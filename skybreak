@@ -1,0 +1,75 @@
+#!/bin/bash
+
+BUNDLE_VERSION=0.0.4
+
+# Find the script dir, following one level of symlink.
+if [ -L "$0" ] ; then
+    SCRIPT_DIR=$(dirname $(readlink "$0") )
+else
+    SCRIPT_DIR=$(dirname "$0")
+fi
+
+# OS Check. Put here because here is where we download the precompiled
+# bundles that are arch specific.
+UNAME=$(uname)
+if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
+    echo "This OS is not supported."
+    exit 1
+fi
+if [ "x86_64" != $(uname -m) ] ; then
+    echo "Only x86_64 support at this time."
+    exit 1
+fi
+
+
+function install_dev_bundle {
+    set -e
+    trap "echo FAILED" INT TERM EXIT
+
+    TARBALL="dev_bundle_${UNAME}_${BUNDLE_VERSION}.tar.gz"
+    TMPDIR="$SCRIPT_DIR/dev_bundle.xxx"
+
+    rm -rf "$TMPDIR"
+    mkdir "$TMPDIR"
+
+    if [ -f "$SCRIPT_DIR/$TARBALL" ] ; then
+        echo "Installing from local copy..."
+        tar -xzf "$SCRIPT_DIR/$TARBALL" -C "$TMPDIR"
+    else
+        echo "Downloading..."
+        curl https://d377jur38fl888.cloudfront.net/$TARBALL | tar -xzf - -C "$TMPDIR"
+    fi
+
+    mv "$TMPDIR" "$SCRIPT_DIR/dev_bundle"
+
+    trap - INT TERM EXIT
+    set +e
+}
+
+
+if [ -d "$SCRIPT_DIR/.git" ]; then
+    # In a checkout.
+
+    if [ ! -d "$SCRIPT_DIR/dev_bundle" ] ; then
+        # if this is the first time we've run skybreak, we may not have
+        # a dev_bundle yet. Set one up by downloading
+        echo "First skybreak run. Need to install dev bundle."
+        install_dev_bundle
+    elif [ ! -f "$SCRIPT_DIR/dev_bundle/.bundle_version.txt" ] ||
+        grep -qvx "$BUNDLE_VERSION" "$SCRIPT_DIR/dev_bundle/.bundle_version.txt" ; then
+        # Also check if dev bundle is out of date.
+        echo "dev_bundle is out of date. Re-installing."
+        rm -rf "$SCRIPT_DIR/dev_bundle"
+        install_dev_bundle
+    fi
+
+    DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
+    SKYBREAK="$SCRIPT_DIR/app/skybreak/skybreak.js"
+else
+    # In an install
+    DEV_BUNDLE=$(dirname "$SCRIPT_DIR")
+    SKYBREAK="$DEV_BUNDLE/app/skybreak/skybreak.js"
+fi
+
+export NODE_PATH="$DEV_BUNDLE/lib/node_modules"
+exec "$DEV_BUNDLE/bin/node" "$SKYBREAK" "$@"

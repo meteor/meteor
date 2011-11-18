@@ -1,0 +1,302 @@
+
+Sky = global.Sky || {};
+
+Sky._publishes = {}; // XXX namespace pollution
+
+Sky._poll_subscriptions = function (socket) { // XXX namespace pollution
+  Fiber(function () {
+    // what we send to the client.
+    // {collection_name:
+    //   {inserted: [objects], updated: [objects], removed: [ids]}}
+    var results = {};
+    // set of keys we touched in the update. things in the cache that
+    // are not touched are removed.
+    var touched_keys = {};
+
+    var add_to_results = function (collection, which, id) {
+      if (!(collection in results))
+        results[collection] = {};
+      if (!(which in results[collection]))
+        results[collection][which] = [];
+      results[collection][which].push(id);
+    };
+
+    // setup a channel object
+    var channel = {
+      send: function(collection_name, obj) {
+        if (!(obj instanceof Array))
+          obj = [obj];
+        if (obj.length === 0)
+          return;
+
+        _.each(obj, function (o) {
+          if (!o._id) {
+            console.log("WARNING trying to send object without _id"); // XXX
+            return;
+          }
+
+          // | not allowed in collection name?
+          var key = collection_name + "|" + o._id;
+
+          var cached = socket.sky.cache[key];
+          socket.sky.cache[key] = o;
+          touched_keys[key] = true;
+
+          if (!cached)
+            add_to_results(collection_name, 'inserted', o);
+          else if (JSON.stringify(o) !== JSON.stringify(cached))
+            // Not canonical order comparison or anything, but close
+            // enough I hope. We may send some spurious updates?
+            add_to_results(collection_name, 'updated', o);
+          else {
+            // cache hit. do nothing.
+          }
+        });
+      }
+    };
+
+    // actually run the subscriptions.
+    _.each(socket.sky.subs, function (sub) {
+      var pub = Sky._publishes[sub.name];
+      if (!pub) {
+        // XXX error unknown publish
+        console.log("ERROR UNKNOWN PUBLISH " + sub.name);
+        return;
+      }
+
+      pub(channel, sub.args);
+    });
+
+    // compute the removed keys.
+    var removed_keys = _.difference(_.keys(socket.sky.cache),
+                                    _.keys(touched_keys));
+    _.each(removed_keys, function (key) {
+      // XXX parsing from the string is so ugly.
+      var parts = key.split("|");
+      if (!parts || parts.length !== 2) return;
+      var collection_name = parts[0];
+      var id = parts[1];
+
+      add_to_results(collection_name, 'removed', id);
+      delete socket.sky.cache[key];
+    });
+
+    // if (and only if) any changes, send to client
+    for (var x in results) {
+      socket.emit('published', results);
+      break;
+    }
+
+    // inform the client that the subscription is ready to go
+    _.each(socket.sky.subs, function (sub) {
+      if (!sub.ready) {
+        socket.emit('subscription_ready', sub._id);
+        sub.ready = true;
+      }
+    });
+
+  }).run();
+
+};
+
+_.extend(Sky, {
+  is_server: true,
+  is_client: false,
+
+  /**
+   * Returns a unique identifier as a string.
+   *
+   * XXX copied from minimongo/genid.js
+   */
+  _genId_counter:0, // XXX namespace pollution
+  genId: function () {
+    var key = (Sky._genId_counter++) + "#";
+    key += (new Date()).getTime() + "#";
+    key += Math.random() + "#";
+    key += Math.random() + "#";
+    key += Math.random() + "#";
+    // XXX XXX eliminate require (easy, in this case..)
+    var md5 = __skybreak_bootstrap__.require('crypto').createHash('md5');
+    md5.update(key);
+    var id = md5.digest('hex');
+    return id;
+  },
+
+  /**
+   * Defines a live query.
+   *
+   * @param name {String} identifier for query
+   * @param callback {Function<channel, args>} OR
+   *                 {Object<mongodb selector>}
+   *
+   * If callback is an object, not a function, this will automatically run
+   * the selector through db.find and send the results to the client. The
+   * 'name' argument is used as the colleciton name on both the server and
+   * the client. This is just sugar.
+   */
+  publish: function (name, callback) {
+    if (name in Sky._publishes) {
+      // XXX error duplicate publish
+      console.log("ERROR DUPLICATE PUBLISH " + name);
+      return;
+    }
+
+    var func = callback;
+    if (typeof callback !== 'function' &&
+        callback instanceof Object) {
+      var collection = Sky._collections[name];
+      if (!collection)
+        // XXX confusing error message
+        throw new Error("No such collection " + JSON.stringify(name) +
+                        " (while generating default publish function)");
+      func = function (channel) {
+        channel.send(name, collection.find(callback));
+      };
+    }
+
+    Sky._publishes[name] = func;
+  },
+
+  subscribe: function () {
+    // ignored on server
+  },
+
+  startup: function (callback) {
+    __skybreak_bootstrap__.startup_hooks.push(callback);
+  }
+});
+
+Sky._collections = {};
+Sky.Collection = function (name) {
+  if (!name)
+    // XXX maybe support this using minimongo?
+    throw new Error("Anonymous collections aren't allowed on the server");
+
+  var ret = {
+    _name: name,
+    _api: {},
+
+    // XXX there are probably a lot of little places where this API
+    // and minimongo diverge. we should track each of those down and
+    // kill it.
+
+    insert: function (doc) {
+      // do id allocation here, so we never end up with an ObjectID.
+      // This only happens if some calls this directly on the server,
+      // since normally ids are allocated on the client and sent over
+      // the wire to us.
+      if (! doc._id) {
+        // copy doc because we mess with it. only shallow copy.
+        new_doc = {};
+        _.extend(new_doc, doc);
+        doc = new_doc;
+        doc._id = Sky.genId();
+      }
+
+      Sky._mongo_driver.insert(this._name, doc);
+
+      // return the doc w/ _id, so we can use it.
+      return doc;
+    },
+
+    find: function (selector, options) {
+      return Sky._mongo_driver.find(this._name, selector, options);
+    },
+
+    findLive: function () {
+      throw new Error("findLive isn't supported on the server");
+    },
+
+    update: function (selector, mod, options) {
+      return Sky._mongo_driver.update(this._name, selector, mod, options);
+    },
+
+    remove: function (selector) {
+      return Sky._mongo_driver.remove(this._name, selector);
+    },
+
+    schema: function () {
+      // XXX not implemented yet
+    },
+
+    api: function (methods) {
+      for (var method in methods) {
+        this[method] = _.bind(methods[method], null);
+        this._api[method] = methods[method];
+      }
+    }
+  }
+
+  if (name)
+    Sky._collections[name] = ret;
+
+  return ret;
+};
+
+__skybreak_bootstrap__.register_socket = function (socket) {
+  socket.sky = {};
+  socket.sky.subs = [];
+  socket.sky.cache = {};
+
+  // 5/sec updates tops, once every 10sec min.
+  socket.sky.throttled_poll = _.throttle(function () {
+    Sky._poll_subscriptions(socket)
+  }, 50); // XXX only 50ms! for great speed. might want higher in prod.
+  socket.sky.timer = setInterval(socket.sky.throttled_poll, 10000);
+};
+
+__skybreak_bootstrap__.register_subscription = function (socket, data) {
+  socket.sky.subs.push(data);
+  Sky._poll_subscriptions(socket);
+};
+
+__skybreak_bootstrap__.unregister_subscription = function (socket, data) {
+  socket.sky.subs = _.filter(socket.sky.subs, function (x) {
+    return x._id !== data._id;
+  });
+  Sky._poll_subscriptions(socket);
+};
+
+__skybreak_bootstrap__.run_handler = function (socket, data, other_sockets) {
+  // XXX note that running this in a fiber means that two serial
+  // requests from the client can try to execute in parallel.. we're
+  // going to have to think that through at some point. also, consider
+  // races against Sky.Collection(), though this shouldn't happen in
+  // most normal use cases
+  Fiber(function () {
+    if (!('collection' in data) || !(data.collection in Sky._collections))
+      // XXX gracefully report over the wire
+      throw new Error("No such collection "+ JSON.stringify(data.collection));
+    var collection = Sky._collections[data.collection];
+
+    // XXX obviously, we're going to add validation and authentication
+    // somewhere around here (and probably the ability to disable the
+    // automatic mutators completely, too)
+    if (data.type === 'insert')
+      collection.insert(data.args);
+    else if (data.type === 'update')
+      collection.update(data.selector, data.mutator, data.options);
+    else if (data.type === 'remove')
+      collection.remove(data.selector);
+    else if (data.type === 'method') {
+      var func = collection._api[data.method];
+      if (!func)
+        throw new Error("No API method " + JSON.stringify(data.method) +
+                        " on collection " + data.collection);
+      func.apply(null, data.args);
+    } else
+      throw new Error("Bad handler type " + JSON.stringify(data.type));
+
+    // XXX XXX should emit some kind of success/failure indication
+
+    // after the handler, rerun all the subscriptions as stuff may have
+    // changed.
+    // XXX potential fast path for 'remove' -- we know which sockets
+    // need the removal message; it's exactly the sockets that have
+    // the item in their cache
+    _.each(other_sockets, function(x) {
+      if (x && x.sky) {
+        x.sky.throttled_poll(); } });
+
+  }).run();
+};
