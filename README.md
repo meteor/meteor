@@ -38,7 +38,7 @@ Deploy it to the world, for free:
 
 If you want to run on the bleeding edge, or help develop Skybreak, you can run Skybreak directly from a git checkout.
 
-    git clone git@github.com:honeycomb/skybreak.git
+    git clone git@github.com:skybreak/skybreak.git
     cd skybreak
 
 If you're the sort of person who likes to build everything from scratch, you can build all the Skybreak dependencies (node.js, npm, mongodb, etc) with the provided script. If you do not run this script, Skybreak will automatically download pre-compiled binaries when you first run it.
