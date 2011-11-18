@@ -33,14 +33,17 @@ function install_dev_bundle {
     mkdir "$TMPDIR"
 
     if [ -f "$SCRIPT_DIR/$TARBALL" ] ; then
-        echo "Installing from local copy..."
+        echo "... installing from local tarball ..."
         tar -xzf "$SCRIPT_DIR/$TARBALL" -C "$TMPDIR"
     else
-        echo "Downloading..."
-        curl https://d377jur38fl888.cloudfront.net/$TARBALL | tar -xzf - -C "$TMPDIR"
+        echo "... downloading ..."
+        curl -# https://d377jur38fl888.cloudfront.net/$TARBALL | tar -xzf - -C "$TMPDIR"
     fi
 
     mv "$TMPDIR" "$SCRIPT_DIR/dev_bundle"
+
+    echo "... installed runtime environment v${BUNDLE_VERSION} ..."
+    echo
 
     trap - INT TERM EXIT
     set +e
@@ -53,12 +56,12 @@ if [ -d "$SCRIPT_DIR/.git" ]; then
     if [ ! -d "$SCRIPT_DIR/dev_bundle" ] ; then
         # if this is the first time we've run skybreak, we may not have
         # a dev_bundle yet. Set one up by downloading
-        echo "First skybreak run. Need to install dev bundle."
+        echo "... runtime environment not found ..."
         install_dev_bundle
     elif [ ! -f "$SCRIPT_DIR/dev_bundle/.bundle_version.txt" ] ||
         grep -qvx "$BUNDLE_VERSION" "$SCRIPT_DIR/dev_bundle/.bundle_version.txt" ; then
         # Also check if dev bundle is out of date.
-        echo "dev_bundle is out of date. Re-installing."
+        echo "... runtime environment out of date. upgrading. ..."
         rm -rf "$SCRIPT_DIR/dev_bundle"
         install_dev_bundle
     fi
