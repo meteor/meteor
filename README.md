@@ -58,7 +58,7 @@ Or install to ```/usr/local``` like the normal install process. This will cause 
 
 ## Developer Resources
 
-There are several communication mechanisms you can use to talk to us or other Skybreak users:
+Get in touch! We love to hear from developers. You can contact us several ways:
 
 * Google group for discussion: http://groups.google.com/group/skybreak-users
 * IRC: ```#skybreak``` on ```irc.freenode.net```
