@@ -58,7 +58,8 @@ Or install to ```/usr/local``` like the normal install process. This will cause 
 
 ## Developer Resources
 
-- XXX google group
-- XXX irc channel
+There are several communication mechanisms you can use to talk to us or other Skybreak users:
 
-
+* Google group for discussion: http://groups.google.com/group/skybreak-users
+* IRC: ```#skybreak``` on ```irc.freenode.net```
+* Email us: ```info@skybreakplatform.com```
