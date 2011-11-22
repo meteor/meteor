@@ -239,8 +239,11 @@ var start_server = function (bundle_path, port, mongo_url, on_exit) {
 
   // Keepalive so server can detect when we die
   var timer = setInterval(function () {
-    if (proc.pid) {
-      proc.stdin.write('k');
+    try {
+      if (proc && proc.pid && proc.stdin && proc.stdin.write)
+        proc.stdin.write('k');
+    } catch (e) {
+      // do nothing. this fails when the process dies.
     }
   }, 2000);
 
