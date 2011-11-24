@@ -123,36 +123,38 @@ _.extend(Sky, {
   },
 
   /**
-   * Defines a live query.
+   * Defines a live dataset that clients can subscribe to.
    *
    * @param name {String} identifier for query
-   * @param callback {Function<channel, args>} OR
-   *                 {Object<mongodb selector>}
+   * @param options {Object}
    *
-   * If callback is an object, not a function, this will automatically run
-   * the selector through db.find and send the results to the client. The
-   * 'name' argument is used as the colleciton name on both the server and
-   * the client. This is just sugar.
+   * options to contain:
+   *  - collection {Collection} collection; defaults to the collection
+   *    named 'name' on disk in mongodb
+   *  - selector {Function<args> OR Object} either a mongodb selector,
+   *    or a function that takes the argument object passed to
+   *    Sky.subscribe and returns a mongodb selector. default {}
    */
-  publish: function (name, callback) {
+  publish: function (name, options) {
     if (name in Sky._publishes) {
       // XXX error duplicate publish
       console.log("ERROR DUPLICATE PUBLISH " + name);
       return;
     }
 
-    var func = callback;
-    if (typeof callback !== 'function' &&
-        callback instanceof Object) {
-      var collection = Sky._collections[name];
-      if (!collection)
-        // XXX confusing error message
-        throw new Error("No such collection " + JSON.stringify(name) +
-                        " (while generating default publish function)");
-      func = function (channel) {
-        channel.send(name, collection.find(callback));
-      };
-    }
+    options = options || {};
+    var collection = options.collection || Sky._collections[name];
+    if (!collection)
+      throw new Error("No collection '" + name + "' found to publish. " +
+                      "You can specify the collection explicitly with the " +
+                      "'collection' option.");
+    var selector = options.selector || {};
+    var func = function (channel, args) {
+      var s = selector;
+      if (s instanceof Function)
+        s = s(args);
+      channel.send(name, collection.find(s));
+    };
 
     Sky._publishes[name] = func;
   },
