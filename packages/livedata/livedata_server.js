@@ -149,11 +149,11 @@ _.extend(Sky, {
                       "You can specify the collection explicitly with the " +
                       "'collection' option.");
     var selector = options.selector || {};
-    var func = function (channel, args) {
+    var func = function (channel, params) {
       var s = selector;
       if (s instanceof Function)
-        s = s(args);
-      channel.send(name, collection.find(s));
+        s = s(params);
+      channel.send(collection._name, collection.find(s));
     };
 
     Sky._publishes[name] = func;
