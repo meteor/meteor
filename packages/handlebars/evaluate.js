@@ -68,7 +68,7 @@ Handlebars._escape = function (x) {
       ">": "&gt;",
       '"': "&quot;",
       "'": "&#x27;",
-      "`": "&#x60;",
+      "`": "&#x60;", /* IE allows backtick-delimited attributes?? */
       "&": "&amp;"
     }[c];
   });
