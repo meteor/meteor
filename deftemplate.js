@@ -121,24 +121,13 @@ Sky._partials = {};
 Sky._def_template = function (name, raw_func, multi) {
   Sky._hook_handlebars_each();
   window.Template = window.Template || {};
-  var cooked_func = function (data_in, data_ptr) {
-    data_ptr[0] = {};
-    if (data_in !== undefined) {
-      if (!(typeof(data_in) === "object"))
-        throw new Error("The argument to a template (if given) must be " +
-                        "an object");
-      // copy data because Template.foo.setup might add to it
-      _.extend(data_ptr[0], data_in);
-    }
-    if (name && 'setup' in Template[name])
-      Template[name].setup.apply(data_ptr[0], arguments);
-
+  var cooked_func = function (data) {
     var in_partial = !!Sky._pending_partials;
     if (!in_partial)
       Sky._pending_partials = {};
     // XXX should catch exceptions and clean up pending_partials if
     // stack is unwound
-    var html = raw_func(data_ptr[0], {
+    var html = raw_func(data, {
       helpers: name ? Template[name] : {},
       partials: Sky._partials
     });
@@ -193,15 +182,9 @@ Sky._def_template = function (name, raw_func, multi) {
     }
   };
 
-  var func = function (data_in) {
-    // we pass the result of Template.foo.setup into the event
-    // handler, but we only want to set up the event hanndlers once,
-    // while we want to rerun Template.foo.setup when it
-    // dependencies change.. use a little trickery
-    var data_ptr = []; // use an array as a pointer..
-
-    return Sky.ui.render(_.bind(cooked_func, null, data_in, data_ptr),
-                         name && Template[name].events || {}, data_ptr);
+  var func = function (data) {
+    return Sky.ui.render(_.bind(cooked_func, null, data),
+                         name && Template[name].events || {}, data);
   };
 
   if (name) {
