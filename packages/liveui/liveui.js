@@ -46,10 +46,8 @@ Sky.ui._tryFocus = function () {
 /// as renderLive. If 'what' is a function and returns an array, the
 /// event map will be applied to each element in the array.
 ///
-/// 'obj_ptr[0]' will be passed to events when they fire, as their
-/// object data agument. (XXX this is so the caller can change the
-/// value without re-hooking-up the events.. ugh, this is pretty
-/// messy)
+/// 'event_data' will be passed to events when they fire, as their
+/// object data agument.
 ///
 /// render() may be called recursively (that is, 'what' can call
 /// render.) when this happens, a change to a dependency in the inner
@@ -59,7 +57,7 @@ Sky.ui._tryFocus = function () {
 /// XXX refactor renderList to make it use this?
 /// XXX need to provide a way to stop the updating and let GC happen!!!
 /// XXX remove underscore template support.. it's only going to hurt you
-Sky.ui.render = function (what, events, obj_ptr) {
+Sky.ui.render = function (what, events, event_data) {
   var render;
   if (typeof(what) === 'object') {
     if (('$' in window) && (element instanceof $))
@@ -84,10 +82,10 @@ Sky.ui.render = function (what, events, obj_ptr) {
       result = new_result;
       if (result instanceof Array)
         result.forEach(function (elt) {
-          Sky.ui._setupEvents(elt, events || {}, obj_ptr);
+          Sky.ui._setupEvents(elt, events || {}, event_data);
         });
       else
-        Sky.ui._setupEvents(result, events || {}, obj_ptr);
+        Sky.ui._setupEvents(result, events || {}, event_data);
     } else {
       // update in place by hollowing out old element(s), and copying
       // over all of the children and attributes. unfortunately there
@@ -275,15 +273,15 @@ Sky.ui.renderList = function (collection, element, options) {
 };
 
 // XXX jQuery dependency
-// 'obj_ptr[0]' will be an additional argument to event callback
-Sky.ui._setupEvents = function (elt, events, obj_ptr) {
+// 'event_data' will be an additional argument to event callback
+Sky.ui._setupEvents = function (elt, events, event_data) {
   events = events || {};
   function create_callback (callback) {
     // return a function that will be used as the jquery event
     // callback, in which "this" is bound to the DOM element bound
     // to the event.
     return function (evt) {
-      callback.call(obj_ptr[0], evt);
+      callback.call(event_data, evt);
     };
   };
 
