@@ -51,7 +51,6 @@ Sky.ui._tryFocus = function () {
 ///
 /// XXX refactor renderList to make it use this?
 /// XXX need to provide a way to stop the updating and let GC happen!!!
-/// XXX remove underscore template support.. it's only going to hurt you
 Sky.ui.render = function (render_func, events, event_data) {
   var result = null;
   var update = function () {
@@ -142,9 +141,7 @@ Sky.ui.render = function (render_func, events, event_data) {
 /// options to include:
 ///  query: minimongo selector (default: {})
 ///  sort: minimongo sort specification (default: natural order)
-/// .. and one of ..
 ///  render: render function (from object to element)
-///  template: string, or element/jQuery result set, to use _ template from DOM
 /// .. plus optionally
 ///  events: vaguely backbone-style live event specification
 ///    {'click #selector #path' : function (obj) { } }
@@ -161,20 +158,6 @@ Sky.ui.renderList = function (collection, element, options) {
   if (('$' in window) && (element instanceof $))
     // allow element to be a jQuery result set
     element = element[0];
-
-  var create;
-  if ('render' in options) {
-    create = options.render;
-  } else if ('template' in options) {
-    var template = options.template;
-    if (typeof template !== "string")
-      template = $(template).html(); // XXX jQuery dependency
-    var compiled_template = _.template(template);
-    create = function (obj) {return $(compiled_template(obj))[0];};
-  } else {
-    throw new Error("renderList requires either 'render' or 'template'");
-  }
-
   var dead = false;
 
   var changed = function (obj, at_idx) {
@@ -187,7 +170,7 @@ Sky.ui.renderList = function (collection, element, options) {
 
   var render = function (obj) {
     var elt = Sky.deps.captureDependencies(
-      function () { return create(obj); },
+      function () { return options.render(obj); },
       function () {
         var idx = query.indexOf(obj._id);
         if (idx !== -1) {
