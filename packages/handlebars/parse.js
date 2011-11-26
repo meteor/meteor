@@ -92,7 +92,7 @@ Handlebars.to_json_ast = function (code) {
           throw new Error("Template names shouldn't contain '.' or '/'");
         var x = ['>', id[1]];
         if (node.context)
-          x = ['#', ['with', identifier(node.context)], [ret]];
+          x = ['#', [[0, 'with'], identifier(node.context)], [x]];
         ret.push(x);
       },
       block: function (node) {
