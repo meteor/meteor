@@ -33,20 +33,15 @@ Sky.ui._tryFocus = function () {
 /// template mustn't change -- it must not be a function of any
 /// dependencies.)
 ///
-/// 'what' may be a function (which will be called and should return
-/// an element), or a string (interpreted, for now, as a _ template),
-/// or an element/jQuery result set (to use the DOM as a _ template)
-///
-/// If 'what' is a function, instead of returning a single element, it
-/// is also allowed to return an array of elements. In this case, on
-/// rerendering, it must still return an array, and the number and tag
-/// names of the elements in the array must not change.
+/// render_func should return either a single DOM element, or an array
+/// of elements. In the latter case, on rerendering, it must still
+/// return an array, and the number and tag names of the elements in
+/// the array must not change.
 ///
 /// 'events' is optional. if given, takes the same kind of event map
-/// as renderLive. If 'what' is a function and returns an array, the
-/// event map will be applied to each element in the array.
-///
-/// 'event_data' will be passed to events when they fire, as their
+/// as renderLive. If render_func retruns an array, the event map will
+/// be applied to each element in the array. If 'event_data' is
+/// provided, it will be passed to events when they fire, as their
 /// object data agument.
 ///
 /// render() may be called recursively (that is, 'what' can call
@@ -57,27 +52,10 @@ Sky.ui._tryFocus = function () {
 /// XXX refactor renderList to make it use this?
 /// XXX need to provide a way to stop the updating and let GC happen!!!
 /// XXX remove underscore template support.. it's only going to hurt you
-Sky.ui.render = function (what, events, event_data) {
-  var render;
-  if (typeof(what) === 'object') {
-    if (('$' in window) && (element instanceof $))
-      what = what[0]; // allow jQuery result set
-    if (what instanceof Element)
-      what = $(template).html();
-  }
-  if (typeof(what) === 'string') {
-    // XXX allow template to return multiple objects (changing the
-    // signature of render() how?)
-    var compiled_template = _.template(what);
-    render = function (obj) {return $(what(obj))[0];};
-  } else if (what instanceof Function)
-    render = what;
-  else
-    throw new Error("Unrecognized template/renderer type");
-
+Sky.ui.render = function (render_func, events, event_data) {
   var result = null;
   var update = function () {
-    var new_result = Sky.deps.captureDependencies(render, update);
+    var new_result = Sky.deps.captureDependencies(render_func, update);
     if (result === null) {
       result = new_result;
       if (result instanceof Array)
