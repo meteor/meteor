@@ -214,12 +214,12 @@ Sky = window.Sky || {};
       return token;
     },
 
-    subscriptions: function (sub_func) {
+    autosubscribe: function (sub_func) {
       var local_subs = [];
 
       Sky.deps.captureDependencies(function () {
         if (capture_subs)
-          throw new Error("Sky.subscriptions may not be called recursively");
+          throw new Error("Sky.autosubscribe may not be called recursively");
 
         capture_subs = [];
         sub_func();
@@ -229,7 +229,7 @@ Sky = window.Sky || {};
 
       }, function (key, new_value, old_value) {
         // recurse.
-        Sky.subscriptions(sub_func);
+        Sky.autosubscribe(sub_func);
         // unsub after re-subbing, to avoid bouncing.
         _.each(local_subs, function (x) { x.stop() });
       });

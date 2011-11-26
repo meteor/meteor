@@ -163,6 +163,10 @@ _.extend(Sky, {
     // ignored on server
   },
 
+  autosubscribe: function () {
+    // ignored on server
+  },
+
   startup: function (callback) {
     __skybreak_bootstrap__.startup_hooks.push(callback);
   }
