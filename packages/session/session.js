@@ -8,14 +8,11 @@ Session.constructor(function (_super) {
 
   self.keys = {};
 
-  self.deps = Sky.deps; // XXX XXX
-
+  self.next_id = 1;
   self.key_callbacks = {}; // key -> id -> true
   self.key_value_callbacks = {}; // key -> value -> id -> true
   self.callbacks = {}; // id -> func
   self.callback_deps = {}; // id -> key || {key: key, value: value}
-
-  self.oneshot = {}; // id -> boolean
 });
 
 Session.methods({
@@ -67,16 +64,17 @@ Session.methods({
   get: function (key) {
     var self = this;
 
-    var id = Collection._genId(); // XXX expose genid cleanly!
-    var invalidation = self.deps.getInvalidationFunction(function () {
-      self._cleanupCallbacks(id);
-    });
+    if (Sky.deps.monitoring) {
+      var id = self.next_id++;
 
-    if (invalidation) {
       self._ensureKey(key);
       self.key_callbacks[key][id] = true;
-      self.callbacks[id] = invalidation;
+      self.callbacks[id] = Sky.deps.getInvalidate();
       self.callback_deps[id] = key;
+
+      Sky.deps.cleanup(function () {
+        self._cleanupCallbacks(id);
+      });
     }
 
     return self.keys[key];
@@ -91,18 +89,19 @@ Session.methods({
         value !== null && value !== undefined)
       throw new Error("Session.equals: value can't be an object");
 
-    var id = Collection._genId(); // XXX expose genid cleanly!
-    var invalidation = self.deps.getInvalidationFunction(function () {
-      self._cleanupCallbacks(id);
-    });
+    if (Sky.deps.monitoring) {
+      var id = self.next_id++;
 
-    if (invalidation) {
       self._ensureKey(key);
       if (!(value in self.key_value_callbacks[key]))
         self.key_value_callbacks[key][value] = {};
       self.key_value_callbacks[key][value][id] = true;
-      self.callbacks[id] = invalidation;
+      self.callbacks[id] = Sky.deps.getInvalidate();;
       self.callback_deps[id] = {key: key, value: value};
+
+      Sky.deps.cleanup(function () {
+        self._cleanupCallbacks(id);
+      });
     }
 
     return self.keys[key] === value;

@@ -54,7 +54,7 @@ Sky.ui._tryFocus = function () {
 Sky.ui.render = function (render_func, events, event_data) {
   var result = null;
   var update = function () {
-    var new_result = Sky.deps.captureDependencies(render_func, update);
+    var new_result = Sky.deps.monitor(render_func, update);
     if (result === null) {
       result = new_result;
       if (result instanceof Array)
@@ -150,10 +150,6 @@ Sky.ui.render = function (render_func, events, event_data) {
 ///  stop(): stop updating, tear everything down and let it get GC'd
 ///
 /// XXX eliminate jQuery dependencies ...
-/// XXX be templating-system agnostic.. allow handlebars or whatever
-/// XXX what if the template returns more than one top-level element?
-///
-/// XXX make this into a view subclass, eg QueryView, that you subclass
 Sky.ui.renderList = function (collection, element, options) {
   if (('$' in window) && (element instanceof $))
     // allow element to be a jQuery result set
@@ -169,7 +165,7 @@ Sky.ui.renderList = function (collection, element, options) {
   };
 
   var render = function (obj) {
-    var elt = Sky.deps.captureDependencies(
+    var elt = Sky.deps.monitor(
       function () { return options.render(obj); },
       function () {
         var idx = query.indexOf(obj._id);
@@ -218,9 +214,9 @@ Sky.ui.renderList = function (collection, element, options) {
   return {
     stop: function() {
       // XXX this has terrible GC semantics. we don't get to tear
-      // everything down until each captureDependencies instance
-      // experiences its callback. actually there are probably a ton
-      // of bad GC issues; I haven't thought about it.
+      // everything down until each monitor block experiences its
+      // callback. actually there are probably a ton of bad GC issues;
+      // I haven't thought about it.
       //
       // XXX more generally, this pattern where the caller has to call
       // stop() is going to result in tears. more likely, we want to

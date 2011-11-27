@@ -4,7 +4,9 @@
 Collection = function () {
   this.docs = {}; // _id -> document (also containing id)
 
-  // random id -> query object. keys: selector_f, sort_f, (callbacks)
+  this.next_qid = 1; // query id generator
+
+  // qid -> query object. keys: selector_f, sort_f, (callbacks)
   this.queries = {};
 };
 
@@ -30,13 +32,16 @@ Collection.prototype.insert = function (doc) {
 // XXX add one more sort form: "key"
 // and tests, etc
 
-// options may include sort, skip, limit
+// options may include sort, skip, limit, reactive
 // sort may be any of these forms:
 //     {a: 1, b: -1}
 //     [["a", "asc"], ["b", "desc"]]
 //     ["a", ["b", "desc"]]
 //   (in the first form you're beholden to key enumeration order in
 //   your javascript VM)
+//
+// reactive: if given, and false, don't register with Sky.deps (default
+// is true)
 //
 // XXX possibly should support retrieving a subset of fields? and
 // have it be a hint (ignored on the client, when not copying the
@@ -73,40 +78,24 @@ Collection.prototype.find = function (selector, options) {
 
   }
 
-  // support deps manager / captureDependencies
-  if (self.depsFunc) {
-    // setup for cleanup. This would be cleaner if we had a way to check
-    // if we were in a deps block before call depsFunc.
-    var stop = null;
-    var invalidation = self.depsFunc(function () {
-      if (stop) stop.stop();
-      stop = null;
+  // support Sky.deps if present
+  var reactive = (options.reactive === undefined) ? true : options.reactive;
+  if (reactive && typeof Sky === "object" && Sky.deps && Sky.deps.monitoring) {
+    var invalidate = Sky.deps.getInvalidate();
+
+    var new_options = _.clone(options);
+    _.extend(new_options, {
+      added: invalidate,
+      removed: invalidate,
+      changed: invalidate,
+      moved: invalidate,
+      _suppress_initial: true,
     });
 
-    if (invalidation) {
-      // ok, we're in a block. setup findLive.
-
-      // we need to not fire until the initial adds are in. These come
-      // back before findLive returns. so we just turn off reporting
-      // until we're ready.
-      var initial_suppression = true;
-      var invalidation_wrapper = function () {
-        if (!initial_suppression) invalidation();
-      };
-
-      var new_options = {
-        added: invalidation_wrapper,
-        removed: invalidation_wrapper,
-        changed: invalidation_wrapper,
-        moved: invalidation_wrapper,
-      };
-      for (key in options)
-        new_options[key] = options[key]; // XXX could overwrite callbacks!
-
-      stop = self.findLive(selector, new_options);
-      // after initial callbacks
-      initial_suppression = false;
-    }
+    var live_handle = self.findLive(selector, new_options);
+    Sky.deps.cleanup(function () {
+      live_handle.stop();
+    });
   }
 
   return results;
@@ -138,7 +127,7 @@ Collection.prototype.find = function (selector, options) {
 Collection.LiveResultsSet = function () {};
 Collection.prototype.findLive = function (selector, options) {
   var self = this;
-  var qid = Collection._genId();
+  var qid = self.next_qid++;
   if (typeof(selector) === "string")
     selector = {_id: selector};
 
@@ -154,8 +143,9 @@ Collection.prototype.findLive = function (selector, options) {
     query.changed = options.changed || function () {};
     query.moved = options.moved || function () {};
     query.removed = options.removed || function () {};
-    for (var i = 0; i < query.results.length; i++)
-      query.added(Collection._deepcopy(query.results[i]), i);
+    if (!options._suppress_initial)
+      for (var i = 0; i < query.results.length; i++)
+        query.added(Collection._deepcopy(query.results[i]), i);
   };
 
   connect(options);

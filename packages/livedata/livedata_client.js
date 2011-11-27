@@ -153,10 +153,6 @@ Sky = window.Sky || {};
         }, this);
       }
     };
-    // XXX XXX turn on captureDependencies in minimongo.
-    // should be a better way to do this.
-    ret._collection.depsFunc = Sky.deps.getInvalidationFunction;
-
 
     if (name)
       collections[name] = ret;
@@ -177,7 +173,7 @@ Sky = window.Sky || {};
 
     subscribe: function (name, args, callback) {
       var id;
-      var existing = subs.find({name: name, args: args});
+      var existing = subs.find({name: name, args: args}, {reactive: false});
 
       if (existing && existing[0]) {
         // already subbed, inc count.
@@ -217,17 +213,18 @@ Sky = window.Sky || {};
     autosubscribe: function (sub_func) {
       var local_subs = [];
 
-      Sky.deps.captureDependencies(function () {
+      Sky.deps.monitor(function () {
         if (capture_subs)
           throw new Error("Sky.autosubscribe may not be called recursively");
 
         capture_subs = [];
-        sub_func();
-        local_subs = capture_subs;
-        capture_subs = undefined;
-
-
-      }, function (key, new_value, old_value) {
+        try {
+          sub_func();
+        } finally {
+          local_subs = capture_subs;
+          capture_subs = undefined;
+        }
+      }, function () {
         // recurse.
         Sky.autosubscribe(sub_func);
         // unsub after re-subbing, to avoid bouncing.
