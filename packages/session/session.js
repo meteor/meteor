@@ -9,10 +9,8 @@ Session.constructor(function (_super) {
   self.keys = {};
 
   self.next_id = 1;
-  self.key_callbacks = {}; // key -> id -> true
-  self.key_value_callbacks = {}; // key -> value -> id -> true
-  self.callbacks = {}; // id -> func
-  self.callback_deps = {}; // id -> key || {key: key, value: value}
+  self.key_callbacks = {}; // key -> id -> func
+  self.key_value_callbacks = {}; // key -> value -> id -> func
 });
 
 Session.methods({
@@ -49,16 +47,15 @@ Session.methods({
 
     var activated = {};
     for (var id in self.key_callbacks[key])
-      activated[id] = true;
+      self.key_callbacks[key][id]();
+
     if (old_value in self.key_value_callbacks[key])
       for (var id in self.key_value_callbacks[key][old_value])
-        activated[id] = true;
+        self.key_value_callbacks[key][old_value][id]();
+
     if (value in self.key_value_callbacks[key])
       for (var id in self.key_value_callbacks[key][value])
-        activated[id] = true;
-
-    for (var id in activated)
-      self._fireCallback(id);
+        self.key_value_callbacks[key][value][id]();
   },
 
   get: function (key) {
@@ -68,12 +65,10 @@ Session.methods({
       var id = self.next_id++;
 
       self._ensureKey(key);
-      self.key_callbacks[key][id] = true;
-      self.callbacks[id] = Sky.deps.getInvalidate();
-      self.callback_deps[id] = key;
+      self.key_callbacks[key][id] = Sky.deps.getInvalidate();
 
       Sky.deps.cleanup(function () {
-        self._cleanupCallbacks(id);
+        delete self.key_callbacks[key][id];
       });
     }
 
@@ -95,12 +90,16 @@ Session.methods({
       self._ensureKey(key);
       if (!(value in self.key_value_callbacks[key]))
         self.key_value_callbacks[key][value] = {};
-      self.key_value_callbacks[key][value][id] = true;
-      self.callbacks[id] = Sky.deps.getInvalidate();;
-      self.callback_deps[id] = {key: key, value: value};
+      self.key_value_callbacks[key][value][id] = Sky.deps.getInvalidate();
 
       Sky.deps.cleanup(function () {
-        self._cleanupCallbacks(id);
+        delete self.key_value_callbacks[key][value][id];
+
+        // clean up [key][value] if it's now empty, so we don't use
+        // O(n) memory for n = values seen ever
+        for (var x in self.key_value_callbacks[key][value])
+          return;
+        delete self.key_value_callbacks[key][value];
       });
     }
 
@@ -113,37 +112,7 @@ Session.methods({
       self.key_callbacks[key] = {};
       self.key_value_callbacks[key] = {};
     }
-  },
-
-  _fireCallback: function (id) {
-    var self = this;
-    var callback = self.callbacks[id];
-
-    if (callback)
-      callback();
-
-    delete self.callbacks[id];
-
-    // not strictly needed, as we'll get at least one back, but it
-    // doesn't hurt.
-    self._cleanupCallbacks(id);
-  },
-
-  _cleanupCallbacks: function (id) {
-    var self = this;
-    var deps = self.callback_deps[id];
-
-    if (deps) {
-      if (typeof(deps) === 'string')
-        delete self.key_callbacks[deps][id];
-      else
-        delete self.key_value_callbacks[deps.key][deps.value][id];
-    }
-
-    delete self.callbacks[id];
-    delete self.callback_deps[id];
   }
-
 });
 
 // singleton
