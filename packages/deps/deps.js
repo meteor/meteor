@@ -1,5 +1,7 @@
 Sky = window.Sky || {};
 
+// XXX rename package 'monitor'?
+
 // XXX XXX what happens if invalidate is called before the initial
 // invocation of func has returned?
 
@@ -19,26 +21,26 @@ Sky = window.Sky || {};
 
   _.extend(Sky, {
     deps: {
-      /// Execute func. While accessing it, record all of the
-      /// invalidation tokens that are handed out. After func completes,
-      /// the first time any invalidation function handed out during the
-      /// run is called, invoke callback. (One shot -- callback is only
-      /// invoked once, not repeated.)
+      /// Create a new monitor block, execute func inside it, and
+      /// return func's value. When the monitor block is invalidated,
+      /// call on_invalidated and any cleanup functions registered
+      /// from within the block using Sky.deps.cleanup. To invalidate
+      /// the monitor block, retrieve the block's invalidation
+      /// function by calling Sky.deps.getInvalidate from within the
+      /// block, and then call it at any time (not necessarily from
+      /// within the block.) Invalidation is idempotent.
       ///
-      /// If called recursively (if callback calls captureDependencies),
-      /// then dependencies accrue only to the innermost invocation. You
-      /// might say that "each invocation functions independently," or
-      /// that captureDependencies "acts as a recomputation fence."
-      ///
-      /// @return The return value of 'func'
-      monitor: function (func, callback) {
+      /// May be called recursively, in which case each invocation is
+      /// indepedent, and Sky.deps.getInvalidate and Sky.deps.cleanup
+      /// operate on the innermost invocation.
+      monitor: function (func, on_invalidated) {
         // if invoked recursively, save parent context
         var prev_id = active_id;
 
         // create a new monitor context
         active_id = next_id++;
         Sky.deps.monitoring = true;
-        callbacks[active_id] = [callback];
+        callbacks[active_id] = [on_invalidated];
 
         // run the func in that context, and return the result
         try {
@@ -52,17 +54,11 @@ Sky = window.Sky || {};
         return ret;
       },
 
-      /// True if inside a 'monitor' block.
+      /// True if inside a monitor block.
       monitoring: false,
 
-      /// If inside a 'monitor' block: This will be a function. If
-      /// your package wants to support 'monitor', then you need to
-      /// save this function off, and call it if a piece of
-      /// information has changed and the 'monitor' block should be
-      /// re-run. Only the first call matters (by code in the
-      /// 'monitor' block); all subsequent calls will be ignored.
-      ///
-      /// If not inside a 'monitor' block: throws an exception.
+      /// Return the invalidation function for the current monitor
+      /// block, or throw an exception if not inside a monitor block.
       getInvalidate: function () {
         if (!active_id)
           throw new Error("Not inside monitor()");
@@ -70,14 +66,8 @@ Sky = window.Sky || {};
         return _.bind(invalidate, null, active_id);
       },
 
-      /// If inside 'monitor' block: register a cleanup function. When
-      /// 'changed' is called on the block, your callback function
-      /// will be called. It will be called exactly once. Use this to
-      /// clean up whatever event handlers you had wired up to
-      /// 'changed'. In other words, when you get this call, you know
-      /// that you are no longer responsible for calling 'changed'.
-      ///
-      /// If not inside 'monitor' block: throws an exception.
+      /// Register a cleanup function on the current monitor block, or
+      /// throw an exception if not inside a monitor block.
       cleanup: function (callback) {
         if (!active_id)
           throw new Error("Not inside monitor()");
@@ -90,3 +80,14 @@ Sky = window.Sky || {};
 
     }});
 })();
+
+
+
+      /// If inside 'monitor' block: register a cleanup function. When
+      /// 'changed' is called on the block, your callback function
+      /// will be called. It will be called exactly once. Use this to
+      /// clean up whatever event handlers you had wired up to
+      /// 'changed'. In other words, when you get this call, you know
+      /// that you are no longer responsible for calling 'changed'.
+      ///
+      /// If not inside 'monitor' block: throws an exception.
