@@ -4,10 +4,10 @@ var path = require("path");
 var spawn = require('child_process').spawn;
 var url = require("url");
 
-var wrench = require("wrench");
 var ProgressBar = require('progress');
 
 var updater = require("../lib/updater.js");
+var files = require("../lib/files.js");
 
 updater.get_manifest(function (manifest) {
   if (!manifest) {
@@ -75,7 +75,7 @@ updater.get_manifest(function (manifest) {
         // untar complete. swap directories
         var old_base_dir = base_dir.slice(0,-1) + ".old";
         if (path.existsSync(old_base_dir))
-            wrench.rmdirSyncRecursive(old_base_dir); // rm -rf !!
+          files.rm_recursive(old_base_dir); // rm -rf !!
 
         fs.renameSync(base_dir, old_base_dir);
         fs.renameSync(old_base_dir + "/tmp/skybreak", base_dir);
