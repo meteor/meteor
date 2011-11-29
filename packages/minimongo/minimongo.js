@@ -123,6 +123,8 @@ Collection.prototype.find = function (selector, options) {
 // XXX maybe callbacks should take a list of objects, to expose transactions?
 // XXX maybe support field limiting (to limit what you're notified on)
 // XXX maybe support limit/skip
+// XXX it'd be helpful if removed got the object that just left the
+// query, not just its id
 
 Collection.LiveResultsSet = function () {};
 Collection.prototype.findLive = function (selector, options) {
