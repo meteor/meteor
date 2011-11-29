@@ -204,7 +204,7 @@ Commands.push({
 "\n" +
 "Adds packages to your Skybreak project. You can add multiple\n" +
 "packages with one command. For a list of the available packages, see\n" +
-"'skybreak packages'.\n");
+"'skybreak list'.\n");
       process.exit(1);
     }
 
@@ -240,8 +240,8 @@ Commands.push({
 "Usage: skybreak remove <package> [package] [package..]\n" +
 "\n" +
 "Removes a package previously added to your Skybreak project. For a\n" +
-"list of the packages that your package is currently using, see\n" +
-"'skybreak using'.\n");
+"list of the packages that your application is currently using, see\n" +
+"'skybreak list --using'.\n");
       process.exit(1);
     }
 
