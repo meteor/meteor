@@ -367,7 +367,7 @@ exports.run = function (app_dir, bundle_path, port, on_restart) {
   };
 
   watch_files(app_dir, deps.extensions || [], function () {
-    log_to_clients({'system': "=> Modified -- restarting."});
+    // log_to_clients({'system': "=> Modified -- restarting."});
     on_restart();
     Status.reset();
     restart_server();
