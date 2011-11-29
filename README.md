@@ -43,9 +43,10 @@ If you want to run on the bleeding edge, or help develop Skybreak, you can run S
 
 If you're the sort of person who likes to build everything from scratch, you can build all the Skybreak dependencies (node.js, npm, mongodb, etc) with the provided script. If you do not run this script, Skybreak will automatically download pre-compiled binaries when you first run it.
 
-    ./admin/generate-dev-bundle.sh # OPTIONAL
+    # OPTIONAL
+    ./admin/generate-dev-bundle.sh
 
-Now you can run skybreak directly from the checkout (if you did not build the dev bundle above, this will take a few moments to download dependencies).
+Now you can run skybreak directly from the checkout (if you did not build the dependency bundle above, this will take a few moments to download a pre-build version).
 
     ./skybreak --help
 
@@ -58,7 +59,8 @@ Or install to ```/usr/local``` like the normal install process. This will cause 
 
 ## Developer Resources
 
-Get in touch! We love to hear from developers. You can contact us several ways:
+Get in touch! We'd love to hear what you think. You can get involved
+in several ways:
 
 * Google group for discussion: http://groups.google.com/group/skybreak-users
 * IRC: ```#skybreak``` on ```irc.freenode.net```
