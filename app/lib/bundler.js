@@ -201,9 +201,6 @@ _.extend(Bundle.prototype, {
     this.api.require('livedata');
     this.api.require('liveui');
     this.api.require('templating');
-
-    // these should really be something that users have to add manually
-    this.api.require('coffeescript');
   },
 
   // returns paths relative to app_dir
