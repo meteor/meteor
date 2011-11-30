@@ -150,10 +150,15 @@ _.extend(Sky, {
                       "'collection' option.");
     var selector = options.selector || {};
     var func = function (channel, params) {
-      var s = selector;
-      if (s instanceof Function)
-        s = s(params);
-      channel.send(collection._name, collection.find(s));
+      var opt = function (key, or) {
+        var x = options[key] || or;
+        return (x instanceof Function) ? x(params) : x
+      }
+      channel.send(collection._name, collection.find(opt("selector", {}), {
+        sort: opt("sort"),
+        skip: opt("skip"),
+        limit: opt("limit")
+      }));
     };
 
     Sky._publishes[name] = func;
