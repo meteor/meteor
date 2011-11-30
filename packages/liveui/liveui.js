@@ -177,7 +177,7 @@ Sky.ui.renderList = function (collection, element, options) {
         // taken care of removing the rendered element
       });
 
-    Sky.ui._setupEvents(elt, options.events || {}, [obj]);
+    Sky.ui._setupEvents(elt, options.events || {}, obj);
     return elt;
   };
 
