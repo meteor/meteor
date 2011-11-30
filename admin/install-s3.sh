@@ -1,6 +1,6 @@
 #!/bin/bash
 
-URL="http://d377jur38fl888.cloudfront.net/skybreak-package-0.0.37.tar.gz"
+URL="http://d377jur38fl888.cloudfront.net/skybreak-package-0.0.38.tar.gz"
 TARGET="/usr/local/skybreak"
 PARENT="/usr/local"
 
