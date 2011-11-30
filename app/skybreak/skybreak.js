@@ -338,11 +338,12 @@ Commands.push({
     var app_dir = path.resolve(require_project("bundle"));
     var build_dir = path.join(app_dir, '.skybreak/local/build_tar');
     var bundle_path = path.join(build_dir, 'bundle');
+    var output_path = path.resolve(argv._[0]); // get absolute path
     require('../lib/bundler.js').bundle(app_dir, bundle_path);
 
     var cp = require('child_process');
     cp.execFile('/usr/bin/env',
-                ['tar', 'czf', argv._[0], 'bundle'],
+                ['tar', 'czf', output_path, 'bundle'],
                 {cwd: build_dir},
                 function (error, stdout, stderr) {
                   if (error !== null) {
