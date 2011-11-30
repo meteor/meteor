@@ -399,7 +399,7 @@ Commands.push({
     var cp = require('child_process');
     // curl -# progress meter, -f exit nonzero if HTTP 403, -F form data.
     // XXX exec won't let us buffer the output.
-    cp.exec('tar czf - bundle | curl -f -# -F file=@- http://deploy.skybreakplatform.com/deploy/' + url.hostname,
+    cp.exec('tar czf - bundle | curl -f -# --data-binary @- http://deploy.skybreakplatform.com/deploy/' + url.hostname,
             {cwd: build_dir},
             function (error, stdout, stderr) {
               files.rm_recursive(build_dir);
