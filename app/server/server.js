@@ -125,7 +125,8 @@ var run = function (bundle_dir) {
 
   }).run();
 
-  init_keepalive();
+  if (argv.keepalive)
+    init_keepalive();
 };
 
 run();

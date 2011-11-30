@@ -214,7 +214,8 @@ var start_server = function (bundle_path, port, mongo_url, on_exit) {
 
   Status.running = true;
   proc = spawn(process.execPath,
-               [path.join(bundle_path, 'main.js')], {env: env});
+               [path.join(bundle_path, 'main.js'), '--keepalive'],
+               {env: env});
 
   proc.stdout.setEncoding('utf8');
   proc.stdout.on('data', function (data) {
