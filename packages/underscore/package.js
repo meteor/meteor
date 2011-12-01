@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Collection of small helper functions (map, each, bind, filter..)"
+  summary: "Collection of small helper functions (map, each, bind, ...)"
 });
 
 // XXX or, underscore_min.js, which is even checked in for you ..
