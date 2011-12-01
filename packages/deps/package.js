@@ -1,3 +1,5 @@
+// XXX rename package 'monitor'?
+
 Package.describe({
   summary: "Dependency mananger to allow reactive callbacks",
   internal: true

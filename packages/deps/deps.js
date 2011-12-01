@@ -1,10 +1,5 @@
 Sky = window.Sky || {};
 
-// XXX rename package 'monitor'?
-
-// XXX XXX what happens if invalidate is called before the initial
-// invocation of func has returned?
-
 (function () {
   var next_id = 1;
   var active_id = null; // null if not inside monitor
@@ -80,14 +75,3 @@ Sky = window.Sky || {};
 
     }});
 })();
-
-
-
-      /// If inside 'monitor' block: register a cleanup function. When
-      /// 'changed' is called on the block, your callback function
-      /// will be called. It will be called exactly once. Use this to
-      /// clean up whatever event handlers you had wired up to
-      /// 'changed'. In other words, when you get this call, you know
-      /// that you are no longer responsible for calling 'changed'.
-      ///
-      /// If not inside 'monitor' block: throws an exception.
