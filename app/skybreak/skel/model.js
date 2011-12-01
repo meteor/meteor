@@ -1,3 +1,5 @@
-Presses = Sky.Collection('presses');
+Clicks = Sky.Collection('clicks');
 
-Sky.publish('presses', {});
+if (Sky.is_server) {
+  Sky.publish('clicks', {});
+}

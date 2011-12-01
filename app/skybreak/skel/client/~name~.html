@@ -3,34 +3,28 @@
 </head>
 
 <body>
+  <div id="wrapper">
+  <img src="planes.png" id="skybreak">
+
   <h1>~name~</h1>
 
-  Welcome to Skybreak! Here is a button for you to press.
+  Skybreak is an ultra-simple environment for building websites:
+  <ul>
+    <li>In pure Javascript</li>
+    <li>That send data, not HTML, over the wire</li>
+    <li>Using your choice of popular open-source libraries</li>
+  </ul>
 
   {{> button_demo }}
-
-  <!-- Skybreak is an incredibly fast way to create incredibly great
-  websites
-  - in pure Javascript
-
-  - using your tools of choice, from jQuery and backbone to
-  Coffeescript and handlebars
-  -->
-
-  <img class="banner" src="/4201645142_ec2e3bb3f8_b.jpg">
-
+  </div>
 </body>
 
 <template name="button_demo">
-  <div>
-    <input type="button" value="Button"><br>
+  <div class="button_demo">
+    <input type="button" value="Press this button">
 
-    This delightful button has
-
-    {{#if never_pressed}}
-      never been pressed! Won't you be the first?
-    {{else}}
-      been pressed {{press_count}} times.
+    {{#if ever_pressed}}
+      <div>The button has been pressed {{press_count}} times.</div>
     {{/if}}
   </div>
 </template>
