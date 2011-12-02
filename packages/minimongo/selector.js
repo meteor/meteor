@@ -260,9 +260,14 @@ Collection._compileSelector = function (selector) {
   // you can pass a literal function instead of a selector
   if (selector instanceof Function)
     return function (doc) {return selector.call(doc);}
-  return eval("(function(f,literals){return function(doc){return " +
-              Collection._exprForSelector(selector, literals) +
-              ";};})")(Collection._f, literals);
+
+  // eval() does not return a value in IE8, nor does the spec say it
+  // should. Assign to a local to get the value, instead.
+  var _func;
+  eval("_func = (function(f,literals){return function(doc){return " +
+       Collection._exprForSelector(selector, literals) +
+       ";};})")
+  return _func(Collection._f, literals);
 };
 
 // XXX implement ordinal indexing: 'people.2.name'
