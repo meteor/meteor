@@ -389,7 +389,7 @@ Commands.push({
       process.exit(1);
     }
 
-    process.stdout.write('Deploying to ' + url.hostname + ' ...\n');
+    process.stdout.write('Deploying to ' + url.hostname + '.  Bundling ... ');
 
     var app_dir = path.resolve(require_project("bundle"));
     var build_dir = path.join(app_dir, '.skybreak/local/build_tar');
@@ -397,42 +397,52 @@ Commands.push({
     var bundle_opts = { skip_dev_bundle: true };
     require('../lib/bundler.js').bundle(app_dir, bundle_path, bundle_opts);
 
-    var cp = require('child_process');
-    // curl -# progress meter, -f exit nonzero if HTTP 403, -F form data.
-    // XXX exec won't let us buffer the output.
-    cp.exec('tar czf - bundle | curl -f -# --data-binary @- http://deploy.skybreakplatform.com/deploy/' + url.hostname,
-            {cwd: build_dir},
-            function (error, stdout, stderr) {
-              files.rm_recursive(build_dir);
+    process.stdout.write('uploading ... ');
 
-              process.stdout.write(stdout);
-              process.stderr.write(stderr);
+    var spawn = require('child_process').spawn;
 
-              if (error !== null) {
-                // XXX better error reporting
-                process.stderr.write("couldn't deploy\n");
-                process.exit(1);
-              }
+    var tar = spawn('tar', ['czf', '-', 'bundle'], {cwd: build_dir});
 
-              process.stdout.write('Done.  Now serving at ' + url.hostname + '\n');
+    var deploy_req_opts = {
+      method: 'POST',
+      host: 'deploy.skybreakplatform.com',
+      path: '/deploy/' + url.hostname
+    };
 
-              if (!url.hostname.match('skybreakplatform.com')) {
-                var dns = require('dns');
-                dns.resolve(url.hostname, 'CNAME', function (err, cnames) {
-                  if (err || cnames[0] !== 'origin.skybreakplatform.com') {
-                    dns.resolve(url.hostname, 'A', function (err, addresses) {
-                      if (err || addresses[0] !== '107.22.210.133') {
-                        process.stdout.write('-------------\n');
-                        process.stdout.write("You've deployed to a custom domain.\n");
-                        process.stdout.write("Please be sure to CNAME your hostname to origin.skybreakplatform.com,\n");
-                        process.stdout.write("or set an A record to 107.22.210.133.\n");
-                        process.stdout.write('-------------\n');
-                      }
-                    });
-                  }
-                });
-              }
-            });
+    var http = require('http');
+    var deploy_req = http.request(deploy_req_opts, function (deploy_res) {
+      deploy_res.on('end', function () {
+        process.stdout.write('done.\n');
+        process.stdout.write('Now serving at ' + url.hostname + '\n');
+
+        files.rm_recursive(build_dir);
+
+        if (!url.hostname.match('skybreakplatform.com')) {
+          var dns = require('dns');
+          dns.resolve(url.hostname, 'CNAME', function (err, cnames) {
+            if (err || cnames[0] !== 'origin.skybreakplatform.com') {
+              dns.resolve(url.hostname, 'A', function (err, addresses) {
+                if (err || addresses[0] !== '107.22.210.133') {
+                  process.stdout.write('-------------\n');
+                  process.stdout.write("You've deployed to a custom domain.\n");
+                  process.stdout.write("Please be sure to CNAME your hostname to origin.skybreakplatform.com,\n");
+                  process.stdout.write("or set an A record to 107.22.210.133.\n");
+                  process.stdout.write('-------------\n');
+                }
+              });
+            }
+          });
+        }
+      });
+    });
+
+    tar.stdout.on('data', function (data) {
+      deploy_req.write(data);
+    });
+
+    tar.on('exit', function (code) {
+      deploy_req.end();
+    });
   }
 });
 
