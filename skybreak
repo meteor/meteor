@@ -16,11 +16,15 @@ if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
     echo "This OS is not supported."
     exit 1
 fi
-if [ "x86_64" != $(uname -m) ] ; then
-    echo "Only x86_64 support at this time."
-    exit 1
-fi
 
+if [ "$UNAME" = "Darwin" ] ; then
+  if [ "i386" != $(uname -p) -o "1" != $(sysctl -n hw.cpu64bit_capable) ] ; then
+
+    # Can't just test uname -m = x86_64, because Snow Leopard can
+    # return other values.
+    echo "Only 64-bit Intel processors are supported at this time."
+  fi
+fi
 
 function install_dev_bundle {
     set -e
