@@ -45,17 +45,31 @@ Session.methods({
     self.keys[key] = value;
     self._ensureKey(key);
 
-    var activated = {};
-    for (var id in self.key_callbacks[key])
+    // Old code did this:
+    //   for (var id in self.key_callbacks[key])
+    //     self.key_callbacks[key][id]();
+    //
+    // This works on all browsers except IE8. The problem is that the
+    // callback we call will (most likely) add a new callback to
+    // self.key_callbacks. On IE8 this results in an infinite
+    // loop. Suprisingly, this does work on other browsers, they don't
+    // include newly added keys in the iteration.
+    //
+    // Work around this on IE8 by iterating over a copy.
+
+    _.each(_.keys(self.key_callbacks[key]), function (id) {
       self.key_callbacks[key][id]();
+    });
 
     if (old_value in self.key_value_callbacks[key])
-      for (var id in self.key_value_callbacks[key][old_value])
+      _.each(_.keys(self.key_value_callbacks[key][old_value]), function (id) {
         self.key_value_callbacks[key][old_value][id]();
+      });
 
     if (value in self.key_value_callbacks[key])
-      for (var id in self.key_value_callbacks[key][value])
+      _.each(_.keys(self.key_value_callbacks[key][value]), function (id) {
         self.key_value_callbacks[key][value][id]();
+      });
   },
 
   get: function (key) {
