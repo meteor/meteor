@@ -27,6 +27,57 @@ Sky.ui._tryFocus = function () {
   }
 };
 
+// update in place by hollowing out old element(s), and copying
+// over all of the children and attributes. unfortunately there
+// is no way to change the tag name. leave the events in place.
+Sky.ui._patch = function (old_elt_in, new_elt_in) {
+  // Don't let more than one instance of patch run simultaneously.
+  // http://code.google.com/p/chromium/issues/detail?id=104397
+  //
+  // XXX this is a pretty lame solution. Normally users see
+  // their changes to Session, the database, etc, reflected in
+  // the DOM immediately.. except if, somewhere above them on
+  // the stack, is a onblur handler triggered by patch, in which
+  // case updates are queued up?? That makes no kind of sense.
+  var already_in_patch = !!Sky.ui._patch_queue;
+  if (!already_in_patch)
+    Sky.ui._patch_queue = [];
+  Sky.ui._patch_queue.push([old_elt_in, new_elt_in])
+  if (already_in_patch)
+    return;
+
+  while (Sky.ui._patch_queue.length) {
+    var x = Sky.ui._patch_queue.splice(0, 10)[0];
+    var old_elt = x[0];
+    var new_elt = x[1];
+
+    if (old_elt.nodeType !== new_elt.nodeType)
+      throw new Error("The top-level element type can't change when " +
+                      "an element is rerendered (changed from type " +
+                      old_elt.nodeType + " to " + new_elt.nodeType + ")");
+    if (old_elt.nodeType === 3) { // text node
+      old_elt.nodeValue = new_elt.nodeValue;
+      return;
+    }
+    if (old_elt.tagName !== new_elt.tagName)
+      throw new Error("The top-level element type can't change when " +
+                      "an element is rerendered (changed from " +
+                      old_elt.tagName + " to " + new_elt.tagName + ")");
+    while (old_elt.childNodes.length)
+      old_elt.removeChild(old_elt.childNodes[0]);
+    while (new_elt.childNodes.length)
+      old_elt.appendChild(new_elt.childNodes[0]);
+    while (old_elt.attributes.length)
+      old_elt.removeAttribute(old_elt.attributes[0].name);
+    for (var i = 0; i < new_elt.attributes.length; i++)
+      old_elt.setAttribute(new_elt.attributes[i].name,
+                           new_elt.attributes[i].value);
+  };
+
+  delete Sky.ui._patch_queue;
+};
+
+
 /// Render some HTML, resulting in a DOM node, which is
 /// returned. Update that DOM node in place when any of the rendering
 /// dependencies change. (The tag name of the node returned from the
@@ -64,56 +115,6 @@ Sky.ui.render = function (render_func, events, event_data) {
       else
         Sky.ui._setupEvents(result, events || {}, event_data);
     } else {
-      // update in place by hollowing out old element(s), and copying
-      // over all of the children and attributes. unfortunately there
-      // is no way to change the tag name. leave the events in place.
-      var patch = function (old_elt_in, new_elt_in) {
-        // Don't let more than one instance of patch run simultaneously.
-        // http://code.google.com/p/chromium/issues/detail?id=104397
-        //
-        // XXX this is a pretty lame solution. Normally users see
-        // their changes to Session, the database, etc, reflected in
-        // the DOM immediately.. except if, somewhere above them on
-        // the stack, is a onblur handler triggered by patch, in which
-        // case updates are queued up?? That makes no kind of sense.
-        var already_in_patch = !!Sky.ui._patch_queue;
-        if (!already_in_patch)
-          Sky.ui._patch_queue = [];
-        Sky.ui._patch_queue.push([old_elt_in, new_elt_in])
-        if (already_in_patch)
-          return;
-
-        while (Sky.ui._patch_queue.length) {
-          var x = Sky.ui._patch_queue.splice(0, 10)[0];
-          var old_elt = x[0];
-          var new_elt = x[1];
-
-          if (old_elt.nodeType !== new_elt.nodeType)
-            throw new Error("The top-level element type can't change when " +
-                            "an element is rerendered (changed from type " +
-                            old_elt.nodeType + " to " + new_elt.nodeType + ")");
-          if (old_elt.nodeType === 3) { // text node
-            old_elt.nodeValue = new_elt.nodeValue;
-            return;
-          }
-          if (old_elt.tagName !== new_elt.tagName)
-            throw new Error("The top-level element type can't change when " +
-                            "an element is rerendered (changed from " +
-                            old_elt.tagName + " to " + new_elt.tagName + ")");
-          while (old_elt.childNodes.length)
-            old_elt.removeChild(old_elt.childNodes[0]);
-          while (new_elt.childNodes.length)
-            old_elt.appendChild(new_elt.childNodes[0]);
-          while (old_elt.attributes.length)
-            old_elt.removeAttribute(old_elt.attributes[0].name);
-          for (var i = 0; i < new_elt.attributes.length; i++)
-            old_elt.setAttribute(new_elt.attributes[i].name,
-                                 new_elt.attributes[i].value);
-        };
-
-        delete Sky.ui._patch_queue;
-      };
-
       if ((new_result instanceof Array) !==
           (result instanceof Array))
         throw new Error("A template function can't change from returning an " +
@@ -124,9 +125,9 @@ Sky.ui.render = function (render_func, events, event_data) {
                           "elements it returns (from " + result.length +
                           " to " + new_result.length + ")");
         for (var i = 0; i < result.length; i++)
-          patch(result[i], new_result[i]);
+          Sky.ui._patch(result[i], new_result[i]);
       } else
-        patch(result, new_result);
+        Sky.ui._patch(result, new_result);
       Sky.ui._tryFocus();
     }
   };
