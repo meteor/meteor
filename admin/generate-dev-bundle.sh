@@ -96,6 +96,8 @@ npm install uglify-js@1.1.1
 npm install clean-css@0.2.4
 npm install progress@0.0.4
 npm install fibers@0.6.3
+npm install useragent@1.0.3
+npm install request@2.2.9
 
 # patched versions to allow node 0.6.
 # This breaks websockets!
