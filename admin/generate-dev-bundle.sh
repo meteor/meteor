@@ -81,19 +81,19 @@ which node
 which npm
 
 cd "$DIR/lib/node_modules"
-npm install connect@1.7.2
-npm install connect-gzip@0.1.4
-npm install optimist@0.2.6
-npm install socket.io@0.8.2
-npm install coffee-script@1.1.2
+npm install connect@1.8.2
+npm install connect-gzip@0.1.5
+npm install optimist@0.2.8
+npm install socket.io@0.8.7
+npm install coffee-script@1.1.3
 npm install less@1.1.5
-npm install mime@1.2.2
-npm install semver@1.0.9
-npm install wrench@1.2.0
+npm install mime@1.2.4
+npm install semver@1.0.12
+npm install wrench@1.3.2
 npm install handlebars@1.0.2beta
-npm install mongodb@0.9.6-19
+npm install mongodb@0.9.7-1.4
 npm install uglify-js@1.1.1
-npm install clean-css@0.2.4
+npm install clean-css@0.3.0
 npm install progress@0.0.4
 npm install fibers@0.6.3
 npm install useragent@1.0.3
