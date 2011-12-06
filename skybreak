@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUNDLE_VERSION=0.0.4
+BUNDLE_VERSION=0.0.5
 
 # Find the script dir, following one level of symlink.
 if [ -L "$0" ] ; then
