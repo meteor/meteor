@@ -32,7 +32,7 @@ cd build
 
 git clone git://github.com/joyent/node.git
 cd node
-git checkout v0.6.1
+git checkout v0.6.5
 
 # Disable obnoxious print. No easy way to disable that I found.
 patch -p1 <<EOF
@@ -40,7 +40,7 @@ diff --git a/lib/sys.js b/lib/sys.js
 index c37e2a7..d4e71bc 100644
 --- a/lib/sys.js
 +++ b/lib/sys.js
-@@ -21,12 +21,13 @@
+@@ -21,15 +21,16 @@
  
  var util = require('util');
  
@@ -48,14 +48,20 @@ index c37e2a7..d4e71bc 100644
 -if (!sysWarning) {
 -  sysWarning = 'The "sys" module is now called "util". ' +
 -               'It should have a similar interface.';
--  util.error(sysWarning);
+-  if (process.env.NODE_DEBUG && process.env.NODE_DEBUG.indexOf('sys') != -1)
+-    console.trace(sysWarning);
+-  else
+-    console.error(sysWarning);
 -}
-+// XXX skybreak disabled
++// XXX Skybreak disabled
 +// var sysWarning;
 +// if (!sysWarning) {
 +//   sysWarning = 'The "sys" module is now called "util". ' +
 +//                'It should have a similar interface.';
-+//   util.error(sysWarning);
++//   if (process.env.NODE_DEBUG && process.env.NODE_DEBUG.indexOf('sys') != -1)
++//     console.trace(sysWarning);
++//   else
++//     console.error(sysWarning);
 +// }
  
  exports.print = util.print;
@@ -71,13 +77,6 @@ make install
 export PATH="$DIR/bin:$PATH"
 
 which node
-
-cd ..
-git clone https://github.com/isaacs/npm
-cd npm
-git checkout v1.0.105
-make
-node cli.js install -g -f
 
 which npm
 
