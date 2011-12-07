@@ -11,6 +11,7 @@ var argv = require('optimist').argv;
 var mime = require('mime');
 var socketio = require('socket.io');
 var handlebars = require('handlebars');
+var useragent = require('useragent');
 
 // this is a copy of underscore that will be shipped just for use by
 // this file, server.js.
@@ -37,6 +38,11 @@ var init_keepalive = function () {
   }, 3000);
 };
 
+var supported_browser = function (user_agent) {
+  var agent = useragent.lookup(user_agent);
+  return !(agent.family === 'IE' && agent.major <= '7');
+};
+
 var run = function (bundle_dir) {
   var bundle_dir = path.join(__dirname, '..');
 
@@ -50,9 +56,14 @@ var run = function (bundle_dir) {
   var app = connect.createServer();
   app.use(gzip.gzip());
   app.use(connect.static(path.join(bundle_dir, 'static')));
+
   var app_html = fs.readFileSync(path.join(bundle_dir, 'app.html'));
+  var unsupported_html = fs.readFileSync(path.join(bundle_dir, 'unsupported.html'));
   app.use(function (req, res) {
-    res.write(app_html);
+    if (supported_browser(req.headers['user-agent']))
+      res.write(app_html);
+    else
+      res.write(unsupported_html);
     res.end();
   });
 

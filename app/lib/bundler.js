@@ -416,6 +416,9 @@ exports.bundle = function (app_dir, output_path, options) {
   fs.writeFileSync(path.join(build_path, 'app.html'),
                    bundle.generate_app_html());
 
+  fs.writeFileSync(path.join(build_path, 'unsupported.html'),
+                   fs.readFileSync(path.join(__dirname, "unsupported.html")));
+
   fs.writeFileSync(path.join(build_path, 'main.js'),
 "require(require('path').join(__dirname, 'server/server.js'));\n");
 
