@@ -419,11 +419,6 @@ exports.bundle = function (app_dir, output_path, options) {
   fs.writeFileSync(path.join(build_path, 'main.js'),
 "require(require('path').join(__dirname, 'server/server.js'));\n");
 
-  // XXX XXX we need to rejigger this a bit to make it true (letting
-  // the user bring their own fibers -- which is necessary, if we want
-  // the package to be portable. same goes for any other binary
-  // package we use..) (also, we need to not require keepalives when
-  // the app is run this way.)
   fs.writeFileSync(path.join(build_path, 'README'),
 "This is a Skybreak application bundle. It has only one dependency,\n" +
 "node.js (with the 'fibers' package). To run the application:\n" +
