@@ -11,8 +11,9 @@
 // isn't a single DOM element (eg, a partial that is a set of
 // attributes, or a text string to be included inside an attribute..)
 
-// XXX it'd be nice to do a better job of hiding this symbol
+// XXX it'd be nice to do a better job of hiding these symbols
 Sky._pending_partials = null; // id -> element
+Sky._pending_partials_idx_nonce = 0;
 
 // XXX another disgusting hack -- we reach into handlebars and
 // extend #each to know how to cooperate with pending_partials and
@@ -99,7 +100,7 @@ Sky._hook_handlebars_each = function () {
       }
     });
 
-    var id = Sky.genId();
+    var id = Sky._pending_partials_idx_nonce++;
     Sky._pending_partials[id] = element;
     return "<div id='" + id +
       "'><!-- for replacement with findlive each --></div>";
@@ -116,7 +117,7 @@ Sky._partials = {};
 // templates.
 //
 // XXX hack: if multi is true, the template is allowed to return
-// multiple elemnts at toplevel, and the return value of the created
+// multiple elements at toplevel, and the return value of the created
 // template function is a list. this is used for <body>.
 Sky._def_template = function (name, raw_func, multi) {
   Sky._hook_handlebars_each();
@@ -204,7 +205,7 @@ Sky._def_template = function (name, raw_func, multi) {
         // XXX lame error
         throw new Error("this partial may only be invoked from inside a Template.foo-style template");
       var elt = func(data);
-      var id = Sky.genId();
+      var id = Sky._pending_partials_idx_nonce++;
       Sky._pending_partials[id] = elt;
       return "<div id='" + id + "'><!-- for replacement with partial --></div>";
     };
