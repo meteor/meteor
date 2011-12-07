@@ -2,7 +2,7 @@
 
 set -e
 
-BUNDLE_VERSION=0.0.4
+BUNDLE_VERSION=0.0.5
 UNAME=$(uname)
 
 if [ "$UNAME" == "Linux" ] ; then
@@ -32,7 +32,7 @@ cd build
 
 git clone git://github.com/joyent/node.git
 cd node
-git checkout v0.6.1
+git checkout v0.6.5
 
 # Disable obnoxious print. No easy way to disable that I found.
 patch -p1 <<EOF
@@ -40,7 +40,7 @@ diff --git a/lib/sys.js b/lib/sys.js
 index c37e2a7..d4e71bc 100644
 --- a/lib/sys.js
 +++ b/lib/sys.js
-@@ -21,12 +21,13 @@
+@@ -21,15 +21,16 @@
  
  var util = require('util');
  
@@ -48,14 +48,20 @@ index c37e2a7..d4e71bc 100644
 -if (!sysWarning) {
 -  sysWarning = 'The "sys" module is now called "util". ' +
 -               'It should have a similar interface.';
--  util.error(sysWarning);
+-  if (process.env.NODE_DEBUG && process.env.NODE_DEBUG.indexOf('sys') != -1)
+-    console.trace(sysWarning);
+-  else
+-    console.error(sysWarning);
 -}
-+// XXX skybreak disabled
++// XXX Skybreak disabled
 +// var sysWarning;
 +// if (!sysWarning) {
 +//   sysWarning = 'The "sys" module is now called "util". ' +
 +//                'It should have a similar interface.';
-+//   util.error(sysWarning);
++//   if (process.env.NODE_DEBUG && process.env.NODE_DEBUG.indexOf('sys') != -1)
++//     console.trace(sysWarning);
++//   else
++//     console.error(sysWarning);
 +// }
  
  exports.print = util.print;
@@ -72,31 +78,26 @@ export PATH="$DIR/bin:$PATH"
 
 which node
 
-cd ..
-git clone https://github.com/isaacs/npm
-cd npm
-git checkout v1.0.105
-make
-node cli.js install -g -f
-
 which npm
 
 cd "$DIR/lib/node_modules"
-npm install connect@1.7.2
-npm install connect-gzip@0.1.4
-npm install optimist@0.2.6
-npm install socket.io@0.8.2
-npm install coffee-script@1.1.2
+npm install connect@1.8.2
+npm install connect-gzip@0.1.5
+npm install optimist@0.2.8
+npm install socket.io@0.8.7
+npm install coffee-script@1.1.3
 npm install less@1.1.5
-npm install mime@1.2.2
-npm install semver@1.0.9
-npm install wrench@1.2.0
+npm install mime@1.2.4
+npm install semver@1.0.12
+npm install wrench@1.3.2
 npm install handlebars@1.0.2beta
-npm install mongodb@0.9.6-19
+npm install mongodb@0.9.7-1.4
 npm install uglify-js@1.1.1
-npm install clean-css@0.2.4
+npm install clean-css@0.3.0
 npm install progress@0.0.4
 npm install fibers@0.6.3
+npm install useragent@1.0.3
+npm install request@2.2.9
 
 # patched versions to allow node 0.6.
 # This breaks websockets!
