@@ -144,13 +144,6 @@ if ( !Array.prototype.forEach ) {
   };
 }
 
-
-/// Return a random string that is likely to be unique and contains
-/// only alphanumeric characters.
-var genGuid = function () {
-  return genId(); // suitable for now
-}
-
 /// http://snipplr.com/view/26662/get-url-parameters-with-jquery--improved/
 ///
 /// XXX should this be here? It is client-only (references window).

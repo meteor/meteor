@@ -91,7 +91,7 @@ Sky = window.Sky || {};
         // XXX mutates the object passed in. that is not cool.
         if (obj._id)
           console.log("WARNING: trying to insert object w/ _id set");
-        var _id = Sky.genId();
+        var _id = Collection.uuid();
         obj._id = _id;
 
         if (this._name)
@@ -161,9 +161,6 @@ Sky = window.Sky || {};
   };
 
   _.extend(Sky, {
-    // XXX don't get this out of minimongo..
-    genId: Collection._genId,
-
     is_server: false,
     is_client: true,
 
@@ -189,7 +186,7 @@ Sky = window.Sky || {};
       } else {
         // new sub, add object.
         // generate our own id so we can know it w/ a find afterwards.
-        id = Sky.genId();
+        id = Collection.uuid();
         subs.insert({_id: id, name: name, args: args, count: 1});
 
         sub_ready_callbacks[id] = [];

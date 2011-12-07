@@ -24,5 +24,6 @@ Package.client_file('livedata_client.js');
 // out of everyone?
 Package.server_file('../../app/lib/third/underscore.js');
 
+Package.server_file('uuid.js');
 Package.server_file('livedata_server.js');
 Package.server_file('mongo_driver.js');

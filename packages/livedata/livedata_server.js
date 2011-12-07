@@ -104,25 +104,6 @@ _.extend(Sky, {
   is_client: false,
 
   /**
-   * Returns a unique identifier as a string.
-   *
-   * XXX copied from minimongo/genid.js
-   */
-  _genId_counter:0, // XXX namespace pollution
-  genId: function () {
-    var key = (Sky._genId_counter++) + "#";
-    key += (new Date()).getTime() + "#";
-    key += Math.random() + "#";
-    key += Math.random() + "#";
-    key += Math.random() + "#";
-    // XXX XXX eliminate require (easy, in this case..)
-    var md5 = __skybreak_bootstrap__.require('crypto').createHash('md5');
-    md5.update(key);
-    var id = md5.digest('hex');
-    return id;
-  },
-
-  /**
    * Defines a live dataset that clients can subscribe to.
    *
    * @param name {String} identifier for query
@@ -201,7 +182,7 @@ Sky.Collection = function (name) {
         new_doc = {};
         _.extend(new_doc, doc);
         doc = new_doc;
-        doc._id = Sky.genId();
+        doc._id = Sky.uuid();
       }
 
       Sky._mongo_driver.insert(this._name, doc);
