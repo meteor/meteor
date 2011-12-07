@@ -19,7 +19,7 @@ Collection.prototype.insert = function (doc) {
   doc = Collection._deepcopy(doc);
   // XXX deal with mongo's binary id type?
   if (!('_id' in doc))
-    doc._id = Collection._genId();
+    doc._id = Collection.uuid();
   // XXX check to see that there is no object with this _id yet?
   self.docs[doc._id] = doc;
   for (var qid in self.queries) {

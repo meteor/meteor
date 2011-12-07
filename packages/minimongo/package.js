@@ -6,5 +6,5 @@ Package.describe({
 Package.client_file('minimongo.js');
 Package.client_file('selector.js');
 Package.client_file('sort.js');
-Package.client_file('genid.js');
+Package.client_file('uuid.js');
 Package.client_file('modify.js');
