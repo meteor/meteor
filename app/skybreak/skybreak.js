@@ -13,7 +13,7 @@ var usage = function() {
 "Use 'skybreak create <name>' to create a new Skybreak project.\n" +
 "\n" +
 "Commands:\n");
-  Commands.forEach(function (cmd) {
+  _.each(Commands, function (cmd) {
     if (cmd.help) {
       var name = cmd.name + "           ".substr(cmd.name.length);
       process.stdout.write("   " + name + cmd.help + "\n");

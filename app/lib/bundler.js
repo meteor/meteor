@@ -197,10 +197,6 @@ _.extend(Bundle.prototype, {
     // underscore package
     this.api.require('underscore');
 
-    // XXX this is some kind of legacy crap that someone might need
-    // but I don't know the details. it should go away.
-    this.api.require('basics');
-
     // standard client packages (for now), for the classic skybreak stack
     this.api.require('deps');
     this.api.require('session');
@@ -295,7 +291,7 @@ exports.bundle = function (app_dir, output_path, options) {
   // stuff' like minimongo
   bundle.add_standard_packages();
 
-  require('./project.js').get_packages(app_dir).forEach(function (p) {
+  _.each(require('./project.js').get_packages(app_dir), function (p) {
     bundle.api.require(p);
   });
 
@@ -303,7 +299,7 @@ exports.bundle = function (app_dir, output_path, options) {
 
   var user_files = bundle.compute_user_files(app_dir);
 
-  user_files.forEach(function (rel_path) {
+  _.each(user_files, function (rel_path) {
     var full_path = path.join(app_dir, rel_path);
 
     // XXX at some point we should re-work our directory structure and
@@ -416,7 +412,7 @@ exports.bundle = function (app_dir, output_path, options) {
 
   app_json.load = [];
   files.mkdir_p(path.join(build_path, 'app'), 0755);
-  bundle.server_load.forEach(function (rel_path) {
+  _.each(bundle.server_load, function (rel_path) {
     var path_in_bundle = path.join('app', rel_path);
     var full_path = path.join(build_path, path_in_bundle);
     app_json.load.push(path_in_bundle);

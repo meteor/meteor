@@ -163,7 +163,7 @@ Sky._def_template = function (name, raw_func, multi) {
             replaced.push(id);
           }
         }
-        replaced.forEach(function (id) {
+        _.each(replaced, function (id) {
           delete Sky._pending_partials[id];
         });
       } while (replaced.length);

@@ -66,12 +66,12 @@ var files = module.exports = {
             return;
           }
 
-          fileNames.forEach(function (fileName) {
+          _.each(fileNames, function (fileName) {
             files.file_list_async(path.join(filepath, fileName),
                                   extensions, func);
           });
         });
-      } else if (extensions.indexOf(path.extname(filepath)) !== -1) {
+      } else if (_.indexOf(extensions, path.extname(filepath)) !== -1) {
         func(filepath);
       }
     });
@@ -83,11 +83,11 @@ var files = module.exports = {
     var stats = fs.statSync(filepath);
     if (stats.isDirectory()) {
       var fileNames = fs.readdirSync(filepath);
-      fileNames.forEach(function (fileName) {
+      _.each(fileNames, function (fileName) {
         ret = ret.concat(files.file_list_sync(
           path.join(filepath, fileName), extensions));
       });
-    } else if (extensions.indexOf(path.extname(filepath)) !== -1) {
+    } else if (_.indexOf(extensions, path.extname(filepath)) !== -1) {
       ret.push(filepath);
     }
 
@@ -189,7 +189,7 @@ var files = module.exports = {
     }
 
     if (stat.isDirectory()) {
-      fs.readdirSync(p).forEach(function (file) {
+      _.each(fs.readdirSync(p), function (file) {
         file = path.join(p, file);
         files.rm_recursive(file);
       });
@@ -238,7 +238,7 @@ var files = module.exports = {
   cp_r: function (from, to, options) {
     options = options || {};
     files.mkdir_p(to, 0755);
-    fs.readdirSync(from).forEach(function (f) {
+    _.each(fs.readdirSync(from), function (f) {
       if (_.any(options.ignore || [], function (pattern) {
         return f.match(pattern);
       })) return;

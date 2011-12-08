@@ -474,7 +474,7 @@ test_ordering = function () {
 
   // document ordering under a sort specification
   var test = function (sorts, docs) {
-    sorts.forEach(function (sort) {
+    _.each(sorts, function (sort) {
       assert_ordering(Collection._compileSort(sort), docs);
     });
   };
