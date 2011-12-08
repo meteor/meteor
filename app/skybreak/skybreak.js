@@ -527,7 +527,7 @@ Commands.push({
 
     var deploy_req_opts = {
       method: 'POST',
-      host: 'deploy.skybreakplatform.com',
+      host: deploy.HOSTNAME,
       path: '/deploy/' + url.hostname
     };
 
@@ -586,7 +586,7 @@ Commands.push({
     var http = require('http');
 
     var options = {
-      host: 'deploy.skybreakplatform.com',
+      host: deploy.HOSTNAME,
       port: 80,
       path: '/logs/' + url.hostname,
     };

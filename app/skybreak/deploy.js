@@ -1,3 +1,6 @@
+exports.HOSTNAME = 'deploy.skybreakplatform.com';
+
+
 // accepts www.host.com, defaults domain to skybreakplatform, defaults
 // protocol to http.
 //
