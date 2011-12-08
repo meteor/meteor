@@ -64,16 +64,7 @@ var start_proxy = function (outer_port, inner_port) {
 
       res.write("Your app is crashed. Here's the latest log.\n\n");
 
-      // XXX this is a hack to look through the error logs until the last
-      // startup.
-      var last_logs = _.reduceRight(server_log, function(acc, log) {
-        if (!_.last(acc) || ! _.last(acc).launch)
-          return acc.concat([log]);
-        return acc;
-      }, []);
-      last_logs.reverse();
-
-      _.each(last_logs, function(log) {
+      _.each(server_log, function(log) {
         _.each(log, function(val, key) {
           res.write(val);
           // deal with mixed line endings! XXX
@@ -365,6 +356,7 @@ exports.run = function (app_dir, bundle_path, bundle_opts, port) {
   var restart_server = function () {
     if (server)
       kill_server(server);
+    server_log = [];
 
     try {
       bundle();
@@ -382,7 +374,8 @@ exports.run = function (app_dir, bundle_path, bundle_opts, port) {
   };
 
   watch_files(app_dir, deps.extensions || [], function () {
-    // log_to_clients({'system': "=> Modified -- restarting."});
+    if (Status.crashing)
+      log_to_clients({'system': "=> Modified -- restarting."});
     Status.reset();
     restart_server();
   });
