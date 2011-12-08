@@ -50,8 +50,7 @@ updater.get_manifest(function (manifest) {
     try { fs.mkdirSync(tmp_dir, 0755); } catch (err) { }
 
     // open pipe to tar
-    // XXX not always /usr/bin/tar !!!. linux is /bin/tar.
-    var tar_proc = spawn("/usr/bin/tar", ["-C", tmp_dir, "-xzf", "-"]);
+    var tar_proc = spawn("tar", ["-C", tmp_dir, "-xzf", "-"]);
 
     // XXX
     tar_proc.stderr.setEncoding('utf8');
