@@ -30,7 +30,7 @@ fi
 
 function install_dev_bundle {
     set -e
-    trap "echo FAILED" INT TERM EXIT
+    trap "echo Failed to install dependency kit." INT TERM EXIT
 
     TARBALL="dev_bundle_${UNAME}_${BUNDLE_VERSION}.tar.gz"
     TMPDIR="$SCRIPT_DIR/dev_bundle.xxx"
