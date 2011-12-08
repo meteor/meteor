@@ -260,7 +260,7 @@ var kill_server = function (handle) {
 
 ////////// Watching dependencies  //////////
 
-var watch_files = function (app_dir, extensions, on_change) {
+var watch_files = function (app_dir, get_extensions, on_change) {
   var watched_files = {};
 
   var file_accessed = function (oldStat, newStat) {
@@ -284,12 +284,12 @@ var watch_files = function (app_dir, extensions, on_change) {
   };
 
   // kick off initial watch.
-  files.file_list_async(app_dir, extensions,
+  files.file_list_async(app_dir, get_extensions(),
                         _.bind(consider_file, null, true));
 
   // watch for new files.
   setInterval(function () {
-    files.file_list_async(app_dir, extensions,
+    files.file_list_async(app_dir, get_extensions(),
                         _.bind(consider_file, null, false));
   }, 5000);
 
@@ -334,19 +334,44 @@ exports.run = function (app_dir, bundle_path, bundle_opts, port) {
   var inner_port = outer_port + 1;
   var mongo_port = outer_port + 2;
   var mongo_url = "mongodb://localhost:" + mongo_port + "/skybreak";
-  var bundle = function(){ bundler.bundle(app_dir, bundle_path, bundle_opts); };
+
+  var deps = {};
+  var started_watching_files = false;
+  var warned_about_no_deps_info = false;
+  var bundle = function () {
+    bundler.bundle(app_dir, bundle_path, bundle_opts);
+
+    try {
+      var deps_raw =
+        fs.readFileSync(path.join(bundle_path, 'dependencies.json'), 'utf8');
+      deps = JSON.parse(deps_raw.toString());
+    } catch (e) {
+      if (!warned_about_no_deps_info) {
+        process.stdout.write("No dependency info in bundle. " +
+                             "Filesystem monitoring disabled.\n");
+        warned_about_no_deps_info = true;
+      }
+    }
+
+    if (!started_watching_files) {
+      // Don't start watching files until we've built the bundle for
+      // the first time and have gotten the deps info out of it.
+      var get_extensions = function () {
+        return deps.extensions || [];
+      };
+
+      watch_files(app_dir, get_extensions, function () {
+        if (Status.crashing)
+          log_to_clients({'system': "=> Modified -- restarting."});
+        Status.reset();
+        restart_server();
+      });
+
+      started_watching_files = true;
+    }
+  };
 
   process.stdout.write("[[[[[ " + files.pretty_path(app_dir) + " ]]]]]\n\n");
-
-  deps = {};
-  try {
-    var deps_raw =
-      fs.readFileSync(path.join(bundle_path, 'dependencies.json'), 'utf8');
-    var deps = JSON.parse(deps_raw.toString());
-  } catch (e) {
-    process.stdout.write("No dependency info in bundle. " +
-                         "Filesystem monitoring disabled.\n");
-  }
 
   if (!files.in_checkout())
     start_update_checks();
@@ -372,13 +397,6 @@ exports.run = function (app_dir, bundle_path, bundle_opts, port) {
         restart_server(app_dir);
     });
   };
-
-  watch_files(app_dir, deps.extensions || [], function () {
-    if (Status.crashing)
-      log_to_clients({'system': "=> Modified -- restarting."});
-    Status.reset();
-    restart_server();
-  });
 
   var launch = function () {
     launch_mongo(app_dir, mongo_port,
