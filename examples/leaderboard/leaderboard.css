@@ -1,0 +1,56 @@
+body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, san-serif;
+    margin: 50px auto;
+    width: 420px;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -o-user-select: none;
+    user-select: none;
+}
+
+.leaderboard {
+    margin: 50px 0px;
+}
+
+.player {
+    padding: 5px 10px;
+}
+
+.player .name {
+    display: inline-block;
+    width: 300px;
+    font-weight: 200;
+    font-size: 1.75em;
+}
+
+.player .score {
+    font-weight: bold;
+    display: inline-block;
+    width: 100px;
+    color: #777;
+    font-size: 2em;
+    text-align: right;
+}
+
+.player.selected {
+    background-color: yellow;
+}
+
+.player.selected .score {
+    color: black;
+}
+
+.details, .none {
+    font-weight: bold;
+    font-size: 2em;
+    border-style: dashed none none none;
+    border-color: #ccc;
+    border-width: 4px;
+    margin: 50px 10px;
+    padding: 10px 0px;
+}
+
+.none {
+    color: #777;
+}

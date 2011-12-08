@@ -1,0 +1,221 @@
+body {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.4em;
+  background: #eeeeee;
+  color: #333333;
+}
+
+.ui-layout-north {
+    background: #dddddd;
+}
+
+#tag-filter {
+    margin: 8px;
+}
+
+#items-view {
+    display: none;
+    margin: 10px;
+}
+
+#new-todo {
+    width: 466px;
+    font-size: 24px;
+    font-family: inherit;
+    line-height: 1.4em;
+    border: 0;
+    outline: none;
+    padding: 6px;
+    border: 1px solid #999999;
+    margin-left: 75px;
+}
+
+.ui-layout-west {
+    padding: 10px;
+    border-right: solid 1px #cccccc;
+}
+
+.ui-layout-south {
+    border-top: solid 1px black;
+    padding: 10px;
+    background: #cccccc;
+}
+
+#help p {
+    margin: 8px;
+}
+
+.ui-layout-center {
+    overflow: auto;
+}                    
+
+#lists .list {
+    margin: 2px;
+    font-weight: bold;
+}
+
+#lists .list-name .empty {
+    font-size: 0.9em;
+    font-style: italic;
+}
+
+#lists .editing .display,
+#lists .edit {
+    display: none;
+}
+#lists .editing .edit {
+    display: block;
+}
+#lists .editing input {
+    font-family: inherit;
+    margin: 0;
+    line-height: 1.6em;
+    border: 0;
+    outline: none;
+    padding: 10px 7px 0px 27px;
+    border: 1px solid #999999;
+}
+#lists .selected {
+    background-color: lightblue;
+}
+
+/* todo items */
+
+#item-list {
+    margin-top: 10px;
+}
+
+#item-list li {
+    margin: 12px;
+    font-size: 24px;
+    line-height: 1.1em;
+    border-bottom: 1px solid #cccccc;
+    height: 50px;
+}
+
+#item-list li:after {
+    content: "\0020";
+    display: block;
+    height: 0;
+    clear: both;
+    overflow: hidden;
+    visibility: hidden;
+}
+
+#item-list .destroy {
+    float: left;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    margin-top: 12px;
+    margin-left: 5px;
+}
+
+#item-list li:hover .destroy {
+    background: url('/destroy.png') no-repeat 0 0;
+}
+
+#item-list li .destroy:hover {
+    background-position: 0 -20px;
+}
+
+#item-list .display {
+    float: left;
+    margin: 9px;
+}
+
+#item-list .check {
+    float: left;
+    margin: 9px;
+}
+
+#item-list .edit {
+    float: left;
+}
+
+#item-list .todo-text {
+    float: left;
+}
+
+#item-list li.editing {
+    padding: 0;
+}
+
+#item-list .editing .display,
+#item-list .edit {
+    display: none;
+}
+
+#item-list .editing .edit {
+    display: block;
+}
+
+#item-list .editing input {
+    width: 444px;
+    font-size: 24px;
+    font-family: inherit;
+    margin-left: 38px;
+    line-height: 1.6em;
+    border: 0;
+    outline: none;
+    border: 1px solid #999999;
+}
+
+#item-list .done .todo-text {
+    text-decoration: line-through;
+    color: #777777;
+}
+
+#item-list .item-tags {
+    float: right;
+}
+
+/* tags */
+
+.tag {
+    float: left;
+
+    color: black;
+    background: #aaaaaa;
+    font-size: 16px;
+    font-weight: bold;
+
+    cursor: pointer;
+
+    border: 1px solid black;
+    border-radius: 2px;
+    -webkit-border-radius: 2px;
+    -moz-border-radius: 2px;
+
+    padding: 1px 3px 1px 3px;
+    margin: 4px;
+}
+
+.tag.addtag {
+    background: lightblue;
+    border: 1px dashed black;
+}
+
+.tag.edittag {
+    display: none;
+}
+
+.tag.selected {
+    background: lightblue;
+}
+
+.tag .name {
+    float: left;
+}
+
+.tag .remove {
+    margin-top: 5px;
+    margin-left: 5px;
+    float: left;
+    width: 16px;
+    height: 16px;
+    background-image: url("/close_16.png");
+}
+
+

@@ -1,0 +1,26 @@
+#room-list .room.selected {
+    color: white;
+    background-color: black;
+}
+
+.room .name {
+    display: inline;
+}
+
+.room .delete {
+    float: right;
+    display: none;
+}
+
+.room:hover .delete {
+    display: block;
+}
+
+.add-room {
+    margin-top: 20px;
+    font-style: italic;
+}
+
+.add-room:hover {
+    text-decoration: underline;
+}

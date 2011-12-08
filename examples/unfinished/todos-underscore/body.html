@@ -1,0 +1,98 @@
+<head>
+<title>Todos</title>
+</head>
+
+<body>
+
+<div class="ui-layout-north">
+  <div id="tag-filter" class="tag-list">
+  </div>
+</div>
+
+<div class="ui-layout-center">
+  <div id="items-view">
+    <input type="text" id="new-todo" placeholder="New item, press enter to save." />
+    <ul id="item-list"></ul>
+  </div>
+</div>
+
+<div class="ui-layout-west">
+  <div id="createList">
+    <input type="text" id="new-list" placeholder="New list name." />
+  </div>
+
+  <div id="lists"></div>
+</div>
+
+<div class="ui-layout-south">
+  <div id="help">
+    <p>
+      To get started, create a new todo list in the left sidebar by
+      typing its name in the text box.  Select a list by clicking on its
+      name, and rename by double clicking.  The active list appears in
+      the main window pane.  You can do the usual here: add items, check
+      them off as completed, and destroy items.  You can also tag items
+      with one or more tags, by clicking the blue <b>Add new tag</b>
+      button to the right.  All your in-use tags appear at the top.  You
+      can filter the list items by selecting a tag, or click the
+      leftmost button to return to the full list.
+    </p>
+
+    <p>
+      Inspired by Backbone's
+      <a href="http://documentcloud.github.com/backbone/examples/todos/index.html">Todo Demo</a>,
+      with credit to
+      <a href="http://jgn.me/">J&eacute;r&ocirc;me Gravel-Niquet</a>.
+    </p>
+  </div>
+</div>
+
+<!-- underscore templates -->
+
+<script type="text/template" id="tag-filter-template">
+  <div class="tag <%= Session.equals('tag_filter', tag) ? 'selected' : '' %>">
+    <%= tag || "Show all todo items" %>
+  </div>
+</script>
+
+<script type="text/template" id="list-template">
+  <div class="list <%= Session.equals('list_id', _id) ? 'selected' : '' %>">
+    <div class="display">
+      <div class="list-name">
+        <%= name || '<div class="empty">empty</i>' %>
+      </div>
+    </div>
+    <div class="edit">
+      <input class="list-name-input" type="text" value="" />
+    </div>
+  </div>
+</script>
+
+<script type="text/template" id="item-template">
+  <li class="todo <%= typeof(done) !== 'undefined' && done ? 'done' : '' %>">
+    <div class="destroy"></div>
+    <div class="display">
+      <input class="check" type="checkbox" <%= typeof(done) !== 'undefined' && done ? 'checked="checked"' : '' %> />
+      <div class="todo-text"></div>
+    </div>
+    <div class="edit">
+      <input class="todo-input" type="text" value="" />
+    </div>
+    <div class="item-tags">
+      <% _.each(typeof(tags) === 'undefined' ? [] : tags, function (tag) { %>
+      <div class="tag">
+        <div class="name"><%= tag %></div>
+        <div class="remove" name="<%= tag %>"></div>
+      </div>
+      <% }); %>
+      <div class="tag addtag">
+        Add new tag
+      </div>
+      <div class="tag edittag">
+        <input type="text" value="" />
+      </div>
+    </div>
+  </li>
+</script>
+
+</body>

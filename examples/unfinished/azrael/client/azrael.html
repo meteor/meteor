@@ -1,0 +1,61 @@
+<body>
+
+<div class="ui-layout-center" id="chat-view">
+  {{> center_pane }}
+</div>
+<div class="ui-layout-east">East</div>
+<div class="ui-layout-west">
+  {{> room_list}}
+  {{> add_room}}
+</div>
+<div class="ui-layout-north">Azrael</div>
+
+</body>
+
+<template name="room_list">
+  <div id="room-list">
+    {{#each rooms}}
+      {{> room}}
+    {{/each}}
+  </div>
+</template>
+
+<template name="add_room">
+  <div class="add-room">
+    Create new room
+  </div>
+</template>
+
+<template name="room">
+  <div class="room {{maybe_selected}}">
+  {{#if editing}}
+    <input id="room_name_input" value="{{name}}">
+  {{else}}
+    <div class="name">{{name}}</div>
+    <div class="delete">(x)</div>
+  {{/if}}
+  </div>
+</template>
+
+<template name="center_pane">
+  <div id="center-pane">
+    {{#if any_room_selected}}
+      <div id="chat">
+        {{#each messages}}
+          {{> chat_message}}
+        {{else}}
+           No chat yet!
+        {{/each}}
+      </div>
+      <input id="chat-entry">
+    {{else}}
+      No room selected
+    {{/if}}
+  </div>
+</template>
+
+<template name="chat_message">
+  <div>
+    {{username}}: {{message}}
+  </div>
+</template>
