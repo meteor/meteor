@@ -359,6 +359,100 @@ Commands.push({
 });
 
 Commands.push({
+  name: "mongo",
+  help: "Connect to the Mongo database for the specified site",
+  func: function (argv) {
+    var opt = require('optimist')
+      .boolean('url')
+      .boolean('U')
+      .alias('url', 'U')
+      .describe('url', 'request a Mongo URL')
+      .usage(
+"Usage: skybreak mongo [--url] <site>\n" +
+"\n" +
+"Connect to the Mongo database for the specified site.  For a\n" +
+"URL suitable for an external program, specify --url (-U), which\n" +
+"will return a URL valid for the next 60 seconds."
+      );
+
+    new_argv = opt.argv;
+
+    if (new_argv.help) {
+      process.stdout.write(opt.help());
+      process.exit(1);
+    }
+
+    if (new_argv._.length !== 2) {
+      process.stdout.write(
+"Please specify a domain to connect to, such as www.example.com or\n" +
+"http://www.example.com/\n");
+      process.exit(1);
+    }
+
+    var url = require('./deploy').parse_url(new_argv._[1]);
+
+    if (!url.hostname) {
+      process.stdout.write(
+"Please specify a domain to connect to, such as www.example.com or\n" +
+"http://www.example.com/\n");
+      process.exit(1);
+    }
+
+    if (url.pathname != '/' || url.hash || url.query) {
+      process.stdout.write(
+"Sorry, Skybreak does not yet support specific path URLs, such as\n" +
+"http://www.example.com/blog .  Please specify the root of a domain.\n");
+      process.exit(1);
+    }
+
+    var http = require('http');
+
+    var options = {
+      host: 'deploy.skybreakplatform.com',
+      port: 80,
+      path: '/mongo/' + url.hostname,
+    };
+
+    var data = '';
+
+    var req = http.get(options, function(res) {
+      res.setEncoding('utf8');
+      res.on('data', function (chunk) { data += chunk; });
+      res.on('end', function () {
+        if (new_argv.url) {
+          console.log(data);
+          process.exit(0);
+        }
+
+        if (res.statusCode == 200) {
+          var mongo_path = path.join(files.get_dev_bundle(), 'mongodb/bin/mongo');
+          var mongo_url = require('url').parse(data);
+          var auth = mongo_url.auth.split(':');
+          var spawn = require('child_process').spawn;
+          spawn(mongo_path,
+                ['-u', auth[0],
+                 '-p', auth[1],
+                 mongo_url.hostname + ':' + mongo_url.port + mongo_url.pathname],
+                {
+                  customFds: [0, 1, 2], // just take the fds! sketch, but works
+                });
+        } else {
+          process.stderr.write(data);
+          process.stderr.write("\n");
+          process.exit(1);
+        }
+      });
+    });
+
+    req.on('error', function(e) {
+      console.log(e);
+      console.log("Error connecting to Skybreak: " + e.message);
+      process.exit(1);
+    });
+  }
+});
+
+Commands.push({
   name: "deploy",
   help: "Deploy this project to Skybreak",
   func: function (argv) {
