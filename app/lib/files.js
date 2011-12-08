@@ -231,10 +231,18 @@ var files = module.exports = {
   // If options.transformer_{filename, contents} is present, it should
   // be a function, and the contents (as a buffer) or filename will be
   // passed through the function. Use this to, eg, fill templates.
+  //
+  // If options.ignore is present, it should be a list of regexps. Any
+  // file whose basename matches one of the regexps, before
+  // transformation, will be skipped.
   cp_r: function (from, to, options) {
     options = options || {};
     files.mkdir_p(to, 0755);
     fs.readdirSync(from).forEach(function (f) {
+      if (_.any(options.ignore || [], function (pattern) {
+        return f.match(pattern);
+      })) return;
+
       var full_from = path.join(from, f);
       if (options.transform_filename)
         f = options.transform_filename(f);
