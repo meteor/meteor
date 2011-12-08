@@ -9,6 +9,7 @@ var httpProxy = require('http-proxy');
 
 var files = require('../lib/files.js');
 var updater = require('../lib/updater.js');
+var bundler = require('../lib/bundler.js');
 
 var _ = require('../lib/third/underscore.js');
 
@@ -27,7 +28,12 @@ Status = {
     this.counter = 0;
   },
 
-  crashed: function () {
+  hard_crashed: function () {
+    log_to_clients({'exit': "Your application is crashing. Waiting for file change."});
+    this.crashing = true;
+  },
+
+  soft_crashed: function () {
     if (this.counter === 0)
       setTimeout(function () {
         this.counter = 0;
@@ -36,8 +42,7 @@ Status = {
     this.counter++;
 
     if (this.counter > 2) {
-      log_to_clients({'exit': "Your application is crashing. Waiting for file change."});
-      this.crashing = true;
+      Status.hard_crashed();
     }
   }
 };
@@ -333,12 +338,12 @@ var start_update_checks = function () {
 
 // XXX leave a pidfile and check if we are already running
 
-exports.run = function (app_dir, bundle_path, port, on_restart) {
+exports.run = function (app_dir, bundle_path, bundle_opts, port) {
   var outer_port = port || 3000;
   var inner_port = outer_port + 1;
   var mongo_port = outer_port + 2;
   var mongo_url = "mongodb://localhost:" + mongo_port + "/skybreak";
-  on_restart = on_restart || function () {};
+  var bundle = function(){ bundler.bundle(app_dir, bundle_path, bundle_opts); };
 
   process.stdout.write("[[[[[ " + files.pretty_path(app_dir) + " ]]]]]\n\n");
 
@@ -360,8 +365,17 @@ exports.run = function (app_dir, bundle_path, port, on_restart) {
   var restart_server = function () {
     if (server)
       kill_server(server);
+
+    try {
+      bundle();
+    } catch (e) {
+      log_to_clients({system: e.stack});
+      Status.hard_crashed();
+      return;
+    }
+
     server = start_server(bundle_path, inner_port, mongo_url, function () {
-      Status.crashed();
+      Status.soft_crashed();
       if (!Status.crashing)
         restart_server(app_dir);
     });
@@ -369,7 +383,6 @@ exports.run = function (app_dir, bundle_path, port, on_restart) {
 
   watch_files(app_dir, deps.extensions || [], function () {
     // log_to_clients({'system': "=> Modified -- restarting."});
-    on_restart();
     Status.reset();
     restart_server();
   });

@@ -114,12 +114,8 @@ Commands.push({
 
     var app_dir = require_project("run");
     var bundle_path = path.join(app_dir, '.skybreak/local/build');
-    var opts = { no_minify: !argv.production, symlink_dev_bundle: true };
-    var build = function () {
-      require('../lib/bundler.js').bundle(app_dir, bundle_path, opts);
-    };
-    build();
-    require('./run.js').run(app_dir, bundle_path, new_argv.port, build);
+    var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true };
+    require('./run.js').run(app_dir, bundle_path, bundle_opts, new_argv.port);
   }
 });
 
