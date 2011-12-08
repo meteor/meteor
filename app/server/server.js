@@ -94,7 +94,7 @@ var run = function (bundle_dir) {
     __skybreak_bootstrap__.mongo_url = mongo_url;
 
     // load app code
-    info.load.forEach(function (filename) {
+    _.each(info.load, function (filename) {
       var code = fs.readFileSync(path.join(bundle_dir, filename));
       // it's tempting to run the code in a new context so we can
       // precisely control the enviroment the user code sees. but,

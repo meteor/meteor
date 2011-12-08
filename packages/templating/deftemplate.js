@@ -163,7 +163,7 @@ Sky._def_template = function (name, raw_func, multi) {
             replaced.push(id);
           }
         }
-        replaced.forEach(function (id) {
+        _.each(replaced, function (id) {
           delete Sky._pending_partials[id];
         });
       } while (replaced.length);
@@ -189,6 +189,10 @@ Sky._def_template = function (name, raw_func, multi) {
   };
 
   if (name) {
+    if (Template[name])
+      throw new Error("There are multiple templates named '" + name +
+                      "'. Each template needs a unique name.");
+
     Template[name] = func;
 
     // XXX hack.. copy all of Handlebars' built in helpers over to

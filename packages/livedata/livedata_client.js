@@ -35,7 +35,7 @@ Sky = window.Sky || {};
 
       // XXX this is all a little whack. Need to think about how we handle
       // removes, etc.
-      (changes.inserted || []).forEach(function (elt) {
+      _.each(changes.inserted || [], function (elt) {
         if (!coll.find(elt._id)) {
           coll._collection.insert(elt);
         } else {
@@ -44,10 +44,10 @@ Sky = window.Sky || {};
           coll._collection.update({_id: elt._id}, elt);
         }
       });
-      (changes.updated || []).forEach(function (elt) {
+      _.each(changes.updated || [], function (elt) {
         coll._collection.update({_id: elt._id}, elt);
       });
-      (changes.removed || []).forEach(function (id) {
+      _.each(changes.removed || [], function (id) {
         coll._collection.remove({_id: id});
       });
     });

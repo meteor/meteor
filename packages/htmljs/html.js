@@ -27,84 +27,91 @@
 
 // XXX allow style to be set as an object
 
-// XXX todo: don't pollute the namespace..
-var __private__event_names = {
-  blur: true,
-  change: true,
-  click: true,
-  dblclick: true,
-  error: true,
-  focus: true,
-  focusin: true,
-  focusout: true,
-  keydown: true,
-  keypress: true,
-  keyup: true,
-  load: true,
-  mousedown: true,
-  mouseenter: true,
-  mouseleave: true,
-  mousemove: true,
-  mouseout: true,
-  mouseover: true,
-  mouseup: true,
-  resize: true,
-  scroll: true,
-  select: true,
-  submit: true
-};
+(function () {
+  var event_names = {
+    blur: true,
+    change: true,
+    click: true,
+    dblclick: true,
+    error: true,
+    focus: true,
+    focusin: true,
+    focusout: true,
+    keydown: true,
+    keypress: true,
+    keyup: true,
+    load: true,
+    mousedown: true,
+    mouseenter: true,
+    mouseleave: true,
+    mousemove: true,
+    mouseout: true,
+    mouseover: true,
+    mouseup: true,
+    resize: true,
+    scroll: true,
+    select: true,
+    submit: true
+  };
 
-// All HTML4 elements, excluding deprecated element
-// http://www.w3.org/TR/html4/index/elements.html
-// also excluding the following elements that seem unlikely to be used in the body:
-// HEAD, HTML, LINK, MAP, META, NOFRAMES, NOSCRIPT, STYLE, TITLE
-('A ABBR ACRONYM B BDO BIG BLOCKQUOTE BR BUTTON CAPTION CITE CODE COL ' +
- 'COLGROUP DD DEL DFN DIV DL DT EM FIELDSET FORM H1 H2 H3 H4 H5 H6 HR ' +
- 'I IFRAME IMG INPUT INS KBD LABEL LEGEND LI OBJECT OL OPTGROUP OPTION ' +
- 'P PARAM PRE Q S SAMP SCRIPT SELECT SMALL SPAN STRIKE STRONG SUB SUP TABLE ' +
- 'TBODY TD TEXTAREA TFOOT TH THEAD TR TT U UL VAR').split(' ').forEach(
-   function (tag) {
-     window[tag] = function (arg1, arg2) {
-       var attrs, contents;
-       if (arg2) {
-         attrs = arg1;
-         contents = arg2;
-       } else {
-         if (arg1 instanceof Array) {
-           attrs = {};
-           contents = arg1;
-         } else {
-           attrs = arg1;
-           contents = [];
-         }
-       }
-       var elt = document.createElement(tag);
-       for (var a in attrs) {
-         if (a === 'cls')
-           elt.setAttribute('class', attrs[a]);
-         else if (a === '_for')
-           elt.setAttribute('for', attrs[a]);
-         else if (__private__event_names[a])
-           // XXX creates a dependency on jQuery.. ick..
-           ($(elt)[a])(attrs[a]);
-         else
-           elt.setAttribute(a, attrs[a]);
-       }
-       var addChildren = function (children) {
-         children.forEach(function (c) {
-           if (!c && c !== '')
-             throw new Error("Bad value for element body: " + c);
-           else if (c instanceof Array)
-             addChildren(c);
-           else if (typeof(c) === "string")
-             elt.appendChild(document.createTextNode(c));
-           else if ('element' in c)
-             addChildren([c.element]);
-           else
-             elt.appendChild(c);
-         });
-       };
-       addChildren(contents);
-       return elt;
-     };
-   });
+  // All HTML4 elements, excluding deprecated elements
+  // http://www.w3.org/TR/html4/index/elements.html
+  // also excluding the following elements that seem unlikely to be
+  // used in the body:
+  // HEAD, HTML, LINK, MAP, META, NOFRAMES, NOSCRIPT, STYLE, TITLE
+  var tag_names = 
+    ('A ABBR ACRONYM B BDO BIG BLOCKQUOTE BR BUTTON CAPTION CITE CODE COL ' +
+     'COLGROUP DD DEL DFN DIV DL DT EM FIELDSET FORM H1 H2 H3 H4 H5 H6 HR ' +
+     'I IFRAME IMG INPUT INS KBD LABEL LEGEND LI OBJECT OL OPTGROUP OPTION ' +
+     'P PARAM PRE Q S SAMP SCRIPT SELECT SMALL SPAN STRIKE STRONG SUB SUP ' +
+     'TABLE TBODY TD TEXTAREA TFOOT TH THEAD TR TT U UL VAR').split(' ');
+
+  for (var i = 0; i < tag_names.length; i++) {
+    var tag = tag_names[i];
+
+    window[tag] = function (arg1, arg2) {
+      var attrs, contents;
+      if (arg2) {
+        attrs = arg1;
+        contents = arg2;
+      } else {
+        if (arg1 instanceof Array) {
+          attrs = {};
+          contents = arg1;
+        } else {
+          attrs = arg1;
+          contents = [];
+        }
+      }
+      var elt = document.createElement(tag);
+      for (var a in attrs) {
+        if (a === 'cls')
+          elt.setAttribute('class', attrs[a]);
+        else if (a === '_for')
+          elt.setAttribute('for', attrs[a]);
+        else if (event_names[a])
+          // XXX creates a dependency on jQuery.. ick..
+          ($(elt)[a])(attrs[a]);
+        else
+          elt.setAttribute(a, attrs[a]);
+      }
+      var addChildren = function (children) {
+        for (var i = 0; i < children.length; i++) {
+          var c = children[i];
+          if (!c && c !== '')
+            throw new Error("Bad value for element body: " + c);
+          else if (c instanceof Array)
+            addChildren(c);
+          else if (typeof(c) === "string")
+            elt.appendChild(document.createTextNode(c));
+          else if ('element' in c)
+            addChildren([c.element]);
+          else
+            elt.appendChild(c);
+        };
+      };
+      addChildren(contents);
+      return elt;
+    };
+  };
+})();

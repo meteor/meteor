@@ -1,19 +1,12 @@
-Session = Class("Session");
-
 // XXX could use some tests
 
-Session.constructor(function (_super) {
-  var self = this;
-  _super();
+Session = _.extend({}, {
+  keys: {},
 
-  self.keys = {};
+  next_id: 1,
+  key_callbacks: {}, // key -> id -> func
+  key_value_callbacks: {}, // key -> value -> id -> func
 
-  self.next_id = 1;
-  self.key_callbacks = {}; // key -> id -> func
-  self.key_value_callbacks = {}; // key -> value -> id -> func
-});
-
-Session.methods({
   // XXX remove debugging method (or improve it, but anyway, don't
   // ship it in production)
   dump_state: function () {
@@ -55,20 +48,25 @@ Session.methods({
     // loop. Suprisingly, this does work on other browsers, they don't
     // include newly added keys in the iteration.
     //
-    // Work around this on IE8 by iterating over a copy.
+    // Work around this on IE8 by iterating over a copy. We need to be
+    // careful though and not try to call callbacks that have been
+    // removed since we make our copy.
 
     _.each(_.keys(self.key_callbacks[key]), function (id) {
-      self.key_callbacks[key][id]();
+      var f = self.key_callbacks[key][id];
+      f && f();
     });
 
     if (old_value in self.key_value_callbacks[key])
       _.each(_.keys(self.key_value_callbacks[key][old_value]), function (id) {
-        self.key_value_callbacks[key][old_value][id]();
+        var f = self.key_value_callbacks[key][old_value][id];
+        f && f();
       });
 
     if (value in self.key_value_callbacks[key])
       _.each(_.keys(self.key_value_callbacks[key][value]), function (id) {
-        self.key_value_callbacks[key][value][id]();
+        var f = self.key_value_callbacks[key][value][id];
+        f && f();
       });
   },
 
@@ -128,6 +126,3 @@ Session.methods({
     }
   }
 });
-
-// singleton
-Session = Session.create();

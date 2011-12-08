@@ -4,43 +4,45 @@ URL="http://d377jur38fl888.cloudfront.net/skybreak-package-0.0.39.tar.gz"
 TARGET="/usr/local/skybreak"
 PARENT="/usr/local"
 
-set -e
-trap "echo Installation FAILED" INT TERM EXIT
-
 # Check for MacOS
 if [ `uname` != "Darwin" ] ; then
-    echo "Skybreak only support MacOS X right now."
+    echo "Sorry, Skybreak only supports MacOS X right now."
     exit 1
 fi
 
+set -e
+trap "echo Installation failed." EXIT
 
-echo "Installing Skybreak to $TARGET"
+if [ -e "$TARGET" ] ; then
+    echo "Updating Skybreak in $TARGET"
+else
+    echo "Installing Skybreak to $TARGET"
+fi
 
 # if /usr/local doesn't exist or isn't writable, fix it with sudo.
 if [ ! -d "$PARENT" ] ; then
     echo
-    echo "'$PARENT' does not exist. creating it."
+    echo "$PARENT does not exist. Creating it with 'sudo mkdir'."
     echo "This may prompt for your password."
-    echo "sudo /bin/mkdir \"$PARENT\""
+    echo
     sudo /bin/mkdir "$PARENT"
-    echo "sudo /usr/bin/chgrp admin \"$PARENT\""
     sudo /usr/bin/chgrp admin "$PARENT"
-    echo "sudo /bin/chmod 775 \"$PARENT\""
     sudo /bin/chmod 775 "$PARENT"
 elif [ ! -w "$PARENT" -o ! -w "$PARENT/bin" ] ; then
     echo
-    echo "'$PARENT' is not writable to you. changing it."
-    echo "This may prompt for your password."
-    echo "sudo /usr/bin/chgrp -f admin \"$PARENT\" \"$PARENT/bin\""
-    sudo /usr/bin/chgrp -f admin "$PARENT" "$PARENT/bin"
-    echo "sudo chmod -f g+rwx \"$PARENT\" \"$PARENT/bin\""
-    sudo /bin/chmod -f g+rwx "$PARENT" "$PARENT/bin"
+    echo "The install script needs to change the permissions on $PARENT so that"
+    echo "administrators can write to it. This may prompt for your password."
+    echo
+    sudo /usr/bin/chgrp admin "$PARENT"
+    sudo /bin/chmod g+rwx "$PARENT"
+    if [ -d "$PARENT/bin" ] ; then
+        sudo /usr/bin/chgrp admin "$PARENT/bin"
+        sudo /bin/chmod g+rwx "$PARENT/bin"
+    fi
 fi
-
 
 # remove old version
 if [ -e "$TARGET" ] ; then
-    echo "found existing install. removing $TARGET."
     rm -rf "$TARGET"
 fi
 
@@ -55,7 +57,6 @@ fi
 echo "... downloading"
 curl --progress-bar $URL | tar -C "$PARENT" -xzf -
 
-
 # add to $PATH
 mkdir -p "$PARENT/bin"
 rm -f "$PARENT/bin/skybreak"
@@ -63,14 +64,16 @@ ln -s "$TARGET/bin/skybreak" "$PARENT/bin/skybreak"
 
 cat <<EOF
 
-Skybreak installed!
+Skybreak installed! To get started fast:
 
-To get started fast:
+  $ skybreak create ~/my_cool_app
+  $ cd ~/my_cool_app
+  $ skybreak
 
-skybreak create ~/my_cool_app
-cd ~/my_cool_app
-skybreak
+Or see the docs at:
+
+  preview.skybreakplatform.com
 
 EOF
 
-trap - INT TERM EXIT
+trap - EXIT

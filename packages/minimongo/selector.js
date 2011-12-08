@@ -7,7 +7,7 @@ Collection._f = {
     // don't get screwed by key order
     var parts = {};
     var remaining = 0;
-    qval.forEach(function (q) {
+    _.each(qval, function (q) {
       var hash = JSON.stringify(q);
       if (!(hash in parts)) {
         parts[hash] = true;
@@ -300,7 +300,7 @@ Collection._exprForSelector = function (selector, literals) {
 Collection._exprForDocumentPredicate = function (op, value, literals) {
   if (op === '$or') {
     var clauses = [];
-    value.forEach(function (c) {
+    _.each(value, function (c) {
       clauses.push(Collection._exprForSelector(c, literals));
     });
     if (clauses.length === 0) return 'true';
@@ -309,7 +309,7 @@ Collection._exprForDocumentPredicate = function (op, value, literals) {
 
   if (op === '$and') {
     var clauses = [];
-    value.forEach(function (c) {
+    _.each(value, function (c) {
       clauses.push(Collection._exprForSelector(c, literals));
     });
     if (clauses.length === 0) return 'true';
@@ -318,7 +318,7 @@ Collection._exprForDocumentPredicate = function (op, value, literals) {
 
   if (op === '$nor') {
     var clauses = [];
-    value.forEach(function (c) {
+    _.each(value, function (c) {
       clauses.push("!(" + Collection._exprForSelector(c, literals) + ")");
     });
     if (clauses.length === 0) return 'true';

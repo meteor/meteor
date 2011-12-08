@@ -13,7 +13,7 @@ fi
 # bundles that are arch specific.
 UNAME=$(uname)
 if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
-    echo "This OS is not supported."
+    echo "Sorry, this OS is not supported."
     exit 1
 fi
 
@@ -30,7 +30,7 @@ fi
 
 function install_dev_bundle {
     set -e
-    trap "echo FAILED" INT TERM EXIT
+    trap "echo Failed to install dependency kit." EXIT
 
     TARBALL="dev_bundle_${UNAME}_${BUNDLE_VERSION}.tar.gz"
     TMPDIR="$SCRIPT_DIR/dev_bundle.xxx"
@@ -39,19 +39,19 @@ function install_dev_bundle {
     mkdir "$TMPDIR"
 
     if [ -f "$SCRIPT_DIR/$TARBALL" ] ; then
-        echo "... installing from local tarball ..."
+        echo "Skipping download and installing kit from $SCRIPT_DIR/$TARBALL"
         tar -xzf "$SCRIPT_DIR/$TARBALL" -C "$TMPDIR"
     else
-        echo "... downloading ..."
         curl -# https://d377jur38fl888.cloudfront.net/$TARBALL | tar -xzf - -C "$TMPDIR"
+        test -x "${TMPDIR}/bin/node" # bomb out if it didn't work, eg no net
     fi
 
     mv "$TMPDIR" "$SCRIPT_DIR/dev_bundle"
 
-    echo "... installed runtime environment v${BUNDLE_VERSION} ..."
+    echo "Installed dependency kit v${BUNDLE_VERSION} in dev_bundle."
     echo
 
-    trap - INT TERM EXIT
+    trap - EXIT
     set +e
 }
 
@@ -60,14 +60,12 @@ if [ -d "$SCRIPT_DIR/.git" ]; then
     # In a checkout.
 
     if [ ! -d "$SCRIPT_DIR/dev_bundle" ] ; then
-        # if this is the first time we've run skybreak, we may not have
-        # a dev_bundle yet. Set one up by downloading
-        echo "... runtime environment not found ..."
+        echo "It's the first time you've run Skybreak from a git checkout."
+        echo "I will download a kit containing all of Skybreak's dependencies."
         install_dev_bundle
     elif [ ! -f "$SCRIPT_DIR/dev_bundle/.bundle_version.txt" ] ||
         grep -qvx "$BUNDLE_VERSION" "$SCRIPT_DIR/dev_bundle/.bundle_version.txt" ; then
-        # Also check if dev bundle is out of date.
-        echo "... runtime environment out of date. upgrading. ..."
+        echo "Your dependency kit is out of date. I will download the new one."
         rm -rf "$SCRIPT_DIR/dev_bundle"
         install_dev_bundle
     fi

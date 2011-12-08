@@ -109,7 +109,7 @@ Sky.ui.render = function (render_func, events, event_data) {
     if (result === null) {
       result = new_result;
       if (result instanceof Array)
-        result.forEach(function (elt) {
+        _.each(result, function (elt) {
           Sky.ui._setupEvents(elt, events || {}, event_data);
         });
       else

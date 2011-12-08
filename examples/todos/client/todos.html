@@ -1,0 +1,130 @@
+<head>
+  <title>Todos</title>
+</head>
+
+<body>
+
+  <div class="ui-layout-north">
+    {{> tag_filter}}
+  </div>
+
+  <div class="ui-layout-center">
+    {{> todos}}
+  </div>
+
+  <div class="ui-layout-west">
+    {{> create_list}}
+    {{> lists}}
+  </div>
+
+  <div class="ui-layout-south">
+    <div id="help">
+      <p>
+        To get started, create a new todo list in the left sidebar by
+        typing its name in the text box.  Select a list by clicking on its
+        name, and rename by double clicking.  The active list appears in
+        the main window pane.  You can do the usual here: add items, check
+        them off as completed, and destroy items.  You can also tag items
+        with one or more tags, by clicking the blue <b>Add new tag</b>
+        button to the right.  All your in-use tags appear at the top.  You
+        can filter the list items by selecting a tag, or click the
+        leftmost button to return to the full list.
+      </p>
+
+      <p>
+        Inspired by Backbone's
+        <a href="http://documentcloud.github.com/backbone/examples/todos/index.html">Todo Demo</a>,
+        with credit to
+        <a href="http://jgn.me/">J&eacute;r&ocirc;me Gravel-Niquet</a>.
+      </p>
+    </div>
+  </div>
+
+</body>
+
+<template name="tag_filter">
+  <div id="tag-filter" class="tag-list">
+    {{#each tags}}
+      {{> tag_item}}
+    {{/each}}
+  </div>
+</template>
+
+<template name="tag_item">
+  <div class="tag {{selected}}">
+    {{tag_text}}
+  </div>
+</template>
+
+<template name="lists">
+  <div id="lists">
+    {{#each lists}}
+      {{> list_item}}
+    {{/each}}
+  </div>
+</template>
+
+<template name="list_item">
+  <div class="list {{selected}}">
+    <div class="display {{display_hidden}}">
+      <div class="list-name {{name_class}}">
+        {{name}}
+      </div>
+    </div>
+    <div class="edit {{edit_hidden}}">
+      <input class="list-name-input" type="text" value="" />
+    </div>
+  </div>
+</template>
+
+<template name="create_list">
+  <div id="createList">
+    <input type="text" id="new-list" placeholder="New list" />
+  </div>
+</template>
+
+<template name="todos">
+  <div id="items-view" class="{{hidden_class}}">
+    <input type="text" id="new-todo" placeholder="New item" />
+    {{> todo_list}}
+  </div>
+</template>
+
+<template name="todo_list">
+  <ul id="item-list">
+    {{#each todos}}
+      {{> todo_item}}
+    {{/each}}
+  </ul>
+</template>
+
+<template name="todo_item">
+  <li class="todo {{done_class}}">
+    <div class="destroy"></div>
+    <div class="display {{display_hidden}}">
+      <input class="check" type="checkbox" {{done_checkbox}} />
+      <div class="todo-text">{{text}}</div>
+    </div>
+    <div class="edit {{edit_hidden}}">
+      <input class="todo-input" type="text" value="" />
+    </div>
+    <div class="item-tags">
+      {{#each tag_objs}}
+        {{> todo_tag}}
+      {{/each}}
+      <div class="tag addtag {{addtag_hidden}}">
+        Add new tag
+      </div>
+      <div class="tag edittag {{edittag_hidden}}">
+        <input type="text" value="" />
+      </div>
+    </div>
+  </li>
+</template>
+
+<template name="todo_tag">
+  <div class="tag">
+    <div class="name">{{tag}}</div>
+    <div class="remove"></div>
+  </div>
+</template>

@@ -9,6 +9,7 @@ var httpProxy = require('http-proxy');
 
 var files = require('../lib/files.js');
 var updater = require('../lib/updater.js');
+var bundler = require('../lib/bundler.js');
 
 var _ = require('../lib/third/underscore.js');
 
@@ -27,7 +28,12 @@ Status = {
     this.counter = 0;
   },
 
-  crashed: function () {
+  hard_crashed: function () {
+    log_to_clients({'exit': "Your application is crashing. Waiting for file change."});
+    this.crashing = true;
+  },
+
+  soft_crashed: function () {
     if (this.counter === 0)
       setTimeout(function () {
         this.counter = 0;
@@ -36,8 +42,7 @@ Status = {
     this.counter++;
 
     if (this.counter > 2) {
-      log_to_clients({'exit': "Your application is crashing. Waiting for file change."});
-      this.crashing = true;
+      Status.hard_crashed();
     }
   }
 };
@@ -59,16 +64,7 @@ var start_proxy = function (outer_port, inner_port) {
 
       res.write("Your app is crashed. Here's the latest log.\n\n");
 
-      // XXX this is a hack to look through the error logs until the last
-      // startup.
-      var last_logs = _.reduceRight(server_log, function(acc, log) {
-        if (!_.last(acc) || ! _.last(acc).launch)
-          return acc.concat([log]);
-        return acc;
-      }, []);
-      last_logs.reverse();
-
-      _.each(last_logs, function(log) {
+      _.each(server_log, function(log) {
         _.each(log, function(val, key) {
           res.write(val);
           // deal with mixed line endings! XXX
@@ -264,7 +260,7 @@ var kill_server = function (handle) {
 
 ////////// Watching dependencies  //////////
 
-var watch_files = function (app_dir, extensions, on_change) {
+var watch_files = function (app_dir, get_extensions, on_change) {
   var watched_files = {};
 
   var file_accessed = function (oldStat, newStat) {
@@ -288,12 +284,12 @@ var watch_files = function (app_dir, extensions, on_change) {
   };
 
   // kick off initial watch.
-  files.file_list_async(app_dir, extensions,
+  files.file_list_async(app_dir, get_extensions(),
                         _.bind(consider_file, null, true));
 
   // watch for new files.
   setInterval(function () {
-    files.file_list_async(app_dir, extensions,
+    files.file_list_async(app_dir, get_extensions(),
                         _.bind(consider_file, null, false));
   }, 5000);
 
@@ -333,24 +329,49 @@ var start_update_checks = function () {
 
 // XXX leave a pidfile and check if we are already running
 
-exports.run = function (app_dir, bundle_path, port, on_restart) {
+exports.run = function (app_dir, bundle_path, bundle_opts, port) {
   var outer_port = port || 3000;
   var inner_port = outer_port + 1;
   var mongo_port = outer_port + 2;
   var mongo_url = "mongodb://localhost:" + mongo_port + "/skybreak";
-  on_restart = on_restart || function () {};
+
+  var deps = {};
+  var started_watching_files = false;
+  var warned_about_no_deps_info = false;
+  var bundle = function () {
+    bundler.bundle(app_dir, bundle_path, bundle_opts);
+
+    try {
+      var deps_raw =
+        fs.readFileSync(path.join(bundle_path, 'dependencies.json'), 'utf8');
+      deps = JSON.parse(deps_raw.toString());
+    } catch (e) {
+      if (!warned_about_no_deps_info) {
+        process.stdout.write("No dependency info in bundle. " +
+                             "Filesystem monitoring disabled.\n");
+        warned_about_no_deps_info = true;
+      }
+    }
+
+    if (!started_watching_files) {
+      // Don't start watching files until we've built the bundle for
+      // the first time and have gotten the deps info out of it.
+      var get_extensions = function () {
+        return deps.extensions || [];
+      };
+
+      watch_files(app_dir, get_extensions, function () {
+        if (Status.crashing)
+          log_to_clients({'system': "=> Modified -- restarting."});
+        Status.reset();
+        restart_server();
+      });
+
+      started_watching_files = true;
+    }
+  };
 
   process.stdout.write("[[[[[ " + files.pretty_path(app_dir) + " ]]]]]\n\n");
-
-  deps = {};
-  try {
-    var deps_raw =
-      fs.readFileSync(path.join(bundle_path, 'dependencies.json'), 'utf8');
-    var deps = JSON.parse(deps_raw.toString());
-  } catch (e) {
-    process.stdout.write("No dependency info in bundle. " +
-                         "Filesystem monitoring disabled.\n");
-  }
 
   if (!files.in_checkout())
     start_update_checks();
@@ -360,19 +381,22 @@ exports.run = function (app_dir, bundle_path, port, on_restart) {
   var restart_server = function () {
     if (server)
       kill_server(server);
+    server_log = [];
+
+    try {
+      bundle();
+    } catch (e) {
+      log_to_clients({system: e.stack});
+      Status.hard_crashed();
+      return;
+    }
+
     server = start_server(bundle_path, inner_port, mongo_url, function () {
-      Status.crashed();
+      Status.soft_crashed();
       if (!Status.crashing)
         restart_server(app_dir);
     });
   };
-
-  watch_files(app_dir, deps.extensions || [], function () {
-    // log_to_clients({'system': "=> Modified -- restarting."});
-    on_restart();
-    Status.reset();
-    restart_server();
-  });
 
   var launch = function () {
     launch_mongo(app_dir, mongo_port,

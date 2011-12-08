@@ -183,7 +183,7 @@ Collection._modifiers = {
         }
       }
       var values = isEach ? arg["$each"] : [arg];
-      values.forEach(function (value) {
+      _.each(values, function (value) {
         for (var i = 0; i < x.length; i++)
           if (Collection._f._equal(value, x[i]))
             return;

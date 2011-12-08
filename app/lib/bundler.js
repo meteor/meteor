@@ -24,6 +24,12 @@ var uglify = require('uglify-js');
 var cleanCSS = require('clean-css');
 var _ = require('./third/underscore.js');
 
+// files to ignore when bundling. node has no globs, so use regexps
+var ignore_files = [
+    /~$/, /^\.#/, /^#.*#$/,
+    /^\.DS_Store$/, /^ehthumbs\.db$/, /^Icon.$/, /^Thumbs\.db$/
+];
+
 var Bundle = function () {
   var self = this;
 
@@ -191,10 +197,6 @@ _.extend(Bundle.prototype, {
     // underscore package
     this.api.require('underscore');
 
-    // XXX this is some kind of legacy crap that someone might need
-    // but I don't know the details. it should go away.
-    this.api.require('basics');
-
     // standard client packages (for now), for the classic skybreak stack
     this.api.require('deps');
     this.api.require('session');
@@ -208,6 +210,11 @@ _.extend(Bundle.prototype, {
     // find everything in tree, sorted depth-first alphabetically.
     var file_list = files.file_list_sync(app_dir,
                                        this.registeredExtensions());
+    file_list = _.reject(file_list, function (file) {
+      return _.any(ignore_files, function (pattern) {
+        return file.match(pattern);
+      });
+    });
     file_list.sort(files.sort);
 
     // (Note: we used to have some functionality to let users push
@@ -284,7 +291,7 @@ exports.bundle = function (app_dir, output_path, options) {
   // stuff' like minimongo
   bundle.add_standard_packages();
 
-  require('./project.js').get_packages(app_dir).forEach(function (p) {
+  _.each(require('./project.js').get_packages(app_dir), function (p) {
     bundle.api.require(p);
   });
 
@@ -292,7 +299,7 @@ exports.bundle = function (app_dir, output_path, options) {
 
   var user_files = bundle.compute_user_files(app_dir);
 
-  user_files.forEach(function (rel_path) {
+  _.each(user_files, function (rel_path) {
     var full_path = path.join(app_dir, rel_path);
 
     // XXX at some point we should re-work our directory structure and
@@ -381,7 +388,7 @@ exports.bundle = function (app_dir, output_path, options) {
   files.mkdir_p(build_path, 0755);
 
   files.cp_r(path.join(__dirname, '../server'),
-             path.join(build_path, 'server'));
+             path.join(build_path, 'server'), {ignore: ignore_files});
 
   if (options.skip_dev_bundle)
     ;
@@ -390,12 +397,12 @@ exports.bundle = function (app_dir, output_path, options) {
                    path.join(build_path, 'server/node_modules'));
   else
     files.cp_r(path.join(files.get_dev_bundle(), 'lib/node_modules'),
-               path.join(build_path, 'server/node_modules'));
+               path.join(build_path, 'server/node_modules'),
+               {ignore: ignore_files});
 
-  // XXX should filter out foo~, etc, from public? (server too?)
   if (path.existsSync(path.join(app_dir, 'public'))) {
     files.cp_r(path.join(app_dir, 'public'),
-               path.join(build_path, 'static'));
+               path.join(build_path, 'static'), {ignore: ignore_files});
   }
   for (var rel_path in bundle.client_files) {
     var full_path = path.join(build_path, 'static', rel_path);
@@ -405,7 +412,7 @@ exports.bundle = function (app_dir, output_path, options) {
 
   app_json.load = [];
   files.mkdir_p(path.join(build_path, 'app'), 0755);
-  bundle.server_load.forEach(function (rel_path) {
+  _.each(bundle.server_load, function (rel_path) {
     var path_in_bundle = path.join('app', rel_path);
     var full_path = path.join(build_path, path_in_bundle);
     app_json.load.push(path_in_bundle);

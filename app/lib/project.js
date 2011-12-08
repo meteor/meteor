@@ -36,7 +36,7 @@ var project = module.exports = {
   get_packages: function (app_dir) {
     var ret = [];
 
-    project._get_lines(app_dir).forEach(function (line) {
+    _.each(project._get_lines(app_dir), function (line) {
       line = project._trim_line(line);
       if (line !== '')
         ret.push(line);
