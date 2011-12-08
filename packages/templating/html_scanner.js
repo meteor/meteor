@@ -1,27 +1,3 @@
-/*
-// sigh. jsdom is a nonstarter (without modifications at least),
-// because it immediately executes any scripts it finds in the
-// document when it parses it..
-var jsdom  = require('jsdom');
-
-var html_scanner = module.exports = {
-  scan: function (contents) {
-    // XXX is it actually safe to use jsdom? that requires all of our
-    // template languages to parse as HTML, which seems a bit
-    // unlikely..
-    contents = "<script>console.log('whooooosh');</script>";
-    var doc = jsdom.jsdom(contents, null, {
-      FetchExternalResources: false,
-      ProcessExternalResources: false,
-      MutationEvents: false
-    });
-    console.log("doc has " + doc.childNodes.length + " children");
-    console.log(contents);
-    return {};
-  }
-};
-*/
-
 // XXX should allow <!-- --> comments at toplevel
 
 var html_scanner = module.exports = {
