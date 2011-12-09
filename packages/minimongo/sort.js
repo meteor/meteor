@@ -39,7 +39,10 @@ Collection._compileSort = function (spec) {
   if (keys.length === 0)
     return function () {return 0;}
 
-  var code = "(function(c){return function(a,b){var x;";
+  // eval() does not return a value in IE8, nor does the spec say it
+  // should. Assign to a local to get the value, instead.
+  var _func;
+  var code = "_func = (function(c){return function(a,b){var x;";
   for (var i = 0; i < keys.length; i++) {
     if (i !== 0)
       code += "if(x!==0)return x;";
@@ -48,5 +51,7 @@ Collection._compileSort = function (spec) {
       JSON.stringify(keys[i]) + "]);";
   }
   code += "return x;};})";
-  return eval(code)(Collection._f._cmp);
+
+  eval(code);
+  return _func(Collection._f._cmp);
 };
