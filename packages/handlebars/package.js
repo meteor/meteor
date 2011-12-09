@@ -17,4 +17,4 @@ Package.client_file('evaluate.js');
 // depending on the node package (or packaging the compiler
 // ourselves..)
 
-Package.require('underscore'); // XXX lame
+Package.require('underscore');

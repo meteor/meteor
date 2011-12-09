@@ -3,4 +3,6 @@ Package.describe({
   internal: true
 });
 
+Package.require('underscore');
+
 Package.client_file('session.js');

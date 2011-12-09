@@ -191,12 +191,6 @@ _.extend(Bundle.prototype, {
   },
 
   add_standard_packages: function () {
-    // XXX if we need underscore on the client for our internal use,
-    // we should still send it in such a way that '_' doesn't get in
-    // the global namespace unless the user specifically asks for the
-    // underscore package
-    this.api.require('underscore');
-
     // standard client packages (for now), for the classic skybreak stack
     this.api.require('deps');
     this.api.require('session');

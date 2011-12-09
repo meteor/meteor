@@ -3,8 +3,8 @@ Package.describe({
   internal: true
 });
 
-Package.require('liveui'); // probably?
-Package.require('livedata'); // since it's what creates the Sky object.. ugh, XXX
+Package.require('underscore');
+Package.require('liveui');
 
 // XXX super lame! we actually have to give paths relative to
 // app/inner/app.js, since that's who's evaling us.
