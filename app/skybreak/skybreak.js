@@ -354,6 +354,22 @@ Commands.push({
   }
 });
 
+var run_mongo_shell = function (url) {
+  var mongo_path = path.join(files.get_dev_bundle(), 'mongodb/bin/mongo');
+  var mongo_url = require('url').parse(url);
+  var auth = mongo_url.auth && mongo_url.auth.split(':');
+  var spawn = require('child_process').spawn;
+
+  var args = [];
+  if (auth) args.push('-u', auth[0]);
+  if (auth) args.push('-p', auth[1]);
+  args.push(mongo_url.hostname + ':' + mongo_url.port + mongo_url.pathname);
+
+  spawn(mongo_path,
+        args,
+        { customFds: [0, 1, 2] });
+};
+
 Commands.push({
   name: "mongo",
   help: "Connect to the Mongo database for the specified site",
@@ -364,11 +380,21 @@ Commands.push({
       .alias('url', 'U')
       .describe('url', 'request a Mongo URL')
       .usage(
-"Usage: skybreak mongo [--url] <site>\n" +
+"Usage: skybreak mongo [--url] [site]\n" +
 "\n" +
-"Connect to the Mongo database for the specified site.  For a\n" +
-"URL suitable for an external program, specify --url (-U), which\n" +
-"will return a URL valid for the next 60 seconds."
+"Open a Mongo shell to view or manipulate collections.\n" +
+"\n" +
+"If site is specified, this is the hosted Mongo database for the deployed\n" +
+"Skybreak site.\n" +
+"\n" +
+"If no site is specified, this is the current project's local development\n" +
+"database.  In this case, the current working directory must be a\n" +
+"Skybreak project directory, and the Skybreak application must already be\n" +
+"running.\n" +
+"\n" +
+"Instead of opening a shell, specifying --url (-U) will return a URL\n" +
+"suitable for an external program to connect to the database.  For remote\n" +
+"databases on deployed applications, the URL is valid for one minute.\n"
       );
 
     new_argv = opt.argv;
@@ -378,73 +404,79 @@ Commands.push({
       process.exit(1);
     }
 
-    if (new_argv._.length !== 2) {
-      process.stdout.write(
+    if (new_argv._.length === 1) {
+      // localhost mode
+      var mongod_port = find_mongo_port("mongo");
+      if (!mongod_port) {
+        process.stdout.write(
+"mongo: Skybreak isn't running.\n" +
+"\n" +
+"This command only works while Skybreak is running your application\n" +
+"locally. Start your application first.\n");
+        process.exit(1);
+      }
+
+      var mongo_url = "mongodb://127.0.0.1:" + mongod_port + "/skybreak";
+
+      if (new_argv.url)
+        console.log(mongo_url)
+      else
+        run_mongo_shell(mongo_url);
+
+    } else if (new_argv._.length === 2) {
+      // remote mode
+      var url = require('./deploy').parse_url(new_argv._[1]);
+
+      if (!url.hostname) {
+        process.stdout.write(
 "Please specify a domain to connect to, such as www.example.com or\n" +
 "http://www.example.com/\n");
-      process.exit(1);
-    }
+        process.exit(1);
+      }
 
-    var url = require('./deploy').parse_url(new_argv._[1]);
-
-    if (!url.hostname) {
-      process.stdout.write(
-"Please specify a domain to connect to, such as www.example.com or\n" +
-"http://www.example.com/\n");
-      process.exit(1);
-    }
-
-    if (url.pathname != '/' || url.hash || url.query) {
-      process.stdout.write(
+      if (url.pathname != '/' || url.hash || url.query) {
+        process.stdout.write(
 "Sorry, Skybreak does not yet support specific path URLs, such as\n" +
 "http://www.example.com/blog .  Please specify the root of a domain.\n");
+        process.exit(1);
+      }
+
+      var options = {
+        host: 'deploy.skybreakplatform.com',
+        port: 80,
+        path: '/mongo/' + url.hostname,
+      };
+      var data = '';
+
+      var req = require('http').get(options, function(res) {
+        res.setEncoding('utf8');
+        res.on('data', function (chunk) { data += chunk; });
+        res.on('end', function () {
+          if (res.statusCode == 200) {
+            if (new_argv.url)
+              console.log(data);
+            else
+              run_mongo_shell(data);
+
+          } else {
+            process.stderr.write(data);
+            process.stderr.write("\n");
+            process.exit(1);
+          }
+        });
+      });
+
+      req.on('error', function(e) {
+        console.log(e);
+        console.log("Error connecting to Skybreak: " + e.message);
+        process.exit(1);
+      });
+
+    } else {
+      // usage
+      process.stdout.write(opt.help());
       process.exit(1);
     }
-
-    var http = require('http');
-
-    var options = {
-      host: 'deploy.skybreakplatform.com',
-      port: 80,
-      path: '/mongo/' + url.hostname,
-    };
-
-    var data = '';
-
-    var req = http.get(options, function(res) {
-      res.setEncoding('utf8');
-      res.on('data', function (chunk) { data += chunk; });
-      res.on('end', function () {
-        if (new_argv.url) {
-          console.log(data);
-          process.exit(0);
-        }
-
-        if (res.statusCode == 200) {
-          var mongo_path = path.join(files.get_dev_bundle(), 'mongodb/bin/mongo');
-          var mongo_url = require('url').parse(data);
-          var auth = mongo_url.auth.split(':');
-          var spawn = require('child_process').spawn;
-          spawn(mongo_path,
-                ['-u', auth[0],
-                 '-p', auth[1],
-                 mongo_url.hostname + ':' + mongo_url.port + mongo_url.pathname],
-                {
-                  customFds: [0, 1, 2], // just take the fds! sketch, but works
-                });
-        } else {
-          process.stderr.write(data);
-          process.stderr.write("\n");
-          process.exit(1);
-        }
-      });
-    });
-
-    req.on('error', function(e) {
-      console.log(e);
-      console.log("Error connecting to Skybreak: " + e.message);
-      process.exit(1);
-    });
   }
 });
 
@@ -569,47 +601,6 @@ Commands.push({
     req.on('error', function(e) {
       console.log("Error connecting to Skybreak: " + e.message);
       process.exit(1);
-    });
-  }
-});
-
-Commands.push({
-  name: "mongo",
-  help: "Open a MongoDB shell on this project's local database",
-  func: function (argv) {
-    if (argv.help) {
-      process.stdout.write(
-"Usage: skybreak mongo\n" +
-"\n" +
-"Open a MongoDB shell on your local development database, so that you\n" +
-"can view or manipulate it directly. You must already have your\n" +
-"application running locally.\n");
-      process.exit(1);
-    }
-
-    var mongod_port = find_mongo_port("mongo");
-
-    if (!mongod_port) {
-      process.stdout.write(
-"mongo: Skybreak isn't running.\n" +
-"\n" +
-"This command only works while Skybreak is running your application\n" +
-"locally. Start your application first.\n");
-      process.exit(1);
-    }
-
-    var path_base = path.join(path.dirname(process.execPath), '..');
-    var mongo_path = path.join(path_base, 'mongodb/bin/mongo');
-
-    process.stdout.write("Database: " +
-                         files.pretty_path(files.find_app_dir()) +
-                         "/.skybreak\n\n");
-
-    var spawn = require('child_process').spawn;
-    var mongo_proc = spawn(mongo_path,[
-      '127.0.0.1:' +  mongod_port + '/skybreak', '--shell'
-    ], {
-      customFds: [0, 1, 2], // just take the fds! sketch, but works
     });
   }
 });
