@@ -365,9 +365,12 @@ var run_mongo_shell = function (url) {
   if (auth) args.push('-p', auth[1]);
   args.push(mongo_url.hostname + ':' + mongo_url.port + mongo_url.pathname);
 
-  spawn(mongo_path,
-        args,
-        { customFds: [0, 1, 2] });
+  var proc = spawn(mongo_path,
+                   args,
+                   { customFds: [0, 1, 2] });
+  proc.on('exit', function () {
+    process.stdin.destroy(); // clean up after maybe_password
+  });
 };
 
 Commands.push({
@@ -459,10 +462,19 @@ Commands.push({
           res.on('data', function (chunk) { data += chunk; });
           res.on('end', function () {
             if (res.statusCode == 200) {
-              if (new_argv.url)
+              if (new_argv.url) {
                 console.log(data);
-              else
+
+                // only do this if we're printing the URL. Don't do it
+                // if we're running the mongo shell, since that will
+                // close off stdin for the shell.
+                process.stdin.destroy(); // clean up after maybe_password
+              } else {
+                // pause stdin so we don't try to read it while mongo is
+                // running.
+                process.stdin.pause();
                 run_mongo_shell(data);
+              }
 
             } else {
               process.stderr.write(data);
@@ -597,6 +609,9 @@ Commands.push({
       tar.on('exit', function (code) {
         deploy_req.end();
       });
+
+      // XXX this is gross. maybe some way to automate?
+      process.stdin.destroy(); // clean up after maybe_password
     };
 
     deploy.maybe_password(url.hostname, function (password) {
@@ -648,6 +663,9 @@ Commands.push({
         console.log("Error connecting to Skybreak: " + e.message);
         process.exit(1);
       });
+
+      // XXX this is gross. maybe some way to automate?
+      process.stdin.destroy(); // clean up after maybe_password
     });
   }
 });
