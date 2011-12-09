@@ -150,10 +150,6 @@ _.extend(Sky, {
 
   autosubscribe: function () {
     // ignored on server
-  },
-
-  startup: function (callback) {
-    __skybreak_bootstrap__.startup_hooks.push(callback);
   }
 });
 
