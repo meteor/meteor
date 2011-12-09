@@ -105,8 +105,6 @@ var read_password = function (callback) {
 // be undefined.
 exports.maybe_password = function (endpoint, callback) {
   var check_url = "http://" + exports.HOSTNAME + "/has_password/" + endpoint;
-  // var check_url = "http://localhost:8001/has_password/" + endpoint;
-
 
   request(check_url, function (error, response, body) {
     if (error || response.statusCode !== 200) {
