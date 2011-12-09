@@ -139,6 +139,9 @@ Sky.ui.render = function (render_func, events, event_data) {
 /// Do a query on 'collection', and replace the children of 'element'
 /// with the results.
 ///
+/// If jQuery is present, then 'element' may be a jQuery result set,
+/// in which case the first element is used.
+///
 /// options to include:
 ///  query: minimongo selector (default: {})
 ///  sort: minimongo sort specification (default: natural order)
@@ -149,8 +152,6 @@ Sky.ui.render = function (render_func, events, event_data) {
 ///
 /// returns an object with:
 ///  stop(): stop updating, tear everything down and let it get GC'd
-///
-/// XXX eliminate jQuery dependencies ...
 Sky.ui.renderList = function (collection, element, options) {
   if (('$' in window) && (element instanceof $))
     // allow element to be a jQuery result set
