@@ -583,24 +583,28 @@ Commands.push({
     var deploy = require('./deploy');
     var url = deploy.parse_url(argv._[0]);
 
-    var http = require('http');
+    deploy.maybe_password(url.hostname, function (password) {
+      var http = require('http');
+      var options = {
+        host: deploy.HOSTNAME,
+        port: 80,
+        path: '/logs/' + url.hostname,
+      };
+      if (password) {
+        options.path += '?password=' + password;
+      }
 
-    var options = {
-      host: deploy.HOSTNAME,
-      port: 80,
-      path: '/logs/' + url.hostname,
-    };
-
-    var req = http.get(options, function(res) {
-      res.setEncoding('utf8');
-      res.on('data', function (chunk) {
-        process.stdout.write(chunk);
+      var req = http.get(options, function(res) {
+        res.setEncoding('utf8');
+        res.on('data', function (chunk) {
+          process.stdout.write(chunk);
+        });
       });
-    });
 
-    req.on('error', function(e) {
-      console.log("Error connecting to Skybreak: " + e.message);
-      process.exit(1);
+      req.on('error', function(e) {
+        console.log("Error connecting to Skybreak: " + e.message);
+        process.exit(1);
+      });
     });
   }
 });
