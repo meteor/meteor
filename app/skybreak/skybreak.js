@@ -491,18 +491,27 @@ Commands.push({
   name: "deploy",
   help: "Deploy this project to Skybreak",
   func: function (argv) {
-    if (argv.help || argv._.length < 1 || argv._.length > 2) {
-      process.stdout.write(
+    var opt = require('optimist')
+      .boolean('password')
+      .alias('password', 'P')
+      .describe('password', 'set a password for the deployment')
+      .usage(
 "Usage: skybreak deploy <site>\n" +
 "\n" +
 "Deploy the current code in your tree to the specified subdomain of\n" +
-"skybreakplatform.com.\n");
+"skybreakplatform.com.\n"
+      );
+
+    new_argv = opt.argv;
+
+    if (new_argv.help || new_argv._.length != 2) {
+      process.stdout.write(opt.help());
       process.exit(1);
     }
 
     var deploy = require('./deploy');
 
-    var url = deploy.parse_url(argv._[0]);
+    var url = deploy.parse_url(new_argv._[1]);
 
     if (!url.hostname) {
       process.stdout.write(
@@ -518,16 +527,14 @@ Commands.push({
       process.exit(1);
     }
 
-    deploy.maybe_password(url.hostname, function (password) {
+    var app_dir = path.resolve(require_project("bundle"));
+    var build_dir = path.join(app_dir, '.skybreak/local/build_tar');
+    var bundle_path = path.join(build_dir, 'bundle');
+    var bundle_opts = { skip_dev_bundle: true };
 
-      // XXX prompt for new password here
-
+    var do_deploy = function (password, set_password) {
       process.stdout.write('Deploying to ' + url.hostname + '.  Bundling ... ');
 
-      var app_dir = path.resolve(require_project("bundle"));
-      var build_dir = path.join(app_dir, '.skybreak/local/build_tar');
-      var bundle_path = path.join(build_dir, 'bundle');
-      var bundle_opts = { skip_dev_bundle: true };
       require('../lib/bundler.js').bundle(app_dir, bundle_path, bundle_opts);
 
       process.stdout.write('uploading ... ');
@@ -541,9 +548,11 @@ Commands.push({
         host: deploy.HOSTNAME,
         path: '/deploy/' + url.hostname
       };
-      if (password) {
-        options.path += '?password=' + password;
-      }
+      var password_opts = {};
+      if (password) password_opts.password = password;
+      if (set_password) password_opts.set_password = set_password;
+      if (password || set_password)
+        deploy_req_opts.path += "?" + require('querystring').stringify(password_opts);
 
       var http = require('http');
       var deploy_req = http.request(deploy_req_opts, function (deploy_res) {
@@ -579,6 +588,16 @@ Commands.push({
       tar.on('exit', function (code) {
         deploy_req.end();
       });
+    };
+
+    deploy.maybe_password(url.hostname, function (password) {
+      if (new_argv.password) {
+        deploy.get_new_password(function (set_password) {
+          do_deploy(password, set_password);
+        });
+      } else {
+        do_deploy(password);
+      }
     });
   }
 });
