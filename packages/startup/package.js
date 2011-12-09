@@ -4,4 +4,4 @@ Package.describe({
 });
 
 Package.client_file('startup_client.js');
-Package.client_file('startup_server.js');
+Package.server_file('startup_server.js');

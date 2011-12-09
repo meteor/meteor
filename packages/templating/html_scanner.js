@@ -71,8 +71,7 @@ var html_scanner = module.exports = {
       } else { // tag === "body"
         // as a special case, and to stop users from stabbing us, body
         // is allowed to have multiple elements at toplevel
-        // XXX remove jquery dependency!
-        results.js += "$(function(){var elts = Sky._def_template(null," + code + ",true)();for(var i=0;i<elts.length;i++) {$('body').append(elts[i]);}});";
+        results.js += "Sky.startup(function(){var elts = Sky._def_template(null," + code + ",true)();for(var i=0;i<elts.length;i++) {$('body').append(elts[i]);}});";
       }
     });
     if (!found) {

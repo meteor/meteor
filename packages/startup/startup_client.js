@@ -1,10 +1,42 @@
 if (typeof Sky === "undefined") Sky = {};
 
-Sky.startup = function (callback) {
-  // defer so that we don't kill what is running when startup is
-  // called. this way things don't break, but we still get an error
-  // on the console.
-  _.defer(function () {
-    throw new Error("Sky.startup not supported on the client. Use jQuery.ready() or an equivalent method.");
-  });
-};
+(function() {
+  var queue = [];
+  var loaded = document.readyState === "loaded" ||
+    document.readyState == "complete";
+
+  var ready = function() {
+    loaded = true;
+    while (queue.length)
+      (queue.shift())();
+  };
+
+  if (document.addEventListener) {
+    document.addEventListener('DOMContentLoaded', ready, false);
+    window.addEventListener('load', ready, false);
+  } else {
+    document.attachEvent('onreadystatechange', function () {
+      if (document.readyState === "complete")
+        ready();
+    });
+    window.attachEvent('load', ready);
+  }
+
+  Sky.startup = function (cb) {
+    var doScroll = document.documentElement.doScroll;
+
+    if (!doScroll || window !== top) {
+      if (loaded)
+        cb();
+      else
+        queue.push(cb);
+    } else {
+      try { doScroll('left'); }
+      catch (e) {
+        setTimeout(function() { Sky.startup(cb); }, 50);
+        return;
+      };
+      cb();
+    }
+  };
+})();

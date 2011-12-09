@@ -46,10 +46,9 @@ Package.register_extension(
 // provides the runtime logic to instantiate our templates
 Package.client_file('deftemplate.js');
 
-// XXX sadly html_scanner.js has introduced a temporary dependency on
-// jquery (ie: it generates client-side code that requires the client
-// to have jquery)
-Package.require('jquery');
+// html_scanner.js emits client code that calls Sky.startup
+// XXX the correct thing would be to require this only on the client
+Package.require('startup');
 
 // for now, the only templating system we support
 Package.require('handlebars');
