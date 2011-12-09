@@ -1,3 +1,4 @@
+var crypto = require('crypto');
 var tty = require('tty');
 var request = require('request');
 
@@ -27,8 +28,10 @@ exports.parse_url = function (url) {
 // actually make us more secure, but it means we won't leak a user's
 // password, which they might use on other sites too.
 var transform_password = function (password) {
-  // XXX
-  return password;
+  var hash = crypto.createHash('sha1');
+  hash.update('S3krit Salt!');
+  hash.update(password);
+  return hash.digest('hex');
 };
 
 // read a password from stdin. return it in a callback.
