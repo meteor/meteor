@@ -1,32 +1,5 @@
 Sky.ui = Sky.ui || {};
 
-/// Give the focus to the first element that matches the given
-/// selector. If no elements match the selector, wait until one does
-/// (checking every time we update an element through a reactive
-/// template, renderList, etc), and then move the focus to it. In the
-/// latter case, if there's a subsequent call to Sky.ui.focus before
-/// the element is found, cancel the earlier call.
-///
-/// XXX XXX this doesn't help the (very reasonable) case where the
-/// user calls a template function, then inserts the element in the
-/// dom themselves..
-Sky.ui.focus = function (selector) {
-  Sky.ui._focus_goal = selector;
-  Sky.ui._tryFocus();
-};
-
-Sky.ui._focus_goal = null;
-Sky.ui._tryFocus = function () {
-  if (Sky.ui._focus_goal) {
-    // XXX jquery dependency
-    var elt = $(Sky.ui._focus_goal)[0];
-    if (elt) {
-      elt.focus();
-      Sky.ui._focus_goal = null;
-    }
-  }
-};
-
 // update in place by hollowing out old element(s), and copying
 // over all of the children and attributes. unfortunately there
 // is no way to change the tag name. leave the events in place.
@@ -128,7 +101,6 @@ Sky.ui.render = function (render_func, events, event_data) {
           Sky.ui._patch(result[i], new_result[i]);
       } else
         Sky.ui._patch(result, new_result);
-      Sky.ui._tryFocus();
     }
   };
 
@@ -193,7 +165,6 @@ Sky.ui.renderList = function (collection, element, options) {
         element.appendChild(render(obj));
       else
         element.insertBefore(render(obj), element.childNodes[before_idx])
-      Sky.ui._tryFocus();
     },
     removed: function (id, at_idx) {
       element.removeChild(element.childNodes[at_idx]);
@@ -201,7 +172,6 @@ Sky.ui.renderList = function (collection, element, options) {
     changed: function (obj, at_idx) {
       element.insertBefore(render(obj), element.childNodes[at_idx]);
       element.removeChild(element.childNodes[at_idx + 1]);
-      Sky.ui._tryFocus();
     },
     moved: function (obj, old_idx, new_idx) {
       var elt = element.removeChild(element.childNodes[old_idx]);
