@@ -430,20 +430,7 @@ Commands.push({
       // remote mode
       var deploy = require('./deploy');
       var url = deploy.parse_url(new_argv._[1]);
-
-      if (!url.hostname) {
-        process.stdout.write(
-"Please specify a domain to connect to, such as www.example.com or\n" +
-"http://www.example.com/\n");
-        process.exit(1);
-      }
-
-      if (url.pathname != '/' || url.hash || url.query) {
-        process.stdout.write(
-"Sorry, Skybreak does not yet support specific path URLs, such as\n" +
-"http://www.example.com/blog .  Please specify the root of a domain.\n");
-        process.exit(1);
-      }
+      deploy.validate_url(url);
 
       deploy.maybe_password(url.hostname, function (password) {
 
@@ -524,20 +511,7 @@ Commands.push({
     var deploy = require('./deploy');
 
     var url = deploy.parse_url(new_argv._[1]);
-
-    if (!url.hostname) {
-      process.stdout.write(
-"Please specify a domain to deploy to, such as www.example.com or\n" +
-"http://www.example.com/\n");
-      process.exit(1);
-    }
-
-    if (url.pathname != '/' || url.hash || url.query) {
-      process.stdout.write(
-"Sorry, Skybreak does not yet support deploying to a specific path URL, such as\n" +
-"http://www.example.com/blog .  Please specify the root of a domain.\n");
-      process.exit(1);
-    }
+    deploy.validate_url(url);
 
     var app_dir = path.resolve(require_project("bundle"));
     var build_dir = path.join(app_dir, '.skybreak/local/build_tar');
@@ -640,6 +614,7 @@ Commands.push({
 
     var deploy = require('./deploy');
     var url = deploy.parse_url(argv._[0]);
+    deploy.validate_url(url);
 
     deploy.maybe_password(url.hostname, function (password) {
       var http = require('http');

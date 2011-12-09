@@ -24,6 +24,23 @@ exports.parse_url = function (url) {
   return parsed;
 };
 
+exports.validate_url = function (url) {
+  if (!url.hostname) {
+    process.stdout.write(
+"Please specify a domain to connect to, such as www.example.com or\n" +
+"http://www.example.com/\n");
+    process.exit(1);
+  }
+
+  if (url.pathname != '/' || url.hash || url.query) {
+    process.stdout.write(
+"Sorry, Skybreak does not yet support specific path URLs, such as\n" +
+"http://www.example.com/blog .  Please specify the root of a domain.\n");
+    process.exit(1);
+  }
+}
+
+
 // hash the password so we never send plaintext over the wire. Doesn't
 // actually make us more secure, but it means we won't leak a user's
 // password, which they might use on other sites too.
