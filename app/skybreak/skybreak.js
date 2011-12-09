@@ -442,35 +442,41 @@ Commands.push({
         process.exit(1);
       }
 
-      var options = {
-        host: deploy.HOSTNAME,
-        port: 80,
-        path: '/mongo/' + url.hostname,
-      };
-      var data = '';
+      deploy.maybe_password(url.hostname, function (password) {
 
-      var req = require('http').get(options, function(res) {
-        res.setEncoding('utf8');
-        res.on('data', function (chunk) { data += chunk; });
-        res.on('end', function () {
-          if (res.statusCode == 200) {
-            if (new_argv.url)
-              console.log(data);
-            else
-              run_mongo_shell(data);
+        var options = {
+          host: deploy.HOSTNAME,
+          port: 80,
+          path: '/mongo/' + url.hostname,
+        };
+        if (password) {
+          options.path += '?password=' + password;
+        }
+        var data = '';
 
-          } else {
-            process.stderr.write(data);
-            process.stderr.write("\n");
-            process.exit(1);
-          }
+        var req = require('http').get(options, function(res) {
+          res.setEncoding('utf8');
+          res.on('data', function (chunk) { data += chunk; });
+          res.on('end', function () {
+            if (res.statusCode == 200) {
+              if (new_argv.url)
+                console.log(data);
+              else
+                run_mongo_shell(data);
+
+            } else {
+              process.stderr.write(data);
+              process.stderr.write("\n");
+              process.exit(1);
+            }
+          });
         });
-      });
 
-      req.on('error', function(e) {
-        console.log(e);
-        console.log("Error connecting to Skybreak: " + e.message);
-        process.exit(1);
+        req.on('error', function(e) {
+          console.log(e);
+          console.log("Error connecting to Skybreak: " + e.message);
+          process.exit(1);
+        });
       });
 
     } else {
@@ -512,59 +518,67 @@ Commands.push({
       process.exit(1);
     }
 
-    process.stdout.write('Deploying to ' + url.hostname + '.  Bundling ... ');
+    deploy.maybe_password(url.hostname, function (password) {
 
-    var app_dir = path.resolve(require_project("bundle"));
-    var build_dir = path.join(app_dir, '.skybreak/local/build_tar');
-    var bundle_path = path.join(build_dir, 'bundle');
-    var bundle_opts = { skip_dev_bundle: true };
-    require('../lib/bundler.js').bundle(app_dir, bundle_path, bundle_opts);
+      // XXX prompt for new password here
 
-    process.stdout.write('uploading ... ');
+      process.stdout.write('Deploying to ' + url.hostname + '.  Bundling ... ');
 
-    var spawn = require('child_process').spawn;
+      var app_dir = path.resolve(require_project("bundle"));
+      var build_dir = path.join(app_dir, '.skybreak/local/build_tar');
+      var bundle_path = path.join(build_dir, 'bundle');
+      var bundle_opts = { skip_dev_bundle: true };
+      require('../lib/bundler.js').bundle(app_dir, bundle_path, bundle_opts);
 
-    var tar = spawn('tar', ['czf', '-', 'bundle'], {cwd: build_dir});
+      process.stdout.write('uploading ... ');
 
-    var deploy_req_opts = {
-      method: 'POST',
-      host: deploy.HOSTNAME,
-      path: '/deploy/' + url.hostname
-    };
+      var spawn = require('child_process').spawn;
 
-    var http = require('http');
-    var deploy_req = http.request(deploy_req_opts, function (deploy_res) {
-      deploy_res.on('end', function () {
-        process.stdout.write('done.\n');
-        process.stdout.write('Now serving at ' + url.hostname + '\n');
+      var tar = spawn('tar', ['czf', '-', 'bundle'], {cwd: build_dir});
 
-        files.rm_recursive(build_dir);
+      var deploy_req_opts = {
+        method: 'POST',
+        host: deploy.HOSTNAME,
+        path: '/deploy/' + url.hostname
+      };
+      if (password) {
+        options.path += '?password=' + password;
+      }
 
-        if (!url.hostname.match('skybreakplatform.com')) {
-          var dns = require('dns');
-          dns.resolve(url.hostname, 'CNAME', function (err, cnames) {
-            if (err || cnames[0] !== 'origin.skybreakplatform.com') {
-              dns.resolve(url.hostname, 'A', function (err, addresses) {
-                if (err || addresses[0] !== '107.22.210.133') {
-                  process.stdout.write('-------------\n');
-                  process.stdout.write("You've deployed to a custom domain.\n");
-                  process.stdout.write("Please be sure to CNAME your hostname to origin.skybreakplatform.com,\n");
-                  process.stdout.write("or set an A record to 107.22.210.133.\n");
-                  process.stdout.write('-------------\n');
-                }
-              });
-            }
-          });
-        }
+      var http = require('http');
+      var deploy_req = http.request(deploy_req_opts, function (deploy_res) {
+        deploy_res.on('end', function () {
+          process.stdout.write('done.\n');
+          process.stdout.write('Now serving at ' + url.hostname + '\n');
+
+          files.rm_recursive(build_dir);
+
+          if (!url.hostname.match('skybreakplatform.com')) {
+            var dns = require('dns');
+            dns.resolve(url.hostname, 'CNAME', function (err, cnames) {
+              if (err || cnames[0] !== 'origin.skybreakplatform.com') {
+                dns.resolve(url.hostname, 'A', function (err, addresses) {
+                  if (err || addresses[0] !== '107.22.210.133') {
+                    process.stdout.write('-------------\n');
+                    process.stdout.write("You've deployed to a custom domain.\n");
+                    process.stdout.write("Please be sure to CNAME your hostname to origin.skybreakplatform.com,\n");
+                    process.stdout.write("or set an A record to 107.22.210.133.\n");
+                    process.stdout.write('-------------\n');
+                  }
+                });
+              }
+            });
+          }
+        });
       });
-    });
 
-    tar.stdout.on('data', function (data) {
-      deploy_req.write(data);
-    });
+      tar.stdout.on('data', function (data) {
+        deploy_req.write(data);
+      });
 
-    tar.on('exit', function (code) {
-      deploy_req.end();
+      tar.on('exit', function (code) {
+        deploy_req.end();
+      });
     });
   }
 });
