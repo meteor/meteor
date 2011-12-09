@@ -555,8 +555,17 @@ Commands.push({
         deploy_req_opts.path += "?" + require('querystring').stringify(password_opts);
 
       var http = require('http');
+      var deploy_data = '';
       var deploy_req = http.request(deploy_req_opts, function (deploy_res) {
+        deploy_res.setEncoding('utf8');
+        deploy_res.on('data', function (chunk) { deploy_data += chunk; });
         deploy_res.on('end', function () {
+          if (deploy_res.statusCode !== 200) {
+            console.log("failed!");
+            console.log(deploy_data);
+            process.exit(1);
+          }
+
           process.stdout.write('done.\n');
           process.stdout.write('Now serving at ' + url.hostname + '\n');
 
