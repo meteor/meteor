@@ -1,4 +1,4 @@
-Sky = window.Sky || {};
+if (typeof Sky === "undefined") Sky = {};
 
 // XXX right now, if we can't connect to the database, we silently
 // drop writes on the floor!! that is very, very lame.

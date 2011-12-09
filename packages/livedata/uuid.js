@@ -28,7 +28,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-Sky = global.Sky || {};
+if (typeof Sky === "undefined") Sky = {};
 
 Sky._Alea = function () {
   function Mash() {

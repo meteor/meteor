@@ -1,5 +1,4 @@
-
-Sky = global.Sky || {};
+if (typeof Sky === "undefined") Sky = {};
 
 Sky._publishes = {}; // XXX namespace pollution
 

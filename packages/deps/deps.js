@@ -1,4 +1,4 @@
-Sky = window.Sky || {};
+if (typeof Sky === "undefined") Sky = {};
 
 (function () {
   var next_id = 1;
