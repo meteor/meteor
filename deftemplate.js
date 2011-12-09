@@ -1,4 +1,4 @@
-Sky = window.Sky || {};
+if (typeof Sky === "undefined") Sky = {};
 
 // XXX ugly hack. provides Sky._def_template, which is used to load in
 // compiled templates.
