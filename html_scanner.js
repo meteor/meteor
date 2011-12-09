@@ -17,6 +17,10 @@ var html_scanner = module.exports = {
     // probably the easiest option if we don't require that the
     // contents of a <template> block parse as valid HTML.
     var found = false;
+    // XXX forEach should probably be _.each, but we don't have a good
+    // way to get underscore included in this file yet, since it's
+    // code that's run at bundle-time, and we can't yet eval packages
+    // at bundle-time yet
     ['template', 'head', 'body'].forEach(function (tag) {
       if (found) return;
       var re = new RegExp("^\\s*<" + tag + "([^>]*?)>([\\s\\S]*?)</" + tag + ">([\\s\\S]*)$", 'i');

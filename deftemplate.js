@@ -1,3 +1,5 @@
+Sky = window.Sky || {};
+
 // XXX ugly hack. provides Sky._def_template, which is used to load in
 // compiled templates.
 
