@@ -425,7 +425,8 @@ Commands.push({
 
     } else if (new_argv._.length === 2) {
       // remote mode
-      var url = require('./deploy').parse_url(new_argv._[1]);
+      var deploy = require('./deploy');
+      var url = deploy.parse_url(new_argv._[1]);
 
       if (!url.hostname) {
         process.stdout.write(
@@ -442,7 +443,7 @@ Commands.push({
       }
 
       var options = {
-        host: 'deploy.skybreakplatform.com',
+        host: deploy.HOSTNAME,
         port: 80,
         path: '/mongo/' + url.hostname,
       };
