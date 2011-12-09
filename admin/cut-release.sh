@@ -68,6 +68,9 @@ read anykey
 git commit -a -m "Bump to version $VERSION"
 git push origin master
 
+git tag "v$VERSION"
+git push origin "v$VERSION"
+
 
 echo
 echo "//////////////////////"
