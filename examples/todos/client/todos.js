@@ -240,7 +240,7 @@ Router = new TodosRouter;
 
 ////////// Startup //////////
 
-$(function () {
+Sky.startup(function () {
   $('body').layout({north__minSize: 50,
                     spacing_open: 10,
                     north__fxSettings: { direction: "vertical" }});
