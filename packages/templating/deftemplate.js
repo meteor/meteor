@@ -153,22 +153,21 @@ Sky._def_template = function (name, raw_func, multi) {
                       " returned " + div.childNodes.length)
 
     if (!in_partial) {
-      // make multiple passes, since partials could be nested.
-      // XXX inefficient
-      do {
-        var replaced = [];
-        for (var id in Sky._pending_partials) {
-          // XXX jquery dependency
-          var target = $("#" + id, div)[0];
-          if (target) {
-            $(target).replaceWith(Sky._pending_partials[id]);
-            replaced.push(id);
+      var traverse = function (elt) {
+        for (var i = 0; i < elt.childNodes.length; i++) {
+          var child = elt.childNodes[i];
+          var replacement = child.id && Sky._pending_partials[child.id];
+          if (replacement) {
+            elt.replaceChild(replacement, child);
+            delete Sky._pending_partials[child.id];
+            child = replacement;
           }
+          traverse(child);
         }
-        _.each(replaced, function (id) {
-          delete Sky._pending_partials[id];
-        });
-      } while (replaced.length);
+      };
+
+      traverse(div);
+
       for (var id in Sky._pending_partials)
         throw new Error("internal error -- not all pending partials patched");
       Sky._pending_partials = null;
