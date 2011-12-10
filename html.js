@@ -59,7 +59,7 @@
   // also excluding the following elements that seem unlikely to be
   // used in the body:
   // HEAD, HTML, LINK, MAP, META, NOFRAMES, NOSCRIPT, STYLE, TITLE
-  var tag_names = 
+  var tag_names =
     ('A ABBR ACRONYM B BDO BIG BLOCKQUOTE BR BUTTON CAPTION CITE CODE COL ' +
      'COLGROUP DD DEL DFN DIV DL DT EM FIELDSET FORM H1 H2 H3 H4 H5 H6 HR ' +
      'I IFRAME IMG INPUT INS KBD LABEL LEGEND LI OBJECT OL OPTGROUP OPTION ' +
@@ -69,49 +69,55 @@
   for (var i = 0; i < tag_names.length; i++) {
     var tag = tag_names[i];
 
-    window[tag] = function (arg1, arg2) {
-      var attrs, contents;
-      if (arg2) {
-        attrs = arg1;
-        contents = arg2;
-      } else {
-        if (arg1 instanceof Array) {
-          attrs = {};
-          contents = arg1;
-        } else {
+    // 'this' will end up being the global object (eg, 'window' on the client)
+    this[tag] = (function (tag) {
+      return function (arg1, arg2) {
+        var attrs, contents;
+        if (arg2) {
           attrs = arg1;
-          contents = [];
+          contents = arg2;
+        } else {
+          if (arg1 instanceof Array) {
+            attrs = {};
+            contents = arg1;
+          } else {
+            attrs = arg1;
+            contents = [];
+          }
         }
-      }
-      var elt = document.createElement(tag);
-      for (var a in attrs) {
-        if (a === 'cls')
-          elt.setAttribute('class', attrs[a]);
-        else if (a === '_for')
-          elt.setAttribute('for', attrs[a]);
-        else if (event_names[a])
-          // XXX creates a dependency on jQuery.. ick..
-          ($(elt)[a])(attrs[a]);
-        else
-          elt.setAttribute(a, attrs[a]);
-      }
-      var addChildren = function (children) {
-        for (var i = 0; i < children.length; i++) {
-          var c = children[i];
-          if (!c && c !== '')
-            throw new Error("Bad value for element body: " + c);
-          else if (c instanceof Array)
-            addChildren(c);
-          else if (typeof(c) === "string")
-            elt.appendChild(document.createTextNode(c));
-          else if ('element' in c)
-            addChildren([c.element]);
+        var elt = document.createElement(tag);
+        for (var a in attrs) {
+          if (a === 'cls')
+            elt.setAttribute('class', attrs[a]);
+          else if (a === '_for')
+            elt.setAttribute('for', attrs[a]);
+          else if (event_names[a]) {
+            if (typeof $ === "undefined")
+              throw new Error("Event binding is supported only if " +
+                              "jQuery or similar is available");
+            ($(elt)[a])(attrs[a]);
+          }
           else
-            elt.appendChild(c);
+            elt.setAttribute(a, attrs[a]);
+        }
+        var addChildren = function (children) {
+          for (var i = 0; i < children.length; i++) {
+            var c = children[i];
+            if (!c && c !== '')
+              throw new Error("Bad value for element body: " + c);
+            else if (c instanceof Array)
+              addChildren(c);
+            else if (typeof(c) === "string")
+              elt.appendChild(document.createTextNode(c));
+            else if ('element' in c)
+              addChildren([c.element]);
+            else
+              elt.appendChild(c);
+          };
         };
+        addChildren(contents);
+        return elt;
       };
-      addChildren(contents);
-      return elt;
-    };
+    })(tag);
   };
 })();
