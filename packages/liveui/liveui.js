@@ -115,7 +115,7 @@ Sky.ui.render = function (render_func, events, event_data) {
 /// in which case the first element is used.
 ///
 /// options to include:
-///  query: minimongo selector (default: {})
+///  selector: minimongo selector (default: {})
 ///  sort: minimongo sort specification (default: natural order)
 ///  render: render function (from object to element)
 /// .. plus optionally
@@ -159,7 +159,7 @@ Sky.ui.renderList = function (collection, element, options) {
     element.removeChild(element.childNodes[0]);
 
   // XXX duplicated in sky_client.js (hook_handlebars_each)
-  var query = collection.findLive(options.query, {
+  var query = collection.findLive(options.selector, {
     added: function (obj, before_idx) {
       if (before_idx === element.childNodes.length)
         element.appendChild(render(obj));

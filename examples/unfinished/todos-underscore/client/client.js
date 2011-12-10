@@ -117,7 +117,7 @@ $(function () {
     // render individual todo list, stash kill function
     current_list_stop =
       Sky.ui.renderList(Todos, $('#item-list'), {
-        query: query,
+        selector: query,
         sort: {timestamp: 1},
         render: renderItem,
         events: {}
@@ -126,7 +126,6 @@ $(function () {
 
   // render list of lists in the left sidebar.
   Sky.ui.renderList(Lists, $('#lists'), {
-    query: {}, // everything
     sort: {name: 1},
     template: $('#list-template'),
     events: {
@@ -207,7 +206,6 @@ $(function () {
   Session.set('tag_filter', null);
 
   Sky.ui.renderList(LocalTags, $('#tag-filter'), {
-    query: {},
     sort: {tag: 1},
     template: $('#tag-filter-template'),
     events: {
