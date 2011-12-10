@@ -125,7 +125,7 @@ Sky.ui.render = function (render_func, events, event_data) {
 /// returns an object with:
 ///  stop(): stop updating, tear everything down and let it get GC'd
 Sky.ui.renderList = function (collection, element, options) {
-  if (('$' in window) && (element instanceof $))
+  if ((typeof $ !== "undefined") && (element instanceof $))
     // allow element to be a jQuery result set
     element = element[0];
   var dead = false;
