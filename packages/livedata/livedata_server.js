@@ -220,31 +220,20 @@ Sky.Collection = function (name) {
   return ret;
 };
 
-__skybreak_bootstrap__.register_socket = function (socket) {
-  socket.sky = {};
-  socket.sky.subs = [];
-  socket.sky.cache = {};
 
-  // 5/sec updates tops, once every 10sec min.
-  socket.sky.throttled_poll = _.throttle(function () {
-    Sky._poll_subscriptions(socket)
-  }, 50); // XXX only 50ms! for great speed. might want higher in prod.
-  socket.sky.timer = setInterval(socket.sky.throttled_poll, 10000);
-};
-
-__skybreak_bootstrap__.register_subscription = function (socket, data) {
+var register_subscription = function (socket, data) {
   socket.sky.subs.push(data);
   Sky._poll_subscriptions(socket);
 };
 
-__skybreak_bootstrap__.unregister_subscription = function (socket, data) {
+var unregister_subscription = function (socket, data) {
   socket.sky.subs = _.filter(socket.sky.subs, function (x) {
     return x._id !== data._id;
   });
   Sky._poll_subscriptions(socket);
 };
 
-__skybreak_bootstrap__.run_handler = function (socket, data, other_sockets) {
+var run_handler = function (socket, data, other_sockets) {
   // XXX note that running this in a fiber means that two serial
   // requests from the client can try to execute in parallel.. we're
   // going to have to think that through at some point. also, consider
@@ -287,3 +276,29 @@ __skybreak_bootstrap__.run_handler = function (socket, data, other_sockets) {
 
   }).run();
 };
+
+Sky._stream.register(function (socket) {
+  socket.sky = {};
+  socket.sky.subs = [];
+  socket.sky.cache = {};
+
+
+  socket.on('subscribe', function (data) {
+    register_subscription(socket, data);
+  });
+
+  socket.on('unsubscribe', function (data) {
+    unregister_subscription(socket, data);
+  });
+
+  socket.on('handle', function (data) {
+    run_handler(socket, data, Sky._stream.all_sockets());
+  });
+
+  // 5/sec updates tops, once every 10sec min.
+  socket.sky.throttled_poll = _.throttle(function () {
+    Sky._poll_subscriptions(socket)
+  }, 50); // XXX only 50ms! for great speed. might want higher in prod.
+  socket.sky.timer = setInterval(socket.sky.throttled_poll, 10000);
+});
+
