@@ -71,6 +71,40 @@ if (typeof Sky === "undefined") Sky = {};
           callback(); // already invalidated!
         else
           callbacks[active_id].push(callback);
+      },
+
+      /// Usage: once(obj, key1, key2...) -- obj is a context object
+      /// that the caller provides (initialize it to {}). once returns
+      /// false if called outside of a monitor block, or it returns
+      /// true the first time it called within a monitor block for a
+      /// given context object and key sequence. (except that two key
+      /// values that map to the same string are considered equal.)
+      /// XXX this is a weird and nasty function
+      /// XXX maybe revisit this whole api in terms of:
+      ///   - Sky.depend(key), Sky.invalidate(key) [key scoped like obj?]
+      ///   - or retrieving the "current dependency context" which can
+      ///     then be manipulated
+      once: function (obj) {
+        var id = active_id;
+        if (!id)
+          return false;
+        if (!obj[id])
+          Sky.deps.cleanup(function () {
+            delete obj[id];
+          });
+        var key = [id];
+        for (var i = 1; i < arguments.length; i++)
+          key.push("_" + arguments[i]);
+        var leaf = obj;
+        for (var i = 0; i < key.length; i++) {
+          if (!(key[i] in leaf))
+            leaf[key[i]] = {};
+          leaf = leaf[key[i]];
+        }
+        if ('' in leaf)
+          return false;
+        leaf[''] = true;
+        return true;
       }
 
     }});

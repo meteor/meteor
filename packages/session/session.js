@@ -6,6 +6,7 @@ Session = _.extend({}, {
   next_id: 1,
   key_callbacks: {}, // key -> id -> func
   key_value_callbacks: {}, // key -> value -> id -> func
+  once: {},
 
   // XXX remove debugging method (or improve it, but anyway, don't
   // ship it in production)
@@ -73,7 +74,7 @@ Session = _.extend({}, {
   get: function (key) {
     var self = this;
 
-    if (Sky.deps.monitoring) {
+    if (Sky.deps.once(Session.once, key)) {
       var id = self.next_id++;
 
       self._ensureKey(key);
@@ -96,7 +97,7 @@ Session = _.extend({}, {
         value !== null && value !== undefined)
       throw new Error("Session.equals: value can't be an object");
 
-    if (Sky.deps.monitoring) {
+    if (Sky.deps.once(Session.once, key, value)) {
       var id = self.next_id++;
 
       self._ensureKey(key);
