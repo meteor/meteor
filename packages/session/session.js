@@ -2,10 +2,8 @@
 
 Session = _.extend({}, {
   keys: {},
-
-  next_id: 1,
-  key_deps: {}, // key -> id -> context, key -> _once
-  key_value_deps: {}, // key -> value -> id -> context, key -> value -> _once
+  key_deps: {}, // key -> context id -> context
+  key_value_deps: {}, // key -> value -> context id -> context
 
   // XXX remove debugging method (or improve it, but anyway, don't
   // ship it in production)
@@ -40,8 +38,7 @@ Session = _.extend({}, {
     var invalidate = function (map) {
       if (map)
         for (var id in map)
-          if (id !== '_once')
-            map[id].invalidate();
+          map[id].invalidate();
     };
 
     self._ensureKey(key);
@@ -55,12 +52,10 @@ Session = _.extend({}, {
     var context = Sky.deps.Context.current;
     self._ensureKey(key);
 
-    if (context && context.once(self.key_deps[key])) {
-      var id = self.next_id++;
-
-      self.key_deps[key][id] = context;
+    if (context && !(context.id in self.key_deps[key])) {
+      self.key_deps[key][context.id] = context;
       context.on_invalidate(function () {
-        delete self.key_deps[key][id];
+        delete self.key_deps[key][context.id];
       });
     }
 
@@ -82,19 +77,16 @@ Session = _.extend({}, {
       if (!(value in self.key_value_deps[key]))
         self.key_value_deps[key][value] = {};
 
-      if (context.once(self.key_value_deps[key][value])) {
-        var id = self.next_id++;
-
-        self.key_value_deps[key][value][id] = context;
+      if (!(context.id in self.key_value_deps[key][value])) {
+        self.key_value_deps[key][value][context.id] = context;
         context.on_invalidate(function () {
-          delete self.key_value_deps[key][value][id];
+          delete self.key_value_deps[key][value][context.id];
 
           // clean up [key][value] if it's now empty, so we don't use
           // O(n) memory for n = values seen ever
           for (var x in self.key_value_deps[key][value])
-            if (x !== '_once')
-              return;
-          delete self.key_value_callbacks[key][value];
+            return;
+          delete self.key_value_deps[key][value];
         });
       }
     }

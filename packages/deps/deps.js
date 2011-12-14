@@ -5,9 +5,12 @@ if (typeof Sky === "undefined") Sky = {};
   var next_id = 1;
 
   var Context = function () {
-    this.callbacks = [];
-    this.invalidated = false;
+    // Each context has a unique number. You can use this to avoid
+    // storing multiple copies of the same context in your
+    // invalidation list.
     this.id = next_id++;
+    this._callbacks = [];
+    this._invalidated = false;
   };
   Context.current = null;
 
@@ -24,8 +27,8 @@ if (typeof Sky === "undefined") Sky = {};
     // invalidation functions (before returning) -- it just marks the
     // context as invalidated.
     invalidate: function () {
-      if (!this.invalidated) {
-        this.invalidated = true;
+      if (!this._invalidated) {
+        this._invalidated = true;
         if (!pending_invalidate.length)
           setTimeout(Sky.flush, 0);
         pending_invalidate.push(this);
@@ -34,24 +37,10 @@ if (typeof Sky === "undefined") Sky = {};
 
     // calls f immediately if this context was already invalidated
     on_invalidate: function (f) {
-      if (this.invalidated)
+      if (this._invalidated)
         f();
       else
-        this.callbacks.push(f);
-    },
-
-    // obj should be an object. true iff once() has never been called
-    // on this context with this object as the argument. modifies obj
-    // by adding a property named '_once'.
-    once: function (obj) {
-      obj._once = obj._once || {};
-      if (this.id in obj._once)
-        return false;
-      obj._once[this.id] = true;
-      this.on_invalidate(function () {
-        delete obj._once[this.id];
-      });
-      return true;
+        this._callbacks.push(f);
     }
   });
 
@@ -66,10 +55,10 @@ if (typeof Sky === "undefined") Sky = {};
       pending_invalidate = [];
 
       _.each(pending, function (ctx) {
-        _.each(ctx.callbacks, function (f) {
+        _.each(ctx._callbacks, function (f) {
           f(); // XXX wrap in try?
         });
-        delete this.callbacks; // maybe help the GC
+        delete this._callbacks; // maybe help the GC
       });
     },
 
