@@ -32,28 +32,35 @@ if (typeof Sky === "undefined") Sky = {};
       }
     },
 
+    // calls f immediately if this context was already invalidated
     on_invalidate: function (f) {
       if (this.invalidated)
-        // XXX should probably defer to flush
         f();
       else
         this.callbacks.push(f);
     },
 
+    // obj should be an object. true iff once() has never been called
+    // on this context with this object as the argument. modifies obj
+    // by adding a property named '_once'.
     once: function (obj) {
       obj._once = obj._once || {};
-      if (!(this.id in obj._once)) {
-        obj._once[this.id] = true;
-        this.on_invalidate(function () {
-          delete obj._once[this.id];
-        });
-        return true;
-      } else
+      if (this.id in obj._once)
         return false;
+      obj._once[this.id] = true;
+      this.on_invalidate(function () {
+        delete obj._once[this.id];
+      });
+      return true;
     }
   });
 
   _.extend(Sky, {
+    // XXX specify what happens when flush calls flush. eg, flushing
+    // causes a dom update, which causes onblur, which invokes an
+    // event handler that calls flush. it's probably an exception --
+    // no flushing from inside onblur. can also imagine routing onblur
+    // through settimeout(0), which is probably what the user wants.
     flush: function () {
       var pending = pending_invalidate;
       pending_invalidate = [];
