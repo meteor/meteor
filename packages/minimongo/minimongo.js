@@ -80,8 +80,10 @@ Collection.prototype.find = function (selector, options) {
 
   // support Sky.deps if present
   var reactive = (options.reactive === undefined) ? true : options.reactive;
-  if (reactive && typeof Sky === "object" && Sky.deps && Sky.deps.monitoring) {
-    var invalidate = Sky.deps.getInvalidate();
+  var context = reactive && typeof Sky === "object" && Sky.deps &&
+    Sky.deps.Context.current;
+  if (context) {
+    var invalidate = _.bind(context.invalidate, context);
 
     var new_options = _.clone(options);
     _.extend(new_options, {
@@ -93,7 +95,7 @@ Collection.prototype.find = function (selector, options) {
     });
 
     var live_handle = self.findLive(selector, new_options);
-    Sky.deps.cleanup(function () {
+    context.on_invalidate(function () {
       live_handle.stop();
     });
   }

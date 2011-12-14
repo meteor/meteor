@@ -4,28 +4,27 @@ Session = _.extend({}, {
   keys: {},
 
   next_id: 1,
-  key_callbacks: {}, // key -> id -> func
-  key_value_callbacks: {}, // key -> value -> id -> func
-  once: {},
+  key_deps: {}, // key -> id -> context, key -> _once
+  key_value_deps: {}, // key -> value -> id -> context, key -> value -> _once
 
   // XXX remove debugging method (or improve it, but anyway, don't
   // ship it in production)
   dump_state: function () {
     var self = this;
     console.log("=== Session state ===");
-    for (var key in self.key_callbacks) {
-      var ids = _.keys(self.key_callbacks[key]);
+    for (var key in self.key_deps) {
+      var ids = _.keys(self.key_deps[key]);
       if (!ids.length)
         continue;
-      console.log(key + ": " + _.map(ids, function (x) {return x.substr(0,4);}).join(' '));
+      console.log(key + ": " + _.reject(ids, function (x) {return x === "_once"}).join(' '));
     }
 
-    for (var key in self.key_value_callbacks) {
-      for (var value in self.key_value_callbacks[key]) {
-        var ids = _.keys(self.key_value_callbacks[key][value]);
+    for (var key in self.key_value_deps) {
+      for (var value in self.key_value_deps[key]) {
+        var ids = _.keys(self.key_value_deps[key][value]);
         if (!ids.length)
           continue;
-        console.log(key + "(" + value + "): " + _.map(ids, function (x) {return x.substr(0,4);}).join(' '));
+        console.log(key + "(" + value + "): " + _.reject(ids, function (x) {return x === "_once";}).join(' '));
       }
     }
   },
@@ -37,51 +36,31 @@ Session = _.extend({}, {
     if (value === old_value)
       return;
     self.keys[key] = value;
+
+    var invalidate = function (map) {
+      if (map)
+        for (var id in map)
+          if (id !== '_once')
+            map[id].invalidate();
+    };
+
     self._ensureKey(key);
-
-    // Old code did this:
-    //   for (var id in self.key_callbacks[key])
-    //     self.key_callbacks[key][id]();
-    //
-    // This works on all browsers except IE8. The problem is that the
-    // callback we call will (most likely) add a new callback to
-    // self.key_callbacks. On IE8 this results in an infinite
-    // loop. Suprisingly, this does work on other browsers, they don't
-    // include newly added keys in the iteration.
-    //
-    // Work around this on IE8 by iterating over a copy. We need to be
-    // careful though and not try to call callbacks that have been
-    // removed since we make our copy.
-
-    _.each(_.keys(self.key_callbacks[key]), function (id) {
-      var f = self.key_callbacks[key][id];
-      f && f();
-    });
-
-    if (old_value in self.key_value_callbacks[key])
-      _.each(_.keys(self.key_value_callbacks[key][old_value]), function (id) {
-        var f = self.key_value_callbacks[key][old_value][id];
-        f && f();
-      });
-
-    if (value in self.key_value_callbacks[key])
-      _.each(_.keys(self.key_value_callbacks[key][value]), function (id) {
-        var f = self.key_value_callbacks[key][value][id];
-        f && f();
-      });
+    invalidate(self.key_deps[key]);
+    invalidate(self.key_value_deps[key][old_value]);
+    invalidate(self.key_value_deps[key][value]);
   },
 
   get: function (key) {
     var self = this;
+    var context = Sky.deps.Context.current;
+    self._ensureKey(key);
 
-    if (Sky.deps.once(Session.once, key)) {
+    if (context && context.once(self.key_deps[key])) {
       var id = self.next_id++;
 
-      self._ensureKey(key);
-      self.key_callbacks[key][id] = Sky.deps.getInvalidate();
-
-      Sky.deps.cleanup(function () {
-        delete self.key_callbacks[key][id];
+      self.key_deps[key][id] = context;
+      context.on_invalidate(function () {
+        delete self.key_deps[key][id];
       });
     }
 
@@ -90,6 +69,7 @@ Session = _.extend({}, {
 
   equals: function (key, value) {
     var self = this;
+    var context = Sky.deps.Context.current;
 
     if (typeof(value) !== 'string' &&
         typeof(value) !== 'number' &&
@@ -97,23 +77,26 @@ Session = _.extend({}, {
         value !== null && value !== undefined)
       throw new Error("Session.equals: value can't be an object");
 
-    if (Sky.deps.once(Session.once, key, value)) {
-      var id = self.next_id++;
-
+    if (context) {
       self._ensureKey(key);
-      if (!(value in self.key_value_callbacks[key]))
-        self.key_value_callbacks[key][value] = {};
-      self.key_value_callbacks[key][value][id] = Sky.deps.getInvalidate();
+      if (!(value in self.key_value_deps[key]))
+        self.key_value_deps[key][value] = {};
 
-      Sky.deps.cleanup(function () {
-        delete self.key_value_callbacks[key][value][id];
+      if (context.once(self.key_value_deps[key][value])) {
+        var id = self.next_id++;
 
-        // clean up [key][value] if it's now empty, so we don't use
-        // O(n) memory for n = values seen ever
-        for (var x in self.key_value_callbacks[key][value])
-          return;
-        delete self.key_value_callbacks[key][value];
-      });
+        self.key_value_deps[key][value][id] = context;
+        context.on_invalidate(function () {
+          delete self.key_value_deps[key][value][id];
+
+          // clean up [key][value] if it's now empty, so we don't use
+          // O(n) memory for n = values seen ever
+          for (var x in self.key_value_deps[key][value])
+            if (x !== '_once')
+              return;
+          delete self.key_value_callbacks[key][value];
+        });
+      }
     }
 
     return self.keys[key] === value;
@@ -121,9 +104,9 @@ Session = _.extend({}, {
 
   _ensureKey: function (key) {
     var self = this;
-    if (!(key in self.key_callbacks)) {
-      self.key_callbacks[key] = {};
-      self.key_value_callbacks[key] = {};
+    if (!(key in self.key_deps)) {
+      self.key_deps[key] = {};
+      self.key_value_deps[key] = {};
     }
   }
 });
