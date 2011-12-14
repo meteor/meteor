@@ -1,10 +1,6 @@
 if (typeof Sky === "undefined") Sky = {};
 
-// XXX right now, if we can't connect to the database, we silently
-// drop writes on the floor!! that is very, very lame.
-
 (function () {
-  var socket = io.connect();
   var collections = {}; // name -> Collection-type object
 
   var subs = new Collection();
@@ -17,14 +13,7 @@ if (typeof Sky === "undefined") Sky = {};
   // Sky.subscriptions(). But who wants that? What does that even mean?
   var capture_subs;
 
-  socket.on('connect', function () {
-    // XXX
-  });
-  socket.on('disconnect', function () {
-    // XXX reconnect
-  });
-
-  socket.on('published', function (data) {
+  Sky._stream.on('published', function (data) {
     _.each(data, function (changes, collection_name) {
       var coll = collections[collection_name];
       if (!coll) {
@@ -53,7 +42,7 @@ if (typeof Sky === "undefined") Sky = {};
     });
   });
 
-  socket.on('subscription_ready', function (id) {
+  Sky._stream.on('subscription_ready', function (id) {
     var arr = sub_ready_callbacks[id];
     if (arr) _.each(arr, function (c) { c(); });
     delete sub_ready_callbacks[id];
@@ -61,7 +50,7 @@ if (typeof Sky === "undefined") Sky = {};
 
   var subsToken = subs.findLive({}, {
     added: function (sub) {
-      socket.emit('subscribe', {
+      Sky._stream.emit('subscribe', {
         _id: sub._id, name: sub.name, args: sub.args});
     },
     changed: function (sub) {
@@ -71,7 +60,7 @@ if (typeof Sky === "undefined") Sky = {};
       }
     },
     removed: function (id) {
-      socket.emit('unsubscribe', {_id: id});
+      Sky._stream.emit('unsubscribe', {_id: id});
     }
   });
 
@@ -95,8 +84,8 @@ if (typeof Sky === "undefined") Sky = {};
         obj._id = _id;
 
         if (this._name)
-          socket.emit('handle', {collection: this._name, type: 'insert',
-                                 args: obj});
+          Sky._stream.emit('handle', {
+            collection: this._name, type: 'insert', args: obj});
         this._collection.insert(obj);
 
         return obj;
@@ -115,9 +104,9 @@ if (typeof Sky === "undefined") Sky = {};
           selector = {_id: selector};
 
         if (this._name)
-          socket.emit('handle', {collection: this._name, type: 'update',
-                                 selector: selector, mutator: mutator,
-                                 options: options});
+          Sky._stream.emit('handle', {
+            collection: this._name, type: 'update',
+            selector: selector, mutator: mutator, options: options});
         this._collection.update(selector, mutator, options);
       },
 
@@ -126,8 +115,8 @@ if (typeof Sky === "undefined") Sky = {};
           selector = {_id: selector};
 
         if (this._name)
-          socket.emit('handle', {collection: this._name, type: 'remove',
-                                 selector: selector});
+          Sky._stream.emit('handle', {
+            collection: this._name, type: 'remove', selector: selector});
         this._collection.remove(selector);
       },
 
@@ -147,8 +136,9 @@ if (typeof Sky === "undefined") Sky = {};
 
             // tell the server to run the handler
             if (this._name)
-              socket.emit('handle', {collection: this._name, type: 'method',
-                                     method: method, args: args});
+              Sky._stream.emit('handle', {
+                collection: this._name, type: 'method',
+                method: method, args: args});
           };
         }, this);
       }

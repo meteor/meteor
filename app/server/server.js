@@ -9,7 +9,6 @@ var connect = require('connect');
 var gzip = require('connect-gzip');
 var argv = require('optimist').argv;
 var mime = require('mime');
-var socketio = require('socket.io');
 var handlebars = require('handlebars');
 var useragent = require('useragent');
 
@@ -67,26 +66,13 @@ var run = function (bundle_dir) {
     res.end();
   });
 
-  // socket.io setup
-  var io = socketio.listen(app);
-  io.configure(function() {
-    // Don't serve static files from socket.io. We serve them separately
-    // to get gzip and other fun things.
-    io.set('browser client', false);
-
-    io.set('log level', 1);
-    // XXX disable websockets! they break chrome both debugging
-    // and node-http-proxy (used in outer app)
-    io.set('transports', _.without(io.transports(), 'websocket'));
-  });
-
   // read bundle config file
   var info_raw =
     fs.readFileSync(path.join(bundle_dir, 'app.json'), 'utf8');
   var info = JSON.parse(info_raw);
 
   // start up app
-  __skybreak_bootstrap__ = {require: require, startup_hooks: []};
+  __skybreak_bootstrap__ = {require: require, startup_hooks: [], app: app};
   Fiber(function () {
     // (put in a fiber to let Sky.db operations happen during loading)
 
@@ -109,23 +95,6 @@ var run = function (bundle_dir) {
       // error message on parse error. it's what require() uses to
       // generate its errors.
       require('vm').runInThisContext(code, filename, true);
-    });
-
-    // connect socket.io to skybreak server libraries
-    io.sockets.on('connection', function (socket) {
-      __skybreak_bootstrap__.register_socket(socket);
-
-      socket.on('subscribe', function (data) {
-        __skybreak_bootstrap__.register_subscription(socket, data);
-      });
-      socket.on('unsubscribe', function (data) {
-        __skybreak_bootstrap__.unregister_subscription(socket, data);
-      });
-
-      socket.on('handle', function (data) {
-        __skybreak_bootstrap__.run_handler(socket, data,
-                                                   io.sockets.sockets);
-      });
     });
 
     // run the user startup hooks.

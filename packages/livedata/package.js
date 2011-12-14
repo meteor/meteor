@@ -6,6 +6,7 @@ Package.describe({
 Package.require('underscore');
 Package.require('session');
 Package.require('minimongo');
+Package.require('stream');
 
 Package.client_file('livedata_client.js');
 
