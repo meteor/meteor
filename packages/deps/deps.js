@@ -4,17 +4,24 @@ if (typeof Sky === "undefined") Sky = {};
   var next_id = 1;
   var active_id = null; // null if not inside monitor
   var callbacks = {}; // id -> list of functions to call on invalidate
-
-  function invalidate (id) {
-    var funcs = callbacks[id] || [];
-    delete callbacks[id];
-
-    _.each(funcs, function (f) {
-      f(); // XXX wrap in try?
-    });
-  };
+  var pending_invalidations = [];
 
   _.extend(Sky, {
+    /// XXX document
+    /// XXX is it weird that this is on the root namespace?
+    flush: function () {
+      _.each(pending_invalidations, function (id) {
+        var funcs = callbacks[id] || [];
+        delete callbacks[id];
+
+        _.each(funcs, function (f) {
+          f(); // XXX wrap in try?
+        });
+      });
+
+      pending_invalidations = [];
+    },
+
     deps: {
       /// Create a new monitor block, execute func inside it, and
       /// return func's value. When the monitor block is invalidated,
@@ -55,10 +62,15 @@ if (typeof Sky === "undefined") Sky = {};
       /// Return the invalidation function for the current monitor
       /// block, or throw an exception if not inside a monitor block.
       getInvalidate: function () {
-        if (!active_id)
+        var id = active_id;
+        if (!id)
           throw new Error("Not inside monitor()");
 
-        return _.bind(invalidate, null, active_id);
+        return function () {
+          if (!pending_invalidations.length)
+            setTimeout(Sky.flush);
+          pending_invalidations.push(id);
+        };
       },
 
       /// Register a cleanup function on the current monitor block, or
@@ -84,6 +96,7 @@ if (typeof Sky === "undefined") Sky = {};
       ///   - Sky.depend(key), Sky.invalidate(key) [key scoped like obj?]
       ///   - or retrieving the "current dependency context" which can
       ///     then be manipulated
+      /// XXX document (including the fact that this file isn't 50 line anymore)
       once: function (obj) {
         var id = active_id;
         if (!id)
