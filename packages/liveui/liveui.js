@@ -1,28 +1,29 @@
 Sky.ui = Sky.ui || {};
 
+Sky.ui._killtree = function (elt) {
+  if (elt._context) {
+    elt._context.killed = true;
+    elt._context.invalidate();
+    delete elt._context;
+  }
+
+  for (var i = 0; i < elt.childNodes.length; i++)
+    Sky.ui._killtree(elt.childNodes[i]);
+};
+
 // from and to should be siblings
 // XXX if jquery is present, hook this up to the jquery cleanup system
-Sky.ui._kill = function (from, to) {
-  var killtree = function (elt) {
-    if (elt._context) {
-      elt._context.killed = true;
-      elt._context.invalidate();
-      delete elt._context;
-    }
-
-    for (var i = 0; i < elt.childNodes.length; i++)
-      killtree(elt.childNodes[i]);
-  };
-
+Sky.ui._killrange = function (from, to) {
   while (true) {
-    killtree(from);
+    Sky.ui._killtree(from);
     if (from === to)
       break;
     from = from.nextSibling;
   }
 };
 
-// if frag is given, put the removed nodes in it instead of deleting them
+// if frag is given, save the removed nodes in it instead of deleting
+// them (and don't kill them)
 Sky.ui._remove = function (from, to, frag) {
   // could use a Range here (on many browsers) for faster deletes?
   var parent = from.parentNode;
@@ -30,8 +31,10 @@ Sky.ui._remove = function (from, to, frag) {
     var next = from.nextSibling;
     if (frag)
       frag.appendChild(from);
-    else
+    else {
+      Sky.ui._killtree(from);
       parent.removeChild(from);
+    }
     if (from === to)
       break;
     if (!next) {
@@ -106,12 +109,13 @@ Sky.ui.render = function (render_func, events, event_data) {
         return;
 
       delete start._context;
-      Sky.ui._kill(start, end);
 
       if (!(document.body.contains ? document.body.contains(start)
-            : (document.body.compareDocumentPosition(start) & 16)))
+            : (document.body.compareDocumentPosition(start) & 16))) {
         // It was taken offscreen. Stop updating it so it can get GC'd.
+        Sky.ui._killrange(start, end);
         return;
+      }
     }
 
     var context = new Sky.deps.Context;
@@ -231,7 +235,7 @@ Sky.ui.renderList = function (collection, options) {
 
     if (!old_context.killed) {
       delete start._context;
-      Sky.ui._kill(start, end);
+      Sky.ui._killrange(start, end);
     }
   });
 
