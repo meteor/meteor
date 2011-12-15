@@ -75,12 +75,7 @@ if (typeof Sky === "undefined") Sky = {};
       clearTimeout(connection_timer);
       connection_timer = undefined;
     }
-
-    status.status = "waiting"
-    status.connected = false;
-    status_changed();
-
-    retry_later();
+    retry_later(); // sets status. no need to do it here.
   };
   var fake_connect_failed = function () {
     // sometimes socket.io just doesn't tell us when it failed. we
@@ -103,12 +98,19 @@ if (typeof Sky === "undefined") Sky = {};
     return timeout;
   };
   var retry_later = function () {
-    retry_timer = setTimeout(retry_now, retry_timeout(status.retry_count));
+    var timeout = retry_timeout(status.retry_count)
+    retry_timer = setTimeout(retry_now, timeout);
+
+    status.status = "waiting"
+    status.connected = false;
+    status.retry_time = (new Date()).getTime() + timeout;
+    status_changed();
   };
   var retry_now = function () {
     status.retry_count += 1;
     status.status = "connecting";
     status.connected = false;
+    delete status.retry_time;
     status_changed();
 
     launch_connection();
