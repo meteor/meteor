@@ -17,14 +17,9 @@ if (typeof Sky === "undefined") Sky = {};
 Sky._pending_partials = null; // id -> element
 Sky._pending_partials_idx_nonce = 0;
 
-// XXX another disgusting hack -- we reach into handlebars and
-// extend #each to know how to cooperate with pending_partials and
-// minimongo findlive.
-//
-// XXX XXX XXX the garbage collection implications are terrible.. we
-// don't even pretend to call stop on the findlive, so every time
-// we're rerendered, we kick off another findlive that runs
-// .. forever!
+// XXX another messy hack -- we reach into handlebars and extend #each
+// to know how to cooperate with pending_partials and minimongo
+// findlive.
 Sky._hook_handlebars_each = function () {
   Sky._hook_handlebars_each = function(){}; // install the hook only once
 
@@ -33,80 +28,15 @@ Sky._hook_handlebars_each = function () {
     if (!(context instanceof Collection.LiveResultsSet))
       return orig(context, options);
 
-    // XXX inserts an intermediate DIV!! that is lame and should be
-    // fixed. besides general hygiene/pride, we really need to
-    // support <ul>{{#each items}}<li>{{name}}</li>{{/each}}</ul>
-    var element = document.createElement("div");
-
-    var trim = function (markup) {
-      // Consider {{#each items}\n{{> item}}\n{{/each}}
-      //
-      // In that case, options.fn will return HTML that parses into
-      // three nodes: whitespace, the partial, whitespace. That
-      // won't work. I can't reconcile this logically at the moment,
-      // but "do what you mean" and strip the whitespace.
-      //
-      // XXX fails if a {{#if}..{{else}}..{{/if}} is at toplevel in
-      // a template?
-      var match = markup.match(/^\s*(<[\s\S]+>)\s*$/);
-      if (match)
-        markup = match[1];
-      return markup;
-    }
-
-    var render = Sky._def_template(null, function (obj) {
-      return trim(options.fn(obj));
-    });
-
-    var renderElse = Sky._def_template(null, function () {
-      return trim(options.inverse({}));
-    });
-
-    // XXX sort of lame that we always end up rendering this even if
-    // the query returns results 100% of the time ..
-    var is_empty = true;
-    element.appendChild(renderElse());
-
-    // XXX copied code from Sky.ui.renderList.. bleh
-    // (with addition of is_empty / renderElse)
-    context.reconnect({
-      added: function (obj, before_idx) {
-        if (is_empty) {
-          element.removeChild(element.childNodes[0]);
-          is_empty = false;
-        }
-        if (before_idx === element.childNodes.length)
-          element.appendChild(render(obj));
-        else
-          element.insertBefore(render(obj), element.childNodes[before_idx]);
-        Sky.ui._tryFocus();
-      },
-      removed: function (id, at_idx) {
-        element.removeChild(element.childNodes[at_idx]);
-        if (element.childNodes.length === 0) {
-          is_empty = true;
-          element.appendChild(renderElse());
-        }
-      },
-      changed: function (obj, at_idx) {
-        element.insertBefore(render(obj), element.childNodes[at_idx]);
-        element.removeChild(element.childNodes[at_idx + 1]);
-        Sky.ui._tryFocus();
-      },
-      moved: function (obj, old_idx, new_idx) {
-        var elt = element.removeChild(element.childNodes[old_idx]);
-        if (new_idx === element.childNodes.length)
-          element.appendChild(elt);
-        else
-          element.insertBefore(elt, element.childNodes[new_idx]);
-      }
-    });
-
     var id = Sky._pending_partials_idx_nonce++;
-    Sky._pending_partials[id] = element;
+    Sky._pending_partials[id] = Sky.ui.renderList(context, {
+      render: Sky._def_template(null, options.fn),
+      render_empty: Sky._def_template(null, _.bind(options.inverse, null, {}))
+    });
+
     return "<div id='" + id +
       "'><!-- for replacement with findlive each --></div>";
-  }
+  };
 };
 
 // XXX namespacing

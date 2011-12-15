@@ -169,29 +169,36 @@ Sky.ui.render = function (render_func, events, event_data) {
 /// options to include:
 ///  selector: minimongo selector (default: {})
 ///  sort: minimongo sort specification (default: natural order)
-///  render: render function (from object to element)
+///  render: render function (as in render(), but takes a document)
 /// .. plus optionally
+///  render_empty: render function for content to show when query empty.
+///   still gets same event bindings.
 ///  events: vaguely backbone-style live event specification
 ///    {'click #selector #path' : function (obj) { } }
 ///
 /// returns an object with:
 ///  stop(): stop updating, tear everything down and let it get GC'd
-///
-/// XXX rewrite using Sky.ui.render, and new GC semantics, and make it
-/// return a fragment rather than plopping its results into a
-/// container
 
-Sky.ui.renderList = function (collection, options) {
+/// XXX consider making render an argument rather than an option
+///
+/// XXX what package should this go in? depends on both liveui and minimongo..
+///
+/// XXX what can now be a collection, or the handle of an existing
+/// findlive. messy.
+Sky.ui.renderList = function (what, options) {
   var frag = document.createDocumentFragment();
   var context = new Sky.deps.Context;
 
-  var start = document.createComment("renderList " + collection._name);
-  var end = document.createComment("end " + collection._name);
+  var is_handle = what instanceof Collection.LiveResultsSet;
+  var name = (is_handle ? what.collection : what)._name;
+  var start = document.createComment("renderList " + name);
+  var end = document.createComment("end " + name);
   start._used = end._used = true;
   start._context = context;
   frag.appendChild(start);
   frag.appendChild(end);
 
+  var empty_shown = false;
   var entry_starts = [];
   var entry_end = function (idx) {
     return (entry_starts[idx + 1] || end).previousSibling;
@@ -206,14 +213,26 @@ Sky.ui.renderList = function (collection, options) {
     return this_start;
   };
 
-  var query = collection.findLive(options.selector, {
-    sort: options.sort,
+  var maybe_show_empty = function () {
+    if (!entry_starts.length && options.render_empty) {
+      start.parentNode.insertBefore(
+        Sky.ui.render(options.render_empty, options.events), end);
+      empty_shown = true;
+    }
+  };
+
+  var query_opts = {
     added: function (doc, before_idx) {
+      if (empty_shown) {
+        Sky.ui._remove(start.nextSibling, end.previousSibling);
+        empty_shown = false;
+      }
       entry_starts.splice(before_idx, 0, insert_entry(doc, before_idx));
     },
     removed: function (id, at_idx) {
       Sky.ui._remove(entry_starts[at_idx], entry_end(at_idx));
       entry_starts.splice(at_idx, 1);
+      maybe_show_empty();
     },
     changed: function (doc, at_idx) {
       var this_start = insert_entry(doc, at_idx);
@@ -228,7 +247,16 @@ Sky.ui.renderList = function (collection, options) {
       entry_starts.splice(old_idx, 1);
       entry_starts.splice(new_idx, 0, this_start);
     }
-  });
+  };
+
+  if (is_handle) {
+    var query = what;
+    query.reconnect(query_opts);
+  } else {
+    query_opts.sort = options.sort;
+    var query = what.findLive(options.selector || {}, query_opts);
+  }
+  maybe_show_empty();
 
   context.on_invalidate(function (old_context) {
     query.stop();

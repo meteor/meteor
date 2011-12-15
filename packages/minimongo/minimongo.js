@@ -111,12 +111,13 @@ Collection.prototype.find = function (selector, options) {
 //    - removed (id, at_index)
 //  * sort: sort descriptor
 //
-// functions available on returned query handle:
+// attributes available on returned query handle:
 //  * stop(): end updates
 //  * indexOf(id): return current index of object in result set, or -1
 //  * reconnect({}): replace added, changed, moved, removed, from the
 //      arguments, and call added to deliver the current state of the
 //      query (XXX ugly hack to support templating)
+//  * collection: the collection this query is querying
 //
 // iff x is a returned query handle, (x instanceof
 // Collection.LiveResultsSet) is true
@@ -127,6 +128,7 @@ Collection.prototype.find = function (selector, options) {
 // XXX maybe support limit/skip
 // XXX it'd be helpful if removed got the object that just left the
 // query, not just its id
+// XXX document that initial results will definitely be delivered before we return [do, add to asana]
 
 Collection.LiveResultsSet = function () {};
 Collection.prototype.findLive = function (selector, options) {
@@ -165,7 +167,8 @@ Collection.prototype.findLive = function (selector, options) {
           return i;
       return -1;
     },
-    reconnect: connect
+    reconnect: connect,
+    collection: this
   });
   return handle;
 };
