@@ -49,8 +49,8 @@ Status = {
 
 ////////// Outer Proxy Server //////////
 
-var start_proxy = function (outer_port, inner_port) {
-  httpProxy.createServer(function (req, res, proxy) {
+var start_proxy = function (outer_port, inner_port, callback) {
+  var p = httpProxy.createServer(function (req, res, proxy) {
     if (Status.running) {
       // server is running. things are hunky dory!
       proxy.proxyRequest(req, res, {
@@ -74,11 +74,25 @@ var start_proxy = function (outer_port, inner_port) {
       });
 
       res.end();
-
     }
-  }).listen(outer_port, function () {
-    process.stdout.write("Running on: http://localhost:" + outer_port + "/\n");
   });
+
+  p.on('error', function (err) {
+    if (err.code == 'EADDRINUSE') {
+      process.stderr.write("Can't listen on port " + outer_port
+                           + ", perhaps another Skybreak is running?\n");
+      process.stderr.write("\n");
+      process.stderr.write("Running two copies of Skybreak in the same application directory\n");
+      process.stderr.write("will not work.  If something else is using port " + outer_port + ", you can\n");
+      process.stderr.write("specify an alternative port with --port <port>.\n");
+    } else {
+      process.stderr.write(err + "\n");
+    }
+
+    process.exit(1);
+  });
+
+  p.listen(outer_port, callback);
 };
 
 ////////// MongoDB //////////
@@ -371,42 +385,44 @@ exports.run = function (app_dir, bundle_path, bundle_opts, port) {
     }
   };
 
-  process.stdout.write("[[[[[ " + files.pretty_path(app_dir) + " ]]]]]\n\n");
-
   if (!files.in_checkout())
     start_update_checks();
-  start_proxy(outer_port, inner_port);
 
-  var server;
-  var restart_server = function () {
-    if (server)
-      kill_server(server);
-    server_log = [];
+  start_proxy(outer_port, inner_port, function () {
+    process.stdout.write("[[[[[ " + files.pretty_path(app_dir) + " ]]]]]\n\n");
+    process.stdout.write("Running on: http://localhost:" + outer_port + "/\n");
 
-    try {
-      bundle();
-    } catch (e) {
-      log_to_clients({system: e.stack});
-      Status.hard_crashed();
-      return;
-    }
+    var server;
+    var restart_server = function () {
+      if (server)
+        kill_server(server);
+      server_log = [];
 
-    server = start_server(bundle_path, inner_port, mongo_url, function () {
-      Status.soft_crashed();
-      if (!Status.crashing)
-        restart_server(app_dir);
-    });
-  };
+      try {
+        bundle();
+      } catch (e) {
+        log_to_clients({system: e.stack});
+        Status.hard_crashed();
+        return;
+      }
 
-  var launch = function () {
-    launch_mongo(app_dir, mongo_port,
-                 function () { // On Mongo startup complete
-                   restart_server();
-                 },
-                 function () { // On Mongo dead
-                   // XXX wait a sec to restart.
-                   setTimeout(launch, 1000);
-                 });
-  };
-  launch();
+      server = start_server(bundle_path, inner_port, mongo_url, function () {
+        Status.soft_crashed();
+        if (!Status.crashing)
+          restart_server(app_dir);
+      });
+    };
+
+    var launch = function () {
+      launch_mongo(app_dir, mongo_port,
+                   function () { // On Mongo startup complete
+                     restart_server();
+                   },
+                   function () { // On Mongo dead
+                     // XXX wait a sec to restart.
+                     setTimeout(launch, 1000);
+                   });
+    };
+    launch();
+  });
 };
