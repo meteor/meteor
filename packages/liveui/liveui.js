@@ -96,10 +96,12 @@ Sky.ui.render = function (render_func, events, event_data) {
       : (document.body.compareDocumentPosition(start) & 16);
     if (!onscreen) {
       // It was taken offscreen. Stop updating it so it can get GC'd.
-      do {
+      while (true) {
         kill(start);
+        if (start === end)
+          break;
         start = start.nextSibling;
-      } while (start !== end);
+      };
       return;
     }
 
@@ -150,6 +152,13 @@ Sky.ui.render = function (render_func, events, event_data) {
     var frag = render_fragment(context);
     start = frag.firstChild;
     end = frag.lastChild;
+    // XXX code duplication
+    if (start._context)
+      // bleh. could be render() returning the result of another
+      // render(), without wrapping it in a container
+      throw new Error("Hit an implementation limitation");
+    start._context = context;
+    end._end = true;
     return frag;
   })();
 };
