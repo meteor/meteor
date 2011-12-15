@@ -1,6 +1,7 @@
 var files = require('../lib/files.js');
 var path = require('path');
 var _ = require('../lib/third/underscore.js');
+var deploy = require('./deploy');
 
 var usage = function() {
   process.stdout.write(
@@ -354,25 +355,6 @@ Commands.push({
   }
 });
 
-var run_mongo_shell = function (url) {
-  var mongo_path = path.join(files.get_dev_bundle(), 'mongodb/bin/mongo');
-  var mongo_url = require('url').parse(url);
-  var auth = mongo_url.auth && mongo_url.auth.split(':');
-  var spawn = require('child_process').spawn;
-
-  var args = [];
-  if (auth) args.push('-u', auth[0]);
-  if (auth) args.push('-p', auth[1]);
-  args.push(mongo_url.hostname + ':' + mongo_url.port + mongo_url.pathname);
-
-  var proc = spawn(mongo_path,
-                   args,
-                   { customFds: [0, 1, 2] });
-  proc.on('exit', function () {
-    process.stdin.destroy(); // clean up after maybe_password
-  });
-};
-
 Commands.push({
   name: "mongo",
   help: "Connect to the Mongo database for the specified site",
@@ -428,55 +410,7 @@ Commands.push({
 
     } else if (new_argv._.length === 2) {
       // remote mode
-      var deploy = require('./deploy');
-      var url = deploy.parse_url(new_argv._[1]);
-      deploy.validate_url(url);
-
-      deploy.maybe_password(url.hostname, function (password) {
-
-        var options = {
-          host: deploy.HOSTNAME,
-          port: 80,
-          path: '/mongo/' + url.hostname,
-        };
-        if (password) {
-          options.path += '?password=' + password;
-        }
-        var data = '';
-
-        var req = require('http').get(options, function(res) {
-          res.setEncoding('utf8');
-          res.on('data', function (chunk) { data += chunk; });
-          res.on('end', function () {
-            if (res.statusCode == 200) {
-              if (new_argv.url) {
-                console.log(data);
-
-                // only do this if we're printing the URL. Don't do it
-                // if we're running the mongo shell, since that will
-                // close off stdin for the shell.
-                process.stdin.destroy(); // clean up after maybe_password
-              } else {
-                // pause stdin so we don't try to read it while mongo is
-                // running.
-                process.stdin.pause();
-                run_mongo_shell(data);
-              }
-
-            } else {
-              process.stderr.write(data);
-              process.stderr.write("\n");
-              process.exit(1);
-            }
-          });
-        });
-
-        req.on('error', function(e) {
-          console.log(e);
-          console.log("Error connecting to Skybreak: " + e.message);
-          process.exit(1);
-        });
-      });
+      deploy.mongo(new_argv._[1], new_argv.url);
 
     } else {
       // usage
@@ -494,6 +428,9 @@ Commands.push({
       .boolean('password')
       .alias('password', 'P')
       .describe('password', 'set a password for the deployment')
+      .boolean('delete')
+      .alias('delete', 'D')
+      .describe('delete', "permanently delete this project and its data from Skybreak")
       .usage(
 "Usage: skybreak deploy <site>\n" +
 "\n" +
@@ -508,95 +445,12 @@ Commands.push({
       process.exit(1);
     }
 
-    var deploy = require('./deploy');
-
-    var url = deploy.parse_url(new_argv._[1]);
-    deploy.validate_url(url);
-
-    var app_dir = path.resolve(require_project("bundle"));
-    var build_dir = path.join(app_dir, '.skybreak/local/build_tar');
-    var bundle_path = path.join(build_dir, 'bundle');
-    var bundle_opts = { skip_dev_bundle: true };
-
-    var do_deploy = function (password, set_password) {
-      process.stdout.write('Deploying to ' + url.hostname + '.  Bundling ... ');
-
-      require('../lib/bundler.js').bundle(app_dir, bundle_path, bundle_opts);
-
-      process.stdout.write('uploading ... ');
-
-      var spawn = require('child_process').spawn;
-
-      var tar = spawn('tar', ['czf', '-', 'bundle'], {cwd: build_dir});
-
-      var deploy_req_opts = {
-        method: 'POST',
-        host: deploy.HOSTNAME,
-        path: '/deploy/' + url.hostname
-      };
-      var password_opts = {};
-      if (password) password_opts.password = password;
-      if (set_password) password_opts.set_password = set_password;
-      if (password || set_password)
-        deploy_req_opts.path += "?" + require('querystring').stringify(password_opts);
-
-      var http = require('http');
-      var deploy_data = '';
-      var deploy_req = http.request(deploy_req_opts, function (deploy_res) {
-        deploy_res.setEncoding('utf8');
-        deploy_res.on('data', function (chunk) { deploy_data += chunk; });
-        deploy_res.on('end', function () {
-          if (deploy_res.statusCode !== 200) {
-            console.log("failed!");
-            console.log(deploy_data);
-            process.exit(1);
-          }
-
-          process.stdout.write('done.\n');
-          process.stdout.write('Now serving at ' + url.hostname + '\n');
-
-          files.rm_recursive(build_dir);
-
-          if (!url.hostname.match('skybreakplatform.com')) {
-            var dns = require('dns');
-            dns.resolve(url.hostname, 'CNAME', function (err, cnames) {
-              if (err || cnames[0] !== 'origin.skybreakplatform.com') {
-                dns.resolve(url.hostname, 'A', function (err, addresses) {
-                  if (err || addresses[0] !== '107.22.210.133') {
-                    process.stdout.write('-------------\n');
-                    process.stdout.write("You've deployed to a custom domain.\n");
-                    process.stdout.write("Please be sure to CNAME your hostname to origin.skybreakplatform.com,\n");
-                    process.stdout.write("or set an A record to 107.22.210.133.\n");
-                    process.stdout.write('-------------\n');
-                  }
-                });
-              }
-            });
-          }
-        });
-      });
-
-      tar.stdout.on('data', function (data) {
-        deploy_req.write(data);
-      });
-
-      tar.on('exit', function (code) {
-        deploy_req.end();
-      });
-
-      // XXX this is gross. maybe some way to automate?
-      process.stdin.destroy(); // clean up after maybe_password
-    };
-
-    deploy.maybe_password(url.hostname, function (password) {
-      if (new_argv.password) {
-        deploy.get_new_password(function (set_password) {
-          do_deploy(password, set_password);
-        });
-      } else {
-        do_deploy(password);
-      }
-    });
+    if (new_argv.delete) {
+      deploy.delete_app(new_argv._[1]);
+    } else {
+      var app_dir = path.resolve(require_project("bundle"));
+      deploy.deploy_app(new_argv._[1], app_dir, new_argv.password);
+    }
   }
 });
 
@@ -612,36 +466,7 @@ Commands.push({
       process.exit(1);
     }
 
-    var deploy = require('./deploy');
-    var url = deploy.parse_url(argv._[0]);
-    deploy.validate_url(url);
-
-    deploy.maybe_password(url.hostname, function (password) {
-      var http = require('http');
-      var options = {
-        host: deploy.HOSTNAME,
-        port: 80,
-        path: '/logs/' + url.hostname,
-      };
-      if (password) {
-        options.path += '?password=' + password;
-      }
-
-      var req = http.get(options, function(res) {
-        res.setEncoding('utf8');
-        res.on('data', function (chunk) {
-          process.stdout.write(chunk);
-        });
-      });
-
-      req.on('error', function(e) {
-        console.log("Error connecting to Skybreak: " + e.message);
-        process.exit(1);
-      });
-
-      // XXX this is gross. maybe some way to automate?
-      process.stdin.destroy(); // clean up after maybe_password
-    });
+    deploy.logs(argv._[0]);
   }
 });
 
