@@ -1,5 +1,48 @@
 Sky.ui = Sky.ui || {};
 
+// from and to should be siblings
+// XXX if jquery is present, hook this up to the jquery cleanup system
+Sky.ui._kill = function (from, to) {
+  var killtree = function (elt) {
+    if (elt._context) {
+      elt._context.killed = true;
+      elt._context.invalidate();
+      delete elt._context;
+    }
+
+    for (var i = 0; i < elt.childNodes.length; i++)
+      killtree(elt.childNodes[i]);
+  };
+
+  while (true) {
+    killtree(from);
+    if (from === to)
+      break;
+    from = from.nextSibling;
+  }
+};
+
+// if frag is given, put the removed nodes in it instead of deleting them
+Sky.ui._remove = function (from, to, frag) {
+  // could use a Range here (on many browsers) for faster deletes?
+  var parent = from.parentNode;
+  while (true) {
+    var next = from.nextSibling;
+    if (frag)
+      frag.appendChild(from);
+    else
+      parent.removeChild(from);
+    if (from === to)
+      break;
+    if (!next) {
+      console.log("Warning: The final element in a live-updating range " +
+                  "was removed. This could result in incorrect updates.");
+      break;
+    }
+    from = next;
+  }
+};
+
 /// OLD COMMENT, REWRITE (XXX):
 ///
 /// Render some HTML, resulting in a DOM node, which is
@@ -57,75 +100,45 @@ Sky.ui.render = function (render_func, events, event_data) {
     return frag;
   };
 
-  var kill = function (elt) {
-    // (only works if the element is offscreen, because invalidate
-    // will just rerender the element unless the containment check
-    // fails)
+  var update = function (old_context) {
+    if (old_context) {
+      if (old_context.killed)
+        return;
 
-    for (var i = 0; i < elt.childNodes.length; i++) {
-      var ch = elt.childNodes[i];
+      delete start._context;
+      Sky.ui._kill(start, end);
 
-      if (ch._context) {
-        // A live-updating range is indicated in the DOM by an element
-        // with a _context expando (pointing at an invalidation
-        // context), followed eventually by a sibling (maybe even the
-        // same node) with an _end expando, marking the end of the
-        // range. When we encounter such a range, instead of
-        // traversing it, we invalidate the context. It's then
-        // responsible for traversing its own children.
-        ch._context.invalidate();
-        while (i < elt.childNodes.length && elt.childNodes[i]._end)
-          i++;
-      } else
-        kill(elt.childNodes[i]);
-    }
-
-    if (elt._context) {
-      elt._context.invalidate();
-      delete elt._context;
-    }
-    for (var i = 0; i < elt.childNodes.length; i++)
-      kill(elt.childNodes[i]);
-  };
-
-  var update = function () {
-    delete start._context;
-
-    var onscreen =
-      document.body.contains ? document.body.contains(start)
-      : (document.body.compareDocumentPosition(start) & 16);
-    if (!onscreen) {
-      // It was taken offscreen. Stop updating it so it can get GC'd.
-      while (true) {
-        kill(start);
-        if (start === end)
-          break;
-        start = start.nextSibling;
-      };
-      return;
+      if (!(document.body.contains ? document.body.contains(start)
+            : (document.body.compareDocumentPosition(start) & 16)))
+        // It was taken offscreen. Stop updating it so it can get GC'd.
+        return;
     }
 
     var context = new Sky.deps.Context;
     context.on_invalidate(update);
     var frag = render_fragment(context);
+
+    // if we share 'start' or 'end' with another instance of render,
+    // bad things could happen.
+    // XXX need name less prone to collide
+    if (frag.firstChild._used) {
+      console.log("note: wrapping prefix"); // XXX REMOVE
+      frag.insertBefore(document.createComment(""), frag.firstChild);
+    }
+    if (frag.lastChild._used) {
+      console.log("note: wrapping suffix"); // XXX REMOVE
+      frag.appendChild(document.createComment(""));
+    }
+
     var new_start = frag.firstChild;
     var new_end = frag.lastChild;
+    new_start._used = new_end._used = true;
+    // XXX need name less prone to collide
+    new_start._context = context;
 
-    var container = start.parentNode;
-    container.insertBefore(frag, start);
-    // could use a Range here (on many browsers) for faster deletes?
-    while (true) {
-      var next = start.nextSibling;
-      container.removeChild(start);
-      kill(start);
-      if (start === end)
-        break;
-      if (!next) {
-        console.log("Warning: The final element in a live-updating range " +
-                    "was removed. This could result in incorrect updates.");
-        break;
-      }
-      start = next;
+    if (old_context) {
+      start.parentNode.insertBefore(frag, start);
+      Sky.ui._remove(start, end);
     }
 
     // XXX remove could trigger blur, which could reasonably call
@@ -135,40 +148,14 @@ Sky.ui.render = function (render_func, events, event_data) {
 
     start = new_start;
     end = new_end;
-    // XXX need names less prone to collide
-    if (start._context)
-      // bleh. could be render() returning the result of another
-      // render(), without wrapping it in a container
-      throw new Error("Hit an implementation limitation");
-    start._context = context;
-    end._end = true;
+    return frag;
   };
 
-  return (function () {
-    // run in an anonymous function to keep these vars out of update's
-    // closure
-    var context = new Sky.deps.Context;
-    context.on_invalidate(update);
-    var frag = render_fragment(context);
-    start = frag.firstChild;
-    end = frag.lastChild;
-    // XXX code duplication
-    if (start._context)
-      // bleh. could be render() returning the result of another
-      // render(), without wrapping it in a container
-      throw new Error("Hit an implementation limitation");
-    start._context = context;
-    end._end = true;
-    return frag;
-  })();
+  return update(null);
 };
 
-
-
-
-
-
-
+/// OLD COMMENT, REWRITE (XXX):
+///
 /// Do a query on 'collection', and replace the children of 'element'
 /// with the results.
 ///
@@ -189,89 +176,66 @@ Sky.ui.render = function (render_func, events, event_data) {
 /// XXX rewrite using Sky.ui.render, and new GC semantics, and make it
 /// return a fragment rather than plopping its results into a
 /// container
-Sky.ui.renderList = function (collection, element, options) {
-  if ((typeof $ !== "undefined") && (element instanceof $))
-    // allow element to be a jQuery result set
-    element = element[0];
-  var dead = false;
 
-  var changed = function (obj, at_idx) {
-    if (dead)
-      return;
-    var rendered = render(obj);
-    element.insertBefore(rendered, element.children[at_idx]);
-    element.removeChild(element.children[at_idx + 1]);
+Sky.ui.renderList = function (collection, options) {
+  var frag = document.createDocumentFragment();
+  var context = new Sky.deps.Context;
+
+  var start = document.createComment("renderList " + collection._name);
+  var end = document.createComment("end " + collection._name);
+  start._used = end._used = true;
+  start._context = context;
+  frag.appendChild(start);
+  frag.appendChild(end);
+
+  var entry_starts = [];
+  var entry_end = function (idx) {
+    return (entry_starts[idx + 1] || end).previousSibling;
   };
 
-  var render = function (obj) {
-    var context = new Sky.deps.Context();
-
-    context.on_invalidate(function () {
-      var idx = query.indexOf(obj._id);
-      if (idx !== -1) {
-        element.insertBefore(render(obj), element.children[idx]);
-        element.removeChild(element.children[idx + 1]);
-      }
-      // if idx === -1, then the liveQuery remove handler will have
-      // taken care of removing the rendered element
-    });
-
-    var elt = context.run(function () {
-      return options.render(obj);
-    });
-
-    Sky.ui._setupEvents(elt, options.events || {}, obj);
-    return elt;
+  var insert_entry = function (doc, before_idx) {
+    var frag = Sky.ui.render(_.bind(options.render, null, doc),
+                             options.events || {}, doc);
+    var this_start = document.createComment(doc._id);
+    frag.insertBefore(this_start, frag.firstChild);
+    start.parentNode.insertBefore(frag, entry_starts[before_idx] || end);
+    return this_start;
   };
 
-  while (element.childNodes.length > 0)
-    element.removeChild(element.childNodes[0]);
-
-  // XXX duplicated in sky_client.js (hook_handlebars_each)
   var query = collection.findLive(options.selector, {
-    added: function (obj, before_idx) {
-      if (before_idx === element.childNodes.length)
-        element.appendChild(render(obj));
-      else
-        element.insertBefore(render(obj), element.childNodes[before_idx])
+    sort: options.sort,
+    added: function (doc, before_idx) {
+      entry_starts.splice(before_idx, 0, insert_entry(doc, before_idx));
     },
     removed: function (id, at_idx) {
-      element.removeChild(element.childNodes[at_idx]);
+      Sky.ui._remove(entry_starts[at_idx], entry_end(at_idx));
+      entry_starts.splice(at_idx, 1);
     },
-    changed: function (obj, at_idx) {
-      element.insertBefore(render(obj), element.childNodes[at_idx]);
-      element.removeChild(element.childNodes[at_idx + 1]);
+    changed: function (doc, at_idx) {
+      var this_start = insert_entry(doc, at_idx);
+      Sky.ui._remove(entry_starts[at_idx], entry_end(at_idx));
+      entry_starts[at_idx] = this_start;
     },
-    moved: function (obj, old_idx, new_idx) {
-      var elt = element.removeChild(element.childNodes[old_idx]);
-      if (new_idx === element.childNodes.length)
-        element.appendChild(elt);
-      else
-        element.insertBefore(elt, element.childNodes[new_idx]);
-    },
-    sort: options.sort
+    moved: function (doc, old_idx, new_idx) {
+      var this_start = entry_starts[old_idx];
+      var frag = document.createDocumentFragment();
+      Sky.ui._remove(this_start, entry_end(old_idx), frag);
+      start.parentNode.insertBefore(frag, entry_starts[new_idx] || null);
+      entry_starts.splice(old_idx, 1);
+      entry_starts.splice(new_idx, 0, this_start);
+    }
   });
 
-  return {
-    stop: function() {
-      // XXX this has terrible GC semantics. we don't get to tear
-      // everything down until each monitor block experiences its
-      // callback. actually there are probably a ton of bad GC issues;
-      // I haven't thought about it.
-      //
-      // XXX this is now totally avoidable with the new context
-      // api. need to keep an array of contexts, one for each child,
-      // and invalidate them all. probably need to rewrite function.
-      //
-      // XXX more generally, this pattern where the caller has to call
-      // stop() is going to result in tears. more likely, we want to
-      // detect when we're taken out of the DOM somehow (like jQuery
-      // does?) (or maybe even by polling the DOM every few seconds??)
-      // and tear everything down automatically.
-      dead = true;
-      query.stop();
+  context.on_invalidate(function (old_context) {
+    query.stop();
+
+    if (!old_context.killed) {
+      delete start._context;
+      Sky.ui._kill(start, end);
     }
-  };
+  });
+
+  return frag;
 };
 
 // XXX jQuery dependency

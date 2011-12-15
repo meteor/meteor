@@ -13,8 +13,7 @@ if (Sky.is_client) {
 
   $(document).ready(function () {
     // List the players by score. You can click to select a player.
-    var leaderboard_elt = $('<div class="leaderboard"></div>')[0];
-    Sky.ui.renderList(Players, leaderboard_elt, {
+    var scores = Sky.ui.renderList(Players, {
       sort: {score: -1}, // sort from high to low score
       render: function (player) {
         if (Session.equals("selected_player", player._id))
@@ -24,7 +23,7 @@ if (Sky.is_client) {
 
         return $('<div class="' + style + '">' +
                  '<div class="name">' + player.name + '</div>' +
-                 '<div class="score">' + player.score + '</div></div>')[0];
+                 '<div class="score">' + player.score + '</div></div>');
       },
       events: {
         "click": function () {
@@ -32,7 +31,8 @@ if (Sky.is_client) {
         }
       }
     });
-    $('body').append(leaderboard_elt);
+    var leaderboard = $('<div class="leaderboard"></div>').append(scores);
+    $('body').append(leaderboard);
 
     // Details area, showing the currently selected player.
     var details_elt = Sky.ui.render(function () {
@@ -53,6 +53,10 @@ if (Sky.is_client) {
 }
 
 /*** Server ***/
+
+// If you don't want your server code to be sent to the client
+// (probably a good thing to avoid), you can just put it in a
+// subdirectory named 'server'.
 
 if (Sky.is_server) {
   // Publish the top 10 players, live, to any client that wants them.

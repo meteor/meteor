@@ -35,10 +35,11 @@ if (typeof Sky === "undefined") Sky = {};
       }
     },
 
-    // calls f immediately if this context was already invalidated
+    // calls f immediately if this context was already
+    // invalidated. receives one argument, the context.
     on_invalidate: function (f) {
       if (this._invalidated)
-        f();
+        f(this);
       else
         this._callbacks.push(f);
     }
@@ -56,7 +57,7 @@ if (typeof Sky === "undefined") Sky = {};
 
       _.each(pending, function (ctx) {
         _.each(ctx._callbacks, function (f) {
-          f(); // XXX wrap in try?
+          f(ctx); // XXX wrap in try?
         });
         delete this._callbacks; // maybe help the GC
       });

@@ -63,12 +63,12 @@ Collection.prototype.find = function (selector, options) {
   } else {
 
     var selector_f = Collection._compileSelector(selector);
-    var sort_f = ('sort' in options) && Collection._compileSort(options.sort);
+    var sort_f = options.sort && Collection._compileSort(options.sort);
     results = self._rawFind(selector_f, sort_f);
 
-    if ('skip' in options)
+    if (options.skip)
       results.splice(0, options.skip);
-    if ('limit' in options) {
+    if (options.limit !== undefined) {
       var limit = options.limit;
       if (results.length > limit)
         results.length = limit;
@@ -137,7 +137,7 @@ Collection.prototype.findLive = function (selector, options) {
 
   var query = self.queries[qid] = {
     selector_f: Collection._compileSelector(selector),
-    sort_f: 'sort' in options ? Collection._compileSort(options.sort) : null,
+    sort_f: options.sort ? Collection._compileSort(options.sort) : null,
     results: []
   };
   query.results = self._rawFind(query.selector_f, query.sort_f);
