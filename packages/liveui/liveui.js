@@ -1,56 +1,7 @@
 Sky.ui = Sky.ui || {};
 
-// update in place by hollowing out old element(s), and copying
-// over all of the children and attributes. unfortunately there
-// is no way to change the tag name. leave the events in place.
-Sky.ui._patch = function (old_elt_in, new_elt_in) {
-  // Don't let more than one instance of patch run simultaneously.
-  // http://code.google.com/p/chromium/issues/detail?id=104397
-  //
-  // XXX this is a pretty lame solution. Normally users see
-  // their changes to Session, the database, etc, reflected in
-  // the DOM immediately.. except if, somewhere above them on
-  // the stack, is a onblur handler triggered by patch, in which
-  // case updates are queued up?? That makes no kind of sense.
-  var already_in_patch = !!Sky.ui._patch_queue;
-  if (!already_in_patch)
-    Sky.ui._patch_queue = [];
-  Sky.ui._patch_queue.push([old_elt_in, new_elt_in])
-  if (already_in_patch)
-    return;
-
-  while (Sky.ui._patch_queue.length) {
-    var x = Sky.ui._patch_queue.splice(0, 10)[0];
-    var old_elt = x[0];
-    var new_elt = x[1];
-
-    if (old_elt.nodeType !== new_elt.nodeType)
-      throw new Error("The top-level element type can't change when " +
-                      "an element is rerendered (changed from type " +
-                      old_elt.nodeType + " to " + new_elt.nodeType + ")");
-    if (old_elt.nodeType === 3) { // text node
-      old_elt.nodeValue = new_elt.nodeValue;
-      return;
-    }
-    if (old_elt.tagName !== new_elt.tagName)
-      throw new Error("The top-level element type can't change when " +
-                      "an element is rerendered (changed from " +
-                      old_elt.tagName + " to " + new_elt.tagName + ")");
-    while (old_elt.childNodes.length)
-      old_elt.removeChild(old_elt.childNodes[0]);
-    while (new_elt.childNodes.length)
-      old_elt.appendChild(new_elt.childNodes[0]);
-    while (old_elt.attributes.length)
-      old_elt.removeAttribute(old_elt.attributes[0].name);
-    for (var i = 0; i < new_elt.attributes.length; i++)
-      old_elt.setAttribute(new_elt.attributes[i].name,
-                           new_elt.attributes[i].value);
-  };
-
-  delete Sky.ui._patch_queue;
-};
-
-
+/// OLD COMMENT, REWRITE (XXX):
+///
 /// Render some HTML, resulting in a DOM node, which is
 /// returned. Update that DOM node in place when any of the rendering
 /// dependencies change. (The tag name of the node returned from the
@@ -72,43 +23,142 @@ Sky.ui._patch = function (old_elt_in, new_elt_in) {
 /// render.) when this happens, a change to a dependency in the inner
 /// render() won't cause the stuff in the outer render() to be
 /// re-evaluated, so it serves as a recomputation fence.
-///
-/// XXX refactor renderList to make it use this?
-/// XXX need to provide a way to stop the updating and let GC happen!!!
+
 Sky.ui.render = function (render_func, events, event_data) {
-  var result = null;
-  var update = function () {
-    var context = new Sky.deps.Context();
-    context.on_invalidate(update);
-    var new_result = context.run(render_func);
-    if (result === null) {
-      result = new_result;
-      if (result instanceof Array)
-        _.each(result, function (elt) {
-          Sky.ui._setupEvents(elt, events || {}, event_data);
-        });
-      else
-        Sky.ui._setupEvents(result, events || {}, event_data);
-    } else {
-      if ((new_result instanceof Array) !==
-          (result instanceof Array))
-        throw new Error("A template function can't change from returning an " +
-                        "array to returning a single element (or vice versa)");
-      if (new_result instanceof Array) {
-        if (new_result.length !== result.length)
-          throw new Error("A template function can't change the number of " +
-                          "elements it returns (from " + result.length +
-                          " to " + new_result.length + ")");
-        for (var i = 0; i < result.length; i++)
-          Sky.ui._patch(result[i], new_result[i]);
-      } else
-        Sky.ui._patch(result, new_result);
-    }
+  var start, end;
+
+  var render_fragment = function (context) {
+    var result = context.run(render_func);
+    var frag;
+
+    // Coerce to a document fragment
+    if (result instanceof DocumentFragment)
+      frag = result;
+    else if (result instanceof Node) {
+      var frag = document.createDocumentFragment();
+      frag.appendChild(result);
+    } else if (result instanceof Array ||
+               ((typeof $ !== "undefined") && (result instanceof $))) {
+      var frag = document.createDocumentFragment();
+      for (var i = 0; i < result.length; i++)
+        frag.appendChild(result[i]);
+    } else
+      throw new Error("Render functions should return a DocumentFragment, " +
+                      "a node, an array of nodes, or a jQuery-style result " +
+                      "set.");
+
+    // Attach events
+    for (var i = 0; i < frag.childNodes.length; i++)
+      Sky.ui._setupEvents(frag.childNodes[i], events || {}, event_data);
+
+    // If empty, add a placeholder
+    if (!frag.childNodes.length)
+      frag.appendChild(document.createComment("empty rendering"));
+    return frag;
   };
 
-  update();
-  return result;
+  var kill = function (elt) {
+    // (only works if the element is offscreen, because invalidate
+    // will just rerender the element unless the containment check
+    // fails)
+
+    for (var i = 0; i < elt.childNodes.length; i++) {
+      var ch = elt.childNodes[i];
+
+      if (ch._context) {
+        // A live-updating range is indicated in the DOM by an element
+        // with a _context expando (pointing at an invalidation
+        // context), followed eventually by a sibling (maybe even the
+        // same node) with an _end expando, marking the end of the
+        // range. When we encounter such a range, instead of
+        // traversing it, we invalidate the context. It's then
+        // responsible for traversing its own children.
+        ch._context.invalidate();
+        while (i < elt.childNodes.length && elt.childNodes[i]._end)
+          i++;
+      } else
+        kill(elt.childNodes[i]);
+    }
+
+    if (elt._context) {
+      elt._context.invalidate();
+      delete elt._context;
+    }
+    for (var i = 0; i < elt.childNodes.length; i++)
+      kill(elt.childNodes[i]);
+  };
+
+  var update = function () {
+    delete start._context;
+
+    var onscreen =
+      document.body.contains ? document.body.contains(start)
+      : (document.body.compareDocumentPosition(start) & 16);
+    if (!onscreen) {
+      // It was taken offscreen. Stop updating it so it can get GC'd.
+      do {
+        kill(start);
+        start = start.nextSibling;
+      } while (start !== end);
+      return;
+    }
+
+    var context = new Sky.deps.Context;
+    context.on_invalidate(update);
+    var frag = render_fragment(context);
+    var new_start = frag.firstChild;
+    var new_end = frag.lastChild;
+
+    var container = start.parentNode;
+    container.insertBefore(frag, start);
+    // could use a Range here (on many browsers) for faster deletes?
+    while (true) {
+      var next = start.nextSibling;
+      container.removeChild(start);
+      kill(start);
+      if (start === end)
+        break;
+      if (!next) {
+        console.log("Warning: The final element in a live-updating range " +
+                    "was removed. This could result in incorrect updates.");
+        break;
+      }
+      start = next;
+    }
+
+    // XXX remove could trigger blur, which could reasonably call
+    // flush, which could reinvoke us. or could it?  what's the deal
+    // for flush inside flush?? [consider synthesizing onblur, via
+    // settimeout(0)..]
+
+    start = new_start;
+    end = new_end;
+    // XXX need names less prone to collide
+    if (start._context)
+      // bleh. could be render() returning the result of another
+      // render(), without wrapping it in a container
+      throw new Error("Hit an implementation limitation");
+    start._context = context;
+    end._end = true;
+  };
+
+  return (function () {
+    // run in an anonymous function to keep these vars out of update's
+    // closure
+    var context = new Sky.deps.Context;
+    context.on_invalidate(update);
+    var frag = render_fragment(context);
+    start = frag.firstChild;
+    end = frag.lastChild;
+    return frag;
+  })();
 };
+
+
+
+
+
+
 
 /// Do a query on 'collection', and replace the children of 'element'
 /// with the results.
@@ -126,6 +176,10 @@ Sky.ui.render = function (render_func, events, event_data) {
 ///
 /// returns an object with:
 ///  stop(): stop updating, tear everything down and let it get GC'd
+///
+/// XXX rewrite using Sky.ui.render, and new GC semantics, and make it
+/// return a fragment rather than plopping its results into a
+/// container
 Sky.ui.renderList = function (collection, element, options) {
   if ((typeof $ !== "undefined") && (element instanceof $))
     // allow element to be a jQuery result set

@@ -38,11 +38,11 @@ if (Sky.is_client) {
     var details_elt = Sky.ui.render(function () {
       var selected_player = Session.get("selected_player");
       if (!selected_player)
-        return $('<div class="none">Click a player to select</div>')[0];
+        return $('<div class="none">Click a player to select</div>');
 
       var player = Players.find(selected_player);
       return $('<div class="details"><div class="name">' + player.name +
-               '</div><input type="button" value="Give 5 points"></div>')[0];
+               '</div><input type="button" value="Give 5 points"></div>');
     }, {
       'click input': function () {
         Players.update(Session.get("selected_player"), {$inc: {score: 5}});

@@ -5,7 +5,7 @@ if (typeof Sky === "undefined") Sky = {};
 
 // XXX disgusting hack. we want to allow Template.foo to be used as a
 // Handlebars partial. uh oh -- Handlebars does templating in the
-// realm of strings, but Template.foo returns a DOM element (it must,
+// realm of strings, but Template.foo returns a DOM object (it must,
 // for event handlers to work properly). so, for now, we make the
 // partial render as an empty div and fix it up later. this probably
 // doesn't work in some cases, such as inside a table or ul, where
@@ -117,11 +117,7 @@ Sky._partials = {};
 // the finished template function (that would otherwise be put in
 // Template) is returned. this is a hack that is used for <body>
 // templates.
-//
-// XXX hack: if multi is true, the template is allowed to return
-// multiple elements at toplevel, and the return value of the created
-// template function is a list. this is used for <body>.
-Sky._def_template = function (name, raw_func, multi) {
+Sky._def_template = function (name, raw_func) {
   Sky._hook_handlebars_each();
   window.Template = window.Template || {};
   var cooked_func = function (data) {
@@ -144,13 +140,9 @@ Sky._def_template = function (name, raw_func, multi) {
     // a div. we probably need to do that..
     var div = document.createElement("div");
     div.innerHTML = html;
-    if (div.childNodes.length !== 1 && !multi)
-      // XXX this limitation is really lame and possibly
-      // unsustainable.. on the other hand .. what, you want
-      // Template.foo to return an array? (maybe a jquery object?)
-      throw new Error("A template should return exactly 1 node, but " +
-                      (name ? name : "(anonymous template)") +
-                      " returned " + div.childNodes.length)
+    var frag = document.createDocumentFragment();
+    while (div.firstChild)
+      frag.appendChild(div.firstChild);
 
     if (!in_partial) {
       var traverse = function (elt) {
@@ -166,22 +158,14 @@ Sky._def_template = function (name, raw_func, multi) {
         }
       };
 
-      traverse(div);
+      traverse(frag);
 
       for (var id in Sky._pending_partials)
         throw new Error("internal error -- not all pending partials patched");
       Sky._pending_partials = null;
     }
 
-    if (!multi)
-      return div.childNodes[0];
-    else {
-      // make DOM node list into a proper JS array
-      var ret = [];
-      for (var i = 0; i < div.childNodes.length; i++)
-        ret.push(div.childNodes[i]);
-      return ret;
-    }
+    return frag;
   };
 
   var func = function (data) {
@@ -209,9 +193,9 @@ Sky._def_template = function (name, raw_func, multi) {
       if (!Sky._pending_partials)
         // XXX lame error
         throw new Error("this partial may only be invoked from inside a Template.foo-style template");
-      var elt = func(data);
+      var frag = func(data);
       var id = Sky._pending_partials_idx_nonce++;
-      Sky._pending_partials[id] = elt;
+      Sky._pending_partials[id] = frag;
       return "<div id='" + id + "'><!-- for replacement with partial --></div>";
     };
   }

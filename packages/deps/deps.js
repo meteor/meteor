@@ -7,7 +7,7 @@ if (typeof Sky === "undefined") Sky = {};
   var Context = function () {
     // Each context has a unique number. You can use this to avoid
     // storing multiple copies of the same context in your
-    // invalidation list.
+    // invalidation list. The id is an integer >= 1.
     this.id = next_id++;
     this._callbacks = [];
     this._invalidated = false;
