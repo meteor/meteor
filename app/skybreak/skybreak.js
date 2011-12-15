@@ -363,11 +363,11 @@ Commands.push({
       .boolean('url')
       .boolean('U')
       .alias('url', 'U')
-      .describe('url', 'request a Mongo URL')
+      .describe('url', 'return a Mongo database URL')
       .usage(
 "Usage: skybreak mongo [--url] [site]\n" +
 "\n" +
-"Open a Mongo shell to view or manipulate collections.\n" +
+"Opens a Mongo shell to view or manipulate collections.\n" +
 "\n" +
 "If site is specified, this is the hosted Mongo database for the deployed\n" +
 "Skybreak site.\n" +
@@ -427,15 +427,27 @@ Commands.push({
     var opt = require('optimist')
       .boolean('password')
       .alias('password', 'P')
-      .describe('password', 'set a password for the deployment')
+      .describe('password', 'set a password for this deployment')
       .boolean('delete')
       .alias('delete', 'D')
-      .describe('delete', "permanently delete this project and its data from Skybreak")
+      .describe('delete', "permanently delete this deployment")
       .usage(
-"Usage: skybreak deploy <site>\n" +
+"Usage: skybreak deploy <site> [--password] [--delete]\n" +
 "\n" +
-"Deploy the current code in your tree to the specified subdomain of\n" +
-"skybreakplatform.com.\n"
+"Deploys the project in your current directory to Skybreak's servers.\n" +
+"\n" +
+"You can deploy to any available name under 'skybreakplatform.com'\n" +
+"without any additional configuration, for example,\n" +
+"'myapp.skybreakplatform.com'.  If you deploy to a custom domain, such as\n" +
+"'myapp.mydomain.com', then you'll also need to configure your domain's\n" +
+"DNS records.  See the Skybreak docs for details.\n" +
+"\n" +
+"The --delete flag permanently removes a deployed application, including\n" +
+"all of its stored data.\n" +
+"\n" +
+"The --password flag sets an administrative password for the domain.  Once\n" +
+"set, any subsequent 'deploy', 'logs', or 'mongo' command will prompt for\n" +
+"the password.  You can change the password with a second 'deploy' command.\n"
       );
 
     new_argv = opt.argv;
@@ -462,7 +474,7 @@ Commands.push({
       process.stdout.write(
 "Usage: skybreak logs <site>\n" +
 "\n" +
-"Retrieves the logs for the requested site.\n");
+"Retrieves the server logs for the requested site.\n");
       process.exit(1);
     }
 
