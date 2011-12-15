@@ -44,10 +44,15 @@ var html_scanner = module.exports = {
         return;
       }
 
-      // for a template, we need to kill *all* of the whitespace
-      // around the payload, else we will get text nodes containing
-      // whitespace, and that will break the rule that a template must
-      // return exactly one top-level element. (XXX lame)
+      // Strip all of the whitespace around the payload. This is so
+      // that if you make a template that's supposed to be a <tr>, you
+      // really get just a <tr>, and not a whitespace node, a tr, and
+      // then another whitespace node. (Maybe browsers are robust to
+      // this, I don't know, but we have this code for historical
+      // reasons and I don't feel like rocking the boat today. Maybe
+      // it should go away.) => Hard to see how this matters, since
+      // {{#each foo}}{{> bar}}{{/each}} will typically end up
+      // introducing whitespace around the partial invocation anyway.
       match = payload.match(/^\s*([\s\S]*)$/);
       payload = match[1];
       match = payload.match(/^([\s\S]*\S)\s*$/);
@@ -69,9 +74,7 @@ var html_scanner = module.exports = {
         results.js += "Sky._def_template(" + JSON.stringify(id) + "," + code +
           ");\n";
       } else { // tag === "body"
-        // as a special case, and to stop users from stabbing us, body
-        // is allowed to have multiple elements at toplevel
-        results.js += "Sky.startup(function(){var elts = Sky._def_template(null," + code + ",true)();for(var i=0;i<elts.length;i++) {$('body').append(elts[i]);}});";
+        results.js += "Sky.startup(function(){document.body.appendChild(Sky._def_template(null," + code + ")());});";
       }
     });
     if (!found) {

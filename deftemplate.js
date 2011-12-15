@@ -131,9 +131,6 @@ Sky._def_template = function (name, raw_func) {
       partials: Sky._partials
     });
 
-    if (html === '')
-      html = ' '; // ensure at least one node is generated ..
-
     // XXX see the 'clean' function in jquery for a much more
     // elaborate implementation of this. it's smart about
     // instantiating, eg, a tr inside a table, not directly inside
@@ -152,7 +149,7 @@ Sky._def_template = function (name, raw_func) {
           if (replacement) {
             elt.replaceChild(replacement, child);
             delete Sky._pending_partials[child.id];
-            child = replacement;
+            child = elt.childNodes[i];
           }
           traverse(child);
         }
