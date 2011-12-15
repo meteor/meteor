@@ -1,30 +1,35 @@
 if (typeof Sky === "undefined") Sky = {};
 
+// socket.io reconnect is broken and doesn't tell us when it gives up:
+// https://github.com/LearnBoost/socket.io/issues/652
+// also, seems to have some issues with re-handshaking
+// https://github.com/LearnBoost/socket.io/issues/438
+// also, it doesn't always tell us when connections fail
+// https://github.com/LearnBoost/socket.io-client/issues/214
+// https://github.com/LearnBoost/socket.io-client/issues/311
+//
+// we wanted our own logic on top of socket.io anyway, since their
+// reconnect is a little gimpy. So this just means we have to do it all
+// ourselves instead of allowing socket.io to handle the short-term
+// transient reconnects.
+//
+// We may be able to drop a lot of this code when socket.io gets its act
+// together with regards to reconnect. Some people are working on it
+// already:
+// https://github.com/3rd-Eden/Socket.IO/tree/bugs/reconnect
+
+
 (function () {
 
   ////////// Constants //////////
-  var CONNECT_TIMEOUT = 5000;
+  var CONNECT_TIMEOUT = 10000;
   var CONNECT_TIMEOUT_SLOP = 1000;
+  var RETRY_BASE_TIMEOUT = 3000;
+  var RETRY_EXPONENT = 2.2;
+  var RETRY_MAX_TIMEOUT = 1800000; // 30min
+  var RETRY_FUZZ = 0.5; // +- 25%
 
   ////////// Internals //////////
-
-  // socket.io reconnect is broken and doesn't tell us when it gives up:
-  // https://github.com/LearnBoost/socket.io/issues/652
-  // also, seems to have some issues with re-handshaking
-  // https://github.com/LearnBoost/socket.io/issues/438
-  // also, it doesn't always tell us when connections fail
-  // https://github.com/LearnBoost/socket.io-client/issues/214
-  // https://github.com/LearnBoost/socket.io-client/issues/311
-  //
-  // we wanted our own logic on top of socket.io anyway, since their
-  // reconnect is a little gimpy. So this just means we have to do it
-  // all ourselves instead of allowing socket.io to handle the
-  // short-term transient reconnects.
-  //
-  // We may be able to drop a lot of this code when socket.io gets its
-  // act together with regards to reconnect. Some people are working on
-  // it already:
-  // https://github.com/3rd-Eden/Socket.IO/tree/bugs/reconnect
 
   var socket;
   var event_callbacks = {}; // name -> [callback]
@@ -48,7 +53,10 @@ if (typeof Sky === "undefined") Sky = {};
   var connection_timer;
 
   var connected = function () {
-    if (connection_timer) clearTimeout(connection_timer);
+    if (connection_timer) {
+      clearTimeout(connection_timer);
+      connection_timer = undefined;
+    }
 
     if (status.connected) {
       // already connected. do nothing. this probably shouldn't happen.
@@ -63,9 +71,12 @@ if (typeof Sky === "undefined") Sky = {};
     // XXX send message queue
   };
   var disconnected = function () {
-    if (connection_timer) clearTimeout(connection_timer);
+    if (connection_timer) {
+      clearTimeout(connection_timer);
+      connection_timer = undefined;
+    }
 
-    status.status = "disconnected"
+    status.status = "waiting"
     status.connected = false;
     status_changed();
 
@@ -79,11 +90,20 @@ if (typeof Sky === "undefined") Sky = {};
     socket.removeAllListeners('connect_failed');
     socket.disconnect();
     disconnected();
-  }
+  };
 
+  var retry_timeout = function (count) {
+    var timeout = Math.min(
+      RETRY_MAX_TIMEOUT,
+      RETRY_BASE_TIMEOUT * Math.pow(RETRY_EXPONENT, count));
+    // fuzz the timeout randomly, to avoid reconnect storms when a
+    // server goes down.
+    timeout = timeout * ((Math.random() * RETRY_FUZZ) + (1 - RETRY_FUZZ/2));
+
+    return timeout;
+  };
   var retry_later = function () {
-    var timeout = 1000; // XXX compute real timeout
-    retry_timer = setTimeout(retry_now, timeout);
+    retry_timer = setTimeout(retry_now, retry_timeout(status.retry_count));
   };
   var retry_now = function () {
     status.retry_count += 1;
