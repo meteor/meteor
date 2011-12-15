@@ -155,7 +155,17 @@ if (typeof Sky === "undefined") Sky = {};
   };
 
   Sky.reconnect = function () {
-    // XXX implement
+    if (status.connected) return; // already connected. noop.
+
+    // if we're mid-connection, stop it.
+    if (status.status === "connecting") {
+      fake_connect_failed();
+    }
+
+    if (retry_timer) clearTimeout(retry_timer);
+    retry_timer = undefined;
+    status.retry_count -= 1; // don't count manual retries
+    retry_now();
   };
 
 
