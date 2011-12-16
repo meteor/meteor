@@ -48,8 +48,13 @@ Status = {
 };
 
 ////////// Outer Proxy Server //////////
+//
+// calls callback once proxy is actively listening on outer and
+// proxying to inner.
 
 var start_proxy = function (outer_port, inner_port, callback) {
+  callback = callback || function () {};
+
   var p = httpProxy.createServer(function (req, res, proxy) {
     if (Status.running) {
       // server is running. things are hunky dory!
@@ -191,8 +196,6 @@ var launch_mongo = function (app_dir, port, launch_callback, on_exit_callback) {
   }
 };
 
-////////// Launch server process //////////
-
 var log_to_clients = function (msg) {
   server_log.push(msg);
   if (server_log.length > 100) {
@@ -214,7 +217,9 @@ var log_to_clients = function (msg) {
   });
 };
 
-var start_server = function (bundle_path, port, mongo_url, on_exit) {
+////////// Launch server process //////////
+
+var start_server = function (bundle_path, port, mongo_url, on_exit_callback) {
   // environment
   var env = {};
   for (var k in process.env)
@@ -245,7 +250,7 @@ var start_server = function (bundle_path, port, mongo_url, on_exit) {
     }
 
     Status.running = false;
-    on_exit();
+    on_exit_callback();
   });
 
   // Keepalive so server can detect when we die
@@ -352,6 +357,9 @@ exports.run = function (app_dir, bundle_path, bundle_opts, port) {
   var deps = {};
   var started_watching_files = false;
   var warned_about_no_deps_info = false;
+
+  var server_handle;
+
   var bundle = function () {
     bundler.bundle(app_dir, bundle_path, bundle_opts);
 
@@ -385,44 +393,46 @@ exports.run = function (app_dir, bundle_path, bundle_opts, port) {
     }
   };
 
-  if (!files.in_checkout())
-    start_update_checks();
+  var restart_server = function () {
+    if (server_handle)
+      kill_server(server_handle);
+
+    server_log = [];
+
+    try {
+      bundle();
+    } catch (e) {
+      log_to_clients({system: e.stack});
+      Status.hard_crashed();
+      return;
+    }
+
+    server_handle = start_server(bundle_path, inner_port, mongo_url, function () {
+      // on server exit
+      Status.soft_crashed();
+      if (!Status.crashing)
+        restart_server();
+    });
+  };
+
+  var launch = function () {
+    launch_mongo(app_dir, mongo_port,
+                 function () { // On Mongo startup complete
+                   restart_server();
+                 },
+                 function () { // On Mongo dead
+                   // XXX wait a sec to restart.
+                   setTimeout(launch, 1000);
+                 });
+  };
 
   start_proxy(outer_port, inner_port, function () {
     process.stdout.write("[[[[[ " + files.pretty_path(app_dir) + " ]]]]]\n\n");
     process.stdout.write("Running on: http://localhost:" + outer_port + "/\n");
 
-    var server;
-    var restart_server = function () {
-      if (server)
-        kill_server(server);
-      server_log = [];
+    if (!files.in_checkout())
+      start_update_checks();
 
-      try {
-        bundle();
-      } catch (e) {
-        log_to_clients({system: e.stack});
-        Status.hard_crashed();
-        return;
-      }
-
-      server = start_server(bundle_path, inner_port, mongo_url, function () {
-        Status.soft_crashed();
-        if (!Status.crashing)
-          restart_server(app_dir);
-      });
-    };
-
-    var launch = function () {
-      launch_mongo(app_dir, mongo_port,
-                   function () { // On Mongo startup complete
-                     restart_server();
-                   },
-                   function () { // On Mongo dead
-                     // XXX wait a sec to restart.
-                     setTimeout(launch, 1000);
-                   });
-    };
     launch();
   });
 };
