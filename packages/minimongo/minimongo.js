@@ -96,6 +96,10 @@ Collection.prototype.find = function (selector, options) {
 
     var live_handle = self.findLive(selector, new_options);
     context.on_invalidate(function () {
+      // XXX in many cases, the query will be immediately
+      // recreated. so we might want to let it linger for a little
+      // while and repurpose it if it comes back. this will save us
+      // work because we won't have to redo the initial find.
       live_handle.stop();
     });
   }
