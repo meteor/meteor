@@ -157,3 +157,23 @@ Sky.ui._LiveRange.prototype.replace_contents = function (new_frag) {
 
   return ret;
 };
+
+// Remove the range from inside its current parent, and return a
+// fragment that contains exactly the range's contents (including any
+// subranges.) Throw an exception if this would make a parent range
+// empty.
+Sky.ui._LiveRange.prototype.extract = function () {
+  // XXX IMPLEMENT
+};
+
+// Insert frag so that it comes immediately before the start of the
+// range.
+Sky.ui._LiveRange.prototype.insertBefore = function (frag) {
+  // XXX IMPLEMENT
+};
+
+// Insert frag so that it comes immediately after the start of the
+// range.
+Sky.ui._LiveRange.prototype.insertAfter = function (frag) {
+  // XXX IMPLEMENT
+};

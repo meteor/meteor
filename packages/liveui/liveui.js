@@ -1,50 +1,20 @@
 Sky.ui = Sky.ui || {};
 
-Sky.ui._killtree = function (elt) {
-  if (elt._context) {
-    elt._context.killed = true;
-    elt._context.invalidate();
-    delete elt._context;
-  }
-
-  for (var i = 0; i < elt.childNodes.length; i++)
-    Sky.ui._killtree(elt.childNodes[i]);
-};
-
-// from and to should be siblings
-// XXX if jquery is present, hook this up to the jquery cleanup system
-Sky.ui._killrange = function (from, to) {
-  while (true) {
-    Sky.ui._killtree(from);
-    if (from === to)
-      break;
-    from = from.nextSibling;
-  }
-};
-
-// if frag is given, save the removed nodes in it instead of deleting
-// them (and don't kill them)
-Sky.ui._remove = function (from, to, frag) {
-  // could use a Range here (on many browsers) for faster deletes?
-  var parent = from.parentNode;
-  while (true) {
-    var next = from.nextSibling;
-    if (frag)
-      frag.appendChild(from);
-    else {
-      Sky.ui._killtree(from);
-      parent.removeChild(from);
+// Kill/cancel all the subranges of 'range', but not 'range' itself.
+Sky.ui._cleanup = function (range) {
+  var walk = function (branch) {
+    _.each(branch.children, walk);
+    if (branch.range.context) {
+      branch.range.context.killed = true;
+      branch.range.context.invalidate();
     }
-    if (from === to)
-      break;
-    if (!next) {
-      console.log("Warning: The final element in a live-updating range " +
-                  "was removed. This could result in incorrect updates.");
-      break;
-    }
-    from = next;
-  }
+    branch.range.destroy(); // help old GC's
+  };
+
+  _.each(range.contained(), walk);
 };
+
+Sky.ui._tag = "_liveui"; // XXX XXX
 
 /// OLD COMMENT, REWRITE (XXX):
 ///
@@ -71,7 +41,7 @@ Sky.ui._remove = function (from, to, frag) {
 /// re-evaluated, so it serves as a recomputation fence.
 
 Sky.ui.render = function (render_func, events, event_data) {
-  var start, end;
+  var range;
 
   var render_fragment = function (context) {
     var result = context.run(render_func);
@@ -104,45 +74,15 @@ Sky.ui.render = function (render_func, events, event_data) {
   };
 
   var update = function (old_context) {
-    if (old_context) {
-      if (old_context.killed)
-        return;
+    if (old_context.killed)
+      return; // _cleanup is killing us
 
-      delete start._context;
-
-      if (!(document.body.contains ? document.body.contains(start)
-            : (document.body.compareDocumentPosition(start) & 16))) {
-        // It was taken offscreen. Stop updating it so it can get GC'd.
-        Sky.ui._killrange(start, end);
-        return;
-      }
-    }
-
-    var context = new Sky.deps.Context;
-    context.on_invalidate(update);
-    var frag = render_fragment(context);
-
-    // if we share 'start' or 'end' with another instance of render,
-    // bad things could happen.
-    // XXX need name less prone to collide
-    if (frag.firstChild._used) {
-      console.log("note: wrapping prefix"); // XXX REMOVE
-      frag.insertBefore(document.createComment(""), frag.firstChild);
-    }
-    if (frag.lastChild._used) {
-      console.log("note: wrapping suffix"); // XXX REMOVE
-      frag.appendChild(document.createComment(""));
-    }
-
-    var new_start = frag.firstChild;
-    var new_end = frag.lastChild;
-    new_start._used = new_end._used = true;
-    // XXX need name less prone to collide
-    new_start._context = context;
-
-    if (old_context) {
-      start.parentNode.insertBefore(frag, start);
-      Sky.ui._remove(start, end);
+    if (!(document.body.contains ? document.body.contains(start)
+          : (document.body.compareDocumentPosition(start) & 16))) {
+      // It was taken offscreen. Stop updating it so it can get GC'd.
+      Sky.ui._cleanup(range);
+      range.destroy();
+      return;
     }
 
     // XXX remove could trigger blur, which could reasonably call
@@ -150,12 +90,24 @@ Sky.ui.render = function (render_func, events, event_data) {
     // for flush inside flush?? [consider synthesizing onblur, via
     // settimeout(0)..]
 
-    start = new_start;
-    end = new_end;
-    return frag;
+    var context = new Sky.deps.Context;
+    context.on_invalidate(update);
+    var frag = render_fragment(context);
+    var removed = range.replace_contents(frag);
+    range.context = context;
+
+    var removed_range = new Sky.ui._LiveRange(Sky.ui._tag, removed);
+    Sky.ui._cleanup(removed_range);
+    removed_range.destroy();
   };
 
-  return update(null);
+  var context = new Sky.deps.Context;
+  context.on_invalidate(update);
+  var frag = render_fragment(context);
+  range = new Sky.ui._LiveRange(Sky.ui._tag, frag);
+  range.context = context;
+
+  return frag;
 };
 
 /// OLD COMMENT, REWRITE (XXX):
@@ -186,86 +138,90 @@ Sky.ui.render = function (render_func, events, event_data) {
 /// XXX what can now be a collection, or the handle of an existing
 /// findlive. messy.
 Sky.ui.renderList = function (what, options) {
-  var frag = document.createDocumentFragment();
-  var context = new Sky.deps.Context;
+  var outer_range;
+  var entry_ranges = [];
 
-  var is_handle = what instanceof Collection.LiveResultsSet;
-  var name = (is_handle ? what.collection : what)._name;
-  var start = document.createComment("renderList " + name);
-  var end = document.createComment("end " + name);
-  start._used = end._used = true;
-  start._context = context;
-  frag.appendChild(start);
-  frag.appendChild(end);
+  var create_outer_range = function (initial_contents) {
+    var outer_range = new Sky.ui._LiveRange(Sky.ui._tag, initial_contents);
+    outer_range.context = new Sky.deps.Context;
 
-  var empty_shown = false;
-  var entry_starts = [];
-  var entry_end = function (idx) {
-    return (entry_starts[idx + 1] || end).previousSibling;
+    outer_range.context.on_invalidate(function (old_context) {
+      query.stop();
+
+      if (!old_context.killed) {
+        Sky.ui._cleanup(outer_range);
+        outer_range.destroy();
+      }
+    });
   };
 
-  var insert_entry = function (doc, before_idx) {
-    var frag = Sky.ui.render(_.bind(options.render, null, doc),
-                             options.events || {}, doc);
-    var this_start = document.createComment(doc._id);
-    frag.insertBefore(this_start, frag.firstChild);
-    start.parentNode.insertBefore(frag, entry_starts[before_idx] || end);
-    return this_start;
+  var render_doc = function (doc) {
+    return Sky.ui.render(_.bind(options.render, null, doc),
+                         options.events || {}, doc);
   };
 
-  var maybe_show_empty = function () {
-    if (!entry_starts.length && options.render_empty) {
-      start.parentNode.insertBefore(
-        Sky.ui.render(options.render_empty, options.events), end);
-      empty_shown = true;
-    }
+  var render_empty = function () {
+    return options.render_empty ?
+      Sky.ui.render(options.render_empty, options.events) :
+      document.createComment("empty list");
   };
 
   var query_opts = {
     added: function (doc, before_idx) {
-      if (empty_shown) {
-        Sky.ui._remove(start.nextSibling, end.previousSibling);
-        empty_shown = false;
+      var frag = render_doc(doc);
+      var new_range = new Sky.ui._LiveRange(Sky.ui._tag, frag);
+
+      if (!outer_range)
+        create_outer_range(frag);
+      else if (!entry_ranges.length) {
+        var removed = outer_range.replace_contents(frag);
+        Sky.ui._cleanup(removed); // XXX NO, MUST WRAP IN RANGE
+      } else {
+        if (before_idx < entry_ranges.length)
+          entry_ranges[before_idx].insertBefore(new_range);
+        else
+          entry_ranges[before_idx - 1].insertAfter(new_range);
       }
-      entry_starts.splice(before_idx, 0, insert_entry(doc, before_idx));
+
+      entry_ranges.splice(before_idx, 0, new_range);
     },
     removed: function (id, at_idx) {
-      Sky.ui._remove(entry_starts[at_idx], entry_end(at_idx));
-      entry_starts.splice(at_idx, 1);
-      maybe_show_empty();
+      if (entry_ranges.length > 1)
+        var removed = entry_ranges[at_idx].extract();
+      else
+        var removed = outer_range.replace_contents(render_empty());
+      Sky.ui._cleanup(removed); // XXX NO, MUST WRAP IN RANGE
+      entry_ranges[at_idx].destroy();
+      entry_ranges.splice(at_idx, 1);
     },
     changed: function (doc, at_idx) {
-      var this_start = insert_entry(doc, at_idx);
-      Sky.ui._remove(entry_starts[at_idx], entry_end(at_idx));
-      entry_starts[at_idx] = this_start;
+      var removed = entry_ranges[at_idx].replace_contents(render_doc(doc));
+      Sky.ui._cleanup(removed); // XXX NO, MUST WRAP IN RANGE
     },
     moved: function (doc, old_idx, new_idx) {
-      var this_start = entry_starts[old_idx];
-      var frag = document.createDocumentFragment();
-      Sky.ui._remove(this_start, entry_end(old_idx), frag);
-      start.parentNode.insertBefore(frag, entry_starts[new_idx] || null);
-      entry_starts.splice(old_idx, 1);
-      entry_starts.splice(new_idx, 0, this_start);
+      if (old_idx === new_idx)
+        return;
+      // At this point we know the list has at least two elements.
+      var range = entry_ranges.splice(old_idx, 1)[0];
+      var frag = range.extract();
+      if (new_idx === entry_ranges.length)
+        range.insertAfter(entry_ranges[new_idx - 1]);
+      else
+        range.insertBefore(entry_ranges[new_idx]);
+      entry_ranges.splice(new_idx, 0, range);
     }
   };
 
-  if (is_handle) {
+  if (what instanceof Collection.LiveResultsSet) {
     var query = what;
     query.reconnect(query_opts);
   } else {
     query_opts.sort = options.sort;
     var query = what.findLive(options.selector || {}, query_opts);
   }
-  maybe_show_empty();
 
-  context.on_invalidate(function (old_context) {
-    query.stop();
-
-    if (!old_context.killed) {
-      delete start._context;
-      Sky.ui._killrange(start, end);
-    }
-  });
+  if (!outer_range)
+    create_outer_range(render_empty());
 
   return frag;
 };

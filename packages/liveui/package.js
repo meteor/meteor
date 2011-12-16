@@ -13,4 +13,5 @@ Package.require('session');
 // you still want the event object normalization that jquery provides?)
 Package.require('jquery');
 
+Package.client_file('liverange.js');
 Package.client_file('liveui.js');
