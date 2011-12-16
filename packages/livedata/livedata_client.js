@@ -48,6 +48,30 @@ if (typeof Sky === "undefined") Sky = {};
     delete sub_ready_callbacks[id];
   });
 
+
+  Sky._stream.reset(function (msg_list) {
+    // remove existing subscribe and unsubscribe
+    msg_list = _.reject(msg_list, function (elem) {
+      return (!elem || elem[0] === "subscribe" || elem[0] === "unsubscribe");
+    });
+
+    // add new subscriptions at the end. this way they take effect after
+    // the handlers and we don't see flicker.
+    _.each(subs.find(), function (sub) {
+      msg_list.push(
+        ['subscribe', {
+          _id: sub._id, name: sub.name, args: sub.args}]);
+    });
+
+    // clear out the local database!
+    _.each(collections, function (col) {
+      col._collection.remove({});
+    });
+
+    return msg_list;
+  });
+
+
   var subsToken = subs.findLive({}, {
     added: function (sub) {
       Sky._stream.emit('subscribe', {

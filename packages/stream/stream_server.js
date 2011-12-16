@@ -28,6 +28,12 @@ if (typeof Sky === "undefined") Sky = {};
     _.each(registration_callbacks, function (callback) {
       callback(socket);
     });
+
+    // unwrap messages from the client and dispatch them as if they were
+    // sent with 'emit'.
+    socket.on('message', function (msg) {
+      socket.$emit.apply(socket, msg);
+    });
   });
 
   ////////// API for other packages //////////
