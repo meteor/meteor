@@ -33,7 +33,8 @@ if (typeof Sky === "undefined") Sky = {};
 
   var socket;
   var event_callbacks = {}; // name -> [callback]
-  // XXX var message_queue = [];
+  var message_queue = {}; // id -> message
+  var next_message_id = 0;
 
   //// reactive status stuff
   var status = {
@@ -68,7 +69,6 @@ if (typeof Sky === "undefined") Sky = {};
 
     status_changed();
 
-    // XXX send message queue
   };
   var disconnected = function () {
     if (connection_timer) {
@@ -136,10 +136,18 @@ if (typeof Sky === "undefined") Sky = {};
     connection_timer = setTimeout(fake_connect_failed,
                                   CONNECT_TIMEOUT + CONNECT_TIMEOUT_SLOP);
 
+    // send the pending message queue. this should always be in
+    // order, since the keys are ordered numerically and they are added
+    // in order.
+    _.each(message_queue, function (msg, id) {
+      socket.json.send(msg, function () {
+        delete message_queue[id];
+      });
+    });
+
     // XXX for debugging
     // XXXsocket = socket;
   }
-
 
   ////////// User facing API //////////
 
@@ -175,12 +183,19 @@ if (typeof Sky === "undefined") Sky = {};
     on: function (name, callback) {
       if (!event_callbacks[name]) event_callbacks[name] = []
       event_callbacks[name].push(callback);
-      socket.on(name, callback)
+      if (socket) socket.on(name, callback)
     },
 
-    emit: function (XXX) {
-      // XXX add to message queue
-      socket.emit.apply(socket, arguments);
+    emit: function (/* var args */) {
+      var args = Array.prototype.slice.call(arguments);
+      var id = next_message_id++;
+      message_queue[id] = args;
+
+      if (socket) {
+        socket.json.send(args, function () {
+          delete message_queue[id];
+        });
+      }
     }
   };
 
