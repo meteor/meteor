@@ -4,12 +4,9 @@ if (typeof Sky === "undefined") Sky = {};
 // https://github.com/LearnBoost/socket.io/issues/652
 // also, seems to have some issues with re-handshaking
 // https://github.com/LearnBoost/socket.io/issues/438
-// also, it doesn't always tell us when connections fail
-// https://github.com/LearnBoost/socket.io-client/issues/214
-// https://github.com/LearnBoost/socket.io-client/issues/311
 //
 // we wanted our own logic on top of socket.io anyway, since their
-// reconnect is a little gimpy. So this just means we have to do it all
+// reconnect is a little broken. So this just means we have to do it all
 // ourselves instead of allowing socket.io to handle the short-term
 // transient reconnects.
 //
@@ -22,11 +19,23 @@ if (typeof Sky === "undefined") Sky = {};
 (function () {
 
   ////////// Constants //////////
+
+  // how long to wait until we declare the connection attempt
+  // failed. socket.io doesn't tell us sometimes.
+  // https://github.com/LearnBoost/socket.io-client/issues/214
+  // https://github.com/LearnBoost/socket.io-client/issues/311
   var CONNECT_TIMEOUT = 10000;
+  // extra time to make sure our timer and socket.ios timer don't
+  // collide.
   var CONNECT_TIMEOUT_SLOP = 1000;
+  // time for initial reconnect attempt.
   var RETRY_BASE_TIMEOUT = 3000;
+  // exponential factor to increase timeout each attempt.
   var RETRY_EXPONENT = 2.2;
-  var RETRY_MAX_TIMEOUT = 1800000; // 30min
+  // maximum time between reconnects.
+  var RETRY_MAX_TIMEOUT = 1800000; // 30min.
+  // fuzz factor to randomize reconnect times by. avoid reconnect
+  // storms.
   var RETRY_FUZZ = 0.5; // +- 25%
 
   ////////// Internals //////////
