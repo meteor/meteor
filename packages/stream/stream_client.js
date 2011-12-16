@@ -33,6 +33,7 @@ if (typeof Sky === "undefined") Sky = {};
 
   var socket;
   var event_callbacks = {}; // name -> [callback]
+  var reset_callbacks = [];
   var message_queue = {}; // id -> message
   var next_message_id = 0;
 
@@ -63,11 +64,33 @@ if (typeof Sky === "undefined") Sky = {};
       // already connected. do nothing. this probably shouldn't happen.
       return;
     }
+
+    // give everyone a chance to munge the message queue.
+    if (status.status !== "startup") {
+      var msg_list = _.toArray(message_queue);
+      _.each(reset_callbacks, function (callback) {
+        msg_list = callback(msg_list);
+      });
+      message_queue = {};
+      _.each(msg_list, function (msg) {
+        message_queue[next_message_id++] = msg;
+      });
+    }
+
+    // send the pending message queue. this should always be in
+    // order, since the keys are ordered numerically and they are added
+    // in order.
+    _.each(message_queue, function (msg, id) {
+      socket.json.send(msg, function () {
+        delete message_queue[id];
+      });
+    });
+
     status.status = "connected";
     status.connected = true;
     status.retry_count = 0;
-
     status_changed();
+
 
   };
   var disconnected = function () {
@@ -136,15 +159,6 @@ if (typeof Sky === "undefined") Sky = {};
     connection_timer = setTimeout(fake_connect_failed,
                                   CONNECT_TIMEOUT + CONNECT_TIMEOUT_SLOP);
 
-    // send the pending message queue. this should always be in
-    // order, since the keys are ordered numerically and they are added
-    // in order.
-    _.each(message_queue, function (msg, id) {
-      socket.json.send(msg, function () {
-        delete message_queue[id];
-      });
-    });
-
     // XXX for debugging
     // XXXsocket = socket;
   }
@@ -187,15 +201,26 @@ if (typeof Sky === "undefined") Sky = {};
     },
 
     emit: function (/* var args */) {
-      var args = Array.prototype.slice.call(arguments);
+      var args = _.toArray(arguments);
       var id = next_message_id++;
       message_queue[id] = args;
 
-      if (socket) {
+      if (status.connected) {
         socket.json.send(args, function () {
           delete message_queue[id];
         });
       }
+    },
+
+    // provide a hook for modules to re-initialize state upon new
+    // connection. callback is a function that takes a message list and
+    // returns a message list. modules use this to strip out unneeded
+    // messages and/or insert new messages. NOTE: this API is weird! We
+    // probably want to revisit this, potentially adding some sort of
+    // namespacing so multiple modules can share the stream more
+    // gracefully.
+    reset: function (callback) {
+      reset_callbacks.push(callback);
     }
   };
 
