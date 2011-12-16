@@ -1,48 +1,70 @@
-// Possible optimization: Just keep a count for _leave (losing the
-// ability to detect overlapping ranges)
+Sky.ui = Sky.ui || {};
+
+// XXX correct namespace? should probably be private to package, actually..
+
+// Possible optimization: get rid of start_idx/end_idx and just search
+// the list. Not clear which strategy will be faster.
+
+// Possible extension: could allow zero-length ranges is some cases,
+// by encoding both 'enter' and 'leave' type events in the same list
 
 // can also pass just one node, or a document/documentfragment
-LiveRange = function (start, end) {
+
+// tag is an arbitrary string (the 'class' of range.) an expando
+// attribute named 'tag' will be set on the endpoints of the range.
+Sky.ui._LiveRange = function (tag, start, end) {
   if ((start instanceof Document) || (start instanceof DocumentFragment)) {
     end = start.lastChild;
     start = start.firstChild;
   }
   end = end || start;
 
+  this._tag = tag;
+
   // this._start is the node N such that we begin before N, but not
   // before the node before N in the preorder traversal of the
-  // document (if there is such a node.) this._start._enter will be
-  // the list of all LiveRanges for which this._start is N, including
-  // us, sorted in the order that the ranges start. and finally,
-  // this._start[this._start_idx] === this.
+  // document (if there is such a node.) this._start[this._tag][0]
+  // will be the list of all LiveRanges for which this._start is N,
+  // including us, sorted in the order that the ranges start. and
+  // finally, this._start[this._start_idx] === this.
   this._start = start;
-  if (!('_enter' in start))
-    start._enter = [];
-  this._start_idx = start._enter.length;
-  start._enter.push(this);
+  if (!(tag in start))
+    start[tag] = [[], []];
+  this._start_idx = start[tag][0].length;
+  start[tag][0].push(this);
 
   // just like this._end, except it's the node N such that we end
   // after N, but not after the node after N in the postorder
-  // traversal; and the attribute on the node is called _leave instead
-  // of _enter, and it's sorted in the order that the ranges end.
+  // traversal; and the data is stored in this._end[this._tag][1], and
+  // it's sorted in the order that the ranges end.
   this._end = end;
-  if (!('_leave' in end))
-    start._leave = [];
+  if (!(tag in end))
+    end[tag] = [[], []];
   this._end_idx = 0;
-  start._leave.splice(0, 0, this);
+  end[tag][1].splice(0, 0, this);
 };
 
-LiveRange.prototype.destroy = function () {
-  this._start._enter.splice(this._start_idx, 1);
-  if (!this._start._enter.length)
-    delete this._start._enter;
+// You shouldn't need to call this function for GC reasons on a modern
+// browser. It's more like removeChild -- you'd call it because you
+// don't want to see the range in contained() anymore. However, on old
+// versions of IE, you do need to manually remove all ranges because
+// IE can't GC reference cycles through the DOM.
+Sky.ui._LiveRange.prototype.destroy = function () {
+  var start_data = this._start[this._tag];
+  start_data[0].splice(this._start_idx, 1);
+  if (start_data[0].length === 0 && start_data[1].length === 0)
+    delete this._start[this._tag];
 
-  this._end._leave.splice(this._end_idx, 1);
-  if (!this._end._leave.length)
-    delete this._end._leave;
+  var end_data = this._end[this._tag];
+  end_data[1].splice(this._end_idx, 1);
+  if (end_data[0].length === 0 && end_data[1].length === 0)
+    delete this._end[this._tag];
+
+  this._start = this._end = null;
 };
 
-LiveRange.prototype.contained = function () {
+// (returns only ranges with the same tag as this one)
+Sky.ui._LiveRange.prototype.contained = function () {
   // visit() is invoked for each node start-point or end-point that we
   // encounter as we walk the range stored in 'this' (not counting the
   // endpoints of 'this' itself.)
@@ -59,20 +81,20 @@ LiveRange.prototype.contained = function () {
   };
 
   var traverse = function (node) {
-    if (node._enter)
-      for (var i = 0; i < node._enter.length; i++)
-        visit(true, node._enter[i]);
+    var data = node[this._tag] || [[], []];
+    for (var i = 0; i < data[0].length; i++)
+      visit(true, data[0][i]);
     for (var walk = node.firstChild; walk; walk = walk.nextSibling)
       traverse(walk);
-    if (node._leave)
-      for (var i = 0; i < node._leave.length; i++)
-        visit(node, walk._leave[i]);
+    for (var i = 0; i < data[1].length; i++)
+      visit(false, data[1][i]);
   };
 
-  var walk = this._start;
-  for (var i = this._start_idx + 1; i < walk._enter.length; i++)
-    visit(true, walk._enter[i]);
+  var start_enter = this._start[this._tag][0];
+  for (var i = this._start_idx + 1; i < start_enter.length; i++)
+    visit(true, start_enter[i]);
 
+  var walk = this._start;
   while (true) {
     traverse(walk);
     if (walk === this._end)
@@ -80,23 +102,24 @@ LiveRange.prototype.contained = function () {
     walk = walk.nextSibling;
   }
 
-  for (var i = 0; i < walk._end_idx; i++)
-    visit(false, walk._enter[i]);
+  var end_leave = this._end[this._tag][1];
+  for (var i = 0; i < this._end_idx; i++)
+    visit(false, end_leave[i]);
 
   return result.children;
 };
 
-LiveRange.prototype.replace = function (new_frag) {
+Sky.ui._LiveRange.prototype.replace_contents = function (new_frag) {
   if (!new_frag.firstChild)
     throw new Error("Ranges must contain at least one element");
 
   // Fix up range pointers on departing fragment
-  var old_enter = this._start._enter;
+  var old_enter = this._start[this._tag][0];
   var save_enter = old_enter.splice(0, this._start_idx + 1);
   for (var i = 0; i < old_enter.length; i++)
     old_enter[i]._start_idx = i;
 
-  var old_leave = this._end._leave;
+  var old_leave = this._end[this._tag][1]
   var save_leave = old_leave.splice(this._end_idx, old_leave.length);
 
   // Insert new fragment
@@ -117,15 +140,15 @@ LiveRange.prototype.replace = function (new_frag) {
   }
 
   // Fix up range pointers on new fragment -- including our own
-  // Clobbers this._start[_idx], this._end[_idx]
-  var new_enter = new_start._enter;
+  // Clobbers this._start(_idx), this._end(_idx)
+  var new_enter = new_start[this._tag][0];
   Array.prototype.splice.apply(new_enter, [0, 0].concat(save_enter));
   for (var i = 0; i < new_enter.length; i++) {
     new_enter[i]._start = new_start;
     new_enter[i]._start_idx = i;
   }
 
-  var new_leave = new_end._leave;
+  var new_leave = new_end[this._tag][1];
   for (var i = 0; i < save_leave.length; i++) {
     save_leave[i]._end = new_end;
     save_leave[i]._end_idx = new_leave.length + i;
