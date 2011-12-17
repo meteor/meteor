@@ -77,8 +77,8 @@ Sky.ui.render = function (render_func, events, event_data) {
     if (old_context.killed)
       return; // _cleanup is killing us
 
-    if (!(document.body.contains ? document.body.contains(range.start())
-          : (document.body.compareDocumentPosition(range.start()) & 16))) {
+    if (!(document.body.contains ? document.body.contains(range.firstNode())
+          : (document.body.compareDocumentPosition(range.lastNode()) & 16))) {
       // It was taken offscreen. Stop updating it so it can get GC'd.
       Sky.ui._cleanup(range);
       range.destroy();

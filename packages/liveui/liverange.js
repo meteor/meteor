@@ -19,6 +19,8 @@ Sky.ui = Sky.ui || {};
 
   // 'start' - start point, in preorder traversal (range starts just before start)
   // 'end' - end point, in postorder traversal (range ends just after end)
+  // if there are any other ranges that also span exactly from start
+  // to end, the new range will be outside of them.
   Sky.ui._LiveRange = function (tag, start, end) {
     if ((start instanceof Document) || (start instanceof DocumentFragment)) {
       end = start.lastChild;
@@ -26,41 +28,42 @@ Sky.ui = Sky.ui || {};
     }
     end = end || start;
 
-    this._tag = tag;
+    // XXX this is public for reading. document it.
+    this.tag = tag;
     this._ensure_tags([start, end]);
 
     // this._start is the node N such that we begin before N, but not
     // before the node before N in the preorder traversal of the
-    // document (if there is such a node.) this._start[this._tag][0]
+    // document (if there is such a node.) this._start[this.tag][0]
     // will be the list of all LiveRanges for which this._start is N,
     // including us, sorted in the order that the ranges start. and
     // finally, this._start[this._start_idx] === this.
     this._start = start;
-    this._start_idx = start[tag][0].length;
-    start[tag][0].push(this);
+    this._start_idx = 0;
+    start[tag][0].splice(0, 0, this);
+    for (var i = 1; i < start[tag][0].length; i++)
+      start[tag][0][i]._start_idx = i;
 
     // just like this._end, except it's the node N such that we end
     // after N, but not after the node after N in the postorder
-    // traversal; and the data is stored in this._end[this._tag][1], and
+    // traversal; and the data is stored in this._end[this.tag][1], and
     // it's sorted in the order that the ranges end.
     this._end = end;
-    this._end_idx = 0;
-    end[tag][1].splice(0, 0, this);
-    for (var i = 1; i < end[tag][1].length; i++)
-      end[tag][1][i]._end_idx = i;
+    this._end_idx = end[tag][1].length;
+    end[tag][1].push(this);
   };
 
   Sky.ui._LiveRange.prototype._ensure_tags = function (nodes) {
     for (var i = 0; i < nodes.length; i++)
-      if (!(this._tag in nodes[i]))
-        nodes[i][this._tag] = [[], []];
+      if (!(this.tag in nodes[i]))
+        nodes[i][this.tag] = [[], []];
   };
 
   Sky.ui._LiveRange.prototype._clean_tags = function (nodes) {
     for (var i = 0; i < nodes.length; i++) {
-      var data = nodes[i][this._tag];
+      var data = nodes[i][this.tag];
       if (data && !(data[0].length + data[1].length))
-        delete nodes[i][this._tag];
+        delete nodes[i][this.tag];
     }
   };
 
@@ -70,20 +73,20 @@ Sky.ui = Sky.ui || {};
   // versions of IE, you do need to manually remove all ranges because
   // IE can't GC reference cycles through the DOM.
   Sky.ui._LiveRange.prototype.destroy = function () {
-    this._start[this._tag][0].splice(this._start_idx, 1);
-    this._end[this._tag][1].splice(this._end_idx, 1);
+    this._start[this.tag][0].splice(this._start_idx, 1);
+    this._end[this.tag][1].splice(this._end_idx, 1);
     this._clean_tags([this._start, this._end]);
 
     this._start = this._end = null;
   };
 
   // The first node in the range (in preorder traversal)
-  Sky.ui._LiveRange.prototype.start = function () {
+  Sky.ui._LiveRange.prototype.firstNode = function () {
     return this._start;
   };
 
   // The last node in the range (in postorder traversal)
-  Sky.ui._LiveRange.prototype.end = function () {
+  Sky.ui._LiveRange.prototype.lastNode = function () {
     return this._end;
   };
 
@@ -101,7 +104,7 @@ Sky.ui = Sky.ui || {};
         visit_range(true, data[0][i]);
       visit_node && visit_node(true, node);
       for (var walk = node.firstChild; walk; walk = walk.nextSibling) {
-        var walk_data = walk[this._tag] || [[], []];
+        var walk_data = walk[this.tag] || [[], []];
         traverse(walk, walk_data, 0, walk_data[1].length);
       }
       visit_node && visit_node(false, node);
@@ -111,7 +114,7 @@ Sky.ui = Sky.ui || {};
 
     var walk = this._start;
     while (true) {
-      var walk_data = walk[this._tag] || [[], []];
+      var walk_data = walk[this.tag] || [[], []];
       traverse(walk, walk_data, walk === this._start ? this._start_idx + 1 : 0,
                walk === this._end ? this._end_idx : walk_data[1].length);
       if (walk === this._end)
@@ -145,12 +148,12 @@ Sky.ui = Sky.ui || {};
       throw new Error("Ranges must contain at least one element");
 
     // Fix up range pointers on departing fragment
-    var old_enter = this._start[this._tag][0];
+    var old_enter = this._start[this.tag][0];
     var save_enter = old_enter.splice(0, this._start_idx + 1);
     for (var i = 0; i < old_enter.length; i++)
       old_enter[i]._start_idx = i;
 
-    var old_leave = this._end[this._tag][1]
+    var old_leave = this._end[this.tag][1]
     var save_leave = old_leave.splice(this._end_idx, old_leave.length);
 
     this._clean_tags([this._start, this._end]);
@@ -175,14 +178,14 @@ Sky.ui = Sky.ui || {};
 
     // Fix up range pointers on new fragment -- including our own
     // Clobbers this._start(_idx), this._end(_idx)
-    var new_enter = new_start[this._tag][0];
+    var new_enter = new_start[this.tag][0];
     Array.prototype.splice.apply(new_enter, [0, 0].concat(save_enter));
     for (var i = 0; i < new_enter.length; i++) {
       new_enter[i]._start = new_start;
       new_enter[i]._start_idx = i;
     }
 
-    var new_leave = new_end[this._tag][1];
+    var new_leave = new_end[this.tag][1];
     for (var i = 0; i < save_leave.length; i++) {
       save_leave[i]._end = new_end;
       save_leave[i]._end_idx = new_leave.length + i;
@@ -210,7 +213,7 @@ Sky.ui = Sky.ui || {};
     // the right.
 
     // We're abutting on the left if this._start_idx > 0. We're abutting
-    // on the right if this._end_idx !== this._end[this._tag][1].length - 1.
+    // on the right if this._end_idx !== this._end[this.tag][1].length - 1.
     // XXX is this complete, eg maybe need to look at eg this._end.
 
     // ---
