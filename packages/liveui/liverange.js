@@ -46,6 +46,8 @@ Sky.ui = Sky.ui || {};
     this._end = end;
     this._end_idx = 0;
     end[tag][1].splice(0, 0, this);
+    for (var i = 1; i < end[tag][1].length; i++)
+      end[tag][1][i]._end_idx = i;
   };
 
   Sky.ui._LiveRange.prototype._ensure_tags = function (nodes) {
