@@ -21,6 +21,12 @@ Sky.ui = Sky.ui || {};
   // 'end' - end point, in postorder traversal (range ends just after end)
   // if there are any other ranges that also span exactly from start
   // to end, the new range will be outside of them.
+  //
+  // "Create a range, tagged 'tag', that includes start, end, and all
+  // the nodes between them, and the children of all of those nodes,
+  // but includes no other nodes. If there are other ranges tagged
+  // "tag" that contain this exact set of nodes, then the new range
+  // will contain them."
   Sky.ui._LiveRange = function (tag, start, end) {
     if ((start instanceof Document) || (start instanceof DocumentFragment)) {
       end = start.lastChild;
@@ -73,10 +79,17 @@ Sky.ui = Sky.ui || {};
   // versions of IE, you do need to manually remove all ranges because
   // IE can't GC reference cycles through the DOM.
   Sky.ui._LiveRange.prototype.destroy = function () {
-    this._start[this.tag][0].splice(this._start_idx, 1);
-    this._end[this.tag][1].splice(this._end_idx, 1);
-    this._clean_tags([this._start, this._end]);
+    var enter = this._start[this.tag][0];
+    enter.splice(this._start_idx, 1);
+    for (var i = this._start_idx; i < enter.length; i++)
+      enter[i]._start_idx = i;
 
+    var leave = this._end[this.tag][1];
+    leave.splice(this._end_idx, 1);
+    for (var i = this._end_idx; i < leave.length; i++)
+      leave[i]._end_idx = i;
+
+    this._clean_tags([this._start, this._end]);
     this._start = this._end = null;
   };
 

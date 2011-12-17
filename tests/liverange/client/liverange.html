@@ -1,0 +1,21 @@
+<head>
+  <title>liverange test</title>
+</head>
+
+<body>
+  {{> results }}
+</body>
+
+<template name="results">
+  {{#each results}}
+    {{#if type_is "assert"}}
+      <div class="assert">
+        {{message}}
+        <div class="expected">Expected: {{expected}}</div>
+        <div class="actual">Actual: {{actual}}</div>
+      </div>
+    {{else}}
+      <div class="{{type}}">{{message}}</div>
+    {{/if}}
+  {{/each}}
+</template>
