@@ -13,7 +13,7 @@ Please, do not share or blog about Skybreak yet.  It is experimental,
 pre-release software.  We hope it shows the direction of our thinking,
 and much of it will to change.  We'd love to hear your feedback.
 
-Documentation is available at http://preview.skybreakplatform.com
+Documentation is available at http://preview.skybreakplatform.com/
 
 ## Quick Start
 
