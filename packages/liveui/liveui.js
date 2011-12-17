@@ -77,8 +77,8 @@ Sky.ui.render = function (render_func, events, event_data) {
     if (old_context.killed)
       return; // _cleanup is killing us
 
-    if (!(document.body.contains ? document.body.contains(start)
-          : (document.body.compareDocumentPosition(start) & 16))) {
+    if (!(document.body.contains ? document.body.contains(range.start())
+          : (document.body.compareDocumentPosition(range.start()) & 16))) {
       // It was taken offscreen. Stop updating it so it can get GC'd.
       Sky.ui._cleanup(range);
       range.destroy();
@@ -138,6 +138,7 @@ Sky.ui.render = function (render_func, events, event_data) {
 /// XXX what can now be a collection, or the handle of an existing
 /// findlive. messy.
 Sky.ui.renderList = function (what, options) {
+  throw new Error("Unimplemented");
   var outer_range;
   var entry_ranges = [];
 
