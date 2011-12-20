@@ -64,6 +64,27 @@ Sky.ui.render = function (render_func, events, event_data) {
                       "set.");
 
     // Attach events
+
+    // XXX BUG: If you have a conditional (#if) element at toplevel,
+    // will it get its event attached if it comes into existence
+    // later? In fact, there are cases eg in AcataGrid where you have
+    // to add an extra div to make it work:
+    //
+    /*
+<template name="user_list">
+  <div class="user_list">
+    {{#each users}}
+      {{> user }}
+    {{/each}}
+  </div>
+  <div>               <==== Here is the extra div that's required
+    {{#if logged_in}}
+      <span class="edit_user action">Edit my information</span>
+    {{/if}}
+  </div>
+</template>
+*/
+
     for (var i = 0; i < frag.childNodes.length; i++)
       Sky.ui._setupEvents(frag.childNodes[i], events || {}, event_data);
 
