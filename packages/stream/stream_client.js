@@ -50,13 +50,11 @@ if (typeof Sky === "undefined") Sky = {};
   var status = {
     status: "startup", connected: false, retry_count: 0
   };
-  var status_listeners = [];
+  var status_listeners = {}; // context.id -> context
   var status_changed = function () {
-    // XXX does _.each do the right thing if the list is modified out
-    // from under it? The list will be modified out from under it until
-    // Geoff's flush changes land (and even then, may still be modified
-    // out from under us?).
-    _.each(status_listeners, function (x) { x(); });
+    _.each(status_listeners, function (context) {
+      context.invalidate();
+    });
   };
 
   //// retry logic
@@ -175,11 +173,11 @@ if (typeof Sky === "undefined") Sky = {};
   ////////// User facing API //////////
 
   Sky.status = function () {
-    if (Sky.deps.monitoring) {
-      var invalidate = Sky.deps.getInvalidate();
-      status_listeners.push(invalidate);
-      Sky.deps.cleanup(function () {
-        status_listeners = _.without(status_listeners, invalidate);
+    var context = Sky.deps.Context.current;
+    if (context && !(context.id in status_listeners)) {
+      status_listeners[context.id] = context;
+      context.on_invalidate(function () {
+        delete status_listeners[context.id];
       });
     }
     return status;
