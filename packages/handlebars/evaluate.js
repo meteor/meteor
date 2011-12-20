@@ -56,7 +56,6 @@ Handlebars.registerHelper = function (name, func) {
 };
 
 Handlebars._escape = function (x) {
-  x = x.toString();
   // If Handlebars sees an &entity; in the input text, it won't quote
   // it (won't replace it with &ampentity;). I'm not sure if that's
   // the right choice -- it's definitely a heuristic..
@@ -140,13 +139,21 @@ Handlebars.evaluate = function (ast, data, options) {
   var template = function (stack, elts) {
     var out = "";
 
+    var toString = function (x) {
+      if (typeof x === "string") return x;
+      // May want to revisit the following one day
+      if (x === null) return "null";
+      if (x === undefined) return "";
+      return x.toString();
+    };
+
     _.each(elts, function (elt) {
       if (typeof(elt) === "string")
         out += elt;
       else if (elt[0] === '{')
-        out += Handlebars._escape(invoke(stack, elt[1]));
+        out += Handlebars._escape(toString(invoke(stack, elt[1])));
       else if (elt[0] === '!')
-        out += invoke(stack, elt[1]);
+        out += toString(invoke(stack, elt[1] || ''));
       else if (elt[0] === '#') {
         var block = function (data) {
           return template({parent: stack, data: data}, elt[2]);
