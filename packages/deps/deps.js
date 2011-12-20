@@ -1,77 +1,69 @@
 if (typeof Sky === "undefined") Sky = {};
 
 (function () {
+  var pending_invalidate = [];
   var next_id = 1;
-  var active_id = null; // null if not inside monitor
-  var callbacks = {}; // id -> list of functions to call on invalidate
 
-  function invalidate (id) {
-    var funcs = callbacks[id] || [];
-    delete callbacks[id];
-
-    _.each(funcs, function (f) {
-      f(); // XXX wrap in try?
-    });
+  var Context = function () {
+    // Each context has a unique number. You can use this to avoid
+    // storing multiple copies of the same context in your
+    // invalidation list.
+    this.id = next_id++;
+    this._callbacks = [];
+    this._invalidated = false;
   };
+  Context.current = null;
+
+  _.extend(Context.prototype, {
+    run: function (f) {
+      var previous = Context.current;
+      Context.current = this;
+      try { var ret = f(); }
+      finally { Context.current = previous; }
+      return ret;
+    },
+
+    // we specifically guarantee that this doesn't call any
+    // invalidation functions (before returning) -- it just marks the
+    // context as invalidated.
+    invalidate: function () {
+      if (!this._invalidated) {
+        this._invalidated = true;
+        if (!pending_invalidate.length)
+          setTimeout(Sky.flush, 0);
+        pending_invalidate.push(this);
+      }
+    },
+
+    // calls f immediately if this context was already invalidated
+    on_invalidate: function (f) {
+      if (this._invalidated)
+        f();
+      else
+        this._callbacks.push(f);
+    }
+  });
 
   _.extend(Sky, {
+    // XXX specify what happens when flush calls flush. eg, flushing
+    // causes a dom update, which causes onblur, which invokes an
+    // event handler that calls flush. it's probably an exception --
+    // no flushing from inside onblur. can also imagine routing onblur
+    // through settimeout(0), which is probably what the user wants.
+    flush: function () {
+      var pending = pending_invalidate;
+      pending_invalidate = [];
+
+      _.each(pending, function (ctx) {
+        _.each(ctx._callbacks, function (f) {
+          f(); // XXX wrap in try?
+        });
+        delete this._callbacks; // maybe help the GC
+      });
+    },
+
     deps: {
-      /// Create a new monitor block, execute func inside it, and
-      /// return func's value. When the monitor block is invalidated,
-      /// call on_invalidated and any cleanup functions registered
-      /// from within the block using Sky.deps.cleanup. To invalidate
-      /// the monitor block, retrieve the block's invalidation
-      /// function by calling Sky.deps.getInvalidate from within the
-      /// block, and then call it at any time (not necessarily from
-      /// within the block.) Invalidation is idempotent.
-      ///
-      /// May be called recursively, in which case each invocation is
-      /// indepedent, and Sky.deps.getInvalidate and Sky.deps.cleanup
-      /// operate on the innermost invocation.
-      monitor: function (func, on_invalidated) {
-        // if invoked recursively, save parent context
-        var prev_id = active_id;
-
-        // create a new monitor context
-        active_id = next_id++;
-        Sky.deps.monitoring = true;
-        callbacks[active_id] = [on_invalidated];
-
-        // run the func in that context, and return the result
-        try {
-          var ret = func();
-        } finally {
-          // restore the previous context
-          active_id = prev_id;
-          Sky.deps.monitoring = (active_id !== null);
-        }
-
-        return ret;
-      },
-
-      /// True if inside a monitor block.
-      monitoring: false,
-
-      /// Return the invalidation function for the current monitor
-      /// block, or throw an exception if not inside a monitor block.
-      getInvalidate: function () {
-        if (!active_id)
-          throw new Error("Not inside monitor()");
-
-        return _.bind(invalidate, null, active_id);
-      },
-
-      /// Register a cleanup function on the current monitor block, or
-      /// throw an exception if not inside a monitor block.
-      cleanup: function (callback) {
-        if (!active_id)
-          throw new Error("Not inside monitor()");
-
-        if (!(active_id in callbacks))
-          callback(); // already invalidated!
-        else
-          callbacks[active_id].push(callback);
-      }
-
-    }});
+      Context: Context
+    }
+  });
 })();

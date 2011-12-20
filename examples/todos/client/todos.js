@@ -77,6 +77,7 @@ Template.list_item.events = {
   'dblclick': function (evt) { // start editing list name
     var top = $(evt.target).parents('.list');
     Session.set('editing_listname', this._id);
+    Sky.flush();
     top.find('.edit input').val(this.name).focus().select();
   },
   'blur .edit input, keypress .edit input': function (evt) {
@@ -183,12 +184,14 @@ Template.todo_item.events = {
   'click .addtag': function (evt) {
     var top = $(evt.target).closest('li.todo');
     Session.set('editing_addtag', this._id);
+    Sky.flush();
     top.find('.edittag input').focus();
   },
 
   'dblclick': function (evt) {
     var top = $(evt.target).closest('li.todo');
     Session.set('editing_itemname', this._id);
+    Sky.flush();
     top.find('.edit input').val(this.text).focus().select();
   },
 

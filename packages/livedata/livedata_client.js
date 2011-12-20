@@ -223,8 +223,16 @@ if (typeof Sky === "undefined") Sky = {};
 
     autosubscribe: function (sub_func) {
       var local_subs = [];
+      var context = new Sky.deps.Context();
 
-      Sky.deps.monitor(function () {
+      context.on_invalidate(function () {
+        // recurse.
+        Sky.autosubscribe(sub_func);
+        // unsub after re-subbing, to avoid bouncing.
+        _.each(local_subs, function (x) { x.stop() });
+      });
+
+      context.run(function () {
         if (capture_subs)
           throw new Error("Sky.autosubscribe may not be called recursively");
 
@@ -235,11 +243,6 @@ if (typeof Sky === "undefined") Sky = {};
           local_subs = capture_subs;
           capture_subs = undefined;
         }
-      }, function () {
-        // recurse.
-        Sky.autosubscribe(sub_func);
-        // unsub after re-subbing, to avoid bouncing.
-        _.each(local_subs, function (x) { x.stop() });
       });
     }
   });

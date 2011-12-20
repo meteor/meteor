@@ -78,7 +78,9 @@ Sky.ui._patch = function (old_elt_in, new_elt_in) {
 Sky.ui.render = function (render_func, events, event_data) {
   var result = null;
   var update = function () {
-    var new_result = Sky.deps.monitor(render_func, update);
+    var context = new Sky.deps.Context();
+    context.on_invalidate(update);
+    var new_result = context.run(render_func);
     if (result === null) {
       result = new_result;
       if (result instanceof Array)
@@ -139,17 +141,21 @@ Sky.ui.renderList = function (collection, element, options) {
   };
 
   var render = function (obj) {
-    var elt = Sky.deps.monitor(
-      function () { return options.render(obj); },
-      function () {
-        var idx = query.indexOf(obj._id);
-        if (idx !== -1) {
-          element.insertBefore(render(obj), element.children[idx]);
-          element.removeChild(element.children[idx + 1]);
-        }
-        // if idx === -1, then the liveQuery remove handler will have
-        // taken care of removing the rendered element
-      });
+    var context = new Sky.deps.Context();
+
+    context.on_invalidate(function () {
+      var idx = query.indexOf(obj._id);
+      if (idx !== -1) {
+        element.insertBefore(render(obj), element.children[idx]);
+        element.removeChild(element.children[idx + 1]);
+      }
+      // if idx === -1, then the liveQuery remove handler will have
+      // taken care of removing the rendered element
+    });
+
+    var elt = context.run(function () {
+      return options.render(obj);
+    });
 
     Sky.ui._setupEvents(elt, options.events || {}, obj);
     return elt;
@@ -189,6 +195,10 @@ Sky.ui.renderList = function (collection, element, options) {
       // everything down until each monitor block experiences its
       // callback. actually there are probably a ton of bad GC issues;
       // I haven't thought about it.
+      //
+      // XXX this is now totally avoidable with the new context
+      // api. need to keep an array of contexts, one for each child,
+      // and invalidate them all. probably need to rewrite function.
       //
       // XXX more generally, this pattern where the caller has to call
       // stop() is going to result in tears. more likely, we want to
