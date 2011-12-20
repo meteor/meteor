@@ -52,15 +52,17 @@ if (typeof Sky === "undefined") Sky = {};
     // no flushing from inside onblur. can also imagine routing onblur
     // through settimeout(0), which is probably what the user wants.
     flush: function () {
-      var pending = pending_invalidate;
-      pending_invalidate = [];
+      while (pending_invalidate.length) {
+        var pending = pending_invalidate;
+        pending_invalidate = [];
 
-      _.each(pending, function (ctx) {
-        _.each(ctx._callbacks, function (f) {
-          f(ctx); // XXX wrap in try?
+        _.each(pending, function (ctx) {
+          _.each(ctx._callbacks, function (f) {
+            f(ctx); // XXX wrap in try?
+          });
+          delete this._callbacks; // maybe help the GC
         });
-        delete this._callbacks; // maybe help the GC
-      });
+      }
     },
 
     deps: {
