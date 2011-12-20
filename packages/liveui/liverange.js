@@ -1,3 +1,5 @@
+// Stand back, I'm going to try SCIENCE.
+
 Sky.ui = Sky.ui || {};
 
 // XXX maybe take out of funtion(){}() -- unnecessary at the moment
@@ -27,16 +29,55 @@ Sky.ui = Sky.ui || {};
   // but includes no other nodes. If there are other ranges tagged
   // "tag" that contain this exact set of nodes, then the new range
   // will contain them."
-  Sky.ui._LiveRange = function (tag, start, end) {
+  //
+  // if fast is set, you are promising that there is no range that
+  // starts on start that does not end by end, and vice versa. this is
+  // trivially true in the common case that start and end are the
+  // first and last child of their parent respectively (in this case,
+  // fast will be automatically set to true for you), or in the case
+  // that you are building up the range tree from the inside out. if
+  // fast is set, then the function is bounded by O(ranges that start
+  // on start + ranges that end on end). if fast is false, then add
+  // O(siblings between start and and) to that running time.
+  Sky.ui._LiveRange = function (tag, start, end, fast) {
     if ((start instanceof Document) || (start instanceof DocumentFragment)) {
       end = start.lastChild;
       start = start.firstChild;
     }
     end = end || start;
 
-    // XXX this is public for reading. document it.
+    // XXX 'this.tag' is public for reading. document it.
     this.tag = tag;
     this._ensure_tags([start, end]);
+
+    var balance = 0;
+    fast = fast ||
+      (start.parentNode.firstChild === start &&
+       end.parentNode.lastChild === end);
+    if (!fast) {
+      var walk = start;
+      while (true) {
+        if (tag in walk)
+          balance += walk[tag][0].length - walk[tag][1].length;
+        if (walk === end)
+          break;
+        walk = walk.nextSibling;
+      }
+    }
+
+    // Examples ([] is existing ranges, {} is new range)
+
+    // [.. {[start] .. end}] => balance -1
+    // [{start .. [end]} .. ] => balance 1
+
+    // [.. {[start] .. [end]}] => balance -1
+    // [{[start] .. [end]} .. ] => balance 1
+
+    // [[.. {[start] .. end}]] => balance -2
+    // [[{start .. [end]} .. ]] => balance 2
+
+    // [[.. {[start] .. [end]}]] => balance -2
+    // [[{[start] .. [end]} .. ]] => balance 2
 
     // this._start is the node N such that we begin before N, but not
     // before the node before N in the preorder traversal of the
@@ -45,9 +86,9 @@ Sky.ui = Sky.ui || {};
     // including us, sorted in the order that the ranges start. and
     // finally, this._start[this._start_idx] === this.
     this._start = start;
-    this._start_idx = 0;
-    start[tag][0].splice(0, 0, this);
-    for (var i = 1; i < start[tag][0].length; i++)
+    var i = balance < 0 ? 0 : balance;
+    start[tag][0].splice(i, 0, this);
+    for (; i < start[tag][0].length; i++)
       start[tag][0][i]._start_idx = i;
 
     // just like this._end, except it's the node N such that we end
@@ -55,8 +96,10 @@ Sky.ui = Sky.ui || {};
     // traversal; and the data is stored in this._end[this.tag][1], and
     // it's sorted in the order that the ranges end.
     this._end = end;
-    this._end_idx = end[tag][1].length;
-    end[tag][1].push(this);
+    i = (balance > 0 ? 0 : balance) + end[tag][1].length;
+    end[tag][1].splice(i, 0, this);
+    for (; i < end[tag][1].length; i++)
+      end[tag][1][i]._end_idx = i;
   };
 
   Sky.ui._LiveRange.prototype._ensure_tags = function (nodes) {
@@ -111,13 +154,12 @@ Sky.ui = Sky.ui || {};
   // -- would be nice to let your visit function return false when
   // is_start is true to skip visiting that range/node's children..
   Sky.ui._LiveRange.prototype.visit = function (visit_range, visit_node) {
-    // Stand back, I'm going to try SCIENCE.
-    var traverse = function (node, data, start_bound, end_bound) {
+    var traverse = function (node, data, start_bound, end_bound, tag) {
       for (var i = start_bound; i < data[0].length; i++)
         visit_range(true, data[0][i]);
       visit_node && visit_node(true, node);
       for (var walk = node.firstChild; walk; walk = walk.nextSibling) {
-        var walk_data = walk[this.tag] || [[], []];
+        var walk_data = walk[tag] || [[], []];
         traverse(walk, walk_data, 0, walk_data[1].length);
       }
       visit_node && visit_node(false, node);
@@ -129,7 +171,8 @@ Sky.ui = Sky.ui || {};
     while (true) {
       var walk_data = walk[this.tag] || [[], []];
       traverse(walk, walk_data, walk === this._start ? this._start_idx + 1 : 0,
-               walk === this._end ? this._end_idx : walk_data[1].length);
+               walk === this._end ? this._end_idx : walk_data[1].length,
+               this.tag);
       if (walk === this._end)
         break;
       walk = walk.nextSibling;
@@ -139,7 +182,7 @@ Sky.ui = Sky.ui || {};
   // (returns only ranges with the same tag as this one)
   // XXX could remove .. or just provide a verify() method in debug mode..
   Sky.ui._LiveRange.prototype.contained = function () {
-    var result = {children: []};
+    var result = {range: this, children: []};
     var stack = [result];
 
     this.visit(function (is_start, range) {
@@ -152,7 +195,7 @@ Sky.ui = Sky.ui || {};
           throw new Error("Overlapping ranges detected");
     });
 
-    return result.children;
+    return result;
   };
 
   // XXX need to make sure that tags are removed if they become empty
