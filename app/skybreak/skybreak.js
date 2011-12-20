@@ -406,7 +406,7 @@ Commands.push({
       if (new_argv.url)
         console.log(mongo_url)
       else
-        run_mongo_shell(mongo_url);
+        deploy.run_mongo_shell(mongo_url);
 
     } else if (new_argv._.length === 2) {
       // remote mode

@@ -335,3 +335,5 @@ exports.deploy_app = deploy_app;
 exports.delete_app = delete_app;
 exports.mongo = mongo;
 exports.logs = logs;
+
+exports.run_mongo_shell = run_mongo_shell;
