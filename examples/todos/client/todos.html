@@ -66,14 +66,17 @@
 
 <template name="list_item">
   <div class="list {{selected}}">
-    <div class="display {{display_hidden}}">
-      <div class="list-name {{name_class}}">
-        {{name}}
+    {{#if editing}}
+      <div class="edit">
+        <input class="list-name-input" type="text" value="" />
       </div>
-    </div>
-    <div class="edit {{edit_hidden}}">
-      <input class="list-name-input" type="text" value="" />
-    </div>
+    {{else}}
+      <div class="display">
+        <div class="list-name {{name_class}}">
+          {{name}}
+        </div>
+      </div>
+    {{/if}}
   </div>
 </template>
 
@@ -84,10 +87,12 @@
 </template>
 
 <template name="todos">
-  <div id="items-view" class="{{hidden_class}}">
+  {{#if any_list_selected}}
+  <div id="items-view">
     <input type="text" id="new-todo" placeholder="New item" />
     {{> todo_list}}
   </div>
+  {{/if}}
 </template>
 
 <template name="todo_list">
@@ -101,23 +106,29 @@
 <template name="todo_item">
   <li class="todo {{done_class}}">
     <div class="destroy"></div>
-    <div class="display {{display_hidden}}">
-      <input class="check" type="checkbox" {{done_checkbox}} />
-      <div class="todo-text">{{text}}</div>
-    </div>
-    <div class="edit {{edit_hidden}}">
-      <input class="todo-input" type="text" value="" />
-    </div>
+    {{#if editing}}
+      <div class="edit">
+        <input class="todo-input" type="text" value="" />
+      </div>
+    {{else}}
+      <div class="display">
+        <input class="check" type="checkbox" {{done_checkbox}} />
+        <div class="todo-text">{{text}}</div>
+      </div>
+    {{/if}}
     <div class="item-tags">
       {{#each tag_objs}}
         {{> todo_tag}}
       {{/each}}
-      <div class="tag addtag {{addtag_hidden}}">
-        Add new tag
-      </div>
-      <div class="tag edittag {{edittag_hidden}}">
-        <input type="text" value="" />
-      </div>
+      {{#if adding_tag}}
+        <div class="tag edittag">
+          <input type="text" value="" />
+        </div>
+      {{else}}
+        <div class="tag addtag">
+          Add new tag
+        </div>
+      {{/if}}
     </div>
   </li>
 </template>

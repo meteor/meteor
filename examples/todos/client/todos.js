@@ -62,12 +62,8 @@ Template.list_item.name_class = function () {
   return this.name ? '' : 'empty';
 };
 
-Template.list_item.display_hidden = function () {
-  return Session.equals('editing_listname', this._id) ? 'hidden' : '';
-};
-
-Template.list_item.edit_hidden = function () {
-  return Session.equals('editing_listname', this._id) ? '' : 'hidden';
+Template.list_item.editing = function () {
+  return Session.equals('editing_listname', this._id);
 };
 
 Template.list_item.events = {
@@ -106,8 +102,8 @@ Template.create_list.events = {
 
 ////////// Todos //////////
 
-Template.todos.hidden_class = function () {
-  return Session.get('list_id') ? '' : 'hidden';
+Template.todos.any_list_selected = function () {
+  return !Session.equals('list_id', null);
 };
 
 Template.todos.events = {
@@ -156,20 +152,12 @@ Template.todo_item.done_checkbox = function () {
   return this.done ? 'checked="checked"' : '';
 };
 
-Template.todo_item.display_hidden = function () {
-  return Session.equals('editing_itemname', this._id) ? 'hidden' : '';
+Template.todo_item.editing = function () {
+  return Session.equals('editing_itemname', this._id);
 };
 
-Template.todo_item.edit_hidden = function () {
-  return Session.equals('editing_itemname', this._id) ? '' : 'hidden';
-};
-
-Template.todo_item.addtag_hidden = function () {
-  return Session.equals('editing_addtag', this._id) ? 'hidden' : '';
-};
-
-Template.todo_item.edittag_hidden = function () {
-  return Session.equals('editing_addtag', this._id) ? '' : 'hidden';
+Template.todo_item.adding_tag = function () {
+  return Session.equals('editing_addtag', this._id);
 };
 
 Template.todo_item.events = {

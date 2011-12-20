@@ -6,10 +6,6 @@ body {
   color: #333333;
 }
 
-.hidden {
-    display: none;
-}
-
 .ui-layout-north {
     background: #dddddd;
 }
