@@ -382,12 +382,12 @@ Commands.push({
 "databases on deployed applications, the URL is valid for one minute.\n"
       );
 
-    new_argv = opt.argv;
-
-    if (new_argv.help) {
+    if (argv.help) {
       process.stdout.write(opt.help());
       process.exit(1);
     }
+
+    new_argv = opt.argv;
 
     if (new_argv._.length === 1) {
       // localhost mode
@@ -452,7 +452,7 @@ Commands.push({
 
     new_argv = opt.argv;
 
-    if (new_argv.help || new_argv._.length != 2) {
+    if (argv.help || new_argv._.length != 2) {
       process.stdout.write(opt.help());
       process.exit(1);
     }
