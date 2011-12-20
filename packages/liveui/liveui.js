@@ -117,7 +117,7 @@ Sky.ui.render = function (render_func, events, event_data) {
     var removed = range.replace_contents(frag);
     range.context = context;
 
-    var removed_range = new Sky.ui._LiveRange(Sky.ui._tag, removed);
+    var removed_range = new Sky.ui._LiveRange(Sky.ui._tag, removed, true);
     Sky.ui._cleanup(removed_range);
     removed_range.destroy();
   };
@@ -125,7 +125,7 @@ Sky.ui.render = function (render_func, events, event_data) {
   var context = new Sky.deps.Context;
   context.on_invalidate(update);
   var frag = render_fragment(context);
-  range = new Sky.ui._LiveRange(Sky.ui._tag, frag);
+  range = new Sky.ui._LiveRange(Sky.ui._tag, frag, true);
   range.context = context;
 
   return frag;
@@ -164,7 +164,8 @@ Sky.ui.renderList = function (what, options) {
   var entry_ranges = [];
 
   var create_outer_range = function (initial_contents) {
-    var outer_range = new Sky.ui._LiveRange(Sky.ui._tag, initial_contents);
+    var outer_range = new Sky.ui._LiveRange(Sky.ui._tag, initial_contents,
+                                            true);
     outer_range.context = new Sky.deps.Context;
 
     outer_range.context.on_invalidate(function (old_context) {
@@ -191,7 +192,7 @@ Sky.ui.renderList = function (what, options) {
   var query_opts = {
     added: function (doc, before_idx) {
       var frag = render_doc(doc);
-      var new_range = new Sky.ui._LiveRange(Sky.ui._tag, frag);
+      var new_range = new Sky.ui._LiveRange(Sky.ui._tag, frag, true);
 
       if (!outer_range)
         create_outer_range(frag);
