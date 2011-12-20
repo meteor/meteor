@@ -425,11 +425,13 @@ Commands.push({
   help: "Deploy this project to Skybreak",
   func: function (argv) {
     var opt = require('optimist')
-      .boolean('password')
       .alias('password', 'P')
+      .boolean('password')
+      .boolean('P')
       .describe('password', 'set a password for this deployment')
-      .boolean('delete')
       .alias('delete', 'D')
+      .boolean('delete')
+      .boolean('D')
       .describe('delete', "permanently delete this deployment")
       .usage(
 "Usage: skybreak deploy <site> [--password] [--delete]\n" +
@@ -517,7 +519,9 @@ Commands.push({
 
 var main = function() {
   var optimist = require('optimist')
-    .boolean("h").alias("h", "help")
+    .alias("h", "help")
+    .boolean("h")
+    .boolean("help")
     .boolean("version")
     .boolean("debug");
 
