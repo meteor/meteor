@@ -11,7 +11,7 @@ Sky.ui._cleanup = function (range) {
     branch.range.destroy(); // help old GC's
   };
 
-  _.each(range.contained(), walk);
+  _.each(range.contained().children, walk);
 };
 
 Sky.ui._tag = "_liveui"; // XXX XXX

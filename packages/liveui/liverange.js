@@ -160,7 +160,7 @@ Sky.ui = Sky.ui || {};
       visit_node && visit_node(true, node);
       for (var walk = node.firstChild; walk; walk = walk.nextSibling) {
         var walk_data = walk[tag] || [[], []];
-        traverse(walk, walk_data, 0, walk_data[1].length);
+        traverse(walk, walk_data, 0, walk_data[1].length, tag);
       }
       visit_node && visit_node(false, node);
       for (var i = 0; i < end_bound; i++)

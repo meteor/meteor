@@ -9,7 +9,7 @@ _.each(["begin", "ok", "fail"], function (what) {
 });
 
 Sky.startup(function () {
-  _.each([test_single, test_multi], function (f) {
+  _.each([test_single, test_multi, test_deep_visit], function (f) {
     var run = function () {
       f(true);
       f(false);
@@ -352,4 +352,27 @@ var test_multi = function (fast) {
   assert_dump("<k><6></6><7><1></1><9></9><10></10><11></11><5></5></7><8></8></k>", f2);
   r_k.destroy();
   assert_dump("<6></6><7><1></1><9></9><10></10><11></11><5></5></7><8></8>", f2);
+};
+
+var test_deep_visit = function (fast) {
+  begin("deep visit" + (fast ? " fast" : ""));
+
+  var f = frag("<div id=1><div id=2><div id=3><div id=4><div id=5></div></div></div></div></div>");
+
+  var dive = function (f, count) {
+    for (var i = 0; i < count; i ++)
+      f = f.firstChild;
+    return f;
+  };
+
+  var r_a = create("a", dive(f, 5), dive(f, 5), fast);
+  var r_b = create("b", dive(f, 3), dive(f, 3), fast);
+  var r_c = create("c", dive(f, 2), dive(f, 2), fast);
+  var r_d = create("d", f);
+
+  assert_dump("<d><1><c><2><b><3><4><a><5></5></a></4></3></b></2></c></1></d>",
+              f);
+
+  assert_contained(r_d,
+                   {range: r_d, children: [{range: r_c, children: [{range: r_b, children: [{range: r_a, children: []}]}]}]});
 };
