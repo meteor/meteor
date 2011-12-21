@@ -23,7 +23,8 @@ if (typeof Sky === "undefined") Sky = {};
   }
 
   Sky.startup = function (cb) {
-    var doScroll = document.documentElement.doScroll;
+    var doScroll = !document.addEventListener &&
+      document.documentElement.doScroll;
 
     if (!doScroll || window !== top) {
       if (loaded)
