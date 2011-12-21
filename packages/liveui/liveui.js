@@ -1,7 +1,10 @@
 Sky.ui = Sky.ui || {};
 
-// Kill/cancel all the subranges of 'range', but not 'range' itself.
-Sky.ui._cleanup = function (range) {
+// Kill/cancel everything inside 'what', which may be a
+// DocumentFragment or a range. In the former case, you must pass the
+// the range tag to operate on. In the latter case, the range itself
+// will be destroyed along with its subranges.
+Sky.ui._cleanup = function (what, tag) {
   var walk = function (branch) {
     _.each(branch.children, walk);
     if (branch.range.context) {
@@ -11,7 +14,9 @@ Sky.ui._cleanup = function (range) {
     branch.range.destroy(); // help old GC's
   };
 
-  _.each(range.contained().children, walk);
+  if (what instanceof DocumentFragment)
+    what = new Sky.ui._LiveRange(tag, what.firstChild, what.lastChild);
+  walk(what);
 };
 
 Sky.ui._tag = "_liveui"; // XXX XXX
@@ -102,7 +107,6 @@ Sky.ui.render = function (render_func, events, event_data) {
           : (document.body.compareDocumentPosition(range.lastNode()) & 16))) {
       // It was taken offscreen. Stop updating it so it can get GC'd.
       Sky.ui._cleanup(range);
-      range.destroy();
       return;
     }
 
@@ -113,13 +117,9 @@ Sky.ui.render = function (render_func, events, event_data) {
 
     var context = new Sky.deps.Context;
     context.on_invalidate(update);
-    var frag = render_fragment(context);
-    var removed = range.replace_contents(frag);
+    Sky.ui._cleanup(range.replace_contents(render_fragment(context)),
+                    range.tag);
     range.context = context;
-
-    var removed_range = new Sky.ui._LiveRange(Sky.ui._tag, removed, true);
-    Sky.ui._cleanup(removed_range);
-    removed_range.destroy();
   };
 
   var context = new Sky.deps.Context;
@@ -171,10 +171,8 @@ Sky.ui.renderList = function (what, options) {
     outer_range.context.on_invalidate(function (old_context) {
       query.stop();
 
-      if (!old_context.killed) {
+      if (!old_context.killed)
         Sky.ui._cleanup(outer_range);
-        outer_range.destroy();
-      }
     });
   };
 
@@ -189,6 +187,15 @@ Sky.ui.renderList = function (what, options) {
       document.createComment("empty list");
   };
 
+  var insert_before = function (before_idx, range) {
+    // XXX do the insert
+    entry_ranges.splice(before_idx, 0, range);
+  };
+
+  // return a frag. do not 
+  var extract = function (at_idx) {
+  };
+
   var query_opts = {
     added: function (doc, before_idx) {
       var frag = render_doc(doc);
@@ -197,29 +204,23 @@ Sky.ui.renderList = function (what, options) {
       if (!outer_range)
         create_outer_range(frag);
       else if (!entry_ranges.length) {
-        var removed = outer_range.replace_contents(frag);
-        Sky.ui._cleanup(removed); // XXX NO, MUST WRAP IN RANGE
-      } else {
-        if (before_idx < entry_ranges.length)
-          entry_ranges[before_idx].insertBefore(new_range);
-        else
-          entry_ranges[before_idx - 1].insertAfter(new_range);
-      }
-
-      entry_ranges.splice(before_idx, 0, new_range);
+        Sky.ui._cleanup(outer_range.replace_contents(frag), outer_range.tag);
+        entrty_ranges = [new_range];
+      } else
+        insert_before(before_idx, new_range);
     },
     removed: function (id, at_idx) {
       if (entry_ranges.length > 1)
-        var removed = entry_ranges[at_idx].extract();
+        var removed = extract(at_idx);
       else
         var removed = outer_range.replace_contents(render_empty());
-      Sky.ui._cleanup(removed); // XXX NO, MUST WRAP IN RANGE
+      Sky.ui._cleanup(removed, /* XXX tag */);
       entry_ranges[at_idx].destroy();
       entry_ranges.splice(at_idx, 1);
     },
     changed: function (doc, at_idx) {
-      var removed = entry_ranges[at_idx].replace_contents(render_doc(doc));
-      Sky.ui._cleanup(removed); // XXX NO, MUST WRAP IN RANGE
+      var range = entry_ranges[at_idx];
+      Sky.ui._cleanup(range.replace_contents(render_doc(doc)), range.tag);
     },
     moved: function (doc, old_idx, new_idx) {
       if (old_idx === new_idx)
