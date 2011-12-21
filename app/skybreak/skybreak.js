@@ -290,7 +290,7 @@ Commands.push({
 "  skybreak add <package> <package> ...\n" +
 "\n" +
 "To see available packages:\n" +
-"  skybreak packages\n");
+"  skybreak list\n");
       }
       return;
     }
