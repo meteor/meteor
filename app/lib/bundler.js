@@ -150,17 +150,15 @@ var Bundle = function () {
       self.client_files[name] = fs.readFileSync(fullpath);
     },
 
-    append_head: function (buffer, comment) {
+    append_head: function (buffer) {
       // XXX raise error if contents is not a buffer .. or .. something
       if (self.head_extra) self.head_extra += "\n";
-      self.head_extra += "<!-- " + comment + " -->\n";
       self.head_extra += buffer;
     },
 
-    append_body: function (buffer, comment) {
+    append_body: function (buffer) {
       // XXX raise error if contents is not a buffer .. or .. something
       if (self.body_extra) self.body_extra += "\n";
-      self.body_extra += "<!-- " + comment + " -->\n";
       self.body_extra += buffer;
     }
   };
