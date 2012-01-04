@@ -16,7 +16,7 @@ var _ = require('../lib/third/underscore.js');
 // configuration
 //
 
-var DEPLOY_HOSTNAME = 'deploy.skybreakplatform.com';
+var DEPLOY_HOSTNAME = 'deploy.meteor.com';
 
 // available RPCs are: deploy (with set-password), delete, logs,
 // mongo_cred.  each RPC might require a password, which we
@@ -87,15 +87,15 @@ var bundle_and_deploy = function (site, app_dir, password, set_password) {
 
     files.rm_recursive(build_dir);
 
-    if (!site.match('skybreakplatform.com')) {
+    if (!site.match('meteor.com')) {
       var dns = require('dns');
       dns.resolve(site, 'CNAME', function (err, cnames) {
-        if (err || cnames[0] !== 'origin.skybreakplatform.com') {
+        if (err || cnames[0] !== 'origin.meteor.com') {
           dns.resolve(site, 'A', function (err, addresses) {
             if (err || addresses[0] !== '107.22.210.133') {
               process.stdout.write('-------------\n');
               process.stdout.write("You've deployed to a custom domain.\n");
-              process.stdout.write("Please be sure to CNAME your hostname to origin.skybreakplatform.com,\n");
+              process.stdout.write("Please be sure to CNAME your hostname to origin.meteor.com,\n");
               process.stdout.write("or set an A record to 107.22.210.133.\n");
               process.stdout.write('-------------\n');
             }
@@ -182,7 +182,7 @@ var logs = function (url) {
   });
 };
 
-// accepts www.host.com, defaults domain to skybreakplatform, defaults
+// accepts www.host.com, defaults domain to meteor, defaults
 // protocol to http.  on bad URL, prints error and exits the process.
 //
 // XXX shared w/ proxy.js
@@ -195,7 +195,7 @@ var parse_url = function (url) {
   delete parsed.host; // we use hostname
 
   if (parsed.hostname && !parsed.hostname.match(/\./))
-    parsed.hostname += '.skybreakplatform.com';
+    parsed.hostname += '.meteor.com';
 
   if (!parsed.hostname) {
     process.stdout.write(

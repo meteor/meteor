@@ -13,7 +13,7 @@ Please, do not share or blog about Skybreak yet.  It is experimental,
 pre-release software.  We hope it shows the direction of our thinking,
 and much of it will to change.  We'd love to hear your feedback.
 
-Documentation is available at http://preview.skybreakplatform.com/
+Documentation is available at http://preview.meteor.com/
 
 ## Quick Start
 
@@ -32,7 +32,7 @@ Run it:
 
 Deploy it to the world, for free:
 
-    skybreak deploy try-skybreak.skybreakplatform.com
+    skybreak deploy try-skybreak.meteor.com
 
 ## Slow Start (for developers)
 
@@ -67,7 +67,7 @@ will cause ```skybreak``` to be in your ```PATH```.
 Get in touch! We'd love to hear what you think. You can get involved
 in several ways:
 
-* Announcement list: sign up at http://preview.skybreakplatform.com/
+* Announcement list: sign up at http://preview.meteor.com/
 * Google group for discussion: http://groups.google.com/group/skybreak-users
 * IRC: ```#skybreak``` on ```irc.freenode.net```
-* Email us: ```info@skybreakplatform.com```
+* Email us: ```info@meteor.com```

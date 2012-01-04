@@ -72,7 +72,7 @@ Skybreak installed! To get started fast:
 
 Or see the docs at:
 
-  preview.skybreakplatform.com
+  preview.meteor.com
 
 EOF
 

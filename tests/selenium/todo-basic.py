@@ -21,7 +21,7 @@ class bar(unittest.TestCase):
 
         ##### Sauce Labs
 
-        #URL = "http://todos.skybreakplatform.com/"
+        #URL = "http://todos.meteor.com/"
         #WD="http://SAUCE_ID:SAUCE_KEY@ondemand.saucelabs.com:80/wd/hub"
 
         # desired_capabilities = webdriver.DesiredCapabilities.FIREFOX

@@ -434,7 +434,7 @@ exports.bundle = function (app_dir, output_path, options) {
 "application will listen. The default is 80, but that will require\n" +
 "root on most systems.\n" +
 "\n" +
-"Find out more about Skybreak at skybreakplatform.com.\n");
+"Find out more about Skybreak at meteor.com.\n");
 
   // XXX enhance dependencies to include all dependencies, not just
   // user code, so we can get reload behavior when developing packages

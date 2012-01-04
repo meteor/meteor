@@ -438,9 +438,9 @@ Commands.push({
 "\n" +
 "Deploys the project in your current directory to Skybreak's servers.\n" +
 "\n" +
-"You can deploy to any available name under 'skybreakplatform.com'\n" +
+"You can deploy to any available name under 'meteor.com'\n" +
 "without any additional configuration, for example,\n" +
-"'myapp.skybreakplatform.com'.  If you deploy to a custom domain, such as\n" +
+"'myapp.meteor.com'.  If you deploy to a custom domain, such as\n" +
 "'myapp.mydomain.com', then you'll also need to configure your domain's\n" +
 "DNS records.  See the Skybreak docs for details.\n" +
 "\n" +
