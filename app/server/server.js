@@ -74,7 +74,7 @@ var run = function (bundle_dir) {
   // start up app
   __meteor_bootstrap__ = {require: require, startup_hooks: [], app: app};
   Fiber(function () {
-    // (put in a fiber to let Sky.db operations happen during loading)
+    // (put in a fiber to let Meteor.db operations happen during loading)
 
     // pass in database info
     __meteor_bootstrap__.mongo_url = mongo_url;

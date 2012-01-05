@@ -1,4 +1,4 @@
-Sky.subscribe 'presses'
+Meteor.subscribe 'presses'
 
 Template.button_demo.events =
   'click input': ->

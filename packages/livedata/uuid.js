@@ -1,7 +1,7 @@
 // XXX dups packages/minimongo/uuid.js
 
-// Sky.random() -- known good PRNG, replaces Math.random()
-// Sky.uuid() -- returns RFC 4122 v4 UUID.
+// Meteor.random() -- known good PRNG, replaces Math.random()
+// Meteor.uuid() -- returns RFC 4122 v4 UUID.
 
 // see http://baagoe.org/en/wiki/Better_random_numbers_for_javascript
 // for a full discussion and Alea implementation.
@@ -28,9 +28,9 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-if (typeof Sky === "undefined") Sky = {};
+if (typeof Meteor === "undefined") Meteor = {};
 
-Sky._Alea = function () {
+Meteor._Alea = function () {
   function Mash() {
     var n = 0xefc8249d;
 
@@ -104,14 +104,14 @@ Sky._Alea = function () {
 }
 
 // instantiate RNG.  use the default seed, which is current time.
-Sky.random = new Sky._Alea();
+Meteor.random = new Meteor._Alea();
 
 // RFC 4122 v4 UUID.
-Sky.uuid = function () {
+Meteor.uuid = function () {
   var s = [];
   var hexDigits = "0123456789abcdef";
   for (var i = 0; i < 36; i++) {
-    s[i] = hexDigits.substr(Math.floor(Sky.random() * 0x10), 1);
+    s[i] = hexDigits.substr(Math.floor(Meteor.random() * 0x10), 1);
   }
   s[14] = "4";
   s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1);

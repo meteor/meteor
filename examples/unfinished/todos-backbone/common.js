@@ -1,4 +1,4 @@
-Todos = Sky.Collection("todos");
+Todos = Meteor.Collection("todos");
 Todos.schema({text: String, done: Boolean, order: Number});
 
-Sky.publish('todos');
+Meteor.publish('todos');

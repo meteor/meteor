@@ -1,4 +1,4 @@
-Sky.subscribe('clicks');
+Meteor.subscribe('clicks');
 
 Template.button_demo.events = {
   'click input': function () {

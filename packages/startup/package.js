@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Provides Sky.startup",
+  summary: "Provides Meteor.startup",
   internal: true
 });
 

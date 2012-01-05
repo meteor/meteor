@@ -1,5 +1,5 @@
-if (typeof Sky === "undefined") Sky = {};
+if (typeof Meteor === "undefined") Meteor = {};
 
-Sky.startup = function (callback) {
+Meteor.startup = function (callback) {
   __meteor_bootstrap__.startup_hooks.push(callback);
 };

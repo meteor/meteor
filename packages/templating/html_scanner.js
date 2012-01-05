@@ -66,12 +66,12 @@ var html_scanner = module.exports = {
           throw new Error("Template missing id attribute, um, somewhere ...");
         var id = match[1];
 
-        results.js += "Sky._def_template(" + JSON.stringify(id) + "," + code +
+        results.js += "Meteor._def_template(" + JSON.stringify(id) + "," + code +
           ");\n";
       } else { // tag === "body"
         // as a special case, and to stop users from stabbing us, body
         // is allowed to have multiple elements at toplevel
-        results.js += "Sky.startup(function(){var elts = Sky._def_template(null," + code + ",true)();for(var i=0;i<elts.length;i++) {$('body').append(elts[i]);}});";
+        results.js += "Meteor.startup(function(){var elts = Meteor._def_template(null," + code + ",true)();for(var i=0;i<elts.length;i++) {$('body').append(elts[i]);}});";
       }
     });
     if (!found) {

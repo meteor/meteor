@@ -4,7 +4,7 @@ Session.set('editing_addtag', null);
 Session.set('editing_listname', null);
 Session.set('editing_itemname', null);
 
-Sky.subscribe('lists', {}, function () {
+Meteor.subscribe('lists', {}, function () {
   // Once the lists have loaded, select the first one.
   if (!Session.get('list_id')) {
     var lists = Lists.find({}, {sort: {name: 1}, limit: 1});
@@ -13,10 +13,10 @@ Sky.subscribe('lists', {}, function () {
   }
 });
 
-Sky.autosubscribe(function () {
+Meteor.autosubscribe(function () {
   var list_id = Session.get('list_id');
   if (list_id)
-    Sky.subscribe('todos', {list: list_id});
+    Meteor.subscribe('todos', {list: list_id});
 });
 
 ////////// Tag Filter //////////
@@ -77,7 +77,7 @@ Template.list_item.events = {
   'dblclick': function (evt) { // start editing list name
     var top = $(evt.target).parents('.list');
     Session.set('editing_listname', this._id);
-    Sky.flush();
+    Meteor.flush();
     top.find('.edit input').val(this.name).focus().select();
   },
   'blur .edit input, keypress .edit input': function (evt) {
@@ -184,14 +184,14 @@ Template.todo_item.events = {
   'click .addtag': function (evt) {
     var top = $(evt.target).closest('li.todo');
     Session.set('editing_addtag', this._id);
-    Sky.flush();
+    Meteor.flush();
     top.find('.edittag input').focus();
   },
 
   'dblclick': function (evt) {
     var top = $(evt.target).closest('li.todo');
     Session.set('editing_itemname', this._id);
-    Sky.flush();
+    Meteor.flush();
     top.find('.edit input').val(this.text).focus().select();
   },
 
@@ -243,7 +243,7 @@ Router = new TodosRouter;
 
 ////////// Startup //////////
 
-Sky.startup(function () {
+Meteor.startup(function () {
   $('body').layout({north__minSize: 50,
                     spacing_open: 10,
                     north__fxSettings: { direction: "vertical" }});

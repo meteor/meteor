@@ -116,7 +116,7 @@ $(function () {
 
     // render individual todo list, stash kill function
     current_list_stop =
-      Sky.ui.renderList(Todos, $('#item-list'), {
+      Meteor.ui.renderList(Todos, $('#item-list'), {
         selector: query,
         sort: {timestamp: 1},
         render: renderItem,
@@ -125,7 +125,7 @@ $(function () {
   };
 
   // render list of lists in the left sidebar.
-  Sky.ui.renderList(Lists, $('#lists'), {
+  Meteor.ui.renderList(Lists, $('#lists'), {
     sort: {name: 1},
     template: $('#list-template'),
     events: {
@@ -174,7 +174,7 @@ $(function () {
   // support aggregate queries, construct a local collection to serve
   // the same purpose, and drive the renderList() off of it.
 
-  var LocalTags = Sky.Collection();
+  var LocalTags = Meteor.Collection();
   (function () {
     function updateLocalTags() {
       var real = _(Todos.find()).chain().pluck('tags').compact().flatten().uniq().value();
@@ -205,7 +205,7 @@ $(function () {
 
   Session.set('tag_filter', null);
 
-  Sky.ui.renderList(LocalTags, $('#tag-filter'), {
+  Meteor.ui.renderList(LocalTags, $('#tag-filter'), {
     sort: {tag: 1},
     template: $('#tag-filter-template'),
     events: {
@@ -229,7 +229,7 @@ $(function () {
 
   // subscribe to all available todo lists.  once the inital load
   // completes, navigate to the list specified by URL, if any.
-  Sky.subscribe('lists', {}, function () {
+  Meteor.subscribe('lists', {}, function () {
     var initial_list_id = window.location.pathname.split('/')[1];
     var list;
 
@@ -254,5 +254,5 @@ $(function () {
 
   // subscribe to all the items in each list.  no need for a callback
   // here: todo items are never queried using collection.find().
-  Sky.subscribe('todos');
+  Meteor.subscribe('todos');
 });

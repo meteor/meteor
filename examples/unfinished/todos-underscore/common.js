@@ -1,6 +1,6 @@
-Lists = Sky.Collection("lists");
+Lists = Meteor.Collection("lists");
 
-Todos = Sky.Collection("todos");
+Todos = Meteor.Collection("todos");
 
 /* Schema support coming soon!
 
@@ -11,5 +11,5 @@ Todos.schema({text: String,
               tags: [String]});
 */
 
-Sky.publish('lists');
-Sky.publish('todos');
+Meteor.publish('lists');
+Meteor.publish('todos');

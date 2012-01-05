@@ -1,4 +1,4 @@
-if (typeof Sky === "undefined") Sky = {};
+if (typeof Meteor === "undefined") Meteor = {};
 
 (function () {
 
@@ -38,7 +38,7 @@ if (typeof Sky === "undefined") Sky = {};
 
   ////////// API for other packages //////////
 
-  Sky._stream = {
+  Meteor._stream = {
     // call my callback when a new socket connects.
     // also call it for all current connections.
     register: function (callback) {

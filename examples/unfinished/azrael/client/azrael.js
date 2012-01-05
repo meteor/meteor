@@ -1,11 +1,11 @@
-Sky.subscribe('rooms');
+Meteor.subscribe('rooms');
 
 Session.set('current_room', null);
 Session.set('editing_room_name', false);
 
-Sky.autosubscribe(function () {
+Meteor.autosubscribe(function () {
   var room_id = Session.get('current_room');
-  if (room_id) Sky.subscribe('room-detail', {room: room_id});
+  if (room_id) Meteor.subscribe('room-detail', {room: room_id});
 });
 
 // XXX would be nice to eliminate this function and have people just
@@ -49,7 +49,7 @@ Template.add_room.events = {
     // principled way to do this is to narrow the scope of the
     // rerender to not include the <input>.
     Session.set('editing_room_name', true);
-    Sky.ui.focus('#room_name_input');
+    Meteor.ui.focus('#room_name_input');
   }
 };
 
@@ -61,7 +61,7 @@ Template.room.events = {
     Session.set('editing_room_name', true);
     // XXX XXX doesn't generalize.. the element might very reasonably
     // not have a unique id. may need a different strategy..
-    Sky.ui.focus('#room_name_input');
+    Meteor.ui.focus('#room_name_input');
   },
   'blur input': function (evt) {
     Session.set('editing_room_name', false);

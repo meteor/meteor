@@ -1,4 +1,4 @@
-if (typeof Sky === "undefined") Sky = {};
+if (typeof Meteor === "undefined") Meteor = {};
 
 (function () {
   var pending_invalidate = [];
@@ -30,7 +30,7 @@ if (typeof Sky === "undefined") Sky = {};
       if (!this._invalidated) {
         this._invalidated = true;
         if (!pending_invalidate.length)
-          setTimeout(Sky.flush, 0);
+          setTimeout(Meteor.flush, 0);
         pending_invalidate.push(this);
       }
     },
@@ -44,7 +44,7 @@ if (typeof Sky === "undefined") Sky = {};
     }
   });
 
-  _.extend(Sky, {
+  _.extend(Meteor, {
     // XXX specify what happens when flush calls flush. eg, flushing
     // causes a dom update, which causes onblur, which invokes an
     // event handler that calls flush. it's probably an exception --

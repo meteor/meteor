@@ -1,9 +1,9 @@
-Sky.ui = Sky.ui || {};
+Meteor.ui = Meteor.ui || {};
 
 // update in place by hollowing out old element(s), and copying
 // over all of the children and attributes. unfortunately there
 // is no way to change the tag name. leave the events in place.
-Sky.ui._patch = function (old_elt_in, new_elt_in) {
+Meteor.ui._patch = function (old_elt_in, new_elt_in) {
   // Don't let more than one instance of patch run simultaneously.
   // http://code.google.com/p/chromium/issues/detail?id=104397
   //
@@ -12,15 +12,15 @@ Sky.ui._patch = function (old_elt_in, new_elt_in) {
   // the DOM immediately.. except if, somewhere above them on
   // the stack, is a onblur handler triggered by patch, in which
   // case updates are queued up?? That makes no kind of sense.
-  var already_in_patch = !!Sky.ui._patch_queue;
+  var already_in_patch = !!Meteor.ui._patch_queue;
   if (!already_in_patch)
-    Sky.ui._patch_queue = [];
-  Sky.ui._patch_queue.push([old_elt_in, new_elt_in])
+    Meteor.ui._patch_queue = [];
+  Meteor.ui._patch_queue.push([old_elt_in, new_elt_in])
   if (already_in_patch)
     return;
 
-  while (Sky.ui._patch_queue.length) {
-    var x = Sky.ui._patch_queue.splice(0, 10)[0];
+  while (Meteor.ui._patch_queue.length) {
+    var x = Meteor.ui._patch_queue.splice(0, 10)[0];
     var old_elt = x[0];
     var new_elt = x[1];
 
@@ -47,7 +47,7 @@ Sky.ui._patch = function (old_elt_in, new_elt_in) {
                            new_elt.attributes[i].value);
   };
 
-  delete Sky.ui._patch_queue;
+  delete Meteor.ui._patch_queue;
 };
 
 
@@ -75,20 +75,20 @@ Sky.ui._patch = function (old_elt_in, new_elt_in) {
 ///
 /// XXX refactor renderList to make it use this?
 /// XXX need to provide a way to stop the updating and let GC happen!!!
-Sky.ui.render = function (render_func, events, event_data) {
+Meteor.ui.render = function (render_func, events, event_data) {
   var result = null;
   var update = function () {
-    var context = new Sky.deps.Context();
+    var context = new Meteor.deps.Context();
     context.on_invalidate(update);
     var new_result = context.run(render_func);
     if (result === null) {
       result = new_result;
       if (result instanceof Array)
         _.each(result, function (elt) {
-          Sky.ui._setupEvents(elt, events || {}, event_data);
+          Meteor.ui._setupEvents(elt, events || {}, event_data);
         });
       else
-        Sky.ui._setupEvents(result, events || {}, event_data);
+        Meteor.ui._setupEvents(result, events || {}, event_data);
     } else {
       if ((new_result instanceof Array) !==
           (result instanceof Array))
@@ -100,9 +100,9 @@ Sky.ui.render = function (render_func, events, event_data) {
                           "elements it returns (from " + result.length +
                           " to " + new_result.length + ")");
         for (var i = 0; i < result.length; i++)
-          Sky.ui._patch(result[i], new_result[i]);
+          Meteor.ui._patch(result[i], new_result[i]);
       } else
-        Sky.ui._patch(result, new_result);
+        Meteor.ui._patch(result, new_result);
     }
   };
 
@@ -126,7 +126,7 @@ Sky.ui.render = function (render_func, events, event_data) {
 ///
 /// returns an object with:
 ///  stop(): stop updating, tear everything down and let it get GC'd
-Sky.ui.renderList = function (collection, element, options) {
+Meteor.ui.renderList = function (collection, element, options) {
   if ((typeof $ !== "undefined") && (element instanceof $))
     // allow element to be a jQuery result set
     element = element[0];
@@ -141,7 +141,7 @@ Sky.ui.renderList = function (collection, element, options) {
   };
 
   var render = function (obj) {
-    var context = new Sky.deps.Context();
+    var context = new Meteor.deps.Context();
 
     context.on_invalidate(function () {
       var idx = query.indexOf(obj._id);
@@ -157,7 +157,7 @@ Sky.ui.renderList = function (collection, element, options) {
       return options.render(obj);
     });
 
-    Sky.ui._setupEvents(elt, options.events || {}, obj);
+    Meteor.ui._setupEvents(elt, options.events || {}, obj);
     return elt;
   };
 
@@ -213,7 +213,7 @@ Sky.ui.renderList = function (collection, element, options) {
 
 // XXX jQuery dependency
 // 'event_data' will be an additional argument to event callback
-Sky.ui._setupEvents = function (elt, events, event_data) {
+Meteor.ui._setupEvents = function (elt, events, event_data) {
   events = events || {};
   function create_callback (callback) {
     // return a function that will be used as the jquery event

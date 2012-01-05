@@ -1,4 +1,4 @@
-if (typeof Sky === "undefined") Sky = {};
+if (typeof Meteor === "undefined") Meteor = {};
 
 // socket.io reconnect is broken and doesn't tell us when it gives up:
 // https://github.com/LearnBoost/socket.io/issues/652
@@ -172,8 +172,8 @@ if (typeof Sky === "undefined") Sky = {};
 
   ////////// User facing API //////////
 
-  Sky.status = function () {
-    var context = Sky.deps.Context.current;
+  Meteor.status = function () {
+    var context = Meteor.deps.Context.current;
     if (context && !(context.id in status_listeners)) {
       status_listeners[context.id] = context;
       context.on_invalidate(function () {
@@ -183,7 +183,7 @@ if (typeof Sky === "undefined") Sky = {};
     return status;
   };
 
-  Sky.reconnect = function () {
+  Meteor.reconnect = function () {
     if (status.connected) return; // already connected. noop.
 
     // if we're mid-connection, stop it.
@@ -200,7 +200,7 @@ if (typeof Sky === "undefined") Sky = {};
 
   ////////// API for other packages //////////
 
-  Sky._stream = {
+  Meteor._stream = {
     on: function (name, callback) {
       if (!event_callbacks[name]) event_callbacks[name] = []
       event_callbacks[name].push(callback);

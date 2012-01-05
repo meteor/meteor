@@ -1,4 +1,4 @@
-if (typeof Sky === "undefined") Sky = {};
+if (typeof Meteor === "undefined") Meteor = {};
 
 (function () {
 
@@ -119,7 +119,7 @@ if (typeof Sky === "undefined") Sky = {};
     // XXX note that running this in a fiber means that two serial
     // requests from the client can try to execute in parallel.. we're
     // going to have to think that through at some point. also, consider
-    // races against Sky.Collection(), though this shouldn't happen in
+    // races against Meteor.Collection(), though this shouldn't happen in
     // most normal use cases
     Fiber(function () {
       if (!('collection' in data) || !(data.collection in collections))
@@ -159,7 +159,7 @@ if (typeof Sky === "undefined") Sky = {};
     }).run();
   };
 
-  Sky._stream.register(function (socket) {
+  Meteor._stream.register(function (socket) {
     socket.sky = {};
     socket.sky.subs = [];
     socket.sky.cache = {};
@@ -174,7 +174,7 @@ if (typeof Sky === "undefined") Sky = {};
     });
 
     socket.on('handle', function (data) {
-      run_handler(socket, data, Sky._stream.all_sockets());
+      run_handler(socket, data, Meteor._stream.all_sockets());
     });
 
     // 5/sec updates tops, once every 10sec min.
@@ -187,7 +187,7 @@ if (typeof Sky === "undefined") Sky = {};
 
   ////////// User visible API //////////
 
-  _.extend(Sky, {
+  _.extend(Meteor, {
     is_server: true,
     is_client: false,
 
@@ -202,7 +202,7 @@ if (typeof Sky === "undefined") Sky = {};
      *    named 'name' on disk in mongodb
      *  - selector {Function<args> OR Object} either a mongodb selector,
      *    or a function that takes the argument object passed to
-     *    Sky.subscribe and returns a mongodb selector. default {}
+     *    Meteor.subscribe and returns a mongodb selector. default {}
      */
     publish: function (name, options) {
       if (name in publishes) {
@@ -242,7 +242,7 @@ if (typeof Sky === "undefined") Sky = {};
     }
   });
 
-  Sky.Collection = function (name) {
+  Meteor.Collection = function (name) {
     if (!name)
       // XXX maybe support this using minimongo?
       throw new Error("Anonymous collections aren't allowed on the server");
@@ -265,17 +265,17 @@ if (typeof Sky === "undefined") Sky = {};
           new_doc = {};
           _.extend(new_doc, doc);
           doc = new_doc;
-          doc._id = Sky.uuid();
+          doc._id = Meteor.uuid();
         }
 
-        Sky._mongo_driver.insert(this._name, doc);
+        Meteor._mongo_driver.insert(this._name, doc);
 
         // return the doc w/ _id, so we can use it.
         return doc;
       },
 
       find: function (selector, options) {
-        return Sky._mongo_driver.find(this._name, selector, options);
+        return Meteor._mongo_driver.find(this._name, selector, options);
       },
 
       findLive: function () {
@@ -283,11 +283,11 @@ if (typeof Sky === "undefined") Sky = {};
       },
 
       update: function (selector, mod, options) {
-        return Sky._mongo_driver.update(this._name, selector, mod, options);
+        return Meteor._mongo_driver.update(this._name, selector, mod, options);
       },
 
       remove: function (selector) {
-        return Sky._mongo_driver.remove(this._name, selector);
+        return Meteor._mongo_driver.remove(this._name, selector);
       },
 
       schema: function () {

@@ -20,7 +20,7 @@ var client;
 var with_collection_queue;
 
 /**
- * Initialize the Sky library
+ * Initialize the Meteor library
  *
  * @param url {String} mongo DB URL (eg mongodb://localhost:27017/meteor)
  */
@@ -158,7 +158,7 @@ function update (collection_name, selector, mod, options) {
   return future.wait();
 };
 
-Sky._mongo_driver = {
+Meteor._mongo_driver = {
   find: find,
   insert: insert,
   remove: remove,

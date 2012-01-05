@@ -1,5 +1,5 @@
-Clicks = Sky.Collection('clicks');
+Clicks = Meteor.Collection('clicks');
 
-if (Sky.is_server) {
-  Sky.publish('clicks', {});
+if (Meteor.is_server) {
+  Meteor.publish('clicks', {});
 }

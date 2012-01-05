@@ -49,7 +49,7 @@ Session = _.extend({}, {
 
   get: function (key) {
     var self = this;
-    var context = Sky.deps.Context.current;
+    var context = Meteor.deps.Context.current;
     self._ensureKey(key);
 
     if (context && !(context.id in self.key_deps[key])) {
@@ -64,7 +64,7 @@ Session = _.extend({}, {
 
   equals: function (key, value) {
     var self = this;
-    var context = Sky.deps.Context.current;
+    var context = Meteor.deps.Context.current;
 
     if (typeof(value) !== 'string' &&
         typeof(value) !== 'number' &&
