@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Skybreak's automatic dependency framework",
+  summary: "Meteor's automatic dependency framework",
   internal: true
 });
 

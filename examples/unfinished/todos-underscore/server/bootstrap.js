@@ -3,7 +3,7 @@ Sky.startup(function () {
   if (Lists.find().length === 0) {
     var list1 = Lists.insert({name: 'Things to do'});
     Todos.insert({list_id: list1._id,
-                  text: 'Write Skybreak app', tags: ['fun']});
+                  text: 'Write Meteor app', tags: ['fun']});
     Todos.insert({list_id: list1._id,
                   text: 'Drink beer', tags: ['fun', 'yum']});
 

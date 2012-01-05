@@ -53,7 +53,7 @@ index c37e2a7..d4e71bc 100644
 -  else
 -    console.error(sysWarning);
 -}
-+// XXX Skybreak disabled
++// XXX Meteor disabled
 +// var sysWarning;
 +// if (!sysWarning) {
 +//   sysWarning = 'The "sys" module is now called "util". ' +

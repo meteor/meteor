@@ -11,7 +11,7 @@ var usage = function() {
 "directory in local development mode. You can run it from the root\n" +
 "directory of the project or from any subdirectory.\n" +
 "\n" +
-"Use 'skybreak create <name>' to create a new Skybreak project.\n" +
+"Use 'skybreak create <name>' to create a new Meteor project.\n" +
 "\n" +
 "Commands:\n");
   _.each(Commands, function (cmd) {
@@ -32,9 +32,9 @@ var require_project = function (cmd) {
     // This is where you end up if you type 'skybreak' with no
     // args. Be gentle to the noobs..
     process.stdout.write(
-cmd + ": You're not in a Skybreak project directory.\n" +
+cmd + ": You're not in a Meteor project directory.\n" +
 "\n" +
-"To create a new Skybreak project:\n" +
+"To create a new Meteor project:\n" +
 "   skybreak create <project name>\n" +
 "For example:\n" +
 "   skybreak create myapp\n" +
@@ -72,7 +72,7 @@ var findCommand = function (name) {
   for (var i = 0; i < Commands.length; i++)
     if (Commands[i].name === name)
       return Commands[i];
-  process.stdout.write("'" + name + "' is not a Skybreak command. See " +
+  process.stdout.write("'" + name + "' is not a Meteor command. See " +
                        "'skybreak --help'.\n");
   process.exit(1);
 };
@@ -95,7 +95,7 @@ Commands.push({
 "Usage: skybreak run [options]\n" +
 "\n" +
 "Searches upward from the current directory for the root directory of a\n" +
-"Skybreak project, then runs that project in local development\n" +
+"Meteor project, then runs that project in local development\n" +
 "mode. You can use the application by pointing your web browser at\n" +
 "localhost:3000. No internet connection is required.\n" +
 "\n" +
@@ -139,7 +139,7 @@ Commands.push({
       process.stdout.write(
 "Usage: skybreak create <name>\n" +
 "\n" +
-"Make a subdirectory named <name> and create a new Skybreak project\n" +
+"Make a subdirectory named <name> and create a new Meteor project\n" +
 "there. You can also pass an absolute or relative path.\n");
       process.exit(1);
     }
@@ -152,7 +152,7 @@ Commands.push({
 
     if (files.find_app_dir(name)) {
       process.stderr.write(
-"You can't create a Skybreak project inside another Skybreak project.\n");
+"You can't create a Meteor project inside another Meteor project.\n");
       process.exit(1);
     }
 
@@ -176,13 +176,13 @@ Commands.push({
 
 Commands.push({
   name: "update",
-  help: "Upgrade to the latest version of Skybreak",
+  help: "Upgrade to the latest version of Meteor",
   func: function (argv) {
     if (argv.help) {
       process.stdout.write(
 "Usage: skybreak update\n" +
 "\n" +
-"Checks to see if a new version of Skybreak is available, and if so,\n" +
+"Checks to see if a new version of Meteor is available, and if so,\n" +
 "downloads and installs it. You must be connected to the internet.\n");
       process.exit(1);
     }
@@ -199,7 +199,7 @@ Commands.push({
       process.stdout.write(
 "Usage: skybreak add <package> [package] [package..]\n" +
 "\n" +
-"Adds packages to your Skybreak project. You can add multiple\n" +
+"Adds packages to your Meteor project. You can add multiple\n" +
 "packages with one command. For a list of the available packages, see\n" +
 "'skybreak list'.\n");
       process.exit(1);
@@ -236,7 +236,7 @@ Commands.push({
       process.stdout.write(
 "Usage: skybreak remove <package> [package] [package..]\n" +
 "\n" +
-"Removes a package previously added to your Skybreak project. For a\n" +
+"Removes a package previously added to your Meteor project. For a\n" +
 "list of the packages that your application is currently using, see\n" +
 "'skybreak list --using'.\n");
       process.exit(1);
@@ -269,7 +269,7 @@ Commands.push({
       process.stdout.write(
 "Usage: skybreak list [--using]\n" +
 "\n" +
-"Without arguments, lists all available Skybreak packages. To add one\n" +
+"Without arguments, lists all available Meteor packages. To add one\n" +
 "of these packages to your project, see 'skybreak add'.\n" +
 "\n" +
 "With --using, list the packages that you have added to your project.\n");
@@ -370,11 +370,11 @@ Commands.push({
 "Opens a Mongo shell to view or manipulate collections.\n" +
 "\n" +
 "If site is specified, this is the hosted Mongo database for the deployed\n" +
-"Skybreak site.\n" +
+"Meteor site.\n" +
 "\n" +
 "If no site is specified, this is the current project's local development\n" +
 "database.  In this case, the current working directory must be a\n" +
-"Skybreak project directory, and the Skybreak application must already be\n" +
+"Meteor project directory, and the Meteor application must already be\n" +
 "running.\n" +
 "\n" +
 "Instead of opening a shell, specifying --url (-U) will return a URL\n" +
@@ -394,9 +394,9 @@ Commands.push({
       var mongod_port = find_mongo_port("mongo");
       if (!mongod_port) {
         process.stdout.write(
-"mongo: Skybreak isn't running.\n" +
+"mongo: Meteor isn't running.\n" +
 "\n" +
-"This command only works while Skybreak is running your application\n" +
+"This command only works while Meteor is running your application\n" +
 "locally. Start your application first.\n");
         process.exit(1);
       }
@@ -422,7 +422,7 @@ Commands.push({
 
 Commands.push({
   name: "deploy",
-  help: "Deploy this project to Skybreak",
+  help: "Deploy this project to Meteor",
   func: function (argv) {
     var opt = require('optimist')
       .alias('password', 'P')
@@ -436,13 +436,13 @@ Commands.push({
       .usage(
 "Usage: skybreak deploy <site> [--password] [--delete]\n" +
 "\n" +
-"Deploys the project in your current directory to Skybreak's servers.\n" +
+"Deploys the project in your current directory to Meteor's servers.\n" +
 "\n" +
 "You can deploy to any available name under 'meteor.com'\n" +
 "without any additional configuration, for example,\n" +
 "'myapp.meteor.com'.  If you deploy to a custom domain, such as\n" +
 "'myapp.mydomain.com', then you'll also need to configure your domain's\n" +
-"DNS records.  See the Skybreak docs for details.\n" +
+"DNS records.  See the Meteor docs for details.\n" +
 "\n" +
 "The --delete flag permanently removes a deployed application, including\n" +
 "all of its stored data.\n" +
@@ -502,9 +502,9 @@ Commands.push({
     var mongod_port = find_mongo_port("reset");
     if (mongod_port) {
       process.stdout.write(
-"reset: Skybreak is running.\n" +
+"reset: Meteor is running.\n" +
 "\n" +
-"This command does not work while Skybreak is running your application.\n" +
+"This command does not work while Meteor is running your application.\n" +
 "Exit the running skybreak development server.\n");
       process.exit(1);
     }
@@ -534,7 +534,7 @@ var main = function() {
 
   if (argv.version) {
     var updater = require('../lib/updater.js');
-    process.stdout.write("Skybreak version " + updater.CURRENT_VERSION + "\n");
+    process.stdout.write("Meteor version " + updater.CURRENT_VERSION + "\n");
     process.exit(0);
   }
 

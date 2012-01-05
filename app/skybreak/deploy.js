@@ -206,7 +206,7 @@ var parse_url = function (url) {
 
   if (parsed.pathname != '/' || parsed.hash || parsed.query) {
     process.stdout.write(
-"Sorry, Skybreak does not yet support specific path URLs, such as\n" +
+"Sorry, Meteor does not yet support specific path URLs, such as\n" +
 "http://www.example.com/blog .  Please specify the root of a domain.\n");
     process.exit(1);
   }

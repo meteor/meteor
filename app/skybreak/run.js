@@ -85,9 +85,9 @@ var start_proxy = function (outer_port, inner_port, callback) {
   p.on('error', function (err) {
     if (err.code == 'EADDRINUSE') {
       process.stderr.write("Can't listen on port " + outer_port
-                           + ", perhaps another Skybreak is running?\n");
+                           + ", perhaps another Meteor is running?\n");
       process.stderr.write("\n");
-      process.stderr.write("Running two copies of Skybreak in the same application directory\n");
+      process.stderr.write("Running two copies of Meteor in the same application directory\n");
       process.stderr.write("will not work.  If something else is using port " + outer_port + ", you can\n");
       process.stderr.write("specify an alternative port with --port <port>.\n");
     } else {

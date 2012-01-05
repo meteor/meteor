@@ -6,7 +6,7 @@ PARENT="/usr/local"
 
 # Check for MacOS
 if [ `uname` != "Darwin" ] ; then
-    echo "Sorry, Skybreak only supports MacOS X right now."
+    echo "Sorry, Meteor only supports MacOS X right now."
     exit 1
 fi
 
@@ -14,9 +14,9 @@ set -e
 trap "echo Installation failed." EXIT
 
 if [ -e "$TARGET" ] ; then
-    echo "Updating Skybreak in $TARGET"
+    echo "Updating Meteor in $TARGET"
 else
-    echo "Installing Skybreak to $TARGET"
+    echo "Installing Meteor to $TARGET"
 fi
 
 # if /usr/local doesn't exist or isn't writable, fix it with sudo.
@@ -64,7 +64,7 @@ ln -s "$TARGET/bin/skybreak" "$PARENT/bin/skybreak"
 
 cat <<EOF
 
-Skybreak installed! To get started fast:
+Meteor installed! To get started fast:
 
   $ skybreak create ~/my_cool_app
   $ cd ~/my_cool_app

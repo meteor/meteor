@@ -261,7 +261,7 @@ _.extend(Bundle.prototype, {
 });
 
 /**
- * Take the Skybreak application in app_dir, and compile it into a
+ * Take the Meteor application in app_dir, and compile it into a
  * bundle at output_path. output_path will be created if it doesn't
  * exist (it will be a directory), and removed if it does exist.
  *
@@ -423,7 +423,7 @@ exports.bundle = function (app_dir, output_path, options) {
 "require(require('path').join(__dirname, 'server/server.js'));\n");
 
   fs.writeFileSync(path.join(build_path, 'README'),
-"This is a Skybreak application bundle. It has only one dependency,\n" +
+"This is a Meteor application bundle. It has only one dependency,\n" +
 "node.js (with the 'fibers' package). To run the application:\n" +
 "\n" +
 "  $ npm install fibers\n" +
@@ -434,7 +434,7 @@ exports.bundle = function (app_dir, output_path, options) {
 "application will listen. The default is 80, but that will require\n" +
 "root on most systems.\n" +
 "\n" +
-"Find out more about Skybreak at meteor.com.\n");
+"Find out more about Meteor at meteor.com.\n");
 
   // XXX enhance dependencies to include all dependencies, not just
   // user code, so we can get reload behavior when developing packages

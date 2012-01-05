@@ -15,7 +15,7 @@ Sky.startup(function () {
       },
       {name: "Next-gen frameworks",
        contents: [
-         ["Skybreak"],
+         ["Meteor"],
          ["Derby + Racer"],
          ["Capsule + Thoonk from &yet"],
          ["Flatiron from Nodejitsu"],

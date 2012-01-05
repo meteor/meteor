@@ -8,7 +8,7 @@ cd ..
 
 # Check for MacOS
 if [ `uname` != "Darwin" ] ; then
-    echo "Skybreak only support MacOS X right now."
+    echo "Meteor only support MacOS X right now."
     exit 1
 fi
 

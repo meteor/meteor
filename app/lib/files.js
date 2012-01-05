@@ -140,7 +140,7 @@ var files = module.exports = {
     }
   },
 
-  // True if we're in a git checkout of Skybreak, else false (we're in
+  // True if we're in a git checkout of Meteor, else false (we're in
   // an installation.)
   in_checkout: function () {
     try {
