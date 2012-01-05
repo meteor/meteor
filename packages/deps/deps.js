@@ -56,7 +56,7 @@ if (typeof Sky === "undefined") Sky = {};
 
       _.each(pending, function (ctx) {
         _.each(ctx._callbacks, function (f) {
-          f(); // XXX wrap in try?
+          f(ctx); // XXX wrap in try?
         });
         delete ctx._callbacks; // maybe help the GC
       });
