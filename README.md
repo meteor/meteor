@@ -70,4 +70,4 @@ in several ways:
 * Announcement list: sign up at http://preview.meteor.com/
 * Google group for discussion: http://groups.google.com/group/skybreak-users
 * IRC: ```#skybreak``` on ```irc.freenode.net```
-* Email us: ```info@meteor.com```
+* Email us: ```contact@meteor.com```
