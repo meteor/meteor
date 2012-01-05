@@ -22,7 +22,7 @@ var DEPLOY_HOSTNAME = 'deploy.meteor.com';
 // mongo_cred.  each RPC might require a password, which we
 // interactively prompt for here.
 
-var sky_rpc = function (rpc_name, method, site, query_params, callback) {
+var meteor_rpc = function (rpc_name, method, site, query_params, callback) {
   var url = "http://" + DEPLOY_HOSTNAME + '/' + rpc_name + '/' + site;
 
   if (!_.isEmpty(query_params))
@@ -73,7 +73,7 @@ var bundle_and_deploy = function (site, app_dir, password, set_password) {
   var spawn = require('child_process').spawn;
   var tar = spawn('tar', ['czf', '-', 'bundle'], {cwd: build_dir});
 
-  var rpc = sky_rpc('deploy', 'POST', site, opts, function (err, body) {
+  var rpc = meteor_rpc('deploy', 'POST', site, opts, function (err, body) {
     // XXX this is gross. maybe some way to automate?
     process.stdin.destroy(); // clean up after maybe_password
 
@@ -115,7 +115,7 @@ var delete_app = function (url) {
     var opts = {};
     if (password) opts.password = password;
 
-    sky_rpc('deploy', 'DELETE', parsed_url.hostname, opts, function (err, body) {
+    meteor_rpc('deploy', 'DELETE', parsed_url.hostname, opts, function (err, body) {
       process.stdin.destroy(); // clean up after with_password
 
       if (err) {
@@ -137,7 +137,7 @@ var mongo = function (url, just_credential) {
     var opts = {};
     if (password) opts.password = password;
 
-    sky_rpc('mongo', 'GET', parsed_url.hostname, opts, function (err, body) {
+    meteor_rpc('mongo', 'GET', parsed_url.hostname, opts, function (err, body) {
       if (err) {
         process.stderr.write(body + "\n");
         process.exit(1);
@@ -169,7 +169,7 @@ var logs = function (url) {
     var opts = {};
     if (password) opts.password = password;
 
-    sky_rpc('logs', 'GET', parsed_url.hostname, opts, function (err, body) {
+    meteor_rpc('logs', 'GET', parsed_url.hostname, opts, function (err, body) {
       process.stdin.destroy(); // clean up after with_password
 
       if (err) {
