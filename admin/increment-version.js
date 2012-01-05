@@ -15,7 +15,7 @@ var UPDATE_FILES = ['app/lib/updater.js', 'admin/install-s3.sh',
                     ['admin/manifest.json', 'g']];
 
 // Files to update for dev_bundle
-var BUNDLE_FILES = ['admin/generate-dev-bundle.sh', 'skybreak'];
+var BUNDLE_FILES = ['admin/generate-dev-bundle.sh', 'meteor'];
 
 
 var opt = require('optimist')
@@ -36,7 +36,7 @@ var CURRENT_VERSION = updater.CURRENT_VERSION;
 var files = UPDATE_FILES;
 
 if (argv.dev_bundle) {
-  var version_path = path.join(__dirname, '..', 'skybreak');
+  var version_path = path.join(__dirname, '..', 'meteor');
   var version_data = fs.readFileSync(version_path, 'utf8');
   var version_match = /BUNDLE_VERSION=([\d\.]+)/.exec(version_data);
   CURRENT_VERSION = version_match[1];

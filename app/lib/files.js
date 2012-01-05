@@ -94,14 +94,14 @@ var files = module.exports = {
     return ret;
   },
 
-  // given a path, traverse upwards until we find a .skybreak
+  // given a path, traverse upwards until we find a .meteor
   // directory that contains a 'packages' file. returns either the
   // path to a top-level app or null for no app found. if filepath
   // isn't given, use cwd.
   find_app_dir: function (filepath) {
     var test_dir = filepath || process.cwd();
     while (test_dir) {
-      if (path.existsSync(path.join(test_dir, '.skybreak/packages'))) {
+      if (path.existsSync(path.join(test_dir, '.meteor/packages'))) {
         break;
       }
       var new_dir = path.dirname(test_dir);
@@ -151,7 +151,7 @@ var files = module.exports = {
     return false;
   },
 
-  // Return the root of dev_bundle (probably /usr/local/skybreak in an
+  // Return the root of dev_bundle (probably /usr/local/meteor in an
   // install, or (checkout root)/dev_bundle in a checkout..)
   get_dev_bundle: function () {
     if (files.in_checkout()) {

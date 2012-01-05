@@ -23,24 +23,24 @@ Install Meteor (only OS X, for now):
 
 Create a project:
 
-    skybreak create try-skybreak
+    meteor create try-meteor
 
 Run it:
 
-    cd try-skybreak
-    skybreak
+    cd try-meteor
+    meteor
 
 Deploy it to the world, for free:
 
-    skybreak deploy try-skybreak.meteor.com
+    meteor deploy try-meteor.meteor.com
 
 ## Slow Start (for developers)
 
 If you want to run on the bleeding edge, or help develop Meteor, you
 can run Meteor directly from a git checkout.
 
-    git clone git@github.com:skybreak/skybreak.git
-    cd skybreak
+    git clone git@github.com:meteor/meteor.git
+    cd meteor
 
 If you're the sort of person who likes to build everything from scratch,
 you can build all the Meteor dependencies (node.js, npm, mongodb, etc)
@@ -50,17 +50,17 @@ automatically download pre-compiled binaries when you first run it.
     # OPTIONAL
     ./admin/generate-dev-bundle.sh
 
-Now you can run skybreak directly from the checkout (if you did not
+Now you can run meteor directly from the checkout (if you did not
 build the dependency bundle above, this will take a few moments to
 download a pre-build version).
 
-    ./skybreak --help
+    ./meteor --help
 
 Or install to ```/usr/local``` like the normal install process. This
-will cause ```skybreak``` to be in your ```PATH```.
+will cause ```meteor``` to be in your ```PATH```.
 
     ./install.sh
-    skybreak --help
+    meteor --help
 
 ## Developer Resources
 
@@ -68,6 +68,6 @@ Get in touch! We'd love to hear what you think. You can get involved
 in several ways:
 
 * Announcement list: sign up at http://preview.meteor.com/
-* Google group for discussion: http://groups.google.com/group/skybreak-users
-* IRC: ```#skybreak``` on ```irc.freenode.net```
+* Google group for discussion: http://groups.google.com/group/meteor-users
+* IRC: ```#meteor``` on ```irc.freenode.net```
 * Email us: ```contact@meteor.com```

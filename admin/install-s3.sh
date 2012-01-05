@@ -1,7 +1,7 @@
 #!/bin/bash
 
-URL="http://d377jur38fl888.cloudfront.net/skybreak-package-0.0.41.tar.gz"
-TARGET="/usr/local/skybreak"
+URL="http://d377jur38fl888.cloudfront.net/meteor-package-0.0.41.tar.gz"
+TARGET="/usr/local/meteor"
 PARENT="/usr/local"
 
 # Check for MacOS
@@ -59,16 +59,16 @@ curl --progress-bar $URL | tar -C "$PARENT" -xzf -
 
 # add to $PATH
 mkdir -p "$PARENT/bin"
-rm -f "$PARENT/bin/skybreak"
-ln -s "$TARGET/bin/skybreak" "$PARENT/bin/skybreak"
+rm -f "$PARENT/bin/meteor"
+ln -s "$TARGET/bin/meteor" "$PARENT/bin/meteor"
 
 cat <<EOF
 
 Meteor installed! To get started fast:
 
-  $ skybreak create ~/my_cool_app
+  $ meteor create ~/my_cool_app
   $ cd ~/my_cool_app
-  $ skybreak
+  $ meteor
 
 Or see the docs at:
 

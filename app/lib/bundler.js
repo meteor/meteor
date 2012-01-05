@@ -3,7 +3,7 @@
 // /static [served by node for now]
 // /server
 //   server.js, db.js, .... [contents of app/server]
-//   node_modules [for now, contents of (skybreak_root)/lib/node_modules]
+//   node_modules [for now, contents of (meteor_root)/lib/node_modules]
 // /app.html
 // /app [user code]
 // /app.json: [data for server.js]
@@ -189,7 +189,7 @@ _.extend(Bundle.prototype, {
   },
 
   add_standard_packages: function () {
-    // standard client packages (for now), for the classic skybreak stack
+    // standard client packages (for now), for the classic meteor stack
     this.api.require('deps');
     this.api.require('session');
     this.api.require('livedata');
@@ -270,7 +270,7 @@ _.extend(Bundle.prototype, {
  * - skip_dev_bundle : don't put any node_modules in the bundle.
  * - symlink_dev_bundle : symlink bundle's node_modules to prebuilt
  *   local installation (to save startup time when running locally,
- *   used by skybreak run).
+ *   used by meteor run).
  */
 exports.bundle = function (app_dir, output_path, options) {
   options = options || {};
@@ -280,7 +280,7 @@ exports.bundle = function (app_dir, output_path, options) {
   ////////// Packages //////////
 
   // has to come before user packages, because we don't (presently)
-  // require packages to declare dependencies on 'standard skybreak
+  // require packages to declare dependencies on 'standard meteor
   // stuff' like minimongo
   bundle.add_standard_packages();
 
@@ -438,10 +438,10 @@ exports.bundle = function (app_dir, output_path, options) {
 
   // XXX enhance dependencies to include all dependencies, not just
   // user code, so we can get reload behavior when developing packages
-  // or skybreak itself. that includes (1) any file that went in the
+  // or meteor itself. that includes (1) any file that went in the
   // bundle (from 'static', 'app/server', or a package), (2)
   // package.js for each package that was included. also conceptually
-  // we need to restart on 'skybreak add'.
+  // we need to restart on 'meteor add'.
   dependencies_json.extensions = bundle.registeredExtensions();
 
   fs.writeFileSync(path.join(build_path, 'app.json'),

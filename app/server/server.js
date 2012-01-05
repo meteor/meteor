@@ -72,12 +72,12 @@ var run = function (bundle_dir) {
   var info = JSON.parse(info_raw);
 
   // start up app
-  __skybreak_bootstrap__ = {require: require, startup_hooks: [], app: app};
+  __meteor_bootstrap__ = {require: require, startup_hooks: [], app: app};
   Fiber(function () {
     // (put in a fiber to let Sky.db operations happen during loading)
 
     // pass in database info
-    __skybreak_bootstrap__.mongo_url = mongo_url;
+    __meteor_bootstrap__.mongo_url = mongo_url;
 
     // load app code
     _.each(info.load, function (filename) {
@@ -98,7 +98,7 @@ var run = function (bundle_dir) {
     });
 
     // run the user startup hooks.
-    _.each(__skybreak_bootstrap__.startup_hooks, function (x) { x(); });
+    _.each(__meteor_bootstrap__.startup_hooks, function (x) { x(); });
 
     // only start listening after all the startup code has run.
     app.listen(port, function() {});

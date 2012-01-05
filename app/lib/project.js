@@ -5,7 +5,7 @@ var _ = require('./third/underscore.js');
 var project = module.exports = {
 
   _get_lines: function (app_dir) {
-    var raw = fs.readFileSync(path.join(app_dir, '.skybreak/packages'), 'utf8');
+    var raw = fs.readFileSync(path.join(app_dir, '.meteor/packages'), 'utf8');
     var lines = raw.split(/\r*\n\r*/);
 
     // strip blank lines at the end
@@ -28,7 +28,7 @@ var project = module.exports = {
   },
 
   _write_packages: function (app_dir, lines) {
-    fs.writeFileSync(path.join(app_dir, '.skybreak/packages'),
+    fs.writeFileSync(path.join(app_dir, '.meteor/packages'),
                      lines.join('\n') + '\n', 'utf8');
   },
 

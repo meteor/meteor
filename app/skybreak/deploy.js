@@ -57,7 +57,7 @@ var deploy_app = function (url, app_dir, opt_set_password) {
 };
 
 var bundle_and_deploy = function (site, app_dir, password, set_password) {
-  var build_dir = path.join(app_dir, '.skybreak/local/build_tar');
+  var build_dir = path.join(app_dir, '.meteor/local/build_tar');
   var bundle_path = path.join(build_dir, 'bundle');
   var bundle_opts = { skip_dev_bundle: true };
 

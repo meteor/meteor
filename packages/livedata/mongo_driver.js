@@ -8,9 +8,9 @@
 
 (function () {
 
-var Mongo = __skybreak_bootstrap__.require('mongodb');
+var Mongo = __meteor_bootstrap__.require('mongodb');
 
-var Future = __skybreak_bootstrap__.require('fibers/future');
+var Future = __meteor_bootstrap__.require('fibers/future');
 
 //////////// Internal //////////
 
@@ -22,7 +22,7 @@ var with_collection_queue;
 /**
  * Initialize the Sky library
  *
- * @param url {String} mongo DB URL (eg mongodb://localhost:27017/skybreak)
+ * @param url {String} mongo DB URL (eg mongodb://localhost:27017/meteor)
  */
 function init (url) {
   with_collection_queue = [];
@@ -166,6 +166,6 @@ Sky._mongo_driver = {
 };
 
 // start database
-init(__skybreak_bootstrap__.mongo_url)
+init(__meteor_bootstrap__.mongo_url)
 
 })();

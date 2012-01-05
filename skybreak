@@ -71,11 +71,11 @@ if [ -d "$SCRIPT_DIR/.git" ]; then
     fi
 
     DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
-    SKYBREAK="$SCRIPT_DIR/app/skybreak/skybreak.js"
+    SKYBREAK="$SCRIPT_DIR/app/meteor/meteor.js"
 else
     # In an install
     DEV_BUNDLE=$(dirname "$SCRIPT_DIR")
-    SKYBREAK="$DEV_BUNDLE/app/skybreak/skybreak.js"
+    SKYBREAK="$DEV_BUNDLE/app/meteor/meteor.js"
 fi
 
 export NODE_PATH="$DEV_BUNDLE/lib/node_modules"

@@ -5,13 +5,13 @@ var deploy = require('./deploy');
 
 var usage = function() {
   process.stdout.write(
-"Usage: skybreak [--version] [--help] <command> [<args>]\n" +
+"Usage: meteor [--version] [--help] <command> [<args>]\n" +
 "\n" +
-"With no arguments, 'skybreak' runs the project in the current\n" +
+"With no arguments, 'meteor' runs the project in the current\n" +
 "directory in local development mode. You can run it from the root\n" +
 "directory of the project or from any subdirectory.\n" +
 "\n" +
-"Use 'skybreak create <name>' to create a new Meteor project.\n" +
+"Use 'meteor create <name>' to create a new Meteor project.\n" +
 "\n" +
 "Commands:\n");
   _.each(Commands, function (cmd) {
@@ -22,24 +22,24 @@ var usage = function() {
   });
   process.stdout.write("\n");
 process.stdout.write(
-"See 'skybreak help <command>' for details on a command.\n");
+"See 'meteor help <command>' for details on a command.\n");
   process.exit(1);
 };
 
 var require_project = function (cmd) {
   var app_dir = files.find_app_dir();
   if (!app_dir) {
-    // This is where you end up if you type 'skybreak' with no
+    // This is where you end up if you type 'meteor' with no
     // args. Be gentle to the noobs..
     process.stdout.write(
 cmd + ": You're not in a Meteor project directory.\n" +
 "\n" +
 "To create a new Meteor project:\n" +
-"   skybreak create <project name>\n" +
+"   meteor create <project name>\n" +
 "For example:\n" +
-"   skybreak create myapp\n" +
+"   meteor create myapp\n" +
 "\n" +
-"For more help, see 'skybreak --help'.\n");
+"For more help, see 'meteor --help'.\n");
     process.exit(1);
   }
   return app_dir;
@@ -51,8 +51,8 @@ var find_mongo_port = function (cmd) {
   var app_dir = require_project(cmd);
 
   var fs = require("fs");
-  var pid_path = path.join(app_dir, '.skybreak/local/mongod.pid');
-  var port_path = path.join(app_dir, '.skybreak/local/mongod.port');
+  var pid_path = path.join(app_dir, '.meteor/local/mongod.pid');
+  var port_path = path.join(app_dir, '.meteor/local/mongod.port');
   var port;
 
   try {
@@ -73,7 +73,7 @@ var findCommand = function (name) {
     if (Commands[i].name === name)
       return Commands[i];
   process.stdout.write("'" + name + "' is not a Meteor command. See " +
-                       "'skybreak --help'.\n");
+                       "'meteor --help'.\n");
   process.exit(1);
 };
 
@@ -92,7 +92,7 @@ Commands.push({
       .boolean('production')
       .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
       .usage(
-"Usage: skybreak run [options]\n" +
+"Usage: meteor run [options]\n" +
 "\n" +
 "Searches upward from the current directory for the root directory of a\n" +
 "Meteor project, then runs that project in local development\n" +
@@ -103,7 +103,7 @@ Commands.push({
 "are automatically detected and applied to the running application.\n" +
 "\n" +
 "The application's database persists between runs. It's stored under\n" +
-"the .skybreak directory in the root of the project.\n"
+"the .meteor directory in the root of the project.\n"
 );
 
     new_argv = opt.argv;
@@ -114,7 +114,7 @@ Commands.push({
     }
 
     var app_dir = require_project("run");
-    var bundle_path = path.join(app_dir, '.skybreak/local/build');
+    var bundle_path = path.join(app_dir, '.meteor/local/build');
     var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true };
     require('./run.js').run(app_dir, bundle_path, bundle_opts, new_argv.port);
   }
@@ -137,7 +137,7 @@ Commands.push({
   func: function (argv) {
     if (argv.help || argv._.length !== 1 || !argv._[0].length) {
       process.stdout.write(
-"Usage: skybreak create <name>\n" +
+"Usage: meteor create <name>\n" +
 "\n" +
 "Make a subdirectory named <name> and create a new Meteor project\n" +
 "there. You can also pass an absolute or relative path.\n");
@@ -180,7 +180,7 @@ Commands.push({
   func: function (argv) {
     if (argv.help) {
       process.stdout.write(
-"Usage: skybreak update\n" +
+"Usage: meteor update\n" +
 "\n" +
 "Checks to see if a new version of Meteor is available, and if so,\n" +
 "downloads and installs it. You must be connected to the internet.\n");
@@ -197,11 +197,11 @@ Commands.push({
   func: function (argv) {
     if (argv.help || !argv._.length) {
       process.stdout.write(
-"Usage: skybreak add <package> [package] [package..]\n" +
+"Usage: meteor add <package> [package] [package..]\n" +
 "\n" +
 "Adds packages to your Meteor project. You can add multiple\n" +
 "packages with one command. For a list of the available packages, see\n" +
-"'skybreak list'.\n");
+"'meteor list'.\n");
       process.exit(1);
     }
 
@@ -234,11 +234,11 @@ Commands.push({
   func: function (argv) {
     if (argv.help || !argv._.length) {
       process.stdout.write(
-"Usage: skybreak remove <package> [package] [package..]\n" +
+"Usage: meteor remove <package> [package] [package..]\n" +
 "\n" +
 "Removes a package previously added to your Meteor project. For a\n" +
 "list of the packages that your application is currently using, see\n" +
-"'skybreak list --using'.\n");
+"'meteor list --using'.\n");
       process.exit(1);
     }
 
@@ -267,10 +267,10 @@ Commands.push({
   func: function (argv) {
     if (argv.help) {
       process.stdout.write(
-"Usage: skybreak list [--using]\n" +
+"Usage: meteor list [--using]\n" +
 "\n" +
 "Without arguments, lists all available Meteor packages. To add one\n" +
-"of these packages to your project, see 'skybreak add'.\n" +
+"of these packages to your project, see 'meteor add'.\n" +
 "\n" +
 "With --using, list the packages that you have added to your project.\n");
       process.exit(1);
@@ -287,10 +287,10 @@ Commands.push({
       } else {
         process.stderr.write(
 "This project doesn't use any packages yet. To add some packages:\n" +
-"  skybreak add <package> <package> ...\n" +
+"  meteor add <package> <package> ...\n" +
 "\n" +
 "To see available packages:\n" +
-"  skybreak list\n");
+"  meteor list\n");
       }
       return;
     }
@@ -314,7 +314,7 @@ Commands.push({
   func: function (argv) {
     if (argv.help || argv._.length != 1) {
       process.stdout.write(
-"Usage: skybreak bundle <output_file.tar.gz>\n" +
+"Usage: meteor bundle <output_file.tar.gz>\n" +
 "\n" +
 "Package this project up for deployment. The output is a tarball that\n" +
 "includes everything necessary to run the application. See README in\n" +
@@ -333,7 +333,7 @@ Commands.push({
     // machines, but worth it for humans)
 
     var app_dir = path.resolve(require_project("bundle"));
-    var build_dir = path.join(app_dir, '.skybreak/local/build_tar');
+    var build_dir = path.join(app_dir, '.meteor/local/build_tar');
     var bundle_path = path.join(build_dir, 'bundle');
     var output_path = path.resolve(argv._[0]); // get absolute path
     require('../lib/bundler.js').bundle(app_dir, bundle_path);
@@ -365,7 +365,7 @@ Commands.push({
       .alias('url', 'U')
       .describe('url', 'return a Mongo database URL')
       .usage(
-"Usage: skybreak mongo [--url] [site]\n" +
+"Usage: meteor mongo [--url] [site]\n" +
 "\n" +
 "Opens a Mongo shell to view or manipulate collections.\n" +
 "\n" +
@@ -401,7 +401,7 @@ Commands.push({
         process.exit(1);
       }
 
-      var mongo_url = "mongodb://127.0.0.1:" + mongod_port + "/skybreak";
+      var mongo_url = "mongodb://127.0.0.1:" + mongod_port + "/meteor";
 
       if (new_argv.url)
         console.log(mongo_url)
@@ -434,7 +434,7 @@ Commands.push({
       .boolean('D')
       .describe('delete', "permanently delete this deployment")
       .usage(
-"Usage: skybreak deploy <site> [--password] [--delete]\n" +
+"Usage: meteor deploy <site> [--password] [--delete]\n" +
 "\n" +
 "Deploys the project in your current directory to Meteor's servers.\n" +
 "\n" +
@@ -474,7 +474,7 @@ Commands.push({
   func: function (argv) {
     if (argv.help || argv._.length < 1 || argv._.length > 2) {
       process.stdout.write(
-"Usage: skybreak logs <site>\n" +
+"Usage: meteor logs <site>\n" +
 "\n" +
 "Retrieves the server logs for the requested site.\n");
       process.exit(1);
@@ -490,10 +490,10 @@ Commands.push({
   func: function (argv) {
     if (argv.help) {
       process.stdout.write(
-"Usage: skybreak reset\n" +
+"Usage: meteor reset\n" +
 "\n" +
 "Reset the current project to a fresh state. Removes all local\n" +
-"data and kills any running skybreak development servers.\n");
+"data and kills any running meteor development servers.\n");
       process.exit(1);
     }
 
@@ -505,11 +505,11 @@ Commands.push({
 "reset: Meteor is running.\n" +
 "\n" +
 "This command does not work while Meteor is running your application.\n" +
-"Exit the running skybreak development server.\n");
+"Exit the running meteor development server.\n");
       process.exit(1);
     }
 
-    var local_dir = path.join(app_dir, '.skybreak/local');
+    var local_dir = path.join(app_dir, '.meteor/local');
     files.rm_recursive(local_dir);
 
     process.stdout.write("Project reset.\n");

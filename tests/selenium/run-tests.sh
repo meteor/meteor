@@ -11,9 +11,9 @@ TOPDIR=`pwd`
 
 cp -r examples/todos2 "$TMPDIR"
 cd "$TMPDIR/todos2"
-rm -rf .skybreak/local
+rm -rf .meteor/local
 
-"$TOPDIR/skybreak" &
+"$TOPDIR/meteor" &
 SKY_PID=$!
 
 echo "Running $SKY_PID"
