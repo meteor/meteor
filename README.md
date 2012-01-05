@@ -39,8 +39,8 @@ Deploy it to the world, for free:
 If you want to run on the bleeding edge, or help develop Meteor, you
 can run Meteor directly from a git checkout.
 
-    git clone git@github.com:meteor/meteor.git
-    cd meteor
+    git clone git@github.com:skybreak/skybreak.git
+    cd skybreak
 
 If you're the sort of person who likes to build everything from scratch,
 you can build all the Meteor dependencies (node.js, npm, mongodb, etc)
