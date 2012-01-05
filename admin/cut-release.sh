@@ -90,9 +90,9 @@ cat <<EOF
 EOF
 read
 
-s3cmd -P put "$TARBALL" s3://com.meteorplatform.static
-s3cmd -P put ./admin/install-s3.sh s3://com.meteorplatform.static/update/
-s3cmd -P put ./admin/manifest.json s3://com.meteorplatform.static/update/
+s3cmd -P put "$TARBALL" s3://com.skybreakplatform.static
+s3cmd -P put ./admin/install-s3.sh s3://com.skybreakplatform.static/update/
+s3cmd -P put ./admin/manifest.json s3://com.skybreakplatform.static/update/
 
 echo
 echo "//////////////////////"

@@ -7,7 +7,7 @@ var semver = require("semver");
 
 var manifest_options = {
   host: 's3.amazonaws.com',
-  path: '/com.meteorplatform.static/update/manifest.json'
+  path: '/com.skybreakplatform.static/update/manifest.json'
 };
 
 
