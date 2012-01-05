@@ -42,8 +42,8 @@ if (typeof Meteor === "undefined") Meteor = {};
             // | not allowed in collection name?
             var key = collection_name + "|" + o._id;
 
-            var cached = socket.sky.cache[key];
-            socket.sky.cache[key] = o;
+            var cached = socket.meteor.cache[key];
+            socket.meteor.cache[key] = o;
             touched_keys[key] = true;
 
             if (!cached)
@@ -60,7 +60,7 @@ if (typeof Meteor === "undefined") Meteor = {};
       };
 
       // actually run the subscriptions.
-      _.each(socket.sky.subs, function (sub) {
+      _.each(socket.meteor.subs, function (sub) {
         var pub = publishes[sub.name];
         if (!pub) {
           // XXX error unknown publish
@@ -72,7 +72,7 @@ if (typeof Meteor === "undefined") Meteor = {};
       });
 
       // compute the removed keys.
-      var removed_keys = _.difference(_.keys(socket.sky.cache),
+      var removed_keys = _.difference(_.keys(socket.meteor.cache),
                                       _.keys(touched_keys));
       _.each(removed_keys, function (key) {
         // XXX parsing from the string is so ugly.
@@ -82,7 +82,7 @@ if (typeof Meteor === "undefined") Meteor = {};
         var id = parts[1];
 
         add_to_results(collection_name, 'removed', id);
-        delete socket.sky.cache[key];
+        delete socket.meteor.cache[key];
       });
 
       // if (and only if) any changes, send to client
@@ -92,7 +92,7 @@ if (typeof Meteor === "undefined") Meteor = {};
       }
 
       // inform the client that the subscription is ready to go
-      _.each(socket.sky.subs, function (sub) {
+      _.each(socket.meteor.subs, function (sub) {
         if (!sub.ready) {
           socket.emit('subscription_ready', sub._id);
           sub.ready = true;
@@ -104,12 +104,12 @@ if (typeof Meteor === "undefined") Meteor = {};
 
 
   var register_subscription = function (socket, data) {
-    socket.sky.subs.push(data);
+    socket.meteor.subs.push(data);
     poll_subscriptions(socket);
   };
 
   var unregister_subscription = function (socket, data) {
-    socket.sky.subs = _.filter(socket.sky.subs, function (x) {
+    socket.meteor.subs = _.filter(socket.meteor.subs, function (x) {
       return x._id !== data._id;
     });
     poll_subscriptions(socket);
@@ -153,16 +153,16 @@ if (typeof Meteor === "undefined") Meteor = {};
       // need the removal message; it's exactly the sockets that have
       // the item in their cache
       _.each(other_sockets, function(x) {
-        if (x && x.sky) {
-          x.sky.throttled_poll(); } });
+        if (x && x.meteor) {
+          x.meteor.throttled_poll(); } });
 
     }).run();
   };
 
   Meteor._stream.register(function (socket) {
-    socket.sky = {};
-    socket.sky.subs = [];
-    socket.sky.cache = {};
+    socket.meteor = {};
+    socket.meteor.subs = [];
+    socket.meteor.cache = {};
 
 
     socket.on('subscribe', function (data) {
@@ -178,10 +178,10 @@ if (typeof Meteor === "undefined") Meteor = {};
     });
 
     // 5/sec updates tops, once every 10sec min.
-    socket.sky.throttled_poll = _.throttle(function () {
+    socket.meteor.throttled_poll = _.throttle(function () {
       poll_subscriptions(socket)
     }, 50); // XXX only 50ms! for great speed. might want higher in prod.
-    socket.sky.timer = setInterval(socket.sky.throttled_poll, 10000);
+    socket.meteor.timer = setInterval(socket.meteor.throttled_poll, 10000);
   });
 
 
