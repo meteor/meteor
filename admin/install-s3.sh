@@ -1,6 +1,6 @@
 #!/bin/bash
 
-URL="http://d3sqy0vbqsdhku.cloudfront.net/meteor-package-0.0.41.tar.gz"
+URL="http://d3sqy0vbqsdhku.cloudfront.net/meteor-package-0.0.42.tar.gz"
 TARGET="/usr/local/meteor"
 PARENT="/usr/local"
 
