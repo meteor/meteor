@@ -107,13 +107,18 @@ if (typeof Sky === "undefined") Sky = {};
     }
     retry_later(); // sets status. no need to do it here.
   };
+  var cleanup_socket = function () {
+    if (socket) {
+      socket.removeAllListeners('connect');
+      socket.removeAllListeners('disconnect');
+      socket.removeAllListeners('connect_failed');
+      socket.disconnect();
+    }
+  };
   var fake_connect_failed = function () {
     // sometimes socket.io just doesn't tell us when it failed. we
     // detect this with a timer and force failure.
-    socket.removeAllListeners('connect');
-    socket.removeAllListeners('disconnect');
-    socket.removeAllListeners('connect_failed');
-    socket.disconnect();
+    cleanup_socket();
     disconnected();
   };
 
@@ -147,7 +152,7 @@ if (typeof Sky === "undefined") Sky = {};
   };
 
   var launch_connection = function () {
-    // XXX if existing socket, any cleanup we have to do?
+    cleanup_socket(); // cleanup the old socket.
 
     socket = io.connect('/', { reconnect: false,
                                'connect timeout': CONNECT_TIMEOUT,
