@@ -1,0 +1,113 @@
+require("./words.js");
+
+var BOGGLE_DICE = ['pchoas', 'oattow', 'lrytte', 'vthrwe',
+                   'eghwne', 'seotis', 'anaeeg', 'idsytt',
+                   'mtoicu', 'afpkfs', 'xlderi', 'ensieu',
+                   'yldevr', 'znrnhl', 'nmiqhu', 'obbaoj'];
+
+var FLAGS = [0x1, 0x2, 0x4, 0x8,
+             0x10, 0x20, 0x40, 0x80,
+             0x100, 0x200, 0x400, 0x800,
+             0x1000, 0x2000, 0x4000, 0x8000];
+
+var MASKS = {};
+
+// generate masks for all one, two, three, and four-letter combinations
+var make_masks = function () {
+  var mask_count = 0;
+
+  // recursive helper
+  var check_mask = function (word, index, used) {
+    for (var i = 0; i < 16; i += 1) {
+      for (var j = 0; j < 6; j += 1) {
+        // if die i is still available, and it has a letter that
+        // matches what we need, we can make use of this.
+        if (!(used & FLAGS[i]) && (BOGGLE_DICE[i][j] === word[index])) {
+          if (word.length === index + 1) {
+            // this is the end of the word, we have a valid mask!
+            if (!MASKS[word])
+              MASKS[word] = [];
+            if (MASKS[word].indexOf(used | FLAGS[i]) === -1) {
+              MASKS[word].push(used | FLAGS[i]);
+              mask_count += 1;
+            }
+            // console.log("MASK", word, used | FLAGS[i]);
+          } else {
+            // descend into searching rest of word w/ remaining dice.
+            check_mask(word,
+                       index + 1,
+                       used | FLAGS[i]);
+          }
+        }
+      }
+    }
+  }
+
+  process.stderr.write("CALCULATING MASKS FOR ");
+  for (var a = 97; a <= 97; a += 1) {
+    process.stderr.write(String.fromCharCode(a));
+    check_mask(String.fromCharCode(a), 0, 0x0);
+    for (var b = 97; b <= 122; b += 1) {
+      check_mask(String.fromCharCode(a,b), 0, 0x0);
+      for (var c = 97; c <= 122; c += 1) {
+        check_mask(String.fromCharCode(a,b,c), 0, 0x0);
+        for (var d = 97; d <= 122; d += 1) {
+          check_mask(String.fromCharCode(a,b,c,d), 0, 0x0);
+        }
+      }
+    }
+  }
+  process.stderr.write(" DONE [" + mask_count + " MASKS]\n");
+};
+
+make_masks();
+
+function check (word, index, used) {
+  //console.log('CHECK', word, index, used);
+
+  var length;
+  var masks;
+
+  // check up to 4 chars at a time
+  length = (word.length - index > 4) ? 4 : word.length - index;
+  masks = MASKS[word.slice(index, length + index)] || [];
+
+  for (var i = 0; i < masks.length; i += 1) {
+    if (!(used & masks[i])) {
+      // masks[i] has no overlap w/ tiles we already consumed.
+      if (word.length === index + length)
+        // we consumed the whole word.
+        return true;
+      else if (check(word, index + length, used | masks[i]))
+        // some descendant consumed the whole word
+        return true;
+    }
+  }
+
+  // none of the available masks returned true.  there's no match.
+  return false;
+};
+
+var dict_len = DICTIONARY.length
+for (var i = 0; i < dict_len; i+=1) {
+  var word = DICTIONARY[i];
+
+  // reject words that have q followed by non-u.  those can't be made
+  // in boggle.  otherwise, strip the q -- our dictionary won't
+  // include the u.
+
+  if (word.match(/q/)) {
+    if (word.match(/q[^u]/)) {
+      process.stderr.write('Q REJECT ' + word + '\n');
+      continue;
+    } else {
+      word = word.replace('qu', 'q');
+      process.stderr.write('Q REPLACED ' + word + '\n');
+    }
+  }
+
+  if (check(word, 0, 0x0))
+    console.log(word);
+  else
+    process.stderr.write('REJECT ' + DICTIONARY[i] + '\n');
+};
