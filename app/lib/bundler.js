@@ -196,6 +196,7 @@ _.extend(Bundle.prototype, {
     this.api.require('liveui');
     this.api.require('templating');
     this.api.require('startup');
+    this.api.require('past');
   },
 
   // returns paths relative to app_dir
