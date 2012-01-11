@@ -151,8 +151,13 @@ Sky.ui = Sky.ui || {};
   // stored in 'this' (not counting the endpoints of 'this' itself.)
   // visit_node(is_start, node) is similar but for nodes, and is
   // optional.
+  //
+  // if you create or destroy ranges with this tag from a visitation
+  // function, results are undefined!
+  //
   // -- would be nice to let your visit function return false when
   // is_start is true to skip visiting that range/node's children..
+  //
   Sky.ui._LiveRange.prototype.visit = function (visit_range, visit_node) {
     var traverse = function (node, data, start_bound, end_bound, tag) {
       for (var i = start_bound; i < data[0].length; i++)

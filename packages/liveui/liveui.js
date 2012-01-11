@@ -5,18 +5,24 @@ Sky.ui = Sky.ui || {};
 // the range tag to operate on. In the latter case, the range itself
 // will be destroyed along with its subranges.
 Sky.ui._cleanup = function (what, tag) {
-  var walk = function (branch) {
-    _.each(branch.children, walk);
-    if (branch.range.context) {
-      branch.range.context.killed = true;
-      branch.range.context.invalidate();
-    }
-    branch.range.destroy(); // help old GC's
-  };
-
-  if (what instanceof DocumentFragment)
+  if (what instanceof DocumentFragment) {
     what = new Sky.ui._LiveRange(tag, what.firstChild, what.lastChild);
-  walk(what);
+    what.where = "_cleanup";
+  }
+
+  var ranges = [];
+  what.visit(function (is_start, range) {
+    if (is_start)
+      ranges.push(range);
+  });
+
+  _.each(ranges, function (range) {
+    if (range.context) {
+      range.context.killed = true;
+      range.context.invalidate();
+    }
+    range.destroy(); // help old GC's
+  });
 };
 
 Sky.ui._tag = "_liveui"; // XXX XXX
@@ -69,27 +75,7 @@ Sky.ui.render = function (render_func, events, event_data) {
                       "set.");
 
     // Attach events
-
-    // XXX BUG: If you have a conditional (#if) element at toplevel,
-    // will it get its event attached if it comes into existence
-    // later? In fact, there are cases eg in AcataGrid where you have
-    // to add an extra div to make it work:
-    //
-    /*
-<template name="user_list">
-  <div class="user_list">
-    {{#each users}}
-      {{> user }}
-    {{/each}}
-  </div>
-  <div>               <==== Here is the extra div that's required
-    {{#if logged_in}}
-      <span class="edit_user action">Edit my information</span>
-    {{/if}}
-  </div>
-</template>
-*/
-
+    // XXX bug: https://app.asana.com/0/159908330244/357591577797
     for (var i = 0; i < frag.childNodes.length; i++)
       Sky.ui._setupEvents(frag.childNodes[i], events || {}, event_data);
 
@@ -126,6 +112,7 @@ Sky.ui.render = function (render_func, events, event_data) {
   context.on_invalidate(update);
   var frag = render_fragment(context);
   range = new Sky.ui._LiveRange(Sky.ui._tag, frag, true);
+  range.where = "render";
   range.context = context;
 
   return frag;
@@ -214,7 +201,7 @@ Sky.ui.renderList = function (what, options) {
         var removed = extract(at_idx);
       else
         var removed = outer_range.replace_contents(render_empty());
-      Sky.ui._cleanup(removed, /* XXX tag */);
+      Sky.ui._cleanup(removed, 12345/* XXX tag */);
       entry_ranges[at_idx].destroy();
       entry_ranges.splice(at_idx, 1);
     },
