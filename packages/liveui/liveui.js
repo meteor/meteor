@@ -51,11 +51,11 @@ Sky.ui.render = function (render_func, events, event_data) {
     if (result instanceof DocumentFragment)
       frag = result;
     else if (result instanceof Node) {
-      var frag = document.createDocumentFragment();
+      frag = document.createDocumentFragment();
       frag.appendChild(result);
     } else if (result instanceof Array ||
                ((typeof $ !== "undefined") && (result instanceof $))) {
-      var frag = document.createDocumentFragment();
+      frag = document.createDocumentFragment();
       for (var i = 0; i < result.length; i++)
         frag.appendChild(result[i]);
     } else
@@ -262,7 +262,7 @@ Sky.ui._setupEvents = function (elt, events, event_data) {
     };
   };
 
-  for (spec in events) {
+  for (var spec in events) {
     var clauses = spec.split(/,\s+/);
     _.each(clauses, function (clause) {
       var parts = clause.split(/\s+/);
@@ -272,7 +272,7 @@ Sky.ui._setupEvents = function (elt, events, event_data) {
       if (parts.length === 1) {
         $(elt).bind(parts[0], create_callback(events[spec]));
       } else {
-        var event = parts.splice(0, 1)[0];
+        var event = parts.shift();
         $(elt).delegate(parts.join(' '), event, create_callback(events[spec]));
       }
     });

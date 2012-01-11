@@ -41,7 +41,7 @@ Handlebars._default_helpers = {
     else
       return options.fn(this);
   },
-  'unless': function () {
+  'unless': function (data, options) {
     if (!data || (data instanceof Array && !data.length))
       return options.fn(this);
     else
