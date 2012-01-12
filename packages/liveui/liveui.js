@@ -104,14 +104,14 @@ Sky.ui.render = function (render_func, events, event_data) {
     var context = new Sky.deps.Context;
     context.on_invalidate(update);
     Sky.ui._cleanup(range.replace_contents(render_fragment(context)),
-                    range.tag);
+                    Sky.ui._tag);
     range.context = context;
   };
 
   var context = new Sky.deps.Context;
   context.on_invalidate(update);
   var frag = render_fragment(context);
-  range = new Sky.ui._LiveRange(Sky.ui._tag, frag, true);
+  range = new Sky.ui._LiveRange(Sky.ui._tag, frag, null, true);
   range.where = "render";
   range.context = context;
 
@@ -139,6 +139,9 @@ Sky.ui.render = function (render_func, events, event_data) {
 /// returns an object with:
 ///  stop(): stop updating, tear everything down and let it get GC'd
 
+/// NOTE: if you pass in a query, we will take responsibility for
+/// calling stop() on it! this should change in New Database API.
+
 /// XXX consider making render an argument rather than an option
 ///
 /// XXX what package should this go in? depends on both liveui and minimongo..
@@ -146,13 +149,18 @@ Sky.ui.render = function (render_func, events, event_data) {
 /// XXX what can now be a collection, or the handle of an existing
 /// findlive. messy.
 Sky.ui.renderList = function (what, options) {
-  throw new Error("Unimplemented");
+  var outer_frag;
   var outer_range;
   var entry_ranges = [];
 
+  // create the top-level document fragment/range that will be
+  // returned by renderList. called exactly once, ever (and that call
+  // will be before renderList returns.) returns nothing, sets
+  // outer_(frag, range).
   var create_outer_range = function (initial_contents) {
-    var outer_range = new Sky.ui._LiveRange(Sky.ui._tag, initial_contents,
-                                            true);
+    outer_frag = initial_contents;
+    outer_range = new Sky.ui._LiveRange(Sky.ui._tag, initial_contents,
+                                            null, true);
     outer_range.context = new Sky.deps.Context;
 
     outer_range.context.on_invalidate(function (old_context) {
@@ -163,63 +171,175 @@ Sky.ui.renderList = function (what, options) {
     });
   };
 
+  // render a database result to a DocumentFragment, and return it
   var render_doc = function (doc) {
     return Sky.ui.render(_.bind(options.render, null, doc),
                          options.events || {}, doc);
   };
 
+  // return the DocumentFragment to show when there are no results
   var render_empty = function () {
     return options.render_empty ?
       Sky.ui.render(options.render_empty, options.events) :
       document.createComment("empty list");
   };
 
-  var insert_before = function (before_idx, range) {
-    // XXX do the insert
-    entry_ranges.splice(before_idx, 0, range);
+  // Return a document fragment containing a single node, an empty
+  // comment.
+  var placeholder = function () {
+    var ret = document.createDocumentFragment();
+    ret.appendChild(document.createComment(""));
+    return ret;
   };
 
-  // return a frag. do not 
+  // At least one entry currently exists. Wrap the given fragment in a
+  // range and insert it just before before_idx (or at the end, if
+  // before_idx === entry_ranges.length.)
+  var insert_before = function (before_idx, frag) {
+    if (!entry_ranges.length)
+      throw new Error("insert_before: at least one entry must exist");
+
+    // DIAGRAM
+    //
+    // O1, O2: old entry 1, old entry 2
+    // P: temporary placeholder
+    // new: entry being inserted
+    //
+    // +-      +-      +-          +-
+    // | +-    | +-    | +-        | +-
+    // | |O1   | |P    | | +-      | |new
+    // | +-    | +-    | | |new    | +-
+    // |    => |    => | | +-   => |
+    // | +-    | +-    | |         | +-
+    // | |O2   | |O2   | | +-      | |O1
+    // | +-    | +-    | | |O1     | +-
+    // |-      +-      | | +-      |
+    //                 | +-        | +-
+    //                 |           | |O2
+    //                 | +-        | +-
+    //                 | |O2       +-
+    //                 | +-
+    //                 +-
+
+    // We are going to perform a maneuver where we split one of the
+    // existing entries in half. First, determine which entry to split.
+    var at_end = before_idx === entry_ranges.length;
+    var split_idx = before_idx - (at_end ? 1 : 0);
+
+    // Pull out its contents by replacing them with a placeholder.
+    var old_entry = entry_ranges[split_idx].replace_contents(placeholder());
+
+    // Create ranges around both that old entry, and our new entry.
+    var new_range = new Sky.ui._LiveRange(Sky.ui._tag, frag, null, true);
+    var old_range = new Sky.ui._LiveRange(Sky.ui._tag, old_entry, null, true);
+
+    // If inserting at the end, interchange the entries so it's like
+    // we're inserting before the end.
+    if (at_end) {
+      var swap;
+      swap = new_range; new_range = old_range; old_range = swap;
+      swap = frag; frag = old_entry; old_entry = swap;
+    }
+
+    // Now, make a new fragment that is the entry we just removed,
+    // side by side with the entry we're inserting, in the correct
+    // order.
+    var new_contents = document.createDocumentFragment();
+    new_contents.appendChild(frag);
+    new_contents.appendChild(old_entry);
+
+    // Replace the placeholder with that fragment. Now the right
+    // elements are in the DOM in the right order.
+    entry_ranges[split_idx].replace_contents(new_contents);
+
+    // Finally, fix up the range pointers. This involves deleting the
+    // original range (which now contains the two elements.)
+    entry_ranges[split_idx].destroy();
+    entry_ranges.splice(split_idx, 1, new_range, old_range);
+  };
+
+  // Remove an entry (leaving at least one left.) Return the entry as
+  // a fragment. Destroy the entry's range and update entry_ranges. Do
+  // not clean up the fragment.
   var extract = function (at_idx) {
+    if (entry_ranges.length < 2)
+      throw new Error("extract: at least one entry must remain");
+
+    // DIAGRAM
+    //
+    // O1, O2: old entry 1, old entry 2
+    // P: temporary placeholder
+    //
+    // +-      +-         +-          +-
+    // | +-    | +-       | +-        | +-
+    // | |O1   | | +-     | | +-      | |O2
+    // | +-    | | |O1    | | |O1     | +-
+    // |    => | | +-  => | | +-   => +-
+    // | +-    | |        | |
+    // | |O2   | | +-     | | +-
+    // | +-    | | |O2    | | |P
+    // |-      | | +-     | | +-
+    //         | +-       | +-
+    //         +-         +-
+
+    // Similar to insert_before, but the other way around: we will
+    // merge two entries down to one. Find the first entry to merge.
+    var last = at_idx === entry_ranges.length - 1;
+    var first_idx = at_idx - (last ? 1 : 0);
+
+    // Make a range surrounding the two entries. This is the only
+    // range that will ultimately survive the merge.
+    var new_range = new Sky.ui._LiveRange(Sky.ui._tag,
+                                          entry_ranges[first_idx].firstNode(),
+                                          entry_ranges[first_idx + 1].lastNode()
+                                          /* fast === false! */);
+
+    // Pull out the entry that will survive by replacing it with a placeholder.
+    var keep_frag = entry_ranges[at_idx].replace_contents(placeholder());
+
+    // Now make the contents of new_range be just the surviving entry.
+    Sky.ui._cleanup(new_range.replace_contents(keep_frag), Sky.ui._tag);
+
+    // Finally, delete the old ranges and fix up range pointers.
+    entry_ranges[first_idx].destroy();
+    entry_ranges[first_idx + 1].destroy();
+    entry_ranges.splice(first_idx, 1, new_range);
   };
 
   var query_opts = {
     added: function (doc, before_idx) {
       var frag = render_doc(doc);
-      var new_range = new Sky.ui._LiveRange(Sky.ui._tag, frag, true);
 
-      if (!outer_range)
-        create_outer_range(frag);
-      else if (!entry_ranges.length) {
-        Sky.ui._cleanup(outer_range.replace_contents(frag), outer_range.tag);
-        entrty_ranges = [new_range];
+      if (!entry_ranges.length) {
+        var new_range = new Sky.ui._LiveRange(Sky.ui._tag, frag, null, true);
+        if (!outer_range)
+          create_outer_range(frag);
+        else
+          Sky.ui._cleanup(outer_range.replace_contents(frag), Sky.ui._tag);
+        entry_ranges = [new_range];
       } else
-        insert_before(before_idx, new_range);
+        insert_before(before_idx, frag);
     },
     removed: function (id, at_idx) {
-      if (entry_ranges.length > 1)
-        var removed = extract(at_idx);
-      else
-        var removed = outer_range.replace_contents(render_empty());
-      Sky.ui._cleanup(removed, 12345/* XXX tag */);
-      entry_ranges[at_idx].destroy();
-      entry_ranges.splice(at_idx, 1);
+      if (entry_ranges.length > 1) {
+        Sky.ui._cleanup(extract(at_idx), Sky.ui._tag);
+      } else {
+        Sky.ui._cleanup(outer_range.replace_contents(render_empty()),
+                        Ski.ui._tag);
+        entry_ranges[at_idx].destroy();
+        entry_ranges.splice(at_idx, 1);
+      }
     },
     changed: function (doc, at_idx) {
       var range = entry_ranges[at_idx];
-      Sky.ui._cleanup(range.replace_contents(render_doc(doc)), range.tag);
+      Sky.ui._cleanup(range.replace_contents(render_doc(doc)), Sky.ui._tag);
     },
     moved: function (doc, old_idx, new_idx) {
       if (old_idx === new_idx)
         return;
-      // At this point we know the list has at least two elements.
-      var range = entry_ranges.splice(old_idx, 1)[0];
-      var frag = range.extract();
-      if (new_idx === entry_ranges.length)
-        range.insertAfter(entry_ranges[new_idx - 1]);
-      else
-        range.insertBefore(entry_ranges[new_idx]);
-      entry_ranges.splice(new_idx, 0, range);
+      // At this point we know the list has at least two elements (the
+      // ones with indices old_idx and new_idx.) So extract() is legal.
+      insert_before(new_idx, extract(old_idx));
     }
   };
 
@@ -234,7 +354,7 @@ Sky.ui.renderList = function (what, options) {
   if (!outer_range)
     create_outer_range(render_empty());
 
-  return frag;
+  return outer_frag;
 };
 
 // XXX jQuery dependency

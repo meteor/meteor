@@ -203,6 +203,7 @@ Sky.ui = Sky.ui || {};
     return result;
   };
 
+  // returns a DocumentFragment with the removed elements
   // XXX need to make sure that tags are removed if they become empty
   Sky.ui._LiveRange.prototype.replace_contents = function (new_frag) {
     if (!new_frag.firstChild)
