@@ -5,10 +5,16 @@ body {
     line-height: 1.3;
 }
 
+.section {
+    font-size: 2em;
+    color: black;
+    text-decoration: underline;
+    margin-top: 30px;
+}
+
 .begin {
     font-size: 1.5em;
     color: black;
-    text-decoration: underline;
 }
 
 .ok {

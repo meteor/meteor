@@ -5,10 +5,8 @@ Sky.ui = Sky.ui || {};
 // the range tag to operate on. In the latter case, the range itself
 // will be destroyed along with its subranges.
 Sky.ui._cleanup = function (what, tag) {
-  if (what instanceof DocumentFragment) {
+  if (what instanceof DocumentFragment)
     what = new Sky.ui._LiveRange(tag, what.firstChild, what.lastChild);
-    what.where = "_cleanup";
-  }
 
   var ranges = [];
   what.visit(function (is_start, range) {
@@ -111,8 +109,7 @@ Sky.ui.render = function (render_func, events, event_data) {
   var context = new Sky.deps.Context;
   context.on_invalidate(update);
   var frag = render_fragment(context);
-  range = new Sky.ui._LiveRange(Sky.ui._tag, frag, null, true);
-  range.where = "render";
+  range = new Sky.ui._LiveRange(Sky.ui._tag, frag);
   range.context = context;
 
   return frag;
@@ -159,8 +156,7 @@ Sky.ui.renderList = function (what, options) {
   // outer_(frag, range).
   var create_outer_range = function (initial_contents) {
     outer_frag = initial_contents;
-    outer_range = new Sky.ui._LiveRange(Sky.ui._tag, initial_contents,
-                                            null, true);
+    outer_range = new Sky.ui._LiveRange(Sky.ui._tag, initial_contents);
     outer_range.context = new Sky.deps.Context;
 
     outer_range.context.on_invalidate(function (old_context) {
@@ -183,6 +179,12 @@ Sky.ui.renderList = function (what, options) {
       Sky.ui.render(options.render_empty, options.events) :
       document.createComment("empty list");
   };
+
+  // XXX in the future, insert_before and extract should be refactored
+  // into general-purpose functions and moved into the LiveRange
+  // library, and ideally rewritten to manipulate the LiveRange tags
+  // directly instead of dancing around with placeholders. but for
+  // now, let's just get something working.
 
   // Return a document fragment containing a single node, an empty
   // comment.
@@ -230,8 +232,8 @@ Sky.ui.renderList = function (what, options) {
     var old_entry = entry_ranges[split_idx].replace_contents(placeholder());
 
     // Create ranges around both that old entry, and our new entry.
-    var new_range = new Sky.ui._LiveRange(Sky.ui._tag, frag, null, true);
-    var old_range = new Sky.ui._LiveRange(Sky.ui._tag, old_entry, null, true);
+    var new_range = new Sky.ui._LiveRange(Sky.ui._tag, frag);
+    var old_range = new Sky.ui._LiveRange(Sky.ui._tag, old_entry);
 
     // If inserting at the end, interchange the entries so it's like
     // we're inserting before the end.
@@ -268,12 +270,12 @@ Sky.ui.renderList = function (what, options) {
     // DIAGRAM
     //
     // O1, O2: old entry 1, old entry 2
-    // P: temporary placeholder
+    // P: temporary placeholders
     //
     // +-      +-         +-          +-
     // | +-    | +-       | +-        | +-
     // | |O1   | | +-     | | +-      | |O2
-    // | +-    | | |O1    | | |O1     | +-
+    // | +-    | | |O1    | | |P      | +-
     // |    => | | +-  => | | +-   => +-
     // | +-    | |        | |
     // | |O2   | | +-     | | +-
@@ -289,21 +291,29 @@ Sky.ui.renderList = function (what, options) {
 
     // Make a range surrounding the two entries. This is the only
     // range that will ultimately survive the merge.
-    var new_range = new Sky.ui._LiveRange(Sky.ui._tag,
-                                          entry_ranges[first_idx].firstNode(),
-                                          entry_ranges[first_idx + 1].lastNode()
-                                          /* fast === false! */);
+    var new_range =
+      new Sky.ui._LiveRange(Sky.ui._tag,
+                            entry_ranges[first_idx].firstNode(),
+                            entry_ranges[first_idx + 1].lastNode(),
+                            true /* inner! */);
 
     // Pull out the entry that will survive by replacing it with a placeholder.
-    var keep_frag = entry_ranges[at_idx].replace_contents(placeholder());
+    var keep_frag = entry_ranges[at_idx + (last ? -1 : 1)]
+      .replace_contents(placeholder());
 
-    // Now make the contents of new_range be just the surviving entry.
-    Sky.ui._cleanup(new_range.replace_contents(keep_frag), Sky.ui._tag);
+    // Also pull out the entry we're removing to the caller.
+    var ret = entry_ranges[at_idx].replace_contents(placeholder());
+
+    // Now make the contents of new_range be just the surviving
+    // entry. (Discard the returned fragment, which is just the two
+    // placeholders.)
+    new_range.replace_contents(keep_frag);
 
     // Finally, delete the old ranges and fix up range pointers.
     entry_ranges[first_idx].destroy();
     entry_ranges[first_idx + 1].destroy();
-    entry_ranges.splice(first_idx, 1, new_range);
+    entry_ranges.splice(first_idx, 2, new_range);
+    return ret;
   };
 
   var query_opts = {
@@ -311,7 +321,7 @@ Sky.ui.renderList = function (what, options) {
       var frag = render_doc(doc);
 
       if (!entry_ranges.length) {
-        var new_range = new Sky.ui._LiveRange(Sky.ui._tag, frag, null, true);
+        var new_range = new Sky.ui._LiveRange(Sky.ui._tag, frag);
         if (!outer_range)
           create_outer_range(frag);
         else
@@ -325,8 +335,8 @@ Sky.ui.renderList = function (what, options) {
         Sky.ui._cleanup(extract(at_idx), Sky.ui._tag);
       } else {
         Sky.ui._cleanup(outer_range.replace_contents(render_empty()),
-                        Ski.ui._tag);
-        entry_ranges[at_idx].destroy();
+                        Sky.ui._tag);
+        // _cleanup will already have destroyed entry_ranges[at_idx] for us
         entry_ranges.splice(at_idx, 1);
       }
     },

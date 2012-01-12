@@ -27,19 +27,18 @@ Sky.ui = Sky.ui || {};
   // "Create a range, tagged 'tag', that includes start, end, and all
   // the nodes between them, and the children of all of those nodes,
   // but includes no other nodes. If there are other ranges tagged
-  // "tag" that contain this exact set of nodes, then the new range
-  // will contain them."
+  // "tag" that contain this exact set of nodes, then: if inner is
+  // false (the default), the new range will be outside all of them
+  // (will contain all of them), or if inner is true, then it will be
+  // inside all of them (be contained by all of them.)"
   //
-  // if fast is set, you are promising that there is no range that
-  // starts on start that does not end by end, and vice versa. this is
-  // trivially true in the common case that start and end are the
-  // first and last child of their parent respectively (in this case,
-  // fast will be automatically set to true for you), or in the case
-  // that you are building up the range tree from the inside out. if
-  // fast is set, then the function is bounded by O(ranges that start
-  // on start + ranges that end on end). if fast is false, then add
-  // O(siblings between start and and) to that running time.
-  Sky.ui._LiveRange = function (tag, start, end, fast) {
+  // It would be possible to add a fast path through this function
+  // when caller can promise that there is no range that starts on
+  // start that does not end by end, and vice versa. eg: when start
+  // and end are the first and last child of their parent respectively
+  // or when caller is building up the range tree from the inside
+  // out. let's wait for the profiler to tell us to add this.
+  Sky.ui._LiveRange = function (tag, start, end, inner) {
     if ((start instanceof Document) || (start instanceof DocumentFragment)) {
       end = start.lastChild;
       start = start.firstChild;
@@ -50,11 +49,76 @@ Sky.ui = Sky.ui || {};
     this.tag = tag;
     this._ensure_tags([start, end]);
 
-    var balance = 0;
-    fast = fast ||
-      (start.parentNode.firstChild === start &&
-       end.parentNode.lastChild === end);
-    if (!fast) {
+    // Decide at what indices in start[tag][0] and end[tag][1] we
+    // should insert the new range.
+    //
+    // If we are creating the range on the outside, we want to insert
+    // it before the first range that starts at start and ends at
+    // end. If are creating the range on the inside, we want to insert
+    // it after the last range that starts at start and ends at end.
+    //
+    // If there are no other ranges that start at start and end at
+    // end, then: if there are no ranges start on start AND no ranges
+    // that end on end, then there is no choice to be made (the only
+    // option is index 0.) Otherwise, we have to scan through the
+    // siblings to figure out the correct nesting level.
+
+    var start_first_match, end_last_match, match_count = 0;
+    for (var i = 0; i < start[tag][0].length; i++)
+      if (start[tag][0][i]._end === end) {
+        start_first_match = i;
+
+        do {
+          match_count++;
+          i++;
+        } while (i < start[tag][0].length && start[tag][0][i]._end === end);
+
+        for (i = end[tag][1].length - 1; i >= 0; i--) {
+          if (end[tag][1][i]._start === start) {
+            end_last_match = i;
+            break;
+          }
+        }
+        if (end_last_match === undefined)
+          throw new Error("Corrupt range data");
+
+        break;
+      }
+
+    var start_index, end_index;
+    if (start[tag][0].length + end[tag][1].length === 0)
+      start_index = end_index = 0;
+    else if (start_first_match !== undefined) {
+      if (inner) {
+        start_index = start_first_match + match_count;
+        end_index = end_last_match + 1 - match_count;
+      } else {
+        start_index = start_first_match;
+        end_index = end_last_match + 1;
+      }
+    } else {
+      // There are no other ranges that both start at start, and end
+      // at end. To figure out where such a range should go, we need
+      // to measure the difference in nesting level between the
+      // two. We compute a value called 'balance' which is the nesting
+      // depth of end, minus the nesting depth of start.
+
+      // Examples ([] is existing ranges, {} is where the new range
+      // should go):
+
+      // [.. {[start] .. end}] => balance -1
+      // [{start .. [end]} .. ] => balance 1
+
+      // [.. {[start] .. [end]}] => balance -1
+      // [{[start] .. [end]} .. ] => balance 1
+
+      // [[.. {[start] .. end}]] => balance -2
+      // [[{start .. [end]} .. ]] => balance 2
+
+      // [[.. {[start] .. [end]}]] => balance -2
+      // [[{[start] .. [end]} .. ]] => balance 2
+
+      var balance = 0;
       var walk = start;
       while (true) {
         if (tag in walk)
@@ -63,32 +127,23 @@ Sky.ui = Sky.ui || {};
           break;
         walk = walk.nextSibling;
       }
+
+      // inner and outer modes will be the same since there are no
+      // other ranges across exactly this part of elements.
+      start_index = balance < 0 ? 0 : balance;
+      end_index = (balance > 0 ? 0 : balance) + end[tag][1].length;
     }
-
-    // Examples ([] is existing ranges, {} is new range)
-
-    // [.. {[start] .. end}] => balance -1
-    // [{start .. [end]} .. ] => balance 1
-
-    // [.. {[start] .. [end]}] => balance -1
-    // [{[start] .. [end]} .. ] => balance 1
-
-    // [[.. {[start] .. end}]] => balance -2
-    // [[{start .. [end]} .. ]] => balance 2
-
-    // [[.. {[start] .. [end]}]] => balance -2
-    // [[{[start] .. [end]} .. ]] => balance 2
 
     // this._start is the node N such that we begin before N, but not
     // before the node before N in the preorder traversal of the
     // document (if there is such a node.) this._start[this.tag][0]
     // will be the list of all LiveRanges for which this._start is N,
     // including us, sorted in the order that the ranges start. and
-    // finally, this._start[this._start_idx] === this.
+    // finally, this._start_idx is the value such that
+    // this._start[this.tag][0][this._start_idx] === this.
     this._start = start;
-    var i = balance < 0 ? 0 : balance;
-    start[tag][0].splice(i, 0, this);
-    for (; i < start[tag][0].length; i++)
+    start[tag][0].splice(start_index, 0, this);
+    for (i = start_index; i < start[tag][0].length; i++)
       start[tag][0][i]._start_idx = i;
 
     // just like this._end, except it's the node N such that we end
@@ -96,9 +151,8 @@ Sky.ui = Sky.ui || {};
     // traversal; and the data is stored in this._end[this.tag][1], and
     // it's sorted in the order that the ranges end.
     this._end = end;
-    i = (balance > 0 ? 0 : balance) + end[tag][1].length;
-    end[tag][1].splice(i, 0, this);
-    for (; i < end[tag][1].length; i++)
+    end[tag][1].splice(end_index, 0, this);
+    for (i = end_index; i < end[tag][1].length; i++)
       end[tag][1][i]._end_idx = i;
   };
 
@@ -185,7 +239,7 @@ Sky.ui = Sky.ui || {};
   };
 
   // (returns only ranges with the same tag as this one)
-  // XXX could remove .. or just provide a verify() method in debug mode..
+  // XXX remove
   Sky.ui._LiveRange.prototype.contained = function () {
     var result = {range: this, children: []};
     var stack = [result];
@@ -256,51 +310,4 @@ Sky.ui = Sky.ui || {};
 
     return ret;
   };
-
-  // Remove the range from inside its current parent, and return a
-  // fragment that contains exactly the range's contents (including any
-  // subranges.) Throw an exception if this would make a parent range
-  // empty.
-  Sky.ui._LiveRange.prototype.extract = function () {
-    throw new Error("Unimplemented");
-    // XXX IMPLEMENT
-
-    // A range is abutting on the left if there are no elements between
-    // its start and the end of the previous sibling range, or if there
-    // are no siblings, the beginning of its immediate containing range,
-    // or if there is no containing range, the beginning of the
-    // document. "Abutting on the right" has a similar definition.
-
-    // We throw an exception if we're both abutting on both the left and
-    // the right.
-
-    // We're abutting on the left if this._start_idx > 0. We're abutting
-    // on the right if this._end_idx !== this._end[this.tag][1].length - 1.
-    // XXX is this complete, eg maybe need to look at eg this._end.
-
-    // ---
-
-    // As usual we need to repair just the start and the end of the range
-    //
-    // What's happening to the departing range is clear.
-    //
-    // On the start side, there are the start contexts that occur before
-    // this._start_idx. They need to be relocated.
-
-  };
-
-  // Insert frag so that it comes immediately before the start of the
-  // range.
-  Sky.ui._LiveRange.prototype.insertBefore = function (frag) {
-    throw new Error("Unimplemented");
-    // XXX IMPLEMENT
-  };
-
-  // Insert frag so that it comes immediately after the start of the
-  // range.
-  Sky.ui._LiveRange.prototype.insertAfter = function (frag) {
-    throw new Error("Unimplemented");
-    // XXX IMPLEMENT
-  };
-
 })();
