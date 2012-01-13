@@ -183,7 +183,6 @@ Sky.ui.renderList = function (what, options) {
         return;
       }
 
-      console.log("stopping");
       query.stop();
       if (!old_context.killed)
         Sky.ui._cleanup(outer_range);
