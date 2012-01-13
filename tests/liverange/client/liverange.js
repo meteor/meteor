@@ -99,8 +99,7 @@ var dump = function (what, tag) {
     ret += (is_start ? "<": "</") + obj.id + ">";
   };
 
-  if (typeof DocumentFragment !== 'undefined' ?
-      what instanceof DocumentFragment : what instanceof HTMLDocument) {
+  if (typeof what === 'object' && what.nodeType === 11 /* DocumentFragment */) {
     if (what.firstChild) {
       var range = new Sky.ui._LiveRange(tag || 'a', what);
       range.visit(emit, emit);
@@ -371,8 +370,7 @@ var test_single = function () {
   assert(f.lastChild, r_b.lastNode());
 
   var ret1 = r_a.replace_contents(frag("<div id=2></div>"));
-  assert(true, typeof DocumentFragment !== 'undefined' ?
-         ret1 instanceof DocumentFragment : ret1 instanceof HTMLDocument);
+  assert(true, ret1.nodeType === 11 /* DocumentFragment */);
   assert_dump("<1></1>", ret1);
   assert_dump("<a><2></2></a>", r_a);
   assert_dump("<b><a><2></2></a></b>", r_b);
