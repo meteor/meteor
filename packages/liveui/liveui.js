@@ -183,9 +183,13 @@ Sky.ui.renderList = function (what, options) {
 
   // return the DocumentFragment to show when there are no results
   var render_empty = function () {
-    return options.render_empty ?
-      Sky.ui.render(options.render_empty, options.events) :
-      document.createComment("empty list");
+    if (options.render_empty)
+      return Sky.ui.render(options.render_empty, options.events);
+    else {
+      var ret = document.createDocumentFragment();
+      ret.appendChild(document.createComment("empty list"));
+      return ret;
+    }
   };
 
   // XXX in the future, insert_before and extract should be refactored

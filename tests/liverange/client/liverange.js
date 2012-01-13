@@ -595,9 +595,13 @@ var assert_frag = function (expected, actual) {
   };
 
   var dump = function (node) {
-    actual_dump += '<' + node.id + '>';
-    dump_children(node);
-    actual_dump += '</' + node.id + '>';
+    if (node.nodeType === 8) /* comment */
+      actual_dump += "<!---->";
+    else {
+      actual_dump += '<' + node.id + '>';
+      dump_children(node);
+      actual_dump += '</' + node.id + '>';
+    }
   };
 
   dump_children(actual);
@@ -664,11 +668,32 @@ var test_renderList = function () {
   c.remove({id: "D"});
   assert_frag("<empty></empty>", r);
 
+  begin("renderList - default render empty");
+
+  r = Sky.ui.renderList(c, {
+    sort: ["id"],
+    render: function (doc) {
+      return DIV({id: doc.id});
+    }
+  });
+  assert_frag("<!---->", r);
+
+  c.insert({id: "D"});
+  assert_frag("<D></D>", r);
+  c.remove({id: "D"});
+  assert_frag("<!---->", r);
+
+
+
+
 
   /*
+    - passing in an existing query
     - render_empty, default render_empty
     - all callbacks: add, remove, move, change
     - correct cleanup/GC
     - multiple elements in a rendered fragment
+
+    - #each with a findlive handle
   */
 };
