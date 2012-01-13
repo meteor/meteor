@@ -290,7 +290,7 @@ Commands.push({
 "  skybreak add <package> <package> ...\n" +
 "\n" +
 "To see available packages:\n" +
-"  skybreak packages\n");
+"  skybreak list\n");
       }
       return;
     }
@@ -382,12 +382,12 @@ Commands.push({
 "databases on deployed applications, the URL is valid for one minute.\n"
       );
 
-    new_argv = opt.argv;
-
-    if (new_argv.help) {
+    if (argv.help) {
       process.stdout.write(opt.help());
       process.exit(1);
     }
+
+    new_argv = opt.argv;
 
     if (new_argv._.length === 1) {
       // localhost mode
@@ -406,7 +406,7 @@ Commands.push({
       if (new_argv.url)
         console.log(mongo_url)
       else
-        run_mongo_shell(mongo_url);
+        deploy.run_mongo_shell(mongo_url);
 
     } else if (new_argv._.length === 2) {
       // remote mode
@@ -425,11 +425,13 @@ Commands.push({
   help: "Deploy this project to Skybreak",
   func: function (argv) {
     var opt = require('optimist')
-      .boolean('password')
       .alias('password', 'P')
+      .boolean('password')
+      .boolean('P')
       .describe('password', 'set a password for this deployment')
-      .boolean('delete')
       .alias('delete', 'D')
+      .boolean('delete')
+      .boolean('D')
       .describe('delete', "permanently delete this deployment")
       .usage(
 "Usage: skybreak deploy <site> [--password] [--delete]\n" +
@@ -452,7 +454,7 @@ Commands.push({
 
     new_argv = opt.argv;
 
-    if (new_argv.help || new_argv._.length != 2) {
+    if (argv.help || new_argv._.length != 2) {
       process.stdout.write(opt.help());
       process.exit(1);
     }
@@ -517,7 +519,9 @@ Commands.push({
 
 var main = function() {
   var optimist = require('optimist')
-    .boolean("h").alias("h", "help")
+    .alias("h", "help")
+    .boolean("h")
+    .boolean("help")
     .boolean("version")
     .boolean("debug");
 
