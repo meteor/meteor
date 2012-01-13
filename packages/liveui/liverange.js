@@ -39,7 +39,10 @@ Sky.ui = Sky.ui || {};
   // or when caller is building up the range tree from the inside
   // out. let's wait for the profiler to tell us to add this.
   Sky.ui._LiveRange = function (tag, start, end, inner) {
-    if ((start instanceof Document) || (start instanceof DocumentFragment)) {
+    if ((typeof Document !== 'undefined' && start instanceof Document) ||
+        (typeof HTMLDocument !== 'undefined' && start instanceof HTMLDocument) ||
+        (typeof DocumentFragment !== 'undefined' && start instanceof DocumentFragment))
+    {
       end = start.lastChild;
       start = start.firstChild;
     }

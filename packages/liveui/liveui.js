@@ -5,7 +5,8 @@ Sky.ui = Sky.ui || {};
 // the range tag to operate on. In the latter case, the range itself
 // will be destroyed along with its subranges.
 Sky.ui._cleanup = function (what, tag) {
-  if (what instanceof DocumentFragment)
+  if (typeof DocumentFragment !== 'undefined' ?
+      what instanceof DocumentFragment : what instanceof HTMLDocument)
     what = new Sky.ui._LiveRange(tag, what.firstChild, what.lastChild);
 
   var ranges = [];
@@ -57,7 +58,8 @@ Sky.ui.render = function (render_func, events, event_data) {
     var frag;
 
     // Coerce to a document fragment
-    if (result instanceof DocumentFragment)
+    if (typeof DocumentFragment !== 'undefined' ?
+        result instanceof DocumentFragment : result instanceof HTMLDocument)
       frag = result;
     else if (result instanceof Node) {
       frag = document.createDocumentFragment();
