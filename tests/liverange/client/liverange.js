@@ -9,6 +9,9 @@ _.each(["section", "begin", "ok", "fail"], function (what) {
 });
 
 Sky.startup(function () {
+  section("Meta tests");
+  test_try_all_orders();
+
   section("LiveRange");
   test_single();
   test_multi();
@@ -168,6 +171,80 @@ var assert_contained = function (r, expected) {
   };
 
   traverse(expected, actual);
+};
+
+// Given a set of functions, run them in every possible order
+// (permutation).
+//
+// options:
+// - functions: an array of functions
+// - before: function to run before each permutation
+// - after: function to run after each permutation
+
+var try_all_orders = function (options) {
+  var before = options.before || function () {};
+  var after = options.after || function () {};
+
+  var pick = function (chosen, remaining) {
+    if (remaining.length === 0) {
+      before();
+      _.each(chosen, function (f) { f(); });
+      after();
+    } else {
+      for (var i = 0; i < remaining.length; i++) {
+        chosen.push(remaining[i]);
+        pick(chosen, remaining.slice(0, i).concat(remaining.slice(i + 1)));
+        chosen.pop();
+      }
+    }
+  };
+
+  pick([], options.functions || []);
+};
+
+/******************************************************************************/
+
+var test_try_all_orders = function () {
+  begin("try_all_orders");
+
+  var out = "";
+  try_all_orders({
+    functions: [
+      function () {out += "A";},
+      function () {out += "B";},
+      function () {out += "C";},
+    ],
+    before: function () {out += ":";},
+    after: function () {out += ".";},
+  });
+
+  assert(":ABC.:ACB.:BAC.:BCA.:CAB.:CBA.", out);
+
+  var test = function (n) {
+    var fs = [];
+    var seq = "";
+    var seen = {};
+
+    for (var i = 0; i < n; i++)
+      fs.push(_.bind(function (x) { seq += x + "_"; }, null, i));
+    try_all_orders({
+      functions: fs,
+      before: function () {seq = "";},
+      after: function () {
+        if (seq in seen)
+          throw new Error("duplicate permutation");
+        seen[seq] = true;
+      }
+    });
+
+    var expected_count = 1;
+    for (var i = n; i >= 1; i--)
+      expected_count *= i;
+    assert(expected_count, _.keys(seen).length);
+  };
+
+  for (var i = 1; i <= 5; i++)
+    test(i);
 };
 
 /******************************************************************************/
@@ -506,81 +583,33 @@ var test_create_inner = function () {
   r_e = create("e", f.childNodes[0], f.childNodes[2]);
   assert_dump("<e><b><a><1></1></a></b><2></2><c><3></3></c></e>", f);
 
-  // (one scenario, six possible creation orders)
+  try_all_orders({
+    before: function () {
+      f = frag("<div id=1></div><div id=2></div><div id=3></div>");
+    },
+    functions: [
+      function () { create("a", f.childNodes[1], f.childNodes[2]); },
+      function () { create("b", f.childNodes[2], f.childNodes[2]); },
+      function () { create("c", f.childNodes[0], f.childNodes[2]); }
+    ],
+    after: function () {
+      assert_dump("<c><1></1><a><2></2><b><3></3></b></a></c>", f);
+    }
+  });
 
-  f = frag("<div id=1></div><div id=2></div><div id=3></div>");
-  r_a = create("a", f.childNodes[1], f.childNodes[2]);
-  r_b = create("b", f.childNodes[2], f.childNodes[2]);
-  r_c = create("c", f.childNodes[0], f.childNodes[2]);
-  assert_dump("<c><1></1><a><2></2><b><3></3></b></a></c>", f);
-
-  f = frag("<div id=1></div><div id=2></div><div id=3></div>");
-  r_a = create("a", f.childNodes[1], f.childNodes[2]);
-  r_c = create("c", f.childNodes[0], f.childNodes[2]);
-  r_b = create("b", f.childNodes[2], f.childNodes[2]);
-  assert_dump("<c><1></1><a><2></2><b><3></3></b></a></c>", f);
-
-  f = frag("<div id=1></div><div id=2></div><div id=3></div>");
-  r_b = create("b", f.childNodes[2], f.childNodes[2]);
-  r_a = create("a", f.childNodes[1], f.childNodes[2]);
-  r_c = create("c", f.childNodes[0], f.childNodes[2]);
-  assert_dump("<c><1></1><a><2></2><b><3></3></b></a></c>", f);
-
-  f = frag("<div id=1></div><div id=2></div><div id=3></div>");
-  r_b = create("b", f.childNodes[2], f.childNodes[2]);
-  r_c = create("c", f.childNodes[0], f.childNodes[2]);
-  r_a = create("a", f.childNodes[1], f.childNodes[2]);
-  assert_dump("<c><1></1><a><2></2><b><3></3></b></a></c>", f);
-
-  f = frag("<div id=1></div><div id=2></div><div id=3></div>");
-  r_c = create("c", f.childNodes[0], f.childNodes[2]);
-  r_a = create("a", f.childNodes[1], f.childNodes[2]);
-  r_b = create("b", f.childNodes[2], f.childNodes[2]);
-  assert_dump("<c><1></1><a><2></2><b><3></3></b></a></c>", f);
-
-  f = frag("<div id=1></div><div id=2></div><div id=3></div>");
-  r_c = create("c", f.childNodes[0], f.childNodes[2]);
-  r_b = create("b", f.childNodes[2], f.childNodes[2]);
-  r_a = create("a", f.childNodes[1], f.childNodes[2]);
-  assert_dump("<c><1></1><a><2></2><b><3></3></b></a></c>", f);
-
-  // same thing, but with the opposite nesting relationship
-
-  f = frag("<div id=1></div><div id=2></div><div id=3></div>");
-  r_a = create("a", f.childNodes[0], f.childNodes[0]);
-  r_b = create("b", f.childNodes[0], f.childNodes[1]);
-  r_c = create("c", f.childNodes[0], f.childNodes[2]);
-  assert_dump("<c><b><a><1></1></a><2></2></b><3></3></c>", f);
-
-  f = frag("<div id=1></div><div id=2></div><div id=3></div>");
-  r_a = create("a", f.childNodes[0], f.childNodes[0]);
-  r_c = create("c", f.childNodes[0], f.childNodes[2]);
-  r_b = create("b", f.childNodes[0], f.childNodes[1]);
-  assert_dump("<c><b><a><1></1></a><2></2></b><3></3></c>", f);
-
-  f = frag("<div id=1></div><div id=2></div><div id=3></div>");
-  r_b = create("b", f.childNodes[0], f.childNodes[1]);
-  r_a = create("a", f.childNodes[0], f.childNodes[0]);
-  r_c = create("c", f.childNodes[0], f.childNodes[2]);
-  assert_dump("<c><b><a><1></1></a><2></2></b><3></3></c>", f);
-
-  f = frag("<div id=1></div><div id=2></div><div id=3></div>");
-  r_b = create("b", f.childNodes[0], f.childNodes[1]);
-  r_c = create("c", f.childNodes[0], f.childNodes[2]);
-  r_a = create("a", f.childNodes[0], f.childNodes[0]);
-  assert_dump("<c><b><a><1></1></a><2></2></b><3></3></c>", f);
-
-  f = frag("<div id=1></div><div id=2></div><div id=3></div>");
-  r_c = create("c", f.childNodes[0], f.childNodes[2]);
-  r_a = create("a", f.childNodes[0], f.childNodes[0]);
-  r_b = create("b", f.childNodes[0], f.childNodes[1]);
-  assert_dump("<c><b><a><1></1></a><2></2></b><3></3></c>", f);
-
-  f = frag("<div id=1></div><div id=2></div><div id=3></div>");
-  r_c = create("c", f.childNodes[0], f.childNodes[2]);
-  r_b = create("b", f.childNodes[0], f.childNodes[1]);
-  r_a = create("a", f.childNodes[0], f.childNodes[0]);
-  assert_dump("<c><b><a><1></1></a><2></2></b><3></3></c>", f);
+  try_all_orders({
+    before: function () {
+      f = frag("<div id=1></div><div id=2></div><div id=3></div>");
+    },
+    functions: [
+      function () { create("a", f.childNodes[0], f.childNodes[0]); },
+      function () { create("b", f.childNodes[0], f.childNodes[1]); },
+      function () { create("c", f.childNodes[0], f.childNodes[2]); }
+    ],
+    after: function () {
+      assert_dump("<c><b><a><1></1></a><2></2></b><3></3></c>", f);
+    }
+  });
 }
 
 
@@ -647,6 +676,35 @@ var test_renderList = function () {
   c.insert({id: "D2"});
   assert_frag("<C></C><D></D><D2></D2><E></E><F></F>", r);
 
+  // this should hit all of the edge cases in insert_before
+  var parts;
+  var do_insert = function (id) {
+    c.insert({id: id});
+    parts.push("<" + id + "></" + id + ">");
+    parts.sort();
+    assert_frag(parts.join(''), r);
+  };
+  try_all_orders({
+    before: function () {
+      c.remove();
+      parts = [];
+      assert_frag("<empty></empty>", r);
+    },
+    functions: [
+      _.bind(do_insert, null, "D"),
+      _.bind(do_insert, null, "E"),
+      _.bind(do_insert, null, "F"),
+      _.bind(do_insert, null, "G")
+    ],
+    after: function () {
+      assert_frag("<D></D><E></E><F></F><G></G>", r);
+    }
+  });
+
+  c.insert({id: "C"});
+  c.insert({id: "D2"});
+  c.remove({id: "G"});
+
   begin("renderList - change without move");
 
   c.update({id: "E"}, {$set: {id: "E2"}});
@@ -667,6 +725,32 @@ var test_renderList = function () {
   assert_frag("<D></D>", r);
   c.remove({id: "D"});
   assert_frag("<empty></empty>", r);
+
+  // this should hit all of the edge cases in extract
+  var do_remove = function (id) {
+    c.remove({id: id});
+    delete parts["<" + id + "></" + id + ">"];
+    assert_frag(_.keys(parts).sort().join('') || '<empty></empty>', r);
+  };
+  try_all_orders({
+    before: function () {
+      parts = {};
+      _.each(["D", "E", "F", "G"], function (id) {
+        c.insert({id: id});
+        parts["<" + id + "></" + id + ">"] = true;
+      });
+      assert_frag("<D></D><E></E><F></F><G></G>", r);
+    },
+    functions: [
+      _.bind(do_remove, null, "D"),
+      _.bind(do_remove, null, "E"),
+      _.bind(do_remove, null, "F"),
+      _.bind(do_remove, null, "G")
+    ],
+    after: function () {
+      assert_frag("<empty></empty>", r);
+    }
+  });
 
   begin("renderList - default render empty");
 
@@ -689,10 +773,11 @@ var test_renderList = function () {
 
   /*
     - passing in an existing query
-    - render_empty, default render_empty
+    - render_empty gets events attached
     - all callbacks: add, remove, move, change
     - correct cleanup/GC
     - multiple elements in a rendered fragment
+    - flush kills it!
 
     - #each with a findlive handle
   */
