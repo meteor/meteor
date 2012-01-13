@@ -646,6 +646,7 @@ var assert_frag = function (expected, actual) {
 
 var test_render = function () {
   // XXX write tests for render, especially garbage collection
+  // check that it's safe from GC until flush
 };
 
 var test_renderList = function () {
@@ -767,15 +768,50 @@ var test_renderList = function () {
   c.remove({id: "D"});
   assert_frag("<!---->", r);
 
+  begin("renderList - change and move");
 
+  c.insert({id: "D"});
+  c.insert({id: "E"});
+  assert_frag("<D></D><E></E>", r);
+  c.update({id: "D"}, {id: "F"});
+  assert_frag("<E></E><F></F>", r);
+  c.update({id: "E"}, {id: "G"});
+  assert_frag("<F></F><G></G>", r);
+  c.update({id: "G"}, {id: "C"});
+  assert_frag("<C></C><F></F>", r);
+  c.insert({id: "E"});
+  assert_frag("<C></C><E></E><F></F>", r);
+  c.insert({id: "D"});
+  assert_frag("<C></C><D></D><E></E><F></F>", r);
+  c.update({id: "C"}, {id: "D2"});
+  assert_frag("<D></D><D2></D2><E></E><F></F>", r);
+  c.update({id: "F"}, {id: "D3"});
+  assert_frag("<D></D><D2></D2><D3></D3><E></E>", r);
+  c.update({id: "D3"}, {id: "C"});
+  assert_frag("<C></C><D></D><D2></D2><E></E>", r);
+  c.update({id: "D2"}, {id: "F"});
+  assert_frag("<C></C><D></D><E></E><F></F>", r);
+
+  begin("renderList - termination");
+
+  c.remove();
+  c.insert({id: "A"});
+  assert_frag("<A></A>", r);
+  Sky.flush(); // not onscreen, so terminates
+  c.insert({id: "B"});
+  assert_frag("<A></A>", r);
+  c.remove({id: "A"});
+  assert_frag("<A></A>", r);
+  Sky.flush();
+  assert_frag("<A></A>", r);
 
 
 
   /*
     - passing in an existing query
     - render_empty gets events attached
-    - all callbacks: add, remove, move, change
     - correct cleanup/GC
+    - moved doesn't GC, and preserves events
     - multiple elements in a rendered fragment
     - flush kills it!
 

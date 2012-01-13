@@ -26,6 +26,12 @@ Sky.ui._cleanup = function (what, tag) {
 
 Sky.ui._tag = "_liveui"; // XXX XXX
 
+Sky.ui._onscreen = function (node) {
+  return document.body.contains ?
+    document.body.contains(node) :
+    document.body.compareDocumentPosition(node) & 16;
+};
+
 /// OLD COMMENT, REWRITE (XXX):
 ///
 /// Render some HTML, resulting in a DOM node, which is
@@ -95,8 +101,7 @@ Sky.ui.render = function (render_func, events, event_data) {
     if (old_context.killed)
       return; // _cleanup is killing us
 
-    if (!(document.body.contains ? document.body.contains(range.firstNode())
-          : (document.body.compareDocumentPosition(range.lastNode()) & 16))) {
+    if (!Sky.ui._onscreen(range.firstNode())) {
       // It was taken offscreen. Stop updating it so it can get GC'd.
       Sky.ui._cleanup(range);
       return;
@@ -167,12 +172,24 @@ Sky.ui.renderList = function (what, options) {
     outer_range = new Sky.ui._LiveRange(Sky.ui._tag, initial_contents);
     outer_range.context = new Sky.deps.Context;
 
-    outer_range.context.on_invalidate(function (old_context) {
-      query.stop();
+    var try_cleanup = function (old_context) {
+      var node = outer_range && outer_range.firstNode();
+      if (!old_context.killed && node && Sky.ui._onscreen(node)) {
+        // False alarm -- still onscreen. Could happen if a renderList
+        // is initiated, then callbacks happen, then the renderList is
+        // put on the screen, then flush is called.
+        outer_range.context = new Sky.deps.Context;
+        outer_range.context.on_invalidate(try_cleanup);
+        return;
+      }
 
+      console.log("stopping");
+      query.stop();
       if (!old_context.killed)
         Sky.ui._cleanup(outer_range);
-    });
+    };
+
+    outer_range.context.on_invalidate(try_cleanup);
   };
 
   // render a database result to a DocumentFragment, and return it
@@ -328,8 +345,18 @@ Sky.ui.renderList = function (what, options) {
     return ret;
   };
 
+  var check_onscreen = function () {
+    var node = outer_range && outer_range.firstNode();
+    if (node && !Sky.ui._onscreen(node))
+      // Schedule a check at flush()-time to see if we're still off
+      // the screen. (The user has from when we're created, to when
+      // flush() is called, to put us on the screen.)
+      outer_range.context.invalidate();
+  }
+
   var query_opts = {
     added: function (doc, before_idx) {
+      check_onscreen();
       var frag = render_doc(doc);
 
       if (!entry_ranges.length) {
@@ -343,6 +370,7 @@ Sky.ui.renderList = function (what, options) {
         insert_before(before_idx, frag);
     },
     removed: function (id, at_idx) {
+      check_onscreen();
       if (entry_ranges.length > 1) {
         Sky.ui._cleanup(extract(at_idx), Sky.ui._tag);
       } else {
@@ -353,10 +381,12 @@ Sky.ui.renderList = function (what, options) {
       }
     },
     changed: function (doc, at_idx) {
+      check_onscreen();
       var range = entry_ranges[at_idx];
       Sky.ui._cleanup(range.replace_contents(render_doc(doc)), Sky.ui._tag);
     },
     moved: function (doc, old_idx, new_idx) {
+      check_onscreen();
       if (old_idx === new_idx)
         return;
       // At this point we know the list has at least two elements (the
