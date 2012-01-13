@@ -60,7 +60,7 @@ if (typeof Sky === "undefined") Sky = {};
           _.each(ctx._callbacks, function (f) {
             f(ctx); // XXX wrap in try?
           });
-          delete this._callbacks; // maybe help the GC
+          delete ctx._callbacks; // maybe help the GC
         });
       }
     },
