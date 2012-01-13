@@ -40,14 +40,20 @@ Template.results.type_is = function (arg) {
   return this.type === arg;
 };
 
-assert = function (expected, actual, message) {
-  if (!(expected instanceof Node)) {
+var isNode = function (o) {
+  return (typeof Node === "object" ? o instanceof Node :
+          (typeof o === "object" && typeof o.nodeType === "number" &&
+           typeof o.nodeName==="string"));
+};
+
+var assert = function (expected, actual, message) {
+  if (!isNode(expected)) {
     expected = JSON.stringify(expected);
     actual = JSON.stringify(actual);
   }
 
   if (expected !== actual) {
-    debugger;
+    // debugger;
     Results.insert({n: next_result++, type: "assert",
                     message: message || "Assert fail",
                     expected: expected, actual: actual});

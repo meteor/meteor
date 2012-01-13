@@ -52,6 +52,12 @@ Sky.ui._tag = "_liveui"; // XXX XXX
 
 Sky.ui.render = function (render_func, events, event_data) {
   var range;
+  // http://stackoverflow.com/questions/384286/javascript-isdom-how-do-you-check-if-a-javascript-object-is-a-dom-object
+  var isNode = function (o) {
+    return (typeof Node === "object" ? o instanceof Node :
+            (typeof o === "object" && typeof o.nodeType === "number" &&
+             typeof o.nodeName === "string"));
+  };
 
   var render_fragment = function (context) {
     var result = context.run(render_func);
@@ -61,7 +67,7 @@ Sky.ui.render = function (render_func, events, event_data) {
     if (typeof DocumentFragment !== 'undefined' ?
         result instanceof DocumentFragment : result instanceof HTMLDocument)
       frag = result;
-    else if (result instanceof Node) {
+    else if (isNode(result)) {
       frag = document.createDocumentFragment();
       frag.appendChild(result);
     } else if (result instanceof Array ||
