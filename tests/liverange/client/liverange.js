@@ -10,7 +10,7 @@ _.each(["section", "begin", "ok", "fail"], function (what) {
 
 Sky.startup(function () {
   section("Meta tests");
-  test_try_all_orders();
+  test_try_all_permutations();
 
   section("LiveRange");
   test_single();
@@ -60,6 +60,20 @@ var assert = function (expected, actual, message) {
     Results.insert({n: next_result++, type: "assert",
                     message: message || "Assert fail",
                     expected: expected, actual: actual});
+  }
+};
+
+var assert_not = function (expected, actual, message) {
+  if (!isNode(expected)) {
+    expected = JSON.stringify(expected);
+    actual = JSON.stringify(actual);
+  }
+
+  if (expected === actual) {
+    // debugger;
+    Results.insert({n: next_result++, type: "assert",
+                    message: message || "Assert fail",
+                    expected: expected, actual: actual, not: true});
   }
 };
 
@@ -173,52 +187,136 @@ var assert_contained = function (r, expected) {
   traverse(expected, actual);
 };
 
-// Given a set of functions, run them in every possible order
-// (permutation).
+// Given some functions, run them in every possible order.
 //
-// options:
-// - functions: an array of functions
-// - before: function to run before each permutation
-// - after: function to run after each permutation
+// In simplest usage, takes one argument, an array of functions. Run
+// those functions in every possible order. Or, if the first element
+// of the array is an integer N, with the remaining elements being
+// functions (N >= the number of functions), run every permutation of
+// N functions from the array.
+//
+// Eg:
+// try_all_permutations([A, B, C])
+// => runs A, B, C; A, C, B; B, A, C; B, C, A; C, A, B; C, B, A
+// (semicolons for clarity only)
+//
+// try_all_permutations([2, A, B, C])
+// => runs A, B; A, C; B, A; B, C; C, A; C, B
+//
+// If more than one argument A_1, A_2 ... A_n is passed, each should
+// be an array as described above. Compute the possible orderings O_1,
+// O_2 ... O_n per above, and run the Cartesian product of the
+// sets. (Except that unlike a proper Cartesian product, a set with
+// zero elements will simply be ignored.)
+//
+// Eg:
+// try_all_permutations([X], [A, B], [Y])
+// => runs X, A, B, Y; X, B, A, Y
+// try_all_permutations([X], [A, B], [], [Y])
+// => same
+//
+// If a function is passed instead of an array, it will be treated as
+// an array with one argument. In other words, these are the same:
+// try_all_permutations([X], [A, B], [Y])
+// try_all_permutations(X, [A, B], Y)
 
-var try_all_orders = function (options) {
-  var before = options.before || function () {};
-  var after = options.after || function () {};
+var try_all_permutations = function () {
+  var args = Array.prototype.slice.call(arguments);
 
-  var pick = function (chosen, remaining) {
-    if (remaining.length === 0) {
-      before();
+  var current_set = 0;
+  var chosen = [];
+
+  var expand_next_set = function () {
+    if (current_set === args.length) {
       _.each(chosen, function (f) { f(); });
-      after();
     } else {
+      var set = args[current_set];
+      if (typeof set === "function")
+        set = [set];
+
+      current_set++;
+      if (typeof set[0] === "number")
+        pick(set[0], set.slice(1));
+      else
+        pick(set.length, set);
+      current_set--;
+    }
+  };
+
+  var pick = function (how_many, remaining) {
+    if (how_many === 0)
+      expand_next_set();
+    else {
       for (var i = 0; i < remaining.length; i++) {
         chosen.push(remaining[i]);
-        pick(chosen, remaining.slice(0, i).concat(remaining.slice(i + 1)));
+        pick(how_many - 1,
+             remaining.slice(0, i).concat(remaining.slice(i + 1)))
         chosen.pop();
       }
     }
   };
 
-  pick([], options.functions || []);
+  expand_next_set();
 };
 
 /******************************************************************************/
 
-var test_try_all_orders = function () {
-  begin("try_all_orders");
+var test_try_all_permutations = function () {
+  begin("try_all_permutations");
+
+  // Have a good test of try_all_permutations, because it would suck
+  // if try_all_permutations didn't actually run anything and so none
+  // of our other tests actually did any testing.
 
   var out = "";
-  try_all_orders({
-    functions: [
+  try_all_permutations(
+    function () {out += ":";},
+    [
+      function () {out += "A";},
+      function () {out += "B";},
+      function () {out += "C";}
+    ],
+    function () {out += ".";}
+  );
+
+  assert(":ABC.:ACB.:BAC.:BCA.:CAB.:CBA.", out);
+
+  out = "";
+  try_all_permutations(
+    [function () {out += ":";}],
+    [
+      2,
+      function () {out += "A";},
+      function () {out += "B";},
+      function () {out += "C";}
+    ],
+    [],
+    [
+      0,
+      function () {out += "X";},
+      function () {out += "Y";},
+    ],
+    function () {out += ".";}
+  );
+
+  assert(":AB.:AC.:BA.:BC.:CA.:CB.", out);
+
+  out = "";
+  try_all_permutations(
+    [
+      2,
       function () {out += "A";},
       function () {out += "B";},
       function () {out += "C";},
+      function () {out += "D";}
     ],
-    before: function () {out += ":";},
-    after: function () {out += ".";},
-  });
-
-  assert(":ABC.:ACB.:BAC.:BCA.:CAB.:CBA.", out);
+    [
+      function () {out += "X";},
+      function () {out += "Y";},
+    ],
+    function () {out += ".";}
+  );
+  assert("ABXY.ABYX.ACXY.ACYX.ADXY.ADYX.BAXY.BAYX.BCXY.BCYX.BDXY.BDYX.CAXY.CAYX.CBXY.CBYX.CDXY.CDYX.DAXY.DAYX.DBXY.DBYX.DCXY.DCYX.", out);
 
   var test = function (n) {
     var fs = [];
@@ -227,15 +325,15 @@ var test_try_all_orders = function () {
 
     for (var i = 0; i < n; i++)
       fs.push(_.bind(function (x) { seq += x + "_"; }, null, i));
-    try_all_orders({
-      functions: fs,
-      before: function () {seq = "";},
-      after: function () {
+    try_all_permutations(
+      function () {seq = "";},
+      fs,
+      function () {
         if (seq in seen)
           throw new Error("duplicate permutation");
         seen[seq] = true;
       }
-    });
+    );
 
     var expected_count = 1;
     for (var i = n; i >= 1; i--)
@@ -245,6 +343,8 @@ var test_try_all_orders = function () {
 
   for (var i = 1; i <= 5; i++)
     test(i);
+
+  try_all_permutations();
 };
 
 /******************************************************************************/
@@ -583,40 +683,40 @@ var test_create_inner = function () {
   r_e = create("e", f.childNodes[0], f.childNodes[2]);
   assert_dump("<e><b><a><1></1></a></b><2></2><c><3></3></c></e>", f);
 
-  try_all_orders({
-    before: function () {
+  try_all_permutations(
+    function () {
       f = frag("<div id=1></div><div id=2></div><div id=3></div>");
     },
-    functions: [
+    [
       function () { create("a", f.childNodes[1], f.childNodes[2]); },
       function () { create("b", f.childNodes[2], f.childNodes[2]); },
       function () { create("c", f.childNodes[0], f.childNodes[2]); }
     ],
-    after: function () {
+    function () {
       assert_dump("<c><1></1><a><2></2><b><3></3></b></a></c>", f);
     }
-  });
+  );
 
-  try_all_orders({
-    before: function () {
+  try_all_permutations(
+    function () {
       f = frag("<div id=1></div><div id=2></div><div id=3></div>");
     },
-    functions: [
+    [
       function () { create("a", f.childNodes[0], f.childNodes[0]); },
       function () { create("b", f.childNodes[0], f.childNodes[1]); },
       function () { create("c", f.childNodes[0], f.childNodes[2]); }
     ],
-    after: function () {
+    function () {
       assert_dump("<c><b><a><1></1></a><2></2></b><3></3></c>", f);
     }
-  });
+  );
 }
 
 
 /******************************************************************************/
 
-var assert_frag = function (expected, actual) {
-  var actual_dump = '';
+var dump_frag = function (frag) {
+  var ret = '';
 
   var dump_children = function (node) {
     for (var child = node.firstChild; child; child = child.nextSibling)
@@ -625,16 +725,20 @@ var assert_frag = function (expected, actual) {
 
   var dump = function (node) {
     if (node.nodeType === 8) /* comment */
-      actual_dump += "<!---->";
+      ret += "<!---->";
     else {
-      actual_dump += '<' + node.id + '>';
+      ret += '<' + node.id + '>';
       dump_children(node);
-      actual_dump += '</' + node.id + '>';
+      ret += '</' + node.id + '>';
     }
   };
 
-  dump_children(actual);
-  assert(expected, actual_dump, "Fragments don't match");
+  dump_children(frag);
+  return ret;
+}
+
+var assert_frag = function (expected, actual) {
+  assert(expected, dump_frag(actual), "Fragments don't match");
 
   if (actual.firstChild) {
     /* XXX get Sky.ui._tag in a cleaner way */
@@ -685,22 +789,22 @@ var test_renderList = function () {
     parts.sort();
     assert_frag(parts.join(''), r);
   };
-  try_all_orders({
-    before: function () {
+  try_all_permutations(
+    function () {
       c.remove();
       parts = [];
       assert_frag("<empty></empty>", r);
     },
-    functions: [
+    [
       _.bind(do_insert, null, "D"),
       _.bind(do_insert, null, "E"),
       _.bind(do_insert, null, "F"),
       _.bind(do_insert, null, "G")
     ],
-    after: function () {
+    function () {
       assert_frag("<D></D><E></E><F></F><G></G>", r);
     }
-  });
+  );
 
   c.insert({id: "C"});
   c.insert({id: "D2"});
@@ -733,8 +837,8 @@ var test_renderList = function () {
     delete parts["<" + id + "></" + id + ">"];
     assert_frag(_.keys(parts).sort().join('') || '<empty></empty>', r);
   };
-  try_all_orders({
-    before: function () {
+  try_all_permutations(
+    function () {
       parts = {};
       _.each(["D", "E", "F", "G"], function (id) {
         c.insert({id: id});
@@ -742,16 +846,16 @@ var test_renderList = function () {
       });
       assert_frag("<D></D><E></E><F></F><G></G>", r);
     },
-    functions: [
+    [
       _.bind(do_remove, null, "D"),
       _.bind(do_remove, null, "E"),
       _.bind(do_remove, null, "F"),
       _.bind(do_remove, null, "G")
     ],
-    after: function () {
+    function () {
       assert_frag("<empty></empty>", r);
     }
-  });
+  );
 
   begin("renderList - default render empty");
 
@@ -805,15 +909,89 @@ var test_renderList = function () {
   Sky.flush();
   assert_frag("<A></A>", r);
 
+  var before_flush;
+  var should_gc;
+  var onscreen;
+  var second_is_noop;
+  try_all_permutations(
+    // Set up
+    function () {
+      c.remove();
+      c.insert({id: "A"});
+      c.insert({id: "B"});
+      r = Sky.ui.renderList(c, {
+        sort: ["id"],
+        render: function (doc) {
+          return DIV({id: doc.id});
+        }
+      });
+      assert_frag("<A></A><B></B>", r);
+      should_gc = false;
+      onscreen = null;
+      second_is_noop = false;
+    },
+    // Modify. Should not trigger GC, even though the element isn't
+    // onscreen, since a flush hasn't happened yet.
+    [1,
+     function () {c.insert({id: "C"});},
+     function () {c.update({id: "A"}, {id: "A2"});},
+     function () {c.update({id: "A"}, {id: "X"});},
+     function () {c.remove({id: "A"});}
+    ],
+    function () {
+      before_flush = dump_frag(r);
+      assert_not("<A></A><B></B>", before_flush);
+    },
+    // Possibly put onscreen.
+    [1,
+     function () {
+       onscreen = document.createElement("DIV");
+       onscreen.appendChild(r);
+       document.body.appendChild(onscreen);
+     },
+     function () { }
+    ],
+    // Possibly flush.
+    [1,
+     function () {
+       Sky.flush();
+       should_gc = !onscreen;
+     },
+     function () { }
+    ],
+    // Take a second action.
+    [1,
+     function () {c.insert({id: "D"});},
+     function () {c.update({id: "B"}, {id: "B2"});},
+     function () {c.update({id: "B"}, {id: "Y"});},
+     function () {c.remove({id: "B"});},
+     function () {second_is_noop = true;}
+    ],
+    // If GC was supposed to be triggered, make sure it actually was
+    // triggered.
+    function () {
+      if (onscreen) {
+        document.body.removeChild(onscreen);
+        while (onscreen.firstChild)
+          r.appendChild(onscreen.firstChild);
+      }
+
+      if (should_gc || second_is_noop)
+        assert_frag(before_flush, r);
+      else
+        assert_not(before_flush, dump_frag(r));
+    }
+  );
+
 
 
   /*
     - passing in an existing query
     - render_empty gets events attached
-    - correct cleanup/GC
     - moved doesn't GC, and preserves events
+    - renderlists inside other renderlists work and GC correctly
     - multiple elements in a rendered fragment
-    - flush kills it!
+    - test that entries are reactive and GC correctly
 
     - #each with a findlive handle
   */

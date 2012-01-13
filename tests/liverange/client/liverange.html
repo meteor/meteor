@@ -11,7 +11,8 @@
     {{#if type_is "assert"}}
       <div class="assert">
         {{message}}
-        <div class="expected">Expected: {{expected}}</div>
+        <div class="expected">Expected:
+          {{#if not}}Any value but{{/if}} {{expected}}</div>
         <div class="actual">Actual: {{actual}}</div>
       </div>
     {{else}}
