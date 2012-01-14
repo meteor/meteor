@@ -1157,7 +1157,6 @@ var test_renderList = function () {
       if (lengths[index] === 0)
         expected += "<!---->";
     });
-    console.log(expected);
     assert_frag(expected || "<!---->", r);
   };
   /* Consider uncommenting the 6 lines below in a "slow tests" mode */
