@@ -102,12 +102,24 @@ if (typeof Sky === "undefined") Sky = {};
   };
   var cleanup_socket = function () {
     if (socket) {
-      socket.removeAllListeners('connect');
-      socket.removeAllListeners('disconnect');
-      socket.removeAllListeners('connect_failed');
+
+      if (socket.$events) {
+        _.each(socket.$events, function (v, k) {
+          socket.removeAllListeners(k);
+        });
+      }
       socket.disconnect();
+
+      var old_socket = socket;
+      socket = undefined;
+
+      old_socket.on('connect', function () {
+        if (console) console.log("DEBUG: OLD SOCKET RECONNECTED", old_socket);
+        old_socket.disconnect();
+      });
     }
   };
+
   var disconnected = function () {
     if (connection_timer) {
       clearTimeout(connection_timer);
