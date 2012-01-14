@@ -29,9 +29,19 @@ Sky.ui._cleanup = function (what, tag) {
 Sky.ui._tag = "_liveui"; // XXX XXX
 
 Sky.ui._onscreen = function (node) {
-  return document.body.contains ?
-    document.body.contains(node) :
-    document.body.compareDocumentPosition(node) & 16;
+  // http://jsperf.com/is-element-in-the-dom
+
+  if (document.compareDocumentPosition)
+    return document.compareDocumentPosition(node) & 16;
+  else {
+    if (node.nodeType !== 1 /* Element */)
+      /* contains() doesn't work reliably on non-Elements. Fine on
+         Chrome, not so much on Safari and IE. */
+      node = node.parentNode;
+    /* contains() exists on document on Chrome, but only on
+       document.body on some other browsers. */
+    return document.body.contains(node);
+  }
 };
 
 /// OLD COMMENT, REWRITE (XXX):
