@@ -95,6 +95,27 @@ index ee2bf49..a68f9cb 100644
  Manager.prototype.__proto__ = EventEmitter.prototype
 EOF
 
+# Patch an issue already fixed in socket.io master, but not released yet.
+# https://github.com/LearnBoost/socket.io-client/commit/7155d84af997dcfca418568dfcc778263926d7b2
+cd "$DIR/lib/node_modules/socket.io/node_modules/socket.io-client"
+patch -p1 <<EOF
+diff --git a/lib/socket.js b/lib/socket.js
+index 0f1b1c7..932beaa 100644
+--- a/lib/socket.js
++++ b/lib/socket.js
+@@ -405,7 +405,7 @@
+   Socket.prototype.onError = function (err) {
+     if (err && err.advice) {
+-      if (err.advice === 'reconnect' && this.connected) {
++      if (this.options.reconnect && err.advice === 'reconnect' && this.connected) {
+         this.disconnect();
+         this.reconnect();
+       }
+EOF
+# rebuild
+make build
+
+
 echo BUNDLING
 
 cd "$DIR"
