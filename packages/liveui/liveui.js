@@ -5,10 +5,13 @@ Sky.ui = Sky.ui || {};
 // the range tag to operate on. In the latter case, the range itself
 // will be destroyed along with its subranges.
 Sky.ui._cleanup = function (what, tag) {
+  var ranges = [];
+
   if (typeof what === 'object' && what.nodeType === 11 /* DocumentFragment */)
     what = new Sky.ui._LiveRange(tag, what.firstChild, what.lastChild);
+  else
+    ranges.push(what);
 
-  var ranges = [];
   what.visit(function (is_start, range) {
     if (is_start)
       ranges.push(range);

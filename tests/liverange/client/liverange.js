@@ -735,6 +735,8 @@ var dump_frag = function (frag) {
   return ret;
 }
 
+// if passed a node instead of a fragment, dump its children. turns
+// out to be handy.
 var assert_frag = function (expected, actual) {
   assert(expected, dump_frag(actual), "Fragments don't match");
 
@@ -943,7 +945,7 @@ var test_renderList = function () {
     // Possibly put onscreen.
     [1,
      function () {
-       onscreen = document.createElement("DIV");
+       onscreen = DIV({style: "display: none;"});
        onscreen.appendChild(r);
        document.body.appendChild(onscreen);
      },
@@ -968,17 +970,248 @@ var test_renderList = function () {
     // If GC was supposed to be triggered, make sure it actually was
     // triggered.
     function () {
-      if (onscreen) {
-        document.body.removeChild(onscreen);
-        while (onscreen.firstChild)
-          r.appendChild(onscreen.firstChild);
-      }
-
       if (should_gc || second_is_noop)
-        assert_frag(before_flush, r);
+        assert_frag(before_flush, onscreen || r);
       else
-        assert_not(before_flush, dump_frag(r));
+        assert_not(before_flush, dump_frag(onscreen || r));
+
+      if (onscreen)
+        document.body.removeChild(onscreen);
     }
+  );
+
+  begin("renderList - list items are reactive");
+
+  var weather = {here: "cloudy", there: "cloudy"};
+  var weather_listeners = {here: {}, there: {}};
+  var get_weather = function (where) {
+    var context = Sky.deps.Context.current;
+    if (context && !(context.id in weather_listeners[where])) {
+      weather_listeners[where][context.id] = context;
+      context.on_invalidate(function (old_context) {
+        delete weather_listeners[where][old_context.id];
+      });
+    }
+    return weather[where];
+  };
+  var set_weather = function (where, what) {
+    weather[where] = what;
+    for (id in weather_listeners[where])
+      weather_listeners[where][id].invalidate();
+  };
+
+  Sky.flush();
+  var render_count = 0;
+  c.remove();
+  r = Sky.ui.renderList(c, {
+    sort: ["id"],
+    render: function (doc) {
+      render_count++;
+      if (doc.want_weather)
+        return DIV({id: doc.id + "_" + get_weather(doc.want_weather)});
+      else
+        return DIV({id: doc.id});
+    }
+  });
+  onscreen = DIV({style: "display: none;"});
+  onscreen.appendChild(r);
+  document.body.appendChild(onscreen);
+
+  assert(0, render_count);
+  c.insert({id: "A", want_weather: "here"});
+  assert(1, render_count);
+  assert_frag("<A_cloudy></A_cloudy>", onscreen);
+
+  c.insert({id: "B", want_weather: "here"});
+  assert(2, render_count);
+  assert(2, _.keys(weather_listeners.here).length);
+  assert_frag("<A_cloudy></A_cloudy><B_cloudy></B_cloudy>", onscreen);
+
+  c.insert({id: "C"});
+  assert(3, render_count);
+  assert(2, _.keys(weather_listeners.here).length);
+  assert_frag("<A_cloudy></A_cloudy><B_cloudy></B_cloudy><C></C>", onscreen);
+
+  c.update({id: "B"}, {$set: {id: "B2"}});
+  assert(4, render_count);
+  assert(3, _.keys(weather_listeners.here).length);
+  assert_frag("<A_cloudy></A_cloudy><B2_cloudy></B2_cloudy><C></C>", onscreen);
+
+  Sky.flush();
+  assert(4, render_count);
+  assert(2, _.keys(weather_listeners.here).length);
+  assert_frag("<A_cloudy></A_cloudy><B2_cloudy></B2_cloudy><C></C>", onscreen);
+
+  c.update({id: "B2"}, {$set: {id: "D"}});
+  assert(5, render_count); // move doesn't rerender
+  assert(3, _.keys(weather_listeners.here).length);
+  assert_frag("<A_cloudy></A_cloudy><C></C><D_cloudy></D_cloudy>", onscreen);
+
+  Sky.flush();
+  assert(5, render_count);
+  assert(2, _.keys(weather_listeners.here).length);
+  assert_frag("<A_cloudy></A_cloudy><C></C><D_cloudy></D_cloudy>", onscreen);
+
+  set_weather("here", "sunny");
+  assert(5, render_count);
+  assert(2, _.keys(weather_listeners.here).length);
+  assert_frag("<A_cloudy></A_cloudy><C></C><D_cloudy></D_cloudy>", onscreen);
+
+  Sky.flush();
+  assert(7, render_count);
+  assert(2, _.keys(weather_listeners.here).length);
+  assert_frag("<A_sunny></A_sunny><C></C><D_sunny></D_sunny>", onscreen);
+
+  c.remove({id: "A"});
+  assert(7, render_count);
+  assert(2, _.keys(weather_listeners.here).length);
+  assert_frag("<C></C><D_sunny></D_sunny>", onscreen);
+
+  Sky.flush();
+  assert(7, render_count);
+  assert(1, _.keys(weather_listeners.here).length);
+  assert(0, _.keys(weather_listeners.there).length);
+  assert_frag("<C></C><D_sunny></D_sunny>", onscreen);
+
+  c.insert({id: "F", want_weather: "there"});
+  assert(8, render_count);
+  assert(1, _.keys(weather_listeners.here).length);
+  assert(1, _.keys(weather_listeners.there).length);
+  assert_frag("<C></C><D_sunny></D_sunny><F_cloudy></F_cloudy>", onscreen);
+
+  r.appendChild(onscreen); // take offscreen
+  Sky.flush();
+  assert(8, render_count);
+  assert(1, _.keys(weather_listeners.here).length);
+  assert(1, _.keys(weather_listeners.there).length);
+  assert_frag("<C></C><D_sunny></D_sunny><F_cloudy></F_cloudy>", onscreen);
+
+  // it's offscreen, but it wasn't taken off through a mechanism that
+  // calls Sky.ui._cleanup, so we take the slow GC path. the entries
+  // will notice as they get invalidated, but the list won't notice
+  // until it has a structure change (at which point any remaining
+  // entries will get torn down too.)
+  set_weather("here", "ducky");
+  Sky.flush();
+  assert(8, render_count);
+  assert(0, _.keys(weather_listeners.here).length);
+  assert(1, _.keys(weather_listeners.there).length);
+  assert_frag("<C></C><D_sunny></D_sunny><F_cloudy></F_cloudy>", onscreen);
+
+  c.insert({id: "E"});
+  // insert renders the doc -- it has to, since renderList GC happens
+  // only on flush
+  assert(9, render_count);
+  assert(0, _.keys(weather_listeners.here).length);
+  assert(1, _.keys(weather_listeners.there).length);
+  assert_frag("<C></C><D_sunny></D_sunny><E></E><F_cloudy></F_cloudy>", onscreen);
+
+  Sky.flush();
+  assert(9, render_count);
+  assert(0, _.keys(weather_listeners.here).length);
+  assert(0, _.keys(weather_listeners.there).length);
+  assert_frag("<C></C><D_sunny></D_sunny><E></E><F_cloudy></F_cloudy>", onscreen);
+
+  c.insert({id: "G"});
+  Sky.flush();
+  assert(9, render_count);
+  assert(0, _.keys(weather_listeners.here).length);
+  assert(0, _.keys(weather_listeners.there).length);
+  assert_frag("<C></C><D_sunny></D_sunny><E></E><F_cloudy></F_cloudy>", onscreen);
+
+  begin("renderList - multiple elements in an item");
+
+  var lengths = [];
+  var present, changed, moved;
+  var mode;
+  var update = function (index) {
+    if (mode === "add") {
+      c.insert({index: index, moved: 0});
+      present[index] = true;
+    }
+    else if (mode === "remove") {
+      c.remove({index: index});
+      present[index] = false;
+    }
+    else if (mode === "change") {
+      c.update({index: index}, {$set: {changed: true}});
+      changed[index] = true;
+    }
+    else if (mode === "move") {
+      c.update({index: index}, {$set: {moved: 1}});
+      moved[index] = true;
+    }
+
+    var parts = {}
+    for (var i = 0; i < 3; i++) {
+      if (present[i])
+        parts[(moved[i] ? "1_" : "0_") + i] = i;
+    }
+    var expected = "";
+    _.each(_.keys(parts).sort(), function (key) {
+      var index = parts[key];
+      for (var i = 0; i < lengths[index]; i++) {
+        var id = index + "_" + i + (changed[index] ? "B" : "");
+        expected += "<" + id + "></" + id + ">";
+      }
+      if (lengths[index] === 0)
+        expected += "<!---->";
+    });
+    console.log(expected);
+    assert_frag(expected || "<!---->", r);
+  };
+  /* Consider uncommenting the 6 lines below in a "slow tests" mode */
+  try_all_permutations(
+    [1,
+//     function () {lengths[0] = 0;},
+     function () {lengths[0] = 1;},
+//     function () {lengths[0] = 2;},
+     function () {lengths[0] = 3;}
+    ],
+    [1,
+//     function () {lengths[1] = 0;},
+//     function () {lengths[1] = 1;},
+     function () {lengths[1] = 2;},
+     function () {lengths[1] = 3;}
+    ],
+    [1,
+//     function () {lengths[2] = 0;},
+     function () {lengths[2] = 1;},
+     function () {lengths[2] = 2;},
+//     function () {lengths[2] = 3;}
+    ],
+    [1,
+     function () {mode = "add";},
+     function () {mode = "remove";},
+     function () {mode = "change";},
+     function () {mode = "move";}
+    ],
+    function () {
+      c.remove();
+      Sky.flush();
+      r = Sky.ui.renderList(c, {
+        sort: ["moved", "index"],
+        render: function (doc) {
+          var ret = [];
+          for (var i = 0; i < lengths[doc.index]; i++)
+            ret.push(DIV({id: doc.index + "_" + i + (doc.changed ? "B" : "")}));
+          return ret;
+        }
+      });
+
+      present = mode === "add" ? [false, false, false] : [true, true, true];
+      changed = [false, false, false];
+      moved = [false, false, false];
+      if (mode !== "add") {
+        for (var i = 0; i < 3; i++)
+          c.insert({index: i, moved: 0});
+      }
+    },
+    [
+      _.bind(update, null, 0),
+      _.bind(update, null, 1),
+      _.bind(update, null, 2)
+    ]
   );
 
 
@@ -986,10 +1219,8 @@ var test_renderList = function () {
   /*
     - passing in an existing query
     - render_empty gets events attached
-    - moved doesn't GC, and preserves events
+    - moved preserves events
     - renderlists inside other renderlists work and GC correctly
-    - multiple elements in a rendered fragment
-    - test that entries are reactive and GC correctly
 
     - #each with a findlive handle
   */
