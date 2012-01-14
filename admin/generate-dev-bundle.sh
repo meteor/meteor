@@ -2,7 +2,7 @@
 
 set -e
 
-BUNDLE_VERSION=0.0.5
+BUNDLE_VERSION=0.0.6
 UNAME=$(uname)
 
 if [ "$UNAME" == "Linux" ] ; then
