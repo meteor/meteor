@@ -724,6 +724,10 @@ var dump_frag = function (frag) {
   var dump = function (node) {
     if (node.nodeType === 8) /* comment */
       ret += "<!---->";
+    else if (node.nodeType === 3) { /* text */
+      // strip whitespace. note, no entity escaping
+      ret += node.nodeValue.replace(/^\s+|\s+$/g, "");
+    }
     else {
       ret += '<' + node.id + '>';
       dump_children(node);
@@ -1213,14 +1217,66 @@ var test_renderList = function () {
     ]
   );
 
+  begin("renderList - #each");
 
+  c.remove();
+  var render_count = 0;
+
+  _.extend(Template.test_renderList_each, {
+    render_count: function () {
+      return render_count++;
+    },
+    weather: function (where) {
+      return get_weather(where);
+    },
+    data: function () {
+      return c.findLive({x: {$lt: 5}}, {sort: ["x"]});
+    },
+    data2: function () {
+      return c.findLive({x: {$gt: 5}}, {sort: ["x"]});
+    }
+  });
+
+  onscreen = DIV({style: "display: none;"});
+  onscreen.appendChild(Template.test_renderList_each());
+  document.body.appendChild(onscreen);
+
+  assert_frag("Before0<!---->MiddleElseAfter", onscreen);
+  assert(0, _.keys(weather_listeners.here).length);
+
+  c.insert({x: 2, name: "A"});
+  assert_frag("Before0AduckyMiddleElseAfter", onscreen);
+  assert(1, _.keys(weather_listeners.here).length);
+
+  c.insert({x: 3, name: "B"});
+  assert_frag("Before0AduckyBduckyMiddleElseAfter", onscreen);
+  assert(2, _.keys(weather_listeners.here).length);
+
+  set_weather("here", "clear");
+  assert_frag("Before0AduckyBduckyMiddleElseAfter", onscreen);
+  assert(2, _.keys(weather_listeners.here).length);
+  Sky.flush();
+  assert_frag("Before0AclearBclearMiddleElseAfter", onscreen);
+  assert(2, _.keys(weather_listeners.here).length);
+
+  c.update({x: 3}, {$set: {x: 8}});
+  assert_frag("Before0AclearMiddleBAfter", onscreen);
+  assert(2, _.keys(weather_listeners.here).length);
+  Sky.flush();
+  assert(1, _.keys(weather_listeners.here).length);
+
+  c.update({}, {$set: {x: 5}});
+  assert_frag("Before0<!---->MiddleElseAfter", onscreen);
+  assert(1, _.keys(weather_listeners.here).length);
+  Sky.flush();
+  assert(0, _.keys(weather_listeners.here).length);
+
+  document.body.removeChild(onscreen);
 
   /*
     - passing in an existing query
     - render_empty gets events attached
     - moved preserves events
     - renderlists inside other renderlists work and GC correctly
-
-    - #each with a findlive handle
   */
 };
