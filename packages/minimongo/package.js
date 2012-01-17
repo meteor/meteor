@@ -6,6 +6,7 @@ Package.describe({
 // It would be sort of nice if minimongo didn't depend on underscore,
 // so we could ship it separately.
 Package.require('underscore');
+Package.require('json');
 
 Package.client_file('minimongo.js');
 Package.client_file('selector.js');

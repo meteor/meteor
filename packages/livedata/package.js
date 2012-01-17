@@ -3,6 +3,7 @@ Package.describe({
   internal: true
 });
 
+Package.require('json');
 Package.require('underscore');
 Package.require('session');
 Package.require('minimongo');
