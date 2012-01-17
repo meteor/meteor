@@ -91,7 +91,7 @@ Collection.prototype.find = function (selector, options) {
       removed: invalidate,
       changed: invalidate,
       moved: invalidate,
-      _suppress_initial: true,
+      _suppress_initial: true
     });
 
     var live_handle = self.findLive(selector, new_options);

@@ -43,36 +43,31 @@ Template.results.type_is = function (arg) {
   return this.type === arg;
 };
 
-var assert = function (expected, actual, message) {
+var assert = function (expected, actual, message, not) {
   /* If expected is a DOM node, do a literal '===' comparison with
    * actual. Otherwise compare the JSON stringifications of expected
    * and actual. (It's no good to stringify a DOM node. Circular
    * references, to start with..) */
-  if (!(typeof expected === "object" && expected.nodeType)) {
+  if (typeof expected === "object" && expected.nodeType) {
+    var matched = expected === actual;
+    expected = "[Node]";
+    actual = "[Unknown]";
+  } else {
     expected = JSON.stringify(expected);
     actual = JSON.stringify(actual);
+    var matched = expected === actual;
   }
 
-  if (expected !== actual) {
+  if (matched === !!not) {
     // debugger;
     Results.insert({n: next_result++, type: "assert",
                     message: message || "Assert fail",
-                    expected: expected, actual: actual});
+                    expected: expected, actual: actual, not: !!not});
   }
 };
 
 var assert_not = function (expected, actual, message) {
-  if (!(typeof expected === "object" && expected.nodeType)) {
-    expected = JSON.stringify(expected);
-    actual = JSON.stringify(actual);
-  }
-
-  if (expected === actual) {
-    // debugger;
-    Results.insert({n: next_result++, type: "assert",
-                    message: message || "Assert fail",
-                    expected: expected, actual: actual, not: true});
-  }
+  assert(expected, actual, message, true);
 };
 
 var create = function (id, start, end, inner, tag) {

@@ -2,7 +2,6 @@
 
 Sky.ui = Sky.ui || {};
 
-// XXX maybe take out of funtion(){}() -- unnecessary at the moment
 (function () {
   // XXX correct namespace? should probably be private to package, actually..
 
@@ -67,12 +66,8 @@ Sky.ui = Sky.ui || {};
   // and end are the first and last child of their parent respectively
   // or when caller is building up the range tree from the inside
   // out. let's wait for the profiler to tell us to add this.
-  var expandos_supported_on_text_nodes;
   Sky.ui._LiveRange = function (tag, start, end, inner) {
-    if ((typeof Document !== 'undefined' && start instanceof Document) ||
-        (typeof HTMLDocument !== 'undefined' && start instanceof HTMLDocument) ||
-        (typeof DocumentFragment !== 'undefined' && start instanceof DocumentFragment))
-    {
+    if (start.nodeType === 11 /* DocumentFragment */) {
       end = start.lastChild;
       start = start.firstChild;
     }
@@ -194,16 +189,35 @@ Sky.ui = Sky.ui || {};
   };
 
   Sky.ui._LiveRange.prototype._ensure_tags = function (nodes) {
-    for (var i = 0; i < nodes.length; i++)
+    for (var i = 0; i < nodes.length; i++) {
       if (!(this.tag in nodes[i]))
         nodes[i][this.tag] = [[], []];
+    }
   };
 
+  var can_delete_expandos;
   Sky.ui._LiveRange.prototype._clean_tags = function (nodes) {
+    // IE7 can't remove expando attributes from DOM nodes with
+    // delete. Instead you must remove them with node.removeAttribute.
+    if (can_delete_expandos === undefined) {
+      var node = document.createElement("DIV");
+      var exception;
+      can_delete_expandos = false;
+      try {
+        node.test = 12;
+        delete node.test;
+        can_delete_expandos = true;
+      } catch (exception) { }
+    }
+
     for (var i = 0; i < nodes.length; i++) {
       var data = nodes[i][this.tag];
-      if (data && !(data[0].length + data[1].length))
-        delete nodes[i][this.tag];
+      if (data && !(data[0].length + data[1].length)) {
+        if (can_delete_expandos)
+          delete nodes[i][this.tag];
+        else
+          nodes[i].removeAttribute(this.tag);
+      }
     }
   };
 
