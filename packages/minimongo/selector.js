@@ -280,7 +280,7 @@ Collection._exprForSelector = function (selector, literals) {
   for (var key in selector) {
     var value = selector[key];
 
-    if (key[0] === '$') {
+    if (key.substr(0, 1) === '$') { // no indexing into strings on IE7
       // whole-document predicate like {$or: [{x: 12}, {y: 12}]}
       clauses.push(Collection._exprForDocumentPredicate(key, value, literals));
     } else {
@@ -356,7 +356,7 @@ Collection._exprForKeypathPredicate = function (keypath, value, literals) {
     // is it a literal document or a bunch of $-expressions?
     var is_literal = true;
     for (var k in value) {
-      if (k[0] === '$') {
+      if (k.substr(0, 1) === '$') { // no indexing into strings on IE7
         is_literal = false;
         break;
       }

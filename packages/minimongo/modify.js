@@ -8,7 +8,10 @@
 Collection._modify = function (doc, mod) {
   var is_modifier = false;
   for (var k in mod) {
-    is_modifier = (k[0] === '$');
+    // IE7 doesn't support indexing into strings (eg, k[0]), so use substr.
+    // Too bad -- it's far slower:
+    // http://jsperf.com/testing-the-first-character-of-a-string
+    is_modifier = k.substr(0, 1) === '$';
     break; // just check the first key.
   }
 
@@ -20,7 +23,7 @@ Collection._modify = function (doc, mod) {
 
     // replace the whole document
     for (var k in mod) {
-      if (k[0] === '$')
+      if (k.substr(0, 1) === '$')
         throw Error("Field name may not start with '$'");
       if (/\./.test(k))
         throw Error("Field name may not contain '.'");
