@@ -12,7 +12,36 @@ Sky.ui = Sky.ui || {};
   // Possible extension: could allow zero-length ranges is some cases,
   // by encoding both 'enter' and 'leave' type events in the same list
 
+  Sky.ui._wrap_endpoints = function (start, end) {
+    // IE8 and earlier don't support expando attributes on text nodes,
+    // but fortunately they are OK on comments.
+    var test_elt = document.createTextNode("");
+    var exception;
+    try {
+      test_elt.test = 123;
+    } catch (exception) { }
 
+    Sky.ui._wrap_endpoints = (test_elt.test === 123) ?
+      function (start, end) {
+        return [start, end];
+      } :
+    function (start, end) {
+      // IE8 workaround: insert some empty comments.
+      if (start.nodeType === 3 /* text node */) {
+        var placeholder = document.createComment("");
+        start.parentNode.insertBefore(placeholder, start);
+        start = placeholder;
+      }
+      if (end.nodeType === 3 /* text node */) {
+        var placeholder = document.createComment("");
+        end.parentNode.insertBefore(placeholder, end.nextSibling);
+        end = placeholder;
+      }
+      return [start, end];
+    };
+
+    return Sky.ui._wrap_endpoints(start, end);
+  };
 
   // can also pass just one node, or a document/documentfragment
 
@@ -38,6 +67,7 @@ Sky.ui = Sky.ui || {};
   // and end are the first and last child of their parent respectively
   // or when caller is building up the range tree from the inside
   // out. let's wait for the profiler to tell us to add this.
+  var expandos_supported_on_text_nodes;
   Sky.ui._LiveRange = function (tag, start, end, inner) {
     if ((typeof Document !== 'undefined' && start instanceof Document) ||
         (typeof HTMLDocument !== 'undefined' && start instanceof HTMLDocument) ||
@@ -48,9 +78,13 @@ Sky.ui = Sky.ui || {};
     }
     end = end || start;
 
+    var endpoints = Sky.ui._wrap_endpoints(start, end);
+    start = endpoints[0];
+    end = endpoints[1];
+
     // XXX 'this.tag' is public for reading. document it.
-    this.tag = tag;
-    this._ensure_tags([start, end]);
+    this.tag = tag; // must be set before calling _ensure_tags
+    this._ensure_tags(endpoints);
 
     // Decide at what indices in start[tag][0] and end[tag][1] we
     // should insert the new range.
@@ -278,9 +312,12 @@ Sky.ui = Sky.ui || {};
     this._clean_tags([this._start, this._end]);
 
     // Insert new fragment
-    var new_start = new_frag.firstChild;
-    var new_end = new_frag.lastChild;
-    this._ensure_tags([new_start, new_end]);
+
+    var new_endpoints = Sky.ui._wrap_endpoints(new_frag.firstChild,
+                                               new_frag.lastChild);
+    var new_start = new_endpoints[0];
+    var new_end = new_endpoints[1];
+    this._ensure_tags(new_endpoints);
     this._start.parentNode.insertBefore(new_frag, this._start);
 
     // Pull out departing fragment

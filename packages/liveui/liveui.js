@@ -38,6 +38,10 @@ Sky.ui._onscreen = function (node) {
       /* contains() doesn't work reliably on non-Elements. Fine on
          Chrome, not so much on Safari and IE. */
       node = node.parentNode;
+    if (node.nodeType === 11 /* DocumentFragment */ ||
+        node.nodeType === 9 /* Document */)
+      /* contains() chokes on DocumentFragments on IE8 */
+      return node === document;
     /* contains() exists on document on Chrome, but only on
        document.body on some other browsers. */
     return document.body.contains(node);

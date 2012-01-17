@@ -43,14 +43,12 @@ Template.results.type_is = function (arg) {
   return this.type === arg;
 };
 
-var isNode = function (o) {
-  return (typeof Node === "object" ? o instanceof Node :
-          (typeof o === "object" && typeof o.nodeType === "number" &&
-           typeof o.nodeName==="string"));
-};
-
 var assert = function (expected, actual, message) {
-  if (!isNode(expected)) {
+  /* If expected is a DOM node, do a literal '===' comparison with
+   * actual. Otherwise compare the JSON stringifications of expected
+   * and actual. (It's no good to stringify a DOM node. Circular
+   * references, to start with..) */
+  if (!(typeof expected === "object" && expected.nodeType)) {
     expected = JSON.stringify(expected);
     actual = JSON.stringify(actual);
   }
@@ -64,7 +62,7 @@ var assert = function (expected, actual, message) {
 };
 
 var assert_not = function (expected, actual, message) {
-  if (!isNode(expected)) {
+  if (!(typeof expected === "object" && expected.nodeType)) {
     expected = JSON.stringify(expected);
     actual = JSON.stringify(actual);
   }
@@ -741,8 +739,19 @@ var dump_frag = function (frag) {
 
 // if passed a node instead of a fragment, dump its children. turns
 // out to be handy.
-var assert_frag = function (expected, actual) {
-  assert(expected, dump_frag(actual), "Fragments don't match");
+//
+// if expected includes '~', it will be interpreted to mean "either
+// <!----> or nothing". this is useful because LiveRange is sometimes
+// forced to insert placeholder comments on older versions of IE.
+var assert_frag = function (expected, actual_frag) {
+  var expected1 = expected.replace(/~/g, "");
+  var expected2 = expected.replace(/~/g, "<!---->");
+  var actual = dump_frag(actual_frag);
+
+  if (actual !== expected1 && actual !== expected2)
+    Results.insert({n: next_result++, type: "assert",
+                    message: "Fragment doesn't match pattern",
+                    expected: expected, actual: actual});
 
   if (actual.firstChild) {
     /* XXX get Sky.ui._tag in a cleaner way */
@@ -795,11 +804,11 @@ var test_render = function () {
     return $('<div id="f"></div><div id="g"></div>');
   }));
 
-  assert_frag("hi", Sky.ui.render(function () {
+  assert_frag("~hi~", Sky.ui.render(function () {
     return document.createTextNode("hi");
   }));
 
-  assert_frag("igloo", Sky.ui.render(function () {
+  assert_frag("~igloo~", Sky.ui.render(function () {
     return "igloo";
   }));
 
@@ -815,14 +824,14 @@ var test_render = function () {
     return get_weather("here");
   });
   assert(1, _.keys(weather_listeners.here).length);
-  assert_frag("cloudy", r);
+  assert_frag("~cloudy~", r);
 
   set_weather("here", "icy");
   assert(1, _.keys(weather_listeners.here).length);
-  assert_frag("cloudy", r);
+  assert_frag("~cloudy~", r);
   Sky.flush(); // not onscreen -- gets GC'd
   assert(0, _.keys(weather_listeners.here).length);
-  assert_frag("cloudy", r);
+  assert_frag("~cloudy~", r);
 
   r = Sky.ui.render(function () {
     return get_weather("here");
@@ -831,15 +840,15 @@ var test_render = function () {
   onscreen.appendChild(r);
   document.body.appendChild(onscreen);
 
-  assert_frag("icy", onscreen);
+  assert_frag("~icy~", onscreen);
   assert(1, _.keys(weather_listeners.here).length);
 
   set_weather("here", "vanilla");
   assert(1, _.keys(weather_listeners.here).length);
-  assert_frag("icy", onscreen);
+  assert_frag("~icy~", onscreen);
   Sky.flush();
   assert(1, _.keys(weather_listeners.here).length);
-  assert_frag("vanilla", onscreen);
+  assert_frag("~vanilla~", onscreen);
 
   document.body.removeChild(onscreen);
   Sky.flush();
@@ -849,15 +858,15 @@ var test_render = function () {
   document.body.appendChild(onscreen);
   Sky.flush();
   assert(1, _.keys(weather_listeners.here).length);
-  assert_frag("curious", onscreen);
+  assert_frag("~curious~", onscreen);
 
   document.body.removeChild(onscreen);
   set_weather("here", "penguins");
   assert(1, _.keys(weather_listeners.here).length);
-  assert_frag("curious", onscreen);
+  assert_frag("~curious~", onscreen);
   Sky.flush();
   assert(0, _.keys(weather_listeners.here).length);
-  assert_frag("curious", onscreen);
+  assert_frag("~curious~", onscreen);
 
   begin("render - recursive");
   set_weather("there", "wet");
@@ -876,7 +885,7 @@ var test_render = function () {
     })
   ]);
   document.body.appendChild(onscreen);
-  assert_frag("<outer>penguinswet</outer>", onscreen);
+  assert_frag("<outer>penguins~wet~</outer>", onscreen);
   assert(1, outer_count);
   assert(1, inner_count);
   assert(1, _.keys(weather_listeners.here).length);
@@ -884,7 +893,7 @@ var test_render = function () {
 
   set_weather("there", "dry");
   Sky.flush();
-  assert_frag("<outer>penguinsdry</outer>", onscreen);
+  assert_frag("<outer>penguins~dry~</outer>", onscreen);
   assert(1, outer_count);
   assert(2, inner_count);
   assert(1, _.keys(weather_listeners.here).length);
@@ -892,7 +901,7 @@ var test_render = function () {
 
   set_weather("here", "chocolate");
   Sky.flush();
-  assert_frag("<outer>chocolatedry</outer>", onscreen);
+  assert_frag("<outer>chocolate~dry~</outer>", onscreen);
   assert(2, outer_count);
   assert(3, inner_count);
   assert(1, _.keys(weather_listeners.here).length);
@@ -904,7 +913,7 @@ var test_render = function () {
   assert(1, _.keys(weather_listeners.there).length);
   document.body.appendChild(onscreen);
   Sky.flush();
-  assert_frag("<outer>chocolatemelting</outer>", onscreen);
+  assert_frag("<outer>chocolate~melting~</outer>", onscreen);
   assert(2, outer_count);
   assert(4, inner_count);
   assert(1, _.keys(weather_listeners.here).length);
@@ -913,7 +922,7 @@ var test_render = function () {
   document.body.removeChild(onscreen);
   set_weather("here", "silent");
   Sky.flush();
-  assert_frag("<outer>chocolatemelting</outer>", onscreen);
+  assert_frag("<outer>chocolate~melting~</outer>", onscreen);
   assert(2, outer_count);
   assert(4, inner_count);
   assert(0, _.keys(weather_listeners.here).length);
@@ -949,39 +958,47 @@ var test_render = function () {
         })
       ];
     }, {
-      "aaa": function (e) {
+      "click": function (e) {
         assert(this.x, 12);
-        evts += "a" + e.originalEvent.y;
+        evts += "a" + e.originalEvent.data;
       },
-      "bbb #outer": function (e) {
+      "mousedown #outer": function (e) {
         assert(this.x, 12);
-        evts += "b" + e.originalEvent.y;
+        evts += "b" + e.originalEvent.data;
       },
-      "ccc #inner1": function (e) {
+      "mouseup #inner1": function (e) {
         assert(this.x, 12);
-        evts += "c1" + e.originalEvent.y;
+        evts += "c1" + e.originalEvent.data;
       },
-      "ccc #inner2": function (e) {
+      "mouseup #inner2": function (e) {
         assert(this.x, 12);
-        evts += "c2" + e.originalEvent.y;
+        evts += "c2" + e.originalEvent.data;
       },
-      "ddd, eee #inner2": function (e) {
+      "keypress, keydown #inner2": function (e) {
         assert(this.x, 12);
-        evts += "de" + e.originalEvent.y;
+        evts += "de" + e.originalEvent.data;
       },
-      "fff #wrapper": function (e) {
+      "keyup #wrapper": function (e) {
         assert(this.x, 12);
-        evts += "f" + e.originalEvent.y;
+        evts += "f" + e.originalEvent.data;
       }
     }, {x : 12})
   ]);
   document.body.appendChild(onscreen);
 
   var simulate = function (node, event, args) {
-    var e = document.createEvent("Event");
-    e.initEvent(event, true, true);
-    _.extend(e, args);
-    (node instanceof $ ? node[0] : node).dispatchEvent(e);
+    node = (node instanceof $ ? node[0] : node);
+
+    if (document.createEvent) {
+      var e = document.createEvent("Event");
+      e.initEvent(event, true, true);
+      _.extend(e, args);
+      node.dispatchEvent(e);
+    } else {
+      var e = document.createEventObject();
+      _.extend(e, args);
+      node.fireEvent("on" + event, e);
+    }
   };
 
   var test  = function (expected, id, event, args) {
@@ -991,31 +1008,31 @@ var test_render = function () {
   }
 
   var main_event_tests = function () {
-    test('a0', 'inner1', 'aaa', {y: 0});
-    test('a1', 'inner2', 'aaa', {y: 1});
-    test('a2', 'outer', 'aaa', {y: 2});
-    test('a3', 'wrapper', 'aaa', {y: 3});
-    test('b4', 'inner1', 'bbb', {y: 4});
-    test('b5', 'inner2', 'bbb', {y: 5});
-    test('b6', 'outer', 'bbb', {y: 6});
-    test('', 'wrapper', 'bbb', {y: 7});
-    test('c18', 'inner1', 'ccc', {y: 8});
-    test('c29', 'inner2', 'ccc', {y: 9});
-    test('', 'outer', 'ccc', {y: 10});
-    test('', 'wrapper', 'ccc', {y: 11});
-    test('de12', 'inner1', 'ddd', {y: 12});
-    test('de13', 'inner2', 'ddd', {y: 13});
-    test('de14', 'outer', 'ddd', {y: 14});
-    test('de15', 'wrapper', 'ddd', {y: 15});
-    test('', 'inner1', 'eee', {y: 16});
-    test('de17', 'inner2', 'eee', {y: 17});
-    test('', 'outer', 'eee', {y: 18});
-    test('', 'wrapper', 'eee', {y: 19});
-    test('', 'inner1', 'fff', {y: 20});
-    test('', 'inner2', 'fff', {y: 21});
-    test('', 'outer', 'fff', {y: 22});
+    test('a0', 'inner1', 'click', {data: 0});
+    test('a1', 'inner2', 'click', {data: 1});
+    test('a2', 'outer', 'click', {data: 2});
+    test('a3', 'wrapper', 'click', {data: 3});
+    test('b4', 'inner1', 'mousedown', {data: 4});
+    test('b5', 'inner2', 'mousedown', {data: 5});
+    test('b6', 'outer', 'mousedown', {data: 6});
+    test('', 'wrapper', 'mousedown', {data: 7});
+    test('c18', 'inner1', 'mouseup', {data: 8});
+    test('c29', 'inner2', 'mouseup', {data: 9});
+    test('', 'outer', 'mouseup', {data: 10});
+    test('', 'wrapper', 'mouseup', {data: 11});
+    test('de12', 'inner1', 'keypress', {data: 12});
+    test('de13', 'inner2', 'keypress', {data: 13});
+    test('de14', 'outer', 'keypress', {data: 14});
+    test('de15', 'wrapper', 'keypress', {data: 15});
+    test('', 'inner1', 'keydown', {data: 16});
+    test('de17', 'inner2', 'keydown', {data: 17});
+    test('', 'outer', 'keydown', {data: 18});
+    test('', 'wrapper', 'keydown', {data: 19});
+    test('', 'inner1', 'keyup', {data: 20});
+    test('', 'inner2', 'keyup', {data: 21});
+    test('', 'outer', 'keyup', {data: 22});
     // XXX expected failure -- selectors will never match top-level nodes
-    // test('f23', 'wrapper', 'fff', {y: 23});
+    // test('f23', 'wrapper', 'keyup', {data: 23});
   };
   main_event_tests();
 
@@ -1025,8 +1042,8 @@ var test_render = function () {
 
   // XXX expected failure -- top-level nodes that appear later will
   // not get events delivered to them or their children, because event
-  // handlers will not get instatlled on them..
-  // test("a23", 'inner21', 'aaa', {y: 23});
+  // handlers will not get installed on them..
+  // test("a23", 'inner21', 'click', {data: 23});
 
   set_weather("there", "peachy");
   Sky.flush();
@@ -1445,8 +1462,8 @@ var test_renderList = function () {
     [1,
 //     function () {lengths[2] = 0;},
      function () {lengths[2] = 1;},
-     function () {lengths[2] = 2;},
-//     function () {lengths[2] = 3;}
+     function () {lengths[2] = 2;}
+//     ,function () {lengths[2] = 3;}
     ],
     [1,
      function () {mode = "add";},
@@ -1506,32 +1523,32 @@ var test_renderList = function () {
   onscreen.appendChild(Template.test_renderList_each());
   document.body.appendChild(onscreen);
 
-  assert_frag("Before0<!---->MiddleElseAfter", onscreen);
+  assert_frag("~Before0<!---->Middle~Else~After~", onscreen);
   assert(0, _.keys(weather_listeners.here).length);
 
   c.insert({x: 2, name: "A"});
-  assert_frag("Before0AduckyMiddleElseAfter", onscreen);
+  assert_frag("~Before0~Aducky~Middle~Else~After~", onscreen);
   assert(1, _.keys(weather_listeners.here).length);
 
   c.insert({x: 3, name: "B"});
-  assert_frag("Before0AduckyBduckyMiddleElseAfter", onscreen);
+  assert_frag("~Before0~Aducky~~Bducky~Middle~Else~After~", onscreen);
   assert(2, _.keys(weather_listeners.here).length);
 
   set_weather("here", "clear");
-  assert_frag("Before0AduckyBduckyMiddleElseAfter", onscreen);
+  assert_frag("~Before0~Aducky~~Bducky~Middle~Else~After~", onscreen);
   assert(2, _.keys(weather_listeners.here).length);
   Sky.flush();
-  assert_frag("Before0AclearBclearMiddleElseAfter", onscreen);
+  assert_frag("~Before0~Aclear~~Bclear~Middle~Else~After~", onscreen);
   assert(2, _.keys(weather_listeners.here).length);
 
   c.update({x: 3}, {$set: {x: 8}});
-  assert_frag("Before0AclearMiddleBAfter", onscreen);
+  assert_frag("~Before0~Aclear~Middle~B~After~", onscreen);
   assert(2, _.keys(weather_listeners.here).length);
   Sky.flush();
   assert(1, _.keys(weather_listeners.here).length);
 
   c.update({}, {$set: {x: 5}});
-  assert_frag("Before0<!---->MiddleElseAfter", onscreen);
+  assert_frag("~Before0<!---->Middle~Else~After~", onscreen);
   assert(1, _.keys(weather_listeners.here).length);
   Sky.flush();
   assert(0, _.keys(weather_listeners.here).length);
