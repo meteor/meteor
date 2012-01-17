@@ -293,7 +293,7 @@ var test_try_all_permutations = function () {
     [
       0,
       function () {out += "X";},
-      function () {out += "Y";},
+      function () {out += "Y";}
     ],
     function () {out += ".";}
   );
@@ -311,7 +311,7 @@ var test_try_all_permutations = function () {
     ],
     [
       function () {out += "X";},
-      function () {out += "Y";},
+      function () {out += "Y";}
     ],
     function () {out += ".";}
   );
