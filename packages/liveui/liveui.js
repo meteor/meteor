@@ -70,21 +70,19 @@ Sky.ui._onscreen = function (node) {
 
 Sky.ui.render = function (render_func, events, event_data) {
   var range;
-  // http://stackoverflow.com/questions/384286/javascript-isdom-how-do-you-check-if-a-javascript-object-is-a-dom-object
-  var isNode = function (o) {
-    return (typeof Node === "object" ? o instanceof Node :
-            (typeof o === "object" && typeof o.nodeType === "number" &&
-             typeof o.nodeName === "string"));
-  };
 
   var render_fragment = function (context) {
     var result = context.run(render_func);
     var frag;
 
     // Coerce to a document fragment
-    if (typeof what === 'object' && what.nodeType === 11 /* DocumentFragment */)
+    if (typeof result === "string")
+      result = document.createTextNode(result);
+    if (typeof result === 'object' && result.nodeType === 11)
+      /* already a DocumentFragment */
       frag = result;
-    else if (isNode(result)) {
+    else if (typeof result === 'object' && result.nodeType) {
+      /* probably some other Node */
       frag = document.createDocumentFragment();
       frag.appendChild(result);
     } else if (result instanceof Array ||
@@ -94,8 +92,8 @@ Sky.ui.render = function (render_func, events, event_data) {
         frag.appendChild(result[i]);
     } else
       throw new Error("Render functions should return a DocumentFragment, " +
-                      "a node, an array of nodes, or a jQuery-style result " +
-                      "set.");
+                      "a node, a string, an array of nodes, or a " +
+                      "jQuery-style result set");
 
     // Attach events
     // XXX bug: https://app.asana.com/0/159908330244/357591577797

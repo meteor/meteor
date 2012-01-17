@@ -752,9 +752,290 @@ var assert_frag = function (expected, actual) {
   }
 };
 
+var weather = {here: "cloudy", there: "cloudy"};
+var weather_listeners = {here: {}, there: {}};
+var get_weather = function (where) {
+  var context = Sky.deps.Context.current;
+  if (context && !(context.id in weather_listeners[where])) {
+    weather_listeners[where][context.id] = context;
+    context.on_invalidate(function (old_context) {
+      delete weather_listeners[where][old_context.id];
+    });
+  }
+  return weather[where];
+};
+var set_weather = function (where, what) {
+  weather[where] = what;
+  for (id in weather_listeners[where])
+    weather_listeners[where][id].invalidate();
+};
+
 var test_render = function () {
-  // XXX write tests for render, especially garbage collection
-  // check that it's safe from GC until flush
+  begin("render - coercion");
+
+  assert_frag("<a></a>", Sky.ui.render(function () {
+    return DIV({id: "a"});
+  }));
+
+  assert_frag("<b></b><c></c>", Sky.ui.render(function () {
+    var f = document.createDocumentFragment();
+    f.appendChild(DIV({id: "b"}));
+    f.appendChild(DIV({id: "c"}));
+    return f;
+  }));
+
+  assert_frag("<d></d><e></e>", Sky.ui.render(function () {
+    return [
+      DIV({id: "d"}),
+      DIV({id: "e"})
+    ];
+  }));
+
+  assert_frag("<f></f><g></g>", Sky.ui.render(function () {
+    return $('<div id="f"></div><div id="g"></div>');
+  }));
+
+  assert_frag("hi", Sky.ui.render(function () {
+    return document.createTextNode("hi");
+  }));
+
+  assert_frag("igloo", Sky.ui.render(function () {
+    return "igloo";
+  }));
+
+  assert_frag("<!---->", Sky.ui.render(function () {
+    return document.createComment('');
+  }));
+
+  begin("render - updating and GC");
+
+  set_weather("here", "cloudy");
+  assert(0, _.keys(weather_listeners.here).length);
+  var r = Sky.ui.render(function () {
+    return get_weather("here");
+  });
+  assert(1, _.keys(weather_listeners.here).length);
+  assert_frag("cloudy", r);
+
+  set_weather("here", "icy");
+  assert(1, _.keys(weather_listeners.here).length);
+  assert_frag("cloudy", r);
+  Sky.flush(); // not onscreen -- gets GC'd
+  assert(0, _.keys(weather_listeners.here).length);
+  assert_frag("cloudy", r);
+
+  r = Sky.ui.render(function () {
+    return get_weather("here");
+  });
+  var onscreen = DIV({style: "display: none;"});
+  onscreen.appendChild(r);
+  document.body.appendChild(onscreen);
+
+  assert_frag("icy", onscreen);
+  assert(1, _.keys(weather_listeners.here).length);
+
+  set_weather("here", "vanilla");
+  assert(1, _.keys(weather_listeners.here).length);
+  assert_frag("icy", onscreen);
+  Sky.flush();
+  assert(1, _.keys(weather_listeners.here).length);
+  assert_frag("vanilla", onscreen);
+
+  document.body.removeChild(onscreen);
+  Sky.flush();
+  assert(1, _.keys(weather_listeners.here).length);
+
+  set_weather("here", "curious"); // safe from GC until flush
+  document.body.appendChild(onscreen);
+  Sky.flush();
+  assert(1, _.keys(weather_listeners.here).length);
+  assert_frag("curious", onscreen);
+
+  document.body.removeChild(onscreen);
+  set_weather("here", "penguins");
+  assert(1, _.keys(weather_listeners.here).length);
+  assert_frag("curious", onscreen);
+  Sky.flush();
+  assert(0, _.keys(weather_listeners.here).length);
+  assert_frag("curious", onscreen);
+
+  begin("render - recursive");
+  set_weather("there", "wet");
+
+  var outer_count = 0;
+  var inner_count = 0;
+  var onscreen = DIV({style: "display: none;"}, [
+    Sky.ui.render(function () {
+      outer_count++;
+      return DIV({id: "outer"}, [get_weather("here"),
+                  Sky.ui.render(function () {
+                    inner_count++;
+                    return get_weather("there");
+                  })
+                 ]);
+    })
+  ]);
+  document.body.appendChild(onscreen);
+  assert_frag("<outer>penguinswet</outer>", onscreen);
+  assert(1, outer_count);
+  assert(1, inner_count);
+  assert(1, _.keys(weather_listeners.here).length);
+  assert(1, _.keys(weather_listeners.there).length);
+
+  set_weather("there", "dry");
+  Sky.flush();
+  assert_frag("<outer>penguinsdry</outer>", onscreen);
+  assert(1, outer_count);
+  assert(2, inner_count);
+  assert(1, _.keys(weather_listeners.here).length);
+  assert(1, _.keys(weather_listeners.there).length);
+
+  set_weather("here", "chocolate");
+  Sky.flush();
+  assert_frag("<outer>chocolatedry</outer>", onscreen);
+  assert(2, outer_count);
+  assert(3, inner_count);
+  assert(1, _.keys(weather_listeners.here).length);
+  assert(1, _.keys(weather_listeners.there).length);
+
+  document.body.removeChild(onscreen);
+  set_weather("there", "melting"); // safe from GC until flush
+  assert(1, _.keys(weather_listeners.here).length);
+  assert(1, _.keys(weather_listeners.there).length);
+  document.body.appendChild(onscreen);
+  Sky.flush();
+  assert_frag("<outer>chocolatemelting</outer>", onscreen);
+  assert(2, outer_count);
+  assert(4, inner_count);
+  assert(1, _.keys(weather_listeners.here).length);
+  assert(1, _.keys(weather_listeners.there).length);
+
+  document.body.removeChild(onscreen);
+  set_weather("here", "silent");
+  Sky.flush();
+  assert_frag("<outer>chocolatemelting</outer>", onscreen);
+  assert(2, outer_count);
+  assert(4, inner_count);
+  assert(0, _.keys(weather_listeners.here).length);
+  assert(0, _.keys(weather_listeners.there).length);
+
+  begin("render - events");
+
+  var evts = '';
+  onscreen = DIV({style: "display: none;"}, [
+    Sky.ui.render(function () {
+      return [
+        Sky.ui.render(function () {
+          get_weather("there");
+          return DIV({id: "wrapper"}, [
+            DIV({id: "outer"}, [
+              DIV({id: "inner1"}),
+              Sky.ui.render(function () {
+                return DIV({id: "inner2"});
+              })
+            ])])
+        }),
+        Sky.ui.render(function () {
+          if (get_weather("here") !== "expansive")
+            return [];
+          return DIV({id: "wrapper2"}, [
+            DIV({id: "outer2"}, [
+              DIV({id: "inner21"}),
+              Sky.ui.render(function () {
+                return DIV({id: "inner2"});
+              })
+            ])
+          ]);
+        })
+      ];
+    }, {
+      "aaa": function (e) {
+        assert(this.x, 12);
+        evts += "a" + e.originalEvent.y;
+      },
+      "bbb #outer": function (e) {
+        assert(this.x, 12);
+        evts += "b" + e.originalEvent.y;
+      },
+      "ccc #inner1": function (e) {
+        assert(this.x, 12);
+        evts += "c1" + e.originalEvent.y;
+      },
+      "ccc #inner2": function (e) {
+        assert(this.x, 12);
+        evts += "c2" + e.originalEvent.y;
+      },
+      "ddd, eee #inner2": function (e) {
+        assert(this.x, 12);
+        evts += "de" + e.originalEvent.y;
+      },
+      "fff #wrapper": function (e) {
+        assert(this.x, 12);
+        evts += "f" + e.originalEvent.y;
+      }
+    }, {x : 12})
+  ]);
+  document.body.appendChild(onscreen);
+
+  var simulate = function (node, event, args) {
+    var e = document.createEvent("Event");
+    e.initEvent(event, true, true);
+    _.extend(e, args);
+    (node instanceof $ ? node[0] : node).dispatchEvent(e);
+  };
+
+  var test  = function (expected, id, event, args) {
+    evts = "";
+    simulate($('#' + id), event, args);
+    assert(expected, evts);
+  }
+
+  var main_event_tests = function () {
+    test('a0', 'inner1', 'aaa', {y: 0});
+    test('a1', 'inner2', 'aaa', {y: 1});
+    test('a2', 'outer', 'aaa', {y: 2});
+    test('a3', 'wrapper', 'aaa', {y: 3});
+    test('b4', 'inner1', 'bbb', {y: 4});
+    test('b5', 'inner2', 'bbb', {y: 5});
+    test('b6', 'outer', 'bbb', {y: 6});
+    test('', 'wrapper', 'bbb', {y: 7});
+    test('c18', 'inner1', 'ccc', {y: 8});
+    test('c29', 'inner2', 'ccc', {y: 9});
+    test('', 'outer', 'ccc', {y: 10});
+    test('', 'wrapper', 'ccc', {y: 11});
+    test('de12', 'inner1', 'ddd', {y: 12});
+    test('de13', 'inner2', 'ddd', {y: 13});
+    test('de14', 'outer', 'ddd', {y: 14});
+    test('de15', 'wrapper', 'ddd', {y: 15});
+    test('', 'inner1', 'eee', {y: 16});
+    test('de17', 'inner2', 'eee', {y: 17});
+    test('', 'outer', 'eee', {y: 18});
+    test('', 'wrapper', 'eee', {y: 19});
+    test('', 'inner1', 'fff', {y: 20});
+    test('', 'inner2', 'fff', {y: 21});
+    test('', 'outer', 'fff', {y: 22});
+    // XXX expected failure -- selectors will never match top-level nodes
+    // test('f23', 'wrapper', 'fff', {y: 23});
+  };
+  main_event_tests();
+
+  set_weather("here", "expansive");
+  Sky.flush();
+  main_event_tests();
+
+  // XXX expected failure -- top-level nodes that appear later will
+  // not get events delivered to them or their children, because event
+  // handlers will not get instatlled on them..
+  // test("a23", 'inner21', 'aaa', {y: 23});
+
+  set_weather("there", "peachy");
+  Sky.flush();
+  // XXX expected failure -- if a LiveRange at toplevel gets
+  // repopulated, then it won't get event handlers installed on
+  // it. really the same case as the previous.
+  // main_event_tests();
+
+  document.body.removeChild(onscreen);
 };
 
 var test_renderList = function () {
@@ -986,24 +1267,8 @@ var test_renderList = function () {
 
   begin("renderList - list items are reactive");
 
-  var weather = {here: "cloudy", there: "cloudy"};
-  var weather_listeners = {here: {}, there: {}};
-  var get_weather = function (where) {
-    var context = Sky.deps.Context.current;
-    if (context && !(context.id in weather_listeners[where])) {
-      weather_listeners[where][context.id] = context;
-      context.on_invalidate(function (old_context) {
-        delete weather_listeners[where][old_context.id];
-      });
-    }
-    return weather[where];
-  };
-  var set_weather = function (where, what) {
-    weather[where] = what;
-    for (id in weather_listeners[where])
-      weather_listeners[where][id].invalidate();
-  };
-
+  set_weather("here", "cloudy");
+  set_weather("there", "cloudy");
   Sky.flush();
   var render_count = 0;
   c.remove();
