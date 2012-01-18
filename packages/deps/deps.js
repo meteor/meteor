@@ -51,6 +51,7 @@ if (typeof Sky === "undefined") Sky = {};
     // event handler that calls flush. it's probably an exception --
     // no flushing from inside onblur. can also imagine routing onblur
     // through settimeout(0), which is probably what the user wants.
+    // https://app.asana.com/0/159908330244/385138233856
     flush: function () {
       while (pending_invalidate.length) {
         var pending = pending_invalidate;

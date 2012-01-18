@@ -48,30 +48,28 @@ Sky.ui._onscreen = function (node) {
   }
 };
 
-/// OLD COMMENT, REWRITE (XXX):
+/// Unites LiveRange and invalidation contexts. Takes a function that
+/// returns a DocumentFragment (or similar), and returns an
+/// auto-updating DocumentFragment, by (1) running the function inside
+/// an invalidation context, (2) creating a LiveRange around the
+/// resulting fragment so that we can track where it goes, (3) wiring
+/// up the invalidation handler on the context to re-run the render
+/// function and update the fragment in place, whenever it's gone.
 ///
-/// Render some HTML, resulting in a DOM node, which is
-/// returned. Update that DOM node in place when any of the rendering
-/// dependencies change. (The tag name of the node returned from the
-/// template mustn't change -- it must not be a function of any
-/// dependencies.)
+/// Exact GC semantics are as follows.
+/// - Slow path: If we go to do an update, and it's offscreen, we
+///   forget it (tear down the auto-updating machinery) so it can get
+///   GC'd. This can only happen during Sky.flush().
 ///
-/// render_func should return either a single DOM element, or an array
-/// of elements. In the latter case, on rerendering, it must still
-/// return an array, and the number and tag names of the elements in
-/// the array must not change.
-///
-/// 'events' is optional. if given, takes the same kind of event map
-/// as renderLive. If render_func retruns an array, the event map will
-/// be applied to each element in the array. If 'event_data' is
-/// provided, it will be passed to events when they fire, as their
-/// object data agument.
-///
-/// render() may be called recursively (that is, 'what' can call
-/// render.) when this happens, a change to a dependency in the inner
-/// render() won't cause the stuff in the outer render() to be
-/// re-evaluated, so it serves as a recomputation fence.
-
+/// - Fast path: When render and renderList take nodes off the screen
+///   due to a rerender, they traverse them to find any auto-updating
+///   ranges inside of them and tear them down immediately, without
+///   waiting for a flush. This isn't documented (the documentation
+///   says that auto-updating can only stop when elements are
+///   offscreen during a flush.) We should probably change the
+///   implementation, not the documentation. It is a simple change but
+///   a lot of tests will need updates.
+///   https://app.asana.com/0/159908330244/382690197728
 Sky.ui.render = function (render_func, events, event_data) {
   var range;
 
@@ -124,6 +122,7 @@ Sky.ui.render = function (render_func, events, event_data) {
     // flush, which could reinvoke us. or could it?  what's the deal
     // for flush inside flush?? [consider synthesizing onblur, via
     // settimeout(0)..]
+    // https://app.asana.com/0/159908330244/385138233856
 
     var context = new Sky.deps.Context;
     context.on_invalidate(update);
@@ -141,36 +140,29 @@ Sky.ui.render = function (render_func, events, event_data) {
   return frag;
 };
 
-/// OLD COMMENT, REWRITE (XXX):
+/// Unites LiveRange, invaldiation contexts, and database queries
+/// (specific to mongo at the moment, but will be generalized
+/// eventually.)
 ///
-/// Do a query on 'collection', and replace the children of 'element'
-/// with the results.
+/// Undocumented elsewhere: you may pass in a findLive handle instead
+/// of 'what'. In that case, we will use that query instead, and we
+/// will take responsibility for calling stop() on it! Let's leave
+/// undocumented for now, and document when the new database API
+/// lands.
 ///
-/// If jQuery is present, then 'element' may be a jQuery result set,
-/// in which case the first element is used.
+/// Exact GC semantics:
+/// - Slow path: When a database change happens, unconditionally
+///   update the rendering, but also schedule an onscreen check to
+///   happen at the next flush(). If at flush() time we're not
+///   onscreen, stop updating (and tear down the database query.)
 ///
-/// options to include:
-///  selector: minimongo selector (default: {})
-///  sort: minimongo sort specification (default: natural order)
-///  render: render function (as in render(), but takes a document)
-/// .. plus optionally
-///  render_empty: render function for content to show when query empty.
-///   still gets same event bindings.
-///  events: vaguely backbone-style live event specification
-///    {'click #selector #path' : function (obj) { } }
-///
-/// returns an object with:
-///  stop(): stop updating, tear everything down and let it get GC'd
-
-/// NOTE: if you pass in a query, we will take responsibility for
-/// calling stop() on it! this should change in New Database API.
-
-/// XXX consider making render an argument rather than an option
-///
-/// XXX what package should this go in? depends on both liveui and minimongo..
-///
-/// XXX what can now be a collection, or the handle of an existing
-/// findlive. messy.
+/// - Fast path: When taken off the screen by (a containing) render or
+///   renderList, then schedule teardown to unconditionally happen at
+///   the next flush(). (Database-callback-driven updates will still
+///   happen until then.) As with render, should probably change this
+///   to only do the teardown if it is in fact still offscreen at
+///   flush()-time.
+///   https://app.asana.com/0/159908330244/382690197728
 Sky.ui.renderList = function (what, options) {
   var outer_frag;
   var outer_range;

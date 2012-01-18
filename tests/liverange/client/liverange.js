@@ -164,8 +164,26 @@ var assert_dump = function (expected, actual, tag) {
   }
 };
 
+var contained_ranges = function (range) {
+  var result = {range: range, children: []};
+  var stack = [result];
+
+  range.visit(function (is_start, range) {
+    if (is_start) {
+      var record = {range: range, children: []};
+      stack[stack.length - 1].children.push(record);
+      stack.push(record);
+    } else
+      if (stack.pop().range !== range)
+        throw new Error("Overlapping ranges detected");
+  });
+
+  return result;
+};
+
 var assert_contained = function (r, expected) {
-  var actual = r.contained();
+  // one day, fold in the above function (use visit() directly)
+  var actual = contained_ranges(r);
 
   var traverse = function (exp, act) {
     if (exp.range !== act.range)

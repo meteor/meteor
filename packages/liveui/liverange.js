@@ -3,7 +3,9 @@
 Sky.ui = Sky.ui || {};
 
 (function () {
-  // XXX correct namespace? should probably be private to package, actually..
+  // XXX we should eventually move LiveRange off into its own
+  // package. but it would be also be nice to keep it as a single,
+  // self-contained file to make it easier to use outside of Skybreak.
 
   // Possible optimization: get rid of start_idx/end_idx and just search
   // the list. Not clear which strategy will be faster.
@@ -13,7 +15,7 @@ Sky.ui = Sky.ui || {};
 
   Sky.ui._wrap_endpoints = function (start, end) {
     // IE8 and earlier don't support expando attributes on text nodes,
-    // but fortunately they are OK on comments.
+    // but fortunately they are allowed on comments.
     var test_elt = document.createTextNode("");
     var exception;
     try {
@@ -42,30 +44,40 @@ Sky.ui = Sky.ui || {};
     return Sky.ui._wrap_endpoints(start, end);
   };
 
-  // can also pass just one node, or a document/documentfragment
-
-  // tag is an arbitrary string (the 'class' of range.) an expando
-  // attribute named 'tag' will be set on the endpoints of the range.
-
-  // 'start' - start point, in preorder traversal (range starts just before start)
-  // 'end' - end point, in postorder traversal (range ends just after end)
-  // if there are any other ranges that also span exactly from start
-  // to end, the new range will be outside of them.
+  // This is a constructor (invoke it as 'new Sky.ui._LiveRange').
   //
-  // "Create a range, tagged 'tag', that includes start, end, and all
+  // Create a range, tagged 'tag', that includes start, end, and all
   // the nodes between them, and the children of all of those nodes,
   // but includes no other nodes. If there are other ranges tagged
-  // "tag" that contain this exact set of nodes, then: if inner is
+  // 'tag' that contain this exact set of nodes, then: if inner is
   // false (the default), the new range will be outside all of them
   // (will contain all of them), or if inner is true, then it will be
-  // inside all of them (be contained by all of them.)"
+  // inside all of them (be contained by all of them.) If there are no
+  // other ranges that contain this exact set of nodes, then 'inner'
+  // is ignored because the nesting of the new range with respect to
+  // other ranges is uniquely determined.
+  //
+  // To track the range as it's relocated, some of the DOM nodes that
+  // are part of the range will have an expando attribute set on
+  // them. The name of the expando attribute will be 'tag', so pick
+  // something that won't collide.
+  //
+  // Instead of start and end, you can pass a document or
+  // documentfragment for start and leave end undefined. Or you can
+  // pass a node for start and leave end undefined, in which case end
+  // === start.
+  //
+  // You can set any attributes you like on the returned LiveRange
+  // object, with two exceptions. First, attribute names that start
+  // with '_' are reserved. Second, the attribute 'tag' contains the
+  // tag name of this range and mustn't be changed.
   //
   // It would be possible to add a fast path through this function
   // when caller can promise that there is no range that starts on
   // start that does not end by end, and vice versa. eg: when start
   // and end are the first and last child of their parent respectively
   // or when caller is building up the range tree from the inside
-  // out. let's wait for the profiler to tell us to add this.
+  // out. Let's wait for the profiler to tell us to add this.
   Sky.ui._LiveRange = function (tag, start, end, inner) {
     if (start.nodeType === 11 /* DocumentFragment */) {
       end = start.lastChild;
@@ -221,11 +233,15 @@ Sky.ui = Sky.ui || {};
     }
   };
 
-  // You shouldn't need to call this function for GC reasons on a modern
-  // browser. It's more like removeChild -- you'd call it because you
-  // don't want to see the range in contained() anymore. However, on old
-  // versions of IE, you do need to manually remove all ranges because
-  // IE can't GC reference cycles through the DOM.
+  // Delete a LiveRange. This is analogous to removing a DOM node from
+  // its parent -- it will no longer appear when traversing the tree
+  // with visit().
+  //
+  // On modern browsers there is no requirement to delete
+  // LiveRanges. They will be garbage collected just like any other
+  // object. However, on old versions of IE, you probably do need to
+  // manually remove all ranges because IE can't GC reference cycles
+  // through the DOM.
   Sky.ui._LiveRange.prototype.destroy = function () {
     var enter = this._start[this.tag][0];
     enter.splice(this._start_idx, 1);
@@ -241,28 +257,32 @@ Sky.ui = Sky.ui || {};
     this._start = this._end = null;
   };
 
-  // The first node in the range (in preorder traversal)
+  // Return the first node in the range (in preorder traversal)
   Sky.ui._LiveRange.prototype.firstNode = function () {
     return this._start;
   };
 
-  // The last node in the range (in postorder traversal)
+  // Return the last node in the range (in postorder traversal)
   Sky.ui._LiveRange.prototype.lastNode = function () {
     return this._end;
   };
 
+  // Walk through the current contents of a LiveRange, enumerating
+  // either the contained ranges (with the same tag as this range),
+  // the contained elements, or both.
+  //
   // visit_range(is_start, range) is invoked for each range
   // start-point or end-point that we encounter as we walk the range
   // stored in 'this' (not counting the endpoints of 'this' itself.)
   // visit_node(is_start, node) is similar but for nodes, and is
   // optional.
   //
-  // if you create or destroy ranges with this tag from a visitation
+  // If you create or destroy ranges with this tag from a visitation
   // function, results are undefined!
   //
-  // -- would be nice to let your visit function return false when
-  // is_start is true to skip visiting that range/node's children..
-  //
+  // future: maybe would be nice to let your visit function return
+  // false when is_start is true to skip visiting that range/node's
+  // children..
   Sky.ui._LiveRange.prototype.visit = function (visit_range, visit_node) {
     var traverse = function (node, data, start_bound, end_bound, tag) {
       for (var i = start_bound; i < data[0].length; i++)
@@ -289,26 +309,16 @@ Sky.ui = Sky.ui || {};
     }
   };
 
-  // (returns only ranges with the same tag as this one)
-  // XXX remove
-  Sky.ui._LiveRange.prototype.contained = function () {
-    var result = {range: this, children: []};
-    var stack = [result];
-
-    this.visit(function (is_start, range) {
-      if (is_start) {
-        var record = {range: range, children: []};
-        stack[stack.length - 1].children.push(record);
-        stack.push(record);
-      } else
-        if (stack.pop().range !== range)
-          throw new Error("Overlapping ranges detected");
-    });
-
-    return result;
-  };
-
-  // returns a DocumentFragment with the removed elements
+  // Replace the contents of this range with the provided
+  // DocumentFragment. Returns the previous contents as a
+  // DocumentFragment.
+  //
+  // "The right thing happens" with child LiveRanges:
+  // - If there were child LiveRanges inside us, they will end up in
+  //   the returned DocumentFragment.
+  // - If the input DocumentFragment has LiveRanges, they will become
+  //   our children.
+  //
   // XXX need to make sure that tags are removed if they become empty
   Sky.ui._LiveRange.prototype.replace_contents = function (new_frag) {
     if (!new_frag.firstChild)
