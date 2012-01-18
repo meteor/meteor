@@ -24,8 +24,9 @@ Sky.autosubscribe(function () {
 Template.tag_filter.tags = function () {
   // Pick out the unique tags from all tasks.
   var tags = _(Todos.find())
-    .chain().pluck('tags').compact().flatten().sort().uniq(true).value()
-    .map(function (tag) { return {tag: tag} });
+    .chain().pluck('tags').compact().flatten().sort().uniq(true).value();
+  // for some reason, .map can't be chained on IE8. underscore bug?
+  tags = _.map(tags, function (tag) { return {tag: tag} });
 
   tags.unshift({tag: null}); // "show all" button
   return tags;
