@@ -434,7 +434,6 @@ Commands.push({
       .boolean('D')
       .describe('delete', "permanently delete this deployment")
       .boolean('debug')
-      .boolean('d')
       .describe('debug', 'deploy in debug mode (don\'t minify, etc)')
       .usage(
 "Usage: skybreak deploy <site> [--password] [--delete] [--debug]\n" +
