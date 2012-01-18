@@ -1,4 +1,4 @@
-exports.CURRENT_VERSION = "0.0.41";
+exports.CURRENT_VERSION = "0.0.42";
 
 var fs = require("fs");
 var https = require("https");
