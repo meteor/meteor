@@ -15,3 +15,6 @@ Package.require('jquery');
 
 Package.client_file('liverange.js');
 Package.client_file('liveui.js');
+
+// XXX this should be loaded only in test code, not in the app!
+Package.client_file('liverange_test_helpers.js');

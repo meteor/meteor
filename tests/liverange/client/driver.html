@@ -1,0 +1,77 @@
+<head>
+  <title>tinytest WIP</title>
+</head>
+
+<body>
+  placeholder
+  {{> results }}
+  placeholder
+</body>
+
+<template name="results">
+  placeholder
+  {{#each results}}
+    {{#if type_is "begin"}}
+      <div class="begin">{{name}}</div>
+    {{else}}
+      {{#if type_is "fail"}}
+        {{> fail details}}
+      {{else}}
+        {{#if type_is "exception"}}
+          {{> exception }}
+        {{else}}
+          <div class="{{type}}">{{message}}</div>
+        {{/if}}
+      {{/if}}
+    {{/if}}
+  {{/each}}
+  {{> rerun_all_button }}
+  placeholder
+</template>
+
+<template name="rerun_all_button">
+  placeholder
+  <div><div class="rerunall">Rerun all</div></div>
+  placeholder
+</template>
+
+<template name="exception">
+  placeholder
+  <div class="exception">Exception: {{message}}
+    {{stack}}
+    <div class="rerun">Rerun and stop here</div>
+  </div>
+  placeholder
+</template>
+
+<template name="fail">
+  placeholder
+  {{#if type_is "assert"}}
+    <div class="assert">
+      {{message}}
+      <div class="expected">Expected:
+        {{#if not}}Any value but{{/if}} {{expected}}</div>
+      <div class="actual">Actual: {{actual}}</div>
+    </div>
+  {{else}}
+    <div class="{{type}}">{{message}}</div>
+  {{/if}}
+  <span>
+    <div class="rerun">Rerun and stop here</a>
+  </span>
+  placeholder
+</template>
+
+<template name="test_renderList_each">
+  Before{{render_count}}
+  {{#each data}}
+    {{name}}{{weather "here"}}
+  {{/each}}
+  Middle
+  {{#each data2}}
+    {{name}}
+  {{else}}
+    Else
+  {{/each}}
+  After
+</template>
