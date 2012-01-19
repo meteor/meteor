@@ -1,11 +1,11 @@
-if (typeof Meteor === "undefined") Meteor = {};
+if (typeof Sky === "undefined") Sky = {};
 
-// XXX ugly hack. provides Meteor._def_template, which is used to load in
+// XXX ugly hack. provides Sky._def_template, which is used to load in
 // compiled templates.
 
 // XXX disgusting hack. we want to allow Template.foo to be used as a
 // Handlebars partial. uh oh -- Handlebars does templating in the
-// realm of strings, but Template.foo returns a DOM element (it must,
+// realm of strings, but Template.foo returns a DOM object (it must,
 // for event handlers to work properly). so, for now, we make the
 // partial render as an empty div and fix it up later. this probably
 // doesn't work in some cases, such as inside a table or ul, where
@@ -14,129 +14,52 @@ if (typeof Meteor === "undefined") Meteor = {};
 // attributes, or a text string to be included inside an attribute..)
 
 // XXX it'd be nice to do a better job of hiding these symbols
-Meteor._pending_partials = null; // id -> element
-Meteor._pending_partials_idx_nonce = 0;
+Sky._pending_partials = null; // id -> element
+Sky._pending_partials_idx_nonce = 0;
 
-// XXX another disgusting hack -- we reach into handlebars and
-// extend #each to know how to cooperate with pending_partials and
-// minimongo findlive.
-//
-// XXX XXX XXX the garbage collection implications are terrible.. we
-// don't even pretend to call stop on the findlive, so every time
-// we're rerendered, we kick off another findlive that runs
-// .. forever!
-Meteor._hook_handlebars_each = function () {
-  Meteor._hook_handlebars_each = function(){}; // install the hook only once
+// XXX another messy hack -- we reach into handlebars and extend #each
+// to know how to cooperate with pending_partials and minimongo
+// findlive.
+Sky._hook_handlebars_each = function () {
+  Sky._hook_handlebars_each = function(){}; // install the hook only once
 
   var orig = Handlebars._default_helpers.each;
   Handlebars._default_helpers.each = function (context, options) {
     if (!(context instanceof Collection.LiveResultsSet))
       return orig(context, options);
 
-    // XXX inserts an intermediate DIV!! that is lame and should be
-    // fixed. besides general hygiene/pride, we really need to
-    // support <ul>{{#each items}}<li>{{name}}</li>{{/each}}</ul>
-    var element = document.createElement("div");
-
-    var trim = function (markup) {
-      // Consider {{#each items}\n{{> item}}\n{{/each}}
-      //
-      // In that case, options.fn will return HTML that parses into
-      // three nodes: whitespace, the partial, whitespace. That
-      // won't work. I can't reconcile this logically at the moment,
-      // but "do what you mean" and strip the whitespace.
-      //
-      // XXX fails if a {{#if}..{{else}}..{{/if}} is at toplevel in
-      // a template?
-      var match = markup.match(/^\s*(<[\s\S]+>)\s*$/);
-      if (match)
-        markup = match[1];
-      return markup;
-    }
-
-    var render = Meteor._def_template(null, function (obj) {
-      return trim(options.fn(obj));
+    var id = Sky._pending_partials_idx_nonce++;
+    Sky._pending_partials[id] = Sky.ui.renderList(context, {
+      render: Sky._def_template(null, options.fn),
+      render_empty: Sky._def_template(null, _.bind(options.inverse, null, {}))
     });
 
-    var renderElse = Meteor._def_template(null, function () {
-      return trim(options.inverse({}));
-    });
-
-    // XXX sort of lame that we always end up rendering this even if
-    // the query returns results 100% of the time ..
-    var is_empty = true;
-    element.appendChild(renderElse());
-
-    // XXX copied code from Meteor.ui.renderList.. bleh
-    // (with addition of is_empty / renderElse)
-    context.reconnect({
-      added: function (obj, before_idx) {
-        if (is_empty) {
-          element.removeChild(element.childNodes[0]);
-          is_empty = false;
-        }
-        if (before_idx === element.childNodes.length)
-          element.appendChild(render(obj));
-        else
-          element.insertBefore(render(obj), element.childNodes[before_idx]);
-        Meteor.ui._tryFocus();
-      },
-      removed: function (id, at_idx) {
-        element.removeChild(element.childNodes[at_idx]);
-        if (element.childNodes.length === 0) {
-          is_empty = true;
-          element.appendChild(renderElse());
-        }
-      },
-      changed: function (obj, at_idx) {
-        element.insertBefore(render(obj), element.childNodes[at_idx]);
-        element.removeChild(element.childNodes[at_idx + 1]);
-        Meteor.ui._tryFocus();
-      },
-      moved: function (obj, old_idx, new_idx) {
-        var elt = element.removeChild(element.childNodes[old_idx]);
-        if (new_idx === element.childNodes.length)
-          element.appendChild(elt);
-        else
-          element.insertBefore(elt, element.childNodes[new_idx]);
-      }
-    });
-
-    var id = Meteor._pending_partials_idx_nonce++;
-    Meteor._pending_partials[id] = element;
     return "<div id='" + id +
       "'><!-- for replacement with findlive each --></div>";
-  }
+  };
 };
 
 // XXX namespacing
-Meteor._partials = {};
+Sky._partials = {};
 
 // XXX hack: name may be null, in which case nothing is put in
 // Template, there is no way to define events/data functions, and
 // the finished template function (that would otherwise be put in
 // Template) is returned. this is a hack that is used for <body>
 // templates.
-//
-// XXX hack: if multi is true, the template is allowed to return
-// multiple elements at toplevel, and the return value of the created
-// template function is a list. this is used for <body>.
-Meteor._def_template = function (name, raw_func, multi) {
-  Meteor._hook_handlebars_each();
+Sky._def_template = function (name, raw_func) {
+  Sky._hook_handlebars_each();
   window.Template = window.Template || {};
   var cooked_func = function (data) {
-    var in_partial = !!Meteor._pending_partials;
+    var in_partial = !!Sky._pending_partials;
     if (!in_partial)
-      Meteor._pending_partials = {};
+      Sky._pending_partials = {};
     // XXX should catch exceptions and clean up pending_partials if
     // stack is unwound
     var html = raw_func(data, {
       helpers: name ? Template[name] : {},
-      partials: Meteor._partials
+      partials: Sky._partials
     });
-
-    if (html === '')
-      html = ' '; // ensure at least one node is generated ..
 
     // XXX see the 'clean' function in jquery for a much more
     // elaborate implementation of this. it's smart about
@@ -144,48 +67,36 @@ Meteor._def_template = function (name, raw_func, multi) {
     // a div. we probably need to do that..
     var div = document.createElement("div");
     div.innerHTML = html;
-    if (div.childNodes.length !== 1 && !multi)
-      // XXX this limitation is really lame and possibly
-      // unsustainable.. on the other hand .. what, you want
-      // Template.foo to return an array? (maybe a jquery object?)
-      throw new Error("A template should return exactly 1 node, but " +
-                      (name ? name : "(anonymous template)") +
-                      " returned " + div.childNodes.length)
+    var frag = document.createDocumentFragment();
+    while (div.firstChild)
+      frag.appendChild(div.firstChild);
 
     if (!in_partial) {
       var traverse = function (elt) {
         for (var i = 0; i < elt.childNodes.length; i++) {
           var child = elt.childNodes[i];
-          var replacement = child.id && Meteor._pending_partials[child.id];
+          var replacement = child.id && Sky._pending_partials[child.id];
           if (replacement) {
             elt.replaceChild(replacement, child);
-            delete Meteor._pending_partials[child.id];
-            child = replacement;
+            delete Sky._pending_partials[child.id];
+            child = elt.childNodes[i];
           }
           traverse(child);
         }
       };
 
-      traverse(div);
+      traverse(frag);
 
-      for (var id in Meteor._pending_partials)
+      for (var id in Sky._pending_partials)
         throw new Error("internal error -- not all pending partials patched");
-      Meteor._pending_partials = null;
+      Sky._pending_partials = null;
     }
 
-    if (!multi)
-      return div.childNodes[0];
-    else {
-      // make DOM node list into a proper JS array
-      var ret = [];
-      for (var i = 0; i < div.childNodes.length; i++)
-        ret.push(div.childNodes[i]);
-      return ret;
-    }
+    return frag;
   };
 
   var func = function (data) {
-    return Meteor.ui.render(_.bind(cooked_func, null, data),
+    return Sky.ui.render(_.bind(cooked_func, null, data),
                          name && Template[name].events || {}, data);
   };
 
@@ -205,13 +116,13 @@ Meteor._def_template = function (name, raw_func, multi) {
 
   // XXX hacky. sucks that we have to depend on handlebars here.
   if (name) {
-    Meteor._partials[name] = function (data) {
-      if (!Meteor._pending_partials)
+    Sky._partials[name] = function (data) {
+      if (!Sky._pending_partials)
         // XXX lame error
         throw new Error("this partial may only be invoked from inside a Template.foo-style template");
-      var elt = func(data);
-      var id = Meteor._pending_partials_idx_nonce++;
-      Meteor._pending_partials[id] = elt;
+      var frag = func(data);
+      var id = Sky._pending_partials_idx_nonce++;
+      Sky._pending_partials[id] = frag;
       return "<div id='" + id + "'><!-- for replacement with partial --></div>";
     };
   }
