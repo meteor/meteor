@@ -1,5 +1,25 @@
 Results = Sky.Collection();
 
+Template.header.passed_count = function () {
+  return Results.find({type: "ok"}).length;
+};
+
+Template.header.failed_count = function () {
+  return Results.find({type: "fail", expected: false}).length;
+};
+
+Template.header.expected_failed_count = function () {
+  return Results.find({type: "fail", expected: true}).length;
+};
+
+Template.header.total_count = function () {
+  return Results.find({type: {$in: ["ok", "fail"]}}).length;
+};
+
+Template.header.exception_count = function () {
+  return Results.find({type: "exception"}).length;
+};
+
 Template.results.results = function () {
   return Results.find({}, {sort: {n: 1}});
 };

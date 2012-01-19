@@ -3,11 +3,23 @@
 </head>
 
 <body>
+  {{> header }}
   {{> results }}
 </body>
 
-<template name="results">
+<template name="header">
+  Passed: {{passed_count}}<br>
+  Failed: {{failed_count}} ({{expected_failed_count}})<br>
+  Total: {{total_count}}<br>
+  {{#with exception_count}}
+    {{#if this}}
+      Exceptions: {{this}}<br>
+    {{/if}}
+  {{/with}}
   {{> rerun_all_button }}
+</template>
+
+<template name="results">
   {{#each results}}
     {{#if type_is "begin"}}
       <div class="begin">{{name}}</div>

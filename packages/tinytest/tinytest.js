@@ -27,6 +27,7 @@ globals.test = function (name, func) {
 
 _.extend(globals.test, {
   ok: function () {
+    results.insert({n: next_result++, type: "ok"});
   },
 
   expect_fail: function () {
