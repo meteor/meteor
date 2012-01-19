@@ -16,7 +16,7 @@ var selectRoom = function (room_id) {
   Session.set('current_room', room_id);
 };
 
-$(document).ready(function () {
+Sky.startup(function () {
   $('body').layout({applyDefaultStyles: true})
 });
 
@@ -48,8 +48,11 @@ Template.add_room.events = {
     // another is to suppress blur on rerender. probably the only
     // principled way to do this is to narrow the scope of the
     // rerender to not include the <input>.
+    //
+    // [No idea if the comment above is still current]
     Session.set('editing_room_name', true);
-    Meteor.ui.focus('#room_name_input');
+    Meteor.flush();
+    $('#room_name_input').focus();
   }
 };
 
@@ -61,7 +64,8 @@ Template.room.events = {
     Session.set('editing_room_name', true);
     // XXX XXX doesn't generalize.. the element might very reasonably
     // not have a unique id. may need a different strategy..
-    Meteor.ui.focus('#room_name_input');
+    Meteor.flush();
+    $('#room_name_input').focus();
   },
   'blur input': function (evt) {
     Session.set('editing_room_name', false);

@@ -100,20 +100,38 @@ if (typeof Meteor === "undefined") Meteor = {};
 
 
   };
+  var cleanup_socket = function () {
+    if (socket) {
+
+      if (socket.$events) {
+        _.each(socket.$events, function (v, k) {
+          socket.removeAllListeners(k);
+        });
+      }
+      socket.disconnect();
+
+      var old_socket = socket;
+      socket = undefined;
+
+      old_socket.on('connect', function () {
+        if (console) console.log("DEBUG: OLD SOCKET RECONNECTED", old_socket);
+        old_socket.disconnect();
+      });
+    }
+  };
+
   var disconnected = function () {
     if (connection_timer) {
       clearTimeout(connection_timer);
       connection_timer = undefined;
     }
+    cleanup_socket();
     retry_later(); // sets status. no need to do it here.
   };
   var fake_connect_failed = function () {
     // sometimes socket.io just doesn't tell us when it failed. we
     // detect this with a timer and force failure.
-    socket.removeAllListeners('connect');
-    socket.removeAllListeners('disconnect');
-    socket.removeAllListeners('connect_failed');
-    socket.disconnect();
+    cleanup_socket();
     disconnected();
   };
 
@@ -129,6 +147,7 @@ if (typeof Meteor === "undefined") Meteor = {};
   };
   var retry_later = function () {
     var timeout = retry_timeout(status.retry_count)
+    if (retry_timer) { clearTimeout(retry_timer); }
     retry_timer = setTimeout(retry_now, timeout);
 
     status.status = "waiting"
@@ -147,7 +166,7 @@ if (typeof Meteor === "undefined") Meteor = {};
   };
 
   var launch_connection = function () {
-    // XXX if existing socket, any cleanup we have to do?
+    cleanup_socket(); // cleanup the old socket, if there was one.
 
     socket = io.connect('/', { reconnect: false,
                                'connect timeout': CONNECT_TIMEOUT,

@@ -63,12 +63,12 @@ Collection.prototype.find = function (selector, options) {
   } else {
 
     var selector_f = Collection._compileSelector(selector);
-    var sort_f = ('sort' in options) && Collection._compileSort(options.sort);
+    var sort_f = options.sort && Collection._compileSort(options.sort);
     results = self._rawFind(selector_f, sort_f);
 
-    if ('skip' in options)
+    if (options.skip)
       results.splice(0, options.skip);
-    if ('limit' in options) {
+    if (options.limit !== undefined) {
       var limit = options.limit;
       if (results.length > limit)
         results.length = limit;
@@ -91,11 +91,15 @@ Collection.prototype.find = function (selector, options) {
       removed: invalidate,
       changed: invalidate,
       moved: invalidate,
-      _suppress_initial: true,
+      _suppress_initial: true
     });
 
     var live_handle = self.findLive(selector, new_options);
     context.on_invalidate(function () {
+      // XXX in many cases, the query will be immediately
+      // recreated. so we might want to let it linger for a little
+      // while and repurpose it if it comes back. this will save us
+      // work because we won't have to redo the initial find.
       live_handle.stop();
     });
   }
@@ -111,12 +115,13 @@ Collection.prototype.find = function (selector, options) {
 //    - removed (id, at_index)
 //  * sort: sort descriptor
 //
-// functions available on returned query handle:
+// attributes available on returned query handle:
 //  * stop(): end updates
 //  * indexOf(id): return current index of object in result set, or -1
 //  * reconnect({}): replace added, changed, moved, removed, from the
 //      arguments, and call added to deliver the current state of the
 //      query (XXX ugly hack to support templating)
+//  * collection: the collection this query is querying
 //
 // iff x is a returned query handle, (x instanceof
 // Collection.LiveResultsSet) is true
@@ -127,6 +132,7 @@ Collection.prototype.find = function (selector, options) {
 // XXX maybe support limit/skip
 // XXX it'd be helpful if removed got the object that just left the
 // query, not just its id
+// XXX document that initial results will definitely be delivered before we return [do, add to asana]
 
 Collection.LiveResultsSet = function () {};
 Collection.prototype.findLive = function (selector, options) {
@@ -137,7 +143,7 @@ Collection.prototype.findLive = function (selector, options) {
 
   var query = self.queries[qid] = {
     selector_f: Collection._compileSelector(selector),
-    sort_f: 'sort' in options ? Collection._compileSort(options.sort) : null,
+    sort_f: options.sort ? Collection._compileSort(options.sort) : null,
     results: []
   };
   query.results = self._rawFind(query.selector_f, query.sort_f);
@@ -165,7 +171,8 @@ Collection.prototype.findLive = function (selector, options) {
           return i;
       return -1;
     },
-    reconnect: connect
+    reconnect: connect,
+    collection: this
   });
   return handle;
 };

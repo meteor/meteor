@@ -7,7 +7,7 @@ if (typeof Meteor === "undefined") Meteor = {};
   var Context = function () {
     // Each context has a unique number. You can use this to avoid
     // storing multiple copies of the same context in your
-    // invalidation list.
+    // invalidation list. The id is an integer >= 1.
     this.id = next_id++;
     this._callbacks = [];
     this._invalidated = false;
@@ -35,10 +35,11 @@ if (typeof Meteor === "undefined") Meteor = {};
       }
     },
 
-    // calls f immediately if this context was already invalidated
+    // calls f immediately if this context was already
+    // invalidated. receives one argument, the context.
     on_invalidate: function (f) {
       if (this._invalidated)
-        f();
+        f(this);
       else
         this._callbacks.push(f);
     }
@@ -50,16 +51,19 @@ if (typeof Meteor === "undefined") Meteor = {};
     // event handler that calls flush. it's probably an exception --
     // no flushing from inside onblur. can also imagine routing onblur
     // through settimeout(0), which is probably what the user wants.
+    // https://app.asana.com/0/159908330244/385138233856
     flush: function () {
-      var pending = pending_invalidate;
-      pending_invalidate = [];
+      while (pending_invalidate.length) {
+        var pending = pending_invalidate;
+        pending_invalidate = [];
 
-      _.each(pending, function (ctx) {
-        _.each(ctx._callbacks, function (f) {
-          f(); // XXX wrap in try?
+        _.each(pending, function (ctx) {
+          _.each(ctx._callbacks, function (f) {
+            f(ctx); // XXX wrap in try?
+          });
+          delete ctx._callbacks; // maybe help the GC
         });
-        delete ctx._callbacks; // maybe help the GC
-      });
+      }
     },
 
     deps: {

@@ -39,7 +39,7 @@ var init_keepalive = function () {
 
 var supported_browser = function (user_agent) {
   var agent = useragent.lookup(user_agent);
-  return !(agent.family === 'IE' && agent.major <= '7');
+  return !(agent.family === 'IE' && agent.major <= '5');
 };
 
 var run = function (bundle_dir) {

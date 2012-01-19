@@ -13,8 +13,7 @@ if (Meteor.is_client) {
 
   $(document).ready(function () {
     // List the players by score. You can click to select a player.
-    var leaderboard_elt = $('<div class="leaderboard"></div>')[0];
-    Meteor.ui.renderList(Players, leaderboard_elt, {
+    var scores = Meteor.ui.renderList(Players, {
       sort: {score: -1}, // sort from high to low score
       render: function (player) {
         if (Session.equals("selected_player", player._id))
@@ -24,7 +23,7 @@ if (Meteor.is_client) {
 
         return $('<div class="' + style + '">' +
                  '<div class="name">' + player.name + '</div>' +
-                 '<div class="score">' + player.score + '</div></div>')[0];
+                 '<div class="score">' + player.score + '</div></div>');
       },
       events: {
         "click": function () {
@@ -32,17 +31,18 @@ if (Meteor.is_client) {
         }
       }
     });
-    $('body').append(leaderboard_elt);
+    var leaderboard = $('<div class="leaderboard"></div>').append(scores);
+    $('body').append(leaderboard);
 
     // Details area, showing the currently selected player.
     var details_elt = Meteor.ui.render(function () {
       var selected_player = Session.get("selected_player");
       if (!selected_player)
-        return $('<div class="none">Click a player to select</div>')[0];
+        return $('<div class="none">Click a player to select</div>');
 
       var player = Players.find(selected_player);
       return $('<div class="details"><div class="name">' + player.name +
-               '</div><input type="button" value="Give 5 points"></div>')[0];
+               '</div><input type="button" value="Give 5 points"></div>');
     }, {
       'click input': function () {
         Players.update(Session.get("selected_player"), {$inc: {score: 5}});
@@ -53,6 +53,10 @@ if (Meteor.is_client) {
 }
 
 /*** Server ***/
+
+// If you don't want your server code to be sent to the client
+// (probably a good thing to avoid), you can just put it in a
+// subdirectory named 'server'.
 
 if (Meteor.is_server) {
   // Publish the top 10 players, live, to any client that wants them.

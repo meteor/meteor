@@ -433,8 +433,10 @@ Commands.push({
       .boolean('delete')
       .boolean('D')
       .describe('delete', "permanently delete this deployment")
+      .boolean('debug')
+      .describe('debug', 'deploy in debug mode (don\'t minify, etc)')
       .usage(
-"Usage: meteor deploy <site> [--password] [--delete]\n" +
+"Usage: meteor deploy <site> [--password] [--delete] [--debug]\n" +
 "\n" +
 "Deploys the project in your current directory to Meteor's servers.\n" +
 "\n" +
@@ -449,7 +451,7 @@ Commands.push({
 "\n" +
 "The --password flag sets an administrative password for the domain.  Once\n" +
 "set, any subsequent 'deploy', 'logs', or 'mongo' command will prompt for\n" +
-"the password.  You can change the password with a second 'deploy' command.\n"
+"the password.  You can change the password with a second 'deploy' command."
       );
 
     new_argv = opt.argv;
@@ -463,7 +465,8 @@ Commands.push({
       deploy.delete_app(new_argv._[1]);
     } else {
       var app_dir = path.resolve(require_project("bundle"));
-      deploy.deploy_app(new_argv._[1], app_dir, new_argv.password);
+      deploy.deploy_app(new_argv._[1], app_dir, new_argv.debug,
+                        new_argv.password);
     }
   }
 });
