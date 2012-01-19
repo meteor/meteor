@@ -93,7 +93,10 @@ _.extend(globals.test, {
         }
       }
     });
+
+  results.insert({n: next_result++, type: "begin", name: "complete!"});
   }
+
 });
 
 var test_assert = function () {
@@ -126,7 +129,7 @@ _.extend(test_assert, {
   },
 
   notEqual: function (actual, expected, message) {
-    test.equal(actual, expected, message, true);
+    test_assert.equal(actual, expected, message, true);
   },
 
   instanceOf: function (obj, klass) {

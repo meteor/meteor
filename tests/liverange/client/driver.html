@@ -37,19 +37,23 @@
 </template>
 
 <template name="fail">
-  {{#if type_is "assert"}}
-    <div class="assert">
-      {{message}}
-      <div class="expected">Expected:
-        {{#if not}}Any value but{{/if}} {{expected}}</div>
-      <div class="actual">Actual: {{actual}}</div>
-    </div>
+  {{#if expected}}
+    <span>(expected failure)</span>
   {{else}}
-    <div class="{{type}}">{{message}}</div>
+    {{#if type_is "assert"}}
+      <div class="assert">
+        {{message}}
+        <div class="expected">Expected:
+          {{#if not}}Any value but{{/if}} {{expected}}</div>
+        <div class="actual">Actual: {{actual}}</div>
+      </div>
+    {{else}}
+      <div class="{{type}}">Fail: {{message}}</div>
+    {{/if}}
+    <span>
+      <div class="rerun">Rerun and stop here</a>
+    </span>
   {{/if}}
-  <span>
-    <div class="rerun">Rerun and stop here</a>
-  </span>
 </template>
 
 <template name="test_renderList_each">
