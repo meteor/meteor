@@ -1,11 +1,11 @@
 // Stand back, I'm going to try SCIENCE.
 
-Sky.ui = Sky.ui || {};
+Meteor.ui = Meteor.ui || {};
 
 (function () {
   // XXX we should eventually move LiveRange off into its own
   // package. but it would be also be nice to keep it as a single,
-  // self-contained file to make it easier to use outside of Skybreak.
+  // self-contained file to make it easier to use outside of Meteor.
 
   // Possible optimization: get rid of start_idx/end_idx and just search
   // the list. Not clear which strategy will be faster.
@@ -13,7 +13,7 @@ Sky.ui = Sky.ui || {};
   // Possible extension: could allow zero-length ranges is some cases,
   // by encoding both 'enter' and 'leave' type events in the same list
 
-  Sky.ui._wrap_endpoints = function (start, end) {
+  Meteor.ui._wrap_endpoints = function (start, end) {
     // IE8 and earlier don't support expando attributes on text nodes,
     // but fortunately they are allowed on comments.
     var test_elt = document.createTextNode("");
@@ -22,7 +22,7 @@ Sky.ui = Sky.ui || {};
       test_elt.test = 123;
     } catch (exception) { }
 
-    Sky.ui._wrap_endpoints = (test_elt.test === 123) ?
+    Meteor.ui._wrap_endpoints = (test_elt.test === 123) ?
       function (start, end) {
         return [start, end];
       } :
@@ -41,10 +41,10 @@ Sky.ui = Sky.ui || {};
       return [start, end];
     };
 
-    return Sky.ui._wrap_endpoints(start, end);
+    return Meteor.ui._wrap_endpoints(start, end);
   };
 
-  // This is a constructor (invoke it as 'new Sky.ui._LiveRange').
+  // This is a constructor (invoke it as 'new Meteor.ui._LiveRange').
   //
   // Create a range, tagged 'tag', that includes start, end, and all
   // the nodes between them, and the children of all of those nodes,
@@ -78,14 +78,14 @@ Sky.ui = Sky.ui || {};
   // and end are the first and last child of their parent respectively
   // or when caller is building up the range tree from the inside
   // out. Let's wait for the profiler to tell us to add this.
-  Sky.ui._LiveRange = function (tag, start, end, inner) {
+  Meteor.ui._LiveRange = function (tag, start, end, inner) {
     if (start.nodeType === 11 /* DocumentFragment */) {
       end = start.lastChild;
       start = start.firstChild;
     }
     end = end || start;
 
-    var endpoints = Sky.ui._wrap_endpoints(start, end);
+    var endpoints = Meteor.ui._wrap_endpoints(start, end);
     start = endpoints[0];
     end = endpoints[1];
 
@@ -200,7 +200,7 @@ Sky.ui = Sky.ui || {};
       end[tag][1][i]._end_idx = i;
   };
 
-  Sky.ui._LiveRange.prototype._ensure_tags = function (nodes) {
+  Meteor.ui._LiveRange.prototype._ensure_tags = function (nodes) {
     for (var i = 0; i < nodes.length; i++) {
       if (!(this.tag in nodes[i]))
         nodes[i][this.tag] = [[], []];
@@ -208,7 +208,7 @@ Sky.ui = Sky.ui || {};
   };
 
   var can_delete_expandos;
-  Sky.ui._LiveRange.prototype._clean_tags = function (nodes) {
+  Meteor.ui._LiveRange.prototype._clean_tags = function (nodes) {
     // IE7 can't remove expando attributes from DOM nodes with
     // delete. Instead you must remove them with node.removeAttribute.
     if (can_delete_expandos === undefined) {
@@ -242,7 +242,7 @@ Sky.ui = Sky.ui || {};
   // object. However, on old versions of IE, you probably do need to
   // manually remove all ranges because IE can't GC reference cycles
   // through the DOM.
-  Sky.ui._LiveRange.prototype.destroy = function () {
+  Meteor.ui._LiveRange.prototype.destroy = function () {
     var enter = this._start[this.tag][0];
     enter.splice(this._start_idx, 1);
     for (var i = this._start_idx; i < enter.length; i++)
@@ -258,12 +258,12 @@ Sky.ui = Sky.ui || {};
   };
 
   // Return the first node in the range (in preorder traversal)
-  Sky.ui._LiveRange.prototype.firstNode = function () {
+  Meteor.ui._LiveRange.prototype.firstNode = function () {
     return this._start;
   };
 
   // Return the last node in the range (in postorder traversal)
-  Sky.ui._LiveRange.prototype.lastNode = function () {
+  Meteor.ui._LiveRange.prototype.lastNode = function () {
     return this._end;
   };
 
@@ -283,7 +283,7 @@ Sky.ui = Sky.ui || {};
   // future: maybe would be nice to let your visit function return
   // false when is_start is true to skip visiting that range/node's
   // children..
-  Sky.ui._LiveRange.prototype.visit = function (visit_range, visit_node) {
+  Meteor.ui._LiveRange.prototype.visit = function (visit_range, visit_node) {
     var traverse = function (node, data, start_bound, end_bound, tag) {
       for (var i = start_bound; i < data[0].length; i++)
         visit_range(true, data[0][i]);
@@ -320,7 +320,7 @@ Sky.ui = Sky.ui || {};
   //   our children.
   //
   // XXX need to make sure that tags are removed if they become empty
-  Sky.ui._LiveRange.prototype.replace_contents = function (new_frag) {
+  Meteor.ui._LiveRange.prototype.replace_contents = function (new_frag) {
     if (!new_frag.firstChild)
       throw new Error("Ranges must contain at least one element");
 
@@ -337,8 +337,8 @@ Sky.ui = Sky.ui || {};
 
     // Insert new fragment
 
-    var new_endpoints = Sky.ui._wrap_endpoints(new_frag.firstChild,
-                                               new_frag.lastChild);
+    var new_endpoints = Meteor.ui._wrap_endpoints(new_frag.firstChild,
+                                                  new_frag.lastChild);
     var new_start = new_endpoints[0];
     var new_end = new_endpoints[1];
     this._ensure_tags(new_endpoints);

@@ -16,7 +16,7 @@ var selectRoom = function (room_id) {
   Session.set('current_room', room_id);
 };
 
-Sky.startup(function () {
+Meteor.startup(function () {
   $('body').layout({applyDefaultStyles: true})
 });
 

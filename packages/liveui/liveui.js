@@ -1,14 +1,14 @@
-Sky.ui = Sky.ui || {};
+Meteor.ui = Meteor.ui || {};
 
 // Kill/cancel everything inside 'what', which may be a
 // DocumentFragment or a range. In the former case, you must pass the
 // the range tag to operate on. In the latter case, the range itself
 // will be destroyed along with its subranges.
-Sky.ui._cleanup = function (what, tag) {
+Meteor.ui._cleanup = function (what, tag) {
   var ranges = [];
 
   if (typeof what === 'object' && what.nodeType === 11 /* DocumentFragment */)
-    what = new Sky.ui._LiveRange(tag, what.firstChild, what.lastChild);
+    what = new Meteor.ui._LiveRange(tag, what.firstChild, what.lastChild);
   else
     ranges.push(what);
 
@@ -26,9 +26,9 @@ Sky.ui._cleanup = function (what, tag) {
   });
 };
 
-Sky.ui._tag = "_liveui"; // XXX XXX
+Meteor.ui._tag = "_liveui"; // XXX XXX
 
-Sky.ui._onscreen = function (node) {
+Meteor.ui._onscreen = function (node) {
   // http://jsperf.com/is-element-in-the-dom
 
   if (document.compareDocumentPosition)
@@ -59,7 +59,7 @@ Sky.ui._onscreen = function (node) {
 /// Exact GC semantics are as follows.
 /// - Slow path: If we go to do an update, and it's offscreen, we
 ///   forget it (tear down the auto-updating machinery) so it can get
-///   GC'd. This can only happen during Sky.flush().
+///   GC'd. This can only happen during Meteor.flush().
 ///
 /// - Fast path: When render and renderList take nodes off the screen
 ///   due to a rerender, they traverse them to find any auto-updating
@@ -70,7 +70,7 @@ Sky.ui._onscreen = function (node) {
 ///   implementation, not the documentation. It is a simple change but
 ///   a lot of tests will need updates.
 ///   https://app.asana.com/0/159908330244/382690197728
-Sky.ui.render = function (render_func, events, event_data) {
+Meteor.ui.render = function (render_func, events, event_data) {
   var range;
 
   var render_fragment = function (context) {
@@ -100,7 +100,7 @@ Sky.ui.render = function (render_func, events, event_data) {
     // Attach events
     // XXX bug: https://app.asana.com/0/159908330244/357591577797
     for (var i = 0; i < frag.childNodes.length; i++)
-      Sky.ui._setupEvents(frag.childNodes[i], events || {}, event_data);
+      Meteor.ui._setupEvents(frag.childNodes[i], events || {}, event_data);
 
     // If empty, add a placeholder
     if (!frag.childNodes.length)
@@ -112,9 +112,9 @@ Sky.ui.render = function (render_func, events, event_data) {
     if (old_context.killed)
       return; // _cleanup is killing us
 
-    if (!Sky.ui._onscreen(range.firstNode())) {
+    if (!Meteor.ui._onscreen(range.firstNode())) {
       // It was taken offscreen. Stop updating it so it can get GC'd.
-      Sky.ui._cleanup(range);
+      Meteor.ui._cleanup(range);
       return;
     }
 
@@ -124,17 +124,17 @@ Sky.ui.render = function (render_func, events, event_data) {
     // settimeout(0)..]
     // https://app.asana.com/0/159908330244/385138233856
 
-    var context = new Sky.deps.Context;
+    var context = new Meteor.deps.Context;
     context.on_invalidate(update);
-    Sky.ui._cleanup(range.replace_contents(render_fragment(context)),
-                    Sky.ui._tag);
+    Meteor.ui._cleanup(range.replace_contents(render_fragment(context)),
+                       Meteor.ui._tag);
     range.context = context;
   };
 
-  var context = new Sky.deps.Context;
+  var context = new Meteor.deps.Context;
   context.on_invalidate(update);
   var frag = render_fragment(context);
-  range = new Sky.ui._LiveRange(Sky.ui._tag, frag);
+  range = new Meteor.ui._LiveRange(Meteor.ui._tag, frag);
   range.context = context;
 
   return frag;
@@ -163,7 +163,7 @@ Sky.ui.render = function (render_func, events, event_data) {
 ///   to only do the teardown if it is in fact still offscreen at
 ///   flush()-time.
 ///   https://app.asana.com/0/159908330244/382690197728
-Sky.ui.renderList = function (what, options) {
+Meteor.ui.renderList = function (what, options) {
   var outer_frag;
   var outer_range;
   var entry_ranges = [];
@@ -174,23 +174,23 @@ Sky.ui.renderList = function (what, options) {
   // outer_(frag, range).
   var create_outer_range = function (initial_contents) {
     outer_frag = initial_contents;
-    outer_range = new Sky.ui._LiveRange(Sky.ui._tag, initial_contents);
-    outer_range.context = new Sky.deps.Context;
+    outer_range = new Meteor.ui._LiveRange(Meteor.ui._tag, initial_contents);
+    outer_range.context = new Meteor.deps.Context;
 
     var try_cleanup = function (old_context) {
       var node = outer_range && outer_range.firstNode();
-      if (!old_context.killed && node && Sky.ui._onscreen(node)) {
+      if (!old_context.killed && node && Meteor.ui._onscreen(node)) {
         // False alarm -- still onscreen. Could happen if a renderList
         // is initiated, then callbacks happen, then the renderList is
         // put on the screen, then flush is called.
-        outer_range.context = new Sky.deps.Context;
+        outer_range.context = new Meteor.deps.Context;
         outer_range.context.on_invalidate(try_cleanup);
         return;
       }
 
       query.stop();
       if (!old_context.killed)
-        Sky.ui._cleanup(outer_range);
+        Meteor.ui._cleanup(outer_range);
     };
 
     outer_range.context.on_invalidate(try_cleanup);
@@ -198,14 +198,14 @@ Sky.ui.renderList = function (what, options) {
 
   // render a database result to a DocumentFragment, and return it
   var render_doc = function (doc) {
-    return Sky.ui.render(_.bind(options.render, null, doc),
-                         options.events || {}, doc);
+    return Meteor.ui.render(_.bind(options.render, null, doc),
+                            options.events || {}, doc);
   };
 
   // return the DocumentFragment to show when there are no results
   var render_empty = function () {
     if (options.render_empty)
-      return Sky.ui.render(options.render_empty, options.events);
+      return Meteor.ui.render(options.render_empty, options.events);
     else {
       var ret = document.createDocumentFragment();
       ret.appendChild(document.createComment("empty list"));
@@ -265,8 +265,8 @@ Sky.ui.renderList = function (what, options) {
     var old_entry = entry_ranges[split_idx].replace_contents(placeholder());
 
     // Create ranges around both that old entry, and our new entry.
-    var new_range = new Sky.ui._LiveRange(Sky.ui._tag, frag);
-    var old_range = new Sky.ui._LiveRange(Sky.ui._tag, old_entry);
+    var new_range = new Meteor.ui._LiveRange(Meteor.ui._tag, frag);
+    var old_range = new Meteor.ui._LiveRange(Meteor.ui._tag, old_entry);
 
     // If inserting at the end, interchange the entries so it's like
     // we're inserting before the end.
@@ -325,10 +325,10 @@ Sky.ui.renderList = function (what, options) {
     // Make a range surrounding the two entries. This is the only
     // range that will ultimately survive the merge.
     var new_range =
-      new Sky.ui._LiveRange(Sky.ui._tag,
-                            entry_ranges[first_idx].firstNode(),
-                            entry_ranges[first_idx + 1].lastNode(),
-                            true /* inner! */);
+      new Meteor.ui._LiveRange(Meteor.ui._tag,
+                               entry_ranges[first_idx].firstNode(),
+                               entry_ranges[first_idx + 1].lastNode(),
+                               true /* inner! */);
 
     // Pull out the entry that will survive by replacing it with a placeholder.
     var keep_frag = entry_ranges[at_idx + (last ? -1 : 1)]
@@ -351,7 +351,7 @@ Sky.ui.renderList = function (what, options) {
 
   var check_onscreen = function () {
     var node = outer_range && outer_range.firstNode();
-    if (node && !Sky.ui._onscreen(node))
+    if (node && !Meteor.ui._onscreen(node))
       // Schedule a check at flush()-time to see if we're still off
       // the screen. (The user has from when we're created, to when
       // flush() is called, to put us on the screen.)
@@ -364,11 +364,11 @@ Sky.ui.renderList = function (what, options) {
       var frag = render_doc(doc);
 
       if (!entry_ranges.length) {
-        var new_range = new Sky.ui._LiveRange(Sky.ui._tag, frag);
+        var new_range = new Meteor.ui._LiveRange(Meteor.ui._tag, frag);
         if (!outer_range)
           create_outer_range(frag);
         else
-          Sky.ui._cleanup(outer_range.replace_contents(frag), Sky.ui._tag);
+          Meteor.ui._cleanup(outer_range.replace_contents(frag), Meteor.ui._tag);
         entry_ranges = [new_range];
       } else
         insert_before(before_idx, frag);
@@ -376,10 +376,10 @@ Sky.ui.renderList = function (what, options) {
     removed: function (id, at_idx) {
       check_onscreen();
       if (entry_ranges.length > 1) {
-        Sky.ui._cleanup(extract(at_idx), Sky.ui._tag);
+        Meteor.ui._cleanup(extract(at_idx), Meteor.ui._tag);
       } else {
-        Sky.ui._cleanup(outer_range.replace_contents(render_empty()),
-                        Sky.ui._tag);
+        Meteor.ui._cleanup(outer_range.replace_contents(render_empty()),
+                           Meteor.ui._tag);
         // _cleanup will already have destroyed entry_ranges[at_idx] for us
         entry_ranges.splice(at_idx, 1);
       }
@@ -387,7 +387,7 @@ Sky.ui.renderList = function (what, options) {
     changed: function (doc, at_idx) {
       check_onscreen();
       var range = entry_ranges[at_idx];
-      Sky.ui._cleanup(range.replace_contents(render_doc(doc)), Sky.ui._tag);
+      Meteor.ui._cleanup(range.replace_contents(render_doc(doc)), Meteor.ui._tag);
     },
     moved: function (doc, old_idx, new_idx) {
       check_onscreen();
@@ -415,7 +415,7 @@ Sky.ui.renderList = function (what, options) {
 
 // XXX jQuery dependency
 // 'event_data' will be an additional argument to event callback
-Sky.ui._setupEvents = function (elt, events, event_data) {
+Meteor.ui._setupEvents = function (elt, events, event_data) {
   events = events || {};
   function create_callback (callback) {
     // return a function that will be used as the jquery event

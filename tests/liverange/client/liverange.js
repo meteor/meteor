@@ -1,4 +1,4 @@
-Results = new Sky.Collection;
+Results = new Meteor.Collection;
 
 var next_result = 0;
 
@@ -8,7 +8,7 @@ _.each(["section", "begin", "ok", "fail"], function (what) {
   };
 });
 
-Sky.startup(function () {
+Meteor.startup(function () {
   section("Meta tests");
   test_try_all_permutations();
 
@@ -71,7 +71,7 @@ var assert_not = function (expected, actual, message) {
 };
 
 var create = function (id, start, end, inner, tag) {
-  var ret = new Sky.ui._LiveRange(tag || 'a', start, end, inner);
+  var ret = new Meteor.ui._LiveRange(tag || 'a', start, end, inner);
   ret.id = id;
   return ret;
 };
@@ -94,7 +94,7 @@ var dump = function (what, tag) {
 
   if (typeof what === 'object' && what.nodeType === 11 /* DocumentFragment */) {
     if (what.firstChild) {
-      var range = new Sky.ui._LiveRange(tag || 'a', what);
+      var range = new Meteor.ui._LiveRange(tag || 'a', what);
       range.visit(emit, emit);
       range.destroy();
     }
@@ -153,11 +153,11 @@ var check_integrity = function (range) {
 // actual can be a range or a fragment
 var assert_dump = function (expected, actual, tag) {
   assert(expected, dump(actual), "Tree doesn't match");
-  if (actual instanceof Sky.ui._LiveRange)
+  if (actual instanceof Meteor.ui._LiveRange)
     check_integrity(actual);
   else {
     if (actual.firstChild) {
-      var range = new Sky.ui._LiveRange(tag || 'a', actual);
+      var range = new Meteor.ui._LiveRange(tag || 'a', actual);
       check_integrity(range);
       range.destroy();
     }
@@ -364,7 +364,7 @@ var test_single = function () {
 
   var f = frag("<div id=1></div>");
   var r_a = create("a", f);
-  assert(true, r_a instanceof Sky.ui._LiveRange);
+  assert(true, r_a instanceof Meteor.ui._LiveRange);
   assert_dump("<a><1></1></a>", r_a);
   assert_dump("<a><1></1></a>", f);
   assert_contained(r_a, {range: r_a, children: []});
@@ -767,8 +767,8 @@ var assert_frag = function (expected, actual_frag) {
                     expected: expected, actual: actual});
 
   if (actual.firstChild) {
-    /* XXX get Sky.ui._tag in a cleaner way */
-    var range = new Sky.ui._LiveRange(Sky.ui._tag, actual);
+    /* XXX get Meteor.ui._tag in a cleaner way */
+    var range = new Meteor.ui._LiveRange(Meteor.ui._tag, actual);
     check_integrity(range);
     range.destroy();
   }
@@ -777,7 +777,7 @@ var assert_frag = function (expected, actual_frag) {
 var weather = {here: "cloudy", there: "cloudy"};
 var weather_listeners = {here: {}, there: {}};
 var get_weather = function (where) {
-  var context = Sky.deps.Context.current;
+  var context = Meteor.deps.Context.current;
   if (context && !(context.id in weather_listeners[where])) {
     weather_listeners[where][context.id] = context;
     context.on_invalidate(function (old_context) {
@@ -795,37 +795,37 @@ var set_weather = function (where, what) {
 var test_render = function () {
   begin("render - coercion");
 
-  assert_frag("<a></a>", Sky.ui.render(function () {
+  assert_frag("<a></a>", Meteor.ui.render(function () {
     return DIV({id: "a"});
   }));
 
-  assert_frag("<b></b><c></c>", Sky.ui.render(function () {
+  assert_frag("<b></b><c></c>", Meteor.ui.render(function () {
     var f = document.createDocumentFragment();
     f.appendChild(DIV({id: "b"}));
     f.appendChild(DIV({id: "c"}));
     return f;
   }));
 
-  assert_frag("<d></d><e></e>", Sky.ui.render(function () {
+  assert_frag("<d></d><e></e>", Meteor.ui.render(function () {
     return [
       DIV({id: "d"}),
       DIV({id: "e"})
     ];
   }));
 
-  assert_frag("<f></f><g></g>", Sky.ui.render(function () {
+  assert_frag("<f></f><g></g>", Meteor.ui.render(function () {
     return $('<div id="f"></div><div id="g"></div>');
   }));
 
-  assert_frag("~hi~", Sky.ui.render(function () {
+  assert_frag("~hi~", Meteor.ui.render(function () {
     return document.createTextNode("hi");
   }));
 
-  assert_frag("~igloo~", Sky.ui.render(function () {
+  assert_frag("~igloo~", Meteor.ui.render(function () {
     return "igloo";
   }));
 
-  assert_frag("<!---->", Sky.ui.render(function () {
+  assert_frag("<!---->", Meteor.ui.render(function () {
     return document.createComment('');
   }));
 
@@ -833,7 +833,7 @@ var test_render = function () {
 
   set_weather("here", "cloudy");
   assert(0, _.keys(weather_listeners.here).length);
-  var r = Sky.ui.render(function () {
+  var r = Meteor.ui.render(function () {
     return get_weather("here");
   });
   assert(1, _.keys(weather_listeners.here).length);
@@ -842,11 +842,11 @@ var test_render = function () {
   set_weather("here", "icy");
   assert(1, _.keys(weather_listeners.here).length);
   assert_frag("~cloudy~", r);
-  Sky.flush(); // not onscreen -- gets GC'd
+  Meteor.flush(); // not onscreen -- gets GC'd
   assert(0, _.keys(weather_listeners.here).length);
   assert_frag("~cloudy~", r);
 
-  r = Sky.ui.render(function () {
+  r = Meteor.ui.render(function () {
     return get_weather("here");
   });
   var onscreen = DIV({style: "display: none;"});
@@ -859,17 +859,17 @@ var test_render = function () {
   set_weather("here", "vanilla");
   assert(1, _.keys(weather_listeners.here).length);
   assert_frag("~icy~", onscreen);
-  Sky.flush();
+  Meteor.flush();
   assert(1, _.keys(weather_listeners.here).length);
   assert_frag("~vanilla~", onscreen);
 
   document.body.removeChild(onscreen);
-  Sky.flush();
+  Meteor.flush();
   assert(1, _.keys(weather_listeners.here).length);
 
   set_weather("here", "curious"); // safe from GC until flush
   document.body.appendChild(onscreen);
-  Sky.flush();
+  Meteor.flush();
   assert(1, _.keys(weather_listeners.here).length);
   assert_frag("~curious~", onscreen);
 
@@ -877,7 +877,7 @@ var test_render = function () {
   set_weather("here", "penguins");
   assert(1, _.keys(weather_listeners.here).length);
   assert_frag("~curious~", onscreen);
-  Sky.flush();
+  Meteor.flush();
   assert(0, _.keys(weather_listeners.here).length);
   assert_frag("~curious~", onscreen);
 
@@ -887,10 +887,10 @@ var test_render = function () {
   var outer_count = 0;
   var inner_count = 0;
   var onscreen = DIV({style: "display: none;"}, [
-    Sky.ui.render(function () {
+    Meteor.ui.render(function () {
       outer_count++;
       return DIV({id: "outer"}, [get_weather("here"),
-                  Sky.ui.render(function () {
+                  Meteor.ui.render(function () {
                     inner_count++;
                     return get_weather("there");
                   })
@@ -905,7 +905,7 @@ var test_render = function () {
   assert(1, _.keys(weather_listeners.there).length);
 
   set_weather("there", "dry");
-  Sky.flush();
+  Meteor.flush();
   assert_frag("<outer>penguins~dry~</outer>", onscreen);
   assert(1, outer_count);
   assert(2, inner_count);
@@ -913,7 +913,7 @@ var test_render = function () {
   assert(1, _.keys(weather_listeners.there).length);
 
   set_weather("here", "chocolate");
-  Sky.flush();
+  Meteor.flush();
   assert_frag("<outer>chocolate~dry~</outer>", onscreen);
   assert(2, outer_count);
   assert(3, inner_count);
@@ -925,7 +925,7 @@ var test_render = function () {
   assert(1, _.keys(weather_listeners.here).length);
   assert(1, _.keys(weather_listeners.there).length);
   document.body.appendChild(onscreen);
-  Sky.flush();
+  Meteor.flush();
   assert_frag("<outer>chocolate~melting~</outer>", onscreen);
   assert(2, outer_count);
   assert(4, inner_count);
@@ -934,7 +934,7 @@ var test_render = function () {
 
   document.body.removeChild(onscreen);
   set_weather("here", "silent");
-  Sky.flush();
+  Meteor.flush();
   assert_frag("<outer>chocolate~melting~</outer>", onscreen);
   assert(2, outer_count);
   assert(4, inner_count);
@@ -945,25 +945,25 @@ var test_render = function () {
 
   var evts = '';
   onscreen = DIV({style: "display: none;"}, [
-    Sky.ui.render(function () {
+    Meteor.ui.render(function () {
       return [
-        Sky.ui.render(function () {
+        Meteor.ui.render(function () {
           get_weather("there");
           return DIV({id: "wrapper"}, [
             DIV({id: "outer"}, [
               DIV({id: "inner1"}),
-              Sky.ui.render(function () {
+              Meteor.ui.render(function () {
                 return DIV({id: "inner2"});
               })
             ])])
         }),
-        Sky.ui.render(function () {
+        Meteor.ui.render(function () {
           if (get_weather("here") !== "expansive")
             return [];
           return DIV({id: "wrapper2"}, [
             DIV({id: "outer2"}, [
               DIV({id: "inner21"}),
-              Sky.ui.render(function () {
+              Meteor.ui.render(function () {
                 return DIV({id: "inner2"});
               })
             ])
@@ -1050,7 +1050,7 @@ var test_render = function () {
   main_event_tests();
 
   set_weather("here", "expansive");
-  Sky.flush();
+  Meteor.flush();
   main_event_tests();
 
   // XXX expected failure -- top-level nodes that appear later will
@@ -1059,7 +1059,7 @@ var test_render = function () {
   // test("a23", 'inner21', 'click', {data: 23});
 
   set_weather("there", "peachy");
-  Sky.flush();
+  Meteor.flush();
   // XXX expected failure -- if a LiveRange at toplevel gets
   // repopulated, then it won't get event handlers installed on
   // it. really the same case as the previous.
@@ -1069,9 +1069,9 @@ var test_render = function () {
 };
 
 var test_renderList = function () {
-  var c = Sky.Collection();
+  var c = Meteor.Collection();
 
-  var r = Sky.ui.renderList(c, {
+  var r = Meteor.ui.renderList(c, {
     sort: ["id"],
     render: function (doc) {
       return DIV({id: doc.id});
@@ -1174,7 +1174,7 @@ var test_renderList = function () {
 
   begin("renderList - default render empty");
 
-  r = Sky.ui.renderList(c, {
+  r = Meteor.ui.renderList(c, {
     sort: ["id"],
     render: function (doc) {
       return DIV({id: doc.id});
@@ -1216,12 +1216,12 @@ var test_renderList = function () {
   c.remove();
   c.insert({id: "A"});
   assert_frag("<A></A>", r);
-  Sky.flush(); // not onscreen, so terminates
+  Meteor.flush(); // not onscreen, so terminates
   c.insert({id: "B"});
   assert_frag("<A></A>", r);
   c.remove({id: "A"});
   assert_frag("<A></A>", r);
-  Sky.flush();
+  Meteor.flush();
   assert_frag("<A></A>", r);
 
   var before_flush;
@@ -1234,7 +1234,7 @@ var test_renderList = function () {
       c.remove();
       c.insert({id: "A"});
       c.insert({id: "B"});
-      r = Sky.ui.renderList(c, {
+      r = Meteor.ui.renderList(c, {
         sort: ["id"],
         render: function (doc) {
           return DIV({id: doc.id});
@@ -1269,7 +1269,7 @@ var test_renderList = function () {
     // Possibly flush.
     [1,
      function () {
-       Sky.flush();
+       Meteor.flush();
        should_gc = !onscreen;
      },
      function () { }
@@ -1299,10 +1299,10 @@ var test_renderList = function () {
 
   set_weather("here", "cloudy");
   set_weather("there", "cloudy");
-  Sky.flush();
+  Meteor.flush();
   var render_count = 0;
   c.remove();
-  r = Sky.ui.renderList(c, {
+  r = Meteor.ui.renderList(c, {
     sort: ["id"],
     render: function (doc) {
       render_count++;
@@ -1336,7 +1336,7 @@ var test_renderList = function () {
   assert(3, _.keys(weather_listeners.here).length);
   assert_frag("<A_cloudy></A_cloudy><B2_cloudy></B2_cloudy><C></C>", onscreen);
 
-  Sky.flush();
+  Meteor.flush();
   assert(4, render_count);
   assert(2, _.keys(weather_listeners.here).length);
   assert_frag("<A_cloudy></A_cloudy><B2_cloudy></B2_cloudy><C></C>", onscreen);
@@ -1346,7 +1346,7 @@ var test_renderList = function () {
   assert(3, _.keys(weather_listeners.here).length);
   assert_frag("<A_cloudy></A_cloudy><C></C><D_cloudy></D_cloudy>", onscreen);
 
-  Sky.flush();
+  Meteor.flush();
   assert(5, render_count);
   assert(2, _.keys(weather_listeners.here).length);
   assert_frag("<A_cloudy></A_cloudy><C></C><D_cloudy></D_cloudy>", onscreen);
@@ -1356,7 +1356,7 @@ var test_renderList = function () {
   assert(2, _.keys(weather_listeners.here).length);
   assert_frag("<A_cloudy></A_cloudy><C></C><D_cloudy></D_cloudy>", onscreen);
 
-  Sky.flush();
+  Meteor.flush();
   assert(7, render_count);
   assert(2, _.keys(weather_listeners.here).length);
   assert_frag("<A_sunny></A_sunny><C></C><D_sunny></D_sunny>", onscreen);
@@ -1366,7 +1366,7 @@ var test_renderList = function () {
   assert(2, _.keys(weather_listeners.here).length);
   assert_frag("<C></C><D_sunny></D_sunny>", onscreen);
 
-  Sky.flush();
+  Meteor.flush();
   assert(7, render_count);
   assert(1, _.keys(weather_listeners.here).length);
   assert(0, _.keys(weather_listeners.there).length);
@@ -1379,19 +1379,19 @@ var test_renderList = function () {
   assert_frag("<C></C><D_sunny></D_sunny><F_cloudy></F_cloudy>", onscreen);
 
   r.appendChild(onscreen); // take offscreen
-  Sky.flush();
+  Meteor.flush();
   assert(8, render_count);
   assert(1, _.keys(weather_listeners.here).length);
   assert(1, _.keys(weather_listeners.there).length);
   assert_frag("<C></C><D_sunny></D_sunny><F_cloudy></F_cloudy>", onscreen);
 
   // it's offscreen, but it wasn't taken off through a mechanism that
-  // calls Sky.ui._cleanup, so we take the slow GC path. the entries
+  // calls Meteor.ui._cleanup, so we take the slow GC path. the entries
   // will notice as they get invalidated, but the list won't notice
   // until it has a structure change (at which point any remaining
   // entries will get torn down too.)
   set_weather("here", "ducky");
-  Sky.flush();
+  Meteor.flush();
   assert(8, render_count);
   assert(0, _.keys(weather_listeners.here).length);
   assert(1, _.keys(weather_listeners.there).length);
@@ -1405,14 +1405,14 @@ var test_renderList = function () {
   assert(1, _.keys(weather_listeners.there).length);
   assert_frag("<C></C><D_sunny></D_sunny><E></E><F_cloudy></F_cloudy>", onscreen);
 
-  Sky.flush();
+  Meteor.flush();
   assert(9, render_count);
   assert(0, _.keys(weather_listeners.here).length);
   assert(0, _.keys(weather_listeners.there).length);
   assert_frag("<C></C><D_sunny></D_sunny><E></E><F_cloudy></F_cloudy>", onscreen);
 
   c.insert({id: "G"});
-  Sky.flush();
+  Meteor.flush();
   assert(9, render_count);
   assert(0, _.keys(weather_listeners.here).length);
   assert(0, _.keys(weather_listeners.there).length);
@@ -1486,8 +1486,8 @@ var test_renderList = function () {
     ],
     function () {
       c.remove();
-      Sky.flush();
-      r = Sky.ui.renderList(c, {
+      Meteor.flush();
+      r = Meteor.ui.renderList(c, {
         sort: ["moved", "index"],
         render: function (doc) {
           var ret = [];
@@ -1550,20 +1550,20 @@ var test_renderList = function () {
   set_weather("here", "clear");
   assert_frag("~Before0~Aducky~~Bducky~Middle~Else~After~", onscreen);
   assert(2, _.keys(weather_listeners.here).length);
-  Sky.flush();
+  Meteor.flush();
   assert_frag("~Before0~Aclear~~Bclear~Middle~Else~After~", onscreen);
   assert(2, _.keys(weather_listeners.here).length);
 
   c.update({x: 3}, {$set: {x: 8}});
   assert_frag("~Before0~Aclear~Middle~B~After~", onscreen);
   assert(2, _.keys(weather_listeners.here).length);
-  Sky.flush();
+  Meteor.flush();
   assert(1, _.keys(weather_listeners.here).length);
 
   c.update({}, {$set: {x: 5}});
   assert_frag("~Before0<!---->Middle~Else~After~", onscreen);
   assert(1, _.keys(weather_listeners.here).length);
-  Sky.flush();
+  Meteor.flush();
   assert(0, _.keys(weather_listeners.here).length);
 
   document.body.removeChild(onscreen);
