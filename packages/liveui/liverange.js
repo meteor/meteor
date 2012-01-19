@@ -306,6 +306,8 @@ Sky.ui = Sky.ui || {};
       if (walk === this._end)
         break;
       walk = walk.nextSibling;
+      if (!walk)
+        throw new Error("LiveRanges must begin and end on adjacent siblings");
     }
   };
 
@@ -349,13 +351,13 @@ Sky.ui = Sky.ui || {};
     var ret = this._start.ownerDocument.createDocumentFragment();
     var walk = this._start;
     while (true) {
-      if (walk === null)
-        debugger; // XXX NOCOMMIT
       var next = walk.nextSibling;
       ret.appendChild(walk);
       if (walk === this._end)
         break;
       walk = next;
+      if (!walk)
+        throw new Error("LiveRanges must begin and end on adjacent siblings");
     }
 
     // Fix up range pointers on new fragment -- including our own

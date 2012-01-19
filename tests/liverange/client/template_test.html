@@ -1,15 +1,30 @@
-<template name="test_assembly_0">
-  {{> test_assembly_1}}
+<template name="test_assembly_a0">
+  {{> test_assembly_a1}}
 </template>
 
-<template name="test_assembly_1">
-  {{> test_assembly_2}}
+<template name="test_assembly_a1">
+  {{> test_assembly_a2}}
 </template>
 
-<template name="test_assembly_2">
-  {{> test_assembly_3}}
+<template name="test_assembly_a2">
+  {{> test_assembly_a3}}
 </template>
 
-<template name="test_assembly_3">
+<template name="test_assembly_a3">
   Hi
 </template>
+
+
+
+<template name="test_assembly_b0">
+  {{> test_assembly_b1}}
+</template>
+
+<template name="test_assembly_b1">
+  x{{#if stuff}}y{{/if}}{{> test_assembly_b2}}
+</template>
+
+<template name="test_assembly_b2">
+  hi
+</template>
+
