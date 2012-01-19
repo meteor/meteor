@@ -547,7 +547,7 @@ test_modify = function () {
     }
   };
   var exception = function (doc, mod) {
-    var caught = true;
+    var caught = false;
     try {
       Collection._modify(Collection._deepcopy(doc), mod);
     } catch (e) {
