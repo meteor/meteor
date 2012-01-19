@@ -104,6 +104,8 @@ _.extend(globals.test, {
 
 });
 
+
+// Patterned after http://vowsjs.org/#reference
 var test_assert = {
   // XXX eliminate 'message' and 'not' arguments
   equal: function (actual, expected, message, not) {
