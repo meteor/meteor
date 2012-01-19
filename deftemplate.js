@@ -77,7 +77,9 @@ Sky._def_template = function (name, raw_func) {
           var child = elt.childNodes[i];
           var replacement = child.id && Sky._pending_partials[child.id];
           if (replacement) {
-            elt.replaceChild(replacement, child);
+            var range = new Sky.ui._LiveRange(Sky.ui._tag, child);
+            range.replace_contents(replacement);
+            range.destroy();
             delete Sky._pending_partials[child.id];
             i--;
             continue;
