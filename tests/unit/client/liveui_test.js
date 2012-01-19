@@ -105,18 +105,18 @@ test("render - coercion", function () {
 
 test("render - updating and GC", function () {
   set_weather("here", "cloudy");
-  assert.lengthIs(_.keys(weather_listeners.here), 0);
+  assert.length(_.keys(weather_listeners.here), 0);
   var r = Sky.ui.render(function () {
     return get_weather("here");
   });
-  assert.lengthIs(_.keys(weather_listeners.here), 1);
+  assert.length(_.keys(weather_listeners.here), 1);
   assert_frag("~cloudy~", r);
 
   set_weather("here", "icy");
-  assert.lengthIs(_.keys(weather_listeners.here), 1);
+  assert.length(_.keys(weather_listeners.here), 1);
   assert_frag("~cloudy~", r);
   Sky.flush(); // not onscreen -- gets GC'd
-  assert.lengthIs(_.keys(weather_listeners.here), 0);
+  assert.length(_.keys(weather_listeners.here), 0);
   assert_frag("~cloudy~", r);
 
   r = Sky.ui.render(function () {
@@ -127,31 +127,31 @@ test("render - updating and GC", function () {
   document.body.appendChild(onscreen);
 
   assert_frag("~icy~", onscreen);
-  assert.lengthIs(_.keys(weather_listeners.here), 1);
+  assert.length(_.keys(weather_listeners.here), 1);
 
   set_weather("here", "vanilla");
-  assert.lengthIs(_.keys(weather_listeners.here), 1);
+  assert.length(_.keys(weather_listeners.here), 1);
   assert_frag("~icy~", onscreen);
   Sky.flush();
-  assert.lengthIs(_.keys(weather_listeners.here), 1);
+  assert.length(_.keys(weather_listeners.here), 1);
   assert_frag("~vanilla~", onscreen);
 
   document.body.removeChild(onscreen);
   Sky.flush();
-  assert.lengthIs(_.keys(weather_listeners.here), 1);
+  assert.length(_.keys(weather_listeners.here), 1);
 
   set_weather("here", "curious"); // safe from GC until flush
   document.body.appendChild(onscreen);
   Sky.flush();
-  assert.lengthIs(_.keys(weather_listeners.here), 1);
+  assert.length(_.keys(weather_listeners.here), 1);
   assert_frag("~curious~", onscreen);
 
   document.body.removeChild(onscreen);
   set_weather("here", "penguins");
-  assert.lengthIs(_.keys(weather_listeners.here), 1);
+  assert.length(_.keys(weather_listeners.here), 1);
   assert_frag("~curious~", onscreen);
   Sky.flush();
-  assert.lengthIs(_.keys(weather_listeners.here), 0);
+  assert.length(_.keys(weather_listeners.here), 0);
   assert_frag("~curious~", onscreen);
 });
 
@@ -175,36 +175,36 @@ test("render - recursive", function () {
   assert_frag("<outer>penguins~wet~</outer>", onscreen);
   assert.equal(outer_count, 1);
   assert.equal(inner_count, 1);
-  assert.lengthIs(_.keys(weather_listeners.here), 1);
-  assert.lengthIs(_.keys(weather_listeners.there), 1);
+  assert.length(_.keys(weather_listeners.here), 1);
+  assert.length(_.keys(weather_listeners.there), 1);
 
   set_weather("there", "dry");
   Sky.flush();
   assert_frag("<outer>penguins~dry~</outer>", onscreen);
   assert.equal(outer_count, 1);
   assert.equal(inner_count, 2);
-  assert.lengthIs(_.keys(weather_listeners.here), 1);
-  assert.lengthIs(_.keys(weather_listeners.there), 1);
+  assert.length(_.keys(weather_listeners.here), 1);
+  assert.length(_.keys(weather_listeners.there), 1);
 
   set_weather("here", "chocolate");
   Sky.flush();
   assert_frag("<outer>chocolate~dry~</outer>", onscreen);
   assert.equal(outer_count, 2);
   assert.equal(inner_count, 3);
-  assert.lengthIs(_.keys(weather_listeners.here), 1);
-  assert.lengthIs(_.keys(weather_listeners.there), 1);
+  assert.length(_.keys(weather_listeners.here), 1);
+  assert.length(_.keys(weather_listeners.there), 1);
 
   document.body.removeChild(onscreen);
   set_weather("there", "melting"); // safe from GC until flush
-  assert.lengthIs(_.keys(weather_listeners.here), 1);
-  assert.lengthIs(_.keys(weather_listeners.there), 1);
+  assert.length(_.keys(weather_listeners.here), 1);
+  assert.length(_.keys(weather_listeners.there), 1);
   document.body.appendChild(onscreen);
   Sky.flush();
   assert_frag("<outer>chocolate~melting~</outer>", onscreen);
   assert.equal(outer_count, 2);
   assert.equal(inner_count, 4);
-  assert.lengthIs(_.keys(weather_listeners.here), 1);
-  assert.lengthIs(_.keys(weather_listeners.there), 1);
+  assert.length(_.keys(weather_listeners.here), 1);
+  assert.length(_.keys(weather_listeners.there), 1);
 
   document.body.removeChild(onscreen);
   set_weather("here", "silent");
@@ -212,8 +212,8 @@ test("render - recursive", function () {
   assert_frag("<outer>chocolate~melting~</outer>", onscreen);
   assert.equal(outer_count, 2);
   assert.equal(inner_count, 4);
-  assert.lengthIs(_.keys(weather_listeners.here), 0);
-  assert.lengthIs(_.keys(weather_listeners.there), 0);
+  assert.length(_.keys(weather_listeners.here), 0);
+  assert.length(_.keys(weather_listeners.there), 0);
 });
 
 test("render - events", function () {
@@ -647,66 +647,66 @@ test("renderList - list items are reactive", function () {
 
   c.insert({id: "B", want_weather: "here"});
   assert.equal(render_count, 2);
-  assert.lengthIs(_.keys(weather_listeners.here), 2);
+  assert.length(_.keys(weather_listeners.here), 2);
   assert_frag("<A_cloudy></A_cloudy><B_cloudy></B_cloudy>", onscreen);
 
   c.insert({id: "C"});
   assert.equal(render_count, 3);
-  assert.lengthIs(_.keys(weather_listeners.here), 2);
+  assert.length(_.keys(weather_listeners.here), 2);
   assert_frag("<A_cloudy></A_cloudy><B_cloudy></B_cloudy><C></C>", onscreen);
 
   c.update({id: "B"}, {$set: {id: "B2"}});
   assert.equal(render_count, 4);
-  assert.lengthIs(_.keys(weather_listeners.here), 3);
+  assert.length(_.keys(weather_listeners.here), 3);
   assert_frag("<A_cloudy></A_cloudy><B2_cloudy></B2_cloudy><C></C>", onscreen);
 
   Sky.flush();
   assert.equal(render_count, 4);
-  assert.lengthIs(_.keys(weather_listeners.here), 2);
+  assert.length(_.keys(weather_listeners.here), 2);
   assert_frag("<A_cloudy></A_cloudy><B2_cloudy></B2_cloudy><C></C>", onscreen);
 
   c.update({id: "B2"}, {$set: {id: "D"}});
   assert.equal(render_count, 5); // move doesn't rerender
-  assert.lengthIs(_.keys(weather_listeners.here), 3);
+  assert.length(_.keys(weather_listeners.here), 3);
   assert_frag("<A_cloudy></A_cloudy><C></C><D_cloudy></D_cloudy>", onscreen);
 
   Sky.flush();
   assert.equal(render_count, 5);
-  assert.lengthIs(_.keys(weather_listeners.here), 2);
+  assert.length(_.keys(weather_listeners.here), 2);
   assert_frag("<A_cloudy></A_cloudy><C></C><D_cloudy></D_cloudy>", onscreen);
 
   set_weather("here", "sunny");
   assert.equal(render_count, 5);
-  assert.lengthIs(_.keys(weather_listeners.here), 2);
+  assert.length(_.keys(weather_listeners.here), 2);
   assert_frag("<A_cloudy></A_cloudy><C></C><D_cloudy></D_cloudy>", onscreen);
 
   Sky.flush();
   assert.equal(render_count, 7);
-  assert.lengthIs(_.keys(weather_listeners.here), 2);
+  assert.length(_.keys(weather_listeners.here), 2);
   assert_frag("<A_sunny></A_sunny><C></C><D_sunny></D_sunny>", onscreen);
 
   c.remove({id: "A"});
   assert.equal(render_count, 7);
-  assert.lengthIs(_.keys(weather_listeners.here), 2);
+  assert.length(_.keys(weather_listeners.here), 2);
   assert_frag("<C></C><D_sunny></D_sunny>", onscreen);
 
   Sky.flush();
   assert.equal(render_count, 7);
-  assert.lengthIs(_.keys(weather_listeners.here), 1);
-  assert.lengthIs(_.keys(weather_listeners.there), 0);
+  assert.length(_.keys(weather_listeners.here), 1);
+  assert.length(_.keys(weather_listeners.there), 0);
   assert_frag("<C></C><D_sunny></D_sunny>", onscreen);
 
   c.insert({id: "F", want_weather: "there"});
   assert.equal(render_count, 8);
-  assert.lengthIs(_.keys(weather_listeners.here), 1);
-  assert.lengthIs(_.keys(weather_listeners.there), 1);
+  assert.length(_.keys(weather_listeners.here), 1);
+  assert.length(_.keys(weather_listeners.there), 1);
   assert_frag("<C></C><D_sunny></D_sunny><F_cloudy></F_cloudy>", onscreen);
 
   r.appendChild(onscreen); // take offscreen
   Sky.flush();
   assert.equal(render_count, 8);
-  assert.lengthIs(_.keys(weather_listeners.here), 1);
-  assert.lengthIs(_.keys(weather_listeners.there), 1);
+  assert.length(_.keys(weather_listeners.here), 1);
+  assert.length(_.keys(weather_listeners.there), 1);
   assert_frag("<C></C><D_sunny></D_sunny><F_cloudy></F_cloudy>", onscreen);
 
   // it's offscreen, but it wasn't taken off through a mechanism that
@@ -717,29 +717,29 @@ test("renderList - list items are reactive", function () {
   set_weather("here", "ducky");
   Sky.flush();
   assert.equal(render_count, 8);
-  assert.lengthIs(_.keys(weather_listeners.here), 0);
-  assert.lengthIs(_.keys(weather_listeners.there), 1);
+  assert.length(_.keys(weather_listeners.here), 0);
+  assert.length(_.keys(weather_listeners.there), 1);
   assert_frag("<C></C><D_sunny></D_sunny><F_cloudy></F_cloudy>", onscreen);
 
   c.insert({id: "E"});
   // insert renders the doc -- it has to, since renderList GC happens
   // only on flush
   assert.equal(render_count, 9);
-  assert.lengthIs(_.keys(weather_listeners.here), 0);
-  assert.lengthIs(_.keys(weather_listeners.there), 1);
+  assert.length(_.keys(weather_listeners.here), 0);
+  assert.length(_.keys(weather_listeners.there), 1);
   assert_frag("<C></C><D_sunny></D_sunny><E></E><F_cloudy></F_cloudy>", onscreen);
 
   Sky.flush();
   assert.equal(render_count, 9);
-  assert.lengthIs(_.keys(weather_listeners.here), 0);
-  assert.lengthIs(_.keys(weather_listeners.there), 0);
+  assert.length(_.keys(weather_listeners.here), 0);
+  assert.length(_.keys(weather_listeners.there), 0);
   assert_frag("<C></C><D_sunny></D_sunny><E></E><F_cloudy></F_cloudy>", onscreen);
 
   c.insert({id: "G"});
   Sky.flush();
   assert.equal(render_count, 9);
-  assert.lengthIs(_.keys(weather_listeners.here), 0);
-  assert.lengthIs(_.keys(weather_listeners.there), 0);
+  assert.length(_.keys(weather_listeners.here), 0);
+  assert.length(_.keys(weather_listeners.there), 0);
   assert_frag("<C></C><D_sunny></D_sunny><E></E><F_cloudy></F_cloudy>", onscreen);
 });
 
@@ -865,34 +865,34 @@ test("renderList - #each", function () {
   document.body.appendChild(onscreen);
 
   assert_frag("~Before0<!---->Middle~Else~After~", onscreen);
-  assert.lengthIs(_.keys(weather_listeners.here), 0);
+  assert.length(_.keys(weather_listeners.here), 0);
 
   c.insert({x: 2, name: "A"});
   assert_frag("~Before0~Aducky~Middle~Else~After~", onscreen);
-  assert.lengthIs(_.keys(weather_listeners.here), 1);
+  assert.length(_.keys(weather_listeners.here), 1);
 
   c.insert({x: 3, name: "B"});
   assert_frag("~Before0~Aducky~~Bducky~Middle~Else~After~", onscreen);
-  assert.lengthIs(_.keys(weather_listeners.here), 2);
+  assert.length(_.keys(weather_listeners.here), 2);
 
   set_weather("here", "clear");
   assert_frag("~Before0~Aducky~~Bducky~Middle~Else~After~", onscreen);
-  assert.lengthIs(_.keys(weather_listeners.here), 2);
+  assert.length(_.keys(weather_listeners.here), 2);
   Sky.flush();
   assert_frag("~Before0~Aclear~~Bclear~Middle~Else~After~", onscreen);
-  assert.lengthIs(_.keys(weather_listeners.here), 2);
+  assert.length(_.keys(weather_listeners.here), 2);
 
   c.update({x: 3}, {$set: {x: 8}});
   assert_frag("~Before0~Aclear~Middle~B~After~", onscreen);
-  assert.lengthIs(_.keys(weather_listeners.here), 2);
+  assert.length(_.keys(weather_listeners.here), 2);
   Sky.flush();
-  assert.lengthIs(_.keys(weather_listeners.here), 1);
+  assert.length(_.keys(weather_listeners.here), 1);
 
   c.update({}, {$set: {x: 5}});
   assert_frag("~Before0<!---->Middle~Else~After~", onscreen);
-  assert.lengthIs(_.keys(weather_listeners.here), 1);
+  assert.length(_.keys(weather_listeners.here), 1);
   Sky.flush();
-  assert.lengthIs(_.keys(weather_listeners.here), 0);
+  assert.length(_.keys(weather_listeners.here), 0);
 
   document.body.removeChild(onscreen);
 

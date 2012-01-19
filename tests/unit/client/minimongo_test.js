@@ -1,58 +1,43 @@
-TestFailure = function (message) {
-  this.message = message;
-};
-TestFailure.prototype = new Error();
-
-log = function (message) {
-  $('body').append(DIV([message]));
-};
-
-assert = function (expected, actual) {
-  expected = JSON.stringify(expected);
-  actual = JSON.stringify(actual);
-
-  if (expected !== actual) {
-    debugger;
-    console.log("Assertion failed");
-    console.log("  Expected: " + expected);
-    console.log("  Actual: " + actual);
-    throw new TestFailure("assertion failed");
+// assert that f is a strcmp-style comparison function that puts
+// 'values' in the provided order
+assert_ordering = function (f, values) {
+  for (var i = 0; i < values.length; i++) {
+    var x = f(values[i], values[i]);
+    if (x !== 0) {
+      // XXX super janky
+      test.fail({type: "minimongo-ordering",
+                 message: "value doesn't order as equal to itself",
+                 value: JSON.stringify(values[i]),
+                 should_be_zero_but_got: JSON.stringify(x)});
+    }
+    if (i + 1 < values.length) {
+      var less = values[i];
+      var more = values[i + 1];
+      var x = f(less, more);
+      if (!(x < 0)) {
+        // XXX super janky
+        test.fail({type: "minimongo-ordering",
+                   message: "ordering test failed",
+                   first: JSON.stringify(less),
+                   second: JSON.stringify(more),
+                   should_be_negative_but_got: JSON.stringify(x)});
+      }
+      x = f(more, less);
+      if (!(x > 0)) {
+        // XXX super janky
+        test.fail({type: "minimongo-ordering",
+                   message: "ordering test failed",
+                   first: JSON.stringify(less),
+                   second: JSON.stringify(more),
+                   should_be_positive_but_got: JSON.stringify(x)});
+      }
+    }
   }
 };
-
-// XXX should separate exceptions that come from test assertions
-// failing, from assertions coming from the actual API
-// calls. assertThrows is trying to assert that we get the latter
-assertThrows = function (f) {
-  var caught = false;
-  try {
-    f();
-  } catch (e) {
-    if (e instanceof TestFailure)
-      throw new TestFailure("test expected an exception, but got a test failure");
-    caught = true;
-  }
-  if (!caught) {
-    debugger;
-    throw new TestFailure("test expected an exception");
-  }
-}
 
 // XXX test shared structure in all MM entrypoints
 
-run_tests = function () {
-  log("running tests");
-  test_basics();
-  test_misc();
-  test_selector_compiler();
-  test_ordering();
-  test_sort();
-  test_modify();
-  test_livequery();
-  log("done");
-};
-
-test_basics = function () {
+test("minimongo - basics", function () {
   var c = new Collection();
 
   c.insert({type: "kitten", name: "fluffy"});
@@ -60,22 +45,22 @@ test_basics = function () {
   c.insert({type: "cryptographer", name: "alice"});
   c.insert({type: "cryptographer", name: "bob"});
   c.insert({type: "cryptographer", name: "cara"});
-  assert(2, c.find({type: "kitten"}).length);
-  assert(3, c.find({type: "cryptographer"}).length);
+  assert.length(c.find({type: "kitten"}), 2);
+  assert.length(c.find({type: "cryptographer"}), 3);
   c.remove({name: "cara"});
-  assert(2, c.find({type: "kitten"}).length);
-  assert(2, c.find({type: "cryptographer"}).length);
+  assert.length(c.find({type: "kitten"}), 2);
+  assert.length(c.find({type: "cryptographer"}), 2);
   c.update({name: "snookums"}, {$set: {type: "cryptographer"}});
-  assert(1, c.find({type: "kitten"}).length);
-  assert(3, c.find({type: "cryptographer"}).length);
+  assert.length(c.find({type: "kitten"}), 1);
+  assert.length(c.find({type: "cryptographer"}), 3);
 
   c.remove({});
   c.insert({_id: 1, name: "strawberry", tags: ["fruit", "red", "squishy"]});
   c.insert({_id: 2, name: "apple", tags: ["fruit", "red", "hard"]});
   c.insert({_id: 3, name: "rose", tags: ["flower", "red", "squishy"]});
-  assert(1, c.find({tags: "flower"}).length);
-  assert(2, c.find({tags: "fruit"}).length);
-  assert(3, c.find({tags: "red"}).length);
+  assert.length(c.find({tags: "flower"}), 1);
+  assert.length(c.find({tags: "fruit"}), 2);
+  assert.length(c.find({tags: "red"}), 3);
 
   var ev = "";
   var makecb = function (tag) {
@@ -86,7 +71,7 @@ test_basics = function () {
     };
   };
   var expect = function (x) {
-    assert(x, ev);
+    assert.equal(ev, x);
     ev = "";
   };
   c.findLive({tags: "flower"}, makecb('a'));
@@ -101,43 +86,42 @@ test_basics = function () {
   expect("ra3_");
   c.insert({_id: 4, name: "daisy", tags: ["flower"]});
   expect("aa4_");
-};
+});
 
-test_misc = function () {
+test("minimongo - misc", function () {
   // deepcopy
   var a = {a: [1, 2, 3], b: "x", c: true, d: {x: 12, y: [12]},
            f: null};
   var b = Collection._deepcopy(a);
-  assert(true, Collection._f._equal(a, b));
+  assert.isTrue(Collection._f._equal(a, b));
   a.a.push(4);
-  assert(3, b.a.length);
+  assert.length(b.a, 3);
   a.c = false;
-  assert(true, b.c);
+  assert.isTrue(b.c);
   b.d.z = 15;
   a.d.z = 14;
-  assert(15, b.d.z);
+  assert.equal(b.d.z, 15);
   a.d.y.push(88);
-  assert(1, b.d.y.length);
+  assert.length(b.d.y, 1);
 
   a = {x: function () {}};
   b = Collection._deepcopy(a);
   a.x.a = 14;
-  assert(14, b.x.a); // just to document current behavior
-};
+  assert.equal(b.x.a, 14); // just to document current behavior
+});
 
-test_selector_compiler = function () {
+test("minimongo - selector_compiler", function () {
   var matches = function (should_match, selector, doc) {
     var does_match = Collection._matches(selector, doc);
     if (does_match != should_match) {
-      console.log("minimongo match failed");
-      console.log("  Selector: " + JSON.stringify(selector));
-      console.log("  Document: " + JSON.stringify(doc));
-      if (should_match)
-        console.log("  Should match, but doesn't");
-      else
-        console.log("  Shouldn't match, but does");
-      debugger;
-      throw new TestFailure("minimongo match failed");
+      // XXX super janky
+      test.fail({type: "minimongo-ordering",
+                 message: "minimongo match failure: document " +
+                 (should_match ? "should match, but doesn't" :
+                  "shouldn't match, but does"),
+                 selector: JSON.stringify(selector),
+                 document: JSON.stringify(doc)
+                });
     }
   };
 
@@ -393,10 +377,10 @@ test_selector_compiler = function () {
   match({a: /a/}, {a: ['dog', 'cat']});
   nomatch({a: /a/}, {a: ['dog', 'puppy']});
 
-  assertThrows(function () {
+  assert.throws(function () {
     match({a: {$regex: /a/, $options: 'x'}}, {a: 'cat'});
   });
-  assertThrows(function () {
+  assert.throws(function () {
     match({a: {$regex: /a/, $options: 's'}}, {a: 'cat'});
   });
 
@@ -415,52 +399,15 @@ test_selector_compiler = function () {
   match({x: {$not: /a/}}, {x: ["dog", "puppy"]});
   nomatch({x: {$not: /a/}}, {x: ["kitten", "cat"]})
 
-  // still needs tests:
+  // XXX still needs tests:
   // - $or, $and, $nor, $where
   // - $elemMatch
   // - dotted keypaths
   // - people.2.name
   // - non-scalar arguments to $gt, $lt, etc
-};
+});
 
-// assert that f is a strcmp-style comparison function that puts
-// 'values' in the provided order
-var assert_ordering = function (f, values) {
-  for (var i = 0; i < values.length; i++) {
-    var x = f(values[i], values[i]);
-    if (x !== 0) {
-      console.log("value doesn't order as equal to itself");
-      console.log("  value: " + JSON.stringify(values[i]));
-      console.log("  should be zero, but got: " + JSON.stringify(x));
-      debugger;
-      throw new TestFailure("value doesn't order as equal to itself");
-    }
-    if (i + 1 < values.length) {
-      var less = values[i];
-      var more = values[i + 1];
-      var x = f(less, more);
-      if (!(x < 0)) {
-        console.log("ordering test failed");
-        console.log("  first arg: " + JSON.stringify(less));
-        console.log("  second arg: " + JSON.stringify(more));
-        console.log("  should be negative, but got: " + JSON.stringify(x));
-        debugger;
-        throw new TestFailure("ordering test failed");
-      }
-      x = f(more, less);
-      if (!(x > 0)) {
-        console.log("ordering test failed");
-        console.log("  first arg: " + JSON.stringify(less));
-        console.log("  second arg: " + JSON.stringify(more));
-        console.log("  should be positive, but got: " + JSON.stringify(x));
-        debugger;
-        throw new TestFailure("ordering test failed");
-      }
-    }
-  }
-}
-
-test_ordering = function () {
+test("minimongo - ordering", function () {
   // value ordering
   assert_ordering(Collection._f._cmp, [
     null,
@@ -473,139 +420,136 @@ test_ordering = function () {
   ]);
 
   // document ordering under a sort specification
-  var test = function (sorts, docs) {
+  var verify = function (sorts, docs) {
     _.each(sorts, function (sort) {
       assert_ordering(Collection._compileSort(sort), docs);
     });
   };
 
-  test([{"a" : 1}, ["a"], [["a", "asc"]]],
-       [{c: 1}, {a: 1}, {a: {}}, {a: []}, {a: true}])
-  test([{"a" : -1}, [["a", "desc"]]],
-       [{a: true}, {a: []}, {a: {}}, {a: 1}, {c: 1}]);
+  verify([{"a" : 1}, ["a"], [["a", "asc"]]],
+         [{c: 1}, {a: 1}, {a: {}}, {a: []}, {a: true}])
+  verify([{"a" : -1}, [["a", "desc"]]],
+         [{a: true}, {a: []}, {a: {}}, {a: 1}, {c: 1}]);
 
-  test([{"a" : 1, "b": -1}, ["a", ["b", "desc"]],
-        [["a", "asc"], ["b", "desc"]]],
-       [{c: 1}, {a: 1, b: 3}, {a: 1, b: 2}, {a: 2, b: 0}]);
+  verify([{"a" : 1, "b": -1}, ["a", ["b", "desc"]],
+          [["a", "asc"], ["b", "desc"]]],
+         [{c: 1}, {a: 1, b: 3}, {a: 1, b: 2}, {a: 2, b: 0}]);
 
-  test([{"a" : 1, "b": 1}, ["a", "b"],
-        [["a", "asc"], ["b", "asc"]]],
-       [{c: 1}, {a: 1, b: 2}, {a: 1, b: 3}, {a: 2, b: 0}]);
+  verify([{"a" : 1, "b": 1}, ["a", "b"],
+          [["a", "asc"], ["b", "asc"]]],
+         [{c: 1}, {a: 1, b: 2}, {a: 1, b: 3}, {a: 2, b: 0}]);
 
-  assertThrows(function () {
+  assert.throws(function () {
     Collection._compileSort("a");
   });
 
-  assertThrows(function () {
+  assert.throws(function () {
     Collection._compileSort(123);
   });
 
-  assert(0, Collection._compileSort({})({a:1}, {a:2}));
-};
+  assert.equal(Collection._compileSort({})({a:1}, {a:2}), 0);
+});
 
-test_sort = function () {
+test("minimongo - sort", function () {
   var c = new Collection();
   for (var i = 0; i < 50; i++)
     for (var j = 0; j < 2; j++)
       c.insert({a: i, b: j, _id: i + "_" + j});
 
-  assert([
-    {a: 11, b: 1, _id: "11_1"},
-    {a: 12, b: 1, _id: "12_1"},
-    {a: 13, b: 1, _id: "13_1"},
-    {a: 14, b: 1, _id: "14_1"},
-    {a: 15, b: 1, _id: "15_1"}],
-         c.find({a: {$gt: 10}}, {sort: {b: -1, a: 1}, limit: 5}));
-  assert([
-    {a: 14, b: 1, _id: "14_1"},
-    {a: 15, b: 1, _id: "15_1"},
-    {a: 16, b: 1, _id: "16_1"},
-    {a: 17, b: 1, _id: "17_1"},
-    {a: 18, b: 1, _id: "18_1"}],
-         c.find({a: {$gt: 10}}, {sort: {b: -1, a: 1}, skip: 3, limit: 5}));
-  assert([
-    {a: 45, b: 1, _id: "45_1"},
-    {a: 45, b: 0, _id: "45_0"},
-    {a: 46, b: 1, _id: "46_1"},
-    {a: 46, b: 0, _id: "46_0"},
-    {a: 47, b: 1, _id: "47_1"}],
-         c.find({a: {$gte: 20}}, {sort: {a: 1, b: -1}, skip: 50, limit: 5}));
-};
+  assert.equal(
+    c.find({a: {$gt: 10}}, {sort: {b: -1, a: 1}, limit: 5}), [
+      {a: 11, b: 1, _id: "11_1"},
+      {a: 12, b: 1, _id: "12_1"},
+      {a: 13, b: 1, _id: "13_1"},
+      {a: 14, b: 1, _id: "14_1"},
+      {a: 15, b: 1, _id: "15_1"}]);
 
-test_modify = function () {
-  var test = function (doc, mod, result) {
+  assert.equal(
+    c.find({a: {$gt: 10}}, {sort: {b: -1, a: 1}, skip: 3, limit: 5}), [
+      {a: 14, b: 1, _id: "14_1"},
+      {a: 15, b: 1, _id: "15_1"},
+      {a: 16, b: 1, _id: "16_1"},
+      {a: 17, b: 1, _id: "17_1"},
+      {a: 18, b: 1, _id: "18_1"}]);
+
+  assert.equal(
+    c.find({a: {$gte: 20}}, {sort: {a: 1, b: -1}, skip: 50, limit: 5}), [
+      {a: 45, b: 1, _id: "45_1"},
+      {a: 45, b: 0, _id: "45_0"},
+      {a: 46, b: 1, _id: "46_1"},
+      {a: 46, b: 0, _id: "46_0"},
+      {a: 47, b: 1, _id: "47_1"}]);
+});
+
+test("minimongo - modify", function () {
+  var modify = function (doc, mod, result) {
     var copy = Collection._deepcopy(doc);
     Collection._modify(copy, mod);
     if (!Collection._f._equal(copy, result)) {
-      console.log("modifier test failed");
-      console.log("  input doc: " + JSON.stringify(doc));
-      console.log("  modifier: " + JSON.stringify(mod));
-      console.log("  expected: " + JSON.stringify(result));
-      console.log("  actual: " + JSON.stringify(copy));
-      debugger;
-      throw new TestFailure("modifier test failed");
+      // XXX super janky
+      test.fail({type: "minimongo-modifier",
+                 message: "modifier test failure",
+                 input_doc: JSON.stringify(doc),
+                 modifier: JSON.stringify(mod),
+                 expected: JSON.stringify(result),
+                 actual: JSON.stringify(copy)
+                });
     }
   };
   var exception = function (doc, mod) {
-    var caught = false;
-    try {
+    assert.throws(function () {
       Collection._modify(Collection._deepcopy(doc), mod);
-    } catch (e) {
-      caught = true;
-    }
-    if (!caught) {
-      console.log("modifier should have raised exception");
-      console.log("  input doc: " + JSON.stringify(doc));
-      console.log("  modifier: " + JSON.stringify(mod));
-      debugger;
-      throw new TestFailure("modifier should have raised exception");
-    }
+    });
   };
 
   // document replacement
-  test({}, {}, {});
-  test({a: 12}, {}, {}); // tested against mongodb
-  test({a: 12}, {a: 13}, {a:13});
-  test({a: 12, b: 99}, {a: 13}, {a:13});
+  modify({}, {}, {});
+  modify({a: 12}, {}, {}); // tested against mongodb
+  modify({a: 12}, {a: 13}, {a:13});
+  modify({a: 12, b: 99}, {a: 13}, {a:13});
   exception({a: 12}, {a: 13, $set: {b: 13}});
   exception({a: 12}, {$set: {b: 13}, a: 13});
 
   // keys
-  test({}, {$set: {'a': 12}}, {a: 12});
-  test({}, {$set: {'a.b': 12}}, {a: {b: 12}});
-  test({}, {$set: {'a.b.c': 12}}, {a: {b: {c: 12}}});
-  test({a: {d: 99}}, {$set: {'a.b.c': 12}}, {a: {d: 99, b: {c: 12}}});
-  test({}, {$set: {'a.b.3.c': 12}}, {a: {b: {3: {c: 12}}}});
-  test({a: {b: []}}, {$set: {'a.b.3.c': 12}}, {
+  modify({}, {$set: {'a': 12}}, {a: 12});
+  modify({}, {$set: {'a.b': 12}}, {a: {b: 12}});
+  modify({}, {$set: {'a.b.c': 12}}, {a: {b: {c: 12}}});
+  modify({a: {d: 99}}, {$set: {'a.b.c': 12}}, {a: {d: 99, b: {c: 12}}});
+  modify({}, {$set: {'a.b.3.c': 12}}, {a: {b: {3: {c: 12}}}});
+  modify({a: {b: []}}, {$set: {'a.b.3.c': 12}}, {
     a: {b: [null, null, null, {c: 12}]}});
   exception({a: [null, null, null]}, {$set: {'a.1.b': 12}});
   exception({a: [null, 1, null]}, {$set: {'a.1.b': 12}});
   exception({a: [null, "x", null]}, {$set: {'a.1.b': 12}});
   exception({a: [null, [], null]}, {$set: {'a.1.b': 12}});
-  test({a: [null, null, null]}, {$set: {'a.3.b': 12}}, {
+  modify({a: [null, null, null]}, {$set: {'a.3.b': 12}}, {
     a: [null, null, null, {b: 12}]});
   exception({a: []}, {$set: {'a.b': 12}});
+  test.expect_fail();
   exception({a: 12}, {$set: {'a.b': 99}}); // tested on mongo
+  test.expect_fail();
   exception({a: 'x'}, {$set: {'a.b': 99}});
+  test.expect_fail();
   exception({a: true}, {$set: {'a.b': 99}});
+  test.expect_fail();
   exception({a: null}, {$set: {'a.b': 99}});
-  test({a: {}}, {$set: {'a.3': 12}}, {a: {'3': 12}});
-  test({a: []}, {$set: {'a.3': 12}}, {a: [null, null, null, 12]});
-  test({}, {$set: {'': 12}}, {'': 12}); // tested on mongo
+  modify({a: {}}, {$set: {'a.3': 12}}, {a: {'3': 12}});
+  modify({a: []}, {$set: {'a.3': 12}}, {a: [null, null, null, 12]});
+  modify({}, {$set: {'': 12}}, {'': 12}); // tested on mongo
   exception({}, {$set: {'.': 12}}); // tested on mongo
-  test({}, {$set: {'. ': 12}}, {'': {' ': 12}}); // tested on mongo
-  test({}, {$inc: {'... ': 12}}, {'': {'': {'': {' ': 12}}}}); // tested
-  test({}, {$set: {'a..b': 12}}, {a: {'': {b: 12}}});
-  test({a: [1,2,3]}, {$set: {'a.01': 99}}, {a: [1, 99, 3]});
-  test({a: [1,{a: 98},3]}, {$set: {'a.01.b': 99}}, {a: [1,{a:98, b: 99},3]});
-  test({}, {$set: {'2.a.b': 12}}, {'2': {'a': {'b': 12}}}); // tested
-  test({x: []}, {$set: {'x.2..a': 99}}, {x: [null, null, {'': {a: 99}}]});
-  test({x: [null, null]}, {$set: {'x.2.a': 1}}, {x: [null, null, {a: 1}]});
+  modify({}, {$set: {'. ': 12}}, {'': {' ': 12}}); // tested on mongo
+  modify({}, {$inc: {'... ': 12}}, {'': {'': {'': {' ': 12}}}}); // tested
+  modify({}, {$set: {'a..b': 12}}, {a: {'': {b: 12}}});
+  modify({a: [1,2,3]}, {$set: {'a.01': 99}}, {a: [1, 99, 3]});
+  modify({a: [1,{a: 98},3]}, {$set: {'a.01.b': 99}}, {a: [1,{a:98, b: 99},3]});
+  modify({}, {$set: {'2.a.b': 12}}, {'2': {'a': {'b': 12}}}); // tested
+  modify({x: []}, {$set: {'x.2..a': 99}}, {x: [null, null, {'': {a: 99}}]});
+  modify({x: [null, null]}, {$set: {'x.2.a': 1}}, {x: [null, null, {a: 1}]});
   exception({x: [null, null]}, {$set: {'x.1.a': 1}});
 
   // $inc
-  test({a: 1, b: 2}, {$inc: {a: 10}}, {a: 11, b: 2});
-  test({a: 1, b: 2}, {$inc: {c: 10}}, {a: 1, b: 2, c: 10});
+  modify({a: 1, b: 2}, {$inc: {a: 10}}, {a: 11, b: 2});
+  modify({a: 1, b: 2}, {$inc: {c: 10}}, {a: 1, b: 2, c: 10});
   exception({a: 1}, {$inc: {a: '10'}});
   exception({a: 1}, {$inc: {a: true}});
   exception({a: 1}, {$inc: {a: [10]}});
@@ -614,167 +558,170 @@ test_modify = function () {
   exception({a: {}}, {$inc: {a: 10}});
   exception({a: false}, {$inc: {a: 10}});
   exception({a: null}, {$inc: {a: 10}});
-  test({a: [1, 2]}, {$inc: {'a.1': 10}}, {a: [1, 12]});
-  test({a: [1, 2]}, {$inc: {'a.2': 10}}, {a: [1, 2, 10]});
-  test({a: [1, 2]}, {$inc: {'a.3': 10}}, {a: [1, 2, null, 10]});
-  test({a: {b: 2}}, {$inc: {'a.b': 10}}, {a: {b: 12}});
-  test({a: {b: 2}}, {$inc: {'a.c': 10}}, {a: {b: 2, c: 10}});
+  modify({a: [1, 2]}, {$inc: {'a.1': 10}}, {a: [1, 12]});
+  modify({a: [1, 2]}, {$inc: {'a.2': 10}}, {a: [1, 2, 10]});
+  modify({a: [1, 2]}, {$inc: {'a.3': 10}}, {a: [1, 2, null, 10]});
+  modify({a: {b: 2}}, {$inc: {'a.b': 10}}, {a: {b: 12}});
+  modify({a: {b: 2}}, {$inc: {'a.c': 10}}, {a: {b: 2, c: 10}});
 
   // $set
-  test({a: 1, b: 2}, {$set: {a: 10}}, {a: 10, b: 2});
-  test({a: 1, b: 2}, {$set: {c: 10}}, {a: 1, b: 2, c: 10});
-  test({a: 1, b: 2}, {$set: {a: {c: 10}}}, {a: {c: 10}, b: 2});
-  test({a: [1, 2], b: 2}, {$set: {a: [3, 4]}}, {a: [3, 4], b: 2});
-  test({a: [1, 2, 3], b: 2}, {$set: {'a.1': [3, 4]}}, {a: [1, [3, 4], 3], b:2});
-  test({a: [1], b: 2}, {$set: {'a.1': 9}}, {a: [1, 9], b: 2});
-  test({a: [1], b: 2}, {$set: {'a.2': 9}}, {a: [1, null, 9], b: 2});
-  test({a: {b: 1}}, {$set: {'a.c': 9}}, {a: {b: 1, c: 9}});
+  modify({a: 1, b: 2}, {$set: {a: 10}}, {a: 10, b: 2});
+  modify({a: 1, b: 2}, {$set: {c: 10}}, {a: 1, b: 2, c: 10});
+  modify({a: 1, b: 2}, {$set: {a: {c: 10}}}, {a: {c: 10}, b: 2});
+  modify({a: [1, 2], b: 2}, {$set: {a: [3, 4]}}, {a: [3, 4], b: 2});
+  modify({a: [1, 2, 3], b: 2}, {$set: {'a.1': [3, 4]}},
+         {a: [1, [3, 4], 3], b:2});
+  modify({a: [1], b: 2}, {$set: {'a.1': 9}}, {a: [1, 9], b: 2});
+  modify({a: [1], b: 2}, {$set: {'a.2': 9}}, {a: [1, null, 9], b: 2});
+  modify({a: {b: 1}}, {$set: {'a.c': 9}}, {a: {b: 1, c: 9}});
 
   // $unset
-  test({}, {$unset: {a: 1}}, {});
-  test({a: 1}, {$unset: {a: 1}}, {});
-  test({a: 1, b: 2}, {$unset: {a: 1}}, {b: 2});
-  test({a: 1, b: 2}, {$unset: {a: 0}}, {b: 2});
-  test({a: 1, b: 2}, {$unset: {a: false}}, {b: 2});
-  test({a: 1, b: 2}, {$unset: {a: null}}, {b: 2});
-  test({a: 1, b: 2}, {$unset: {a: [1]}}, {b: 2});
-  test({a: 1, b: 2}, {$unset: {a: {}}}, {b: 2});
-  test({a: {b: 2, c: 3}}, {$unset: {'a.b': 1}}, {a: {c: 3}});
-  test({a: [1, 2, 3]}, {$unset: {'a.1': 1}}, {a: [1, null, 3]}); // tested
-  test({a: [1, 2, 3]}, {$unset: {'a.2': 1}}, {a: [1, 2, null]}); // tested
-  test({a: [1, 2, 3]}, {$unset: {'a.x': 1}}, {a: [1, 2, 3]}); // tested
-  test({a: {b: 1}}, {$unset: {'a.b.c.d': 1}}, {a: {b: 1}});
-  test({a: {b: 1}}, {$unset: {'a.x.c.d': 1}}, {a: {b: 1}});
-  test({a: {b: {c: 1}}}, {$unset: {'a.b.c': 1}}, {a: {b: {}}});
+  modify({}, {$unset: {a: 1}}, {});
+  modify({a: 1}, {$unset: {a: 1}}, {});
+  modify({a: 1, b: 2}, {$unset: {a: 1}}, {b: 2});
+  modify({a: 1, b: 2}, {$unset: {a: 0}}, {b: 2});
+  modify({a: 1, b: 2}, {$unset: {a: false}}, {b: 2});
+  modify({a: 1, b: 2}, {$unset: {a: null}}, {b: 2});
+  modify({a: 1, b: 2}, {$unset: {a: [1]}}, {b: 2});
+  modify({a: 1, b: 2}, {$unset: {a: {}}}, {b: 2});
+  modify({a: {b: 2, c: 3}}, {$unset: {'a.b': 1}}, {a: {c: 3}});
+  modify({a: [1, 2, 3]}, {$unset: {'a.1': 1}}, {a: [1, null, 3]}); // tested
+  modify({a: [1, 2, 3]}, {$unset: {'a.2': 1}}, {a: [1, 2, null]}); // tested
+  modify({a: [1, 2, 3]}, {$unset: {'a.x': 1}}, {a: [1, 2, 3]}); // tested
+  modify({a: {b: 1}}, {$unset: {'a.b.c.d': 1}}, {a: {b: 1}});
+  modify({a: {b: 1}}, {$unset: {'a.x.c.d': 1}}, {a: {b: 1}});
+  modify({a: {b: {c: 1}}}, {$unset: {'a.b.c': 1}}, {a: {b: {}}});
 
   // $push
-  test({}, {$push: {a: 1}}, {a: [1]});
-  test({a: []}, {$push: {a: 1}}, {a: [1]});
-  test({a: [1]}, {$push: {a: 2}}, {a: [1, 2]});
+  modify({}, {$push: {a: 1}}, {a: [1]});
+  modify({a: []}, {$push: {a: 1}}, {a: [1]});
+  modify({a: [1]}, {$push: {a: 2}}, {a: [1, 2]});
   exception({a: true}, {$push: {a: 1}});
-  test({a: [1]}, {$push: {a: [2]}}, {a: [1, [2]]});
-  test({a: []}, {$push: {'a.1': 99}}, {a: [null, [99]]}); // tested
-  test({a: {}}, {$push: {'a.x': 99}}, {a: {x: [99]}});
+  modify({a: [1]}, {$push: {a: [2]}}, {a: [1, [2]]});
+  modify({a: []}, {$push: {'a.1': 99}}, {a: [null, [99]]}); // tested
+  modify({a: {}}, {$push: {'a.x': 99}}, {a: {x: [99]}});
 
   // $pushAll
-  test({}, {$pushAll: {a: [1]}}, {a: [1]});
-  test({a: []}, {$pushAll: {a: [1]}}, {a: [1]});
-  test({a: [1]}, {$pushAll: {a: [2]}}, {a: [1, 2]});
-  test({}, {$pushAll: {a: [1, 2]}}, {a: [1, 2]});
-  test({a: []}, {$pushAll: {a: [1, 2]}}, {a: [1, 2]});
-  test({a: [1]}, {$pushAll: {a: [2, 3]}}, {a: [1, 2, 3]});
-  test({}, {$pushAll: {a: []}}, {a: []});
-  test({a: []}, {$pushAll: {a: []}}, {a: []});
-  test({a: [1]}, {$pushAll: {a: []}}, {a: [1]});
+  modify({}, {$pushAll: {a: [1]}}, {a: [1]});
+  modify({a: []}, {$pushAll: {a: [1]}}, {a: [1]});
+  modify({a: [1]}, {$pushAll: {a: [2]}}, {a: [1, 2]});
+  modify({}, {$pushAll: {a: [1, 2]}}, {a: [1, 2]});
+  modify({a: []}, {$pushAll: {a: [1, 2]}}, {a: [1, 2]});
+  modify({a: [1]}, {$pushAll: {a: [2, 3]}}, {a: [1, 2, 3]});
+  modify({}, {$pushAll: {a: []}}, {a: []});
+  modify({a: []}, {$pushAll: {a: []}}, {a: []});
+  modify({a: [1]}, {$pushAll: {a: []}}, {a: [1]});
   exception({a: true}, {$pushAll: {a: [1]}});
   exception({a: []}, {$pushAll: {a: 1}});
-  test({a: []}, {$pushAll: {'a.1': [99]}}, {a: [null, [99]]});
-  test({a: []}, {$pushAll: {'a.1': []}}, {a: [null, []]});
-  test({a: {}}, {$pushAll: {'a.x': [99]}}, {a: {x: [99]}});
-  test({a: {}}, {$pushAll: {'a.x': []}}, {a: {x: []}});
+  modify({a: []}, {$pushAll: {'a.1': [99]}}, {a: [null, [99]]});
+  modify({a: []}, {$pushAll: {'a.1': []}}, {a: [null, []]});
+  modify({a: {}}, {$pushAll: {'a.x': [99]}}, {a: {x: [99]}});
+  modify({a: {}}, {$pushAll: {'a.x': []}}, {a: {x: []}});
 
   // $addToSet
-  test({}, {$addToSet: {a: 1}}, {a: [1]});
-  test({a: []}, {$addToSet: {a: 1}}, {a: [1]});
-  test({a: [1]}, {$addToSet: {a: 2}}, {a: [1, 2]});
-  test({a: [1, 2]}, {$addToSet: {a: 1}}, {a: [1, 2]});
-  test({a: [1, 2]}, {$addToSet: {a: 2}}, {a: [1, 2]});
-  test({a: [1, 2]}, {$addToSet: {a: 3}}, {a: [1, 2, 3]});
+  modify({}, {$addToSet: {a: 1}}, {a: [1]});
+  modify({a: []}, {$addToSet: {a: 1}}, {a: [1]});
+  modify({a: [1]}, {$addToSet: {a: 2}}, {a: [1, 2]});
+  modify({a: [1, 2]}, {$addToSet: {a: 1}}, {a: [1, 2]});
+  modify({a: [1, 2]}, {$addToSet: {a: 2}}, {a: [1, 2]});
+  modify({a: [1, 2]}, {$addToSet: {a: 3}}, {a: [1, 2, 3]});
   exception({a: true}, {$addToSet: {a: 1}});
-  test({a: [1]}, {$addToSet: {a: [2]}}, {a: [1, [2]]});
-  test({}, {$addToSet: {a: {x: 1}}}, {a: [{x: 1}]});
-  test({a: [{x: 1}]}, {$addToSet: {a: {x: 1}}}, {a: [{x: 1}]});
-  test({a: [{x: 1}]}, {$addToSet: {a: {x: 2}}}, {a: [{x: 1}, {x: 2}]});
-  test({a: [{x: 1, y: 2}]}, {$addToSet: {a: {x: 1, y: 2}}},
-       {a: [{x: 1, y: 2}]});
-  test({a: [{x: 1, y: 2}]}, {$addToSet: {a: {y: 2, x: 1}}},
-       {a: [{x: 1, y: 2}, {y: 2, x: 1}]});
-  test({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, 4]}}}, {a: [1, 2, 3, 4]});
-  test({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, 4], b: 12}}},
-       {a: [1, 2, 3, 4]}); // tested
-  test({a: [1, 2]}, {$addToSet: {a: {b: 12, $each: [3, 1, 4]}}},
-       {a: [1, 2, {b: 12, $each: [3, 1, 4]}]}); // tested
-  test({a: []}, {$addToSet: {'a.1': 99}}, {a: [null, [99]]});
-  test({a: {}}, {$addToSet: {'a.x': 99}}, {a: {x: [99]}});
+  modify({a: [1]}, {$addToSet: {a: [2]}}, {a: [1, [2]]});
+  modify({}, {$addToSet: {a: {x: 1}}}, {a: [{x: 1}]});
+  modify({a: [{x: 1}]}, {$addToSet: {a: {x: 1}}}, {a: [{x: 1}]});
+  modify({a: [{x: 1}]}, {$addToSet: {a: {x: 2}}}, {a: [{x: 1}, {x: 2}]});
+  modify({a: [{x: 1, y: 2}]}, {$addToSet: {a: {x: 1, y: 2}}},
+         {a: [{x: 1, y: 2}]});
+  modify({a: [{x: 1, y: 2}]}, {$addToSet: {a: {y: 2, x: 1}}},
+         {a: [{x: 1, y: 2}, {y: 2, x: 1}]});
+  modify({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, 4]}}}, {a: [1, 2, 3, 4]});
+  modify({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, 4], b: 12}}},
+         {a: [1, 2, 3, 4]}); // tested
+  modify({a: [1, 2]}, {$addToSet: {a: {b: 12, $each: [3, 1, 4]}}},
+         {a: [1, 2, {b: 12, $each: [3, 1, 4]}]}); // tested
+  modify({a: []}, {$addToSet: {'a.1': 99}}, {a: [null, [99]]});
+  modify({a: {}}, {$addToSet: {'a.x': 99}}, {a: {x: [99]}});
 
   // $pop
-  test({}, {$pop: {a: 1}}, {}); // tested
-  test({}, {$pop: {a: -1}}, {}); // tested
-  test({a: []}, {$pop: {a: 1}}, {a: []});
-  test({a: []}, {$pop: {a: -1}}, {a: []});
-  test({a: [1, 2, 3]}, {$pop: {a: 1}}, {a: [1, 2]});
-  test({a: [1, 2, 3]}, {$pop: {a: 10}}, {a: [1, 2]});
-  test({a: [1, 2, 3]}, {$pop: {a: .001}}, {a: [1, 2]});
-  test({a: [1, 2, 3]}, {$pop: {a: 0}}, {a: [1, 2]});
-  test({a: [1, 2, 3]}, {$pop: {a: "stuff"}}, {a: [1, 2]});
-  test({a: [1, 2, 3]}, {$pop: {a: -1}}, {a: [2, 3]});
-  test({a: [1, 2, 3]}, {$pop: {a: -10}}, {a: [2, 3]});
-  test({a: [1, 2, 3]}, {$pop: {a: -.001}}, {a: [2, 3]});
+  modify({}, {$pop: {a: 1}}, {}); // tested
+  modify({}, {$pop: {a: -1}}, {}); // tested
+  modify({a: []}, {$pop: {a: 1}}, {a: []});
+  modify({a: []}, {$pop: {a: -1}}, {a: []});
+  modify({a: [1, 2, 3]}, {$pop: {a: 1}}, {a: [1, 2]});
+  modify({a: [1, 2, 3]}, {$pop: {a: 10}}, {a: [1, 2]});
+  modify({a: [1, 2, 3]}, {$pop: {a: .001}}, {a: [1, 2]});
+  modify({a: [1, 2, 3]}, {$pop: {a: 0}}, {a: [1, 2]});
+  modify({a: [1, 2, 3]}, {$pop: {a: "stuff"}}, {a: [1, 2]});
+  modify({a: [1, 2, 3]}, {$pop: {a: -1}}, {a: [2, 3]});
+  modify({a: [1, 2, 3]}, {$pop: {a: -10}}, {a: [2, 3]});
+  modify({a: [1, 2, 3]}, {$pop: {a: -.001}}, {a: [2, 3]});
   exception({a: true}, {$pop: {a: 1}});
   exception({a: true}, {$pop: {a: -1}});
-  test({a: []}, {$pop: {'a.1': 1}}, {a: []}); // tested
-  test({a: [1, [2, 3], 4]}, {$pop: {'a.1': 1}}, {a: [1, [2], 4]});
-  test({a: {}}, {$pop: {'a.x': 1}}, {a: {}}); // tested
-  test({a: {x: [2, 3]}}, {$pop: {'a.x': 1}}, {a: {x: [2]}});
+  modify({a: []}, {$pop: {'a.1': 1}}, {a: []}); // tested
+  modify({a: [1, [2, 3], 4]}, {$pop: {'a.1': 1}}, {a: [1, [2], 4]});
+  modify({a: {}}, {$pop: {'a.x': 1}}, {a: {}}); // tested
+  modify({a: {x: [2, 3]}}, {$pop: {'a.x': 1}}, {a: {x: [2]}});
 
   // $pull
-  test({}, {$pull: {a: 1}}, {});
-  test({}, {$pull: {'a.x': 1}}, {});
-  test({a: {}}, {$pull: {'a.x': 1}}, {a: {}});
+  modify({}, {$pull: {a: 1}}, {});
+  modify({}, {$pull: {'a.x': 1}}, {});
+  modify({a: {}}, {$pull: {'a.x': 1}}, {a: {}});
   exception({a: true}, {$pull: {a: 1}});
-  test({a: [2, 1, 2]}, {$pull: {a: 1}}, {a: [2, 2]});
-  test({a: [2, 1, 2]}, {$pull: {a: 2}}, {a: [1]});
-  test({a: [2, 1, 2]}, {$pull: {a: 3}}, {a: [2, 1, 2]});
-  test({a: []}, {$pull: {a: 3}}, {a: []});
-  test({a: [[2], [2, 1], [3]]}, {$pull: {a: [2, 1]}}, {a: [[2], [3]]}); //tested
-  test({a: [{b: 1, c: 2}, {b: 2, c: 2}]}, {$pull: {a: {b: 1}}},
-       {a: [{b: 2, c: 2}]});
-  test({a: [{b: 1, c: 2}, {b: 2, c: 2}]}, {$pull: {a: {c: 2}}},
-       {a: []});
+  modify({a: [2, 1, 2]}, {$pull: {a: 1}}, {a: [2, 2]});
+  modify({a: [2, 1, 2]}, {$pull: {a: 2}}, {a: [1]});
+  modify({a: [2, 1, 2]}, {$pull: {a: 3}}, {a: [2, 1, 2]});
+  modify({a: []}, {$pull: {a: 3}}, {a: []});
+  modify({a: [[2], [2, 1], [3]]}, {$pull: {a: [2, 1]}},
+         {a: [[2], [3]]}); // tested
+  modify({a: [{b: 1, c: 2}, {b: 2, c: 2}]}, {$pull: {a: {b: 1}}},
+         {a: [{b: 2, c: 2}]});
+  modify({a: [{b: 1, c: 2}, {b: 2, c: 2}]}, {$pull: {a: {c: 2}}},
+         {a: []});
   // XXX implement this functionality!
   // probably same refactoring as $elemMatch?
-  // test({a: [1, 2, 3, 4]}, {$pull: {$gt: 2}}, {a: [1,2]}); fails!
+  // modify({a: [1, 2, 3, 4]}, {$pull: {$gt: 2}}, {a: [1,2]}); fails!
 
   // $pullAll
-  test({}, {$pullAll: {a: [1]}}, {});
-  test({a: [1, 2, 3]}, {$pullAll: {a: []}}, {a: [1, 2, 3]});
-  test({a: [1, 2, 3]}, {$pullAll: {a: [2]}}, {a: [1, 3]});
-  test({a: [1, 2, 3]}, {$pullAll: {a: [2, 1]}}, {a: [3]});
-  test({a: [1, 2, 3]}, {$pullAll: {a: [1, 2]}}, {a: [3]});
-  test({}, {$pullAll: {'a.b.c': [2]}}, {});
+  modify({}, {$pullAll: {a: [1]}}, {});
+  modify({a: [1, 2, 3]}, {$pullAll: {a: []}}, {a: [1, 2, 3]});
+  modify({a: [1, 2, 3]}, {$pullAll: {a: [2]}}, {a: [1, 3]});
+  modify({a: [1, 2, 3]}, {$pullAll: {a: [2, 1]}}, {a: [3]});
+  modify({a: [1, 2, 3]}, {$pullAll: {a: [1, 2]}}, {a: [3]});
+  modify({}, {$pullAll: {'a.b.c': [2]}}, {});
   exception({a: true}, {$pullAll: {a: [1]}});
   exception({a: [1, 2, 3]}, {$pullAll: {a: 1}});
-  test({x: [{a: 1}, {a: 1, b: 2}]}, {$pullAll: {x: [{a: 1}]}},
-       {x: [{a: 1, b: 2}]});
+  modify({x: [{a: 1}, {a: 1, b: 2}]}, {$pullAll: {x: [{a: 1}]}},
+         {x: [{a: 1, b: 2}]});
 
   // $rename
-  test({}, {$rename: {a: 'b'}}, {});
-  test({a: [12]}, {$rename: {a: 'b'}}, {b: [12]});
-  test({a: {b: 12}}, {$rename: {a: 'c'}}, {c: {b: 12}});
-  test({a: {b: 12}}, {$rename: {'a.b': 'a.c'}}, {a: {c: 12}});
-  test({a: {b: 12}}, {$rename: {'a.b': 'x'}}, {a: {}, x: 12}); // tested
-  test({a: {b: 12}}, {$rename: {'a.b': 'q.r'}}, {a: {}, q: {r: 12}});
-  test({a: {b: 12}}, {$rename: {'a.b': 'q.2.r'}}, {a: {}, q: {2: {r: 12}}});
-  test({a: {b: 12}, q: {}}, {$rename: {'a.b': 'q.2.r'}},
-       {a: {}, q: {2: {r: 12}}});
+  modify({}, {$rename: {a: 'b'}}, {});
+  modify({a: [12]}, {$rename: {a: 'b'}}, {b: [12]});
+  modify({a: {b: 12}}, {$rename: {a: 'c'}}, {c: {b: 12}});
+  modify({a: {b: 12}}, {$rename: {'a.b': 'a.c'}}, {a: {c: 12}});
+  modify({a: {b: 12}}, {$rename: {'a.b': 'x'}}, {a: {}, x: 12}); // tested
+  modify({a: {b: 12}}, {$rename: {'a.b': 'q.r'}}, {a: {}, q: {r: 12}});
+  modify({a: {b: 12}}, {$rename: {'a.b': 'q.2.r'}}, {a: {}, q: {2: {r: 12}}});
+  modify({a: {b: 12}, q: {}}, {$rename: {'a.b': 'q.2.r'}},
+         {a: {}, q: {2: {r: 12}}});
   exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2'}}); // tested
   exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2.r'}}); // tested
   exception({a: {b: 12}, q: []}, {$rename: {'q.1': 'x'}}); // tested
+  test.expect_fail();
   exception({a: {b: 12}, q: []}, {$rename: {'q.1.j': 'x'}}); // tested
   exception({}, {$rename: {'a': 'a'}});
   exception({}, {$rename: {'a.b': 'a.b'}});
-  test({a: 12, b: 13}, {$rename: {a: 'b'}}, {b: 12});
+  modify({a: 12, b: 13}, {$rename: {a: 'b'}}, {b: 12});
 
   // $bit
   // unimplemented
 
   // XXX test case sensitivity of modops
   // XXX for each (most) modop, test that it performs a deep copy
-};
+});
 
 // XXX test update() (selecting docs, multi, upsert..)
 
-test_livequery = function () {
+test("minimongo - livequery", function () {
   // XXX needs tests!
   // don't forget tests for stop, indexOf
-};
+});
