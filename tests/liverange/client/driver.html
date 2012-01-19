@@ -3,13 +3,11 @@
 </head>
 
 <body>
-  placeholder
   {{> results }}
-  placeholder
 </body>
 
 <template name="results">
-  placeholder
+  {{> rerun_all_button }}
   {{#each results}}
     {{#if type_is "begin"}}
       <div class="begin">{{name}}</div>
@@ -25,27 +23,20 @@
       {{/if}}
     {{/if}}
   {{/each}}
-  {{> rerun_all_button }}
-  placeholder
 </template>
 
 <template name="rerun_all_button">
-  placeholder
   <div><div class="rerunall">Rerun all</div></div>
-  placeholder
 </template>
 
 <template name="exception">
-  placeholder
   <div class="exception">Exception: {{message}}
     {{stack}}
     <div class="rerun">Rerun and stop here</div>
   </div>
-  placeholder
 </template>
 
 <template name="fail">
-  placeholder
   {{#if type_is "assert"}}
     <div class="assert">
       {{message}}
@@ -59,7 +50,6 @@
   <span>
     <div class="rerun">Rerun and stop here</a>
   </span>
-  placeholder
 </template>
 
 <template name="test_renderList_each">

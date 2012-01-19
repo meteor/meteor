@@ -20,6 +20,10 @@ Template.exception.events = {
   }
 };
 
+Template.fail.type_is = function (arg) {
+  return this.type === arg;
+};
+
 Template.fail.events = {
   "click .rerun": function () {
     run_tests(this.cookie);
