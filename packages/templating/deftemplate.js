@@ -79,7 +79,8 @@ Sky._def_template = function (name, raw_func) {
           if (replacement) {
             elt.replaceChild(replacement, child);
             delete Sky._pending_partials[child.id];
-            child = elt.childNodes[i];
+            i--;
+            continue;
           }
           traverse(child);
         }
