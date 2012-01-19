@@ -54,12 +54,17 @@ Sky._def_template = function (name, raw_func) {
     var in_partial = !!Sky._pending_partials;
     if (!in_partial)
       Sky._pending_partials = {};
-    // XXX should catch exceptions and clean up pending_partials if
-    // stack is unwound
-    var html = raw_func(data, {
-      helpers: name ? Template[name] : {},
-      partials: Sky._partials
-    });
+
+//    try { XXX NOCOMMIT COMMENT???
+      var html = raw_func(data, {
+        helpers: name ? Template[name] : {},
+        partials: Sky._partials
+      });
+/*    } catch (e) {
+      if (!in_partial)
+        Sky._pending_partials = null;
+      throw e;
+    } */
 
     // XXX see the 'clean' function in jquery for a much more
     // elaborate implementation of this. it's smart about
