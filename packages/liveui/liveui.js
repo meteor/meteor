@@ -387,7 +387,8 @@ Meteor.ui.renderList = function (what, options) {
     changed: function (doc, at_idx) {
       check_onscreen();
       var range = entry_ranges[at_idx];
-      Meteor.ui._cleanup(range.replace_contents(render_doc(doc)), Meteor.ui._tag);
+      var frag = render_doc(doc);
+      Meteor.ui._cleanup(range.replace_contents(frag, Meteor.ui._tag));
     },
     moved: function (doc, old_idx, new_idx) {
       check_onscreen();

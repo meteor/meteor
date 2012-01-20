@@ -34,8 +34,7 @@ Meteor._hook_handlebars_each = function () {
       render_empty: Meteor._def_template(null, _.bind(options.inverse, null, {}))
     });
 
-    return "<div id='" + id +
-      "'><!-- for replacement with findlive each --></div>";
+    return "<!-- TEMPLATE_REPLACE_"+id+" for findlive each -->";
   };
 };
 
@@ -72,26 +71,23 @@ Meteor._def_template = function (name, raw_func) {
       throw e;
     } */
 
-    // XXX see the 'clean' function in jquery for a much more
-    // elaborate implementation of this. it's smart about
-    // instantiating, eg, a tr inside a table, not directly inside
-    // a div. we probably need to do that..
-    var div = document.createElement("div");
-    div.innerHTML = html;
-    var frag = document.createDocumentFragment();
-    while (div.firstChild)
-      frag.appendChild(div.firstChild);
+
+    var frag = Meteor.makeFrag(html);
 
     if (!in_partial) {
       var traverse = function (elt) {
         for (var i = 0; i < elt.childNodes.length; i++) {
           var child = elt.childNodes[i];
-          var replacement = child.id && Meteor._pending_partials[child.id];
+          var idMatchResult =
+                (child.nodeType == 8 /*comment*/ &&
+                 /^\s*TEMPLATE_REPLACE_(\S+)/.exec(child.nodeValue));
+          var childId = idMatchResult && idMatchResult[1];
+          var replacement = Meteor._pending_partials[childId];
           if (replacement) {
             var range = new Meteor.ui._LiveRange(Meteor.ui._tag, child);
             range.replace_contents(replacement);
             range.destroy();
-            delete Meteor._pending_partials[child.id];
+            delete Meteor._pending_partials[childId];
             i--;
             continue;
           }
@@ -137,10 +133,115 @@ Meteor._def_template = function (name, raw_func) {
       var frag = func(data);
       var id = Meteor._pending_partials_idx_nonce++;
       Meteor._pending_partials[id] = frag;
-      return "<div id='" + id + "'><!-- for replacement with partial --></div>";
+      return "<!-- TEMPLATE_REPLACE_"+id+" for partial -->";
     };
   }
 
   if (!name)
     return func;
 };
+
+// Adapted from jquery html() and "clean".
+Meteor.makeFrag = (function() {
+
+  // --- One-time set-up:
+
+  var testDiv = document.createElement("div");
+  testDiv.innerHTML = "   <link/><table></table>";
+
+  // Tests that, if true, indicate browser quirks present.
+  var quirks = {
+    // IE loses initial whitespace when setting innerHTML.
+    leadingWhitespaceKilled: (testDiv.firstChild.nodeType !== 3),
+
+    // IE may insert an empty tbody tag in a table.
+    tbodyInserted: testDiv.getElementsByTagName("tbody").length > 0,
+
+    // IE loses some tags in some environments (requiring extra wrapper).
+    tagsLost: testDiv.getElementsByTagName("link").length == 0
+  };
+
+  // Set up map of wrappers for different nodes.
+  var wrapMap = {
+    option: [ 1, "<select multiple='multiple'>", "</select>" ],
+    legend: [ 1, "<fieldset>", "</fieldset>" ],
+    thead: [ 1, "<table>", "</table>" ],
+    tr: [ 2, "<table><tbody>", "</tbody></table>" ],
+    td: [ 3, "<table><tbody><tr>", "</tr></tbody></table>" ],
+    col: [ 2, "<table><tbody></tbody><colgroup>", "</colgroup></table>" ],
+    area: [ 1, "<map>", "</map>" ],
+    _default: [ 0, "", "" ]
+  };
+  _.extend(wrapMap, {
+    optgroup: wrapMap.option,
+    tbody: wrapMap.thead,
+    tfoot: wrapMap.thead,
+    colgroup: wrapMap.thead,
+    caption: wrapMap.thead,
+    th: wrapMap.td
+  });
+  if (quirks.tagsLost) {
+    // trick from jquery.  initial text is ignored when we take lastChild.
+    wrapMap._default = [ 1, "div<div>", "</div>" ];
+  }
+
+  var rleadingWhitespace = /^\s+/,
+      rxhtmlTag = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([\w:]+)[^>]*)\/>/ig,
+      rtagName = /<([\w:]+)/,
+      rtbody = /<tbody/i,
+      rhtml = /<|&#?\w+;/,
+      rnoInnerhtml = /<(?:script|style)/i;
+
+  // string -> DocumentFragment
+  return function(html) {
+    var doc = document; // used for node creation
+    var frag = doc.createDocumentFragment();
+
+    if (! rhtml.test(html)) {
+      // Just text.
+      frag.appendChild(doc.createTextNode(html));
+    } else {
+      // General case.
+      // Replace self-closing tags
+      html = html.replace(rxhtmlTag, "<$1></$2>");
+      // Use first tag to determine wrapping needed.
+      var firstTagMatch = rtagName.exec(html);
+      var firstTag = (firstTagMatch ? firstTagMatch[1].toLowerCase() : "");
+      var wrapData = wrapMap[firstTag] || wrapMap._default;
+
+      var parent = doc.createElement("div");
+      // insert wrapped HTML into a DIV
+      parent.innerHTML = wrapData[1] + html + wrapData[2];
+      // move "parent" inside wrapper
+      var unwraps = wrapData[0];
+      while (unwraps--) {
+        parent = parent.lastChild;
+      }
+
+      if (quirks.tbodyInserted && ! rtbody.test(html)) {
+        // Any tbody we find was created by the browser.
+        var tbodies = parent.getElementsByTagName("tbody");
+        _.each(tbodies, function(n) {
+          if (! n.firstChild) {
+            // spurious empty tbody
+            n.parentNode.removeChild(n);
+          }
+        });
+      }
+
+      if (quirks.leadingWhitespaceKilled) {
+        var wsMatch = rleadingWhitespace.exec(html);
+        if (wsMatch) {
+          parent.insertBefore(doc.createTextNode(wsMatch[0]), parent.firstChild);
+        }
+      }
+
+      // Reparent children of "parent" to frag.
+      while (parent.firstChild)
+        frag.appendChild(parent.firstChild);
+    }
+
+    return frag;
+  };
+})();
+
