@@ -66,10 +66,10 @@ echo "// Commit to git? Press enter to continue. Hit C-c to abort."
 read anykey
 
 git commit -a -m "Bump to version $VERSION"
-git push meteor meteor:master
+git push origin master
 
 git tag "v$VERSION"
-git push meteor "v$VERSION"
+git push origin "v$VERSION"
 
 
 echo
