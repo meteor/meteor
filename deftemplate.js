@@ -72,7 +72,7 @@ Meteor._def_template = function (name, raw_func) {
     } */
 
 
-    var frag = Meteor.makeFrag(html);
+    var frag = Meteor._htmlToFragment(html);
 
     if (!in_partial) {
       var traverse = function (elt) {
@@ -82,10 +82,25 @@ Meteor._def_template = function (name, raw_func) {
                 (child.nodeType == 8 /*comment*/ &&
                  /^\s*TEMPLATE_REPLACE_(\S+)/.exec(child.nodeValue));
           var childId = idMatchResult && idMatchResult[1];
-          var replacement = Meteor._pending_partials[childId];
-          if (replacement) {
+          var replacement_frag = childId && Meteor._pending_partials[childId];
+
+          if (replacement_frag) {
+            // Table-body fix:
+            if (child.parentNode.nodeName == "TABLE" &&
+                _.any(replacement_frag.childNodes,
+                      function (n) { return n.nodeName == "TR"; })) {
+              // Inserting a TR directly into a TABLE without an intervening
+              // TBODY won't display properly in IE.  So wrap a new TBODY
+              // around the placeholder, in all browsers.
+              var tbody = document.createElement("tbody");
+              child.parentNode.replaceChild(tbody, child);
+              // move the child we are visiting
+              tbody.appendChild(child);
+              i = 0;
+            }
+
             var range = new Meteor.ui._LiveRange(Meteor.ui._tag, child);
-            range.replace_contents(replacement);
+            range.replace_contents(replacement_frag);
             range.destroy();
             delete Meteor._pending_partials[childId];
             i--;
@@ -127,9 +142,10 @@ Meteor._def_template = function (name, raw_func) {
   // XXX hacky. sucks that we have to depend on handlebars here.
   if (name) {
     Meteor._partials[name] = function (data) {
-      if (!Meteor._pending_partials)
+      if (!Meteor._pending_partials) {
         // XXX lame error
         throw new Error("this partial may only be invoked from inside a Template.foo-style template");
+      }
       var frag = func(data);
       var id = Meteor._pending_partials_idx_nonce++;
       Meteor._pending_partials[id] = frag;
@@ -139,10 +155,13 @@ Meteor._def_template = function (name, raw_func) {
 
   if (!name)
     return func;
+  else
+    return null;
 };
 
+
 // Adapted from jquery html() and "clean".
-Meteor.makeFrag = (function() {
+_.extend(Meteor, (function() {
 
   // --- One-time set-up:
 
@@ -192,56 +211,89 @@ Meteor.makeFrag = (function() {
       rhtml = /<|&#?\w+;/,
       rnoInnerhtml = /<(?:script|style)/i;
 
-  // string -> DocumentFragment
-  return function(html) {
-    var doc = document; // used for node creation
-    var frag = doc.createDocumentFragment();
 
-    if (! rhtml.test(html)) {
-      // Just text.
-      frag.appendChild(doc.createTextNode(html));
-    } else {
-      // General case.
-      // Replace self-closing tags
-      html = html.replace(rxhtmlTag, "<$1></$2>");
-      // Use first tag to determine wrapping needed.
-      var firstTagMatch = rtagName.exec(html);
-      var firstTag = (firstTagMatch ? firstTagMatch[1].toLowerCase() : "");
-      var wrapData = wrapMap[firstTag] || wrapMap._default;
+  return {
+    _htmlToFragment: function(html) {
+      var doc = document; // node factory
+      var frag = doc.createDocumentFragment();
 
-      var parent = doc.createElement("div");
-      // insert wrapped HTML into a DIV
-      parent.innerHTML = wrapData[1] + html + wrapData[2];
-      // move "parent" inside wrapper
-      var unwraps = wrapData[0];
-      while (unwraps--) {
-        parent = parent.lastChild;
-      }
+      if (! rhtml.test(html)) {
+        // Just text.
+        frag.appendChild(doc.createTextNode(html));
+      } else {
+        // General case.
+        // Replace self-closing tags
+        html = html.replace(rxhtmlTag, "<$1></$2>");
+        // Use first tag to determine wrapping needed.
+        var firstTagMatch = rtagName.exec(html);
+        var firstTag = (firstTagMatch ? firstTagMatch[1].toLowerCase() : "");
+        var wrapData = wrapMap[firstTag] || wrapMap._default;
 
-      if (quirks.tbodyInserted && ! rtbody.test(html)) {
-        // Any tbody we find was created by the browser.
-        var tbodies = parent.getElementsByTagName("tbody");
-        _.each(tbodies, function(n) {
-          if (! n.firstChild) {
-            // spurious empty tbody
-            n.parentNode.removeChild(n);
-          }
-        });
-      }
-
-      if (quirks.leadingWhitespaceKilled) {
-        var wsMatch = rleadingWhitespace.exec(html);
-        if (wsMatch) {
-          parent.insertBefore(doc.createTextNode(wsMatch[0]), parent.firstChild);
+        var container = doc.createElement("div");
+        // insert wrapped HTML into a DIV
+        container.innerHTML = wrapData[1] + html + wrapData[2];
+        // set "container" to inner node of wrapper
+        var unwraps = wrapData[0];
+        while (unwraps--) {
+          container = container.lastChild;
         }
+
+        if (quirks.tbodyInserted && ! rtbody.test(html)) {
+          // Any tbody we find was created by the browser.
+          var tbodies = container.getElementsByTagName("tbody");
+          _.each(tbodies, function(n) {
+            if (! n.firstChild) {
+              // spurious empty tbody
+              n.parentNode.removeChild(n);
+            }
+          });
+        }
+
+        if (quirks.leadingWhitespaceKilled) {
+          var wsMatch = rleadingWhitespace.exec(html);
+          if (wsMatch) {
+            container.insertBefore(doc.createTextNode(wsMatch[0]),
+                                   container.firstChild);
+          }
+        }
+
+        // Reparent children of container to frag.
+        while (container.firstChild)
+          frag.appendChild(container.firstChild);
       }
 
-      // Reparent children of "parent" to frag.
-      while (parent.firstChild)
-        frag.appendChild(parent.firstChild);
-    }
+      return frag;
+    },
+    _fragmentToHtml: function(frag) {
+      frag = frag.cloneNode(true); // deep copy, don't touch original!
 
-    return frag;
+      var doc = document; // node factory
+
+      var firstElement = frag.firstChild;
+      while (firstElement && firstElement.nodeType !== 1) {
+        firstElement = firstElement.nextSibling;
+      }
+
+      var container = doc.createElement("div");
+
+      if (! firstElement) {
+        // no tags!
+        container.appendChild(frag);
+      } else {
+        var firstTag = firstElement.nodeName;
+        var wrapData = wrapMap[firstTag] || wrapMap._default;
+
+        container.innerHTML = wrapData[1] + wrapData[2];
+        var unwraps = wrapData[0];
+        while (unwraps--) {
+          container = container.lastChild;
+        }
+
+        container.appendChild(frag);
+      }
+
+      return container.innerHTML;
+    }
   };
-})();
+})());
 
