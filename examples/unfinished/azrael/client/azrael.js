@@ -1,11 +1,11 @@
-Sky.subscribe('rooms');
+Meteor.subscribe('rooms');
 
 Session.set('current_room', null);
 Session.set('editing_room_name', false);
 
-Sky.autosubscribe(function () {
+Meteor.autosubscribe(function () {
   var room_id = Session.get('current_room');
-  if (room_id) Sky.subscribe('room-detail', {room: room_id});
+  if (room_id) Meteor.subscribe('room-detail', {room: room_id});
 });
 
 // XXX would be nice to eliminate this function and have people just
@@ -16,7 +16,7 @@ var selectRoom = function (room_id) {
   Session.set('current_room', room_id);
 };
 
-Sky.startup(function () {
+Meteor.startup(function () {
   $('body').layout({applyDefaultStyles: true})
 });
 
@@ -51,7 +51,7 @@ Template.add_room.events = {
     //
     // [No idea if the comment above is still current]
     Session.set('editing_room_name', true);
-    Sky.flush();
+    Meteor.flush();
     $('#room_name_input').focus();
   }
 };
@@ -64,7 +64,7 @@ Template.room.events = {
     Session.set('editing_room_name', true);
     // XXX XXX doesn't generalize.. the element might very reasonably
     // not have a unique id. may need a different strategy..
-    Sky.flush();
+    Meteor.flush();
     $('#room_name_input').focus();
   },
   'blur input': function (evt) {

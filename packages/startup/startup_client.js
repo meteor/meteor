@@ -1,4 +1,4 @@
-if (typeof Sky === "undefined") Sky = {};
+if (typeof Meteor === "undefined") Meteor = {};
 
 (function() {
   var queue = [];
@@ -22,7 +22,7 @@ if (typeof Sky === "undefined") Sky = {};
     window.attachEvent('load', ready);
   }
 
-  Sky.startup = function (cb) {
+  Meteor.startup = function (cb) {
     var doScroll = !document.addEventListener &&
       document.documentElement.doScroll;
 
@@ -34,7 +34,7 @@ if (typeof Sky === "undefined") Sky = {};
     } else {
       try { doScroll('left'); }
       catch (e) {
-        setTimeout(function() { Sky.startup(cb); }, 50);
+        setTimeout(function() { Meteor.startup(cb); }, 50);
         return;
       };
       cb();

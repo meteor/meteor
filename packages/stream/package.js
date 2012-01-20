@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Skybreak's reliable message delivery module",
+  summary: "Meteor's reliable message delivery module",
   internal: true
 });
 

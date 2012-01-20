@@ -23,7 +23,7 @@ test("template assembly", function () {
   document.body.appendChild(onscreen);
   assert.equal(onscreen.innerHTML, "xyhi");
   Session.set("stuff", false);
-  Sky.flush();
+  Meteor.flush();
   assert.equal(onscreen.innerHTML, "xhi");
   document.body.removeChild(onscreen);
 });

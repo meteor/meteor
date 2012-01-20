@@ -46,7 +46,7 @@ Package.register_extension(
 // provides the runtime logic to instantiate our templates
 Package.client_file('deftemplate.js');
 
-// html_scanner.js emits client code that calls Sky.startup
+// html_scanner.js emits client code that calls Meteor.startup
 // XXX the correct thing would be to require this only on the client
 Package.require('startup');
 

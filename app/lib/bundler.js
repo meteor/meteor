@@ -3,7 +3,7 @@
 // /static [served by node for now]
 // /server
 //   server.js, db.js, .... [contents of app/server]
-//   node_modules [for now, contents of (skybreak_root)/lib/node_modules]
+//   node_modules [for now, contents of (meteor_root)/lib/node_modules]
 // /app.html
 // /app [user code]
 // /app.json: [data for server.js]
@@ -11,7 +11,7 @@
 // /dependencies.json: files to monitor for changes in development mode
 //  - extensions [list of extensions registered for user code, with dots]
 //  - packages [map from package name to list of paths relative to the package]
-//  - core [paths relative to 'app' in skybreak tree]
+//  - core [paths relative to 'app' in meteor tree]
 //  - app [paths relative to top of app tree]
 //  - exclude [list of regexps for files to ignore (everywhere)]
 //  (for 'core' and 'apps', if a directory is given, you should
@@ -222,13 +222,14 @@ _.extend(Bundle.prototype, {
   },
 
   add_standard_packages: function () {
-    // standard client packages (for now), for the classic skybreak stack
+    // standard client packages (for now), for the classic meteor stack
     this.api.require('deps');
     this.api.require('session');
     this.api.require('livedata');
     this.api.require('liveui');
     this.api.require('templating');
     this.api.require('startup');
+    this.api.require('past');
   },
 
   // returns paths relative to app_dir
@@ -294,7 +295,7 @@ _.extend(Bundle.prototype, {
 });
 
 /**
- * Take the Skybreak application in app_dir, and compile it into a
+ * Take the Meteor application in app_dir, and compile it into a
  * bundle at output_path. output_path will be created if it doesn't
  * exist (it will be a directory), and removed if it does exist.
  *
@@ -303,7 +304,7 @@ _.extend(Bundle.prototype, {
  * - skip_dev_bundle : don't put any node_modules in the bundle.
  * - symlink_dev_bundle : symlink bundle's node_modules to prebuilt
  *   local installation (to save startup time when running locally,
- *   used by skybreak run).
+ *   used by meteor run).
  */
 exports.bundle = function (app_dir, output_path, options) {
   options = options || {};
@@ -313,7 +314,7 @@ exports.bundle = function (app_dir, output_path, options) {
   ////////// Packages //////////
 
   // has to come before user packages, because we don't (presently)
-  // require packages to declare dependencies on 'standard skybreak
+  // require packages to declare dependencies on 'standard meteor
   // stuff' like minimongo
   bundle.add_standard_packages();
 
@@ -403,7 +404,7 @@ exports.bundle = function (app_dir, output_path, options) {
 
   var app_json = {};
   var dependencies_json = {core: [], app: []};
-  dependencies_json.app.push('.skybreak/packages');
+  dependencies_json.app.push('.meteor/packages');
 
   // foo/bar => foo/.build.bar
   var build_path = path.join(path.dirname(output_path),
@@ -461,7 +462,7 @@ exports.bundle = function (app_dir, output_path, options) {
 "require(require('path').join(__dirname, 'server/server.js'));\n");
 
   fs.writeFileSync(path.join(build_path, 'README'),
-"This is a Skybreak application bundle. It has only one dependency,\n" +
+"This is a Meteor application bundle. It has only one dependency,\n" +
 "node.js (with the 'fibers' package). To run the application:\n" +
 "\n" +
 "  $ npm install fibers\n" +
@@ -472,7 +473,7 @@ exports.bundle = function (app_dir, output_path, options) {
 "application will listen. The default is 80, but that will require\n" +
 "root on most systems.\n" +
 "\n" +
-"Find out more about Skybreak at skybreakplatform.com.\n");
+"Find out more about Meteor at meteor.com.\n");
 
   dependencies_json.extensions = bundle.registeredExtensions();
   dependencies_json.packages = {};

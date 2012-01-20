@@ -85,9 +85,9 @@ var start_proxy = function (outer_port, inner_port, callback) {
   p.on('error', function (err) {
     if (err.code == 'EADDRINUSE') {
       process.stderr.write("Can't listen on port " + outer_port
-                           + ", perhaps another Skybreak is running?\n");
+                           + ", perhaps another Meteor is running?\n");
       process.stderr.write("\n");
-      process.stderr.write("Running two copies of Skybreak in the same application directory\n");
+      process.stderr.write("Running two copies of Meteor in the same application directory\n");
       process.stderr.write("will not work.  If something else is using port " + outer_port + ", you can\n");
       process.stderr.write("specify an alternative port with --port <port>.\n");
     } else {
@@ -109,10 +109,10 @@ var launch_mongo = function (app_dir, port, launch_callback, on_exit_callback) {
   var mongod_path = path.join(files.get_dev_bundle(), 'mongodb/bin/mongod');
 
   // store data in app_dir
-  var data_path = path.join(app_dir, '.skybreak/local/db');
+  var data_path = path.join(app_dir, '.meteor/local/db');
   files.mkdir_p(data_path, 0755);
-  var pid_path = path.join(app_dir, '.skybreak/local/mongod.pid');
-  var port_path = path.join(app_dir, '.skybreak/local/mongod.port');
+  var pid_path = path.join(app_dir, '.meteor/local/mongod.pid');
+  var port_path = path.join(app_dir, '.meteor/local/mongod.port');
 
   // read old pid file, kill old process.
   var pid;
@@ -319,7 +319,7 @@ var DependencyWatcher = function (deps, app_dir, on_change) {
     return new RegExp(pattern);
   });
   self.exclude_paths = [
-    path.join(app_dir, '.skybreak', 'local')
+    path.join(app_dir, '.meteor', 'local')
   ];
 
   // Start monitoring
@@ -435,7 +435,7 @@ _.extend(DependencyWatcher.prototype, {
 
 ////////// Upgrade check //////////
 
-// XXX this should move to main skybreak command-line, probably?
+// XXX this should move to main meteor command-line, probably?
 var start_update_checks = function () {
   var update_check = function () {
     updater.get_manifest(function (manifest) {
@@ -443,9 +443,9 @@ var start_update_checks = function () {
         console.log("////////////////////////////////////////");
         console.log("////////////////////////////////////////");
         console.log();
-        console.log("skybreak is out of date. Please run:");
+        console.log("meteor is out of date. Please run:");
         console.log();
-        console.log("     skybreak update");
+        console.log("     meteor update");
         console.log();
         console.log("////////////////////////////////////////");
         console.log("////////////////////////////////////////");
@@ -464,7 +464,7 @@ exports.run = function (app_dir, bundle_path, bundle_opts, port) {
   var outer_port = port || 3000;
   var inner_port = outer_port + 1;
   var mongo_port = outer_port + 2;
-  var mongo_url = "mongodb://localhost:" + mongo_port + "/skybreak";
+  var mongo_url = "mongodb://localhost:" + mongo_port + "/meteor";
 
   var started_watching_files = false;
   var warned_about_no_deps_info = false;

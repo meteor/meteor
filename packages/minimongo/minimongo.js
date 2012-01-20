@@ -40,7 +40,7 @@ Collection.prototype.insert = function (doc) {
 //   (in the first form you're beholden to key enumeration order in
 //   your javascript VM)
 //
-// reactive: if given, and false, don't register with Sky.deps (default
+// reactive: if given, and false, don't register with Meteor.deps (default
 // is true)
 //
 // XXX possibly should support retrieving a subset of fields? and
@@ -78,10 +78,10 @@ Collection.prototype.find = function (selector, options) {
 
   }
 
-  // support Sky.deps if present
+  // support Meteor.deps if present
   var reactive = (options.reactive === undefined) ? true : options.reactive;
-  var context = reactive && typeof Sky === "object" && Sky.deps &&
-    Sky.deps.Context.current;
+  var context = reactive && typeof Meteor === "object" && Meteor.deps &&
+    Meteor.deps.Context.current;
   if (context) {
     var invalidate = _.bind(context.invalidate, context);
 

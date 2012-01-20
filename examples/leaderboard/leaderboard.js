@@ -1,19 +1,19 @@
 // Set up a collection to contain player information. On the server,
 // it is backed by a MongoDB collection named "players."
-Players = Sky.Collection("players");
+Players = Meteor.Collection("players");
 
 /*** Client ***/
 
-if (Sky.is_client) {
+if (Meteor.is_client) {
   // Get the top 10 players from the server, updated continuously.
-  Sky.subscribe("top10");
+  Meteor.subscribe("top10");
 
   // Start with no player selected.
   Session.set("selected_player", null);
 
   $(document).ready(function () {
     // List the players by score. You can click to select a player.
-    var scores = Sky.ui.renderList(Players, {
+    var scores = Meteor.ui.renderList(Players, {
       sort: {score: -1}, // sort from high to low score
       render: function (player) {
         if (Session.equals("selected_player", player._id))
@@ -35,7 +35,7 @@ if (Sky.is_client) {
     $('body').append(leaderboard);
 
     // Details area, showing the currently selected player.
-    var details_elt = Sky.ui.render(function () {
+    var details_elt = Meteor.ui.render(function () {
       var selected_player = Session.get("selected_player");
       if (!selected_player)
         return $('<div class="none">Click a player to select</div>');
@@ -58,13 +58,13 @@ if (Sky.is_client) {
 // (probably a good thing to avoid), you can just put it in a
 // subdirectory named 'server'.
 
-if (Sky.is_server) {
+if (Meteor.is_server) {
   // Publish the top 10 players, live, to any client that wants them.
-  Sky.publish("top10", {collection: Players, sort: {score: -1},
+  Meteor.publish("top10", {collection: Players, sort: {score: -1},
                         limit: 10});
 
   // On server startup, create some players if the database is empty.
-  Sky.startup(function () {
+  Meteor.startup(function () {
     if (Players.find().length === 0) {
       var names = ["Glinnes Hulden", "Shira Hulden", "Denzel Warhound",
                    "Lute Casagave", "Akadie", "Thammas, Lord Gensifer",

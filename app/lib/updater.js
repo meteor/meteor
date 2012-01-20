@@ -1,4 +1,4 @@
-exports.CURRENT_VERSION = "0.0.41";
+exports.CURRENT_VERSION = "0.0.42";
 
 var fs = require("fs");
 var https = require("https");
@@ -7,7 +7,7 @@ var semver = require("semver");
 
 var manifest_options = {
   host: 's3.amazonaws.com',
-  path: '/com.skybreakplatform.static/update/manifest.json'
+  path: '/com.meteor.static/update/manifest.json'
 };
 
 

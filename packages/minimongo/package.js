@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Skybreak's client-side datastore: a port of MongoDB to Javascript",
+  summary: "Meteor's client-side datastore: a port of MongoDB to Javascript",
   internal: true
 });
 

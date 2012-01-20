@@ -1,5 +1,5 @@
 // if the database is empty on server start, create some sample data.
-Sky.startup(function () {
+Meteor.startup(function () {
   if (Lists.find().length === 0) {
     var data = [
       {name: "* Seven Principles *",
@@ -15,7 +15,7 @@ Sky.startup(function () {
       },
       {name: "Next-gen frameworks",
        contents: [
-         ["Skybreak"],
+         ["Meteor"],
          ["Derby + Racer"],
          ["Capsule + Thoonk from &yet"],
          ["Flatiron from Nodejitsu"],

@@ -3,7 +3,7 @@
 /******************************************************************************/
 
 var create = function (id, start, end, inner, tag) {
-  var ret = new Sky.ui._LiveRange(tag || 'a', start, end, inner);
+  var ret = new Meteor.ui._LiveRange(tag || 'a', start, end, inner);
   ret.id = id;
   return ret;
 };
@@ -26,7 +26,7 @@ var dump = function (what, tag) {
 
   if (typeof what === 'object' && what.nodeType === 11 /* DocumentFragment */) {
     if (what.firstChild) {
-      var range = new Sky.ui._LiveRange(tag || 'a', what);
+      var range = new Meteor.ui._LiveRange(tag || 'a', what);
       range.visit(emit, emit);
       range.destroy();
     }
@@ -42,11 +42,11 @@ var dump = function (what, tag) {
 // actual can be a range or a fragment
 var assert_dump = function (expected, actual, tag) {
   assert.equal(dump(actual), expected, "Tree doesn't match");
-  if (actual instanceof Sky.ui._LiveRange)
+  if (actual instanceof Meteor.ui._LiveRange)
     check_liverange_integrity(actual);
   else {
     if (actual.firstChild) {
-      var range = new Sky.ui._LiveRange(tag || 'a', actual);
+      var range = new Meteor.ui._LiveRange(tag || 'a', actual);
       check_liverange_integrity(range);
       range.destroy();
     }
@@ -91,7 +91,7 @@ var assert_contained = function (r, expected) {
 test("single node", function () {
   var f = frag("<div id=1></div>");
   var r_a = create("a", f);
-  assert.instanceOf(r_a, Sky.ui._LiveRange);
+  assert.instanceOf(r_a, Meteor.ui._LiveRange);
   assert_dump("<a><1></1></a>", r_a);
   assert_dump("<a><1></1></a>", f);
   assert_contained(r_a, {range: r_a, children: []});

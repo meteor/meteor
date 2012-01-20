@@ -1,4 +1,4 @@
-if (typeof Sky === "undefined") Sky = {};
+if (typeof Meteor === "undefined") Meteor = {};
 
 (function () {
   var collections = {}; // name -> Collection-type object
@@ -10,10 +10,10 @@ if (typeof Sky === "undefined") Sky = {};
   // list of subscription tokens outstanding during a
   // captureDependencies run. only set when we're doing a run. The fact
   // that this is a singleton means we can't do recursive
-  // Sky.subscriptions(). But who wants that? What does that even mean?
+  // Meteor.subscriptions(). But who wants that? What does that even mean?
   var capture_subs;
 
-  Sky._stream.on('published', function (data) {
+  Meteor._stream.on('published', function (data) {
     _.each(data, function (changes, collection_name) {
       var coll = collections[collection_name];
       if (!coll) {
@@ -42,14 +42,14 @@ if (typeof Sky === "undefined") Sky = {};
     });
   });
 
-  Sky._stream.on('subscription_ready', function (id) {
+  Meteor._stream.on('subscription_ready', function (id) {
     var arr = sub_ready_callbacks[id];
     if (arr) _.each(arr, function (c) { c(); });
     delete sub_ready_callbacks[id];
   });
 
 
-  Sky._stream.reset(function (msg_list) {
+  Meteor._stream.reset(function (msg_list) {
     // remove existing subscribe and unsubscribe
     msg_list = _.reject(msg_list, function (elem) {
       return (!elem || elem[0] === "subscribe" || elem[0] === "unsubscribe");
@@ -74,7 +74,7 @@ if (typeof Sky === "undefined") Sky = {};
 
   var subsToken = subs.findLive({}, {
     added: function (sub) {
-      Sky._stream.emit('subscribe', {
+      Meteor._stream.emit('subscribe', {
         _id: sub._id, name: sub.name, args: sub.args});
     },
     changed: function (sub) {
@@ -84,13 +84,13 @@ if (typeof Sky === "undefined") Sky = {};
       }
     },
     removed: function (id) {
-      Sky._stream.emit('unsubscribe', {_id: id});
+      Meteor._stream.emit('unsubscribe', {_id: id});
     }
   });
 
   // XXX let it take a second argument, the URL of the domain that
   // hosts the collection :)
-  Sky.Collection = function (name) {
+  Meteor.Collection = function (name) {
     if (name && (name in collections))
       // maybe should just return collections[name]?
       throw new Error("There is already a remote collection '" + name + "'");
@@ -108,7 +108,7 @@ if (typeof Sky === "undefined") Sky = {};
         obj._id = _id;
 
         if (this._name)
-          Sky._stream.emit('handle', {
+          Meteor._stream.emit('handle', {
             collection: this._name, type: 'insert', args: obj});
         this._collection.insert(obj);
 
@@ -128,7 +128,7 @@ if (typeof Sky === "undefined") Sky = {};
           selector = {_id: selector};
 
         if (this._name)
-          Sky._stream.emit('handle', {
+          Meteor._stream.emit('handle', {
             collection: this._name, type: 'update',
             selector: selector, mutator: mutator, options: options});
         this._collection.update(selector, mutator, options);
@@ -139,7 +139,7 @@ if (typeof Sky === "undefined") Sky = {};
           selector = {_id: selector};
 
         if (this._name)
-          Sky._stream.emit('handle', {
+          Meteor._stream.emit('handle', {
             collection: this._name, type: 'remove', selector: selector});
         this._collection.remove(selector);
       },
@@ -160,7 +160,7 @@ if (typeof Sky === "undefined") Sky = {};
 
             // tell the server to run the handler
             if (this._name)
-              Sky._stream.emit('handle', {
+              Meteor._stream.emit('handle', {
                 collection: this._name, type: 'method',
                 method: method, args: args});
           };
@@ -174,7 +174,7 @@ if (typeof Sky === "undefined") Sky = {};
     return ret;
   };
 
-  _.extend(Sky, {
+  _.extend(Meteor, {
     is_server: false,
     is_client: true,
 
@@ -223,18 +223,18 @@ if (typeof Sky === "undefined") Sky = {};
 
     autosubscribe: function (sub_func) {
       var local_subs = [];
-      var context = new Sky.deps.Context();
+      var context = new Meteor.deps.Context();
 
       context.on_invalidate(function () {
         // recurse.
-        Sky.autosubscribe(sub_func);
+        Meteor.autosubscribe(sub_func);
         // unsub after re-subbing, to avoid bouncing.
         _.each(local_subs, function (x) { x.stop() });
       });
 
       context.run(function () {
         if (capture_subs)
-          throw new Error("Sky.autosubscribe may not be called recursively");
+          throw new Error("Meteor.autosubscribe may not be called recursively");
 
         capture_subs = [];
         try {

@@ -42,7 +42,7 @@ function install_dev_bundle {
         echo "Skipping download and installing kit from $SCRIPT_DIR/$TARBALL"
         tar -xzf "$SCRIPT_DIR/$TARBALL" -C "$TMPDIR"
     else
-        curl -# https://d377jur38fl888.cloudfront.net/$TARBALL | tar -xzf - -C "$TMPDIR"
+        curl -# https://d3sqy0vbqsdhku.cloudfront.net/$TARBALL | tar -xzf - -C "$TMPDIR"
         test -x "${TMPDIR}/bin/node" # bomb out if it didn't work, eg no net
     fi
 
@@ -60,8 +60,8 @@ if [ -d "$SCRIPT_DIR/.git" ]; then
     # In a checkout.
 
     if [ ! -d "$SCRIPT_DIR/dev_bundle" ] ; then
-        echo "It's the first time you've run Skybreak from a git checkout."
-        echo "I will download a kit containing all of Skybreak's dependencies."
+        echo "It's the first time you've run Meteor from a git checkout."
+        echo "I will download a kit containing all of Meteor's dependencies."
         install_dev_bundle
     elif [ ! -f "$SCRIPT_DIR/dev_bundle/.bundle_version.txt" ] ||
         grep -qvx "$BUNDLE_VERSION" "$SCRIPT_DIR/dev_bundle/.bundle_version.txt" ; then
@@ -71,12 +71,12 @@ if [ -d "$SCRIPT_DIR/.git" ]; then
     fi
 
     DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
-    SKYBREAK="$SCRIPT_DIR/app/skybreak/skybreak.js"
+    METEOR="$SCRIPT_DIR/app/meteor/meteor.js"
 else
     # In an install
     DEV_BUNDLE=$(dirname "$SCRIPT_DIR")
-    SKYBREAK="$DEV_BUNDLE/app/skybreak/skybreak.js"
+    METEOR="$DEV_BUNDLE/app/meteor/meteor.js"
 fi
 
 export NODE_PATH="$DEV_BUNDLE/lib/node_modules"
-exec "$DEV_BUNDLE/bin/node" "$SKYBREAK" "$@"
+exec "$DEV_BUNDLE/bin/node" "$METEOR" "$@"

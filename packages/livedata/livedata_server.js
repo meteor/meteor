@@ -1,4 +1,4 @@
-if (typeof Sky === "undefined") Sky = {};
+if (typeof Meteor === "undefined") Meteor = {};
 
 (function () {
 
@@ -42,8 +42,8 @@ if (typeof Sky === "undefined") Sky = {};
             // | not allowed in collection name?
             var key = collection_name + "|" + o._id;
 
-            var cached = socket.sky.cache[key];
-            socket.sky.cache[key] = o;
+            var cached = socket.meteor.cache[key];
+            socket.meteor.cache[key] = o;
             touched_keys[key] = true;
 
             if (!cached)
@@ -60,7 +60,7 @@ if (typeof Sky === "undefined") Sky = {};
       };
 
       // actually run the subscriptions.
-      _.each(socket.sky.subs, function (sub) {
+      _.each(socket.meteor.subs, function (sub) {
         var pub = publishes[sub.name];
         if (!pub) {
           // XXX error unknown publish
@@ -72,7 +72,7 @@ if (typeof Sky === "undefined") Sky = {};
       });
 
       // compute the removed keys.
-      var removed_keys = _.difference(_.keys(socket.sky.cache),
+      var removed_keys = _.difference(_.keys(socket.meteor.cache),
                                       _.keys(touched_keys));
       _.each(removed_keys, function (key) {
         // XXX parsing from the string is so ugly.
@@ -82,7 +82,7 @@ if (typeof Sky === "undefined") Sky = {};
         var id = parts[1];
 
         add_to_results(collection_name, 'removed', id);
-        delete socket.sky.cache[key];
+        delete socket.meteor.cache[key];
       });
 
       // if (and only if) any changes, send to client
@@ -92,7 +92,7 @@ if (typeof Sky === "undefined") Sky = {};
       }
 
       // inform the client that the subscription is ready to go
-      _.each(socket.sky.subs, function (sub) {
+      _.each(socket.meteor.subs, function (sub) {
         if (!sub.ready) {
           socket.emit('subscription_ready', sub._id);
           sub.ready = true;
@@ -104,12 +104,12 @@ if (typeof Sky === "undefined") Sky = {};
 
 
   var register_subscription = function (socket, data) {
-    socket.sky.subs.push(data);
+    socket.meteor.subs.push(data);
     poll_subscriptions(socket);
   };
 
   var unregister_subscription = function (socket, data) {
-    socket.sky.subs = _.filter(socket.sky.subs, function (x) {
+    socket.meteor.subs = _.filter(socket.meteor.subs, function (x) {
       return x._id !== data._id;
     });
     poll_subscriptions(socket);
@@ -119,7 +119,7 @@ if (typeof Sky === "undefined") Sky = {};
     // XXX note that running this in a fiber means that two serial
     // requests from the client can try to execute in parallel.. we're
     // going to have to think that through at some point. also, consider
-    // races against Sky.Collection(), though this shouldn't happen in
+    // races against Meteor.Collection(), though this shouldn't happen in
     // most normal use cases
     Fiber(function () {
       if (!('collection' in data) || !(data.collection in collections))
@@ -153,16 +153,16 @@ if (typeof Sky === "undefined") Sky = {};
       // need the removal message; it's exactly the sockets that have
       // the item in their cache
       _.each(other_sockets, function(x) {
-        if (x && x.sky) {
-          x.sky.throttled_poll(); } });
+        if (x && x.meteor) {
+          x.meteor.throttled_poll(); } });
 
     }).run();
   };
 
-  Sky._stream.register(function (socket) {
-    socket.sky = {};
-    socket.sky.subs = [];
-    socket.sky.cache = {};
+  Meteor._stream.register(function (socket) {
+    socket.meteor = {};
+    socket.meteor.subs = [];
+    socket.meteor.cache = {};
 
 
     socket.on('subscribe', function (data) {
@@ -174,20 +174,20 @@ if (typeof Sky === "undefined") Sky = {};
     });
 
     socket.on('handle', function (data) {
-      run_handler(socket, data, Sky._stream.all_sockets());
+      run_handler(socket, data, Meteor._stream.all_sockets());
     });
 
     // 5/sec updates tops, once every 10sec min.
-    socket.sky.throttled_poll = _.throttle(function () {
+    socket.meteor.throttled_poll = _.throttle(function () {
       poll_subscriptions(socket)
     }, 50); // XXX only 50ms! for great speed. might want higher in prod.
-    socket.sky.timer = setInterval(socket.sky.throttled_poll, 10000);
+    socket.meteor.timer = setInterval(socket.meteor.throttled_poll, 10000);
   });
 
 
   ////////// User visible API //////////
 
-  _.extend(Sky, {
+  _.extend(Meteor, {
     is_server: true,
     is_client: false,
 
@@ -202,7 +202,7 @@ if (typeof Sky === "undefined") Sky = {};
      *    named 'name' on disk in mongodb
      *  - selector {Function<args> OR Object} either a mongodb selector,
      *    or a function that takes the argument object passed to
-     *    Sky.subscribe and returns a mongodb selector. default {}
+     *    Meteor.subscribe and returns a mongodb selector. default {}
      */
     publish: function (name, options) {
       if (name in publishes) {
@@ -242,7 +242,7 @@ if (typeof Sky === "undefined") Sky = {};
     }
   });
 
-  Sky.Collection = function (name) {
+  Meteor.Collection = function (name) {
     if (!name)
       // XXX maybe support this using minimongo?
       throw new Error("Anonymous collections aren't allowed on the server");
@@ -265,17 +265,17 @@ if (typeof Sky === "undefined") Sky = {};
           new_doc = {};
           _.extend(new_doc, doc);
           doc = new_doc;
-          doc._id = Sky.uuid();
+          doc._id = Meteor.uuid();
         }
 
-        Sky._mongo_driver.insert(this._name, doc);
+        Meteor._mongo_driver.insert(this._name, doc);
 
         // return the doc w/ _id, so we can use it.
         return doc;
       },
 
       find: function (selector, options) {
-        return Sky._mongo_driver.find(this._name, selector, options);
+        return Meteor._mongo_driver.find(this._name, selector, options);
       },
 
       findLive: function () {
@@ -283,11 +283,11 @@ if (typeof Sky === "undefined") Sky = {};
       },
 
       update: function (selector, mod, options) {
-        return Sky._mongo_driver.update(this._name, selector, mod, options);
+        return Meteor._mongo_driver.update(this._name, selector, mod, options);
       },
 
       remove: function (selector) {
-        return Sky._mongo_driver.remove(this._name, selector);
+        return Meteor._mongo_driver.remove(this._name, selector);
       },
 
       schema: function () {

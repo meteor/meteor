@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Skybreak's machinery for making arbitrary templates reactive",
+  summary: "Meteor's machinery for making arbitrary templates reactive",
   internal: true
 });
 

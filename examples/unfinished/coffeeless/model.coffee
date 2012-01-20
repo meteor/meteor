@@ -1,4 +1,4 @@
 root = exports ? this # export Presses globally.
-root.Presses = Sky.Collection 'presses'
+root.Presses = Meteor.Collection 'presses'
 
-Sky.publish 'presses'
+Meteor.publish 'presses'

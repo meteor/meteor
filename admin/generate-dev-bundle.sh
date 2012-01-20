@@ -17,7 +17,7 @@ else
 fi
 
 
-# save off skybreak checkout dir as final target
+# save off meteor checkout dir as final target
 cd `dirname $0`/..
 TARGET_DIR=`pwd`
 
@@ -89,7 +89,7 @@ index ee2bf49..a68f9cb 100644
    }
  
 -  this.log.info('socket.io started');
-+  // this.log.info('socket.io started'); // XXX skybreak disabled
++  // this.log.info('socket.io started'); // XXX meteor disabled
  };
  
  Manager.prototype.__proto__ = EventEmitter.prototype

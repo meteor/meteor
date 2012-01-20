@@ -1,4 +1,4 @@
-if (typeof Sky === "undefined") Sky = {};
+if (typeof Meteor === "undefined") Meteor = {};
 
 (function () {
 
@@ -8,9 +8,9 @@ if (typeof Sky === "undefined") Sky = {};
 
 
   // basic socketio setup
-  var socketio = __skybreak_bootstrap__.require('socket.io');
+  var socketio = __meteor_bootstrap__.require('socket.io');
 
-  var io = socketio.listen(__skybreak_bootstrap__.app);
+  var io = socketio.listen(__meteor_bootstrap__.app);
   io.configure(function() {
     // Don't serve static files from socket.io. We serve them separately
     // to get gzip and other fun things.
@@ -38,7 +38,7 @@ if (typeof Sky === "undefined") Sky = {};
 
   ////////// API for other packages //////////
 
-  Sky._stream = {
+  Meteor._stream = {
     // call my callback when a new socket connects.
     // also call it for all current connections.
     register: function (callback) {

@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Skybreak's latency-compensated distributed data framework",
+  summary: "Meteor's latency-compensated distributed data framework",
   internal: true
 });
 

@@ -1,4 +1,4 @@
-Results = Sky.Collection();
+Results = Meteor.Collection();
 
 Template.header.passed_count = function () {
   return Results.find({type: "ok"}).length;
@@ -58,6 +58,6 @@ var run_tests = function (through) {
   }, 0);
 };
 
-Sky.startup(function () {
+Meteor.startup(function () {
   run_tests();
 });

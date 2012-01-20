@@ -6,7 +6,7 @@
 // Load the application once the DOM is ready, using `jQuery.ready`:
 $(function(){
   // ask for all the todos in my cache
-  Sky.subscribe('todos');
+  Meteor.subscribe('todos');
 
   // helper functions
 

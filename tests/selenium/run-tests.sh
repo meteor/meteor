@@ -3,7 +3,7 @@
 # XXX this is just a placeholder!
 
 TESTDIR=`dirname $0`
-TMPDIR=`mktemp -d -t skytest`
+TMPDIR=`mktemp -d -t meteor-test`
 
 cd "$TESTDIR"
 cd ../..
@@ -11,21 +11,21 @@ TOPDIR=`pwd`
 
 cp -r examples/todos2 "$TMPDIR"
 cd "$TMPDIR/todos2"
-rm -rf .skybreak/local
+rm -rf .meteor/local
 
-"$TOPDIR/skybreak" &
-SKY_PID=$!
+"$TOPDIR/meteor" &
+METEOR_PID=$!
 
-echo "Running $SKY_PID"
+echo "Running $METEOR_PID"
 
 sleep 2
 
 cd $TOPDIR
 python ./tests/selenium/todo-basic.py
 
-echo "Killing $SKY_PID"
+echo "Killing $METEOR_PID"
 
-kill -INT $SKY_PID
+kill -INT $METEOR_PID
 # XXX horrible and wrong!!
 killall mongod
 

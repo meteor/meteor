@@ -8,7 +8,7 @@ cd ..
 
 # Check for MacOS
 if [ `uname` != "Darwin" ] ; then
-    echo "Skybreak only support MacOS X right now."
+    echo "Meteor only support MacOS X right now."
     exit 1
 fi
 
@@ -32,7 +32,7 @@ if [ -d dev_bundle ] ; then
 fi
 
 # Force dev_bundle re-creation
-./skybreak --version || \
+./meteor --version || \
     warn_and_exit "dev_bundle installation failed."
 
 
@@ -46,13 +46,13 @@ echo "Installing."
 ./install.sh
 
 # get the version number.
-VERSION="$(/usr/local/bin/skybreak --version | sed 's/.* //')"
+VERSION="$(/usr/local/bin/meteor --version | sed 's/.* //')"
 
 # tar it up
-TARBALL=~/skybreak-package-${VERSION}.tar.gz
+TARBALL=~/meteor-package-${VERSION}.tar.gz
 echo "Tarring to: $TARBALL"
 
-tar -C /usr/local --exclude .skybreak/local -czf "$TARBALL" skybreak
+tar -C /usr/local --exclude .meteor/local -czf "$TARBALL" meteor
 
 # commit to git
 echo
@@ -90,9 +90,9 @@ cat <<EOF
 EOF
 read
 
-s3cmd -P put "$TARBALL" s3://com.skybreakplatform.static
-s3cmd -P put ./admin/install-s3.sh s3://com.skybreakplatform.static/update/
-s3cmd -P put ./admin/manifest.json s3://com.skybreakplatform.static/update/
+s3cmd -P put "$TARBALL" s3://com.meteor.static
+s3cmd -P put ./admin/install-s3.sh s3://com.meteor.static/update/
+s3cmd -P put ./admin/manifest.json s3://com.meteor.static/update/
 
 echo
 echo "//////////////////////"

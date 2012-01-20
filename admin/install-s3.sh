@@ -1,12 +1,12 @@
 #!/bin/bash
 
-URL="http://d377jur38fl888.cloudfront.net/skybreak-package-0.0.41.tar.gz"
-TARGET="/usr/local/skybreak"
+URL="http://d3sqy0vbqsdhku.cloudfront.net/meteor-package-0.0.42.tar.gz"
+TARGET="/usr/local/meteor"
 PARENT="/usr/local"
 
 # Check for MacOS
 if [ `uname` != "Darwin" ] ; then
-    echo "Sorry, Skybreak only supports MacOS X right now."
+    echo "Sorry, Meteor only supports MacOS X right now."
     exit 1
 fi
 
@@ -14,9 +14,9 @@ set -e
 trap "echo Installation failed." EXIT
 
 if [ -e "$TARGET" ] ; then
-    echo "Updating Skybreak in $TARGET"
+    echo "Updating Meteor in $TARGET"
 else
-    echo "Installing Skybreak to $TARGET"
+    echo "Installing Meteor to $TARGET"
 fi
 
 # if /usr/local doesn't exist or isn't writable, fix it with sudo.
@@ -59,20 +59,20 @@ curl --progress-bar $URL | tar -C "$PARENT" -xzf -
 
 # add to $PATH
 mkdir -p "$PARENT/bin"
-rm -f "$PARENT/bin/skybreak"
-ln -s "$TARGET/bin/skybreak" "$PARENT/bin/skybreak"
+rm -f "$PARENT/bin/meteor"
+ln -s "$TARGET/bin/meteor" "$PARENT/bin/meteor"
 
 cat <<EOF
 
-Skybreak installed! To get started fast:
+Meteor installed! To get started fast:
 
-  $ skybreak create ~/my_cool_app
+  $ meteor create ~/my_cool_app
   $ cd ~/my_cool_app
-  $ skybreak
+  $ meteor
 
 Or see the docs at:
 
-  preview.skybreakplatform.com
+  preview.meteor.com
 
 EOF
 

@@ -46,7 +46,7 @@ _.extend(globals.test, {
                     cookie: {test: current_test.name,
                              failure_count: current_failure_count++}});
     expecting_failure = false;
-    Sky.flush();
+    Meteor.flush();
   },
 
   // 'stop_at_cookie' is the 'cookie' attribute of a failure document,
