@@ -9,13 +9,15 @@
 // /app.json: [data for server.js]
 //  - load [list of files to load, relative to root, presumably under /app]
 // /dependencies.json: files to monitor for changes in development mode
-//  - extensions [list of extensions registered for user code]
+//  - extensions [list of extensions registered for user code, with dots]
 //  - packages [map from package name to list of paths relative to the package]
 //  - core [paths relative to 'app' in skybreak tree]
 //  - app [paths relative to top of app tree]
+//  - exclude [list of regexps for files to ignore (everywhere)]
 //  (for 'core' and 'apps', if a directory is given, you should
-//  monitor everything in the subtree under it, and if it doesn't
-//  exist yet, you should watch for it to appear)
+//  monitor everything in the subtree under it minus the stuff that
+//  matches exclude, and if it doesn't exist yet, you should watch for
+//  it to appear)
 //
 // The application launcher is expected to execute /main.js with node,
 // setting the PORT and MONGO_URL environment variables. The enclosed
@@ -453,7 +455,7 @@ exports.bundle = function (app_dir, output_path, options) {
 
   fs.writeFileSync(path.join(build_path, 'unsupported.html'),
                    fs.readFileSync(path.join(__dirname, "unsupported.html")));
-  dependencies_json.core.push('lib/server');
+  dependencies_json.core.push('lib/unsupported.html');
 
   fs.writeFileSync(path.join(build_path, 'main.js'),
 "require(require('path').join(__dirname, 'server/server.js'));\n");
@@ -472,16 +474,11 @@ exports.bundle = function (app_dir, output_path, options) {
 "\n" +
 "Find out more about Skybreak at skybreakplatform.com.\n");
 
-  // XXX enhance dependencies to include all dependencies, not just
-  // user code, so we can get reload behavior when developing packages
-  // or skybreak itself. that includes (1) any file that went in the
-  // bundle (from 'static', 'app/server', or a package), (2)
-  // package.js for each package that was included. also conceptually
-  // we need to restart on 'skybreak add'.
   dependencies_json.extensions = bundle.registeredExtensions();
   dependencies_json.packages = {};
   for (var pkg in bundle.package_dependencies)
     dependencies_json.packages[pkg] = _.uniq(bundle.package_dependencies[pkg]);
+  dependencies_json.exclude = _.pluck(ignore_files, 'source');
 
   fs.writeFileSync(path.join(build_path, 'app.json'),
                    JSON.stringify(app_json));

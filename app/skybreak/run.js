@@ -279,47 +279,159 @@ var kill_server = function (handle) {
 
 ////////// Watching dependencies  //////////
 
-var watch_files = function (app_dir, get_extensions, on_change) {
-  var watched_files = {};
+// deps is the data from dependencies.json in the bundle
+// on_change is only fired once
+var DependencyWatcher = function (deps, app_dir, on_change) {
+  var self = this;
 
-  var file_accessed = function (oldStat, newStat) {
-    if (newStat.mtime.getTime() !== oldStat.mtime.getTime())
-      on_change();
+  self.app_dir = app_dir;
+  self.on_change = on_change;
+  self.watches = {}; // path => fs.watch handle
+  self.last_contents = {}; // path => last contents (array of filenames)
+  self.mtimes = {}; // path => last seen mtime
+
+  // If a file is under a source_dir, and has one of the
+  // source_extensions, then it's interesting.
+  self.source_dirs = [self.app_dir];
+  self.source_extensions = deps.extensions || [];
+
+  // Any file under a bulk_dir is interesting. (bulk_dirs may also
+  // contain individual files)
+  self.bulk_dirs = [];
+  _.each(deps.core || [], function (filepath) {
+    self.bulk_dirs.push(path.join(files.get_core_dir(), filepath));
+  });
+  _.each(deps.app || [], function (filepath) {
+    self.bulk_dirs.push(path.join(self.app_dir, filepath));
+  });
+
+  // Additional list of specific files that are interesting.
+  self.specific_files = {};
+  for (var pkg in (deps.packages || {})) {
+    _.each(deps.packages[pkg], function (file) {
+      self.specific_files[path.join(files.get_package_dir(), pkg, file)]
+        = true;
+    });
   };
 
-  var consider_file = function (initial_scan, filepath) {
-    // XXX maybe exclude some files?
-    if (filepath in watched_files) {
+  // Things that are never interesting.
+  self.exclude_patterns = _.map((deps.exclude || []), function (pattern) {
+    return new RegExp(pattern);
+  });
+  self.exclude_paths = [
+    path.join(app_dir, '.skybreak', 'local')
+  ];
+
+  // Start monitoring
+  _.each(_.union(self.source_dirs, self.bulk_dirs, _.keys(self.specific_files)),
+         _.bind(self._scan, self, true));
+};
+
+_.extend(DependencyWatcher.prototype, {
+  // stop monitoring
+  destroy: function () {
+    var self = this;
+    self.on_change = function () {};
+    for (var filepath in self.watches)
+      self.watches[filepath].close();
+    self.watches = {};
+  },
+
+  // initial is true on the inital scan, to suppress notifications
+  _scan: function (initial, filepath) {
+    var self = this;
+
+    if (_.indexOf(self.exclude_paths, filepath) !== -1)
+      return;
+
+    try {
+      var stats = fs.lstatSync(filepath)
+    } catch (e) {
+      // doesn't exist -- leave stats undefined
+    }
+
+    // '+' is necessary to coerce the mtimes from date objects to ints
+    // (unix times) so they can be conveniently tested for equality
+    if (stats && +stats.mtime === +self.mtimes[filepath])
+      // We already know about this file and it hasn't actually
+      // changed. Probably its atime changed.
+      return;
+
+    // If an interesting file has changed, fire!
+    var is_interesting = self._is_interesting(filepath);
+    if (!initial && is_interesting) {
+      self.on_change();
+      self.destroy();
       return;
     }
-    watched_files[filepath] = true;
 
-    fs.watchFile(filepath,
-                 {persistant: true, interval: 500}, // poll a lot!
-                 file_accessed);
+    if (!stats) {
+      // A directory (or an uninteresting file) was removed
+      var watcher = self.watches[filepath];
+      if (watcher)
+        watcher.close();
+      delete self.watches[filepath];
+      delete self.last_contents[filepath];
+      delete self.mtimes[filepath];
+      return;
+    }
 
-    if (!initial_scan)
-      on_change();
-  };
+    // If we're seeing this file or directory for the first time,
+    // monitor it if necessary
+    if (!(filepath in self.watches) &&
+        (is_interesting || stats.isDirectory())) {
+      self.watches[filepath] =
+        fs.watch(filepath, {interval: 500}, // poll a lot!
+                 _.bind(self._scan, self, false, filepath));
+      self.mtimes[filepath] = stats.mtime;
+    }
 
-  // kick off initial watch.
-  files.file_list_async(app_dir, get_extensions(),
-                        _.bind(consider_file, null, true));
+    // If a directory, recurse into any new files it contains. (We
+    // don't need to check for removed files here, since if we care
+    // about a file, we'll already be monitoring it)
+    if (stats.isDirectory()) {
+      var old_contents = self.last_contents[filepath] || [];
+      var new_contents = fs.readdirSync(filepath);
+      var added = _.difference(new_contents, old_contents);
 
-  // watch for new files.
-  setInterval(function () {
-    files.file_list_async(app_dir, get_extensions(),
-                        _.bind(consider_file, null, false));
-  }, 5000);
+      self.last_contents[filepath] = new_contents;
+      _.each(added, function (child) {
+        self._scan(initial, path.join(filepath, child));
+      });
+    }
+  },
 
-  // XXX doesn't deal with removed files
+  // Should we fire if this file changes?
+  _is_interesting: function (filepath) {
+    var self = this;
 
-  // XXX if a file is removed from the project, we will continue to
-  // restart when it's updated
+    // Skip things that match exclude_patterns
+    for (var i = 0; i < self.exclude_patterns.length; i++)
+      if (path.basename(filepath).match(self.exclude_patterns[i]))
+        return;
 
-  // XXX if the initial scan takes more than 5000 ms to complete, it's
-  // all going to come crashing down on us..
-};
+    var in_any_dir = function (dirs) {
+      return _.any(dirs, function (dir) {
+        return filepath.slice(0, dir.length) === dir;
+      });
+    };
+
+    // Specific, individual files that we want to monitor
+    if (filepath in self.specific_files)
+      return true;
+
+    // Source files
+    if (in_any_dir(self.source_dirs) &&
+        _.indexOf(self.source_extensions, path.extname(filepath)) !== -1)
+      return true;
+
+    // Other directories and files that are included
+    if (in_any_dir(self.bulk_dirs))
+      return true;
+
+    return false;
+  }
+});
 
 ////////// Upgrade check //////////
 
@@ -354,19 +466,19 @@ exports.run = function (app_dir, bundle_path, bundle_opts, port) {
   var mongo_port = outer_port + 2;
   var mongo_url = "mongodb://localhost:" + mongo_port + "/skybreak";
 
-  var deps = {};
   var started_watching_files = false;
   var warned_about_no_deps_info = false;
 
   var server_handle;
+  var watcher;
 
   var bundle = function () {
     bundler.bundle(app_dir, bundle_path, bundle_opts);
 
+    var deps_raw;
     try {
-      var deps_raw =
+      deps_raw =
         fs.readFileSync(path.join(bundle_path, 'dependencies.json'), 'utf8');
-      deps = JSON.parse(deps_raw.toString());
     } catch (e) {
       if (!warned_about_no_deps_info) {
         process.stdout.write("No dependency info in bundle. " +
@@ -375,21 +487,17 @@ exports.run = function (app_dir, bundle_path, bundle_opts, port) {
       }
     }
 
-    if (!started_watching_files) {
-      // Don't start watching files until we've built the bundle for
-      // the first time and have gotten the deps info out of it.
-      var get_extensions = function () {
-        return deps.extensions || [];
-      };
+    if (deps_raw) {
+      if (watcher)
+        watcher.destroy();
 
-      watch_files(app_dir, get_extensions, function () {
+      var deps = JSON.parse(deps_raw.toString());
+      watcher = new DependencyWatcher(deps, app_dir, function () {
         if (Status.crashing)
           log_to_clients({'system': "=> Modified -- restarting."});
         Status.reset();
         restart_server();
       });
-
-      started_watching_files = true;
     }
   };
 

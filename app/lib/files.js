@@ -166,6 +166,12 @@ var files = module.exports = {
     return path.join(__dirname, '../../packages');
   },
 
+  // Return the directory that contains the core tool (the top-level
+  // 'app' directory)
+  get_core_dir: function () {
+    return path.join(__dirname, '../../app');
+  },
+
   // Try to find the prettiest way to present a path to the
   // user. Presently, the main thing it does is replace $HOME with ~.
   pretty_path: function (path) {
