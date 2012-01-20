@@ -8,8 +8,8 @@ Meteor.subscribe('lists', {}, function () {
   // Once the lists have loaded, select the first one.
   if (!Session.get('list_id')) {
     var lists = Lists.find({}, {sort: {name: 1}, limit: 1});
-    if (lists.length)
-      Router.setList(lists[0]._id);
+    if (lists.count() > 0)
+      Router.setList(lists.get(0)._id);
   }
 });
 
@@ -23,7 +23,7 @@ Meteor.autosubscribe(function () {
 
 Template.tag_filter.tags = function () {
   // Pick out the unique tags from all tasks.
-  var tags = _(Todos.find())
+  var tags = _(Todos.find().fetch())
     .chain().pluck('tags').compact().flatten().sort().uniq(true).value();
   // for some reason, .map can't be chained on IE8. underscore bug?
   tags = _.map(tags, function (tag) { return {tag: tag} });

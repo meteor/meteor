@@ -148,12 +148,6 @@ Meteor.ui.render = function (render_func, events, event_data) {
 /// (specific to mongo at the moment, but will be generalized
 /// eventually.)
 ///
-/// Undocumented elsewhere: you may pass in a findLive handle instead
-/// of 'what'. In that case, we will use that query instead, and we
-/// will take responsibility for calling stop() on it! Let's leave
-/// undocumented for now, and document when the new database API
-/// lands.
-///
 /// Exact GC semantics:
 /// - Slow path: When a database change happens, unconditionally
 ///   update the rendering, but also schedule an onscreen check to
@@ -167,10 +161,16 @@ Meteor.ui.render = function (render_func, events, event_data) {
 ///   to only do the teardown if it is in fact still offscreen at
 ///   flush()-time.
 ///   https://app.asana.com/0/159908330244/382690197728
-Meteor.ui.renderList = function (what, options) {
+Meteor.ui.renderList = function (query, options) {
   var outer_frag;
   var outer_range;
   var entry_ranges = [];
+
+  // protect against old invocations passing in a Collection or a
+  // LiveResultsSet.
+  // XXX remove in a few releases
+  if (!(query instanceof Collection.Query))
+    throw new Error("insert_before: at least one entry must exist");
 
   // create the top-level document fragment/range that will be
   // returned by renderList. called exactly once, ever (and that call
@@ -192,7 +192,7 @@ Meteor.ui.renderList = function (what, options) {
         return;
       }
 
-      query.stop();
+      live_results.stop();
       if (!old_context.killed)
         Meteor.ui._cleanup(outer_range);
     };
@@ -360,9 +360,9 @@ Meteor.ui.renderList = function (what, options) {
       // the screen. (The user has from when we're created, to when
       // flush() is called, to put us on the screen.)
       outer_range.context.invalidate();
-  }
+  };
 
-  var query_opts = {
+  var observe_callbacks = {
     added: function (doc, before_idx) {
       check_onscreen();
       var frag = render_doc(doc);
@@ -406,13 +406,7 @@ Meteor.ui.renderList = function (what, options) {
     }
   };
 
-  if (what instanceof Collection.LiveResultsSet) {
-    var query = what;
-    query.reconnect(query_opts);
-  } else {
-    query_opts.sort = options.sort;
-    var query = what.findLive(options.selector || {}, query_opts);
-  }
+  var live_results = query.observe(observe_callbacks);
 
   if (!outer_range)
     create_outer_range(render_empty());

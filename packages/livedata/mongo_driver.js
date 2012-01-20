@@ -51,8 +51,7 @@ function withCollection (collection_name, callback) {
 
 //////////// Public API //////////
 
-
-function find (collection_name, selector, options) {
+function Cursor (collection_name, selector, options) {
   var future = new Future;
   withCollection(collection_name, function(err, collection) {
     // XXX err handling
@@ -76,15 +75,75 @@ function find (collection_name, selector, options) {
     if (options && options.skip)
       cursor = cursor.skip(options.skip);
 
-    var func = single_result ? cursor.nextObject : cursor.toArray;
-    func.call(cursor, function(err, result) {
-      // XXX error handling!
-      future.return(result);
-    });
+    future.return(cursor);
+  });
+  this.cursor = future.wait();
+};
+
+Cursor.prototype.forEach = function (callback) {
+  var self = this;
+  var future = new Future;
+
+  self.cursor.each(function (err, doc) {
+    if (err || !doc)
+      future.return(err);
+    else
+      callback(null, doc);
   });
   return future.wait();
 };
 
+Cursor.prototype.map = function (callback) {
+  var self = this;
+  var res = [];
+  self.forEach(function (doc) {
+    res.push(callback(doc));
+  });
+  return res;
+};
+
+Cursor.prototype.rewind = function () {
+  var self = this;
+
+  self.cursor.rewind();
+};
+
+Cursor.prototype.fetch = function (length) {
+  var self = this;
+  var future = new Future;
+  var res = [];
+
+  self.cursor.each(function (err, doc) {
+    if (err)
+      future.return(err);
+    else if (!doc)
+      future.return(res);
+
+    res.push(doc);
+
+    if (length && res.length === length)
+      // immediately return w/o consuming another doc in the iterator
+      future.return(res);
+  });
+
+  return future.wait();
+};
+
+Cursor.prototype.get = function (i) {
+  var self = this;
+  return self.fetch(i + 1)[0];
+};
+
+Cursor.prototype.count = function () {
+  var self = this;
+  var future = new Future;
+
+  self.cursor.count(function (err, res) {
+    future.return(res);
+  });
+
+  return future.wait();
+};
 
 function insert (collection_name, document) {
   var future = new Future;
@@ -125,7 +184,6 @@ function remove (collection_name, selector) {
   return future.wait();
 };
 
-
 function update (collection_name, selector, mod, options) {
   var future = new Future;
   // XXX this blocks for the operation to complete (safe:true), because
@@ -139,7 +197,6 @@ function update (collection_name, selector, mod, options) {
   // Default to multi. This is the oppposite of mongo. We'll see how it goes.
   if (typeof(options.multi) === "undefined")
     options.multi = true
-
 
   withCollection(collection_name, function(err, collection) {
     // XXX err handling
@@ -159,13 +216,13 @@ function update (collection_name, selector, mod, options) {
 };
 
 Meteor._mongo_driver = {
-  find: find,
+  Cursor: Cursor,
   insert: insert,
   remove: remove,
   update: update
 };
 
 // start database
-init(__meteor_bootstrap__.mongo_url)
+init(__meteor_bootstrap__.mongo_url);
 
 })();

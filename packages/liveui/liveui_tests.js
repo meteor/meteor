@@ -349,8 +349,7 @@ test("render - events", function () {
 test("renderList - basics", function () {
   var c = Meteor.Collection();
 
-  var r = Meteor.ui.renderList(c, {
-    sort: ["id"],
+  var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
     render: function (doc) {
       return DIV({id: doc.id});
     },
@@ -428,8 +427,7 @@ test("renderList - removal", function () {
   c.update({id: "F"}, {$set: {id: "F2"}});
   c.update({id: "C"}, {$set: {id: "C2"}});
 
-  var r = Meteor.ui.renderList(c, {
-    sort: ["id"],
+  var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
     render: function (doc) {
       return DIV({id: doc.id});
     },
@@ -479,8 +477,7 @@ test("renderList - removal", function () {
 test("renderList - default render empty", function () {
   var c = Meteor.Collection();
 
-  var r = Meteor.ui.renderList(c, {
-    sort: ["id"],
+  var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
     render: function (doc) {
       return DIV({id: doc.id});
     }
@@ -496,8 +493,7 @@ test("renderList - default render empty", function () {
 test("renderList - change and move", function () {
   var c = Meteor.Collection();
 
-  var r = Meteor.ui.renderList(c, {
-    sort: ["id"],
+  var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
     render: function (doc) {
       return DIV({id: doc.id});
     }
@@ -529,8 +525,7 @@ test("renderList - change and move", function () {
 test("renderList - termination", function () {
   var c = Meteor.Collection();
 
-  var r = Meteor.ui.renderList(c, {
-    sort: ["id"],
+  var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
     render: function (doc) {
       return DIV({id: doc.id});
     }
@@ -557,8 +552,7 @@ test("renderList - termination", function () {
       c.remove();
       c.insert({id: "A"});
       c.insert({id: "B"});
-      r = Meteor.ui.renderList(c, {
-        sort: ["id"],
+      r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
         render: function (doc) {
           return DIV({id: doc.id});
         }
@@ -626,8 +620,7 @@ test("renderList - list items are reactive", function () {
   set_weather("there", "cloudy");
   Meteor.flush();
   var render_count = 0;
-  var r = Meteor.ui.renderList(c, {
-    sort: ["id"],
+  var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
     render: function (doc) {
       render_count++;
       if (doc.want_weather)
@@ -814,8 +807,7 @@ test("renderList - multiple elements in an item", function () {
     function () {
       c.remove();
       Meteor.flush();
-      r = Meteor.ui.renderList(c, {
-        sort: ["moved", "index"],
+      r = Meteor.ui.renderList(c.find({}, {sort: ['moved', 'index']}), {
         render: function (doc) {
           var ret = [];
           for (var i = 0; i < lengths[doc.index]; i++)
@@ -853,10 +845,10 @@ test("renderList - #each", function () {
       return get_weather(where);
     },
     data: function () {
-      return c.findLive({x: {$lt: 5}}, {sort: ["x"]});
+      return c.find({x: {$lt: 5}}, {sort: ["x"]});
     },
     data2: function () {
-      return c.findLive({x: {$gt: 5}}, {sort: ["x"]});
+      return c.find({x: {$gt: 5}}, {sort: ["x"]});
     }
   });
 

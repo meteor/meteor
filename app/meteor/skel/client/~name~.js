@@ -7,9 +7,9 @@ Template.button_demo.events = {
 };
 
 Template.button_demo.ever_pressed = function (options) {
-  return Clicks.find().length > 0;
+  return Clicks.find().count() > 0;
 };
 
 Template.button_demo.press_count = function () {
-  return Clicks.find().length;
+  return Clicks.find().count();
 };

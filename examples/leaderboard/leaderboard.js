@@ -13,8 +13,7 @@ if (Meteor.is_client) {
 
   $(document).ready(function () {
     // List the players by score. You can click to select a player.
-    var scores = Meteor.ui.renderList(Players, {
-      sort: {score: -1}, // sort from high to low score
+    var scores = Meteor.ui.renderList(Players.find({}, {sort: {score: -1}}), {
       render: function (player) {
         if (Session.equals("selected_player", player._id))
           var style = "player selected";
@@ -40,7 +39,7 @@ if (Meteor.is_client) {
       if (!selected_player)
         return $('<div class="none">Click a player to select</div>');
 
-      var player = Players.find(selected_player);
+      var player = Players.findOne(selected_player);
       return $('<div class="details"><div class="name">' + player.name +
                '</div><input type="button" value="Give 5 points"></div>');
     }, {
@@ -60,12 +59,13 @@ if (Meteor.is_client) {
 
 if (Meteor.is_server) {
   // Publish the top 10 players, live, to any client that wants them.
-  Meteor.publish("top10", {collection: Players, sort: {score: -1},
-                        limit: 10});
+  Meteor.publish("top10", {collection: Players,
+                           sort: {score: -1},
+                           limit: 10});
 
   // On server startup, create some players if the database is empty.
   Meteor.startup(function () {
-    if (Players.find().length === 0) {
+    if (Players.find().count() === 0) {
       var names = ["Glinnes Hulden", "Shira Hulden", "Denzel Warhound",
                    "Lute Casagave", "Akadie", "Thammas, Lord Gensifer",
                    "Ervil Savat", "Duissane Trevanyi", "Sagmondo Bandolio",

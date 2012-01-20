@@ -227,7 +227,7 @@ if (typeof Meteor === "undefined") Meteor = {};
           sort: opt("sort"),
           skip: opt("skip"),
           limit: opt("limit")
-        }));
+        }).fetch());
       };
 
       publishes[name] = func;
@@ -255,6 +255,15 @@ if (typeof Meteor === "undefined") Meteor = {};
       // and minimongo diverge. we should track each of those down and
       // kill it.
 
+      find: function (selector, options) {
+        var cursor = new Meteor._mongo_driver.Cursor(this._name, selector, options);
+        return cursor;
+      },
+
+      findOne: function (selector, options) {
+        return this.find(selector, options).get(0);
+      },
+
       insert: function (doc) {
         // do id allocation here, so we never end up with an ObjectID.
         // This only happens if some calls this directly on the server,
@@ -272,14 +281,6 @@ if (typeof Meteor === "undefined") Meteor = {};
 
         // return the doc w/ _id, so we can use it.
         return doc;
-      },
-
-      find: function (selector, options) {
-        return Meteor._mongo_driver.find(this._name, selector, options);
-      },
-
-      findLive: function () {
-        throw new Error("findLive isn't supported on the server");
       },
 
       update: function (selector, mod, options) {
@@ -306,6 +307,12 @@ if (typeof Meteor === "undefined") Meteor = {};
       collections[name] = ret;
 
     return ret;
+  };
+
+  Meteor.Collection.Query = function (collection, selector, options) {
+    if (!options) options = {};
+
+    this.cursor = Meteor._mongo_driver.find(this._name, selector, options);
   };
 
 })();

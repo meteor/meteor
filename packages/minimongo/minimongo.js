@@ -1,36 +1,25 @@
 // XXX indexes
 // XXX type checking on selectors (graceful error if malformed)
+// XXX merge ad-hoc live query object and Query
+
+// XXX keep observe()s running after they're killed, because usually
+// the dependency tracker is going to spin them up again right away.
+
+// Collection: a set of documents that supports queries and modifiers.
+
+// Query: a specification for a particular subset of documents, w/
+// a defined order, limit, and offset.  creating a Query with Collection.find(),
+
+// LiveResultsSet: the return value of a live query.
 
 Collection = function () {
   this.docs = {}; // _id -> document (also containing id)
 
-  this.next_qid = 1; // query id generator
+  this.next_qid = 1; // live query id generator
 
-  // qid -> query object. keys: selector_f, sort_f, (callbacks)
+  // qid -> live query object. keys: selector_f, sort_f, (callbacks)
   this.queries = {};
 };
-
-  // XXX enforce rule that field names can't start with '$' or contain '.'
-  // (real mongodb does in fact enforce this)
-  // XXX possibly enforce that 'undefined' does not appear (we assume
-  // this in our handling of null and $exists)
-Collection.prototype.insert = function (doc) {
-  var self = this;
-  doc = Collection._deepcopy(doc);
-  // XXX deal with mongo's binary id type?
-  if (!('_id' in doc))
-    doc._id = Collection.uuid();
-  // XXX check to see that there is no object with this _id yet?
-  self.docs[doc._id] = doc;
-  for (var qid in self.queries) {
-    var query = self.queries[qid];
-    if (query.selector_f(doc))
-      Collection._insertInResults(query, doc);
-  }
-};
-
-// XXX add one more sort form: "key"
-// and tests, etc
 
 // options may include sort, skip, limit, reactive
 // sort may be any of these forms:
@@ -48,63 +37,221 @@ Collection.prototype.insert = function (doc) {
 // doc?)
 //
 // XXX sort does not yet support subkeys ('a.b') .. fix that!
+// XXX add one more sort form: "key"
+// XXX tests
 Collection.prototype.find = function (selector, options) {
-  var self = this;
-  options = options || {};
+  return new Collection.Query(this, selector, options);
+};
 
-  var results = null;
+// don't call this ctor directly.  use Collection.find().
+Collection.Query = function (collection, selector, options) {
+  if (!options) options = {};
 
-  if (typeof selector === 'string') {
-    // XXX fast path for single object. NOTE: this is actually a
-    // different return type than {_id: id} (either object or null, not
-    // array). Maybe rename this findOne to match mongo?
-    results = self.docs[selector] || null;
-    results = Collection._deepcopy(results);
+  this.collection = collection;
+
+  if (typeof selector === "string") {
+    // stash for fast path
+    this.selector_id = selector;
+    this.selector_f = Collection._compileSelector({_id: selector});
   } else {
-
-    var selector_f = Collection._compileSelector(selector);
-    var sort_f = options.sort && Collection._compileSort(options.sort);
-    results = self._rawFind(selector_f, sort_f);
-
-    if (options.skip)
-      results.splice(0, options.skip);
-    if (options.limit !== undefined) {
-      var limit = options.limit;
-      if (results.length > limit)
-        results.length = limit;
-    }
-    for (var i = 0; i < results.length; i++)
-      results[i] = Collection._deepcopy(results[i]);
-
+    this.selector_f = Collection._compileSelector(selector);
+    this.sort_f = options.sort ? Collection._compileSort(options.sort) : null;
+    this.skip = options.skip;
+    this.limit = options.limit;
   }
 
-  // support Meteor.deps if present
-  var reactive = (options.reactive === undefined) ? true : options.reactive;
-  var context = reactive && typeof Meteor === "object" && Meteor.deps &&
-    Meteor.deps.Context.current;
+  this.db_objects = null;
+  this.cursor_pos = 0;
+
+  // by default, queries register w/ Meteor.deps when it is available.
+  if (typeof Meteor === "object" && Meteor.deps)
+    this.reactive = (options.reactive === undefined) ? true : options.reactive;
+};
+
+// fetch array of documents from the cursor.  defaults to all
+// remaining docs, or limited to specified length.  returns [] once
+// all documents have been consumed.
+Collection.Query.prototype.fetch = function (length) {
+  var self = this;
+
+  if (self.reactive)
+    self._markAsReactive({added: true,
+                          removed: true,
+                          changed: true,
+                          moved: true});
+
+  if (self.db_objects === null)
+    self.db_objects = self._getRawObjects();
+
+  var idx_end = length ? (length + self.cursor_pos) : undefined;
+  var objects = self.db_objects.slice(self.cursor_pos, idx_end);
+  self.cursor_pos += objects.length;
+
+  var results = [];
+  for (var i = 0; i < objects.length; i++)
+    results.push(Collection._deepcopy(objects[i]));
+  return results;
+};
+
+Collection.Query.prototype.rewind = function () {
+  var self = this;
+  self.db_objects = null;
+  self.cursor_pos = 0;
+};
+
+Collection.Query.prototype.get = function (offset) {
+  var self = this;
+  offset = offset || 0;
+  return self.fetch(offset + 1).pop();
+};
+
+Collection.prototype.findOne = function (selector, options) {
+  return this.find(selector, options).get();
+};
+
+Collection.STOP = 'stop';
+Collection.Query.prototype.forEach = function (callback) {
+  var self = this;
+  var doc;
+
+  while ((doc = self.get()))
+    if (callback(doc) === Collection.STOP)
+      // callback requests we break out of forEach
+      return;
+};
+
+Collection.Query.prototype.map = function (callback) {
+  var self = this;
+  var res = [];
+  var doc;
+
+  while ((doc = self.get()))
+    res.push(callback(doc));
+  return res;
+};
+
+Collection.Query.prototype.count = function () {
+  var self = this;
+
+  if (self.reactive)
+    self._markAsReactive({added: true, removed: true});
+
+  if (self.db_objects === null)
+    self.db_objects = self._getRawObjects();
+
+  return self.db_objects.length;
+};
+
+// the handle that comes back from observe.
+Collection.LiveResultsSet = function () {};
+
+Collection.Query.prototype.observe = function (options) {
+  var self = this;
+
+  if (self.skip || self.limit)
+    throw new Error("cannot observe queries with skip or limit");
+
+  var qid = self.collection.next_qid++;
+
+  // XXX merge this object w/ "this" Query.  they're the same.
+  var query = self.collection.queries[qid] = {
+    selector_f: self.selector_f, // not fast pathed
+    sort_f: self.sort_f,
+    results: []
+  };
+  query.results = self._getRawObjects();
+
+  query.added = options.added || function () {};
+  query.changed = options.changed || function () {};
+  query.moved = options.moved || function () {};
+  query.removed = options.removed || function () {};
+  if (!options._suppress_initial)
+    for (var i = 0; i < query.results.length; i++)
+      query.added(Collection._deepcopy(query.results[i]), i);
+
+  var handle = new Collection.LiveResultsSet;
+  _.extend(handle, {
+    stop: function () {
+      delete self.collection.queries[qid];
+    },
+    indexOf: function (id) {
+      for (var i = 0; i < query.results.length; i++)
+        if (query.results[i]._id === id)
+          return i;
+      return -1;
+    },
+    collection: self.collection
+  });
+  return handle;
+};
+
+// constructs sorted array of matching objects, but doesn't copy them.
+// respects sort, skip, and limit properties of the query.
+// if sort_f is falsey, no sort -- you get the natural order
+Collection.Query.prototype._getRawObjects = function () {
+  var self = this;
+
+  // fast path for single ID value
+  if (self.selector_id)
+    return [self.collection.docs[self.selector_id]];
+
+  // slow path for arbitrary selector, sort, skip, limit
+  var results = [];
+  for (var id in self.collection.docs) {
+    var doc = self.collection.docs[id];
+    if (self.selector_f(doc))
+      results.push(doc);
+  }
+
+  if (self.sort_f)
+    results.sort(self.sort_f);
+
+  var idx_start = self.skip || 0;
+  var idx_end = self.limit ? (self.limit + idx_start) : undefined;
+  return results.slice(idx_start, idx_end);
+};
+
+Collection.Query.prototype._markAsReactive = function (options) {
+  var self = this;
+
+  var context = Meteor.deps.Context.current;
+
   if (context) {
     var invalidate = _.bind(context.invalidate, context);
 
-    var new_options = _.clone(options);
-    _.extend(new_options, {
-      added: invalidate,
-      removed: invalidate,
-      changed: invalidate,
-      moved: invalidate,
-      _suppress_initial: true
-    });
+    var handle = self.observe({added: options.added && invalidate,
+                               removed: options.removed && invalidate,
+                               changed: options.changed && invalidate,
+                               moved: options.moved && invalidate,
+                               _suppress_initial: true});
 
-    var live_handle = self.findLive(selector, new_options);
-    context.on_invalidate(function () {
-      // XXX in many cases, the query will be immediately
-      // recreated. so we might want to let it linger for a little
-      // while and repurpose it if it comes back. this will save us
-      // work because we won't have to redo the initial find.
-      live_handle.stop();
-    });
+    // XXX in many cases, the query will be immediately
+    // recreated. so we might want to let it linger for a little
+    // while and repurpose it if it comes back. this will save us
+    // work because we won't have to redo the initial find.
+    context.on_invalidate(handle.stop);
   }
+};
 
-  return results;
+// XXX enforce rule that field names can't start with '$' or contain '.'
+// (real mongodb does in fact enforce this)
+// XXX possibly enforce that 'undefined' does not appear (we assume
+// this in our handling of null and $exists)
+Collection.prototype.insert = function (doc) {
+  var self = this;
+  doc = Collection._deepcopy(doc);
+  // XXX deal with mongo's binary id type?
+  if (!('_id' in doc))
+    doc._id = Collection.uuid();
+  // XXX check to see that there is no object with this _id yet?
+  self.docs[doc._id] = doc;
+
+  // trigger live queries that match
+  for (var qid in self.queries) {
+    var query = self.queries[qid];
+    if (query.selector_f(doc))
+      Collection._insertInResults(query, doc);
+  }
 };
 
 // options to contain:
@@ -118,9 +265,6 @@ Collection.prototype.find = function (selector, options) {
 // attributes available on returned query handle:
 //  * stop(): end updates
 //  * indexOf(id): return current index of object in result set, or -1
-//  * reconnect({}): replace added, changed, moved, removed, from the
-//      arguments, and call added to deliver the current state of the
-//      query (XXX ugly hack to support templating)
 //  * collection: the collection this query is querying
 //
 // iff x is a returned query handle, (x instanceof
@@ -133,64 +277,6 @@ Collection.prototype.find = function (selector, options) {
 // XXX it'd be helpful if removed got the object that just left the
 // query, not just its id
 // XXX document that initial results will definitely be delivered before we return [do, add to asana]
-
-Collection.LiveResultsSet = function () {};
-Collection.prototype.findLive = function (selector, options) {
-  var self = this;
-  var qid = self.next_qid++;
-  if (typeof(selector) === "string")
-    selector = {_id: selector};
-
-  var query = self.queries[qid] = {
-    selector_f: Collection._compileSelector(selector),
-    sort_f: options.sort ? Collection._compileSort(options.sort) : null,
-    results: []
-  };
-  query.results = self._rawFind(query.selector_f, query.sort_f);
-
-  var connect = function (options) {
-    query.added = options.added || function () {};
-    query.changed = options.changed || function () {};
-    query.moved = options.moved || function () {};
-    query.removed = options.removed || function () {};
-    if (!options._suppress_initial)
-      for (var i = 0; i < query.results.length; i++)
-        query.added(Collection._deepcopy(query.results[i]), i);
-  };
-
-  connect(options);
-
-  var handle = new Collection.LiveResultsSet;
-  _.extend(handle, {
-    stop: function () {
-      delete self.queries[qid];
-    },
-    indexOf: function (id) {
-      for (var i = 0; i < query.results.length; i++)
-        if (query.results[i]._id === id)
-          return i;
-      return -1;
-    },
-    reconnect: connect,
-    collection: this
-  });
-  return handle;
-};
-
-// returns matching objects, but doesn't copy them
-// if sort_f is falsey, no sort -- you get the natural order
-Collection.prototype._rawFind = function (selector_f, sort_f) {
-  var self = this;
-  var results = [];
-  for (var id in self.docs) {
-    var doc = self.docs[id];
-    if (selector_f(doc))
-      results.push(doc);
-  }
-  if (sort_f)
-    results.sort(sort_f);
-  return results;
-};
 
 Collection.prototype.remove = function (selector) {
   var self = this;
@@ -214,7 +300,7 @@ Collection.prototype.remove = function (selector) {
     delete self.docs[remove[i]];
   }
 
-  // run findLive callbacks _after_ we've removed the documents.
+  // run live query callbacks _after_ we've removed the documents.
   for (var i = 0; i < query_remove.length; i++) {
     Collection._removeFromResults(query_remove[i][0], query_remove[i][1]);
   }

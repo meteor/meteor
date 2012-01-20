@@ -26,7 +26,7 @@ if (typeof Meteor === "undefined") Meteor = {};
       // XXX this is all a little whack. Need to think about how we handle
       // removes, etc.
       _.each(changes.inserted || [], function (elt) {
-        if (!coll.find(elt._id)) {
+        if (!coll.findOne(elt._id)) {
           coll._collection.insert(elt);
         } else {
           // we already added it locally! this is the case after an insert
@@ -58,7 +58,7 @@ if (typeof Meteor === "undefined") Meteor = {};
 
     // add new subscriptions at the end. this way they take effect after
     // the handlers and we don't see flicker.
-    _.each(subs.find(), function (sub) {
+    subs.find().forEach(function (sub) {
       msg_list.push(
         ['subscribe', {
           _id: sub._id, name: sub.name, args: sub.args}]);
@@ -73,7 +73,7 @@ if (typeof Meteor === "undefined") Meteor = {};
   });
 
 
-  var subsToken = subs.findLive({}, {
+  var subsToken = subs.find({}).observe({
     added: function (sub) {
       Meteor._stream.emit('subscribe', {
         _id: sub._id, name: sub.name, args: sub.args});
@@ -100,6 +100,14 @@ if (typeof Meteor === "undefined") Meteor = {};
       _name: name,
       _collection: new Collection(),
 
+      find: function (selector, options) {
+        return this._collection.find(selector, options);
+      },
+
+      findOne: function (selector) {
+        return this._collection.findOne(selector);
+      },
+
       insert: function (obj) {
         // Generate an id for the object.
         // XXX mutates the object passed in. that is not cool.
@@ -115,14 +123,6 @@ if (typeof Meteor === "undefined") Meteor = {};
         this._collection.insert(obj);
 
         return obj;
-      },
-
-      find: function (selector, options) {
-        return this._collection.find(selector, options);
-      },
-
-      findLive: function (selector, options) {
-        return this._collection.findLive(selector, options);
       },
 
       update: function (selector, mutator, options) {
@@ -214,7 +214,7 @@ if (typeof Meteor === "undefined") Meteor = {};
       // return an object with a stop method.
       var token = {stop: function () {
         if (!id) return; // must have an id (local from above).
-        // just update the database. findLive takes care of the rest.
+        // just update the database. observe takes care of the rest.
         subs.update({_id: id}, {$inc: {count: -1}});
       }};
 

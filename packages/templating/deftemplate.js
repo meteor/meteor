@@ -19,13 +19,13 @@ Meteor._pending_partials_idx_nonce = 0;
 
 // XXX another messy hack -- we reach into handlebars and extend #each
 // to know how to cooperate with pending_partials and minimongo
-// findlive.
+// observe.
 Meteor._hook_handlebars_each = function () {
   Meteor._hook_handlebars_each = function(){}; // install the hook only once
 
   var orig = Handlebars._default_helpers.each;
   Handlebars._default_helpers.each = function (context, options) {
-    if (!(context instanceof Collection.LiveResultsSet))
+    if (!(context instanceof Collection.Query))
       return orig(context, options);
 
     var id = Meteor._pending_partials_idx_nonce++;

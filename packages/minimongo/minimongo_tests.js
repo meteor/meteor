@@ -45,22 +45,39 @@ test("minimongo - basics", function () {
   c.insert({type: "cryptographer", name: "alice"});
   c.insert({type: "cryptographer", name: "bob"});
   c.insert({type: "cryptographer", name: "cara"});
-  assert.length(c.find({type: "kitten"}), 2);
-  assert.length(c.find({type: "cryptographer"}), 3);
+  assert.equal(c.find().count(), 5);
+  assert.equal(c.find({type: "kitten"}).count(), 2);
+  assert.equal(c.find({type: "cryptographer"}).count(), 3);
+  assert.length(c.find({type: "kitten"}).fetch(), 2);
+  assert.length(c.find({type: "cryptographer"}).fetch(), 3);
+
   c.remove({name: "cara"});
-  assert.length(c.find({type: "kitten"}), 2);
-  assert.length(c.find({type: "cryptographer"}), 2);
+  assert.equal(c.find().count(), 4);
+  assert.equal(c.find({type: "kitten"}).count(), 2);
+  assert.equal(c.find({type: "cryptographer"}).count(), 2);
+  assert.length(c.find({type: "kitten"}).fetch(), 2);
+  assert.length(c.find({type: "cryptographer"}).fetch(), 2);
+
   c.update({name: "snookums"}, {$set: {type: "cryptographer"}});
-  assert.length(c.find({type: "kitten"}), 1);
-  assert.length(c.find({type: "cryptographer"}), 3);
+  assert.equal(c.find().count(), 4);
+  assert.equal(c.find({type: "kitten"}).count(), 1);
+  assert.equal(c.find({type: "cryptographer"}).count(), 3);
+  assert.length(c.find({type: "kitten"}).fetch(), 1);
+  assert.length(c.find({type: "cryptographer"}).fetch(), 3);
 
   c.remove({});
+  assert.equal(0, c.find().count());
+
   c.insert({_id: 1, name: "strawberry", tags: ["fruit", "red", "squishy"]});
   c.insert({_id: 2, name: "apple", tags: ["fruit", "red", "hard"]});
   c.insert({_id: 3, name: "rose", tags: ["flower", "red", "squishy"]});
-  assert.length(c.find({tags: "flower"}), 1);
-  assert.length(c.find({tags: "fruit"}), 2);
-  assert.length(c.find({tags: "red"}), 3);
+
+  assert.equal(c.find({tags: "flower"}).count(), 1);
+  assert.equal(c.find({tags: "fruit"}).count(), 2);
+  assert.equal(c.find({tags: "red"}).count(), 3);
+  assert.length(c.find({tags: "flower"}).fetch(), 1);
+  assert.length(c.find({tags: "fruit"}).fetch(), 2);
+  assert.length(c.find({tags: "red"}).fetch(), 3);
 
   var ev = "";
   var makecb = function (tag) {
@@ -74,7 +91,7 @@ test("minimongo - basics", function () {
     assert.equal(ev, x);
     ev = "";
   };
-  c.findLive({tags: "flower"}, makecb('a'));
+  c.find({tags: "flower"}).observe(makecb('a'));
   expect("aa3_");
   c.update({name: "rose"}, {$set: {tags: ["bloom", "red", "squishy"]}});
   expect("ra3_");
@@ -86,6 +103,57 @@ test("minimongo - basics", function () {
   expect("ra3_");
   c.insert({_id: 4, name: "daisy", tags: ["flower"]});
   expect("aa4_");
+});
+
+test("minimongo - cursors", function () {
+  var c = new Collection();
+  var res;
+
+  for (var i = 0; i < 20; i++)
+    c.insert({i: i});
+
+  var q = c.find();
+  assert.equal(q.count(), 20);
+
+  // first 5
+  res = q.fetch(5);
+  assert.length(res, 5);
+  for (var i = 0; i < 5; i++)
+    assert.equal(res[i].i, i);
+  // next 5
+  res = q.fetch(5);
+  assert.length(res, 5);
+  for (var i = 0; i < 5; i++)
+    assert.equal(res[i].i, i + 5);
+  // get
+  res = q.get();
+  assert.equal(res.i, 10);
+  res = q.get(2);
+  assert.equal(res.i, 13);
+  // foreach should consume 3 objects
+  var count = 0;
+  q.forEach(function (obj) {
+    count++;
+    if (count === 3)
+      return Collection.STOP;
+  });
+  res = q.get(0);
+  assert.equal(res.i, 17);
+
+  // rewind
+  q.rewind();
+  assert.equal(q.get().i, 0);
+  // remaining 19 in map
+  res = q.map(function (x) { return x.i; });
+  assert.length(res, 19);
+  for (var i = 0; i < 19; i++)
+    assert.equal(res[i], i + 1);
+
+  // findOne
+  assert.equal(c.findOne({i: 0}).i, 0);
+  assert.equal(c.findOne({i: 1}).i, 1);
+  var id = c.findOne({i: 2})._id;
+  assert.equal(c.findOne(id).i, 2);
 });
 
 test("minimongo - misc", function () {
@@ -457,7 +525,7 @@ test("minimongo - sort", function () {
       c.insert({a: i, b: j, _id: i + "_" + j});
 
   assert.equal(
-    c.find({a: {$gt: 10}}, {sort: {b: -1, a: 1}, limit: 5}), [
+    c.find({a: {$gt: 10}}, {sort: {b: -1, a: 1}, limit: 5}).fetch(), [
       {a: 11, b: 1, _id: "11_1"},
       {a: 12, b: 1, _id: "12_1"},
       {a: 13, b: 1, _id: "13_1"},
@@ -465,7 +533,7 @@ test("minimongo - sort", function () {
       {a: 15, b: 1, _id: "15_1"}]);
 
   assert.equal(
-    c.find({a: {$gt: 10}}, {sort: {b: -1, a: 1}, skip: 3, limit: 5}), [
+    c.find({a: {$gt: 10}}, {sort: {b: -1, a: 1}, skip: 3, limit: 5}).fetch(), [
       {a: 14, b: 1, _id: "14_1"},
       {a: 15, b: 1, _id: "15_1"},
       {a: 16, b: 1, _id: "16_1"},
@@ -473,7 +541,7 @@ test("minimongo - sort", function () {
       {a: 18, b: 1, _id: "18_1"}]);
 
   assert.equal(
-    c.find({a: {$gte: 20}}, {sort: {a: 1, b: -1}, skip: 50, limit: 5}), [
+    c.find({a: {$gte: 20}}, {sort: {a: 1, b: -1}, skip: 50, limit: 5}).fetch(), [
       {a: 45, b: 1, _id: "45_1"},
       {a: 45, b: 0, _id: "45_0"},
       {a: 46, b: 1, _id: "46_1"},
