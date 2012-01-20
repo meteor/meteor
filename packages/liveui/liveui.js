@@ -78,12 +78,15 @@ Meteor.ui.render = function (render_func, events, event_data) {
     var frag;
 
     // Coerce to a document fragment
-    if (typeof result === "string")
+
+    if (typeof result === "string") {
       result = document.createTextNode(result);
-    if (typeof result === 'object' && result.nodeType === 11)
+    }
+
+    if (typeof result === 'object' && result.nodeType === 11) {
       /* already a DocumentFragment */
       frag = result;
-    else if (typeof result === 'object' && result.nodeType) {
+    } else if (typeof result === 'object' && result.nodeType) {
       /* probably some other Node */
       frag = document.createDocumentFragment();
       frag.appendChild(result);
@@ -92,10 +95,11 @@ Meteor.ui.render = function (render_func, events, event_data) {
       frag = document.createDocumentFragment();
       for (var i = 0; i < result.length; i++)
         frag.appendChild(result[i]);
-    } else
+    } else {
       throw new Error("Render functions should return a DocumentFragment, " +
                       "a node, a string, an array of nodes, or a " +
                       "jQuery-style result set");
+    }
 
     // Attach events
     // XXX bug: https://app.asana.com/0/159908330244/357591577797
@@ -365,13 +369,15 @@ Meteor.ui.renderList = function (what, options) {
 
       if (!entry_ranges.length) {
         var new_range = new Meteor.ui._LiveRange(Meteor.ui._tag, frag);
-        if (!outer_range)
+        if (!outer_range) {
           create_outer_range(frag);
-        else
+        } else {
           Meteor.ui._cleanup(outer_range.replace_contents(frag), Meteor.ui._tag);
+        }
         entry_ranges = [new_range];
-      } else
+      } else {
         insert_before(before_idx, frag);
+      }
     },
     removed: function (id, at_idx) {
       check_onscreen();
