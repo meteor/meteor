@@ -8,8 +8,14 @@
 // /app [user code]
 // /app.json: [data for server.js]
 //  - load [list of files to load, relative to root, presumably under /app]
-// /dependencies.json:
-//  - extensions
+// /dependencies.json: files to monitor for changes in development mode
+//  - extensions [list of extensions registered for user code]
+//  - packages [map from package name to list of paths relative to the package]
+//  - core [paths relative to 'app' in skybreak tree]
+//  - app [paths relative to top of app tree]
+//  (for 'core' and 'apps', if a directory is given, you should
+//  monitor everything in the subtree under it, and if it doesn't
+//  exist yet, you should watch for it to appear)
 //
 // The application launcher is expected to execute /main.js with node,
 // setting the PORT and MONGO_URL environment variables. The enclosed
@@ -54,6 +60,11 @@ var Bundle = function () {
   self.head_extra = '';
   self.body_extra = '';
 
+  // Map from package name to list of files that the package depends
+  // on (the files that, if changed, should trigger a reload),
+  // relative to the top-level directory for each package.
+  self.package_dependencies = {};
+
   self.api = {
     describe: function () {},
 
@@ -64,6 +75,7 @@ var Bundle = function () {
       var was_loading = self.loading;
       self.loading = name;
       try {
+        self.api.add_dependency("package.js");
         var fullpath = path.join(files.get_package_dir(), name, 'package.js');
         var code = fs.readFileSync(fullpath).toString();
         // \n is necessary in case final line is a //-comment
@@ -99,6 +111,7 @@ var Bundle = function () {
       var fullpath = path.join(__dirname, '../..', name);
       self.serve_js.push(name);
       self.client_files[name] = fs.readFileSync(fullpath);
+      self.api.add_dependency(file);
     },
 
     // XXX should rename to something like server_js_file
@@ -107,6 +120,7 @@ var Bundle = function () {
       var fullpath = path.join(__dirname, '../..', name);
       self.server_files[name] = fs.readFileSync(fullpath);
       self.server_load.push(name);
+      self.api.add_dependency(file);
     },
 
     register_extension: function (extension, callback) {
@@ -148,6 +162,7 @@ var Bundle = function () {
       var fullpath = path.join(__dirname, '../..', name);
       self.serve_css.push(name);
       self.client_files[name] = fs.readFileSync(fullpath);
+      self.api.add_dependency(file);
     },
 
     append_head: function (buffer) {
@@ -160,6 +175,22 @@ var Bundle = function () {
       // XXX raise error if contents is not a buffer .. or .. something
       if (self.body_extra) self.body_extra += "\n";
       self.body_extra += buffer;
+    },
+
+    // Not necessary when using *_file
+    add_dependency: function (file) {
+      var fullpath = path.join(__dirname, '../..', 'packages',
+                               self.loading, file);
+      try {
+        fs.statSync(fullpath);
+      } catch (e) {
+        throw new Error("No such file '" + file + "' in package " +
+                        self.loading);
+      }
+
+      if (!(self.loading in self.package_dependencies))
+        self.package_dependencies[self.loading] = [];
+      self.package_dependencies[self.loading].push(file);
     }
   };
 
@@ -369,7 +400,8 @@ exports.bundle = function (app_dir, output_path, options) {
   ////////// Generate bundle //////////
 
   var app_json = {};
-  var dependencies_json = {};
+  var dependencies_json = {core: [], app: []};
+  dependencies_json.app.push('.skybreak/packages');
 
   // foo/bar => foo/.build.bar
   var build_path = path.join(path.dirname(output_path),
@@ -382,6 +414,7 @@ exports.bundle = function (app_dir, output_path, options) {
 
   files.cp_r(path.join(__dirname, '../server'),
              path.join(build_path, 'server'), {ignore: ignore_files});
+  dependencies_json.core.push('server');
 
   if (options.skip_dev_bundle)
     ;
@@ -397,6 +430,7 @@ exports.bundle = function (app_dir, output_path, options) {
     files.cp_r(path.join(app_dir, 'public'),
                path.join(build_path, 'static'), {ignore: ignore_files});
   }
+  dependencies_json.app.push('public');
   for (var rel_path in bundle.client_files) {
     var full_path = path.join(build_path, 'static', rel_path);
     files.mkdir_p(path.dirname(full_path), 0755);
@@ -415,9 +449,11 @@ exports.bundle = function (app_dir, output_path, options) {
 
   fs.writeFileSync(path.join(build_path, 'app.html'),
                    bundle.generate_app_html());
+  dependencies_json.core.push('lib/app.html.in');
 
   fs.writeFileSync(path.join(build_path, 'unsupported.html'),
                    fs.readFileSync(path.join(__dirname, "unsupported.html")));
+  dependencies_json.core.push('lib/server');
 
   fs.writeFileSync(path.join(build_path, 'main.js'),
 "require(require('path').join(__dirname, 'server/server.js'));\n");
@@ -443,6 +479,9 @@ exports.bundle = function (app_dir, output_path, options) {
   // package.js for each package that was included. also conceptually
   // we need to restart on 'skybreak add'.
   dependencies_json.extensions = bundle.registeredExtensions();
+  dependencies_json.packages = {};
+  for (var pkg in bundle.package_dependencies)
+    dependencies_json.packages[pkg] = _.uniq(bundle.package_dependencies[pkg]);
 
   fs.writeFileSync(path.join(build_path, 'app.json'),
                    JSON.stringify(app_json));
