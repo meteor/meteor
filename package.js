@@ -1,8 +1,8 @@
 Package.describe({
-  summary: "Easy macros for generating DOM elements in Javascript"
+  summary: "Easy macros for generating DOM elements in Javascript",
+  environments: ["client"]
 });
 
-
 // the jquery dependency is unfortunate, avoidable, and real
-Package.require('jquery');
-Package.client_file('html.js');
+Package.depend('jquery');
+Package.source('html.js');
