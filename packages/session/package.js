@@ -1,8 +1,9 @@
 Package.describe({
-  summary: "Meteor's automatic dependency framework",
+  summary: "Session variable",
+  environments: ["client", "server"],
   internal: true
 });
 
-Package.require('underscore');
+Package.depend(['underscore', 'deps']);
 
-Package.client_file('session.js');
+Package.source('session.js');

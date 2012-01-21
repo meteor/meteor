@@ -3,7 +3,12 @@ Package.describe({
   internal: true
 });
 
-Package.require('underscore');
+Package.depend({
+  client: 'underscore',
+  server: 'underscore'
+});
 
-Package.client_file('stream_client.js');
-Package.server_file('stream_server.js');
+Package.source({
+  client: 'stream_client.js',
+  server: 'stream_server.js'
+});

@@ -1,7 +1,7 @@
 Package.describe({
   summary: "Backwards compatibility.",
+  environments: ["client", "server"],
   internal: true
 });
 
-Package.client_file('past.js');
-Package.server_file('past.js');
+Package.source('past.js');

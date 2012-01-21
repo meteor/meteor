@@ -1,8 +1,9 @@
 Package.describe({
-  summary: "A minimalist client-side MVC framework"
+  summary: "A minimalist client-side MVC framework",
+  environments: ["client"]
 });
 
-// Backbone requires either jquery or zepto
-Package.require("jquery");
+// XXX Backbone requires either jquery or zepto
+Package.depend("jquery");
 
-Package.client_file("backbone.js");
+Package.source("backbone.js");

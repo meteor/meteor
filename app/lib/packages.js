@@ -3,6 +3,7 @@ var files = require('./files.js');
 var fs = require('fs');
 var path = require('path');
 
+// XXX replace thish with Package/PackageLibrary from the bundler
 var packages = module.exports = {
   // get the description info out of a package
   describe: function (name) {

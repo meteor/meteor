@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "Manipulate the DOM using CSS selectors"
+  summary: "Manipulate the DOM using CSS selectors",
+  environments: ["client"]
 });
 
-Package.client_file('jquery.js');
+Package.source('jquery.js');

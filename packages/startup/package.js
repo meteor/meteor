@@ -1,7 +1,13 @@
 Package.describe({
   summary: "Provides Meteor.startup",
+  environments: ["client", "server"],
   internal: true
 });
 
-Package.client_file('startup_client.js');
-Package.server_file('startup_server.js');
+// XXX this loads the package on BOTH the client and the server if
+// EITHER was requested.
+
+Package.source({
+  client: 'startup_client.js',
+  server: 'startup_server.js'
+});

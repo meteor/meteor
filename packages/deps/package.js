@@ -1,10 +1,10 @@
-// XXX rename package 'monitor'?
+// XXX rename package?
 
 Package.describe({
   summary: "Dependency mananger to allow reactive callbacks",
+  environments: ["client", "server"],
   internal: true
 });
 
-Package.require('underscore');
-
-Package.client_file('deps.js');
+Package.depend('underscore');
+Package.source('deps.js');

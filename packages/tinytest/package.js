@@ -1,8 +1,9 @@
 Package.describe({
   summary: "Tiny testing framework",
+  environments: ["client"],
   internal: true
 });
 
 Package.require('underscore');
 
-Package.client_file('tinytest.js');
+Package.source('tinytest.js');
