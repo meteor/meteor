@@ -11,7 +11,7 @@ body {
     left: 0px;
     bottom: 0px;
     opacity: .25;
-    width: 33%;
+    z-index: -1;
 }
 
 h1 {
