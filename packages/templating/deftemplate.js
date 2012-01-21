@@ -173,7 +173,7 @@ _.extend(Meteor, (function() {
     leadingWhitespaceKilled: (testDiv.firstChild.nodeType !== 3),
 
     // IE may insert an empty tbody tag in a table.
-    tbodyInserted: testDiv.getElementsByTagName("tbody").length > 0,
+    tbodyInsertion: testDiv.getElementsByTagName("tbody").length > 0,
 
     // IE loses some tags in some environments (requiring extra wrapper).
     tagsLost: testDiv.getElementsByTagName("link").length == 0
@@ -216,7 +216,9 @@ _.extend(Meteor, (function() {
       var doc = document; // node factory
       var frag = doc.createDocumentFragment();
 
-      if (! rhtml.test(html)) {
+      if (! html.length) {
+        // empty, do nothing
+      } else if (! rhtml.test(html)) {
         // Just text.
         frag.appendChild(doc.createTextNode(html));
       } else {
@@ -237,7 +239,7 @@ _.extend(Meteor, (function() {
           container = container.lastChild;
         }
 
-        if (quirks.tbodyInserted && ! rtbody.test(html)) {
+        if (quirks.tbodyInsertion && ! rtbody.test(html)) {
           // Any tbody we find was created by the browser.
           var tbodies = container.getElementsByTagName("tbody");
           _.each(tbodies, function(n) {
