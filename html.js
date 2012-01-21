@@ -54,6 +54,10 @@
     submit: true
   };
 
+  var testDiv = document.createElement("div");
+  testDiv.innerHTML = '<a style="top:1px">a</a>';
+  var styleGetSetSupport = /top/.test(testDiv.firstChild.getAttribute("style"));
+
   // All HTML4 elements, excluding deprecated elements
   // http://www.w3.org/TR/html4/index/elements.html
   // also excluding the following elements that seem unlikely to be
@@ -91,6 +95,8 @@
             elt.setAttribute('class', attrs[a]);
           else if (a === '_for')
             elt.setAttribute('for', attrs[a]);
+          else if (a === 'style' && ! styleGetSetSupport)
+            elt.style.cssText = String(attrs[a]);
           else if (event_names[a]) {
             if (typeof $ === "undefined")
               throw new Error("Event binding is supported only if " +
