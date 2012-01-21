@@ -1,17 +1,9 @@
-var dump_html = function (frag) {
-  var container = document.createElement("DIV");
-  container.appendChild(frag);
-  var ret = container.innerHTML;
-  while (container.firstChild)
-    frag.appendChild(container.firstChild);
-  return ret;
-};
 
 test("template assembly", function () {
   // Test for a bug that made it to production -- after a replacement,
   // we need to also check the newly replaced node for replacements
   var frag = Template.test_assembly_a0();
-  assert.equal(dump_html(frag), "Hi");
+  assert.equal(Meteor._fragmentToHtml(frag), "Hi");
 
   // Another production bug -- we must use LiveRange to replace the
   // placeholder, or risk breaking other LiveRanges
