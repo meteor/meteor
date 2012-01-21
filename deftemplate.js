@@ -91,12 +91,11 @@ Meteor._def_template = function (name, raw_func) {
                       function (n) { return n.nodeName == "TR"; })) {
               // Inserting a TR directly into a TABLE without an intervening
               // TBODY won't display properly in IE.  So wrap a new TBODY
-              // around the placeholder, in all browsers.
+              // around the fragment, in all browsers.
               var tbody = document.createElement("tbody");
-              child.parentNode.replaceChild(tbody, child);
-              // move the child we are visiting
-              tbody.appendChild(child);
-              i = 0;
+              tbody.appendChild(replacement_frag);
+              replacement_frag = document.createDocumentFragment();
+              replacement_frag.appendChild(tbody);
             }
 
             var range = new Meteor.ui._LiveRange(Meteor.ui._tag, child);
