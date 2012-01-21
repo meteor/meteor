@@ -864,7 +864,7 @@ test("renderList - #each", function () {
   onscreen.appendChild(Template.test_renderList_each());
   document.body.appendChild(onscreen);
 
-  assert_frag("~Before0<!---->~Middle~Else~After~", onscreen);
+  assert_frag("~Before0<!---->Middle~Else~After~", onscreen);
   assert.length(_.keys(weather_listeners.here), 0);
 
   c.insert({x: 2, name: "A"});
