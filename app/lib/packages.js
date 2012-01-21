@@ -3,12 +3,6 @@ var files = require('./files.js');
 var fs = require('fs');
 var path = require('path');
 
-// Universal source file handlers, available everywhere. This is kind
-// of hack and doesn't really belong here, but it's the most
-// convenient place to put it. Would be better to handle it as a
-// hidden package call 'core' or something that all packages
-// automatically depend on.
-
 // Under the hood, packages in the library (/package/foo), and user
 // applications, are both Packages -- they are just represented
 // differently on disk.
@@ -47,10 +41,17 @@ var Package = function () {
 
   // functions that can be called when the package is scanned
   self.api = {
-    // new keys
-    // - environments: if depended in an environment not on this list,
-    //   then throw an error
-    // - default_environments
+    // keys
+    // - summary: for 'meteor list'
+    // - internal: if true, hide in list
+    // - environments: optional
+    //   (1) if present, if depended on in an environment not on this
+    //       list, then throw an error
+    //   (2) if present, these are also the environments that will be
+    //       used when an application uses the package (since it can't
+    //       specify environments.) if not present, apps will use
+    //       [''], which is suitable for a package that doesn't care
+    //       where it's loaded (like livedata.)
     describe: function (metadata) {
       _.extend(self.metadata, metadata);
     },
@@ -81,6 +82,12 @@ var Package = function () {
      * If no environments given, defaults to "all environments
      * requested for this package" (added by package), or "package
      * default environment" (added by the app).
+     *
+     * Reload dependencies will be created on all referenced source
+     * files. Currently this is the only way for a package to create
+     * reload dependencies. (XXX we should really change that. Imagine
+     * a packages that is some kind of preprocessor with something
+     * like an #include directive.)
      */
     source: function (what) {
       if (typeof what !== "object" || (what instanceof Array))
@@ -184,7 +191,7 @@ _.extend(Package.prototype, {
   // Find all files under this.source_root that have an extension we
   // recognize, and return them as a list of paths relative to
   // source_root. Ignore files that match a regexp in the ignore_files
-  // array, if given.  As a special case (ugh), push all html files to
+  // array, if given. As a special case (ugh), push all html files to
   // the head of the list.
   _scan_for_sources: function (ignore_files) {
     var self = this;

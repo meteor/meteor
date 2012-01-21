@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Provides JSON.stringify and JSON.parse for older browsers",
-  environments: ["client"],
+  environments: ["client", "server"],
   internal: true
 });
 

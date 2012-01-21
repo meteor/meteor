@@ -179,6 +179,12 @@ _.extend(Bundle.prototype, {
        var token = env + "_" + (pkg.name || '');
       if (token in before)
         return; // already processed
+      if (env && pkg.metadata.environments &&
+          _.indexOf(pkg.metadata.environments, env) === -1)
+        // XXX should do something more graceful. no exception.
+        throw new Error("Package " + pkg.name + " can't be used in " +
+                        "environment " + env);
+
       before[token] = {};
 
       for (var other_env in pkg.depends) {
@@ -325,10 +331,6 @@ exports.bundle = function (app_dir, output_path, options) {
               path.join(source.pkg.serve_root, source.rel_path),
               env);
 
-      // XXX should really allow packages to create arbitrary
-      // dependencies on files within the packages -- suppose you have
-      // a compiler that reads a source file and pulls in other
-      // resources based on #includes.
       if (source.pkg !== app)
           dependencies_json.packages[source.pkg.name][source.rel_path] = true;
     });
