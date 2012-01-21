@@ -4,6 +4,6 @@ Package.describe({
   internal: true
 });
 
-Package.require('underscore');
+Package.depend('underscore');
 
 Package.source('tinytest.js');

@@ -221,7 +221,7 @@ Commands.push({
         process.stderr.write(name + ": already using\n");
       } else {
         project.add_package(app_dir, name);
-        var note = all[name].summary || '';
+        var note = all[name].metadata.summary || '';
         process.stderr.write(name + ": " + note + "\n");
       }
     });
@@ -298,12 +298,12 @@ Commands.push({
     var list = require('../lib/packages.js').list();
     var names = _.keys(list);
     names.sort();
-    var descrs = [];
+    var pkgs = [];
     _.each(names, function (name) {
-      descrs.push(list[name]);
+      pkgs.push(list[name]);
     });
     process.stdout.write("\n" +
-                         require('../lib/packages.js').format_list(descrs) +
+                         require('../lib/packages.js').format_list(pkgs) +
                          "\n");
   }
 });
