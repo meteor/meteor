@@ -1,9 +1,10 @@
 Package.describe({
   summary: "Tiny testing framework",
-  environments: ["client"],
   internal: true
 });
 
-Package.depend('underscore');
-
-Package.source('tinytest.js');
+Package.on_use(function (api) {
+  // XXX figure out how to do server-side testing
+  api.use('underscore', 'client');
+  api.add_files('tinytest.js', 'client');
+});

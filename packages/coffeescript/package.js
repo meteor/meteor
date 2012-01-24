@@ -6,7 +6,7 @@ var coffee = require('coffee-script');
 var fs = require('fs');
 
 Package.register_extension(
-  "coffee", function (bundle, source_path, serve_path, environment) {
+  "coffee", function (bundle, source_path, serve_path, where) {
     serve_path = serve_path + '.js';
 
     var contents = fs.readFileSync(source_path);
@@ -17,7 +17,7 @@ Package.register_extension(
       type: "js",
       path: serve_path,
       data: contents,
-      environments: environment
+      where: where
     });
   }
 );

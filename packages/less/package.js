@@ -6,7 +6,7 @@ var less = require('less')
 var fs = require('fs');
 
 Package.register_extension(
-  "less", function (bundle, source_path, serve_path, environment) {
+  "less", function (bundle, source_path, serve_path, where) {
     serve_path = serve_path + '.css';
 
     var contents = fs.readFileSync(source_path);
@@ -19,7 +19,7 @@ Package.register_extension(
         type: "css",
         path: serve_path,
         data: new Buffer(css),
-        environments: environment
+        where: where
       });
     });
   }

@@ -1,7 +1,8 @@
 Package.describe({
-  summary: "Execute a function when the user scrolls past an element",
-  environments: ["client"]
+  summary: "Execute a function when the user scrolls past an element"
 });
 
-Package.depend("jquery");
-Package.source('waypoints.js');
+Package.on_use(function (api) {
+  api.use('jquery');
+  api.add_files('waypoints.js', 'client');
+});

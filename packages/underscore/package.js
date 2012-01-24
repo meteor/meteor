@@ -1,6 +1,8 @@
 Package.describe({
-  summary: "Collection of small helper functions (map, each, bind, ...)",
-  environments: ["client", "server"]
+  summary: "Collection of small helper functions (map, each, bind, ...)"
 });
 
-Package.source('underscore.js');
+Package.on_use(function (api, where) {
+  where = where || ['client', 'server'];
+  api.add_files('underscore.js', where);
+});

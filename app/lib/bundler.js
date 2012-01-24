@@ -40,11 +40,154 @@ var ignore_files = [
 ];
 
 ///////////////////////////////////////////////////////////////////////////////
+// PackageInstance
+///////////////////////////////////////////////////////////////////////////////
+
+// Represents the occurrence of a package in a bundle
+var PackageInstance = function (pkg, bundle) {
+  var self = this;
+  self.pkg = pkg;
+  self.bundle = bundle;
+
+  // list of places we've already been used. map from a 'canonicalized
+  // where' to true. 'canonicalized where' is the JSONification of a
+  // sorted array with zero or more elements drawn from the set
+  // 'client', 'server', with each element unique
+  // XXX this is a mess, refactor
+  self.where = {};
+
+  // other packages we've used (with any 'where') -- map from id to package
+  self.using = {}
+
+  // map from where (client, server) to a source file name (relative
+  // to the package) to true
+  self.files = {client: {}, server: {}};
+
+  // files we depend on -- map from rel_path to true
+  self.dependencies = {};
+  if (pkg.name)
+    self.dependencies['package.js'] = true;
+
+  // the API available from on_use / on_test handlers
+  self.api = {
+    // Called when this package wants to make another package be
+    // used. Can also take literal package objects, if you have
+    // anonymous packages you want to use (eg, app packages)
+    use: function (names, where) {
+      if (!(names instanceof Array))
+        names = [names];
+
+      _.each(names, function (name) {
+        var pkg = packages.get(name);
+        self.bundle.use(pkg, where, self);
+      });
+    },
+
+    add_files: function (paths, where) {
+      if (!(paths instanceof Array))
+        paths = [paths];
+      if (!(where instanceof Array))
+        where = [where];
+
+      _.each(where, function (w) {
+        _.each(paths, function (rel_path) {
+          self.add_file(rel_path, w);
+        });
+      });
+    },
+
+    // Return a list of all of the extension that indicate source files
+    // inside this package, INCLUDING leading dots.
+    registered_extensions: function () {
+      var ret = _.keys(self.pkg.extensions);
+
+      for (var id in self.using) {
+        var other_inst = self.using[id];
+        ret = _.union(ret, _.keys(other_inst.pkg.extensions));
+      }
+
+      return _.map(ret, function (x) {return "." + x;});
+    }
+  };
+
+  if (pkg.name !== "core")
+    self.api.use("core");
+};
+
+_.extend(PackageInstance.prototype, {
+  // Find the function that should be used to handle a source file
+  // found in this package. We'll use handlers that are defined in
+  // this package and in its immediate dependencies. ('extension'
+  // should be the extension of the file without a leading dot.)
+  get_source_handler: function (extension) {
+    var self = this;
+    var candidates = []
+
+    if (extension in self.pkg.extensions)
+      candidates.push(self.pkg.extensions[extension]);
+
+    for (var id in self.using) {
+      var other_inst = self.using[id];
+      var other_pkg = other_inst.pkg;
+      if (extension in other_pkg.extensions)
+        candidates.push(other_pkg.extensions[extension]);
+    }
+
+    // XXX do something more graceful than printing a stack trace and
+    // exiting!! we have higher standards than that!
+
+    if (!candidates.length)
+      return null;
+
+    if (candidates.length > 1)
+      // XXX improve error message (eg, name the packages involved)
+      // and make it clear that it's not a global conflict, but just
+      // among this package's dependencies
+      throw new Error("Conflict: two packages are both trying " +
+                      "to handle ." + extension);
+
+    return candidates[0];
+  },
+
+  add_file: function (rel_path, where) {
+    var self = this;
+
+    if (self.files[where][rel_path])
+      return;
+    self.files[where][rel_path] = true;
+
+    var ext = path.extname(rel_path).substr(1);
+    var handler = self.get_source_handler(ext);
+    if (!handler) {
+      // A package included a source file that we don't have a
+      // processor for. Wouldn't be app source, since we wouldn't have
+      // added it as a source file in the first place.
+      // XXX do something more graceful than printing a stack trace
+      throw new Error("Don't know how to process file: " +
+                      rel_path);
+    }
+
+    handler(self.bundle.api,
+            path.join(self.pkg.source_root, rel_path),
+            path.join(self.pkg.serve_root, rel_path),
+            where);
+
+    self.dependencies[rel_path] = true;
+  }
+});
+
+///////////////////////////////////////////////////////////////////////////////
 // Bundle
 ///////////////////////////////////////////////////////////////////////////////
 
 var Bundle = function () {
   var self = this;
+
+  // Packages being used. Map from a package id to a PackageInstance.
+  self.packages = {};
+
+  // Packages that have had tests included. Map from package id to instance
+  self.tests_included = {};
 
   // map from environment, to list of filenames
   self.js = {client: [], server: []};
@@ -60,16 +203,16 @@ var Bundle = function () {
   self.head = [];
   self.body = [];
 
-  // the public API
+  // the API available from register_extension handlers
   self.api = {
     /**
      * This is the ultimate low-level API to add data to the bundle.
      *
      * type: "js", "css", "head", "body"
      *
-     * environments: an environment, or a list of one or more
-     * environments ("client", "server", "tests") -- for non-JS
-     * resources, the only legal environment is "client"
+     * where: an environment, or a list of one or more environments
+     * ("client", "server", "tests") -- for non-JS resources, the only
+     * legal environment is "client"
      *
      * path: the (absolute) path at which the file will be
      * served. ignored in the case of "head" and "body".
@@ -97,32 +240,35 @@ var Bundle = function () {
         var data = fs.readFileSync(source_file);
       }
 
-      var environments = options.environments;
-      if (typeof environments === "string")
-        environments = [environments];
-      if (!environments)
-        throw new Error("Must specify environments");
+      var where = options.where;
+      if (typeof where === "string")
+        where = [where];
+      if (!where)
+        throw new Error("Must specify where");
 
-      _.each(environments, function (env) {
+      _.each(where, function (w) {
         if (options.type === "js") {
           if (!options.path)
             throw new Error("Must specify path")
 
-          if (env === "client" || env === "server") {
-            self.files[env][options.path] = data;
-            self.js[env].push(options.path);
+          if (w === "client" || w === "server") {
+            self.files[w][options.path] = data;
+            self.js[w].push(options.path);
           } else {
-            throw new Error("Invalid environment");
+            throw new Error("Invalid wironment");
           }
         } else if (options.type === "css") {
-          if (env !== "client")
-            throw new Error("CSS resources can only go to the client");
+          if (w !== "client")
+            // XXX might be nice to throw an error here, but then we'd
+            // have to make it so that packages.js ignores css files
+            // that appear in the server directories in an app tree
+            return;
           if (!options.path)
             throw new Error("Must specify path")
           self.files.client[options.path] = data;
           self.css.push(options.path);
         } else if (options.type === "head" || options.type === "body") {
-          if (env !== "client")
+          if (w !== "client")
             throw new Error("HTML segments can only go to the client");
           self[options.type].push(data);
         } else {
@@ -134,218 +280,73 @@ var Bundle = function () {
 };
 
 _.extend(Bundle.prototype, {
-  generate_app_html: function () {
+  _get_instance: function (pkg) {
     var self = this;
 
-    var template = fs.readFileSync(path.join(__dirname, "app.html.in"));
-    var f = require('handlebars').compile(template.toString());
-    return f({
-      scripts: self.js.client,
-      head_extra: self.head.join('/n'),
-      body_extra: self.body.join('/n'),
-      stylesheets: self.css
-    });
+    var inst = self.packages[pkg.id];
+    if (!inst) {
+      inst = new PackageInstance(pkg, self);
+      self.packages[pkg.id] = inst;
+    }
+
+    return inst;
   },
 
-  // Returns: map from environments to (load) ordered list of packages
-  // objects in each environment. root is allowed to be an app
-  // packages with no name, but all of the other packages will have
-  // library packages with names, because there is no way to depend on
-  // anything but a library package (since the depend() API only takes
-  // names.) empty string for environment means 'this package was
-  // used, but doesn't necessarily have any files to output', in other
-  // words the bundler environment, or possibly 'this package doesn't
-  // care where it was invoked from, since it always outputs the same
-  // sources.'
-  compute_packages: function (root) {
-    // map from a token, to a map of tokens that must be loaded before
-    // it (to true). tokens are of the form
-    // 'env_packagename'. presence of a token in 'before' means that
-    // the package is required in the corresponding environment.
-    var before = {};
+  // Call to add a package to this bundle
+  // if 'where' is given, it's an array of "client" and/or "server"
+  // if 'from' is given, it's the PackageInstance that's doing the
+  // using, or it can be undefined for top level
+  use: function (pkg, where, from) {
+    var self = this;
+    var inst = self._get_instance(pkg);
 
-    // add an arc: before 'after' is loaded in 'after_env', 'before'
-    // must be loaded in 'before_env'. before and after are
-    // package objects.
-    var add_arc = function (after_pkg, after_env, before_pkg, before_env) {
-      var before_token = before_env + "_" + (before_pkg.name || '');
-      var after_token = after_env + "_" + (after_pkg.name || '');
-      before[after_token][before_token] = true;
-    };
+    if (from)
+      from.using[pkg.id] = inst;
 
-    // add a requirement that a package is loaded in a particular
-    // environment
-    var require = function (pkg, env) {
-       var token = env + "_" + (pkg.name || '');
-      if (token in before)
-        return; // already processed
-      if (env && pkg.metadata.environments &&
-          _.indexOf(pkg.metadata.environments, env) === -1)
-        // XXX should do something more graceful. no exception.
-        throw new Error("Package " + pkg.name + " can't be used in " +
-                        "environment " + env);
+    // get 'canonicalized where'
+    var canon_where = where;
+    if (!canon_where)
+      canon_where = [];
+    if (!(canon_where instanceof Array))
+      canon_where = [canon_where];
+    else
+      canon_where = _.clone(canon_where);
+    canon_where.sort();
+    var canon_where = JSON.stringify(canon_where);
 
-      before[token] = {};
+    if (inst.where[canon_where])
+      return; // already used in this environment
+    inst.where[canon_where] = true;
 
-      for (var other_env in pkg.depends) {
-        var eff_other_env = other_env || env; // '' -> env required from
-        for (var other_pkg_name in pkg.depends[other_env]) {
-          var other_pkg = packages.get(other_pkg_name);
-          require(other_pkg, eff_other_env);
-          add_arc(pkg, env, other_pkg, eff_other_env);
-        };
-      };
-    };
+    // XXX detect circular dependencies and print an error. (not sure
+    // what the current code will do)
 
-    require(root, 'client');
-    require(root, 'server');
-
-    // topological sort based on arcs. no attempt has been made to
-    // make this efficient.
-    var ret = {};
-    while (_.keys(before).length) {
-      var satisfied = [];
-      for (var token in before) {
-        if (_.keys(before[token]).length)
-          continue; // dependencies not satisfied
-
-        var parts = token.match(/^([^_]*)_(.*)$/);
-        var env = parts[1];
-        var pkg = (parts[2] === '') ? root :
-          packages.get(parts[2]);
-
-        if (!(env in ret))
-          ret[env] = [];
-        ret[env].push(pkg);
-        satisfied.push(token);
-      }
-      if (!satisfied.length)
-        throw new Error("Circular dependency in packages");
-
-      _.each(satisfied, function (token) {
-        delete before[token];
-      });
-
-      for (var token in before) {
-        _.each(satisfied, function (token2) {
-          delete before[token][token2];
-        });
-      }
-    }
-
-    return ret;
+    if (pkg.on_use)
+      pkg.on_use(inst.api, where);
   },
 
-  // input: output from packages_used
-  // output: map from environment to ordered list of source files,
-  // each given as an object with keys 'pkg' (package) and 'rel_path'
-  // (path relative to pkg.source_root)
-  compute_sources: function (packages_used) {
-    var ret = {};
+  include_tests: function (pkg) {
+    var self = this;
+    if (self.tests_included[pkg.id])
+      return;
+    self.tests_included[pkg.id] = true;
 
-    for (var env in packages_used) {
-      ret[env] = [];
-      _.each(packages_used[env], function (pkg) {
-        var make_obj = function (rel_path) {
-          return {pkg: pkg, rel_path: rel_path};
-        };
+    var inst = self._get_instance(pkg);
+    if (inst.pkg.on_test)
+      inst.pkg.on_test(inst.api);
+  },
 
-        ret[env] = ret[env].concat(_.map(pkg.sources[''], make_obj));
-        ret[env] = ret[env].concat(_.map(pkg.sources[env], make_obj));
-      });
-    }
+  // Minify the bundle
+  minify: function () {
+    var self = this;
 
-    // deduplicate, taking just the first appearance
-    var take_first = function (array) {
-      var seen = {};
-      var ret = [];
-      _.each(array, function (source) {
-        var key = path.join(source.pkg.source_root, source.rel_path);
-        if (key in seen)
-          return;
-        seen[key] = true;
-        ret.push(source);
-      });
-      return ret;
-    };
-
-    for (var env in ret) {
-      ret[env] = take_first(ret[env]);
-    }
-
-    return ret;
-  }
-});
-
-
-///////////////////////////////////////////////////////////////////////////////
-// Main
-///////////////////////////////////////////////////////////////////////////////
-
-/**
- * Take the Meteor application in app_dir, and compile it into a
- * bundle at output_path. output_path will be created if it doesn't
- * exist (it will be a directory), and removed if it does exist.
- *
- * options include:
- * - no_minify : don't minify the assets
- * - skip_dev_bundle : don't put any node_modules in the bundle.
- * - symlink_dev_bundle : symlink bundle's node_modules to prebuilt
- *   local installation (to save startup time when running locally,
- *   used by meteor run).
- */
-exports.bundle = function (app_dir, output_path, options) {
-  options = options || {};
-
-  packages.flush();
-  var bundle = new Bundle;
-  var app = packages.get_for_app(app_dir, ignore_files);
-
-  var dependencies_json = {core: [], app: [], packages: {}};
-
-  ////////// Compute source files //////////
-
-  var packages_used = bundle.compute_packages(app);
-
-  for (var env in packages_used) {
-    _.each(packages_used[env], function (pkg) {
-      if (pkg !== app) {
-        if (pkg !== app && !(pkg.name in dependencies_json.packages))
-          dependencies_json.packages[pkg.name] = {}
-        dependencies_json.packages[pkg.name]['package.js'] = true;
-      }
-    });
-  }
-
-  var sources_used = bundle.compute_sources(packages_used);
-
-  ////////// Process source files //////////
-
-  for (var env in sources_used) {
-    _.each(sources_used[env], function (source) {
-      var ext = path.extname(source.rel_path).substr(1);
-
-      var handler = source.pkg.get_sources_handler(ext);
-      handler(bundle.api,
-              path.join(source.pkg.source_root, source.rel_path),
-              path.join(source.pkg.serve_root, source.rel_path),
-              env);
-
-      if (source.pkg !== app)
-          dependencies_json.packages[source.pkg.name][source.rel_path] = true;
-    });
-  }
-
-  ////////// Minify and bundle files //////////
-
-  if (!options.no_minify) {
     /// Javascript
     var js_concat = "";
-    _.each(bundle.js.client, function (js_path) {
-      var js_data = bundle.files.client[js_path];
+    _.each(self.js.client, function (js_path) {
+      var js_data = self.files.client[js_path];
       js_concat = js_concat + "\n;\n" +  js_data.toString('utf8');
 
-      delete bundle.files.client[js_path];
+      delete self.files.client[js_path];
     });
 
     var ast = uglify.parser.parse(js_concat);
@@ -358,16 +359,16 @@ exports.bundle = function (app_dir, output_path, options) {
     var digest = hash.digest('hex');
     var name = digest + ".js";
 
-    bundle.files.client[name] = new Buffer(final_code);
-    bundle.js.client = [name];
+    self.files.client[name] = new Buffer(final_code);
+    self.js.client = [name];
 
     /// CSS
     var css_concat = "";
-    _.each(bundle.css, function (css_path) {
-      var css_data = bundle.files.client[css_path];
+    _.each(self.css, function (css_path) {
+      var css_data = self.files.client[css_path];
       css_concat = css_concat + "\n" +  css_data.toString('utf8');
 
-      delete bundle.files.client[css_path];
+      delete self.files.client[css_path];
     });
 
     var final_css = cleanCSS.process(css_concat);
@@ -377,81 +378,118 @@ exports.bundle = function (app_dir, output_path, options) {
     digest = hash.digest('hex');
     name = digest + ".css";
 
-    bundle.files.client[name] = new Buffer(final_css);
-    bundle.css = [name];
-  }
+    self.files.client[name] = new Buffer(final_css);
+    self.css = [name];
+  },
 
-  // Socket.io is an exceptional file. Push it in manually after
-  // minification (it doesn't like being minified). But still serve it
-  // ourselves instead of letting socket.io do it, so we get gzip and
-  // such (potentially CDN later).
-  bundle.js.client.unshift('/socketio.static.js');
-  bundle.files.client['/socketio.static.js'] =
-    fs.readFileSync(path.join(
-      files.get_dev_bundle(), 'lib/node_modules',
-      'socket.io/node_modules/socket.io-client/dist/socket.io.min.js'));
+  _generate_app_html: function () {
+    var self = this;
 
-  ////////// Generate bundle //////////
+    var template = fs.readFileSync(path.join(__dirname, "app.html.in"));
+    var f = require('handlebars').compile(template.toString());
+    return f({
+      scripts: self.js.client,
+      head_extra: self.head.join('/n'),
+      body_extra: self.body.join('/n'),
+      stylesheets: self.css
+    });
+  },
 
-  var app_json = {};
-  dependencies_json.app.push('.meteor/packages');
+  // All extensions registered by any loaded package.
+  _all_extensions: function () {
+    var self = this;
+    var exts = {};
 
-  // foo/bar => foo/.build.bar
-  var build_path = path.join(path.dirname(output_path),
-                             '.build.' + path.basename(output_path));
+    for (var id in self.packages)
+      _.each(self.packages[id].api.registered_extensions(), function (ext) {
+        exts[ext] = true;
+      });
 
-  // XXX cleaner error handling. don't make the humans read an
-  // exception (and, make suitable for use in automated systems)
-  files.rm_recursive(build_path);
-  files.mkdir_p(build_path, 0755);
+    return _.keys(exts);
+  },
 
-  files.cp_r(path.join(__dirname, '../server'),
-             path.join(build_path, 'server'), {ignore: ignore_files});
-  dependencies_json.core.push('server');
+  // dev_bundle_mode should be "skip", "symlink", or "copy"
+  write_to_directory: function (output_path, project_dir, dev_bundle_mode) {
+    var self = this;
+    var app_json = {};
+    var dependencies_json = {core: [], app: [], packages: {}};
+    var is_app = files.is_app_dir(project_dir);
 
-  if (options.skip_dev_bundle)
-    ;
-  else if (options.symlink_dev_bundle)
-    fs.symlinkSync(path.join(files.get_dev_bundle(), 'lib/node_modules'),
-                   path.join(build_path, 'server/node_modules'));
-  else
-    files.cp_r(path.join(files.get_dev_bundle(), 'lib/node_modules'),
-               path.join(build_path, 'server/node_modules'),
-               {ignore: ignore_files});
+    if (is_app)
+      dependencies_json.app.push('.meteor/packages');
 
-  if (path.existsSync(path.join(app_dir, 'public'))) {
-    files.cp_r(path.join(app_dir, 'public'),
-               path.join(build_path, 'static'), {ignore: ignore_files});
-  }
-  dependencies_json.app.push('public');
-  for (var rel_path in bundle.files.client) {
-    var full_path = path.join(build_path, 'static', rel_path);
-    files.mkdir_p(path.dirname(full_path), 0755);
-    fs.writeFileSync(full_path, bundle.files.client[rel_path]);
-  }
+    // --- Set up build area ---
 
-  app_json.load = [];
-  files.mkdir_p(path.join(build_path, 'app'), 0755);
-  _.each(bundle.js.server, function (rel_path) {
-    var path_in_bundle = path.join('app', rel_path);
-    var full_path = path.join(build_path, path_in_bundle);
-    app_json.load.push(path_in_bundle);
-    files.mkdir_p(path.dirname(full_path), 0755);
-    fs.writeFileSync(full_path, bundle.files.server[rel_path]);
-  });
+    // foo/bar => foo/.build.bar
+    var build_path = path.join(path.dirname(output_path),
+                               '.build.' + path.basename(output_path));
 
-  fs.writeFileSync(path.join(build_path, 'app.html'),
-                   bundle.generate_app_html());
-  dependencies_json.core.push('lib/app.html.in');
+    // XXX cleaner error handling. don't make the humans read an
+    // exception (and, make suitable for use in automated systems)
+    files.rm_recursive(build_path);
+    files.mkdir_p(build_path, 0755);
 
-  fs.writeFileSync(path.join(build_path, 'unsupported.html'),
-                   fs.readFileSync(path.join(__dirname, "unsupported.html")));
-  dependencies_json.core.push('lib/unsupported.html');
+    // --- Core runner code ---
 
-  fs.writeFileSync(path.join(build_path, 'main.js'),
+    files.cp_r(path.join(__dirname, '../server'),
+               path.join(build_path, 'server'), {ignore: ignore_files});
+    dependencies_json.core.push('server');
+
+    // --- Third party dependencies ---
+
+    if (dev_bundle_mode === "symlink")
+      fs.symlinkSync(path.join(files.get_dev_bundle(), 'lib/node_modules'),
+                     path.join(build_path, 'server/node_modules'));
+    else if (dev_bundle_mode === "copy")
+      files.cp_r(path.join(files.get_dev_bundle(), 'lib/node_modules'),
+                 path.join(build_path, 'server/node_modules'),
+                 {ignore: ignore_files});
+    else
+      /* dev_bundle_mode === "skip" */;
+
+    // --- Static assets ---
+
+    if (is_app) {
+      if (path.existsSync(path.join(project_dir, 'public'))) {
+        files.cp_r(path.join(project_dir, 'public'),
+                   path.join(build_path, 'static'), {ignore: ignore_files});
+      }
+      dependencies_json.app.push('public');
+    }
+
+    // -- Client code --
+    for (var rel_path in self.files.client) {
+      var full_path = path.join(build_path, 'static', rel_path);
+      files.mkdir_p(path.dirname(full_path), 0755);
+      fs.writeFileSync(full_path, self.files.client[rel_path]);
+    }
+
+    // ---  Server code and generated files ---
+
+    app_json.load = [];
+    files.mkdir_p(path.join(build_path, 'app'), 0755);
+    for (var rel_path in self.files.server) {
+      var path_in_bundle = path.join('app', rel_path);
+      var full_path = path.join(build_path, path_in_bundle);
+      app_json.load.push(path_in_bundle);
+      files.mkdir_p(path.dirname(full_path), 0755);
+      fs.writeFileSync(full_path, self.files.server[rel_path]);
+    }
+
+    fs.writeFileSync(path.join(build_path, 'app.html'),
+                     self._generate_app_html());
+    dependencies_json.core.push('lib/app.html.in');
+
+    fs.writeFileSync(path.join(build_path, 'unsupported.html'),
+                     fs.readFileSync(path.join(__dirname, "unsupported.html")));
+    dependencies_json.core.push('lib/unsupported.html');
+
+    // --- Documentation, and running from the command line ---
+
+    fs.writeFileSync(path.join(build_path, 'main.js'),
 "require(require('path').join(__dirname, 'server/server.js'));\n");
 
-  fs.writeFileSync(path.join(build_path, 'README'),
+    fs.writeFileSync(path.join(build_path, 'README'),
 "This is a Meteor application bundle. It has only one dependency,\n" +
 "node.js (with the 'fibers' package). To run the application:\n" +
 "\n" +
@@ -465,18 +503,84 @@ exports.bundle = function (app_dir, output_path, options) {
 "\n" +
 "Find out more about Meteor at meteor.com.\n");
 
-  dependencies_json.extensions = app.registered_extensions();
-  dependencies_json.exclude = _.pluck(ignore_files, 'source');
-  for (var pkg in dependencies_json.packages)
-    dependencies_json.packages[pkg] =
-    _.keys(dependencies_json.packages[pkg]);
+    // --- Metadata ---
 
-  fs.writeFileSync(path.join(build_path, 'app.json'),
-                   JSON.stringify(app_json));
-  fs.writeFileSync(path.join(build_path, 'dependencies.json'),
-                   JSON.stringify(dependencies_json));
+    dependencies_json.extensions = self._all_extensions();
+    dependencies_json.exclude = _.pluck(ignore_files, 'source');
+    dependencies_json.packages = {};
+    for (var id in self.packages) {
+      var inst = self.packages[id];
+      dependencies_json.packages[inst.pkg.name] = _.keys(inst.dependencies);
+    }
 
-  // XXX cleaner error handling (no exceptions)
-  files.rm_recursive(output_path);
-  fs.renameSync(build_path, output_path);
+    fs.writeFileSync(path.join(build_path, 'app.json'),
+                     JSON.stringify(app_json));
+    fs.writeFileSync(path.join(build_path, 'dependencies.json'),
+                     JSON.stringify(dependencies_json));
+
+    // --- Move into place ---
+
+    // XXX cleaner error handling (no exceptions)
+    files.rm_recursive(output_path);
+    fs.renameSync(build_path, output_path);
+  }
+
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// Main
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Take the Meteor project (app or package) in project_dir, and compile it
+ * into a bundle at output_path. output_path will be created if it
+ * doesn't exist (it will be a directory), and removed if it does
+ * exist.
+ *
+ * It's unlikely to be useful to run a project without including its
+ * tests, but it's well-defined.
+ *
+ * options include:
+ * - no_minify : don't minify the assets
+ * - skip_dev_bundle : don't put any node_modules in the bundle.
+ * - symlink_dev_bundle : symlink bundle's node_modules to prebuilt
+ *   local installation (to save startup time when running locally,
+ *   used by meteor run).
+ * - include_tests : include tests for the project
+ */
+exports.bundle = function (project_dir, output_path, options) {
+  options = options || {};
+
+  // Create a bundle, add the project
+  packages.flush();
+  var bundle = new Bundle;
+  var project = packages.get_for_dir(project_dir, ignore_files);
+  bundle.use(project);
+
+  // Include tests if requested
+  if (options.include_tests) {
+    // in the future, let use specify the driver, instead of hardcoding?
+    bundle.use(packages.get('test-in-browser'));
+    bundle.include_tests(project);
+  }
+
+  // Minify and bundle
+  if (!options.no_minify)
+    bundle.minify();
+
+  // Socket.io get special handling. Push it in manually after
+  // minification (it doesn't like being minified). But still serve it
+  // ourselves instead of letting socket.io do it, so we get gzip and
+  // such (potentially CDN later).
+  bundle.js.client.unshift('/socketio.static.js');
+  bundle.files.client['/socketio.static.js'] =
+    fs.readFileSync(path.join(
+      files.get_dev_bundle(), 'lib/node_modules',
+      'socket.io/node_modules/socket.io-client/dist/socket.io.min.js'));
+
+  // Write to disk
+  var dev_bundle_mode =
+    options.skip_dev_bundle ? "skip" : (
+      options.symlink_dev_bundle ? "symlink" : "copy");
+  bundle.write_to_directory(output_path, project_dir, dev_bundle_mode);
 };

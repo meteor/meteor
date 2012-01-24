@@ -1,7 +1,8 @@
 Package.describe({
   summary: "Backwards compatibility.",
-  environments: ["client", "server"],
   internal: true
 });
 
-Package.source('past.js');
+Package.on_use(function (api) {
+  api.add_files('past.js', ['client', 'server']);
+});

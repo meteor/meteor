@@ -1,7 +1,8 @@
 Package.describe({
-  summary: "pushState module from the jQuery project",
-  environments: ["client"]
+  summary: "pushState module from the jQuery project"
 });
 
-Package.depend("jquery");
-Package.source('jquery.history.js');
+Package.on_use(function (api) {
+  api.use('jquery');
+  api.add_files('jquery.history.js', 'client');
+});

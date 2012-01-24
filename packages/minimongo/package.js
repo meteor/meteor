@@ -1,17 +1,26 @@
 Package.describe({
   summary: "Meteor's client-side datastore: a port of MongoDB to Javascript",
-  environments: ["client", "server"],
   internal: true
 });
 
-// It would be sort of nice if minimongo didn't depend on underscore,
-// so we could ship it separately.
-Package.depend('underscore', 'json');
+Package.on_use(function (api, where) {
+  where = where || ['client', 'server'];
 
-Package.source([
-  'minimongo.js',
-  'selector.js',
-  'sort.js',
-  'uuid.js',
-  'modify.js'
-]);
+  // It would be sort of nice if minimongo didn't depend on
+  // underscore, so we could ship it separately.
+  api.use(['underscore', 'json'], where);
+
+  api.add_files([
+    'minimongo.js',
+    'selector.js',
+    'sort.js',
+    'uuid.js',
+    'modify.js'
+  ], where);
+});
+
+Package.on_test(function (api) {
+  api.use('minimongo', 'client');
+  api.use('tinytest');
+  api.add_files('minimongo_tests.js', 'client');
+});

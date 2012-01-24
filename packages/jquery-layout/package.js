@@ -2,9 +2,10 @@
 // flexie, rather than this
 
 Package.describe({
-  summary: "Easily create arbitrary multicolumn layouts",
-  environments: ["client"]
+  summary: "Easily create arbitrary multicolumn layouts"
 });
 
-Package.depend("jquery");
-Package.source('jquery.layout.js');
+Package.on_use(function (api) {
+  api.use('jquery');
+  api.add_files('jquery.layout.js', 'client');
+});

@@ -6,23 +6,23 @@ Package.describe({
 });
 
 Package.register_extension(
-  "js", function (bundle, source_path, serve_path, env) {
+  "js", function (bundle, source_path, serve_path, where) {
     bundle.add_resource({
       type: "js",
       path: serve_path,
       source_file: source_path,
-      environments: env
+      where: where
     });
   }
 );
 
 Package.register_extension(
-  "css", function (bundle, source_path, serve_path, env) {
+  "css", function (bundle, source_path, serve_path, where) {
     bundle.add_resource({
       type: "css",
       path: serve_path,
       source_file: source_path,
-      environments: env
+      where: where
     });
   }
 );

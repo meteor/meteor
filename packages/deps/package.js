@@ -2,9 +2,12 @@
 
 Package.describe({
   summary: "Dependency mananger to allow reactive callbacks",
-  environments: ["client", "server"],
   internal: true
 });
 
-Package.depend('underscore');
-Package.source('deps.js');
+Package.on_use(function (api, where) {
+  where = where || ['client', 'server'];
+
+  api.use('underscore', where);
+  api.add_files('deps.js', where);
+});

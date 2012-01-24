@@ -15,26 +15,29 @@ var path = require('path');
 //   var pkg = new Package;
 //   pkg.init_from_app_dir(app_dir);
 //
+// Or from a collection (a directory whose subdirs are packages):
+//   var pkg = new Package;
+//   pkg.init_from_collection(collection_dir);
+
+var next_package_id = 1;
 var Package = function () {
   var self = this;
 
   // Fields set by init_*:
-  // name: package name, or null for an app pseudo-package
-  // source_root: base directory for resolving source files
-  // serve_root: base directory for serving files
+  // name: package name, or null for an app pseudo-package or collection
+  // source_root: base directory for resolving source files, null for collection
+  // serve_root: base directory for serving files, null for collection
+
+  // A unique ID (guaranteed to not be reused in this process -- if
+  // the package is reloaded, it will get a different id the second
+  // time)
+  self.id = next_package_id++;
 
   // package metadata, from describe()
   self.metadata = {};
 
-  // high-level sources (map from environment to array), IN LOAD
-  // ORDER. empty string means 'any environment this package is
-  // included in'. each object is a path relative to source_root.
-  self.sources = {'': [], client: [], server: []};
-
-  // dependencies on other packages. map from environment (or empty
-  // string, same deal as before) to package name to true. we have to
-  // load these other packages before we can load our own files.
-  self.depends = {'': {}, client: {}, server: {}};
+  self.on_use = null;
+  self.on_test = null;
 
   // registered source file handlers
   self.extensions = {};
@@ -56,54 +59,22 @@ var Package = function () {
       _.extend(self.metadata, metadata);
     },
 
-    depend: function (what) {
-      if (typeof what !== "object" || (what instanceof Array))
-        what = {'': what};
-
-      for (var env in what) {
-        var pkgs = what[env];
-        if (!(pkgs instanceof Array))
-          pkgs = [pkgs];
-        _.each(pkgs, function (pkg) {
-          self.depends[env][pkg] = true;
-        });
-      }
+    on_use: function (f) {
+      if (self.on_use)
+        throw new Error("A package may have only one on_use handler");
+      self.on_use = f;
     },
 
-    /**
-     * This is the main API for adding source files to a package. They
-     * will be processed with the register_extensions() handlers down
-     * into bundle resources.
-     *
-     * Package.source(file1, file2, file3)
-     * Package.source([file1, file2, file3])
-     * Package.source({env1: [file1, file2, file3], env2: file4});
-     *
-     * If no environments given, defaults to "all environments
-     * requested for this package" (added by package), or "package
-     * default environment" (added by the app).
-     *
-     * Reload dependencies will be created on all referenced source
-     * files. Currently this is the only way for a package to create
-     * reload dependencies. (XXX we should really change that. Imagine
-     * a packages that is some kind of preprocessor with something
-     * like an #include directive.)
-     */
-    source: function (what) {
-      if (typeof what !== "object" || (what instanceof Array))
-        what = {'': what};
-
-      for (var env in what) {
-        var files = what[env];
-        if (!(files instanceof Array))
-          files = [files];
-        _.each(files, function (file) {
-          self.sources[env].push(file);
-        });
-      }
+    on_test: function (f) {
+      if (self.on_test)
+        throw new Error("A package may have only one on_test handler");
+      self.on_test = f;
     },
 
     register_extension: function (extension, callback) {
+      if (self.on_test)
+        throw new Error("This package has already registered a handler for " +
+                       extension);
       self.extensions[extension] = callback;
     }
   };
@@ -115,9 +86,6 @@ _.extend(Package.prototype, {
     self.name = name;
     self.source_root = path.join(__dirname, '../../packages', name);
     self.serve_root = path.join('/packages', name);
-
-    if (name !== "core")
-      self.depends[''].core = true;
 
     var fullpath = path.join(files.get_package_dir(), name, 'package.js');
     var code = fs.readFileSync(fullpath).toString();
@@ -141,50 +109,38 @@ _.extend(Package.prototype, {
     self.name = null;
     self.source_root = app_dir;
     self.serve_root = '/';
-    self.depends[''].core = true;
 
-    // -- Packages --
+    var sources_except = function (api, except, tests) {
+      return _(self._scan_for_sources(api, ignore_files || []))
+        .reject(function (source_path) {
+          return ('/' + source_path + '/').indexOf('/' + except + '/') !== -1;
+        })
+        .filter(function (source_path) {
+          var is_test = (('/' + source_path + '/').indexOf('/tests/') !== -1);
+          return is_test === (!!tests);
+        });
+    };
 
-    // standard client packages (for now), for the classic meteor
-    // stack -- has to come before user packages, because we don't
-    // (presently) require packages to declare dependencies on
-    // 'standard meteor stuff' like minimongo.
-    var used_packages = [
-      'deps', 'session', 'livedata', 'liveui', 'templating', 'startup', 'past'
-    ];
-    used_packages =
-      used_packages.concat(require('./project.js').get_packages(app_dir));
+    self.api.on_use(function (api) {
+      // -- Packages --
 
-    _.each(used_packages, function (other_name) {
-      // XXX should print a nice error if there's no such package
-      // (this is where you'd get if you had a non-existent package in
-      // .meteor/packages)
-      var other_pkg = packages.get(other_name);
-      var environments = other_pkg.metadata.environments;
-      if (!environments)
-        environments = [''];
+      // standard client packages (for now), for the classic meteor
+      // stack -- has to come before user packages, because we don't
+      // (presently) require packages to declare dependencies on
+      // 'standard meteor stuff' like minimongo.
+      api.use(['deps', 'session', 'livedata', 'liveui', 'templating',
+               'startup', 'past']);
+      api.use(require('./project.js').get_packages(app_dir));
 
-      _.each(environments, function (env) {
-        var d = {};
-        d[env] = other_name;
-        self.api.depend(d);
-      });
+      // -- Source files --
+      api.add_files(sources_except(api, "server"), "client");
+      api.add_files(sources_except(api, "client"), "server");
     });
 
-    // -- Source files --
-
-    _.each(self._scan_for_sources(ignore_files || []), function (rel_path) {
-      // XXX at some point we should re-work our directory structure and
-      // how we determine which files are for the client and which are for
-      // the server.
-      var source_path = path.join(app_dir, rel_path);
-      var is_client = (source_path.indexOf('/server/') === -1);
-      var is_server = (source_path.indexOf('/client/') === -1);
-
-      self.api.source({
-        client: is_client ? rel_path : [],
-        server: is_server ? rel_path : []
-      });
+    self.api.on_test(function (api) {
+      api.use(self);
+      api.add_files(sources_except(api, "server", true), "client");
+      api.add_files(sources_except(api, "client", true), "server");
     });
   },
 
@@ -193,12 +149,12 @@ _.extend(Package.prototype, {
   // source_root. Ignore files that match a regexp in the ignore_files
   // array, if given. As a special case (ugh), push all html files to
   // the head of the list.
-  _scan_for_sources: function (ignore_files) {
+  _scan_for_sources: function (api, ignore_files) {
     var self = this;
 
     // find everything in tree, sorted depth-first alphabetically.
     var file_list = files.file_list_sync(self.source_root,
-                                         self.registered_extensions());
+                                         api.registered_extensions());
     file_list = _.reject(file_list, function (file) {
       return _.any(ignore_files || [], function (pattern) {
         return file.match(pattern);
@@ -237,56 +193,23 @@ _.extend(Package.prototype, {
     });
   },
 
-  // Find the function that should be used to handle a source file
-  // found in this package. We'll use handlers that are defined in
-  // this package and in its immediate dependencies. ('extension'
-  // should be the extension of the file without a leading dot.)
-  get_sources_handler: function (extension) {
+  init_from_collection: function (collection_dir) {
     var self = this;
-    var candidates = []
+    self.name = null;
+    self.source_root = null;
+    self.serve_root = null;
 
-    if (extension in self.extensions)
-      candidates.push(self.extensions[extension]);
-
-    for (var env in self.depends) {
-      for (var other_name in self.depends[env]) {
-        var other_pkg = packages.get(other_name);
-        if (extension in other_pkg.extensions)
-          candidates.push(other_pkg.extensions[extension]);
-      }
-    }
-
-    // XXX do something more graceful than printing a stack trace and
-    // exiting!! we have higher standards than that!
-
-    if (!candidates.length)
-      // A package included a source file that we don't have a
-      // processor for. Wouldn't be app source, since we wouldn't have
-      // added it as a source file in the first place.
-      throw new Error("Don't know how to process file: " +
-                      source.source_path);
-
-    if (candidates.length > 1)
-      // XXX improve error message (eg, name the packages involved)
-      // and make it clear that it's not a global conflict, but just
-      // among this package's dependencies
-      throw new Error("Conflict: two packages are both trying " +
-                      "to handle ." + extension);
-
-    return candidates[0];
-  },
-
-  // Return a list of all of the extension that indicate source files
-  // inside this package, INCLUDING leading dots.
-  registered_extensions: function () {
-    var self = this;
-    var ret = _.keys(self.extensions);
-
-    for (var env in self.depends)
-      for (var other_name in self.depends[env])
-        ret = _.union(ret, _.keys(packages.get(other_name).extensions));
-
-    return _.map(ret, function (x) {return "." + x;});
+    self.api.on_test(function () {
+      _.each(fs.readdir(collection_dir), function (name) {
+        // only take things that are actually packages
+        var subdir = path.join(collection_dir, name);
+        if (files.is_package_dir(subdir)) {
+          var p = packages.get(p);
+          if (p.on_test)
+            p.on_test();
+        }
+      });
+    });
   }
 });
 
@@ -294,8 +217,10 @@ _.extend(Package.prototype, {
 var package_cache = {};
 
 var packages = module.exports = {
-  // get a package by name
+  // get a package by name. also maps package objects to themselves.
   get: function (name) {
+    if (name instanceof Package)
+      return name;
     if (!(name in package_cache)) {
       var pkg = new Package;
       pkg.init_from_library(name);
@@ -312,6 +237,28 @@ var packages = module.exports = {
     var pkg = new Package;
     pkg.init_from_app_dir(app_dir, ignore_files || []);
     return pkg;
+  },
+
+  get_for_collection: function (collection_dir) {
+    var pkg = new Package;
+    pkg.init_from_collection(collection_dir);
+    return pkg;
+  },
+
+  // get a package that represents a particular directory on disk,
+  // which might be an app, a package, or even a collection of
+  // packages.
+  get_for_dir: function (project_dir) {
+    if (files.is_app_dir(project_dir))
+      return packages.get_for_app(project_dir);
+    else if (files.is_package_dir(project_dir))
+      // this will need to change when packages are stored in more
+      // than one place
+      return packages.get(path.basename(project_dir));
+    else if (files.is_package_collection_dir(project_dir))
+      return packages.get_for_collection(project_dir);
+    else
+      throw new Error("Unknown project directory type");
   },
 
   // force reload of all packages

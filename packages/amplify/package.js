@@ -1,6 +1,7 @@
 Package.describe({
-  summary: "Cross browser API for Persistant Storage, PubSub and Request.",
-  environments: ["client"]
+  summary: "Cross browser API for Persistant Storage, PubSub and Request."
 });
 
-Package.source('amplify.js');
+Package.on_use(function (api) {
+  api.add_files('amplify.js', 'client');
+});

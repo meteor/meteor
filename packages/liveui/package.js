@@ -1,21 +1,29 @@
 Package.describe({
   summary: "Meteor's machinery for making arbitrary templates reactive",
-  environments: ["client"],
   internal: true
 });
 
-Package.depend('underscore');
-Package.depend('livedata');
-Package.depend('session');
+Package.on_use(function (api) {
+  api.use('livedata');
+  api.use(['underscore', 'session'], 'client');
 
-// XXX Depends on jquery because we need a selector engine to resolve
-// event maps. What would be nice is, if you've included jquery or
-// zepto, use one of those; if not, ship our own copy of sizzle (but,
-// you still want the event object normalization that jquery provides?)
-Package.depend('jquery');
+  // XXX Depends on jquery because we need a selector engine to resolve
+  // event maps. What would be nice is, if you've included jquery or
+  // zepto, use one of those; if not, ship our own copy of sizzle (but,
+  // you still want the event object normalization that jquery provides?)
+  api.use('jquery');
 
-Package.source('liverange.js');
-Package.source('liveui.js');
+  api.add_files(['liverange.js', 'liveui.js'], 'client');
+});
 
-// XXX this should be loaded only in test code, not in the app!
-Package.source('liverange_test_helpers.js');
+Package.on_test(function (api) {
+  api.use(['tinytest', 'templating', 'htmljs']);
+  api.use(['liveui', 'test-helpers'], 'client');
+
+  api.add_files([
+    'liverange_test_helpers.js',
+    'liveui_tests.js',
+    'liveui_tests.html',
+    'liverange_tests.js'
+  ], 'client');
+});

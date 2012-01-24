@@ -5,12 +5,14 @@
 // support both..)
 
 Package.describe({
-  summary: "Syntax highlighting of code, from Google",
-  environments: ["client"]
+  summary: "Syntax highlighting of code, from Google"
 });
 
 // XXX this code dumps symbols into the global namespace (directly
 // onto 'window'.) we need to fix that.
-Package.source(['prettify.js',
-                'prettify.css',
-                'styles/sunburst.css']);
+Package.on_use(function (api) {
+  api.add_files([
+    'prettify.js',
+    'prettify.css',
+    'styles/sunburst.css'], "client");
+});

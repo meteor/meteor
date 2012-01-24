@@ -3,12 +3,8 @@ Package.describe({
   internal: true
 });
 
-Package.depend({
-  client: 'underscore',
-  server: 'underscore'
-});
-
-Package.source({
-  client: 'stream_client.js',
-  server: 'stream_server.js'
+Package.on_use(function (api) {
+  api.use('underscore', ['client', 'server']);
+  api.add_files('stream_client.js', 'client');
+  api.add_files('stream_server.js', 'server');
 });
