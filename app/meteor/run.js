@@ -18,7 +18,7 @@ var _ = require('../lib/third/underscore.js');
 // list of log objects from the child process.
 var server_log = [];
 
-Status = {
+var Status = {
   running: false, // is server running now?
   crashing: false, // does server crash whenever we start it?
   counter: 0, // how many crashes in rapid succession
