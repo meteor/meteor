@@ -69,5 +69,5 @@ in several ways:
 
 * Announcement list: sign up at http://preview.meteor.com/
 * Google group for discussion: http://groups.google.com/group/meteor-users
-* IRC: ```#skybreak``` on ```irc.freenode.net```
+* IRC: ```#meteor``` on ```irc.freenode.net```
 * Email us: ```contact@meteor.com```
