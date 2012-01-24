@@ -1,38 +1,62 @@
 Package.describe({
   summary: "Allows templates to be defined in .html files",
-  environments: ["client"],
   internal: true
 });
-
-Package.depend(['underscore', 'liveui']);
-
-// XXX super lame! we actually have to give paths relative to
-// app/inner/app.js, since that's who's evaling us.
-var html_scanner = require('../../packages/templating/html_scanner.js');
-
-// XXX the way we deal with encodings here is sloppy .. should get
-// religion on that
 
 var fs = require('fs');
 var path = require('path');
 
+Package.on_use(function (api) {
+  // XXX would like to do the following only when the first html file
+  // is encountered.. shouldn't be very hard, we just need a way to
+  // get at 'api' from a register_extension handler
+
+  api.use(['underscore', 'liveui'], 'client');
+
+  // provides the runtime logic to instantiate our templates
+  api.add_files('deftemplate.js', 'client');
+
+  // html_scanner.js emits client code that calls Meteor.startup
+  api.use('startup', 'client');
+
+  // for now, the only templating system we support
+  // XXX this is a huge hack. using handlebars causes a Handlebars
+  // symbol to be slammed into the global environment, which
+  // html_scanner needs. refactor.
+  api.use('handlebars', 'client');
+});
+
 Package.register_extension(
-  "html", function (bundle, source_path, serve_path, environment) {
+  "html", function (bundle, source_path, serve_path, where) {
+    if (where !== "client")
+      // XXX might be nice to throw an error here, but then we'd have
+      // to make it so that packages.js ignores html files that appear
+      // in the server directories in an app tree.. or, it might be
+      // nice to make html files actually work on the server (against
+      // jsdom or something)
+      return;
+
+    // XXX the way we deal with encodings here is sloppy .. should get
+    // religion on that
     var contents = fs.readFileSync(source_path);
+
+    // XXX super lame! we actually have to give paths relative to
+    // app/inner/app.js, since that's who's evaling us.
+    var html_scanner = require('../../packages/templating/html_scanner.js');
     var results = html_scanner.scan(contents.toString('utf8'));
 
     if (results.head)
       bundle.add_resource({
         type: "head",
         data: results.head,
-        environments: environment
+        where: where
       });
 
     if (results.body)
       bundle.add_resource({
         type: "body",
         data: results.body,
-        environments: environment
+        where: where
       });
 
     if (results.js) {
@@ -50,17 +74,16 @@ Package.register_extension(
         path: serve_path,
         data: new Buffer(results.js),
         source_file: source_path,
-        environments: environment
+        where: where
       });
     }
   }
 );
 
-// provides the runtime logic to instantiate our templates
-Package.source('deftemplate.js');
-
-// html_scanner.js emits client code that calls Meteor.startup
-Package.depend('startup');
-
-// for now, the only templating system we support
-Package.depend('handlebars');
+Package.on_test(function (api) {
+  api.use('tinytest');
+  api.add_files([
+    'templating_tests.js',
+    'templating_tests.html'
+  ], 'client');
+});
