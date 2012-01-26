@@ -1,9 +1,13 @@
 
 test("template assembly", function () {
+  var minusEmptyComments = function(s) {
+    return String(s).replace(/<!---->/g, '');
+  };
+
   // Test for a bug that made it to production -- after a replacement,
   // we need to also check the newly replaced node for replacements
   var frag = Template.test_assembly_a0();
-  assert.equal(Meteor._fragmentToHtml(frag), "Hi");
+  assert.equal(minusEmptyComments(Meteor._fragmentToHtml(frag)), "Hi");
 
   // Another production bug -- we must use LiveRange to replace the
   // placeholder, or risk breaking other LiveRanges
@@ -13,10 +17,10 @@ test("template assembly", function () {
   };
   var onscreen = DIV({style: "display: none"}, [Template.test_assembly_b0()]);
   document.body.appendChild(onscreen);
-  assert.equal(onscreen.innerHTML, "xyhi");
+  assert.equal(minusEmptyComments(onscreen.innerHTML), "xyhi");
   Session.set("stuff", false);
   Meteor.flush();
-  assert.equal(onscreen.innerHTML, "xhi");
+  assert.equal(minusEmptyComments(onscreen.innerHTML), "xhi");
   document.body.removeChild(onscreen);
 });
 
