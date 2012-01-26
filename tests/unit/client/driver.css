@@ -1,6 +1,6 @@
 .test_table {
   font-family: Arial, sans-serif;
-  width: 600px;
+  width: 500px;
   font-size: 16px;
 }
 
@@ -28,7 +28,7 @@
   padding-left: 5px;
   line-height: 24px;
   vertical-align: middle;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .test_table .event {

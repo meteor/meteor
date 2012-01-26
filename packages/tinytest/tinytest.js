@@ -35,7 +35,7 @@ _.extend(globals.test, {
   setReporter: function(reportFunc) {
     report = function(test, rest) {
       reportFunc(_.extend({ groupPath: test.groupPath,
-                            test: test.name },
+                            test: test.short_name },
                           rest));
     };
   },
