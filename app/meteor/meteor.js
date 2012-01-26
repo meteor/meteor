@@ -26,8 +26,13 @@ process.stdout.write(
   process.exit(1);
 };
 
-var require_project = function (cmd) {
-  var app_dir = files.find_app_dir();
+var require_project = function (cmd, accept_package) {
+  var pred = files.is_app_dir;
+  if (accept_package)
+    pred = function (p) {
+      return files.is_app_dir(p) || files.is_package_dir(p); };
+
+  var app_dir = files.find_upwards(pred);
   if (!app_dir) {
     // This is where you end up if you type 'meteor' with no
     // args. Be gentle to the noobs..
@@ -113,7 +118,7 @@ Commands.push({
       process.exit(1);
     }
 
-    var app_dir = require_project("run");
+    var app_dir = require_project("run", true); // app or package
     var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true };
     require('./run.js').run(app_dir, bundle_opts, new_argv.port);
   }
