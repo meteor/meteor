@@ -460,11 +460,14 @@ var start_update_checks = function () {
 
 // XXX leave a pidfile and check if we are already running
 
-exports.run = function (app_dir, bundle_path, bundle_opts, port) {
+exports.run = function (app_dir, bundle_opts, port) {
   var outer_port = port || 3000;
   var inner_port = outer_port + 1;
   var mongo_port = outer_port + 2;
   var mongo_url = "mongodb://localhost:" + mongo_port + "/meteor";
+
+  // this logic needs to be updated for running package tests
+  var bundle_path = path.join(app_dir, '.meteor/local/build');
 
   var started_watching_files = false;
   var warned_about_no_deps_info = false;

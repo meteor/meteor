@@ -114,9 +114,8 @@ Commands.push({
     }
 
     var app_dir = require_project("run");
-    var bundle_path = path.join(app_dir, '.meteor/local/build');
     var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true };
-    require('./run.js').run(app_dir, bundle_path, bundle_opts, new_argv.port);
+    require('./run.js').run(app_dir, bundle_opts, new_argv.port);
   }
 });
 
