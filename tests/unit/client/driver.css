@@ -1,6 +1,6 @@
 .test_table {
   font-family: Arial, sans-serif;
-  width: 500px;
+  width: 600px;
   font-size: 16px;
 }
 
@@ -40,7 +40,7 @@
   width: 600px;
 }
 
-.test_table .test .testrow { psosition: relative; overflow: hidden; /*hasLayout*/ }
+.test_table .test .testrow { position: relative; overflow: hidden; /*hasLayout*/ }
 
 .test_table .running .testname { color: #66c; /* blue */ }
 .test_table .failed .testname { color: #900; /* red */ }
@@ -50,11 +50,25 @@
   position: absolute;
   height: 100%;
   width: 100px;
-  right: 0;
+  right: 80px;
   top: 0;
   text-align: center;
   line-height: 24px;
   vertical-align: middle;
+}
+
+.test_table .testtime {
+  position: absolute;
+  height: 100%;
+  width: 75px;
+  margin-right: 5px;
+  right: 0;
+  top: 0;
+  text-align: right;
+  line-height: 24px;
+  vertical-align: middle;
+  font-size: 14px;
+  color: #666;
 }
 
 .test_table .succeeded .teststatus { color: #090; /* green */  background: #cfc; }

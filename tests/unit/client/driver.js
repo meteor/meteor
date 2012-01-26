@@ -34,20 +34,8 @@ Template.test.summary = function() {
   return buf.join(", ");
 };
 
-Template.test.test_status = function() {
-  var events = this.events || [];
-  if (events.length == 0 || _.last(events).type != "finish") {
-    return "running";
-  } else if (_.any(events, function(e) {
-    return e.type == "fail" || e.type == "exception"; })) {
-    return "failed";
-  } else {
-    return "succeeded";
-  }
-};
-
 Template.test.test_status_display = function() {
-  var status = Template.test.test_status.call(this);
+  var status = _testStatus(this);
   if (status == "failed") {
     return "FAIL";
   } else if (status == "succeeded") {
@@ -57,9 +45,14 @@ Template.test.test_status_display = function() {
   }
 };
 
+Template.test.test_time_display = function() {
+  var time = _testTime(this);
+  return (typeof time === "number") ? time + " ms" : "";
+};
+
 Template.test.test_class = function() {
   var events = this.events || [];
-  var classes = [Template.test.test_status.call(this)];
+  var classes = [_testStatus(this)];
 
   if (this.expanded) {
     classes.push("expanded");
@@ -116,6 +109,30 @@ var _resultsChanged = function() {
     cx.invalidate();
   });
   resultDeps.length = 0;
+};
+
+var _testTime = function(t) {
+  if (t.events && t.events.length > 0) {
+    var lastEvent = _.last(t.events);
+    if (lastEvent.type === "finish") {
+      if ((typeof lastEvent.timeMs) === "number") {
+        return lastEvent.timeMs;
+      }
+    }
+  }
+  return null;
+};
+
+var _testStatus = function(t) {
+  var events = t.events || [];
+  if (events.length == 0 || _.last(events).type != "finish") {
+    return "running";
+  } else if (_.any(events, function(e) {
+    return e.type == "fail" || e.type == "exception"; })) {
+    return "failed";
+  } else {
+    return "succeeded";
+  }
 };
 
 var throttled_flush = _.throttle(Meteor.flush, 1000);

@@ -83,6 +83,8 @@ _.extend(globals.test, {
       var original_assert = globals.assert;
       globals.assert = test_assert;
 
+      var startTime = (+new Date);
+
       // XXX XXX we also need to skip try..catch if we're about to
       // execute the test that will generate the fail() that we're
       // trying to replicate, else we end up reporting the "stopping
@@ -117,7 +119,8 @@ _.extend(globals.test, {
       }
       ////}
 
-      report(t, {events: [{type: "finish"}]});
+      var totalTime = (+new Date) - startTime;
+      report(t, {events: [{type: "finish", timeMs: totalTime}]});
     }; // run_test
 
 
