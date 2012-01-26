@@ -40,7 +40,7 @@
   width: 600px;
 }
 
-.test div { position: relative; }
+.test_table .test .testrow { psosition: relative; overflow: hidden; /*hasLayout*/ }
 
 .test_table .running .testname { color: #66c; /* blue */ }
 .test_table .failed .testname { color: #900; /* red */ }
@@ -66,3 +66,4 @@
 .test_table .event .exception { color: #d00; }
 .test_table .event .nodata { color: #ccc; font-style: italic; }
 .test_table .event .xtimes { font-weight: bold; }
+

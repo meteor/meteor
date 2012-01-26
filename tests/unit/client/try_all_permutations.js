@@ -3,7 +3,7 @@
 // In simplest usage, takes one argument, an array of functions. Run
 // those functions in every possible order. Or, if the first element
 // of the array is an integer N, with the remaining elements being
-// functions (N >= the number of functions), run every permutation of
+// functions (N <= the number of functions), run every permutation of
 // N functions from the array.
 //
 // Eg:
@@ -61,7 +61,7 @@ var try_all_permutations = function () {
       for (var i = 0; i < remaining.length; i++) {
         chosen.push(remaining[i]);
         pick(how_many - 1,
-             remaining.slice(0, i).concat(remaining.slice(i + 1)))
+             remaining.slice(0, i).concat(remaining.slice(i + 1)));
         chosen.pop();
       }
     }
