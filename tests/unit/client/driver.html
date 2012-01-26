@@ -1,85 +1,63 @@
 <head>
-  <title>tinytest WIP</title>
+  <title>Tests</title>
 </head>
 
 <body>
-  {{> header }}
-  {{> results }}
+  {{> test_table}}
 </body>
 
-<template name="header">
-  Passed: {{passed_count}}<br>
-  Failed: {{failed_count}} ({{expected_failed_count}})<br>
-  Total: {{total_count}}<br>
-  {{#with exception_count}}
-    {{#if this}}
-      Exceptions: {{this}}<br>
-    {{/if}}
-  {{/with}}
-  {{> rerun_all_button }}
-</template>
-
-<template name="results">
-  {{#each results}}
-    {{#if type_is "begin"}}
-      <div class="begin">{{name}}</div>
-    {{else}}
-      {{#if type_is "fail"}}
-        {{> fail}}
-      {{else}}
-        {{#if type_is "exception"}}
-          {{> exception }}
-        {{else}}
-          <div class="{{type}}">{{message}}</div>
-        {{/if}}
-      {{/if}}
-    {{/if}}
-  {{/each}}
-</template>
-
-<template name="rerun_all_button">
-  <div><div class="rerunall">Rerun all</div></div>
-</template>
-
-<template name="exception">
-  <div class="exception">Exception: {{message}}
-    {{stack}}
-    <div class="rerun">Rerun and stop here</div>
+<template name="test_table">
+  <div class="test_table">
+    {{#each data}}
+      {{> test_group this}}
+    {{/each}}
   </div>
 </template>
 
-<template name="fail">
-  {{#if expected}}
-    <span>(expected failure)</span>
-  {{else}}
-    {{#with details}}
-      {{#if type_is "assert"}}
-        <div class="assert">
-          {{message}}
-          <div class="expected">Expected:
-            {{#if not}}Any value but{{/if}} {{expected}}</div>
-          <div class="actual">Actual: {{actual}}</div>
-        </div>
-      {{else}}
-        <div class="{{type}}">Fail: {{type}} &mdash; {{stringify this}}</div>
-      {{/if}}
-      <span>
-        <div class="rerun">Rerun and stop here</a>
-      </span>
-    {{/with}}
-  {{/if}}
+<template name="test_group">
+  <div class="group">
+    <div class="groupname">{{name}}</div>
+    {{#each tests}}
+      {{> test}}
+    {{/each}}
+    {{#each groups}}
+      {{> test_group}}
+    {{/each}}
+  </div>
 </template>
 
-<template name="test_renderList_each">
-  Before{{render_count}}
-  {{#each data}}
-    {{name}}{{weather "here"}}
-  {{/each}}
-  Middle
-  {{#each data2}}
-    {{name}}
-  {{else}}
-    Else
-  {{/each}}
-  After
+<template name="test">
+  <div class="test {{test_class}}">
+    <div>
+      <div class="testname">
+        {{name}}
+      </div>
+      <div class="teststatus">
+        {{test_status_display}}
+      </div>
+    </div>
+    {{#if expanded}}
+      {{#each eventsArray}}
+        {{> event}}
+      {{else}}
+        <div class="event"><div class="nodata">(no data)</div></div>
+      {{/each}}
+    {{/if}}
+  </div>
+</template>
+
+<template name="event">
+  <div class="event">
+    <div class="{{type}}">
+      - {{type}}
+      {{#if times}}
+        <span class="xtimes">({{times}} times)</span>
+      {{/if}}
+      {{#with get_details}}
+        {{#if this}}
+          -- {{this}}
+        {{/if}}
+      {{/with}}
+    </div>
+  </div>
 </template>

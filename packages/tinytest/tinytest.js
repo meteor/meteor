@@ -6,14 +6,13 @@ var tests = {};
 var ordered_tests = [];
 
 var expecting_failure = false;
-var results;
-var next_result;
+var report;
 
 var current_test;
-var current_failure_count;
+////var current_failure_count;
 
-var stop_at_test;
-var stop_at_failure_count;
+////var stop_at_test;
+////var stop_at_failure_count;
 
 // XXX find a way to permit async tests..
 globals.test = function (name, func) {
@@ -23,11 +22,26 @@ globals.test = function (name, func) {
   var t = {name: name, func: func};
   tests[t.name] = t;
   ordered_tests.push(t);
+
+  var nameParts = _.map(t.name.split(" - "), function(s) {
+    return s.replace(/^\s*|\s*$/g, ""); // trim
+  });
+  t.short_name = nameParts.pop();
+  nameParts.unshift("tinytest");
+  t.groupPath = nameParts;
 };
 
 _.extend(globals.test, {
+  setReporter: function(reportFunc) {
+    report = function(test, rest) {
+      reportFunc(_.extend({ groupPath: test.groupPath,
+                            test: test.name },
+                          rest));
+    };
+  },
+
   ok: function () {
-    results.insert({n: next_result++, type: "ok"});
+    report(current_test, {events: [{type: "ok"}]});
   },
 
   expect_fail: function () {
@@ -35,37 +49,36 @@ _.extend(globals.test, {
   },
 
   fail: function (doc) {
-    if (stop_at_test === current_test &&
-        stop_at_failure_count === current_failure_count) {
-      debugger;
-      throw new Error("Stopping at failed test -- " + JSON.stringify(doc));
-    }
+    ////if (stop_at_test === current_test &&
+    ////stop_at_failure_count === current_failure_count) {
+    ////debugger;
+    ////throw new Error("Stopping at failed test -- " + JSON.stringify(doc));
+    ////}
 
-    results.insert({n: next_result++, type: "fail", details: doc,
-                    expected: expecting_failure,
-                    cookie: {test: current_test.name,
-                             failure_count: current_failure_count++}});
+    report(current_test,
+           {events: [{type: (expecting_failure ? "expected_fail" : "fail"),
+                      details: doc}]});
     expecting_failure = false;
-    Meteor.flush();
+  },
+
+  list: function() {
+    _.each(ordered_tests, report);
   },
 
   // 'stop_at_cookie' is the 'cookie' attribute of a failure document,
   // to stop at that failure
-  run: function (collection, stop_at_cookie) {
-    results = collection;
-    next_result = 0;
+  run: function (/*stop_at_cookie*/) {
 
-    if (stop_at_cookie) {
-      stop_at_test = tests[stop_at_cookie.test]
-      stop_at_failure_count = stop_at_cookie.failure_count;
-    } else
-      stop_at_test = null;
+    ////if (stop_at_cookie) {
+    ////stop_at_test = tests[stop_at_cookie.test]
+    ////stop_at_failure_count = stop_at_cookie.failure_count;
+    ////} else
+    ////stop_at_test = null;
 
-    var exception;
-    _.each(ordered_tests, function (t) {
-      results.insert({n: next_result++, type: "begin", name: t.name});
+    var run_test = function(t) {
+      report(t);
       current_test = t;
-      current_failure_count = 0;
+      ////current_failure_count = 0;
 
       var original_assert = globals.assert;
       globals.assert = test_assert;
@@ -74,34 +87,49 @@ _.extend(globals.test, {
       // execute the test that will generate the fail() that we're
       // trying to replicate, else we end up reporting the "stopping
       // at failure" exception in the log!
-      if (stop_at_test === current_test &&
-          stop_at_failure_count === "exception") {
+      ////if (stop_at_test === current_test &&
+      ////stop_at_failure_count === "exception") {
         // Don't run the test inside try..catch, since in some
         // browsers that loses stack info.
-        t.func();
+      ////t.func();
         // XXX XXX XXX and you're not going to restore the original
         // assert()??! ooooouch.
-      } else {
-        try {
-          t.func();
-        } catch (exception) {
-          // XXX you want the "name" and "message" fields on the
-          // exception, to start with..
-          results.insert({n: next_result++, type: "exception",
-                          message: exception.message, // XXX empty???
-                          stack: exception.stack, // XXX portability
-                          cookie: {test: current_test.name,
-                                   failure_count: "exception"}});
-        } finally {
-          globals.assert = original_assert;
-          current_test = null;
-        }
+      ////} else {
+      try {
+        t.func();
+      } catch (exception) {
+        // XXX you want the "name" and "message" fields on the
+        // exception, to start with..
+        report(current_test, {
+          events: [{
+            type: "exception",
+            details: {
+              message: exception.message, // XXX empty???
+              stack: exception.stack // XXX portability
+            }
+          }]
+        });
+        ////cookie: {test: current_test.name,
+        ////failure_count: "exception"}});
+      } finally {
+        globals.assert = original_assert;
+        current_test = null;
       }
-    });
+      ////}
 
-  results.insert({n: next_result++, type: "begin", name: "complete!"});
+      report(t, {events: [{type: "finish"}]});
+    }; // run_test
+
+
+    var i = 0;
+    var runNext = function() {
+      if (i < ordered_tests.length) {
+        run_test(ordered_tests[i++]);
+        _.defer(runNext);
+      }
+    };
+    _.defer(runNext);
   }
-
 });
 
 
