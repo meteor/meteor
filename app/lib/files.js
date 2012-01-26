@@ -94,14 +94,31 @@ var files = module.exports = {
     return ret;
   },
 
-  // given a path, traverse upwards until we find a .meteor
-  // directory that contains a 'packages' file. returns either the
-  // path to a top-level app or null for no app found. if filepath
-  // isn't given, use cwd.
-  find_app_dir: function (filepath) {
-    var test_dir = filepath || process.cwd();
+
+  // given a path, returns true if it is a meteor application (has a
+  // .meteor directory with a 'packages' file). false otherwise.
+  is_app_dir: function (filepath) {
+    return path.existsSync(path.join(filepath, '.meteor/packages'));
+  },
+
+  // given a path, returns true if it is a meteor package (is a
+  // directory with a 'packages.js' file). false otherwise.
+  //
+  // Note that a directory can be both a package _and_ an application.
+  is_package_dir: function (filepath) {
+    return path.existsSync(path.join(filepath, 'package.js'));
+  },
+
+  // given a predicate function and a starting path, traverse upwards
+  // from the path until we find a path that satisfys the predicate.
+  //
+  // returns either the path to the lowest level directory that passed
+  // the test or null for none found. if starting path isn't given, use
+  // cwd.
+  find_upwards: function (predicate, start_path) {
+    var test_dir = start_path || process.cwd();
     while (test_dir) {
-      if (path.existsSync(path.join(test_dir, '.meteor/packages'))) {
+      if (predicate(test_dir)) {
         break;
       }
       var new_dir = path.dirname(test_dir);
@@ -115,6 +132,11 @@ var files = module.exports = {
       return null;
 
     return test_dir;
+  },
+
+  // compatibility shim. delete when unused.
+  find_app_dir: function (filepath) {
+    return files.find_upwards(files.is_app_dir, filepath);
   },
 
   // create a .gitignore file in dir_path if one doesn't exist. add
