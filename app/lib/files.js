@@ -142,7 +142,6 @@ var files = module.exports = {
   // create a .gitignore file in dir_path if one doesn't exist. add
   // 'entry' to the .gitignore on its own line at the bottom of the
   // file, if the exact line does not already exist in the file.
-  // XXX unused. remove?
   add_to_gitignore: function (dir_path, entry) {
     var filepath = path.join(dir_path, ".gitignore");
     if (path.existsSync(filepath)) {

@@ -113,6 +113,8 @@ var launch_mongo = function (app_dir, port, launch_callback, on_exit_callback) {
   files.mkdir_p(data_path, 0755);
   var pid_path = path.join(app_dir, '.meteor/local/mongod.pid');
   var port_path = path.join(app_dir, '.meteor/local/mongod.port');
+  // add .gitignore if needed.
+  files.add_to_gitignore(path.join(app_dir, '.meteor'), 'local');
 
   // read old pid file, kill old process.
   var pid;
