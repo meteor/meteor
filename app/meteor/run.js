@@ -229,10 +229,11 @@ var start_server = function (bundle_path, port, mongo_url, on_exit_callback) {
   env.PORT = port;
   env.MONGO_URL = mongo_url;
 
-  Status.running = true;
-  proc = spawn(process.execPath,
-               [path.join(bundle_path, 'main.js'), '--keepalive'],
-               {env: env});
+  var proc = spawn(process.execPath,
+                   [path.join(bundle_path, 'main.js'), '--keepalive'],
+                   {env: env});
+
+  // XXX deal with test server logging differently?!
 
   proc.stdout.setEncoding('utf8');
   proc.stdout.on('data', function (data) {
@@ -251,7 +252,6 @@ var start_server = function (bundle_path, port, mongo_url, on_exit_callback) {
       log_to_clients({'exit': 'Exited with code: ' + code});
     }
 
-    Status.running = false;
     on_exit_callback();
   });
 
@@ -466,19 +466,28 @@ exports.run = function (app_dir, bundle_opts, port) {
   var outer_port = port || 3000;
   var inner_port = outer_port + 1;
   var mongo_port = outer_port + 2;
+  var test_port = outer_port + 3;
   var mongo_url = "mongodb://localhost:" + mongo_port + "/meteor";
-
+  var test_mongo_url = "mongodb://localhost:" + mongo_port + "/meteor_test";
   var bundle_path = path.join(app_dir, '.meteor/local/build');
-  // XXX quick hack to be undone shortly. run packages in test mode,
-  // apps in regular mode. apps should run _both_ a regular bundle and a
-  // test bundle.
-  if (files.is_package_dir(app_dir))
+  var test_bundle_path = path.join(app_dir, '.meteor/local/build_test');
+
+  var test_bundle_opts;
+  if (files.is_package_dir(app_dir)) {
+    // If we're running in a package directory, run the tests as the main
+    // app (so we get reload watching and such).
     bundle_opts = _.extend({include_tests: true}, bundle_opts);
+  } else {
+    // Otherwise, make separate test_bundle_opts to trigger a separate
+    // runner.
+    test_bundle_opts = _.extend({include_tests: true}, bundle_opts);
+  }
 
   var started_watching_files = false;
   var warned_about_no_deps_info = false;
 
   var server_handle;
+  var test_server_handle;
   var watcher;
 
   var bundle = function () {
@@ -511,8 +520,11 @@ exports.run = function (app_dir, bundle_opts, port) {
   };
 
   var restart_server = function () {
+    Status.running = false;
     if (server_handle)
       kill_server(server_handle);
+    if (test_server_handle)
+      kill_server(test_server_handle);
 
     server_log = [];
 
@@ -524,12 +536,31 @@ exports.run = function (app_dir, bundle_opts, port) {
       return;
     }
 
+    Status.running = true;
     server_handle = start_server(bundle_path, inner_port, mongo_url, function () {
       // on server exit
+      Status.running = false;
       Status.soft_crashed();
       if (!Status.crashing)
         restart_server();
     });
+
+
+    // launch test bundle and server if needed.
+    if (test_bundle_opts) {
+      try {
+        bundler.bundle(app_dir, test_bundle_path, test_bundle_opts);
+        test_server_handle = start_server(
+          test_bundle_path, test_port, test_mongo_url, function () {
+            // No restarting or crash loop prevention on the test server
+            // for now. We'll see how annoying it is.
+            log_to_clients({'system': "Test server crashed."});
+          });
+      } catch (e) {
+        log_to_clients({'system': "Test bundle failure."});
+      }
+
+    };
   };
 
   var launch = function () {
