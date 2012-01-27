@@ -30,7 +30,9 @@ var require_project = function (cmd, accept_package) {
   var pred = files.is_app_dir;
   if (accept_package)
     pred = function (p) {
-      return files.is_app_dir(p) || files.is_package_dir(p); };
+      return files.is_app_dir(p) ||
+        files.is_package_dir(p) || files.is_package_collection_dir(p);
+    };
 
   var app_dir = files.find_upwards(pred);
   if (!app_dir) {

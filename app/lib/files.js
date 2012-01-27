@@ -109,6 +109,16 @@ var files = module.exports = {
     return path.existsSync(path.join(filepath, 'package.js'));
   },
 
+  // given a path, return true if this is a collection of packages.
+  // This is used to run all the tests in meteor.
+  is_package_collection_dir: function (filepath) {
+    // XXX implementation is kinda specific to our code base, but this
+    // is better than confusing the hell out of someone who names their
+    // project 'packages'
+    return path.basename(filepath) === 'packages' &&
+      path.existsSync(path.join(filepath, 'core/package.js'));
+  },
+
   // given a predicate function and a starting path, traverse upwards
   // from the path until we find a path that satisfys the predicate.
   //
