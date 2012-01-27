@@ -473,14 +473,14 @@ exports.run = function (app_dir, bundle_opts, port) {
   var test_bundle_path = path.join(app_dir, '.meteor/local/build_test');
 
   var test_bundle_opts;
-  if (files.is_package_dir(app_dir)) {
-    // If we're running in a package directory, run the tests as the main
-    // app (so we get reload watching and such).
-    bundle_opts = _.extend({include_tests: true}, bundle_opts);
-  } else {
-    // Otherwise, make separate test_bundle_opts to trigger a separate
-    // runner.
+  if (files.is_app_dir(app_dir)) {
+    // If we're an app, make separate test_bundle_opts to trigger a
+    // separate runner.
     test_bundle_opts = _.extend({include_tests: true}, bundle_opts);
+  } else {
+    // Otherwise we're running in a package directory, run the tests as
+    // the main app (so we get reload watching and such).
+    bundle_opts = _.extend({include_tests: true}, bundle_opts);
   }
 
   var started_watching_files = false;
