@@ -48,7 +48,8 @@ if (typeof Meteor === "undefined") Meteor = {};
 
   //// reactive status stuff
   var status = {
-    status: "startup", connected: false, retry_count: 0
+    status: "waiting", connected: false, retry_count: 0,
+    first: true
   };
   var status_listeners = {}; // context.id -> context
   var status_changed = function () {
@@ -73,7 +74,7 @@ if (typeof Meteor === "undefined") Meteor = {};
     }
 
     // give everyone a chance to munge the message queue.
-    if (status.status !== "startup") {
+    if (!status.first) {
       var msg_list = _.toArray(message_queue);
       _.each(reset_callbacks, function (callback) {
         msg_list = callback(msg_list);
@@ -82,6 +83,8 @@ if (typeof Meteor === "undefined") Meteor = {};
       _.each(msg_list, function (msg) {
         message_queue[next_message_id++] = msg;
       });
+    } else {
+      status.first = false;
     }
 
     // send the pending message queue. this should always be in
