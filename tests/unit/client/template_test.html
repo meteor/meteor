@@ -53,3 +53,38 @@
 <template name="test_table_a3">
   Foo.
 </template>
+
+<template name="test_table_b0">
+  <table>
+    <tbody>
+      {{> test_table_b1}}
+      {{> test_table_b1}}
+      {{> test_table_b1}}
+    </tbody>
+  </table>
+</template>
+
+<template name="test_table_b1">
+  <tr>
+    {{> test_table_b2}}
+  </tr>
+</template>
+
+<template name="test_table_b2">
+  <td>
+    {{> test_table_b3}}
+  </td>
+</template>
+
+<template name="test_table_b3">
+  Foo.
+</template>
+
+
+<template name="test_table_each">
+  <table>
+    {{#each foo}}
+      <tr><td>{{bar}}</td></tr>
+    {{/each}}
+  </table>
+</template>

@@ -636,7 +636,7 @@ test("renderList - list items are reactive", function () {
         return DIV({id: doc.id});
     }
   });
-  onscreen = DIV({style: "display: none;"});
+  var onscreen = DIV({style: "display: none;"});
   onscreen.appendChild(r);
   document.body.appendChild(onscreen);
 

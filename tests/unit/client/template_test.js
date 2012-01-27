@@ -33,13 +33,41 @@ test("template assembly", function () {
 
 
 test("template table assembly", function() {
-  var frag = Template.test_table_a0();
-  var table = _.find(frag.childNodes, function(n) {
-    return n.nodeName == "TABLE";
-  });
-  assert.isTrue(table);
+  var childWithTag = function(node, tag) {
+    return _.find(node.childNodes, function(n) {
+      return n.nodeName === tag;
+    });
+  };
 
-  // This will accurately detect whether TRs in a TABLE in Internet Explorer
-  // are considered "not really there" for lack of an explicit TBODY.
+  var table;
+
+  table = childWithTag(Template.test_table_a0(), "TABLE");
+
+  // table.rows is a great test, as it fails not only when TR/TD tags are
+  // stripped due to improper html-to-fragment, but also when they are present
+  // but don't show up because we didn't create a TBODY for IE.
   assert.equal(table.rows.length, 3);
+
+  // this time with an explicit TBODY
+  table = childWithTag(Template.test_table_b0(), "TABLE");
+  assert.equal(table.rows.length, 3);
+
+  var c = Meteor.Collection();
+  c.insert({bar:'a'});
+  c.insert({bar:'b'});
+  c.insert({bar:'c'});
+  var onscreen = DIV({style: "display: none;"});
+  onscreen.appendChild(Template.test_table_each({foo: c.find()}));
+  document.body.appendChild(onscreen);
+  table = childWithTag(onscreen, "TABLE");
+
+  assert.equal(table.rows.length, 3);
+  var tds = onscreen.getElementsByTagName("TD");
+  assert.equal(tds.length, 3);
+  assert.equal(tds[0].innerHTML, "a");
+  assert.equal(tds[1].innerHTML, "b");
+  assert.equal(tds[2].innerHTML, "c");
+
+
+  document.body.removeChild(onscreen);
 });
