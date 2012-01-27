@@ -24,7 +24,22 @@ test("template assembly", function () {
   document.body.removeChild(onscreen);
 });
 
-
-
 // Test that if a template throws an error, then pending_partials is
 // cleaned up properly (that template rendering doesn't break..)
+
+
+
+
+
+
+test("template table assembly", function() {
+  var frag = Template.test_table_a0();
+  var table = _.find(frag.childNodes, function(n) {
+    return n.nodeName == "TABLE";
+  });
+  assert.isTrue(table);
+
+  // This will accurately detect whether TRs in a TABLE in Internet Explorer
+  // are considered "not really there" for lack of an explicit TBODY.
+  assert.equal(table.rows.length, 3);
+});
