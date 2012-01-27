@@ -476,7 +476,10 @@ exports.run = function (app_dir, bundle_opts, port) {
   if (files.is_app_dir(app_dir)) {
     // If we're an app, make separate test_bundle_opts to trigger a
     // separate runner.
-    test_bundle_opts = _.extend({include_tests: true}, bundle_opts);
+
+    // XXX test_bundle_opts = _.extend({include_tests: true}, bundle_opts);
+    // Disable app dir testing for now! It is not fully developed and we
+    // don't want to burden users yet.
   } else {
     // Otherwise we're running in a package directory, run the tests as
     // the main app (so we get reload watching and such).
