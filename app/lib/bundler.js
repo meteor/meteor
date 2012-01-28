@@ -108,6 +108,19 @@ var PackageInstance = function (pkg, bundle) {
       }
 
       return _.map(ret, function (x) {return "." + x;});
+    },
+
+    // Add the tests for another package. Mostly for internal
+    // use. Like use in that it can take either the package name or a
+    // package object, and can take an array.
+    include_tests: function (names) {
+      if (!(names instanceof Array))
+        names = [names];
+
+      _.each(names, function (name) {
+        var pkg = packages.get(name);
+        self.bundle.include_tests(pkg);
+      });
     }
   };
 

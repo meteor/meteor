@@ -199,15 +199,11 @@ _.extend(Package.prototype, {
     self.source_root = null;
     self.serve_root = null;
 
-    self.api.on_test(function () {
-      _.each(fs.readdir(collection_dir), function (name) {
+    self.api.on_test(function (api) {
+      _.each(fs.readdirSync(collection_dir), function (name) {
         // only take things that are actually packages
-        var subdir = path.join(collection_dir, name);
-        if (files.is_package_dir(subdir)) {
-          var p = packages.get(p);
-          if (p.on_test)
-            p.on_test();
-        }
+        if (files.is_package_dir(path.join(collection_dir, name)))
+          api.include_tests(name);
       });
     });
   }
