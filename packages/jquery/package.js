@@ -2,4 +2,6 @@ Package.describe({
   summary: "Manipulate the DOM using CSS selectors"
 });
 
-Package.client_file('jquery.js');
+Package.on_use(function (api) {
+  api.add_files('jquery.js', 'client');
+});

@@ -5,5 +5,7 @@ Package.describe({
   summary: "Easily create arbitrary multicolumn layouts"
 });
 
-Package.require("jquery");
-Package.client_file('jquery.layout.js');
+Package.on_use(function (api) {
+  api.use('jquery');
+  api.add_files('jquery.layout.js', 'client');
+});

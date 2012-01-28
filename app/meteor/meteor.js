@@ -26,12 +26,25 @@ process.stdout.write(
   process.exit(1);
 };
 
-var require_project = function (cmd) {
-  var app_dir = files.find_app_dir();
-  if (!app_dir) {
-    // This is where you end up if you type 'meteor' with no
-    // args. Be gentle to the noobs..
-    process.stdout.write(
+var require_project = function (cmd, accept_package) {
+  var app_dir = files.find_upwards(files.is_app_dir);
+  if (app_dir)
+    return app_dir;
+
+  var package_dir = files.find_upwards(function (p) {
+    return files.is_package_dir(p) || files.is_package_collection_dir(p);
+  });
+  if (package_dir) {
+    if (accept_package)
+      return package_dir;
+
+    process.stdout.write(cmd + ": Only works on applications, not packages\n");
+    process.exit(1);
+  }
+
+  // This is where you end up if you type 'meteor' with no
+  // args. Be gentle to the noobs..
+  process.stdout.write(
 cmd + ": You're not in a Meteor project directory.\n" +
 "\n" +
 "To create a new Meteor project:\n" +
@@ -40,9 +53,7 @@ cmd + ": You're not in a Meteor project directory.\n" +
 "   meteor create myapp\n" +
 "\n" +
 "For more help, see 'meteor --help'.\n");
-    process.exit(1);
-  }
-  return app_dir;
+  process.exit(1);
 };
 
 // See if mongo is running already. If so, return the current port. If
@@ -113,10 +124,9 @@ Commands.push({
       process.exit(1);
     }
 
-    var app_dir = require_project("run");
-    var bundle_path = path.join(app_dir, '.meteor/local/build');
+    var app_dir = require_project("run", true); // app or package
     var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true };
-    require('./run.js').run(app_dir, bundle_path, bundle_opts, new_argv.port);
+    require('./run.js').run(app_dir, bundle_opts, new_argv.port);
   }
 });
 
@@ -221,7 +231,7 @@ Commands.push({
         process.stderr.write(name + ": already using\n");
       } else {
         project.add_package(app_dir, name);
-        var note = all[name].summary || '';
+        var note = all[name].metadata.summary || '';
         process.stderr.write(name + ": " + note + "\n");
       }
     });
@@ -298,12 +308,12 @@ Commands.push({
     var list = require('../lib/packages.js').list();
     var names = _.keys(list);
     names.sort();
-    var descrs = [];
+    var pkgs = [];
     _.each(names, function (name) {
-      descrs.push(list[name]);
+      pkgs.push(list[name]);
     });
     process.stdout.write("\n" +
-                         require('../lib/packages.js').format_list(descrs) +
+                         require('../lib/packages.js').format_list(pkgs) +
                          "\n");
   }
 });

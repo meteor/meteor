@@ -3,13 +3,24 @@ Package.describe({
   internal: true
 });
 
-// It would be sort of nice if minimongo didn't depend on underscore,
-// so we could ship it separately.
-Package.require('underscore');
-Package.require('json');
+Package.on_use(function (api, where) {
+  where = where || ['client', 'server'];
 
-Package.client_file('minimongo.js');
-Package.client_file('selector.js');
-Package.client_file('sort.js');
-Package.client_file('uuid.js');
-Package.client_file('modify.js');
+  // It would be sort of nice if minimongo didn't depend on
+  // underscore, so we could ship it separately.
+  api.use(['underscore', 'json'], where);
+
+  api.add_files([
+    'minimongo.js',
+    'selector.js',
+    'sort.js',
+    'uuid.js',
+    'modify.js'
+  ], where);
+});
+
+Package.on_test(function (api) {
+  api.use('minimongo', 'client');
+  api.use('tinytest');
+  api.add_files('minimongo_tests.js', 'client');
+});

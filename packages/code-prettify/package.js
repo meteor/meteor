@@ -10,6 +10,9 @@ Package.describe({
 
 // XXX this code dumps symbols into the global namespace (directly
 // onto 'window'.) we need to fix that.
-Package.client_file('prettify.js');
-Package.client_css_file('prettify.css');
-Package.client_css_file('styles/sunburst.css');
+Package.on_use(function (api) {
+  api.add_files([
+    'prettify.js',
+    'prettify.css',
+    'styles/sunburst.css'], "client");
+});

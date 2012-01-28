@@ -1,0 +1,13 @@
+<template name="test_renderList_each">
+  Before{{render_count}}
+  {{#each data}}
+    {{name}}{{weather "here"}}
+  {{/each}}
+  Middle
+  {{#each data2}}
+    {{name}}
+  {{else}}
+    Else
+  {{/each}}
+  After
+</template>

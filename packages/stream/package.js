@@ -3,7 +3,8 @@ Package.describe({
   internal: true
 });
 
-Package.require('underscore');
-
-Package.client_file('stream_client.js');
-Package.server_file('stream_server.js');
+Package.on_use(function (api) {
+  api.use('underscore', ['client', 'server']);
+  api.add_files('stream_client.js', 'client');
+  api.add_files('stream_server.js', 'server');
+});

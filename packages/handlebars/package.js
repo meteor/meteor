@@ -7,14 +7,15 @@ Package.describe({
   summary: "Simple semantic templating language"
 });
 
-
 require('../../packages/handlebars/parse.js'); // XXX lame!!
-// XXX should only be sent if we have handlebars templates in the app..
-Package.client_file('evaluate.js');
+
+Package.on_use(function (api) {
+  // XXX should only be sent if we have handlebars templates in the app..
+  api.add_files('evaluate.js', 'client');
+  api.use('underscore', 'client')
+});
 
 // XXX lots more to do here .. registering this a templating engine,
 // making it the default default, providing the compiler code,
 // depending on the node package (or packaging the compiler
 // ourselves..)
-
-Package.require('underscore');

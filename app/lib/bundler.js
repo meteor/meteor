@@ -8,8 +8,16 @@
 // /app [user code]
 // /app.json: [data for server.js]
 //  - load [list of files to load, relative to root, presumably under /app]
-// /dependencies.json:
-//  - extensions
+// /dependencies.json: files to monitor for changes in development mode
+//  - extensions [list of extensions registered for user code, with dots]
+//  - packages [map from package name to list of paths relative to the package]
+//  - core [paths relative to 'app' in meteor tree]
+//  - app [paths relative to top of app tree]
+//  - exclude [list of regexps for files to ignore (everywhere)]
+//  (for 'core' and 'apps', if a directory is given, you should
+//  monitor everything in the subtree under it minus the stuff that
+//  matches exclude, and if it doesn't exist yet, you should watch for
+//  it to appear)
 //
 // The application launcher is expected to execute /main.js with node,
 // setting the PORT and MONGO_URL environment variables. The enclosed
@@ -17,6 +25,7 @@
 // /static.
 
 var files = require('./files.js');
+var packages = require('./packages.js');
 var crypto = require('crypto');
 var path = require('path');
 var fs = require('fs');
@@ -27,301 +36,331 @@ var _ = require('./third/underscore.js');
 // files to ignore when bundling. node has no globs, so use regexps
 var ignore_files = [
     /~$/, /^\.#/, /^#.*#$/,
-    /^\.DS_Store$/, /^ehthumbs\.db$/, /^Icon.$/, /^Thumbs\.db$/
+    /^\.DS_Store$/, /^ehthumbs\.db$/, /^Icon.$/, /^Thumbs\.db$/,
+    /^\.meteor$/ /* avoids scanning N^2 files when bundling all packages */
 ];
+
+///////////////////////////////////////////////////////////////////////////////
+// PackageInstance
+///////////////////////////////////////////////////////////////////////////////
+
+// Represents the occurrence of a package in a bundle
+var PackageInstance = function (pkg, bundle) {
+  var self = this;
+  self.pkg = pkg;
+  self.bundle = bundle;
+
+  // list of places we've already been used. map from a 'canonicalized
+  // where' to true. 'canonicalized where' is the JSONification of a
+  // sorted array with zero or more elements drawn from the set
+  // 'client', 'server', with each element unique
+  // XXX this is a mess, refactor
+  self.where = {};
+
+  // other packages we've used (with any 'where') -- map from id to package
+  self.using = {}
+
+  // map from where (client, server) to a source file name (relative
+  // to the package) to true
+  self.files = {client: {}, server: {}};
+
+  // files we depend on -- map from rel_path to true
+  self.dependencies = {};
+  if (pkg.name)
+    self.dependencies['package.js'] = true;
+
+  // the API available from on_use / on_test handlers
+  self.api = {
+    // Called when this package wants to make another package be
+    // used. Can also take literal package objects, if you have
+    // anonymous packages you want to use (eg, app packages)
+    use: function (names, where) {
+      if (!(names instanceof Array))
+        names = [names];
+
+      _.each(names, function (name) {
+        var pkg = packages.get(name);
+        self.bundle.use(pkg, where, self);
+      });
+    },
+
+    add_files: function (paths, where) {
+      if (!(paths instanceof Array))
+        paths = [paths];
+      if (!(where instanceof Array))
+        where = [where];
+
+      _.each(where, function (w) {
+        _.each(paths, function (rel_path) {
+          self.add_file(rel_path, w);
+        });
+      });
+    },
+
+    // Return a list of all of the extension that indicate source files
+    // inside this package, INCLUDING leading dots.
+    registered_extensions: function () {
+      var ret = _.keys(self.pkg.extensions);
+
+      for (var id in self.using) {
+        var other_inst = self.using[id];
+        ret = _.union(ret, _.keys(other_inst.pkg.extensions));
+      }
+
+      return _.map(ret, function (x) {return "." + x;});
+    },
+
+    // Add the tests for another package. Mostly for internal
+    // use. Like use in that it can take either the package name or a
+    // package object, and can take an array.
+    include_tests: function (names) {
+      if (!(names instanceof Array))
+        names = [names];
+
+      _.each(names, function (name) {
+        var pkg = packages.get(name);
+        self.bundle.include_tests(pkg);
+      });
+    }
+  };
+
+  if (pkg.name !== "core")
+    self.api.use("core");
+};
+
+_.extend(PackageInstance.prototype, {
+  // Find the function that should be used to handle a source file
+  // found in this package. We'll use handlers that are defined in
+  // this package and in its immediate dependencies. ('extension'
+  // should be the extension of the file without a leading dot.)
+  get_source_handler: function (extension) {
+    var self = this;
+    var candidates = []
+
+    if (extension in self.pkg.extensions)
+      candidates.push(self.pkg.extensions[extension]);
+
+    for (var id in self.using) {
+      var other_inst = self.using[id];
+      var other_pkg = other_inst.pkg;
+      if (extension in other_pkg.extensions)
+        candidates.push(other_pkg.extensions[extension]);
+    }
+
+    // XXX do something more graceful than printing a stack trace and
+    // exiting!! we have higher standards than that!
+
+    if (!candidates.length)
+      return null;
+
+    if (candidates.length > 1)
+      // XXX improve error message (eg, name the packages involved)
+      // and make it clear that it's not a global conflict, but just
+      // among this package's dependencies
+      throw new Error("Conflict: two packages are both trying " +
+                      "to handle ." + extension);
+
+    return candidates[0];
+  },
+
+  add_file: function (rel_path, where) {
+    var self = this;
+
+    if (self.files[where][rel_path])
+      return;
+    self.files[where][rel_path] = true;
+
+    var ext = path.extname(rel_path).substr(1);
+    var handler = self.get_source_handler(ext);
+    if (!handler) {
+      // A package included a source file that we don't have a
+      // processor for. Wouldn't be app source, since we wouldn't have
+      // added it as a source file in the first place.
+      // XXX do something more graceful than printing a stack trace
+      throw new Error("Don't know how to process file: " +
+                      rel_path);
+    }
+
+    handler(self.bundle.api,
+            path.join(self.pkg.source_root, rel_path),
+            path.join(self.pkg.serve_root, rel_path),
+            where);
+
+    self.dependencies[rel_path] = true;
+  }
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// Bundle
+///////////////////////////////////////////////////////////////////////////////
 
 var Bundle = function () {
   var self = this;
 
-  self.loading = null;
-  self.loaded = {};
-  self.extensions = {};
+  // Packages being used. Map from a package id to a PackageInstance.
+  self.packages = {};
 
-  // Map from path name (server relative) to contents of file as buffer.
-  self.client_files = {};
-  self.server_files = {};
+  // Packages that have had tests included. Map from package id to instance
+  self.tests_included = {};
 
-  // list of files to load on the server
-  self.server_load = [];
+  // map from environment, to list of filenames
+  self.js = {client: [], server: []};
 
-  // list of javascript files to tell the client to load
-  self.serve_js = [];
+  // list of filenames
+  self.css = [];
 
-  // list of css files to tell the client to load
-  self.serve_css = [];
+  // Map from environment, to path name (server relative), to contents
+  // of file as buffer.
+  self.files = {client: {}, server: {}};
 
-  // extra HTML to add to <head> and <body>
-  self.head_extra = '';
-  self.body_extra = '';
+  // list of segments of additional HTML for <head>/<body>
+  self.head = [];
+  self.body = [];
 
+  // the API available from register_extension handlers
   self.api = {
-    describe: function () {},
+    /**
+     * This is the ultimate low-level API to add data to the bundle.
+     *
+     * type: "js", "css", "head", "body"
+     *
+     * where: an environment, or a list of one or more environments
+     * ("client", "server", "tests") -- for non-JS resources, the only
+     * legal environment is "client"
+     *
+     * path: the (absolute) path at which the file will be
+     * served. ignored in the case of "head" and "body".
+     *
+     * source_file: the absolute path to read the data from. if path
+     * is set, will default based on that. overridden by data.
+     *
+     * data: the data to send. overrides source_file if present. you
+     * must still set path (except for "head" and "body".)
+     */
+    add_resource: function (options) {
+      var source_file = options.source_file || options.path;
 
-    require: function (name) {
-      if (name in self.loaded)
-        return;
-
-      var was_loading = self.loading;
-      self.loading = name;
-      try {
-        var fullpath = path.join(files.get_package_dir(), name, 'package.js');
-        var code = fs.readFileSync(fullpath).toString();
-        // \n is necessary in case final line is a //-comment
-        var wrapped = "(function(Package,require){" + code + "\n})";
-        // XXX it'd be nice to runInNewContext so that the package
-        // setup code can't mess with our globals, but objects that
-        // come out of runInNewContext have bizarro antimatter
-        // prototype chains and break 'instanceof Array'. for now,
-        // steer clear
-        var func = require('vm').runInThisContext(wrapped, fullpath, true);
-        // XXX would be nice to eliminate require. packages like
-        // 'templating' use this to load other code to run at
-        // bundle-time. and to pull in, eg, 'fs' and 'path' to access
-        // the file system
-        func(self.api, require);
-        // XXX catch circular dependencies
-        self.loaded[name] = true;
-      } finally {
-        self.loading = was_loading;
+      var data = options.data;
+      if (options.data) {
+        var data = options.data;
+        if (!(data instanceof Buffer)) {
+          if (!(typeof data === "string"))
+            throw new Error("Bad type for data");
+          data = new Buffer(data, 'utf8');
+        }
+      } else {
+        if (!source_file)
+          throw new Error("Need either source_file or data");
+        var data = fs.readFileSync(source_file);
       }
-    },
 
-    // XXX probably unify this into a much smaller number of routines
-    // that take more complicated parameters. eg, a hash with keys
-    // filename, data (if you want to provide the data yourself rather
-    // than have it be read from the filename), type (defaulting to
-    // js.) and maybe call it Package.serve for the client and
-    // Package.load for the server?
+      var where = options.where;
+      if (typeof where === "string")
+        where = [where];
+      if (!where)
+        throw new Error("Must specify where");
 
-    // XXX should rename to something like client_js_file
-    client_file: function (file) {
-      var name = path.join("/packages", self.loading, file);
-      var fullpath = path.join(__dirname, '../..', name);
-      self.serve_js.push(name);
-      self.client_files[name] = fs.readFileSync(fullpath);
-    },
+      _.each(where, function (w) {
+        if (options.type === "js") {
+          if (!options.path)
+            throw new Error("Must specify path")
 
-    // XXX should rename to something like server_js_file
-    server_file: function (file) {
-      var name = path.join("/packages", self.loading, file);
-      var fullpath = path.join(__dirname, '../..', name);
-      self.server_files[name] = fs.readFileSync(fullpath);
-      self.server_load.push(name);
-    },
-
-    register_extension: function (extension, callback) {
-      if (extension in self.extensions)
-        // XXX improve error message (eg, name the packages in conflict)
-        // XXX do something more graceful than printing a stack trace and
-        // exiting! this isn't javaland!
-        throw new Error("Conflict: two packages are both trying " +
-                        "to handle ." + extension);
-      self.extensions[extension] = callback;
-    },
-
-    // XXX figure out what the hell we're doing with encodings (and get
-    // consistent about the use of strings vs buffers)
-
-    server_js_buffer: function (path, contents) {
-      // XXX raise error if there is already a file at that path
-      // XXX raise error if contents is not a buffer .. or .. something
-      self.server_files[path] = contents;
-      self.server_load.push(path);
-    },
-
-    client_js_buffer: function (path, contents) {
-      // XXX raise error if there is already a file at that path
-      // XXX raise error if contents is not a buffer .. or .. something
-      self.client_files[path] = contents;
-      self.serve_js.push(path);
-    },
-
-    client_css_buffer: function (path, contents) {
-      // XXX raise error if there is already a file at that path
-      // XXX raise error if contents is not a buffer .. or .. something
-      self.client_files[path] = contents;
-      self.serve_css.push(path);
-    },
-
-    client_css_file: function (file) {
-      var name = path.join("/packages", self.loading, file);
-      var fullpath = path.join(__dirname, '../..', name);
-      self.serve_css.push(name);
-      self.client_files[name] = fs.readFileSync(fullpath);
-    },
-
-    append_head: function (buffer) {
-      // XXX raise error if contents is not a buffer .. or .. something
-      if (self.head_extra) self.head_extra += "\n";
-      self.head_extra += buffer;
-    },
-
-    append_body: function (buffer) {
-      // XXX raise error if contents is not a buffer .. or .. something
-      if (self.body_extra) self.body_extra += "\n";
-      self.body_extra += buffer;
+          if (w === "client" || w === "server") {
+            self.files[w][options.path] = data;
+            self.js[w].push(options.path);
+          } else {
+            throw new Error("Invalid wironment");
+          }
+        } else if (options.type === "css") {
+          if (w !== "client")
+            // XXX might be nice to throw an error here, but then we'd
+            // have to make it so that packages.js ignores css files
+            // that appear in the server directories in an app tree
+            return;
+          if (!options.path)
+            throw new Error("Must specify path")
+          self.files.client[options.path] = data;
+          self.css.push(options.path);
+        } else if (options.type === "head" || options.type === "body") {
+          if (w !== "client")
+            throw new Error("HTML segments can only go to the client");
+          self[options.type].push(data);
+        } else {
+          throw new Error("Unknown type " + options.type);
+        }
+      });
     }
   };
-
-  self.api.register_extension(
-    "js", function (filename, rel_filename, is_client, is_server) {
-      var contents = fs.readFileSync(filename);
-      if (is_client)
-        self.api.client_js_buffer(rel_filename, contents);
-      if (is_server)
-        self.api.server_js_buffer(rel_filename, contents);
-    });
-
-  self.api.register_extension(
-    "css", function (filename, rel_filename, is_client, is_server) {
-      if (!is_client) return; // only for the client.
-      self.api.client_css_buffer(rel_filename, fs.readFileSync(filename));
-    });
 };
 
 _.extend(Bundle.prototype, {
-  // XXX note that this includes dots
-  registeredExtensions: function () {
-    var ret = [];
-    for (var ext in this.extensions)
-      ret.push("." + ext);
-    return ret;
+  _get_instance: function (pkg) {
+    var self = this;
+
+    var inst = self.packages[pkg.id];
+    if (!inst) {
+      inst = new PackageInstance(pkg, self);
+      self.packages[pkg.id] = inst;
+    }
+
+    return inst;
   },
 
-  add_standard_packages: function () {
-    // standard client packages (for now), for the classic meteor stack
-    this.api.require('deps');
-    this.api.require('session');
-    this.api.require('livedata');
-    this.api.require('liveui');
-    this.api.require('templating');
-    this.api.require('startup');
-    this.api.require('past');
+  // Call to add a package to this bundle
+  // if 'where' is given, it's an array of "client" and/or "server"
+  // if 'from' is given, it's the PackageInstance that's doing the
+  // using, or it can be undefined for top level
+  use: function (pkg, where, from) {
+    var self = this;
+    var inst = self._get_instance(pkg);
+
+    if (from)
+      from.using[pkg.id] = inst;
+
+    // get 'canonicalized where'
+    var canon_where = where;
+    if (!canon_where)
+      canon_where = [];
+    if (!(canon_where instanceof Array))
+      canon_where = [canon_where];
+    else
+      canon_where = _.clone(canon_where);
+    canon_where.sort();
+    var canon_where = JSON.stringify(canon_where);
+
+    if (inst.where[canon_where])
+      return; // already used in this environment
+    inst.where[canon_where] = true;
+
+    // XXX detect circular dependencies and print an error. (not sure
+    // what the current code will do)
+
+    if (pkg.on_use)
+      pkg.on_use(inst.api, where);
   },
 
-  // returns paths relative to app_dir
-  compute_user_files: function (app_dir) {
-    // find everything in tree, sorted depth-first alphabetically.
-    var file_list = files.file_list_sync(app_dir,
-                                       this.registeredExtensions());
-    file_list = _.reject(file_list, function (file) {
-      return _.any(ignore_files, function (pattern) {
-        return file.match(pattern);
-      });
-    });
-    file_list.sort(files.sort);
+  include_tests: function (pkg) {
+    var self = this;
+    if (self.tests_included[pkg.id])
+      return;
+    self.tests_included[pkg.id] = true;
 
-    // (Note: we used to have some functionality to let users push
-    // some files to the front of the load order. It was removed
-    // because once we had packages, no app seemed to need it. But you
-    // could fish it out of version control if you wanted to bring it
-    // back.)
-
-    // now push html (template) files ahead of everything else. this
-    // is important because the user wants to be able to say
-    // Template.foo.events = { ... }
-    //
-    // XXX this is kind of hacky. maybe all of the templates should go
-    // in one file? packages should probably have a way to request
-    // this treatment (load order depedency tags?) .. who knows.
-    var htmls = [];
-    _.each(file_list, function (filename) {
-      if (path.extname(filename) === '.html') {
-        htmls.push(filename);
-        file_list = _.reject(file_list, function (f) { return f === filename;});
-      }
-    });
-    file_list = htmls.concat(file_list);
-
-    // now make everything relative to app_dir
-    var prefix = app_dir;
-    if (prefix[prefix.length - 1] !== '/')
-      prefix += '/';
-    file_list = file_list.map(function (abs) {
-      if (app_dir.length >= abs.length ||
-          abs.substr(0, app_dir.length) !== app_dir)
-        // XXX audit to make sure it works in all possible symlink
-        // scenarios
-        throw new Error("internal error: source file outside of app_dir?");
-      return abs.substr(app_dir.length);
-    });
-
-    return file_list;
+    var inst = self._get_instance(pkg);
+    if (inst.pkg.on_test)
+      inst.pkg.on_test(inst.api);
   },
 
-  generate_app_html: function () {
-    var template = fs.readFileSync(path.join(__dirname, "app.html.in"));
-    var f = require('handlebars').compile(template.toString());
-    return f({
-      scripts: this.serve_js,
-      head_extra: this.head_extra,
-      body_extra: this.body_extra,
-      stylesheets: this.serve_css
-    });
-  }
-});
+  // Minify the bundle
+  minify: function () {
+    var self = this;
 
-/**
- * Take the Meteor application in app_dir, and compile it into a
- * bundle at output_path. output_path will be created if it doesn't
- * exist (it will be a directory), and removed if it does exist.
- *
- * options include:
- * - no_minify : don't minify the assets
- * - skip_dev_bundle : don't put any node_modules in the bundle.
- * - symlink_dev_bundle : symlink bundle's node_modules to prebuilt
- *   local installation (to save startup time when running locally,
- *   used by meteor run).
- */
-exports.bundle = function (app_dir, output_path, options) {
-  options = options || {};
-  var bundle = new Bundle;
-  var base = Date.now();
-
-  ////////// Packages //////////
-
-  // has to come before user packages, because we don't (presently)
-  // require packages to declare dependencies on 'standard meteor
-  // stuff' like minimongo
-  bundle.add_standard_packages();
-
-  _.each(require('./project.js').get_packages(app_dir), function (p) {
-    bundle.api.require(p);
-  });
-
-  ////////// User source //////////
-
-  var user_files = bundle.compute_user_files(app_dir);
-
-  _.each(user_files, function (rel_path) {
-    var full_path = path.join(app_dir, rel_path);
-
-    // XXX at some point we should re-work our directory structure and
-    // how we determine which files are for the client and which are for
-    // the server.
-    var is_client = (full_path.indexOf('/server/') === -1);
-    var is_server = (full_path.indexOf('/client/') === -1);
-
-    var ext = path.extname(full_path).substr(1);
-
-    if (!(ext in bundle.extensions))
-      // huh? we used bundle.extensions to build the file list ..
-      throw new Error("internal error: don't have handler for extension?");
-
-    bundle.extensions[ext](full_path, rel_path, is_client, is_server);
-
-  });
-
-  ////////// Minify and bundle files //////////
-
-  if (!options.no_minify) {
     /// Javascript
     var js_concat = "";
-    _.each(bundle.serve_js, function (js_path) {
-      var js_data = bundle.client_files[js_path];
+    _.each(self.js.client, function (js_path) {
+      var js_data = self.files.client[js_path];
       js_concat = js_concat + "\n;\n" +  js_data.toString('utf8');
 
-      delete bundle.client_files[js_path];
+      delete self.files.client[js_path];
     });
 
     var ast = uglify.parser.parse(js_concat);
@@ -334,16 +373,16 @@ exports.bundle = function (app_dir, output_path, options) {
     var digest = hash.digest('hex');
     var name = digest + ".js";
 
-    bundle.client_files[name] = new Buffer(final_code);
-    bundle.serve_js = [name];
+    self.files.client[name] = new Buffer(final_code);
+    self.js.client = [name];
 
     /// CSS
     var css_concat = "";
-    _.each(bundle.serve_css, function (css_path) {
-      var css_data = bundle.client_files[css_path];
+    _.each(self.css, function (css_path) {
+      var css_data = self.files.client[css_path];
       css_concat = css_concat + "\n" +  css_data.toString('utf8');
 
-      delete bundle.client_files[css_path];
+      delete self.files.client[css_path];
     });
 
     var final_css = cleanCSS.process(css_concat);
@@ -353,77 +392,122 @@ exports.bundle = function (app_dir, output_path, options) {
     digest = hash.digest('hex');
     name = digest + ".css";
 
-    bundle.client_files[name] = new Buffer(final_css);
-    bundle.serve_css = [name];
-  }
+    self.files.client[name] = new Buffer(final_css);
+    self.css = [name];
+  },
 
-  // Socket.io is an exceptional file. Push it in manually after
-  // minification (it doesn't like being minified). But still serve it
-  // ourselves instead of letting socket.io do it, so we get gzip and
-  // such (potentially CDN later).
-  bundle.serve_js.unshift('/socketio.static.js');
-  bundle.client_files['/socketio.static.js'] =
-    fs.readFileSync(path.join(
-      files.get_dev_bundle(), 'lib/node_modules',
-      'socket.io/node_modules/socket.io-client/dist/socket.io.min.js'));
+  _generate_app_html: function () {
+    var self = this;
 
-  ////////// Generate bundle //////////
+    var template = fs.readFileSync(path.join(__dirname, "app.html.in"));
+    var f = require('handlebars').compile(template.toString());
+    return f({
+      scripts: self.js.client,
+      head_extra: self.head.join('/n'),
+      body_extra: self.body.join('/n'),
+      stylesheets: self.css
+    });
+  },
 
-  var app_json = {};
-  var dependencies_json = {};
+  // The extensions registered by the application package, if
+  // any. Kind of a hack.
+  _app_extensions: function () {
+    var self = this;
+    var exts = {};
 
-  // foo/bar => foo/.build.bar
-  var build_path = path.join(path.dirname(output_path),
-                             '.build.' + path.basename(output_path));
+    for (var id in self.packages) {
+      var inst = self.packages[id];
+      if (!inst.name)
+        _.each(inst.api.registered_extensions(), function (ext) {
+          exts[ext] = true;
+        });
+    }
 
-  // XXX cleaner error handling. don't make the humans read an
-  // exception (and, make suitable for use in automated systems)
-  files.rm_recursive(build_path);
-  files.mkdir_p(build_path, 0755);
+    return _.keys(exts);
+  },
 
-  files.cp_r(path.join(__dirname, '../server'),
-             path.join(build_path, 'server'), {ignore: ignore_files});
+  // dev_bundle_mode should be "skip", "symlink", or "copy"
+  write_to_directory: function (output_path, project_dir, dev_bundle_mode) {
+    var self = this;
+    var app_json = {};
+    var dependencies_json = {core: [], app: [], packages: {}};
+    var is_app = files.is_app_dir(project_dir);
 
-  if (options.skip_dev_bundle)
-    ;
-  else if (options.symlink_dev_bundle)
-    fs.symlinkSync(path.join(files.get_dev_bundle(), 'lib/node_modules'),
-                   path.join(build_path, 'server/node_modules'));
-  else
-    files.cp_r(path.join(files.get_dev_bundle(), 'lib/node_modules'),
-               path.join(build_path, 'server/node_modules'),
-               {ignore: ignore_files});
+    if (is_app)
+      dependencies_json.app.push('.meteor/packages');
 
-  if (path.existsSync(path.join(app_dir, 'public'))) {
-    files.cp_r(path.join(app_dir, 'public'),
-               path.join(build_path, 'static'), {ignore: ignore_files});
-  }
-  for (var rel_path in bundle.client_files) {
-    var full_path = path.join(build_path, 'static', rel_path);
-    files.mkdir_p(path.dirname(full_path), 0755);
-    fs.writeFileSync(full_path, bundle.client_files[rel_path]);
-  }
+    // --- Set up build area ---
 
-  app_json.load = [];
-  files.mkdir_p(path.join(build_path, 'app'), 0755);
-  _.each(bundle.server_load, function (rel_path) {
-    var path_in_bundle = path.join('app', rel_path);
-    var full_path = path.join(build_path, path_in_bundle);
-    app_json.load.push(path_in_bundle);
-    files.mkdir_p(path.dirname(full_path), 0755);
-    fs.writeFileSync(full_path, bundle.server_files[rel_path]);
-  });
+    // foo/bar => foo/.build.bar
+    var build_path = path.join(path.dirname(output_path),
+                               '.build.' + path.basename(output_path));
 
-  fs.writeFileSync(path.join(build_path, 'app.html'),
-                   bundle.generate_app_html());
+    // XXX cleaner error handling. don't make the humans read an
+    // exception (and, make suitable for use in automated systems)
+    files.rm_recursive(build_path);
+    files.mkdir_p(build_path, 0755);
 
-  fs.writeFileSync(path.join(build_path, 'unsupported.html'),
-                   fs.readFileSync(path.join(__dirname, "unsupported.html")));
+    // --- Core runner code ---
 
-  fs.writeFileSync(path.join(build_path, 'main.js'),
+    files.cp_r(path.join(__dirname, '../server'),
+               path.join(build_path, 'server'), {ignore: ignore_files});
+    dependencies_json.core.push('server');
+
+    // --- Third party dependencies ---
+
+    if (dev_bundle_mode === "symlink")
+      fs.symlinkSync(path.join(files.get_dev_bundle(), 'lib/node_modules'),
+                     path.join(build_path, 'server/node_modules'));
+    else if (dev_bundle_mode === "copy")
+      files.cp_r(path.join(files.get_dev_bundle(), 'lib/node_modules'),
+                 path.join(build_path, 'server/node_modules'),
+                 {ignore: ignore_files});
+    else
+      /* dev_bundle_mode === "skip" */;
+
+    // --- Static assets ---
+
+    if (is_app) {
+      if (path.existsSync(path.join(project_dir, 'public'))) {
+        files.cp_r(path.join(project_dir, 'public'),
+                   path.join(build_path, 'static'), {ignore: ignore_files});
+      }
+      dependencies_json.app.push('public');
+    }
+
+    // -- Client code --
+    for (var rel_path in self.files.client) {
+      var full_path = path.join(build_path, 'static', rel_path);
+      files.mkdir_p(path.dirname(full_path), 0755);
+      fs.writeFileSync(full_path, self.files.client[rel_path]);
+    }
+
+    // ---  Server code and generated files ---
+
+    app_json.load = [];
+    files.mkdir_p(path.join(build_path, 'app'), 0755);
+    for (var rel_path in self.files.server) {
+      var path_in_bundle = path.join('app', rel_path);
+      var full_path = path.join(build_path, path_in_bundle);
+      app_json.load.push(path_in_bundle);
+      files.mkdir_p(path.dirname(full_path), 0755);
+      fs.writeFileSync(full_path, self.files.server[rel_path]);
+    }
+
+    fs.writeFileSync(path.join(build_path, 'app.html'),
+                     self._generate_app_html());
+    dependencies_json.core.push('lib/app.html.in');
+
+    fs.writeFileSync(path.join(build_path, 'unsupported.html'),
+                     fs.readFileSync(path.join(__dirname, "unsupported.html")));
+    dependencies_json.core.push('lib/unsupported.html');
+
+    // --- Documentation, and running from the command line ---
+
+    fs.writeFileSync(path.join(build_path, 'main.js'),
 "require(require('path').join(__dirname, 'server/server.js'));\n");
 
-  fs.writeFileSync(path.join(build_path, 'README'),
+    fs.writeFileSync(path.join(build_path, 'README'),
 "This is a Meteor application bundle. It has only one dependency,\n" +
 "node.js (with the 'fibers' package). To run the application:\n" +
 "\n" +
@@ -437,20 +521,85 @@ exports.bundle = function (app_dir, output_path, options) {
 "\n" +
 "Find out more about Meteor at meteor.com.\n");
 
-  // XXX enhance dependencies to include all dependencies, not just
-  // user code, so we can get reload behavior when developing packages
-  // or meteor itself. that includes (1) any file that went in the
-  // bundle (from 'static', 'app/server', or a package), (2)
-  // package.js for each package that was included. also conceptually
-  // we need to restart on 'meteor add'.
-  dependencies_json.extensions = bundle.registeredExtensions();
+    // --- Metadata ---
 
-  fs.writeFileSync(path.join(build_path, 'app.json'),
-                   JSON.stringify(app_json));
-  fs.writeFileSync(path.join(build_path, 'dependencies.json'),
-                   JSON.stringify(dependencies_json));
+    dependencies_json.extensions = self._app_extensions();
+    dependencies_json.exclude = _.pluck(ignore_files, 'source');
+    dependencies_json.packages = {};
+    for (var id in self.packages) {
+      var inst = self.packages[id];
+      if (inst.pkg.name)
+        dependencies_json.packages[inst.pkg.name] = _.keys(inst.dependencies);
+    }
 
-  // XXX cleaner error handling (no exceptions)
-  files.rm_recursive(output_path);
-  fs.renameSync(build_path, output_path);
+    fs.writeFileSync(path.join(build_path, 'app.json'),
+                     JSON.stringify(app_json));
+    fs.writeFileSync(path.join(build_path, 'dependencies.json'),
+                     JSON.stringify(dependencies_json));
+
+    // --- Move into place ---
+
+    // XXX cleaner error handling (no exceptions)
+    files.rm_recursive(output_path);
+    fs.renameSync(build_path, output_path);
+  }
+
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// Main
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Take the Meteor project (app or package) in project_dir, and compile it
+ * into a bundle at output_path. output_path will be created if it
+ * doesn't exist (it will be a directory), and removed if it does
+ * exist.
+ *
+ * It's unlikely to be useful to run a project without including its
+ * tests, but it's well-defined.
+ *
+ * options include:
+ * - no_minify : don't minify the assets
+ * - skip_dev_bundle : don't put any node_modules in the bundle.
+ * - symlink_dev_bundle : symlink bundle's node_modules to prebuilt
+ *   local installation (to save startup time when running locally,
+ *   used by meteor run).
+ * - include_tests : include tests for the project
+ */
+exports.bundle = function (project_dir, output_path, options) {
+  options = options || {};
+
+  // Create a bundle, add the project
+  packages.flush();
+  var bundle = new Bundle;
+  var project = packages.get_for_dir(project_dir, ignore_files);
+  bundle.use(project);
+
+  // Include tests if requested
+  if (options.include_tests) {
+    // in the future, let use specify the driver, instead of hardcoding?
+    bundle.use(packages.get('test-in-browser'));
+    bundle.include_tests(project);
+  }
+
+  // Minify and bundle
+  if (!options.no_minify)
+    bundle.minify();
+
+  // Socket.io get special handling. Push it in manually after
+  // minification (it doesn't like being minified). But still serve it
+  // ourselves instead of letting socket.io do it, so we get gzip and
+  // such (potentially CDN later).
+  bundle.js.client.unshift('/socketio.static.js');
+  bundle.files.client['/socketio.static.js'] =
+    fs.readFileSync(path.join(
+      files.get_dev_bundle(), 'lib/node_modules',
+      'socket.io/node_modules/socket.io-client/dist/socket.io.min.js'));
+
+  // Write to disk
+  var dev_bundle_mode =
+    options.skip_dev_bundle ? "skip" : (
+      options.symlink_dev_bundle ? "symlink" : "copy");
+  bundle.write_to_directory(output_path, project_dir, dev_bundle_mode);
 };

@@ -1,8 +1,11 @@
 Package.describe({
-  summary: "Meteor's automatic dependency framework",
+  summary: "Session variable",
   internal: true
 });
 
-Package.require('underscore');
+Package.on_use(function (api, where) {
+  where = where || ['client', 'server'];
 
-Package.client_file('session.js');
+  api.use(['underscore', 'deps'], where);
+  api.add_files('session.js', where);
+});

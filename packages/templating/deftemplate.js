@@ -34,8 +34,7 @@ Meteor._hook_handlebars_each = function () {
       render_empty: Meteor._def_template(null, _.bind(options.inverse, null, {}))
     });
 
-    return "<div id='" + id +
-      "'><!-- for replacement with findlive each --></div>";
+    return "<!-- TEMPLATE_REPLACE_"+id+" for findlive each -->";
   };
 };
 
@@ -54,32 +53,57 @@ Meteor._def_template = function (name, raw_func) {
     var in_partial = !!Meteor._pending_partials;
     if (!in_partial)
       Meteor._pending_partials = {};
-    // XXX should catch exceptions and clean up pending_partials if
-    // stack is unwound
-    var html = raw_func(data, {
-      helpers: name ? Template[name] : {},
-      partials: Meteor._partials
-    });
 
-    // XXX see the 'clean' function in jquery for a much more
-    // elaborate implementation of this. it's smart about
-    // instantiating, eg, a tr inside a table, not directly inside
-    // a div. we probably need to do that..
-    var div = document.createElement("div");
-    div.innerHTML = html;
-    var frag = document.createDocumentFragment();
-    while (div.firstChild)
-      frag.appendChild(div.firstChild);
+    // XXX it'd be really nice to wrap this in try..catch, because we
+    // need to clear _pending_partials or templates won't work
+    // anymore! but, it sucks to lose the original stack trace (by
+    // rethrowing the exception.) what to do? maybe save off the stack
+    // before rethrowing the exception, and somehow make it available
+    // to the user?
+//    try {
+      var html = raw_func(data, {
+        helpers: name ? Template[name] : {},
+        partials: Meteor._partials
+      });
+/*    } catch (e) {
+      if (!in_partial)
+        Meteor._pending_partials = null;
+      throw e;
+    } */
+
+
+    var frag = Meteor._htmlToFragment(html);
 
     if (!in_partial) {
       var traverse = function (elt) {
         for (var i = 0; i < elt.childNodes.length; i++) {
           var child = elt.childNodes[i];
-          var replacement = child.id && Meteor._pending_partials[child.id];
-          if (replacement) {
-            elt.replaceChild(replacement, child);
-            delete Meteor._pending_partials[child.id];
-            child = elt.childNodes[i];
+          var idMatchResult =
+                (child.nodeType == 8 /*comment*/ &&
+                 /^\s*TEMPLATE_REPLACE_(\S+)/.exec(child.nodeValue));
+          var childId = idMatchResult && idMatchResult[1];
+          var replacement_frag = childId && Meteor._pending_partials[childId];
+
+          if (replacement_frag) {
+            // Table-body fix:
+            if (child.parentNode.nodeName == "TABLE" &&
+                _.any(replacement_frag.childNodes,
+                      function (n) { return n.nodeName == "TR"; })) {
+              // Inserting a TR directly into a TABLE without an intervening
+              // TBODY won't display properly in IE.  So wrap a new TBODY
+              // around the fragment, in all browsers.
+              var tbody = document.createElement("tbody");
+              tbody.appendChild(replacement_frag);
+              replacement_frag = document.createDocumentFragment();
+              replacement_frag.appendChild(tbody);
+            }
+
+            var range = new Meteor.ui._LiveRange(Meteor.ui._tag, child);
+            range.replace_contents(replacement_frag);
+            range.destroy();
+            delete Meteor._pending_partials[childId];
+            i--;
+            continue;
           }
           traverse(child);
         }
@@ -117,16 +141,160 @@ Meteor._def_template = function (name, raw_func) {
   // XXX hacky. sucks that we have to depend on handlebars here.
   if (name) {
     Meteor._partials[name] = function (data) {
-      if (!Meteor._pending_partials)
+      if (!Meteor._pending_partials) {
         // XXX lame error
         throw new Error("this partial may only be invoked from inside a Template.foo-style template");
+      }
       var frag = func(data);
       var id = Meteor._pending_partials_idx_nonce++;
       Meteor._pending_partials[id] = frag;
-      return "<div id='" + id + "'><!-- for replacement with partial --></div>";
+      return "<!-- TEMPLATE_REPLACE_"+id+" for partial -->";
     };
   }
 
   if (!name)
     return func;
+  else
+    return null;
 };
+
+
+// Adapted from jquery html() and "clean".
+_.extend(Meteor, (function() {
+
+  // --- One-time set-up:
+
+  var testDiv = document.createElement("div");
+  testDiv.innerHTML = "   <link/><table></table>";
+
+  // Tests that, if true, indicate browser quirks present.
+  var quirks = {
+    // IE loses initial whitespace when setting innerHTML.
+    leadingWhitespaceKilled: (testDiv.firstChild.nodeType !== 3),
+
+    // IE may insert an empty tbody tag in a table.
+    tbodyInsertion: testDiv.getElementsByTagName("tbody").length > 0,
+
+    // IE loses some tags in some environments (requiring extra wrapper).
+    tagsLost: testDiv.getElementsByTagName("link").length == 0
+  };
+
+  // Set up map of wrappers for different nodes.
+  var wrapMap = {
+    option: [ 1, "<select multiple='multiple'>", "</select>" ],
+    legend: [ 1, "<fieldset>", "</fieldset>" ],
+    thead: [ 1, "<table>", "</table>" ],
+    tr: [ 2, "<table><tbody>", "</tbody></table>" ],
+    td: [ 3, "<table><tbody><tr>", "</tr></tbody></table>" ],
+    col: [ 2, "<table><tbody></tbody><colgroup>", "</colgroup></table>" ],
+    area: [ 1, "<map>", "</map>" ],
+    _default: [ 0, "", "" ]
+  };
+  _.extend(wrapMap, {
+    optgroup: wrapMap.option,
+    tbody: wrapMap.thead,
+    tfoot: wrapMap.thead,
+    colgroup: wrapMap.thead,
+    caption: wrapMap.thead,
+    th: wrapMap.td
+  });
+  if (quirks.tagsLost) {
+    // trick from jquery.  initial text is ignored when we take lastChild.
+    wrapMap._default = [ 1, "div<div>", "</div>" ];
+  }
+
+  var rleadingWhitespace = /^\s+/,
+      rxhtmlTag = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([\w:]+)[^>]*)\/>/ig,
+      rtagName = /<([\w:]+)/,
+      rtbody = /<tbody/i,
+      rhtml = /<|&#?\w+;/,
+      rnoInnerhtml = /<(?:script|style)/i;
+
+
+  return {
+    _htmlToFragment: function(html) {
+      var doc = document; // node factory
+      var frag = doc.createDocumentFragment();
+
+      if (! html.length) {
+        // empty, do nothing
+      } else if (! rhtml.test(html)) {
+        // Just text.
+        frag.appendChild(doc.createTextNode(html));
+      } else {
+        // General case.
+        // Replace self-closing tags
+        html = html.replace(rxhtmlTag, "<$1></$2>");
+        // Use first tag to determine wrapping needed.
+        var firstTagMatch = rtagName.exec(html);
+        var firstTag = (firstTagMatch ? firstTagMatch[1].toLowerCase() : "");
+        var wrapData = wrapMap[firstTag] || wrapMap._default;
+
+        var container = doc.createElement("div");
+        // insert wrapped HTML into a DIV
+        container.innerHTML = wrapData[1] + html + wrapData[2];
+        // set "container" to inner node of wrapper
+        var unwraps = wrapData[0];
+        while (unwraps--) {
+          container = container.lastChild;
+        }
+
+        if (quirks.tbodyInsertion && ! rtbody.test(html)) {
+          // Any tbody we find was created by the browser.
+          var tbodies = container.getElementsByTagName("tbody");
+          _.each(tbodies, function(n) {
+            if (! n.firstChild) {
+              // spurious empty tbody
+              n.parentNode.removeChild(n);
+            }
+          });
+        }
+
+        if (quirks.leadingWhitespaceKilled) {
+          var wsMatch = rleadingWhitespace.exec(html);
+          if (wsMatch) {
+            container.insertBefore(doc.createTextNode(wsMatch[0]),
+                                   container.firstChild);
+          }
+        }
+
+        // Reparent children of container to frag.
+        while (container.firstChild)
+          frag.appendChild(container.firstChild);
+      }
+
+      return frag;
+    },
+    _fragmentToHtml: function(frag) {
+      frag = frag.cloneNode(true); // deep copy, don't touch original!
+
+      var doc = document; // node factory
+
+      var firstElement = frag.firstChild;
+      while (firstElement && firstElement.nodeType !== 1) {
+        firstElement = firstElement.nextSibling;
+      }
+
+      var container = doc.createElement("div");
+
+      if (! firstElement) {
+        // no tags!
+        container.appendChild(frag);
+      } else {
+        var firstTag = firstElement.nodeName;
+        var wrapData = wrapMap[firstTag] || wrapMap._default;
+
+        container.innerHTML = wrapData[1] + wrapData[2];
+        var unwraps = wrapData[0];
+        while (unwraps--) {
+          container = container.lastChild;
+        }
+
+        container.appendChild(frag);
+      }
+
+      return container.innerHTML;
+    }
+  };
+})());
+

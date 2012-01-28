@@ -306,6 +306,8 @@ Meteor.ui = Meteor.ui || {};
       if (walk === this._end)
         break;
       walk = walk.nextSibling;
+      if (!walk)
+        throw new Error("LiveRanges must begin and end on adjacent siblings");
     }
   };
 
@@ -354,6 +356,8 @@ Meteor.ui = Meteor.ui || {};
       if (walk === this._end)
         break;
       walk = next;
+      if (!walk)
+        throw new Error("LiveRanges must begin and end on adjacent siblings");
     }
 
     // Fix up range pointers on new fragment -- including our own
@@ -374,4 +378,5 @@ Meteor.ui = Meteor.ui || {};
 
     return ret;
   };
+
 })();

@@ -2,5 +2,7 @@ Package.describe({
   summary: "pushState module from the jQuery project"
 });
 
-Package.require("jquery");
-Package.client_file('jquery.history.js');
+Package.on_use(function (api) {
+  api.use('jquery');
+  api.add_files('jquery.history.js', 'client');
+});

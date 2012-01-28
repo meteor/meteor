@@ -3,5 +3,6 @@ Package.describe({
   internal: true
 });
 
-Package.client_file('past.js');
-Package.server_file('past.js');
+Package.on_use(function (api) {
+  api.add_files('past.js', ['client', 'server']);
+});

@@ -1,0 +1,83 @@
+.test_table {
+  font-family: Arial, sans-serif;
+  width: 500px;
+  font-size: 16px;
+}
+
+.test_table .group {
+  border-left: 1px solid #ddd;
+}
+
+.test_table .group .group {
+  margin-left: 20px;
+}
+
+.test_table .test {
+  margin-left: 20px;
+}
+
+.test_table .testname {
+  line-height: 24px;
+  vertical-align: middle;
+  text-decoration: underline;
+}
+
+.test_table .groupname {
+  font-weight: bold;
+  background: #ddd;
+  padding-left: 5px;
+  line-height: 24px;
+  vertical-align: middle;
+  font-size: 16px;
+}
+
+.test_table .event {
+  margin-left: 20px;
+  font-size: 14px;
+  border-left: 2px solid #def;
+  padding: 4px;
+  position: relative;
+  width: 600px;
+}
+
+.test_table .test .testrow { position: relative; overflow: hidden; /*hasLayout*/ }
+
+.test_table .running .testname { color: #66c; /* blue */ }
+.test_table .failed .testname { color: #900; /* red */ }
+.test_table .succeeded .testname { color: #090; /* green */ }
+
+.test_table .teststatus {
+  position: absolute;
+  height: 100%;
+  width: 100px;
+  right: 80px;
+  top: 0;
+  text-align: center;
+  line-height: 24px;
+  vertical-align: middle;
+}
+
+.test_table .testtime {
+  position: absolute;
+  height: 100%;
+  width: 75px;
+  margin-right: 5px;
+  right: 0;
+  top: 0;
+  text-align: right;
+  line-height: 24px;
+  vertical-align: middle;
+  font-size: 14px;
+  color: #666;
+}
+
+.test_table .succeeded .teststatus { color: #090; /* green */  background: #cfc; }
+.test_table .failed .teststatus { color: #900; /* red */  background: #fcc; }
+.test_table .running .teststatus { color: #ccc; }
+
+.test_table .event .expected_fail { color: #600; }
+.test_table .event .fail { color: #d00; }
+.test_table .event .exception { color: #d00; }
+.test_table .event .nodata { color: #ccc; font-style: italic; }
+.test_table .event .xtimes { font-weight: bold; }
+

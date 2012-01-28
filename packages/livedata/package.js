@@ -3,14 +3,16 @@ Package.describe({
   internal: true
 });
 
-Package.require('json');
-Package.require('underscore');
-Package.require('session');
-Package.require('minimongo');
-Package.require('stream');
+Package.on_use(function (api) {
+  api.use('stream');
+  api.use(['json', 'underscore'], 'server');
+  api.use(['json', 'underscore', 'deps', 'minimongo'], 'client');
 
-Package.client_file('livedata_client.js');
+  api.add_files('livedata_client.js', 'client');
+  api.add_files([
+    'uuid.js',
+    'livedata_server.js',
+    'mongo_driver.js'
+  ], 'server');
 
-Package.server_file('uuid.js');
-Package.server_file('livedata_server.js');
-Package.server_file('mongo_driver.js');
+});
