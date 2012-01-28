@@ -27,15 +27,12 @@ process.stdout.write(
 };
 
 var require_project = function (cmd, accept_package) {
-  var pred = files.is_app_dir;
-  if (accept_package)
-    pred = function (p) {
-      return files.is_app_dir(p) ||
-        files.is_package_dir(p) || files.is_package_collection_dir(p);
-    };
+  var project_dir = files.find_upwards(function (p) {
+    return files.is_app_dir(p) ||
+      files.is_package_dir(p) || files.is_package_collection_dir(p);
+  });
 
-  var app_dir = files.find_upwards(pred);
-  if (!app_dir) {
+  if (!project_dir) {
     // This is where you end up if you type 'meteor' with no
     // args. Be gentle to the noobs..
     process.stdout.write(
@@ -49,7 +46,13 @@ cmd + ": You're not in a Meteor project directory.\n" +
 "For more help, see 'meteor --help'.\n");
     process.exit(1);
   }
-  return app_dir;
+
+  if (!accept_package && !files.is_app_dir(project_dir)) {
+    process.stdout.write(cmd + ": Only works on applications, not packages\n");
+    process.exit(1);
+  }
+
+  return project_dir;
 };
 
 // See if mongo is running already. If so, return the current port. If
