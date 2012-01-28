@@ -414,7 +414,7 @@ _.extend(DependencyWatcher.prototype, {
       return path.basename(filepath).match(regexp);
     });
 
-    return !excluded_by_pattern;
+    return excluded_by_pattern;
   },
 
   // Should we fire if this file changes?
