@@ -266,7 +266,7 @@ Collection._compileSelector = function (selector) {
   var _func;
   eval("_func = (function(f,literals){return function(doc){return " +
        Collection._exprForSelector(selector, literals) +
-       ";};})")
+       ";};})");
   return _func(Collection._f, literals);
 };
 

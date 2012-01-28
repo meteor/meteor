@@ -22,17 +22,6 @@ Template.test_table.data = function() {
   return resultTree;
 };
 
-Template.test.summary = function() {
-  var grouped = _.groupBy(this.events, function(e) { return e.type; });
-  var buf = [];
-  _.each(grouped, function(v,k) {
-    if (k != "finish")
-      buf.push(k+": "+v.length);
-  });
-  buf.sort();
-  return buf.join(", ");
-};
-
 Template.test.test_status_display = function() {
   var status = _testStatus(this);
   if (status == "failed") {
@@ -74,7 +63,22 @@ Template.test.eventsArray = function() {
     return e.type != "finish";
   });
 
-  var dupLists = _.groupBy(
+  var partitionBy = function(seq, func) {
+    var result = [];
+    var lastValue = {};
+    _.each(seq, function(x) {
+      var newValue = func(x);
+      if (newValue === lastValue) {
+        result[result.length-1].push(x);
+      } else {
+        lastValue = newValue;
+        result.push([x]);
+      }
+    });
+    return result;
+  };
+
+  var dupLists = partitionBy(
     _.map(events, function(e) {
       return {obj: e, str: JSON.stringify(e)};
     }), function(x) { return x.str; });

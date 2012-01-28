@@ -40,8 +40,17 @@ _.extend(globals.test, {
     };
   },
 
-  ok: function () {
-    report(current_test, {events: [{type: "ok"}]});
+  ok: function (doc) {
+    var ok = {type: "ok"};
+    if (doc) {
+      ok.details = doc;
+    }
+    if (expecting_failure) {
+      //ok.type = "fail";
+      ok.details["was_expecting_failure"] = true;
+      expecting_failure = false;
+    }
+    report(current_test, {events: [ok]});
   },
 
   expect_fail: function () {
@@ -195,9 +204,9 @@ var test_assert = {
     }
 
     if (actual)
-      test.ok();
+      test.ok({message: actual.message});
     else
-      test.fail({type: "throws"}); // XXX what else
+      test.fail({type: "throws"});
   },
 
   isTrue: function (v) {

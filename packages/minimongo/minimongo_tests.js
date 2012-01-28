@@ -562,6 +562,8 @@ test("minimongo - modify", function () {
                  expected: JSON.stringify(result),
                  actual: JSON.stringify(copy)
                 });
+    } else {
+      test.ok();
     }
   };
   var exception = function (doc, mod) {
@@ -604,6 +606,7 @@ test("minimongo - modify", function () {
   modify({a: {}}, {$set: {'a.3': 12}}, {a: {'3': 12}});
   modify({a: []}, {$set: {'a.3': 12}}, {a: [null, null, null, 12]});
   modify({}, {$set: {'': 12}}, {'': 12}); // tested on mongo
+  test.expect_fail();
   exception({}, {$set: {'.': 12}}); // tested on mongo
   modify({}, {$set: {'. ': 12}}, {'': {' ': 12}}); // tested on mongo
   modify({}, {$inc: {'... ': 12}}, {'': {'': {'': {' ': 12}}}}); // tested
@@ -773,6 +776,7 @@ test("minimongo - modify", function () {
          {a: {}, q: {2: {r: 12}}});
   exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2'}}); // tested
   exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2.r'}}); // tested
+  test.expect_fail();
   exception({a: {b: 12}, q: []}, {$rename: {'q.1': 'x'}}); // tested
   test.expect_fail();
   exception({a: {b: 12}, q: []}, {$rename: {'q.1.j': 'x'}}); // tested

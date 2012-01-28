@@ -7,7 +7,11 @@ if (typeof Meteor === "undefined") Meteor = {};
   Meteor._debug = function (/* varargs */) {
     if (typeof console !== 'undefined' &&
         typeof console.log !== 'undefined') {
-      console.log.apply(console, arguments);
+      if (arguments.length == 0) {
+        console.log(); // IE Companion breaks otherwise
+      } else {
+        console.log.apply(console, arguments);
+      }
     }
   }
 })();

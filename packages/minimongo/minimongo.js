@@ -83,7 +83,7 @@ Collection.Query.prototype.fetch = function (length) {
   if (self.db_objects === null)
     self.db_objects = self._getRawObjects();
 
-  var idx_end = length ? (length + self.cursor_pos) : undefined;
+  var idx_end = length ? (length + self.cursor_pos) : self.db_objects.length;
   var objects = self.db_objects.slice(self.cursor_pos, idx_end);
   self.cursor_pos += objects.length;
 
@@ -207,7 +207,7 @@ Collection.Query.prototype._getRawObjects = function () {
     results.sort(self.sort_f);
 
   var idx_start = self.skip || 0;
-  var idx_end = self.limit ? (self.limit + idx_start) : undefined;
+  var idx_end = self.limit ? (self.limit + idx_start) : results.length;
   return results.slice(idx_start, idx_end);
 };
 
