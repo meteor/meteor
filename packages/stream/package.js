@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use('underscore', ['client', 'server']);
+  api.use(['underscore', 'logging'], ['client', 'server']);
   api.add_files('stream_client.js', 'client');
   api.add_files('stream_server.js', 'server');
 });

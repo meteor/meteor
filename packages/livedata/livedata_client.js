@@ -17,7 +17,7 @@ if (typeof Meteor === "undefined") Meteor = {};
     _.each(data, function (changes, collection_name) {
       var coll = collections[collection_name];
       if (!coll) {
-        console && console.log(
+        Meteor._debug(
           "discarding data received for unknown collection " +
             JSON.stringify(collection_name));
         return;
@@ -112,8 +112,7 @@ if (typeof Meteor === "undefined") Meteor = {};
         // Generate an id for the object.
         // XXX mutates the object passed in. that is not cool.
         if (obj._id)
-          console && console.log(
-            "WARNING: trying to insert object w/ _id set");
+          Meteor._debug("WARNING: trying to insert object w/ _id set");
         var _id = Collection.uuid();
         obj._id = _id;
 

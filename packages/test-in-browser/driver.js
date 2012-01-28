@@ -6,7 +6,6 @@ Meteor.startup(function () {
 });
 
 var run_tests = function () {
-  console.log("running tests");
   setTimeout(function () {
     //resetResults();
     test.run();

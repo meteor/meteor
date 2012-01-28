@@ -117,7 +117,7 @@ if (typeof Meteor === "undefined") Meteor = {};
       socket = undefined;
 
       old_socket.on('connect', function () {
-        if (console) console.log("DEBUG: OLD SOCKET RECONNECTED", old_socket);
+        Meteor._debug("DEBUG: OLD SOCKET RECONNECTED", old_socket);
         old_socket.disconnect();
       });
     }
