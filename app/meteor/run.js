@@ -557,6 +557,11 @@ exports.run = function (app_dir, bundle_opts, port) {
       if (!deps_info) {
         // We don't know what files to watch for changes, so we have to exit.
         process.stdout.write("\nPlease fix the problem and restart.\n");
+
+        // XXX calling process.exit like this leaves mongod running!
+        // One solution would be to try to kill mongo in this case. Or
+        // we could try to bundle before we launch mongo, so in this case
+        // mongo would never have been started.
         process.exit(1);
       }
       start_watching();
