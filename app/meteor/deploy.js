@@ -40,7 +40,8 @@ var meteor_rpc = function (rpc_name, method, site, query_params, callback) {
   return r;
 }
 
-var deploy_app = function (url, app_dir, opt_debug, opt_set_password) {
+var deploy_app = function (url, app_dir, opt_debug, opt_tests,
+                           opt_set_password) {
   var parsed_url = parse_url(url);
 
   // a bit contorted here to make sure we ask for the password before
@@ -49,19 +50,21 @@ var deploy_app = function (url, app_dir, opt_debug, opt_set_password) {
   with_password(parsed_url.hostname, function (password) {
     if (opt_set_password)
       get_new_password(function (set_password) {
-        bundle_and_deploy(parsed_url.hostname, app_dir, opt_debug,
+        bundle_and_deploy(parsed_url.hostname, app_dir, opt_debug, opt_tests,
                           password, set_password);
       });
     else
-      bundle_and_deploy(parsed_url.hostname, app_dir, opt_debug, password);
+      bundle_and_deploy(parsed_url.hostname, app_dir, opt_debug, opt_tests,
+                        password);
   });
 };
 
-var bundle_and_deploy = function (site, app_dir, opt_debug, password,
-                                  set_password) {
+var bundle_and_deploy = function (site, app_dir, opt_debug, opt_tests,
+                                  password, set_password) {
   var build_dir = path.join(app_dir, '.meteor/local/build_tar');
   var bundle_path = path.join(build_dir, 'bundle');
-  var bundle_opts = { skip_dev_bundle: true, no_minify: !!opt_debug };
+  var bundle_opts = { skip_dev_bundle: true, no_minify: !!opt_debug,
+                      include_tests: opt_tests };
 
   process.stdout.write('Deploying to ' + site + '.  Bundling ... ');
   require('../lib/bundler.js').bundle(app_dir, bundle_path, bundle_opts);
