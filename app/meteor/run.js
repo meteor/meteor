@@ -474,6 +474,9 @@ var start_update_checks = function () {
 
 // XXX leave a pidfile and check if we are already running
 
+// This function never returns and will call process.exit() if it
+// can't continue. If you change this, remember to call
+// watcher.destroy() as appropriate.
 exports.run = function (app_dir, bundle_opts, port) {
   var outer_port = port || 3000;
   var inner_port = outer_port + 1;
@@ -498,7 +501,7 @@ exports.run = function (app_dir, bundle_opts, port) {
     bundle_opts = _.extend({include_tests: true}, bundle_opts);
   }
 
-  var started_watching_files = false;
+  var deps_info = null;
   var warned_about_no_deps_info = false;
 
   var server_handle;
@@ -520,12 +523,16 @@ exports.run = function (app_dir, bundle_opts, port) {
       }
     }
 
-    if (deps_raw) {
+    if (deps_raw)
+      deps_info = JSON.parse(deps_raw.toString());
+  };
+
+  var start_watching = function () {
+    if (deps_info) {
       if (watcher)
         watcher.destroy();
 
-      var deps = JSON.parse(deps_raw.toString());
-      watcher = new DependencyWatcher(deps, app_dir, function () {
+      watcher = new DependencyWatcher(deps_info, app_dir, function () {
         if (Status.crashing)
           log_to_clients({'system': "=> Modified -- restarting."});
         Status.reset();
@@ -547,10 +554,17 @@ exports.run = function (app_dir, bundle_opts, port) {
       bundle();
     } catch (e) {
       log_to_clients({system: e.stack});
+      if (!deps_info) {
+        // We don't know what files to watch for changes, so we have to exit.
+        process.stdout.write("\nPlease fix the problem and restart.\n");
+        process.exit(1);
+      }
+      start_watching();
       Status.hard_crashed();
       return;
     }
 
+    start_watching();
     Status.running = true;
     server_handle = start_server(bundle_path, inner_port, mongo_url, function () {
       // on server exit
