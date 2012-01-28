@@ -445,7 +445,11 @@ Commands.push({
       .describe('delete', "permanently delete this deployment")
       .boolean('debug')
       .describe('debug', 'deploy in debug mode (don\'t minify, etc)')
+      .boolean('tests')
+//      .describe('tests', 'deploy the tests instead of the actual application')
       .usage(
+        // XXX document --tests in the future, once we publicly
+        // support tests
 "Usage: meteor deploy <site> [--password] [--delete] [--debug]\n" +
 "\n" +
 "Deploys the project in your current directory to Meteor's servers.\n" +
@@ -474,9 +478,10 @@ Commands.push({
     if (new_argv.delete) {
       deploy.delete_app(new_argv._[1]);
     } else {
-      var app_dir = path.resolve(require_project("bundle"));
-      deploy.deploy_app(new_argv._[1], app_dir, new_argv.debug,
-                        new_argv.password);
+      // accept packages iff we're deploying tests
+      var project_dir = path.resolve(require_project("bundle", new_argv.tests));
+      deploy.deploy_app(new_argv._[1], project_dir, new_argv.debug,
+                        new_argv.tests, new_argv.password);
     }
   }
 });
