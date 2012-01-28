@@ -36,7 +36,8 @@ var _ = require('./third/underscore.js');
 // files to ignore when bundling. node has no globs, so use regexps
 var ignore_files = [
     /~$/, /^\.#/, /^#.*#$/,
-    /^\.DS_Store$/, /^ehthumbs\.db$/, /^Icon.$/, /^Thumbs\.db$/
+    /^\.DS_Store$/, /^ehthumbs\.db$/, /^Icon.$/, /^Thumbs\.db$/,
+    /^\.meteor$/ /* avoids scanning N^2 files when bundling all packages */
 ];
 
 ///////////////////////////////////////////////////////////////////////////////

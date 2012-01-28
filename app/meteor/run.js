@@ -343,8 +343,8 @@ _.extend(DependencyWatcher.prototype, {
   _scan: function (initial, filepath) {
     var self = this;
 
-    if (_.indexOf(self.exclude_paths, filepath) !== -1)
-      return;
+    if (self._is_excluded(filepath))
+      return false;
 
     try {
       var stats = fs.lstatSync(filepath)
@@ -403,14 +403,26 @@ _.extend(DependencyWatcher.prototype, {
     }
   },
 
+  // Should we even bother to scan/recurse into this file?
+  _is_excluded: function (filepath) {
+    var self = this;
+
+    if (_.indexOf(self.exclude_paths, filepath) !== -1)
+      return true;
+
+    var excluded_by_pattern = _.any(self.exclude_patterns, function (regexp) {
+      return path.basename(filepath).match(regexp);
+    });
+
+    return !excluded_by_pattern;
+  },
+
   // Should we fire if this file changes?
   _is_interesting: function (filepath) {
     var self = this;
 
-    // Skip things that match exclude_patterns
-    for (var i = 0; i < self.exclude_patterns.length; i++)
-      if (path.basename(filepath).match(self.exclude_patterns[i]))
-        return;
+    if (self._is_excluded(filepath))
+      return false;
 
     var in_any_dir = function (dirs) {
       return _.any(dirs, function (dir) {
