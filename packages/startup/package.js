@@ -8,6 +8,8 @@ var _ = require('../../packages/underscore/underscore.js');
 
 Package.on_use(function (api, where) {
   where = where || ['client', 'server'];
+  if (!(where instanceof Array))
+    where = [where];
 
   if (_.indexOf(where, 'client') !== -1)
     api.add_files('startup_client.js', 'client');

@@ -395,15 +395,19 @@ _.extend(Bundle.prototype, {
     });
   },
 
-  // All extensions registered by any loaded package.
-  _all_extensions: function () {
+  // The extensions registered by the application package, if
+  // any. Kind of a hack.
+  _app_extensions: function () {
     var self = this;
     var exts = {};
 
-    for (var id in self.packages)
-      _.each(self.packages[id].api.registered_extensions(), function (ext) {
-        exts[ext] = true;
-      });
+    for (var id in self.packages) {
+      var inst = self.packages[id];
+      if (!inst.name)
+        _.each(inst.api.registered_extensions(), function (ext) {
+          exts[ext] = true;
+        });
+    }
 
     return _.keys(exts);
   },
@@ -505,12 +509,13 @@ _.extend(Bundle.prototype, {
 
     // --- Metadata ---
 
-    dependencies_json.extensions = self._all_extensions();
+    dependencies_json.extensions = self._app_extensions();
     dependencies_json.exclude = _.pluck(ignore_files, 'source');
     dependencies_json.packages = {};
     for (var id in self.packages) {
       var inst = self.packages[id];
-      dependencies_json.packages[inst.pkg.name] = _.keys(inst.dependencies);
+      if (inst.pkg.name)
+        dependencies_json.packages[inst.pkg.name] = _.keys(inst.dependencies);
     }
 
     fs.writeFileSync(path.join(build_path, 'app.json'),
