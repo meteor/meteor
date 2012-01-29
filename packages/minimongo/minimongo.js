@@ -171,16 +171,10 @@ Collection.Query.prototype.observe = function (options) {
 
   var handle = new Collection.LiveResultsSet;
   _.extend(handle, {
+    collection: self.collection,
     stop: function () {
       delete self.collection.queries[qid];
-    },
-    indexOf: function (id) {
-      for (var i = 0; i < query.results.length; i++)
-        if (query.results[i]._id === id)
-          return i;
-      return -1;
-    },
-    collection: self.collection
+    }
   });
   return handle;
 };

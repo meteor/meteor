@@ -793,7 +793,7 @@ test("minimongo - modify", function () {
 
 // XXX test update() (selecting docs, multi, upsert..)
 
-test("minimongo - livequery", function () {
+test("minimongo - observe", function () {
   // XXX needs tests!
-  // don't forget tests for stop, indexOf
+  // don't forget tests for stop
 });
