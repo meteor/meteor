@@ -7,9 +7,9 @@ Session.set('editing_itemname', null);
 Meteor.subscribe('lists', {}, function () {
   // Once the lists have loaded, select the first one.
   if (!Session.get('list_id')) {
-    var lists = Lists.find({}, {sort: {name: 1}, limit: 1});
-    if (lists.count() > 0)
-      Router.setList(lists.get(0)._id);
+    var list = Lists.findOne({}, {sort: {name: 1}});
+    if (list)
+      Router.setList(list._id);
   }
 });
 
