@@ -68,11 +68,24 @@ Collection.Query = function (collection, selector, options) {
     this.reactive = (options.reactive === undefined) ? true : options.reactive;
 };
 
-// fetch array of documents from the cursor.  defaults to all
-// remaining docs, or limited to specified length.  returns [] once
-// all documents have been consumed.
-Collection.Query.prototype.fetch = function (length) {
+Collection.Query.prototype.rewind = function () {
   var self = this;
+  self.db_objects = null;
+  self.cursor_pos = 0;
+};
+
+Collection.prototype.findOne = function (selector, options) {
+  options = options || {};
+  options.limit = 1;
+  return this.find(selector, options).fetch()[0];
+};
+
+Collection.Query.prototype.forEach = function (callback) {
+  var self = this;
+  var doc;
+
+  if (self.db_objects === null)
+    self.db_objects = self._getRawObjects();
 
   if (self.reactive)
     self._markAsReactive({added: true,
@@ -80,53 +93,25 @@ Collection.Query.prototype.fetch = function (length) {
                           changed: true,
                           moved: true});
 
-  if (self.db_objects === null)
-    self.db_objects = self._getRawObjects();
-
-  var idx_end = length ? (length + self.cursor_pos) : self.db_objects.length;
-  var objects = self.db_objects.slice(self.cursor_pos, idx_end);
-  self.cursor_pos += objects.length;
-
-  var results = [];
-  for (var i = 0; i < objects.length; i++)
-    results.push(Collection._deepcopy(objects[i]));
-  return results;
-};
-
-Collection.Query.prototype.rewind = function () {
-  var self = this;
-  self.db_objects = null;
-  self.cursor_pos = 0;
-};
-
-Collection.Query.prototype.get = function (offset) {
-  var self = this;
-  offset = offset || 0;
-  return self.fetch(offset + 1).pop();
-};
-
-Collection.prototype.findOne = function (selector, options) {
-  return this.find(selector, options).get();
-};
-
-Collection.STOP = 'stop';
-Collection.Query.prototype.forEach = function (callback) {
-  var self = this;
-  var doc;
-
-  while ((doc = self.get()))
-    if (callback(doc) === Collection.STOP)
-      // callback requests we break out of forEach
-      return;
+  while (self.cursor_pos < self.db_objects.length)
+    callback(Collection._deepcopy(self.db_objects[self.cursor_pos++]));
 };
 
 Collection.Query.prototype.map = function (callback) {
   var self = this;
   var res = [];
-  var doc;
-
-  while ((doc = self.get()))
+  self.forEach(function (doc) {
     res.push(callback(doc));
+  });
+  return res;
+};
+
+Collection.Query.prototype.fetch = function () {
+  var self = this;
+  var res = [];
+  self.forEach(function (doc) {
+    res.push(doc);
+  });
   return res;
 };
 
@@ -171,16 +156,10 @@ Collection.Query.prototype.observe = function (options) {
 
   var handle = new Collection.LiveResultsSet;
   _.extend(handle, {
+    collection: self.collection,
     stop: function () {
       delete self.collection.queries[qid];
-    },
-    indexOf: function (id) {
-      for (var i = 0; i < query.results.length; i++)
-        if (query.results[i]._id === id)
-          return i;
-      return -1;
-    },
-    collection: self.collection
+    }
   });
   return handle;
 };

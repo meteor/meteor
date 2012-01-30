@@ -105,30 +105,15 @@
     self.cursor.rewind();
   };
 
-  Cursor.prototype.fetch = function (length) {
+  Cursor.prototype.fetch = function () {
     var self = this;
     var future = new Future;
-    var res = [];
 
-    self.cursor.each(function (err, doc) {
-      if (err)
-        future.return(err);
-      else if (!doc)
-        future.return(res);
-
-      res.push(doc);
-
-      if (length && res.length === length)
-        // immediately return w/o consuming another doc in the iterator
-        future.return(res);
+    self.cursor.toArray(function (err, res) {
+      future.return(err || res);
     });
 
     return future.wait();
-  };
-
-  Cursor.prototype.get = function (i) {
-    var self = this;
-    return self.fetch(i + 1)[0];
   };
 
   Cursor.prototype.count = function () {
@@ -136,7 +121,7 @@
     var future = new Future;
 
     self.cursor.count(function (err, res) {
-      future.return(res);
+      future.return(err || res);
     });
 
     return future.wait();

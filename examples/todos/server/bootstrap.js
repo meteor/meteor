@@ -44,6 +44,7 @@ Meteor.startup(function () {
         var info = data[i].contents[j];
         Todos.insert({list_id: list_id,
                       text: info[0],
+                      timestamp: (new Date()).getTime(),
                       tags: info.slice(1)});
       }
     }
