@@ -115,41 +115,34 @@ test("minimongo - cursors", function () {
   var q = c.find();
   assert.equal(q.count(), 20);
 
-  // first 5
-  res = q.fetch(5);
-  assert.length(res, 5);
-  for (var i = 0; i < 5; i++)
+  // fetch
+  res = q.fetch();
+  assert.length(res, 20);
+  for (var i = 0; i < 20; i++)
     assert.equal(res[i].i, i);
-  // next 5
-  res = q.fetch(5);
-  assert.length(res, 5);
-  for (var i = 0; i < 5; i++)
-    assert.equal(res[i].i, i + 5);
-  // get
-  res = q.get();
-  assert.equal(res.i, 10);
-  res = q.get(2);
-  assert.equal(res.i, 13);
-  // foreach should consume 3 objects
+  // everything empty
+  assert.length(q.fetch(), 0);
+  q.rewind();
+
+  // forEach
   var count = 0;
   q.forEach(function (obj) {
-    count++;
-    if (count === 3)
-      return Collection.STOP;
+    assert.equal(obj.i, count++);
   });
-  res = q.get(0);
-  assert.equal(res.i, 17);
-
-  // rewind
+  assert.equal(count, 20);
+  // everything empty
+  assert.length(q.fetch(), 0);
   q.rewind();
-  assert.equal(q.get().i, 0);
-  // remaining 19 in map
-  res = q.map(function (x) { return x.i; });
-  assert.length(res, 19);
-  for (var i = 0; i < 19; i++)
-    assert.equal(res[i], i + 1);
 
-  // findOne
+  // map
+  res = q.map(function (obj) { return obj.i * 2; });
+  assert.length(res, 20);
+  for (var i = 0; i < 20; i++)
+    assert.equal(res[i], i * 2);
+  // everything empty
+  assert.length(q.fetch(), 0);
+
+  // findOne (and no rewind first)
   assert.equal(c.findOne({i: 0}).i, 0);
   assert.equal(c.findOne({i: 1}).i, 1);
   var id = c.findOne({i: 2})._id;

@@ -261,7 +261,9 @@ if (typeof Meteor === "undefined") Meteor = {};
       },
 
       findOne: function (selector, options) {
-        return this.find(selector, options).get(0);
+        options = options || {};
+        options.limit = 1;
+        return this.find(selector, options).fetch()[0];
       },
 
       insert: function (doc) {
