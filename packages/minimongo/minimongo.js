@@ -406,9 +406,6 @@ Collection._findInResults = function (query, doc) {
 };
 
 Collection._insertInSortedList = function (cmp, array, value) {
-console.log(cmp,array,value);
-
-
   if (array.length === 0) {
     array.push(value);
     return 0;
