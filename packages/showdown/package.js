@@ -13,12 +13,12 @@ Package.on_use(function (api, where) {
   where = where || ["client", "server"];
   where = where instanceof Array ? where : [where];
 
-  Package.add_files("showdown.js", where);
+  api.add_files("showdown.js", where);
 
   // XXX what we really want to do is, load template-integration after
   // handlebars, iff handlebars was included in the project.
   if (_.indexOf(where, "client") !== -1) {
-    Package.depend("handlebars");
-    Package.source("template-integration.js");
+    api.use("handlebars", "client");
+    api.add_files("template-integration.js", "client");
   }
 });
