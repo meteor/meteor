@@ -268,7 +268,9 @@ var packages = module.exports = {
     var ret = {};
     var dir = files.get_package_dir();
     _.each(fs.readdirSync(dir), function (name) {
-      ret[name] = packages.get(name);
+      // skip .meteor directory
+      if (path.existsSync(path.join(dir, name, 'package.js')))
+        ret[name] = packages.get(name);
     });
 
     return ret;
