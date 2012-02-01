@@ -21,6 +21,7 @@ var server_log = [];
 var Status = {
   running: false, // is server running now?
   crashing: false, // does server crash whenever we start it?
+  listening: false, // do we expect the server to be listening now.
   counter: 0, // how many crashes in rapid succession
 
   reset: function () {
@@ -47,6 +48,10 @@ var Status = {
   }
 };
 
+// List of queued requests. Each item in the list is a function to run
+// when the inner app is ready to receive connections.
+var request_queue = [];
+
 ////////// Outer Proxy Server //////////
 //
 // calls callback once proxy is actively listening on outer and
@@ -56,13 +61,7 @@ var start_proxy = function (outer_port, inner_port, callback) {
   callback = callback || function () {};
 
   var p = httpProxy.createServer(function (req, res, proxy) {
-    if (Status.running) {
-      // server is running. things are hunky dory!
-      proxy.proxyRequest(req, res, {
-        host: '127.0.0.1',
-        port: inner_port
-      });
-    } else {
+    if (Status.crashing) {
       // sad face. send error logs.
       // XXX formatting! text/plain is bad
       res.writeHead(200, {'Content-Type': 'text/plain'});
@@ -79,6 +78,20 @@ var start_proxy = function (outer_port, inner_port, callback) {
       });
 
       res.end();
+    } else if (Status.listening) {
+      // server is listening. things are hunky dory!
+      proxy.proxyRequest(req, res, {
+        host: '127.0.0.1', port: inner_port
+      });
+    } else {
+      // Not listening yet. Queue up request.
+      var buffer = httpProxy.buffer(req);
+      request_queue.push(function () {
+        proxy.proxyRequest(req, res, {
+          host: '127.0.0.1', port: inner_port,
+          buffer: buffer
+        });
+      });
     }
   });
 
@@ -95,6 +108,16 @@ var start_proxy = function (outer_port, inner_port, callback) {
     }
 
     process.exit(1);
+  });
+
+  // don't spin forever if the app doesn't respond. instead return an
+  // error immediately. This shouldn't happen much since we try to not
+  // send requests if the app is down.
+  p.proxy.on('proxyError', function (err, req, res) {
+    res.writeHead(503, {
+      'Content-Type': 'text/plain'
+    });
+    res.end('Unexpected error.');
   });
 
   p.listen(outer_port, callback);
@@ -221,7 +244,8 @@ var log_to_clients = function (msg) {
 
 ////////// Launch server process //////////
 
-var start_server = function (bundle_path, port, mongo_url, on_exit_callback) {
+var start_server = function (bundle_path, port, mongo_url,
+                             on_exit_callback, on_listen_callback) {
   // environment
   var env = {};
   for (var k in process.env)
@@ -237,7 +261,14 @@ var start_server = function (bundle_path, port, mongo_url, on_exit_callback) {
 
   proc.stdout.setEncoding('utf8');
   proc.stdout.on('data', function (data) {
-    data && log_to_clients({stdout: data});
+    if (!data) return;
+
+    // string must match server.js
+    if (data.match(/^LISTENING\s*$/)) {
+      on_listen_callback && on_listen_callback();
+    } else {
+      log_to_clients({stdout: data});
+    }
   });
 
   proc.stderr.setEncoding('utf8');
@@ -543,6 +574,7 @@ exports.run = function (app_dir, bundle_opts, port) {
 
   var restart_server = function () {
     Status.running = false;
+    Status.listening = false;
     if (server_handle)
       kill_server(server_handle);
     if (test_server_handle)
@@ -574,9 +606,15 @@ exports.run = function (app_dir, bundle_opts, port) {
     server_handle = start_server(bundle_path, inner_port, mongo_url, function () {
       // on server exit
       Status.running = false;
+      Status.listening = false;
       Status.soft_crashed();
       if (!Status.crashing)
         restart_server();
+    }, function () {
+      // on listen
+      Status.listening = true;
+      _.each(request_queue, function (f) { f(); });
+      request_queue = [];
     });
 
 
