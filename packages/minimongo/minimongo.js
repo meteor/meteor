@@ -1,14 +1,11 @@
 // XXX indexes
 // XXX type checking on selectors (graceful error if malformed)
-// XXX merge ad-hoc live query object and Query
-
-// XXX keep observe()s running after they're killed, because usually
-// the dependency tracker is going to spin them up again right away.
+// XXX merge ad-hoc live query object and Cursor
 
 // Collection: a set of documents that supports queries and modifiers.
 
-// Query: a specification for a particular subset of documents, w/
-// a defined order, limit, and offset.  creating a Query with Collection.find(),
+// Cursor: a specification for a particular subset of documents, w/
+// a defined order, limit, and offset.  creating a Cursor with Collection.find(),
 
 // LiveResultsSet: the return value of a live query.
 
@@ -40,19 +37,25 @@ Collection = function () {
 // XXX add one more sort form: "key"
 // XXX tests
 Collection.prototype.find = function (selector, options) {
-  return new Collection.Query(this, selector, options);
+  // default syntax for everything is to omit the selector argument.
+  // but if selector is explicitly passed in as false or undefined, we
+  // want a selector that matches nothing.
+  if (arguments.length === 0)
+    selector = {};
+
+  return new Collection.Cursor(this, selector, options);
 };
 
 // don't call this ctor directly.  use Collection.find().
-Collection.Query = function (collection, selector, options) {
+Collection.Cursor = function (collection, selector, options) {
   if (!options) options = {};
 
   this.collection = collection;
 
-  if (typeof selector === "string") {
+  if ((typeof selector === "string") || (typeof selector === "number")) {
     // stash for fast path
     this.selector_id = selector;
-    this.selector_f = Collection._compileSelector({_id: selector});
+    this.selector_f = Collection._compileSelector(selector);
   } else {
     this.selector_f = Collection._compileSelector(selector);
     this.sort_f = options.sort ? Collection._compileSort(options.sort) : null;
@@ -68,19 +71,22 @@ Collection.Query = function (collection, selector, options) {
     this.reactive = (options.reactive === undefined) ? true : options.reactive;
 };
 
-Collection.Query.prototype.rewind = function () {
+Collection.Cursor.prototype.rewind = function () {
   var self = this;
   self.db_objects = null;
   self.cursor_pos = 0;
 };
 
 Collection.prototype.findOne = function (selector, options) {
+  if (arguments.length === 0)
+    selector = {};
+
   options = options || {};
   options.limit = 1;
   return this.find(selector, options).fetch()[0];
 };
 
-Collection.Query.prototype.forEach = function (callback) {
+Collection.Cursor.prototype.forEach = function (callback) {
   var self = this;
   var doc;
 
@@ -97,7 +103,7 @@ Collection.Query.prototype.forEach = function (callback) {
     callback(Collection._deepcopy(self.db_objects[self.cursor_pos++]));
 };
 
-Collection.Query.prototype.map = function (callback) {
+Collection.Cursor.prototype.map = function (callback) {
   var self = this;
   var res = [];
   self.forEach(function (doc) {
@@ -106,7 +112,7 @@ Collection.Query.prototype.map = function (callback) {
   return res;
 };
 
-Collection.Query.prototype.fetch = function () {
+Collection.Cursor.prototype.fetch = function () {
   var self = this;
   var res = [];
   self.forEach(function (doc) {
@@ -115,7 +121,7 @@ Collection.Query.prototype.fetch = function () {
   return res;
 };
 
-Collection.Query.prototype.count = function () {
+Collection.Cursor.prototype.count = function () {
   var self = this;
 
   if (self.reactive)
@@ -130,7 +136,31 @@ Collection.Query.prototype.count = function () {
 // the handle that comes back from observe.
 Collection.LiveResultsSet = function () {};
 
-Collection.Query.prototype.observe = function (options) {
+// options to contain:
+//  * callbacks:
+//    - added (object, before_index)
+//    - changed (new_object, at_index)
+//    - moved (object, old_index, new_index) - can only fire with changed()
+//    - removed (id, at_index)
+//  * sort: sort descriptor
+//
+// attributes available on returned query handle:
+//  * stop(): end updates
+//  * indexOf(id): return current index of object in result set, or -1
+//  * collection: the collection this query is querying
+//
+// iff x is a returned query handle, (x instanceof
+// Collection.LiveResultsSet) is true
+//
+// initial results delivered through added callback
+// XXX maybe callbacks should take a list of objects, to expose transactions?
+// XXX maybe support field limiting (to limit what you're notified on)
+// XXX maybe support limit/skip
+// XXX it'd be helpful if removed got the object that just left the
+// query, not just its id
+// XXX document that initial results will definitely be delivered before we return [do, add to asana]
+
+Collection.Cursor.prototype.observe = function (options) {
   var self = this;
 
   if (self.skip || self.limit)
@@ -138,7 +168,7 @@ Collection.Query.prototype.observe = function (options) {
 
   var qid = self.collection.next_qid++;
 
-  // XXX merge this object w/ "this" Query.  they're the same.
+  // XXX merge this object w/ "this" Cursor.  they're the same.
   var query = self.collection.queries[qid] = {
     selector_f: self.selector_f, // not fast pathed
     sort_f: self.sort_f,
@@ -167,11 +197,11 @@ Collection.Query.prototype.observe = function (options) {
 // constructs sorted array of matching objects, but doesn't copy them.
 // respects sort, skip, and limit properties of the query.
 // if sort_f is falsey, no sort -- you get the natural order
-Collection.Query.prototype._getRawObjects = function () {
+Collection.Cursor.prototype._getRawObjects = function () {
   var self = this;
 
   // fast path for single ID value
-  if (self.selector_id)
+  if (self.selector_id && (self.selector_id in self.collection.docs))
     return [self.collection.docs[self.selector_id]];
 
   // slow path for arbitrary selector, sort, skip, limit
@@ -190,7 +220,7 @@ Collection.Query.prototype._getRawObjects = function () {
   return results.slice(idx_start, idx_end);
 };
 
-Collection.Query.prototype._markAsReactive = function (options) {
+Collection.Cursor.prototype._markAsReactive = function (options) {
   var self = this;
 
   var context = Meteor.deps.Context.current;
@@ -233,36 +263,11 @@ Collection.prototype.insert = function (doc) {
   }
 };
 
-// options to contain:
-//  * callbacks:
-//    - added (object, before_index)
-//    - changed (new_object, at_index)
-//    - moved (object, old_index, new_index) - can only fire with changed()
-//    - removed (id, at_index)
-//  * sort: sort descriptor
-//
-// attributes available on returned query handle:
-//  * stop(): end updates
-//  * indexOf(id): return current index of object in result set, or -1
-//  * collection: the collection this query is querying
-//
-// iff x is a returned query handle, (x instanceof
-// Collection.LiveResultsSet) is true
-//
-// initial results delivered through added callback
-// XXX maybe callbacks should take a list of objects, to expose transactions?
-// XXX maybe support field limiting (to limit what you're notified on)
-// XXX maybe support limit/skip
-// XXX it'd be helpful if removed got the object that just left the
-// query, not just its id
-// XXX document that initial results will definitely be delivered before we return [do, add to asana]
-
 Collection.prototype.remove = function (selector) {
   var self = this;
   var remove = [];
   var query_remove = [];
-  if (typeof(selector) === "string")
-    selector = {_id: selector};
+
   var selector_f = Collection._compileSelector(selector);
   for (var id in self.docs) {
     var doc = self.docs[id];
@@ -288,13 +293,10 @@ Collection.prototype.remove = function (selector) {
 // XXX atomicity: if multi is true, and one modification fails, do
 // we rollback the whole operation, or what?
 Collection.prototype.update = function (selector, mod, options) {
-  if (typeof(selector) === "string")
-    selector = {_id: selector};
-
   if (!options) options = {};
   // Default to multi. This is the oppposite of mongo. We'll see how it goes.
   if (typeof(options.multi) === "undefined")
-    options.multi = true
+    options.multi = true;
 
   var self = this;
   var any = false;

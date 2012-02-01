@@ -65,7 +65,17 @@ test("minimongo - basics", function () {
   assert.length(c.find({type: "kitten"}).fetch(), 1);
   assert.length(c.find({type: "cryptographer"}).fetch(), 3);
 
-  c.remove({});
+  c.remove(null);
+  c.remove(false);
+  c.remove(undefined);
+  assert.equal(c.find().count(), 4);
+
+  c.remove({_id: null});
+  c.remove({_id: false});
+  c.remove({_id: undefined});
+  assert.equal(c.find().count(), 4);
+
+  c.remove();
   assert.equal(0, c.find().count());
 
   c.insert({_id: 1, name: "strawberry", tags: ["fruit", "red", "squishy"]});
@@ -78,6 +88,19 @@ test("minimongo - basics", function () {
   assert.length(c.find({tags: "flower"}).fetch(), 1);
   assert.length(c.find({tags: "fruit"}).fetch(), 2);
   assert.length(c.find({tags: "red"}).fetch(), 3);
+
+  assert.equal(c.findOne(1).name, "strawberry");
+  assert.equal(c.findOne(2).name, "apple");
+  assert.equal(c.findOne(3).name, "rose");
+  assert.equal(c.findOne(4), undefined);
+  assert.equal(c.findOne("abc"), undefined);
+  assert.equal(c.findOne(undefined), undefined);
+
+  assert.equal(c.find(1).count(), 1);
+  assert.equal(c.find(4).count(), 0);
+  assert.equal(c.find("abc").count(), 0);
+  assert.equal(c.find(undefined).count(), 0);
+  assert.equal(c.find().count(), 3);
 
   var ev = "";
   var makecb = function (tag) {
@@ -195,6 +218,21 @@ test("minimongo - selector_compiler", function () {
   // empty selectors
   match({}, {});
   match({}, {a: 12});
+
+  // scalars
+  match(1, {_id: 1, a: 'foo'});
+  nomatch(1, {_id: 2, a: 'foo'});
+  match('a', {_id: 'a', a: 'foo'});
+  nomatch('a', {_id: 'b', a: 'foo'});
+
+  // safety
+  nomatch(undefined, {});
+  nomatch(undefined, {_id: 'foo'});
+  nomatch(false, {_id: 'foo'});
+  nomatch(null, {_id: 'foo'});
+  nomatch({_id: undefined}, {_id: 'foo'});
+  nomatch({_id: false}, {_id: 'foo'});
+  nomatch({_id: null}, {_id: 'foo'});
 
   // matching one or more keys
   nomatch({a: 12}, {});

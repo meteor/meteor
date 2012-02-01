@@ -256,11 +256,16 @@ if (typeof Meteor === "undefined") Meteor = {};
       // kill it.
 
       find: function (selector, options) {
-        var cursor = new Meteor._mongo_driver.Cursor(this._name, selector, options);
-        return cursor;
+        if (arguments.length === 0)
+          selector = {};
+
+        return new Meteor._mongo_driver.Cursor(this._name, selector, options);
       },
 
       findOne: function (selector, options) {
+        if (arguments.length === 0)
+          selector = {};
+
         options = options || {};
         options.limit = 1;
         return this.find(selector, options).fetch()[0];
@@ -310,11 +315,4 @@ if (typeof Meteor === "undefined") Meteor = {};
 
     return ret;
   };
-
-  Meteor.Collection.Query = function (collection, selector, options) {
-    if (!options) options = {};
-
-    this.cursor = Meteor._mongo_driver.find(this._name, selector, options);
-  };
-
 })();

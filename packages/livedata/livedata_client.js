@@ -100,12 +100,17 @@ if (typeof Meteor === "undefined") Meteor = {};
       _name: name,
       _collection: new Collection(),
 
-      find: function (selector, options) {
-        return this._collection.find(selector, options);
+      find: function (/* selector, options */) {
+        // Collection.find() (return all docs) behaves differently
+        // from Collection.find(undefined) (return 0 docs).  so be
+        // careful about preserving the length of arguments when
+        // descending into minimongo.
+        return this._collection.find.apply(this._collection, Array.prototype.slice.call(arguments));
       },
 
-      findOne: function (selector) {
-        return this._collection.findOne(selector);
+      findOne: function (/* selector, options */) {
+        // as above
+        return this._collection.findOne.apply(this._collection, Array.prototype.slice.call(arguments));
       },
 
       insert: function (obj) {
@@ -125,9 +130,6 @@ if (typeof Meteor === "undefined") Meteor = {};
       },
 
       update: function (selector, mutator, options) {
-        if (typeof(selector) === "string")
-          selector = {_id: selector};
-
         if (this._name)
           Meteor._stream.emit('handle', {
             collection: this._name, type: 'update',
@@ -136,9 +138,6 @@ if (typeof Meteor === "undefined") Meteor = {};
       },
 
       remove: function (selector) {
-        if (typeof(selector) === "string")
-          selector = {_id: selector};
-
         if (this._name)
           Meteor._stream.emit('handle', {
             collection: this._name, type: 'remove', selector: selector});

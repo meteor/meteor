@@ -46,6 +46,21 @@
     }
   }
 
+  // protect against dangerous selectors.  falsey and {_id: falsey}
+  // are both likely programmer error, and not what you want,
+  // particularly for destructive operations.
+  function rewrite_selector (selector) {
+    // shorthand -- scalars match _id
+    if ((typeof selector === 'string') || (typeof selector === 'number'))
+      selector = {_id: selector};
+
+    if (!selector || (('_id' in selector) && !selector._id))
+      // can't match anything
+      return {_id: Meteor.uuid()};
+    else
+      return selector;
+  }
+
   //////////// Public API //////////
 
   function Cursor (collection_name, selector, options) {
@@ -53,15 +68,7 @@
     withCollection(collection_name, function(err, collection) {
       // XXX err handling
 
-      var single_result = false;
-      // if single id is passed
-      // XXX deal with both string and objectid
-      if (typeof selector === 'string') {
-        selector = {_id: selector};
-        single_result = true;
-      } else if (!selector) {
-        selector = {};
-      }
+      selector = rewrite_selector(selector);
 
       var cursor = collection.find(selector);
       // XXX is there a way to do this as for x in ['sort', 'limit', 'skip']?
@@ -150,10 +157,8 @@
     // needed, really.
 
     // XXX does not allow options. matches the client.
-    // XXX consider allowing string -> {_id: id} shortcut.
 
-    if (typeof(selector) === "string")
-      selector = {_id: selector};
+    selector = rewrite_selector(selector);
 
     withCollection(collection_name, function(err, collection) {
       // XXX err handling
@@ -172,8 +177,7 @@
     // I couldn't convince myself it was safe not to. Not sure if it is
     // needed, really.
 
-    if (typeof(selector) === "string")
-      selector = {_id: selector};
+    selector = rewrite_selector(selector);
 
     if (!options) options = {};
     // Default to multi. This is the oppposite of mongo. We'll see how it goes.

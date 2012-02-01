@@ -25,7 +25,7 @@ Meteor._hook_handlebars_each = function () {
 
   var orig = Handlebars._default_helpers.each;
   Handlebars._default_helpers.each = function (context, options) {
-    if (!(context instanceof Collection.Query))
+    if (!(context instanceof Collection.Cursor))
       return orig(context, options);
 
     var id = Meteor._pending_partials_idx_nonce++;

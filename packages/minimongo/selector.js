@@ -259,7 +259,17 @@ Collection._compileSelector = function (selector) {
   var literals = [];
   // you can pass a literal function instead of a selector
   if (selector instanceof Function)
-    return function (doc) {return selector.call(doc);}
+    return function (doc) {return selector.call(doc);};
+
+  // shorthand -- scalars match _id
+  if ((typeof(selector) === "string") || (typeof(selector) === "number"))
+    selector = {_id: selector};
+
+  // protect against dangerous selectors.  falsey and {_id: falsey}
+  // are both likely programmer error, and not what you want,
+  // particularly for destructive operations.
+  if (!selector || (('_id' in selector) && !selector._id))
+    return function (doc) {return false;};
 
   // eval() does not return a value in IE8, nor does the spec say it
   // should. Assign to a local to get the value, instead.
