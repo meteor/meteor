@@ -1,13 +1,11 @@
 
 Tinytest.add("template assembly", function (test) {
-  var minusEmptyComments = function(s) {
-    return String(s).replace(/<!---->/g, '');
-  };
 
   // Test for a bug that made it to production -- after a replacement,
   // we need to also check the newly replaced node for replacements
-  var frag = Template.test_assembly_a0();
-  test.equal(minusEmptyComments(Meteor._fragmentToHtml(frag)), "Hi");
+  var frag = Meteor.ui.render(Template.test_assembly_a0);
+  test.equal(Meteor.ui._canonicalizeHtml(Meteor.ui._fragmentToHtml(frag)),
+               "Hi");
 
   // Another production bug -- we must use LiveRange to replace the
   // placeholder, or risk breaking other LiveRanges
@@ -15,12 +13,13 @@ Tinytest.add("template assembly", function (test) {
   Template.test_assembly_b1.stuff = function () {
     return Session.get("stuff");
   };
-  var onscreen = DIV({style: "display: none"}, [Template.test_assembly_b0()]);
+  var onscreen = DIV({style: "display: none"}, [
+    Meteor.ui.render(Template.test_assembly_b0)]);
   document.body.appendChild(onscreen);
-  test.equal(minusEmptyComments(onscreen.innerHTML), "xyhi");
+  test.equal(Meteor.ui._canonicalizeHtml(onscreen.innerHTML), "xyhi");
   Session.set("stuff", false);
   Meteor.flush();
-  test.equal(minusEmptyComments(onscreen.innerHTML), "xhi");
+  test.equal(Meteor.ui._canonicalizeHtml(onscreen.innerHTML), "xhi");
   document.body.removeChild(onscreen);
 });
 
@@ -41,7 +40,7 @@ Tinytest.add("template table assembly", function(test) {
 
   var table;
 
-  table = childWithTag(Template.test_table_a0(), "TABLE");
+  table = childWithTag(Meteor.ui.render(Template.test_table_a0), "TABLE");
 
   // table.rows is a great test, as it fails not only when TR/TD tags are
   // stripped due to improper html-to-fragment, but also when they are present
@@ -49,7 +48,7 @@ Tinytest.add("template table assembly", function(test) {
   test.equal(table.rows.length, 3);
 
   // this time with an explicit TBODY
-  table = childWithTag(Template.test_table_b0(), "TABLE");
+  table = childWithTag(Meteor.ui.render(Template.test_table_b0), "TABLE");
   test.equal(table.rows.length, 3);
 
   var c = new LocalCollection();
@@ -57,11 +56,12 @@ Tinytest.add("template table assembly", function(test) {
   c.insert({bar:'b'});
   c.insert({bar:'c'});
   var onscreen = DIV({style: "display: none;"});
-  onscreen.appendChild(Template.test_table_each({foo: c.find()}));
+  onscreen.appendChild(
+    Meteor.ui.render(_.bind(Template.test_table_each, null, {foo: c.find()})));
   document.body.appendChild(onscreen);
   table = childWithTag(onscreen, "TABLE");
 
-  test.equal(table.rows.length, 3);
+  test.equal(table.rows.length, 3, table.parentNode.innerHTML);
   var tds = onscreen.getElementsByTagName("TD");
   test.equal(tds.length, 3);
   test.equal(tds[0].innerHTML, "a");
@@ -71,3 +71,4 @@ Tinytest.add("template table assembly", function(test) {
 
   document.body.removeChild(onscreen);
 });
+

@@ -35,7 +35,7 @@ var html_scanner = module.exports = {
       match = payload.match(/^[ \t]*[\r\n]+(.*)$/);
       if (match)
         payload = match[1];
-      match = payload.match(/^(.*)[\r\n]+\s*$/)
+      match = payload.match(/^(.*)[\r\n]+\s*$/);
       if (match)
         payload = match[1];
 
@@ -74,7 +74,7 @@ var html_scanner = module.exports = {
         results.js += "Meteor._def_template(" + JSON.stringify(id) + "," + code +
           ");\n";
       } else { // tag === "body"
-        results.js += "Meteor.startup(function(){document.body.appendChild(Meteor._def_template(null," + code + ")());});";
+        results.js += "Meteor.startup(function(){document.body.appendChild(Meteor.ui.render(Meteor._def_template(null," + code + ")));});";
       }
     });
     if (!found) {
