@@ -185,7 +185,7 @@ if (typeof Meteor === "undefined") Meteor = {};
 
     subscribe: function (name, args, callback) {
       var id;
-      var existing = subs.find({name: name, args: args}, {reactive: false});
+      var existing = subs.find({name: name, args: args}, {reactive: false}).fetch();
 
       if (existing && existing[0]) {
         // already subbed, inc count.
