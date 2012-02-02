@@ -62,7 +62,6 @@ if (typeof Meteor === "undefined") Meteor = {};
   //// retry logic
   var retry_timer;
   var connection_timer;
-  var first_connection = true;
 
   var connected = function (welcome_data) {
     if (connection_timer) {
@@ -78,7 +77,10 @@ if (typeof Meteor === "undefined") Meteor = {};
     // inspect the welcome data and decide if we have to reload
     if (welcome_data && welcome_data.server_id) {
       if (server_id && server_id !== welcome_data.server_id) {
-        Meteor._debug("XXX FORCE RELOAD HERE");
+        Meteor._reload.reload();
+        // world's about to end, just leave the connection 'connecting'
+        // until it does.
+        return;
       }
       server_id = welcome_data.server_id;
     } else {
@@ -86,18 +88,14 @@ if (typeof Meteor === "undefined") Meteor = {};
     }
 
     // give everyone a chance to munge the message queue.
-    if (!first_connection) {
-      var msg_list = _.toArray(message_queue);
-      _.each(reset_callbacks, function (callback) {
-        msg_list = callback(msg_list);
-      });
-      message_queue = {};
-      _.each(msg_list, function (msg) {
-        message_queue[next_message_id++] = msg;
-      });
-    } else {
-      first_connection = false;
-    }
+    var msg_list = _.toArray(message_queue);
+    _.each(reset_callbacks, function (callback) {
+      msg_list = callback(msg_list);
+    });
+    message_queue = {};
+    _.each(msg_list, function (msg) {
+      message_queue[next_message_id++] = msg;
+    });
 
     // send the pending message queue. this should always be in
     // order, since the keys are ordered numerically and they are added
@@ -200,8 +198,19 @@ if (typeof Meteor === "undefined") Meteor = {};
     connection_timer = setTimeout(fake_connect_failed,
                                   CONNECT_TIMEOUT + CONNECT_TIMEOUT_SLOP);
 
-    // XXX for debugging
-    // XXXsocket = socket;
+  };
+
+  ////////// Save and restore state //////////
+
+  Meteor._reload.on_migrate('stream', function () {
+    return { message_list: _.toArray(message_queue) };
+  });
+
+  var migration_data = Meteor._reload.migration_data('stream');
+  if (migration_data && migration_data.message_list) {
+    _.each(migration_data.message_list, function (msg) {
+      message_queue[next_message_id++] = msg;
+    });
   }
 
   ////////// User facing API //////////
