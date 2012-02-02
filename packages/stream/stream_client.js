@@ -45,12 +45,13 @@ if (typeof Meteor === "undefined") Meteor = {};
   var reset_callbacks = [];
   var message_queue = {}; // id -> message
   var next_message_id = 0;
+  var server_id;
 
   //// reactive status stuff
   var status = {
-    status: "waiting", connected: false, retry_count: 0,
-    first: true
+    status: "waiting", connected: false, retry_count: 0
   };
+
   var status_listeners = {}; // context.id -> context
   var status_changed = function () {
     _.each(status_listeners, function (context) {
@@ -61,8 +62,9 @@ if (typeof Meteor === "undefined") Meteor = {};
   //// retry logic
   var retry_timer;
   var connection_timer;
+  var first_connection = true;
 
-  var connected = function () {
+  var connected = function (welcome_data) {
     if (connection_timer) {
       clearTimeout(connection_timer);
       connection_timer = undefined;
@@ -73,8 +75,18 @@ if (typeof Meteor === "undefined") Meteor = {};
       return;
     }
 
+    // inspect the welcome data and decide if we have to reload
+    if (welcome_data && welcome_data.server_id) {
+      if (server_id && server_id !== welcome_data.server_id) {
+        Meteor._debug("XXX FORCE RELOAD HERE");
+      }
+      server_id = welcome_data.server_id;
+    } else {
+      Meteor._debug("DEBUG: invalid welcome packet", welcome_data);
+    }
+
     // give everyone a chance to munge the message queue.
-    if (!status.first) {
+    if (!first_connection) {
       var msg_list = _.toArray(message_queue);
       _.each(reset_callbacks, function (callback) {
         msg_list = callback(msg_list);
@@ -84,7 +96,7 @@ if (typeof Meteor === "undefined") Meteor = {};
         message_queue[next_message_id++] = msg;
       });
     } else {
-      status.first = false;
+      first_connection = false;
     }
 
     // send the pending message queue. this should always be in
@@ -174,7 +186,7 @@ if (typeof Meteor === "undefined") Meteor = {};
     socket = io.connect('/', { reconnect: false,
                                'connect timeout': CONNECT_TIMEOUT,
                                'force new connection': true } );
-    socket.on('connect', connected);
+    socket.once('welcome', connected);
     socket.on('disconnect', disconnected);
     socket.on('connect_failed', disconnected);
 
@@ -224,9 +236,9 @@ if (typeof Meteor === "undefined") Meteor = {};
 
   Meteor._stream = {
     on: function (name, callback) {
-      if (!event_callbacks[name]) event_callbacks[name] = []
+      if (!event_callbacks[name]) event_callbacks[name] = [];
       event_callbacks[name].push(callback);
-      if (socket) socket.on(name, callback)
+      if (socket) socket.on(name, callback);
     },
 
     emit: function (/* var args */) {

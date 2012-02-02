@@ -6,6 +6,12 @@ if (typeof Meteor === "undefined") Meteor = {};
 
   var registration_callbacks = [];
 
+  // unique id for this instantiation of the server. If this changes
+  // between client reconnects, the client will reload. In production,
+  // we might want to make this the bundle id, so that if runner restarts
+  // we don't force clients to reload unneccesarily. Or we could integrate
+  // with the bundler and have this be a hash of all the code.
+  var server_id = Meteor.uuid();
 
   // basic socketio setup
   var socketio = __meteor_bootstrap__.require('socket.io');
@@ -22,9 +28,13 @@ if (typeof Meteor === "undefined") Meteor = {};
     io.set('transports', _.without(io.transports(), 'websocket'));
   });
 
-  // call all our callbacks when we get a new socket. they will do the
-  // work of setting up handlers and such for specific messages.
   io.sockets.on('connection', function (socket) {
+    // Send a welcome message with the server_id. Client uses this to
+    // reload if needed.
+    socket.emit('welcome', {server_id: server_id});
+
+    // call all our callbacks when we get a new socket. they will do the
+    // work of setting up handlers and such for specific messages.
     _.each(registration_callbacks, function (callback) {
       callback(socket);
     });
