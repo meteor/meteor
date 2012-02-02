@@ -27,7 +27,10 @@
     invalidate: function () {
       if (!this._invalidated) {
         this._invalidated = true;
-        if (!pending_invalidate.length)
+        // If this is first invalidation, schedule a flush.
+        // We may be inside a flush already, in which case this
+        // in unnecessary but harmless.
+        if (pending_invalidate.length === 0)
           setTimeout(Meteor.flush, 0);
         pending_invalidate.push(this);
       }

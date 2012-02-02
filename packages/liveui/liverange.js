@@ -30,13 +30,14 @@ Meteor.ui = Meteor.ui || {};
       return [start, end];
     } else {
       // IE8 workaround: insert some empty comments.
+      var placeholder;
       if (start.nodeType === 3 /* text node */) {
-        var placeholder = document.createComment("");
+        placeholder = document.createComment("IE");
         start.parentNode.insertBefore(placeholder, start);
         start = placeholder;
       }
       if (end.nodeType === 3 /* text node */) {
-        var placeholder = document.createComment("");
+        placeholder = document.createComment("IE");
         end.parentNode.insertBefore(placeholder, end.nextSibling);
         end = placeholder;
       }
@@ -86,13 +87,11 @@ Meteor.ui = Meteor.ui || {};
     }
     end = end || start;
 
-    var endpoints = Meteor.ui._wrap_endpoints(start, end);
-    start = endpoints[0];
-    end = endpoints[1];
+    this.tag = tag; // must be set before calling _ensure_tag
 
-    // XXX 'this.tag' is public for reading. document it.
-    this.tag = tag; // must be set before calling _ensure_tags
-    this._ensure_tags(endpoints);
+    var endpoints = Meteor.ui._wrap_endpoints(start, end);
+    start = this._ensure_tag(endpoints[0]);
+    end = this._ensure_tag(endpoints[1]);
 
     // Decide at what indices in start[tag][0] and end[tag][1] we
     // should insert the new range.
@@ -111,52 +110,8 @@ Meteor.ui = Meteor.ui || {};
     // Liveranges technically start just before, and end just after, their
     // start and end nodes to which the liverange data is attached.
 
-    var findPosition = function(ranges, findEndNotStart, edge, otherEdge) {
-      var index;
-      // For purpose of finding where we belong in start[tag][0],
-      // walk the array and determine where we start to see ranges
-      // end at `end` (==edge) or earlier.  For the purpose of finding
-      // where we belong in end[tag][1], walk the array and determine
-      // where we start to see ranges start at `start` (==edge) or
-      // earlier.  In both cases, we slide a sibling pointer backwards
-      // looking for `edge`, though the details are slightly different.
-      //
-      // Use `inner` to take first or last candidate index for insertion.
-      // Candidate indices are:  Right before a range whose edge is `edge`
-      // (i.e., a range with same start and end as we are creating),
-      // or the index where ranges start to have edges earlier than `edge`
-      // (treating the end of the list as such an index).  We detect the
-      // latter case when `n` hits `edge` without hitting the edge of the
-      // current range; that is, it is about to move past `edge`.  This is
-      // always an appropriate time to stop.
-      //
-      // Joint traversal of the array and DOM should be fast.  The most
-      // expensive thing to happen would be a single walk from lastChild
-      // to end looking for range ends, or from end to start looking for
-      // range starts.
-      //
-      // invariant: n >= edge ("n is after, or is, edge")
-      var initial_n = (findEndNotStart ? edge.parentNode.lastChild : otherEdge);
-      var take_first = (findEndNotStart ? ! inner : inner);
-      for(var i=0, n=initial_n; i<=ranges.length; i++) {
-        var r = ranges[i];
-        var curEdge = r && (findEndNotStart ? r._end : r._start);
-        while (n !== curEdge && n !== edge) {
-          n = n.previousSibling;
-        }
-        if (curEdge === edge) {
-          index = i;
-          if (take_first) break;
-        } else if (n === edge) {
-          index = i;
-          break;
-        }
-      }
-      return index;
-    };
-
-    var start_index = findPosition(start[tag][0], true, end, start);
-    var end_index = findPosition(end[tag][1], false, start, end);
+    var start_index = findPosition(start[tag][0], true, end, start, inner);
+    var end_index = findPosition(end[tag][1], false, start, end, inner);
 
     // this._start is the node N such that we begin before N, but not
     // before the node before N in the preorder traversal of the
@@ -176,11 +131,54 @@ Meteor.ui = Meteor.ui || {};
     this._insert_entries(end, 1, end_index, [this]);
   };
 
-  Meteor.ui._LiveRange.prototype._ensure_tags = function (nodes) {
-    for (var i = 0; i < nodes.length; i++) {
-      if (!(this.tag in nodes[i]))
-        nodes[i][this.tag] = [[], []];
+  var findPosition = function(ranges, findEndNotStart, edge, otherEdge, inner) {
+    var index;
+    // For purpose of finding where we belong in start[tag][0],
+    // walk the array and determine where we start to see ranges
+    // end at `end` (==edge) or earlier.  For the purpose of finding
+    // where we belong in end[tag][1], walk the array and determine
+    // where we start to see ranges start at `start` (==edge) or
+    // earlier.  In both cases, we slide a sibling pointer backwards
+    // looking for `edge`, though the details are slightly different.
+    //
+    // Use `inner` to take first or last candidate index for insertion.
+    // Candidate indices are:  Right before a range whose edge is `edge`
+    // (i.e., a range with same start and end as we are creating),
+    // or the index where ranges start to have edges earlier than `edge`
+    // (treating the end of the list as such an index).  We detect the
+    // latter case when `n` hits `edge` without hitting the edge of the
+    // current range; that is, it is about to move past `edge`.  This is
+    // always an appropriate time to stop.
+    //
+    // Joint traversal of the array and DOM should be fast.  The most
+    // expensive thing to happen would be a single walk from lastChild
+    // to end looking for range ends, or from end to start looking for
+    // range starts.
+    //
+    // invariant: n >= edge ("n is after, or is, edge")
+    var initial_n = (findEndNotStart ? edge.parentNode.lastChild : otherEdge);
+    var take_first = (findEndNotStart ? ! inner : inner);
+    for(var i=0, n=initial_n; i<=ranges.length; i++) {
+      var r = ranges[i];
+      var curEdge = r && (findEndNotStart ? r._end : r._start);
+      while (n !== curEdge && n !== edge) {
+        n = n.previousSibling;
+      }
+      if (curEdge === edge) {
+        index = i;
+        if (take_first) break;
+      } else if (n === edge) {
+        index = i;
+        break;
+      }
     }
+    return index;
+  };
+
+  Meteor.ui._LiveRange.prototype._ensure_tag = function (node) {
+    if (!(this.tag in node))
+      node[this.tag] = [[], []];
+    return node;
   };
 
   var can_delete_expandos = (function() {
@@ -197,13 +195,13 @@ Meteor.ui = Meteor.ui || {};
     return result;
   })();
 
-  Meteor.ui._LiveRange.prototype._clean_node = function (node) {
-    var data = node[this.tag];
-    if (data && !(data[0].length + data[1].length)) {
+  Meteor.ui._LiveRange._clean_node = function (tag, node, force) {
+    var data = node[tag];
+    if (data && (!(data[0].length + data[1].length) || force)) {
       if (can_delete_expandos)
-        delete node[this.tag];
+        delete node[tag];
       else
-        node.removeAttribute(this.tag);
+        node.removeAttribute(tag);
     }
   };
 
@@ -232,6 +230,12 @@ Meteor.ui = Meteor.ui || {};
     return this._end;
   };
 
+  // Return the node that immediately contains this LiveRange, that is,
+  // the parentNode of firstNode and lastNode.
+  Meteor.ui._LiveRange.prototype.containerNode = function() {
+    return this._start.parentNode;
+  };
+
   // Walk through the current contents of a LiveRange, enumerating
   // either the contained ranges (with the same tag as this range),
   // the contained elements, or both.
@@ -239,78 +243,109 @@ Meteor.ui = Meteor.ui || {};
   // visit_range(is_start, range) is invoked for each range
   // start-point or end-point that we encounter as we walk the range
   // stored in 'this' (not counting the endpoints of 'this' itself.)
-  // visit_node(is_start, node) is similar but for nodes, and is
-  // optional.
+  // visit_node(is_start, node) is similar but for nodes.  Both
+  // functions are optional.
+  //
+  // If you return false (i.e. a value === false) from visit_range
+  // or visit_node when is_start is true, the children of that range
+  // or node are skipped, and the next callback will be the same
+  // range or node with is_start false.
   //
   // If you create or destroy ranges with this tag from a visitation
   // function, results are undefined!
-  //
-  // future: maybe would be nice to let your visit function return
-  // false when is_start is true to skip visiting that range/node's
-  // children..
-  Meteor.ui._LiveRange.prototype.visit = function (visit_range, visit_node) {
-    var no_data = [[], []]; // reduce instance creation
+  Meteor.ui._LiveRange.prototype.visit = function(visit_range, visit_node) {
+    _visit_nodes(this.tag, this._start, this._end,
+                 visit_range, visit_node,
+                 this._start_idx + 1);
+  };
 
-    var traverse = function (node, data, start_bound, end_bound, tag) {
-      for (var i = start_bound; i < data[0].length; i++)
-        visit_range(true, data[0][i]);
-      visit_node && visit_node(true, node);
-      for (var walk = node.firstChild; walk; walk = walk.nextSibling) {
-        var walk_data = walk[tag] || no_data;
-        traverse(walk, walk_data, 0, walk_data[1].length, tag);
+  Meteor.ui._LiveRange.visit_children = function(rangeOrParent, tag,
+                                                 visit_range, visit_node)
+  {
+    if (rangeOrParent instanceof Meteor.ui._LiveRange)
+      rangeOrParent.visit(visit_range, visit_node);
+    else {
+      if (rangeOrParent.firstChild)
+        _visit_nodes(tag, rangeOrParent.firstChild, rangeOrParent.lastChild,
+                     visit_range, visit_node);
+    }
+  };
+
+  // If ranges starting between first_node and last_node extend past
+  // last_node, we will visit them and keep going.  We don't detect
+  // when we follow a range end past last_node.  Tag is optional
+    // if we won't be visiting ranges.
+  var _visit_nodes =
+        function(tag, first_node, last_node, visit_range, visit_node,
+                 start_range_skip)
+  {
+    visit_range = visit_range || function() {};
+    visit_node = visit_node || function() {};
+
+    var recurse = function(start, end, start_range_skip) {
+      var startIndex = start_range_skip || 0;
+      var after = end.nextSibling;
+      for(var n = start; n && n !== after; n = n.nextSibling) {
+        var startData = tag && n[tag] && n[tag][0];
+        if (startData && startIndex < startData.length) {
+          // immediate child range that starts with n
+          var range = startData[startIndex];
+          if (visit_range(true, range) !== false)
+            recurse(range._start, range._end, startIndex+1);
+          visit_range(false, range);
+          n = range._end;
+        }
+        else {
+          // bare node
+          if (visit_node(true, n) !== false && n.firstChild)
+            recurse(n.firstChild, n.lastChild);
+          visit_node(false, n);
+        }
+        startIndex = 0;
       }
-      visit_node && visit_node(false, node);
-      for (var i = 0; i < end_bound; i++)
-        visit_range(false, data[1][i]);
     };
 
-    for(var walk = this._start;; walk = walk.nextSibling) {
-      if (!walk)
-        throw new Error("LiveRanges must begin and end on siblings in order");
-
-      var walk_data = walk[this.tag] || no_data;
-      traverse(walk, walk_data, walk === this._start ? this._start_idx + 1 : 0,
-               walk === this._end ? this._end_idx : walk_data[1].length,
-               this.tag);
-      if (walk === this._end)
-        break;
-    }
+    recurse(first_node, last_node, start_range_skip);
   };
 
   // startEnd === 0 for starts, 1 for ends
   Meteor.ui._LiveRange.prototype._remove_entries =
-    function(node, startEnd, i, j) {
-      var entries = node[this.tag][startEnd];
-      i = i || 0;
-      j = (j || j === 0) ? j : entries.length;
-      var removed = entries.splice(i, j-i);
-      // fix up remaining ranges (not removed ones)
-      for(var a = i; a < entries.length; a++) {
-        if (startEnd) entries[a]._end_idx = a;
-        else entries[a]._start_idx = a;
-      }
+    function(node, startEnd, i, j)
+  {
+    var entries = node[this.tag][startEnd];
+    i = i || 0;
+    j = (j || j === 0) ? j : entries.length;
+    var removed = entries.splice(i, j-i);
+    // fix up remaining ranges (not removed ones)
+    for(var a = i; a < entries.length; a++) {
+      if (startEnd) entries[a]._end_idx = a;
+      else entries[a]._start_idx = a;
+    }
 
-      // potentially remove empty liverange data
-      if (! entries.length) this._clean_node(node);
+    // potentially remove empty liverange data
+    if (! entries.length) {
+      Meteor.ui._LiveRange._clean_node(this.tag, node);
+    }
 
-      return removed;
-    };
+    return removed;
+  };
 
   Meteor.ui._LiveRange.prototype._insert_entries =
-    function(node, startEnd, i, newRanges) {
-      // insert the new ranges and "adopt" them by setting node pointers
-      var entries = node[this.tag][startEnd];
-      Array.prototype.splice.apply(entries, [i, 0].concat(newRanges));
-      for(var a=i; a < entries.length; a++) {
-        if (startEnd) {
-          entries[a]._end = node;
-          entries[a]._end_idx = a;
-        } else {
-          entries[a]._start = node;
-          entries[a]._start_idx = a;
-        }
+    function(node, startEnd, i, newRanges)
+  {
+    // insert the new ranges and "adopt" them by setting node pointers
+    var entries = node[this.tag][startEnd];
+    Array.prototype.splice.apply(entries, [i, 0].concat(newRanges));
+    for(var a=i; a < entries.length; a++) {
+      if (startEnd) {
+        entries[a]._end = node;
+        entries[a]._end_idx = a;
+      } else {
+        entries[a]._start = node;
+        entries[a]._start_idx = a;
       }
-    };
+    }
+  };
 
   // Replace the contents of this range with the provided
   // DocumentFragment. Returns the previous contents as a
@@ -322,50 +357,231 @@ Meteor.ui = Meteor.ui || {};
   // - If the input DocumentFragment has LiveRanges, they will become
   //   our children.
   //
-  // XXX need to make sure that tags are removed if they become empty
-  Meteor.ui._LiveRange.prototype.replace_contents = function (new_frag) {
-    if (!new_frag.firstChild)
-      throw new Error("Ranges must contain at least one element");
-
+  // new_frag must not be empty!
+  //
+  // Or, the caller can pass a function to perform the replacement in terms
+  // of DOM operations.  Before the function is called, the nodes in this range
+  // are stripped of data about this range and ranges external to it.  This
+  // information is restored afterwards.  Passing a fragment is equivalent to
+  // passing a function that removes the nodes in this range and inserts
+  // the contents of the fragment.  This liverange and enclosing liveranges
+  // that have been temporarily removed while calling the function are not
+  // fully functional while the function executes.  They have start and end
+  // nodes, but those nodes do not have pointers back to them.
+  Meteor.ui._LiveRange.prototype.replace_contents =
+    function (new_frag_or_func, and_return)
+  {
     // boundary nodes of departing fragment
     var old_start = this._start;
     var old_end = this._end;
 
-    // boundary nodes of new fragment
-    var new_endpoints = Meteor.ui._wrap_endpoints(new_frag.firstChild,
-                                                  new_frag.lastChild);
-    this._ensure_tags(new_endpoints);
-    var new_start = new_endpoints[0];
-    var new_end = new_endpoints[1];
-
-    // make all the liverange changes
+    // pull off outer liverange data
     var outer_starts =
           this._remove_entries(old_start, 0, 0, this._start_idx + 1);
     var outer_ends =
           this._remove_entries(old_end, 1, this._end_idx);
 
+    var container_node = old_start.parentNode;
+    var before_node = old_start.previousSibling;
+    var after_node = old_end.nextSibling;
+
+    var ret = null;
+
+    ////////// actual replacement (DOM manipulation) happens here
+
+    if (typeof new_frag_or_func === "function") {
+
+      ret = new_frag_or_func(and_return);
+
+    } else {
+
+      var new_frag = new_frag_or_func;
+
+      if (! new_frag.firstChild)
+        throw new Error("replace_contents requires non-empty fragment");
+
+      // Insert new fragment
+      old_start.parentNode.insertBefore(new_frag, old_start);
+
+      // Pull out departing fragment
+      // Possible optimization: use W3C Ranges on browsers that support them
+      ret = old_start.ownerDocument.createDocumentFragment();
+      var walk = old_start;
+      while (true) {
+        var next = walk.nextSibling;
+        ret.appendChild(walk);
+        if (walk === old_end)
+          break;
+        walk = next;
+        if (!walk)
+          throw new Error("LiveRanges must begin and end on siblings in order");
+      }
+
+      if (! and_return) {
+        Meteor.ui._LiveRange.cleanup(ret, this.tag);
+        ret = null;
+      }
+
+    }
+
+    //////////
+
+    var new_start =
+          before_node ? before_node.nextSibling : container_node.firstChild;
+    var new_end =
+          after_node ? after_node.previousSibling : container_node.lastChild;
+
+    if (! new_start || new_start === after_node) {
+      throw new Error("Ranges must contain at least one element");
+    }
+
+    // Wrap endpoints if necessary
+    var new_endpoints = Meteor.ui._wrap_endpoints(new_start, new_end);
+    new_start = this._ensure_tag(new_endpoints[0]);
+    new_end = this._ensure_tag(new_endpoints[1]);
+
+    // put the outer liveranges back
+
     this._insert_entries(new_start, 0, 0, outer_starts);
     this._insert_entries(new_end, 1, new_end[this.tag][1].length, outer_ends);
 
-    // Insert new fragment
+    return ret;
+  };
 
-    old_start.parentNode.insertBefore(new_frag, old_start);
+  Meteor.ui._LiveRange.prototype.transplant_tag =
+    function(targetNode, sourceNode)
+  {
+    if (! sourceNode[this.tag])
+      return;
 
-    // Pull out departing fragment
-    // Possible optimization: use W3C Ranges on browsers that support them
-    var ret = old_start.ownerDocument.createDocumentFragment();
-    var walk = old_start;
-    while (true) {
-      var next = walk.nextSibling;
-      ret.appendChild(walk);
-      if (walk === old_end)
-        break;
-      walk = next;
-      if (!walk)
-        throw new Error("LiveRanges must begin and end on siblings in order");
+    // copy data pointer (don't bother to clean sourceNode)
+    targetNode[this.tag] = sourceNode[this.tag];
+
+    var starts = targetNode[this.tag][0];
+    var ends = targetNode[this.tag][1];
+
+    // fix _start and _end pointers
+    for(var i=0;i<starts.length;i++)
+      starts[i]._start = targetNode;
+    for(var i=0;i<ends.length;i++)
+      ends[i]._end = targetNode;
+  };
+
+
+  Meteor.ui._LiveRange.prototype.insert_before = function(frag) {
+    var frag_start = frag.firstChild;
+
+    if (! frag_start) // empty frag
+      return;
+
+    // insert into DOM
+    this._start.parentNode.insertBefore(frag, this._start);
+
+    // move starts of ranges that begin on this._start, but are
+    // outside this, to beginning of frag_start
+    this._ensure_tag(frag_start);
+    this._insert_entries(frag_start, 0, 0,
+                         this._remove_entries(this._start, 0, 0,
+                                              this._start_idx));
+  };
+
+  Meteor.ui._LiveRange.prototype.insert_after = function(frag) {
+    var frag_end = frag.lastChild;
+
+    if (! frag_end) // empty frag
+      return;
+
+    // insert into DOM
+    this._end.parentNode.insertBefore(frag, this._end.nextSibling);
+
+    // move ends of ranges that end on this._end, but are
+    // outside this, to end of frag_end
+    this._ensure_tag(frag_end);
+    this._insert_entries(frag_end, 1, frag_end[this.tag][1].length,
+                         this._remove_entries(this._end, 1,
+                                              this._end_idx + 1));
+  };
+
+  Meteor.ui._LiveRange.prototype.extract = function(and_return) {
+    if (this._start_idx > 0 &&
+        this._start[this.tag][0][this._start_idx - 1]._end === this._end) {
+      // immediately enclosing range wraps same nodes, so can't extract because
+      // it would empty it.
+      return null;
     }
 
-    return ret;
+    var before = this._start.previousSibling;
+    var after = this._end.nextSibling;
+    var parent = this._start.parentNode;
+
+    if (this._start_idx > 0) {
+      // must be a later node where outer ranges that start here end;
+      // move their starts to after
+      this._ensure_tag(after);
+      this._insert_entries(after, 0, 0,
+                           this._remove_entries(this._start, 0, 0,
+                                                this._start_idx));
+    }
+
+    if (this._end_idx < this._end[this.tag][1].length - 1) {
+      // must be an earlier node where outer ranges that end here
+      // start; move their ends to before
+      this._ensure_tag(before);
+      this._insert_entries(before, 1, before[this.tag][1].length,
+                           this._remove_entries(this._end, 1,
+                                                this._end_idx + 1));
+    }
+
+    var result = document.createDocumentFragment();
+
+    for(var n;
+        n = before ? before.nextSibling : parent.firstChild,
+        n && n !== after;)
+      result.appendChild(n);
+
+    if (! and_return) {
+      Meteor.ui._LiveRange.cleanup(result, this.tag);
+      result = null;
+    }
+
+    return result;
+  };
+
+  // Strip all livedata information from nodes in rangeOrParent, calling
+  // finalize() on each range found.  Most liverange operations are not
+  // safe to call on a liverange from the finalizer, as the liverange tree
+  // is being torn down.  If rangeOrParent is a range, its tag is used
+  // instead of the tag argument.
+  Meteor.ui._LiveRange.cleanup = function(rangeOrParent, tag)
+  {
+    var first_node, last_node;
+    if (rangeOrParent instanceof Meteor.ui._LiveRange) {
+      first_node = rangeOrParent.firstNode();
+      last_node = rangeOrParent.lastNode();
+      tag = rangeOrParent.tag;
+    } else {
+      first_node = rangeOrParent.firstChild;
+      last_node = rangeOrParent.lastChild;
+    }
+
+    var ranges = [];
+    _visit_nodes(tag, first_node, last_node,
+      function(is_start, range) {
+        is_start && ranges.push(range);
+      });
+
+    for(var i=0; i<ranges.length; i++) {
+      var r = ranges[i];
+      r.finalize && r.finalize();
+      r._start = null;
+      r._end = null;
+    }
+
+    _visit_nodes(
+      null, first_node, last_node, null,
+      function(is_start, node) {
+        is_start && Meteor.ui._LiveRange._clean_node(tag, node, true);
+      });
   };
 
 })();

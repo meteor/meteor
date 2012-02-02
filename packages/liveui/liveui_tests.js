@@ -1,898 +1,959 @@
-var dump_frag = function (frag) {
-  var ret = '';
 
-  var dump_children = function (node) {
-    for (var child = node.firstChild; child; child = child.nextSibling)
-      dump(child);
-  };
+///// ReactiveVar /////
 
-  var dump = function (node) {
-    if (node.nodeType === 8) /* comment */
-      ret += "<!---->";
-    else if (node.nodeType === 3) { /* text */
-      // strip whitespace. note, no entity escaping
-      ret += node.nodeValue.replace(/^\s+|\s+$/g, "");
-    }
-    else {
-      ret += '<' + node.id + '>';
-      dump_children(node);
-      ret += '</' + node.id + '>';
-    }
-  };
+var ReactiveVar = function(initialValue) {
+  if (! (this instanceof ReactiveVar))
+    return new ReactiveVar(initialValue);
 
-  dump_children(frag);
-  return ret;
-}
-
-// if passed a node instead of a fragment, dump its children. turns
-// out to be handy.
-//
-// if expected includes '~', it will be interpreted to mean "either
-// <!----> or nothing". this is useful because LiveRange is sometimes
-// forced to insert placeholder comments on older versions of IE.
-var assert_frag = function (test, expected, actual_frag) {
-  var expected1 = expected.replace(/~/g, "");
-  var expected2 = expected.replace(/~/g, "<!---->");
-  var actual = dump_frag(actual_frag);
-
-  if (actual !== expected1 && actual !== expected2)
-    test.equal(actual, expected, "Fragment doesn't match pattern");
-
-  if (actual.firstChild) {
-    /* XXX get Meteor.ui._tag in a cleaner way */
-    var range = new Meteor.ui._LiveRange(Meteor.ui._tag, actual);
-    check_liverange_integrity(range);
-    range.destroy();
-  }
+  this._value = (typeof initialValue === "undefined" ? null :
+                 initialValue);
+  this._deps = {};
 };
-
-var weather = {here: "cloudy", there: "cloudy"};
-var weather_listeners = {here: {}, there: {}};
-var get_weather = function (where) {
+ReactiveVar.prototype.get = function() {
   var context = Meteor.deps.Context.current;
-  if (context && !(context.id in weather_listeners[where])) {
-    weather_listeners[where][context.id] = context;
-    context.on_invalidate(function (old_context) {
-      delete weather_listeners[where][old_context.id];
+  if (context && !(context.id in this._deps)) {
+    this._deps[context.id] = context;
+    var self = this;
+    context.on_invalidate(function() {
+      delete self._deps[context.id];
     });
   }
-  return weather[where];
-};
-var set_weather = function (where, what) {
-  weather[where] = what;
-  for (id in weather_listeners[where])
-    weather_listeners[where][id].invalidate();
+
+  return this._value;
 };
 
-  // XXX SECTION: LiveUI
+ReactiveVar.prototype.set = function(newValue) {
+  this._value = newValue;
 
-Tinytest.add("render - coercion", function (test) {
+  for(var id in this._deps)
+    this._deps[id].invalidate();
 
-  assert_frag(test, "<a></a>", Meteor.ui.render(function () {
-    return DIV({id: "a"});
+};
+
+ReactiveVar.prototype.numListeners = function() {
+  return _.keys(this._deps).length;
+};
+
+///// WrappedFrag /////
+
+var WrappedFrag = function(frag) {
+  if (! (this instanceof WrappedFrag))
+    return new WrappedFrag(frag);
+
+  this.frag = frag;
+};
+WrappedFrag.prototype.rawHtml = function() {
+  return Meteor.ui._fragmentToHtml(this.frag);
+};
+WrappedFrag.prototype.html = function() {
+  return Meteor.ui._canonicalizeHtml(this.rawHtml());
+};
+WrappedFrag.prototype.hold = function() {
+  return Meteor.ui._hold(this.frag), this;
+};
+WrappedFrag.prototype.release = function() {
+  return Meteor.ui._release(this.frag), this;
+};
+WrappedFrag.prototype.node = function() {
+  return this.frag;
+};
+
+///// OnscreenDiv /////
+
+var OnscreenDiv = function(optFrag) {
+  if (! (this instanceof OnscreenDiv))
+    return new OnscreenDiv(optFrag);
+
+  this.div = Meteor.ui._htmlToFragment(
+    '<div class="OnscreenDiv" style="display: none"></div>').firstChild;
+  document.body.appendChild(this.div);
+  if (optFrag)
+    this.div.appendChild(optFrag);
+};
+OnscreenDiv.prototype.rawHtml = function() {
+  return this.div.innerHTML;
+};
+OnscreenDiv.prototype.html = function() {
+  return Meteor.ui._canonicalizeHtml(this.rawHtml());
+};
+OnscreenDiv.prototype.node = function() {
+  return this.div;
+};
+OnscreenDiv.prototype.kill = function() {
+  // remove DIV from document by putting it in a fragment
+  var frag = document.createDocumentFragment();
+  frag.appendChild(this.div);
+  // instigate clean-up on next flush()
+  Meteor.ui._hold(frag);
+  Meteor.ui._release(frag);
+};
+OnscreenDiv.prototype.remove = function() {
+  this.div.parentNode.removeChild(this.div);
+};
+
+///// SeededRandom /////
+
+var SeededRandom = function(seed) { // seed may be a string or any type
+  if (! (this instanceof SeededRandom))
+    return new SeededRandom(seed);
+
+  this.gen = new Meteor._Alea(seed); // from uuid.js
+};
+SeededRandom.prototype.next = function() {
+  return this.gen();
+};
+SeededRandom.prototype.nextBoolean = function() {
+  return this.next() >= 0.5;
+};
+SeededRandom.prototype.nextIntBetween = function(min, max) {
+  // inclusive of min and max
+  return Math.floor(this.next() * (max-min+1)) + min;
+};
+SeededRandom.prototype.nextIdentifier = function(optLen) {
+  var letters = [];
+  var len = (typeof optLen === "number" ? optLen : 12);
+  for(var i=0; i<len; i++)
+    letters.push(String.fromCharCode(this.nextIntBetween(97, 122)));
+  var x;
+  return letters.join('');
+};
+SeededRandom.prototype.nextChoice = function(list) {
+  return list[this.nextIntBetween(0, list.length-1)];
+};
+
+///// TESTS /////
+
+Tinytest.add("liveui - one render", function(test) {
+
+  var R = ReactiveVar("foo");
+
+  var frag = WrappedFrag(Meteor.ui.render(function() {
+    return R.get();
+  })).hold();
+
+  test.equal(R.numListeners(), 1);
+
+  // frag should be "foo" initially
+  test.equal(frag.html(), "foo");
+  R.set("bar");
+  // haven't flushed yet, so update won't have happened
+  test.equal(frag.html(), "foo");
+  Meteor.flush();
+  // flushed now, frag should say "bar"
+  test.equal(frag.html(), "bar");
+  R.set("baz");
+  frag.release(); // frag is now considered offscreen
+  Meteor.flush();
+  // no update should have happened, offscreen range dep killed
+  test.equal(frag.html(), "bar");
+
+  // should be back to no listeners
+  test.equal(R.numListeners(), 0);
+
+  // empty return value should work, and show up as a comment
+  frag = WrappedFrag(Meteor.ui.render(function() {
+    return "";
   }));
+  test.equal(frag.html(), "<!---->");
 
-  assert_frag(test, "<b></b><c></c>", Meteor.ui.render(function () {
-    var f = document.createDocumentFragment();
-    f.appendChild(DIV({id: "b"}));
-    f.appendChild(DIV({id: "c"}));
-    return f;
-  }));
+  // nodes coming and going at top level of fragment
+  R.set(true);
+  frag = WrappedFrag(Meteor.ui.render(function() {
+    return R.get() ? "<div>hello</div><div>world</div>" : "";
+  })).hold();
+  test.equal(frag.html(), "<div>hello</div><div>world</div>");
+  R.set(false);
+  Meteor.flush();
+  test.equal(frag.html(), "<!---->");
+  R.set(true);
+  Meteor.flush();
+  test.equal(frag.html(), "<div>hello</div><div>world</div>");
+  test.equal(R.numListeners(), 1);
+  frag.release();
+  Meteor.flush();
+  test.equal(R.numListeners(), 0);
 
-  assert_frag(test, "<d></d><e></e>", Meteor.ui.render(function () {
-    return [
-      DIV({id: "d"}),
-      DIV({id: "e"})
-    ];
-  }));
+  // more complicated changes
+  R.set(1);
+  frag = WrappedFrag(Meteor.ui.render(function() {
+    var result = [];
+    for(var i=0; i<R.get(); i++) {
+      result.push('<div id="x'+i+'" class="foo" name="bar"><p><b>'+
+                  R.get()+'</b></p></div>');
+    }
+    return result.join('');
+  })).hold();
+  test.equal(frag.html(),
+               '<div class="foo" id="x0" name="bar"><p><b>1</b></p></div>');
+  R.set(3);
+  Meteor.flush();
+  test.equal(frag.html(),
+               '<div class="foo" id="x0" name="bar"><p><b>3</b></p></div>'+
+               '<div class="foo" id="x1" name="bar"><p><b>3</b></p></div>'+
+               '<div class="foo" id="x2" name="bar"><p><b>3</b></p></div>');
+  R.set(2);
+  Meteor.flush();
+  test.equal(frag.html(),
+               '<div class="foo" id="x0" name="bar"><p><b>2</b></p></div>'+
+               '<div class="foo" id="x1" name="bar"><p><b>2</b></p></div>');
+  frag.release();
+  Meteor.flush();
+  test.equal(R.numListeners(), 0);
 
-  assert_frag(test, "<f></f><g></g>", Meteor.ui.render(function () {
-    return $('<div id="f"></div><div id="g"></div>');
-  }));
-
-  assert_frag(test, "~hi~", Meteor.ui.render(function () {
-    return document.createTextNode("hi");
-  }));
-
-  assert_frag(test, "~igloo~", Meteor.ui.render(function () {
-    return "igloo";
-  }));
-
-  assert_frag(test, "<!---->", Meteor.ui.render(function () {
-    return document.createComment('');
-  }));
-});
-
-Tinytest.add("render - updating and GC", function (test) {
-  set_weather("here", "cloudy");
-  test.length(_.keys(weather_listeners.here), 0);
-  var r = Meteor.ui.render(function () {
-    return get_weather("here");
+  // caller violating preconditions
+  test.throws(function() {
+    Meteor.ui.render("foo");
   });
-  test.length(_.keys(weather_listeners.here), 1);
-  assert_frag(test, "~cloudy~", r);
 
-  set_weather("here", "icy");
-  test.length(_.keys(weather_listeners.here), 1);
-  assert_frag(test, "~cloudy~", r);
-  Meteor.flush(); // not onscreen -- gets GC'd
-  test.length(_.keys(weather_listeners.here), 0);
-  assert_frag(test, "~cloudy~", r);
-
-  r = Meteor.ui.render(function () {
-    return get_weather("here");
+  test.throws(function() {
+    Meteor.ui.render(function() { return document.createElement("DIV"); });
   });
-  var onscreen = DIV({style: "display: none;"});
-  onscreen.appendChild(r);
-  document.body.appendChild(onscreen);
-
-  assert_frag(test, "~icy~", onscreen);
-  test.length(_.keys(weather_listeners.here), 1);
-
-  set_weather("here", "vanilla");
-  test.length(_.keys(weather_listeners.here), 1);
-  assert_frag(test, "~icy~", onscreen);
-  Meteor.flush();
-  test.length(_.keys(weather_listeners.here), 1);
-  assert_frag(test, "~vanilla~", onscreen);
-
-  document.body.removeChild(onscreen);
-  Meteor.flush();
-  test.length(_.keys(weather_listeners.here), 1);
-
-  set_weather("here", "curious"); // safe from GC until flush
-  document.body.appendChild(onscreen);
-  Meteor.flush();
-  test.length(_.keys(weather_listeners.here), 1);
-  assert_frag(test, "~curious~", onscreen);
-
-  document.body.removeChild(onscreen);
-  set_weather("here", "penguins");
-  test.length(_.keys(weather_listeners.here), 1);
-  assert_frag(test, "~curious~", onscreen);
-  Meteor.flush();
-  test.length(_.keys(weather_listeners.here), 0);
-  assert_frag(test, "~curious~", onscreen);
 });
 
-Tinytest.add("render - recursive", function (test) {
-  set_weather("there", "wet");
+Tinytest.add("liveui - onscreen", function(test) {
 
-  var outer_count = 0;
-  var inner_count = 0;
-  var onscreen = DIV({style: "display: none;"}, [
-    Meteor.ui.render(function () {
-      outer_count++;
-      return DIV({id: "outer"}, [get_weather("here"),
-                  Meteor.ui.render(function () {
-                    inner_count++;
-                    return get_weather("there");
-                  })
-                 ]);
-    })
-  ]);
-  document.body.appendChild(onscreen);
-  assert_frag(test, "<outer>penguins~wet~</outer>", onscreen);
-  test.equal(outer_count, 1);
-  test.equal(inner_count, 1);
-  test.length(_.keys(weather_listeners.here), 1);
-  test.length(_.keys(weather_listeners.there), 1);
+  var R = ReactiveVar(123);
 
-  set_weather("there", "dry");
+  var div = OnscreenDiv(Meteor.ui.render(function() {
+    return "<p>The number is "+R.get()+".</p><hr><br><br><u>underlined</u>";
+  }));
+
+  test.equal(div.html(), "<p>The number is 123.</p><hr><br><br><u>underlined</u>");
+  test.equal(R.numListeners(), 1);
   Meteor.flush();
-  assert_frag(test, "<outer>penguins~dry~</outer>", onscreen);
-  test.equal(outer_count, 1);
-  test.equal(inner_count, 2);
-  test.length(_.keys(weather_listeners.here), 1);
-  test.length(_.keys(weather_listeners.there), 1);
-
-  set_weather("here", "chocolate");
+  R.set(456); // won't take effect until flush()
+  test.equal(div.html(), "<p>The number is 123.</p><hr><br><br><u>underlined</u>");
+  test.equal(R.numListeners(), 1);
   Meteor.flush();
-  assert_frag(test, "<outer>chocolate~dry~</outer>", onscreen);
-  test.equal(outer_count, 2);
-  test.equal(inner_count, 3);
-  test.length(_.keys(weather_listeners.here), 1);
-  test.length(_.keys(weather_listeners.there), 1);
+  test.equal(div.html(), "<p>The number is 456.</p><hr><br><br><u>underlined</u>");
+  test.equal(R.numListeners(), 1);
 
-  document.body.removeChild(onscreen);
-  set_weather("there", "melting"); // safe from GC until flush
-  test.length(_.keys(weather_listeners.here), 1);
-  test.length(_.keys(weather_listeners.there), 1);
-  document.body.appendChild(onscreen);
+  div.remove();
+  R.set(789); // update should force div dependency to be GCed when div is updated
   Meteor.flush();
-  assert_frag(test, "<outer>chocolate~melting~</outer>", onscreen);
-  test.equal(outer_count, 2);
-  test.equal(inner_count, 4);
-  test.length(_.keys(weather_listeners.here), 1);
-  test.length(_.keys(weather_listeners.there), 1);
-
-  document.body.removeChild(onscreen);
-  set_weather("here", "silent");
-  Meteor.flush();
-  assert_frag(test, "<outer>chocolate~melting~</outer>", onscreen);
-  test.equal(outer_count, 2);
-  test.equal(inner_count, 4);
-  test.length(_.keys(weather_listeners.here), 0);
-  test.length(_.keys(weather_listeners.there), 0);
+  test.equal(R.numListeners(), 0);
 });
 
-Tinytest.add("render - events", function (test) {
-  var evts = '';
-  var onscreen = DIV({style: "display: none;"}, [
-    Meteor.ui.render(function () {
-      return [
-        Meteor.ui.render(function () {
-          get_weather("there");
-          return DIV({id: "wrapper"}, [
-            DIV({id: "outer"}, [
-              DIV({id: "inner1"}),
-              Meteor.ui.render(function () {
-                return DIV({id: "inner2"});
-              })
-            ])])
-        }),
-        Meteor.ui.render(function () {
-          if (get_weather("here") !== "expansive")
-            return [];
-          return DIV({id: "wrapper2"}, [
-            DIV({id: "outer2"}, [
-              DIV({id: "inner21"}),
-              Meteor.ui.render(function () {
-                return DIV({id: "inner2"});
-              })
-            ])
-          ]);
-        })
-      ];
-    }, {
-      "click": function (e) {
-        test.equal(12, this.x);
-        evts += "a" + e.originalEvent.data;
-      },
-      "mousedown #outer": function (e) {
-        test.equal(12, this.x);
-        evts += "b" + e.originalEvent.data;
-      },
-      "mouseup #inner1": function (e) {
-        test.equal(12, this.x);
-        evts += "c1" + e.originalEvent.data;
-      },
-      "mouseup #inner2": function (e) {
-        test.equal(12, this.x);
-        evts += "c2" + e.originalEvent.data;
-      },
-      "keypress, keydown #inner2": function (e) {
-        test.equal(12, this.x);
-        evts += "de" + e.originalEvent.data;
-      },
-      "keyup #wrapper": function (e) {
-        test.equal(12, this.x);
-        evts += "f" + e.originalEvent.data;
-      }
-    }, {x : 12})
-  ]);
-  document.body.appendChild(onscreen);
+Tinytest.add("liveui - tables", function(test) {
+  var R = ReactiveVar(0);
 
-  var simulate = function (node, event, args) {
-    node = (node instanceof $ ? node[0] : node);
+  var table = OnscreenDiv(Meteor.ui.render(function() {
+    var buf = [];
+    buf.push("<table>");
+    for(var i=0; i<R.get(); i++)
+      buf.push("<tr><td>"+(i+1)+"</td></tr>");
+    buf.push("</table>");
+    return buf.join('');
+  }));
 
-    if (document.createEvent) {
-      var e = document.createEvent("Event");
-      e.initEvent(event, true, true);
-      _.extend(e, args);
-      node.dispatchEvent(e);
+  R.set(1);
+  Meteor.flush();
+  test.equal(table.html(), "<table><tbody><tr><td>1</td></tr></tbody></table>");
+
+  R.set(10);
+  test.equal(table.html(), "<table><tbody><tr><td>1</td></tr></tbody></table>");
+  Meteor.flush();
+  test.equal(table.html(), "<table><tbody>"+
+               "<tr><td>1</td></tr>"+
+               "<tr><td>2</td></tr>"+
+               "<tr><td>3</td></tr>"+
+               "<tr><td>4</td></tr>"+
+               "<tr><td>5</td></tr>"+
+               "<tr><td>6</td></tr>"+
+               "<tr><td>7</td></tr>"+
+               "<tr><td>8</td></tr>"+
+               "<tr><td>9</td></tr>"+
+               "<tr><td>10</td></tr>"+
+               "</tbody></table>");
+
+  R.set(0);
+  Meteor.flush();
+  test.equal(table.html(), "<table></table>");
+  table.kill();
+  Meteor.flush();
+  test.equal(R.numListeners(), 0);
+
+  var div = OnscreenDiv();
+  div.node().appendChild(document.createElement("TABLE"));
+  div.node().firstChild.appendChild(Meteor.ui.render(function() {
+    var buf = [];
+    for(var i=0; i<R.get(); i++)
+      buf.push("<tr><td>"+(i+1)+"</td></tr>");
+    return buf.join('');
+  }));
+  test.equal(div.html(), "<table><!----></table>");
+  R.set(3);
+  Meteor.flush();
+  test.equal(div.html(), "<table><tbody>"+
+               "<tr><td>1</td></tr>"+
+               "<tr><td>2</td></tr>"+
+               "<tr><td>3</td></tr>"+
+               "</tbody></table>");
+  test.equal(div.node().firstChild.rows.length, 3);
+  R.set(0);
+  Meteor.flush();
+  test.equal(div.html(), "<table><!----></table>");
+  div.kill();
+  Meteor.flush();
+
+  test.equal(R.numListeners(), 0);
+
+  div = OnscreenDiv();
+  div.node().appendChild(Meteor.ui._htmlToFragment("<table><tr></tr></table>"));
+  R.set(3);
+  div.node().getElementsByTagName("tr")[0].appendChild(Meteor.ui.render(
+    function() {
+      var buf = [];
+      for(var i=0; i<R.get(); i++)
+        buf.push("<td>"+(i+1)+"</td>");
+      return buf.join('');
+    }));
+  test.equal(div.html(),
+               "<table><tbody><tr><td>1</td><td>2</td><td>3</td>"+
+               "</tr></tbody></table>");
+  R.set(1);
+  Meteor.flush();
+  test.equal(div.html(),
+               "<table><tbody><tr><td>1</td></tr></tbody></table>");
+  div.kill();
+  Meteor.flush();
+  test.equal(R.numListeners(), 0);
+});
+
+Tinytest.add("liveui - preserved nodes (diff/patch)", function(test) {
+
+  var rand;
+
+  var randomNodeList = function(optParentTag, depth) {
+    var atTopLevel = ! optParentTag;
+    var len = rand.nextIntBetween(atTopLevel ? 1 : 0, 10);
+    var buf = [];
+    for(var i=0; i<len; i++)
+      buf.push(randomNode(optParentTag, depth));
+    return buf;
+  };
+
+  var randomNode = function(optParentTag, depth) {
+    var n = {};
+
+    if (rand.nextBoolean()) {
+      // text node
+      n.text = rand.nextIdentifier(2);
     } else {
-      var e = document.createEventObject();
-      _.extend(e, args);
-      node.fireEvent("on" + event, e);
+
+      n.tagName = rand.nextChoice((function() {
+        switch (optParentTag) {
+        case "table": return ['tr'];
+        case "tr": return ['td'];
+        case "p": case "b": case "i": return ['b', 'i'];
+        default: return ['div', 'ins', 'center', 'p'];
+        }
+      })());
+
+      if (rand.nextBoolean())
+        n.id = rand.nextIdentifier();
+      if (rand.nextBoolean())
+        n.name = rand.nextIdentifier();
+
+      if (depth === 0) {
+        n.children = [];
+      } else {
+        n.children = randomNodeList(n.tagName, depth-1);
+      }
+    }
+
+    var existence = rand.nextChoice([[true, true], [false, true], [true, false]]);
+    n.existsBefore = existence[0];
+    n.existsAfter = existence[1];
+
+    return n;
+  };
+
+  var nodeListToHtml = function(list, is_after, optBuf) {
+    var buf = (optBuf || []);
+    _.each(list, function(n) {
+      if (is_after ? n.existsAfter : n.existsBefore) {
+        if (n.text) {
+          buf.push(n.text);
+        } else {
+          buf.push('<', n.tagName);
+          if (n.id)
+            buf.push(' id="', n.id, '"');
+          if (n.name)
+            buf.push(' name="', n.name, '"');
+          buf.push('>');
+          nodeListToHtml(n.children, is_after, buf);
+          buf.push('</', n.tagName, '>');
+        }
+      }
+    });
+    return optBuf ? null : buf.join('');
+  };
+
+  var fillInElementIdentities = function(list, parent, is_after) {
+    var elementsInList = _.filter(
+      list,
+      function(x) {
+        return (is_after ? x.existsAfter : x.existsBefore) && x.tagName;
+      });
+    var elementsInDom = _.filter(parent.childNodes,
+                                 function(x) { return x.nodeType === 1; });
+    test.equal(elementsInList.length, elementsInDom.length);
+    for(var i=0; i<elementsInList.length; i++) {
+      elementsInList[i].node = elementsInDom[i];
+      fillInElementIdentities(elementsInList[i].children,
+                              elementsInDom[i]);
     }
   };
 
-  var test_event = function (expected, id, event, args) {
-    evts = "";
-    simulate($('#' + id), event, args);
-    test.equal(evts, expected);
+  var getParentChain = function(node) {
+    var buf = [];
+    while (node) {
+      buf.push(node);
+      node = node.parentNode;
+    }
+    return buf;
+  };
+
+  var isSameElements = function(a, b) {
+    if (a.length !== b.length)
+      return false;
+    for(var i=0; i<a.length; i++) {
+      if (a[i] !== b[i])
+        return false;
+    }
+    return true;
+  };
+
+  var collectLabeledNodeData = function(list, optArray) {
+    var buf = optArray || [];
+
+    _.each(list, function(x) {
+      if (x.tagName && x.existsBefore && x.existsAfter) {
+        if (x.name || x.id) {
+          buf.push({ node: x.node, parents: getParentChain(x.node) });
+        }
+        collectLabeledNodeData(x.children, buf);
+      }
+    });
+
+    return buf;
+  };
+
+  for(var i=0; i<20; i++) {
+    rand = new SeededRandom("preserved nodes "+i);
+
+    var R = ReactiveVar(false);
+    var structure = randomNodeList(null, 4);
+    var frag = WrappedFrag(Meteor.ui.render(function() {
+      return nodeListToHtml(structure, R.get());
+    })).hold();
+    test.equal(frag.html(), nodeListToHtml(structure, false) || "<!---->");
+    fillInElementIdentities(structure, frag.node());
+    var labeledNodes = collectLabeledNodeData(structure);
+    R.set(true);
+    Meteor.flush();
+    test.equal(frag.html(), nodeListToHtml(structure, true) || "<!---->");
+    _.each(labeledNodes, function(x) {
+      test.isTrue(isSameElements(x.parents, getParentChain(x.node)));
+    });
+
+    frag.release();
+    Meteor.flush();
+    test.equal(R.numListeners(), 0);
   }
 
-  var main_event_tests = function () {
-    test_event('a0', 'inner1', 'click', {data: 0});
-    test_event('a1', 'inner2', 'click', {data: 1});
-    test_event('a2', 'outer', 'click', {data: 2});
-    test_event('a3', 'wrapper', 'click', {data: 3});
-    test_event('b4', 'inner1', 'mousedown', {data: 4});
-    test_event('b5', 'inner2', 'mousedown', {data: 5});
-    test_event('b6', 'outer', 'mousedown', {data: 6});
-    test_event('', 'wrapper', 'mousedown', {data: 7});
-    test_event('c18', 'inner1', 'mouseup', {data: 8});
-    test_event('c29', 'inner2', 'mouseup', {data: 9});
-    test_event('', 'outer', 'mouseup', {data: 10});
-    test_event('', 'wrapper', 'mouseup', {data: 11});
-    test_event('de12', 'inner1', 'keypress', {data: 12});
-    test_event('de13', 'inner2', 'keypress', {data: 13});
-    test_event('de14', 'outer', 'keypress', {data: 14});
-    test_event('de15', 'wrapper', 'keypress', {data: 15});
-    test_event('', 'inner1', 'keydown', {data: 16});
-    test_event('de17', 'inner2', 'keydown', {data: 17});
-    test_event('', 'outer', 'keydown', {data: 18});
-    test_event('', 'wrapper', 'keydown', {data: 19});
-    test_event('', 'inner1', 'keyup', {data: 20});
-    test_event('', 'inner2', 'keyup', {data: 21});
-    test_event('', 'outer', 'keyup', {data: 22});
-    // XXX expected failure -- selectors will never match top-level nodes
-    test.expect_fail();
-    test_event('f23', 'wrapper', 'keyup', {data: 23});
-  };
-  main_event_tests();
-
-  set_weather("here", "expansive");
-  Meteor.flush();
-  main_event_tests();
-
-  // XXX expected failure -- top-level nodes that appear later will
-  // not get events delivered to them or their children, because event
-  // handlers will not get installed on them..
-  test.expect_fail();
-  test_event("a23", 'inner21', 'click', {data: 23});
-
-  set_weather("there", "peachy");
-  Meteor.flush();
-  // XXX expected failure -- if a LiveRange at toplevel gets
-  // repopulated, then it won't get event handlers installed on
-  // it. really the same case as the previous.
-  test.expect_fail();
-  test_event('a0', 'inner1', 'click', {data: 0});
-  // main_event_tests();
-
-  document.body.removeChild(onscreen);
 });
 
-Tinytest.add("renderList - basics", function (test) {
-  var c = new LocalCollection();
+Tinytest.add("liveui - copied attributes", function(test) {
+  // make sure attributes are correctly changed (i.e. copied)
+  // when preserving old nodes, either because they are labeled
+  // or because they are a parent of a labeled node.
 
-  var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
-    render: function (doc) {
-      return DIV({id: doc.id});
-    },
-    render_empty: function () {
-      return DIV({id: "empty"});
-    }
-  });
+  var R1 = ReactiveVar("foo");
+  var R2 = ReactiveVar("abcd");
+  var frag = WrappedFrag(Meteor.ui.render(function() {
+    return '<div puppy="'+R1.get()+'"><div><div><div><input name="blah" kittycat="'+
+      R2.get()+'"></div></div></div></div>';
+  })).hold();
+  var node1 = frag.node().firstChild;
+  var node2 = frag.node().firstChild.getElementsByTagName("input")[0];
+  test.equal(node1.nodeName, "DIV");
+  test.equal(node2.nodeName, "INPUT");
+  test.equal(node1.getAttribute("puppy"), "foo");
+  test.equal(node2.getAttribute("kittycat"), "abcd");
 
-  assert_frag(test, "<empty></empty>", r);
+  R1.set("bar");
+  R2.set("efgh");
+  Meteor.flush();
+  test.equal(node1.getAttribute("puppy"), "bar");
+  test.equal(node2.getAttribute("kittycat"), "efgh");
 
-  // Insertion
+  frag.release();
+  Meteor.flush();
+  test.equal(R1.numListeners(), 0);
+  test.equal(R2.numListeners(), 0);
 
-  c.insert({id: "D"});
-  assert_frag(test, "<D></D>", r);
-  c.insert({id: "E"});
-  assert_frag(test, "<D></D><E></E>", r);
-  c.insert({id: "F"});
-  assert_frag(test, "<D></D><E></E><F></F>", r);
-  c.insert({id: "C"});
-  assert_frag(test, "<C></C><D></D><E></E><F></F>", r);
-  c.insert({id: "D2"});
-  assert_frag(test, "<C></C><D></D><D2></D2><E></E><F></F>", r);
+  var R;
+  R = ReactiveVar(false);
+  frag = WrappedFrag(Meteor.ui.render(function() {
+    return '<input id="foo" type="checkbox"' + (R.get() ? ' checked="checked"' : '') + '>';
+  })).hold();
+  var get_checked = function() { return !! frag.node().firstChild.checked; };
+  test.equal(get_checked(), false);
+  Meteor.flush();
+  test.equal(get_checked(), false);
+  R.set(true);
+  test.equal(get_checked(), false);
+  Meteor.flush();
+  test.equal(get_checked(), true);
+  R.set(false);
+  test.equal(get_checked(), true);
+  Meteor.flush();
+  test.equal(get_checked(), false);
+  R.set(true);
+  Meteor.flush();
+  test.equal(get_checked(), true);
+  frag.release();
+  R = ReactiveVar(true);
+  frag = WrappedFrag(Meteor.ui.render(function() {
+    return '<input type="checkbox"' + (R.get() ? ' checked="checked"' : '') + '>';
+  })).hold();
+  test.equal(get_checked(), true);
+  Meteor.flush();
+  test.equal(get_checked(), true);
+  R.set(false);
+  test.equal(get_checked(), true);
+  Meteor.flush();
+  test.equal(get_checked(), false);
+  frag.release();
 
-  // this should hit all of the edge cases in insert_before
-  var parts;
-  var do_insert = function (id) {
-    c.insert({id: id});
-    parts.push("<" + id + "></" + id + ">");
-    parts.sort();
-    assert_frag(test, parts.join(''), r);
-  };
-  try_all_permutations(
-    function () {
-      c.remove();
-      parts = [];
-      assert_frag(test, "<empty></empty>", r);
-    },
-    [
-      _.bind(do_insert, null, "D"),
-      _.bind(do_insert, null, "E"),
-      _.bind(do_insert, null, "F"),
-      _.bind(do_insert, null, "G")
-    ],
-    function () {
-      assert_frag(test, "<D></D><E></E><F></F><G></G>", r);
-    }
-  );
-
-  c.insert({id: "C"});
-  c.insert({id: "D2"});
-  c.remove({id: "G"});
-
-  // Change without move
-
-  c.update({id: "E"}, {$set: {id: "E2"}});
-  assert_frag(test, "<C></C><D></D><D2></D2><E2></E2><F></F>", r);
-  c.update({id: "F"}, {$set: {id: "F2"}});
-  assert_frag(test, "<C></C><D></D><D2></D2><E2></E2><F2></F2>", r);
-  c.update({id: "C"}, {$set: {id: "C2"}});
-  assert_frag(test, "<C2></C2><D></D><D2></D2><E2></E2><F2></F2>", r);
 });
 
-Tinytest.add("renderList - removal", function (test) {
-  var c = new LocalCollection();
-  // (test is written in this weird way for historical reasons; feel
-  // free to refactor)
-  c.insert({id: "D"});
-  c.insert({id: "E"});
-  c.insert({id: "F"});
-  c.insert({id: "G"});
-  c.insert({id: "C"});
-  c.insert({id: "D2"});
-  c.remove({id: "G"});
-  c.update({id: "E"}, {$set: {id: "E2"}});
-  c.update({id: "F"}, {$set: {id: "F2"}});
-  c.update({id: "C"}, {$set: {id: "C2"}});
+Tinytest.add("liveui - bad labels", function(test) {
+  // make sure patching behaves gracefully even when labels violate
+  // the rules that would allow preservation of nodes identity.
 
-  var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
-    render: function (doc) {
-      return DIV({id: doc.id});
-    },
-    render_empty: function () {
-      return DIV({id: "empty"});
-    }
-  });
+  var go = function(html1, html2) {
+    var R = ReactiveVar(true);
+    var frag = WrappedFrag(Meteor.ui.render(function() {
+      return R.get() ? html1 : html2;
+    })).hold();
 
-  c.remove({id: "D2"});
-  assert_frag(test, "<C2></C2><D></D><E2></E2><F2></F2>", r);
-  c.remove({id: "F2"});
-  assert_frag(test, "<C2></C2><D></D><E2></E2>", r);
-  c.remove({id: "C2"});
-  assert_frag(test, "<D></D><E2></E2>", r);
-  c.remove({id: "E2"});
-  assert_frag(test, "<D></D>", r);
-  c.remove({id: "D"});
-  assert_frag(test, "<empty></empty>", r);
-
-  // this should hit all of the edge cases in extract
-  var do_remove = function (id) {
-    c.remove({id: id});
-    delete parts["<" + id + "></" + id + ">"];
-    assert_frag(test, _.keys(parts).sort().join('') || '<empty></empty>', r);
+    R.set(false);
+    Meteor.flush();
+    test.equal(frag.html(), html2);
+    frag.release();
   };
-  try_all_permutations(
-    function () {
-      parts = {};
-      _.each(["D", "E", "F", "G"], function (id) {
-        c.insert({id: id});
-        parts["<" + id + "></" + id + ">"] = true;
+
+  go('hello', 'world');
+
+  // duplicate IDs (bad developer; but should patch correctly)
+  go('<div id="foo">hello</div><b id="foo">world</b>',
+     '<div id="foo">hi</div><b id="foo">there</b>');
+  go('<div id="foo"><b id="foo">hello</b></div>',
+     '<div id="foo"><b id="foo">hi</b></div>');
+  go('<div id="foo">hello</div><b id="foo">world</b>',
+     '<div id="foo"><b id="foo">hi</b></div>');
+
+  // tag name changes
+  go('<div id="foo">abcd</div>',
+     '<p id="foo">efgh</p>');
+
+  // parent chain changes at all
+  go('<div><div><div><p id="foo">test123</p></div></div></div>',
+     '<div><div><p id="foo">test123</p></div></div>');
+  go('<div><div><div><p id="foo">test123</p></div></div></div>',
+     '<div><ins><div><p id="foo">test123</p></div></ins></div>');
+
+  // ambiguous names
+  go('<ul><li name="me">1</li><li name="me">3</li><li name="me">3</li></ul>',
+     '<ul><li name="me">4</li><li name="me">5</li></ul>');
+});
+
+Tinytest.add("liveui - chunks", function(test) {
+
+  var inc = function(v) {
+    v.set(v.get() + 1); };
+
+  var R1 = ReactiveVar(0);
+  var R2 = ReactiveVar(0);
+  var R3 = ReactiveVar(0);
+  var count1 = 0, count2 = 0, count3 = 0;
+
+  var frag = WrappedFrag(Meteor.ui.render(function() {
+    return R1.get() + "," + (count1++) + " " +
+      Meteor.ui.chunk(function() {
+        return R2.get() + "," + (count2++) + " " +
+          Meteor.ui.chunk(function() {
+            return R3.get() + "," + (count3++);
+          });
       });
-      assert_frag(test, "<D></D><E></E><F></F><G></G>", r);
-    },
-    [
-      _.bind(do_remove, null, "D"),
-      _.bind(do_remove, null, "E"),
-      _.bind(do_remove, null, "F"),
-      _.bind(do_remove, null, "G")
-    ],
-    function () {
-      assert_frag(test, "<empty></empty>", r);
-    }
-  );
-});
+  })).hold();
 
-Tinytest.add("renderList - default render empty", function (test) {
-  var c = new LocalCollection();
+  test.equal(frag.html(), "0,0 0,0 0,0");
 
-  var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
-    render: function (doc) {
-      return DIV({id: doc.id});
-    }
-  });
-  assert_frag(test, "<!---->", r);
+  inc(R1); Meteor.flush();
+  test.equal(frag.html(), "1,1 0,1 0,1");
 
-  c.insert({id: "D"});
-  assert_frag(test, "<D></D>", r);
-  c.remove({id: "D"});
-  assert_frag(test, "<!---->", r);
-});
+  inc(R2); Meteor.flush();
+  test.equal(frag.html(), "1,1 1,2 0,2");
 
-Tinytest.add("renderList - change and move", function (test) {
-  var c = new LocalCollection();
+  inc(R3); Meteor.flush();
+  test.equal(frag.html(), "1,1 1,2 1,3");
 
-  var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
-    render: function (doc) {
-      return DIV({id: doc.id});
-    }
-  });
+  inc(R2); Meteor.flush();
+  test.equal(frag.html(), "1,1 2,3 1,4");
 
-  c.insert({id: "D"});
-  c.insert({id: "E"});
-  assert_frag(test, "<D></D><E></E>", r);
-  c.update({id: "D"}, {id: "F"});
-  assert_frag(test, "<E></E><F></F>", r);
-  c.update({id: "E"}, {id: "G"});
-  assert_frag(test, "<F></F><G></G>", r);
-  c.update({id: "G"}, {id: "C"});
-  assert_frag(test, "<C></C><F></F>", r);
-  c.insert({id: "E"});
-  assert_frag(test, "<C></C><E></E><F></F>", r);
-  c.insert({id: "D"});
-  assert_frag(test, "<C></C><D></D><E></E><F></F>", r);
-  c.update({id: "C"}, {id: "D2"});
-  assert_frag(test, "<D></D><D2></D2><E></E><F></F>", r);
-  c.update({id: "F"}, {id: "D3"});
-  assert_frag(test, "<D></D><D2></D2><D3></D3><E></E>", r);
-  c.update({id: "D3"}, {id: "C"});
-  assert_frag(test, "<C></C><D></D><D2></D2><E></E>", r);
-  c.update({id: "D2"}, {id: "F"});
-  assert_frag(test, "<C></C><D></D><E></E><F></F>", r);
-});
+  inc(R1); Meteor.flush();
+  test.equal(frag.html(), "2,2 2,4 1,5");
 
-Tinytest.add("renderList - termination", function (test) {
-  var c = new LocalCollection();
-
-  var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
-    render: function (doc) {
-      return DIV({id: doc.id});
-    }
-  });
-
-  c.remove();
-  c.insert({id: "A"});
-  assert_frag(test, "<A></A>", r);
-  Meteor.flush(); // not onscreen, so terminates
-  c.insert({id: "B"});
-  assert_frag(test, "<A></A>", r);
-  c.remove({id: "A"});
-  assert_frag(test, "<A></A>", r);
+  frag.release();
   Meteor.flush();
-  assert_frag(test, "<A></A>", r);
+  test.equal(R1.numListeners(), 0);
+  test.equal(R2.numListeners(), 0);
+  test.equal(R3.numListeners(), 0);
 
-  var before_flush;
-  var should_gc;
-  var onscreen;
-  var second_is_noop;
-  try_all_permutations(
-    // Set up
-    function () {
-      c.remove();
-      c.insert({id: "A"});
-      c.insert({id: "B"});
-      r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
-        render: function (doc) {
-          return DIV({id: doc.id});
-        }
-      });
-      assert_frag(test, "<A></A><B></B>", r);
-      should_gc = false;
-      onscreen = null;
-      second_is_noop = false;
-    },
-    // Modify. Should not trigger GC, even though the element isn't
-    // onscreen, since a flush hasn't happened yet.
-    [1,
-     function () {c.insert({id: "C"});},
-     function () {c.update({id: "A"}, {id: "A2"});},
-     function () {c.update({id: "A"}, {id: "X"});},
-     function () {c.remove({id: "A"});}
-    ],
-    function () {
-      before_flush = dump_frag(r);
-      test.notEqual("<A></A><B></B>", before_flush);
-    },
-    // Possibly put onscreen.
-    [1,
-     function () {
-       onscreen = DIV({style: "display: none;"});
-       onscreen.appendChild(r);
-       document.body.appendChild(onscreen);
-     },
-     function () { }
-    ],
-    // Possibly flush.
-    [1,
-     function () {
-       Meteor.flush();
-       should_gc = !onscreen;
-     },
-     function () { }
-    ],
-    // Take a second action.
-    [1,
-     function () {c.insert({id: "D"});},
-     function () {c.update({id: "B"}, {id: "B2"});},
-     function () {c.update({id: "B"}, {id: "Y"});},
-     function () {c.remove({id: "B"});},
-     function () {second_is_noop = true;}
-    ],
-    // If GC was supposed to be triggered, make sure it actually was
-    // triggered.
-    function () {
-      if (should_gc || second_is_noop)
-        assert_frag(test, before_flush, onscreen || r);
-      else
-        test.notEqual(before_flush, dump_frag(onscreen || r));
+  R1.set(0);
+  R2.set(0);
+  R3.set(0);
 
-      if (onscreen)
-        document.body.removeChild(onscreen);
-    }
-  );
-});
-
-Tinytest.add("renderList - list items are reactive", function (test) {
-  var c = new LocalCollection();
-
-  set_weather("here", "cloudy");
-  set_weather("there", "cloudy");
-  Meteor.flush();
-  var render_count = 0;
-  var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
-    render: function (doc) {
-      render_count++;
-      if (doc.want_weather)
-        return DIV({id: doc.id + "_" + get_weather(doc.want_weather)});
-      else
-        return DIV({id: doc.id});
-    }
-  });
-  var onscreen = DIV({style: "display: none;"});
-  onscreen.appendChild(r);
-  document.body.appendChild(onscreen);
-
-  test.equal(render_count, 0);
-  c.insert({id: "A", want_weather: "here"});
-  test.equal(render_count, 1);
-  assert_frag(test, "<A_cloudy></A_cloudy>", onscreen);
-
-  c.insert({id: "B", want_weather: "here"});
-  test.equal(render_count, 2);
-  test.length(_.keys(weather_listeners.here), 2);
-  assert_frag(test, "<A_cloudy></A_cloudy><B_cloudy></B_cloudy>", onscreen);
-
-  c.insert({id: "C"});
-  test.equal(render_count, 3);
-  test.length(_.keys(weather_listeners.here), 2);
-  assert_frag(test, "<A_cloudy></A_cloudy><B_cloudy></B_cloudy><C></C>", onscreen);
-
-  c.update({id: "B"}, {$set: {id: "B2"}});
-  test.equal(render_count, 4);
-  test.length(_.keys(weather_listeners.here), 3);
-  assert_frag(test, "<A_cloudy></A_cloudy><B2_cloudy></B2_cloudy><C></C>", onscreen);
-
-  Meteor.flush();
-  test.equal(render_count, 4);
-  test.length(_.keys(weather_listeners.here), 2);
-  assert_frag(test, "<A_cloudy></A_cloudy><B2_cloudy></B2_cloudy><C></C>", onscreen);
-
-  c.update({id: "B2"}, {$set: {id: "D"}});
-  test.equal(render_count, 5); // move doesn't rerender
-  test.length(_.keys(weather_listeners.here), 3);
-  assert_frag(test, "<A_cloudy></A_cloudy><C></C><D_cloudy></D_cloudy>", onscreen);
-
-  Meteor.flush();
-  test.equal(render_count, 5);
-  test.length(_.keys(weather_listeners.here), 2);
-  assert_frag(test, "<A_cloudy></A_cloudy><C></C><D_cloudy></D_cloudy>", onscreen);
-
-  set_weather("here", "sunny");
-  test.equal(render_count, 5);
-  test.length(_.keys(weather_listeners.here), 2);
-  assert_frag(test, "<A_cloudy></A_cloudy><C></C><D_cloudy></D_cloudy>", onscreen);
-
-  Meteor.flush();
-  test.equal(render_count, 7);
-  test.length(_.keys(weather_listeners.here), 2);
-  assert_frag(test, "<A_sunny></A_sunny><C></C><D_sunny></D_sunny>", onscreen);
-
-  c.remove({id: "A"});
-  test.equal(render_count, 7);
-  test.length(_.keys(weather_listeners.here), 2);
-  assert_frag(test, "<C></C><D_sunny></D_sunny>", onscreen);
-
-  Meteor.flush();
-  test.equal(render_count, 7);
-  test.length(_.keys(weather_listeners.here), 1);
-  test.length(_.keys(weather_listeners.there), 0);
-  assert_frag(test, "<C></C><D_sunny></D_sunny>", onscreen);
-
-  c.insert({id: "F", want_weather: "there"});
-  test.equal(render_count, 8);
-  test.length(_.keys(weather_listeners.here), 1);
-  test.length(_.keys(weather_listeners.there), 1);
-  assert_frag(test, "<C></C><D_sunny></D_sunny><F_cloudy></F_cloudy>", onscreen);
-
-  r.appendChild(onscreen); // take offscreen
-  Meteor.flush();
-  test.equal(render_count, 8);
-  test.length(_.keys(weather_listeners.here), 1);
-  test.length(_.keys(weather_listeners.there), 1);
-  assert_frag(test, "<C></C><D_sunny></D_sunny><F_cloudy></F_cloudy>", onscreen);
-
-  // it's offscreen, but it wasn't taken off through a mechanism that
-  // calls Meteor.ui._cleanup, so we take the slow GC path. the entries
-  // will notice as they get invalidated, but the list won't notice
-  // until it has a structure change (at which point any remaining
-  // entries will get torn down too.)
-  set_weather("here", "ducky");
-  Meteor.flush();
-  test.equal(render_count, 8);
-  test.length(_.keys(weather_listeners.here), 0);
-  test.length(_.keys(weather_listeners.there), 1);
-  assert_frag(test, "<C></C><D_sunny></D_sunny><F_cloudy></F_cloudy>", onscreen);
-
-  c.insert({id: "E"});
-  // insert renders the doc -- it has to, since renderList GC happens
-  // only on flush
-  test.equal(render_count, 9);
-  test.length(_.keys(weather_listeners.here), 0);
-  test.length(_.keys(weather_listeners.there), 1);
-  assert_frag(test, "<C></C><D_sunny></D_sunny><E></E><F_cloudy></F_cloudy>", onscreen);
-
-  Meteor.flush();
-  test.equal(render_count, 9);
-  test.length(_.keys(weather_listeners.here), 0);
-  test.length(_.keys(weather_listeners.there), 0);
-  assert_frag(test, "<C></C><D_sunny></D_sunny><E></E><F_cloudy></F_cloudy>", onscreen);
-
-  c.insert({id: "G"});
-  Meteor.flush();
-  test.equal(render_count, 9);
-  test.length(_.keys(weather_listeners.here), 0);
-  test.length(_.keys(weather_listeners.there), 0);
-  assert_frag(test, "<C></C><D_sunny></D_sunny><E></E><F_cloudy></F_cloudy>", onscreen);
-});
-
-Tinytest.add("renderList - multiple elements in an item", function (test) {
-  var c = new LocalCollection();
-  var r;
-
-  var lengths = [];
-  var present, changed, moved;
-  var mode;
-  var update = function (index) {
-    if (mode === "add") {
-      c.insert({index: index, moved: 0});
-      present[index] = true;
-    }
-    else if (mode === "remove") {
-      c.remove({index: index});
-      present[index] = false;
-    }
-    else if (mode === "change") {
-      c.update({index: index}, {$set: {changed: true}});
-      changed[index] = true;
-    }
-    else if (mode === "move") {
-      c.update({index: index}, {$set: {moved: 1}});
-      moved[index] = true;
-    }
-
-    var parts = {}
-    for (var i = 0; i < 3; i++) {
-      if (present[i])
-        parts[(moved[i] ? "1_" : "0_") + i] = i;
-    }
-    var expected = "";
-    _.each(_.keys(parts).sort(), function (key) {
-      var index = parts[key];
-      for (var i = 0; i < lengths[index]; i++) {
-        var id = index + "_" + i + (changed[index] ? "B" : "");
-        expected += "<" + id + "></" + id + ">";
+  frag = WrappedFrag(Meteor.ui.render(function() {
+    var buf = [];
+    buf.push('<div class="foo', R1.get(), '">');
+    buf.push(Meteor.ui.chunk(function() {
+      var buf = [];
+      for(var i=0; i<R2.get(); i++) {
+        buf.push(Meteor.ui.chunk(function() {
+          return '<div>'+R3.get()+'</div>';
+        }));
       }
-      if (lengths[index] === 0)
-        expected += "<!---->";
+      return buf.join('');
+    }));
+    buf.push('</div>');
+    return buf.join('');
+  })).hold();
+
+  test.equal(frag.html(), '<div class="foo0"><!----></div>');
+  R2.set(3); Meteor.flush();
+  test.equal(frag.html(), '<div class="foo0">'+
+               '<div>0</div><div>0</div><div>0</div>'+
+               '</div>');
+
+  R3.set(5); Meteor.flush();
+  test.equal(frag.html(), '<div class="foo0">'+
+               '<div>5</div><div>5</div><div>5</div>'+
+               '</div>');
+
+  R1.set(7); Meteor.flush();
+  test.equal(frag.html(), '<div class="foo7">'+
+               '<div>5</div><div>5</div><div>5</div>'+
+               '</div>');
+
+  R2.set(1); Meteor.flush();
+  test.equal(frag.html(), '<div class="foo7">'+
+               '<div>5</div>'+
+               '</div>');
+
+  R1.set(11); Meteor.flush();
+  test.equal(frag.html(), '<div class="foo11">'+
+               '<div>5</div>'+
+               '</div>');
+
+  R2.set(2); Meteor.flush();
+  test.equal(frag.html(), '<div class="foo11">'+
+               '<div>5</div><div>5</div>'+
+               '</div>');
+
+  R3.set(4); Meteor.flush();
+  test.equal(frag.html(), '<div class="foo11">'+
+               '<div>4</div><div>4</div>'+
+               '</div>');
+
+  frag.release();
+
+  // calling chunk() outside of render mode
+  test.equal(Meteor.ui.chunk(function() { return "foo"; }), "foo");
+
+  // caller violating preconditions
+
+  test.throws(function() {
+    Meteor.ui.render(function() {
+      return Meteor.ui.chunk("foo");
     });
-    assert_frag(test, expected || "<!---->", r);
-  };
-  /* Consider uncommenting the 6 lines below in a "slow tests" mode */
-  try_all_permutations(
-    [1,
-//     function () {lengths[0] = 0;},
-     function () {lengths[0] = 1;},
-//     function () {lengths[0] = 2;},
-     function () {lengths[0] = 3;}
-    ],
-    [1,
-//     function () {lengths[1] = 0;},
-//     function () {lengths[1] = 1;},
-     function () {lengths[1] = 2;},
-     function () {lengths[1] = 3;}
-    ],
-    [1,
-//     function () {lengths[2] = 0;},
-     function () {lengths[2] = 1;},
-     function () {lengths[2] = 2;}
-//     ,function () {lengths[2] = 3;}
-    ],
-    [1,
-     function () {mode = "add";},
-     function () {mode = "remove";},
-     function () {mode = "change";},
-     function () {mode = "move";}
-    ],
-    function () {
-      c.remove();
-      Meteor.flush();
-      r = Meteor.ui.renderList(c.find({}, {sort: ['moved', 'index']}), {
-        render: function (doc) {
-          var ret = [];
-          for (var i = 0; i < lengths[doc.index]; i++)
-            ret.push(DIV({id: doc.index + "_" + i + (doc.changed ? "B" : "")}));
-          return ret;
-        }
-      });
-
-      present = mode === "add" ? [false, false, false] : [true, true, true];
-      changed = [false, false, false];
-      moved = [false, false, false];
-      if (mode !== "add") {
-        for (var i = 0; i < 3; i++)
-          c.insert({index: i, moved: 0});
-      }
-    },
-    [
-      _.bind(update, null, 0),
-      _.bind(update, null, 1),
-      _.bind(update, null, 2)
-    ]
-  );
-});
-
-Tinytest.add("renderList - #each", function (test) {
-  var c = new LocalCollection();
-
-  var render_count = 0;
-
-  _.extend(Template.test_renderList_each, {
-    render_count: function () {
-      return render_count++;
-    },
-    weather: function (where) {
-      return get_weather(where);
-    },
-    data: function () {
-      return c.find({x: {$lt: 5}}, {sort: ["x"]});
-    },
-    data2: function () {
-      return c.find({x: {$gt: 5}}, {sort: ["x"]});
-    }
   });
 
-  onscreen = DIV({style: "display: none;"});
-  onscreen.appendChild(Template.test_renderList_each());
-  document.body.appendChild(onscreen);
-
-  assert_frag(test, "~Before0<!---->Middle~Else~After~", onscreen);
-  test.length(_.keys(weather_listeners.here), 0);
-
-  c.insert({x: 2, name: "A"});
-  assert_frag(test, "~Before0~Aducky~Middle~Else~After~", onscreen);
-  test.length(_.keys(weather_listeners.here), 1);
-
-  c.insert({x: 3, name: "B"});
-  assert_frag(test, "~Before0~Aducky~~Bducky~Middle~Else~After~", onscreen);
-  test.length(_.keys(weather_listeners.here), 2);
-
-  set_weather("here", "clear");
-  assert_frag(test, "~Before0~Aducky~~Bducky~Middle~Else~After~", onscreen);
-  test.length(_.keys(weather_listeners.here), 2);
-  Meteor.flush();
-  assert_frag(test, "~Before0~Aclear~~Bclear~Middle~Else~After~", onscreen);
-  test.length(_.keys(weather_listeners.here), 2);
-
-  c.update({x: 3}, {$set: {x: 8}}, {multi: true});
-  assert_frag(test, "~Before0~Aclear~Middle~B~After~", onscreen);
-  test.length(_.keys(weather_listeners.here), 2);
-  Meteor.flush();
-  test.length(_.keys(weather_listeners.here), 1);
-
-  c.update({}, {$set: {x: 5}}, {multi: true});
-  assert_frag(test, "~Before0<!---->Middle~Else~After~", onscreen);
-  test.length(_.keys(weather_listeners.here), 1);
-  Meteor.flush();
-  test.length(_.keys(weather_listeners.here), 0);
-
-  document.body.removeChild(onscreen);
+  test.throws(function() {
+    Meteor.ui.render(function() {
+      return Meteor.ui.chunk(function() {
+        return {};
+      });
+    });
+  });
 
 });
 
-/* Still to test:
-  - render_empty gets events attached
-  - moved preserves events
-  - renderlists inside other renderlists work and GC correctly
-  - passing in an existing query [optional, it's undocumented..]
-*/
+Tinytest.add("liveui - repeated chunk", function(test) {
+  test.throws(function() {
+    var frag = Meteor.ui.render(function() {
+      var x = Meteor.ui.chunk(function() {
+        return "abc";
+      });
+      return x+x;
+    });
+  });
+});
+
+Tinytest.add("liveui - leaderboard", function(test) {
+  // use a simplified, local leaderboard to test some stuff
+
+  var players = new LocalCollection();
+  var selected_player = ReactiveVar();
+
+  var scores = OnscreenDiv(Meteor.ui.render(function() {
+    return Meteor.ui.listChunk(
+      players.find({}, {sort: {score: -1}}),
+      function(player) {
+        var style;
+        if (selected_player.get() === player._id)
+          style = "player selected";
+        else
+          style = "player";
+
+        return '<div class="' + style + '">' +
+          '<div class="name">' + player.name + '</div>' +
+          '<div name="score">' + player.score + '</div></div>';
+      }, null, {
+        events: {
+          "click": function () {
+            selected_player.set(this._id);
+          }
+        }
+      });
+  }));
+
+  var names = ["Glinnes Hulden", "Shira Hulden", "Denzel Warhound",
+               "Lute Casagave", "Akadie", "Thammas, Lord Gensifer",
+               "Ervil Savat", "Duissane Trevanyi", "Sagmondo Bandolio",
+               "Rhyl Shermatz", "Yalden Wirp", "Tyran Lucho",
+               "Bump Candolf", "Wilmer Guff", "Carbo Gilweg"];
+  for (var i = 0; i < names.length; i++)
+    players.insert({name: names[i], score: i*5});
+
+  var bump = function() {
+    players.update(selected_player.get(), {$inc: {score: 5}});
+  };
+
+  var findPlayerNameDiv = function(name) {
+    var divs = scores.node().getElementsByTagName('DIV');
+    return _.find(divs, function(div) {
+      return div.innerHTML === name;
+    });
+  };
+
+  Meteor.flush();
+  var glinnesNameNode = findPlayerNameDiv(names[0]);
+  test.isTrue(!! glinnesNameNode);
+  var glinnesScoreNode = glinnesNameNode.nextSibling;
+  test.equal(glinnesScoreNode.getAttribute("name"), "score");
+  simulateEvent(glinnesNameNode, 'click');
+  Meteor.flush();
+  glinnesNameNode = findPlayerNameDiv(names[0]);
+  test.isTrue(!! glinnesNameNode);
+  test.equal(glinnesNameNode.parentNode.className, 'player selected');
+  var glinnesId = players.findOne({name: names[0]})._id;
+  test.isTrue(!! glinnesId);
+  test.equal(selected_player.get(), glinnesId);
+  test.equal(
+    Meteor.ui._canonicalizeHtml(glinnesNameNode.parentNode.innerHTML),
+    '<div class="name">Glinnes Hulden</div><div name="score">0</div>');
+
+  bump();
+  Meteor.flush();
+
+  glinnesNameNode = findPlayerNameDiv(names[0], glinnesNameNode);
+  var glinnesScoreNode2 = glinnesNameNode.nextSibling;
+  test.equal(glinnesScoreNode2.getAttribute("name"), "score");
+  // move and patch should leave score node the same, because it
+  // has a name attribute!
+  test.equal(glinnesScoreNode, glinnesScoreNode2);
+  test.equal(glinnesNameNode.parentNode.className, 'player selected');
+  test.equal(
+    Meteor.ui._canonicalizeHtml(glinnesNameNode.parentNode.innerHTML),
+    '<div class="name">Glinnes Hulden</div><div name="score">5</div>');
+
+  bump();
+  Meteor.flush();
+
+  glinnesNameNode = findPlayerNameDiv(names[0], glinnesNameNode);
+  test.equal(
+    Meteor.ui._canonicalizeHtml(glinnesNameNode.parentNode.innerHTML),
+    '<div class="name">Glinnes Hulden</div><div name="score">10</div>');
+
+  scores.kill();
+  Meteor.flush();
+  test.equal(selected_player.numListeners(), 0);
+});
+
+Tinytest.add("liveui - listChunk table", function(test) {
+  var c = new LocalCollection();
+
+  c.insert({value: "fudge", order: "A"});
+  c.insert({value: "sundae", order: "B"});
+
+  var R = ReactiveVar();
+
+  var table = WrappedFrag(Meteor.ui.render(function() {
+    var buf = [];
+    buf.push('<table>');
+    buf.push(Meteor.ui.listChunk(
+      c.find({}, {sort: ['order']}),
+      function(doc) {
+        return "<tr><td>"+doc.value + (doc.reactive ? R.get() : '')+
+          "</td></tr>";
+      },
+      function() {
+        return "<tr><td>(nothing)</td></tr>";
+      }));
+    buf.push('</table>');
+    return buf.join('');
+  })).hold();
+
+  var lastHtml;
+
+  var shouldFlushTo = function(html) {
+    // same before flush
+    test.equal(table.html(), lastHtml);
+    Meteor.flush();
+    test.equal(table.html(), html);
+    lastHtml = html;
+  };
+  var tableOf = function(/*htmls*/) {
+    if (arguments.length === 0) {
+      return '<table></table>';
+    } else {
+      return '<table><tbody><tr><td>' +
+        _.toArray(arguments).join('</td></tr><tr><td>') +
+        '</td></tr></tbody></table>';
+    }
+  };
+
+  test.equal(table.html(), lastHtml = tableOf('fudge', 'sundae'));
+
+  // switch order
+  c.update({value: "fudge"}, {$set: {order: "BA"}});
+  shouldFlushTo(tableOf('sundae', 'fudge'));
+
+  // change text
+  c.update({value: "fudge"}, {$set: {value: "hello"}});
+  c.update({value: "sundae"}, {$set: {value: "world"}});
+  shouldFlushTo(tableOf('world', 'hello'));
+
+  // remove all
+  c.remove({});
+  shouldFlushTo(tableOf('(nothing)'));
+
+  c.insert({value: "1", order: "A"});
+  c.insert({value: "5", order: "B"});
+  c.insert({value: "3", order: "AB"});
+  c.insert({value: "7", order: "BB"});
+  c.insert({value: "2", order: "AA"});
+  c.insert({value: "4", order: "ABA"});
+  c.insert({value: "6", order: "BA"});
+  c.insert({value: "8", order: "BBA"});
+  shouldFlushTo(tableOf('1', '2', '3', '4', '5', '6', '7', '8'));
+
+  // make one item newly reactive
+  R.set('*');
+  c.update({value: "7"}, {$set: {reactive: true}});
+  shouldFlushTo(tableOf('1', '2', '3', '4', '5', '6', '7*', '8'));
+
+  R.set('!');
+  shouldFlushTo(tableOf('1', '2', '3', '4', '5', '6', '7!', '8'));
+
+  // move it
+  c.update({value: "7"}, {$set: {order: "A0"}});
+  shouldFlushTo(tableOf('1', '7!', '2', '3', '4', '5', '6', '8'));
+
+  // still reactive?
+  R.set('?');
+  shouldFlushTo(tableOf('1', '7?', '2', '3', '4', '5', '6', '8'));
+
+  // go nuts
+  c.update({value: '1'}, {$set: {reactive: true}});
+  c.update({value: '1'}, {$set: {reactive: false}});
+  c.update({value: '2'}, {$set: {reactive: true}});
+  c.update({value: '2'}, {$set: {order: "BBB"}});
+  R.set(';');
+  R.set('.');
+  shouldFlushTo(tableOf('1', '7.', '3', '4', '5', '6', '8', '2.'));
+
+  for(var i=1; i<=8; i++)
+    c.update({value: String(i)},
+             {$set: {reactive: true, value: '='+String(i)}});
+  R.set('!');
+  shouldFlushTo(tableOf('=1!', '=7!', '=3!', '=4!', '=5!', '=6!', '=8!', '=2!'));
+
+  for(var i=1; i<=8; i++)
+    c.update({value: '='+String(i)},
+             {$set: {order: "A"+i}});
+  shouldFlushTo(tableOf('=1!', '=2!', '=3!', '=4!', '=5!', '=6!', '=7!', '=8!'));
+
+  var valueFunc = function(n) { return '<b name="bold">'+n+'</b>'; };
+  for(var i=1; i<=8; i++)
+    c.update({value: '='+String(i)},
+             {$set: {value: valueFunc(i)}});
+  shouldFlushTo(tableOf.apply(
+    null,
+    _.map(_.range(1,9), function(n) { return valueFunc(n)+R.get(); })));
+
+  test.equal(table.node().firstChild.rows.length, 8);
+
+  var bolds = table.node().firstChild.getElementsByTagName('B');
+  test.equal(bolds.length, 8);
+  _.each(bolds, function(b) {
+    b.nifty = {}; // mark the nodes; non-primitive value won't appear in IE HTML
+  });
+
+  R.set('...');
+  shouldFlushTo(tableOf.apply(
+    null,
+    _.map(_.range(1,9), function(n) { return valueFunc(n)+R.get(); })));
+  var bolds2 = table.node().firstChild.getElementsByTagName('B');
+  test.equal(bolds2.length, 8);
+  // make sure patching is actually happening
+  _.each(bolds2, function(b) {
+    test.equal(!! b.nifty, true);
+  });
+
+  // change value func, and still we should be patching
+  var valueFunc2 = function(n) { return '<b name="bold">'+n+'</b><i>yeah</i>'; };
+  for(var i=1; i<=8; i++)
+    c.update({value: valueFunc(i)},
+             {$set: {value: valueFunc2(i)}});
+  shouldFlushTo(tableOf.apply(
+    null,
+    _.map(_.range(1,9), function(n) { return valueFunc2(n)+R.get(); })));
+  var bolds3 = table.node().firstChild.getElementsByTagName('B');
+  test.equal(bolds3.length, 8);
+  _.each(bolds3, function(b) {
+    test.equal(!! b.nifty, true);
+  });
+
+  table.release();
+
+});
+
+
+// TO TEST:
+// - events
+//   - current brokenness
+//   - attaching events in render, chunk, listChunk item, listChunk else
+//   - test that handlers still work under various sub-partial replacements
+//   - test presered checkbox
+// - unused chunk??
+
+// XXX GC testing: for sake of coverage, removing any 'LiveRange.cleanup'
+// call should cause breakage somewhere.
+
+

@@ -68,7 +68,7 @@
   <div class="list {{selected}}">
     {{#if editing}}
       <div class="edit">
-        <input class="list-name-input" type="text" value="" />
+        <input class="list-name-input" name="list-name-input" type="text" value="" />
       </div>
     {{else}}
       <div class="display">
@@ -108,11 +108,11 @@
     <div class="destroy"></div>
     {{#if editing}}
       <div class="edit">
-        <input class="todo-input" type="text" value="" />
+        <input class="todo-input" name="todo-input" type="text" value="" />
       </div>
     {{else}}
       <div class="display">
-        <input class="check" type="checkbox" {{done_checkbox}} />
+        <input class="check" name="markdone" type="checkbox" {{{done_checkbox}}} />
         <div class="todo-text">{{text}}</div>
       </div>
     {{/if}}
@@ -122,7 +122,7 @@
       {{/each}}
       {{#if adding_tag}}
         <div class="tag edittag">
-          <input type="text" value="" />
+          <input type="text" name="edittag" value="" />
         </div>
       {{else}}
         <div class="tag addtag">
