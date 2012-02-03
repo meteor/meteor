@@ -1,0 +1,34 @@
+<head>
+  <title>Meteor</title>
+</head>
+
+<body>
+  <div id="main" class="ui-layout-center">
+    <div id="main-wrapper">
+      {{> introduction }}
+      {{> examples }}
+      {{> concepts }}
+      {{> api }}
+      {{> packages }}
+    </div>
+  </div>
+
+  <div id="nav" class="ui-layout-west">
+    {{> nav }}
+  </div>
+</body>
+
+<template name="nav">
+<div>
+  <h1>Version 0.1.2</h2>
+  <hr />
+  {{#each sections}}
+  {{#if type "spacer"}}
+    <div class="spacer"> </div>
+  {{/if}}
+  {{#if type "section"}}
+    <h{{depth}}><a href="#{{id}}" class="{{maybe_current}} {{style}}">{{name}}</a></h{{depth}}>
+  {{/if}}
+  {{/each}}
+</div>
+</template>
