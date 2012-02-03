@@ -29,11 +29,16 @@ if (typeof Meteor === "undefined") Meteor = {};
   // collide.
   var CONNECT_TIMEOUT_SLOP = 1000;
   // time for initial reconnect attempt.
-  var RETRY_BASE_TIMEOUT = 3000;
+  var RETRY_BASE_TIMEOUT = 1000;
   // exponential factor to increase timeout each attempt.
   var RETRY_EXPONENT = 2.2;
   // maximum time between reconnects.
   var RETRY_MAX_TIMEOUT = 1800000; // 30min.
+  // time to wait for the first 2 retries.  this helps page reload
+  // speed during dev mode restarts, but doesn't hurt prod too
+  // much (due to CONNECT_TIMEOUT)
+  var RETRY_MIN_TIMEOUT = 10;
+
   // fuzz factor to randomize reconnect times by. avoid reconnect
   // storms.
   var RETRY_FUZZ = 0.5; // +- 25%
@@ -149,6 +154,9 @@ if (typeof Meteor === "undefined") Meteor = {};
   };
 
   var retry_timeout = function (count) {
+    if (count < 2)
+      return RETRY_MIN_TIMEOUT;
+
     var timeout = Math.min(
       RETRY_MAX_TIMEOUT,
       RETRY_BASE_TIMEOUT * Math.pow(RETRY_EXPONENT, count));
