@@ -250,8 +250,10 @@ invalidations.</p>
 <dt><span class="name">status</span>
   <span class="type">String</span></dt>
 <dd>Text string describing the current reconnection status. The possible
-  values are "<code>connected</code>", "<code>connecting</code>",
-  "<code>waiting</code>", and "<code>startup</code>".</dd>
+  values are "<code>connected</code>" (the connection is up and
+  running), "<code>connecting</code>" (disconnected and trying to open a
+  new connection), and "<code>waiting</code>" (failed to connect and
+  waiting to try to reconnect).</dd>
 
 <dt><span class="name">retry_count</span>
   <span class="type">Number</span></dt>
