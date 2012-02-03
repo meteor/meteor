@@ -266,6 +266,8 @@ if (typeof Meteor === "undefined") Meteor = {};
         if (arguments.length === 0)
           selector = {};
 
+        // XXX when implementing observe() on the server, either
+        // support limit or remove this performance hack.
         options = options || {};
         options.limit = 1;
         return this.find(selector, options).fetch()[0];

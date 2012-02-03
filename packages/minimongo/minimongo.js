@@ -81,8 +81,10 @@ Collection.prototype.findOne = function (selector, options) {
   if (arguments.length === 0)
     selector = {};
 
-  options = options || {};
-  options.limit = 1;
+  // XXX disable limit here so that we can observe findOne() cursor,
+  // as required by markAsReactive.
+  // options = options || {};
+  // options.limit = 1;
   return this.find(selector, options).fetch()[0];
 };
 
