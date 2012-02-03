@@ -1,0 +1,1470 @@
+<template name="api_box">
+<div class="api">
+<h3 id="{{id}}">
+  <span class="name">{{{name}}}</span>
+  <span class="locus">{{locus}}</span>
+</h3>
+
+<div class="desc">
+{{#each descr}}<p>{{#pretty}}{{this}}{{/pretty}}</p>{{/each}}
+</div>
+
+{{#if args}}
+<h4>Arguments</h4>
+
+{{#with args}}
+{{> api_box_args }}
+{{/with}}
+{{/if}}
+
+{{#if options}}
+<h4>Options</h4>
+
+{{#with options}}
+{{> api_box_args }}
+{{/with}}
+{{/if}}
+
+</div>
+</template>
+
+<template name="api_box_args">
+<dl class="args">
+{{#each this}}
+<dt><span class="name">{{name}}</span>
+  <span class="type">
+    {{#if type_link}}
+      <a href="#{{type_link}}">{{type}}</a>
+    {{else}}
+      {{type}}
+    {{/if}}
+  </span></dt>
+<dd>{{#pretty}}{{descr}}{{/pretty}}</dd>
+{{/each}}
+</dl>
+</template>
+
+<template name="api">
+<div>
+<h1 id="api">API</h1>
+
+<!------------------------------------------------------------------->
+<!-- METEOR ------------------------------------------------------------>
+
+<h2 id="meteor"><span>Meteor</span></h2>
+
+<!------------------------------------------------------------------->
+<!-- Meteor.publish ---------------------------------------------------->
+
+{{> api_box publish}}
+
+<div class="warning">
+This API will change completely in an upcoming release. You will no
+longer be limited to datasets that can be expressed as a selector
+query against a single collection.
+</div>
+
+Examples:
+<pre class="prettyprint">
+// Publish the entire 'todos' collection to any client that asks for
+// it, and send updates in realtime.
+Meteor.publish("todos");
+
+// Publish the 'payments' collection, but exclude payments that are
+// marked secret.
+Meteor.publish("payments", {selector: {secret: false}});
+
+// Let clients subscribe to just the posts made by a particular
+// person.
+Meteor.publish("user-posts", {
+  collection: Posts,
+  selector: function (params) {
+    return {posted_by: params.who};
+  }
+});
+</pre>
+
+<!------------------------------------------------------------------->
+<!-- Meteor.subscribe -------------------------------------------------->
+
+{{> api_box subscribe}}
+
+<!-- XXX when you call stop, is the data from the subscription
+removed? -->
+
+<div class="warning">
+<code>on_ready</code> will likely be removed in a future release and
+replaced with a different mechanism.
+</div>
+
+Examples:
+
+<pre class="prettyprint">
+// Connect to the server, grab the "todos" dataset, and store it in
+// the appropriate local collections. Listen for changes on the server
+// and keep the local copy updated.
+var s = Meteor.subscribe("todos");
+
+// After five seconds, end the subscription and stop receiving updates.
+setTimeout(function () {s.stop();}, 5000);
+
+// Pull down Woudiver's posts.
+Meteor.subscribe("user-posts", {who: "Woudiver"});
+
+// Find the available rooms, and once they've loaded, select the
+// first one.
+Meteor.subscribe("rooms", {}, function () {
+  Session.set("selected-room", Rooms.find()[0]._id);
+});
+</pre>
+
+<!------------------------------------------------------------------->
+<!-- Meteor.autosubscribe ---------------------------------------------->
+
+{{> api_box autosubscribe}}
+
+<p>The easiest way to understand what this function does is to look at
+the example.</p>
+
+<p><code>func</code> will be run immediately, and while it runs,
+records will be kept of the subscriptions it makes
+(via <code><a href="#subscribe">Meteor.subscribe</a></code>) and the data it uses
+(including calls to <code><a href="#get">Session.get</a></code>
+and <code><a href="#find">collection.find</a></code>).</p>
+
+<p>Whenever the used data changes, the subscriptions will be cancelled
+and <code>func</code> will be re-run to make replacement subscriptions.</p>
+
+<p>It's not necessary to call <code>stop</code> on subscriptions made
+from inside <code>Meteor.subscriptions</code>.</p>
+
+<p>Example:</p>
+
+<pre class="prettyprint">
+// Subscribe to the chat messages in the current room. Automatically
+// update the subscription whenever the current room changes.
+Meteor.subscriptions(function () {
+  Meteor.subscribe("chat", {room: Session.get("current-room");});
+});
+</pre>
+
+<!------------------------------------------------------------------->
+<!-- Meteor.is_client, Meteor.is_server  ---------------------------------->
+
+<div class="api">
+
+<h3 id="isclientisserver">
+  <span class="name">Meteor.is_client, Meteor.is_server</span>
+  <span class="locus">Anywhere</span>
+</h3>
+
+<div class="desc">
+  Detect whether code is running on a client or a server.
+</div>
+
+<dl class="constants">
+<dt><span class="name">Meteor.is_client</span>
+  <span class="type">Boolean constant</span></dt>
+<dd>True on a client and false on a server.</dd>
+<dt><span class="name">Meteor.is_server</span>
+  <span class="type">Boolean constant</span></dt>
+<dd>The reverse.</dd>
+</dl>
+
+</div>
+
+<!------------------------------------------------------------------->
+<!-- Meteor.startup  --------------------------------------------------->
+
+{{> api_box startup}}
+
+<p>On a server, the function will run as soon as the server process is
+finished starting. On a client, the function will run as soon as the
+DOM is ready and any <code>&lt;body&gt;</code> templates from
+your <code>.html</code> files have been put on the screen.</p>
+
+<p>Example:</p>
+
+<pre class="prettyprint">
+// On server startup, if the database is empty, create some initial data.
+if (Meteor.is_server) {
+  Meteor.startup(function () {
+    if (Rooms.find().length === 0) {
+      Rooms.insert({name: "Initial room"});
+    }
+  });
+}
+</pre>
+
+<!------------------------------------------------------------------->
+<!-- Meteor.flush ------------------------------------------------------>
+
+{{> api_box flush }}
+
+<p>Normally, when you make changes (like writing to the database),
+their impact (like updating the DOM) is delayed until the system is
+idle. This keeps things predictable &mdash; you can know that the DOM
+won't go changing out from under your code as it runs. It's also one
+of the things that makes Meteor fast.</p>
+
+<p>Call <code>flush</code> to apply any pending changes
+immediately. The main use for this is to make sure the DOM has been
+brought up to date with your latest changes, so you can manually
+manipulate it with jQuery or the like.</p>
+
+<p>When you call <code>flush</code>, any auto-updating DOM elements
+that are not on the screen may be cleaned up (meaning that Meteor
+will stop tracking and updating the elements, so that the browser's
+garbage collector can delete them.) So, if you manually
+call <code>flush</code>, you need to make sure that any auto-updating
+elements that you have created with templates, or by calling
+<code><a href="#render">Meteor.ui.render</a></code> or
+<code><a href="#renderList">Meteor.ui.renderList</a></code>, have already
+been inserted in the main DOM tree.</p>
+
+<p>Technically speaking, <code>flush</code> calls
+the <a href="#on_invalidate">invalidation callbacks</a></code> on
+every <a href="#context">reactive context</a> that has been
+<a href="#invalidate">invalidated</a>, but hasn't yet has its
+callbacks called. If the invalidation callbacks invalidate still more
+contexts, flush keeps flushing until everything is totally
+settled. The DOM elements are cleaned up because of logic in
+<code><a href="#render">Meteor.ui.render</a></code> that works through
+invalidations.</p>
+
+<!------------------------------------------------------------------->
+<!-- Meteor.status  ---------------------------------------------------->
+
+{{> api_box status}}
+
+<p>This method returns the status of the connection between the client
+  and the server. The return value is an object with the following
+  fields:</p>
+
+<dl class="objdesc">
+<dt><span class="name">connected</span>
+  <span class="type">Boolean</span></dt>
+<dd>True if currently connected to the server. If false, changes will
+  be queued up until the connection is reestablished.</dd>
+
+<dt><span class="name">status</span>
+  <span class="type">String</span></dt>
+<dd>Text string describing the current reconnection status. The possible
+  values are "<code>connected</code>", "<code>connecting</code>",
+  "<code>waiting</code>", and "<code>startup</code>".</dd>
+
+<dt><span class="name">retry_count</span>
+  <span class="type">Number</span></dt>
+<dd>The number of times the client has tried to reconnect since the
+  connection was lost. 0 when connected.</dd>
+
+<dt><span class="name">retry_time</span>
+  <span class="type">Number or undefined</span></dt>
+<dd>The estimated time of the next reconnection attempt. To turn this
+  into an interval until the next reconnection, use
+  "<code>retry_time - (new Date()).getTime()</code>". This key will
+  be set only when <code>status</code> is <code>"waiting"</code>.
+</dd>
+
+</dl>
+
+<p>Instead of using callbacks to notify you on changes, this is
+  a <a href="#reactivity">reactive</a> data source. You can use it in a
+  <a href="#templates">template</a> or <a href="#meteordeps">invalidation
+  context</a> to get realtime updates.</p>
+
+<!------------------------------------------------------------------->
+<!-- Meteor.reconnect  ------------------------------------------------->
+
+{{> api_box reconnect}}
+
+<!------------------------------------------------------------------->
+<!-- COLLECTION ----------------------------------------------------->
+
+<h2 id="collection"><span>Collection</span></h2>
+
+<p>There is a single API for accessing your data, whether from the
+client or from the server. Right now the only database supported is
+MongoDB. When you use the API from the server, you're hitting a real
+Mongo database. When you use the API from the client, you're hitting a
+local, in-memory cache called Minimongo. Minimongo has exactly the
+same API as regular Mongo.</p>
+
+<div class="warning">
+  In this preview, Minimongo has some limitations. The most important
+  are:
+  <ul>
+    <li><code>$elemMatch</code> is not supported in selectors.</li>
+    <li><code>$pull</code> in modifiers can only accept certain kinds
+    of selectors.</li>
+    <li>In selectors, dot notation and ordinal indexing may not work correctly.</li>
+    <li><code>$</code> to denote the matched array position is not
+    supported in modifier.</li>
+    <li>Sort does not support subkeys (you can sort on <code>a</code>,
+    but not <code>a.b</code>.)</li>
+    <li><code>findAndModify</code>, upsert, aggregate functions, and
+    map/reduce aren't supported.</li>
+    <li>The supported types are String, Number, Boolean, Array,
+    and Object.</li>
+  </ul>
+  All of these will be addressed in a future release. For full
+  Minimongo release notes, see <code>packages/minimongo/NOTES</code>
+  in the repository.
+</div>
+
+<div class="warning">
+  Minimongo currently doesn't have indexes. This will come soon. It's
+  usually not an issue, since there usually isn't that much data in
+  the client &mdash; it is not that common for developers to implement
+  indexes in their client-side models anyway.
+</div>
+
+<!------------------------------------------------------------------->
+<!-- Creating ------------------------------------------------------->
+
+{{> api_box collection}}
+
+<p>Calling this function is analogous to declaring a model in an
+traditional ORM (Object-Relation Mapper)-centric framework. It sets up
+a "collection" (a storage space for records, or "documents") that can
+be used to store a particular type of information, like users, posts,
+scores, todo items, or whatever matters to your application.</p>
+
+<p>The function returns an object with methods to
+<code><a href="#insert">insert</a></code> documents in the collection,
+<code><a href="#insert">update</a></code> their properties,
+and <code><a href="#insert">remove</a></code> them, and to
+<code><a href="#find">find</a></code> the documents in the collection
+that match arbitrary criteria. The way these methods work is
+compatible with the popular Mongo database API.</p>
+
+<p>If you pass a <code>name</code> when you create the collection, then
+you are declaring a persistent collection &mdash; one that is stored on
+the server and seen by all users. Client code and server code can both
+access the same collection using the same API.</p>
+
+<p>Specifically, when you pass a <code>name</code>, here's what
+happens:</p>
+<ul>
+
+<li>On the server, a collection with that name is created on a backend
+Mongo server. When you call methods on that collection on the server,
+they translate directly into normal Mongo operations.</li>
+
+<li>On the client, a Minimongo instance is created. Minimongo is
+essentially an in-memory, non-persistent implementation of Mongo in
+pure JavaScript. It serves as a local cache that stores just the
+subset of the database that this client is working with. Queries
+(<code><a href="#find">find</a></code>) are served directly out of
+this cache, without talking to the server.</li>
+
+<li>When you write to the database on the client
+(<code><a href="#update">update</a></code>, <code><a href="#remove">remove</a></code>),
+the command is executed immediately on the client, and,
+simultaneously, it's shipped up to the server and executed there
+too.</li>
+
+<li>How does the data get into the client-side database to start with?
+You have to put it there, by
+calling <code><a href="#publish">Meteor.publish</a></code> on the server
+and <code><a href="#subscribe">Meteor.subscribe</a></code> on the
+client. When data comes in from a subscription, the <code>name</code>s
+that were provided when creating the collections are used to insert it
+into the correct Minimongo collections.</li>
+
+</ul>
+
+<p>If you <em>don't pass a <code>name</code></em>, then you're
+creating a local collection. It's not synchronized anywhere; it's just
+a local scratchpad that supports Mongo-style
+<code><a href="#find">find</a></code>,
+<code><a href="#insert">insert</a></code>,
+<code><a href="#update">update</a></code>, and
+<code><a href="#remove">remove</a></code> operations.</p>
+
+<div class="warning">
+Currently the client is given full write access to the
+collection. They can execute arbitrary Mongo update commands. Once we
+land authentication and handlers, this will all change. You will be
+able to limit the client's direct access to insert, update, and
+remove. Instead, you'll define handler functions, which will limit the
+client to performing only the actual inserts, updates, and removes
+that you wrote in your source code. We are also considering validators
+and other ORM-like functionality.
+</div>
+
+<div class="warning">
+Currently local collections can only be created on the client.
+</div>
+
+<div>Example:</div>
+<pre>
+// Create a collection called Posts and put a document in it. The
+// document will be immediately visible in the local copy of the
+// collection. It will be written to the server-side database
+// a fraction of a second later, and a fraction of a second
+// after that, it will be synchronized down to any other clients
+// that are subscribed to a query that includes it (see
+// Meteor.subscribe)
+Posts = Meteor.Collection("posts");
+Posts.insert({title: "Hello world", body: "First post"});
+
+// Changes are visible immediately -- no waiting for a round trip to
+// the server.
+assert(Posts.find().count() === 1);
+
+// Create a temporary, local collection. It works just any other
+// collection, but it doesn't send changes to the server, and it
+// can't receive any data from subscriptions.
+Scratchpad = Meteor.Collection();
+for (var i = 0; i < 10; i++)
+  Scratchpad.insert({number: i * 2});
+assert(Scratchpad.find({number: {$lt: 9}}).count() === 5);
+</pre>
+
+<!------------------------------------------------------------------->
+<!-- Collection.find ------------------------------------------------>
+
+{{> api_box find}}
+
+<p>
+  Define a query and return a cursor: a reference to that query.  Does
+  not immediately access the database or register a data dependency.
+</p>
+
+<p>
+  Collection cursors track the set of matched database objects the
+  cursor's position within that set.  Each of the methods that retrieves
+  data updates the cursor position until the cursor reaches the end of
+  the data set.  Collection cursors can be rewound to read through the
+  documents a second time.
+</p>
+
+<div class="warning">
+  Collection cursors are not query snapshots.  If the database changes
+  between calling <code>Collection.find()</code> and fetching the
+  results of the cursor, or while fetching results from the cursor,
+  those changes may or may not appear in the result set.  This cursor
+  behavior mirrors MongoDB itself.
+</div>
+
+<p>
+  Queries are a reactive data source.  The first time a cursor's data is
+  used in a reactive context (eg,
+  <code><a href="#render">Meteor.ui.render</a></code>,
+  <code><a href="#render">Meteor.autosubscribe</a></code>, it will
+  register a dependency on the underlying data.  Any change to that data
+  that would affect the value of the cursor will trigger a
+  recomputation.  To disable this behavior, pass {reactive: false} as an
+  option to the original query call.
+</p>
+
+{{> api_box cursor_count}}
+
+<pre>
+// Display a count of posts matching certain criteria. Automatically
+// keep it updated as the database changes.
+var frag = Meteor.ui.render(function () {
+  var high_scoring = Posts.find({score: {$gt: 10}});
+  return $("&lt;p&gt;There are " + high_scoring.length + " posts with " +
+    "scores greater than 10&lt;/p&gt;");
+});
+document.body.appendChild(frag);
+</pre>
+
+<p>
+When called in a reactive context, count() will trigger a recomputation
+if the number of matching documents changes.  (Updates to a matching
+document will <i>not</i> trigger a recomputation.)
+</p>
+
+{{> api_box cursor_foreach}}
+{{> api_box cursor_map}}
+{{> api_box cursor_fetch}}
+
+<p>
+  To access the documents in a cursor, use one of the above
+  methods.  <code>forEach</code> will call a callback function with each
+  document in order, <code>map</code> returns an array containing the
+  results of applying the callback function to each document,
+  and <code>fetch</code> simply returns an array of the results.
+</p>
+
+<p>Each of these methods registers a dependency on the full query
+  result.  This means, when the cursor is accessed in a reactive
+  context, any change in the query's result set will trigger a
+  recomputation.<p>
+
+<p>Examples:</p>
+
+<pre>
+// Print the titles of the five top-scoring posts
+var top_posts = Posts.find({}, {sort: {score: -1}, limit: 5});
+var count = 0;
+top_posts.forEach(function (post) {
+  console.log("Title of post " + count + ": " + post.title);
+  count += 1;
+});
+</pre>
+
+{{> api_box cursor_rewind}}
+
+<p>
+  To access the data in a cursor more than once,
+  call <code>rewind</code> to reset the cursor to its initial state.
+</p>
+
+<!------------------------------------------------------------------->
+<!-- Collection.observe --------------------------------------------->
+
+{{> api_box cursor_observe}}
+
+<p>Establishes a <i>live query</i> that is notified on any change to
+  the query result.  Observe is only available on the client.<p>
+
+<p><code>callbacks</code> may have the following functions as
+properties:</p>
+<dl>
+
+<dt><code>added(document, before_index)</code></dt>
+<dd>Called when a new document enters the result set. It was inserted
+immediately before the document currently at the
+position <code>before_index</code>. Or if it was inserted at the end
+of the list, <code>before_index</code> will be equal to the (prior)
+length of the list.</dd>
+
+<dt><code>changed(new_document, at_index)</code></dt>
+<dd>The contents of the document at position <code>at_index</code>
+changed to <code>new_document</code>.</ddt>
+
+<dt><code>moved(document, old_index, new_index)</code></dt>
+<dd>A document changed its position in the result set,
+from <code>old_index</code> to <code>new_index</code>. For your
+convenience, its current contents is <code>document</code>. (This will
+only fire immediately after <code>changed</code>.</dd>
+
+<dt><code>removed(id, at_index)</code></dt>
+<dd>The document at position <code>at_index</code>, which had the
+given <code>id</code>, is no longer in the result set.</dd>
+
+</dl>
+
+<p><code>added</code> will immediately be called as necessary to
+deliver the initial results of the query, if any.</p>
+
+<p>Calling <code>observe</code> in a reactive context does <i>not</i>
+register a dependency on the query.</p>
+
+<p>Returns a live query handle, which is an object with these
+methods:</p>
+
+<dl>
+<dt><code>stop()</code></dt>
+<dd>Stop calling the callback functions and tear down the query. <b>The query will run forever until you call this.</b></dd>
+</dl>
+
+<p>Example:</p>
+
+<pre>
+// Keep track of how many administrators are online.
+var count = 0;
+var query = Users.find({admin: true, online_now: true});
+var handle = query.observe({
+  added: function (user) {
+    count++;
+    console.log(user.name + " brings the total to " + count + " admins.");
+  },
+  removed: function () {
+    count--;
+    console.log("Lost one. We're now down to " + count + " admins.");
+  }
+});
+
+// After five seconds, stop keeping the count.
+setTimeout(function () {handle.stop();}, 5000);
+</pre>
+
+<!------------------------------------------------------------------->
+<!-- Collection.insert ---------------------------------------------->
+
+{{> api_box insert}}
+
+<p>Add a document to the collection. A document is just an object, and
+its fields can contain any combination of JSON-compatible datatypes
+(arrays, objects, numbers, strings, null, true, and false).</p>
+
+<p><code>insert</code> will make a copy of the object, add
+an <code>_id</code> attribute that contains a unique ID for the
+object, insert it in the database, and return the copy to you.</p>
+
+<p>Example:</p>
+
+<pre>
+var groceries_id = Lists.insert({name: "Groceries"})._id;
+Items.insert({list: groceries_id, name: "Watercress"});
+Items.insert({list: groceries_id, name: "Persimmons"});
+</pre>
+
+<!------------------------------------------------------------------->
+<!-- Collection.update ---------------------------------------------->
+
+{{> api_box update}}
+
+<p>Find all of the documents that match <code>selector</code>, and
+modify them as given by <code>modifer</code>
+(see <a href="#modifiers">modifier documentation</a>.) Or,
+if <code>multi</code> is false, modify only one matching document.</p>
+
+<p><b>The default value of <code>multi</code> is different from most
+other Mongo drivers. In Meteor the default is true (modify all
+matching documents), but in many other drivers it is false.</b></p>
+
+<p>Instead of a selector, you can pass a string, which will be
+interpreted as an <code>_id</code>.</p>
+
+<div class="warning">
+The Mongo <code>upsert</code> feature is not implemented.
+</div>
+
+<p>Example:</p>
+
+<pre>
+// Give the "Superlative" badge to each user with a score greater than
+// 10. If they are logged in and their badge list is visible on the
+// screen, it will update automatically as they watch.
+Users.update({score: {$gt: 10}}, {badges: {$addToSet: "Superlative"}});
+</pre>
+
+<!------------------------------------------------------------------->
+<!-- Collection.remove ---------------------------------------------->
+
+{{> api_box remove}}
+
+<p>Find all of the documents that match <code>selector</code>, and
+delete them from the collection. Or instead of a selector, you may
+pass a string, to delete the document with that <code>_id</code>.</p>
+
+<p>Example:</p>
+
+<pre>
+// Delete all users with a karma of less than -2.
+Users.remove({karma: {$lt: -2}});
+
+// Show a list of posts that have been flagged, updating in realtime.
+// Put a link next to each post that deletes the post if clicked.
+var frag = Meteor.renderList(Posts, {
+  selector: {flagged: true},
+  render: function (post) {
+    // In real code it'd be necessary to sanitize post.name
+    return $("&lt;div&gt;" + post.name +
+      " &lt;span class='delete'&gt;Delete&lt;/span&gt;&lt;/div&gt;");
+  },
+  events: {
+    'click .delete': function () {
+      Posts.remove(this._id);
+    }
+  }
+});
+document.body.appendChild(frag);
+</pre>
+
+<!------------------------------------------------------------------->
+<!-- selectors ------------------------------------------------------>
+
+<div class="api">
+
+<h3 id="selectors">
+<span class="name">Mongo-style Selectors</span></h3>
+
+<p>In its simplest form, a selector is just a set of keys that must
+match in a document:</p>
+
+<pre>
+// Matches all documents where deleted is false
+{deleted: false}
+
+// Matches all documents where the name and cognomen are as given
+{name: "Rhialto", cognomen: "the Marvelous"}
+
+// Matches every document
+{}
+</pre>
+
+<p>But they can also contain more complicated tests:</p>
+
+<pre>
+// Matches documents where age is greater than 18
+{age: {$gt: 18}}
+
+// Also matches documents where tags is an array containing "today"
+{tags: "popular"}
+
+// Matches documents where fruit is one of three possibilities
+{fruit: {$in: ["peach", "plum", "pear"]}}
+</pre>
+
+<p>See the <a href="http://www.mongodb.org/display/DOCS/Advanced+Queries" target="_blank">complete documentation.</a></p>
+
+</div>
+
+<!------------------------------------------------------------------->
+<!-- modifiers ------------------------------------------------------>
+
+<div class="api">
+
+<h3 id="modifiers">
+<span class="name">Mongo-style Modifiers</span></h3>
+
+<p>A modifer is an object that describes how to update a document in
+place by changing some of its fields. Some examples:</p>
+
+<pre>
+// Set the 'admin' property on the document to true
+{$set: {admin: true}}
+
+// Add 2 to the 'votes' property, and add "Traz" to the end of the 
+// 'supporters' array
+{$inc: {votes: 2}, $push: {supporters: "Traz"}}
+</pre>
+
+<p>But if a modifier doesn't contain any $-operators, then it is
+instead interpreted as a literal document, and completely replaces
+whatever was previously in the database.
+</p>
+
+<pre>
+// Find the document with id "123", and completely replace it.
+Users.update({_id: "123"}, {name: "Alice", friends: ["Bob"]});
+</pre>
+
+<p>See the <a href="http://www.mongodb.org/display/DOCS/Updating#Updating-ModifierOperations" target="_blank">full list of modifiers.</a></p>
+
+</div>
+
+<!------------------------------------------------------------------->
+<!-- sort specifiers ------------------------------------------------>
+
+<div class="api">
+
+<h3 id="sortspecifiers"><span class="name">Sort Specifiers</span></h3>
+
+<p>Sorts may be specified using your choice of several syntaxes:</p>
+
+<pre>
+// All of these do the same thing (sort in ascending order by
+// key "a", breaking ties in descending order of key "b")
+
+[["a", "asc"], ["b", "desc"]]
+["a", ["b", "desc"]]
+{a: 1, b: -1}
+</pre>
+
+<p>The last form will only work if your JavaScript implementation
+preserves the order of keys in objects. Most do, most of the time, but
+it's up to you to be sure.</p>
+
+</div>
+
+<!------------------------------------------------------------------->
+<!-- SESSION -------------------------------------------------------->
+
+<h2 id="session"><span>Session</span></h2>
+
+<p><code>Session</code> is a global object that you can use to store
+an arbitrary set of key-value pairs. Use it to store things like the
+currently selected item in a list.</p>
+
+<p>What's special about <code>Session</code> is that it's reactive. If
+you call <code><a href="#get">Session.get</a>("current_list")</code>
+from inside a template, the template will automatically be rerendered
+whenever <code><a href="#set">Session.set</a></code> is called.
+</p>
+
+<!------------------------------------------------------------------->
+<!-- Session.set ---------------------------------------------------->
+
+{{> api_box set}}
+
+<p>Example:</p>
+
+<pre class="prettyprint">
+Meteor.autosubcribe(function () {
+  Meteor.subscribe("chat-history", {room: Session.get("current_room")});
+});
+
+// Causes the function passed to Meteor.autosubscribe to be re-run, so
+// that the chat-history subscription is moved to the room "home".
+Session.set("current_room", "home");
+</pre>
+
+<p>See <code><a href="#meteordeps">Meteor.deps</a></code> for another
+example.</p>
+
+<!------------------------------------------------------------------->
+<!-- Session.get ---------------------------------------------------->
+
+{{> api_box get}}
+
+<p>Example:</p>
+
+<pre class="prettyprint">
+Session.set("enemy", "Eastasia");
+var frag = Meteor.ui.render(function () {
+  return $("&lt;p&gt;We've always been at war with " +
+    Session.get("enemy") + "&lt;/p&gt;");
+});
+
+// Page will say "We've always been at war with Eastasia"
+document.body.append(frag);
+
+// Page will change to say "We've always been at war with Eurasia"
+Session.set("enemy", "Eurasia");
+</pre>
+
+<!------------------------------------------------------------------->
+<!-- Session.equals ------------------------------------------------->
+
+{{> api_box equals}}
+
+<p>These two expressions do the same thing:</p>
+
+<pre>
+(1) Session.get("key") === value
+(2) Session.equals("key", value)
+</pre>
+
+<p>.. but the second one is always better. It triggers fewer
+invalidations (template redraws), making your program more
+efficient.</p>
+
+<p>Example:</p>
+
+<pre class="prettyprint">
+// Show a dynamically updating list of items. Let the user click on an
+// item to select it. The selected item is given a CSS class so it
+// can be rendered differently.
+var frag = Meteor.ui.renderList(Posts, {
+  render: function (post) {
+    var cls = Session.equals("selected_post", post._id) ?
+      "selected" : "";
+    return $("&lt;div class='" + cls + "'&gt;" + post.title + "&lt;/div&gt;");
+  }, events: {
+    'click': function () {
+      Session.set("selected_post", this._id);
+    }
+  }
+});
+
+document.body.appendChild(frag);
+
+// In this code, when the user clicks on an item to select it, the
+// render function is called twice: once to rerender the item
+// that lost the selection, and once to rerender the item that gained
+// the selection.
+//
+// If Session.get had been used instead of Session.equals, then when
+// the user clicked on an item, the render function would have to
+// called once for every Post shown in the list.
+</pre>
+
+<!------------------------------------------------------------------->
+<!-- METEOR.UI --------------------------------------------------------->
+
+<h2 id="meteorui"><span>Meteor.ui</span></h2>
+
+<p>These are some utility functions for building interfaces. They make
+it easy to create DOM elements that update automatically as data
+changes in <code><a href="session">Session</a></code> variables or in
+a <code><a href="collection">Collection</a></code>.</p>
+
+<p>These helpers are implemented entirely on top of the public
+interfaces at
+<code><a href="meteordeps">Meteor.Deps</a></code> and
+<code><a href="collection">Meteor.Collection</a></code>.</p>
+
+<!------------------------------------------------------------------->
+<!-- Meteor.ui.render -------------------------------------------------->
+
+<!-- XXX maybe rename autorender? by analogy to autosubscribe -->
+
+{{> api_box render}}
+
+<p>You provide a function that returns some DOM
+elements. <code>Meteor.ui.render</code> gives you back some DOM elements
+that automatically updates themselves in place. They are sensitive to
+changes to session variables
+(<code><a href="#get">Session.get</a></code>) and to database writes
+(<code><a href="#get"><i>collection</i>.update</a></code>, etc.)</p>
+
+<p>The auto-updating elements are returned as
+a <code>DocumentFragment</code>. Simply insert
+this <code>DocumentFragment</code> anywhere in the DOM you like. Its
+elements will update themselves automatically until they are taken
+offscreen &mdash; specifically,
+until <code><a href="#flush">Meteor.flush</a></code> is called when the
+elements are not children of <code>document</code>.</p>
+
+<p><code>events</code> lets you quickly hook up some event handlers to
+the DOM nodes. If you provide <code>event_data</code>, it will be
+passed to event handlers in <code>this</code>.</p>
+
+<p><code>Meteor.ui.render</code> may be called recursively (that
+is, <code>render_func</code> can call <code>Meteor.ui.render</code>.) If
+that happens, each invocation of <code>render</code> works
+independently &mdash; an change to a dependency of the
+inner <code>render_func</code> will (correctly) not cause the
+outer <code>render_func</code> to be recomputed.</p>
+
+<p>Example:</p>
+
+<pre>
+// Show the number of users online.
+var frag = Meteor.ui.render(function () {
+  return $("&lt;p&gt;There are " + Users.find({online: true}).length +
+    " users online.&lt;/p&gt;");
+});
+document.body.appendChild(frag);
+
+// Find all users that have been idle for a while, and mark them as
+// offline. The count on the screen will automatically update.
+Users.update({idleTime: {$gt: 30}}, {online: false});
+
+// Show a counter, and let the user click to increase or decrease it.
+Session.set("counter", 0);
+var frag = Meteor.ui.render(function () {
+  return $('&lt;div&gt;Counter: ' + Session.get("counter") + ' ' +
+    '&lt;span class="inc"&gt;Increase&lt;/span&gt;' +
+    '&lt;span class="dec"&gt;Decrease&lt;/span&gt;&lt/div&gt;');
+}, {
+  'click .inc': function (event) {
+    Session.set("counter", Session.get("counter") + 1);
+  },
+  'click .dec': function (event) {
+    Session.set("counter", Session.get("counter") - 1);
+  }
+});
+document.body.appendChild(frag);
+</pre>
+
+<!------------------------------------------------------------------->
+<!-- Meteor.ui.renderList ---------------------------------------------->
+
+{{> api_box renderList}}
+
+<p>This is <code><a href="#render">Meteor.ui.render</a></code> crossed
+with <code><a href="#findlive"><i>collection</i>.findLive</a></code>
+It calls a render function repeatedly for each document in a
+collection that matches a query.</p>
+
+If you attach event handlers, then when they are triggered, they
+will receive the document in <code>this</code>.</p>
+
+<p>Returns a <code>DocumentFragment</code> with the same semantics as in
+<code><a href="#render">Meteor.ui.render</a></code> &mdash; insert it
+anywhere, it will automatically update itself, make sure it's on the
+page before the next time you
+call <code><a href="#flush">Meteor.flush</a></code>.
+
+<p>Example:</p>
+
+<pre>
+// List the titles of all of the posts that have the tag
+// "frontpage". Keep the list updated as new posts are made, as tags
+// change, etc. Let the user click a post to select it.
+Session.set("selected", null);
+var frag = Meteor.ui.renderList(Posts, {
+  render: function (post) {
+    var style = Session.equals("selected", post._id) ? "selected" : "";
+    // A real app would need to quote/sanitize post._name
+    return $('&lt;div class="' + style + '"&gt;' + post._name + '&lt;/div&gt;');
+  },
+  selector: {tags: "frontpage"},
+  events: {
+    'click': function (event) {
+      Session.set("selected", this._id);
+    }
+  }
+});
+document.body.appendChild(frag);
+</pre>
+
+<!------------------------------------------------------------------->
+<!-- event maps ----------------------------------------------------->
+
+<div class="api">
+
+<h3 id="eventmaps">
+<span class="name">Event Maps</span></h3>
+
+<p>Several functions take event maps. An event map is an object where
+the properties specify a set of events to handle, and the values are
+the handlers for those events. The property can be in one of several
+forms:</p>
+
+<dl>
+  <dt><em>eventname</em></dt>
+  <dd>Matches a particular type of event, such as 'click'</dd>
+  <dt><em>eventname selector</em></dt>
+  <dd>Matches a particular type of event, but only when it appears on
+  an element that matches a certain CSS selector</dd>
+  <dt><em>event1, event2</em></dt>
+  <dd>To handle more than one type of event with the same function, use a comma-separated list.</dd>
+</dl>
+
+<p>The handler function gets one argument, an object with information
+about the event. It will receive some additional context data
+in <code>this</code>, depending on the context (eg: with
+<code><a href="#renderList">Meteor.ui.renderList</a></code>, you get the
+document; with a Handlebars template, you get the data being used to
+fill the template.)</p>
+
+<div class="warning">
+Right now, the event handlers are wired up with jQuery, and the event
+object you receive is a jQuery event object. We would like to change
+this so that you are not required to use jQuery.
+</div>
+
+<div class="warning">
+There are currently two bugs that will cause events to not get
+delivered in certain circumstances. Both have easy workarounds:
+
+<ul>
+<li>If an event is filtered by a selector, then it will never be
+delivered to a top-level node in a template. The problem is that
+selectors will never match the top-level node in a template. This
+matches other libraries but can be counterintuitive. The workaround is
+to remove the selector if possible, or else add a wrapper element at the
+top of the template.</li>
+
+<li>If a template A inserts another template B at the top-level of the
+template, then if B updates itself, it will no longer receive
+events. The workaround is to add a wrapper element around B.</li>
+</ul>
+</div>
+
+<p>Example:</p>
+
+<pre>
+{
+  // Fires when any element is clicked
+  'click': function (event) { ... },
+
+  // Fires when any element with the 'accept' class is clicked
+  'click .accept': function (event) { ... },
+
+  // Fires when 'accept' is clicked, or a key is pressed
+  'keydown, click .accept': function (event) { ... }
+}
+</pre>
+</div>
+
+<!------------------------------------------------------------------->
+<!-- METEOR.DEPS ------------------------------------------------------->
+
+<h2 id="meteordeps"><span>Meteor.deps</span></h2>
+
+<p>
+Meteor has a simple dependency tracking system, so that it it can
+automatically rerender templates and such when
+<code><a href="#session">Session</a></code> variables are modified, or
+database queries change.
+</p>
+
+<p>
+Unlike most other systems, you don't have to manually declare these
+dependencies &mdash; it "just works". The mechanism is simple and
+efficient. When you call a function that supports reactive updates
+(say, a database query), it automatically saves the current
+"invalidation context" object if any (say, the current template being
+rendered.) Later, when the data changes, it can "invalidates" this
+context (tell the template to rerender itself.) The whole
+implementation is about 50 lines of code.
+</p>
+
+<p>
+As an end user, the only function you need to know about is
+<code><a href="#flush">Meteor.flush</a></code>, which forces all of the
+pending updates to complete (for example, it ensures the DOM has been
+updated with your recent database changes.) The functions
+in <code>Meteor.deps</code> are provided in case you want to hook into the
+invalidation system yourself to write your own reactive functions.
+</p>
+
+<!------------------------------------------------------------------->
+<!-- Meteor.deps.Context ----------------------------------------------->
+
+{{> api_box Context }}
+
+<p>
+  Create an invalidation context by calling this constructor, then run
+  some code inside the context
+  with <code><a href="#run">run</a></code>. Finally, register a
+  callback
+  with <code><a href="#on_invalidate">on_invalidate</a></code> that
+  will get called when the code you run wants to signal that it should
+  be rerun.
+</p>
+
+<p>
+  Code can see if it's running inside an invalidation context by
+  reading
+  the <code><a href="#current">Meteor.deps.Context.current</a></code>
+  global variable, which will be the currently active context,
+  or <code>null</code> if it's not being run from inside a context.
+  If it wants to participate in the reactivity system, it should save
+  this context away, and later call
+  the <code><a href="#invalidate">invalidate</a></code> method on the
+  context when it wants to signal that something has changed. If it
+  does this, it should also
+  use <code><a href="#on_invalidate">on_invalidate</a></code> to set
+  up a cleanup function so that it can know when to stop listening for
+  changes.
+</p>
+
+<p>
+  Invalidation contexts have an attribute <code>id</code> which is a
+  unique positive integer. You're free to add any other attributes you
+  like to the invalidation context for your own convenience, as long
+  as they don't start with an underscore.
+</p>
+
+<!------------------------------------------------------------------->
+<!-- Meteor.deps.Context.current --------------------------------------->
+
+{{> api_box current }}
+
+<p>This is a global variable that is set by 
+<code><a href="#run">run</a></code>.</p>
+
+<p>If you have a background in Lisp or programming language theory,
+you might think of it as a dynamically scoped ("special")
+variable. (That just means that <code><a href="#run">run</a></code>
+sets it, runs some user-supplied code, and then restores its previous
+value.)</p>
+
+<!------------------------------------------------------------------->
+<!-- collection.run ------------------------------------------------->
+
+{{> api_box run }}
+
+<p>
+  This function simply sets
+  <code><a href="#current">Meteor.deps.Context.current</a></code> to this
+  invalidation context, runs <code>func</code>, and then restores it
+  to its previous value. It returns the result of
+  calling <code>func</code>.
+</p>
+
+<p>
+  It's fine for <code>run</code> to be called
+  recursively. <code>current</code> will return the innermost context.
+</p>
+
+<!------------------------------------------------------------------->
+<!-- collection.on_invalidate --------------------------------------->
+
+{{> api_box on_invalidate }}
+
+<p>
+  If this context hasn't been invalidated yet,
+  adds <code>callback</code> to the list of callbacks that will be
+  called when <code><a href="#invalidate">invalidate</a></code> is
+  called. If the context has already been invalidated,
+  call <code>callback</code> immediately.
+</p>
+
+<p>
+  Typically this function will have two kinds of callers:
+</p>
+
+<ul>
+  <li>
+    The function that creates the invalidation context will use
+    the <code>on_invalidate</code> callback as a signal to rerun the
+    code in the context, to see what new value it returns. In order to
+    rerun the code, it'll create a fresh invalidation context and
+    reregister its <code>on_invalidate</code> callback on that new
+    context. When that context is invalidated the cycle will repeat.
+  </li>
+  <li>
+    Functions that are sources of reactive data will save
+    <code><a href="#current">Meteor.deps.Context.current</a></code> into
+    some kind of list of listeners. They'll use
+    the <code>on_invalidate</code> callback to remove the context from
+    their listener list.
+  </li>
+</ul>
+
+<p>Example:</p>
+
+<pre>
+// Print the current username to the console.  Will re-run every time
+// the username changes.
+var log_current_username = function () {
+  var update = function () {
+    var ctx = new Meteor.deps.Context();  // invalidation context
+    ctx.on_invalidate(update);         // rerun update() on invalidation
+    ctx.run(function () {
+      var username = Session.get("username");
+      console.log("The current username is now", username);
+    });
+  };
+  update();
+};
+
+// Example use. Since Session is reactive (meaning that it knows how
+// to use Meteor.deps to record its dependencies), log_current_username
+// will be re-run whenever Session.set is called for "username".
+Session.set("username", "matt");
+log_current_username(); // prints matt
+Session.set("username", "geoff"); // immediately prints geoff
+Session.set("username", "geoff"); // won't print: Session won't trigger
+                                  // invalidation if the value is the same.
+</pre>
+
+<!------------------------------------------------------------------->
+<!-- collection.invalidate ------------------------------------------>
+
+{{> api_box invalidate }}
+
+<p>If this function has already been called on this context, it does
+nothing (a mathematician would say that it is "idempotent.") Otherwise
+it calls each <code><a href="#on_invalidate">on_invalidate</a></code>
+function registered on the context.</p>
+
+<p>The functions aren't called immediately &mdash; instead, they will
+be called the next time you call
+<code><a href="#flush">Meteor.flush</a></code>. This function just adds
+the context to the flush list and is guaranteed to do nothing
+else just yet.</p>
+
+<p>If you don't call <code><a href="#flush">Meteor.flush</a></code>
+explicitly, it will be called for you automatically when your code is
+done running (by setting a <code>setTimeout</code> timer with a delay
+of zero.)</p>
+
+<p>Example:</p>
+
+<pre>
+// Create a simple class called Weather that tracks the current
+// temperature. The temperature can be read reactively.
+var Weather = function () {
+  this.temperature = 60;
+  this.listeners = {};
+};
+
+// Function to get the temperature (and, if called in a reactive
+// context, start listening for changes to the temperature.)
+Weather.prototype.get_temp = function () {
+  var context = Meteor.deps.Context.current;
+
+  // If we're inside a context, and it's not yet listening to
+  // temperature changes..
+  if (context && !this.listeners[context.id])
+    // .. add it to our list of contexts that care about the temperature ..
+    this.listeners[context.id] = context;
+
+    // .. and remember to take it off our list when it goes away.
+    var self = this;
+    context.on_invalidate(function () {
+      delete self.listeners[context.id];
+    });
+  }
+
+  // return the current temperature, whether or not in a reactive context.
+  return this.temperature;
+};
+
+// Function to set the temperature, and notify anyone that might be
+// listening for temperature updates.
+Weather.prototype.set_temp = function (new_temp) {
+  if (this.temperature === new_temp)
+    return; // don't want to trigger invalidation if there's no change.
+
+  // Set the temperature
+  this.temperature = new_temp;
+
+  // Notify any contexts that care about temperature changes
+  for (var context_id in this.listeners)
+    // This will trigger the on_invalidate function above, but not
+    // immediately -- only when Meteor.flush() is called, or at the end
+    // of the event loop. So we know that this.listeners will be
+    // emptied, but it won't change while we're trying to loop over it.
+    this.listeners[context_id].invalidate();
+};
+</pre>
+
+<!------------------------------------------------------------------->
+<!-- COMMAND LINE --------------------------------------------------->
+
+<h2 id="commandline"><span>Command line</span></h2>
+
+<!-- XXX some intro text? -->
+
+<h3 id="meteorhelp">meteor help</h3>
+
+<p>Get help on meteor command line usage. Running <code>meteor
+help</code> by itself will list the common meteor
+commands. Running <code>meteor help <i>command</i></code> will print
+detailed help about the command.</p>
+
+
+<h3 id="meteorrun">meteor run</h3>
+
+<p>Run a meteor development server in the current project. Searches
+upward from the current directory for the root directory of a Meteor
+project. Whenever you change any of the application's source files, the
+changes are automatically detected and applied to the running
+application.</p>
+
+<p>You can use the application by pointing your web browser at
+<a href="http://localhost:3000">localhost:3000</a>. No internet connection is
+required.</p>
+
+<p>This is the default command. Simply running <code>meteor</code> is the
+same as <code>meteor run</code>.</p>
+
+<p>Run <code>meteor help run</code> to see the full list of options.</p>
+
+
+<h3 id="meteorcreate">meteor create <i>name</i></h3>
+
+<p>Create a new Meteor project. Makes a subdirectory named <i>name</i>
+and copies in the template app. You can pass an absolute or relative
+path.</p>
+
+
+<h3 id="meteordeploy">meteor deploy <i>site</i></h3>
+
+<p>Deploy the project in your current directory to Meteor's servers.</p>
+
+<p>
+You can deploy to any available name
+under <code>meteor.com</code> without any additional
+configuration, for example, <code>myapp.meteor.com</code>.  If
+you deploy to a custom domain, such as <code>myapp.mydomain.com</code>,
+then you'll need to make sure the DNS for that domain is configured to
+point at <code>origin.meteor.com</code>.
+</p>
+
+<p>
+  You can deploy in debug mode by passing <code>--debug</code>. This
+  will leave your source code readable by your favorite in-browser
+  debugger, just like it is in local development mode.
+</p>
+
+<p>
+  To delete an application you've deployed, specify
+  the <code>--delete</code> option along with the site.
+</p>
+
+<p>
+  To add an administrative password to your deployment, include
+  the <code><nobr>--password</nobr></code> option.  Meteor will prompt
+  for a password.  Once set, any future <code>meteor deploy</code> to
+  the same domain will require that you provide the password.  The same
+  password protects access to <code>meteor mongo</code>
+  and <code>meteor logs</code>.  You can change the password by
+  running <code>meteor deploy <nobr>--password</nobr></code> again,
+  which will first prompt for the current password, then for a new
+  password.
+</p>
+
+<div class='warning'>
+  Password protection only applies to administrative actions with the
+  Meteor command.  It does not prevent access to your deployed
+  website.  Also, this all is a temporary hack until we have
+  full-featured Meteor accounts.
+</div>
+
+<div class='warning'>
+If you use a domain name other than <code>meteor.com</code>
+you must ensure that the name resolves
+to <code>origin.meteor.com</code>.  If you want a top-level
+domain like myapp.com, you'll need a DNS A record, matching the IP
+address of origin.meteor.com.
+</div>
+
+<h3 id="meteorlogs">meteor logs <i>site</i></h3>
+
+<p>Retrieves the server logs for the named Meteor application.</p>
+
+<p>
+  Meteor redirects the output of <code>console.log()</code> in your
+  server code into a logging server.  <code>meteor logs</code>
+  displays those logs.  In client code, the output
+  of <code>console.log()</code> is available in your web browser's
+  inspector, just like any other client-side JavaScript.
+</p>
+
+<h3 id="meteorupdate">meteor update</h3>
+
+<p>Upgrade to the latest Meteor version. Checks to see if a new
+version of Meteor is available, and if so, downloads and installs
+it. You must be connected to the internet.</p>
+
+
+<h3 id="meteoradd">meteor add <i>package</i></h3>
+
+<p>Add packages to your Meteor project. You can add multiple packages
+with one command. For a list of the available packages, run <code>meteor
+list</code>.</p>
+
+
+<h3 id="meteorremove">meteor remove <i>package</i></h3>
+
+<p>Removes a package previously added to your Meteor project. For a
+list of the packages that your application is currently using, run
+<code>meteor list --using</code>.</p>
+
+
+<h3 id="meteorlist">meteor list</h3>
+
+<p>Without arguments, lists all available Meteor packages. To add one of
+these packages to your project, run <code>meteor add <i>package</i></code>.</p>
+
+<p>With <code>--using</code>, list the packages that you have added to your project.</p>
+
+
+<h3 id="meteormongo">meteor mongo</h3>
+
+<p>Open a MongoDB shell on your local development database, so that you
+can view or manipulate it directly.</p>
+
+<div class='warning'>
+For now, you must already have your application running locally
+with <code>meteor run</code>. This will be easier in the future.
+</div>
+
+
+<h3 id="meteorreset">meteor reset</h3>
+
+<p>Reset the current project to a fresh state. Removes the local
+  mongo database.</p>
+
+<div class='warning'>
+This deletes your data! Make sure you do not have any information you
+care about in your local mongo database by running <code>meteor
+mongo</code>. From the mongo shell, use <code>show collections</code>
+and <code>db.<i>collection</i>.find()</code> to inspect your data.
+</div>
+
+<div class='warning'>
+For now, you can not run this while a development server is
+running. Quit all running meteor applications before running this.
+</div>
+
+
+<h3 id="meteorbundle">meteor bundle</h3>
+
+<p>Package the application up for deployment. The output is a tarball
+that includes everything necessary to run the
+application. See <code>README</code> in the tarball for details.</p>
+
+<p>You can use this to host a Meteor application on your own server,
+instead of deploying to Meteor's servers.  You will have to deal with
+logging, monitoring, backups, load-balancing, etc, all of which we
+handle for you if you use <code>meteor deploy</code>.</p>
+
+</div>
+</template>
