@@ -4,6 +4,6 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['underscore'], 'client');
+  api.use(['underscore', 'logging', 'json'], 'client');
   api.add_files('reload.js', 'client');
 });
