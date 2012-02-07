@@ -2,7 +2,7 @@ Meteor.subscribe('clicks');
 
 Template.button_demo.events = {
   'click input': function () {
-    Clicks.insert({});
+    Clicks.insert({time: (new Date()).getTime()});
   }
 };
 
