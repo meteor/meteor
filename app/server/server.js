@@ -102,7 +102,10 @@ var run = function (bundle_dir) {
     _.each(__meteor_bootstrap__.startup_hooks, function (x) { x(); });
 
     // only start listening after all the startup code has run.
-    app.listen(port, function() {});
+    app.listen(port, function() {
+      if (argv.keepalive)
+        console.log("LISTENING"); // must match run.js
+    });
 
   }).run();
 

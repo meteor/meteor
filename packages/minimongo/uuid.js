@@ -1,4 +1,4 @@
-// XXX dups packages/minimongo/uuid.js
+// XXX dups packages/uuid/uuid.js
 
 // Collection.random() -- known good PRNG, replaces Math.random()
 // Collection.uuid() -- returns RFC 4122 v4 UUID.

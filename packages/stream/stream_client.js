@@ -29,11 +29,16 @@ if (typeof Meteor === "undefined") Meteor = {};
   // collide.
   var CONNECT_TIMEOUT_SLOP = 1000;
   // time for initial reconnect attempt.
-  var RETRY_BASE_TIMEOUT = 3000;
+  var RETRY_BASE_TIMEOUT = 1000;
   // exponential factor to increase timeout each attempt.
   var RETRY_EXPONENT = 2.2;
   // maximum time between reconnects.
   var RETRY_MAX_TIMEOUT = 1800000; // 30min.
+  // time to wait for the first 2 retries.  this helps page reload
+  // speed during dev mode restarts, but doesn't hurt prod too
+  // much (due to CONNECT_TIMEOUT)
+  var RETRY_MIN_TIMEOUT = 10;
+
   // fuzz factor to randomize reconnect times by. avoid reconnect
   // storms.
   var RETRY_FUZZ = 0.5; // +- 25%
@@ -45,12 +50,13 @@ if (typeof Meteor === "undefined") Meteor = {};
   var reset_callbacks = [];
   var message_queue = {}; // id -> message
   var next_message_id = 0;
+  var server_id;
 
   //// reactive status stuff
   var status = {
-    status: "waiting", connected: false, retry_count: 0,
-    first: true
+    status: "waiting", connected: false, retry_count: 0
   };
+
   var status_listeners = {}; // context.id -> context
   var status_changed = function () {
     _.each(status_listeners, function (context) {
@@ -62,7 +68,7 @@ if (typeof Meteor === "undefined") Meteor = {};
   var retry_timer;
   var connection_timer;
 
-  var connected = function () {
+  var connected = function (welcome_data) {
     if (connection_timer) {
       clearTimeout(connection_timer);
       connection_timer = undefined;
@@ -73,19 +79,28 @@ if (typeof Meteor === "undefined") Meteor = {};
       return;
     }
 
-    // give everyone a chance to munge the message queue.
-    if (!status.first) {
-      var msg_list = _.toArray(message_queue);
-      _.each(reset_callbacks, function (callback) {
-        msg_list = callback(msg_list);
-      });
-      message_queue = {};
-      _.each(msg_list, function (msg) {
-        message_queue[next_message_id++] = msg;
-      });
+    // inspect the welcome data and decide if we have to reload
+    if (welcome_data && welcome_data.server_id) {
+      if (server_id && server_id !== welcome_data.server_id) {
+        Meteor._reload.reload();
+        // world's about to end, just leave the connection 'connecting'
+        // until it does.
+        return;
+      }
+      server_id = welcome_data.server_id;
     } else {
-      status.first = false;
+      Meteor._debug("DEBUG: invalid welcome packet", welcome_data);
     }
+
+    // give everyone a chance to munge the message queue.
+    var msg_list = _.toArray(message_queue);
+    _.each(reset_callbacks, function (callback) {
+      msg_list = callback(msg_list);
+    });
+    message_queue = {};
+    _.each(msg_list, function (msg) {
+      message_queue[next_message_id++] = msg;
+    });
 
     // send the pending message queue. this should always be in
     // order, since the keys are ordered numerically and they are added
@@ -139,6 +154,9 @@ if (typeof Meteor === "undefined") Meteor = {};
   };
 
   var retry_timeout = function (count) {
+    if (count < 2)
+      return RETRY_MIN_TIMEOUT;
+
     var timeout = Math.min(
       RETRY_MAX_TIMEOUT,
       RETRY_BASE_TIMEOUT * Math.pow(RETRY_EXPONENT, count));
@@ -174,7 +192,7 @@ if (typeof Meteor === "undefined") Meteor = {};
     socket = io.connect('/', { reconnect: false,
                                'connect timeout': CONNECT_TIMEOUT,
                                'force new connection': true } );
-    socket.on('connect', connected);
+    socket.once('welcome', connected);
     socket.on('disconnect', disconnected);
     socket.on('connect_failed', disconnected);
 
@@ -188,8 +206,19 @@ if (typeof Meteor === "undefined") Meteor = {};
     connection_timer = setTimeout(fake_connect_failed,
                                   CONNECT_TIMEOUT + CONNECT_TIMEOUT_SLOP);
 
-    // XXX for debugging
-    // XXXsocket = socket;
+  };
+
+  ////////// Save and restore state //////////
+
+  Meteor._reload.on_migrate('stream', function () {
+    return { message_list: _.toArray(message_queue) };
+  });
+
+  var migration_data = Meteor._reload.migration_data('stream');
+  if (migration_data && migration_data.message_list) {
+    _.each(migration_data.message_list, function (msg) {
+      message_queue[next_message_id++] = msg;
+    });
   }
 
   ////////// User facing API //////////
@@ -224,9 +253,9 @@ if (typeof Meteor === "undefined") Meteor = {};
 
   Meteor._stream = {
     on: function (name, callback) {
-      if (!event_callbacks[name]) event_callbacks[name] = []
+      if (!event_callbacks[name]) event_callbacks[name] = [];
       event_callbacks[name].push(callback);
-      if (socket) socket.on(name, callback)
+      if (socket) socket.on(name, callback);
     },
 
     emit: function (/* var args */) {

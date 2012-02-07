@@ -8,9 +8,6 @@ if (Meteor.is_client) {
   // Get the top 10 players from the server, updated continuously.
   Meteor.subscribe("top10");
 
-  // Start with no player selected.
-  Session.set("selected_player", null);
-
   $(document).ready(function () {
     // List the players by score. You can click to select a player.
     var scores = Meteor.ui.renderList(Players.find({}, {sort: {score: -1}}), {
@@ -35,11 +32,10 @@ if (Meteor.is_client) {
 
     // Details area, showing the currently selected player.
     var details_elt = Meteor.ui.render(function () {
-      var selected_player = Session.get("selected_player");
-      if (!selected_player)
+      var player = Players.findOne(Session.get("selected_player"));
+      if (!player)
         return $('<div class="none">Click a player to select</div>');
 
-      var player = Players.findOne(selected_player);
       return $('<div class="details"><div class="name">' + player.name +
                '</div><input type="button" value="Give 5 points"></div>');
     }, {
