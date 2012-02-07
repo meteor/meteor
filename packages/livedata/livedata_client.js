@@ -38,6 +38,7 @@ if (typeof Meteor === "undefined") Meteor = {};
   });
 
   var livedata_connected = function (msg) {
+    Meteor._debug("CONNECTED", msg);
   };
 
   var livedata_data = function (msg) {
@@ -87,12 +88,16 @@ if (typeof Meteor === "undefined") Meteor = {};
   });
 
   Meteor._stream.reset(function (msg_list) {
-    // remove existing subscribe and unsubscribe
-    msg_list = _.reject(msg_list, function (elem) {
-      return (!elem
-              || (elem[0] === "livedata" && elem[1]
-                  && (elem[1].msg === "sub" || elem[1].msg === "unsub")));
+    // remove all 'livedata' message except 'method'
+    msg_list = _.filter(msg_list, function (elem) {
+      return (elem && (elem[0] !== "livedata" ||
+                       (elem[1] && elem[1].msg === "method")));
     });
+
+    // Send a connect message at the beginning of the stream.
+    // NOTE: reset is called even on the first connection, so this is
+    // the only place we send this message.
+    msg_list.unshift(['livedata', {msg: 'connect'}]);
 
     // add new subscriptions at the end. this way they take effect after
     // the handlers and we don't see flicker.

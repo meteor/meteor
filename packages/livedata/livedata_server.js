@@ -119,6 +119,11 @@ if (typeof Meteor === "undefined") Meteor = {};
     }).run();
   };
 
+  var livedata_connect = function (socket, msg) {
+    // Always start a new session. We don't support any reconnection.
+    socket.emit('livedata', {msg: 'connected', session: Meteor.uuid()});
+  };
+
   var livedata_sub = function (socket, msg) {
     if (!publishes[msg.name]) {
       // can't sub to unknown publish name
@@ -195,7 +200,9 @@ if (typeof Meteor === "undefined") Meteor = {};
         return;
       }
 
-      if (msg.msg === 'sub')
+      if (msg.msg === 'connect')
+        livedata_connect(socket, msg);
+      else if (msg.msg === 'sub')
         livedata_sub(socket, msg);
       else if (msg.msg === 'unsub')
         livedata_unsub(socket, msg);
