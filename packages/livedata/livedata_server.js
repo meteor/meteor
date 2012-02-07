@@ -46,7 +46,7 @@ if (typeof Meteor === "undefined") Meteor = {};
           return;
         }
 
-        pub(channel, sub.args);
+        pub(channel, sub.params);
       });
 
       // emit deltas for each item in the new cache (any object
@@ -119,14 +119,23 @@ if (typeof Meteor === "undefined") Meteor = {};
     }).run();
   };
 
-  var register_subscription = function (socket, data) {
-    socket.meteor.subs.push(data);
+  var livedata_sub = function (socket, msg) {
+    if (!publishes[msg.name]) {
+      // can't sub to unknown publish name
+      // XXX error value
+      socket.emit('livedata', {
+        msg: 'nosub', id: msg.id, error: {error: 17, reason: "Unknown name"}});
+      return;
+    }
+
+    socket.meteor.subs.push({_id: msg.id, name: msg.name, params: msg.params});
     poll_subscriptions(socket);
   };
 
-  var unregister_subscription = function (socket, data) {
+  var livedata_unsub = function (socket, msg) {
+    socket.emit('livedata', {msg: 'nosub', id: msg.id});
     socket.meteor.subs = _.filter(socket.meteor.subs, function (x) {
-      return x._id !== data._id;
+      return x._id !== msg.id;
     });
     poll_subscriptions(socket);
   };
@@ -180,13 +189,18 @@ if (typeof Meteor === "undefined") Meteor = {};
     socket.meteor.subs = [];
     socket.meteor.cache = {};
 
+    socket.on('livedata', function (msg) {
+      if (typeof(msg) !== 'object' || !msg.msg) {
+        Meteor._debug("discarding invalid livedata message", msg);
+        return;
+      }
 
-    socket.on('subscribe', function (data) {
-      register_subscription(socket, data);
-    });
-
-    socket.on('unsubscribe', function (data) {
-      unregister_subscription(socket, data);
+      if (msg.msg === 'sub')
+        livedata_sub(socket, msg);
+      else if (msg.msg === 'unsub')
+        livedata_unsub(socket, msg);
+      else
+        Meteor._debug("discarding unknown livedata message type", msg);
     });
 
     socket.on('handle', function (data) {

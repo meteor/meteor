@@ -74,6 +74,7 @@ if (typeof Meteor === "undefined") Meteor = {};
   };
 
   var livedata_nosub = function (msg) {
+    Meteor._debug("NOSUB", msg);
   };
 
   var livedata_result = function (msg) {
@@ -88,15 +89,17 @@ if (typeof Meteor === "undefined") Meteor = {};
   Meteor._stream.reset(function (msg_list) {
     // remove existing subscribe and unsubscribe
     msg_list = _.reject(msg_list, function (elem) {
-      return (!elem || elem[0] === "subscribe" || elem[0] === "unsubscribe");
+      return (!elem
+              || (elem[0] === "livedata" && elem[1]
+                  && (elem[1].msg === "sub" || elem[1].msg === "unsub")));
     });
 
     // add new subscriptions at the end. this way they take effect after
     // the handlers and we don't see flicker.
     subs.find().forEach(function (sub) {
       msg_list.push(
-        ['subscribe', {
-          _id: sub._id, name: sub.name, args: sub.args}]);
+        ['livedata',
+         {msg: 'sub', id: sub._id, name: sub.name, params: sub.args}]);
     });
 
     // clear out the local database!
@@ -107,11 +110,10 @@ if (typeof Meteor === "undefined") Meteor = {};
     return msg_list;
   });
 
-
   var subsToken = subs.find({}).observe({
     added: function (sub) {
-      Meteor._stream.emit('subscribe', {
-        _id: sub._id, name: sub.name, args: sub.args});
+      Meteor._stream.emit('livedata', {
+        msg: 'sub', id: sub._id, name: sub.name, params: sub.args});
     },
     changed: function (sub) {
       if (sub.count <= 0) {
@@ -120,7 +122,7 @@ if (typeof Meteor === "undefined") Meteor = {};
       }
     },
     removed: function (id) {
-      Meteor._stream.emit('unsubscribe', {_id: id});
+      Meteor._stream.emit('livedata', {msg: 'unsub', id: id});
     }
   });
 
