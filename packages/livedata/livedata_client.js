@@ -138,6 +138,9 @@ if (typeof Meteor === "undefined") Meteor = {};
       },
 
       remove: function (selector) {
+        if (arguments.length === 0)
+          selector = {};
+
         if (this._name)
           Meteor._stream.emit('handle', {
             collection: this._name, type: 'remove', selector: selector});

@@ -874,13 +874,13 @@ test("renderList - #each", function () {
   assert_frag("~Before0~Aclear~~Bclear~Middle~Else~After~", onscreen);
   assert.length(_.keys(weather_listeners.here), 2);
 
-  c.update({x: 3}, {$set: {x: 8}});
+  c.update({x: 3}, {$set: {x: 8}}, {multi: true});
   assert_frag("~Before0~Aclear~Middle~B~After~", onscreen);
   assert.length(_.keys(weather_listeners.here), 2);
   Meteor.flush();
   assert.length(_.keys(weather_listeners.here), 1);
 
-  c.update({}, {$set: {x: 5}});
+  c.update({}, {$set: {x: 5}}, {multi: true});
   assert_frag("~Before0<!---->Middle~Else~After~", onscreen);
   assert.length(_.keys(weather_listeners.here), 1);
   Meteor.flush();

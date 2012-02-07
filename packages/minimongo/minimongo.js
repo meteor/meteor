@@ -270,6 +270,9 @@ Collection.prototype.remove = function (selector) {
   var remove = [];
   var query_remove = [];
 
+  if (arguments.length === 0)
+    selector = {};
+
   var selector_f = Collection._compileSelector(selector);
   for (var id in self.docs) {
     var doc = self.docs[id];
@@ -296,9 +299,6 @@ Collection.prototype.remove = function (selector) {
 // we rollback the whole operation, or what?
 Collection.prototype.update = function (selector, mod, options) {
   if (!options) options = {};
-  // Default to multi. This is the oppposite of mongo. We'll see how it goes.
-  if (typeof(options.multi) === "undefined")
-    options.multi = true;
 
   var self = this;
   var any = false;

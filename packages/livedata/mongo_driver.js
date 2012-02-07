@@ -180,10 +180,6 @@
     selector = rewrite_selector(selector);
 
     if (!options) options = {};
-    // Default to multi. This is the oppposite of mongo. We'll see how it goes.
-    if (typeof(options.multi) === "undefined")
-      options.multi = true
-
     withCollection(collection_name, function(err, collection) {
       // XXX err handling
 

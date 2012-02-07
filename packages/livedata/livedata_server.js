@@ -297,6 +297,9 @@ if (typeof Meteor === "undefined") Meteor = {};
       },
 
       remove: function (selector) {
+        if (arguments.length === 0)
+          selector = {};
+
         return Meteor._mongo_driver.remove(this._name, selector);
       },
 
