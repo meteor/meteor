@@ -461,6 +461,14 @@ assert(Scratchpad.find({number: {$lt: 9}}).count() === 5);
   option to the original query call.
 </p>
 
+{{> api_box findone}}
+
+<p>
+  Immediately return a single document without creating an explicit
+  cursor.  Equivalent to <code>collection.find(selector, options).fetch()[0]</code>.
+</p>
+
+
 {{> api_box cursor_count}}
 
 <pre>
