@@ -68,6 +68,7 @@ var toc = [
     "Collection", [
       {name: "Meteor.Collection", id: "create_collection"},
       "find",
+      "findOne",
       "cursor.count",
       "cursor.foreach",
       "cursor.map",

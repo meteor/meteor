@@ -174,6 +174,31 @@ Template.api.find = {
   ]
 };
 
+Template.api.findone = {
+  id: "findone",
+  name: "<em>collection</em>.findOne(selector, [options])",
+  locus: "Anywhere",
+  descr: ["Returns the first document matching selector, as ordered by sort and skip options."],
+  args: [
+    {name: "selector",
+     type: "Object &mdash; Mongo selector, or String",
+     type_link: "selectors",
+     descr: "The query"}
+  ],
+  options: [
+    {name: "sort",
+     type: "Object &mdash; sort specifier",
+     type_link: "sortspecifiers",
+     descr: "Sort order (default: natural order)"},
+    {name: "skip",
+     type: "Number",
+     descr: "Number of result to skip at the beginnig"},
+    {name: "reactive",
+     type: "Boolean",
+     descr: "Default true; pass false to disable reactivity"}
+  ]
+};
+
 Template.api.cursor_count = {
   id: "cursorcount",
   name: "<em>cursor</em>.count()",
