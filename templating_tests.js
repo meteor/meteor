@@ -52,7 +52,7 @@ test("template table assembly", function() {
   table = childWithTag(Template.test_table_b0(), "TABLE");
   assert.equal(table.rows.length, 3);
 
-  var c = Meteor.Collection();
+  var c = new Collection();
   c.insert({bar:'a'});
   c.insert({bar:'b'});
   c.insert({bar:'c'});
