@@ -4,43 +4,41 @@ if (typeof Meteor === "undefined") Meteor = {};
   Meteor._reload = {};
 
   var KEY_NAME = 'Meteor_Reload';
+  // after how long should we consider this no longer an automatic
+  // reload, but a fresh restart. This only happens if a reload is
+  // interrupted and a user manually restarts things. The only time
+  // this is really weird is if a user navigates away mid-refresh,
+  // then manually navigates back to the page.
+  var TIMEOUT = 30000;
 
-  // read in old data at startup.
+
   var old_data = {};
-  // check for fragment in URL to indicate reload
-  if (window.location.hash &&
-      window.location.hash.substr(0, KEY_NAME.length+1) === '#'+KEY_NAME) {
+  // read in old data at startup.
+  var old_json;
+  if (typeof sessionStorage !== "undefined") {
+    old_json = sessionStorage.getItem(KEY_NAME);
+    sessionStorage.removeItem(KEY_NAME);
+
+  } else {
+    Meteor._debug("XXX UNSUPPORTED BROWSER");
+  }
+
+  if (!old_json) old_json = '{}';
+
+  try {
+    var old_parsed = JSON.parse(old_json);
+    if (typeof old_parsed !== "object") {
+      Meteor._debug("XXX INVALID old_json");
+    }
+  } catch (err) {
+    Meteor._debug("XXX INVALID JSON");
+  }
+
+  if (old_parsed.reload && typeof old_parsed.data === "object" &&
+      old_parsed.time + TIMEOUT > (new Date()).getTime()) {
     Meteor._debug("XXX RESTORING");
 
-    // remove fragment.
-    // XXX this leaves a #!
-    // XXX make sure that if there are id's in the document, we don't move!
-    window.location.hash = window.location.hash.substr(KEY_NAME.length+1);
-
-    // read and remove old data.
-    var old_json;
-    if (typeof sessionStorage !== "undefined") {
-      old_json = sessionStorage.getItem(KEY_NAME);
-      sessionStorage.removeItem(KEY_NAME);
-    } else {
-      Meteor._debug("XXX UNSUPPORTED BROWSER");
-    }
-    if (!old_json) old_json = '{}';
-
-    // parse it.
-    if (old_json) {
-      try {
-        old_data = JSON.parse(old_json);
-        if (typeof old_data !== "object") {
-          Meteor._debug("XXX INVALID old_json");
-          old_data = {};
-        }
-      } catch (err) {
-        Meteor._debug("XXX UNSUPPORTED BROWSER");
-      }
-    }
-
-    Meteor._debug("XXX RESTORED", old_data);
+    old_data = old_parsed.data;
   }
 
 
@@ -75,24 +73,19 @@ if (typeof Meteor === "undefined") Meteor = {};
 
     var new_json;
     try {
-      new_json = JSON.stringify(new_data);
+      new_json = JSON.stringify({
+        time: (new Date()).getTime(), data: new_data, reload: true
+      });
     } catch (err) {
       Meteor._debug("XXX NON JSON DATA");
     }
 
     // save it
     if (typeof sessionStorage !== "undefined") {
-      if (new_json)
-        sessionStorage.setItem(KEY_NAME, new_json)
-      else
-        sessionStorage.removeItem(KEY_NAME);
-
+        sessionStorage.setItem(KEY_NAME, new_json);
     } else {
       Meteor._debug("XXX UNSUPPORTED BROWSER");
     }
-
-    // the the fragment so we know it's a reload
-    window.location.hash = KEY_NAME + window.location.hash;
 
     // blow up the world!
     window.location.reload();
