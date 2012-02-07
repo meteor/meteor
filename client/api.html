@@ -612,14 +612,10 @@ Items.insert({list: groceries_id, name: "Persimmons"});
 
 {{> api_box update}}
 
-<p>Find all of the documents that match <code>selector</code>, and
-modify them as given by <code>modifer</code>
-(see <a href="#modifiers">modifier documentation</a>.) Or,
-if <code>multi</code> is false, modify only one matching document.</p>
-
-<p><b>The default value of <code>multi</code> is different from most
-other Mongo drivers. In Meteor the default is true (modify all
-matching documents), but in many other drivers it is false.</b></p>
+<p>Modify documents that match <code>selector</code> as
+  given by <code>modifer</code> (see <a href="#modifiers">modifier
+  documentation</a>).  By default, modify only one matching document.
+  If <code>multi</code> is true, modify all matching documents.</p>
 
 <p>Instead of a selector, you can pass a string, which will be
 interpreted as an <code>_id</code>.</p>
@@ -634,7 +630,9 @@ The Mongo <code>upsert</code> feature is not implemented.
 // Give the "Superlative" badge to each user with a score greater than
 // 10. If they are logged in and their badge list is visible on the
 // screen, it will update automatically as they watch.
-Users.update({score: {$gt: 10}}, {badges: {$addToSet: "Superlative"}});
+Users.update({score: {$gt: 10}},
+             {badges: {$addToSet: "Superlative"}},
+             {multi: true});
 </pre>
 
 <!------------------------------------------------------------------->
@@ -644,13 +642,17 @@ Users.update({score: {$gt: 10}}, {badges: {$addToSet: "Superlative"}});
 
 <p>Find all of the documents that match <code>selector</code>, and
 delete them from the collection. Or instead of a selector, you may
-pass a string, to delete the document with that <code>_id</code>.</p>
+pass a string, to delete the document with that <code>_id</code>.
+Without any selector, remove all documents from the collection.</p>
 
 <p>Example:</p>
 
 <pre>
 // Delete all users with a karma of less than -2.
 Users.remove({karma: {$lt: -2}});
+
+// Delete all the log entries
+Logs.remove();
 
 // Show a list of posts that have been flagged, updating in realtime.
 // Put a link next to each post that deletes the post if clicked.

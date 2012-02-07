@@ -264,7 +264,7 @@ Template.api.update = {
   options: [
     {name: "multi",
      type: "Boolean",
-     descr: "True to modify all matching documents (the default); false to only modify one of the matching documents."}
+     descr: "True to modify all matching documents; false to only modify one of the matching documents (the default)."}
   ]
 };
 
