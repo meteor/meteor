@@ -13,42 +13,77 @@ if (typeof Meteor === "undefined") Meteor = {};
   // Meteor.subscriptions(). But who wants that? What does that even mean?
   var capture_subs;
 
-  Meteor._stream.on('published', function (data) {
-    _.each(data, function (changes, collection_name) {
-      var coll = collections[collection_name];
-      if (!coll) {
-        Meteor._debug(
-          "discarding data received for unknown collection " +
-            JSON.stringify(collection_name));
-        return;
-      }
+  // all socket.io traffic is framed as a "livedata" message.
+  Meteor._stream.on('livedata', function (msg) {
+    // connected
+    // data
+    // nosub
+    // result
 
-      // XXX this is all a little whack. Need to think about how we handle
-      // removes, etc.
-      _.each(changes.inserted || [], function (elt) {
-        if (!coll.findOne(elt._id)) {
-          coll._collection.insert(elt);
-        } else {
-          // we already added it locally! this is the case after an insert
-          // handler.
-          coll._collection.update({_id: elt._id}, elt);
-        }
-      });
-      _.each(changes.updated || [], function (elt) {
-        coll._collection.update({_id: elt._id}, elt);
-      });
-      _.each(changes.removed || [], function (id) {
-        coll._collection.remove({_id: id});
-      });
-    });
+    if (typeof(msg) !== 'object' || !msg.msg) {
+      Meteor._debug("discarding invalid livedata message", msg);
+      return;
+    }
+
+    if (msg.msg === 'connected')
+      livedata_connected(msg);
+    else if (msg.msg === 'data')
+      livedata_data(msg);
+    else if (msg.msg === 'nosub')
+      livedata_nosub(msg);
+    else if (msg.msg === 'result')
+      livedata_result(msg);
+    else
+      Meteor._debug("discarding unknown livedata message type", msg);
   });
+
+  var livedata_connected = function (msg) {
+  };
+
+  var livedata_data = function (msg) {
+    var meteor_coll = msg.collection && collections[msg.collection];
+
+    if (!meteor_coll) {
+      Meteor._debug(
+        "discarding data received for unknown collection " +
+          JSON.stringify(msg.collection));
+      return;
+    }
+
+    // do all the work against underlying minimongo collection.
+    var coll = meteor_coll._collection;
+
+    var doc = coll.findOne(msg.id);
+
+    if (doc
+        && (!msg.set || msg.set.length === 0)
+        && _.difference(_.keys(doc), msg.unset, ['_id']).length === 0) {
+      // what's left is empty, just remove it.  cannot fail.
+      coll.remove(msg.id);
+    } else if (doc) {
+      var mutator = {$set: msg.set, $unset: {}};
+      _.each(msg.unset, function (propname) {
+        mutator.$unset[propname] = 1;
+      });
+      // XXX error check return value from update.
+      coll.update(msg.id, mutator);
+    } else {
+      // XXX error check return value from insert.
+      coll.insert(_.extend({_id: msg.id}, msg.set));
+    }
+  };
+
+  var livedata_nosub = function (msg) {
+  };
+
+  var livedata_result = function (msg) {
+  };
 
   Meteor._stream.on('subscription_ready', function (id) {
     var arr = sub_ready_callbacks[id];
     if (arr) _.each(arr, function (c) { c(); });
     delete sub_ready_callbacks[id];
   });
-
 
   Meteor._stream.reset(function (msg_list) {
     // remove existing subscribe and unsubscribe
