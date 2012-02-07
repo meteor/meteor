@@ -1,5 +1,33 @@
 if (typeof Meteor === "undefined") Meteor = {};
 
+/**
+ * This code does _NOT_ support hot (session-restoring) reloads on
+ * IE6,7. It only works on browsers with sessionStorage support.
+ *
+ * There are a couple approaches to add IE6,7 support:
+ *
+ * - use IE's "userData" mechanism in combination with window.name.
+ * This mostly works, however the problem is that it can not get to the
+ * data until after DOMReady. This is a problem for us since this API
+ * relies on the data being ready before API users run. We could
+ * refactor using Meteor.startup in all API users, but that might slow
+ * page loads as we couldn't start the stream until after DOMReady.
+ * Here are some resources on this approach:
+ * https://github.com/hugeinc/USTORE.js
+ * http://thudjs.tumblr.com/post/419577524/localstorage-userdata
+ * http://www.javascriptkit.com/javatutors/domstorage2.shtml
+ *
+ * - POST the data to the server, and have the server send it back on
+ * page load. This is nice because it sidesteps all the local storage
+ * compatibility issues, however it is kinda tricky. We can use a unique
+ * token in the URL, then get rid of it with HTML5 pushstate, but that
+ * only works on pushstate browsers.
+ *
+ * This will all need to be reworked entirely when we add server-side
+ * HTML rendering. In that case, the server will need to have access to
+ * the client's session to render properly.
+ */
+
 (function () {
   Meteor._reload = {};
 
@@ -18,26 +46,26 @@ if (typeof Meteor === "undefined") Meteor = {};
   if (typeof sessionStorage !== "undefined") {
     old_json = sessionStorage.getItem(KEY_NAME);
     sessionStorage.removeItem(KEY_NAME);
-
   } else {
-    Meteor._debug("XXX UNSUPPORTED BROWSER");
+    // Unsupported browser (IE 6,7). No session resumption.
+    // Meteor._debug("XXX UNSUPPORTED BROWSER");
   }
 
   if (!old_json) old_json = '{}';
-
+  var old_parsed = {};
   try {
-    var old_parsed = JSON.parse(old_json);
+    old_parsed = JSON.parse(old_json);
     if (typeof old_parsed !== "object") {
-      Meteor._debug("XXX INVALID old_json");
+      Meteor._debug("Got bad data on reload. Ignoring.");
+      old_parsed = {};
     }
   } catch (err) {
-    Meteor._debug("XXX INVALID JSON");
+    Meteor._debug("Got invalid JSON on reload. Ignoring.");
   }
 
   if (old_parsed.reload && typeof old_parsed.data === "object" &&
       old_parsed.time + TIMEOUT > (new Date()).getTime()) {
-    Meteor._debug("XXX RESTORING");
-
+    // Meteor._debug("Restoring reload data.");
     old_data = old_parsed.data;
   }
 
@@ -63,7 +91,7 @@ if (typeof Meteor === "undefined") Meteor = {};
   // Trigger a reload. Calls all the callbacks, saves all the values,
   // then blows up the world.
   Meteor._reload.reload = function () {
-    Meteor._debug("XXX FORCE RELOAD HERE");
+    // Meteor._debug("Beginning hot reload.");
 
     // ask everyone for stuff to save
     var new_data = {};
@@ -77,14 +105,15 @@ if (typeof Meteor === "undefined") Meteor = {};
         time: (new Date()).getTime(), data: new_data, reload: true
       });
     } catch (err) {
-      Meteor._debug("XXX NON JSON DATA");
+      Meteor._debug("Asked to persist non-JSONable data. Ignoring.");
+      new_json = '{}';
     }
 
     // save it
     if (typeof sessionStorage !== "undefined") {
         sessionStorage.setItem(KEY_NAME, new_json);
     } else {
-      Meteor._debug("XXX UNSUPPORTED BROWSER");
+      Meteor._debug("Browser does not support sessionStorage. Not saving reload state.");
     }
 
     // blow up the world!
