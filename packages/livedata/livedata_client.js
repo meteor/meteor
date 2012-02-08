@@ -42,35 +42,48 @@ if (typeof Meteor === "undefined") Meteor = {};
   };
 
   var livedata_data = function (msg) {
-    var meteor_coll = msg.collection && collections[msg.collection];
+    if (msg.collection && msg.id) {
+      var meteor_coll = collections[msg.collection];
 
-    if (!meteor_coll) {
-      Meteor._debug(
-        "discarding data received for unknown collection " +
-          JSON.stringify(msg.collection));
-      return;
+      if (!meteor_coll) {
+        Meteor._debug(
+          "discarding data received for unknown collection " +
+            JSON.stringify(msg.collection));
+        return;
+      }
+
+      // do all the work against underlying minimongo collection.
+      var coll = meteor_coll._collection;
+
+      var doc = coll.findOne(msg.id);
+
+      if (doc
+          && (!msg.set || msg.set.length === 0)
+          && _.difference(_.keys(doc), msg.unset, ['_id']).length === 0) {
+        // what's left is empty, just remove it.  cannot fail.
+        coll.remove(msg.id);
+      } else if (doc) {
+        var mutator = {$set: msg.set, $unset: {}};
+        _.each(msg.unset, function (propname) {
+          mutator.$unset[propname] = 1;
+        });
+        // XXX error check return value from update.
+        coll.update(msg.id, mutator);
+      } else {
+        // XXX error check return value from insert.
+        coll.insert(_.extend({_id: msg.id}, msg.set));
+      }
     }
 
-    // do all the work against underlying minimongo collection.
-    var coll = meteor_coll._collection;
-
-    var doc = coll.findOne(msg.id);
-
-    if (doc
-        && (!msg.set || msg.set.length === 0)
-        && _.difference(_.keys(doc), msg.unset, ['_id']).length === 0) {
-      // what's left is empty, just remove it.  cannot fail.
-      coll.remove(msg.id);
-    } else if (doc) {
-      var mutator = {$set: msg.set, $unset: {}};
-      _.each(msg.unset, function (propname) {
-        mutator.$unset[propname] = 1;
+    if (msg.subs) {
+      _.each(msg.subs, function (id) {
+        var arr = sub_ready_callbacks[id];
+        if (arr) _.each(arr, function (c) { c(); });
+        delete sub_ready_callbacks[id];
       });
-      // XXX error check return value from update.
-      coll.update(msg.id, mutator);
-    } else {
-      // XXX error check return value from insert.
-      coll.insert(_.extend({_id: msg.id}, msg.set));
+    }
+    if (msg.methods) {
+      Meteor._debug("METHODCOMPLETE", msg.methods);
     }
   };
 
@@ -79,13 +92,8 @@ if (typeof Meteor === "undefined") Meteor = {};
   };
 
   var livedata_result = function (msg) {
+    Meteor._debug("RESULT", msg);
   };
-
-  Meteor._stream.on('subscription_ready', function (id) {
-    var arr = sub_ready_callbacks[id];
-    if (arr) _.each(arr, function (c) { c(); });
-    delete sub_ready_callbacks[id];
-  });
 
   Meteor._stream.reset(function (msg_list) {
     // remove all 'livedata' message except 'method'
@@ -164,8 +172,10 @@ if (typeof Meteor === "undefined") Meteor = {};
         obj._id = _id;
 
         if (this._name)
-          Meteor._stream.emit('handle', {
-            collection: this._name, type: 'insert', args: obj});
+          Meteor._stream.emit('livedata', {
+            msg: 'method',
+            method: '/' + this._name + '/insert',
+            params: [obj], id: Meteor.uuid()});
         this._collection.insert(obj);
 
         return obj;
@@ -173,9 +183,11 @@ if (typeof Meteor === "undefined") Meteor = {};
 
       update: function (selector, mutator, options) {
         if (this._name)
-          Meteor._stream.emit('handle', {
-            collection: this._name, type: 'update',
-            selector: selector, mutator: mutator, options: options});
+          Meteor._stream.emit('livedata', {
+            msg: 'method',
+            method: '/' + this._name + '/update',
+            params: [selector, mutator, options],
+            id: Meteor.uuid()});
         this._collection.update(selector, mutator, options);
       },
 
@@ -184,8 +196,11 @@ if (typeof Meteor === "undefined") Meteor = {};
           selector = {};
 
         if (this._name)
-          Meteor._stream.emit('handle', {
-            collection: this._name, type: 'remove', selector: selector});
+          Meteor._stream.emit('livedata', {
+            msg: 'method',
+            method: '/' + this._name + '/remove',
+            params: [selector],
+            id: Meteor.uuid()});
         this._collection.remove(selector);
       },
 
@@ -198,16 +213,18 @@ if (typeof Meteor === "undefined") Meteor = {};
           this[method] = function (/* arguments */) {
             // (must turn 'arguments' into a plain array so as not to
             // confuse stringify)
-            var args = [].slice.call(arguments);
+            var params = [].slice.call(arguments);
 
             // run the handler ourselves
-            methods[method].apply(null, args);
+            methods[method].apply(null, params);
 
             // tell the server to run the handler
             if (this._name)
-              Meteor._stream.emit('handle', {
-                collection: this._name, type: 'method',
-                method: method, args: args});
+              Meteor._stream.emit('livedata', {
+                msg: 'method',
+                method: '/' + this._name + '/' + method,
+                params: params,
+                id: Meteor.uuid()});
           };
         }, this);
       }

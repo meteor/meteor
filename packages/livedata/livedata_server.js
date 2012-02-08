@@ -6,6 +6,7 @@ if (typeof Meteor === "undefined") Meteor = {};
 
   var publishes = {};
   var collections = {};
+  var methods = {};
 
   var poll_subscriptions = function (socket) {
     Fiber(function () {
@@ -109,12 +110,23 @@ if (typeof Meteor === "undefined") Meteor = {};
       socket.meteor.cache = new_cache;
 
       // inform the client that the subscription is ready to go
+      var subs_ready = [];
       _.each(socket.meteor.subs, function (sub) {
         if (!sub.ready) {
-          socket.emit('subscription_ready', sub._id);
+          subs_ready.push(sub._id);
           sub.ready = true;
         }
       });
+
+      if (subs_ready.length || socket.meteor.pending_method_ids.length) {
+        var msg = {msg: 'data'};
+        if (subs_ready.length)
+          msg.subs = subs_ready;
+        if (socket.meteor.pending_method_ids.length)
+          msg.methods = socket.meteor.pending_method_ids;
+        socket.emit('livedata', msg);
+      }
+      socket.meteor.pending_method_ids = [];
 
     }).run();
   };
@@ -145,46 +157,43 @@ if (typeof Meteor === "undefined") Meteor = {};
     poll_subscriptions(socket);
   };
 
-  var run_handler = function (socket, data, other_sockets) {
+  var livedata_method = function (socket, msg) {
     // XXX note that running this in a fiber means that two serial
     // requests from the client can try to execute in parallel.. we're
     // going to have to think that through at some point. also, consider
     // races against Meteor.Collection(), though this shouldn't happen in
     // most normal use cases
     Fiber(function () {
-      if (!('collection' in data) || !(data.collection in collections))
-        // XXX gracefully report over the wire
-        throw new Error("No such collection "+ JSON.stringify(data.collection));
-      var collection = collections[data.collection];
+      var func = msg.method && methods[msg.method];
+      if (!func) {
+        socket.emit('livedata', {
+          msg: 'result', id: msg.id,
+          error: {error: 12, /* XXX error codes! */
+                  reason: "No method " + JSON.stringify(msg.method)}});
+        return;
+      }
 
-      // XXX obviously, we're going to add validation and authentication
-      // somewhere around here (and probably the ability to disable the
-      // automatic mutators completely, too)
-      if (data.type === 'insert')
-        collection.insert(data.args);
-      else if (data.type === 'update')
-        collection.update(data.selector, data.mutator, data.options);
-      else if (data.type === 'remove')
-        collection.remove(data.selector);
-      else if (data.type === 'method') {
-        var func = collection._api[data.method];
-        if (!func)
-          throw new Error("No API method " + JSON.stringify(data.method) +
-                          " on collection " + data.collection);
-        func.apply(null, data.args);
-      } else
-        throw new Error("Bad handler type " + JSON.stringify(data.type));
+      try {
+        var result = func.apply(null, msg.params);
+        socket.emit('livedata', {
+          msg: 'result', id: msg.id, result: result});
+      } catch (err) {
+        socket.emit('livedata', {
+          msg: 'result', id: msg.id,
+          error: {error: 13, /* XXX error codes! */
+                  reason: "Exception in method " + JSON.stringify(msg.method),
+                  details: JSON.stringify(err)}});
+      }
+      if (msg.id)
+        socket.meteor.pending_method_ids.push(msg.id);
 
-      // XXX XXX should emit some kind of success/failure indication
 
-      // after the handler, rerun all the subscriptions as stuff may have
+      // after the method, rerun all the subscriptions as stuff may have
       // changed.
-      // XXX potential fast path for 'remove' -- we know which sockets
-      // need the removal message; it's exactly the sockets that have
-      // the item in their cache
-      _.each(other_sockets, function(x) {
-        if (x && x.meteor) {
-          x.meteor.throttled_poll(); } });
+      _.each(Meteor._stream.all_sockets(), function(x) {
+        if (x && x.meteor)
+          x.meteor.throttled_poll();
+      });
 
     }).run();
   };
@@ -193,6 +202,7 @@ if (typeof Meteor === "undefined") Meteor = {};
     socket.meteor = {};
     socket.meteor.subs = [];
     socket.meteor.cache = {};
+    socket.meteor.pending_method_ids = [];
 
     socket.on('livedata', function (msg) {
       if (typeof(msg) !== 'object' || !msg.msg) {
@@ -206,13 +216,12 @@ if (typeof Meteor === "undefined") Meteor = {};
         livedata_sub(socket, msg);
       else if (msg.msg === 'unsub')
         livedata_unsub(socket, msg);
+      else if (msg.msg === 'method')
+        livedata_method(socket, msg);
       else
         Meteor._debug("discarding unknown livedata message type", msg);
     });
 
-    socket.on('handle', function (data) {
-      run_handler(socket, data, Meteor._stream.all_sockets());
-    });
 
     // 5/sec updates tops, once every 10sec min.
     socket.meteor.throttled_poll = _.throttle(function () {
@@ -344,16 +353,32 @@ if (typeof Meteor === "undefined") Meteor = {};
         // XXX not implemented yet
       },
 
-      api: function (methods) {
-        for (var method in methods) {
-          this[method] = _.bind(methods[method], null);
-          this._api[method] = methods[method];
+      // Backwards compatibility for old handler API.
+      // Still put the function in the Collection object, also make a
+      // method entry for calls coming in over the wire.
+      api: function (local_methods) {
+        for (var method in local_methods) {
+          this[method] = _.bind(local_methods[method], null);
+          if (name)
+            methods['/' + name + '/' + method] = this[method];
         }
       }
     };
 
-    if (name)
+    if (name) {
       collections[name] = ret;
+      // XXX temporary automatically generated methods for mongo mutators
+      methods['/' + name + '/insert'] = function (obj) {
+        ret.insert(obj);
+      };
+      methods['/' + name + '/update'] = function (selector, mutator, options) {
+        ret.update(selector, mutator, options);
+      };
+      methods['/' + name + '/remove'] = function (selector) {
+        ret.remove(selector);
+      };
+
+    }
 
     return ret;
   };
