@@ -13,55 +13,106 @@ if (typeof Meteor === "undefined") Meteor = {};
   // Meteor.subscriptions(). But who wants that? What does that even mean?
   var capture_subs;
 
-  Meteor._stream.on('published', function (data) {
-    _.each(data, function (changes, collection_name) {
-      var coll = collections[collection_name];
-      if (!coll) {
+  // all socket.io traffic is framed as a "livedata" message.
+  Meteor._stream.on('livedata', function (msg) {
+    // connected
+    // data
+    // nosub
+    // result
+
+    if (typeof(msg) !== 'object' || !msg.msg) {
+      Meteor._debug("discarding invalid livedata message", msg);
+      return;
+    }
+
+    if (msg.msg === 'connected')
+      livedata_connected(msg);
+    else if (msg.msg === 'data')
+      livedata_data(msg);
+    else if (msg.msg === 'nosub')
+      livedata_nosub(msg);
+    else if (msg.msg === 'result')
+      livedata_result(msg);
+    else
+      Meteor._debug("discarding unknown livedata message type", msg);
+  });
+
+  var livedata_connected = function (msg) {
+    Meteor._debug("CONNECTED", msg);
+  };
+
+  var livedata_data = function (msg) {
+    if (msg.collection && msg.id) {
+      var meteor_coll = collections[msg.collection];
+
+      if (!meteor_coll) {
         Meteor._debug(
           "discarding data received for unknown collection " +
-            JSON.stringify(collection_name));
+            JSON.stringify(msg.collection));
         return;
       }
 
-      // XXX this is all a little whack. Need to think about how we handle
-      // removes, etc.
-      _.each(changes.inserted || [], function (elt) {
-        if (!coll.findOne(elt._id)) {
-          coll._collection.insert(elt);
-        } else {
-          // we already added it locally! this is the case after an insert
-          // handler.
-          coll._collection.update({_id: elt._id}, elt);
-        }
-      });
-      _.each(changes.updated || [], function (elt) {
-        coll._collection.update({_id: elt._id}, elt);
-      });
-      _.each(changes.removed || [], function (id) {
-        coll._collection.remove({_id: id});
-      });
-    });
-  });
+      // do all the work against underlying minimongo collection.
+      var coll = meteor_coll._collection;
 
-  Meteor._stream.on('subscription_ready', function (id) {
-    var arr = sub_ready_callbacks[id];
-    if (arr) _.each(arr, function (c) { c(); });
-    delete sub_ready_callbacks[id];
-  });
+      var doc = coll.findOne(msg.id);
 
+      if (doc
+          && (!msg.set || msg.set.length === 0)
+          && _.difference(_.keys(doc), msg.unset, ['_id']).length === 0) {
+        // what's left is empty, just remove it.  cannot fail.
+        coll.remove(msg.id);
+      } else if (doc) {
+        var mutator = {$set: msg.set, $unset: {}};
+        _.each(msg.unset, function (propname) {
+          mutator.$unset[propname] = 1;
+        });
+        // XXX error check return value from update.
+        coll.update(msg.id, mutator);
+      } else {
+        // XXX error check return value from insert.
+        coll.insert(_.extend({_id: msg.id}, msg.set));
+      }
+    }
+
+    if (msg.subs) {
+      _.each(msg.subs, function (id) {
+        var arr = sub_ready_callbacks[id];
+        if (arr) _.each(arr, function (c) { c(); });
+        delete sub_ready_callbacks[id];
+      });
+    }
+    if (msg.methods) {
+      Meteor._debug("METHODCOMPLETE", msg.methods);
+    }
+  };
+
+  var livedata_nosub = function (msg) {
+    Meteor._debug("NOSUB", msg);
+  };
+
+  var livedata_result = function (msg) {
+    Meteor._debug("RESULT", msg);
+  };
 
   Meteor._stream.reset(function (msg_list) {
-    // remove existing subscribe and unsubscribe
-    msg_list = _.reject(msg_list, function (elem) {
-      return (!elem || elem[0] === "subscribe" || elem[0] === "unsubscribe");
+    // remove all 'livedata' message except 'method'
+    msg_list = _.filter(msg_list, function (elem) {
+      return (elem && (elem[0] !== "livedata" ||
+                       (elem[1] && elem[1].msg === "method")));
     });
+
+    // Send a connect message at the beginning of the stream.
+    // NOTE: reset is called even on the first connection, so this is
+    // the only place we send this message.
+    msg_list.unshift(['livedata', {msg: 'connect'}]);
 
     // add new subscriptions at the end. this way they take effect after
     // the handlers and we don't see flicker.
     subs.find().forEach(function (sub) {
       msg_list.push(
-        ['subscribe', {
-          _id: sub._id, name: sub.name, args: sub.args}]);
+        ['livedata',
+         {msg: 'sub', id: sub._id, name: sub.name, params: sub.args}]);
     });
 
     // clear out the local database!
@@ -72,11 +123,10 @@ if (typeof Meteor === "undefined") Meteor = {};
     return msg_list;
   });
 
-
   var subsToken = subs.find({}).observe({
     added: function (sub) {
-      Meteor._stream.emit('subscribe', {
-        _id: sub._id, name: sub.name, args: sub.args});
+      Meteor._stream.emit('livedata', {
+        msg: 'sub', id: sub._id, name: sub.name, params: sub.args});
     },
     changed: function (sub) {
       if (sub.count <= 0) {
@@ -85,7 +135,7 @@ if (typeof Meteor === "undefined") Meteor = {};
       }
     },
     removed: function (id) {
-      Meteor._stream.emit('unsubscribe', {_id: id});
+      Meteor._stream.emit('livedata', {msg: 'unsub', id: id});
     }
   });
 
@@ -122,8 +172,10 @@ if (typeof Meteor === "undefined") Meteor = {};
         obj._id = _id;
 
         if (this._name)
-          Meteor._stream.emit('handle', {
-            collection: this._name, type: 'insert', args: obj});
+          Meteor._stream.emit('livedata', {
+            msg: 'method',
+            method: '/' + this._name + '/insert',
+            params: [obj], id: Meteor.uuid()});
         this._collection.insert(obj);
 
         return obj;
@@ -131,9 +183,11 @@ if (typeof Meteor === "undefined") Meteor = {};
 
       update: function (selector, mutator, options) {
         if (this._name)
-          Meteor._stream.emit('handle', {
-            collection: this._name, type: 'update',
-            selector: selector, mutator: mutator, options: options});
+          Meteor._stream.emit('livedata', {
+            msg: 'method',
+            method: '/' + this._name + '/update',
+            params: [selector, mutator, options],
+            id: Meteor.uuid()});
         this._collection.update(selector, mutator, options);
       },
 
@@ -142,8 +196,11 @@ if (typeof Meteor === "undefined") Meteor = {};
           selector = {};
 
         if (this._name)
-          Meteor._stream.emit('handle', {
-            collection: this._name, type: 'remove', selector: selector});
+          Meteor._stream.emit('livedata', {
+            msg: 'method',
+            method: '/' + this._name + '/remove',
+            params: [selector],
+            id: Meteor.uuid()});
         this._collection.remove(selector);
       },
 
@@ -156,16 +213,18 @@ if (typeof Meteor === "undefined") Meteor = {};
           this[method] = function (/* arguments */) {
             // (must turn 'arguments' into a plain array so as not to
             // confuse stringify)
-            var args = [].slice.call(arguments);
+            var params = [].slice.call(arguments);
 
             // run the handler ourselves
-            methods[method].apply(null, args);
+            methods[method].apply(null, params);
 
             // tell the server to run the handler
             if (this._name)
-              Meteor._stream.emit('handle', {
-                collection: this._name, type: 'method',
-                method: method, args: args});
+              Meteor._stream.emit('livedata', {
+                msg: 'method',
+                method: '/' + this._name + '/' + method,
+                params: params,
+                id: Meteor.uuid()});
           };
         }, this);
       }

@@ -6,32 +6,22 @@ if (typeof Meteor === "undefined") Meteor = {};
 
   var publishes = {};
   var collections = {};
+  var methods = {};
 
   var poll_subscriptions = function (socket) {
     Fiber(function () {
-      // what we send to the client.
-      // {collection_name:
-      //   {inserted: [objects], updated: [objects], removed: [ids]}}
-      var results = {};
-      // set of keys we touched in the update. things in the cache that
-      // are not touched are removed.
-      var touched_keys = {};
-
-      var add_to_results = function (collection, which, id) {
-        if (!(collection in results))
-          results[collection] = {};
-        if (!(which in results[collection]))
-          results[collection][which] = [];
-        results[collection][which].push(id);
-      };
+      // holds a clean copy of client's data.  channel.send will
+      // populate new_cache, then we compute the difference with the old
+      // cache, send the delta.
+      var new_cache = {};
 
       // setup a channel object
       var channel = {
+        // this gets called by publish lambda with each object.  send
+        // populates the server's copy of what the client has.
         send: function(collection_name, obj) {
           if (!(obj instanceof Array))
             obj = [obj];
-          if (obj.length === 0)
-            return;
 
           _.each(obj, function (o) {
             if (!o._id) {
@@ -42,19 +32,8 @@ if (typeof Meteor === "undefined") Meteor = {};
             // | not allowed in collection name?
             var key = collection_name + "|" + o._id;
 
-            var cached = socket.meteor.cache[key];
-            socket.meteor.cache[key] = o;
-            touched_keys[key] = true;
-
-            if (!cached)
-              add_to_results(collection_name, 'inserted', o);
-            else if (JSON.stringify(o) !== JSON.stringify(cached))
-              // Not canonical order comparison or anything, but close
-              // enough I hope. We may send some spurious updates?
-              add_to_results(collection_name, 'updated', o);
-            else {
-              // cache hit. do nothing.
-            }
+            // insert or extend new_cache with 'o' object
+            new_cache[key] = _.extend(new_cache[key] || {}, o);
           });
         }
       };
@@ -68,12 +47,53 @@ if (typeof Meteor === "undefined") Meteor = {};
           return;
         }
 
-        pub(channel, sub.args);
+        pub(channel, sub.params);
       });
 
-      // compute the removed keys.
+      // emit deltas for each item in the new cache (any object
+      // created in this poll cycle).
+      _.each(new_cache, function (new_obj, key) {
+        var old_obj = socket.meteor.cache[key];
+
+        // XXX parsing from the string is so ugly.
+        var parts = key.split("|");
+        if (!parts || parts.length !== 2) return;
+        var collection_name = parts[0];
+        var id = parts[1];
+
+        var msg = {msg: 'data', collection: collection_name, id: id};
+
+        if (!old_obj) {
+          var obj_to_send = _.extend({}, new_obj);
+          delete obj_to_send._id;
+          msg.set = obj_to_send;
+          socket.emit('livedata', msg);
+
+        } else {
+          var set = {};
+          var unset = [];
+
+          _.each(new_obj, function (v, k) {
+            // Not canonical order comparison or anything, but close
+            // enough I hope. We may send some spurious updates?
+            if (JSON.stringify(v) !== JSON.stringify(old_obj[k]))
+              set[k] = v;
+          });
+
+          unset = _.difference(_.keys(old_obj), _.keys(new_obj));
+
+          if (_.keys(set).length > 0)
+            msg.set = set;
+          if (unset.length > 0)
+            msg.unset = unset;
+
+          socket.emit('livedata', msg);
+        }
+      });
+
+      // emit deltas for items in the old cache that no longer exist.
       var removed_keys = _.difference(_.keys(socket.meteor.cache),
-                                      _.keys(touched_keys));
+                                      _.keys(new_cache));
       _.each(removed_keys, function (key) {
         // XXX parsing from the string is so ugly.
         var parts = key.split("|");
@@ -81,80 +101,99 @@ if (typeof Meteor === "undefined") Meteor = {};
         var collection_name = parts[0];
         var id = parts[1];
 
-        add_to_results(collection_name, 'removed', id);
-        delete socket.meteor.cache[key];
+        var msg = {msg: 'data', collection: collection_name, id: id};
+        msg.unset = _.without(_.keys(socket.meteor.cache[key]), '_id');
+        socket.emit('livedata', msg);
       });
 
-      // if (and only if) any changes, send to client
-      for (var x in results) {
-        socket.emit('published', results);
-        break;
-      }
+      // promote new_cache to old_cache
+      socket.meteor.cache = new_cache;
 
       // inform the client that the subscription is ready to go
+      var subs_ready = [];
       _.each(socket.meteor.subs, function (sub) {
         if (!sub.ready) {
-          socket.emit('subscription_ready', sub._id);
+          subs_ready.push(sub._id);
           sub.ready = true;
         }
       });
 
+      if (subs_ready.length || socket.meteor.pending_method_ids.length) {
+        var msg = {msg: 'data'};
+        if (subs_ready.length)
+          msg.subs = subs_ready;
+        if (socket.meteor.pending_method_ids.length)
+          msg.methods = socket.meteor.pending_method_ids;
+        socket.emit('livedata', msg);
+      }
+      socket.meteor.pending_method_ids = [];
+
     }).run();
   };
 
+  var livedata_connect = function (socket, msg) {
+    // Always start a new session. We don't support any reconnection.
+    socket.emit('livedata', {msg: 'connected', session: Meteor.uuid()});
+  };
 
-  var register_subscription = function (socket, data) {
-    socket.meteor.subs.push(data);
+  var livedata_sub = function (socket, msg) {
+    if (!publishes[msg.name]) {
+      // can't sub to unknown publish name
+      // XXX error value
+      socket.emit('livedata', {
+        msg: 'nosub', id: msg.id, error: {error: 17, reason: "Unknown name"}});
+      return;
+    }
+
+    socket.meteor.subs.push({_id: msg.id, name: msg.name, params: msg.params});
     poll_subscriptions(socket);
   };
 
-  var unregister_subscription = function (socket, data) {
+  var livedata_unsub = function (socket, msg) {
+    socket.emit('livedata', {msg: 'nosub', id: msg.id});
     socket.meteor.subs = _.filter(socket.meteor.subs, function (x) {
-      return x._id !== data._id;
+      return x._id !== msg.id;
     });
     poll_subscriptions(socket);
   };
 
-  var run_handler = function (socket, data, other_sockets) {
+  var livedata_method = function (socket, msg) {
     // XXX note that running this in a fiber means that two serial
     // requests from the client can try to execute in parallel.. we're
     // going to have to think that through at some point. also, consider
     // races against Meteor.Collection(), though this shouldn't happen in
     // most normal use cases
     Fiber(function () {
-      if (!('collection' in data) || !(data.collection in collections))
-        // XXX gracefully report over the wire
-        throw new Error("No such collection "+ JSON.stringify(data.collection));
-      var collection = collections[data.collection];
+      var func = msg.method && methods[msg.method];
+      if (!func) {
+        socket.emit('livedata', {
+          msg: 'result', id: msg.id,
+          error: {error: 12, /* XXX error codes! */
+                  reason: "No method " + JSON.stringify(msg.method)}});
+        return;
+      }
 
-      // XXX obviously, we're going to add validation and authentication
-      // somewhere around here (and probably the ability to disable the
-      // automatic mutators completely, too)
-      if (data.type === 'insert')
-        collection.insert(data.args);
-      else if (data.type === 'update')
-        collection.update(data.selector, data.mutator, data.options);
-      else if (data.type === 'remove')
-        collection.remove(data.selector);
-      else if (data.type === 'method') {
-        var func = collection._api[data.method];
-        if (!func)
-          throw new Error("No API method " + JSON.stringify(data.method) +
-                          " on collection " + data.collection);
-        func.apply(null, data.args);
-      } else
-        throw new Error("Bad handler type " + JSON.stringify(data.type));
+      try {
+        var result = func.apply(null, msg.params);
+        socket.emit('livedata', {
+          msg: 'result', id: msg.id, result: result});
+      } catch (err) {
+        socket.emit('livedata', {
+          msg: 'result', id: msg.id,
+          error: {error: 13, /* XXX error codes! */
+                  reason: "Exception in method " + JSON.stringify(msg.method),
+                  details: JSON.stringify(err)}});
+      }
+      if (msg.id)
+        socket.meteor.pending_method_ids.push(msg.id);
 
-      // XXX XXX should emit some kind of success/failure indication
 
-      // after the handler, rerun all the subscriptions as stuff may have
+      // after the method, rerun all the subscriptions as stuff may have
       // changed.
-      // XXX potential fast path for 'remove' -- we know which sockets
-      // need the removal message; it's exactly the sockets that have
-      // the item in their cache
-      _.each(other_sockets, function(x) {
-        if (x && x.meteor) {
-          x.meteor.throttled_poll(); } });
+      _.each(Meteor._stream.all_sockets(), function(x) {
+        if (x && x.meteor)
+          x.meteor.throttled_poll();
+      });
 
     }).run();
   };
@@ -163,19 +202,26 @@ if (typeof Meteor === "undefined") Meteor = {};
     socket.meteor = {};
     socket.meteor.subs = [];
     socket.meteor.cache = {};
+    socket.meteor.pending_method_ids = [];
 
+    socket.on('livedata', function (msg) {
+      if (typeof(msg) !== 'object' || !msg.msg) {
+        Meteor._debug("discarding invalid livedata message", msg);
+        return;
+      }
 
-    socket.on('subscribe', function (data) {
-      register_subscription(socket, data);
+      if (msg.msg === 'connect')
+        livedata_connect(socket, msg);
+      else if (msg.msg === 'sub')
+        livedata_sub(socket, msg);
+      else if (msg.msg === 'unsub')
+        livedata_unsub(socket, msg);
+      else if (msg.msg === 'method')
+        livedata_method(socket, msg);
+      else
+        Meteor._debug("discarding unknown livedata message type", msg);
     });
 
-    socket.on('unsubscribe', function (data) {
-      unregister_subscription(socket, data);
-    });
-
-    socket.on('handle', function (data) {
-      run_handler(socket, data, Meteor._stream.all_sockets());
-    });
 
     // 5/sec updates tops, once every 10sec min.
     socket.meteor.throttled_poll = _.throttle(function () {
@@ -221,8 +267,8 @@ if (typeof Meteor === "undefined") Meteor = {};
       var func = function (channel, params) {
         var opt = function (key, or) {
           var x = options[key] || or;
-          return (x instanceof Function) ? x(params) : x
-        }
+          return (x instanceof Function) ? x(params) : x;
+        };
         channel.send(collection._name, collection.find(opt("selector", {}), {
           sort: opt("sort"),
           skip: opt("skip"),
@@ -307,16 +353,32 @@ if (typeof Meteor === "undefined") Meteor = {};
         // XXX not implemented yet
       },
 
-      api: function (methods) {
-        for (var method in methods) {
-          this[method] = _.bind(methods[method], null);
-          this._api[method] = methods[method];
+      // Backwards compatibility for old handler API.
+      // Still put the function in the Collection object, also make a
+      // method entry for calls coming in over the wire.
+      api: function (local_methods) {
+        for (var method in local_methods) {
+          this[method] = _.bind(local_methods[method], null);
+          if (name)
+            methods['/' + name + '/' + method] = this[method];
         }
       }
-    }
+    };
 
-    if (name)
+    if (name) {
       collections[name] = ret;
+      // XXX temporary automatically generated methods for mongo mutators
+      methods['/' + name + '/insert'] = function (obj) {
+        ret.insert(obj);
+      };
+      methods['/' + name + '/update'] = function (selector, mutator, options) {
+        ret.update(selector, mutator, options);
+      };
+      methods['/' + name + '/remove'] = function (selector) {
+        ret.remove(selector);
+      };
+
+    }
 
     return ret;
   };
