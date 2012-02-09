@@ -1,6 +1,7 @@
 // Bundle contents:
 // main.js [run to start the server]
 // /static [served by node for now]
+// /static_cacheable [cache-forever files, served by node for now]
 // /server
 //   server.js, db.js, .... [contents of app/server]
 //   node_modules [for now, contents of (meteor_root)/lib/node_modules]
@@ -59,7 +60,7 @@ var PackageInstance = function (pkg, bundle) {
   self.where = {};
 
   // other packages we've used (with any 'where') -- map from id to package
-  self.using = {}
+  self.using = {};
 
   // map from where (client, server) to a source file name (relative
   // to the package) to true
@@ -212,7 +213,7 @@ var Bundle = function () {
 
   // Map from environment, to path name (server relative), to contents
   // of file as buffer.
-  self.files = {client: {}, server: {}};
+  self.files = {client: {}, client_cacheable: {}, server: {}};
 
   // list of segments of additional HTML for <head>/<body>
   self.head = [];
@@ -374,7 +375,7 @@ _.extend(Bundle.prototype, {
     var digest = hash.digest('hex');
     var name = digest + ".js";
 
-    self.files.client[name] = new Buffer(final_code);
+    self.files.client_cacheable[name] = new Buffer(final_code);
     self.js.client = [name];
 
     /// CSS
@@ -393,7 +394,7 @@ _.extend(Bundle.prototype, {
     digest = hash.digest('hex');
     name = digest + ".css";
 
-    self.files.client[name] = new Buffer(final_css);
+    self.files.client_cacheable[name] = new Buffer(final_css);
     self.css = [name];
   },
 
@@ -481,6 +482,13 @@ _.extend(Bundle.prototype, {
       var full_path = path.join(build_path, 'static', rel_path);
       files.mkdir_p(path.dirname(full_path), 0755);
       fs.writeFileSync(full_path, self.files.client[rel_path]);
+    }
+
+    // -- Client cache forever code --
+    for (var rel_path in self.files.client_cacheable) {
+      var full_path = path.join(build_path, 'static_cacheable', rel_path);
+      files.mkdir_p(path.dirname(full_path), 0755);
+      fs.writeFileSync(full_path, self.files.client_cacheable[rel_path]);
     }
 
     // ---  Server code and generated files ---
