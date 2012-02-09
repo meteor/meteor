@@ -15,11 +15,6 @@ if (typeof Meteor === "undefined") Meteor = {};
 
   // all socket.io traffic is framed as a "livedata" message.
   Meteor._stream.on('livedata', function (msg) {
-    // connected
-    // data
-    // nosub
-    // result
-
     if (typeof(msg) !== 'object' || !msg.msg) {
       Meteor._debug("discarding invalid livedata message", msg);
       return;
@@ -38,7 +33,7 @@ if (typeof Meteor === "undefined") Meteor = {};
   });
 
   var livedata_connected = function (msg) {
-    Meteor._debug("CONNECTED", msg);
+    // Meteor._debug("CONNECTED", msg);
   };
 
   var livedata_data = function (msg) {
@@ -83,16 +78,16 @@ if (typeof Meteor === "undefined") Meteor = {};
       });
     }
     if (msg.methods) {
-      Meteor._debug("METHODCOMPLETE", msg.methods);
+      // Meteor._debug("METHODCOMPLETE", msg.methods);
     }
   };
 
   var livedata_nosub = function (msg) {
-    Meteor._debug("NOSUB", msg);
+    // Meteor._debug("NOSUB", msg);
   };
 
   var livedata_result = function (msg) {
-    Meteor._debug("RESULT", msg);
+    // Meteor._debug("RESULT", msg);
   };
 
   Meteor._stream.reset(function (msg_list) {
