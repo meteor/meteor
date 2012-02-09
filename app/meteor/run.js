@@ -4,7 +4,6 @@ var fs = require("fs");
 var path = require("path");
 var spawn = require('child_process').spawn;
 
-var socketio = require('socket.io');
 var httpProxy = require('http-proxy');
 
 var files = require('../lib/files.js');
