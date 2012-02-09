@@ -1,14 +1,50 @@
 if (typeof Meteor === "undefined") Meteor = {};
 
-(function () {
+Meteor._LivedataServer = function () {
+  var self = this;
 
-  ////////// Internals //////////
+  self.publishes = {};
+  self.collections = {};
+  self.methods = {};
+  self.stream_server = new Meteor._StreamServer;
 
-  var publishes = {};
-  var collections = {};
-  var methods = {};
+  self.stream_server.register(function (socket) {
+    socket.meteor = {};
+    socket.meteor.subs = [];
+    socket.meteor.cache = {};
+    socket.meteor.pending_method_ids = [];
 
-  var poll_subscriptions = function (socket) {
+    socket.on('livedata', function (msg) {
+      if (typeof(msg) !== 'object' || !msg.msg) {
+        Meteor._debug("discarding invalid livedata message", msg);
+        return;
+      }
+
+      if (msg.msg === 'connect')
+        self._livedata_connect(socket, msg);
+      else if (msg.msg === 'sub')
+        self._livedata_sub(socket, msg);
+      else if (msg.msg === 'unsub')
+        self._livedata_unsub(socket, msg);
+      else if (msg.msg === 'method')
+        self._livedata_method(socket, msg);
+      else
+        Meteor._debug("discarding unknown livedata message type", msg);
+    });
+
+
+    // 5/sec updates tops, once every 10sec min.
+    socket.meteor.throttled_poll = _.throttle(function () {
+      self._poll_subscriptions(socket)
+    }, 50); // XXX only 50ms! for great speed. might want higher in prod.
+    socket.meteor.timer = setInterval(socket.meteor.throttled_poll, 10000);
+  });
+};
+
+_.extend(Meteor._LivedataServer.prototype, {
+  _poll_subscriptions: function (socket) {
+    var self = this;
+
     Fiber(function () {
       // holds a clean copy of client's data.  channel.send will
       // populate new_cache, then we compute the difference with the old
@@ -40,7 +76,7 @@ if (typeof Meteor === "undefined") Meteor = {};
 
       // actually run the subscriptions.
       _.each(socket.meteor.subs, function (sub) {
-        var pub = publishes[sub.name];
+        var pub = self.publishes[sub.name];
         if (!pub) {
           // XXX error unknown publish
           console.log("ERROR UNKNOWN PUBLISH " + sub.name);
@@ -129,15 +165,18 @@ if (typeof Meteor === "undefined") Meteor = {};
       socket.meteor.pending_method_ids = [];
 
     }).run();
-  };
+  },
 
-  var livedata_connect = function (socket, msg) {
+  _livedata_connect: function (socket, msg) {
+    var self = this;
     // Always start a new session. We don't support any reconnection.
     socket.emit('livedata', {msg: 'connected', session: Meteor.uuid()});
-  };
+  },
 
-  var livedata_sub = function (socket, msg) {
-    if (!publishes[msg.name]) {
+  _livedata_sub: function (socket, msg) {
+    var self = this;
+
+    if (!self.publishes[msg.name]) {
       // can't sub to unknown publish name
       // XXX error value
       socket.emit('livedata', {
@@ -146,25 +185,27 @@ if (typeof Meteor === "undefined") Meteor = {};
     }
 
     socket.meteor.subs.push({_id: msg.id, name: msg.name, params: msg.params});
-    poll_subscriptions(socket);
-  };
+    self._poll_subscriptions(socket);
+  },
 
-  var livedata_unsub = function (socket, msg) {
+  _livedata_unsub: function (socket, msg) {
+    var self = this;
     socket.emit('livedata', {msg: 'nosub', id: msg.id});
     socket.meteor.subs = _.filter(socket.meteor.subs, function (x) {
       return x._id !== msg.id;
     });
-    poll_subscriptions(socket);
-  };
+    self._poll_subscriptions(socket);
+  },
 
-  var livedata_method = function (socket, msg) {
+  _livedata_method: function (socket, msg) {
+    var self = this;
     // XXX note that running this in a fiber means that two serial
     // requests from the client can try to execute in parallel.. we're
     // going to have to think that through at some point. also, consider
     // races against Meteor.Collection(), though this shouldn't happen in
     // most normal use cases
     Fiber(function () {
-      var func = msg.method && methods[msg.method];
+      var func = msg.method && self.methods[msg.method];
       if (!func) {
         socket.emit('livedata', {
           msg: 'result', id: msg.id,
@@ -190,196 +231,179 @@ if (typeof Meteor === "undefined") Meteor = {};
 
       // after the method, rerun all the subscriptions as stuff may have
       // changed.
-      _.each(Meteor._stream.all_sockets(), function(x) {
+      _.each(self.stream_server.all_sockets(), function(x) {
         if (x && x.meteor)
           x.meteor.throttled_poll();
       });
 
     }).run();
-  };
+  },
 
-  Meteor._stream.register(function (socket) {
-    socket.meteor = {};
-    socket.meteor.subs = [];
-    socket.meteor.cache = {};
-    socket.meteor.pending_method_ids = [];
+  /**
+   * Defines a live dataset that clients can subscribe to.
+   *
+   * @param name {String} identifier for query
+   * @param options {Object}
+   *
+   * options to contain:
+   *  - collection {Collection} collection; defaults to the collection
+   *    named 'name' on disk in mongodb
+   *  - selector {Function<args> OR Object} either a mongodb selector,
+   *    or a function that takes the argument object passed to
+   *    Meteor.subscribe and returns a mongodb selector. default {}
+   */
+  publish: function (name, options) {
+    var self = this;
 
-    socket.on('livedata', function (msg) {
-      if (typeof(msg) !== 'object' || !msg.msg) {
-        Meteor._debug("discarding invalid livedata message", msg);
-        return;
-      }
-
-      if (msg.msg === 'connect')
-        livedata_connect(socket, msg);
-      else if (msg.msg === 'sub')
-        livedata_sub(socket, msg);
-      else if (msg.msg === 'unsub')
-        livedata_unsub(socket, msg);
-      else if (msg.msg === 'method')
-        livedata_method(socket, msg);
-      else
-        Meteor._debug("discarding unknown livedata message type", msg);
-    });
-
-
-    // 5/sec updates tops, once every 10sec min.
-    socket.meteor.throttled_poll = _.throttle(function () {
-      poll_subscriptions(socket)
-    }, 50); // XXX only 50ms! for great speed. might want higher in prod.
-    socket.meteor.timer = setInterval(socket.meteor.throttled_poll, 10000);
-  });
-
-
-  ////////// User visible API //////////
-
-  _.extend(Meteor, {
-    is_server: true,
-    is_client: false,
-
-    /**
-     * Defines a live dataset that clients can subscribe to.
-     *
-     * @param name {String} identifier for query
-     * @param options {Object}
-     *
-     * options to contain:
-     *  - collection {Collection} collection; defaults to the collection
-     *    named 'name' on disk in mongodb
-     *  - selector {Function<args> OR Object} either a mongodb selector,
-     *    or a function that takes the argument object passed to
-     *    Meteor.subscribe and returns a mongodb selector. default {}
-     */
-    publish: function (name, options) {
-      if (name in publishes) {
-        // XXX error duplicate publish
-        console.log("ERROR DUPLICATE PUBLISH " + name);
-        return;
-      }
-
-      options = options || {};
-      var collection = options.collection || collections[name];
-      if (!collection)
-        throw new Error("No collection '" + name + "' found to publish. " +
-                        "You can specify the collection explicitly with the " +
-                        "'collection' option.");
-      var selector = options.selector || {};
-      var func = function (channel, params) {
-        var opt = function (key, or) {
-          var x = options[key] || or;
-          return (x instanceof Function) ? x(params) : x;
-        };
-        channel.send(collection._name, collection.find(opt("selector", {}), {
-          sort: opt("sort"),
-          skip: opt("skip"),
-          limit: opt("limit")
-        }).fetch());
-      };
-
-      publishes[name] = func;
-    },
-
-    subscribe: function () {
-      // ignored on server
-    },
-
-    autosubscribe: function () {
-      // ignored on server
+    if (name in self.publishes) {
+      // XXX error duplicate publish
+      console.log("ERROR DUPLICATE PUBLISH " + name);
+      return;
     }
-  });
 
-  Meteor.Collection = function (name) {
-    if (!name)
-      // XXX maybe support this using minimongo?
-      throw new Error("Anonymous collections aren't allowed on the server");
-
-    var ret = {
-      _name: name,
-      _api: {},
-
-      // XXX there are probably a lot of little places where this API
-      // and minimongo diverge. we should track each of those down and
-      // kill it.
-
-      find: function (selector, options) {
-        if (arguments.length === 0)
-          selector = {};
-
-        return new Meteor._mongo_driver.Cursor(this._name, selector, options);
-      },
-
-      findOne: function (selector, options) {
-        if (arguments.length === 0)
-          selector = {};
-
-        // XXX when implementing observe() on the server, either
-        // support limit or remove this performance hack.
-        options = options || {};
-        options.limit = 1;
-        return this.find(selector, options).fetch()[0];
-      },
-
-      insert: function (doc) {
-        // do id allocation here, so we never end up with an ObjectID.
-        // This only happens if some calls this directly on the server,
-        // since normally ids are allocated on the client and sent over
-        // the wire to us.
-        if (! doc._id) {
-          // copy doc because we mess with it. only shallow copy.
-          new_doc = {};
-          _.extend(new_doc, doc);
-          doc = new_doc;
-          doc._id = Meteor.uuid();
-        }
-
-        Meteor._mongo_driver.insert(this._name, doc);
-
-        // return the doc w/ _id, so we can use it.
-        return doc;
-      },
-
-      update: function (selector, mod, options) {
-        return Meteor._mongo_driver.update(this._name, selector, mod, options);
-      },
-
-      remove: function (selector) {
-        if (arguments.length === 0)
-          selector = {};
-
-        return Meteor._mongo_driver.remove(this._name, selector);
-      },
-
-      schema: function () {
-        // XXX not implemented yet
-      },
-
-      // Backwards compatibility for old handler API.
-      // Still put the function in the Collection object, also make a
-      // method entry for calls coming in over the wire.
-      api: function (local_methods) {
-        for (var method in local_methods) {
-          this[method] = _.bind(local_methods[method], null);
-          if (name)
-            methods['/' + name + '/' + method] = this[method];
-        }
-      }
+    options = options || {};
+    var collection = options.collection || self.collections[name];
+    if (!collection)
+      throw new Error("No collection '" + name + "' found to publish. " +
+                      "You can specify the collection explicitly with the " +
+                      "'collection' option.");
+    var selector = options.selector || {};
+    var func = function (channel, params) {
+      var opt = function (key, or) {
+        var x = options[key] || or;
+        return (x instanceof Function) ? x(params) : x;
+      };
+      channel.send(collection._name, collection.find(opt("selector", {}), {
+        sort: opt("sort"),
+        skip: opt("skip"),
+        limit: opt("limit")
+      }).fetch());
     };
 
-    if (name) {
-      collections[name] = ret;
-      // XXX temporary automatically generated methods for mongo mutators
-      methods['/' + name + '/insert'] = function (obj) {
-        ret.insert(obj);
-      };
-      methods['/' + name + '/update'] = function (selector, mutator, options) {
-        ret.update(selector, mutator, options);
-      };
-      methods['/' + name + '/remove'] = function (selector) {
-        ret.remove(selector);
-      };
+    self.publishes[name] = func;
+  }
+});
 
+Meteor._Collection = function (name, server) {
+  var self = this;
+
+  if (!name)
+    // XXX maybe support this using minimongo?
+    throw new Error("Anonymous collections aren't allowed on the server");
+
+  self._name = name;
+  self._api = {};
+  self._server = server;
+
+  if (name) {
+    self._server.collections[name] = self;
+    // XXX temporary automatically generated methods for mongo mutators
+    self._server.methods['/' + name + '/insert'] = function (obj) {
+      ret.insert(obj);
+    };
+    self._server.methods['/' + name + '/update'] = function (selector, mutator, options) {
+      ret.update(selector, mutator, options);
+    };
+    self._server.methods['/' + name + '/remove'] = function (selector) {
+      ret.remove(selector);
+    };
+  }
+};
+
+_.extend(Meteor._Collection.prototype, {
+  // XXX there are probably a lot of little places where this API
+  // and minimongo diverge. we should track each of those down and
+  // kill it.
+
+  find: function (selector, options) {
+    var self = this;
+
+    if (arguments.length === 0)
+      selector = {};
+
+    return new Meteor._mongo_driver.Cursor(self._name, selector, options);
+  },
+
+  findOne: function (selector, options) {
+    var self = this;
+
+    if (arguments.length === 0)
+      selector = {};
+
+    // XXX when implementing observe() on the server, either
+    // support limit or remove this performance hack.
+    options = options || {};
+    options.limit = 1;
+    return self.find(selector, options).fetch()[0];
+  },
+
+  insert: function (doc) {
+    var self = this;
+
+    // do id allocation here, so we never end up with an ObjectID.
+    // This only happens if some calls this directly on the server,
+    // since normally ids are allocated on the client and sent over
+    // the wire to us.
+    if (! doc._id) {
+      // copy doc because we mess with it. only shallow copy.
+      new_doc = {};
+      _.extend(new_doc, doc);
+      doc = new_doc;
+      doc._id = Meteor.uuid();
     }
 
-    return ret;
-  };
-})();
+    Meteor._mongo_driver.insert(self._name, doc);
+
+    // return the doc w/ _id, so we can use it.
+    return doc;
+  },
+
+  update: function (selector, mod, options) {
+    var self = this;
+    return Meteor._mongo_driver.update(self._name, selector, mod, options);
+  },
+
+  remove: function (selector) {
+    var self = this;
+
+    if (arguments.length === 0)
+      selector = {};
+
+    return Meteor._mongo_driver.remove(self._name, selector);
+  },
+
+  schema: function () {
+    // XXX not implemented yet
+  },
+
+  // Backwards compatibility for old handler API.
+  // Still put the function in the Collection object, also make a
+  // method entry for calls coming in over the wire.
+  api: function (local_methods) {
+    var self = this;
+    for (var method in local_methods) {
+      self[method] = _.bind(local_methods[method], null);
+      if (self._name)
+        self._server.methods['/' + self._name + '/' + method] = self[method];
+    }
+  }
+});
+
+// XXX temporary -- rename
+TheServer = new Meteor._LivedataServer;
+
+_.extend(Meteor, {
+  is_server: true,
+  is_client: false,
+
+  publish: _.bind(TheServer.publish, TheServer),
+
+  // XXX eliminate shim; have app do it directly
+  Collection: function (name) {
+    return new Meteor._Collection(name, TheServer);
+  },
+
+  // these are ignored on the server
+  subscribe: function () {},
+  autosubscribe: function () {}
+});

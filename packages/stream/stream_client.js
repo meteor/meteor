@@ -15,275 +15,296 @@ if (typeof Meteor === "undefined") Meteor = {};
 // already:
 // https://github.com/3rd-Eden/Socket.IO/tree/bugs/reconnect
 
+Meteor._Stream = function (url) {
+  var self = this;
 
-(function () {
+  self.url = url;
+  self.socket = null;
+  self.event_callbacks = {}; // name -> [callback]
+  self.reset_callbacks = [];
+  self.message_queue = {}; // id -> message
+  self.next_message_id = 0;
+  self.server_id = null;
 
-  ////////// Constants //////////
+  //// Constants
 
   // how long to wait until we declare the connection attempt
   // failed. socket.io doesn't tell us sometimes.
   // https://github.com/LearnBoost/socket.io-client/issues/214
   // https://github.com/LearnBoost/socket.io-client/issues/311
-  var CONNECT_TIMEOUT = 10000;
+  self.CONNECT_TIMEOUT = 10000;
   // extra time to make sure our timer and socket.ios timer don't
   // collide.
-  var CONNECT_TIMEOUT_SLOP = 1000;
+  self.CONNECT_TIMEOUT_SLOP = 1000;
   // time for initial reconnect attempt.
-  var RETRY_BASE_TIMEOUT = 1000;
+  self.RETRY_BASE_TIMEOUT = 1000;
   // exponential factor to increase timeout each attempt.
-  var RETRY_EXPONENT = 2.2;
+  self.RETRY_EXPONENT = 2.2;
   // maximum time between reconnects.
-  var RETRY_MAX_TIMEOUT = 1800000; // 30min.
+  self.RETRY_MAX_TIMEOUT = 1800000; // 30min.
   // time to wait for the first 2 retries.  this helps page reload
   // speed during dev mode restarts, but doesn't hurt prod too
   // much (due to CONNECT_TIMEOUT)
-  var RETRY_MIN_TIMEOUT = 10;
-
+  self.RETRY_MIN_TIMEOUT = 10;
   // fuzz factor to randomize reconnect times by. avoid reconnect
   // storms.
-  var RETRY_FUZZ = 0.5; // +- 25%
+  self.RETRY_FUZZ = 0.5; // +- 25%
 
-  ////////// Internals //////////
-
-  var socket;
-  var event_callbacks = {}; // name -> [callback]
-  var reset_callbacks = [];
-  var message_queue = {}; // id -> message
-  var next_message_id = 0;
-  var server_id;
-
-  //// reactive status stuff
-  var status = {
+  //// Reactive status
+  self.status = {
     status: "waiting", connected: false, retry_count: 0
   };
 
-  var status_listeners = {}; // context.id -> context
-  var status_changed = function () {
-    _.each(status_listeners, function (context) {
+  self.status_listeners = {}; // context.id -> context
+  self.status_changed = function () {
+    _.each(self.status_listeners, function (context) {
       context.invalidate();
     });
   };
 
-  //// retry logic
-  var retry_timer;
-  var connection_timer;
+  //// Retry logic
+  self.retry_timer = null;
+  self.connection_timer = null;
 
-  var connected = function (welcome_data) {
-    if (connection_timer) {
-      clearTimeout(connection_timer);
-      connection_timer = undefined;
+  //// Saving and restoring state
+  Meteor._reload.on_migrate('stream', function () {
+    return { message_list: _.toArray(self.message_queue) };
+  });
+
+  var migration_data = Meteor._reload.migration_data('stream');
+  if (migration_data && migration_data.message_list) {
+    _.each(migration_data.message_list, function (msg) {
+      self.message_queue[self.next_message_id++] = msg;
+    });
+  }
+
+  //// Kickoff!
+  self._launch_connection();
+};
+
+_.extend(Meteor._Stream.prototype, {
+  on: function (name, callback) {
+    var self = this;
+
+    if (!self.event_callbacks[name])
+      self.event_callbacks[name] = [];
+    self.event_callbacks[name].push(callback);
+    if (self.socket)
+      self.socket.on(name, callback);
+  },
+
+  emit: function (/* arguments */) {
+    var self = this;
+
+    var args = _.toArray(arguments);
+    var id = self.next_message_id++;
+    self.message_queue[id] = args;
+
+    if (self.status.connected) {
+      self.socket.json.send(args, function () {
+        delete self.message_queue[id];
+      });
+    }
+  },
+
+  // provide a hook for modules to re-initialize state upon new
+  // connection. callback is a function that takes a message list and
+  // returns a message list. modules use this to strip out unneeded
+  // messages and/or insert new messages. NOTE: this API is weird! We
+  // probably want to revisit this, potentially adding some sort of
+  // namespacing so multiple modules can share the stream more
+  // gracefully.
+  reset: function (callback) {
+    var self = this;
+    self.reset_callbacks.push(callback);
+  },
+
+  status: function () {
+    var self = this;
+    var context = Meteor.deps && Meteor.deps.Context.current;
+    if (context && !(context.id in self.status_listeners)) {
+      self.status_listeners[context.id] = context;
+      context.on_invalidate(function () {
+        delete self.status_listeners[context.id];
+      });
+    }
+    return self.status;
+  },
+
+  reconnect: function () {
+    var self = this;
+    if (self.status.connected)
+      return; // already connected. noop.
+
+    // if we're mid-connection, stop it.
+    if (self.status.status === "connecting") {
+      self._fake_connect_failed();
     }
 
-    if (status.connected) {
+    if (self.retry_timer)
+      clearTimeout(self.retry_timer);
+    self.retry_timer = undefined;
+    self.status.retry_count -= 1; // don't count manual retries
+    self._retry_now();
+  },
+
+  _connected: function (welcome_data) {
+    var self = this;
+
+    if (self.connection_timer) {
+      clearTimeout(self.connection_timer);
+      self.connection_timer = undefined;
+    }
+
+    if (self.status.connected) {
       // already connected. do nothing. this probably shouldn't happen.
       return;
     }
 
     // inspect the welcome data and decide if we have to reload
     if (welcome_data && welcome_data.server_id) {
-      if (server_id && server_id !== welcome_data.server_id) {
+      if (self.server_id && self.server_id !== welcome_data.server_id) {
         Meteor._reload.reload();
         // world's about to end, just leave the connection 'connecting'
         // until it does.
         return;
       }
-      server_id = welcome_data.server_id;
+      self.server_id = welcome_data.server_id;
     } else {
       Meteor._debug("DEBUG: invalid welcome packet", welcome_data);
     }
 
     // give everyone a chance to munge the message queue.
-    var msg_list = _.toArray(message_queue);
-    _.each(reset_callbacks, function (callback) {
+    var msg_list = _.toArray(self.message_queue);
+    _.each(self.reset_callbacks, function (callback) {
       msg_list = callback(msg_list);
     });
-    message_queue = {};
+    self.message_queue = {};
     _.each(msg_list, function (msg) {
-      message_queue[next_message_id++] = msg;
+      self.message_queue[self.next_message_id++] = msg;
     });
 
     // send the pending message queue. this should always be in
     // order, since the keys are ordered numerically and they are added
     // in order.
-    _.each(message_queue, function (msg, id) {
-      socket.json.send(msg, function () {
-        delete message_queue[id];
+    _.each(self.message_queue, function (msg, id) {
+      self.socket.json.send(msg, function () {
+        delete self.message_queue[id];
       });
     });
 
-    status.status = "connected";
-    status.connected = true;
-    status.retry_count = 0;
-    status_changed();
+    self.status.status = "connected";
+    self.status.connected = true;
+    self.status.retry_count = 0;
+    self.status_changed();
+  },
 
+  _cleanup_socket: function () {
+    var self = this;
 
-  };
-  var cleanup_socket = function () {
-    if (socket) {
+    if (self.socket) {
 
-      if (socket.$events) {
-        _.each(socket.$events, function (v, k) {
-          socket.removeAllListeners(k);
+      if (self.socket.$events) {
+        _.each(self.socket.$events, function (v, k) {
+          self.socket.removeAllListeners(k);
         });
       }
-      socket.disconnect();
+      self.socket.disconnect();
 
-      var old_socket = socket;
-      socket = undefined;
+      var old_socket = self.socket;
+      self.socket = null;
 
       old_socket.on('connect', function () {
         Meteor._debug("DEBUG: OLD SOCKET RECONNECTED", old_socket);
         old_socket.disconnect();
       });
     }
-  };
+  },
 
-  var disconnected = function () {
-    if (connection_timer) {
-      clearTimeout(connection_timer);
-      connection_timer = undefined;
+  _disconnected: function () {
+    var self = this;
+
+    if (self.connection_timer) {
+      clearTimeout(self.connection_timer);
+      self.connection_timer = undefined;
     }
-    cleanup_socket();
-    retry_later(); // sets status. no need to do it here.
-  };
-  var fake_connect_failed = function () {
+    self._cleanup_socket();
+    self._retry_later(); // sets status. no need to do it here.
+  },
+
+  _fake_connect_failed: function () {
+    var self = this;
     // sometimes socket.io just doesn't tell us when it failed. we
     // detect this with a timer and force failure.
-    cleanup_socket();
-    disconnected();
-  };
+    self._cleanup_socket();
+    self._disconnected();
+  },
 
-  var retry_timeout = function (count) {
+  _retry_timeout: function (count) {
+    var self = this;
+
     if (count < 2)
-      return RETRY_MIN_TIMEOUT;
+      return self.RETRY_MIN_TIMEOUT;
 
     var timeout = Math.min(
-      RETRY_MAX_TIMEOUT,
-      RETRY_BASE_TIMEOUT * Math.pow(RETRY_EXPONENT, count));
+      self.RETRY_MAX_TIMEOUT,
+      self.RETRY_BASE_TIMEOUT * Math.pow(self.RETRY_EXPONENT, count));
     // fuzz the timeout randomly, to avoid reconnect storms when a
     // server goes down.
-    timeout = timeout * ((Math.random() * RETRY_FUZZ) + (1 - RETRY_FUZZ/2));
-
+    timeout = timeout * ((Math.random() * self.RETRY_FUZZ) +
+                         (1 - self.RETRY_FUZZ/2));
     return timeout;
-  };
-  var retry_later = function () {
-    var timeout = retry_timeout(status.retry_count)
-    if (retry_timer) { clearTimeout(retry_timer); }
-    retry_timer = setTimeout(retry_now, timeout);
+  },
 
-    status.status = "waiting"
-    status.connected = false;
-    status.retry_time = (new Date()).getTime() + timeout;
-    status_changed();
-  };
-  var retry_now = function () {
-    status.retry_count += 1;
-    status.status = "connecting";
-    status.connected = false;
-    delete status.retry_time;
-    status_changed();
+  _retry_later: function () {
+    var self = this;
 
-    launch_connection();
-  };
+    var timeout = self._retry_timeout(self.status.retry_count)
+    if (self.retry_timer)
+      clearTimeout(self.retry_timer);
+    self.retry_timer = setTimeout(_.bind(self._retry_now, self), timeout);
 
-  var launch_connection = function () {
-    cleanup_socket(); // cleanup the old socket, if there was one.
+    self.status.status = "waiting"
+    self.status.connected = false;
+    self.status.retry_time = (new Date()).getTime() + timeout;
+    self.status_changed();
+  },
 
-    socket = io.connect('/', { reconnect: false,
-                               'connect timeout': CONNECT_TIMEOUT,
-                               'force new connection': true } );
-    socket.once('welcome', connected);
-    socket.on('disconnect', disconnected);
-    socket.on('connect_failed', disconnected);
+  _retry_now: function () {
+    var self = this;
 
-    _.each(event_callbacks, function (callbacks, name) {
+    self.status.retry_count += 1;
+    self.status.status = "connecting";
+    self.status.connected = false;
+    delete self.status.retry_time;
+    self.status_changed();
+
+    self._launch_connection();
+  },
+
+  _launch_connection: function () {
+    var self = this;
+    self._cleanup_socket(); // cleanup the old socket, if there was one.
+
+    self.socket = io.connect(self.url, {
+      reconnect: false,
+      'connect timeout': self.CONNECT_TIMEOUT,
+      'force new connection': true
+    });
+    self.socket.once('welcome', _.bind(self._connected, self));
+    self.socket.on('disconnect', _.bind(self._disconnected, self));
+    self.socket.on('connect_failed', _.bind(self._disconnected, self));
+
+    _.each(self.event_callbacks, function (callbacks, name) {
       _.each(callbacks, function (callback) {
-        socket.on(name, callback);
+        self.socket.on(name, callback);
       });
     });
 
-    if (connection_timer) clearTimeout(connection_timer);
-    connection_timer = setTimeout(fake_connect_failed,
-                                  CONNECT_TIMEOUT + CONNECT_TIMEOUT_SLOP);
-
-  };
-
-  ////////// Save and restore state //////////
-
-  Meteor._reload.on_migrate('stream', function () {
-    return { message_list: _.toArray(message_queue) };
-  });
-
-  var migration_data = Meteor._reload.migration_data('stream');
-  if (migration_data && migration_data.message_list) {
-    _.each(migration_data.message_list, function (msg) {
-      message_queue[next_message_id++] = msg;
-    });
+    if (self.connection_timer)
+      clearTimeout(self.connection_timer);
+    var timeout = self.CONNECT_TIMEOUT + self.CONNECT_TIMEOUT_SLOP;
+    self.connection_timer = setTimeout(_.bind(self._fake_connect_failed, self),
+                                       timeout);
   }
-
-  ////////// User facing API //////////
-
-  Meteor.status = function () {
-    var context = Meteor.deps.Context.current;
-    if (context && !(context.id in status_listeners)) {
-      status_listeners[context.id] = context;
-      context.on_invalidate(function () {
-        delete status_listeners[context.id];
-      });
-    }
-    return status;
-  };
-
-  Meteor.reconnect = function () {
-    if (status.connected) return; // already connected. noop.
-
-    // if we're mid-connection, stop it.
-    if (status.status === "connecting") {
-      fake_connect_failed();
-    }
-
-    if (retry_timer) clearTimeout(retry_timer);
-    retry_timer = undefined;
-    status.retry_count -= 1; // don't count manual retries
-    retry_now();
-  };
-
-
-  ////////// API for other packages //////////
-
-  Meteor._stream = {
-    on: function (name, callback) {
-      if (!event_callbacks[name]) event_callbacks[name] = [];
-      event_callbacks[name].push(callback);
-      if (socket) socket.on(name, callback);
-    },
-
-    emit: function (/* var args */) {
-      var args = _.toArray(arguments);
-      var id = next_message_id++;
-      message_queue[id] = args;
-
-      if (status.connected) {
-        socket.json.send(args, function () {
-          delete message_queue[id];
-        });
-      }
-    },
-
-    // provide a hook for modules to re-initialize state upon new
-    // connection. callback is a function that takes a message list and
-    // returns a message list. modules use this to strip out unneeded
-    // messages and/or insert new messages. NOTE: this API is weird! We
-    // probably want to revisit this, potentially adding some sort of
-    // namespacing so multiple modules can share the stream more
-    // gracefully.
-    reset: function (callback) {
-      reset_callbacks.push(callback);
-    }
-  };
-
-
-  ////////// Kickoff! //////////
-  launch_connection();
-
-})();
+});
