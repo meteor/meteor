@@ -51,14 +51,13 @@ npm install connect@1.8.5
 npm install connect-gzip@0.1.5
 npm install optimist@0.3.1
 npm install coffee-script@1.2.0
-npm install less@1.2.0
+npm install less@1.2.1
 npm install mime@1.2.4
 npm install semver@1.0.13
-npm install wrench@1.3.3
 npm install handlebars@1.0.2beta
 npm install mongodb@0.9.7-1.4
 npm install uglify-js@1.2.5
-npm install clean-css@0.3.1
+npm install clean-css@0.3.2
 npm install progress@0.0.4
 npm install fibers@0.6.4
 npm install useragent@1.0.5
