@@ -4,14 +4,16 @@ var path = require('path');
 var semver = require('semver');
 
 
-var optimist = require('optimist')
+var optimist = require('optimist');
 
 var updater = require('../app/lib/updater.js');
 var _ = require('../app/lib/third/underscore.js');
 
 
 // What files to update. Relative to project root.
-var UPDATE_FILES = ['app/lib/updater.js', 'admin/install-s3.sh',
+var UPDATE_FILES = ['app/lib/updater.js',
+                    'admin/install-s3.sh',
+                    'docs/client/docs.html',
                     ['admin/manifest.json', 'g']];
 
 // Files to update for dev_bundle
