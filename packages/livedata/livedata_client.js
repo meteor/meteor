@@ -24,8 +24,13 @@ Meteor.Server = function (url) {
 
   self.stream = new Meteor._Stream(self.url);
 
-  // all socket.io traffic is framed as a "livedata" message.
-  self.stream.on('livedata', function (msg) {
+  self.stream.on('message', function (raw_msg) {
+    try {
+      var msg = JSON.parse(raw_msg);
+    } catch (err) {
+      Meteor._debug("discarding message with invalid JSON", raw_msg);
+      return;
+    }
     if (typeof msg !== 'object' || !msg.msg) {
       Meteor._debug("discarding invalid livedata message", msg);
       return;
@@ -43,24 +48,18 @@ Meteor.Server = function (url) {
       Meteor._debug("discarding unknown livedata message type", msg);
   });
 
-  self.stream.reset(function (msg_list) {
-    // remove all 'livedata' message except 'method'
-    msg_list = _.filter(msg_list, function (elem) {
-      return (elem && (elem[0] !== "livedata" ||
-                       (elem[1] && elem[1].msg === "method")));
-    });
+  self.stream.on('reset', function () {
 
     // Send a connect message at the beginning of the stream.
     // NOTE: reset is called even on the first connection, so this is
     // the only place we send this message.
-    msg_list.unshift(['livedata', {msg: 'connect'}]);
+    self.stream.send(JSON.stringify({msg: 'connect'}));
 
     // add new subscriptions at the end. this way they take effect after
     // the handlers and we don't see flicker.
     self.subs.find().forEach(function (sub) {
-      msg_list.push(
-        ['livedata',
-         {msg: 'sub', id: sub._id, name: sub.name, params: sub.args}]);
+      self.stream.send(JSON.stringify(
+        {msg: 'sub', id: sub._id, name: sub.name, params: sub.args}));
     });
 
     // clear out the local database!
@@ -68,7 +67,8 @@ Meteor.Server = function (url) {
       col._collection.remove({});
     });
 
-    return msg_list;
+    // XXX XXX resend pending mutators!
+
   });
 
   // we never terminate the observe(), since there is no way to
@@ -76,8 +76,8 @@ Meteor.Server = function (url) {
   // only one that holds a reference to the self.subs collection
   self.subs_token = self.subs.find({}).observe({
     added: function (sub) {
-      self.stream.emit('livedata', {
-        msg: 'sub', id: sub._id, name: sub.name, params: sub.args});
+      self.stream.send(JSON.stringify({
+        msg: 'sub', id: sub._id, name: sub.name, params: sub.args}));
     },
     changed: function (sub) {
       if (sub.count <= 0) {
@@ -86,7 +86,7 @@ Meteor.Server = function (url) {
       }
     },
     removed: function (id) {
-      self.stream.emit('livedata', {msg: 'unsub', id: id});
+      self.stream.send(JSON.stringify({msg: 'unsub', id: id}));
     }
   });
 };
@@ -164,9 +164,9 @@ _.extend(Meteor.Server.prototype, {
     }
 
     // run on server
-    self._server.stream.emit('livedata', {
+    self._server.stream.send(JSON.stringify({
       msg: 'method', method: name, params: params,
-      id: self._create_invocation(result_func)});
+      id: self._create_invocation(result_func)}));
     return ret;
   },
 
@@ -180,7 +180,6 @@ _.extend(Meteor.Server.prototype, {
 
   _livedata_connected: function (msg) {
     var self = this;
-
     // Meteor._debug("CONNECTED", msg);
   },
 
@@ -328,10 +327,10 @@ _.extend(Meteor._Collection.prototype, {
 
     if (self._name) {
       self._maybe_snapshot();
-      self._server.stream.emit('livedata', {
+      self._server.stream.send(JSON.stringify({
         msg: 'method',
         method: '/' + self._name + '/insert',
-        params: [obj], id: self._server._create_invocation()});
+        params: [obj], id: self._server._create_invocation()}));
     }
     self._collection.insert(obj);
 
@@ -343,11 +342,11 @@ _.extend(Meteor._Collection.prototype, {
     var self = this;
     if (self._name) {
       self._maybe_snapshot();
-      self._server.stream.emit('livedata', {
+      self._server.stream.send(JSON.stringify({
         msg: 'method',
         method: '/' + self._name + '/update',
         params: [selector, mutator, options],
-        id: self._server._create_invocation()});
+        id: self._server._create_invocation()}));
     }
     self._collection.update(selector, mutator, options);
   },
@@ -361,11 +360,11 @@ _.extend(Meteor._Collection.prototype, {
 
     if (self._name) {
       self._maybe_snapshot();
-      self._server.stream.emit('livedata', {
+      self._server.stream.send(JSON.stringify({
         msg: 'method',
         method: '/' + self._name + '/remove',
         params: [selector],
-        id: self._server._create_invocation()});
+        id: self._server._create_invocation()}));
     }
     self._collection.remove(selector);
   },

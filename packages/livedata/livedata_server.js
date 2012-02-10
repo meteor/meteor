@@ -14,7 +14,13 @@ Meteor._LivedataServer = function () {
     socket.meteor.cache = {};
     socket.meteor.pending_method_ids = [];
 
-    socket.on('livedata', function (msg) {
+    socket.on('data', function (raw_msg) {
+      try {
+        var msg = JSON.parse(raw_msg);
+      } catch (err) {
+        Meteor._debug("discarding message with invalid JSON", raw_msg);
+        return;
+      }
       if (typeof msg !== 'object' || !msg.msg) {
         Meteor._debug("discarding invalid livedata message", msg);
         return;
@@ -35,7 +41,7 @@ Meteor._LivedataServer = function () {
 
     // 5/sec updates tops, once every 10sec min.
     socket.meteor.throttled_poll = _.throttle(function () {
-      self._poll_subscriptions(socket)
+      self._poll_subscriptions(socket);
     }, 50); // XXX only 50ms! for great speed. might want higher in prod.
     socket.meteor.timer = setInterval(socket.meteor.throttled_poll, 10000);
   });
@@ -86,6 +92,7 @@ _.extend(Meteor._LivedataServer.prototype, {
         pub(channel, sub.params);
       });
 
+
       // emit deltas for each item in the new cache (any object
       // created in this poll cycle).
       _.each(new_cache, function (new_obj, key) {
@@ -103,7 +110,7 @@ _.extend(Meteor._LivedataServer.prototype, {
           var obj_to_send = _.extend({}, new_obj);
           delete obj_to_send._id;
           msg.set = obj_to_send;
-          socket.emit('livedata', msg);
+          socket.send(JSON.stringify(msg));
 
         } else {
           var set = {};
@@ -124,7 +131,7 @@ _.extend(Meteor._LivedataServer.prototype, {
             msg.unset = unset;
 
           if (msg.set || msg.unset)
-            socket.emit('livedata', msg);
+            socket.send(JSON.stringify(msg));
         }
       });
 
@@ -140,7 +147,7 @@ _.extend(Meteor._LivedataServer.prototype, {
 
         var msg = {msg: 'data', collection: collection_name, id: id};
         msg.unset = _.without(_.keys(socket.meteor.cache[key]), '_id');
-        socket.emit('livedata', msg);
+        socket.send(JSON.stringify(msg));
       });
 
       // promote new_cache to old_cache
@@ -161,7 +168,7 @@ _.extend(Meteor._LivedataServer.prototype, {
           msg.subs = subs_ready;
         if (socket.meteor.pending_method_ids.length)
           msg.methods = socket.meteor.pending_method_ids;
-        socket.emit('livedata', msg);
+        socket.send(JSON.stringify(msg));
       }
       socket.meteor.pending_method_ids = [];
 
@@ -171,17 +178,18 @@ _.extend(Meteor._LivedataServer.prototype, {
   _livedata_connect: function (socket, msg) {
     var self = this;
     // Always start a new session. We don't support any reconnection.
-    socket.emit('livedata', {msg: 'connected', session: Meteor.uuid()});
+    socket.send(JSON.stringify({msg: 'connected', session: Meteor.uuid()}));
   },
 
   _livedata_sub: function (socket, msg) {
     var self = this;
 
+
     if (!self.publishes[msg.name]) {
       // can't sub to unknown publish name
       // XXX error value
-      socket.emit('livedata', {
-        msg: 'nosub', id: msg.id, error: {error: 17, reason: "Unknown name"}});
+      socket.send(JSON.stringify({
+        msg: 'nosub', id: msg.id, error: {error: 17, reason: "Unknown name"}}));
       return;
     }
 
@@ -191,7 +199,7 @@ _.extend(Meteor._LivedataServer.prototype, {
 
   _livedata_unsub: function (socket, msg) {
     var self = this;
-    socket.emit('livedata', {msg: 'nosub', id: msg.id});
+    socket.send(JSON.stringify({msg: 'nosub', id: msg.id}));
     socket.meteor.subs = _.filter(socket.meteor.subs, function (x) {
       return x._id !== msg.id;
     });
@@ -208,22 +216,22 @@ _.extend(Meteor._LivedataServer.prototype, {
     Fiber(function () {
       var func = msg.method && self.method_handlers[msg.method];
       if (!func) {
-        socket.emit('livedata', {
+        socket.send(JSON.stringify({
           msg: 'result', id: msg.id,
           error: {error: 12, /* XXX error codes! */
-                  reason: "Method not found"}});
+                  reason: "Method not found"}}));
         return;
       }
 
       try {
         var result = func.apply(null, msg.params);
-        socket.emit('livedata', {
-          msg: 'result', id: msg.id, result: result});
+        socket.send(JSON.stringify({
+          msg: 'result', id: msg.id, result: result}));
       } catch (err) {
-        socket.emit('livedata', {
+        socket.send(JSON.stringify({
           msg: 'result', id: msg.id,
           error: {error: 13, /* XXX error codes! */
-                  reason: "Internal server error"}});
+                  reason: "Internal server error"}}));
         // XXX prettyprint exception in the log
         Meteor._debug("Exception in method '" + msg.method + "': " +
                       JSON.stringify(err));
