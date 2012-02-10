@@ -113,7 +113,7 @@
               throw new Error("Bad value for element body: " + c);
             else if (c instanceof Array)
               addChildren(c);
-            else if (typeof(c) === "string")
+            else if (typeof c === "string")
               elt.appendChild(document.createTextNode(c));
             else if ('element' in c)
               addChildren([c.element]);
