@@ -59,7 +59,15 @@ var run = function (bundle_dir) {
 
   var app_html = fs.readFileSync(path.join(bundle_dir, 'app.html'));
   var unsupported_html = fs.readFileSync(path.join(bundle_dir, 'unsupported.html'));
+
   app.use(function (req, res) {
+    if (req.url === '/favicon.ico') {
+      // prevent /favicon.ico from returning app_html
+      res.writeHead(404);
+      res.end();
+      return;
+    }
+
     res.writeHead(200, {'Content-Type': 'text/html'});
     if (supported_browser(req.headers['user-agent']))
       res.write(app_html);
