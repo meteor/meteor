@@ -88,7 +88,7 @@ Collection._findModTarget = function (doc, keyparts, no_create,
         return null;
       if (!numeric)
         throw Error("can't append to array using string field name ["
-                    + keypart + "]")
+                    + keypart + "]");
       keypart = parseInt(keypart);
       if (last)
         // handle 'a.01'
@@ -98,7 +98,7 @@ Collection._findModTarget = function (doc, keyparts, no_create,
       if (!last) {
         if (doc.length === keypart)
           doc.push({});
-        else if (typeof(doc[keypart]) !== "object")
+        else if (typeof doc[keypart] !== "object")
           throw Error("can't modify field '" + keyparts[i + 1] +
                       "' of list value " + JSON.stringify(doc[keypart]));
       }
@@ -126,10 +126,10 @@ Collection._noCreateModifiers = {
 
 Collection._modifiers = {
   $inc: function (target, field, arg) {
-    if (typeof(arg) !== "number")
+    if (typeof arg !== "number")
       throw Error("Modifier $inc allowed for numbers only");
     if (field in target) {
-      if (typeof(target[field]) !== "number")
+      if (typeof target[field] !== "number")
         throw Error("Cannot apply $inc modifier to non-number");
       target[field] += arg;
     } else {
@@ -158,7 +158,7 @@ Collection._modifiers = {
       x.push(Collection._deepcopy(arg));
   },
   $pushAll: function (target, field, arg) {
-    if (!(typeof(arg) === "object" && arg instanceof Array))
+    if (!(typeof arg === "object" && arg instanceof Array))
       throw Error("Modifier $pushAll/pullAll allowed for arrays only");
     var x = target[field];
     if (x === undefined)
@@ -178,7 +178,7 @@ Collection._modifiers = {
       throw Error("Cannot apply $addToSet modifier to non-array");
     else {
       var isEach = false;
-      if (typeof(arg) === "object") {
+      if (typeof arg === "object") {
         for (var k in arg) {
           if (k === "$each")
             isEach = true;
@@ -203,7 +203,7 @@ Collection._modifiers = {
     else if (!(x instanceof Array))
       throw Error("Cannot apply $pop modifier to non-array");
     else {
-      if (typeof(arg) === 'number' && arg < 0)
+      if (typeof arg === 'number' && arg < 0)
         x.splice(0, 1);
       else
         x.pop();
@@ -219,7 +219,7 @@ Collection._modifiers = {
       throw Error("Cannot apply $pull/pullAll modifier to non-array");
     else {
       var out = []
-      if (typeof(arg) === "object" && !(arg instanceof Array)) {
+      if (typeof arg === "object" && !(arg instanceof Array)) {
         // XXX would be much nicer to compile this once, rather than
         // for each document we modify.. but usually we're not
         // modifying that many documents, so we'll let it slide for
@@ -242,7 +242,7 @@ Collection._modifiers = {
     }
   },
   $pullAll: function (target, field, arg) {
-    if (!(typeof(arg) === "object" && arg instanceof Array))
+    if (!(typeof arg === "object" && arg instanceof Array))
       throw Error("Modifier $pushAll/pullAll allowed for arrays only");
     if (target === undefined)
       return;
@@ -273,7 +273,7 @@ Collection._modifiers = {
       throw Error("$rename source must differ from target");
     if (target === null)
       throw Error("$rename source field invalid");
-    if (typeof(arg) !== "string")
+    if (typeof arg !== "string")
       throw Error("$rename target must be a string");
     if (target === undefined)
       return;

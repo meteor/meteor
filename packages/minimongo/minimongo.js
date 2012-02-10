@@ -355,7 +355,7 @@ Collection.prototype._modifyAndNotify = function (doc, mod) {
 // XXX findandmodify
 
 Collection._deepcopy = function (v) {
-  if (typeof(v) !== "object")
+  if (typeof v !== "object")
     return v;
   if (v === null)
     return null; // null has typeof "object"

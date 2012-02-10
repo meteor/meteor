@@ -15,7 +15,7 @@ Meteor._LivedataServer = function () {
     socket.meteor.pending_method_ids = [];
 
     socket.on('livedata', function (msg) {
-      if (typeof(msg) !== 'object' || !msg.msg) {
+      if (typeof msg !== 'object' || !msg.msg) {
         Meteor._debug("discarding invalid livedata message", msg);
         return;
       }

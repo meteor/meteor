@@ -66,9 +66,9 @@ Session = _.extend({}, {
     var self = this;
     var context = Meteor.deps.Context.current;
 
-    if (typeof(value) !== 'string' &&
-        typeof(value) !== 'number' &&
-        typeof(value) !== 'boolean' &&
+    if (typeof value !== 'string' &&
+        typeof value !== 'number' &&
+        typeof value !== 'boolean' &&
         value !== null && value !== undefined)
       throw new Error("Session.equals: value can't be an object");
 

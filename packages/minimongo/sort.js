@@ -19,7 +19,7 @@ Collection._compileSort = function (spec) {
 
   if (spec instanceof Array) {
     for (var i = 0; i < spec.length; i++) {
-      if (typeof(spec[i]) === "string") {
+      if (typeof spec[i] === "string") {
         keys.push(spec[i]);
         asc.push(true);
       } else {
@@ -27,7 +27,7 @@ Collection._compileSort = function (spec) {
         asc.push(spec[i][1] !== "desc");
       }
     }
-  } else if (typeof(spec) === "object") {
+  } else if (typeof spec === "object") {
     for (key in spec) {
       keys.push(key);
       asc.push(!(spec[key] < 0));
@@ -37,7 +37,7 @@ Collection._compileSort = function (spec) {
   }
 
   if (keys.length === 0)
-    return function () {return 0;}
+    return function () {return 0;};
 
   // eval() does not return a value in IE8, nor does the spec say it
   // should. Assign to a local to get the value, instead.

@@ -26,7 +26,7 @@ Meteor.Server = function (url) {
 
   // all socket.io traffic is framed as a "livedata" message.
   self.stream.on('livedata', function (msg) {
-    if (typeof(msg) !== 'object' || !msg.msg) {
+    if (typeof msg !== 'object' || !msg.msg) {
       Meteor._debug("discarding invalid livedata message", msg);
       return;
     }

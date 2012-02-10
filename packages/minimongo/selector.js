@@ -29,7 +29,7 @@ Collection._f = {
   },
 
   _in: function (x, qval) {
-    if (typeof(x) !== "object") {
+    if (typeof x !== "object") {
       // optimization: use scalar equality (fast)
       for (var i = 0; i < qval.length; i++)
         if (x === qval[i])
@@ -45,11 +45,11 @@ Collection._f = {
   },
 
   _type: function (v) {
-    if (typeof(v) === "number")
+    if (typeof v === "number")
       return 1;
-    if (typeof(v) === "string")
+    if (typeof v === "string")
       return 2;
-    if (typeof(v) === "boolean")
+    if (typeof v === "boolean")
       return 8;
     if (v instanceof Array)
       return 4;
@@ -57,7 +57,7 @@ Collection._f = {
       return 10;
     if (v instanceof RegExp)
       return 11;
-    if (typeof(v) === "function")
+    if (typeof v === "function")
       // note that typeof(/x/) === "function"
       return 13;
     return 3; // object
@@ -78,14 +78,14 @@ Collection._f = {
   _equal: function (x, qval) {
     var match = function (a, b) {
       // scalars
-      if (typeof(a) === 'number' || typeof(a) === 'string' ||
-          typeof(a) === 'boolean' || a === undefined || a === null)
+      if (typeof a === 'number' || typeof a === 'string' ||
+          typeof a === 'boolean' || a === undefined || a === null)
         return a === b;
-      if (typeof(a) === 'function')
+      if (typeof a === 'function')
         return false;
 
-      // OK, typeof(a) === 'object'
-      if (typeof(b) !== 'object')
+      // OK, typeof a === 'object'
+      if (typeof b !== 'object')
         return false;
 
       // arrays
@@ -262,7 +262,7 @@ Collection._compileSelector = function (selector) {
     return function (doc) {return selector.call(doc);};
 
   // shorthand -- scalars match _id
-  if ((typeof(selector) === "string") || (typeof(selector) === "number"))
+  if ((typeof selector === "string") || (typeof selector === "number"))
     selector = {_id: selector};
 
   // protect against dangerous selectors.  falsey and {_id: falsey}
@@ -357,7 +357,7 @@ Collection._exprForKeypathPredicate = function (keypath, value, literals) {
   if (value instanceof RegExp) {
     predcode = Collection._exprForOperatorTest(value, literals);
   } else if (
-    !(typeof(value) === 'object') ||
+    !(typeof value === 'object') ||
       value === null ||
       value instanceof Array) {
     // it's something like {x.y: 12} or {x.y: [12]}
@@ -483,7 +483,7 @@ Collection._exprForConstraint = function (type, arg, others,
     expr = 'x%' + JSON.stringify(arg[0]) + '===' +
       JSON.stringify(arg[1]);
   } else if (type === '$ne') {
-    if (typeof(arg) !== "object")
+    if (typeof arg !== "object")
       expr = 'x===' + JSON.stringify(arg);
     else
       expr = 'f._equal(x,' + JSON.stringify(arg) + ')';
