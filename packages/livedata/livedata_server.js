@@ -5,7 +5,7 @@ Meteor._LivedataServer = function () {
 
   self.publishes = {};
   self.collections = {};
-  self.methods = {};
+  self.method_handlers = {};
   self.stream_server = new Meteor._StreamServer;
 
   self.stream_server.register(function (socket) {
@@ -205,12 +205,12 @@ _.extend(Meteor._LivedataServer.prototype, {
     // races against Meteor.Collection(), though this shouldn't happen in
     // most normal use cases
     Fiber(function () {
-      var func = msg.method && self.methods[msg.method];
+      var func = msg.method && self.method_handlers[msg.method];
       if (!func) {
         socket.emit('livedata', {
           msg: 'result', id: msg.id,
           error: {error: 12, /* XXX error codes! */
-                  reason: "No method " + JSON.stringify(msg.method)}});
+                  reason: "Method not found"}});
         return;
       }
 
@@ -222,12 +222,14 @@ _.extend(Meteor._LivedataServer.prototype, {
         socket.emit('livedata', {
           msg: 'result', id: msg.id,
           error: {error: 13, /* XXX error codes! */
-                  reason: "Exception in method " + JSON.stringify(msg.method),
-                  details: JSON.stringify(err)}});
+                  reason: "Internal server error"}});
+        // XXX prettyprint exception in the log
+        Meteor._debug("Exception in method '" + msg.method + "': " +
+                      JSON.stringify(err));
       }
+
       if (msg.id)
         socket.meteor.pending_method_ids.push(msg.id);
-
 
       // after the method, rerun all the subscriptions as stuff may have
       // changed.
@@ -281,6 +283,42 @@ _.extend(Meteor._LivedataServer.prototype, {
     };
 
     self.publishes[name] = func;
+  },
+
+  methods: function (methods) {
+    var self = this;
+    _.each(methods, function (func, name) {
+      if (self.method_handlers[name])
+        throw new Error("A method named '" + name + "' is already defined");
+      self.method_handlers[name] = func;
+    });
+  },
+
+  call: function (name /*, arguments */) {
+    return this.apply(name, Array.prototype.slice.call(arguments, 1));
+  },
+
+  apply: function (name, args) {
+    var self = this;
+    var handler = self.method_handlers[name];
+    if (!handler)
+      throw new Error("No such method '" + name + "'");
+
+    args = _.clone(args);
+    if (args.length && typeof args[args.length - 1] === "function")
+      var result_func = args.pop();
+    else
+      var result_func = function () {};
+
+    /*
+       var user_id =
+       (Fiber.current && Fiber.current._meteor_livedata_user_id) || null;
+      args.unshift(user_id);
+    */
+    var ret = handler.apply(null, args);
+    if (result_func)
+      result_func(ret); // XXX catch exception?
+    return ret;
   }
 });
 
@@ -298,14 +336,14 @@ Meteor._Collection = function (name, server) {
   if (name) {
     self._server.collections[name] = self;
     // XXX temporary automatically generated methods for mongo mutators
-    self._server.methods['/' + name + '/insert'] = function (obj) {
-      ret.insert(obj);
+    self._server.method_handlers['/' + name + '/insert'] = function (obj) {
+      self.insert(obj);
     };
-    self._server.methods['/' + name + '/update'] = function (selector, mutator, options) {
-      ret.update(selector, mutator, options);
+    self._server.method_handlers['/' + name + '/update'] = function (selector, mutator, options) {
+      self.update(selector, mutator, options);
     };
-    self._server.methods['/' + name + '/remove'] = function (selector) {
-      ret.remove(selector);
+    self._server.method_handlers['/' + name + '/remove'] = function (selector) {
+      self.remove(selector);
     };
   }
 };
@@ -374,18 +412,6 @@ _.extend(Meteor._Collection.prototype, {
 
   schema: function () {
     // XXX not implemented yet
-  },
-
-  // Backwards compatibility for old handler API.
-  // Still put the function in the Collection object, also make a
-  // method entry for calls coming in over the wire.
-  api: function (local_methods) {
-    var self = this;
-    for (var method in local_methods) {
-      self[method] = _.bind(local_methods[method], null);
-      if (self._name)
-        self._server.methods['/' + self._name + '/' + method] = self[method];
-    }
   }
 });
 

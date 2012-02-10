@@ -11,6 +11,11 @@ Meteor.Server = function (url) {
   var self = this;
   self.url = url;
   self.collections = {}; // name -> Collection-type object
+  self.method_handlers = {}; // name -> func
+  self.next_method_id = 1;
+  self.pending_methods = {}; // map from method_id -> result function
+  self.unsatisfied_methods = {}; // map from method_id -> true
+  self.pending_data = []; // array of pending data messages
 
   self.subs = new Collection;
   // keyed by subs._id. value is unset or an array. if set, sub is not
@@ -128,6 +133,51 @@ _.extend(Meteor.Server.prototype, {
     return token;
   },
 
+  methods: function (methods) {
+    var self = this;
+    _.each(methods, function (func, name) {
+      if (self.method_handlers[name])
+        throw new Error("A method named '" + name + "' is already defined");
+      self.method_handlers[name] = func;
+    });
+  },
+
+  call: function (name /*, arguments */) {
+    return this.apply(name, Array.prototype.slice.call(arguments, 1));
+  },
+
+  apply: function (name, args) {
+    var self = this;
+    var handler = self.method_handlers[name];
+
+    args = _.clone(args);
+    if (args.length && typeof args[args.length - 1] === "function")
+      var result_func = args.pop();
+    else
+      var result_func = function () {};
+
+    if (handler) {
+      // run locally (if available)
+      var local_args = _.clone(args);
+      local_args.unshift(self.user_id);
+      var ret = handler.apply(null, args);
+    }
+
+    // run on server
+    self._server.stream.emit('livedata', {
+      msg: 'method', method: name, params: params,
+      id: self._create_invocation(result_func)});
+    return ret;
+  },
+
+  _create_invocation: function (result_func) {
+    var self = this;
+    var method_id = self.next_method_id++;
+    self.pending_methods[method_id] = result_func || function () {};
+    self.unsatisfied_methods[method_id] = true;
+    return method_id;
+  },
+
   _livedata_connected: function (msg) {
     var self = this;
 
@@ -137,49 +187,65 @@ _.extend(Meteor.Server.prototype, {
   _livedata_data: function (msg) {
     var self = this;
 
-    if (msg.collection && msg.id) {
-      var meteor_coll = self.collections[msg.collection];
+    // Add the data message to the queue
+    self.pending_data.push(msg);
 
-      if (!meteor_coll) {
-        Meteor._debug(
-          "discarding data received for unknown collection " +
-            JSON.stringify(msg.collection));
-        return;
+    // If there are still method invocations in flight, stop
+    _.each(msg.methods || [], function (method_id) {
+      delete self.unsatisfied_methods[method_id];
+    });
+    for (var method_id in self.unsatisfied_methods)
+      return;
+
+    // All methods have landed. Blow away local changes and replace
+    // with authoritative changes from server.
+
+    // XXX XXX restore database to snapshot
+
+    _.each(self.pending_data, function (msg) {
+      if (msg.collection && msg.id) {
+        var meteor_coll = self.collections[msg.collection];
+
+        if (!meteor_coll) {
+          Meteor._debug(
+            "discarding data received for unknown collection " +
+              JSON.stringify(msg.collection));
+          return;
+        }
+
+        // do all the work against underlying minimongo collection.
+        var coll = meteor_coll._collection;
+
+        var doc = coll.findOne(msg.id);
+
+        if (doc
+            && (!msg.set || msg.set.length === 0)
+            && _.difference(_.keys(doc), msg.unset, ['_id']).length === 0) {
+          // what's left is empty, just remove it.  cannot fail.
+          coll.remove(msg.id);
+        } else if (doc) {
+          var mutator = {$set: msg.set, $unset: {}};
+          _.each(msg.unset, function (propname) {
+            mutator.$unset[propname] = 1;
+          });
+          // XXX error check return value from update.
+          coll.update(msg.id, mutator);
+        } else {
+          // XXX error check return value from insert.
+          coll.insert(_.extend({_id: msg.id}, msg.set));
+        }
       }
 
-      // do all the work against underlying minimongo collection.
-      var coll = meteor_coll._collection;
-
-      var doc = coll.findOne(msg.id);
-
-      if (doc
-          && (!msg.set || msg.set.length === 0)
-          && _.difference(_.keys(doc), msg.unset, ['_id']).length === 0) {
-        // what's left is empty, just remove it.  cannot fail.
-        coll.remove(msg.id);
-      } else if (doc) {
-        var mutator = {$set: msg.set, $unset: {}};
-        _.each(msg.unset, function (propname) {
-          mutator.$unset[propname] = 1;
+      if (msg.subs) {
+        _.each(msg.subs, function (id) {
+          var arr = self.sub_ready_callbacks[id];
+          if (arr) _.each(arr, function (c) { c(); });
+          delete self.sub_ready_callbacks[id];
         });
-        // XXX error check return value from update.
-        coll.update(msg.id, mutator);
-      } else {
-        // XXX error check return value from insert.
-        coll.insert(_.extend({_id: msg.id}, msg.set));
       }
-    }
+    });
 
-    if (msg.subs) {
-      _.each(msg.subs, function (id) {
-        var arr = self.sub_ready_callbacks[id];
-        if (arr) _.each(arr, function (c) { c(); });
-        delete self.sub_ready_callbacks[id];
-      });
-    }
-    if (msg.methods) {
-      // Meteor._debug("METHODCOMPLETE", msg.methods);
-    }
+    self.pending_data = [];
   },
 
   _livedata_nosub: function (msg) {
@@ -189,7 +255,19 @@ _.extend(Meteor.Server.prototype, {
 
   _livedata_result: function (msg) {
     var self = this;
-    // Meteor._debug("RESULT", msg);
+    // id, result or error. error has error (code), reason, details
+    if (('id' in msg) && (msg.id in self.pending_methods)) {
+      var func = self.pending_methods[msg.id];
+      delete self.pending_methods[msg.id];
+      // XXX wrap in try..catch?
+      if ('error' in msg)
+        func(msg.error);
+      else
+        func(undefined, msg.result);
+    } else {
+      // XXX write a better error
+      Meteor._debug("Can't interpret method response message");
+    }
   }
 });
 
@@ -224,36 +302,41 @@ _.extend(Meteor._Collection.prototype, {
     return self._collection.findOne.apply(self._collection, Array.prototype.slice.call(arguments));
   },
 
+  // XXX provide a way for the caller to find out about errors from the server?
   insert: function (obj) {
     var self = this;
     // Generate an id for the object.
     // XXX mutates the object passed in. that is not cool.
     if (obj._id)
       Meteor._debug("WARNING: trying to insert object w/ _id set");
-      var _id = Collection.uuid();
-      obj._id = _id;
+    var _id = Collection.uuid();
+    obj._id = _id;
 
-      if (self._name)
-        self._server.stream.emit('livedata', {
-          msg: 'method',
-          method: '/' + self._name + '/insert',
-          params: [obj], id: Meteor.uuid()});
-      self._collection.insert(obj);
+    if (self._name)
+      // XXX take database snapshot if necessary
+      self._server.stream.emit('livedata', {
+        msg: 'method',
+        method: '/' + self._name + '/insert',
+        params: [obj], id: self._server._create_invocation()});
+    self._collection.insert(obj);
 
-      return obj;
-    },
+    return obj;
+  },
 
+  // XXX provide a way for the caller to find out about errors from the server?
   update: function (selector, mutator, options) {
     var self = this;
     if (self._name)
+      // XXX take database snapshot if necessary
       self._server.stream.emit('livedata', {
         msg: 'method',
         method: '/' + self._name + '/update',
         params: [selector, mutator, options],
-        id: Meteor.uuid()});
+        id: self._server._create_invocation()});
     self._collection.update(selector, mutator, options);
   },
 
+  // XXX provide a way for the caller to find out about errors from the server?
   remove: function (selector) {
     var self = this;
 
@@ -261,42 +344,19 @@ _.extend(Meteor._Collection.prototype, {
       selector = {};
 
     if (self._name)
+      // XXX take database snapshot if necessary
       self._server.stream.emit('livedata', {
         msg: 'method',
         method: '/' + self._name + '/remove',
         params: [selector],
-        id: Meteor.uuid()});
+        id: self._server._create_invocation()});
     self._collection.remove(selector);
   },
 
   schema: function  () {
     // XXX not implemented yet
-  },
-
-  api: function (methods) {
-    var self = this;
-
-    _.each(methods, function (func, method) {
-      self[method] = function (/* arguments */) {
-        // (must turn 'arguments' into a plain array so as not to
-        // confuse stringify)
-        var params = [].slice.call(arguments);
-
-        // run the handler ourselves
-        methods[method].apply(null, params);
-
-        // tell the server to run the handler
-        if (self._name)
-          self._server.stream.emit('livedata', {
-            msg: 'method',
-            method: '/' + self._name + '/' + method,
-            params: params,
-            id: Meteor.uuid()});
-      };
-    }, self);
   }
 });
-
 
 App = new Meteor.Server('/');
 
