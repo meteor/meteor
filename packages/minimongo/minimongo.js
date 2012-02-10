@@ -14,8 +14,11 @@ Collection = function () {
 
   this.next_qid = 1; // live query id generator
 
-  // qid -> live query object. keys: selector_f, sort_f, (callbacks)
+  // qid -> live query object. keys: results, selector_f, sort_f, cursor, (callbacks)
   this.queries = {};
+
+  // when we have a snapshot, this will contain a deep copy of 'docs'.
+  this.current_snapshot = null;
 };
 
 // options may include sort, skip, limit, reactive
@@ -174,7 +177,8 @@ Collection.Cursor.prototype.observe = function (options) {
   var query = self.collection.queries[qid] = {
     selector_f: self.selector_f, // not fast pathed
     sort_f: self.sort_f,
-    results: []
+    results: [],
+    cursor: this
   };
   query.results = self._getRawObjects();
 
@@ -424,4 +428,38 @@ Collection._insertInSortedList = function (cmp, array, value) {
 
   array.push(value);
   return array.length - 1;
+};
+
+// At most one snapshot can exist at once. If one already existed,
+// overwrite it.
+// XXX document (at some point)
+// XXX test
+Collection.prototype.snapshot = function () {
+  this.current_snapshot = _.clone(this.docs);
+};
+
+// Restore (and destroy) the snapshot. If no snapshot exists, raise an
+// exception.
+// XXX document (at some point)
+// XXX test
+Collection.prototype.restore = function () {
+  if (!this.current_snapshot)
+    throw new Error("No current snapshot");
+  this.docs = this.current_snapshot;
+  this.current_snapshot = null;
+
+  // Rerun all queries from scratch. (XXX should do something more
+  // efficient -- diffing at least; ideally, take the snapshot in an
+  // efficient way, say with an undo log, so that we can efficiently
+  // tell what changed)
+  for (var qid in this.queries) {
+    var query = this.queries[qid];
+    for (var i = query.results.length - 1; i >= 0; i--)
+      query.removed(query.results[i]._id, i);
+
+    query.results = query.cursor._getRawObjects();
+
+    for (var i = 0; i < query.results.length; i++)
+      query.added(Collection._deepcopy(query.results[i]), i);
+  }
 };

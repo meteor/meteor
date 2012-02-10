@@ -200,7 +200,12 @@ _.extend(Meteor.Server.prototype, {
     // All methods have landed. Blow away local changes and replace
     // with authoritative changes from server.
 
-    // XXX XXX restore database to snapshot
+    _.each(self.collections, function (coll) {
+      if (coll._was_snapshot) {
+        coll._collection.restore(); // Revert all local changes
+        coll._was_snapshot = false;
+      }
+    });
 
     _.each(self.pending_data, function (msg) {
       if (msg.collection && msg.id) {
@@ -281,6 +286,7 @@ Meteor._Collection = function (name, server) {
   self._name = name;
   self._collection = new Collection;
   self._server = server;
+  self._was_snapshot = false;
 
   if (name)
     server.collections[name] = self;
@@ -302,6 +308,14 @@ _.extend(Meteor._Collection.prototype, {
     return self._collection.findOne.apply(self._collection, Array.prototype.slice.call(arguments));
   },
 
+  _maybe_snapshot: function () {
+    var self = this;
+    if (!self._was_snapshot) {
+      self._collection.snapshot();
+      self._was_snapshot = true;
+    }
+  },
+
   // XXX provide a way for the caller to find out about errors from the server?
   insert: function (obj) {
     var self = this;
@@ -312,12 +326,13 @@ _.extend(Meteor._Collection.prototype, {
     var _id = Collection.uuid();
     obj._id = _id;
 
-    if (self._name)
-      // XXX take database snapshot if necessary
+    if (self._name) {
+      self._maybe_snapshot();
       self._server.stream.emit('livedata', {
         msg: 'method',
         method: '/' + self._name + '/insert',
         params: [obj], id: self._server._create_invocation()});
+    }
     self._collection.insert(obj);
 
     return obj;
@@ -326,13 +341,14 @@ _.extend(Meteor._Collection.prototype, {
   // XXX provide a way for the caller to find out about errors from the server?
   update: function (selector, mutator, options) {
     var self = this;
-    if (self._name)
-      // XXX take database snapshot if necessary
+    if (self._name) {
+      self._maybe_snapshot();
       self._server.stream.emit('livedata', {
         msg: 'method',
         method: '/' + self._name + '/update',
         params: [selector, mutator, options],
         id: self._server._create_invocation()});
+    }
     self._collection.update(selector, mutator, options);
   },
 
@@ -343,13 +359,14 @@ _.extend(Meteor._Collection.prototype, {
     if (arguments.length === 0)
       selector = {};
 
-    if (self._name)
-      // XXX take database snapshot if necessary
+    if (self._name) {
+      self._maybe_snapshot();
       self._server.stream.emit('livedata', {
         msg: 'method',
         method: '/' + self._name + '/remove',
         params: [selector],
         id: self._server._create_invocation()});
+    }
     self._collection.remove(selector);
   },
 
