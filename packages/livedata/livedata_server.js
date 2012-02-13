@@ -123,7 +123,8 @@ _.extend(Meteor._LivedataServer.prototype, {
           if (unset.length > 0)
             msg.unset = unset;
 
-          socket.emit('livedata', msg);
+          if (msg.set || msg.unset)
+            socket.emit('livedata', msg);
         }
       });
 
