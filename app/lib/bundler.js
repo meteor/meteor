@@ -78,7 +78,9 @@ var PackageInstance = function (pkg, bundle) {
     // anonymous packages you want to use (eg, app packages)
     use: function (names, where) {
       if (!(names instanceof Array))
-        names = [names];
+        names = names ? [names] : [];
+      if (!(where instanceof Array))
+        where = where ? [where] : [];
 
       _.each(names, function (name) {
         var pkg = packages.get(name);
@@ -88,9 +90,9 @@ var PackageInstance = function (pkg, bundle) {
 
     add_files: function (paths, where) {
       if (!(paths instanceof Array))
-        paths = [paths];
+        paths = paths ? [paths] : [];
       if (!(where instanceof Array))
-        where = [where];
+        where = where ? [where] : [];
 
       _.each(where, function (w) {
         _.each(paths, function (rel_path) {

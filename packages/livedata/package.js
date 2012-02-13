@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use('stream', 'uuid');
+  api.use(['stream', 'uuid']);
   api.use(['json', 'underscore'], 'server');
   api.use(['json', 'underscore', 'deps', 'minimongo', 'logging'], 'client');
 
