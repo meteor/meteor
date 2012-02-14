@@ -284,6 +284,7 @@ _.extend(Meteor._LivedataServer.prototype, {
         var x = options[key] || or;
         return (x instanceof Function) ? x(params) : x;
       };
+
       channel.send(collection._name, collection.find(opt("selector", {}), {
         sort: opt("sort"),
         skip: opt("skip"),
@@ -331,12 +332,14 @@ _.extend(Meteor._LivedataServer.prototype, {
   }
 });
 
-Meteor._Collection = function (name, server) {
+Meteor._Collection = function (name, server, mongo_url) {
   var self = this;
 
   if (!name)
     // XXX maybe support this using minimongo?
     throw new Error("Anonymous collections aren't allowed on the server");
+
+  self._mongo = new Meteor._Mongo(mongo_url);
 
   self._name = name;
   self._api = {};
@@ -362,26 +365,20 @@ _.extend(Meteor._Collection.prototype, {
   // and minimongo diverge. we should track each of those down and
   // kill it.
 
-  find: function (selector, options) {
+  find: function (/* selector, options */) {
     var self = this;
 
-    if (arguments.length === 0)
-      selector = {};
-
-    return new Meteor._mongo_driver.Cursor(self._name, selector, options);
+    var args = Array.prototype.slice.call(arguments);
+    args.unshift(self._name);
+    return self._mongo.find.apply(self._mongo, args);
   },
 
-  findOne: function (selector, options) {
+  findOne: function (/* selector, options */) {
     var self = this;
 
-    if (arguments.length === 0)
-      selector = {};
-
-    // XXX when implementing observe() on the server, either
-    // support limit or remove this performance hack.
-    options = options || {};
-    options.limit = 1;
-    return self.find(selector, options).fetch()[0];
+    var args = Array.prototype.slice.call(arguments);
+    args.unshift(self._name);
+    return self._mongo.findOne.apply(self._mongo, args);
   },
 
   insert: function (doc) {
@@ -399,7 +396,7 @@ _.extend(Meteor._Collection.prototype, {
       doc._id = Meteor.uuid();
     }
 
-    Meteor._mongo_driver.insert(self._name, doc);
+    self._mongo.insert(self._name, doc);
 
     // return the doc w/ _id, so we can use it.
     return doc;
@@ -407,7 +404,7 @@ _.extend(Meteor._Collection.prototype, {
 
   update: function (selector, mod, options) {
     var self = this;
-    return Meteor._mongo_driver.update(self._name, selector, mod, options);
+    self._mongo.update(self._name, selector, mod, options);
   },
 
   remove: function (selector) {
@@ -416,7 +413,7 @@ _.extend(Meteor._Collection.prototype, {
     if (arguments.length === 0)
       selector = {};
 
-    return Meteor._mongo_driver.remove(self._name, selector);
+    return self._mongo.remove(self._name, selector);
   },
 
   schema: function () {
@@ -435,7 +432,7 @@ _.extend(Meteor, {
 
   // XXX eliminate shim; have app do it directly
   Collection: function (name) {
-    return new Meteor._Collection(name, TheServer);
+    return new Meteor._Collection(name, TheServer, __meteor_bootstrap__.mongo_url);
   },
 
   // these are ignored on the server
