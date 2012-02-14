@@ -13,7 +13,8 @@ Meteor.Server = function (url) {
   self.collections = {}; // name -> Collection-type object
   self.method_handlers = {}; // name -> func
   self.next_method_id = 1;
-  self.pending_methods = {}; // map from method_id -> result function
+  self.pending_method_callbacks = {}; // map from method_id -> result function
+  self.pending_method_messages = {}; // map from method_id -> message to server
   self.unsatisfied_methods = {}; // map from method_id -> true
   self.pending_data = []; // array of pending data messages
 
@@ -22,6 +23,24 @@ Meteor.Server = function (url) {
   // yet ready.
   self.sub_ready_callbacks = {};
 
+
+  // Setup auto-reload persistence.
+  var reload_key = "Server-" + url;
+  var reload_data = Meteor._reload.migration_data(reload_key);
+  if (typeof reload_data === "object") {
+    if (typeof reload_data.next_method_id === "number")
+      self.next_method_id = reload_data.next_method_id;
+    if (typeof reload_data.pending_method_messages === "object")
+      self.pending_method_messages = reload_data.pending_method_messages;
+    // pending messages will be transmitted on initial stream 'reset'
+  }
+  Meteor._reload.on_migrate(reload_key, function () {
+    return { next_method_id: self.next_method_id,
+             pending_method_messages: self.pending_method_messages };
+  });
+
+
+  // Setup stream
   self.stream = new Meteor._Stream(self.url);
 
   self.stream.on('message', function (raw_msg) {
@@ -55,6 +74,11 @@ Meteor.Server = function (url) {
     // the only place we send this message.
     self.stream.send(JSON.stringify({msg: 'connect'}));
 
+    // Send pending methods.
+    _.each(self.pending_method_messages, function (msg) {
+      self.stream.send(JSON.stringify(msg));
+    });
+
     // add new subscriptions at the end. this way they take effect after
     // the handlers and we don't see flicker.
     self.subs.find().forEach(function (sub) {
@@ -66,8 +90,6 @@ Meteor.Server = function (url) {
     _.each(self.collections, function (col) {
       col._collection.remove({});
     });
-
-    // XXX XXX resend pending mutators!
 
   });
 
@@ -151,10 +173,9 @@ _.extend(Meteor.Server.prototype, {
     var handler = self.method_handlers[name];
 
     args = _.clone(args);
+    var result_func = function () {};
     if (args.length && typeof args[args.length - 1] === "function")
-      var result_func = args.pop();
-    else
-      var result_func = function () {};
+      result_func = args.pop();
 
     if (handler) {
       // run locally (if available)
@@ -164,18 +185,21 @@ _.extend(Meteor.Server.prototype, {
     }
 
     // run on server
-    self._server.stream.send(JSON.stringify({
-      msg: 'method', method: name, params: params,
-      id: self._create_invocation(result_func)}));
-    return ret;
+    self._send_method(
+      {msg: 'method', method: name, params: args},
+      result_func);
   },
 
-  _create_invocation: function (result_func) {
+
+  _send_method: function (msg, result_func) {
     var self = this;
     var method_id = self.next_method_id++;
-    self.pending_methods[method_id] = result_func || function () {};
+    var new_msg = _.extend({id: method_id}, msg);
+    self.pending_method_messages[method_id] = new_msg;
+    self.pending_method_callbacks[method_id] = result_func || function () {};
     self.unsatisfied_methods[method_id] = true;
-    return method_id;
+
+    self.stream.send(JSON.stringify(new_msg));
   },
 
   _livedata_connected: function (msg) {
@@ -260,17 +284,27 @@ _.extend(Meteor.Server.prototype, {
   _livedata_result: function (msg) {
     var self = this;
     // id, result or error. error has error (code), reason, details
-    if (('id' in msg) && (msg.id in self.pending_methods)) {
-      var func = self.pending_methods[msg.id];
-      delete self.pending_methods[msg.id];
+
+    if (('id' in msg) && (msg.id in self.pending_method_messages)) {
+      delete self.pending_method_messages[msg.id];
+    } else {
+      // XXX write a better error
+      Meteor._debug("Can't interpret method response message");
+    }
+
+    if (('id' in msg) && (msg.id in self.pending_method_callbacks)) {
+      var func = self.pending_method_callbacks[msg.id];
+      delete self.pending_method_callbacks[msg.id];
       // XXX wrap in try..catch?
       if ('error' in msg)
         func(msg.error);
       else
         func(undefined, msg.result);
     } else {
-      // XXX write a better error
-      Meteor._debug("Can't interpret method response message");
+      // If a response is to a method we sent from reload pending methods,
+      // it won't have a callback. This is OK. This will get revisited
+      // when we do more intellegent auto-reloads where we wait to
+      // quiesce, pre-stage cached assets, etc.
     }
   }
 });
@@ -327,10 +361,10 @@ _.extend(Meteor._Collection.prototype, {
 
     if (self._name) {
       self._maybe_snapshot();
-      self._server.stream.send(JSON.stringify({
+      self._server._send_method({
         msg: 'method',
         method: '/' + self._name + '/insert',
-        params: [obj], id: self._server._create_invocation()}));
+        params: [obj]});
     }
     self._collection.insert(obj);
 
@@ -342,11 +376,10 @@ _.extend(Meteor._Collection.prototype, {
     var self = this;
     if (self._name) {
       self._maybe_snapshot();
-      self._server.stream.send(JSON.stringify({
+      self._server._send_method({
         msg: 'method',
         method: '/' + self._name + '/update',
-        params: [selector, mutator, options],
-        id: self._server._create_invocation()}));
+        params: [selector, mutator, options]});
     }
     self._collection.update(selector, mutator, options);
   },
@@ -360,11 +393,10 @@ _.extend(Meteor._Collection.prototype, {
 
     if (self._name) {
       self._maybe_snapshot();
-      self._server.stream.send(JSON.stringify({
+      self._server._send_method({
         msg: 'method',
         method: '/' + self._name + '/remove',
-        params: [selector],
-        id: self._server._create_invocation()}));
+        params: [selector]});
     }
     self._collection.remove(selector);
   },
