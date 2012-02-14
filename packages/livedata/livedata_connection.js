@@ -203,9 +203,11 @@ _.extend(Meteor._LivedataConnection.prototype, {
   apply: function (name, args) {
     var self = this;
     var handler = self.method_handlers[name];
+    var result_func;
 
+    // if it's a function, the last argument is the result callback,
+    // not a parameter to the remote method.
     args = _.clone(args);
-    var result_func = function () {};
     if (args.length && typeof args[args.length - 1] === "function")
       result_func = args.pop();
 

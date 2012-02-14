@@ -371,10 +371,9 @@ _.extend(Meteor._LivedataServer.prototype, {
       throw new Error("No such method '" + name + "'");
 
     args = _.clone(args);
+    var result_func;
     if (args.length && typeof args[args.length - 1] === "function")
-      var result_func = args.pop();
-    else
-      var result_func = function () {};
+      result_func = args.pop();
 
     /*
        var user_id =

@@ -3,7 +3,6 @@ App.methods({
     return _.toArray(arguments);
   },
   exception: function (where) {
-    Meteor._debug("hi there");
     var shouldThrow =
       (Meteor.is_server && where === "server") ||
       (Meteor.is_client && where === "client") ||
