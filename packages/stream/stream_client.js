@@ -13,10 +13,6 @@ Meteor._Stream = function (url) {
   // how long to wait until we declare the connection attempt
   // failed.
   self.CONNECT_TIMEOUT = 10000;
-  // extra time to make sure our timer and socket.ios timer don't
-  // collide.
-  // XXX XXX remove
-  self.CONNECT_TIMEOUT_SLOP = 1000;
   // time for initial reconnect attempt.
   self.RETRY_BASE_TIMEOUT = 1000;
   // exponential factor to increase timeout each attempt.
@@ -259,9 +255,8 @@ _.extend(Meteor._Stream.prototype, {
 
     if (self.connection_timer)
       clearTimeout(self.connection_timer);
-    var timeout = self.CONNECT_TIMEOUT + self.CONNECT_TIMEOUT_SLOP;
     self.connection_timer = setTimeout(
       _.bind(self._fake_connect_failed, self),
-      timeout);
+      self.CONNECT_TIMEOUT);
   }
 });
