@@ -406,7 +406,9 @@ _.extend(Meteor._Collection.prototype, {
   }
 });
 
-App = new Meteor.Server('/');
+// Path matches sockjs 'prefix' in stream_server. We should revisit this
+// once we specify the 'on the wire' aspects of livedata more clearly.
+App = new Meteor.Server('/sockjs');
 
 _.extend(Meteor, {
   is_server: false,

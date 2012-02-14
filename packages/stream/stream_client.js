@@ -226,8 +226,7 @@ _.extend(Meteor._Stream.prototype, {
     var self = this;
     self._cleanup_socket(); // cleanup the old socket, if there was one.
 
-    // XXX URL!
-    self.socket = new SockJS('http://localhost:3000/sockjs', undefined, {debug: false});
+    self.socket = new SockJS(self.url, undefined, {debug: false});
     self.socket.onmessage = function (data) {
       // first message we get when we're connecting goes to _connected,
       // which connects us. All subsequent messages (while connected) go to
