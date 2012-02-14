@@ -153,13 +153,8 @@ _.extend(Meteor._Stream.prototype, {
     var self = this;
 
     if (self.socket) {
-
-      // XXX XXX how do we remove listeners on engine socket
-      if (self.socket.$events) {
-        _.each(self.socket.$events, function (v, k) {
-          self.socket.removeAllListeners(k);
-        });
-      }
+      self.socket.onmessage = self.socket.onclose
+        = self.socket.onerror = function () {};
       self.socket.close();
 
       var old_socket = self.socket;
