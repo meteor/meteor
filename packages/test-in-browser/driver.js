@@ -138,8 +138,6 @@ var _testStatus = function(t) {
   }
 };
 
-var throttled_flush = _.throttle(Meteor.flush, 1000);
-
 // report a series of events in a single test, or just
 // the existence of that test if no events
 var reportResults = function(results) {
@@ -175,6 +173,11 @@ var reportResults = function(results) {
                                results.events);
   }
 
-  _resultsChanged();
-  throttled_flush();
+
+  _.defer(_throttled_update);
 };
+
+var _throttled_update = _.throttle(function() {
+  _resultsChanged();
+  Meteor.flush();
+}, 500);

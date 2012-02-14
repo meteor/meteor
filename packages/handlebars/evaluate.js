@@ -55,23 +55,26 @@ Handlebars.registerHelper = function (name, func) {
   Handlebars._default_helpers[name] = func;
 };
 
-Handlebars._escape = function (x) {
-  // If Handlebars sees an &entity; in the input text, it won't quote
-  // it (won't replace it with &ampentity;). I'm not sure if that's
-  // the right choice -- it's definitely a heuristic..
-  if (!(/[&<>"'`]/.test(x))) // XXX is this really faster?
-    return x;
-  return x.replace(/&(?!\w+;)|[<>"'`]/g, function (c) {
-    return {
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#x27;",
-      "`": "&#x60;", /* IE allows backtick-delimited attributes?? */
-      "&": "&amp;"
-    }[c];
-  });
-};
+Handlebars._escape = (function() {
+  var escape_map = {
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#x27;",
+    "`": "&#x60;", /* IE allows backtick-delimited attributes?? */
+    "&": "&amp;"
+  };
+  var escape_one = function(c) {
+    return escape_map[c];
+  };
+
+  return function (x) {
+    // If Handlebars sees an &entity; in the input text, it won't quote
+    // it (won't replace it with &ampentity;). I'm not sure if that's
+    // the right choice -- it's definitely a heuristic..
+    return x.replace(/&(?!\w+;)|[<>"'`]/g, escape_one);
+  };
+})();
 
 Handlebars.evaluate = function (ast, data, options) {
   options = options || {};
@@ -123,21 +126,24 @@ Handlebars.evaluate = function (ast, data, options) {
     // argument.
     var apply = function (values, toplevel) {
       var args = values.slice(1);
-      if (args.length && typeof(args[0]) === "function")
+      if (args.length && typeof (args[0]) === "function")
         args = [apply(args)];
       if (toplevel)
-        args.push(extra)
+        args.push(extra);
       return values[0].apply(stack.data, args);
     };
 
-    var values = _.map(params, _.bind(eval_value, null, stack));
+    var values = new Array(params.length);
+    for(var i=0; i<params.length; i++)
+      values[i] = eval_value(stack, params[i]);
+
     if (typeof(values[0]) !== "function")
       return values[0];
     return apply(values, true);
   };
 
   var template = function (stack, elts) {
-    var out = "";
+    var buf = [];
 
     var toString = function (x) {
       if (typeof x === "string") return x;
@@ -149,11 +155,11 @@ Handlebars.evaluate = function (ast, data, options) {
 
     _.each(elts, function (elt) {
       if (typeof(elt) === "string")
-        out += elt;
+        buf.push(elt);
       else if (elt[0] === '{')
-        out += Handlebars._escape(toString(invoke(stack, elt[1])));
+        buf.push(Handlebars._escape(toString(invoke(stack, elt[1]))));
       else if (elt[0] === '!')
-        out += toString(invoke(stack, elt[1] || ''));
+        buf.push(toString(invoke(stack, elt[1] || '')));
       else if (elt[0] === '#') {
         var block = function (data) {
           return template({parent: stack, data: data}, elt[2]);
@@ -162,16 +168,16 @@ Handlebars.evaluate = function (ast, data, options) {
         block.inverse = function (data) {
           return template({parent: stack, data: data}, elt[3] || []);
         };
-        out += invoke(stack, elt[1], block);
+        buf.push(invoke(stack, elt[1], block));
       } else if (elt[0] === '>') {
         if (!(elt[1] in partials))
           throw new Error("No such partial '" + elt[1] + "'");
-        out += partials[elt[1]](stack.data);
+        buf.push(partials[elt[1]](stack.data));
       } else
         throw new Error("bad element in template");
     });
 
-    return out;
+    return buf.join('');
   };
 
   return template({data: data, parent: null}, ast);
