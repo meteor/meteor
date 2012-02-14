@@ -10,6 +10,9 @@
   var Mongo = __meteor_bootstrap__.require('mongodb');
   var Future = __meteor_bootstrap__.require('fibers/future');
 
+  // js2-mode AST blows up when parsing 'future.return()', so alias.
+  Future.prototype.ret = Future.prototype.return;
+
   //////////// Internal //////////
 
   // stash mongo connection and pending operations before connection is
@@ -79,7 +82,7 @@
       if (options && options.skip)
         cursor = cursor.skip(options.skip);
 
-      future.return(cursor);
+      future.ret(cursor);
     });
     this.cursor = future.wait();
   };
@@ -90,7 +93,7 @@
 
     self.cursor.each(function (err, doc) {
       if (err || !doc)
-        future.return(err);
+        future.ret(err);
       else
         callback(null, doc);
     });
@@ -117,7 +120,7 @@
     var future = new Future;
 
     self.cursor.toArray(function (err, res) {
-      future.return(err || res);
+      future.ret(err || res);
     });
 
     return future.wait();
@@ -128,7 +131,7 @@
     var future = new Future;
 
     self.cursor.count(function (err, res) {
-      future.return(err || res);
+      future.ret(err || res);
     });
 
     return future.wait();
@@ -143,7 +146,7 @@
       // XXX err handling
       collection.insert(document, {safe: true}, function(err) {
         // XXX err handling
-        future.return();
+        future.ret();
       });
     });
 
@@ -164,7 +167,7 @@
       // XXX err handling
       collection.remove(selector, {safe:true}, function(err) {
         // XXX err handling
-        future.return();
+        future.ret();
       });
     });
 
@@ -190,7 +193,7 @@
 
       collection.update(selector, mod, opts, function(err) {
         // XXX err handling
-        future.return();
+        future.ret();
       });
     });
 
