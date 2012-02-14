@@ -63,7 +63,7 @@ npm install fibers@0.6.4
 npm install useragent@1.0.5
 npm install request@2.9.3
 npm install http-proxy@0.8.0
-npm install sockjs@0.2.0
+npm install sockjs@0.2.1
 
 cd "$DIR"
 curl "$MONGO_URL" | tar -xz

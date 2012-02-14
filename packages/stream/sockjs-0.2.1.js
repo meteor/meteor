@@ -1,4 +1,4 @@
-/* SockJS client, version 0.2.0, http://sockjs.org, MIT License
+/* SockJS client, version 0.2.1, http://sockjs.org, MIT License
 
 Copyright (C) 2011 VMware, Inc.
 
@@ -161,11 +161,23 @@ utils.getOrigin = function(url) {
     return parts.join('/');
 };
 
-utils.isLocalUrl = function(url) {
+utils.isSameOriginUrl = function(url) {
     // location.origin would do, but it's not available in some
     // browsers.
     var o = _window.location.href.split('/').slice(0,3).join('/');
     return url.slice(0, o.length) === o;
+};
+
+utils.getParentDomain = function(url) {
+    // ipv4 ip address
+    if (/^[0-9.]*$/.test(url)) return url;
+    // ipv6 ip address
+    if (/^\[/.test(url)) return url;
+    // no dots
+    if (!(/[.]/.test(url))) return url;
+
+    var parts = url.split('.').slice(1);
+    return parts.join('.');
 };
 
 utils.objectExtend = function(dst, src) {
@@ -607,13 +619,11 @@ XHRObject.prototype = new EventEmitter(['chunk', 'finish']);
 
 XHRObject.prototype._start = function(method, url, payload) {
     var that = this;
-    if (_window.ActiveXObject) {
+    try {
+        that.xhr = new _window.ActiveXObject('Microsoft.XMLHTTP');
         // IE caches POSTs
         url += ((url.indexOf('?') === -1) ? '?' : '&') + 't='+(+new Date);
-        try {
-            that.xhr = new ActiveXObject('Microsoft.XMLHTTP');
-        } catch(x) {};
-    }
+    } catch(x) {};
     if (!that.xhr) {
         that.xhr = new XMLHttpRequest();
     }
@@ -793,7 +803,7 @@ var SockJS = function(url, dep_protocols_whitelist, options) {
         if (info) {
             if (that._options.info) {
                 // Override if user supplies the option
-                info = that._options.info;
+                info = utils.objectExtend(info, that._options.info);
             }
             if (that._options.rtt) {
                 rtt = that._options.rtt;
@@ -808,7 +818,7 @@ var SockJS = function(url, dep_protocols_whitelist, options) {
 // Inheritance
 SockJS.prototype = new REventTarget();
 
-SockJS.version = "0.2.0";
+SockJS.version = "0.2.1";
 
 SockJS.CONNECTING = 0;
 SockJS.OPEN = 1;
@@ -1582,7 +1592,8 @@ SockJS.bootstrap_iframe = function() {
                           " \"" + version + "\", the iframe:" +
                           " \"" + SockJS.version + "\".");
             }
-            if (!utils.isLocalUrl(trans_url) || !utils.isLocalUrl(base_url)) {
+            if (!utils.isSameOriginUrl(trans_url) ||
+                !utils.isSameOriginUrl(base_url)) {
                 utils.log("Can't connect to different domain from within an " +
                           "iframe. (" + JSON.stringify([_window.location.href, trans_url, base_url]) +
                           ")");
@@ -1604,7 +1615,7 @@ SockJS.bootstrap_iframe = function() {
 
     // alert('test ticker');
     // facade = new FacadeJS();
-    // facade._transport = new FacadeJS['w-iframe-xhr-polling'](facade, 'http://mmajkowski.eng.vmware.com:9999/ticker/12/basd');
+    // facade._transport = new FacadeJS['w-iframe-xhr-polling'](facade, 'http://host.com:9999/ticker/12/basd');
 
     utils.attachMessage(onMessage);
 
@@ -1692,7 +1703,7 @@ var InfoReceiverFake = function() {
 InfoReceiverFake.prototype = new EventEmitter(['finish']);
 
 var createInfoReceiver = function(base_url) {
-    if (utils.isLocalUrl(base_url)) {
+    if (utils.isSameOriginUrl(base_url)) {
         // If, for some reason, we have SockJS locally - there's no
         // need to start up the complex machinery. Just use ajax.
         return new InfoReceiver(base_url, utils.XHRObject);
