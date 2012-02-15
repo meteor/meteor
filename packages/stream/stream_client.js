@@ -30,7 +30,7 @@ Meteor._Stream = function (url) {
   self.RETRY_FUZZ = 0.5; // +- 25%
 
   //// Reactive status
-  self.status = {
+  self.current_status = {
     status: "connecting", connected: false, retry_count: 0
   };
 
@@ -61,7 +61,7 @@ _.extend(Meteor._Stream.prototype, {
     if (!self.event_callbacks[name])
       self.event_callbacks[name] = [];
     self.event_callbacks[name].push(callback);
-    if (self.status.connected)
+    if (self.current_status.connected)
       self.socket.on(name, callback);
   },
 
@@ -70,7 +70,7 @@ _.extend(Meteor._Stream.prototype, {
   // messages on 'reset'
   send: function (data) {
     var self = this;
-    if (self.status.connected) {
+    if (self.current_status.connected) {
       self.socket.send(data);
     }
   },
@@ -85,24 +85,24 @@ _.extend(Meteor._Stream.prototype, {
         delete self.status_listeners[context.id];
       });
     }
-    return self.status;
+    return self.current_status;
   },
 
   // Trigger a reconnect.
   reconnect: function () {
     var self = this;
-    if (self.status.connected)
+    if (self.current_status.connected)
       return; // already connected. noop.
 
     // if we're mid-connection, stop it.
-    if (self.status.status === "connecting") {
+    if (self.current_status.status === "connecting") {
       self._fake_connect_failed();
     }
 
     if (self.retry_timer)
       clearTimeout(self.retry_timer);
     self.retry_timer = null;
-    self.status.retry_count -= 1; // don't count manual retries
+    self.current_status.retry_count -= 1; // don't count manual retries
     self._retry_now();
   },
 
@@ -114,7 +114,7 @@ _.extend(Meteor._Stream.prototype, {
       self.connection_timer = null;
     }
 
-    if (self.status.connected) {
+    if (self.current_status.connected) {
       // already connected. do nothing. this probably shouldn't happen.
       return;
     }
@@ -138,9 +138,9 @@ _.extend(Meteor._Stream.prototype, {
     }
 
     // update status
-    self.status.status = "connected";
-    self.status.connected = true;
-    self.status.retry_count = 0;
+    self.current_status.status = "connected";
+    self.current_status.connected = true;
+    self.current_status.retry_count = 0;
     self.status_changed();
 
     // fire resets. This must come after status change so that clients
@@ -199,24 +199,24 @@ _.extend(Meteor._Stream.prototype, {
   _retry_later: function () {
     var self = this;
 
-    var timeout = self._retry_timeout(self.status.retry_count);
+    var timeout = self._retry_timeout(self.current_status.retry_count);
     if (self.retry_timer)
       clearTimeout(self.retry_timer);
     self.retry_timer = setTimeout(_.bind(self._retry_now, self), timeout);
 
-    self.status.status = "waiting";
-    self.status.connected = false;
-    self.status.retry_time = (new Date()).getTime() + timeout;
+    self.current_status.status = "waiting";
+    self.current_status.connected = false;
+    self.current_status.retry_time = (new Date()).getTime() + timeout;
     self.status_changed();
   },
 
   _retry_now: function () {
     var self = this;
 
-    self.status.retry_count += 1;
-    self.status.status = "connecting";
-    self.status.connected = false;
-    delete self.status.retry_time;
+    self.current_status.retry_count += 1;
+    self.current_status.status = "connecting";
+    self.current_status.connected = false;
+    delete self.current_status.retry_time;
     self.status_changed();
 
     self._launch_connection();
@@ -231,9 +231,9 @@ _.extend(Meteor._Stream.prototype, {
       // first message we get when we're connecting goes to _connected,
       // which connects us. All subsequent messages (while connected) go to
       // the callback.
-      if (self.status.status === "connecting")
+      if (self.current_status.status === "connecting")
         self._connected(data.data);
-      else if (self.status.connected)
+      else if (self.current_status.connected)
         _.each(self.event_callbacks.message, function (callback) {
           callback(data.data);
         });
