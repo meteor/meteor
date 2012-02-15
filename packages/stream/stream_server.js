@@ -3,6 +3,7 @@ if (typeof Meteor === "undefined") Meteor = {};
 Meteor._StreamServer = function () {
   var self = this;
   self.registration_callbacks = [];
+  self.open_sockets = [];
 
   // unique id for this instantiation of the server. If this changes
   // between client reconnects, the client will reload. In production,
@@ -12,37 +13,33 @@ Meteor._StreamServer = function () {
   self.server_id = Meteor.uuid();
 
   // set up socket.io
-  var socketio = __meteor_bootstrap__.require('socket.io');
+  var sockjs = __meteor_bootstrap__.require('sockjs');
+  self.server = sockjs.createServer({
+    prefix: '/sockjs', websocket: false, log: function(){},
+    jsessionid: false});
+  self.server.installHandlers(__meteor_bootstrap__.app);
 
-  self.io = socketio.listen(__meteor_bootstrap__.app);
-  self.io.configure(function() {
-    // Don't serve static files from socket.io. We serve them separately
-    // to get gzip and other fun things.
-    self.io.set('browser client', false);
+  self.server.on('connection', function (socket) {
+    socket.send = function (data) {
+      socket.write(data);
+    };
+    socket.on('close', function () {
+      self.open_sockets = _.without(self.open_sockets, socket);
+    });
+    self.open_sockets.push(socket);
 
-    self.io.set('log level', 1);
-    // XXX disable websockets! they break chrome both debugging
-    // and node-http-proxy (used in outer app)
-    self.io.set('transports', _.without(self.io.transports(), 'websocket'));
-  });
 
-  self.io.sockets.on('connection', function (socket) {
     // Send a welcome message with the server_id. Client uses this to
     // reload if needed.
-    socket.emit('welcome', {server_id: self.server_id});
+    socket.send(JSON.stringify({server_id: self.server_id}));
 
     // call all our callbacks when we get a new socket. they will do the
     // work of setting up handlers and such for specific messages.
     _.each(self.registration_callbacks, function (callback) {
       callback(socket);
     });
-
-    // unwrap messages from the client and dispatch them as if they were
-    // sent with 'emit'.
-    socket.on('message', function (msg) {
-      socket.$emit.apply(socket, msg);
-    });
   });
+
 };
 
 _.extend(Meteor._StreamServer.prototype, {
@@ -51,7 +48,7 @@ _.extend(Meteor._StreamServer.prototype, {
   register: function (callback) {
     var self = this;
     self.registration_callbacks.push(callback);
-    _.each(self.io.sockets.sockets, function (socket) {
+    _.each(self.all_sockets(), function (socket) {
       callback(socket);
     });
   },
@@ -59,6 +56,6 @@ _.extend(Meteor._StreamServer.prototype, {
   // get a list of all sockets
   all_sockets: function () {
     var self = this;
-    return self.io.sockets.sockets;
+    return _.values(self.open_sockets);
   }
 });

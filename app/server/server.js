@@ -38,8 +38,13 @@ var init_keepalive = function () {
 };
 
 var supported_browser = function (user_agent) {
-  var agent = useragent.lookup(user_agent);
-  return !(agent.family === 'IE' && agent.major <= '5');
+  return true;
+
+  // For now, we don't actually deny anyone. The unsupported browser
+  // page isn't very good.
+  //
+  // var agent = useragent.lookup(user_agent);
+  // return !(agent.family === 'IE' && +agent.major <= 5);
 };
 
 var run = function (bundle_dir) {

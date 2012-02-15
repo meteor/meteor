@@ -598,16 +598,6 @@ exports.bundle = function (project_dir, output_path, options) {
   if (!options.no_minify)
     bundle.minify();
 
-  // Socket.io get special handling. Push it in manually after
-  // minification (it doesn't like being minified). But still serve it
-  // ourselves instead of letting socket.io do it, so we get gzip and
-  // such (potentially CDN later).
-  bundle.js.client.unshift('/socketio.static.js');
-  bundle.files.client['/socketio.static.js'] =
-    fs.readFileSync(path.join(
-      files.get_dev_bundle(), 'lib/node_modules',
-      'socket.io/node_modules/socket.io-client/dist/socket.io.min.js'));
-
   // Write to disk
   var dev_bundle_mode =
     options.skip_dev_bundle ? "skip" : (
