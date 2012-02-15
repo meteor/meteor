@@ -330,7 +330,7 @@ _.extend(Bundle.prototype, {
     else
       canon_where = _.clone(canon_where);
     canon_where.sort();
-    var canon_where = JSON.stringify(canon_where);
+    canon_where = JSON.stringify(canon_where);
 
     if (inst.where[canon_where])
       return; // already used in this environment
