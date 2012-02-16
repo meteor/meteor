@@ -124,6 +124,85 @@ var start_proxy = function (outer_port, inner_port, callback) {
 
 ////////// MongoDB //////////
 
+// Try to kill any other mongos running on our port. Calls callback
+// once they are all gone. Callback takes one arg: err (falsy means all
+// good).
+//
+// This is a big hammer for dealing with still running mongos, but
+// smaller hammers have failed before and it is getting tiresome.
+var find_mongo_and_kill_it_dead = function (data_path, port, callback) {
+  var proc = spawn('ps', ['ax']);
+  var data = '';
+  proc.stdout.on('data', function (d) {
+    data += d;
+  });
+
+  proc.on('exit', function (code, signal) {
+    if (code === 0) {
+      var kill_pids = [];
+
+      _.each(data.split('\n'), function (ps_line) {
+        // matches mongos we start
+        var m = ps_line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+\.meteor\/local\/db)\s*$/);
+        if (m && m.length === 4) {
+          var found_pid =  m[1];
+          var found_port = m[2];
+
+          if (port === parseInt(found_port)) {
+            kill_pids.push(found_pid);
+          }
+        }
+      });
+
+
+      if (kill_pids.length) {
+        // Send kill attempts and wait. First a SIGINT, then if it isn't
+        // dead within 2 sec, SIGKILL. This goes through the list
+        // serially, but thats OK because there really should only ever be
+        // one.
+        var attempts = 0;
+        var dead_yet = function () {
+          attempts = attempts + 1;
+          var pid = kill_pids[0];
+          var signal = 0;
+          if (attempts === 1)
+            signal = 'SIGINT';
+          else if (attempts === 20 || attempts === 30)
+            signal = 'SIGKILL';
+          try {
+            process.kill(pid, signal);
+          } catch (e) {
+            // it's dead. remove this pid from the list.
+            kill_pids.shift();
+
+            // if no more in the list, we're done!
+            if (!kill_pids.length) {
+              callback();
+              return;
+            }
+          }
+          if (attempts === 40) {
+            // give up after 4 seconds.
+            callback({
+              reason: "Can't kill running mongo (pid " + pid + ")."});
+            return;
+          }
+
+          // recurse
+          setTimeout(dead_yet, 100);
+        };
+        dead_yet();
+
+      } else {
+        // nothing to kill, fire OK callback
+        callback();
+      }
+    } else {
+      callback({reason: 'ps exit code ' + code});
+    }
+  });
+};
+
 var launch_mongo = function (app_dir, port, launch_callback, on_exit_callback) {
   launch_callback = launch_callback || function () {};
   on_exit_callback = on_exit_callback || function () {};
@@ -140,39 +219,26 @@ var launch_mongo = function (app_dir, port, launch_callback, on_exit_callback) {
   // store data in app_dir
   var data_path = path.join(app_dir, '.meteor/local/db');
   files.mkdir_p(data_path, 0755);
-  var pid_path = path.join(app_dir, '.meteor/local/mongod.pid');
   var port_path = path.join(app_dir, '.meteor/local/mongod.port');
   // add .gitignore if needed.
   files.add_to_gitignore(path.join(app_dir, '.meteor'), 'local');
 
-  // read old pid file, kill old process.
-  var pid;
-  try {
-    var pid_data = parseInt(fs.readFileSync(pid_path));
-    if (pid_data) {
-      // found old mongo. killing it. will raise if already dead.
-      pid = pid_data;
-      process.kill(pid);
-      console.log("Killing old mongod " + pid);
+  find_mongo_and_kill_it_dead(data_path, port, function (err) {
+    if (err) {
+      console.log("Can't kill running mongo:", err.reason);
+      process.exit(1);
     }
-  } catch (e) {
-    // no pid, or no longer running. no worries.
-  }
 
-  // We need to wait for mongo to fully die, so define a callback
-  // function for launch.
-  var _launch = function () {
     var proc = spawn(mongod_path, [
       '--bind_ip', '127.0.0.1', '--port', port,
       '--dbpath', data_path
     ]);
 
-    // write pid and port file.
-    fs.writeFileSync(pid_path, proc.pid.toString(), 'ascii');
+    // write port file.
     fs.writeFileSync(port_path, port.toString(), 'ascii');
 
     proc.on('exit', function (code, signal) {
-      console.log("XXX MONGO DEAD! " + code + " : " + signal); // XXX
+      console.log("Unexpected mongo exit code " + code + ". Restarting.");
       on_exit_callback();
     });
 
@@ -187,44 +253,8 @@ var launch_mongo = function (app_dir, port, launch_callback, on_exit_callback) {
       if (/ \[initandlisten\] waiting for connections on port/.test(data))
         launch_callback();
     });
+  });
 
-    // XXX deal with unclean death.
-  };
-
-  if (!pid) {
-    // no mongo running, launch new one
-    _launch();
-  } else {
-    // Ensure mongo is really dead.
-    // XXX super ugly.
-    var attempts = 0;
-    var dead_yet = function () {
-      setTimeout(function () {
-        attempts = attempts + 1;
-        var signal = 0;
-        // try to kill -9 it twice, once at 1 second, once at 10 seconds
-        if (attempts === 10 || attempts === 20)
-          signal = 'SIGKILL';
-        try {
-          process.kill(pid, signal);
-        } catch (e) {
-          // it's dead. launch and we're done
-          _launch();
-          return;
-        }
-        if (attempts === 30) {
-          // give up after 3 seconds.
-          process.stdout.write(
-            "Can't kill running mongo (pid " + pid + "). Aborting.\n");
-          process.exit(1);
-        }
-
-        // recurse
-        dead_yet();
-      }, 100);
-    };
-    dead_yet();
-  }
 };
 
 var log_to_clients = function (msg) {
@@ -644,15 +674,34 @@ exports.run = function (app_dir, bundle_opts, port) {
     };
   };
 
+
+  var mongo_err_count = 0;
+  var mongo_err_timer;
   var launch = function () {
-    launch_mongo(app_dir, mongo_port,
-                 function () { // On Mongo startup complete
-                   restart_server();
-                 },
-                 function () { // On Mongo dead
-                   // XXX wait a sec to restart.
-                   setTimeout(launch, 1000);
-                 });
+    launch_mongo(
+      app_dir,
+      mongo_port,
+      function () { // On Mongo startup complete
+        restart_server();
+      },
+      function () { // On Mongo dead
+        // if mongo dies 3 times with less than 5 seconds between each,
+        // declare it failed and die.
+        mongo_err_count += 1;
+        if (mongo_err_count >= 3) {
+          console.log("Can't start mongod. Check for other processes listening on port " + mongo_port + " or other meteors running in the same project.");
+          process.exit(1);
+        }
+        if (mongo_err_timer)
+          clearTimeout(mongo_err_timer);
+        mongo_err_timer = setTimeout(function () {
+          mongo_err_count = 0;
+          mongo_err_timer = null;
+        }, 5000);
+
+        // Wait a sec to restart.
+        setTimeout(launch, 1000);
+      });
   };
 
   start_proxy(outer_port, inner_port, function () {
