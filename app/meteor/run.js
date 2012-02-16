@@ -128,6 +128,13 @@ var launch_mongo = function (app_dir, port, launch_callback, on_exit_callback) {
   launch_callback = launch_callback || function () {};
   on_exit_callback = on_exit_callback || function () {};
 
+  // If we are passed an external mongo, assume it is launched and never
+  // exits. Matches code in exports.run.
+  if (process.env.MONGO_URL) {
+    launch_callback();
+    return;
+  }
+
   var mongod_path = path.join(files.get_dev_bundle(), 'mongodb/bin/mongod');
 
   // store data in app_dir
@@ -513,10 +520,12 @@ exports.run = function (app_dir, bundle_opts, port) {
   var inner_port = outer_port + 1;
   var mongo_port = outer_port + 2;
   var test_port = outer_port + 3;
-  var mongo_url = "mongodb://localhost:" + mongo_port + "/meteor";
-  var test_mongo_url = "mongodb://localhost:" + mongo_port + "/meteor_test";
   var bundle_path = path.join(app_dir, '.meteor/local/build');
   var test_bundle_path = path.join(app_dir, '.meteor/local/build_test');
+  // Allow override and use of external mongo. Matches code in launch_mongo.
+  var mongo_url = process.env.MONGO_URL ||
+        ("mongodb://localhost:" + mongo_port + "/meteor");
+  var test_mongo_url = "mongodb://localhost:" + mongo_port + "/meteor_test";
 
   var test_bundle_opts;
   if (files.is_app_dir(app_dir)) {
