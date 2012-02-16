@@ -15,3 +15,9 @@ Package.on_use(function (api) {
   ], 'server');
 
 });
+
+Package.on_test(function (api) {
+  api.use('livedata', ['client', 'server']);
+  api.use('tinytest');
+  api.add_files('livedata_tests.js', 'client');
+});

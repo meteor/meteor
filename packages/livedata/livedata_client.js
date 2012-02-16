@@ -423,10 +423,6 @@ _.extend(Meteor, {
     return App.stream.reconnect();
   },
 
-  reset: function (callback) {
-    return App.stream.reset(callback);
-  },
-
   publish: function() {
     // ignored on the client
   },
