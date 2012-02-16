@@ -12,3 +12,9 @@ Package.on_use(function (api) {
   api.add_files('stream_client.js', 'client');
   api.add_files('stream_server.js', 'server');
 });
+
+Package.on_test(function (api) {
+  api.use('stream', ['client', 'server']);
+  api.use('tinytest');
+  api.add_files('stream_tests.js', 'client');
+});
