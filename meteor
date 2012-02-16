@@ -78,5 +78,18 @@ else
     METEOR="$DEV_BUNDLE/app/meteor/meteor.js"
 fi
 
+
+# Bump our file descriptor ulimit as high as it will go. This is a
+# temporary workaround for dependancy watching holding open too many
+# files: https://app.asana.com/0/364581412985/472479912325
+if [ "$(ulimit -n)" != "unlimited" ] ; then
+    ulimit -n 16384 > /dev/null 2>&1 || \
+    ulimit -n 8192 > /dev/null 2>&1 || \
+    ulimit -n 4096 > /dev/null 2>&1 || \
+    ulimit -n 2048 > /dev/null 2>&1 || \
+    ulimit -n 1024 > /dev/null 2>&1 || \
+    ulimit -n 512 > /dev/null 2>&1
+fi
+
 export NODE_PATH="$DEV_BUNDLE/lib/node_modules"
 exec "$DEV_BUNDLE/bin/node" "$METEOR" "$@"
