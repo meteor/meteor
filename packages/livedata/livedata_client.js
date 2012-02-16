@@ -7,7 +7,7 @@ if (typeof Meteor === "undefined") Meteor = {};
 // XXX namespacing
 Meteor._capture_subs = null;
 
-Meteor.Server = function (url) {
+Meteor._LivedataClient = function (url) {
   var self = this;
   self.url = url;
   self.collections = {}; // name -> Collection-type object
@@ -94,8 +94,8 @@ Meteor.Server = function (url) {
   });
 
   // we never terminate the observe(), since there is no way to
-  // destroy a Server.. but this shouldn't matter, since we're the
-  // only one that holds a reference to the self.subs collection
+  // destroy a LivedataClient.. but this shouldn't matter, since we're
+  // the only one that holds a reference to the self.subs collection
   self.subs_token = self.subs.find({}).observe({
     added: function (sub) {
       self.stream.send(JSON.stringify({
@@ -113,7 +113,7 @@ Meteor.Server = function (url) {
   });
 };
 
-_.extend(Meteor.Server.prototype, {
+_.extend(Meteor._LivedataClient.prototype, {
   subscribe: function (name, args, callback) {
     var self = this;
     var id;
@@ -409,13 +409,13 @@ _.extend(Meteor._Collection.prototype, {
   }
 });
 
-// Path matches sockjs 'prefix' in stream_server. We should revisit this
-// once we specify the 'on the wire' aspects of livedata more clearly.
-App = new Meteor.Server('/sockjs');
-
 _.extend(Meteor, {
   is_server: false,
   is_client: true,
+
+  connect: function (url) {
+    return new Meteor._LivedataClient(url);
+  },
 
   // XXX these are wrong
   status: function () {
@@ -464,3 +464,11 @@ _.extend(Meteor, {
     });
   }
 });
+
+// XXX this isn't going to work -- when connecting to a remote server,
+// the user isn't going to know to include /sockjs. need to add it in
+// stream_client..
+
+// Path matches sockjs 'prefix' in stream_server. We should revisit this
+// once we specify the 'on the wire' aspects of livedata more clearly.
+App = Meteor.connect('/sockjs');

@@ -426,18 +426,20 @@ _.extend(Meteor._Collection.prototype, {
   }
 });
 
-// XXX temporary -- rename
-TheServer = new Meteor._LivedataServer;
+App = new Meteor._LivedataServer;
+
+// XXX need to restructure so that both client and server have methods
+// like Meteor.connect and Meteor.autosubscribe
 
 _.extend(Meteor, {
   is_server: true,
   is_client: false,
 
-  publish: _.bind(TheServer.publish, TheServer),
+  publish: _.bind(App.publish, App),
 
   // XXX eliminate shim; have app do it directly
   Collection: function (name) {
-    return new Meteor._Collection(name, TheServer, __meteor_bootstrap__.mongo_url);
+    return new Meteor._Collection(name, App, __meteor_bootstrap__.mongo_url);
   },
 
   // these are ignored on the server
