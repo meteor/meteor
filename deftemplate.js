@@ -25,7 +25,9 @@ Meteor._hook_handlebars_each = function () {
 
   var orig = Handlebars._default_helpers.each;
   Handlebars._default_helpers.each = function (context, options) {
-    if (!(context instanceof Collection.Cursor))
+    // XXX eliminate minimongo dependency -- use a Cursor base class,
+    // or duck typing
+    if (!(context instanceof LocalCollection.Cursor))
       return orig(context, options);
 
     var id = Meteor._pending_partials_idx_nonce++;
