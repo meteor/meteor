@@ -347,7 +347,7 @@ test("render - events", function () {
 });
 
 test("renderList - basics", function () {
-  var c = new Collection();
+  var c = new LocalCollection();
 
   var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
     render: function (doc) {
@@ -413,7 +413,7 @@ test("renderList - basics", function () {
 });
 
 test("renderList - removal", function () {
-  var c = new Collection();
+  var c = new LocalCollection();
   // (test is written in this weird way for historical reasons; feel
   // free to refactor)
   c.insert({id: "D"});
@@ -475,7 +475,7 @@ test("renderList - removal", function () {
 });
 
 test("renderList - default render empty", function () {
-  var c = new Collection();
+  var c = new LocalCollection();
 
   var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
     render: function (doc) {
@@ -491,7 +491,7 @@ test("renderList - default render empty", function () {
 });
 
 test("renderList - change and move", function () {
-  var c = new Collection();
+  var c = new LocalCollection();
 
   var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
     render: function (doc) {
@@ -523,7 +523,7 @@ test("renderList - change and move", function () {
 });
 
 test("renderList - termination", function () {
-  var c = new Collection();
+  var c = new LocalCollection();
 
   var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
     render: function (doc) {
@@ -614,7 +614,7 @@ test("renderList - termination", function () {
 });
 
 test("renderList - list items are reactive", function () {
-  var c = new Collection();
+  var c = new LocalCollection();
 
   set_weather("here", "cloudy");
   set_weather("there", "cloudy");
@@ -737,7 +737,7 @@ test("renderList - list items are reactive", function () {
 });
 
 test("renderList - multiple elements in an item", function () {
-  var c = new Collection();
+  var c = new LocalCollection();
   var r;
 
   var lengths = [];
@@ -833,7 +833,7 @@ test("renderList - multiple elements in an item", function () {
 });
 
 test("renderList - #each", function () {
-  var c = new Collection();
+  var c = new LocalCollection();
 
   var render_count = 0;
 

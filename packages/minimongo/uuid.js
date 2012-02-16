@@ -1,7 +1,7 @@
 // XXX dups packages/uuid/uuid.js
 
-// Collection.random() -- known good PRNG, replaces Math.random()
-// Collection.uuid() -- returns RFC 4122 v4 UUID.
+// LocalCollection.random() -- known good PRNG, replaces Math.random()
+// LocalCollection.uuid() -- returns RFC 4122 v4 UUID.
 
 // see http://baagoe.org/en/wiki/Better_random_numbers_for_javascript
 // for a full discussion and Alea implementation.
@@ -28,7 +28,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-Collection._Alea = function () {
+LocalCollection._Alea = function () {
   function Mash() {
     var n = 0xefc8249d;
 
@@ -102,14 +102,14 @@ Collection._Alea = function () {
 }
 
 // instantiate RNG.  use the default seed, which is current time.
-Collection.random = new Collection._Alea();
+LocalCollection.random = new LocalCollection._Alea();
 
 // RFC 4122 v4 UUID.
-Collection.uuid = function () {
+LocalCollection.uuid = function () {
   var s = [];
   var hexDigits = "0123456789abcdef";
   for (var i = 0; i < 36; i++) {
-    s[i] = hexDigits.substr(Math.floor(Collection.random() * 0x10), 1);
+    s[i] = hexDigits.substr(Math.floor(LocalCollection.random() * 0x10), 1);
   }
   s[14] = "4";
   s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1);

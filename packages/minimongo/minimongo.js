@@ -2,14 +2,14 @@
 // XXX type checking on selectors (graceful error if malformed)
 // XXX merge ad-hoc live query object and Cursor
 
-// Collection: a set of documents that supports queries and modifiers.
+// LocalCollection: a set of documents that supports queries and modifiers.
 
 // Cursor: a specification for a particular subset of documents, w/
-// a defined order, limit, and offset.  creating a Cursor with Collection.find(),
+// a defined order, limit, and offset.  creating a Cursor with LocalCollection.find(),
 
 // LiveResultsSet: the return value of a live query.
 
-Collection = function () {
+LocalCollection = function () {
   this.docs = {}; // _id -> document (also containing id)
 
   this.next_qid = 1; // live query id generator
@@ -39,18 +39,18 @@ Collection = function () {
 // XXX sort does not yet support subkeys ('a.b') .. fix that!
 // XXX add one more sort form: "key"
 // XXX tests
-Collection.prototype.find = function (selector, options) {
+LocalCollection.prototype.find = function (selector, options) {
   // default syntax for everything is to omit the selector argument.
   // but if selector is explicitly passed in as false or undefined, we
   // want a selector that matches nothing.
   if (arguments.length === 0)
     selector = {};
 
-  return new Collection.Cursor(this, selector, options);
+  return new LocalCollection.Cursor(this, selector, options);
 };
 
-// don't call this ctor directly.  use Collection.find().
-Collection.Cursor = function (collection, selector, options) {
+// don't call this ctor directly.  use LocalCollection.find().
+LocalCollection.Cursor = function (collection, selector, options) {
   if (!options) options = {};
 
   this.collection = collection;
@@ -58,10 +58,10 @@ Collection.Cursor = function (collection, selector, options) {
   if ((typeof selector === "string") || (typeof selector === "number")) {
     // stash for fast path
     this.selector_id = selector;
-    this.selector_f = Collection._compileSelector(selector);
+    this.selector_f = LocalCollection._compileSelector(selector);
   } else {
-    this.selector_f = Collection._compileSelector(selector);
-    this.sort_f = options.sort ? Collection._compileSort(options.sort) : null;
+    this.selector_f = LocalCollection._compileSelector(selector);
+    this.sort_f = options.sort ? LocalCollection._compileSort(options.sort) : null;
     this.skip = options.skip;
     this.limit = options.limit;
   }
@@ -74,13 +74,13 @@ Collection.Cursor = function (collection, selector, options) {
     this.reactive = (options.reactive === undefined) ? true : options.reactive;
 };
 
-Collection.Cursor.prototype.rewind = function () {
+LocalCollection.Cursor.prototype.rewind = function () {
   var self = this;
   self.db_objects = null;
   self.cursor_pos = 0;
 };
 
-Collection.prototype.findOne = function (selector, options) {
+LocalCollection.prototype.findOne = function (selector, options) {
   if (arguments.length === 0)
     selector = {};
 
@@ -91,7 +91,7 @@ Collection.prototype.findOne = function (selector, options) {
   return this.find(selector, options).fetch()[0];
 };
 
-Collection.Cursor.prototype.forEach = function (callback) {
+LocalCollection.Cursor.prototype.forEach = function (callback) {
   var self = this;
   var doc;
 
@@ -105,10 +105,10 @@ Collection.Cursor.prototype.forEach = function (callback) {
                           moved: true});
 
   while (self.cursor_pos < self.db_objects.length)
-    callback(Collection._deepcopy(self.db_objects[self.cursor_pos++]));
+    callback(LocalCollection._deepcopy(self.db_objects[self.cursor_pos++]));
 };
 
-Collection.Cursor.prototype.map = function (callback) {
+LocalCollection.Cursor.prototype.map = function (callback) {
   var self = this;
   var res = [];
   self.forEach(function (doc) {
@@ -117,7 +117,7 @@ Collection.Cursor.prototype.map = function (callback) {
   return res;
 };
 
-Collection.Cursor.prototype.fetch = function () {
+LocalCollection.Cursor.prototype.fetch = function () {
   var self = this;
   var res = [];
   self.forEach(function (doc) {
@@ -126,7 +126,7 @@ Collection.Cursor.prototype.fetch = function () {
   return res;
 };
 
-Collection.Cursor.prototype.count = function () {
+LocalCollection.Cursor.prototype.count = function () {
   var self = this;
 
   if (self.reactive)
@@ -139,7 +139,7 @@ Collection.Cursor.prototype.count = function () {
 };
 
 // the handle that comes back from observe.
-Collection.LiveResultsSet = function () {};
+LocalCollection.LiveResultsSet = function () {};
 
 // options to contain:
 //  * callbacks:
@@ -155,7 +155,7 @@ Collection.LiveResultsSet = function () {};
 //  * collection: the collection this query is querying
 //
 // iff x is a returned query handle, (x instanceof
-// Collection.LiveResultsSet) is true
+// LocalCollection.LiveResultsSet) is true
 //
 // initial results delivered through added callback
 // XXX maybe callbacks should take a list of objects, to expose transactions?
@@ -165,7 +165,7 @@ Collection.LiveResultsSet = function () {};
 // query, not just its id
 // XXX document that initial results will definitely be delivered before we return [do, add to asana]
 
-Collection.Cursor.prototype.observe = function (options) {
+LocalCollection.Cursor.prototype.observe = function (options) {
   var self = this;
 
   if (self.skip || self.limit)
@@ -188,9 +188,9 @@ Collection.Cursor.prototype.observe = function (options) {
   query.removed = options.removed || function () {};
   if (!options._suppress_initial)
     for (var i = 0; i < query.results.length; i++)
-      query.added(Collection._deepcopy(query.results[i]), i);
+      query.added(LocalCollection._deepcopy(query.results[i]), i);
 
-  var handle = new Collection.LiveResultsSet;
+  var handle = new LocalCollection.LiveResultsSet;
   _.extend(handle, {
     collection: self.collection,
     stop: function () {
@@ -203,7 +203,7 @@ Collection.Cursor.prototype.observe = function (options) {
 // constructs sorted array of matching objects, but doesn't copy them.
 // respects sort, skip, and limit properties of the query.
 // if sort_f is falsey, no sort -- you get the natural order
-Collection.Cursor.prototype._getRawObjects = function () {
+LocalCollection.Cursor.prototype._getRawObjects = function () {
   var self = this;
 
   // fast path for single ID value
@@ -226,7 +226,7 @@ Collection.Cursor.prototype._getRawObjects = function () {
   return results.slice(idx_start, idx_end);
 };
 
-Collection.Cursor.prototype._markAsReactive = function (options) {
+LocalCollection.Cursor.prototype._markAsReactive = function (options) {
   var self = this;
 
   var context = Meteor.deps.Context.current;
@@ -252,12 +252,12 @@ Collection.Cursor.prototype._markAsReactive = function (options) {
 // (real mongodb does in fact enforce this)
 // XXX possibly enforce that 'undefined' does not appear (we assume
 // this in our handling of null and $exists)
-Collection.prototype.insert = function (doc) {
+LocalCollection.prototype.insert = function (doc) {
   var self = this;
-  doc = Collection._deepcopy(doc);
+  doc = LocalCollection._deepcopy(doc);
   // XXX deal with mongo's binary id type?
   if (!('_id' in doc))
-    doc._id = Collection.uuid();
+    doc._id = LocalCollection.uuid();
   // XXX check to see that there is no object with this _id yet?
   self.docs[doc._id] = doc;
 
@@ -265,11 +265,11 @@ Collection.prototype.insert = function (doc) {
   for (var qid in self.queries) {
     var query = self.queries[qid];
     if (query.selector_f(doc))
-      Collection._insertInResults(query, doc);
+      LocalCollection._insertInResults(query, doc);
   }
 };
 
-Collection.prototype.remove = function (selector) {
+LocalCollection.prototype.remove = function (selector) {
   var self = this;
   var remove = [];
   var query_remove = [];
@@ -277,7 +277,7 @@ Collection.prototype.remove = function (selector) {
   if (arguments.length === 0)
     selector = {};
 
-  var selector_f = Collection._compileSelector(selector);
+  var selector_f = LocalCollection._compileSelector(selector);
   for (var id in self.docs) {
     var doc = self.docs[id];
     if (selector_f(doc)) {
@@ -295,18 +295,18 @@ Collection.prototype.remove = function (selector) {
 
   // run live query callbacks _after_ we've removed the documents.
   for (var i = 0; i < query_remove.length; i++) {
-    Collection._removeFromResults(query_remove[i][0], query_remove[i][1]);
+    LocalCollection._removeFromResults(query_remove[i][0], query_remove[i][1]);
   }
 };
 
 // XXX atomicity: if multi is true, and one modification fails, do
 // we rollback the whole operation, or what?
-Collection.prototype.update = function (selector, mod, options) {
+LocalCollection.prototype.update = function (selector, mod, options) {
   if (!options) options = {};
 
   var self = this;
   var any = false;
-  var selector_f = Collection._compileSelector(selector);
+  var selector_f = LocalCollection._compileSelector(selector);
   for (var id in self.docs) {
     var doc = self.docs[id];
     if (selector_f(doc)) {
@@ -324,37 +324,37 @@ Collection.prototype.update = function (selector, mod, options) {
   if (options.upsert && !any) {
     // XXX is this actually right? don't we have to resolve/delete
     // $-ops or something like that?
-    insert = Collection._deepcopy(selector);
-    Collection._modify(insert, mod);
+    insert = LocalCollection._deepcopy(selector);
+    LocalCollection._modify(insert, mod);
     self.insert(insert);
   }
 };
 
-Collection.prototype._modifyAndNotify = function (doc, mod) {
+LocalCollection.prototype._modifyAndNotify = function (doc, mod) {
   var self = this;
 
   var matched_before = {};
   for (var qid in self.queries)
     matched_before[qid] = self.queries[qid].selector_f(doc);
 
-  Collection._modify(doc, mod);
+  LocalCollection._modify(doc, mod);
 
   for (var qid in self.queries) {
     var query = self.queries[qid];
     var before = matched_before[qid];
     var after = query.selector_f(doc);
     if (before && !after)
-      Collection._removeFromResults(query, doc);
+      LocalCollection._removeFromResults(query, doc);
     else if (!before && after)
-      Collection._insertInResults(query, doc);
+      LocalCollection._insertInResults(query, doc);
     else if (before && after)
-      Collection._updateInResults(query, doc);
+      LocalCollection._updateInResults(query, doc);
   }
 };
 
 // XXX findandmodify
 
-Collection._deepcopy = function (v) {
+LocalCollection._deepcopy = function (v) {
   if (typeof v !== "object")
     return v;
   if (v === null)
@@ -362,37 +362,37 @@ Collection._deepcopy = function (v) {
   if (_.isArray(v)) {
     var ret = v.slice(0);
     for (var i = 0; i < v.length; i++)
-      ret[i] = Collection._deepcopy(ret[i]);
+      ret[i] = LocalCollection._deepcopy(ret[i]);
     return ret;
   }
   var ret = {};
   for (var key in v)
-    ret[key] = Collection._deepcopy(v[key]);
+    ret[key] = LocalCollection._deepcopy(v[key]);
   return ret;
 };
 
 // XXX the sorted-query logic below is laughably inefficient. we'll
 // need to come up with a better datastructure for this.
 
-Collection._insertInResults = function (query, doc) {
+LocalCollection._insertInResults = function (query, doc) {
   if (!query.sort_f) {
     query.added(doc, query.results.length);
     query.results.push(doc);
   } else {
-    var i = Collection._insertInSortedList(query.sort_f, query.results, doc);
+    var i = LocalCollection._insertInSortedList(query.sort_f, query.results, doc);
     query.added(doc, i);
   }
 };
 
-Collection._removeFromResults = function (query, doc) {
-  var i = Collection._findInResults(query, doc);
+LocalCollection._removeFromResults = function (query, doc) {
+  var i = LocalCollection._findInResults(query, doc);
   query.removed(doc._id, i);
   query.results.splice(i, 1);
 };
 
-Collection._updateInResults = function (query, doc) {
-  var orig_idx = Collection._findInResults(query, doc);
-  query.changed(Collection._deepcopy(doc), orig_idx);
+LocalCollection._updateInResults = function (query, doc) {
+  var orig_idx = LocalCollection._findInResults(query, doc);
+  query.changed(LocalCollection._deepcopy(doc), orig_idx);
 
   if (!query.sort_f)
     return;
@@ -400,20 +400,20 @@ Collection._updateInResults = function (query, doc) {
   // just take it out and put it back in again, and see if the index
   // changes
   query.results.splice(orig_idx, 1);
-  var new_idx = Collection._insertInSortedList(query.sort_f,
+  var new_idx = LocalCollection._insertInSortedList(query.sort_f,
                                                query.results, doc);
   if (orig_idx !== new_idx)
     query.moved(doc, orig_idx, new_idx);
 };
 
-Collection._findInResults = function (query, doc) {
+LocalCollection._findInResults = function (query, doc) {
   for (var i = 0; i < query.results.length; i++)
     if (query.results[i] === doc)
       return i;
   throw Error("object missing from query");
 };
 
-Collection._insertInSortedList = function (cmp, array, value) {
+LocalCollection._insertInSortedList = function (cmp, array, value) {
   if (array.length === 0) {
     array.push(value);
     return 0;
@@ -434,7 +434,7 @@ Collection._insertInSortedList = function (cmp, array, value) {
 // overwrite it.
 // XXX document (at some point)
 // XXX test
-Collection.prototype.snapshot = function () {
+LocalCollection.prototype.snapshot = function () {
   this.current_snapshot = _.clone(this.docs);
 };
 
@@ -442,7 +442,7 @@ Collection.prototype.snapshot = function () {
 // exception.
 // XXX document (at some point)
 // XXX test
-Collection.prototype.restore = function () {
+LocalCollection.prototype.restore = function () {
   if (!this.current_snapshot)
     throw new Error("No current snapshot");
   this.docs = this.current_snapshot;
@@ -460,6 +460,6 @@ Collection.prototype.restore = function () {
     query.results = query.cursor._getRawObjects();
 
     for (var i = 0; i < query.results.length; i++)
-      query.added(Collection._deepcopy(query.results[i]), i);
+      query.added(LocalCollection._deepcopy(query.results[i]), i);
   }
 };

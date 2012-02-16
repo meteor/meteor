@@ -18,7 +18,7 @@ Meteor.Server = function (url) {
   self.unsatisfied_methods = {}; // map from method_id -> true
   self.pending_data = []; // array of pending data messages
 
-  self.subs = new Collection;
+  self.subs = new LocalCollection;
   // keyed by subs._id. value is unset or an array. if set, sub is not
   // yet ready.
   self.sub_ready_callbacks = {};
@@ -133,7 +133,7 @@ _.extend(Meteor.Server.prototype, {
     } else {
       // new sub, add object.
       // generate our own id so we can know it w/ a find afterwards.
-      id = Collection.uuid();
+      id = LocalCollection.uuid();
       self.subs.insert({_id: id, name: name, args: args, count: 1});
 
       self.sub_ready_callbacks[id] = [];
@@ -317,7 +317,7 @@ Meteor._Collection = function (name, server) {
     throw new Error("There is already a remote collection '" + name + "'");
 
   self._name = name;
-  self._collection = new Collection;
+  self._collection = new LocalCollection;
   self._server = server;
   self._was_snapshot = false;
 
@@ -359,7 +359,7 @@ _.extend(Meteor._Collection.prototype, {
     if (_.keys(obj).length === 0)
       Meteor._debug("WARNING: inserting empty object.");
 
-    var _id = Collection.uuid();
+    var _id = LocalCollection.uuid();
     obj._id = _id;
 
     if (self._name) {

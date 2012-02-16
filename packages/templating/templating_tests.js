@@ -52,7 +52,7 @@ test("template table assembly", function() {
   table = childWithTag(Template.test_table_b0(), "TABLE");
   assert.equal(table.rows.length, 3);
 
-  var c = new Collection();
+  var c = new LocalCollection();
   c.insert({bar:'a'});
   c.insert({bar:'b'});
   c.insert({bar:'c'});

@@ -1,5 +1,5 @@
 // helpers used by compiled selector code
-Collection._f = {
+LocalCollection._f = {
   // XXX for _all and _in, consider building 'inquery' at compile time..
 
   _all: function (x, qval) {
@@ -38,7 +38,7 @@ Collection._f = {
     } else {
       // nope, have to use deep equality
       for (var i = 0; i < qval.length; i++)
-        if (Collection._f._equal(x, qval[i]))
+        if (LocalCollection._f._equal(x, qval[i]))
           return true;
       return false;
     }
@@ -185,10 +185,10 @@ Collection._f = {
       return b === undefined ? 0 : -1;
     if (b === undefined)
       return 1;
-    var ta = Collection._f._type(a);
-    var tb = Collection._f._type(b);
-    var oa = Collection._f._typeorder(ta);
-    var ob = Collection._f._typeorder(tb);
+    var ta = LocalCollection._f._type(a);
+    var tb = LocalCollection._f._type(b);
+    var oa = LocalCollection._f._typeorder(ta);
+    var ob = LocalCollection._f._typeorder(tb);
     if (oa !== ob)
       return oa < ob ? -1 : 1;
     if (ta !== tb)
@@ -209,7 +209,7 @@ Collection._f = {
         }
         return ret;
       }
-      return Collection._f._cmp(to_array(a), to_array(b));
+      return LocalCollection._f._cmp(to_array(a), to_array(b));
     }
     if (ta === 4) { // Array
       for (var i = 0; ; i++) {
@@ -217,7 +217,7 @@ Collection._f = {
           return (i === b.length) ? 0 : -1;
         if (i === b.length)
           return 1;
-        var s = Collection._f._cmp(a[i], b[i]);
+        var s = LocalCollection._f._cmp(a[i], b[i]);
         if (s !== 0)
           return s;
       }
@@ -248,14 +248,14 @@ Collection._f = {
 
 // For unit tests. True if the given document matches the given
 // selector.
-Collection._matches = function (selector, doc) {
-  return (Collection._compileSelector(selector))(doc);
+LocalCollection._matches = function (selector, doc) {
+  return (LocalCollection._compileSelector(selector))(doc);
 };
 
 // Given a selector, return a function that takes one argument, a
 // document, and returns true if the document matches the selector,
 // else false.
-Collection._compileSelector = function (selector) {
+LocalCollection._compileSelector = function (selector) {
   var literals = [];
   // you can pass a literal function instead of a selector
   if (selector instanceof Function)
@@ -275,9 +275,9 @@ Collection._compileSelector = function (selector) {
   // should. Assign to a local to get the value, instead.
   var _func;
   eval("_func = (function(f,literals){return function(doc){return " +
-       Collection._exprForSelector(selector, literals) +
+       LocalCollection._exprForSelector(selector, literals) +
        ";};})");
-  return _func(Collection._f, literals);
+  return _func(LocalCollection._f, literals);
 };
 
 // XXX implement ordinal indexing: 'people.2.name'
@@ -285,17 +285,17 @@ Collection._compileSelector = function (selector) {
 // Given an arbitrary Mongo-style query selector, return an expression
 // that evaluates to true if the document in 'doc' matches the
 // selector, else false.
-Collection._exprForSelector = function (selector, literals) {
+LocalCollection._exprForSelector = function (selector, literals) {
   var clauses = [];
   for (var key in selector) {
     var value = selector[key];
 
     if (key.substr(0, 1) === '$') { // no indexing into strings on IE7
       // whole-document predicate like {$or: [{x: 12}, {y: 12}]}
-      clauses.push(Collection._exprForDocumentPredicate(key, value, literals));
+      clauses.push(LocalCollection._exprForDocumentPredicate(key, value, literals));
     } else {
       // else, it's a constraint on a particular key (or dotted keypath)
-      clauses.push(Collection._exprForKeypathPredicate(key, value, literals));
+      clauses.push(LocalCollection._exprForKeypathPredicate(key, value, literals));
     }
   };
 
@@ -307,11 +307,11 @@ Collection._exprForSelector = function (selector, literals) {
 // selector, like '$or' in {$or: [{x: 12}, {y: 12}]}. 'value' is its
 // value in the selector. Return an expression that evaluates to true
 // if 'doc' matches this predicate, else false.
-Collection._exprForDocumentPredicate = function (op, value, literals) {
+LocalCollection._exprForDocumentPredicate = function (op, value, literals) {
   if (op === '$or') {
     var clauses = [];
     _.each(value, function (c) {
-      clauses.push(Collection._exprForSelector(c, literals));
+      clauses.push(LocalCollection._exprForSelector(c, literals));
     });
     if (clauses.length === 0) return 'true';
     return '(' + clauses.join('||') +')';
@@ -320,7 +320,7 @@ Collection._exprForDocumentPredicate = function (op, value, literals) {
   if (op === '$and') {
     var clauses = [];
     _.each(value, function (c) {
-      clauses.push(Collection._exprForSelector(c, literals));
+      clauses.push(LocalCollection._exprForSelector(c, literals));
     });
     if (clauses.length === 0) return 'true';
     return '(' + clauses.join('&&') +')';
@@ -329,7 +329,7 @@ Collection._exprForDocumentPredicate = function (op, value, literals) {
   if (op === '$nor') {
     var clauses = [];
     _.each(value, function (c) {
-      clauses.push("!(" + Collection._exprForSelector(c, literals) + ")");
+      clauses.push("!(" + LocalCollection._exprForSelector(c, literals) + ")");
     });
     if (clauses.length === 0) return 'true';
     return '(' + clauses.join('&&') +')';
@@ -349,19 +349,19 @@ Collection._exprForDocumentPredicate = function (op, value, literals) {
 // Given a single 'dotted.key.path: value' constraint from a Mongo
 // query selector, return an expression that evaluates to true if the
 // document in 'doc' matches the constraint, else false.
-Collection._exprForKeypathPredicate = function (keypath, value, literals) {
+LocalCollection._exprForKeypathPredicate = function (keypath, value, literals) {
   var keyparts = keypath.split('.');
 
   // get the inner predicate expression
   var predcode = '';
   if (value instanceof RegExp) {
-    predcode = Collection._exprForOperatorTest(value, literals);
+    predcode = LocalCollection._exprForOperatorTest(value, literals);
   } else if (
     !(typeof value === 'object') ||
       value === null ||
       value instanceof Array) {
     // it's something like {x.y: 12} or {x.y: [12]}
-    predcode = Collection._exprForValueTest(value, literals);
+    predcode = LocalCollection._exprForValueTest(value, literals);
   } else {
     // is it a literal document or a bunch of $-expressions?
     var is_literal = true;
@@ -374,9 +374,9 @@ Collection._exprForKeypathPredicate = function (keypath, value, literals) {
 
     if (is_literal) {
       // it's a literal document, like {x.y: {a: 12}}
-      predcode = Collection._exprForValueTest(value, literals);
+      predcode = LocalCollection._exprForValueTest(value, literals);
     } else {
-      predcode = Collection._exprForOperatorTest(value, literals);
+      predcode = LocalCollection._exprForOperatorTest(value, literals);
     }
   }
 
@@ -407,7 +407,7 @@ Collection._exprForKeypathPredicate = function (keypath, value, literals) {
 // searching 'x' if it is an array. This doesn't include regular
 // expressions (that's because mongo's $not operator works with
 // regular expressions but not other kinds of scalar tests.)
-Collection._exprForValueTest = function (value, literals) {
+LocalCollection._exprForValueTest = function (value, literals) {
   var expr;
 
   if (value === null) {
@@ -437,14 +437,14 @@ Collection._exprForValueTest = function (value, literals) {
 // expression that evaluates to true if the value in 'x' matches the
 // operator, or else false. This includes searching 'x' if necessary
 // if it's an array. In {x: /a/}, we consider /a/ to be an operator.
-Collection._exprForOperatorTest = function (op, literals) {
+LocalCollection._exprForOperatorTest = function (op, literals) {
   if (op instanceof RegExp) {
-    return Collection._exprForOperatorTest({$regex: op}, literals);
+    return LocalCollection._exprForOperatorTest({$regex: op}, literals);
   } else {
     var clauses = [];
     for (var type in op)
-      clauses.push(Collection._exprForConstraint(type, op[type],
-                                                 op, literals));
+      clauses.push(LocalCollection._exprForConstraint(type, op[type],
+                                                      op, literals));
     if (clauses.length === 0)
       return 'true';
     return '(' + clauses.join('&&') + ')';
@@ -456,8 +456,8 @@ Collection._exprForOperatorTest = function (op, literals) {
 // return an expression that evaluates to true if the value in 'x'
 // matches the constraint, or else false. This includes searching 'x'
 // if it's an array (and it's appropriate to the constraint.)
-Collection._exprForConstraint = function (type, arg, others,
-                                          literals) {
+LocalCollection._exprForConstraint = function (type, arg, others,
+                                               literals) {
   var expr;
   var search = '_matches';
   var negate = false;
