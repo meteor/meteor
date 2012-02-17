@@ -417,7 +417,7 @@ Currently local collections can only be created on the client.
 // after that, it will be synchronized down to any other clients
 // that are subscribed to a query that includes it (see
 // Meteor.subscribe)
-Posts = Meteor.Collection("posts");
+Posts = new Meteor.Collection("posts");
 Posts.insert({title: "Hello world", body: "First post"});
 
 // Changes are visible immediately -- no waiting for a round trip to
@@ -427,7 +427,7 @@ assert(Posts.find().count() === 1);
 // Create a temporary, local collection. It works just any other
 // collection, but it doesn't send changes to the server, and it
 // can't receive any data from subscriptions.
-Scratchpad = Meteor.Collection();
+Scratchpad = new Meteor.Collection;
 for (var i = 0; i < 10; i++)
   Scratchpad.insert({number: i * 2});
 assert(Scratchpad.find({number: {$lt: 9}}).count() === 5);
