@@ -4,6 +4,7 @@ if (typeof Meteor === "undefined") Meteor = {};
 // XXX presently there is no way to destroy/clean up a Collection
 Meteor.Collection = function (name, manager, driver) {
   var self = this;
+  // note: nameless collections never have a manager
   manager = name && (manager || App);
 
   if (!driver) {
@@ -104,9 +105,9 @@ Meteor.Collection = function (name, manager, driver) {
   }
 
   // autopublish
-  if (name && manager.onAutopublish)
+  if (manager.onAutopublish)
     manager.onAutopublish(function () {
-      manager.publish(name, {is_auto: true});
+      manager.publish(null, {collection: self, is_auto: true});
     });
 };
 

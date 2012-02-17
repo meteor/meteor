@@ -4,6 +4,7 @@ Meteor._LivedataServer = function () {
   var self = this;
 
   self.publishes = {};
+  self.universal_publishes = []; // publishes with no name
   self._hack_collections = {}; // XXX hack. name => Collection
   self.method_handlers = {};
   self.stream_server = new Meteor._StreamServer;
@@ -83,6 +84,11 @@ _.extend(Meteor._LivedataServer.prototype, {
       };
 
       // actually run the subscriptions.
+
+      _.each(self.universal_publishes, function (pub) {
+        pub(channel, {});
+      });
+
       _.each(socket.meteor.subs, function (sub) {
         var pub = self.publishes[sub.name];
         if (!pub) {
@@ -186,11 +192,12 @@ _.extend(Meteor._LivedataServer.prototype, {
     var self = this;
     // Always start a new session. We don't support any reconnection.
     socket.send(JSON.stringify({msg: 'connected', session: Meteor.uuid()}));
+    // Run any universal publishes we may have.
+    self._poll_subscriptions(socket);
   },
 
   _livedata_sub: function (socket, msg) {
     var self = this;
-
 
     if (!self.publishes[msg.name]) {
       // can't sub to unknown publish name
@@ -263,6 +270,11 @@ _.extend(Meteor._LivedataServer.prototype, {
    * @param name {String} identifier for query
    * @param options {Object}
    *
+   * If name is null, this will be a subscription that is
+   * automatically established and permanently on for all connected
+   * client, instead of a subscription that can be turned on and off
+   * with subscribe().
+   *
    * options to contain:
    *  - collection {Collection} collection; defaults to the collection
    *    named 'name' on disk in mongodb
@@ -277,7 +289,7 @@ _.extend(Meteor._LivedataServer.prototype, {
   publish: function (name, options) {
     var self = this;
 
-    if (name in self.publishes) {
+    if (name && name in self.publishes) {
       // XXX error duplicate publish
       console.log("ERROR DUPLICATE PUBLISH " + name);
       return;
@@ -285,7 +297,7 @@ _.extend(Meteor._LivedataServer.prototype, {
 
     options = options || {};
 
-    if (!self.onAutopublish && options.is_auto) {
+    if (!self.on_autopublish && !options.is_auto) {
       // They have autopublish on, yet they're trying to manually
       // picking stuff to publish. They probably should turn off
       // autopublish. (This check isn't perfect -- if you create a
@@ -305,16 +317,23 @@ _.extend(Meteor._LivedataServer.prototype, {
 "**\n" +
 "**   $ meteor remove autopublish\n" +
 "**\n" +
-"** .. and make sure you have a Meteor.publish() call for each\n" +
-"** collection you want clients to be able to use.\n\n");
+"** .. and make sure you have Meteor.publish() and Meteor.subscribe() calls\n" +
+"** for each collection that you want clients to see.\n");
       }
     }
 
-    var collection = options.collection || self._hack_collections[name];
-    if (!collection)
-      throw new Error("No collection '" + name + "' found to publish. " +
-                      "You can specify the collection explicitly with the " +
-                      "'collection' option.");
+    var collection = options.collection ||
+      (name && self._hack_collections[name]);
+    if (!collection) {
+      if (name)
+        throw new Error("No collection '" + name + "' found to publish. " +
+                        "You can specify the collection explicitly with the " +
+                        "'collection' option.");
+      else
+        throw new Error("When creating universal publishes, you must specify " +
+                        "the collection explicitly with the 'collection' " +
+                        "option.");
+    }
     var selector = options.selector || {};
     var func = function (channel, params) {
       var opt = function (key, or) {
@@ -329,7 +348,10 @@ _.extend(Meteor._LivedataServer.prototype, {
       }).fetch());
     };
 
-    self.publishes[name] = func;
+    if (name)
+      self.publishes[name] = func;
+    else
+      self.universal_publishes.push(func);
   },
 
   methods: function (methods) {
