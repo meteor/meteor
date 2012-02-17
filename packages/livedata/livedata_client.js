@@ -410,9 +410,6 @@ _.extend(Meteor._Collection.prototype, {
 });
 
 _.extend(Meteor, {
-  is_server: false,
-  is_client: true,
-
   connect: function (url) {
     return new Meteor._LivedataClient(url);
   },

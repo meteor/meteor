@@ -8,6 +8,10 @@ Package.on_use(function (api) {
   api.use(['json', 'underscore'], 'server');
   api.use(['json', 'underscore', 'deps', 'minimongo', 'logging'], 'client');
 
+  // this should move to a new package, called something like 'base'?
+  api.add_files('client_base.js', 'client');
+  api.add_files('server_base.js', 'server');
+
   api.add_files('livedata_client.js', 'client');
   api.add_files([
     'livedata_server.js',

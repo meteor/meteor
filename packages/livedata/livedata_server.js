@@ -432,9 +432,6 @@ App = new Meteor._LivedataServer;
 // like Meteor.connect and Meteor.autosubscribe
 
 _.extend(Meteor, {
-  is_server: true,
-  is_client: false,
-
   publish: _.bind(App.publish, App),
 
   // XXX eliminate shim; have app do it directly
