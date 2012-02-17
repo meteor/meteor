@@ -3,20 +3,21 @@ if (typeof Meteor === "undefined") Meteor = {};
 // list of subscription tokens outstanding during a
 // captureDependencies run. only set when we're doing a run. The fact
 // that this is a singleton means we can't do recursive
-// Meteor.subscriptions(). But who wants that? What does that even mean?
+// Meteor.subscriptions(). But what would that even mean?
 // XXX namespacing
 Meteor._capture_subs = null;
 
 Meteor._LivedataClient = function (url) {
   var self = this;
   self.url = url;
-  self.collections = {}; // name -> Collection-type object
+  self.stores = {}; // name -> object with methods
   self.method_handlers = {}; // name -> func
   self.next_method_id = 1;
   self.pending_method_callbacks = {}; // map from method_id -> result function
   self.pending_method_messages = {}; // map from method_id -> message to server
   self.unsatisfied_methods = {}; // map from method_id -> true
   self.pending_data = []; // array of pending data messages
+  self.queued = {}; // name -> updates for (yet to be created) collection
 
   self.subs = new LocalCollection;
   // keyed by subs._id. value is unset or an array. if set, sub is not
@@ -87,10 +88,23 @@ Meteor._LivedataClient = function (url) {
     });
 
     // clear out the local database!
-    _.each(self.collections, function (col) {
-      col._collection.remove({});
-    });
 
+    // XXX this causes flicker ("database flap") and needs to be
+    // rewritten. we should wait until we found out if we successfully
+    // resumed the stream. if so, we need do nothing special. if not,
+    // we need to put a reset message in pending_data (optionally
+    // clearing pending_data and queued first, as an optimization),
+    // and defer processing pending_data until all of the
+    // subscriptions that we previously told the user were ready, are
+    // now once again ready. then, when we do go to process the
+    // messages, we need to do it in one atomic batch (the reset and
+    // the redeliveries together) so that livequeries don't observe
+    // spurious 'added' and 'removed' messages, which would cause, eg,
+    // DOM elements to fail to get semantically matched, leading to a
+    // loss of focus/input state.
+    _.each(self.stores, function (s) { s.reset(); });
+    self.pending_data = [];
+    self.queued = {};
   });
 
   // we never terminate the observe(), since there is no way to
@@ -114,6 +128,26 @@ Meteor._LivedataClient = function (url) {
 };
 
 _.extend(Meteor._LivedataClient.prototype, {
+  // 'name' is the name of the data on the wire that should go in the
+  // store. 'store' should be an object with methods beginUpdate,
+  // update, endUpdate, reset. see Collection for an example.
+  registerStore: function (name, store) {
+    var self = this;
+
+    if (name in self.stores)
+      return false;
+    self.stores[name] = store;
+
+    store.beginUpdate();
+    _.each(self.queued[name] || [], function (msg) {
+      store.update(msg);
+    });
+    store.endUpdate();
+    delete self.queued[name];
+
+    return true;
+  },
+
   subscribe: function (name, args, callback) {
     var self = this;
     var id;
@@ -178,11 +212,16 @@ _.extend(Meteor._LivedataClient.prototype, {
       result_func = args.pop();
 
     if (handler) {
-      // run locally (if available)
+      // run locally (if we have a stub for it)
       var local_args = _.clone(args);
       local_args.unshift(self.user_id);
       var ret = handler.apply(null, args);
     }
+
+    // Note that it is important that the function totally complete,
+    // locally, before the message is sent to the server. (Or at
+    // least, we need to guarantee that the snapshot is not restored
+    // until the local copy of the function has stopped doing writes.)
 
     // run on server
     self._send_method(
@@ -223,45 +262,25 @@ _.extend(Meteor._LivedataClient.prototype, {
     // All methods have landed. Blow away local changes and replace
     // with authoritative changes from server.
 
-    _.each(self.collections, function (coll) {
-      if (coll._was_snapshot) {
-        coll._collection.restore(); // Revert all local changes
-        coll._was_snapshot = false;
-      }
-    });
+    _.each(self.stores, function (s) { s.beginUpdate(); });
 
     _.each(self.pending_data, function (msg) {
       if (msg.collection && msg.id) {
-        var meteor_coll = self.collections[msg.collection];
+        var store = stores[msg.collection];
 
-        if (!meteor_coll) {
-          Meteor._debug(
-            "discarding data received for unknown collection " +
-              JSON.stringify(msg.collection));
+        if (!store) {
+          // Nobody's listening for this data. Queue it up until
+          // someone wants it.
+          // XXX memory use will grow without bound if you forget to
+          // create a collection.. going to have to do something about
+          // that.
+          if (!(msg.collection in self.queued))
+            self.queued[msg.collection] = [];
+          self.queued[msg.collection].push(msg);
           return;
         }
 
-        // do all the work against underlying minimongo collection.
-        var coll = meteor_coll._collection;
-
-        var doc = coll.findOne(msg.id);
-
-        if (doc
-            && (!msg.set || msg.set.length === 0)
-            && _.difference(_.keys(doc), msg.unset, ['_id']).length === 0) {
-          // what's left is empty, just remove it.  cannot fail.
-          coll.remove(msg.id);
-        } else if (doc) {
-          var mutator = {$set: msg.set, $unset: {}};
-          _.each(msg.unset, function (propname) {
-            mutator.$unset[propname] = 1;
-          });
-          // XXX error check return value from update.
-          coll.update(msg.id, mutator);
-        } else {
-          // XXX error check return value from insert.
-          coll.insert(_.extend({_id: msg.id}, msg.set));
-        }
+        store.update(msg);
       }
 
       if (msg.subs) {
@@ -272,6 +291,8 @@ _.extend(Meteor._LivedataClient.prototype, {
         });
       }
     });
+
+    _.each(self.stores, function (s) { s.endUpdate(); });
 
     self.pending_data = [];
   },
@@ -309,106 +330,6 @@ _.extend(Meteor._LivedataClient.prototype, {
   }
 });
 
-Meteor._Collection = function (name, server) {
-  var self = this;
-
-  if (name && (name in server.collections))
-    // maybe should just return server.collections[name]?
-    throw new Error("There is already a remote collection '" + name + "'");
-
-  self._name = name;
-  self._collection = new LocalCollection;
-  self._server = server;
-  self._was_snapshot = false;
-
-  if (name)
-    server.collections[name] = self;
-};
-
-_.extend(Meteor._Collection.prototype, {
-  find: function (/* selector, options */) {
-    var self = this;
-    // Collection.find() (return all docs) behaves differently
-    // from Collection.find(undefined) (return 0 docs).  so be
-    // careful about preserving the length of arguments when
-    // descending into minimongo.
-    return self._collection.find.apply(self._collection, Array.prototype.slice.call(arguments));
-  },
-
-  findOne: function (/* selector, options */) {
-    var self = this;
-    // as above
-    return self._collection.findOne.apply(self._collection, Array.prototype.slice.call(arguments));
-  },
-
-  _maybe_snapshot: function () {
-    var self = this;
-    if (!self._was_snapshot) {
-      self._collection.snapshot();
-      self._was_snapshot = true;
-    }
-  },
-
-  // XXX provide a way for the caller to find out about errors from the server?
-  insert: function (obj) {
-    var self = this;
-    // Generate an id for the object.
-    // XXX mutates the object passed in. that is not cool.
-    if (obj._id)
-      Meteor._debug("WARNING: trying to insert object w/ _id set. _id ignored.");
-    if (_.keys(obj).length === 0)
-      Meteor._debug("WARNING: inserting empty object.");
-
-    var _id = LocalCollection.uuid();
-    obj._id = _id;
-
-    if (self._name) {
-      self._maybe_snapshot();
-      self._server._send_method({
-        msg: 'method',
-        method: '/' + self._name + '/insert',
-        params: [obj]});
-    }
-    self._collection.insert(obj);
-
-    return obj;
-  },
-
-  // XXX provide a way for the caller to find out about errors from the server?
-  update: function (selector, mutator, options) {
-    var self = this;
-    if (self._name) {
-      self._maybe_snapshot();
-      self._server._send_method({
-        msg: 'method',
-        method: '/' + self._name + '/update',
-        params: [selector, mutator, options]});
-    }
-    self._collection.update(selector, mutator, options);
-  },
-
-  // XXX provide a way for the caller to find out about errors from the server?
-  remove: function (selector) {
-    var self = this;
-
-    if (arguments.length === 0)
-      selector = {};
-
-    if (self._name) {
-      self._maybe_snapshot();
-      self._server._send_method({
-        msg: 'method',
-        method: '/' + self._name + '/remove',
-        params: [selector]});
-    }
-    self._collection.remove(selector);
-  },
-
-  schema: function  () {
-    // XXX not implemented yet
-  }
-});
-
 _.extend(Meteor, {
   connect: function (url) {
     return new Meteor._LivedataClient(url);
@@ -425,11 +346,6 @@ _.extend(Meteor, {
 
   publish: function() {
     // ignored on the client
-  },
-
-  // XXX make the user create it directly, with 'new'
-  Collection: function (name) {
-    return new Meteor._Collection(name, App);
   },
 
   subscribe: function (/* arguments */) {

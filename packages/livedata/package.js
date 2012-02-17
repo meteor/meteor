@@ -18,6 +18,9 @@ Package.on_use(function (api) {
     'mongo_driver.js'
   ], 'server');
 
+  api.add_files('local_collection_driver.js', ['client', 'server']);
+  api.add_files('remote_collection_driver.js', 'server');
+  api.add_files('collection.js', ['client', 'server']);
 });
 
 Package.on_test(function (api) {

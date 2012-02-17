@@ -4,7 +4,7 @@ Meteor._LivedataServer = function () {
   var self = this;
 
   self.publishes = {};
-  self.collections = {};
+  self._hack_collections = {}; // XXX hack. name => Collection
   self.method_handlers = {};
   self.stream_server = new Meteor._StreamServer;
 
@@ -71,7 +71,7 @@ _.extend(Meteor._LivedataServer.prototype, {
               return;
             }
 
-            // | not allowed in collection name?
+            // XXX -- '|' not allowed in collection name?
             var key = collection_name + "|" + o._id;
 
             // insert or extend new_cache with 'o' object
@@ -278,7 +278,7 @@ _.extend(Meteor._LivedataServer.prototype, {
     }
 
     options = options || {};
-    var collection = options.collection || self.collections[name];
+    var collection = options.collection || self._hack_collections[name];
     if (!collection)
       throw new Error("No collection '" + name + "' found to publish. " +
                       "You can specify the collection explicitly with the " +
@@ -337,94 +337,6 @@ _.extend(Meteor._LivedataServer.prototype, {
   }
 });
 
-Meteor._Collection = function (name, server, mongo_url) {
-  var self = this;
-
-  if (!name)
-    // XXX maybe support this using minimongo?
-    throw new Error("Anonymous collections aren't allowed on the server");
-
-  self._mongo = new Meteor._Mongo(mongo_url);
-
-  self._name = name;
-  self._api = {};
-  self._server = server;
-
-  if (name) {
-    self._server.collections[name] = self;
-    // XXX temporary automatically generated methods for mongo mutators
-    self._server.method_handlers['/' + name + '/insert'] = function (obj) {
-      self.insert(obj);
-    };
-    self._server.method_handlers['/' + name + '/update'] = function (selector, mutator, options) {
-      self.update(selector, mutator, options);
-    };
-    self._server.method_handlers['/' + name + '/remove'] = function (selector) {
-      self.remove(selector);
-    };
-  }
-};
-
-_.extend(Meteor._Collection.prototype, {
-  // XXX there are probably a lot of little places where this API
-  // and minimongo diverge. we should track each of those down and
-  // kill it.
-
-  find: function (/* selector, options */) {
-    var self = this;
-
-    var args = Array.prototype.slice.call(arguments);
-    args.unshift(self._name);
-    return self._mongo.find.apply(self._mongo, args);
-  },
-
-  findOne: function (/* selector, options */) {
-    var self = this;
-
-    var args = Array.prototype.slice.call(arguments);
-    args.unshift(self._name);
-    return self._mongo.findOne.apply(self._mongo, args);
-  },
-
-  insert: function (doc) {
-    var self = this;
-
-    // do id allocation here, so we never end up with an ObjectID.
-    // This only happens if some calls this directly on the server,
-    // since normally ids are allocated on the client and sent over
-    // the wire to us.
-    if (! doc._id) {
-      // copy doc because we mess with it. only shallow copy.
-      new_doc = {};
-      _.extend(new_doc, doc);
-      doc = new_doc;
-      doc._id = Meteor.uuid();
-    }
-
-    self._mongo.insert(self._name, doc);
-
-    // return the doc w/ _id, so we can use it.
-    return doc;
-  },
-
-  update: function (selector, mod, options) {
-    var self = this;
-    self._mongo.update(self._name, selector, mod, options);
-  },
-
-  remove: function (selector) {
-    var self = this;
-
-    if (arguments.length === 0)
-      selector = {};
-
-    return self._mongo.remove(self._name, selector);
-  },
-
-  schema: function () {
-    // XXX not implemented yet
-  }
-});
 
 App = new Meteor._LivedataServer;
 
@@ -433,11 +345,6 @@ App = new Meteor._LivedataServer;
 
 _.extend(Meteor, {
   publish: _.bind(App.publish, App),
-
-  // XXX eliminate shim; have app do it directly
-  Collection: function (name) {
-    return new Meteor._Collection(name, App, __meteor_bootstrap__.mongo_url);
-  },
 
   // these are ignored on the server
   subscribe: function () {},
