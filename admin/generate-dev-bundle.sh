@@ -4,12 +4,32 @@ set -e
 
 BUNDLE_VERSION=0.0.8
 UNAME=$(uname)
+ARCH=$(uname -m)
 
 if [ "$UNAME" == "Linux" ] ; then
-    MONGO_NAME="mongodb-linux-x86_64-2.0.2"
+    if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
+        echo "Unsupported architecture: $ARCH"
+        echo "Meteor only supports i686 and x86_64 for now."
+        exit 1
+    fi
+    MONGO_NAME="mongodb-linux-${ARCH}-2.0.2"
     MONGO_URL="http://fastdl.mongodb.org/linux/${MONGO_NAME}.tgz"
 elif [ "$UNAME" == "Darwin" ] ; then
-    MONGO_NAME="mongodb-osx-x86_64-2.0.2"
+    SYSCTL_64BIT=$(sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0)
+    if [ "$ARCH" == "i386" -a "1" != "$SYSCTL_64BIT" ] ; then
+        # some older macos returns i386 but can run 64 bit binaries.
+        # Probably should distribute binaries built on these machines,
+        # but it should be OK for users to run.
+        ARCH="x86_64"
+    fi
+
+    if [ "$ARCH" != "x86_64" ] ; then
+        echo "Unsupported architecture: $ARCH"
+        echo "Meteor only supports x86_64 for now."
+        exit 1
+    fi
+
+    MONGO_NAME="mongodb-osx-${ARCH}-2.0.2"
     MONGO_URL="http://fastdl.mongodb.org/osx/${MONGO_NAME}.tgz"
 else
     echo "This OS not yet supported"
@@ -177,6 +197,6 @@ cd "$DIR"
 echo "${BUNDLE_VERSION}" > .bundle_version.txt
 rm -rf build
 
-tar czf "${TARGET_DIR}/dev_bundle_${UNAME}_${BUNDLE_VERSION}.tar.gz" .
+tar czf "${TARGET_DIR}/dev_bundle_${UNAME}_${ARCH}_${BUNDLE_VERSION}.tar.gz" .
 
 echo DONE
