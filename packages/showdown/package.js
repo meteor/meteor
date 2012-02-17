@@ -17,7 +17,8 @@ Package.on_use(function (api, where) {
 
   // XXX what we really want to do is, load template-integration after
   // handlebars, iff handlebars was included in the project.
-  if (_.indexOf(where, "client") !== -1) {
+  if (where === "client" ||
+      (where instanceof Array && _.indexOf(where, "client") !== -1)) {
     api.use("handlebars", "client");
     api.add_files("template-integration.js", "client");
   }

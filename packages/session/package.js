@@ -13,7 +13,8 @@ Package.on_use(function (api, where) {
   // XXX what I really want to do is ensure that if 'reload' is going to
   // be loaded, it should be loaded before 'session'. Session can work
   // with or without reload.
-  if (_.indexOf(where, "client") !== -1) {
+  if (where === "client" ||
+      (where instanceof Array && _.indexOf(where, "client") !== -1)) {
     api.use("reload", "client");
   }
 

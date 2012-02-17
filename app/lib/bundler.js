@@ -79,8 +79,6 @@ var PackageInstance = function (pkg, bundle) {
     use: function (names, where) {
       if (!(names instanceof Array))
         names = names ? [names] : [];
-      if (!(where instanceof Array))
-        where = where ? [where] : [];
 
       _.each(names, function (name) {
         var pkg = packages.get(name);
