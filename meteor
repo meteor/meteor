@@ -24,15 +24,21 @@ if [ "$UNAME" = "Darwin" ] ; then
         # return other values.
         echo "Only 64-bit Intel processors are supported at this time."
     fi
-elif [ "$UNAME" = "Linux" -a "x86_64" != $(uname -m) ] ; then
-    echo "Only 64-bit Intel processors are supported at this time."
+    ARCH="x86_64"
+elif [ "$UNAME" = "Linux" ] ; then
+    ARCH=$(uname -m)
+    if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
+        echo "Unsupported architecture: $ARCH"
+        echo "Meteor only supports i686 and x86_64 for now."
+        exit 1
+    fi
 fi
 
 function install_dev_bundle {
     set -e
     trap "echo Failed to install dependency kit." EXIT
 
-    TARBALL="dev_bundle_${UNAME}_${BUNDLE_VERSION}.tar.gz"
+    TARBALL="dev_bundle_${UNAME}_${ARCH}_${BUNDLE_VERSION}.tar.gz"
     TMPDIR="$SCRIPT_DIR/dev_bundle.xxx"
 
     rm -rf "$TMPDIR"
