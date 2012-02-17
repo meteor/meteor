@@ -355,7 +355,10 @@ _.extend(Meteor._Collection.prototype, {
     // Generate an id for the object.
     // XXX mutates the object passed in. that is not cool.
     if (obj._id)
-      Meteor._debug("WARNING: trying to insert object w/ _id set");
+      Meteor._debug("WARNING: trying to insert object w/ _id set. _id ignored.");
+    if (_.keys(obj).length === 0)
+      Meteor._debug("WARNING: inserting empty object.");
+
     var _id = Collection.uuid();
     obj._id = _id;
 
