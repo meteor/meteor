@@ -1,0 +1,1 @@
+App._enable_autopublish();

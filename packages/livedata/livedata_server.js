@@ -7,6 +7,8 @@ Meteor._LivedataServer = function () {
   self._hack_collections = {}; // XXX hack. name => Collection
   self.method_handlers = {};
   self.stream_server = new Meteor._StreamServer;
+  self.on_autopublish = []; // array of func if AP disabled, null if enabled
+  self.warned_about_autopublish = false;
 
   self.stream_server.register(function (socket) {
     socket.meteor = {};
@@ -267,6 +269,10 @@ _.extend(Meteor._LivedataServer.prototype, {
    *  - selector {Function<args> OR Object} either a mongodb selector,
    *    or a function that takes the argument object passed to
    *    Meteor.subscribe and returns a mongodb selector. default {}
+   *  - (mostly internal) is_auto: true if generated automatically
+   *    from an autopublish hook. this is for cosmetic purposes only
+   *    (it lets us determine whether to print a warning suggesting
+   *    that you turn off autopublish.)
    */
   publish: function (name, options) {
     var self = this;
@@ -278,6 +284,32 @@ _.extend(Meteor._LivedataServer.prototype, {
     }
 
     options = options || {};
+
+    if (!self.onAutopublish && options.is_auto) {
+      // They have autopublish on, yet they're trying to manually
+      // picking stuff to publish. They probably should turn off
+      // autopublish. (This check isn't perfect -- if you create a
+      // publish before you turn on autopublish, it won't catch
+      // it. But this will definitely handle the simple case where
+      // you've added the autopublish package to your app, and are
+      // calling publish from your app code.)
+      if (!self.warned_about_autopublish) {
+        self.warned_about_autopublish = true;
+        Meteor._debug(
+"** You've set up some data subscriptions with Meteor.publish(), but\n" +
+"** you still have autopublish turned on. Because autopublish is still\n" +
+"** on, your Meteor.publish() calls won't have much effect. All data\n" +
+"** will still be sent to all clients.\n" +
+"**\n" +
+"** Turn off autopublish by removing the autopublish package:\n" +
+"**\n" +
+"**   $ meteor remove autopublish\n" +
+"**\n" +
+"** .. and make sure you have a Meteor.publish() call for each\n" +
+"** collection you want clients to be able to use.\n\n");
+      }
+    }
+
     var collection = options.collection || self._hack_collections[name];
     if (!collection)
       throw new Error("No collection '" + name + "' found to publish. " +
@@ -334,5 +366,24 @@ _.extend(Meteor._LivedataServer.prototype, {
     if (result_func)
       result_func(ret); // XXX catch exception?
     return ret;
+  },
+
+  // A much more elegant way to do this would be: let any autopublish
+  // provider (eg, mongo-livedata) declare a weak package dependency
+  // on the autopublish package, then have that package simply set a
+  // flag that eg the Collection constructor checks, and autopublishes
+  // if necessary.
+  autopublish: function () {
+    var self = this;
+    _.each(self.on_autopublish || [], function (f) { f(); });
+    self.on_autopublish = null;
+  },
+
+  onAutopublish: function (f) {
+    var self = this;
+    if (self.on_autopublish)
+      self.on_autopublish.push(f);
+    else
+      f();
   }
 });
