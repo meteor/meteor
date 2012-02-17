@@ -1,5 +1,1 @@
-Clicks = Meteor.Collection('clicks');
-
-if (Meteor.is_server) {
-  Meteor.publish('clicks', {});
-}
+Clicks = new Meteor.Collection('clicks');

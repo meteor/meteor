@@ -38,7 +38,7 @@ assert_ordering = function (f, values) {
 // XXX test shared structure in all MM entrypoints
 
 test("minimongo - basics", function () {
-  var c = new Collection();
+  var c = new LocalCollection();
 
   c.insert({type: "kitten", name: "fluffy"});
   c.insert({type: "kitten", name: "snookums"});
@@ -129,7 +129,7 @@ test("minimongo - basics", function () {
 });
 
 test("minimongo - cursors", function () {
-  var c = new Collection();
+  var c = new LocalCollection();
   var res;
 
   for (var i = 0; i < 20; i++)
@@ -176,8 +176,8 @@ test("minimongo - misc", function () {
   // deepcopy
   var a = {a: [1, 2, 3], b: "x", c: true, d: {x: 12, y: [12]},
            f: null};
-  var b = Collection._deepcopy(a);
-  assert.isTrue(Collection._f._equal(a, b));
+  var b = LocalCollection._deepcopy(a);
+  assert.isTrue(LocalCollection._f._equal(a, b));
   a.a.push(4);
   assert.length(b.a, 3);
   a.c = false;
@@ -189,14 +189,14 @@ test("minimongo - misc", function () {
   assert.length(b.d.y, 1);
 
   a = {x: function () {}};
-  b = Collection._deepcopy(a);
+  b = LocalCollection._deepcopy(a);
   a.x.a = 14;
   assert.equal(b.x.a, 14); // just to document current behavior
 });
 
 test("minimongo - selector_compiler", function () {
   var matches = function (should_match, selector, doc) {
-    var does_match = Collection._matches(selector, doc);
+    var does_match = LocalCollection._matches(selector, doc);
     if (does_match != should_match) {
       // XXX super janky
       test.fail({type: "minimongo-ordering",
@@ -508,7 +508,7 @@ test("minimongo - selector_compiler", function () {
 
 test("minimongo - ordering", function () {
   // value ordering
-  assert_ordering(Collection._f._cmp, [
+  assert_ordering(LocalCollection._f._cmp, [
     null,
     1, 2.2, 3,
     "03", "1", "11", "2", "a", "aaa",
@@ -521,7 +521,7 @@ test("minimongo - ordering", function () {
   // document ordering under a sort specification
   var verify = function (sorts, docs) {
     _.each(sorts, function (sort) {
-      assert_ordering(Collection._compileSort(sort), docs);
+      assert_ordering(LocalCollection._compileSort(sort), docs);
     });
   };
 
@@ -539,18 +539,18 @@ test("minimongo - ordering", function () {
          [{c: 1}, {a: 1, b: 2}, {a: 1, b: 3}, {a: 2, b: 0}]);
 
   assert.throws(function () {
-    Collection._compileSort("a");
+    LocalCollection._compileSort("a");
   });
 
   assert.throws(function () {
-    Collection._compileSort(123);
+    LocalCollection._compileSort(123);
   });
 
-  assert.equal(Collection._compileSort({})({a:1}, {a:2}), 0);
+  assert.equal(LocalCollection._compileSort({})({a:1}, {a:2}), 0);
 });
 
 test("minimongo - sort", function () {
-  var c = new Collection();
+  var c = new LocalCollection();
   for (var i = 0; i < 50; i++)
     for (var j = 0; j < 2; j++)
       c.insert({a: i, b: j, _id: i + "_" + j});
@@ -582,9 +582,9 @@ test("minimongo - sort", function () {
 
 test("minimongo - modify", function () {
   var modify = function (doc, mod, result) {
-    var copy = Collection._deepcopy(doc);
-    Collection._modify(copy, mod);
-    if (!Collection._f._equal(copy, result)) {
+    var copy = LocalCollection._deepcopy(doc);
+    LocalCollection._modify(copy, mod);
+    if (!LocalCollection._f._equal(copy, result)) {
       // XXX super janky
       test.fail({type: "minimongo-modifier",
                  message: "modifier test failure",
@@ -599,7 +599,7 @@ test("minimongo - modify", function () {
   };
   var exception = function (doc, mod) {
     assert.throws(function () {
-      Collection._modify(Collection._deepcopy(doc), mod);
+      LocalCollection._modify(LocalCollection._deepcopy(doc), mod);
     });
   };
 

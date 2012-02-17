@@ -13,7 +13,7 @@
 
 // XXX sort does not yet support subkeys ('a.b') .. fix that!
 
-Collection._compileSort = function (spec) {
+LocalCollection._compileSort = function (spec) {
   var keys = [];
   var asc = [];
 
@@ -53,5 +53,5 @@ Collection._compileSort = function (spec) {
   code += "return x;};})";
 
   eval(code);
-  return _func(Collection._f._cmp);
+  return _func(LocalCollection._f._cmp);
 };

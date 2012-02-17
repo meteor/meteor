@@ -1,9 +1,9 @@
 // XXX it is actually very dangerous to store times as Number. use
 // Date type once it's implemented in minimongo
-Rooms = Meteor.Collection("rooms");
+Rooms = new Meteor.Collection("rooms");
 //Rooms.schema({name: String, created: Number});
 
-Chat = Meteor.Collection("chat");
+Chat = new Meteor.Collection("chat");
 /*
 Chat.schema({room: String, message: String,
              username: String, created: Number});

@@ -4,9 +4,12 @@ Meteor._LivedataServer = function () {
   var self = this;
 
   self.publishes = {};
-  self.collections = {};
+  self.universal_publishes = []; // publishes with no name
+  self._hack_collections = {}; // XXX hack. name => Collection
   self.method_handlers = {};
   self.stream_server = new Meteor._StreamServer;
+  self.on_autopublish = []; // array of func if AP disabled, null if enabled
+  self.warned_about_autopublish = false;
 
   self.stream_server.register(function (socket) {
     socket.meteor = {};
@@ -71,7 +74,7 @@ _.extend(Meteor._LivedataServer.prototype, {
               return;
             }
 
-            // | not allowed in collection name?
+            // XXX -- '|' not allowed in collection name?
             var key = collection_name + "|" + o._id;
 
             // insert or extend new_cache with 'o' object
@@ -81,6 +84,11 @@ _.extend(Meteor._LivedataServer.prototype, {
       };
 
       // actually run the subscriptions.
+
+      _.each(self.universal_publishes, function (pub) {
+        pub(channel, {});
+      });
+
       _.each(socket.meteor.subs, function (sub) {
         var pub = self.publishes[sub.name];
         if (!pub) {
@@ -184,11 +192,12 @@ _.extend(Meteor._LivedataServer.prototype, {
     var self = this;
     // Always start a new session. We don't support any reconnection.
     socket.send(JSON.stringify({msg: 'connected', session: Meteor.uuid()}));
+    // Run any universal publishes we may have.
+    self._poll_subscriptions(socket);
   },
 
   _livedata_sub: function (socket, msg) {
     var self = this;
-
 
     if (!self.publishes[msg.name]) {
       // can't sub to unknown publish name
@@ -239,7 +248,7 @@ _.extend(Meteor._LivedataServer.prototype, {
                   reason: "Internal server error"}}));
         // XXX prettyprint exception in the log
         Meteor._debug("Exception in method '" + msg.method + "': " +
-                      JSON.stringify(err));
+                      JSON.stringify(err.stack));
       }
 
       if (msg.id)
@@ -261,28 +270,70 @@ _.extend(Meteor._LivedataServer.prototype, {
    * @param name {String} identifier for query
    * @param options {Object}
    *
+   * If name is null, this will be a subscription that is
+   * automatically established and permanently on for all connected
+   * client, instead of a subscription that can be turned on and off
+   * with subscribe().
+   *
    * options to contain:
    *  - collection {Collection} collection; defaults to the collection
    *    named 'name' on disk in mongodb
    *  - selector {Function<args> OR Object} either a mongodb selector,
    *    or a function that takes the argument object passed to
    *    Meteor.subscribe and returns a mongodb selector. default {}
+   *  - (mostly internal) is_auto: true if generated automatically
+   *    from an autopublish hook. this is for cosmetic purposes only
+   *    (it lets us determine whether to print a warning suggesting
+   *    that you turn off autopublish.)
    */
   publish: function (name, options) {
     var self = this;
 
-    if (name in self.publishes) {
+    if (name && name in self.publishes) {
       // XXX error duplicate publish
       console.log("ERROR DUPLICATE PUBLISH " + name);
       return;
     }
 
     options = options || {};
-    var collection = options.collection || self.collections[name];
-    if (!collection)
-      throw new Error("No collection '" + name + "' found to publish. " +
-                      "You can specify the collection explicitly with the " +
-                      "'collection' option.");
+
+    if (!self.on_autopublish && !options.is_auto) {
+      // They have autopublish on, yet they're trying to manually
+      // picking stuff to publish. They probably should turn off
+      // autopublish. (This check isn't perfect -- if you create a
+      // publish before you turn on autopublish, it won't catch
+      // it. But this will definitely handle the simple case where
+      // you've added the autopublish package to your app, and are
+      // calling publish from your app code.)
+      if (!self.warned_about_autopublish) {
+        self.warned_about_autopublish = true;
+        Meteor._debug(
+"** You've set up some data subscriptions with Meteor.publish(), but\n" +
+"** you still have autopublish turned on. Because autopublish is still\n" +
+"** on, your Meteor.publish() calls won't have much effect. All data\n" +
+"** will still be sent to all clients.\n" +
+"**\n" +
+"** Turn off autopublish by removing the autopublish package:\n" +
+"**\n" +
+"**   $ meteor remove autopublish\n" +
+"**\n" +
+"** .. and make sure you have Meteor.publish() and Meteor.subscribe() calls\n" +
+"** for each collection that you want clients to see.\n");
+      }
+    }
+
+    var collection = options.collection ||
+      (name && self._hack_collections[name]);
+    if (!collection) {
+      if (name)
+        throw new Error("No collection '" + name + "' found to publish. " +
+                        "You can specify the collection explicitly with the " +
+                        "'collection' option.");
+      else
+        throw new Error("When creating universal publishes, you must specify " +
+                        "the collection explicitly with the 'collection' " +
+                        "option.");
+    }
     var selector = options.selector || {};
     var func = function (channel, params) {
       var opt = function (key, or) {
@@ -297,7 +348,10 @@ _.extend(Meteor._LivedataServer.prototype, {
       }).fetch());
     };
 
-    self.publishes[name] = func;
+    if (name)
+      self.publishes[name] = func;
+    else
+      self.universal_publishes.push(func);
   },
 
   methods: function (methods) {
@@ -334,113 +388,24 @@ _.extend(Meteor._LivedataServer.prototype, {
     if (result_func)
       result_func(ret); // XXX catch exception?
     return ret;
+  },
+
+  // A much more elegant way to do this would be: let any autopublish
+  // provider (eg, mongo-livedata) declare a weak package dependency
+  // on the autopublish package, then have that package simply set a
+  // flag that eg the Collection constructor checks, and autopublishes
+  // if necessary.
+  autopublish: function () {
+    var self = this;
+    _.each(self.on_autopublish || [], function (f) { f(); });
+    self.on_autopublish = null;
+  },
+
+  onAutopublish: function (f) {
+    var self = this;
+    if (self.on_autopublish)
+      self.on_autopublish.push(f);
+    else
+      f();
   }
-});
-
-Meteor._Collection = function (name, server, mongo_url) {
-  var self = this;
-
-  if (!name)
-    // XXX maybe support this using minimongo?
-    throw new Error("Anonymous collections aren't allowed on the server");
-
-  self._mongo = new Meteor._Mongo(mongo_url);
-
-  self._name = name;
-  self._api = {};
-  self._server = server;
-
-  if (name) {
-    self._server.collections[name] = self;
-    // XXX temporary automatically generated methods for mongo mutators
-    self._server.method_handlers['/' + name + '/insert'] = function (obj) {
-      self.insert(obj);
-    };
-    self._server.method_handlers['/' + name + '/update'] = function (selector, mutator, options) {
-      self.update(selector, mutator, options);
-    };
-    self._server.method_handlers['/' + name + '/remove'] = function (selector) {
-      self.remove(selector);
-    };
-  }
-};
-
-_.extend(Meteor._Collection.prototype, {
-  // XXX there are probably a lot of little places where this API
-  // and minimongo diverge. we should track each of those down and
-  // kill it.
-
-  find: function (/* selector, options */) {
-    var self = this;
-
-    var args = Array.prototype.slice.call(arguments);
-    args.unshift(self._name);
-    return self._mongo.find.apply(self._mongo, args);
-  },
-
-  findOne: function (/* selector, options */) {
-    var self = this;
-
-    var args = Array.prototype.slice.call(arguments);
-    args.unshift(self._name);
-    return self._mongo.findOne.apply(self._mongo, args);
-  },
-
-  insert: function (doc) {
-    var self = this;
-
-    // do id allocation here, so we never end up with an ObjectID.
-    // This only happens if some calls this directly on the server,
-    // since normally ids are allocated on the client and sent over
-    // the wire to us.
-    if (! doc._id) {
-      // copy doc because we mess with it. only shallow copy.
-      new_doc = {};
-      _.extend(new_doc, doc);
-      doc = new_doc;
-      doc._id = Meteor.uuid();
-    }
-
-    self._mongo.insert(self._name, doc);
-
-    // return the doc w/ _id, so we can use it.
-    return doc;
-  },
-
-  update: function (selector, mod, options) {
-    var self = this;
-    self._mongo.update(self._name, selector, mod, options);
-  },
-
-  remove: function (selector) {
-    var self = this;
-
-    if (arguments.length === 0)
-      selector = {};
-
-    return self._mongo.remove(self._name, selector);
-  },
-
-  schema: function () {
-    // XXX not implemented yet
-  }
-});
-
-// XXX temporary -- rename
-TheServer = new Meteor._LivedataServer;
-
-_.extend(Meteor, {
-  is_server: true,
-  is_client: false,
-
-  publish: _.bind(TheServer.publish, TheServer),
-
-  // XXX eliminate shim; have app do it directly
-  Collection: function (name) {
-    return new Meteor._Collection(name, TheServer, __meteor_bootstrap__.mongo_url);
-  },
-
-  // these are ignored on the server
-  subscribe: function () {},
-  autosubscribe: function () {}
 });

@@ -169,7 +169,7 @@ Meteor.ui.renderList = function (query, options) {
   // protect against old invocations passing in a Collection or a
   // LiveResultsSet.
   // XXX remove in a few releases
-  if (!(query instanceof Collection.Cursor))
+  if (!(query instanceof LocalCollection.Cursor))
     throw new Error("insert_before: at least one entry must exist");
 
   // create the top-level document fragment/range that will be

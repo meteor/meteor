@@ -1,0 +1,41 @@
+body {
+    width: 400px;
+    margin: 100px auto 0 auto;
+    background-color: white;
+    font-family: 'Helvetica Neue', Helvetica, Arial, san-serif;
+    line-height: 1.3;
+}
+
+#meteor {
+    position: absolute;
+    left: 0px;
+    bottom: 0px;
+    opacity: .25;
+    z-index: -1;
+}
+
+h1 {
+    color: red;
+    font-size: 3em;
+    font-weight: 200;
+    border-style: solid none none none;
+    border-color: red;
+    border-width: 4px;
+}
+
+.button_demo {
+    margin-top: 2em;
+    width: 100%;
+}
+
+.button_demo input {
+    display: block;
+    margin: 0 auto .5em auto;
+    width: 125px;
+}
+
+.button_demo div {
+    text-align: center;
+    color: #777;
+    font-weight: bold;
+}

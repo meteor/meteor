@@ -5,7 +5,7 @@
 //
 // XXX atomicity: if one modification fails, do we roll back the whole
 // change?
-Collection._modify = function (doc, mod) {
+LocalCollection._modify = function (doc, mod) {
   var is_modifier = false;
   for (var k in mod) {
     // IE7 doesn't support indexing into strings (eg, k[0]), so use substr.
@@ -31,10 +31,10 @@ Collection._modify = function (doc, mod) {
     new_doc = mod;
   } else {
     // apply modifiers
-    var new_doc = Collection._deepcopy(doc);
+    var new_doc = LocalCollection._deepcopy(doc);
 
     for (var op in mod) {
-      var mod_func = Collection._modifiers[op];
+      var mod_func = LocalCollection._modifiers[op];
       if (!mod_func)
         throw Error("Invalid modifier specified " + op);
       for (var keypath in mod[op]) {
@@ -45,10 +45,10 @@ Collection._modify = function (doc, mod) {
 
         var arg = mod[op][keypath];
         var keyparts = keypath.split('.');
-        var no_create = !!Collection._noCreateModifiers[op];
+        var no_create = !!LocalCollection._noCreateModifiers[op];
         var forbid_array = (op === "$rename");
-        var target = Collection._findModTarget(new_doc, keyparts,
-                                               no_create, forbid_array);
+        var target = LocalCollection._findModTarget(new_doc, keyparts,
+                                                    no_create, forbid_array);
         var field = keyparts.pop();
         mod_func(target, field, arg, keypath, new_doc);
       }
@@ -75,7 +75,7 @@ Collection._modify = function (doc, mod) {
 // different value to index into the returned object (for example,
 // ['a', '01'] -> ['a', 1]). if forbid_array is true, return null if
 // the keypath goes through an array.
-Collection._findModTarget = function (doc, keyparts, no_create,
+LocalCollection._findModTarget = function (doc, keyparts, no_create,
                                       forbid_array) {
   for (var i = 0; i < keyparts.length; i++) {
     var last = (i === keyparts.length - 1);
@@ -116,7 +116,7 @@ Collection._findModTarget = function (doc, keyparts, no_create,
   // notreached
 };
 
-Collection._noCreateModifiers = {
+LocalCollection._noCreateModifiers = {
   $unset: true,
   $pop: true,
   $rename: true,
@@ -124,7 +124,7 @@ Collection._noCreateModifiers = {
   $pullAll: true
 };
 
-Collection._modifiers = {
+LocalCollection._modifiers = {
   $inc: function (target, field, arg) {
     if (typeof arg !== "number")
       throw Error("Modifier $inc allowed for numbers only");
@@ -137,7 +137,7 @@ Collection._modifiers = {
     }
   },
   $set: function (target, field, arg) {
-    target[field] = Collection._deepcopy(arg);
+    target[field] = LocalCollection._deepcopy(arg);
   },
   $unset: function (target, field, arg) {
     if (target !== undefined) {
@@ -155,7 +155,7 @@ Collection._modifiers = {
     else if (!(x instanceof Array))
       throw Error("Cannot apply $push modifier to non-array");
     else
-      x.push(Collection._deepcopy(arg));
+      x.push(LocalCollection._deepcopy(arg));
   },
   $pushAll: function (target, field, arg) {
     if (!(typeof arg === "object" && arg instanceof Array))
@@ -188,7 +188,7 @@ Collection._modifiers = {
       var values = isEach ? arg["$each"] : [arg];
       _.each(values, function (value) {
         for (var i = 0; i < x.length; i++)
-          if (Collection._f._equal(value, x[i]))
+          if (LocalCollection._f._equal(value, x[i]))
             return;
         x.push(value);
       });
@@ -229,13 +229,13 @@ Collection._modifiers = {
         // to permit stuff like {$pull: {a: {$gt: 4}}}.. something
         // like {$gt: 4} is not normally a complete selector.
         // same issue as $elemMatch possibly?
-        var match = Collection._compileSelector(arg);
+        var match = LocalCollection._compileSelector(arg);
         for (var i = 0; i < x.length; i++)
           if (!match(x[i]))
             out.push(x[i])
       } else {
         for (var i = 0; i < x.length; i++)
-          if (!Collection._f._equal(x[i], arg))
+          if (!LocalCollection._f._equal(x[i], arg))
             out.push(x[i]);
       }
       target[field] = out;
@@ -256,7 +256,7 @@ Collection._modifiers = {
       for (var i = 0; i < x.length; i++) {
         var exclude = false;
         for (var j = 0; j < arg.length; j++) {
-          if (Collection._f._equal(x[i], arg[j])) {
+          if (LocalCollection._f._equal(x[i], arg[j])) {
             exclude = true;
             break;
           }
@@ -281,7 +281,7 @@ Collection._modifiers = {
     delete target[field];
 
     var keyparts = arg.split('.');
-    var target2 = Collection._findModTarget(doc, keyparts, false, true);
+    var target2 = LocalCollection._findModTarget(doc, keyparts, false, true);
     if (target2 === null)
       throw Error("$rename target field invalid");
     var field2 = keyparts.pop();
