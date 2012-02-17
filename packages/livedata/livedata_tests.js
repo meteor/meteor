@@ -1,16 +1,3 @@
-test("livedata - basics", function () {
-  // Very basic test. Just see that it runs.
-
-  var coll = new Meteor.Collection("testing" + LocalCollection.uuid());
-
-  coll.remove({foo: 'bar'});
-  assert.length(coll.find({foo: 'bar'}).fetch(), 0);
-  coll.insert({foo: 'bar'});
-  assert.length(coll.find({foo: 'bar'}).fetch(), 1);
-});
-
-/******************************************************************************/
-
 // XXX should probably move this into a testing helpers package so it
 // can be used by other tests
 
