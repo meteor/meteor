@@ -32,7 +32,7 @@ cd build
 
 git clone git://github.com/joyent/node.git
 cd node
-git checkout v0.6.7
+git checkout v0.6.11
 
 export JOBS=4
 ./configure --prefix="$DIR"
