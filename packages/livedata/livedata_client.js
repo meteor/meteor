@@ -229,6 +229,15 @@ _.extend(Meteor._LivedataClient.prototype, {
       result_func);
   },
 
+  status: function () {
+    var self = this;
+    return self.stream.status();
+  },
+
+  reconnect: function () {
+    var self = this;
+    return self.stream.reconnect();
+  },
 
   _send_method: function (msg, result_func) {
     var self = this;
@@ -335,23 +344,6 @@ _.extend(Meteor, {
     return new Meteor._LivedataClient(url);
   },
 
-  // XXX these are wrong
-  status: function () {
-    return App.stream.status();
-  },
-
-  reconnect: function () {
-    return App.stream.reconnect();
-  },
-
-  publish: function() {
-    // ignored on the client
-  },
-
-  subscribe: function (/* arguments */) {
-    return App.subscribe.apply(App, _.toArray(arguments));
-  },
-
   autosubscribe: function (sub_func) {
     var local_subs = [];
     var context = new Meteor.deps.Context();
@@ -378,10 +370,3 @@ _.extend(Meteor, {
   }
 });
 
-// XXX this isn't going to work -- when connecting to a remote server,
-// the user isn't going to know to include /sockjs. need to add it in
-// stream_client..
-
-// Path matches sockjs 'prefix' in stream_server. We should revisit this
-// once we specify the 'on the wire' aspects of livedata more clearly.
-App = Meteor.connect('/sockjs');

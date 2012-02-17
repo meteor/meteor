@@ -5,22 +5,13 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use(['stream', 'uuid']);
-  api.use(['json', 'underscore'], 'server');
-  api.use(['json', 'underscore', 'deps', 'minimongo', 'logging'], 'client');
-
-  // this should move to a new package, called something like 'base'?
-  api.add_files('client_base.js', 'client');
-  api.add_files('server_base.js', 'server');
+  api.use(['json', 'underscore', 'deps', 'logging'], ['client', 'server']);
 
   api.add_files('livedata_client.js', 'client');
-  api.add_files([
-    'livedata_server.js',
-    'mongo_driver.js'
-  ], 'server');
+  api.add_files('livedata_server.js', 'server');
 
-  api.add_files('local_collection_driver.js', ['client', 'server']);
-  api.add_files('remote_collection_driver.js', 'server');
-  api.add_files('collection.js', ['client', 'server']);
+  api.add_files('client_convenience.js', 'client');
+  api.add_files('server_convenience.js', 'server');
 });
 
 Package.on_test(function (api) {

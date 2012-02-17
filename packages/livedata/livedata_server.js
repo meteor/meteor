@@ -336,17 +336,3 @@ _.extend(Meteor._LivedataServer.prototype, {
     return ret;
   }
 });
-
-
-App = new Meteor._LivedataServer;
-
-// XXX need to restructure so that both client and server have methods
-// like Meteor.connect and Meteor.autosubscribe
-
-_.extend(Meteor, {
-  publish: _.bind(App.publish, App),
-
-  // these are ignored on the server
-  subscribe: function () {},
-  autosubscribe: function () {}
-});
