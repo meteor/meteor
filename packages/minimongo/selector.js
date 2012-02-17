@@ -531,7 +531,7 @@ LocalCollection._exprForConstraint = function (type, arg, others,
     // mongo doesn't support $regex inside a $not for some reason. we
     // do, because there's no reason not to that I can see.. but maybe
     // we should follow mongo's behavior?
-    expr = '!' + Collection._exprForOperatorTest(arg, literals);
+    expr = '!' + LocalCollection._exprForOperatorTest(arg, literals);
     search = null;
   } else {
     throw Error("Unrecognized key in selector: " + type);

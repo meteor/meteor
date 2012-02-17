@@ -38,6 +38,7 @@ Meteor.Collection = function (name, manager, driver) {
       },
 
       // Apply an update from the server.
+      // XXX better specify this interface (not in terms of a wire message)?
       update: function (msg) {
         var doc = self._collection.findOne(msg.id);
 
