@@ -84,6 +84,15 @@ Meteor.publish("user-posts", {
 });
 </pre>
 
+<p>Publish acts on individual attributes of objects. If an object has no
+attributes except <code>_id</code>, it will not be published to the
+client.  Generally, empty object are not very useful so this is not a
+problem.  If you need to create and track an object and assign it
+properties later, create it with a simple property
+eg: <code>collection.insert({exists: true});</code>
+</p>
+
+
 <!------------------------------------------------------------------->
 <!-- Meteor.subscribe -------------------------------------------------->
 
