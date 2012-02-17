@@ -1,1 +1,1 @@
-App._enable_autopublish();
+App.autopublish();

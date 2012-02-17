@@ -136,7 +136,7 @@ Template.api.reconnect = {
 
 Template.api.collection = {
   id: "create_collection",
-  name: "Meteor.Collection([name])",
+  name: "new Meteor.Collection([name])",
   locus: "Anywhere",
   descr: ["Create a MongoDB-style collection that can be used to store data."],
   args: [

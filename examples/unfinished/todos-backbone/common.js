@@ -1,4 +1,6 @@
-Todos = Meteor.Collection("todos");
-Todos.schema({text: String, done: Boolean, order: Number});
+Todos = new Meteor.Collection("todos");
+//Todos.schema({text: String, done: Boolean, order: Number});
 
-Meteor.publish('todos');
+if (Meteor.is_server) {
+  Meteor.publish('todos');
+}

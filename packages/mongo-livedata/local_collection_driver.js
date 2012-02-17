@@ -8,6 +8,7 @@ Meteor._LocalCollectionDriver = function () {
 
 _.extend(Meteor._LocalCollectionDriver.prototype, {
   open: function (name) {
+    var self = this;
     if (!name)
       return new LocalCollection;
     if (!(name in self.collections))

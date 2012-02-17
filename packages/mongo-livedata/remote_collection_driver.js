@@ -8,6 +8,7 @@ Meteor._RemoteCollectionDriver = function (mongo_url) {
 
 _.extend(Meteor._RemoteCollectionDriver.prototype, {
   open: function (name) {
+    var self = this;
     var ret = {};
     _.each(['find', 'findOne', 'insert', 'update', 'remove'], function (m) {
       ret[m] = _.bind(self.mongo[m], self.mongo, name);

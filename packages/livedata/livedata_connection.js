@@ -275,7 +275,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
     _.each(self.pending_data, function (msg) {
       if (msg.collection && msg.id) {
-        var store = stores[msg.collection];
+        var store = self.stores[msg.collection];
 
         if (!store) {
           // Nobody's listening for this data. Queue it up until

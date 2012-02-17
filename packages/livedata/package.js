@@ -7,6 +7,11 @@ Package.on_use(function (api) {
   api.use(['stream', 'uuid']);
   api.use(['json', 'underscore', 'deps', 'logging'], ['client', 'server']);
 
+  // livedata_connection.js uses a Minimongo collection internally to
+  // manage the current set of subscriptions.
+  api.use('minimongo', ['client', 'server']);
+
+
   api.add_files('livedata_connection.js', 'client');
   api.add_files('livedata_server.js', 'server');
 

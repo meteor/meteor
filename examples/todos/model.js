@@ -1,6 +1,6 @@
-Lists = Meteor.Collection("lists");
+Lists = new Meteor.Collection("lists");
 
-Todos = Meteor.Collection("todos");
+Todos = new Meteor.Collection("todos");
 
 /* Schema support coming soon!
 
@@ -11,9 +11,11 @@ Todos.schema({text: String,
               tags: [String]});
 */
 
-Meteor.publish('lists');
-Meteor.publish('todos', {
-  selector: function (params) {
-    return {list_id: params.list};
-  }
-});
+if (Meteor.is_server) {
+  Meteor.publish('lists');
+  Meteor.publish('todos', {
+    selector: function (params) {
+      return {list_id: params.list};
+    }
+  });
+}

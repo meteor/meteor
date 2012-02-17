@@ -241,7 +241,7 @@ _.extend(Meteor._LivedataServer.prototype, {
                   reason: "Internal server error"}}));
         // XXX prettyprint exception in the log
         Meteor._debug("Exception in method '" + msg.method + "': " +
-                      JSON.stringify(err));
+                      JSON.stringify(err.stack));
       }
 
       if (msg.id)

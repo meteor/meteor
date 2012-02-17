@@ -73,6 +73,7 @@ Meteor.Collection = function (name, manager, driver) {
       throw new Error("There is already a collection named '" + name + "'");
   }
 
+  // mutation methods
   if (manager) {
     var m = {};
     // XXX what if name has illegal characters in it?
@@ -96,10 +97,18 @@ Meteor.Collection = function (name, manager, driver) {
   }
 
   // XXX temporary hack to provide sugar in LivedataServer.publish()
-  if (name && manager && manager._hack_collections)
+  if (name && manager && manager._hack_collections) {
+    if (name in manager._hack_collections)
+      throw new Error("There is already a collection named '" + name + "'");
     manager._hack_collections[name] = self;
-};
+  }
 
+  // autopublish
+  if (name && manager.onAutopublish)
+    manager.onAutopublish(function () {
+      manager.publish(name, {is_auto: true});
+    });
+};
 
 _.extend(Meteor.Collection.prototype, {
   find: function (/* selector, options */) {
@@ -117,7 +126,7 @@ _.extend(Meteor.Collection.prototype, {
 
   _maybe_snapshot: function () {
     var self = this;
-    if (!self._was_snapshot) {
+    if (self.manager && self.manager.registerStore && !self._was_snapshot) {
       self._collection.snapshot();
       self._was_snapshot = true;
     }

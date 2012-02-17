@@ -1,4 +1,4 @@
 root = exports ? this # export Presses globally.
-root.Presses = Meteor.Collection 'presses'
+root.Presses = new Meteor.Collection 'presses'
 
 Meteor.publish 'presses'
