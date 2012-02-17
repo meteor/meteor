@@ -151,7 +151,6 @@ LocalCollection.LiveResultsSet = function () {};
 //
 // attributes available on returned query handle:
 //  * stop(): end updates
-//  * indexOf(id): return current index of object in result set, or -1
 //  * collection: the collection this query is querying
 //
 // iff x is a returned query handle, (x instanceof
