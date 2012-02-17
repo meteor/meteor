@@ -7,7 +7,7 @@ if (typeof Meteor === "undefined") Meteor = {};
 // XXX namespacing
 Meteor._capture_subs = null;
 
-Meteor._LivedataClient = function (url) {
+Meteor._LivedataConnection = function (url) {
   var self = this;
   self.url = url;
   self.stores = {}; // name -> object with methods
@@ -108,7 +108,7 @@ Meteor._LivedataClient = function (url) {
   });
 
   // we never terminate the observe(), since there is no way to
-  // destroy a LivedataClient.. but this shouldn't matter, since we're
+  // destroy a LivedataConnection.. but this shouldn't matter, since we're
   // the only one that holds a reference to the self.subs collection
   self.subs_token = self.subs.find({}).observe({
     added: function (sub) {
@@ -127,7 +127,7 @@ Meteor._LivedataClient = function (url) {
   });
 };
 
-_.extend(Meteor._LivedataClient.prototype, {
+_.extend(Meteor._LivedataConnection.prototype, {
   // 'name' is the name of the data on the wire that should go in the
   // store. 'store' should be an object with methods beginUpdate,
   // update, endUpdate, reset. see Collection for an example.
@@ -341,7 +341,7 @@ _.extend(Meteor._LivedataClient.prototype, {
 
 _.extend(Meteor, {
   connect: function (url) {
-    return new Meteor._LivedataClient(url);
+    return new Meteor._LivedataConnection(url);
   },
 
   autosubscribe: function (sub_func) {
