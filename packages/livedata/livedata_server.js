@@ -107,12 +107,17 @@ _.extend(Meteor._LivedataServer.prototype, {
         var msg = {msg: 'data', collection: collection_name, id: id};
 
         if (!old_obj) {
+          // New object. Send an insert down to the client.
           var obj_to_send = _.extend({}, new_obj);
           delete obj_to_send._id;
-          msg.set = obj_to_send;
-          socket.send(JSON.stringify(msg));
+          if (_.keys(obj_to_send).length) {
+            msg.set = obj_to_send;
+            socket.send(JSON.stringify(msg));
+          }
 
         } else {
+          // Old object. Check for updates and send changes attributes
+          // to the client.
           var set = {};
           var unset = [];
 
