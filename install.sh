@@ -2,7 +2,17 @@
 
 cd `dirname $0`
 
-TARGET_DIR=/usr/local/meteor
+PARENT="/usr/local"
+TARGET_DIR="/usr/local/meteor"
+
+# XXX try to fix it up automatically?
+if [ ! -d "$PARENT" -o ! -w "$PARENT" ] ; then
+    echo "Can not write to $PARENT"
+    exit 1
+elif [ -d "$PARENT/bin" -a ! -w "$PARENT/bin" ] ; then
+    echo "Can not write to $PARENT/bin"
+    exit 1
+fi
 
 rm -rf "$TARGET_DIR"
 
