@@ -87,7 +87,7 @@ _Mongo.prototype.remove = function (collection_name, selector) {
 
   // XXX does not allow options. matches the client.
 
-  selector = _Mongo.rewriteSelector(selector);
+  selector = _Mongo._rewriteSelector(selector);
 
   self._withCollection(collection_name, function(err, collection) {
     // XXX err handling
