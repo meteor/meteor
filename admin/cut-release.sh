@@ -12,47 +12,19 @@ if [ `uname` != "Darwin" ] ; then
     exit 1
 fi
 
-# make sure we're clean
-# http://stackoverflow.com/questions/2657935/checking-for-a-dirty-index-or-untracked-files-with-git
-function warn_and_exit { echo $1 ; return 1; }
-git diff-files --quiet || \
-    warn_and_exit "Local changes. Aborting."
-git diff-index --quiet --cached HEAD || \
-    warn_and_exit "Local changes staged. Aborting."
-test -z "$(git ls-files --others --exclude-standard)" || \
-    warn_and_exit "Uncommitted files. Aborting."
-
-# Make sure we have an up to date dev bundle by re-downloading.
-for i in dev_bundle_*.tar.gz ; do
-    test -f $i && warn_and_exit "Local dev_bundle tarball. Aborting."
-done
-if [ -d dev_bundle ] ; then
-    echo "Removing old dev_bundle."
-    rm -rf dev_bundle
-fi
-
-# Force dev_bundle re-creation
-./meteor --version || \
-    warn_and_exit "dev_bundle installation failed."
-
-
 # increment the version number
 export NODE_PATH="$(pwd)/dev_bundle/lib/node_modules"
 ./dev_bundle/bin/node admin/increment-version.js
 
-echo "Installing."
 
-# install it.
-./install.sh
+./admin/build-release.sh
 
-# get the version number.
+# get the tarball. XXX copied from build-release.sh
+UNAME=$(uname)
+ARCH=$(uname -m)
 VERSION="$(/usr/local/bin/meteor --version | sed 's/.* //')"
-
-# tar it up
-TARBALL=~/meteor-package-${VERSION}.tar.gz
-echo "Tarring to: $TARBALL"
-
-tar -C /usr/local --exclude .meteor/local -czf "$TARBALL" meteor
+TARBALL=~/meteor-package-${UNAME}-${ARCH}-${VERSION}.tar.gz
+test -f "$TARBALL"
 
 # commit to git
 echo
