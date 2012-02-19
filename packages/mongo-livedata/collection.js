@@ -106,7 +106,7 @@ Meteor.Collection = function (name, manager, driver) {
   }
 
   // autopublish
-  if (manager.onAutopublish)
+  if (manager && manager.onAutopublish)
     manager.onAutopublish(function () {
       manager.publish(null, {collection: self, is_auto: true});
     });
@@ -147,28 +147,28 @@ _.extend(Meteor.Collection.prototype, {
     doc._id = Meteor.uuid();
 
     if (self._manager)
-      return self._manager.call(self._prefix + 'insert', doc);
+      self._manager.call(self._prefix + 'insert', doc);
     else
-      return self._collection.insert(doc);
+      self._collection.insert(doc);
 
+    return doc;
   },
 
   update: function (/* arguments */) {
     var self = this;
 
     if (self._manager)
-      return self._manager.apply(self._prefix + 'update', _.toArray(arguments));
+      self._manager.apply(self._prefix + 'update', _.toArray(arguments));
     else
-      return self._collection.update.apply(self._collection, _.toArray(arguments));
-
+      self._collection.update.apply(self._collection, _.toArray(arguments));
   },
 
   remove: function (/* arguments */) {
     var self = this;
 
     if (self._manager)
-      return self._manager.apply(self._prefix + 'remove', _.toArray(arguments));
+      self._manager.apply(self._prefix + 'remove', _.toArray(arguments));
     else
-      return self._collection.remove.apply(self._collection, _.toArray(arguments));
+      self._collection.remove.apply(self._collection, _.toArray(arguments));
   }
 });
