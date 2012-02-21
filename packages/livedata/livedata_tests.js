@@ -4,7 +4,7 @@ test("livedata - basics", function () {
   assert.isTrue(Meteor.is_client);
   assert.isFalse(Meteor.is_server);
 
-  var coll = new Meteor.Collection("testing");
+  var coll = new Meteor.Collection("testing" + LocalCollection.uuid());
 
   coll.remove({foo: 'bar'});
   assert.length(coll.find({foo: 'bar'}).fetch(), 0);
