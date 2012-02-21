@@ -13,6 +13,7 @@ var _ = require('../app/lib/third/underscore.js');
 // What files to update. Relative to project root.
 var UPDATE_FILES = ['app/lib/updater.js',
                     'admin/install-s3.sh',
+                    'admin/debian/changelog',
                     'docs/client/docs.html',
                     ['admin/manifest.json', 'g']];
 
