@@ -1,17 +1,7 @@
 Meteor.startup(function () {
   test.setReporter(reportResults);
-  test.list();
-
-  run_tests();
+  test.run();
 });
-
-var run_tests = function () {
-  setTimeout(function () {
-    //resetResults();
-    test.run();
-  }, 0);
-};
-
 
 Template.test_table.data = function() {
   var cx = Meteor.deps.Context.current;
@@ -101,11 +91,6 @@ Template.event.get_details = function() {
 
 var resultTree = [];
 var resultDeps = [];
-
-var resetResults = function() {
-  resultTree = [];
-  _resultsChanged();
-};
 
 var _resultsChanged = function() {
   _.each(resultDeps, function(cx) {

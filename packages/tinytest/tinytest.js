@@ -2,148 +2,177 @@
 
 var globals = (function () {return this;})();
 
-var tests = {};
-var ordered_tests = [];
+/******************************************************************************/
+/* TestCase                                                                   */
+/******************************************************************************/
 
-var expecting_failure = false;
-var report;
+var TestCase = function (name, func, async) {
+  var self = this;
+  self.name = name;
+  self.func = func;
+  self.async = async || false;
 
-var current_test;
-////var current_failure_count;
-
-////var stop_at_test;
-////var stop_at_failure_count;
-
-// XXX find a way to permit async tests..
-globals.test = function (name, func) {
-  if (name in tests)
-    throw new Error("Every test needs a unique name, but there are two tests named '" + name + "'");
-
-  var t = {name: name, func: func};
-  tests[t.name] = t;
-  ordered_tests.push(t);
-
-  var nameParts = _.map(t.name.split(" - "), function(s) {
+  var nameParts = _.map(name.split(" - "), function(s) {
     return s.replace(/^\s*|\s*$/g, ""); // trim
   });
-  t.short_name = nameParts.pop();
+  self.short_name = nameParts.pop();
   nameParts.unshift("tinytest");
-  t.groupPath = nameParts;
+  self.groupPath = nameParts;
 };
 
-_.extend(globals.test, {
-  setReporter: function(reportFunc) {
-    report = function(test, rest) {
-      reportFunc(_.extend({ groupPath: test.groupPath,
-                            test: test.short_name },
-                          rest));
+_.extend(TestCase.prototype, {
+  // Run the test, then (asynchronously) call complete(). If the test
+  // throws an exception, will let that exception propagate up to the
+  // caller.
+  run: function (onComplete) {
+    var self = this;
+    _.defer(function () {
+      if (self.async)
+        self.func(onComplete);
+      else {
+        self.func();
+        onComplete();
+      }
+    });
+  }
+});
+
+/******************************************************************************/
+/* TestManager                                                                */
+/******************************************************************************/
+
+var TestManager = function () {
+  var self = this;
+  self.tests = {};
+  self.ordered_tests = [];
+};
+
+_.extend(TestManager.prototype, {
+  addCase: function (test) {
+    var self = this;
+    if (test.name in self.tests)
+      throw new Error("Every test needs a unique name, but there are two tests named '" + name + "'");
+    self.tests[test.name] = test;
+    self.ordered_tests.push(test);
+  },
+
+  createRun: function (onReport) {
+    var self = this;
+    return new TestRun(self, onReport);
+  }
+});
+
+// singleton
+TestManager = new TestManager;
+
+/******************************************************************************/
+/* TestRun                                                                    */
+/******************************************************************************/
+
+// Previously we had functionality that would let you run up to a
+// particular test, and then stop (open the debugger on the assert,
+// report the exception, whatever.) It did this by counting calls to
+// fail() within a particular test. It'd be nice to restore this.
+var TestRun = function (manager, onReport) {
+  var self = this;
+  self.expecting_failure = false;
+  self.manager = manager;
+  self.onReport = onReport;
+  // XXX eliminate, so tests can run in parallel?
+  self.current_test = null;
+
+  _.each(self.manager.ordered_tests, _.bind(self._report, self));
+};
+
+_.extend(TestRun.prototype, {
+  _runOne: function (test, onComplete) {
+    var self = this;
+    self._report(test);
+    self.current_test = test;
+
+    var original_assert = globals.assert;
+    globals.assert = test_assert;
+    var startTime = (+new Date);
+
+    try {
+      test.run(function () {
+        globals.assert = original_assert;
+        self.current_test = null;
+
+        var totalTime = (+new Date) - startTime;
+        self._report(test, {events: [{type: "finish", timeMs: totalTime}]});
+        onComplete();
+      });
+    } catch (exception) {
+      // XXX you want the "name" and "message" fields on the
+      // exception, to start with..
+      self._report(test, {
+        events: [{
+          type: "exception",
+          details: {
+            message: exception.message, // XXX empty???
+            stack: exception.stack // XXX portability
+          }
+        }]
+      });
+
+      globals.assert = original_assert;
+      self.current_test = null;
+    }
+  },
+
+  run: function (onComplete) {
+    var self = this;
+    var tests = _.clone(self.manager.ordered_tests);
+
+    var runNext = function () {
+      if (tests.length)
+        self._runOne(tests.shift(), runNext);
+      else
+        onComplete();
     };
+
+    runNext();
+  },
+
+  _report: function (test, rest) {
+    var self = this;
+    self.onReport(_.extend({ groupPath: test.groupPath,
+                             test: test.short_name },
+                           rest));
   },
 
   ok: function (doc) {
+    var self = this;
     var ok = {type: "ok"};
     if (doc) {
       ok.details = doc;
     }
-    if (expecting_failure) {
-      //ok.type = "fail";
+    if (self.expecting_failure) {
       ok.details["was_expecting_failure"] = true;
-      expecting_failure = false;
+      self.expecting_failure = false;
     }
-    report(current_test, {events: [ok]});
+    self._report(self.current_test, {events: [ok]});
   },
 
   expect_fail: function () {
-    expecting_failure = true;
+    var self = this;
+    self.expecting_failure = true;
   },
 
   fail: function (doc) {
-    ////if (stop_at_test === current_test &&
-    ////stop_at_failure_count === current_failure_count) {
-    ////debugger;
-    ////throw new Error("Stopping at failed test -- " + JSON.stringify(doc));
-    ////}
+    var self = this;
 
-    report(current_test,
-           {events: [{type: (expecting_failure ? "expected_fail" : "fail"),
-                      details: doc}]});
-    expecting_failure = false;
-  },
-
-  list: function() {
-    _.each(ordered_tests, report);
-  },
-
-  // 'stop_at_cookie' is the 'cookie' attribute of a failure document,
-  // to stop at that failure
-  run: function (/*stop_at_cookie*/) {
-
-    ////if (stop_at_cookie) {
-    ////stop_at_test = tests[stop_at_cookie.test]
-    ////stop_at_failure_count = stop_at_cookie.failure_count;
-    ////} else
-    ////stop_at_test = null;
-
-    var run_test = function(t) {
-      report(t);
-      current_test = t;
-      ////current_failure_count = 0;
-
-      var original_assert = globals.assert;
-      globals.assert = test_assert;
-
-      var startTime = (+new Date);
-
-      // XXX XXX we also need to skip try..catch if we're about to
-      // execute the test that will generate the fail() that we're
-      // trying to replicate, else we end up reporting the "stopping
-      // at failure" exception in the log!
-      ////if (stop_at_test === current_test &&
-      ////stop_at_failure_count === "exception") {
-        // Don't run the test inside try..catch, since in some
-        // browsers that loses stack info.
-      ////t.func();
-        // XXX XXX XXX and you're not going to restore the original
-        // assert()??! ooooouch.
-      ////} else {
-      try {
-        t.func();
-      } catch (exception) {
-        // XXX you want the "name" and "message" fields on the
-        // exception, to start with..
-        report(current_test, {
-          events: [{
-            type: "exception",
-            details: {
-              message: exception.message, // XXX empty???
-              stack: exception.stack // XXX portability
-            }
-          }]
-        });
-        ////cookie: {test: current_test.name,
-        ////failure_count: "exception"}});
-      } finally {
-        globals.assert = original_assert;
-        current_test = null;
-      }
-      ////}
-
-      var totalTime = (+new Date) - startTime;
-      report(t, {events: [{type: "finish", timeMs: totalTime}]});
-    }; // run_test
-
-
-    var i = 0;
-    var runNext = function() {
-      if (i < ordered_tests.length) {
-        run_test(ordered_tests[i++]);
-        _.defer(runNext);
-      }
-    };
-    _.defer(runNext);
+    self._report(self.current_test, {
+      events: [{type: (self.expecting_failure ? "expected_fail" : "fail"),
+                details: doc}]});
+    self.expecting_failure = false;
   }
 });
 
+/******************************************************************************/
+/* Helpers                                                                    */
+/******************************************************************************/
 
 // Patterned after http://vowsjs.org/#reference
 var test_assert = {
@@ -223,5 +252,51 @@ var test_assert = {
       test.ok();
   }
 };
+
+/******************************************************************************/
+/* Public API                                                                 */
+/******************************************************************************/
+
+// XXX this API is confusing and irregular. revisit once we have
+// package namespacing.
+
+globals.test = function (name, func) {
+  TestManager.addCase(new TestCase(name, func));
+};
+
+globals.testAsync = function (name, func) {
+  TestManager.addCase(new TestCase(name, func, true));
+};
+
+var currentRun = null;
+var reportFunc = function () {};
+
+_.extend(globals.test, {
+  setReporter: function (_reportFunc) {
+    reportFunc = _reportFunc;
+  },
+
+  ok: function (doc) {
+    currentRun.ok(doc);
+  },
+
+  expect_fail: function () {
+    currentRun.expect_fail();
+  },
+
+  fail: function (doc) {
+    currentRun.fail(doc);
+  },
+
+  run: function (onComplete) {
+    if (currentRun)
+      throw new Error("Only one test run can be happening at once");
+    currentRun = TestManager.createRun(reportFunc);
+    currentRun.run(function () {
+      currentRun = null;
+      onComplete && onComplete();
+    });
+  }
+});
 
 })();
