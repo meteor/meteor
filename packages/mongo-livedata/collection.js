@@ -43,7 +43,7 @@ Meteor.Collection = function (name, manager, driver) {
         var doc = self._collection.findOne(msg.id);
 
         if (doc
-            && (!msg.set || msg.set.length === 0)
+            && (!msg.set)
             && _.difference(_.keys(doc), msg.unset, ['_id']).length === 0) {
           // what's left is empty, just remove it.  cannot fail.
           self._collection.remove(msg.id);
@@ -56,7 +56,8 @@ Meteor.Collection = function (name, manager, driver) {
           self._collection.update(msg.id, mutator);
         } else {
           // XXX error check return value from insert.
-          self._collection.insert(_.extend({_id: msg.id}, msg.set));
+          if (msg.set)
+            self._collection.insert(_.extend({_id: msg.id}, msg.set));
         }
       },
 
