@@ -8,9 +8,33 @@ cd ..
 
 # Check for MacOS
 if [ `uname` != "Darwin" ] ; then
-    echo "Meteor only support MacOS X right now."
+    echo "Meteor release script must run on MacOS."
     exit 1
 fi
+
+# make sure we're clean
+# http://stackoverflow.com/questions/2657935/checking-for-a-dirty-index-or-untracked-files-with-git
+function warn_and_exit { echo $1 ; return 1; }
+git diff-files --quiet || \
+    warn_and_exit "Local changes. Aborting."
+git diff-index --quiet --cached HEAD || \
+    warn_and_exit "Local changes staged. Aborting."
+test -z "$(git ls-files --others --exclude-standard)" || \
+    warn_and_exit "Uncommitted files. Aborting."
+
+for i in dev_bundle_*.tar.gz ; do
+    test -f $i && warn_and_exit "Local dev_bundle tarball. Aborting."
+done
+
+# Make sure we have an up to date dev bundle by re-downloading.
+if [ -d dev_bundle ] ; then
+    echo "Removing old dev_bundle."
+    rm -rf dev_bundle
+fi
+# Force dev_bundle re-creation
+./meteor --version || \
+    warn_and_exit "dev_bundle installation failed."
+
 
 # increment the version number
 export NODE_PATH="$(pwd)/dev_bundle/lib/node_modules"
