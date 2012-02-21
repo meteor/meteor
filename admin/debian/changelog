@@ -1,0 +1,5 @@
+meteor (0.1.4-1) unstable; urgency=low
+
+  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+
+ -- Meteor Deb Packager <debian@meteor.com>  Tue, 21 Feb 2012 04:21:07 +0000
