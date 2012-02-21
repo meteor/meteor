@@ -91,6 +91,7 @@ var TestRun = function (manager, onReport) {
   self.current_test = null;
   self.current_fail_count = null;
   self.stop_at_offset = null;
+  self.current_onException = null;
 
   _.each(self.manager.ordered_tests, _.bind(self._report, self));
 };
@@ -110,18 +111,12 @@ _.extend(TestRun.prototype, {
     var cleanup = function () {
       globals.assert = original_assert;
       self.current_test = null;
+      self.current_fail_count = null;
       self.stop_at_offset = null;
+      self.current_onException = null;
     };
 
-    test.run(function () {
-      /* onComplete */
-      cleanup();
-
-      var totalTime = (+new Date) - startTime;
-      self._report(test, {events: [{type: "finish", timeMs: totalTime}]});
-      onComplete();
-    }, function (exception) {
-      /* onException */
+    self.current_onException = function (exception) {
       cleanup();
 
       // XXX you want the "name" and "message" fields on the
@@ -137,7 +132,16 @@ _.extend(TestRun.prototype, {
       });
 
       onComplete();
-    });
+    };
+
+    test.run(function () {
+      /* onComplete */
+      cleanup();
+
+      var totalTime = (+new Date) - startTime;
+      self._report(test, {events: [{type: "finish", timeMs: totalTime}]});
+      onComplete();
+    }, _.bind(self.current_onException, self));
   },
 
   run: function (onComplete) {
@@ -213,6 +217,20 @@ _.extend(TestRun.prototype, {
       }]});
     self.expecting_failure = false;
     self.current_fail_count++;
+  },
+
+  // Call this to fail the current test with an exception. Use this to record
+  // exceptions that occur inside asynchronous callbacks in tests.
+  //
+  // It should only be used with asynchronous tests, and if you call
+  // this function, you should make sure that (1) the test doesn't
+  // call its callback (onComplete function); (2) the test function
+  // doesn't directly raise an exception.
+  exception: function (exception) {
+    var self = this;
+    if (!self.current_onException)
+      throw new Error("Not in a test");
+    self.current_onException(exception);
   }
 });
 
@@ -228,6 +246,11 @@ var test_assert = {
      * actual. Otherwise compare the JSON stringifications of expected
      * and actual. (It's no good to stringify a DOM node. Circular
      * references, to start with..) */
+
+    // XXX WE REALLY SHOULD NOT BE USING
+    // STRINGIFY. stringify([undefined]) === stringify([null]). should use
+    // deep equality instead.
+
     // XXX remove cruft specific to liverange
     if (typeof expected === "object" && expected.nodeType) {
       var matched = expected === actual;
@@ -332,6 +355,10 @@ _.extend(globals.test, {
 
   fail: function (doc) {
     currentRun.fail(doc);
+  },
+
+  exception: function (exception) {
+    currentRun.exception(exception);
   },
 
   run: function (onComplete) {

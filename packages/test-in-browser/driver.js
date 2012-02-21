@@ -70,6 +70,8 @@ Template.test.eventsArray = function() {
 
   var dupLists = partitionBy(
     _.map(events, function(e) {
+      // XXX XXX We need something better than stringify!
+      // stringify([undefined]) === "[null]"
       return {obj: e, str: JSON.stringify(e)};
     }), function(x) { return x.str; });
 
@@ -94,6 +96,8 @@ Template.event.get_details = function() {
   if (! details) {
     return null;
   } else {
+    // XXX XXX We need something better than stringify!
+    // stringify([undefined]) === "[null]"
     return JSON.stringify(details);
   }
 };
