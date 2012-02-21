@@ -58,9 +58,12 @@
       {{/if}}
       {{#with get_details}}
         {{#if this}}
-          -- {{this}}
+          &mdash; {{this}}
         {{/if}}
       {{/with}}
+      {{#if is_debuggable}}
+        <span class="debug">[Debug]</a>
+      {{/if}}
     </div>
   </div>
 </template>

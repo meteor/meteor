@@ -15,7 +15,7 @@ var TestCase = function (name, func, async) {
   var nameParts = _.map(name.split(" - "), function(s) {
     return s.replace(/^\s*|\s*$/g, ""); // trim
   });
-  self.short_name = nameParts.pop();
+  self.shortName = nameParts.pop();
   nameParts.unshift("tinytest");
   self.groupPath = nameParts;
 };
@@ -24,13 +24,22 @@ _.extend(TestCase.prototype, {
   // Run the test, then (asynchronously) call complete(). If the test
   // throws an exception, will let that exception propagate up to the
   // caller.
-  run: function (onComplete) {
+  run: function (onComplete, onException) {
     var self = this;
     _.defer(function () {
-      if (self.async)
-        self.func(onComplete);
-      else {
-        self.func();
+      if (self.async) {
+        try {
+          self.func(onComplete);
+        } catch (e) {
+          onException(e);
+        }
+      } else {
+        try {
+          self.func();
+        } catch (e) {
+          onException(e);
+          return;
+        }
         onComplete();
       }
     });
@@ -80,30 +89,41 @@ var TestRun = function (manager, onReport) {
   self.onReport = onReport;
   // XXX eliminate, so tests can run in parallel?
   self.current_test = null;
+  self.current_fail_count = null;
+  self.stop_at_offset = null;
 
   _.each(self.manager.ordered_tests, _.bind(self._report, self));
 };
 
 _.extend(TestRun.prototype, {
-  _runOne: function (test, onComplete) {
+  _runOne: function (test, onComplete, stopAtOffset) {
     var self = this;
     self._report(test);
     self.current_test = test;
+    self.current_fail_count = 0;
+    self.stop_at_offset = stopAtOffset;
 
     var original_assert = globals.assert;
     globals.assert = test_assert;
     var startTime = (+new Date);
 
-    try {
-      test.run(function () {
-        globals.assert = original_assert;
-        self.current_test = null;
+    var cleanup = function () {
+      globals.assert = original_assert;
+      self.current_test = null;
+      self.stop_at_offset = null;
+    };
 
-        var totalTime = (+new Date) - startTime;
-        self._report(test, {events: [{type: "finish", timeMs: totalTime}]});
-        onComplete();
-      });
-    } catch (exception) {
+    test.run(function () {
+      /* onComplete */
+      cleanup();
+
+      var totalTime = (+new Date) - startTime;
+      self._report(test, {events: [{type: "finish", timeMs: totalTime}]});
+      onComplete();
+    }, function (exception) {
+      /* onException */
+      cleanup();
+
       // XXX you want the "name" and "message" fields on the
       // exception, to start with..
       self._report(test, {
@@ -116,9 +136,8 @@ _.extend(TestRun.prototype, {
         }]
       });
 
-      globals.assert = original_assert;
-      self.current_test = null;
-    }
+      onComplete();
+    });
   },
 
   run: function (onComplete) {
@@ -135,10 +154,21 @@ _.extend(TestRun.prototype, {
     runNext();
   },
 
+  // An alternative to run(). Given the 'cookie' attribute of a
+  // failure record, try to rerun that particular test up to that
+  // failure, and then open the debugger.
+  debug: function (cookie, onComplete) {
+    var self = this;
+    var test = self.manager.tests[cookie.name];
+    if (!test)
+      throw new Error("No such test '" + cookie.name + "'");
+    self._runOne(test, onComplete, cookie.offset);
+  },
+
   _report: function (test, rest) {
     var self = this;
     self.onReport(_.extend({ groupPath: test.groupPath,
-                             test: test.short_name },
+                             test: test.shortName },
                            rest));
   },
 
@@ -163,10 +193,26 @@ _.extend(TestRun.prototype, {
   fail: function (doc) {
     var self = this;
 
+    if (self.stop_at_offset === 0) {
+      var now = (+new Date);
+      debugger;
+      if ((+new Date) - now < 100)
+        alert("To use this feature, first open the debugger window in your browser.");
+      self.stop_at_offset = null;
+    }
+    if (self.stop_at_offset)
+      self.stop_at_offset--;
+
     self._report(self.current_test, {
-      events: [{type: (self.expecting_failure ? "expected_fail" : "fail"),
-                details: doc}]});
+      events: [{
+        type: (self.expecting_failure ? "expected_fail" : "fail"),
+        details: doc,
+        cookie: {name: self.current_test.name, offset: self.current_fail_count,
+                 groupPath: self.current_test.groupPath,
+                 shortName: self.current_test.shortName}
+      }]});
     self.expecting_failure = false;
+    self.current_fail_count++;
   }
 });
 
@@ -293,6 +339,16 @@ _.extend(globals.test, {
       throw new Error("Only one test run can be happening at once");
     currentRun = TestManager.createRun(reportFunc);
     currentRun.run(function () {
+      currentRun = null;
+      onComplete && onComplete();
+    });
+  },
+
+  debug: function (cookie, onComplete) {
+    if (currentRun)
+      throw new Error("Only one test run can be happening at once");
+    currentRun = TestManager.createRun(reportFunc);
+    currentRun.debug(cookie, function () {
       currentRun = null;
       onComplete && onComplete();
     });
