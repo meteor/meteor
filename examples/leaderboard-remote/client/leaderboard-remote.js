@@ -3,8 +3,6 @@ Leaderboard = Meteor.connect("http://leader2.meteor.com/sockjs");
 // XXX I'd rather this be Leaderboard.Players.. can this API be easier?
 Players = new Meteor.Collection("players", Leaderboard);
 
-Leaderboard.subscribe("top10");
-
 Template.main.events = {
   'keydown': function () {
     Session.set("error", null);
