@@ -39,4 +39,12 @@ if [ "$UNAME" == "Linux" ] ; then
     # XXX!
     cp ../*.deb ~
 
+
+    echo "Building RPM"
+    rpmbuild -bb --define="TARBALL $TARBALL" "$TOPDIR/admin/meteor.spec"
+
+    # XXX
+    cp ~/rpmbuild/RPMS/*/*.rpm ~
+
+
 fi
