@@ -136,6 +136,15 @@ npm install request@2.9.3
 npm install http-proxy@0.8.0
 npm install sockjs@0.2.1
 
+# Disable mtime check in fibers. Fixes problem when packaging tools
+# don't preserve mtimes.
+cat > fibers/fibers.js <<EOF
+// meteor removed mtime check here.
+
+// Injects 'Fiber' and 'yield' in to global
+require('./src/fibers');
+EOF
+
 cd "$DIR"
 curl "$MONGO_URL" | tar -xz
 mv "$MONGO_NAME" mongodb
