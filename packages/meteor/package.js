@@ -28,6 +28,18 @@ Package.register_extension(
 );
 
 Package.on_use(function (api, where) {
+  api.use('underscore', ['client', 'server']);
   api.add_files('client_environment.js', 'client');
   api.add_files('server_environment.js', 'server');
+
+  // dynamic variables, bindEnvironment
+  // XXX move into a separate package?
+  api.use('underscore', ['client', 'server']);
+  api.add_files('dynamics_browser.js', 'client');
+  api.add_files('dynamics_nodejs.js', 'server');
+});
+
+Package.on_test(function (api) {
+  api.use('tinytest');
+  api.add_files('dynamics_test.js', 'client');
 });

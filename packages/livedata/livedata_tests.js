@@ -1,9 +1,6 @@
 test("livedata - basics", function () {
   // Very basic test. Just see that it runs.
 
-  assert.isTrue(Meteor.is_client);
-  assert.isFalse(Meteor.is_server);
-
   var coll = new Meteor.Collection("testing" + LocalCollection.uuid());
 
   coll.remove({foo: 'bar'});
@@ -13,6 +10,9 @@ test("livedata - basics", function () {
 });
 
 /******************************************************************************/
+
+// XXX should probably move this into a testing helpers package so it
+// can be used by other tests
 
 var ExpectationManager = function (onComplete) {
   var self = this;
