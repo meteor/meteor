@@ -26,6 +26,7 @@ test("environment - bindEnvironment", function () {
         throw "test";
       return 12;
     }, function (e) {
+      assert.equal(CurrentFoo.get(), 17);
       raised_f = e;
     });
   });
@@ -70,6 +71,7 @@ test("environment - bindEnvironment", function () {
       test_f();
       return 88;
     }, function (e) {
+      assert.equal(CurrentFoo.get(), 99);
       raised_g = e;
     });
   });
