@@ -116,7 +116,7 @@ var files = module.exports = {
     // is better than confusing the hell out of someone who names their
     // project 'packages'
     return path.basename(filepath) === 'packages' &&
-      path.existsSync(path.join(filepath, 'core/package.js'));
+      path.existsSync(path.join(filepath, 'meteor/package.js'));
   },
 
   // given a predicate function and a starting path, traverse upwards

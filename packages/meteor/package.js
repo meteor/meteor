@@ -1,7 +1,7 @@
-// This sets up the basic environment that any package will want.
+// All other packages automatically depend on this one
 
 Package.describe({
-  summary: "Base package that all other packages automatically depend on.",
+  summary: "Core Meteor environment",
   internal: true
 });
 
@@ -26,3 +26,8 @@ Package.register_extension(
     });
   }
 );
+
+Package.on_use(function (api, where) {
+  api.add_files('client_environment.js', 'client');
+  api.add_files('server_environment.js', 'server');
+});

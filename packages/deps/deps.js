@@ -1,5 +1,3 @@
-if (typeof Meteor === "undefined") Meteor = {};
-
 (function () {
   var pending_invalidate = [];
   var next_id = 1;

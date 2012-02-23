@@ -126,8 +126,8 @@ var PackageInstance = function (pkg, bundle) {
     }
   };
 
-  if (pkg.name !== "core")
-    self.api.use("core");
+  if (pkg.name !== "meteor")
+    self.api.use("meteor");
 };
 
 _.extend(PackageInstance.prototype, {

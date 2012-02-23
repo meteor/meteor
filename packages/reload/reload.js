@@ -1,5 +1,3 @@
-if (typeof Meteor === "undefined") Meteor = {};
-
 /**
  * This code does _NOT_ support hot (session-restoring) reloads on
  * IE6,7. It only works on browsers with sessionStorage support.

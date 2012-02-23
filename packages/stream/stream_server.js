@@ -1,5 +1,3 @@
-if (typeof Meteor === "undefined") Meteor = {};
-
 Meteor._StreamServer = function () {
   var self = this;
   self.registration_callbacks = [];

@@ -1,5 +1,3 @@
-if (typeof Meteor === "undefined") Meteor = {};
-
 Meteor._Stream = function (url) {
   var self = this;
 

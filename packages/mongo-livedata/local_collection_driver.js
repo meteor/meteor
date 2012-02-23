@@ -1,5 +1,3 @@
-if (typeof Meteor === "undefined") Meteor = {};
-
 // XXX namespacing
 Meteor._LocalCollectionDriver = function () {
   var self = this;

@@ -1,5 +1,3 @@
-if (typeof Meteor === "undefined") Meteor = {};
-
 (function() {
   var queue = [];
   var loaded = document.readyState === "loaded" ||

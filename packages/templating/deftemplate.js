@@ -1,5 +1,3 @@
-if (typeof Meteor === "undefined") Meteor = {};
-
 // XXX ugly hack. provides Meteor._def_template, which is used to load in
 // compiled templates.
 

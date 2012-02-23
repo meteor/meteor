@@ -1,5 +1,3 @@
-if (typeof Meteor === "undefined") Meteor = {};
-
 // manager, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
 Meteor.Collection = function (name, manager, driver) {

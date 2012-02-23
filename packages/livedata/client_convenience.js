@@ -1,5 +1,3 @@
-if (typeof Meteor === "undefined") Meteor = {};
-
 // XXX this isn't going to work -- when connecting to a remote server,
 // the user isn't going to know to include /sockjs. need to add it in
 // stream_client..
@@ -9,9 +7,6 @@ if (typeof Meteor === "undefined") Meteor = {};
 App = Meteor.connect('/sockjs');
 
 _.extend(Meteor, {
-  is_server: false,
-  is_client: true,
-
   status: function () {
     return App.status();
   },

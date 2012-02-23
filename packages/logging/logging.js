@@ -1,5 +1,3 @@
-if (typeof Meteor === "undefined") Meteor = {};
-
 (function() {
   // replacement for console.log. This is a temporary API. We should
   // provide a real logging API soon (possibly just a polyfill for

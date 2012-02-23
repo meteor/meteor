@@ -1,5 +1,3 @@
-if (typeof Meteor === "undefined") Meteor = {};
-
 // XXX namespacing
 Meteor._RemoteCollectionDriver = function (mongo_url) {
   var self = this;

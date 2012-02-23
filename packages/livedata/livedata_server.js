@@ -1,5 +1,3 @@
-if (typeof Meteor === "undefined") Meteor = {};
-
 Meteor._LivedataServer = function () {
   var self = this;
 

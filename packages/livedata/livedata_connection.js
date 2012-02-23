@@ -1,5 +1,3 @@
-if (typeof Meteor === "undefined") Meteor = {};
-
 // list of subscription tokens outstanding during a
 // captureDependencies run. only set when we're doing a run. The fact
 // that this is a singleton means we can't do recursive

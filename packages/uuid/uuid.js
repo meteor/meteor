@@ -28,8 +28,6 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-if (typeof Meteor === "undefined") Meteor = {};
-
 Meteor._Alea = function () {
   function Mash() {
     var n = 0xefc8249d;
