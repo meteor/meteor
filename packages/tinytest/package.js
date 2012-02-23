@@ -4,7 +4,14 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  // XXX figure out how to do server-side testing
-  api.use('underscore', 'client');
-  api.add_files('tinytest.js', 'client');
+  api.use('underscore', ['client', 'server']);
+
+  api.add_files('tinytest.js', ['client', 'server']);
+
+  api.use('mongo-livedata', ['client', 'server']);
+  api.add_files('model.js', ['client', 'server']);
+
+  api.add_files('tinytest_client.js', 'client');
+  api.use('startup', 'server');
+  api.add_files('tinytest_server.js', 'server');
 });

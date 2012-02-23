@@ -30,6 +30,7 @@
   <div class="test {{test_class}}">
     <div class="testrow">
       <div class="testname">
+        {{#if server}}S:{{else}}C:{{/if}}
         {{name}}
       </div>
       <div class="teststatus">

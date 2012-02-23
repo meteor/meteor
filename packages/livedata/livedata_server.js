@@ -232,21 +232,20 @@ _.extend(Meteor._LivedataServer.prototype, {
           msg: 'result', id: msg.id,
           error: {error: 12, /* XXX error codes! */
                   reason: "Method not found"}}));
-        return;
-      }
-
-      try {
-        var result = func.apply(null, msg.params);
-        socket.send(JSON.stringify({
-          msg: 'result', id: msg.id, result: result}));
-      } catch (err) {
-        socket.send(JSON.stringify({
-          msg: 'result', id: msg.id,
-          error: {error: 13, /* XXX error codes! */
-                  reason: "Internal server error"}}));
-        // XXX prettyprint exception in the log
-        Meteor._debug("Exception in method '" + msg.method + "': " +
-                      JSON.stringify(err.stack));
+      } else {
+        try {
+          var result = func.apply(null, msg.params);
+          socket.send(JSON.stringify({
+            msg: 'result', id: msg.id, result: result}));
+        } catch (err) {
+          socket.send(JSON.stringify({
+            msg: 'result', id: msg.id,
+            error: {error: 13, /* XXX error codes! */
+                    reason: "Internal server error"}}));
+          // XXX prettyprint exception in the log
+          Meteor._debug("Exception in method '" + msg.method + "': " +
+                        JSON.stringify(err.stack));
+        }
       }
 
       if (msg.id)

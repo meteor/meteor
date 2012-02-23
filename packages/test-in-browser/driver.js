@@ -166,10 +166,13 @@ var _findTestForResults = function (results) {
   });
 
   var testName = results.test;
+  var server = !!results.server;
   var test = _.find(group.tests || (group.tests = []),
-                    function(t) { return t.name === testName; });
+                    function(t) { return t.name === testName &&
+                                  t.server === server; });
   if (! test) {
-    test = {name: testName, parent: group}; // create test
+    // create test
+    test = {name: testName, parent: group, server: server};
     group.tests.push(test);
   }
 

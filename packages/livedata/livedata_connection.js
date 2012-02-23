@@ -221,6 +221,14 @@ _.extend(Meteor._LivedataConnection.prototype, {
     // least, we need to guarantee that the snapshot is not restored
     // until the local copy of the function has stopped doing writes.)
 
+    // XXX would it be better form to do the binding in stream.on,
+    // instead of here?
+    result_func = Meteor.bindEnvironment(result_func, function (e) {
+      // XXX improve error message (and how we report it)
+      Meteor._debug("Exception while delivering result of invoking '" +
+                    name + "'", e.stack);
+    });
+
     // run on server
     self._send_method(
       {msg: 'method', method: name, params: args},

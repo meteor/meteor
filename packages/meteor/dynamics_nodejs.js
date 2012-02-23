@@ -41,13 +41,15 @@
     var boundValues = _.clone(Fiber.current._meteor_dynamics || []);
 
     return function (/* arguments */) {
+      var args = _.toArray(arguments);
+
       var runWithEnvironment = function () {
         var savedValues = Fiber.current._meteor_dynamics;
         try {
           // Need to clone boundValues in case two fibers invoke this
           // function at the same time
           Fiber.current._meteor_dynamics = _.clone(boundValues);
-          var ret = func.apply(_this, _.toArray(arguments));
+          var ret = func.apply(_this, args);
         } catch (e) {
           onException(e);
         } finally {
