@@ -357,18 +357,29 @@ _.extend(Bundle.prototype, {
     var self = this;
 
     /// Javascript
-    var js_concat = "";
-    _.each(self.js.client, function (js_path) {
-      var js_data = self.files.client[js_path];
-      js_concat = js_concat + "\n;\n" +  js_data.toString('utf8');
+    var code_parts = [];
 
+    _.each(self.js.client, function (js_path) {
+      var code = self.files.client[js_path].toString('utf8');
+
+      // Uglify has a bug -- it will incorrectly minifiy files that
+      // contain the 'debugger' statement.
+      // https://github.com/mishoo/UglifyJS/issues/243
+      // For now, just skip minification of such files.
+      // XXX fix uglify, and once that happens, go back to
+      // concatenating before minifying, rather than vice versa
+      // https://app.asana.com/0/159908330244/522242142181
+      if (!(code.match(/debugger/))) {
+        var ast = uglify.parser.parse(code);
+        ast = uglify.uglify.ast_mangle(ast);
+        ast = uglify.uglify.ast_squeeze(ast);
+        code = uglify.uglify.gen_code(ast);
+      }
+
+      code_parts.push(code);
       delete self.files.client[js_path];
     });
-
-    var ast = uglify.parser.parse(js_concat);
-    ast = uglify.uglify.ast_mangle(ast);
-    ast = uglify.uglify.ast_squeeze(ast);
-    var final_code = uglify.uglify.gen_code(ast);
+    var final_code = code_parts.join('\n;\n');
 
     var hash = crypto.createHash('sha1');
     hash.update(final_code);

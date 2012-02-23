@@ -81,3 +81,14 @@
 .test_table .event .nodata { color: #ccc; font-style: italic; }
 .test_table .event .xtimes { font-weight: bold; }
 
+.test_table .event .debug {
+    display: none;
+}
+
+.test_table .event:hover .debug {
+    display: inline;
+    color: gray;
+    text-decoration: underline;
+    cursor: pointer;
+}
+

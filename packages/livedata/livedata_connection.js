@@ -227,6 +227,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
     self._send_method(
       {msg: 'method', method: name, params: args},
       result_func);
+
+    return ret;
   },
 
   status: function () {

@@ -1,17 +1,7 @@
 Meteor.startup(function () {
   test.setReporter(reportResults);
-  test.list();
-
-  run_tests();
+  test.run();
 });
-
-var run_tests = function () {
-  setTimeout(function () {
-    //resetResults();
-    test.run();
-  }, 0);
-};
-
 
 Template.test_table.data = function() {
   var cx = Meteor.deps.Context.current;
@@ -80,6 +70,8 @@ Template.test.eventsArray = function() {
 
   var dupLists = partitionBy(
     _.map(events, function(e) {
+      // XXX XXX We need something better than stringify!
+      // stringify([undefined]) === "[null]"
       return {obj: e, str: JSON.stringify(e)};
     }), function(x) { return x.str; });
 
@@ -89,23 +81,34 @@ Template.test.eventsArray = function() {
   });
 };
 
+Template.event.events = {
+  'click .debug': function () {
+    // the way we manage groupPath, shortName, cookies, etc, is really
+    // messy. needs to be aggressively refactored.
+    forgetEvents({groupPath: this.cookie.groupPath,
+                  test: this.cookie.shortName});
+    test.debug(this.cookie);
+  }
+};
+
 Template.event.get_details = function() {
   var details = this.details;
   if (! details) {
     return null;
   } else {
+    // XXX XXX We need something better than stringify!
+    // stringify([undefined]) === "[null]"
     return JSON.stringify(details);
   }
+};
+
+Template.event.is_debuggable = function() {
+  return !!this.cookie;
 };
 
 
 var resultTree = [];
 var resultDeps = [];
-
-var resetResults = function() {
-  resultTree = [];
-  _resultsChanged();
-};
 
 var _resultsChanged = function() {
   _.each(resultDeps, function(cx) {
@@ -128,7 +131,8 @@ var _testTime = function(t) {
 
 var _testStatus = function(t) {
   var events = t.events || [];
-  if (events.length == 0 || _.last(events).type != "finish") {
+  if (events.length == 0 || (_.last(events).type != "finish" &&
+                             _.last(events).type != "exception")) {
     return "running";
   } else if (_.any(events, function(e) {
     return e.type == "fail" || e.type == "exception"; })) {
@@ -138,9 +142,11 @@ var _testStatus = function(t) {
   }
 };
 
-// report a series of events in a single test, or just
-// the existence of that test if no events
-var reportResults = function(results) {
+// given a 'results' as delivered via setReporter, find the
+// corresponding leaf object in resultTree, creating one if it doesn't
+// exist. it will be an object with attributes 'name', 'parent', and
+// possibly 'events'.
+var _findTestForResults = function (results) {
   var groupPath = results.groupPath; // array
 
   if ((! _.isArray(groupPath)) || (groupPath.length < 1)) {
@@ -167,14 +173,30 @@ var reportResults = function(results) {
     group.tests.push(test);
   }
 
+  return test;
+};
+
+// report a series of events in a single test, or just
+// the existence of that test if no events
+var reportResults = function(results) {
+  var test = _findTestForResults(results);
+
+
   if (_.isArray(results.events)) {
     // append events, if present
     Array.prototype.push.apply((test.events || (test.events = [])),
                                results.events);
   }
 
-
   _.defer(_throttled_update);
+};
+
+// forget all of the events for a particular test
+var forgetEvents = function (test) {
+  var test = _findTestForResults(test);
+
+  delete test.events;
+  _resultsChanged();
 };
 
 var _throttled_update = _.throttle(function() {
