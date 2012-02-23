@@ -16,6 +16,7 @@ if [ "$UNAME" = "Darwin" ] ; then
         # Can't just test uname -m = x86_64, because Snow Leopard can
         # return other values.
         echo "Only 64-bit Intel processors are supported at this time."
+        exit 1
     fi
     ARCH="x86_64"
 elif [ "$UNAME" = "Linux" ] ; then
