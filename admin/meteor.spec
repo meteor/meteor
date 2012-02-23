@@ -22,6 +22,10 @@ XXX
 
 %install
 [ "%{buildroot}" != '/' ] && rm -rf %{buildroot}
+if [ ! -f "%{TARBALL}" ] ; then
+    echo "Can't find TARBALL: %{TARBALL}"
+    exit 1
+fi
 install -d %{buildroot}%{_libdir}
 # XXX XXX
 tar -x -C %{buildroot}%{_libdir} -f %{TARBALL}
