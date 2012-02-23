@@ -2,8 +2,12 @@
 
 cd `dirname $0`
 
-PARENT="/usr/local"
-TARGET_DIR="/usr/local/meteor"
+if [ "$PREFIX" != "" ] ; then
+    PARENT="$PREFIX"
+else
+    PARENT="/usr/local"
+fi
+TARGET_DIR="$PARENT/meteor"
 
 # XXX try to fix it up automatically?
 if [ ! -d "$PARENT" -o ! -w "$PARENT" ] ; then
@@ -13,6 +17,8 @@ elif [ -d "$PARENT/bin" -a ! -w "$PARENT/bin" ] ; then
     echo "Can not write to $PARENT/bin"
     exit 1
 fi
+
+echo "Installing in $PARENT"
 
 rm -rf "$TARGET_DIR"
 
