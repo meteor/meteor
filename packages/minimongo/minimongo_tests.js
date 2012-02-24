@@ -825,6 +825,64 @@ test("minimongo - modify", function () {
 // XXX test update() (selecting docs, multi, upsert..)
 
 test("minimongo - observe", function () {
-  // XXX needs tests!
-  // don't forget tests for stop
+  var operations = [];
+  var cbs = {
+    added: function (obj, idx) {
+      delete obj._id;
+      operations.push(LocalCollection._deepcopy(['added', obj, idx]));
+    },
+    changed: function (obj, at, old_obj) {
+      delete obj._id;
+      delete old_obj._id;
+      operations.push(LocalCollection._deepcopy(['changed', obj, at, old_obj]));
+    },
+    moved: function (obj, old_at, new_at) {
+      delete obj._id;
+      operations.push(LocalCollection._deepcopy(['moved', obj, old_at, new_at]));
+    },
+    removed: function (id, at, old_obj) {
+      delete old_obj._id;
+      operations.push(LocalCollection._deepcopy(['removed', id, at, old_obj]));
+    }
+  };
+  var handle;
+
+  var c = new LocalCollection();
+  handle = c.find({}, {sort: {a: 1}}).observe(cbs);
+
+  c.insert({a:1});
+  assert.equal(operations.shift(), ['added', {a:1}, 0]);
+  c.update({a:1}, {$set: {a: 2}});
+  assert.equal(operations.shift(), ['changed', {a:2}, 0, {a:1}]);
+  c.insert({a:10});
+  assert.equal(operations.shift(), ['added', {a:10}, 1]);
+  c.update({}, {$inc: {a: 1}}, {multi: true});
+  assert.equal(operations.shift(), ['changed', {a:3}, 0, {a:2}]);
+  assert.equal(operations.shift(), ['changed', {a:11}, 1, {a:10}]);
+  c.update({a:11}, {a:1});
+  assert.equal(operations.shift(), ['changed', {a:1}, 1, {a:11}]);
+  assert.equal(operations.shift(), ['moved', {a:1}, 1, 0]);
+  c.remove({a:2});
+  assert.equal(operations.shift(), undefined);
+  var id = c.findOne({a:3})._id;
+  c.remove({a:3});
+  assert.equal(operations.shift(), ['removed', id, 1, {a:3}]);
+
+  // test stop
+  handle.stop();
+  c.insert({a:2});
+  assert.equal(operations.shift(), undefined);
+
+  // test initial inserts (and backwards sort)
+  handle = c.find({}, {sort: {a: -1}}).observe(cbs);
+  assert.equal(operations.shift(), ['added', {a:2}, 0]);
+  assert.equal(operations.shift(), ['added', {a:1}, 1]);
+  handle.stop();
+
+  // test _suppress_initial
+  handle = c.find({}, {sort: {a: -1}}).observe(_.extend(cbs, {_suppress_initial: true}));
+  assert.equal(operations.shift(), undefined);
+  c.insert({a:100});
+  assert.equal(operations.shift(), ['added', {a:100}, 0]);
+  handle.stop();
 });

@@ -147,7 +147,6 @@ LocalCollection.LiveResultsSet = function () {};
 //    - changed (new_object, at_index, old_object)
 //    - moved (object, old_index, new_index) - can only fire with changed()
 //    - removed (id, at_index, object)
-//  * sort: sort descriptor
 //
 // attributes available on returned query handle:
 //  * stop(): end updates
