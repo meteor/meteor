@@ -849,6 +849,7 @@ test("minimongo - observe", function () {
 
   var c = new LocalCollection();
   handle = c.find({}, {sort: {a: 1}}).observe(cbs);
+  assert.isTrue(handle.collection === c);
 
   c.insert({a:1});
   assert.equal(operations.shift(), ['added', {a:1}, 0]);
