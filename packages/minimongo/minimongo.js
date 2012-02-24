@@ -144,10 +144,9 @@ LocalCollection.LiveResultsSet = function () {};
 // options to contain:
 //  * callbacks:
 //    - added (object, before_index)
-//    - changed (new_object, at_index)
+//    - changed (new_object, at_index, old_object)
 //    - moved (object, old_index, new_index) - can only fire with changed()
-//    - removed (id, at_index)
-//  * sort: sort descriptor
+//    - removed (id, at_index, object)
 //
 // attributes available on returned query handle:
 //  * stop(): end updates
@@ -335,6 +334,8 @@ LocalCollection.prototype._modifyAndNotify = function (doc, mod) {
   for (var qid in self.queries)
     matched_before[qid] = self.queries[qid].selector_f(doc);
 
+  var old_doc = LocalCollection._deepcopy(doc);
+
   LocalCollection._modify(doc, mod);
 
   for (var qid in self.queries) {
@@ -346,7 +347,7 @@ LocalCollection.prototype._modifyAndNotify = function (doc, mod) {
     else if (!before && after)
       LocalCollection._insertInResults(query, doc);
     else if (before && after)
-      LocalCollection._updateInResults(query, doc);
+      LocalCollection._updateInResults(query, doc, old_doc);
   }
 };
 
@@ -384,13 +385,13 @@ LocalCollection._insertInResults = function (query, doc) {
 
 LocalCollection._removeFromResults = function (query, doc) {
   var i = LocalCollection._findInResults(query, doc);
-  query.removed(doc._id, i);
+  query.removed(doc._id, i, doc);
   query.results.splice(i, 1);
 };
 
-LocalCollection._updateInResults = function (query, doc) {
+LocalCollection._updateInResults = function (query, doc, old_doc) {
   var orig_idx = LocalCollection._findInResults(query, doc);
-  query.changed(LocalCollection._deepcopy(doc), orig_idx);
+  query.changed(LocalCollection._deepcopy(doc), orig_idx, old_doc);
 
   if (!query.sort_f)
     return;
