@@ -137,7 +137,7 @@ updater.get_manifest(function (manifest) {
       "." + rpm_arch + ".rpm";
 
     download_callback = function (rpm_path) {
-      var proc = run_with_root('rpm', ['-Uvh', '--replacepkgs', rpm_path]);
+      var proc = run_with_root('rpm', ['-U', '--force', rpm_path]);
       proc.on('exit', function (code, signal) {
         if (code !== 0 || signal) {
           console.log("failed to install rpm");

@@ -160,7 +160,7 @@ elif [ "$UNAME" = "Linux" ] ; then
             exit 1
         fi
         echo "... installing .rpm"
-        do_with_root rpm -Uvh --replacepkgs "$FILE"
+        do_with_root rpm -U --force "$FILE"
 
     else
         echo "Unsupported Linux distribution."
