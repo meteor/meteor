@@ -157,7 +157,7 @@ var files = module.exports = {
     if (path.existsSync(filepath)) {
       var data = fs.readFileSync(filepath, 'utf8');
       var lines = data.split(/\n/);
-      if (_.any(lines, function (x) { return x === entry })) {
+      if (_.any(lines, function (x) { return x === entry; })) {
         // already there do nothing
       } else {
         // rewrite file w/ new entry.
