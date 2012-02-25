@@ -194,16 +194,7 @@ _Mongo.Cursor = function (mongo, collection_name, selector, options) {
 
   self.mongo._withCollection(collection_name, function(err, collection) {
     // XXX err handling
-
-    var cursor = collection.find(self.selector);
-    // XXX is there a way to do this as for x in ['sort', 'limit', 'skip']?
-    if (self.options.sort)
-      cursor = cursor.sort(self.options.sort);
-    if (self.options.limit)
-      cursor = cursor.limit(self.options.limit);
-    if (self.options.skip)
-      cursor = cursor.skip(self.options.skip);
-
+    var cursor = collection.find(self.selector, self.options.fields, self.options.skip, self.options.limit, self.options.sort);
     future.ret(cursor);
   });
 
@@ -267,7 +258,6 @@ _Mongo.Cursor.prototype.count = function () {
 //    - changed (new_object, at_index)
 //    - moved (object, old_index, new_index) - can only fire with changed()
 //    - removed (id, at_index)
-//  * sort: sort descriptor
 //
 // attributes available on returned LiveResultsSet
 //  * stop(): end updates
