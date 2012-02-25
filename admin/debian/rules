@@ -15,6 +15,7 @@ override_dh_prep:
 	if [ ! -f "$(TARBALL)" ] ; then echo "Can't find TARBALL: $(TARBALL)" ; exit 1 ; fi
 	mkdir -p debian/tmp/usr/lib
 	tar -C debian/tmp/usr/lib -xzf $(TARBALL)
+	echo -n 'deb' > debian/tmp/usr/lib/meteor/.package_stamp
 
 %:
 	dh $@ 

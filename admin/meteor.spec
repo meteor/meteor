@@ -31,6 +31,7 @@ install -d %{buildroot}%{_libdir}
 tar -x -C %{buildroot}%{_libdir} -f %{TARBALL}
 install -d %{buildroot}%{_bindir}
 ln -s /%{_libdir}/meteor/bin/meteor %{buildroot}%{_bindir}/meteor
+echo -n 'rpm' > %{buildroot}%{_libdir}/meteor/.package_stamp
 
 %clean
 [ "%{buildroot}" != '/' ] && rm -rf %{buildroot}
