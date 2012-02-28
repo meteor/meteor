@@ -258,6 +258,7 @@ _Mongo.Cursor.prototype.count = function () {
 //    - changed (new_object, at_index)
 //    - moved (object, old_index, new_index) - can only fire with changed()
 //    - removed (id, at_index)
+//    - complete () - called once after the inital set of callbacks
 //
 // attributes available on returned LiveResultsSet
 //  * stop(): end updates
@@ -289,6 +290,7 @@ _Mongo.LiveResultsSet = function (cursor, options) {
   this.changed = options.changed;
   this.moved = options.moved;
   this.removed = options.removed;
+  this.complete = options.complete;
 
   // if caller doesn't want a flurry of added callbacks, prefill the
   // cache.  otherwise, trigger the first poll() cycle immediately.
@@ -297,51 +299,13 @@ _Mongo.LiveResultsSet = function (cursor, options) {
   else
     this.poll();
 
+  // signal that the first round of added calls is finished.  note,
+  // this relies on poll() blocking until callbacks are complete.
+  if (options.complete)
+    options.complete();
+
   // register myself with the mongo driver
   this.cursor.mongo.observers[this.qid] = this;
-};
-
-
-
-// deep equality test: use for literal document matches
-// XXX dup w/ minimongo/minimongo.js
-_Mongo.LiveResultsSet.sameDocument = function (x, y) {
-  var match = function (a, b) {
-    // scalars
-    if (typeof a === 'number' || typeof a === 'string' ||
-        typeof a === 'boolean' || a === undefined || a === null)
-      return a === b;
-    if (typeof a === 'function')
-      return false;
-
-    // OK, typeof a === 'object'
-    if (typeof b !== 'object')
-      return false;
-
-    // arrays
-    if (a instanceof Array) {
-      if (!(b instanceof Array))
-        return false;
-      if (a.length !== b.length)
-        return false;
-      for (var i = 0; i < a.length; i++)
-        if (!match(a[i],b[i]))
-          return false;
-      return true;
-    }
-
-    // objects
-    var unmatched_b_keys = 0;
-    for (var x in b)
-      unmatched_b_keys++;
-    for (var x in a) {
-      if (!(x in b) || !match(a[x], b[x]))
-        return false;
-      unmatched_b_keys--;
-    }
-    return unmatched_b_keys === 0;
-  };
-  return match(x, y);
 };
 
 _Mongo.LiveResultsSet.prototype.fetchResults = function (results, indexes) {

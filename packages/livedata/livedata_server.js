@@ -132,22 +132,22 @@ Meteor._LivedataServer.Subscription.prototype.flush = function () {
   self.pending_complete = false;
 };
 
-Meteor._LivedataServer.Subscription.prototype.publishCursor = function (cursor) {
+Meteor._LivedataServer.Subscription.prototype.publishCursor = function (cursor, name) {
   var self = this;
+  var collection = name || cursor.collection_name;
 
   // push all current data and flag as satisfying the sub.
   cursor.forEach(function (obj) {
-    self.set(cursor.collection_name, obj._id, obj);
+    self.set(collection, obj._id, obj);
   });
-  if (self.sub_id)
-    self.complete();
+  self.complete();
   self.flush();
 
   // callbacks to push future data.
   var observe_handle = cursor.observe({
     _suppress_initial: true,
     added: function (obj) {
-      self.set(cursor.collection_name, obj._id, obj);
+      self.set(collection, obj._id, obj);
       self.flush();
     },
     changed: function (obj, old_idx, old_obj) {
@@ -156,13 +156,13 @@ Meteor._LivedataServer.Subscription.prototype.publishCursor = function (cursor) 
         if (!_.isEqual(v, old_obj[k]))
           set[k] = v;
       });
-      self.set(cursor.collection_name, obj._id, set);
+      self.set(collection, obj._id, set);
       var dead_keys = _.difference(_.keys(old_obj), _.keys(obj));
-      self.unset(cursor.collection_name, obj._id, dead_keys);
+      self.unset(collection, obj._id, dead_keys);
       self.flush();
     },
     removed: function (id, old_idx, old_obj) {
-      self.unset(cursor.collection_name, id, _.keys(old_obj));
+      self.unset(collection, id, _.keys(old_obj));
       self.flush();
     }
   });
