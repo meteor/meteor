@@ -56,16 +56,16 @@ Meteor._LivedataServer.Subscription = function (socket, sub_id) {
   this.queue = [];
 
   // stop callbacks to g/c this sub.  called w/ zero arguments.
-  this.stops = [];
+  this.stop_callbacks = [];
 };
 
 Meteor._LivedataServer.Subscription.prototype.stop = function () {
-  for (var i = 0; i < this.stops.length; i++)
-    (this.stops[i])();
+  for (var i = 0; i < this.stop_callbacks.length; i++)
+    (this.stop_callbacks[i])();
 };
 
 Meteor._LivedataServer.Subscription.prototype.onStop = function (callback) {
-  this.stops.push(callback);
+  this.stop_callbacks.push(callback);
 };
 
 // peek at the last message in the queue.  return it if it's a
