@@ -97,11 +97,18 @@ Meteor._LivedataServer.Subscription.prototype.unset = function (collection_name,
   msg.unset = _.union(msg.unset || [], keys);
 };
 
-Meteor._LivedataServer.Subscription.prototype.satisfies_sub = function () {
+Meteor._LivedataServer.Subscription.prototype.complete = function () {
   var self = this;
-  var msg = self._ensureLastMsg();
-  msg.subs = msg.subs || [];
-  msg.subs.push(self.sub_id);
+
+  // universal subs (sub_id is null) can't signal completion.  it's
+  // not an error, since the same handler (eg publishQuery) might be used
+  // to implement both named and universal subs.
+
+  if (self.sub_id) {
+    var msg = self._ensureLastMsg();
+    msg.subs = msg.subs || [];
+    msg.subs.push(self.sub_id);
+  }
 };
 
 Meteor._LivedataServer.Subscription.prototype.flush = function () {
@@ -121,7 +128,7 @@ Meteor._LivedataServer.Subscription.prototype.publishCursor = function (cursor) 
     self.set(cursor.collection_name, obj._id, obj);
   });
   if (self.sub_id)
-    self.satisfies_sub();
+    self.complete();
   self.flush();
 
   // callbacks to push future data.
