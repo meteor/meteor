@@ -24,7 +24,10 @@ mkdir -p "$PREFIX"
 VERSION="$($PREFIX/bin/meteor --version | sed 's/.* //')"
 
 # tar it up
-TARBALL=~/meteor-package-${UNAME}-${ARCH}-${VERSION}.tar.gz
+OUTDIR="$TOPDIR/dist"
+rm -rf "$OUTDIR"
+mkdir -p "$OUTDIR"
+TARBALL="$OUTDIR/meteor-package-${UNAME}-${ARCH}-${VERSION}.tar.gz"
 echo "Tarring to: $TARBALL"
 
 tar -C "$PREFIX" --exclude .meteor/local -czf "$TARBALL" meteor
@@ -32,7 +35,7 @@ tar -C "$PREFIX" --exclude .meteor/local -czf "$TARBALL" meteor
 
 if [ "$UNAME" == "Linux" ] ; then
     echo "Building debian package"
-    DEBDIR="TMPDIR/debian"
+    DEBDIR="$TMPDIR/debian"
     mkdir "$DEBDIR"
     cd "$DEBDIR"
     cp "$TARBALL" "meteor_${VERSION}.orig.tar.gz"
@@ -41,16 +44,13 @@ if [ "$UNAME" == "Linux" ] ; then
     cp -r "$TOPDIR/admin/debian" .
     export TARBALL
     dpkg-buildpackage
-
-    # XXX!
-    cp ../*.deb ~
+    cp ../*.deb "$OUTDIR"
 
 
     echo "Building RPM"
-    # XXX how to set rpm build dir to not be ~/rpmbuild
     rpmbuild -bb --define="TARBALL $TARBALL" "$TOPDIR/admin/meteor.spec"
 
-    # XXX
-    cp ~/rpmbuild/RPMS/*/*.rpm ~
+    # XXX how to set rpm build dir to not be ~/rpmbuild
+    cp ~/rpmbuild/RPMS/*/*.rpm "$OUTDIR"
 
 fi
