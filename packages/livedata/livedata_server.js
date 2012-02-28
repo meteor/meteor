@@ -45,7 +45,7 @@ Meteor._LivedataServer = function () {
 };
 
 // ctor for a sub handle: the input to each publish function
-Meteor._LivedataServer.SubHandle = function (socket, sub_id) {
+Meteor._LivedataServer.Subscription = function (socket, sub_id) {
   // transport.  provides send(obj).
   this.socket = socket;
 
@@ -59,18 +59,18 @@ Meteor._LivedataServer.SubHandle = function (socket, sub_id) {
   this.stops = [];
 };
 
-Meteor._LivedataServer.SubHandle.prototype.stop = function () {
+Meteor._LivedataServer.Subscription.prototype.stop = function () {
   for (var i = 0; i < this.stops.length; i++)
     (this.stops[i])();
 };
 
-Meteor._LivedataServer.SubHandle.prototype.on_stop = function (callback) {
+Meteor._LivedataServer.Subscription.prototype.onStop = function (callback) {
   this.stops.push(callback);
 };
 
 // peek at the last message in the queue.  return it if it's a
 // match, or create a new match on the queue and return that.
-Meteor._LivedataServer.SubHandle.prototype._lastMsgOrNew = function (collection_name, id) {
+Meteor._LivedataServer.Subscription.prototype._lastMsgOrNew = function (collection_name, id) {
   var self = this;
   var msg = self.queue.length && self.queue[self.queue.length - 1];
   if (!msg || msg.msg !== 'data' || msg.collection_name !== collection_name || msg.id !== id) {
@@ -80,7 +80,7 @@ Meteor._LivedataServer.SubHandle.prototype._lastMsgOrNew = function (collection_
   return msg;
 };
 
-Meteor._LivedataServer.SubHandle.prototype.set = function (collection_name, id, dictionary) {
+Meteor._LivedataServer.Subscription.prototype.set = function (collection_name, id, dictionary) {
   var self = this;
   var obj = _.extend({}, dictionary);
   delete obj['_id'];
@@ -89,7 +89,7 @@ Meteor._LivedataServer.SubHandle.prototype.set = function (collection_name, id, 
   msg.set = _.extend(msg.set || {}, obj);
 };
 
-Meteor._LivedataServer.SubHandle.prototype.unset = function (collection_name, id, keys) {
+Meteor._LivedataServer.Subscription.prototype.unset = function (collection_name, id, keys) {
   var self = this;
   keys = _.without(keys, '_id');
 
@@ -97,14 +97,14 @@ Meteor._LivedataServer.SubHandle.prototype.unset = function (collection_name, id
   msg.unset = _.union(msg.unset || [], keys);
 };
 
-Meteor._LivedataServer.SubHandle.prototype.satisfies_sub = function () {
+Meteor._LivedataServer.Subscription.prototype.satisfies_sub = function () {
   var self = this;
   var msg = self._lastMsgOrNew();
   msg.subs = msg.subs || [];
   msg.subs.push(self.sub_id);
 };
 
-Meteor._LivedataServer.SubHandle.prototype.flush = function () {
+Meteor._LivedataServer.Subscription.prototype.flush = function () {
   var self = this;
   for (var i = 0; i < self.queue.length; i++) {
     self.socket.send(JSON.stringify(self.queue[i]));
@@ -113,7 +113,7 @@ Meteor._LivedataServer.SubHandle.prototype.flush = function () {
   self.queue = [];
 };
 
-Meteor._LivedataServer.SubHandle.prototype.publishCursor = function (cursor) {
+Meteor._LivedataServer.Subscription.prototype.publishCursor = function (cursor) {
   var self = this;
 
   // push all current data and flag as satisfying the sub.
@@ -153,7 +153,7 @@ Meteor._LivedataServer.SubHandle.prototype.publishCursor = function (cursor) {
   });
 
   // register stop callback (expects lambda w/ no args)
-  self.on_stop(_.bind(observe_handle.stop, observe_handle));
+  self.onStop(_.bind(observe_handle.stop, observe_handle));
 };
 
 _.extend(Meteor._LivedataServer.prototype, {
@@ -162,7 +162,7 @@ _.extend(Meteor._LivedataServer.prototype, {
   _startSubscription: function (socket, handler, sub_id, params) {
     var self = this;
 
-    var sub = new Meteor._LivedataServer.SubHandle(socket, sub_id);
+    var sub = new Meteor._LivedataServer.Subscription(socket, sub_id);
     if (sub_id)
       socket.meteor.named_subs[sub_id] = sub;
     else
