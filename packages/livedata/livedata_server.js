@@ -53,7 +53,8 @@ Meteor._LivedataServer.Subscription = function (socket, sub_id) {
   this.sub_id = sub_id;
 
   // unsent DDP messages.
-  this.queue = [];
+  this.pending_updates = {};
+  this.pending_complete = false;
 
   // stop callbacks to g/c this sub.  called w/ zero arguments.
   this.stop_callbacks = [];
@@ -68,33 +69,41 @@ Meteor._LivedataServer.Subscription.prototype.onStop = function (callback) {
   this.stop_callbacks.push(callback);
 };
 
-// peek at the last message in the queue.  return it if it's a
-// match, or create a new match on the queue and return that.
-Meteor._LivedataServer.Subscription.prototype._ensureLastMsg = function (collection_name, id) {
+Meteor._LivedataServer.Subscription.prototype._ensureMsg = function (collection_name, id) {
   var self = this;
-  var msg = self.queue.length && self.queue[self.queue.length - 1];
-  if (!msg || msg.msg !== 'data' || msg.collection_name !== collection_name || msg.id !== id) {
-    msg = {msg: 'data', collection: collection_name, id: id};
-    self.queue.push(msg);
-  }
-  return msg;
+  if (!self.pending_updates[collection_name])
+    self.pending_updates[collection_name] = {};
+  if (!self.pending_updates[collection_name][id])
+    self.pending_updates[collection_name][id] = {msg: 'data', collection: collection_name, id: id};
+  return self.pending_updates[collection_name][id];
 };
 
 Meteor._LivedataServer.Subscription.prototype.set = function (collection_name, id, dictionary) {
   var self = this;
   var obj = _.extend({}, dictionary);
   delete obj._id;
-
-  var msg = self._ensureLastMsg(collection_name, id);
+  var msg = self._ensureMsg(collection_name, id);
   msg.set = _.extend(msg.set || {}, obj);
+
+  if (msg.unset) {
+    msg.unset = _.difference(msg.unset, _.keys(msg.set));
+    if (!msg.unset.length)
+      delete msg.unset;
+  }
 };
 
 Meteor._LivedataServer.Subscription.prototype.unset = function (collection_name, id, keys) {
   var self = this;
   keys = _.without(keys, '_id');
-
-  var msg = self._ensureLastMsg(collection_name, id);
+  var msg = self._ensureMsg(collection_name, id);
   msg.unset = _.union(msg.unset || [], keys);
+
+  if (msg.set) {
+    for (var key in keys)
+      delete msg.set[key];
+    if (!_.keys(msg.set))
+      delete msg.set;
+  }
 };
 
 Meteor._LivedataServer.Subscription.prototype.complete = function () {
@@ -104,20 +113,23 @@ Meteor._LivedataServer.Subscription.prototype.complete = function () {
   // not an error, since the same handler (eg publishQuery) might be used
   // to implement both named and universal subs.
 
-  if (self.sub_id) {
-    var msg = self._ensureLastMsg();
-    msg.subs = msg.subs || [];
-    msg.subs.push(self.sub_id);
-  }
+  if (self.sub_id)
+    self.pending_complete = true;
 };
 
 Meteor._LivedataServer.Subscription.prototype.flush = function () {
   var self = this;
-  for (var i = 0; i < self.queue.length; i++) {
-    self.socket.send(JSON.stringify(self.queue[i]));
-    // Meteor._debug("LD DATA", self.sub_id, self.queue[i]);
-  }
-  self.queue = [];
+  var msg;
+
+  for (var name in self.pending_updates)
+    for (var id in self.pending_updates[name])
+      self.socket.send(JSON.stringify(self.pending_updates[name][id]));
+
+  if (self.pending_complete)
+    self.socket.send(JSON.stringify({msg: 'data', subs: [self.sub_id]}));
+
+  self.pending_updates = {};
+  self.pending_complete = false;
 };
 
 Meteor._LivedataServer.Subscription.prototype.publishCursor = function (cursor) {
@@ -204,8 +216,6 @@ _.extend(Meteor._LivedataServer.prototype, {
     // Always start a new session. We don't support any reconnection.
     socket.send(JSON.stringify({msg: 'connected', session: Meteor.uuid()}));
 
-    // Meteor._debug("LD CONNECT", msg);
-
     // Spin up all the universal publishers.
     Fiber(function () {
       _.each(self.universal_publish_handlers, function (handler) {
@@ -219,14 +229,12 @@ _.extend(Meteor._LivedataServer.prototype, {
   _livedata_sub: function (socket, msg) {
     var self = this;
 
-    // Meteor._debug("LD SUB", msg);
-
     if (!self.publish_handlers[msg.name]) {
-      // can't sub to unknown publish name
       // XXX error value
-      Meteor._debug("UNKNOWN NAME", msg.name);
       socket.send(JSON.stringify({
-        msg: 'nosub', id: msg.id, error: {error: 17, reason: "Unknown name"}}));
+        msg: 'nosub',
+        id: msg.id,
+        error: {error: 17, reason: "Unknown publish named '" + msg.name + "'"}}));
       return;
     }
 
@@ -242,8 +250,6 @@ _.extend(Meteor._LivedataServer.prototype, {
 
   _livedata_unsub: function (socket, msg) {
     var self = this;
-
-    // Meteor._debug("LD UNSUB", msg);
 
     Fiber(function () {
       self._stopSubscription(socket, msg.id);
@@ -297,7 +303,6 @@ _.extend(Meteor._LivedataServer.prototype, {
    * @param handler {Function} publish handler
    * @param options {Object}
    *
-
    * Server will call handler function on each new subscription,
    * either when receiving DDP sub message for a named subscription, or on
    * DDP connect for a universal subscription.
@@ -319,7 +324,7 @@ _.extend(Meteor._LivedataServer.prototype, {
     options = options || {};
 
     if (name && name in self.publish_handlers) {
-      Meteor._debug("ERROR DUPLICATE PUBLISH " + name);
+      Meteor._debug("Ignoring duplicate publish named '" + name + "'");
       return;
     }
 
