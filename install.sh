@@ -34,6 +34,6 @@ cp meteor "$TARGET_DIR/bin"
 CPR app "$TARGET_DIR"
 CPR packages "$TARGET_DIR"
 
-mkdir -p /usr/local/bin
-rm -f /usr/local/bin/meteor
-ln -s "$TARGET_DIR/bin/meteor" /usr/local/bin/meteor
+mkdir -p "$PARENT/bin"
+rm -f "$PARENT/bin/meteor"
+ln -s "$TARGET_DIR/bin/meteor" "$PARENT/bin/meteor"
