@@ -70,7 +70,7 @@ Meteor._LivedataServer.Subscription.prototype.onStop = function (callback) {
 
 // peek at the last message in the queue.  return it if it's a
 // match, or create a new match on the queue and return that.
-Meteor._LivedataServer.Subscription.prototype._lastMsgOrNew = function (collection_name, id) {
+Meteor._LivedataServer.Subscription.prototype._ensureLastMsg = function (collection_name, id) {
   var self = this;
   var msg = self.queue.length && self.queue[self.queue.length - 1];
   if (!msg || msg.msg !== 'data' || msg.collection_name !== collection_name || msg.id !== id) {
@@ -83,9 +83,9 @@ Meteor._LivedataServer.Subscription.prototype._lastMsgOrNew = function (collecti
 Meteor._LivedataServer.Subscription.prototype.set = function (collection_name, id, dictionary) {
   var self = this;
   var obj = _.extend({}, dictionary);
-  delete obj['_id'];
+  delete obj._id;
 
-  var msg = self._lastMsgOrNew(collection_name, id);
+  var msg = self._ensureLastMsg(collection_name, id);
   msg.set = _.extend(msg.set || {}, obj);
 };
 
@@ -93,13 +93,13 @@ Meteor._LivedataServer.Subscription.prototype.unset = function (collection_name,
   var self = this;
   keys = _.without(keys, '_id');
 
-  var msg = self._lastMsgOrNew(collection_name, id);
+  var msg = self._ensureLastMsg(collection_name, id);
   msg.unset = _.union(msg.unset || [], keys);
 };
 
 Meteor._LivedataServer.Subscription.prototype.satisfies_sub = function () {
   var self = this;
-  var msg = self._lastMsgOrNew();
+  var msg = self._ensureLastMsg();
   msg.subs = msg.subs || [];
   msg.subs.push(self.sub_id);
 };
@@ -134,16 +134,12 @@ Meteor._LivedataServer.Subscription.prototype.publishCursor = function (cursor) 
     changed: function (obj, old_idx, old_obj) {
       var set = {};
       _.each(obj, function (v, k) {
-        // comparison doesn't have to be perfect, just means we send
-        // extra bits.
-        if (JSON.stringify(v) !== JSON.stringify(old_obj[k]))
+        if (!_.isEqual(v, old_obj[k]))
           set[k] = v;
       });
-      if (_.keys(set).length)
-        self.set(cursor.collection_name, obj._id, set);
+      self.set(cursor.collection_name, obj._id, set);
       var dead_keys = _.difference(_.keys(old_obj), _.keys(obj));
-      if (dead_keys.length)
-        self.unset(cursor.collection_name, obj._id, dead_keys);
+      self.unset(cursor.collection_name, obj._id, dead_keys);
       self.flush();
     },
     removed: function (id, old_idx, old_obj) {
@@ -228,7 +224,7 @@ _.extend(Meteor._LivedataServer.prototype, {
     }
 
     Fiber(function () {
-      if (msg.id)
+      if (msg.id in socket.meteor.named_subs)
         // XXX client screwed up
         self._stopSubscription(socket, msg.id);
 
@@ -268,6 +264,10 @@ _.extend(Meteor._LivedataServer.prototype, {
           var result = func.apply(null, msg.params);
           socket.send(JSON.stringify({
             msg: 'result', id: msg.id, result: result}));
+          // the method is satisfied once func returns, because any
+          // DB observe callbacks run to completion in the same tick.
+          // publishQuery will queue data before returning from the
+          // observe callback.
           socket.send(JSON.stringify({
             msg: 'data', methods: [msg.id]}));
         } catch (err) {

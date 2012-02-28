@@ -301,7 +301,10 @@ _Mongo.LiveResultsSet = function (cursor, options) {
   this.cursor.mongo.observers[this.qid] = this;
 };
 
+
+
 // deep equality test: use for literal document matches
+// XXX dup w/ minimongo/minimongo.js
 _Mongo.LiveResultsSet.sameDocument = function (x, y) {
   var match = function (a, b) {
     // scalars
@@ -368,7 +371,7 @@ _Mongo.LiveResultsSet.prototype.poll = function () {
     if (self.added && !old_results[obj._id])
       self.added(obj, new_indexes[obj._id]);
 
-    else if (self.changed && !_Mongo.LiveResultsSet.sameDocument(new_results[obj._id], old_results[obj._id]))
+    else if (self.changed && !_.isEqual(new_results[obj._id], old_results[obj._id]))
       self.changed(obj, old_indexes[obj._id], old_results[obj._id]);
 
     if (self.moved && new_indexes[obj._id] !== old_indexes[obj._id])
@@ -385,8 +388,6 @@ _Mongo.LiveResultsSet.prototype.poll = function () {
 
 _Mongo.LiveResultsSet.prototype.stop = function () {
   var self = this;
-
-  console.log("OBSERVE STOP", self.collection_name, self.qid);
   delete self.cursor.mongo.observers[self.qid];
 };
 
