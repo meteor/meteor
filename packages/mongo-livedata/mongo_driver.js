@@ -16,6 +16,10 @@ Future.prototype.ret = Future.prototype.return;
 _Mongo = function (url) {
   var self = this;
 
+  // holds active observes
+  self.observers = {};
+  self.next_observer_id = 1;
+
   self.collection_queue = [];
 
   MongoDB.connect(url, function(err, db) {
@@ -27,6 +31,14 @@ _Mongo = function (url) {
       db.collection(c.name, c.callback);
     }
   });
+
+  // refresh all outstanding observers every 10 seconds.  they are
+  // also triggered on DB updates.
+  setInterval(function () {
+    Fiber(function () {
+      self.pollObservers.call(self);
+    }).run();
+  }, 10000);
 };
 
 // protect against dangerous selectors.  falsey and {_id: falsey}
@@ -56,6 +68,19 @@ _Mongo.prototype._withCollection = function(collection_name, callback) {
   }
 };
 
+// poke observers watching the given collection name, or all observers
+// if no collection name provided.
+_Mongo.prototype.pollObservers = function (collection_name) {
+  var self = this;
+
+  for (var id in self.observers) {
+    var o = self.observers[id];
+    if (!collection_name || o.collection_name === collection_name) {
+      o.poll();
+    }
+  }
+};
+
 //////////// Public API //////////
 
 _Mongo.prototype.insert = function (collection_name, document) {
@@ -70,7 +95,10 @@ _Mongo.prototype.insert = function (collection_name, document) {
     // XXX err handling
     collection.insert(document, {safe: true}, function(err) {
       // XXX err handling
-      future.ret();
+      Fiber(function () {
+        self.pollObservers(collection_name);
+        future.ret();
+      }).run();
     });
   });
 
@@ -93,7 +121,10 @@ _Mongo.prototype.remove = function (collection_name, selector) {
     // XXX err handling
     collection.remove(selector, {safe:true}, function(err) {
       // XXX err handling
-      future.ret();
+      Fiber(function () {
+        self.pollObservers(collection_name);
+        future.ret();
+      }).run();
     });
   });
 
@@ -121,7 +152,10 @@ _Mongo.prototype.update = function (collection_name, selector, mod, options) {
 
     collection.update(selector, mod, opts, function(err) {
       // XXX err handling
-      future.ret();
+      Fiber(function () {
+        self.pollObservers(collection_name);
+        future.ret();
+      }).run();
     });
   });
 
@@ -160,16 +194,7 @@ _Mongo.Cursor = function (mongo, collection_name, selector, options) {
 
   self.mongo._withCollection(collection_name, function(err, collection) {
     // XXX err handling
-
-    var cursor = collection.find(self.selector);
-    // XXX is there a way to do this as for x in ['sort', 'limit', 'skip']?
-    if (self.options.sort)
-      cursor = cursor.sort(self.options.sort);
-    if (self.options.limit)
-      cursor = cursor.limit(self.options.limit);
-    if (self.options.skip)
-      cursor = cursor.skip(self.options.skip);
-
+    var cursor = collection.find(self.selector, self.options.fields, self.options.skip, self.options.limit, self.options.sort);
     future.ret(cursor);
   });
 
@@ -184,7 +209,7 @@ _Mongo.Cursor.prototype.forEach = function (callback) {
     if (err || !doc)
       future.ret(err);
     else
-      callback(null, doc);
+      callback(doc);
   });
   return future.wait();
 };
@@ -224,9 +249,110 @@ _Mongo.Cursor.prototype.count = function () {
     future.ret(err || res);
   });
 
-
-
   return future.wait();
+};
+
+// options to contain:
+//  * callbacks:
+//    - added (object, before_index)
+//    - changed (new_object, at_index)
+//    - moved (object, old_index, new_index) - can only fire with changed()
+//    - removed (id, at_index)
+//    - complete () - called once after the inital set of callbacks
+//
+// attributes available on returned LiveResultsSet
+//  * stop(): end updates
+
+_Mongo.Cursor.prototype.observe = function (options) {
+  return new _Mongo.LiveResultsSet(this, options);
+};
+
+_Mongo.LiveResultsSet = function (cursor, options) {
+  // copy my cursor, so that the observe can run independently from
+  // some other use of the cursor.
+  this.cursor = new _Mongo.Cursor(cursor.mongo,
+                                  cursor.collection_name,
+                                  cursor.selector,
+                                  cursor.options);
+
+  // expose collection name
+  this.collection_name = cursor.collection_name;
+
+  // unique handle for this live query
+  this.qid = this.cursor.mongo.next_observer_id++;
+
+  // previous results snapshot.  on each poll cycle, diffs against
+  // results drives the callbacks.
+  this.results = {};
+  this.indexes = {};
+
+  this.added = options.added;
+  this.changed = options.changed;
+  this.moved = options.moved;
+  this.removed = options.removed;
+  this.complete = options.complete;
+
+  // if caller doesn't want a flurry of added callbacks, prefill the
+  // cache.  otherwise, trigger the first poll() cycle immediately.
+  if (options._suppress_initial)
+    this.fetchResults(this.results, this.indexes);
+  else
+    this.poll();
+
+  // signal that the first round of added calls is finished.  note,
+  // this relies on poll() blocking until callbacks are complete.
+  if (options.complete)
+    options.complete();
+
+  // register myself with the mongo driver
+  this.cursor.mongo.observers[this.qid] = this;
+};
+
+_Mongo.LiveResultsSet.prototype.fetchResults = function (results, indexes) {
+  var self = this;
+  var index = 0;
+
+  self.cursor.rewind();
+  self.cursor.forEach(function (obj) {
+    results[obj._id] = obj;
+    indexes[obj._id] = index++;
+  });
+};
+
+_Mongo.LiveResultsSet.prototype.poll = function () {
+  var self = this;
+
+  var old_results = self.results;
+  var old_indexes = self.indexes;
+  var new_results = {};
+  var new_indexes = {};
+
+  var callbacks = [];
+
+  self.fetchResults(new_results, new_indexes);
+
+  _.each(new_results, function (obj) {
+    if (self.added && !old_results[obj._id])
+      self.added(obj, new_indexes[obj._id]);
+
+    else if (self.changed && !_.isEqual(new_results[obj._id], old_results[obj._id]))
+      self.changed(obj, old_indexes[obj._id], old_results[obj._id]);
+
+    if (self.moved && new_indexes[obj._id] !== old_indexes[obj._id])
+      self.moved(obj, old_indexes[obj._id], new_indexes[obj._id]);
+  });
+
+  for (var id in old_results)
+    if (self.removed && !(id in new_results))
+      self.removed(id, old_indexes[id], old_results[id]);
+
+  self.results = new_results;
+  self.indexes = new_indexes;
+};
+
+_Mongo.LiveResultsSet.prototype.stop = function () {
+  var self = this;
+  delete self.cursor.mongo.observers[self.qid];
 };
 
 _.extend(Meteor, {
