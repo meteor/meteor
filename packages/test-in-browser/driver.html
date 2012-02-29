@@ -7,6 +7,16 @@
 </body>
 
 <template name="test_table">
+  {{#if running}}
+  <div class="header in-progress">Testing in progress ...</div>
+  {{else}}
+    {{#if passed}}
+      <div class="header pass">All tests pass!</div>
+    {{else}}
+      <div class="header fail">There are failures.</div>
+    {{/if}}
+  {{/if}}
+
   <div class="test_table">
     {{#each data}}
       {{> test_group this}}

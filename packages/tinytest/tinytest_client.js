@@ -2,14 +2,8 @@
 
 var globals = (function () {return this;})();
 
-var reportFunc = function () {};
-
 _.extend(globals.test, {
-  setReporter: function (_reportFunc) {
-    reportFunc = _reportFunc;
-  },
-
-  run: function (onComplete) {
+  run: function (reportFunc, onComplete) {
     var run_id = LocalCollection.uuid();
     var local_complete = false;
     var remote_complete = false;
@@ -54,7 +48,7 @@ _.extend(globals.test, {
     });
   },
 
-  debug: function (cookie, onComplete) {
+  debug: function (cookie, reportFunc, onComplete) {
     var testRun = Meteor._TestManager.createRun(reportFunc);
     test._currentRun.withValue(testRun, function () {
       testRun.debug(cookie, function () {
