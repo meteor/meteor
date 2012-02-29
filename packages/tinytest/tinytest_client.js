@@ -41,7 +41,9 @@ _.extend(globals.test, {
     var sub_handle = App.subscribe('tinytest/results', {run_id: run_id});
     var query_handle = Meteor._ServerTestResults.find().observe({
       added: function (doc) {
-        delete doc.cookie; // can't debug a server test on the client..
+        _.each(doc.report.events || [], function (event) {
+          delete event.cookie; // can't debug a server test on the client..
+        });
         doc.report.server = true;
         reportFunc(doc.report);
       }
