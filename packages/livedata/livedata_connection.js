@@ -5,8 +5,6 @@
 // XXX namespacing
 Meteor._capture_subs = null;
 
-
-
 Meteor._LivedataConnection = function (url) {
   var self = this;
   self.url = url;
@@ -18,6 +16,7 @@ Meteor._LivedataConnection = function (url) {
   self.unsatisfied_methods = {}; // map from method_id -> true
   self.pending_data = []; // array of pending data messages
   self.queued = {}; // name -> updates for (yet to be created) collection
+  self.quiesce_callbacks = [];
 
   self.subs = new LocalCollection;
   // keyed by subs._id. value is unset or an array. if set, sub is not
@@ -275,6 +274,27 @@ _.extend(Meteor._LivedataConnection.prototype, {
     return self.stream.reconnect();
   },
 
+  // called when we are up-to-date with the server. intended for use
+  // only in tests. currently, you are very limited in what you may do
+  // inside your callback -- in particular, don't do anything that
+  // could result in another call to onQuiesce, or results are
+  // undefined.
+  onQuiesce: function (f) {
+    var self = this;
+
+    f = Meteor.bindEnvironment(f, function (e) {
+      Meteor._debug("Exception in quiesce callback", e.stack);
+    });
+
+    for (var method_id in self.unsatisfied_methods) {
+      // we are not quiesced -- wait until we are
+      self.quiesce_callbacks.push(f);
+      return;
+    }
+
+    f();
+  },
+
   _send_method: function (msg, result_func) {
     var self = this;
     var method_id = '' + (self.next_method_id++);
@@ -338,6 +358,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
     });
 
     _.each(self.stores, function (s) { s.endUpdate(); });
+
+    _.each(self.quiesce_callbacks, function (cb) { cb(); });
+    self.quiesce_callbacks = [];
 
     self.pending_data = [];
   },

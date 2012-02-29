@@ -40,7 +40,7 @@ _.extend(ExpectationManager.prototype, {
       if (typeof expected === "function")
         expected.apply({}, arguments);
       else
-        assert.equal(expected, _.toArray(arguments));
+        assert.equal(_.toArray(arguments), expected);
 
       self.outstanding--;
       self._check_complete();
@@ -113,11 +113,13 @@ var testAsyncMulti = function (name, funcs) {
 var failure = function (code, reason) {
   return function (error, result) {
     assert.equal(result, undefined);
-    assert.equal(typeof(error), "object");
-    code && assert.equal(error.error, code);
-    reason && assert.equal(error.reason, reason);
-    // XXX should check that other keys aren't present.. should
-    // probably use something like the Matcher we used to have
+    assert.isTrue(error && typeof error === "object");
+    if (error && typeof error === "object") {
+      code && assert.equal(error.error, code);
+      reason && assert.equal(error.reason, reason);
+      // XXX should check that other keys aren't present.. should
+      // probably use something like the Matcher we used to have
+    }
   };
 }
 
@@ -196,12 +198,63 @@ testAsyncMulti("livedata - basic method invocation", [
 
 ]);
 
-// XXX things to test:
+
+var checkBalances = function (a, b) {
+  var alice = Ledger.findOne({name: "alice", world: world});
+  var bob = Ledger.findOne({name: "bob", world: world});
+  assert.equal(alice.balance, a);
+  assert.equal(bob.balance, b);
+}
+
+// would be nice to have a database-aware test harness of some kind --
+// this is a big hack (and XXX pollutes the global test namespace)
+var world;
+testAsyncMulti("livedata - compound methods", [
+  function () {
+    world = LocalCollection.uuid();
+    if (Meteor.is_client)
+      Meteor.subscribe("ledger", {world: world});
+    Ledger.insert({name: "alice", balance: 100, world: world});
+    Ledger.insert({name: "bob", balance: 50, world: world});
+  },
+  function (expect) {
+    App.call('ledger/transfer', world, "alice", "bob", 10,
+             expect(undefined, undefined));
+
+    checkBalances(90, 60);
+
+    var release = expect();
+    App.onQuiesce(function () {
+      checkBalances(90, 60);
+      Meteor.defer(release);
+    });
+  },
+  function (expect) {
+    App.call('ledger/transfer', world, "alice", "bob", 100, true,
+             expect(failure(409)));
+
+    if (Meteor.is_client)
+      // client can fool itself by cheating, but only until the sync
+      // finishes
+      checkBalances(-10, 160);
+    else
+      checkBalances(90, 60);
+
+    var release = expect();
+    App.onQuiesce(function () {
+      checkBalances(90, 60);
+      Meteor.defer(release);
+    });
+  }
+]);
+
+
+// XXX some things to test in greater detail:
 // staying in simulation mode
 // time warp
 // serialization / beginAsync(true) / beginAsync(false)
 // malformed messages (need raw wire access)
-// method completion
+// method completion/satisfaction
 // subscriptions (multiple APIs, including autosubscribe?)
 // subscription completion
 // [probably lots more]

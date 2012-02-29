@@ -15,5 +15,10 @@ _.extend(Meteor, {
 
   clearInterval: _.bind(clearInterval, null),
 
-  clearTimeout: _.bind(clearTimeout, null)
+  clearTimeout: _.bind(clearTimeout, null),
+
+  // won't be necessary once we clobber the global setTimeout
+  defer: function (f) {
+    Meteor.setTimeout(f, 0);
+  }
 });

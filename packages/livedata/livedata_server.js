@@ -7,6 +7,7 @@ Meteor._ServerMethodInvocation = function (name, handler) {
   self._handler = handler;
   self._async = false;
   self._responded = false;
+  self._autoresponded = false;
   self._threw = false;
   self._callback = null;
   self._next = null;
@@ -46,19 +47,23 @@ _.extend(Meteor._ServerMethodInvocation.prototype, {
 
   _sendResponse: function (error, ret, from) {
     var self = this;
-    if (!self._async && from === "async")
-      throw new Error(
-        "respond() and error() can only be called on async methods " +
-          "(use beginAsync() to mark a method as async)");
     if (self._threw && from !== "throw")
       return;
     if (self._responded) {
       if (from === "throw")
         return;
-      throw new Error(
-        "respond() or error() may only be called once per request");
+      if (self._autoresponded)
+        throw new Error(
+          "The method has already returned, so it is too late to call " +
+            "respond() or error(). If you want to respond asynchronously, " +
+            "first use beginAsync() to prevent a response from being " +
+            "automatically sent.");
+      else
+        throw new Error(
+          "respond() or error() may only be called once per request");
     }
     self._responded = true;
+    self._autoresponded = (from === "sync");
     if (!self._calledNext) {
       self._calledNext = true;
       self._next && self._next();
@@ -85,7 +90,7 @@ _.extend(Meteor._ServerMethodInvocation.prototype, {
       var ret = Meteor._CurrentInvocation.withValue(self, function () {
         return self._handler.apply(self, args);
       });
-      if (!self._async)
+      if (!self._responded && !self._async)
         self._sendResponse(undefined, ret, "sync");
       return ret;
     } catch (e) {
@@ -570,5 +575,13 @@ _.extend(Meteor._LivedataServer.prototype, {
       self.on_autopublish.push(f);
     else
       f();
-  }
+  },
+
+  // called when we are up-to-date. intended for use only in tests.
+  onQuiesce: function (f) {
+    var self = this;
+    // the server is always up-to-date
+    f();
+  },
+
 });
