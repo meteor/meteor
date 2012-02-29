@@ -5,6 +5,8 @@
 // XXX namespacing
 Meteor._capture_subs = null;
 
+
+
 Meteor._LivedataConnection = function (url) {
   var self = this;
   self.url = url;
@@ -21,7 +23,6 @@ Meteor._LivedataConnection = function (url) {
   // keyed by subs._id. value is unset or an array. if set, sub is not
   // yet ready.
   self.sub_ready_callbacks = {};
-
 
   // Setup auto-reload persistence.
   var reload_key = "Server-" + url;
@@ -202,6 +203,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
   apply: function (name, args) {
     var self = this;
+    var enclosing = Meteor._CurrentInvocation.get();
     var handler = self.method_handlers[name];
     var result_func = function () {};
 
@@ -215,7 +217,25 @@ _.extend(Meteor._LivedataConnection.prototype, {
       // run locally (if we have a stub for it)
       var local_args = _.clone(args);
       local_args.unshift(self.user_id);
-      var ret = handler.apply(null, args);
+      var invocation = {
+        // XXX need: user, setRestartHook, setUser (simulated??)
+        isSimulation: true,
+        beginAsync: function () {
+          // XXX need a much better error message!
+          // duplicated in livedata_server
+          throw new Error("Simulated methods may not be asynchronous");
+        }
+      };
+
+      var ret = Meteor._CurrentInvocation.withValue(invocation, function () {
+        return handler.apply(invocation, args);
+      });
+    }
+
+    if (enclosing && enclosing.isSimulation) {
+      if (result_func)
+        result_func(ret);
+      return ret;
     }
 
     // Note that it is important that the function totally complete,
@@ -251,7 +271,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
   _send_method: function (msg, result_func) {
     var self = this;
-    var method_id = self.next_method_id++;
+    var method_id = '' + (self.next_method_id++);
     var new_msg = _.extend({id: method_id}, msg);
     self.pending_method_messages[method_id] = new_msg;
     self.pending_method_callbacks[method_id] = result_func || function () {};

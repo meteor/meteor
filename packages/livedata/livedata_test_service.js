@@ -8,7 +8,10 @@ App.methods({
       (Meteor.is_client && where === "client") ||
       where === "both";
 
-    if (shouldThrow)
-      throw new Error("Test method throwing an exception");
+    if (shouldThrow) {
+      e = new Error("Test method throwing an exception");
+      e.expected = true;
+      throw e;
+    }
   }
 });

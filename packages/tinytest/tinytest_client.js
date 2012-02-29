@@ -36,18 +36,20 @@ _.extend(globals.test, {
       });
     });
 
-    App.call('tinytest/run', run_id);
-    var sub_handle = App.subscribe('tinytest/results', run_id);
+    App.call('tinytest/run', run_id, function (error, result) {
+      if (error)
+        // XXX better report error
+        throw new Error("Test server returned an error");
+      remote_complete = true;
+      maybeDone();
+    });
+
+    var sub_handle = App.subscribe('tinytest/results', {run_id: run_id});
     var query_handle = Meteor._ServerTestResults.find().observe({
       added: function (doc) {
-        if (doc.complete) {
-          remote_complete = true;
-          maybeDone();
-        } else {
-          delete doc.cookie; // wouldn't work on client..
-          doc.report.server = true;
-          reportFunc(doc.report);
-        }
+        delete doc.cookie; // can't debug a server test on the client..
+        doc.report.server = true;
+        reportFunc(doc.report);
       }
     });
   },

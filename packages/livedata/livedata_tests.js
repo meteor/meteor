@@ -16,6 +16,7 @@ test("livedata - basics", function () {
 
 var ExpectationManager = function (onComplete) {
   var self = this;
+
   self.onComplete = onComplete;
   self.closed = false;
   self.dead = false;
@@ -67,6 +68,8 @@ _.extend(ExpectationManager.prototype, {
 });
 
 var testAsyncMulti = function (name, funcs) {
+  var timeout = 1000;
+
   testAsync(name, function (onComplete) {
     var remaining = _.clone(funcs);
 
@@ -75,12 +78,24 @@ var testAsyncMulti = function (name, funcs) {
       if (!func)
         onComplete();
       else {
-        var em = new ExpectationManager(runNext);
+        var em = new ExpectationManager(function () {
+          clearTimeout(timer);
+          runNext();
+        });
+
+        var timer = Meteor.setTimeout(function () {
+          em.cancel();
+          test.fail({type: "timeout", message: "Async batch timed out"});
+          onComplete();
+          return;
+        }, timeout);
+
         try {
           func(_.bind(em.expect, em));
         } catch (exception) {
           em.cancel();
           test.exception(exception);
+          onComplete();
           return;
         }
         em.done();
@@ -94,19 +109,41 @@ var testAsyncMulti = function (name, funcs) {
 /******************************************************************************/
 
 // XXX should check error codes
-var failure = function (reason) {
+var failure = function (code, reason) {
   return function (error, result) {
     assert.equal(result, undefined);
     assert.equal(typeof(error), "object");
-    assert.equal(error.reason, reason);
+    code && assert.equal(error.error, code);
+    reason && assert.equal(error.reason, reason);
     // XXX should check that other keys aren't present.. should
     // probably use something like the Matcher we used to have
   };
 }
 
+test("livedata - methods with colliding names", function () {
+  var x = LocalCollection.uuid();
+  var m = {};
+  m[x] = function () {};
+  App.methods(m);
+
+  assert.throws(function () {
+    App.methods(m);
+  });
+});
+
 testAsyncMulti("livedata - basic method invocation", [
   function (expect) {
-    var ret = App.call("unknown method", expect(failure("Method not found")));
+    try {
+      var ret = App.call("unknown method",
+                         expect(failure(404, "Method not found")));
+    } catch (e) {
+      // throws immediately on server, but still calls callback
+      assert.isTrue(Meteor.is_server);
+      return;
+    }
+
+    // returns undefined on client, then calls callback
+    assert.isTrue(Meteor.is_client);
     assert.equal(ret, undefined);
   },
 
@@ -133,7 +170,7 @@ testAsyncMulti("livedata - basic method invocation", [
 
   function (expect) {
     var ret = App.call("exception", "server",
-                       expect(failure("Internal server error")));
+                       expect(failure(500, "Internal server error")));
     assert.equal(ret, undefined);
   },
 
@@ -145,4 +182,12 @@ testAsyncMulti("livedata - basic method invocation", [
 
 ]);
 
-// XXX need a lot more tests
+// XXX things to test:
+// staying in simulation mode
+// time warp
+// serialization / beginAsync(true) / beginAsync(false)
+// malformed messages (need raw wire access)
+// method completion
+// subscriptions (multiple APIs, including autosubscribe?)
+// subscription completion
+// [probably lots more]

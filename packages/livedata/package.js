@@ -11,6 +11,7 @@ Package.on_use(function (api) {
   // manage the current set of subscriptions.
   api.use('minimongo', ['client', 'server']);
 
+  api.add_files('livedata_common.js', ['client', 'server']);
 
   api.add_files('livedata_connection.js', 'client');
   api.add_files('livedata_server.js', 'server');
@@ -23,6 +24,6 @@ Package.on_test(function (api) {
   api.use('livedata', ['client', 'server']);
   api.use('mongo-livedata', ['client', 'server']);
   api.use('tinytest');
-  api.add_files('livedata_tests.js', 'client');
+  api.add_files('livedata_tests.js', ['client', 'server']);
   api.add_files('livedata_test_service.js', ['client', 'server']);
 });

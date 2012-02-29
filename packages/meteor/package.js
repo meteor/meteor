@@ -31,6 +31,7 @@ Package.on_use(function (api, where) {
   api.use('underscore', ['client', 'server']);
   api.add_files('client_environment.js', 'client');
   api.add_files('server_environment.js', 'server');
+  api.add_files('timers.js', ['client', 'server']);
 
   // dynamic variables, bindEnvironment
   // XXX move into a separate package?
