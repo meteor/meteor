@@ -450,10 +450,9 @@ _.extend(Meteor._LivedataServer.prototype, {
           socket.send(JSON.stringify({
             msg: 'result', id: msg.id, result: result}));
 
-        // the method is satisfied once func returns, because any
-        // DB observe callbacks run to completion in the same tick.
-        // publishQuery will queue data before returning from the
-        // observe callback.
+        // the method is satisfied once callback is called, because
+        // any DB observe callbacks run to completion in the same
+        // tick.
         socket.send(JSON.stringify({
           msg: 'data', methods: [msg.id]}));
       };
