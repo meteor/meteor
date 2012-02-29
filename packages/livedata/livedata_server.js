@@ -531,9 +531,6 @@ _.extend(Meteor._LivedataServer.prototype, {
 
   apply: function (name, args) {
     var self = this;
-    var handler = self.method_handlers[name];
-    if (!handler)
-      throw new Error("No such method '" + name + "'");
 
     args = _.clone(args);
     var result_func;
@@ -543,6 +540,13 @@ _.extend(Meteor._LivedataServer.prototype, {
         Meteor._debug("Exception while delivering result of invoking '" +
                       name + "'", e.stack);
       });
+    }
+
+    var handler = self.method_handlers[name];
+    if (!handler) {
+      if (result_func)
+        result_func({error: 404, reason: "Method not found"});
+      throw new Error("No such method '" + name + "'");
     }
 
     var invocation = new Meteor._ServerMethodInvocation(name, handler);

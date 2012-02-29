@@ -228,7 +228,6 @@ var _findTestForResults = function (results) {
 var reportResults = function(results) {
   var test = _findTestForResults(results);
 
-
   if (_.isArray(results.events)) {
     // append events, if present
     Array.prototype.push.apply((test.events || (test.events = [])),

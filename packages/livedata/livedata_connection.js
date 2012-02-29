@@ -227,9 +227,13 @@ _.extend(Meteor._LivedataConnection.prototype, {
         }
       };
 
-      var ret = Meteor._CurrentInvocation.withValue(invocation, function () {
-        return handler.apply(invocation, args);
-      });
+      try {
+        var ret = Meteor._CurrentInvocation.withValue(invocation, function () {
+          return handler.apply(invocation, args);
+        });
+      } catch (e) {
+        var stub_exception = e;
+      }
     }
 
     if (enclosing && enclosing.isSimulation) {
@@ -256,6 +260,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
       {msg: 'method', method: name, params: args},
       result_func);
 
+    if (stub_exception)
+      throw stub_exception;
     return ret;
   },
 

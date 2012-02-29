@@ -79,7 +79,7 @@ var testAsyncMulti = function (name, funcs) {
         onComplete();
       else {
         var em = new ExpectationManager(function () {
-          clearTimeout(timer);
+          Meteor.clearTimeout(timer);
           runNext();
         });
 
@@ -95,6 +95,7 @@ var testAsyncMulti = function (name, funcs) {
         } catch (exception) {
           em.cancel();
           test.exception(exception);
+          Meteor.clearTimeout(timer);
           onComplete();
           return;
         }
@@ -164,20 +165,33 @@ testAsyncMulti("livedata - basic method invocation", [
 
   function (expect) {
     assert.throws(function () {
-      var ret = App.call("exception", "both");
+      var ret = App.call("exception", "both",
+                         expect(failure(500, "Internal server error")));
     });
   },
 
   function (expect) {
-    var ret = App.call("exception", "server",
-                       expect(failure(500, "Internal server error")));
+    try {
+      var ret = App.call("exception", "server",
+                         expect(failure(500, "Internal server error")));
+    } catch (e) {
+      assert.isTrue(Meteor.is_server);
+      return;
+    }
+
+    assert.isTrue(Meteor.is_client);
     assert.equal(ret, undefined);
   },
 
   function (expect) {
-    assert.throws(function () {
-      var ret = App.call("exception", "client");
-    });
+    if (Meteor.is_client) {
+      assert.throws(function () {
+        var ret = App.call("exception", "client", expect(undefined, undefined));
+      });
+    } else {
+      var ret = App.call("exception", "client", expect(undefined, undefined));
+      assert.equal(ret, undefined);
+    }
   }
 
 ]);

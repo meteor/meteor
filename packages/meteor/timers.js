@@ -13,7 +13,7 @@ _.extend(Meteor, {
     }), duration);
   },
 
-  clearInterval: clearInterval,
+  clearInterval: _.bind(clearInterval, null),
 
-  clearTimeout: clearTimeout
+  clearTimeout: _.bind(clearTimeout, null)
 });
