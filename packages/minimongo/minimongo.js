@@ -376,11 +376,11 @@ LocalCollection._deepcopy = function (v) {
 
 LocalCollection._insertInResults = function (query, doc) {
   if (!query.sort_f) {
-    query.added(doc, query.results.length);
+    query.added(LocalCollection._deepcopy(doc), query.results.length);
     query.results.push(doc);
   } else {
     var i = LocalCollection._insertInSortedList(query.sort_f, query.results, doc);
-    query.added(doc, i);
+    query.added(LocalCollection._deepcopy(doc), i);
   }
 };
 
@@ -403,7 +403,7 @@ LocalCollection._updateInResults = function (query, doc) {
   var new_idx = LocalCollection._insertInSortedList(query.sort_f,
                                                query.results, doc);
   if (orig_idx !== new_idx)
-    query.moved(doc, orig_idx, new_idx);
+    query.moved(LocalCollection._deepcopy(doc), orig_idx, new_idx);
 };
 
 LocalCollection._findInResults = function (query, doc) {
