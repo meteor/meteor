@@ -54,6 +54,13 @@ git clone git://github.com/joyent/node.git
 cd node
 git checkout v0.6.11
 
+# use newer v8. This fixes an issue with node-fibers:
+# https://github.com/laverdet/node-fibers/issues/28
+echo checking out v8
+rm -rf deps/v8
+git clone http://github.com/v8/v8.git deps/v8
+(cd deps/v8 && git checkout 3.9.7)
+
 
 # on linux, build a static openssl to link against. Everything else we
 # dynamically link against is pretty stable.
