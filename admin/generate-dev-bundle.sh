@@ -78,35 +78,32 @@ if [ "$UNAME" == "Linux" ] ; then
         "--openssl-libpath=$DIR/build/openssl-out/lib" )
     cd "$DIR/build/node"
     patch -p1 <<EOF
-diff --git a/wscript b/wscript
-index 2b04358..4f82be3 100644
 --- a/wscript
 +++ b/wscript
-@@ -348,20 +348,10 @@ def configure(conf):
+@@ -348,17 +348,23 @@ def configure(conf):
        if sys.platform.startswith('win32'):
          openssl_lib_names += ['ws2_32', 'gdi32']
  
--      libssl = conf.check_cc(lib=openssl_lib_names,
--                             header_name='openssl/ssl.h',
--                             function_name='SSL_library_init',
--                             includes=openssl_includes,
--                             libpath=openssl_libpath,
--                             uselib_store='OPENSSL')
--
--      libcrypto = conf.check_cc(lib='crypto',
--                                header_name='openssl/crypto.h',
--                                includes=openssl_includes,
--                                libpath=openssl_libpath,
--                                uselib_store='OPENSSL')
--
--      if libcrypto and libssl:
-+      # XXX Horrible hack for static openssl!
-+      conf.env.append_value("LINKFLAGS", ["-Wl,-Bstatic","-lssl","-lcrypto"])
++      # XXX METEOR Horrible hack for static openssl!
++      static_linkflags = ["-Wl,-Bstatic","-lssl","-lcrypto"]
++      openssl_lib_names += ['dl']
 +
-+      if True:
-         conf.env["USE_OPENSSL"] = Options.options.use_openssl = True
-         conf.env.append_value("CPPFLAGS", "-DHAVE_OPENSSL=1")
-       elif sys.platform.startswith('win32'):
+       libssl = conf.check_cc(lib=openssl_lib_names,
+                              header_name='openssl/ssl.h',
+                              function_name='SSL_library_init',
+                              includes=openssl_includes,
+                              libpath=openssl_libpath,
++                             linkflags=static_linkflags,
+                              uselib_store='OPENSSL')
+ 
+       libcrypto = conf.check_cc(lib='crypto',
+                                 header_name='openssl/crypto.h',
+                                 includes=openssl_includes,
+                                 libpath=openssl_libpath,
++                                linkflags=static_linkflags,
+                                 uselib_store='OPENSSL')
+ 
+       if libcrypto and libssl:
 EOF
 
 fi
