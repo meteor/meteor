@@ -120,7 +120,7 @@ elif [ "$UNAME" = "Linux" ] ; then
     }
 
 
-    TMPDIR=`mktemp -d --tmpdir meteor-install-XXXXXXX`
+    TMPDIR=`mktemp -d -t meteor-install-XXXXXXX`
     cd "$TMPDIR"
 
     if [ -f "/etc/debian_version" ] ; then
