@@ -138,7 +138,12 @@ npm install fibers@0.6.4
 npm install useragent@1.0.5
 npm install request@2.9.3
 npm install http-proxy@0.8.0
+
+# Sockjs has a broken optional dependancy, and npm optional dependancies
+# don't seem to quite work. Fake it out with a checkout.
+git clone http://github.com/akdubya/rbytes.git
 npm install sockjs@0.2.1
+rm -rf rbytes
 
 # Disable mtime check in fibers. Fixes problem when packaging tools
 # don't preserve mtimes.
