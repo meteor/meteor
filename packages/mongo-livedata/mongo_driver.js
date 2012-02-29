@@ -184,7 +184,7 @@ _Mongo.Cursor.prototype.forEach = function (callback) {
     if (err || !doc)
       future.ret(err);
     else
-      callback(null, doc);
+      callback(doc);
   });
   return future.wait();
 };

@@ -28,6 +28,10 @@
 
   Meteor.bindEnvironment = function (func, onException, _this) {
     var boundValues = _.clone(currentValues);
+
+    if (!onException)
+      throw new Error("onException must be supplied");
+
     return function (/* arguments */) {
       var savedValues = currentValues;
       try {

@@ -1,7 +1,51 @@
+var running = true;
+
 Meteor.startup(function () {
-  test.setReporter(reportResults);
-  test.run();
+  test.run(reportResults, function () {
+    running = false;
+    _resultsChanged();
+  });
 });
+
+Template.test_table.running = function() {
+  var cx = Meteor.deps.Context.current;
+  if (cx) {
+    resultDeps.push(cx);
+  }
+
+  return running;
+};
+
+Template.test_table.passed = function() {
+  var cx = Meteor.deps.Context.current;
+  if (cx) {
+    resultDeps.push(cx);
+  }
+
+  // walk whole tree to look for failed tests
+  var walk = function (groups) {
+    var ret = true;
+
+    _.each(groups || [], function (group) {
+      if (!ret)
+        return;
+
+      _.each(group.tests || [], function (t) {
+        if (!ret)
+          return;
+        if (_testStatus(t) === "failed")
+          ret = false;
+      });
+
+      if (!walk(group.groups))
+        ret = false;
+    });
+
+    return ret;
+  };
+
+  return walk(resultTree);
+};
 
 Template.test_table.data = function() {
   var cx = Meteor.deps.Context.current;
@@ -87,7 +131,7 @@ Template.event.events = {
     // messy. needs to be aggressively refactored.
     forgetEvents({groupPath: this.cookie.groupPath,
                   test: this.cookie.shortName});
-    test.debug(this.cookie);
+    test.debug(this.cookie, reportResults);
   }
 };
 
@@ -183,7 +227,6 @@ var _findTestForResults = function (results) {
 // the existence of that test if no events
 var reportResults = function(results) {
   var test = _findTestForResults(results);
-
 
   if (_.isArray(results.events)) {
     // append events, if present

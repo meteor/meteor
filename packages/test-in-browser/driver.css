@@ -1,3 +1,22 @@
+.header {
+  font-family: Arial, sans-serif;
+  font-size: 24px;
+  padding-bottom: 4px;
+}
+
+.header.in-progress {
+  color: #ccc;
+}
+
+.header.pass {
+  color: #090; /* green */
+}
+
+.header.fail {
+  color: #900; /* red */
+  font-weight: bold;
+}
+
 .test_table {
   font-family: Arial, sans-serif;
   width: 500px;

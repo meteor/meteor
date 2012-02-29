@@ -16,12 +16,12 @@ Meteor._LivedataConnection = function (url) {
   self.unsatisfied_methods = {}; // map from method_id -> true
   self.pending_data = []; // array of pending data messages
   self.queued = {}; // name -> updates for (yet to be created) collection
+  self.quiesce_callbacks = [];
 
   self.subs = new LocalCollection;
   // keyed by subs._id. value is unset or an array. if set, sub is not
   // yet ready.
   self.sub_ready_callbacks = {};
-
 
   // Setup auto-reload persistence.
   var reload_key = "Server-" + url;
@@ -202,6 +202,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
   apply: function (name, args) {
     var self = this;
+    var enclosing = Meteor._CurrentInvocation.get();
     var handler = self.method_handlers[name];
     var result_func = function () {};
 
@@ -215,7 +216,29 @@ _.extend(Meteor._LivedataConnection.prototype, {
       // run locally (if we have a stub for it)
       var local_args = _.clone(args);
       local_args.unshift(self.user_id);
-      var ret = handler.apply(null, args);
+      var invocation = {
+        // XXX need: user, setRestartHook, setUser (simulated??)
+        isSimulation: true,
+        beginAsync: function () {
+          // XXX need a much better error message!
+          // duplicated in livedata_server
+          throw new Error("Simulated methods may not be asynchronous");
+        }
+      };
+
+      try {
+        var ret = Meteor._CurrentInvocation.withValue(invocation, function () {
+          return handler.apply(invocation, args);
+        });
+      } catch (e) {
+        var stub_exception = e;
+      }
+    }
+
+    if (enclosing && enclosing.isSimulation) {
+      if (result_func)
+        result_func(ret);
+      return ret;
     }
 
     // Note that it is important that the function totally complete,
@@ -236,6 +259,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
       {msg: 'method', method: name, params: args},
       result_func);
 
+    if (stub_exception)
+      throw stub_exception;
     return ret;
   },
 
@@ -249,9 +274,30 @@ _.extend(Meteor._LivedataConnection.prototype, {
     return self.stream.reconnect();
   },
 
+  // called when we are up-to-date with the server. intended for use
+  // only in tests. currently, you are very limited in what you may do
+  // inside your callback -- in particular, don't do anything that
+  // could result in another call to onQuiesce, or results are
+  // undefined.
+  onQuiesce: function (f) {
+    var self = this;
+
+    f = Meteor.bindEnvironment(f, function (e) {
+      Meteor._debug("Exception in quiesce callback", e.stack);
+    });
+
+    for (var method_id in self.unsatisfied_methods) {
+      // we are not quiesced -- wait until we are
+      self.quiesce_callbacks.push(f);
+      return;
+    }
+
+    f();
+  },
+
   _send_method: function (msg, result_func) {
     var self = this;
-    var method_id = self.next_method_id++;
+    var method_id = '' + (self.next_method_id++);
     var new_msg = _.extend({id: method_id}, msg);
     self.pending_method_messages[method_id] = new_msg;
     self.pending_method_callbacks[method_id] = result_func || function () {};
@@ -312,6 +358,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
     });
 
     _.each(self.stores, function (s) { s.endUpdate(); });
+
+    _.each(self.quiesce_callbacks, function (cb) { cb(); });
+    self.quiesce_callbacks = [];
 
     self.pending_data = [];
   },

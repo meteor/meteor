@@ -10,10 +10,17 @@
 
   _.extend(Meteor.DynamicVariable.prototype, {
     get: function () {
-      return Fiber.current._meteor_dynamics[this.slot];
+      if (!Fiber.current)
+        throw new Error("Meteor code must always run within a Fiber");
+
+      return Fiber.current._meteor_dynamics &&
+        Fiber.current._meteor_dynamics[this.slot];
     },
 
     withValue: function (value, func) {
+      if (!Fiber.current)
+        throw new Error("Meteor code must always run within a Fiber");
+
       if (!Fiber.current._meteor_dynamics)
         Fiber.current._meteor_dynamics = [];
       var currentValues = Fiber.current._meteor_dynamics;
@@ -39,6 +46,9 @@
   // fiber will be created.)
   Meteor.bindEnvironment = function (func, onException, _this) {
     var boundValues = _.clone(Fiber.current._meteor_dynamics || []);
+
+    if (!onException)
+      throw new Error("onException must be supplied");
 
     return function (/* arguments */) {
       var args = _.toArray(arguments);

@@ -1,3 +1,115 @@
+Meteor._ServerMethodInvocation = function (name, handler) {
+  var self = this;
+
+  self._enclosing = null;
+  self.isSimulation = null;
+  self._name = name;
+  self._handler = handler;
+  self._async = false;
+  self._responded = false;
+  self._autoresponded = false;
+  self._threw = false;
+  self._callback = null;
+  self._next = null;
+  self._calledNext = false;
+};
+
+_.extend(Meteor._ServerMethodInvocation.prototype, {
+  beginAsync: function (okToContinue) {
+    var self = this;
+
+    if (okToContinue === undefined)
+      okToContinue = true;
+
+    if (self.isSimulation)
+      // XXX need a much better error message!
+      // duplicated in livedata_connection
+      throw new Error("Simulated methods may not be asynchronous");
+    else if (self._responded)
+      throw new Error("The method has already returned, so it is too late " +
+                      "to mark it as asynchronous");
+    else {
+      self._async = true;
+      if (okToContinue && !self._calledNext) {
+        self._calledNext = true;
+        self._next && self._next();
+      }
+    }
+  },
+
+  respond: function (ret) {
+    this._sendResponse(undefined, ret, "async");
+  },
+
+  error: function (code, message) {
+    this._sendResponse({error: code, reason: message}, undefined, "async");
+  },
+
+  _sendResponse: function (error, ret, from) {
+    var self = this;
+    if (self._threw && from !== "throw")
+      return;
+    if (self._responded) {
+      if (from === "throw")
+        return;
+      if (self._autoresponded)
+        throw new Error(
+          "The method has already returned, so it is too late to call " +
+            "respond() or error(). If you want to respond asynchronously, " +
+            "first use beginAsync() to prevent a response from being " +
+            "automatically sent.");
+      else
+        throw new Error(
+          "respond() or error() may only be called once per request");
+    }
+    self._responded = true;
+    self._autoresponded = (from === "sync");
+    if (!self._calledNext) {
+      self._calledNext = true;
+      self._next && self._next();
+    }
+    self._callback && self._callback(error, ret);
+  },
+
+  // entry point
+  // - returns the immediate value (or throws an exception)
+  // - in any case, calls callback (if truthy) with eventual result
+  // - caller should call bindEnvironment on callback, or otherwise handle
+  //   any exceptions it throws
+  // - 'name' is for exception reporting
+  // - 'next' will be called when it's OK to start the next method from
+  //   this client
+  _run: function (args, callback, next) {
+    var self = this;
+    self._callback = callback;
+    self._next = next;
+    self._enclosing = Meteor._CurrentInvocation.get();
+    self.isSimulation = !!(self._enclosing && self._enclosing.isSimulation);
+
+    try {
+      var ret = Meteor._CurrentInvocation.withValue(self, function () {
+        return self._handler.apply(self, args);
+      });
+      if (!self._responded && !self._async)
+        self._sendResponse(undefined, ret, "sync");
+      return ret;
+    } catch (e) {
+      // in async mode, _threw avoids races against other fibers that
+      // might be trying to report a result
+      self._threw = true;
+      self._sendResponse({error: 500, reason: "Internal server error"},
+                         undefined, "throw");
+      // XXX improve error message (and how we report it)
+      if (!e.expected)
+        // tests can set the 'expected' flag on an exception so it
+        // won't go to the server log
+        Meteor._debug("Exception while invoking method '" +
+                      self._name + "'", e.stack);
+      throw e;
+    }
+  }
+});
+
 Meteor._LivedataServer = function () {
   var self = this;
 
@@ -14,29 +126,37 @@ Meteor._LivedataServer = function () {
     socket.meteor.subs = [];
     socket.meteor.cache = {};
     socket.meteor.pending_method_ids = [];
+    socket.meteor.methods_blocked = false;
+    socket.meteor.method_queue = [];
 
     socket.on('data', function (raw_msg) {
       try {
-        var msg = JSON.parse(raw_msg);
-      } catch (err) {
-        Meteor._debug("discarding message with invalid JSON", raw_msg);
-        return;
-      }
-      if (typeof msg !== 'object' || !msg.msg) {
-        Meteor._debug("discarding invalid livedata message", msg);
-        return;
-      }
+        try {
+          var msg = JSON.parse(raw_msg);
+        } catch (err) {
+          Meteor._debug("discarding message with invalid JSON", raw_msg);
+          return;
+        }
+        if (typeof msg !== 'object' || !msg.msg) {
+          Meteor._debug("discarding invalid livedata message", msg);
+          return;
+        }
 
-      if (msg.msg === 'connect')
-        self._livedata_connect(socket, msg);
-      else if (msg.msg === 'sub')
-        self._livedata_sub(socket, msg);
-      else if (msg.msg === 'unsub')
-        self._livedata_unsub(socket, msg);
-      else if (msg.msg === 'method')
-        self._livedata_method(socket, msg);
-      else
-        Meteor._debug("discarding unknown livedata message type", msg);
+        if (msg.msg === 'connect')
+          self._livedata_connect(socket, msg);
+        else if (msg.msg === 'sub')
+          self._livedata_sub(socket, msg);
+        else if (msg.msg === 'unsub')
+          self._livedata_unsub(socket, msg);
+        else if (msg.msg === 'method')
+          self._livedata_method(socket, msg);
+        else
+          Meteor._debug("discarding unknown livedata message type", msg);
+      } catch (e) {
+        // XXX print stack nicely
+        Meteor._debug("Internal exception while processing message", msg,
+                      e.stack);
+      }
     });
 
 
@@ -186,6 +306,7 @@ _.extend(Meteor._LivedataServer.prototype, {
     }).run();
   },
 
+  // XXX 'connect' message should have a protocol version
   _livedata_connect: function (socket, msg) {
     var self = this;
     // Always start a new session. We don't support any reconnection.
@@ -197,15 +318,25 @@ _.extend(Meteor._LivedataServer.prototype, {
   _livedata_sub: function (socket, msg) {
     var self = this;
 
-    if (!self.publishes[msg.name]) {
-      // can't sub to unknown publish name
-      // XXX error value
+    // reject malformed messages
+    if (typeof (msg.id) !== "string" ||
+        typeof (msg.name) !== "string" ||
+        (('params' in msg) && typeof (msg.params) !== "object")) {
       socket.send(JSON.stringify({
-        msg: 'nosub', id: msg.id, error: {error: 17, reason: "Unknown name"}}));
+        msg: 'nosub', id: msg.id, error: {error: 400,
+                                          reason: "Bad request"}}));
       return;
     }
 
-    socket.meteor.subs.push({_id: msg.id, name: msg.name, params: msg.params});
+    if (!self.publishes[msg.name]) {
+      socket.send(JSON.stringify({
+        msg: 'nosub', id: msg.id, error: {error: 404,
+                                          reason: "Subscription not found"}}));
+      return;
+    }
+
+    socket.meteor.subs.push({_id: msg.id, name: msg.name,
+                             params: msg.params || {}});
     self._poll_subscriptions(socket);
   },
 
@@ -220,44 +351,83 @@ _.extend(Meteor._LivedataServer.prototype, {
 
   _livedata_method: function (socket, msg) {
     var self = this;
-    // XXX note that running this in a fiber means that two serial
-    // requests from the client can try to execute in parallel.. we're
-    // going to have to think that through at some point. also, consider
-    // races against Meteor.Collection(), though this shouldn't happen in
-    // most normal use cases
+
+    // reject malformed messages
+    // XXX should also reject messages with unknown attributes?
+    if (typeof (msg.id) !== "string" ||
+        typeof (msg.method) !== "string" ||
+        (('params' in msg) && !(msg.params instanceof Array))) {
+      socket.send(JSON.stringify({
+        msg: 'result', id: msg.id,
+        error: {error: 400, reason: "Bad request"}}));
+      if (typeof (msg.id) === "string")
+        socket.send(JSON.stringify({
+          msg: 'data', methods: [msg.id]}));
+      return;
+    }
+
+    socket.meteor.method_queue.push(msg);
+    self._try_invoke_next(socket);
+  },
+
+  _try_invoke_next: function (socket) {
+    var self = this;
+
+    // Invoke methods one at a time, in the order sent by the client
+    // -- invocations sent by a given client block later invocations
+    // sent by the same client, unless the method explicitly allows
+    // later methods to run by calling beginAsync(true).
+
+    if (socket.meteor.methods_blocked)
+      return;
+    var msg = socket.meteor.method_queue.shift();
+    if (!msg)
+      return;
+
+    socket.meteor.methods_blocked = true;
     Fiber(function () {
-      var func = msg.method && self.method_handlers[msg.method];
-      if (!func) {
+      var next = function (error, ret) {
+        socket.meteor.methods_blocked = false;
+        _.defer(_.bind(self._try_invoke_next, self, socket));
+      };
+
+      var handler = self.method_handlers[msg.method];
+      if (!handler) {
         socket.send(JSON.stringify({
           msg: 'result', id: msg.id,
-          error: {error: 12, /* XXX error codes! */
-                  reason: "Method not found"}}));
-      } else {
-        try {
-          var result = func.apply(null, msg.params);
-          socket.send(JSON.stringify({
-            msg: 'result', id: msg.id, result: result}));
-        } catch (err) {
-          socket.send(JSON.stringify({
-            msg: 'result', id: msg.id,
-            error: {error: 13, /* XXX error codes! */
-                    reason: "Internal server error"}}));
-          // XXX prettyprint exception in the log
-          Meteor._debug("Exception in method '" + msg.method + "': " +
-                        JSON.stringify(err.stack));
-        }
+          error: {error: 404, reason: "Method not found"}}));
+        socket.send(JSON.stringify({
+          msg: 'data', methods: [msg.id]}));
+        next();
+        return;
       }
 
-      if (msg.id)
+      var callback = function (error, result) {
+        if (error)
+          socket.send(JSON.stringify({
+            msg: 'result', id: msg.id, error: error}));
+        else
+          socket.send(JSON.stringify({
+            msg: 'result', id: msg.id, result: result}));
+
+        // after the method, rerun all the subscriptions as stuff may
+        // have changed.
+        // XXX going away in merge very soon
         socket.meteor.pending_method_ids.push(msg.id);
+        _.each(self.stream_server.all_sockets(), function(x) {
+          if (x && x.meteor)
+            x.meteor.throttled_poll();
+        });
 
-      // after the method, rerun all the subscriptions as stuff may have
-      // changed.
-      _.each(self.stream_server.all_sockets(), function(x) {
-        if (x && x.meteor)
-          x.meteor.throttled_poll();
-      });
+      };
 
+      var invocation = new Meteor._ServerMethodInvocation(msg.method, handler);
+      try {
+        invocation._run(msg.params || [], callback, next);
+      } catch (e) {
+        // _run will have already logged the exception (and told the
+        // client, if appropriate)
+      }
     }).run();
   },
 
@@ -366,24 +536,26 @@ _.extend(Meteor._LivedataServer.prototype, {
 
   apply: function (name, args) {
     var self = this;
-    var handler = self.method_handlers[name];
-    if (!handler)
-      throw new Error("No such method '" + name + "'");
 
     args = _.clone(args);
     var result_func;
-    if (args.length && typeof args[args.length - 1] === "function")
-      result_func = args.pop();
+    if (args.length && typeof args[args.length - 1] === "function") {
+      result_func = Meteor.bindEnvironment(args.pop(), function (e) {
+        // XXX improve error message (and how we report it)
+        Meteor._debug("Exception while delivering result of invoking '" +
+                      name + "'", e.stack);
+      });
+    }
 
-    /*
-       var user_id =
-       (Fiber.current && Fiber.current._meteor_livedata_user_id) || null;
-      args.unshift(user_id);
-    */
-    var ret = handler.apply(null, args);
-    if (result_func)
-      result_func(ret); // XXX catch exception?
-    return ret;
+    var handler = self.method_handlers[name];
+    if (!handler) {
+      if (result_func)
+        result_func({error: 404, reason: "Method not found"});
+      throw new Error("No such method '" + name + "'");
+    }
+
+    var invocation = new Meteor._ServerMethodInvocation(name, handler);
+    return invocation._run(args, result_func);
   },
 
   // A much more elegant way to do this would be: let any autopublish
@@ -403,5 +575,13 @@ _.extend(Meteor._LivedataServer.prototype, {
       self.on_autopublish.push(f);
     else
       f();
-  }
+  },
+
+  // called when we are up-to-date. intended for use only in tests.
+  onQuiesce: function (f) {
+    var self = this;
+    // the server is always up-to-date
+    f();
+  },
+
 });

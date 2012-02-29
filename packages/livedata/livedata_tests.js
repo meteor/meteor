@@ -16,6 +16,7 @@ test("livedata - basics", function () {
 
 var ExpectationManager = function (onComplete) {
   var self = this;
+
   self.onComplete = onComplete;
   self.closed = false;
   self.dead = false;
@@ -39,7 +40,7 @@ _.extend(ExpectationManager.prototype, {
       if (typeof expected === "function")
         expected.apply({}, arguments);
       else
-        assert.equal(expected, _.toArray(arguments));
+        assert.equal(_.toArray(arguments), expected);
 
       self.outstanding--;
       self._check_complete();
@@ -67,6 +68,8 @@ _.extend(ExpectationManager.prototype, {
 });
 
 var testAsyncMulti = function (name, funcs) {
+  var timeout = 1000;
+
   testAsync(name, function (onComplete) {
     var remaining = _.clone(funcs);
 
@@ -75,12 +78,25 @@ var testAsyncMulti = function (name, funcs) {
       if (!func)
         onComplete();
       else {
-        var em = new ExpectationManager(runNext);
+        var em = new ExpectationManager(function () {
+          Meteor.clearTimeout(timer);
+          runNext();
+        });
+
+        var timer = Meteor.setTimeout(function () {
+          em.cancel();
+          test.fail({type: "timeout", message: "Async batch timed out"});
+          onComplete();
+          return;
+        }, timeout);
+
         try {
           func(_.bind(em.expect, em));
         } catch (exception) {
           em.cancel();
           test.exception(exception);
+          Meteor.clearTimeout(timer);
+          onComplete();
           return;
         }
         em.done();
@@ -94,19 +110,43 @@ var testAsyncMulti = function (name, funcs) {
 /******************************************************************************/
 
 // XXX should check error codes
-var failure = function (reason) {
+var failure = function (code, reason) {
   return function (error, result) {
     assert.equal(result, undefined);
-    assert.equal(typeof(error), "object");
-    assert.equal(error.reason, reason);
-    // XXX should check that other keys aren't present.. should
-    // probably use something like the Matcher we used to have
+    assert.isTrue(error && typeof error === "object");
+    if (error && typeof error === "object") {
+      code && assert.equal(error.error, code);
+      reason && assert.equal(error.reason, reason);
+      // XXX should check that other keys aren't present.. should
+      // probably use something like the Matcher we used to have
+    }
   };
 }
 
+test("livedata - methods with colliding names", function () {
+  var x = LocalCollection.uuid();
+  var m = {};
+  m[x] = function () {};
+  App.methods(m);
+
+  assert.throws(function () {
+    App.methods(m);
+  });
+});
+
 testAsyncMulti("livedata - basic method invocation", [
   function (expect) {
-    var ret = App.call("unknown method", expect(failure("Method not found")));
+    try {
+      var ret = App.call("unknown method",
+                         expect(failure(404, "Method not found")));
+    } catch (e) {
+      // throws immediately on server, but still calls callback
+      assert.isTrue(Meteor.is_server);
+      return;
+    }
+
+    // returns undefined on client, then calls callback
+    assert.isTrue(Meteor.is_client);
     assert.equal(ret, undefined);
   },
 
@@ -127,22 +167,94 @@ testAsyncMulti("livedata - basic method invocation", [
 
   function (expect) {
     assert.throws(function () {
-      var ret = App.call("exception", "both");
+      var ret = App.call("exception", "both",
+                         expect(failure(500, "Internal server error")));
     });
   },
 
   function (expect) {
-    var ret = App.call("exception", "server",
-                       expect(failure("Internal server error")));
+    try {
+      var ret = App.call("exception", "server",
+                         expect(failure(500, "Internal server error")));
+    } catch (e) {
+      assert.isTrue(Meteor.is_server);
+      return;
+    }
+
+    assert.isTrue(Meteor.is_client);
     assert.equal(ret, undefined);
   },
 
   function (expect) {
-    assert.throws(function () {
-      var ret = App.call("exception", "client");
-    });
+    if (Meteor.is_client) {
+      assert.throws(function () {
+        var ret = App.call("exception", "client", expect(undefined, undefined));
+      });
+    } else {
+      var ret = App.call("exception", "client", expect(undefined, undefined));
+      assert.equal(ret, undefined);
+    }
   }
 
 ]);
 
-// XXX need a lot more tests
+
+var checkBalances = function (a, b) {
+  var alice = Ledger.findOne({name: "alice", world: world});
+  var bob = Ledger.findOne({name: "bob", world: world});
+  assert.equal(alice.balance, a);
+  assert.equal(bob.balance, b);
+}
+
+// would be nice to have a database-aware test harness of some kind --
+// this is a big hack (and XXX pollutes the global test namespace)
+var world;
+testAsyncMulti("livedata - compound methods", [
+  function () {
+    world = LocalCollection.uuid();
+    if (Meteor.is_client)
+      Meteor.subscribe("ledger", {world: world});
+    Ledger.insert({name: "alice", balance: 100, world: world});
+    Ledger.insert({name: "bob", balance: 50, world: world});
+  },
+  function (expect) {
+    App.call('ledger/transfer', world, "alice", "bob", 10,
+             expect(undefined, undefined));
+
+    checkBalances(90, 60);
+
+    var release = expect();
+    App.onQuiesce(function () {
+      checkBalances(90, 60);
+      Meteor.defer(release);
+    });
+  },
+  function (expect) {
+    App.call('ledger/transfer', world, "alice", "bob", 100, true,
+             expect(failure(409)));
+
+    if (Meteor.is_client)
+      // client can fool itself by cheating, but only until the sync
+      // finishes
+      checkBalances(-10, 160);
+    else
+      checkBalances(90, 60);
+
+    var release = expect();
+    App.onQuiesce(function () {
+      checkBalances(90, 60);
+      Meteor.defer(release);
+    });
+  }
+]);
+
+
+// XXX some things to test in greater detail:
+// staying in simulation mode
+// time warp
+// serialization / beginAsync(true) / beginAsync(false)
+// malformed messages (need raw wire access)
+// method completion/satisfaction
+// subscriptions (multiple APIs, including autosubscribe?)
+// subscription completion
+// [probably lots more]

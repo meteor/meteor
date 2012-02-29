@@ -434,8 +434,11 @@ LocalCollection._insertInSortedList = function (cmp, array, value) {
 // overwrite it.
 // XXX document (at some point)
 // XXX test
+// XXX obviously this particular implementation will not be very efficient
 LocalCollection.prototype.snapshot = function () {
-  this.current_snapshot = _.clone(this.docs);
+  this.current_snapshot = {};
+  for (var id in this.docs)
+    this.current_snapshot[id] = JSON.parse(JSON.stringify(this.docs[id]));
 };
 
 // Restore (and destroy) the snapshot. If no snapshot exists, raise an

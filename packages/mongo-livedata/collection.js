@@ -2,6 +2,13 @@
 // XXX presently there is no way to destroy/clean up a Collection
 Meteor.Collection = function (name, manager, driver) {
   var self = this;
+
+  if (!name && (name !== null)) {
+    Meteor._debug("Warning: creating anonymous collection. It will not be " +
+                  "saved or synchronized over the network. (Pass null for " +
+                  "the collection name to turn off this warning.)");
+  }
+
   // note: nameless collections never have a manager
   manager = name && (manager || App);
 
@@ -127,7 +134,7 @@ _.extend(Meteor.Collection.prototype, {
 
   _maybe_snapshot: function () {
     var self = this;
-    if (self.manager && self.manager.registerStore && !self._was_snapshot) {
+    if (self._manager && self._manager.registerStore && !self._was_snapshot) {
       self._collection.snapshot();
       self._was_snapshot = true;
     }

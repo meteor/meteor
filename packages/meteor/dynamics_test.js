@@ -103,7 +103,7 @@ testAsync("environment - bare bindEnvironment", function (onComplete) {
     var f = Meteor.bindEnvironment(function () {
       assert.equal(CurrentFoo.get(), 68);
       onComplete();
-    });
+    }, function () {});
 
     setTimeout(f, 0);
   });
