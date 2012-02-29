@@ -47,7 +47,7 @@ _.extend(Meteor._ServerMethodInvocation.prototype, {
 
   _sendResponse: function (error, ret, from) {
     var self = this;
-    if (self._threw && from !== "throw")
+   if (self._threw && from !== "throw")
       return;
     if (self._responded) {
       if (from === "throw")
@@ -460,19 +460,11 @@ _.extend(Meteor._LivedataServer.prototype, {
       var invocation = new Meteor._ServerMethodInvocation(msg.method, handler);
       try {
         invocation._run(msg.params || [], callback, next);
+      } catch (e) {
         // _run will have already logged the exception (and told the
         // client, if appropriate)
-      } catch (err) {
-        socket.send(JSON.stringify({
-          msg: 'result', id: msg.id,
-          error: {error: 13, /* XXX error codes! */
-                  reason: "Internal server error"}}));
-        // report method satisfaction to the client
         socket.send(JSON.stringify({
           msg: 'data', methods: [msg.id]}));
-        // XXX prettyprint exception in the log
-        Meteor._debug("Exception in method '" + msg.method + "': " +
-                      JSON.stringify(err.stack));
       }
     }).run();
   },
