@@ -26,11 +26,8 @@ Meteor.startup(function () {
 });
 
 if (Meteor.is_server)
-  Meteor.publish('ledger', {
-    collection: Ledger,
-    selector: function (params) {
-      return {world: params.world};
-    }
+  Meteor.publish('ledger', function (sub, params) {
+    return Ledger.find({world: params.world});
   });
 
 App.methods({

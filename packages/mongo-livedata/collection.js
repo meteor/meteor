@@ -104,17 +104,11 @@ Meteor.Collection = function (name, manager, driver) {
     manager.methods(m);
   }
 
-  // XXX temporary hack to provide sugar in LivedataServer.publish()
-  if (name && manager && manager._hack_collections) {
-    if (name in manager._hack_collections)
-      throw new Error("There is already a collection named '" + name + "'");
-    manager._hack_collections[name] = self;
-  }
-
   // autopublish
   if (manager && manager.onAutopublish)
     manager.onAutopublish(function () {
-      manager.publish(null, {collection: self, is_auto: true});
+      var handler = function (sub, params) { return self.find(); };
+      manager.publish(null, handler, {is_auto: true});
     });
 };
 

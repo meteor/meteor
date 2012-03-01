@@ -30,40 +30,20 @@ Template.api_box_args.pretty = function (fn) {
 
 // Meteor boxes
 
-// XXX now supports sort, skip, limit. same deal as collection (can be
-// a function.) document this.
 Template.api.publish = {
   id: "publish",
-  name: "Meteor.publish(name, [options])",
+  name: "Meteor.publish(name, handler)",
   locus: "Server",
   descr: [
-    "Define a live dataset to which clients may subscribe. Every dataset has a name and can optionally take arguments.",
-    "A client that connects to the dataset with `Meteor.subscribe|subscribe` will receive the published data, and will receive updates in realtime.",
+    "Define a live dataset to which clients may subscribe.  If `name` is a String, a client can subscribe to the dataset with `Meteor.subscribe|subscribe`.  If `name` is falsey, every client is automatically subscribed at connection time.  The `handler` argument is a publish function, called at subscription or connection time, that is expected to send data events to the client.",
     "Calls to this function are ignored on the client."],
   args: [
     {name: "name",
      type: "String",
-     descr: "The name that clients will use to subscribe to this query."}],
-  options: [
-    {name: "collection",
-     type: "Collection",
-     type_link: 'collection',
-     descr: "The collection to publish. If not given, the default is the collection named `name` on disk in MongoDB."},
-    {name: "selector",
-     type: "Object &mdash; Mongo selector; or Function",
-     type_link: "selectors",
-     descr: "Filter for the records to publish. The default is `{}` (everything.). If a function, it receives the parameters passed by the client when making the subscription, and should return the selector to use."},
-    {name: "sort",
-     type: "Object &mdash; sort specifier; or Function",
-     type_link: "sortspecifiers",
-     descr: "Sort order. Like `selector`, can take a function, to be sensitive to the subscription parameters."},
-    {name: "skip",
-     type: "Number; or Function",
-     descr: "Number of results to skip at the beginning. Like `selector`, can take a function, to be sensitive to the subscription parameters."},
-    {name: "limit",
-     type: "Number; or Function",
-     descr: "Maximum number of results to return. Like `selector`, can take a function, to be sensitive to the subscription parameters."}
-  ]
+     descr: "The name that clients will use to subscribe to this query."},
+    {name: "handler",
+     type: "Function",
+     descr: "The publish function that emits data messages."}]
 };
 
 Template.api.subscribe = {

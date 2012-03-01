@@ -5,9 +5,6 @@ Players = new Meteor.Collection("players");
 /*** Client ***/
 
 if (Meteor.is_client) {
-  // Get the top 10 players from the server, updated continuously.
-  Meteor.subscribe("top10");
-
   $(document).ready(function () {
     // List the players by score. You can click to select a player.
     var scores = Meteor.ui.renderList(Players.find({}, {sort: {score: -1}}), {
@@ -54,11 +51,6 @@ if (Meteor.is_client) {
 // subdirectory named 'server'.
 
 if (Meteor.is_server) {
-  // Publish the top 10 players, live, to any client that wants them.
-  Meteor.publish("top10", {collection: Players,
-                           sort: {score: -1},
-                           limit: 10});
-
   // On server startup, create some players if the database is empty.
   Meteor.startup(function () {
     if (Players.find().count() === 0) {
