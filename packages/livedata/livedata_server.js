@@ -138,9 +138,11 @@ _.extend(Meteor._ServerMethodInvocation.prototype, {
 /* LivedataSession                                                            */
 /******************************************************************************/
 
-Meteor._LivedataSession = function () {
+Meteor._LivedataSession = function (socket) {
   var self = this;
   self.id = Meteor.uuid();
+
+  self.socket = socket;
 
   self.methods_blocked = false;
   self.method_queue = [];
@@ -149,6 +151,51 @@ Meteor._LivedataSession = function () {
   self.named_subs = {};
   self.universal_subs = [];
 };
+
+_.extend(Meteor._LivedataSession.prototype, {
+  startSubscription: function (handler, sub_id, params) {
+    var self = this;
+
+    var sub = new Meteor._LivedataServer.Subscription(self.socket, sub_id);
+    if (sub_id)
+      self.named_subs[sub_id] = sub;
+    else
+      self.universal_subs.push(sub);
+
+    var res = handler(sub, params);
+
+    // automatically wire up handlers that return a Cursor.
+    // otherwise, the handler is completely responsible for delivering
+    // its own data messages and registering stop functions.
+    if (res instanceof _Mongo.Cursor) // XXX generalize
+      sub._publishCursor(res);
+  },
+
+  // tear down specified subscription
+  stopSubscription: function (sub_id) {
+    var self = this;
+
+    if (sub_id && self.named_subs[sub_id]) {
+      self.named_subs[sub_id].stop();
+      delete self.named_subs[sub_id];
+    }
+  },
+
+  // tear down all subscriptions
+  stopAllSubscriptions: function () {
+    var self = this;
+
+    _.each(self.named_subs, function (sub, id) {
+      sub.stop();
+    });
+    self.named_subs = {};
+
+    _.each(self.universal_subs, function (sub) {
+      sub.stop();
+    });
+    self.universal_subs = [];
+  }
+});
 
 /******************************************************************************/
 /* LivedataServer                                                             */
@@ -170,7 +217,7 @@ Meteor._LivedataServer = function () {
   self.stream_server = new Meteor._StreamServer;
 
   self.stream_server.register(function (socket) {
-    socket.meteor_session = new Meteor._LivedataSession;
+    socket.meteor_session = new Meteor._LivedataSession(socket);
 
     socket.on('data', function (raw_msg) {
       try {
@@ -203,7 +250,7 @@ Meteor._LivedataServer = function () {
     });
 
     socket.on('close', function () {
-      self._stopAllSubscriptions(socket);
+      socket.meteor_session.stopAllSubscriptions();
     });
   });
 };
@@ -332,45 +379,6 @@ Meteor._LivedataServer.Subscription.prototype._publishCursor = function (cursor,
 };
 
 _.extend(Meteor._LivedataServer.prototype, {
-  _startSubscription: function (socket, handler, sub_id, params) {
-    var self = this;
-
-    var sub = new Meteor._LivedataServer.Subscription(socket, sub_id);
-    if (sub_id)
-      socket.meteor_session.named_subs[sub_id] = sub;
-    else
-      socket.meteor_session.universal_subs.push(sub);
-
-    var res = handler(sub, params);
-
-    // automatically wire up handlers that return a Cursor.
-    // otherwise, the handler is completely responsible for delivering
-    // its own data messages and registering stop functions.
-    if (res instanceof _Mongo.Cursor) // XXX generalize
-      sub._publishCursor(res);
-  },
-
-  // tear down specified subscription
-  _stopSubscription: function (socket, sub_id) {
-    if (sub_id && socket.meteor_session.named_subs[sub_id]) {
-      socket.meteor_session.named_subs[sub_id].stop();
-      delete socket.meteor_session.named_subs[sub_id];
-    }
-  },
-
-  // tear down all subscriptions
-  _stopAllSubscriptions: function (socket) {
-    _.each(socket.meteor_session.named_subs, function (sub, id) {
-      sub.stop();
-    });
-    socket.meteor_session.named_subs = {};
-
-    _.each(socket.meteor_session.universal_subs, function (sub) {
-      sub.stop();
-    });
-    socket.meteor_session.universal_subs = [];
-  },
-
   // XXX 'connect' message should have a protocol version
   _livedata_connect: function (socket, msg) {
     var self = this;
@@ -380,7 +388,7 @@ _.extend(Meteor._LivedataServer.prototype, {
     // Spin up all the universal publishers.
     Fiber(function () {
       _.each(self.universal_publish_handlers, function (handler) {
-        self._startSubscription(socket, handler);
+        socket.meteor_session.startSubscription(handler);
       });
     }).run();
 
@@ -410,10 +418,10 @@ _.extend(Meteor._LivedataServer.prototype, {
     Fiber(function () {
       if (msg.id in socket.meteor_session.named_subs)
         // XXX client screwed up
-        self._stopSubscription(socket, msg.id);
+        socket.meteor_session.stopSubscription(msg.id);
 
       var handler = self.publish_handlers[msg.name];
-      self._startSubscription(socket, handler, msg.id, msg.params);
+      socket.meteor_session.startSubscription(handler, msg.id, msg.params);
     }).run();
   },
 
@@ -423,7 +431,7 @@ _.extend(Meteor._LivedataServer.prototype, {
     var self = this;
 
     Fiber(function () {
-      self._stopSubscription(socket, msg.id);
+      socket.meteor_session.stopSubscription(msg.id);
     }).run();
 
     socket.send(JSON.stringify({msg: 'nosub', id: msg.id}));
