@@ -5,6 +5,7 @@ Meteor._Stream = function (url) {
   self.socket = null;
   self.event_callbacks = {}; // name -> [callback]
   self.server_id = null;
+  self.force_fail = false;
 
   //// Constants
 
@@ -102,6 +103,15 @@ _.extend(Meteor._Stream.prototype, {
     self.retry_timer = null;
     self.current_status.retry_count -= 1; // don't count manual retries
     self._retry_now();
+  },
+
+  // Undocumented function for testing -- as long as the flag is set,
+  // the connection is forced to be disconnected
+  forceDisconnect: function (flag) {
+    var self = this;
+    self.force_fail = flag;
+    if (flag && self.socket)
+      self.socket.close();
   },
 
   _connected: function (welcome_message) {
@@ -210,6 +220,9 @@ _.extend(Meteor._Stream.prototype, {
 
   _retry_now: function () {
     var self = this;
+
+    if (self.force_fail)
+      return;
 
     self.current_status.retry_count += 1;
     self.current_status.status = "connecting";

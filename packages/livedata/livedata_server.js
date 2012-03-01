@@ -598,12 +598,15 @@ Meteor._LivedataServer = function () {
 
           if (msg.session)
             var old_session = self.sessions[msg.session];
-          if (old_session)
+          if (old_session) {
             // Resuming a session
             socket.meteor_session = old_session;
-          else
+          }
+          else {
             // Creating a new session
             socket.meteor_session = new Meteor._LivedataSession(self);
+            self.sessions[socket.meteor_session.id] = socket.meteor_session;
+          }
 
           socket.send(JSON.stringify({msg: 'connected',
                                       session: socket.meteor_session.id}));
