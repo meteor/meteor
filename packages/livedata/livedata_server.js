@@ -145,8 +145,9 @@ Meteor._LivedataSession = function (socket, server) {
   self.socket = socket;
   self.server = server;
 
-  self.methods_blocked = false;
-  self.method_queue = [];
+  self.queue = [];
+  self.blocked = false;
+  self.worker_running = false;
 
   // Sub objects for active subscriptions
   self.named_subs = {};
@@ -159,13 +160,44 @@ _.extend(Meteor._LivedataSession.prototype, {
     self.stopAllSubscriptions();
   },
 
+  // We run the messages from the client one at a time, in the order
+  // given by the client. A message can set self.blocked to pause
+  // processing (eg, for an async method to complete.) To resume
+  // processing, clear self.blocked and call _tryProcessNext().
+
+  // Actually, we don't have to 'totally order' the messages in this
+  // way, but it's the easiest thing that's correct. (unsub needs to
+  // be ordered against sub, methods need to be ordered against each
+  // other.)
+
   processMessage: function (msg) {
     var self = this;
+    self.queue.push(msg);
+    self._tryProcessNext();
+  },
 
-    if (msg.msg in self.protocol_handlers)
-      self.protocol_handlers[msg.msg].call(self, msg);
-    else
-      self.server._sendError(socket, 'Bad request', msg);
+  _tryProcessNext: function () {
+    var self = this;
+
+    if (self.blocked || !self.queue.length || self.worker_running)
+      return;
+
+    self.worker_running = true;
+    Fiber(function () {
+      while (true) {
+        var more = !self.blocked && self.queue.length;
+        if (!more) {
+          self.worker_running = false;
+          return;
+        }
+
+        var msg = self.queue.shift();
+        if (msg.msg in self.protocol_handlers)
+          self.protocol_handlers[msg.msg].call(self, msg);
+        else
+          self.server._sendError(socket, 'Bad request', msg);
+      }
+    }).run();
   },
 
   protocol_handlers: {
@@ -187,27 +219,20 @@ _.extend(Meteor._LivedataSession.prototype, {
         return;
       }
 
-      Fiber(function () {
-        if (msg.id in self.named_subs)
-          // subs are idempotent, or rather, they are ignored if a sub
-          // with that id already exists. this is important during
-          // reconnect.
-          return;
+      if (msg.id in self.named_subs)
+        // subs are idempotent, or rather, they are ignored if a sub
+        // with that id already exists. this is important during
+        // reconnect.
+        return;
 
-        var handler = self.server.publish_handlers[msg.name];
-        self.startSubscription(handler, msg.id, msg.params);
-      }).run();
+      var handler = self.server.publish_handlers[msg.name];
+      self.startSubscription(handler, msg.id, msg.params);
     },
 
-    // XXX Fiber() doesn't interlock.  if a client subs then unsubs, the
-    // subscription should end up as off.
     unsub: function (msg) {
       var self = this;
 
-      Fiber(function () {
-        self.stopSubscription(msg.id);
-      }).run();
-
+      self.stopSubscription(msg.id);
       self.socket.send(JSON.stringify({msg: 'nosub', id: msg.id}));
     },
 
@@ -223,8 +248,54 @@ _.extend(Meteor._LivedataSession.prototype, {
         return;
       }
 
-      self.method_queue.push(msg);
-      self._tryInvokeNext();
+      var handler = self.server.method_handlers[msg.method];
+      if (!handler) {
+        self.socket.send(JSON.stringify({
+          msg: 'result', id: msg.id,
+          error: {error: 404, reason: "Method not found"}}));
+        self.socket.send(JSON.stringify({
+          msg: 'data', methods: [msg.id]}));
+        return;
+      }
+
+      // Invocations sent by a given client block later invocations
+      // sent by the same client until they return, unless the method
+      // explicitly allows later methods to run by calling
+      // beginAsync(true).
+
+      // XXX for completeness, should probably have a way of sending a
+      // response *without* unblocking processing (and doing that
+      // later..)
+
+      self.blocked = true;
+
+      var callback = function (error, result) {
+        if (error)
+          self.socket.send(JSON.stringify({
+            msg: 'result', id: msg.id, error: error}));
+        else
+          self.socket.send(JSON.stringify({
+            msg: 'result', id: msg.id, result: result}));
+
+        // the method is satisfied once callback is called, because
+        // any DB observe callbacks run to completion in the same
+        // tick.
+        self.socket.send(JSON.stringify({
+          msg: 'data', methods: [msg.id]}));
+      };
+
+      var next = function (error, ret) {
+        self.blocked = false;
+        self._tryProcessNext()
+      };
+
+      var invocation = new Meteor._ServerMethodInvocation(msg.method, handler);
+      try {
+        invocation._run(msg.params || [], callback, next);
+      } catch (e) {
+        // _run will have already logged the exception (and told the
+        // client, if appropriate)
+      }
     }
   },
 
@@ -269,65 +340,7 @@ _.extend(Meteor._LivedataSession.prototype, {
       sub.stop();
     });
     self.universal_subs = [];
-  },
-
-  _tryInvokeNext: function () {
-    var self = this;
-
-    // Invoke methods one at a time, in the order sent by the client
-    // -- invocations sent by a given client block later invocations
-    // sent by the same client, unless the method explicitly allows
-    // later methods to run by calling beginAsync(true).
-
-    if (self.methods_blocked)
-      return;
-    var msg = self.method_queue.shift();
-    if (!msg)
-      return;
-
-    self.methods_blocked = true;
-    Fiber(function () {
-      var next = function (error, ret) {
-        self.methods_blocked = false;
-        _.defer(_.bind(self._tryInvokeNext, self));
-      };
-
-      var handler = self.server.method_handlers[msg.method];
-      if (!handler) {
-        self.socket.send(JSON.stringify({
-          msg: 'result', id: msg.id,
-          error: {error: 404, reason: "Method not found"}}));
-        self.socket.send(JSON.stringify({
-          msg: 'data', methods: [msg.id]}));
-        next();
-        return;
-      }
-
-      var callback = function (error, result) {
-        if (error)
-          self.socket.send(JSON.stringify({
-            msg: 'result', id: msg.id, error: error}));
-        else
-          self.socket.send(JSON.stringify({
-            msg: 'result', id: msg.id, result: result}));
-
-        // the method is satisfied once callback is called, because
-        // any DB observe callbacks run to completion in the same
-        // tick.
-        self.socket.send(JSON.stringify({
-          msg: 'data', methods: [msg.id]}));
-      };
-
-      var invocation = new Meteor._ServerMethodInvocation(msg.method, handler);
-      try {
-        invocation._run(msg.params || [], callback, next);
-      } catch (e) {
-        // _run will have already logged the exception (and told the
-        // client, if appropriate)
-      }
-    }).run();
-  },
-
+  }
 });
 
 /******************************************************************************/
@@ -674,6 +687,5 @@ _.extend(Meteor._LivedataServer.prototype, {
     var self = this;
     // the server is always up-to-date
     f();
-  },
-
+  }
 });
