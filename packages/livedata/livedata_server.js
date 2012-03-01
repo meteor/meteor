@@ -1,3 +1,7 @@
+/******************************************************************************/
+/* ServerMethodInvocation                                                     */
+/******************************************************************************/
+
 Meteor._ServerMethodInvocation = function (name, handler) {
   var self = this;
 
@@ -130,68 +134,341 @@ _.extend(Meteor._ServerMethodInvocation.prototype, {
   }
 });
 
-Meteor._LivedataServer = function () {
+/******************************************************************************/
+/* LivedataSession                                                            */
+/******************************************************************************/
+
+Meteor._LivedataSession = function (server) {
   var self = this;
+  self.id = Meteor.uuid();
 
-  self.publish_handlers = {};
-  self.universal_publish_handlers = [];
+  self.server = server;
 
-  self.method_handlers = {};
+  self.initialized = false;
+  self.socket = null;
+  self.last_connect_time = 0;
+  self.last_detach_time = +(new Date);
 
-  self.on_autopublish = []; // array of func if AP disabled, null if enabled
-  self.warned_about_autopublish = false;
+  self.in_queue = [];
+  self.blocked = false;
+  self.worker_running = false;
 
-  self.stream_server = new Meteor._StreamServer;
+  self.out_queue = [];
 
-  self.stream_server.register(function (socket) {
-    socket.meteor = {};
-    socket.meteor.methods_blocked = false;
-    socket.meteor.method_queue = [];
+  // id of invocation => {result or error, when}
+  self.result_cache = {};
 
-    // Sub objects for active subscriptions
-    socket.meteor.named_subs = {};
-    socket.meteor.universal_subs = [];
-
-    socket.on('data', function (raw_msg) {
-      try {
-        try {
-          var msg = JSON.parse(raw_msg);
-        } catch (err) {
-          Meteor._debug("discarding message with invalid JSON", raw_msg);
-          return;
-        }
-        if (typeof msg !== 'object' || !msg.msg) {
-          Meteor._debug("discarding invalid livedata message", msg);
-          return;
-        }
-
-        if (msg.msg === 'connect')
-          self._livedata_connect(socket, msg);
-        else if (msg.msg === 'sub')
-          self._livedata_sub(socket, msg);
-        else if (msg.msg === 'unsub')
-          self._livedata_unsub(socket, msg);
-        else if (msg.msg === 'method')
-          self._livedata_method(socket, msg);
-        else
-          Meteor._debug("discarding unknown livedata message type", msg);
-      } catch (e) {
-        // XXX print stack nicely
-        Meteor._debug("Internal exception while processing message", msg,
-                      e.stack);
-      }
-    });
-
-    socket.on('close', function () {
-      self._stopAllSubscriptions(socket);
-    });
-  });
+  // Sub objects for active subscriptions
+  self.named_subs = {};
+  self.universal_subs = [];
 };
 
+_.extend(Meteor._LivedataSession.prototype, {
+  // Connect a new socket to this session, displacing (and closing)
+  // any socket that was previously connected
+  connect: function (socket) {
+    var self = this;
+    if (self.socket) {
+      self.socket.close();
+      self.detach(self.socket);
+    }
+
+    self.socket = socket;
+    self.last_connect_time = +(new Date);
+    _.each(self.out_queue, function (msg) {
+      self.socket.send(JSON.stringify(msg));
+    });
+    self.out_queue = [];
+
+    // On initial connect, spin up all the universal publishers.
+    if (!self.initialized) {
+      self.initialized = true;
+      Fiber(function () {
+        _.each(self.server.universal_publish_handlers, function (handler) {
+          self._startSubscription(handler);
+        });
+      }).run();
+    }
+  },
+
+  // If 'socket' is the socket currently connected to this session,
+  // detach it (the session will then have no socket -- it will
+  // continue running and queue up its messages.) If 'socket' isn't
+  // the currently connected socket, just clean up the pointer that
+  // may have led us to believe otherwise.
+  detach: function (socket) {
+    var self = this;
+    if (socket === self.socket) {
+      self.socket = null;
+      self.last_detach_time = +(new Date);
+    }
+    if (socket.meteor_session === self)
+      socket.meteor_session = null;
+  },
+
+  // Should be called periodically to prune the method invocation
+  // replay cache.
+  cleanup: function () {
+    var self = this;
+    // Only prune if we're connected, and we've been connected for at
+    // least five minutes. That seems like enough time for the client
+    // to finish its reconnection. Then, keep five minutes of
+    // history. That seems like enough time for the client to receive
+    // our responses, or else for us to notice that the connection is
+    // gone.
+    var now = +(new Date);
+    if (!(self.socket && (now - self.last_connect_time) > 5 * 60 * 1000))
+      return; // not connected, or not connected long enough
+
+    var kill = [];
+    _.each(self.result_cache, function (info, id) {
+      if (now - info.when > 5 * 60 * 1000)
+        kill.push(id);
+    });
+    _.each(kill, function (id) {
+      delete self.result_cache[id];
+    });
+  },
+
+  // Destroy this session. Stop all processing and tear everything
+  // down. If a socket was attached, close it.
+  destroy: function () {
+    var self = this;
+    if (self.socket) {
+      self.socket.close();
+      self.detach(self.socket);
+    }
+    self._stopAllSubscriptions();
+    self.in_queue = self.out_queue = [];
+  },
+
+  // Send a message (queueing it if no socket is connected right now.)
+  // It should be a JSON object (it will be stringified.)
+  send: function (msg) {
+    var self = this;
+    if (self.socket)
+      self.socket.send(JSON.stringify(msg));
+    else
+      self.out_queue.push(msg);
+  },
+
+  // Send a connection error.
+  sendError: function (reason, offending_message) {
+    var self = this;
+    var msg = {msg: 'error', reason: reason};
+    if (offending_message)
+      msg.offending_message = offending_message;
+    self.send(msg);
+  },
+
+  // Throw 'msg' into the queue to be processed as an incoming
+  // message, but ignore it if 'socket' is not the currently connected
+  // socket.
+  processMessage: function (msg, socket) {
+    var self = this;
+    if (socket === self.socket) {
+      self.in_queue.push(msg);
+      self._tryProcessNext();
+    }
+  },
+
+  // We run the messages from the client one at a time, in the order
+  // given by the client. A message can set self.blocked to pause
+  // processing (eg, for an async method to complete.) To resume
+  // processing, clear self.blocked and call _tryProcessNext().
+
+  // Actually, we don't have to 'totally order' the messages in this
+  // way, but it's the easiest thing that's correct. (unsub needs to
+  // be ordered against sub, methods need to be ordered against each
+  // other.)
+  _tryProcessNext: function () {
+    var self = this;
+
+    if (self.blocked || !self.in_queue.length || self.worker_running)
+      return;
+
+    self.worker_running = true;
+    Fiber(function () {
+      while (true) {
+        var more = !self.blocked && self.in_queue.length;
+        if (!more) {
+          self.worker_running = false;
+          return;
+        }
+
+        var msg = self.in_queue.shift();
+        if (msg.msg in self.protocol_handlers)
+          self.protocol_handlers[msg.msg].call(self, msg);
+        else
+          self.sendError('Bad request', msg);
+      }
+    }).run();
+  },
+
+  protocol_handlers: {
+    sub: function (msg) {
+      var self = this;
+
+      // reject malformed messages
+      if (typeof (msg.id) !== "string" ||
+          typeof (msg.name) !== "string" ||
+          (('params' in msg) && typeof (msg.params) !== "object")) {
+        self.sendError("Malformed subscription", msg);
+        return;
+      }
+
+      if (!self.server.publish_handlers[msg.name]) {
+        self.send({
+          msg: 'nosub', id: msg.id,
+          error: {error: 404, reason: "Subscription not found"}});
+        return;
+      }
+
+      if (msg.id in self.named_subs)
+        // subs are idempotent, or rather, they are ignored if a sub
+        // with that id already exists. this is important during
+        // reconnect.
+        return;
+
+      var handler = self.server.publish_handlers[msg.name];
+      self._startSubscription(handler, msg.id, msg.params);
+    },
+
+    unsub: function (msg) {
+      var self = this;
+
+      self._stopSubscription(msg.id);
+      self.send({msg: 'nosub', id: msg.id});
+    },
+
+    method: function (msg) {
+      var self = this;
+
+      // reject malformed messages
+      // XXX should also reject messages with unknown attributes?
+      if (typeof (msg.id) !== "string" ||
+          typeof (msg.method) !== "string" ||
+          (('params' in msg) && !(msg.params instanceof Array))) {
+        self.sendError("Malformed method invocation", msg);
+        return;
+      }
+
+      // check for a replayed method (this is important during
+      // reconnect)
+      if (msg.id in self.result_cache) {
+        // found -- just resend whatever we sent last time
+        var payload = _.clone(self.result_cache[msg.id]);
+        delete payload.when;
+        self.send(
+          _.extend({msg: 'result', id: msg.id}, payload));
+        return;
+      }
+
+      // find the handler
+      var handler = self.server.method_handlers[msg.method];
+      if (!handler) {
+        self.send({
+          msg: 'result', id: msg.id,
+          error: {error: 404, reason: "Method not found"}});
+        self.send({
+          msg: 'data', methods: [msg.id]});
+        return;
+      }
+
+      // Invocations sent by a given client block later invocations
+      // sent by the same client until they return, unless the method
+      // explicitly allows later methods to run by calling
+      // beginAsync(true).
+
+      // XXX for completeness, should probably have a way of sending a
+      // response *without* unblocking processing (and doing that
+      // later..)
+
+      self.blocked = true;
+
+      var callback = function (error, result) {
+        var payload = error ? {error: error} : {result: result};
+
+        self.result_cache[msg.id] =
+          _.extend({when: +(new Date)}, payload);
+
+        self.send(
+          _.extend({msg: 'result', id: msg.id}, payload));
+
+        // the method is satisfied once callback is called, because
+        // any DB observe callbacks run to completion in the same
+        // tick.
+        self.send({
+          msg: 'data', methods: [msg.id]});
+      };
+
+      var next = function (error, ret) {
+        self.blocked = false;
+        self._tryProcessNext()
+      };
+
+      var invocation = new Meteor._ServerMethodInvocation(msg.method, handler);
+      try {
+        invocation._run(msg.params || [], callback, next);
+      } catch (e) {
+        // _run will have already logged the exception (and told the
+        // client, if appropriate)
+      }
+    }
+  },
+
+  _startSubscription: function (handler, sub_id, params) {
+    var self = this;
+
+    var sub = new Meteor._LivedataSubscription(self, sub_id);
+    if (sub_id)
+      self.named_subs[sub_id] = sub;
+    else
+      self.universal_subs.push(sub);
+
+    var res = handler(sub, params);
+
+    // automatically wire up handlers that return a Cursor.
+    // otherwise, the handler is completely responsible for delivering
+    // its own data messages and registering stop functions.
+    if (res instanceof _Mongo.Cursor) // XXX generalize
+      sub._publishCursor(res);
+  },
+
+  // tear down specified subscription
+  _stopSubscription: function (sub_id) {
+    var self = this;
+
+    if (sub_id && self.named_subs[sub_id]) {
+      self.named_subs[sub_id].stop();
+      delete self.named_subs[sub_id];
+    }
+  },
+
+  // tear down all subscriptions
+  _stopAllSubscriptions: function () {
+    var self = this;
+
+    _.each(self.named_subs, function (sub, id) {
+      sub.stop();
+    });
+    self.named_subs = {};
+
+    _.each(self.universal_subs, function (sub) {
+      sub.stop();
+    });
+    self.universal_subs = [];
+  }
+});
+
+/******************************************************************************/
+/* LivedataSubscription                                                       */
+/******************************************************************************/
+
 // ctor for a sub handle: the input to each publish function
-Meteor._LivedataServer.Subscription = function (socket, sub_id) {
-  // transport.  provides send(obj).
-  this.socket = socket;
+Meteor._LivedataSubscription = function (session, sub_id) {
+  // LivedataSession. provides send().
+  this.session = session;
 
   // my subscription ID (generated by client, null for universal subs).
   this.sub_id = sub_id;
@@ -204,289 +481,215 @@ Meteor._LivedataServer.Subscription = function (socket, sub_id) {
   this.stop_callbacks = [];
 };
 
-Meteor._LivedataServer.Subscription.prototype.stop = function () {
-  for (var i = 0; i < this.stop_callbacks.length; i++)
-    (this.stop_callbacks[i])();
-};
+_.extend(Meteor._LivedataSubscription.prototype, {
+  stop: function () {
+    for (var i = 0; i < this.stop_callbacks.length; i++)
+      (this.stop_callbacks[i])();
+  },
 
-Meteor._LivedataServer.Subscription.prototype.onStop = function (callback) {
-  this.stop_callbacks.push(callback);
-};
+  onStop: function (callback) {
+    this.stop_callbacks.push(callback);
+  },
 
-Meteor._LivedataServer.Subscription.prototype._ensureMsg = function (collection_name, id) {
-  var self = this;
-  if (!self.pending_updates[collection_name])
-    self.pending_updates[collection_name] = {};
-  if (!self.pending_updates[collection_name][id])
-    self.pending_updates[collection_name][id] = {msg: 'data', collection: collection_name, id: id};
-  return self.pending_updates[collection_name][id];
-};
+  _ensureMsg: function (collection_name, id) {
+    var self = this;
+    if (!self.pending_updates[collection_name])
+      self.pending_updates[collection_name] = {};
+    if (!self.pending_updates[collection_name][id])
+      self.pending_updates[collection_name][id] = {msg: 'data', collection: collection_name, id: id};
+    return self.pending_updates[collection_name][id];
+  },
 
-Meteor._LivedataServer.Subscription.prototype.set = function (collection_name, id, dictionary) {
-  var self = this;
-  var obj = _.extend({}, dictionary);
-  delete obj._id;
-  var msg = self._ensureMsg(collection_name, id);
-  msg.set = _.extend(msg.set || {}, obj);
+  set: function (collection_name, id, dictionary) {
+    var self = this;
+    var obj = _.extend({}, dictionary);
+    delete obj._id;
+    var msg = self._ensureMsg(collection_name, id);
+    msg.set = _.extend(msg.set || {}, obj);
 
-  if (msg.unset) {
-    msg.unset = _.difference(msg.unset, _.keys(msg.set));
-    if (!msg.unset.length)
-      delete msg.unset;
-  }
-};
-
-Meteor._LivedataServer.Subscription.prototype.unset = function (collection_name, id, keys) {
-  var self = this;
-  keys = _.without(keys, '_id');
-  var msg = self._ensureMsg(collection_name, id);
-  msg.unset = _.union(msg.unset || [], keys);
-
-  if (msg.set) {
-    for (var key in keys)
-      delete msg.set[key];
-    if (!_.keys(msg.set))
-      delete msg.set;
-  }
-};
-
-Meteor._LivedataServer.Subscription.prototype.complete = function () {
-  var self = this;
-
-  // universal subs (sub_id is null) can't signal completion.  it's
-  // not an error, since the same handler (eg publishQuery) might be used
-  // to implement both named and universal subs.
-
-  if (self.sub_id)
-    self.pending_complete = true;
-};
-
-Meteor._LivedataServer.Subscription.prototype.flush = function () {
-  var self = this;
-  var msg;
-
-  for (var name in self.pending_updates)
-    for (var id in self.pending_updates[name])
-      self.socket.send(JSON.stringify(self.pending_updates[name][id]));
-
-  if (self.pending_complete)
-    self.socket.send(JSON.stringify({msg: 'data', subs: [self.sub_id]}));
-
-  self.pending_updates = {};
-  self.pending_complete = false;
-};
-
-Meteor._LivedataServer.Subscription.prototype._publishCursor = function (cursor, name) {
-  var self = this;
-  var collection = name || cursor.collection_name;
-
-  var observe_handle = cursor.observe({
-    added: function (obj) {
-      self.set(collection, obj._id, obj);
-      self.flush();
-    },
-    changed: function (obj, old_idx, old_obj) {
-      var set = {};
-      _.each(obj, function (v, k) {
-        if (!_.isEqual(v, old_obj[k]))
-          set[k] = v;
-      });
-      self.set(collection, obj._id, set);
-      var dead_keys = _.difference(_.keys(old_obj), _.keys(obj));
-      self.unset(collection, obj._id, dead_keys);
-      self.flush();
-    },
-    removed: function (id, old_idx, old_obj) {
-      self.unset(collection, id, _.keys(old_obj));
-      self.flush();
+    if (msg.unset) {
+      msg.unset = _.difference(msg.unset, _.keys(msg.set));
+      if (!msg.unset.length)
+        delete msg.unset;
     }
+  },
+
+  unset: function (collection_name, id, keys) {
+    var self = this;
+    keys = _.without(keys, '_id');
+    var msg = self._ensureMsg(collection_name, id);
+    msg.unset = _.union(msg.unset || [], keys);
+
+    if (msg.set) {
+      for (var key in keys)
+        delete msg.set[key];
+      if (!_.keys(msg.set))
+        delete msg.set;
+    }
+  },
+
+  complete: function () {
+    var self = this;
+
+    // universal subs (sub_id is null) can't signal completion.  it's
+    // not an error, since the same handler (eg publishQuery) might be
+    // used to implement both named and universal subs.
+
+    if (self.sub_id)
+      self.pending_complete = true;
+  },
+
+  flush: function () {
+    var self = this;
+    var msg;
+
+    for (var name in self.pending_updates)
+      for (var id in self.pending_updates[name])
+        self.session.send(self.pending_updates[name][id]);
+
+    if (self.pending_complete)
+      self.session.send({msg: 'data', subs: [self.sub_id]});
+
+    self.pending_updates = {};
+    self.pending_complete = false;
+  },
+
+  _publishCursor: function (cursor, name) {
+    var self = this;
+    var collection = name || cursor.collection_name;
+
+    var observe_handle = cursor.observe({
+      added: function (obj) {
+        self.set(collection, obj._id, obj);
+        self.flush();
+      },
+      changed: function (obj, old_idx, old_obj) {
+        var set = {};
+        _.each(obj, function (v, k) {
+          if (!_.isEqual(v, old_obj[k]))
+            set[k] = v;
+        });
+        self.set(collection, obj._id, set);
+        var dead_keys = _.difference(_.keys(old_obj), _.keys(obj));
+        self.unset(collection, obj._id, dead_keys);
+        self.flush();
+      },
+      removed: function (id, old_idx, old_obj) {
+        self.unset(collection, id, _.keys(old_obj));
+        self.flush();
+      }
+    });
+
+    // observe only returns after the initial added callbacks have
+    // run.  mark subscription as completed.
+    self.complete();
+    self.flush();
+
+    // register stop callback (expects lambda w/ no args).
+    self.onStop(_.bind(observe_handle.stop, observe_handle));
+  }
+});
+
+/******************************************************************************/
+/* LivedataServer                                                             */
+/******************************************************************************/
+
+Meteor._LivedataServer = function () {
+  var self = this;
+
+  self.publish_handlers = {};
+  self.universal_publish_handlers = [];
+
+  self.method_handlers = {};
+
+  self.on_autopublish = []; // array of func if AP disabled, null if enabled
+  self.warned_about_autopublish = false;
+
+  self.sessions = {}; // map from id to session
+
+  self.stream_server = new Meteor._StreamServer;
+
+  self.stream_server.register(function (socket) {
+    socket.meteor_session = null;
+
+    var sendError = function (reason, offending_message) {
+      var msg = {msg: 'error', reason: reason};
+      if (offending_message)
+        msg.offending_message = offending_message;
+      socket.send(JSON.stringify(msg));
+    };
+
+    socket.on('data', function (raw_msg) {
+      try {
+        try {
+          var msg = JSON.parse(raw_msg);
+        } catch (err) {
+          sendError(socket, 'Parse error');
+          return;
+        }
+        if (typeof msg !== 'object' || !msg.msg) {
+          sendError(socket, 'Bad request', msg);
+          return;
+        }
+
+        if (msg.msg === 'connect') {
+          if (socket.meteor_session) {
+            sendError(socket, "Already connected", msg);
+            return;
+          }
+
+          if (msg.session)
+            var old_session = self.sessions[msg.session];
+          if (old_session) {
+            // Resuming a session
+            socket.meteor_session = old_session;
+          }
+          else {
+            // Creating a new session
+            socket.meteor_session = new Meteor._LivedataSession(self);
+            self.sessions[socket.meteor_session.id] = socket.meteor_session;
+          }
+
+          socket.send(JSON.stringify({msg: 'connected',
+                                      session: socket.meteor_session.id}));
+          // will kick off previous connection, if any
+          socket.meteor_session.connect(socket);
+          return;
+        }
+
+        if (!socket.meteor_session) {
+          sendError(socket, 'Must connect first', msg);
+          return;
+        }
+        socket.meteor_session.processMessage(msg, socket);
+      } catch (e) {
+        // XXX print stack nicely
+        Meteor._debug("Internal exception while processing message", msg,
+                      e.stack);
+      }
+    });
+
+    socket.on('close', function () {
+      if (socket.meteor_session)
+        socket.meteor_session.detach(socket);
+    });
   });
 
-  // observe only returns after the initial added callbacks have
-  // run.  mark subscription as completed.
-  self.complete();
-  self.flush();
-
-  // register stop callback (expects lambda w/ no args).
-  self.onStop(_.bind(observe_handle.stop, observe_handle));
+  // Every minute, clean up sessions that have been abandoned for 15
+  // minutes. Also run result cache cleanup.
+  // XXX at scale, we'll want to have a separate timer for each
+  // session, and stagger them
+  setInterval(function () {
+    var now = +(new Date);
+    _.each(self.sessions, function (s) {
+      s.cleanup();
+      if (!s.socket && (now - s.last_detach_time) > 15 * 60 * 1000)
+        s.destroy();
+    });
+  }, 1 * 60 * 1000);
 };
 
 _.extend(Meteor._LivedataServer.prototype, {
-  _startSubscription: function (socket, handler, sub_id, params) {
-    var self = this;
-
-    var sub = new Meteor._LivedataServer.Subscription(socket, sub_id);
-    if (sub_id)
-      socket.meteor.named_subs[sub_id] = sub;
-    else
-      socket.meteor.universal_subs.push(sub);
-
-    var res = handler(sub, params);
-
-    // automatically wire up handlers that return a Cursor.
-    // otherwise, the handler is completely responsible for delivering
-    // its own data messages and registering stop functions.
-    if (res instanceof _Mongo.Cursor) // XXX generalize
-      sub._publishCursor(res);
-  },
-
-  // tear down specified subscription
-  _stopSubscription: function (socket, sub_id) {
-    if (sub_id && socket.meteor.named_subs[sub_id]) {
-      socket.meteor.named_subs[sub_id].stop();
-      delete socket.meteor.named_subs[sub_id];
-    }
-  },
-
-  // tear down all subscriptions
-  _stopAllSubscriptions: function (socket) {
-    _.each(socket.meteor.named_subs, function (sub, id) {
-      sub.stop();
-    });
-    socket.meteor.named_subs = {};
-
-    _.each(socket.meteor.universal_subs, function (sub) {
-      sub.stop();
-    });
-    socket.meteor.universal_subs = [];
-  },
-
-  // XXX 'connect' message should have a protocol version
-  _livedata_connect: function (socket, msg) {
-    var self = this;
-    // Always start a new session. We don't support any reconnection.
-    socket.send(JSON.stringify({msg: 'connected', session: Meteor.uuid()}));
-
-    // Spin up all the universal publishers.
-    Fiber(function () {
-      _.each(self.universal_publish_handlers, function (handler) {
-        self._startSubscription(socket, handler);
-      });
-    }).run();
-
-    // XXX what to do here on reconnect?  oh, probably just fake a sub message.
-  },
-
-  _livedata_sub: function (socket, msg) {
-    var self = this;
-
-    // reject malformed messages
-    if (typeof (msg.id) !== "string" ||
-        typeof (msg.name) !== "string" ||
-        (('params' in msg) && typeof (msg.params) !== "object")) {
-      socket.send(JSON.stringify({
-        msg: 'nosub', id: msg.id, error: {error: 400,
-                                          reason: "Bad request"}}));
-      return;
-    }
-
-    if (!self.publish_handlers[msg.name]) {
-      socket.send(JSON.stringify({
-        msg: 'nosub', id: msg.id, error: {error: 404,
-                                          reason: "Subscription not found"}}));
-      return;
-    }
-
-    Fiber(function () {
-      if (msg.id in socket.meteor.named_subs)
-        // XXX client screwed up
-        self._stopSubscription(socket, msg.id);
-
-      var handler = self.publish_handlers[msg.name];
-      self._startSubscription(socket, handler, msg.id, msg.params);
-    }).run();
-  },
-
-  // XXX Fiber() doesn't interlock.  if a client subs then unsubs, the
-  // subscription should end up as off.
-  _livedata_unsub: function (socket, msg) {
-    var self = this;
-
-    Fiber(function () {
-      self._stopSubscription(socket, msg.id);
-    }).run();
-
-    socket.send(JSON.stringify({msg: 'nosub', id: msg.id}));
-  },
-
-  _livedata_method: function (socket, msg) {
-    var self = this;
-
-    // reject malformed messages
-    // XXX should also reject messages with unknown attributes?
-    if (typeof (msg.id) !== "string" ||
-        typeof (msg.method) !== "string" ||
-        (('params' in msg) && !(msg.params instanceof Array))) {
-      socket.send(JSON.stringify({
-        msg: 'result', id: msg.id,
-        error: {error: 400, reason: "Bad request"}}));
-      if (typeof (msg.id) === "string")
-        socket.send(JSON.stringify({
-          msg: 'data', methods: [msg.id]}));
-      return;
-    }
-
-    socket.meteor.method_queue.push(msg);
-    self._try_invoke_next(socket);
-  },
-
-  _try_invoke_next: function (socket) {
-    var self = this;
-
-    // Invoke methods one at a time, in the order sent by the client
-    // -- invocations sent by a given client block later invocations
-    // sent by the same client, unless the method explicitly allows
-    // later methods to run by calling beginAsync(true).
-
-    if (socket.meteor.methods_blocked)
-      return;
-    var msg = socket.meteor.method_queue.shift();
-    if (!msg)
-      return;
-
-    socket.meteor.methods_blocked = true;
-    Fiber(function () {
-      var next = function (error, ret) {
-        socket.meteor.methods_blocked = false;
-        _.defer(_.bind(self._try_invoke_next, self, socket));
-      };
-
-      var handler = self.method_handlers[msg.method];
-      if (!handler) {
-        socket.send(JSON.stringify({
-          msg: 'result', id: msg.id,
-          error: {error: 404, reason: "Method not found"}}));
-        socket.send(JSON.stringify({
-          msg: 'data', methods: [msg.id]}));
-        next();
-        return;
-      }
-
-      var callback = function (error, result) {
-        if (error)
-          socket.send(JSON.stringify({
-            msg: 'result', id: msg.id, error: error}));
-        else
-          socket.send(JSON.stringify({
-            msg: 'result', id: msg.id, result: result}));
-
-        // the method is satisfied once callback is called, because
-        // any DB observe callbacks run to completion in the same
-        // tick.
-        socket.send(JSON.stringify({
-          msg: 'data', methods: [msg.id]}));
-      };
-
-      var invocation = new Meteor._ServerMethodInvocation(msg.method, handler);
-      try {
-        invocation._run(msg.params || [], callback, next);
-      } catch (e) {
-        // _run will have already logged the exception (and told the
-        // client, if appropriate)
-      }
-    }).run();
-  },
-
   /**
    * Register a publish handler function.
    *
@@ -611,6 +814,5 @@ _.extend(Meteor._LivedataServer.prototype, {
     var self = this;
     // the server is always up-to-date
     f();
-  },
-
+  }
 });
