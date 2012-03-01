@@ -72,6 +72,7 @@ Meteor._capture_subs = null;
 Meteor._LivedataConnection = function (url) {
   var self = this;
   self.url = url;
+  self.last_session_id = null;
   self.stores = {}; // name -> object with methods
   self.method_handlers = {}; // name -> func
   self.next_method_id = 1;
@@ -140,7 +141,22 @@ Meteor._LivedataConnection = function (url) {
     // Send a connect message at the beginning of the stream.
     // NOTE: reset is called even on the first connection, so this is
     // the only place we send this message.
-    self.stream.send(JSON.stringify({msg: 'connect'}));
+    var msg = {msg: 'connect'};
+    if (self.last_session_id)
+      msg.session = self.last_session_id;
+    self.stream.send(JSON.stringify(msg));
+
+    // Now, to minimize setup latency, go ahead and blast out all of
+    // our pending methods ands subscriptions before we've even taken
+    // the necessary RTT to know if we successfully reconnected. (1)
+    // They're supposed to be idempotent; (2) even if we did
+    // reconnect, we're not sure what messages might have gotten lost
+    // (in either direction) since we were disconnected (TCP being
+    // sloppy about that.)
+
+    // XXX we may have an issue where we lose 'data' messages sent
+    // immediately before disconnection.. do we need to add app-level
+    // acking of data messages?
 
     // Send pending methods.
     _.each(self.outstanding_methods, function (m) {
@@ -153,25 +169,6 @@ Meteor._LivedataConnection = function (url) {
       self.stream.send(JSON.stringify(
         {msg: 'sub', id: sub._id, name: sub.name, params: sub.args}));
     });
-
-    // clear out the local database!
-
-    // XXX this causes flicker ("database flap") and needs to be
-    // rewritten. we should wait until we found out if we successfully
-    // resumed the stream. if so, we need do nothing special. if not,
-    // we need to put a reset message in pending_data (optionally
-    // clearing pending_data and queued first, as an optimization),
-    // and defer processing pending_data until all of the
-    // subscriptions that we previously told the user were ready, are
-    // now once again ready. then, when we do go to process the
-    // messages, we need to do it in one atomic batch (the reset and
-    // the redeliveries together) so that livequeries don't observe
-    // spurious 'added' and 'removed' messages, which would cause, eg,
-    // DOM elements to fail to get semantically matched, leading to a
-    // loss of focus/input state.
-    _.each(self.stores, function (s) { s.reset(); });
-    self.pending_data = [];
-    self.queued = {};
   });
 
   // we never terminate the observe(), since there is no way to
@@ -334,7 +331,32 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
   _livedata_connected: function (msg) {
     var self = this;
-    // Meteor._debug("CONNECTED", msg);
+
+    if (typeof (msg.session) === "string") {
+      var reconnected = (self.last_session_id === msg.session);
+      self.last_session_id = msg.session;
+    }
+
+    if (reconnected)
+      // successful reconnection -- pick up where we left off.
+      return;
+
+    // clear out the local database!
+
+    // XXX this causes flicker ("database flap") and needs to be
+    // rewritten. we need to put a reset message in pending_data
+    // (optionally clearing pending_data and queued first, as an
+    // optimization), and defer processing pending_data until all of
+    // the subscriptions that we previously told the user were ready,
+    // are now once again ready. then, when we do go to process the
+    // messages, we need to do it in one atomic batch (the reset and
+    // the redeliveries together) so that livequeries don't observe
+    // spurious 'added' and 'removed' messages, which would cause, eg,
+    // DOM elements to fail to get semantically matched, leading to a
+    // loss of focus/input state.
+    _.each(self.stores, function (s) { s.reset(); });
+    self.pending_data = [];
+    self.queued = {};
   },
 
   _livedata_data: function (msg) {
