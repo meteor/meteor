@@ -154,6 +154,11 @@ Meteor._LivedataSession = function (socket, server) {
 };
 
 _.extend(Meteor._LivedataSession.prototype, {
+  disconnect: function () {
+    var self = this;
+    self.stopAllSubscriptions();
+  },
+
   processMessage: function (msg) {
     var self = this;
 
@@ -218,7 +223,8 @@ _.extend(Meteor._LivedataSession.prototype, {
         return;
       }
 
-      self.enqueueMethod(msg);
+      self.method_queue.push(msg);
+      self._tryInvokeNext();
     }
   },
 
@@ -263,12 +269,6 @@ _.extend(Meteor._LivedataSession.prototype, {
       sub.stop();
     });
     self.universal_subs = [];
-  },
-
-  enqueueMethod: function (msg) {
-    var self = this;
-    self.method_queue.push(msg);
-    self._tryInvokeNext();
   },
 
   _tryInvokeNext: function () {
@@ -513,7 +513,7 @@ Meteor._LivedataServer = function () {
 
     socket.on('close', function () {
       if (socket.meteor_session)
-        socket.meteor_session.stopAllSubscriptions();
+        socket.meteor_session.disconnect();
     });
   });
 };
