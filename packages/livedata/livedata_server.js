@@ -146,6 +146,7 @@ Meteor._LivedataSession = function (server) {
 
   self.initialized = false;
   self.socket = null;
+  self.last_connect_time = 0;
   self.last_detach_time = +(new Date);
 
   self.in_queue = [];
@@ -153,6 +154,9 @@ Meteor._LivedataSession = function (server) {
   self.worker_running = false;
 
   self.out_queue = [];
+
+  // id of invocation => {result or error, when}
+  self.result_cache = {};
 
   // Sub objects for active subscriptions
   self.named_subs = {};
@@ -170,6 +174,7 @@ _.extend(Meteor._LivedataSession.prototype, {
     }
 
     self.socket = socket;
+    self.last_connect_time = +(new Date);
     _.each(self.out_queue, function (msg) {
       self.socket.send(JSON.stringify(msg));
     });
@@ -199,6 +204,30 @@ _.extend(Meteor._LivedataSession.prototype, {
     }
     if (socket.meteor_session === self)
       socket.meteor_session = null;
+  },
+
+  // Should be called periodically to prune the method invocation
+  // replay cache.
+  cleanup: function () {
+    var self = this;
+    // Only prune if we're connected, and we've been connected for at
+    // least five minutes. That seems like enough time for the client
+    // to finish its reconnection. Then, keep five minutes of
+    // history. That seems like enough time for the client to receive
+    // our responses, or else for us to notice that the connection is
+    // gone.
+    var now = +(new Date);
+    if (!(self.socket && (now - self.last_connect_time) > 5 * 60 * 1000))
+      return; // not connected, or not connected long enough
+
+    var kill = [];
+    _.each(self.result_cache, function (info, id) {
+      if (now - info.when > 5 * 60 * 1000)
+        kill.push(id);
+    });
+    _.each(kill, function (id) {
+      delete self.result_cache[id];
+    });
   },
 
   // Destroy this session. Stop all processing and tear everything
@@ -324,6 +353,18 @@ _.extend(Meteor._LivedataSession.prototype, {
         return;
       }
 
+      // check for a replayed method (this is important during
+      // reconnect)
+      if (msg.id in self.result_cache) {
+        // found -- just resend whatever we sent last time
+        var payload = _.clone(self.result_cache[msg.id]);
+        delete payload.when;
+        self.send(
+          _.extend({msg: 'result', id: msg.id}, payload));
+        return;
+      }
+
+      // find the handler
       var handler = self.server.method_handlers[msg.method];
       if (!handler) {
         self.send({
@@ -346,12 +387,13 @@ _.extend(Meteor._LivedataSession.prototype, {
       self.blocked = true;
 
       var callback = function (error, result) {
-        if (error)
-          self.send({
-            msg: 'result', id: msg.id, error: error});
-        else
-          self.send({
-            msg: 'result', id: msg.id, result: result});
+        var payload = error ? {error: error} : {result: result};
+
+        self.result_cache[msg.id] =
+          _.extend({when: +(new Date)}, payload);
+
+        self.send(
+          _.extend({msg: 'result', id: msg.id}, payload));
 
         // the method is satisfied once callback is called, because
         // any DB observe callbacks run to completion in the same
@@ -634,10 +676,13 @@ Meteor._LivedataServer = function () {
   });
 
   // Every minute, clean up sessions that have been abandoned for 15
-  // minutes
+  // minutes. Also run result cache cleanup.
+  // XXX at scale, we'll want to have a separate timer for each
+  // session, and stagger them
   setInterval(function () {
     var now = +(new Date);
     _.each(self.sessions, function (s) {
+      s.cleanup();
       if (!s.socket && (now - s.last_detach_time) > 15 * 60 * 1000)
         s.destroy();
     });

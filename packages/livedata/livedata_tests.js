@@ -245,4 +245,8 @@ testAsyncMulti("livedata - compound methods", [
 // subscriptions (multiple APIs, including autosubscribe?)
 // subscription completion
 // server method calling methods on other server (eg, should simulate)
+// subscriptions and methods being idempotent
+// reconnection
+// reconnection not resulting in method re-execution
+// reconnection tolerating all kinds of lost messages (including data)
 // [probably lots more]
