@@ -1,3 +1,67 @@
+Meteor._ClientMethodInvocation = function (name, handler) {
+  var self = this;
+
+  // XXX need: user, setRestartHook, setUser (simulated??)
+
+  self._enclosing = null;
+  self.isSimulation = null;
+  self._name = name;
+  self._handler = handler;
+  self._callback = null;
+  self._id = null;
+};
+
+_.extend(Meteor._ClientMethodInvocation.prototype, {
+  beginAsync: function () {
+    // XXX need a much better error message!
+    // duplicated in livedata_server
+    throw new Error("Simulated methods may not be asynchronous");
+  },
+
+  _run: function (args, callback, enqueue) {
+    var self = this;
+    self._enclosing = Meteor._CurrentInvocation.get();
+    self._callback = callback;
+    self.isSimulation = true; // NB: refers to child invocations, not to us
+
+    // run locally (if we have a stub for it)
+    if (self._handler) {
+      try {
+        var ret = Meteor._CurrentInvocation.withValue(self, function () {
+          return self._handler.apply(self, args);
+        });
+      } catch (e) {
+        var stub_exception = e;
+      }
+    }
+
+    if (self._enclosing && self._enclosing.isSimulation) {
+      // In simulation mode, never do an RPC. Use the result of
+      // running the stub instead.
+      if (self._callback) {
+        if (stub_exception)
+          self._callback({error: 500, reason: "Stub threw exception"});
+        else
+          self._callback(ret);
+      }
+    } else {
+      // This invocation is real, not a simulation. Do the RPC.
+
+      // Note that it is important that the function totally complete,
+      // locally, before the message is sent to the server. (Or at
+      // least, we need to guarantee that the snapshot is not restored
+      // until the local copy of the function has stopped doing writes.)
+
+      enqueue({msg: 'method', method: self._name, params: args},
+              self._callback);
+    }
+
+    if (stub_exception)
+      throw stub_exception;
+    return ret;
+  }
+});
+
 // list of subscription tokens outstanding during a
 // captureDependencies run. only set when we're doing a run. The fact
 // that this is a singleton means we can't do recursive
@@ -11,8 +75,7 @@ Meteor._LivedataConnection = function (url) {
   self.stores = {}; // name -> object with methods
   self.method_handlers = {}; // name -> func
   self.next_method_id = 1;
-  self.pending_method_callbacks = {}; // map from method_id -> result function
-  self.pending_method_messages = {}; // map from method_id -> message to server
+  self.outstanding_methods = []; // each item has keys: msg, callback
   self.unsatisfied_methods = {}; // map from method_id -> true
   self.pending_data = []; // array of pending data messages
   self.queued = {}; // name -> updates for (yet to be created) collection
@@ -29,15 +92,19 @@ Meteor._LivedataConnection = function (url) {
   if (typeof reload_data === "object") {
     if (typeof reload_data.next_method_id === "number")
       self.next_method_id = reload_data.next_method_id;
-    if (typeof reload_data.pending_method_messages === "object")
-      self.pending_method_messages = reload_data.pending_method_messages;
+    if (typeof reload_data.outstanding_methods === "object")
+      self.outstanding_methods = reload_data.outstanding_methods;
     // pending messages will be transmitted on initial stream 'reset'
   }
   Meteor._reload.on_migrate(reload_key, function () {
-    return { next_method_id: self.next_method_id,
-             pending_method_messages: self.pending_method_messages };
-  });
+    var methods = _.map(self.outstanding_methods, function (m) {
+      // filter out callback
+      return {msg: m.msg};
+    });
 
+    return { next_method_id: self.next_method_id,
+             outstanding_methods: methods };
+  });
 
   // Setup stream
   self.stream = new Meteor._Stream(self.url);
@@ -74,8 +141,8 @@ Meteor._LivedataConnection = function (url) {
     self.stream.send(JSON.stringify({msg: 'connect'}));
 
     // Send pending methods.
-    _.each(self.pending_method_messages, function (msg) {
-      self.stream.send(JSON.stringify(msg));
+    _.each(self.outstanding_methods, function (m) {
+      self.stream.send(JSON.stringify(m.msg));
     });
 
     // add new subscriptions at the end. this way they take effect after
@@ -209,59 +276,27 @@ _.extend(Meteor._LivedataConnection.prototype, {
     // if it's a function, the last argument is the result callback,
     // not a parameter to the remote method.
     args = _.clone(args);
-    if (args.length && typeof args[args.length - 1] === "function")
-      result_func = args.pop();
-
-    if (handler) {
-      // run locally (if we have a stub for it)
-      var local_args = _.clone(args);
-      local_args.unshift(self.user_id);
-      var invocation = {
-        // XXX need: user, setRestartHook, setUser (simulated??)
-        isSimulation: true,
-        beginAsync: function () {
-          // XXX need a much better error message!
-          // duplicated in livedata_server
-          throw new Error("Simulated methods may not be asynchronous");
-        }
-      };
-
-      try {
-        var ret = Meteor._CurrentInvocation.withValue(invocation, function () {
-          return handler.apply(invocation, args);
-        });
-      } catch (e) {
-        var stub_exception = e;
-      }
+    if (args.length && typeof args[args.length - 1] === "function") {
+      // XXX would it be better form to do the binding in stream.on,
+      // or caller, instead of here?
+      result_func = Meteor.bindEnvironment(args.pop(), function (e) {
+        // XXX improve error message (and how we report it)
+        Meteor._debug("Exception while delivering result of invoking '" +
+                      name + "'", e.stack);
+      });
     }
 
-    if (enclosing && enclosing.isSimulation) {
-      if (result_func)
-        result_func(ret);
-      return ret;
-    }
+    var enqueue = function (msg, callback) {
+      msg.id = '' + (self.next_method_id++);
+      self.outstanding_methods.push({
+        msg: msg, callback: callback});
+      self.unsatisfied_methods[msg.id] = true;
+      self.stream.send(JSON.stringify(msg));
+    };
 
-    // Note that it is important that the function totally complete,
-    // locally, before the message is sent to the server. (Or at
-    // least, we need to guarantee that the snapshot is not restored
-    // until the local copy of the function has stopped doing writes.)
-
-    // XXX would it be better form to do the binding in stream.on,
-    // instead of here?
-    result_func = Meteor.bindEnvironment(result_func, function (e) {
-      // XXX improve error message (and how we report it)
-      Meteor._debug("Exception while delivering result of invoking '" +
-                    name + "'", e.stack);
-    });
-
-    // run on server
-    self._send_method(
-      {msg: 'method', method: name, params: args},
-      result_func);
-
-    if (stub_exception)
-      throw stub_exception;
-    return ret;
+    var invocation = new Meteor._ClientMethodInvocation(name, handler, self);
+    // if _run throws an exception, allow it to propagate
+    return invocation._run(args, result_func, enqueue);
   },
 
   status: function () {
@@ -293,17 +328,6 @@ _.extend(Meteor._LivedataConnection.prototype, {
     }
 
     f();
-  },
-
-  _send_method: function (msg, result_func) {
-    var self = this;
-    var method_id = '' + (self.next_method_id++);
-    var new_msg = _.extend({id: method_id}, msg);
-    self.pending_method_messages[method_id] = new_msg;
-    self.pending_method_callbacks[method_id] = result_func || function () {};
-    self.unsatisfied_methods[method_id] = true;
-
-    self.stream.send(JSON.stringify(new_msg));
   },
 
   _livedata_connected: function (msg) {
@@ -374,26 +398,33 @@ _.extend(Meteor._LivedataConnection.prototype, {
     var self = this;
     // id, result or error. error has error (code), reason, details
 
-    if (('id' in msg) && (msg.id in self.pending_method_messages)) {
-      delete self.pending_method_messages[msg.id];
-    } else {
+    // find the outstanding request
+    // should be O(1) in nearly all realistic use cases
+    for (var i = 0; i < self.outstanding_methods.length; i++) {
+      var m = self.outstanding_methods[i];
+      if (m.msg.id === msg.id)
+        break;
+    }
+    if (!m) {
       // XXX write a better error
       Meteor._debug("Can't interpret method response message");
+      return;
     }
 
-    if (('id' in msg) && (msg.id in self.pending_method_callbacks)) {
-      var func = self.pending_method_callbacks[msg.id];
-      delete self.pending_method_callbacks[msg.id];
-      // XXX wrap in try..catch?
+    // remove
+    self.outstanding_methods.splice(i, 1);
+
+    // If a response is to a method we sent from reload pending
+    // methods, it won't have a callback. This is OK. This will get
+    // revisited when we do more intellegent auto-reloads where we
+    // wait to quiesce, pre-stage cached assets, etc.
+    if (m.callback) {
+      // callback will have already been bindEnvironment'd by apply(),
+      // so no need to catch exceptions
       if ('error' in msg)
-        func(msg.error);
+        m.callback(msg.error);
       else
-        func(undefined, msg.result);
-    } else {
-      // If a response is to a method we sent from reload pending methods,
-      // it won't have a callback. This is OK. This will get revisited
-      // when we do more intellegent auto-reloads where we wait to
-      // quiesce, pre-stage cached assets, etc.
+        m.callback(undefined, msg.result);
     }
   }
 });

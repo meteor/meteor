@@ -244,4 +244,5 @@ testAsyncMulti("livedata - compound methods", [
 // method completion/satisfaction
 // subscriptions (multiple APIs, including autosubscribe?)
 // subscription completion
+// server method calling methods on other server (eg, should simulate)
 // [probably lots more]
