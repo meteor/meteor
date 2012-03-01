@@ -55,7 +55,7 @@ _.extend(ExpectationManager.prototype, {
 });
 
 var testAsyncMulti = function (name, funcs) {
-  var timeout = 1000;
+  var timeout = 5000;
 
   testAsync(name, function (onComplete) {
     var remaining = _.clone(funcs);
