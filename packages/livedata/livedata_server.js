@@ -142,8 +142,11 @@ Meteor._LivedataSession = function (server) {
   var self = this;
   self.id = Meteor.uuid();
 
-  self.socket = null;
   self.server = server;
+
+  self.initialized = false;
+  self.socket = null;
+  self.last_detach_time = +(new Date);
 
   self.in_queue = [];
   self.blocked = false;
@@ -157,10 +160,14 @@ Meteor._LivedataSession = function (server) {
 };
 
 _.extend(Meteor._LivedataSession.prototype, {
+  // Connect a new socket to this session, displacing (and closing)
+  // any socket that was previously connected
   connect: function (socket) {
     var self = this;
-    if (self.socket)
-      throw new Error("already connected");
+    if (self.socket) {
+      self.socket.close();
+      self.detach(self.socket);
+    }
 
     self.socket = socket;
     _.each(self.out_queue, function (msg) {
@@ -168,25 +175,46 @@ _.extend(Meteor._LivedataSession.prototype, {
     });
     self.out_queue = [];
 
-    // XXX should only happen on initial commit?
-    // Spin up all the universal publishers.
-    Fiber(function () {
-      _.each(self.server.universal_publish_handlers, function (handler) {
-        self._startSubscription(handler);
-      });
-    }).run();
-
-    // XXX what to do here on reconnect?  oh, probably just fake a sub message.
+    // On initial connect, spin up all the universal publishers.
+    if (!self.initialized) {
+      self.initialized = true;
+      Fiber(function () {
+        _.each(self.server.universal_publish_handlers, function (handler) {
+          self._startSubscription(handler);
+        });
+      }).run();
+    }
   },
 
-  disconnect: function () {
+  // If 'socket' is the socket currently connected to this session,
+  // detach it (the session will then have no socket -- it will
+  // continue running and queue up its messages.) If 'socket' isn't
+  // the currently connected socket, just clean up the pointer that
+  // may have led us to believe otherwise.
+  detach: function (socket) {
     var self = this;
-    if (!self.socket)
-      throw new Error("not connected");
-    self._stopAllSubscriptions();
+    if (socket === self.socket) {
+      self.socket = null;
+      self.last_detach_time = +(new Date);
+    }
+    if (socket.meteor_session === self)
+      socket.meteor_session = null;
   },
 
-  // msg will be stringified
+  // Destroy this session. Stop all processing and tear everything
+  // down. If a socket was attached, close it.
+  destroy: function () {
+    var self = this;
+    if (self.socket) {
+      self.socket.close();
+      self.detach(self.socket);
+    }
+    self._stopAllSubscriptions();
+    self.in_queue = self.out_queue = [];
+  },
+
+  // Send a message (queueing it if no socket is connected right now.)
+  // It should be a JSON object (it will be stringified.)
   send: function (msg) {
     var self = this;
     if (self.socket)
@@ -195,12 +223,24 @@ _.extend(Meteor._LivedataSession.prototype, {
       self.out_queue.push(msg);
   },
 
+  // Send a connection error.
   sendError: function (reason, offending_message) {
     var self = this;
     var msg = {msg: 'error', reason: reason};
     if (offending_message)
       msg.offending_message = offending_message;
     self.send(msg);
+  },
+
+  // Throw 'msg' into the queue to be processed as an incoming
+  // message, but ignore it if 'socket' is not the currently connected
+  // socket.
+  processMessage: function (msg, socket) {
+    var self = this;
+    if (socket === self.socket) {
+      self.in_queue.push(msg);
+      self._tryProcessNext();
+    }
   },
 
   // We run the messages from the client one at a time, in the order
@@ -212,13 +252,6 @@ _.extend(Meteor._LivedataSession.prototype, {
   // way, but it's the easiest thing that's correct. (unsub needs to
   // be ordered against sub, methods need to be ordered against each
   // other.)
-
-  processMessage: function (msg) {
-    var self = this;
-    self.in_queue.push(msg);
-    self._tryProcessNext();
-  },
-
   _tryProcessNext: function () {
     var self = this;
 
@@ -563,10 +596,18 @@ Meteor._LivedataServer = function () {
             return;
           }
 
-          // Always start a new session. We don't support any reconnection.
-          socket.meteor_session = new Meteor._LivedataSession(self);
+          if (msg.session)
+            var old_session = self.sessions[msg.session];
+          if (old_session)
+            // Resuming a session
+            socket.meteor_session = old_session;
+          else
+            // Creating a new session
+            socket.meteor_session = new Meteor._LivedataSession(self);
+
           socket.send(JSON.stringify({msg: 'connected',
                                       session: socket.meteor_session.id}));
+          // will kick off previous connection, if any
           socket.meteor_session.connect(socket);
           return;
         }
@@ -575,7 +616,7 @@ Meteor._LivedataServer = function () {
           sendError(socket, 'Must connect first', msg);
           return;
         }
-        socket.meteor_session.processMessage(msg);
+        socket.meteor_session.processMessage(msg, socket);
       } catch (e) {
         // XXX print stack nicely
         Meteor._debug("Internal exception while processing message", msg,
@@ -585,9 +626,19 @@ Meteor._LivedataServer = function () {
 
     socket.on('close', function () {
       if (socket.meteor_session)
-        socket.meteor_session.disconnect();
+        socket.meteor_session.detach(socket);
     });
   });
+
+  // Every minute, clean up sessions that have been abandoned for 15
+  // minutes
+  setInterval(function () {
+    var now = +(new Date);
+    _.each(self.sessions, function (s) {
+      if (!s.socket && (now - s.last_detach_time) > 15 * 60 * 1000)
+        s.destroy();
+    });
+  }, 1 * 60 * 1000);
 };
 
 _.extend(Meteor._LivedataServer.prototype, {
