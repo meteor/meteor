@@ -411,31 +411,39 @@ Meteor._LivedataServer = function () {
   self.stream_server = new Meteor._StreamServer;
 
   self.stream_server.register(function (socket) {
-    socket.meteor_session = new Meteor._LivedataSession(socket, self);
+    socket.meteor_session = null;
 
     socket.on('data', function (raw_msg) {
       try {
         try {
           var msg = JSON.parse(raw_msg);
         } catch (err) {
-          Meteor._debug("discarding message with invalid JSON", raw_msg);
+          self._sendError(socket, 'Parse error');
           return;
         }
         if (typeof msg !== 'object' || !msg.msg) {
-          Meteor._debug("discarding invalid livedata message", msg);
+          self._sendError(socket, 'Bad request', msg);
           return;
         }
 
-        if (msg.msg === 'connect')
+        if (msg.msg === 'connect') {
           self._livedata_connect(socket, msg);
-        else if (msg.msg === 'sub')
+          return;
+        }
+
+        if (!socket.meteor_session) {
+          self._sendError(socket, 'Must connect first', msg);
+          return;
+        }
+
+        if (msg.msg === 'sub')
           self._livedata_sub(socket, msg);
         else if (msg.msg === 'unsub')
           self._livedata_unsub(socket, msg);
         else if (msg.msg === 'method')
           self._livedata_method(socket, msg);
         else
-          Meteor._debug("discarding unknown livedata message type", msg);
+          self._sendError(socket, 'Bad request', msg);
       } catch (e) {
         // XXX print stack nicely
         Meteor._debug("Internal exception while processing message", msg,
@@ -444,18 +452,35 @@ Meteor._LivedataServer = function () {
     });
 
     socket.on('close', function () {
-      socket.meteor_session.stopAllSubscriptions();
+      if (socket.meteor_session)
+        socket.meteor_session.stopAllSubscriptions();
     });
   });
 };
 
 
 _.extend(Meteor._LivedataServer.prototype, {
+  _sendError: function (socket, reason, offending_message) {
+    var self = this;
+    var msg = {msg: 'error', reason: reason};
+    if (offending_message)
+      msg.offending_message = offending_message;
+    socket.send(msg);
+  },
+
   // XXX 'connect' message should have a protocol version
   _livedata_connect: function (socket, msg) {
     var self = this;
+
+    if (socket.meteor_session) {
+      self._sendError(socket, "Already connected", msg);
+      return;
+    }
+
     // Always start a new session. We don't support any reconnection.
-    socket.send(JSON.stringify({msg: 'connected', session: Meteor.uuid()}));
+    socket.meteor_session = new Meteor._LivedataSession(socket, self);
+    socket.send(JSON.stringify({msg: 'connected',
+                                session: socket.meteor_session.id}));
 
     // Spin up all the universal publishers.
     Fiber(function () {
@@ -474,9 +499,7 @@ _.extend(Meteor._LivedataServer.prototype, {
     if (typeof (msg.id) !== "string" ||
         typeof (msg.name) !== "string" ||
         (('params' in msg) && typeof (msg.params) !== "object")) {
-      socket.send(JSON.stringify({
-        msg: 'error', reason: 'Malformed subscription',
-        offending_message: msg}));
+      self._sendError(socket, "Malformed subscription", msg);
       return;
     }
 
@@ -517,12 +540,7 @@ _.extend(Meteor._LivedataServer.prototype, {
     if (typeof (msg.id) !== "string" ||
         typeof (msg.method) !== "string" ||
         (('params' in msg) && !(msg.params instanceof Array))) {
-      socket.send(JSON.stringify({
-        msg: 'error', reason: 'Malformed method invocation',
-        offending_message: msg}));
-      if (typeof (msg.id) === "string")
-        socket.send(JSON.stringify({
-          msg: 'data', methods: [msg.id]}));
+      self._sendError(socket, "Malformed method invocation", msg);
       return;
     }
 
