@@ -138,16 +138,18 @@ _.extend(Meteor._ServerMethodInvocation.prototype, {
 /* LivedataSession                                                            */
 /******************************************************************************/
 
-Meteor._LivedataSession = function (socket, server) {
+Meteor._LivedataSession = function (server) {
   var self = this;
   self.id = Meteor.uuid();
 
-  self.socket = socket;
+  self.socket = null;
   self.server = server;
 
-  self.queue = [];
+  self.in_queue = [];
   self.blocked = false;
   self.worker_running = false;
+
+  self.out_queue = [];
 
   // Sub objects for active subscriptions
   self.named_subs = {};
@@ -155,15 +157,42 @@ Meteor._LivedataSession = function (socket, server) {
 };
 
 _.extend(Meteor._LivedataSession.prototype, {
+  connect: function (socket) {
+    var self = this;
+    if (self.socket)
+      throw new Error("already connected");
+
+    self.socket = socket;
+    _.each(self.out_queue, function (msg) {
+      self.socket.send(JSON.stringify(msg));
+    });
+    self.out_queue = [];
+
+    // XXX should only happen on initial commit?
+    // Spin up all the universal publishers.
+    Fiber(function () {
+      _.each(self.server.universal_publish_handlers, function (handler) {
+        self._startSubscription(handler);
+      });
+    }).run();
+
+    // XXX what to do here on reconnect?  oh, probably just fake a sub message.
+  },
+
   disconnect: function () {
     var self = this;
-    self.stopAllSubscriptions();
+    if (!self.socket)
+      throw new Error("not connected");
+    self._stopAllSubscriptions();
   },
 
   // msg will be stringified
   send: function (msg) {
     var self = this;
-    self.socket.send(JSON.stringify(msg));
+    if (self.socket)
+      self.socket.send(JSON.stringify(msg));
+    else
+      self.out_queue.push(msg);
   },
 
   sendError: function (reason, offending_message) {
@@ -186,26 +215,26 @@ _.extend(Meteor._LivedataSession.prototype, {
 
   processMessage: function (msg) {
     var self = this;
-    self.queue.push(msg);
+    self.in_queue.push(msg);
     self._tryProcessNext();
   },
 
   _tryProcessNext: function () {
     var self = this;
 
-    if (self.blocked || !self.queue.length || self.worker_running)
+    if (self.blocked || !self.in_queue.length || self.worker_running)
       return;
 
     self.worker_running = true;
     Fiber(function () {
       while (true) {
-        var more = !self.blocked && self.queue.length;
+        var more = !self.blocked && self.in_queue.length;
         if (!more) {
           self.worker_running = false;
           return;
         }
 
-        var msg = self.queue.shift();
+        var msg = self.in_queue.shift();
         if (msg.msg in self.protocol_handlers)
           self.protocol_handlers[msg.msg].call(self, msg);
         else
@@ -240,13 +269,13 @@ _.extend(Meteor._LivedataSession.prototype, {
         return;
 
       var handler = self.server.publish_handlers[msg.name];
-      self.startSubscription(handler, msg.id, msg.params);
+      self._startSubscription(handler, msg.id, msg.params);
     },
 
     unsub: function (msg) {
       var self = this;
 
-      self.stopSubscription(msg.id);
+      self._stopSubscription(msg.id);
       self.send({msg: 'nosub', id: msg.id});
     },
 
@@ -313,7 +342,7 @@ _.extend(Meteor._LivedataSession.prototype, {
     }
   },
 
-  startSubscription: function (handler, sub_id, params) {
+  _startSubscription: function (handler, sub_id, params) {
     var self = this;
 
     var sub = new Meteor._LivedataSubscription(self, sub_id);
@@ -332,7 +361,7 @@ _.extend(Meteor._LivedataSession.prototype, {
   },
 
   // tear down specified subscription
-  stopSubscription: function (sub_id) {
+  _stopSubscription: function (sub_id) {
     var self = this;
 
     if (sub_id && self.named_subs[sub_id]) {
@@ -342,7 +371,7 @@ _.extend(Meteor._LivedataSession.prototype, {
   },
 
   // tear down all subscriptions
-  stopAllSubscriptions: function () {
+  _stopAllSubscriptions: function () {
     var self = this;
 
     _.each(self.named_subs, function (sub, id) {
@@ -508,26 +537,42 @@ Meteor._LivedataServer = function () {
   self.stream_server.register(function (socket) {
     socket.meteor_session = null;
 
+    var sendError = function (reason, offending_message) {
+      var msg = {msg: 'error', reason: reason};
+      if (offending_message)
+        msg.offending_message = offending_message;
+      socket.send(JSON.stringify(msg));
+    };
+
     socket.on('data', function (raw_msg) {
       try {
         try {
           var msg = JSON.parse(raw_msg);
         } catch (err) {
-          self._sendError(socket, 'Parse error');
+          sendError(socket, 'Parse error');
           return;
         }
         if (typeof msg !== 'object' || !msg.msg) {
-          self._sendError(socket, 'Bad request', msg);
+          sendError(socket, 'Bad request', msg);
           return;
         }
 
         if (msg.msg === 'connect') {
-          self._handleConnect(socket, msg);
+          if (socket.meteor_session) {
+            sendError(socket, "Already connected", msg);
+            return;
+          }
+
+          // Always start a new session. We don't support any reconnection.
+          socket.meteor_session = new Meteor._LivedataSession(self);
+          socket.send(JSON.stringify({msg: 'connected',
+                                      session: socket.meteor_session.id}));
+          socket.meteor_session.connect(socket);
           return;
         }
 
         if (!socket.meteor_session) {
-          self._sendError(socket, 'Must connect first', msg);
+          sendError(socket, 'Must connect first', msg);
           return;
         }
         socket.meteor_session.processMessage(msg);
@@ -546,37 +591,6 @@ Meteor._LivedataServer = function () {
 };
 
 _.extend(Meteor._LivedataServer.prototype, {
-  _sendError: function (socket, reason, offending_message) {
-    var self = this;
-    var msg = {msg: 'error', reason: reason};
-    if (offending_message)
-      msg.offending_message = offending_message;
-    socket.send(JSON.stringify(msg));
-  },
-
-  _handleConnect: function (socket, msg) {
-    var self = this;
-
-    if (socket.meteor_session) {
-      self._sendError(socket, "Already connected", msg);
-      return;
-    }
-
-    // Always start a new session. We don't support any reconnection.
-    socket.meteor_session = new Meteor._LivedataSession(socket, self);
-    socket.send(JSON.stringify({msg: 'connected',
-                                session: socket.meteor_session.id}));
-
-    // Spin up all the universal publishers.
-    Fiber(function () {
-      _.each(self.universal_publish_handlers, function (handler) {
-        socket.meteor_session.startSubscription(handler);
-      });
-    }).run();
-
-    // XXX what to do here on reconnect?  oh, probably just fake a sub message.
-  },
-
   /**
    * Register a publish handler function.
    *
