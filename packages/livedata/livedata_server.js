@@ -138,11 +138,12 @@ _.extend(Meteor._ServerMethodInvocation.prototype, {
 /* LivedataSession                                                            */
 /******************************************************************************/
 
-Meteor._LivedataSession = function (socket) {
+Meteor._LivedataSession = function (socket, server) {
   var self = this;
   self.id = Meteor.uuid();
 
   self.socket = socket;
+  self.server = server;
 
   self.methods_blocked = false;
   self.method_queue = [];
@@ -194,7 +195,71 @@ _.extend(Meteor._LivedataSession.prototype, {
       sub.stop();
     });
     self.universal_subs = [];
-  }
+  },
+
+  enqueueMethod: function (msg) {
+    var self = this;
+    self.method_queue.push(msg);
+    self._tryInvokeNext();
+  },
+
+  _tryInvokeNext: function () {
+    var self = this;
+
+    // Invoke methods one at a time, in the order sent by the client
+    // -- invocations sent by a given client block later invocations
+    // sent by the same client, unless the method explicitly allows
+    // later methods to run by calling beginAsync(true).
+
+    if (self.methods_blocked)
+      return;
+    var msg = self.method_queue.shift();
+    if (!msg)
+      return;
+
+    self.methods_blocked = true;
+    Fiber(function () {
+      var next = function (error, ret) {
+        self.methods_blocked = false;
+        _.defer(_.bind(self._tryInvokeNext, self));
+      };
+
+      var handler = self.server.method_handlers[msg.method];
+      if (!handler) {
+        self.socket.send(JSON.stringify({
+          msg: 'result', id: msg.id,
+          error: {error: 404, reason: "Method not found"}}));
+        self.socket.send(JSON.stringify({
+          msg: 'data', methods: [msg.id]}));
+        next();
+        return;
+      }
+
+      var callback = function (error, result) {
+        if (error)
+          self.socket.send(JSON.stringify({
+            msg: 'result', id: msg.id, error: error}));
+        else
+          self.socket.send(JSON.stringify({
+            msg: 'result', id: msg.id, result: result}));
+
+        // the method is satisfied once callback is called, because
+        // any DB observe callbacks run to completion in the same
+        // tick.
+        self.socket.send(JSON.stringify({
+          msg: 'data', methods: [msg.id]}));
+      };
+
+      var invocation = new Meteor._ServerMethodInvocation(msg.method, handler);
+      try {
+        invocation._run(msg.params || [], callback, next);
+      } catch (e) {
+        // _run will have already logged the exception (and told the
+        // client, if appropriate)
+      }
+    }).run();
+  },
+
 });
 
 /******************************************************************************/
@@ -346,7 +411,7 @@ Meteor._LivedataServer = function () {
   self.stream_server = new Meteor._StreamServer;
 
   self.stream_server.register(function (socket) {
-    socket.meteor_session = new Meteor._LivedataSession(socket);
+    socket.meteor_session = new Meteor._LivedataSession(socket, self);
 
     socket.on('data', function (raw_msg) {
       try {
@@ -461,65 +526,7 @@ _.extend(Meteor._LivedataServer.prototype, {
       return;
     }
 
-    socket.meteor_session.method_queue.push(msg);
-    self._try_invoke_next(socket);
-  },
-
-  _try_invoke_next: function (socket) {
-    var self = this;
-
-    // Invoke methods one at a time, in the order sent by the client
-    // -- invocations sent by a given client block later invocations
-    // sent by the same client, unless the method explicitly allows
-    // later methods to run by calling beginAsync(true).
-
-    if (socket.meteor_session.methods_blocked)
-      return;
-    var msg = socket.meteor_session.method_queue.shift();
-    if (!msg)
-      return;
-
-    socket.meteor_session.methods_blocked = true;
-    Fiber(function () {
-      var next = function (error, ret) {
-        socket.meteor_session.methods_blocked = false;
-        _.defer(_.bind(self._try_invoke_next, self, socket));
-      };
-
-      var handler = self.method_handlers[msg.method];
-      if (!handler) {
-        socket.send(JSON.stringify({
-          msg: 'result', id: msg.id,
-          error: {error: 404, reason: "Method not found"}}));
-        socket.send(JSON.stringify({
-          msg: 'data', methods: [msg.id]}));
-        next();
-        return;
-      }
-
-      var callback = function (error, result) {
-        if (error)
-          socket.send(JSON.stringify({
-            msg: 'result', id: msg.id, error: error}));
-        else
-          socket.send(JSON.stringify({
-            msg: 'result', id: msg.id, result: result}));
-
-        // the method is satisfied once callback is called, because
-        // any DB observe callbacks run to completion in the same
-        // tick.
-        socket.send(JSON.stringify({
-          msg: 'data', methods: [msg.id]}));
-      };
-
-      var invocation = new Meteor._ServerMethodInvocation(msg.method, handler);
-      try {
-        invocation._run(msg.params || [], callback, next);
-      } catch (e) {
-        // _run will have already logged the exception (and told the
-        // client, if appropriate)
-      }
-    }).run();
+    socket.meteor_session.enqueueMethod(msg);
   },
 
   /**
