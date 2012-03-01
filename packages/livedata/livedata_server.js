@@ -1,3 +1,7 @@
+/******************************************************************************/
+/* ServerMethodInvocation                                                     */
+/******************************************************************************/
+
 Meteor._ServerMethodInvocation = function (name, handler) {
   var self = this;
 
@@ -130,6 +134,26 @@ _.extend(Meteor._ServerMethodInvocation.prototype, {
   }
 });
 
+/******************************************************************************/
+/* LivedataSession                                                            */
+/******************************************************************************/
+
+Meteor._LivedataSession = function () {
+  var self = this;
+  self.id = Meteor.uuid();
+
+  self.methods_blocked = false;
+  self.method_queue = [];
+
+  // Sub objects for active subscriptions
+  self.named_subs = {};
+  self.universal_subs = [];
+};
+
+/******************************************************************************/
+/* LivedataServer                                                             */
+/******************************************************************************/
+
 Meteor._LivedataServer = function () {
   var self = this;
 
@@ -141,16 +165,12 @@ Meteor._LivedataServer = function () {
   self.on_autopublish = []; // array of func if AP disabled, null if enabled
   self.warned_about_autopublish = false;
 
+  self.sessions = {}; // map from id to session
+
   self.stream_server = new Meteor._StreamServer;
 
   self.stream_server.register(function (socket) {
-    socket.meteor = {};
-    socket.meteor.methods_blocked = false;
-    socket.meteor.method_queue = [];
-
-    // Sub objects for active subscriptions
-    socket.meteor.named_subs = {};
-    socket.meteor.universal_subs = [];
+    socket.meteor_session = new Meteor._LivedataSession;
 
     socket.on('data', function (raw_msg) {
       try {
@@ -317,9 +337,9 @@ _.extend(Meteor._LivedataServer.prototype, {
 
     var sub = new Meteor._LivedataServer.Subscription(socket, sub_id);
     if (sub_id)
-      socket.meteor.named_subs[sub_id] = sub;
+      socket.meteor_session.named_subs[sub_id] = sub;
     else
-      socket.meteor.universal_subs.push(sub);
+      socket.meteor_session.universal_subs.push(sub);
 
     var res = handler(sub, params);
 
@@ -332,23 +352,23 @@ _.extend(Meteor._LivedataServer.prototype, {
 
   // tear down specified subscription
   _stopSubscription: function (socket, sub_id) {
-    if (sub_id && socket.meteor.named_subs[sub_id]) {
-      socket.meteor.named_subs[sub_id].stop();
-      delete socket.meteor.named_subs[sub_id];
+    if (sub_id && socket.meteor_session.named_subs[sub_id]) {
+      socket.meteor_session.named_subs[sub_id].stop();
+      delete socket.meteor_session.named_subs[sub_id];
     }
   },
 
   // tear down all subscriptions
   _stopAllSubscriptions: function (socket) {
-    _.each(socket.meteor.named_subs, function (sub, id) {
+    _.each(socket.meteor_session.named_subs, function (sub, id) {
       sub.stop();
     });
-    socket.meteor.named_subs = {};
+    socket.meteor_session.named_subs = {};
 
-    _.each(socket.meteor.universal_subs, function (sub) {
+    _.each(socket.meteor_session.universal_subs, function (sub) {
       sub.stop();
     });
-    socket.meteor.universal_subs = [];
+    socket.meteor_session.universal_subs = [];
   },
 
   // XXX 'connect' message should have a protocol version
@@ -375,8 +395,8 @@ _.extend(Meteor._LivedataServer.prototype, {
         typeof (msg.name) !== "string" ||
         (('params' in msg) && typeof (msg.params) !== "object")) {
       socket.send(JSON.stringify({
-        msg: 'nosub', id: msg.id, error: {error: 400,
-                                          reason: "Bad request"}}));
+        msg: 'error', reason: 'Malformed subscription',
+        offending_message: msg}));
       return;
     }
 
@@ -388,7 +408,7 @@ _.extend(Meteor._LivedataServer.prototype, {
     }
 
     Fiber(function () {
-      if (msg.id in socket.meteor.named_subs)
+      if (msg.id in socket.meteor_session.named_subs)
         // XXX client screwed up
         self._stopSubscription(socket, msg.id);
 
@@ -418,15 +438,15 @@ _.extend(Meteor._LivedataServer.prototype, {
         typeof (msg.method) !== "string" ||
         (('params' in msg) && !(msg.params instanceof Array))) {
       socket.send(JSON.stringify({
-        msg: 'result', id: msg.id,
-        error: {error: 400, reason: "Bad request"}}));
+        msg: 'error', reason: 'Malformed method invocation',
+        offending_message: msg}));
       if (typeof (msg.id) === "string")
         socket.send(JSON.stringify({
           msg: 'data', methods: [msg.id]}));
       return;
     }
 
-    socket.meteor.method_queue.push(msg);
+    socket.meteor_session.method_queue.push(msg);
     self._try_invoke_next(socket);
   },
 
@@ -438,16 +458,16 @@ _.extend(Meteor._LivedataServer.prototype, {
     // sent by the same client, unless the method explicitly allows
     // later methods to run by calling beginAsync(true).
 
-    if (socket.meteor.methods_blocked)
+    if (socket.meteor_session.methods_blocked)
       return;
-    var msg = socket.meteor.method_queue.shift();
+    var msg = socket.meteor_session.method_queue.shift();
     if (!msg)
       return;
 
-    socket.meteor.methods_blocked = true;
+    socket.meteor_session.methods_blocked = true;
     Fiber(function () {
       var next = function (error, ret) {
-        socket.meteor.methods_blocked = false;
+        socket.meteor_session.methods_blocked = false;
         _.defer(_.bind(self._try_invoke_next, self, socket));
       };
 

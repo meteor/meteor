@@ -129,6 +129,8 @@ Meteor._LivedataConnection = function (url) {
       self._livedata_nosub(msg);
     else if (msg.msg === 'result')
       self._livedata_result(msg);
+    else if (msg.msg === 'error')
+      self._livedata_error(msg);
     else
       Meteor._debug("discarding unknown livedata message type", msg);
   });
@@ -426,7 +428,12 @@ _.extend(Meteor._LivedataConnection.prototype, {
       else
         m.callback(undefined, msg.result);
     }
+  },
+
+  _livedata_error: function (msg) {
+    Meteor._debug("Received error from server: " + msg.reason);
   }
+
 });
 
 _.extend(Meteor, {
