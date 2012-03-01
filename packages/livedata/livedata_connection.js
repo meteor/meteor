@@ -263,27 +263,29 @@ _.extend(Meteor._LivedataConnection.prototype, {
   },
 
   call: function (name /*, arguments */) {
-    return this.apply(name, Array.prototype.slice.call(arguments, 1));
+    // if it's a function, the last argument is the result callback,
+    // not a parameter to the remote method.
+    var args = Array.prototype.slice.call(arguments, 1);
+    if (args.length && typeof args[args.length - 1] === "function")
+      var callback = args.pop();
+    return this.apply(name, args, callback);
   },
 
-  apply: function (name, args) {
+  apply: function (name, args, callback) {
     var self = this;
     var enclosing = Meteor._CurrentInvocation.get();
     var handler = self.method_handlers[name];
-    var result_func = function () {};
 
-    // if it's a function, the last argument is the result callback,
-    // not a parameter to the remote method.
-    args = _.clone(args);
-    if (args.length && typeof args[args.length - 1] === "function") {
+    if (callback)
       // XXX would it be better form to do the binding in stream.on,
       // or caller, instead of here?
-      result_func = Meteor.bindEnvironment(args.pop(), function (e) {
+      callback = Meteor.bindEnvironment(callback, function (e) {
         // XXX improve error message (and how we report it)
         Meteor._debug("Exception while delivering result of invoking '" +
                       name + "'", e.stack);
       });
-    }
+    else
+      callback = function () {};
 
     var enqueue = function (msg, callback) {
       msg.id = '' + (self.next_method_id++);
@@ -295,7 +297,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
     var invocation = new Meteor._ClientMethodInvocation(name, handler, self);
     // if _run throws an exception, allow it to propagate
-    return invocation._run(args, result_func, enqueue);
+    return invocation._run(args, callback, enqueue);
   },
 
   status: function () {

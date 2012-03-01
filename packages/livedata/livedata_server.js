@@ -763,31 +763,35 @@ _.extend(Meteor._LivedataServer.prototype, {
   },
 
   call: function (name /*, arguments */) {
-    return this.apply(name, Array.prototype.slice.call(arguments, 1));
+    // if it's a function, the last argument is the result callback,
+    // not a parameter to the remote method.
+    var args = Array.prototype.slice.call(arguments, 1);
+    if (args.length && typeof args[args.length - 1] === "function")
+      var callback = args.pop();
+    return this.apply(name, args, callback);
   },
 
-  apply: function (name, args) {
+  apply: function (name, args, callback) {
     var self = this;
 
-    args = _.clone(args);
-    var result_func;
-    if (args.length && typeof args[args.length - 1] === "function") {
-      result_func = Meteor.bindEnvironment(args.pop(), function (e) {
+    if (callback)
+      callback = Meteor.bindEnvironment(callback, function (e) {
         // XXX improve error message (and how we report it)
         Meteor._debug("Exception while delivering result of invoking '" +
                       name + "'", e.stack);
       });
-    }
+    else
+      callback = function () {};
 
     var handler = self.method_handlers[name];
     if (!handler) {
-      if (result_func)
-        result_func({error: 404, reason: "Method not found"});
+      if (callback)
+        callback({error: 404, reason: "Method not found"});
       throw new Error("No such method '" + name + "'");
     }
 
     var invocation = new Meteor._ServerMethodInvocation(name, handler);
-    return invocation._run(args, result_func);
+    return invocation._run(args, callback);
   },
 
   // A much more elegant way to do this would be: let any autopublish
