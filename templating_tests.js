@@ -1,5 +1,5 @@
 
-test("template assembly", function (test) {
+Tinytest.add("template assembly", function (test) {
   var minusEmptyComments = function(s) {
     return String(s).replace(/<!---->/g, '');
   };
@@ -32,7 +32,7 @@ test("template assembly", function (test) {
 
 
 
-test("template table assembly", function(test) {
+Tinytest.add("template table assembly", function(test) {
   var childWithTag = function(node, tag) {
     return _.find(node.childNodes, function(n) {
       return n.nodeName === tag;
