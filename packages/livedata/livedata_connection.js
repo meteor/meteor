@@ -97,14 +97,14 @@ Meteor._LivedataConnection = function (url) {
       self.outstanding_methods = reload_data.outstanding_methods;
     // pending messages will be transmitted on initial stream 'reset'
   }
-  Meteor._reload.on_migrate(reload_key, function () {
+  Meteor._reload.on_migrate(reload_key, function (result) {
     var methods = _.map(self.outstanding_methods, function (m) {
       // filter out callback
       return {msg: m.msg};
     });
 
-    return { next_method_id: self.next_method_id,
-             outstanding_methods: methods };
+    result({ next_method_id: self.next_method_id,
+             outstanding_methods: methods });
   });
 
   // Setup stream

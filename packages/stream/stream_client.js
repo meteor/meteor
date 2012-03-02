@@ -130,20 +130,20 @@ _.extend(Meteor._Stream.prototype, {
     // inspect the welcome data and decide if we have to reload
     try {
       var welcome_data = JSON.parse(welcome_message);
-      if (welcome_data && welcome_data.server_id) {
-        if (self.server_id && self.server_id !== welcome_data.server_id) {
-          Meteor._reload.reload();
-          // world's about to end, just leave the connection 'connecting'
-          // until it does.
-          return;
-        }
-        self.server_id = welcome_data.server_id;
-      } else {
-        Meteor._debug("DEBUG: invalid welcome packet", welcome_data);
-      }
     } catch (err) {
       Meteor._debug("DEBUG: malformed welcome packet", welcome_message);
     }
+
+    if (welcome_data && welcome_data.server_id) {
+      if (self.server_id && self.server_id !== welcome_data.server_id) {
+        Meteor._reload.reload();
+        // world's about to end, just leave the connection 'connecting'
+        // until it does.
+        return;
+      }
+      self.server_id = welcome_data.server_id;
+    } else
+      Meteor._debug("DEBUG: invalid welcome packet", welcome_data);
 
     // update status
     self.current_status.status = "connected";

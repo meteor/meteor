@@ -105,9 +105,9 @@ Session = _.extend({}, {
 
 
 if (Meteor._reload) {
-  Meteor._reload.on_migrate('session', function () {
+  Meteor._reload.on_migrate('session', function (result) {
     // XXX sanitize and make sure it's JSONible?
-    return { keys: Session.keys };
+    result({keys: Session.keys});
   });
 
   (function () {
