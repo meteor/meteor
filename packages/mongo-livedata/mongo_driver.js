@@ -22,6 +22,12 @@ _Mongo = function (url) {
 
   self.collection_queue = [];
 
+  // collection name => true, or 'true' for all, 'false' for none
+  self.dirty = false;
+  self.fence_listeners = [];
+  self.flush_running = false;
+  self.flush_queued = false;
+
   MongoDB.connect(url, function(err, db) {
     self.db = db;
 
@@ -35,9 +41,7 @@ _Mongo = function (url) {
   // refresh all outstanding observers every 10 seconds.  they are
   // also triggered on DB updates.
   setInterval(function () {
-    Fiber(function () {
-      self._pollObservers.call(self);
-    }).run();
+    self._markDirty();
   }, 10000);
 };
 
@@ -68,18 +72,52 @@ _Mongo.prototype._withCollection = function(collection_name, callback) {
   }
 };
 
-// poke observers watching the given collection name, or all observers
-// if no collection name provided.
-_Mongo.prototype._pollObservers = function (collection_name) {
+// mark a collection as dirty (or the whole database, if no collection
+// name is provided.) arrange for observers against the dirty sector
+// to update themselves.
+_Mongo.prototype._markDirty = function (collection_name) {
   var self = this;
 
-  for (var id in self.observers) {
-    var o = self.observers[id];
-    if (!collection_name || o.collection_name === collection_name) {
-      o._poll();
-    }
+  if (collection_name === undefined)
+    self.dirty = true;
+  else if (self.dirty !== true) {
+    self.dirty = self.dirty || {};
+    self.dirty[collection_name] = true;
   }
+
+  self._flushObservers();
 };
+
+_Mongo.prototype._flushObservers = _.throttle(function () {
+  var self = this;
+
+  // only let one instance of flush run at once.
+  if (self.flush_running) {
+    self.flush_queued = true;
+    return;
+  }
+  self.flush_running = true;
+  var listeners_for_cycle = self.fence_listeners;
+  self.fence_listeners = [];
+
+  Fiber(function () {
+    var dirty = self.dirty;
+    self.dirty = false;
+
+    _.each(self.observers, function (o) {
+      if (dirty && dirty === true || dirty[o.collection_name])
+        o._poll();
+    });
+
+    _.each(listeners_for_cycle, function (f) {f();});
+
+    self.flush_running = false;
+    if (self.flush_queued || self.fence_listeners.length) {
+      self.flush_queued = false;
+      self._flushObservers();
+    }
+  }).run();
+}, 50 /* 50 ms */);
 
 //////////// Public API //////////
 
@@ -87,19 +125,14 @@ _Mongo.prototype.insert = function (collection_name, document) {
   var self = this;
 
   var future = new Future;
-  // XXX this blocks for the operation to complete (safe:true), because
-  // I couldn't convince myself it was safe not to. Not sure if it is
-  // needed, really.
-
   self._withCollection(collection_name, function(err, collection) {
     // XXX err handling
-    collection.insert(document, {safe: true}, function(err) {
+    collection.insert(document, {/* safe: true */}, function(err) {
       // XXX err handling
-      Fiber(function () {
-        self._pollObservers(collection_name);
-        future.ret();
-      }).run();
     });
+
+    self._markDirty(collection_name);
+    future.ret();
   });
 
   return future.wait();
@@ -108,24 +141,18 @@ _Mongo.prototype.insert = function (collection_name, document) {
 _Mongo.prototype.remove = function (collection_name, selector) {
   var self = this;
 
-  var future = new Future;
-  // XXX this blocks for the operation to complete (safe:true), because
-  // I couldn't convince myself it was safe not to. Not sure if it is
-  // needed, really.
-
   // XXX does not allow options. matches the client.
-
   selector = _Mongo._rewriteSelector(selector);
 
+  var future = new Future;
   self._withCollection(collection_name, function(err, collection) {
     // XXX err handling
-    collection.remove(selector, {safe:true}, function(err) {
+    collection.remove(selector, {/* safe: true */}, function(err) {
       // XXX err handling
-      Fiber(function () {
-        self._pollObservers(collection_name);
-        future.ret();
-      }).run();
     });
+
+    self._markDirty(collection_name);
+    future.ret();
   });
 
   return future.wait();
@@ -134,29 +161,24 @@ _Mongo.prototype.remove = function (collection_name, selector) {
 _Mongo.prototype.update = function (collection_name, selector, mod, options) {
   var self = this;
 
-  var future = new Future;
-  // XXX this blocks for the operation to complete (safe:true), because
-  // I couldn't convince myself it was safe not to. Not sure if it is
-  // needed, really.
-
   selector = _Mongo._rewriteSelector(selector);
   if (!options) options = {};
 
+  var future = new Future;
   self._withCollection(collection_name, function(err, collection) {
     // XXX err handling
 
-    var opts = {safe: true};
+    var opts = {/* safe: true */};
     // explictly enumerate options that minimongo supports
     if (options.upsert) opts.upsert = true;
     if (options.multi) opts.multi = true;
 
     collection.update(selector, mod, opts, function(err) {
       // XXX err handling
-      Fiber(function () {
-        self._pollObservers(collection_name);
-        future.ret();
-      }).run();
     });
+
+    self._markDirty(collection_name);
+    future.ret();
   });
 
   return future.wait();
@@ -178,6 +200,25 @@ _Mongo.prototype.findOne = function (collection_name, selector, options) {
     selector = {};
 
   return this.find(collection_name, selector, options).fetch()[0];
+};
+
+// After making a write (with insert, update, remove), observers are
+// notified asynchronously. Call 'callback' once it is guaranteed that
+// all writes that have been made so far have been reflected in
+// observer notifications. (Since our execution environment is
+// single-threaded, this is well-defined -- a write "has been made" if
+// it's returned, and an observer "has been notified" if its callback
+// has returned.)
+_Mongo.prototype.writeFence = function (callback) {
+  var self = this;
+  if (!self.dirty)
+    callback();
+  else
+    // XXX it'd be better to actually kick off a polling cycle
+    // here. have observers natually be notified on some long-ish
+    // polling cycle, like 250ms, and immediately (or, say, with 50ms
+    // throttling) in response to writeFence().
+    self.fence_listeners.push(callback);
 };
 
 // Cursors

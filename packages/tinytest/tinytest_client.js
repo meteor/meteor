@@ -12,15 +12,9 @@ _.extend(globals.test, {
     var maybeDone = function () {
       if (!done && local_complete && remote_complete) {
         done = true;
-        // XXX this is a really sloppy way to GC the test results
-        _.defer(function () {
-          // XXX use _.defer to avoid calling into minimongo
-          // reentrantly. we need to handle this better..
-          Meteor._ServerTestResults.remove({run_id: run_id});
-        });
         onComplete && onComplete();
       }
-    };
+    }
 
     var testRun = Meteor._TestManager.createRun(reportFunc);
     test._currentRun.withValue(testRun, function () {
@@ -34,8 +28,27 @@ _.extend(globals.test, {
       if (error)
         // XXX better report error
         throw new Error("Test server returned an error");
-      remote_complete = true;
-      maybeDone();
+    });
+
+    App.onQuiesce(function () {
+      // XXX use _.defer to avoid calling into minimongo
+      // reentrantly. we need to handle this better..
+      // (XXX code got refactored -- still necessary?)
+      _.defer(function () {
+        // XXX this is a really sloppy way to GC the test results
+
+        // XXX huge mess. have to use onQuiesce (supposed to be
+        // private/for testing only) because otherwise we might start
+        // removing the results before they've actually all arrived at
+        // the client, since methods can complete before subs
+        // update. or, could use the complete:true hack from before..
+        Meteor._ServerTestResults.remove({run_id: run_id});
+
+        // and of course we shouldn't print "All tests pass!"
+        // until we have actually received the test results :)
+        remote_complete = true;
+        maybeDone();
+      });
     });
 
     var sub_handle = App.subscribe('tinytest/results', {run_id: run_id});

@@ -370,8 +370,7 @@ _.extend(Meteor._LivedataSession.prototype, {
         self.send({
           msg: 'result', id: msg.id,
           error: {error: 404, reason: "Method not found"}});
-        self.send({
-          msg: 'data', methods: [msg.id]});
+        self._completeWhenFenced(msg.id);
         return;
       }
 
@@ -394,12 +393,7 @@ _.extend(Meteor._LivedataSession.prototype, {
 
         self.send(
           _.extend({msg: 'result', id: msg.id}, payload));
-
-        // the method is satisfied once callback is called, because
-        // any DB observe callbacks run to completion in the same
-        // tick.
-        self.send({
-          msg: 'data', methods: [msg.id]});
+        self._completeWhenFenced(msg.id);
       };
 
       var next = function (error, ret) {
@@ -415,6 +409,19 @@ _.extend(Meteor._LivedataSession.prototype, {
         // client, if appropriate)
       }
     }
+  },
+
+  _completeWhenFenced: function (id) {
+    var self = this;
+    // XXX hack -- coordinate our update messages with the
+    // observation cycle of the remote mongo database
+    // driver. really, should support N such counterparties, and
+    // should send method completion only when all of them have
+    // crossed a write fence.
+    Meteor._RemoteCollectionDriver.writeFence(function () {
+      self.send({
+        msg: 'data', methods: [id]});
+    });
   },
 
   _startSubscription: function (handler, sub_id, params) {

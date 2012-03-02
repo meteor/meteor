@@ -12,6 +12,10 @@ _.extend(Meteor._RemoteCollectionDriver.prototype, {
       ret[m] = _.bind(self.mongo[m], self.mongo, name);
     });
     return ret;
+  },
+
+  writeFence: function (func) {
+    this.mongo.writeFence(func);
   }
 });
 
