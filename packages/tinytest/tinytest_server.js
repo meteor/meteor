@@ -11,12 +11,11 @@ App.methods({
     var request = this;
     request.beginAsync();
 
-    var reportFunc = function (report) {
+    Meteor._runTests(function (report) {
+      /* onReport */
       Meteor._ServerTestResults.insert({run_id: run_id, report: report});
-    };
-
-    var testRun = Meteor._TestManager.createRun(reportFunc);
-    testRun.run(function () {
+    }, function () {
+      /* onComplete */
       request.respond();
     });
   }

@@ -260,7 +260,7 @@ _.extend(Meteor._TestRun.prototype, {
       /* onComplete */
       var totalTime = (+new Date) - startTime;
       self._report(test, {events: [{type: "finish", timeMs: totalTime}]});
-      onComplete();
+      onComplete && onComplete();
     }, function (exception) {
       /* onException */
 
@@ -276,7 +276,7 @@ _.extend(Meteor._TestRun.prototype, {
         }]
       });
 
-      onComplete();
+      onComplete && onComplete();
     }, stop_at_offset);
   },
 
@@ -326,6 +326,23 @@ globals.test = function (name, func) {
 
 globals.testAsync = function (name, func) {
   Meteor._TestManager.addCase(new Meteor._TestCase(name, func, true));
+};
+
+// Run every test, asynchronously. Runs the test in the current
+// process only (if called on the server, runs the tests on the
+// server, and likewise for the client.) Report results via
+// onReport. Call onComplete when it's done.
+Meteor._runTests = function (onReport, onComplete) {
+  var testRun = Meteor._TestManager.createRun(onReport);
+  testRun.run(onComplete);
+};
+
+// Run just one test case, and stop the debugger at a particular
+// error, all as indicated by 'cookie', which will have come from a
+// failure event output by _runTests.
+Meteor._debugTest = function (cookie, onReport, onComplete) {
+  var testRun = Meteor._TestManager.createRun(onReport);
+  testRun.debug(cookie, onComplete);
 };
 
 })();
