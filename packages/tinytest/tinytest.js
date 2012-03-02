@@ -1,7 +1,6 @@
 
 (function () {
   var globals = this;
-  var CurrentTestRun = new Meteor.DynamicVariable;
 
 // XXX namespacing
 
@@ -9,11 +8,11 @@
 /* TestCaseResults                                                        */
 /******************************************************************************/
 
-Meteor._TestCaseResults = function (test_case, run, stop_at_offset,
-                                    onException) {
+Meteor._TestCaseResults = function (test_case, onEvent, onException,
+                                    stop_at_offset) {
   var self = this;
   self.test_case = test_case;
-  self.run = run;
+  self.onEvent = onEvent;
   self.expecting_failure = false;
   self.current_fail_count = 0;
   self.stop_at_offset = stop_at_offset;
@@ -31,7 +30,7 @@ _.extend(Meteor._TestCaseResults.prototype, {
       ok.details["was_expecting_failure"] = true;
       self.expecting_failure = false;
     }
-    self.run._report(self.test_case, {events: [ok]});
+    self.onEvent(ok);
   },
 
   expect_fail: function () {
@@ -55,14 +54,13 @@ _.extend(Meteor._TestCaseResults.prototype, {
     if (self.stop_at_offset)
       self.stop_at_offset--;
 
-    self.run._report(self.test_case, {
-      events: [{
+    self.onEvent({
         type: (self.expecting_failure ? "expected_fail" : "fail"),
         details: doc,
         cookie: {name: self.test_case.name, offset: self.current_fail_count,
                  groupPath: self.test_case.groupPath,
                  shortName: self.test_case.shortName}
-      }]});
+    });
     self.expecting_failure = false;
     self.current_fail_count++;
   },
@@ -187,20 +185,25 @@ Meteor._TestCase = function (name, func, async) {
 };
 
 _.extend(Meteor._TestCase.prototype, {
-  // Run the test asynchronously, then call onComplete() on success,
-  // or else onException(e) if the test raised an exception.
-  run: function (run, stop_at_offset, onComplete, onException) {
+  // Run the test asynchronously, delivering results via onEvent;
+  // then call onComplete() on success, or else onException(e) if the
+  // test raised (or voluntarily reported) an exception.
+  run: function (onEvent, onComplete, onException, stop_at_offset) {
     var self = this;
-    var results = new Meteor._TestCaseResults(self, run, stop_at_offset,
-                                              onException);
-    _.defer(Meteor.bindEnvironment(function () {
-      if (self.async)
-        self.func(results, onComplete);
-      else {
-        self.func(results);
-        onComplete();
+    var results = new Meteor._TestCaseResults(self, onEvent, onException,
+                                              stop_at_offset);
+    Meteor.defer(function () {
+      try {
+        if (self.async)
+          self.func(results, onComplete);
+        else {
+          self.func(results);
+          onComplete();
+        }
+      } catch (e) {
+        onException(e);
       }
-    }, onException));
+    });
   }
 });
 
@@ -247,11 +250,13 @@ Meteor._TestRun = function (manager, onReport) {
 _.extend(Meteor._TestRun.prototype, {
   _runOne: function (test, onComplete, stop_at_offset) {
     var self = this;
-    self._report(test);
 
     var startTime = (+new Date);
 
-    test.run(self, stop_at_offset, function () {
+    test.run(function (event) {
+      /* onEvent */
+      self._report(test, {events: [event]});
+    }, function () {
       /* onComplete */
       var totalTime = (+new Date) - startTime;
       self._report(test, {events: [{type: "finish", timeMs: totalTime}]});
@@ -272,7 +277,7 @@ _.extend(Meteor._TestRun.prototype, {
       });
 
       onComplete();
-    });
+    }, stop_at_offset);
   },
 
   run: function (onComplete) {
@@ -286,7 +291,7 @@ _.extend(Meteor._TestRun.prototype, {
         onComplete();
     };
 
-    CurrentTestRun.withValue(self, runNext);
+    runNext();
   },
 
   // An alternative to run(). Given the 'cookie' attribute of a
@@ -297,9 +302,7 @@ _.extend(Meteor._TestRun.prototype, {
     var test = self.manager.tests[cookie.name];
     if (!test)
       throw new Error("No such test '" + cookie.name + "'");
-    CurrentTestRun.withValue(self, function () {
-      self._runOne(test, onComplete, cookie.offset);
-    });
+    self._runOne(test, onComplete, cookie.offset);
   },
 
   _report: function (test, rest) {
