@@ -5,6 +5,7 @@ Meteor._Stream = function (url) {
   self.socket = null;
   self.event_callbacks = {}; // name -> [callback]
   self.server_id = null;
+  self.sent_update_available = false;
   self.force_fail = false;
 
   //// Constants
@@ -53,8 +54,7 @@ _.extend(Meteor._Stream.prototype, {
   on: function (name, callback) {
     var self = this;
 
-    // only allow message and reset for now.
-    if (name !== 'message' && name !== 'reset')
+    if (name !== 'message' && name !== 'reset' && name !== 'update_available')
       throw new Error("unknown event type: " + name);
 
     if (!self.event_callbacks[name])
@@ -130,20 +130,22 @@ _.extend(Meteor._Stream.prototype, {
     // inspect the welcome data and decide if we have to reload
     try {
       var welcome_data = JSON.parse(welcome_message);
-      if (welcome_data && welcome_data.server_id) {
-        if (self.server_id && self.server_id !== welcome_data.server_id) {
-          Meteor._reload.reload();
-          // world's about to end, just leave the connection 'connecting'
-          // until it does.
-          return;
-        }
-        self.server_id = welcome_data.server_id;
-      } else {
-        Meteor._debug("DEBUG: invalid welcome packet", welcome_data);
-      }
     } catch (err) {
       Meteor._debug("DEBUG: malformed welcome packet", welcome_message);
     }
+
+    if (welcome_data && welcome_data.server_id) {
+      if (!self.server_id)
+        self.server_id = welcome_data.server_id;
+
+      if (self.server_id && self.server_id !== welcome_data.server_id &&
+          !self.sent_update_available) {
+        self.update_available = true;
+        _.each(self.event_callbacks.update_available,
+               function (callback) { callback(); });
+      }
+    } else
+      Meteor._debug("DEBUG: invalid welcome packet", welcome_data);
 
     // update status
     self.current_status.status = "connected";

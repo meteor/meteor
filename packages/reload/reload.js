@@ -68,16 +68,24 @@
   }
 
 
-  var save_callbacks = {};
+  var providers = [];
 
   ////////// External API //////////
 
-  // Called by packages when they start up.
-  // Registers a callback for when we want to save data.
-  // Before a reload, callback is called, and should return
-  // a JSONifyable object.
+  // Packages that support migration should register themselves by
+  // calling this function. When it's time to migrate, callback will
+  // be called with one argument, the "retry function." If the package
+  // is ready to migrate, it should return [true, data], where data is
+  // its migration data, an arbitrary JSON value (or [true] if it has
+  // no migration data this time). If the package needs more time
+  // before it is ready to migrate, it should return false. Then, once
+  // it is ready to migrating again, it should call the retry
+  // function. The retry function will return immediately, but will
+  // schedule the migration to be retried, meaning that every package
+  // will be polled once again for its migration data. If they are all
+  // ready this time, then the migration will happen.
   Meteor._reload.on_migrate = function (name, callback) {
-    save_callbacks[name] = callback;
+    providers.push({name: name, callback: callback});
   };
 
   // Called by packages when they start up.
@@ -86,36 +94,47 @@
     return old_data[name];
   };
 
-  // Trigger a reload. Calls all the callbacks, saves all the values,
-  // then blows up the world.
+  // Migrating reload: reload this page (presumably to pick up a new
+  // version of the code or assets), but save the program state and
+  // migrate it over. This function returns immediately. The reload
+  // will happen at some point in the future once all of the packages
+  // are ready to migrate.
+  var reloading = false;
   Meteor._reload.reload = function () {
-    // Meteor._debug("Beginning hot reload.");
+    if (reloading)
+      return;
+    reloading = true;
 
-    // ask everyone for stuff to save
-    var new_data = {};
-    _.each(save_callbacks, function (callback, name) {
-      new_data[name] = callback();
-    });
+    var tryReload = function () { _.defer(function () {
+      // Make sure each package is ready to go, and collect their
+      // migration data
+      var migration_data = {};
+      var remaining = _.clone(providers);
+      while (remaining.length) {
+        var p = remaining.shift();
+        var status = p.callback(tryReload);
+        if (!status[0])
+          return; // not ready yet..
+        if (status.length > 1)
+          migration_data[p.name] = status[1];
+      };
 
-    var new_json;
-    try {
-      new_json = JSON.stringify({
-        time: (new Date()).getTime(), data: new_data, reload: true
+      // Persist the migration data
+      var json = JSON.stringify({
+        time: (new Date()).getTime(), data: migration_data, reload: true
       });
-    } catch (err) {
-      Meteor._debug("Asked to persist non-JSONable data. Ignoring.");
-      new_json = '{}';
-    }
 
-    // save it
-    if (typeof sessionStorage !== "undefined") {
-        sessionStorage.setItem(KEY_NAME, new_json);
-    } else {
-      Meteor._debug("Browser does not support sessionStorage. Not saving reload state.");
-    }
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.setItem(KEY_NAME, json);
+      } else {
+        Meteor._debug("Browser does not support sessionStorage. Not saving migration state.");
+      }
 
-    // blow up the world!
-    window.location.reload();
+      // Tell the browser to shut down this VM and make a new one
+      window.location.reload();
+    })};
+
+    tryReload();
   };
 
 })();
