@@ -80,6 +80,7 @@ Meteor._TestRun = function (manager, onReport) {
   self.current_fail_count = null;
   self.stop_at_offset = null;
   self.current_onException = null;
+  self.id = Meteor.uuid();
 
   _.each(self.manager.ordered_tests, _.bind(self._report, self));
 };
@@ -343,6 +344,12 @@ _.extend(globals.test, {
 
   exception: function (exception) {
     test._currentRun.get().exception(exception);
+  },
+
+  // returns a unique ID for this test run, for convenience use by
+  // your tests
+  runId: function () {
+    return test._currentRun.get().id;
   }
 });
 

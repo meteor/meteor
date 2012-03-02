@@ -187,25 +187,23 @@ testAsyncMulti("livedata - basic method invocation", [
 
 
 var checkBalances = function (a, b) {
-  var alice = Ledger.findOne({name: "alice", world: world});
-  var bob = Ledger.findOne({name: "bob", world: world});
+  var alice = Ledger.findOne({name: "alice", world: test.runId()});
+  var bob = Ledger.findOne({name: "bob", world: test.runId()});
   assert.equal(alice.balance, a);
   assert.equal(bob.balance, b);
 }
 
 // would be nice to have a database-aware test harness of some kind --
 // this is a big hack (and XXX pollutes the global test namespace)
-var world;
 testAsyncMulti("livedata - compound methods", [
   function () {
-    world = LocalCollection.uuid();
     if (Meteor.is_client)
-      Meteor.subscribe("ledger", {world: world});
-    Ledger.insert({name: "alice", balance: 100, world: world});
-    Ledger.insert({name: "bob", balance: 50, world: world});
+      Meteor.subscribe("ledger", {world: test.runId()});
+    Ledger.insert({name: "alice", balance: 100, world: test.runId()});
+    Ledger.insert({name: "bob", balance: 50, world: test.runId()});
   },
   function (expect) {
-    App.call('ledger/transfer', world, "alice", "bob", 10,
+    App.call('ledger/transfer', test.runId(), "alice", "bob", 10,
              expect(undefined, undefined));
 
     checkBalances(90, 60);
@@ -217,7 +215,7 @@ testAsyncMulti("livedata - compound methods", [
     });
   },
   function (expect) {
-    App.call('ledger/transfer', world, "alice", "bob", 100, true,
+    App.call('ledger/transfer', test.runId(), "alice", "bob", 100, true,
              expect(failure(409)));
 
     if (Meteor.is_client)
