@@ -1,6 +1,6 @@
 // assert that f is a strcmp-style comparison function that puts
 // 'values' in the provided order
-assert_ordering = function (f, values) {
+assert_ordering = function (test, f, values) {
   for (var i = 0; i < values.length; i++) {
     var x = f(values[i], values[i]);
     if (x !== 0) {
@@ -37,7 +37,7 @@ assert_ordering = function (f, values) {
 
 // XXX test shared structure in all MM entrypoints
 
-test("minimongo - basics", function () {
+test("minimongo - basics", function (test) {
   var c = new LocalCollection();
 
   c.insert({type: "kitten", name: "fluffy"});
@@ -45,62 +45,62 @@ test("minimongo - basics", function () {
   c.insert({type: "cryptographer", name: "alice"});
   c.insert({type: "cryptographer", name: "bob"});
   c.insert({type: "cryptographer", name: "cara"});
-  assert.equal(c.find().count(), 5);
-  assert.equal(c.find({type: "kitten"}).count(), 2);
-  assert.equal(c.find({type: "cryptographer"}).count(), 3);
-  assert.length(c.find({type: "kitten"}).fetch(), 2);
-  assert.length(c.find({type: "cryptographer"}).fetch(), 3);
+  test.equal(c.find().count(), 5);
+  test.equal(c.find({type: "kitten"}).count(), 2);
+  test.equal(c.find({type: "cryptographer"}).count(), 3);
+  test.length(c.find({type: "kitten"}).fetch(), 2);
+  test.length(c.find({type: "cryptographer"}).fetch(), 3);
 
   c.remove({name: "cara"});
-  assert.equal(c.find().count(), 4);
-  assert.equal(c.find({type: "kitten"}).count(), 2);
-  assert.equal(c.find({type: "cryptographer"}).count(), 2);
-  assert.length(c.find({type: "kitten"}).fetch(), 2);
-  assert.length(c.find({type: "cryptographer"}).fetch(), 2);
+  test.equal(c.find().count(), 4);
+  test.equal(c.find({type: "kitten"}).count(), 2);
+  test.equal(c.find({type: "cryptographer"}).count(), 2);
+  test.length(c.find({type: "kitten"}).fetch(), 2);
+  test.length(c.find({type: "cryptographer"}).fetch(), 2);
 
   c.update({name: "snookums"}, {$set: {type: "cryptographer"}});
-  assert.equal(c.find().count(), 4);
-  assert.equal(c.find({type: "kitten"}).count(), 1);
-  assert.equal(c.find({type: "cryptographer"}).count(), 3);
-  assert.length(c.find({type: "kitten"}).fetch(), 1);
-  assert.length(c.find({type: "cryptographer"}).fetch(), 3);
+  test.equal(c.find().count(), 4);
+  test.equal(c.find({type: "kitten"}).count(), 1);
+  test.equal(c.find({type: "cryptographer"}).count(), 3);
+  test.length(c.find({type: "kitten"}).fetch(), 1);
+  test.length(c.find({type: "cryptographer"}).fetch(), 3);
 
   c.remove(null);
   c.remove(false);
   c.remove(undefined);
-  assert.equal(c.find().count(), 4);
+  test.equal(c.find().count(), 4);
 
   c.remove({_id: null});
   c.remove({_id: false});
   c.remove({_id: undefined});
-  assert.equal(c.find().count(), 4);
+  test.equal(c.find().count(), 4);
 
   c.remove();
-  assert.equal(0, c.find().count());
+  test.equal(0, c.find().count());
 
   c.insert({_id: 1, name: "strawberry", tags: ["fruit", "red", "squishy"]});
   c.insert({_id: 2, name: "apple", tags: ["fruit", "red", "hard"]});
   c.insert({_id: 3, name: "rose", tags: ["flower", "red", "squishy"]});
 
-  assert.equal(c.find({tags: "flower"}).count(), 1);
-  assert.equal(c.find({tags: "fruit"}).count(), 2);
-  assert.equal(c.find({tags: "red"}).count(), 3);
-  assert.length(c.find({tags: "flower"}).fetch(), 1);
-  assert.length(c.find({tags: "fruit"}).fetch(), 2);
-  assert.length(c.find({tags: "red"}).fetch(), 3);
+  test.equal(c.find({tags: "flower"}).count(), 1);
+  test.equal(c.find({tags: "fruit"}).count(), 2);
+  test.equal(c.find({tags: "red"}).count(), 3);
+  test.length(c.find({tags: "flower"}).fetch(), 1);
+  test.length(c.find({tags: "fruit"}).fetch(), 2);
+  test.length(c.find({tags: "red"}).fetch(), 3);
 
-  assert.equal(c.findOne(1).name, "strawberry");
-  assert.equal(c.findOne(2).name, "apple");
-  assert.equal(c.findOne(3).name, "rose");
-  assert.equal(c.findOne(4), undefined);
-  assert.equal(c.findOne("abc"), undefined);
-  assert.equal(c.findOne(undefined), undefined);
+  test.equal(c.findOne(1).name, "strawberry");
+  test.equal(c.findOne(2).name, "apple");
+  test.equal(c.findOne(3).name, "rose");
+  test.equal(c.findOne(4), undefined);
+  test.equal(c.findOne("abc"), undefined);
+  test.equal(c.findOne(undefined), undefined);
 
-  assert.equal(c.find(1).count(), 1);
-  assert.equal(c.find(4).count(), 0);
-  assert.equal(c.find("abc").count(), 0);
-  assert.equal(c.find(undefined).count(), 0);
-  assert.equal(c.find().count(), 3);
+  test.equal(c.find(1).count(), 1);
+  test.equal(c.find(4).count(), 0);
+  test.equal(c.find("abc").count(), 0);
+  test.equal(c.find(undefined).count(), 0);
+  test.equal(c.find().count(), 3);
 
   var ev = "";
   var makecb = function (tag) {
@@ -111,7 +111,7 @@ test("minimongo - basics", function () {
     };
   };
   var expect = function (x) {
-    assert.equal(ev, x);
+    test.equal(ev, x);
     ev = "";
   };
   c.find({tags: "flower"}).observe(makecb('a'));
@@ -128,7 +128,7 @@ test("minimongo - basics", function () {
   expect("aa4_");
 });
 
-test("minimongo - cursors", function () {
+test("minimongo - cursors", function (test) {
   var c = new LocalCollection();
   var res;
 
@@ -136,65 +136,65 @@ test("minimongo - cursors", function () {
     c.insert({i: i});
 
   var q = c.find();
-  assert.equal(q.count(), 20);
+  test.equal(q.count(), 20);
 
   // fetch
   res = q.fetch();
-  assert.length(res, 20);
+  test.length(res, 20);
   for (var i = 0; i < 20; i++)
-    assert.equal(res[i].i, i);
+    test.equal(res[i].i, i);
   // everything empty
-  assert.length(q.fetch(), 0);
+  test.length(q.fetch(), 0);
   q.rewind();
 
   // forEach
   var count = 0;
   q.forEach(function (obj) {
-    assert.equal(obj.i, count++);
+    test.equal(obj.i, count++);
   });
-  assert.equal(count, 20);
+  test.equal(count, 20);
   // everything empty
-  assert.length(q.fetch(), 0);
+  test.length(q.fetch(), 0);
   q.rewind();
 
   // map
   res = q.map(function (obj) { return obj.i * 2; });
-  assert.length(res, 20);
+  test.length(res, 20);
   for (var i = 0; i < 20; i++)
-    assert.equal(res[i], i * 2);
+    test.equal(res[i], i * 2);
   // everything empty
-  assert.length(q.fetch(), 0);
+  test.length(q.fetch(), 0);
 
   // findOne (and no rewind first)
-  assert.equal(c.findOne({i: 0}).i, 0);
-  assert.equal(c.findOne({i: 1}).i, 1);
+  test.equal(c.findOne({i: 0}).i, 0);
+  test.equal(c.findOne({i: 1}).i, 1);
   var id = c.findOne({i: 2})._id;
-  assert.equal(c.findOne(id).i, 2);
+  test.equal(c.findOne(id).i, 2);
 });
 
-test("minimongo - misc", function () {
+test("minimongo - misc", function (test) {
   // deepcopy
   var a = {a: [1, 2, 3], b: "x", c: true, d: {x: 12, y: [12]},
            f: null};
   var b = LocalCollection._deepcopy(a);
-  assert.isTrue(LocalCollection._f._equal(a, b));
+  test.isTrue(LocalCollection._f._equal(a, b));
   a.a.push(4);
-  assert.length(b.a, 3);
+  test.length(b.a, 3);
   a.c = false;
-  assert.isTrue(b.c);
+  test.isTrue(b.c);
   b.d.z = 15;
   a.d.z = 14;
-  assert.equal(b.d.z, 15);
+  test.equal(b.d.z, 15);
   a.d.y.push(88);
-  assert.length(b.d.y, 1);
+  test.length(b.d.y, 1);
 
   a = {x: function () {}};
   b = LocalCollection._deepcopy(a);
   a.x.a = 14;
-  assert.equal(b.x.a, 14); // just to document current behavior
+  test.equal(b.x.a, 14); // just to document current behavior
 });
 
-test("minimongo - selector_compiler", function () {
+test("minimongo - selector_compiler", function (test) {
   var matches = function (should_match, selector, doc) {
     var does_match = LocalCollection._matches(selector, doc);
     if (does_match != should_match) {
@@ -476,10 +476,10 @@ test("minimongo - selector_compiler", function () {
   match({a: /a/}, {a: ['dog', 'cat']});
   nomatch({a: /a/}, {a: ['dog', 'puppy']});
 
-  assert.throws(function () {
+  test.throws(function () {
     match({a: {$regex: /a/, $options: 'x'}}, {a: 'cat'});
   });
-  assert.throws(function () {
+  test.throws(function () {
     match({a: {$regex: /a/, $options: 's'}}, {a: 'cat'});
   });
 
@@ -506,9 +506,9 @@ test("minimongo - selector_compiler", function () {
   // - non-scalar arguments to $gt, $lt, etc
 });
 
-test("minimongo - ordering", function () {
+test("minimongo - ordering", function (test) {
   // value ordering
-  assert_ordering(LocalCollection._f._cmp, [
+  assert_ordering(test, LocalCollection._f._cmp, [
     null,
     1, 2.2, 3,
     "03", "1", "11", "2", "a", "aaa",
@@ -521,7 +521,7 @@ test("minimongo - ordering", function () {
   // document ordering under a sort specification
   var verify = function (sorts, docs) {
     _.each(sorts, function (sort) {
-      assert_ordering(LocalCollection._compileSort(sort), docs);
+      assert_ordering(test, LocalCollection._compileSort(sort), docs);
     });
   };
 
@@ -538,24 +538,24 @@ test("minimongo - ordering", function () {
           [["a", "asc"], ["b", "asc"]]],
          [{c: 1}, {a: 1, b: 2}, {a: 1, b: 3}, {a: 2, b: 0}]);
 
-  assert.throws(function () {
+  test.throws(function () {
     LocalCollection._compileSort("a");
   });
 
-  assert.throws(function () {
+  test.throws(function () {
     LocalCollection._compileSort(123);
   });
 
-  assert.equal(LocalCollection._compileSort({})({a:1}, {a:2}), 0);
+  test.equal(LocalCollection._compileSort({})({a:1}, {a:2}), 0);
 });
 
-test("minimongo - sort", function () {
+test("minimongo - sort", function (test) {
   var c = new LocalCollection();
   for (var i = 0; i < 50; i++)
     for (var j = 0; j < 2; j++)
       c.insert({a: i, b: j, _id: i + "_" + j});
 
-  assert.equal(
+  test.equal(
     c.find({a: {$gt: 10}}, {sort: {b: -1, a: 1}, limit: 5}).fetch(), [
       {a: 11, b: 1, _id: "11_1"},
       {a: 12, b: 1, _id: "12_1"},
@@ -563,7 +563,7 @@ test("minimongo - sort", function () {
       {a: 14, b: 1, _id: "14_1"},
       {a: 15, b: 1, _id: "15_1"}]);
 
-  assert.equal(
+  test.equal(
     c.find({a: {$gt: 10}}, {sort: {b: -1, a: 1}, skip: 3, limit: 5}).fetch(), [
       {a: 14, b: 1, _id: "14_1"},
       {a: 15, b: 1, _id: "15_1"},
@@ -571,7 +571,7 @@ test("minimongo - sort", function () {
       {a: 17, b: 1, _id: "17_1"},
       {a: 18, b: 1, _id: "18_1"}]);
 
-  assert.equal(
+  test.equal(
     c.find({a: {$gte: 20}}, {sort: {a: 1, b: -1}, skip: 50, limit: 5}).fetch(), [
       {a: 45, b: 1, _id: "45_1"},
       {a: 45, b: 0, _id: "45_0"},
@@ -580,7 +580,7 @@ test("minimongo - sort", function () {
       {a: 47, b: 1, _id: "47_1"}]);
 });
 
-test("minimongo - modify", function () {
+test("minimongo - modify", function (test) {
   var modify = function (doc, mod, result) {
     var copy = LocalCollection._deepcopy(doc);
     LocalCollection._modify(copy, mod);
@@ -598,7 +598,7 @@ test("minimongo - modify", function () {
     }
   };
   var exception = function (doc, mod) {
-    assert.throws(function () {
+    test.throws(function () {
       LocalCollection._modify(LocalCollection._deepcopy(doc), mod);
     });
   };
@@ -824,7 +824,7 @@ test("minimongo - modify", function () {
 
 // XXX test update() (selecting docs, multi, upsert..)
 
-test("minimongo - observe", function () {
+test("minimongo - observe", function (test) {
   var operations = [];
   var cbs = {
     added: function (obj, idx) {
@@ -849,41 +849,41 @@ test("minimongo - observe", function () {
 
   var c = new LocalCollection();
   handle = c.find({}, {sort: {a: 1}}).observe(cbs);
-  assert.isTrue(handle.collection === c);
+  test.isTrue(handle.collection === c);
 
   c.insert({a:1});
-  assert.equal(operations.shift(), ['added', {a:1}, 0]);
+  test.equal(operations.shift(), ['added', {a:1}, 0]);
   c.update({a:1}, {$set: {a: 2}});
-  assert.equal(operations.shift(), ['changed', {a:2}, 0, {a:1}]);
+  test.equal(operations.shift(), ['changed', {a:2}, 0, {a:1}]);
   c.insert({a:10});
-  assert.equal(operations.shift(), ['added', {a:10}, 1]);
+  test.equal(operations.shift(), ['added', {a:10}, 1]);
   c.update({}, {$inc: {a: 1}}, {multi: true});
-  assert.equal(operations.shift(), ['changed', {a:3}, 0, {a:2}]);
-  assert.equal(operations.shift(), ['changed', {a:11}, 1, {a:10}]);
+  test.equal(operations.shift(), ['changed', {a:3}, 0, {a:2}]);
+  test.equal(operations.shift(), ['changed', {a:11}, 1, {a:10}]);
   c.update({a:11}, {a:1});
-  assert.equal(operations.shift(), ['changed', {a:1}, 1, {a:11}]);
-  assert.equal(operations.shift(), ['moved', {a:1}, 1, 0]);
+  test.equal(operations.shift(), ['changed', {a:1}, 1, {a:11}]);
+  test.equal(operations.shift(), ['moved', {a:1}, 1, 0]);
   c.remove({a:2});
-  assert.equal(operations.shift(), undefined);
+  test.equal(operations.shift(), undefined);
   var id = c.findOne({a:3})._id;
   c.remove({a:3});
-  assert.equal(operations.shift(), ['removed', id, 1, {a:3}]);
+  test.equal(operations.shift(), ['removed', id, 1, {a:3}]);
 
   // test stop
   handle.stop();
   c.insert({a:2});
-  assert.equal(operations.shift(), undefined);
+  test.equal(operations.shift(), undefined);
 
   // test initial inserts (and backwards sort)
   handle = c.find({}, {sort: {a: -1}}).observe(cbs);
-  assert.equal(operations.shift(), ['added', {a:2}, 0]);
-  assert.equal(operations.shift(), ['added', {a:1}, 1]);
+  test.equal(operations.shift(), ['added', {a:2}, 0]);
+  test.equal(operations.shift(), ['added', {a:1}, 1]);
   handle.stop();
 
   // test _suppress_initial
   handle = c.find({}, {sort: {a: -1}}).observe(_.extend(cbs, {_suppress_initial: true}));
-  assert.equal(operations.shift(), undefined);
+  test.equal(operations.shift(), undefined);
   c.insert({a:100});
-  assert.equal(operations.shift(), ['added', {a:100}, 0]);
+  test.equal(operations.shift(), ['added', {a:100}, 0]);
   handle.stop();
 });

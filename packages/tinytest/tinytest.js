@@ -4,7 +4,122 @@
   var CurrentTestRun = new Meteor.DynamicVariable;
 
 // XXX namespacing
-// XXX audit for use on server (eg, stupid globals hacks)
+
+/******************************************************************************/
+/* TestResultsReporter                                                        */
+/******************************************************************************/
+
+Meteor._TestResultsReporter = function (run) {
+  var self = this;
+  self.run = run;
+};
+
+_.extend(Meteor._TestResultsReporter.prototype, {
+  ok: function (doc) {
+    this.run.ok(doc);
+  },
+
+  expect_fail: function () {
+    this.run.expect_fail();
+  },
+
+  fail: function (doc) {
+    this.run.fail(doc);
+  },
+
+  exception: function (exception) {
+    this.run.exception(exception);
+  },
+
+  // returns a unique ID for this test run, for convenience use by
+  // your tests
+  runId: function () {
+    return this.run.id;
+  },
+
+  // === Following patterned after http://vowsjs.org/#reference ===
+
+  // XXX eliminate 'message' and 'not' arguments
+  equal: function (actual, expected, message, not) {
+    /* If expected is a DOM node, do a literal '===' comparison with
+     * actual. Otherwise compare the JSON stringifications of expected
+     * and actual. (It's no good to stringify a DOM node. Circular
+     * references, to start with..) */
+
+    // XXX WE REALLY SHOULD NOT BE USING
+    // STRINGIFY. stringify([undefined]) === stringify([null]). should use
+    // deep equality instead.
+
+    // XXX remove cruft specific to liverange
+    if (typeof expected === "object" && expected && expected.nodeType) {
+      var matched = expected === actual;
+      expected = "[Node]";
+      actual = "[Unknown]";
+    } else {
+      expected = JSON.stringify(expected);
+      actual = JSON.stringify(actual);
+      var matched = expected === actual;
+    }
+
+    if (matched === !!not) {
+      this.fail({type: "assert_equal", message: message,
+                 expected: expected, actual: actual, not: !!not});
+    } else
+      this.ok();
+  },
+
+  notEqual: function (actual, expected, message) {
+    this.equal(actual, expected, message, true);
+  },
+
+  instanceOf: function (obj, klass) {
+    if (obj instanceof klass)
+      this.ok();
+    else
+      this.fail({type: "instanceOf"}); // XXX what other data?
+  },
+
+  // XXX should be length(), but on Chrome, functions always have a
+  // length property that is permanently 0 and can't be assigned to
+  // (it's a noop). How does vows do it??
+  length: function (obj, expected_length) {
+    if (obj.length === expected_length)
+      this.ok();
+    else
+      this.fail({type: "length"}); // XXX what other data?
+  },
+
+  // XXX nodejs assert.throws can take an expected error, as a class,
+  // regular expression, or predicate function..
+  throws: function (f) {
+    var actual;
+
+    try {
+      f();
+    } catch (exception) {
+      actual = exception;
+    }
+
+    if (actual)
+      this.ok({message: actual.message});
+    else
+      this.fail({type: "throws"});
+  },
+
+  isTrue: function (v) {
+    if (v)
+      this.ok();
+    else
+      this.fail({type: "true"});
+  },
+
+  isFalse: function (v) {
+    if (v)
+      this.fail({type: "true"});
+    else
+      this.ok();
+  }
+});
 
 /******************************************************************************/
 /* TestCase                                                                   */
@@ -27,13 +142,14 @@ Meteor._TestCase = function (name, func, async) {
 _.extend(Meteor._TestCase.prototype, {
   // Run the test asynchronously, then call onComplete() on success,
   // or else onException(e) if the test raised an exception.
-  run: function (onComplete, onException) {
+  run: function (run, onComplete, onException) {
     var self = this;
+    var reporter = new Meteor._TestResultsReporter(run);
     _.defer(Meteor.bindEnvironment(function () {
       if (self.async)
-        self.func(onComplete);
+        self.func(reporter, onComplete);
       else {
-        self.func();
+        self.func(reporter);
         onComplete();
       }
     }, onException));
@@ -95,12 +211,9 @@ _.extend(Meteor._TestRun.prototype, {
     self.current_fail_count = 0;
     self.stop_at_offset = stopAtOffset;
 
-    var original_assert = globals.assert;
-    globals.assert = test_assert;
     var startTime = (+new Date);
 
     var cleanup = function () {
-      globals.assert = original_assert;
       self.current_test = null;
       self.current_fail_count = null;
       self.stop_at_offset = null;
@@ -125,7 +238,7 @@ _.extend(Meteor._TestRun.prototype, {
       onComplete();
     };
 
-    test.run(function () {
+    test.run(self, function () {
       /* onComplete */
       cleanup();
 
@@ -229,94 +342,6 @@ _.extend(Meteor._TestRun.prototype, {
 });
 
 /******************************************************************************/
-/* Helpers                                                                    */
-/******************************************************************************/
-
-// Patterned after http://vowsjs.org/#reference
-var test_assert = {
-  // XXX eliminate 'message' and 'not' arguments
-  equal: function (actual, expected, message, not) {
-    /* If expected is a DOM node, do a literal '===' comparison with
-     * actual. Otherwise compare the JSON stringifications of expected
-     * and actual. (It's no good to stringify a DOM node. Circular
-     * references, to start with..) */
-
-    // XXX WE REALLY SHOULD NOT BE USING
-    // STRINGIFY. stringify([undefined]) === stringify([null]). should use
-    // deep equality instead.
-
-    // XXX remove cruft specific to liverange
-    if (typeof expected === "object" && expected && expected.nodeType) {
-      var matched = expected === actual;
-      expected = "[Node]";
-      actual = "[Unknown]";
-    } else {
-      expected = JSON.stringify(expected);
-      actual = JSON.stringify(actual);
-      var matched = expected === actual;
-    }
-
-    if (matched === !!not) {
-      test.fail({type: "assert_equal", message: message,
-                 expected: expected, actual: actual, not: !!not});
-    } else
-      test.ok();
-  },
-
-  notEqual: function (actual, expected, message) {
-    test_assert.equal(actual, expected, message, true);
-  },
-
-  instanceOf: function (obj, klass) {
-    if (obj instanceof klass)
-      test.ok();
-    else
-      test.fail({type: "instanceOf"}); // XXX what other data?
-  },
-
-  // XXX should be length(), but on Chrome, functions always have a
-  // length property that is permanently 0 and can't be assigned to
-  // (it's a noop). How does vows do it??
-  length: function (obj, expected_length) {
-    if (obj.length === expected_length)
-      test.ok();
-    else
-      test.fail({type: "length"}); // XXX what other data?
-  },
-
-  // XXX nodejs assert.throws can take an expected error, as a class,
-  // regular expression, or predicate function..
-  throws: function (f) {
-    var actual;
-
-    try {
-      f();
-    } catch (exception) {
-      actual = exception;
-    }
-
-    if (actual)
-      test.ok({message: actual.message});
-    else
-      test.fail({type: "throws"});
-  },
-
-  isTrue: function (v) {
-    if (v)
-      test.ok();
-    else
-      test.fail({type: "true"});
-  },
-
-  isFalse: function (v) {
-    if (v)
-      test.fail({type: "true"});
-    else
-      test.ok();
-  }
-};
-
-/******************************************************************************/
 /* Public API                                                                 */
 /******************************************************************************/
 
@@ -330,31 +355,5 @@ globals.test = function (name, func) {
 globals.testAsync = function (name, func) {
   Meteor._TestManager.addCase(new Meteor._TestCase(name, func, true));
 };
-
-
-_.extend(globals.test, {
-
-  ok: function (doc) {
-    CurrentTestRun.get().ok(doc);
-  },
-
-  expect_fail: function () {
-    CurrentTestRun.get().expect_fail();
-  },
-
-  fail: function (doc) {
-    CurrentTestRun.get().fail(doc);
-  },
-
-  exception: function (exception) {
-    CurrentTestRun.get().exception(exception);
-  },
-
-  // returns a unique ID for this test run, for convenience use by
-  // your tests
-  runId: function () {
-    return CurrentTestRun.get().id;
-  }
-});
 
 })();

@@ -1,4 +1,4 @@
-test("environment - server basics", function () {
-  assert.isFalse(Meteor.is_client);
-  assert.isTrue(Meteor.is_server);
+test("environment - server basics", function (test) {
+  test.isFalse(Meteor.is_client);
+  test.isTrue(Meteor.is_server);
 });
