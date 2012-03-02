@@ -6,35 +6,82 @@
 // XXX namespacing
 
 /******************************************************************************/
-/* TestResultsReporter                                                        */
+/* TestCaseResults                                                        */
 /******************************************************************************/
 
-Meteor._TestResultsReporter = function (run) {
+Meteor._TestCaseResults = function (test_case, run, stop_at_offset,
+                                    onException) {
   var self = this;
+  self.test_case = test_case;
   self.run = run;
+  self.expecting_failure = false;
+  self.current_fail_count = 0;
+  self.stop_at_offset = stop_at_offset;
+  self.onException = onException;
+  self.id = Meteor.uuid();
 };
 
-_.extend(Meteor._TestResultsReporter.prototype, {
+_.extend(Meteor._TestCaseResults.prototype, {
   ok: function (doc) {
-    this.run.ok(doc);
+    var self = this;
+    var ok = {type: "ok"};
+    if (doc)
+      ok.details = doc;
+    if (self.expecting_failure) {
+      ok.details["was_expecting_failure"] = true;
+      self.expecting_failure = false;
+    }
+    self.run._report(self.test_case, {events: [ok]});
   },
 
   expect_fail: function () {
-    this.run.expect_fail();
+    var self = this;
+    self.expecting_failure = true;
   },
 
   fail: function (doc) {
-    this.run.fail(doc);
+    var self = this;
+
+    if (self.stop_at_offset === 0) {
+      if (Meteor.is_client) {
+        // Only supported on the browser for now..
+        var now = (+new Date);
+        debugger;
+        if ((+new Date) - now < 100)
+          alert("To use this feature, first open the debugger window in your browser.");
+      }
+      self.stop_at_offset = null;
+    }
+    if (self.stop_at_offset)
+      self.stop_at_offset--;
+
+    self.run._report(self.test_case, {
+      events: [{
+        type: (self.expecting_failure ? "expected_fail" : "fail"),
+        details: doc,
+        cookie: {name: self.test_case.name, offset: self.current_fail_count,
+                 groupPath: self.test_case.groupPath,
+                 shortName: self.test_case.shortName}
+      }]});
+    self.expecting_failure = false;
+    self.current_fail_count++;
   },
 
+  // Call this to fail the test with an exception. Use this to record
+  // exceptions that occur inside asynchronous callbacks in tests.
+  //
+  // It should only be used with asynchronous tests, and if you call
+  // this function, you should make sure that (1) the test doesn't
+  // call its callback (onComplete function); (2) the test function
+  // doesn't directly raise an exception.
   exception: function (exception) {
-    this.run.exception(exception);
+    this.onException(exception);
   },
 
   // returns a unique ID for this test run, for convenience use by
   // your tests
   runId: function () {
-    return this.run.id;
+    return this.id;
   },
 
   // === Following patterned after http://vowsjs.org/#reference ===
@@ -142,14 +189,15 @@ Meteor._TestCase = function (name, func, async) {
 _.extend(Meteor._TestCase.prototype, {
   // Run the test asynchronously, then call onComplete() on success,
   // or else onException(e) if the test raised an exception.
-  run: function (run, onComplete, onException) {
+  run: function (run, stop_at_offset, onComplete, onException) {
     var self = this;
-    var reporter = new Meteor._TestResultsReporter(run);
+    var results = new Meteor._TestCaseResults(self, run, stop_at_offset,
+                                              onException);
     _.defer(Meteor.bindEnvironment(function () {
       if (self.async)
-        self.func(reporter, onComplete);
+        self.func(results, onComplete);
       else {
-        self.func(reporter);
+        self.func(results);
         onComplete();
       }
     }, onException));
@@ -190,38 +238,26 @@ Meteor._TestManager = new Meteor._TestManager;
 
 Meteor._TestRun = function (manager, onReport) {
   var self = this;
-  self.expecting_failure = false;
   self.manager = manager;
   self.onReport = onReport;
-  // XXX eliminate, so test cases can run in parallel (within the run)?
-  self.current_test = null;
-  self.current_fail_count = null;
-  self.stop_at_offset = null;
-  self.current_onException = null;
-  self.id = Meteor.uuid();
 
   _.each(self.manager.ordered_tests, _.bind(self._report, self));
 };
 
 _.extend(Meteor._TestRun.prototype, {
-  _runOne: function (test, onComplete, stopAtOffset) {
+  _runOne: function (test, onComplete, stop_at_offset) {
     var self = this;
     self._report(test);
-    self.current_test = test;
-    self.current_fail_count = 0;
-    self.stop_at_offset = stopAtOffset;
 
     var startTime = (+new Date);
 
-    var cleanup = function () {
-      self.current_test = null;
-      self.current_fail_count = null;
-      self.stop_at_offset = null;
-      self.current_onException = null;
-    };
-
-    self.current_onException = function (exception) {
-      cleanup();
+    test.run(self, stop_at_offset, function () {
+      /* onComplete */
+      var totalTime = (+new Date) - startTime;
+      self._report(test, {events: [{type: "finish", timeMs: totalTime}]});
+      onComplete();
+    }, function (exception) {
+      /* onException */
 
       // XXX you want the "name" and "message" fields on the
       // exception, to start with..
@@ -236,16 +272,7 @@ _.extend(Meteor._TestRun.prototype, {
       });
 
       onComplete();
-    };
-
-    test.run(self, function () {
-      /* onComplete */
-      cleanup();
-
-      var totalTime = (+new Date) - startTime;
-      self._report(test, {events: [{type: "finish", timeMs: totalTime}]});
-      onComplete();
-    }, _.bind(self.current_onException, self));
+    });
   },
 
   run: function (onComplete) {
@@ -280,64 +307,6 @@ _.extend(Meteor._TestRun.prototype, {
     self.onReport(_.extend({ groupPath: test.groupPath,
                              test: test.shortName },
                            rest));
-  },
-
-  ok: function (doc) {
-    var self = this;
-    var ok = {type: "ok"};
-    if (doc) {
-      ok.details = doc;
-    }
-    if (self.expecting_failure) {
-      ok.details["was_expecting_failure"] = true;
-      self.expecting_failure = false;
-    }
-    self._report(self.current_test, {events: [ok]});
-  },
-
-  expect_fail: function () {
-    var self = this;
-    self.expecting_failure = true;
-  },
-
-  fail: function (doc) {
-    var self = this;
-
-    if (self.stop_at_offset === 0) {
-      if (Meteor.is_client) {
-        // Only supported on the browser for now..
-        var now = (+new Date);
-        debugger;
-        if ((+new Date) - now < 100)
-          alert("To use this feature, first open the debugger window in your browser.");
-      }
-      self.stop_at_offset = null;
-    }
-
-    self._report(self.current_test, {
-      events: [{
-        type: (self.expecting_failure ? "expected_fail" : "fail"),
-        details: doc,
-        cookie: {name: self.current_test.name, offset: self.current_fail_count,
-                 groupPath: self.current_test.groupPath,
-                 shortName: self.current_test.shortName}
-      }]});
-    self.expecting_failure = false;
-    self.current_fail_count++;
-  },
-
-  // Call this to fail the current test with an exception. Use this to record
-  // exceptions that occur inside asynchronous callbacks in tests.
-  //
-  // It should only be used with asynchronous tests, and if you call
-  // this function, you should make sure that (1) the test doesn't
-  // call its callback (onComplete function); (2) the test function
-  // doesn't directly raise an exception.
-  exception: function (exception) {
-    var self = this;
-    if (!self.current_onException)
-      throw new Error("Not in a test");
-    self.current_onException(exception);
   }
 });
 
