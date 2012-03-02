@@ -1,5 +1,7 @@
+
 (function () {
   var globals = this;
+  var CurrentTestRun = new Meteor.DynamicVariable;
 
 // XXX namespacing
 // XXX audit for use on server (eg, stupid globals hacks)
@@ -144,7 +146,7 @@ _.extend(Meteor._TestRun.prototype, {
         onComplete();
     };
 
-    runNext();
+    CurrentTestRun.withValue(self, runNext);
   },
 
   // An alternative to run(). Given the 'cookie' attribute of a
@@ -155,7 +157,9 @@ _.extend(Meteor._TestRun.prototype, {
     var test = self.manager.tests[cookie.name];
     if (!test)
       throw new Error("No such test '" + cookie.name + "'");
-    self._runOne(test, onComplete, cookie.offset);
+    CurrentTestRun.withValue(self, function () {
+      self._runOne(test, onComplete, cookie.offset);
+    });
   },
 
   _report: function (test, rest) {
@@ -327,29 +331,29 @@ globals.testAsync = function (name, func) {
   Meteor._TestManager.addCase(new Meteor._TestCase(name, func, true));
 };
 
+
 _.extend(globals.test, {
-  _currentRun: new Meteor.DynamicVariable,
 
   ok: function (doc) {
-    test._currentRun.get().ok(doc);
+    CurrentTestRun.get().ok(doc);
   },
 
   expect_fail: function () {
-    test._currentRun.get().expect_fail();
+    CurrentTestRun.get().expect_fail();
   },
 
   fail: function (doc) {
-    test._currentRun.get().fail(doc);
+    CurrentTestRun.get().fail(doc);
   },
 
   exception: function (exception) {
-    test._currentRun.get().exception(exception);
+    CurrentTestRun.get().exception(exception);
   },
 
   // returns a unique ID for this test run, for convenience use by
   // your tests
   runId: function () {
-    return test._currentRun.get().id;
+    return CurrentTestRun.get().id;
   }
 });
 

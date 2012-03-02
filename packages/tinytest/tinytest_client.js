@@ -17,11 +17,9 @@ globals.tinytest = {
     }
 
     var testRun = Meteor._TestManager.createRun(reportFunc);
-    test._currentRun.withValue(testRun, function () {
-      testRun.run(function () {
-        local_complete = true;
-        maybeDone();
-      });
+    testRun.run(function () {
+      local_complete = true;
+      maybeDone();
     });
 
     App.call('tinytest/run', run_id, function (error, result) {
@@ -65,10 +63,8 @@ globals.tinytest = {
 
   debug: function (cookie, reportFunc, onComplete) {
     var testRun = Meteor._TestManager.createRun(reportFunc);
-    test._currentRun.withValue(testRun, function () {
-      testRun.debug(cookie, function () {
-        onComplete && onComplete();
-      });
+    testRun.debug(cookie, function () {
+      onComplete && onComplete();
     });
   }
 };

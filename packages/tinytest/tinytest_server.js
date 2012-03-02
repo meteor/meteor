@@ -16,10 +16,8 @@ App.methods({
     };
 
     var testRun = Meteor._TestManager.createRun(reportFunc);
-    test._currentRun.withValue(testRun, function () {
-      testRun.run(function () {
-        request.respond();
-      });
+    testRun.run(function () {
+      request.respond();
     });
   }
 });
