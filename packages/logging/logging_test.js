@@ -1,4 +1,4 @@
-test("logging", function (test) {
+Tinytest.add("logging", function (test) {
 
   // Just run a log statement and make sure it doesn't explode.
   Meteor._debug();

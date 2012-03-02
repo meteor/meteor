@@ -88,7 +88,7 @@ var assert_contained = function (r, expected) {
 
 /******************************************************************************/
 
-test("liverange - single node", function (test) {
+Tinytest.add("liverange - single node", function (test) {
   var f = frag("<div id=1></div>");
   var r_a = create("a", f);
   test.instanceOf(r_a, Meteor.ui._LiveRange);
@@ -158,7 +158,7 @@ test("liverange - single node", function (test) {
   assert_dump(test, "<c><3></3></c>", r_c);
 });
 
-test("liverange - multiple nodes", function (test) {
+Tinytest.add("liverange - multiple nodes", function (test) {
   var f = frag("<div id=1></div><div id=2></div><div id=3></div><div id=4></div><div id=5></div>");
   assert_dump(test, "<1></1><2></2><3></3><4></4><5></5>", f);
 
@@ -279,7 +279,7 @@ test("liverange - multiple nodes", function (test) {
   assert_dump(test, "<6></6><7><1></1><9></9><10></10><11></11><5></5></7><8></8>", f2);
 });
 
-test("liverange - deep visit", function (test) {
+Tinytest.add("liverange - deep visit", function (test) {
 
   var f = frag("<div id=1><div id=2><div id=3><div id=4><div id=5></div></div></div></div></div>");
 
@@ -301,7 +301,7 @@ test("liverange - deep visit", function (test) {
                    {range: r_d, children: [{range: r_c, children: [{range: r_b, children: [{range: r_a, children: []}]}]}]});
 });
 
-test("liverange - create inner", function (test) {
+Tinytest.add("liverange - create inner", function (test) {
   // Basics
 
   var f = frag("<div id=1></div><div id=2></div><div id=3></div><div id=4></div><div id=5></div>");

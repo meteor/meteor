@@ -37,7 +37,7 @@ assert_ordering = function (test, f, values) {
 
 // XXX test shared structure in all MM entrypoints
 
-test("minimongo - basics", function (test) {
+Tinytest.add("minimongo - basics", function (test) {
   var c = new LocalCollection();
 
   c.insert({type: "kitten", name: "fluffy"});
@@ -128,7 +128,7 @@ test("minimongo - basics", function (test) {
   expect("aa4_");
 });
 
-test("minimongo - cursors", function (test) {
+Tinytest.add("minimongo - cursors", function (test) {
   var c = new LocalCollection();
   var res;
 
@@ -172,7 +172,7 @@ test("minimongo - cursors", function (test) {
   test.equal(c.findOne(id).i, 2);
 });
 
-test("minimongo - misc", function (test) {
+Tinytest.add("minimongo - misc", function (test) {
   // deepcopy
   var a = {a: [1, 2, 3], b: "x", c: true, d: {x: 12, y: [12]},
            f: null};
@@ -194,7 +194,7 @@ test("minimongo - misc", function (test) {
   test.equal(b.x.a, 14); // just to document current behavior
 });
 
-test("minimongo - selector_compiler", function (test) {
+Tinytest.add("minimongo - selector_compiler", function (test) {
   var matches = function (should_match, selector, doc) {
     var does_match = LocalCollection._matches(selector, doc);
     if (does_match != should_match) {
@@ -506,7 +506,7 @@ test("minimongo - selector_compiler", function (test) {
   // - non-scalar arguments to $gt, $lt, etc
 });
 
-test("minimongo - ordering", function (test) {
+Tinytest.add("minimongo - ordering", function (test) {
   // value ordering
   assert_ordering(test, LocalCollection._f._cmp, [
     null,
@@ -549,7 +549,7 @@ test("minimongo - ordering", function (test) {
   test.equal(LocalCollection._compileSort({})({a:1}, {a:2}), 0);
 });
 
-test("minimongo - sort", function (test) {
+Tinytest.add("minimongo - sort", function (test) {
   var c = new LocalCollection();
   for (var i = 0; i < 50; i++)
     for (var j = 0; j < 2; j++)
@@ -580,7 +580,7 @@ test("minimongo - sort", function (test) {
       {a: 47, b: 1, _id: "47_1"}]);
 });
 
-test("minimongo - modify", function (test) {
+Tinytest.add("minimongo - modify", function (test) {
   var modify = function (doc, mod, result) {
     var copy = LocalCollection._deepcopy(doc);
     LocalCollection._modify(copy, mod);
@@ -824,7 +824,7 @@ test("minimongo - modify", function (test) {
 
 // XXX test update() (selecting docs, multi, upsert..)
 
-test("minimongo - observe", function (test) {
+Tinytest.add("minimongo - observe", function (test) {
   var operations = [];
   var cbs = {
     added: function (obj, idx) {

@@ -66,7 +66,7 @@ var set_weather = function (where, what) {
 
   // XXX SECTION: LiveUI
 
-test("render - coercion", function (test) {
+Tinytest.add("render - coercion", function (test) {
 
   assert_frag(test, "<a></a>", Meteor.ui.render(function () {
     return DIV({id: "a"});
@@ -103,7 +103,7 @@ test("render - coercion", function (test) {
   }));
 });
 
-test("render - updating and GC", function (test) {
+Tinytest.add("render - updating and GC", function (test) {
   set_weather("here", "cloudy");
   test.length(_.keys(weather_listeners.here), 0);
   var r = Meteor.ui.render(function () {
@@ -155,7 +155,7 @@ test("render - updating and GC", function (test) {
   assert_frag(test, "~curious~", onscreen);
 });
 
-test("render - recursive", function (test) {
+Tinytest.add("render - recursive", function (test) {
   set_weather("there", "wet");
 
   var outer_count = 0;
@@ -216,7 +216,7 @@ test("render - recursive", function (test) {
   test.length(_.keys(weather_listeners.there), 0);
 });
 
-test("render - events", function (test) {
+Tinytest.add("render - events", function (test) {
   var evts = '';
   var onscreen = DIV({style: "display: none;"}, [
     Meteor.ui.render(function () {
@@ -346,7 +346,7 @@ test("render - events", function (test) {
   document.body.removeChild(onscreen);
 });
 
-test("renderList - basics", function (test) {
+Tinytest.add("renderList - basics", function (test) {
   var c = new LocalCollection();
 
   var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
@@ -412,7 +412,7 @@ test("renderList - basics", function (test) {
   assert_frag(test, "<C2></C2><D></D><D2></D2><E2></E2><F2></F2>", r);
 });
 
-test("renderList - removal", function (test) {
+Tinytest.add("renderList - removal", function (test) {
   var c = new LocalCollection();
   // (test is written in this weird way for historical reasons; feel
   // free to refactor)
@@ -474,7 +474,7 @@ test("renderList - removal", function (test) {
   );
 });
 
-test("renderList - default render empty", function (test) {
+Tinytest.add("renderList - default render empty", function (test) {
   var c = new LocalCollection();
 
   var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
@@ -490,7 +490,7 @@ test("renderList - default render empty", function (test) {
   assert_frag(test, "<!---->", r);
 });
 
-test("renderList - change and move", function (test) {
+Tinytest.add("renderList - change and move", function (test) {
   var c = new LocalCollection();
 
   var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
@@ -522,7 +522,7 @@ test("renderList - change and move", function (test) {
   assert_frag(test, "<C></C><D></D><E></E><F></F>", r);
 });
 
-test("renderList - termination", function (test) {
+Tinytest.add("renderList - termination", function (test) {
   var c = new LocalCollection();
 
   var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
@@ -613,7 +613,7 @@ test("renderList - termination", function (test) {
   );
 });
 
-test("renderList - list items are reactive", function (test) {
+Tinytest.add("renderList - list items are reactive", function (test) {
   var c = new LocalCollection();
 
   set_weather("here", "cloudy");
@@ -736,7 +736,7 @@ test("renderList - list items are reactive", function (test) {
   assert_frag(test, "<C></C><D_sunny></D_sunny><E></E><F_cloudy></F_cloudy>", onscreen);
 });
 
-test("renderList - multiple elements in an item", function (test) {
+Tinytest.add("renderList - multiple elements in an item", function (test) {
   var c = new LocalCollection();
   var r;
 
@@ -832,7 +832,7 @@ test("renderList - multiple elements in an item", function (test) {
   );
 });
 
-test("renderList - #each", function (test) {
+Tinytest.add("renderList - #each", function (test) {
   var c = new LocalCollection();
 
   var render_count = 0;

@@ -313,16 +313,14 @@ _.extend(TestRun.prototype, {
 /******************************************************************************/
 
 var globals = this;
+globals.Tinytest = {
+  add: function (name, func) {
+    TestManager.addCase(new TestCase(name, func));
+  },
 
-// XXX this API is confusing and irregular. revisit once we have
-// package namespacing.
-
-globals.test = function (name, func) {
-  TestManager.addCase(new TestCase(name, func));
-};
-
-globals.testAsync = function (name, func) {
-  TestManager.addCase(new TestCase(name, func, true));
+  addAsync: function (name, func) {
+    TestManager.addCase(new TestCase(name, func, true));
+  }
 };
 
 // Run every test, asynchronously. Runs the test in the current

@@ -1,6 +1,6 @@
 CurrentFoo = new Meteor.DynamicVariable;
 
-test("environment - dynamic variables", function (test) {
+Tinytest.add("environment - dynamic variables", function (test) {
   test.equal(CurrentFoo.get(), undefined);
 
   CurrentFoo.withValue(17, function () {
@@ -16,7 +16,7 @@ test("environment - dynamic variables", function (test) {
   test.equal(CurrentFoo.get(), undefined);
 });
 
-test("environment - bindEnvironment", function (test) {
+Tinytest.add("environment - bindEnvironment", function (test) {
   var raised_f;
 
   var f = CurrentFoo.withValue(17, function () {
@@ -97,7 +97,8 @@ test("environment - bindEnvironment", function (test) {
   test.equal(CurrentFoo.get(), undefined);
 });
 
-testAsync("environment - bare bindEnvironment", function (test, onComplete) {
+Tinytest.addAsync("environment - bare bindEnvironment",
+                  function (test, onComplete) {
   // this will have to create a fiber in nodejs
   CurrentFoo.withValue(68, function () {
     var f = Meteor.bindEnvironment(function () {

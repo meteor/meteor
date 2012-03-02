@@ -58,7 +58,7 @@ _.extend(ExpectationManager.prototype, {
 var testAsyncMulti = function (name, funcs) {
   var timeout = 5000;
 
-  testAsync(name, function (test, onComplete) {
+  Tinytest.addAsync(name, function (test, onComplete) {
     var remaining = _.clone(funcs);
 
     var runNext = function () {
@@ -111,7 +111,7 @@ var failure = function (test, code, reason) {
   };
 }
 
-test("livedata - methods with colliding names", function (test) {
+Tinytest.add("livedata - methods with colliding names", function (test) {
   var x = LocalCollection.uuid();
   var m = {};
   m[x] = function () {};
