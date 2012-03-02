@@ -2,7 +2,7 @@
 
 var globals = (function () {return this;})();
 
-_.extend(globals.test, {
+globals.tinytest = {
   run: function (reportFunc, onComplete) {
     var run_id = LocalCollection.uuid();
     var local_complete = false;
@@ -71,6 +71,6 @@ _.extend(globals.test, {
       });
     });
   }
-});
+};
 
 })();
