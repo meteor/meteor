@@ -4,7 +4,7 @@
 
 // Path matches sockjs 'prefix' in stream_server. We should revisit this
 // once we specify the 'on the wire' aspects of livedata more clearly.
-App = Meteor.connect('/sockjs');
+App = Meteor.connect('/sockjs', true /* restart_on_update */);
 
 _.extend(Meteor, {
   status: function () {

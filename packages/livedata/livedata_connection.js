@@ -69,7 +69,7 @@ _.extend(Meteor._ClientMethodInvocation.prototype, {
 // XXX namespacing
 Meteor._capture_subs = null;
 
-Meteor._LivedataConnection = function (url) {
+Meteor._LivedataConnection = function (url, restart_on_update) {
   var self = this;
   self.url = url;
   self.last_session_id = null;
@@ -81,6 +81,7 @@ Meteor._LivedataConnection = function (url) {
   self.pending_data = []; // array of pending data messages
   self.queued = {}; // name -> updates for (yet to be created) collection
   self.quiesce_callbacks = [];
+  self.retry_migrate = null; // if we're blocking a migration, the retry func
 
   self.subs = new LocalCollection;
   // keyed by subs._id. value is unset or an array. if set, sub is not
@@ -97,9 +98,15 @@ Meteor._LivedataConnection = function (url) {
       self.outstanding_methods = reload_data.outstanding_methods;
     // pending messages will be transmitted on initial stream 'reset'
   }
-  Meteor._reload.on_migrate(reload_key, function () {
+  Meteor._reload.on_migrate(reload_key, function (retry) {
+    if (!self._readyToMigrate()) {
+      if (self.retry_migrate)
+        throw new Error("Two migrations in progress?");
+      self.retry_migrate = retry;
+      return false;
+    }
+
     var methods = _.map(self.outstanding_methods, function (m) {
-      // filter out callback
       return {msg: m.msg};
     });
 
@@ -170,6 +177,14 @@ Meteor._LivedataConnection = function (url) {
         {msg: 'sub', id: sub._id, name: sub.name, params: sub.args}));
     });
   });
+
+  if (restart_on_update)
+    self.stream.on('update_available', function () {
+      // Start trying to migrate to a new version. Until all packages
+      // signal that they're ready for a migration, the app will
+      // continue running normally.
+      Meteor._reload.reload();
+    });
 
   // we never terminate the observe(), since there is no way to
   // destroy a LivedataConnection.. but this shouldn't matter, since we're
@@ -440,10 +455,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
     // remove
     self.outstanding_methods.splice(i, 1);
 
-    // If a response is to a method we sent from reload pending
-    // methods, it won't have a callback. This is OK. This will get
-    // revisited when we do more intellegent auto-reloads where we
-    // wait to quiesce, pre-stage cached assets, etc.
+    // deliver result
     if (m.callback) {
       // callback will have already been bindEnvironment'd by apply(),
       // so no need to catch exceptions
@@ -452,17 +464,35 @@ _.extend(Meteor._LivedataConnection.prototype, {
       else
         m.callback(undefined, msg.result);
     }
+
+    // if we were blocking a migration, see if it's now possible to
+    // continue
+    if (self.retry_migrate && self._readyToMigrate()) {
+      self.retry_migrate();
+      self.retry_migrate = null;
+    }
   },
 
   _livedata_error: function (msg) {
     Meteor._debug("Received error from server: " + msg.reason);
+  },
+
+  // true if we're OK for a migration to happen
+  _readyToMigrate: function () {
+    var self = this;
+    return _.all(self.outstanding_methods, function (m) {
+      // Callbacks can't be preserved across migrations, so we can't
+      // migrate as long as there is an outstanding requests with a
+      // callback.
+      return !m.callback;
+    });
   }
 
 });
 
 _.extend(Meteor, {
-  connect: function (url) {
-    return new Meteor._LivedataConnection(url);
+  connect: function (url, _restart_on_update) {
+    return new Meteor._LivedataConnection(url, _restart_on_update);
   },
 
   autosubscribe: function (sub_func) {
