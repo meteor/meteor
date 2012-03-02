@@ -1,7 +1,7 @@
 var running = true;
 
 Meteor.startup(function () {
-  test.run(reportResults, function () {
+  Meteor._runTestsEverywhere(reportResults, function () {
     running = false;
     _resultsChanged();
   });
@@ -131,7 +131,7 @@ Template.event.events = {
     // messy. needs to be aggressively refactored.
     forgetEvents({groupPath: this.cookie.groupPath,
                   test: this.cookie.shortName});
-    test.debug(this.cookie, reportResults);
+    Meteor._debugTest(this.cookie, reportResults);
   }
 };
 

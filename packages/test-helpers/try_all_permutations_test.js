@@ -1,6 +1,6 @@
 // XXX SECTION: Meta tests
 
-test("try_all_permutations", function () {
+Tinytest.add("try_all_permutations", function (test) {
   // Have a good test of try_all_permutations, because it would suck
   // if try_all_permutations didn't actually run anything and so none
   // of our other tests actually did any testing.
@@ -16,7 +16,7 @@ test("try_all_permutations", function () {
     function () {out += ".";}
   );
 
-  assert.equal(out, ":ABC.:ACB.:BAC.:BCA.:CAB.:CBA.");
+  test.equal(out, ":ABC.:ACB.:BAC.:BCA.:CAB.:CBA.");
 
   out = "";
   try_all_permutations(
@@ -36,7 +36,7 @@ test("try_all_permutations", function () {
     function () {out += ".";}
   );
 
-  assert.equal(out, ":AB.:AC.:BA.:BC.:CA.:CB.");
+  test.equal(out, ":AB.:AC.:BA.:BC.:CA.:CB.");
 
   out = "";
   try_all_permutations(
@@ -53,9 +53,9 @@ test("try_all_permutations", function () {
     ],
     function () {out += ".";}
   );
-  assert.equal(out, "ABXY.ABYX.ACXY.ACYX.ADXY.ADYX.BAXY.BAYX.BCXY.BCYX.BDXY.BDYX.CAXY.CAYX.CBXY.CBYX.CDXY.CDYX.DAXY.DAYX.DBXY.DBYX.DCXY.DCYX.");
+  test.equal(out, "ABXY.ABYX.ACXY.ACYX.ADXY.ADYX.BAXY.BAYX.BCXY.BCYX.BDXY.BDYX.CAXY.CAYX.CBXY.CBYX.CDXY.CDYX.DAXY.DAYX.DBXY.DBYX.DCXY.DCYX.");
 
-  var test = function (n) {
+  var examine = function (n) {
     var fs = [];
     var seq = "";
     var seen = {};
@@ -75,11 +75,11 @@ test("try_all_permutations", function () {
     var expected_count = 1;
     for (var i = n; i >= 1; i--)
       expected_count *= i;
-    assert.equal(_.keys(seen).length, expected_count);
+    test.equal(_.keys(seen).length, expected_count);
   };
 
   for (var i = 1; i <= 5; i++)
-    test(i);
+    examine(i);
 
   try_all_permutations();
 });

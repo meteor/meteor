@@ -30,13 +30,13 @@ var dump_frag = function (frag) {
 // if expected includes '~', it will be interpreted to mean "either
 // <!----> or nothing". this is useful because LiveRange is sometimes
 // forced to insert placeholder comments on older versions of IE.
-var assert_frag = function (expected, actual_frag) {
+var assert_frag = function (test, expected, actual_frag) {
   var expected1 = expected.replace(/~/g, "");
   var expected2 = expected.replace(/~/g, "<!---->");
   var actual = dump_frag(actual_frag);
 
   if (actual !== expected1 && actual !== expected2)
-    assert.equal(actual, expected, "Fragment doesn't match pattern");
+    test.equal(actual, expected, "Fragment doesn't match pattern");
 
   if (actual.firstChild) {
     /* XXX get Meteor.ui._tag in a cleaner way */
@@ -66,58 +66,58 @@ var set_weather = function (where, what) {
 
   // XXX SECTION: LiveUI
 
-test("render - coercion", function () {
+Tinytest.add("render - coercion", function (test) {
 
-  assert_frag("<a></a>", Meteor.ui.render(function () {
+  assert_frag(test, "<a></a>", Meteor.ui.render(function () {
     return DIV({id: "a"});
   }));
 
-  assert_frag("<b></b><c></c>", Meteor.ui.render(function () {
+  assert_frag(test, "<b></b><c></c>", Meteor.ui.render(function () {
     var f = document.createDocumentFragment();
     f.appendChild(DIV({id: "b"}));
     f.appendChild(DIV({id: "c"}));
     return f;
   }));
 
-  assert_frag("<d></d><e></e>", Meteor.ui.render(function () {
+  assert_frag(test, "<d></d><e></e>", Meteor.ui.render(function () {
     return [
       DIV({id: "d"}),
       DIV({id: "e"})
     ];
   }));
 
-  assert_frag("<f></f><g></g>", Meteor.ui.render(function () {
+  assert_frag(test, "<f></f><g></g>", Meteor.ui.render(function () {
     return $('<div id="f"></div><div id="g"></div>');
   }));
 
-  assert_frag("~hi~", Meteor.ui.render(function () {
+  assert_frag(test, "~hi~", Meteor.ui.render(function () {
     return document.createTextNode("hi");
   }));
 
-  assert_frag("~igloo~", Meteor.ui.render(function () {
+  assert_frag(test, "~igloo~", Meteor.ui.render(function () {
     return "igloo";
   }));
 
-  assert_frag("<!---->", Meteor.ui.render(function () {
+  assert_frag(test, "<!---->", Meteor.ui.render(function () {
     return document.createComment('');
   }));
 });
 
-test("render - updating and GC", function () {
+Tinytest.add("render - updating and GC", function (test) {
   set_weather("here", "cloudy");
-  assert.length(_.keys(weather_listeners.here), 0);
+  test.length(_.keys(weather_listeners.here), 0);
   var r = Meteor.ui.render(function () {
     return get_weather("here");
   });
-  assert.length(_.keys(weather_listeners.here), 1);
-  assert_frag("~cloudy~", r);
+  test.length(_.keys(weather_listeners.here), 1);
+  assert_frag(test, "~cloudy~", r);
 
   set_weather("here", "icy");
-  assert.length(_.keys(weather_listeners.here), 1);
-  assert_frag("~cloudy~", r);
+  test.length(_.keys(weather_listeners.here), 1);
+  assert_frag(test, "~cloudy~", r);
   Meteor.flush(); // not onscreen -- gets GC'd
-  assert.length(_.keys(weather_listeners.here), 0);
-  assert_frag("~cloudy~", r);
+  test.length(_.keys(weather_listeners.here), 0);
+  assert_frag(test, "~cloudy~", r);
 
   r = Meteor.ui.render(function () {
     return get_weather("here");
@@ -126,36 +126,36 @@ test("render - updating and GC", function () {
   onscreen.appendChild(r);
   document.body.appendChild(onscreen);
 
-  assert_frag("~icy~", onscreen);
-  assert.length(_.keys(weather_listeners.here), 1);
+  assert_frag(test, "~icy~", onscreen);
+  test.length(_.keys(weather_listeners.here), 1);
 
   set_weather("here", "vanilla");
-  assert.length(_.keys(weather_listeners.here), 1);
-  assert_frag("~icy~", onscreen);
+  test.length(_.keys(weather_listeners.here), 1);
+  assert_frag(test, "~icy~", onscreen);
   Meteor.flush();
-  assert.length(_.keys(weather_listeners.here), 1);
-  assert_frag("~vanilla~", onscreen);
+  test.length(_.keys(weather_listeners.here), 1);
+  assert_frag(test, "~vanilla~", onscreen);
 
   document.body.removeChild(onscreen);
   Meteor.flush();
-  assert.length(_.keys(weather_listeners.here), 1);
+  test.length(_.keys(weather_listeners.here), 1);
 
   set_weather("here", "curious"); // safe from GC until flush
   document.body.appendChild(onscreen);
   Meteor.flush();
-  assert.length(_.keys(weather_listeners.here), 1);
-  assert_frag("~curious~", onscreen);
+  test.length(_.keys(weather_listeners.here), 1);
+  assert_frag(test, "~curious~", onscreen);
 
   document.body.removeChild(onscreen);
   set_weather("here", "penguins");
-  assert.length(_.keys(weather_listeners.here), 1);
-  assert_frag("~curious~", onscreen);
+  test.length(_.keys(weather_listeners.here), 1);
+  assert_frag(test, "~curious~", onscreen);
   Meteor.flush();
-  assert.length(_.keys(weather_listeners.here), 0);
-  assert_frag("~curious~", onscreen);
+  test.length(_.keys(weather_listeners.here), 0);
+  assert_frag(test, "~curious~", onscreen);
 });
 
-test("render - recursive", function () {
+Tinytest.add("render - recursive", function (test) {
   set_weather("there", "wet");
 
   var outer_count = 0;
@@ -172,51 +172,51 @@ test("render - recursive", function () {
     })
   ]);
   document.body.appendChild(onscreen);
-  assert_frag("<outer>penguins~wet~</outer>", onscreen);
-  assert.equal(outer_count, 1);
-  assert.equal(inner_count, 1);
-  assert.length(_.keys(weather_listeners.here), 1);
-  assert.length(_.keys(weather_listeners.there), 1);
+  assert_frag(test, "<outer>penguins~wet~</outer>", onscreen);
+  test.equal(outer_count, 1);
+  test.equal(inner_count, 1);
+  test.length(_.keys(weather_listeners.here), 1);
+  test.length(_.keys(weather_listeners.there), 1);
 
   set_weather("there", "dry");
   Meteor.flush();
-  assert_frag("<outer>penguins~dry~</outer>", onscreen);
-  assert.equal(outer_count, 1);
-  assert.equal(inner_count, 2);
-  assert.length(_.keys(weather_listeners.here), 1);
-  assert.length(_.keys(weather_listeners.there), 1);
+  assert_frag(test, "<outer>penguins~dry~</outer>", onscreen);
+  test.equal(outer_count, 1);
+  test.equal(inner_count, 2);
+  test.length(_.keys(weather_listeners.here), 1);
+  test.length(_.keys(weather_listeners.there), 1);
 
   set_weather("here", "chocolate");
   Meteor.flush();
-  assert_frag("<outer>chocolate~dry~</outer>", onscreen);
-  assert.equal(outer_count, 2);
-  assert.equal(inner_count, 3);
-  assert.length(_.keys(weather_listeners.here), 1);
-  assert.length(_.keys(weather_listeners.there), 1);
+  assert_frag(test, "<outer>chocolate~dry~</outer>", onscreen);
+  test.equal(outer_count, 2);
+  test.equal(inner_count, 3);
+  test.length(_.keys(weather_listeners.here), 1);
+  test.length(_.keys(weather_listeners.there), 1);
 
   document.body.removeChild(onscreen);
   set_weather("there", "melting"); // safe from GC until flush
-  assert.length(_.keys(weather_listeners.here), 1);
-  assert.length(_.keys(weather_listeners.there), 1);
+  test.length(_.keys(weather_listeners.here), 1);
+  test.length(_.keys(weather_listeners.there), 1);
   document.body.appendChild(onscreen);
   Meteor.flush();
-  assert_frag("<outer>chocolate~melting~</outer>", onscreen);
-  assert.equal(outer_count, 2);
-  assert.equal(inner_count, 4);
-  assert.length(_.keys(weather_listeners.here), 1);
-  assert.length(_.keys(weather_listeners.there), 1);
+  assert_frag(test, "<outer>chocolate~melting~</outer>", onscreen);
+  test.equal(outer_count, 2);
+  test.equal(inner_count, 4);
+  test.length(_.keys(weather_listeners.here), 1);
+  test.length(_.keys(weather_listeners.there), 1);
 
   document.body.removeChild(onscreen);
   set_weather("here", "silent");
   Meteor.flush();
-  assert_frag("<outer>chocolate~melting~</outer>", onscreen);
-  assert.equal(outer_count, 2);
-  assert.equal(inner_count, 4);
-  assert.length(_.keys(weather_listeners.here), 0);
-  assert.length(_.keys(weather_listeners.there), 0);
+  assert_frag(test, "<outer>chocolate~melting~</outer>", onscreen);
+  test.equal(outer_count, 2);
+  test.equal(inner_count, 4);
+  test.length(_.keys(weather_listeners.here), 0);
+  test.length(_.keys(weather_listeners.there), 0);
 });
 
-test("render - events", function () {
+Tinytest.add("render - events", function (test) {
   var evts = '';
   var onscreen = DIV({style: "display: none;"}, [
     Meteor.ui.render(function () {
@@ -246,27 +246,27 @@ test("render - events", function () {
       ];
     }, {
       "click": function (e) {
-        assert.equal(12, this.x);
+        test.equal(12, this.x);
         evts += "a" + e.originalEvent.data;
       },
       "mousedown #outer": function (e) {
-        assert.equal(12, this.x);
+        test.equal(12, this.x);
         evts += "b" + e.originalEvent.data;
       },
       "mouseup #inner1": function (e) {
-        assert.equal(12, this.x);
+        test.equal(12, this.x);
         evts += "c1" + e.originalEvent.data;
       },
       "mouseup #inner2": function (e) {
-        assert.equal(12, this.x);
+        test.equal(12, this.x);
         evts += "c2" + e.originalEvent.data;
       },
       "keypress, keydown #inner2": function (e) {
-        assert.equal(12, this.x);
+        test.equal(12, this.x);
         evts += "de" + e.originalEvent.data;
       },
       "keyup #wrapper": function (e) {
-        assert.equal(12, this.x);
+        test.equal(12, this.x);
         evts += "f" + e.originalEvent.data;
       }
     }, {x : 12})
@@ -291,7 +291,7 @@ test("render - events", function () {
   var test_event = function (expected, id, event, args) {
     evts = "";
     simulate($('#' + id), event, args);
-    assert.equal(evts, expected);
+    test.equal(evts, expected);
   }
 
   var main_event_tests = function () {
@@ -346,7 +346,7 @@ test("render - events", function () {
   document.body.removeChild(onscreen);
 });
 
-test("renderList - basics", function () {
+Tinytest.add("renderList - basics", function (test) {
   var c = new LocalCollection();
 
   var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
@@ -358,20 +358,20 @@ test("renderList - basics", function () {
     }
   });
 
-  assert_frag("<empty></empty>", r);
+  assert_frag(test, "<empty></empty>", r);
 
   // Insertion
 
   c.insert({id: "D"});
-  assert_frag("<D></D>", r);
+  assert_frag(test, "<D></D>", r);
   c.insert({id: "E"});
-  assert_frag("<D></D><E></E>", r);
+  assert_frag(test, "<D></D><E></E>", r);
   c.insert({id: "F"});
-  assert_frag("<D></D><E></E><F></F>", r);
+  assert_frag(test, "<D></D><E></E><F></F>", r);
   c.insert({id: "C"});
-  assert_frag("<C></C><D></D><E></E><F></F>", r);
+  assert_frag(test, "<C></C><D></D><E></E><F></F>", r);
   c.insert({id: "D2"});
-  assert_frag("<C></C><D></D><D2></D2><E></E><F></F>", r);
+  assert_frag(test, "<C></C><D></D><D2></D2><E></E><F></F>", r);
 
   // this should hit all of the edge cases in insert_before
   var parts;
@@ -379,13 +379,13 @@ test("renderList - basics", function () {
     c.insert({id: id});
     parts.push("<" + id + "></" + id + ">");
     parts.sort();
-    assert_frag(parts.join(''), r);
+    assert_frag(test, parts.join(''), r);
   };
   try_all_permutations(
     function () {
       c.remove();
       parts = [];
-      assert_frag("<empty></empty>", r);
+      assert_frag(test, "<empty></empty>", r);
     },
     [
       _.bind(do_insert, null, "D"),
@@ -394,7 +394,7 @@ test("renderList - basics", function () {
       _.bind(do_insert, null, "G")
     ],
     function () {
-      assert_frag("<D></D><E></E><F></F><G></G>", r);
+      assert_frag(test, "<D></D><E></E><F></F><G></G>", r);
     }
   );
 
@@ -405,14 +405,14 @@ test("renderList - basics", function () {
   // Change without move
 
   c.update({id: "E"}, {$set: {id: "E2"}});
-  assert_frag("<C></C><D></D><D2></D2><E2></E2><F></F>", r);
+  assert_frag(test, "<C></C><D></D><D2></D2><E2></E2><F></F>", r);
   c.update({id: "F"}, {$set: {id: "F2"}});
-  assert_frag("<C></C><D></D><D2></D2><E2></E2><F2></F2>", r);
+  assert_frag(test, "<C></C><D></D><D2></D2><E2></E2><F2></F2>", r);
   c.update({id: "C"}, {$set: {id: "C2"}});
-  assert_frag("<C2></C2><D></D><D2></D2><E2></E2><F2></F2>", r);
+  assert_frag(test, "<C2></C2><D></D><D2></D2><E2></E2><F2></F2>", r);
 });
 
-test("renderList - removal", function () {
+Tinytest.add("renderList - removal", function (test) {
   var c = new LocalCollection();
   // (test is written in this weird way for historical reasons; feel
   // free to refactor)
@@ -437,21 +437,21 @@ test("renderList - removal", function () {
   });
 
   c.remove({id: "D2"});
-  assert_frag("<C2></C2><D></D><E2></E2><F2></F2>", r);
+  assert_frag(test, "<C2></C2><D></D><E2></E2><F2></F2>", r);
   c.remove({id: "F2"});
-  assert_frag("<C2></C2><D></D><E2></E2>", r);
+  assert_frag(test, "<C2></C2><D></D><E2></E2>", r);
   c.remove({id: "C2"});
-  assert_frag("<D></D><E2></E2>", r);
+  assert_frag(test, "<D></D><E2></E2>", r);
   c.remove({id: "E2"});
-  assert_frag("<D></D>", r);
+  assert_frag(test, "<D></D>", r);
   c.remove({id: "D"});
-  assert_frag("<empty></empty>", r);
+  assert_frag(test, "<empty></empty>", r);
 
   // this should hit all of the edge cases in extract
   var do_remove = function (id) {
     c.remove({id: id});
     delete parts["<" + id + "></" + id + ">"];
-    assert_frag(_.keys(parts).sort().join('') || '<empty></empty>', r);
+    assert_frag(test, _.keys(parts).sort().join('') || '<empty></empty>', r);
   };
   try_all_permutations(
     function () {
@@ -460,7 +460,7 @@ test("renderList - removal", function () {
         c.insert({id: id});
         parts["<" + id + "></" + id + ">"] = true;
       });
-      assert_frag("<D></D><E></E><F></F><G></G>", r);
+      assert_frag(test, "<D></D><E></E><F></F><G></G>", r);
     },
     [
       _.bind(do_remove, null, "D"),
@@ -469,12 +469,12 @@ test("renderList - removal", function () {
       _.bind(do_remove, null, "G")
     ],
     function () {
-      assert_frag("<empty></empty>", r);
+      assert_frag(test, "<empty></empty>", r);
     }
   );
 });
 
-test("renderList - default render empty", function () {
+Tinytest.add("renderList - default render empty", function (test) {
   var c = new LocalCollection();
 
   var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
@@ -482,15 +482,15 @@ test("renderList - default render empty", function () {
       return DIV({id: doc.id});
     }
   });
-  assert_frag("<!---->", r);
+  assert_frag(test, "<!---->", r);
 
   c.insert({id: "D"});
-  assert_frag("<D></D>", r);
+  assert_frag(test, "<D></D>", r);
   c.remove({id: "D"});
-  assert_frag("<!---->", r);
+  assert_frag(test, "<!---->", r);
 });
 
-test("renderList - change and move", function () {
+Tinytest.add("renderList - change and move", function (test) {
   var c = new LocalCollection();
 
   var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
@@ -501,28 +501,28 @@ test("renderList - change and move", function () {
 
   c.insert({id: "D"});
   c.insert({id: "E"});
-  assert_frag("<D></D><E></E>", r);
+  assert_frag(test, "<D></D><E></E>", r);
   c.update({id: "D"}, {id: "F"});
-  assert_frag("<E></E><F></F>", r);
+  assert_frag(test, "<E></E><F></F>", r);
   c.update({id: "E"}, {id: "G"});
-  assert_frag("<F></F><G></G>", r);
+  assert_frag(test, "<F></F><G></G>", r);
   c.update({id: "G"}, {id: "C"});
-  assert_frag("<C></C><F></F>", r);
+  assert_frag(test, "<C></C><F></F>", r);
   c.insert({id: "E"});
-  assert_frag("<C></C><E></E><F></F>", r);
+  assert_frag(test, "<C></C><E></E><F></F>", r);
   c.insert({id: "D"});
-  assert_frag("<C></C><D></D><E></E><F></F>", r);
+  assert_frag(test, "<C></C><D></D><E></E><F></F>", r);
   c.update({id: "C"}, {id: "D2"});
-  assert_frag("<D></D><D2></D2><E></E><F></F>", r);
+  assert_frag(test, "<D></D><D2></D2><E></E><F></F>", r);
   c.update({id: "F"}, {id: "D3"});
-  assert_frag("<D></D><D2></D2><D3></D3><E></E>", r);
+  assert_frag(test, "<D></D><D2></D2><D3></D3><E></E>", r);
   c.update({id: "D3"}, {id: "C"});
-  assert_frag("<C></C><D></D><D2></D2><E></E>", r);
+  assert_frag(test, "<C></C><D></D><D2></D2><E></E>", r);
   c.update({id: "D2"}, {id: "F"});
-  assert_frag("<C></C><D></D><E></E><F></F>", r);
+  assert_frag(test, "<C></C><D></D><E></E><F></F>", r);
 });
 
-test("renderList - termination", function () {
+Tinytest.add("renderList - termination", function (test) {
   var c = new LocalCollection();
 
   var r = Meteor.ui.renderList(c.find({}, {sort: ['id']}), {
@@ -533,14 +533,14 @@ test("renderList - termination", function () {
 
   c.remove();
   c.insert({id: "A"});
-  assert_frag("<A></A>", r);
+  assert_frag(test, "<A></A>", r);
   Meteor.flush(); // not onscreen, so terminates
   c.insert({id: "B"});
-  assert_frag("<A></A>", r);
+  assert_frag(test, "<A></A>", r);
   c.remove({id: "A"});
-  assert_frag("<A></A>", r);
+  assert_frag(test, "<A></A>", r);
   Meteor.flush();
-  assert_frag("<A></A>", r);
+  assert_frag(test, "<A></A>", r);
 
   var before_flush;
   var should_gc;
@@ -557,7 +557,7 @@ test("renderList - termination", function () {
           return DIV({id: doc.id});
         }
       });
-      assert_frag("<A></A><B></B>", r);
+      assert_frag(test, "<A></A><B></B>", r);
       should_gc = false;
       onscreen = null;
       second_is_noop = false;
@@ -572,7 +572,7 @@ test("renderList - termination", function () {
     ],
     function () {
       before_flush = dump_frag(r);
-      assert.notEqual("<A></A><B></B>", before_flush);
+      test.notEqual("<A></A><B></B>", before_flush);
     },
     // Possibly put onscreen.
     [1,
@@ -603,9 +603,9 @@ test("renderList - termination", function () {
     // triggered.
     function () {
       if (should_gc || second_is_noop)
-        assert_frag(before_flush, onscreen || r);
+        assert_frag(test, before_flush, onscreen || r);
       else
-        assert.notEqual(before_flush, dump_frag(onscreen || r));
+        test.notEqual(before_flush, dump_frag(onscreen || r));
 
       if (onscreen)
         document.body.removeChild(onscreen);
@@ -613,7 +613,7 @@ test("renderList - termination", function () {
   );
 });
 
-test("renderList - list items are reactive", function () {
+Tinytest.add("renderList - list items are reactive", function (test) {
   var c = new LocalCollection();
 
   set_weather("here", "cloudy");
@@ -633,74 +633,74 @@ test("renderList - list items are reactive", function () {
   onscreen.appendChild(r);
   document.body.appendChild(onscreen);
 
-  assert.equal(render_count, 0);
+  test.equal(render_count, 0);
   c.insert({id: "A", want_weather: "here"});
-  assert.equal(render_count, 1);
-  assert_frag("<A_cloudy></A_cloudy>", onscreen);
+  test.equal(render_count, 1);
+  assert_frag(test, "<A_cloudy></A_cloudy>", onscreen);
 
   c.insert({id: "B", want_weather: "here"});
-  assert.equal(render_count, 2);
-  assert.length(_.keys(weather_listeners.here), 2);
-  assert_frag("<A_cloudy></A_cloudy><B_cloudy></B_cloudy>", onscreen);
+  test.equal(render_count, 2);
+  test.length(_.keys(weather_listeners.here), 2);
+  assert_frag(test, "<A_cloudy></A_cloudy><B_cloudy></B_cloudy>", onscreen);
 
   c.insert({id: "C"});
-  assert.equal(render_count, 3);
-  assert.length(_.keys(weather_listeners.here), 2);
-  assert_frag("<A_cloudy></A_cloudy><B_cloudy></B_cloudy><C></C>", onscreen);
+  test.equal(render_count, 3);
+  test.length(_.keys(weather_listeners.here), 2);
+  assert_frag(test, "<A_cloudy></A_cloudy><B_cloudy></B_cloudy><C></C>", onscreen);
 
   c.update({id: "B"}, {$set: {id: "B2"}});
-  assert.equal(render_count, 4);
-  assert.length(_.keys(weather_listeners.here), 3);
-  assert_frag("<A_cloudy></A_cloudy><B2_cloudy></B2_cloudy><C></C>", onscreen);
+  test.equal(render_count, 4);
+  test.length(_.keys(weather_listeners.here), 3);
+  assert_frag(test, "<A_cloudy></A_cloudy><B2_cloudy></B2_cloudy><C></C>", onscreen);
 
   Meteor.flush();
-  assert.equal(render_count, 4);
-  assert.length(_.keys(weather_listeners.here), 2);
-  assert_frag("<A_cloudy></A_cloudy><B2_cloudy></B2_cloudy><C></C>", onscreen);
+  test.equal(render_count, 4);
+  test.length(_.keys(weather_listeners.here), 2);
+  assert_frag(test, "<A_cloudy></A_cloudy><B2_cloudy></B2_cloudy><C></C>", onscreen);
 
   c.update({id: "B2"}, {$set: {id: "D"}});
-  assert.equal(render_count, 5); // move doesn't rerender
-  assert.length(_.keys(weather_listeners.here), 3);
-  assert_frag("<A_cloudy></A_cloudy><C></C><D_cloudy></D_cloudy>", onscreen);
+  test.equal(render_count, 5); // move doesn't rerender
+  test.length(_.keys(weather_listeners.here), 3);
+  assert_frag(test, "<A_cloudy></A_cloudy><C></C><D_cloudy></D_cloudy>", onscreen);
 
   Meteor.flush();
-  assert.equal(render_count, 5);
-  assert.length(_.keys(weather_listeners.here), 2);
-  assert_frag("<A_cloudy></A_cloudy><C></C><D_cloudy></D_cloudy>", onscreen);
+  test.equal(render_count, 5);
+  test.length(_.keys(weather_listeners.here), 2);
+  assert_frag(test, "<A_cloudy></A_cloudy><C></C><D_cloudy></D_cloudy>", onscreen);
 
   set_weather("here", "sunny");
-  assert.equal(render_count, 5);
-  assert.length(_.keys(weather_listeners.here), 2);
-  assert_frag("<A_cloudy></A_cloudy><C></C><D_cloudy></D_cloudy>", onscreen);
+  test.equal(render_count, 5);
+  test.length(_.keys(weather_listeners.here), 2);
+  assert_frag(test, "<A_cloudy></A_cloudy><C></C><D_cloudy></D_cloudy>", onscreen);
 
   Meteor.flush();
-  assert.equal(render_count, 7);
-  assert.length(_.keys(weather_listeners.here), 2);
-  assert_frag("<A_sunny></A_sunny><C></C><D_sunny></D_sunny>", onscreen);
+  test.equal(render_count, 7);
+  test.length(_.keys(weather_listeners.here), 2);
+  assert_frag(test, "<A_sunny></A_sunny><C></C><D_sunny></D_sunny>", onscreen);
 
   c.remove({id: "A"});
-  assert.equal(render_count, 7);
-  assert.length(_.keys(weather_listeners.here), 2);
-  assert_frag("<C></C><D_sunny></D_sunny>", onscreen);
+  test.equal(render_count, 7);
+  test.length(_.keys(weather_listeners.here), 2);
+  assert_frag(test, "<C></C><D_sunny></D_sunny>", onscreen);
 
   Meteor.flush();
-  assert.equal(render_count, 7);
-  assert.length(_.keys(weather_listeners.here), 1);
-  assert.length(_.keys(weather_listeners.there), 0);
-  assert_frag("<C></C><D_sunny></D_sunny>", onscreen);
+  test.equal(render_count, 7);
+  test.length(_.keys(weather_listeners.here), 1);
+  test.length(_.keys(weather_listeners.there), 0);
+  assert_frag(test, "<C></C><D_sunny></D_sunny>", onscreen);
 
   c.insert({id: "F", want_weather: "there"});
-  assert.equal(render_count, 8);
-  assert.length(_.keys(weather_listeners.here), 1);
-  assert.length(_.keys(weather_listeners.there), 1);
-  assert_frag("<C></C><D_sunny></D_sunny><F_cloudy></F_cloudy>", onscreen);
+  test.equal(render_count, 8);
+  test.length(_.keys(weather_listeners.here), 1);
+  test.length(_.keys(weather_listeners.there), 1);
+  assert_frag(test, "<C></C><D_sunny></D_sunny><F_cloudy></F_cloudy>", onscreen);
 
   r.appendChild(onscreen); // take offscreen
   Meteor.flush();
-  assert.equal(render_count, 8);
-  assert.length(_.keys(weather_listeners.here), 1);
-  assert.length(_.keys(weather_listeners.there), 1);
-  assert_frag("<C></C><D_sunny></D_sunny><F_cloudy></F_cloudy>", onscreen);
+  test.equal(render_count, 8);
+  test.length(_.keys(weather_listeners.here), 1);
+  test.length(_.keys(weather_listeners.there), 1);
+  assert_frag(test, "<C></C><D_sunny></D_sunny><F_cloudy></F_cloudy>", onscreen);
 
   // it's offscreen, but it wasn't taken off through a mechanism that
   // calls Meteor.ui._cleanup, so we take the slow GC path. the entries
@@ -709,34 +709,34 @@ test("renderList - list items are reactive", function () {
   // entries will get torn down too.)
   set_weather("here", "ducky");
   Meteor.flush();
-  assert.equal(render_count, 8);
-  assert.length(_.keys(weather_listeners.here), 0);
-  assert.length(_.keys(weather_listeners.there), 1);
-  assert_frag("<C></C><D_sunny></D_sunny><F_cloudy></F_cloudy>", onscreen);
+  test.equal(render_count, 8);
+  test.length(_.keys(weather_listeners.here), 0);
+  test.length(_.keys(weather_listeners.there), 1);
+  assert_frag(test, "<C></C><D_sunny></D_sunny><F_cloudy></F_cloudy>", onscreen);
 
   c.insert({id: "E"});
   // insert renders the doc -- it has to, since renderList GC happens
   // only on flush
-  assert.equal(render_count, 9);
-  assert.length(_.keys(weather_listeners.here), 0);
-  assert.length(_.keys(weather_listeners.there), 1);
-  assert_frag("<C></C><D_sunny></D_sunny><E></E><F_cloudy></F_cloudy>", onscreen);
+  test.equal(render_count, 9);
+  test.length(_.keys(weather_listeners.here), 0);
+  test.length(_.keys(weather_listeners.there), 1);
+  assert_frag(test, "<C></C><D_sunny></D_sunny><E></E><F_cloudy></F_cloudy>", onscreen);
 
   Meteor.flush();
-  assert.equal(render_count, 9);
-  assert.length(_.keys(weather_listeners.here), 0);
-  assert.length(_.keys(weather_listeners.there), 0);
-  assert_frag("<C></C><D_sunny></D_sunny><E></E><F_cloudy></F_cloudy>", onscreen);
+  test.equal(render_count, 9);
+  test.length(_.keys(weather_listeners.here), 0);
+  test.length(_.keys(weather_listeners.there), 0);
+  assert_frag(test, "<C></C><D_sunny></D_sunny><E></E><F_cloudy></F_cloudy>", onscreen);
 
   c.insert({id: "G"});
   Meteor.flush();
-  assert.equal(render_count, 9);
-  assert.length(_.keys(weather_listeners.here), 0);
-  assert.length(_.keys(weather_listeners.there), 0);
-  assert_frag("<C></C><D_sunny></D_sunny><E></E><F_cloudy></F_cloudy>", onscreen);
+  test.equal(render_count, 9);
+  test.length(_.keys(weather_listeners.here), 0);
+  test.length(_.keys(weather_listeners.there), 0);
+  assert_frag(test, "<C></C><D_sunny></D_sunny><E></E><F_cloudy></F_cloudy>", onscreen);
 });
 
-test("renderList - multiple elements in an item", function () {
+Tinytest.add("renderList - multiple elements in an item", function (test) {
   var c = new LocalCollection();
   var r;
 
@@ -776,7 +776,7 @@ test("renderList - multiple elements in an item", function () {
       if (lengths[index] === 0)
         expected += "<!---->";
     });
-    assert_frag(expected || "<!---->", r);
+    assert_frag(test, expected || "<!---->", r);
   };
   /* Consider uncommenting the 6 lines below in a "slow tests" mode */
   try_all_permutations(
@@ -832,7 +832,7 @@ test("renderList - multiple elements in an item", function () {
   );
 });
 
-test("renderList - #each", function () {
+Tinytest.add("renderList - #each", function (test) {
   var c = new LocalCollection();
 
   var render_count = 0;
@@ -856,35 +856,35 @@ test("renderList - #each", function () {
   onscreen.appendChild(Template.test_renderList_each());
   document.body.appendChild(onscreen);
 
-  assert_frag("~Before0<!---->Middle~Else~After~", onscreen);
-  assert.length(_.keys(weather_listeners.here), 0);
+  assert_frag(test, "~Before0<!---->Middle~Else~After~", onscreen);
+  test.length(_.keys(weather_listeners.here), 0);
 
   c.insert({x: 2, name: "A"});
-  assert_frag("~Before0~Aducky~Middle~Else~After~", onscreen);
-  assert.length(_.keys(weather_listeners.here), 1);
+  assert_frag(test, "~Before0~Aducky~Middle~Else~After~", onscreen);
+  test.length(_.keys(weather_listeners.here), 1);
 
   c.insert({x: 3, name: "B"});
-  assert_frag("~Before0~Aducky~~Bducky~Middle~Else~After~", onscreen);
-  assert.length(_.keys(weather_listeners.here), 2);
+  assert_frag(test, "~Before0~Aducky~~Bducky~Middle~Else~After~", onscreen);
+  test.length(_.keys(weather_listeners.here), 2);
 
   set_weather("here", "clear");
-  assert_frag("~Before0~Aducky~~Bducky~Middle~Else~After~", onscreen);
-  assert.length(_.keys(weather_listeners.here), 2);
+  assert_frag(test, "~Before0~Aducky~~Bducky~Middle~Else~After~", onscreen);
+  test.length(_.keys(weather_listeners.here), 2);
   Meteor.flush();
-  assert_frag("~Before0~Aclear~~Bclear~Middle~Else~After~", onscreen);
-  assert.length(_.keys(weather_listeners.here), 2);
+  assert_frag(test, "~Before0~Aclear~~Bclear~Middle~Else~After~", onscreen);
+  test.length(_.keys(weather_listeners.here), 2);
 
   c.update({x: 3}, {$set: {x: 8}}, {multi: true});
-  assert_frag("~Before0~Aclear~Middle~B~After~", onscreen);
-  assert.length(_.keys(weather_listeners.here), 2);
+  assert_frag(test, "~Before0~Aclear~Middle~B~After~", onscreen);
+  test.length(_.keys(weather_listeners.here), 2);
   Meteor.flush();
-  assert.length(_.keys(weather_listeners.here), 1);
+  test.length(_.keys(weather_listeners.here), 1);
 
   c.update({}, {$set: {x: 5}}, {multi: true});
-  assert_frag("~Before0<!---->Middle~Else~After~", onscreen);
-  assert.length(_.keys(weather_listeners.here), 1);
+  assert_frag(test, "~Before0<!---->Middle~Else~After~", onscreen);
+  test.length(_.keys(weather_listeners.here), 1);
   Meteor.flush();
-  assert.length(_.keys(weather_listeners.here), 0);
+  test.length(_.keys(weather_listeners.here), 0);
 
   document.body.removeChild(onscreen);
 

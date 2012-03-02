@@ -1,5 +1,5 @@
 
-test("template assembly", function () {
+Tinytest.add("template assembly", function (test) {
   var minusEmptyComments = function(s) {
     return String(s).replace(/<!---->/g, '');
   };
@@ -7,7 +7,7 @@ test("template assembly", function () {
   // Test for a bug that made it to production -- after a replacement,
   // we need to also check the newly replaced node for replacements
   var frag = Template.test_assembly_a0();
-  assert.equal(minusEmptyComments(Meteor._fragmentToHtml(frag)), "Hi");
+  test.equal(minusEmptyComments(Meteor._fragmentToHtml(frag)), "Hi");
 
   // Another production bug -- we must use LiveRange to replace the
   // placeholder, or risk breaking other LiveRanges
@@ -17,10 +17,10 @@ test("template assembly", function () {
   };
   var onscreen = DIV({style: "display: none"}, [Template.test_assembly_b0()]);
   document.body.appendChild(onscreen);
-  assert.equal(minusEmptyComments(onscreen.innerHTML), "xyhi");
+  test.equal(minusEmptyComments(onscreen.innerHTML), "xyhi");
   Session.set("stuff", false);
   Meteor.flush();
-  assert.equal(minusEmptyComments(onscreen.innerHTML), "xhi");
+  test.equal(minusEmptyComments(onscreen.innerHTML), "xhi");
   document.body.removeChild(onscreen);
 });
 
@@ -32,7 +32,7 @@ test("template assembly", function () {
 
 
 
-test("template table assembly", function() {
+Tinytest.add("template table assembly", function(test) {
   var childWithTag = function(node, tag) {
     return _.find(node.childNodes, function(n) {
       return n.nodeName === tag;
@@ -46,11 +46,11 @@ test("template table assembly", function() {
   // table.rows is a great test, as it fails not only when TR/TD tags are
   // stripped due to improper html-to-fragment, but also when they are present
   // but don't show up because we didn't create a TBODY for IE.
-  assert.equal(table.rows.length, 3);
+  test.equal(table.rows.length, 3);
 
   // this time with an explicit TBODY
   table = childWithTag(Template.test_table_b0(), "TABLE");
-  assert.equal(table.rows.length, 3);
+  test.equal(table.rows.length, 3);
 
   var c = new LocalCollection();
   c.insert({bar:'a'});
@@ -61,12 +61,12 @@ test("template table assembly", function() {
   document.body.appendChild(onscreen);
   table = childWithTag(onscreen, "TABLE");
 
-  assert.equal(table.rows.length, 3);
+  test.equal(table.rows.length, 3);
   var tds = onscreen.getElementsByTagName("TD");
-  assert.equal(tds.length, 3);
-  assert.equal(tds[0].innerHTML, "a");
-  assert.equal(tds[1].innerHTML, "b");
-  assert.equal(tds[2].innerHTML, "c");
+  test.equal(tds.length, 3);
+  test.equal(tds[0].innerHTML, "a");
+  test.equal(tds[1].innerHTML, "b");
+  test.equal(tds[2].innerHTML, "c");
 
 
   document.body.removeChild(onscreen);
