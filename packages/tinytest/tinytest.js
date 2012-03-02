@@ -1,15 +1,10 @@
-
 (function () {
-  var globals = this;
-
-// XXX namespacing
 
 /******************************************************************************/
-/* TestCaseResults                                                        */
+/* TestCaseResults                                                            */
 /******************************************************************************/
 
-Meteor._TestCaseResults = function (test_case, onEvent, onException,
-                                    stop_at_offset) {
+TestCaseResults = function (test_case, onEvent, onException, stop_at_offset) {
   var self = this;
   self.test_case = test_case;
   self.onEvent = onEvent;
@@ -20,7 +15,7 @@ Meteor._TestCaseResults = function (test_case, onEvent, onException,
   self.id = Meteor.uuid();
 };
 
-_.extend(Meteor._TestCaseResults.prototype, {
+_.extend(TestCaseResults.prototype, {
   ok: function (doc) {
     var self = this;
     var ok = {type: "ok"};
@@ -170,7 +165,7 @@ _.extend(Meteor._TestCaseResults.prototype, {
 /* TestCase                                                                   */
 /******************************************************************************/
 
-Meteor._TestCase = function (name, func, async) {
+TestCase = function (name, func, async) {
   var self = this;
   self.name = name;
   self.func = func;
@@ -184,14 +179,14 @@ Meteor._TestCase = function (name, func, async) {
   self.groupPath = nameParts;
 };
 
-_.extend(Meteor._TestCase.prototype, {
+_.extend(TestCase.prototype, {
   // Run the test asynchronously, delivering results via onEvent;
   // then call onComplete() on success, or else onException(e) if the
   // test raised (or voluntarily reported) an exception.
   run: function (onEvent, onComplete, onException, stop_at_offset) {
     var self = this;
-    var results = new Meteor._TestCaseResults(self, onEvent, onException,
-                                              stop_at_offset);
+    var results = new TestCaseResults(self, onEvent, onException,
+                                      stop_at_offset);
     Meteor.defer(function () {
       try {
         if (self.async)
@@ -211,13 +206,13 @@ _.extend(Meteor._TestCase.prototype, {
 /* TestManager                                                                */
 /******************************************************************************/
 
-Meteor._TestManager = function () {
+TestManager = function () {
   var self = this;
   self.tests = {};
   self.ordered_tests = [];
 };
 
-_.extend(Meteor._TestManager.prototype, {
+_.extend(TestManager.prototype, {
   addCase: function (test) {
     var self = this;
     if (test.name in self.tests)
@@ -228,18 +223,18 @@ _.extend(Meteor._TestManager.prototype, {
 
   createRun: function (onReport) {
     var self = this;
-    return new Meteor._TestRun(self, onReport);
+    return new TestRun(self, onReport);
   }
 });
 
 // singleton
-Meteor._TestManager = new Meteor._TestManager;
+TestManager = new TestManager;
 
 /******************************************************************************/
 /* TestRun                                                                    */
 /******************************************************************************/
 
-Meteor._TestRun = function (manager, onReport) {
+TestRun = function (manager, onReport) {
   var self = this;
   self.manager = manager;
   self.onReport = onReport;
@@ -247,7 +242,7 @@ Meteor._TestRun = function (manager, onReport) {
   _.each(self.manager.ordered_tests, _.bind(self._report, self));
 };
 
-_.extend(Meteor._TestRun.prototype, {
+_.extend(TestRun.prototype, {
   _runOne: function (test, onComplete, stop_at_offset) {
     var self = this;
 
@@ -317,15 +312,17 @@ _.extend(Meteor._TestRun.prototype, {
 /* Public API                                                                 */
 /******************************************************************************/
 
+var globals = this;
+
 // XXX this API is confusing and irregular. revisit once we have
 // package namespacing.
 
 globals.test = function (name, func) {
-  Meteor._TestManager.addCase(new Meteor._TestCase(name, func));
+  TestManager.addCase(new TestCase(name, func));
 };
 
 globals.testAsync = function (name, func) {
-  Meteor._TestManager.addCase(new Meteor._TestCase(name, func, true));
+  TestManager.addCase(new TestCase(name, func, true));
 };
 
 // Run every test, asynchronously. Runs the test in the current
@@ -333,7 +330,7 @@ globals.testAsync = function (name, func) {
 // server, and likewise for the client.) Report results via
 // onReport. Call onComplete when it's done.
 Meteor._runTests = function (onReport, onComplete) {
-  var testRun = Meteor._TestManager.createRun(onReport);
+  var testRun = TestManager.createRun(onReport);
   testRun.run(onComplete);
 };
 
@@ -341,7 +338,7 @@ Meteor._runTests = function (onReport, onComplete) {
 // error, all as indicated by 'cookie', which will have come from a
 // failure event output by _runTests.
 Meteor._debugTest = function (cookie, onReport, onComplete) {
-  var testRun = Meteor._TestManager.createRun(onReport);
+  var testRun = TestManager.createRun(onReport);
   testRun.debug(cookie, onComplete);
 };
 
