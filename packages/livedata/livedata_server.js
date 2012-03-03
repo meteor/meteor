@@ -312,7 +312,7 @@ _.extend(Meteor._LivedataSession.prototype, {
       // reject malformed messages
       if (typeof (msg.id) !== "string" ||
           typeof (msg.name) !== "string" ||
-          (('params' in msg) && typeof (msg.params) !== "object")) {
+          (('params' in msg) && !(msg.params instanceof Array))) {
         self.sendError("Malformed subscription", msg);
         return;
       }
@@ -432,7 +432,7 @@ _.extend(Meteor._LivedataSession.prototype, {
     else
       self.universal_subs.push(sub);
 
-    var res = handler(sub, params);
+    var res = handler.apply(sub, params || []);
 
     // automatically wire up handlers that return a Cursor.
     // otherwise, the handler is completely responsible for delivering

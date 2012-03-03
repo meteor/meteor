@@ -26,8 +26,8 @@ Meteor.startup(function () {
 });
 
 if (Meteor.is_server)
-  Meteor.publish('ledger', function (sub, params) {
-    return Ledger.find({world: params.world});
+  Meteor.publish('ledger', function (world) {
+    return Ledger.find({world: world});
   });
 
 App.methods({
@@ -37,13 +37,6 @@ App.methods({
 
     if (Meteor.is_server)
       cheat = false;
-
-/*
-    console.log("=== " + world + " ledger ===");
-    Ledger.find({world: world}).forEach(function (x) {
-      console.log(x.name + ": " + x.balance);
-    });
-*/
 
     if (!from) {
       this.error(404, "No such account " + from_name + " in " + world);

@@ -4,7 +4,7 @@ Session.set('editing_addtag', null);
 Session.set('editing_listname', null);
 Session.set('editing_itemname', null);
 
-Meteor.subscribe('lists', {}, function () {
+Meteor.subscribe('lists', function () {
   // Once the lists have loaded, select the first one.
   if (!Session.get('list_id')) {
     var list = Lists.findOne({}, {sort: {name: 1}});
@@ -16,7 +16,7 @@ Meteor.subscribe('lists', {}, function () {
 Meteor.autosubscribe(function () {
   var list_id = Session.get('list_id');
   if (list_id)
-    Meteor.subscribe('todos', {list: list_id});
+    Meteor.subscribe('todos', list_id);
 });
 
 ////////// Tag Filter //////////

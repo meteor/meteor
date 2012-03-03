@@ -12,6 +12,11 @@ Todos.schema({text: String,
 */
 
 if (Meteor.is_server) {
-  Meteor.publish('lists');
-  Meteor.publish('todos');
+  Meteor.publish('lists', function () {
+    return Lists.find();
+  });
+
+  Meteor.publish('todos', function () {
+    return Todos.find();
+  });
 }

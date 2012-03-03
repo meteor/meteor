@@ -229,7 +229,7 @@ $(function () {
 
   // subscribe to all available todo lists.  once the inital load
   // completes, navigate to the list specified by URL, if any.
-  Meteor.subscribe('lists', {}, function () {
+  Meteor.subscribe('lists', function () {
     var initial_list_id = window.location.pathname.split('/')[1];
     var list;
 

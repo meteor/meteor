@@ -9,12 +9,13 @@ Chat.schema({room: String, message: String,
              username: String, created: Number});
 */
 
-Meteor.publish('rooms');
+if (Meteor.is_server) {
+  Meteor.publish('rooms', function () {
+    return Rooms.find();
+  });
 
-// XXX should limit to just a certain amount of recent chat ..
-Meteor.publish('room-detail', {
-  collection: Chat,
-  selector: function (params) {
-    return {room: params.room};
-  }
-});
+  // XXX should limit to just a certain amount of recent chat ..
+  Meteor.publish('room-detail', function (room) {
+    return Chat.find({room: room});
+  });
+}

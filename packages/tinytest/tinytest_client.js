@@ -46,7 +46,7 @@ Meteor._runTestsEverywhere = function (onReport, onComplete) {
     });
   });
 
-  var sub_handle = App.subscribe('tinytest/results', {run_id: run_id});
+  var sub_handle = App.subscribe('tinytest/results', run_id);
   var query_handle = Meteor._ServerTestResults.find().observe({
     added: function (doc) {
       _.each(doc.report.events || [], function (event) {

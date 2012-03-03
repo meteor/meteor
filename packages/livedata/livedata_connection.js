@@ -227,9 +227,14 @@ _.extend(Meteor._LivedataConnection.prototype, {
     return true;
   },
 
-  subscribe: function (name, args, callback) {
+  subscribe: function (name /* .. [arguments] .. callback */) {
     var self = this;
     var id;
+
+    var args = Array.prototype.slice.call(arguments, 1);
+    if (args.length && typeof args[args.length - 1] === "function")
+      var callback = args.pop();
+
     var existing = self.subs.find({name: name, args: args}, {reactive: false}).fetch();
 
     if (existing && existing[0]) {
@@ -277,7 +282,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
     });
   },
 
-  call: function (name /*, arguments */) {
+  call: function (name /* .. [arguments] .. callback */) {
     // if it's a function, the last argument is the result callback,
     // not a parameter to the remote method.
     var args = Array.prototype.slice.call(arguments, 1);
@@ -474,7 +479,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
   },
 
   _livedata_error: function (msg) {
-    Meteor._debug("Received error from server: " + msg.reason);
+    Meteor._debug("Received error from server: ", msg.reason);
+    if (msg.offending_message)
+      Meteor._debug("For: ", msg.offending_message);
   },
 
   // true if we're OK for a migration to happen

@@ -199,7 +199,7 @@ var checkBalances = function (test, a, b) {
 testAsyncMulti("livedata - compound methods", [
   function (test) {
     if (Meteor.is_client)
-      Meteor.subscribe("ledger", {world: test.runId()});
+      Meteor.subscribe("ledger", test.runId());
     Ledger.insert({name: "alice", balance: 100, world: test.runId()});
     Ledger.insert({name: "bob", balance: 50, world: test.runId()});
   },

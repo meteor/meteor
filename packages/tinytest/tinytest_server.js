@@ -2,8 +2,8 @@ Meteor.startup(function () {
   Meteor._ServerTestResults.remove();
 });
 
-App.publish('tinytest/results', function (sub, params) {
-  return Meteor._ServerTestResults.find({run_id: params.run_id});
+App.publish('tinytest/results', function (run_id) {
+  return Meteor._ServerTestResults.find({run_id: run_id});
 });
 
 App.methods({

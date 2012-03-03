@@ -5,7 +5,7 @@ Session.set('editing_room_name', false);
 
 Meteor.autosubscribe(function () {
   var room_id = Session.get('current_room');
-  if (room_id) Meteor.subscribe('room-detail', {room: room_id});
+  if (room_id) Meteor.subscribe('room-detail', room_id);
 });
 
 // XXX would be nice to eliminate this function and have people just

@@ -107,7 +107,7 @@ Meteor.Collection = function (name, manager, driver) {
   // autopublish
   if (manager && manager.onAutopublish)
     manager.onAutopublish(function () {
-      var handler = function (sub, params) { return self.find(); };
+      var handler = function () { return self.find(); };
       manager.publish(null, handler, {is_auto: true});
     });
 };
