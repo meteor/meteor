@@ -2,7 +2,7 @@
 
 set -e
 
-BUNDLE_VERSION=0.0.6
+BUNDLE_VERSION=0.0.8
 UNAME=$(uname)
 
 if [ "$UNAME" == "Linux" ] ; then
@@ -50,22 +50,20 @@ cd "$DIR/lib/node_modules"
 npm install connect@1.8.5
 npm install connect-gzip@0.1.5
 npm install optimist@0.3.1
-npm install socket.io@0.8.7
 npm install coffee-script@1.2.0
-npm install less@1.2.0
+npm install less@1.2.1
 npm install mime@1.2.4
 npm install semver@1.0.13
-npm install wrench@1.3.3
 npm install handlebars@1.0.2beta
 npm install mongodb@0.9.7-1.4
 npm install uglify-js@1.2.5
-npm install clean-css@0.3.1
+npm install clean-css@0.3.2
 npm install progress@0.0.4
 npm install fibers@0.6.4
 npm install useragent@1.0.5
 npm install request@2.9.3
 npm install http-proxy@0.8.0
-
+npm install sockjs@0.2.1
 
 cd "$DIR"
 curl "$MONGO_URL" | tar -xz
@@ -78,7 +76,14 @@ cd mongodb/bin
 rm bsondump mongodump mongoexport mongofiles mongoimport mongorestore mongos mongosniff mongostat mongotop
 cd ../..
 
+
+## Install socket.io. Even though we're not using it any more, we still
+## want it in the dev bundle so that older apps already deployed to
+## mother can still run.
+cd "$DIR/lib/node_modules"
+npm install socket.io@0.8.7
 # Remove annoying print from socket.io that can't be disabled in config.
+cd "$DIR"
 patch -p2 <<EOF
 diff --git a/dev_bundle/lib/node_modules/socket.io/lib/manager.js b/dev_bundle/lib/node_modules/socket.io/lib/manager.js
 index ee2bf49..a68f9cb 100644
@@ -94,7 +99,6 @@ index ee2bf49..a68f9cb 100644
  
  Manager.prototype.__proto__ = EventEmitter.prototype
 EOF
-
 # Patch an issue already fixed in socket.io master, but not released yet.
 # https://github.com/LearnBoost/socket.io-client/commit/7155d84af997dcfca418568dfcc778263926d7b2
 cd "$DIR/lib/node_modules/socket.io/node_modules/socket.io-client"
