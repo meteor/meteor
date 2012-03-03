@@ -24,7 +24,7 @@ _Mongo = function (url) {
 
   // collection name => true, or 'true' for all, 'false' for none
   self.dirty = false;
-  self.fence_listeners = [];
+  self.pending_writes = []; // from WriteFence.beginWrite()
   self.flush_running = false;
   self.flush_queued = false;
 
@@ -97,8 +97,8 @@ _Mongo.prototype._flushObservers = _.throttle(function () {
     return;
   }
   self.flush_running = true;
-  var listeners_for_cycle = self.fence_listeners;
-  self.fence_listeners = [];
+  var writes_for_cycle = self.pending_writes;
+  self.pending_writes = [];
 
   Fiber(function () {
     var dirty = self.dirty;
@@ -109,20 +109,39 @@ _Mongo.prototype._flushObservers = _.throttle(function () {
         o._poll();
     });
 
-    _.each(listeners_for_cycle, function (f) {f();});
+    _.each(writes_for_cycle, function (w) {w.committed();});
 
     self.flush_running = false;
-    if (self.flush_queued || self.fence_listeners.length) {
+    if (self.flush_queued || self.pending_writes.length) {
       self.flush_queued = false;
       self._flushObservers();
     }
   }).run();
 }, 50 /* 50 ms */);
 
+_Mongo.prototype._beginWrite = function () {
+  var self = this;
+  var fence = Meteor._CurrentWriteFence.get();
+  if (fence)
+    self.pending_writes.push(fence.beginWrite());
+};
+
 //////////// Public API //////////
+
+// After making a write (with insert, update, remove), observers are
+// notified asynchronously. If you want to receive a callback once all
+// of the observer notifications have landed for your write, do the
+// writes inside a write fence (set Meteor._CurrentWriteFence to a new
+// _WriteFence, and then set a callback on the write fence.)
+//
+// Since our execution environment is single-threaded, this is
+// well-defined -- a write "has been made" if it's returned, and an
+// observer "has been notified" if its callback has returned.
 
 _Mongo.prototype.insert = function (collection_name, document) {
   var self = this;
+
+  self._beginWrite();
 
   var future = new Future;
   self._withCollection(collection_name, function(err, collection) {
@@ -140,6 +159,8 @@ _Mongo.prototype.insert = function (collection_name, document) {
 
 _Mongo.prototype.remove = function (collection_name, selector) {
   var self = this;
+
+  self._beginWrite();
 
   // XXX does not allow options. matches the client.
   selector = _Mongo._rewriteSelector(selector);
@@ -160,6 +181,8 @@ _Mongo.prototype.remove = function (collection_name, selector) {
 
 _Mongo.prototype.update = function (collection_name, selector, mod, options) {
   var self = this;
+
+  self._beginWrite();
 
   selector = _Mongo._rewriteSelector(selector);
   if (!options) options = {};
@@ -200,25 +223,6 @@ _Mongo.prototype.findOne = function (collection_name, selector, options) {
     selector = {};
 
   return this.find(collection_name, selector, options).fetch()[0];
-};
-
-// After making a write (with insert, update, remove), observers are
-// notified asynchronously. Call 'callback' once it is guaranteed that
-// all writes that have been made so far have been reflected in
-// observer notifications. (Since our execution environment is
-// single-threaded, this is well-defined -- a write "has been made" if
-// it's returned, and an observer "has been notified" if its callback
-// has returned.)
-_Mongo.prototype.writeFence = function (callback) {
-  var self = this;
-  if (!self.dirty)
-    callback();
-  else
-    // XXX it'd be better to actually kick off a polling cycle
-    // here. have observers natually be notified on some long-ish
-    // polling cycle, like 250ms, and immediately (or, say, with 50ms
-    // throttling) in response to writeFence().
-    self.fence_listeners.push(callback);
 };
 
 // Cursors

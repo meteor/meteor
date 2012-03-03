@@ -353,6 +353,15 @@ _.extend(Meteor._LivedataSession.prototype, {
         return;
       }
 
+      // set up to mmark the method as satisfied until all observers
+      // (and subscriptions) have reacted to any writes that were
+      // done.
+      var fence = new Meteor._WriteFence;
+      fence.onAllCommitted(function () {
+        self.send({
+          msg: 'data', methods: [msg.id]});
+      });
+
       // check for a replayed method (this is important during
       // reconnect)
       if (msg.id in self.result_cache) {
@@ -361,6 +370,7 @@ _.extend(Meteor._LivedataSession.prototype, {
         delete payload.when;
         self.send(
           _.extend({msg: 'result', id: msg.id}, payload));
+        fence.arm();
         return;
       }
 
@@ -370,7 +380,7 @@ _.extend(Meteor._LivedataSession.prototype, {
         self.send({
           msg: 'result', id: msg.id,
           error: {error: 404, reason: "Method not found"}});
-        self._completeWhenFenced(msg.id);
+        fence.arm();
         return;
       }
 
@@ -393,7 +403,7 @@ _.extend(Meteor._LivedataSession.prototype, {
 
         self.send(
           _.extend({msg: 'result', id: msg.id}, payload));
-        self._completeWhenFenced(msg.id);
+        fence.arm();
       };
 
       var next = function (error, ret) {
@@ -403,25 +413,14 @@ _.extend(Meteor._LivedataSession.prototype, {
 
       var invocation = new Meteor._ServerMethodInvocation(msg.method, handler);
       try {
-        invocation._run(msg.params || [], callback, next);
+        Meteor._CurrentWriteFence.withValue(fence, function () {
+          invocation._run(msg.params || [], callback, next);
+        });
       } catch (e) {
         // _run will have already logged the exception (and told the
         // client, if appropriate)
       }
     }
-  },
-
-  _completeWhenFenced: function (id) {
-    var self = this;
-    // XXX hack -- coordinate our update messages with the
-    // observation cycle of the remote mongo database
-    // driver. really, should support N such counterparties, and
-    // should send method completion only when all of them have
-    // crossed a write fence.
-    Meteor._RemoteCollectionDriver.writeFence(function () {
-      self.send({
-        msg: 'data', methods: [id]});
-    });
   },
 
   _startSubscription: function (handler, sub_id, params) {
