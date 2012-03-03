@@ -10,7 +10,7 @@ Vcs-Git: git://github.com/meteor/meteor.git
 Package: meteor
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description:  A framework and app server for building websites in JavaScript.
+Description:  A platform for building HTML5 websites in JavaScript.
  Database Everywhere: Use the same database APIs on the client that you already use on the server. Thanks to latency compensation, client-side reads and writes can be served from a cache - no waiting on the network.
  .
  Realtime is the Default: When one user writes to the database, if any other users are looking at that same data, their screens can update automatically. It's like Etherpad for structured data.

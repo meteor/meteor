@@ -2,7 +2,7 @@
 # Meteor RPM spec file
 #
 
-Summary: Meteor microframework and JavaScript application server
+Summary: Meteor platform and JavaScript application server
 Vendor: Meteor
 Name: meteor
 Version: 0.1.4
@@ -14,7 +14,7 @@ URL: http://meteor.com/
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 
 %description
-XXX
+A platform and app server for building websites in JavaScript.
 
 %prep
 

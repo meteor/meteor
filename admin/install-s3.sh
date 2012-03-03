@@ -110,11 +110,11 @@ elif [ "$UNAME" = "Linux" ] ; then
         if [ `whoami` = 'root' ] ; then
             $*
         elif [ -x /bin/sudo -o -x /usr/bin/sudo ] ; then
-            echo "Running sudo $*"
-            echo "This may prompt for a password."
+            echo "Root access required. Trying sudo. This may prompt for a password."
+            echo "sudo $*"
             sudo $*
         else
-            echo "Not running as root and no sudo. Please re-run this script as root."
+            echo "Root access required. Please re-run this script as root."
             exit 1
         fi
     }
@@ -163,7 +163,7 @@ elif [ "$UNAME" = "Linux" ] ; then
         do_with_root rpm -Uvh --replacepkgs "$FILE"
 
     else
-        echo "Unsupported Linux Distribution."
+        echo "Unsupported Linux distribution."
         exit 1
     fi
 
