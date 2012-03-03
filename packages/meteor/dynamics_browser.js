@@ -5,11 +5,11 @@
   var nextSlot = 0;
   var currentValues = [];
 
-  Meteor.DynamicVariable = function () {
+  Meteor.EnvironmentVariable = function () {
     this.slot = nextSlot++;
   };
 
-  _.extend(Meteor.DynamicVariable.prototype, {
+  _.extend(Meteor.EnvironmentVariable.prototype, {
     get: function () {
       return currentValues[this.slot];
     },

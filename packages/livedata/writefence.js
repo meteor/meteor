@@ -13,7 +13,7 @@ Meteor._WriteFence = function () {
 // The current write fence. When there is a current write fence, code
 // that writes to databases should register their writes with it using
 // beginWrite().
-Meteor._CurrentWriteFence = new Meteor.DynamicVariable;
+Meteor._CurrentWriteFence = new Meteor.EnvironmentVariable;
 
 _.extend(Meteor._WriteFence.prototype, {
   // Start tracking a write, and return an object to represent it. The

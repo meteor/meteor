@@ -4,11 +4,11 @@
 
   var nextSlot = 0;
 
-  Meteor.DynamicVariable = function () {
+  Meteor.EnvironmentVariable = function () {
     this.slot = nextSlot++;
   };
 
-  _.extend(Meteor.DynamicVariable.prototype, {
+  _.extend(Meteor.EnvironmentVariable.prototype, {
     get: function () {
       if (!Fiber.current)
         throw new Error("Meteor code must always run within a Fiber");
