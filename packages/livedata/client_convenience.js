@@ -17,5 +17,8 @@ _.extend(Meteor, {
 
   subscribe: function (/* arguments */) {
     return App.subscribe.apply(App, _.toArray(arguments));
+  },
+
+  refresh: function (notification) {
   }
 });

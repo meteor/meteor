@@ -238,8 +238,11 @@ TestRun = function (manager, onReport) {
   var self = this;
   self.manager = manager;
   self.onReport = onReport;
+  self.next_sequence_number = 0;
 
-  _.each(self.manager.ordered_tests, _.bind(self._report, self));
+  _.each(self.manager.ordered_tests, function (test) {
+    self._report(test);
+  });
 };
 
 _.extend(TestRun.prototype, {
@@ -250,11 +253,11 @@ _.extend(TestRun.prototype, {
 
     test.run(function (event) {
       /* onEvent */
-      self._report(test, {events: [event]});
+      self._report(test, event);
     }, function () {
       /* onComplete */
       var totalTime = (+new Date) - startTime;
-      self._report(test, {events: [{type: "finish", timeMs: totalTime}]});
+      self._report(test, {type: "finish", timeMs: totalTime});
       onComplete && onComplete();
     }, function (exception) {
       /* onException */
@@ -262,13 +265,11 @@ _.extend(TestRun.prototype, {
       // XXX you want the "name" and "message" fields on the
       // exception, to start with..
       self._report(test, {
-        events: [{
-          type: "exception",
-          details: {
-            message: exception.message, // XXX empty???
-            stack: exception.stack // XXX portability
-          }
-        }]
+        type: "exception",
+        details: {
+          message: exception.message, // XXX empty???
+          stack: exception.stack // XXX portability
+        }
       });
 
       onComplete && onComplete();
@@ -300,11 +301,17 @@ _.extend(TestRun.prototype, {
     self._runOne(test, onComplete, cookie.offset);
   },
 
-  _report: function (test, rest) {
+  _report: function (test, event) {
     var self = this;
-    self.onReport(_.extend({ groupPath: test.groupPath,
-                             test: test.shortName },
-                           rest));
+    if (event)
+      var events = [_.extend({sequence: self.next_sequence_number++}, event)];
+    else
+      var events = [];
+    self.onReport({
+      groupPath: test.groupPath,
+      test: test.shortName,
+      events: events
+    });
   }
 });
 

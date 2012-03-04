@@ -27,7 +27,8 @@ Meteor.startup(function () {
 
 if (Meteor.is_server)
   Meteor.publish('ledger', function (world) {
-    return Ledger.find({world: world});
+    return Ledger.find({world: world}, {key: {collection: 'ledger',
+                                              world: world}});
   });
 
 App.methods({
@@ -55,5 +56,6 @@ App.methods({
 
     Ledger.update({_id: from._id}, {$inc: {balance: -amount}});
     Ledger.update({_id: to._id}, {$inc: {balance: amount}});
+    Meteor.refresh({collection: 'ledger', world: world});
   }
 });

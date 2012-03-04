@@ -16,17 +16,7 @@ Future.prototype.ret = Future.prototype.return;
 _Mongo = function (url) {
   var self = this;
 
-  // holds active observes
-  self.observers = {};
-  self.next_observer_id = 1;
-
   self.collection_queue = [];
-
-  // collection name => true, or 'true' for all, 'false' for none
-  self.dirty = false;
-  self.pending_writes = []; // from WriteFence.beginWrite()
-  self.flush_running = false;
-  self.flush_queued = false;
 
   MongoDB.connect(url, function(err, db) {
     self.db = db;
@@ -34,15 +24,11 @@ _Mongo = function (url) {
     // drain queue of pending callbacks
     var c;
     while ((c = self.collection_queue.pop())) {
-      db.collection(c.name, c.callback);
+      Fiber(function () {
+        db.collection(c.name, c.callback);
+      }).run();
     }
   });
-
-  // refresh all outstanding observers every 10 seconds.  they are
-  // also triggered on DB updates.
-  setInterval(function () {
-    self._markDirty();
-  }, 10000);
 };
 
 // protect against dangerous selectors.  falsey and {_id: falsey}
@@ -72,58 +58,18 @@ _Mongo.prototype._withCollection = function(collection_name, callback) {
   }
 };
 
-// mark a collection as dirty (or the whole database, if no collection
-// name is provided.) arrange for observers against the dirty sector
-// to update themselves.
-_Mongo.prototype._markDirty = function (collection_name) {
-  var self = this;
-
-  if (collection_name === undefined)
-    self.dirty = true;
-  else if (self.dirty !== true) {
-    self.dirty = self.dirty || {};
-    self.dirty[collection_name] = true;
-  }
-
-  self._flushObservers();
-};
-
-_Mongo.prototype._flushObservers = _.throttle(function () {
-  var self = this;
-
-  // only let one instance of flush run at once.
-  if (self.flush_running) {
-    self.flush_queued = true;
-    return;
-  }
-  self.flush_running = true;
-  var writes_for_cycle = self.pending_writes;
-  self.pending_writes = [];
-
-  Fiber(function () {
-    var dirty = self.dirty;
-    self.dirty = false;
-
-    _.each(self.observers, function (o) {
-      if (dirty && dirty === true || dirty[o.collection_name])
-        o._poll();
-    });
-
-    _.each(writes_for_cycle, function (w) {w.committed();});
-
-    self.flush_running = false;
-    if (self.flush_queued || self.pending_writes.length) {
-      self.flush_queued = false;
-      self._flushObservers();
-    }
-  }).run();
-}, 50 /* 50 ms */);
-
-_Mongo.prototype._beginWrite = function () {
+// This should be called synchronously with a write, to create a
+// transaction on the current write fence, if any. After we can read
+// the write, and after observers have been notified (or at least,
+// after the observer notifiers have added themselves to the write
+// fence), you should call 'committed()' on the object returned.
+_Mongo.prototype._maybeBeginWrite = function () {
   var self = this;
   var fence = Meteor._CurrentWriteFence.get();
   if (fence)
-    self.pending_writes.push(fence.beginWrite());
+    return fence.beginWrite();
+  else
+    return {committed: function () {}};
 };
 
 //////////// Public API //////////
@@ -140,8 +86,7 @@ _Mongo.prototype._beginWrite = function () {
 
 _Mongo.prototype.insert = function (collection_name, document) {
   var self = this;
-
-  self._beginWrite();
+  var write = self._maybeBeginWrite();
 
   var future = new Future;
   self._withCollection(collection_name, function(err, collection) {
@@ -150,7 +95,9 @@ _Mongo.prototype.insert = function (collection_name, document) {
       // XXX err handling
     });
 
-    self._markDirty(collection_name);
+    Meteor.refresh({collection: collection_name});
+    write.committed();
+
     future.ret();
   });
 
@@ -159,8 +106,7 @@ _Mongo.prototype.insert = function (collection_name, document) {
 
 _Mongo.prototype.remove = function (collection_name, selector) {
   var self = this;
-
-  self._beginWrite();
+  var write = self._maybeBeginWrite();
 
   // XXX does not allow options. matches the client.
   selector = _Mongo._rewriteSelector(selector);
@@ -172,7 +118,9 @@ _Mongo.prototype.remove = function (collection_name, selector) {
       // XXX err handling
     });
 
-    self._markDirty(collection_name);
+    Meteor.refresh({collection: collection_name});
+    write.committed();
+
     future.ret();
   });
 
@@ -181,8 +129,7 @@ _Mongo.prototype.remove = function (collection_name, selector) {
 
 _Mongo.prototype.update = function (collection_name, selector, mod, options) {
   var self = this;
-
-  self._beginWrite();
+  var write = self._maybeBeginWrite();
 
   selector = _Mongo._rewriteSelector(selector);
   if (!options) options = {};
@@ -200,7 +147,9 @@ _Mongo.prototype.update = function (collection_name, selector, mod, options) {
       // XXX err handling
     });
 
-    self._markDirty(collection_name);
+    Meteor.refresh({collection: collection_name});
+    write.committed();
+
     future.ret();
   });
 
@@ -312,34 +261,70 @@ _Mongo.Cursor.prototype.observe = function (options) {
 };
 
 _Mongo.LiveResultsSet = function (cursor, options) {
+  var self = this;
+
   // copy my cursor, so that the observe can run independently from
   // some other use of the cursor.
-  this.cursor = new _Mongo.Cursor(cursor.mongo,
+  self.cursor = new _Mongo.Cursor(cursor.mongo,
                                   cursor.collection_name,
                                   cursor.selector,
                                   cursor.options);
 
   // expose collection name
-  this.collection_name = cursor.collection_name;
+  self.collection_name = cursor.collection_name;
 
   // unique handle for this live query
-  this.qid = this.cursor.mongo.next_observer_id++;
+  self.qid = self.cursor.mongo.next_observer_id++;
 
   // previous results snapshot.  on each poll cycle, diffs against
   // results drives the callbacks.
-  this.results = {};
-  this.indexes = {};
+  self.results = {};
+  self.indexes = {};
 
-  this.added = options.added;
-  this.changed = options.changed;
-  this.moved = options.moved;
-  this.removed = options.removed;
+  // state for polling
+  self.dirty = false; // do we need polling?
+  self.pending_writes = []; // people to notify when polling completes
+  self.poll_running = false; // is polling in progress now?
 
-  // trigger the first _poll() cycle immediately.
-  this._poll();
+  // (each instance of the class needs to get a separate throttling
+  // context -- we don't want to coalesce invocations of markDirty on
+  // different instances!)
+  self._markDirty = _.throttle(self._unthrottled_markDirty, 50 /* ms */);
 
-  // register myself with the mongo driver
-  this.cursor.mongo.observers[this.qid] = this;
+  // listen for the invalidation messages that will trigger us to poll
+  // the database for changes
+  var keys = self.cursor.options.key || {collection: cursor.collection_name};
+  if (!(keys instanceof Array))
+    keys = [keys];
+  self.crossbar_listeners = _.map(keys, function (key) {
+    return Meteor._InvalidationCrossbar.listen(key,function (notification,
+                                                             complete) {
+      // When someone does a transaction that might affect us,
+      // schedule a poll of the database. If that transaction happens
+      // inside of a write fence, block the fence until we've polled
+      // and notified observers.
+      var fence = Meteor._CurrentWriteFence.get();
+      if (fence)
+        self.pending_writes.push(fence.beginWrite());
+      self._markDirty();
+      complete();
+    });
+  });
+
+  // user callbacks
+  self.added = options.added;
+  self.changed = options.changed;
+  self.moved = options.moved;
+  self.removed = options.removed;
+
+  // run the first _poll() cycle synchronously.
+  self._doPoll();
+
+  // every once and a while, poll even if we don't think we're dirty,
+  // for eventual consistency with database writes from outside the
+  // Meteor universe
+  self.refreshTimer = Meteor.setInterval(_.bind(self._markDirty, this),
+                                         10 * 1000 /* 10 seconds */);
 };
 
 _Mongo.LiveResultsSet.prototype._fetchResults = function (results, indexes) {
@@ -353,7 +338,29 @@ _Mongo.LiveResultsSet.prototype._fetchResults = function (results, indexes) {
   });
 };
 
-_Mongo.LiveResultsSet.prototype._poll = function () {
+_Mongo.LiveResultsSet.prototype._unthrottled_markDirty = function () {
+  var self = this;
+
+  self.dirty = true;
+  if (self.poll_running)
+    return; // only one instance can run at once. just tell it to re-cycle.
+  self.poll_running = true;
+
+  Fiber(function () {
+    self.dirty = false;
+    var writes_for_cycle = self.pending_writes;
+    self.pending_writes = [];
+    self._doPoll(); // could yield, and set self.dirty
+    _.each(writes_for_cycle, function (w) {w.committed();});
+
+    self.poll_running = false;
+    if (self.dirty || self.pending_writes.length)
+      // rerun ourselves, but through _.throttle
+      self._markDirty();
+  }).run();
+};
+
+_Mongo.LiveResultsSet.prototype._doPoll = function () {
   var self = this;
 
   var old_results = self.results;
@@ -386,7 +393,8 @@ _Mongo.LiveResultsSet.prototype._poll = function () {
 
 _Mongo.LiveResultsSet.prototype.stop = function () {
   var self = this;
-  delete self.cursor.mongo.observers[self.qid];
+  _.each(self.crossbar_listeners, function (l) { l.stop(); });
+  Meteor.clearInterval(self.refreshTimer);
 };
 
 _.extend(Meteor, {

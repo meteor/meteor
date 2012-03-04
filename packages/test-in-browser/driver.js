@@ -116,6 +116,8 @@ Template.test.eventsArray = function() {
     _.map(events, function(e) {
       // XXX XXX We need something better than stringify!
       // stringify([undefined]) === "[null]"
+      e = _.clone(e);
+      delete e.sequence;
       return {obj: e, str: JSON.stringify(e)};
     }), function(x) { return x.str; });
 
@@ -232,6 +234,16 @@ var reportResults = function(results) {
     // append events, if present
     Array.prototype.push.apply((test.events || (test.events = [])),
                                results.events);
+    // sort and de-duplicate, based on sequence number
+    test.events.sort(function (a, b) {
+      return a.sequence - b.sequence;
+    });
+    var out = [];
+    _.each(test.events, function (e) {
+      if (out.length === 0 || out[out.length - 1].sequence !== e.sequence)
+        out.push(e);
+    });
+    test.events = out;
   }
 
   _.defer(_throttled_update);
