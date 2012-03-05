@@ -13,9 +13,13 @@ _.extend(Meteor, {
     }), duration);
   },
 
-  clearInterval: _.bind(clearInterval, null),
+  clearInterval: function(x) {
+    return clearInterval(x);
+  },
 
-  clearTimeout: _.bind(clearTimeout, null),
+  clearTimeout: function(x) {
+    return clearTimeout(x);
+  },
 
   // won't be necessary once we clobber the global setTimeout
   defer: function (f) {
