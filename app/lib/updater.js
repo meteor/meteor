@@ -54,4 +54,4 @@ exports.needs_upgrade = function (version) {
   if (!version) return false;
 
   return semver.lt(exports.CURRENT_VERSION, version);
-}
+};

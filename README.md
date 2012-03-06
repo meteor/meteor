@@ -17,9 +17,9 @@ Documentation is available at http://preview.meteor.com/
 
 ## Quick Start
 
-Install Meteor (only OS X, for now):
+Install Meteor:
 
-    curl -sL bit.ly/n122Iu | /bin/sh
+    curl install.meteor.com | /bin/sh
 
 Create a project:
 
