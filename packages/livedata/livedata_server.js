@@ -630,17 +630,17 @@ Meteor._LivedataServer = function () {
         try {
           var msg = JSON.parse(raw_msg);
         } catch (err) {
-          sendError(socket, 'Parse error');
+          sendError('Parse error');
           return;
         }
         if (typeof msg !== 'object' || !msg.msg) {
-          sendError(socket, 'Bad request', msg);
+          sendError('Bad request', msg);
           return;
         }
 
         if (msg.msg === 'connect') {
           if (socket.meteor_session) {
-            sendError(socket, "Already connected", msg);
+            sendError("Already connected", msg);
             return;
           }
 
@@ -664,7 +664,7 @@ Meteor._LivedataServer = function () {
         }
 
         if (!socket.meteor_session) {
-          sendError(socket, 'Must connect first', msg);
+          sendError('Must connect first', msg);
           return;
         }
         socket.meteor_session.processMessage(msg, socket);
