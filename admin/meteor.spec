@@ -5,7 +5,7 @@
 Summary: Meteor platform and JavaScript application server
 Vendor: Meteor
 Name: meteor
-Version: 0.1.4
+Version: 0.1.5
 Release: 1
 License: AGPL-3
 Group: Networking/WWW
