@@ -119,9 +119,6 @@ _.extend(TestCaseResults.prototype, {
       this.fail({type: "instanceOf"}); // XXX what other data?
   },
 
-  // XXX should be length(), but on Chrome, functions always have a
-  // length property that is permanently 0 and can't be assigned to
-  // (it's a noop). How does vows do it??
   length: function (obj, expected_length) {
     if (obj.length === expected_length)
       this.ok();

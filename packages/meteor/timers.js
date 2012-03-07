@@ -23,6 +23,9 @@ _.extend(Meteor, {
 
   // won't be necessary once we clobber the global setTimeout
   defer: function (f) {
-    Meteor.setTimeout(f, 0);
+    // Older Firefox will pass an argument to the setTimout callback
+    // function, indicating the "actual lateness." It's non-standard,
+    // so for defer, standardize on not having it.
+    Meteor.setTimeout(function () {f();}, 0);
   }
 });
