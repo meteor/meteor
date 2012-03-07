@@ -544,7 +544,6 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
   flush: function () {
     var self = this;
-    var msg;
 
     for (var name in self.pending_data)
       for (var id in self.pending_data[name]) {
@@ -553,14 +552,21 @@ _.extend(Meteor._LivedataSubscription.prototype, {
         for (var key in self.pending_data[name][id]) {
           var value = self.pending_data[name][id][key];
 
+          if (!(name in self.snapshot))
+            self.snapshot[name] = {};
+          if (!(id in self.snapshot[name]))
+            self.snapshot[name][id] = {};
+          var snapshot = self.snapshot[name][id];
+
           if (value === undefined) {
             if (!('unset' in msg))
               msg.unset = [];
             msg.unset.push(key);
+            delete snapshot[key];
           } else {
             if (!('set' in msg))
               msg.set = {};
-            msg.set[key] = value;
+            snapshot[key] = msg.set[key] = value;
           }
         }
 
