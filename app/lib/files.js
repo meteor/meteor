@@ -157,7 +157,7 @@ var files = module.exports = {
     if (path.existsSync(filepath)) {
       var data = fs.readFileSync(filepath, 'utf8');
       var lines = data.split(/\n/);
-      if (_.any(lines, function (x) { return x === entry })) {
+      if (_.any(lines, function (x) { return x === entry; })) {
         // already there do nothing
       } else {
         // rewrite file w/ new entry.
@@ -297,6 +297,32 @@ var files = module.exports = {
         }
       }
     });
+  },
+
+  // Make a temporary directory. Returns the path to the newly created
+  // directory. Caller is responsible for deleting the directory later.
+  mkdtemp: function (prefix) {
+    prefix = prefix || 'meteor-temp-';
+    // find /tmp
+    var tmp_dir = _.first(_.map(['TMPDIR', 'TMP', 'TEMP'], function (t) {
+      return process.env[t];
+    }).filter(_.identity)) || '/tmp';
+    tmp_dir = fs.realpathSync(tmp_dir);
+
+    // make the directory. give it 3 tries in case of collisions from
+    // crappy random.
+    var tries = 3;
+    while (tries > 0) {
+      var dir_path = path.join(
+        tmp_dir, prefix + (Math.random() * 0x100000000 + 1).toString(36));
+      try {
+        fs.mkdirSync(dir_path, 0755);
+        return dir_path;
+      } catch (err) {
+        tries--;
+      }
+    }
+    throw new Error("failed to make tempory directory in " + tmp_dir);
   }
 
 };

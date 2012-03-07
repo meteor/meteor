@@ -2,7 +2,23 @@
 
 cd `dirname $0`
 
-TARGET_DIR=/usr/local/meteor
+if [ "$PREFIX" != "" ] ; then
+    PARENT="$PREFIX"
+else
+    PARENT="/usr/local"
+fi
+TARGET_DIR="$PARENT/meteor"
+
+# XXX try to fix it up automatically?
+if [ ! -d "$PARENT" -o ! -w "$PARENT" ] ; then
+    echo "Can not write to $PARENT"
+    exit 1
+elif [ -d "$PARENT/bin" -a ! -w "$PARENT/bin" ] ; then
+    echo "Can not write to $PARENT/bin"
+    exit 1
+fi
+
+echo "Installing in $PARENT"
 
 rm -rf "$TARGET_DIR"
 
@@ -18,6 +34,6 @@ cp meteor "$TARGET_DIR/bin"
 CPR app "$TARGET_DIR"
 CPR packages "$TARGET_DIR"
 
-mkdir -p /usr/local/bin
-rm -f /usr/local/bin/meteor
-ln -s "$TARGET_DIR/bin/meteor" /usr/local/bin/meteor
+mkdir -p "$PARENT/bin"
+rm -f "$PARENT/bin/meteor"
+ln -s "$TARGET_DIR/bin/meteor" "$PARENT/bin/meteor"
