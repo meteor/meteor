@@ -63,6 +63,7 @@
 <template name="event">
   <div class="event">
     <div class="{{type}}">
+      <span>
       - {{type}}
       {{#if times}}
         <span class="xtimes">({{times}} times)</span>
@@ -75,6 +76,7 @@
       {{#if is_debuggable}}
         <span class="debug">[Debug]</a>
       {{/if}}
+      </span>
     </div>
   </div>
 </template>
