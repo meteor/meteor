@@ -89,8 +89,7 @@ elif [ "$UNAME" = "Linux" ] ; then
     ### Linux ###
     ARCH=`uname -m`
     if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
-        echo "Unsupported architecture: $ARCH"
-        echo "Meteor only supports i686 and x86_64 for now."
+        echo "Unable to install Meteor on unsupported architecture: $ARCH"
         exit 1
     fi
 
@@ -100,7 +99,7 @@ elif [ "$UNAME" = "Linux" ] ; then
         elif [ -x "/usr/bin/wget" ] ; then
             /usr/bin/wget -q $1
         else
-            echo "Can't find wget or curl."
+            echo "Unable to install Meteor: can't find wget or curl in /usr/bin."
             exit 1
         fi
     }
@@ -110,11 +109,14 @@ elif [ "$UNAME" = "Linux" ] ; then
         if [ `whoami` = 'root' ] ; then
             $*
         elif [ -x /bin/sudo -o -x /usr/bin/sudo ] ; then
-            echo "Root access required. Trying sudo. This may prompt for a password."
+            echo "Since this system includes sudo, Meteor will request root privileges to"
+            echo "install. You may be prompted for a password. If you prefer to not use"
+            echo "sudo, please re-run this script as root."
             echo "sudo $*"
             sudo $*
         else
-            echo "Root access required. Please re-run this script as root."
+            echo "Meteor requires root privileges to install. Please re-run this script as"
+            echo "root."
             exit 1
         fi
     }
@@ -125,7 +127,7 @@ elif [ "$UNAME" = "Linux" ] ; then
 
     if [ -f "/etc/debian_version" ] ; then
         ## Debian
-        echo "... detected Debian. downloading .deb"
+        echo "Detected a Debian system. Downloading install package."
         if [ "$ARCH" = "i686" ] ; then
             DEBARCH="i386"
         elif [ "$ARCH" = "x86_64" ] ; then
@@ -136,16 +138,15 @@ elif [ "$UNAME" = "Linux" ] ; then
         URL="$URLBASE/$FILE"
         download_url $URL
         if [ ! -f "$FILE" ] ; then
-            echo "Download failed."
+            echo "Error: package download failed (no .deb file in $TMPDIR)."
             exit 1
         fi
-        echo "... installing .deb"
+        echo "Installing $TMPDIR/$FILE"
         do_with_root dpkg -i "$FILE"
-
 
     elif [ -f /etc/redhat_version -o -x /bin/rpm ] ; then
         ## Redhat
-        echo "... detected RedHat. downloading .rpm"
+        echo "Detected a RedHat system. Downloading install package."
         if [ "$ARCH" = "i686" ] ; then
             RPMARCH="i386"
         else
@@ -156,14 +157,14 @@ elif [ "$UNAME" = "Linux" ] ; then
         URL="$URLBASE/$FILE"
         download_url $URL
         if [ ! -f "$FILE" ] ; then
-            echo "Download failed."
+            echo "Error: package download failed (no .rpm file in $TMPDIR)."
             exit 1
         fi
-        echo "... installing .rpm"
+        echo "Installing $TMPDIR/$FILE"
         do_with_root rpm -U --force "$FILE"
 
     else
-        echo "Unsupported Linux distribution."
+        echo "Unable to install. Meteor supports RedHat and Debian."
         exit 1
     fi
 
