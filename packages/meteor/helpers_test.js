@@ -51,6 +51,14 @@ Tinytest.add("environment - helpers", function (test) {
   Meteor._delete(x, "a", "b", "c");
   test.equal(x, {});
 
+  x = {a: {b: 99}};
+  Meteor._delete(x, "a", "b", "c", "d");
+  test.equal(x, {});
+
+  x = {a: {b: 99}};
+  Meteor._delete(x, "a", "b", "c", "d", "e", "f");
+  test.equal(x, {});
+
   x = {a: {b: {c: {d: 99}}}, x: 12};
   Meteor._delete(x, "a", "b", "c", "d");
   test.equal(x, {x: 12});

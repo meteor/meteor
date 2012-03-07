@@ -37,6 +37,8 @@ _.extend(Meteor, {
         break;
       }
       obj = obj[key];
+      if (typeof obj !== "object")
+        break;
       stack.push(obj);
     }
 

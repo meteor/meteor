@@ -42,7 +42,7 @@ _.extend(TestCaseResults.prototype, {
         var now = (+new Date);
         debugger;
         if ((+new Date) - now < 100)
-          alert("To use this feature, first open the debugger window in your browser.");
+          alert("To use this feature, first enable your browser's debugger.");
       }
       self.stop_at_offset = null;
     }
