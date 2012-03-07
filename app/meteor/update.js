@@ -71,13 +71,16 @@ updater.get_manifest(function (manifest) {
     } else if (path.existsSync("/bin/sudo") ||
                path.existsSync("/usr/bin/sudo")) {
       // spawn a sudo
-      console.log("Root access required for update. Trying sudo. This may prompt for a password.");
+      console.log("Since this system includes sudo, Meteor will request root privileges to");
+      console.log("install. You may be prompted for a password. If you prefer to not use");
+      console.log("sudo, please re-run this command as root.");
       console.log("sudo", cmd, args.join(" "));
       return spawn('sudo', [cmd].concat(args));
     }
 
     // no root, no sudo. fail
-    console.log("Root access required for update. Please re-run this command as root.");
+    console.log("Meteor requires root privileges to install. Please re-run this command");
+    console.log("as root.");
     process.exit(1);
     return null; // unreached, but makes js2 mode happy.
   };
@@ -140,7 +143,7 @@ updater.get_manifest(function (manifest) {
       var proc = run_with_root('rpm', ['-U', '--force', rpm_path]);
       proc.on('exit', function (code, signal) {
         if (code !== 0 || signal) {
-          console.log("failed to install rpm");
+          console.log("Error: failed to install Meteor RPM package.");
           return;
         }
         // success!
@@ -170,7 +173,7 @@ updater.get_manifest(function (manifest) {
 
       tar_proc.on('exit', function (code, signal) {
         if (code !== 0 || signal) {
-          console.log("failed to untar download");
+          console.log("Error: package download failed.");
           return;
         }
 
