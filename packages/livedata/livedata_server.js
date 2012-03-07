@@ -522,14 +522,38 @@ Meteor._LivedataSubscription = function (session, sub_id, priority) {
   this.snapshot = {};
   this.sent_complete = false;
 
+  // has stop() been called?
+  this.stopped = false;
+
   // stop callbacks to g/c this sub.  called w/ zero arguments.
   this.stop_callbacks = [];
 };
 
 _.extend(Meteor._LivedataSubscription.prototype, {
   stop: function () {
+    var self = this;
+
+    if (self.stopped)
+      return;
+
+    // tell listeners, so they can clean up
     for (var i = 0; i < this.stop_callbacks.length; i++)
       (this.stop_callbacks[i])();
+
+    // remove our data from the client (possibly unshadowing data from
+    // lower priority subscriptions)
+    self.pending_data = {};
+    self.pending_complete = false;
+    for (var name in self.snapshot) {
+      self.pending_data[name] = {};
+      for (var id in self.snapshot[name]) {
+        self.pending_data[name][id] = {};
+        for (var key in self.snapshot[name][id])
+          self.pending_data[name][id][key] = undefined;
+      }
+    }
+    self.flush();
+    self.stopped = true;
   },
 
   onStop: function (callback) {
@@ -567,6 +591,9 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
   flush: function () {
     var self = this;
+
+    if (self.stopped)
+      return;
 
     for (var name in self.pending_data)
       for (var id in self.pending_data[name]) {
