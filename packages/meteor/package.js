@@ -29,8 +29,10 @@ Package.register_extension(
 
 Package.on_use(function (api, where) {
   api.use('underscore', ['client', 'server']);
+
   api.add_files('client_environment.js', 'client');
   api.add_files('server_environment.js', 'server');
+  api.add_files('helpers.js', ['client', 'server']);
   api.add_files('timers.js', ['client', 'server']);
 
   // dynamic variables, bindEnvironment
@@ -46,5 +48,6 @@ Package.on_test(function (api) {
   api.add_files('client_environment_test.js', 'client');
   api.add_files('server_environment_test.js', 'server');
 
+  api.add_files('helpers_test.js', ['client', 'server']);
   api.add_files('dynamics_test.js', ['client', 'server']);
 });
