@@ -482,7 +482,7 @@ _.extend(Meteor._LivedataSession.prototype, {
     provided_by = _.values(provided_by || {});
 
     if (provided_by.length === 0)
-      return; // no value for key
+      return undefined; // no value for key
 
     // Which one is highest priority?
     var authority = _.max(provided_by, function (sub) {
