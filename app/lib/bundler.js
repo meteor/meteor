@@ -384,7 +384,7 @@ _.extend(Bundle.prototype, {
     var hash = crypto.createHash('sha1');
     hash.update(final_code);
     var digest = hash.digest('hex');
-    var name = digest + ".js";
+    var name = '/' + digest + ".js";
 
     self.files.client_cacheable[name] = new Buffer(final_code);
     self.js.client = [name];
@@ -403,7 +403,7 @@ _.extend(Bundle.prototype, {
     hash = crypto.createHash('sha1');
     hash.update(final_css);
     digest = hash.digest('hex');
-    name = digest + ".css";
+    name = '/' + digest + ".css";
 
     self.files.client_cacheable[name] = new Buffer(final_css);
     self.css = [name];
