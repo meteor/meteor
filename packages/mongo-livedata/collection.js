@@ -19,9 +19,6 @@ Meteor.Collection = function (name, manager, driver) {
       driver = Meteor._LocalCollectionDriver;
   }
 
-  // XXX LivedataServer.publish() presently reaches into us and reads
-  // _name. Total hack, needs to go away.
-  self._name = name;
   self._manager = manager;
   self._driver = driver;
   self._collection = driver.open(name);
