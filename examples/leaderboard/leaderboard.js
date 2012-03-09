@@ -54,11 +54,10 @@ if (Meteor.is_server) {
   // On server startup, create some players if the database is empty.
   Meteor.startup(function () {
     if (Players.find().count() === 0) {
-      var names = ["Glinnes Hulden", "Shira Hulden", "Denzel Warhound",
-                   "Lute Casagave", "Akadie", "Thammas, Lord Gensifer",
-                   "Ervil Savat", "Duissane Trevanyi", "Sagmondo Bandolio",
-                   "Rhyl Shermatz", "Yalden Wirp", "Tyran Lucho",
-                   "Bump Candolf", "Wilmer Guff", "Carbo Gilweg"];
+      var names = ["Glinnes Hulden", "Shira Hulden", "Ervil Savat",
+                   "Lute Casagave", "Akadie", "Rhyl Shermatz",
+                   "Yalden Wirp", "Tyran Lucho", "Bump Candolf",
+                   "Carbo Gilweg"];
       for (var i = 0; i < names.length; i++)
         Players.insert({name: names[i], score: Math.floor(Math.random()*10)*5});
     }
