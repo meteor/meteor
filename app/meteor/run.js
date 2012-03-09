@@ -69,7 +69,8 @@ var start_proxy = function (outer_port, inner_port, callback) {
 
       _.each(server_log, function(log) {
         _.each(log, function(val, key) {
-          res.write(val);
+          if (val)
+            res.write(val);
           // deal with mixed line endings! XXX
           if (key !== 'stdout' && key !== 'stderr')
             res.write("\n");
