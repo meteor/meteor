@@ -60,21 +60,8 @@ cmd + ": You're not in a Meteor project directory.\n" +
 // not, return null.
 var find_mongo_port = function (cmd) {
   var app_dir = require_project(cmd);
-
-  var fs = require("fs");
-  var pid_path = path.join(app_dir, '.meteor/local/mongod.pid');
-  var port_path = path.join(app_dir, '.meteor/local/mongod.port');
-  var port;
-
-  try {
-    var pid_data = parseInt(fs.readFileSync(pid_path));
-    process.kill(pid_data, 0); // make sure it is still alive
-    port = parseInt(fs.readFileSync(port_path));
-  } catch (e) {
-    return null;
-  }
-
-  return port;
+  var mongo_runner = require('../lib/mongo_runner.js');
+  return mongo_runner.find_mongo_port(app_dir);
 };
 
 Commands = [];
