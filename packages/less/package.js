@@ -2,7 +2,7 @@ Package.describe({
   summary: "The dynamic stylesheet language."
 });
 
-var less = require('less')
+var less = require('less');
 var fs = require('fs');
 
 Package.register_extension(
@@ -13,7 +13,9 @@ Package.register_extension(
     less.render(contents.toString('utf8'), function (err, css) {
       // XXX why is this a callback? it's not async.
       // XXX report compile failures better?
-      if (err) throw new Error(err);
+      if (err) throw new Error(
+        "less compile error: " + source_path + ": " +
+          (err.message || ""));
 
       bundle.add_resource({
         type: "css",
