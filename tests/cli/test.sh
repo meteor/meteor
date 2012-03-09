@@ -52,12 +52,12 @@ cd skel
 echo "... add/remove/list"
 
 $METEOR list | grep "backbone" > /dev/null
-$METEOR list --using 2>&1 | grep "This project doesn't" > /dev/null
+! $METEOR list --using 2>&1 | grep "backbone" > /dev/null
 $METEOR add backbone 2>&1 | grep "backbone:" > /dev/null
 $METEOR list --using | grep "backbone" > /dev/null
 grep backbone .meteor/packages > /dev/null
 $METEOR remove backbone 2>&1 | grep "backbone: removed" > /dev/null
-$METEOR list --using 2>&1 | grep "This project doesn't" > /dev/null
+! $METEOR list --using 2>&1 | grep "backbone" > /dev/null
 
 echo "... bundle"
 
