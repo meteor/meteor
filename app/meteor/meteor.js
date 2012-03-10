@@ -56,25 +56,10 @@ cmd + ": You're not in a Meteor project directory.\n" +
   process.exit(1);
 };
 
-// See if mongo is running already. If so, return the current port. If
-// not, return null.
-var find_mongo_port = function (cmd) {
+var find_mongo_port = function (cmd, callback) {
   var app_dir = require_project(cmd);
-
-  var fs = require("fs");
-  var pid_path = path.join(app_dir, '.meteor/local/mongod.pid');
-  var port_path = path.join(app_dir, '.meteor/local/mongod.port');
-  var port;
-
-  try {
-    var pid_data = parseInt(fs.readFileSync(pid_path));
-    process.kill(pid_data, 0); // make sure it is still alive
-    port = parseInt(fs.readFileSync(port_path));
-  } catch (e) {
-    return null;
-  }
-
-  return port;
+  var mongo_runner = require('../lib/mongo_runner.js');
+  mongo_runner.find_mongo_port(app_dir, callback);
 };
 
 Commands = [];
@@ -401,22 +386,23 @@ Commands.push({
 
     if (new_argv._.length === 1) {
       // localhost mode
-      var mongod_port = find_mongo_port("mongo");
-      if (!mongod_port) {
-        process.stdout.write(
+      find_mongo_port("mongo", function (mongod_port) {
+        if (!mongod_port) {
+          process.stdout.write(
 "mongo: Meteor isn't running.\n" +
 "\n" +
 "This command only works while Meteor is running your application\n" +
 "locally. Start your application first.\n");
-        process.exit(1);
-      }
+          process.exit(1);
+        }
 
-      var mongo_url = "mongodb://127.0.0.1:" + mongod_port + "/meteor";
+        var mongo_url = "mongodb://127.0.0.1:" + mongod_port + "/meteor";
 
-      if (new_argv.url)
-        console.log(mongo_url)
-      else
-        deploy.run_mongo_shell(mongo_url);
+        if (new_argv.url)
+          console.log(mongo_url)
+        else
+          deploy.run_mongo_shell(mongo_url);
+      });
 
     } else if (new_argv._.length === 2) {
       // remote mode
@@ -517,20 +503,21 @@ Commands.push({
 
     var app_dir = path.resolve(require_project("reset"));
 
-    var mongod_port = find_mongo_port("reset");
-    if (mongod_port) {
-      process.stdout.write(
+    find_mongo_port("reset", function (mongod_port) {
+      if (mongod_port) {
+        process.stdout.write(
 "reset: Meteor is running.\n" +
 "\n" +
 "This command does not work while Meteor is running your application.\n" +
 "Exit the running meteor development server.\n");
-      process.exit(1);
-    }
+        process.exit(1);
+      }
 
-    var local_dir = path.join(app_dir, '.meteor/local');
-    files.rm_recursive(local_dir);
+      var local_dir = path.join(app_dir, '.meteor/local');
+      files.rm_recursive(local_dir);
 
-    process.stdout.write("Project reset.\n");
+      process.stdout.write("Project reset.\n");
+    });
   }
 });
 
