@@ -10,6 +10,7 @@
       {{> concepts }}
       {{> api }}
       {{> packages }}
+      {{> commandline }}
     </div>
   </div>
 
@@ -20,8 +21,7 @@
 
 <template name="nav">
 <div>
-  <h1>Version 0.1.5</h2>
-  <hr />
+  <h1>Meteor 0.1.5</h2>
   {{#each sections}}
   {{#if type "spacer"}}
     <div class="spacer"> </div>
@@ -32,3 +32,21 @@
   {{/each}}
 </div>
 </template>
+
+
+
+<template name="dtdd_helper">
+<dt><span class="name">{{{name}}}</span>
+  {{#if type}}<span class="type">{{type}}</span>{{/if}}
+</dt>
+<dd>{{#better_markdown}}{{{descr}}}{{/better_markdown}}</dd>
+</template>
+
+
+
+<template name="warning_helper">
+  <div class="warning">
+    {{#better_markdown}}{{{this}}}{{/better_markdown}}
+  </div>
+</template>
+
