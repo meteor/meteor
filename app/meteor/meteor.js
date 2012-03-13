@@ -331,7 +331,17 @@ Commands.push({
     var build_dir = path.join(app_dir, '.meteor/local/build_tar');
     var bundle_path = path.join(build_dir, 'bundle');
     var output_path = path.resolve(argv._[0]); // get absolute path
-    require('../lib/bundler.js').bundle(app_dir, bundle_path);
+
+    var bundler = require('../lib/bundler.js');
+    var errors = bundler.bundle(app_dir, bundle_path);
+    if (errors) {
+      process.stdout.write("Errors prevented bundling:\n");
+      _.each(errors, function (e) {
+        process.stdout.write(e + "\n");
+      });
+      files.rm_recursive(build_dir);
+      process.exit(1);
+    }
 
     var cp = require('child_process');
     cp.execFile('/usr/bin/env',

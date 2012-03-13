@@ -67,7 +67,16 @@ var bundle_and_deploy = function (site, app_dir, opt_debug, opt_tests,
                       include_tests: opt_tests };
 
   process.stdout.write('Deploying to ' + site + '.  Bundling ... ');
-  require('../lib/bundler.js').bundle(app_dir, bundle_path, bundle_opts);
+  var bundler = require('../lib/bundler.js');
+  var errors = bundler.bundle(app_dir, bundle_path, bundle_opts);
+  if (errors) {
+    process.stdout.write("\n\nErrors prevented deploying:\n");
+    _.each(errors, function (e) {
+      process.stdout.write(e + "\n");
+    });
+    files.rm_recursive(build_dir);
+    process.exit(1);
+  }
 
   process.stdout.write('uploading ... ');
 

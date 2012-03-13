@@ -10,19 +10,27 @@ Package.register_extension(
     serve_path = serve_path + '.css';
 
     var contents = fs.readFileSync(source_path);
-    less.render(contents.toString('utf8'), function (err, css) {
-      // XXX why is this a callback? it's not async.
-      // XXX report compile failures better?
-      if (err) throw new Error(
-        "less compile error: " + source_path + ": " +
-          (err.message || ""));
 
-      bundle.add_resource({
-        type: "css",
-        path: serve_path,
-        data: new Buffer(css),
-        where: where
+    try {
+      less.render(contents.toString('utf8'), function (err, css) {
+        // XXX why is this a callback? it's not async.
+        if (err) {
+          bundle.error(source_path + ": Less compiler error: " + err.message);
+          return;
+        }
+
+        bundle.add_resource({
+          type: "css",
+          path: serve_path,
+          data: new Buffer(css),
+          where: where
+        });
       });
-    });
+    } catch (e) {
+      // less.render() is supposed to report any errors via its
+      // callback. But sometimes, it throws them instead. This is
+      // probably a bug in less. Be prepared for either behavior.
+      bundle.error(source_path + ": Less compiler error: " + err.message);
+    }
   }
 );

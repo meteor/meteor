@@ -66,7 +66,7 @@ var start_proxy = function (outer_port, inner_port, callback) {
       // XXX formatting! text/plain is bad
       res.writeHead(200, {'Content-Type': 'text/plain'});
 
-      res.write("Your app is crashed. Here's the latest log.\n\n");
+      res.write("Your app is crashing. Here's the latest log.\n\n");
 
       _.each(server_log, function(log) {
         _.each(log, function(val, key) {
@@ -134,9 +134,9 @@ var log_to_clients = function (msg) {
 
   // log to console
   //
-  // XXX this is a mess. some lines have newlines some don't.  this
-  // whole thing should be redone. it is the result of doing it very
-  // differently and changing over quickly.
+  // XXX this is a mess. some lines have newlines, and some don't.
+  // this whole thing should be redone. it is the result of doing it
+  // very differently and changing over quickly.
   _.each(msg, function (val, key) {
     if (key === "stdout")
       process.stdout.write(val);
@@ -446,25 +446,6 @@ exports.run = function (app_dir, bundle_opts, port) {
   var test_server_handle;
   var watcher;
 
-  var bundle = function () {
-    bundler.bundle(app_dir, bundle_path, bundle_opts);
-
-    var deps_raw;
-    try {
-      deps_raw =
-        fs.readFileSync(path.join(bundle_path, 'dependencies.json'), 'utf8');
-    } catch (e) {
-      if (!warned_about_no_deps_info) {
-        process.stdout.write("No dependency info in bundle. " +
-                             "Filesystem monitoring disabled.\n");
-        warned_about_no_deps_info = true;
-      }
-    }
-
-    if (deps_raw)
-      deps_info = JSON.parse(deps_raw.toString());
-  };
-
   var start_watching = function () {
     if (deps_info) {
       if (watcher)
@@ -489,10 +470,29 @@ exports.run = function (app_dir, bundle_opts, port) {
 
     server_log = [];
 
+    var errors = bundler.bundle(app_dir, bundle_path, bundle_opts);
+
+    var deps_raw;
     try {
-      bundle();
+      deps_raw =
+        fs.readFileSync(path.join(bundle_path, 'dependencies.json'), 'utf8');
     } catch (e) {
-      log_to_clients({system: e.stack});
+      if (!warned_about_no_deps_info) {
+        process.stdout.write("No dependency info in bundle. " +
+                             "Filesystem monitoring disabled.\n");
+        warned_about_no_deps_info = true;
+      }
+    }
+
+    if (deps_raw)
+      deps_info = JSON.parse(deps_raw.toString());
+
+    if (errors) {
+      log_to_clients({stdout: "Errors prevented startup:\n"});
+      _.each(errors, function (e) {
+        log_to_clients({stdout: e + "\n"});
+      });
+
       if (!deps_info) {
         // We don't know what files to watch for changes, so we have to exit.
         process.stdout.write("\nPlease fix the problem and restart.\n");
@@ -527,18 +527,22 @@ exports.run = function (app_dir, bundle_opts, port) {
 
     // launch test bundle and server if needed.
     if (test_bundle_opts) {
-      try {
+      var errors =
         bundler.bundle(app_dir, test_bundle_path, test_bundle_opts);
+      if (errors) {
+        log_to_clients({system: "Errors prevented test server from starting:"});
+        _.each(errors, function (e) {
+          log_to_clients({system: e});
+        });
+        files.rm_recursive(test_bundle_path);
+      } else {
         test_server_handle = start_server(
           test_bundle_path, test_port, test_mongo_url, function () {
             // No restarting or crash loop prevention on the test server
             // for now. We'll see how annoying it is.
             log_to_clients({'system': "Test server crashed."});
           });
-      } catch (e) {
-        log_to_clients({'system': "Test bundle failure."});
       }
-
     };
   };
 

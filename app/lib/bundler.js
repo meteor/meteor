@@ -123,6 +123,13 @@ var PackageInstance = function (pkg, bundle) {
         var pkg = packages.get(name);
         self.bundle.include_tests(pkg);
       });
+    },
+
+    // Report an error. It should be a single human-readable
+    // string. If any errors are reported, the bundling is considered
+    // to have failed.
+    error: function (message) {
+      self.bundle.errors.push(message);
     }
   };
 
@@ -219,6 +226,9 @@ var Bundle = function () {
   self.head = [];
   self.body = [];
 
+  // list of errors encountered while bundling. array of string.
+  self.errors = [];
+
   // the API available from register_extension handlers
   self.api = {
     /**
@@ -291,6 +301,13 @@ var Bundle = function () {
           throw new Error("Unknown type " + options.type);
         }
       });
+    },
+
+    // Report an error. It should be a single human-readable
+    // string. If any errors are reported, the bundling is considered
+    // to have failed.
+    error: function (message) {
+      self.errors.push(message);
     }
   };
 };
@@ -576,8 +593,14 @@ _.extend(Bundle.prototype, {
  * doesn't exist (it will be a directory), and removed if it does
  * exist.
  *
- * It's unlikely to be useful to run a project without including its
- * tests, but it's well-defined.
+ * Returns undefined on success. On failure, returns an array of
+ * strings, the error messages. On failure, a bundle will still be
+ * written to output_path. It is probably broken, but it is supposed
+ * to contain correct dependency information, so you can tell when to
+ * try bundling again.
+ *
+ * It's unlikely to be useful to run a package (as opposed to an app)
+ * without including its tests, but it's well-defined.
  *
  * options include:
  * - no_minify : don't minify the assets
@@ -603,7 +626,7 @@ exports.bundle = function (project_dir, output_path, options) {
     bundle.include_tests(project);
   }
 
-  // Minify and bundle
+  // Minify, if requested
   if (!options.no_minify)
     bundle.minify();
 
@@ -612,4 +635,7 @@ exports.bundle = function (project_dir, output_path, options) {
     options.skip_dev_bundle ? "skip" : (
       options.symlink_dev_bundle ? "symlink" : "copy");
   bundle.write_to_directory(output_path, project_dir, dev_bundle_mode);
+
+  if (bundle.errors.length)
+    return bundle.errors;
 };
