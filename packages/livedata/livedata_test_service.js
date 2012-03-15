@@ -1,4 +1,4 @@
-App.methods({
+Meteor.methods({
   echo: function (/* arguments */) {
     return _.toArray(arguments);
   },
@@ -31,7 +31,7 @@ if (Meteor.is_server)
                                               world: world}});
   });
 
-App.methods({
+Meteor.methods({
   'ledger/transfer': function (world, from_name, to_name, amount, cheat) {
     var from = Ledger.findOne({name: from_name, world: world});
     var to = Ledger.findOne({name: to_name, world: world});

@@ -2,13 +2,13 @@ Meteor.startup(function () {
   Meteor._ServerTestResults.remove();
 });
 
-App.publish('tinytest/results', function (run_id) {
+Meteor.publish('tinytest/results', function (run_id) {
   return Meteor._ServerTestResults.find({run_id: run_id},
                                         {key: {collection: 'tinytest_results',
                                                run_id: run_id}});
 });
 
-App.methods({
+Meteor.methods({
   'tinytest/run': function (run_id) {
     var request = this;
     request.beginAsync();

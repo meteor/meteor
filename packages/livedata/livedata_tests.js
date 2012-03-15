@@ -115,18 +115,18 @@ Tinytest.add("livedata - methods with colliding names", function (test) {
   var x = LocalCollection.uuid();
   var m = {};
   m[x] = function () {};
-  App.methods(m);
+  Meteor.methods(m);
 
   test.throws(function () {
-    App.methods(m);
+    Meteor.methods(m);
   });
 });
 
 testAsyncMulti("livedata - basic method invocation", [
   function (test, expect) {
     try {
-      var ret = App.call("unknown method",
-                         expect(failure(test, 404, "Method not found")));
+      var ret = Meteor.call("unknown method",
+                            expect(failure(test, 404, "Method not found")));
     } catch (e) {
       // throws immediately on server, but still calls callback
       test.isTrue(Meteor.is_server);
@@ -139,31 +139,31 @@ testAsyncMulti("livedata - basic method invocation", [
   },
 
   function (test, expect) {
-    var ret = App.call("echo", expect(undefined, []));
+    var ret = Meteor.call("echo", expect(undefined, []));
     test.equal(ret, []);
   },
 
   function (test, expect) {
-    var ret = App.call("echo", 12, expect(undefined, [12]));
+    var ret = Meteor.call("echo", 12, expect(undefined, [12]));
     test.equal(ret, [12]);
   },
 
   function (test, expect) {
-    var ret = App.call("echo", 12, {x: 13}, expect(undefined, [12, {x: 13}]));
+    var ret = Meteor.call("echo", 12, {x: 13}, expect(undefined, [12, {x: 13}]));
     test.equal(ret, [12, {x: 13}]);
   },
 
   function (test, expect) {
     test.throws(function () {
-      var ret = App.call("exception", "both",
-                         expect(failure(test, 500, "Internal server error")));
+      var ret = Meteor.call("exception", "both",
+                            expect(failure(test, 500, "Internal server error")));
     });
   },
 
   function (test, expect) {
     try {
-      var ret = App.call("exception", "server",
-                         expect(failure(test, 500, "Internal server error")));
+      var ret = Meteor.call("exception", "server",
+                            expect(failure(test, 500, "Internal server error")));
     } catch (e) {
       test.isTrue(Meteor.is_server);
       return;
@@ -176,10 +176,10 @@ testAsyncMulti("livedata - basic method invocation", [
   function (test, expect) {
     if (Meteor.is_client) {
       test.throws(function () {
-        var ret = App.call("exception", "client", expect(undefined, undefined));
+        var ret = Meteor.call("exception", "client", expect(undefined, undefined));
       });
     } else {
-      var ret = App.call("exception", "client", expect(undefined, undefined));
+      var ret = Meteor.call("exception", "client", expect(undefined, undefined));
       test.equal(ret, undefined);
     }
   }
@@ -194,6 +194,13 @@ var checkBalances = function (test, a, b) {
   test.equal(bob.balance, b);
 }
 
+var onQuiesce = function (f) {
+  if (Meteor.is_server)
+    f();
+  else
+    Meteor.default_connection.onQuiesce(f);
+};
+
 // would be nice to have a database-aware test harness of some kind --
 // this is a big hack (and XXX pollutes the global test namespace)
 testAsyncMulti("livedata - compound methods", [
@@ -204,20 +211,20 @@ testAsyncMulti("livedata - compound methods", [
     Ledger.insert({name: "bob", balance: 50, world: test.runId()});
   },
   function (test, expect) {
-    App.call('ledger/transfer', test.runId(), "alice", "bob", 10,
-             expect(undefined, undefined));
+    Meteor.call('ledger/transfer', test.runId(), "alice", "bob", 10,
+                expect(undefined, undefined));
 
     checkBalances(test, 90, 60);
 
     var release = expect();
-    App.onQuiesce(function () {
+    onQuiesce(function () {
       checkBalances(test, 90, 60);
       Meteor.defer(release);
     });
   },
   function (test, expect) {
-    App.call('ledger/transfer', test.runId(), "alice", "bob", 100, true,
-             expect(failure(test, 409)));
+    Meteor.call('ledger/transfer', test.runId(), "alice", "bob", 100, true,
+                expect(failure(test, 409)));
 
     if (Meteor.is_client)
       // client can fool itself by cheating, but only until the sync
@@ -227,7 +234,7 @@ testAsyncMulti("livedata - compound methods", [
       checkBalances(test, 90, 60);
 
     var release = expect();
-    App.onQuiesce(function () {
+    onQuiesce(function () {
       checkBalances(test, 90, 60);
       Meteor.defer(release);
     });

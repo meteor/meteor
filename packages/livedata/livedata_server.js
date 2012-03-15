@@ -910,12 +910,5 @@ _.extend(Meteor._LivedataServer.prototype, {
       self.on_autopublish.push(f);
     else
       f();
-  },
-
-  // called when we are up-to-date. intended for use only in tests.
-  onQuiesce: function (f) {
-    var self = this;
-    // the server is always up-to-date
-    f();
   }
 });

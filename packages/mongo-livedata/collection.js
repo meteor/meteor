@@ -10,10 +10,13 @@ Meteor.Collection = function (name, manager, driver) {
   }
 
   // note: nameless collections never have a manager
-  manager = name && (manager || App);
+  manager = name && (manager ||
+                     (Meteor.is_client ?
+                      Meteor.default_connection : Meteor.default_server));
 
   if (!driver) {
-    if (name && manager === App && Meteor._RemoteCollectionDriver)
+    if (name && manager === Meteor.default_server &&
+        Meteor._RemoteCollectionDriver)
       driver = Meteor._RemoteCollectionDriver;
     else
       driver = Meteor._LocalCollectionDriver;
