@@ -11,6 +11,7 @@ Meteor._ServerMethodInvocation = function (name, handler) {
   self._handler = handler;
   self._async = false;
   self._responded = false;
+  self._response_was_error = null;
   self._autoresponded = false;
   self._threw = false;
   self._callback = null;
@@ -72,6 +73,10 @@ _.extend(Meteor._ServerMethodInvocation.prototype, {
       // code is responding more than once.
       if (from === "throw")
         return;
+      if (from === "sync" && self._response_was_error)
+        // it has to be OK to call this.error from a sync method,
+        // because how else would you signal an error?
+        return;
       if (self._autoresponded)
         throw new Error(
           "The method has already returned, so it is too late to call " +
@@ -83,6 +88,7 @@ _.extend(Meteor._ServerMethodInvocation.prototype, {
           "respond() or error() may only be called once per request");
     }
     self._responded = true;
+    self._response_was_error = !!error;
     self._autoresponded = (from === "sync");
 
     // if we haven't yet yielded to the next method in the queue, do
