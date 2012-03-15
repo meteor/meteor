@@ -88,17 +88,29 @@ Meteor.Collection = function (name, manager, driver) {
     self._prefix = '/' + name + '/';
     m[self._prefix + 'insert'] = function (/* selector, options */) {
       self._maybe_snapshot();
-      return self._collection.insert.apply(self._collection, _.toArray(arguments));
+      try {
+        self._collection.insert.apply(self._collection, _.toArray(arguments));
+      } catch (e) {
+        this.error({error: 500, reason: "Database write failed"});
+      }
     };
 
     m[self._prefix + 'update'] = function (/* selector, mutator, options */) {
       self._maybe_snapshot();
-      return self._collection.update.apply(self._collection, _.toArray(arguments));
+      try {
+        self._collection.update.apply(self._collection, _.toArray(arguments));
+      } catch (e) {
+        this.error({error: 500, reason: "Database write failed"});
+      }
     };
 
     m[self._prefix + 'remove'] = function (/* selector */) {
       self._maybe_snapshot();
-      return self._collection.remove.apply(self._collection, _.toArray(arguments));
+      try {
+        self._collection.remove.apply(self._collection, _.toArray(arguments));
+      } catch (e) {
+        this.error({error: 500, reason: "Database write failed"});
+      }
     };
 
     manager.methods(m);
@@ -132,43 +144,70 @@ _.extend(Meteor.Collection.prototype, {
       self._collection.snapshot();
       self._was_snapshot = true;
     }
-  },
-
-  // XXX provide a way for the caller to find out about errors from
-  // the server? probably the answer is: detect a function at the end
-  // of the arguments, use as a callback ... same semantics as methods
-  // usually have?
-
-  insert: function (doc) {
-    var self = this;
-
-    // shallow-copy the document and generate an ID
-    doc = _.extend({}, doc);
-    doc._id = Meteor.uuid();
-
-    if (self._manager)
-      self._manager.call(self._prefix + 'insert', doc);
-    else
-      self._collection.insert(doc);
-
-    return doc;
-  },
-
-  update: function (/* arguments */) {
-    var self = this;
-
-    if (self._manager)
-      self._manager.apply(self._prefix + 'update', _.toArray(arguments));
-    else
-      self._collection.update.apply(self._collection, _.toArray(arguments));
-  },
-
-  remove: function (/* arguments */) {
-    var self = this;
-
-    if (self._manager)
-      self._manager.apply(self._prefix + 'remove', _.toArray(arguments));
-    else
-      self._collection.remove.apply(self._collection, _.toArray(arguments));
   }
+});
+
+// 'insert' returns a copy of the inserted document with the _id
+// added. the others return nothing. all of them may throw exceptions
+// (see below.)
+//
+// all of them can take a function as the last argument. if provided,
+// it will be called when the actual result of the operation is known
+// from the database. it will be called with no arguments if the
+// operation succeeded, or with one argument, the DDP error, if it
+// failed. if no callback is provided, then if an error happens, it
+// will be logged with Meteor._debug.
+//
+// if the operation fails before returning (eg, if on the server the
+// database returns failure), then an exception is raised AND the
+// callback (if provided) is called.
+//
+// database drivers SHOULD default to doing the operations
+// synchronously, so that they don't return until the database has
+// received them, but in the future we MAY provide a flag to turn this
+// off.
+_.each(["insert", "update", "remove"], function (name) {
+  Meteor.Collection.prototype[name] = function (/* arguments */) {
+    var self = this;
+    var args = _.toArray(arguments);
+
+    if (args.length && args[args.length - 1] instanceof Function)
+      var callback = args.pop();
+
+    if (name === "insert") {
+      if (!args.length)
+        throw new Error("insert requires an argument");
+      // shallow-copy the document and generate an ID
+      args[0] = _.extend({}, args[0]);
+      if ('_id' in args[0])
+        throw new Error("Do not pass an _id to insert. Meteor will generate the _id for you.");
+      args[0]._id = Meteor.uuid();
+      var ret = args[0];
+    }
+
+    if (self._manager) {
+      // NB: on failure, allow exception to propagate
+      self._manager.apply(self._prefix + name, args, function (err) {
+        if (err) {
+          if (callback)
+            callback(err);
+          else
+            Meteor._debug(name + " failed: " + err.error + " -- " + err.reason);
+        }
+      });
+    }
+    else {
+      try {
+        self._collection[name].apply(self._collection, args);
+      } catch (e) {
+        if (callback)
+          callback({error: 500, reason: "Local database threw exception",
+                    detail: e.stack});
+        throw e;
+      }
+      callback && callback();
+    }
+
+    return ret;
+  };
 });
