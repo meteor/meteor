@@ -84,7 +84,7 @@ var testAsyncMulti = function (name, funcs) {
           em.cancel();
           test.exception(exception);
           Meteor.clearTimeout(timer);
-          onComplete();
+          // Because we called test.exception, we're not to call onComplete.
           return;
         }
         em.done();
