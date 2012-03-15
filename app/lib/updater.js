@@ -5,6 +5,8 @@ var https = require("https");
 var path = require("path");
 var semver = require("semver");
 
+var files = require("./files.js")
+
 var manifest_options = {
   host: 's3.amazonaws.com',
   path: '/com.meteor.static/update/manifest.json'
@@ -54,4 +56,20 @@ exports.needs_upgrade = function (version) {
   if (!version) return false;
 
   return semver.lt(exports.CURRENT_VERSION, version);
+};
+
+
+exports.git_sha = function () {
+  var d = files.get_dev_bundle();
+  var f = path.join(d, ".git_version.txt");
+
+  if (path.existsSync(f)) {
+    try {
+      var contents = fs.readFileSync(f, 'utf8');
+      contents = contents.replace(/\s+$/, "");
+      return contents;
+    } catch (err) { }
+  }
+
+  return null;
 };

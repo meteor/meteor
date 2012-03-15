@@ -549,7 +549,16 @@ var main = function() {
 
   if (argv.version) {
     var updater = require('../lib/updater.js');
-    process.stdout.write("Meteor version " + updater.CURRENT_VERSION + "\n");
+    var sha = updater.git_sha();
+
+    process.stdout.write("Meteor version " + updater.CURRENT_VERSION);
+
+    if (files.in_checkout())
+      process.stdout.write(" (git checkout)");
+    else if (sha)
+      process.stdout.write(" (" + sha.substr(0, 10) + ")");
+
+    process.stdout.write("\n");
     process.exit(0);
   }
 

@@ -37,3 +37,6 @@ CPR packages "$TARGET_DIR"
 mkdir -p "$PARENT/bin"
 rm -f "$PARENT/bin/meteor"
 ln -s "$TARGET_DIR/bin/meteor" "$PARENT/bin/meteor"
+
+# mark directory with current git sha
+git rev-parse HEAD > "$TARGET_DIR/.git_version.txt"
