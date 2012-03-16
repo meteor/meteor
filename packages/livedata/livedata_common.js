@@ -39,3 +39,5 @@ Meteor.Error = function (error, reason, details) {
   // it doesn't need to be pretty.)
   self.details = details;
 };
+
+Meteor.Error.prototype = new Error;
