@@ -1,66 +1,7 @@
-Meteor._ClientMethodInvocation = function (name, handler) {
-  var self = this;
-
-  // XXX need: user, setRestartHook, setUser (simulated??)
-
-  self._enclosing = null;
-  self.isSimulation = null;
-  self._name = name;
-  self._handler = handler;
-  self._callback = null;
-  self._id = null;
-};
-
-_.extend(Meteor._ClientMethodInvocation.prototype, {
-  beginAsync: function () {
-    // XXX need a much better error message!
-    // duplicated in livedata_server
-    throw new Error("Simulated methods may not be asynchronous");
-  },
-
-  _run: function (args, callback, enqueue) {
-    var self = this;
-    self._enclosing = Meteor._CurrentInvocation.get();
-    self._callback = callback;
-    self.isSimulation = true; // NB: refers to child invocations, not to us
-
-    // run locally (if we have a stub for it)
-    if (self._handler) {
-      try {
-        var ret = Meteor._CurrentInvocation.withValue(self, function () {
-          return self._handler.apply(self, args);
-        });
-      } catch (e) {
-        var stub_exception = e;
-      }
-    }
-
-    if (self._enclosing && self._enclosing.isSimulation) {
-      // In simulation mode, never do an RPC. Use the result of
-      // running the stub instead.
-      if (self._callback) {
-        if (stub_exception)
-          self._callback({error: 500, reason: "Stub threw exception"});
-        else
-          self._callback(ret);
-      }
-    } else {
-      // This invocation is real, not a simulation. Do the RPC.
-
-      // Note that it is important that the function totally complete,
-      // locally, before the message is sent to the server. (Or at
-      // least, we need to guarantee that the snapshot is not restored
-      // until the local copy of the function has stopped doing writes.)
-
-      enqueue({msg: 'method', method: self._name, params: args},
-              self._callback);
-    }
-
-    if (stub_exception)
-      throw stub_exception;
-    return ret;
-  }
-});
+if (Meteor.is_server) {
+  // XXX namespacing
+  var Future = __meteor_bootstrap__.require('fibers/future');
+}
 
 // list of subscription tokens outstanding during a
 // captureDependencies run. only set when we're doing a run. The fact
@@ -294,7 +235,6 @@ _.extend(Meteor._LivedataConnection.prototype, {
   apply: function (name, args, callback) {
     var self = this;
     var enclosing = Meteor._CurrentInvocation.get();
-    var handler = self.method_handlers[name];
 
     if (callback)
       // XXX would it be better form to do the binding in stream.on,
@@ -304,20 +244,101 @@ _.extend(Meteor._LivedataConnection.prototype, {
         Meteor._debug("Exception while delivering result of invoking '" +
                       name + "'", e.stack);
       });
-    else
-      callback = function () {};
 
-    var enqueue = function (msg, callback) {
-      msg.id = '' + (self.next_method_id++);
-      self.outstanding_methods.push({
-        msg: msg, callback: callback});
-      self.unsatisfied_methods[msg.id] = true;
-      self.stream.send(JSON.stringify(msg));
+    var is_simulation = enclosing && enclosing.is_simulation;
+    if (Meteor.is_client) {
+      // If on a client, run the stub, if we have one. The stub is
+      // supposed to make some temporary writes to the database to
+      // give the user a smooth experience until the actual result of
+      // executing the method comes back from the server (whereupon
+      // the temporary writes to the database will be reversed during
+      // the beginUpdate/endUpdate process.)
+      //
+      // Normally, we ignore the return value of the stub (even if it
+      // is an exception), in favor of the real return value from the
+      // server. The exception is if the *caller* is a stub. In that
+      // case, we're not going to do a RPC, so we use the return value
+      // of the stub as our return value.
+      var stub = self.method_handlers[name];
+      if (stub) {
+        var invocation = new Meteor._MethodInvocation(true /* is_simulation */);
+        try {
+          var ret = Meteor._CurrentInvocation.withValue(invocation,function () {
+            return stub.apply(self, args);
+          });
+        }
+        catch (e) {
+          var exception = e;
+        }
+      }
+
+      // If we're in a simulation, stop and return the result we have,
+      // rather than going on to do an RPC. This can only happen on
+      // the client (since we only bother with stubs and simulations
+      // on the client.) If there was not stub, we'll end up returning
+      // undefined.
+      if (is_simulation) {
+        if (callback) {
+          callback(exception, ret);
+          return;
+        }
+        if (exception)
+          throw exception;
+        return ret;
+      }
+
+      // If an exception occurred in a stub, and we're ignoring it
+      // because we're doing an RPC and want to use what the server
+      // returns instead, log it so the developer knows.
+      //
+      // Tests can set the 'expected' flag on an exception so it won't
+      // go to log.
+      if (exception && !exception.expected)
+        Meteor._debug("Exception while simulating the effect of invoking '" +
+                      name + "'", exception.stack);
+    }
+
+    // At this point we're definitely doing an RPC, and we're going to
+    // return the value of the RPC to the caller.
+
+    // If the caller didn't give a callback, decide what to do.
+    if (!callback) {
+      if (Meteor.is_client)
+        // On the client, we don't have fibers, so we can't block. The
+        // only thing we can do is to return undefined and discard the
+        // result of the RPC.
+        callback = function () {};
+      else {
+        // On the server, make the function synchronous.
+        var future = new Future;
+        callback = function (err, result) {
+          future['return']([err, result]);
+        };
+      }
+    }
+
+    // Send the RPC. Note that on the client, it is important that the
+    // stub have finished before we send the RPC (or at least we need
+    // to guaranteed that the snapshot is not restored until the stub
+    // has stopped doing writes.)
+    var msg = {
+      msg: 'method',
+      method: name,
+      params: args,
+      id: '' + (self.next_method_id++)
     };
+    self.outstanding_methods.push({msg: msg, callback: callback});
+    self.unsatisfied_methods[msg.id] = true;
+    self.stream.send(JSON.stringify(msg));
 
-    var invocation = new Meteor._ClientMethodInvocation(name, handler, self);
-    // if _run throws an exception, allow it to propagate
-    return invocation._run(args, callback, enqueue);
+    // If we're using the default callback on the server,
+    // synchronously return the result from the remote host.
+    if (future) {
+      var outcome = future.wait();
+      if (outcome[0])
+        throw outcome[0];
+      return outcome[1];
+    }
   },
 
   status: function () {
@@ -465,8 +486,11 @@ _.extend(Meteor._LivedataConnection.prototype, {
       // callback will have already been bindEnvironment'd by apply(),
       // so no need to catch exceptions
       if ('error' in msg)
-        m.callback(msg.error);
+        m.callback(new Meteor.Error(msg.error.error, msg.error.reason,
+                                    msg.error.details));
       else
+        // msg.result may be undefined if the method didn't return a
+        // value
         m.callback(undefined, msg.result);
     }
 

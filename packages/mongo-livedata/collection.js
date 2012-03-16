@@ -88,29 +88,20 @@ Meteor.Collection = function (name, manager, driver) {
     self._prefix = '/' + name + '/';
     m[self._prefix + 'insert'] = function (/* selector, options */) {
       self._maybe_snapshot();
-      try {
-        self._collection.insert.apply(self._collection, _.toArray(arguments));
-      } catch (e) {
-        this.error({error: 500, reason: "Database write failed"});
-      }
+      // Allow exceptions to propagate
+      self._collection.insert.apply(self._collection, _.toArray(arguments));
     };
 
     m[self._prefix + 'update'] = function (/* selector, mutator, options */) {
       self._maybe_snapshot();
-      try {
-        self._collection.update.apply(self._collection, _.toArray(arguments));
-      } catch (e) {
-        this.error({error: 500, reason: "Database write failed"});
-      }
+      // Allow exceptions to propagate
+      self._collection.update.apply(self._collection, _.toArray(arguments));
     };
 
     m[self._prefix + 'remove'] = function (/* selector */) {
       self._maybe_snapshot();
-      try {
-        self._collection.remove.apply(self._collection, _.toArray(arguments));
-      } catch (e) {
-        this.error({error: 500, reason: "Database write failed"});
-      }
+      // Allow exceptions to propagate
+      self._collection.remove.apply(self._collection, _.toArray(arguments));
     };
 
     manager.methods(m);
@@ -147,24 +138,27 @@ _.extend(Meteor.Collection.prototype, {
   }
 });
 
-// 'insert' returns a copy of the inserted document with the _id
-// added. the others return nothing. all of them may throw exceptions
-// (see below.)
+// 'insert' immediately returns a copy of the inserted document with
+// the _id added. The others return nothing.
 //
-// all of them can take a function as the last argument. if provided,
-// it will be called when the actual result of the operation is known
-// from the database. it will be called with no arguments if the
-// operation succeeded, or with one argument, the DDP error, if it
-// failed. if no callback is provided, then if an error happens, it
-// will be logged with Meteor._debug.
+// Otherwise, the semantics are exactly like other methods: they take
+// a callback as an optional last argument; if no callback is
+// provided, they block until the operation is complete, and throw an
+// exception if it fails; if a callback is provided, then they don't
+// necessarily block, and they call the callback when they finish with
+// zero arguments on success, or one argument, an exception, on
+// failure; on the client, blocking is impossible, so if a callback
+// isn't provided, they just return immediately and any error
+// information is lost.
 //
-// if the operation fails before returning (eg, if on the server the
-// database returns failure), then an exception is raised AND the
-// callback (if provided) is called.
+// There's one more tweak. On the client, if you don't provide a
+// callback, then if there is an error, a message will be logged with
+// Meteor._debug.
 //
-// database drivers SHOULD default to doing the operations
-// synchronously, so that they don't return until the database has
-// received them, but in the future we MAY provide a flag to turn this
+// The intent (though this is actually determined by the underlying
+// drivers) is that the operations should be done synchronously, not
+// generating their result until the database has acknowledged
+// them. In the future maybe we should provide a flag to turn this
 // off.
 _.each(["insert", "update", "remove"], function (name) {
   Meteor.Collection.prototype[name] = function (/* arguments */) {
@@ -173,6 +167,18 @@ _.each(["insert", "update", "remove"], function (name) {
 
     if (args.length && args[args.length - 1] instanceof Function)
       var callback = args.pop();
+
+    if (Meteor.is_client && !callback)
+      // Client can't block, so it can't report errors by exception,
+      // only by callback. If they forget the callback, give them a
+      // default one that logs the error, so they aren't totally
+      // baffled if their writes don't work because their database is
+      // down.
+      callback = function (err) {
+        if (err) {
+          Meteor._debug(name + " failed: " + err.error + " -- " + err.reason);
+        }
+      };
 
     if (name === "insert") {
       if (!args.length)
@@ -187,24 +193,25 @@ _.each(["insert", "update", "remove"], function (name) {
 
     if (self._manager) {
       // NB: on failure, allow exception to propagate
-      self._manager.apply(self._prefix + name, args, function (err) {
-        if (err) {
-          if (callback)
-            callback(err);
-          else
-            Meteor._debug(name + " failed: " + err.error + " -- " + err.reason);
-        }
-      });
+      self._manager.apply(self._prefix + name, args, callback);
     }
     else {
       try {
         self._collection[name].apply(self._collection, args);
       } catch (e) {
-        if (callback)
-          callback({error: 500, reason: "Local database threw exception",
-                    detail: e.stack});
+        if (callback) {
+          callback(e);
+          return;
+        }
+
+        // Note that on the client, this will never happen, because
+        // we will have been provided with a default callback. (This
+        // is nice because it matches the behavior of named
+        // collections, which on the client never throw exceptions
+        // directly.)
         throw e;
       }
+
       callback && callback();
     }
 

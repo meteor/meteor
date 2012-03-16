@@ -1,146 +1,4 @@
 /******************************************************************************/
-/* ServerMethodInvocation                                                     */
-/******************************************************************************/
-
-Meteor._ServerMethodInvocation = function (name, handler) {
-  var self = this;
-
-  self._enclosing = null;
-  self.isSimulation = null;
-  self._name = name;
-  self._handler = handler;
-  self._async = false;
-  self._responded = false;
-  self._response_was_error = null;
-  self._autoresponded = false;
-  self._threw = false;
-  self._callback = null;
-  self._next = null;
-  self._calledNext = false;
-};
-
-_.extend(Meteor._ServerMethodInvocation.prototype, {
-  beginAsync: function (okToContinue) {
-    var self = this;
-
-    if (okToContinue === undefined)
-      okToContinue = true;
-
-    if (self.isSimulation)
-      // XXX need a much better error message!
-      // duplicated in livedata_connection
-      throw new Error("Simulated methods may not be asynchronous");
-    else if (self._responded)
-      throw new Error("The method has already returned, so it is too late " +
-                      "to mark it as asynchronous");
-    else {
-      self._async = true;
-      if (okToContinue && !self._calledNext) {
-        self._calledNext = true;
-        self._next && self._next();
-      }
-    }
-  },
-
-  respond: function (ret) {
-    this._sendResponse(undefined, ret, "async");
-  },
-
-  error: function (code, message) {
-    this._sendResponse({error: code, reason: message}, undefined, "async");
-  },
-
-  // from: "async", "sync", or "throw".
-  // self._threw is set by _run, and indicates that we're about to
-  // report an exception and not to allow any other fibers kicked off by
-  // the method to emit data.
-
-  _sendResponse: function (error, ret, from) {
-    var self = this;
-
-    if (from === "throw")
-      self._threw = true;
-
-    if (self._threw && from !== "throw")
-      // this is a different fiber.  don't emit data, don't print an error.
-      return;
-
-    if (self._responded) {
-      // another fiber already reported a result to the client.  if
-      // this fiber is throwing an exception, there's nothing left to do,
-      // since methods can only return a single result.  the exception
-      // has already been logged.  otherwise, throw an error: the user's
-      // code is responding more than once.
-      if (from === "throw")
-        return;
-      if (from === "sync" && self._response_was_error)
-        // it has to be OK to call this.error from a sync method,
-        // because how else would you signal an error?
-        return;
-      if (self._autoresponded)
-        throw new Error(
-          "The method has already returned, so it is too late to call " +
-            "respond() or error(). If you want to respond asynchronously, " +
-            "first use beginAsync() to prevent a response from being " +
-            "automatically sent.");
-      else
-        throw new Error(
-          "respond() or error() may only be called once per request");
-    }
-    self._responded = true;
-    self._response_was_error = !!error;
-    self._autoresponded = (from === "sync");
-
-    // if we haven't yet yielded to the next method in the queue, do
-    // that now, just before sending the response.
-    if (!self._calledNext) {
-      self._calledNext = true;
-      self._next && self._next();
-    }
-
-    // call the callback.  should happen exactly once per method.
-    self._callback && self._callback(error, ret);
-  },
-
-  // entry point
-  // - returns the immediate value (or throws an exception)
-  // - in any case, calls callback (if truthy) with eventual result
-  // - caller should call bindEnvironment on callback, or otherwise handle
-  //   any exceptions it throws
-  // - 'name' is for exception reporting
-  // - 'next' will be called when it's OK to start the next method from
-  //   this client
-  _run: function (args, callback, next) {
-    var self = this;
-    self._callback = callback;
-    self._next = next;
-    self._enclosing = Meteor._CurrentInvocation.get();
-    self.isSimulation = !!(self._enclosing && self._enclosing.isSimulation);
-
-    try {
-      var ret = Meteor._CurrentInvocation.withValue(self, function () {
-        return self._handler.apply(self, args);
-      });
-      if (!self._responded && !self._async)
-        self._sendResponse(undefined, ret, "sync");
-      return ret;
-    } catch (e) {
-      // send response in "throw" mode, which will lock out any other
-      // fibers kicked off by this method from emitting a response.
-      self._sendResponse({error: 500, reason: "Internal server error"},
-                         undefined, "throw");
-      // XXX improve error message (and how we report it)
-      if (!e.expected)
-        // tests can set the 'expected' flag on an exception so it
-        // won't go to the server log
-        Meteor._debug("Exception while invoking method '" +
-                      self._name + "'", e.stack);
-      throw e;
-    }
-  }
-});
-
-/******************************************************************************/
 /* LivedataSession                                                            */
 /******************************************************************************/
 
@@ -272,48 +130,57 @@ _.extend(Meteor._LivedataSession.prototype, {
     self.send(msg);
   },
 
-  // Throw 'msg' into the queue to be processed as an incoming
-  // message, but ignore it if 'socket' is not the currently connected
-  // socket.
-  processMessage: function (msg, socket) {
-    var self = this;
-    if (socket === self.socket) {
-      self.in_queue.push(msg);
-      self._tryProcessNext();
-    }
-  },
-
+  // Process 'msg' as an incoming message. (But as a guard against
+  // race conditions during reconnection, ignore the message if
+  // 'socket' is not the currently connected socket.)
+  //
   // We run the messages from the client one at a time, in the order
-  // given by the client. A message can set self.blocked to pause
-  // processing (eg, for an async method to complete.) To resume
-  // processing, clear self.blocked and call _tryProcessNext().
-
+  // given by the client. The message handler is passed an idempotent
+  // function 'unblock' which it may call to allow other messages to
+  // begin running in parallel in another fiber (for example, a method
+  // that wants to yield.) Otherwise, it is automatically unblocked
+  // when it returns.
+  //
   // Actually, we don't have to 'totally order' the messages in this
   // way, but it's the easiest thing that's correct. (unsub needs to
   // be ordered against sub, methods need to be ordered against each
   // other.)
-  _tryProcessNext: function () {
+  processMessage: function (msg_in, socket) {
     var self = this;
-
-    if (self.blocked || !self.in_queue.length || self.worker_running)
+    if (socket !== self.socket)
       return;
 
+    self.in_queue.push(msg_in);
+    if (self.worker_running)
+      return;
     self.worker_running = true;
-    Fiber(function () {
-      while (true) {
-        var more = !self.blocked && self.in_queue.length;
-        if (!more) {
-          self.worker_running = false;
-          return;
-        }
 
-        var msg = self.in_queue.shift();
+    var processNext = function () {
+      var msg = self.in_queue.shift();
+      if (!msg) {
+        self.worker_running = false;
+        return;
+      }
+
+      Fiber(function () {
+        var blocked = true;
+
+        var unblock = function () {
+          if (!blocked)
+            return; // idempotent
+          blocked = false;
+          processNext();
+        };
+
         if (msg.msg in self.protocol_handlers)
-          self.protocol_handlers[msg.msg].call(self, msg);
+          self.protocol_handlers[msg.msg].call(self, msg, unblock);
         else
           self.sendError('Bad request', msg);
-      }
-    }).run();
+        unblock(); // in case the handler didn't already do it
+      }).run();
+    };
+
+    processNext();
   },
 
   protocol_handlers: {
@@ -353,7 +220,7 @@ _.extend(Meteor._LivedataSession.prototype, {
       self.send({msg: 'nosub', id: msg.id});
     },
 
-    method: function (msg) {
+    method: function (msg, unblock) {
       var self = this;
 
       // reject malformed messages
@@ -396,42 +263,39 @@ _.extend(Meteor._LivedataSession.prototype, {
         return;
       }
 
-      // Invocations sent by a given client block later invocations
-      // sent by the same client until they return, unless the method
-      // explicitly allows later methods to run by calling
-      // beginAsync(true).
-
-      // XXX for completeness, should probably have a way of sending a
-      // response *without* unblocking processing (and doing that
-      // later..)
-
-      self.blocked = true;
-
-      var callback = function (error, result) {
-        var payload = error ? {error: error} : {result: result};
-
-        self.result_cache[msg.id] =
-          _.extend({when: +(new Date)}, payload);
-
-        self.send(
-          _.extend({msg: 'result', id: msg.id}, payload));
-        fence.arm();
-      };
-
-      var next = function (error, ret) {
-        self.blocked = false;
-        self._tryProcessNext()
-      };
-
-      var invocation = new Meteor._ServerMethodInvocation(msg.method, handler);
+      var invocation = new Meteor._MethodInvocation(false /* is_simulation */,
+                                                   unblock);
       try {
-        Meteor._CurrentWriteFence.withValue(fence, function () {
-          invocation._run(msg.params || [], callback, next);
-        });
+        var ret =
+          Meteor._CurrentWriteFence.withValue(fence, function () {
+            return Meteor._CurrentInvocation.withValue(invocation, function () {
+              return handler.apply(invocation, msg.params || []);
+            });
+          });
       } catch (e) {
-        // _run will have already logged the exception (and told the
-        // client, if appropriate)
+        var exception = e;
       }
+
+      fence.arm(); // we're done adding writes to the fence
+      unblock(); // unblock, if the method hasn't done it already
+
+      // "blind" exceptions other than those that were deliberately
+      // thrown to signal errors to the client
+      if (exception && !(exception instanceof Meteor.Error)) {
+        // tests can set the 'expected' flag on an exception so it
+        // won't go to the server log
+        if (!exception.expected)
+          Meteor._debug("Exception while invoking method '" +
+                        msg.method + "'", exception.stack);
+        exception = new Meteor.Error(500, "Internal server error");
+      }
+
+      // send response and add to cache
+      var payload =
+        exception ? {error: exception} : (ret !== undefined ?
+                                          {result: ret} : {});
+      self.result_cache[msg.id] = _.extend({when: +(new Date)}, payload);
+      self.send(_.extend({msg: 'result', id: msg.id}, payload));
     }
   },
 
@@ -880,23 +744,38 @@ _.extend(Meteor._LivedataServer.prototype, {
     var self = this;
 
     if (callback)
+      // It's not really necessary to do this, since we immediately
+      // run the callback in this fiber before returning, but we do it
+      // anyway for regularity.
       callback = Meteor.bindEnvironment(callback, function (e) {
         // XXX improve error message (and how we report it)
         Meteor._debug("Exception while delivering result of invoking '" +
                       name + "'", e.stack);
       });
-    else
-      callback = function () {};
 
+    // Run the handler
     var handler = self.method_handlers[name];
-    if (!handler) {
-      if (callback)
-        callback({error: 404, reason: "Method not found"});
-      throw new Error("No such method '" + name + "'");
+    if (!handler)
+      var exception = new Meteor.Error(404, "Method not found");
+    else {
+      var invocation = new Meteor._MethodInvocation(false /* is_simulation */);
+      try {
+        var ret = Meteor._CurrentInvocation.withValue(invocation, function () {
+          return handler.apply(invocation, args)
+        });
+      } catch (e) {
+        var exception = e;
+      }
     }
 
-    var invocation = new Meteor._ServerMethodInvocation(name, handler);
-    return invocation._run(args, callback);
+    // Return the result in whichever way the caller asked for it
+    if (callback) {
+      callback(exception, ret);
+      return;
+    }
+    if (exception)
+      throw exception;
+    return ret;
   },
 
   // A much more elegant way to do this would be: let any autopublish

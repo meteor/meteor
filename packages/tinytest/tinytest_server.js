@@ -10,8 +10,11 @@ Meteor.publish('tinytest/results', function (run_id) {
 
 Meteor.methods({
   'tinytest/run': function (run_id) {
-    var request = this;
-    request.beginAsync();
+    this.unblock();
+
+    // XXX using private API === lame
+    var Future = __meteor_bootstrap__.require('fibers/future');
+    var future = new Future;
 
     Meteor._runTests(function (report) {
       /* onReport */
@@ -19,7 +22,9 @@ Meteor.methods({
       Meteor.refresh({collection: 'tinytest_results', run_id: run_id});
     }, function () {
       /* onComplete */
-      request.respond();
+      future['return']();
     });
+
+    future.wait();
   }
 });

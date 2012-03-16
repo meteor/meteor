@@ -103,10 +103,17 @@ var failure = function (test, code, reason) {
     test.equal(result, undefined);
     test.isTrue(error && typeof error === "object");
     if (error && typeof error === "object") {
-      code && test.equal(error.error, code);
-      reason && test.equal(error.reason, reason);
-      // XXX should check that other keys aren't present.. should
-      // probably use something like the Matcher we used to have
+      if (typeof code === "number") {
+        test.instanceOf(error, Meteor.Error);
+        code && test.equal(error.error, code);
+        reason && test.equal(error.reason, reason);
+        // XXX should check that other keys aren't present.. should
+        // probably use something like the Matcher we used to have
+      } else {
+        // for normal Javascript errors
+        test.instanceOf(error, Error);
+        test.equal(error.message, code);
+      }
     }
   };
 }
@@ -123,67 +130,148 @@ Tinytest.add("livedata - methods with colliding names", function (test) {
 });
 
 testAsyncMulti("livedata - basic method invocation", [
+  // Unknown methods
   function (test, expect) {
-    try {
-      var ret = Meteor.call("unknown method",
-                            expect(failure(test, 404, "Method not found")));
-    } catch (e) {
-      // throws immediately on server, but still calls callback
-      test.isTrue(Meteor.is_server);
-      return;
-    }
-
-    // returns undefined on client, then calls callback
-    test.isTrue(Meteor.is_client);
-    test.equal(ret, undefined);
-  },
-
-  function (test, expect) {
-    var ret = Meteor.call("echo", expect(undefined, []));
-    test.equal(ret, []);
-  },
-
-  function (test, expect) {
-    var ret = Meteor.call("echo", 12, expect(undefined, [12]));
-    test.equal(ret, [12]);
-  },
-
-  function (test, expect) {
-    var ret = Meteor.call("echo", 12, {x: 13}, expect(undefined, [12, {x: 13}]));
-    test.equal(ret, [12, {x: 13}]);
-  },
-
-  function (test, expect) {
-    test.throws(function () {
-      var ret = Meteor.call("exception", "both",
-                            expect(failure(test, 500, "Internal server error")));
-    });
-  },
-
-  function (test, expect) {
-    try {
-      var ret = Meteor.call("exception", "server",
-                            expect(failure(test, 500, "Internal server error")));
-    } catch (e) {
-      test.isTrue(Meteor.is_server);
-      return;
-    }
-
-    test.isTrue(Meteor.is_client);
-    test.equal(ret, undefined);
-  },
-
-  function (test, expect) {
-    if (Meteor.is_client) {
-      test.throws(function () {
-        var ret = Meteor.call("exception", "client", expect(undefined, undefined));
-      });
-    } else {
-      var ret = Meteor.call("exception", "client", expect(undefined, undefined));
+    if (Meteor.is_server) {
+      // On server, with no callback, throws exception
+      try {
+        var ret = Meteor.call("unknown method");
+      } catch (e) {
+        test.equal(e.error, 404);
+        var threw = true;
+      }
+      test.isTrue(threw);
       test.equal(ret, undefined);
     }
-  }
 
+    if (Meteor.is_client) {
+      // On client, with no callback, just returns undefined
+      var ret = Meteor.call("unknown method");
+      test.equal(ret, undefined);
+    }
+
+    // On either, with a callback, calls the callback and does not throw
+    var ret = Meteor.call("unknown method",
+                          expect(failure(test, 404, "Method not found")));
+    test.equal(ret, undefined);
+  },
+
+  function (test, expect) {
+    // make sure 'undefined' is preserved as such, instead of turning
+    // into null (JSON does not have 'undefined' so there is special
+    // code for this)
+    if (Meteor.is_server)
+      test.equal(Meteor.call("nothing"), undefined);
+    if (Meteor.is_client)
+      test.equal(Meteor.call("nothing"), undefined);
+
+    test.equal(Meteor.call("nothing", expect(undefined, undefined)), undefined);
+  },
+
+  function (test, expect) {
+    if (Meteor.is_server)
+      test.equal(Meteor.call("echo"), []);
+    if (Meteor.is_client)
+      test.equal(Meteor.call("echo"), undefined);
+
+    test.equal(Meteor.call("echo", expect(undefined, [])), undefined);
+  },
+
+  function (test, expect) {
+    if (Meteor.is_server)
+      test.equal(Meteor.call("echo", 12), [12]);
+    if (Meteor.is_client)
+      test.equal(Meteor.call("echo", 12), undefined);
+
+    test.equal(Meteor.call("echo", 12, expect(undefined, [12])), undefined);
+  },
+
+  function (test, expect) {
+    if (Meteor.is_server)
+      test.equal(Meteor.call("echo", 12, {x: 13}), [12, {x: 13}]);
+    if (Meteor.is_client)
+      test.equal(Meteor.call("echo", 12, {x: 13}), undefined);
+
+    test.equal(Meteor.call("echo", 12, {x: 13},
+                           expect(undefined, [12, {x: 13}])), undefined);
+  },
+
+  function (test, expect) {
+    // No callback
+
+    if (Meteor.is_server) {
+      test.throws(function () {
+        Meteor.call("exception", "both");
+      });
+      test.throws(function () {
+        Meteor.call("exception", "server");
+      });
+      // No exception, because no code will run on the client
+      test.equal(Meteor.call("exception", "client"), undefined);
+    }
+
+    if (Meteor.is_client) {
+      // The client exception is thrown away because it's in the
+      // stub. The server exception is throw away because we didn't
+      // give a callback.
+      test.equal(Meteor.call("exception", "both"), undefined);
+      test.equal(Meteor.call("exception", "server"), undefined);
+      test.equal(Meteor.call("exception", "client"), undefined);
+    }
+
+    // With callback
+
+    if (Meteor.is_client) {
+      test.equal(
+        Meteor.call("exception", "both",
+                    expect(failure(test, 500, "Internal server error"))),
+        undefined);
+      test.equal(
+        Meteor.call("exception", "server",
+                    expect(failure(test, 500, "Internal server error"))),
+        undefined);
+      test.equal(Meteor.call("exception", "client"), undefined);
+    }
+
+    if (Meteor.is_server) {
+      test.equal(
+        Meteor.call("exception", "both",
+                    expect(failure(test, "Test method throwing an exception"))),
+        undefined);
+      test.equal(
+        Meteor.call("exception", "server",
+                    expect(failure(test, "Test method throwing an exception"))),
+        undefined);
+      test.equal(Meteor.call("exception", "client"), undefined);
+    }
+  },
+
+  function (test, expect) {
+    if (Meteor.is_server) {
+      var threw = false;
+      try {
+        Meteor.call("exception", "both", true);
+      } catch (e) {
+        threw = true;
+        test.equal(e.error, 999);
+        test.equal(e.reason, "Client-visible test exception");
+      }
+      test.isTrue(threw);
+    }
+
+    if (Meteor.is_client) {
+      test.equal(
+        Meteor.call("exception", "both", true,
+                    expect(failure(test, 999,
+                                   "Client-visible test exception"))),
+        undefined);
+      test.equal(
+        Meteor.call("exception", "server", true,
+                    expect(failure(test, 999,
+                                   "Client-visible test exception"))),
+        undefined);
+    }
+  }
 ]);
 
 
