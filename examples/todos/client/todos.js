@@ -94,8 +94,8 @@ Template.create_list.events = {
     var target = $(evt.target);
     var text = target.val();
     if (evt.keyCode === 13 && text) {
-      var list = Lists.insert({name: text});
-      Router.setList(list._id);
+      var id = Lists.insert({name: text});
+      Router.setList(id);
       target.val('');
     }
   }

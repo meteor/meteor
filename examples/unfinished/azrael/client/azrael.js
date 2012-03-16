@@ -30,10 +30,10 @@ Template.add_room.events = {
   'click': function () {
     // XXX should put up dialog to get name
     // XXX should support automatically set created/updated timestamps
-    var obj = Rooms.insert({name: "New room",
-                            // XXX horrid syntax
-                            created: (new Date()).getTime()});
-    selectRoom(obj._id);
+    var room_id = Rooms.insert({name: "New room",
+                                // XXX horrid syntax
+                                created: (new Date()).getTime()});
+    selectRoom(room_id);
     // XXX XXX XXX this fails to work -- it leaves edit mode after
     // 1RTT. what happens is, the server echos the insert back to us,
     // and that is currently wired up to trigger a changed event on

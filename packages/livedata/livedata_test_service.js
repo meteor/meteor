@@ -1,15 +1,20 @@
-App.methods({
+Meteor.methods({
+  nothing: function () {
+  },
   echo: function (/* arguments */) {
     return _.toArray(arguments);
   },
-  exception: function (where) {
+  exception: function (where, intended) {
     var shouldThrow =
       (Meteor.is_server && where === "server") ||
       (Meteor.is_client && where === "client") ||
       where === "both";
 
     if (shouldThrow) {
-      e = new Error("Test method throwing an exception");
+      if (intended)
+        e = new Meteor.Error(999, "Client-visible test exception");
+      else
+        e = new Error("Test method throwing an exception");
       e.expected = true;
       throw e;
     }
@@ -31,7 +36,7 @@ if (Meteor.is_server)
                                               world: world}});
   });
 
-App.methods({
+Meteor.methods({
   'ledger/transfer': function (world, from_name, to_name, amount, cheat) {
     var from = Ledger.findOne({name: from_name, world: world});
     var to = Ledger.findOne({name: to_name, world: world});
@@ -39,20 +44,16 @@ App.methods({
     if (Meteor.is_server)
       cheat = false;
 
-    if (!from) {
-      this.error(404, "No such account " + from_name + " in " + world);
-      return;
-    }
+    if (!from)
+      throw new Meteor.Error(404,
+                             "No such account " + from_name + " in " + world);
 
-    if (!to) {
-      this.error(404, "No such account " + to_name + " in " + world);
-      return;
-    }
+    if (!to)
+      throw new Meteor.Error(404,
+                             "No such account " + to_name + " in " + world);
 
-    if (from.balance < amount && !cheat) {
-      this.error(409, "Insufficient funds");
-      return;
-    }
+    if (from.balance < amount && !cheat)
+      throw new Meteor.Error(409, "Insufficient funds");
 
     Ledger.update({_id: from._id}, {$inc: {balance: -amount}});
     Ledger.update({_id: to._id}, {$inc: {balance: amount}});

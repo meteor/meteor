@@ -182,18 +182,39 @@ _.extend(TestCase.prototype, {
   // test raised (or voluntarily reported) an exception.
   run: function (onEvent, onComplete, onException, stop_at_offset) {
     var self = this;
-    var results = new TestCaseResults(self, onEvent, onException,
-                                      stop_at_offset);
+
+    var completed = false;
+    var markComplete = function () {
+      if (completed) {
+        Meteor._debug("*** Test error -- test '" + self.name +
+                      "' returned multiple times.");
+        return false;
+      }
+      completed = true;
+      return true;
+    }
+
+    var results = new TestCaseResults(self, onEvent,
+                                      function (e) {
+                                        if (markComplete())
+                                          onException(e);
+                                      }, stop_at_offset);
+
     Meteor.defer(function () {
       try {
-        if (self.async)
-          self.func(results, onComplete);
-        else {
+        if (self.async) {
+          self.func(results, function () {
+            if (markComplete())
+              onComplete()
+          });
+        } else {
           self.func(results);
-          onComplete();
+          if (markComplete())
+            onComplete();
         }
       } catch (e) {
-        onException(e);
+        if (markComplete())
+          onException(e);
       }
     });
   }

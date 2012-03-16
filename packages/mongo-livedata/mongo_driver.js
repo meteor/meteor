@@ -74,6 +74,13 @@ _Mongo.prototype._maybeBeginWrite = function () {
 
 //////////// Public API //////////
 
+// The write methods block until the database has confirmed the write
+// (it may not be replicated or stable on disk, but one server has
+// confirmed it.) (In the future we might have an option to turn this
+// off, ie, to enqueue the request on the wire and return
+// immediately.)  They return nothing on success, and raise an
+// exception on failure.
+//
 // After making a write (with insert, update, remove), observers are
 // notified asynchronously. If you want to receive a callback once all
 // of the observer notifications have landed for your write, do the
@@ -86,74 +93,139 @@ _Mongo.prototype._maybeBeginWrite = function () {
 
 _Mongo.prototype.insert = function (collection_name, document) {
   var self = this;
+
+  if (collection_name === "___meteor_failure_test_collection" &&
+      document.fail) {
+    var e = new Error("Failure test");
+    e.expected = true;
+    throw e;
+  }
+
   var write = self._maybeBeginWrite();
 
-  var future = new Future;
-  self._withCollection(collection_name, function(err, collection) {
-    // XXX err handling
-    collection.insert(document, {/* safe: true */}, function(err) {
-      // XXX err handling
-    });
-
+  var finish = Meteor.bindEnvironment(function () {
     Meteor.refresh({collection: collection_name});
     write.committed();
-
-    future.ret();
+  }, function (e) {
+    Meteor._debug("Exception while completing insert: " + e.stack);
   });
 
-  return future.wait();
+  var future = new Future;
+  self._withCollection(collection_name, function (err, collection) {
+    if (err) {
+      future.ret(err);
+      return;
+    }
+
+    collection.insert(document, {safe: true}, function (err) {
+      if (err) {
+        future.ret(err);
+        return;
+      }
+
+      finish();
+      future.ret();
+    });
+  });
+
+  var err = future.wait();
+  if (err)
+    throw err;
 };
 
 _Mongo.prototype.remove = function (collection_name, selector) {
   var self = this;
+
+  if (collection_name === "___meteor_failure_test_collection" &&
+      selector.fail) {
+    var e = new Error("Failure test");
+    e.expected = true;
+    throw e;
+  }
+
   var write = self._maybeBeginWrite();
+
+  var finish = Meteor.bindEnvironment(function () {
+    Meteor.refresh({collection: collection_name});
+    write.committed();
+  }, function (e) {
+    Meteor._debug("Exception while completing remove: " + e.stack);
+  });
 
   // XXX does not allow options. matches the client.
   selector = _Mongo._rewriteSelector(selector);
 
   var future = new Future;
-  self._withCollection(collection_name, function(err, collection) {
-    // XXX err handling
-    collection.remove(selector, {/* safe: true */}, function(err) {
-      // XXX err handling
+  self._withCollection(collection_name, function (err, collection) {
+    if (err) {
+      future.ret(err);
+      return;
+    }
+
+    collection.remove(selector, {/* XXXsafe: true*/}, function (err) {
+      if (err) {
+        future.ret(err);
+        return;
+      }
+
+      finish();
+      future.ret();
     });
-
-    Meteor.refresh({collection: collection_name});
-    write.committed();
-
-    future.ret();
   });
 
-  return future.wait();
+  var err = future.wait();
+  if (err)
+    throw err;
 };
 
 _Mongo.prototype.update = function (collection_name, selector, mod, options) {
   var self = this;
+
+  if (collection_name === "___meteor_failure_test_collection" &&
+      selector.fail) {
+    var e = new Error("Failure test");
+    e.expected = true;
+    throw e;
+  }
+
   var write = self._maybeBeginWrite();
+
+  var finish = Meteor.bindEnvironment(function () {
+    Meteor.refresh({collection: collection_name});
+    write.committed();
+  }, function (e) {
+    Meteor._debug("Exception while completing update: " + e.stack);
+  });
 
   selector = _Mongo._rewriteSelector(selector);
   if (!options) options = {};
 
   var future = new Future;
-  self._withCollection(collection_name, function(err, collection) {
-    // XXX err handling
+  self._withCollection(collection_name, function (err, collection) {
+    if (err) {
+      future.ret(err);
+      return;
+    }
 
-    var opts = {/* safe: true */};
+    var opts = {safe: true};
     // explictly enumerate options that minimongo supports
     if (options.upsert) opts.upsert = true;
     if (options.multi) opts.multi = true;
 
-    collection.update(selector, mod, opts, function(err) {
-      // XXX err handling
+    collection.update(selector, mod, opts, function (err) {
+      if (err) {
+        future.ret(err);
+        return;
+      }
+
+      finish();
+      future.ret();
     });
-
-    Meteor.refresh({collection: collection_name});
-    write.committed();
-
-    future.ret();
   });
 
-  return future.wait();
+  var err = future.wait();
+  if (err)
+    throw err;
 };
 
 _Mongo.prototype.find = function (collection_name, selector, options) {
@@ -162,7 +234,7 @@ _Mongo.prototype.find = function (collection_name, selector, options) {
   if (arguments.length === 1)
     selector = {};
 
-  return new _Mongo.Cursor(self, collection_name, selector, options);
+  return _Mongo._makeCursor(self, collection_name, selector, options);
 };
 
 _Mongo.prototype.findOne = function (collection_name, selector, options) {
@@ -171,28 +243,52 @@ _Mongo.prototype.findOne = function (collection_name, selector, options) {
   if (arguments.length === 1)
     selector = {};
 
-  return this.find(collection_name, selector, options).fetch()[0];
+  return self.find(collection_name, selector, options).fetch()[0];
 };
 
 // Cursors
 
-_Mongo.Cursor = function (mongo, collection_name, selector, options) {
-  var self = this;
-
-  self.mongo = mongo;
-  self.collection_name = collection_name;
-  self.selector = _Mongo._rewriteSelector(selector);
-  self.options = options || {};
-
+// Returns a _Mongo.Cursor, or throws an exception on
+// failure. Creating a cursor involves a database query, and we block
+// until it returns.
+_Mongo._makeCursor = function (mongo, collection_name, selector, options) {
   var future = new Future;
 
-  self.mongo._withCollection(collection_name, function(err, collection) {
-    // XXX err handling
-    var cursor = collection.find(self.selector, self.options.fields, self.options.skip, self.options.limit, self.options.sort);
-    future.ret(cursor);
+  options = options || {};
+  selector = _Mongo._rewriteSelector(selector);
+
+  mongo._withCollection(collection_name, function (err, collection) {
+    if (err) {
+      future.ret([false, err]);
+      return
+    }
+
+    var cursor = collection.find(selector, options.fields,
+                                 options.skip, options.limit, options.sort);
+    future.ret([true, cursor]);
   });
 
-  this.cursor = future.wait();
+  var result = future.wait();
+  if (!(result[0]))
+    throw result[1];
+
+  return new _Mongo.Cursor(mongo, collection_name, selector, options,
+                           result[1]);
+};
+
+// Do not call directly. Use _Mongo._makeCursor instead.
+_Mongo.Cursor = function (mongo, collection_name, selector, options, cursor) {
+  var self = this;
+
+  if (!cursor)
+    throw new Error("Cursor required");
+
+  // NB: 'options' and 'selector' have already been preprocessed by _makeCursor
+  self.mongo = mongo;
+  self.collection_name = collection_name;
+  self.selector = selector;
+  self.options = options;
+  self.cursor = cursor;
 };
 
 _Mongo.Cursor.prototype.forEach = function (callback) {
@@ -205,7 +301,10 @@ _Mongo.Cursor.prototype.forEach = function (callback) {
     else
       callback(doc);
   });
-  return future.wait();
+
+  var err = future.wait();
+  if (err)
+    throw err;
 };
 
 _Mongo.Cursor.prototype.map = function (callback) {
@@ -229,10 +328,13 @@ _Mongo.Cursor.prototype.fetch = function () {
   var future = new Future;
 
   self.cursor.toArray(function (err, res) {
-    future.ret(err || res);
+    future.ret([err, res]);
   });
 
-  return future.wait();
+  var result = future.wait();
+  if (result[0])
+    throw result[0];
+  return result[1];
 };
 
 _Mongo.Cursor.prototype.count = function () {
@@ -240,10 +342,13 @@ _Mongo.Cursor.prototype.count = function () {
   var future = new Future;
 
   self.cursor.count(function (err, res) {
-    future.ret(err || res);
+    future.ret([err, res]);
   });
 
-  return future.wait();
+  var err = future.wait();
+  if (result[0])
+    throw result[0];
+  return result[1];
 };
 
 // options to contain:
@@ -265,10 +370,10 @@ _Mongo.LiveResultsSet = function (cursor, options) {
 
   // copy my cursor, so that the observe can run independently from
   // some other use of the cursor.
-  self.cursor = new _Mongo.Cursor(cursor.mongo,
-                                  cursor.collection_name,
-                                  cursor.selector,
-                                  cursor.options);
+  self.cursor = _Mongo._makeCursor(cursor.mongo,
+                                   cursor.collection_name,
+                                   cursor.selector,
+                                   cursor.options);
 
   // expose collection name
   self.collection_name = cursor.collection_name;
