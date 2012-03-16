@@ -345,7 +345,7 @@ _Mongo.Cursor.prototype.count = function () {
     future.ret([err, res]);
   });
 
-  var err = future.wait();
+  var result = future.wait();
   if (result[0])
     throw result[0];
   return result[1];
