@@ -49,7 +49,7 @@ Meteor._partials = {};
 Meteor._def_template = function (name, raw_func) {
   Meteor._hook_handlebars_each();
   window.Template = window.Template || {};
-  var cooked_func = function (data) {
+  var cooked_func = function (data, asHtml) {
     var in_partial = !!Meteor._pending_partials;
     if (!in_partial)
       Meteor._pending_partials = {};
@@ -71,6 +71,8 @@ Meteor._def_template = function (name, raw_func) {
       throw e;
     } */
 
+    if (asHtml)
+      return html;
 
     var frag = Meteor._htmlToFragment(html);
 
@@ -119,9 +121,12 @@ Meteor._def_template = function (name, raw_func) {
     return frag;
   };
 
-  var func = function (data) {
-    return Meteor.ui.render(_.bind(cooked_func, null, data),
-                            name && Template[name].events || {}, data);
+  var func = function (data, asHtml) {
+    if (asHtml)
+      return cooked_func(data, true);
+    else
+      return Meteor.ui.render(_.bind(cooked_func, null, data),
+                              name && Template[name].events || {}, data);
   };
 
   if (name) {
