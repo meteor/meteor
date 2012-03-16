@@ -40,7 +40,7 @@ Meteor.startup(function () {
 
     var timestamp = (new Date()).getTime();
     for (var i = 0; i < data.length; i++) {
-      var list_id = Lists.insert({name: data[i].name})._id;
+      var list_id = Lists.insert({name: data[i].name});
       for (var j = 0; j < data[i].contents.length; j++) {
         var info = data[i].contents[j];
         Todos.insert({list_id: list_id,

@@ -186,8 +186,7 @@ _.each(["insert", "update", "remove"], function (name) {
       args[0] = _.extend({}, args[0]);
       if ('_id' in args[0])
         throw new Error("Do not pass an _id to insert. Meteor will generate the _id for you.");
-      args[0]._id = Meteor.uuid();
-      var ret = args[0];
+      var ret = args[0]._id = Meteor.uuid();
     }
 
     if (self._manager) {
