@@ -175,9 +175,8 @@ _.each(["insert", "update", "remove"], function (name) {
       // baffled if their writes don't work because their database is
       // down.
       callback = function (err) {
-        if (err) {
+        if (err)
           Meteor._debug(name + " failed: " + err.error + " -- " + err.reason);
-        }
       };
 
     if (name === "insert") {

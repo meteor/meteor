@@ -93,6 +93,14 @@ _Mongo.prototype._maybeBeginWrite = function () {
 
 _Mongo.prototype.insert = function (collection_name, document) {
   var self = this;
+
+  if (collection_name === "___meteor_failure_test_collection" &&
+      document.fail) {
+    var e = new Error("Failure test");
+    e.expected = true;
+    throw e;
+  }
+
   var write = self._maybeBeginWrite();
 
   var finish = Meteor.bindEnvironment(function () {
@@ -127,6 +135,14 @@ _Mongo.prototype.insert = function (collection_name, document) {
 
 _Mongo.prototype.remove = function (collection_name, selector) {
   var self = this;
+
+  if (collection_name === "___meteor_failure_test_collection" &&
+      selector.fail) {
+    var e = new Error("Failure test");
+    e.expected = true;
+    throw e;
+  }
+
   var write = self._maybeBeginWrite();
 
   var finish = Meteor.bindEnvironment(function () {
@@ -164,6 +180,14 @@ _Mongo.prototype.remove = function (collection_name, selector) {
 
 _Mongo.prototype.update = function (collection_name, selector, mod, options) {
   var self = this;
+
+  if (collection_name === "___meteor_failure_test_collection" &&
+      selector.fail) {
+    var e = new Error("Failure test");
+    e.expected = true;
+    throw e;
+  }
+
   var write = self._maybeBeginWrite();
 
   var finish = Meteor.bindEnvironment(function () {
