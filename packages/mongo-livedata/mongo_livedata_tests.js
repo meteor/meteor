@@ -63,12 +63,7 @@ Tinytest.add("mongo-livedata - basics", function (test) {
     } else {
       var fence = new Meteor._WriteFence;
       Meteor._CurrentWriteFence.withValue(fence, f);
-      var future = new Future;
-      fence.onAllCommitted(function () {
-        future['return']();
-      });
-      fence.arm();
-      future.wait();
+      fence.armAndWait();
     }
 
     if (!(expected instanceof Array))
