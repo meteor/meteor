@@ -57,6 +57,17 @@ _.extend(Meteor._WriteFence.prototype, {
     self.completion_callbacks.push(func);
   },
 
+  // Convenience function. Arms the fence, then blocks until it fires.
+  armAndWait: function () {
+    var self = this;
+    var future = new Future;
+    self.onAllCommitted(function () {
+      future['return']();
+    });
+    self.arm();
+    future.wait();
+  },
+
   _maybeFire: function () {
     var self = this;
     if (self.fired)

@@ -119,13 +119,6 @@ _.extend(TestCaseResults.prototype, {
       this.fail({type: "instanceOf"}); // XXX what other data?
   },
 
-  length: function (obj, expected_length) {
-    if (obj.length === expected_length)
-      this.ok();
-    else
-      this.fail({type: "length"}); // XXX what other data?
-  },
-
   // XXX nodejs assert.throws can take an expected error, as a class,
   // regular expression, or predicate function..
   throws: function (f) {
@@ -155,7 +148,64 @@ _.extend(TestCaseResults.prototype, {
       this.fail({type: "true"});
     else
       this.ok();
+  },
+
+  isNull: function (v) {
+    if (v === null)
+      this.ok();
+    else
+      this.fail({type: "null"});
+  },
+
+  isNotNull: function (v) {
+    if (v === null)
+      this.fail({type: "true"});
+    else
+      this.ok();
+  },
+
+  isUndefined: function (v) {
+    if (v === undefined)
+      this.ok();
+    else
+      this.fail({type: "undefined"});
+  },
+
+  isNaN: function (v) {
+    if (isNaN(v))
+      this.ok();
+    else
+      this.fail({type: "NaN"});
+  },
+
+  include: function (s, v) {
+    var pass = false;
+    if (s instanceof Array)
+      pass = _.indexOf(s, v) !== -1;
+    else if (typeof s === "object")
+      pass = v in s;
+    else if (typeof s === "string")
+      for (var i = 0; i < s.length; i++)
+        if (s.charAt(i) === v) {
+          pass = true;
+          break;
+        }
+    else
+      /* fail -- not something that contains other things */;
+    if (pass)
+      this.ok();
+    else
+      this.fail({type: "include", sequence: s, should_contain_value: v});
+  },
+
+  // XXX should change to lengthOf to match vowsjs
+  length: function (obj, expected_length) {
+    if (obj.length === expected_length)
+      this.ok();
+    else
+      this.fail({type: "length"}); // XXX what other data?
   }
+
 });
 
 /******************************************************************************/
