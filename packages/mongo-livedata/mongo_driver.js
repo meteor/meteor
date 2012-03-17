@@ -262,9 +262,8 @@ _Mongo._makeCursor = function (mongo, collection_name, selector, options) {
       future.ret([false, err]);
       return
     }
-
-    var cursor = collection.find(selector, options.fields,
-                                 options.skip, options.limit, options.sort);
+    var cursor = collection.find(selector, options.fields, {
+      sort: options.sort, limit: options.limit, skip: options.skip});
     future.ret([true, cursor]);
   });
 
