@@ -37,7 +37,7 @@ testAsyncMulti("mongo-livedata - database failure reporting", [
 Meteor._LivedataTestCollection =
   new Meteor.Collection("livedata_test_collection");
 
-Tinytest.addAsync("mongo-livedata - basics", function (test, onComplete) {
+Tinytest.add("mongo-livedata - basics", function (test) {
   var coll = Meteor._LivedataTestCollection;
   var run = test.runId();
 
@@ -141,5 +141,4 @@ Tinytest.addAsync("mongo-livedata - basics", function (test, onComplete) {
   });
 
   obs.stop();
-  onComplete();
 });
