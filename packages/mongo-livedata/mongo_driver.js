@@ -382,8 +382,7 @@ _Mongo.LiveResultsSet = function (cursor, options) {
 
   // previous results snapshot.  on each poll cycle, diffs against
   // results drives the callbacks.
-  self.results = {};
-  self.indexes = {};
+  self.results = [];
 
   // state for polling
   self.dirty = false; // do we need polling?
@@ -431,17 +430,6 @@ _Mongo.LiveResultsSet = function (cursor, options) {
                                          10 * 1000 /* 10 seconds */);
 };
 
-_Mongo.LiveResultsSet.prototype._fetchResults = function (results, indexes) {
-  var self = this;
-  var index = 0;
-
-  self.cursor.rewind();
-  self.cursor.forEach(function (obj) {
-    results[obj._id] = obj;
-    indexes[obj._id] = index++;
-  });
-};
-
 _Mongo.LiveResultsSet.prototype._unthrottled_markDirty = function () {
   var self = this;
 
@@ -467,32 +455,67 @@ _Mongo.LiveResultsSet.prototype._unthrottled_markDirty = function () {
 _Mongo.LiveResultsSet.prototype._doPoll = function () {
   var self = this;
 
-  var old_results = self.results;
-  var old_indexes = self.indexes;
-  var new_results = {};
-  var new_indexes = {};
+  // Get the new query results
+  self.cursor.rewind();
+  var new_results = self.cursor.fetch();
+  var present_in_new = {}, present_in_old = {};
 
-  var callbacks = [];
-
-  self._fetchResults(new_results, new_indexes);
-
-  _.each(new_results, function (obj) {
-    if (self.added && !old_results[obj._id])
-      self.added(obj, new_indexes[obj._id]);
-
-    else if (self.changed && !_.isEqual(new_results[obj._id], old_results[obj._id]))
-      self.changed(obj, old_indexes[obj._id], old_results[obj._id]);
-
-    if (self.moved && new_indexes[obj._id] !== old_indexes[obj._id])
-      self.moved(obj, old_indexes[obj._id], new_indexes[obj._id]);
+  // Generate some indexes to speed up the process
+  _.each(new_results, function (doc) {
+    present_in_new[doc._id] = true;
+  });
+  _.each(self.results, function (doc) {
+    present_in_old[doc._id] = true;
   });
 
-  for (var id in old_results)
-    if (self.removed && !(id in new_results))
-      self.removed(old_results[id], old_indexes[id]);
+  // If documents left the query, remove them from self.results
+  for (var i = 0; i < self.results.length; i++) {
+    if (!(self.results[i]._id in present_in_new)) {
+      self.removed && self.removed(self.results[i], i);
+      self.results.splice(i, 1);
+      i--;
+    }
+  }
 
-  self.results = new_results;
-  self.indexes = new_indexes;
+  // Now new_results is a (non-strict) superset of self.results, so we
+  // can be sure that new_results is at least as long as self.results.
+
+  // Transform self.results into new_results
+  // XXX this is O(N^2) in the worst case, but O(N) in typical cases
+  for (var i = 0; i < new_results.length; i++) {
+    // Newly added documents
+    if (!(new_results[i]._id in present_in_old)) {
+      self.added && self.added(new_results[i], i);
+      self.results.splice(i, 0, new_results[i]);
+      continue;
+    }
+
+    // Find the offset of new_results[i] in self.results (if
+    // present). Note that we check the most likely case first
+    // (old_offset === i)
+    var old_offset;
+    for (var j = i; j < self.results.length; j++)
+      if (self.results[j]._id === new_results[i]._id) {
+        old_offset = j;
+        break;
+      }
+    if (old_offset === undefined)
+      throw new Error("Document in index, but missing from array?");
+
+    // Changed documents
+    if (!_.isEqual(self.results[old_offset], new_results[i])) {
+      self.changed && self.changed(new_results[i], old_offset,
+                                   self.results[old_offset]);
+      self.results[i] = new_results[i];
+    }
+
+    // Moved documents
+    if (old_offset !== i) {
+      self.moved && self.moved(new_results[i], old_offset, i);
+      self.results.splice(old_offset, 1);
+      self.results.splice(i, 0, new_results[i]);
+    }
+  }
 };
 
 _Mongo.LiveResultsSet.prototype.stop = function () {
