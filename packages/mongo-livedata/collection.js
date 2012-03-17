@@ -140,6 +140,7 @@ _.extend(Meteor.Collection.prototype, {
       self._was_snapshot = true;
     }
   }
+
 });
 
 // 'insert' immediately returns the inserted document's new _id.  The

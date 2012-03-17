@@ -133,46 +133,46 @@ _.extend(TestCaseResults.prototype, {
       this.fail({type: "throws"});
   },
 
-  isTrue: function (v) {
+  isTrue: function (v, msg) {
     if (v)
       this.ok();
     else
-      this.fail({type: "true"});
+      this.fail({type: "true", message: msg});
   },
 
-  isFalse: function (v) {
+  isFalse: function (v, msg) {
     if (v)
-      this.fail({type: "true"});
+      this.fail({type: "true", message: msg});
     else
       this.ok();
   },
 
-  isNull: function (v) {
+  isNull: function (v, msg) {
     if (v === null)
       this.ok();
     else
-      this.fail({type: "null"});
+      this.fail({type: "null", message: msg});
   },
 
-  isNotNull: function (v) {
+  isNotNull: function (v, msg) {
     if (v === null)
-      this.fail({type: "true"});
+      this.fail({type: "true", message: msg});
     else
       this.ok();
   },
 
-  isUndefined: function (v) {
+  isUndefined: function (v, msg) {
     if (v === undefined)
       this.ok();
     else
-      this.fail({type: "undefined"});
+      this.fail({type: "undefined", message: msg});
   },
 
-  isNaN: function (v) {
+  isNaN: function (v, msg) {
     if (isNaN(v))
       this.ok();
     else
-      this.fail({type: "NaN"});
+      this.fail({type: "NaN", message: msg});
   },
 
   include: function (s, v) {
@@ -240,7 +240,7 @@ _.extend(TestCase.prototype, {
       }
       completed = true;
       return true;
-    }
+    };
 
     var results = new TestCaseResults(self, onEvent,
                                       function (e) {
@@ -253,7 +253,7 @@ _.extend(TestCase.prototype, {
         if (self.async) {
           self.func(results, function () {
             if (markComplete())
-              onComplete()
+              onComplete();
           });
         } else {
           self.func(results);

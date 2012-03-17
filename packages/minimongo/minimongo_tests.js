@@ -888,3 +888,72 @@ Tinytest.add("minimongo - observe", function (test) {
   test.equal(operations.shift(), ['added', {a:100}, 0]);
   handle.stop();
 });
+
+Tinytest.add("minimongo - diff", function (test) {
+
+  // test correctness
+
+  var diff_test = function(orig_len, new_old_idx) {
+    var old_results = new Array(orig_len);
+    for(var i=1; i<=orig_len; i++)
+      old_results[i-1] = {_id: i};
+
+    var new_results = _.map(new_old_idx, function(n) {
+      var doc = {_id: Math.abs(n)};
+      if (n < 0)
+        doc.changed = true;
+      return doc;
+    });
+
+    var results = _.clone(old_results);
+    var observer = {
+      added: function(doc, before_idx) {
+        test.isFalse(before_idx < 0 || before_idx > results.length);
+        results.splice(before_idx, 0, doc);
+      },
+      removed: function(doc, at_idx) {
+        test.isFalse(at_idx < 0 || at_idx >= results.length);
+        test.equal(doc, results[at_idx]);
+        results.splice(at_idx, 1);
+      },
+      changed: function(doc, at_idx) {
+        test.isFalse(at_idx < 0 || at_idx >= results.length);
+        results[at_idx] = doc;
+      },
+      moved: function(doc, old_idx, new_idx) {
+        test.isFalse(old_idx < 0 || old_idx >= results.length);
+        test.isFalse(new_idx < 0 || new_idx >= results.length);
+        test.equal(doc, results[old_idx]);
+        results.splice(new_idx, 0, results.splice(old_idx, 1)[0]);
+      }
+    };
+
+    LocalCollection._diffQuery(old_results, new_results, observer);
+    test.equal(results, new_results);
+  };
+
+  // edge cases and cases run into during debugging
+  diff_test(5, [5, 1, 2, 3, 4]);
+  diff_test(0, [1, 2, 3, 4]);
+  diff_test(4, []);
+  diff_test(7, [4, 5, 6, 7, 1, 2, 3]);
+  diff_test(7, [5, 6, 7, 1, 2, 3, 4]);
+  diff_test(10, [7, 4, 11, 6, 12, 1, 5]);
+  diff_test(3, [3, 2, 1]);
+  diff_test(10, [2, 7, 4, 6, 11, 3, 8, 9]);
+  diff_test(0, []);
+  diff_test(1, []);
+  diff_test(0, [1]);
+  diff_test(1, [1]);
+  diff_test(5, [1, 2, 3, 4, 5]);
+
+  // interaction between "changed" and other ops
+  diff_test(5, [-5, -1, 2, -3, 4]);
+  diff_test(7, [-4, -5, 6, 7, -1, 2, 3]);
+  diff_test(7, [5, 6, -7, 1, 2, -3, 4]);
+  diff_test(10, [7, -4, 11, 6, 12, -1, 5]);
+  diff_test(3, [-3, -2, -1]);
+  diff_test(10, [-2, 7, 4, 6, 11, -3, -8, 9]);
+
+
+});
