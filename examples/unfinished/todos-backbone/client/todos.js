@@ -136,7 +136,7 @@ $(function(){
           self.$("#todo-list").append(view.render().el);
           self.render();
         },
-        removed: function (id, at_idx) {
+        removed: function (obj, at_idx) {
           // remove the view node from the DOM
           var view = self.todos.splice(at_idx, 1);
           view[0].remove();

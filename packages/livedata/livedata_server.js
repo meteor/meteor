@@ -543,8 +543,8 @@ _.extend(Meteor._LivedataSubscription.prototype, {
         self.unset(collection, obj._id, dead_keys);
         self.flush();
       },
-      removed: function (id, old_idx, old_obj) {
-        self.unset(collection, id, _.keys(old_obj));
+      removed: function (old_obj, old_idx) {
+        self.unset(collection, old_obj._id, _.keys(old_obj));
         self.flush();
       }
     });

@@ -356,7 +356,7 @@ _Mongo.Cursor.prototype.count = function () {
 //    - added (object, before_index)
 //    - changed (new_object, at_index)
 //    - moved (object, old_index, new_index) - can only fire with changed()
-//    - removed (id, at_index)
+//    - removed (old_object, at_index)
 //
 // attributes available on returned LiveResultsSet
 //  * stop(): end updates
@@ -490,7 +490,7 @@ _Mongo.LiveResultsSet.prototype._doPoll = function () {
 
   for (var id in old_results)
     if (self.removed && !(id in new_results))
-      self.removed(id, old_indexes[id], old_results[id]);
+      self.removed(old_results[id], old_indexes[id]);
 
   self.results = new_results;
   self.indexes = new_indexes;

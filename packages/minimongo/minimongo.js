@@ -385,7 +385,7 @@ LocalCollection._insertInResults = function (query, doc) {
 
 LocalCollection._removeFromResults = function (query, doc) {
   var i = LocalCollection._findInResults(query, doc);
-  query.removed(doc._id, i, doc);
+  query.removed(doc, i);
   query.results.splice(i, 1);
 };
 

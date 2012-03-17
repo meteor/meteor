@@ -379,7 +379,7 @@ Meteor.ui.renderList = function (query, options) {
         insert_before(before_idx, frag);
       }
     },
-    removed: function (id, at_idx) {
+    removed: function (doc, at_idx) {
       check_onscreen();
       if (entry_ranges.length > 1) {
         Meteor.ui._cleanup(extract(at_idx), Meteor.ui._tag);

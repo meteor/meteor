@@ -141,8 +141,8 @@ Meteor._LivedataConnection = function (url, restart_on_update) {
         _.defer(function () { self.subs.remove({_id: sub._id}); });
       }
     },
-    removed: function (id) {
-      self.stream.send(JSON.stringify({msg: 'unsub', id: id}));
+    removed: function (obj) {
+      self.stream.send(JSON.stringify({msg: 'unsub', id: obj._id}));
     }
   });
 };

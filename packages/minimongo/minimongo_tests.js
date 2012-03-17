@@ -107,7 +107,7 @@ Tinytest.add("minimongo - basics", function (test) {
     return {
       added: function (doc) { ev += "a" + tag + doc._id + "_"; },
       changed: function (doc) { ev += "c" + tag + doc._id + "_"; },
-      removed: function (id) { ev += "r" + tag + id + "_"; }
+      removed: function (doc) { ev += "r" + tag + doc._id + "_"; }
     };
   };
   var expect = function (x) {
@@ -840,7 +840,8 @@ Tinytest.add("minimongo - observe", function (test) {
       delete obj._id;
       operations.push(LocalCollection._deepcopy(['moved', obj, old_at, new_at]));
     },
-    removed: function (id, at, old_obj) {
+    removed: function (old_obj, at) {
+      id = old_obj._id;
       delete old_obj._id;
       operations.push(LocalCollection._deepcopy(['removed', id, at, old_obj]));
     }
