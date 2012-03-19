@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "Utility functions for tests"
+  summary: "Utility functions for tests",
+  internal: true
 });
 
 Package.on_use(function (api, where) {
