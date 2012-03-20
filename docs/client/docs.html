@@ -5,11 +5,13 @@
 <body>
   <div id="main" class="ui-layout-center">
     <div id="main-wrapper">
+      <div id="top"></div>
       {{> introduction }}
       {{> examples }}
       {{> concepts }}
       {{> api }}
       {{> packages }}
+      {{> commandline }}
     </div>
   </div>
 
@@ -20,15 +22,33 @@
 
 <template name="nav">
 <div>
-  <h1>Version 0.1.5</h2>
-  <hr />
   {{#each sections}}
   {{#if type "spacer"}}
     <div class="spacer"> </div>
   {{/if}}
   {{#if type "section"}}
-    <h{{depth}}><a href="#{{id}}" class="{{maybe_current}} {{style}}">{{name}}</a></h{{depth}}>
+    <h{{depth}}><a href="#{{id}}" class="{{maybe_current}} {{style}}">
+        {{#if instance}}<i>{{instance}}</i>.{{/if}}{{name}}
+    </a></h{{depth}}>
   {{/if}}
   {{/each}}
 </div>
 </template>
+
+
+
+<template name="dtdd_helper">
+<dt><span class="name">{{{name}}}</span>
+  {{#if type}}<span class="type">{{type}}</span>{{/if}}
+</dt>
+<dd>{{#better_markdown}}{{{descr}}}{{/better_markdown}}</dd>
+</template>
+
+
+
+<template name="warning_helper">
+  <div class="warning">
+    {{#better_markdown}}{{{this}}}{{/better_markdown}}
+  </div>
+</template>
+

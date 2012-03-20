@@ -1,6 +1,4 @@
-// XXX indexes
 // XXX type checking on selectors (graceful error if malformed)
-// XXX merge ad-hoc live query object and Cursor
 
 // LocalCollection: a set of documents that supports queries and modifiers.
 

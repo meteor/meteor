@@ -1,127 +1,28 @@
 <template name="packages">
-<div>
-{{#markdown}}
-<h1 id="packagelist">Packages</h1>
+{{#better_markdown}}
+
+<h1 id="packages">Packages</h1>
 
 Meteor supports a variety of add-on packages and third party
-libraries. While you can build great applications using only the
-Meteor core functionality, optional packages can make development even
-faster and better.
+libraries. While you can build great applications using only the Meteor
+core functionality, optional packages can make development even faster
+and better.
 
 Packages can be added and removed from a Meteor project with:
 
-<pre class="prettyprint">
-$ meteor add <i>package_name</i>
-</pre>
+    $ meteor add <package_name>
 
 and removed with:
 
-<pre class="prettyprint">
-$ meteor remove <i>package_name</i>
-</pre>
+    $ meteor remove <package_name>
 
+{{> pkg_amplify}}
+{{> pkg_backbone}}
+{{> pkg_coffeescript}}
+{{> pkg_jquery}}
+{{> pkg_less}}
+{{> pkg_showdown}}
+{{> pkg_underscore}}
 
-## `amplify`
-
-Amplify provides a simple cross-browser API for HTML5 local storage, an
-in-browser communication channel for loosely coupling application
-components, and several useful utility functions.
-
-Amplify defines a global namespace `amplify` on the client only. It does
-not run on the server.
-
-For more information about Amplify, see <a href="http://amplifyjs.com/">http://amplifyjs.com/</a>
-
-## `backbone`
-
-Backbone is a popular client-side MVC framework for managing complex
-data in the browser. In addition to the MVC and DOM-binding
-functionality, it also provides an API for HTML5 pushState and
-client-side URL routing.
-
-For more information about Backbone, see
-<a href="http://documentcloud.github.com/backbone/">http://documentcloud.github.com/backbone/</a>
-
-<div class='warning'>
-Tighter integration between Backbone models and Meteor data is coming
-soon, along with additional examples and patterns for using Backbone
-with Meteor.
-</div>
-
-## `coffeescript`
-
-CoffeeScript is a little language that compiles into JavaScript. It
-provides a simple syntax without lots of braces and parentheses.  The
-code compiles one-to-one into the equivalent JS, and there is no
-interpretation at runtime.
-
-CoffeeScript is supported on both the client and the server. Files
-ending with `.coffee` are automatically compiled to JavaScript.
-
-See <a href="http://jashkenas.github.com/coffee-script/">http://jashkenas.github.com/coffee-script/</a>
-for more information.
-
-## `jquery`
-
-<a href="http://jquery.com/">jQuery</a> is a fast and concise JavaScript
-Library that simplifies HTML document traversing, event handling,
-animating, and Ajax interactions for rapid web development.
-
-The `jquery` package adds the jQuery library to the client JavaScript
-bundle. It has no effect on the server.
-
-In addition to the `jquery` package, Meteor provides several jQuery
-plugins as separate packages. These include:
-
-* `jquery-history`
-* `jquery-layout`
-* `jquery-waypoints`
-
-## `less`
-
-LESS extends CSS with dynamic behavior such as variables, mixins,
-operations and functions. It allows for more compact stylesheets and
-helps reduce code duplication in CSS files.
-
-With the `less` package installed, `.less` files in your application are
-automatically compiled to CSS and the results are included in the client
-CSS bundle.
-
-See <a href="http://lesscss.org/">http://lesscss.org/</a> for
-documentation of the LESS language.
-
-## `showdown`
-<!-- XXX rename to markdown when we rename the package -->
-
-This package lets you use Markdown in your templates. It's easy: just
-put your markdown inside
-<code>{&#123;#markdown}}</code> ... <code>{&#123;/markdown}}</code>
-tags. You can still use all of the usual Meteor template features
-inside a Markdown block, such `#each`, and you still get reactivity.
-
-<!-- XXX include an example -->
-
-## `underscore`
-
-Underscore is a utility-belt library for JavaScript that provides
-support for functional programming. It is invaluable for writing clear,
-concise JavaScript in a functional style.
-
-The `underscore` package defines the `_` namespace on both the client
-and the server.
-
-See <a href="http://documentcloud.github.com/underscore/">http://documentcloud.github.com/underscore/</a>
-for underscore API documentation.
-
-<div class='warning'>
-Currently, underscore is included in all projects, as the Meteor
-core depends on it. _ is available in the global namespace on both the
-client and the server even if you do not include this package. However
-if you do use underscore in your application, you should still add the
-package as we will remove the default underscore in the future.
-</div>
-
-
-{{/markdown}}
-</div>
+{{/better_markdown}}
 </template>

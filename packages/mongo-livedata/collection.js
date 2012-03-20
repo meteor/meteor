@@ -138,8 +138,8 @@ _.extend(Meteor.Collection.prototype, {
   }
 });
 
-// 'insert' immediately returns a copy of the inserted document with
-// the _id added. The others return nothing.
+// 'insert' immediately returns the inserted document's new _id.  The
+// others return nothing.
 //
 // Otherwise, the semantics are exactly like other methods: they take
 // a callback as an optional last argument; if no callback is
