@@ -21,7 +21,7 @@ mkdir -p "$PREFIX"
 ./install.sh
 
 # get the version number.
-VERSION="$($PREFIX/bin/meteor --version | sed 's/.* //')"
+VERSION="$($PREFIX/bin/meteor --version | perl -pe 's/.+ ([^ \(]+)( \(.+\))*/$1/')"
 
 # tar it up
 OUTDIR="$TOPDIR/dist"

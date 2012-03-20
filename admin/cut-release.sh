@@ -2,6 +2,10 @@
 
 set -e
 
+# XXX
+echo "This script is currently broken and does not represent the new release procedure. Don't use it!"
+exit 1
+
 # cd to top level dir
 cd `dirname $0`
 cd ..
@@ -46,7 +50,7 @@ export NODE_PATH="$(pwd)/dev_bundle/lib/node_modules"
 # get the tarball. XXX copied from build-release.sh
 UNAME=$(uname)
 ARCH=$(uname -m)
-VERSION="$(/usr/local/bin/meteor --version | sed 's/.* //')"
+VERSION="$(/usr/local/bin/meteor --version | perl -pe 's/.+ ([^ \(]+)( \(.+\))*/$1/')"
 TARBALL=~/meteor-package-${UNAME}-${ARCH}-${VERSION}.tar.gz
 test -f "$TARBALL"
 
