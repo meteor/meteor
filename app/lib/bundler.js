@@ -433,8 +433,8 @@ _.extend(Bundle.prototype, {
     var f = require('handlebars').compile(template.toString());
     return f({
       scripts: self.js.client,
-      head_extra: self.head.join('/n'),
-      body_extra: self.body.join('/n'),
+      head_extra: self.head.join('\n'),
+      body_extra: self.body.join('\n'),
       stylesheets: self.css
     });
   },
