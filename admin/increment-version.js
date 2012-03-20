@@ -15,7 +15,7 @@ var UPDATE_FILES = ['app/lib/updater.js',
                     'admin/install-s3.sh',
                     'admin/debian/changelog',
                     'admin/meteor.spec',
-                    'docs/client/docs.html',
+                    'docs/client/docs.js',
                     ['admin/manifest.json', 'g']];
 
 // Files to update for dev_bundle
