@@ -151,6 +151,15 @@ em {
     letter-spacing: 0px;
 }
 
+#nav h4 {
+    font-size: .8em;
+    font-weight: normal;
+    margin: 4px 0px 4px 0px;
+    padding-left: 20px;
+    color: #333333;
+    letter-spacing: 0px;
+}
+
 #nav .spacer {
     height: .33em;
 }

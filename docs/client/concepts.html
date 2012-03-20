@@ -227,7 +227,7 @@ packages. For now, read up on the
 
 To render the template, you simply call the function:
 
-<pre class="prettyprint">
+<pre>
 &lt;!-- in myapp.html --&gt;
 &lt;template name="hello"&gt;
   &lt;div class="greeting"&gt;Hello there, {&#123;first}} {&#123;last}}!&lt;/div&gt;
@@ -235,9 +235,7 @@ To render the template, you simply call the function:
 
 // in the JavaScript console
 &gt; Template.hello({first: "Alyssa", last: "Hacker"});
- =&gt; &lt;div class="greeting"&gt;Hello there, Alyssa Hacker!&lt;/div&gt;
-</pre>
-</pre>
+ =&gt; &lt;div class="greeting"&gt;Hello there, Alyssa Hacker!&lt;/div&gt;</pre>
 
 In addition to passing JSON data directly to the template function,
 you can also provide data to templates by setting additional
@@ -256,8 +254,7 @@ Template.players.top_10_scorers = function () {
   {&#123;#each top_10_scorers}}
     &lt;div&gt;{&#123;name}}&lt;/div&gt;
   {&#123;/each}}
-&lt;/template&gt;
-</pre>
+&lt;/template&gt;</pre>
 
 Functions can take arguments, and they receive the current template
 data in <code>this</code>.
@@ -277,8 +274,7 @@ Template.players.league_is = function (league) {
       &lt;div&gt;Senior: {&#123;name}}&lt;/div&gt;
     {&#123/if}}
   {&#123;/each}}
-&lt;/template&gt;
-</pre>
+&lt;/template&gt;</pre>
 
 <div class="note">
   Handlebars note: <code>{&#123;#if league_is "junior"}}</code> is
@@ -292,8 +288,7 @@ You can also pass in constant data.
 
 <pre>
 // Works fine with {&#123;#each sections}}
-Template.report.sections = ["Situation", "Complication", "Resolution"];
-</pre>
+Template.report.sections = ["Situation", "Complication", "Resolution"];</pre>
 
 Finally, you can set the <code>events</code> property of a template
 function to a table of event handlers. The format is documented at
@@ -326,8 +321,7 @@ Template.player_score.events = {
   'click .give_points': function () {
     Users.update({_id: this._id}, {$inc: {score: 2}});
   }
-};
-</pre>
+};</pre>
 
 Templates are reactive &mdash; they are automatically wrapped
 in <a href="#render"><code>Meteor.ui.render</code></a>. So, the DOM
@@ -353,8 +347,7 @@ Template.forecast.prediction = function () {
 &gt; document.body.appendChild(x);
 &gt; Session.set("weather", "cool and dry");
 &gt; x
- =&gt; &lt;div&gt;It'll be cool and dry tonight&lt;/div&gt;
-</pre>
+ =&gt; &lt;div&gt;It'll be cool and dry tonight&lt;/div&gt;</pre>
 
 The auto-updating continues as long as the elements are on the
 screen. The specific rule is: if the elements are not children

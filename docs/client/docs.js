@@ -1,3 +1,5 @@
+METEOR_VERSION = "0.1.5";
+
 Meteor.startup(function () {
   var layout = $('body').layout({west: {size: 300}});
   // XXX this is broken by the new multi-page layout.  Also, it was
@@ -46,7 +48,7 @@ Meteor.startup(function () {
 });
 
 var toc = [
-  "Introduction", [
+  {name: "Meteor " + METEOR_VERSION, id: "top"}, [
     "Quick start",
     "Seven principles",
     "Resources"
@@ -65,55 +67,58 @@ var toc = [
   ],
 
   "API", [
-    "Meteor", [
-      "is_client",
-      "is_server",
-      "startup",
-      "setTimeout",
-      "setInterval",
-      "clearTimeout",
-      "clearInterval",
-
-      "publish",
-      "subscription.set",
-      "subscription.unset",
-      "subscription.complete",
-      "subscription.flush",
-      "subscription.onStop",
-      "subscription.stop",
-      "subscribe",
-      "autosubscribe",
-
-      "methods",
-      "Error",
-      "invocation.is_simulation",
-      "invocation.unblock",
-      "call",
-      "apply",
-
-      "status",
-      "reconnect",
-      "connect",
-
-      "flush",
-
-      "random",
-      "uuid"
+    "Core", [
+      "Meteor.is_client",
+      "Meteor.is_server",
+      "Meteor.startup"
     ],
 
-    {name: "Meteor.Collection", id: "meteorcollection_header"}, [
-      "Meteor.Collection",
-      "find",
-      "findOne",
-      "cursor.foreach",
-      "cursor.map",
-      "cursor.fetch",
-      "cursor.count",
-      "cursor.rewind",
-      "cursor.observe",
-      "insert",
-      "update",
-      "remove",
+    "Publish and subscribe", [
+      "Meteor.publish", [
+        {instance: "this", name: "set", id: "publish_set"},
+        {instance: "this", name: "unset", id: "publish_unset"},
+        {instance: "this", name: "complete", id: "publish_complete"},
+        {instance: "this", name: "flush", id: "publish_flush"},
+        {instance: "this", name: "onStop", id: "publish_onstop"},
+        {instance: "this", name: "stop", id: "publish_stop"}
+      ],
+      "Meteor.subscribe",
+      "Meteor.autosubscribe"
+    ],
+
+    {name: "Methods", id: "methods_header"}, [
+      "Meteor.methods", [
+        {instance: "this", name: "is_simulation", id: "method_is_simulation"},
+        {instance: "this", name: "unblock", id: "method_unblock"}
+      ],
+      "Meteor.Error",
+      "Meteor.call",
+      "Meteor.apply"
+    ],
+
+    {name: "Server connections", id: "connections"}, [
+      "Meteor.status",
+      "Meteor.reconnect",
+      "Meteor.connect"
+    ],
+
+    {name: "Collections", id: "collections"}, [
+      "Meteor.Collection", [
+        {instance: "collection", name: "find"},
+        {instance: "collection", name: "findOne"},
+        {instance: "collection", name: "insert"},
+        {instance: "collection", name: "update"},
+        {instance: "collection", name: "remove"}
+      ],
+
+      "Meteor.Collection.Cursor", [
+        {instance: "cursor", name: "forEach"},
+        {instance: "cursor", name: "map"},
+        {instance: "cursor", name: "fetch"},
+        {instance: "cursor", name: "count"},
+        {instance: "cursor", name: "rewind"},
+        {instance: "cursor", name: "observe"}
+      ],
       {type: "spacer"},
       {name: "Selectors", style: "noncode"},
       {name: "Modifiers", style: "noncode"},
@@ -121,66 +126,72 @@ var toc = [
     ],
 
     "Session", [
-      "set",
-      "get",
-      "equals"
+      "Session.set",
+      "Session.get",
+      "Session.equals"
     ],
 
     "Meteor.ui", [
-      "render",
-      "renderList",
+      "Meteor.ui.render",
+      "Meteor.ui.renderList",
+      "Meteor.flush",
       {type: "spacer"},
       {name: "Event maps", style: "noncode"}
     ],
 
-    {type: "spacer"},
+    "Timers", [
+      "Meteor.setTimeout",
+      "Meteor.setInterval",
+      "Meteor.clearTimeout",
+      "Meteor.clearInterval"
+    ],
 
     "Meteor.deps", [
-      {name: "Meteor.deps.Context", id: "context"},
-      {name: "Meteor.deps.Context.current", id: "current"},
-      "run",
-      {name: "on_invalidate", id: "on_invalidate"},
-      "invalidate"
-    ],
+      {name: "Meteor.deps.Context", id: "context"}, [
+        {instance: "context", name: "run"},
+        {instance: "context", name: "on_invalidate"},
+        {instance: "context", name: "invalidate"}
+      ],
+      {name: "Meteor.deps.Context.current", id: "current"}
+    // ],
 
-    {name: "Meteor.EnvironmentVariable", id: "meteor_environmentvariable"}, [
-      "Meteor.EnvironmentVariable",
-      "environment_variable.get",
-      "environment_variable.withValue",
-      "environment_variable.bindEnvironment"
-    ],
-
-    // "EnvironmentVariable",
-
-    "Packages", [
-      "amplify",
-      "backbone",
-      "coffeescript",
-      "jquery",
-      "less",
-      "showdown",
-      "underscore"
-    ],
-
-    "Command line", [
-      "meteor help",
-      "meteor run",
-      "meteor create",
-      "meteor deploy",
-      "meteor logs",
-      "meteor update",
-      "meteor add",
-      "meteor remove",
-      "meteor list",
-      "meteor mongo",
-      "meteor reset",
-      "meteor bundle"
+    // "Environment Variables", [
+    //   "Meteor.EnvironmentVariable", [
+    //     {instance: "env_var", name: "get", id: "env_var_get"},
+    //     {instance: "env_var", name: "withValue", id: "env_var_withvalue"},
+    //     {instance: "env_var", name: "bindEnvironment", id: "env_var_bindenvironment"}
+    //   ]
     ]
-  ]
+  ],
+
+  "Packages", [ [
+    "amplify",
+    "backbone",
+    "coffeescript",
+    "jquery",
+    "less",
+    "showdown",
+    "underscore"
+  ] ],
+
+  "Command line", [ [
+    "meteor help",
+    "meteor run",
+    "meteor create",
+    "meteor deploy",
+    "meteor logs",
+    "meteor update",
+    "meteor add",
+    "meteor remove",
+    "meteor list",
+    "meteor mongo",
+    "meteor reset",
+    "meteor bundle"
+  ] ]
 ];
 
 var name_to_id = function (name) {
-  var x = name.toLowerCase().replace(/[^a-z0-9_,]/g, '').replace(/,/g, '_');
+  var x = name.toLowerCase().replace(/[^a-z0-9_,.]/g, '').replace(/[,.]/g, '_');
   return x;
 };
 
