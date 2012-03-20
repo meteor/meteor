@@ -389,7 +389,8 @@ _.extend(DependencyWatcher.prototype, {
 var start_update_checks = function () {
   var update_check = function () {
     updater.get_manifest(function (manifest) {
-      if (manifest && updater.needs_upgrade(manifest)) {
+      if (!files.in_checkout() && manifest &&
+          updater.needs_upgrade(manifest)) {
         console.log("////////////////////////////////////////");
         console.log("////////////////////////////////////////");
         console.log();
@@ -582,9 +583,7 @@ exports.run = function (app_dir, bundle_opts, port) {
     process.stdout.write("[[[[[ " + files.pretty_path(app_dir) + " ]]]]]\n\n");
     process.stdout.write("Running on: http://localhost:" + outer_port + "/\n");
 
-    if (!files.in_checkout())
-      start_update_checks();
-
+    start_update_checks();
     launch();
   });
 };

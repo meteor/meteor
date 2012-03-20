@@ -1,15 +1,20 @@
 exports.CURRENT_VERSION = "0.1.5";
 
 var fs = require("fs");
+var http = require("http");
 var https = require("https");
 var path = require("path");
 var semver = require("semver");
 
-var files = require("./files.js")
+var files = require("./files.js");
 
 var manifest_options = {
+/* uncomment for testing
   host: 's3.amazonaws.com',
-  path: '/com.meteor.static/update/manifest.json'
+  path: '/com.meteor.static/test/update/manifest.json'
+*/
+  host: 'update.meteor.com',
+  path: '/manifest.json'
 };
 
 
@@ -18,7 +23,7 @@ var manifest_options = {
  * null on error)
  */
 exports.get_manifest = function (callback) {
-  var req = https.request(manifest_options, function(res) {
+  var req = http.request(manifest_options, function(res) {
     if (res.statusCode !== 200) {
       callback(null);
       return;
@@ -38,9 +43,11 @@ exports.get_manifest = function (callback) {
       callback(parsed);
     });
   });
-  req.addListener('error', function () {
-    // No-op makes node not crash!
+  req.addListener('error', function (err) {
+    // Need to register an error handler or node will crash:
     // http://rentzsch.tumblr.com/post/664884799/node-js-handling-refused-http-client-connections
+
+    callback(null);
   });
   req.end();
 };
