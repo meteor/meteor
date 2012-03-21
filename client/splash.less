@@ -4,27 +4,24 @@
 
     .mask {
         position: fixed;
-        z-index: 10;
+        left: 0;
+        top: 0;
         width: 100%;
         height: 100%;
+        z-index: 10;
         background: black;
         opacity: 0.4;
         -ms-filter:"progid:DXImageTransform.Microsoft.Alpha(Opacity=40)";
         -webkit-transition: opacity .25s;
     }
 
-    .dialog_wrapper {
-        position: fixed;
-        top: 50%;
-        height: 1px;
-    }
-
     .dialog {
         position: fixed;
+        float: left;
+        top: 10%;
         left: 50%;
         width: 450px;
-        height: 325px;
-        margin-top: -225px;
+        height: 300px;
         margin-left: -225px;
 
         z-index: 11;

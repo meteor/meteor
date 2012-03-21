@@ -100,20 +100,12 @@ em {
     font-style: italic;
 }
 
-/** Misc layout **/
-
-.ui-layout-pane {
-    overflow: auto;
-}
-
 /** Section nav **/
 
 #nav {
-    padding: 30px;
-    line-height: 1.2;
-    border-width: 1px;
-    border-color: black;
-    border-style: none dotted none none;
+    padding-top: 40px;
+    padding-left: 30px;
+    padding-right: 30px;
 }
 
 #nav > div {
@@ -175,24 +167,10 @@ em {
 /** Main pane **/
 
 #main {
-    padding: 30px;
+    padding: 10px;
+    width: 100%;
     line-height: 1.3;
     color: #333333;
-}
-
-#main-wrapper {
-    width: 550px;
-}
-
-.tagline {
-    width: 100%;
-    text-align: center;
-    font-size: 1.75em;
-    letter-spacing: -1px;
-    font-weight: normal;
-    line-height: normal;
-    font-style: italic;
-    color: black;
 }
 
 #main code {
@@ -416,4 +394,23 @@ dl.example dd {
   border: none;
   color: inherit;
   background: none;
+}
+
+/** layout control **/
+@media (min-width: 480px) {
+#main {
+    width: 550px;
+    height: 100%;
+    margin-left: 22%;
+    padding: 30px;
+}
+#nav {
+    position: fixed;
+    overflow: auto;
+    height: 100%;
+    line-height: 1.2;
+    border-width: 1px;
+    border-color: black;
+    border-style: none dotted none none;
+}
 }
