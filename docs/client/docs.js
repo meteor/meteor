@@ -1,4 +1,4 @@
-METEOR_VERSION = "0.1.5";
+METEOR_VERSION = "0.2.0";
 
 Meteor.startup(function () {
   var layout = $('body').layout({west: {size: 300}});
