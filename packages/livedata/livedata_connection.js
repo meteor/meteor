@@ -17,17 +17,28 @@ Meteor._LivedataConnection = function (url, restart_on_update) {
   self.stores = {}; // name -> object with methods
   self.method_handlers = {}; // name -> func
   self.next_method_id = 1;
+  // waiting for results of method
   self.outstanding_methods = []; // each item has keys: msg, callback
+  // waiting for data from method
   self.unsatisfied_methods = {}; // map from method_id -> true
+  // sub was ready, is no longer (due to reconnect)
+  self.unready_subscriptions = {}; // map from sub._id -> true
+  // messages from the server that have not been applied
   self.pending_data = []; // array of pending data messages
-  self.queued = {}; // name -> updates for (yet to be created) collection
-  self.quiesce_callbacks = [];
-  self.retry_migrate = null; // if we're blocking a migration, the retry func
+  // name -> updates for (yet to be created) collection
+  self.queued = {};
+  // if we're blocking a migration, the retry func
+  self.retry_migrate = null;
 
+  // metadata for subscriptions
   self.subs = new LocalCollection;
   // keyed by subs._id. value is unset or an array. if set, sub is not
   // yet ready.
   self.sub_ready_callbacks = {};
+
+  // just for testing
+  self.quiesce_callbacks = [];
+
 
   // Setup auto-reload persistence.
   var reload_key = "Server-" + url;
@@ -333,7 +344,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
     // If we're using the default callback on the server,
     // synchronously return the result from the remote host.
-    if (future) {
+    if (future) { // XXX should this be typeof !== undefined?
       var outcome = future.wait();
       if (outcome[0])
         throw outcome[0];
@@ -384,22 +395,23 @@ _.extend(Meteor._LivedataConnection.prototype, {
       // successful reconnection -- pick up where we left off.
       return;
 
-    // clear out the local database!
+    // Server doesn't have our data any more. Re-sync a new session.
 
-    // XXX this causes flicker ("database flap") and needs to be
-    // rewritten. we need to put a reset message in pending_data
-    // (optionally clearing pending_data and queued first, as an
-    // optimization), and defer processing pending_data until all of
-    // the subscriptions that we previously told the user were ready,
-    // are now once again ready. then, when we do go to process the
-    // messages, we need to do it in one atomic batch (the reset and
-    // the redeliveries together) so that livequeries don't observe
-    // spurious 'added' and 'removed' messages, which would cause, eg,
-    // DOM elements to fail to get semantically matched, leading to a
-    // loss of focus/input state.
-    _.each(self.stores, function (s) { s.reset(); });
-    self.pending_data = [];
+    // Put a reset message into the pending data queue and discard any
+    // previous messages (they are unimportant now).
+    self.pending_data = ["reset"];
     self.queued = {};
+
+    // Mark all currently ready subscriptions as 'unready'.
+    var all_subs = self.subs.find({}).fetch();
+    self.unready_subscriptions = {};
+    _.each(all_subs, function (sub) {
+      if (!self.sub_ready_callbacks[sub._id])
+        self.unready_subscriptions[sub._id] = true;
+    });
+
+    // Do not remove the database here. That happens once all the subs
+    // are re-ready and we process pending_data.
   },
 
   _livedata_data: function (msg) {
@@ -408,19 +420,41 @@ _.extend(Meteor._LivedataConnection.prototype, {
     // Add the data message to the queue
     self.pending_data.push(msg);
 
-    // If there are still method invocations in flight, stop
+    // Process satisfied methods and subscriptions.
+    // NOTE: does not fire callbacks here, that happens when
+    // the data message is processed for real. This is just for
+    // quiescing.
     _.each(msg.methods || [], function (method_id) {
       delete self.unsatisfied_methods[method_id];
     });
+    _.each(msg.subs || [], function (sub_id) {
+      delete self.unready_subscriptions[sub_id];
+    });
+
+    // If there are still method invocations in flight, stop
     for (var method_id in self.unsatisfied_methods)
       return;
+    // If there are still uncomplete subscriptions, stop
+    for (var sub_id in self.unready_subscriptions)
+      return;
 
-    // All methods have landed. Blow away local changes and replace
+    // We have quiesced. Blow away local changes and replace
     // with authoritative changes from server.
 
     _.each(self.stores, function (s) { s.beginUpdate(); });
 
     _.each(self.pending_data, function (msg) {
+      // Reset message from reconnect. Blow away everything.
+      //
+      // XXX instead of reset message, we could have a flag, and pass
+      // that to beginUpdate. This would be more efficient since we don't
+      // have to restore a snapshot if we're just going to blow away the
+      // db.
+      if (msg === "reset") {
+        _.each(self.stores, function (s) { s.reset(); });
+        return;
+      }
+
       if (msg.collection && msg.id) {
         var store = self.stores[msg.collection];
 

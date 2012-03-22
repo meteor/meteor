@@ -15,7 +15,8 @@ Package.on_use(function (api, where) {
     'selector.js',
     'sort.js',
     'uuid.js',
-    'modify.js'
+    'modify.js',
+    'diff.js'
   ], where);
 });
 
