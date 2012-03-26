@@ -521,7 +521,7 @@ LocalCollection.prototype.resumeObservers = function () {
     var query = this.queries[qid];
     // Diff the current results against the snapshot and send to observers.
     // pass the query object for its observer callbacks.
-    LocalCollection._diffQuery(query.results_snapshot, query.results, query);
+    LocalCollection._diffQuery(query.results_snapshot, query.results, query, true);
     query.results_snapshot = null;
   }
 

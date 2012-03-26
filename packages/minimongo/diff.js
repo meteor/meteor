@@ -2,7 +2,9 @@
 // new_results: array of documents.
 // observer: object with 'added', 'changed', 'moved',
 //           'removed' functions (each optional)
-LocalCollection._diffQuery = function (old_results, new_results, observer) {
+// deepcopy: if true, elements of new_results that are passed to callbacks are
+//          deepcopied first
+LocalCollection._diffQuery = function (old_results, new_results, observer, deepcopy) {
 
   var new_presence_of_id = {};
   _.each(new_results, function (doc) {
@@ -14,6 +16,8 @@ LocalCollection._diffQuery = function (old_results, new_results, observer) {
     old_index_of_id[doc._id] = i;
   });
 
+  // "maybe deepcopy"
+  var mdc = (deepcopy ? LocalCollection._deepcopy : _.identity);
 
   // ALGORITHM:
   //
@@ -171,7 +175,7 @@ LocalCollection._diffQuery = function (old_results, new_results, observer) {
       var old_doc_idx = old_index_of_id[new_doc._id];
       if (old_doc_idx === undefined) {
         // insert
-        observer.added && observer.added(new_doc, new_idx + bump_list.length);
+        observer.added && observer.added(mdc(new_doc), new_idx + bump_list.length);
       } else {
         var old_doc = old_results[old_doc_idx];
         //var is_unmoved = (old_doc_idx > old_idx); // greedy; not minimal
@@ -183,7 +187,7 @@ LocalCollection._diffQuery = function (old_results, new_results, observer) {
           scan_to(old_doc_idx);
           if (! _.isEqual(old_doc, new_doc)) {
             observer.changed && observer.changed(
-              new_doc, new_idx + bump_list.length, old_doc);
+              mdc(new_doc), new_idx + bump_list.length, old_doc);
           }
           old_idx++;
         } else {
@@ -210,9 +214,9 @@ LocalCollection._diffQuery = function (old_results, new_results, observer) {
             bump_list_old_idx.splice(b, 1);
           }
           if (from_idx != to_idx)
-            observer.moved && observer.moved(old_doc, from_idx, to_idx);
+            observer.moved && observer.moved(mdc(old_doc), from_idx, to_idx);
           if (! _.isEqual(old_doc, new_doc)) {
-            observer.changed && observer.changed(new_doc, to_idx, old_doc);
+            observer.changed && observer.changed(mdc(new_doc), to_idx, old_doc);
           }
         }
       }
