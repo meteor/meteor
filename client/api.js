@@ -145,7 +145,7 @@ Template.api.autosubscribe = {
   args: [
     {name: "func",
      type: "Function",
-     descr: "A [`reactive`](#reactivity) function that sets up some subscriptions by calling [`Meteor.subscribe`](#subscribe). It will automatically be re-run when its dependencies change."}
+     descr: "A [`reactive`](#reactivity) function that sets up some subscriptions by calling [`Meteor.subscribe`](#meteor_subscribe). It will automatically be re-run when its dependencies change."}
     ]
 };
 
@@ -501,7 +501,7 @@ Template.api.invalidate = {
   id: "invalidate",
   name: "<em>context</em>.invalidate()",
   locus: "Client",
-  descr: ["Add this context to the list of contexts that will have their `on_invalidate|on_invalidate` callbacks called by the next call to [`Meteor.flush`](#flush)."]
+  descr: ["Add this context to the list of contexts that will have their `on_invalidate|on_invalidate` callbacks called by the next call to [`Meteor.flush`](#meteor_flush)."]
 };
 
 
@@ -510,13 +510,15 @@ Template.api.invalidate = {
 
 Template.api.render = {
   id: "meteor_ui_render",
-  name: "Meteor.ui.render(render_func, [events], [event_data])",
+  name: "Meteor.ui.render(html_func, [options])",
   locus: "Client",
-  descr: ["Create reactive DOM elements that automatically update themselves as data changes in the database or session variables."],
+  descr: ["Create a DocumentFragment containing reactive DOM elements that automatically update as data changes in the database or session variables."],
   args: [
-    {name: "render_func",
-     type: "Function returning a DOM element, an array of DOM elements, a DocumentFragment, a jQuery-style result set, or a string",
-     descr: "Function that renders the DOM elements"},
+    {name: "html_func",
+     type: "Function returning a string of HTML",
+     descr: "Render function to be called, initially and when data changes"}
+  ],
+  options: [
     {name: "events",
      type: "Object &mdash; event map",
      type_link: "eventmaps",
@@ -528,35 +530,50 @@ Template.api.render = {
   ]
 };
 
-Template.api.renderList = {
-  id: "meteor_ui_renderlist",
-  name: "Meteor.ui.renderList(collection, options)",
+Template.api.chunk = {
+  id: "meteor_ui_chunk",
+  name: "Meteor.ui.chunk(html_func, [options])",
   locus: "Client",
-  descr: ["Do a database query and repeat a template for each result. Keep the query running constantly, and return reactive DOM elements that automatically update themselves as the results of the query change."],
+  descr: ["Create annotated HTML that will be reactively updated when rendered with [`Meteor.ui.render`](#meteor_ui_render)."],
   args: [
-    {name: "collection",
-     type: "Collection",
-     type_link: "collection",
-     descr: "The collection to query"}],
+    {name: "html_func",
+     type: "Function returning a string of HTML",
+     descr: "Render function to be called, initially and when data changes"}
+  ],
   options: [
-    {name: "render",
-     type: "Function (required)", // XXX document that it's reactive
-     descr: "Takes a document from the collection and returns a DOM element"},
-    {name: "render_empty",
-     type: "Function",
-     descr: "Return something to show when the query has no results"},
-    {name: "selector",
-     type: "Object &mdash; Mongo selector",
-     type_link: "selectors",
-     descr: "Filter (default: `{}`, all records)"},
-    {name: "sort",
-     type: "Object &mdash; sort specifier",
-     type_link: "sortspecifiers",
-     descr: "Ordering (default: natural order in the database)"},
     {name: "events",
      type: "Object &mdash; event map",
      type_link: "eventmaps",
-     descr: "Events to hook up to each rendered element"}
+     descr: "Events to hook up to the rendered elements"},
+    {name: "event_data",
+     type: "Any value",
+     descr: "Value to bind to `this` in event handlers"
+    }
+  ]
+};
+
+Template.api.listChunk = {
+  id: "meteor_ui_listchunk",
+  name: "Meteor.ui.listChunk(observable, doc_func, [else_func], [options])",
+  locus: "Client",
+  descr: ["Observe a database query and create annotated HTML that will be reactively updated when rendered with [`Meteor.ui.render`](#meteor_ui_render)."],
+  args: [
+    {name: "observable",
+     type: "Cursor",
+     type_link: "meteor_collection_cursor",
+     descr: "Query cursor to observe, as a reactive source of ordered documents"},
+    {name: "doc_func",
+     type: "Function taking a document and returning HTML",
+     descr: "Render function to be called for each document"},
+    {name: "else_func",
+     type: "Function returning HTML",
+     descr: "Render function to be called when query is empty"}
+  ],
+  options: [
+    {name: "events",
+     type: "Object &mdash; event map",
+     type_link: "eventmaps",
+     descr: "Events to hook up to the rendered elements"}
   ]
 };
 
@@ -564,7 +581,7 @@ Template.api.flush = {
   id: "meteor_flush",
   name: "Meteor.flush()",
   locus: "Client",
-  descr: ["Ensure than any reactive updates have finished. Allow auto-updating DOM element to be cleaned up if they are offscreen."]
+  descr: ["Ensure that any reactive updates have finished. Allow auto-updating DOM element to be cleaned up if they are offscreen."]
 };
 
 Template.api.eventmaps = {
@@ -689,7 +706,7 @@ Template.api.set = {
   id: "session_set",
   name: "Session.set(key, value)",
   locus: "Client",
-  descr: ["Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Meteor.autosubscribe`](#autosubscribe) blocks, that called [`Session.get`](#get) on this `key`.)"],
+  descr: ["Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Meteor.autosubscribe`](#meteor_autosubscribe) blocks, that called [`Session.get`](#session_get) on this `key`.)"],
   args: [
     {name: "key",
      type: "String",
@@ -704,7 +721,7 @@ Template.api.get = {
   id: "session_get",
   name: "Session.get(key)",
   locus: "Client",
-  descr: ["Get the value of a session variable. If inside a [`Meteor.monitor`](#monitor) block, invalidate the block the next time the value of the variable is changed by [`Session.set`](#set)."],
+  descr: ["Get the value of a session variable. If inside a [`Meteor.deps`](#meteor_deps) context, invalidate the context the next time the value of the variable is changed by [`Session.set`](#session_set)."],
   args: [
     {name: "key",
      type: "String",
@@ -716,7 +733,7 @@ Template.api.equals = {
   id: "session_equals",
   name: "Session.equals(key, value)",
   locus: "Client",
-  descr: ["Test if a session variable is equal to a value. If inside a [`Meteor.monitor`](#monitor) block, invalidate the block the next time the variable changes to or from the value."],
+  descr: ["Test if a session variable is equal to a value. If inside a [`Meteor.deps`](#meteor_deps) context, invalidate the context the next time the variable changes to or from the value."],
   args: [
     {name: "key",
      type: "String",

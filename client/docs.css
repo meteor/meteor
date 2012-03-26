@@ -173,6 +173,10 @@ em {
     color: #333333;
 }
 
+#main strong {
+    font-weight: bold;
+}
+
 #main code {
     font-size: 1.1em;
     white-space: nowrap;
