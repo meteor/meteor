@@ -1,6 +1,5 @@
 <template name="examples">
-<div>
-{{#markdown}}
+{{#better_markdown}}
 
 # Examples
 
@@ -8,17 +7,14 @@ The source to all our Meteor examples is
 <a target="_blank" href="https://github.com/meteor/meteor/tree/master/examples">available
 on GitHub</a>.
 
-<pre class="prettyprint">
-git clone git@github.com:meteor/meteor.git
-cd meteor/examples/todos
-meteor
-</pre>
+    git clone git@github.com:meteor/meteor.git
+    cd meteor/examples/todos
+    meteor
 
 ## Leaderboard
 
-The <code>leaderboard</code> example shows a basic Meteor application
-using <a href="#render">Meteor.ui.render</a>
-and <a href="#renderlist">renderList</a>.
+The `leaderboard` example shows a basic Meteor application
+using [`Meteor.ui.render`](#meteor_ui_render).
 
 This example is under 100 lines of JavaScript. Read the source
 <a target="_blank" href="https://github.com/meteor/meteor/blob/master/examples/leaderboard/leaderboard.js">
@@ -49,7 +45,7 @@ filter data with Meteor, we added tags to todo items. Each item can be
 tagged with multiple tags, and you can filter on those tags.</dd>
 
 <dt>Templates</dt>
-<dd>Instead of calling <code>renderList</code>, Todos uses Meteor's
+<dd>Todos uses Meteor's
 reactive Handlebars templates to generate and update DOM elements.</dd>
 
 </dl>
@@ -57,6 +53,5 @@ reactive Handlebars templates to generate and update DOM elements.</dd>
 Check out the live todos example at
 <a target="_blank" href="http://todos.meteor.com">todos.meteor.com</a>. The source is about 250 lines of JavaScript and is <a target="_blank" href="https://github.com/meteor/meteor/tree/master/examples/todos">on GitHub</a>.
 
-{{/markdown}}
-</div>
+{{/better_markdown}}
 </template>
