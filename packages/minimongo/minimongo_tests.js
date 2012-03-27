@@ -1,6 +1,6 @@
 // assert that f is a strcmp-style comparison function that puts
 // 'values' in the provided order
-assert_ordering = function (test, f, values) {
+var assert_ordering = function (test, f, values) {
   for (var i = 0; i < values.length; i++) {
     var x = f(values[i], values[i]);
     if (x !== 0) {
@@ -33,6 +33,29 @@ assert_ordering = function (test, f, values) {
       }
     }
   }
+};
+
+var log_callbacks = function (operations) {
+  return {
+    added: function (obj, idx) {
+      delete obj._id;
+      operations.push(LocalCollection._deepcopy(['added', obj, idx]));
+    },
+    changed: function (obj, at, old_obj) {
+      delete obj._id;
+      delete old_obj._id;
+      operations.push(LocalCollection._deepcopy(['changed', obj, at, old_obj]));
+    },
+    moved: function (obj, old_at, new_at) {
+      delete obj._id;
+      operations.push(LocalCollection._deepcopy(['moved', obj, old_at, new_at]));
+    },
+    removed: function (old_obj, at) {
+      var id = old_obj._id;
+      delete old_obj._id;
+      operations.push(LocalCollection._deepcopy(['removed', id, at, old_obj]));
+    }
+  };
 };
 
 // XXX test shared structure in all MM entrypoints
@@ -526,7 +549,7 @@ Tinytest.add("minimongo - ordering", function (test) {
   };
 
   verify([{"a" : 1}, ["a"], [["a", "asc"]]],
-         [{c: 1}, {a: 1}, {a: {}}, {a: []}, {a: true}])
+         [{c: 1}, {a: 1}, {a: {}}, {a: []}, {a: true}]);
   verify([{"a" : -1}, [["a", "desc"]]],
          [{a: true}, {a: []}, {a: {}}, {a: 1}, {c: 1}]);
 
@@ -826,26 +849,7 @@ Tinytest.add("minimongo - modify", function (test) {
 
 Tinytest.add("minimongo - observe", function (test) {
   var operations = [];
-  var cbs = {
-    added: function (obj, idx) {
-      delete obj._id;
-      operations.push(LocalCollection._deepcopy(['added', obj, idx]));
-    },
-    changed: function (obj, at, old_obj) {
-      delete obj._id;
-      delete old_obj._id;
-      operations.push(LocalCollection._deepcopy(['changed', obj, at, old_obj]));
-    },
-    moved: function (obj, old_at, new_at) {
-      delete obj._id;
-      operations.push(LocalCollection._deepcopy(['moved', obj, old_at, new_at]));
-    },
-    removed: function (old_obj, at) {
-      id = old_obj._id;
-      delete old_obj._id;
-      operations.push(LocalCollection._deepcopy(['removed', id, at, old_obj]));
-    }
-  };
+  var cbs = log_callbacks(operations);
   var handle;
 
   var c = new LocalCollection();
@@ -956,4 +960,159 @@ Tinytest.add("minimongo - diff", function (test) {
   diff_test(10, [-2, 7, 4, 6, 11, -3, -8, 9]);
 
 
+});
+
+
+Tinytest.add("minimongo - snapshot", function (test) {
+  var operations = [];
+  var cbs = log_callbacks(operations);
+
+  var c = new LocalCollection();
+  var h = c.find({}).observe(cbs);
+
+  // snapshot empty, restore immediately.
+
+  test.equal(c.find().count(), 0);
+  test.length(operations, 0);
+  c.snapshot();
+  test.equal(c.find().count(), 0);
+  test.length(operations, 0);
+  c.restore();
+  test.equal(c.find().count(), 0);
+  test.length(operations, 0);
+
+
+  // snapshot empty, add new docs
+
+  test.equal(c.find().count(), 0);
+  test.length(operations, 0);
+
+  c.snapshot();
+  test.equal(c.find().count(), 0);
+
+  c.insert({_id: 1, a: 1});
+  test.equal(c.find().count(), 1);
+  test.equal(operations.shift(), ['added', {a:1}, 0]);
+  c.insert({_id: 2, b: 2});
+  test.equal(c.find().count(), 2);
+  test.equal(operations.shift(), ['added', {b:2}, 1]);
+
+  c.restore();
+
+  test.equal(c.find().count(), 0);
+  test.equal(operations.shift(), ['removed', 1, 0, {a:1}]);
+  test.equal(operations.shift(), ['removed', 2, 0, {b:2}]);
+
+
+  // snapshot with contents. see we get add, update and remove.
+  // depends on observer update order from diffQuery.
+  // reorder test statements if this changes.
+
+  c.insert({_id: 1, a: 1});
+  test.equal(c.find().count(), 1);
+  test.equal(operations.shift(), ['added', {a:1}, 0]);
+  c.insert({_id: 2, b: 2});
+  test.equal(c.find().count(), 2);
+  test.equal(operations.shift(), ['added', {b:2}, 1]);
+
+  c.snapshot();
+  test.equal(c.find().count(), 2);
+
+  c.remove({_id: 1});
+  test.equal(c.find().count(), 1);
+  test.equal(operations.shift(), ['removed', 1, 0, {a:1}]);
+  c.insert({_id: 3, c: 3});
+  test.equal(c.find().count(), 2);
+  test.equal(operations.shift(), ['added', {c:3}, 1]);
+  c.update({_id: 2}, {$set: {b: 4}});
+  test.equal(operations.shift(), ['changed', {b:4}, 0, {b:2}]);
+
+  c.restore();
+  test.equal(c.find().count(), 2);
+  test.equal(operations.shift(), ['added', {a:1}, 0]);
+  test.equal(operations.shift(), ['changed', {b:2}, 1, {b:4}]);
+  test.equal(operations.shift(), ['removed', 3, 2, {c:3}]);
+
+
+  // snapshot with stuff. restore immediately. no changes.
+
+  test.equal(c.find().count(), 2);
+  test.length(operations, 0);
+  c.snapshot();
+  test.equal(c.find().count(), 2);
+  test.length(operations, 0);
+  c.restore();
+  test.equal(c.find().count(), 2);
+  test.length(operations, 0);
+
+
+
+  h.stop();
+});
+
+
+Tinytest.add("minimongo - pause", function (test) {
+  var operations = [];
+  var cbs = log_callbacks(operations);
+
+  var c = new LocalCollection();
+  var h = c.find({}).observe(cbs);
+
+  // remove and add cancel out.
+  c.insert({_id: 1, a: 1});
+  test.equal(operations.shift(), ['added', {a:1}, 0]);
+
+  c.pauseObservers();
+
+  c.remove({_id: 1});
+  test.length(operations, 0);
+  c.insert({_id: 1, a: 1});
+  test.length(operations, 0);
+
+  c.resumeObservers();
+  test.length(operations, 0);
+
+
+  // two modifications become one
+  c.pauseObservers();
+
+  c.update({_id: 1}, {a: 2});
+  c.update({_id: 1}, {a: 3});
+
+  c.resumeObservers();
+  test.equal(operations.shift(), ['changed', {a:3}, 0, {a:1}]);
+  test.length(operations, 0);
+
+
+  // snapshot/restore, same results
+  c.snapshot();
+
+  c.insert({_id: 2, b: 2});
+  test.equal(operations.shift(), ['added', {b:2}, 1]);
+
+  c.pauseObservers();
+  c.restore();
+  c.insert({_id: 2, b: 2});
+  test.length(operations, 0);
+
+  c.resumeObservers();
+  test.length(operations, 0);
+
+  // snapshot/restore, different results
+  c.snapshot();
+
+  c.insert({_id: 3, c: 3});
+  test.equal(operations.shift(), ['added', {c:3}, 2]);
+
+  c.pauseObservers();
+  c.restore();
+  c.insert({_id: 3, c: 4});
+  test.length(operations, 0);
+
+  c.resumeObservers();
+  test.equal(operations.shift(), ['changed', {c:4}, 2, {c:3}]);
+  test.length(operations, 0);
+
+
+  h.stop();
 });
