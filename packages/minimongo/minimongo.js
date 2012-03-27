@@ -470,18 +470,16 @@ LocalCollection.prototype.restore = function () {
   // Rerun all queries from scratch. (XXX should do something more
   // efficient -- diffing at least; ideally, take the snapshot in an
   // efficient way, say with an undo log, so that we can efficiently
-  // tell what changed)
+  // tell what changed).
   for (var qid in this.queries) {
     var query = this.queries[qid];
-    if (!this.paused)
-      for (var i = query.results.length - 1; i >= 0; i--)
-        query.removed(query.results[i]._id, i);
+
+    var old_results = query.results;
 
     query.results = query.cursor._getRawObjects();
 
     if (!this.paused)
-      for (var i = 0; i < query.results.length; i++)
-        query.added(LocalCollection._deepcopy(query.results[i]), i);
+      LocalCollection._diffQuery(old_results, query.results, query, true);
   }
 };
 
