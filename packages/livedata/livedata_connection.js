@@ -12,7 +12,15 @@ Meteor._capture_subs = null;
 
 Meteor._LivedataConnection = function (url, restart_on_update) {
   var self = this;
-  self.url = url;
+
+  // as a test hook, allow passing a stream instead of a url.
+  if (typeof url === "object") {
+    self.stream = url;
+    self.url = "/debug";
+  } else {
+    self.url = url;
+  }
+
   self.last_session_id = null;
   self.stores = {}; // name -> object with methods
   self.method_handlers = {}; // name -> func
@@ -66,8 +74,8 @@ Meteor._LivedataConnection = function (url, restart_on_update) {
                    outstanding_methods: methods}];
   });
 
-  // Setup stream
-  self.stream = new Meteor._Stream(self.url);
+  // Setup stream (if not overriden above)
+  self.stream = self.stream || new Meteor._Stream(self.url);
 
   self.stream.on('message', function (raw_msg) {
     try {
