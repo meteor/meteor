@@ -8,11 +8,15 @@ LocalCollection._diffQuery = function (old_results, new_results, observer, deepc
 
   var new_presence_of_id = {};
   _.each(new_results, function (doc) {
+    if (new_presence_of_id[doc._id])
+      Meteor._debug("Duplicate _id in new_results");
     new_presence_of_id[doc._id] = true;
   });
 
   var old_index_of_id = {};
   _.each(old_results, function (doc, i) {
+    if (doc._id in old_index_of_id)
+      Meteor._debug("Duplicate _id in old_results");
     old_index_of_id[doc._id] = i;
   });
 
