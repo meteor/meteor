@@ -36,7 +36,12 @@ testAsyncMulti("mongo-livedata - database failure reporting", [
 
 Tinytest.addAsync("mongo-livedata - basics and fuzz", function (test, onComplete) {
   var run = test.runId();
-  var coll = new Meteor.Collection("livedata_test_collection_"+run);
+  var coll;
+  if (Meteor.is_client) {
+    coll = new Meteor.Collection(); // local, unmanaged
+  } else {
+    coll = new Meteor.Collection("livedata_test_collection_"+run);
+  }
 
   var log = '';
   var obs = coll.find({run: run}, {sort: ["x"]}).observe({
