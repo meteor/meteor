@@ -607,13 +607,17 @@ Meteor._LivedataServer = function () {
             return;
           }
 
+          // XXX session resumption does not work yet!
+          // https://app.asana.com/0/159908330244/577350817064
+          // disabled here:
+          /*
           if (msg.session)
             var old_session = self.sessions[msg.session];
           if (old_session) {
             // Resuming a session
             socket.meteor_session = old_session;
           }
-          else {
+          else */ {
             // Creating a new session
             socket.meteor_session = new Meteor._LivedataSession(self);
             self.sessions[socket.meteor_session.id] = socket.meteor_session;
