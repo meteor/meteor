@@ -141,8 +141,9 @@ Tinytest.add("liveui - one render", function(test) {
   Meteor.flush();
   // flushed now, frag should say "bar"
   test.equal(frag.html(), "bar");
-  R.set("baz");
   frag.release(); // frag is now considered offscreen
+  Meteor.flush();
+  R.set("baz");
   Meteor.flush();
   // no update should have happened, offscreen range dep killed
   test.equal(frag.html(), "bar");
@@ -941,6 +942,78 @@ Tinytest.add("liveui - listChunk table", function(test) {
   });
 
   table.release();
+
+});
+
+Tinytest.add("liveui - listChunk event_data", function(test) {
+  // this is based on a bug
+
+  var lastClicked = null;
+  var R = ReactiveVar(0);
+  var later;
+  var div = OnscreenDiv(Meteor.ui.render(function() {
+    return Meteor.ui.listChunk(
+      { observe: function(observer) {
+        observer.added({_id: '1', name: 'Foo'}, 0);
+        observer.added({_id: '2', name: 'Bar'}, 1);
+        // exercise callback path
+        later = function() {
+          observer.added({_id: '3', name: 'Baz'}, 2);
+          observer.added({_id: '4', name: 'Qux'}, 3);
+        };
+      }},
+      function(doc) {
+        R.get(); // depend on R
+        return '<div>' + doc.name + '</div>';
+      },
+      { events:
+        {
+          'click': function (event) {
+            lastClicked = this.name;
+            R.set(R.get() + 1); // signal all dependers on R
+          }
+        }
+      });
+  }));
+
+  var item = function(name) {
+    return _.find(div.node().getElementsByTagName('div'), function(d) {
+      return d.innerHTML === name; });
+  };
+
+  later();
+  Meteor.flush();
+  test.equal(item("Foo").innerHTML, "Foo");
+  test.equal(item("Bar").innerHTML, "Bar");
+  test.equal(item("Baz").innerHTML, "Baz");
+  test.equal(item("Qux").innerHTML, "Qux");
+
+  var doClick = function(name) {
+    simulateEvent(item(name), 'click');
+    test.equal(lastClicked, name);
+    Meteor.flush();
+  };
+
+  doClick("Foo");
+  doClick("Bar");
+  doClick("Baz");
+  doClick("Qux");
+  doClick("Bar");
+  doClick("Foo");
+  doClick("Foo");
+  doClick("Foo");
+  doClick("Qux");
+  doClick("Baz");
+  doClick("Baz");
+  doClick("Baz");
+  doClick("Bar");
+  doClick("Baz");
+  doClick("Foo");
+  doClick("Qux");
+  doClick("Foo");
+
+  div.kill();
+  Meteor.flush();
 
 });
 

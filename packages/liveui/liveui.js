@@ -137,6 +137,12 @@ Meteor.ui = Meteor.ui || {};
 
 
   Meteor.ui.listChunk = function (observable, doc_func, else_func, react_data) {
+    if (arguments.length === 3 && typeof else_func === "object") {
+      // support (observable, doc_func, react_data) form
+      react_data = else_func;
+      else_func = null;
+    }
+
     if (typeof doc_func !== "function")
       throw new Error("Meteor.ui.listChunk() requires a function as first argument");
     else_func = (typeof else_func === "function" ? else_func :
@@ -155,7 +161,7 @@ Meteor.ui = Meteor.ui || {};
     var doc_render = function(doc) {
       return Meteor.ui._ranged_html(
         Meteor.ui.chunk(function() { return doc_func(doc); },
-                        _.extend(react_data, {event_data: doc})));
+                        _.extend({}, react_data, {event_data: doc})));
     };
     var else_render = function() {
       return Meteor.ui.chunk(function() { return else_func(); },
@@ -232,16 +238,17 @@ Meteor.ui = Meteor.ui || {};
     frag._liveui_refs = (frag._liveui_refs || 0) + 1;
   };
   Meteor.ui._release = function(frag) {
-    --frag._liveui_refs;
-    if (! frag._liveui_refs) {
-      // clean up on flush
-      var cx = new Meteor.deps.Context;
-      cx.on_invalidate(function() {
-        if (! frag._liveui_refs)
-          Meteor.ui._LiveRange.cleanup(frag, Meteor.ui._LiveUIRange.tag);
-      });
-      cx.invalidate();
-    }
+    // Clean up on flush, if hits 0.
+    // Don't want to decrement
+    // _liveui_refs to 0 now because someone else might
+    // clean it up if it's not held.
+    var cx = new Meteor.deps.Context;
+    cx.on_invalidate(function() {
+      --frag._liveui_refs;
+      if (! frag._liveui_refs)
+        Meteor.ui._LiveRange.cleanup(frag, Meteor.ui._LiveUIRange.tag);
+    });
+    cx.invalidate();
   };
 
   Meteor.ui._onscreen = function (node) {
@@ -520,7 +527,7 @@ Meteor.ui = Meteor.ui || {};
     var makeItem = function(doc, in_range) {
       return Meteor.ui.render(
           _.bind(doc_func, null, doc),
-        _.extend(react_data, {event_data: doc}),
+        _.extend({}, react_data, {event_data: doc}),
         in_range);
     };
 
