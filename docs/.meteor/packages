@@ -3,11 +3,9 @@
 # 'meteor add' and 'meteor remove' will edit this file for you,
 # but you can also edit it by hand.
 
-jquery-layout
 jquery
 underscore
 showdown
 code-prettify
 jquery-waypoints
-amplify
 less

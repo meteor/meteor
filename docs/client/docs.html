@@ -1,27 +1,29 @@
 <head>
   <title>Meteor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 
 <body>
-  <div id="main" class="ui-layout-center">
-    <div id="main-wrapper">
-      <div id="top"></div>
-      {{> introduction }}
-      {{> examples }}
-      {{> concepts }}
-      {{> api }}
-      {{> packages }}
-      {{> commandline }}
+  <div class="container-fluid">
+    <div class="row-fluid">
+      <div id="nav" class="span2">
+        {{> nav }}
+      </div>
+      <div id="main" class="span8">
+        <div id="top"></div>
+        {{> introduction }}
+        {{> examples }}
+        {{> concepts }}
+        {{> api }}
+        {{> packages }}
+        {{> commandline }}
+      </div>
     </div>
-  </div>
-
-  <div id="nav" class="ui-layout-west">
-    {{> nav }}
   </div>
 </body>
 
 <template name="nav">
-<div>
+<div class="hidden-phone">
   {{#each sections}}
   {{#if type "spacer"}}
     <div class="spacer"> </div>

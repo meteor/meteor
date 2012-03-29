@@ -1,7 +1,6 @@
 METEOR_VERSION = "0.2.0";
 
 Meteor.startup(function () {
-  var layout = $('body').layout({west: {size: 300}});
   // XXX this is broken by the new multi-page layout.  Also, it was
   // broken before the multi-page layout because it had illegible
   // colors. Just turn it off for now. We'll fix it and turn it on
@@ -21,7 +20,7 @@ Meteor.startup(function () {
       continue;
     sections[i].prev = sections[i-1] || sections[i];
     sections[i].next = sections[i+1] || sections[i];
-    $(sections[i]).waypoint({context: '#main', offset: 30});
+    $(sections[i]).waypoint({offset: 30});
   }
   Session.set('section', document.location.hash.substr(1) || sections[0].id);
 
@@ -33,13 +32,13 @@ Meteor.startup(function () {
     }
   });
 
-  $('body').delegate("a[href^='#']", 'click', function (evt) {
+  $('#main, #nav').delegate("a[href^='#']", 'click', function (evt) {
     evt.preventDefault();
     var sel = $(this).attr('href');
     ignore_waypoints = true;
     Session.set("section", sel.substr(1));
-    $('#main').stop().animate({
-      scrollTop: $(sel).offset().top + $('#main').scrollTop()
+    $('body').stop().animate({
+      scrollTop: $(sel).offset().top
     }, 500, 'swing', function () {
       window.location.hash = sel;
       ignore_waypoints = false;
@@ -58,7 +57,7 @@ var toc = [
     "Todos"
   ],
   "Concepts", [
-    "Structuring your application",
+    "Structuring your app",
     "Data",
     "Reactivity",
     "Templates",
