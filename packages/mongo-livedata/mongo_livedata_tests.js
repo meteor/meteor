@@ -38,7 +38,7 @@ Tinytest.addAsync("mongo-livedata - basics", function (test, onComplete) {
   var run = test.runId();
   var coll;
   if (Meteor.is_client) {
-    coll = new Meteor.Collection(); // local, unmanaged
+    coll = new Meteor.Collection(null); // local, unmanaged
   } else {
     coll = new Meteor.Collection("livedata_test_collection_"+run);
   }
@@ -152,7 +152,7 @@ Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
   var run = test.runId();
   var coll;
   if (Meteor.is_client) {
-    coll = new Meteor.Collection(); // local, unmanaged
+    coll = new Meteor.Collection(null); // local, unmanaged
   } else {
     coll = new Meteor.Collection("livedata_test_collection_"+run);
   }
