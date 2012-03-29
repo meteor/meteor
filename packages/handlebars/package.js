@@ -12,7 +12,7 @@ require('../../packages/handlebars/parse.js'); // XXX lame!!
 Package.on_use(function (api) {
   // XXX should only be sent if we have handlebars templates in the app..
   api.add_files('evaluate.js', 'client');
-  api.use('underscore', 'client')
+  api.use('underscore', 'client');
 });
 
 // XXX lots more to do here .. registering this a templating engine,
