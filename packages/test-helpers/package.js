@@ -8,6 +8,7 @@ Package.on_use(function (api, where) {
 
   api.add_files('try_all_permutations.js', where);
   api.add_files('async_multi.js', where);
+  api.add_files('test_events.js', where);
 });
 
 Package.on_test(function (api) {

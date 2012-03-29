@@ -22,6 +22,7 @@ _.extend(TestCaseResults.prototype, {
     if (doc)
       ok.details = doc;
     if (self.expecting_failure) {
+      ok.details = ok.details || {};
       ok.details["was_expecting_failure"] = true;
       self.expecting_failure = false;
     }
@@ -199,7 +200,8 @@ _.extend(TestCaseResults.prototype, {
     if (obj.length === expected_length)
       this.ok();
     else
-      this.fail({type: "length"}); // XXX what other data?
+      this.fail({type: "length", expected: expected_length,
+                 actual: obj.length});
   }
 
 });
