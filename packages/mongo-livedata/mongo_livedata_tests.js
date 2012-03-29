@@ -33,13 +33,10 @@ testAsyncMulti("mongo-livedata - database failure reporting", [
   }
 ]);
 
-// XXX namespacing
-Meteor._LivedataTestCollection =
-  new Meteor.Collection("livedata_test_collection");
 
-Tinytest.addAsync("mongo-livedata - basics", function (test, onComplete) {
-  var coll = Meteor._LivedataTestCollection;
+Tinytest.addAsync("mongo-livedata - basics and fuzz", function (test, onComplete) {
   var run = test.runId();
+  var coll = new Meteor.Collection("livedata_test_collection_"+run);
 
   var log = '';
   var obs = coll.find({run: run}, {sort: ["x"]}).observe({
