@@ -34,7 +34,7 @@ testAsyncMulti("mongo-livedata - database failure reporting", [
 ]);
 
 
-Tinytest.addAsync("mongo-livedata - basics and fuzz", function (test, onComplete) {
+Tinytest.addAsync("mongo-livedata - basics", function (test, onComplete) {
   var run = test.runId();
   var coll;
   if (Meteor.is_client) {
@@ -143,13 +143,26 @@ Tinytest.addAsync("mongo-livedata - basics and fuzz", function (test, onComplete
     test.equal(coll.find({run: run}).count(), 0);
   });
 
+  obs.stop();
+  onComplete();
+});
+
+Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
+
+  var run = test.runId();
+  var coll;
+  if (Meteor.is_client) {
+    coll = new Meteor.Collection(); // local, unmanaged
+  } else {
+    coll = new Meteor.Collection("livedata_test_collection_"+run);
+  }
 
   // fuzz test of observe(), especially the server-side diffing
   var actual = [];
   var correct = [];
   var counters = {add: 0, change: 0, move: 0, remove: 0};
 
-  var obs2 = coll.find({run: run}, {sort: ["x"]}).observe({
+  var obs = coll.find({run: run}, {sort: ["x"]}).observe({
     added: function (doc, before_index) {
       counters.add++;
       actual.splice(before_index, 0, doc.x);
@@ -181,21 +194,29 @@ Tinytest.addAsync("mongo-livedata - basics and fuzz", function (test, onComplete
     return seededRandom.nextIntBetween(0, n-1);
   };
 
+  var finishObserve = function (f) {
+    if (Meteor.is_client) {
+      f();
+    } else {
+      var fence = new Meteor._WriteFence;
+      Meteor._CurrentWriteFence.withValue(fence, f);
+      fence.armAndWait();
+    }
+  };
+
   var doStep = function () {
     if (step++ === 100) {
       obs.stop();
-      obs2.stop();
       onComplete();
       return;
     }
 
     var max_counters = _.clone(counters);
 
-    captureObserve(function () {
-      if (Meteor.is_server) {
+    finishObserve(function () {
+      if (Meteor.is_server)
         obs._suspendPolling();
-        obs2._suspendPolling();
-      }
+
       // Do a batch of 1-5 operations
       var batch_count = rnd(5) + 1;
       for (var i = 0; i < batch_count; i++) {
@@ -226,10 +247,9 @@ Tinytest.addAsync("mongo-livedata - basics and fuzz", function (test, onComplete
           max_counters.remove++;
         }
       }
-      if (Meteor.is_server) {
+      if (Meteor.is_server)
         obs._resumePolling();
-        obs2._resumePolling();
-      }
+
     });
 
     // Did we actually deliver messages that mutated the array in the
@@ -247,4 +267,5 @@ Tinytest.addAsync("mongo-livedata - basics and fuzz", function (test, onComplete
   };
 
   doStep();
+
 });
