@@ -1,6 +1,6 @@
 Meteor.startup(function () {
   if (!document.cookie.match("splash="))
-    $('body').append(Meteor.ui.render(Template.splash()));
+    $('body').append(Meteor.ui.render(Template.splash));
 });
 
 Template.splash.events = {
