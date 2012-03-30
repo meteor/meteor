@@ -344,16 +344,30 @@ _.extend(TestRun.prototype, {
 
   run: function (onComplete) {
     var self = this;
-    var tests = _.clone(self.manager.ordered_tests);
+    // create array of arrays of tests; synchronous tests in
+    // different groups are run in parallel on client, async tests or
+    // tests in different groups are run in sequence, as are all
+    // tests on server
+    var testGroups = _.values(
+      _.groupBy(self.manager.ordered_tests,
+                function(t) {
+                  if (Meteor.is_server)
+                    return "SERVER";
+                  if (t.async)
+                    return "ASYNC";
+                  return t.name.split(" - ")[0];
+                }));
 
-    var runNext = function () {
-      if (tests.length)
-        self._runOne(tests.shift(), runNext);
-      else
-        onComplete();
-    };
+    _.each(testGroups, function(tests) {
+      var runNext = function () {
+        if (tests.length)
+          self._runOne(tests.shift(), runNext);
+        else
+          onComplete();
+      };
 
-    runNext();
+      runNext();
+    });
   },
 
   // An alternative to run(). Given the 'cookie' attribute of a
