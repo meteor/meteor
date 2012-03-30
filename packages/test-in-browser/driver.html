@@ -11,9 +11,13 @@
   <div class="header in-progress">Testing in progress ...</div>
   {{else}}
     {{#if passed}}
-      <div class="header pass">All tests pass!</div>
+      <div class="header pass">All tests pass!
+        <span class="time">{{total_test_time}} ms</span>
+      </div>
     {{else}}
-      <div class="header fail">There are failures.</div>
+      <div class="header fail">There are failures.
+        <span class="time">{{total_test_time}} ms</span>
+      </div>
     {{/if}}
   {{/if}}
 
@@ -74,7 +78,7 @@
         {{/if}}
       {{/with}}
       {{#if is_debuggable}}
-        <span class="debug">[Debug]</a>
+        <span class="debug">[Debug]</span>
       {{/if}}
       </span>
     </div>

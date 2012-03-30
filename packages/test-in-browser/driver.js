@@ -47,6 +47,33 @@ Template.test_table.passed = function() {
   return walk(resultTree);
 };
 
+
+Template.test_table.total_test_time = function() {
+  var cx = Meteor.deps.Context.current;
+  if (cx) {
+    resultDeps.push(cx);
+  }
+
+  // walk whole tree to get all tests
+  var walk = function (groups) {
+    var total = 0;
+
+    _.each(groups || [], function (group) {
+      _.each(group.tests || [], function (t) {
+        total += _testTime(t);
+      });
+
+      total += walk(group.groups);
+    });
+
+    return total;
+  };
+
+  return walk(resultTree);
+};
+
+
+
 Template.test_table.data = function() {
   var cx = Meteor.deps.Context.current;
   if (cx) {

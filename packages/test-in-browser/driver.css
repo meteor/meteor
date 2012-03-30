@@ -17,6 +17,11 @@
   font-weight: bold;
 }
 
+.header .time {
+  color: #666;
+  font-size: 14px;
+}
+
 .test_table {
   font-family: Arial, sans-serif;
   width: 500px;

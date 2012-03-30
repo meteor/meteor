@@ -22,6 +22,7 @@ _.extend(TestCaseResults.prototype, {
     if (doc)
       ok.details = doc;
     if (self.expecting_failure) {
+      ok.details = ok.details || {};
       ok.details["was_expecting_failure"] = true;
       self.expecting_failure = false;
     }
@@ -82,23 +83,19 @@ _.extend(TestCaseResults.prototype, {
   // XXX eliminate 'message' and 'not' arguments
   equal: function (actual, expected, message, not) {
     /* If expected is a DOM node, do a literal '===' comparison with
-     * actual. Otherwise compare the JSON stringifications of expected
-     * and actual. (It's no good to stringify a DOM node. Circular
-     * references, to start with..) */
+     * actual. Otherwise do a deep comparison, as implemented by _.isEqual.
+     */
 
-    // XXX WE REALLY SHOULD NOT BE USING
-    // STRINGIFY. stringify([undefined]) === stringify([null]). should use
-    // deep equality instead.
-
+    var matched;
     // XXX remove cruft specific to liverange
     if (typeof expected === "object" && expected && expected.nodeType) {
-      var matched = expected === actual;
+      matched = expected === actual;
       expected = "[Node]";
       actual = "[Unknown]";
     } else {
+      matched = _.isEqual(expected, actual);
       expected = JSON.stringify(expected);
       actual = JSON.stringify(actual);
-      var matched = expected === actual;
     }
 
     if (matched === !!not) {
@@ -203,7 +200,8 @@ _.extend(TestCaseResults.prototype, {
     if (obj.length === expected_length)
       this.ok();
     else
-      this.fail({type: "length"}); // XXX what other data?
+      this.fail({type: "length", expected: expected_length,
+                 actual: obj.length});
   }
 
 });
