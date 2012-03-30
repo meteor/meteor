@@ -462,6 +462,14 @@ Meteor.ui = Meteor.ui || {};
 
     old_range.replace_contents(function() {
       Meteor.ui._LiveRange.cleanup(old_range);
+
+      // remove event handlers on old nodes (which we will be patching)
+      // at top level, where they are attached by $(...).delegate().
+      for(var n = old_range.firstNode();
+          n && n !== old_range.lastNode().nextSibling;
+          n = n.nextSibling)
+        $(n).unbind();
+
       patch(old_range, new_parent);
     });
 

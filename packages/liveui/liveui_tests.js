@@ -1017,13 +1017,40 @@ Tinytest.add("liveui - listChunk event_data", function(test) {
 
 });
 
+Tinytest.add("liveui - events on preserved nodes", function(test) {
+  var count = ReactiveVar(0);
+  var demo = OnscreenDiv(Meteor.ui.render(function() {
+    return '<div class="button_demo">'+
+      '<input type="button" name="press" value="Press this button">'+
+      '<div>The button has been pressed '+count.get()+' times.</div>'+
+      '</div>';
+  }, {events: {
+    'click input': function() {
+      count.set(count.get() + 1);
+    }
+  }}));
+
+  var click = function() {
+    simulateEvent(demo.node().getElementsByTagName('input')[0], 'click');
+  };
+
+  test.equal(count.get(), 0);
+  for(var i=0; i<10; i++) {
+    click();
+    Meteor.flush();
+    test.equal(count.get(), i+1);
+  }
+
+  demo.kill();
+  Meteor.flush();
+});
+
 
 // TO TEST:
 // - events
 //   - current brokenness
 //   - attaching events in render, chunk, listChunk item, listChunk else
 //   - test that handlers still work under various sub-partial replacements
-//   - test presered checkbox
 // - unused chunk??
 
 // XXX GC testing: for sake of coverage, removing any 'LiveRange.cleanup'
