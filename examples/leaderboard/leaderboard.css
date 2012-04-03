@@ -1,7 +1,8 @@
 body {
     font-family: 'Helvetica Neue', Helvetica, Arial, san-serif;
+    font-weight: 200;
     margin: 50px auto;
-    width: 420px;
+    width: 600px;
     -webkit-user-select: none;
     -khtml-user-select: none;
     -moz-user-select: none;
@@ -9,28 +10,23 @@ body {
     user-select: none;
 }
 
-.leaderboard {
-    margin: 50px 0px;
-}
-
 .player {
-    padding: 5px 10px;
+    padding: 5px;
 }
 
 .player .name {
     display: inline-block;
     width: 300px;
-    font-weight: 200;
     font-size: 1.75em;
 }
 
 .player .score {
-    font-weight: bold;
     display: inline-block;
     width: 100px;
-    color: #777;
-    font-size: 2em;
     text-align: right;
+    font-size: 2em;
+    font-weight: bold;
+    color: #777;
 }
 
 .player.selected {
