@@ -377,11 +377,6 @@ _Mongo.LiveResultsSet = function (cursor, options) {
   // expose collection name
   self.collection_name = cursor.collection_name;
 
-  // unique handle for this live query
-  self.cursor.mongo.next_observer_id =
-    self.cursor.mongo.next_observer_id || 0; // XXX added by dgreenspan
-  self.qid = self.cursor.mongo.next_observer_id++;
-
   // previous results snapshot.  on each poll cycle, diffs against
   // results drives the callbacks.
   self.results = [];
@@ -457,10 +452,10 @@ _Mongo.LiveResultsSet.prototype._unthrottled_markDirty = function () {
   }).run();
 };
 
+// interface for tests to control when polling happens
 _Mongo.LiveResultsSet.prototype._suspendPolling = function() {
   this.polling_suspended = true;
 };
-
 _Mongo.LiveResultsSet.prototype._resumePolling = function() {
   this.polling_suspended = false;
   this._unthrottled_markDirty(); // poll NOW, don't wait
