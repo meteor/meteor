@@ -260,7 +260,7 @@ _Mongo._makeCursor = function (mongo, collection_name, selector, options) {
   mongo._withCollection(collection_name, function (err, collection) {
     if (err) {
       future.ret([false, err]);
-      return
+      return;
     }
     var cursor = collection.find(selector, options.fields, {
       sort: options.sort, limit: options.limit, skip: options.skip});
@@ -288,6 +288,8 @@ _Mongo.Cursor = function (mongo, collection_name, selector, options, cursor) {
   self.selector = selector;
   self.options = options;
   self.cursor = cursor;
+
+  self.visited_ids = {};
 };
 
 _Mongo.Cursor.prototype.forEach = function (callback) {
@@ -295,10 +297,15 @@ _Mongo.Cursor.prototype.forEach = function (callback) {
   var future = new Future;
 
   self.cursor.each(function (err, doc) {
-    if (err || !doc)
+    if (err || !doc || !doc._id) {
       future.ret(err);
-    else
+    } else if (self.visited_ids[doc._id]) {
+      // already seen this doc;  Mongo cursors can
+      // return duplicates
+    } else {
+      self.visited_ids[doc._id] = true;
       callback(doc);
+    }
   });
 
   var err = future.wait();
@@ -320,6 +327,8 @@ _Mongo.Cursor.prototype.rewind = function () {
 
   // known to be synchronous
   self.cursor.rewind();
+
+  self.visited_ids = {};
 };
 
 _Mongo.Cursor.prototype.fetch = function () {
@@ -333,7 +342,9 @@ _Mongo.Cursor.prototype.fetch = function () {
   var result = future.wait();
   if (result[0])
     throw result[0];
-  return result[1];
+  // dedup
+  return _.uniq(result[1], false, function(doc) {
+    return doc._id; });
 };
 
 _Mongo.Cursor.prototype.count = function () {
