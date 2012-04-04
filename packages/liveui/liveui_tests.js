@@ -46,7 +46,7 @@ WrappedFrag.prototype.rawHtml = function() {
   return Meteor.ui._fragmentToHtml(this.frag);
 };
 WrappedFrag.prototype.html = function() {
-  return Meteor.ui._canonicalizeHtml(this.rawHtml());
+  return canonicalizeHtml(this.rawHtml());
 };
 WrappedFrag.prototype.hold = function() {
   return Meteor.ui._hold(this.frag), this;
@@ -74,7 +74,7 @@ OnscreenDiv.prototype.rawHtml = function() {
   return this.div.innerHTML;
 };
 OnscreenDiv.prototype.html = function() {
-  return Meteor.ui._canonicalizeHtml(this.rawHtml());
+  return canonicalizeHtml(this.rawHtml());
 };
 OnscreenDiv.prototype.node = function() {
   return this.div;
@@ -766,7 +766,7 @@ Tinytest.add("liveui - leaderboard", function(test) {
   test.isTrue(!! glinnesId);
   test.equal(selected_player.get(), glinnesId);
   test.equal(
-    Meteor.ui._canonicalizeHtml(glinnesNameNode.parentNode.innerHTML),
+    canonicalizeHtml(glinnesNameNode.parentNode.innerHTML),
     '<div class="name">Glinnes Hulden</div><div name="score">0</div>');
 
   bump();
@@ -780,7 +780,7 @@ Tinytest.add("liveui - leaderboard", function(test) {
   test.equal(glinnesScoreNode, glinnesScoreNode2);
   test.equal(glinnesNameNode.parentNode.className, 'player selected');
   test.equal(
-    Meteor.ui._canonicalizeHtml(glinnesNameNode.parentNode.innerHTML),
+    canonicalizeHtml(glinnesNameNode.parentNode.innerHTML),
     '<div class="name">Glinnes Hulden</div><div name="score">5</div>');
 
   bump();
@@ -788,7 +788,7 @@ Tinytest.add("liveui - leaderboard", function(test) {
 
   glinnesNameNode = findPlayerNameDiv(names[0], glinnesNameNode);
   test.equal(
-    Meteor.ui._canonicalizeHtml(glinnesNameNode.parentNode.innerHTML),
+    canonicalizeHtml(glinnesNameNode.parentNode.innerHTML),
     '<div class="name">Glinnes Hulden</div><div name="score">10</div>');
 
   scores.kill();

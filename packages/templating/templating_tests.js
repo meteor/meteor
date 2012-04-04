@@ -4,7 +4,7 @@ Tinytest.add("template assembly", function (test) {
   // Test for a bug that made it to production -- after a replacement,
   // we need to also check the newly replaced node for replacements
   var frag = Meteor.ui.render(Template.test_assembly_a0);
-  test.equal(Meteor.ui._canonicalizeHtml(Meteor.ui._fragmentToHtml(frag)),
+  test.equal(canonicalizeHtml(Meteor.ui._fragmentToHtml(frag)),
                "Hi");
 
   // Another production bug -- we must use LiveRange to replace the
@@ -16,10 +16,10 @@ Tinytest.add("template assembly", function (test) {
   var onscreen = DIV({style: "display: none"}, [
     Meteor.ui.render(Template.test_assembly_b0)]);
   document.body.appendChild(onscreen);
-  test.equal(Meteor.ui._canonicalizeHtml(onscreen.innerHTML), "xyhi");
+  test.equal(canonicalizeHtml(onscreen.innerHTML), "xyhi");
   Session.set("stuff", false);
   Meteor.flush();
-  test.equal(Meteor.ui._canonicalizeHtml(onscreen.innerHTML), "xhi");
+  test.equal(canonicalizeHtml(onscreen.innerHTML), "xhi");
   document.body.removeChild(onscreen);
 });
 

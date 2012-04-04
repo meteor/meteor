@@ -30,14 +30,15 @@ Meteor.ui = Meteor.ui || {};
       return [start, end];
     } else {
       // IE8 workaround: insert some empty comments.
-      var placeholder;
+      // Comments whose text is "IE" are stripped out
+      // in cross-browser testing.
       if (start.nodeType === 3 /* text node */) {
-        placeholder = document.createComment("IE");
+        var placeholder = document.createComment("IE");
         start.parentNode.insertBefore(placeholder, start);
         start = placeholder;
       }
       if (end.nodeType === 3 /* text node */) {
-        placeholder = document.createComment("IE");
+        var placeholder = document.createComment("IE");
         end.parentNode.insertBefore(placeholder, end.nextSibling);
         end = placeholder;
       }

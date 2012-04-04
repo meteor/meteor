@@ -9,6 +9,7 @@ Package.on_use(function (api, where) {
   api.add_files('try_all_permutations.js', where);
   api.add_files('async_multi.js', where);
   api.add_files('simulate_event.js', where);
+  api.add_files('canonicalize_html.js', where);
 });
 
 Package.on_test(function (api) {

@@ -2,22 +2,26 @@ Meteor.ui = Meteor.ui || {};
 
 (function() {
 
+  // `in_range` is a package-private argument used to render inside
+  // an existing LiveRange on an update.
   Meteor.ui.render = function (html_func, react_data, in_range) {
     if (typeof html_func !== "function")
       throw new Error("Meteor.ui.render() requires a function as its first argument.");
 
     var cx = new Meteor.deps.Context;
-    cx.rangeCallbacks = {_count: 0};
+    cx.rangeCallbacks = {_count: 0}; // XXX refactor into special
 
     var html = cx.run(html_func);
     if (typeof html !== "string")
-      throw new Error("Return value of Meteor.ui.render()'s first argument must be "+
-                      "a string");
+      throw new Error("Render function must return a string");
+
     var frag = Meteor.ui._htmlToFragment(html);
     if (! frag.firstChild)
       frag.appendChild(document.createComment("empty"));
 
 
+    // Helper that invokes `f` on every comment node under `parent`.
+    // If `f` returns a node, visit that node next.
     var each_comment = function(parent, f) {
       for (var n = parent.firstChild; n;) {
         if (n.nodeType === 8) { // comment
@@ -36,10 +40,12 @@ Meteor.ui = Meteor.ui || {};
     each_comment(frag, function(n) {
       var next = null;
 
+      // XXX use match instead of replace to clarify
+
       n.nodeValue.replace(/^\s*(START|END)RANGE_(\S+)/, function(z, which, id) {
         if (which === "START") {
           if (rangeStartNodes[id])
-            throw new Error("Can't render same chunk or range twice.");
+            throw new Error("The return value of chunk can only be used once.");
           rangeStartNodes[id] = n;
         } else if (which === "END") {
           var startNode = rangeStartNodes[id], endNode = n;
@@ -60,6 +66,8 @@ Meteor.ui = Meteor.ui || {};
               a.parentNode.removeChild(a);
               b.parentNode.removeChild(b);
             }
+          } else {
+            /* shouldn't happen; invalid HTML? */
           }
 
           if (startNode.parentNode !== endNode.parentNode) {
@@ -93,12 +101,14 @@ Meteor.ui = Meteor.ui || {};
 
     var range;
     if (in_range) {
+      // Called to re-render a chunk; update that chunk in place.
       Meteor.ui._intelligent_replace(in_range, frag);
       range = in_range;
     } else {
       range = new Meteor.ui._LiveUIRange(frag);
     }
 
+    // Call "added to DOM" callbacks to wire up all sub-chunks.
     _.each(rangesCreated, function(r) {
       if ("temp_callback" in r) {
         r.temp_callback && r.temp_callback(r);
@@ -128,7 +138,7 @@ Meteor.ui = Meteor.ui || {};
 
     var html = cx.run(html_func);
     if (typeof html !== "string")
-      throw new Error("Function passed to chunk() must return a string");
+      throw new Error("Render function must return a string");
 
     return Meteor.ui._ranged_html(html, function(range) {
       Meteor.ui._wire_up(cx, range, html_func, react_data);
@@ -158,21 +168,17 @@ Meteor.ui = Meteor.ui || {};
     var handle = observable.observe(receiver);
     receiver.flush_to_array(buf);
 
-    var doc_render = function(doc) {
-      return Meteor.ui._ranged_html(
-        Meteor.ui.chunk(function() { return doc_func(doc); },
-                        _.extend({}, react_data, {event_data: doc})));
-    };
-    var else_render = function() {
-      return Meteor.ui.chunk(function() { return else_func(); },
-                              react_data);
-    };
-
     var inner_html;
-    if (buf.length == 0)
-      inner_html = live ? else_render() : else_func();
-    else
-      inner_html = _.map(buf, live ? doc_render : doc_func).join('');
+    if (buf.length === 0) {
+      inner_html = Meteor.ui.chunk(else_func, react_data);
+    } else {
+      var doc_render = function(doc) {
+        return Meteor.ui._ranged_html(
+          Meteor.ui.chunk(function() { return doc_func(doc); },
+                          _.extend({}, react_data, {event_data: doc})));
+      };
+      inner_html = _.map(buf, doc_render).join('');
+    }
 
     if (! live) {
       handle.stop();
@@ -228,11 +234,14 @@ Meteor.ui = Meteor.ui || {};
     return true;
   };
 
+  // Internal facility, only used by tests, for holding onto
+  // DocumentFragments across flush().  Reference counts
+  // using hold() and release().
   Meteor.ui._is_held = function(node) {
     while (node.parentNode)
       node = node.parentNode;
 
-    return node.nodeType !== 3 && node._liveui_refs;
+    return node.nodeType !== 3 /*TEXT_NODE*/ && node._liveui_refs;
   };
   Meteor.ui._hold = function(frag) {
     frag._liveui_refs = (frag._liveui_refs || 0) + 1;
@@ -313,9 +322,6 @@ Meteor.ui = Meteor.ui || {};
     this.queue.push(['changed', doc, at_idx]);
     this.signal();
   };
-  CallbackReceiver.prototype.clear = function() {
-    this.queue.length = 0;
-  };
   CallbackReceiver.prototype.flush_to = function(t) {
     // fire all queued events on new target
     for(var i=0; i<this.queue.length; i++) {
@@ -327,7 +333,7 @@ Meteor.ui = Meteor.ui || {};
       case 'changed': t.changed(a[1], a[2]); break;
       }
     }
-    this.clear();
+    this.queue.length = 0;
   };
   CallbackReceiver.prototype.flush_to_array = function(array) {
     // apply all queued events to array
@@ -340,7 +346,7 @@ Meteor.ui = Meteor.ui || {};
       case 'changed': array[a[2]] = a[1]; break;
       }
     }
-    this.clear();
+    this.queue.length = 0;
   };
   CallbackReceiver.prototype.signal = function() {
     if (this.queue.length > 0) {
@@ -391,7 +397,8 @@ Meteor.ui = Meteor.ui || {};
     }
   };
 
-
+  // Performs a replacement by determining which nodes should
+  // be preserved and invoking Meteor.ui._Patcher as appropriate.
   Meteor.ui._intelligent_replace = function(old_range, new_parent) {
 
     // Table-body fix:  if old_range is in a table and new_parent
@@ -449,10 +456,10 @@ Meteor.ui = Meteor.ui || {};
         if (tgt && targetNodeOrder[label] > lastPos) {
           if (patcher.match(tgt, src, copyFunc)) {
             // match succeeded
-            lastPos = targetNodeOrder[label];
             if (tgt.firstChild || src.firstChild)
               patch(tgt, src); // recurse
           }
+          lastPos = targetNodeOrder[label];
         }
       });
       patcher.finish();
@@ -486,12 +493,9 @@ Meteor.ui = Meteor.ui || {};
       }
     }
 
-    if (data.branchName) {
-      range.branchName = data.branchName;
-    }
-
     // record that if we see this range offscreen during a flush,
     // we are to kill the context (mark it killed and invalidate it).
+    // Kill old context from previous update.
     range.killContext();
     range.context = cx;
 
@@ -517,13 +521,11 @@ Meteor.ui = Meteor.ui || {};
       receiver.depend();
     });
     outer_range.context.on_invalidate(function update(old_cx) {
-      if (old_cx.killed) {
+      if (old_cx.killed || _checkOffscreen(outer_range)) {
         if (handle_to_stop)
           handle_to_stop.stop();
         return;
       }
-      if (_checkOffscreen(outer_range))
-        return;
 
       receiver.flush_to(callbacks);
 
@@ -566,6 +568,8 @@ Meteor.ui = Meteor.ui || {};
           return;
 
         var range = range_list[old_idx];
+        // We know the list has at least two items,
+        // at old_idx and new_idx, so `extract` will succeed.
         var frag = range.extract(true);
         range_list.splice(old_idx, 1);
 
