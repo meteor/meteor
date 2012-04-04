@@ -58,9 +58,9 @@ var run = function (bundle_dir) {
 
   // webserver
   var app = connect.createServer();
+  app.use(gzip.staticGzip(path.join(bundle_dir, 'static_cacheable'), {maxAge: 1000 * 60 * 60 * 24 * 365}));
+  app.use(gzip.staticGzip(path.join(bundle_dir, 'static')));
   app.use(gzip.gzip());
-  app.use(connect.static(path.join(bundle_dir, 'static_cacheable'), {maxAge: 1000 * 60 * 60 * 24 * 365}));
-  app.use(connect.static(path.join(bundle_dir, 'static')));
 
   var app_html = fs.readFileSync(path.join(bundle_dir, 'app.html'));
   var unsupported_html = fs.readFileSync(path.join(bundle_dir, 'unsupported.html'));
