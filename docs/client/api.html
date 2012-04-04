@@ -905,40 +905,21 @@ DocumentFragment are sensitive to changes to the previously accessed data,
 in that if the data accessed from within `html_func` changes, then `html_func`
 is automatically re-run and the new DOM elements are patched into place.
 
-There are two potential pitfalls to overwriting parts of the DOM with replacement
-elements, as `render` must do during an update.
-One is that we might end up doing a lot
-of extra work, for example re-rendering the entire page whenever the
-database changes.  The other is that re-rendering might reset form controls,
-for example replacing a text field that the user is typing in with a fresh, empty
-one that doesn't have focus.  Ideally, small database changes would produce
-small, localized DOM updates, and the identity of input controls would be preserved
-even in the presence of reactive changes to their surroundings.
-
-By providing some hints, you can enable `render` to patch DOM elements in place, rather than replacing them.
-
-<span id="patching">Patching</span> is triggered by the presence of elements
-with `id` or `name` attributes,
-and it aims to preserve the old elements while still effecting the same overall
-update.  If the old HTML and the new HTML both declare an element with the same `id`,
-the old element and its parents are not removed from the DOM or reparented; instead,
-the only the old element's siblings, children, and attributes are changed.  The
-`name` attribute has a similar effect if it is unique among descendents of the
-nearest ancestor with a `name` or `id` tag.  An element with an `id` or `name` attribute is called a "labeled" element.  To be sure that a form field is preserved
-across updates, then, you should either assign it a unique `id` or give it a unique `name` within some enclosing element with a unique `id`.
-
-The patching process preserves all labeled elements, regardless of their depth or nesting, as long as this can be done without reparenting or recreating the elements.  It is possible to create situations where patching is impossible; for example, changing the tag name of an element, or moving the element to a different position, in which case the element in question is not preserved.
-
 The DocumentFragment returned by `Meteor.ui.render` can be inserted anywhere
 in the DOM you like, and the DOM elements will continue to update until they are
 removed from the document.  For the details, see [`Meteor.flush`](#meteor_flush).
-
-If you want a region of your HTML to be able to update independently of the other HTML around it, wrap it in a [`Meteor.ui.chunk`](#meteor_ui_chunk).
 
 The `events` option lets you hook up event handlers to
 the DOM nodes. If you provide `event_data`, it will be
 passed to event handlers in `this`.  (See [Event Maps](#eventmaps).)
 
+When `render` replaces DOM elements because data changed, it can leave `input`
+elements undisturbed so that focus is preserved, text entered into fields isn't
+lost, and so forth.  To activate this feature, give each such element a unique
+`id`, or give it a unique `name` attribute inside the nearest enclosing element
+with an `id`.
+
+If you want a region of your HTML to be able to update independently of the other HTML around it, wrap it in a [`Meteor.ui.chunk`](#meteor_ui_chunk).
 
 Example:
 
@@ -1026,8 +1007,6 @@ Example:
 `listChunk` is like `chunk`, but instead of creating one chunk, it creates several, one for each record in the results of a database query.
 
 It keeps the chunks updated as the results of the database query change. For example, if a new record is created in the database that matches the query, a new chunk is inserted. If the query is sorted, and a database record changes, and the change causes it to move in the sort order, then the chunk is moved appropriately.
-
-As with `chunk`, all of these updates are made with [minimum disturbance to the DOM](#patching), typically by inserting and removing a few DOM nodes.
 
 If you provide `else_func`, then whenever the query returns no results, it will be called to render alternative content. You might use this to show a message like "No records match your query."
 
