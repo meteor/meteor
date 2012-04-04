@@ -512,11 +512,11 @@ Template.api.render = {
   id: "meteor_ui_render",
   name: "Meteor.ui.render(html_func, [options])",
   locus: "Client",
-  descr: ["Create a DocumentFragment containing reactive DOM elements that automatically update as data changes in the database or session variables."],
+  descr: ["Create DOM nodes that automatically update themselves as data changes."],
   args: [
     {name: "html_func",
      type: "Function returning a string of HTML",
-     descr: "Render function to be called, initially and when data changes"}
+     descr: "Render function to be called, initially and whenever data changes"}
   ],
   options: [
     {name: "events",
@@ -534,11 +534,11 @@ Template.api.chunk = {
   id: "meteor_ui_chunk",
   name: "Meteor.ui.chunk(html_func, [options])",
   locus: "Client",
-  descr: ["Create annotated HTML that will be reactively updated when rendered with [`Meteor.ui.render`](#meteor_ui_render)."],
+  descr: ["Inside [`Meteor.ui.render`](#meteor_ui_render), give special behavior to a range of HTML."],
   args: [
     {name: "html_func",
      type: "Function returning a string of HTML",
-     descr: "Render function to be called, initially and when data changes"}
+     descr: "Render function to be called, initially and whenever data changes"}
   ],
   options: [
     {name: "events",
