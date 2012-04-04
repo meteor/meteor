@@ -12,11 +12,18 @@ LocalCollection = function () {
 
   this.next_qid = 1; // live query id generator
 
-  // qid -> live query object. keys: results, selector_f, sort_f, cursor, (callbacks)
+  // qid -> live query object. keys:
+  //  results: array of current results
+  //  results_snapshot: snapshot of results. null if not paused.
+  //  cursor: Cursor object for the query.
+  //  selector_f, sort_f, (callbacks): functions
   this.queries = {};
 
   // when we have a snapshot, this will contain a deep copy of 'docs'.
   this.current_snapshot = null;
+
+  // True when observers are paused and we should not send callbacks.
+  this.paused = false;
 };
 
 // options may include sort, skip, limit, reactive
@@ -173,15 +180,27 @@ LocalCollection.Cursor.prototype.observe = function (options) {
     selector_f: self.selector_f, // not fast pathed
     sort_f: self.sort_f,
     results: [],
+    results_snapshot: self.collection.paused ? [] : null,
     cursor: this
   };
   query.results = self._getRawObjects();
 
-  query.added = options.added || function () {};
-  query.changed = options.changed || function () {};
-  query.moved = options.moved || function () {};
-  query.removed = options.removed || function () {};
-  if (!options._suppress_initial)
+  // wrap callbacks we were passed. callbacks only fire when not paused
+  // and are never undefined.
+  var if_not_paused = function (f) {
+    if (!f)
+      return function () {};
+    return function (/*args*/) {
+      if (!self.collection.paused)
+        f.apply(this, arguments);
+    };
+  };
+  query.added = if_not_paused(options.added);
+  query.changed = if_not_paused(options.changed);
+  query.moved = if_not_paused(options.moved);
+  query.removed = if_not_paused(options.removed);
+
+  if (!options._suppress_initial && !self.collection.paused)
     for (var i = 0; i < query.results.length; i++)
       query.added(LocalCollection._deepcopy(query.results[i]), i);
 
@@ -451,15 +470,58 @@ LocalCollection.prototype.restore = function () {
   // Rerun all queries from scratch. (XXX should do something more
   // efficient -- diffing at least; ideally, take the snapshot in an
   // efficient way, say with an undo log, so that we can efficiently
-  // tell what changed)
+  // tell what changed).
   for (var qid in this.queries) {
     var query = this.queries[qid];
-    for (var i = query.results.length - 1; i >= 0; i--)
-      query.removed(query.results[i]._id, i);
+
+    var old_results = query.results;
 
     query.results = query.cursor._getRawObjects();
 
-    for (var i = 0; i < query.results.length; i++)
-      query.added(LocalCollection._deepcopy(query.results[i]), i);
+    if (!this.paused)
+      LocalCollection._diffQuery(old_results, query.results, query, true);
   }
 };
+
+
+// Pause the observers. No callbacks from observers will fire until
+// 'resumeObservers' is called.
+LocalCollection.prototype.pauseObservers = function () {
+  // No-op if already paused.
+  if (this.paused)
+    return;
+
+  // Set the 'paused' flag such that new observer messages don't fire.
+  this.paused = true;
+
+  // Take a snapshot of the query results for each query.
+  for (var qid in this.queries) {
+    var query = this.queries[qid];
+
+    query.results_snapshot = LocalCollection._deepcopy(query.results);
+  }
+};
+
+// Resume the observers. Observers immediately receive change
+// notifications to bring them to the current state of the
+// database. Note that this is not just replaying all the changes that
+// happened during the pause, it is a smarter 'coalesced' diff.
+LocalCollection.prototype.resumeObservers = function () {
+  // No-op if not paused.
+  if (!this.paused)
+    return;
+
+  // Unset the 'paused' flag. Make sure to do this first, otherwise
+  // observer methods won't actually fire when we trigger them.
+  this.paused = false;
+
+  for (var qid in this.queries) {
+    var query = this.queries[qid];
+    // Diff the current results against the snapshot and send to observers.
+    // pass the query object for its observer callbacks.
+    LocalCollection._diffQuery(query.results_snapshot, query.results, query, true);
+    query.results_snapshot = null;
+  }
+
+};
+

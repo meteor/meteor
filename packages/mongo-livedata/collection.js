@@ -36,6 +36,10 @@ Meteor.Collection = function (name, manager, driver) {
       // to start by backing out any local writes and returning to the
       // last state delivered by the server.
       beginUpdate: function () {
+        // pause observers so users don't see flicker.
+        self._collection.pauseObservers();
+
+        // restore db snapshot
         if (self._was_snapshot) {
           self._collection.restore();
           self._was_snapshot = false;
@@ -66,9 +70,9 @@ Meteor.Collection = function (name, manager, driver) {
         }
       },
 
-      // Called at the end of a batch of updates, just for symmetry,
-      // or in case some future database driver needs it.
+      // Called at the end of a batch of updates.
       endUpdate: function () {
+        self._collection.resumeObservers();
       },
 
       // Reset the collection to its original, empty state.
@@ -136,6 +140,7 @@ _.extend(Meteor.Collection.prototype, {
       self._was_snapshot = true;
     }
   }
+
 });
 
 // 'insert' immediately returns the inserted document's new _id.  The
