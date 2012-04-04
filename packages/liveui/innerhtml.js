@@ -21,7 +21,7 @@ _.extend(Meteor.ui, (function() {
     tbodyInsertion: testDiv.getElementsByTagName("tbody").length > 0,
 
     // IE loses some tags in some environments (requiring extra wrapper).
-    tagsLost: testDiv.getElementsByTagName("link").length == 0
+    tagsLost: testDiv.getElementsByTagName("link").length === 0
   };
 
   // Set up map of wrappers for different nodes.

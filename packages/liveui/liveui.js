@@ -545,9 +545,9 @@ Meteor.ui = Meteor.ui || {};
       added: function(doc, before_idx) {
         var frag = makeItem(doc);
         var range = new Meteor.ui._LiveUIRange(frag);
-        if (range_list.length == 0)
+        if (range_list.length === 0)
           outer_range.replace_contents(frag);
-        else if (before_idx == range_list.length)
+        else if (before_idx === range_list.length)
           range_list[range_list.length-1].insert_after(frag);
         else
           range_list[before_idx].insert_before(frag);
@@ -555,7 +555,7 @@ Meteor.ui = Meteor.ui || {};
         range_list.splice(before_idx, 0, range);
       },
       removed: function(doc, at_idx) {
-        if (range_list.length == 1)
+        if (range_list.length === 1)
           outer_range.replace_contents(Meteor.ui.render(
             else_func, react_data));
         else
@@ -564,7 +564,7 @@ Meteor.ui = Meteor.ui || {};
         range_list.splice(at_idx, 1);
       },
       moved: function(doc, old_idx, new_idx) {
-        if (old_idx == new_idx)
+        if (old_idx === new_idx)
           return;
 
         var range = range_list[old_idx];
@@ -573,7 +573,7 @@ Meteor.ui = Meteor.ui || {};
         var frag = range.extract(true);
         range_list.splice(old_idx, 1);
 
-        if (new_idx == range_list.length)
+        if (new_idx === range_list.length)
           range_list[range_list.length-1].insert_after(frag);
         else
           range_list[new_idx].insert_before(frag);
