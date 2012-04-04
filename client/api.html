@@ -877,16 +877,16 @@ Example:
     //
     // If Session.get had been used instead of Session.equals, then
     // when the selection changed, all the items would be re-rendered.
-    
+
 <h2 id="meteor_ui"><span>Meteor.ui</span></h2>
 
 `Meteor.ui` provides building blocks for creating reactive UIs out of strings of
-HTML, making it easy to create DOM elements that update 
+HTML, making it easy to create DOM elements that update
 automatically as data changes in
 [`Session`](#session) variables or in a
 [`Meteor.Collection`](#meteor_collection).  Meteor's built-in templates already use these functions, but if you prefer a different way of generating HTML,
 are integrating a new template language with Meteor, or need to compose a reactive
-snippet of HTML on the fly, this package has what you need.
+snippet of HTML on the fly, then this package has what you need.
 
 This package is implemented on top of [`Meteor.deps`](#meteor_deps), which provides the
 data dependency tracking and invalidation system, while `Meteor.ui` contributes
@@ -895,31 +895,63 @@ need updating, and patch old DOM content with new, recalculated content.
 
 {{> api_box render}}
 
-You provide a function `html_func` that returns a string containing HTML.  This
-function is used to create a DocumentFragment containing nodes that reactively
-updating in response to data changes.
+`Meteor.ui.render` creates a `DocumentFragment` (a sequence of DOM
+nodes) that automatically updates in realtime. You pass in
+`html_func`, a function that returns an HTML
+string. `Meteor.ui.render` calls your function and turns the output
+into DOM nodes. Meanwhile, it tracks the data that was used when
+`html_func` ran, and automatically wires up callbacks so that whenever
+of any of the data changes, `html_func` is re-run and the DOM nodes
+are updated in place.
 
-`html_func` is run in a reactive context, which records accesses to any reactive data sources (such as [`Session`](#session)), and the resulting HTML is rendered as
-a DocumentFragment.  The DOM elements in this returned
-DocumentFragment are sensitive to changes to the previously accessed data,
-in that if the data accessed from within `html_func` changes, then `html_func`
-is automatically re-run and the new DOM elements are patched into place.
+Insert the returned `DocumentFragment` directly into the DOM wherever
+you would like it to appear. The inserted nodes will continue to
+update until they are taken off the screen. Then they will be
+automatically cleaned up. For the details, see
+[`Meteor.flush`](#meteor_flush).
 
-The DocumentFragment returned by `Meteor.ui.render` can be inserted anywhere
-in the DOM you like, and the DOM elements will continue to update until they are
-removed from the document.  For the details, see [`Meteor.flush`](#meteor_flush).
+You can also hook up events to the rendered DOM nodes using the
+`events` option. If you provide `event_data`, it will be passed to
+event handlers in `this`. (See [Event Maps](#eventmaps).)
 
-The `events` option lets you hook up event handlers to
-the DOM nodes. If you provide `event_data`, it will be
-passed to event handlers in `this`.  (See [Event Maps](#eventmaps).)
+When render replaces DOM elements because data changed, it can leave
+input elements undisturbed so that focus is preserved, text entered
+into fields isn't lost, and so forth. To activate this feature, give
+each such element a unique `id`, or give it a unique `name` attribute
+inside the nearest enclosing element with an `id`.
 
-When `render` replaces DOM elements because data changed, it can leave `input`
-elements undisturbed so that focus is preserved, text entered into fields isn't
-lost, and so forth.  To activate this feature, give each such element a unique
-`id`, or give it a unique `name` attribute inside the nearest enclosing element
-with an `id`.
+If you want a region of your HTML to be able to update independently
+of the other HTML around it, wrap it in [`Meteor.ui.chunk`](#meteor_ui_chunk).
 
-If you want a region of your HTML to be able to update independently of the other HTML around it, wrap it in a [`Meteor.ui.chunk`](#meteor_ui_chunk).
+`Meteor.ui.render` tracks the data dependencies of `html_func` by
+running it in a reactive context, so it can respond to changes in any
+reactive data sources used by that function. For more information, or
+to learn how to make your own reactive data sources, see
+[Reactivity](#reactivity).
+
+<!--
+Meteor.ui.render runs html_func in a reactive context, then returns a
+DocumentFragment that can be inserted anywhere in a Document and that
+will automatically update itself in place whenever the context is
+invalidated. The updating will stop if the nodes in the fragment are
+ever not on the screen (that is, children of `window.document`) when
+Meteor.flush runs.
+
+During an update, if a node has a unique id, or if it has a name that
+is unique among the descendents of the nearest enclosing parent that
+has an id, then it will be "patched" (updated in place, rather than
+replaced), meaning that focus will be preserved, the text in <input>
+elements will be not be lost, etc.
+
+
+By default, Meteor.ui.render puts the entire output of `html_func` in
+a single invalidation context. For finer control of rerendering, you
+can use Meteor.ui.chunk to create a nested tree of invalidation
+contexts.
+[events]
+[more?]
+-->
+
 
 Example:
 
