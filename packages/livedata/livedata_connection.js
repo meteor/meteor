@@ -285,7 +285,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
         var invocation = new Meteor._MethodInvocation(true /* is_simulation */);
         try {
           var ret = Meteor._CurrentInvocation.withValue(invocation,function () {
-            return stub.apply(self, args);
+            return stub.apply(invocation, args);
           });
         }
         catch (e) {

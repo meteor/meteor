@@ -78,6 +78,36 @@ Tinytest.add("livedata stub - subscribe", function (test) {
 });
 
 
+Tinytest.add("livedata stub - this", function (test) {
+  var stream = new Meteor._StubStream();
+  var conn = new Meteor._LivedataConnection(stream);
+
+  stream.reset(); // initial connection start.
+  test_got_message(test, stream, {msg: 'connect'});
+
+  stream.receive({msg: 'connected', session: SESSION_ID});
+  test.length(stream.sent, 0);
+
+  conn.methods({test_this: function() {
+    test.isTrue(this.is_simulation);
+    this.unblock(); // should be a no-op
+  }});
+
+  // should throw no exceptions
+  conn.call('test_this');
+
+  // satisfy method, quiesce connection
+  var message = JSON.parse(stream.sent.shift());
+  test.equal(message, {msg: 'method', method: 'test_this',
+                       params: [], id:message.id});
+  test.length(stream.sent, 0);
+
+  stream.receive({msg: 'result', id:message.id, result:null});
+  stream.receive({msg: 'data', 'methods': [message.id]});
+
+});
+
+
 Tinytest.add("livedata stub - methods", function (test) {
   var stream = new Meteor._StubStream();
   var conn = new Meteor._LivedataConnection(stream);
