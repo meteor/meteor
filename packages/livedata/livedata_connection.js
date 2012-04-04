@@ -16,6 +16,8 @@ Meteor._LivedataConnection = function (url, restart_on_update) {
   // as a test hook, allow passing a stream instead of a url.
   if (typeof url === "object") {
     self.stream = url;
+    // if we have two test streams, auto reload stuff will break because
+    // the url is used as a key for the migration data.
     self.url = "/debug";
   } else {
     self.url = url;
@@ -352,7 +354,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
     // If we're using the default callback on the server,
     // synchronously return the result from the remote host.
-    if (future) { // XXX should this be typeof !== undefined?
+    if (future) {
       var outcome = future.wait();
       if (outcome[0])
         throw outcome[0];
@@ -418,7 +420,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
         self.unready_subscriptions[sub._id] = true;
     });
 
-    // Do not remove the database here. That happens once all the subs
+    // Do not clear the database here. That happens once all the subs
     // are re-ready and we process pending_data.
   },
 
