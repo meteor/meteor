@@ -34,13 +34,4 @@ Package.on_test(function (api) {
   api.add_files('livedata_connection_tests.js', ['client']);
   api.add_files('livedata_tests.js', ['client', 'server']);
   api.add_files('livedata_test_service.js', ['client', 'server']);
-
-  // XXX Currently there is no good way to share test files between
-  // packages. If the file is included here, when the whole test suite
-  // is run it is included twice and causes an error. However, if you
-  // don't include it here and run the tests just in this directory, the
-  // file is not included at all.
-  //
-  // api.add_files('../stream/stub_stream.js', ['client']);
-
 });

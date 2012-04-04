@@ -11,6 +11,7 @@ Package.on_use(function (api, where) {
   api.add_files('simulate_event.js', where);
   api.add_files('seeded_random.js', where);
   api.add_files('canonicalize_html.js', where);
+  api.add_files('stub_stream.js', where);
 });
 
 Package.on_test(function (api) {
