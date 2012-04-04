@@ -79,14 +79,17 @@ LocalCollection._diffQuery = function (old_results, new_results, observer, deepc
   // To determine which docs should be considered "moved" (and which
   // merely change position because of other docs moving) we run
   // a "longest common subsequence" (LCS) algorithm.  The LCS of the
-  // doc IDs and the new doc IDs gives the docs that should NOT be
+  // old doc IDs and the new doc IDs gives the docs that should NOT be
   // considered moved.
   //
   // Overall, this diff implementation is asymptotically good, but could
   // be optimized to streamline execution and use less memory (e.g. not
   // have to build data structures with an entry for every doc).
 
-  
+  // Asymptotically: O(N k) where k is number of ops, or potentially
+  // O(N log N) if inner loop of LCS were made to be binary search.
+
+
   //////// LCS (longest common sequence, with respect to _id)
   // (see Wikipedia article on Longest Increasing Subsequence,
   // where the LIS is taken of the sequence of old indices of the
@@ -139,7 +142,7 @@ LocalCollection._diffQuery = function (old_results, new_results, observer, deepc
     idx = ptrs[idx];
   }
 
-  //////// Main Algorithm
+  //////// Main Diff Algorithm
 
   var old_idx = 0;
   var new_idx = 0;
