@@ -60,6 +60,7 @@ var toc = [
     "Structuring your app",
     "Data",
     "Reactivity",
+    "Live HTML",
     "Templates",
     "Smart Packages",
     "Deploying"
@@ -132,7 +133,8 @@ var toc = [
 
     "Meteor.ui", [
       "Meteor.ui.render",
-      "Meteor.ui.renderList",
+      "Meteor.ui.chunk",
+      "Meteor.ui.listChunk",
       "Meteor.flush",
       {type: "spacer"},
       {name: "Event maps", style: "noncode"}
@@ -226,7 +228,11 @@ Template.nav.maybe_current = function () {
 };
 
 Handlebars.registerHelper('warning', function(fn) {
-  return Template.warning_helper(fn(this), true);
+  return Template.warning_helper(fn(this));
+});
+
+Handlebars.registerHelper('note', function(fn) {
+  return Template.note_helper(fn(this));
 });
 
 Handlebars.registerHelper('dtdd', function(name, optType, fn) {
@@ -356,4 +362,40 @@ Template.api_box.bare = function() {
   return ((this.descr && this.descr.length) ||
           (this.args && this.args.length) ||
           (this.options && this.options.length)) ? "" : "bareapi";
+};
+
+var check_links = function() {
+  var body = document.body.innerHTML;
+
+  var id_set = {};
+
+  body.replace(/id\s*=\s*"(.*?)"/g, function(match, id) {
+    if (! id) return;
+    if (id_set['$'+id]) {
+      console.log("ERROR: Duplicate id: "+id);
+    } else {
+      id_set['$'+id] = true;
+    }
+  });
+
+  body.replace(/"#(.*?)"/g, function(match, frag) {
+    if (! frag) return;
+    if (! id_set['$'+frag]) {
+      var suggestions = [];
+      _.each(_.keys(id_set), function(id) {
+        id = id.slice(1);
+        if (id.slice(-frag.length) === frag ||
+            frag.slice(-id.length) === id) {
+          suggestions.push(id);
+        }
+      });
+      var msg = "ERROR: id not found: "+frag;
+      if (suggestions.length > 0) {
+        msg += " -- suggest "+suggestions.join(', ');
+      }
+      console.log(msg);
+    }
+  });
+
+  return "DONE";
 };

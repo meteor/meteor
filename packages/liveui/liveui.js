@@ -1,445 +1,608 @@
 Meteor.ui = Meteor.ui || {};
 
-// Kill/cancel everything inside 'what', which may be a
-// DocumentFragment or a range. In the former case, you must pass the
-// the range tag to operate on. In the latter case, the range itself
-// will be destroyed along with its subranges.
-Meteor.ui._cleanup = function (what, tag) {
-  var ranges = [];
+(function() {
 
-  if (typeof what === 'object' && what.nodeType === 11 /* DocumentFragment */)
-    what = new Meteor.ui._LiveRange(tag, what.firstChild, what.lastChild);
-  else
-    ranges.push(what);
+  // `in_range` is a package-private argument used to render inside
+  // an existing LiveRange on an update.
+  Meteor.ui.render = function (html_func, react_data, in_range) {
+    if (typeof html_func !== "function")
+      throw new Error("Meteor.ui.render() requires a function as its first argument.");
 
-  what.visit(function (is_start, range) {
-    if (is_start)
-      ranges.push(range);
-  });
+    var cx = new Meteor.deps.Context;
+    cx.rangeCallbacks = {_count: 0}; // XXX refactor into special
 
-  _.each(ranges, function (range) {
-    if (range.context) {
-      range.context.killed = true;
-      range.context.invalidate();
-    }
-    range.destroy(); // help old GC's
-  });
-};
+    var html = cx.run(html_func);
+    if (typeof html !== "string")
+      throw new Error("Render function must return a string");
 
-Meteor.ui._tag = "_liveui"; // XXX XXX
+    var frag = Meteor.ui._htmlToFragment(html);
+    if (! frag.firstChild)
+      frag.appendChild(document.createComment("empty"));
 
-Meteor.ui._onscreen = function (node) {
-  // http://jsperf.com/is-element-in-the-dom
 
-  if (document.compareDocumentPosition)
-    return document.compareDocumentPosition(node) & 16;
-  else {
-    if (node.nodeType !== 1 /* Element */)
-      /* contains() doesn't work reliably on non-Elements. Fine on
-         Chrome, not so much on Safari and IE. */
-      node = node.parentNode;
-    if (node.nodeType === 11 /* DocumentFragment */ ||
-        node.nodeType === 9 /* Document */)
-      /* contains() chokes on DocumentFragments on IE8 */
-      return node === document;
-    /* contains() exists on document on Chrome, but only on
-       document.body on some other browsers. */
-    return document.body.contains(node);
-  }
-};
-
-/// Unites LiveRange and invalidation contexts. Takes a function that
-/// returns a DocumentFragment (or similar), and returns an
-/// auto-updating DocumentFragment, by (1) running the function inside
-/// an invalidation context, (2) creating a LiveRange around the
-/// resulting fragment so that we can track where it goes, (3) wiring
-/// up the invalidation handler on the context to re-run the render
-/// function and update the fragment in place, whenever it's gone.
-///
-/// Exact GC semantics are as follows.
-/// - Slow path: If we go to do an update, and it's offscreen, we
-///   forget it (tear down the auto-updating machinery) so it can get
-///   GC'd. This can only happen during Meteor.flush().
-///
-/// - Fast path: When render and renderList take nodes off the screen
-///   due to a rerender, they traverse them to find any auto-updating
-///   ranges inside of them and tear them down immediately, without
-///   waiting for a flush. This isn't documented (the documentation
-///   says that auto-updating can only stop when elements are
-///   offscreen during a flush.) We should probably change the
-///   implementation, not the documentation. It is a simple change but
-///   a lot of tests will need updates.
-///   https://app.asana.com/0/159908330244/382690197728
-Meteor.ui.render = function (render_func, events, event_data) {
-  var range;
-
-  var render_fragment = function (context) {
-    var result = context.run(render_func);
-    var frag;
-
-    // Coerce to a document fragment
-
-    if (typeof result === "string") {
-      result = document.createTextNode(result);
-    }
-
-    if (typeof result === 'object' && result.nodeType === 11) {
-      /* already a DocumentFragment */
-      frag = result;
-    } else if (typeof result === 'object' && result.nodeType) {
-      /* probably some other Node */
-      frag = document.createDocumentFragment();
-      frag.appendChild(result);
-    } else if (result instanceof Array ||
-               ((typeof $ !== "undefined") && (result instanceof $))) {
-      frag = document.createDocumentFragment();
-      for (var i = 0; i < result.length; i++)
-        frag.appendChild(result[i]);
-    } else {
-      throw new Error("Render functions should return a DocumentFragment, " +
-                      "a node, a string, an array of nodes, or a " +
-                      "jQuery-style result set");
-    }
-
-    // Attach events
-    // XXX bug: https://app.asana.com/0/159908330244/357591577797
-    for (var i = 0; i < frag.childNodes.length; i++)
-      Meteor.ui._setupEvents(frag.childNodes[i], events || {}, event_data);
-
-    // If empty, add a placeholder
-    if (!frag.childNodes.length)
-      frag.appendChild(document.createComment("empty rendering"));
-    return frag;
-  };
-
-  var update = function (old_context) {
-    if (old_context.killed)
-      return; // _cleanup is killing us
-
-    if (!Meteor.ui._onscreen(range.firstNode())) {
-      // It was taken offscreen. Stop updating it so it can get GC'd.
-      Meteor.ui._cleanup(range);
-      return;
-    }
-
-    // XXX remove could trigger blur, which could reasonably call
-    // flush, which could reinvoke us. or could it?  what's the deal
-    // for flush inside flush?? [consider synthesizing onblur, via
-    // settimeout(0)..]
-    // https://app.asana.com/0/159908330244/385138233856
-
-    var context = new Meteor.deps.Context;
-    context.on_invalidate(update);
-    Meteor.ui._cleanup(range.replace_contents(render_fragment(context)),
-                       Meteor.ui._tag);
-    range.context = context;
-  };
-
-  var context = new Meteor.deps.Context;
-  context.on_invalidate(update);
-  var frag = render_fragment(context);
-  range = new Meteor.ui._LiveRange(Meteor.ui._tag, frag);
-  range.context = context;
-
-  return frag;
-};
-
-/// Unites LiveRange, invaldiation contexts, and database queries
-/// (specific to mongo at the moment, but will be generalized
-/// eventually.)
-///
-/// Exact GC semantics:
-/// - Slow path: When a database change happens, unconditionally
-///   update the rendering, but also schedule an onscreen check to
-///   happen at the next flush(). If at flush() time we're not
-///   onscreen, stop updating (and tear down the database query.)
-///
-/// - Fast path: When taken off the screen by (a containing) render or
-///   renderList, then schedule teardown to unconditionally happen at
-///   the next flush(). (Database-callback-driven updates will still
-///   happen until then.) As with render, should probably change this
-///   to only do the teardown if it is in fact still offscreen at
-///   flush()-time.
-///   https://app.asana.com/0/159908330244/382690197728
-Meteor.ui.renderList = function (query, options) {
-  var outer_frag;
-  var outer_range;
-  var entry_ranges = [];
-
-  // protect against old invocations passing in a Collection or a
-  // LiveResultsSet.
-  // XXX remove in a few releases
-  if (!(query instanceof LocalCollection.Cursor))
-    throw new Error("insert_before: at least one entry must exist");
-
-  // create the top-level document fragment/range that will be
-  // returned by renderList. called exactly once, ever (and that call
-  // will be before renderList returns.) returns nothing, sets
-  // outer_(frag, range).
-  var create_outer_range = function (initial_contents) {
-    outer_frag = initial_contents;
-    outer_range = new Meteor.ui._LiveRange(Meteor.ui._tag, initial_contents);
-    outer_range.context = new Meteor.deps.Context;
-
-    var try_cleanup = function (old_context) {
-      var node = outer_range && outer_range.firstNode();
-      if (!old_context.killed && node && Meteor.ui._onscreen(node)) {
-        // False alarm -- still onscreen. Could happen if a renderList
-        // is initiated, then callbacks happen, then the renderList is
-        // put on the screen, then flush is called.
-        outer_range.context = new Meteor.deps.Context;
-        outer_range.context.on_invalidate(try_cleanup);
-        return;
-      }
-
-      live_results.stop();
-      if (!old_context.killed)
-        Meteor.ui._cleanup(outer_range);
-    };
-
-    outer_range.context.on_invalidate(try_cleanup);
-  };
-
-  // render a database result to a DocumentFragment, and return it
-  var render_doc = function (doc) {
-    return Meteor.ui.render(_.bind(options.render, null, doc),
-                            options.events || {}, doc);
-  };
-
-  // return the DocumentFragment to show when there are no results
-  var render_empty = function () {
-    if (options.render_empty)
-      return Meteor.ui.render(options.render_empty, options.events);
-    else {
-      var ret = document.createDocumentFragment();
-      ret.appendChild(document.createComment("empty list"));
-      return ret;
-    }
-  };
-
-  // XXX in the future, insert_before and extract should be refactored
-  // into general-purpose functions and moved into the LiveRange
-  // library, and ideally rewritten to manipulate the LiveRange tags
-  // directly instead of dancing around with placeholders. but for
-  // now, let's just get something working.
-
-  // Return a document fragment containing a single node, an empty
-  // comment.
-  var placeholder = function () {
-    var ret = document.createDocumentFragment();
-    ret.appendChild(document.createComment(""));
-    return ret;
-  };
-
-  // At least one entry currently exists. Wrap the given fragment in a
-  // range and insert it just before before_idx (or at the end, if
-  // before_idx === entry_ranges.length.)
-  var insert_before = function (before_idx, frag) {
-    if (!entry_ranges.length)
-      throw new Error("insert_before: at least one entry must exist");
-
-    // DIAGRAM
-    //
-    // O1, O2: old entry 1, old entry 2
-    // P: temporary placeholder
-    // new: entry being inserted
-    //
-    // +-      +-      +-          +-
-    // | +-    | +-    | +-        | +-
-    // | |O1   | |P    | | +-      | |new
-    // | +-    | +-    | | |new    | +-
-    // |    => |    => | | +-   => |
-    // | +-    | +-    | |         | +-
-    // | |O2   | |O2   | | +-      | |O1
-    // | +-    | +-    | | |O1     | +-
-    // |-      +-      | | +-      |
-    //                 | +-        | +-
-    //                 |           | |O2
-    //                 | +-        | +-
-    //                 | |O2       +-
-    //                 | +-
-    //                 +-
-
-    // We are going to perform a maneuver where we split one of the
-    // existing entries in half. First, determine which entry to split.
-    var at_end = before_idx === entry_ranges.length;
-    var split_idx = before_idx - (at_end ? 1 : 0);
-
-    // Pull out its contents by replacing them with a placeholder.
-    var old_entry = entry_ranges[split_idx].replace_contents(placeholder());
-
-    // Create ranges around both that old entry, and our new entry.
-    var new_range = new Meteor.ui._LiveRange(Meteor.ui._tag, frag);
-    var old_range = new Meteor.ui._LiveRange(Meteor.ui._tag, old_entry);
-
-    // If inserting at the end, interchange the entries so it's like
-    // we're inserting before the end.
-    if (at_end) {
-      var swap;
-      swap = new_range; new_range = old_range; old_range = swap;
-      swap = frag; frag = old_entry; old_entry = swap;
-    }
-
-    // Now, make a new fragment that is the entry we just removed,
-    // side by side with the entry we're inserting, in the correct
-    // order.
-    var new_contents = document.createDocumentFragment();
-    new_contents.appendChild(frag);
-    new_contents.appendChild(old_entry);
-
-    // Replace the placeholder with that fragment. Now the right
-    // elements are in the DOM in the right order.
-    entry_ranges[split_idx].replace_contents(new_contents);
-
-    // Finally, fix up the range pointers. This involves deleting the
-    // original range (which now contains the two elements.)
-    entry_ranges[split_idx].destroy();
-    entry_ranges.splice(split_idx, 1, new_range, old_range);
-  };
-
-  // Remove an entry (leaving at least one left.) Return the entry as
-  // a fragment. Destroy the entry's range and update entry_ranges. Do
-  // not clean up the fragment.
-  var extract = function (at_idx) {
-    if (entry_ranges.length < 2)
-      throw new Error("extract: at least one entry must remain");
-
-    // DIAGRAM
-    //
-    // O1, O2: old entry 1, old entry 2
-    // P: temporary placeholders
-    //
-    // +-      +-         +-          +-
-    // | +-    | +-       | +-        | +-
-    // | |O1   | | +-     | | +-      | |O2
-    // | +-    | | |O1    | | |P      | +-
-    // |    => | | +-  => | | +-   => +-
-    // | +-    | |        | |
-    // | |O2   | | +-     | | +-
-    // | +-    | | |O2    | | |P
-    // |-      | | +-     | | +-
-    //         | +-       | +-
-    //         +-         +-
-
-    // Similar to insert_before, but the other way around: we will
-    // merge two entries down to one. Find the first entry to merge.
-    var last = at_idx === entry_ranges.length - 1;
-    var first_idx = at_idx - (last ? 1 : 0);
-
-    // Make a range surrounding the two entries. This is the only
-    // range that will ultimately survive the merge.
-    var new_range =
-      new Meteor.ui._LiveRange(Meteor.ui._tag,
-                               entry_ranges[first_idx].firstNode(),
-                               entry_ranges[first_idx + 1].lastNode(),
-                               true /* inner! */);
-
-    // Pull out the entry that will survive by replacing it with a placeholder.
-    var keep_frag = entry_ranges[at_idx + (last ? -1 : 1)]
-      .replace_contents(placeholder());
-
-    // Also pull out the entry we're removing to the caller.
-    var ret = entry_ranges[at_idx].replace_contents(placeholder());
-
-    // Now make the contents of new_range be just the surviving
-    // entry. (Discard the returned fragment, which is just the two
-    // placeholders.)
-    new_range.replace_contents(keep_frag);
-
-    // Finally, delete the old ranges and fix up range pointers.
-    entry_ranges[first_idx].destroy();
-    entry_ranges[first_idx + 1].destroy();
-    entry_ranges.splice(first_idx, 2, new_range);
-    return ret;
-  };
-
-  var check_onscreen = function () {
-    var node = outer_range && outer_range.firstNode();
-    if (node && !Meteor.ui._onscreen(node))
-      // Schedule a check at flush()-time to see if we're still off
-      // the screen. (The user has from when we're created, to when
-      // flush() is called, to put us on the screen.)
-      outer_range.context.invalidate();
-  };
-
-  var observe_callbacks = {
-    added: function (doc, before_idx) {
-      check_onscreen();
-      var frag = render_doc(doc);
-
-      if (!entry_ranges.length) {
-        var new_range = new Meteor.ui._LiveRange(Meteor.ui._tag, frag);
-        if (!outer_range) {
-          create_outer_range(frag);
-        } else {
-          Meteor.ui._cleanup(outer_range.replace_contents(frag), Meteor.ui._tag);
+    // Helper that invokes `f` on every comment node under `parent`.
+    // If `f` returns a node, visit that node next.
+    var each_comment = function(parent, f) {
+      for (var n = parent.firstChild; n;) {
+        if (n.nodeType === 8) { // comment
+          n = f(n) || n.nextSibling;
+          continue;
+        } else if (n.nodeType === 1) { // element
+          each_comment(n, f);
         }
-        entry_ranges = [new_range];
-      } else {
-        insert_before(before_idx, frag);
+        n = n.nextSibling;
       }
-    },
-    removed: function (doc, at_idx) {
-      check_onscreen();
-      if (entry_ranges.length > 1) {
-        Meteor.ui._cleanup(extract(at_idx), Meteor.ui._tag);
-      } else {
-        Meteor.ui._cleanup(outer_range.replace_contents(render_empty()),
-                           Meteor.ui._tag);
-        // _cleanup will already have destroyed entry_ranges[at_idx] for us
-        entry_ranges.splice(at_idx, 1);
-      }
-    },
-    changed: function (doc, at_idx) {
-      check_onscreen();
-      var range = entry_ranges[at_idx];
-      var frag = render_doc(doc);
-      Meteor.ui._cleanup(range.replace_contents(frag), Meteor.ui._tag);
-    },
-    moved: function (doc, old_idx, new_idx) {
-      check_onscreen();
-      if (old_idx === new_idx)
-        return;
-      // At this point we know the list has at least two elements (the
-      // ones with indices old_idx and new_idx.) So extract() is legal.
-      insert_before(new_idx, extract(old_idx));
-    }
-  };
-
-  var live_results = query.observe(observe_callbacks);
-
-  if (!outer_range)
-    create_outer_range(render_empty());
-
-  return outer_frag;
-};
-
-// XXX jQuery dependency
-// 'event_data' will be an additional argument to event callback
-Meteor.ui._setupEvents = function (elt, events, event_data) {
-  events = events || {};
-  function create_callback (callback) {
-    // return a function that will be used as the jquery event
-    // callback, in which "this" is bound to the DOM element bound
-    // to the event.
-    return function (evt) {
-      callback.call(event_data, evt);
     };
-  };
 
-  for (var spec in events) {
-    var clauses = spec.split(/,\s+/);
-    _.each(clauses, function (clause) {
-      var parts = clause.split(/\s+/);
-      if (parts.length === 0)
-        return;
+    // walk comments and create ranges
+    var rangeStartNodes = {};
+    var rangesCreated = [];
+    each_comment(frag, function(n) {
+      var next = null;
 
-      if (parts.length === 1) {
-        $(elt).bind(parts[0], create_callback(events[spec]));
-      } else {
-        var event = parts.shift();
-        $(elt).delegate(parts.join(' '), event, create_callback(events[spec]));
+      // XXX use match instead of replace to clarify
+
+      n.nodeValue.replace(/^\s*(START|END)RANGE_(\S+)/, function(z, which, id) {
+        if (which === "START") {
+          if (rangeStartNodes[id])
+            throw new Error("The return value of chunk can only be used once.");
+          rangeStartNodes[id] = n;
+        } else if (which === "END") {
+          var startNode = rangeStartNodes[id], endNode = n;
+
+          next = endNode.nextSibling;
+          // try to remove comments
+          var a = startNode, b = endNode;
+          if (a.nextSibling && b.previousSibling) {
+            if (a.nextSibling === b) {
+              // replace two adjacent comments with one
+              endNode = startNode;
+              b.parentNode.removeChild(b);
+              startNode.nodeValue = 'placeholder';
+            } else {
+              // remove both comments
+              startNode = startNode.nextSibling;
+              endNode = endNode.previousSibling;
+              a.parentNode.removeChild(a);
+              b.parentNode.removeChild(b);
+            }
+          } else {
+            /* shouldn't happen; invalid HTML? */
+          }
+
+          if (startNode.parentNode !== endNode.parentNode) {
+            // Try to fix messed-up comment ranges like
+            // <!-- #1 --><tbody> ... <!-- /#1 --></tbody>,
+            // which are extremely common with tables.  Tests
+            // fail in all browsers without this code.
+            if (startNode === endNode.parentNode ||
+                startNode === endNode.parentNode.previousSibling) {
+              startNode = endNode.parentNode.firstChild;
+            } else if (endNode === startNode.parentNode ||
+                       endNode === startNode.parentNode.nextSibling) {
+              endNode = startNode.parentNode.lastChild;
+            } else {
+              throw new Error("Could not create liverange in template. "+
+                             "Check for unclosed tags in your HTML.");
+            }
+          }
+
+          var range = new Meteor.ui._LiveUIRange(startNode, endNode);
+          // associate the callback with the range temporarily so that
+          // we can call all the callbacks in a separate loop.
+          range.temp_callback = cx.rangeCallbacks[id];
+          rangesCreated.push(range);
+        }
+      });
+
+      return next;
+    });
+
+
+    var range;
+    if (in_range) {
+      // Called to re-render a chunk; update that chunk in place.
+      Meteor.ui._intelligent_replace(in_range, frag);
+      range = in_range;
+    } else {
+      range = new Meteor.ui._LiveUIRange(frag);
+    }
+
+    // Call "added to DOM" callbacks to wire up all sub-chunks.
+    _.each(rangesCreated, function(r) {
+      if ("temp_callback" in r) {
+        r.temp_callback && r.temp_callback(r);
+        delete r.temp_callback;
       }
     });
-  }
-};
+
+    Meteor.ui._wire_up(cx, range, html_func, react_data);
+
+    return (in_range ? null : frag);
+
+  };
+
+  Meteor.ui.chunk = function(html_func, react_data) {
+    if (typeof html_func !== "function")
+      throw new Error("Meteor.ui.chunk() requires a function as its first argument.");
+
+    var parent = Meteor.deps.Context.current;
+    var live = parent && parent.rangeCallbacks;
+
+    if (! live) {
+      return html_func();
+    }
+
+    var cx = new Meteor.deps.Context;
+    cx.rangeCallbacks = parent.rangeCallbacks;
+
+    var html = cx.run(html_func);
+    if (typeof html !== "string")
+      throw new Error("Render function must return a string");
+
+    return Meteor.ui._ranged_html(html, function(range) {
+      Meteor.ui._wire_up(cx, range, html_func, react_data);
+    });
+  };
+
+
+  Meteor.ui.listChunk = function (observable, doc_func, else_func, react_data) {
+    if (arguments.length === 3 && typeof else_func === "object") {
+      // support (observable, doc_func, react_data) form
+      react_data = else_func;
+      else_func = null;
+    }
+
+    if (typeof doc_func !== "function")
+      throw new Error("Meteor.ui.listChunk() requires a function as first argument");
+    else_func = (typeof else_func === "function" ? else_func :
+                 function() { return ""; });
+    react_data = react_data || {};
+
+    var parent = Meteor.deps.Context.current;
+    var live = parent && parent.rangeCallbacks;
+
+    var buf = [];
+    var receiver = new Meteor.ui._CallbackReceiver();
+
+    var handle = observable.observe(receiver);
+    receiver.flush_to_array(buf);
+
+    var inner_html;
+    if (buf.length === 0) {
+      inner_html = Meteor.ui.chunk(else_func, react_data);
+    } else {
+      var doc_render = function(doc) {
+        return Meteor.ui._ranged_html(
+          Meteor.ui.chunk(function() { return doc_func(doc); },
+                          _.extend({}, react_data, {event_data: doc})));
+      };
+      inner_html = _.map(buf, doc_render).join('');
+    }
+
+    if (! live) {
+      handle.stop();
+      return inner_html;
+    }
+
+    return Meteor.ui._ranged_html(inner_html, function(outer_range) {
+      var range_list = [];
+      // find immediate sub-ranges of range, and add to range_list
+      if (buf.length > 0) {
+        outer_range.visit(function(is_start, r) {
+          if (is_start)
+            range_list.push(r);
+          return false;
+        });
+      }
+
+      Meteor.ui._wire_up_list(outer_range, range_list, receiver, handle,
+                              doc_func, else_func, react_data);
+    });
+  };
+
+
+  // define a subclass of _LiveRange with our tag and a finalize method
+  Meteor.ui._LiveUIRange = function(start, end, inner) {
+    Meteor.ui._LiveRange.call(this, Meteor.ui._LiveUIRange.tag,
+                              start, end, inner);
+  };
+  Meteor.ui._LiveUIRange.prototype = new (
+    _.extend(function() {}, {prototype: Meteor.ui._LiveRange.prototype}));
+  Meteor.ui._LiveUIRange.prototype.finalize = function() {
+    this.killContext();
+  };
+  Meteor.ui._LiveUIRange.prototype.killContext = function() {
+    var cx = this.context;
+    if (cx && ! cx.killed) {
+      cx.killed = true;
+      cx.invalidate && cx.invalidate();
+      delete this.context;
+    }
+  };
+  Meteor.ui._LiveUIRange.tag = "_liveui";
+
+  var _checkOffscreen = function(range) {
+    var node = range.firstNode();
+
+    if (node.parentNode &&
+        (Meteor.ui._onscreen(node) || Meteor.ui._is_held(node)))
+      return false;
+
+    Meteor.ui._LiveRange.cleanup(range);
+
+    return true;
+  };
+
+  // Internal facility, only used by tests, for holding onto
+  // DocumentFragments across flush().  Reference counts
+  // using hold() and release().
+  Meteor.ui._is_held = function(node) {
+    while (node.parentNode)
+      node = node.parentNode;
+
+    return node.nodeType !== 3 /*TEXT_NODE*/ && node._liveui_refs;
+  };
+  Meteor.ui._hold = function(frag) {
+    frag._liveui_refs = (frag._liveui_refs || 0) + 1;
+  };
+  Meteor.ui._release = function(frag) {
+    // Clean up on flush, if hits 0.
+    // Don't want to decrement
+    // _liveui_refs to 0 now because someone else might
+    // clean it up if it's not held.
+    var cx = new Meteor.deps.Context;
+    cx.on_invalidate(function() {
+      --frag._liveui_refs;
+      if (! frag._liveui_refs)
+        Meteor.ui._LiveRange.cleanup(frag, Meteor.ui._LiveUIRange.tag);
+    });
+    cx.invalidate();
+  };
+
+  Meteor.ui._onscreen = function (node) {
+    // http://jsperf.com/is-element-in-the-dom
+
+    if (document.compareDocumentPosition)
+      return document.compareDocumentPosition(node) & 16;
+    else {
+      if (node.nodeType !== 1 /* Element */)
+        /* contains() doesn't work reliably on non-Elements. Fine on
+         Chrome, not so much on Safari and IE. */
+        node = node.parentNode;
+      if (node.nodeType === 11 /* DocumentFragment */ ||
+          node.nodeType === 9 /* Document */)
+        /* contains() chokes on DocumentFragments on IE8 */
+        return node === document;
+      /* contains() exists on document on Chrome, but only on
+       document.body on some other browsers. */
+      return document.body.contains(node);
+    }
+  };
+
+  var CallbackReceiver = function() {
+    this.queue = [];
+    this.deps = {};
+    this.implied_length = 0;
+
+    _.bindAll(this); // make callbacks work even if copied
+  };
+
+  Meteor.ui._CallbackReceiver = CallbackReceiver;
+
+  CallbackReceiver.prototype.added = function(doc, before_idx) {
+    if (before_idx < 0 || before_idx > this.implied_length)
+      throw new Error("Bad before_idx "+before_idx);
+
+    this.implied_length++;
+    this.queue.push(['added', doc, before_idx]);
+    this.signal();
+  };
+  CallbackReceiver.prototype.removed = function(doc, at_idx) {
+    if (at_idx < 0 || at_idx >= this.implied_length)
+      throw new Error("Bad at_idx "+at_idx);
+
+    this.implied_length--;
+    this.queue.push(['removed', doc, at_idx]);
+    this.signal();
+  };
+  CallbackReceiver.prototype.moved = function(doc, old_idx, new_idx) {
+    if (old_idx < 0 || old_idx >= this.implied_length)
+      throw new Error("Bad old_idx "+old_idx);
+    if (new_idx < 0 || new_idx >= this.implied_length)
+      throw new Error("Bad new_idx "+new_idx);
+
+    this.queue.push(['moved', doc, old_idx, new_idx]);
+    this.signal();
+  };
+  CallbackReceiver.prototype.changed = function(doc, at_idx) {
+    if (at_idx < 0 || at_idx >= this.implied_length)
+      throw new Error("Bad at_idx "+at_idx);
+
+    this.queue.push(['changed', doc, at_idx]);
+    this.signal();
+  };
+  CallbackReceiver.prototype.flush_to = function(t) {
+    // fire all queued events on new target
+    for(var i=0; i<this.queue.length; i++) {
+      var a = this.queue[i];
+      switch (a[0]) {
+      case 'added': t.added(a[1], a[2]); break;
+      case 'removed': t.removed(a[1], a[2]); break;
+      case 'moved': t.moved(a[1], a[2], a[3]); break;
+      case 'changed': t.changed(a[1], a[2]); break;
+      }
+    }
+    this.queue.length = 0;
+  };
+  CallbackReceiver.prototype.flush_to_array = function(array) {
+    // apply all queued events to array
+    for(var i=0; i<this.queue.length; i++) {
+      var a = this.queue[i];
+      switch (a[0]) {
+      case 'added': array.splice(a[2], 0, a[1]); break;
+      case 'removed': array.splice(a[2], 1); break;
+      case 'moved': array.splice(a[3], 0, array.splice(a[2], 1)[0]); break;
+      case 'changed': array[a[2]] = a[1]; break;
+      }
+    }
+    this.queue.length = 0;
+  };
+  CallbackReceiver.prototype.signal = function() {
+    if (this.queue.length > 0) {
+      for(var id in this.deps)
+        this.deps[id].invalidate();
+    }
+  };
+  CallbackReceiver.prototype.depend = function() {
+    var context = Meteor.deps.Context.current;
+    if (context && !(context.id in this.deps)) {
+      this.deps[context.id] = context;
+      var self = this;
+      context.on_invalidate(function() {
+        delete self.deps[context.id];
+      });
+    }
+  };
+
+  // XXX jQuery dependency
+  // 'event_data' will be an additional argument to event callback
+  Meteor.ui._setupEvents = function (elt, events, event_data) {
+    events = events || {};
+    function create_callback (callback) {
+      // return a function that will be used as the jquery event
+      // callback, in which "this" is bound to the DOM element bound
+      // to the event.
+      return function (evt) {
+        callback.call(event_data, evt);
+      };
+    };
+
+    for (var spec in events) {
+      var clauses = spec.split(/,\s+/);
+      _.each(clauses, function (clause) {
+        var parts = clause.split(/\s+/);
+        if (parts.length === 0)
+          return;
+
+        if (parts.length === 1) {
+          $(elt).bind(parts[0], create_callback(events[spec]));
+        } else {
+          var event = parts.shift();
+          var selector = parts.join(' ');
+          var callback = create_callback(events[spec]);
+          $(elt).delegate(selector, event, callback);
+        }
+      });
+    }
+  };
+
+  // Performs a replacement by determining which nodes should
+  // be preserved and invoking Meteor.ui._Patcher as appropriate.
+  Meteor.ui._intelligent_replace = function(old_range, new_parent) {
+
+    // Table-body fix:  if old_range is in a table and new_parent
+    // contains a TR, wrap fragment in a TBODY on all browsers,
+    // so that it will display properly in IE.
+    if (old_range.containerNode().nodeName === "TABLE" &&
+        _.any(new_parent.childNodes,
+              function(n) { return n.nodeName === "TR"; })) {
+      var tbody = document.createElement("TBODY");
+      while (new_parent.firstChild)
+        tbody.appendChild(new_parent.firstChild);
+      new_parent.appendChild(tbody);
+    }
+
+    var each_labeled_node = function(rangeOrParent, func) {
+      var visit_node = function(is_start, node) {
+        if (is_start && node.nodeType === 1) {
+          if (node.id) {
+            func('#'+node.id, node);
+          } else if (node.getAttribute("name")) {
+            func(node.getAttribute("name"), node);
+          } else {
+            return true;
+          }
+          return false; // skip children of labeled node
+        }
+        return true;
+      };
+
+      Meteor.ui._LiveRange.visit_children(rangeOrParent, null, null,
+                                          visit_node);
+    };
+
+    var patch = function(targetRangeOrParent, sourceNode) {
+
+      var targetNodes = {};
+      var targetNodeOrder = {};
+      var targetNodeCounter = 0;
+
+      each_labeled_node(targetRangeOrParent, function(label, node) {
+        targetNodes[label] = node;
+        targetNodeOrder[label] = targetNodeCounter++;
+      });
+
+      var patcher = new Meteor.ui._Patcher(
+        targetRangeOrParent, sourceNode);
+      var lastPos = -1;
+      var copyFunc = function(t, s) {
+        $(t).unbind(); // XXX remove jquery events from node
+        old_range.transplant_tag(t, s);
+      };
+      each_labeled_node(sourceNode, function(label, node) {
+        var tgt = targetNodes[label];
+        var src = node;
+        if (tgt && targetNodeOrder[label] > lastPos) {
+          if (patcher.match(tgt, src, copyFunc)) {
+            // match succeeded
+            if (tgt.firstChild || src.firstChild)
+              patch(tgt, src); // recurse
+          }
+          lastPos = targetNodeOrder[label];
+        }
+      });
+      patcher.finish();
+    };
+
+    //old_range.replace_contents(new_parent);
+
+    old_range.replace_contents(function() {
+      Meteor.ui._LiveRange.cleanup(old_range);
+
+      // remove event handlers on old nodes (which we will be patching)
+      // at top level, where they are attached by $(...).delegate().
+      for(var n = old_range.firstNode();
+          n && n !== old_range.lastNode().nextSibling;
+          n = n.nextSibling)
+        $(n).unbind();
+
+      patch(old_range, new_parent);
+    });
+
+  };
+
+  Meteor.ui._wire_up = function(cx, range, html_func, react_data) {
+    // wire events
+    var data = react_data || {};
+    if (data.events) {
+      for(var n = range.firstNode();
+          n && n.previousSibling !== range.lastNode();
+          n = n.nextSibling) {
+        Meteor.ui._setupEvents(n, data.events, data.event_data);
+      }
+    }
+
+    // record that if we see this range offscreen during a flush,
+    // we are to kill the context (mark it killed and invalidate it).
+    // Kill old context from previous update.
+    range.killContext();
+    range.context = cx;
+
+    // wire update
+    cx.on_invalidate(function(old_cx) {
+      if (old_cx.killed)
+        return; // context was invalidated as part of killing it
+      if (_checkOffscreen(range))
+        return;
+
+      Meteor.ui.render(html_func, react_data, range);
+    });
+  };
+
+  Meteor.ui._wire_up_list =
+    function(outer_range, range_list, receiver, handle_to_stop,
+             doc_func, else_func, react_data)
+  {
+    react_data = react_data || {};
+
+    outer_range.context = new Meteor.deps.Context;
+    outer_range.context.run(function() {
+      receiver.depend();
+    });
+    outer_range.context.on_invalidate(function update(old_cx) {
+      if (old_cx.killed || _checkOffscreen(outer_range)) {
+        if (handle_to_stop)
+          handle_to_stop.stop();
+        return;
+      }
+
+      receiver.flush_to(callbacks);
+
+      Meteor.ui._wire_up_list(outer_range, range_list, receiver,
+                              handle_to_stop, doc_func, else_func,
+                              react_data);
+    });
+
+    var makeItem = function(doc, in_range) {
+      return Meteor.ui.render(
+          _.bind(doc_func, null, doc),
+        _.extend({}, react_data, {event_data: doc}),
+        in_range);
+    };
+
+    var callbacks = {
+      added: function(doc, before_idx) {
+        var frag = makeItem(doc);
+        var range = new Meteor.ui._LiveUIRange(frag);
+        if (range_list.length === 0)
+          outer_range.replace_contents(frag);
+        else if (before_idx === range_list.length)
+          range_list[range_list.length-1].insert_after(frag);
+        else
+          range_list[before_idx].insert_before(frag);
+
+        range_list.splice(before_idx, 0, range);
+      },
+      removed: function(doc, at_idx) {
+        if (range_list.length === 1)
+          outer_range.replace_contents(Meteor.ui.render(
+            else_func, react_data));
+        else
+          range_list[at_idx].extract(false);
+
+        range_list.splice(at_idx, 1);
+      },
+      moved: function(doc, old_idx, new_idx) {
+        if (old_idx === new_idx)
+          return;
+
+        var range = range_list[old_idx];
+        // We know the list has at least two items,
+        // at old_idx and new_idx, so `extract` will succeed.
+        var frag = range.extract(true);
+        range_list.splice(old_idx, 1);
+
+        if (new_idx === range_list.length)
+          range_list[range_list.length-1].insert_after(frag);
+        else
+          range_list[new_idx].insert_before(frag);
+        range_list.splice(new_idx, 0, range);
+      },
+      changed: function(doc, at_idx) {
+        var range = range_list[at_idx];
+
+        // replace the render in the immediately nested range
+        range.visit(function(is_start, r) {
+          if (is_start)
+            makeItem(doc, r);
+          return false;
+        });
+      }
+    };
+  };
+
+  Meteor.ui._ranged_html = function(html, callback) {
+    var cx = Meteor.deps.Context.current;
+    var ranges = cx && cx.rangeCallbacks;
+
+    if (! ranges)
+      return html;
+
+    var commentId = ++ranges._count;
+    ranges[commentId] = callback;
+    return "<!-- STARTRANGE_"+commentId+" -->" + html +
+      "<!-- ENDRANGE_"+commentId+" -->";
+  };
+
+})();

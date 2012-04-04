@@ -23,7 +23,7 @@ Meteor.autosubscribe(function () {
 
 Template.tag_filter.tags = function () {
   // Pick out the unique tags from all tasks.
-  var tags = _(Todos.find().fetch())
+  var tags = _(Todos.find({list_id: Session.get('list_id')}).fetch())
     .chain().pluck('tags').compact().flatten().sort().uniq(true).value();
   // for some reason, .map can't be chained on IE8. underscore bug?
   tags = _.map(tags, function (tag) { return {tag: tag} });
@@ -177,7 +177,7 @@ Template.todo_item.events = {
     top.find('.edittag input').focus();
   },
 
-  'dblclick': function (evt) {
+  'dblclick .display .todo-text': function (evt) {
     var top = $(evt.target).closest('li.todo');
     Session.set('editing_itemname', this._id);
     Meteor.flush();

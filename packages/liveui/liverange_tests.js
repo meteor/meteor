@@ -1,4 +1,5 @@
-// XXX SECTION: LiveRange
+
+(function() {
 
 /******************************************************************************/
 
@@ -107,14 +108,14 @@ Tinytest.add("liverange - single node", function (test) {
   test.equal(r_b.firstNode(), f.firstChild);
   test.equal(r_b.lastNode(), f.lastChild);
 
-  var ret1 = r_a.replace_contents(frag("<div id=2></div>"));
+  var ret1 = r_a.replace_contents(frag("<div id=2></div>"), true);
   test.equal(ret1.nodeType, 11 /* DocumentFragment */);
   assert_dump(test, "<1></1>", ret1);
   assert_dump(test, "<a><2></2></a>", r_a);
   assert_dump(test, "<b><a><2></2></a></b>", r_b);
   assert_dump(test, "<b><a><2></2></a></b>", f);
 
-  var ret2 = r_b.replace_contents(frag("<div id=3></div>"));
+  var ret2 = r_b.replace_contents(frag("<div id=3></div>"), true);
   assert_dump(test, "<a><2></2></a>", ret2);
   assert_dump(test, "<a><2></2></a>", r_a);
   assert_dump(test, "<b><3></3></b>", r_b);
@@ -156,6 +157,24 @@ Tinytest.add("liverange - single node", function (test) {
 
   r_e.destroy();
   assert_dump(test, "<c><3></3></c>", r_c);
+
+});
+
+Tinytest.add("liverange - empty replace", function (test) {
+  var f,r;
+
+  f = frag("<div id=1></div>");
+  r = create("z", f);
+  test.throws(function() {
+    r.replace_contents(frag(""));
+  });
+
+  f = frag("<div id=1></div><div id=2></div><div id=3></div>");
+  r = create("z", f.childNodes[1]);
+  assert_dump(test, "<1></1><z><2></2></z><3></3>", f);
+  test.throws(function() {
+    r.replace_contents(frag(""));
+  });
 });
 
 Tinytest.add("liverange - multiple nodes", function (test) {
@@ -242,7 +261,7 @@ Tinytest.add("liverange - multiple nodes", function (test) {
   var r_o = create("o", f3.childNodes[0], f3.childNodes[0]);
   assert_dump(test, "<m><o><n><9></9></n></o><10></10><11></11></m>", f3);
 
-  var ret1 = r_i.replace_contents(f3);
+  var ret1 = r_i.replace_contents(f3, true);
   assert_dump(test, "", f3);
   assert_dump(test, "<2></2><f><c><a><e><3></3></e><d><b><4></4></b></d></a></c></f>", ret1);
   assert_dump(test, "<l><k><6></6><j><7><h><g><1></1><i><m><o><n><9></9></n></o><10></10><11></11></m></i></g></h><5></5></7><8></8></j></k></l>", f2);
@@ -442,3 +461,5 @@ Tinytest.add("liverange - create inner", function (test) {
     }
   );
 });
+
+})();

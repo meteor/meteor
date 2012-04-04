@@ -13,7 +13,8 @@ Package.on_use(function (api) {
   // you still want the event object normalization that jquery provides?)
   api.use('jquery');
 
-  api.add_files(['liverange.js', 'liveui.js'], 'client');
+  api.add_files(['liverange.js', 'liveui.js', 'innerhtml.js', 'smartpatch.js'],
+                'client');
 });
 
 Package.on_test(function (api) {
@@ -24,6 +25,7 @@ Package.on_test(function (api) {
     'liverange_test_helpers.js',
     'liveui_tests.js',
     'liveui_tests.html',
-    'liverange_tests.js'
+    'liverange_tests.js',
+    'smartpatch_tests.js'
   ], 'client');
 });

@@ -22,7 +22,7 @@ put on the screen.
     // On server startup, if the database is empty, create some initial data.
     if (Meteor.is_server) {
       Meteor.startup(function () {
-        if (Rooms.find().length === 0) {
+        if (Rooms.find().count() === 0) {
           Rooms.insert({name: "Initial room"});
         }
       });
@@ -102,7 +102,7 @@ will still work.
 
 {{> api_box subscription_onStop}}
 
-If you call [`observe`](#cursor_observe) in your publish handler, this
+If you call [`observe`](#observe) in your publish handler, this
 is the place to stop the observes.
 
 {{> api_box subscription_stop}}
@@ -140,8 +140,8 @@ documents, just use a placeholder attribute.
 
 `func` will be run immediately, and while it runs,
 records will be kept of the subscriptions it makes
-(via [`Meteor.subscribe`](#subscribe)) and the data it uses
-(including calls to [`Session.get`](#get)
+(via [`Meteor.subscribe`](#meteor_subscribe)) and the data it uses
+(including calls to [`Session.get`](#session_get)
 and [`collection.find`](#find)).
 
 Whenever the used data changes, the subscriptions will be cancelled and
@@ -388,7 +388,7 @@ Specifically, when you pass a `name`, here's what happens:
 Mongo server. When you call methods on that collection on the server,
 they translate directly into normal Mongo operations.
 
-* On the client, a [`minimongo`](#minimongo) instance is
+* On the client, a Minimongo instance is
 created. Minimongo is essentially an in-memory, non-persistent
 implementation of Mongo in pure JavaScript. It serves as a local cache
 that stores just the subset of the database that this client is working
@@ -398,7 +398,7 @@ this cache, without talking to the server.
 * When you write to the database on the client ([`insert`](#insert),
 [`update`](#update), [`remove`](#remove)), the command is executed
 immediately on the client, and, simultaneously, it's shipped up to the
-server and executed there too.  The [`livedata`](#livedata) package is
+server and executed there too.  The `livedata` package is
 responsible for this.
 
 If you pass `null` as the `name`, then you're creating a local
@@ -488,8 +488,8 @@ those changes may or may not appear in the result set.
 
 Cursors are a reactive data source.  The first time you retrieve a
 cursor's documents with `fetch`, `map`, or `forEach` inside a
-reactive context (eg, [`Meteor.ui.render`](#render),
-[`Meteor.autosubscribe`](#autosubscribe), Meteor will register a
+reactive context (eg, [`Meteor.ui.render`](#meteor_ui_render),
+[`Meteor.autosubscribe`](#meteor_autosubscribe), Meteor will register a
 dependency on the underlying data.  Any change to the collection that
 changes the documents in a cursor will trigger a recomputation.  To
 disable this behavior, pass `{reactive: false}` as an option to
@@ -513,7 +513,7 @@ until the database acknowledges the write, or throws an exception if
 something went wrong.  If you do provide a callback, `insert` returns
 immediately.  Once the insert completes (or fails), the callback is
 called with error and result arguments, same as for
-[`methods`](#methods).
+[`methods`](#methods_header).
 
 On the client, `insert` never blocks.  If you do not provide a callback
 and the insert fails on the server, then Meteor will log a warning to
@@ -643,8 +643,8 @@ Examples:
     // keep it updated as the database changes.
     var frag = Meteor.ui.render(function () {
       var high_scoring = Posts.find({score: {$gt: 10}});
-      return $("<p>There are " + high_scoring.length + " posts with " +
-        "scores greater than 10</p>");
+      return "<p>There are " + high_scoring.count() + " posts with " +
+        "scores greater than 10</p>";
     });
     document.body.appendChild(frag);
 
@@ -795,9 +795,9 @@ store an arbitrary set of key-value pairs. Use it to store things like
 the currently selected item in a list.
 
 What's special about `Session` is that it's reactive. If
-you call [`Session.get`](#get)`("current_list")`
+you call [`Session.get`](#session_get)`("current_list")`
 from inside a template, the template will automatically be rerendered
-whenever [`Session.set`](#set) is called.
+whenever [`Session.set`](#session_set) is called.
 
 {{> api_box set}}
 
@@ -819,8 +819,8 @@ Example:
 
     Session.set("enemy", "Eastasia");
     var frag = Meteor.ui.render(function () {
-      return $("<p>We've always been at war with " +
-        Session.get("enemy") + "</p>");
+      return "<p>We've always been at war with " +
+        Session.get("enemy") + "</p>";
     });
 
     // Page will say "We've always been at war with Eastasia"
@@ -841,75 +841,111 @@ These two expressions do the same thing:
 
 Example:
 
-    // Show a dynamically updating list of items. Let the user click on an
-    // item to select it. The selected item is given a CSS class so it
-    // can be rendered differently.
-    var frag = Meteor.ui.renderList(Posts, {
-      render: function (post) {
-        var cls = Session.equals("selected_post", post._id) ?
-          "selected" : "";
-        return $("<div class='" + cls + "'>" + post.title + "</div>");
-      }, events: {
-        'click': function () {
-          Session.set("selected_post", this._id);
-        }
+    <template name="posts_view">
+    {{dstache}}! Show a dynamically updating list of items. Let the user click on an
+        item to select it. The selected item is given a CSS class so it
+        can be rendered differently. }}
+
+    {{dstache}}#each posts}}
+      {{dstache}}> post_item }}
+    {{dstache}}/each}}
+    </{{! }}template>
+
+    <template name="post_item">
+      <div class="{{dstache}}post_class}}">{{dstache}}title}}</div>
+    </{{! }}template>
+
+    ///// in JS file
+    Template.posts_view.posts = function() {
+      return Posts.find();
+    };
+
+    Template.post_item.post_class = function() {
+      return Session.equals("selected_post", this._id) ?
+        "selected" : "";
+    };
+
+    Template.post_item.events = {
+      'click': function() {
+        Session.set("selected_post", this._id);
       }
-    });
+    };
 
-    document.body.appendChild(frag);
-
-    // In this code, when the user clicks on an item to select it, the
-    // render function is called twice: once to rerender the item
-    // that lost the selection, and once to rerender the item that gained
-    // the selection.
+    // Using Session.equals here means that when the user clicks
+    // on an item and changes the selection, only the newly selected
+    // and the newly unselected items are re-rendered.
     //
-    // If Session.get had been used instead of Session.equals, then when
-    // the user clicked on an item, the render function would have to
-    // called once for every Post shown in the list.
-
+    // If Session.get had been used instead of Session.equals, then
+    // when the selection changed, all the items would be re-rendered.
+    
 <h2 id="meteor_ui"><span>Meteor.ui</span></h2>
 
-These are some utility functions for building interfaces. They make it
-easy to create DOM elements that update automatically as data changes in
-[`Session`](#pkg_session) variables or in a
-[`Meteor.Collection`](#pkg_minimongo).
+`Meteor.ui` provides building blocks for creating reactive UIs out of strings of
+HTML, making it easy to create DOM elements that update 
+automatically as data changes in
+[`Session`](#session) variables or in a
+[`Meteor.Collection`](#meteor_collection).  Meteor's built-in templates already use these functions, but if you prefer a different way of generating HTML,
+are integrating a new template language with Meteor, or need to compose a reactive
+snippet of HTML on the fly, this package has what you need.
 
-These helpers are implemented entirely on top of the public
-interfaces at [`Meteor.deps`](#pkg_deps) and
-[`Meteor.Collection`](#pkg_minimongo).
+This package is implemented on top of [`Meteor.deps`](#meteor_deps), which provides the
+data dependency tracking and invalidation system, while `Meteor.ui` contributes
+the ability to turn HTML into DOM elements, keep track of regions of the DOM that
+need updating, and patch old DOM content with new, recalculated content.
 
 {{> api_box render}}
 
-You provide a function that returns some DOM
-elements. `Meteor.ui.render` gives you back some DOM elements that
-automatically updates themselves in place. They are sensitive to changes
-to session variables ([`Session.get`](#pkg_session_get) and to
-database writes
-([<code><i>collection</i>.update</code>](#pkg_minimongo_update), etc.)
+You provide a function `html_func` that returns a string containing HTML.  This
+function is used to create a DocumentFragment containing nodes that reactively
+updating in response to data changes.
 
-The auto-updating elements are returned as a `DocumentFragment`. Simply
-insert this `DocumentFragment` anywhere in the DOM you like. Its
-elements will update themselves automatically until they are taken
-offscreen &mdash; specifically, until [`Meteor.flush`](#meteor_flush) is called
-when the elements are not children of `document`.
+`html_func` is run in a reactive context, which records accesses to any reactive data sources (such as [`Session`](#session)), and the resulting HTML is rendered as
+a DocumentFragment.  The DOM elements in this returned
+DocumentFragment are sensitive to changes to the previously accessed data,
+in that if the data accessed from within `html_func` changes, then `html_func`
+is automatically re-run and the new DOM elements are patched into place.
 
-`events` lets you quickly hook up some event handlers to
+There are two potential pitfalls to overwriting parts of the DOM with replacement
+elements, as `render` must do during an update.
+One is that we might end up doing a lot
+of extra work, for example re-rendering the entire page whenever the
+database changes.  The other is that re-rendering might reset form controls,
+for example replacing a text field that the user is typing in with a fresh, empty
+one that doesn't have focus.  Ideally, small database changes would produce
+small, localized DOM updates, and the identity of input controls would be preserved
+even in the presence of reactive changes to their surroundings.
+
+By providing some hints, you can enable `render` to patch DOM elements in place, rather than replacing them.
+
+<span id="patching">Patching</span> is triggered by the presence of elements
+with `id` or `name` attributes,
+and it aims to preserve the old elements while still effecting the same overall
+update.  If the old HTML and the new HTML both declare an element with the same `id`,
+the old element and its parents are not removed from the DOM or reparented; instead,
+the only the old element's siblings, children, and attributes are changed.  The
+`name` attribute has a similar effect if it is unique among descendents of the
+nearest ancestor with a `name` or `id` tag.  An element with an `id` or `name` attribute is called a "labeled" element.  To be sure that a form field is preserved
+across updates, then, you should either assign it a unique `id` or give it a unique `name` within some enclosing element with a unique `id`.
+
+The patching process preserves all labeled elements, regardless of their depth or nesting, as long as this can be done without reparenting or recreating the elements.  It is possible to create situations where patching is impossible; for example, changing the tag name of an element, or moving the element to a different position, in which case the element in question is not preserved.
+
+The DocumentFragment returned by `Meteor.ui.render` can be inserted anywhere
+in the DOM you like, and the DOM elements will continue to update until they are
+removed from the document.  For the details, see [`Meteor.flush`](#meteor_flush).
+
+If you want a region of your HTML to be able to update independently of the other HTML around it, wrap it in a [`Meteor.ui.chunk`](#meteor_ui_chunk).
+
+The `events` option lets you hook up event handlers to
 the DOM nodes. If you provide `event_data`, it will be
-passed to event handlers in `this`.
+passed to event handlers in `this`.  (See [Event Maps](#eventmaps).)
 
-`Meteor.ui.render` may be called recursively (that
-is, `render_func` can call `Meteor.ui.render`.) If
-that happens, each invocation of `render` works
-independently &mdash; an change to a dependency of the
-inner `render_func` will (correctly) not cause the
-outer `render_func` to be recomputed.
 
 Example:
 
     // Show the number of users online.
     var frag = Meteor.ui.render(function () {
-      return $("<p>There are " + Users.find({online: true}).length +
-        " users online.</p>");
+      return "<p>There are " + Users.find({online: true}).count() +
+        " users online.</p>";
     });
     document.body.appendChild(frag);
 
@@ -919,35 +955,85 @@ Example:
 
     // Show a counter, and let the user click to increase or decrease it.
     Session.set("counter", 0);
+
     var frag = Meteor.ui.render(function () {
-      return $('<div>Counter: ' + Session.get("counter") + ' ' +
-        '<span class="inc">Increase</span>' +
-        '<span class="dec">Decrease</span></div>');
-      }, {
-        'click .inc': function (event) {
-          Session.set("counter", Session.get("counter") + 1);
-      },
-        'click .dec': function (event) {
-          Session.set("counter", Session.get("counter") - 1);
-      }
+        return '<div>Counter: ' + Session.get("counter") + ' ' +
+          '<span class="inc">Increase</span>' +
+          '<span class="dec">Decrease</span></div>';
+      }, { events:
+        {
+          'click .inc': function (event) {
+            Session.set("counter", Session.get("counter") + 1);
+          },
+          'click .dec': function (event) {
+            Session.set("counter", Session.get("counter") - 1);
+          }
+        }
     });
     document.body.appendChild(frag);
 
-{{> api_box renderList}}
+{{> api_box chunk}}
 
-This is [`Meteor.ui.render`](#render) crossed
-with [<code><i>collection</i>.find().observe()</code>](#observe).
-It calls a render function repeatedly for each document in a
-collection that matches a query.
+When generating HTML from a function passed to [`Meteor.ui.render`](#meteor_ui_render), you can use `Meteor.ui.chunk` to mark a substring of the HTML as separately reactive. If the data used to generate that substring changes, only the elements corresponding to that substring will be updated, not the elements before and after it.
 
-If you attach event handlers, then when they are triggered, they
-will receive the document in `this`.
+Like `render`, `Meteor.ui.chunk` takes a function `html_func` that returns a HTML string. It calls that function, records the data that the function used (using a [reactive context](#meteor_ui_deps)), and arranges to rerun the function as necessary whenever the data changes. What's different from `render` is that it returns another HTML string, not a DocumentFragment. So, unlike `render`, `chunk` may be nested as deeply as you like, for example to render nested views or subtemplates.
 
-Returns a `DocumentFragment` with the same semantics as in
-[`Meteor.ui.render`](#render) &mdash; insert it
-anywhere, it will automatically update itself, make sure it's on the
-page before the next time you
-call [`Meteor.flush`](#meteor_flush).
+`chunk` can also be used to attach events to part of an HTML string, in much the same way that they could be attached to DOM elements. When the string is parsed into DOM elements by `render`, the event handlers will automatically be hooked up.
+
+`chunk` works by creating a unique ID for the chunk, wrapping the HTML string in a comment that calls out that ID, and adding an entry to the chunk table for the current invocation of `render`. As `render` turns the HTML string into DOM nodes, it pulls out the comments and wires up the appropriate callbacks and pointers. On the other hand, if there is no current invocation of `render`, `chunk` just passes the string through unchanged. (In this case, if an event map is provided, it is ignored.)
+
+The contents of a chunk must be balanced HTML tags; the string returned by
+`html_func` cannot start or end inside a tag or tag attribute.
+
+Example:
+
+    Meteor.startup(function() {
+
+      Session.set("greeting", "Hello");
+      Session.set("target", "World");
+
+      // Render two chunks that will be tracked and updated independently.
+      document.body.appendChild(
+        Meteor.ui.render(function() {
+          return "<div>" +
+            Meteor.ui.chunk(function() { return Session.get("greeting"); }) +
+            " " +
+            Meteor.ui.chunk(function() { return Session.get("target"); }) +
+            "</div>";
+        }));
+
+      // Updates "Hello" to "Goodbye" without touching "World"
+      Session.set("greeting", "Goodbye");
+      // Updates "World" to "Ralph" without touching "Goodbye"
+      Session.set("target", "Ralph");
+
+    });
+
+    // Every two seconds, alternates between Goodbye Ralph and Goodbye World.
+    // If you select the word Goodbye or part of it, the selection stays on
+    // update, because the text node is not being replaced.  
+    Meteor.setInterval(function() {
+      if (Session.get("target") === "Ralph") {
+        Session.set("target", "World");
+      } else {
+        Session.set("target", "Ralph");
+      }
+    }, 2000);
+
+
+{{> api_box listChunk}}
+
+`listChunk` is like `chunk`, but instead of creating one chunk, it creates several, one for each record in the results of a database query.
+
+It keeps the chunks updated as the results of the database query change. For example, if a new record is created in the database that matches the query, a new chunk is inserted. If the query is sorted, and a database record changes, and the change causes it to move in the sort order, then the chunk is moved appropriately.
+
+As with `chunk`, all of these updates are made with [minimum disturbance to the DOM](#patching), typically by inserting and removing a few DOM nodes.
+
+If you provide `else_func`, then whenever the query returns no results, it will be called to render alternative content. You might use this to show a message like "No records match your query."
+
+You can provide an `events` option to attach a set of event handlers to each chunk that `listChunk` creates. When events fire, `this` in the event handler will contain the database record that triggered the event.
+
+
 
 Example:
 
@@ -955,18 +1041,20 @@ Example:
     // "frontpage". Keep the list updated as new posts are made, as tags
     // change, etc. Let the user click a post to select it.
     Session.set("selected", null);
-    var frag = Meteor.ui.renderList(Posts, {
-      render: function (post) {
-        var style = Session.equals("selected", post._id) ? "selected" : "";
-        // A real app would need to quote/sanitize post._name
-        return $('<div class="' + style + '">' + post._name + '</div>');
-      },
-      selector: {tags: "frontpage"},
-      events: {
-        'click': function (event) {
-          Session.set("selected", this._id);
-        }
-      }
+    var frag = Meteor.ui.render(function() {
+      return Meteor.ui.listChunk(Posts.find({tags: "frontpage"}),
+        function(post) {
+          var style = Session.equals("selected", post._id) ? "selected" : "";
+          // A real app would need to quote/sanitize post.name
+          return '<div class="' + style + '">' + post.name + '</div>';
+        },
+        { events:
+          {
+            'click': function (event) {
+              Session.set("selected", this._id);
+            }
+          }
+        });
     });
     document.body.appendChild(frag);
 
@@ -986,12 +1074,12 @@ brought up to date with your latest changes, so you can manually
 manipulate it with jQuery or the like.
 
 When you call `flush`, any auto-updating DOM elements that are not on
-the screen may be cleaned up (meaning that Meteor will stop tracking and
-updating the elements, so that the browser's garbage collector can
+the screen may be cleaned up (meaning that Meteor will stop tracking
+and updating the elements, so that the browser's garbage collector can
 delete them.) So, if you manually call `flush`, you need to make sure
-that any auto-updating elements that you have created with templates, or
-by calling [`Meteor.ui.render`](#render), have already been inserted in
-the main DOM tree.
+that any auto-updating elements that you have created by calling
+[`Meteor.ui.render`](#meteor_ui_render) have already been inserted in the main
+DOM tree.
 
 Technically speaking, `flush` calls the [invalidation
 callbacks](#on_invalidate) on every [reactive context](#context) that
@@ -999,7 +1087,7 @@ has been [invalidated](#invalidate), but hasn't yet has its callbacks
 called. If the invalidation callbacks invalidate still more contexts,
 flush keeps flushing until everything is totally settled. The DOM
 elements are cleaned up because of logic in
-[`Meteor.ui.render`](#render) that works through invalidations.
+[`Meteor.ui.render`](#meteor_ui_render) that works through invalidations.
 
 {{#api_box_inline eventmaps}}
 
@@ -1026,7 +1114,7 @@ To handle more than one type of event with the same function, use a comma-separa
 The handler function gets one argument, an object with information
 about the event. It will receive some additional context data
 in `this`, depending on the context (eg: with
-[`Meteor.ui.renderList`](#renderList), you get the
+[`Meteor.ui.listChunk`](#meteor_ui_listchunk), you get the
 document; with a Handlebars template, you get the data being used to
 fill the template.)
 
