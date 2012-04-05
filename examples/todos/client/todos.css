@@ -32,6 +32,14 @@ a, a:visited, a:active {
    color: #258;
 }
 
+h3 {
+  font-weight: bold;
+  text-decoration: underline;
+  font-size: 120%;
+  padding: 8px 6px;
+  text-align: center;
+}    
+
 #top-tag-filter, #main-pane, #side-pane, #bottom-pane {
     position: absolute;
     left: 0;
@@ -42,17 +50,11 @@ a, a:visited, a:active {
 }
 
 #top-tag-filter {
-    height: 50px;
+    left: 200px;
+    height: 44px;
     bottom: auto;
     background: #ddd;
-}
-
-#bottom-pane {
-    height: 80px;
-    top: auto;
-    font-size: 80%;
-    border-top: 1px solid #333;
-    background: #ccc;
+    border-bottom: 1px solid #999;
 }
 
 #help {
@@ -60,18 +62,19 @@ a, a:visited, a:active {
 }
 
 #main-pane {
-    top: 50px;
-    bottom: 80px;
+    top: 45px;
+    bottom: 0;
     left: 220px;
     overflow: auto;
 }
 
 #side-pane {
-    top: 50px;
-    bottom: 80px;
     width: 200px;
     right: auto;
     overflow: auto;
+    background: #eee;
+    border-right: 1px solid #999;
+    background: #ddd;
 }
 
 .tag {
@@ -113,7 +116,7 @@ a, a:visited, a:active {
 }
 
 #lists {
-    margin-top: 5px;
+
 }
 
 #lists .list {
@@ -123,8 +126,6 @@ a, a:visited, a:active {
 #lists .selected {
     padding: 2px 6px;
     background: #9be;
-    border-top: 1px solid #999;
-    border-bottom: 1px solid #999;
     font-weight: bold;
 }
 
@@ -137,10 +138,19 @@ a, a:visited, a:active {
     width: 180px;   
 }
 
-#new-todo {
-    margin-top: 5px;
+#new-todo-box {
+    margin-top: 10px;
     margin-bottom: 10px;
-    margin-left: 5px;
+    margin-left: 60px;
+    margin-right: 20px;
+    font-size: 160%;
+    position: relative;
+    height: 40px;
+}
+
+#new-todo {
+   position: absolute;
+   width: 100%;
 }
 
 #items-view {

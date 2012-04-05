@@ -17,24 +17,11 @@
     {{> create_list}}
   </div>
 
-  <div id="bottom-pane">
-    <div id="help">
-      Select a list on the left to view the todo items, and use the
-      buttons at the top to filter by tag.
-      Create a new list or a new item on the current list using
-      the text boxes.
-      <br><b>Double-click</b> on a todo item or list name to edit it.
-      You can also add and remove tags on each item.
-      <br>
-      <a href="https://github.com/meteor/meteor/tree/master/examples/todos">View the source code.</a>
-    </div>
-  </div>
-
 </body>
 
 <template name="tag_filter">
   <div id="tag-filter" class="tag-list">
-    <div class="label">Tag filter:</div>
+    <div class="label">Show:</div>
     {{#each tags}}
       {{> tag_item}}
     {{/each}}
@@ -48,6 +35,7 @@
 </template>
 
 <template name="lists">
+  <h3>Todo Lists</h3>
   <div id="lists">
     {{#each lists}}
       {{> list_item}}
@@ -80,7 +68,9 @@
 <template name="todos">
   {{#if any_list_selected}}
   <div id="items-view">
-    <input type="text" id="new-todo" placeholder="New item" />
+    <div id="new-todo-box">
+      <input type="text" id="new-todo" placeholder="New item" />
+    </div>
     {{> todo_list}}
   </div>
   {{/if}}

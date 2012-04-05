@@ -72,7 +72,7 @@ Template.tag_item.selected = function () {
 };
 
 Template.tag_item.tag_text = function () {
-  return this.tag || "Show all";
+  return this.tag || "All items";
 };
 
 Template.tag_item.events = {
@@ -263,6 +263,7 @@ var TodosRouter = Backbone.Router.extend({
   },
   main: function (list_id) {
     Session.set("list_id", list_id);
+    Session.set("tag_filter", null);
   },
   setList: function (list_id) {
     this.navigate(list_id, true);
