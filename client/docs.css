@@ -8,15 +8,15 @@ small, strike, strong, sub, sup, tt, var,
 dl, dt, dd, ol, ul, li,
 fieldset, form, label, legend,
 table, caption, tbody, tfoot, thead, tr, th, td {
-  margin: 0;
-  padding: 0;
-  border: 0;
-  outline: 0;
-  font-weight: inherit;
-  font-style: inherit;
-  font-size: 100%;
-  font-family: inherit;
-  vertical-align: baseline;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    font-weight: inherit;
+    font-style: inherit;
+    font-family: inherit;
+    font-size: 100%;
+    vertical-align: baseline;
 }
 body {
   line-height: 1;
@@ -34,16 +34,16 @@ a img {
 
 body {
     font-family: 'Helvetica Neue', Helvetica, Arial;
-    text-rendering: optimizeLegibility
+    text-rendering: optimizeLegibility;
 }
 
 pre {
     font-family: monospace;
-    white-space: pre;
 }
 
 code {
     font-family: monospace;
+    font-size: 1.1em;
 }
 
 ul {
@@ -92,7 +92,6 @@ h4 {
 }
 
 p {
-    /* margin-top: 1em; */
     margin-bottom: 1em;
 }
 
@@ -100,12 +99,20 @@ em {
     font-style: italic;
 }
 
+a:hover {
+    background-color: yellow;
+}
+
 /** Section nav **/
 
 #nav {
-    padding-top: 40px;
+    padding-top: 38px;
     padding-left: 30px;
     padding-right: 30px;
+    line-height: 1.2;
+    border-width: 1px;
+    border-color: black;
+    border-style: none dotted none none;
 }
 
 #nav > div {
@@ -118,7 +125,6 @@ em {
 }
 
 #nav a:hover {
-    background-color: yellow;
     margin: 0px -5px 0px -5px;
     padding: 2px 5px 2px 5px;
 }
@@ -167,19 +173,13 @@ em {
 /** Main pane **/
 
 #main {
-    padding: 10px;
-    width: 100%;
+    margin: 10px;
     line-height: 1.3;
     color: #333333;
 }
 
 #main strong {
     font-weight: bold;
-}
-
-#main code {
-    font-size: 1.1em;
-    white-space: nowrap;
 }
 
 #main h1 {
@@ -202,10 +202,6 @@ em {
 
 #main code a:link, #main code a:visited {
     border: none;
-}
-
-#main a:hover {
-    background-color: yellow;
 }
 
 dl.involved {
@@ -390,7 +386,6 @@ dl.example dd {
 #main pre, #main pre code { /* override inline code font and white-space*/
   font-size: 12px;
   font-weight: bold;
-  white-space: pre;
 }
 
 #main a.selflink:link, #main a.selflink:visited, #main a.selflink:hover {
@@ -401,20 +396,48 @@ dl.example dd {
 }
 
 /** layout control **/
-@media (min-width: 480px) {
+
+/* default to no sidebar */
+#nav {
+    display: none;
+}
+.github-ribbon {
+    display: none;
+}
+pre {
+    white-space: pre-wrap;
+}
+
+@media (min-width: 768px) {
+/* ipad portrait or better */
 #main {
-    width: 550px;
+    width: 440px;
     height: 100%;
-    margin-left: 22%;
+    margin-left: 260px; /* nav width + padding */
     padding: 30px;
 }
 #nav {
+    display: block;
+    width: 200px;
     position: fixed;
     overflow: auto;
     height: 100%;
-    line-height: 1.2;
-    border-width: 1px;
-    border-color: black;
-    border-style: none dotted none none;
+}
+.main-headline {
+    display: none;
+}
+}
+
+@media (min-width: 1024px) {
+/* ipad landscape and desktop */
+#main {
+    width: 600px;
+    margin-left: 310px; /* nav width + padding */
+}
+#nav {
+    width: 250px;
+}
+.github-ribbon {
+    display: block;
 }
 }

@@ -4,26 +4,23 @@
 </head>
 
 <body>
-  <div class="container-fluid">
-    <div class="row-fluid">
-      <div id="nav" class="span2">
-        {{> nav }}
-      </div>
-      <div id="main" class="span8">
-        <div id="top"></div>
-        {{> introduction }}
-        {{> examples }}
-        {{> concepts }}
-        {{> api }}
-        {{> packages }}
-        {{> commandline }}
-      </div>
-    </div>
+  <div id="nav">
+    {{> nav }}
+  </div>
+  <div id="main">
+    <div id="top"></div>
+    <h2 class="main-headline">Meteor 0.2.0</h1>
+    {{> introduction }}
+    {{> examples }}
+    {{> concepts }}
+    {{> api }}
+    {{> packages }}
+    {{> commandline }}
   </div>
 </body>
 
 <template name="nav">
-<div class="hidden-phone">
+<div>
   {{#each sections}}
   {{#if type "spacer"}}
     <div class="spacer"> </div>
