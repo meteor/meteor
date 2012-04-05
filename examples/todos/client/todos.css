@@ -1,201 +1,220 @@
-body {
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 14px;
-  line-height: 1.4em;
-  background: #eeeeee;
-  color: #333333;
-}
 
-.ui-layout-north {
-    background: #dddddd;
-}
-
-#tag-filter {
-    margin: 8px;
-}
-
-#items-view {
-    margin: 10px;
-}
-
-#new-todo {
-    width: 466px;
-    font-size: 24px;
-    font-family: inherit;
-    line-height: 1.4em;
-    border: 0;
-    outline: none;
-    padding: 6px;
-    border: 1px solid #999999;
-    margin-left: 75px;
-}
-
-.ui-layout-west {
-    padding: 10px;
-    border-right: solid 1px #cccccc;
-}
-
-.ui-layout-south {
-    border-top: solid 1px black;
-    padding: 10px;
-    background: #cccccc;
-}
-
-#help p {
-    margin: 8px;
-}
-
-.ui-layout-center {
-    overflow: auto;
-}                    
-
-#lists .list {
-    margin: 2px;
-    font-weight: bold;
-}
-
-#lists .list-name .empty {
-    font-size: 0.9em;
-    font-style: italic;
-}
-
-#lists .editing input {
-    font-family: inherit;
+* {
+    padding: 0;
     margin: 0;
-    line-height: 1.6em;
-    border: 0;
-    outline: none;
-    padding: 10px 7px 0px 27px;
-    border: 1px solid #999999;
-}
-#lists .selected {
-    background-color: lightblue;
 }
 
-/* todo items */
+ul {
+    list-style: none;
+}
 
-#item-list {
+html, body {
+    height: 100%;
+}
+
+body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    background: #eeeeee;
+    color: #333333;
+}
+
+body, input {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+input {
+  font-size: 100%;
+}
+
+
+.tag {
+    opacity: 1;
+    transition: opacity 0.3s linear;
+    -moz-transition: opacity 0.3s linear;
+    -webkit-transition: opacity 0.3s linear;
+    -o-transition: opacity 0.3s linear;
+    position: relative;
+}
+
+#top-tag-filter, #main-pane, #side-pane, #bottom-pane {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    overflow: hidden;
+}
+
+#top-tag-filter {
+    height: 50px;
+    bottom: auto;
+}
+
+#bottom-pane {
+    height: 120px;
+    top: auto;
+    font-size: 80%;
+    border-top: 1px solid #333;
+    background: #ccc;
+}
+
+#help {
+    padding: 8px;
+}
+
+#main-pane {
+    top: 50px;
+    bottom: 120px;
+    left: 220px;
+    overflow: auto;
+}
+
+#side-pane {
+    top: 50px;
+    bottom: 120px;
+    width: 200px;
+    right: auto;
+    overflow: auto;
+}
+
+.tag {
+    float: left;
+    margin: 5px;
+    padding: 2px 7px;
+    font-size: 80%;
+    font-weight: bold;
+    background: #999;
+    color: #fff;
+    border-radius: 4px;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    -o-border-radius: 4px;
+}
+
+#tag-filter .label {
+    float: left;
+    margin-top: 9px;
+    margin-left: 12px;
+    margin-right: 8px;
+}
+
+#tag-filter .tag {
     margin-top: 10px;
 }
 
-#item-list li {
-    margin: 12px;
-    font-size: 24px;
-    line-height: 1.1em;
-    border-bottom: 1px solid #cccccc;
-    height: 50px;
+#tag-filter .selected {
+    background: #69d;
 }
 
-#item-list li:after {
-    content: "\0020";
-    display: block;
-    height: 0;
-    clear: both;
-    overflow: hidden;
-    visibility: hidden;
+#lists .list {
+    padding: 3px 6px;
 }
 
-#item-list .destroy {
-    float: left;
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-    margin-top: 12px;
+#lists .selected {
+    background: #9be;
+}
+
+#createList {
+    padding: 3px 6px;
+    margin-top: 5px;
+}
+
+#createList input {
+    width: 180px;   
+}
+
+#new-todo {
+    margin-bottom: 10px;
+}
+
+#items-view {
+    margin-top: 5px;
     margin-left: 5px;
 }
 
-#item-list li:hover .destroy {
-    background: url('/destroy.png') no-repeat 0 0;
+#item-list .todo {
+    display: block;
+    height: 50px;
+    position: relative;
+    overflow: hidden;
+    border-top: 1px solid #ccc;
 }
 
-#item-list li .destroy:hover {
-    background-position: 0 -20px;
+#item-list .todo .destroy {
+    position: absolute;
+    left: 5px;
+    top: 15px;
+    height: 20px;
+    width: 20px;
 }
 
-#item-list .display {
+#item-list .todo .display, #item-list .todo .edit {
+    margin-left: 30px;
+    height: 100%;
+    width: auto;
     float: left;
-    margin: 9px;
-}
-
-#item-list .check {
-    float: left;
-    margin: 9px;
-}
-
-#item-list .edit {
-    float: left;
-}
-
-#item-list .todo-text {
-    float: left;
-}
-
-#item-list li.editing {
-    padding: 0;
-}
-
-#item-list .editing input {
-    width: 444px;
-    font-size: 24px;
-    font-family: inherit;
-    margin-left: 38px;
-    line-height: 1.6em;
-    border: 0;
-    outline: none;
-    border: 1px solid #999999;
+    padding-top: 18px;
+    line-height: 1;
 }
 
 #item-list .done .todo-text {
     text-decoration: line-through;
-    color: #777777;
+    color: #999;
 }
 
-#item-list .item-tags {
+#item-list .todo:hover .destroy {
+    background: url('/destroy.png') no-repeat 0 0;
+}
+
+#item-list .todo .destroy:hover {
+    background-position: 0 -20px;
+}
+
+#item-list .todo .item-tags {
+    overflow: auto;
     float: right;
+    margin-right: 8px;
 }
 
-/* tags */
+#item-list .todo .item-tags .tag {
+    margin-top: 15px;
+}
 
-.tag {
+#item-list .todo .item-tags .removable_tag {
+    padding-right: 22px;
+}
+
+#item-list .todo .item-tags .tag .remove {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 20px;
+    background: url("/close_16.png") no-repeat center center;
+}
+
+#item-list .todo .item-tags div.addtag {
+    
+}
+
+#item-list .todo .check {
     float: left;
-
-    color: black;
-    background: #aaaaaa;
-    font-size: 16px;
-    font-weight: bold;
-
-    cursor: pointer;
-
-    border: 1px solid black;
-    border-radius: 2px;
-    -webkit-border-radius: 2px;
-    -moz-border-radius: 2px;
-
-    padding: 1px 3px 1px 3px;
-    margin: 4px;
+    width: 25px;
 }
 
-.tag.addtag {
-    background: lightblue;
-    border: 1px dashed black;
-}
-
-.tag.edittag {
-}
-
-.tag.selected {
-    background: lightblue;
-}
-
-.tag .name {
+#item-list .todo .todo-text {
     float: left;
+    margin-left: 10px;
+    font-size: 100%;
 }
 
-.tag .remove {
-    margin-top: 5px;
-    margin-left: 5px;
-    float: left;
-    width: 16px;
-    height: 16px;
-    background-image: url("/close_16.png");
+#item-list .todo .edit input {
+    margin-left: 35px;
 }
+
+#edittag-input {
+    width: 80px;
+}
+

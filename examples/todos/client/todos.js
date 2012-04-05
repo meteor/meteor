@@ -247,9 +247,11 @@ Template.todo_tag.events = {
     var tag = this.tag;
     var id = this.todo_id;
 
-    $(evt.target).parent().fadeOut(500, function () {
+    evt.target.parentNode.style.opacity = 0;
+    // wait for CSS animation to finish
+    Meteor.setTimeout(function() {
       Todos.update({_id: id}, {$pull: {tags: tag}});
-    });
+    }, 300);
   }
 };
 
@@ -272,9 +274,5 @@ Router = new TodosRouter;
 ////////// Startup //////////
 
 Meteor.startup(function () {
-  $('body').layout({north__minSize: 50,
-                    spacing_open: 10,
-                    north__fxSettings: { direction: "vertical" }});
-
   Backbone.history.start({pushState: true});
 });

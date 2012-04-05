@@ -4,20 +4,20 @@
 
 <body>
 
-  <div class="ui-layout-north">
+  <div id="top-tag-filter">
     {{> tag_filter}}
   </div>
 
-  <div class="ui-layout-center">
+  <div id="main-pane">
     {{> todos}}
   </div>
 
-  <div class="ui-layout-west">
-    {{> create_list}}
+  <div id="side-pane">
     {{> lists}}
+    {{> create_list}}
   </div>
 
-  <div class="ui-layout-south">
+  <div id="bottom-pane">
     <div id="help">
       <p>
         To get started, create a new todo list in the left sidebar by
@@ -33,9 +33,7 @@
 
       <p>
         Inspired by Backbone's
-        <a href="http://documentcloud.github.com/backbone/examples/todos/index.html">Todo Demo</a>,
-        with credit to
-        <a href="http://jgn.me/">J&eacute;r&ocirc;me Gravel-Niquet</a>.
+        <a href="http://documentcloud.github.com/backbone/examples/todos/index.html">Todo Demo</a>.
       </p>
     </div>
   </div>
@@ -44,6 +42,7 @@
 
 <template name="tag_filter">
   <div id="tag-filter" class="tag-list">
+    <div class="label">Filter:</div>
     {{#each tags}}
       {{> tag_item}}
     {{/each}}
@@ -126,7 +125,7 @@
         </div>
       {{else}}
         <div class="tag addtag">
-          Add new tag
+          (+)
         </div>
       {{/if}}
     </div>
@@ -134,7 +133,7 @@
 </template>
 
 <template name="todo_tag">
-  <div class="tag">
+  <div class="tag removable_tag">
     <div class="name">{{tag}}</div>
     <div class="remove"></div>
   </div>
