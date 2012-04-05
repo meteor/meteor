@@ -1,5 +1,4 @@
 <template name="concepts">
-{{#better_markdown}}
 
 <h1 id="concepts">Concepts</h1>
 
@@ -15,8 +14,6 @@ when writing those apps.
 {{> templates }}
 {{> packages_concept }}
 {{> deploying }}
-
-{{/better_markdown}}
 </template>
 
 <template name="structure">
@@ -146,7 +143,8 @@ over the requested change.
 
 <template name="reactivity">
 {{#better_markdown}}
-  <h2 id="reactivity">Reactivity</h2>
+
+<h2 id="reactivity">Reactivity</h2>
 
 Meteor embraces the concept of
 <a target="_blank" href="http://en.wikipedia.org/wiki/Reactive_programming">
@@ -209,7 +207,7 @@ or another.  This is where Meteor's reactivity really shines.  Meteor
 provides general mechanisms for tracking the data you use to generate
 your HTML, and automatically updating the HTML in place when the data
 changes.
-  
+
 Here is an example of appending reactive HTML to a web page:
 
     var fragment = Meteor.ui.render(
@@ -247,7 +245,6 @@ update the page incrementally.
 
 {{/better_markdown}}
 </template>
-
 
 <template name="templates">
 {{#better_markdown}}
@@ -377,7 +374,7 @@ be changing.
         Users.update({_id: this._id}, {$inc: {score: 2}});
       }
     };
-    
+
 As mentioned, templates are reactive when wrapped in
 [`Meteor.ui.render`](#meteor_ui_render), meaning that when you add the
 DocumentFragment returned by `render` to the DOM, that region
@@ -407,7 +404,7 @@ For the details on how updating is performed, see the documentation
 for [`Meteor.ui.chunk`](#meteor_ui_chunk) and
 [`Meteor.ui.listChunk`](#meteor_ui_listchunk), which provide the implementation
 used internally.
-   
+
 Auto-updating continues as long as the elements are on the
 screen. The specific rule is: if the elements are not children
 of `document` when
