@@ -19,6 +19,41 @@ Meteor.autosubscribe(function () {
     Meteor.subscribe('todos', list_id);
 });
 
+////////// Helpers for in-place editing //////////
+
+var okcancel_events = function(selector) {
+  return 'keyup %, keydown %, focusout %'.replace(/%/g, selector);
+};
+
+var make_okcancel_handler = function(options) {
+  var ok = options.ok || function() {};
+  var cancel = options.cancel || function() {};
+
+  return function(evt) {
+    if (evt.type === "keydown" && evt.which === 27) {
+      // escape = cancel
+      cancel.call(this, evt);
+
+    } else if (evt.type === "keyup" && evt.which === 13 ||
+               evt.type === "focusout") {
+      // blur/return/enter = ok/submit if non-empty
+      var value = String(evt.target.value || "");
+      if (value)
+        ok.call(this, value, evt);
+      else
+        cancel.call(this, evt);
+    }
+  };
+};
+
+var focus_field_by_id = function(id) {
+  var input = document.getElementById(id);
+  if (input) {
+    input.focus();
+    input.select();
+  }
+};
+
 ////////// Tag Filter //////////
 
 Template.tag_filter.tags = function () {
@@ -72,34 +107,33 @@ Template.list_item.events = {
     Router.setList(this._id);
   },
   'dblclick': function (evt) { // start editing list name
-    var top = $(evt.target).parents('.list');
     Session.set('editing_listname', this._id);
     Meteor.flush();
-    top.find('.edit input').val(this.name).focus().select();
-  },
-  'blur .edit input, keypress .edit input': function (evt) {
-    // rename list
-    if (evt.type === "blur" || evt.keyCode === 13) {
-      var target = $(evt.target);
-      var val = target.val();
-      if (val)
-        Lists.update(this._id, {$set: {name: val}});
-      Session.set('editing_listname', null);
-    }
+    focus_field_by_id("list-name-input");
   }
 };
 
-Template.create_list.events = {
-  'keypress #new-list': function (evt) {
-    var target = $(evt.target);
-    var text = target.val();
-    if (evt.keyCode === 13 && text) {
+Template.list_item.events[ okcancel_events('#list-name-input') ] =
+  make_okcancel_handler({
+    ok: function(value) {
+      Lists.update(this._id, {$set: {name: value}});
+      Session.set('editing_listname', null);
+    },
+    cancel: function() {
+      Session.set('editing_listname', null);
+    }
+  });
+
+Template.create_list.events = {};
+
+Template.create_list.events[ okcancel_events('#new-list') ] =
+  make_okcancel_handler({
+    ok: function(text, evt) {
       var id = Lists.insert({name: text});
       Router.setList(id);
-      target.val('');
+      evt.target.value = "";
     }
-  }
-};
+  });
 
 ////////// Todos //////////
 
@@ -107,11 +141,11 @@ Template.todos.any_list_selected = function () {
   return !Session.equals('list_id', null);
 };
 
-Template.todos.events = {
-  'keypress #new-todo': function (evt) {
-    var target = $(evt.target);
-    var text = target.val();
-    if (evt.keyCode === 13 && text) {
+Template.todos.events = {};
+
+Template.todos.events[ okcancel_events('#new-todo') ] =
+  make_okcancel_handler({
+    ok: function(text, evt) {
       var tag = Session.get('tag_filter');
       Todos.insert({
         text: text,
@@ -120,10 +154,10 @@ Template.todos.events = {
         timestamp: (new Date()).getTime(),
         tags: tag ? [tag] : []
       });
-      target.val('');
+      evt.target.value = '';
     }
-  }
-};
+  });
+
 
 Template.todo_list.todos = function () {
   var list_id = Session.get('list_id');
@@ -171,37 +205,42 @@ Template.todo_item.events = {
   },
 
   'click .addtag': function (evt) {
-    var top = $(evt.target).closest('li.todo');
     Session.set('editing_addtag', this._id);
     Meteor.flush();
-    top.find('.edittag input').focus();
+    focus_field_by_id("edittag-input");
   },
 
   'dblclick .display .todo-text': function (evt) {
-    var top = $(evt.target).closest('li.todo');
     Session.set('editing_itemname', this._id);
     Meteor.flush();
-    top.find('.edit input').val(this.text).focus().select();
-  },
+    focus_field_by_id("todo-input");
+  }
 
-  'blur .edit input, keypress .edit input': function (evt) {
-    if (evt.type === "blur" || evt.keyCode === 13) {
-      var target = $(evt.target);
-      if (target.val())
-        Todos.update(this._id, {$set: {text: target.val()}});
+};
+
+Template.todo_item.events[ okcancel_events('#todo-input') ] =
+  make_okcancel_handler({
+    ok: function(value) {
+      Todos.update(this._id, {$set: {text: value}});
+      Session.set('editing_itemname', null);
+    },
+    cancel: function() {
       Session.set('editing_itemname', null);
     }
-  },
+  });
 
-  'blur .edittag input, keypress .edittag input': function (evt) {
-    if (evt.type === "blur" || evt.keyCode === 13) {
-      var target = $(evt.target);
-      if (target.val())
-        Todos.update(this._id, {$addToSet: {tags: target.val()}});
+
+Template.todo_item.events[ okcancel_events('#edittag-input') ] =
+  make_okcancel_handler({
+    ok: function(value) {
+      Todos.update(this._id, {$addToSet: {tags: value}});
+      Session.set('editing_addtag', null);
+    },
+    cancel: function() {
       Session.set('editing_addtag', null);
     }
-  }
-};
+  });
+
 
 Template.todo_tag.events = {
   'click .remove': function (evt) {

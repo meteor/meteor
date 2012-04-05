@@ -68,7 +68,7 @@
   <div class="list {{selected}}">
     {{#if editing}}
       <div class="edit">
-        <input class="list-name-input" name="list-name-input" type="text" value="" />
+        <input class="list-name-input" id="list-name-input" type="text" value="{{name}}" />
       </div>
     {{else}}
       <div class="display">
@@ -108,7 +108,7 @@
     <div class="destroy"></div>
     {{#if editing}}
       <div class="edit">
-        <input class="todo-input" name="todo-input" type="text" value="" />
+        <input id="todo-input" type="text" value="{{text}}" />
       </div>
     {{else}}
       <div class="display">
@@ -122,7 +122,7 @@
       {{/each}}
       {{#if adding_tag}}
         <div class="tag edittag">
-          <input type="text" name="edittag" value="" />
+          <input type="text" id="edittag-input" value="" />
         </div>
       {{else}}
         <div class="tag addtag">
