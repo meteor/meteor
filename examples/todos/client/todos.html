@@ -3,7 +3,6 @@
 </head>
 
 <body>
-
   <div id="top-tag-filter">
     {{> tag_filter}}
   </div>
@@ -14,25 +13,8 @@
 
   <div id="side-pane">
     {{> lists}}
-    {{> create_list}}
   </div>
-
 </body>
-
-<template name="tag_filter">
-  <div id="tag-filter" class="tag-list">
-    <div class="label">Show:</div>
-    {{#each tags}}
-      {{> tag_item}}
-    {{/each}}
-  </div>
-</template>
-
-<template name="tag_item">
-  <div class="tag {{selected}}">
-    {{tag_text}}
-  </div>
-</template>
 
 <template name="lists">
   <h3>Todo Lists</h3>
@@ -40,6 +22,9 @@
     {{#each lists}}
       {{> list_item}}
     {{/each}}
+  </div>
+  <div id="createList">
+    <input type="text" id="new-list" placeholder="New list" />
   </div>
 </template>
 
@@ -59,29 +44,19 @@
   </div>
 </template>
 
-<template name="create_list">
-  <div id="createList">
-    <input type="text" id="new-list" placeholder="New list" />
-  </div>
-</template>
-
 <template name="todos">
   {{#if any_list_selected}}
   <div id="items-view">
     <div id="new-todo-box">
       <input type="text" id="new-todo" placeholder="New item" />
     </div>
-    {{> todo_list}}
+    <ul id="item-list">
+      {{#each todos}}
+        {{> todo_item}}
+      {{/each}}
+    </ul>
   </div>
   {{/if}}
-</template>
-
-<template name="todo_list">
-  <ul id="item-list">
-    {{#each todos}}
-      {{> todo_item}}
-    {{/each}}
-  </ul>
 </template>
 
 <template name="todo_item">
@@ -120,3 +95,19 @@
     <div class="remove"></div>
   </div>
 </template>
+
+<template name="tag_filter">
+  <div id="tag-filter" class="tag-list">
+    <div class="label">Show:</div>
+    {{#each tags}}
+      {{> tag_item}}
+    {{/each}}
+  </div>
+</template>
+
+<template name="tag_item">
+  <div class="tag {{selected}}">
+    {{tag_text}}
+  </div>
+</template>
+
