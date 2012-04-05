@@ -219,7 +219,7 @@ kind of error that a server will send to the client.  If a method
 function throws a different exception, then it will be mapped to
 `Meteor.Error(500, "Internal server error")` on the wire.
 
-{{> api_box call}}
+{{> api_box meteor_call}}
 
 This is how to invoke a method.  It will run the method on the server.
 If a stub is available, it will also run the stub on the client.
@@ -267,7 +267,7 @@ invoking their stub versions that update the local cache, instead of
 their "real" versions that update the database (using credentials known
 only to the server.)
 
-{{> api_box apply}}
+{{> api_box meteor_apply}}
 
 `Meteor.apply` is just like `Meteor.call`, but it allows the
 arguments to be passed as an array.

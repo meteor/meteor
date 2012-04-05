@@ -193,7 +193,7 @@ Template.api.error = {
   ]
 };
 
-Template.api.call = {
+Template.api.meteor_call = {
   id: "meteor_call",
   name: "Meteor.call(func, arg1, arg2, ... [, asyncCallback])",
   locus: "Anywhere",
@@ -211,7 +211,7 @@ Template.api.call = {
   ]
 };
 
-Template.api.apply = {
+Template.api.meteor_apply = {
   id: "meteor_apply",
   name: "Meteor.apply(name, params [, asyncCallback])",
   locus: "Anywhere",
