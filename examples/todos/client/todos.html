@@ -19,22 +19,14 @@
 
   <div id="bottom-pane">
     <div id="help">
-      <p>
-        To get started, create a new todo list in the left sidebar by
-        typing its name in the text box.  Select a list by clicking on its
-        name, and rename by double clicking.  The active list appears in
-        the main window pane.  You can do the usual here: add items, check
-        them off as completed, and destroy items.  You can also tag items
-        with one or more tags, by clicking the blue <b>Add new tag</b>
-        button to the right.  All your in-use tags appear at the top.  You
-        can filter the list items by selecting a tag, or click the
-        leftmost button to return to the full list.
-      </p>
-
-      <p>
-        Inspired by Backbone's
-        <a href="http://documentcloud.github.com/backbone/examples/todos/index.html">Todo Demo</a>.
-      </p>
+      Select a list on the left to view the todo items, and use the
+      buttons at the top to filter by tag.
+      Create a new list or a new item on the current list using
+      the text boxes.
+      <br><b>Double-click</b> on a todo item or list name to edit it.
+      You can also add and remove tags on each item.
+      <br>
+      <a href="https://github.com/meteor/meteor/tree/master/examples/todos">View the source code.</a>
     </div>
   </div>
 
@@ -42,7 +34,7 @@
 
 <template name="tag_filter">
   <div id="tag-filter" class="tag-list">
-    <div class="label">Filter:</div>
+    <div class="label">Tag filter:</div>
     {{#each tags}}
       {{> tag_item}}
     {{/each}}
@@ -104,12 +96,12 @@
 
 <template name="todo_item">
   <li class="todo {{done_class}}">
-    <div class="destroy"></div>
     {{#if editing}}
       <div class="edit">
         <input id="todo-input" type="text" value="{{text}}" />
       </div>
     {{else}}
+      <div class="destroy"></div>
       <div class="display">
         <input class="check" name="markdone" type="checkbox" {{{done_checkbox}}} />
         <div class="todo-text">{{text}}</div>
@@ -125,7 +117,7 @@
         </div>
       {{else}}
         <div class="tag addtag">
-          (+)
+          +tag
         </div>
       {{/if}}
     </div>

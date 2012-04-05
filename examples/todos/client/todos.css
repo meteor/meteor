@@ -28,14 +28,8 @@ input {
   font-size: 100%;
 }
 
-
-.tag {
-    opacity: 1;
-    transition: opacity 0.3s linear;
-    -moz-transition: opacity 0.3s linear;
-    -webkit-transition: opacity 0.3s linear;
-    -o-transition: opacity 0.3s linear;
-    position: relative;
+a, a:visited, a:active {
+   color: #258;
 }
 
 #top-tag-filter, #main-pane, #side-pane, #bottom-pane {
@@ -50,10 +44,11 @@ input {
 #top-tag-filter {
     height: 50px;
     bottom: auto;
+    background: #ddd;
 }
 
 #bottom-pane {
-    height: 120px;
+    height: 80px;
     top: auto;
     font-size: 80%;
     border-top: 1px solid #333;
@@ -66,14 +61,14 @@ input {
 
 #main-pane {
     top: 50px;
-    bottom: 120px;
+    bottom: 80px;
     left: 220px;
     overflow: auto;
 }
 
 #side-pane {
     top: 50px;
-    bottom: 120px;
+    bottom: 80px;
     width: 200px;
     right: auto;
     overflow: auto;
@@ -91,6 +86,14 @@ input {
     -webkit-border-radius: 4px;
     -moz-border-radius: 4px;
     -o-border-radius: 4px;
+
+    opacity: 1;
+    transition: opacity 0.3s linear;
+    -moz-transition: opacity 0.3s linear;
+    -webkit-transition: opacity 0.3s linear;
+    -o-transition: opacity 0.3s linear;
+
+    position: relative;
 }
 
 #tag-filter .label {
@@ -102,10 +105,15 @@ input {
 
 #tag-filter .tag {
     margin-top: 10px;
+    border: 1px solid #777;
 }
 
 #tag-filter .selected {
     background: #69d;
+}
+
+#lists {
+    margin-top: 5px;
 }
 
 #lists .list {
@@ -113,7 +121,11 @@ input {
 }
 
 #lists .selected {
+    padding: 2px 6px;
     background: #9be;
+    border-top: 1px solid #999;
+    border-bottom: 1px solid #999;
+    font-weight: bold;
 }
 
 #createList {
@@ -126,7 +138,9 @@ input {
 }
 
 #new-todo {
+    margin-top: 5px;
     margin-bottom: 10px;
+    margin-left: 5px;
 }
 
 #items-view {
@@ -157,6 +171,12 @@ input {
     float: left;
     padding-top: 18px;
     line-height: 1;
+}
+
+#todo-input {
+    width: 300px;
+    position: relative;
+    top: -3px;
 }
 
 #item-list .done .todo-text {
@@ -196,7 +216,9 @@ input {
 }
 
 #item-list .todo .item-tags div.addtag {
-    
+    background: none;
+    color: #333;
+    border: 1px dashed #999;
 }
 
 #item-list .todo .check {
