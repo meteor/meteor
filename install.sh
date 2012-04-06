@@ -33,6 +33,8 @@ function CPR {
 cp meteor "$TARGET_DIR/bin"
 CPR app "$TARGET_DIR"
 CPR packages "$TARGET_DIR"
+CPR examples "$TARGET_DIR"
+rm -rf "$TARGET_DIR"/examples/unfinished
 
 mkdir -p "$PARENT/bin"
 rm -f "$PARENT/bin/meteor"
