@@ -2,7 +2,7 @@
 
 set -e
 
-BUNDLE_VERSION=0.1.0
+BUNDLE_VERSION=0.1.1
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -123,7 +123,7 @@ which npm
 
 cd "$DIR/lib/node_modules"
 npm install connect@1.8.5
-npm install connect-gzip@0.1.5
+npm install gzippo@0.1.4
 npm install optimist@0.3.1
 npm install coffee-script@1.2.0
 npm install less@1.2.1
@@ -138,6 +138,9 @@ npm install fibers@0.6.4
 npm install useragent@1.0.5
 npm install request@2.9.3
 npm install http-proxy@0.8.0
+
+# unused, but kept in bundle for compatibility for a while.
+npm install connect-gzip@0.1.5
 
 # Sockjs has a broken optional dependancy, and npm optional dependancies
 # don't seem to quite work. Fake it out with a checkout.
