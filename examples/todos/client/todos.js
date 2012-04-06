@@ -1,11 +1,28 @@
+// Client-side JavaScript, bundled and sent to client.
+
+// Define Minimongo collections to match server/publish.js.
+Lists = new Meteor.Collection("lists");
+Todos = new Meteor.Collection("todos");
+
+// ID of currently selected list
 Session.set('list_id', null);
+
+// Name of currently selected tag for filtering
 Session.set('tag_filter', null);
+
+// When adding tag to a todo, ID of the todo
 Session.set('editing_addtag', null);
+
+// When editing a list name, ID of the list
 Session.set('editing_listname', null);
+
+// When editing todo text, ID of the todo
 Session.set('editing_itemname', null);
 
+
+// Subscribe to 'lists' collection on startup.
+// Select a list once data has arrived.
 Meteor.subscribe('lists', function () {
-  // Once the lists have loaded, select the first one.
   if (!Session.get('list_id')) {
     var list = Lists.findOne({}, {sort: {name: 1}});
     if (list)
@@ -13,39 +30,51 @@ Meteor.subscribe('lists', function () {
   }
 });
 
+// Always be subscribed to the todos for the selected list.
 Meteor.autosubscribe(function () {
   var list_id = Session.get('list_id');
   if (list_id)
     Meteor.subscribe('todos', list_id);
 });
 
-////////// Tag Filter //////////
 
-Template.tag_filter.tags = function () {
-  // Pick out the unique tags from all tasks.
-  var tags = _(Todos.find({list_id: Session.get('list_id')}).fetch())
-    .chain().pluck('tags').compact().flatten().sort().uniq(true).value();
-  // for some reason, .map can't be chained on IE8. underscore bug?
-  tags = _.map(tags, function (tag) { return {tag: tag} });
+////////// Helpers for in-place editing //////////
 
-  tags.unshift({tag: null}); // "show all" button
-  return tags;
+// Returns an event_map key for attaching "ok/cancel" events to
+// a text input (given by selector)
+var okcancel_events = function (selector) {
+  return 'keyup '+selector+', keydown '+selector+', focusout '+selector;
 };
 
-Template.tag_item.selected = function () {
-  return Session.equals('tag_filter', this.tag) ? 'selected' : '';
+// Creates an event handler for interpreting "escape", "return", and "blur"
+// on a text field and calling "ok" or "cancel" callbacks.
+var make_okcancel_handler = function (options) {
+  var ok = options.ok || function () {};
+  var cancel = options.cancel || function () {};
+
+  return function (evt) {
+    if (evt.type === "keydown" && evt.which === 27) {
+      // escape = cancel
+      cancel.call(this, evt);
+
+    } else if (evt.type === "keyup" && evt.which === 13 ||
+               evt.type === "focusout") {
+      // blur/return/enter = ok/submit if non-empty
+      var value = String(evt.target.value || "");
+      if (value)
+        ok.call(this, value, evt);
+      else
+        cancel.call(this, evt);
+    }
+  };
 };
 
-Template.tag_item.tag_text = function () {
-  return this.tag || "Show all";
-};
-
-Template.tag_item.events = {
-  'mousedown': function () {
-    if (Session.equals('tag_filter', this.tag))
-      Session.set('tag_filter', null);
-    else
-      Session.set('tag_filter', this.tag);
+// Finds a text input in the DOM by id and focuses it.
+var focus_field_by_id = function (id) {
+  var input = document.getElementById(id);
+  if (input) {
+    input.focus();
+    input.select();
   }
 };
 
@@ -54,6 +83,18 @@ Template.tag_item.events = {
 Template.lists.lists = function () {
   return Lists.find({}, {sort: {name: 1}});
 };
+
+Template.lists.events = {};
+
+// Attach events to keydown, keyup, and blur on "New list" input box.
+Template.lists.events[ okcancel_events('#new-list') ] =
+  make_okcancel_handler({
+    ok: function (text, evt) {
+      var id = Lists.insert({name: text});
+      Router.setList(id);
+      evt.target.value = "";
+    }
+  });
 
 Template.list_item.selected = function () {
   return Session.equals('list_id', this._id) ? 'selected' : '';
@@ -72,34 +113,22 @@ Template.list_item.events = {
     Router.setList(this._id);
   },
   'dblclick': function (evt) { // start editing list name
-    var top = $(evt.target).parents('.list');
     Session.set('editing_listname', this._id);
-    Meteor.flush();
-    top.find('.edit input').val(this.name).focus().select();
-  },
-  'blur .edit input, keypress .edit input': function (evt) {
-    // rename list
-    if (evt.type === "blur" || evt.keyCode === 13) {
-      var target = $(evt.target);
-      var val = target.val();
-      if (val)
-        Lists.update(this._id, {$set: {name: val}});
-      Session.set('editing_listname', null);
-    }
+    Meteor.flush(); // force DOM redraw, so we can focus the edit field
+    focus_field_by_id("list-name-input");
   }
 };
 
-Template.create_list.events = {
-  'keypress #new-list': function (evt) {
-    var target = $(evt.target);
-    var text = target.val();
-    if (evt.keyCode === 13 && text) {
-      var id = Lists.insert({name: text});
-      Router.setList(id);
-      target.val('');
+Template.list_item.events[ okcancel_events('#list-name-input') ] =
+  make_okcancel_handler({
+    ok: function (value) {
+      Lists.update(this._id, {$set: {name: value}});
+      Session.set('editing_listname', null);
+    },
+    cancel: function () {
+      Session.set('editing_listname', null);
     }
-  }
-};
+  });
 
 ////////// Todos //////////
 
@@ -107,11 +136,11 @@ Template.todos.any_list_selected = function () {
   return !Session.equals('list_id', null);
 };
 
-Template.todos.events = {
-  'keypress #new-todo': function (evt) {
-    var target = $(evt.target);
-    var text = target.val();
-    if (evt.keyCode === 13 && text) {
+Template.todos.events = {};
+
+Template.todos.events[ okcancel_events('#new-todo') ] =
+  make_okcancel_handler({
+    ok: function (text, evt) {
       var tag = Session.get('tag_filter');
       Todos.insert({
         text: text,
@@ -120,12 +149,14 @@ Template.todos.events = {
         timestamp: (new Date()).getTime(),
         tags: tag ? [tag] : []
       });
-      target.val('');
+      evt.target.value = '';
     }
-  }
-};
+  });
 
-Template.todo_list.todos = function () {
+Template.todos.todos = function () {
+  // Determine which todos to display in main pane,
+  // selected based on list_id and tag_filter.
+
   var list_id = Session.get('list_id');
   if (!list_id)
     return {};
@@ -171,46 +202,91 @@ Template.todo_item.events = {
   },
 
   'click .addtag': function (evt) {
-    var top = $(evt.target).closest('li.todo');
     Session.set('editing_addtag', this._id);
-    Meteor.flush();
-    top.find('.edittag input').focus();
+    Meteor.flush(); // update DOM before focus
+    focus_field_by_id("edittag-input");
   },
 
   'dblclick .display .todo-text': function (evt) {
-    var top = $(evt.target).closest('li.todo');
     Session.set('editing_itemname', this._id);
-    Meteor.flush();
-    top.find('.edit input').val(this.text).focus().select();
-  },
-
-  'blur .edit input, keypress .edit input': function (evt) {
-    if (evt.type === "blur" || evt.keyCode === 13) {
-      var target = $(evt.target);
-      if (target.val())
-        Todos.update(this._id, {$set: {text: target.val()}});
-      Session.set('editing_itemname', null);
-    }
-  },
-
-  'blur .edittag input, keypress .edittag input': function (evt) {
-    if (evt.type === "blur" || evt.keyCode === 13) {
-      var target = $(evt.target);
-      if (target.val())
-        Todos.update(this._id, {$addToSet: {tags: target.val()}});
-      Session.set('editing_addtag', null);
-    }
+    Meteor.flush(); // update DOM before focus
+    focus_field_by_id("todo-input");
   }
 };
+
+Template.todo_item.events[ okcancel_events('#todo-input') ] =
+  make_okcancel_handler({
+    ok: function (value) {
+      Todos.update(this._id, {$set: {text: value}});
+      Session.set('editing_itemname', null);
+    },
+    cancel: function () {
+      Session.set('editing_itemname', null);
+    }
+  });
+
+Template.todo_item.events[ okcancel_events('#edittag-input') ] =
+  make_okcancel_handler({
+    ok: function (value) {
+      Todos.update(this._id, {$addToSet: {tags: value}});
+      Session.set('editing_addtag', null);
+    },
+    cancel: function () {
+      Session.set('editing_addtag', null);
+    }
+  });
 
 Template.todo_tag.events = {
   'click .remove': function (evt) {
     var tag = this.tag;
     var id = this.todo_id;
 
-    $(evt.target).parent().fadeOut(500, function () {
+    evt.target.parentNode.style.opacity = 0;
+    // wait for CSS animation to finish
+    Meteor.setTimeout(function () {
       Todos.update({_id: id}, {$pull: {tags: tag}});
+    }, 300);
+  }
+};
+
+////////// Tag Filter //////////
+
+// Pick out the unique tags from all todos in current list.
+Template.tag_filter.tags = function () {
+  var tag_infos = [];
+  var total_count = 0;
+
+  Todos.find({list_id: Session.get('list_id')}).forEach(function (todo) {
+    _.each(todo.tags, function (tag) {
+      var tag_info = _.find(tag_infos, function (x) { return x.tag === tag; });
+      if (! tag_info)
+        tag_infos.push({tag: tag, count: 1});
+      else
+        tag_info.count++;
     });
+    total_count++;
+  });
+
+  _.sortBy(tag_infos, function (x) { return x.tag; });
+  tag_infos.unshift({tag: null, count: total_count});
+
+  return tag_infos;
+};
+
+Template.tag_item.tag_text = function () {
+  return this.tag || "All items";
+};
+
+Template.tag_item.selected = function () {
+  return Session.equals('tag_filter', this.tag) ? 'selected' : '';
+};
+
+Template.tag_item.events = {
+  'mousedown': function () {
+    if (Session.equals('tag_filter', this.tag))
+      Session.set('tag_filter', null);
+    else
+      Session.set('tag_filter', this.tag);
   }
 };
 
@@ -222,6 +298,7 @@ var TodosRouter = Backbone.Router.extend({
   },
   main: function (list_id) {
     Session.set("list_id", list_id);
+    Session.set("tag_filter", null);
   },
   setList: function (list_id) {
     this.navigate(list_id, true);
@@ -230,12 +307,6 @@ var TodosRouter = Backbone.Router.extend({
 
 Router = new TodosRouter;
 
-////////// Startup //////////
-
 Meteor.startup(function () {
-  $('body').layout({north__minSize: 50,
-                    spacing_open: 10,
-                    north__fxSettings: { direction: "vertical" }});
-
   Backbone.history.start({pushState: true});
 });

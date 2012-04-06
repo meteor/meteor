@@ -3,64 +3,28 @@
 </head>
 
 <body>
-
-  <div class="ui-layout-north">
+  <div id="top-tag-filter">
     {{> tag_filter}}
   </div>
 
-  <div class="ui-layout-center">
+  <div id="main-pane">
     {{> todos}}
   </div>
 
-  <div class="ui-layout-west">
-    {{> create_list}}
+  <div id="side-pane">
     {{> lists}}
   </div>
-
-  <div class="ui-layout-south">
-    <div id="help">
-      <p>
-        To get started, create a new todo list in the left sidebar by
-        typing its name in the text box.  Select a list by clicking on its
-        name, and rename by double clicking.  The active list appears in
-        the main window pane.  You can do the usual here: add items, check
-        them off as completed, and destroy items.  You can also tag items
-        with one or more tags, by clicking the blue <b>Add new tag</b>
-        button to the right.  All your in-use tags appear at the top.  You
-        can filter the list items by selecting a tag, or click the
-        leftmost button to return to the full list.
-      </p>
-
-      <p>
-        Inspired by Backbone's
-        <a href="http://documentcloud.github.com/backbone/examples/todos/index.html">Todo Demo</a>,
-        with credit to
-        <a href="http://jgn.me/">J&eacute;r&ocirc;me Gravel-Niquet</a>.
-      </p>
-    </div>
-  </div>
-
 </body>
 
-<template name="tag_filter">
-  <div id="tag-filter" class="tag-list">
-    {{#each tags}}
-      {{> tag_item}}
-    {{/each}}
-  </div>
-</template>
-
-<template name="tag_item">
-  <div class="tag {{selected}}">
-    {{tag_text}}
-  </div>
-</template>
-
 <template name="lists">
+  <h3>Todo Lists</h3>
   <div id="lists">
     {{#each lists}}
       {{> list_item}}
     {{/each}}
+  </div>
+  <div id="createList">
+    <input type="text" id="new-list" placeholder="New list" />
   </div>
 </template>
 
@@ -68,7 +32,7 @@
   <div class="list {{selected}}">
     {{#if editing}}
       <div class="edit">
-        <input class="list-name-input" name="list-name-input" type="text" value="" />
+        <input class="list-name-input" id="list-name-input" type="text" value="{{name}}" />
       </div>
     {{else}}
       <div class="display">
@@ -80,37 +44,29 @@
   </div>
 </template>
 
-<template name="create_list">
-  <div id="createList">
-    <input type="text" id="new-list" placeholder="New list" />
-  </div>
-</template>
-
 <template name="todos">
   {{#if any_list_selected}}
   <div id="items-view">
-    <input type="text" id="new-todo" placeholder="New item" />
-    {{> todo_list}}
+    <div id="new-todo-box">
+      <input type="text" id="new-todo" placeholder="New item" />
+    </div>
+    <ul id="item-list">
+      {{#each todos}}
+        {{> todo_item}}
+      {{/each}}
+    </ul>
   </div>
   {{/if}}
 </template>
 
-<template name="todo_list">
-  <ul id="item-list">
-    {{#each todos}}
-      {{> todo_item}}
-    {{/each}}
-  </ul>
-</template>
-
 <template name="todo_item">
   <li class="todo {{done_class}}">
-    <div class="destroy"></div>
     {{#if editing}}
       <div class="edit">
-        <input class="todo-input" name="todo-input" type="text" value="" />
+        <input id="todo-input" type="text" value="{{text}}" />
       </div>
     {{else}}
+      <div class="destroy"></div>
       <div class="display">
         <input class="check" name="markdone" type="checkbox" {{{done_checkbox}}} />
         <div class="todo-text">{{text}}</div>
@@ -122,11 +78,11 @@
       {{/each}}
       {{#if adding_tag}}
         <div class="tag edittag">
-          <input type="text" name="edittag" value="" />
+          <input type="text" id="edittag-input" value="" />
         </div>
       {{else}}
         <div class="tag addtag">
-          Add new tag
+          +tag
         </div>
       {{/if}}
     </div>
@@ -134,8 +90,24 @@
 </template>
 
 <template name="todo_tag">
-  <div class="tag">
+  <div class="tag removable_tag">
     <div class="name">{{tag}}</div>
     <div class="remove"></div>
   </div>
 </template>
+
+<template name="tag_filter">
+  <div id="tag-filter" class="tag-list">
+    <div class="label">Show:</div>
+    {{#each tags}}
+      {{> tag_item}}
+    {{/each}}
+  </div>
+</template>
+
+<template name="tag_item">
+  <div class="tag {{selected}}">
+    {{tag_text}} <span class="count">({{count}})</span>
+  </div>
+</template>
+
