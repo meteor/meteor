@@ -267,7 +267,7 @@ Template.tag_filter.tags = function () {
     total_count++;
   });
 
-  _.sortBy(tag_infos, function (x) { return x.tag; });
+  tag_infos = _.sortBy(tag_infos, function (x) { return x.tag; });
   tag_infos.unshift({tag: null, count: total_count});
 
   return tag_infos;
