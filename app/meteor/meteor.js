@@ -2,6 +2,7 @@ var files = require('../lib/files.js');
 var path = require('path');
 var _ = require('../lib/third/underscore.js');
 var deploy = require('./deploy');
+var fs = require("fs");
 
 var usage = function() {
   process.stdout.write(
@@ -102,7 +103,7 @@ Commands.push({
 "the .meteor directory in the root of the project.\n"
 );
 
-    new_argv = opt.argv;
+    var new_argv = opt.argv;
 
     if (argv.help) {
       process.stdout.write(opt.help());
@@ -130,12 +131,35 @@ Commands.push({
   name: "create",
   help: "Create a new project",
   func: function (argv) {
-    if (argv.help || argv._.length !== 1 || !argv._[0].length) {
-      process.stdout.write(
-"Usage: meteor create <name>\n" +
+    // reparse args
+    var opt = require('optimist')
+          .describe('example', 'Name of example application.')
+          .boolean('list-examples')
+          .describe('list-examples', 'Show list of available examples.')
+          .usage(
+"Usage: meteor create [--example example_name] <name>\n" +
 "\n" +
 "Make a subdirectory named <name> and create a new Meteor project\n" +
-"there. You can also pass an absolute or relative path.\n");
+"there. You can also pass an absolute or relative path.  Specify an\n" +
+"example name to start with one of the example applications\n");
+
+    var new_argv = opt.argv;
+
+    var example_dir = path.join(__dirname, '../../examples');
+    var examples = _.reject(fs.readdirSync(example_dir), function (e) {
+      return (e === 'unfinished');
+    });
+
+    if (new_argv['list-examples']) {
+      process.stdout.write("Available examples:\n");
+      _.each(examples, function (e) {
+        process.stdout.write("  " + e + "\n");
+      });
+      process.exit(1);
+    };
+
+    if (argv.help || argv._.length !== 1 || !argv._[0].length) {
+      process.stdout.write(opt.help());
       process.exit(1);
     }
 
@@ -154,18 +178,31 @@ Commands.push({
     var transform = function (x) {
       return x.replace(/~name~/g, path.basename(name));
     };
-    files.cp_r(path.join(__dirname, 'skel'), name, {
-      transform_filename: function (f) {
-        return transform(f);
-      },
-      transform_contents: function (contents, f) {
-        if (f.substr(-5) === ".html") {
-          return new Buffer(transform(contents.toString()));
-        } else {
-          return contents;
-        }
+
+    if (new_argv.example) {
+      if (examples.indexOf(new_argv.example) === -1) {
+        process.stderr.write("No such example application.  Available examples include:\n");
+        _.each(examples, function (e) {
+          process.stdout.write("  " + e + "\n");
+        });
+        process.exit(1);
+      } else {
+        files.cp_r(path.join(example_dir, new_argv.example), name);
       }
-    });
+    } else {
+      files.cp_r(path.join(__dirname, 'skel'), name, {
+        transform_filename: function (f) {
+          return transform(f);
+        },
+        transform_contents: function (contents, f) {
+          if (f.substr(-5) === ".html") {
+            return new Buffer(transform(contents.toString()));
+          } else {
+            return contents;
+          }
+        }
+      });
+    }
   }
 });
 
