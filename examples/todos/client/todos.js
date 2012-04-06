@@ -253,21 +253,24 @@ Template.todo_tag.events = {
 
 // Pick out the unique tags from all todos in current list.
 Template.tag_filter.tags = function () {
-  var tags = [];
+  var tag_infos = [];
+  var total_count = 0;
 
   Todos.find({list_id: Session.get('list_id')}).forEach(function (todo) {
     _.each(todo.tags, function (tag) {
-      tags.push(tag);
+      var tag_info = _.find(tag_infos, function (x) { return x.tag === tag; });
+      if (! tag_info)
+        tag_infos.push({tag: tag, count: 1});
+      else
+        tag_info.count++;
     });
+    total_count++;
   });
 
-  tags.sort();
-  tags = _.uniq(tags, true);
-  tags.unshift(null);
+  _.sortBy(tag_infos, function (x) { return x.tag; });
+  tag_infos.unshift({tag: null, count: total_count});
 
-  return _.map(tags, function (tag) {
-    return {tag: tag}; // create objects for template
-  });
+  return tag_infos;
 };
 
 Template.tag_item.tag_text = function () {

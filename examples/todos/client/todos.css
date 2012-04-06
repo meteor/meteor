@@ -113,6 +113,11 @@ h3 {
     background: #69d;
 }
 
+#tag-filter .count {
+    font-weight: normal;
+    padding-left: 2px;
+}
+
 #lists .list {
     padding: 3px 6px;
 }
