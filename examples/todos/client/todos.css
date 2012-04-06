@@ -218,10 +218,14 @@ h3 {
 #item-list .todo .item-tags .tag .remove {
     position: absolute;
     top: 0;
-    right: 0;
+    right: 4px;
     bottom: 0;
-    width: 20px;
-    background: url("/close_16.png") no-repeat center center;
+    width: 16px;
+    background: url("/close_16.png") no-repeat 0 center;
+}
+
+#item-list .todo .item-tags .tag .remove:hover {
+    background-position: -16px center;
 }
 
 #item-list .todo .item-tags div.addtag {
