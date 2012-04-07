@@ -550,11 +550,23 @@ exports.run = function (app_dir, bundle_opts, port) {
 
   var mongo_err_count = 0;
   var mongo_err_timer;
+  var mongo_startup_print_timer;
+  var process_startup_printer;
   var launch = function () {
     mongo_runner.launch_mongo(
       app_dir,
       mongo_port,
       function () { // On Mongo startup complete
+        // don't print mongo startup is slow warning.
+        if (mongo_startup_print_timer) {
+          clearTimeout(mongo_startup_print_timer);
+          mongo_startup_print_timer = null;
+        }
+        // print startup if we haven't already.
+        if (process_startup_printer) {
+          process_startup_printer();
+          process_startup_printer = null;
+        }
         restart_server();
       },
       function (code, signal) { // On Mongo dead
@@ -581,7 +593,13 @@ exports.run = function (app_dir, bundle_opts, port) {
 
   start_proxy(outer_port, inner_port, function () {
     process.stdout.write("[[[[[ " + files.pretty_path(app_dir) + " ]]]]]\n\n");
-    process.stdout.write("Running on: http://localhost:" + outer_port + "/\n");
+
+    mongo_startup_print_timer = setTimeout(function () {
+      process.stdout.write("Initializing mongo database... this may take a moment.\n");
+    }, 3000);
+    process_startup_printer = function () {
+      process.stdout.write("Running on: http://localhost:" + outer_port + "/\n");
+    };
 
     start_update_checks();
     launch();
