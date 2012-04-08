@@ -68,6 +68,5 @@ Get in touch! We'd love to hear what you think. You can get involved
 in several ways:
 
 * Announcement list: sign up at http://preview.meteor.com/
-* Google group for discussion: http://groups.google.com/group/meteor-users
 * IRC: ```#meteor``` on ```irc.freenode.net```
 * Email us: ```contact@meteor.com```
