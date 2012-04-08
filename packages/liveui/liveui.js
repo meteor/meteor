@@ -82,8 +82,23 @@ Meteor.ui = Meteor.ui || {};
                        endNode === startNode.parentNode.nextSibling) {
               endNode = startNode.parentNode.lastChild;
             } else {
+              var r = new RegExp('<!--\\s*STARTRANGE_'+id+'.*?-->', 'g');
+              var match = r.exec(html);
+              var help = "";
+              if (match) {
+                var comment_end = r.lastIndex;
+                var comment_start = comment_end - match[0].length;
+                var stripped_before = html.slice(0, comment_start).replace(
+                    /<!--\s*(START|END)RANGE.*?-->/g, '');
+                var stripped_after = html.slice(comment_end).replace(
+                    /<!--\s*(START|END)RANGE.*?-->/g, '');
+                var context_amount = 50;
+                var context = stripped_before.slice(-context_amount) +
+                      stripped_after.slice(0, context_amount);
+                help = " (possible unclosed near: "+context+")";
+              }
               throw new Error("Could not create liverange in template. "+
-                             "Check for unclosed tags in your HTML.");
+                             "Check for unclosed tags in your HTML."+help);
             }
           }
 
