@@ -134,23 +134,31 @@ Commands.push({
     // reparse args
     var opt = require('optimist')
           .describe('example', 'Name of example application.')
-          .boolean('list-examples')
-          .describe('list-examples', 'Show list of available examples.')
+          .boolean('list')
+          .describe('list', 'Show list of available examples.')
           .usage(
-"Usage: meteor create [--example example_name] <name>\n" +
+"Usage: meteor create <name>\n" +
+"       meteor create --example <example_name> [<name>]\n" +
 "\n" +
 "Make a subdirectory named <name> and create a new Meteor project\n" +
 "there. You can also pass an absolute or relative path.  Specify an\n" +
 "example name to start with one of the example applications\n");
 
     var new_argv = opt.argv;
+    var appname;
 
     var example_dir = path.join(__dirname, '../../examples');
     var examples = _.reject(fs.readdirSync(example_dir), function (e) {
       return (e === 'unfinished');
     });
 
-    if (new_argv['list-examples']) {
+    if (argv._.length === 1) {
+      appname = argv._[0];
+    } else if (argv._.length === 0 && new_argv.example) {
+      appname = new_argv.example;
+    }
+
+    if (new_argv['list']) {
       process.stdout.write("Available examples:\n");
       _.each(examples, function (e) {
         process.stdout.write("  " + e + "\n");
@@ -158,25 +166,24 @@ Commands.push({
       process.exit(1);
     };
 
-    if (argv.help || argv._.length !== 1 || !argv._[0].length) {
+    if (argv.help || !appname) {
       process.stdout.write(opt.help());
       process.exit(1);
     }
 
-    var name = argv._[0];
-    if (path.existsSync(name)) {
-      process.stderr.write(name + ": Already exists\n");
+    if (path.existsSync(appname)) {
+      process.stderr.write(appname + ": Already exists\n");
       process.exit(1);
     }
 
-    if (files.find_app_dir(name)) {
+    if (files.find_app_dir(appname)) {
       process.stderr.write(
 "You can't create a Meteor project inside another Meteor project.\n");
       process.exit(1);
     }
 
     var transform = function (x) {
-      return x.replace(/~name~/g, path.basename(name));
+      return x.replace(/~name~/g, path.basename(appname));
     };
 
     if (new_argv.example) {
@@ -187,19 +194,18 @@ Commands.push({
         });
         process.exit(1);
       } else {
-        files.cp_r(path.join(example_dir, new_argv.example), name);
+        files.cp_r(path.join(example_dir, new_argv.example), appname);
       }
     } else {
-      files.cp_r(path.join(__dirname, 'skel'), name, {
+      files.cp_r(path.join(__dirname, 'skel'), appname, {
         transform_filename: function (f) {
           return transform(f);
         },
         transform_contents: function (contents, f) {
-          if (f.substr(-5) === ".html") {
+          if ((/(\.html|\.js|\.css)/).test(f))
             return new Buffer(transform(contents.toString()));
-          } else {
+          else
             return contents;
-          }
         }
       });
     }
