@@ -109,6 +109,7 @@ elif [ "$UNAME" = "Linux" ] ; then
         if [ `whoami` = 'root' ] ; then
             $*
         elif [ -x /bin/sudo -o -x /usr/bin/sudo ] ; then
+            echo
             echo "Since this system includes sudo, Meteor will request root privileges to"
             echo "install. You may be prompted for a password. If you prefer to not use"
             echo "sudo, please re-run this script as root."
