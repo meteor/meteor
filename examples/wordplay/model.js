@@ -118,7 +118,7 @@ Meteor.methods({
 
 if (Meteor.is_server) {
   Meteor.publish('players', function () {
-    return Players.find();
+    return Players.find({idle: false});
   });
 
   // publish single games

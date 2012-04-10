@@ -195,14 +195,17 @@ Template.words.total_score = function () {
   return score;
 };
 
-// subscribe to all the players, the game i'm in, and all
-// the words in that game.
 
-// on client startup, create a fresh Player
 Meteor.startup(function () {
-  var player_id = Players.insert({name: ''});
+  // Allocate a new player id.
+  //
+  // XXX this does not handle hot reload. In the reload case,
+  // Session.get('player_id') will return a real id.
+  var player_id = Players.insert({name: '', idle: false});
   Session.set('player_id', player_id);
 
+  // subscribe to all the players, the game i'm in, and all
+  // the words in that game.
   Meteor.autosubscribe(function () {
     Meteor.subscribe('players');
 
@@ -214,4 +217,10 @@ Meteor.startup(function () {
       }
     }
   });
+
+  // send keepalives so the server can tell when we go away.
+  Meteor.setInterval(function() {
+    if (Meteor.status().connected)
+      Meteor.call('keepalive', Session.get('player_id'));
+  }, 20*1000);
 });
