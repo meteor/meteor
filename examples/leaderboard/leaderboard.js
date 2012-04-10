@@ -5,7 +5,7 @@ Players = new Meteor.Collection("players");
 
 if (Meteor.is_client) {
   Template.leaderboard.players = function () {
-    return Players.find({}, {sort: {score: -1}});
+    return Players.find({}, {sort: {score: -1, name: 1}});
   };
 
   Template.leaderboard.selected_name = function () {
@@ -31,11 +31,15 @@ if (Meteor.is_client) {
 }
 
 // On server startup, create some players if the database is empty.
-
 if (Meteor.is_server) {
   Meteor.startup(function () {
     if (Players.find().count() === 0) {
-      var names = ["Mario", "Luigi", "Toad", "Yoshi", "Princess Peach"];
+      var names = ["Ada Lovelace",
+                   "Grace Hopper",
+                   "Marie Curie",
+                   "Carl Friedrich Gauss",
+                   "Nikola Tesla",
+                   "Claude Shannon"];
       for (var i = 0; i < names.length; i++)
         Players.insert({name: names[i], score: Math.floor(Math.random()*10)*5});
     }
