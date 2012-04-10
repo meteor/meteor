@@ -99,13 +99,16 @@
 
 <template name="player">
   <div class="player">
-    <div class="header">
+    <div class="header {{winner}}">
       {{#if name}}
         {{name}}
       {{else}}
         <span class="unnamed">no name</span>
       {{/if}}
       <span class="score">{{total_score}}</span>
+      {{#if winner}}
+        <span class="winner_text">Winner!</span>
+      {{/if}}
     </div>
     {{> words}}
   </div>

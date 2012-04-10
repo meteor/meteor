@@ -178,6 +178,13 @@ Template.scores.players = function () {
   return game() && game().players;
 };
 
+Template.player.winner = function () {
+  var g = game();
+  if (!g.winners || !_.include(g.winners, this._id))
+    return '';
+  return 'winner';
+};
+
 Template.player.total_score = function () {
   var words = Words.find({game_id: game() && game()._id,
                           player_id: this._id});

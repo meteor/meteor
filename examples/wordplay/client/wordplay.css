@@ -146,6 +146,14 @@ button:active {
     font-style: italic;
 }
 
+#scores .winner {
+    background-color: yellow;
+}
+
+#scores .winner_text {
+    float: right;
+}
+
 #scores .word {
     float: left;
     font-size: 1.25em;
