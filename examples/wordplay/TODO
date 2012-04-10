@@ -3,10 +3,6 @@ strip spaces on input box
 focus input on game start
 styling
 eliminate extra divs
-lobby isn't working quite right.
-when player returns to lobby after game, don't remove their score from
-  the other screens.
-need a way to expire old lingering Player records from lobby
 
 POSSIBLE EXTENSIONS
 publish remaining words at end of game
