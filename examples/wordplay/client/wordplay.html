@@ -60,7 +60,11 @@
       <div class="player">{{name}}</div>
       {{/each}}
       {{/if}}
-      <button class="startgame">It's on!</button>
+      <div>
+        <button id="startgame" class="startgame" {{{disabled}}}>
+          {{#if count}} It's on! {{else}} Play solo {{/if}}
+        </button>
+      </div>
     </div>
     {{/if}}
   </div>
@@ -70,7 +74,7 @@
   {{#if show}}
   <div id="scratchpad">
     <input id="scratchpad_input" type="text" />
-    <button class="submit">Submit</button>
+    <button name="submit" class="submit">Submit</button>
   </div>
   {{/if}}
 </template>
@@ -79,7 +83,7 @@
   <div>
     {{#if show}}
     <div id="postgame">
-      <button class="lobby">Back to lobby</button>
+      <button name="backtolobby" class="lobby">Back to lobby</button>
     </div>
     {{/if}}
   </div>

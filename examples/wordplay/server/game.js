@@ -6,8 +6,8 @@ Meteor.methods({
     var game_id = Games.insert({board: new_board(),
                                 clock: 120});
 
-    // move everyone in the lobby to the game
-    Players.update({game_id: null, idle: false},
+    // move everyone who is ready in the lobby to the game
+    Players.update({game_id: null, idle: false, name: {$ne: ''}},
                    {$set: {game_id: game_id}},
                    {multi: true});
     // Save a record of who is in the game, so when they leave we can

@@ -77,6 +77,14 @@ Template.lobby.count = function () {
   return players.count();
 };
 
+Template.lobby.disabled = function () {
+  var me = player();
+  if (me && me.name)
+    return '';
+  return 'disabled="disabled"';
+};
+
+
 Template.lobby.events = {
   'keyup input#myname': function (evt) {
     var name = $('#lobby input#myname').val().trim();
