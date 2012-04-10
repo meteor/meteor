@@ -2,7 +2,7 @@
 
 <h1 id="concepts">Concepts</h1>
 
-We've written our fair share of single-page JS applications by hand.
+We've written our fair share of single-page JavaScript applications by hand.
 Writing an entire application in one language (JavaScript) with one
 data format (JSON) is a real joy.  Meteor is everything we wanted
 when writing those apps.
@@ -28,7 +28,7 @@ and static assets.  Meteor automates the packaging and transmission
 of these different components.  And, it is quite flexible about how
 you choose to structure those components in your file tree.
 
-The only server asset is JavaScript.  Meteor gathers all your JS
+The only server asset is JavaScript.  Meteor gathers all your JavaScript
 files, excluding anything under the `client`
 and `public` subdirectories, and loads them into a Node.js
 server instance inside a fiber.  In Meteor, your server code runs in
@@ -40,7 +40,7 @@ There are more assets to consider on the client side.  Meteor
 gathers all JavaScript files in your tree with the exception of
 the `server` and `public` subdirectories for the
 client.  It minifies this bundle and serves it to each new client.
-You're free to use a single JS file for your entire application, or
+You're free to use a single JavaScript file for your entire application, or
 create a nested tree of separate files, or anything in between.
 
 Files outside the `client` and `server`
@@ -48,13 +48,13 @@ subdirectories are loaded on both the client and the server!  That's
 the place for model definitions and other functions.  Also, instead of
 putting client and server functions in different directories, you can
 use the [`is_client` and `is_server`](#meteor_is_client) variables
-to isolate JS to one or the other side.
+to isolate JavaScript to one or the other side.
 
 CSS files work just the same: the client will get a bundle with all
 the CSS in your tree (excluding the `server`
 and `public` subdirectories).
 
-In development mode, JS and CSS files are sent individually to make
+In development mode, JavaScript and CSS files are sent individually to make
 debugging easier.
 
 HTML files in a Meteor application are treated quite a bit differently
@@ -86,15 +86,11 @@ local database.  It's a clean and simple approach, much easier than
 building individual RPC endpoints, slow roundtrips to the server, and
 orchestrating invalidation messages.
 
-A Meteor application's main data store is MongoDB, which
-holds <b>collections</b> of individual <b>documents</b>.  Your server
-code has direct access to that database.  Your client code
-has <i>simulated</i> direct access to that database.
-
-Every Meteor client includes an in-memory database cache.  Each
-client's cache holds valid copies of some set of documents.  When a
-matching document in the server's master database changes, Meteor
-automatically synchronizes that change to every subscribed client.
+Every Meteor client includes an in-memory database cache.  Each client's
+cache holds valid copies of some set of documents that are stored in a
+server's master database.  When a matching document in that database
+changes, Meteor automatically synchronizes that change to every
+subscribed client.
 
 To manage the client caches, your server code <b>publishes</b> sets of
 documents, and your client code <b>subscribes</b> to those sets.  For
@@ -104,6 +100,14 @@ Each client would subscribe to the master set of available rooms and the
 set of messages in the currently-selected room.  Once subscribed, the
 client uses its cache as a fast local database, dramatically simplifying
 your client model code.
+
+Meteor's protocol for distributing document updates is database
+agnostic.  By default, Meteor applications use the
+familiar <a target="_blank"
+href="http://www.mongodb.org/display/DOCS/Manual">MongoDB API</a>:
+servers store documents in MongoDB collections, and clients cache those
+documents in a client-side cache that implements the same Mongo API for
+queries and updates.
 
     // server: publish all room documents, and per-room messages
     Meteor.publish("chatrooms");
@@ -115,17 +119,15 @@ your client model code.
     Meteor.subscribe("chatrooms");
     Meteor.subscribe("messages", Chatrooms.find()[0]._id);
 
-Document modifications also propagate automatically.  To insert, update,
-or remove a document, client code uses the familiar <a target="_blank"
-href="http://www.mongodb.org/display/DOCS/Manual">MongoDB API</a>.  That
-change instruction is executed immediately on the client's cached
-data.  <i>At the same time</i>, the client sends that instruction up to
-the server, which executes the same change against the master database.
-Usually the client and server agree, but should they differ (permissions
-checking or overlapping with another client, for example), the server's
-result will publish back down to the client.  And of course, all other
-clients with a matching subscription automatically receive an updated
-document.
+Document modifications also propagate automatically.  Modification
+instructions like `insert`, `remove`, and `update` are executed
+immediately on the client's cached data.  <i>At the same time</i>, the
+client sends that instruction up to the server, which executes the same
+change against the master database.  Usually the client and server
+agree, but should they differ (permissions checking or overlapping with
+another client, for example), the server's result will publish back down
+to the client.  And of course, all other clients with a matching
+subscription automatically receive an updated document.
 
     // create new message, executes on both client and server.
     Messages.insert({room: 2413, text: "hello!"});
@@ -136,6 +138,11 @@ never need to wait for a roundtrip to the server.  And when clients
 modify data, those modifications can run locally without waiting for the
 confirmation from the server, while still giving the server final say
 over the requested change.
+
+You can substitute another database for MongoDB by providing a
+server-side database driver and/or a client-side cache that implements
+an alternative API.  The `mongo-livedata` is a good starting point for
+such a project.
 
 {{/better_markdown}}
 </template>
@@ -488,7 +495,7 @@ make your own packages just yet. Coming soon.
 <h2 id="deploying">Deploying</h2>
 
 Meteor is a full application server.  We include everything you need
-to deploy your application on the internet: you just provide the JS,
+to deploy your application on the internet: you just provide the JavaScript,
 HTML, and CSS.
 
 <h3 class="nosection">Running on Meteor's infrastructure</h3>
