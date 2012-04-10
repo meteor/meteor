@@ -1,13 +1,18 @@
 body {
     font-family: 'Helvetica Neue', Helvetica, Arial, san-serif;
     font-weight: 200;
-    margin: 50px auto;
-    width: 600px;
+    margin: 50px 0;
+    padding: 0;
     -webkit-user-select: none;
     -khtml-user-select: none;
     -moz-user-select: none;
     -o-user-select: none;
     user-select: none;
+}
+
+#outer {
+    width: 600px;
+    margin: 0 auto;    
 }
 
 .player {

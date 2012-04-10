@@ -3,13 +3,15 @@
 </head>
 
 <body>
-  {{> leaderboard}}
+  <div id="outer">
+    {{> leaderboard}}
+  </div>
 </body>
 
 <template name="leaderboard">
   <div class="leaderboard">
     {{#each players}}
-    {{> player}}
+      {{> player}}
     {{/each}}
   </div>
 
@@ -27,8 +29,8 @@
 
 <template name="player">
   <div class="player {{selected}}">
-    <div class="name">{{name}}</div>
-    <div class="score">{{score}}</div>
+    <span class="name">{{name}}</span>
+    <span class="score">{{score}}</span>
   </div>
 </template>
 
