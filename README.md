@@ -9,11 +9,7 @@ With Meteor you write apps:
 * that send data over the wire, rather than HTML
 * using your choice of popular open-source libraries
 
-Please, do not share or blog about Meteor yet.  It is experimental,
-pre-release software.  We hope it shows the direction of our thinking,
-and much of it will to change.  We'd love to hear your feedback.
-
-Documentation is available at http://preview.meteor.com/
+Documentation is available at http://docs.meteor.com/
 
 ## Quick Start
 
@@ -67,6 +63,7 @@ will cause ```meteor``` to be in your ```PATH```.
 Get in touch! We'd love to hear what you think. You can get involved
 in several ways:
 
-* Announcement list: sign up at http://preview.meteor.com/
+* Announcement list: sign up at http://www.meteor.com/
 * IRC: ```#meteor``` on ```irc.freenode.net```
+* Ask a question: http://stackoverflow.com/questions/tagged/meteor
 * Email us: ```contact@meteor.com```
