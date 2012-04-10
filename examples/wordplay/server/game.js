@@ -8,6 +8,12 @@ Meteor.methods({
     Players.update({game_id: null, idle: false},
                    {$set: {game_id: game_id}},
                    {multi: true});
+    // Save a record of who is in the game, so when they leave we can
+    // still show them.
+    var p = Players.find({game_id: game_id},
+                         {fields: {_id: true, name: true}}).fetch();
+    Games.update({_id: game_id}, {$set: {players: p}});
+
 
     // wind down the game clock
     var clock = 120;

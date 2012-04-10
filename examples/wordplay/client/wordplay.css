@@ -141,6 +141,11 @@ button:active {
     font-size: 1.25em;
 }
 
+#scores .unnamed {
+    color: #444;
+    font-style: italic;
+}
+
 #scores .word {
     float: left;
     font-size: 1.25em;

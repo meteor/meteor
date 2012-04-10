@@ -90,19 +90,29 @@
     {{#if show}}
     <div id="scores">
       {{#each players}}
-      <div class="player">
-        <div class="header">{{name}}</div>
-        {{> words}}
-      </div>
+        {{> player }}
       {{/each}}
     </div>
     {{/if}}
   </div>
 </template>
 
+<template name="player">
+  <div class="player">
+    <div class="header">
+      {{#if name}}
+        {{name}}
+      {{else}}
+        <span class="unnamed">no name</span>
+      {{/if}}
+      <span class="score">{{total_score}}</span>
+    </div>
+    {{> words}}
+  </div>
+</template>
+
 <template name="words">
   <div class="words">
-    <div class="score">{{total_score}}</div>
     {{#each words}}
     <div id="word_{{_id}}" class="word {{state}}">
       <span class="score">

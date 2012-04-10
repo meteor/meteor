@@ -175,15 +175,10 @@ Template.scores.show = function () {
 };
 
 Template.scores.players = function () {
-  return Players.find({game_id: game() && game()._id});
+  return game() && game().players;
 };
 
-Template.words.words = function () {
-  return Words.find({game_id: game() && game()._id,
-                    player_id: this._id});
-};
-
-Template.words.total_score = function () {
+Template.player.total_score = function () {
   var words = Words.find({game_id: game() && game()._id,
                           player_id: this._id});
 
@@ -194,6 +189,12 @@ Template.words.total_score = function () {
   });
   return score;
 };
+
+Template.words.words = function () {
+  return Words.find({game_id: game() && game()._id,
+                    player_id: this._id});
+};
+
 
 
 Meteor.startup(function () {
