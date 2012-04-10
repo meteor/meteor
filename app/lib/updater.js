@@ -1,4 +1,4 @@
-exports.CURRENT_VERSION = "0.3.1";
+exports.CURRENT_VERSION = "0.3.2";
 
 var fs = require("fs");
 var http = require("http");
