@@ -2,7 +2,7 @@
 Meteor.startup(function () {
   if (Lists.find().count() === 0) {
     var data = [
-      {name: "* Seven Principles *",
+      {name: "Meteor Principles",
        contents: [
          ["Data on the Wire", "Simplicity", "Better UX", "Fun"],
          ["One Language", "Simplicity", "Fun"],
@@ -13,27 +13,27 @@ Meteor.startup(function () {
          ["Simplicity Equals Productivity", "Simplicity", "Fun"]
        ]
       },
-      {name: "Next-gen frameworks",
+      {name: "Languages",
        contents: [
-         ["Meteor"],
-         ["Derby + Racer"],
-         ["Capsule + Thoonk from &yet"],
-         ["Flatiron from Nodejitsu"],
-         ["Socketstream"],
-         ["Sencha.io Data"]
-       ]
+         ["Lisp", "GC"],
+         ["C", "Linked"],
+         ["C++", "Objects", "Linked"],
+         ["Python", "GC", "Objects"],
+         ["Ruby", "GC", "Objects"],
+         ["JavaScript", "GC", "Objects"],
+         ["Scala", "GC", "Objects"],
+         ["Erlang", "GC"],
+         ["Erlang", "Linked"]
+         ]
       },
-      {name: "Client-side MVC options",
+      {name: "Favorite Scientists",
        contents: [
-         ["Backbone", "Minimal"],
-         ["Spine", "Minimal", "Coffeescript"],
-         ["Angular", "Minimal", "Templating"],
-         ["Batman", "Minimal", "Coffeescript"],
-         ["Knockout", "Minimal", "Templating"],
-         ["Sproutcore", "Widgets", "Templating"],
-         ["Sencha", "Widgets", "GUI builder", "Mobile"],
-         ["Kendo UI", "Widgets", "Mobile"],
-         ["boltjs", "Minimal"]
+         ["Ada Lovelace", "Computer Science"],
+         ["Grace Hopper", "Computer Science"],
+         ["Marie Curie", "Physics", "Chemistry"],
+         ["Carl Friedrich Gauss", "Math", "Physics"],
+         ["Nikola Tesla", "Physics"],
+         ["Claude Shannon", "Math", "Computer Science"]
        ]
       }
     ];
