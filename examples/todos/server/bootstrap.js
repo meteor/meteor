@@ -23,7 +23,7 @@ Meteor.startup(function () {
          ["JavaScript", "GC", "Objects"],
          ["Scala", "GC", "Objects"],
          ["Erlang", "GC"],
-         ["Erlang", "Linked"]
+         ["6502 Assembly", "Linked"]
          ]
       },
       {name: "Favorite Scientists",
