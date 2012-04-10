@@ -185,7 +185,7 @@ Meteor installed! To get started fast:
 
 Or see the docs at:
 
-  preview.meteor.com
+  docs.meteor.com
 
 EOF
 
