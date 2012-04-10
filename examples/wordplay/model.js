@@ -1,5 +1,8 @@
+////////// Shared code (client and server) //////////
+
 Games = new Meteor.Collection('games');
-// { board: ['A','I',...], clock: 60 }
+// { board: ['A','I',...], clock: 60,
+//   players: [{player_id, name}], winners: [player_id] }
 
 Words = new Meteor.Collection('words');
 // {player_id: 10, game_id: 123, word: 'hello', state: 'good', score: 4}
@@ -53,7 +56,7 @@ var new_board = function () {
   }
 
   return board;
-}
+};
 
 // returns an array of valid paths to make the specified word on the
 // board.  each path is an array of board positions 0-15.  a valid
@@ -106,17 +109,20 @@ Meteor.methods({
     }
 
     // now only on the server, check against dictionary and score it.
-    if (Meteor.is_server)
+    if (Meteor.is_server) {
       if (DICTIONARY.indexOf(word.word.toLowerCase()) === -1) {
         Words.update(word._id, {$set: {score: 0, state: 'bad'}});
       } else {
         var score = Math.pow(2, word.word.length - 3);
         Words.update(word._id, {$set: {score: score, state: 'good'}});
       }
+    }
   }
 });
 
+
 if (Meteor.is_server) {
+  // publish all the non-idle players.
   Meteor.publish('players', function () {
     return Players.find({idle: false});
   });

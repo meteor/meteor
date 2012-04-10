@@ -1,3 +1,9 @@
+////////// Main client application logic //////////
+
+//////
+////// Utility functions
+//////
+
 var player = function () {
   return Players.findOne(Session.get('player_id'));
 };
@@ -51,6 +57,7 @@ var clear_selected_positions = function () {
 //////
 
 Template.lobby.show = function () {
+  // only show lobby if we're not in a game
   return !game();
 };
 
@@ -126,22 +133,13 @@ Template.scratchpad.show = function () {
   return game() && game().clock > 0;
 };
 
-// wish we had a better pattern here.  this comes up all the time.
 Template.scratchpad.events = {
-  'click button': function (evt) {
+  'click button, keyup input': function (evt) {
     var textbox = $('#scratchpad input');
-    var word_id = Words.insert({player_id: Session.get('player_id'),
-                                game_id: game() && game()._id,
-                                word: textbox.val().toUpperCase(),
-                                state: 'pending'});
-    Meteor.call('score_word', word_id);
-    textbox.val('');
-    textbox.focus();
-    clear_selected_positions();
-  },
-  'keyup input': function (evt) {
-    var textbox = $('#scratchpad input');
-    if (13 === evt.which) {
+    // if we clicked the button or hit enter
+    if (evt.type === "click" ||
+        (evt.type === "keyup" && evt.which === 13)) {
+
       var word_id = Words.insert({player_id: Session.get('player_id'),
                                   game_id: game() && game()._id,
                                   word: textbox.val().toUpperCase(),
@@ -180,9 +178,9 @@ Template.scores.players = function () {
 
 Template.player.winner = function () {
   var g = game();
-  if (!g.winners || !_.include(g.winners, this._id))
-    return '';
-  return 'winner';
+  if (g.winners && _.include(g.winners, this._id))
+    return 'winner';
+  return '';
 };
 
 Template.player.total_score = function () {
@@ -203,12 +201,17 @@ Template.words.words = function () {
 };
 
 
+//////
+////// Initialization
+//////
 
 Meteor.startup(function () {
   // Allocate a new player id.
   //
   // XXX this does not handle hot reload. In the reload case,
-  // Session.get('player_id') will return a real id.
+  // Session.get('player_id') will return a real id. We should check for
+  // a pre-existing player, and if it exists, make sure the server still
+  // knows about us.
   var player_id = Players.insert({name: '', idle: false});
   Session.set('player_id', player_id);
 
@@ -227,6 +230,10 @@ Meteor.startup(function () {
   });
 
   // send keepalives so the server can tell when we go away.
+  //
+  // XXX this is not a great idiom. meteor server does not yet have a
+  // way to expose connection status to user code. Once it does, this
+  // code can go away.
   Meteor.setInterval(function() {
     if (Meteor.status().connected)
       Meteor.call('keepalive', Session.get('player_id'));

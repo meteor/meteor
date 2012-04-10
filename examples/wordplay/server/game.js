@@ -1,3 +1,5 @@
+////////// Server only logic //////////
+
 Meteor.methods({
   start_new_game: function (evt) {
     // create a new game w/ fresh board
@@ -35,7 +37,7 @@ Meteor.methods({
         var high_score = _.max(scores);
         var winners = [];
         _.each(scores, function (score, player_id) {
-          if (score == high_score)
+          if (score === high_score)
             winners.push(player_id);
         });
         Games.update(game_id, {$set: {winners: winners}});
