@@ -36,7 +36,7 @@ if [ -L "$(basename $0)" ] ; then
     cd $(dirname $(readlink $(basename "$0") ) )
 fi
 SCRIPT_DIR=$(pwd -P)
-cd $ORIG_DIR
+cd "$ORIG_DIR"
 
 
 
