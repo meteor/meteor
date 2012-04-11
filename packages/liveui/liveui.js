@@ -296,54 +296,42 @@ Meteor.ui = Meteor.ui || {};
   };
 
   var CallbackReceiver = function() {
-    this.queue = [];
-    this.deps = {};
+    var self = this;
 
-    _.bindAll(this); // make callbacks work even if copied
+    self.queue = [];
+    self.deps = {};
+
+    // attach these callback funcs to each instance, as they may
+    // not be called as methods by livedata.
+    _.each(["added", "removed", "moved", "changed"], function (name) {
+      self[name] = function (/* arguments */) {
+        self.queue.push([name].concat(_.toArray(arguments)));
+        self.signal();
+      };
+    });
   };
 
   Meteor.ui._CallbackReceiver = CallbackReceiver;
 
-  CallbackReceiver.prototype.added = function(doc, before_idx) {
-    this.queue.push(['added', doc, before_idx]);
-    this.signal();
-  };
-  CallbackReceiver.prototype.removed = function(doc, at_idx) {
-    this.queue.push(['removed', doc, at_idx]);
-    this.signal();
-  };
-  CallbackReceiver.prototype.moved = function(doc, old_idx, new_idx) {
-    this.queue.push(['moved', doc, old_idx, new_idx]);
-    this.signal();
-  };
-  CallbackReceiver.prototype.changed = function(doc, at_idx) {
-    this.queue.push(['changed', doc, at_idx]);
-    this.signal();
-  };
   CallbackReceiver.prototype.flush_to = function(t) {
     // fire all queued events on new target
-    for(var i=0; i<this.queue.length; i++) {
-      var a = this.queue[i];
-      switch (a[0]) {
-      case 'added': t.added(a[1], a[2]); break;
-      case 'removed': t.removed(a[1], a[2]); break;
-      case 'moved': t.moved(a[1], a[2], a[3]); break;
-      case 'changed': t.changed(a[1], a[2]); break;
-      }
-    }
+    _.each(this.queue, function(x) {
+      var name = x[0];
+      var args = x.slice(1);
+      t[name].apply(t, args);
+    });
     this.queue.length = 0;
   };
   CallbackReceiver.prototype.flush_to_array = function(array) {
     // apply all queued events to array
-    for(var i=0; i<this.queue.length; i++) {
-      var a = this.queue[i];
-      switch (a[0]) {
-      case 'added': array.splice(a[2], 0, a[1]); break;
-      case 'removed': array.splice(a[2], 1); break;
-      case 'moved': array.splice(a[3], 0, array.splice(a[2], 1)[0]); break;
-      case 'changed': array[a[2]] = a[1]; break;
+    _.each(this.queue, function(x) {
+      switch (x[0]) {
+      case 'added': array.splice(x[2], 0, x[1]); break;
+      case 'removed': array.splice(x[2], 1); break;
+      case 'moved': array.splice(x[3], 0, array.splice(x[2], 1)[0]); break;
+      case 'changed': array[x[2]] = x[1]; break;
       }
-    }
+    });
     this.queue.length = 0;
   };
   CallbackReceiver.prototype.signal = function() {
