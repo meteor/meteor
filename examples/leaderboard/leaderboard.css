@@ -16,6 +16,7 @@ body {
 }
 
 .player {
+    cursor: pointer;
     padding: 5px;
 }
 
