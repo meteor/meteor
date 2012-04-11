@@ -378,7 +378,7 @@ Template.api.cursor_rewind = {
 
 Template.api.cursor_observe = {
   id: "observe",
-  name: "<em>cursor</em>.observe(options)",
+  name: "<em>cursor</em>.observe(callbacks)",
   locus: "Client",
   descr: ["Watch a query.  Receive callbacks as the result set changes."],
   args: [
