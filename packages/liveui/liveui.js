@@ -298,7 +298,6 @@ Meteor.ui = Meteor.ui || {};
   var CallbackReceiver = function() {
     this.queue = [];
     this.deps = {};
-    this.implied_length = 0;
 
     _.bindAll(this); // make callbacks work even if copied
   };
@@ -306,34 +305,18 @@ Meteor.ui = Meteor.ui || {};
   Meteor.ui._CallbackReceiver = CallbackReceiver;
 
   CallbackReceiver.prototype.added = function(doc, before_idx) {
-    if (before_idx < 0 || before_idx > this.implied_length)
-      throw new Error("Bad before_idx "+before_idx);
-
-    this.implied_length++;
     this.queue.push(['added', doc, before_idx]);
     this.signal();
   };
   CallbackReceiver.prototype.removed = function(doc, at_idx) {
-    if (at_idx < 0 || at_idx >= this.implied_length)
-      throw new Error("Bad at_idx "+at_idx);
-
-    this.implied_length--;
     this.queue.push(['removed', doc, at_idx]);
     this.signal();
   };
   CallbackReceiver.prototype.moved = function(doc, old_idx, new_idx) {
-    if (old_idx < 0 || old_idx >= this.implied_length)
-      throw new Error("Bad old_idx "+old_idx);
-    if (new_idx < 0 || new_idx >= this.implied_length)
-      throw new Error("Bad new_idx "+new_idx);
-
     this.queue.push(['moved', doc, old_idx, new_idx]);
     this.signal();
   };
   CallbackReceiver.prototype.changed = function(doc, at_idx) {
-    if (at_idx < 0 || at_idx >= this.implied_length)
-      throw new Error("Bad at_idx "+at_idx);
-
     this.queue.push(['changed', doc, at_idx]);
     this.signal();
   };
