@@ -2,16 +2,31 @@ Meteor.ui = Meteor.ui || {};
 
 (function() {
 
+  // In render mode (i.e. inside Meteor.ui.render), this is an
+  // object, otherwise it is null.
+  // callbacks: id -> func, where id ranges from 1 to callbacks._count.
+  Meteor.ui._render_mode = null;
+
   // `in_range` is a package-private argument used to render inside
   // an existing LiveRange on an update.
   Meteor.ui.render = function (html_func, react_data, in_range) {
     if (typeof html_func !== "function")
       throw new Error("Meteor.ui.render() requires a function as its first argument.");
 
-    var cx = new Meteor.deps.Context;
-    cx.rangeCallbacks = {_count: 0}; // XXX refactor into special
+    if (Meteor.ui._render_mode)
+      throw new Error("Can't nest Meteor.ui.render.");
 
-    var html = cx.run(html_func);
+    var cx = new Meteor.deps.Context;
+
+    Meteor.ui._render_mode = {callbacks: {_count: 0}};
+    var html, rangeCallbacks;
+    try {
+      html = cx.run(html_func); // run the caller's html_func
+    } finally {
+      rangeCallbacks = Meteor.ui._render_mode.callbacks;
+      Meteor.ui._render_mode = null;
+    }
+
     if (typeof html !== "string")
       throw new Error("Render function must return a string");
 
@@ -36,7 +51,7 @@ Meteor.ui = Meteor.ui || {};
 
     // walk comments and create ranges
     var rangeStartNodes = {};
-    var rangesCreated = [];
+    var rangesCreated = []; // [[range, id], ...]
     each_comment(frag, function(n) {
       var next = null;
 
@@ -103,10 +118,7 @@ Meteor.ui = Meteor.ui || {};
           }
 
           var range = new Meteor.ui._LiveUIRange(startNode, endNode);
-          // associate the callback with the range temporarily so that
-          // we can call all the callbacks in a separate loop.
-          range.temp_callback = cx.rangeCallbacks[id];
-          rangesCreated.push(range);
+          rangesCreated.push([range, id]);
         }
       });
 
@@ -124,11 +136,11 @@ Meteor.ui = Meteor.ui || {};
     }
 
     // Call "added to DOM" callbacks to wire up all sub-chunks.
-    _.each(rangesCreated, function(r) {
-      if ("temp_callback" in r) {
-        r.temp_callback && r.temp_callback(r);
-        delete r.temp_callback;
-      }
+    _.each(rangesCreated, function(x) {
+      var range = x[0];
+      var id = x[1];
+      if (rangeCallbacks[id])
+        rangeCallbacks[id](range);
     });
 
     Meteor.ui._wire_up(cx, range, html_func, react_data);
@@ -141,17 +153,13 @@ Meteor.ui = Meteor.ui || {};
     if (typeof html_func !== "function")
       throw new Error("Meteor.ui.chunk() requires a function as its first argument.");
 
-    var parent = Meteor.deps.Context.current;
-    var live = parent && parent.rangeCallbacks;
-
-    if (! live) {
+    if (! Meteor.ui._render_mode) {
       return html_func();
     }
 
     var cx = new Meteor.deps.Context;
-    cx.rangeCallbacks = parent.rangeCallbacks;
-
     var html = cx.run(html_func);
+
     if (typeof html !== "string")
       throw new Error("Render function must return a string");
 
@@ -174,9 +182,6 @@ Meteor.ui = Meteor.ui || {};
                  function() { return ""; });
     react_data = react_data || {};
 
-    var parent = Meteor.deps.Context.current;
-    var live = parent && parent.rangeCallbacks;
-
     var buf = [];
     var receiver = new Meteor.ui._CallbackReceiver();
 
@@ -195,7 +200,7 @@ Meteor.ui = Meteor.ui || {};
       inner_html = _.map(buf, doc_render).join('');
     }
 
-    if (! live) {
+    if (! Meteor.ui._render_mode) {
       handle.stop();
       return inner_html;
     }
@@ -579,14 +584,13 @@ Meteor.ui = Meteor.ui || {};
   };
 
   Meteor.ui._ranged_html = function(html, callback) {
-    var cx = Meteor.deps.Context.current;
-    var ranges = cx && cx.rangeCallbacks;
-
-    if (! ranges)
+    if (! Meteor.ui._render_mode)
       return html;
 
-    var commentId = ++ranges._count;
-    ranges[commentId] = callback;
+    var callbacks = Meteor.ui._render_mode.callbacks;
+
+    var commentId = ++callbacks._count;
+    callbacks[commentId] = callback;
     return "<!-- STARTRANGE_"+commentId+" -->" + html +
       "<!-- ENDRANGE_"+commentId+" -->";
   };
