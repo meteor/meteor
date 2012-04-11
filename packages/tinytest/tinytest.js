@@ -358,16 +358,25 @@ _.extend(TestRun.prototype, {
                   return t.name.split(" - ")[0];
                 }));
 
-    _.each(testGroups, function(tests) {
-      var runNext = function () {
-        if (tests.length)
-          self._runOne(tests.shift(), runNext);
-        else
-          onComplete();
-      };
+    if (! testGroups.length) {
+      onComplete();
+    } else {
+      var groupsDone = 0;
 
-      runNext();
-    });
+      _.each(testGroups, function(tests) {
+        var runNext = function () {
+          if (tests.length) {
+            self._runOne(tests.shift(), runNext);
+          } else {
+            groupsDone++;
+            if (groupsDone >= testGroups.length)
+              onComplete();
+          }
+        };
+
+        runNext();
+      });
+    }
   },
 
   // An alternative to run(). Given the 'cookie' attribute of a
