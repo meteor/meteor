@@ -73,6 +73,7 @@ button:active {
 }
 
 .square {
+    cursor: pointer;
     width:84px;
     height:84px;
     border:4px solid #eeeee8;
