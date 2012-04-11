@@ -106,7 +106,6 @@ a:hover {
 /** Section nav **/
 
 #nav {
-    padding-top: 38px;
     padding-left: 30px;
     padding-right: 30px;
     line-height: 1.2;
@@ -116,7 +115,7 @@ a:hover {
 }
 
 #nav > div {
-    margin-top: -50px;
+    margin-bottom: 30px;
 }
 
 #nav a {
@@ -420,6 +419,8 @@ pre {
     display: block;
     width: 200px;
     position: fixed;
+    top: 0;
+    left: 0;
     overflow: auto;
     height: 100%;
 }
