@@ -55,3 +55,7 @@ body {
 .none {
     color: #777;
 }
+
+.inc {
+  cursor: pointer;   
+}
