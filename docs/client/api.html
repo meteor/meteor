@@ -154,7 +154,7 @@ Example:
 
     // Subscribe to the chat messages in the current room. Automatically
     // update the subscription whenever the current room changes.
-    Meteor.subscriptions(function () {
+    Meteor.autosubscribe(function () {
       Meteor.subscribe("chat", {room: Session.get("current-room");});
     });
 
