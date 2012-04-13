@@ -73,6 +73,12 @@ Lastly, the Meteor server will serve any files under the `public`
 directory, just like in a Rails or Django project.  This is the place
 for images, `favicon.ico`, `robots.txt`, and anything else.
 
+{{#warning}}
+Assets defined in the `<head>` and `<body>` elements will be parsed before the Meteor stack is sent down the wire.
+Make sure you that any assets defined in these elements do not have Meteor provided dependencies, such as jQuery or Backbone.js.
+{{/warning}}
+
+
 {{/better_markdown}}
 </template>
 
