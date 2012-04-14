@@ -1,11 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html manifest="/manifest.appcache">
 <head>
 {{#each stylesheets}}  <link rel="stylesheet" href="{{this}}">
 {{/each}}
-
 {{{head_extra}}}
-
 {{#each scripts}}  <script type="text/javascript" src="{{this}}"></script>
 {{/each}}
 </head>

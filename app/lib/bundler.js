@@ -421,9 +421,16 @@ _.extend(Bundle.prototype, {
     hash.update(final_css);
     digest = hash.digest('hex');
     name = '/' + digest + ".css";
-
     self.files.client_cacheable[name] = new Buffer(final_css);
     self.css = [name];
+  },
+
+  _generate_app_cache_file: function () {
+    var self = this;
+    var file = "CACHE MANIFEST\nCACHE:\n/\n";
+    _.each(self.files.client_cacheable, function(data,file_name) { file += file_name+"\n";});
+    file += '\nNETWORK\n/sockjs/info';
+    return file;
   },
 
   _generate_app_html: function () {
@@ -630,6 +637,8 @@ exports.bundle = function (project_dir, output_path, options) {
     // Minify, if requested
     if (!options.no_minify)
       bundle.minify();
+
+    bundle.files.client_cacheable['manifest.appcache'] = new Buffer(bundle._generate_app_cache_file());
 
     // Write to disk
     var dev_bundle_mode =
