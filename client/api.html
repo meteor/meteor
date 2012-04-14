@@ -522,7 +522,7 @@ with the error or result of the server's insert.
 
 Example:
 
-    var groceries_id = Lists.insert({name: "Groceries"})._id;
+    var groceries_id = Lists.insert({name: "Groceries"});
     Items.insert({list: groceries_id, name: "Watercress"});
     Items.insert({list: groceries_id, name: "Persimmons"});
 
