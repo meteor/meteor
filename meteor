@@ -68,9 +68,8 @@ function install_dev_bundle {
 }
 
 
-if [ -d "$SCRIPT_DIR/.git" ]; then
+if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
     # In a checkout.
-
     if [ ! -d "$SCRIPT_DIR/dev_bundle" ] ; then
         echo "It's the first time you've run Meteor from a git checkout."
         echo "I will download a kit containing all of Meteor's dependencies."
