@@ -332,16 +332,16 @@ functions in JavaScript. Just add the helper functions directly on the
 `Template.[template name]` object. For example, in this template:
 
     <template name="players">
-      {{dstache}}#each top_10_scorers}}
+      {{dstache}}#each top_scorers}}
         <div>{{dstache}}name}}</div>
       {{dstache}}/each}}
     </{{! }}template>
 
-instead of passing in `top_10_scorers` as data when we call the
+instead of passing in `top_scorers` as data when we call the
 template function, we could define a function on `Template.players`:
 
-    Template.players.top_10_scorers = function () {
-      return Users.find({}, {sort: {score: -1}, limit: 10});
+    Template.players.top_scorers = function () {
+      return Users.find({score: {$gt: 100}}, {sort: {score: -1}});
     };
 
 In this case, the data is coming from a database query. When the
@@ -359,7 +359,7 @@ in `this`:
 
     <!-- in a HTML file -->
     <template name="players">
-      {{dstache}}#each top_10_scorers}}
+      {{dstache}}#each top_scorers}}
         {{dstache}}#if league_is "junior"}}
           <div>Junior: {{dstache}}name}}</div>
         {{dstache}}/if}}
