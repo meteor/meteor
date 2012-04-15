@@ -4,10 +4,10 @@
 {{#each stylesheets}}  <link rel="stylesheet" href="{{this}}">
 {{/each}}
 
-{{{head_extra}}}
-
 {{#each scripts}}  <script type="text/javascript" src="{{this}}"></script>
 {{/each}}
+
+{{{head_extra}}}
 </head>
 <body>
 {{{body_extra}}}
