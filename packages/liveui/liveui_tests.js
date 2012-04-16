@@ -295,7 +295,6 @@ Tinytest.add("liveui - tables", function(test) {
 });
 
 Tinytest.add("liveui - preserved nodes (diff/patch)", function(test) {
-  return;
 
   var rand;
 
