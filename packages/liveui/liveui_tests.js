@@ -503,6 +503,60 @@ Tinytest.add("liveui - copied attributes", function(test) {
   test.equal(get_checked(), false);
   frag.release();
 
+
+  _.each([false, true], function(with_focus) {
+    R = ReactiveVar("apple");
+    var div = OnscreenDiv(Meteor.ui.render(function() {
+      return '<input id="foo" type="text" value="' + R.get() + '">';
+    }));
+    var maybe_focus = function(div) {
+      if (with_focus) {
+        div.node().style.display = "block";
+        div.node().firstChild.focus();
+        div.node().firstChild.focus(); // IE 8 needs a second call!
+        // focus() should set document.activeElement
+        // (this one's on the browser to pass)
+        test.equal(document.activeElement, div.node().firstChild);
+      }
+    };
+    maybe_focus(div);
+    var get_value = function() { return div.node().firstChild.value; };
+    var set_value = function(v) { div.node().firstChild.value = v; };
+    var if_blurred = function(v, v2) {
+      return with_focus ? v2 : v; };
+    test.equal(get_value(), "apple");
+    Meteor.flush();
+    test.equal(get_value(), "apple");
+    R.set("");
+    test.equal(get_value(), "apple");
+    Meteor.flush();
+    test.equal(get_value(), if_blurred("", "apple"));
+    R.set("pear");
+    test.equal(get_value(), if_blurred("", "apple"));
+    Meteor.flush();
+    test.equal(get_value(), if_blurred("pear", "apple"));
+    set_value("jerry"); // like user typing
+    R.set("steve");
+    Meteor.flush();
+    // should overwrite user typing if blurred
+    test.equal(get_value(), if_blurred("steve", "jerry"));
+    div.kill();
+    R = ReactiveVar("");
+    div = OnscreenDiv(Meteor.ui.render(function() {
+      return '<input id="foo" type="text" value="' + R.get() + '">';
+    }));
+    maybe_focus(div);
+    test.equal(get_value(), "");
+    Meteor.flush();
+    test.equal(get_value(), "");
+    R.set("tom");
+    test.equal(get_value(), "");
+    Meteor.flush();
+    test.equal(get_value(), if_blurred("tom", ""));
+    div.kill();
+    Meteor.flush();
+  });
+
 });
 
 Tinytest.add("liveui - bad labels", function(test) {
