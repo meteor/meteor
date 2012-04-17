@@ -28,10 +28,16 @@ _.extend(ExpectationManager.prototype, {
       if (self.dead)
         return;
 
-      if (typeof expected === "function")
-        expected.apply({}, arguments);
-      else
+      if (typeof expected === "function") {
+        try {
+          expected.apply({}, arguments);
+        } catch (e) {
+          if (self.cancel())
+            self.test.exception(e);
+        }
+      } else {
         self.test.equal(_.toArray(arguments), expected);
+      }
 
       self.outstanding--;
       self._check_complete();
@@ -46,7 +52,11 @@ _.extend(ExpectationManager.prototype, {
 
   cancel: function () {
     var self = this;
-    self.dead = true;
+    if (! self.dead) {
+      self.dead = true;
+      return true;
+    }
+    return false;
   },
 
   _check_complete: function () {
@@ -75,17 +85,18 @@ var testAsyncMulti = function (name, funcs) {
         });
 
         var timer = Tinytest.setTimeout(function () {
-          em.cancel();
-          test.fail({type: "timeout", message: "Async batch timed out"});
-          onComplete();
+          if (em.cancel()) {
+            test.fail({type: "timeout", message: "Async batch timed out"});
+            onComplete();
+          }
           return;
         }, timeout);
 
         try {
           func(test, _.bind(em.expect, em));
         } catch (exception) {
-          em.cancel();
-          test.exception(exception);
+          if (em.cancel())
+            test.exception(exception);
           Tinytest.clearTimeout(timer);
           // Because we called test.exception, we're not to call onComplete.
           return;
