@@ -25,6 +25,9 @@ _.extend(ExpectationManager.prototype, {
     self.outstanding++;
 
     return function (/* arguments */) {
+      if (self.dead)
+        return;
+
       if (typeof expected === "function")
         expected.apply({}, arguments);
       else
