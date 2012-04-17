@@ -129,7 +129,7 @@ _.extend(Package.prototype, {
       // (presently) require packages to declare dependencies on
       // 'standard meteor stuff' like minimongo.
       api.use(['deps', 'session', 'livedata', 'mongo-livedata', 'liveui',
-               'templating', 'startup', 'past']);
+               'templating', 'startup']);
       api.use(require('./project.js').get_packages(app_dir));
 
       // -- Source files --
