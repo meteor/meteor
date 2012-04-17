@@ -227,7 +227,7 @@ If a stub is available, it will also run the stub on the client.
 If you include a callback function as the last argument (which can't be
 an argument to the method, since functions aren't serializeable), the
 method will run asynchronously: it will return nothing in particular and
-will not throw an execption.  When the method is complete (which may or
+will not throw an exception.  When the method is complete (which may or
 may not happen before `Meteor.call` returns), the callback will be
 called with two arguments: `error` and `result`. If an error was thrown,
 then `error` will be the exception object.  Otherwise, `error` will be
@@ -262,7 +262,7 @@ described earlier.
 
 You use this functionality all the time, because the database mutators
 (`insert`, `update`, `remove`) are essentially methods. When you call
-them on the client (whether from inside a method or at toplevel), you're
+them on the client (whether from inside a method or at top level), you're
 invoking their stub versions that update the local cache, instead of
 their "real" versions that update the database (using credentials known
 only to the server.)
@@ -522,14 +522,14 @@ with the error or result of the server's insert.
 
 Example:
 
-    var groceries_id = Lists.insert({name: "Groceries"})._id;
+    var groceries_id = Lists.insert({name: "Groceries"});
     Items.insert({list: groceries_id, name: "Watercress"});
     Items.insert({list: groceries_id, name: "Persimmons"});
 
 {{> api_box update}}
 
 Modify documents that match `selector` as
-given by `modifer` (see <a href="#modifiers">modifier
+given by `modifier` (see <a href="#modifiers">modifier
 documentation</a>).  By default, modify only one matching document.
 If `multi` is true, modify all matching documents.
 
@@ -750,7 +750,7 @@ See the <a href="http://www.mongodb.org/display/DOCS/Advanced+Queries" target="_
 
 {{#api_box_inline modifiers}}
 
-A modifer is an object that describes how to update a document in
+A modifier is an object that describes how to update a document in
 place by changing some of its fields. Some examples:
 
     // Set the 'admin' property on the document to true
@@ -901,7 +901,7 @@ nodes) that automatically updates in realtime. You pass in
 string. `Meteor.ui.render` calls your function and turns the output
 into DOM nodes. Meanwhile, it tracks the data that was used when
 `html_func` ran, and automatically wires up callbacks so that whenever
-of any of the data changes, `html_func` is re-run and the DOM nodes
+any of the data changes, `html_func` is re-run and the DOM nodes
 are updated in place.
 
 Insert the returned `DocumentFragment` directly into the DOM wherever
@@ -938,7 +938,7 @@ ever not on the screen (that is, children of `window.document`) when
 Meteor.flush runs.
 
 During an update, if a node has a unique id, or if it has a name that
-is unique among the descendents of the nearest enclosing parent that
+is unique among the descendants of the nearest enclosing parent that
 has an id, then it will be "patched" (updated in place, rather than
 replaced), meaning that focus will be preserved, the text in <input>
 elements will be not be lost, etc.
