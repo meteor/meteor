@@ -58,6 +58,21 @@ var run = function (bundle_dir) {
 
   // webserver
   var app = connect.createServer();
+  try {
+    var authData = fs.readFileSync(path.join(bundle_dir,"../../../.auth"), "ascii");
+    var identities = authData.split("\n");
+    app.use(connect.basicAuth(function(username, password) {
+      for(var i=0, len = identities.length; i < len; i++) {
+        var credentials = identities[i].split(":");
+        if(credentials.length < 2) continue;
+
+        if(username === credentials[0] && password === credentials[1]) return true;
+      }
+      return false;
+    }));
+  } catch(e) {
+    console.log("No .auth file present. Starting without HTTP Auth");
+  }
   app.use(gzippo.staticGzip(path.join(bundle_dir, 'static_cacheable'), {clientMaxAge: 1000 * 60 * 60 * 24 * 365}));
   app.use(gzippo.staticGzip(path.join(bundle_dir, 'static')));
 
