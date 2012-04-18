@@ -22,7 +22,7 @@ Meteor.methods({
       Meteor.refresh({collection: 'tinytest_results', run_id: run_id});
     }, function () {
       /* onComplete */
-      future['return']();
+      future.ret();
     });
 
     future.wait();
