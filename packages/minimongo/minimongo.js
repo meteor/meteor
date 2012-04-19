@@ -116,8 +116,11 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
 LocalCollection.Cursor.prototype.map = function (callback) {
   var self = this;
   var res = [];
+  var count = 0;
+  
   self.forEach(function (doc) {
     res.push(callback(doc, count));
+    count++;
   });
   return res;
 };
