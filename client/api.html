@@ -1355,6 +1355,85 @@ just means that [`run`](#run) sets it, runs some user-supplied code, and
 then restores its previous value.)
 
 
+<h2 id="meteor_http"><span>Meteor.http</span></h2>
+
+{{> api_box httpcall}}
+
+This function initiates an HTTP request to a remote server. It returns
+a result object with the contents of the HTTP response. The result
+object is detailed below.
+
+On the server, this function can be run synchronously by omitting
+the callback argument. In this case, the results are returned
+to the caller once the request completes. This is useful when making
+server-to-server HTTP API calls from with Meteor methods. You can easily
+delay return method success or failure to the client until after the HTTP
+call has finished. In this case, consider running
+[`this.unblock()`](#method_unblock) to allow other methods to start.
+
+The `url` argument can begin with `"http://"` or `"https://"`. On the
+client, you can also use relative URLs, on the server only absolute URLs
+are allowed. `url` can include a query string, but it will be
+overwritten if the `query` option is passed. The `params` option will be
+encoded and either added to the URL (GET requests and POST requests that
+already have `content` specified) or to the body of the request (POST
+requests without `content` specified)
+
+The callback receives two arguments, `error` and `result`.  The `error`
+argument will contain an Error if the request fails in any way,
+including a bad HTTP status code. The result object is always
+defined. When run in synchronous mode, the `result` is returned from the
+function, and the `error` value is a stored as a property in `result`.
+
+Contents of the result object:
+
+<dl class="objdesc">
+
+<dt><span class="name">statusCode</span>
+  <span class="type">Number or null</span></dt>
+<dd>Numeric HTTP result status code, or null on error.</dd>
+
+<dt><span class="name">headers()</span>
+  <span class="type">Object</span></dt>
+<dd>Return a dictionary of HTTP headers from the response.</dd>
+
+<dt><span class="name">content()</span>
+  <span class="type">String</span></dt>
+<dd>Return the body of the HTTP response as a string.</dd>
+
+<dt><span class="name">data()</span>
+  <span class="type">Object</span></dt>
+<dd>Return the body of the document parsed as a JSON object</dd>
+
+<dt><span class="name">error</span>
+  <span class="type">Error</span></dt>
+<dd>Error object if the request failed. Matches the `error` callback parameter.</dd>
+
+
+</dl>
+
+Example server method:
+
+    Meteor.methods({check_twitter: function (user_id) {
+      this.unblock();
+      var result = Meteor.http.call("GET", "http://api.twitter.com/xxx",
+                                    {params: {user: user_id}});
+      if (result.statusCode === 200)
+         return true
+      return false;
+    }});
+
+Example asynchronous HTTP call:
+
+    Meteor.http.call("POST", "http://api.twitter.com/xxx",
+                     {data: {some: "json", stuff: 1}},
+                     function (error, result) {
+                       if (result.statusCode === 200) {
+                         Session.set("twizzled", true);
+                       }
+                     });
+
+
 {{/better_markdown}}
 </template>
 
