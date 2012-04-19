@@ -791,4 +791,11 @@ Template.api.httpcall = {
   ]
 };
 
+Template.api.httphelpers = {
+  id: "meteor_http_helpers",
+  name: "Meteor.http.[get, post, put, del] (...)",
+  locus: "Anywhere",
+  descr: ["Convience shortcuts for `Meteor.http.call` with `method` argument specified."]
+};
+
 

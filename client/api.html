@@ -1401,20 +1401,20 @@ Contents of the result object:
 <dl class="objdesc">
 
 <dt><span class="name">statusCode</span>
-  <span class="type">Number or null</span></dt>
+  <span class="type">Number</span></dt>
 <dd>Numeric HTTP result status code, or null on error.</dd>
 
-<dt><span class="name">headers()</span>
-  <span class="type">Object</span></dt>
-<dd>Return a dictionary of HTTP headers from the response.</dd>
-
-<dt><span class="name">content()</span>
+<dt><span class="name">content</span>
   <span class="type">String</span></dt>
-<dd>Return the body of the HTTP response as a string.</dd>
+<dd>The body of the HTTP response as a string.</dd>
 
-<dt><span class="name">data()</span>
+<dt><span class="name">data</span>
+  <span class="type">Object or null</span></dt>
+<dd>If the response headers indicate JSON content, this contains the body of the document parsed as a JSON object.</dd>
+
+<dt><span class="name">headers</span>
   <span class="type">Object</span></dt>
-<dd>Return the body of the document parsed as a JSON object.</dd>
+<dd>A dictionary of HTTP headers from the response.</dd>
 
 <dt><span class="name">error</span>
   <span class="type">Error</span></dt>
@@ -1446,6 +1446,11 @@ Example asynchronous HTTP call:
 
 
 {{/better_markdown}}
+
+
+{{> api_box httphelpers}}
+
+
 </template>
 
 

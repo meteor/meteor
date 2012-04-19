@@ -165,7 +165,11 @@ var toc = [
     ],
 
     "Meteor.http", [
-      "Meteor.http.call"
+      "Meteor.http.call",
+      {name: "Meteor.http.get", id: "meteor_http_helpers"},
+      {name: "Meteor.http.post", id: "meteor_http_helpers"},
+      {name: "Meteor.http.put", id: "meteor_http_helpers"},
+      {name: "Meteor.http.del", id: "meteor_http_helpers"}
     ]
   ],
 
