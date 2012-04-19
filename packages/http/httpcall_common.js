@@ -35,4 +35,19 @@ Meteor.http = Meteor.http || {};
     return url;
   };
 
+
+  Meteor.http.get = function (/* varargs */) {
+    return Meteor.http.call.apply(this, ["GET"].concat(_.toArray(arguments)));
+  };
+  Meteor.http.post = function (/* varargs */) {
+    return Meteor.http.call.apply(this, ["POST"].concat(_.toArray(arguments)));
+  };
+  Meteor.http.put = function (/* varargs */) {
+    return Meteor.http.call.apply(this, ["PUT"].concat(_.toArray(arguments)));
+  };
+  Meteor.http.del = function (/* varargs */) {
+    return Meteor.http.call.apply(this, ["DELETE"].concat(_.toArray(arguments)));
+  };
+
+
 })();

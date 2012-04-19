@@ -166,34 +166,29 @@ testAsyncMulti("httpcall - methods", [
 
   function(test, expect) {
     // non-get methods
-    var test_method = function(meth, should_throw) {
-      var maybe_expect = (should_throw ? _.identity : expect);
-      var func = function() {
-        Meteor.http.call(
-          meth, url_prefix()+"/foo",
-          maybe_expect(function(error, result) {
-            test.isFalse(error);
-            test.isTrue(result);
-            test.equal(result.statusCode, 200);
-            var data = result.data();
-            test.equal(data.url, "/foo");
-            // IE <= 8 turns seems to turn POSTs with no body into
-            // GETs, inexplicably.
-            if (Meteor.is_client && $.browser.msie && $.browser.version <= 8
-                && meth === "POST")
-              meth = "GET";
-            test.equal(data.method, meth);
-          }));
-      };
-      if (should_throw)
-        test.throws(func);
-      else
-        func();
+    var test_method = function(meth, func_name) {
+      func_name = func_name || meth.toLowerCase();
+      Meteor.http[func_name](
+        url_prefix()+"/foo",
+        expect(function(error, result) {
+          test.isFalse(error);
+          test.isTrue(result);
+          test.equal(result.statusCode, 200);
+          var data = result.data();
+          test.equal(data.url, "/foo");
+          // IE <= 8 turns seems to turn POSTs with no body into
+          // GETs, inexplicably.
+          if (Meteor.is_client && $.browser.msie && $.browser.version <= 8
+              && meth === "POST")
+            meth = "GET";
+          test.equal(data.method, meth);
+        }));
     };
 
+    test_method("GET");
     test_method("POST");
     test_method("PUT");
-    test_method("DELETE");
+    test_method("DELETE", 'del');
   },
 
   function(test, expect) {
