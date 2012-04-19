@@ -109,15 +109,15 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
                           changed: true,
                           moved: true});
 
-  while (self.cursor_pos < self.db_objects.length)
-    callback(LocalCollection._deepcopy(self.db_objects[self.cursor_pos++]));
+  while (self.cursor_pos < self.db_objects.length)                       // Cursor position starts at 1, not 0
+    callback(LocalCollection._deepcopy(self.db_objects[self.cursor_pos++]), self.cursor_pos-1);
 };
 
 LocalCollection.Cursor.prototype.map = function (callback) {
   var self = this;
   var res = [];
   self.forEach(function (doc) {
-    res.push(callback(doc));
+    res.push(callback(doc, count));
   });
   return res;
 };
