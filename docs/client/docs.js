@@ -162,6 +162,10 @@ var toc = [
     //     {instance: "env_var", name: "withValue", id: "env_var_withvalue"},
     //     {instance: "env_var", name: "bindEnvironment", id: "env_var_bindenvironment"}
     //   ]
+    ],
+
+    "Meteor.http", [
+      "Meteor.http.call"
     ]
   ],
 
