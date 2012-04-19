@@ -221,6 +221,35 @@ function throws a different exception, then it will be mapped to
 
 {{> api_box meteor_call}}
 
+Example (using Meteor.methods and Meteor.call for a login scenario):
+
+    Meteor.methods({
+        login: function(email, pass){
+            // Lookup user by email
+            var user = Users.findOne({ email: email });
+            if(user) {
+                // If user found, check password
+                if(user.pass === pass) {
+                    return user;
+                } else {
+                    throw new Meteor.Error(404, 'Password incorrect');
+                }
+            } else {
+                throw new Meteor.Error(404, 'Email not registered');
+            }
+        }
+    });
+    
+    Meteor.call('login', $('#loginEmail').val(), $('#loginPass').val(), function(error, result) {
+        if(error)
+            console.log(error);
+            // Do Form Validation here
+        else if(result) {
+            // Set Session.user
+            Session.set('user', result);
+        }
+    });
+
 This is how to invoke a method.  It will run the method on the server.
 If a stub is available, it will also run the stub on the client.
 
