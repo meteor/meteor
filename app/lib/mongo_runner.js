@@ -156,7 +156,9 @@ exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callbac
     }
 
     var proc = spawn(mongod_path, [
-      '--bind_ip', '127.0.0.1', '--port', port,
+      '--bind_ip', '127.0.0.1',
+      '--smallfiles',
+      '--port', port,
       '--dbpath', data_path
     ]);
 

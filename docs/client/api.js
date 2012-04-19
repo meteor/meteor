@@ -89,7 +89,7 @@ Template.api.subscription_complete = {
   id: "publish_complete",
   name: "<i>this</i>.complete()",
   locus: "Server",
-  descr: ["Call inside publish function.  Queues a command to mark this subscription as complete (inital attributes are set)."]
+  descr: ["Call inside publish function.  Queues a command to mark this subscription as complete (initial attributes are set)."]
 };
 
 Template.api.subscription_flush = {
@@ -295,7 +295,7 @@ Template.api.find = {
      descr: "Sort order (default: natural order)"},
     {name: "skip",
      type: "Number",
-     descr: "Number of result to skip at the beginnig"},
+     descr: "Number of result to skip at the beginning"},
     {name: "limit",
      type: "Number",
      descr: "Maximum number of results to return"},
@@ -323,7 +323,7 @@ Template.api.findone = {
      descr: "Sort order (default: natural order)"},
     {name: "skip",
      type: "Number",
-     descr: "Number of result to skip at the beginnig"},
+     descr: "Number of result to skip at the beginning"},
     {name: "reactive",
      type: "Boolean",
      descr: "Default true; pass false to disable reactivity"}
@@ -378,7 +378,7 @@ Template.api.cursor_rewind = {
 
 Template.api.cursor_observe = {
   id: "observe",
-  name: "<em>cursor</em>.observe(options)",
+  name: "<em>cursor</em>.observe(callbacks)",
   locus: "Client",
   descr: ["Watch a query.  Receive callbacks as the result set changes."],
   args: [

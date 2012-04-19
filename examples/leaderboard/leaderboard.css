@@ -16,6 +16,7 @@ body {
 }
 
 .player {
+    cursor: pointer;
     padding: 5px;
 }
 
@@ -54,4 +55,8 @@ body {
 
 .none {
     color: #777;
+}
+
+.inc {
+  cursor: pointer;
 }
