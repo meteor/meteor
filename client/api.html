@@ -1360,28 +1360,39 @@ then restores its previous value.)
 {{> api_box httpcall}}
 
 This function initiates an HTTP request to a remote server. It returns
-a result object with the contents of the HTTP response. The result
+a result object with the contents of the HTTP response.  The result
 object is detailed below.
 
-On the server, this function can be run synchronously by omitting
-the callback argument. In this case, the results are returned
-to the caller once the request completes. This is useful when making
-server-to-server HTTP API calls from with Meteor methods. You can easily
-delay return method success or failure to the client until after the HTTP
-call has finished. In this case, consider running
-[`this.unblock()`](#method_unblock) to allow other methods to start.
+On the server, this function can be run either synchronously or
+asynchronously.  If the callback is omitted, it runs synchronously,
+and the results are returned once the request completes. This is
+useful when making server-to-server HTTP API calls from within Meteor
+methods, as the method can succeed or fail based on the results of the
+synchronous HTTP call.  In this case, consider using
+[`this.unblock()`](#method_unblock) to allow other methods to run in
+the mean time.  On the client, this function must be used
+asynchronously by passing a callback.
 
-The `url` argument can begin with `"http://"` or `"https://"`. On the
-client, you can also use relative URLs, on the server only absolute URLs
-are allowed. `url` can include a query string, but it will be
-overwritten if the `query` option is passed. The `params` option will be
-encoded and either added to the URL (GET requests and POST requests that
-already have `content` specified) or to the body of the request (POST
-requests without `content` specified)
+Both HTTP and HTTPS protocols are supported.  The `url` argument must be
+an absolute URL including protocol and host name on the server, but may be
+relative to the current host on the client.  The `query` option
+replaces the query string of `url`.  Parameters specified in `params`
+that are put in the URL are appended to any query string.
+For example, with a `url` of `"/path?query"` and
+`params` of `{foo:"bar"}`, the final URL will be `"/path?query&foo=bar"`.
+
+The `params` are put in the URL or the request body, depending on the
+type of request.  In the case of request with no bodies, like GET and
+HEAD, the parameters will always go in the URL.  For a POST or other
+type of request, the parameters will be encoded into the body with a
+standard `x-www-form-urlencoded` content type, unless the `content`
+or `data` option is used to specify a body, in which case the
+parameters will be appended to the URL instead.
 
 The callback receives two arguments, `error` and `result`.  The `error`
 argument will contain an Error if the request fails in any way,
-including a bad HTTP status code. The result object is always
+including a network error, time-out, or an HTTP status code in the 400
+or 500 range.  The result object is always
 defined. When run in synchronous mode, the `result` is returned from the
 function, and the `error` value is a stored as a property in `result`.
 
@@ -1403,7 +1414,7 @@ Contents of the result object:
 
 <dt><span class="name">data()</span>
   <span class="type">Object</span></dt>
-<dd>Return the body of the document parsed as a JSON object</dd>
+<dd>Return the body of the document parsed as a JSON object.</dd>
 
 <dt><span class="name">error</span>
   <span class="type">Error</span></dt>
