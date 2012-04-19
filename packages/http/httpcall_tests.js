@@ -8,8 +8,7 @@ var url_prefix = function () {
   }
   return _XHR_URL_PREFIX;
 };
-// Are we in IE?
-var IN_OLD_MSIE = Meteor.is_client && $.browser.msie && $.browser.version.substr(0,1) <= 8;
+
 
 testAsyncMulti("httpcall - basic", [
   function(test, expect) {
@@ -22,7 +21,13 @@ testAsyncMulti("httpcall - basic", [
           test.equal(result.statusCode, 200);
 
           var data = result.data();
-          test.equal(data.url, expected_url);
+
+          // allow dropping of final ? (which mobile browsers seem to do)
+          var allowed = [expected_url];
+          if (expected_url.slice(-1) === '?')
+            allowed.push(expected_url.slice(0, -1));
+
+          test.include(allowed, expected_url);
           test.equal(data.method, "GET");
         }
       };
@@ -174,7 +179,10 @@ testAsyncMulti("httpcall - methods", [
             test.equal(data.url, "/foo");
             // IE <= 8 turns seems to turn POSTs with no body into
             // GETs, inexplicably.
-            test.equal(data.method, IN_OLD_MSIE ? "GET" : meth);
+            if (Meteor.is_client && $.browser.msie && $.browser.version <= 8
+                && meth === "POST")
+              meth = "GET";
+            test.equal(data.method, meth);
           }));
       };
       if (should_throw)
@@ -248,7 +256,7 @@ testAsyncMulti("httpcall - http auth", [
 testAsyncMulti("httpcall - headers", [
   function(test, expect) {
     Meteor.http.call(
-      "GET", url_prefix()+"/foo",
+      "GET", url_prefix()+"/foo-with-headers",
       {headers: { "Test-header": "Value",
                   "another": "Value2" } },
       expect(function(error, result) {
@@ -257,7 +265,7 @@ testAsyncMulti("httpcall - headers", [
 
         test.equal(result.statusCode, 200);
         var data = result.data();
-        test.equal(data.url, "/foo");
+        test.equal(data.url, "/foo-with-headers");
         test.equal(data.method, "GET");
         test.equal(data.headers['test-header'], "Value");
         test.equal(data.headers['another'], "Value2");
@@ -305,7 +313,6 @@ testAsyncMulti("httpcall - params", [
     };
 
     do_test("GET", "/blah", {foo:"bar"}, "/blah?foo=bar", "");
-    do_test("GET", "/blah", {}, "/blah?", "");
     do_test("GET", "/", {foo:"bar", fruit:"apple"}, "/?foo=bar&fruit=apple", "");
     do_test("POST", "/", {foo:"bar", fruit:"apple"}, "/", "foo=bar&fruit=apple");
     do_test("POST", "/", {foo:"bar", fruit:"apple"}, "/", "foo=bar&fruit=apple");
