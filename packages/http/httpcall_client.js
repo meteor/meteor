@@ -111,24 +111,28 @@ Meteor.http = Meteor.http || {};
             // no HTTP response
             callback(new Error("network"));
           } else {
+
             var response = {};
             response.statusCode = xhr.status;
-            response.content = function() {
-              return xhr.responseText;
-            };
-            response.data = function() {
-              return JSON.parse(response.content());
-            };
-            response.headers = function () {
-              var header_str = xhr.getAllResponseHeaders();
-              var headers_raw = header_str.split(/\r?\n/);
-              var headers = {};
-              _.each(headers_raw, function (h) {
-                var m = /^(.*?):(?:\s+)(.*)$/.exec(h);
-                if (m && m.length === 3)
-                  headers[m[1].toLowerCase()] = m[2];
-              });
-              return headers;
+            response.content = xhr.responseText;
+
+            response.headers = {};
+            var header_str = xhr.getAllResponseHeaders();
+            var headers_raw = header_str.split(/\r?\n/);
+            _.each(headers_raw, function (h) {
+              var m = /^(.*?):(?:\s+)(.*)$/.exec(h);
+              if (m && m.length === 3)
+                response.headers[m[1].toLowerCase()] = m[2];
+            });
+
+            // only parse data if correct content type.
+            if (_.include(['application/json', 'text/javascript'],
+                          response.headers['content-type'])) {
+              try {
+                response.data = JSON.parse(response.content);
+              } catch (err) {
+                response.data = null;
+              }
             };
 
             var error = null;

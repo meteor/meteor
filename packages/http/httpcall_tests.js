@@ -20,7 +20,7 @@ testAsyncMulti("httpcall - basic", [
           test.equal(typeof result, "object");
           test.equal(result.statusCode, 200);
 
-          var data = result.data();
+          var data = result.data;
 
           // allow dropping of final ? (which mobile browsers seem to do)
           var allowed = [expected_url];
@@ -105,7 +105,7 @@ testAsyncMulti("httpcall - failure", [
         test.isFalse(error);
         test.isTrue(result);
         test.equal(result.statusCode, 200);
-        var data = result.data();
+        var data = result.data;
         test.equal(data.url, "/foo");
         test.equal(data.method, "GET");
 
@@ -123,7 +123,7 @@ testAsyncMulti("httpcall - redirect", [
 
         // should be redirected transparently to /foo
         test.equal(result.statusCode, 200);
-        var data = result.data();
+        var data = result.data;
         test.equal(data.url, "/foo");
         test.equal(data.method, "GET");
       }));
@@ -142,7 +142,7 @@ testAsyncMulti("httpcall - redirect", [
             if (followRedirects) {
               // should be redirected transparently to /foo
               test.equal(result.statusCode, 200);
-              var data = result.data();
+              var data = result.data;
               test.equal(data.url, "/foo");
               test.equal(data.method, "GET");
             } else {
@@ -174,7 +174,7 @@ testAsyncMulti("httpcall - methods", [
           test.isFalse(error);
           test.isTrue(result);
           test.equal(result.statusCode, 200);
-          var data = result.data();
+          var data = result.data;
           test.equal(data.url, "/foo");
           // IE <= 8 turns seems to turn POSTs with no body into
           // GETs, inexplicably.
@@ -200,7 +200,7 @@ testAsyncMulti("httpcall - methods", [
         test.isFalse(error);
         test.isTrue(result);
         test.equal(result.statusCode, 200);
-        var data = result.data();
+        var data = result.data;
         test.equal(data.body, "Hello World!");
       }));
 
@@ -211,7 +211,7 @@ testAsyncMulti("httpcall - methods", [
         test.isFalse(error);
         test.isTrue(result);
         test.equal(result.statusCode, 200);
-        var data = result.data();
+        var data = result.data;
         test.equal(data.body, {greeting: "Hello World!"});
       }));
   }
@@ -234,7 +234,7 @@ testAsyncMulti("httpcall - http auth", [
         test.isFalse(error);
         test.isTrue(result);
         test.equal(result.statusCode, 200);
-        var data = result.data();
+        var data = result.data;
         test.equal(data.url, "/login?"+password);
       }));
 
@@ -259,7 +259,7 @@ testAsyncMulti("httpcall - headers", [
         test.isTrue(result);
 
         test.equal(result.statusCode, 200);
-        var data = result.data();
+        var data = result.data;
         test.equal(data.url, "/foo-with-headers");
         test.equal(data.method, "GET");
         test.equal(data.headers['test-header'], "Value");
@@ -273,8 +273,8 @@ testAsyncMulti("httpcall - headers", [
         test.isTrue(result);
 
         test.equal(result.statusCode, 201);
-        test.equal(result.headers()['a-silly-header'], "Tis a");
-        test.equal(result.headers()['another-silly-header'], "Silly place.");
+        test.equal(result.headers['a-silly-header'], "Tis a");
+        test.equal(result.headers['another-silly-header'], "Silly place.");
       }));
   }
 ]);
@@ -299,7 +299,7 @@ testAsyncMulti("httpcall - params", [
           test.isTrue(result);
           test.equal(result.statusCode, 200);
           if (method !== "HEAD") {
-            var data = result.data();
+            var data = result.data;
             test.equal(data.method, method);
             test.equal(data.url, expect_url);
             test.equal(data.body, expect_body);

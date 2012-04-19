@@ -108,14 +108,17 @@ Meteor.http = Meteor.http || {};
 
         response = {};
         response.statusCode = res.statusCode;
-        response.content = function() {
-          return body;
-          };
-        response.data = function() {
-          return JSON.parse(response.content());
-        };
-        response.headers = function () {
-          return res.headers;
+        response.content = body;
+        response.headers = res.headers;
+
+        // only parse data if correct content type.
+        if (_.include(['application/json', 'text/javascript'],
+                      response.headers['content-type'])) {
+          try {
+            response.data = JSON.parse(response.content);
+          } catch (err) {
+            response.data = null;
+          }
         };
 
         if (res.statusCode >= 400)

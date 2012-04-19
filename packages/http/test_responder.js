@@ -63,6 +63,7 @@ var respond = function(req, res) {
       response_string = JSON.stringify(response_data);
 
     res.statusCode = 200;
+    res.setHeader("Content-Type", "application/json");
     res.end(response_string);
   });
 
