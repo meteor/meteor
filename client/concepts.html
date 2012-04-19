@@ -323,7 +323,7 @@ HTML`](#livehtml) system, and get DOM elements that update
 automatically in place, use [`Meteor.ui.render`](#meteor_ui_render):
 
     Meteor.ui.render(function () {
-      Template.hello({first: "Alyssa", last: "Hacker"});
+      return Template.hello({first: "Alyssa", last: "Hacker"});
     })
       => automatically updating DOM elements
 
