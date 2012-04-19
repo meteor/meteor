@@ -57,6 +57,13 @@ will cause ```meteor``` to be in your ```PATH```.
 
     ./install.sh
     meteor --help
+    
+After installing, you can read the docs locally. The ```/docs``` directory is a meteor application, so simply change into the ```/docs``` directory and launch the app:
+	
+	cd docs/
+	meteor
+
+You'll then be able to read the docs locally in your browser at ```http://localhost:3000/```
 
 ## Developer Resources
 
