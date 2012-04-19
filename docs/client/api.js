@@ -743,3 +743,52 @@ Template.api.equals = {
      descr: "The value to test against"}
   ]
 };
+
+Template.api.httpcall = {
+  id: "meteor_http_call",
+  name: "Meteor.http.call(method, url, [options], [asyncCallback])",
+  locus: "Anywhere",
+  descr: ["Perform an outbound HTTP request."],
+  args: [
+    {name: "method",
+     type: "String",
+     descr: 'The HTTP method to use, e.g. "GET" or "POST".'},
+    {name: "url",
+     type: "String",
+     descr: 'The URL to retrieve.'},
+    {name: "asyncCallback",
+     type: "Function",
+     descr: "Optional callback.  If passed, the method runs asynchronously, instead of synchronously, and calls asyncCallback.  On the client, this callback is required."
+    }
+  ],
+  options: [
+    {name: "content",
+     type: "String",
+     descr: "HTTP request body, as a raw string."
+},
+    {name: "data",
+     type: "Object",
+     descr: "JSON-able object, encoded and placed in HTTP request body. Overwrites `content`."},
+    {name: "query",
+     type: "String",
+     descr: "Query string. If given, overwrites any query string in `url`"},
+    {name: "params",
+     type: "Object",
+     descr: "Parameters are encoded and placed in the URL for GETs, or the body for POSTs"
+    },
+    {name: "auth",
+     type: "String",
+     descr: 'HTTP basic authentication string, e.g. `"username:password"`'},
+    {name: "headers",
+     type: "Object",
+     descr: "Dictionary of values to place in HTTP headers."},
+    {name: "timeout",
+     type: "Number",
+     descr: "Fail the request if it takes longer that `timeout` milliseconds."},
+    {name: "followRedirects",
+     type: "Boolean",
+    descr: "Whether or not to follow HTTP redirects. Defaults to true. Can not be disabled on the client."}
+  ]
+};
+
+
