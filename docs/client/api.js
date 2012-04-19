@@ -764,30 +764,30 @@ Template.api.httpcall = {
   options: [
     {name: "content",
      type: "String",
-     descr: "HTTP request body, as a raw string."
+     descr: "String to use as the HTTP request body."
 },
     {name: "data",
      type: "Object",
-     descr: "JSON-able object, encoded and placed in HTTP request body. Overwrites `content`."},
+     descr: "JSON-able object to stringify and use as the HTTP request body. Overwrites `content`."},
     {name: "query",
      type: "String",
-     descr: "Query string. If given, overwrites any query string in `url`"},
+     descr: "Query string to go in the URL. Overwrites any query string in `url`."},
     {name: "params",
      type: "Object",
-     descr: "Parameters are encoded and placed in the URL for GETs, or the body for POSTs"
+     descr: "Dictionary of request parameters to be encoded and placed in the URL (for GETs) or request body (for POSTs).  If `content` or `data` is specified, `params` will always be placed in the URL."
     },
     {name: "auth",
      type: "String",
-     descr: 'HTTP basic authentication string, e.g. `"username:password"`'},
+     descr: 'HTTP basic authentication string of the form `"username:password"`'},
     {name: "headers",
      type: "Object",
-     descr: "Dictionary of values to place in HTTP headers."},
+     descr: "Dictionary of strings, headers to add to the HTTP request."},
     {name: "timeout",
      type: "Number",
-     descr: "Fail the request if it takes longer that `timeout` milliseconds."},
+     descr: "Maximum time in milliseconds to wait for the request before failing.  There is no timeout by default."},
     {name: "followRedirects",
      type: "Boolean",
-    descr: "Whether or not to follow HTTP redirects. Defaults to true. Can not be disabled on the client."}
+     descr: "If true, transparently follow HTTP redirects.  Cannot be set to false on the client."}
   ]
 };
 
