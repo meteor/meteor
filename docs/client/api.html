@@ -564,10 +564,11 @@ The Mongo `upsert` feature is not implemented.
 
 {{> api_box remove}}
 
-Find all of the documents that match `selector` and delete them from
-the collection. Or instead of a selector, you may pass a string, to
-delete the document with that `_id`.  Without any selector, remove all
-documents from the collection.
+Find all of the documents that match `selector` and delete them from the
+collection. Or instead of a selector, you may pass a string, to delete
+the document with that `_id`.  As a safety measure, do nothing if the
+selector is undefined.  If the selector is `{}`, remove all the
+documents from the collection.)
 
 On the server, if you don't provide a callback, then `remove` blocks
 until the database acknowledges the write, or throws an exception if
@@ -588,7 +589,7 @@ Example:
     Users.remove({karma: {$lt: -2}});
 
     // Delete all the log entries
-    Logs.remove();
+    Logs.remove({});
 
     // Show a list of posts that have been flagged, updating in realtime.
     // Put a link next to each post that deletes the post if clicked.
