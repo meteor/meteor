@@ -204,8 +204,13 @@ var _testTime = function(t) {
 
 var _testStatus = function(t) {
   var events = t.events || [];
-  if (events.length == 0 || (_.last(events).type != "finish" &&
-                             _.last(events).type != "exception")) {
+  if (_.find(events, function(x) { return x.type === "exception"; })) {
+    // "exception" should be last event, except race conditions on the
+    // server can make this not the case.  Technically we can't tell
+    // if the test is still running at this point, but it can only
+    // result in FAIL.
+    return "failed";
+  } else if (events.length == 0 || (_.last(events).type != "finish")) {
     return "running";
   } else if (_.any(events, function(e) {
     return e.type == "fail" || e.type == "exception"; })) {
