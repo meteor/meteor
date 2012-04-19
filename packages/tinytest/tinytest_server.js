@@ -16,14 +16,21 @@ Meteor.methods({
     var Future = __meteor_bootstrap__.require('fibers/future');
     var future = new Future;
 
-    Meteor._runTests(function (report) {
-      /* onReport */
+    var onReport = function (report) {
+      if (! Fiber.current) {
+        Meteor._debug("Trying to report a test not in a fiber! "+
+                      "You probably forgot to wrap a callback in bindEnvironment.");
+        console.trace();
+      }
       Meteor._ServerTestResults.insert({run_id: run_id, report: report});
       Meteor.refresh({collection: 'tinytest_results', run_id: run_id});
-    }, function () {
-      /* onComplete */
-      future['return']();
-    });
+    };
+
+    var onComplete = function() {
+      future.ret();
+    };
+
+    Meteor._runTests(onReport, onComplete);
 
     future.wait();
   }

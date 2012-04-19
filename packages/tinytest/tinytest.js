@@ -248,7 +248,7 @@ _.extend(TestCase.prototype, {
                                           onException(e);
                                       }, stop_at_offset);
 
-    Meteor.defer(function () {
+    Tinytest.defer(function () {
       try {
         if (self.async) {
           self.func(results, function () {
@@ -358,16 +358,25 @@ _.extend(TestRun.prototype, {
                   return t.name.split(" - ")[0];
                 }));
 
-    _.each(testGroups, function(tests) {
-      var runNext = function () {
-        if (tests.length)
-          self._runOne(tests.shift(), runNext);
-        else
-          onComplete();
-      };
+    if (! testGroups.length) {
+      onComplete();
+    } else {
+      var groupsDone = 0;
 
-      runNext();
-    });
+      _.each(testGroups, function(tests) {
+        var runNext = function () {
+          if (tests.length) {
+            self._runOne(tests.shift(), runNext);
+          } else {
+            groupsDone++;
+            if (groupsDone >= testGroups.length)
+              onComplete();
+          }
+        };
+
+        runNext();
+      });
+    }
   },
 
   // An alternative to run(). Given the 'cookie' attribute of a
@@ -407,7 +416,40 @@ globals.Tinytest = {
 
   addAsync: function (name, func) {
     TestManager.addCase(new TestCase(name, func, true));
+  },
+
+  // Tinytest has versions of setTimeout et al. that preserve the
+  // environment with write fence on the server.  Unlike how
+  // Meteor.setTimeout etc. are currently implemented, we *DO*
+  // want to block method satisfaction.
+
+  setTimeout: function (f, duration) {
+    return setTimeout(Meteor.bindEnvironment(f, function (e) {
+      Meteor._debug("Exception from setTimeout callback:", e.stack);
+    }), duration);
+  },
+
+  setInterval: function (f, duration) {
+    return setInterval(Meteor.bindEnvironment(f, function (e) {
+      Meteor._debug("Exception from setInterval callback:", e);
+    }), duration);
+  },
+
+  clearInterval: function(x) {
+    return clearInterval(x);
+  },
+
+  clearTimeout: function(x) {
+    return clearTimeout(x);
+  },
+
+  defer: function (f) {
+    // Older Firefox will pass an argument to the setTimeout callback
+    // function, indicating the "actual lateness." It's non-standard,
+    // so for defer, standardize on not having it.
+    globals.Tinytest.setTimeout(function () {f();}, 0);
   }
+
 };
 
 // Run every test, asynchronously. Runs the test in the current

@@ -76,6 +76,7 @@ h3 {
 }
 
 .tag {
+    cursor: pointer;
     float: left;
     margin: 5px;
     padding: 2px 7px;
@@ -166,6 +167,7 @@ h3 {
 }
 
 #item-list .todo .destroy {
+    cursor: pointer;
     position: absolute;
     left: 5px;
     top: 15px;
