@@ -232,10 +232,10 @@ Example (using Meteor.methods and Meteor.call for a login scenario):
                 if(user.pass === pass) {
                     return user;
                 } else {
-                    throw new Meteor.Error(404, 'Password incorrect');
+                    throw new Meteor.Error(401, 'Password incorrect');
                 }
             } else {
-                throw new Meteor.Error(404, 'Email not registered');
+                throw new Meteor.Error(401, 'Email not registered');
             }
         }
     });
