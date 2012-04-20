@@ -6,7 +6,7 @@
 
   // connect to madewith and subscribe to my app's record
   var server = Meteor.connect("http://madewith.meteor.com/sockjs");
-  var sub = server.subscribe("my_app", hostname);
+  var sub = server.subscribe("myApp", hostname);
 
   // minimongo collection to hold my singleton app record.
   var apps = new Meteor.Collection('apps', server);
