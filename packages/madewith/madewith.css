@@ -1,0 +1,48 @@
+/* CSS declarations go here */
+a.madewith_link {
+  text-decoration: none;
+}
+
+.madewith_badge {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 300px;
+  height: 129px;
+  background-size: 300px 129px;
+  text-shadow: 1px 1px black, 1px -1px black, -1px 1px black, -1px -1px black;
+  border: 1px solid black;
+}
+
+.madewith_badge_inner {
+  margin: 10px;
+  height: 109px;
+  background-color: rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.madewith_text {
+  position: absolute;
+  top: 15px;
+  width: 280px;
+  text-align: center;
+  color: white;
+  font-weight: 700;
+  font-size: 1.9em;
+}
+
+.madewith_votes {
+  position: absolute;
+  bottom: 15px;
+  width: 280px;
+  color: white;
+  font-size: 1.5em;
+  text-align: center;
+}
+
+.madewith_upvote {
+  color: yellow;
+  cursor: pointer;
+}
+
