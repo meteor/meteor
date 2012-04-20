@@ -1178,12 +1178,143 @@ Tinytest.add("liveui - basic tag contents", function(test) {
 });
 
 
+Tinytest.add("liveui - events", function(test) {
+  var event_buf = [];
+  var eventmap = function(/* arguments */) {
+    var events = {};
+    _.each(arguments, function(evt_sel) {
+      events[evt_sel] = function() {
+        event_buf.push(evt_sel);
+      };
+    });
+    return events;
+  };
+  var getid = function(id) {
+    return document.getElementById(id);
+  };
+
+  var div;
+
+  // clicking on a div at top level
+  event_buf.length = 0;
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return '<div id="foozy">Foo</div>';
+  }, {events: eventmap("click")}));
+  simulateEvent(getid("foozy"), 'click');
+  test.equal(event_buf, ['click']);
+  div.kill();
+  Meteor.flush();
+
+  // selector that specifies a top-level div
+  // FAILS in 0.3.3
+  event_buf.length = 0;
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return '<div id="foozy">Foo</div>';
+  }, {events: eventmap("click div")}));
+  simulateEvent(getid("foozy"), 'click');
+  test.expect_fail();
+  test.equal(event_buf, ['click div']);
+  div.kill();
+  Meteor.flush();
+
+  // selector that specifies a second-level span
+  event_buf.length = 0;
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return '<div id="foozy"><span>Foo</span></div>';
+  }, {events: eventmap("click span")}));
+  simulateEvent(getid("foozy").firstChild, 'click');
+  test.equal(event_buf, ['click span']);
+  div.kill();
+  Meteor.flush();
+
+  // replaced top-level elements still have event handlers
+  // even if not replaced by the chunk wih the handlers
+  // FAILS in 0.3.3
+  var R = ReactiveVar("p");
+  event_buf.length = 0;
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return Meteor.ui.chunk(function() {
+      return '<'+R.get()+' id="foozy">Hello</'+R.get()+'>';
+    });
+  }, {events: eventmap("click")}));
+  simulateEvent(getid("foozy"), 'click');
+  test.equal(event_buf, ['click']);
+  event_buf.length = 0;
+  R.set("div"); // change tag, which is sure to replace element
+  Meteor.flush();
+  simulateEvent(getid("foozy"), 'click'); // still clickable?
+  test.expect_fail();
+  test.equal(event_buf, ['click']);
+  event_buf.length = 0;
+  R.set("p");
+  Meteor.flush();
+  simulateEvent(getid("foozy"), 'click');
+  test.expect_fail();
+  test.equal(event_buf, ['click']);
+  event_buf.length = 0;
+
+  div.kill();
+  Meteor.flush();
+
+
+});
+
+Tinytest.add("liveui - cleanup", function(test) {
+
+  // more exhaustive clean-up testing
+  var stuff = new LocalCollection();
+
+  var add_doc = function() {
+    stuff.insert({foo:'bar'}); };
+  var clear_docs = function() {
+    stuff.remove({}); };
+  var remove_one = function() {
+    stuff.remove(stuff.findOne()._id); };
+
+  add_doc(); // start the collection with a doc
+
+  var R = ReactiveVar("x");
+
+  var div = OnscreenDiv(Meteor.ui.render(function() {
+    return Meteor.ui.listChunk(
+      stuff.find(),
+      function() { return R.get()+"1"; },
+      function() { return R.get()+"0"; });
+  }));
+
+  test.equal(div.text(), "x1");
+  Meteor.flush();
+  test.equal(div.text(), "x1");
+  test.equal(R.numListeners(), 1);
+
+  clear_docs();
+  Meteor.flush();
+  test.equal(div.text(), "x0");
+  test.equal(R.numListeners(), 1); // test clean-up of doc on remove
+
+  add_doc();
+  Meteor.flush();
+  test.equal(div.text(), "x1");
+  test.equal(R.numListeners(), 1); // test clean-up of "else" listeners
+
+  add_doc();
+  Meteor.flush();
+  test.equal(div.text(), "x1x1");
+  test.equal(R.numListeners(), 2);
+
+  remove_one();
+  Meteor.flush();
+  test.equal(div.text(), "x1");
+  test.equal(R.numListeners(), 1); // test clean-up of doc with other docs
+
+  div.kill();
+  Meteor.flush();
+  test.equal(R.numListeners(), 0);
+
+});
+
+
 // TO TEST:
 // - events
 //   - attaching events in render, chunk, listChunk item, listChunk else
-//   - test that handlers still work under various sub-partial replacements
-
-// XXX GC testing: for sake of coverage, removing any 'LiveRange.cleanup'
-// call should cause breakage somewhere.
-
 
