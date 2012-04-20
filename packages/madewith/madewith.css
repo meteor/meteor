@@ -4,6 +4,7 @@ a.madewith_link {
 }
 
 .madewith_badge {
+  z-index: 10000;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   position: fixed;
   top: 0;
