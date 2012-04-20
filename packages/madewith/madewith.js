@@ -19,7 +19,7 @@
 
   Template.madewith.vote_count = function() {
     var app = apps.findOne();
-    return app ? app.vote_count : '';
+    return app ? app.vote_count : '???';
   };
 
   Template.madewith.shortname = function () {
