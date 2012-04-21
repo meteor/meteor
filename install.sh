@@ -26,6 +26,7 @@ rm -rf "$TARGET_DIR"
 ./meteor --version || exit 1
 
 cp -a dev_bundle "$TARGET_DIR"
+cp LICENSE.txt "$TARGET_DIR"
 
 function CPR {
     tar -c --exclude .meteor/local "$1" | tar -x -C "$2"
