@@ -7,7 +7,7 @@ Vendor: Meteor
 Name: meteor
 Version: 0.3.2
 Release: 1
-License: GPL-2
+License: MIT
 Group: Networking/WWW
 Packager: Meteor Packaging Team <contact@meteor.com>
 URL: http://meteor.com/
