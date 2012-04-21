@@ -1,0 +1,43 @@
+/* CSS declarations go here */
+a.madewith_badge {
+  text-decoration: none;
+  z-index: 10000;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  display: block;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 280px;
+  height: 32px;
+  background-repeat: no-repeat;
+  background-position: left top;
+  font-weight: bold;
+}
+
+.madewith_upvote {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 205px;
+  width: 26px;
+  cursor: pointer;
+  background-repeat: no-repeat;
+  background-position: 100px 100px; /* hidden */
+}
+
+.madewith_upvote:hover {
+  background-position: 5px 3px;
+}
+
+.madewith_vote_count {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  right: 2px;
+  width: 52px;
+  text-align: center;
+  overflow: visible;
+  color: #fff;
+  line-height: 28px;
+  font-size: 18px;
+}
