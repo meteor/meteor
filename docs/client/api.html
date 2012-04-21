@@ -618,16 +618,6 @@ cursor, use [`forEach`](#foreach), [`map`](#map), or [`fetch`](#fetch).
 When called in a reactive context, `forEach` registers dependencies on
 the matching documents.
 
-{{> api_box cursor_map}}
-
-When called in a reactive context, `map` registers dependencies on
-the matching documents.
-
-{{> api_box cursor_fetch}}
-
-When called in a reactive context, `fetch` registers dependencies on
-the matching documents.
-
 Examples:
 
     // Print the titles of the five top-scoring posts
@@ -637,6 +627,16 @@ Examples:
       console.log("Title of post " + count + ": " + post.title);
       count += 1;
     });
+
+{{> api_box cursor_map}}
+
+When called in a reactive context, `map` registers dependencies on
+the matching documents.
+
+{{> api_box cursor_fetch}}
+
+When called in a reactive context, `fetch` registers dependencies on
+the matching documents.
 
 {{> api_box cursor_count}}
 
