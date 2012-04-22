@@ -99,6 +99,10 @@ var PackageInstance = function (pkg, bundle) {
       });
     },
 
+    add_head_extra: function(extra, where) {
+      self.add_head(extra, where);
+    },
+
     // Return a list of all of the extension that indicate source files
     // inside this package, INCLUDING leading dots.
     registered_extensions: function () {
@@ -196,7 +200,13 @@ _.extend(PackageInstance.prototype, {
             where);
 
     self.dependencies[rel_path] = true;
+  },
+
+  add_head: function (extra, where) {
+    var self = this;
+    self.bundle.head.push(extra);
   }
+
 });
 
 ///////////////////////////////////////////////////////////////////////////////
