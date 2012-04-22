@@ -52,10 +52,6 @@ var toc = [
     "Seven principles",
     "Resources"
   ],
-  "Examples", [
-    "Leaderboard",
-    "Todos"
-  ],
   "Concepts", [
     "Structuring your app",
     "Data",
