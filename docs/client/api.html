@@ -1358,6 +1358,10 @@ then restores its previous value.)
 
 <h2 id="meteor_http"><span>Meteor.http</span></h2>
 
+`Meteor.http` provides an HTTP API on the client and server.  To use
+these functions, add the HTTP package to your project with `meteor add
+http`.
+
 {{> api_box httpcall}}
 
 This function initiates an HTTP request to a remote server. It returns
@@ -1446,7 +1450,10 @@ Example asynchronous HTTP call:
                      });
 
 
-{{> api_box httphelpers}}
+{{> api_box http_get}}
+{{> api_box http_post}}
+{{> api_box http_put}}
+{{> api_box http_del}}
 
 
 {{/better_markdown}}
