@@ -10,7 +10,9 @@ Package.register_extension(
     serve_path = serve_path + '.js';
 
     var contents = fs.readFileSync(source_path);
-    contents = new Buffer(coffee.compile(contents.toString('utf8')));
+		var options = {};
+		options.bare = true;
+    contents = new Buffer(coffee.compile(contents.toString('utf8'),options));
     // XXX report coffee compile failures better?
 
     bundle.add_resource({
