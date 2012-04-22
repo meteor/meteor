@@ -297,6 +297,8 @@ var Bundle = function () {
           if (w !== "client")
             throw new Error("HTML segments can only go to the client");
           self[options.type].push(data);
+        } else if (options.type === "img") {
+          self.files.client[options.path] = data;
         } else {
           throw new Error("Unknown type " + options.type);
         }
