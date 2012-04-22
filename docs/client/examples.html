@@ -1,0 +1,55 @@
+<template name="examples">
+{{#better_markdown}}
+
+# Examples
+
+The source to all our Meteor examples is
+<a target="_blank" href="https://github.com/meteor/meteor/tree/master/examples">available
+on GitHub</a>.
+
+    git clone git@github.com:meteor/meteor.git
+    cd meteor/examples/todos
+    meteor
+
+## Leaderboard
+
+The `leaderboard` example shows a basic Meteor application.  This
+example is under 100 lines of JavaScript. Read the source
+<a target="_blank" href="https://github.com/meteor/meteor/blob/master/examples/leaderboard/leaderboard.js">
+on GitHub</a> or check out the
+<a target="_blank" href="http://leaderboard.meteor.com">live
+  example</a>. Try opening it in two browsers simultaneously!
+
+## Todos
+
+The second example is the classic Todos application.  Our version
+includes several advanced features demonstrating the power of the
+Meteor platform.
+
+<dl class="example">
+
+<dt>Persistence</dt>
+<dd>Your todo items are fully persistent, whether running locally or
+deployed to a server.  They survive across browser reloads and Meteor
+restarts.</dd>
+
+<dt>Multi-user</dt>
+<dd>Meteor automatically synchronizes database state across
+multiple clients. Try opening the demo in two different browsers!</dd>
+
+<dt>Tagging and filtering</dt>
+<dd>To demonstrate how easy it is to sort and
+filter data with Meteor, we added tags to todo items. Each item can be
+tagged with multiple tags, and you can filter on those tags.</dd>
+
+<dt>Templates</dt>
+<dd>Todos uses Meteor's
+reactive Handlebars templates to generate and update DOM elements.</dd>
+
+</dl>
+
+Check out the live todos example at
+<a target="_blank" href="http://todos.meteor.com">todos.meteor.com</a>. The source is about 250 lines of JavaScript and is <a target="_blank" href="https://github.com/meteor/meteor/tree/master/examples/todos">on GitHub</a>.
+
+{{/better_markdown}}
+</template>
