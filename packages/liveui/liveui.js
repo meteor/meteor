@@ -249,7 +249,7 @@ Meteor.ui = Meteor.ui || {};
         (Meteor.ui._onscreen(node) || Meteor.ui._is_held(node)))
       return false;
 
-    Meteor.ui._LiveRange.cleanup(range);
+    range.destroy(true);
 
     return true;
   };
@@ -275,7 +275,7 @@ Meteor.ui = Meteor.ui || {};
     cx.on_invalidate(function() {
       --frag._liveui_refs;
       if (! frag._liveui_refs)
-        Meteor.ui._LiveRange.cleanup(frag, Meteor.ui._LiveUIRange.tag);
+        cleanup(frag);
     });
     cx.invalidate();
   };
@@ -458,8 +458,12 @@ Meteor.ui = Meteor.ui || {};
 
     //old_range.replace_contents(new_parent);
 
-    old_range.replace_contents(function() {
-      Meteor.ui._LiveRange.cleanup(old_range);
+    old_range.replace_contents(function(start, end) {
+      var r;
+      r = new Meteor.ui._LiveUIRange(start, end);
+      r.destroy(true);
+      r = { firstNode: function() { return start; },
+            lastNode: function() { return end; } };
 
       // remove event handlers on old nodes (which we will be patching)
       // at top level, where they are attached by $(...).delegate().
@@ -468,7 +472,7 @@ Meteor.ui = Meteor.ui || {};
           n = n.nextSibling)
         $(n).unbind();
 
-      patch(old_range, new_parent);
+      patch(r, new_parent);
     });
 
   };
@@ -537,8 +541,7 @@ Meteor.ui = Meteor.ui || {};
         var frag = makeItem(doc);
         var range = new Meteor.ui._LiveUIRange(frag);
         if (range_list.length === 0)
-          Meteor.ui._LiveRange.cleanup(outer_range.replace_contents(frag),
-                                       Meteor.ui._LiveUIRange.tag);
+          cleanup(outer_range.replace_contents(frag));
         else if (before_idx === range_list.length)
           range_list[range_list.length-1].insert_after(frag);
         else
@@ -548,14 +551,11 @@ Meteor.ui = Meteor.ui || {};
       },
       removed: function(doc, at_idx) {
         if (range_list.length === 1)
-          Meteor.ui._LiveRange.cleanup(
+          cleanup(
             outer_range.replace_contents(Meteor.ui.render(
-              else_func, react_data)),
-            Meteor.ui._LiveUIRange.tag);
+              else_func, react_data)));
         else
-          Meteor.ui._LiveRange.cleanup(
-            range_list[at_idx].extract(),
-            Meteor.ui._LiveUIRange.tag);
+          cleanup(range_list[at_idx].extract());
 
         range_list.splice(at_idx, 1);
       },
@@ -600,4 +600,8 @@ Meteor.ui = Meteor.ui || {};
       "<!-- ENDRANGE_"+commentId+" -->";
   };
 
+
+  var cleanup = function(frag) {
+    (new Meteor.ui._LiveUIRange(frag)).destroy(true);
+  };
 })();

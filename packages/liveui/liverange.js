@@ -215,10 +215,41 @@ Meteor.ui = Meteor.ui || {};
   // object. However, on old versions of IE, you probably do need to
   // manually remove all ranges because IE can't GC reference cycles
   // through the DOM.
-  Meteor.ui._LiveRange.prototype.destroy = function () {
-    this._remove_entries(this._start, 0, this._start_idx, this._start_idx + 1);
-    this._remove_entries(this._end, 1, this._end_idx, this._end_idx + 1);
-    this._start = this._end = null;
+  Meteor.ui._LiveRange.prototype.destroy = function (recursive) {
+    if (recursive) {
+      this.visit(function(is_start, range) {
+        if (is_start) {
+          range.finalize();
+          range._start = null;
+          range._end = null;
+        }
+      }, function(is_start, node) {
+        if (! is_start) {
+          // when leaving a node, clean its children
+          for(var n = node.firstChild; n; n = n.nextSibling) {
+            Meteor.ui._LiveRange._clean_node(this.tag, n, true);
+          }
+        }
+      });
+
+      this._remove_entries(this._start, 0, this._start_idx);
+      this._remove_entries(this._end, 1, 0, this._end_idx + 1);
+      // force-clean the top-level nodes in this, besides _start and _end
+      if (this._start !== this._end) {
+        for(var n = this._start.nextSibling;
+            n !== this._end;
+            n = n.nextSibling) {
+          Meteor.ui._LiveRange._clean_node(this.tag, n, true);
+        }
+      }
+
+      this._start = this._end = null;
+
+    } else {
+      this._remove_entries(this._start, 0, this._start_idx, this._start_idx + 1);
+      this._remove_entries(this._end, 1, this._end_idx, this._end_idx + 1);
+      this._start = this._end = null;
+    }
   };
 
   // Return the first node in the range (in preorder traversal)
@@ -263,9 +294,10 @@ Meteor.ui = Meteor.ui || {};
   Meteor.ui._LiveRange.visit_children = function(rangeOrParent, tag,
                                                  visit_range, visit_node)
   {
-    if (rangeOrParent instanceof Meteor.ui._LiveRange)
-      rangeOrParent.visit(visit_range, visit_node);
-    else {
+    if (rangeOrParent.firstNode) {
+      _visit_nodes(rangeOrParent.tag, rangeOrParent.firstNode(),
+                   rangeOrParent.lastNode(), visit_range, visit_node);
+    } else {
       if (rangeOrParent.firstChild)
         _visit_nodes(tag, rangeOrParent.firstChild, rangeOrParent.lastChild,
                      visit_range, visit_node);
@@ -275,7 +307,7 @@ Meteor.ui = Meteor.ui || {};
   // If ranges starting between first_node and last_node extend past
   // last_node, we will visit them and keep going.  We don't detect
   // when we follow a range end past last_node.  Tag is optional
-    // if we won't be visiting ranges.
+  // if we won't be visiting ranges.
   var _visit_nodes =
         function(tag, first_node, last_node, visit_range, visit_node,
                  start_range_skip)
@@ -291,10 +323,15 @@ Meteor.ui = Meteor.ui || {};
         if (startData && startIndex < startData.length) {
           // immediate child range that starts with n
           var range = startData[startIndex];
+          // copy _start and _end in case they change inside
+          // the callback (hard to support in the general case,
+          // but useful in destroy(true) for example)
+          var range_start = range._start;
+          var range_end = range._end;
           if (visit_range(true, range) !== false)
-            recurse(range._start, range._end, startIndex+1);
+            recurse(range_start, range_end, startIndex+1);
           visit_range(false, range);
-          n = range._end;
+          n = range_end;
         }
         else {
           // bare node
@@ -392,7 +429,7 @@ Meteor.ui = Meteor.ui || {};
 
     if (typeof new_frag_or_func === "function") {
 
-      ret = new_frag_or_func();
+      ret = new_frag_or_func(old_start, old_end);
 
     } else {
 
@@ -536,43 +573,6 @@ Meteor.ui = Meteor.ui || {};
       result.appendChild(n);
 
     return result;
-  };
-
-  // Strip all livedata information from nodes in rangeOrParent, calling
-  // finalize() on each range found.  Most liverange operations are not
-  // safe to call on a liverange from the finalizer, as the liverange tree
-  // is being torn down.  If rangeOrParent is a range, its tag is used
-  // instead of the tag argument.
-  Meteor.ui._LiveRange.cleanup = function(rangeOrParent, tag)
-  {
-    var first_node, last_node;
-    if (rangeOrParent instanceof Meteor.ui._LiveRange) {
-      first_node = rangeOrParent.firstNode();
-      last_node = rangeOrParent.lastNode();
-      tag = rangeOrParent.tag;
-    } else {
-      first_node = rangeOrParent.firstChild;
-      last_node = rangeOrParent.lastChild;
-    }
-
-    var ranges = [];
-    _visit_nodes(tag, first_node, last_node,
-      function(is_start, range) {
-        is_start && ranges.push(range);
-      });
-
-    for(var i=0; i<ranges.length; i++) {
-      var r = ranges[i];
-      r.finalize && r.finalize();
-      r._start = null;
-      r._end = null;
-    }
-
-    _visit_nodes(
-      null, first_node, last_node, null,
-      function(is_start, node) {
-        is_start && Meteor.ui._LiveRange._clean_node(tag, node, true);
-      });
   };
 
 })();
