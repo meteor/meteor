@@ -537,7 +537,8 @@ Meteor.ui = Meteor.ui || {};
         var frag = makeItem(doc);
         var range = new Meteor.ui._LiveUIRange(frag);
         if (range_list.length === 0)
-          outer_range.replace_contents(frag);
+          Meteor.ui._LiveRange.cleanup(outer_range.replace_contents(frag),
+                                       Meteor.ui._LiveUIRange.tag);
         else if (before_idx === range_list.length)
           range_list[range_list.length-1].insert_after(frag);
         else
@@ -547,10 +548,14 @@ Meteor.ui = Meteor.ui || {};
       },
       removed: function(doc, at_idx) {
         if (range_list.length === 1)
-          outer_range.replace_contents(Meteor.ui.render(
-            else_func, react_data));
+          Meteor.ui._LiveRange.cleanup(
+            outer_range.replace_contents(Meteor.ui.render(
+              else_func, react_data)),
+            Meteor.ui._LiveUIRange.tag);
         else
-          range_list[at_idx].extract(false);
+          Meteor.ui._LiveRange.cleanup(
+            range_list[at_idx].extract(),
+            Meteor.ui._LiveUIRange.tag);
 
         range_list.splice(at_idx, 1);
       },

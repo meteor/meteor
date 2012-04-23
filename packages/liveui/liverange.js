@@ -370,7 +370,7 @@ Meteor.ui = Meteor.ui || {};
   // fully functional while the function executes.  They have start and end
   // nodes, but those nodes do not have pointers back to them.
   Meteor.ui._LiveRange.prototype.replace_contents =
-    function (new_frag_or_func, and_return)
+    function (new_frag_or_func)
   {
     // boundary nodes of departing fragment
     var old_start = this._start;
@@ -392,7 +392,7 @@ Meteor.ui = Meteor.ui || {};
 
     if (typeof new_frag_or_func === "function") {
 
-      ret = new_frag_or_func(and_return);
+      ret = new_frag_or_func();
 
     } else {
 
@@ -416,11 +416,6 @@ Meteor.ui = Meteor.ui || {};
         walk = next;
         if (!walk)
           throw new Error("LiveRanges must begin and end on siblings in order");
-      }
-
-      if (! and_return) {
-        Meteor.ui._LiveRange.cleanup(ret, this.tag);
-        ret = null;
       }
 
     }
@@ -503,7 +498,7 @@ Meteor.ui = Meteor.ui || {};
                                               this._end_idx + 1));
   };
 
-  Meteor.ui._LiveRange.prototype.extract = function(and_return) {
+  Meteor.ui._LiveRange.prototype.extract = function() {
     if (this._start_idx > 0 &&
         this._start[this.tag][0][this._start_idx - 1]._end === this._end) {
       // immediately enclosing range wraps same nodes, so can't extract because
@@ -539,11 +534,6 @@ Meteor.ui = Meteor.ui || {};
         n = before ? before.nextSibling : parent.firstChild,
         n && n !== after;)
       result.appendChild(n);
-
-    if (! and_return) {
-      Meteor.ui._LiveRange.cleanup(result, this.tag);
-      result = null;
-    }
 
     return result;
   };
