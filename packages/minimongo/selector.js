@@ -395,7 +395,7 @@ LocalCollection._exprForKeypathPredicate = function (keypath, value, literals) {
       // for all but the innermost level of a dotted expression,
       // if the runtime type is an array, search it
       ret = 'f._matches(' + formal + '[' + JSON.stringify(part) +
-        '], function(x){return ' + ret + ';}';
+        '], function(x){return ' + ret + ';})';
     }
   }
 
