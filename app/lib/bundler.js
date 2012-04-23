@@ -519,6 +519,23 @@ _.extend(Bundle.prototype, {
       fs.writeFileSync(full_path, self.files.client_cacheable[rel_path]);
     }
 
+    // -- Add query params to client js and css --
+    // This busts through browser caches when files change.
+    var add_query_param = function (file) {
+      if (file in self.files.client_cacheable)
+        return file;
+      else if (file in self.files.client) {
+        var hash = crypto.createHash('sha1');
+        hash.update(self.files.client[file]);
+        var digest = hash.digest('hex');
+        return file + "?" + digest;
+      }
+      // er? file we don't know how to serve? thats not right...
+      return file;
+    };
+    self.js.client = _.map(self.js.client, add_query_param);
+    self.css = _.map(self.css, add_query_param);
+
     // ---  Server code and generated files ---
 
     app_json.load = [];

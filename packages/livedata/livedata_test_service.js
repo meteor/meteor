@@ -11,6 +11,7 @@ Meteor.methods({
       where === "both";
 
     if (shouldThrow) {
+      var e;
       if (intended)
         e = new Meteor.Error(999, "Client-visible test exception");
       else

@@ -1,0 +1,12 @@
+<body>
+  {{> madewith}}
+</body>
+
+<template name="madewith">
+  <a class="madewith_badge" href="http://madewith.meteor.com/{{shortname}}" target="_blank">
+    <div class="madewith_votes">
+      <div class="madewith_upvote"></div>
+      <div class="madewith_vote_count">{{vote_count}}</div>
+    </div>
+  </a>
+</template>
