@@ -3,3 +3,4 @@
 /dev_bundle
 /dev_bundle*.tar.gz
 /dist
+*.swp
