@@ -55,74 +55,80 @@ Meteor.ui = Meteor.ui || {};
     var rangeStartNodes = {};
     var rangesCreated = []; // [[range, id], ...]
     each_comment(frag, function(n) {
-      var next = null;
 
-      // XXX use match instead of replace to clarify
+      var rangeCommentMatch = /^\s*(START|END)RANGE_(\S+)/.exec(n.nodeValue);
+      if (! rangeCommentMatch)
+        return null;
 
-      n.nodeValue.replace(/^\s*(START|END)RANGE_(\S+)/, function(z, which, id) {
-        if (which === "START") {
-          if (rangeStartNodes[id])
-            throw new Error("The return value of chunk can only be used once.");
-          rangeStartNodes[id] = n;
-        } else if (which === "END") {
-          var startNode = rangeStartNodes[id], endNode = n;
+      var which = rangeCommentMatch[1];
+      var id = rangeCommentMatch[2];
 
-          next = endNode.nextSibling;
-          // try to remove comments
-          var a = startNode, b = endNode;
-          if (a.nextSibling && b.previousSibling) {
-            if (a.nextSibling === b) {
-              // replace two adjacent comments with one
-              endNode = startNode;
-              b.parentNode.removeChild(b);
-              startNode.nodeValue = 'placeholder';
-            } else {
-              // remove both comments
-              startNode = startNode.nextSibling;
-              endNode = endNode.previousSibling;
-              a.parentNode.removeChild(a);
-              b.parentNode.removeChild(b);
-            }
-          } else {
-            /* shouldn't happen; invalid HTML? */
-          }
+      if (which === "START") {
+        if (rangeStartNodes[id])
+          throw new Error("The return value of chunk can only be used once.");
+        rangeStartNodes[id] = n;
 
-          if (startNode.parentNode !== endNode.parentNode) {
-            // Try to fix messed-up comment ranges like
-            // <!-- #1 --><tbody> ... <!-- /#1 --></tbody>,
-            // which are extremely common with tables.  Tests
-            // fail in all browsers without this code.
-            if (startNode === endNode.parentNode ||
-                startNode === endNode.parentNode.previousSibling) {
-              startNode = endNode.parentNode.firstChild;
-            } else if (endNode === startNode.parentNode ||
-                       endNode === startNode.parentNode.nextSibling) {
-              endNode = startNode.parentNode.lastChild;
-            } else {
-              var r = new RegExp('<!--\\s*STARTRANGE_'+id+'.*?-->', 'g');
-              var match = r.exec(html);
-              var help = "";
-              if (match) {
-                var comment_end = r.lastIndex;
-                var comment_start = comment_end - match[0].length;
-                var stripped_before = html.slice(0, comment_start).replace(
-                    /<!--\s*(START|END)RANGE.*?-->/g, '');
-                var stripped_after = html.slice(comment_end).replace(
-                    /<!--\s*(START|END)RANGE.*?-->/g, '');
-                var context_amount = 50;
-                var context = stripped_before.slice(-context_amount) +
-                      stripped_after.slice(0, context_amount);
-                help = " (possible unclosed near: "+context+")";
-              }
-              throw new Error("Could not create liverange in template. "+
-                             "Check for unclosed tags in your HTML."+help);
-            }
-          }
+        return null;
+      }
+      // else: which === "END"
 
-          var range = new LiveRange(Meteor.ui._tag, startNode, endNode);
-          rangesCreated.push([range, id]);
+      var startNode = rangeStartNodes[id];
+      var endNode = n;
+      var next = endNode.nextSibling;
+
+      // try to remove comments
+      var a = startNode, b = endNode;
+      if (a.nextSibling && b.previousSibling) {
+        if (a.nextSibling === b) {
+          // replace two adjacent comments with one
+          endNode = startNode;
+          b.parentNode.removeChild(b);
+          startNode.nodeValue = 'placeholder';
+        } else {
+          // remove both comments
+          startNode = startNode.nextSibling;
+          endNode = endNode.previousSibling;
+          a.parentNode.removeChild(a);
+          b.parentNode.removeChild(b);
         }
-      });
+      } else {
+        /* shouldn't happen; invalid HTML? */
+      }
+
+      if (startNode.parentNode !== endNode.parentNode) {
+        // Try to fix messed-up comment ranges like
+        // <!-- #1 --><tbody> ... <!-- /#1 --></tbody>,
+        // which are extremely common with tables.  Tests
+        // fail in all browsers without this code.
+        if (startNode === endNode.parentNode ||
+            startNode === endNode.parentNode.previousSibling) {
+          startNode = endNode.parentNode.firstChild;
+        } else if (endNode === startNode.parentNode ||
+                   endNode === startNode.parentNode.nextSibling) {
+          endNode = startNode.parentNode.lastChild;
+        } else {
+          var r = new RegExp('<!--\\s*STARTRANGE_'+id+'.*?-->', 'g');
+          var match = r.exec(html);
+          var help = "";
+          if (match) {
+            var comment_end = r.lastIndex;
+            var comment_start = comment_end - match[0].length;
+            var stripped_before = html.slice(0, comment_start).replace(
+                /<!--\s*(START|END)RANGE.*?-->/g, '');
+            var stripped_after = html.slice(comment_end).replace(
+                /<!--\s*(START|END)RANGE.*?-->/g, '');
+            var context_amount = 50;
+            var context = stripped_before.slice(-context_amount) +
+                  stripped_after.slice(0, context_amount);
+            help = " (possible unclosed near: "+context+")";
+          }
+          throw new Error("Could not create liverange in template. "+
+                          "Check for unclosed tags in your HTML."+help);
+        }
+      }
+
+      var range = new LiveRange(Meteor.ui._tag, startNode, endNode);
+      rangesCreated.push([range, id]);
 
       return next;
     });
