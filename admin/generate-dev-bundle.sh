@@ -169,48 +169,6 @@ rm bsondump mongodump mongoexport mongofiles mongoimport mongorestore mongos mon
 cd ../..
 
 
-## Install socket.io. Even though we're not using it any more, we still
-## want it in the dev bundle so that older apps already deployed to
-## mother can still run.
-cd "$DIR/lib/node_modules"
-npm install socket.io@0.8.7
-# Remove annoying print from socket.io that can't be disabled in config.
-cd "$DIR"
-patch -p2 <<EOF
-diff --git a/dev_bundle/lib/node_modules/socket.io/lib/manager.js b/dev_bundle/lib/node_modules/socket.io/lib/manager.js
-index ee2bf49..a68f9cb 100644
---- a/dev_bundle/lib/node_modules/socket.io/lib/manager.js
-+++ b/dev_bundle/lib/node_modules/socket.io/lib/manager.js
-@@ -114,7 +114,7 @@ function Manager (server, options) {
-     }
-   }
- 
--  this.log.info('socket.io started');
-+  // this.log.info('socket.io started'); // XXX meteor disabled
- };
- 
- Manager.prototype.__proto__ = EventEmitter.prototype
-EOF
-# Patch an issue already fixed in socket.io master, but not released yet.
-# https://github.com/LearnBoost/socket.io-client/commit/7155d84af997dcfca418568dfcc778263926d7b2
-cd "$DIR/lib/node_modules/socket.io/node_modules/socket.io-client"
-patch -p1 <<EOF
-diff --git a/lib/socket.js b/lib/socket.js
-index 0f1b1c7..932beaa 100644
---- a/lib/socket.js
-+++ b/lib/socket.js
-@@ -405,7 +405,7 @@
-   Socket.prototype.onError = function (err) {
-     if (err && err.advice) {
--      if (err.advice === 'reconnect' && this.connected) {
-+      if (this.options.reconnect && err.advice === 'reconnect' && this.connected) {
-         this.disconnect();
-         this.reconnect();
-       }
-EOF
-# rebuild
-make build
-
 
 echo BUNDLING
 
