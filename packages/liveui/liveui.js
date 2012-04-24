@@ -356,17 +356,8 @@ Meteor.ui = Meteor.ui || {};
   };
 
   // XXX jQuery dependency
-  // 'event_data' will be an additional argument to event callback
   Meteor.ui._setupEvents = function (elt, events, event_data) {
     events = events || {};
-    function create_callback (callback) {
-      // return a function that will be used as the jquery event
-      // callback, in which "this" is bound to the DOM element bound
-      // to the event.
-      return function (evt) {
-        callback.call(event_data, evt);
-      };
-    };
 
     for (var spec in events) {
       var clauses = spec.split(/,\s+/);
@@ -375,14 +366,22 @@ Meteor.ui = Meteor.ui || {};
         if (parts.length === 0)
           return;
 
-        if (parts.length === 1) {
-          $(elt).bind(parts[0], create_callback(events[spec]));
-        } else {
-          var event = parts.shift();
-          var selector = parts.join(' ');
-          var callback = create_callback(events[spec]);
-          $(elt).delegate(selector, event, callback);
-        }
+        var event = parts.shift();
+        var selector = parts.join(' ');
+        var callback = events[spec];
+        $.event.add(elt, event, function(evt) {
+          if (selector) {
+            // target must match selector
+            var target = evt.target;
+            // use element's parentNode as a "context"; any elements
+            // referenced in the selector must be proper descendents
+            // of the context.
+            var results = $(elt.parentNode).find(selector);
+            if (! _.contains(results, target))
+              return;
+          }
+          callback.call(event_data, evt);
+        });
       });
     }
   };
