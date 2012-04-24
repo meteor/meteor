@@ -292,6 +292,21 @@ Tinytest.add("liveui - tables", function(test) {
   div.kill();
   Meteor.flush();
   test.equal(R.numListeners(), 0);
+
+  // Test tables with patching
+  R.set("");
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return '<table id="my-awesome-table">'+R.get()+'</table>';
+  }));
+  Meteor.flush();
+  R.set("<tr><td>Hello</td></tr>");
+  Meteor.flush();
+  test.equal(
+    div.html(),
+    '<table id="my-awesome-table"><tbody><tr><td>Hello</td></tr></tbody></table>');
+  div.kill();
+  Meteor.flush();
+
 });
 
 Tinytest.add("liveui - preserved nodes (diff/patch)", function(test) {
