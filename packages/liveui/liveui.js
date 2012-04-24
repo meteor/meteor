@@ -390,89 +390,42 @@ Meteor.ui = Meteor.ui || {};
 
   // Performs a replacement by determining which nodes should
   // be preserved and invoking Meteor.ui._Patcher as appropriate.
-  Meteor.ui._intelligent_replace = function(old_range, new_parent) {
+  Meteor.ui._intelligent_replace = function(tgtRange, srcParent) {
 
-    // Table-body fix:  if old_range is in a table and new_parent
+    // Table-body fix:  if tgtRange is in a table and srcParent
     // contains a TR, wrap fragment in a TBODY on all browsers,
     // so that it will display properly in IE.
-    if (old_range.containerNode().nodeName === "TABLE" &&
-        _.any(new_parent.childNodes,
+    if (tgtRange.containerNode().nodeName === "TABLE" &&
+        _.any(srcParent.childNodes,
               function(n) { return n.nodeName === "TR"; })) {
       var tbody = document.createElement("TBODY");
-      while (new_parent.firstChild)
-        tbody.appendChild(new_parent.firstChild);
-      new_parent.appendChild(tbody);
+      while (srcParent.firstChild)
+        tbody.appendChild(srcParent.firstChild);
+      srcParent.appendChild(tbody);
     }
 
-    var each_labeled_node = function(rangeOrParent, func) {
-      var visit_node = function(is_start, node) {
-        if (is_start && node.nodeType === 1) {
-          if (node.id) {
-            func('#'+node.id, node);
-          } else if (node.getAttribute("name")) {
-            func(node.getAttribute("name"), node);
-          } else {
-            return true;
-          }
-          return false; // skip children of labeled node
-        }
-        return true;
-      };
-
-      Meteor.ui._LiveRange.visit_children(rangeOrParent, null, null,
-                                          visit_node);
+    var copyFunc = function(t, s) {
+      $(t).unbind(); // XXX remove jquery events from node
+      tgtRange.transplant_tag(t, s);
     };
 
-    var patch = function(targetRangeOrParent, sourceNode) {
+    //tgtRange.replace_contents(srcParent);
 
-      var targetNodes = {};
-      var targetNodeOrder = {};
-      var targetNodeCounter = 0;
-
-      each_labeled_node(targetRangeOrParent, function(label, node) {
-        targetNodes[label] = node;
-        targetNodeOrder[label] = targetNodeCounter++;
-      });
-
-      var patcher = new Meteor.ui._Patcher(
-        targetRangeOrParent, sourceNode);
-      var lastPos = -1;
-      var copyFunc = function(t, s) {
-        $(t).unbind(); // XXX remove jquery events from node
-        old_range.transplant_tag(t, s);
-      };
-      each_labeled_node(sourceNode, function(label, node) {
-        var tgt = targetNodes[label];
-        var src = node;
-        if (tgt && targetNodeOrder[label] > lastPos) {
-          if (patcher.match(tgt, src, copyFunc)) {
-            // match succeeded
-            if (tgt.firstChild || src.firstChild)
-              patch(tgt, src); // recurse
-          }
-          lastPos = targetNodeOrder[label];
-        }
-      });
-      patcher.finish();
-    };
-
-    //old_range.replace_contents(new_parent);
-
-    old_range.replace_contents(function(start, end) {
-      var r;
-      r = new Meteor.ui._LiveUIRange(start, end);
-      r.destroy(true);
-      r = { firstNode: function() { return start; },
-            lastNode: function() { return end; } };
+    tgtRange.replace_contents(function(start, end) {
+      // clear all LiveRanges on target
+      (new Meteor.ui._LiveUIRange(start, end)).destroy(true);
 
       // remove event handlers on old nodes (which we will be patching)
       // at top level, where they are attached by $(...).delegate().
-      for(var n = old_range.firstNode();
-          n && n !== old_range.lastNode().nextSibling;
+      for(var n = start;
+          n && n !== end.nextSibling;
           n = n.nextSibling)
         $(n).unbind();
 
-      patch(r, new_parent);
+      var patcher = new Meteor.ui._Patcher(
+        start.parentNode, srcParent,
+        start.previousSibling, end.nextSibling);
+      patcher.diffpatch(copyFunc);
     });
 
   };

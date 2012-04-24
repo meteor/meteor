@@ -102,7 +102,10 @@ Tinytest.add("smartpatch - basic", function(test) {
     x = div(aaa+"<b><i>foo</i><u>bar</u></b>"+zzz);
     y = div("<b><u>bar</u><s>baz</s></b>");
     var rng = liverange(tag(y, 'u'));
-    p = new Patcher(liverange(tag(x, 'b')), y);
+    var tgt = liverange(tag(x, 'b'));
+    p = new Patcher(tgt.containerNode(), y,
+                    tgt.firstNode().previousSibling,
+                    tgt.lastNode().nextSibling);
     var copyCallback = _.bind(rng.transplant_tag, rng);
     ret = p.match(tag(x, 'u'), tag(y, 'u'), copyCallback);
     test.isTrue(ret);
