@@ -52,14 +52,14 @@ cd build
 
 git clone git://github.com/joyent/node.git
 cd node
-git checkout v0.6.11
+git checkout v0.6.15
 
 # use newer v8. This fixes an issue with node-fibers:
 # https://github.com/laverdet/node-fibers/issues/28
 echo checking out v8
 rm -rf deps/v8
 git clone http://github.com/v8/v8.git deps/v8
-(cd deps/v8 && git checkout 3.9.7)
+(cd deps/v8 && git checkout 3.9.24)
 
 
 # on linux, build a static openssl to link against. Everything else we
@@ -69,8 +69,8 @@ git clone http://github.com/v8/v8.git deps/v8
 # this in the node 0.6 build system. The build system is all different
 # in 0.7, so this will have to change when we upgrade
 if [ "$UNAME" == "Linux" ] ; then
-    curl http://www.openssl.org/source/openssl-1.0.0g.tar.gz | tar -xz
-    cd openssl-1.0.0g
+    curl http://www.openssl.org/source/openssl-1.0.0i.tar.gz | tar -xz
+    cd openssl-1.0.0i
     ./config --prefix="$DIR/build/openssl-out" no-shared
     make install
     NODE_CONFIG_FLAGS=(
@@ -122,21 +122,21 @@ which node
 which npm
 
 cd "$DIR/lib/node_modules"
-npm install connect@1.8.5
+npm install connect@1.8.7 # not 2.x yet. sockjs doesn't work w/ new connect
 npm install gzippo@0.1.4
 npm install optimist@0.3.1
-npm install coffee-script@1.2.0
-npm install less@1.2.1
-npm install mime@1.2.4
+npm install coffee-script@1.3.1
+npm install less@1.3.0
+npm install mime@1.2.5
 npm install semver@1.0.13
-npm install handlebars@1.0.2beta
-npm install mongodb@0.9.7-1.4
-npm install uglify-js@1.2.5
+npm install handlebars@1.0.5beta
+npm install mongodb@0.9.9-8
+npm install uglify-js@1.2.6
 npm install clean-css@0.3.2
 npm install progress@0.0.4
-npm install fibers@0.6.4
-npm install useragent@1.0.5
-npm install request@2.9.3
+npm install fibers@0.6.5
+npm install useragent@1.0.6
+npm install request@2.9.202
 npm install http-proxy@0.8.0
 
 # unused, but kept in bundle for compatibility for a while.
@@ -145,7 +145,7 @@ npm install connect-gzip@0.1.5
 # Sockjs has a broken optional dependancy, and npm optional dependancies
 # don't seem to quite work. Fake it out with a checkout.
 git clone http://github.com/akdubya/rbytes.git
-npm install sockjs@0.2.1
+npm install sockjs@0.2.1 # majek said wait for 0.3.1
 rm -rf rbytes
 
 # Disable mtime check in fibers. Fixes problem when packaging tools
