@@ -414,13 +414,6 @@ Meteor.ui = Meteor.ui || {};
       // clear all LiveRanges on target
       cleanup_range(new LiveRange(Meteor.ui._tag, start, end));
 
-      // remove event handlers on old nodes (which we will be patching)
-      // at top level, where they are attached by $(...).delegate().
-      for(var n = start;
-          n && n !== end.nextSibling;
-          n = n.nextSibling)
-        $(n).unbind();
-
       var patcher = new Meteor.ui._Patcher(
         start.parentNode, srcParent,
         start.previousSibling, end.nextSibling);

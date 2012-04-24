@@ -291,8 +291,23 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
     // never delete value attribute, only overwrite the property
     if (name === "value")
       continue;
+
+    // We want to patch any HTML attributes that were specified in the
+    // source, but preserve DOM properties set programmatically.
+    // Old IE makes this difficult by exposing properties as attributes.
+    // Expando properties will even appear in innerHTML, though not if the
+    // value is an object rather than a primitive.
+    //
+    // We use a heuristic to determine if we are looking at a programmatic
+    // property (an expando) rather than a DOM attribute.
+    //
+    // Losing jQuery's expando (whose value is a number) is very bad,
+    // because it points to event handlers that only jQuery can detach,
+    // and only if the expando is in place.
     var possibleExpando = tgt[name];
-    if (possibleExpando && typeof possibleExpando === "object")
+    if (possibleExpando &&
+        (typeof possibleExpando === "object" ||
+         /^jQuery/.test(name)))
       continue; // for object properties that surface attributes only in IE
     tgt.removeAttributeNode(attr);
   }
