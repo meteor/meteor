@@ -286,34 +286,10 @@ Meteor.ui = Meteor.ui || {};
   // If you create or destroy ranges with this tag from a visitation
   // function, results are undefined!
   Meteor.ui._LiveRange.prototype.visit = function(visit_range, visit_node) {
-    _visit_nodes(this.tag, this._start, this._end,
-                 visit_range, visit_node,
-                 this._start_idx + 1);
-  };
-
-  Meteor.ui._LiveRange.visit_children = function(rangeOrParent, tag,
-                                                 visit_range, visit_node)
-  {
-    if (rangeOrParent.firstNode) {
-      _visit_nodes(rangeOrParent.tag, rangeOrParent.firstNode(),
-                   rangeOrParent.lastNode(), visit_range, visit_node);
-    } else {
-      if (rangeOrParent.firstChild)
-        _visit_nodes(tag, rangeOrParent.firstChild, rangeOrParent.lastChild,
-                     visit_range, visit_node);
-    }
-  };
-
-  // If ranges starting between first_node and last_node extend past
-  // last_node, we will visit them and keep going.  We don't detect
-  // when we follow a range end past last_node.  Tag is optional
-  // if we won't be visiting ranges.
-  var _visit_nodes =
-        function(tag, first_node, last_node, visit_range, visit_node,
-                 start_range_skip)
-  {
     visit_range = visit_range || function() {};
     visit_node = visit_node || function() {};
+
+    var tag = this.tag;
 
     var recurse = function(start, end, start_range_skip) {
       var startIndex = start_range_skip || 0;
@@ -343,7 +319,7 @@ Meteor.ui = Meteor.ui || {};
       }
     };
 
-    recurse(first_node, last_node, start_range_skip);
+    recurse(this._start, this._end, this._start_idx + 1);
   };
 
   // startEnd === 0 for starts, 1 for ends
