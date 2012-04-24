@@ -219,7 +219,6 @@ Meteor.ui = Meteor.ui || {};
     if (recursive) {
       this.visit(function(is_start, range) {
         if (is_start) {
-          range.finalize();
           range._start = null;
           range._end = null;
         }

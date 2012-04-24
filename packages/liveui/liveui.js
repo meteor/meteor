@@ -2,6 +2,8 @@ Meteor.ui = Meteor.ui || {};
 
 (function() {
 
+  var LiveRange = Meteor.ui._LiveRange;
+
   // In render mode (i.e. inside Meteor.ui.render), this is an
   // object, otherwise it is null.
   // callbacks: id -> func, where id ranges from 1 to callbacks._count.
@@ -117,7 +119,7 @@ Meteor.ui = Meteor.ui || {};
             }
           }
 
-          var range = new Meteor.ui._LiveUIRange(startNode, endNode);
+          var range = new LiveRange(Meteor.ui._tag, startNode, endNode);
           rangesCreated.push([range, id]);
         }
       });
@@ -132,7 +134,7 @@ Meteor.ui = Meteor.ui || {};
       Meteor.ui._intelligent_replace(in_range, frag);
       range = in_range;
     } else {
-      range = new Meteor.ui._LiveUIRange(frag);
+      range = new LiveRange(Meteor.ui._tag, frag);
     }
 
     // Call "added to DOM" callbacks to wire up all sub-chunks.
@@ -222,25 +224,16 @@ Meteor.ui = Meteor.ui || {};
   };
 
 
-  // define a subclass of _LiveRange with our tag and a finalize method
-  Meteor.ui._LiveUIRange = function(start, end, inner) {
-    Meteor.ui._LiveRange.call(this, Meteor.ui._LiveUIRange.tag,
-                              start, end, inner);
-  };
-  Meteor.ui._LiveUIRange.prototype = new (
-    _.extend(function() {}, {prototype: Meteor.ui._LiveRange.prototype}));
-  Meteor.ui._LiveUIRange.prototype.finalize = function() {
-    this.killContext();
-  };
-  Meteor.ui._LiveUIRange.prototype.killContext = function() {
-    var cx = this.context;
+  var killContext = function(range) {
+    var cx = range.context;
     if (cx && ! cx.killed) {
       cx.killed = true;
       cx.invalidate && cx.invalidate();
-      delete this.context;
+      delete range.context;
     }
   };
-  Meteor.ui._LiveUIRange.tag = "_liveui";
+
+  Meteor.ui._tag = "_liveui";
 
   var _checkOffscreen = function(range) {
     var node = range.firstNode();
@@ -249,7 +242,7 @@ Meteor.ui = Meteor.ui || {};
         (Meteor.ui._onscreen(node) || Meteor.ui._is_held(node)))
       return false;
 
-    range.destroy(true);
+    cleanup_range(range);
 
     return true;
   };
@@ -275,7 +268,7 @@ Meteor.ui = Meteor.ui || {};
     cx.on_invalidate(function() {
       --frag._liveui_refs;
       if (! frag._liveui_refs)
-        cleanup(frag);
+        cleanup_frag(frag);
     });
     cx.invalidate();
   };
@@ -413,7 +406,7 @@ Meteor.ui = Meteor.ui || {};
 
     tgtRange.replace_contents(function(start, end) {
       // clear all LiveRanges on target
-      (new Meteor.ui._LiveUIRange(start, end)).destroy(true);
+      cleanup_range(new LiveRange(Meteor.ui._tag, start, end));
 
       // remove event handlers on old nodes (which we will be patching)
       // at top level, where they are attached by $(...).delegate().
@@ -444,7 +437,7 @@ Meteor.ui = Meteor.ui || {};
     // record that if we see this range offscreen during a flush,
     // we are to kill the context (mark it killed and invalidate it).
     // Kill old context from previous update.
-    range.killContext();
+    killContext(range);
     range.context = cx;
 
     // wire update
@@ -492,9 +485,9 @@ Meteor.ui = Meteor.ui || {};
     var callbacks = {
       added: function(doc, before_idx) {
         var frag = makeItem(doc);
-        var range = new Meteor.ui._LiveUIRange(frag);
+        var range = new LiveRange(Meteor.ui._tag, frag);
         if (range_list.length === 0)
-          cleanup(outer_range.replace_contents(frag));
+          cleanup_frag(outer_range.replace_contents(frag));
         else if (before_idx === range_list.length)
           range_list[range_list.length-1].insert_after(frag);
         else
@@ -504,11 +497,11 @@ Meteor.ui = Meteor.ui || {};
       },
       removed: function(doc, at_idx) {
         if (range_list.length === 1)
-          cleanup(
+          cleanup_frag(
             outer_range.replace_contents(Meteor.ui.render(
               else_func, react_data)));
         else
-          cleanup(range_list[at_idx].extract());
+          cleanup_frag(range_list[at_idx].extract());
 
         range_list.splice(at_idx, 1);
       },
@@ -553,8 +546,16 @@ Meteor.ui = Meteor.ui || {};
       "<!-- ENDRANGE_"+commentId+" -->";
   };
 
-
-  var cleanup = function(frag) {
-    (new Meteor.ui._LiveUIRange(frag)).destroy(true);
+  var cleanup_frag = function(frag) {
+    cleanup_range(new LiveRange(Meteor.ui._tag, frag));
   };
+
+  var cleanup_range = function(range) {
+    range.visit(function(is_start, range) {
+      if (is_start)
+        killContext(range);
+    });
+    range.destroy(true);
+  };
+
 })();
