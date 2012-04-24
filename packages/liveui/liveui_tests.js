@@ -429,8 +429,11 @@ Tinytest.add("liveui - preserved nodes (diff/patch)", function(test) {
     return buf;
   };
 
-  for(var i=0; i<20; i++) {
-    rand = new SeededRandom("preserved nodes "+i);
+  for(var i=0; i<5; i++) {
+    // Use non-deterministic randomness so we can have a shorter fuzz
+    // test (fewer iterations).  For deterministic (fully seeded)
+    // randomness, remove the call to Math.random().
+    rand = new SeededRandom("preserved nodes "+i+" "+Math.random());
 
     var R = ReactiveVar(false);
     var structure = randomNodeList(null, 4);
