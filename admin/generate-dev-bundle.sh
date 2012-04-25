@@ -151,7 +151,7 @@ npm install connect-gzip@0.1.5
 # Sockjs has a broken optional dependancy, and npm optional dependancies
 # don't seem to quite work. Fake it out with a checkout.
 git clone http://github.com/akdubya/rbytes.git
-npm install sockjs@0.2.1 # majek said wait for 0.3.1
+npm install sockjs@0.3.1
 rm -rf rbytes
 
 # Disable mtime check in fibers. Fixes problem when packaging tools
