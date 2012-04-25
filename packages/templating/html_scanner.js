@@ -1,5 +1,3 @@
-// XXX should allow <!-- --> comments at toplevel
-
 var html_scanner = module.exports = {
   scan: function (contents) {
     var results = { head: '', body: '', js: '' };
@@ -11,6 +9,14 @@ var html_scanner = module.exports = {
   _scanChunk: function (results, contents) {
     if (contents.match(/^\s*$/))
       return '';
+
+    // ignore <!-- --> comments at top level
+    var re = new RegExp("^\\s*<!\\s*--(.*?)(--\\s*>)([\\s\\S]*)$", 'i');
+    var match = contents.match(re);
+    if (match) {
+      return match[3];
+    }
+
     // XXX this is really terrible and buggy. it's just a proof of
     // concept, and probably will fail in all kinds of edge
     // cases. Shouldn't be too hard to clean up, though, and that's
