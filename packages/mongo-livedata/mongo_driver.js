@@ -292,10 +292,11 @@ _Mongo.Cursor = function (mongo, collection_name, selector, options, cursor) {
   self.visited_ids = {};
 };
 
-_Mongo.Cursor.prototype.forEach = function (callback) {
+_Mongo.Cursor.prototype.forEach = function (callback, thisArg) {
   var self = this;
   var future = new Future;
-
+  var index = 0;
+  
   self.cursor.each(function (err, doc) {
     if (err || !doc || !doc._id) {
       future.ret(err);
@@ -304,7 +305,10 @@ _Mongo.Cursor.prototype.forEach = function (callback) {
       // return duplicates
     } else {
       self.visited_ids[doc._id] = true;
-      callback(doc);
+      if (thisArg === undefined)
+        callback(doc, index++);
+      else
+        callback.call(thisArg, doc, index++);
     }
   });
 
@@ -313,11 +317,16 @@ _Mongo.Cursor.prototype.forEach = function (callback) {
     throw err;
 };
 
-_Mongo.Cursor.prototype.map = function (callback) {
+_Mongo.Cursor.prototype.map = function (callback, thisArg) {
   var self = this;
   var res = [];
+  var index = 0;
+  
   self.forEach(function (doc) {
-    res.push(callback(doc));
+    if (thisArg === undefined)
+      res.push(callback(doc, index++));
+    else
+      res.push(callback.call(thisArg, doc, index++));
   });
   return res;
 };

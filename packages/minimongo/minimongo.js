@@ -109,18 +109,26 @@ LocalCollection.Cursor.prototype.forEach = function (callback, thisArg) {
                           changed: true,
                           moved: true});
 
-  while (self.cursor_pos < self.db_objects.length)                       // Cursor position starts at 1, not 0
-    callback(LocalCollection._deepcopy(self.db_objects[self.cursor_pos++]), self.cursor_pos-1, thisArg);
+  while (self.cursor_pos < self.db_objects.length) {
+                // Cursor position starts at 1, not 0
+    var index = self.cursor_pos-1;
+    if (thisArg === undefined)
+      callback(LocalCollection._deepcopy(self.db_objects[self.cursor_pos++]), index);
+    else
+      callback.call(thisArg, LocalCollection._deepcopy(self.db_objects[self.cursor_pos++]), index);
+  }
 };
 
 LocalCollection.Cursor.prototype.map = function (callback, thisArg) {
   var self = this;
   var res = [];
-  var count = 0;
+  var index = 0;
   
   self.forEach(function (doc) {
-    res.push(callback(doc, count, thisArg));
-    count++;
+    if (thisArg === undefined)
+      res.push(callback(doc, index++));
+    else
+      res.push(callback.call(thisArg, doc, index++));
   });
   return res;
 };
