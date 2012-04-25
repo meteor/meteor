@@ -355,37 +355,6 @@ Meteor.ui = Meteor.ui || {};
     }
   };
 
-  // XXX jQuery dependency
-  Meteor.ui._setupEvents = function (elt, events, event_data) {
-    events = events || {};
-
-    for (var spec in events) {
-      var clauses = spec.split(/,\s+/);
-      _.each(clauses, function (clause) {
-        var parts = clause.split(/\s+/);
-        if (parts.length === 0)
-          return;
-
-        var event = parts.shift();
-        var selector = parts.join(' ');
-        var callback = events[spec];
-        $.event.add(elt, event+".liveui", function(evt) {
-          if (selector) {
-            // target must match selector
-            var target = evt.target;
-            // use element's parentNode as a "context"; any elements
-            // referenced in the selector must be proper descendents
-            // of the context.
-            var results = $(elt.parentNode).find(selector);
-            if (! _.contains(results, target))
-              return;
-          }
-          callback.call(event_data, evt);
-        });
-      });
-    }
-  };
-
   // Performs a replacement by determining which nodes should
   // be preserved and invoking Meteor.ui._Patcher as appropriate.
   Meteor.ui._intelligent_replace = function(tgtRange, srcParent) {
@@ -570,28 +539,64 @@ Meteor.ui = Meteor.ui || {};
 
   // Attach events specified by `range` to top-level nodes in `range`.
   var attach_primary_events = function(range) {
-    if (range.events) {
-      for(var n = range.firstNode();
-          n && n.previousSibling !== range.lastNode();
-          n = n.nextSibling) {
-        Meteor.ui._setupEvents(n, range.events, range.event_data);
-      }
-    }
+    Meteor.ui._attachEvents(range.firstNode(), range.lastNode(),
+                            range.events, range.event_data);
   };
 
   // Attach events specified by enclosing ranges of `range`, at the
-  // same DOM level, to nodes in `range`.
+  // same DOM level, to nodes in `range`.  This is necessary if
+  // `range` has just been inserted (as in the case of list 'added'
+  // events) or if it has been re-rendered but its enclosing ranges
+  // haven't.  In either case, the nodes in `range` have been rendered
+  // without taking enclosing ranges into account, so additional event
+  // handlers need to be attached.
   var attach_secondary_events = function(range) {
     for(var r = range; r; r = r.findParent(true)) {
       if (r === range)
         continue;
-      
-      for(var n = range.firstNode();
-          n && n.previousSibling !== range.lastNode();
-          n = n.nextSibling) {
-        Meteor.ui._setupEvents(n, r.events, r.event_data);
-      }
 
+      Meteor.ui._attachEvents(range.firstNode(), range.lastNode(),
+                              r.events, r.event_data);
     }
   };
+
+  // XXX jQuery dependency
+  Meteor.ui._attachEvents = function (start, end, events, event_data) {
+    events = events || {};
+
+    // iterate over `spec: callback` map
+    _.each(events, function(callback, spec) {
+      var clauses = spec.split(/,\s+/);
+      _.each(clauses, function (clause) {
+        var parts = clause.split(/\s+/);
+        if (parts.length === 0)
+          return;
+
+        var event = parts.shift();
+        var selector = parts.join(' ');
+
+        var after = end.nextSibling;
+        for(var n = start; n && n !== after; n = n.nextSibling) {
+          // use function scope to close over each node `n`.
+          // otherwise, there is only one `n` for all the callbacks!
+          (function(bound) {
+            $.event.add(n, event+".liveui", function(evt) {
+              if (selector) {
+                // target must match selector
+                var target = evt.target;
+                // use element's parentNode as a "context"; any elements
+                // referenced in the selector must be proper descendents
+                // of the context.
+                var results = $(bound.parentNode).find(selector);
+                if (! _.contains(results, target))
+                  return;
+              }
+              callback.call(event_data, evt);
+            });
+          })(n);
+        }
+      });
+    });
+  };
+
 })();
