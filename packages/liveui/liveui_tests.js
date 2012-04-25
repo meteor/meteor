@@ -1225,13 +1225,11 @@ Tinytest.add("liveui - events", function(test) {
   Meteor.flush();
 
   // selector that specifies a top-level div
-  // FAILS in 0.3.3
   event_buf.length = 0;
   div = OnscreenDiv(Meteor.ui.render(function() {
     return '<div id="foozy">Foo</div>';
   }, {events: eventmap("click div")}));
   simulateEvent(getid("foozy"), 'click');
-  test.expect_fail();
   test.equal(event_buf, ['click div']);
   div.kill();
   Meteor.flush();
@@ -1248,7 +1246,6 @@ Tinytest.add("liveui - events", function(test) {
 
   // replaced top-level elements still have event handlers
   // even if not replaced by the chunk wih the handlers
-  // FAILS in 0.3.3
   var R = ReactiveVar("p");
   event_buf.length = 0;
   div = OnscreenDiv(Meteor.ui.render(function() {
@@ -1262,13 +1259,11 @@ Tinytest.add("liveui - events", function(test) {
   R.set("div"); // change tag, which is sure to replace element
   Meteor.flush();
   simulateEvent(getid("foozy"), 'click'); // still clickable?
-  test.expect_fail();
   test.equal(event_buf, ['click']);
   event_buf.length = 0;
   R.set("p");
   Meteor.flush();
   simulateEvent(getid("foozy"), 'click');
-  test.expect_fail();
   test.equal(event_buf, ['click']);
   event_buf.length = 0;
 

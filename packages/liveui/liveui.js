@@ -419,18 +419,18 @@ Meteor.ui = Meteor.ui || {};
       patcher.diffpatch(copyFunc);
     });
 
+    attach_secondary_events(tgtRange);
   };
 
   Meteor.ui._wire_up = function(cx, range, html_func, react_data) {
     // wire events
     var data = react_data || {};
     if (data.events) {
-      for(var n = range.firstNode();
-          n && n.previousSibling !== range.lastNode();
-          n = n.nextSibling) {
-        Meteor.ui._setupEvents(n, data.events, data.event_data);
-      }
+      range.events = data.events;
+      range.event_data = data.event_data;
     }
+
+    attach_primary_events(range);
 
     // record that if we see this range offscreen during a flush,
     // we are to kill the context (mark it killed and invalidate it).
@@ -480,6 +480,10 @@ Meteor.ui = Meteor.ui || {};
         in_range);
     };
 
+    var renderElse = function() {
+      return Meteor.ui.render(else_func, react_data);
+    };
+
     var callbacks = {
       added: function(doc, before_idx) {
         var frag = renderItem(doc);
@@ -491,15 +495,18 @@ Meteor.ui = Meteor.ui || {};
         else
           range_list[before_idx].insert_before(frag);
 
+        attach_secondary_events(range);
+
         range_list.splice(before_idx, 0, range);
       },
       removed: function(doc, at_idx) {
-        if (range_list.length === 1)
+        if (range_list.length === 1) {
           cleanup_frag(
-            outer_range.replace_contents(Meteor.ui.render(
-              else_func, react_data)));
-        else
+            outer_range.replace_contents(renderElse()));
+          attach_secondary_events(outer_range);
+        } else {
           cleanup_frag(range_list[at_idx].extract());
+        }
 
         range_list.splice(at_idx, 1);
       },
@@ -561,4 +568,30 @@ Meteor.ui = Meteor.ui || {};
     range.destroy(true);
   };
 
+  // Attach events specified by `range` to top-level nodes in `range`.
+  var attach_primary_events = function(range) {
+    if (range.events) {
+      for(var n = range.firstNode();
+          n && n.previousSibling !== range.lastNode();
+          n = n.nextSibling) {
+        Meteor.ui._setupEvents(n, range.events, range.event_data);
+      }
+    }
+  };
+
+  // Attach events specified by enclosing ranges of `range`, at the
+  // same DOM level, to nodes in `range`.
+  var attach_secondary_events = function(range) {
+    for(var r = range; r; r = r.findParent(true)) {
+      if (r === range)
+        continue;
+      
+      for(var n = range.firstNode();
+          n && n.previousSibling !== range.lastNode();
+          n = n.nextSibling) {
+        Meteor.ui._setupEvents(n, r.events, r.event_data);
+      }
+
+    }
+  };
 })();

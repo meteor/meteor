@@ -294,7 +294,7 @@ Meteor.ui = Meteor.ui || {};
       var startIndex = start_range_skip || 0;
       var after = end.nextSibling;
       for(var n = start; n && n !== after; n = n.nextSibling) {
-        var startData = tag && n[tag] && n[tag][0];
+        var startData = n[tag] && n[tag][0];
         if (startData && startIndex < startData.length) {
           // immediate child range that starts with n
           var range = startData[startIndex];
@@ -548,6 +548,49 @@ Meteor.ui = Meteor.ui || {};
       result.appendChild(n);
 
     return result;
+  };
+
+  Meteor.ui._LiveRange.prototype.findParent = function(withSameContainer) {
+    var tag = this.tag;
+
+    if (this._end_idx + 1 < this._end[tag][1].length) {
+      // immediately enclosing range ends at same node as this one
+      return this._end[tag][1][this._end_idx + 1];
+    }
+
+    var node = this._end.nextSibling;
+    while (node) {
+      var endIndex = 0;
+      var startData = node[tag] && node[tag][0];
+      if (startData && startData.length) {
+        // skip over sibling of this range
+        var r = startData[0];
+        node = r._end;
+        endIndex = r._end_idx + 1;
+      }
+      if (endIndex < node[tag][1].length)
+        return node[tag][1][endIndex];
+      node = node.nextSibling;
+    }
+
+    if (withSameContainer)
+      return null;
+
+    return Meteor.ui._LiveRange.findRange(tag, this.containerNode());
+  };
+
+  Meteor.ui._LiveRange.findRange = function(tag, node) {
+    while (node) {
+      var endData = node[tag] && node[tag][1];
+      if (endData.length)
+        return endData[0];
+      node = node.nextSibling;
+    }
+
+    if (! node.parentNode)
+      return null;
+
+    return Meteor.ui._LiveRange.findRange(tag, node.parentNode);
   };
 
 })();
