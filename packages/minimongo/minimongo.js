@@ -96,7 +96,7 @@ LocalCollection.prototype.findOne = function (selector, options) {
   return this.find(selector, options).fetch()[0];
 };
 
-LocalCollection.Cursor.prototype.forEach = function (callback) {
+LocalCollection.Cursor.prototype.forEach = function (callback, thisArg) {
   var self = this;
   var doc;
 
@@ -109,15 +109,26 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
                           changed: true,
                           moved: true});
 
-  while (self.cursor_pos < self.db_objects.length)
-    callback(LocalCollection._deepcopy(self.db_objects[self.cursor_pos++]));
+  while (self.cursor_pos < self.db_objects.length) {
+                // Cursor position starts at 1, not 0
+    var index = self.cursor_pos-1;
+    if (thisArg === undefined)
+      callback(LocalCollection._deepcopy(self.db_objects[self.cursor_pos++]), index);
+    else
+      callback.call(thisArg, LocalCollection._deepcopy(self.db_objects[self.cursor_pos++]), index);
+  }
 };
 
-LocalCollection.Cursor.prototype.map = function (callback) {
+LocalCollection.Cursor.prototype.map = function (callback, thisArg) {
   var self = this;
   var res = [];
+  var index = 0;
+  
   self.forEach(function (doc) {
-    res.push(callback(doc));
+    if (thisArg === undefined)
+      res.push(callback(doc, index++));
+    else
+      res.push(callback.call(thisArg, doc, index++));
   });
   return res;
 };
