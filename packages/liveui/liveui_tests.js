@@ -1266,10 +1266,40 @@ Tinytest.add("liveui - events", function(test) {
   simulateEvent(getid("foozy"), 'click');
   test.equal(event_buf, ['click']);
   event_buf.length = 0;
-
   div.kill();
   Meteor.flush();
 
+  // "bubbling" order
+  event_buf.length = 0;
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return Meteor.ui.chunk(function() {
+      return Meteor.ui.chunk(function() {
+        return '<span id="foozy" class="a b c">Hello</span>';
+      }, {events: eventmap("click .c")});
+    }, {events: eventmap("click .b")});
+  }, {events: eventmap("click .a")}));
+  simulateEvent(getid("foozy"), 'click');
+  test.equal(event_buf, ['click .c', 'click .b', 'click .a']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+  // "bubbling" stop (doesn't work; eventually support?)
+  event_buf.length = 0;
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return Meteor.ui.chunk(function() {
+      return Meteor.ui.chunk(function() {
+        return '<span id="foozy" class="a b c">Hello</span>';
+      }, {events: eventmap("click .c")});
+    }, {events: {"click .b": function(evt) {
+      event_buf.push("click .b"); evt.stopPropagation(); return false;}}});
+  }, {events: eventmap("click .a")}));
+  simulateEvent(getid("foozy"), 'click');
+  test.expect_fail();
+  test.equal(event_buf, ['click .c', 'click .b']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
 
 });
 
