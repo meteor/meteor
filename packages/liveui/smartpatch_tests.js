@@ -106,7 +106,9 @@ Tinytest.add("smartpatch - basic", function(test) {
     p = new Patcher(tgt.containerNode(), y,
                     tgt.firstNode().previousSibling,
                     tgt.lastNode().nextSibling);
-    var copyCallback = _.bind(rng.transplant_tag, rng);
+    var copyCallback = function(tgt, src) {
+      LiveRange.transplant_tag(t, tgt, src);
+    };
     ret = p.match(tag(x, 'u'), tag(y, 'u'), copyCallback);
     test.isTrue(ret);
     assert_html(x, aaa+"<b><u>bar</u></b>"+zzz);

@@ -215,8 +215,13 @@ Meteor.ui = Meteor.ui || {};
   // object. However, on old versions of IE, you probably do need to
   // manually remove all ranges because IE can't GC reference cycles
   // through the DOM.
+  //
+  // Pass true for `recursive` to also destroy all descendent ranges.
   Meteor.ui._LiveRange.prototype.destroy = function (recursive) {
     if (recursive) {
+      // recursive case: destroy all descendent ranges too
+      // (more efficient than actually recursing)
+
       this.visit(function(is_start, range) {
         if (is_start) {
           range._start = null;
@@ -224,7 +229,7 @@ Meteor.ui = Meteor.ui || {};
         }
       }, function(is_start, node) {
         if (! is_start) {
-          // when leaving a node, clean its children
+          // when leaving a node, force-clean its children
           for(var n = node.firstChild; n; n = n.nextSibling) {
             Meteor.ui._LiveRange._clean_node(this.tag, n, true);
           }
@@ -298,9 +303,8 @@ Meteor.ui = Meteor.ui || {};
         if (startData && startIndex < startData.length) {
           // immediate child range that starts with n
           var range = startData[startIndex];
-          // copy _start and _end in case they change inside
-          // the callback (hard to support in the general case,
-          // but useful in destroy(true) for example)
+          // be robust if visit_range mutates _start or _end;
+          // useful in destroy(true)
           var range_start = range._start;
           var range_end = range._end;
           if (visit_range(true, range) !== false)
@@ -370,20 +374,50 @@ Meteor.ui = Meteor.ui || {};
   // - If the input DocumentFragment has LiveRanges, they will become
   //   our children.
   //
-  // new_frag must not be empty!
+  // It is illegal for new_frag to be empty.
+  Meteor.ui._LiveRange.prototype.replace_contents = function (new_frag) {
+    if (! new_frag.firstChild)
+      throw new Error("replace_contents requires non-empty fragment");
+
+    return this.operate(function(old_start, old_end) {
+      // Insert new fragment
+      old_start.parentNode.insertBefore(new_frag, old_start);
+
+      // Pull out departing fragment
+      // Possible optimization: use W3C Ranges on browsers that support them
+      var ret_frag = old_start.ownerDocument.createDocumentFragment();
+      var walk = old_start;
+      while (true) {
+        var next = walk.nextSibling;
+        ret_frag.appendChild(walk);
+        if (walk === old_end)
+          break;
+        walk = next;
+        if (!walk)
+          throw new Error("LiveRanges must begin and end on siblings in order");
+      }
+
+      return ret_frag;
+    });
+  };
+
+
+  // Perform a user-specified DOM mutation on the contents of this range.
   //
-  // Or, the caller can pass a function to perform the replacement in terms
-  // of DOM operations.  Before the function is called, the nodes in this range
-  // are stripped of data about this range and ranges external to it.  This
-  // information is restored afterwards.  Passing a fragment is equivalent to
-  // passing a function that removes the nodes in this range and inserts
-  // the contents of the fragment.  This liverange and enclosing liveranges
-  // that have been temporarily removed while calling the function are not
-  // fully functional while the function executes.  They have start and end
-  // nodes, but those nodes do not have pointers back to them.
-  Meteor.ui._LiveRange.prototype.replace_contents =
-    function (new_frag_or_func)
-  {
+  // `func` is called with two parameters, `old_start` and `old_end`, equal
+  // to the original firstNode() and lastNode() of this range.  `func` is allowed
+  // to perform arbitrary operations on the sequence of nodes from `old_start`
+  // to `old_end` and on child ranges of this range.  `func` may NOT call methods
+  // on this range itself or otherwise rely on the existence of this range and
+  // enclosing ranges.  `func` must leave at least one node to become the new
+  // contents of this range.
+  //
+  // The return value of `func` is returned.
+  //
+  // This method is a generalization of replace_contents that works by
+  // temporarily removing this LiveRange from the DOM and restoring it after
+  // `func` has been called.
+  Meteor.ui._LiveRange.prototype.operate = function (func) {
     // boundary nodes of departing fragment
     var old_start = this._start;
     var old_end = this._end;
@@ -400,39 +434,10 @@ Meteor.ui = Meteor.ui || {};
 
     var ret = null;
 
-    ////////// actual replacement (DOM manipulation) happens here
+    // perform user-specifiedDOM manipulation
+    ret = func(old_start, old_end);
 
-    if (typeof new_frag_or_func === "function") {
-
-      ret = new_frag_or_func(old_start, old_end);
-
-    } else {
-
-      var new_frag = new_frag_or_func;
-
-      if (! new_frag.firstChild)
-        throw new Error("replace_contents requires non-empty fragment");
-
-      // Insert new fragment
-      old_start.parentNode.insertBefore(new_frag, old_start);
-
-      // Pull out departing fragment
-      // Possible optimization: use W3C Ranges on browsers that support them
-      ret = old_start.ownerDocument.createDocumentFragment();
-      var walk = old_start;
-      while (true) {
-        var next = walk.nextSibling;
-        ret.appendChild(walk);
-        if (walk === old_end)
-          break;
-        walk = next;
-        if (!walk)
-          throw new Error("LiveRanges must begin and end on siblings in order");
-      }
-
-    }
-
-    //////////
+    // see what we've got...
 
     var new_start =
           before_node ? before_node.nextSibling : container_node.firstChild;
@@ -443,7 +448,7 @@ Meteor.ui = Meteor.ui || {};
       throw new Error("Ranges must contain at least one element");
     }
 
-    // Wrap endpoints if necessary
+    // wrap endpoints if necessary
     var new_endpoints = Meteor.ui._wrap_endpoints(new_start, new_end);
     new_start = this._ensure_tag(new_endpoints[0]);
     new_end = this._ensure_tag(new_endpoints[1]);
@@ -456,17 +461,22 @@ Meteor.ui = Meteor.ui || {};
     return ret;
   };
 
-  Meteor.ui._LiveRange.prototype.transplant_tag =
-    function(targetNode, sourceNode)
-  {
-    if (! sourceNode[this.tag])
+  // Move all liverange data represented in the DOM from sourceNode to
+  // targetNode.
+  //
+  // This is a low-level operation suitable for moving liveranges en masse
+  // from one DOM tree to another, where transplant_tag is called on every
+  // pair of nodes such that targetNode takes the place of sourceNode.
+  Meteor.ui._LiveRange.transplant_tag = function(tag, targetNode, sourceNode) {
+    if (! sourceNode[tag])
       return;
 
-    // copy data pointer (don't bother to clean sourceNode)
-    targetNode[this.tag] = sourceNode[this.tag];
+    // copy data pointer
+    targetNode[tag] = sourceNode[tag];
+    sourceNode[tag] = null;
 
-    var starts = targetNode[this.tag][0];
-    var ends = targetNode[this.tag][1];
+    var starts = targetNode[tag][0];
+    var ends = targetNode[tag][1];
 
     // fix _start and _end pointers
     for(var i=0;i<starts.length;i++)
@@ -550,6 +560,13 @@ Meteor.ui = Meteor.ui || {};
     return result;
   };
 
+  // Find the immediately enclosing parent range of this range, or
+  // null if this range has no enclosing ranges.
+  //
+  // If `withSameContainer` is true, we stop looking when we reach
+  // this range's container node (the parent of its endpoints) and
+  // only return liveranges whose first and last nodes are siblings
+  // of this one's.
   Meteor.ui._LiveRange.prototype.findParent = function(withSameContainer) {
     var tag = this.tag;
 
@@ -579,6 +596,7 @@ Meteor.ui = Meteor.ui || {};
     return Meteor.ui._LiveRange.findRange(tag, this.containerNode());
   };
 
+  // Find the nearest enclosing range containing `node`, if any.
   Meteor.ui._LiveRange.findRange = function(tag, node) {
     while (node) {
       var endData = node[tag] && node[tag][1];

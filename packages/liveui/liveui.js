@@ -2,8 +2,6 @@ Meteor.ui = Meteor.ui || {};
 
 (function() {
 
-  var LiveRange = Meteor.ui._LiveRange;
-
   // In render mode (i.e. inside Meteor.ui.render), this is an
   // object, otherwise it is null.
   // callbacks: id -> func, where id ranges from 1 to callbacks._count.
@@ -127,7 +125,7 @@ Meteor.ui = Meteor.ui || {};
         }
       }
 
-      var range = new LiveRange(Meteor.ui._tag, startNode, endNode);
+      var range = new Meteor.ui._LiveRange(Meteor.ui._tag, startNode, endNode);
       rangesCreated.push([range, id]);
 
       return next;
@@ -140,7 +138,7 @@ Meteor.ui = Meteor.ui || {};
       Meteor.ui._intelligent_replace(in_range, frag);
       range = in_range;
     } else {
-      range = new LiveRange(Meteor.ui._tag, frag);
+      range = new Meteor.ui._LiveRange(Meteor.ui._tag, frag);
     }
 
     // Call "added to DOM" callbacks to wire up all sub-chunks.
@@ -373,14 +371,15 @@ Meteor.ui = Meteor.ui || {};
 
     var copyFunc = function(t, s) {
       $(t).unbind(".liveui"); // XXX jQuery dependency
-      tgtRange.transplant_tag(t, s);
+      Meteor.ui._LiveRange.transplant_tag(
+        Meteor.ui._tag, t, s);
     };
 
     //tgtRange.replace_contents(srcParent);
 
-    tgtRange.replace_contents(function(start, end) {
+    tgtRange.operate(function(start, end) {
       // clear all LiveRanges on target
-      cleanup_range(new LiveRange(Meteor.ui._tag, start, end));
+      cleanup_range(new Meteor.ui._LiveRange(Meteor.ui._tag, start, end));
 
       var patcher = new Meteor.ui._Patcher(
         start.parentNode, srcParent,
@@ -456,7 +455,7 @@ Meteor.ui = Meteor.ui || {};
     var callbacks = {
       added: function(doc, before_idx) {
         var frag = renderItem(doc);
-        var range = new LiveRange(Meteor.ui._tag, frag);
+        var range = new Meteor.ui._LiveRange(Meteor.ui._tag, frag);
         if (range_list.length === 0)
           cleanup_frag(outer_range.replace_contents(frag));
         else if (before_idx === range_list.length)
@@ -522,7 +521,7 @@ Meteor.ui = Meteor.ui || {};
 
   var cleanup_frag = function(frag) {
     // wrap the frag in a new LiveRange that will be destroyed
-    cleanup_range(new LiveRange(Meteor.ui._tag, frag));
+    cleanup_range(new Meteor.ui._LiveRange(Meteor.ui._tag, frag));
   };
 
   // Cleans up a range and its descendant ranges by calling
