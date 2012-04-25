@@ -61,6 +61,12 @@ rm -rf deps/v8
 git clone http://github.com/v8/v8.git deps/v8
 (cd deps/v8 && git checkout 3.9.24)
 
+# use newer npm. workaround issue in fstream-npm?
+echo checking out npm
+rm -rf deps/npm
+git clone http://github.com/isaacs/npm.git deps/npm
+(cd deps/npm && git checkout v1.1.18)
+
 
 # on linux, build a static openssl to link against. Everything else we
 # dynamically link against is pretty stable.
