@@ -485,7 +485,9 @@ Meteor.ui = Meteor.ui || {};
       ends[i]._end = targetNode;
   };
 
-
+  // Inserts a DocumentFragment immediately before this range.
+  // The new nodes are outside this range but inside all
+  // enclosing ranges.
   Meteor.ui._LiveRange.prototype.insert_before = function(frag) {
     var frag_start = frag.firstChild;
 
@@ -503,6 +505,9 @@ Meteor.ui = Meteor.ui || {};
                                               this._start_idx));
   };
 
+  // Inserts a DocumentFragment immediately after this range.
+  // The new nodes are outside this range but inside all
+  // enclosing ranges.
   Meteor.ui._LiveRange.prototype.insert_after = function(frag) {
     var frag_end = frag.lastChild;
 
@@ -520,6 +525,15 @@ Meteor.ui = Meteor.ui || {};
                                               this._end_idx + 1));
   };
 
+  // Extracts this range and its contents from the DOM and
+  // puts it into a DocumentFragment, which is returned.
+  // All nodes and ranges outside this range are properly
+  // preserved.
+  //
+  // Because liveranges must contain at least one node,
+  // it is illegal to perform `extract` if the immediately
+  // enclosing range would become empty.  If this precondition
+  // is violated, no action is taken and null is returned.
   Meteor.ui._LiveRange.prototype.extract = function() {
     if (this._start_idx > 0 &&
         this._start[this.tag][0][this._start_idx - 1]._end === this._end) {
