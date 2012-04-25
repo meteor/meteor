@@ -369,7 +369,7 @@ Meteor.ui = Meteor.ui || {};
         var event = parts.shift();
         var selector = parts.join(' ');
         var callback = events[spec];
-        $.event.add(elt, event, function(evt) {
+        $.event.add(elt, event+".liveui", function(evt) {
           if (selector) {
             // target must match selector
             var target = evt.target;
@@ -403,7 +403,7 @@ Meteor.ui = Meteor.ui || {};
     }
 
     var copyFunc = function(t, s) {
-      $(t).unbind(); // XXX jQuery dependency
+      $(t).unbind(".liveui"); // XXX jQuery dependency
       tgtRange.transplant_tag(t, s);
     };
 
