@@ -752,7 +752,7 @@ Template.api.httpcall = {
   args: [
     {name: "method",
      type: "String",
-     descr: 'The HTTP method to use, e.g. "GET" or "POST".'},
+     descr: 'The HTTP method to use: "`GET`", "`POST`", "`PUT`", or "`DELETE`".'},
     {name: "url",
      type: "String",
      descr: 'The URL to retrieve.'},
@@ -791,11 +791,32 @@ Template.api.httpcall = {
   ]
 };
 
-Template.api.httphelpers = {
-  id: "meteor_http_helpers",
-  name: "Meteor.http.[get, post, put, del] (...)",
+Template.api.http_get = {
+  id: "meteor_http_get",
+  name: "Meteor.http.get(url, [options], [asyncCallback])",
   locus: "Anywhere",
-  descr: ["Convience shortcuts for `Meteor.http.call` with `method` argument specified."]
+  descr: ["Send an HTTP GET request.  Equivalent to `Meteor.http.call(\"GET\", ...)`."]
+};
+
+Template.api.http_post = {
+  id: "meteor_http_post",
+  name: "Meteor.http.post(url, [options], [asyncCallback])",
+  locus: "Anywhere",
+  descr: ["Send an HTTP POST request.  Equivalent to `Meteor.http.call(\"POST\", ...)`."]
+};
+
+Template.api.http_put = {
+  id: "meteor_http_put",
+  name: "Meteor.http.put(url, [options], [asyncCallback])",
+  locus: "Anywhere",
+  descr: ["Send an HTTP PUT request.  Equivalent to `Meteor.http.call(\"PUT\", ...)`."]
+};
+
+Template.api.http_del = {
+  id: "meteor_http_del",
+  name: "Meteor.http.del(url, [options], [asyncCallback])",
+  locus: "Anywhere",
+  descr: ["Send an HTTP DELETE request.  Equivalent to `Meteor.http.call(\"DELETE\", ...).  (Named `del` to avoid conflict with JavaScript's `delete``."]
 };
 
 

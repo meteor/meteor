@@ -52,10 +52,6 @@ var toc = [
     "Seven principles",
     "Resources"
   ],
-  "Examples", [
-    "Leaderboard",
-    "Todos"
-  ],
   "Concepts", [
     "Structuring your app",
     "Data",
@@ -166,10 +162,10 @@ var toc = [
 
     "Meteor.http", [
       "Meteor.http.call",
-      {name: "Meteor.http.get", id: "meteor_http_helpers"},
-      {name: "Meteor.http.post", id: "meteor_http_helpers"},
-      {name: "Meteor.http.put", id: "meteor_http_helpers"},
-      {name: "Meteor.http.del", id: "meteor_http_helpers"}
+      {name: "Meteor.http.get", id: "meteor_http_get"},
+      {name: "Meteor.http.post", id: "meteor_http_post"},
+      {name: "Meteor.http.put", id: "meteor_http_put"},
+      {name: "Meteor.http.del", id: "meteor_http_del"}
     ]
   ],
 
