@@ -1,8 +1,18 @@
 (function () {
-// automatically capture this app's hostname
+  // Duplicated in the madewith app (search for #DisplayAppName in
+  // https://github.com/meteor/madewith)
+  // XXX - Can this code somehow be shared reasonably?
+  var displayAppName = function (name) {
+    var parts = name.split('.');
+    if (parts.length === 3 && parts[1] === 'meteor' && parts[2] === 'com')
+      return parts[0];
+    else
+      return name;
+  };
+
+  // automatically capture this app's hostname
   var hostname = window.location.host;
-  var match = hostname.match(/(.*)\.meteor.com$/);
-  var shortname = match ? match[1] : hostname;
+  var shortname = displayAppName(hostname);
 
   // connect to madewith and subscribe to my app's record
   var server = Meteor.connect("http://madewith.meteor.com/sockjs");
