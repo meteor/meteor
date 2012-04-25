@@ -315,7 +315,7 @@ Tinytest.add("liveui - preserved nodes (diff/patch)", function(test) {
 
   var randomNodeList = function(optParentTag, depth) {
     var atTopLevel = ! optParentTag;
-    var len = rand.nextIntBetween(atTopLevel ? 1 : 0, 10);
+    var len = rand.nextIntBetween(atTopLevel ? 1 : 0, 6);
     var buf = [];
     for(var i=0; i<len; i++)
       buf.push(randomNode(optParentTag, depth));
@@ -332,9 +332,10 @@ Tinytest.add("liveui - preserved nodes (diff/patch)", function(test) {
 
       n.tagName = rand.nextChoice((function() {
         switch (optParentTag) {
-        case "table": return ['tr'];
-        case "tr": return ['td'];
-        case "p": case "b": case "i": return ['b', 'i'];
+        case "p": return ['b', 'i', 'u'];
+        case "b": return ['i', 'u'];
+        case "i": return ['u'];
+        case "u": case "span": return ['span'];
         default: return ['div', 'ins', 'center', 'p'];
         }
       })());
@@ -436,7 +437,7 @@ Tinytest.add("liveui - preserved nodes (diff/patch)", function(test) {
     rand = new SeededRandom("preserved nodes "+i+" "+Math.random());
 
     var R = ReactiveVar(false);
-    var structure = randomNodeList(null, 4);
+    var structure = randomNodeList(null, 6);
     var frag = WrappedFrag(Meteor.ui.render(function() {
       return nodeListToHtml(structure, R.get());
     })).hold();
