@@ -473,7 +473,7 @@ Meteor.ui = Meteor.ui || {};
                               react_data);
     });
 
-    var makeItem = function(doc, in_range) {
+    var renderItem = function(doc, in_range) {
       return Meteor.ui.render(
           _.bind(doc_func, null, doc),
         _.extend({}, react_data, {event_data: doc}),
@@ -482,7 +482,7 @@ Meteor.ui = Meteor.ui || {};
 
     var callbacks = {
       added: function(doc, before_idx) {
-        var frag = makeItem(doc);
+        var frag = renderItem(doc);
         var range = new LiveRange(Meteor.ui._tag, frag);
         if (range_list.length === 0)
           cleanup_frag(outer_range.replace_contents(frag));
@@ -525,7 +525,7 @@ Meteor.ui = Meteor.ui || {};
         // replace the render in the immediately nested range
         range.visit(function(is_start, r) {
           if (is_start)
-            makeItem(doc, r);
+            renderItem(doc, r);
           return false;
         });
       }
