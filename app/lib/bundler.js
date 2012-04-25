@@ -495,6 +495,11 @@ _.extend(Bundle.prototype, {
     else
       /* dev_bundle_mode === "skip" */;
 
+    fs.writeFileSync(
+      path.join(build_path, 'server', '.bundle_version.txt'),
+      fs.readFileSync(
+        path.join(files.get_dev_bundle(), '.bundle_version.txt')));
+
     // --- Static assets ---
 
     if (is_app) {
