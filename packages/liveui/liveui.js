@@ -403,7 +403,7 @@ Meteor.ui = Meteor.ui || {};
     }
 
     var copyFunc = function(t, s) {
-      $(t).unbind(); // XXX remove jquery events from node
+      $(t).unbind(); // XXX jQuery dependency
       tgtRange.transplant_tag(t, s);
     };
 
@@ -545,9 +545,14 @@ Meteor.ui = Meteor.ui || {};
   };
 
   var cleanup_frag = function(frag) {
+    // wrap the frag in a new LiveRange that will be destroyed
     cleanup_range(new LiveRange(Meteor.ui._tag, frag));
   };
 
+  // Cleans up a range and its descendant ranges by calling
+  // killContext on them (which removes any associated context
+  // from dependency tracking) and then destroy (which removes
+  // the liverange data from the DOM).
   var cleanup_range = function(range) {
     range.visit(function(is_start, range) {
       if (is_start)
