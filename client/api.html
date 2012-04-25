@@ -1136,23 +1136,6 @@ object you receive is a jQuery event object. We would like to change
 this so that you are not required to use jQuery.
 {{/warning}}
 
-{{#warning}}
-There are currently two bugs that will cause events to not get
-delivered in certain circumstances. Both have easy workarounds:
-
-* If an event is filtered by a selector, then it will never be
-delivered to a top-level node in a template. The problem is that
-selectors will never match the top-level node in a template. This
-matches other libraries but can be counterintuitive. The workaround is
-to remove the selector if possible, or else add a wrapper element at the
-top of the template.
-
-* If a template A inserts another template B at the top-level of the
-template, then if B updates itself, it will no longer receive
-events. The workaround is to add a wrapper element around B.
-
-{{/warning}}
-
 Example:
 
     {
