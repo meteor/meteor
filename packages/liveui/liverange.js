@@ -568,14 +568,44 @@ Meteor.ui = Meteor.ui || {};
   // only return liveranges whose first and last nodes are siblings
   // of this one's.
   Meteor.ui._LiveRange.prototype.findParent = function(withSameContainer) {
-    var tag = this.tag;
+    var result = _enclosing_range_search(this.tag, this._end, this._end_idx);
+    if (result)
+      return result;
 
-    if (this._end_idx + 1 < this._end[tag][1].length) {
+    if (withSameContainer)
+      return null;
+
+    return Meteor.ui._LiveRange.findRange(this.tag, this.containerNode());
+  };
+
+  // Find the nearest enclosing range containing `node`, if any.
+  Meteor.ui._LiveRange.findRange = function(tag, node) {
+    var result = _enclosing_range_search(tag, node);
+    if (result)
+      return result;
+
+    if (! node.parentNode)
+      return null;
+
+    return Meteor.ui._LiveRange.findRange(tag, node.parentNode);
+  };
+
+  var _enclosing_range_search = function(tag, end, end_idx) {
+    // Search for an enclosing range, at the same level,
+    // starting at node `end` or after the range whose
+    // position in the end array of `end` is `end_idx`.
+    // The search works by scanning forwards for range ends
+    // while skipping over ranges whose starts we encounter.
+
+    if (typeof end_idx === "undefined")
+      end_idx = -1;
+
+    if (end[tag] && end_idx + 1 < end[tag][1].length) {
       // immediately enclosing range ends at same node as this one
-      return this._end[tag][1][this._end_idx + 1];
+      return end[tag][1][end_idx + 1];
     }
 
-    var node = this._end.nextSibling;
+    var node = end.nextSibling;
     while (node) {
       var endIndex = 0;
       var startData = node[tag] && node[tag][0];
@@ -585,30 +615,12 @@ Meteor.ui = Meteor.ui || {};
         node = r._end;
         endIndex = r._end_idx + 1;
       }
-      if (endIndex < node[tag][1].length)
+      if (node[tag] && endIndex < node[tag][1].length)
         return node[tag][1][endIndex];
       node = node.nextSibling;
     }
 
-    if (withSameContainer)
-      return null;
-
-    return Meteor.ui._LiveRange.findRange(tag, this.containerNode());
-  };
-
-  // Find the nearest enclosing range containing `node`, if any.
-  Meteor.ui._LiveRange.findRange = function(tag, node) {
-    while (node) {
-      var endData = node[tag] && node[tag][1];
-      if (endData.length)
-        return endData[0];
-      node = node.nextSibling;
-    }
-
-    if (! node.parentNode)
-      return null;
-
-    return Meteor.ui._LiveRange.findRange(tag, node.parentNode);
+    return null;
   };
 
 })();
