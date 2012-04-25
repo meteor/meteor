@@ -2,7 +2,7 @@ var TEST_RESPONDER_ROUTE = "/test_responder";
 
 var respond = function(req, res) {
 
-  if (req.url === "/slow") {
+  if (req.url.slice(0,5) === "/slow") {
     setTimeout(function() {
       res.statusCode = 200;
       res.end("A SLOW RESPONSE");
