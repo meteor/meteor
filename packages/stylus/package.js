@@ -25,3 +25,7 @@ Package.register_extension(
     });
   }
 );
+
+Package.on_test(function (api) {
+  api.add_files(['stylus_tests.styl', 'stylus_tests.js'], 'client');
+});
