@@ -6,6 +6,9 @@ Meteor.ui = Meteor.ui || {};
   // object, otherwise it is null.
   // callbacks: id -> func, where id ranges from 1 to callbacks._count.
   Meteor.ui._render_mode = null;
+  
+  // Array of rendered Templates (used for callback handling)
+  Meteor.ui._rendered_templates = null;
 
   // `in_range` is a package-private argument used to render inside
   // an existing LiveRange on an update.
@@ -144,12 +147,39 @@ Meteor.ui = Meteor.ui || {};
     });
 
     Meteor.ui._wire_up(cx, range, html_func, react_data);
+    
+    // Call Template.xxx.callback on initial render
+    _.each(Meteor.ui._rendered_templates, function(template){
+      if ( Template[template].callback && (typeof Template[template].callback === "function") ) {
+        $(function(){
+          Template[template].callback.call(window);
+        });
+      }
+    });
+    // Call Template.xxx.callback on all subsequent re-renders
+    if(react_data){
+      var template = react_data.template_name;
 
+      if(Template[template].callback && (typeof Template[template].callback === "function")) {
+        $(function(){
+          Template[template].callback.call(window);
+        });  
+      }
+    }
+    
     return (in_range ? null : frag);
 
   };
 
   Meteor.ui.chunk = function(html_func, react_data) {
+    // Creates array of rendered templates (to be used when processing callbacks)
+    if (react_data && react_data.template_name) {
+      var template = react_data.template_name;
+      if(!_.contains(Meteor.ui._rendered_templates, template)) {
+        Meteor.ui._rendered_templates.push(template);
+      }
+    }
+    
     if (typeof html_func !== "function")
       throw new Error("Meteor.ui.chunk() requires a function as its first argument.");
 
