@@ -1,6 +1,6 @@
-/* SockJS client, version 0.2.1, http://sockjs.org, MIT License
+/* SockJS client, version 0.3.1, http://sockjs.org, MIT License
 
-Copyright (C) 2011 VMware, Inc.
+Copyright (c) 2011-2012 VMware, Inc.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,8 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-// REMOVED: JSON2 by Douglas Crockford (minified).
-// Meteor ships JSON already for browsers that don't have it.
+// JSON2 by Douglas Crockford (minified).
+var JSON;JSON||(JSON={}),function(){function str(a,b){var c,d,e,f,g=gap,h,i=b[a];i&&typeof i=="object"&&typeof i.toJSON=="function"&&(i=i.toJSON(a)),typeof rep=="function"&&(i=rep.call(b,a,i));switch(typeof i){case"string":return quote(i);case"number":return isFinite(i)?String(i):"null";case"boolean":case"null":return String(i);case"object":if(!i)return"null";gap+=indent,h=[];if(Object.prototype.toString.apply(i)==="[object Array]"){f=i.length;for(c=0;c<f;c+=1)h[c]=str(c,i)||"null";e=h.length===0?"[]":gap?"[\n"+gap+h.join(",\n"+gap)+"\n"+g+"]":"["+h.join(",")+"]",gap=g;return e}if(rep&&typeof rep=="object"){f=rep.length;for(c=0;c<f;c+=1)typeof rep[c]=="string"&&(d=rep[c],e=str(d,i),e&&h.push(quote(d)+(gap?": ":":")+e))}else for(d in i)Object.prototype.hasOwnProperty.call(i,d)&&(e=str(d,i),e&&h.push(quote(d)+(gap?": ":":")+e));e=h.length===0?"{}":gap?"{\n"+gap+h.join(",\n"+gap)+"\n"+g+"}":"{"+h.join(",")+"}",gap=g;return e}}function quote(a){escapable.lastIndex=0;return escapable.test(a)?'"'+a.replace(escapable,function(a){var b=meta[a];return typeof b=="string"?b:"\\u"+("0000"+a.charCodeAt(0).toString(16)).slice(-4)})+'"':'"'+a+'"'}function f(a){return a<10?"0"+a:a}"use strict",typeof Date.prototype.toJSON!="function"&&(Date.prototype.toJSON=function(a){return isFinite(this.valueOf())?this.getUTCFullYear()+"-"+f(this.getUTCMonth()+1)+"-"+f(this.getUTCDate())+"T"+f(this.getUTCHours())+":"+f(this.getUTCMinutes())+":"+f(this.getUTCSeconds())+"Z":null},String.prototype.toJSON=Number.prototype.toJSON=Boolean.prototype.toJSON=function(a){return this.valueOf()});var cx=/[\u0000\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g,escapable=/[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g,gap,indent,meta={"\b":"\\b","\t":"\\t","\n":"\\n","\f":"\\f","\r":"\\r",'"':'\\"',"\\":"\\\\"},rep;typeof JSON.stringify!="function"&&(JSON.stringify=function(a,b,c){var d;gap="",indent="";if(typeof c=="number")for(d=0;d<c;d+=1)indent+=" ";else typeof c=="string"&&(indent=c);rep=b;if(!b||typeof b=="function"||typeof b=="object"&&typeof b.length=="number")return str("",{"":a});throw new Error("JSON.stringify")}),typeof JSON.parse!="function"&&(JSON.parse=function(text,reviver){function walk(a,b){var c,d,e=a[b];if(e&&typeof e=="object")for(c in e)Object.prototype.hasOwnProperty.call(e,c)&&(d=walk(e,c),d!==undefined?e[c]=d:delete e[c]);return reviver.call(a,b,e)}var j;text=String(text),cx.lastIndex=0,cx.test(text)&&(text=text.replace(cx,function(a){return"\\u"+("0000"+a.charCodeAt(0).toString(16)).slice(-4)}));if(/^[\],:{}\s]*$/.test(text.replace(/\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g,"@").replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g,"]").replace(/(?:^|:|,)(?:\s*\[)+/g,""))){j=eval("("+text+")");return typeof reviver=="function"?walk({"":j},""):j}throw new SyntaxError("JSON.parse")})}()
 
 
 //     [*] Including lib/index.js
@@ -34,6 +34,14 @@ SockJS = (function(){
 
 
 //         [*] Including lib/reventtarget.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
+
 /* Simplified implementation of DOM2 EventTarget.
  *   http://www.w3.org/TR/DOM-Level-2-Events/events.html#Events-EventTarget
  */
@@ -85,6 +93,14 @@ REventTarget.prototype.dispatchEvent = function (event) {
 
 
 //         [*] Including lib/simpleevent.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
+
 var SimpleEvent = function(type, obj) {
     this.type = type;
     if (typeof obj !== 'undefined') {
@@ -109,6 +125,14 @@ SimpleEvent.prototype.toString = function() {
 
 
 //         [*] Including lib/eventemitter.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
+
 var EventEmitter = function(events) {
     this.events = events || [];
 };
@@ -136,6 +160,14 @@ EventEmitter.prototype.nuke = function(type) {
 
 
 //         [*] Including lib/utils.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
+
 var random_string_chars = 'abcdefghijklmnopqrstuvwxyz0123456789_';
 utils.random_string = function(length, max) {
     max = max || random_string_chars.length;
@@ -161,11 +193,13 @@ utils.getOrigin = function(url) {
     return parts.join('/');
 };
 
-utils.isSameOriginUrl = function(url) {
-    // location.origin would do, but it's not available in some
-    // browsers.
-    var o = _window.location.href.split('/').slice(0,3).join('/');
-    return url.slice(0, o.length) === o;
+utils.isSameOriginUrl = function(url_a, url_b) {
+    // location.origin would do, but it's not always available.
+    if (!url_b) url_b = _window.location.href;
+
+    return (url_a.split('/').slice(0,3).join('/')
+                ===
+            url_b.split('/').slice(0,3).join('/'));
 };
 
 utils.getParentDomain = function(url) {
@@ -233,11 +267,19 @@ utils.bind = function(fun, that) {
     }
 };
 
+utils.flatUrl = function(url) {
+    return url.indexOf('?') === -1 && url.indexOf('#') === -1;
+};
+
 utils.amendUrl = function(url) {
     var dl = _document.location;
     if (!url) {
         throw new Error('Wrong url for SockJS');
     }
+    if (!utils.flatUrl(url)) {
+        throw new Error('Only basic urls are supported in SockJS');
+    }
+
     //  '//abc' --> 'http://abc'
     if (url.indexOf('//') === 0) {
         url = dl.protocol + url;
@@ -419,21 +461,27 @@ utils.detectProtocols = function(probed, protocols_whitelist, info) {
     }
 
     // 2. Streaming
-    if (pe['xdr-streaming'] && !info.cookie_needed) {
-        protocols.push('xdr-streaming');
+    if (pe['xhr-streaming'] && !info.null_origin) {
+        protocols.push('xhr-streaming');
     } else {
-        maybe_push(['xhr-streaming',
-                    'iframe-eventsource',
-                    'iframe-htmlfile']);
+        if (pe['xdr-streaming'] && !info.cookie_needed && !info.null_origin) {
+            protocols.push('xdr-streaming');
+        } else {
+            maybe_push(['iframe-eventsource',
+                        'iframe-htmlfile']);
+        }
     }
 
     // 3. Polling
-    if (pe['xdr-polling'] && !info.cookie_needed) {
-        protocols.push('xdr-polling');
+    if (pe['xhr-polling'] && !info.null_origin) {
+        protocols.push('xhr-polling');
     } else {
-        maybe_push(['xhr-polling',
-                    'iframe-xhr-polling',
-                    'jsonp-polling']);
+        if (pe['xdr-polling'] && !info.cookie_needed && !info.null_origin) {
+            protocols.push('xdr-polling');
+        } else {
+            maybe_push(['iframe-xhr-polling',
+                        'jsonp-polling']);
+        }
     }
     return protocols;
 }
@@ -441,6 +489,14 @@ utils.detectProtocols = function(probed, protocols_whitelist, info) {
 
 
 //         [*] Including lib/dom.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
+
 // May be used by htmlfile jsonp and transports.
 var MPrefix = '_sockjs_global';
 utils.createHook = function() {
@@ -490,10 +546,35 @@ utils.detachEvent = function(event, listener) {
     }
 };
 
+
 var on_unload = {};
+// Things registered after beforeunload are to be called immediately.
+var after_unload = false;
+
+var trigger_unload_callbacks = function() {
+    for(var ref in on_unload) {
+        on_unload[ref]();
+        delete on_unload[ref];
+    };
+};
+
+var unload_triggered = function() {
+    if(after_unload) return;
+    after_unload = true;
+    trigger_unload_callbacks();
+};
+
+// Onbeforeunload alone is not reliable. We could use only 'unload'
+// but it's not working in opera within an iframe. Let's use both.
+utils.attachEvent('beforeunload', unload_triggered);
+utils.attachEvent('unload', unload_triggered);
+
 utils.unload_add = function(listener) {
     var ref = utils.random_string(8);
     on_unload[ref] = listener;
+    if (after_unload) {
+        utils.delay(trigger_unload_callbacks);
+    }
     return ref;
 };
 utils.unload_del = function(ref) {
@@ -501,15 +582,10 @@ utils.unload_del = function(ref) {
         delete on_unload[ref];
 };
 
-utils.attachEvent('unload', function() {
-    for(var k in on_unload) {
-        on_unload[k]();
-    };
-});
 
 utils.createIframe = function (iframe_url, error_callback) {
     var iframe = _document.createElement('iframe');
-    var tref;
+    var tref, unload_ref;
     var unattach = function() {
         clearTimeout(tref);
         // Explorer had problems with that.
@@ -519,10 +595,6 @@ utils.createIframe = function (iframe_url, error_callback) {
     var cleanup = function() {
         if (iframe) {
             unattach();
-            // This is required, in order to force ie7 to fire the
-            // onunload event. Setting .src must happen before the
-            // removeChild step.
-            iframe.src = "about:blank";
             // This timeout makes chrome fire onbeforeunload event
             // within iframe. Without the timeout it goes straight to
             // onunload.
@@ -532,7 +604,7 @@ utils.createIframe = function (iframe_url, error_callback) {
                 }
                 iframe = null;
             }, 0);
-            utils.detachEvent('unload', cleanup);
+            utils.unload_del(unload_ref);
         }
     };
     var onerror = function(r) {
@@ -541,6 +613,16 @@ utils.createIframe = function (iframe_url, error_callback) {
             error_callback(r);
         }
     };
+    var post = function(msg, origin) {
+        try {
+            // When the iframe is not loaded, IE raises an exception
+            // on 'contentWindow'.
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage(msg, origin);
+            }
+        } catch (x) {};
+    };
+
     iframe.src = iframe_url;
     iframe.style.display = 'none';
     iframe.style.position = 'absolute';
@@ -552,10 +634,10 @@ utils.createIframe = function (iframe_url, error_callback) {
         tref = setTimeout(function(){onerror('onload timeout');}, 2000);
     };
     _document.body.appendChild(iframe);
-    tref = setTimeout(function(){onerror('timeout');}, 5000);
-    utils.attachEvent('unload', cleanup);
+    tref = setTimeout(function(){onerror('timeout');}, 15000);
+    unload_ref = utils.unload_add(cleanup);
     return {
-        iframe: iframe,
+        post: post,
         cleanup: cleanup,
         loaded: unattach
     };
@@ -563,7 +645,7 @@ utils.createIframe = function (iframe_url, error_callback) {
 
 utils.createHtmlfile = function (iframe_url, error_callback) {
     var doc = new ActiveXObject('htmlfile');
-    var tref;
+    var tref, unload_ref;
     var iframe;
     var unattach = function() {
         clearTimeout(tref);
@@ -571,10 +653,7 @@ utils.createHtmlfile = function (iframe_url, error_callback) {
     var cleanup = function() {
         if (doc) {
             unattach();
-            utils.detachEvent('unload', cleanup);
-            try {
-                iframe.src = "about:blank";
-            } catch (x) {}
+            utils.unload_del(unload_ref);
             iframe.parentNode.removeChild(iframe);
             iframe = doc = null;
             CollectGarbage();
@@ -585,6 +664,15 @@ utils.createHtmlfile = function (iframe_url, error_callback) {
             cleanup();
             error_callback(r);
         }
+    };
+    var post = function(msg, origin) {
+        try {
+            // When the iframe is not loaded, IE raises an exception
+            // on 'contentWindow'.
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage(msg, origin);
+            }
+        } catch (x) {};
     };
 
     doc.open();
@@ -598,10 +686,10 @@ utils.createHtmlfile = function (iframe_url, error_callback) {
     iframe = doc.createElement('iframe');
     c.appendChild(iframe);
     iframe.src = iframe_url;
-    tref = setTimeout(function(){onerror('timeout');}, 5000);
-    utils.attachEvent('unload', cleanup);
+    tref = setTimeout(function(){onerror('timeout');}, 15000);
+    unload_ref = utils.unload_add(cleanup);
     return {
-        iframe: iframe,
+        post: post,
         cleanup: cleanup,
         loaded: unattach
     };
@@ -610,22 +698,32 @@ utils.createHtmlfile = function (iframe_url, error_callback) {
 
 
 //         [*] Including lib/dom2.js
-var XHRObject = utils.XHRObject = function(method, url, payload) {
-    var that = this;
-    utils.delay(function(){that._start(method, url, payload);});
-};
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
 
-XHRObject.prototype = new EventEmitter(['chunk', 'finish']);
+var AbstractXHRObject = function(){};
+AbstractXHRObject.prototype = new EventEmitter(['chunk', 'finish']);
 
-XHRObject.prototype._start = function(method, url, payload) {
+AbstractXHRObject.prototype._start = function(method, url, payload, opts) {
     var that = this;
+
     try {
-        that.xhr = new _window.ActiveXObject('Microsoft.XMLHTTP');
-        // IE caches POSTs
-        url += ((url.indexOf('?') === -1) ? '?' : '&') + 't='+(+new Date);
-    } catch(x) {};
-    if (!that.xhr) {
         that.xhr = new XMLHttpRequest();
+    } catch(x) {};
+
+    if (!that.xhr) {
+        try {
+            that.xhr = new _window.ActiveXObject('Microsoft.XMLHTTP');
+        } catch(x) {};
+    }
+    if (_window.ActiveXObject || _window.XDomainRequest) {
+        // IE8 caches even POSTs
+        url += ((url.indexOf('?') === -1) ? '?' : '&') + 't='+(+new Date);
     }
 
     // Explorer tends to keep connection open, even after the
@@ -640,8 +738,15 @@ XHRObject.prototype._start = function(method, url, payload) {
         return;
     };
 
-    if ('withCredentials' in that.xhr) {
+    if (!opts || !opts.no_credentials) {
+        // Mozilla docs says https://developer.mozilla.org/en/XMLHttpRequest :
+        // "This never affects same-site requests."
         that.xhr.withCredentials = 'true';
+    }
+    if (opts && opts.headers) {
+        for(var key in opts.headers) {
+            that.xhr.setRequestHeader(key, opts.headers[key]);
+        }
     }
 
     that.xhr.onreadystatechange = function() {
@@ -649,13 +754,16 @@ XHRObject.prototype._start = function(method, url, payload) {
             var x = that.xhr;
             switch (x.readyState) {
             case 3:
-                // IE doesn't like peeking into responseText or status on
-                // XHR and readystate=3
+                // IE doesn't like peeking into responseText or status
+                // on Microsoft.XMLHTTP and readystate=3
                 try {
                     var status = x.status;
                     var text = x.responseText;
-                    that.emit('chunk', status, text);
                 } catch (x) {};
+                // IE does return readystate == 3 for 404 answers.
+                if (text && text.length > 0) {
+                    that.emit('chunk', status, text);
+                }
                 break;
             case 4:
                 that.emit('finish', x.status, x.responseText);
@@ -667,7 +775,7 @@ XHRObject.prototype._start = function(method, url, payload) {
     that.xhr.send(payload);
 };
 
-XHRObject.prototype._cleanup = function(abort) {
+AbstractXHRObject.prototype._cleanup = function(abort) {
     var that = this;
     if (!that.xhr) return;
     utils.unload_del(that.unload_ref);
@@ -683,11 +791,28 @@ XHRObject.prototype._cleanup = function(abort) {
     that.unload_ref = that.xhr = null;
 };
 
-XHRObject.prototype.close = function() {
+AbstractXHRObject.prototype.close = function() {
     var that = this;
     that.nuke();
     that._cleanup(true);
 };
+
+var XHRCorsObject = utils.XHRCorsObject = function() {
+    var that = this, args = arguments;
+    utils.delay(function(){that._start.apply(that, args);});
+};
+XHRCorsObject.prototype = new AbstractXHRObject();
+
+var XHRLocalObject = utils.XHRLocalObject = function(method, url, payload) {
+    var that = this;
+    utils.delay(function(){
+        that._start(method, url, payload, {
+            no_credentials: true
+        });
+    });
+};
+XHRLocalObject.prototype = new AbstractXHRObject();
+
 
 
 // References:
@@ -755,7 +880,8 @@ utils.isXHRCorsCapable = function() {
     if (_window.XMLHttpRequest && 'withCredentials' in new XMLHttpRequest()) {
         return 1;
     }
-    if (_window.XDomainRequest) {
+    // XDomainRequest doesn't work if page is served from file://
+    if (_window.XDomainRequest && _document.domain) {
         return 2;
     }
     if (IframeTransport.enabled()) {
@@ -767,6 +893,14 @@ utils.isXHRCorsCapable = function() {
 
 
 //         [*] Including lib/sockjs.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
+
 var SockJS = function(url, dep_protocols_whitelist, options) {
     var that = this, protocols_whitelist;
     that._options = {devel: false, debug: false, protocols_whitelist: [],
@@ -798,8 +932,9 @@ var SockJS = function(url, dep_protocols_whitelist, options) {
     that._protocols = [];
     that.protocol = null;
     that.readyState = SockJS.CONNECTING;
-    var ir = createInfoReceiver(that._base_url);
-    ir.onfinish = function(info, rtt) {
+    that._ir = createInfoReceiver(that._base_url);
+    that._ir.onfinish = function(info, rtt) {
+        that._ir = null;
         if (info) {
             if (that._options.info) {
                 // Override if user supplies the option
@@ -818,7 +953,7 @@ var SockJS = function(url, dep_protocols_whitelist, options) {
 // Inheritance
 SockJS.prototype = new REventTarget();
 
-SockJS.version = "0.2.1";
+SockJS.version = "0.3.1";
 
 SockJS.CONNECTING = 0;
 SockJS.OPEN = 1;
@@ -866,9 +1001,15 @@ SockJS.prototype._didClose = function(code, reason, force) {
         that.readyState !== SockJS.OPEN &&
         that.readyState !== SockJS.CLOSING)
             throw new Error('INVALID_STATE_ERR');
-    if (that._transport)
+    if (that._ir) {
+        that._ir.nuke();
+        that._ir = null;
+    }
+
+    if (that._transport) {
         that._transport.doCleanup();
-    that._transport = null;
+        that._transport = null;
+    }
 
     var close_event = new SimpleEvent("close", {
         code: code,
@@ -939,7 +1080,9 @@ SockJS.prototype._try_next_protocol = function(close_event) {
         // the `head`?
         if (SockJS[protocol] &&
             SockJS[protocol].need_body === true &&
-            !_document.body) {
+            (!_document.body ||
+             (typeof _document.readyState !== 'undefined'
+              && _document.readyState !== 'complete'))) {
             that._protocols.unshift(protocol);
             that.protocol = 'waiting-for-load';
             utils.attachEvent('load', function(){
@@ -1002,6 +1145,7 @@ SockJS.prototype._applyInfo = function(info, rtt, protocols_whitelist) {
     that._options.info = info;
     that._options.rtt = rtt;
     that._options.rto = utils.countRTO(rtt);
+    that._options.info.null_origin = !_document.domain;
     var probed = utils.probeProtocols();
     that._protocols = utils.detectProtocols(probed, protocols_whitelist, info);
 };
@@ -1009,6 +1153,14 @@ SockJS.prototype._applyInfo = function(info, rtt, protocols_whitelist) {
 
 
 //         [*] Including lib/trans-websocket.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
+
 var WebSocketTransport = SockJS.websocket = function(ri, trans_url) {
     var that = this;
     var url = trans_url + '/websocket';
@@ -1038,7 +1190,7 @@ var WebSocketTransport = SockJS.websocket = function(ri, trans_url) {
 };
 
 WebSocketTransport.prototype.doSend = function(data) {
-    this.ws.send(data);
+    this.ws.send('[' + data + ']');
 };
 
 WebSocketTransport.prototype.doCleanup = function() {
@@ -1055,10 +1207,24 @@ WebSocketTransport.prototype.doCleanup = function() {
 WebSocketTransport.enabled = function() {
     return !!(_window.WebSocket || _window.MozWebSocket);
 };
+
+// In theory, ws should require 1 round trip. But in chrome, this is
+// not very stable over SSL. Most likely a ws connection requires a
+// separate SSL connection, in which case 2 round trips are an
+// absolute minumum.
+WebSocketTransport.roundTrips = 2;
 //         [*] End of lib/trans-websocket.js
 
 
 //         [*] Including lib/trans-sender.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
+
 var BufferedSender = function() {};
 BufferedSender.prototype.send_constructor = function(sender) {
     var that = this;
@@ -1152,7 +1318,7 @@ var jsonPGenericSender = function(url, payload, callback) {
     try {
         area.value = payload;
     } catch(e) {
-        alert('Your browser is seriously broken. Go home! ' + e.message);
+        utils.log('Your browser is seriously broken. Go home! ' + e.message);
     }
     form.submit();
 
@@ -1165,7 +1331,7 @@ var jsonPGenericSender = function(url, payload, callback) {
                        iframe.parentNode.removeChild(iframe);
                        iframe = null;
                    });
-        area.value = null;
+        area.value = '';
         callback();
     };
     iframe.onerror = iframe.onload = completed;
@@ -1190,6 +1356,14 @@ var createAjaxSender = function(AjaxObject) {
 
 
 //         [*] Including lib/trans-jsonp-receiver.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
+
 // Parts derived from Socket.io:
 //    https://github.com/LearnBoost/socket.io/blob/0.6.17/lib/socket.io/transports/jsonp-polling.js
 // and jQuery-JSONP:
@@ -1300,6 +1474,14 @@ var jsonPGenericReceiver = function(url, callback) {
 
 
 //         [*] Including lib/trans-jsonp-polling.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
+
 // The simplest and most robust transport, using the well-know cross
 // domain hack - JSONP. This transport is quite inefficient - one
 // mssage could use up to one http request. But at least it works almost
@@ -1381,6 +1563,14 @@ var jsonPReceiverWrapper = function(url, constructReceiver, user_callback) {
 
 
 //         [*] Including lib/trans-xhr.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
+
 var AjaxBasedTransport = function() {};
 AjaxBasedTransport.prototype = new BufferedSender();
 
@@ -1404,16 +1594,24 @@ AjaxBasedTransport.prototype.doCleanup = function() {
 
 // xhr-streaming
 var XhrStreamingTransport = SockJS['xhr-streaming'] = function(ri, trans_url) {
-    this.run(ri, trans_url, '/xhr_streaming', XhrReceiver, utils.XHRObject);
+    this.run(ri, trans_url, '/xhr_streaming', XhrReceiver, utils.XHRCorsObject);
 };
 
 XhrStreamingTransport.prototype = new AjaxBasedTransport();
 
 XhrStreamingTransport.enabled = function() {
+    // Support for CORS Ajax aka Ajax2? Opera 12 claims CORS but
+    // doesn't do streaming.
     return (_window.XMLHttpRequest &&
-            'withCredentials' in new XMLHttpRequest());
+            'withCredentials' in new XMLHttpRequest() &&
+            (!/opera/i.test(navigator.userAgent)));
 };
 XhrStreamingTransport.roundTrips = 2; // preflight, ajax
+
+// Safari gets confused when a streaming ajax request is started
+// before onload. This causes the load indicator to spin indefinetely.
+XhrStreamingTransport.need_body = true;
+
 
 // According to:
 //   http://stackoverflow.com/questions/1641507/detect-browser-support-for-cross-domain-xmlhttprequests
@@ -1436,7 +1634,7 @@ XdrStreamingTransport.roundTrips = 2; // preflight, ajax
 
 // xhr-polling
 var XhrPollingTransport = SockJS['xhr-polling'] = function(ri, trans_url) {
-    this.run(ri, trans_url, '/xhr', XhrReceiver, utils.XHRObject);
+    this.run(ri, trans_url, '/xhr', XhrReceiver, utils.XHRCorsObject);
 };
 
 XhrPollingTransport.prototype = new AjaxBasedTransport();
@@ -1458,6 +1656,14 @@ XdrPollingTransport.roundTrips = 2; // preflight, ajax
 
 
 //         [*] Including lib/trans-iframe.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
+
 // Few cool transports do work only for same-origin. In order to make
 // them working cross-domain we shall use iframe, served form the
 // remote domain. New browsers, have capabilities to communicate with
@@ -1529,7 +1735,7 @@ IframeTransport.prototype.onmessage = function(e) {
 
 IframeTransport.prototype.postMessage = function(type, data) {
     var that = this;
-    that.iframeObj.iframe.contentWindow.postMessage(that.window_id + type + (data || ''), that.origin);
+    that.iframeObj.post(that.window_id + type + (data || ''), that.origin);
 };
 
 IframeTransport.prototype.doSend = function (message) {
@@ -1547,6 +1753,14 @@ IframeTransport.enabled = function() {
 
 
 //         [*] Including lib/trans-iframe-within.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
+
 var curr_window_id;
 
 var postMessage = function (type, data) {
@@ -1571,11 +1785,17 @@ FacadeJS.prototype._doCleanup = function () {
     this._transport.doCleanup();
 };
 
+utils.parent_origin = undefined;
+
 SockJS.bootstrap_iframe = function() {
     var facade;
     curr_window_id = _document.location.hash.slice(1);
     var onMessage = function(e) {
         if(e.source !== parent) return;
+        if(typeof utils.parent_origin === 'undefined')
+            utils.parent_origin = e.origin;
+        if (e.origin !== utils.parent_origin) return;
+
         var window_id = e.data.slice(0, 8);
         var type = e.data.slice(8, 9);
         var data = e.data.slice(9);
@@ -1592,6 +1812,11 @@ SockJS.bootstrap_iframe = function() {
                           " \"" + version + "\", the iframe:" +
                           " \"" + SockJS.version + "\".");
             }
+            if (!utils.flatUrl(trans_url) || !utils.flatUrl(base_url)) {
+                utils.log("Only basic urls are supported in SockJS");
+                return;
+            }
+
             if (!utils.isSameOriginUrl(trans_url) ||
                 !utils.isSameOriginUrl(base_url)) {
                 utils.log("Can't connect to different domain from within an " +
@@ -1626,6 +1851,14 @@ SockJS.bootstrap_iframe = function() {
 
 
 //         [*] Including lib/info.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
+
 var InfoReceiver = function(base_url, AjaxObject) {
     var that = this;
     utils.delay(function(){that.doXhr(base_url, AjaxObject);});
@@ -1636,7 +1869,7 @@ InfoReceiver.prototype = new EventEmitter(['finish']);
 InfoReceiver.prototype.doXhr = function(base_url, AjaxObject) {
     var that = this;
     var t0 = (new Date()).getTime();
-    var xo = new AjaxObject('GET', base_url + '/info' , null);
+    var xo = new AjaxObject('GET', base_url + '/info');
 
     var tref = utils.delay(8000,
                            function(){xo.ontimeout();});
@@ -1706,11 +1939,11 @@ var createInfoReceiver = function(base_url) {
     if (utils.isSameOriginUrl(base_url)) {
         // If, for some reason, we have SockJS locally - there's no
         // need to start up the complex machinery. Just use ajax.
-        return new InfoReceiver(base_url, utils.XHRObject);
+        return new InfoReceiver(base_url, utils.XHRLocalObject);
     }
     switch (utils.isXHRCorsCapable()) {
     case 1:
-        return new InfoReceiver(base_url, utils.XHRObject);
+        return new InfoReceiver(base_url, utils.XHRCorsObject);
     case 2:
         return new InfoReceiver(base_url, utils.XDRObject);
     case 3:
@@ -1724,7 +1957,7 @@ var createInfoReceiver = function(base_url) {
 
 
 var WInfoReceiverIframe = FacadeJS['w-iframe-info-receiver'] = function(ri, _trans_url, base_url) {
-    var ir = new InfoReceiver(base_url, utils.XHRObject);
+    var ir = new InfoReceiver(base_url, utils.XHRLocalObject);
     ir.onfinish = function(info, rtt) {
         ri._didMessage('m'+JSON.stringify([info, rtt]));
         ri._didClose();
@@ -1735,6 +1968,14 @@ WInfoReceiverIframe.prototype.doCleanup = function() {};
 
 
 //         [*] Including lib/trans-iframe-eventsource.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
+
 var EventSourceIframeTransport = SockJS['iframe-eventsource'] = function () {
     var that = this;
     that.protocol = 'w-iframe-eventsource';
@@ -1753,13 +1994,21 @@ EventSourceIframeTransport.roundTrips = 3; // html, javascript, eventsource
 
 // w-iframe-eventsource
 var EventSourceTransport = FacadeJS['w-iframe-eventsource'] = function(ri, trans_url) {
-    this.run(ri, trans_url, '/eventsource', EventSourceReceiver, utils.XHRObject);
+    this.run(ri, trans_url, '/eventsource', EventSourceReceiver, utils.XHRLocalObject);
 }
 EventSourceTransport.prototype = new AjaxBasedTransport();
 //         [*] End of lib/trans-iframe-eventsource.js
 
 
 //         [*] Including lib/trans-iframe-xhr-polling.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
+
 var XhrPollingIframeTransport = SockJS['iframe-xhr-polling'] = function () {
     var that = this;
     that.protocol = 'w-iframe-xhr-polling';
@@ -1778,7 +2027,7 @@ XhrPollingIframeTransport.roundTrips = 3; // html, javascript, xhr
 
 // w-iframe-xhr-polling
 var XhrPollingITransport = FacadeJS['w-iframe-xhr-polling'] = function(ri, trans_url) {
-    this.run(ri, trans_url, '/xhr', XhrReceiver, utils.XHRObject);
+    this.run(ri, trans_url, '/xhr', XhrReceiver, utils.XHRLocalObject);
 };
 
 XhrPollingITransport.prototype = new AjaxBasedTransport();
@@ -1786,6 +2035,14 @@ XhrPollingITransport.prototype = new AjaxBasedTransport();
 
 
 //         [*] Including lib/trans-iframe-htmlfile.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
+
 // This transport generally works in any browser, but will cause a
 // spinning cursor to appear in any browser other than IE.
 // We may test this transport in all browsers - why not, but in
@@ -1810,13 +2067,20 @@ HtmlFileIframeTransport.roundTrips = 3; // html, javascript, htmlfile
 
 // w-iframe-htmlfile
 var HtmlFileTransport = FacadeJS['w-iframe-htmlfile'] = function(ri, trans_url) {
-    this.run(ri, trans_url, '/htmlfile', HtmlfileReceiver, utils.XHRObject);
+    this.run(ri, trans_url, '/htmlfile', HtmlfileReceiver, utils.XHRLocalObject);
 };
 HtmlFileTransport.prototype = new AjaxBasedTransport();
 //         [*] End of lib/trans-iframe-htmlfile.js
 
 
 //         [*] Including lib/trans-polling.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
 
 var Polling = function(ri, Receiver, recv_url, AjaxObject) {
     var that = this;
@@ -1858,6 +2122,13 @@ Polling.prototype.abort = function() {
 
 
 //         [*] Including lib/trans-receiver-eventsource.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
 
 var EventSourceReceiver = function(url) {
     var that = this;
@@ -1896,6 +2167,14 @@ EventSourceReceiver.prototype.abort = function() {
 
 
 //         [*] Including lib/trans-receiver-htmlfile.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
+
 var _is_ie_htmlfile_capable;
 var isIeHtmlfileCapable = function() {
     if (_is_ie_htmlfile_capable === undefined) {
@@ -1957,6 +2236,13 @@ HtmlfileReceiver.prototype.abort = function() {
 
 
 //         [*] Including lib/trans-receiver-xhr.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
 
 var XhrReceiver = function(url, AjaxObject) {
     var that = this;
@@ -1996,6 +2282,14 @@ XhrReceiver.prototype.abort = function() {
 
 
 //         [*] Including lib/test-hooks.js
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Copyright (c) 2011-2012 VMware, Inc.
+ *
+ * For the license see COPYING.
+ * ***** END LICENSE BLOCK *****
+ */
+
 // For testing
 SockJS.getUtils = function(){
     return utils;
@@ -2009,6 +2303,11 @@ SockJS.getIframeTransport = function(){
                   return SockJS;
           })();
 if ('_sockjs_onload' in window) setTimeout(_sockjs_onload, 1);
+
+// AMD compliance
+if (typeof define === 'function' && define.amd) {
+    define('sockjs', [], function(){return SockJS;});
+}
 //     [*] End of lib/index.js
 
 // [*] End of lib/all.js

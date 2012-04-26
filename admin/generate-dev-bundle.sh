@@ -2,7 +2,7 @@
 
 set -e
 
-BUNDLE_VERSION=0.1.2
+BUNDLE_VERSION=0.1.3
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -60,6 +60,12 @@ echo checking out v8
 rm -rf deps/v8
 git clone http://github.com/v8/v8.git deps/v8
 (cd deps/v8 && git checkout 3.9.24)
+
+# use newer npm. workaround issue in fstream-npm?
+echo checking out npm
+rm -rf deps/npm
+git clone http://github.com/isaacs/npm.git deps/npm
+(cd deps/npm && git checkout v1.1.18)
 
 
 # on linux, build a static openssl to link against. Everything else we
@@ -127,6 +133,8 @@ npm install gzippo@0.1.4
 npm install optimist@0.3.1
 npm install coffee-script@1.3.1
 npm install less@1.3.0
+npm install sass@0.5.0
+npm install stylus@0.25.0
 npm install mime@1.2.5
 npm install semver@1.0.13
 npm install handlebars@1.0.5beta
@@ -145,7 +153,7 @@ npm install connect-gzip@0.1.5
 # Sockjs has a broken optional dependancy, and npm optional dependancies
 # don't seem to quite work. Fake it out with a checkout.
 git clone http://github.com/akdubya/rbytes.git
-npm install sockjs@0.2.1 # majek said wait for 0.3.1
+npm install sockjs@0.3.1
 rm -rf rbytes
 
 # Disable mtime check in fibers. Fixes problem when packaging tools
