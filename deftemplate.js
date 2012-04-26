@@ -8,7 +8,7 @@
     var orig = Handlebars._default_helpers.each;
     Handlebars._default_helpers.each = function (arg, options) {
       if (!(arg instanceof LocalCollection.Cursor))
-        return orig(arg, options);
+        return orig.call(this, arg, options);
 
       return Meteor.ui.listChunk(arg, options.fn, options.inverse, null);
     };
