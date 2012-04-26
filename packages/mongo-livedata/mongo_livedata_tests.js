@@ -187,10 +187,11 @@ Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
 
   var step = 0;
 
-  // Random integer in [0,n)
-  // use SeededRandom test helper to allow for deterministic results.
-  // comment out random input to use seeded mode
+  // Use non-deterministic randomness so we can have a shorter fuzz
+  // test (fewer iterations).  For deterministic (fully seeded)
+  // randomness, remove the call to Math.random().
   var seededRandom = new SeededRandom("foobard" + Math.random());
+  // Random integer in [0,n)
   var rnd = function (n) {
     return seededRandom.nextIntBetween(0, n-1);
   };

@@ -292,6 +292,21 @@ Tinytest.add("liveui - tables", function(test) {
   div.kill();
   Meteor.flush();
   test.equal(R.numListeners(), 0);
+
+  // Test tables with patching
+  R.set("");
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return '<table id="my-awesome-table">'+R.get()+'</table>';
+  }));
+  Meteor.flush();
+  R.set("<tr><td>Hello</td></tr>");
+  Meteor.flush();
+  test.equal(
+    div.html(),
+    '<table id="my-awesome-table"><tbody><tr><td>Hello</td></tr></tbody></table>');
+  div.kill();
+  Meteor.flush();
+
 });
 
 Tinytest.add("liveui - preserved nodes (diff/patch)", function(test) {
@@ -300,7 +315,7 @@ Tinytest.add("liveui - preserved nodes (diff/patch)", function(test) {
 
   var randomNodeList = function(optParentTag, depth) {
     var atTopLevel = ! optParentTag;
-    var len = rand.nextIntBetween(atTopLevel ? 1 : 0, 10);
+    var len = rand.nextIntBetween(atTopLevel ? 1 : 0, 6);
     var buf = [];
     for(var i=0; i<len; i++)
       buf.push(randomNode(optParentTag, depth));
@@ -317,9 +332,10 @@ Tinytest.add("liveui - preserved nodes (diff/patch)", function(test) {
 
       n.tagName = rand.nextChoice((function() {
         switch (optParentTag) {
-        case "table": return ['tr'];
-        case "tr": return ['td'];
-        case "p": case "b": case "i": return ['b', 'i'];
+        case "p": return ['b', 'i', 'u'];
+        case "b": return ['i', 'u'];
+        case "i": return ['u'];
+        case "u": case "span": return ['span'];
         default: return ['div', 'ins', 'center', 'p'];
         }
       })());
@@ -414,11 +430,14 @@ Tinytest.add("liveui - preserved nodes (diff/patch)", function(test) {
     return buf;
   };
 
-  for(var i=0; i<20; i++) {
-    rand = new SeededRandom("preserved nodes "+i);
+  for(var i=0; i<5; i++) {
+    // Use non-deterministic randomness so we can have a shorter fuzz
+    // test (fewer iterations).  For deterministic (fully seeded)
+    // randomness, remove the call to Math.random().
+    rand = new SeededRandom("preserved nodes "+i+" "+Math.random());
 
     var R = ReactiveVar(false);
-    var structure = randomNodeList(null, 4);
+    var structure = randomNodeList(null, 6);
     var frag = WrappedFrag(Meteor.ui.render(function() {
       return nodeListToHtml(structure, R.get());
     })).hold();
@@ -1206,13 +1225,11 @@ Tinytest.add("liveui - events", function(test) {
   Meteor.flush();
 
   // selector that specifies a top-level div
-  // FAILS in 0.3.3
   event_buf.length = 0;
   div = OnscreenDiv(Meteor.ui.render(function() {
     return '<div id="foozy">Foo</div>';
   }, {events: eventmap("click div")}));
   simulateEvent(getid("foozy"), 'click');
-  test.expect_fail();
   test.equal(event_buf, ['click div']);
   div.kill();
   Meteor.flush();
@@ -1229,7 +1246,6 @@ Tinytest.add("liveui - events", function(test) {
 
   // replaced top-level elements still have event handlers
   // even if not replaced by the chunk wih the handlers
-  // FAILS in 0.3.3
   var R = ReactiveVar("p");
   event_buf.length = 0;
   div = OnscreenDiv(Meteor.ui.render(function() {
@@ -1243,19 +1259,47 @@ Tinytest.add("liveui - events", function(test) {
   R.set("div"); // change tag, which is sure to replace element
   Meteor.flush();
   simulateEvent(getid("foozy"), 'click'); // still clickable?
-  test.expect_fail();
   test.equal(event_buf, ['click']);
   event_buf.length = 0;
   R.set("p");
   Meteor.flush();
   simulateEvent(getid("foozy"), 'click');
-  test.expect_fail();
   test.equal(event_buf, ['click']);
   event_buf.length = 0;
-
   div.kill();
   Meteor.flush();
 
+  // "bubbling" order
+  event_buf.length = 0;
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return Meteor.ui.chunk(function() {
+      return Meteor.ui.chunk(function() {
+        return '<span id="foozy" class="a b c">Hello</span>';
+      }, {events: eventmap("click .c")});
+    }, {events: eventmap("click .b")});
+  }, {events: eventmap("click .a")}));
+  simulateEvent(getid("foozy"), 'click');
+  test.equal(event_buf, ['click .c', 'click .b', 'click .a']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+  // "bubbling" stop (doesn't work; eventually support?)
+  event_buf.length = 0;
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return Meteor.ui.chunk(function() {
+      return Meteor.ui.chunk(function() {
+        return '<span id="foozy" class="a b c">Hello</span>';
+      }, {events: eventmap("click .c")});
+    }, {events: {"click .b": function(evt) {
+      event_buf.push("click .b"); evt.stopPropagation(); return false;}}});
+  }, {events: eventmap("click .a")}));
+  simulateEvent(getid("foozy"), 'click');
+  test.expect_fail();
+  test.equal(event_buf, ['click .c', 'click .b']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
 
 });
 
