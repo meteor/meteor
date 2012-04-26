@@ -24,5 +24,6 @@ Package.register_extension(
 );
 
 Package.on_test(function (api) {
-  api.add_files('coffeescript_tests.coffee', ['client', 'server']);
+  api.add_files(['coffeescript_tests.coffee', 'coffeescript_tests.js'],
+                ['client', 'server']);
 });
