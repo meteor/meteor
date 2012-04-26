@@ -1,6 +1,6 @@
 Package.describe({
   summary: "UX/UI framework from Twitter"
-})
+});
 
 Package.on_use(function (api) {
   api.add_files('css/bootstrap.css', 'client');
@@ -11,6 +11,6 @@ Package.on_use(function (api) {
 
   // XXX this makes the paths to the icon sets absolute. it needs
   // to be included _after_ the standard bootstrap css so
-  // that it's styles take precedence.
+  // that its styles take precedence.
   api.add_files('css/bootstrap-override.css', 'client');
 });
