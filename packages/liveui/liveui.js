@@ -130,6 +130,15 @@ Meteor.ui = Meteor.ui || {};
     if (in_range) {
       // Called to re-render a chunk; update that chunk in place.
       Meteor.ui._intelligent_replace(in_range, frag);
+      
+      // Call Template.XXX.callback anytime the template is re-rendered
+      var template = react_date.template_name;
+      if(Template[template].callback && (typeof Template[template].callback === "function")) {
+        $(function(){
+          Template[template].callback.call(window);
+        });  
+      }
+      
       range = in_range;
     } else {
       range = new Meteor.ui._LiveUIRange(frag);
