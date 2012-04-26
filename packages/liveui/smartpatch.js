@@ -1,6 +1,28 @@
 Meteor.ui = Meteor.ui || {};
 
-
+// A Patcher manages the controlled replacement of a region of the DOM.
+// The target region is changed in place to match the source region.
+//
+// The target region consists of the children of tgtParent, extending from
+// the child after tgtBefore to the child before tgtAfter.  A null
+// or absent tgtBefore or tgtAfter represents the beginning or end
+// of tgtParent's children.  The source region consists of all children
+// of srcParent, which may be a DocumentFragment.
+//
+// To use a new Patcher, call `match` zero or more times followed by
+// `finish`.  Alternatively, just call `diffpatch` to use the standard
+// matching strategy.
+//
+// A match is a correspondence between an old node in the target region
+// and a new node in the source region that will replace it.  Based on
+// this correspondence, the target node is preserved and the attributes
+// and children of the source node are copied over it.  The `match`
+// method declares such a correspondence.  The `diffpatch` method
+// determines the correspondences and calls `match` and `finish`.
+// A Patcher that makes no matches just removes the target nodes
+// and inserts the source nodes in their place.
+//
+// Constructor:
 Meteor.ui._Patcher = function(tgtParent, srcParent, tgtBefore, tgtAfter) {
   this.tgtParent = tgtParent;
   this.srcParent = srcParent;
@@ -11,6 +33,18 @@ Meteor.ui._Patcher = function(tgtParent, srcParent, tgtBefore, tgtAfter) {
   this.lastKeptTgtNode = null;
   this.lastKeptSrcNode = null;
 };
+
+// Perform a complete patching where nodes with the same `id` or `name`
+// are matched.
+//
+// Any node that has either an "id" or "name" attribute is considered a
+// "labeled" node, and these labeled nodes are candidates for preservation.
+// For two labeled nodes, old and new, to match, they first must have the same
+// label (that is, they have the same id, or neither has an id and they have
+// the same name).  Labels are considered relative to the nearest enclosing
+// labeled ancestor, and must be unique among the labeled nodes that share
+// this nearest labeled ancestor.  Labeled nodes are also expected to stay
+// in the same order, or else some of them won't be matched.
 
 Meteor.ui._Patcher.prototype.diffpatch = function(copyCallback) {
   var self = this;
@@ -218,6 +252,10 @@ Meteor.ui._Patcher.prototype.match = function(tgtNode, srcNode, copyCallback) {
   return true;
 };
 
+// Completes patching assuming no more matches.
+//
+// Patchers are single-use, so no more methods can be called
+// on the Patcher.
 Meteor.ui._Patcher.prototype.finish = function() {
   return this.match(null, null);
 };
@@ -260,7 +298,16 @@ Meteor.ui._Patcher.prototype._replaceNodes = function(
   }
 };
 
-
+// Copy HTML attributes of node `src` onto node `tgt`.
+//
+// The effect we are trying to achieve is best expresed in terms of
+// HTML.  Whatever HTML generated `tgt`, we want to mutate the DOM element
+// so that it is as if it were the HTML that generated `src`.
+// We want to preserve JavaScript properties in general (tgt.foo),
+// while syncing the HTML attributes (tgt.getAttribute("foo")).
+//
+// This is complicated by form controls and the fact that old IE
+// can't keep the difference straight between properties and attributes.
 Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
   var srcAttrs = src.attributes;
   var tgtAttrs = tgt.attributes;
