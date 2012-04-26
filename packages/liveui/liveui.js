@@ -160,7 +160,7 @@ Meteor.ui = Meteor.ui || {};
     if(react_data){
       var template = react_data.template_name;
 
-      if(Template[template].callback && (typeof Template[template].callback === "function")) {
+      if(template && Template[template].callback && (typeof Template[template].callback === "function")) {
         $(function(){
           Template[template].callback.call(window);
         });  
