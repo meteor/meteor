@@ -1,6 +1,10 @@
 // XXX should allow <!-- --> comments at toplevel
 
 var html_scanner = module.exports = {
+  regex: {
+    name_attr: /[$\s]name\s*=\s*["']?([^"'\s]+)["'\s]/
+  },
+
   scan: function (contents) {
     var results = { head: '', body: '', js: '' };
     while (contents)
@@ -65,7 +69,7 @@ var html_scanner = module.exports = {
       if (tag === "template") {
         // XXX fails for attributes that contain whitespace, and
         // probably lots of other stuff too..
-        match = attrs.match(/[$\s]name=["']?([^"'\s]+)["'\s]/);
+        match = attrs.match(regex.name_attr);
         if (!match)
           // XXX improve error
           throw new Error("Template missing id attribute, um, somewhere ...");
