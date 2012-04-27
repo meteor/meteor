@@ -13,6 +13,8 @@ Meteor.ui = Meteor.ui || {};
   // `in_range` is a package-private argument used to render inside
   // an existing LiveRange on an update.
   Meteor.ui.render = function (html_func, react_data, in_range) {
+    
+    Meteor.ui._rendered_templates = [];
     if (typeof html_func !== "function")
       throw new Error("Meteor.ui.render() requires a function as its first argument.");
 
