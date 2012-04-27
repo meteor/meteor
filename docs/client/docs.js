@@ -172,6 +172,7 @@ var toc = [
   "Packages", [ [
     "amplify",
     "backbone",
+    "bootstrap",
     "coffeescript",
     "jquery",
     "less",
