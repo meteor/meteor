@@ -176,6 +176,7 @@ var toc = [
     "jquery",
     "less",
     "stylus",
+    "sass",
     "showdown",
     "underscore"
   ] ],
