@@ -296,6 +296,12 @@ _Mongo.Cursor.prototype.forEach = function (callback) {
   var self = this;
   var future = new Future;
 
+  callback = Meteor.bindEnvironment(callback, function (e) {
+    // XXX improve error message (and how we report it)
+    Meteor._debug("Exception while running Meteor.Collection forEach callback"
+                  + e.stack);
+  });
+
   self.cursor.each(function (err, doc) {
     if (err || !doc || !doc._id) {
       future.ret(err);
