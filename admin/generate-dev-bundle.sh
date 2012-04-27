@@ -122,6 +122,8 @@ which node
 which npm
 
 cd "$DIR/lib/node_modules"
+npm install expresso@0.9.2
+
 npm install connect@1.8.5
 npm install gzippo@0.1.4
 npm install optimist@0.3.1
