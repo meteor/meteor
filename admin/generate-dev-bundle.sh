@@ -2,7 +2,7 @@
 
 set -e
 
-BUNDLE_VERSION=0.1.3
+BUNDLE_VERSION=0.1.4
 UNAME=$(uname)
 ARCH=$(uname -m)
 
