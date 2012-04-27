@@ -30,7 +30,7 @@ Package.register_extension(
       // less.render() is supposed to report any errors via its
       // callback. But sometimes, it throws them instead. This is
       // probably a bug in less. Be prepared for either behavior.
-      bundle.error(source_path + ": Less compiler error: " + err.message);
+      bundle.error(source_path + ": Less compiler error: " + e.message);
     }
   }
 );

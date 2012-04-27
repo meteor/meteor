@@ -214,6 +214,10 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
   var srcAttrs = src.attributes;
   var tgtAttrs = tgt.attributes;
 
+  // Determine whether tgt has focus; works in all browsers
+  // as of FF3, Safari4
+  var target_focused = (tgt === document.activeElement);
+
   // clear current attributes
 
   if (tgt.style.cssText)
@@ -233,6 +237,9 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
       continue; // catches weird "propdescname" in IE 8
     if (name === "id" || name === "type")
       continue;
+    // never delete value attribute, only overwrite the property
+    if (name === "value")
+      continue;
     var possibleExpando = tgt[name];
     if (possibleExpando && typeof possibleExpando === "object")
       continue; // for object properties that surface attributes only in IE
@@ -242,15 +249,22 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
   // copy over src's attributes
 
   if (tgt.mergeAttributes) {
+    // IE code path:
 
-    // IE
     tgt.mergeAttributes(src);
-    if (typeof tgt.checked !== "undefined" || typeof src.checked !== "undefined")
+    if (typeof tgt.checked !== "undefined" ||
+        typeof src.checked !== "undefined")
       tgt.checked = src.checked;
+    if (src.nodeName === "INPUT" && src.type === "text") {
+      if (! target_focused)
+        tgt.value = src.value;
+    }
     if (src.name)
       tgt.name = src.name;
 
   } else {
+    // non-IE code path:
+
     for(var i=0, L=srcAttrs.length; i<L; i++) {
       var srcA = srcAttrs.item(i);
       if (srcA.specified) {
@@ -264,7 +278,11 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
         } else if (name === "style") {
           tgt.style.cssText = src.style.cssText;
         } else if (name === "class") {
-                  tgt.className = src.className;
+          tgt.className = src.className;
+        } else if (name === "value") {
+          // don't set attribute, just overwrite property
+          if (! target_focused)
+            tgt.value = src.value;
         } else {
           tgt.setAttribute(name, value);
         }

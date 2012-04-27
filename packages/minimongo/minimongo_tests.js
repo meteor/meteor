@@ -96,9 +96,10 @@ Tinytest.add("minimongo - basics", function (test) {
   c.remove({_id: null});
   c.remove({_id: false});
   c.remove({_id: undefined});
+  c.remove();
   test.equal(c.find().count(), 4);
 
-  c.remove();
+  c.remove({});
   test.equal(c.find().count(), 0);
 
   c.insert({_id: 1, name: "strawberry", tags: ["fruit", "red", "squishy"]});

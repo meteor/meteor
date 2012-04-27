@@ -194,7 +194,7 @@ _.each(["insert", "update", "remove"], function (name) {
       var ret = args[0]._id = Meteor.uuid();
     }
 
-    if (self._manager) {
+    if (self._manager && self._manager !== Meteor.default_server) {
       // NB: on failure, allow exception to propagate
       self._manager.apply(self._prefix + name, args, callback);
     }
