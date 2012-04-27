@@ -175,8 +175,8 @@ var toc = [
     "coffeescript",
     "jquery",
     "less",
-    "stylus",
     "sass",
+    "stylus",
     "showdown",
     "underscore"
   ] ],
