@@ -6,13 +6,17 @@ Meteor.ui = Meteor.ui || {};
   // object, otherwise it is null.
   // callbacks: id -> func, where id ranges from 1 to callbacks._count.
   Meteor.ui._render_mode        = null;
-  Meteor.ui._rendered_templates = null;
+
+  // Array of nodes which defines a callback after Templates rendering & DOM Insertion
+  Meteor.ui._render_callbacks_nodes     = null;
 
   // `in_range` is a package-private argument used to render inside
   // an existing LiveRange on an update.
   Meteor.ui.render = function (html_func, react_data, in_range) {
 
-    Meteor.ui._rendered_templates = [];
+    // Empty the render_callbacks array each time we do a render
+    Meteor.ui_render_callbacks_nodes    = [];
+
     if (typeof html_func !== "function")
       throw new Error("Meteor.ui.render() requires a function as its first argument.");
 
@@ -147,14 +151,12 @@ Meteor.ui = Meteor.ui || {};
     });
 
     Meteor.ui._wire_up(cx, range, html_func, react_data);
-    _.each(Meteor.ui._rendered_templates, function(template){
-      if ( Template[template].callback && (typeof Template[template].callback === "function") ) {
-        /* We load callbacks on Chunck Loaded
-         * XXX Callbacks can only access their own template nodes on DOM Load. */
-        $(function(){
-          Template[template].callback.call(window);
-        });
-      }
+
+    // Triggers the 'afterinsert' for each node which defines this event
+    _.each(Meteor.ui._render_callbacks_nodes, function(node){
+        $(function() {
+            node.trigger('afterinsert');
+        })
     });
 
     return (in_range ? null : frag);
@@ -162,13 +164,6 @@ Meteor.ui = Meteor.ui || {};
   };
 
   Meteor.ui.chunk = function(html_func, react_data) {
-    /* Allows us to define a callback for each chunk after Meteor.ui.render as been called */
-    if ( react_data && react_data.template_name) {
-      var template = react_data.template_name;
-      if (!_.contains(Meteor.ui._rendered_templates, template))
-        Meteor.ui._rendered_templates.push(template);
-    }
-
     if (typeof html_func !== "function")
       throw new Error("Meteor.ui.chunk() requires a function as its first argument.");
 
@@ -495,11 +490,16 @@ Meteor.ui = Meteor.ui || {};
   Meteor.ui._wire_up = function(cx, range, html_func, react_data) {
     // wire events
     var data = react_data || {};
+    Meteor.ui._callback_nodes = Meteor.ui._callback_nodes || [];
+
     if (data.events) {
       for(var n = range.firstNode();
           n && n.previousSibling !== range.lastNode();
           n = n.nextSibling) {
-        Meteor.ui._setupEvents(n, data.events, data.event_data);
+          Meteor.ui._setupEvents(n, data.events, data.event_data);
+          if ( _.has(data.events, 'afterinsert') ) {
+            Meteor.ui._callback_nodes.push($(n));
+        }
       }
     }
 
