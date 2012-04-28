@@ -581,13 +581,26 @@ Meteor.ui = Meteor.ui || {};
           (function(bound) {
             $.event.add(n, event+".liveui", function(evt) {
               if (selector) {
-                // target must match selector
-                var target = evt.target;
                 // use element's parentNode as a "context"; any elements
                 // referenced in the selector must be proper descendents
                 // of the context.
                 var results = $(bound.parentNode).find(selector);
-                if (! _.contains(results, target))
+                // target or ancestor must match selector
+                var curNode = evt.target;
+                var selectorMatch = null;
+                while (! selectorMatch) {
+                  if (_.contains(results, curNode))
+                    // found the node that justifies handling
+                    // this event
+                    selectorMatch = curNode;
+                  else if (curNode === bound)
+                    // couldn't find a match
+                    break;
+                  else
+                    curNode = curNode.parentNode;
+                }
+
+                if (! selectorMatch)
                   return;
               }
               callback.call(event_data, evt);
