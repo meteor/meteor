@@ -2,7 +2,7 @@
 
 set -e
 
-BUNDLE_VERSION=0.1.3
+BUNDLE_VERSION=0.1.4
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -47,6 +47,8 @@ trap 'rm -rf "$DIR" >/dev/null 2>&1' 0
 echo BUILDING IN "$DIR"
 
 cd "$DIR"
+chmod 755 .
+umask 022
 mkdir build
 cd build
 
