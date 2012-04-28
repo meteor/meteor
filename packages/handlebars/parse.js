@@ -28,7 +28,7 @@ Handlebars = {};
 
 Handlebars.to_json_ast = function (code) {
   var ast = require("handlebars").parse(code);
-  var _ = require('../../app/lib/third/underscore.js'); // XXX super lame
+  var _ = require('../../packages/underscore/underscore.js'); // XXX super lame
 
   var identifier = function (node) {
     if (node.type !== "ID")

@@ -154,7 +154,7 @@ Example:
 
     // Subscribe to the chat messages in the current room. Automatically
     // update the subscription whenever the current room changes.
-    Meteor.subscriptions(function () {
+    Meteor.autosubscribe(function () {
       Meteor.subscribe("chat", {room: Session.get("current-room");});
     });
 
@@ -618,16 +618,6 @@ cursor, use [`forEach`](#foreach), [`map`](#map), or [`fetch`](#fetch).
 When called in a reactive context, `forEach` registers dependencies on
 the matching documents.
 
-{{> api_box cursor_map}}
-
-When called in a reactive context, `map` registers dependencies on
-the matching documents.
-
-{{> api_box cursor_fetch}}
-
-When called in a reactive context, `fetch` registers dependencies on
-the matching documents.
-
 Examples:
 
     // Print the titles of the five top-scoring posts
@@ -637,6 +627,16 @@ Examples:
       console.log("Title of post " + count + ": " + post.title);
       count += 1;
     });
+
+{{> api_box cursor_map}}
+
+When called in a reactive context, `map` registers dependencies on
+the matching documents.
+
+{{> api_box cursor_fetch}}
+
+When called in a reactive context, `fetch` registers dependencies on
+the matching documents.
 
 {{> api_box cursor_count}}
 
@@ -1136,23 +1136,6 @@ object you receive is a jQuery event object. We would like to change
 this so that you are not required to use jQuery.
 {{/warning}}
 
-{{#warning}}
-There are currently two bugs that will cause events to not get
-delivered in certain circumstances. Both have easy workarounds:
-
-* If an event is filtered by a selector, then it will never be
-delivered to a top-level node in a template. The problem is that
-selectors will never match the top-level node in a template. This
-matches other libraries but can be counterintuitive. The workaround is
-to remove the selector if possible, or else add a wrapper element at the
-top of the template.
-
-* If a template A inserts another template B at the top-level of the
-template, then if B updates itself, it will no longer receive
-events. The workaround is to add a wrapper element around B.
-
-{{/warning}}
-
 Example:
 
     {
@@ -1358,6 +1341,10 @@ then restores its previous value.)
 
 <h2 id="meteor_http"><span>Meteor.http</span></h2>
 
+`Meteor.http` provides an HTTP API on the client and server.  To use
+these functions, add the HTTP package to your project with `meteor add
+http`.
+
 {{> api_box httpcall}}
 
 This function initiates an HTTP request to a remote server. It returns
@@ -1446,7 +1433,10 @@ Example asynchronous HTTP call:
                      });
 
 
-{{> api_box httphelpers}}
+{{> api_box http_get}}
+{{> api_box http_post}}
+{{> api_box http_put}}
+{{> api_box http_del}}
 
 
 {{/better_markdown}}

@@ -1,4 +1,4 @@
-METEOR_VERSION = "0.3.3";
+METEOR_VERSION = "0.3.4";
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
@@ -51,10 +51,6 @@ var toc = [
     "Quick start",
     "Seven principles",
     "Resources"
-  ],
-  "Examples", [
-    "Leaderboard",
-    "Todos"
   ],
   "Concepts", [
     "Structuring your app",
@@ -166,19 +162,22 @@ var toc = [
 
     "Meteor.http", [
       "Meteor.http.call",
-      {name: "Meteor.http.get", id: "meteor_http_helpers"},
-      {name: "Meteor.http.post", id: "meteor_http_helpers"},
-      {name: "Meteor.http.put", id: "meteor_http_helpers"},
-      {name: "Meteor.http.del", id: "meteor_http_helpers"}
+      {name: "Meteor.http.get", id: "meteor_http_get"},
+      {name: "Meteor.http.post", id: "meteor_http_post"},
+      {name: "Meteor.http.put", id: "meteor_http_put"},
+      {name: "Meteor.http.del", id: "meteor_http_del"}
     ]
   ],
 
   "Packages", [ [
     "amplify",
     "backbone",
+    "bootstrap",
     "coffeescript",
     "jquery",
     "less",
+    "sass",
+    "stylus",
     "showdown",
     "underscore"
   ] ],

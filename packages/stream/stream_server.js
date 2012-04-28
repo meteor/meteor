@@ -17,7 +17,7 @@ Meteor._StreamServer = function () {
   // set up socket.io
   var sockjs = __meteor_bootstrap__.require('sockjs');
   self.server = sockjs.createServer({
-    prefix: '/sockjs', websocket: false, log: function(){},
+    prefix: '/sockjs', log: function(){},
     jsessionid: false});
   self.server.installHandlers(__meteor_bootstrap__.app);
 

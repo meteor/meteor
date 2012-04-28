@@ -36,11 +36,13 @@ testAsyncMulti("mongo-livedata - database failure reporting", [
 
 Tinytest.addAsync("mongo-livedata - basics", function (test, onComplete) {
   var run = test.runId();
-  var coll;
+  var coll, coll2;
   if (Meteor.is_client) {
     coll = new Meteor.Collection(null); // local, unmanaged
+    coll2 = new Meteor.Collection(null); // local, unmanaged
   } else {
     coll = new Meteor.Collection("livedata_test_collection_"+run);
+    coll2 = new Meteor.Collection("livedata_test_collection_2_"+run);
   }
 
   var log = '';
@@ -109,6 +111,8 @@ Tinytest.addAsync("mongo-livedata - basics", function (test, onComplete) {
   cur.forEach(function (doc) {
     total *= 10;
     total += doc.x;
+    // verify the meteor environment is set up here
+    coll2.insert({total:total});
   })
   test.equal(total, 14);
 
@@ -187,10 +191,11 @@ Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
 
   var step = 0;
 
-  // Random integer in [0,n)
-  // use SeededRandom test helper to allow for deterministic results.
-  // comment out random input to use seeded mode
+  // Use non-deterministic randomness so we can have a shorter fuzz
+  // test (fewer iterations).  For deterministic (fully seeded)
+  // randomness, remove the call to Math.random().
   var seededRandom = new SeededRandom("foobard" + Math.random());
+  // Random integer in [0,n)
   var rnd = function (n) {
     return seededRandom.nextIntBetween(0, n-1);
   };

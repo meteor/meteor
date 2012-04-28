@@ -90,23 +90,25 @@ testAsyncMulti("httpcall - failure", [
         test.equal(result.statusCode, 500);
       }));
 
-    // Timeout
+    // Should time out
     Meteor.http.call(
-      "GET", url_prefix()+"/slow",
-      { timeout: 200 },
+      "GET", url_prefix()+"/slow-"+Meteor.uuid(),
+      { timeout: 500 },
       expect(function(error, result) {
         test.isTrue(error);
         test.equal(error, result.error);
       }));
+
+    // Should not time out
     Meteor.http.call(
-      "GET", url_prefix()+"/foo",
+      "GET", url_prefix()+"/foo-"+Meteor.uuid(),
       { timeout: 2000 },
       expect(function(error, result) {
         test.isFalse(error);
         test.isTrue(result);
         test.equal(result.statusCode, 200);
         var data = result.data;
-        test.equal(data.url, "/foo");
+        test.equal(data.url.substring(0, 4), "/foo");
         test.equal(data.method, "GET");
 
       }));

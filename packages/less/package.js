@@ -34,3 +34,7 @@ Package.register_extension(
     }
   }
 );
+
+Package.on_test(function (api) {
+  api.add_files(['less_tests.less', 'less_tests.js'], 'client');
+});
