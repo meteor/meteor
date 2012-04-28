@@ -182,12 +182,15 @@ _.extend(PackageInstance.prototype, {
     var ext = path.extname(rel_path).substr(1);
     var handler = self.get_source_handler(ext);
     if (!handler) {
-      // A package included a source file that we don't have a
-      // processor for. Wouldn't be app source, since we wouldn't have
-      // added it as a source file in the first place.
-      // XXX do something more graceful than printing a stack trace
-      throw new Error("Don't know how to process file: " +
-                      rel_path);
+      // If we don't have an extension handler, serve this file
+      // as a static resource.
+      self.bundle.api.add_resource({
+        type: "static",
+        path: path.join(self.pkg.serve_root, rel_path),
+        data: fs.readFileSync(path.join(self.pkg.source_root, rel_path)),
+        where: where
+      });
+      return;
     }
 
     handler(self.bundle.api,
@@ -297,6 +300,8 @@ var Bundle = function () {
           if (w !== "client")
             throw new Error("HTML segments can only go to the client");
           self[options.type].push(data);
+        } else if (options.type === "static") {
+          self.files[w][options.path] = data;
         } else {
           throw new Error("Unknown type " + options.type);
         }
@@ -494,6 +499,11 @@ _.extend(Bundle.prototype, {
                  {ignore: ignore_files});
     else
       /* dev_bundle_mode === "skip" */;
+
+    fs.writeFileSync(
+      path.join(build_path, 'server', '.bundle_version.txt'),
+      fs.readFileSync(
+        path.join(files.get_dev_bundle(), '.bundle_version.txt')));
 
     // --- Static assets ---
 
