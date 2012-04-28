@@ -407,14 +407,10 @@ Meteor.ui = Meteor.ui || {};
   Meteor.ui._wire_up = function(cx, range, html_func, react_data) {
     // wire events
     var data = react_data || {};
-    Meteor.ui._callback_nodes = Meteor.ui._callback_nodes || [];
 
     if (data.events) {
-      for(var n = range.firstNode();
-          n && n.previousSibling !== range.lastNode();
-          n = n.nextSibling) {
-        Meteor.ui._setupEvents(n, data.events, data.event_data);
-      }
+      range.events = data.events;
+      range.event_data = data.event_data;
     }
 
     attach_primary_events(range);
@@ -581,6 +577,7 @@ Meteor.ui = Meteor.ui || {};
   // XXX jQuery dependency
   Meteor.ui._attachEvents = function (start, end, events, event_data) {
     events = events || {};
+    Meteor.ui._render_callbacks_nodes = Meteor.ui._render_callbacks_nodes || [];
 
     // iterate over `spec: callback` map
     _.each(events, function(callback, spec) {
@@ -612,6 +609,9 @@ Meteor.ui = Meteor.ui || {};
               callback.call(event_data, evt);
             });
           })(n);
+          if ( event === 'afterinsert' ) {
+            Meteor.ui._render_callbacks_nodes.push($(n));
+          }
         }
       });
     });
