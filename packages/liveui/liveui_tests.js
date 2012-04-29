@@ -1,4 +1,6 @@
 
+(function() {
+
 ///// ReactiveVar /////
 
 var ReactiveVar = function(initialValue) {
@@ -1370,8 +1372,12 @@ Tinytest.add("liveui - cleanup", function(test) {
 
 });
 
+Tinytest.add("liveui - focus/blur", function(test) {
+
+});
 
 // TO TEST:
 // - events
 //   - attaching events in render, chunk, listChunk item, listChunk else
 
+})();
