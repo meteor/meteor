@@ -1269,7 +1269,20 @@ Tinytest.add("liveui - events", function(test) {
   div.kill();
   Meteor.flush();
 
-  // "bubbling" order
+  // bubbling from event on descendent of element matched
+  // by selector
+  event_buf.length = 0;
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return '<div id="foozy"><span><u><b>Foo</b></u></span>'+
+      '<span>Bar</span></div>';
+  }, {events: eventmap("click span")}));
+  simulateEvent(
+    getid("foozy").firstChild.firstChild.firstChild, 'click');
+  test.equal(event_buf, ['click span']);
+  div.kill();
+  Meteor.flush();
+
+  // "bubbling" order for handlers at same level
   event_buf.length = 0;
   div = OnscreenDiv(Meteor.ui.render(function() {
     return Meteor.ui.chunk(function() {
