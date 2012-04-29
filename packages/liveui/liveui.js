@@ -571,15 +571,33 @@ Meteor.ui = Meteor.ui || {};
         if (parts.length === 0)
           return;
 
-        var event = parts.shift();
+        var eventType = parts.shift();
         var selector = parts.join(' ');
+        var rewrittenEventType = eventType;
+        var bubbles = true;
+        // Rewrite focus and blur to non-bubbling focusin and focusout.
+        // We are relying on jquery to simulate focusin/focusout in Firefox,
+        // the only major browser that lacks support for them.
+        // When removing jquery dependency, use event capturing in Firefox,
+        // focusin/focusout in IE, and either in WebKit.
+        switch (eventType) {
+        case 'focus':
+          rewrittenEventType = 'focusin';
+          bubbles = false;
+          break;
+        case 'blur':
+          rewrittenEventType = 'focusout';
+          bubbles = false;
+          break;
+        }
 
         var after = end.nextSibling;
         for(var n = start; n && n !== after; n = n.nextSibling) {
           // use function scope to close over each node `n`.
           // otherwise, there is only one `n` for all the callbacks!
           (function(bound) {
-            $.event.add(n, event+".liveui", function(evt) {
+            $.event.add(n, rewrittenEventType+".liveui", function(evt) {
+              evt.type = eventType;
               if (selector) {
                 // use element's parentNode as a "context"; any elements
                 // referenced in the selector must be proper descendents
@@ -593,7 +611,7 @@ Meteor.ui = Meteor.ui || {};
                     // found the node that justifies handling
                     // this event
                     selectorMatch = curNode;
-                  else if (curNode === bound)
+                  else if (curNode === bound || ! bubbles)
                     // couldn't find a match
                     break;
                   else
