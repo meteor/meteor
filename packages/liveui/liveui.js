@@ -15,7 +15,7 @@ Meteor.ui = Meteor.ui || {};
   Meteor.ui.render = function (html_func, react_data, in_range) {
 
     // Empty the render_callbacks array each time we do a render
-    Meteor.ui_render_callbacks_nodes    = [];
+    Meteor.ui._render_callbacks_nodes = [];
 
     if (typeof html_func !== "function")
       throw new Error("Meteor.ui.render() requires a function as its first argument.");
