@@ -96,6 +96,20 @@ OnscreenDiv.prototype.remove = function() {
   this.div.parentNode.removeChild(this.div);
 };
 
+var focusElement = function(elem) {
+  elem.focus();
+  elem.focus(); // IE 8 seems to need a second call!
+  // focus() should set document.activeElement
+  if (document.activeElement !== elem)
+    throw new Error("focus() didn't set activeElement");
+};
+
+var blurElement = function(elem) {
+  elem.blur();
+  if (document.activeElement === elem)
+    throw new Error("blur() didn't affect activeElement");
+};
+
 ///// TESTS /////
 
 Tinytest.add("liveui - one render", function(test) {
@@ -531,12 +545,8 @@ Tinytest.add("liveui - copied attributes", function(test) {
     }));
     var maybe_focus = function(div) {
       if (with_focus) {
-        div.node().style.display = "block";
-        div.node().firstChild.focus();
-        div.node().firstChild.focus(); // IE 8 needs a second call!
-        // focus() should set document.activeElement
-        // (this one's on the browser to pass)
-        test.equal(document.activeElement, div.node().firstChild);
+        div.node().style.display = "block"; // make visible
+        focusElement(div.node().firstChild);
       }
     };
     maybe_focus(div);
@@ -1373,6 +1383,89 @@ Tinytest.add("liveui - cleanup", function(test) {
 });
 
 Tinytest.add("liveui - focus/blur", function(test) {
+
+  var focus_blur = function(render_func, events) {
+    var buf = [];
+
+    var div = OnscreenDiv(
+      Meteor.ui.render(render_func,
+                       { events: events,
+                         event_data: buf }));
+    div.node().style.display = "block"; // make visible
+
+    // focus the <input>
+    var input = div.node().getElementsByTagName("input")[0];
+    test.isTrue(input);
+    focusElement(input);
+    var focusBuf = buf.slice();
+    buf.length = 0;
+
+    // blur the <input>
+    blurElement(input);
+    var blurBuf = buf;
+
+    // clean up
+    div.kill();
+    Meteor.flush();
+
+    return [focusBuf, blurBuf];
+  };
+
+  var event_map = function(/*args*/) {
+    var events = {};
+    _.each(arguments, function(esel) {
+      var etyp = esel.split(' ')[0];
+      events[esel] = function(evt) {
+        test.equal(evt.type, etyp);
+        this.push(esel);
+      };
+    });
+    return events;
+  };
+
+  var level1 = function() { return '<input type="text" />'; };
+  var level2 = function() {
+    return '<span id="spanOfMurder"><input type="text" /></span>'; };
+
+  // focus on top-level input
+  test.equal(focus_blur(level1, event_map('focus input')),
+             [['focus input'], []]);
+
+  // focus on second-level input
+  // issue #108
+  test.equal(focus_blur(level2, event_map('focus input')),
+             [['focus input'], []]);
+
+
+  // focusin
+  test.equal(focus_blur(level1, event_map('focusin input')),
+             [['focusin input'], []]);
+  test.equal(focus_blur(level2, event_map('focusin input')),
+             [['focusin input'], []]);
+
+  // focusin bubbles
+  test.equal(focus_blur(level2, event_map('focusin span')),
+             [['focusin span'], []]);
+
+  // focus doesn't bubble
+  test.equal(focus_blur(level2, event_map('focus span')),
+             [[], []]);
+
+  // blur works, doesn't bubble
+  test.equal(focus_blur(level1, event_map('blur input')),
+             [[], ['blur input']]);
+  test.equal(focus_blur(level2, event_map('blur input')),
+             [[], ['blur input']]);
+  test.equal(focus_blur(level2, event_map('blur span')),
+             [[], []]);
+
+  // focusout works, bubbles
+  test.equal(focus_blur(level1, event_map('focusout input')),
+             [[], ['focusout input']]);
+  test.equal(focus_blur(level2, event_map('focusout input')),
+             [[], ['focusout input']]);
+  test.equal(focus_blur(level2, event_map('focusout span')),
+             [[], ['focusout span']]);
 
 });
 
