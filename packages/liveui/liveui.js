@@ -601,25 +601,26 @@ Meteor.ui = Meteor.ui || {};
           // otherwise, there is only one `n` for all the callbacks!
           (function(bound) {
             $.event.add(n, rewrittenEventType+".liveui", function(evt) {
+              var contextNode = bound.parentNode;
               evt.type = eventType;
               if (selector) {
                 // use element's parentNode as a "context"; any elements
                 // referenced in the selector must be proper descendents
                 // of the context.
-                var results = $(bound.parentNode).find(selector);
+                var results = $(contextNode).find(selector);
                 // target or ancestor must match selector
-                var curNode = evt.target;
                 var selectorMatch = null;
-                while (! selectorMatch) {
-                  if (_.contains(results, curNode))
+                for(var curNode = evt.target;
+                    curNode !== contextNode;
+                    curNode = curNode.parentNode) {
+                  if (_.contains(results, curNode)) {
                     // found the node that justifies handling
                     // this event
                     selectorMatch = curNode;
-                  else if (curNode === bound || ! bubbles)
-                    // couldn't find a match
                     break;
-                  else
-                    curNode = curNode.parentNode;
+                  }
+                  if (! bubbles)
+                    break;
                 }
 
                 if (! selectorMatch)

@@ -1455,9 +1455,16 @@ Tinytest.add("liveui - tricky events", function(test) {
 
   ///// CHANGE
 
+  // on top-level
   var checkbox1 = make_input_tester(checkboxLevel1, 'change input');
   test.equal(checkbox1.click(), ['change input']);
   checkbox1.kill();
+
+  // on second-level (should bubble)
+  //var checkbox2 = make_input_tester(checkboxLevel2,
+  //'change input', 'change span');
+  //test.equal(checkbox2.click(), ['change input', 'change span']);
+  //checkbox2.kill();
 
 });
 
