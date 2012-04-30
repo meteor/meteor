@@ -15,6 +15,8 @@ Meteor.ui = Meteor.ui || {};
 // - keeping track of handlers that have been bound
 // - cross-browser event attaching (attachEvent/addEventListener)
 // - event field and callback normalization (event.target, etc.)
+//
+// XXX TODO: support 'submit' on non-top-level form in IE 6-8.
 
 (function() {
 
@@ -157,8 +159,10 @@ Meteor.ui = Meteor.ui || {};
       var after = end.nextSibling;
       for(var n = start; n && n !== after; n = n.nextSibling) {
         wireNode(n);
-        if (n.firstChild) // element nodes only
+        if (n.firstChild) { // element nodes only
           _.each(n.getElementsByTagName('INPUT'), wireNode);
+          _.each(n.getElementsByTagName('FORM'), wireNode);
+        }
       }
     };
   };
