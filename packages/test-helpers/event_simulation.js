@@ -28,5 +28,8 @@ var blurElement = function(elem) {
 };
 
 var clickElement = function(elem) {
-  simulateEvent(elem, 'click');
+  if (elem.click)
+    elem.click(); // supported by form controls cross-browser; most native way
+  else
+    simulateEvent(elem, 'click');
 };

@@ -1413,18 +1413,11 @@ Tinytest.add("liveui - tricky events", function(test) {
         // clean up
         div.kill();
         Meteor.flush();
+      },
+      inputNode: function() {
+        return input;
       }
     };
-  };
-
-  var focus_blur = function(render_func, events) {
-    var tester = make_input_tester(render_func, events);
-
-    var focusBuf = tester.focus();
-    var blurBuf = tester.blur();
-    tester.kill();
-
-    return [focusBuf, blurBuf];
   };
 
   var event_map = function(/*args*/) {
@@ -1441,6 +1434,20 @@ Tinytest.add("liveui - tricky events", function(test) {
 
   var textLevel1 = '<input type="text" />';
   var textLevel2 = '<span id="spanOfMurder"><input type="text" /></span>';
+  var checkboxLevel1 = '<input type="checkbox" />';
+  var checkboxLevel2 = '<span id="spanOfMurder"><input type="checkbox" /></span>';
+
+  ///// FOCUS & BLUR
+
+  var focus_blur = function(render_func, events) {
+    var tester = make_input_tester(render_func, events);
+
+    var focusBuf = tester.focus();
+    var blurBuf = tester.blur();
+    tester.kill();
+
+    return [focusBuf, blurBuf];
+  };
 
   // focus on top-level input
   test.equal(focus_blur(textLevel1, 'focus input'),
@@ -1482,6 +1489,11 @@ Tinytest.add("liveui - tricky events", function(test) {
   test.equal(focus_blur(textLevel2, 'focusout span'),
              [[], ['focusout span']]);
 
+  ///// CHANGE
+  
+  var checkbox1 = make_input_tester(checkboxLevel1, 'change input');
+  test.equal(checkbox1.click(), ['change input']);
+  checkbox1.kill();
 
 });
 
