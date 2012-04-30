@@ -57,7 +57,7 @@ var request_queue = [];
 // calls callback once proxy is actively listening on outer and
 // proxying to inner.
 
-var start_proxy = function (outer_port, inner_port, callback) {
+var start_proxy = function (host, outer_port, inner_port, callback) {
   callback = callback || function () {};
 
   var p = httpProxy.createServer(function (req, res, proxy) {
@@ -82,14 +82,14 @@ var start_proxy = function (outer_port, inner_port, callback) {
     } else if (Status.listening) {
       // server is listening. things are hunky dory!
       proxy.proxyRequest(req, res, {
-        host: '127.0.0.1', port: inner_port
+        host: host, port: inner_port
       });
     } else {
       // Not listening yet. Queue up request.
       var buffer = httpProxy.buffer(req);
       request_queue.push(function () {
         proxy.proxyRequest(req, res, {
-          host: '127.0.0.1', port: inner_port,
+          host: host, port: inner_port,
           buffer: buffer
         });
       });
@@ -420,7 +420,8 @@ var start_update_checks = function () {
 // This function never returns and will call process.exit() if it
 // can't continue. If you change this, remember to call
 // watcher.destroy() as appropriate.
-exports.run = function (app_dir, bundle_opts, port) {
+exports.run = function (app_dir, bundle_opts, host, port) {
+  var host = host || '127.0.0.1';
   var outer_port = port || 3000;
   var inner_port = outer_port + 1;
   var mongo_port = outer_port + 2;
@@ -597,14 +598,14 @@ exports.run = function (app_dir, bundle_opts, port) {
       });
   };
 
-  start_proxy(outer_port, inner_port, function () {
+  start_proxy(host, outer_port, inner_port, function () {
     process.stdout.write("[[[[[ " + files.pretty_path(app_dir) + " ]]]]]\n\n");
 
     mongo_startup_print_timer = setTimeout(function () {
       process.stdout.write("Initializing mongo database... this may take a moment.\n");
     }, 3000);
     process_startup_printer = function () {
-      process.stdout.write("Running on: http://localhost:" + outer_port + "/\n");
+      process.stdout.write("Running on: http://" + host + ":" + outer_port + "/\n");
     };
 
     start_update_checks();

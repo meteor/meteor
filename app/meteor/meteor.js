@@ -86,6 +86,8 @@ Commands.push({
     var opt = require('optimist')
       .alias('port', 'p').default('port', 3000)
       .describe('port', 'Port to listen on. NOTE: Also uses port N+1 and N+2.')
+      .default('host', '127.0.0.1')
+      .describe('host', 'Address to bind to.')
       .boolean('production')
       .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
       .usage(
@@ -112,7 +114,7 @@ Commands.push({
 
     var app_dir = require_project("run", true); // app or package
     var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true };
-    require('./run.js').run(app_dir, bundle_opts, new_argv.port);
+    require('./run.js').run(app_dir, bundle_opts, new_argv.host, new_argv.port);
   }
 });
 
