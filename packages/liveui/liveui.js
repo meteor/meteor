@@ -370,13 +370,8 @@ Meteor.ui = Meteor.ui || {};
     }
 
     var copyFunc = function(t, s) {
-      // XXX jQuery dependency
-      // We are relying on jquery to keep track of the events
-      // we have bound so that we can unbind them.
-      $(t).unbind(".liveui");
-
-      Meteor.ui._LiveRange.transplant_tag(
-        Meteor.ui._tag, t, s);
+      Meteor.ui._resetEvents(t);
+      Meteor.ui._LiveRange.transplant_tag(Meteor.ui._tag, t, s);
     };
 
     //tgtRange.replace_contents(srcParent);
@@ -403,6 +398,7 @@ Meteor.ui = Meteor.ui || {};
     }
 
     attach_primary_events(range);
+    Meteor.ui._prepareForEvents(range.firstNode(), range.lastNode());
 
     // record that if we see this range offscreen during a flush,
     // we are to kill the context (mark it killed and invalidate it).
@@ -545,15 +541,6 @@ Meteor.ui = Meteor.ui || {};
   var attach_primary_events = function(range) {
     Meteor.ui._attachEvents(range.firstNode(), range.lastNode(),
                             range.events, range.event_data);
-
-    // In old IE, 'change' and 'submit' don't bubble, so we need
-    // to register special handlers.
-    // Use this as an opportunity to walk the newly-created nodes,
-    // as attach_primary_events is called once on any DOM nodes
-    // created by liveui.
-    if (wireIEChangeSubmitHack)
-      wireIEChangeSubmitHack(range);
-
   };
 
   // Attach events specified by enclosing ranges of `range`, at the
@@ -571,141 +558,6 @@ Meteor.ui = Meteor.ui || {};
       Meteor.ui._attachEvents(range.firstNode(), range.lastNode(),
                               r.events, r.event_data);
     }
-  };
-
-
-  // Make 'change' event bubble in IE 6-8, the only browser where it
-  // doesn't.  We also fix the quirk that change events on checkboxes
-  // and radio buttons don't fire until blur, also on IE 6-8 and no
-  // other known browsers.
-  //
-  // Our solution is to bind an event handler to every element that
-  // might be the target of a change event.  The event handler is
-  // generic, and simply refires a 'cellchange' event, an obscure
-  // IE event that does bubble and is unlikely to be used in an app.
-  // To fix checkboxes and radio buttons, use the 'propertychange'
-  // event instead of 'change'.
-  //
-  // Relevant info:
-  // http://www.quirksmode.org/dom/events/change.html
-  var wireIEChangeSubmitHack = null;
-  if (document.attachEvent &&
-      (! ('onchange' in document)) &&
-      'oncellchange' in document) {
-    // IE <= 8
-    wireIEChangeSubmitHack = function(range) {
-      var wireNode = function(n) {
-        if (n.nodeName === 'INPUT') {
-          if (n.type === "checkbox" || n.type === "radio") {
-            n.detachEvent('onpropertychange', changeHandlerIE);
-            n.attachEvent('onpropertychange', changeHandlerIE);
-          } else {
-            n.detachEvent('onchange', changeHandlerIE);
-            n.attachEvent('onchange', changeHandlerIE);
-          }
-        }
-      };
-
-      var after = range.lastNode().nextSibling;
-      for(var n = range.firstNode();
-          n && n !== after;
-          n = n.nextSibling) {
-        wireNode(n);
-        if (n.firstChild) // element nodes only
-          _.each(n.getElementsByTagName('INPUT'), wireNode);
-      }
-    };
-  };
-
-  // this function must be a singleton (i.e. only one instance of it)
-  // so that detachEvent can find it.
-  var changeHandlerIE = function() {
-    var evt = window.event;
-    var target = evt && window.event.srcElement;
-    if (! target)
-      return;
-    if (evt.type === 'propertychange' &&
-        evt.propertyName !== 'checked')
-      return;
-
-    target.fireEvent('oncellchange');
-  };
-
-
-
-  // XXX jQuery dependency
-  Meteor.ui._attachEvents = function (start, end, events, event_data) {
-    events = events || {};
-
-    // iterate over `spec: callback` map
-    _.each(events, function(callback, spec) {
-      var clauses = spec.split(/,\s+/);
-      _.each(clauses, function (clause) {
-        var parts = clause.split(/\s+/);
-        if (parts.length === 0)
-          return;
-
-        var eventType = parts.shift();
-        var selector = parts.join(' ');
-        var rewrittenEventType = eventType;
-        var bubbles = true;
-        // Rewrite focus and blur to non-bubbling focusin and focusout.
-        // We are relying on jquery to simulate focusin/focusout in Firefox,
-        // the only major browser that lacks support for them.
-        // When removing jquery dependency, use event capturing in Firefox,
-        // focusin/focusout in IE, and either in WebKit.
-        switch (eventType) {
-        case 'focus':
-          rewrittenEventType = 'focusin';
-          bubbles = false;
-          break;
-        case 'blur':
-          rewrittenEventType = 'focusout';
-          bubbles = false;
-          break;
-        case 'change':
-          if (wireIEChangeSubmitHack)
-            rewrittenEventType = 'cellchange';
-          break;
-        }
-
-        var attach = function(renderNode) {
-          $.event.add(renderNode, rewrittenEventType+".liveui", function(evt) {
-            var contextNode = renderNode.parentNode;
-            evt.type = eventType;
-            if (selector) {
-              // use element's parentNode as a "context"; any elements
-              // referenced in the selector must be proper descendents
-              // of the context.
-              var results = $(contextNode).find(selector);
-              // target or ancestor must match selector
-              var selectorMatch = null;
-              for(var curNode = evt.target;
-                  curNode !== contextNode;
-                  curNode = curNode.parentNode) {
-                if (_.contains(results, curNode)) {
-                  // found the node that justifies handling
-                  // this event
-                  selectorMatch = curNode;
-                  break;
-                }
-                if (! bubbles)
-                  break;
-              }
-
-              if (! selectorMatch)
-                return;
-            }
-            callback.call(event_data, evt);
-          });
-        };
-
-        var after = end.nextSibling;
-        for(var n = start; n && n !== after; n = n.nextSibling)
-          attach(n);
-
-      });
-    });
   };
 
 })();
