@@ -1345,14 +1345,13 @@ Tinytest.add("liveui - tricky events", function(test) {
       events = event_map.apply(null, _.toArray(arguments).slice(1));
     }
 
+    var R = ReactiveVar(0);
     var div = OnscreenDiv(
-      Meteor.ui.render(render_func,
-                       { events: events,
-                         event_data: buf }));
+      Meteor.ui.render(function() {
+        R.get(); // create dependency
+        return render_func();
+      }, { events: events, event_data: buf }));
     div.node().style.display = "block"; // make visible
-
-    var input = div.node().getElementsByTagName("input")[0];
-    test.isTrue(input);
 
     var getbuf = function() {
       var ret = buf.slice();
@@ -1360,17 +1359,18 @@ Tinytest.add("liveui - tricky events", function(test) {
       return ret;
     };
 
-    return {
+    var self;
+    return self = {
       focus: function() {
-        focusElement(input);
+        focusElement(self.inputNode());
         return getbuf();
       },
       blur: function() {
-        blurElement(input);
+        blurElement(self.inputNode());
         return getbuf();
       },
       click: function() {
-        clickElement(input);
+        clickElement(self.inputNode());
         return getbuf();
       },
       kill: function() {
@@ -1379,7 +1379,11 @@ Tinytest.add("liveui - tricky events", function(test) {
         Meteor.flush();
       },
       inputNode: function() {
-        return input;
+        return div.node().getElementsByTagName("input")[0];
+      },
+      redraw: function() {
+        R.set(R.get() + 1);
+        Meteor.flush();
       }
     };
   };
@@ -1399,7 +1403,8 @@ Tinytest.add("liveui - tricky events", function(test) {
   var textLevel1 = '<input type="text" />';
   var textLevel2 = '<span id="spanOfMurder"><input type="text" /></span>';
   var checkboxLevel1 = '<input type="checkbox" />';
-  var checkboxLevel2 = '<span id="spanOfMurder"><input type="checkbox" /></span>';
+  var checkboxLevel2 = '<span id="spanOfMurder">'+
+        '<input type="checkbox" id="checkboxy" /></span>';
 
   ///// FOCUS & BLUR
 
@@ -1461,10 +1466,20 @@ Tinytest.add("liveui - tricky events", function(test) {
   checkbox1.kill();
 
   // on second-level (should bubble)
-  //var checkbox2 = make_input_tester(checkboxLevel2,
-  //'change input', 'change span');
-  //test.equal(checkbox2.click(), ['change input', 'change span']);
-  //checkbox2.kill();
+  var checkbox2 = make_input_tester(checkboxLevel2,
+                                    'change input', 'change span');
+  test.equal(checkbox2.click(), ['change input', 'change span']);
+  test.equal(checkbox2.click(), ['change input', 'change span']);
+  checkbox2.redraw();
+  test.equal(checkbox2.click(), ['change input', 'change span']);
+  checkbox2.kill();
+
+  checkbox2 = make_input_tester(checkboxLevel2, 'change input');
+  test.equal(checkbox2.focus(), []);
+  test.equal(checkbox2.click(), ['change input']);
+  test.equal(checkbox2.blur(), []);
+  test.equal(checkbox2.click(), ['change input']);
+  checkbox2.kill();
 
 });
 
