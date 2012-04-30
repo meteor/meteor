@@ -370,7 +370,11 @@ Meteor.ui = Meteor.ui || {};
     }
 
     var copyFunc = function(t, s) {
-      $(t).unbind(".liveui"); // XXX jQuery dependency
+      // XXX jQuery dependency
+      // We are relying on jquery to keep track of the events
+      // we have bound so that we can unbind them.
+      $(t).unbind(".liveui");
+
       Meteor.ui._LiveRange.transplant_tag(
         Meteor.ui._tag, t, s);
     };

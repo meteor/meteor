@@ -96,20 +96,6 @@ OnscreenDiv.prototype.remove = function() {
   this.div.parentNode.removeChild(this.div);
 };
 
-var focusElement = function(elem) {
-  elem.focus();
-  elem.focus(); // IE 8 seems to need a second call!
-  // focus() should set document.activeElement
-  if (document.activeElement !== elem)
-    throw new Error("focus() didn't set activeElement");
-};
-
-var blurElement = function(elem) {
-  elem.blur();
-  if (document.activeElement === elem)
-    throw new Error("blur() didn't affect activeElement");
-};
-
 ///// TESTS /////
 
 Tinytest.add("liveui - one render", function(test) {
@@ -815,7 +801,7 @@ Tinytest.add("liveui - leaderboard", function(test) {
   test.isTrue(!! glinnesNameNode);
   var glinnesScoreNode = glinnesNameNode.nextSibling;
   test.equal(glinnesScoreNode.getAttribute("name"), "score");
-  simulateEvent(glinnesNameNode, 'click');
+  clickElement(glinnesNameNode);
   Meteor.flush();
   glinnesNameNode = findPlayerNameDiv(names[0]);
   test.isTrue(!! glinnesNameNode);
@@ -1047,7 +1033,7 @@ Tinytest.add("liveui - listChunk event_data", function(test) {
   test.equal(item("Qux").innerHTML, "Qux");
 
   var doClick = function(name) {
-    simulateEvent(item(name), 'click');
+    clickElement(item(name));
     test.equal(lastClicked, name);
     Meteor.flush();
   };
@@ -1089,7 +1075,7 @@ Tinytest.add("liveui - events on preserved nodes", function(test) {
   }}));
 
   var click = function() {
-    simulateEvent(demo.node().getElementsByTagName('input')[0], 'click');
+    clickElement(demo.node().getElementsByTagName('input')[0]);
   };
 
   test.equal(count.get(), 0);
@@ -1209,7 +1195,7 @@ Tinytest.add("liveui - basic tag contents", function(test) {
 });
 
 
-Tinytest.add("liveui - events", function(test) {
+Tinytest.add("liveui - basic events", function(test) {
   var event_buf = [];
   var eventmap = function(/* arguments */) {
     var events = {};
@@ -1231,7 +1217,7 @@ Tinytest.add("liveui - events", function(test) {
   div = OnscreenDiv(Meteor.ui.render(function() {
     return '<div id="foozy">Foo</div>';
   }, {events: eventmap("click")}));
-  simulateEvent(getid("foozy"), 'click');
+  clickElement(getid("foozy"));
   test.equal(event_buf, ['click']);
   div.kill();
   Meteor.flush();
@@ -1241,7 +1227,7 @@ Tinytest.add("liveui - events", function(test) {
   div = OnscreenDiv(Meteor.ui.render(function() {
     return '<div id="foozy">Foo</div>';
   }, {events: eventmap("click div")}));
-  simulateEvent(getid("foozy"), 'click');
+  clickElement(getid("foozy"));
   test.equal(event_buf, ['click div']);
   div.kill();
   Meteor.flush();
@@ -1251,7 +1237,7 @@ Tinytest.add("liveui - events", function(test) {
   div = OnscreenDiv(Meteor.ui.render(function() {
     return '<div id="foozy"><span>Foo</span></div>';
   }, {events: eventmap("click span")}));
-  simulateEvent(getid("foozy").firstChild, 'click');
+  clickElement(getid("foozy").firstChild);
   test.equal(event_buf, ['click span']);
   div.kill();
   Meteor.flush();
@@ -1265,17 +1251,17 @@ Tinytest.add("liveui - events", function(test) {
       return '<'+R.get()+' id="foozy">Hello</'+R.get()+'>';
     });
   }, {events: eventmap("click")}));
-  simulateEvent(getid("foozy"), 'click');
+  clickElement(getid("foozy"));
   test.equal(event_buf, ['click']);
   event_buf.length = 0;
   R.set("div"); // change tag, which is sure to replace element
   Meteor.flush();
-  simulateEvent(getid("foozy"), 'click'); // still clickable?
+  clickElement(getid("foozy")); // still clickable?
   test.equal(event_buf, ['click']);
   event_buf.length = 0;
   R.set("p");
   Meteor.flush();
-  simulateEvent(getid("foozy"), 'click');
+  clickElement(getid("foozy"));
   test.equal(event_buf, ['click']);
   event_buf.length = 0;
   div.kill();
@@ -1288,8 +1274,8 @@ Tinytest.add("liveui - events", function(test) {
     return '<div id="foozy"><span><u><b>Foo</b></u></span>'+
       '<span>Bar</span></div>';
   }, {events: eventmap("click span")}));
-  simulateEvent(
-    getid("foozy").firstChild.firstChild.firstChild, 'click');
+  clickElement(
+    getid("foozy").firstChild.firstChild.firstChild);
   test.equal(event_buf, ['click span']);
   div.kill();
   Meteor.flush();
@@ -1303,7 +1289,7 @@ Tinytest.add("liveui - events", function(test) {
       }, {events: eventmap("click .c")});
     }, {events: eventmap("click .b")});
   }, {events: eventmap("click .a")}));
-  simulateEvent(getid("foozy"), 'click');
+  clickElement(getid("foozy"));
   test.equal(event_buf, ['click .c', 'click .b', 'click .a']);
   event_buf.length = 0;
   div.kill();
@@ -1319,7 +1305,7 @@ Tinytest.add("liveui - events", function(test) {
     }, {events: {"click .b": function(evt) {
       event_buf.push("click .b"); evt.stopPropagation(); return false;}}});
   }, {events: eventmap("click .a")}));
-  simulateEvent(getid("foozy"), 'click');
+  clickElement(getid("foozy"));
   test.expect_fail();
   test.equal(event_buf, ['click .c', 'click .b']);
   event_buf.length = 0;
@@ -1382,10 +1368,18 @@ Tinytest.add("liveui - cleanup", function(test) {
 
 });
 
-Tinytest.add("liveui - focus/blur", function(test) {
+Tinytest.add("liveui - tricky events", function(test) {
 
-  var focus_blur = function(render_func, events) {
+  var make_input_tester = function(render_func, events) {
     var buf = [];
+
+    if (typeof render_func === "string") {
+      var render_str = render_func;
+      render_func = function() { return render_str; };
+    }
+    if (typeof events === "string") {
+      events = event_map.apply(null, _.toArray(arguments).slice(1));
+    }
 
     var div = OnscreenDiv(
       Meteor.ui.render(render_func,
@@ -1393,22 +1387,37 @@ Tinytest.add("liveui - focus/blur", function(test) {
                          event_data: buf }));
     div.node().style.display = "block"; // make visible
 
-    // focus the <input>
     var input = div.node().getElementsByTagName("input")[0];
     test.isTrue(input);
-    focusElement(input);
-    var focusBuf = buf.slice();
-    buf.length = 0;
 
-    // blur the <input>
-    blurElement(input);
-    var blurBuf = buf;
+    var getbuf = function() {
+      var ret = buf.slice();
+      buf.length = 0;
+      return ret;
+    };
 
-    // clean up
-    div.kill();
-    Meteor.flush();
-
-    return [focusBuf, blurBuf];
+    return {
+      focus: function() {
+        focusElement(input);
+        return getbuf();
+      },
+      blur: function() {
+        blurElement(input);
+        return getbuf();
+      },
+      click: function() {
+        clickElement(input);
+        return getbuf();
+      },
+      kill: function() {
+        // clean up
+        div.kill();
+        Meteor.flush();
+      },
+      inputNode: function() {
+        return input;
+      }
+    };
   };
 
   var event_map = function(/*args*/) {
@@ -1423,49 +1432,68 @@ Tinytest.add("liveui - focus/blur", function(test) {
     return events;
   };
 
-  var level1 = function() { return '<input type="text" />'; };
-  var level2 = function() {
-    return '<span id="spanOfMurder"><input type="text" /></span>'; };
+  var textLevel1 = '<input type="text" />';
+  var textLevel2 = '<span id="spanOfMurder"><input type="text" /></span>';
+  var checkboxLevel1 = '<input type="checkbox" />';
+  var checkboxLevel2 = '<span id="spanOfMurder"><input type="checkbox" /></span>';
+
+  ///// FOCUS & BLUR
+
+  var focus_blur = function(render_func, events) {
+    var tester = make_input_tester(render_func, events);
+
+    var focusBuf = tester.focus();
+    var blurBuf = tester.blur();
+    tester.kill();
+
+    return [focusBuf, blurBuf];
+  };
 
   // focus on top-level input
-  test.equal(focus_blur(level1, event_map('focus input')),
+  test.equal(focus_blur(textLevel1, 'focus input'),
              [['focus input'], []]);
 
   // focus on second-level input
   // issue #108
-  test.equal(focus_blur(level2, event_map('focus input')),
+  test.equal(focus_blur(textLevel2,'focus input'),
              [['focus input'], []]);
 
 
   // focusin
-  test.equal(focus_blur(level1, event_map('focusin input')),
+  test.equal(focus_blur(textLevel1, 'focusin input'),
              [['focusin input'], []]);
-  test.equal(focus_blur(level2, event_map('focusin input')),
+  test.equal(focus_blur(textLevel2, 'focusin input'),
              [['focusin input'], []]);
 
   // focusin bubbles
-  test.equal(focus_blur(level2, event_map('focusin span')),
+  test.equal(focus_blur(textLevel2, 'focusin span'),
              [['focusin span'], []]);
 
   // focus doesn't bubble
-  test.equal(focus_blur(level2, event_map('focus span')),
+  test.equal(focus_blur(textLevel2, 'focus span'),
              [[], []]);
 
   // blur works, doesn't bubble
-  test.equal(focus_blur(level1, event_map('blur input')),
+  test.equal(focus_blur(textLevel1, 'blur input'),
              [[], ['blur input']]);
-  test.equal(focus_blur(level2, event_map('blur input')),
+  test.equal(focus_blur(textLevel2, 'blur input'),
              [[], ['blur input']]);
-  test.equal(focus_blur(level2, event_map('blur span')),
+  test.equal(focus_blur(textLevel2, 'blur span'),
              [[], []]);
 
   // focusout works, bubbles
-  test.equal(focus_blur(level1, event_map('focusout input')),
+  test.equal(focus_blur(textLevel1, 'focusout input'),
              [[], ['focusout input']]);
-  test.equal(focus_blur(level2, event_map('focusout input')),
+  test.equal(focus_blur(textLevel2, 'focusout input'),
              [[], ['focusout input']]);
-  test.equal(focus_blur(level2, event_map('focusout span')),
+  test.equal(focus_blur(textLevel2, 'focusout span'),
              [[], ['focusout span']]);
+
+  ///// CHANGE
+  
+  var checkbox1 = make_input_tester(checkboxLevel1, 'change input');
+  test.equal(checkbox1.click(), ['change input']);
+  checkbox1.kill();
 
 });
 
