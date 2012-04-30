@@ -1373,6 +1373,14 @@ Tinytest.add("liveui - tricky events", function(test) {
   var make_input_tester = function(render_func, events) {
     var buf = [];
 
+    if (typeof render_func === "string") {
+      var render_str = render_func;
+      render_func = function() { return render_str; };
+    }
+    if (typeof events === "string") {
+      events = event_map.apply(null, _.toArray(arguments).slice(1));
+    }
+
     var div = OnscreenDiv(
       Meteor.ui.render(render_func,
                        { events: events,
@@ -1431,49 +1439,49 @@ Tinytest.add("liveui - tricky events", function(test) {
     return events;
   };
 
-  var level1 = function() { return '<input type="text" />'; };
-  var level2 = function() {
-    return '<span id="spanOfMurder"><input type="text" /></span>'; };
+  var textLevel1 = '<input type="text" />';
+  var textLevel2 = '<span id="spanOfMurder"><input type="text" /></span>';
 
   // focus on top-level input
-  test.equal(focus_blur(level1, event_map('focus input')),
+  test.equal(focus_blur(textLevel1, 'focus input'),
              [['focus input'], []]);
 
   // focus on second-level input
   // issue #108
-  test.equal(focus_blur(level2, event_map('focus input')),
+  test.equal(focus_blur(textLevel2,'focus input'),
              [['focus input'], []]);
 
 
   // focusin
-  test.equal(focus_blur(level1, event_map('focusin input')),
+  test.equal(focus_blur(textLevel1, 'focusin input'),
              [['focusin input'], []]);
-  test.equal(focus_blur(level2, event_map('focusin input')),
+  test.equal(focus_blur(textLevel2, 'focusin input'),
              [['focusin input'], []]);
 
   // focusin bubbles
-  test.equal(focus_blur(level2, event_map('focusin span')),
+  test.equal(focus_blur(textLevel2, 'focusin span'),
              [['focusin span'], []]);
 
   // focus doesn't bubble
-  test.equal(focus_blur(level2, event_map('focus span')),
+  test.equal(focus_blur(textLevel2, 'focus span'),
              [[], []]);
 
   // blur works, doesn't bubble
-  test.equal(focus_blur(level1, event_map('blur input')),
+  test.equal(focus_blur(textLevel1, 'blur input'),
              [[], ['blur input']]);
-  test.equal(focus_blur(level2, event_map('blur input')),
+  test.equal(focus_blur(textLevel2, 'blur input'),
              [[], ['blur input']]);
-  test.equal(focus_blur(level2, event_map('blur span')),
+  test.equal(focus_blur(textLevel2, 'blur span'),
              [[], []]);
 
   // focusout works, bubbles
-  test.equal(focus_blur(level1, event_map('focusout input')),
+  test.equal(focus_blur(textLevel1, 'focusout input'),
              [[], ['focusout input']]);
-  test.equal(focus_blur(level2, event_map('focusout input')),
+  test.equal(focus_blur(textLevel2, 'focusout input'),
              [[], ['focusout input']]);
-  test.equal(focus_blur(level2, event_map('focusout span')),
+  test.equal(focus_blur(textLevel2, 'focusout span'),
              [[], ['focusout span']]);
+
 
 });
 
