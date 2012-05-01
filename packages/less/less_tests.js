@@ -1,23 +1,14 @@
 
 Tinytest.add("less - presence", function(test) {
 
-  var div = document.createElement("DIV");
-  div.style.height = '0';
-  div.style.overflow = 'hidden';
-  div.innerHTML = '<p class="unlucky-left-border"></p>';
-  document.body.appendChild(div);
+  var d = OnscreenDiv(Meteor.ui.render(function() {
+    return '<p class="less-unlucky-left-border"></p>'; }));
+  d.node().style.display = 'block';
 
-  var p = div.firstChild;
-  var leftBorder;
-  if (p.currentStyle) { // IE
-    leftBorder = p.currentStyle.borderLeftWidth;
-  } else {
-    leftBorder =
-      window.getComputedStyle(p, null).getPropertyValue('border-left-width');
-  }
-
+  var p = d.node().firstChild;
+  var leftBorder = getStyleProperty(p, 'border-left-width');
   test.equal(leftBorder, "13px");
 
-  div.parentNode.removeChild(div);
+  d.kill();
 });
 
