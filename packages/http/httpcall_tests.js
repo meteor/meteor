@@ -1,6 +1,6 @@
 
 // URL prefix for tests to talk to
-var _XHR_URL_PREFIX = "/test_responder";
+var _XHR_URL_PREFIX = "/http_test_responder";
 var url_prefix = function () {
   if (Meteor.is_server && _XHR_URL_PREFIX.indexOf("http") !== 0) {
     var address = __meteor_bootstrap__.app.address();
