@@ -578,7 +578,7 @@ _.extend(Meteor, {
       // recurse.
       Meteor.autosubscribe(sub_func);
       // unsub after re-subbing, to avoid bouncing.
-      _.each(local_subs, function (x) { x.stop() });
+      _.each(local_subs, function (x) { x.stop(); });
     });
 
     context.run(function () {

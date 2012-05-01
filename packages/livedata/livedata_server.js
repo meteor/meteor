@@ -471,40 +471,51 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
     for (var name in self.pending_data)
       for (var id in self.pending_data[name]) {
+        // construct outbound DDP data message
         var msg = {msg: 'data', collection: name, id: id};
 
+        // snapshot holds this subscription's values for each key
+        var snapshot = Meteor._ensure(self.snapshot, name, id);
+
         for (var key in self.pending_data[name][id]) {
+          // value: set by this run of this publish handler.
           var value = self.pending_data[name][id][key];
-          var snapshot = Meteor._ensure(self.snapshot, name, id);
+
+          // old_value: set by previous run of this publish handler.
           var old_value = snapshot[key];
 
-          // Update our snapshot based on the written value. Update
-          // our session's index too.
-          if (value === undefined) {
-            delete snapshot[key];
-            Meteor._delete(self.session.provides_key, name, id, key);
-          } else {
-            snapshot[key] = value;
-            var provides = Meteor._ensure(self.session.provides_key,
-                                          name, id, key);
-            provides[self.sub_id] = self;
-          }
-
-          // Now, find the actual value that the client should get,
-          // after taking into account any higher-priority
-          // subscriptions.
-          value = self.session._effectiveValueForKey(name, id, key);
-
-          // And add to the packet that we're sending to the client.
           if (value !== old_value) {
+            // First, find the effective value that the client currently
+            // has, thanks to the highest priority subscription.
+            var old_effective_value = self.session._effectiveValueForKey(name, id, key);
+
+            // Update our snapshot based on the written value. Update
+            // our session's index too.
             if (value === undefined) {
-              if (!('unset' in msg))
-                msg.unset = [];
-              msg.unset.push(key);
+              delete snapshot[key];
+              Meteor._delete(self.session.provides_key, name, id, key, self.sub_id);
             } else {
-              if (!('set' in msg))
-                msg.set = {};
-              msg.set[key] = value;
+              snapshot[key] = value;
+              var provides = Meteor._ensure(self.session.provides_key,
+                                            name, id, key);
+              provides[self.sub_id] = self;
+            }
+
+            // Now compute new effective value, taking into account our new value.
+            var new_effective_value = self.session._effectiveValueForKey(name, id, key);
+
+            // If the effective values differ, this sub is responsible
+            // for sending the new data down to the client.
+            if (old_effective_value !== new_effective_value) {
+              if (new_effective_value === undefined) {
+                if (!('unset' in msg))
+                  msg.unset = [];
+                msg.unset.push(key);
+              } else {
+                if (!('set' in msg))
+                  msg.set = {};
+                msg.set[key] = new_effective_value;
+              }
             }
           }
         }
