@@ -5,11 +5,18 @@ Meteor.ui = Meteor.ui || {};
   // In render mode (i.e. inside Meteor.ui.render), this is an
   // object, otherwise it is null.
   // callbacks: id -> func, where id ranges from 1 to callbacks._count.
-  Meteor.ui._render_mode = null;
+  Meteor.ui._render_mode        = null;
+
+  // Array of nodes which defines a callback after Templates rendering & DOM Insertion
+  Meteor.ui._render_callbacks_nodes     = null;
 
   // `in_range` is a package-private argument used to render inside
   // an existing LiveRange on an update.
   Meteor.ui.render = function (html_func, react_data, in_range) {
+
+    // Empty the render_callbacks array each time we do a render
+    Meteor.ui._render_callbacks_nodes = [];
+
     if (typeof html_func !== "function")
       throw new Error("Meteor.ui.render() requires a function as its first argument.");
 
@@ -150,6 +157,13 @@ Meteor.ui = Meteor.ui || {};
     });
 
     Meteor.ui._wire_up(cx, range, html_func, react_data);
+
+    // Triggers the 'afterinsert' for each node which defines this event
+    _.each(Meteor.ui._render_callbacks_nodes, function(node){
+        $(function() {
+            node.trigger('afterinsert');
+        })
+    });
 
     return (in_range ? null : frag);
 
@@ -397,6 +411,7 @@ Meteor.ui = Meteor.ui || {};
   Meteor.ui._wire_up = function(cx, range, html_func, react_data) {
     // wire events
     var data = react_data || {};
+
     if (data.events) {
       range.events = data.events;
       range.event_data = data.event_data;
@@ -566,6 +581,7 @@ Meteor.ui = Meteor.ui || {};
   // XXX jQuery dependency
   Meteor.ui._attachEvents = function (start, end, events, event_data) {
     events = events || {};
+    Meteor.ui._render_callbacks_nodes = Meteor.ui._render_callbacks_nodes || [];
 
     // iterate over `spec: callback` map
     _.each(events, function(callback, spec) {
@@ -628,6 +644,9 @@ Meteor.ui = Meteor.ui || {};
               callback.call(event_data, evt);
             });
           })(n);
+          if ( event === 'afterinsert' ) {
+            Meteor.ui._render_callbacks_nodes.push($(n));
+          }
         }
       });
     });
