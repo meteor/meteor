@@ -7,6 +7,12 @@ Meteor.startup(function () {
   // later.
   // prettyPrint();
 
+  // returns a jQuery object suitable for setting scrollTop to
+  // scroll the page, either directly for via animate()
+  var scroller = function() {
+    return $("html, body").stop();
+  };
+
   var sections = [];
   _.each($('#main h1, #main h2, #main h3'), function (elt) {
     var classes = (elt.getAttribute('class') || '').split(/\s+/);
@@ -22,7 +28,17 @@ Meteor.startup(function () {
     sections[i].next = sections[i+1] || sections[i];
     $(sections[i]).waypoint({offset: 30});
   }
-  Session.set('section', document.location.hash.substr(1) || sections[0].id);
+  var section = document.location.hash.substr(1) || sections[0].id;
+  Session.set('section', section);
+  if (section) {
+    // WebKit will scroll down to the #id in the URL asynchronously
+    // after the page is rendered, but Firefox won't.
+    Meteor.setTimeout(function() {
+      var elem = $('#'+section);
+      if (elem.length)
+        scroller().scrollTop(elem.offset().top);
+    }, 0);
+  }
 
   var ignore_waypoints = false;
   $('body').delegate('h1, h2, h3', 'waypoint.reached', function (evt, dir) {
@@ -37,7 +53,7 @@ Meteor.startup(function () {
     var sel = $(this).attr('href');
     ignore_waypoints = true;
     Session.set("section", sel.substr(1));
-    $('body').stop().animate({
+    scroller().animate({
       scrollTop: $(sel).offset().top
     }, 500, 'swing', function () {
       window.location.hash = sel;
