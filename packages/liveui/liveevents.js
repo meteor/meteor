@@ -59,6 +59,10 @@ Meteor.ui = Meteor.ui || {};
           if (wireIEChangeSubmitHack)
             rewrittenEventType = 'cellchange';
           break;
+        case 'submit':
+          if (wireIEChangeSubmitHack)
+            rewrittenEventType = 'datasetcomplete';
+          break;
         }
 
         var attach = function(renderNode) {
@@ -141,18 +145,22 @@ Meteor.ui = Meteor.ui || {};
   var wireIEChangeSubmitHack = null;
   if (document.attachEvent &&
       (! ('onchange' in document)) &&
-      'oncellchange' in document) {
+      ('oncellchange' in document) &&
+      ('ondatasetcomplete' in document)) {
     // IE <= 8
     wireIEChangeSubmitHack = function(start, end) {
       var wireNode = function(n) {
         if (n.nodeName === 'INPUT') {
           if (n.type === "checkbox" || n.type === "radio") {
-            n.detachEvent('onpropertychange', changeHandlerIE);
-            n.attachEvent('onpropertychange', changeHandlerIE);
+            n.detachEvent('onpropertychange', changeSubmitHandlerIE);
+            n.attachEvent('onpropertychange', changeSubmitHandlerIE);
           } else {
-            n.detachEvent('onchange', changeHandlerIE);
-            n.attachEvent('onchange', changeHandlerIE);
+            n.detachEvent('onchange', changeSubmitHandlerIE);
+            n.attachEvent('onchange', changeSubmitHandlerIE);
           }
+        } else if (n.nodeName === 'FORM') {
+          n.detachEvent('onsubmit', changeSubmitHandlerIE);
+          n.attachEvent('onsubmit', changeSubmitHandlerIE);
         }
       };
 
@@ -165,21 +173,41 @@ Meteor.ui = Meteor.ui || {};
         }
       }
     };
+    // implement form submission after app has had a chance
+    // to preventDefault
+    document.attachEvent('ondatasetcomplete', function() {
+      var evt = window.event;
+      var target = evt && evt.srcElement;
+      if (target && target.nodeName === 'FORM' &&
+          evt.returnValue !== false)
+        target.submit();
+    });
   };
 
   // this function must be a singleton (i.e. only one instance of it)
   // so that detachEvent can find it.
-  var changeHandlerIE = function() {
+  var changeSubmitHandlerIE = function() {
     var evt = window.event;
-    var target = evt && window.event.srcElement;
+    var target = evt && evt.srcElement;
     if (! target)
       return;
-    if (evt.type === 'propertychange' &&
-        evt.propertyName !== 'checked')
-      return;
 
-    target.fireEvent('oncellchange');
+    var newEvent = document.createEventObject();
+
+    if (evt.type === 'propertychange' && evt.propertyName === 'checked'
+        || evt.type === 'change') {
+      // we appropriate 'oncellchange' as bubbling change
+      target.fireEvent('oncellchange', newEvent);
+    }
+
+    if (evt.type === 'submit') {
+      // we appropriate 'ondatasetcomplete' as bubbling submit.
+      // call preventDefault now, let event bubble, and we
+      // will submit the form later if the app doesn't
+      // prevent it.
+      evt.returnValue = false;
+      target.fireEvent('ondatasetcomplete', newEvent);
+    }
   };
-
 
 })();

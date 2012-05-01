@@ -1332,156 +1332,235 @@ Tinytest.add("liveui - cleanup", function(test) {
 
 });
 
-Tinytest.add("liveui - tricky events", function(test) {
+testAsyncMulti("liveui - tricky events", [
+  function(test, expect) {
 
-  var make_input_tester = function(render_func, events) {
-    var buf = [];
+    var make_input_tester = function(render_func, events) {
+      var buf = [];
 
-    if (typeof render_func === "string") {
-      var render_str = render_func;
-      render_func = function() { return render_str; };
-    }
-    if (typeof events === "string") {
-      events = event_map.apply(null, _.toArray(arguments).slice(1));
-    }
-
-    var R = ReactiveVar(0);
-    var div = OnscreenDiv(
-      Meteor.ui.render(function() {
-        R.get(); // create dependency
-        return render_func();
-      }, { events: events, event_data: buf }));
-    div.node().style.display = "block"; // make visible
-
-    var getbuf = function() {
-      var ret = buf.slice();
-      buf.length = 0;
-      return ret;
-    };
-
-    var self;
-    return self = {
-      focus: function() {
-        focusElement(self.inputNode());
-        return getbuf();
-      },
-      blur: function() {
-        blurElement(self.inputNode());
-        return getbuf();
-      },
-      click: function() {
-        clickElement(self.inputNode());
-        return getbuf();
-      },
-      kill: function() {
-        // clean up
-        div.kill();
-        Meteor.flush();
-      },
-      inputNode: function() {
-        return div.node().getElementsByTagName("input")[0];
-      },
-      redraw: function() {
-        R.set(R.get() + 1);
-        Meteor.flush();
+      if (typeof render_func === "string") {
+        var render_str = render_func;
+        render_func = function() { return render_str; };
       }
-    };
-  };
+      if (typeof events === "string") {
+        events = event_map.apply(null, _.toArray(arguments).slice(1));
+      }
 
-  var event_map = function(/*args*/) {
-    var events = {};
-    _.each(arguments, function(esel) {
-      var etyp = esel.split(' ')[0];
-      events[esel] = function(evt) {
-        test.equal(evt.type, etyp);
-        this.push(esel);
+      var R = ReactiveVar(0);
+      var div = OnscreenDiv(
+        Meteor.ui.render(function() {
+          R.get(); // create dependency
+          return render_func();
+        }, { events: events, event_data: buf }));
+      div.node().style.display = "block"; // make visible
+
+      var getbuf = function() {
+        var ret = buf.slice();
+        buf.length = 0;
+        return ret;
       };
-    });
-    return events;
-  };
 
-  var textLevel1 = '<input type="text" />';
-  var textLevel2 = '<span id="spanOfMurder"><input type="text" /></span>';
-  var checkboxLevel1 = '<input type="checkbox" />';
-  var checkboxLevel2 = '<span id="spanOfMurder">'+
-        '<input type="checkbox" id="checkboxy" /></span>';
+      var self;
+      return self = {
+        focus: function() {
+          focusElement(self.inputNode());
+          return getbuf();
+        },
+        blur: function() {
+          blurElement(self.inputNode());
+          return getbuf();
+        },
+        click: function() {
+          clickElement(self.inputNode());
+          return getbuf();
+        },
+        kill: function() {
+          // clean up
+          div.kill();
+          Meteor.flush();
+        },
+        inputNode: function() {
+          return div.node().getElementsByTagName("input")[0];
+        },
+        redraw: function() {
+          R.set(R.get() + 1);
+          Meteor.flush();
+        }
+      };
+    };
 
-  ///// FOCUS & BLUR
+    var event_map = function(/*args*/) {
+      var events = {};
+      _.each(arguments, function(esel) {
+        var etyp = esel.split(' ')[0];
+        events[esel] = function(evt) {
+          test.equal(evt.type, etyp);
+          this.push(esel);
+        };
+      });
+      return events;
+    };
 
-  var focus_blur = function(render_func, events) {
-    var tester = make_input_tester(render_func, events);
+    var textLevel1 = '<input type="text" />';
+    var textLevel2 = '<span id="spanOfMurder"><input type="text" /></span>';
+    var checkboxLevel1 = '<input type="checkbox" />';
+    var checkboxLevel2 = '<span id="spanOfMurder">'+
+          '<input type="checkbox" id="checkboxy" /></span>';
 
-    var focusBuf = tester.focus();
-    var blurBuf = tester.blur();
-    tester.kill();
+    ///// FOCUS & BLUR
 
-    return [focusBuf, blurBuf];
-  };
+    var focus_blur = function(render_func, events) {
+      var tester = make_input_tester(render_func, events);
 
-  // focus on top-level input
-  test.equal(focus_blur(textLevel1, 'focus input'),
-             [['focus input'], []]);
+      var focusBuf = tester.focus();
+      var blurBuf = tester.blur();
+      tester.kill();
 
-  // focus on second-level input
-  // issue #108
-  test.equal(focus_blur(textLevel2,'focus input'),
-             [['focus input'], []]);
+      return [focusBuf, blurBuf];
+    };
+
+    // focus on top-level input
+    test.equal(focus_blur(textLevel1, 'focus input'),
+               [['focus input'], []]);
+
+    // focus on second-level input
+    // issue #108
+    test.equal(focus_blur(textLevel2,'focus input'),
+               [['focus input'], []]);
 
 
-  // focusin
-  test.equal(focus_blur(textLevel1, 'focusin input'),
-             [['focusin input'], []]);
-  test.equal(focus_blur(textLevel2, 'focusin input'),
-             [['focusin input'], []]);
+    // focusin
+    test.equal(focus_blur(textLevel1, 'focusin input'),
+               [['focusin input'], []]);
+    test.equal(focus_blur(textLevel2, 'focusin input'),
+               [['focusin input'], []]);
 
-  // focusin bubbles
-  test.equal(focus_blur(textLevel2, 'focusin span'),
-             [['focusin span'], []]);
+    // focusin bubbles
+    test.equal(focus_blur(textLevel2, 'focusin span'),
+               [['focusin span'], []]);
 
-  // focus doesn't bubble
-  test.equal(focus_blur(textLevel2, 'focus span'),
-             [[], []]);
+    // focus doesn't bubble
+    test.equal(focus_blur(textLevel2, 'focus span'),
+               [[], []]);
 
-  // blur works, doesn't bubble
-  test.equal(focus_blur(textLevel1, 'blur input'),
-             [[], ['blur input']]);
-  test.equal(focus_blur(textLevel2, 'blur input'),
-             [[], ['blur input']]);
-  test.equal(focus_blur(textLevel2, 'blur span'),
-             [[], []]);
+    // blur works, doesn't bubble
+    test.equal(focus_blur(textLevel1, 'blur input'),
+               [[], ['blur input']]);
+    test.equal(focus_blur(textLevel2, 'blur input'),
+               [[], ['blur input']]);
+    test.equal(focus_blur(textLevel2, 'blur span'),
+               [[], []]);
 
-  // focusout works, bubbles
-  test.equal(focus_blur(textLevel1, 'focusout input'),
-             [[], ['focusout input']]);
-  test.equal(focus_blur(textLevel2, 'focusout input'),
-             [[], ['focusout input']]);
-  test.equal(focus_blur(textLevel2, 'focusout span'),
-             [[], ['focusout span']]);
+    // focusout works, bubbles
+    test.equal(focus_blur(textLevel1, 'focusout input'),
+               [[], ['focusout input']]);
+    test.equal(focus_blur(textLevel2, 'focusout input'),
+               [[], ['focusout input']]);
+    test.equal(focus_blur(textLevel2, 'focusout span'),
+               [[], ['focusout span']]);
 
-  ///// CHANGE
+    ///// CHANGE
 
-  // on top-level
-  var checkbox1 = make_input_tester(checkboxLevel1, 'change input');
-  test.equal(checkbox1.click(), ['change input']);
-  checkbox1.kill();
+    // on top-level
+    var checkbox1 = make_input_tester(checkboxLevel1, 'change input');
+    test.equal(checkbox1.click(), ['change input']);
+    checkbox1.kill();
 
-  // on second-level (should bubble)
-  var checkbox2 = make_input_tester(checkboxLevel2,
-                                    'change input', 'change span');
-  test.equal(checkbox2.click(), ['change input', 'change span']);
-  test.equal(checkbox2.click(), ['change input', 'change span']);
-  checkbox2.redraw();
-  test.equal(checkbox2.click(), ['change input', 'change span']);
-  checkbox2.kill();
+    // on second-level (should bubble)
+    var checkbox2 = make_input_tester(checkboxLevel2,
+                                      'change input', 'change span');
+    test.equal(checkbox2.click(), ['change input', 'change span']);
+    test.equal(checkbox2.click(), ['change input', 'change span']);
+    checkbox2.redraw();
+    test.equal(checkbox2.click(), ['change input', 'change span']);
+    checkbox2.kill();
 
-  checkbox2 = make_input_tester(checkboxLevel2, 'change input');
-  test.equal(checkbox2.focus(), []);
-  test.equal(checkbox2.click(), ['change input']);
-  test.equal(checkbox2.blur(), []);
-  test.equal(checkbox2.click(), ['change input']);
-  checkbox2.kill();
+    checkbox2 = make_input_tester(checkboxLevel2, 'change input');
+    test.equal(checkbox2.focus(), []);
+    test.equal(checkbox2.click(), ['change input']);
+    test.equal(checkbox2.blur(), []);
+    test.equal(checkbox2.click(), ['change input']);
+    checkbox2.kill();
 
-});
+    var checkbox2 = make_input_tester(checkboxLevel2,
+                                      'change input', 'change span', 'change div');
+    test.equal(checkbox2.click(), ['change input', 'change span']);
+    checkbox2.kill();
+
+    ///// SUBMIT
+
+    // These tests are meant to test form submission, including
+    // whether the default behavior occurs (by submitting the form
+    // to an iframe), but permissions issues in IE and differences
+    // between browsers in iframe handling make them not work.
+    // I spent several hours trying to work something out here
+    // and gave up.
+
+    // var expectSubmit = function(shouldSubmit) {
+    //   var frameName = "submitframe"+String(Math.random()).slice(2);
+    //   var iframeDiv = OnscreenDiv(
+    //     Meteor.ui.render(function() {
+    //       return '<iframe name="'+frameName+'" '+
+    //         'src="javascript:void(0)">';
+    //     }));
+    //   var iframe = iframeDiv.node().firstChild;
+
+    //   iframe.contentWindow.location.href = '/favicon.ico';
+
+    //   Tinytest.setTimeout(expect(function() {
+    //     var iframeHref = iframe.contentWindow.location.href;
+    //     var didSubmit = /submitted/.test(iframeHref);
+    //     test.equal(didSubmit, shouldSubmit, iframeHref);
+
+    //     iframeDiv.kill();
+    //   }), 1000); // give time for loading
+
+    //   return frameName;
+    // };
+
+    // var buttonFormHtml = function(frameName) {
+    //   return (
+    //     '<div>'+
+    //       '<form action="/favicon.ico#submitted" target="'+frameName+'">'+
+    //       '<span><input type="submit"></span>'+
+    //       '</form></div>');
+    // };
+
+    // var form = make_input_tester(
+    //   buttonFormHtml(expectSubmit(true)), 'submit form');
+    // test.equal(form.click(), ['submit form']);
+    // form.kill();
+
+    // // submit bubbles up
+    // var form = make_input_tester(
+    //   buttonFormHtml(expectSubmit(true)), 'submit form', 'submit div');
+    // test.equal(form.click(), ['submit form', 'submit div']);
+    // form.kill();
+
+    // // preventDefault works, still bubbles
+    // var form = make_input_tester(
+    //   buttonFormHtml(expectSubmit(false)), {
+    //     'submit form': function(evt) {
+    //       test.equal(evt.type, 'submit');
+    //       test.equal(evt.target.nodeName, 'FORM');
+    //       this.push('submit form');
+    //       evt.preventDefault();
+    //     },
+    //     'submit div': function(evt) {
+    //       test.equal(evt.type, 'submit');
+    //       test.equal(evt.target.nodeName, 'FORM');
+    //       this.push('submit div');
+    //     },
+    //     'submit a': function(evt) {
+    //       this.push('submit a');
+    //     }
+    //   }
+    // );
+    // test.equal(form.click(), ['submit form', 'submit div']);
+    // form.kill();
+
+  }
+]);
 
 // TO TEST:
 // - events
