@@ -1346,6 +1346,11 @@ Tinytest.add("liveui - cleanup", function(test) {
 
 });
 
+var tricky_events_hitlist = [];
+var tricky_events_kill_later = function(thing) {
+  tricky_events_hitlist.push(thing);
+};
+
 testAsyncMulti("liveui - tricky events", [
   function(test, expect) {
 
@@ -1422,6 +1427,9 @@ testAsyncMulti("liveui - tricky events", [
           '<input type="checkbox" id="checkboxy" /></span>';
 
     ///// FOCUS & BLUR
+
+    // Note:  These tests MAY FAIL if the browser window doesn't have focus
+    // (isn't frontmost) in some browsers, particularly Firefox.
 
     var focus_blur = function(render_func, events) {
       var tester = make_input_tester(render_func, events);
@@ -1503,76 +1511,102 @@ testAsyncMulti("liveui - tricky events", [
 
     ///// SUBMIT
 
-    // These tests are meant to test form submission, including
-    // whether the default behavior occurs (by submitting the form
-    // to an iframe), but permissions issues in IE and differences
-    // between browsers in iframe handling make them not work.
-    // I spent several hours trying to work something out here
-    // and gave up.
+    // Submit events can be canceled with preventDefault, which prevents the
+    // browser's native form submission behavior.  This behavior takes some
+    // work to ensure cross-browser, so we want to test it.  To detect
+    // a form submission, we target the form at an iframe.  Iframe security
+    // makes this tricky.  What we do is load a page from the server that
+    // calls us back on 'load' and 'unload'.  We wait for 'load', set up the
+    // test, and then see if we get an 'unload' (due to the form submission
+    // going through) or not.
+    //
+    // This is quite a tricky implementation.
 
-    // var expectSubmit = function(shouldSubmit) {
-    //   var frameName = "submitframe"+String(Math.random()).slice(2);
-    //   var iframeDiv = OnscreenDiv(
-    //     Meteor.ui.render(function() {
-    //       return '<iframe name="'+frameName+'" '+
-    //         'src="javascript:void(0)">';
-    //     }));
-    //   var iframe = iframeDiv.node().firstChild;
+    var withIframe = function(onReady1, onReady2) {
+      var frameName = "submitframe"+String(Math.random()).slice(2);
+      var iframeDiv = OnscreenDiv(
+        Meteor.ui.render(function() {
+          return '<iframe name="'+frameName+'" '+
+            'src="/liveui_test_responder/">';
+        }));
+      var iframe = iframeDiv.node().firstChild;
 
-    //   iframe.contentWindow.location.href = '/favicon.ico';
+      iframe.loadFunc = function() {
+        onReady1(frameName, iframe);
+        onReady2(frameName, iframe);
+      };
+      iframe.unloadFunc = function() {
+        iframe.DID_CHANGE_PAGE = true;
+        tricky_events_kill_later(iframeDiv);
+      };
+    };
+    var expectCheckLater = function(options) {
+      var check = expect(function(iframe) {
+        if (options.shouldSubmit)
+          test.isTrue(iframe.DID_CHANGE_PAGE);
+        else
+          test.isFalse(iframe.DID_CHANGE_PAGE);
+      });
+      var checkLater = function(frameName, iframe) {
+        Tinytest.setTimeout(function() {
+          check(iframe); }, 500); // wait for frame to unload
+      };
+      return checkLater;
+    };
+    var buttonFormHtml = function(frameName) {
+      return '<div style="height:0;overflow:hidden">'+
+        '<form action="about:blank" target="'+frameName+'">'+
+        '<span><input type="submit"></span>'+
+        '</form></div>';
+    };
 
-    //   Tinytest.setTimeout(expect(function() {
-    //     var iframeHref = iframe.contentWindow.location.href;
-    //     var didSubmit = /submitted/.test(iframeHref);
-    //     test.equal(didSubmit, shouldSubmit, iframeHref);
+    // test that form submission by click fires event,
+    // and also actually submits
+    withIframe(function(frameName, iframe) {
+      var form = make_input_tester(
+        buttonFormHtml(frameName), 'submit form');
+      test.equal(form.click(), ['submit form']);
+      tricky_events_kill_later(form);
+    }, expectCheckLater({shouldSubmit:true}));
 
-    //     iframeDiv.kill();
-    //   }), 1000); // give time for loading
+    // submit bubbles up
+    withIframe(function(frameName, iframe) {
+      var form = make_input_tester(
+        buttonFormHtml(frameName), 'submit form', 'submit div');
+      test.equal(form.click(), ['submit form', 'submit div']);
+      tricky_events_kill_later(form);
+    }, expectCheckLater({shouldSubmit:true}));
 
-    //   return frameName;
-    // };
+    // preventDefault works, still bubbles
+    withIframe(function(frameName, iframe) {
+      var form = make_input_tester(
+        buttonFormHtml(frameName), {
+          'submit form': function(evt) {
+            test.equal(evt.type, 'submit');
+            test.equal(evt.target.nodeName, 'FORM');
+            this.push('submit form');
+            evt.preventDefault();
+          },
+          'submit div': function(evt) {
+            test.equal(evt.type, 'submit');
+            test.equal(evt.target.nodeName, 'FORM');
+            this.push('submit div');
+          },
+          'submit a': function(evt) {
+            this.push('submit a');
+          }
+        }
+      );
+      test.equal(form.click(), ['submit form', 'submit div']);
+      tricky_events_kill_later(form);
+    }, expectCheckLater({shouldSubmit:false}));
 
-    // var buttonFormHtml = function(frameName) {
-    //   return (
-    //     '<div>'+
-    //       '<form action="/favicon.ico#submitted" target="'+frameName+'">'+
-    //       '<span><input type="submit"></span>'+
-    //       '</form></div>');
-    // };
-
-    // var form = make_input_tester(
-    //   buttonFormHtml(expectSubmit(true)), 'submit form');
-    // test.equal(form.click(), ['submit form']);
-    // form.kill();
-
-    // // submit bubbles up
-    // var form = make_input_tester(
-    //   buttonFormHtml(expectSubmit(true)), 'submit form', 'submit div');
-    // test.equal(form.click(), ['submit form', 'submit div']);
-    // form.kill();
-
-    // // preventDefault works, still bubbles
-    // var form = make_input_tester(
-    //   buttonFormHtml(expectSubmit(false)), {
-    //     'submit form': function(evt) {
-    //       test.equal(evt.type, 'submit');
-    //       test.equal(evt.target.nodeName, 'FORM');
-    //       this.push('submit form');
-    //       evt.preventDefault();
-    //     },
-    //     'submit div': function(evt) {
-    //       test.equal(evt.type, 'submit');
-    //       test.equal(evt.target.nodeName, 'FORM');
-    //       this.push('submit div');
-    //     },
-    //     'submit a': function(evt) {
-    //       this.push('submit a');
-    //     }
-    //   }
-    // );
-    // test.equal(form.click(), ['submit form', 'submit div']);
-    // form.kill();
-
+  },
+  function(test, expect) {
+    _.each(tricky_events_hitlist, function(thing) {
+      thing.kill();
+    });
+    Meteor.flush();
   }
 ]);
 

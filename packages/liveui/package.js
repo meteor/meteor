@@ -22,6 +22,8 @@ Package.on_test(function (api) {
   api.use(['tinytest', 'templating', 'htmljs']);
   api.use(['liveui', 'test-helpers'], 'client');
 
+  api.add_files('form_responder.js', 'server');
+
   api.add_files([
     'liverange_test_helpers.js',
     'liveui_tests.js',
