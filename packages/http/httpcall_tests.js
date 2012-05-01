@@ -227,7 +227,11 @@ testAsyncMulti("httpcall - http auth", [
     // password prompt.  So we don't test auth failure, only
     // success.
 
-    var password = Meteor.uuid().replace(/[^0-9a-zA-Z]/g, '');
+    // Random password breaks in Firefox, because Firefox incorrectly
+    // uses cached credentials even if we supply different ones:
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=654348
+    var password = 'rocks';
+    //var password = Meteor.uuid().replace(/[^0-9a-zA-Z]/g, '');
     Meteor.http.call(
       "GET", url_prefix()+"/login?"+password,
       { auth: "meteor:"+password },
