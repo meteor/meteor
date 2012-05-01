@@ -60,42 +60,6 @@ WrappedFrag.prototype.node = function() {
   return this.frag;
 };
 
-///// OnscreenDiv /////
-
-var OnscreenDiv = function(optFrag) {
-  if (! (this instanceof OnscreenDiv))
-    return new OnscreenDiv(optFrag);
-
-  this.div = Meteor.ui._htmlToFragment(
-    '<div class="OnscreenDiv" style="display: none"></div>').firstChild;
-  document.body.appendChild(this.div);
-  if (optFrag)
-    this.div.appendChild(optFrag);
-};
-OnscreenDiv.prototype.rawHtml = function() {
-  return this.div.innerHTML;
-};
-OnscreenDiv.prototype.html = function() {
-  return canonicalizeHtml(this.rawHtml());
-};
-OnscreenDiv.prototype.text = function() {
-  return this.div.innerText || this.div.textContent;
-};
-OnscreenDiv.prototype.node = function() {
-  return this.div;
-};
-OnscreenDiv.prototype.kill = function() {
-  // remove DIV from document by putting it in a fragment
-  var frag = document.createDocumentFragment();
-  frag.appendChild(this.div);
-  // instigate clean-up on next flush()
-  Meteor.ui._hold(frag);
-  Meteor.ui._release(frag);
-};
-OnscreenDiv.prototype.remove = function() {
-  this.div.parentNode.removeChild(this.div);
-};
-
 ///// TESTS /////
 
 Tinytest.add("liveui - one render", function(test) {
@@ -1490,7 +1454,7 @@ Tinytest.add("liveui - tricky events", function(test) {
              [[], ['focusout span']]);
 
   ///// CHANGE
-  
+
   var checkbox1 = make_input_tester(checkboxLevel1, 'change input');
   test.equal(checkbox1.click(), ['change input']);
   checkbox1.kill();
