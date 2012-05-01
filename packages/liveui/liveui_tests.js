@@ -1244,6 +1244,20 @@ Tinytest.add("liveui - basic events", function(test) {
   div.kill();
   Meteor.flush();
 
+  // bubbling order (for same event, same render node, different selector nodes)
+  // (doesn't work, currently)
+  event_buf.length = 0;
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return '<div id="foozy"><span><u><b>Foo</b></u></span>'+
+      '<span>Bar</span></div>';
+  }, {events: eventmap("click span", "click b")}));
+  clickElement(
+    getid("foozy").firstChild.firstChild.firstChild);
+  test.expect_fail();
+  test.equal(event_buf, ['click b', 'click span']);
+  div.kill();
+  Meteor.flush();
+
   // "bubbling" order for handlers at same level
   event_buf.length = 0;
   div = OnscreenDiv(Meteor.ui.render(function() {
