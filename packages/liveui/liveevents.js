@@ -16,7 +16,28 @@ Meteor.ui = Meteor.ui || {};
 // - cross-browser event attaching (attachEvent/addEventListener)
 // - event field and callback normalization (event.target, etc.)
 //
-// XXX TODO: support 'submit' on non-top-level form in IE 6-8.
+// TODO: Fix event bubbling between multiple handlers.  Have a story for
+// the order of handler invocation and stick to it, and have
+// event.stopPropagation() always do the right thing.
+// For example, in a DOM of the form DIV > UL > LI, we might have
+// an event selector on the DIV of the form "click ul, click li" or
+// even "click *".  In either case, every matched element should be
+// visited in bottom-up order in a single traversal.  To do this,
+// we need to have only one event handler per event type per liverange.
+// Then, what about events bound at different levels?  Currently,
+// handler firing order is determined first by liverange nesting
+// level, and then by element nesting level.  For example, if a
+// liverange around the DIV selects the LI for an event, and a
+// liverange around the UL selects the UL, then you'd think an
+// event on the LI would bubble LI -> UL -> DIV.  However, the handler
+// on the UL will fire first.  This might be something to document
+// rather than fix -- i.e., handlers in event maps in inner liveranges
+// will always fire before those in outer liveranges, regardless of
+// the selected nodes.  Most solutions requiring taking over the
+// entire event flow, making live events play less well with the
+// rest of the page or events bound by other libraries.  For example,
+// binding all handlers at the top level of the document, or completely
+// faking event bubbling somehow.
 
 (function() {
 
@@ -138,7 +159,12 @@ Meteor.ui = Meteor.ui || {};
   // To fix checkboxes and radio buttons, use the 'propertychange'
   // event instead of 'change'.
   //
-  // XXX TODO: submit
+  // We solve the 'submit' event problem similarly, using the IE
+  // 'datasetcomplete' event to bubble up a form submission.
+  // The tricky part is that the app must be able to call
+  // event.preventDefault() and have the form not submit.  This
+  // is solved by blocking the original submit and calling
+  // submit() later, which never fires a 'submit' event itself.
   //
   // Relevant info:
   // http://www.quirksmode.org/dom/events/change.html
