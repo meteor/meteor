@@ -370,13 +370,8 @@ Meteor.ui = Meteor.ui || {};
     }
 
     var copyFunc = function(t, s) {
-      // XXX jQuery dependency
-      // We are relying on jquery to keep track of the events
-      // we have bound so that we can unbind them.
-      $(t).unbind(".liveui");
-
-      Meteor.ui._LiveRange.transplant_tag(
-        Meteor.ui._tag, t, s);
+      Meteor.ui._resetEvents(t);
+      Meteor.ui._LiveRange.transplant_tag(Meteor.ui._tag, t, s);
     };
 
     //tgtRange.replace_contents(srcParent);
@@ -403,6 +398,7 @@ Meteor.ui = Meteor.ui || {};
     }
 
     attach_primary_events(range);
+    Meteor.ui._prepareForEvents(range.firstNode(), range.lastNode());
 
     // record that if we see this range offscreen during a flush,
     // we are to kill the context (mark it killed and invalidate it).
@@ -541,6 +537,7 @@ Meteor.ui = Meteor.ui || {};
   };
 
   // Attach events specified by `range` to top-level nodes in `range`.
+  // The nodes may still be in a DocumentFragment.
   var attach_primary_events = function(range) {
     Meteor.ui._attachEvents(range.firstNode(), range.lastNode(),
                             range.events, range.event_data);
@@ -561,76 +558,6 @@ Meteor.ui = Meteor.ui || {};
       Meteor.ui._attachEvents(range.firstNode(), range.lastNode(),
                               r.events, r.event_data);
     }
-  };
-
-  // XXX jQuery dependency
-  Meteor.ui._attachEvents = function (start, end, events, event_data) {
-    events = events || {};
-
-    // iterate over `spec: callback` map
-    _.each(events, function(callback, spec) {
-      var clauses = spec.split(/,\s+/);
-      _.each(clauses, function (clause) {
-        var parts = clause.split(/\s+/);
-        if (parts.length === 0)
-          return;
-
-        var eventType = parts.shift();
-        var selector = parts.join(' ');
-        var rewrittenEventType = eventType;
-        var bubbles = true;
-        // Rewrite focus and blur to non-bubbling focusin and focusout.
-        // We are relying on jquery to simulate focusin/focusout in Firefox,
-        // the only major browser that lacks support for them.
-        // When removing jquery dependency, use event capturing in Firefox,
-        // focusin/focusout in IE, and either in WebKit.
-        switch (eventType) {
-        case 'focus':
-          rewrittenEventType = 'focusin';
-          bubbles = false;
-          break;
-        case 'blur':
-          rewrittenEventType = 'focusout';
-          bubbles = false;
-          break;
-        }
-
-        var after = end.nextSibling;
-        for(var n = start; n && n !== after; n = n.nextSibling) {
-          // use function scope to close over each node `n`.
-          // otherwise, there is only one `n` for all the callbacks!
-          (function(bound) {
-            $.event.add(n, rewrittenEventType+".liveui", function(evt) {
-              evt.type = eventType;
-              if (selector) {
-                // use element's parentNode as a "context"; any elements
-                // referenced in the selector must be proper descendents
-                // of the context.
-                var results = $(bound.parentNode).find(selector);
-                // target or ancestor must match selector
-                var curNode = evt.target;
-                var selectorMatch = null;
-                while (! selectorMatch) {
-                  if (_.contains(results, curNode))
-                    // found the node that justifies handling
-                    // this event
-                    selectorMatch = curNode;
-                  else if (curNode === bound || ! bubbles)
-                    // couldn't find a match
-                    break;
-                  else
-                    curNode = curNode.parentNode;
-                }
-
-                if (! selectorMatch)
-                  return;
-              }
-              callback.call(event_data, evt);
-            });
-          })(n);
-        }
-      });
-    });
   };
 
 })();
