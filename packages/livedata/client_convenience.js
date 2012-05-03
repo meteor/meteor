@@ -1,12 +1,5 @@
 _.extend(Meteor, {
-  // XXX this isn't going to work -- when connecting to a remote
-  // server, the user isn't going to know to include /sockjs. need to
-  // add it in stream_client..
-
-  // Path matches sockjs 'prefix' in stream_server. We should revisit
-  // this once we specify the 'on the wire' aspects of livedata more
-  // clearly.
-  default_connection: Meteor.connect('/sockjs', true /* restart_on_update */),
+  default_connection: Meteor.connect('/', true /* restart_on_update */),
 
   refresh: function (notification) {
   }

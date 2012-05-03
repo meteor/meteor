@@ -1,3 +1,5 @@
+// @param url {String} A URL to a sockjs endpoint, e.g.
+//   "http://subdomain.meteor.com/sockjs" or "/sockjs"
 Meteor._Stream = function (url) {
   var self = this;
 
