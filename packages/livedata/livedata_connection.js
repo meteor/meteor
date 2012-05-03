@@ -185,7 +185,7 @@ _.extend(Meteor._LivedataConnection, {
     };
 
     // Prefix FQDNs but not relative URLs
-    if (!startsWith(url, "http://") && !startsWith(url, "/")) {
+    if (url.indexOf("://") === -1 && !startsWith(url, "/")) {
       url = "http://" + url;
     }
 

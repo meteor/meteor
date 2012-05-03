@@ -408,6 +408,8 @@ Tinytest.add("livedata connection - sockjs urls are computed correctly", functio
                    "http://subdomain.meteor.com/sockjs");
   testHasSockjsUrl("http://subdomain.meteor.com",
                    "http://subdomain.meteor.com/sockjs");
+  testHasSockjsUrl("subdomain.meteor.com/sockjs",
+                   "http://subdomain.meteor.com/sockjs");
   testHasSockjsUrl("subdomain.meteor.com/",
                    "http://subdomain.meteor.com/sockjs");
   testHasSockjsUrl("subdomain.meteor.com",
@@ -420,6 +422,13 @@ Tinytest.add("livedata connection - sockjs urls are computed correctly", functio
   testHasSockjsUrl("http://localhost:3000/", "http://localhost:3000/sockjs");
   testHasSockjsUrl("http://localhost:3000", "http://localhost:3000/sockjs");
   testHasSockjsUrl("localhost:3000", "http://localhost:3000/sockjs");
+
+  testHasSockjsUrl("https://subdomain.meteor.com/sockjs",
+                   "https://subdomain.meteor.com/sockjs");
+  testHasSockjsUrl("https://subdomain.meteor.com/",
+                   "https://subdomain.meteor.com/sockjs");
+  testHasSockjsUrl("https://subdomain.meteor.com",
+                   "https://subdomain.meteor.com/sockjs");
 });
 
 // XXX also test:
