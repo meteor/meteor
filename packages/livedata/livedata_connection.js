@@ -10,6 +10,7 @@ if (Meteor.is_server) {
 // XXX namespacing
 Meteor._capture_subs = null;
 
+// @param url {String|Object} See #LivedataURL
 Meteor._LivedataConnection = function (url, restart_on_update) {
   var self = this;
 
@@ -20,7 +21,7 @@ Meteor._LivedataConnection = function (url, restart_on_update) {
     // the url is used as a key for the migration data.
     self.url = "/debug";
   } else {
-    self.url = url;
+    self.url = Meteor._LivedataConnection._toSockjsUrl(url);
   }
 
   self.last_session_id = null;
@@ -167,6 +168,35 @@ Meteor._LivedataConnection = function (url, restart_on_update) {
     }
   });
 };
+
+_.extend(Meteor._LivedataConnection, {
+  // @param url {String} See #LivedataURL
+  // @returns {String} A URL to the sockjs endpoint, e.g.
+  //   "http://subdomain.meteor.com/sockjs" or "/sockjs"
+  _toSockjsUrl: function(url) {
+    // XXX from Underscore.String (http://epeli.github.com/underscore.string/)
+    var startsWith = function(str, starts) {
+      return str.length >= starts.length &&
+        str.substring(0, starts.length) === starts;
+    };
+    var endsWith = function(str, ends) {
+      return str.length >= ends.length &&
+        str.substring(str.length - ends.length) === ends;
+    };
+
+    // Prefix FQDNs but not relative URLs
+    if (!startsWith(url, "http://") && !startsWith(url, "/")) {
+      url = "http://" + url;
+    }
+
+    if (endsWith(url, "/sockjs"))
+      return url;
+    else if (endsWith(url, "/"))
+      return url + "sockjs";
+    else
+      return url + "/sockjs";
+  }
+});
 
 _.extend(Meteor._LivedataConnection.prototype, {
   // 'name' is the name of the data on the wire that should go in the
@@ -562,12 +592,18 @@ _.extend(Meteor._LivedataConnection.prototype, {
       return !m.callback;
     });
   }
-
 });
 
 _.extend(Meteor, {
-  connect: function (url, _restart_on_update) {
-    return new Meteor._LivedataConnection(url, _restart_on_update);
+  // @param url {String} ##LivedataURL e.g.
+  //     "subdomain.meteor.com" (preferred),
+  //     "http://subdomain.meteor.com",
+  //     "subdomain.meteor.com/sockjs" (deprecated?),
+  //     "http://subdomain.meteor.com/sockjs" (deprecated?),
+  //     "/",
+  //     "/sockjs" (deprecated?)
+  connect: function (url, _restartOnUpdate) {
+    return new Meteor._LivedataConnection(url, _restartOnUpdate);
   },
 
   autosubscribe: function (sub_func) {

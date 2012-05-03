@@ -238,7 +238,6 @@ testAsyncMulti("livedata - compound methods", [
   }
 ]);
 
-
 // XXX some things to test in greater detail:
 // staying in simulation mode
 // time warp

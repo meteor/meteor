@@ -5,7 +5,7 @@
   var shortname = match ? match[1] : hostname;
 
   // connect to madewith and subscribe to my app's record
-  var server = Meteor.connect("http://madewith.meteor.com/sockjs");
+  var server = Meteor.connect("madewith.meteor.com");
   var sub = server.subscribe("myApp", hostname);
 
   // minimongo collection to hold my singleton app record.
