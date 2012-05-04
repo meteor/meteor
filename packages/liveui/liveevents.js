@@ -41,6 +41,55 @@ Meteor.ui = Meteor.ui || {};
 
 (function() {
 
+  var tag = '_liveevents';
+
+  ////// WHAT WE SHOULD ACTUALLY DO
+  ////// - have one handler, have it walk the liveranges?????
+  //////   means a different abstraction boundary.
+
+  var makeHandler = function(origType, selector, event_data, callback) {
+    return function(e) {
+      var event = (e || window.event);
+      var curNode = (event.currentTarget || this);
+      return handleEvent(
+        origType, selector, event_data, callback, curNode, event);
+    };
+  };
+
+  var handleEvent = function(origType, selector, event_data, callback,
+                             curNode, event) {
+
+    event.type = origType;
+    event.target = (event.target || event.srcElement);
+
+    if (selector) {
+      // use element's parentNode as a "context"; any elements
+      // referenced in the selector must be proper descendents
+      // of the context.
+      var contextNode = curNode.parentNode;
+      var results = $(contextNode).find(selector);
+      // target or ancestor must match selector
+      var selectorMatch = null;
+      for(var node = event.target;
+          node !== contextNode;
+          node = node.parentNode) {
+        if (_.contains(results, node)) {
+          // found the node that justifies handling
+          // this event
+          selectorMatch = node;
+          break;
+        }
+        if (origType === 'focus' || origType === 'blur')
+          break; // don't bubble
+      }
+
+      if (! selectorMatch)
+        return;
+    }
+
+    callback.call(event_data, event);
+  };
+
   // Wire up events to DOM nodes.
   //
   // `start` and `end` are sibling nodes in order that define
@@ -50,79 +99,75 @@ Meteor.ui = Meteor.ui || {};
   Meteor.ui._attachEvents = function (start, end, events, event_data) {
     events = events || {};
 
-    // iterate over `spec: callback` map
-    _.each(events, function(callback, spec) {
-      var clauses = spec.split(/,\s+/);
-      _.each(clauses, function (clause) {
-        var parts = clause.split(/\s+/);
-        if (parts.length === 0)
-          return;
+    var after = end.nextSibling;
+    for(var node = start; node && node !== after; node = node.nextSibling) {
 
-        var eventType = parts.shift();
-        var selector = parts.join(' ');
-        var rewrittenEventType = eventType;
-        var bubbles = true;
-        // Rewrite focus and blur to non-bubbling focusin and focusout.
-        // We are relying on jquery to simulate focusin/focusout in Firefox,
-        // the only major browser that lacks support for them.
-        // When removing jquery dependency, use event capturing in Firefox,
-        // focusin/focusout in IE, and either in WebKit.
-        switch (eventType) {
-        case 'focus':
-          rewrittenEventType = 'focusin';
-          bubbles = false;
-          break;
-        case 'blur':
-          rewrittenEventType = 'focusout';
-          bubbles = false;
-          break;
-        case 'change':
-          if (wireIEChangeSubmitHack)
-            rewrittenEventType = 'cellchange';
-          break;
-        case 'submit':
-          if (wireIEChangeSubmitHack)
-            rewrittenEventType = 'datasetcomplete';
-          break;
-        }
+      // map of event type to array of arrays of handlers,
+      // e.g. { click: [[handler1, handler2], [handler3]] }
+      // attached to node
+      var handler_data = node[tag];
+      if (! handler_data)
+        handler_data = node[tag] = {};
 
-        var attach = function(renderNode) {
-          $.event.add(renderNode, rewrittenEventType+".liveui", function(evt) {
-            var contextNode = renderNode.parentNode;
-            evt.type = eventType;
-            if (selector) {
-              // use element's parentNode as a "context"; any elements
-              // referenced in the selector must be proper descendents
-              // of the context.
-              var results = $(contextNode).find(selector);
-              // target or ancestor must match selector
-              var selectorMatch = null;
-              for(var curNode = evt.target;
-                  curNode !== contextNode;
-                  curNode = curNode.parentNode) {
-                if (_.contains(results, curNode)) {
-                  // found the node that justifies handling
-                  // this event
-                  selectorMatch = curNode;
-                  break;
-                }
-                if (! bubbles)
-                  break;
-              }
+      // for handlers added this iteration, the array to extend
+      // for additional handlers of the same type,
+      // e.g. { click: [handler3] }
+      var handlers_by_type = {};
 
-              if (! selectorMatch)
-                return;
-            }
-            callback.call(event_data, evt);
-          });
-        };
+      // iterate over `spec: callback` map
+      _.each(events, function(callback, spec) {
+        var clauses = spec.split(/,\s+/);
+        _.each(clauses, function (clause) {
+          var parts = clause.split(/\s+/);
+          if (parts.length === 0)
+            return;
 
-        var after = end.nextSibling;
-        for(var n = start; n && n !== after; n = n.nextSibling)
-          attach(n);
+          var eventType = parts.shift();
+          var selector = parts.join(' ');
+          var rewrittenEventType = eventType;
+          // Rewrite focus and blur to non-bubbling focusin and focusout.
+          // We are relying on jquery to simulate focusin/focusout in Firefox,
+          // the only major browser that lacks support for them.
+          // When removing jquery dependency, use event capturing in Firefox,
+          // focusin/focusout in IE, and either in WebKit.
+          switch (eventType) {
+          case 'focus':
+            rewrittenEventType = 'focusin';
+            break;
+          case 'blur':
+            rewrittenEventType = 'focusout';
+            break;
+          case 'change':
+            if (wireIEChangeSubmitHack)
+              rewrittenEventType = 'cellchange';
+            break;
+          case 'submit':
+            if (wireIEChangeSubmitHack)
+              rewrittenEventType = 'datasetcomplete';
+            break;
+          }
 
+          var t = rewrittenEventType;
+
+          var handler_array = handlers_by_type[t];
+          if (! handler_array) {
+            handler_array = [];
+            handler_data[t] = (handler_data[t] || []);
+            handler_data[t].push(handler_array);
+            handlers_by_type[t] = handler_array;
+          }
+
+          var handler = makeHandler(eventType, selector, event_data, callback);
+          handler_array.push(handler);
+
+          if (node.addEventListener)
+            node.addEventListener(eventType, handler, false);
+          else
+            node.attachEvent('on'+eventType, handler);
+
+        });
       });
-    });
+    }
   };
 
   // Prepare newly-created DOM nodes for event delegation.
