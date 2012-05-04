@@ -2,7 +2,7 @@
 
 set -e
 
-BUNDLE_VERSION=0.1.1
+BUNDLE_VERSION=0.1.4
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -47,19 +47,27 @@ trap 'rm -rf "$DIR" >/dev/null 2>&1' 0
 echo BUILDING IN "$DIR"
 
 cd "$DIR"
+chmod 755 .
+umask 022
 mkdir build
 cd build
 
 git clone git://github.com/joyent/node.git
 cd node
-git checkout v0.6.11
+git checkout v0.6.15
 
 # use newer v8. This fixes an issue with node-fibers:
 # https://github.com/laverdet/node-fibers/issues/28
 echo checking out v8
 rm -rf deps/v8
 git clone http://github.com/v8/v8.git deps/v8
-(cd deps/v8 && git checkout 3.9.7)
+(cd deps/v8 && git checkout 3.9.24)
+
+# use newer npm. workaround issue in fstream-npm?
+echo checking out npm
+rm -rf deps/npm
+git clone http://github.com/isaacs/npm.git deps/npm
+(cd deps/npm && git checkout v1.1.18)
 
 
 # on linux, build a static openssl to link against. Everything else we
@@ -69,8 +77,8 @@ git clone http://github.com/v8/v8.git deps/v8
 # this in the node 0.6 build system. The build system is all different
 # in 0.7, so this will have to change when we upgrade
 if [ "$UNAME" == "Linux" ] ; then
-    curl http://www.openssl.org/source/openssl-1.0.0g.tar.gz | tar -xz
-    cd openssl-1.0.0g
+    curl http://www.openssl.org/source/openssl-1.0.0i.tar.gz | tar -xz
+    cd openssl-1.0.0i
     ./config --prefix="$DIR/build/openssl-out" no-shared
     make install
     NODE_CONFIG_FLAGS=(
@@ -122,21 +130,23 @@ which node
 which npm
 
 cd "$DIR/lib/node_modules"
-npm install connect@1.8.5
+npm install connect@1.8.7 # not 2.x yet. sockjs doesn't work w/ new connect
 npm install gzippo@0.1.4
 npm install optimist@0.3.1
-npm install coffee-script@1.2.0
-npm install less@1.2.1
-npm install mime@1.2.4
+npm install coffee-script@1.3.1
+npm install less@1.3.0
+npm install sass@0.5.0
+npm install stylus@0.25.0
+npm install mime@1.2.5
 npm install semver@1.0.13
-npm install handlebars@1.0.2beta
-npm install mongodb@0.9.7-1.4
-npm install uglify-js@1.2.5
+npm install handlebars@1.0.5beta
+npm install mongodb@0.9.9-8
+npm install uglify-js@1.2.6
 npm install clean-css@0.3.2
 npm install progress@0.0.4
-npm install fibers@0.6.4
-npm install useragent@1.0.5
-npm install request@2.9.3
+npm install fibers@0.6.5
+npm install useragent@1.0.6
+npm install request@2.9.202
 npm install http-proxy@0.8.0
 
 # unused, but kept in bundle for compatibility for a while.
@@ -145,7 +155,7 @@ npm install connect-gzip@0.1.5
 # Sockjs has a broken optional dependancy, and npm optional dependancies
 # don't seem to quite work. Fake it out with a checkout.
 git clone http://github.com/akdubya/rbytes.git
-npm install sockjs@0.2.1
+npm install sockjs@0.3.1
 rm -rf rbytes
 
 # Disable mtime check in fibers. Fixes problem when packaging tools
@@ -168,48 +178,6 @@ cd mongodb/bin
 rm bsondump mongodump mongoexport mongofiles mongoimport mongorestore mongos mongosniff mongostat mongotop
 cd ../..
 
-
-## Install socket.io. Even though we're not using it any more, we still
-## want it in the dev bundle so that older apps already deployed to
-## mother can still run.
-cd "$DIR/lib/node_modules"
-npm install socket.io@0.8.7
-# Remove annoying print from socket.io that can't be disabled in config.
-cd "$DIR"
-patch -p2 <<EOF
-diff --git a/dev_bundle/lib/node_modules/socket.io/lib/manager.js b/dev_bundle/lib/node_modules/socket.io/lib/manager.js
-index ee2bf49..a68f9cb 100644
---- a/dev_bundle/lib/node_modules/socket.io/lib/manager.js
-+++ b/dev_bundle/lib/node_modules/socket.io/lib/manager.js
-@@ -114,7 +114,7 @@ function Manager (server, options) {
-     }
-   }
- 
--  this.log.info('socket.io started');
-+  // this.log.info('socket.io started'); // XXX meteor disabled
- };
- 
- Manager.prototype.__proto__ = EventEmitter.prototype
-EOF
-# Patch an issue already fixed in socket.io master, but not released yet.
-# https://github.com/LearnBoost/socket.io-client/commit/7155d84af997dcfca418568dfcc778263926d7b2
-cd "$DIR/lib/node_modules/socket.io/node_modules/socket.io-client"
-patch -p1 <<EOF
-diff --git a/lib/socket.js b/lib/socket.js
-index 0f1b1c7..932beaa 100644
---- a/lib/socket.js
-+++ b/lib/socket.js
-@@ -405,7 +405,7 @@
-   Socket.prototype.onError = function (err) {
-     if (err && err.advice) {
--      if (err.advice === 'reconnect' && this.connected) {
-+      if (this.options.reconnect && err.advice === 'reconnect' && this.connected) {
-         this.disconnect();
-         this.reconnect();
-       }
-EOF
-# rebuild
-make build
 
 
 echo BUNDLING

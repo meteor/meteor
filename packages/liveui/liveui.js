@@ -2,16 +2,31 @@ Meteor.ui = Meteor.ui || {};
 
 (function() {
 
+  // In render mode (i.e. inside Meteor.ui.render), this is an
+  // object, otherwise it is null.
+  // callbacks: id -> func, where id ranges from 1 to callbacks._count.
+  Meteor.ui._render_mode = null;
+
   // `in_range` is a package-private argument used to render inside
   // an existing LiveRange on an update.
   Meteor.ui.render = function (html_func, react_data, in_range) {
     if (typeof html_func !== "function")
       throw new Error("Meteor.ui.render() requires a function as its first argument.");
 
-    var cx = new Meteor.deps.Context;
-    cx.rangeCallbacks = {_count: 0}; // XXX refactor into special
+    if (Meteor.ui._render_mode)
+      throw new Error("Can't nest Meteor.ui.render.");
 
-    var html = cx.run(html_func);
+    var cx = new Meteor.deps.Context;
+
+    Meteor.ui._render_mode = {callbacks: {_count: 0}};
+    var html, rangeCallbacks;
+    try {
+      html = cx.run(html_func); // run the caller's html_func
+    } finally {
+      rangeCallbacks = Meteor.ui._render_mode.callbacks;
+      Meteor.ui._render_mode = null;
+    }
+
     if (typeof html !== "string")
       throw new Error("Render function must return a string");
 
@@ -36,79 +51,82 @@ Meteor.ui = Meteor.ui || {};
 
     // walk comments and create ranges
     var rangeStartNodes = {};
-    var rangesCreated = [];
+    var rangesCreated = []; // [[range, id], ...]
     each_comment(frag, function(n) {
-      var next = null;
 
-      // XXX use match instead of replace to clarify
+      var rangeCommentMatch = /^\s*(START|END)RANGE_(\S+)/.exec(n.nodeValue);
+      if (! rangeCommentMatch)
+        return null;
 
-      n.nodeValue.replace(/^\s*(START|END)RANGE_(\S+)/, function(z, which, id) {
-        if (which === "START") {
-          if (rangeStartNodes[id])
-            throw new Error("The return value of chunk can only be used once.");
-          rangeStartNodes[id] = n;
-        } else if (which === "END") {
-          var startNode = rangeStartNodes[id], endNode = n;
+      var which = rangeCommentMatch[1];
+      var id = rangeCommentMatch[2];
 
-          next = endNode.nextSibling;
-          // try to remove comments
-          var a = startNode, b = endNode;
-          if (a.nextSibling && b.previousSibling) {
-            if (a.nextSibling === b) {
-              // replace two adjacent comments with one
-              endNode = startNode;
-              b.parentNode.removeChild(b);
-              startNode.nodeValue = 'placeholder';
-            } else {
-              // remove both comments
-              startNode = startNode.nextSibling;
-              endNode = endNode.previousSibling;
-              a.parentNode.removeChild(a);
-              b.parentNode.removeChild(b);
-            }
-          } else {
-            /* shouldn't happen; invalid HTML? */
-          }
+      if (which === "START") {
+        if (rangeStartNodes[id])
+          throw new Error("The return value of chunk can only be used once.");
+        rangeStartNodes[id] = n;
 
-          if (startNode.parentNode !== endNode.parentNode) {
-            // Try to fix messed-up comment ranges like
-            // <!-- #1 --><tbody> ... <!-- /#1 --></tbody>,
-            // which are extremely common with tables.  Tests
-            // fail in all browsers without this code.
-            if (startNode === endNode.parentNode ||
-                startNode === endNode.parentNode.previousSibling) {
-              startNode = endNode.parentNode.firstChild;
-            } else if (endNode === startNode.parentNode ||
-                       endNode === startNode.parentNode.nextSibling) {
-              endNode = startNode.parentNode.lastChild;
-            } else {
-              var r = new RegExp('<!--\\s*STARTRANGE_'+id+'.*?-->', 'g');
-              var match = r.exec(html);
-              var help = "";
-              if (match) {
-                var comment_end = r.lastIndex;
-                var comment_start = comment_end - match[0].length;
-                var stripped_before = html.slice(0, comment_start).replace(
-                    /<!--\s*(START|END)RANGE.*?-->/g, '');
-                var stripped_after = html.slice(comment_end).replace(
-                    /<!--\s*(START|END)RANGE.*?-->/g, '');
-                var context_amount = 50;
-                var context = stripped_before.slice(-context_amount) +
-                      stripped_after.slice(0, context_amount);
-                help = " (possible unclosed near: "+context+")";
-              }
-              throw new Error("Could not create liverange in template. "+
-                             "Check for unclosed tags in your HTML."+help);
-            }
-          }
+        return null;
+      }
+      // else: which === "END"
 
-          var range = new Meteor.ui._LiveUIRange(startNode, endNode);
-          // associate the callback with the range temporarily so that
-          // we can call all the callbacks in a separate loop.
-          range.temp_callback = cx.rangeCallbacks[id];
-          rangesCreated.push(range);
+      var startNode = rangeStartNodes[id];
+      var endNode = n;
+      var next = endNode.nextSibling;
+
+      // try to remove comments
+      var a = startNode, b = endNode;
+      if (a.nextSibling && b.previousSibling) {
+        if (a.nextSibling === b) {
+          // replace two adjacent comments with one
+          endNode = startNode;
+          b.parentNode.removeChild(b);
+          startNode.nodeValue = 'placeholder';
+        } else {
+          // remove both comments
+          startNode = startNode.nextSibling;
+          endNode = endNode.previousSibling;
+          a.parentNode.removeChild(a);
+          b.parentNode.removeChild(b);
         }
-      });
+      } else {
+        /* shouldn't happen; invalid HTML? */
+      }
+
+      if (startNode.parentNode !== endNode.parentNode) {
+        // Try to fix messed-up comment ranges like
+        // <!-- #1 --><tbody> ... <!-- /#1 --></tbody>,
+        // which are extremely common with tables.  Tests
+        // fail in all browsers without this code.
+        if (startNode === endNode.parentNode ||
+            startNode === endNode.parentNode.previousSibling) {
+          startNode = endNode.parentNode.firstChild;
+        } else if (endNode === startNode.parentNode ||
+                   endNode === startNode.parentNode.nextSibling) {
+          endNode = startNode.parentNode.lastChild;
+        } else {
+          var r = new RegExp('<!--\\s*STARTRANGE_'+id+'.*?-->', 'g');
+          var match = r.exec(html);
+          var help = "";
+          if (match) {
+            var comment_end = r.lastIndex;
+            var comment_start = comment_end - match[0].length;
+            var stripped_before = html.slice(0, comment_start).replace(
+                /<!--\s*(START|END)RANGE.*?-->/g, '');
+            var stripped_after = html.slice(comment_end).replace(
+                /<!--\s*(START|END)RANGE.*?-->/g, '');
+            var context_amount = 50;
+            var context = stripped_before.slice(-context_amount) +
+                  stripped_after.slice(0, context_amount);
+            help = " (possible unclosed near: "+context+")";
+          }
+          throw new Error("Could not create liverange in template. "+
+                          "Check for unclosed tags in your HTML."+help);
+        }
+      }
+
+      var range = new Meteor.ui._LiveRange(Meteor.ui._tag, startNode, endNode);
+      rangesCreated.push([range, id]);
 
       return next;
     });
@@ -120,15 +138,15 @@ Meteor.ui = Meteor.ui || {};
       Meteor.ui._intelligent_replace(in_range, frag);
       range = in_range;
     } else {
-      range = new Meteor.ui._LiveUIRange(frag);
+      range = new Meteor.ui._LiveRange(Meteor.ui._tag, frag);
     }
 
     // Call "added to DOM" callbacks to wire up all sub-chunks.
-    _.each(rangesCreated, function(r) {
-      if ("temp_callback" in r) {
-        r.temp_callback && r.temp_callback(r);
-        delete r.temp_callback;
-      }
+    _.each(rangesCreated, function(x) {
+      var range = x[0];
+      var id = x[1];
+      if (rangeCallbacks[id])
+        rangeCallbacks[id](range);
     });
 
     Meteor.ui._wire_up(cx, range, html_func, react_data);
@@ -141,17 +159,13 @@ Meteor.ui = Meteor.ui || {};
     if (typeof html_func !== "function")
       throw new Error("Meteor.ui.chunk() requires a function as its first argument.");
 
-    var parent = Meteor.deps.Context.current;
-    var live = parent && parent.rangeCallbacks;
-
-    if (! live) {
+    if (! Meteor.ui._render_mode) {
       return html_func();
     }
 
     var cx = new Meteor.deps.Context;
-    cx.rangeCallbacks = parent.rangeCallbacks;
-
     var html = cx.run(html_func);
+
     if (typeof html !== "string")
       throw new Error("Render function must return a string");
 
@@ -174,9 +188,6 @@ Meteor.ui = Meteor.ui || {};
                  function() { return ""; });
     react_data = react_data || {};
 
-    var parent = Meteor.deps.Context.current;
-    var live = parent && parent.rangeCallbacks;
-
     var buf = [];
     var receiver = new Meteor.ui._CallbackReceiver();
 
@@ -195,7 +206,7 @@ Meteor.ui = Meteor.ui || {};
       inner_html = _.map(buf, doc_render).join('');
     }
 
-    if (! live) {
+    if (! Meteor.ui._render_mode) {
       handle.stop();
       return inner_html;
     }
@@ -217,25 +228,16 @@ Meteor.ui = Meteor.ui || {};
   };
 
 
-  // define a subclass of _LiveRange with our tag and a finalize method
-  Meteor.ui._LiveUIRange = function(start, end, inner) {
-    Meteor.ui._LiveRange.call(this, Meteor.ui._LiveUIRange.tag,
-                              start, end, inner);
-  };
-  Meteor.ui._LiveUIRange.prototype = new (
-    _.extend(function() {}, {prototype: Meteor.ui._LiveRange.prototype}));
-  Meteor.ui._LiveUIRange.prototype.finalize = function() {
-    this.killContext();
-  };
-  Meteor.ui._LiveUIRange.prototype.killContext = function() {
-    var cx = this.context;
+  var killContext = function(range) {
+    var cx = range.context;
     if (cx && ! cx.killed) {
       cx.killed = true;
       cx.invalidate && cx.invalidate();
-      delete this.context;
+      delete range.context;
     }
   };
-  Meteor.ui._LiveUIRange.tag = "_liveui";
+
+  Meteor.ui._tag = "_liveui";
 
   var _checkOffscreen = function(range) {
     var node = range.firstNode();
@@ -244,7 +246,7 @@ Meteor.ui = Meteor.ui || {};
         (Meteor.ui._onscreen(node) || Meteor.ui._is_held(node)))
       return false;
 
-    Meteor.ui._LiveRange.cleanup(range);
+    cleanup_range(range);
 
     return true;
   };
@@ -270,7 +272,7 @@ Meteor.ui = Meteor.ui || {};
     cx.on_invalidate(function() {
       --frag._liveui_refs;
       if (! frag._liveui_refs)
-        Meteor.ui._LiveRange.cleanup(frag, Meteor.ui._LiveUIRange.tag);
+        cleanup_frag(frag);
     });
     cx.invalidate();
   };
@@ -296,71 +298,42 @@ Meteor.ui = Meteor.ui || {};
   };
 
   var CallbackReceiver = function() {
-    this.queue = [];
-    this.deps = {};
-    this.implied_length = 0;
+    var self = this;
 
-    _.bindAll(this); // make callbacks work even if copied
+    self.queue = [];
+    self.deps = {};
+
+    // attach these callback funcs to each instance, as they may
+    // not be called as methods by livedata.
+    _.each(["added", "removed", "moved", "changed"], function (name) {
+      self[name] = function (/* arguments */) {
+        self.queue.push([name].concat(_.toArray(arguments)));
+        self.signal();
+      };
+    });
   };
 
   Meteor.ui._CallbackReceiver = CallbackReceiver;
 
-  CallbackReceiver.prototype.added = function(doc, before_idx) {
-    if (before_idx < 0 || before_idx > this.implied_length)
-      throw new Error("Bad before_idx "+before_idx);
-
-    this.implied_length++;
-    this.queue.push(['added', doc, before_idx]);
-    this.signal();
-  };
-  CallbackReceiver.prototype.removed = function(doc, at_idx) {
-    if (at_idx < 0 || at_idx >= this.implied_length)
-      throw new Error("Bad at_idx "+at_idx);
-
-    this.implied_length--;
-    this.queue.push(['removed', doc, at_idx]);
-    this.signal();
-  };
-  CallbackReceiver.prototype.moved = function(doc, old_idx, new_idx) {
-    if (old_idx < 0 || old_idx >= this.implied_length)
-      throw new Error("Bad old_idx "+old_idx);
-    if (new_idx < 0 || new_idx >= this.implied_length)
-      throw new Error("Bad new_idx "+new_idx);
-
-    this.queue.push(['moved', doc, old_idx, new_idx]);
-    this.signal();
-  };
-  CallbackReceiver.prototype.changed = function(doc, at_idx) {
-    if (at_idx < 0 || at_idx >= this.implied_length)
-      throw new Error("Bad at_idx "+at_idx);
-
-    this.queue.push(['changed', doc, at_idx]);
-    this.signal();
-  };
   CallbackReceiver.prototype.flush_to = function(t) {
     // fire all queued events on new target
-    for(var i=0; i<this.queue.length; i++) {
-      var a = this.queue[i];
-      switch (a[0]) {
-      case 'added': t.added(a[1], a[2]); break;
-      case 'removed': t.removed(a[1], a[2]); break;
-      case 'moved': t.moved(a[1], a[2], a[3]); break;
-      case 'changed': t.changed(a[1], a[2]); break;
-      }
-    }
+    _.each(this.queue, function(x) {
+      var name = x[0];
+      var args = x.slice(1);
+      t[name].apply(t, args);
+    });
     this.queue.length = 0;
   };
   CallbackReceiver.prototype.flush_to_array = function(array) {
     // apply all queued events to array
-    for(var i=0; i<this.queue.length; i++) {
-      var a = this.queue[i];
-      switch (a[0]) {
-      case 'added': array.splice(a[2], 0, a[1]); break;
-      case 'removed': array.splice(a[2], 1); break;
-      case 'moved': array.splice(a[3], 0, array.splice(a[2], 1)[0]); break;
-      case 'changed': array[a[2]] = a[1]; break;
+    _.each(this.queue, function(x) {
+      switch (x[0]) {
+      case 'added': array.splice(x[2], 0, x[1]); break;
+      case 'removed': array.splice(x[2], 1); break;
+      case 'moved': array.splice(x[3], 0, array.splice(x[2], 1)[0]); break;
+      case 'changed': array[x[2]] = x[1]; break;
       }
-    }
+    });
     this.queue.length = 0;
   };
   CallbackReceiver.prototype.signal = function() {
@@ -380,138 +353,57 @@ Meteor.ui = Meteor.ui || {};
     }
   };
 
-  // XXX jQuery dependency
-  // 'event_data' will be an additional argument to event callback
-  Meteor.ui._setupEvents = function (elt, events, event_data) {
-    events = events || {};
-    function create_callback (callback) {
-      // return a function that will be used as the jquery event
-      // callback, in which "this" is bound to the DOM element bound
-      // to the event.
-      return function (evt) {
-        callback.call(event_data, evt);
-      };
-    };
-
-    for (var spec in events) {
-      var clauses = spec.split(/,\s+/);
-      _.each(clauses, function (clause) {
-        var parts = clause.split(/\s+/);
-        if (parts.length === 0)
-          return;
-
-        if (parts.length === 1) {
-          $(elt).bind(parts[0], create_callback(events[spec]));
-        } else {
-          var event = parts.shift();
-          var selector = parts.join(' ');
-          var callback = create_callback(events[spec]);
-          $(elt).delegate(selector, event, callback);
-        }
-      });
-    }
-  };
-
   // Performs a replacement by determining which nodes should
   // be preserved and invoking Meteor.ui._Patcher as appropriate.
-  Meteor.ui._intelligent_replace = function(old_range, new_parent) {
+  Meteor.ui._intelligent_replace = function(tgtRange, srcParent) {
 
-    // Table-body fix:  if old_range is in a table and new_parent
+    // Table-body fix:  if tgtRange is in a table and srcParent
     // contains a TR, wrap fragment in a TBODY on all browsers,
     // so that it will display properly in IE.
-    if (old_range.containerNode().nodeName === "TABLE" &&
-        _.any(new_parent.childNodes,
+    if (tgtRange.containerNode().nodeName === "TABLE" &&
+        _.any(srcParent.childNodes,
               function(n) { return n.nodeName === "TR"; })) {
       var tbody = document.createElement("TBODY");
-      while (new_parent.firstChild)
-        tbody.appendChild(new_parent.firstChild);
-      new_parent.appendChild(tbody);
+      while (srcParent.firstChild)
+        tbody.appendChild(srcParent.firstChild);
+      srcParent.appendChild(tbody);
     }
 
-    var each_labeled_node = function(rangeOrParent, func) {
-      var visit_node = function(is_start, node) {
-        if (is_start && node.nodeType === 1) {
-          if (node.id) {
-            func('#'+node.id, node);
-          } else if (node.getAttribute("name")) {
-            func(node.getAttribute("name"), node);
-          } else {
-            return true;
-          }
-          return false; // skip children of labeled node
-        }
-        return true;
-      };
-
-      Meteor.ui._LiveRange.visit_children(rangeOrParent, null, null,
-                                          visit_node);
+    var copyFunc = function(t, s) {
+      $(t).unbind(".liveui"); // XXX jQuery dependency
+      Meteor.ui._LiveRange.transplant_tag(
+        Meteor.ui._tag, t, s);
     };
 
-    var patch = function(targetRangeOrParent, sourceNode) {
+    //tgtRange.replace_contents(srcParent);
 
-      var targetNodes = {};
-      var targetNodeOrder = {};
-      var targetNodeCounter = 0;
-
-      each_labeled_node(targetRangeOrParent, function(label, node) {
-        targetNodes[label] = node;
-        targetNodeOrder[label] = targetNodeCounter++;
-      });
+    tgtRange.operate(function(start, end) {
+      // clear all LiveRanges on target
+      cleanup_range(new Meteor.ui._LiveRange(Meteor.ui._tag, start, end));
 
       var patcher = new Meteor.ui._Patcher(
-        targetRangeOrParent, sourceNode);
-      var lastPos = -1;
-      var copyFunc = function(t, s) {
-        $(t).unbind(); // XXX remove jquery events from node
-        old_range.transplant_tag(t, s);
-      };
-      each_labeled_node(sourceNode, function(label, node) {
-        var tgt = targetNodes[label];
-        var src = node;
-        if (tgt && targetNodeOrder[label] > lastPos) {
-          if (patcher.match(tgt, src, copyFunc)) {
-            // match succeeded
-            if (tgt.firstChild || src.firstChild)
-              patch(tgt, src); // recurse
-          }
-          lastPos = targetNodeOrder[label];
-        }
-      });
-      patcher.finish();
-    };
-
-    //old_range.replace_contents(new_parent);
-
-    old_range.replace_contents(function() {
-      Meteor.ui._LiveRange.cleanup(old_range);
-
-      // remove event handlers on old nodes (which we will be patching)
-      // at top level, where they are attached by $(...).delegate().
-      for(var n = old_range.firstNode();
-          n && n !== old_range.lastNode().nextSibling;
-          n = n.nextSibling)
-        $(n).unbind();
-
-      patch(old_range, new_parent);
+        start.parentNode, srcParent,
+        start.previousSibling, end.nextSibling);
+      patcher.diffpatch(copyFunc);
     });
 
+    attach_secondary_events(tgtRange);
   };
 
   Meteor.ui._wire_up = function(cx, range, html_func, react_data) {
     // wire events
     var data = react_data || {};
     if (data.events) {
-      for(var n = range.firstNode();
-          n && n.previousSibling !== range.lastNode();
-          n = n.nextSibling) {
-        Meteor.ui._setupEvents(n, data.events, data.event_data);
-      }
+      range.events = data.events;
+      range.event_data = data.event_data;
     }
+
+    attach_primary_events(range);
 
     // record that if we see this range offscreen during a flush,
     // we are to kill the context (mark it killed and invalidate it).
     // Kill old context from previous update.
-    range.killContext();
+    killContext(range);
     range.context = cx;
 
     // wire update
@@ -549,32 +441,40 @@ Meteor.ui = Meteor.ui || {};
                               react_data);
     });
 
-    var makeItem = function(doc, in_range) {
+    var renderItem = function(doc, in_range) {
       return Meteor.ui.render(
           _.bind(doc_func, null, doc),
         _.extend({}, react_data, {event_data: doc}),
         in_range);
     };
 
+    var renderElse = function() {
+      return Meteor.ui.render(else_func, react_data);
+    };
+
     var callbacks = {
       added: function(doc, before_idx) {
-        var frag = makeItem(doc);
-        var range = new Meteor.ui._LiveUIRange(frag);
+        var frag = renderItem(doc);
+        var range = new Meteor.ui._LiveRange(Meteor.ui._tag, frag);
         if (range_list.length === 0)
-          outer_range.replace_contents(frag);
+          cleanup_frag(outer_range.replace_contents(frag));
         else if (before_idx === range_list.length)
           range_list[range_list.length-1].insert_after(frag);
         else
           range_list[before_idx].insert_before(frag);
 
+        attach_secondary_events(range);
+
         range_list.splice(before_idx, 0, range);
       },
       removed: function(doc, at_idx) {
-        if (range_list.length === 1)
-          outer_range.replace_contents(Meteor.ui.render(
-            else_func, react_data));
-        else
-          range_list[at_idx].extract(false);
+        if (range_list.length === 1) {
+          cleanup_frag(
+            outer_range.replace_contents(renderElse()));
+          attach_secondary_events(outer_range);
+        } else {
+          cleanup_frag(range_list[at_idx].extract());
+        }
 
         range_list.splice(at_idx, 1);
       },
@@ -600,7 +500,7 @@ Meteor.ui = Meteor.ui || {};
         // replace the render in the immediately nested range
         range.visit(function(is_start, r) {
           if (is_start)
-            makeItem(doc, r);
+            renderItem(doc, r);
           return false;
         });
       }
@@ -608,16 +508,107 @@ Meteor.ui = Meteor.ui || {};
   };
 
   Meteor.ui._ranged_html = function(html, callback) {
-    var cx = Meteor.deps.Context.current;
-    var ranges = cx && cx.rangeCallbacks;
-
-    if (! ranges)
+    if (! Meteor.ui._render_mode)
       return html;
 
-    var commentId = ++ranges._count;
-    ranges[commentId] = callback;
+    var callbacks = Meteor.ui._render_mode.callbacks;
+
+    var commentId = ++callbacks._count;
+    callbacks[commentId] = callback;
     return "<!-- STARTRANGE_"+commentId+" -->" + html +
       "<!-- ENDRANGE_"+commentId+" -->";
+  };
+
+  var cleanup_frag = function(frag) {
+    // wrap the frag in a new LiveRange that will be destroyed
+    cleanup_range(new Meteor.ui._LiveRange(Meteor.ui._tag, frag));
+  };
+
+  // Cleans up a range and its descendant ranges by calling
+  // killContext on them (which removes any associated context
+  // from dependency tracking) and then destroy (which removes
+  // the liverange data from the DOM).
+  var cleanup_range = function(range) {
+    range.visit(function(is_start, range) {
+      if (is_start)
+        killContext(range);
+    });
+    range.destroy(true);
+  };
+
+  // Attach events specified by `range` to top-level nodes in `range`.
+  var attach_primary_events = function(range) {
+    Meteor.ui._attachEvents(range.firstNode(), range.lastNode(),
+                            range.events, range.event_data);
+  };
+
+  // Attach events specified by enclosing ranges of `range`, at the
+  // same DOM level, to nodes in `range`.  This is necessary if
+  // `range` has just been inserted (as in the case of list 'added'
+  // events) or if it has been re-rendered but its enclosing ranges
+  // haven't.  In either case, the nodes in `range` have been rendered
+  // without taking enclosing ranges into account, so additional event
+  // handlers need to be attached.
+  var attach_secondary_events = function(range) {
+    for(var r = range; r; r = r.findParent(true)) {
+      if (r === range)
+        continue;
+
+      Meteor.ui._attachEvents(range.firstNode(), range.lastNode(),
+                              r.events, r.event_data);
+    }
+  };
+
+  // XXX jQuery dependency
+  Meteor.ui._attachEvents = function (start, end, events, event_data) {
+    events = events || {};
+
+    // iterate over `spec: callback` map
+    _.each(events, function(callback, spec) {
+      var clauses = spec.split(/,\s+/);
+      _.each(clauses, function (clause) {
+        var parts = clause.split(/\s+/);
+        if (parts.length === 0)
+          return;
+
+        var event = parts.shift();
+        var selector = parts.join(' ');
+
+        var after = end.nextSibling;
+        for(var n = start; n && n !== after; n = n.nextSibling) {
+          // use function scope to close over each node `n`.
+          // otherwise, there is only one `n` for all the callbacks!
+          (function(bound) {
+            $.event.add(n, event+".liveui", function(evt) {
+              if (selector) {
+                // use element's parentNode as a "context"; any elements
+                // referenced in the selector must be proper descendents
+                // of the context.
+                var results = $(bound.parentNode).find(selector);
+                // target or ancestor must match selector
+                var curNode = evt.target;
+                var selectorMatch = null;
+                while (! selectorMatch) {
+                  if (_.contains(results, curNode))
+                    // found the node that justifies handling
+                    // this event
+                    selectorMatch = curNode;
+                  else if (curNode === bound)
+                    // couldn't find a match
+                    break;
+                  else
+                    curNode = curNode.parentNode;
+                }
+
+                if (! selectorMatch)
+                  return;
+              }
+              callback.call(event_data, evt);
+            });
+          })(n);
+        }
+      });
+    });
   };
 
 })();

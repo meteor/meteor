@@ -34,7 +34,6 @@ a img {
 
 body {
     font-family: 'Helvetica Neue', Helvetica, Arial;
-    text-rendering: optimizeLegibility;
 }
 
 pre {
@@ -106,17 +105,17 @@ a:hover {
 /** Section nav **/
 
 #nav {
-    padding-top: 38px;
-    padding-left: 30px;
-    padding-right: 30px;
     line-height: 1.2;
     border-width: 1px;
     border-color: black;
     border-style: none dotted none none;
 }
 
-#nav > div {
-    margin-top: -50px;
+#nav-inner {
+    padding-left: 30px;
+    padding-right: 30px;
+    padding-top: -10px;
+    padding-bottom: 30px;
 }
 
 #nav a {
@@ -130,7 +129,7 @@ a:hover {
 }
 
 #nav h1 {
-    font-size: 2em;
+    font-size: 1.8em;
     margin: 1.2em 0 .2em 0;
 }
 
@@ -422,6 +421,8 @@ pre {
     position: fixed;
     overflow: auto;
     height: 100%;
+    top: 0;
+    left: 0;
 }
 .main-headline {
     display: none;

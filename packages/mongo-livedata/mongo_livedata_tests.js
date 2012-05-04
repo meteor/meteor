@@ -36,11 +36,13 @@ testAsyncMulti("mongo-livedata - database failure reporting", [
 
 Tinytest.addAsync("mongo-livedata - basics", function (test, onComplete) {
   var run = test.runId();
-  var coll;
+  var coll, coll2;
   if (Meteor.is_client) {
     coll = new Meteor.Collection(null); // local, unmanaged
+    coll2 = new Meteor.Collection(null); // local, unmanaged
   } else {
     coll = new Meteor.Collection("livedata_test_collection_"+run);
+    coll2 = new Meteor.Collection("livedata_test_collection_2_"+run);
   }
 
   var log = '';
@@ -109,6 +111,8 @@ Tinytest.addAsync("mongo-livedata - basics", function (test, onComplete) {
   cur.forEach(function (doc) {
     total *= 10;
     total += doc.x;
+    // verify the meteor environment is set up here
+    coll2.insert({total:total});
   })
   test.equal(total, 14);
 
@@ -187,9 +191,11 @@ Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
 
   var step = 0;
 
+  // Use non-deterministic randomness so we can have a shorter fuzz
+  // test (fewer iterations).  For deterministic (fully seeded)
+  // randomness, remove the call to Math.random().
+  var seededRandom = new SeededRandom("foobard" + Math.random());
   // Random integer in [0,n)
-  // use SeededRandom test helper for deterministic results
-  var seededRandom = new SeededRandom("foobard");
   var rnd = function (n) {
     return seededRandom.nextIntBetween(0, n-1);
   };
@@ -205,7 +211,7 @@ Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
   };
 
   var doStep = function () {
-    if (step++ === 100) {
+    if (step++ === 5) { // run N random tests
       obs.stop();
       onComplete();
       return;
@@ -217,8 +223,8 @@ Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
       if (Meteor.is_server)
         obs._suspendPolling();
 
-      // Do a batch of 1-5 operations
-      var batch_count = rnd(5) + 1;
+      // Do a batch of 1-10 operations
+      var batch_count = rnd(10) + 1;
       for (var i = 0; i < batch_count; i++) {
         // 25% add, 25% remove, 25% change in place, 25% change and move
         var op = rnd(4);
@@ -263,7 +269,7 @@ Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
       test.isTrue(max_counters[k] >= counters[k], k);
     });
 
-    Meteor.defer(doStep);
+    Tinytest.defer(doStep);
   };
 
   doStep();

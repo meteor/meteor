@@ -1,5 +1,5 @@
 body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, san-serif;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-weight: 200;
     margin: 50px 0;
     padding: 0;
@@ -16,6 +16,7 @@ body {
 }
 
 .player {
+    cursor: pointer;
     padding: 5px;
 }
 
@@ -54,4 +55,8 @@ body {
 
 .none {
     color: #777;
+}
+
+.inc {
+  cursor: pointer;
 }

@@ -4,16 +4,20 @@ Meteor._StreamServer = function () {
   self.open_sockets = [];
 
   // unique id for this instantiation of the server. If this changes
-  // between client reconnects, the client will reload. In production,
-  // we might want to make this the bundle id, so that if runner restarts
-  // we don't force clients to reload unneccesarily. Or we could integrate
-  // with the bundler and have this be a hash of all the code.
-  self.server_id = Meteor.uuid();
+  // between client reconnects, the client will reload. You can set the
+  // environment variable "SERVER_ID" to control this. For example, if
+  // you want to only force a reload on major changes, you can use a
+  // custom server_id which you only change when something worth pushing
+  // to clients immediately happens.
+  if (process.env.SERVER_ID)
+    self.server_id = process.env.SERVER_ID;
+  else
+    self.server_id = Meteor.uuid();
 
   // set up socket.io
   var sockjs = __meteor_bootstrap__.require('sockjs');
   self.server = sockjs.createServer({
-    prefix: '/sockjs', websocket: false, log: function(){},
+    prefix: '/sockjs', log: function(){},
     jsessionid: false});
   self.server.installHandlers(__meteor_bootstrap__.app);
 

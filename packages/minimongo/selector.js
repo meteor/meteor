@@ -356,10 +356,9 @@ LocalCollection._exprForKeypathPredicate = function (keypath, value, literals) {
   var predcode = '';
   if (value instanceof RegExp) {
     predcode = LocalCollection._exprForOperatorTest(value, literals);
-  } else if (
-    !(typeof value === 'object') ||
-      value === null ||
-      value instanceof Array) {
+  } else if ( !(typeof value === 'object')
+              || value === null
+              || value instanceof Array) {
     // it's something like {x.y: 12} or {x.y: [12]}
     predcode = LocalCollection._exprForValueTest(value, literals);
   } else {
@@ -395,7 +394,7 @@ LocalCollection._exprForKeypathPredicate = function (keypath, value, literals) {
       // for all but the innermost level of a dotted expression,
       // if the runtime type is an array, search it
       ret = 'f._matches(' + formal + '[' + JSON.stringify(part) +
-        '], function(x){return ' + ret + ';}';
+        '], function(x){return ' + ret + ';})';
     }
   }
 

@@ -182,12 +182,15 @@ _.extend(PackageInstance.prototype, {
     var ext = path.extname(rel_path).substr(1);
     var handler = self.get_source_handler(ext);
     if (!handler) {
-      // A package included a source file that we don't have a
-      // processor for. Wouldn't be app source, since we wouldn't have
-      // added it as a source file in the first place.
-      // XXX do something more graceful than printing a stack trace
-      throw new Error("Don't know how to process file: " +
-                      rel_path);
+      // If we don't have an extension handler, serve this file
+      // as a static resource.
+      self.bundle.api.add_resource({
+        type: "static",
+        path: path.join(self.pkg.serve_root, rel_path),
+        data: fs.readFileSync(path.join(self.pkg.source_root, rel_path)),
+        where: where
+      });
+      return;
     }
 
     handler(self.bundle.api,
@@ -297,6 +300,8 @@ var Bundle = function () {
           if (w !== "client")
             throw new Error("HTML segments can only go to the client");
           self[options.type].push(data);
+        } else if (options.type === "static") {
+          self.files[w][options.path] = data;
         } else {
           throw new Error("Unknown type " + options.type);
         }
@@ -495,6 +500,11 @@ _.extend(Bundle.prototype, {
     else
       /* dev_bundle_mode === "skip" */;
 
+    fs.writeFileSync(
+      path.join(build_path, 'server', '.bundle_version.txt'),
+      fs.readFileSync(
+        path.join(files.get_dev_bundle(), '.bundle_version.txt')));
+
     // --- Static assets ---
 
     if (is_app) {
@@ -518,6 +528,23 @@ _.extend(Bundle.prototype, {
       files.mkdir_p(path.dirname(full_path), 0755);
       fs.writeFileSync(full_path, self.files.client_cacheable[rel_path]);
     }
+
+    // -- Add query params to client js and css --
+    // This busts through browser caches when files change.
+    var add_query_param = function (file) {
+      if (file in self.files.client_cacheable)
+        return file;
+      else if (file in self.files.client) {
+        var hash = crypto.createHash('sha1');
+        hash.update(self.files.client[file]);
+        var digest = hash.digest('hex');
+        return file + "?" + digest;
+      }
+      // er? file we don't know how to serve? thats not right...
+      return file;
+    };
+    self.js.client = _.map(self.js.client, add_query_param);
+    self.css = _.map(self.css, add_query_param);
 
     // ---  Server code and generated files ---
 

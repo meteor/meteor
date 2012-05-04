@@ -89,7 +89,7 @@ Template.api.subscription_complete = {
   id: "publish_complete",
   name: "<i>this</i>.complete()",
   locus: "Server",
-  descr: ["Call inside publish function.  Queues a command to mark this subscription as complete (inital attributes are set)."]
+  descr: ["Call inside publish function.  Queues a command to mark this subscription as complete (initial attributes are set)."]
 };
 
 Template.api.subscription_flush = {
@@ -295,7 +295,7 @@ Template.api.find = {
      descr: "Sort order (default: natural order)"},
     {name: "skip",
      type: "Number",
-     descr: "Number of result to skip at the beginnig"},
+     descr: "Number of result to skip at the beginning"},
     {name: "limit",
      type: "Number",
      descr: "Maximum number of results to return"},
@@ -323,7 +323,7 @@ Template.api.findone = {
      descr: "Sort order (default: natural order)"},
     {name: "skip",
      type: "Number",
-     descr: "Number of result to skip at the beginnig"},
+     descr: "Number of result to skip at the beginning"},
     {name: "reactive",
      type: "Boolean",
      descr: "Default true; pass false to disable reactivity"}
@@ -378,7 +378,7 @@ Template.api.cursor_rewind = {
 
 Template.api.cursor_observe = {
   id: "observe",
-  name: "<em>cursor</em>.observe(options)",
+  name: "<em>cursor</em>.observe(callbacks)",
   locus: "Client",
   descr: ["Watch a query.  Receive callbacks as the result set changes."],
   args: [
@@ -743,3 +743,80 @@ Template.api.equals = {
      descr: "The value to test against"}
   ]
 };
+
+Template.api.httpcall = {
+  id: "meteor_http_call",
+  name: "Meteor.http.call(method, url, [options], [asyncCallback])",
+  locus: "Anywhere",
+  descr: ["Perform an outbound HTTP request."],
+  args: [
+    {name: "method",
+     type: "String",
+     descr: 'The HTTP method to use: "`GET`", "`POST`", "`PUT`", or "`DELETE`".'},
+    {name: "url",
+     type: "String",
+     descr: 'The URL to retrieve.'},
+    {name: "asyncCallback",
+     type: "Function",
+     descr: "Optional callback.  If passed, the method runs asynchronously, instead of synchronously, and calls asyncCallback.  On the client, this callback is required."
+    }
+  ],
+  options: [
+    {name: "content",
+     type: "String",
+     descr: "String to use as the HTTP request body."
+},
+    {name: "data",
+     type: "Object",
+     descr: "JSON-able object to stringify and use as the HTTP request body. Overwrites `content`."},
+    {name: "query",
+     type: "String",
+     descr: "Query string to go in the URL. Overwrites any query string in `url`."},
+    {name: "params",
+     type: "Object",
+     descr: "Dictionary of request parameters to be encoded and placed in the URL (for GETs) or request body (for POSTs).  If `content` or `data` is specified, `params` will always be placed in the URL."
+    },
+    {name: "auth",
+     type: "String",
+     descr: 'HTTP basic authentication string of the form `"username:password"`'},
+    {name: "headers",
+     type: "Object",
+     descr: "Dictionary of strings, headers to add to the HTTP request."},
+    {name: "timeout",
+     type: "Number",
+     descr: "Maximum time in milliseconds to wait for the request before failing.  There is no timeout by default."},
+    {name: "followRedirects",
+     type: "Boolean",
+     descr: "If true, transparently follow HTTP redirects.  Cannot be set to false on the client."}
+  ]
+};
+
+Template.api.http_get = {
+  id: "meteor_http_get",
+  name: "Meteor.http.get(url, [options], [asyncCallback])",
+  locus: "Anywhere",
+  descr: ["Send an HTTP GET request.  Equivalent to `Meteor.http.call(\"GET\", ...)`."]
+};
+
+Template.api.http_post = {
+  id: "meteor_http_post",
+  name: "Meteor.http.post(url, [options], [asyncCallback])",
+  locus: "Anywhere",
+  descr: ["Send an HTTP POST request.  Equivalent to `Meteor.http.call(\"POST\", ...)`."]
+};
+
+Template.api.http_put = {
+  id: "meteor_http_put",
+  name: "Meteor.http.put(url, [options], [asyncCallback])",
+  locus: "Anywhere",
+  descr: ["Send an HTTP PUT request.  Equivalent to `Meteor.http.call(\"PUT\", ...)`."]
+};
+
+Template.api.http_del = {
+  id: "meteor_http_del",
+  name: "Meteor.http.del(url, [options], [asyncCallback])",
+  locus: "Anywhere",
+  descr: ["Send an HTTP DELETE request.  Equivalent to `Meteor.http.call(\"DELETE\", ...).  (Named `del` to avoid conflict with JavaScript's `delete``."]
+};
+
+

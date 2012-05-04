@@ -96,9 +96,10 @@ Tinytest.add("minimongo - basics", function (test) {
   c.remove({_id: null});
   c.remove({_id: false});
   c.remove({_id: undefined});
+  c.remove();
   test.equal(c.find().count(), 4);
 
-  c.remove();
+  c.remove({});
   test.equal(c.find().count(), 0);
 
   c.insert({_id: 1, name: "strawberry", tags: ["fruit", "red", "squishy"]});
@@ -519,12 +520,33 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({x: {$not: /a/}}, {x: "dog"});
   nomatch({x: {$not: /a/}}, {x: "cat"});
   match({x: {$not: /a/}}, {x: ["dog", "puppy"]});
-  nomatch({x: {$not: /a/}}, {x: ["kitten", "cat"]})
+  nomatch({x: {$not: /a/}}, {x: ["kitten", "cat"]});
+
+  // dotted keypaths: bare values
+  match({"a.b": 1}, {a: {b: 1}});
+  nomatch({"a.b": 1}, {a: {b: 2}});
+  match({"a.b": [1,2,3]}, {a: {b: [1,2,3]}});
+  nomatch({"a.b": [1,2,3]}, {a: {b: [4]}});
+  match({"a.b": /a/}, {a: {b: "cat"}});
+  nomatch({"a.b": /a/}, {a: {b: "dog"}});
+
+  // dotted keypaths: literal objects
+  match({"a.b": {c: 1}}, {a: {b: {c: 1}}});
+  nomatch({"a.b": {c: 1}}, {a: {b: {c: 2}}});
+  nomatch({"a.b": {c: 1}}, {a: {b: 2}});
+  match({"a.b": {c: 1, d: 2}}, {a: {b: {c: 1, d: 2}}});
+  nomatch({"a.b": {c: 1, d: 2}}, {a: {b: {c: 1, d: 1}}});
+  nomatch({"a.b": {c: 1, d: 2}}, {a: {b: {d: 2}}});
+
+  // dotted keypaths: $ operators
+  match({"a.b": {$in: [1, 2, 3]}}, {a: {b: [2]}}); // tested against mongodb
+  match({"a.b": {$in: [{x: 1}, {x: 2}, {x: 3}]}}, {a: {b: [{x: 2}]}});
+  match({"a.b": {$in: [1, 2, 3]}}, {a: {b: [4, 2]}});
+  nomatch({"a.b": {$in: [1, 2, 3]}}, {a: {b: [4]}});
 
   // XXX still needs tests:
   // - $or, $and, $nor, $where
   // - $elemMatch
-  // - dotted keypaths
   // - people.2.name
   // - non-scalar arguments to $gt, $lt, etc
 });

@@ -1,24 +1,109 @@
 Meteor.ui = Meteor.ui || {};
 
-
-// tgtParentOrRange can be anything with firstNode() and lastNode()
-// methods; need not be a functioning LiveRange
-Meteor.ui._Patcher = function(tgtParentOrRange, srcParent) {
-  if (typeof tgtParentOrRange.firstNode === "function") {
-    this.beforeTgt = tgtParentOrRange.firstNode().previousSibling;
-    this.afterTgt = tgtParentOrRange.lastNode().nextSibling;
-    this.tgtParent = tgtParentOrRange.firstNode().parentNode;
-    if (! this.tgtParent)
-      throw new Error("Can't patch liverange with no parent ndoe");
-  } else {
-    this.tgtParent = tgtParentOrRange;
-  }
+// A Patcher manages the controlled replacement of a region of the DOM.
+// The target region is changed in place to match the source region.
+//
+// The target region consists of the children of tgtParent, extending from
+// the child after tgtBefore to the child before tgtAfter.  A null
+// or absent tgtBefore or tgtAfter represents the beginning or end
+// of tgtParent's children.  The source region consists of all children
+// of srcParent, which may be a DocumentFragment.
+//
+// To use a new Patcher, call `match` zero or more times followed by
+// `finish`.  Alternatively, just call `diffpatch` to use the standard
+// matching strategy.
+//
+// A match is a correspondence between an old node in the target region
+// and a new node in the source region that will replace it.  Based on
+// this correspondence, the target node is preserved and the attributes
+// and children of the source node are copied over it.  The `match`
+// method declares such a correspondence.  The `diffpatch` method
+// determines the correspondences and calls `match` and `finish`.
+// A Patcher that makes no matches just removes the target nodes
+// and inserts the source nodes in their place.
+//
+// Constructor:
+Meteor.ui._Patcher = function(tgtParent, srcParent, tgtBefore, tgtAfter) {
+  this.tgtParent = tgtParent;
   this.srcParent = srcParent;
+
+  this.tgtBefore = tgtBefore;
+  this.tgtAfter = tgtAfter;
 
   this.lastKeptTgtNode = null;
   this.lastKeptSrcNode = null;
+};
+
+// Perform a complete patching where nodes with the same `id` or `name`
+// are matched.
+//
+// Any node that has either an "id" or "name" attribute is considered a
+// "labeled" node, and these labeled nodes are candidates for preservation.
+// For two labeled nodes, old and new, to match, they first must have the same
+// label (that is, they have the same id, or neither has an id and they have
+// the same name).  Labels are considered relative to the nearest enclosing
+// labeled ancestor, and must be unique among the labeled nodes that share
+// this nearest labeled ancestor.  Labeled nodes are also expected to stay
+// in the same order, or else some of them won't be matched.
+
+Meteor.ui._Patcher.prototype.diffpatch = function(copyCallback) {
+  var self = this;
+
+  var each_labeled_node = function(parent, before, after, func) {
+    for(var n = before ? before.nextSibling : parent.firstChild;
+        n && n !== after;
+        n = n.nextSibling) {
+
+      if (n.nodeType === 1) {
+        if (n.id) {
+          func('#'+n.id, n);
+          continue;
+        } else if (n.getAttribute("name")) {
+          func(n.getAttribute("name"), n);
+          continue;
+        }
+      }
+
+      // not a labeled node; recurse
+      each_labeled_node(n, null, null, func);
+    }
+  };
+
+
+  var targetNodes = {};
+  var targetNodeOrder = {};
+  var targetNodeCounter = 0;
+
+  each_labeled_node(
+    self.tgtParent, self.tgtBefore, self.tgtAfter,
+    function(label, node) {
+      targetNodes[label] = node;
+      targetNodeOrder[label] = targetNodeCounter++;
+    });
+
+  var lastPos = -1;
+  each_labeled_node(
+    self.srcParent, null, null,
+    function(label, node) {
+      var tgt = targetNodes[label];
+      var src = node;
+      if (tgt && targetNodeOrder[label] > lastPos) {
+        if (self.match(tgt, src, copyCallback)) {
+          // match succeeded
+          if (tgt.firstChild || src.firstChild) {
+            // recurse with a new Patcher!
+            var patcher = new Meteor.ui._Patcher(tgt, src);
+            patcher.diffpatch(copyCallback);
+          }
+        }
+        lastPos = targetNodeOrder[label];
+      }
+    });
+
+  self.finish();
 
 };
+
 
 // Advances the patching process up to tgtNode in the target tree,
 // and srcNode in the source tree.  tgtNode will be preserved, with
@@ -167,52 +252,69 @@ Meteor.ui._Patcher.prototype.match = function(tgtNode, srcNode, copyCallback) {
   return true;
 };
 
+// Completes patching assuming no more matches.
+//
+// Patchers are single-use, so no more methods can be called
+// on the Patcher.
 Meteor.ui._Patcher.prototype.finish = function() {
   return this.match(null, null);
 };
 
-// Replaces the siblings between beforeTgt and afterTgt (exclusive on both
-// sides) with the siblings between beforeSrc and afterSrc (exclusive on both
+// Replaces the siblings between tgtBefore and tgtAfter (exclusive on both
+// sides) with the siblings between srcBefore and srcAfter (exclusive on both
 // sides).  Falsy values indicate start or end of siblings as appropriate.
 //
-// Precondition: beforeTgt and afterTgt have same parent; either may be falsy,
-// but not both, unless optTgtParent is provided.  Same with beforeSrc/afterSrc.
+// Precondition: tgtBefore and tgtAfter have same parent; either may be falsy,
+// but not both, unless optTgtParent is provided.  Same with srcBefore/srcAfter.
 Meteor.ui._Patcher.prototype._replaceNodes = function(
-  beforeTgt, afterTgt, beforeSrc, afterSrc, optTgtParent, optSrcParent)
+  tgtBefore, tgtAfter, srcBefore, srcAfter, optTgtParent, optSrcParent)
 {
-  var tgtParent = optTgtParent || (beforeTgt || afterTgt).parentNode;
-  var srcParent = optSrcParent || (beforeSrc || afterSrc).parentNode;
+  var tgtParent = optTgtParent || (tgtBefore || tgtAfter).parentNode;
+  var srcParent = optSrcParent || (srcBefore || srcAfter).parentNode;
 
   // deal with case where top level is a range
   if (tgtParent === this.tgtParent) {
-    beforeTgt = beforeTgt || this.beforeTgt;
-    afterTgt = afterTgt || this.afterTgt;
+    tgtBefore = tgtBefore || this.tgtBefore;
+    tgtAfter = tgtAfter || this.tgtAfter;
   }
   if (srcParent === this.srcParent) {
-    beforeSrc = beforeSrc || this.beforeSrc;
-    afterSrc = afterSrc || this.afterSrc;
+    srcBefore = srcBefore || this.srcBefore;
+    srcAfter = srcAfter || this.srcAfter;
   }
 
 
   // remove old children
   var n;
-  while ((n = beforeTgt ? beforeTgt.nextSibling : tgtParent.firstChild)
-         && n !== afterTgt) {
+  while ((n = tgtBefore ? tgtBefore.nextSibling : tgtParent.firstChild)
+         && n !== tgtAfter) {
     tgtParent.removeChild(n);
   }
 
   // add new children
   var m;
-  while ((m = beforeSrc ? beforeSrc.nextSibling : srcParent.firstChild)
-         && m !== afterSrc) {
-    tgtParent.insertBefore(m, afterTgt || null);
+  while ((m = srcBefore ? srcBefore.nextSibling : srcParent.firstChild)
+         && m !== srcAfter) {
+    tgtParent.insertBefore(m, tgtAfter || null);
   }
 };
 
-
+// Copy HTML attributes of node `src` onto node `tgt`.
+//
+// The effect we are trying to achieve is best expresed in terms of
+// HTML.  Whatever HTML generated `tgt`, we want to mutate the DOM element
+// so that it is as if it were the HTML that generated `src`.
+// We want to preserve JavaScript properties in general (tgt.foo),
+// while syncing the HTML attributes (tgt.getAttribute("foo")).
+//
+// This is complicated by form controls and the fact that old IE
+// can't keep the difference straight between properties and attributes.
 Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
   var srcAttrs = src.attributes;
   var tgtAttrs = tgt.attributes;
+
+  // Determine whether tgt has focus; works in all browsers
+  // as of FF3, Safari4
+  var target_focused = (tgt === document.activeElement);
 
   // clear current attributes
 
@@ -233,8 +335,26 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
       continue; // catches weird "propdescname" in IE 8
     if (name === "id" || name === "type")
       continue;
+    // never delete value attribute, only overwrite the property
+    if (name === "value")
+      continue;
+
+    // We want to patch any HTML attributes that were specified in the
+    // source, but preserve DOM properties set programmatically.
+    // Old IE makes this difficult by exposing properties as attributes.
+    // Expando properties will even appear in innerHTML, though not if the
+    // value is an object rather than a primitive.
+    //
+    // We use a heuristic to determine if we are looking at a programmatic
+    // property (an expando) rather than a DOM attribute.
+    //
+    // Losing jQuery's expando (whose value is a number) is very bad,
+    // because it points to event handlers that only jQuery can detach,
+    // and only if the expando is in place.
     var possibleExpando = tgt[name];
-    if (possibleExpando && typeof possibleExpando === "object")
+    if (possibleExpando &&
+        (typeof possibleExpando === "object" ||
+         /^jQuery/.test(name)))
       continue; // for object properties that surface attributes only in IE
     tgt.removeAttributeNode(attr);
   }
@@ -242,15 +362,22 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
   // copy over src's attributes
 
   if (tgt.mergeAttributes) {
+    // IE code path:
 
-    // IE
     tgt.mergeAttributes(src);
-    if (typeof tgt.checked !== "undefined" || typeof src.checked !== "undefined")
+    if (typeof tgt.checked !== "undefined" ||
+        typeof src.checked !== "undefined")
       tgt.checked = src.checked;
+    if (src.nodeName === "INPUT" && src.type === "text") {
+      if (! target_focused)
+        tgt.value = src.value;
+    }
     if (src.name)
       tgt.name = src.name;
 
   } else {
+    // non-IE code path:
+
     for(var i=0, L=srcAttrs.length; i<L; i++) {
       var srcA = srcAttrs.item(i);
       if (srcA.specified) {
@@ -264,7 +391,11 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
         } else if (name === "style") {
           tgt.style.cssText = src.style.cssText;
         } else if (name === "class") {
-                  tgt.className = src.className;
+          tgt.className = src.className;
+        } else if (name === "value") {
+          // don't set attribute, just overwrite property
+          if (! target_focused)
+            tgt.value = src.value;
         } else {
           tgt.setAttribute(name, value);
         }

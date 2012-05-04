@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUNDLE_VERSION=0.1.1
+BUNDLE_VERSION=0.1.4
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
@@ -20,7 +20,7 @@ if [ "$UNAME" = "Darwin" ] ; then
     fi
     ARCH="x86_64"
 elif [ "$UNAME" = "Linux" ] ; then
-    ARCH=$(uname -m)
+    ARCH="$(uname -m)"
     if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
         echo "Unsupported architecture: $ARCH"
         echo "Meteor only supports i686 and x86_64 for now."
@@ -36,7 +36,7 @@ if [ -L "$(basename $0)" ] ; then
     cd $(dirname $(readlink $(basename "$0") ) )
 fi
 SCRIPT_DIR=$(pwd -P)
-cd $ORIG_DIR
+cd "$ORIG_DIR"
 
 
 
@@ -68,9 +68,8 @@ function install_dev_bundle {
 }
 
 
-if [ -d "$SCRIPT_DIR/.git" ]; then
+if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
     # In a checkout.
-
     if [ ! -d "$SCRIPT_DIR/dev_bundle" ] ; then
         echo "It's the first time you've run Meteor from a git checkout."
         echo "I will download a kit containing all of Meteor's dependencies."

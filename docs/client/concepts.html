@@ -60,7 +60,7 @@ debugging easier.
 HTML files in a Meteor application are treated quite a bit differently
 from a server-side framework.  Meteor scans all the HTML files in your
 directory for three top-level elements: `<head>`, `<body>`, and
-`<template>`.  The head and body sections are seperately concatenated
+`<template>`.  The head and body sections are separately concatenated
 into a single head and body, which are transmitted to the client on
 initial page load.
 
@@ -323,7 +323,7 @@ HTML`](#livehtml) system, and get DOM elements that update
 automatically in place, use [`Meteor.ui.render`](#meteor_ui_render):
 
     Meteor.ui.render(function () {
-      Template.hello({first: "Alyssa", last: "Hacker"});
+      return Template.hello({first: "Alyssa", last: "Hacker"});
     })
       => automatically updating DOM elements
 
@@ -332,16 +332,16 @@ functions in JavaScript. Just add the helper functions directly on the
 `Template.[template name]` object. For example, in this template:
 
     <template name="players">
-      {{dstache}}#each top_10_scorers}}
+      {{dstache}}#each top_scorers}}
         <div>{{dstache}}name}}</div>
       {{dstache}}/each}}
     </{{! }}template>
 
-instead of passing in `top_10_scorers` as data when we call the
+instead of passing in `top_scorers` as data when we call the
 template function, we could define a function on `Template.players`:
 
-    Template.players.top_10_scorers = function () {
-      return Users.find({}, {sort: {score: -1}, limit: 10});
+    Template.players.top_scorers = function () {
+      return Users.find({score: {$gt: 100}}, {sort: {score: -1}});
     };
 
 In this case, the data is coming from a database query. When the
@@ -359,7 +359,7 @@ in `this`:
 
     <!-- in a HTML file -->
     <template name="players">
-      {{dstache}}#each top_10_scorers}}
+      {{dstache}}#each top_scorers}}
         {{dstache}}#if league_is "junior"}}
           <div>Junior: {{dstache}}name}}</div>
         {{dstache}}/if}}

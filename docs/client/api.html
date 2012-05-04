@@ -154,7 +154,7 @@ Example:
 
     // Subscribe to the chat messages in the current room. Automatically
     // update the subscription whenever the current room changes.
-    Meteor.subscriptions(function () {
+    Meteor.autosubscribe(function () {
       Meteor.subscribe("chat", {room: Session.get("current-room");});
     });
 
@@ -227,7 +227,7 @@ If a stub is available, it will also run the stub on the client.
 If you include a callback function as the last argument (which can't be
 an argument to the method, since functions aren't serializeable), the
 method will run asynchronously: it will return nothing in particular and
-will not throw an execption.  When the method is complete (which may or
+will not throw an exception.  When the method is complete (which may or
 may not happen before `Meteor.call` returns), the callback will be
 called with two arguments: `error` and `result`. If an error was thrown,
 then `error` will be the exception object.  Otherwise, `error` will be
@@ -262,7 +262,7 @@ described earlier.
 
 You use this functionality all the time, because the database mutators
 (`insert`, `update`, `remove`) are essentially methods. When you call
-them on the client (whether from inside a method or at toplevel), you're
+them on the client (whether from inside a method or at top level), you're
 invoking their stub versions that update the local cache, instead of
 their "real" versions that update the database (using credentials known
 only to the server.)
@@ -522,14 +522,14 @@ with the error or result of the server's insert.
 
 Example:
 
-    var groceries_id = Lists.insert({name: "Groceries"})._id;
+    var groceries_id = Lists.insert({name: "Groceries"});
     Items.insert({list: groceries_id, name: "Watercress"});
     Items.insert({list: groceries_id, name: "Persimmons"});
 
 {{> api_box update}}
 
 Modify documents that match `selector` as
-given by `modifer` (see <a href="#modifiers">modifier
+given by `modifier` (see <a href="#modifiers">modifier
 documentation</a>).  By default, modify only one matching document.
 If `multi` is true, modify all matching documents.
 
@@ -564,10 +564,11 @@ The Mongo `upsert` feature is not implemented.
 
 {{> api_box remove}}
 
-Find all of the documents that match `selector` and delete them from
-the collection. Or instead of a selector, you may pass a string, to
-delete the document with that `_id`.  Without any selector, remove all
-documents from the collection.
+Find all of the documents that match `selector` and delete them from the
+collection. Or instead of a selector, you may pass a string, to delete
+the document with that `_id`.  As a safety measure, do nothing if the
+selector is undefined.  If the selector is `{}`, remove all the
+documents from the collection.)
 
 On the server, if you don't provide a callback, then `remove` blocks
 until the database acknowledges the write, or throws an exception if
@@ -588,7 +589,7 @@ Example:
     Users.remove({karma: {$lt: -2}});
 
     // Delete all the log entries
-    Logs.remove();
+    Logs.remove({});
 
     // Show a list of posts that have been flagged, updating in realtime.
     // Put a link next to each post that deletes the post if clicked.
@@ -617,16 +618,6 @@ cursor, use [`forEach`](#foreach), [`map`](#map), or [`fetch`](#fetch).
 When called in a reactive context, `forEach` registers dependencies on
 the matching documents.
 
-{{> api_box cursor_map}}
-
-When called in a reactive context, `map` registers dependencies on
-the matching documents.
-
-{{> api_box cursor_fetch}}
-
-When called in a reactive context, `fetch` registers dependencies on
-the matching documents.
-
 Examples:
 
     // Print the titles of the five top-scoring posts
@@ -636,6 +627,16 @@ Examples:
       console.log("Title of post " + count + ": " + post.title);
       count += 1;
     });
+
+{{> api_box cursor_map}}
+
+When called in a reactive context, `map` registers dependencies on
+the matching documents.
+
+{{> api_box cursor_fetch}}
+
+When called in a reactive context, `fetch` registers dependencies on
+the matching documents.
 
 {{> api_box cursor_count}}
 
@@ -750,7 +751,7 @@ See the <a href="http://www.mongodb.org/display/DOCS/Advanced+Queries" target="_
 
 {{#api_box_inline modifiers}}
 
-A modifer is an object that describes how to update a document in
+A modifier is an object that describes how to update a document in
 place by changing some of its fields. Some examples:
 
     // Set the 'admin' property on the document to true
@@ -901,7 +902,7 @@ nodes) that automatically updates in realtime. You pass in
 string. `Meteor.ui.render` calls your function and turns the output
 into DOM nodes. Meanwhile, it tracks the data that was used when
 `html_func` ran, and automatically wires up callbacks so that whenever
-of any of the data changes, `html_func` is re-run and the DOM nodes
+any of the data changes, `html_func` is re-run and the DOM nodes
 are updated in place.
 
 Insert the returned `DocumentFragment` directly into the DOM wherever
@@ -938,7 +939,7 @@ ever not on the screen (that is, children of `window.document`) when
 Meteor.flush runs.
 
 During an update, if a node has a unique id, or if it has a name that
-is unique among the descendents of the nearest enclosing parent that
+is unique among the descendants of the nearest enclosing parent that
 has an id, then it will be "patched" (updated in place, rather than
 replaced), meaning that focus will be preserved, the text in <input>
 elements will be not be lost, etc.
@@ -1133,23 +1134,6 @@ fill the template.)
 Right now, the event handlers are wired up with jQuery, and the event
 object you receive is a jQuery event object. We would like to change
 this so that you are not required to use jQuery.
-{{/warning}}
-
-{{#warning}}
-There are currently two bugs that will cause events to not get
-delivered in certain circumstances. Both have easy workarounds:
-
-* If an event is filtered by a selector, then it will never be
-delivered to a top-level node in a template. The problem is that
-selectors will never match the top-level node in a template. This
-matches other libraries but can be counterintuitive. The workaround is
-to remove the selector if possible, or else add a wrapper element at the
-top of the template.
-
-* If a template A inserts another template B at the top-level of the
-template, then if B updates itself, it will no longer receive
-events. The workaround is to add a wrapper element around B.
-
 {{/warning}}
 
 Example:
@@ -1353,6 +1337,106 @@ If you have a background in Lisp or programming language theory, you
 might think of it as a dynamically scoped ("special") variable. (That
 just means that [`run`](#run) sets it, runs some user-supplied code, and
 then restores its previous value.)
+
+
+<h2 id="meteor_http"><span>Meteor.http</span></h2>
+
+`Meteor.http` provides an HTTP API on the client and server.  To use
+these functions, add the HTTP package to your project with `meteor add
+http`.
+
+{{> api_box httpcall}}
+
+This function initiates an HTTP request to a remote server. It returns
+a result object with the contents of the HTTP response.  The result
+object is detailed below.
+
+On the server, this function can be run either synchronously or
+asynchronously.  If the callback is omitted, it runs synchronously,
+and the results are returned once the request completes. This is
+useful when making server-to-server HTTP API calls from within Meteor
+methods, as the method can succeed or fail based on the results of the
+synchronous HTTP call.  In this case, consider using
+[`this.unblock()`](#method_unblock) to allow other methods to run in
+the mean time.  On the client, this function must be used
+asynchronously by passing a callback.
+
+Both HTTP and HTTPS protocols are supported.  The `url` argument must be
+an absolute URL including protocol and host name on the server, but may be
+relative to the current host on the client.  The `query` option
+replaces the query string of `url`.  Parameters specified in `params`
+that are put in the URL are appended to any query string.
+For example, with a `url` of `"/path?query"` and
+`params` of `{foo:"bar"}`, the final URL will be `"/path?query&foo=bar"`.
+
+The `params` are put in the URL or the request body, depending on the
+type of request.  In the case of request with no bodies, like GET and
+HEAD, the parameters will always go in the URL.  For a POST or other
+type of request, the parameters will be encoded into the body with a
+standard `x-www-form-urlencoded` content type, unless the `content`
+or `data` option is used to specify a body, in which case the
+parameters will be appended to the URL instead.
+
+The callback receives two arguments, `error` and `result`.  The `error`
+argument will contain an Error if the request fails in any way,
+including a network error, time-out, or an HTTP status code in the 400
+or 500 range.  The result object is always
+defined. When run in synchronous mode, the `result` is returned from the
+function, and the `error` value is a stored as a property in `result`.
+
+Contents of the result object:
+
+<dl class="objdesc">
+
+<dt><span class="name">statusCode</span>
+  <span class="type">Number</span></dt>
+<dd>Numeric HTTP result status code, or null on error.</dd>
+
+<dt><span class="name">content</span>
+  <span class="type">String</span></dt>
+<dd>The body of the HTTP response as a string.</dd>
+
+<dt><span class="name">data</span>
+  <span class="type">Object or null</span></dt>
+<dd>If the response headers indicate JSON content, this contains the body of the document parsed as a JSON object.</dd>
+
+<dt><span class="name">headers</span>
+  <span class="type">Object</span></dt>
+<dd>A dictionary of HTTP headers from the response.</dd>
+
+<dt><span class="name">error</span>
+  <span class="type">Error</span></dt>
+<dd>Error object if the request failed. Matches the `error` callback parameter.</dd>
+
+
+</dl>
+
+Example server method:
+
+    Meteor.methods({check_twitter: function (user_id) {
+      this.unblock();
+      var result = Meteor.http.call("GET", "http://api.twitter.com/xxx",
+                                    {params: {user: user_id}});
+      if (result.statusCode === 200)
+         return true
+      return false;
+    }});
+
+Example asynchronous HTTP call:
+
+    Meteor.http.call("POST", "http://api.twitter.com/xxx",
+                     {data: {some: "json", stuff: 1}},
+                     function (error, result) {
+                       if (result.statusCode === 200) {
+                         Session.set("twizzled", true);
+                       }
+                     });
+
+
+{{> api_box http_get}}
+{{> api_box http_post}}
+{{> api_box http_put}}
+{{> api_box http_del}}
 
 
 {{/better_markdown}}

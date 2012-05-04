@@ -5,9 +5,9 @@
 Summary: Meteor platform and JavaScript application server
 Vendor: Meteor
 Name: meteor
-Version: 0.3.2
+Version: 0.3.5
 Release: 1
-License: GPL-2
+License: MIT
 Group: Networking/WWW
 Packager: Meteor Packaging Team <contact@meteor.com>
 URL: http://meteor.com/

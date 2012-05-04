@@ -6,22 +6,22 @@ var files = module.exports = {
   // A sort comparator to order files into load order.
   sort: function (a, b) {
     // main.* loaded last
-    ismain_a = (path.basename(a).indexOf('main.') === 0);
-    ismain_b = (path.basename(b).indexOf('main.') === 0);
+    var ismain_a = (path.basename(a).indexOf('main.') === 0);
+    var ismain_b = (path.basename(b).indexOf('main.') === 0);
     if (ismain_a !== ismain_b) {
       return (ismain_a ? 1 : -1);
     }
 
     // /lib/ loaded first
-    islib_a = (a.indexOf('/lib/') !== -1);
-    islib_b = (b.indexOf('/lib/') !== -1);
+    var islib_a = (a.indexOf('/lib/') !== -1);
+    var islib_b = (b.indexOf('/lib/') !== -1);
     if (islib_a !== islib_b) {
       return (islib_a ? -1 : 1);
     }
 
     // deeper paths loaded first.
-    len_a = a.split('/').length;
-    len_b = b.split('/').length;
+    var len_a = a.split('/').length;
+    var len_b = b.split('/').length;
     if (len_a !== len_b) {
       return (len_a < len_b ? 1 : -1);
     }

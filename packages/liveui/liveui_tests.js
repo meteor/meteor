@@ -76,6 +76,9 @@ OnscreenDiv.prototype.rawHtml = function() {
 OnscreenDiv.prototype.html = function() {
   return canonicalizeHtml(this.rawHtml());
 };
+OnscreenDiv.prototype.text = function() {
+  return this.div.innerText || this.div.textContent;
+};
 OnscreenDiv.prototype.node = function() {
   return this.div;
 };
@@ -289,6 +292,21 @@ Tinytest.add("liveui - tables", function(test) {
   div.kill();
   Meteor.flush();
   test.equal(R.numListeners(), 0);
+
+  // Test tables with patching
+  R.set("");
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return '<table id="my-awesome-table">'+R.get()+'</table>';
+  }));
+  Meteor.flush();
+  R.set("<tr><td>Hello</td></tr>");
+  Meteor.flush();
+  test.equal(
+    div.html(),
+    '<table id="my-awesome-table"><tbody><tr><td>Hello</td></tr></tbody></table>');
+  div.kill();
+  Meteor.flush();
+
 });
 
 Tinytest.add("liveui - preserved nodes (diff/patch)", function(test) {
@@ -297,7 +315,7 @@ Tinytest.add("liveui - preserved nodes (diff/patch)", function(test) {
 
   var randomNodeList = function(optParentTag, depth) {
     var atTopLevel = ! optParentTag;
-    var len = rand.nextIntBetween(atTopLevel ? 1 : 0, 10);
+    var len = rand.nextIntBetween(atTopLevel ? 1 : 0, 6);
     var buf = [];
     for(var i=0; i<len; i++)
       buf.push(randomNode(optParentTag, depth));
@@ -314,9 +332,10 @@ Tinytest.add("liveui - preserved nodes (diff/patch)", function(test) {
 
       n.tagName = rand.nextChoice((function() {
         switch (optParentTag) {
-        case "table": return ['tr'];
-        case "tr": return ['td'];
-        case "p": case "b": case "i": return ['b', 'i'];
+        case "p": return ['b', 'i', 'u'];
+        case "b": return ['i', 'u'];
+        case "i": return ['u'];
+        case "u": case "span": return ['span'];
         default: return ['div', 'ins', 'center', 'p'];
         }
       })());
@@ -411,11 +430,14 @@ Tinytest.add("liveui - preserved nodes (diff/patch)", function(test) {
     return buf;
   };
 
-  for(var i=0; i<20; i++) {
-    rand = new SeededRandom("preserved nodes "+i);
+  for(var i=0; i<5; i++) {
+    // Use non-deterministic randomness so we can have a shorter fuzz
+    // test (fewer iterations).  For deterministic (fully seeded)
+    // randomness, remove the call to Math.random().
+    rand = new SeededRandom("preserved nodes "+i+" "+Math.random());
 
     var R = ReactiveVar(false);
-    var structure = randomNodeList(null, 4);
+    var structure = randomNodeList(null, 6);
     var frag = WrappedFrag(Meteor.ui.render(function() {
       return nodeListToHtml(structure, R.get());
     })).hold();
@@ -498,6 +520,60 @@ Tinytest.add("liveui - copied attributes", function(test) {
   Meteor.flush();
   test.equal(get_checked(), false);
   frag.release();
+
+
+  _.each([false, true], function(with_focus) {
+    R = ReactiveVar("apple");
+    var div = OnscreenDiv(Meteor.ui.render(function() {
+      return '<input id="foo" type="text" value="' + R.get() + '">';
+    }));
+    var maybe_focus = function(div) {
+      if (with_focus) {
+        div.node().style.display = "block";
+        div.node().firstChild.focus();
+        div.node().firstChild.focus(); // IE 8 needs a second call!
+        // focus() should set document.activeElement
+        // (this one's on the browser to pass)
+        test.equal(document.activeElement, div.node().firstChild);
+      }
+    };
+    maybe_focus(div);
+    var get_value = function() { return div.node().firstChild.value; };
+    var set_value = function(v) { div.node().firstChild.value = v; };
+    var if_blurred = function(v, v2) {
+      return with_focus ? v2 : v; };
+    test.equal(get_value(), "apple");
+    Meteor.flush();
+    test.equal(get_value(), "apple");
+    R.set("");
+    test.equal(get_value(), "apple");
+    Meteor.flush();
+    test.equal(get_value(), if_blurred("", "apple"));
+    R.set("pear");
+    test.equal(get_value(), if_blurred("", "apple"));
+    Meteor.flush();
+    test.equal(get_value(), if_blurred("pear", "apple"));
+    set_value("jerry"); // like user typing
+    R.set("steve");
+    Meteor.flush();
+    // should overwrite user typing if blurred
+    test.equal(get_value(), if_blurred("steve", "jerry"));
+    div.kill();
+    R = ReactiveVar("");
+    div = OnscreenDiv(Meteor.ui.render(function() {
+      return '<input id="foo" type="text" value="' + R.get() + '">';
+    }));
+    maybe_focus(div);
+    test.equal(get_value(), "");
+    Meteor.flush();
+    test.equal(get_value(), "");
+    R.set("tom");
+    test.equal(get_value(), "");
+    Meteor.flush();
+    test.equal(get_value(), if_blurred("tom", ""));
+    div.kill();
+    Meteor.flush();
+  });
 
 });
 
@@ -1015,15 +1091,287 @@ Tinytest.add("liveui - events on preserved nodes", function(test) {
   Meteor.flush();
 });
 
+Tinytest.add("liveui - basic tag contents", function(test) {
+
+  // adapted from nateps / metamorph
+
+  var do_onscreen = function(f) {
+    var div = OnscreenDiv();
+    var stuff = {
+      div: div,
+      node: _.bind(div.node, div),
+      render: function(rfunc) {
+        div.node().appendChild(Meteor.ui.render(rfunc));
+      }
+    };
+
+    f.call(stuff);
+
+    div.kill();
+  };
+
+  var R, div;
+
+  // basic text replace
+
+  do_onscreen(function() {
+    R = ReactiveVar("one two three");
+    this.render(function() {
+      return R.get();
+    });
+    R.set("three four five six");
+    Meteor.flush();
+    test.equal(this.div.html(), "three four five six");
+  });
+
+  // work inside a table
+
+  do_onscreen(function() {
+    R = ReactiveVar("<tr><td>HI!</td></tr>");
+    this.render(function() {
+      return "<table id='morphing'>" + R.get() + "</table>";
+    });
+
+    test.equal($(this.node()).find("#morphing td").text(), "HI!");
+    R.set("<tr><td>BUH BYE!</td></tr>");
+    Meteor.flush();
+    test.equal($(this.node()).find("#morphing td").text(), "BUH BYE!");
+  });
+
+  // work inside a tbody
+
+  do_onscreen(function() {
+    R = ReactiveVar("<tr><td>HI!</td></tr>");
+    this.render(function() {
+      return "<table id='morphing'><tbody>" + R.get() + "</tbody></table>";
+    });
+
+    test.equal($(this.node()).find("#morphing td").text(), "HI!");
+    R.set("<tr><td>BUH BYE!</td></tr>");
+    Meteor.flush();
+    test.equal($(this.node()).find("#morphing td").text(), "BUH BYE!");
+  });
+
+  // work inside a tr
+
+  do_onscreen(function() {
+    R = ReactiveVar("<td>HI!</td>");
+    this.render(function() {
+      return "<table id='morphing'><tr>" + R.get() + "</tr></table>";
+    });
+
+    test.equal($(this.node()).find("#morphing td").text(), "HI!");
+    R.set("<td>BUH BYE!</td>");
+    Meteor.flush();
+    test.equal($(this.node()).find("#morphing td").text(), "BUH BYE!");
+  });
+
+  // work inside a ul
+
+  do_onscreen(function() {
+    R = ReactiveVar("<li>HI!</li>");
+    this.render(function() {
+      return "<ul id='morphing'>" + R.get() + "</ul>";
+    });
+
+    test.equal($(this.node()).find("#morphing li").text(), "HI!");
+    R.set("<li>BUH BYE!</li>");
+    Meteor.flush();
+    test.equal($(this.node()).find("#morphing li").text(), "BUH BYE!");
+  });
+
+  // work inside a select
+
+  do_onscreen(function() {
+    R = ReactiveVar("<option>HI!</option>");
+    this.render(function() {
+      return "<select id='morphing'>" + R.get() + "</select>";
+    });
+
+    test.equal($(this.node()).find("#morphing option").text(), "HI!");
+    R.set("<option>BUH BYE!</option>");
+    Meteor.flush();
+    test.equal($(this.node()).find("#morphing option").text(), "BUH BYE!");
+  });
+
+});
+
+
+Tinytest.add("liveui - events", function(test) {
+  var event_buf = [];
+  var eventmap = function(/* arguments */) {
+    var events = {};
+    _.each(arguments, function(evt_sel) {
+      events[evt_sel] = function() {
+        event_buf.push(evt_sel);
+      };
+    });
+    return events;
+  };
+  var getid = function(id) {
+    return document.getElementById(id);
+  };
+
+  var div;
+
+  // clicking on a div at top level
+  event_buf.length = 0;
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return '<div id="foozy">Foo</div>';
+  }, {events: eventmap("click")}));
+  simulateEvent(getid("foozy"), 'click');
+  test.equal(event_buf, ['click']);
+  div.kill();
+  Meteor.flush();
+
+  // selector that specifies a top-level div
+  event_buf.length = 0;
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return '<div id="foozy">Foo</div>';
+  }, {events: eventmap("click div")}));
+  simulateEvent(getid("foozy"), 'click');
+  test.equal(event_buf, ['click div']);
+  div.kill();
+  Meteor.flush();
+
+  // selector that specifies a second-level span
+  event_buf.length = 0;
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return '<div id="foozy"><span>Foo</span></div>';
+  }, {events: eventmap("click span")}));
+  simulateEvent(getid("foozy").firstChild, 'click');
+  test.equal(event_buf, ['click span']);
+  div.kill();
+  Meteor.flush();
+
+  // replaced top-level elements still have event handlers
+  // even if not replaced by the chunk wih the handlers
+  var R = ReactiveVar("p");
+  event_buf.length = 0;
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return Meteor.ui.chunk(function() {
+      return '<'+R.get()+' id="foozy">Hello</'+R.get()+'>';
+    });
+  }, {events: eventmap("click")}));
+  simulateEvent(getid("foozy"), 'click');
+  test.equal(event_buf, ['click']);
+  event_buf.length = 0;
+  R.set("div"); // change tag, which is sure to replace element
+  Meteor.flush();
+  simulateEvent(getid("foozy"), 'click'); // still clickable?
+  test.equal(event_buf, ['click']);
+  event_buf.length = 0;
+  R.set("p");
+  Meteor.flush();
+  simulateEvent(getid("foozy"), 'click');
+  test.equal(event_buf, ['click']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+  // bubbling from event on descendent of element matched
+  // by selector
+  event_buf.length = 0;
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return '<div id="foozy"><span><u><b>Foo</b></u></span>'+
+      '<span>Bar</span></div>';
+  }, {events: eventmap("click span")}));
+  simulateEvent(
+    getid("foozy").firstChild.firstChild.firstChild, 'click');
+  test.equal(event_buf, ['click span']);
+  div.kill();
+  Meteor.flush();
+
+  // "bubbling" order for handlers at same level
+  event_buf.length = 0;
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return Meteor.ui.chunk(function() {
+      return Meteor.ui.chunk(function() {
+        return '<span id="foozy" class="a b c">Hello</span>';
+      }, {events: eventmap("click .c")});
+    }, {events: eventmap("click .b")});
+  }, {events: eventmap("click .a")}));
+  simulateEvent(getid("foozy"), 'click');
+  test.equal(event_buf, ['click .c', 'click .b', 'click .a']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+  // "bubbling" stop (doesn't work; eventually support?)
+  event_buf.length = 0;
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return Meteor.ui.chunk(function() {
+      return Meteor.ui.chunk(function() {
+        return '<span id="foozy" class="a b c">Hello</span>';
+      }, {events: eventmap("click .c")});
+    }, {events: {"click .b": function(evt) {
+      event_buf.push("click .b"); evt.stopPropagation(); return false;}}});
+  }, {events: eventmap("click .a")}));
+  simulateEvent(getid("foozy"), 'click');
+  test.expect_fail();
+  test.equal(event_buf, ['click .c', 'click .b']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+});
+
+Tinytest.add("liveui - cleanup", function(test) {
+
+  // more exhaustive clean-up testing
+  var stuff = new LocalCollection();
+
+  var add_doc = function() {
+    stuff.insert({foo:'bar'}); };
+  var clear_docs = function() {
+    stuff.remove({}); };
+  var remove_one = function() {
+    stuff.remove(stuff.findOne()._id); };
+
+  add_doc(); // start the collection with a doc
+
+  var R = ReactiveVar("x");
+
+  var div = OnscreenDiv(Meteor.ui.render(function() {
+    return Meteor.ui.listChunk(
+      stuff.find(),
+      function() { return R.get()+"1"; },
+      function() { return R.get()+"0"; });
+  }));
+
+  test.equal(div.text(), "x1");
+  Meteor.flush();
+  test.equal(div.text(), "x1");
+  test.equal(R.numListeners(), 1);
+
+  clear_docs();
+  Meteor.flush();
+  test.equal(div.text(), "x0");
+  test.equal(R.numListeners(), 1); // test clean-up of doc on remove
+
+  add_doc();
+  Meteor.flush();
+  test.equal(div.text(), "x1");
+  test.equal(R.numListeners(), 1); // test clean-up of "else" listeners
+
+  add_doc();
+  Meteor.flush();
+  test.equal(div.text(), "x1x1");
+  test.equal(R.numListeners(), 2);
+
+  remove_one();
+  Meteor.flush();
+  test.equal(div.text(), "x1");
+  test.equal(R.numListeners(), 1); // test clean-up of doc with other docs
+
+  div.kill();
+  Meteor.flush();
+  test.equal(R.numListeners(), 0);
+
+});
+
 
 // TO TEST:
 // - events
-//   - current brokenness
 //   - attaching events in render, chunk, listChunk item, listChunk else
-//   - test that handlers still work under various sub-partial replacements
-// - unused chunk??
-
-// XXX GC testing: for sake of coverage, removing any 'LiveRange.cleanup'
-// call should cause breakage somewhere.
-
 

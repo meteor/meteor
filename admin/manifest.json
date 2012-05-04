@@ -1,8 +1,8 @@
 {
-  "version": "0.3.2",
-  "url": "https://d3sqy0vbqsdhku.cloudfront.net/meteor-package-Darwin-x86_64-0.3.2.tar.gz",
+  "version": "0.3.5",
+  "url": "https://d3sqy0vbqsdhku.cloudfront.net/meteor-package-Darwin-x86_64-0.3.5.tar.gz",
 
-  "deb_version": "0.3.2-1",
-  "rpm_version": "0.3.2-1",
+  "deb_version": "0.3.5-1",
+  "rpm_version": "0.3.5-1",
   "urlbase": "https://d3sqy0vbqsdhku.cloudfront.net"
 }

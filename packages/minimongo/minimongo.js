@@ -288,9 +288,6 @@ LocalCollection.prototype.remove = function (selector) {
   var remove = [];
   var query_remove = [];
 
-  if (arguments.length === 0)
-    selector = {};
-
   var selector_f = LocalCollection._compileSelector(selector);
   for (var id in self.docs) {
     var doc = self.docs[id];

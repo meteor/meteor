@@ -765,7 +765,7 @@ _.extend(Meteor._LivedataServer.prototype, {
       var invocation = new Meteor._MethodInvocation(false /* is_simulation */);
       try {
         var ret = Meteor._CurrentInvocation.withValue(invocation, function () {
-          return handler.apply(invocation, args)
+          return handler.apply(invocation, args);
         });
       } catch (e) {
         var exception = e;
