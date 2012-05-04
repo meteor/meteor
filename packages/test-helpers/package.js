@@ -8,10 +8,12 @@ Package.on_use(function (api, where) {
 
   api.add_files('try_all_permutations.js', where);
   api.add_files('async_multi.js', where);
-  api.add_files('simulate_event.js', where);
+  api.add_files('event_simulation.js', where);
   api.add_files('seeded_random.js', where);
   api.add_files('canonicalize_html.js', where);
   api.add_files('stub_stream.js', where);
+  api.add_files('onscreendiv.js', where);
+  api.add_files('current_style.js', where);
 });
 
 Package.on_test(function (api) {

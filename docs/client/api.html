@@ -555,7 +555,7 @@ Example:
     // 10. If they are logged in and their badge list is visible on the
     // screen, it will update automatically as they watch.
     Users.update({score: {$gt: 10}},
-                 {badges: {$addToSet: "Superlative"}},
+                 {$addToSet: {badges: "Superlative"}},
                  {multi: true});
 
 {{#warning}}

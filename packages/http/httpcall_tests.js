@@ -1,6 +1,7 @@
+(function() {
 
 // URL prefix for tests to talk to
-var _XHR_URL_PREFIX = "/test_responder";
+var _XHR_URL_PREFIX = "/http_test_responder";
 var url_prefix = function () {
   if (Meteor.is_server && _XHR_URL_PREFIX.indexOf("http") !== 0) {
     var address = __meteor_bootstrap__.app.address();
@@ -227,7 +228,11 @@ testAsyncMulti("httpcall - http auth", [
     // password prompt.  So we don't test auth failure, only
     // success.
 
-    var password = Meteor.uuid().replace(/[^0-9a-zA-Z]/g, '');
+    // Random password breaks in Firefox, because Firefox incorrectly
+    // uses cached credentials even if we supply different ones:
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=654348
+    var password = 'rocks';
+    //var password = Meteor.uuid().replace(/[^0-9a-zA-Z]/g, '');
     Meteor.http.call(
       "GET", url_prefix()+"/login?"+password,
       { auth: "meteor:"+password },
@@ -330,3 +335,5 @@ testAsyncMulti("httpcall - params", [
 // - cookies?
 // - human-readable error reason/cause?
 // - data parse error
+
+})();

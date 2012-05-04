@@ -370,9 +370,8 @@ Meteor.ui = Meteor.ui || {};
     }
 
     var copyFunc = function(t, s) {
-      $(t).unbind(".liveui"); // XXX jQuery dependency
-      Meteor.ui._LiveRange.transplant_tag(
-        Meteor.ui._tag, t, s);
+      Meteor.ui._resetEvents(t);
+      Meteor.ui._LiveRange.transplant_tag(Meteor.ui._tag, t, s);
     };
 
     //tgtRange.replace_contents(srcParent);
@@ -399,6 +398,7 @@ Meteor.ui = Meteor.ui || {};
     }
 
     attach_primary_events(range);
+    Meteor.ui._prepareForEvents(range.firstNode(), range.lastNode());
 
     // record that if we see this range offscreen during a flush,
     // we are to kill the context (mark it killed and invalidate it).
@@ -537,6 +537,7 @@ Meteor.ui = Meteor.ui || {};
   };
 
   // Attach events specified by `range` to top-level nodes in `range`.
+  // The nodes may still be in a DocumentFragment.
   var attach_primary_events = function(range) {
     Meteor.ui._attachEvents(range.firstNode(), range.lastNode(),
                             range.events, range.event_data);
@@ -557,58 +558,6 @@ Meteor.ui = Meteor.ui || {};
       Meteor.ui._attachEvents(range.firstNode(), range.lastNode(),
                               r.events, r.event_data);
     }
-  };
-
-  // XXX jQuery dependency
-  Meteor.ui._attachEvents = function (start, end, events, event_data) {
-    events = events || {};
-
-    // iterate over `spec: callback` map
-    _.each(events, function(callback, spec) {
-      var clauses = spec.split(/,\s+/);
-      _.each(clauses, function (clause) {
-        var parts = clause.split(/\s+/);
-        if (parts.length === 0)
-          return;
-
-        var event = parts.shift();
-        var selector = parts.join(' ');
-
-        var after = end.nextSibling;
-        for(var n = start; n && n !== after; n = n.nextSibling) {
-          // use function scope to close over each node `n`.
-          // otherwise, there is only one `n` for all the callbacks!
-          (function(bound) {
-            $.event.add(n, event+".liveui", function(evt) {
-              if (selector) {
-                // use element's parentNode as a "context"; any elements
-                // referenced in the selector must be proper descendents
-                // of the context.
-                var results = $(bound.parentNode).find(selector);
-                // target or ancestor must match selector
-                var curNode = evt.target;
-                var selectorMatch = null;
-                while (! selectorMatch) {
-                  if (_.contains(results, curNode))
-                    // found the node that justifies handling
-                    // this event
-                    selectorMatch = curNode;
-                  else if (curNode === bound)
-                    // couldn't find a match
-                    break;
-                  else
-                    curNode = curNode.parentNode;
-                }
-
-                if (! selectorMatch)
-                  return;
-              }
-              callback.call(event_data, evt);
-            });
-          })(n);
-        }
-      });
-    });
   };
 
 })();

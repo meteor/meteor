@@ -1,4 +1,6 @@
-var TEST_RESPONDER_ROUTE = "/test_responder";
+(function () {
+
+var TEST_RESPONDER_ROUTE = "/http_test_responder";
 
 var respond = function(req, res) {
 
@@ -76,3 +78,5 @@ var run_responder = function() {
 };
 
 run_responder();
+
+})();

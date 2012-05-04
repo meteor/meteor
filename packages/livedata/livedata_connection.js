@@ -10,6 +10,8 @@ if (Meteor.is_server) {
 // XXX namespacing
 Meteor._capture_subs = null;
 
+// @param url {String|Object} URL to Meteor app or sockjs endpoint (deprecated),
+//     or an object as a test hook (see code)
 Meteor._LivedataConnection = function (url, restart_on_update) {
   var self = this;
 
@@ -562,12 +564,18 @@ _.extend(Meteor._LivedataConnection.prototype, {
       return !m.callback;
     });
   }
-
 });
 
 _.extend(Meteor, {
-  connect: function (url, _restart_on_update) {
-    return new Meteor._LivedataConnection(url, _restart_on_update);
+  // @param url {String} URL to Meteor app, or to sockjs endpoint (deprecated),
+  //     e.g.:
+  //     "subdomain.meteor.com",
+  //     "http://subdomain.meteor.com",
+  //     "/",
+  //     "http://subdomain.meteor.com/sockjs" (deprecated),
+  //     "/sockjs" (deprecated)
+  connect: function (url, _restartOnUpdate) {
+    return new Meteor._LivedataConnection(url, _restartOnUpdate);
   },
 
   autosubscribe: function (sub_func) {
@@ -578,7 +586,7 @@ _.extend(Meteor, {
       // recurse.
       Meteor.autosubscribe(sub_func);
       // unsub after re-subbing, to avoid bouncing.
-      _.each(local_subs, function (x) { x.stop() });
+      _.each(local_subs, function (x) { x.stop(); });
     });
 
     context.run(function () {

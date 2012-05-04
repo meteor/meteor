@@ -238,7 +238,6 @@ testAsyncMulti("livedata - compound methods", [
   }
 ]);
 
-
 // XXX some things to test in greater detail:
 // staying in simulation mode
 // time warp
@@ -247,6 +246,7 @@ testAsyncMulti("livedata - compound methods", [
 // method completion/satisfaction
 // subscriptions (multiple APIs, including autosubscribe?)
 // subscription completion
+// subscription attribute shadowing
 // server method calling methods on other server (eg, should simulate)
 // subscriptions and methods being idempotent
 // reconnection
