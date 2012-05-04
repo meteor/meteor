@@ -1,9 +1,9 @@
-// @param url {String} A URL to a sockjs endpoint, e.g.
+// @param url {String} URL to Meteor app or sockjs endpoint (deprecated)
 //   "http://subdomain.meteor.com/sockjs" or "/sockjs"
 Meteor._Stream = function (url) {
   var self = this;
 
-  self.url = url;
+  self.url = Meteor._Stream._toSockjsUrl(url);
   self.socket = null;
   self.event_callbacks = {}; // name -> [callback]
   self.server_id = null;
@@ -50,6 +50,35 @@ Meteor._Stream = function (url) {
   //// Kickoff!
   self._launch_connection();
 };
+
+_.extend(Meteor._Stream, {
+  // @param url {String} URL to Meteor app, or to sockjs endpoint (deprecated)
+  // @returns {String} URL to the sockjs endpoint, e.g.
+  //   "http://subdomain.meteor.com/sockjs" or "/sockjs"
+  _toSockjsUrl: function(url) {
+    // XXX from Underscore.String (http://epeli.github.com/underscore.string/)
+    var startsWith = function(str, starts) {
+      return str.length >= starts.length &&
+        str.substring(0, starts.length) === starts;
+    };
+    var endsWith = function(str, ends) {
+      return str.length >= ends.length &&
+        str.substring(str.length - ends.length) === ends;
+    };
+
+    // Prefix FQDNs but not relative URLs
+    if (url.indexOf("://") === -1 && !startsWith(url, "/")) {
+      url = "http://" + url;
+    }
+
+    if (endsWith(url, "/sockjs"))
+      return url;
+    else if (endsWith(url, "/"))
+      return url + "sockjs";
+    else
+      return url + "/sockjs";
+  }
+});
 
 _.extend(Meteor._Stream.prototype, {
   // Register for callbacks.
