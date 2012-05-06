@@ -53,13 +53,9 @@ Template.api.subscription_set = {
      type: "String",
      descr: "The ID of the document that should be affected."
     },
-    {name: "name",
-     type: "String",
-     descr: "The name of the attribute."
-    },
-    {name: "value",
-     type: "JSON",
-     descr: "The new value of the attribute."
+    {name: "attributes",
+     type: "Object",
+     descr: "Dictionary of key value pairs."
     }
   ]
 };
