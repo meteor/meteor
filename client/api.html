@@ -70,12 +70,12 @@ Example:
       handle = Room.find({room_id: roomId}).observe({
         added: function (doc, idx) {
           count++;
-          self.set("messages-count", uuid, "count", count);
+          self.set("messages-count", uuid, {count: count});
           self.flush();
         },
         removed: function (doc, idx) {
           count--;
-          self.set("messages-count", uuid, "count", count);
+          self.set("messages-count", uuid, {count: count});
           self.flush();
         }
         // don't care about moved or changed
@@ -1025,7 +1025,7 @@ Example:
 
     // Every two seconds, alternates between Goodbye Ralph and Goodbye World.
     // If you select the word Goodbye or part of it, the selection stays on
-    // update, because the text node is not being replaced.  
+    // update, because the text node is not being replaced.
     Meteor.setInterval(function() {
       if (Session.get("target") === "Ralph") {
         Session.set("target", "World");
