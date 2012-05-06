@@ -41,7 +41,7 @@ Template.api.publish = {
 
 Template.api.subscription_set = {
   id: "publish_set",
-  name: "<i>this</i>.set(collection, id, name, value)",
+  name: "<i>this</i>.set(collection, id, attributes)",
   locus: "Server",
   descr: ["Call inside publish function.  Queues a command to set an attribute value."],
   args: [
@@ -53,20 +53,16 @@ Template.api.subscription_set = {
      type: "String",
      descr: "The ID of the document that should be affected."
     },
-    {name: "name",
-     type: "String",
-     descr: "The name of the attribute."
-    },
-    {name: "value",
-     type: "JSON",
-     descr: "The new value of the attribute."
-    }
+    {name: "attributes",
+     type: "Object",
+     descr: "The new attributes for the document."
+   
   ]
 };
 
 Template.api.subscription_unset = {
   id: "publish_unset",
-  name: "<i>this</i>.unset(collection, id, name)",
+  name: "<i>this</i>.unset(collection, id, keys)",
   locus: "Server",
   descr: ["Call inside publish function.  Queues a command to unset an attribute."],
   args: [
@@ -79,8 +75,8 @@ Template.api.subscription_unset = {
      descr: "The ID of the document that should be affected."
     },
     {name: "name",
-     type: "String",
-     descr: "The name of the attribute."
+     type: "Array",
+     descr: "The names of the attributes."
     }
   ]
 };
