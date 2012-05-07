@@ -41,7 +41,121 @@ Meteor.ui = Meteor.ui || {};
 
 (function() {
 
-  var tag = '_liveevents';
+  var prefix = '_liveevents_';
+
+  var universalCapturer = function(event) {
+    var type = event.type;
+    var bubbles = event.bubbles;
+    var target = event.target;
+
+    target.addEventListener(type, universalHandler, false);
+
+    var ancestors;
+    if (bubbles) {
+      ancestors = [];
+      for(var n = target.parentNode; n; n = n.parentNode) {
+        n.addEventListener(type, universalHandler, false);
+        ancestors.push(n);
+      };
+    }
+
+    Meteor.defer(function() {
+      target.removeEventListener(type, universalHandler);
+      if (bubbles) {
+        _.each(ancestors, function(n) {
+          n.removeEventListener(type, universalHandler);
+        });
+      };
+    });
+  };
+
+  var sendUIEvent = function(type, target, bubbles, cancelable, detail) {
+    var event = document.createEvent("UIEvents");
+    event.initUIEvent(type, bubbles, cancelable, window, detail);
+    event.synthetic = true;
+    target.dispatchEvent(event);
+  };
+
+  var universalHandler = function(event) {
+    // fire synthetic focusin/focusout on blur/focus
+    if (event.currentTarget === event.target) {
+      if (event.type === 'focus')
+        sendUIEvent('focusin', event.target, true);
+      else if (event.type === 'blur')
+        sendUIEvent('focusout', event.target, true);
+    }
+    // only respond to synthetic focusin/focusout
+    if (event.type === 'focusin' || event.type === 'focusout') {
+      if (! event.synthetic)
+        return;
+    }
+
+    var curNode = event.currentTarget;
+    if (! curNode)
+      return;
+
+    var innerRange = Meteor.ui._LiveRange.findRange(Meteor.ui._tag, curNode);
+    if (! innerRange)
+      return;
+
+    var isPropagationStopped = false;
+
+    var originalEvent = event;
+    event = new (_.extend(function() {}, {prototype: originalEvent}));
+    event.stopPropagation = function() {
+      isPropagationStopped = true;
+      originalEvent.stopPropagation();
+    };
+    event.preventDefault = function() {
+      originalEvent.preventDefault();
+    };
+
+    var type = event.type;
+
+    for(var range = innerRange; range; range = range.findParent(true)) {
+      if (! range.event_handlers)
+        continue;
+
+      _.each(range.event_handlers, function(h) {
+        if (h.type !== type)
+          return;
+
+        var selector = h.selector;
+        if (selector) {
+          var contextNode = range.containerNode();
+          var results = $(contextNode).find(selector);
+          if (! _.contains(results, curNode))
+            return;
+        }
+
+        var returnValue = h.callback.call(range.event_data, event);
+        if (returnValue === false) {
+          // extension due to jQuery
+          event.stopPropagation();
+          event.preventDefault();
+        }
+      });
+
+      if (isPropagationStopped)
+        break;
+    }
+  };
+
+  Meteor.ui._installLiveHandler = function(node, eventType) {
+    // we completely fake focusin / focusout in the focus/blur handler
+    // because Firefox doesn't support them natively.
+    if (eventType === 'focusin')
+      Meteor.ui._installLiveHandler(node, 'focus');
+    else if (eventType === 'focusout')
+      Meteor.ui._installLiveHandler(node, 'blur');
+
+    var propName = prefix + eventType;
+    if (! document[propName]) {
+      // only bind one event capturer per type
+      document[propName] = true;
+      document.addEventListener(eventType, universalCapturer, true);
+    }
+  };
 
   ////// WHAT WE SHOULD ACTUALLY DO
   ////// - have one handler, have it walk the liveranges?????
@@ -178,18 +292,13 @@ Meteor.ui = Meteor.ui || {};
   // and their descendents are processed, inserting any hooks
   // needed to make event delegation work.
   Meteor.ui._prepareForEvents = function(start, end) {
-    // In old IE, 'change' and 'submit' don't bubble, so we need
-    // to register special handlers.
-    if (wireIEChangeSubmitHack)
-      wireIEChangeSubmitHack(start, end);
+
   };
 
   // Removes any events bound by Meteor.ui._attachEvent from
   // `node`.
   Meteor.ui._resetEvents = function(node) {
-    // We rely on jquery to keep track of the events
-    // we have bound so that we can unbind them.
-    $(node).unbind(".liveui");
+
   };
 
   // Make 'change' event bubble in IE 6-8, the only browser where it

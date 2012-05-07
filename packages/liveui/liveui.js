@@ -393,11 +393,11 @@ Meteor.ui = Meteor.ui || {};
     // wire events
     var data = react_data || {};
     if (data.events) {
-      range.events = data.events;
+      range.event_handlers = unpackEventMap(data.events);
       range.event_data = data.event_data;
     }
 
-    attach_primary_events(range);
+    attach_events(range);
     Meteor.ui._prepareForEvents(range.firstNode(), range.lastNode());
 
     // record that if we see this range offscreen during a flush,
@@ -415,6 +415,28 @@ Meteor.ui = Meteor.ui || {};
 
       Meteor.ui.render(html_func, react_data, range);
     });
+  };
+
+  var unpackEventMap = function(events) {
+    var handlers = [];
+
+    // iterate over `spec: callback` map
+    _.each(events, function(callback, spec) {
+      var clauses = spec.split(/,\s+/);
+      // iterate over clauses of spec, e.g. ['click .foo', 'click .bar']
+      _.each(clauses, function (clause) {
+        var parts = clause.split(/\s+/);
+        if (parts.length === 0)
+          return;
+
+        var type = parts.shift();
+        var selector = parts.join(' ');
+
+        handlers.push({type:type, selector:selector, callback:callback});
+      });
+    });
+
+    return handlers;
   };
 
   Meteor.ui._wire_up_list =
@@ -538,9 +560,13 @@ Meteor.ui = Meteor.ui || {};
 
   // Attach events specified by `range` to top-level nodes in `range`.
   // The nodes may still be in a DocumentFragment.
-  var attach_primary_events = function(range) {
-    Meteor.ui._attachEvents(range.firstNode(), range.lastNode(),
-                            range.events, range.event_data);
+  var attach_events = function(range) {
+    _.each(range.event_handlers, function(h) {
+      for(var n = range.firstNode(), after = range.lastNode().nextSibling;
+          n && n !== after;
+          n = n.nextSibling)
+        Meteor.ui._installLiveHandler(n, h.type);
+    });
   };
 
   // Attach events specified by enclosing ranges of `range`, at the
@@ -555,8 +581,7 @@ Meteor.ui = Meteor.ui || {};
       if (r === range)
         continue;
 
-      Meteor.ui._attachEvents(range.firstNode(), range.lastNode(),
-                              r.events, r.event_data);
+      attach_events(r);
     }
   };
 
