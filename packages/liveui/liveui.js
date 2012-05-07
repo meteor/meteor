@@ -398,7 +398,6 @@ Meteor.ui = Meteor.ui || {};
     }
 
     attach_events(range);
-    Meteor.ui._prepareForEvents(range.firstNode(), range.lastNode());
 
     // record that if we see this range offscreen during a flush,
     // we are to kill the context (mark it killed and invalidate it).
@@ -577,11 +576,15 @@ Meteor.ui = Meteor.ui || {};
   // without taking enclosing ranges into account, so additional event
   // handlers need to be attached.
   var attach_secondary_events = function(range) {
-    for(var r = range; r; r = r.findParent(true)) {
-      if (r === range)
-        continue;
+    if (Meteor.ui._attachSecondaryEvents) {
+      Meteor.ui._attachSecondaryEvents(range);
+    } else {
+      for(var r = range; r; r = r.findParent(true)) {
+        if (r === range)
+          continue;
 
-      attach_events(r);
+        attach_events(r);
+      }
     }
   };
 

@@ -41,12 +41,19 @@ Meteor.ui = Meteor.ui || {};
 
 (function() {
 
+  // for IE 6-8
+  if (! document.addEventListener) {
+    Meteor.ui._loadNonW3CEvents();
+    return;
+  }
+
   var prefix = '_liveevents_';
 
   var universalCapturer = function(event) {
     var type = event.type;
     var bubbles = event.bubbles;
     var target = event.target;
+    console.log("captured ", type, " on ", target.nodeName);
 
     target.addEventListener(type, universalHandler, false);
 
@@ -77,6 +84,8 @@ Meteor.ui = Meteor.ui || {};
   };
 
   var universalHandler = function(event) {
+    if (event.type === 'focus')
+      console.log(event.target.nodeName);
     // fire synthetic focusin/focusout on blur/focus
     if (event.currentTarget === event.target) {
       if (event.type === 'focus')
@@ -100,14 +109,14 @@ Meteor.ui = Meteor.ui || {};
 
     var isPropagationStopped = false;
 
-    var originalEvent = event;
-    event = new (_.extend(function() {}, {prototype: originalEvent}));
+    var originalStopPropagation = event.stopPropagation;
+    var originalPreventDefault = event.preventDefault;
     event.stopPropagation = function() {
       isPropagationStopped = true;
-      originalEvent.stopPropagation();
+      originalStopPropagation.call(event);
     };
     event.preventDefault = function() {
-      originalEvent.preventDefault();
+      originalPreventDefault.call(event);
     };
 
     var type = event.type;
@@ -155,6 +164,12 @@ Meteor.ui = Meteor.ui || {};
       document[propName] = true;
       document.addEventListener(eventType, universalCapturer, true);
     }
+
+    // XXXX
+    //_.each(document.getElementsByTagName("*"), function(elem) {
+    //elem.addEventListener('focus', universalHandler, false);
+    //elem.addEventListener('blur', universalHandler, false);
+    //});
   };
 
   ////// WHAT WE SHOULD ACTUALLY DO
@@ -291,7 +306,7 @@ Meteor.ui = Meteor.ui || {};
   // specify an inclusive range of siblings, and these nodes
   // and their descendents are processed, inserting any hooks
   // needed to make event delegation work.
-  Meteor.ui._prepareForEvents = function(start, end) {
+  Meteor.ui._prepareForEvents = function(node) {
 
   };
 
