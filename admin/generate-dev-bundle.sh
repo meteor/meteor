@@ -2,7 +2,7 @@
 
 set -e
 
-BUNDLE_VERSION=0.1.4
+BUNDLE_VERSION=0.1.5
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -54,7 +54,7 @@ cd build
 
 git clone git://github.com/joyent/node.git
 cd node
-git checkout v0.6.15
+git checkout v0.6.17
 
 # use newer v8. This fixes an issue with node-fibers:
 # https://github.com/laverdet/node-fibers/issues/28
@@ -62,12 +62,6 @@ echo checking out v8
 rm -rf deps/v8
 git clone http://github.com/v8/v8.git deps/v8
 (cd deps/v8 && git checkout 3.9.24)
-
-# use newer npm. workaround issue in fstream-npm?
-echo checking out npm
-rm -rf deps/npm
-git clone http://github.com/isaacs/npm.git deps/npm
-(cd deps/npm && git checkout v1.1.18)
 
 
 # on linux, build a static openssl to link against. Everything else we
