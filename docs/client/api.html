@@ -84,7 +84,7 @@ Example:
       // remove data and turn off observe when client unsubs
       self.onStop(function () {
         handle.stop();
-        self.unset("messages-count", uuid, "count");
+        self.unset("messages-count", uuid, ["count"]);
         self.flush();
       });
     });
