@@ -3,28 +3,38 @@
 
 Meteor.ui._loadNonW3CEvents = function() {
 
-  var prefix = '_liveevents_';
+  var installOne = function(node, prop) {
+    // install handlers for faking focus/blur if necessary
+    if (prop === 'onfocus')
+      installOne(node, 'onfocusin');
+    else if (prop === 'onblur')
+      installOne(node, 'onfocusout');
+    // install handlers for faking bubbling change/submit
+    else if (prop === 'onchange') {
+      installOne(node, 'oncellchange');
+      if (node.nodeName === 'INPUT' &&
+          (node.type === 'checkbox' || node.type === 'radio')) {
+        installOne(node, 'onpropertychange');
+        return;
+      }
+    } else if (prop === 'onsubmit')
+      installOne(node, 'ondatasetcomplete');
 
-  // use object property value so it doesn't show up in innerHTML
-  var TRUE = {};
-
-  var installOneHandler = function(node, eventType) {
-    var propName = prefix + eventType;
-    if (! node[propName]) {
-      // only bind one event listener per type per node
-      node[propName] = TRUE;
-      node.attachEvent('on'+eventType, universalHandler);
-    }
+    node[prop] = universalHandler;
   };
 
   Meteor.ui._installLiveHandler = function(node, eventType) {
+    // use old-school event binding, so that we can
+    // access the currentTarget as `this` in the handler.
+    var prop = 'on'+eventType;
+
     if (node.nodeType === 1) { // ELEMENT
-      installOneHandler(node, eventType);
+      installOne(node, prop);
 
       var descendents = node.getElementsByTagName('*');
 
       for(var i=0, N = descendents.length; i<N; i++)
-        installOneHandler(descendents[i], eventType);
+        installOne(descendents[i], prop);
     }
   };
 
@@ -51,14 +61,63 @@ Meteor.ui._loadNonW3CEvents = function() {
     });
   };
 
+  /*setTimeout(function() {
+    Meteor.startup(function() {
+      document.body.appendChild(document.createElement("DIV"));
+      document.body.lastChild.innerHTML =
+        '<div style="position:absolute;top:0;right:0;width:300px;height:500px;font-size:10px;font-family:monospace;overflow:visible" id="mylog"></div>';
+    });
+  }, 0);
+  var LOG = function(str) {
+    document.getElementById('mylog').innerHTML += '<br>'+str;
+  };*/
+
+  var sendEvent = function(ontype, target) {
+    var e = document.createEventObject();
+    e.synthetic = true;
+    target.fireEvent(ontype, e);
+    return e.returnValue;
+  };
+
   var universalHandler = function() {
     var event = window.event;
     var type = event.type;
-    event.target = event.srcElement || document;
+    var target = event.srcElement || document;
+    event.target = target;
     if (this.nodeType !== 1)
       return; // sanity check that we have a real target (always an element)
     event.currentTarget = this;
     var curNode = this;
+
+    // simulate focus/blur so that they are synchronous
+    if (curNode === target && ! event.synthetic) {
+      if (type === 'focusin')
+        sendEvent('onfocus', curNode);
+      else if (type === 'focusout')
+        sendEvent('onblur', curNode);
+      else if (type === 'change')
+        sendEvent('oncellchange', curNode);
+      else if (type === 'propertychange') {
+        if (event.propertyName === 'checked')
+          sendEvent('oncellchange', curNode);
+      } else if (type === 'submit') {
+        sendEvent('ondatasetcomplete', curNode);
+      }
+    }
+    // ignore non-simulated events of types we simulate
+    if ((type === 'focus' || event.type === 'blur' || event.type === 'change' ||
+         event.type === 'submit') && ! event.synthetic) {
+      if (event.type === 'submit')
+        event.returnValue = false; // block all native submits, we will submit
+      return;
+    }
+
+    if (type === 'cellchange' && event.synthetic) {
+      type = event.type = 'change';
+    }
+    if (type === 'datasetcomplete' && event.synthetic) {
+      type = event.type = 'submit';
+    }
 
     var innerRange = Meteor.ui._LiveRange.findRange(Meteor.ui._tag, curNode);
     if (! innerRange)
@@ -127,16 +186,9 @@ Meteor.ui._loadNonW3CEvents = function() {
   };
 
   var resetOne = function(node) {
-    for(var k in node) {
-      if (! node[k])
-        continue;
-      if (k.substring(0, prefix.length) !== prefix)
-        continue;
-
-      var type = k.substring(prefix.length);
-
-      node.detachEvent('on'+type, universalHandler);
-    }
+    for(var k in node)
+      if (node[k] === universalHandler)
+        node[k] = null;
   };
 
   Meteor.ui._resetEvents = function(node) {
@@ -149,5 +201,15 @@ Meteor.ui._loadNonW3CEvents = function() {
         resetOne(descendents[i]);
     }
   };
+
+  // submit forms that aren't preventDefaulted
+  document.attachEvent('ondatasetcomplete', function() {
+    var evt = window.event;
+    var target = evt && evt.srcElement;
+    if (evt.synthetic && target &&
+        target.nodeName === 'FORM' &&
+        evt.returnValue !== false)
+      target.submit();
+  });
 
 };

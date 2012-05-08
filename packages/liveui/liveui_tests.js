@@ -1369,6 +1369,8 @@ testAsyncMulti("liveui - tricky events", [
           return render_func();
         }, { events: events, event_data: buf }));
       div.node().style.display = "block"; // make visible
+      div.node().style.height = 0;
+      div.node().style.overflow = 'hidden';
 
       var getbuf = function() {
         var ret = buf.slice();
@@ -1433,7 +1435,7 @@ testAsyncMulti("liveui - tricky events", [
 
       var focusBuf = tester.focus();
       var blurBuf = tester.blur();
-      tester.kill();
+      tricky_events_kill_later(tester);
 
       return [focusBuf, blurBuf];
     };
@@ -1442,11 +1444,11 @@ testAsyncMulti("liveui - tricky events", [
     test.equal(focus_blur(textLevel1, 'focus input'),
                [['focus input'], []]);
 
+
     // focus on second-level input
     // issue #108
     test.equal(focus_blur(textLevel2,'focus input'),
                [['focus input'], []]);
-
 
     // focusin
     test.equal(focus_blur(textLevel1, 'focusin input'),
