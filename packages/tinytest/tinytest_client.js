@@ -12,7 +12,7 @@ Meteor._runTestsEverywhere = function (onReport, onComplete) {
       done = true;
       onComplete && onComplete();
     }
-  }
+  };
 
   Meteor._runTests(onReport, function () {
     local_complete = true;
