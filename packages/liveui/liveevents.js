@@ -102,7 +102,6 @@ Meteor.ui = Meteor.ui || {};
       else if (eventType === 'focusout')
         Meteor.ui._installLiveHandler(node, 'blur');
     }
-
   };
 
   var universalHandler = function(event) {

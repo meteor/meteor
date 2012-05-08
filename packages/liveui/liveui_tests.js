@@ -1288,7 +1288,6 @@ Tinytest.add("liveui - basic events", function(test) {
   Meteor.flush();
 
   // bubbling continues even with DOM change
-  // http://stackoverflow.com/questions/10450293/in-place-editing-with-meteor-cannot-read-property-parentnode-of-null
   event_buf.length = 0;
   R = ReactiveVar(true);
   div = OnscreenDiv(Meteor.ui.render(function() {
@@ -1303,8 +1302,29 @@ Tinytest.add("liveui - basic events", function(test) {
     }}});
   }));
   // click on span
-  simulateEvent(getid("foozy"), 'click');
+  clickElement(getid("foozy"));
+  test.expect_fail(); // doesn't seem to work in old IE
   test.equal(event_buf, ['click span', 'click div']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+  // "deep reach" from high node down to replaced low node.
+  event_buf.length = 0;
+  R = ReactiveVar('foo');
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return '<div><p><span><b>'+
+      Meteor.ui.chunk(function() {
+        return '<input type="checkbox">'+R.get();
+      }, {events: eventmap('click input')}) +
+      '</b></span></p></div>';
+  }, { events: eventmap('change b') }));
+  R.set('bar');
+  Meteor.flush();
+  // click on input
+  clickElement(div.node().getElementsByTagName('input')[0]);
+  event_buf.sort(); // don't care about order
+  test.equal(event_buf, ['change b', 'click input']);
   event_buf.length = 0;
   div.kill();
   Meteor.flush();
@@ -1553,24 +1573,27 @@ testAsyncMulti("liveui - tricky events", [
       var iframe = iframeDiv.node().firstChild;
 
       iframe.loadFunc = function() {
-        onReady1(frameName, iframe);
-        onReady2(frameName, iframe);
+        onReady1(frameName, iframe, iframeDiv);
+        onReady2(frameName, iframe, iframeDiv);
       };
       iframe.unloadFunc = function() {
         iframe.DID_CHANGE_PAGE = true;
-        tricky_events_kill_later(iframeDiv);
       };
     };
     var expectCheckLater = function(options) {
-      var check = expect(function(iframe) {
+      var check = expect(function(iframe, iframeDiv) {
         if (options.shouldSubmit)
           test.isTrue(iframe.DID_CHANGE_PAGE);
         else
           test.isFalse(iframe.DID_CHANGE_PAGE);
+
+        // must do this inside expect() so it happens in time
+        tricky_events_kill_later(iframeDiv);
       });
-      var checkLater = function(frameName, iframe) {
+      var checkLater = function(frameName, iframe, iframeDiv) {
         Tinytest.setTimeout(function() {
-          check(iframe); }, 500); // wait for frame to unload
+          check(iframe, iframeDiv);
+        }, 500); // wait for frame to unload
       };
       return checkLater;
     };
