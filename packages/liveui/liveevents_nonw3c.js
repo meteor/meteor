@@ -61,17 +61,6 @@ Meteor.ui._loadNonW3CEvents = function() {
     });
   };
 
-  /*setTimeout(function() {
-    Meteor.startup(function() {
-      document.body.appendChild(document.createElement("DIV"));
-      document.body.lastChild.innerHTML =
-        '<div style="position:absolute;top:0;right:0;width:300px;height:500px;font-size:10px;font-family:monospace;overflow:visible" id="mylog"></div>';
-    });
-  }, 0);
-  var LOG = function(str) {
-    document.getElementById('mylog').innerHTML += '<br>'+str;
-  };*/
-
   var sendEvent = function(ontype, target) {
     var e = document.createEventObject();
     e.synthetic = true;
