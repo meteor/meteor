@@ -3,6 +3,17 @@ Stellar._controllers = {};
 Stellar.client = {};
 Stellar.page = {};
 Stellar.loaded = false;
+Stellar.session = {};
+
+if(Meteor.is_client) {
+  Stellar.session.updateKey = function(key) {
+    $.cookie("stellar_session_key", key);
+    return true;
+  };
+  Stellar.session.getKey = function() {
+    return $.cookie("stellar_session_key");
+  };
+}
 
 Stellar.client.init = function() {
   if(Meteor.is_client) {
@@ -74,7 +85,7 @@ Stellar.log = function(message) {
   if(console && console.log) {
     console.log(message);
   }
-}
+};
 
 Stellar.Controller = function(name) {
   self = this;
@@ -92,6 +103,79 @@ Stellar.Collection = function(name, manager, driver) {
   }
   return collection;
 };
+
+Stellar.ServerSessions = new Stellar.Collection('Stellar_serverCollections');
+if(Meteor.is_server) {
+  Stellar.session.delete = function(key) {
+    ServerSessions.remove({key: key});
+    return true;
+  };
+
+  //This isn't a public method
+  //This method should be called when the user has no session, it isn't perfect as there is no built in cookies or on start up passing of cookied to the server.
+  //However it should be just as secure just not as quick/simple as I would like
+  Stellar.session.create = function(data) {
+    var key = Stellar.session.generateRandomKey();
+    var expires = new Date();
+    expires.setDate(expires.getDate()+5);
+    serverSession = ServerSessions.insert({data: data, created: new Date(), key: key, expires: expires}); //Set expire time to now to check this works
+    return key;
+  };
+
+  //This is not a public method at all, never make it public
+  Stellar.session.update = function(key, data) {
+    newquay = generateRandomKey(); //Generate a random key to stop session fixation, client will need to update their copy.
+    serverSession = ServerSessions.update({key: key}, {$set: {key: newquay, data: data}});
+    return newquay;
+  }
+
+
+  //Don't make this a meteor method, this is for internal only to be used by other meteor methods however the return value should be set on the client.
+  Stellar.session.set = function(data, key) {
+    if(!key) {
+      return Stellar.session.create(data);
+    } else {
+      return Stellar.session.create(data, key);
+    }
+  }
+
+  //This is not a public method at all, never make it public
+  Stellar.session.get = function(key) {
+    if(serverSession = ServerSessions.findOne({key: key})) {
+      now = new Date();
+      if(serverSession.expires < now) {
+        Stellar.session.garbageCollection();
+        throw new Meteor.Error(401, 'Session timeout');
+        return false;
+      }
+      return serverSession;
+    } else {
+      throw new Meteor.Error(401, 'Invalid session');
+      return false;
+    }
+  };
+
+  //Clears all expired sessions
+  Stellar.session.garbageCollection = function() {
+    now = new Date();
+    ServerSessions.remove({expires: {$lt: now}})
+  };
+
+  //This might need to be more random and will need to check for collisions
+  Stellar.session.generateRandomKey = function() {
+    return Crypto.SHA256(Math.random().toString());
+  };
+
+// TODO consider the below to start the session cookie on the client
+//  Meteor.methods.stellar_session_start = function(key) {
+//    if(key && key !== false) {
+//      return key;
+//    } else {
+//      key = Stellar.session.create();
+//    }
+//    return key;
+//  };
+}
 
 Stellar.page.set = function(controller, action) {
   //TODO make this whole method more flexible
@@ -146,6 +230,7 @@ Stellar.action_exists = function() {
 };
 
 Stellar.page.call = function() {
+  //TODO make more flexible and also add in REST here
   Stellar.log('Call');
   Stellar.log(Stellar.page);
   if(Stellar._controllers[Stellar.page.controller]) { //TODO fix missing error
