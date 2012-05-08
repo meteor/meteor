@@ -1287,6 +1287,28 @@ Tinytest.add("liveui - basic events", function(test) {
   div.kill();
   Meteor.flush();
 
+  // bubbling continues even with DOM change
+  // http://stackoverflow.com/questions/10450293/in-place-editing-with-meteor-cannot-read-property-parentnode-of-null
+  event_buf.length = 0;
+  R = ReactiveVar(true);
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return Meteor.ui.chunk(function() {
+      return '<div id="blarn">'+(R.get()?'<span id="foozy">abcd</span>':'')+'</div>';
+    }, {events: { 'click span': function() {
+      event_buf.push('click span');
+      R.set(false);
+      Meteor.flush(); // kill the span
+    }, 'click div': function(evt) {
+      event_buf.push('click div');
+    }}});
+  }));
+  // click on span
+  simulateEvent(getid("foozy"), 'click');
+  test.equal(event_buf, ['click span', 'click div']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
 });
 
 Tinytest.add("liveui - cleanup", function(test) {
