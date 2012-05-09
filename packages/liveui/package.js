@@ -14,7 +14,7 @@ Package.on_use(function (api) {
   api.use('jquery');
 
   api.add_files(['liverange.js', 'liveui.js', 'innerhtml.js', 'smartpatch.js',
-                 'liveevents_nonw3c.js', 'liveevents.js'],
+                 'liveevents_now3c.js', 'liveevents.js'],
                 'client');
 });
 

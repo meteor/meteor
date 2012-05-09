@@ -4,7 +4,7 @@ Meteor.ui = Meteor.ui || {};
 
   // for IE 6-8
   if (! document.addEventListener) {
-    Meteor.ui._loadNonW3CEvents();
+    Meteor.ui._loadNoW3CEvents();
     return;
   }
 
