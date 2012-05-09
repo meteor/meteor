@@ -5,22 +5,22 @@ Meteor.ui._event = Meteor.ui._event || {};
 
 Meteor.ui._event._loadNoW3CImpl = function() {
 
-  var installOne = function(node, prop) {
+  var installHandler = function(node, prop) {
     // install handlers for faking focus/blur if necessary
     if (prop === 'onfocus')
-      installOne(node, 'onfocusin');
+      installHandler(node, 'onfocusin');
     else if (prop === 'onblur')
-      installOne(node, 'onfocusout');
+      installHandler(node, 'onfocusout');
     // install handlers for faking bubbling change/submit
     else if (prop === 'onchange') {
-      installOne(node, 'oncellchange');
+      installHandler(node, 'oncellchange');
       if (node.nodeName === 'INPUT' &&
           (node.type === 'checkbox' || node.type === 'radio')) {
-        installOne(node, 'onpropertychange');
+        installHandler(node, 'onpropertychange');
         return;
       }
     } else if (prop === 'onsubmit')
-      installOne(node, 'ondatasetcomplete');
+      installHandler(node, 'ondatasetcomplete');
 
     node[prop] = universalHandler;
   };
@@ -31,12 +31,12 @@ Meteor.ui._event._loadNoW3CImpl = function() {
     var prop = 'on'+eventType;
 
     if (subtreeRoot.nodeType === 1) { // ELEMENT
-      installOne(subtreeRoot, prop);
+      installHandler(subtreeRoot, prop);
 
       var descendents = subtreeRoot.getElementsByTagName('*');
 
       for(var i=0, N = descendents.length; i<N; i++)
-        installOne(descendents[i], prop);
+        installHandler(descendents[i], prop);
     }
   };
 

@@ -96,13 +96,14 @@ Meteor.ui._event._loadW3CImpl = function() {
         installCapturer('blur');
     }
 
-    var propName = '_liveevents_' + eventType;
-    if (! document[propName]) {
+    if (! eventsCaptured[eventType]) {
       // only bind one event capturer per type
-      document[propName] = true;
+      eventsCaptured[eventType] = true;
       document.addEventListener(eventType, universalCapturer, true);
     }
   };
+
+  var eventsCaptured = {};
 
   Meteor.ui._event.registerEventType = function(eventType, subtreeRoot) {
     installCapturer(eventType);
