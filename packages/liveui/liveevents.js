@@ -2,6 +2,57 @@ Meteor.ui = Meteor.ui || {};
 
 (function() {
 
+  var returnFalse = function() { return false; };
+  var returnTrue = function() { return true; };
+
+  // inspired by jQuery fix()
+  Meteor.ui._fixEvent = function(event) {
+    var originalStopPropagation = event.stopPropagation;
+    var originalPreventDefault = event.preventDefault;
+    event.isPropagationStopped = returnFalse;
+    event.isDefaultPrevented = returnFalse;
+    event.stopPropagation = function() {
+      event.isPropagationStopped = returnTrue;
+      if (originalStopPropagation)
+        originalStopPropagation.call(event);
+      else
+        event.cancelBubble = true; // IE
+    };
+    event.preventDefault = function() {
+      event.isDefaultPrevented = returnTrue;
+      if (originalPreventDefault)
+        originalPreventDefault.call(event);
+      else
+        event.returnValue = false; // IE
+    };
+
+    var type = event.type;
+
+    if (event.metaKey === undefined)
+      event.metaKey = event.ctrlKey;
+    if (/^key/.test(type)) {
+      // KEY EVENTS
+      // Add `which`
+      if (event.which === null)
+	event.which = event.charCode !== null ? event.charCode : event.keyCode;
+    } else if (/^(?:mouse|contextmenu)|click/.test(type)) {
+      // MOUSE EVENTS
+      // Add relatedTarget, if necessary
+      if (! event.relatedTarget && event.fromElement)
+	event.relatedTarget = (event.fromElement === event.target ?
+                               event.toElement : event.fromElement);
+      // Add which for click: 1 === left; 2 === middle; 3 === right
+      if (! event.which && event.button !== undefined ) {
+        var button = event.button;
+	event.which = (button & 1 ? 1 :
+                       (button & 2 ? 3 :
+                         (button & 4 ? 2 : 0 )));
+      }
+    }
+
+    return event;
+  };
+
   // for IE 6-8
   if (! document.addEventListener) {
     Meteor.ui._loadNoW3CEvents();
@@ -57,7 +108,7 @@ Meteor.ui = Meteor.ui || {};
     target.dispatchEvent(event);
   };
 
-  var doHandleHacks = function(event) {
+  var universalHandler = function(event) {
     // fire synthetic focusin/focusout on blur/focus or vice versa
     if (event.currentTarget === event.target) {
       if (focusBlurMode === SIMULATE_FOCUS_BLUR) {
@@ -76,19 +127,19 @@ Meteor.ui = Meteor.ui || {};
     if (focusBlurMode === SIMULATE_FOCUS_BLUR) {
       if (event.type === 'focus' || event.type === 'blur') {
         if (! event.synthetic)
-          return false;
+          return;
       }
     } else { // SIMULATE_FOCUSIN_FOCUSOUT
       if (event.type === 'focusin' || event.type === 'focusout') {
         if (! event.synthetic)
-          return false;
+          return;
       }
     }
 
-    return true;
+    Meteor.ui._dispatchEvent(event);
   };
 
-  var doInstallHacks = function(node, eventType) {
+  Meteor.ui._installLiveHandler = function(node, eventType) {
     // install handlers for the events used to fake events of this type,
     // in addition to handlers for the real type
     if (focusBlurMode === SIMULATE_FOCUS_BLUR) {
@@ -102,69 +153,6 @@ Meteor.ui = Meteor.ui || {};
       else if (eventType === 'focusout')
         Meteor.ui._installLiveHandler(node, 'blur');
     }
-  };
-
-  var returnFalse = function() { return false; };
-  var returnTrue = function() { return true; };
-
-  var universalHandler = function(event) {
-    if (doHandleHacks(event) === false)
-      return;
-
-    var curNode = event.currentTarget;
-    if (! curNode)
-      return;
-
-    var innerRange = Meteor.ui._LiveRange.findRange(Meteor.ui._tag, curNode);
-    if (! innerRange)
-      return;
-
-    var originalStopPropagation = event.stopPropagation;
-    var originalPreventDefault = event.preventDefault;
-    event.isPropagationStopped = returnFalse;
-    event.isDefaultPrevented = returnFalse;
-    event.stopPropagation = function() {
-      event.isPropagationStopped = returnTrue;
-      originalStopPropagation.call(event);
-    };
-    event.preventDefault = function() {
-      event.isDefaultPrevented = returnTrue;
-      originalPreventDefault.call(event);
-    };
-
-    var type = event.type;
-
-    for(var range = innerRange; range; range = range.findParent(true)) {
-      if (! range.event_handlers)
-        continue;
-
-      _.each(range.event_handlers, function(h) {
-        if (h.type !== type)
-          return;
-
-        var selector = h.selector;
-        if (selector) {
-          var contextNode = range.containerNode();
-          var results = $(contextNode).find(selector);
-          if (! _.contains(results, curNode))
-            return;
-        }
-
-        var returnValue = h.callback.call(range.event_data, event);
-        if (returnValue === false) {
-          // extension due to jQuery
-          event.stopPropagation();
-          event.preventDefault();
-        }
-      });
-
-      if (event.isPropagationStopped())
-        break;
-    }
-  };
-
-  Meteor.ui._installLiveHandler = function(node, eventType) {
-    doInstallHacks(node, eventType);
 
     var propName = prefix + eventType;
     if (! document[propName]) {
@@ -175,7 +163,4 @@ Meteor.ui = Meteor.ui || {};
 
   };
 
-  Meteor.ui._resetEvents = function(node) {
-    // no action needed, listeners are on document.
-  };
 })();
