@@ -61,6 +61,9 @@ Meteor.ui._loadNoW3CEvents = function() {
     });
   };
 
+  var returnFalse = function() { return false; };
+  var returnTrue = function() { return true; };
+
   var sendEvent = function(ontype, target) {
     var e = document.createEventObject();
     e.synthetic = true;
@@ -112,12 +115,14 @@ Meteor.ui._loadNoW3CEvents = function() {
     if (! innerRange)
       return;
 
-    var isPropagationStopped = false;
+    event.isPropagationStopped = returnFalse;
+    event.isDefaultPrevented = returnFalse;
     event.stopPropagation = function() {
-      isPropagationStopped = true;
+      event.isPropagationStopped = returnTrue;
       event.cancelBubble = true;
     };
     event.preventDefault = function() {
+      event.isDefaultPrevented = returnTrue;
       event.returnValue = false;
     };
 
@@ -169,7 +174,7 @@ Meteor.ui._loadNoW3CEvents = function() {
         }
       });
 
-      if (isPropagationStopped)
+      if (event.isPropagationStopped())
         break;
     }
   };

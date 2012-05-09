@@ -104,6 +104,9 @@ Meteor.ui = Meteor.ui || {};
     }
   };
 
+  var returnFalse = function() { return false; };
+  var returnTrue = function() { return true; };
+
   var universalHandler = function(event) {
     if (doHandleHacks(event) === false)
       return;
@@ -116,15 +119,16 @@ Meteor.ui = Meteor.ui || {};
     if (! innerRange)
       return;
 
-    var isPropagationStopped = false;
-
     var originalStopPropagation = event.stopPropagation;
     var originalPreventDefault = event.preventDefault;
+    event.isPropagationStopped = returnFalse;
+    event.isDefaultPrevented = returnFalse;
     event.stopPropagation = function() {
-      isPropagationStopped = true;
+      event.isPropagationStopped = returnTrue;
       originalStopPropagation.call(event);
     };
     event.preventDefault = function() {
+      event.isDefaultPrevented = returnTrue;
       originalPreventDefault.call(event);
     };
 
@@ -154,7 +158,7 @@ Meteor.ui = Meteor.ui || {};
         }
       });
 
-      if (isPropagationStopped)
+      if (event.isPropagationStopped())
         break;
     }
   };
