@@ -1158,18 +1158,21 @@ Tinytest.add("liveui - basic tag contents", function(test) {
 
 });
 
+var eventmap = function(/*args*/) {
+  var events = {};
+  _.each(arguments, function(esel) {
+    var etyp = esel.split(' ')[0];
+    events[esel] = function(evt) {
+      if (evt.type !== etyp)
+        throw new Error(etyp+" event arrived as "+evt.type);
+      this.push(esel);
+    };
+  });
+  return events;
+};
 
 Tinytest.add("liveui - basic events", function(test) {
   var event_buf = [];
-  var eventmap = function(/* arguments */) {
-    var events = {};
-    _.each(arguments, function(evt_sel) {
-      events[evt_sel] = function() {
-        event_buf.push(evt_sel);
-      };
-    });
-    return events;
-  };
   var getid = function(id) {
     return document.getElementById(id);
   };
@@ -1180,7 +1183,7 @@ Tinytest.add("liveui - basic events", function(test) {
   event_buf.length = 0;
   div = OnscreenDiv(Meteor.ui.render(function() {
     return '<div id="foozy">Foo</div>';
-  }, {events: eventmap("click")}));
+  }, {events: eventmap("click"), event_data:event_buf}));
   clickElement(getid("foozy"));
   test.equal(event_buf, ['click']);
   div.kill();
@@ -1190,7 +1193,7 @@ Tinytest.add("liveui - basic events", function(test) {
   event_buf.length = 0;
   div = OnscreenDiv(Meteor.ui.render(function() {
     return '<div id="foozy">Foo</div>';
-  }, {events: eventmap("click div")}));
+  }, {events: eventmap("click div"), event_data:event_buf}));
   clickElement(getid("foozy"));
   test.equal(event_buf, ['click div']);
   div.kill();
@@ -1200,7 +1203,7 @@ Tinytest.add("liveui - basic events", function(test) {
   event_buf.length = 0;
   div = OnscreenDiv(Meteor.ui.render(function() {
     return '<div id="foozy"><span>Foo</span></div>';
-  }, {events: eventmap("click span")}));
+  }, {events: eventmap("click span"), event_data:event_buf}));
   clickElement(getid("foozy").firstChild);
   test.equal(event_buf, ['click span']);
   div.kill();
@@ -1214,7 +1217,7 @@ Tinytest.add("liveui - basic events", function(test) {
     return Meteor.ui.chunk(function() {
       return '<'+R.get()+' id="foozy">Hello</'+R.get()+'>';
     });
-  }, {events: eventmap("click")}));
+  }, {events: eventmap("click"), event_data:event_buf}));
   clickElement(getid("foozy"));
   test.equal(event_buf, ['click']);
   event_buf.length = 0;
@@ -1237,7 +1240,7 @@ Tinytest.add("liveui - basic events", function(test) {
   div = OnscreenDiv(Meteor.ui.render(function() {
     return '<div id="foozy"><span><u><b>Foo</b></u></span>'+
       '<span>Bar</span></div>';
-  }, {events: eventmap("click span")}));
+  }, {events: eventmap("click span"), event_data:event_buf}));
   clickElement(
     getid("foozy").firstChild.firstChild.firstChild);
   test.equal(event_buf, ['click span']);
@@ -1249,7 +1252,7 @@ Tinytest.add("liveui - basic events", function(test) {
   div = OnscreenDiv(Meteor.ui.render(function() {
     return '<div id="foozy"><span><u><b>Foo</b></u></span>'+
       '<span>Bar</span></div>';
-  }, {events: eventmap("click span", "click b")}));
+  }, {events: eventmap("click span", "click b"), event_data:event_buf}));
   clickElement(
     getid("foozy").firstChild.firstChild.firstChild);
   test.equal(event_buf, ['click b', 'click span']);
@@ -1262,9 +1265,9 @@ Tinytest.add("liveui - basic events", function(test) {
     return Meteor.ui.chunk(function() {
       return Meteor.ui.chunk(function() {
         return '<span id="foozy" class="a b c">Hello</span>';
-      }, {events: eventmap("click .c")});
-    }, {events: eventmap("click .b")});
-  }, {events: eventmap("click .a")}));
+      }, {events: eventmap("click .c"), event_data:event_buf});
+    }, {events: eventmap("click .b"), event_data:event_buf});
+  }, {events: eventmap("click .a"), event_data:event_buf}));
   clickElement(getid("foozy"));
   test.equal(event_buf, ['click .c', 'click .b', 'click .a']);
   event_buf.length = 0;
@@ -1277,10 +1280,10 @@ Tinytest.add("liveui - basic events", function(test) {
     return Meteor.ui.chunk(function() {
       return Meteor.ui.chunk(function() {
         return '<span id="foozy" class="a b c">Hello</span>';
-      }, {events: eventmap("click .c")});
+      }, {events: eventmap("click .c"), event_data:event_buf});
     }, {events: {"click .b": function(evt) {
       event_buf.push("click .b"); evt.stopPropagation(); return false;}}});
-  }, {events: eventmap("click .a")}));
+  }, {events: eventmap("click .a"), event_data:event_buf}));
   clickElement(getid("foozy"));
   test.equal(event_buf, ['click .c', 'click .b']);
   event_buf.length = 0;
@@ -1318,9 +1321,9 @@ Tinytest.add("liveui - basic events", function(test) {
     return '<div><p><span><b>'+
       Meteor.ui.chunk(function() {
         return '<input type="checkbox">'+R.get();
-      }, {events: eventmap('click input')}) +
+      }, {events: eventmap('click input'), event_data:event_buf}) +
       '</b></span></p></div>';
-  }, { events: eventmap('change b') }));
+  }, { events: eventmap('change b'), event_data:event_buf }));
   R.set('bar');
   Meteor.flush();
   // click on input
@@ -1387,104 +1390,85 @@ Tinytest.add("liveui - cleanup", function(test) {
 
 });
 
-var tricky_events_hitlist = [];
-var tricky_events_kill_later = function(thing) {
-  tricky_events_hitlist.push(thing);
+var make_input_tester = function(render_func, events) {
+  var buf = [];
+
+  if (typeof render_func === "string") {
+    var render_str = render_func;
+    render_func = function() { return render_str; };
+  }
+  if (typeof events === "string") {
+    events = eventmap.apply(null, _.toArray(arguments).slice(1));
+  }
+
+  var R = ReactiveVar(0);
+  var div = OnscreenDiv(
+    Meteor.ui.render(function() {
+      R.get(); // create dependency
+      return render_func();
+    }, { events: events, event_data: buf }));
+  div.node().style.display = "block"; // make visible
+  div.node().style.height = 0;
+  div.node().style.overflow = 'hidden';
+
+  var getbuf = function() {
+    var ret = buf.slice();
+    buf.length = 0;
+    return ret;
+  };
+
+  var self;
+  return self = {
+    focus: function(optCallback) {
+      focusElement(self.inputNode());
+
+      if (optCallback)
+        Meteor.defer(function() { optCallback(getbuf()); });
+      else
+        return getbuf();
+    },
+    blur: function(optCallback) {
+      blurElement(self.inputNode());
+
+      if (optCallback)
+        Meteor.defer(function() { optCallback(getbuf()); });
+      else
+        return getbuf();
+    },
+    click: function() {
+      clickElement(self.inputNode());
+      return getbuf();
+    },
+    kill: function() {
+      // clean up
+      div.kill();
+      Meteor.flush();
+    },
+    inputNode: function() {
+      return div.node().getElementsByTagName("input")[0];
+    },
+    redraw: function() {
+      R.set(R.get() + 1);
+      Meteor.flush();
+    }
+  };
 };
 
-testAsyncMulti(
-  "liveui - tricky events",
+
+// Note:  These tests MAY FAIL if the browser window doesn't have focus
+// (isn't frontmost) in some browsers, particularly Firefox.
+testAsyncMulti("liveui - focus/blur events",
   (function() {
-
-    var make_input_tester = function(render_func, events) {
-      var buf = [];
-
-      if (typeof render_func === "string") {
-        var render_str = render_func;
-        render_func = function() { return render_str; };
-      }
-      if (typeof events === "string") {
-        events = event_map.apply(null, _.toArray(arguments).slice(1));
-      }
-
-      var R = ReactiveVar(0);
-      var div = OnscreenDiv(
-        Meteor.ui.render(function() {
-          R.get(); // create dependency
-          return render_func();
-        }, { events: events, event_data: buf }));
-      div.node().style.display = "block"; // make visible
-      div.node().style.height = 0;
-      div.node().style.overflow = 'hidden';
-
-      var getbuf = function() {
-        var ret = buf.slice();
-        buf.length = 0;
-        return ret;
-      };
-
-      var self;
-      return self = {
-        focus: function(optCallback) {
-          focusElement(self.inputNode());
-
-          if (optCallback)
-            Meteor.defer(function() { optCallback(getbuf()); });
-          else
-            return getbuf();
-        },
-        blur: function(optCallback) {
-          blurElement(self.inputNode());
-
-          if (optCallback)
-            Meteor.defer(function() { optCallback(getbuf()); });
-          else
-            return getbuf();
-        },
-        click: function() {
-          clickElement(self.inputNode());
-          return getbuf();
-        },
-        kill: function() {
-          // clean up
-          div.kill();
-          Meteor.flush();
-        },
-        inputNode: function() {
-          return div.node().getElementsByTagName("input")[0];
-        },
-        redraw: function() {
-          R.set(R.get() + 1);
-          Meteor.flush();
-        }
-      };
-    };
-
-    var event_map = function(/*args*/) {
-      var events = {};
-      _.each(arguments, function(esel) {
-        var etyp = esel.split(' ')[0];
-        events[esel] = function(evt) {
-          if (evt.type !== etyp)
-            throw new Exception(etyp+" event arrived as "+evt.type);
-          this.push(esel);
-        };
-      });
-      return events;
-    };
 
     var textLevel1 = '<input type="text" />';
     var textLevel2 = '<span id="spanOfMurder"><input type="text" /></span>';
-    var checkboxLevel1 = '<input type="checkbox" />';
-    var checkboxLevel2 = '<span id="spanOfMurder">'+
-          '<input type="checkbox" id="checkboxy" /></span>';
 
     var focus_test = function(render_func, events, expected_results) {
       return function(test, expect) {
         var tester = make_input_tester(render_func, events);
         var callback = expect(expected_results);
         tester.focus(function(buf) {
-          tricky_events_kill_later(tester);
+          tester.kill();
           callback(buf);
         });
       };
@@ -1496,17 +1480,13 @@ testAsyncMulti(
         var callback = expect(expected_results);
         tester.focus();
         tester.blur(function(buf) {
-          tricky_events_kill_later(tester);
+          tester.kill();
           callback(buf);
         });
       };
     };
 
     return [
-      ///// FOCUS & BLUR
-
-      // Note:  These tests MAY FAIL if the browser window doesn't have focus
-      // (isn't frontmost) in some browsers, particularly Firefox.
 
       // focus on top-level input
       focus_test(textLevel1, 'focus input', ['focus input']),
@@ -1533,44 +1513,62 @@ testAsyncMulti(
       // focusout works, bubbles
       blur_test(textLevel1, 'focusout input', ['focusout input']),
       blur_test(textLevel2, 'focusout input', ['focusout input']),
-      blur_test(textLevel2, 'focusout span', ['focusout span']),
+      blur_test(textLevel2, 'focusout span', ['focusout span'])
+    ];
+  })());
 
-      ///// CHANGE
+Tinytest.add("liveui - change events", function(test) {
 
+  var checkboxLevel1 = '<input type="checkbox" />';
+  var checkboxLevel2 = '<span id="spanOfMurder">'+
+    '<input type="checkbox" id="checkboxy" /></span>';
+
+
+  // on top-level
+  var checkbox1 = make_input_tester(checkboxLevel1, 'change input');
+  test.equal(checkbox1.click(), ['change input']);
+  checkbox1.kill();
+
+  // on second-level (should bubble)
+  var checkbox2 = make_input_tester(checkboxLevel2,
+                                    'change input', 'change span');
+  test.equal(checkbox2.click(), ['change input', 'change span']);
+  test.equal(checkbox2.click(), ['change input', 'change span']);
+  checkbox2.redraw();
+  test.equal(checkbox2.click(), ['change input', 'change span']);
+  checkbox2.kill();
+
+  checkbox2 = make_input_tester(checkboxLevel2, 'change input');
+  test.equal(checkbox2.focus(), []);
+  test.equal(checkbox2.click(), ['change input']);
+  test.equal(checkbox2.blur(), []);
+  test.equal(checkbox2.click(), ['change input']);
+  checkbox2.kill();
+
+  var checkbox2 = make_input_tester(
+    checkboxLevel2,
+    'change input', 'change span', 'change div');
+  test.equal(checkbox2.click(), ['change input', 'change span']);
+  checkbox2.kill();
+
+});
+
+testAsyncMulti(
+  "liveui - submit events",
+  (function() {
+    var hitlist = [];
+    var killLater = function(thing) {
+      hitlist.push(thing);
+    };
+
+    var LIVEUI_TEST_RESPONDER = "/liveui_test_responder";
+    var IFRAME_URL_1 = LIVEUI_TEST_RESPONDER + "/";
+    var IFRAME_URL_2 = "about:blank"; // most cross-browser-compatible
+    if (window.opera) // opera doesn't like 'about:blank' form target
+      IFRAME_URL_2 = LIVEUI_TEST_RESPONDER+"/blank";
+
+    return [
       function(test, expect) {
-
-        // on top-level
-        var checkbox1 = make_input_tester(checkboxLevel1, 'change input');
-        test.equal(checkbox1.click(), ['change input']);
-        checkbox1.kill();
-
-        // on second-level (should bubble)
-        var checkbox2 = make_input_tester(checkboxLevel2,
-                                          'change input', 'change span');
-        test.equal(checkbox2.click(), ['change input', 'change span']);
-        test.equal(checkbox2.click(), ['change input', 'change span']);
-        checkbox2.redraw();
-        test.equal(checkbox2.click(), ['change input', 'change span']);
-        checkbox2.kill();
-
-        checkbox2 = make_input_tester(checkboxLevel2, 'change input');
-        test.equal(checkbox2.focus(), []);
-        test.equal(checkbox2.click(), ['change input']);
-        test.equal(checkbox2.blur(), []);
-        test.equal(checkbox2.click(), ['change input']);
-        checkbox2.kill();
-
-        var checkbox2 = make_input_tester(
-          checkboxLevel2,
-          'change input', 'change span', 'change div');
-        test.equal(checkbox2.click(), ['change input', 'change span']);
-        checkbox2.kill();
-
-      },
-
-      function(test, expect) {
-
-        ///// SUBMIT
 
         // Submit events can be canceled with preventDefault, which prevents the
         // browser's native form submission behavior.  This behavior takes some
@@ -1588,7 +1586,7 @@ testAsyncMulti(
           var iframeDiv = OnscreenDiv(
             Meteor.ui.render(function() {
               return '<iframe name="'+frameName+'" '+
-                'src="/liveui_test_responder/">';
+                'src="'+IFRAME_URL_1+'">';
             }));
           var iframe = iframeDiv.node().firstChild;
 
@@ -1608,7 +1606,7 @@ testAsyncMulti(
               test.isFalse(iframe.DID_CHANGE_PAGE);
 
             // must do this inside expect() so it happens in time
-            tricky_events_kill_later(iframeDiv);
+            killLater(iframeDiv);
           });
           var checkLater = function(frameName, iframe, iframeDiv) {
             Tinytest.setTimeout(function() {
@@ -1619,7 +1617,8 @@ testAsyncMulti(
         };
         var buttonFormHtml = function(frameName) {
           return '<div style="height:0;overflow:hidden">'+
-            '<form action="about:blank" target="'+frameName+'">'+
+            '<form action="'+IFRAME_URL_2+'" target="'+
+            frameName+'">'+
             '<span><input type="submit"></span>'+
             '</form></div>';
         };
@@ -1630,7 +1629,7 @@ testAsyncMulti(
           var form = make_input_tester(
             buttonFormHtml(frameName), 'submit form');
           test.equal(form.click(), ['submit form']);
-          tricky_events_kill_later(form);
+          killLater(form);
         }, expectCheckLater({shouldSubmit:true}));
 
         // submit bubbles up
@@ -1638,7 +1637,7 @@ testAsyncMulti(
           var form = make_input_tester(
             buttonFormHtml(frameName), 'submit form', 'submit div');
           test.equal(form.click(), ['submit form', 'submit div']);
-          tricky_events_kill_later(form);
+          killLater(form);
         }, expectCheckLater({shouldSubmit:true}));
 
         // preventDefault works, still bubbles
@@ -1662,13 +1661,12 @@ testAsyncMulti(
             }
           );
           test.equal(form.click(), ['submit form', 'submit div']);
-          tricky_events_kill_later(form);
+          killLater(form);
         }, expectCheckLater({shouldSubmit:false}));
 
       },
-
       function(test, expect) {
-        _.each(tricky_events_hitlist, function(thing) {
+        _.each(hitlist, function(thing) {
           thing.kill();
         });
         Meteor.flush();
