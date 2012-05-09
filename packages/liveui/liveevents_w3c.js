@@ -3,6 +3,7 @@ Meteor.ui._event = Meteor.ui._event || {};
 
 
 Meteor.ui._event._loadW3CImpl = function() {
+  var SIMULATE_NEITHER = 0;
   var SIMULATE_FOCUS_BLUR = 1;
   var SIMULATE_FOCUSIN_FOCUSOUT = 2;
 
@@ -12,7 +13,7 @@ Meteor.ui._event._loadW3CImpl = function() {
   // as of v11.0.  This style of event support testing ('onfoo' in div)
   // doesn't work in Firefox 3.6, but does in IE and WebKit.
   var focusBlurMode = ('onfocusin' in document.createElement("DIV")) ?
-        SIMULATE_FOCUS_BLUR : SIMULATE_FOCUSIN_FOCUSOUT;
+        SIMULATE_NEITHER : SIMULATE_FOCUSIN_FOCUSOUT;
 
   var universalCapturer = function(event) {
     var type = event.type;
@@ -58,7 +59,7 @@ Meteor.ui._event._loadW3CImpl = function() {
           sendUIEvent('focus', event.target, false);
         else if (event.type === 'focusout')
           sendUIEvent('blur', event.target, false);
-      } else { // SIMULATE_FOCUSIN_FOCUSOUT
+      } else if (focusBlurMode === SIMULATE_FOCUSIN_FOCUSOUT) {
         if (event.type === 'focus')
           sendUIEvent('focusin', event.target, true);
         else if (event.type === 'blur')
@@ -71,7 +72,7 @@ Meteor.ui._event._loadW3CImpl = function() {
         if (! event.synthetic)
           return;
       }
-    } else { // SIMULATE_FOCUSIN_FOCUSOUT
+    } else if (focusBlurMode === SIMULATE_FOCUSIN_FOCUSOUT) {
       if (event.type === 'focusin' || event.type === 'focusout') {
         if (! event.synthetic)
           return;
@@ -89,7 +90,7 @@ Meteor.ui._event._loadW3CImpl = function() {
         installCapturer('focusin');
       else if (eventType === 'blur')
         installCapturer('focusout');
-    } else { // SIMULATE_FOCUSIN_FOCUSOUT
+    } else if (focusBlurMode === SIMULATE_FOCUSIN_FOCUSOUT) {
       if (eventType === 'focusin')
         installCapturer('focus');
       else if (eventType === 'focusout')
