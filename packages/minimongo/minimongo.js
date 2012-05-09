@@ -7,7 +7,7 @@
 
 // LiveResultsSet: the return value of a live query.
 
-LocalCollection = function () {
+LocalCollection = function (klass) {
   this.docs = {}; // _id -> document (also containing id)
 
   this.next_qid = 1; // live query id generator
@@ -24,6 +24,9 @@ LocalCollection = function () {
 
   // True when observers are paused and we should not send callbacks.
   this.paused = false;
+  
+  // Store the prototype to be attached to each object pulled from the db
+  this.klass = klass;
 };
 
 // options may include sort, skip, limit, reactive
@@ -110,7 +113,7 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
                           moved: true});
 
   while (self.cursor_pos < self.db_objects.length)
-    callback(LocalCollection._deepcopy(self.db_objects[self.cursor_pos++]));
+    callback(self.collection._prepareRecord(self.db_objects[self.cursor_pos++]));
 };
 
 LocalCollection.Cursor.prototype.map = function (callback) {
@@ -366,6 +369,17 @@ LocalCollection.prototype._modifyAndNotify = function (doc, mod) {
 };
 
 // XXX findandmodify
+
+LocalCollection.prototype._prepareRecord = function(v) {
+  if (this.klass) {
+    var ret = new this.klass();
+    for (var key in v)
+      ret[key] = LocalCollection._deepcopy(v[key]);
+    return ret;
+  } else {
+    return LocalCollection._deepcopy(v);
+  }
+}
 
 LocalCollection._deepcopy = function (v) {
   if (typeof v !== "object")
