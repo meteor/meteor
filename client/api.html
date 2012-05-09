@@ -510,15 +510,18 @@ in the database, and return the ID.
 
 On the server, if you don't provide a callback, then `insert` blocks
 until the database acknowledges the write, or throws an exception if
-something went wrong.  If you do provide a callback, `insert` returns
-immediately.  Once the insert completes (or fails), the callback is
-called with error and result arguments, same as for
-[`methods`](#methods_header).
+something went wrong.  If you do provide a callback, `insert` still
+returns the ID immediately.  Once the insert completes (or fails), the
+callback is called with error and result arguments.  In an error case,
+`result` is undefined.  If the insert is successful, `error` is
+undefined and `result` is the new document ID.
 
 On the client, `insert` never blocks.  If you do not provide a callback
 and the insert fails on the server, then Meteor will log a warning to
 the console.  If you provide a callback, Meteor will call that function
-with the error or result of the server's insert.
+with `error` and `result` arguments.  In an error case, `result` is
+undefined.  If the insert is successful, `error` is undefined and
+`result` is the new document ID.
 
 Example:
 
