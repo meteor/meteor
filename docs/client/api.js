@@ -395,7 +395,7 @@ Template.api.insert = {
      descr: "The document to insert. Should not yet have an _id attribute."},
     {name: "callback",
      type: "Function",
-     descr: "Optional.  If present, called with an error object as the first argument and the _id as the second."}
+     descr: "Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second."}
   ]
 };
 
@@ -415,7 +415,7 @@ Template.api.update = {
      descr: "Specifies how to modify the documents"},
     {name: "callback",
      type: "Function",
-     descr: "Optional.  If present, called with an error object as the first argument and the result as the second."}
+     descr: "Optional.  If present, called with an error object as its argument."}
   ],
   options: [
     {name: "multi",
@@ -436,7 +436,7 @@ Template.api.remove = {
      descr: "Specifies which documents to remove"},
     {name: "callback",
      type: "Function",
-     descr: "Optional.  If present, called with an error object as the first argument and the result as the second."}
+     descr: "Optional.  If present, called with an error object as its argument."}
   ]
 };
 

@@ -92,19 +92,19 @@ Meteor.Collection = function (name, manager, driver) {
     self._prefix = '/' + name + '/';
     m[self._prefix + 'insert'] = function (/* selector, options */) {
       self._maybe_snapshot();
-      // Allow exceptions to propagate
+      // insert returns nothing.  allow exceptions to propagate.
       self._collection.insert.apply(self._collection, _.toArray(arguments));
     };
 
     m[self._prefix + 'update'] = function (/* selector, mutator, options */) {
       self._maybe_snapshot();
-      // Allow exceptions to propagate
+      // update returns nothing.  allow exceptions to propagate.
       self._collection.update.apply(self._collection, _.toArray(arguments));
     };
 
     m[self._prefix + 'remove'] = function (/* selector */) {
       self._maybe_snapshot();
-      // Allow exceptions to propagate
+      // remove returns nothing.  allow exceptions to propagate.
       self._collection.remove.apply(self._collection, _.toArray(arguments));
     };
 
@@ -151,8 +151,10 @@ _.extend(Meteor.Collection.prototype, {
 // provided, they block until the operation is complete, and throw an
 // exception if it fails; if a callback is provided, then they don't
 // necessarily block, and they call the callback when they finish with
-// zero arguments on success, or one argument, an exception, on
-// failure; on the client, blocking is impossible, so if a callback
+// error and result arguments.  (The insert method provides the
+// document ID as its result; update and remove don't provide a result.)
+//
+// On the client, blocking is impossible, so if a callback
 // isn't provided, they just return immediately and any error
 // information is lost.
 //
@@ -169,9 +171,11 @@ _.each(["insert", "update", "remove"], function (name) {
   Meteor.Collection.prototype[name] = function (/* arguments */) {
     var self = this;
     var args = _.toArray(arguments);
+    var callback;
+    var ret;
 
     if (args.length && args[args.length - 1] instanceof Function)
-      var callback = args.pop();
+      callback = args.pop();
 
     if (Meteor.is_client && !callback)
       // Client can't block, so it can't report errors by exception,
@@ -191,33 +195,42 @@ _.each(["insert", "update", "remove"], function (name) {
       args[0] = _.extend({}, args[0]);
       if ('_id' in args[0])
         throw new Error("Do not pass an _id to insert. Meteor will generate the _id for you.");
-      var ret = args[0]._id = Meteor.uuid();
+      ret = args[0]._id = Meteor.uuid();
     }
 
     if (self._manager && self._manager !== Meteor.default_server) {
-      // NB: on failure, allow exception to propagate
-      self._manager.apply(self._prefix + name, args, callback);
-    }
-    else {
+      // just remote to another endpoint, propagate return value or
+      // exception.
+      if (callback)
+        // asynchronous: on success, callback should return ret
+        // (document ID for insert, undefined for update and
+        // remove), not the method's result.
+        self._manager.apply(self._prefix + name, args, function (error, result) {
+          callback(error, !error && ret);
+        });
+      else
+        // synchronous: propagate exception
+        self._manager.apply(self._prefix + name, args);
+
+    } else {
+      // it's my collection.  descend into the collection object
+      // and propagate any exception.
       try {
         self._collection[name].apply(self._collection, args);
       } catch (e) {
         if (callback) {
           callback(e);
-          return;
+          return null;
         }
-
-        // Note that on the client, this will never happen, because
-        // we will have been provided with a default callback. (This
-        // is nice because it matches the behavior of named
-        // collections, which on the client never throw exceptions
-        // directly.)
         throw e;
       }
 
-      callback && callback();
+      // on success, return *ret*, not the manager's return value.
+      callback && callback(null, ret);
     }
 
+    // both sync and async, unless we threw an exception, return ret
+    // (new document ID for insert, undefined otherwise).
     return ret;
   };
 });
