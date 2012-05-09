@@ -1310,6 +1310,8 @@ Tinytest.add("liveui - basic events", function(test) {
   Meteor.flush();
 
   // "deep reach" from high node down to replaced low node.
+  // Tests that attach_secondary_events actually does the
+  // right thing in IE.  Also tests change event bubbling.
   event_buf.length = 0;
   R = ReactiveVar('foo');
   div = OnscreenDiv(Meteor.ui.render(function() {

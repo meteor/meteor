@@ -418,6 +418,8 @@ Meteor.ui = Meteor.ui || {};
   var unpackEventMap = function(events) {
     var handlers = [];
 
+    var eventTypeSet = {};
+
     // iterate over `spec: callback` map
     _.each(events, function(callback, spec) {
       var clauses = spec.split(/,\s+/);
@@ -431,9 +433,11 @@ Meteor.ui = Meteor.ui || {};
         var selector = parts.join(' ');
 
         handlers.push({type:type, selector:selector, callback:callback});
+        eventTypeSet[type] = true;
       });
     });
 
+    handlers.types = _.keys(eventTypeSet);
     return handlers;
   };
 
@@ -559,11 +563,14 @@ Meteor.ui = Meteor.ui || {};
   // Attach events specified by `range` to top-level nodes in `range`.
   // The nodes may still be in a DocumentFragment.
   var attach_events = function(range) {
-    _.each(range.event_handlers, function(h) {
+    if (! range.event_handlers)
+      return;
+
+    _.each(range.event_handlers.types, function(t) {
       for(var n = range.firstNode(), after = range.lastNode().nextSibling;
           n && n !== after;
           n = n.nextSibling)
-        Meteor.ui._installLiveHandler(n, h.type);
+        Meteor.ui._event.registerEventType(t, n);
     });
   };
 
@@ -575,15 +582,19 @@ Meteor.ui = Meteor.ui || {};
   // without taking enclosing ranges into account, so additional event
   // handlers need to be attached.
   var attach_secondary_events = function(range) {
-    if (Meteor.ui._attachSecondaryEvents) {
-      Meteor.ui._attachSecondaryEvents(range);
-    } else {
-      for(var r = range; r; r = r.findParent(true)) {
-        if (r === range)
-          continue;
+    for(var r = range; r; r = r.findParent()) {
+      if (r === range)
+        continue;
+      if (! r.event_handlers)
+        continue;
 
-        attach_events(r);
-      }
+      var eventTypes = r.event_handlers.types;
+      _.each(eventTypes, function(t) {
+        for(var n = range.firstNode(), after = range.lastNode().nextSibling;
+            n && n !== after;
+            n = n.nextSibling)
+          Meteor.ui._event.registerEventType(t, n);
+      });
     }
   };
 
@@ -596,7 +607,7 @@ Meteor.ui = Meteor.ui || {};
     if (! innerRange)
       return;
 
-    Meteor.ui._fixEvent(event);
+    event = Meteor.ui._event.fixEvent(event);
 
     var type = event.type;
 
@@ -628,4 +639,6 @@ Meteor.ui = Meteor.ui || {};
     }
 
   };
+
+  Meteor.ui._event.setDispatcher(Meteor.ui._dispatchEvent);
 })();

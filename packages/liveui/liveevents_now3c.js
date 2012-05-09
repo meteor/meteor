@@ -1,7 +1,9 @@
+Meteor.ui = Meteor.ui || {};
+Meteor.ui._event = Meteor.ui._event || {};
 
 // For IE 6-8.
 
-Meteor.ui._loadNoW3CEvents = function() {
+Meteor.ui._event._loadNoW3CImpl = function() {
 
   var installOne = function(node, prop) {
     // install handlers for faking focus/blur if necessary
@@ -23,42 +25,19 @@ Meteor.ui._loadNoW3CEvents = function() {
     node[prop] = universalHandler;
   };
 
-  Meteor.ui._installLiveHandler = function(node, eventType) {
+  Meteor.ui._event.registerEventType = function(eventType, subtreeRoot) {
     // use old-school event binding, so that we can
     // access the currentTarget as `this` in the handler.
     var prop = 'on'+eventType;
 
-    if (node.nodeType === 1) { // ELEMENT
-      installOne(node, prop);
+    if (subtreeRoot.nodeType === 1) { // ELEMENT
+      installOne(subtreeRoot, prop);
 
-      var descendents = node.getElementsByTagName('*');
+      var descendents = subtreeRoot.getElementsByTagName('*');
 
       for(var i=0, N = descendents.length; i<N; i++)
         installOne(descendents[i], prop);
     }
-  };
-
-  Meteor.ui._attachSecondaryEvents = function(innerRange) {
-    var types = {};
-    for(var range = innerRange; range; range = range.findParent()) {
-      if (range === innerRange)
-        continue;
-
-      if (! range.event_handlers)
-        continue;
-
-      _.each(range.event_handlers, function(h) {
-        types[h.type] = true;
-      });
-    }
-
-    _.each(types, function(z, t) {
-      for(var n = innerRange.firstNode(),
-              after = innerRange.lastNode().nextSibling;
-          n && n !== after;
-          n = n.nextSibling)
-        Meteor.ui._installLiveHandler(n, t);
-    });
   };
 
   var sendEvent = function(ontype, target) {
@@ -108,7 +87,7 @@ Meteor.ui._loadNoW3CEvents = function() {
       type = event.type = 'submit';
     }
 
-    Meteor.ui._dispatchEvent(event);
+    Meteor.ui._event._eventDispatchFunc(event);
   };
 
   // submit forms that aren't preventDefaulted
