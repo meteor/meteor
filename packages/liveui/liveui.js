@@ -632,9 +632,14 @@ Meteor.ui = Meteor.ui || {};
           var results = $(contextNode).find(selector);
           if (! _.contains(results, curNode))
             return;
+        } else {
+          // if no selector, only match the event target
+          if (curNode !== event.target)
+            return;
         }
 
-        var returnValue = h.callback.call(range.event_data, event);
+        var event_data = findEventData(event.target);
+        var returnValue = h.callback.call(event_data, event);
         // allow app to `return false` from event handler, just like
         // you can in a jquery event handler
         if (returnValue === false) {
@@ -647,6 +652,17 @@ Meteor.ui = Meteor.ui || {};
         break;
     }
 
+  };
+
+  // find the innermost enclosing liverange that has event_data
+  var findEventData = function(node) {
+    var innerRange = Meteor.ui._LiveRange.findRange(Meteor.ui._tag, node);
+
+    for(var range = innerRange; range; range = range.findParent())
+      if (range.event_data)
+        return range.event_data;
+
+    return null;
   };
 
   Meteor.ui._event.setHandler(Meteor.ui._handleEvent);

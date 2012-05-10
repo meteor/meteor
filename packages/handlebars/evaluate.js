@@ -76,6 +76,9 @@ Handlebars._escape = (function() {
   };
 })();
 
+// be able to recognize default "this", which is different in different environments
+Handlebars._defaultThis = (function() { return this; })();
+
 Handlebars.evaluate = function (ast, data, options) {
   options = options || {};
   var helpers = _.extend({}, Handlebars._default_helpers);
@@ -153,6 +156,25 @@ Handlebars.evaluate = function (ast, data, options) {
       return x.toString();
     };
 
+    // wrap `fn` and `inverse` blocks in liveranges
+    // having event_data, if the data is different
+    // from the enclosing data.
+    var decorateBlockFn = function(fn, old_data) {
+      return function(data) {
+        // don't create spurious ranges when data is same as before
+        // (or when transitioning between e.g. `window` and `undefined`)
+        if ((data || Handlebars._defaultThis) === (old_data || Handlebars._defaultThis))
+          return fn(data);
+        else
+          return Meteor.ui._ranged_html(
+            fn(data),
+            function(range) {
+              // when range materializes, set event_data on it
+              range.event_data = data;
+            });
+      };
+    };
+
     _.each(elts, function (elt) {
       if (typeof(elt) === "string")
         buf.push(elt);
@@ -161,13 +183,15 @@ Handlebars.evaluate = function (ast, data, options) {
       else if (elt[0] === '!')
         buf.push(toString(invoke(stack, elt[1] || '')));
       else if (elt[0] === '#') {
-        var block = function (data) {
-          return template({parent: stack, data: data}, elt[2]);
-        };
+        var block = decorateBlockFn(
+          function (data) {
+            return template({parent: stack, data: data}, elt[2]);
+          }, stack.data);
         block.fn = block;
-        block.inverse = function (data) {
-          return template({parent: stack, data: data}, elt[3] || []);
-        };
+        block.inverse = decorateBlockFn(
+          function (data) {
+            return template({parent: stack, data: data}, elt[3] || []);
+          }, stack.data);
         buf.push(invoke(stack, elt[1], block));
       } else if (elt[0] === '>') {
         if (!(elt[1] in partials))
