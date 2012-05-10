@@ -318,6 +318,12 @@ Handlebars.registerHelper('better_markdown', function(fn) {
     return result;
   };
 
+  // prevent liverange comment at beginning or end of line from throwing
+  // off showdown's HTML block parsing
+  input = input.replace(/^(<!--.*?-->)|(<!--.*?-->)$/mg, function(s) {
+    return '\n'+s+'\n';
+  });
+
   var nestedTags = [];
   while (idx < input.length) {
     var blockTag = rcall(rOpenBlockTag, false);
