@@ -1,17 +1,37 @@
 Meteor.ui = Meteor.ui || {};
 Meteor.ui._event = Meteor.ui._event || {};
 
+// LiveEvents implementation that depends on the W3C event model,
+// i.e. addEventListener and capturing.  It's intended for all
+// browsers except IE <= 8.
+//
+// We take advantage of the fact that event handlers installed during
+// the capture phase are live during the bubbling phase.  By installing
+// a capturing listener on the document, we bind the handler to the
+// event target and its ancestors "just in time".
 
 Meteor.ui._event._loadW3CImpl = function() {
   var SIMULATE_NEITHER = 0;
   var SIMULATE_FOCUS_BLUR = 1;
   var SIMULATE_FOCUSIN_FOCUSOUT = 2;
 
-  // If we have focusin/focusout, use them to simulate focus/blur.
-  // This has the nice effect of making focus/blur synchronous in IE 9+.
-  // It doesn't work in Firefox, which lacks focusin/focusout completely
-  // as of v11.0.  This style of event support testing ('onfoo' in div)
-  // doesn't work in Firefox 3.6, but does in IE and WebKit.
+  // Focusin/focusout are the bubbling versions of focus/blur, and are
+  // part of the W3C spec, but are absent from Firefox as of today
+  // (v11), so we supply them.
+  //
+  // In addition, while most browsers fire these events sync in
+  // response to a programmatic action (like .focus()), not all do.
+  // IE 9+ fires focusin/focusout sync but focus/blur async.  Opera
+  // fires them all async.  We don't do anything about this right now,
+  // but simulating focus/blur on IE would make them sync.
+  //
+  // We have the capabiilty here to simulate focusin/focusout from
+  // focus/blur, vice versa, or neither.
+  //
+  // We do a browser check that fails in old Firefox (3.6) but will
+  // succeed if Firefox ever implements focusin/focusout.  Old Firefox
+  // fails all tests of the form ('onfoo' in node), while new Firefox
+  // and all other known browsers will pass if 'foo' is a known event.
   var focusBlurMode = ('onfocusin' in document.createElement("DIV")) ?
         SIMULATE_NEITHER : SIMULATE_FOCUSIN_FOCUSOUT;
 
@@ -22,9 +42,10 @@ Meteor.ui._event._loadW3CImpl = function() {
 
     target.addEventListener(type, universalHandler, false);
 
-    // according to the DOM event spec, ancestors for bubbling
-    // purposes are determined at dispatch time (and ignore changes
-    // to the DOM after that)
+    // According to the DOM event spec, if the DOM is mutated during
+    // event handling, the original bubbling order still applies.
+    // So we can determine the chain of nodes that could possibly
+    // be bubbled to right now.
     var ancestors;
     if (bubbles) {
       ancestors = [];
@@ -34,6 +55,7 @@ Meteor.ui._event._loadW3CImpl = function() {
       };
     }
 
+    // Unbind the handlers later.
     Meteor.defer(function() {
       target.removeEventListener(type, universalHandler);
       if (bubbles) {
@@ -79,7 +101,8 @@ Meteor.ui._event._loadW3CImpl = function() {
       }
     }
 
-    Meteor.ui._event._handleEventFunc(event);
+    Meteor.ui._event._handleEventFunc(
+      Meteor.ui._event._fixEvent(event));
   };
 
   var installCapturer = function(eventType) {

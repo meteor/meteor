@@ -607,8 +607,6 @@ Meteor.ui = Meteor.ui || {};
     if (! innerRange)
       return;
 
-    event = Meteor.ui._event.fixEvent(event);
-
     var type = event.type;
 
     for(var range = innerRange; range; range = range.findParent(true)) {
