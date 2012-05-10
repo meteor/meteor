@@ -14,12 +14,15 @@ Meteor._StreamServer = function () {
   else
     self.server_id = Meteor.uuid();
 
-  // set up socket.io
+  // set up sockjs
   var sockjs = __meteor_bootstrap__.require('sockjs');
   self.server = sockjs.createServer({
     prefix: '/sockjs', log: function(){},
     jsessionid: false});
   self.server.installHandlers(__meteor_bootstrap__.app);
+
+  // Support the /websocket endpoint
+  self._redirectWebsocketEndpoint();
 
   self.server.on('connection', function (socket) {
     socket.send = function (data) {
@@ -59,5 +62,36 @@ _.extend(Meteor._StreamServer.prototype, {
   all_sockets: function () {
     var self = this;
     return _.values(self.open_sockets);
+  },
+
+  // Redirect /websocket to /sockjs/websocket in order to not expose
+  // sockjs to clients that want to use raw websockets
+  _redirectWebsocketEndpoint: function() {
+    // Unfortunately we can't use a connect middleware here since
+    // sockjs installs itself prior to all existing listeners
+    // (meaning prior to any connect middlewares) so we need to take
+    // an approach similar to overshadowListeners in
+    // https://github.com/sockjs/sockjs-node/blob/cf820c55af6a9953e16558555a31decea554f70e/src/utils.coffee
+    _.each(['request', 'upgrade'], function(event) {
+      var app = __meteor_bootstrap__.app;
+      var oldAppListeners = app.listeners(event).slice(0);
+      app.removeAllListeners(event);
+
+      // request and upgrade have different arguments passed but
+      // we only care about the first one which is always request
+      var newListener = function(request /*, moreArguments */) {
+        // Store arguments for use within the closure below
+        var args = arguments;
+
+        if (request.url === '/websocket' ||
+            request.url === '/websocket/')
+          request.url = '/sockjs/websocket';
+
+        _.each(oldAppListeners, function(oldListener) {
+          oldListener.apply(app, args);
+        });
+      };
+      app.addListener(event, newListener);
+    });
   }
 });
