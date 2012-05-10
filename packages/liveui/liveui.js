@@ -604,9 +604,9 @@ Meteor.ui = Meteor.ui || {};
   // Handle a currently-propagating event on a particular node.
   // We walk all enclosing liveranges of the node, from the inside out,
   // looking for matching handlers.  If the app calls stopPropagation(),
-  // we don't stop immediately (within an event map), but we DO stop
-  // between ranges (i.e. templates), in keeping with the idea that
-  // ranges are like invisible container nodes.
+  // we still call all handlers in all event maps for the current node.
+  // If the app calls "stopImmediatePropagation()", we don't call any
+  // more handlers.
   Meteor.ui._handleEvent = function(event) {
     var curNode = event.currentTarget;
     if (! curNode)
@@ -650,12 +650,8 @@ Meteor.ui = Meteor.ui || {};
           event.preventDefault();
         }
         if (event.isImmediatePropagationStopped())
-          break;
+          break;; // stop handling by this and other event maps
       }
-
-      // prevent propagation to parent event maps, not just parent nodes
-      if (event.isPropagationStopped())
-        break;
     }
 
   };

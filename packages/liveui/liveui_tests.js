@@ -1274,7 +1274,8 @@ Tinytest.add("liveui - basic events", function(test) {
   div.kill();
   Meteor.flush();
 
-  // "bubbling" stop
+  // stopPropagationd doesn't prevent other event maps from
+  // handling same node
   event_buf.length = 0;
   div = OnscreenDiv(Meteor.ui.render(function() {
     return Meteor.ui.chunk(function() {
@@ -1285,7 +1286,7 @@ Tinytest.add("liveui - basic events", function(test) {
       event_buf.push("click .b"); evt.stopPropagation(); return false;}}});
   }, {events: eventmap("click .a"), event_data:event_buf}));
   clickElement(getid("foozy"));
-  test.equal(event_buf, ['click .c', 'click .b']);
+  test.equal(event_buf, ['click .c', 'click .b', 'click .a']);
   event_buf.length = 0;
   div.kill();
   Meteor.flush();
