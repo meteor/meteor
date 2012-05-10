@@ -582,6 +582,9 @@ Meteor.ui = Meteor.ui || {};
   // without taking enclosing ranges into account, so additional event
   // handlers need to be attached.
   var attach_secondary_events = function(range) {
+    // Implementations of LiveEvents that use whole-document event capture
+    // (all except old IE) don't actually need any of this; this function
+    // could be a no-op.
     for(var r = range; r; r = r.findParent()) {
       if (r === range)
         continue;
@@ -598,6 +601,12 @@ Meteor.ui = Meteor.ui || {};
     }
   };
 
+  // Handle a currently-propagating event on a particular node.
+  // We walk all enclosing liveranges of the node, from the inside out,
+  // looking for matching handlers.  If the app calls stopPropagation(),
+  // we don't stop immediately (within an event map), but we DO stop
+  // between ranges (i.e. templates), in keeping with the idea that
+  // ranges are like invisible container nodes.
   Meteor.ui._handleEvent = function(event) {
     var curNode = event.currentTarget;
     if (! curNode)
@@ -609,7 +618,7 @@ Meteor.ui = Meteor.ui || {};
 
     var type = event.type;
 
-    for(var range = innerRange; range; range = range.findParent(true)) {
+    for(var range = innerRange; range; range = range.findParent()) {
       if (! range.event_handlers)
         continue;
 
@@ -626,6 +635,8 @@ Meteor.ui = Meteor.ui || {};
         }
 
         var returnValue = h.callback.call(range.event_data, event);
+        // allow app to `return false` from event handler, just like
+        // you can in a jquery event handler
         if (returnValue === false) {
           event.stopPropagation();
           event.preventDefault();

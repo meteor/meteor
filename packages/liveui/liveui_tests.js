@@ -1314,7 +1314,8 @@ Tinytest.add("liveui - basic events", function(test) {
 
   // "deep reach" from high node down to replaced low node.
   // Tests that attach_secondary_events actually does the
-  // right thing in IE.  Also tests change event bubbling.
+  // right thing in IE.  Also tests change event bubbling
+  // and proper interpretation of event maps.
   event_buf.length = 0;
   R = ReactiveVar('foo');
   div = OnscreenDiv(Meteor.ui.render(function() {
@@ -1323,13 +1324,34 @@ Tinytest.add("liveui - basic events", function(test) {
         return '<input type="checkbox">'+R.get();
       }, {events: eventmap('click input'), event_data:event_buf}) +
       '</b></span></p></div>';
-  }, { events: eventmap('change b'), event_data:event_buf }));
+  }, { events: eventmap('change b', 'change input'), event_data:event_buf }));
   R.set('bar');
   Meteor.flush();
   // click on input
   clickElement(div.node().getElementsByTagName('input')[0]);
   event_buf.sort(); // don't care about order
-  test.equal(event_buf, ['change b', 'click input']);
+  test.equal(event_buf, ['change b', 'change input', 'click input']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+  // test that 'click *' fires on bubble
+  event_buf.length = 0;
+  R = ReactiveVar('foo');
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return '<div><p><span><b>'+
+      Meteor.ui.chunk(function() {
+        return '<input type="checkbox">'+R.get();
+      }, {events: eventmap('click input'), event_data:event_buf}) +
+      '</b></span></p></div>';
+  }, { events: eventmap('click *'), event_data:event_buf }));
+  R.set('bar');
+  Meteor.flush();
+  // click on input
+  clickElement(div.node().getElementsByTagName('input')[0]);
+  test.equal(
+    event_buf,
+    ['click input', 'click *', 'click *', 'click *', 'click *', 'click *']);
   event_buf.length = 0;
   div.kill();
   Meteor.flush();

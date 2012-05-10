@@ -130,6 +130,8 @@ Meteor.ui._event._loadW3CImpl = function() {
   var eventsCaptured = {};
 
   Meteor.ui._event.registerEventType = function(eventType, subtreeRoot) {
+    // We capture on the entire document, so don't actually care
+    // about subtreeRoot!
     installCapturer(eventType);
   };
 
