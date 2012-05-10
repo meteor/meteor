@@ -1129,10 +1129,9 @@ To handle more than one type of event with the same function, use a comma-separa
 
 The handler function gets one argument, an object with information
 about the event. It will receive some additional context data
-in `this`, depending on the context (eg: with
-[`Meteor.ui.listChunk`](#meteor_ui_listchunk), you get the
-document; with a Handlebars template, you get the data being used to
-fill the template.)
+in `this`, depending on the context of the element that generated
+the event, set either by an `event_data` option attached to a chunk
+or by a Handlebars template or block helper.
 
 Example:
 
