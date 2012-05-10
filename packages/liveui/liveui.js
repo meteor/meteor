@@ -619,23 +619,26 @@ Meteor.ui = Meteor.ui || {};
     var type = event.type;
 
     for(var range = innerRange; range; range = range.findParent()) {
-      if (! range.event_handlers)
+      var event_handlers = range.event_handlers;
+      if (! event_handlers)
         continue;
 
-      _.each(range.event_handlers, function(h) {
+      for(var i=0, N=event_handlers.length; i<N; i++) {
+        var h = event_handlers[i];
+
         if (h.type !== type)
-          return;
+          continue;
 
         var selector = h.selector;
         if (selector) {
           var contextNode = range.containerNode();
           var results = $(contextNode).find(selector);
           if (! _.contains(results, curNode))
-            return;
+            continue;
         } else {
           // if no selector, only match the event target
           if (curNode !== event.target)
-            return;
+            continue;
         }
 
         var event_data = findEventData(event.target);
@@ -643,11 +646,14 @@ Meteor.ui = Meteor.ui || {};
         // allow app to `return false` from event handler, just like
         // you can in a jquery event handler
         if (returnValue === false) {
-          event.stopPropagation();
+          event.stopImmediatePropagation();
           event.preventDefault();
         }
-      });
+        if (event.isImmediatePropagationStopped())
+          break;
+      }
 
+      // prevent propagation to parent event maps, not just parent nodes
       if (event.isPropagationStopped())
         break;
     }

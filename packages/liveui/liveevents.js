@@ -52,6 +52,7 @@ Meteor.ui._event = Meteor.ui._event || {};
     var originalStopPropagation = event.stopPropagation;
     var originalPreventDefault = event.preventDefault;
     event.isPropagationStopped = returnFalse;
+    event.isImmediatePropagationStopped = returnFalse;
     event.isDefaultPrevented = returnFalse;
     event.stopPropagation = function() {
       event.isPropagationStopped = returnTrue;
@@ -66,6 +67,10 @@ Meteor.ui._event = Meteor.ui._event || {};
         originalPreventDefault.call(event);
       else
         event.returnValue = false; // IE
+    };
+    event.stopImmediatePropagation = function() {
+      event.stopPropagation();
+      event.isImmediatePropagationStopped = returnTrue;
     };
 
     var type = event.type;
