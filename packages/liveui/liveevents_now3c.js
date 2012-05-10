@@ -87,7 +87,7 @@ Meteor.ui._event._loadNoW3CImpl = function() {
       type = event.type = 'submit';
     }
 
-    Meteor.ui._event._eventDispatchFunc(event);
+    Meteor.ui._event._handleEventFunc(event);
   };
 
   // submit forms that aren't preventDefaulted

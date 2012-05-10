@@ -79,7 +79,7 @@ Meteor.ui._event._loadW3CImpl = function() {
       }
     }
 
-    Meteor.ui._event._eventDispatchFunc(event);
+    Meteor.ui._event._handleEventFunc(event);
   };
 
   var installCapturer = function(eventType) {

@@ -3,10 +3,8 @@ Meteor.ui._event = Meteor.ui._event || {};
 
 (function() {
 
-  var dispatchEvent = function(event) {};
-
-  Meteor.ui._event.setDispatcher = function(dispatchEvent) {
-    Meteor.ui._event._eventDispatchFunc = dispatchEvent;
+  Meteor.ui._event.setHandler = function(handleEventFunc) {
+    Meteor.ui._event._handleEventFunc = handleEventFunc;
   };
 
   // Prototype, implemented by W3C and NoW3C impls.

@@ -598,7 +598,7 @@ Meteor.ui = Meteor.ui || {};
     }
   };
 
-  Meteor.ui._dispatchEvent = function(event) {
+  Meteor.ui._handleEvent = function(event) {
     var curNode = event.currentTarget;
     if (! curNode)
       return;
@@ -640,5 +640,5 @@ Meteor.ui = Meteor.ui || {};
 
   };
 
-  Meteor.ui._event.setDispatcher(Meteor.ui._dispatchEvent);
+  Meteor.ui._event.setHandler(Meteor.ui._handleEvent);
 })();
