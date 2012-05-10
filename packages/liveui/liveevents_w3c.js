@@ -36,6 +36,9 @@ Meteor.ui._event._loadW3CImpl = function() {
         SIMULATE_NEITHER : SIMULATE_FOCUSIN_FOCUSOUT;
 
   var universalCapturer = function(event) {
+    if (event.target.nodeType === 3) // fix text-node target
+      event.target = event.target.parentNode;
+
     var type = event.type;
     var bubbles = event.bubbles;
     var target = event.target;
