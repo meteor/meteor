@@ -385,14 +385,7 @@ Helpers can also be used to pass in constant data.
 Finally, you can set the `events` property of a template function to a
 table of event handlers. The format is documented at [Event
 Maps](#eventmaps). The `this` argument to the event handler will be
-the template data.
-
-{{#warning}}
-For now, the event handler gets the template data from the *top
-level* of the current template, not the template data from the
-template context of the element that triggered the event. This will
-be changing.
-{{/warning}}
+the data context of the element that triggered the event.
 
     <!-- myapp.html -->
     <template name="scores">
