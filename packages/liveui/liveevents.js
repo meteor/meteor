@@ -84,8 +84,9 @@ Meteor.ui._event = Meteor.ui._event || {};
       // different things; the former is ASCII/unicode/etc and the
       // latter is arbitrary.  But browsers that lack charCode
       // seem to put character info in keyCode.
-      if (event.which === null)
-	event.which = event.charCode !== null ? event.charCode : event.keyCode;
+      // (foo == null) tests for null or undefined
+      if (event.which == null)
+	event.which = (event.charCode != null ? event.charCode : event.keyCode);
     } else if (/^(?:mouse|contextmenu)|click/.test(type)) {
       // MOUSE EVENTS
       // Add relatedTarget, if necessary
