@@ -596,18 +596,19 @@ Example:
 
     // Show a list of posts that have been flagged, updating in realtime.
     // Put a link next to each post that deletes the post if clicked.
-    var frag = Meteor.renderList(Posts, {
-      selector: {flagged: true},
-      render: function (post) {
-        // In real code it'd be necessary to sanitize post.name
-        return $("<div>" + post.name +
-          " <span class='delete'>Delete</span></div>");
-      },
-      events: {
-        'click .delete': function () {
-          Posts.remove(this._id);
-        }
-      }
+    var frag = Meteor.ui.render(function() {
+      return Meteor.ui.listChunk(
+        Posts.find({flagged: true}),
+        function (post) {
+          // In real code it'd be necessary to sanitize post.name
+          return "<div>" + post.name +
+            " <span class='delete'>Delete</span></div>";
+        },
+        { events: {
+          'click .delete': function () {
+            Posts.remove(this._id);
+          }
+        }});
     });
     document.body.appendChild(frag);
 
