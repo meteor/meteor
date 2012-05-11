@@ -1,239 +1,116 @@
 Meteor.ui = Meteor.ui || {};
+Meteor.ui._event = Meteor.ui._event || {};
 
-// LiveEvents is an implementation of event delegation, a technique that
-// listens to events on a subtree of the DOM by binding handlers on the
-// root.
+// LiveEvents simulates binding an event listener to every node in the
+// DOM in a cross-browser way.  This allows the caller to take
+// arbitrary action when an event fires and when it bubbles to each
+// parent node.
 //
-// _attachEvents installs handlers on a range of nodes, specifically the
-// top-level nodes of a template in LiveUI, and detects events on
-// descendents using bubbling.  Events that bubble up are checked
-// against the selectors in the event map to determine whether the
-// user callback should be called.
+// There can be only one global handler for the entire DOM.  The
+// purpose of LiveEvents is to normalize what events are fired for a
+// given user action and how they bubble, and to provide hooks into
+// browser event handling.
 //
-// XXX We currently rely on jQuery for:
-// - focusin/focusout support for Firefox
-// - keeping track of handlers that have been bound
-// - cross-browser event attaching (attachEvent/addEventListener)
-// - event field and callback normalization (event.target, etc.)
-//
-// TODO: Fix event bubbling between multiple handlers.  Have a story for
-// the order of handler invocation and stick to it, and have
-// event.stopPropagation() always do the right thing.
-// For example, in a DOM of the form DIV > UL > LI, we might have
-// an event selector on the DIV of the form "click ul, click li" or
-// even "click *".  In either case, every matched element should be
-// visited in bottom-up order in a single traversal.  To do this,
-// we need to have only one event handler per event type per liverange.
-// Then, what about events bound at different levels?  Currently,
-// handler firing order is determined first by liverange nesting
-// level, and then by element nesting level.  For example, if a
-// liverange around the DIV selects the LI for an event, and a
-// liverange around the UL selects the UL, then you'd think an
-// event on the LI would bubble LI -> UL -> DIV.  However, the handler
-// on the UL will fire first.  This might be something to document
-// rather than fix -- i.e., handlers in event maps in inner liveranges
-// will always fire before those in outer liveranges, regardless of
-// the selected nodes.  Most solutions requiring taking over the
-// entire event flow, making live events play less well with the
-// rest of the page or events bound by other libraries.  For example,
-// binding all handlers at the top level of the document, or completely
-// faking event bubbling somehow.
+// Use registerEventType to specify the event types and DOM regions
+// to listen to.
 
 (function() {
 
-  // Wire up events to DOM nodes.
+  // Install the global event handler.  handleEventFunc(event) is called
+  // when an event fires or bubbles to a new node.
   //
-  // `start` and `end` are sibling nodes in order that define
-  // an inclusive range of DOM nodes.  `events` is an event map,
-  // and `event_data` the object to bind to the callback (like the
-  // Meteor.ui.render options of the same names).
-  Meteor.ui._attachEvents = function (start, end, events, event_data) {
-    events = events || {};
-
-    // iterate over `spec: callback` map
-    _.each(events, function(callback, spec) {
-      var clauses = spec.split(/,\s+/);
-      _.each(clauses, function (clause) {
-        var parts = clause.split(/\s+/);
-        if (parts.length === 0)
-          return;
-
-        var eventType = parts.shift();
-        var selector = parts.join(' ');
-        var rewrittenEventType = eventType;
-        var bubbles = true;
-        // Rewrite focus and blur to non-bubbling focusin and focusout.
-        // We are relying on jquery to simulate focusin/focusout in Firefox,
-        // the only major browser that lacks support for them.
-        // When removing jquery dependency, use event capturing in Firefox,
-        // focusin/focusout in IE, and either in WebKit.
-        switch (eventType) {
-        case 'focus':
-          rewrittenEventType = 'focusin';
-          bubbles = false;
-          break;
-        case 'blur':
-          rewrittenEventType = 'focusout';
-          bubbles = false;
-          break;
-        case 'change':
-          if (wireIEChangeSubmitHack)
-            rewrittenEventType = 'cellchange';
-          break;
-        case 'submit':
-          if (wireIEChangeSubmitHack)
-            rewrittenEventType = 'datasetcomplete';
-          break;
-        }
-
-        var attach = function(renderNode) {
-          $.event.add(renderNode, rewrittenEventType+".liveui", function(evt) {
-            var contextNode = renderNode.parentNode;
-            evt.type = eventType;
-            if (selector) {
-              // use element's parentNode as a "context"; any elements
-              // referenced in the selector must be proper descendents
-              // of the context.
-              var results = $(contextNode).find(selector);
-              // target or ancestor must match selector
-              var selectorMatch = null;
-              for(var curNode = evt.target;
-                  curNode !== contextNode;
-                  curNode = curNode.parentNode) {
-                if (_.contains(results, curNode)) {
-                  // found the node that justifies handling
-                  // this event
-                  selectorMatch = curNode;
-                  break;
-                }
-                if (! bubbles)
-                  break;
-              }
-
-              if (! selectorMatch)
-                return;
-            }
-            callback.call(event_data, evt);
-          });
-        };
-
-        var after = end.nextSibling;
-        for(var n = start; n && n !== after; n = n.nextSibling)
-          attach(n);
-
-      });
-    });
+  // Various properties and methods of the event are normalized, including:
+  // - type
+  // - target
+  // - currentTarget
+  // - stopPropagation()
+  // - preventDefault()
+  // - isPropagationStopped()
+  // - isDefaultPrevented()
+  //
+  // setHandler is intended to be called once ever,
+  // before calling registerEventType.
+  Meteor.ui._event.setHandler = function(handleEventFunc) {
+    Meteor.ui._event._handleEventFunc = handleEventFunc;
   };
 
-  // Prepare newly-created DOM nodes for event delegation.
+  // Ensure delivery of events of type eventType on the DOM subtree
+  // rooted at subtreeRoot (i.e. subtreeRoot and its descendents).
   //
-  // This is a notification to liveevents that gives it a chance
-  // to perform custom processing on nodes.  `start` and `end`
-  // specify an inclusive range of siblings, and these nodes
-  // and their descendents are processed, inserting any hooks
-  // needed to make event delegation work.
-  Meteor.ui._prepareForEvents = function(start, end) {
-    // In old IE, 'change' and 'submit' don't bubble, so we need
-    // to register special handlers.
-    if (wireIEChangeSubmitHack)
-      wireIEChangeSubmitHack(start, end);
+  // LiveEvents will deliver events on the entire document if it can,
+  // but some browsers make this difficult, in which case only nodes
+  // in the subtree are guaranteed to be listened on.
+
+  Meteor.ui._event.registerEventType = function(eventType, subtreeRoot) {
+    // Prototype, implemented by W3C and NoW3C impls.
+    throw new Error("no subclass");
   };
 
-  // Removes any events bound by Meteor.ui._attachEvent from
-  // `node`.
-  Meteor.ui._resetEvents = function(node) {
-    // We rely on jquery to keep track of the events
-    // we have bound so that we can unbind them.
-    $(node).unbind(".liveui");
-  };
 
-  // Make 'change' event bubble in IE 6-8, the only browser where it
-  // doesn't.  We also fix the quirk that change events on checkboxes
-  // and radio buttons don't fire until blur, also on IE 6-8 and no
-  // other known browsers.
-  //
-  // Our solution is to bind an event handler to every element that
-  // might be the target of a change event.  The event handler is
-  // generic, and simply refires a 'cellchange' event, an obscure
-  // IE event that does bubble and is unlikely to be used in an app.
-  // To fix checkboxes and radio buttons, use the 'propertychange'
-  // event instead of 'change'.
-  //
-  // We solve the 'submit' event problem similarly, using the IE
-  // 'datasetcomplete' event to bubble up a form submission.
-  // The tricky part is that the app must be able to call
-  // event.preventDefault() and have the form not submit.  This
-  // is solved by blocking the original submit and calling
-  // submit() later, which never fires a 'submit' event itself.
-  //
-  // Relevant info:
-  // http://www.quirksmode.org/dom/events/change.html
-  var wireIEChangeSubmitHack = null;
-  if (document.attachEvent &&
-      (! ('onchange' in document)) &&
-      ('oncellchange' in document) &&
-      ('ondatasetcomplete' in document)) {
-    // IE <= 8
-    wireIEChangeSubmitHack = function(start, end) {
-      var wireNode = function(n) {
-        if (n.nodeName === 'INPUT') {
-          if (n.type === "checkbox" || n.type === "radio") {
-            n.detachEvent('onpropertychange', changeSubmitHandlerIE);
-            n.attachEvent('onpropertychange', changeSubmitHandlerIE);
-          } else {
-            n.detachEvent('onchange', changeSubmitHandlerIE);
-            n.attachEvent('onchange', changeSubmitHandlerIE);
-          }
-        } else if (n.nodeName === 'FORM') {
-          n.detachEvent('onsubmit', changeSubmitHandlerIE);
-          n.attachEvent('onsubmit', changeSubmitHandlerIE);
-        }
-      };
-
-      var after = end.nextSibling;
-      for(var n = start; n && n !== after; n = n.nextSibling) {
-        wireNode(n);
-        if (n.firstChild) { // element nodes only
-          _.each(n.getElementsByTagName('INPUT'), wireNode);
-          _.each(n.getElementsByTagName('FORM'), wireNode);
-        }
-      }
+  // inspired by jquery fix()
+  Meteor.ui._event._fixEvent = function(event) {
+    var originalStopPropagation = event.stopPropagation;
+    var originalPreventDefault = event.preventDefault;
+    event.isPropagationStopped = returnFalse;
+    event.isImmediatePropagationStopped = returnFalse;
+    event.isDefaultPrevented = returnFalse;
+    event.stopPropagation = function() {
+      event.isPropagationStopped = returnTrue;
+      if (originalStopPropagation)
+        originalStopPropagation.call(event);
+      else
+        event.cancelBubble = true; // IE
     };
-    // implement form submission after app has had a chance
-    // to preventDefault
-    document.attachEvent('ondatasetcomplete', function() {
-      var evt = window.event;
-      var target = evt && evt.srcElement;
-      if (target && target.nodeName === 'FORM' &&
-          evt.returnValue !== false)
-        target.submit();
-    });
-  };
+    event.preventDefault = function() {
+      event.isDefaultPrevented = returnTrue;
+      if (originalPreventDefault)
+        originalPreventDefault.call(event);
+      else
+        event.returnValue = false; // IE
+    };
+    event.stopImmediatePropagation = function() {
+      event.stopPropagation();
+      event.isImmediatePropagationStopped = returnTrue;
+    };
 
-  // this function must be a singleton (i.e. only one instance of it)
-  // so that detachEvent can find it.
-  var changeSubmitHandlerIE = function() {
-    var evt = window.event;
-    var target = evt && evt.srcElement;
-    if (! target)
-      return;
+    var type = event.type;
 
-    var newEvent = document.createEventObject();
-
-    if (evt.type === 'propertychange' && evt.propertyName === 'checked'
-        || evt.type === 'change') {
-      // we appropriate 'oncellchange' as bubbling change
-      target.fireEvent('oncellchange', newEvent);
+    // adapted from jquery
+    if (event.metaKey === undefined)
+      event.metaKey = event.ctrlKey;
+    if (/^key/.test(type)) {
+      // KEY EVENTS
+      // Add which.  Technically char codes and key codes are
+      // different things; the former is ASCII/unicode/etc and the
+      // latter is arbitrary.  But browsers that lack charCode
+      // seem to put character info in keyCode.
+      // (foo == null) tests for null or undefined
+      if (event.which == null)
+	event.which = (event.charCode != null ? event.charCode : event.keyCode);
+    } else if (/^(?:mouse|contextmenu)|click/.test(type)) {
+      // MOUSE EVENTS
+      // Add relatedTarget, if necessary
+      if (! event.relatedTarget && event.fromElement)
+	event.relatedTarget = (event.fromElement === event.target ?
+                               event.toElement : event.fromElement);
+      // Add which for click: 1 === left; 2 === middle; 3 === right
+      if (! event.which && event.button !== undefined ) {
+        var button = event.button;
+	event.which = (button & 1 ? 1 :
+                       (button & 2 ? 3 :
+                         (button & 4 ? 2 : 0 )));
+      }
     }
 
-    if (evt.type === 'submit') {
-      // we appropriate 'ondatasetcomplete' as bubbling submit.
-      // call preventDefault now, let event bubble, and we
-      // will submit the form later if the app doesn't
-      // prevent it.
-      evt.returnValue = false;
-      target.fireEvent('ondatasetcomplete', newEvent);
-    }
+    return event;
   };
+
+  var returnFalse = function() { return false; };
+  var returnTrue = function() { return true; };
+
+  if (! document.addEventListener)
+    Meteor.ui._event._loadNoW3CImpl(); // IE 6-8
+  else
+    Meteor.ui._event._loadW3CImpl(); // IE 9-10, WebKit, Firefox, Opera
 
 })();

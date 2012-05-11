@@ -14,8 +14,12 @@ var simulateEvent = function (node, event, args) {
 };
 
 var focusElement = function(elem) {
+  // This sequence is for benefit of IE 8 and 9;
+  // test there before changing.
+  window.focus();
   elem.focus();
-  elem.focus(); // IE 8 seems to need a second call!
+  elem.focus();
+
   // focus() should set document.activeElement
   if (document.activeElement !== elem)
     throw new Error("focus() didn't set activeElement");
