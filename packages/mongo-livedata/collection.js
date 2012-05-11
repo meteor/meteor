@@ -1,6 +1,6 @@
 // manager, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
-Meteor.Collection = function (name, manager, driver, klass) {
+Meteor.Collection = function (name, manager, driver, ctor) {
   var self = this;
 
   if (!name && (name !== null)) {
@@ -24,7 +24,7 @@ Meteor.Collection = function (name, manager, driver, klass) {
 
   self._manager = manager;
   self._driver = driver;
-  self._collection = driver.open(name, klass);
+  self._collection = driver.open(name, ctor);
   self._was_snapshot = false;
 
   if (name && manager.registerStore) {
