@@ -318,11 +318,10 @@ Handlebars.registerHelper('better_markdown', function(fn) {
     return result;
   };
 
-  // prevent liverange comment at beginning or end of line from throwing
-  // off showdown's HTML block parsing
-  input = input.replace(/^(<!--.*?-->)|(<!--.*?-->)$/mg, function(s) {
-    return '\n'+s+'\n';
-  });
+  input = input.replace(/<!--.*?-->/g, '\n$&\n');
+
+  var hashedBlocks = {};
+  var numHashedBlocks = 0;
 
   var nestedTags = [];
   while (idx < input.length) {
@@ -349,24 +348,25 @@ Handlebars.registerHelper('better_markdown', function(fn) {
         }
       }
       var newBlock = blockBuf.join('');
+      var openTagFinish = newBlock.indexOf('>') + 1;
       var closeTagLoc = newBlock.lastIndexOf('<');
-      var firstMatchingClose = newBlock.indexOf('</'+blockTag+'>');
-      var shouldIndent =
-            (firstMatchingClose >= 0 && firstMatchingClose < closeTagLoc);
-      // Put final close tag at beginning of line, indent other lines if necessary.
-      // Not indenting unless necessary saves us from indenting in a <pre> tag.
-      var part1 = newBlock.substring(0, closeTagLoc);
-      var part2 = newBlock.substring(closeTagLoc);
-      if (shouldIndent)
-        part1 = part1.replace(/\n/g, '\n  ');
-      newBlock = part1 + '\n' + part2;
-      newParts.push(newBlock);
+
+      var key = ++numHashedBlocks;
+      hashedBlocks[key] = newBlock.slice(openTagFinish, closeTagLoc);
+      newParts.push(newBlock.slice(0, openTagFinish),
+                    '!!!!HTML:'+key+'!!!!',
+                    newBlock.slice(closeTagLoc));
       blockBuf.length = 0;
     }
   }
 
   var newInput = newParts.join('');
   var output = converter.makeHtml(newInput);
+
+  output = output.replace(/!!!!HTML:(.*?)!!!!/g, function(z, a) {
+    return hashedBlocks[a];
+  });
+
   return output;
 });
 
