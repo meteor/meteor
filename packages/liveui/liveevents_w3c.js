@@ -35,6 +35,11 @@ Meteor.ui._event._loadW3CImpl = function() {
   var focusBlurMode = ('onfocusin' in document.createElement("DIV")) ?
         SIMULATE_NEITHER : SIMULATE_FOCUSIN_FOCUSOUT;
 
+  // mouseenter/mouseleave is non-bubbling mousein/mouseout.  It's
+  // standard but only IE and Opera seem to support it,
+  // so we simulate it (which works in IE but not in Opera for some reason).
+  var simulateMouseEnterLeave = (! window.opera);
+
   var universalCapturer = function(event) {
     if (event.target.nodeType === 3) // fix text-node target
       event.target = event.target.parentNode;
@@ -103,9 +108,25 @@ Meteor.ui._event._loadW3CImpl = function() {
           return;
       }
     }
+    if (simulateMouseEnterLeave) {
+      if (event.type === 'mouseenter' || event.type === 'mouseleave') {
+        if (! event.synthetic)
+          return;
+      }
+    }
 
     Meteor.ui._event._handleEventFunc(
       Meteor.ui._event._fixEvent(event));
+
+    // fire mouseleave after mouseout
+    if (simulateMouseEnterLeave &&
+        (event.currentTarget === event.target)) {
+      if (event.type === 'mousein')
+        sendUIEvent('mouseenter', event.target, false);
+      else if (event.type === 'mouseout') {
+        sendUIEvent('mouseleave', event.target, false);
+      }
+    }
   };
 
   var installCapturer = function(eventType) {
@@ -121,6 +142,12 @@ Meteor.ui._event._loadW3CImpl = function() {
         installCapturer('focus');
       else if (eventType === 'focusout')
         installCapturer('blur');
+    }
+    if (simulateMouseEnterLeave) {
+      if (eventType === 'mouseenter')
+        installCapturer('mousein');
+      else if (eventType === 'mouseleave')
+        installCapturer('mouseout');
     }
 
     if (! eventsCaptured[eventType]) {
