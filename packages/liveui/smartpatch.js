@@ -368,9 +368,13 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
     if (typeof tgt.checked !== "undefined" ||
         typeof src.checked !== "undefined")
       tgt.checked = src.checked;
-    if (src.nodeName === "INPUT" && src.type === "text") {
-      if (! target_focused)
+    if (src.nodeName === "INPUT") {
+      if (src.type === "text") {
+        if (! target_focused)
+          tgt.value = src.value;
+      } else {
         tgt.value = src.value;
+      }
     }
     if (src.name)
       tgt.name = src.name;
