@@ -40,3 +40,37 @@ Tinytest.add("stream - sockjs urls are computed correctly", function(test) {
                    "https://subdomain.meteor.com/sockjs");
 });
 
+testAsyncMulti("stream - /websocket is a websocket endpoint", [
+  function(test, expect) {
+    //
+    // Verify that /websocket and /websocket/ don't return the main page
+    //
+    _.each(['/websocket', '/websocket/'], function(path) {
+      Meteor.http.get(path, expect(function(error, result) {
+        test.isNotNull(error);
+        test.equal(result.content, 'Can "Upgrade" only to "WebSocket".');
+      }));
+    });
+
+    //
+    // For sanity, also verify that /websockets and /websockets/ return
+    // the main page
+    //
+
+    // Somewhat contorted but we can't call nested expects (XXX why?)
+    var pageContent;
+    var wrappedCallback = expect(function(error, result) {
+      test.isNull(error);
+      test.equal(result.content, pageContent);
+    });
+
+    Meteor.http.get('/', expect(function(error, result) {
+      test.isNull(error);
+      pageContent = result.content;
+
+      _.each(['/websockets', '/websockets/'], function(path) {
+        Meteor.http.get(path, wrappedCallback);
+      });
+    }));
+  }
+]);

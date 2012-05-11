@@ -1,6 +1,8 @@
 
 ## vNEXT
 
+* Add /websocket endpoint.
+
 * Simplified API for Meteor.connect, which now receives a URL to a Meteor app rather than to a sockjs endpoint.
 
 * Add support for focus and blur in event maps. #108

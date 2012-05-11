@@ -9,7 +9,7 @@ testAsyncMulti("mongo-livedata - database failure reporting", [
   function (test, expect) {
     var ftc = Meteor._FailureTestCollection;
 
-    var exception = function (err) {
+    var exception = function (err, res) {
       test.instanceOf(err, Error);
     };
 
