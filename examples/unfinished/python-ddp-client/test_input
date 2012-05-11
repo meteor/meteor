@@ -6,14 +6,14 @@ sub allApps
 sub myApp "foo.bar"
 sub myApp ["foo.meteor.com"]
 
-method
-method xcxc
-method xcxc yzyz
-method xcxc {}
-method createApp
-method createApp []
-method createApp [{"name": "foo.meteor.com", "description": "abc"}]
-method createApp {}
+call
+call xcxc
+call xcxc yzyz
+call xcxc {}
+call createApp
+call createApp []
+call createApp [{"name": "foo.meteor.com", "description": "abc"}]
+call createApp {}
 
 help
 
