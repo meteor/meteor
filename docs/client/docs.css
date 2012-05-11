@@ -238,28 +238,28 @@ dl.example dd {
     margin-bottom: 10px;
 }
 
-.objdesc dt {
+dl.objdesc dt {
     margin-top: 1em;
     margin-left: 1.5em;
 }
 
-.objdesc dt .name {
+dl.objdesc dt .name {
     font-weight: bold;
 }
 
-.objdesc dt .type {
+dl.objdesc dt .type {
     margin-left: 15px;
     font-size: .9em;
     font-weight: 200;
     color: black;
 }
 
-.objdesc dd {
+dl.objdesc dd {
     margin-bottom: 1em;
     margin-left: 1.5em;
 }
 
-.callbacks dt .name, .methods dt .name {
+dl.callbacks dt .name, dl.methods dt .name {
   /* like code tag */
   font-family: monospace;
   font-size: 1.1em;
