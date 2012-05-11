@@ -1225,6 +1225,51 @@ Returns whether `preventDefault()` has been called for this event.
 Returning `false` from a handler is the same as calling
 both `stopImmediatePropagation` and `preventDefault` on the event.
 
+Event types and their uses include:
+
+<dl class="objdesc">
+{{#dtdd "<code>click</code>"}}
+Mouse click on any element, including a link, button, form control, or div.
+Use `preventDefault()` to prevent a clicked link from being followed.
+Some ways of activating an element from the keyboard also fire `click`.
+{{/dtdd}}
+
+{{#dtdd "<code>dblclick</code>"}}
+Double-click.
+{{/dtdd}}
+
+{{#dtdd "<code>focus, blur</code>"}}
+A text input field or other form control gains or loses focus.  You
+can make any element focusable by giving it a `tabindex` property.
+Browsers differ on whether links, checkboxes, and radio buttons are
+natively focusable.
+{{/dtdd}}
+
+{{#dtdd "<code>change</code>"}}
+A checkbox or radio button changes state.  For text fields, use
+`blur` or key events to respond to changes.
+{{/dtdd}}
+
+{{#dtdd "<code>mouseenter, mouseleave</code>"}}
+The pointer enters or leaves the bounds of an element.
+{{/dtdd}}
+
+{{#dtdd "<code>mousedown, mouseup</code>"}}
+The mouse button is newly down or up.
+{{/dtdd}}
+
+{{#dtdd "<code>keydown, keypress, keyup</code>"}}
+The user presses a keyboard key.  `keypress` is most useful for
+catching typing in text fields, while `keydown` and `keyup` can be
+used for arrow keys or modifier keys.  These events are somewhat
+idiosyncratic and should be tested carefully.
+{{/dtdd}}
+</dl>
+
+There are many other event types as well, but some have widely varying
+browser support.  For the events listed above, Meteor incorporates
+workarounds that fix some of the cross-browser incompatibilities.
+
 {{/api_box_inline}}
 
 <h2 id="timers"><span>Timers</span></h2>
