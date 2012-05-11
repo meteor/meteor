@@ -4,7 +4,8 @@
 //           'removed' functions (each optional)
 // deepcopy: if true, elements of new_results that are passed to callbacks are
 //          deepcopied first
-LocalCollection._diffQuery = function (old_results, new_results, observer, deepcopy) {
+// ctor:  if deepcopy is true, pass this ctor into it
+LocalCollection._diffQuery = function (old_results, new_results, observer, deepcopy, ctor) {
 
   var new_presence_of_id = {};
   _.each(new_results, function (doc) {
@@ -21,7 +22,7 @@ LocalCollection._diffQuery = function (old_results, new_results, observer, deepc
   });
 
   // "maybe deepcopy"
-  var mdc = (deepcopy ? LocalCollection._deepcopy : _.identity);
+  var mdc = (deepcopy ? function(v) { return LocalCollection._deepcopy(v, ctor); } : _.identity);
 
   // ALGORITHM:
   //
