@@ -1,0 +1,19 @@
+sub
+sub xcxc
+sub xcxc yzyz
+sub xcxc {}
+sub allApps
+sub myApp "foo.bar"
+sub myApp ["foo.meteor.com"]
+
+method
+method xcxc
+method xcxc yzyz
+method xcxc {}
+method createApp
+method createApp []
+method createApp [{"name": "foo.meteor.com", "description": "abc"}]
+method createApp {}
+
+help
+
