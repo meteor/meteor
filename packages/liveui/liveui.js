@@ -415,6 +415,12 @@ Meteor.ui = Meteor.ui || {};
     });
   };
 
+  // Convert an event map from the developer into an internal
+  // format for range.event_handlers.  The internal format is
+  // an array of objects with properties {type, selector, callback}.
+  // The array has an expando property `types`, which is a list
+  // of all the unique event types used (as an optimization for
+  // code that needs this info).
   var unpackEventMap = function(events) {
     var handlers = [];
 
