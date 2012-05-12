@@ -12,6 +12,10 @@ import argparse
 import os
 import thread
 
+def log(msg):
+    """A shortcut to write to the standard error file descriptor"""
+    sys.stderr.write('{}\n'.format(msg))
+
 #
 # A simple wrapper around Websockets for DDP connections
 #
@@ -26,7 +30,7 @@ class DDPClient(WebSocketClient):
     def print_and_send(self, msg_dict):
         message = json.dumps(msg_dict)
         if self.print_raw:
-            print '[RAW] >>', message
+            log('[RAW] >> {}'.format(message))
         self.send(message)
 
     def opened(self):
@@ -35,12 +39,12 @@ class DDPClient(WebSocketClient):
 
     def received_message(self, data):
         if self.print_raw:
-            print >> sys.stderr, '[RAW] <<', data
+            log('[RAW] << {}'.format(data))
         self.onmessage(str(data))
 
     def closed(self, code, reason=None):
         self.connected = False
-        print >> sys.stderr, '* CONNECTION CLOSED', code, reason
+        log('* CONNECTION CLOSED {}'.format(code, reason))
         self.onclose()
 
 #
@@ -118,7 +122,7 @@ class App(Cmd):
         try:
             method_name,params = self.parse_command(params)
         except:
-            print >> sys.stderr, 'Error parsing parameter list - try `help call`'
+            log('Error parsing parameter list - try `help call`')
             return
 
         id = self.next_id()
@@ -135,7 +139,7 @@ class App(Cmd):
         try:
             sub_name,params = self.parse_command(params)
         except:
-            print >> sys.stderr, 'Error parsing parameter list - try `help sub`'
+            log('Error parsing parameter list - try `help sub`')
             return
 
         id = self.next_id()
@@ -155,17 +159,16 @@ class App(Cmd):
     ### The `help` command
     ###
     def do_help(self, line):
-        print >> sys.stderr
-        print >> sys.stderr, '\n'.join(['call <method name> <json array of parameters>',
-                         '  Calls a remote method',
-                         '  Example: call createApp ' +
-                         '[{"name": "foo.meteor.com", ' +
-                         '"description": "bar"}]']);
-        print >> sys.stderr
-        print >> sys.stderr, '\n'.join(['sub <subscription name> [<json array of parameters>]',
-                         '  Subscribes to a remote dataset',
-                         '  Examples: `sub allApps` or `sub myApp ["foo.meteor.com"]`'])
-        print >> sys.stderr
+        log('')
+        log('call <method name> <json array of parameters>\n'
+            '  Calls a remote method\n'
+            '  Example: call createApp [{"name": "foo.meteor.com", '
+            '"description": "bar"}]')
+        log('')
+        log('sub <subscription name> [<json array of parameters>]\n'
+            '  Subscribes to a remote dataset\n'
+            '  Examples: `sub allApps` or `sub myApp ["foo.meteor.com"]`')
+        log('')
 
     ###
     ### Auxiliary methods
@@ -186,7 +189,6 @@ class App(Cmd):
 
         return name,params
 
-
     def onmessage(self, message):
         """Parse an incoming message, printing and updating the various
         pending_* attributes as appropriate"""
@@ -194,18 +196,18 @@ class App(Cmd):
         map = json.loads(message)
         if map.get('msg') == 'error':
             # Reset all pending state
-            print >> sys.stderr, "* ERROR", map['reason']
+            log("* ERROR {}".format(map['reason']))
             self.pending = {}
 
         elif map.get('msg') == 'connected':
-            print >> sys.stderr, "* CONNECTED"
+            log("* CONNECTED")
 
         elif map.get('msg') == 'result':
             if map['id'] == self.pending.get('id'):
                 if map.get('result'):
-                    print >> sys.stderr, "* METHOD RESULT", map['result']
+                    log("* METHOD RESULT {}".format(map['result']))
                 elif map.get('error'):
-                    print >> sys.stderr, "* ERROR", map['error']['reason']
+                    log("* ERROR {}".format(map['error']['reason']))
                     self.pending.update({'data_acked': True})
                 self.pending.update({'op': 'method', 'result_acked': True})
 
@@ -213,23 +215,25 @@ class App(Cmd):
             if map.get('collection'):
                 if map.get('set'):
                     for key, value in map['set'].items():
-                        print >> sys.stderr, "* SET", map['collection'], map['id'], key, value
+                        log("* SET {} {} {} {}".format(
+                                map['collection'], map['id'], key, value))
                 if map.get('unset'):
                     for key in map['unset']:
-                        print >> sys.stderr, "* UNSET", map['collection'], map['id'], key
+                        log("* UNSET {} {} {}".format(
+                                map['collection'], map['id'], key))
 
             if map.get('methods'):
                 if self.pending.get('id') in map['methods']:
-                    print >> sys.stderr, "* UPDATED"
+                    log("* UPDATED")
                     self.pending.update({'data_acked': True})
 
             if map.get('subs'):
                 if self.pending.get('id') in map['subs']:
-                    print >> sys.stderr, "* READY"
+                    log("* READY")
                     self.pending.update({'data_acked': True})
 
         elif map.get('msg') == 'nosub':
-            print >> sys.stderr, "* NO SUCH SUB"
+            log("* NO SUCH SUB")
             self.pending.update({'data_acked': True})
 
     def onclose(self):
