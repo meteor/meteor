@@ -68,15 +68,48 @@ class App(Cmd):
 
         self.uid = 0
 
-        # We keep track of methods and subs that have been sent from the client
-        # so that we only return to the prompt or quit the app once we get
-        # back all the results from the server
-        self.pending_method_id = None
-        self.pending_method_result_acked = False
-        self.pending_method_data_acked = False
+        # We keep track of methods and subs that have been sent from the
+        # client so that we only return to the prompt or quit the app
+        # once we get back all the results from the server.
+        #
+        # `id`
+        #
+        #   The operation id, informed by the client and returned by the
+        #   server to make sure both are talking about the same thing.
+        #
+        # `op`
+        #
+        #   What they're talking about. Possible values are 'sub' and
+        #   'method'.
+        #
+        # `result_acked`
+        #
+        #   Flag to make sure we were answered.
+        #
+        # `data_acked`
+        #
+        #   Flag to make sure we received the correct data from the
+        #   message we were waiting for.
+        self.pending = {}
 
-        self.pending_sub_id = None
-        self.pending_sub_data_acked = False
+    def block_until_return(self, op_id):
+        """Wait until the op_id that was sent to the server is
+        answered"""
+        self.pending['id'] = op_id
+
+        while self.pending.get('id') is not None:
+            if self.pending.get('op') == 'method':
+                # Methods must validate both data and result flag
+                we_are_good = all((
+                    self.pending.get('result_acked'),
+                    self.pending.get('data_acked')))
+            else:
+                # Subs just need to validate data flag
+                we_are_good = self.pending.get('data_acked')
+
+            if we_are_good:
+                return
+            time.sleep(0)
 
     ###
     ### The `call` command
@@ -93,20 +126,7 @@ class App(Cmd):
                                        "method": method_name,
                                        "params": params,
                                        "id": id})
-        self.block_until_method_fully_returns(id)
-
-    def block_until_method_fully_returns(self, id):
-        """Wait until the last call to method gets back all necessary data
-        from the server"""
-        self.pending_method_id = id
-        while True:
-            if self.pending_method_result_acked and self.pending_method_data_acked:
-                self.pending_method_result_acked = False
-                self.pending_method_data_acked = False
-                self.pending_method_id = None
-                return
-            else:
-                time.sleep(0)
+        self.block_until_return(id)
 
     ###
     ### The `sub` command
@@ -123,19 +143,7 @@ class App(Cmd):
                                        "name": sub_name,
                                        "params": params,
                                        "id": id})
-        self.block_until_sub_fully_returns(id)
-
-    def block_until_sub_fully_returns(self, id):
-        """Wait until the last call to sub gets back all necessary data
-        from the server"""
-        self.pending_sub_id = id
-        while True:
-            if self.pending_sub_data_acked:
-                self.pending_sub_data_acked = False
-                self.pending_sub_id = None
-                return
-            else:
-                time.sleep(0)
+        self.block_until_return(id)
 
     ###
     ### The `EOF` "command" (to support `cat file | python ddpclient.py`)
@@ -187,20 +195,20 @@ class App(Cmd):
         if map.get('msg') == 'error':
             # Reset all pending state
             print >> sys.stderr, "* ERROR", map['reason']
-            self.pending_sub_data_acked = True
-            self.pending_method_data_acked = True
-            self.pending_method_result_acked = True
+            self.pending = {}
+
         elif map.get('msg') == 'connected':
             print >> sys.stderr, "* CONNECTED"
+
         elif map.get('msg') == 'result':
-            if map['id'] == self.pending_method_id:
+            if map['id'] == self.pending.get('id'):
                 if map.get('result'):
                     print >> sys.stderr, "* METHOD RESULT", map['result']
                 elif map.get('error'):
                     print >> sys.stderr, "* ERROR", map['error']['reason']
-                    self.pending_method_data_acked = True
+                    self.pending.update({'data_acked': True})
+                self.pending.update({'op': 'method', 'result_acked': True})
 
-                self.pending_method_result_acked = True
         elif map.get('msg') == 'data':
             if map.get('collection'):
                 if map.get('set'):
@@ -209,17 +217,20 @@ class App(Cmd):
                 if map.get('unset'):
                     for key in map['unset']:
                         print >> sys.stderr, "* UNSET", map['collection'], map['id'], key
+
             if map.get('methods'):
-                if self.pending_method_id in map['methods']:
+                if self.pending.get('id') in map['methods']:
                     print >> sys.stderr, "* UPDATED"
-                    self.pending_method_data_acked = True
+                    self.pending.update({'data_acked': True})
+
             if map.get('subs'):
-                if self.pending_sub_id in map['subs']:
+                if self.pending.get('id') in map['subs']:
                     print >> sys.stderr, "* READY"
-                    self.pending_sub_data_acked = True
+                    self.pending.update({'data_acked': True})
+
         elif map.get('msg') == 'nosub':
             print >> sys.stderr, "* NO SUCH SUB"
-            self.pending_sub_data_acked = True
+            self.pending.update({'data_acked': True})
 
     def onclose(self):
         # Send a KeyboardInterrupt error to the main thread. For some reason
