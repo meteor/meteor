@@ -38,7 +38,7 @@ Stellar.client.init = function() {
 Stellar.client.linkHandler = function() {
   $('body').on('click', 'a', function(e){
     link = $(this).attr('href');
-    if(!link.match(/^(?:https?|mailto):\/\/.*/)) {
+    if(!link.match(/^(?:https?|mailto):\/\/.*/) && !link.match(/^#.*/)) {
       e.preventDefault();
       Stellar.log('Link clicked');
       Stellar.redirect(link);
@@ -104,10 +104,10 @@ Stellar.Collection = function(name, manager, driver) {
   return collection;
 };
 
-Stellar.ServerSessions = new Stellar.Collection('Stellar_serverCollections');
+Stellar.ServerSessions = new Stellar.Collection('Stellar_serverSessions');
 if(Meteor.is_server) {
   Stellar.session.delete = function(key) {
-    ServerSessions.remove({key: key});
+    Stellar.ServerSessions.remove({key: key});
     return true;
   };
 
@@ -118,14 +118,14 @@ if(Meteor.is_server) {
     var key = Stellar.session.generateRandomKey();
     var expires = new Date();
     expires.setDate(expires.getDate()+5);
-    serverSession = ServerSessions.insert({data: data, created: new Date(), key: key, expires: expires}); //Set expire time to now to check this works
+    serverSession = Stellar.ServerSessions.insert({data: data, created: new Date(), key: key, expires: expires}); //Set expire time to now to check this works
     return key;
   };
 
   //This is not a public method at all, never make it public
   Stellar.session.update = function(key, data) {
     newquay = generateRandomKey(); //Generate a random key to stop session fixation, client will need to update their copy.
-    serverSession = ServerSessions.update({key: key}, {$set: {key: newquay, data: data}});
+    serverSession = Stellar.ServerSessions.update({key: key}, {$set: {key: newquay, data: data}});
     return newquay;
   }
 
@@ -141,15 +141,22 @@ if(Meteor.is_server) {
 
   //This is not a public method at all, never make it public
   Stellar.session.get = function(key) {
-    if(serverSession = ServerSessions.findOne({key: key})) {
+console.log('Foo');
+console.log(key);
+console.log(Stellar.ServerSessions);
+console.log(Stellar.ServerSessions.findOne({key: key}));
+    if(serverSession = Stellar.ServerSessions.findOne({key: key})) {
+console.log('Foo1x');
       now = new Date();
       if(serverSession.expires < now) {
         Stellar.session.garbageCollection();
         throw new Meteor.Error(401, 'Session timeout');
         return false;
       }
+console.log('Foo2x');
       return serverSession;
     } else {
+console.log('Foo3x');
       throw new Meteor.Error(401, 'Invalid session');
       return false;
     }
@@ -158,7 +165,7 @@ if(Meteor.is_server) {
   //Clears all expired sessions
   Stellar.session.garbageCollection = function() {
     now = new Date();
-    ServerSessions.remove({expires: {$lt: now}})
+    Stellar.ServerSessions.remove({expires: {$lt: now}})
   };
 
   //This might need to be more random and will need to check for collisions

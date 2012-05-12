@@ -3,7 +3,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['backbone'], 'client');
+  api.use(['backbone', 'jquery'], 'client');
 
   api.add_files('jquery.cookie.js', 'client');
   //TODO seperate out these now this is a package
