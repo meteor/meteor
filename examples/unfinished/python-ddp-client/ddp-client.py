@@ -168,16 +168,27 @@ class App(Cmd):
 
     def do_help(self, line):
         """The `help` command"""
-        log('')
-        log('call <method name> <json array of parameters>\n'
-            '  Calls a remote method\n'
-            '  Example: call createApp [{"name": "foo.meteor.com", '
-            '"description": "bar"}]')
-        log('')
-        log('sub <subscription name> [<json array of parameters>]\n'
-            '  Subscribes to a remote dataset\n'
-            '  Examples: `sub allApps` or `sub myApp ["foo.meteor.com"]`')
-        log('')
+
+        msgs = {
+            'call': (
+                'call <method name> <json array of parameters>\n'
+                '  Calls a remote method\n'
+                '  Example: call createApp '
+                '[{"name": "foo.meteor.com", '
+                '"description": "bar"}]'),
+            'sub': (
+                'sub <subscription name> [<json array of parameters>]\n'
+                '  Subscribes to a remote dataset\n'
+                '  Examples: `sub allApps` or `sub myApp '
+                '["foo.meteor.com"]`'),
+        }
+
+        line = line.strip()
+        if line and line in msgs:
+            return log('\n' + msgs[line])
+
+        for msg in msgs.values():
+            log('\n' + msg)
 
     def next_id(self):
         """Calculates the next id for messages that will be sent to the
