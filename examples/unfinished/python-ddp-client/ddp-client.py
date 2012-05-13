@@ -138,6 +138,7 @@ class App(Cmd):
             return
 
         op_id = self.next_id()
+        self.pending.update({'op': 'method'})
         self.ddpclient.print_and_send({"msg": "method",
                                        "method": method_name,
                                        "params": params,
@@ -153,6 +154,7 @@ class App(Cmd):
             return
 
         op_id = self.next_id()
+        self.pending.update({'op': 'sub'})
         self.ddpclient.print_and_send({"msg": "sub",
                                        "name": sub_name,
                                        "params": params,
@@ -216,7 +218,7 @@ class App(Cmd):
                 elif msg.get('error'):
                     log("* ERROR {}".format(msg['error']['reason']))
                     self.pending.update({'data_acked': True})
-                self.pending.update({'op': 'method', 'result_acked': True})
+                self.pending.update({'result_acked': True})
 
         elif msg.get('msg') == 'data':
             if msg.get('collection'):
