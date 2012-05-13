@@ -31,19 +31,63 @@ class DDPClient(WebSocketClient):
         self.print_raw = print_raw
         self.onclose = onclose
 
-    def print_and_send(self, msg_dict):
-        """Send a message through the websocket client and also prints
-        to the standard error fd."""
+        # We keep track of methods and subs that have been sent from the
+        # client so that we only return to the prompt or quit the app
+        # once we get back all the results from the server.
+        #
+        # `id`
+        #
+        #   The operation id, informed by the client and returned by the
+        #   server to make sure both are talking about the same thing.
+        #
+        # `result_acked`
+        #
+        #   Flag to make sure we were answered.
+        #
+        # `data_acked`
+        #
+        #   Flag to make sure we received the correct data from the
+        #   message we were waiting for.
+        self.pending = {}
+
+    def block_until_return(self, msg_type, msg_id):
+        """Wait until the msg_id that was sent to the server is answered"""
+        self.pending['id'] = msg_id
+
+        while self.pending.get('id') is not None:
+            if msg_type == 'method':
+                # Methods must validate both data and result flag
+                we_are_good = all((
+                    self.pending.get('result_acked'),
+                    self.pending.get('data_acked')))
+            else:
+                # Subs just need to validate data flag
+                we_are_good = self.pending.get('data_acked')
+
+            if we_are_good:
+                return
+            time.sleep(0)
+
+    def send(self, msg_dict):
+        """Send a message through the websocket client and wait for the
+        answer if the message being sent contains an id attribute.
+
+        Also prints to the standard error fd."""
         message = json.dumps(msg_dict)
         if self.print_raw:
             log('[RAW] >> {}'.format(message))
-        self.send(message)
+        super(DDPClient, self).send(message)
+
+        # We don't need to wait for certain messages, just for the ones
+        # with ids
+        if 'id' in msg_dict:
+            self.block_until_return(msg_dict['msg'], msg_dict['id'])
 
     def opened(self):
         """Set the connecte flag to true and send the connect message to
         the server."""
         self.connected = True
-        self.print_and_send({"msg": "connect"})
+        self.send({"msg": "connect"})
 
     def received_message(self, data):
         """Notify the app when a new message arrives"""
@@ -86,49 +130,6 @@ class App(Cmd):
         # by the `next_id() method
         self.uid = 0
 
-        # We keep track of methods and subs that have been sent from the
-        # client so that we only return to the prompt or quit the app
-        # once we get back all the results from the server.
-        #
-        # `id`
-        #
-        #   The operation id, informed by the client and returned by the
-        #   server to make sure both are talking about the same thing.
-        #
-        # `op`
-        #
-        #   What they're talking about. Possible values are 'sub' and
-        #   'method'.
-        #
-        # `result_acked`
-        #
-        #   Flag to make sure we were answered.
-        #
-        # `data_acked`
-        #
-        #   Flag to make sure we received the correct data from the
-        #   message we were waiting for.
-        self.pending = {}
-
-    def block_until_return(self, op_id):
-        """Wait until the op_id that was sent to the server is
-        answered"""
-        self.pending['id'] = op_id
-
-        while self.pending.get('id') is not None:
-            if self.pending.get('op') == 'method':
-                # Methods must validate both data and result flag
-                we_are_good = all((
-                    self.pending.get('result_acked'),
-                    self.pending.get('data_acked')))
-            else:
-                # Subs just need to validate data flag
-                we_are_good = self.pending.get('data_acked')
-
-            if we_are_good:
-                return
-            time.sleep(0)
-
     def do_call(self, params):
         """The `call` command"""
         try:
@@ -136,14 +137,12 @@ class App(Cmd):
         except ValueError:
             log('Error parsing parameter list - try `help call`')
             return
-
-        op_id = self.next_id()
-        self.pending.update({'op': 'method'})
-        self.ddpclient.print_and_send({"msg": "method",
-                                       "method": method_name,
-                                       "params": params,
-                                       "id": op_id})
-        self.block_until_return(op_id)
+        self.ddpclient.send({
+            "msg": "method",
+            "method": method_name,
+            "params": params,
+            "id": self.next_id(),
+        })
 
     def do_sub(self, params):
         """The `sub` command"""
@@ -152,14 +151,12 @@ class App(Cmd):
         except ValueError:
             log('Error parsing parameter list - try `help sub`')
             return
-
-        op_id = self.next_id()
-        self.pending.update({'op': 'sub'})
-        self.ddpclient.print_and_send({"msg": "sub",
-                                       "name": sub_name,
-                                       "params": params,
-                                       "id": op_id})
-        self.block_until_return(op_id)
+        self.ddpclient.send({
+            "msg": "sub",
+            "name": sub_name,
+            "params": params,
+            "id": self.next_id(),
+        })
 
     def do_EOF(self, line):
         """The `EOF` "command"
@@ -203,22 +200,24 @@ class App(Cmd):
         pending_* attributes as appropriate"""
 
         msg = json.loads(message)
+        pending = self.ddpclient.pending
+
         if msg.get('msg') == 'error':
             # Reset all pending state
             log("* ERROR {}".format(msg['reason']))
-            self.pending = {}
+            self.ddpclient.pending = {}
 
         elif msg.get('msg') == 'connected':
             log("* CONNECTED")
 
         elif msg.get('msg') == 'result':
-            if msg['id'] == self.pending.get('id'):
+            if msg['id'] == pending.get('id'):
                 if msg.get('result'):
                     log("* METHOD RESULT {}".format(msg['result']))
                 elif msg.get('error'):
                     log("* ERROR {}".format(msg['error']['reason']))
-                    self.pending.update({'data_acked': True})
-                self.pending.update({'result_acked': True})
+                    pending.update({'data_acked': True})
+                pending.update({'result_acked': True})
 
         elif msg.get('msg') == 'data':
             if msg.get('collection'):
@@ -232,18 +231,18 @@ class App(Cmd):
                                 msg['collection'], msg['id'], key))
 
             if msg.get('methods'):
-                if self.pending.get('id') in msg['methods']:
+                if pending.get('id') in msg['methods']:
                     log("* UPDATED")
-                    self.pending.update({'data_acked': True})
+                    pending.update({'data_acked': True})
 
             if msg.get('subs'):
-                if self.pending.get('id') in msg['subs']:
+                if pending.get('id') in msg['subs']:
                     log("* READY")
-                    self.pending.update({'data_acked': True})
+                    pending.update({'data_acked': True})
 
         elif msg.get('msg') == 'nosub':
             log("* NO SUCH SUB")
-            self.pending.update({'data_acked': True})
+            pending.update({'data_acked': True})
 
     def onclose(self):
         """Send a KeyboardInterrupt error to the main thread. For some
