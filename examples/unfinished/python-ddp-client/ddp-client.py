@@ -24,12 +24,9 @@ def parse_command(params):
 
 class DDPClient(WebSocketClient):
     """simple wrapper around Websockets for DDP connections"""
-    def __init__(self, url, onmessage, onclose, print_raw):
+    def __init__(self, url, print_raw):
         WebSocketClient.__init__(self, url)
-        self.connected = False
-        self.onmessage = onmessage
         self.print_raw = print_raw
-        self.onclose = onclose
 
         # We keep track of methods and subs that have been sent from the
         # client so that we only return to the prompt or quit the app
@@ -50,9 +47,28 @@ class DDPClient(WebSocketClient):
         #   message we were waiting for.
         self.pending = {}
 
+
+    def send(self, msg_dict):
+        """Send a message through the websocket client and wait for the
+        answer if the message being sent contains an id attribute.
+
+        Also prints to the standard error fd.
+
+        (NOTE: DDP does not require waiting for an answer but this is
+        a simple proof-of-concept client)"""
+        message = json.dumps(msg_dict)
+        if self.print_raw:
+            log('[RAW] >> {}'.format(message))
+        super(DDPClient, self).send(message)
+
+        # We don't need to wait for certain messages, just for the ones
+        # with ids.
+        if 'id' in msg_dict:
+            self.block_until_return(msg_dict['msg'], msg_dict['id'])
+
     def block_until_return(self, msg_type, msg_id):
         """Wait until the msg_id that was sent to the server is answered"""
-        self.pending['id'] = msg_id
+        self.pending = {'id': msg_id}
 
         while self.pending.get('id') is not None:
             if msg_type == 'method':
@@ -68,38 +84,68 @@ class DDPClient(WebSocketClient):
                 return
             time.sleep(0)
 
-    def send(self, msg_dict):
-        """Send a message through the websocket client and wait for the
-        answer if the message being sent contains an id attribute.
-
-        Also prints to the standard error fd."""
-        message = json.dumps(msg_dict)
-        if self.print_raw:
-            log('[RAW] >> {}'.format(message))
-        super(DDPClient, self).send(message)
-
-        # We don't need to wait for certain messages, just for the ones
-        # with ids
-        if 'id' in msg_dict:
-            self.block_until_return(msg_dict['msg'], msg_dict['id'])
-
     def opened(self):
         """Set the connecte flag to true and send the connect message to
         the server."""
-        self.connected = True
         self.send({"msg": "connect"})
 
     def received_message(self, data):
-        """Notify the app when a new message arrives"""
+        """Parse an incoming message and print it. Also update
+        self.pending appropriately"""
         if self.print_raw:
             log('[RAW] << {}'.format(data))
-        self.onmessage(str(data))
+
+        msg = json.loads(str(data))
+
+        if msg.get('msg') == 'error':
+            log("* ERROR {}".format(msg['reason']))
+            # Reset all pending state
+            self.pending = {}
+
+        elif msg.get('msg') == 'connected':
+            log("* CONNECTED")
+
+        elif msg.get('msg') == 'result':
+            if msg['id'] == self.pending.get('id'):
+                if msg.get('result'):
+                    log("* METHOD RESULT {}".format(msg['result']))
+                elif msg.get('error'):
+                    log("* ERROR {}".format(msg['error']['reason']))
+                self.pending.update({'result_acked': True})
+
+        elif msg.get('msg') == 'data':
+            if msg.get('collection'):
+                if msg.get('set'):
+                    for key, value in msg['set'].items():
+                        log("* SET {} {} {} {}".format(
+                                msg['collection'], msg['id'], key, value))
+                if msg.get('unset'):
+                    for key in msg['unset']:
+                        log("* UNSET {} {} {}".format(
+                                msg['collection'], msg['id'], key))
+
+            if msg.get('methods'):
+                if self.pending.get('id') in msg['methods']:
+                    log("* UPDATED")
+                    self.pending.update({'data_acked': True})
+
+            if msg.get('subs'):
+                if self.pending.get('id') in msg['subs']:
+                    log("* READY")
+                    self.pending.update({'data_acked': True})
+
+        elif msg.get('msg') == 'nosub':
+            log("* NO SUCH SUB")
+            self.pending.update({'data_acked': True})
 
     def closed(self, code, reason=None):
         """Called when the connection is closed"""
-        self.connected = False
         log('* CONNECTION CLOSED {}'.format(code, reason))
-        self.onclose()
+
+        # Send a KeyboardInterrupt error to the main thread. For some
+        # reason Cmd doesn't immediately respect this so the client only
+        # dies once you press Enter.
+        thread.interrupt_main()
 
 
 class App(Cmd):
@@ -116,7 +162,6 @@ class App(Cmd):
         # meteor
         self.ddpclient = DDPClient(
             'ws://' + ddp_endpoint + '/websocket',
-            self.onmessage, self.onclose,
             self.print_raw)
         self.ddpclient.connect()
 
@@ -128,7 +173,7 @@ class App(Cmd):
 
         # Initializing the message id counter that will be incremented
         # by the `next_id() method
-        self.uid = 0
+        self.unique_id = 0
 
     def do_call(self, params):
         """The `call` command"""
@@ -172,9 +217,7 @@ class App(Cmd):
             'call': (
                 'call <method name> <json array of parameters>\n'
                 '  Calls a remote method\n'
-                '  Example: call createApp '
-                '[{"name": "foo.meteor.com", '
-                '"description": "bar"}]'),
+                '  Example: call vote ["foo.meteor.com"]'),
             'sub': (
                 'sub <subscription name> [<json array of parameters>]\n'
                 '  Subscribes to a remote dataset\n'
@@ -189,66 +232,15 @@ class App(Cmd):
         for msg in msgs.values():
             log('\n' + msg)
 
+    def emptyline(self):
+        """Disable the default Cmd empty line behavior"""
+        pass
+
     def next_id(self):
         """Calculates the next id for messages that will be sent to the
         server"""
-        self.uid = self.uid + 1
-        return str(self.uid)
-
-    def onmessage(self, message):
-        """Parse an incoming message, printing and updating the various
-        pending_* attributes as appropriate"""
-
-        msg = json.loads(message)
-        pending = self.ddpclient.pending
-
-        if msg.get('msg') == 'error':
-            # Reset all pending state
-            log("* ERROR {}".format(msg['reason']))
-            self.ddpclient.pending = {}
-
-        elif msg.get('msg') == 'connected':
-            log("* CONNECTED")
-
-        elif msg.get('msg') == 'result':
-            if msg['id'] == pending.get('id'):
-                if msg.get('result'):
-                    log("* METHOD RESULT {}".format(msg['result']))
-                elif msg.get('error'):
-                    log("* ERROR {}".format(msg['error']['reason']))
-                    pending.update({'data_acked': True})
-                pending.update({'result_acked': True})
-
-        elif msg.get('msg') == 'data':
-            if msg.get('collection'):
-                if msg.get('set'):
-                    for key, value in msg['set'].items():
-                        log("* SET {} {} {} {}".format(
-                                msg['collection'], msg['id'], key, value))
-                if msg.get('unset'):
-                    for key in msg['unset']:
-                        log("* UNSET {} {} {}".format(
-                                msg['collection'], msg['id'], key))
-
-            if msg.get('methods'):
-                if pending.get('id') in msg['methods']:
-                    log("* UPDATED")
-                    pending.update({'data_acked': True})
-
-            if msg.get('subs'):
-                if pending.get('id') in msg['subs']:
-                    log("* READY")
-                    pending.update({'data_acked': True})
-
-        elif msg.get('msg') == 'nosub':
-            log("* NO SUCH SUB")
-            pending.update({'data_acked': True})
-
-    def onclose(self):
-        """Send a KeyboardInterrupt error to the main thread. For some
-        reason Cmd doesn't immediately respect this so the client only
-        dies once you press Enter."""
-        thread.interrupt_main()
+        self.unique_id = self.unique_id + 1
+        return str(self.unique_id)
 
 
 def main():
