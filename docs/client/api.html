@@ -996,7 +996,7 @@ When generating HTML from a function passed to [`Meteor.ui.render`](#meteor_ui_r
 
 Like `render`, `Meteor.ui.chunk` takes a function `html_func` that returns a HTML string. It calls that function, records the data that the function used (using a [reactive context](#meteor_ui_deps)), and arranges to rerun the function as necessary whenever the data changes. What's different from `render` is that it returns another HTML string, not a DocumentFragment. So, unlike `render`, `chunk` may be nested as deeply as you like, for example to render nested views or subtemplates.
 
-`chunk` can also be used to attach events to part of an HTML string, in much the same way that they could be attached to DOM elements. When the string is parsed into DOM elements by `render`, the event handlers will automatically be hooked up.
+`chunk` can also be used to attach events to part of an HTML string, in much the same way that they could be attached to DOM elements. When the string is parsed into DOM elements by `render`, the event handlers will automatically be hooked up. If `event_data` is provided, it sets the event data for _all_ events that occur that within the chunk, even when those events are handled by handlers declared in enclosing chunks.
 
 `chunk` works by creating a unique ID for the chunk, wrapping the HTML string in a comment that calls out that ID, and adding an entry to the chunk table for the current invocation of `render`. As `render` turns the HTML string into DOM nodes, it pulls out the comments and wires up the appropriate callbacks and pointers. On the other hand, if there is no current invocation of `render`, `chunk` just passes the string through unchanged. (In this case, if an event map is provided, it is ignored.)
 
@@ -1047,7 +1047,7 @@ It keeps the chunks updated as the results of the database query change. For exa
 
 If you provide `else_func`, then whenever the query returns no results, it will be called to render alternative content. You might use this to show a message like "No records match your query."
 
-You can provide an `events` option to attach a set of event handlers to each chunk that `listChunk` creates. When events fire, `this` in the event handler will contain the database record that triggered the event.
+You can provide an `events` option to attach a set of event handlers to each chunk that `listChunk` creates. `event_data` is set to the corresponding database record in each chunk, meaning that when any event fires within a chunk, `this` in the event handler will contain the appropriate database record.
 
 
 
@@ -1242,7 +1242,7 @@ Double-click.
 A text input field or other form control gains or loses focus.  You
 can make any element focusable by giving it a `tabindex` property.
 Browsers differ on whether links, checkboxes, and radio buttons are
-natively focusable.
+natively focusable.  These events do not bubble.
 {{/dtdd}}
 
 {{#dtdd "<code>change</code>"}}
@@ -1250,8 +1250,8 @@ A checkbox or radio button changes state.  For text fields, use
 `blur` or key events to respond to changes.
 {{/dtdd}}
 
-{{#dtdd "<code>mouseenter, mouseleave</code>"}}
-The pointer enters or leaves the bounds of an element.
+{{#dtdd "<code>mouseenter, mouseleave</code>"}} The pointer enters or
+leaves the bounds of an element.  These events do not bubble.
 {{/dtdd}}
 
 {{#dtdd "<code>mousedown, mouseup</code>"}}
@@ -1261,14 +1261,13 @@ The mouse button is newly down or up.
 {{#dtdd "<code>keydown, keypress, keyup</code>"}}
 The user presses a keyboard key.  `keypress` is most useful for
 catching typing in text fields, while `keydown` and `keyup` can be
-used for arrow keys or modifier keys.  These events are somewhat
-idiosyncratic and should be tested carefully.
+used for arrow keys or modifier keys.
 {{/dtdd}}
 </dl>
 
-There are many other event types as well, but some have widely varying
-browser support.  For the events listed above, Meteor incorporates
-workarounds that fix some of the cross-browser incompatibilities.
+Other DOM events are available as well, but for the events above,
+Meteor has taken some care to ensure that they work uniformly in all
+browsers.
 
 {{/api_box_inline}}
 
