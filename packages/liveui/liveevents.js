@@ -1,25 +1,40 @@
 Meteor.ui = Meteor.ui || {};
 Meteor.ui._event = Meteor.ui._event || {};
 
-// LiveEvents simulates binding an event listener to every node in the
-// DOM in a cross-browser way.  This allows the caller to take
-// arbitrary action when an event fires and when it bubbles to each
-// parent node.
+// LiveEvents -- Normalized cross-browser event handling library
 //
-// There can be only one global handler for the entire DOM.  The
-// purpose of LiveEvents is to normalize what events are fired for a
-// given user action and how they bubble, and to provide hooks into
-// browser event handling.
+// This module lets you set up a function f that will be called
+// whenever an event fires on any node in the DOM. Specifically, when
+// an event fires on node N, f will be called with N. Then, if the
+// event is a bubbling event, f will be called again with N's parent,
+// then called again with N's grandparent, etc, until the root of the
+// document is reached. This provides a good base on top of which
+// custom event handling semantics can be implemented.
 //
-// Use registerEventType to specify the event types and DOM regions
-// to listen to.
+// f also receives the event object for the event that fired. The
+// event object is normalized and extended to smooth over
+// cross-browser differences in event handling. See the details in
+// setHandler.
+//
+// To use, first call setHandler to set the handler function. (There
+// can be only one.) After that, it's necessary to call
+// registerEventType to indicate what events you'll be handling and
+// where in the document they could occur. setHandler and
+// registerEventType are the only public functions.
+//
+// Internally, there are two separate implementations, one for modern
+// browsers (in liveevents_w3c.js), and one for old browsers with no
+// event capturing support (in liveevents_now3c.js.) The correct
+// implementation will be chosen for you automatically at runtime.
 
 (function() {
 
-  // Install the global event handler.  handleEventFunc(event) is called
-  // when an event fires or bubbles to a new node.
+  // Install the global event handler. After this function has been
+  // done, handleEventFunc(event) will be called whenever a DOM event
+  // fires or bubbles to a new node.
   //
-  // Various properties and methods of the event are normalized, including:
+  // 'event' will be a normalized version of the DOM event
+  // object. Some of the properties that are normalized include:
   // - type
   // - target
   // - currentTarget
@@ -28,19 +43,27 @@ Meteor.ui._event = Meteor.ui._event || {};
   // - isPropagationStopped()
   // - isDefaultPrevented()
   //
-  // setHandler is intended to be called once ever,
-  // before calling registerEventType.
+  // This function should only be called once, ever, and must be
+  // called before registerEventType.
   Meteor.ui._event.setHandler = function(handleEventFunc) {
     Meteor.ui._event._handleEventFunc = handleEventFunc;
   };
 
-  // Ensure delivery of events of type eventType on the DOM subtree
-  // rooted at subtreeRoot (i.e. subtreeRoot and its descendents).
+  // After calling setHandler, this function must be called some
+  // number of times to enable handling of different events at
+  // different points in the document.
   //
-  // LiveEvents will deliver events on the entire document if it can,
-  // but some browsers make this difficult, in which case only nodes
-  // in the subtree are guaranteed to be listened on.
-
+  // Specifically, calling this function will ensure that events of
+  // type eventType will be successfully caught when they occur within
+  // the DOM subtree rooted at subtreeRoot (i.e. subtreeRoot and its
+  // descendents).
+  //
+  // If this function isn't called for a given event type T and
+  // subtree S, and T fires within S, then it's unspecified whether
+  // handleEventFunc will be called. (In browsers where we are able to
+  // catch events for the entire document using a capturing handler,
+  // it will be called. In browsers that don't support this, the event
+  // will be lost.)
   Meteor.ui._event.registerEventType = function(eventType, subtreeRoot) {
     // Prototype, implemented by W3C and NoW3C impls.
     throw new Error("no subclass");
