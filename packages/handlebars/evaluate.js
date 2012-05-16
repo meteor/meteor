@@ -161,17 +161,17 @@ Handlebars.evaluate = function (ast, data, options) {
     // from the enclosing data.
     var decorateBlockFn = function(fn, old_data) {
       return function(data) {
+        var result = fn(data);
         // don't create spurious ranges when data is same as before
         // (or when transitioning between e.g. `window` and `undefined`)
-        if ((data || Handlebars._defaultThis) === (old_data || Handlebars._defaultThis))
-          return fn(data);
-        else
-          return Meteor.ui._ranged_html(
-            fn(data),
-            function(range) {
-              // when range materializes, set event_data on it
-              range.event_data = data;
-            });
+        if ((data || Handlebars._defaultThis) ===
+            (old_data || Handlebars._defaultThis)) {
+          return result;
+        } else {
+          return Meteor.ui.chunk(
+            function() { return result; },
+            { event_data: data });
+        }
       };
     };
 

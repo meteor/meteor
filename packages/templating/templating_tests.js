@@ -1,5 +1,5 @@
 
-Tinytest.add("template assembly", function (test) {
+Tinytest.add("templating - assembly", function (test) {
 
   // Test for a bug that made it to production -- after a replacement,
   // we need to also check the newly replaced node for replacements
@@ -31,7 +31,7 @@ Tinytest.add("template assembly", function (test) {
 
 
 
-Tinytest.add("template table assembly", function(test) {
+Tinytest.add("templating - table assembly", function(test) {
   var childWithTag = function(node, tag) {
     return _.find(node.childNodes, function(n) {
       return n.nodeName === tag;
@@ -72,3 +72,39 @@ Tinytest.add("template table assembly", function(test) {
   document.body.removeChild(onscreen);
 });
 
+Tinytest.add("templating - event handler this", function(test) {
+
+  Template.test_event_data_with.ONE = {str: "one"};
+  Template.test_event_data_with.TWO = {str: "two"};
+  Template.test_event_data_with.THREE = {str: "three"};
+
+  var event_buf = [];
+  var tmpl = OnscreenDiv(
+    Meteor.ui.render(
+      function() {
+        return Template.test_event_data_with(
+          Template.test_event_data_with.ONE);
+      },
+      { events: { 'click': function() {
+        test.isTrue(this.str);
+        event_buf.push(this.str);
+      } }}));
+
+  var divs = tmpl.node().getElementsByTagName("div");
+  test.equal(3, divs.length);
+
+  clickElement(divs[0]);
+  test.equal(event_buf, ['one']);
+  event_buf.length = 0;
+
+  clickElement(divs[1]);
+  test.equal(event_buf, ['two']);
+  event_buf.length = 0;
+
+  clickElement(divs[2]);
+  test.equal(event_buf, ['three']);
+  event_buf.length = 0;
+
+  tmpl.kill();
+  Meteor.flush();
+});

@@ -391,10 +391,10 @@ Meteor.ui = Meteor.ui || {};
   Meteor.ui._wire_up = function(cx, range, html_func, react_data) {
     // wire events
     var data = react_data || {};
-    if (data.events) {
+    if (data.events)
       range.event_handlers = unpackEventMap(data.events);
+    if (data.event_data)
       range.event_data = data.event_data;
-    }
 
     attach_events(range);
 
