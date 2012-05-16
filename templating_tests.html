@@ -88,3 +88,19 @@
     {{/each}}
   </table>
 </template>
+
+<template name="test_event_data_with">
+<div>
+  xxx
+  {{#with TWO}}
+    <div>
+      xxx
+      {{#with THREE}}
+        <div>
+          xxx
+        </div>
+      {{/with}}
+    </div>
+  {{/with}}
+</div>
+</template>
