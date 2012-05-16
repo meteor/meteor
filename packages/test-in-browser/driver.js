@@ -3,6 +3,7 @@ var running = true;
 Meteor.startup(function () {
   Meteor._runTestsEverywhere(reportResults, function () {
     running = false;
+    Meteor.onTestsComplete && Meteor.onTestsComplete();
     _resultsChanged();
   });
 });
