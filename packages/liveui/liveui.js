@@ -656,7 +656,7 @@ Meteor.ui = Meteor.ui || {};
           event.preventDefault();
         }
         if (event.isImmediatePropagationStopped())
-          break;; // stop handling by this and other event maps
+          break; // stop handling by this and other event maps
       }
     }
 
