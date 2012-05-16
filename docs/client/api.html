@@ -998,6 +998,13 @@ Like `render`, `Meteor.ui.chunk` takes a function `html_func` that returns a HTM
 
 `chunk` can also be used to attach events to part of an HTML string, in much the same way that they could be attached to DOM elements. When the string is parsed into DOM elements by `render`, the event handlers will automatically be hooked up. If `event_data` is provided, it sets the event data for _all_ events that occur that within the chunk, even when those events are handled by handlers declared in enclosing chunks.
 
+{{#note}}
+Note: In Internet Explorer 8 and
+earlier, if you manually add elements to a chunk after it has been
+rendered &mdash; for example, using jQuery or the DOM API &mdash; then handlers
+in event maps may not fire on these elements.  This is a limitation of the implementation.
+{{/note}}
+
 `chunk` works by creating a unique ID for the chunk, wrapping the HTML string in a comment that calls out that ID, and adding an entry to the chunk table for the current invocation of `render`. As `render` turns the HTML string into DOM nodes, it pulls out the comments and wires up the appropriate callbacks and pointers. On the other hand, if there is no current invocation of `render`, `chunk` just passes the string through unchanged. (In this case, if an event map is provided, it is ignored.)
 
 The contents of a chunk must be balanced HTML tags; the string returned by
