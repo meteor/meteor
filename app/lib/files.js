@@ -240,7 +240,10 @@ var files = module.exports = {
   // a directory and we couldn't make it one.
   mkdir_p: function (dir, mode) {
     var p = path.resolve(dir);
-    var ps = path.normalize(p).split('/');
+    var ps_tmp = path.normalize(p);
+	if (process.platform === "win32")
+		ps_tmp = ps_tmp.replace(/\\/g, '/');
+	var ps = ps_tmp.split('/');
 
     if (path.existsSync(p)) {
       if (fs.statSync(p).isDirectory()) { return true;}
