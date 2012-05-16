@@ -32,6 +32,7 @@ var path = require('path');
 var fs = require('fs');
 var uglify = require('uglify-js');
 var cleanCSS = require('clean-css');
+var exec = require('child_process').exec;
 var _ = require('./third/underscore.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
@@ -282,7 +283,7 @@ var Bundle = function () {
 
           if (w === "client" || w === "server") {
             self.files[w][options.path] = data;
-            self.js[w].push(options.path);
+            self.js[w].push(options.path.replace("\\/", "/"));
           } else {
             throw new Error("Invalid wironment");
           }
@@ -490,9 +491,13 @@ _.extend(Bundle.prototype, {
 
     // --- Third party dependencies ---
 
-    if (dev_bundle_mode === "symlink")
-      fs.symlinkSync(path.join(files.get_dev_bundle(), 'lib/node_modules'),
-                     path.join(build_path, 'server/node_modules'));
+    if (dev_bundle_mode === "symlink") {
+	  if (process.platform === "win32")
+		exec('ln -s ' + path.join(files.get_dev_bundle(), 'lib/node_modules') + ' ' + path.join(build_path, 'server/node_modules'));
+	  else
+        fs.symlinkSync(path.join(files.get_dev_bundle(), 'lib/node_modules'),
+                     path.join(build_path, 'server/node_modules'), 'dir');
+	}
     else if (dev_bundle_mode === "copy")
       files.cp_r(path.join(files.get_dev_bundle(), 'lib/node_modules'),
                  path.join(build_path, 'server/node_modules'),
@@ -605,7 +610,12 @@ _.extend(Bundle.prototype, {
 
     // XXX cleaner error handling (no exceptions)
     files.rm_recursive(output_path);
-    fs.renameSync(build_path, output_path);
+	try {
+		fs.renameSync(build_path, output_path);
+	} catch (err) {
+		if (process.platform !== "win32")
+			throw err
+	}
   }
 
 });

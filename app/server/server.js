@@ -53,6 +53,7 @@ var run = function (bundle_dir) {
   // check environment
   var port = process.env.PORT ? parseInt(process.env.PORT) : 80;
   var mongo_url = process.env.MONGO_URL;
+
   if (!mongo_url)
     throw new Error("MONGO_URL must be set in environment");
 
@@ -122,7 +123,7 @@ var run = function (bundle_dir) {
 
   }).run();
 
-  if (argv.keepalive)
+  if (argv.keepalive && process.platform !== "win32")
     init_keepalive();
 };
 

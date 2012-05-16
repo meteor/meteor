@@ -5,7 +5,10 @@ BUNDLE_VERSION=0.1.5
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
 UNAME=$(uname)
-if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
+
+if [[ "$UNAME" == CYGWIN* || "$UNAME" == MINGW* ]] ; then
+	ARCH="$(uname -m)"
+elif [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
     echo "Sorry, this OS is not supported."
     exit 1
 fi
