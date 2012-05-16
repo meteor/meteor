@@ -1,17 +1,15 @@
 
 ## vNEXT
 
-* Add /websocket endpoint.
+* Rewrite event handling. `this` in event handlers now refers to the data context of the element that generated the event, *not* the top-level data context of the template where the event is declared.
+
+* Add /websocket endpoint for raw websockets. Pass websockets through development mode proxy.
 
 * Simplified API for Meteor.connect, which now receives a URL to a Meteor app rather than to a sockjs endpoint.
 
-* Add support for focus and blur in event maps. #108
-
-* Support change and submit events on older IE browsers.
-
-* Pass websockets through development mode proxy.
-
 * Fix livedata to support subscriptions with overlapping documents.
+
+* Update node.js to 0.6.17 to fix potential security issue.
 
 
 
