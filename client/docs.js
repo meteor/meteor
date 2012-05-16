@@ -318,7 +318,7 @@ Handlebars.registerHelper('better_markdown', function(fn) {
     return result;
   };
 
-  input = input.replace(/<!--.*?-->/g, '\n$&\n');
+  input = input.replace(/<!--.*?-->/g, '\n\n$&\n\n');
 
   var hashedBlocks = {};
   var numHashedBlocks = 0;
