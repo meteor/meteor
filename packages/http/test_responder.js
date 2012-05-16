@@ -28,7 +28,10 @@ var respond = function(req, res) {
     var password = req.url.slice(7);
     // realm is displayed in dialog box if one pops up, avoid confusion
     var realm = TEST_RESPONDER_ROUTE+"/login";
-    var checker = connect.basicAuth(username, password, realm);
+    var validate = function(user, pass) {
+      return user === username && pass === password;
+    };
+    var checker = connect.basicAuth(validate, realm);
     var success = false;
     checker(req, res, function() {
       success = true;
