@@ -62,20 +62,20 @@ callbacks return.
 Example:
 
     // server: publish the current size of a collection
-    Meteor.publish("messages-count", function (roomId) {
+    Meteor.publish("counts-by-room", function (roomId) {
       var self = this;
       var uuid = Meteor.uuid();
       var count = 0;
 
-      handle = Room.find({room_id: roomId}).observe({
+      var handle = Messages.find({room_id: roomId}).observe({
         added: function (doc, idx) {
           count++;
-          self.set("messages-count", uuid, {count: count});
+          self.set("counts", uuid, {roomId: roomId, count: count});
           self.flush();
         },
         removed: function (doc, idx) {
           count--;
-          self.set("messages-count", uuid, {count: count});
+          self.set("counts", uuid, {roomId: roomId, count: count});
           self.flush();
         }
         // don't care about moved or changed
@@ -84,10 +84,21 @@ Example:
       // remove data and turn off observe when client unsubs
       self.onStop(function () {
         handle.stop();
-        self.unset("messages-count", uuid, ["count"]);
+        self.unset("counts", uuid, ["roomId", "count"]);
         self.flush();
       });
     });
+
+    // client: declare collection to hold count object
+    Counts = new Meteor.Collection("counts");
+
+    // client: autosubscribe to the count for the current room
+    Meteor.autosubscribe(function () {
+      Meteor.subscribe("counts-by-room", Session.get("roomId"));
+    });
+
+    // client: use the new collection
+    console.log("Current room has " + Counts.findOne().count + " messages.");
 
 {{#warning}}
 Meteor will emit a warning message if you call `Meteor.publish` in a
