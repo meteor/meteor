@@ -31,6 +31,12 @@ var respond = function(req, res) {
     var validate = function(user, pass) {
       return user === username && pass === password;
     };
+    if (! req.headers.authorization) {
+      // fail faster if the client hasn't sent any auth at all
+      res.statusCode = 403; // forbidden, no browser prompt
+      res.end("no auth header");
+      return;
+    }
     var checker = connect.basicAuth(validate, realm);
     var success = false;
     checker(req, res, function() {
