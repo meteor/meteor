@@ -374,6 +374,33 @@ _.extend(Meteor._LivedataConnection.prototype, {
     return self.stream.reconnect();
   },
 
+  ///
+  /// Reactive user system
+  /// XXX Can/should this be generalized pattern?
+  ///
+  userId: function () {
+    var self = this;
+    var context = Meteor.deps && Meteor.deps.Context.current;
+    if (context && !(context.id in self._userIdListeners)) {
+      self._userIdListeners[context.id] = context;
+      context.on_invalidate(function () {
+        delete self._userIdListeners[context.id];
+      });
+    }
+    return self._userId;
+  },
+
+  setUserId: function (userId) {
+    var self = this;
+    self._userId = userId;
+    _.each(self._userIdListeners, function (context) {
+      context.invalidate();
+    });
+  },
+
+  _userId: null,
+  _userIdListeners: {}, // context.id -> context
+
   // PRIVATE: called when we are up-to-date with the server. intended
   // for use only in tests. currently, you are very limited in what
   // you may do inside your callback -- in particular, don't do
