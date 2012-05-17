@@ -397,6 +397,15 @@ Tinytest.add("livedata stub - reconnect", function (test) {
   handle.stop();
 });
 
+Tinytest.add("livedata connection - reactive userId", function (test) {
+  var stream = new Meteor._StubStream();
+  var conn = new Meteor._LivedataConnection(stream);
+
+  test.equal(conn.userId(), null);
+  conn.setUserId(1337);
+  test.equal(conn.userId(), 1337);
+});
+
 // XXX also test:
 // - reconnect, with session resume.
 // - restart on update flag
