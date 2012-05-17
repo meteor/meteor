@@ -1,6 +1,9 @@
 
 ## vNEXT
 
+
+## v0.3.6
+
 * Rewrite event handling. `this` in event handlers now refers to the data context of the element that generated the event, *not* the top-level data context of the template where the event is declared.
 
 * Add /websocket endpoint for raw websockets. Pass websockets through development mode proxy.
