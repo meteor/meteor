@@ -44,16 +44,15 @@
 
 
     if (name) {
-      var originalTemplate;
-      if (Template[name]) {
-        originalTemplate = Template[name];
-      }
+      var original;
+
+      if (Template[name])
+        original = Template[name];
 
       Template[name] = partial;
 
-      if (originalTemplate) {
-        _.extend(Template[name], originalTemplate);
-      }
+      if (original)
+        _.extend(Template[name], original);
 
       Meteor._partials[name] = partial;
     }
