@@ -44,10 +44,6 @@
 
 
     if (name) {
-      if (Template[name])
-        throw new Error("There are multiple templates named '" + name +
-                        "'. Each template needs a unique name.");
-
       Template[name] = partial;
 
       Meteor._partials[name] = partial;
