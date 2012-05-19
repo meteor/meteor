@@ -113,17 +113,17 @@ _.extend(Package.prototype, {
     var sources_except = function (api, except, tests) {
       return _(self._scan_for_sources(api, ignore_files || []))
         .reject(function (source_path) {
-		  if (process.platform === "win32")
-			return ('\\' + source_path + '\\').indexOf('\\' + except + '\\') !== -1;
-		  else
-			return ('/' + source_path + '/').indexOf('/' + except + '/') !== -1;
+          if (process.platform === "win32")
+            return ('\\' + source_path + '\\').indexOf('\\' + except + '\\') !== -1;
+          else
+            return ('/' + source_path + '/').indexOf('/' + except + '/') !== -1;
         })
         .filter(function (source_path) {
           var is_test = null;
-		  if (process.platform === "win32")
-			is_test = (('\\' + source_path + '\\').indexOf('\\tests\\') !== -1);
-		  else
-			is_test = (('/' + source_path + '/').indexOf('/tests/') !== -1);
+          if (process.platform === "win32")
+            is_test = (('\\' + source_path + '\\').indexOf('\\tests\\') !== -1);
+          else
+            is_test = (('/' + source_path + '/').indexOf('/tests/') !== -1);
           return is_test === (!!tests);
         });
     };

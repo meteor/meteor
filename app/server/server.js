@@ -59,8 +59,18 @@ var run = function (bundle_dir) {
 
   // webserver
   var app = connect.createServer();
-  app.use(gzippo.staticGzip(path.join(bundle_dir, 'static_cacheable'), {clientMaxAge: 1000 * 60 * 60 * 24 * 365}));
-  app.use(gzippo.staticGzip(path.join(bundle_dir, 'static')));
+  var static_cacheable_gzippo = gzippo.staticGzip(path.join(bundle_dir, 'static_cacheable').replace(/\\/g, '/'), {clientMaxAge: 1000 * 60 * 60 * 24 * 365})
+  var static_gzippo = gzippo.staticGzip(path.join(bundle_dir, 'static').replace(/\\/g, '/'));
+  var fixURLsecurityBug = function (func) {
+    return function (req, res, next) {
+      if (req)
+        req.url = req.url.replace(/\\/g, '/');
+
+      return func(req, res, next);
+    }
+  }
+  app.use(fixURLsecurityBug(static_cacheable_gzippo));
+  app.use(fixURLsecurityBug(static_gzippo));
 
   var app_html = fs.readFileSync(path.join(bundle_dir, 'app.html'));
   var unsupported_html = fs.readFileSync(path.join(bundle_dir, 'unsupported.html'));
