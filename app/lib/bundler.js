@@ -492,9 +492,11 @@ _.extend(Bundle.prototype, {
     // --- Third party dependencies ---
 
     if (dev_bundle_mode === "symlink") {
-	  if (process.platform === "win32")
-		exec('ln -s ' + path.join(files.get_dev_bundle(), 'lib/node_modules') + ' ' + path.join(build_path, 'server/node_modules'));
-	  else
+      if (process.platform === "win32") {
+        // Execute both ways of symlinking files, one of the two will pass.
+        exec('ln -s "' + path.join(files.get_dev_bundle(), 'lib/node_modules') + '" "' + path.join(build_path, 'server/node_modules')) + '"';
+        exec('mklink /J "' + path.join(build_path, 'server/node_modules') + '" "' + path.join(files.get_dev_bundle(), 'lib/node_modules')) + '"';
+      } else
         fs.symlinkSync(path.join(files.get_dev_bundle(), 'lib/node_modules'),
                      path.join(build_path, 'server/node_modules'), 'dir');
 	}
