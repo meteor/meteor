@@ -106,7 +106,7 @@ var run = function (bundle_dir) {
 
     // load app code
     _.each(info.load, function (filename) {
-      var code = fs.readFileSync(path.join(bundle_dir, filename));
+      var code = fs.readFileSync(path.join(bundle_dir, filename).replace(/\\/g, '/'));
       // it's tempting to run the code in a new context so we can
       // precisely control the enviroment the user code sees. but,
       // this is harder than it looks. you get a situation where []
