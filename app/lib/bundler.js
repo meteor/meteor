@@ -481,6 +481,7 @@ _.extend(Bundle.prototype, {
     // XXX cleaner error handling. don't make the humans read an
     // exception (and, make suitable for use in automated systems)
     files.rm_recursive(build_path);
+    files.rm_recursive(output_path);
     files.mkdir_p(build_path, 0755);
 
     // --- Core runner code ---
@@ -494,14 +495,14 @@ _.extend(Bundle.prototype, {
     if (dev_bundle_mode === "symlink") {
       if (process.platform === "win32") {
         // Execute both ways of symlinking files, one of the two will pass.
-        exec('ln -s "' + path.join(files.get_dev_bundle(), 'lib/node_modules') + '" "' + path.join(build_path, 'server/node_modules')) + '"';
-        exec('mklink /J "' + path.join(build_path, 'server/node_modules') + '" "' + path.join(files.get_dev_bundle(), 'lib/node_modules')) + '"';
+        exec('ln -s "' + process.env.NODE_PATH + '" "' + path.join(build_path, 'server/node_modules') + '"');
+        exec('mklink /J "' + path.join(build_path, 'server/node_modules') + '" "' + process.env.NODE_PATH + '"');
       } else
         fs.symlinkSync(path.join(files.get_dev_bundle(), 'lib/node_modules'),
                      path.join(build_path, 'server/node_modules'), 'dir');
 	}
     else if (dev_bundle_mode === "copy")
-      files.cp_r(path.join(files.get_dev_bundle(), 'lib/node_modules'),
+      files.cp_r((process.platform !== "win32" ? path.join(files.get_dev_bundle(), 'lib/node_modules') : process.env.NODE_PATH),
                  path.join(build_path, 'server/node_modules'),
                  {ignore: ignore_files});
     else
@@ -611,13 +612,7 @@ _.extend(Bundle.prototype, {
     // --- Move into place ---
 
     // XXX cleaner error handling (no exceptions)
-    files.rm_recursive(output_path);
-	try {
-		fs.renameSync(build_path, output_path);
-	} catch (err) {
-		if (process.platform !== "win32")
-			throw err
-	}
+    fs.renameSync(build_path, output_path);
   }
 
 });
