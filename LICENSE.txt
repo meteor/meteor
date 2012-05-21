@@ -184,6 +184,219 @@ sass: https://github.com/visionmedia/sass.js
 Copyright (c) 2009 TJ Holowaychuk <tj@vision-media.ca>
 
 
+----------
+jquery-waypoints: https://github.com/imakewebthings/jquery-waypoints
+----------
+
+Copyright (c) 2011-2012 Caleb Troughton
+
+
+----------
+jquery-layout: http://layout.jquery-dev.net/
+----------
+
+Copyright (c) 2008
+  Fabrizio Balliano (http://www.fabrizioballiano.net)
+  Kevin Dalman (http://allpro.net)
+
+
+----------
+rbytes: https://github.com/akdubya/rbytes
+----------
+
+Copyright (c) 2010 Aleksander Williams
+
+
+----------
+formidable: https://github.com/felixge/node-formidable
+----------
+
+By Felix Geisendörfer and Tim Koschuetzki, Debuggable, Ltd.
+
+
+----------
+node-querystring: https://github.com/visionmedia/node-querystring
+----------
+
+Copyright (c) 2010 TJ Holowaychuk <tj@vision-media.ca>
+
+
+----------
+colors: https://github.com/Marak/colors.js
+----------
+
+Copyright (c) 2010
+Marak Squires
+Alexis Sellier (cloudhead)
+
+
+----------
+pkginfo: https://github.com/indexzero/node-pkginfo
+----------
+
+Copyright (c) 2010 Charlie Robbins.
+
+
+----------
+wordwrap: https://github.com/substack/node-wordwrap
+----------
+
+Copyright 2011 James Halliday (mail@substack.net)
+
+
+----------
+underscore.string: https://github.com/epeli/underscore.string
+----------
+
+Copyright (c) 2011 Esa-Matti Suuronen esa-matti@suuronen.org
+
+
+----------
+abbrev-js: https://github.com/isaacs/abbrev-js
+----------
+
+Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
+All rights reserved
+
+
+----------
+node-graceful-fs: https://github.com/isaacs/node-graceful-fs
+----------
+
+Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
+All rights reserved.
+
+
+----------
+node-lru-cache: https://github.com/isaacs/node-lru-cache
+----------
+
+Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
+All rights reserved.
+
+
+----------
+https://github.com/TooTallNate/node-gyp
+----------
+
+Copyright (c) 2012 Nathan Rajlich <nathan@tootallnate.net>
+
+
+----------
+proto-list: https://github.com/isaacs/proto-list
+----------
+
+Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
+All rights reserved.
+
+
+----------
+rimraf: https://github.com/isaacs/rimraf
+----------
+
+Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
+All rights reserved.
+
+
+----------
+node-archy: https://github.com/substack/node-archy
+----------
+
+Copyright 2012 James Halliday (mail@substack.net)
+
+
+----------
+minimatch: https://github.com/isaacs/minimatch
+----------
+
+Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
+All rights reserved.
+
+
+----------
+node-uuid: https://github.com/broofa/node-uuid
+----------
+
+Copyright (c) 2010 Robert Kieffer
+
+
+----------
+node-ini: https://github.com/isaacs/ini
+----------
+
+Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
+All rights reserved.
+
+
+----------
+node-mkdirp: https://github.com/substack/node-mkdirp
+----------
+
+Copyright 2010 James Halliday (mail@substack.net)
+
+
+----------
+node-nopt: https://github.com/isaacs/nopt
+----------
+
+Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
+All rights reserved.
+
+
+----------
+slide-flow-control: https://github.com/isaacs/slide-flow-control
+----------
+
+Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
+All rights reserved.
+
+
+----------
+node-which: https://github.com/isaacs/node-which
+----------
+
+Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
+All rights reserved.
+
+
+----------
+ansi.js: https://github.com/TooTallNate/ansi.js
+----------
+
+Copyright (c) 2012 Nathan Rajlich <nathan@tootallnate.net>
+
+
+----------
+faye-websocket: https://github.com/faye/faye-websocket-node
+----------
+
+Copyright (c) 2009-2012 James Coglan
+
+
+----------
+cssom: https://github.com/NV/CSSOM
+----------
+
+Copyright (c) Nikita Vasilyev
+
+
+----------
+node-debug: https://github.com/visionmedia/debug
+----------
+
+Copyright (c) 2011 TJ Holowaychuk <tj@vision-media.ca>
+
+
+----------
+yamlparser: https://github.com/h4evr/commonjs-javascript-yaml-parser
+----------
+
+Copyright (c) 2011 Diogo Costa (costa.h4evr@gmail.com)
+
+
+
+
+
 ==============
 Apache License
 ==============
@@ -241,6 +454,13 @@ bootstrap: https://github.com/twitter/bootstrap
 ----------
 
 Copyright 2012 Twitter, Inc.
+
+
+----------
+bson: https://github.com/mongodb/js-bson
+----------
+
+Copyright (c) 2012 Christian Amor Kvalheim <christkv@gmail.com>
 
 
 
@@ -380,9 +600,112 @@ negligence or otherwise) arising in any way out of the use of this
 software, even if advised of the possibility of such damage.
 
 
+----------
+history.js: https://github.com/balupton/History.js/
+----------
+
+Copyright (c) 2011, Benjamin Arthur Lupton
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+  * Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+  * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+  * Neither the name of Benjamin Arthur Lupton nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+----------
+node-tar: https://github.com/isaacs/node-tar
+fstream: https://github.com/isaacs/fstream
+read: https://github.com/isaacs/read
+block-stream: https://github.com/isaacs/block-stream
+node-glob: https://github.com/isaacs/node-glob
+----------
+
+Copyright (c) Isaac Z. Schlueter
+All rights reserved.
+
+The BSD License
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
+``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR CONTRIBUTORS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+
+
+
+=============
+Public Domain
+=============
+
+----------
+json2: https://github.com/douglascrockford/JSON-js
+----------
+
+By Douglas Crockford
+2011-10-19
+
+Public Domain.
+
+NO WARRANTY EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
+
+
+----------
+meyerweb-reset: http://meyerweb.com/eric/tools/css/reset/
+----------
+
+By Eric A. Meyer
+v2.0 | 20110126
+License: none (public domain)
+
+
+
+
+
+
 =====
 Other
 =====
+
+----------
+inherits: https://github.com/isaacs/inherits
+----------
+
+By Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/)
+
+
+            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+                    Version 2, December 2004
+
+ Copyright (C) 2004 Sam Hocevar <sam@hocevar.net>
+
+ Everyone is permitted to copy and distribute verbatim or modified
+ copies of this license document, and changing it is allowed as long
+ as the name is changed.
+
+            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+   TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
+
+  0. You just DO WHAT THE FUCK YOU WANT TO.
 
 
 ----------
