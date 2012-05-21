@@ -30,6 +30,19 @@ Meteor._LivedataSession = function (server) {
 
   // map from collection name -> id -> key -> subscription id -> true
   self.provides_key = {};
+
+  //// Reactive status
+  self.current_status = {
+    status: "connecting", connected: false
+  };
+
+  self.status_listeners = {}; // context.id -> context
+  self.status_changed = function () {
+    _.each(self.status_listeners, function (context) {
+      context.invalidate();
+    });
+  };
+
 };
 
 _.extend(Meteor._LivedataSession.prototype, {
@@ -42,21 +55,30 @@ _.extend(Meteor._LivedataSession.prototype, {
       self.detach(self.socket);
     }
 
+
     self.socket = socket;
     self.last_connect_time = +(new Date);
     _.each(self.out_queue, function (msg) {
       self.socket.send(JSON.stringify(msg));
     });
+
+    // update status
+    self.current_status.status = "connected";
+    self.current_status.connected = true;
+    self.status_changed();
+
     self.out_queue = [];
 
     // On initial connect, spin up all the universal publishers.
     if (!self.initialized) {
       self.initialized = true;
-      Fiber(function () {
+      var fiber = Fiber(function () {
         _.each(self.server.universal_publish_handlers, function (handler) {
           self._startSubscription(handler, self.next_sub_priority--);
         });
-      }).run();
+      });
+      fiber.session = self;;
+      fiber.run();
     }
   },
 
@@ -65,12 +87,17 @@ _.extend(Meteor._LivedataSession.prototype, {
   // continue running and queue up its messages.) If 'socket' isn't
   // the currently connected socket, just clean up the pointer that
   // may have led us to believe otherwise.
-  detach: function (socket) {
+  detach: function (socket) {   
     var self = this;
     if (socket === self.socket) {
       self.socket = null;
       self.last_detach_time = +(new Date);
     }
+    // update status
+    self.current_status.status = "detached";
+    self.current_status.connected = false;
+    self.status_changed();
+
     if (socket.meteor_session === self)
       socket.meteor_session = null;
   },
@@ -121,6 +148,19 @@ _.extend(Meteor._LivedataSession.prototype, {
       self.out_queue.push(msg);
   },
 
+   // Get current status. Reactive.
+  status: function () {
+    var self = this;
+    var context = Meteor.deps && Meteor.deps.Context.current;
+    if (context && !(context.id in self.status_listeners)) {
+      self.status_listeners[context.id] = context;
+      context.on_invalidate(function () {
+        delete self.status_listeners[context.id];
+      });
+    }
+    return self.current_status;
+  },
+
   // Send a connection error.
   sendError: function (reason, offending_message) {
     var self = this;
@@ -162,7 +202,7 @@ _.extend(Meteor._LivedataSession.prototype, {
         return;
       }
 
-      Fiber(function () {
+      var fiber = Fiber(function () {
         var blocked = true;
 
         var unblock = function () {
@@ -177,7 +217,9 @@ _.extend(Meteor._LivedataSession.prototype, {
         else
           self.sendError('Bad request', msg);
         unblock(); // in case the handler didn't already do it
-      }).run();
+      });
+      fiber.session = self;
+      fiber.run();
     };
 
     processNext();
@@ -575,6 +617,8 @@ Meteor._LivedataServer = function () {
   self.warned_about_autopublish = false;
 
   self.sessions = {}; // map from id to session
+  self.session_handlers = [];
+  self.destroy_handlers = [];
 
   self.stream_server = new Meteor._StreamServer;
 
@@ -621,6 +665,9 @@ Meteor._LivedataServer = function () {
             // Creating a new session
             socket.meteor_session = new Meteor._LivedataSession(self);
             self.sessions[socket.meteor_session.id] = socket.meteor_session;
+            self.session_handlers.forEach(function(f) {
+              f(socket.meteor_session);
+            });
           }
 
           socket.send(JSON.stringify({msg: 'connected',
@@ -656,8 +703,12 @@ Meteor._LivedataServer = function () {
     var now = +(new Date);
     _.each(self.sessions, function (s) {
       s.cleanup();
-      if (!s.socket && (now - s.last_detach_time) > 15 * 60 * 1000)
+      if (!s.socket && (now - s.last_detach_time) > 15 * 60 * 1000) {
         s.destroy();
+        self.destroy_handlers.forEach(function(f) {
+          f(s);
+        });
+      }
     });
   }, 1 * 60 * 1000);
 };
@@ -799,5 +850,21 @@ _.extend(Meteor._LivedataServer.prototype, {
       self.on_autopublish.push(f);
     else
       f();
+  },
+
+  status: function() {
+    return Fiber.current.session.status();
+  },
+
+  session: function(f) {
+    var self = this;
+    self.session_handlers.push(f);
+  },
+
+  destroy: function(f) {
+    var self = this;
+    self.destroy_handlers.push(f);
   }
 });
+
+
