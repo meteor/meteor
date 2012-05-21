@@ -18,5 +18,7 @@ Package.on_use(function (api, where) {
     api.use("reload", "client");
   }
 
+  api.use('livedata',where);
+
   api.add_files('session.js', where);
 });

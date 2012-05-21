@@ -1,10 +1,13 @@
 // XXX could use some tests
 
-Session = _.extend({}, {
-  keys: {},
-  key_deps: {}, // key -> context id -> context
-  key_value_deps: {}, // key -> value -> context id -> context
+var _Session = function() {
+  var self = this;
+  self.keys = {};
+  self.key_deps = {}; // key -> context id -> context 
+  self.key_value_deps = {}; // key -> value -> context id -> context
+}
 
+_.extend(_Session.prototype, {
   // XXX remove debugging method (or improve it, but anyway, don't
   // ship it in production)
   dump_state: function () {
@@ -117,3 +120,32 @@ if (Meteor._reload) {
     }
   })();
 }
+
+var Session;
+if (Meteor.is_client) {
+  Session = new _Session;
+}
+
+if (Meteor.is_server) {
+  var SessionStores = {};
+  Meteor.session(function(ld_session) {
+    SessionStores[ld_session.id] = new _Session();
+  });
+  Meteor.destroy(function(ld_session) {
+    delete SessionStores[ld_session.id];
+  });
+  Session = _.extend({},{
+    get: function(key) {
+      return SessionStores[Fiber.current.session.id].get(key);
+    },
+
+    set: function(key,value) {
+      return SessionStores[Fiber.current.session.id].set(key,value);
+    },
+
+    equals: function(key,value) {
+      return SessionStores[Fibe.current.session.id].equals(key,value);
+    }
+  })
+}
+
