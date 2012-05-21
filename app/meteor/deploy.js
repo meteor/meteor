@@ -93,7 +93,7 @@ var bundle_and_deploy = function (site, app_dir, opt_debug, opt_tests,
       process.stdin.destroy(); // clean up after maybe_password
 
     if (err) {
-      process.stdout.write("\nError deploying application: " + body + "\n");
+      process.stderr.write("\nError deploying application: " + body + "\n");
       process.exit(1);
     }
 
@@ -113,14 +113,14 @@ var bundle_and_deploy = function (site, app_dir, opt_debug, opt_tests,
               process.stdout.write("Please be sure to CNAME your hostname to origin.meteor.com,\n");
               process.stdout.write("or set an A record to 107.22.210.133.\n");
               process.stdout.write('-------------\n');
-              if (process.platform == "win32")
+              if (process.platform === "win32")
                 process.exit(0);
             }
           });
         }
       });
     } else {
-      if (process.platform == "win32")
+      if (process.platform === "win32")
         process.exit(0);
     }
   });
