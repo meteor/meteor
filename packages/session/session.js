@@ -103,6 +103,12 @@ Session = _.extend({}, {
   }
 });
 
+if (Meteor.is_client) {
+  Session.__defineGetter__('id',function() {
+    return Meteor.default_connection.last_session_id;
+  });
+}
+
 
 if (Meteor._reload) {
   Meteor._reload.on_migrate('session', function () {

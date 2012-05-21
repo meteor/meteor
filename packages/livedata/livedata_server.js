@@ -33,6 +33,37 @@ Meteor._LivedataSession = function (server) {
 };
 
 _.extend(Meteor._LivedataSession.prototype, {
+
+  // Run the middleware stack, passing each middleware
+  // the session object and a function to run the next middleware
+  runStack: function(cb) {
+    var self = this
+      , stack = self.server.stack
+      , index = 0;
+
+    function next() {
+      var handle = stack[index++];
+      if (handle) handle(self,next);
+      else cb();
+    }
+    next();
+  },
+
+  // Run middleware stack and then call a server method.
+  // Currently only used for the reserved methods: session, connect, disconnect, and destroy
+  call: function() {
+    var self = this
+      , server = self.server
+      , args = Array.prototype.slice.call(arguments);
+
+    Fiber(function() {
+      self.runStack(function() {
+        server.call.apply(server,args);
+      });
+    }).run();
+
+  },
+
   // Connect a new socket to this session, displacing (and closing)
   // any socket that was previously connected
   connect: function (socket) {
@@ -47,6 +78,11 @@ _.extend(Meteor._LivedataSession.prototype, {
     _.each(self.out_queue, function (msg) {
       self.socket.send(JSON.stringify(msg));
     });
+
+    self.call('connect',function(err) {
+      if (err && !(err instanceof Meteor.Error)) throw err;
+    });
+
     self.out_queue = [];
 
     // On initial connect, spin up all the universal publishers.
@@ -71,6 +107,11 @@ _.extend(Meteor._LivedataSession.prototype, {
       self.socket = null;
       self.last_detach_time = +(new Date);
     }
+
+    self.call('disconnect',function(err) {
+      if (err && !(err instanceof Meteor.Error)) throw err;
+    });
+
     if (socket.meteor_session === self)
       socket.meteor_session = null;
   },
@@ -109,6 +150,10 @@ _.extend(Meteor._LivedataSession.prototype, {
     }
     self._stopAllSubscriptions();
     self.in_queue = self.out_queue = [];
+
+    self.call('destroy',function(err) {
+      if (err && !(err instanceof Meteor.Error)) throw err;
+    });
   },
 
   // Send a message (queueing it if no socket is connected right now.)
@@ -163,20 +208,22 @@ _.extend(Meteor._LivedataSession.prototype, {
       }
 
       Fiber(function () {
-        var blocked = true;
+        self.runStack(function() {
+          var blocked = true;
 
-        var unblock = function () {
-          if (!blocked)
-            return; // idempotent
-          blocked = false;
-          processNext();
-        };
+          var unblock = function () {
+            if (!blocked)
+              return; // idempotent
+            blocked = false;
+            processNext();
+          };
 
-        if (msg.msg in self.protocol_handlers)
-          self.protocol_handlers[msg.msg].call(self, msg, unblock);
-        else
-          self.sendError('Bad request', msg);
-        unblock(); // in case the handler didn't already do it
+          if (msg.msg in self.protocol_handlers)
+            self.protocol_handlers[msg.msg].call(self, msg, unblock);
+          else
+            self.sendError('Bad request', msg);
+          unblock(); // in case the handler didn't already do it
+        });
       }).run();
     };
 
@@ -587,6 +634,8 @@ Meteor._LivedataServer = function () {
 
   self.sessions = {}; // map from id to session
 
+  self.stack = []; // middleware stack
+
   self.stream_server = new Meteor._StreamServer;
 
   self.stream_server.register(function (socket) {
@@ -632,6 +681,11 @@ Meteor._LivedataServer = function () {
             // Creating a new session
             socket.meteor_session = new Meteor._LivedataSession(self);
             self.sessions[socket.meteor_session.id] = socket.meteor_session;
+
+            socket.meteor_session.call('session',function(err) {
+              if (err && !(err instanceof Meteor.Error)) throw err;
+            });
+            
           }
 
           socket.send(JSON.stringify({msg: 'connected',
@@ -810,5 +864,12 @@ _.extend(Meteor._LivedataServer.prototype, {
       self.on_autopublish.push(f);
     else
       f();
+  },
+
+  // add middleware to stack
+  use: function(f) {
+    var self = this;
+    self.stack.push(f);
   }
 });
+
