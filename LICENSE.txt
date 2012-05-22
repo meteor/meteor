@@ -51,13 +51,6 @@ Copyright (c) 2011 Tom Gallacher <http://www.tomg.co>
 
 
 ----------
-optimist: https://github.com/substack/node-optimist
-----------
-
-Copyright 2010 James Halliday (mail@substack.net)
-
-
-----------
 coffee-script: https://github.com/jashkenas/coffee-script
 ----------
 
@@ -69,14 +62,6 @@ mime: https://github.com/bentomas/node-mime
 ----------
 
 Copyright (c) 2010 Benjamin Thomas, Robert Kieffer
-
-
-----------
-semver: https://github.com/isaacs/node-semver
-----------
-
-Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
-All rights reserved.
 
 
 ----------
@@ -137,16 +122,10 @@ Copyright (c) 2011 John Resig, http://jquery.com/
 
 ----------
 underscore: https://github.com/documentcloud/underscore
-----------
-
-Copyright (c) 2009-2012 Jeremy Ashkenas, DocumentCloud
-
-
-----------
 backbone: https://github.com/documentcloud/backbone/
 ----------
 
-Copyright (c) 2010-2012 Jeremy Ashkenas, DocumentCloud
+Copyright (c) 2009-2012 Jeremy Ashkenas, DocumentCloud
 
 
 ----------
@@ -236,43 +215,11 @@ pkginfo: https://github.com/indexzero/node-pkginfo
 
 Copyright (c) 2010 Charlie Robbins.
 
-
-----------
-wordwrap: https://github.com/substack/node-wordwrap
-----------
-
-Copyright 2011 James Halliday (mail@substack.net)
-
-
 ----------
 underscore.string: https://github.com/epeli/underscore.string
 ----------
 
 Copyright (c) 2011 Esa-Matti Suuronen esa-matti@suuronen.org
-
-
-----------
-abbrev-js: https://github.com/isaacs/abbrev-js
-----------
-
-Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
-All rights reserved
-
-
-----------
-node-graceful-fs: https://github.com/isaacs/node-graceful-fs
-----------
-
-Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
-All rights reserved.
-
-
-----------
-node-lru-cache: https://github.com/isaacs/node-lru-cache
-----------
-
-Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
-All rights reserved.
 
 
 ----------
@@ -282,81 +229,12 @@ https://github.com/TooTallNate/node-gyp
 Copyright (c) 2012 Nathan Rajlich <nathan@tootallnate.net>
 
 
-----------
-proto-list: https://github.com/isaacs/proto-list
-----------
-
-Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
-All rights reserved.
-
-
-----------
-rimraf: https://github.com/isaacs/rimraf
-----------
-
-Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
-All rights reserved.
-
-
-----------
-node-archy: https://github.com/substack/node-archy
-----------
-
-Copyright 2012 James Halliday (mail@substack.net)
-
-
-----------
-minimatch: https://github.com/isaacs/minimatch
-----------
-
-Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
-All rights reserved.
-
 
 ----------
 node-uuid: https://github.com/broofa/node-uuid
 ----------
 
 Copyright (c) 2010 Robert Kieffer
-
-
-----------
-node-ini: https://github.com/isaacs/ini
-----------
-
-Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
-All rights reserved.
-
-
-----------
-node-mkdirp: https://github.com/substack/node-mkdirp
-----------
-
-Copyright 2010 James Halliday (mail@substack.net)
-
-
-----------
-node-nopt: https://github.com/isaacs/nopt
-----------
-
-Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
-All rights reserved.
-
-
-----------
-slide-flow-control: https://github.com/isaacs/slide-flow-control
-----------
-
-Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
-All rights reserved.
-
-
-----------
-node-which: https://github.com/isaacs/node-which
-----------
-
-Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
-All rights reserved.
 
 
 ----------
@@ -393,6 +271,51 @@ yamlparser: https://github.com/h4evr/commonjs-javascript-yaml-parser
 
 Copyright (c) 2011 Diogo Costa (costa.h4evr@gmail.com)
 
+
+----------
+semver: https://github.com/isaacs/node-semver
+abbrev-js: https://github.com/isaacs/abbrev-js
+node-graceful-fs: https://github.com/isaacs/node-graceful-fs
+node-lru-cache: https://github.com/isaacs/node-lru-cache
+proto-list: https://github.com/isaacs/proto-list
+rimraf: https://github.com/isaacs/rimraf
+minimatch: https://github.com/isaacs/minimatch
+node-ini: https://github.com/isaacs/ini
+node-nopt: https://github.com/isaacs/nopt
+slide-flow-control: https://github.com/isaacs/slide-flow-control
+node-which: https://github.com/isaacs/node-which
+----------
+
+Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
+All rights reserved.
+
+
+----------
+optimist: https://github.com/substack/node-optimist
+----------
+
+Copyright 2010 James Halliday (mail@substack.net)
+
+
+----------
+node-mkdirp: https://github.com/substack/node-mkdirp
+----------
+
+Copyright 2010 James Halliday (mail@substack.net)
+
+
+----------
+wordwrap: https://github.com/substack/node-wordwrap
+----------
+
+Copyright 2011 James Halliday (mail@substack.net)
+
+
+----------
+node-archy: https://github.com/substack/node-archy
+----------
+
+Copyright 2012 James Halliday (mail@substack.net)
 
 
 
