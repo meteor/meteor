@@ -341,6 +341,9 @@ sets, call `Meteor.connect` with the URL of the application.
 * `apply`
 * `status`
 * `reconnect`
+* `onReconnect` (this can be set to a function that calls methods as the first
+  step of reconnecting, for example in order to re-establish the proper auth
+  context)
 
 When you call `Meteor.subscribe`, `Meteor.status`, `Meteor.call`, and
 `Meteor.apply`, you are using a connection back to that default
