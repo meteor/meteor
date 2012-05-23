@@ -38,7 +38,7 @@ Stellar.client.init = function() {
 Stellar.client.linkHandler = function() {
   $('body').on('click', 'a', function(e){
     link = $(this).attr('href');
-    if(!link.match(/^(?:https?|mailto):\/\/.*/) && !link.match(/^#.*/)) {
+    if(typeof(link)!='undefined' && !link.match(/^(?:https?|mailto):\/\/.*/) && !link.match(/^#.*/)) {
       e.preventDefault();
       Stellar.log('Link clicked');
       Stellar.redirect(link);
@@ -141,22 +141,15 @@ if(Meteor.is_server) {
 
   //This is not a public method at all, never make it public
   Stellar.session.get = function(key) {
-console.log('Foo');
-console.log(key);
-console.log(Stellar.ServerSessions);
-console.log(Stellar.ServerSessions.findOne({key: key}));
     if(serverSession = Stellar.ServerSessions.findOne({key: key})) {
-console.log('Foo1x');
       now = new Date();
       if(serverSession.expires < now) {
         Stellar.session.garbageCollection();
         throw new Meteor.Error(401, 'Session timeout');
         return false;
       }
-console.log('Foo2x');
       return serverSession;
     } else {
-console.log('Foo3x');
       throw new Meteor.Error(401, 'Invalid session');
       return false;
     }
