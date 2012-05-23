@@ -1,89 +1,117 @@
-// XXX should allow <!-- --> comments at toplevel
 
 var html_scanner = module.exports = {
-  scan: function (contents) {
-    var results = { head: '', body: '', js: '' };
-    while (contents)
-      contents = html_scanner._scanChunk(results, contents);
+  // Scan a template file for <head>, <body>, and <template>
+  // tags and extract their contents.
+  //
+  // This is a primitive, regex-based scanner.  It scans
+  // top-level tags, which are allowed to have attributes,
+  // and ignores top-level HTML comments.
+
+  scan: function (contents, source_name) {
+    var rest = contents;
+    var index = 0;
+
+    var advance = function(amount) {
+      rest = rest.substring(amount);
+      index += amount;
+    };
+
+    var parseError = function(msg) {
+      var lineNumber = contents.substring(0, index).split('\n').length + 1;
+      var line = contents.split('\n')[lineNumber - 1];
+      var info = "line "+lineNumber+", file "+source_name + "\n" + line;
+      return new Error((msg || "Parse error")+" - "+info);
+    };
+
+    var results = {};
+    html_scanner._initResults(results);
+
+    var rOpenTag = /^\s*((<(template|head|body))|(<!--)|$)/i;
+
+    while (rest) {
+      var match = rOpenTag.exec(rest);
+      if (! match)
+        throw parseError(); // unknown text encountered
+
+      advance(match.index + match[0].length);
+
+      if (! match[1])
+        break; // matched $ (end of file)
+      if (match[4] === '<!--') {
+        // top-level HTML comment
+        var end = /-->/.exec(rest);
+        if (! end)
+          throw parseError("unclosed HTML comment");
+        advance(end.index + end[0].length);
+        continue;
+      }
+
+      // otherwise, a <tag>
+      var tagName = match[3].toLowerCase();
+      var tagAttribs = {}; // bare name -> value dict
+      var rTagPart = /^\s*((([a-zA-Z0-9:_-]+)\s*=\s*"(.*?)")|(>))/;
+      var attr;
+      // read attributes
+      while ((attr = rTagPart.exec(rest))) {
+        advance(attr.index + attr[0].length);
+        if (attr[1] === '>')
+          break;
+        // XXX we don't HTML unescape the attribute value
+        // (e.g. to allow "abcd&quot;efg") or protect against
+        // collisions with methods of tagAttribs (e.g. for
+        // a property named toString)
+        tagAttribs[attr[3]] = attr[4];
+      }
+      if (! attr) // didn't end on '>'
+        throw new parseError("Missing '>'");
+      // find </tag>
+      var end = (new RegExp('</'+tagName+'>', 'i')).exec(rest);
+      if (! end)
+        throw new parseError("unclosed <"+tagName+">");
+      var tagContents = rest.slice(0, end.index);
+      advance(end.index + end[0].length);
+
+      // act on the tag
+      html_scanner._handleTag(results, tagName, tagAttribs, tagContents,
+                              parseError);
+    }
+
     return results;
   },
 
-  _scanChunk: function (results, contents) {
-    if (contents.match(/^\s*$/))
-      return '';
-    // XXX this is really terrible and buggy. it's just a proof of
-    // concept, and probably will fail in all kinds of edge
-    // cases. Shouldn't be too hard to clean up, though, and that's
-    // probably the easiest option if we don't require that the
-    // contents of a <template> block parse as valid HTML.
-    var found = false;
-    // XXX forEach should probably be _.each, but we don't have a good
-    // way to get underscore included in this file yet, since it's
-    // code that's run at bundle-time, and we can't yet eval packages
-    // at bundle-time yet
-    ['template', 'head', 'body'].forEach(function (tag) {
-      if (found) return;
-      var re = new RegExp("^\\s*<" + tag + "([^>]*?)>([\\s\\S]*?)</" + tag + ">([\\s\\S]*)$", 'i');
-      var match = contents.match(re);
-      if (!match) return;
-      found = true;
+  _initResults: function(results) {
+    results.head = '';
+    results.body = '';
+    results.js = '';
+  },
 
-      var attrs = match[1];
-      var payload = match[2];
-      contents = match[3];
-      // clean up HTML-y whitespace around payload..
-      match = payload.match(/^[ \t]*[\r\n]+(.*)$/);
-      if (match)
-        payload = match[1];
-      match = payload.match(/^(.*)[\r\n]+\s*$/);
-      if (match)
-        payload = match[1];
+  _handleTag: function (results, tag, attribs, contents, parseError) {
 
-      if (tag === "head") {
-        results[tag] += payload;
-        return;
-      }
+    // trim the tag contents
+    contents = contents.match(/^[ \t\r\n]*([\s\S]*?)[ \t\r\n]*$/)[1];
 
-      // Strip all of the whitespace around the payload. This is so
-      // that if you make a template that's supposed to be a <tr>, you
-      // really get just a <tr>, and not a whitespace node, a tr, and
-      // then another whitespace node. (Maybe browsers are robust to
-      // this, I don't know, but we have this code for historical
-      // reasons and I don't feel like rocking the boat today. Maybe
-      // it should go away.) => Hard to see how this matters, since
-      // {{#each foo}}{{> bar}}{{/each}} will typically end up
-      // introducing whitespace around the partial invocation anyway.
-      match = payload.match(/^\s*([\s\S]*)$/);
-      payload = match[1];
-      match = payload.match(/^([\s\S]*\S)\s*$/);
-      if (match)
-        payload = match[1];
-
-      var code = 'Handlebars.json_ast_to_func(' +
-        JSON.stringify(Handlebars.to_json_ast(payload)) + ')';
-
-      if (tag === "template") {
-        // XXX fails for attributes that contain whitespace, and
-        // probably lots of other stuff too..
-        match = attrs.match(/[$\s]name=["']?([^"'\s]+)["'\s]/);
-        if (!match)
-          // XXX improve error
-          throw new Error("Template missing id attribute, um, somewhere ...");
-        var id = match[1];
-
-        results.js += "Meteor._def_template(" + JSON.stringify(id) + "," + code +
-          ");\n";
-      } else { // tag === "body"
-        results.js += "Meteor.startup(function(){document.body.appendChild(Meteor.ui.render(Meteor._def_template(null," + code + ")));});";
-      }
-    });
-    if (!found) {
-      // XXX how to report an error here?
-      // XXX improve error!!
-      throw new Error("Couldn't parse .. um .. some HTML file, on some line. sorry");
+    if (tag === "head") {
+      results.head += contents;
+      return;
     }
 
-    return contents;
+    // <body> or <template>
+    var code = 'Handlebars.json_ast_to_func(' +
+          JSON.stringify(Handlebars.to_json_ast(contents)) + ')';
+
+    if (tag === "template") {
+      var name = attribs.name;
+      if (! name)
+        throw parseError("Template has no 'name' attribute");
+
+      results.js += "Meteor._def_template(" + JSON.stringify(name) + ","
+        + code + ");\n";
+    } else {
+      // <body>
+      results.js += "Meteor.startup(function(){" +
+        "document.body.appendChild(Meteor.ui.render(" +
+        "Meteor._def_template(null," + code + ")));});";
+    }
   }
 };
 

@@ -43,7 +43,7 @@ Package.register_extension(
     // XXX super lame! we actually have to give paths relative to
     // app/inner/app.js, since that's who's evaling us.
     var html_scanner = require('../../packages/templating/html_scanner.js');
-    var results = html_scanner.scan(contents.toString('utf8'));
+    var results = html_scanner.scan(contents.toString('utf8'), source_path);
 
     if (results.head)
       bundle.add_resource({
