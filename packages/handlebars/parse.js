@@ -27,8 +27,18 @@ Handlebars = {};
  */
 
 Handlebars.to_json_ast = function (code) {
-  var ast = require("handlebars").parse(code);
-  var _ = require('../../packages/underscore/underscore.js'); // XXX super lame
+  // We need handlebars and underscore, but this is bundle time, so
+  // we load them using 'require'.
+  // If we're in a unit test right now, we're actually in the server
+  // run-time environment; we have '_' but not 'require'.
+  // This is all very hacky.
+  var req = (typeof require === 'undefined' ?
+             __meteor_bootstrap__.require : require);
+  var _ = global._;
+  if (! _)
+    _ = req('../../packages/underscore/underscore.js'); // XXX super lame
+
+  var ast = req("handlebars").parse(code);
 
   var identifier = function (node) {
     if (node.type !== "ID")

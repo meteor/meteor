@@ -1,5 +1,5 @@
 
-var html_scanner = module.exports = {
+var html_scanner = {
   // Scan a template file for <head>, <body>, and <template>
   // tags and extract their contents.
   //
@@ -50,7 +50,7 @@ var html_scanner = module.exports = {
       }
       if (match[5] === "<!DOCTYPE")
         throw parseError(
-          "Can't set doctype here.  (Meteor sets <!DOCTYPE html> for you)");
+          "Can't set DOCTYPE here.  (Meteor sets <!DOCTYPE html> for you)");
       if (match[5] === "{{!")
         throw new parseError(
           "Can't use '{{! }}' outside a template.  Use '<!-- -->'.");
@@ -124,3 +124,7 @@ var html_scanner = module.exports = {
   }
 };
 
+// If we are running at bundle time, set module.exports.
+// For unit testing in server environment, don't.
+if (typeof module !== 'undefined')
+  module.exports = html_scanner;
