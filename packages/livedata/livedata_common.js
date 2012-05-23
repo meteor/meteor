@@ -4,11 +4,12 @@ Meteor._MethodInvocation = function (is_simulation, unblock) {
   var self = this;
 
   // true if we're running not the actual method, but a stub (that is,
-  // if we're on the client and presently running a simulation of a
-  // server-side method for latency compensation purposes). never true
-  // except in a client such as a browser, since there's no point in
-  // running stubs unless you have a zero-latency connection to the
-  // user.
+  // if we're on a client (which may be a browser, or in the future a
+  // server connecting to another server) and presently running a
+  // simulation of a server-side method for latency compensation
+  // purposes). not current true except in a client such as a browser,
+  // since there's usually no point in running stubs unless you have a
+  // zero-latency connection to the user.
   this.is_simulation = is_simulation;
 
   // call this function to allow other method invocations (from the
