@@ -60,7 +60,7 @@ Package.register_extension(
       });
 
     if (results.js) {
-      var path_part = path.dirname(serve_path)
+      var path_part = path.dirname(serve_path);
       if (path_part === '.')
         path_part = '';
       if (path_part.length && path_part !== '/')
