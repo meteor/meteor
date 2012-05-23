@@ -17,7 +17,7 @@ var html_scanner = module.exports = {
     };
 
     var parseError = function(msg) {
-      var lineNumber = contents.substring(0, index).split('\n').length + 1;
+      var lineNumber = contents.substring(0, index).split('\n').length;
       var line = contents.split('\n')[lineNumber - 1];
       var info = "line "+lineNumber+", file "+source_name + "\n" + line;
       return new Error((msg || "Parse error")+" - "+info);
@@ -26,9 +26,12 @@ var html_scanner = module.exports = {
     var results = {};
     html_scanner._initResults(results);
 
-    var rOpenTag = /^\s*((<(template|head|body))|(<!--)|$)/i;
+    var rOpenTag = /^((<(template|head|body)\b)|(<!--)|(<!DOCTYPE|{{!)|$)/i;
 
     while (rest) {
+      // skip whitespace first (for better line numbers)
+      advance(rest.match(/^\s*/)[0].length);
+
       var match = rOpenTag.exec(rest);
       if (! match)
         throw parseError(); // unknown text encountered
@@ -45,6 +48,12 @@ var html_scanner = module.exports = {
         advance(end.index + end[0].length);
         continue;
       }
+      if (match[5] === "<!DOCTYPE")
+        throw parseError(
+          "Can't set doctype here.  (Meteor sets <!DOCTYPE html> for you)");
+      if (match[5] === "{{!")
+        throw new parseError(
+          "Can't use '{{! }}' outside a template.  Use '<!-- -->'.");
 
       // otherwise, a <tag>
       var tagName = match[3].toLowerCase();
