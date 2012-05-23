@@ -15,6 +15,15 @@ Meteor._Stream = function (url) {
   // how long to wait until we declare the connection attempt
   // failed.
   self.CONNECT_TIMEOUT = 10000;
+  // how long between hearing heartbeat from the server until we declare
+  // the connection dead. heartbeats come every 25s (stream_server.js)
+  //
+  // NOTE: this is a workaround until sockjs detects heartbeats on the
+  // client automatically.
+  // https://github.com/sockjs/sockjs-client/issues/67
+  // https://github.com/sockjs/sockjs-node/issues/68
+  self.HEARTBEAT_TIMEOUT = 60000;
+
   // time for initial reconnect attempt.
   self.RETRY_BASE_TIMEOUT = 1000;
   // exponential factor to increase timeout each attempt.
@@ -46,6 +55,7 @@ Meteor._Stream = function (url) {
   //// Retry logic
   self.retry_timer = null;
   self.connection_timer = null;
+  self.heartbeat_timer = null;
 
   //// Kickoff!
   self._launch_connection();
@@ -152,6 +162,12 @@ _.extend(Meteor._Stream.prototype, {
       clearTimeout(self.connection_timer);
       self.connection_timer = null;
     }
+    if (self.heartbeat_timer)
+      clearTimeout(self.heartbeat_timer);
+    self.heartbeat_timer = setTimeout(
+      _.bind(self._heartbeat_timeout, self),
+      self.HEARTBEAT_TIMEOUT);
+
 
     if (self.current_status.connected) {
       // already connected. do nothing. this probably shouldn't happen.
@@ -211,6 +227,10 @@ _.extend(Meteor._Stream.prototype, {
       clearTimeout(self.connection_timer);
       self.connection_timer = null;
     }
+    if (self.heartbeat_timer) {
+      clearTimeout(self.heartbeat_timer);
+      self.heartbeat_timer = null;
+    }
     self._cleanup_socket();
     self._retry_later(); // sets status. no need to do it here.
   },
@@ -219,6 +239,12 @@ _.extend(Meteor._Stream.prototype, {
     var self = this;
     self._cleanup_socket();
     self._disconnected();
+  },
+
+  _heartbeat_timeout: function () {
+    var self = this;
+    Meteor._debug("Connection timeout. No heartbeat received.");
+    self._fake_connect_failed();
   },
 
   _retry_timeout: function (count) {
@@ -303,6 +329,16 @@ _.extend(Meteor._Stream.prototype, {
     self.socket.onerror = function () {
       // XXX is this ever called?
       Meteor._debug("stream error", _.toArray(arguments), (new Date()).toDateString());
+    };
+
+    self.socket.onheartbeat =  function () {
+      // reset heartbeat timer when we get a heartbeat.
+      if (self.heartbeat_timer) {
+        clearTimeout(self.heartbeat_timer);
+        self.heartbeat_timer = setTimeout(
+          _.bind(self._heartbeat_timeout, self),
+          self.HEARTBEAT_TIMEOUT);
+      }
     };
 
     if (self.connection_timer)
