@@ -88,4 +88,9 @@ Package.on_test(function (api) {
     'templating_tests.js',
     'templating_tests.html'
   ], 'client');
+  api.add_files([
+    '../handlebars/parse.js', // XXX hacky
+    'html_scanner.js',
+    'scanner_tests.js'
+  ], 'server');
 });
