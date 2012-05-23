@@ -755,8 +755,18 @@ _.extend(Meteor._LivedataServer.prototype, {
     return this.apply(name, args, callback);
   },
 
-  apply: function (name, args, callback) {
+  // @param options {Optional Object}
+  // @param callback {Optional Function}
+  apply: function (name, args, options, callback) {
     var self = this;
+
+    // We were passed 3 arguments. They may be either (name, args, options)
+    // or (name, args, callback)
+    if (!callback && typeof options === 'function') {
+      callback = options;
+      options = {};
+    }
+    options = options || {};
 
     if (callback)
       // It's not really necessary to do this, since we immediately

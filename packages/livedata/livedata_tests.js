@@ -105,6 +105,26 @@ testAsyncMulti("livedata - basic method invocation", [
                            expect(undefined, [12, {x: 13}])), undefined);
   },
 
+  // test that `wait: false` is respected
+  function (test, expect) {
+    if (Meteor.is_client) {
+      Meteor.apply("delayedTrue", [], {wait: false}, expect(function(err, res) {
+        test.equal(res, false);
+      }));
+      Meteor.apply("makeDelayedTrueImmediatelyReturnFalse", []);
+    }
+  },
+
+  // test that `wait: true` is respected
+  function(test, expect) {
+    if (Meteor.is_client) {
+      Meteor.apply("delayedTrue", [], {wait: true}, expect(function(err, res) {
+        test.equal(res, true);
+      }));
+      Meteor.apply("makeDelayedTrueImmediatelyReturnFalse", []);
+    }
+  },
+
   function (test, expect) {
     // No callback
 
