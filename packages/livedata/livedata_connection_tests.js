@@ -487,6 +487,82 @@ Tinytest.add("livedata connection - one wait method with response out of order",
   test.equal(stream.sent.length, 0);
 });
 
+Tinytest.add("livedata connection - onReconnect prepends messages correctly with a wait method", function(test) {
+  var stream = new Meteor._StubStream();
+  var conn = new Meteor._LivedataConnection(stream);
+  startAndConnect(test, stream);
+
+  // setup method
+  conn.methods({do_something: function (x) {}});
+
+  conn.onReconnect = function() {
+    conn.apply('do_something', ['reconnect one']);
+    conn.apply('do_something', ['reconnect two'], {wait: true});
+    conn.apply('do_something', ['reconnect three']);
+  };
+
+  conn.apply('do_something', ['one']);
+  conn.apply('do_something', ['two'], {wait: true});
+  conn.apply('do_something', ['three']);
+
+  // reconnect
+  stream.sent = [];
+  stream.reset();
+  test_got_message(
+    test, stream, {msg: 'connect', session: conn.last_session_id});
+
+  // Test that we sent what we expect to send, and we're blocked on
+  // what we expect to be blocked. The subsequent logic to correctly
+  // read the wait flag is tested separately.
+  test.equal(_.map(stream.sent, function(msg) {
+    return JSON.parse(msg).params[0];
+  }), ['reconnect one', 'reconnect two']);
+  test.equal(_.map(conn.blocked_methods, function(method) {
+    return [method.msg.params[0], method.wait];
+  }), [
+    ['reconnect three', undefined/*==false*/],
+    ['one', undefined/*==false*/],
+    ['two', true],
+    ['three', undefined/*==false*/]
+  ]);
+});
+
+Tinytest.add("livedata connection - onReconnect prepends messages correctly without a wait method", function(test) {
+  var stream = new Meteor._StubStream();
+  var conn = new Meteor._LivedataConnection(stream);
+  startAndConnect(test, stream);
+
+  // setup method
+  conn.methods({do_something: function (x) {}});
+
+  conn.onReconnect = function() {
+    conn.apply('do_something', ['reconnect one']);
+    conn.apply('do_something', ['reconnect two']);
+    conn.apply('do_something', ['reconnect three']);
+  };
+
+  conn.apply('do_something', ['one']);
+  conn.apply('do_something', ['two'], {wait: true});
+  conn.apply('do_something', ['three']);
+
+  // reconnect
+  stream.sent = [];
+  stream.reset();
+  test_got_message(
+    test, stream, {msg: 'connect', session: conn.last_session_id});
+
+  // Test that we sent what we expect to send, and we're blocked on
+  // what we expect to be blocked. The subsequent logic to correctly
+  // read the wait flag is tested separately.
+  test.equal(_.map(stream.sent, function(msg) {
+    return JSON.parse(msg).params[0];
+  }), ['reconnect one', 'reconnect two', 'reconnect three', 'one', 'two']);
+  test.equal(_.map(conn.blocked_methods, function(method) {
+    return [method.msg.params[0], method.wait];
+  }), [
+    ['three', undefined/*==false*/]
+  ]);
+});
 
 // XXX also test:
 // - reconnect, with session resume.

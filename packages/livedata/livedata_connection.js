@@ -29,15 +29,27 @@ Meteor._LivedataConnection = function (url, restart_on_update) {
   self.stores = {}; // name -> object with methods
   self.method_handlers = {}; // name -> func
   self.next_method_id = 1;
-  // waiting for results of method
+
+  // --- Three classes of outstanding methods ---
+
+  // 1. either already sent, or waiting to be sent with no special
+  // consideration once we reconnect
   self.outstanding_methods = []; // each item has keys: msg, callback
-  // the sole outstanding method that needs to be waited on, or null
+
+  // 2. the sole outstanding method that needs to be waited on, or null
+  // same keys as outstanding_methods (notably wait is implicitly true
+  // but not set)
   self.outstanding_wait_method = null; // same keys as outstanding_methods
   // stores response from `outstanding_wait_method` while we wait for
-  // previous method calls to complete
+  // previous method calls to complete, as received in _livedata_result
   self.outstanding_wait_method_response = null;
-  // methods blocked on outstanding_wait_method being completed.
+
+  // 3. methods blocked on outstanding_wait_method being completed.
   self.blocked_methods = []; // each item has keys: msg, callback, wait
+
+  // if set, called when we reconnect, queuing method calls _before_
+  // the existing outstanding ones
+  self.onReconnect = null;
   // waiting for data from method
   self.unsatisfied_methods = {}; // map from method_id -> true
   // sub was ready, is no longer (due to reconnect)
@@ -121,7 +133,15 @@ Meteor._LivedataConnection = function (url, restart_on_update) {
     // immediately before disconnection.. do we need to add app-level
     // acking of data messages?
 
-    self._sendOutstandingMessages();
+    // If an `onReconnect` handler is set, call it first. Go through
+    // some hoops to ensure that methods that are called from within
+    // `onReconnect` get executed _before_ ones that were originally
+    // outstanding (since `onReconnect` is used to re-establish auth
+    // certificates)
+    if (self.onReconnect)
+      self._callOnReconnectAndSendAppropriateOutstandingMethods();
+    else
+      self._sendOutstandingMethods();
 
     // add new subscriptions at the end. this way they take effect after
     // the handlers and we don't see flicker.
@@ -131,13 +151,14 @@ Meteor._LivedataConnection = function (url, restart_on_update) {
     });
   });
 
-  if (restart_on_update)
+  if (restart_on_update) {
     self.stream.on('update_available', function () {
       // Start trying to migrate to a new version. Until all packages
       // signal that they're ready for a migration, the app will
       // continue running normally.
       Meteor._reload.reload();
     });
+  }
 
   // we never terminate the observe(), since there is no way to
   // destroy a LivedataConnection.. but this shouldn't matter, since we're
@@ -617,7 +638,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
           self.blocked_methods = _.rest(self.blocked_methods, i+1);
         }
 
-        self._sendOutstandingMessages();
+        self._sendOutstandingMethods();
       } else {
         if (m !== self.outstanding_wait_method)
           self._deliverMethodResponse(m, msg);
@@ -650,20 +671,61 @@ _.extend(Meteor._LivedataConnection.prototype, {
     }
   },
 
-  _sendOutstandingMessages: function() {
+  _sendOutstandingMethods: function() {
     var self = this;
     _.each(self.outstanding_methods, function (m) {
       self.stream.send(JSON.stringify(m.msg));
     });
-    if (self.outstanding_wait_method) {
+    if (self.outstanding_wait_method)
       self.stream.send(JSON.stringify(self.outstanding_wait_method.msg));
-    }
   },
 
   _livedata_error: function (msg) {
     Meteor._debug("Received error from server: ", msg.reason);
     if (msg.offending_message)
       Meteor._debug("For: ", msg.offending_message);
+  },
+
+  _callOnReconnectAndSendAppropriateOutstandingMethods: function() {
+    var self = this;
+    var old_outstanding_methods = self.outstanding_methods;
+    var old_outstanding_wait_method = self.outstanding_wait_method;
+    var old_blocked_methods = self.blocked_methods;
+    self.outstanding_methods = [];
+    self.outstanding_wait_method = null;
+    self.blocked_methods = [];
+
+    self.onReconnect();
+
+    if (self.outstanding_wait_method) {
+      // self.onReconnect() caused us to wait on a method. Add all old
+      // methods to blocked_methods, and we don't need to send any
+      // additional methods
+      self.blocked_methods = self.blocked_methods.concat(
+        old_outstanding_methods);
+
+      if (old_outstanding_wait_method) {
+        self.blocked_methods.push(_.extend(
+          old_outstanding_wait_method, {wait: true}));
+      }
+
+      self.blocked_methods = self.blocked_methods.concat(
+        old_blocked_methods);
+    } else {
+      // self.onReconnect() did not cause us to wait on a method. Add
+      // as many methods as we can to outstanding_methods and send
+      // them
+      _.each(old_outstanding_methods, function(method) {
+        self.outstanding_methods.push(method);
+        self.stream.send(JSON.stringify(method.msg));
+      });
+
+      self.outstanding_wait_method = old_outstanding_wait_method;
+      if (self.outstanding_wait_method)
+        self.stream.send(JSON.stringify(self.outstanding_wait_method.msg));
+
+      self.blocked_methods = old_blocked_methods;
+    }
   },
 
   _readyToMigrate: function() {
