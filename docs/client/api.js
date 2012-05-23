@@ -227,7 +227,7 @@ Template.api.meteor_apply = {
     {name: "wait",
      type: "Boolean",
      descr: "(Client only) If true, don't send any subsequent method calls until this one is completed. "
-            + "Only run the callback for this method once all previous method calls have been completed."}
+            + "Only run the callback for this method once all previous method calls have completed."}
   ]
 };
 
