@@ -210,14 +210,16 @@ Meteor.ui = Meteor.ui || {};
   // its parent -- it will no longer appear when traversing the tree
   // with visit().
   //
-  // On modern browsers there is no requirement to delete
-  // LiveRanges. They will be garbage collected just like any other
+  // On modern browsers there is no requirement to delete LiveRanges on
+  // defunct nodes. They will be garbage collected just like any other
   // object. However, on old versions of IE, you probably do need to
   // manually remove all ranges because IE can't GC reference cycles
   // through the DOM.
   //
   // Pass true for `recursive` to also destroy all descendent ranges.
   Meteor.ui._LiveRange.prototype.destroy = function (recursive) {
+    var self = this;
+
     if (recursive) {
       // recursive case: destroy all descendent ranges too
       // (more efficient than actually recursing)
@@ -231,7 +233,7 @@ Meteor.ui = Meteor.ui || {};
         if (! is_start) {
           // when leaving a node, force-clean its children
           for(var n = node.firstChild; n; n = n.nextSibling) {
-            Meteor.ui._LiveRange._clean_node(this.tag, n, true);
+            Meteor.ui._LiveRange._clean_node(self.tag, n, true);
           }
         }
       });
@@ -243,9 +245,14 @@ Meteor.ui = Meteor.ui || {};
         for(var n = this._start.nextSibling;
             n !== this._end;
             n = n.nextSibling) {
-          Meteor.ui._LiveRange._clean_node(this.tag, n, true);
+          Meteor.ui._LiveRange._clean_node(self.tag, n, true);
         }
       }
+      // clean ends on this._start and starts on this._end
+      if (this._start[self.tag])
+        this._remove_entries(this._start, 1);
+      if (this._end[self.tag])
+        this._remove_entries(this._end, 0);
 
       this._start = this._end = null;
 

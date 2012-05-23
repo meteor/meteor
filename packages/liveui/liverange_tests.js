@@ -462,17 +462,18 @@ Tinytest.add("liverange - create inner", function (test) {
   );
 });
 
-Tinytest.add("liverange - findParent", function(test) {
-  var tag = '_foo';
+var makeTestPattern = function(codedStr) {
+  codedStr = codedStr.replace(/\*/g, '[]');
 
-  var pat = "I*[[AB[H***FDE*ed*fG*gh]*baC*c*]]i*";
+  var self = {};
+  self.tag = '_foo';
+  self.ranges = {};
 
-  pat = pat.replace(/\*/g, '[]');
+  // set up self.ranges
   var curNode = document.createDocumentFragment();
   var starts = [];
-  var ranges = {};
-  for(var i=0; i<pat.length; i++) {
-    var c = pat.charAt(i);
+  for(var i=0; i<codedStr.length; i++) {
+    var c = codedStr.charAt(i);
     if (/[A-Z]/.test(c)) {
       // open range
       starts.push([curNode, curNode.childNodes.length]);
@@ -481,10 +482,10 @@ Tinytest.add("liverange - findParent", function(test) {
       var start = starts.pop();
       var range =
             new Meteor.ui._LiveRange(
-              tag, start[0].childNodes[start[1]],
+              self.tag, start[0].childNodes[start[1]],
               start[0].lastChild);
       range.letter = c.toUpperCase();
-      ranges[range.letter] = range;
+      self.ranges[range.letter] = range;
     } else if (c === '[') {
       curNode.appendChild(document.createElement("DIV"));
       curNode = curNode.lastChild;
@@ -493,6 +494,45 @@ Tinytest.add("liverange - findParent", function(test) {
       curNode = curNode.parentNode;
     }
   }
+
+  self.frag = curNode;
+
+  self.path = function(/*args*/) {
+    var node = self.frag;
+    _.each(arguments, function(i) {
+      node = node.childNodes[i];
+    });
+    return node;
+  };
+
+  self.findRange = function(node) {
+    return Meteor.ui._LiveRange.findRange(self.tag, node);
+  };
+
+  self.currentString = function() {
+    var buf = [];
+    var tempRange = new Meteor.ui._LiveRange(self.tag, self.frag);
+    tempRange.visit(function(is_start, range) {
+      buf.push(is_start ?
+               range.letter.toUpperCase() :
+               range.letter.toLowerCase());
+    }, function(is_start, node) {
+      buf.push(is_start ? '[' : ']');
+    });
+    tempRange.destroy();
+
+    return buf.join('').replace(/\[\]/g, '*');
+  };
+
+  return self;
+};
+
+Tinytest.add("liverange - findParent", function(test) {
+  var str = "I*[[AB[H***FDE*ed*fG*gh]*baC*c*]]i*";
+  var pat = makeTestPattern(str);
+  test.equal(pat.currentString(), str);
+
+  var ranges = pat.ranges;
 
   test.equal(ranges.E.findParent().letter, 'D');
   test.equal(ranges.D.findParent().letter, 'F');
@@ -510,34 +550,55 @@ Tinytest.add("liverange - findParent", function(test) {
   test.equal(ranges.A.findParent(true), null);
   test.equal(ranges.I.findParent(true), null);
 
-  var path = function(/*args*/) {
-    var node = curNode;
-    _.each(arguments, function(i) {
-      node = node.childNodes[i];
-    });
-    return node;
-  };
-  var findRange = function(node) {
-    return Meteor.ui._LiveRange.findRange(tag, node);
-  };
 
-  test.equal(findRange(path(0)).letter, 'I');
-  test.equal(findRange(path(1)).letter, 'I');
-  test.equal(findRange(path(2)), null);
+  test.equal(pat.findRange(pat.path(0)).letter, 'I');
+  test.equal(pat.findRange(pat.path(1)).letter, 'I');
+  test.equal(pat.findRange(pat.path(2)), null);
 
-  test.equal(findRange(path(1, 0)).letter, 'I');
-  test.equal(findRange(path(1, 0, 0)).letter, 'B');
-  test.equal(findRange(path(1, 0, 1)).letter, 'B');
-  test.equal(findRange(path(1, 0, 2)).letter, 'C');
-  test.equal(findRange(path(1, 0, 3)).letter, 'I');
+  test.equal(pat.findRange(pat.path(1, 0)).letter, 'I');
+  test.equal(pat.findRange(pat.path(1, 0, 0)).letter, 'B');
+  test.equal(pat.findRange(pat.path(1, 0, 1)).letter, 'B');
+  test.equal(pat.findRange(pat.path(1, 0, 2)).letter, 'C');
+  test.equal(pat.findRange(pat.path(1, 0, 3)).letter, 'I');
 
-  test.equal(findRange(path(1, 0, 0, 0)).letter, 'H');
-  test.equal(findRange(path(1, 0, 0, 1)).letter, 'H');
-  test.equal(findRange(path(1, 0, 0, 2)).letter, 'H');
-  test.equal(findRange(path(1, 0, 0, 3)).letter, 'E');
-  test.equal(findRange(path(1, 0, 0, 4)).letter, 'F');
-  test.equal(findRange(path(1, 0, 0, 5)).letter, 'G');
+  test.equal(pat.findRange(pat.path(1, 0, 0, 0)).letter, 'H');
+  test.equal(pat.findRange(pat.path(1, 0, 0, 1)).letter, 'H');
+  test.equal(pat.findRange(pat.path(1, 0, 0, 2)).letter, 'H');
+  test.equal(pat.findRange(pat.path(1, 0, 0, 3)).letter, 'E');
+  test.equal(pat.findRange(pat.path(1, 0, 0, 4)).letter, 'F');
+  test.equal(pat.findRange(pat.path(1, 0, 0, 5)).letter, 'G');
 
 });
+
+Tinytest.add("liverange - destroy", function(test) {
+  var str = "I*[[AB[H***FDE*ed*fG*gh]*baC*c*]]J*ji*";
+  var pat = makeTestPattern(str);
+
+  pat.ranges.D.destroy();
+  test.equal(pat.currentString(), str.replace(/[Dd]/g, ''));
+  pat.ranges.B.destroy();
+  test.equal(pat.currentString(), str.replace(/[DdBb]/g, ''));
+  pat.ranges.A.destroy();
+  test.equal(pat.currentString(), str.replace(/[DdBbAa]/g, ''));
+
+  // recursive destroy
+  pat.ranges.F.destroy(true);
+  test.equal(pat.currentString(),
+             "I*[[[H*****G*gh]*C*c*]]J*ji*");
+  pat.ranges.I.destroy(true);
+  test.equal(pat.currentString(),
+             "*[[[******]***]]**");
+
+  var childrenHaveNoTags = function(node) {
+    for(var n = node.firstChild; n; n = n.nextSibling) {
+      test.isFalse(node[pat.tag]);
+      if (n.firstChild)
+        childrenHaveNoTags(n); // recurse
+    }
+  };
+
+  childrenHaveNoTags(pat.frag);
+});
+
 
 })();
