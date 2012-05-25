@@ -23,8 +23,7 @@ var html_scanner = {
       return new Error((msg || "Parse error")+" - "+info);
     };
 
-    var results = {};
-    html_scanner._initResults(results);
+    var results = html_scanner._initResults();
 
     var rOpenTag = /^((<(template|head|body)\b)|(<!--)|(<!DOCTYPE|{{!)|$)/i;
 
@@ -36,45 +35,59 @@ var html_scanner = {
       if (! match)
         throw parseError(); // unknown text encountered
 
+      var matchToken = match[1];
+      var matchTokenTagName =  match[3];
+      var matchTokenComment = match[4];
+      var matchTokenUnsupported = match[5];
+
       advance(match.index + match[0].length);
 
-      if (! match[1])
+      if (! matchToken)
         break; // matched $ (end of file)
-      if (match[4] === '<!--') {
+      if (matchTokenComment === '<!--') {
         // top-level HTML comment
-        var end = /-->/.exec(rest);
-        if (! end)
+        var commentEnd = /--\s*>/.exec(rest);
+        if (! commentEnd)
           throw parseError("unclosed HTML comment");
-        advance(end.index + end[0].length);
+        advance(commentEnd.index + commentEnd[0].length);
         continue;
       }
-      if (match[5] === "<!DOCTYPE")
-        throw parseError(
-          "Can't set DOCTYPE here.  (Meteor sets <!DOCTYPE html> for you)");
-      if (match[5] === "{{!")
-        throw new parseError(
-          "Can't use '{{! }}' outside a template.  Use '<!-- -->'.");
+      if (matchTokenUnsupported) {
+        switch (matchTokenUnsupported.toLowerCase()) {
+        case '<!doctype':
+          throw parseError(
+            "Can't set DOCTYPE here.  (Meteor sets <!DOCTYPE html> for you)");
+        case '{{!':
+          throw new parseError(
+            "Can't use '{{! }}' outside a template.  Use '<!-- -->'.");
+        }
+        throw new parseError();
+      }
 
       // otherwise, a <tag>
-      var tagName = match[3].toLowerCase();
+      var tagName = matchTokenTagName.toLowerCase();
       var tagAttribs = {}; // bare name -> value dict
-      var rTagPart = /^\s*((([a-zA-Z0-9:_-]+)\s*=\s*"(.*?)")|(>))/;
+      var rTagPart = /^\s*((([a-zA-Z0-9:_-]+)\s*=\s*(["'])(.*?)\4)|(>))/;
       var attr;
       // read attributes
       while ((attr = rTagPart.exec(rest))) {
+        var attrToken = attr[1];
+        var attrKey = attr[3];
+        var attrValue = attr[5];
         advance(attr.index + attr[0].length);
-        if (attr[1] === '>')
+        if (attrToken === '>')
           break;
         // XXX we don't HTML unescape the attribute value
         // (e.g. to allow "abcd&quot;efg") or protect against
         // collisions with methods of tagAttribs (e.g. for
         // a property named toString)
-        tagAttribs[attr[3]] = attr[4];
+        attrValue = attrValue.match(/^\s*([\s\S]*?)\s*$/)[1]; // trim
+        tagAttribs[attrKey] = attrValue;
       }
       if (! attr) // didn't end on '>'
-        throw new parseError("Missing '>'");
+        throw new parseError("Parse error in tag");
       // find </tag>
-      var end = (new RegExp('</'+tagName+'>', 'i')).exec(rest);
+      var end = (new RegExp('</'+tagName+'\\s*>', 'i')).exec(rest);
       if (! end)
         throw new parseError("unclosed <"+tagName+">");
       var tagContents = rest.slice(0, end.index);
@@ -88,10 +101,12 @@ var html_scanner = {
     return results;
   },
 
-  _initResults: function(results) {
+  _initResults: function() {
+    var results = {};
     results.head = '';
     results.body = '';
     results.js = '';
+    return results;
   },
 
   _handleTag: function (results, tag, attribs, contents, parseError) {
@@ -99,7 +114,18 @@ var html_scanner = {
     // trim the tag contents
     contents = contents.match(/^[ \t\r\n]*([\s\S]*?)[ \t\r\n]*$/)[1];
 
+    // do we have 1 or more attribs?
+    var hasAttribs = false;
+    for(var k in attribs) {
+      if (attribs.hasOwnProperty(k)) {
+        hasAttribs = true;
+        break;
+      }
+    }
+
     if (tag === "head") {
+      if (hasAttribs)
+        throw parseError("Attributes on <head> not supported");
       results.head += contents;
       return;
     }
@@ -117,6 +143,8 @@ var html_scanner = {
         + code + ");\n";
     } else {
       // <body>
+      if (hasAttribs)
+        throw parseError("Attributes on <body> not supported");
       results.js += "Meteor.startup(function(){" +
         "document.body.appendChild(Meteor.ui.render(" +
         "Meteor._def_template(null," + code + ")));});";
