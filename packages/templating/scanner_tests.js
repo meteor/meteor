@@ -53,12 +53,18 @@ Tinytest.add("templating - html scanner", function (test) {
   // same as previous, but with various HTML comments
   checkResults(
     html_scanner.scan("\n<!--\n\nfoo\n-->\n<!-- -->\n"+
-                      "<body>\n\nHello\n\n</body>\n\n<!---->\n"),
+                      "<body>\n\nHello\n\n</body>\n\n<!----\n>\n\n"),
     BODY_PREAMBLE+'Handlebars.json_ast_to_func(["Hello"])'+BODY_POSTAMBLE);
 
   // head and body
   checkResults(
     html_scanner.scan("<head>\n<title>Hello</title>\n</head>\n\n<body>World</body>\n\n"),
+    BODY_PREAMBLE+'Handlebars.json_ast_to_func(["World"])'+BODY_POSTAMBLE,
+    "<title>Hello</title>");
+
+  // head and body with tag whitespace
+  checkResults(
+    html_scanner.scan("<head\n>\n<title>Hello</title>\n</head  >\n\n<body>World</body\n\n>\n\n"),
     BODY_PREAMBLE+'Handlebars.json_ast_to_func(["World"])'+BODY_POSTAMBLE,
     "<title>Hello</title>");
 
@@ -84,11 +90,25 @@ Tinytest.add("templating - html scanner", function (test) {
     TEMPLATE_PREAMBLE+'"favoritefood",Handlebars.json_ast_to_func(["pizza"])'+
       TEMPLATE_POSTAMBLE);
 
-  // whitespace around '=' in attributes
+  // whitespace around '=' in attributes and at end of tag
   checkResults(
-    html_scanner.scan('<template foo = "bar" name  ="favoritefood" baz= "qux">'+
-                      'pizza</template>'),
+    html_scanner.scan('<template foo = "bar" name  ="favoritefood" baz= "qux"  >'+
+                      'pizza</template\n\n>'),
     TEMPLATE_PREAMBLE+'"favoritefood",Handlebars.json_ast_to_func(["pizza"])'+
+      TEMPLATE_POSTAMBLE);
+
+  // whitespace around template name
+  checkResults(
+    html_scanner.scan('<template name=" favoritefood  ">pizza</template>'),
+    TEMPLATE_PREAMBLE+'"favoritefood",Handlebars.json_ast_to_func(["pizza"])'+
+      TEMPLATE_POSTAMBLE);
+
+  // single quotes around template name
+  checkResults(
+    html_scanner.scan('<template name=\'the "cool" template\'>'+
+                      'pizza</template>'),
+    TEMPLATE_PREAMBLE+'"the \\"cool\\" template",'+
+      'Handlebars.json_ast_to_func(["pizza"])'+
       TEMPLATE_POSTAMBLE);
 
   // error cases; exact line numbers are not critical, these just reflect
@@ -125,5 +145,27 @@ Tinytest.add("templating - html scanner", function (test) {
         '"http://www.w3.org/TR/html4/strict.dtd">'+
         '\n\n<head>\n</head>', FILE);
   }, "DOCTYPE", 1);
+
+  // lowercase basic doctype
+  checkError(function() {
+    return html_scanner.scan(
+      '<!doctype html>', FILE);
+  }, "DOCTYPE", 1);
+
+  // attributes on body not supported
+  checkError(function() {
+    return html_scanner.scan('<body foo="bar">\n  Hello\n</body>', FILE);
+  }, "Error", 3);
+
+  // attributes on head not supported
+  checkError(function() {
+    return html_scanner.scan('<head foo="bar">\n  Hello\n</head>', FILE);
+  }, "Error", 3);
+
+  // can't mismatch quotes
+  checkError(function() {
+    return html_scanner.scan('<template name="foo\'>'+
+                             'pizza</template>', FILE);
+  }, "Error", 1);
 
 });
