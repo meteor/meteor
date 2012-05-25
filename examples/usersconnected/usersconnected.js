@@ -1,7 +1,6 @@
 if (Meteor.is_client) {
-  var Users = new Meteor.Collection("users");
+  Sessions = new Meteor.Collection('sessions');
 
-  Session.set('user',null);
 
   // Returns an event_map key for attaching "ok/cancel" events to
   // a text input (given by selector)
@@ -34,11 +33,11 @@ if (Meteor.is_client) {
 
   Template.users.users = function() {
     var user_counts = {};
-    Users.find({}).forEach(function(user) {
-      if (user.name in user_counts)
-        user_counts[user.name] ++;
+    Sessions.find({connected: true, user: {$exists: true}}).forEach(function(session) {
+      if (session.user in user_counts)
+        user_counts[session.user] ++;
       else 
-        user_counts[user.name] = 1;
+        user_counts[session.user] = 1;
     });
     return _.map(Object.keys(user_counts),function(key) {
       return {name: key, count: user_counts[key]};
@@ -51,37 +50,32 @@ if (Meteor.is_client) {
   Template.users.events[ okcancel_events('#set-user-box') ] =
     make_okcancel_handler({
       ok: function (text, evt) {
-        if (!Session.equals('user',null))
-          Users.remove('users',Users.remove(Session.get('user')));
-        Session.set('user',Users.insert({name: text}))
-        Meteor.call('remove_on_disconnect',Session.get('user'));
+        Sessions.update({id: Session.id},{$set: {user: text}});
         evt.target.value = "";
       }
     });
+
+  console.log(Session.id);
  
 }
 
 if (Meteor.is_server) {
-  var Users = new Meteor.Collection("users");
+  var Sessions = new Meteor.Collection('sessions');
 
-  Meteor.methods({
-    set_user: function(user_id) {
-      Session.set('user',user_id);
-    }
-  })
-  Meteor.session(function(s) {
+
+  function autoupdate_session() {
     var context = new Meteor.deps.Context();
-      context.on_invalidate(function() {
-        Users.remove(user_id);
-        console.log('remove');
-      })
-      context.run(function() {
-        if (s.status().connected) {
-          Users.insert({name: Session.get('user')});
-        } else {
-          Users.remove(Session.get('user'));
-        }
-      })
+    context.on_invalidate(function() {
+      autoupdate_users();
+    })
+    context.run(function() {
+      Sessions.update({id: Session.id}, {$set: {connected: Session.status().connected}});
+    });
+  }
+  Meteor.session(function() {
+    console.log(Session.id);
+    Sessions.insert({id: Session.id});
+    autoupdate_session();
   });
 
   Meteor.startup(function () {

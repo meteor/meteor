@@ -17,7 +17,7 @@ _.extend(Meteor, {
 
 // Proxy the public methods of Meteor.default_server so they can
 // be called directly on Meteor.
-_.each(['publish', 'methods', 'call', 'apply', 'status', 'session', 'destroy'],
+_.each(['publish', 'methods', 'call', 'apply', 'use'],
        function (name) {
          Meteor[name] = _.bind(Meteor.default_server[name],
                                Meteor.default_server);
