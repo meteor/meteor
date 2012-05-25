@@ -30,6 +30,12 @@ Meteor._LivedataSession = function (server) {
 
   // map from collection name -> id -> key -> subscription id -> true
   self.provides_key = {};
+
+  // if set, ignore flush requests on any subsubcription on this
+  // session. when set this back to false, don't forget to call flush
+  // manually. this is sometimes needed because subscriptions
+  // frequently call flush
+  self.dontFlush = false;
 };
 
 _.extend(Meteor._LivedataSession.prototype, {
@@ -308,17 +314,23 @@ _.extend(Meteor._LivedataSession.prototype, {
     else
       self.universal_subs.push(sub);
 
-    var res = handler.apply(sub, params || []);
+    // Store a function to re-run the handler in case we want to rerun
+    // subscriptions, for example when the current user id changes
+    sub._runHandler = function() {
+      var res = handler.apply(sub, params || []);
 
-    // if Meteor._RemoteCollectionDriver is available (defined in
-    // mongo-livedata), automatically wire up handlers that return a
-    // Cursor.  otherwise, the handler is completely responsible for
-    // delivering its own data messages and registering stop
-    // functions.
-    //
-    // XXX generalize
-    if (Meteor._RemoteCollectionDriver && (res instanceof Meteor._Mongo.Cursor))
-      sub._publishCursor(res);
+      // if Meteor._RemoteCollectionDriver is available (defined in
+      // mongo-livedata), automatically wire up handlers that return a
+      // Cursor.  otherwise, the handler is completely responsible for
+      // delivering its own data messages and registering stop
+      // functions.
+      //
+      // XXX generalize
+      if (Meteor._RemoteCollectionDriver && (res instanceof Meteor._Mongo.Cursor))
+        sub._publishCursor(res);
+    };
+
+    sub._runHandler();
   },
 
   // tear down specified subscription
@@ -346,7 +358,29 @@ _.extend(Meteor._LivedataSession.prototype, {
     self.universal_subs = [];
   },
 
-  // return the current value for a particular key, as given by the
+  // Rerun all subscriptions without sending intermediate state down
+  // the wire
+  _rerunAllSubscriptions: function () {
+    var self = this;
+
+    var rerunSub = function(sub) {
+      sub._teardown();
+      sub._runHandler();
+    };
+    var flushSub = function(sub) {
+      sub.flush();
+    };
+
+    self.dontFlush = true;
+    _.each(self.named_subs, rerunSub);
+    _.each(self.universal_subs, rerunSub);
+
+    self.dontFlush = false;
+    _.each(self.named_subs, flushSub);
+    _.each(self.universal_subs, flushSub);
+  },
+
+  // RETURN the current value for a particular key, as given by the
   // current contents of each subscription's snapshot.
   _effectiveValueForKey: function (collection_name, id, key) {
     var self = this;
@@ -410,22 +444,7 @@ _.extend(Meteor._LivedataSubscription.prototype, {
     if (self.stopped)
       return;
 
-    // tell listeners, so they can clean up
-    for (var i = 0; i < this.stop_callbacks.length; i++)
-      (this.stop_callbacks[i])();
-
-    // remove our data from the client (possibly unshadowing data from
-    // lower priority subscriptions)
-    self.pending_data = {};
-    self.pending_complete = false;
-    for (var name in self.snapshot) {
-      self.pending_data[name] = {};
-      for (var id in self.snapshot[name]) {
-        self.pending_data[name][id] = {};
-        for (var key in self.snapshot[name][id])
-          self.pending_data[name][id][key] = undefined;
-      }
-    }
+    self._teardown();
     self.flush();
     self.stopped = true;
   },
@@ -465,6 +484,9 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
   flush: function () {
     var self = this;
+
+    if (self.session.dontFlush)
+      return;
 
     if (self.stopped)
       return;
@@ -532,6 +554,26 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
     self.pending_data = {};
     self.pending_complete = false;
+  },
+
+  _teardown: function() {
+    var self = this;
+    // tell listeners, so they can clean up
+    for (var i = 0; i < self.stop_callbacks.length; i++)
+      (self.stop_callbacks[i])();
+
+    // remove our data from the client (possibly unshadowing data from
+    // lower priority subscriptions)
+    self.pending_data = {};
+    self.pending_complete = false;
+    for (var name in self.snapshot) {
+      self.pending_data[name] = {};
+      for (var id in self.snapshot[name]) {
+        self.pending_data[name][id] = {};
+        for (var key in self.snapshot[name][id])
+          self.pending_data[name][id][key] = undefined;
+      }
+    }
   },
 
   _publishCursor: function (cursor, name) {
