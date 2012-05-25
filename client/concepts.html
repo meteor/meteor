@@ -45,12 +45,16 @@ create a nested tree of separate files, or anything in between.
 
 Files outside the `client` and `server`
 subdirectories are loaded on both the client and the server!  That's
-the place for model definitions and other functions.  Also, instead of
-putting client and server functions in different directories, you can
-use the [`is_client` and `is_server`](#meteor_is_client) variables
-to isolate JavaScript to one or the other side.
+the place for model definitions and other functions.  Meteor provides
+the variables [`is_client` and `is_server`](#meteor_is_client) so that
+your code can alter its behavior depending on whether it's running
+on the client or the server.
 
-CSS files work just the same: the client will get a bundle with all
+Any sensitive code that you don't want served to the client, such as code
+containing passwords or authentication mechanisms, should be
+kept in the `server` directory.
+
+CSS files are gathered together as well: the client will get a bundle with all
 the CSS in your tree (excluding the `server`
 and `public` subdirectories).
 
