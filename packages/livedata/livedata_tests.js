@@ -17,7 +17,7 @@ var failure = function (test, code, reason) {
       }
     }
   };
-}
+};
 
 Tinytest.add("livedata - Meteor.Error", function (test) {
   var error = new Meteor.Error(123, "kittens", "puppies");
@@ -257,6 +257,128 @@ testAsyncMulti("livedata - compound methods", [
     });
   }
 ]);
+
+// Replaces the LivedataConnection's `_livedata_data` method to push
+// incoming messages on a given collection to an array. This can be
+// used to verify that the right data is sent on the wire
+//
+// @param messages {Array} The array to which to append the messages
+// @return {Function} A function to call to undo the eavesdropping
+var eavesdropOnCollection = function(livedata_connection,
+                                     collection_name, messages) {
+  old_livedata_data = _.bind(
+    livedata_connection._livedata_data, livedata_connection);
+
+  // Kind of gross since all tests past this one will run with this
+  // hook set up. That's probably fine since we only check a specific
+  // collection but still...
+  //
+  // Should we consider having a separate connection per Tinytest or
+  // some similar scheme?
+  livedata_connection._livedata_data = function(msg) {
+    if (msg.collection && msg.collection === collection_name) {
+      messages.push(msg);
+    }
+    old_livedata_data(msg);
+  };
+
+  return function() {
+    livedata_connection._livedata_data = old_livedata_data;
+  };
+};
+
+testAsyncMulti("livedata - changing userid reruns subscriptions without flapping data on the wire", [
+  function(test, expect) {
+    if (Meteor.is_client) {
+      var messages = [];
+      var undoEavesdrop = eavesdropOnCollection(
+        Meteor.default_connection, "objectsWithUsers", messages);
+
+      // A helper for testing incoming set and unset messages
+      // XXX should this be extracted as a general helper together with
+      // eavesdropOnCollection?
+      var testSetAndUnset = function(expectation) {
+        test.equal(_.map(messages, function(msg) {
+          var result = {};
+          if (msg.set)
+            result.set = msg.set.name;
+          if (msg.unset)
+            result.unset = true;
+          return result;
+        }), expectation);
+        messages.length = 0; // clear messages without creating a new object
+      };
+
+      Meteor.subscribe("objectsWithUsers", expect(function() {
+        testSetAndUnset([{set: "owned by none"}]);
+        test.equal(objectsWithUsers.find().count(), 1);
+        Meteor.defer(sendFirstSetUserId);
+      }));
+
+      // Contorted since we need to call expect at the top level of a test
+      // (see comment at top of async_multi.js)
+
+      var sendFirstSetUserId = expect(function() {
+        Meteor.apply("setUserId", [1], {wait: true});
+        Meteor.default_connection.onQuiesce(afterFirstSetUserId);
+      });
+
+      var afterFirstSetUserId = expect(function() {
+        testSetAndUnset([
+          {unset: true},
+          {set: "owned by one - a"},
+          {set: "owned by one - b"}]);
+        test.equal(objectsWithUsers.find().count(), 2);
+        Meteor.defer(sendSecondSetUserId);
+      });
+
+      var sendSecondSetUserId = expect(function() {
+        Meteor.apply("setUserId", [2], {wait: true});
+        Meteor.default_connection.onQuiesce(afterSecondSetUserId);
+      });
+
+      var afterSecondSetUserId = expect(function() {
+        testSetAndUnset([
+          {unset: true},
+          {unset: true},
+          {set: "owned by two - a"},
+          {set: "owned by two - b"},
+          {set: "owned by two - c"}]);
+        test.equal(objectsWithUsers.find().count(), 3);
+        Meteor.defer(sendThirdSetUserId);
+      });
+
+      var sendThirdSetUserId = expect(function() {
+        Meteor.apply("setUserId", [2], {wait: true});
+        Meteor.default_connection.onQuiesce(afterThirdSetUserId);
+      });
+
+      var afterThirdSetUserId = expect(function() {
+        // Nothing should have been sent since the results of the
+        // query are the same ("don't flap data on the wire")
+        testSetAndUnset([]);
+        test.equal(objectsWithUsers.find().count(), 3);
+        undoEavesdrop();
+      });
+    }
+  }, function(test, expect) {
+    if (Meteor.is_client) {
+      Meteor.subscribe("recordUserIdOnStop");
+      Meteor.apply("setUserId", [100], {wait: true}, expect(function() {}));
+      Meteor.apply("setUserId", [101], {wait: true}, expect(function() {}));
+      Meteor.call("userIdWhenStopped", expect(function(err, result) {
+        test.equal(result, 100);
+      }));
+    }
+  }
+]);
+
+Tinytest.add("livedata - setUserId fails when called from server", function(test) {
+  if (Meteor.is_server) {
+    test.equal(errorThrownWhenCallingSetUserIdDirectlyOnServer.message,
+               "Can't call setUserId on a server initiated method call");
+  }
+});
 
 // XXX some things to test in greater detail:
 // staying in simulation mode
