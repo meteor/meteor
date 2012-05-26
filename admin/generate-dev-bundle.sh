@@ -32,10 +32,9 @@ elif [ "$UNAME" == "Darwin" ] ; then
     MONGO_NAME="mongodb-osx-${ARCH}-2.0.2"
     MONGO_URL="http://fastdl.mongodb.org/osx/${MONGO_NAME}.tgz"
 elif [[ "$UNAME" == CYGWIN* || "$UNAME" == MINGW* ]] ; then
-	# TODO: Check whether bitness of system is supported, probably should call `systeminfo` and check "System Type".
+	# Bitness does not matter on Windows, thus we don't check it here.
 
-	# Checks to be certain that all required tools are present, could be useful to use this for every distribution.
-	command -v node >/dev/null 2>&1 && { echo >&2 "Node.js should not be present, please uninstall it first. Aborting."; exit 1; }
+	# We check that all of the required tools are present for people that want to make a dev bundle on Windows.
 	command -v git >/dev/null 2>&1 || { echo >&2 "I require 'git' but it's not installed. Aborting."; exit 1; }
 	command -v mktemp >/dev/null 2>&1 || { echo >&2 "I require 'mktemp' but it's not installed. Aborting."; exit 1; }
 	command -v curl >/dev/null 2>&1 || { echo >&2 "I require 'curl' but it's not installed. Aborting."; exit 1; }
@@ -62,22 +61,26 @@ chmod 755 .
 umask 022
 
 if [[ "$UNAME" == CYGWIN* || "$UNAME" == MINGW* ]] ; then
-	echo DOWNLOADING NODE.JS IN "$DIR"
-	echo.
+	# XXX Only install node if it is not yet present.
+    #     To be able to install Node.js locally instead of to Program Files, we need to wait for https://github.com/joyent/node/issues/2279.
+	command -v node >/dev/null 2>&1 || {
+		echo DOWNLOADING NODE.JS IN "$DIR"
+		echo.
 
-	# Make sure we are on a version that passes the node-fibers tests on Windows.
-	curl -O http://nodejs.org/dist/v0.6.18/node-v0.6.18.msi
+		# Make sure we are on a version that passes the node-fibers tests on Windows.
+		curl -O http://nodejs.org/dist/v0.6.18/node-v0.6.18.msi
 
-	echo.
-	echo INSTALLING NODE.JS
-	echo.
+		echo.
+		echo INSTALLING NODE.JS
+		echo.
 
-	# Let's install node.js (includes v8 and npm).
-	$COMSPEC \/c node-v0.6.18.msi\ \/qr; true
-	rm node-v0.6.18.msi
+		# Let's install node.js (includes v8 and npm).
+		$COMSPEC \/c node-v0.6.18.msi\ \/qr; true
+		rm node-v0.6.18.msi
 
-	# Make sure we can see node and npm from now on.
-	export PATH="/c/Program Files (x86)/nodejs:/c/Program Files/nodejs:$PATH"
+		# Make sure we can see node and npm from now on.
+		export PATH="/c/Program Files (x86)/nodejs:/c/Program Files/nodejs:$PATH"
+	}
 else
 	echo BUILDING IN "$DIR"
 
@@ -163,6 +166,7 @@ which node
 which npm
 
 if [[ "$UNAME" == CYGWIN* || "$UNAME" == MINGW* ]] ; then
+	# XXX On Windows node is installed in Program Files, so we jump there for the moment.
 	NODE=$(which node)
 	cd "${NODE}_modules"
 else
@@ -185,7 +189,8 @@ npm install "uglify-js@1.2.6"
 npm install "clean-css@0.3.2"
 npm install "progress@0.0.4"
 if [[ "$UNAME" == CYGWIN* || "$UNAME" == MINGW* ]] ; then
-	npm install "fibers"
+	# Windows support became avalaible at version 0.6.7 in node-fibers.
+	npm install "fibers@0.6.7"
 else
 	npm install "fibers@0.6.5"
 fi
@@ -216,6 +221,7 @@ fi
 cd "$DIR"
 curl -O "$MONGO_URL"
 if [[ "$UNAME" == CYGWIN* || "$UNAME" == MINGW* ]] ; then
+	# The Windows distribution of MONGO comes in a different format, unzip accordingly.
 	unzip "${MONGO_NAME}.zip"
 	rm "${MONGO_NAME}.zip"
 else
@@ -228,6 +234,7 @@ mv "$MONGO_NAME" mongodb
 # needing.
 cd mongodb/bin
 if [[ "$UNAME" == CYGWIN* || "$UNAME" == MINGW* ]] ; then
+	# The Windows distribution of MONGO comes in a different format, we need to specify ".exe" and "monogosniff.exe" misses.
 	rm bsondump.exe mongodump.exe mongoexport.exe mongofiles.exe mongoimport.exe mongorestore.exe mongos.exe mongostat.exe mongotop.exe
 else
 	rm bsondump mongodump mongoexport mongofiles mongoimport mongorestore mongos mongosniff mongostat mongotop
@@ -237,7 +244,8 @@ cd ../..
 echo BUNDLING
 
 if [[ "$UNAME" == CYGWIN* || "$UNAME" == MINGW* ]] ; then
-	# Make sure node is bundled along, in a proper way.
+	# XXX On Windows we make sure Node.js is bundled along in a proper way.
+	#     To be able to place Node.js here straight away instead of copying Program Files, we need to wait for https://github.com/joyent/node/issues/2279.
 	NODE=$(which node)
 	cd "${NODE}_modules"
 	cd ..
@@ -250,6 +258,7 @@ fi
 cd "$DIR"
 echo "${BUNDLE_VERSION}" > .bundle_version.txt
 
+# If not on Windows, we did build node.js; so, we need to remove the build directory.
 if [[ "$UNAME" != CYGWIN* && "$UNAME" != MINGW* ]] ; then
 	rm -rf build
 fi
