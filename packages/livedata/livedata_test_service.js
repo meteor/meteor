@@ -100,15 +100,16 @@ objectsWithUsers = new Meteor.Collection("objectsWithUsers");
 
 if (Meteor.is_server) {
   objectsWithUsers.remove({});
-  objectsWithUsers.insert({name: "owned by none", ownerUserId: null});
-  objectsWithUsers.insert({name: "owned by one - a", ownerUserId: 1});
-  objectsWithUsers.insert({name: "owned by one - b", ownerUserId: 1});
-  objectsWithUsers.insert({name: "owned by two - a", ownerUserId: 2});
-  objectsWithUsers.insert({name: "owned by two - b", ownerUserId: 2});
-  objectsWithUsers.insert({name: "owned by two - c", ownerUserId: 2});
+  objectsWithUsers.insert({name: "owned by none", ownerUserIds: [null]});
+  objectsWithUsers.insert({name: "owned by one - a", ownerUserIds: [1]});
+  objectsWithUsers.insert({name: "owned by one/two - a", ownerUserIds: [1, 2]});
+  objectsWithUsers.insert({name: "owned by one/two - b", ownerUserIds: [1, 2]});
+  objectsWithUsers.insert({name: "owned by two - a", ownerUserIds: [2]});
+  objectsWithUsers.insert({name: "owned by two - b", ownerUserIds: [2]});
 
   Meteor.publish("objectsWithUsers", function() {
-    return objectsWithUsers.find({ownerUserId: this.userId()});
+    return objectsWithUsers.find({ownerUserIds: this.userId()},
+                                 {fields: {ownerUserIds: 0}});
   });
 
   userIdWhenStopped = null;
