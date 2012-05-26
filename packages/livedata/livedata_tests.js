@@ -327,8 +327,9 @@ testAsyncMulti("livedata - changing userid reruns subscriptions without flapping
         testSetAndUnset([
           {unset: true},
           {set: "owned by one - a"},
-          {set: "owned by one - b"}]);
-        test.equal(objectsWithUsers.find().count(), 2);
+          {set: "owned by one/two - a"},
+          {set: "owned by one/two - b"}]);
+        test.equal(objectsWithUsers.find().count(), 3);
         Meteor.defer(sendSecondSetUserId);
       });
 
@@ -340,11 +341,9 @@ testAsyncMulti("livedata - changing userid reruns subscriptions without flapping
       var afterSecondSetUserId = expect(function() {
         testSetAndUnset([
           {unset: true},
-          {unset: true},
           {set: "owned by two - a"},
-          {set: "owned by two - b"},
-          {set: "owned by two - c"}]);
-        test.equal(objectsWithUsers.find().count(), 3);
+          {set: "owned by two - b"}]);
+        test.equal(objectsWithUsers.find().count(), 4);
         Meteor.defer(sendThirdSetUserId);
       });
 
@@ -357,7 +356,7 @@ testAsyncMulti("livedata - changing userid reruns subscriptions without flapping
         // Nothing should have been sent since the results of the
         // query are the same ("don't flap data on the wire")
         testSetAndUnset([]);
-        test.equal(objectsWithUsers.find().count(), 3);
+        test.equal(objectsWithUsers.find().count(), 4);
         undoEavesdrop();
       });
     }
