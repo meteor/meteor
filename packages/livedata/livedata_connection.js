@@ -306,7 +306,11 @@ _.extend(Meteor._LivedataConnection.prototype, {
       // of the stub as our return value.
       var stub = self.method_handlers[name];
       if (stub) {
-        var invocation = new Meteor._MethodInvocation(true /* is_simulation */);
+        var setUserId = function(userId) {
+          self.setUserId(userId);
+        };
+        var invocation = new Meteor._MethodInvocation(
+          true /* is_simulation */, self.userId(), setUserId);
         try {
           var ret = Meteor._CurrentInvocation.withValue(invocation,function () {
             return stub.apply(invocation, args);
@@ -372,6 +376,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
       params: args,
       id: '' + (self.next_method_id++)
     };
+
     if (self.outstanding_wait_method) {
       self.blocked_methods.push({
         msg: msg,

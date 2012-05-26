@@ -36,6 +36,8 @@ Meteor._LivedataSession = function (server) {
   // manually. this is sometimes needed because subscriptions
   // frequently call flush
   self.dontFlush = false;
+
+  self.userId = null;
 };
 
 _.extend(Meteor._LivedataSession.prototype, {
@@ -269,8 +271,12 @@ _.extend(Meteor._LivedataSession.prototype, {
         return;
       }
 
-      var invocation = new Meteor._MethodInvocation(false /* is_simulation */,
-                                                   unblock);
+      var setUserId = function(userId) {
+        self._setUserId(userId);
+      };
+
+      var invocation = new Meteor._MethodInvocation(
+        false /* is_simulation */, self.userId, setUserId, unblock);
       try {
         var ret =
           Meteor._CurrentWriteFence.withValue(fence, function () {
@@ -303,6 +309,14 @@ _.extend(Meteor._LivedataSession.prototype, {
       self.result_cache[msg.id] = _.extend({when: +(new Date)}, payload);
       self.send(_.extend({msg: 'result', id: msg.id}, payload));
     }
+  },
+
+  // Sets the current user id in all appropriate contexts and reruns
+  // all subscriptions
+  _setUserId: function(userId) {
+    var self = this;
+    self.userId = userId;
+    this._rerunAllSubscriptions();
   },
 
   _startSubscription: function (handler, priority, sub_id, params) {
@@ -365,6 +379,7 @@ _.extend(Meteor._LivedataSession.prototype, {
 
     var rerunSub = function(sub) {
       sub._teardown();
+      sub._userId = self.userId;
       sub._runHandler();
     };
     var flushSub = function(sub) {
@@ -435,6 +450,8 @@ Meteor._LivedataSubscription = function (session, sub_id, priority) {
 
   // stop callbacks to g/c this sub.  called w/ zero arguments.
   this.stop_callbacks = [];
+
+  this._userId = session.userId;
 };
 
 _.extend(Meteor._LivedataSubscription.prototype, {
@@ -554,6 +571,10 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
     self.pending_data = {};
     self.pending_complete = false;
+  },
+
+  userId: function() {
+    return this._userId;
   },
 
   _teardown: function() {
@@ -825,7 +846,23 @@ _.extend(Meteor._LivedataServer.prototype, {
     if (!handler)
       var exception = new Meteor.Error(404, "Method not found");
     else {
-      var invocation = new Meteor._MethodInvocation(false /* is_simulation */);
+      // If this is a method call from within another method, get the
+      // user state from the outer method, otherwise don't allow
+      // setUserId to be called
+      var userId = null;
+      var setUserId = function() {
+        throw new Error("Can't call setUserId on a server initiated method call");
+      };
+      var currentInvocation = Meteor._CurrentInvocation.get();
+      if (currentInvocation) {
+        userId = currentInvocation.userId();
+        setUserId = function(userId) {
+          currentInvocation.setUserId(userId);
+        };
+      }
+
+      var invocation = new Meteor._MethodInvocation(
+        false /* is_simulation */, userId, setUserId);
       try {
         var ret = Meteor._CurrentInvocation.withValue(invocation, function () {
           return handler.apply(invocation, args);
