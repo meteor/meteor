@@ -91,3 +91,55 @@ Meteor.methods({
     Meteor.refresh({collection: 'ledger', world: world});
   }
 });
+
+/*****/
+
+/// Helpers for "livedata - changing userid reruns subscriptions..."
+
+objectsWithUsers = new Meteor.Collection("objectsWithUsers");
+
+if (Meteor.is_server) {
+  objectsWithUsers.remove({});
+  objectsWithUsers.insert({name: "owned by none", ownerUserId: null});
+  objectsWithUsers.insert({name: "owned by one - a", ownerUserId: 1});
+  objectsWithUsers.insert({name: "owned by one - b", ownerUserId: 1});
+  objectsWithUsers.insert({name: "owned by two - a", ownerUserId: 2});
+  objectsWithUsers.insert({name: "owned by two - b", ownerUserId: 2});
+  objectsWithUsers.insert({name: "owned by two - c", ownerUserId: 2});
+
+  Meteor.publish("objectsWithUsers", function() {
+    return objectsWithUsers.find({ownerUserId: this.userId()});
+  });
+
+  userIdWhenStopped = null;
+  Meteor.publish("recordUserIdOnStop", function() {
+    var self = this;
+    self.onStop(function() {
+      userIdWhenStopped = self.userId();
+    });
+  });
+
+  Meteor.methods({
+    setUserId: function(userId) {
+      this.setUserId(userId);
+    },
+    userIdWhenStopped: function() {
+      return userIdWhenStopped;
+    }
+  });
+}
+
+/*****/
+
+/// Helper for "livedata - setUserId fails when called on server"
+
+if (Meteor.is_server) {
+  Meteor.startup(function() {
+    errorThrownWhenCallingSetUserIdDirectlyOnServer = null;
+    try {
+      Meteor.call("setUserId", 1000);
+    } catch (e) {
+      errorThrownWhenCallingSetUserIdDirectlyOnServer = e;
+    }
+  });
+}
