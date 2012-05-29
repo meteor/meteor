@@ -61,3 +61,27 @@ Meteor.methods({
     Meteor.refresh({collection: 'ledger', world: world});
   }
 });
+
+
+
+
+
+if (Meteor.is_server) {
+  
+  Meteor.startup(function() {
+    Meteor.use(function(session,next) {
+      CURRENT_SESSION_ID.withValue(session.id,next);
+    })
+  });
+
+
+  CURRENT_SESSION_ID = new Meteor.EnvironmentVariable;
+  Meteor.methods({
+    'sessionID': function() {
+      return CURRENT_SESSION_ID.get();
+    }
+  });
+}
+
+
+

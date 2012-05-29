@@ -91,7 +91,7 @@ _.extend(Meteor._LivedataSession.prototype, {
         _.each(self.server.universal_publish_handlers, function (handler) {
           self._startSubscription(handler, self.next_sub_priority--);
         });
-      }).run;
+      }).run();
     }
   },
 

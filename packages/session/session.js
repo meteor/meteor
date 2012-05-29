@@ -107,7 +107,7 @@ Session = _.extend({}, {
 
 if (Meteor.is_client) {
   Session.__defineGetter__('id',function() {
-    Meteor.default_connection.last_session_id;
+    return Meteor.default_connection.last_session_id;
   });
 }
 
