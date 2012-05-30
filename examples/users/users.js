@@ -32,6 +32,7 @@ if (Meteor.is_client) {
   };
 
   Template.users.users = function() {
+    // return the users that are connected
     return _.map(Sessions.find({connected: true, user: {$exists: true}}).fetch(),function(session) {
       return {name: session.user};
     });
@@ -43,6 +44,7 @@ if (Meteor.is_client) {
   Template.users.events[ okcancel_events('#set-user-box') ] =
     make_okcancel_handler({
       ok: function (text, evt) {
+        // sets the user for this session
         Sessions.update({id: Session.id},{$set: {user: text}});
         evt.target.value = "";
       }
@@ -52,18 +54,23 @@ if (Meteor.is_client) {
 
 if (Meteor.is_server) {
   Meteor.methods({
+    // on session creation add a session document to the 
+    // sessions collection with the id of the new session
     session: function() {
       var ret = Sessions.insert({id: Session.CURRENT_ID.get(), connected: false});
     },
 
+    // on new connection update the session document 
     connect: function() {
       Sessions.update({id: Session.CURRENT_ID.get()}, {$set: {connected: true}});
     },
 
+    // on disconnection update the session document
     disconnect: function() {
       Sessions.update({id: Session.CURRENT_ID.get()}, {$set: {connected: false}});
     },
 
+    // when session is destroyed remove it from collection
     destroy: function() {
       Sessions.remove({id: Session.CURRENT_ID.get()});
     }
@@ -71,7 +78,12 @@ if (Meteor.is_server) {
 
   Meteor.startup(function () {
     Sessions.remove({});
+
+    // create environment variable for current session id
     Session.CURRENT_ID = new Meteor.EnvironmentVariable;
+
+    // set the current session id environment variable whenever a livedata
+    // session startsup a new fiber
     Meteor.use(function(session,next) {
       Session.CURRENT_ID.withValue(session.id,next);
     });

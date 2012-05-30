@@ -35,7 +35,8 @@ Meteor._LivedataSession = function (server) {
 
 _.extend(Meteor._LivedataSession.prototype, {
 
-
+  // Run the middleware stack, passing each middleware
+  // the session object and function to run next middleware
   runStack: function(cb) {
     var self = this
       , stack = self.server.stack
@@ -49,6 +50,8 @@ _.extend(Meteor._LivedataSession.prototype, {
     next();
   },
 
+  // Run middleware stack and then call a server method
+  // currently only used for the reserved methods: session, connect, disconnect, and destroy
   call: function() {
     var self = this
       , server = self.server
@@ -71,12 +74,12 @@ _.extend(Meteor._LivedataSession.prototype, {
       self.detach(self.socket);
     }
 
-
     self.socket = socket;
     self.last_connect_time = +(new Date);
     _.each(self.out_queue, function (msg) {
       self.socket.send(JSON.stringify(msg));
     });
+
 
     self.call('connect',function(err) {
       if (err && !(err instanceof Meteor.Error)) throw err;
@@ -100,7 +103,7 @@ _.extend(Meteor._LivedataSession.prototype, {
   // continue running and queue up its messages.) If 'socket' isn't
   // the currently connected socket, just clean up the pointer that
   // may have led us to believe otherwise.
-  detach: function (socket) {   
+  detach: function (socket) {
     var self = this;
     if (socket === self.socket) {
       self.socket = null;
@@ -163,8 +166,6 @@ _.extend(Meteor._LivedataSession.prototype, {
     else
       self.out_queue.push(msg);
   },
-
-
 
   // Send a connection error.
   sendError: function (reason, offending_message) {
@@ -345,7 +346,6 @@ _.extend(Meteor._LivedataSession.prototype, {
       self.send(_.extend({msg: 'result', id: msg.id}, payload));
     }
   },
-
 
   _startSubscription: function (handler, priority, sub_id, params) {
     var self = this;
@@ -635,7 +635,7 @@ Meteor._LivedataServer = function () {
 
   self.sessions = {}; // map from id to session
 
-  self.stack = [];
+  self.stack = []; // middleware stack
 
   self.stream_server = new Meteor._StreamServer;
 
@@ -722,9 +722,8 @@ Meteor._LivedataServer = function () {
     var now = +(new Date);
     _.each(self.sessions, function (s) {
       s.cleanup();
-      if (!s.socket && (now - s.last_detach_time) > 15 * 60 * 1000) {
+      if (!s.socket && (now - s.last_detach_time) > 15 * 60 * 1000)
         s.destroy();
-      }
     });
   }, 1 * 60 * 1000);
 };
@@ -868,11 +867,10 @@ _.extend(Meteor._LivedataServer.prototype, {
       f();
   },
 
-
+  // add middleware to stack
   use: function(f) {
     var self = this;
     self.stack.push(f);
   }
 });
-
 

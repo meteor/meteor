@@ -24,6 +24,7 @@
       if (!Fiber.current._meteor_dynamics)
         Fiber.current._meteor_dynamics = [];
       var currentValues = Fiber.current._meteor_dynamics;
+
       var saved = currentValues[this.slot];
       try {
         currentValues[this.slot] = value;
@@ -44,7 +45,6 @@
   // return value of the function will be passed through, and no new
   // fiber will be created.)
   Meteor.bindEnvironment = function (func, onException, _this) {
-
     var boundValues = _.clone(Fiber.current._meteor_dynamics || []);
 
     if (!onException)
