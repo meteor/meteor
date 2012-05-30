@@ -568,3 +568,4 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
 // - reconnect, with session resume.
 // - restart on update flag
 // - on_update event
+// - reloading when the app changes, including session migration

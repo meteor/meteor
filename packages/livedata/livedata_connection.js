@@ -734,9 +734,10 @@ _.extend(Meteor._LivedataConnection.prototype, {
   },
 
   _readyToMigrate: function() {
+    var self = this;
     return self.outstanding_methods.length === 0 &&
       !self.outstanding_wait_method &&
-      self.blocking_methods.length === 0;
+      self.blocked_methods.length === 0;
   }
 });
 
