@@ -238,6 +238,21 @@ testAsyncMulti("livedata - compound methods", [
   }
 ]);
 
+Tinytest.addAsync("livedata - env middleware", function(test,done) {
+  if (Meteor.is_client) {
+    onQuiesce(function() {
+      Meteor.call('sessionID',function(err,sid) {
+        test.equal(sid,Session.id);
+        done();
+      })
+    })
+  } else {
+    done();
+  }
+    
+  }
+);
+
 // XXX some things to test in greater detail:
 // staying in simulation mode
 // time warp
