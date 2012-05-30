@@ -119,10 +119,15 @@
           migration_data[p.name] = status[1];
       };
 
-      // Persist the migration data
-      var json = JSON.stringify({
-        time: (new Date()).getTime(), data: migration_data, reload: true
-      });
+      try {
+        // Persist the migration data
+        var json = JSON.stringify({
+          time: (new Date()).getTime(), data: migration_data, reload: true
+        });
+      } catch (err) {
+        Meteor._debug("Couldn't serialize data for migration", migration_data);
+        throw err;
+      }
 
       if (typeof sessionStorage !== "undefined") {
         sessionStorage.setItem(KEY_NAME, json);
@@ -132,7 +137,7 @@
 
       // Tell the browser to shut down this VM and make a new one
       window.location.reload();
-    })};
+    }); };
 
     tryReload();
   };
