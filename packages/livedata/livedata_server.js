@@ -30,13 +30,12 @@ Meteor._LivedataSession = function (server) {
 
   // map from collection name -> id -> key -> subscription id -> true
   self.provides_key = {};
-
 };
 
 _.extend(Meteor._LivedataSession.prototype, {
 
   // Run the middleware stack, passing each middleware
-  // the session object and function to run next middleware
+  // the session object and a function to run the next middleware
   runStack: function(cb) {
     var self = this
       , stack = self.server.stack
@@ -50,8 +49,8 @@ _.extend(Meteor._LivedataSession.prototype, {
     next();
   },
 
-  // Run middleware stack and then call a server method
-  // currently only used for the reserved methods: session, connect, disconnect, and destroy
+  // Run middleware stack and then call a server method.
+  // Currently only used for the reserved methods: session, connect, disconnect, and destroy
   call: function() {
     var self = this
       , server = self.server
@@ -79,7 +78,6 @@ _.extend(Meteor._LivedataSession.prototype, {
     _.each(self.out_queue, function (msg) {
       self.socket.send(JSON.stringify(msg));
     });
-
 
     self.call('connect',function(err) {
       if (err && !(err instanceof Meteor.Error)) throw err;
@@ -152,9 +150,10 @@ _.extend(Meteor._LivedataSession.prototype, {
     }
     self._stopAllSubscriptions();
     self.in_queue = self.out_queue = [];
+
     self.call('destroy',function(err) {
       if (err && !(err instanceof Meteor.Error)) throw err;
-    })
+    });
   },
 
   // Send a message (queueing it if no socket is connected right now.)
@@ -685,7 +684,7 @@ Meteor._LivedataServer = function () {
 
             socket.meteor_session.call('session',function(err) {
               if (err && !(err instanceof Meteor.Error)) throw err;
-            })
+            });
             
           }
 

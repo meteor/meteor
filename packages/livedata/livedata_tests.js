@@ -253,8 +253,6 @@ Tinytest.addAsync("livedata - env middleware", function(test,done) {
   }
 );
 
-
-
 // XXX some things to test in greater detail:
 // staying in simulation mode
 // time warp

@@ -62,16 +62,12 @@ Meteor.methods({
   }
 });
 
-
-
-
-
 if (Meteor.is_server) {
-  
+
   Meteor.startup(function() {
     Meteor.use(function(session,next) {
       CURRENT_SESSION_ID.withValue(session.id,next);
-    })
+    });
   });
 
 
@@ -82,6 +78,3 @@ if (Meteor.is_server) {
     }
   });
 }
-
-
-
