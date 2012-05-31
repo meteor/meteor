@@ -268,11 +268,14 @@ LocalCollection.Cursor.prototype._markAsReactive = function (options) {
 // this in our handling of null and $exists)
 LocalCollection.prototype.insert = function (doc) {
   var self = this;
-  doc = LocalCollection._deepcopy(doc);
+  doc = LocalCollection._deepcopy(doc, self["default"]);
+
   // XXX deal with mongo's binary id type?
   if (!('_id' in doc))
     doc._id = LocalCollection.uuid();
   // XXX check to see that there is no object with this _id yet?
+  
+  console.log(doc)
   self.docs[doc._id] = doc;
 
   // trigger live queries that match
@@ -367,7 +370,7 @@ LocalCollection.prototype._modifyAndNotify = function (doc, mod) {
 
 // XXX findandmodify
 
-LocalCollection._deepcopy = function (v) {
+LocalCollection._deepcopy = function (v, inherit) {
   if (typeof v !== "object")
     return v;
   if (v === null)
@@ -379,9 +382,22 @@ LocalCollection._deepcopy = function (v) {
     return ret;
   }
   var ret = {};
+  if (inherit) {
+    ret = LocalCollection._createObject(inherit);
+  }
+  
   for (var key in v)
     ret[key] = LocalCollection._deepcopy(v[key]);
   return ret;
+};
+
+// Creates a new Object inherited from the object that is passed.
+
+LocalCollection._createObject = Object.create || function(o) {
+  var Func;
+  Func = function() {};
+  Func.prototype = o;
+  return new Func();
 };
 
 // XXX the sorted-query logic below is laughably inefficient. we'll
