@@ -36,7 +36,7 @@ h3 {
     font-size: 120%;
     padding: 8px 6px;
     text-align: center;
-}    
+}
 
 #top-tag-filter, #main-pane, #side-pane, #bottom-pane {
     position: absolute;
@@ -129,13 +129,17 @@ h3 {
     font-weight: bold;
 }
 
+#lists .list-name {
+    cursor: pointer;
+}
+
 #createList {
     padding: 3px 6px;
     margin-top: 5px;
 }
 
 #createList input {
-    width: 180px;   
+    width: 180px;
 }
 
 #new-todo-box {
