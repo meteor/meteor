@@ -1423,7 +1423,7 @@ Example:
 
       // If we're inside a context, and it's not yet listening to
       // temperature changes..
-      if (context && !this.listeners[context.id])
+      if (context && !this.listeners[context.id]) {
         // .. add it to our list of contexts that care about the temperature ..
         this.listeners[context.id] = context;
 
