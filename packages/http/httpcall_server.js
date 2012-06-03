@@ -52,7 +52,7 @@ Meteor.http = Meteor.http || {};
 
     if (params_for_body) {
       content = Meteor.http._encodeParams(params_for_body);
-      headers['Content-Type'] = "x-www-form-urlencoded";
+      headers['Content-Type'] = "application/x-www-form-urlencoded";
     }
 
     _.extend(headers, options.headers || {});
