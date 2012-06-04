@@ -27,6 +27,7 @@ Package.register_extension("blade", function(bundle, srcPath, servePath, where) 
 		if(templateName == "head")
 			tmpl({}, function(err, html) {
 				//This should happen synchronously due to compile options set above
+				if(err) throw err;
 				bundle.add_resource({
 					type: 'head',
 					data: html,
@@ -36,6 +37,7 @@ Package.register_extension("blade", function(bundle, srcPath, servePath, where) 
 		else if(templateName == "body")
 			tmpl({}, function(err, html) {
 				//This should happen synchronously due to compile options set above
+				if(err) throw err;
 				bundle.add_resource({
 					type: 'body',
 					data: html,
