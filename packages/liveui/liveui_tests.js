@@ -495,7 +495,7 @@ Tinytest.add("liveui - copied attributes", function(test) {
     }));
     var maybe_focus = function(div) {
       if (with_focus) {
-        div.node().style.display = "block"; // make visible
+        div.show();
         focusElement(div.node().firstChild);
       }
     };
@@ -1430,9 +1430,7 @@ var make_input_tester = function(render_func, events) {
       R.get(); // create dependency
       return render_func();
     }, { events: events, event_data: buf }));
-  div.node().style.display = "block"; // make visible
-  div.node().style.height = 0;
-  div.node().style.overflow = 'hidden';
+  div.show(true);
 
   var getbuf = function() {
     var ret = buf.slice();
@@ -1766,6 +1764,50 @@ Tinytest.add("liveui - controls", function(test) {
   Meteor.flush();
   test.equal(_.pluck(btns, 'checked'), [false, true, false]);
   test.equal(div.text(), "Band: FM");
+
+  div.kill();
+
+  // Textarea
+
+  R = ReactiveVar("test");
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return '<textarea id="mytextarea">This is a '+
+      R.get()+'</textarea>';
+  }));
+  div.show(true);
+
+  var textarea = div.node().firstChild;
+  test.equal(textarea.nodeName, "TEXTAREA");
+  test.equal(textarea.value, "This is a test");
+
+  // value updates reactively
+  R.set("fridge");
+  Meteor.flush();
+  test.equal(textarea.value, "This is a fridge");
+
+  // ...unless focused
+  focusElement(textarea);
+  R.set("frog");
+  Meteor.flush();
+  test.equal(textarea.value, "This is a fridge");
+
+  // blurring and re-setting works
+  blurElement(textarea);
+  Meteor.flush();
+  test.equal(textarea.value, "This is a fridge");
+  R.set("frog");
+  Meteor.flush();
+  test.equal(textarea.value, "This is a frog");
+
+  // Setting a value (similar to user typing) should
+  // not prevent value from being updated reactively.
+  textarea.value = "foobar";
+  R.set("photograph");
+  Meteor.flush();
+  test.equal(textarea.value, "This is a photograph");
+
+
+  div.kill();
 });
 
 // TO TEST:

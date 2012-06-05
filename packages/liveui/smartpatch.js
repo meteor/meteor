@@ -104,9 +104,14 @@ Meteor.ui._Patcher.prototype.diffpatch = function(copyCallback) {
         if (self.match(tgt, src, copyCallback)) {
           // match succeeded
           if (tgt.firstChild || src.firstChild) {
-            // recurse with a new Patcher!
-            var patcher = new Meteor.ui._Patcher(tgt, src);
-            patcher.diffpatch(copyCallback);
+            // Don't patch contents of TEXTAREA tag,
+            // which are only the initial contents but
+            // may affect the tag's .value in IE.
+            if (tgt.nodeName !== "TEXTAREA") {
+              // recurse with a new Patcher!
+              var patcher = new Meteor.ui._Patcher(tgt, src);
+              patcher.diffpatch(copyCallback);
+            }
           }
         }
         lastPos = targetNodeOrder[label];
@@ -329,6 +334,12 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
   // as of FF3, Safari4
   var target_focused = (tgt === document.activeElement);
 
+  // Is this a control with a user-mutated "value" property?
+  var has_user_value = (
+    (tgt.nodeName === "INPUT" &&
+     (tgt.type === "text")) ||
+      tgt.nodeName === "TEXTAREA");
+
   ///// Clear current attributes
 
   if (tgt.style.cssText)
@@ -399,24 +410,24 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
 
   if (tgt.mergeAttributes) {
     // IE code path:
+    //
+    // Only IE (all versions) has mergeAttributes.
+    // It's probably a good bit faster in old IE than
+    // iterating over all the attributes, and the treatment
+    // of form controls is sufficiently different in IE from
+    // other browsers that we keep the special cases separate.
 
     tgt.mergeAttributes(src);
+
     if (typeof tgt.checked !== "undefined" ||
         typeof src.checked !== "undefined")
       tgt.checked = src.checked;
-    if (src.nodeName === "INPUT") {
-      if (src.type === "text") {
-        if (! target_focused)
-          tgt.value = src.value;
-      } else {
-        tgt.value = src.value;
-      }
-    }
+
     if (src.name)
       tgt.name = src.name;
 
   } else {
-    // non-IE code path:
+    // Non-IE code path:
 
     for(var i=0, L=srcAttrs.length; i<L; i++) {
       var srcA = srcAttrs.item(i);
@@ -434,13 +445,18 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
           tgt.className = src.className;
         } else if (name === "value") {
           // don't set attribute, just overwrite property
-          if (! target_focused)
-            tgt.value = src.value;
+          // (in next phase)
         } else {
           tgt.setAttribute(name, value);
         }
       }
     }
+  }
+
+  // Copy the control's value, only if tgt doesn't have focus.
+  if (has_user_value) {
+    if (! target_focused)
+      tgt.value = src.value;
   }
 
 };
