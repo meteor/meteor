@@ -1697,6 +1697,77 @@ testAsyncMulti(
     ];
   })());
 
+Tinytest.add("liveui - controls", function(test) {
+
+  // Radio buttons
+
+  var R = ReactiveVar("");
+  var change_buf = [];
+  var div = OnscreenDiv(Meteor.ui.render(function() {
+    var buf = [];
+    buf.push("Band: ");
+    _.each(["AM", "FM", "XM"], function(band) {
+      var checked = (R.get() === band) ? 'checked="checked"' : '';
+      buf.push('<input type="radio" name="bands" '+
+               'value="'+band+'" '+checked+'/>');
+    });
+    buf.push(R.get());
+    return buf.join('');
+  }, {events: {
+    'change input': function(event) {
+      // IE 7 is known to fire change events on all
+      // the radio buttons with checked=false, as if
+      // each button were deselected before selecting
+      // the new one.
+      // However, browsers are consistent if we are
+      // getting a checked=true notification.
+      var btn = event.target;
+      if (btn.checked) {
+        var band = btn.value;
+        change_buf.push(band);
+        R.set(band);
+      }
+    }
+  }}));
+
+  Meteor.flush();
+
+  // get the three buttons; they should be considered 'labeled'
+  // by the patcher and not change identities!
+  var btns = _.toArray(div.node().getElementsByTagName("INPUT"));
+
+  test.equal(_.pluck(btns, 'checked'), [false, false, false]);
+  test.equal(div.text(), "Band: ");
+
+  clickElement(btns[0]);
+  test.equal(change_buf, ['AM']);
+  change_buf.length = 0;
+  Meteor.flush();
+  test.equal(_.pluck(btns, 'checked'), [true, false, false]);
+  test.equal(div.text(), "Band: AM");
+
+  clickElement(btns[1]);
+  test.equal(change_buf, ['FM']);
+  change_buf.length = 0;
+  Meteor.flush();
+  test.equal(_.pluck(btns, 'checked'), [false, true, false]);
+  test.equal(div.text(), "Band: FM");
+
+  clickElement(btns[2]);
+  test.equal(change_buf, ['XM']);
+  change_buf.length = 0;
+  Meteor.flush();
+  test.equal(_.pluck(btns, 'checked'), [false, false, true]);
+  test.equal(div.text(), "Band: XM");
+
+  clickElement(btns[1]);
+  test.equal(change_buf, ['FM']);
+  change_buf.length = 0;
+  Meteor.flush();
+  test.equal(_.pluck(btns, 'checked'), [false, true, false]);
+  test.equal(div.text(), "Band: FM");
+});
+
 // TO TEST:
 // - events
 //   - attaching events in render, chunk, listChunk item, listChunk else
