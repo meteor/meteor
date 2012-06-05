@@ -104,3 +104,10 @@
   {{/with}}
 </div>
 </template>
+
+<template name="test_safestring_a">
+  {{foo}} {{{foo}}} {{bar}} {{{bar}}}
+  {{#foo}}{{/foo}} {{#bar}}{{/bar}}
+  {{fooprop}} {{{fooprop}}} {{barprop}} {{{barprop}}}
+  {{#fooprop}}{{/fooprop}} {{#barprop}}{{/barprop}}
+</template>

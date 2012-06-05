@@ -108,3 +108,21 @@ Tinytest.add("templating - event handler this", function(test) {
   tmpl.kill();
   Meteor.flush();
 });
+
+Tinytest.add("templating - safestring", function(test) {
+
+  Template.test_safestring_a.foo = function() {
+    return "1<2";
+  };
+  Template.test_safestring_a.bar = function() {
+    return new Handlebars.SafeString("3<4");
+  };
+
+  var obj = {fooprop: "1<2",
+             barprop: new Handlebars.SafeString("3<4")};
+
+  test.equal(Template.test_safestring_a(obj).replace(/\s+/g, ' '),
+             "1&lt;2 1<2 3<4 3<4 1<2 3<4 "+
+             "1&lt;2 1<2 3<4 3<4 1<2 3<4");
+
+});
