@@ -111,15 +111,7 @@ Meteor.http = Meteor.http || {};
         response.content = body;
         response.headers = res.headers;
 
-        // only parse data if correct content type.
-        if (_.include(['application/json', 'text/javascript'],
-                      response.headers['content-type'])) {
-          try {
-            response.data = JSON.parse(response.content);
-          } catch (err) {
-            response.data = null;
-          }
-        };
+        Meteor.http._populateData(response);
 
         if (res.statusCode >= 400)
           error = new Error("failed");

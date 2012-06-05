@@ -68,7 +68,7 @@ var respond = function(req, res) {
       response_string = JSON.stringify(response_data);
 
     res.statusCode = 200;
-    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.end(response_string);
   });
 
