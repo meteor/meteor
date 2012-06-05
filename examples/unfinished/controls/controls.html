@@ -1,0 +1,35 @@
+<head>
+  <title>controls</title>
+</head>
+
+<body>
+  {{> radios}}
+  {{> checkboxes}}
+  {{> spew}}
+</body>
+
+<template name="radios">
+  <div>
+    Band:
+    <input type="radio" name="bands" value="AM" {{band_checked "AM"}}/>
+    <input type="radio" name="bands" value="FM" {{band_checked "FM"}}/>
+    <input type="radio" name="bands" value="XM" {{band_checked "XM"}}/>
+    {{current_band}}
+  </div>
+</template>
+
+<template name="checkboxes">
+  <div>
+    Daylight Savings Time:
+    <input type="checkbox" name="dst" value="yes" {{dst_checked}}/>
+    {{dst}}
+  </div>
+</template>
+
+<template name="spew">
+  <div>
+    {{#each lines}}
+      <br>{{this}}
+    {{/each}}
+  </div>
+</template>
