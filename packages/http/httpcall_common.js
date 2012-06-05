@@ -35,6 +35,7 @@ Meteor.http = Meteor.http || {};
     return url;
   };
 
+  // Fill in `response.data` if the content-type is JSON.
   Meteor.http._populateData = function(response) {
     // Read Content-Type header, up to a ';' if there is one.
     // A typical header might be "application/json; charset=utf-8"
