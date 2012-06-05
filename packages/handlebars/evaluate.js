@@ -70,10 +70,7 @@ Handlebars._escape = (function() {
   };
 
   return function (x) {
-    // If Handlebars sees an &entity; in the input text, it won't quote
-    // it (won't replace it with &ampentity;). I'm not sure if that's
-    // the right choice -- it's definitely a heuristic..
-    return x.replace(/&(?!\w+;)|[<>"'`]/g, escape_one);
+    return x.replace(/[&<>"'`]/g, escape_one);
   };
 })();
 
