@@ -55,6 +55,7 @@ Handlebars.registerHelper = function (name, func) {
   Handlebars._default_helpers[name] = func;
 };
 
+// Utility to HTML-escape a string.
 Handlebars._escape = (function() {
   var escape_map = {
     "<": "&lt;",
@@ -196,11 +197,22 @@ Handlebars.evaluate = function (ast, data, options) {
       };
     };
 
+    // Handle the return value of a {{helper}}.
+    // Takes a:
+    //   string - escapes it
+    //   SafeString - returns the underlying string unescaped
+    //   other value - coerces to a string and escapes it
+    var maybeEscape = function(x) {
+      if (x instanceof Handlebars.SafeString)
+        return x.toString();
+      return Handlebars._escape(toString(x));
+    };
+
     _.each(elts, function (elt) {
       if (typeof(elt) === "string")
         buf.push(elt);
       else if (elt[0] === '{')
-        buf.push(Handlebars._escape(toString(invoke(stack, elt[1]))));
+        buf.push(maybeEscape(invoke(stack, elt[1])));
       else if (elt[0] === '!')
         buf.push(toString(invoke(stack, elt[1] || '')));
       else if (elt[0] === '#') {
@@ -213,11 +225,11 @@ Handlebars.evaluate = function (ast, data, options) {
           function (data) {
             return template({parent: stack, data: data}, elt[3] || []);
           }, stack.data);
-        buf.push(invoke(stack, elt[1], block));
+        buf.push(toString(invoke(stack, elt[1], block)));
       } else if (elt[0] === '>') {
         if (!(elt[1] in partials))
           throw new Error("No such partial '" + elt[1] + "'");
-        buf.push(partials[elt[1]](stack.data));
+        buf.push(toString(partials[elt[1]](stack.data)));
       } else
         throw new Error("bad element in template");
     });
@@ -228,3 +240,9 @@ Handlebars.evaluate = function (ast, data, options) {
   return template({data: data, parent: null}, ast);
 };
 
+Handlebars.SafeString = function(string) {
+  this.string = string;
+};
+Handlebars.SafeString.prototype.toString = function() {
+  return this.string.toString();
+};
