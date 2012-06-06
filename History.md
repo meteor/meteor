@@ -1,6 +1,25 @@
 
 ## vNEXT
 
+* Better parsing of `.html` template files
+  * Allow HTML comments (`<!-- -->`) at top level
+  * Allow whitespace anywhere in open/close tag
+  * Provide names and line numbers on error
+  * More helpful error messages
+
+* Form control improvements
+  * Fix reactive radio buttons in Internet Explorer.
+  * Fix reactive textareas to update consistently across browsers, matching text field behavior.
+
+* `http` package bug fixes:
+  * Send correct Content-Type when POSTing `params` from the server. #172
+  * Correctly detect JSON response Content-Type when a charset is present.
+  
+* Support `Handlebars.SafeString`. #160
+
+* Fix intermittent "Cursor is closed" mongo error.
+
+* Fix "Cannot read property 'nextSibling' of null" error in certain nested templates. #142
 
 ## v0.3.6
 
