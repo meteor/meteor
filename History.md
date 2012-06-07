@@ -1,6 +1,8 @@
 
 ## vNEXT
 
+## v0.3.7
+
 * Better parsing of `.html` template files
   * Allow HTML comments (`<!-- -->`) at top level
   * Allow whitespace anywhere in open/close tag
@@ -14,12 +16,15 @@
 * `http` package bug fixes:
   * Send correct Content-Type when POSTing `params` from the server. #172
   * Correctly detect JSON response Content-Type when a charset is present.
-  
+
 * Support `Handlebars.SafeString`. #160
 
 * Fix intermittent "Cursor is closed" mongo error.
 
 * Fix "Cannot read property 'nextSibling' of null" error in certain nested templates. #142
+
+* Add heartbeat timer on the client to notice when the server silently goes away.
+
 
 ## v0.3.6
 
@@ -32,7 +37,6 @@
 * Fix livedata to support subscriptions with overlapping documents.
 
 * Update node.js to 0.6.17 to fix potential security issue.
-
 
 
 ## v0.3.5
