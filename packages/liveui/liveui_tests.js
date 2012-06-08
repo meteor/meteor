@@ -864,7 +864,9 @@ Tinytest.add("liveui - listChunk stop", function(test) {
     return "#"+doc._id;
   });
   test.equal(result, "#123#456");
-  test.equal(numHandles, 0); // listChunk called handle.stop();
+  Meteor.flush();
+  // chunk killed because not created inside Meteor.ui.render
+  test.equal(numHandles, 0);
 
 
   var R = ReactiveVar(1);
@@ -1052,6 +1054,7 @@ Tinytest.add("liveui - listChunk event_data", function(test) {
           observer.added({_id: '3', name: 'Baz'}, 2);
           observer.added({_id: '4', name: 'Qux'}, 3);
         };
+        return { stop: function() {} };
       }},
       function(doc) {
         R.get(); // depend on R
@@ -1528,6 +1531,28 @@ Tinytest.add("liveui - event handling", function(test) {
   test.equal(div.text(), 'barism');
   clickElement(div.node().getElementsByTagName('SPAN')[0]);
   test.equal(event_buf, ['click']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+  // Test that reactive fragments manually inserted inside
+  // a reactive fragment eventually get wired.
+  event_buf.length = 0;
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return "<div></div>";
+  }, { events: eventmap("click span", event_buf) }));
+  Meteor.flush();
+  div.node().firstChild.appendChild(Meteor.ui.render(function() {
+    return '<span id="foozy">hello</span>';
+  }));
+  clickElement(getid("foozy"));
+  // implementation has no way to know we've inserted the fragment
+  test.equal(event_buf, []);
+  event_buf.length = 0;
+  Meteor.flush();
+  clickElement(getid("foozy"));
+  // now should be wired up
+  test.equal(event_buf, ['click span']);
   event_buf.length = 0;
   div.kill();
   Meteor.flush();
