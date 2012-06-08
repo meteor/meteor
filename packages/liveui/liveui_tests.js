@@ -804,6 +804,28 @@ Tinytest.add("liveui - leaderboard", function(test) {
   test.equal(selected_player.numListeners(), 0);
 });
 
+Tinytest.add("liveui - listChunk misc", function(test) {
+  // test listChunk outside of render mode, on custom observable
+
+  var stopped = false;
+  var observable = {
+    observe: function(x) {
+      x.added({_id:"123"}, 0);
+      x.added({_id:"456"}, 1);
+      var handle;
+      return handle = {
+        stop: function() { stopped = true; }
+      };
+    }
+  };
+
+  var result = Meteor.ui.listChunk(observable, function(doc) {
+    return "#"+doc._id;
+  });
+  test.equal(result, "#123#456");
+  test.isTrue(stopped); // listChunk called handle.stop();
+});
+
 Tinytest.add("liveui - listChunk table", function(test) {
   var c = new LocalCollection();
 
