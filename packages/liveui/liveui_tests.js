@@ -823,26 +823,50 @@ Tinytest.add("liveui - leaderboard", function(test) {
   test.equal(selected_player.numListeners(), 0);
 });
 
-Tinytest.add("liveui - listChunk misc", function(test) {
+Tinytest.add("liveui - listChunk stop", function(test) {
   // test listChunk outside of render mode, on custom observable
 
-  var stopped = false;
+  var numHandles = 0;
   var observable = {
     observe: function(x) {
       x.added({_id:"123"}, 0);
       x.added({_id:"456"}, 1);
       var handle;
+      numHandles++;
       return handle = {
-        stop: function() { stopped = true; }
+        stop: function() {
+          numHandles--;
+        }
       };
     }
   };
 
+  test.equal(numHandles, 0);
   var result = Meteor.ui.listChunk(observable, function(doc) {
     return "#"+doc._id;
   });
   test.equal(result, "#123#456");
-  test.isTrue(stopped); // listChunk called handle.stop();
+  test.equal(numHandles, 0); // listChunk called handle.stop();
+
+
+  var R = ReactiveVar(1);
+  var frag = WrappedFrag(Meteor.ui.render(function() {
+    if (R.get() > 0)
+      return Meteor.ui.listChunk(observable, function() { return "*"; });
+    return "";
+  })).hold();
+  test.equal(numHandles, 1);
+  Meteor.flush();
+  test.equal(numHandles, 1);
+  R.set(2);
+  Meteor.flush();
+  test.equal(numHandles, 1);
+  R.set(-1);
+  Meteor.flush();
+  test.equal(numHandles, 0);
+  
+  frag.release();
+  Meteor.flush();
 });
 
 Tinytest.add("liveui - listChunk table", function(test) {
