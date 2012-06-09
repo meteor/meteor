@@ -130,7 +130,7 @@ npm install optimist@0.3.1
 npm install coffee-script@1.3.1
 npm install less@1.3.0
 npm install sass@0.5.0
-npm install stylus@0.25.0
+npm install stylus@0.27.1
 npm install mime@1.2.5
 npm install semver@1.0.13
 npm install handlebars@1.0.5beta

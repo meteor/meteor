@@ -11,7 +11,9 @@ Package.register_extension(
 
     var contents = fs.readFileSync(source_path);
 
-    stylus.render(contents.toString('utf8'), { filename: source_path }, function(err, css) {
+    stylus(contents.toString('utf8'))
+    .set('filename', source_path)
+    .render(function(err, css) {
       if (err) {
         bundle.error('Stylus compiler error: ' + err.message);
         return;
