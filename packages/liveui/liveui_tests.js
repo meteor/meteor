@@ -700,6 +700,25 @@ Tinytest.add("liveui - chunks", function(test) {
     });
   });
 
+
+  // unused chunk
+
+  var Q = ReactiveVar("foo");
+  Meteor.ui.render(function() {
+    // create a chunk, in render mode,
+    // but don't use it.
+    Meteor.ui.chunk(function() {
+      return Q.get();
+    });
+    return "";
+  });
+  test.equal(Q.numListeners(), 1);
+  Q.set("bar");
+  // flush() should invalidate the unused
+  // chunk but not assume it has been wired
+  // up with a LiveRange.
+  Meteor.flush();
+  test.equal(Q.numListeners(), 0);
 });
 
 Tinytest.add("liveui - repeated chunk", function(test) {
