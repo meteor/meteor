@@ -3,6 +3,7 @@ Package.describe({
 });
 
 var stylus = require('stylus');
+var nib = require('nib');
 var fs = require('fs');
 
 Package.register_extension(
@@ -12,6 +13,7 @@ Package.register_extension(
     var contents = fs.readFileSync(source_path);
 
     stylus(contents.toString('utf8'))
+    .use(nib())
     .set('filename', source_path)
     .render(function(err, css) {
       if (err) {
