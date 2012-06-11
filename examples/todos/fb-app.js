@@ -1,0 +1,1 @@
+Meteor.setupFacebook(218833638237574, 'http://auth-todos.meteor.com');

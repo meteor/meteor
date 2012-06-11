@@ -1,0 +1,1 @@
+Meteor.setupFacebookSecret('a2f682b4d25e20c245d8ee8135cd82e3');
