@@ -190,6 +190,10 @@ Template.todo_item.adding_tag = function () {
   return Session.equals('editing_addtag', this._id);
 };
 
+Template.todo_item.loggedIn = function() {
+  return Meteor.default_connection.userId() !== null;
+};
+
 Template.todo_item.events = {
   'click .check': function () {
     Todos.update(this._id, {$set: {done: !this.done}});
@@ -220,8 +224,17 @@ Template.todo_item.events = {
     Meteor.setTimeout(function () {
       Todos.update({_id: id}, {$pull: {tags: tag}});
     }, 300);
-  }
+  },
 
+  'click .make-public': function () {
+    Todos.update(this._id, {$set: {privateTo: null}});
+  },
+
+  'click .make-private': function () {
+    Todos.update(this._id, {$set: {
+      privateTo: Meteor.default_connection.userId()
+    }});
+  }
 };
 
 Template.todo_item.events[ okcancel_events('#todo-input') ] =
@@ -284,6 +297,18 @@ Template.tag_filter.events = {
       Session.set('tag_filter', null);
     else
       Session.set('tag_filter', this.tag);
+  }
+};
+
+////////// Login //////////
+
+Template.login.loggedIn = function() {
+  return Meteor.default_connection.userId() !== null;
+};
+
+Template.login.events = {
+  'click #fb-login': function () {
+    Meteor.loginWithFacebook();
   }
 };
 
