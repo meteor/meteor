@@ -2,17 +2,12 @@
 
   var connect = __meteor_bootstrap__.require("connect");
 
-  // A map from oauth "state"s to `Future`s on which calling `return`
-  // will unblock the corresponding outstanding call to `login`
-  var oauthFutures = {};
-
-  // A map from oauth "state"s to incoming requests that, when processed,
-  // had no matching future (presumably because the login popup window
-  // finished its work before the server executed the call to `login`)
-  var unmatchedOauthRequests = {};
-
-  // XXX add test for supporting both: first receiving the oauth request
-  // and then executing call to `login`; and vice versa
+  // Incoming OAuth http requests are recorded here when the OAuth
+  // process is completed inside a popup window. Afterwards, these are
+  // read by the OAuth login method to complete the process.
+  //
+  // @type {Object} maps from Oauth "state" to request
+  Meteor.accounts._unmatchedOauthRequests = {};
 
   Meteor.accounts.facebook.setSecret = function(secret) {
     Meteor.accounts.facebook._secret = secret;
@@ -34,25 +29,31 @@
         if (!Meteor.accounts.facebook._secret)
           throw new Meteor.accounts.facebook.SetupError("Need to call Meteor.accounts.facebook.setSecret first");
 
-        // Close the popup window
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        var content =
-              '<html><head><script>window.close()</script></head></html>';
-        res.end(content, 'utf-8');
+        Meteor.accounts._unmatchedOauthRequests[req.query.state] = req;
 
-        // Try to unblock the appropriate call to `login`
-        var future = oauthFutures[req.query.state];
-        if (future) {
-          // Unblock the `login` call
-          future.return(handleOauthRequest(req));
+        // We support /_oauth?close, /_oauth?redirect=URL. Any other /_oauth request
+        // just served a blank page
+        if ('close' in req.query) { // check with 'in' because we don't set a value
+          // Close the popup window
+          res.writeHead(200, {'Content-Type': 'text/html'});
+          var content =
+                '<html><head><script>window.close()</script></head></html>';
+          res.end(content, 'utf-8');
+        } else if (req.query.redirect) {
+          res.writeHead(302, {'Location': req.query.redirect});
+          res.end();
         } else {
-          // Store this request. We expect to soon get a call to `login`
-          unmatchedOauthRequests[req.query.state] = req;
+          res.writeHead(200, {'Content-Type': 'text/html'});
+          res.end(content, 'utf-8');
         }
       }).run();
     });
 
   Meteor.methods({
+    // @returns {Object|null}
+    //   If successful, returns {token: reconnectToken, id: userId}
+    //   If unsuccessful (for example, if the user closed the oauth login popup),
+    //   returns null
     login: function(options) {
       // XXX write test for updateOrCreateUser
       var updateOrCreateUser = function(email, fbId, fbAccessToken) {
@@ -91,27 +92,18 @@
           throw new Meteor.Error("We only support facebook login for now. More soon!");
 
         var fbAccessToken;
-        if (unmatchedOauthRequests[options.oauth.state]) {
+        var unmatchedRequest = Meteor.accounts._unmatchedOauthRequests[options.oauth.state];
+        if (unmatchedRequest) {
           // We had previously received the HTTP request with the OAuth code
-          fbAccessToken = handleOauthRequest(
-            unmatchedOauthRequests[options.oauth.state]);
-          delete unmatchedOauthRequests[options.oauth.state];
+          fbAccessToken = handleOauthRequest(unmatchedRequest);
+          delete Meteor.accounts._unmatchedOauthRequests[options.oauth.state];
+
+          // If the user didn't authorize the login, either explicitly
+          // or by closing the popup window, return null
+          if (!fbAccessToken)
+            return null;
         } else {
-          if (oauthFutures[options.oauth.state])
-            throw new Error("STRANGE! We are trying to set up a future for this OAuth state twice " +
-                            "(this could happen if one calls login twice without waiting). " +
-                            options.oauth.state);
-
-          // Prepare Future that will be `return`ed when we get an incoming
-          // HTTP request with the OAuth code
-          oauthFutures[options.oauth.state] = new Future;
-          fbAccessToken = oauthFutures[options.oauth.state].wait();
-          delete oauthFutures[options.oauth.state];
-        }
-
-        if (!fbAccessToken) {
-          // if cancelled or not authorized
-          throw new Meteor.Error("Login cancelled or not authorized by user");
+          return null;
         }
 
         // Fetch user's facebook identity
@@ -141,10 +133,10 @@
       } else {
         throw new Meteor.Error("Unrecognized options for login request");
       }
-  },
+    },
 
-  logout: function() {
-    this.setUserId(null);
+    logout: function() {
+      this.setUserId(null);
     }
   });
 
@@ -164,21 +156,38 @@
       var response = Meteor.http.get(
         "https://graph.facebook.com/oauth/access_token?" +
           "client_id=" + Meteor.accounts.facebook._appId +
-          // XXX what does this redirect_uri even mean?
-          "&redirect_uri=" + Meteor.accounts.facebook._appUrl + "/_oauth/facebook" +
+          "&redirect_uri=" + Meteor.accounts.facebook._appUrl + "/_oauth/facebook?close" +
           "&client_secret=" + Meteor.accounts.facebook._secret +
           "&code=" + req.query.code).content;
 
-      // Extract the facebook access token from the response
-      var fbAccessToken;
-      _.each(response.split('&'), function(kvString) {
-        var kvArray = kvString.split('=');
-        if (kvArray[0] === 'access_token')
-          fbAccessToken = kvArray[1];
-        // XXX also parse the "expires" argument?
-      });
+      // Errors come back as JSON but success looks like a query encoded in a url
+      var error_response = null;
+      try {
+        // Just try to parse so that we know if we failed or not,
+        // while storing the parsed results
+        var error_response = JSON.parse(response);
+      } catch (e) {
+      }
 
-      return fbAccessToken;
+      if (error_response) {
+        if (error_response.error) {
+          throw new Meteor.Error("Error trying to get access token from Facebook", error_response);
+        } else {
+          throw new Meteor.Error("Unexpected response when trying to get access token from Facebook", error_response);
+        }
+      } else {
+        // Success!  Extract the facebook access token from the
+        // response
+        var fbAccessToken;
+        _.each(response.split('&'), function(kvString) {
+          var kvArray = kvString.split('=');
+          if (kvArray[0] === 'access_token')
+            fbAccessToken = kvArray[1];
+          // XXX also parse the "expires" argument?
+        });
+
+        return fbAccessToken;
+      }
     } else {
       throw new Meteor.Error("Unknown OAuth provider: " + provider);
     }
