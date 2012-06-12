@@ -19,7 +19,6 @@ Session.set('editing_listname', null);
 // When editing todo text, ID of the todo
 Session.set('editing_itemname', null);
 
-
 // Subscribe to 'lists' collection on startup.
 // Select a list once data has arrived.
 Meteor.subscribe('lists', function () {
@@ -191,7 +190,7 @@ Template.todo_item.adding_tag = function () {
 };
 
 Template.todo_item.loggedIn = function() {
-  return Meteor.default_connection.userId() !== null;
+  return Meteor.user() !== null;
 };
 
 Template.todo_item.events = {
@@ -232,7 +231,7 @@ Template.todo_item.events = {
 
   'click .make-private': function () {
     Todos.update(this._id, {$set: {
-      privateTo: Meteor.default_connection.userId()
+      privateTo: Meteor.user()._id
     }});
   }
 };
@@ -302,13 +301,18 @@ Template.tag_filter.events = {
 
 ////////// Login //////////
 
-Template.login.loggedIn = function() {
-  return Meteor.default_connection.userId() !== null;
-};
-
 Template.login.events = {
   'click #fb-login': function () {
-    Meteor.loginWithFacebook();
+    try {
+      Meteor.loginWithFacebook();
+    } catch (e) {
+      if (e instanceof Meteor.accounts.facebook.SetupError)
+        alert("You haven't set up your facebook app details. See fb-app.js and server/fb-secret.js");
+    }
+  },
+
+  'click #logout': function() {
+    Meteor.logout();
   }
 };
 
