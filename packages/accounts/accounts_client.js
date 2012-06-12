@@ -13,7 +13,7 @@ if (Handlebars) {
   });
 }
 
-Meteor.loginWithFacebook = function () {
+Meteor.loginWithFacebook = function (callback) {
   var openCenteredPopup = function(url, width, height) {
     var screenX = typeof window.screenX !== 'undefined'
           ? window.screenX : window.screenLeft;
@@ -80,6 +80,8 @@ Meteor.loginWithFacebook = function () {
         }
       });
     };
+    if (typeof callback === 'function')
+      callback();
   });
 };
 
