@@ -3,7 +3,7 @@ Package.describe({
 });
 
 Package.on_use(function(api) {
-  api.use('http', ['client', 'server']);
+  api.use('underscore', 'server');
   api.use('localstorage-polyfill', 'client');
 
   api.add_files('accounts_common.js', ['client', 'server']);

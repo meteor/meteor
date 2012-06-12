@@ -28,18 +28,17 @@ Meteor.loginFromLocalStorage = function () {
   Meteor.accounts._lastLoginTokenWhenPolled = loginToken;
   if (loginToken) {
     Meteor.apply('login', [{resume: loginToken}], {wait: true}, function(error, result) {
-      if (error) {
-        Meteor._debug("Server error on login", error);
-        return;
-      }
+      if (error)
+        throw error;
 
       Meteor.default_connection.setUserId(result.id);
       Meteor.default_connection.onReconnect = function() {
         Meteor.apply('login', [{resume: loginToken}], {wait: true}, function(error, result) {
           if (error) {
             Meteor.accounts.forceClientLoggedOut();
-            Meteor._debug("Server error on login", error);
-            return;
+            throw error;
+          } else {
+            // nothing to do
           }
         });
       };

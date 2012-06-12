@@ -1,53 +1,65 @@
-(function() {
+(function () {
+  // Updates or creates a user after we authenticate with a 3rd party
+  // @param serviceName {String} e.g. 'facebook' or 'google'
+  // @param serviceUserId {?} user id in 3rd party service
+  // @param more {Object} additional attributes to store on the user record
+  // @returns {String} userId
+  Meteor.accounts.updateOrCreateUser = function(email,
+                                                serviceName,
+                                                serviceUserId,
+                                                more) {
 
-  var connect = __meteor_bootstrap__.require("connect");
+    var userByEmail = Meteor.users.findOne({emails: email});
+    if (userByEmail) {
 
-  // Incoming OAuth http requests are recorded here when the OAuth
-  // process is completed inside a popup window. Afterwards, these are
-  // read by the OAuth login method to complete the process.
-  //
-  // @type {Object} maps from Oauth "state" to request
-  Meteor.accounts._unmatchedOauthRequests = {};
+      // If we know about this email address that is our user.
+      // Update the information from this service.
+      var user = userByEmail;
+      if (!user.services || !user.services[serviceName]) {
+        var attrs = {};
+        attrs["services." + serviceName] = _.extend(
+          {id: serviceUserId}, more);
+        Meteor.users.update(user, {$set: attrs});
+      }
+      return user._id;
+    } else {
 
-  Meteor.accounts.facebook.setSecret = function(secret) {
-    Meteor.accounts.facebook._secret = secret;
+      // If not, look for a user with the appropriate service user id.
+      // Update the user's email.
+      var selector = {};
+      selector["services." + serviceName + ".id"] = serviceUserId;
+      var userByServiceUserId = Meteor.users.findOne(selector);
+      if (userByServiceUserId) {
+        var user = userByServiceUserId;
+        if (user.emails.indexOf(email) === -1) {
+          // The user may have changed the email address associated with
+          // this service. Store the new one in addition to the old one.
+          Meteor.users.update(user, {$push: {emails: email}});
+        }
+        return user._id;
+      } else {
+
+        // Create a new user
+        var attrs = {};
+        attrs[serviceName] = _.extend({id: serviceUserId}, more);
+        return Meteor.users.insert({
+          emails: [email],
+          services: attrs
+        });
+      }
+    }
   };
 
-  // Listen on /_oauth/*
-  __meteor_bootstrap__.app
-    .use(connect.query())
-    .use(function (req, res, next) {
-      Fiber(function() {
-        // Any non-oauth request will continue down the default middlewares
-        if (req.url.split('/')[1] !== '_oauth') {
-          next();
-          return;
-        }
+  Meteor.accounts._loginHandlers = [];
 
-        if (!Meteor.accounts.facebook._appId || !Meteor.accounts.facebook._appUrl)
-          throw new Meteor.accounts.facebook.SetupError("Need to call Meteor.accounts.facebook.setup first");
-        if (!Meteor.accounts.facebook._secret)
-          throw new Meteor.accounts.facebook.SetupError("Need to call Meteor.accounts.facebook.setSecret first");
-
-        Meteor.accounts._unmatchedOauthRequests[req.query.state] = req;
-
-        // We support /_oauth?close, /_oauth?redirect=URL. Any other /_oauth request
-        // just served a blank page
-        if ('close' in req.query) { // check with 'in' because we don't set a value
-          // Close the popup window
-          res.writeHead(200, {'Content-Type': 'text/html'});
-          var content =
-                '<html><head><script>window.close()</script></head></html>';
-          res.end(content, 'utf-8');
-        } else if (req.query.redirect) {
-          res.writeHead(302, {'Location': req.query.redirect});
-          res.end();
-        } else {
-          res.writeHead(200, {'Content-Type': 'text/html'});
-          res.end(content, 'utf-8');
-        }
-      }).run();
-    });
+  // @param handler {Function} A function that receives an options object
+  // (as passed as an argument to the `login` method) and returns one of:
+  // - `undefined`, meaning don't handle;
+  // - `null`, meaning the user didn't actually log in;
+  // - {id: userId, accessToken: *}, if the user logged in successfully.
+  Meteor.accounts.registerLoginHandler = function(handler) {
+    Meteor.accounts._loginHandlers.push(handler);
+  };
 
   Meteor.methods({
     // @returns {Object|null}
@@ -55,73 +67,9 @@
     //   If unsuccessful (for example, if the user closed the oauth login popup),
     //   returns null
     login: function(options) {
-      // XXX write test for updateOrCreateUser
-      var updateOrCreateUser = function(email, fbId, fbAccessToken) {
-        var userByEmail = Meteor.users.findOne({emails: email});
-        if (userByEmail) {
-          var user = userByEmail;
-          if (!user.services || !user.services.facebook)
-            Meteor.users.update(user, {$set: {"services.facebook": {
-              id: fbId,
-              accessToken: fbAccessToken
-            }}});
-          return user._id;
-        } else {
-          var userByFacebookId = Meteor.users.findOne({"services.facebook.id": fbId});
-          if (userByFacebookId) {
-            var user = userByFacebookId;
-            if (user.emails.indexOf(email) === -1) {
-              // The user may have changed the email address associated with
-              // their facebook account.
-              Meteor.users.update(user, {$push: {emails: email}});
-            }
-            return user._id;
-          } else {
-            return Meteor.users.insert({
-              emails: [email],
-              services: {
-                facebook: {id: fbId, accessToken: fbAccessToken}
-              }
-            });
-          }
-        }
-      };
-
-      if (options.oauth) {
-        if (options.oauth.version !== 2 || options.oauth.provider !== 'facebook')
-          throw new Meteor.Error("We only support facebook login for now. More soon!");
-
-        var fbAccessToken;
-        var unmatchedRequest = Meteor.accounts._unmatchedOauthRequests[options.oauth.state];
-        if (unmatchedRequest) {
-          // We had previously received the HTTP request with the OAuth code
-          fbAccessToken = handleOauthRequest(unmatchedRequest);
-          delete Meteor.accounts._unmatchedOauthRequests[options.oauth.state];
-
-          // If the user didn't authorize the login, either explicitly
-          // or by closing the popup window, return null
-          if (!fbAccessToken)
-            return null;
-        } else {
-          return null;
-        }
-
-        // Fetch user's facebook identity
-        var identity = Meteor.http.get(
-          "https://graph.facebook.com/me?access_token=" + fbAccessToken).data;
-        this.setUserId(updateOrCreateUser(identity.email, identity.id, fbAccessToken));
-
-        // Generate and store a login token for reconnect
-        var loginToken = Meteor.accounts._loginTokens.insert({
-          userId: this.userId()
-        });
-
-        return {
-          token: loginToken,
-          id: this.userId()
-        };
-      } else if (options.resume) {
-        var loginToken = Meteor.accounts._loginTokens.findOne({_id: options.resume});
+      if (options.resume) {
+        var loginToken = Meteor.accounts._loginTokens
+              .findOne({_id: options.resume});
         if (!loginToken)
           throw new Meteor.Error("Couldn't find login token");
         this.setUserId(loginToken.userId);
@@ -131,7 +79,10 @@
           id: this.userId()
         };
       } else {
-        throw new Meteor.Error("Unrecognized options for login request");
+        var result = tryAllLoginHandlers(options);
+        if (result !== null)
+          this.setUserId(result.id);
+        return result;
       }
     },
 
@@ -140,57 +91,28 @@
     }
   });
 
-  // @returns {String} Facebook access token
-  var handleOauthRequest = function(req) {
-    var bareUrl = req.url.substring(0, req.url.indexOf('?'));
-    var provider = bareUrl.split('/')[2];
-    if (provider === 'facebook') {
-      if (req.query.error) {
-        // Either the user didn't authorize access or we cancelled
-        // this outstanding login request (such as when the user
-        // closes the login popup window)
-        return null;
-      }
+  // Try all of the registered login handlers until one of them doesn't
+  // return `undefined`, meaning it handled this call to `login`. Return
+  // that return value.
+  var tryAllLoginHandlers = function (options) {
+    var result = undefined;
 
-      // Request an access token
-      var response = Meteor.http.get(
-        "https://graph.facebook.com/oauth/access_token?" +
-          "client_id=" + Meteor.accounts.facebook._appId +
-          "&redirect_uri=" + Meteor.accounts.facebook._appUrl + "/_oauth/facebook?close" +
-          "&client_secret=" + Meteor.accounts.facebook._secret +
-          "&code=" + req.query.code).content;
+    _.find(Meteor.accounts._loginHandlers, function(handler) {
 
-      // Errors come back as JSON but success looks like a query encoded in a url
-      var error_response = null;
-      try {
-        // Just try to parse so that we know if we failed or not,
-        // while storing the parsed results
-        var error_response = JSON.parse(response);
-      } catch (e) {
-      }
-
-      if (error_response) {
-        if (error_response.error) {
-          throw new Meteor.Error("Error trying to get access token from Facebook", error_response);
-        } else {
-          throw new Meteor.Error("Unexpected response when trying to get access token from Facebook", error_response);
-        }
+      var maybeResult = handler(options);
+      if (maybeResult !== undefined) {
+        result = maybeResult;
+        return true;
       } else {
-        // Success!  Extract the facebook access token from the
-        // response
-        var fbAccessToken;
-        _.each(response.split('&'), function(kvString) {
-          var kvArray = kvString.split('=');
-          if (kvArray[0] === 'access_token')
-            fbAccessToken = kvArray[1];
-          // XXX also parse the "expires" argument?
-        });
-
-        return fbAccessToken;
+        return false;
       }
+    });
+
+    if (result === undefined) {
+      throw new Meteor.Error("Unrecognized options for login request");
     } else {
-      throw new Meteor.Error("Unknown OAuth provider: " + provider);
+      return result;
     }
   };
-})();
+}) ();
 
