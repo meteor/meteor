@@ -648,7 +648,10 @@ Meteor.ui = Meteor.ui || {};
         }
 
         var event_data = findEventData(event.target);
+
+        // Call the app's handler/callback
         var returnValue = h.callback.call(event_data, event);
+
         // allow app to `return false` from event handler, just like
         // you can in a jquery event handler
         if (returnValue === false) {

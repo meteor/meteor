@@ -60,6 +60,7 @@ WrappedFrag.prototype.node = function() {
   return this.frag;
 };
 
+
 ///// TESTS /////
 
 Tinytest.add("liveui - one render", function(test) {
@@ -864,7 +865,7 @@ Tinytest.add("liveui - listChunk stop", function(test) {
   R.set(-1);
   Meteor.flush();
   test.equal(numHandles, 0);
-  
+
   frag.release();
   Meteor.flush();
 });
@@ -1224,19 +1225,25 @@ Tinytest.add("liveui - basic tag contents", function(test) {
 });
 
 var eventmap = function(/*args*/) {
+  // support event_buf as final argument
+  var event_buf = null;
+  if (arguments.length && _.isArray(arguments[arguments.length-1])) {
+    event_buf = arguments[arguments.length-1];
+    arguments.length--;
+  }
   var events = {};
   _.each(arguments, function(esel) {
     var etyp = esel.split(' ')[0];
     events[esel] = function(evt) {
       if (evt.type !== etyp)
         throw new Error(etyp+" event arrived as "+evt.type);
-      this.push(esel);
+      (event_buf || this).push(esel);
     };
   });
   return events;
 };
 
-Tinytest.add("liveui - basic events", function(test) {
+Tinytest.add("liveui - event handling", function(test) {
   var event_buf = [];
   var getid = function(id) {
     return document.getElementById(id);
@@ -1398,6 +1405,54 @@ Tinytest.add("liveui - basic events", function(test) {
   event_buf.sort(); // don't care about order
   test.equal(event_buf, ['change b', 'change input', 'click input']);
   event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+  // same thing, but with events wired by listChunk "added" and "removed"
+  event_buf.length = 0;
+  var lst = [];
+  lst.observe = function(callbacks) {
+    lst.callbacks = callbacks;
+    return {
+      stop: function() {
+        lst.callbacks = null;
+      }
+    };
+  };
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    var chkbx = function(doc) {
+      return '<input type="checkbox">'+(doc ? doc._id : 'else');
+    };
+    return '<div><p><span><b>'+
+      Meteor.ui.listChunk(lst, chkbx, chkbx,
+                          {events: eventmap('click input', event_buf),
+                           event_data:event_buf}) +
+      '</b></span></p></div>';
+  }, { events: eventmap('change b', 'change input', event_buf),
+       event_data:event_buf }));
+  Meteor.flush();
+  test.equal(div.text(), 'else');
+  // click on input
+  var doClick = function() {
+    clickElement(div.node().getElementsByTagName('input')[0]);
+    event_buf.sort(); // don't care about order
+    test.equal(event_buf, ['change b', 'change input', 'click input']);
+    event_buf.length = 0;
+  };
+  doClick();
+  // add item
+  lst.push({_id:'foo'});
+  lst.callbacks.added(lst[0], 0);
+  Meteor.flush();
+  test.equal(div.text(), 'foo');
+  doClick();
+  // remove item, back to "else" case
+  lst.callbacks.removed(lst[0], 0);
+  lst.pop();
+  Meteor.flush();
+  test.equal(div.text(), 'else');
+  doClick();
+  // cleanup
   div.kill();
   Meteor.flush();
 
@@ -1874,9 +1929,5 @@ Tinytest.add("liveui - controls", function(test) {
 
   div.kill();
 });
-
-// TO TEST:
-// - events
-//   - attaching events in render, chunk, listChunk item, listChunk else
 
 })();

@@ -46,7 +46,18 @@ Meteor.ui._event = Meteor.ui._event || {};
   // This function should only be called once, ever, and must be
   // called before registerEventType.
   Meteor.ui._event.setHandler = function(handleEventFunc) {
-    Meteor.ui._event._handleEventFunc = handleEventFunc;
+
+    Meteor.ui._event._handleEventFunc = function(event) {
+      // When in unit test mode, wrap the given handleEventFunc to
+      // block events we didn't register for explicitly.
+      // See description of this flag in liveevents_tests.js.
+      if (Meteor.ui._TEST_requirePreciseEventHandlers) {
+        if (! event.currentTarget['_liveui_test_eventtype_'+event.type])
+          return;
+      }
+
+      handleEventFunc(event);
+    };
   };
 
   // After calling setHandler, this function must be called some
@@ -56,7 +67,9 @@ Meteor.ui._event = Meteor.ui._event || {};
   // Specifically, calling this function will ensure that events of
   // type eventType will be successfully caught when they occur within
   // the DOM subtree rooted at subtreeRoot (i.e. subtreeRoot and its
-  // descendents).
+  // descendents).  Only the current descendents are registered.
+  // If new nodes are added to the subtree later, they must be
+  // registered.
   //
   // If this function isn't called for a given event type T and
   // subtree S, and T fires within S, then it's unspecified whether
@@ -65,9 +78,32 @@ Meteor.ui._event = Meteor.ui._event || {};
   // it will be called. In browsers that don't support this, the event
   // will be lost.)
   Meteor.ui._event.registerEventType = function(eventType, subtreeRoot) {
-    // Prototype, implemented by W3C and NoW3C impls.
-    throw new Error("no subclass");
+    // Only work on element nodes, not e.g. text nodes or fragments
+    if (subtreeRoot.nodeType !== 1)
+      return;
+
+    Meteor.ui._event.registerEventTypeImpl(eventType, subtreeRoot);
+
+    // When in unit test mode, mark all the nodes in the current subtree.
+    // We will later block events on nodes that weren't marked.  This
+    // tests that LiveUI is generating calls to registerEventType
+    // with proper subtree information, even in browsers that don't need
+    // it.
+    // See description of this flag in liveevents_tests.js.
+    if (Meteor.ui._TEST_requirePreciseEventHandlers) {
+      var n = subtreeRoot, t = eventType;
+      // set property to any non-primitive value (to prevent showing
+      // up as an HTML attribute in IE)
+      n['_liveui_test_eventtype_'+t] = n;
+      if (n.firstChild) {
+        _.each(n.getElementsByTagName('*'), function(x) {
+          x['_liveui_test_eventtype_'+t] = x;
+        });
+      }
+    }
   };
+
+  Meteor.ui._event.registerEventTypeImpl = null; // overridden by impls
 
 
   // inspired by jquery fix()
