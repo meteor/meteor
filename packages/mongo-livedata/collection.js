@@ -1,6 +1,8 @@
 // manager, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
-Meteor.Collection = function (name, manager, driver) {
+
+// XXX probably a good idea to change these arguments to be an options map
+Meteor.Collection = function (name, manager, driver, preventAutopublish) {
   var self = this;
 
   if (!name && (name !== null)) {
@@ -112,7 +114,7 @@ Meteor.Collection = function (name, manager, driver) {
   }
 
   // autopublish
-  if (manager && manager.onAutopublish)
+  if (!preventAutopublish && manager && manager.onAutopublish)
     manager.onAutopublish(function () {
       var handler = function () { return self.find(); };
       manager.publish(null, handler, {is_auto: true});
