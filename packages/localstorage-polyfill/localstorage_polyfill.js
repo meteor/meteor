@@ -1,6 +1,7 @@
 Meteor.startup(function() { // Since we need document.body to be defined
   if (!window.localStorage) {
     window.localStorage = (function () {
+      // XXX eliminate dependency on jQuery, detect browsers ourselves
       if ($.browser.msie) { // If we are on IE, which support userData
         var userdata = document.createElement('span'); // could be anything
         userdata.style.behavior = 'url("#default#userData")';
@@ -30,8 +31,8 @@ Meteor.startup(function() { // Since we need document.body to be defined
       } else {
         Meteor._debug(
           "You are running a browser with no localStorage or userData "
-            + "support (presumable Opera Mini). Logging in from one tab "
-            + "will not cause another tab to be logged in.");
+            + "support. Logging in from one tab will not cause another "
+            + "tab to be logged in.");
 
         return {
           setItem: function () {},

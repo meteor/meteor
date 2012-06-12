@@ -6,3 +6,5 @@
 underscore
 backbone
 accounts
+accounts-facebook
+accounts-google
