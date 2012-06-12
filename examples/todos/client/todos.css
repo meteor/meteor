@@ -259,7 +259,8 @@ h3 {
     width: 80px;
 }
 
-#fb-login {
+/* XXX remove once we have the login-buttons package */
+.fb-login, #logout {
     cursor: pointer;
     margin: 5px 10px 5px 5px;
     padding: 2px 7px;

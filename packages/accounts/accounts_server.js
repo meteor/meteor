@@ -24,13 +24,15 @@
     .use(function (req, res, next) {
       Fiber(function() {
         // Any non-oauth request will continue down the default middlewares
-        if (req.url.split('/')[1] !== '_oauth')
+        if (req.url.split('/')[1] !== '_oauth') {
           next();
+          return;
+        }
 
         if (!Meteor.accounts.facebook._appId || !Meteor.accounts.facebook._appUrl)
-          throw new Error("Need to call Meteor.accounts.facebook.setup first");
+          throw new Meteor.accounts.facebook.SetupError("Need to call Meteor.accounts.facebook.setup first");
         if (!Meteor.accounts.facebook._secret)
-          throw new Error("Need to call Meteor.accounts.facebook.setSecret first");
+          throw new Meteor.accounts.facebook.SetupError("Need to call Meteor.accounts.facebook.setSecret first");
 
         // Close the popup window
         res.writeHead(200, { 'Content-Type': 'text/html' });
@@ -86,7 +88,7 @@
 
       if (options.oauth) {
         if (options.oauth.version !== 2 || options.oauth.provider !== 'facebook')
-          throw new Error("We only support facebook login for now. More soon!");
+          throw new Meteor.Error("We only support facebook login for now. More soon!");
 
         var fbAccessToken;
         if (unmatchedOauthRequests[options.oauth.state]) {
@@ -105,6 +107,11 @@
           oauthFutures[options.oauth.state] = new Future;
           fbAccessToken = oauthFutures[options.oauth.state].wait();
           delete oauthFutures[options.oauth.state];
+        }
+
+        if (!fbAccessToken) {
+          // if cancelled or not authorized
+          throw new Meteor.Error("Login cancelled or not authorized by user");
         }
 
         // Fetch user's facebook identity
@@ -127,14 +134,17 @@
           throw new Meteor.Error("Couldn't find login token");
         this.setUserId(loginToken.userId);
 
-        // XXX do we need to actually return this here?
         return {
           token: loginToken,
           id: this.userId()
         };
       } else {
-        throw new Error("Unrecognized options for login request");
+        throw new Meteor.Error("Unrecognized options for login request");
       }
+  },
+
+  logout: function() {
+    this.setUserId(null);
     }
   });
 
@@ -143,6 +153,13 @@
     var bareUrl = req.url.substring(0, req.url.indexOf('?'));
     var provider = bareUrl.split('/')[2];
     if (provider === 'facebook') {
+      if (req.query.error) {
+        // Either the user didn't authorize access or we cancelled
+        // this outstanding login request (such as when the user
+        // closes the login popup window)
+        return null;
+      }
+
       // Request an access token
       var response = Meteor.http.get(
         "https://graph.facebook.com/oauth/access_token?" +
@@ -163,7 +180,7 @@
 
       return fbAccessToken;
     } else {
-      throw new Error("Unknown OAuth provider: " + provider);
+      throw new Meteor.Error("Unknown OAuth provider: " + provider);
     }
   };
 })();
