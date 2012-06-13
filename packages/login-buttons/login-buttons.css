@@ -1,0 +1,18 @@
+.login-button {
+    float:left;
+
+    cursor: pointer;
+    margin: 5px 10px 5px 5px;
+    padding: 2px 7px;
+    font-size: 80%;
+    color: white;
+
+    background: #3B5998;
+    margin-top: 10px;
+
+    border: 1px solid #777;
+    border-radius: 4px;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    -o-border-radius: 4px;
+}
