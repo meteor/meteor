@@ -112,17 +112,7 @@
       </div>
     {{/each}}
     <div style="float: right">
-      {{> login}}
+      {{> login_buttons}}
     </div>
   </div>
 </template>
-
-<template name="login">
-  {{#if user}}
-    <div id="logout">logout</div>
-  {{else}}
-    <div id="fb-login">login using facebook</div>
-    <div id="google-login">login using google</div>
-  {{/if}}
-</template>
-
