@@ -153,7 +153,7 @@ exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callbac
   files.add_to_gitignore(path.join(app_dir, '.meteor'), 'local');
 
   find_mongo_and_kill_it_dead(port, function (err) {
-    if (err) {
+    if (err && process.platform !== "win32") {
       launch_callback({reason: "Can't kill running mongo: " + err.reason});
       return;
     }
