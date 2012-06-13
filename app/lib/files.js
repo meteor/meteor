@@ -236,9 +236,7 @@ var files = module.exports = {
       if (process.platform === "win32" && p.match(/node_modules/g)) {
         // Make sure that symbolic links are properly removed on Windows, regardless of using bash / cmd.
         try { fs.unlinkSync(p); } catch (e) {}
-        exec('rm "' + p.replace(/\\/g, '/').replace(/^[a-zA-Z]:/g, '/$1').replace(/\/*$/g, '') + '"');
-        exec('del "' + p.replace(/\//g, '\\').replace(/\/*$/g, '') + '"');
-        exec('cmd /c "rmdir ^"' + p.replace(/\//g, '\\').replace(/\\*$/g, '') + '^""');
+        exec('cmd /c "del ^"' + p.replace(/\//g, '\\').replace(/\/*$/g, '') + '^"" || cmd /c "rmdir ^"' + p.replace(/\//g, '\\').replace(/\\*$/g, '') + '^"" || rm "' + p.replace(/\\/g, '/').replace(/^([a-zA-Z]):/g, '/$1').replace(/\/*$/g, '') + '"');
 
         // XXX Sadly, the only way to somewhat ensure the above was done in a synchroneous way.
         var startTime = new Date().getTime();
