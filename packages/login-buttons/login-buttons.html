@@ -1,0 +1,10 @@
+<template name="login_buttons">
+  <div id="login-buttons">
+    {{#if user}}
+      <div class="login-button" id="login-buttons-logout">logout</div>
+    {{else}}
+      <div class="login-button" id="login-buttons-fb-login">login using facebook</div>
+      <div class="login-button" id="login-buttons-google-login">login using google</div>
+    {{/if}}
+  </div>
+</template>
