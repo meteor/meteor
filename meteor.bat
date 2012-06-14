@@ -1,0 +1,1 @@
+@echo off&&node "%METEOR_PATH%\app\meteor\meteor.js" %*
