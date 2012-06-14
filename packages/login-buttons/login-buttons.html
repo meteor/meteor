@@ -2,11 +2,14 @@
   <div id="login-buttons">
     {{#if user}}
       <div class="login-header">{{userName}}</div>
-      <div class="login-button" id="login-buttons-logout">logout</div>
+      <div class="login-button" id="login-buttons-logout">Logout</div>
     {{else}}
       {{#if services}}
         {{#each services}}
-          <div class="login-button" id="login-buttons-{{name}}">login using {{name}}</div>
+          <div class="login-button" id="login-buttons-{{name}}">
+            <div class="login-image" id="login-buttons-image-{{name}}"></div>
+            Login with {{name}}
+          </div>
         {{/each}}
       {{else}}
         <div class="no-services">No account services configured.</div>
