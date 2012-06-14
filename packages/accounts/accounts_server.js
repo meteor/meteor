@@ -33,7 +33,7 @@
       if (!user.services || !user.services[serviceName]) {
         var attrs = {};
         attrs["services." + serviceName] = _.extend(
-          {id: serviceUserId}, more);
+          {id: serviceUserId}, serviceData);
         Meteor.users.update(user, {$set: attrs});
       }
 
@@ -60,7 +60,7 @@
 
         // Create a new user
         var attrs = {};
-        attrs[serviceName] = _.extend({id: serviceUserId}, more);
+        attrs[serviceName] = _.extend({id: serviceUserId}, serviceData);
         return Meteor.users.insert(_.extend({}, userData, {
           emails: [email],
           services: attrs
