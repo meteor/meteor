@@ -1,26 +1,34 @@
 
 #login-buttons .login-header {
   float: left;
-  padding: 2px 7px;
-  margin: 5px 0px 5px 5px;
+  padding-right: 2px;
 }
 
 
 #login-buttons .login-button {
     float:left;
-
     cursor: pointer;
-    margin: 5px 10px 5px 5px;
-    padding: 2px 7px;
+    margin-left: 8px;
+    padding: 1px 4px;
+    height: 20px;
+
     font-size: 80%;
     color: white;
+    text-shadow: #062C50 0px 1px 0px;
 
-    background: #3B5998;
-    margin-top: 10px;
+    background: #19558D;
+    border: 1px solid #062C50;
+    border-top-color: #103372;
+    border-left-color: #103372;
+    border-radius: 3px;
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    -o-border-radius: 3px;
+}
 
-    border: 1px solid #777;
-    border-radius: 4px;
-    -webkit-border-radius: 4px;
-    -moz-border-radius: 4px;
-    -o-border-radius: 4px;
+#login-buttons .login-image {
+    float: left;
+    margin: 2px 5px 2px 0px;
+    width: 16px;
+    height: 16px;
 }
