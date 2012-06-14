@@ -23,8 +23,8 @@
           params: {access_token: accessToken}}).data;
 
       return Meteor.accounts.updateOrCreateUser(
-        identity.email, 'facebook', identity.id,
-        {accessToken: accessToken});
+        identity.email, {name: identity.name},
+        'facebook', identity.id, {accessToken: accessToken});
     }
   };
 
