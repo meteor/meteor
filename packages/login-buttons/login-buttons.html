@@ -1,6 +1,7 @@
 <template name="login_buttons">
   <div id="login-buttons">
     {{#if user}}
+      <div class="login-header-email">{{userName}}</div>
       <div class="login-button" id="login-buttons-logout">logout</div>
     {{else}}
       <div class="login-button" id="login-buttons-fb-login">login using facebook</div>
