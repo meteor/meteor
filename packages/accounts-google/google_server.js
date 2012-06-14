@@ -16,8 +16,8 @@
           {params: {access_token: accessToken}}).data;
 
       return Meteor.accounts.updateOrCreateUser(
-        identity.email, 'google', identity.id,
-        {accessToken: accessToken});
+        identity.email, {name: identity.name},
+        'google', identity.id, {accessToken: accessToken});
     }
   };
 
