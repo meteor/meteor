@@ -1,0 +1,25 @@
+<head>
+  <title>redis-session</title>
+</head>
+
+<body>
+  {{> session}}
+</body>
+
+<template name="session">
+  <div class="session-input">
+  	<div id="set-user-box">
+      <input type="text" id="set-user" placeholder="user" />
+    </div>
+    <div id="set-age-box">
+    	<input type="text" id="set-age" placeholder="age" />
+    </div>
+    <div id="reset-session">
+  		reset session
+  	</div>
+  </div>
+  <div class="session-view">
+  	<div class="user">{{user}}</div>
+  	<div class="age">{{age}}</div>
+  </div>
+</template>
