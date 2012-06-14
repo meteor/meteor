@@ -1,21 +1,7 @@
 (function () {
 
-  Template.login_buttons.userEmail = function () {
-    var user = Meteor.user();
-    if (!user || !user.emails || !user.emails[0])
-      return '';
-    return user.emails[0];
-  };
-
-  Template.login_buttons.userName = function () {
-    var user = Meteor.user();
-    if (!user || !user.name)
-      return '';
-    return user.name;
-  };
-
   Template.login_buttons.events = {
-    'click #login-buttons-fb-login': function () {
+    'click #login-buttons-Facebook': function () {
       try {
         Meteor.loginWithFacebook();
       } catch (e) {
@@ -26,7 +12,7 @@
       }
     },
 
-    'click #login-buttons-google-login': function () {
+    'click #login-buttons-Google': function () {
       try {
         Meteor.loginWithGoogle();
       } catch (e) {
@@ -41,5 +27,30 @@
       Meteor.logout();
     }
   };
+
+  Template.login_buttons.services = function () {
+    var ret = [];
+    if (Meteor.accounts.facebook)
+      ret.push({name: 'Facebook'});
+    if (Meteor.accounts.google)
+      ret.push({name: 'Google'});
+
+    return ret;
+  };
+
+  Template.login_buttons.userEmail = function () {
+    var user = Meteor.user();
+    if (!user || !user.emails || !user.emails[0])
+      return '';
+    return user.emails[0];
+  };
+
+  Template.login_buttons.userName = function () {
+    var user = Meteor.user();
+    if (!user || !user.name)
+      return '';
+    return user.name;
+  };
+
 
 })();
