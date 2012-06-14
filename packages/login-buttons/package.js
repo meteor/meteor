@@ -7,6 +7,7 @@ Package.on_use(function (api) {
 
   api.add_files([
     'login-buttons.css',
+    'login-buttons-images.css',
     'login-buttons.html',
     'login-buttons.js'], 'client');
 });
