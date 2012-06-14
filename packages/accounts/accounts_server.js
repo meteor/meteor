@@ -1,26 +1,43 @@
 (function () {
   // Updates or creates a user after we authenticate with a 3rd party
+  //
+  // @param email {String} The user's email
+  // @param userData {Object} attributes to store directly on the user object
   // @param serviceName {String} e.g. 'facebook' or 'google'
   // @param serviceUserId {?} user id in 3rd party service
-  // @param more {Object} additional attributes to store on the user record
+  // @param serviceData {Object} attributes to store on the user record's
+  //   specific service subobject
   // @returns {String} userId
   Meteor.accounts.updateOrCreateUser = function(email,
+                                                userData,
                                                 serviceName,
                                                 serviceUserId,
-                                                more) {
+                                                serviceData) {
+    var updateUserData = function() {
+      // don't overwrite existing fields
+      var newKeys = _.without(_.keys(userData), _.keys(user));
+      var newAttrs = _.pick(userData, newKeys);
+      Meteor.users.update(user, {$set: newAttrs});
+    };
 
-    var userByEmail = Meteor.users.findOne({emails: email});
+    if (!email)
+      throw new Meteor.Error("We don't yet support email-less users");
+
+    var userByEmail = Meteor.users.findOne({emails: userData.email});
+    var user;
     if (userByEmail) {
 
       // If we know about this email address that is our user.
       // Update the information from this service.
-      var user = userByEmail;
+      user = userByEmail;
       if (!user.services || !user.services[serviceName]) {
         var attrs = {};
         attrs["services." + serviceName] = _.extend(
           {id: serviceUserId}, more);
         Meteor.users.update(user, {$set: attrs});
       }
+
+      updateUserData();
       return user._id;
     } else {
 
@@ -30,22 +47,24 @@
       selector["services." + serviceName + ".id"] = serviceUserId;
       var userByServiceUserId = Meteor.users.findOne(selector);
       if (userByServiceUserId) {
-        var user = userByServiceUserId;
+        user = userByServiceUserId;
         if (user.emails.indexOf(email) === -1) {
           // The user may have changed the email address associated with
           // this service. Store the new one in addition to the old one.
           Meteor.users.update(user, {$push: {emails: email}});
         }
+
+        updateUserData();
         return user._id;
       } else {
 
         // Create a new user
         var attrs = {};
         attrs[serviceName] = _.extend({id: serviceUserId}, more);
-        return Meteor.users.insert({
+        return Meteor.users.insert(_.extend({}, userData, {
           emails: [email],
           services: attrs
-        });
+        }));
       }
     }
   };
@@ -89,6 +108,14 @@
     logout: function() {
       this.setUserId(null);
     }
+  });
+
+  // Publish a few attributes on the current user object
+  Meteor.publish("currentUser", function() {
+    if (this.userId())
+      return Meteor.users.find({_id: this.userId()}, {emails: 1, name: 1});
+    else
+      return null;
   });
 
   // Try all of the registered login handlers until one of them doesn't

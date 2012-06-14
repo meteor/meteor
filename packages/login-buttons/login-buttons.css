@@ -1,3 +1,9 @@
+.login-header-email {
+  float: left;
+  padding: 2px 7px;
+  margin: 5px 0px 5px 5px;
+}
+
 .login-button {
     float:left;
 
