@@ -5,8 +5,8 @@
       try {
         Meteor.loginWithFacebook();
       } catch (e) {
-        if (e instanceof Meteor.accounts.facebook.SetupError)
-          alert("Facebook API key not set. Configure app details with Meteor.accounts.facebook.setup()");
+        if (e instanceof Meteor.accounts.ConfigError)
+          alert("Facebook API key not set. Configure app details with Meteor.accounts.facebook.config()");
         else
           throw e;
       }
@@ -16,8 +16,8 @@
       try {
         Meteor.loginWithGoogle();
       } catch (e) {
-        if (e instanceof Meteor.accounts.google.SetupError)
-          alert("Google API key not set. Configure app details with Meteor.accounts.google.setup()");
+        if (e instanceof Meteor.accounts.ConfigError)
+          alert("Google API key not set. Configure app details with Meteor.accounts.google.config()");
         else
           throw e;
       };
