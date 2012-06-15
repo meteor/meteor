@@ -68,15 +68,15 @@ if [[ "$UNAME" == CYGWIN* || "$UNAME" == MINGW* ]] ; then
 		echo.
 
 		# Make sure we are on a version that passes the node-fibers tests on Windows.
-		curl -O http://nodejs.org/dist/v0.6.18/node-v0.6.18.msi
+		curl -O http://nodejs.org/dist/v0.6.19/node-v0.6.19.msi
 
 		echo.
 		echo INSTALLING NODE.JS
 		echo.
 
 		# Let's install node.js (includes v8 and npm).
-		$COMSPEC \/c node-v0.6.18.msi\ \/qr; true
-		rm node-v0.6.18.msi
+		$COMSPEC \/c node-v0.6.19.msi\ \/qr; true
+		rm node-v0.6.19.msi
 
 		# Make sure we can see node and npm from now on.
 		export PATH="/c/Program Files (x86)/nodejs:/c/Program Files/nodejs:$PATH"
