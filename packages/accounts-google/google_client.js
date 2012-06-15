@@ -1,7 +1,7 @@
 (function () {
   Meteor.loginWithGoogle = function () {
     if (!Meteor.accounts.google._clientId || !Meteor.accounts.google._appUrl)
-      throw new Meteor.accounts.google.SetupError("Need to call Meteor.accounts.google.setup first");
+      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.google.config first");
 
     var state = Meteor.uuid();
     // XXX need to support configuring access_type and scope

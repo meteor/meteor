@@ -22,6 +22,7 @@
   Meteor.accounts.oauth2.registerService = function (name, handleOauthRequest) {
     if (Meteor.accounts.oauth2._services[name])
       throw new Meteor.Error("Already registered the " + name + " OAuth2 service");
+
     Meteor.accounts.oauth2._services[name] = {
       handleOauthRequest: handleOauthRequest
     };
@@ -40,23 +41,26 @@
       return result;
   });
 
-  // When we get an incoming OAuth http request we complete the
-  // facebook handshake, account and token setup before responding.
-  // The results are stored in this map which is then read when the
-  // login method is called. Maps {oauthState} --> return value of
-  // `login`
+  // When we get an incoming OAuth http request we complete the oauth
+  // handshake, account and token setup before responding.  The
+  // results are stored in this map which is then read when the login
+  // method is called. Maps state --> return value of `login`
+  //
+  // XXX we should periodically clear old entries
   Meteor.accounts.oauth2._loginResultForState = {};
 
   // Listen on /_oauth/*
   __meteor_bootstrap__.app
     .use(connect.query())
     .use(function (req, res, next) {
+      // Need to create a Fiber since we're using synchronous http calls
       Fiber(function() {
-        var bareUrl = req.url.substring(0, req.url.indexOf('?'));
-        var splitUrl = bareUrl.split('/');
+        // req.url will be "/_oauth/<service name>?<action>"
+        var barePath = req.url.substring(0, req.url.indexOf('?'));
+        var splitPath = barePath.split('/');
 
         // Any non-oauth request will continue down the default middlewares
-        if (splitUrl[1] !== '_oauth') {
+        if (splitPath[1] !== '_oauth') {
           next();
           return;
         }
@@ -65,7 +69,7 @@
         // This way the subsequent call to the `login` method will be
         // immediate.
 
-        var serviceName = splitUrl[2];
+        var serviceName = splitPath[2];
         var service = Meteor.accounts.oauth2._services[serviceName];
 
         // Get or create user id
@@ -80,8 +84,8 @@
         Meteor.accounts.oauth2._loginResultForState[req.query.state] =
           {token: loginToken, id: userId};
 
-        // We support /_oauth?close, /_oauth?redirect=URL. Any other /_oauth request
-        // just served a blank page
+        // We support ?close and ?redirect=URL. Any other query should
+        // just serve a blank page
         if ('close' in req.query) { // check with 'in' because we don't set a value
           // Close the popup window
           res.writeHead(200, {'Content-Type': 'text/html'});
@@ -93,7 +97,7 @@
           res.end();
         } else {
           res.writeHead(200, {'Content-Type': 'text/html'});
-          res.end(content, 'utf-8');
+          res.end('', 'utf-8');
         }
       }).run();
     });

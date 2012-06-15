@@ -1,9 +1,9 @@
 Package.describe({
   summary: "A basis for OAuth2-based account systems",
+  internal: true
 });
 
 Package.on_use(function (api) {
-  api.use('jquery', 'client'); // XXX only used for browser detection. remove.
   api.use('accounts', ['client', 'server']);
 
   api.add_files('oauth2_common.js', ['client', 'server']);
