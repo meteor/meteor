@@ -7,7 +7,6 @@
   Meteor.accounts.oauth2.registerService('google', function(query) {
     if (query.error) {
       // The user didn't authorize access
-      // XXX can/should we generalize this into the oauth abstration?
       return null;
     }
 

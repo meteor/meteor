@@ -7,12 +7,11 @@
   Meteor.accounts.oauth2.registerService('facebook', function(query) {
     if (query.error) {
       // The user didn't authorize access
-      // XXX can/should we generalize this into the oauth abstration?
       return null;
     }
 
     if (!Meteor.accounts.facebook._appId || !Meteor.accounts.facebook._appUrl)
-      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.facebook.setup first");
+      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.facebook.config first");
     if (!Meteor.accounts.facebook._secret)
       throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.facebook.setSecret first");
 
@@ -29,7 +28,7 @@
 
   var getAccessToken = function (query) {
     // Request an access token
-    var response = Meteor.http.get(
+    var result = Meteor.http.get(
       "https://graph.facebook.com/oauth/access_token", {
         params: {
           client_id: Meteor.accounts.facebook._appId,
@@ -37,9 +36,14 @@
           client_secret: Meteor.accounts.facebook._secret,
           code: query.code
         }
-      }).content;
+      });
 
-    // Errors come back as JSON but success looks like a query encoded in a url
+    if (result.error)
+      throw result.error;
+    var response = result.content;
+
+    // Errors come back as JSON but success looks like a query encoded
+    // in a url
     var error_response;
     try {
       // Just try to parse so that we know if we failed or not,
@@ -66,6 +70,8 @@
         // XXX also parse the "expires" argument?
       });
 
+      if (!fbAccessToken)
+        throw new Meteor.Error("Couldn't find access token in HTTP response: " + response);
       return fbAccessToken;
     }
   };

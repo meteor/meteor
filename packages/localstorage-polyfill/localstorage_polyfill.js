@@ -35,9 +35,17 @@ Meteor.startup(function() { // Since we need document.body to be defined
             + "tab to be logged in.");
 
         return {
-          setItem: function () {},
-          removeItem: function () {},
-          getItem: function () {}
+          _data: {},
+
+          setItem: function (key, val) {
+            this._data[key] = val;
+          },
+          removeItem: function (key) {
+            delete this._data[key];
+          },
+          getItem: function (key) {
+            return this._data[key];
+          }
         };
       };
     })();
