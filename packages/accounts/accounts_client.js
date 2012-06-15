@@ -1,7 +1,6 @@
 (function () {
 
   Meteor.user = function () {
-
     var userId = Meteor.default_connection.userId();
     if (userId) {
       var result = Meteor.users.findOne(userId);
@@ -18,12 +17,6 @@
     }
   };
 
-  if (Handlebars) {
-    Handlebars.registerHelper('currentUser', function () {
-      return Meteor.user();
-    });
-  }
-
   Meteor.logout = function () {
     Meteor.apply('logout', [], {wait: true}, function(error, result) {
       if (error)
@@ -33,4 +26,11 @@
     });
   };
 
+  // If we're using Handlebars, register the {{currentUser}} global
+  // helper
+  if (Handlebars) {
+    Handlebars.registerHelper('currentUser', function () {
+      return Meteor.user();
+    });
+  }
 })();
