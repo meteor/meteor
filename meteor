@@ -35,7 +35,7 @@ fi
 # can be relative or absolute. Too bad 'readlink -f' is not portable.
 ORIG_DIR=$(pwd)
 cd "$(dirname "$0")"
-if [ -L "$(basename $0)" ] ; then
+if [ -L "$(basename "$0")" ] ; then
     cd "$(dirname $(readlink $(basename "$0") ) )"
 fi
 SCRIPT_DIR=$(pwd -P)
@@ -71,7 +71,7 @@ function install_dev_bundle {
 }
 
 
-if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
+if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ] ; then
     # In a checkout.
     if [ ! -d "$SCRIPT_DIR/dev_bundle" ] ; then
         echo "It's the first time you've run Meteor from a git checkout."
@@ -85,6 +85,10 @@ if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
     fi
 
     DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
+    METEOR="$SCRIPT_DIR/app/meteor/meteor.js"
+elif [[ "$UNAME" == CYGWIN* || "$UNAME" == MINGW* ]] ; then
+    # dirname does not work on Windows, however just $SCRIPT_DIR does.
+    DEV_BUNDLE="$SCRIPT_DIR"
     METEOR="$SCRIPT_DIR/app/meteor/meteor.js"
 else
     # In an install
