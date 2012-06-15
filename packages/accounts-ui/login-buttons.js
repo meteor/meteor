@@ -1,6 +1,6 @@
 (function () {
 
-  Template.login_buttons.events = {
+  Template.loginButtons.events = {
     'click #login-buttons-Facebook': function () {
       try {
         Meteor.loginWithFacebook();
@@ -28,7 +28,7 @@
     }
   };
 
-  Template.login_buttons.services = function () {
+  Template.loginButtons.services = function () {
     var ret = [];
     if (Meteor.accounts.facebook)
       ret.push({name: 'Facebook'});
@@ -38,14 +38,14 @@
     return ret;
   };
 
-  Template.login_buttons.userEmail = function () {
+  Template.loginButtons.userEmail = function () {
     var user = Meteor.user();
     if (!user || !user.emails || !user.emails[0])
       return '';
     return user.emails[0];
   };
 
-  Template.login_buttons.userName = function () {
+  Template.loginButtons.userName = function () {
     var user = Meteor.user();
     if (!user || !user.name)
       return '';

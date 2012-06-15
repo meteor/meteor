@@ -8,4 +8,4 @@ backbone
 accounts
 accounts-facebook
 accounts-google
-login-buttons
+accounts-ui
