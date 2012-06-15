@@ -113,7 +113,8 @@
   // Publish a few attributes on the current user object
   Meteor.publish("currentUser", function() {
     if (this.userId())
-      return Meteor.users.find({_id: this.userId()}, {emails: 1, name: 1});
+      return Meteor.users.find({_id: this.userId()},
+                               {fields: {services: 0, private: 0}});
     else
       return null;
   });
