@@ -6,8 +6,8 @@ Package.on_use(function (api) {
   api.use(['accounts', 'underscore', 'liveui', 'templating'], 'client');
 
   api.add_files([
-    'login-buttons.css',
-    'login-buttons-images.css',
-    'login-buttons.html',
-    'login-buttons.js'], 'client');
+    'login_buttons.css',
+    'login_buttons_images.css',
+    'login_buttons.html',
+    'login_buttons.js'], 'client');
 });

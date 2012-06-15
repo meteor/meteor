@@ -1,4 +1,83 @@
 (function () {
+  ///
+  /// LOGIN HANDLERS
+  ///
+
+  Meteor.methods({
+    // @returns {Object|null}
+    //   If successful, returns {token: reconnectToken, id: userId}
+    //   If unsuccessful (for example, if the user closed the oauth login popup),
+    //     returns null
+    login: function(options) {
+      var result = tryAllLoginHandlers(options);
+      if (result !== null)
+        this.setUserId(result.id);
+      return result;
+    },
+
+    logout: function() {
+      this.setUserId(null);
+    }
+  });
+
+  Meteor.accounts._loginHandlers = [];
+
+  // Try all of the registered login handlers until one of them
+  // doesn't return `undefined` (NOT null), meaning it handled this
+  // call to `login`. Return that return value.
+  var tryAllLoginHandlers = function (options) {
+    var result = undefined;
+
+    _.find(Meteor.accounts._loginHandlers, function(handler) {
+
+      var maybeResult = handler(options);
+      if (maybeResult !== undefined) {
+        result = maybeResult;
+        return true;
+      } else {
+        return false;
+      }
+    });
+
+    if (result === undefined) {
+      throw new Meteor.Error("Unrecognized options for login request");
+    } else {
+      return result;
+    }
+  };
+
+  // @param handler {Function} A function that receives an options object
+  // (as passed as an argument to the `login` method) and returns one of:
+  // - `undefined`, meaning don't handle;
+  // - `null`, meaning the user didn't actually log in;
+  // - {id: userId, accessToken: *}, if the user logged in successfully.
+  Meteor.accounts.registerLoginHandler = function(handler) {
+    Meteor.accounts._loginHandlers.push(handler);
+  };
+
+  // support reconnecting using a meteor login token
+  Meteor.accounts.registerLoginHandler(function(options) {
+    if (options.resume) {
+      var loginToken = Meteor.accounts._loginTokens
+            .findOne({_id: options.resume});
+      if (!loginToken)
+        throw new Meteor.Error("Couldn't find login token");
+      this.setUserId(loginToken.userId);
+
+      return {
+        token: loginToken,
+        id: this.userId()
+      };
+    } else {
+      return undefined;
+    }
+  });
+
+
+  ///
+  /// MANAGING USER OBJECTS
+  ///
+
   // Updates or creates a user after we authenticate with a 3rd party
   //
   // @param email {String} The user's email
@@ -69,47 +148,10 @@
     }
   };
 
-  Meteor.accounts._loginHandlers = [];
 
-  // @param handler {Function} A function that receives an options object
-  // (as passed as an argument to the `login` method) and returns one of:
-  // - `undefined`, meaning don't handle;
-  // - `null`, meaning the user didn't actually log in;
-  // - {id: userId, accessToken: *}, if the user logged in successfully.
-  Meteor.accounts.registerLoginHandler = function(handler) {
-    Meteor.accounts._loginHandlers.push(handler);
-  };
-
-  Meteor.methods({
-    // @returns {Object|null}
-    //   If successful, returns {token: reconnectToken, id: userId}
-    //   If unsuccessful (for example, if the user closed the oauth login popup),
-    //   returns null
-    login: function(options) {
-      if (options.resume) {
-        var loginToken = Meteor.accounts._loginTokens
-              .findOne({_id: options.resume});
-        if (!loginToken)
-          throw new Meteor.Error("Couldn't find login token");
-        this.setUserId(loginToken.userId);
-
-        return {
-          token: loginToken,
-          id: this.userId()
-        };
-      } else {
-        var result = tryAllLoginHandlers(options);
-        if (result !== null)
-          this.setUserId(result.id);
-        return result;
-      }
-    },
-
-    logout: function() {
-      this.setUserId(null);
-    }
-  });
-
+  ///
+  /// PUBLISHING USER OBJECTS
+  ///
 
   // Always publish the current user's record to the client.
   Meteor.publish(null, function() {
@@ -128,30 +170,5 @@
     };
     Meteor.default_server.publish(null, handler, {is_auto: true});
   });
-
-
-  // Try all of the registered login handlers until one of them doesn't
-  // return `undefined`, meaning it handled this call to `login`. Return
-  // that return value.
-  var tryAllLoginHandlers = function (options) {
-    var result = undefined;
-
-    _.find(Meteor.accounts._loginHandlers, function(handler) {
-
-      var maybeResult = handler(options);
-      if (maybeResult !== undefined) {
-        result = maybeResult;
-        return true;
-      } else {
-        return false;
-      }
-    });
-
-    if (result === undefined) {
-      throw new Meteor.Error("Unrecognized options for login request");
-    } else {
-      return result;
-    }
-  };
 }) ();
 

@@ -3,6 +3,8 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
+  api.use('jquery', 'client'); // XXX only used for browser detection. remove.
+
   api.add_files('localstorage_polyfill.js', 'client');
 });
 
