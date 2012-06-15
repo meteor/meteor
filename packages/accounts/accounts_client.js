@@ -33,5 +33,4 @@
     });
   };
 
-  Meteor.subscribe("currentUser");
 })();
