@@ -62,11 +62,10 @@
             .findOne({_id: options.resume});
       if (!loginToken)
         throw new Meteor.Error("Couldn't find login token");
-      this.setUserId(loginToken.userId);
 
       return {
-        token: loginToken,
-        id: this.userId()
+        token: loginToken._id,
+        id: loginToken.userId
       };
     } else {
       return undefined;
