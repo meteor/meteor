@@ -4,37 +4,30 @@
     Meteor.accounts.facebook._secret = secret;
   };
 
-  // register the facebook identity provider
-  Meteor.accounts.oauth2.providers.facebook = {
-    userIdForOauthReq: function(req) {
-      if (!Meteor.accounts.facebook._appId || !Meteor.accounts.facebook._appUrl)
-        throw new Meteor.accounts.facebook.SetupError("Need to call Meteor.accounts.facebook.setup first");
-      if (!Meteor.accounts.facebook._secret)
-        throw new Meteor.accounts.facebook.SetupError("Need to call Meteor.accounts.facebook.setSecret first");
-
-      var accessToken = getAccessToken(req);
-      // If the user didn't authorize the login, either explicitly
-      // or by closing the popup window, return null
-      if (!accessToken)
-        return null;
-
-      // Fetch user's facebook identity
-      var identity = Meteor.http.get("https://graph.facebook.com/me", {
-          params: {access_token: accessToken}}).data;
-
-      return Meteor.accounts.updateOrCreateUser(
-        identity.email, {name: identity.name},
-        'facebook', identity.id, {accessToken: accessToken});
-    }
-  };
-
-  // @returns {String} Facebook access token
-  var getAccessToken = function (req) {
-    if (req.query.error) {
+  Meteor.accounts.oauth2.registerService('facebook', function(query) {
+    if (query.error) {
       // The user didn't authorize access
+      // XXX can/should we generalize this into the oauth abstration?
       return null;
     }
 
+    if (!Meteor.accounts.facebook._appId || !Meteor.accounts.facebook._appUrl)
+      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.facebook.setup first");
+    if (!Meteor.accounts.facebook._secret)
+      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.facebook.setSecret first");
+
+    var accessToken = getAccessToken(query);
+    var identity = getIdentity(accessToken);
+
+    return {
+      email: identity.email,
+      userData: {name: identity.name},
+      serviceUserId: identity.id,
+      serviceData: {accessToken: accessToken}
+    };
+  });
+
+  var getAccessToken = function (query) {
     // Request an access token
     var response = Meteor.http.get(
       "https://graph.facebook.com/oauth/access_token", {
@@ -42,7 +35,7 @@
           client_id: Meteor.accounts.facebook._appId,
           redirect_uri: Meteor.accounts.facebook._appUrl + "/_oauth/facebook?close",
           client_secret: Meteor.accounts.facebook._secret,
-          code: req.query.code
+          code: query.code
         }
       }).content;
 
@@ -75,5 +68,14 @@
 
       return fbAccessToken;
     }
+  };
+
+  var getIdentity = function (accessToken) {
+    var result = Meteor.http.get("https://graph.facebook.com/me", {
+      params: {access_token: accessToken}});
+
+    if (result.error)
+      throw result.error;
+    return result.data;
   };
 }) ();
