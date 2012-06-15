@@ -72,9 +72,12 @@ var build = parseInt(version_numbers[3]);
 if (build == 0) {
 	if (minor == 0) {
 		major = major - 1;
+		minor = 99;
+		build = 99;
 	}
 	else {
 		minor = minor - 1;
+		build = 99;
 	}
 } else {
 	build = build - 1;
