@@ -4,7 +4,7 @@
       throw new Meteor.accounts.google.SetupError("Need to call Meteor.accounts.google.setup first");
 
     var state = Meteor.uuid();
-    // XXX need to support configuring access_type and scopy
+    // XXX need to support configuring access_type and scope
     var loginUrl =
           'https://accounts.google.com/o/oauth2/auth' +
           '?response_type=code' +
