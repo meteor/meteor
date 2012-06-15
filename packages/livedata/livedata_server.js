@@ -49,15 +49,16 @@ _.extend(Meteor._LivedataSession.prototype, {
     });
     self.out_queue = [];
 
+    if (self.initialized)
+      self._stopAllSubscriptions();
     // On initial connect, spin up all the universal publishers.
-    if (!self.initialized) {
+    Fiber(function () {
+      _.each(self.server.universal_publish_handlers, function (handler) {
+        self._startSubscription(handler, self.next_sub_priority--);
+      });
+    }).run();
+    if (!self.initialized) 
       self.initialized = true;
-      Fiber(function () {
-        _.each(self.server.universal_publish_handlers, function (handler) {
-          self._startSubscription(handler, self.next_sub_priority--);
-        });
-      }).run();
-    }
   },
 
   // If 'socket' is the socket currently connected to this session,
@@ -618,17 +619,14 @@ Meteor._LivedataServer = function () {
             return;
           }
 
-          // XXX session resumption does not work yet!
-          // https://app.asana.com/0/159908330244/577350817064
-          // disabled here:
-          /*
+          // session resumption:
           if (msg.session)
             var old_session = self.sessions[msg.session];
           if (old_session) {
             // Resuming a session
             socket.meteor_session = old_session;
           }
-          else */ {
+          else {
             // Creating a new session
             socket.meteor_session = new Meteor._LivedataSession(self);
             self.sessions[socket.meteor_session.id] = socket.meteor_session;
