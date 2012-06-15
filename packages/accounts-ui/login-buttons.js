@@ -6,7 +6,7 @@
         Meteor.loginWithFacebook();
       } catch (e) {
         if (e instanceof Meteor.accounts.facebook.SetupError)
-          alert("You haven't set up your Facebook app details. See fb-app.js and server/fb-secret.js");
+          alert("Facebook API key not set. Configure app details with Meteor.accounts.facebook.setup()");
         else
           throw e;
       }
@@ -17,7 +17,7 @@
         Meteor.loginWithGoogle();
       } catch (e) {
         if (e instanceof Meteor.accounts.google.SetupError)
-          alert("You haven't set up your Google API details. See google-api.js and server/google-secret.js");
+          alert("Google API key not set. Configure app details with Meteor.accounts.google.setup()");
         else
           throw e;
       };
