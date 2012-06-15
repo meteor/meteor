@@ -22,7 +22,7 @@
       if (error)
         throw error;
       else
-        Meteor.accounts.forceClientLoggedOut();
+        Meteor.accounts.makeClientLoggedOut();
     });
   };
 
