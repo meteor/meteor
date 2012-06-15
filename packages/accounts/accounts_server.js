@@ -110,14 +110,25 @@
     }
   });
 
-  // Publish a few attributes on the current user object
-  Meteor.publish("currentUser", function() {
+
+  // Always publish the current user's record to the client.
+  Meteor.publish(null, function() {
     if (this.userId())
       return Meteor.users.find({_id: this.userId()},
                                {fields: {services: 0, private: 0}});
     else
       return null;
+  }, {is_auto: true});
+
+  // If autopublish is on, also publish everyone else's user record.
+  Meteor.default_server.onAutopublish(function () {
+    var handler = function () {
+      return Meteor.users.find(
+        {}, {fields: {services: 0, private: 0, emails: 0}});
+    };
+    Meteor.default_server.publish(null, handler, {is_auto: true});
   });
+
 
   // Try all of the registered login handlers until one of them doesn't
   // return `undefined`, meaning it handled this call to `login`. Return
