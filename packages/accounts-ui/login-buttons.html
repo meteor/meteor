@@ -1,6 +1,6 @@
 <template name="loginButtons">
   <div id="login-buttons">
-    {{#if user}}
+    {{#if currentUser}}
       <div class="login-header">{{userName}}</div>
       <div class="login-button" id="login-buttons-logout">Logout</div>
     {{else}}
