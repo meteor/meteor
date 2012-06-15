@@ -19,7 +19,7 @@
   };
 
   if (Handlebars) {
-    Handlebars.registerHelper('user', function () {
+    Handlebars.registerHelper('currentUser', function () {
       return Meteor.user();
     });
   }
