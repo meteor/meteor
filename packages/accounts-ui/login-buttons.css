@@ -1,9 +1,9 @@
-
 #login-buttons .login-header {
-  float: left;
-  padding-right: 2px;
+    float: left;
+    padding-right: 2px;
+    line-height: 1.5;
+    font-family: 'Helvetica Neue', Helvetica, Arial, default;
 }
-
 
 #login-buttons .login-button {
     float:left;
@@ -13,6 +13,8 @@
     height: 20px;
 
     font-size: 80%;
+    font-family: 'Helvetica Neue', Helvetica, Arial, default;
+    line-height: 1.5;
     color: white;
     text-shadow: #062C50 0px 1px 0px;
 
@@ -31,4 +33,8 @@
     margin: 2px 5px 2px 0px;
     width: 16px;
     height: 16px;
+}
+
+#login-buttons .no-services {
+    color: red;
 }
