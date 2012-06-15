@@ -30,7 +30,7 @@
         // access.  Do nothing.
         return;
       } else {
-        Meteor.accounts.loginAndStoreToken(result.token);
+        Meteor.accounts.makeClientLoggedIn(result.id, result.token);
       }
     });
   };

@@ -79,7 +79,9 @@
           userInfo.serviceUserId, userInfo.serviceData);
 
         // Generate and store a login token for reconnect
+        // XXX this could go in accounts_server.js instead
         var loginToken = Meteor.accounts._loginTokens.insert({userId: userId});
+
         // Store results to subsequent call to `login`
         Meteor.accounts.oauth2._loginResultForState[req.query.state] =
           {token: loginToken, id: userId};
