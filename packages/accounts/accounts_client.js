@@ -17,12 +17,14 @@
     }
   };
 
-  Meteor.logout = function () {
+  Meteor.logout = function (callback) {
     Meteor.apply('logout', [], {wait: true}, function(error, result) {
       if (error)
         throw error;
-      else
+      else {
         Meteor.accounts.makeClientLoggedOut();
+        callback && callback();
+      }
     });
   };
 
