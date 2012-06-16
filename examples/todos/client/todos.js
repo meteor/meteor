@@ -217,7 +217,7 @@ Template.todo_item.events = {
     evt.target.parentNode.style.opacity = 0;
     // wait for CSS animation to finish
     Meteor.setTimeout(function () {
-      Todos.update({_id: id}, {$pull: {tags: tag}});
+      Todos.update(id, {$pull: {tags: tag}});
     }, 300);
   },
 
