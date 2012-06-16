@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "A basis for OAuth2-based account systems",
+  summary: "Common code for OAuth2-based login services",
   internal: true
 });
 
