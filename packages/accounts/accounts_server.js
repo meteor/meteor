@@ -101,7 +101,7 @@
     if (!email)
       throw new Meteor.Error("We don't yet support email-less users");
 
-    var userByEmail = Meteor.users.findOne({emails: userData.email});
+    var userByEmail = Meteor.users.findOne({emails: email});
     var user;
     if (userByEmail) {
 
