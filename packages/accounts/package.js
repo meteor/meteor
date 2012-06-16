@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "A user account system",
+  summary: "A user account system"
 });
 
 Package.on_use(function(api) {
