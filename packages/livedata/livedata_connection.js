@@ -435,9 +435,10 @@ _.extend(Meteor._LivedataConnection.prototype, {
       cookie('last_session_id',self.last_session_id,15);
     }
 
-    if (reconnected)
+    // XXX reset on reconnect until DATA acks are implemented
+    //if (reconnected)
       // successful reconnection -- pick up where we left off.
-      return;
+    //  return;
 
     // Server doesn't have our data any more. Re-sync a new session.
 
