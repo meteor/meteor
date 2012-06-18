@@ -21,6 +21,7 @@ Tinytest.add("templating - assembly", function (test) {
   Meteor.flush();
   test.equal(canonicalizeHtml(onscreen.innerHTML), "xhi");
   document.body.removeChild(onscreen);
+  Meteor.flush();
 });
 
 // Test that if a template throws an error, then pending_partials is
@@ -70,6 +71,7 @@ Tinytest.add("templating - table assembly", function(test) {
 
 
   document.body.removeChild(onscreen);
+  Meteor.flush();
 });
 
 Tinytest.add("templating - event handler this", function(test) {
