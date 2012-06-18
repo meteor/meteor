@@ -85,6 +85,9 @@ Meteor.ui = Meteor.ui || {};
     if (start.nodeType === 11 /* DocumentFragment */) {
       end = start.lastChild;
       start = start.firstChild;
+    } else {
+      if (! start.parentNode)
+        throw new Error("LiveRange start and end must have a parent");
     }
     end = end || start;
 
@@ -240,19 +243,21 @@ Meteor.ui = Meteor.ui || {};
 
       this._remove_entries(this._start, 0, this._start_idx);
       this._remove_entries(this._end, 1, 0, this._end_idx + 1);
-      // force-clean the top-level nodes in this, besides _start and _end
+      
       if (this._start !== this._end) {
+        // force-clean the top-level nodes in this, besides _start and _end
         for(var n = this._start.nextSibling;
             n !== this._end;
             n = n.nextSibling) {
           Meteor.ui._LiveRange._clean_node(self.tag, n, true);
         }
+
+        // clean ends on this._start and starts on this._end
+        if (this._start[self.tag])
+          this._remove_entries(this._start, 1);
+        if (this._end[self.tag])
+          this._remove_entries(this._end, 0);
       }
-      // clean ends on this._start and starts on this._end
-      if (this._start[self.tag])
-        this._remove_entries(this._start, 1);
-      if (this._end[self.tag])
-        this._remove_entries(this._end, 0);
 
       this._start = this._end = null;
 

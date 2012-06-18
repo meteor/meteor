@@ -720,6 +720,23 @@ Tinytest.add("liveui - chunks", function(test) {
   // up with a LiveRange.
   Meteor.flush();
   test.equal(Q.numListeners(), 0);
+
+  // nesting
+
+  var stuff = ReactiveVar(true);
+  var div = OnscreenDiv(Meteor.ui.render(function() {
+    return Meteor.ui.chunk(function() {
+      return "x"+(stuff.get() ? 'y' : '') + Meteor.ui.chunk(function() {
+        return "hi";
+      });
+    });
+  }));
+  test.equal(div.html(), "xyhi");
+  stuff.set(false);
+  Meteor.flush();
+  test.equal(div.html(), "xhi");
+  div.kill();
+  Meteor.flush();
 });
 
 Tinytest.add("liveui - repeated chunk", function(test) {
