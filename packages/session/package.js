@@ -20,3 +20,12 @@ Package.on_use(function (api, where) {
 
   api.add_files('session.js', where);
 });
+
+Package.on_test(function (api) {
+  api.use('session', ['client', 'server']);
+  api.use('test-helpers', ['client', 'server']);
+  api.use('tinytest');
+
+  api.add_files('session_tests.js', ['client', 'server']);
+  api.add_files('session_client_tests.js', ['client']);
+});
