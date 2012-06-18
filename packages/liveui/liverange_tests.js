@@ -599,9 +599,9 @@ Tinytest.add("liverange - destroy", function(test) {
 
   childrenHaveNoTags(pat.frag);
 
-  // test recursive on single text node
+  // test recursive on single node
   var frag = document.createDocumentFragment();
-  var txt = document.createTextNode("pudding");
+  var txt = document.createComment("pudding");
   frag.appendChild(txt);
   var rng5 = new Meteor.ui._LiveRange('_pudding', txt);
   var rng4 = new Meteor.ui._LiveRange('_pudding', txt);
