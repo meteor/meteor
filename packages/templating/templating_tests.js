@@ -233,4 +233,11 @@ Tinytest.add("templating - helpers and dots", function(test) {
     // for consistency
     'fancyhelper.currentCountry.daisyGetter=petal'
   ]);
+
+  // test significance of 'this', which prevents helper from
+  // shadowing property
+  test.equal(Template.test_helpers_g(dataObj).match(/\S+/g), [
+    'platypus=eggs',
+    'this.platypus=weird'
+  ]);
 });

@@ -110,13 +110,22 @@ Handlebars.evaluate = function (ast, data, options) {
       // no name: {{this}}, {{..}}, {{../..}}
       return stack.data;
 
+    var scopedToContext = false;
+    if (id[1] === '') {
+      // an empty path segment is our AST's way of encoding
+      // the presence of 'this.' at the beginning of the path.
+      id.splice(1, 1); // remove the ''
+      scopedToContext = true;
+    }
+
     var data;
-    if (id[0] === 0 && (id[1] in helpers)) {
+    if (id[0] === 0 && (id[1] in helpers) && ! scopedToContext) {
       // first path segment is a helper
       data = helpers[id[1]];
     } else {
       if ((! data instanceof Object) &&
-          (typeof (function() {})[id[1]] !== 'undefined')) {
+          (typeof (function() {})[id[1]] !== 'undefined') &&
+          ! scopedToContext) {
         // Give a helpful error message if the user tried to name
         // a helper 'name', 'length', or some other built-in property
         // of function objects.  Unfortunately, this case is very
