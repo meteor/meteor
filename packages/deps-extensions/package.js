@@ -8,3 +8,12 @@ Package.on_use(function (api, where) {
   api.use('deps', where);
   api.add_files('deps-extensions.js', where);
 });
+
+
+Package.on_test(function (api) {
+  api.use('deps-extensions', ['client', 'server']);
+  api.use('test-helpers', ['client', 'server']);
+  api.use('tinytest');
+
+  api.add_files('deps-extensions_tests.js', ['client', 'server']);
+});
