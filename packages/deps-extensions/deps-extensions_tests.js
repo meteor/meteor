@@ -1,6 +1,5 @@
 Tinytest.add("add reactive variable basics", function(test) {
   var obj = {};
-  
   Meteor.deps.add_reactive_variable(obj, 'foo', 'default');
   
   test.equal(obj.foo(), 'default');
@@ -57,4 +56,37 @@ Tinytest.add("add reactive variable reactivity", function(test) {
   test_code_invalidates(test, obj, false, function() {
     test.equal(obj.foo.equals('third'), false);
   });  
+});
+
+Tinytest.add("await", function(test) {
+  var obj = {};
+  Meteor.deps.add_reactive_variable(obj, 'foo', 'default');
+  
+  var await_called = 0;
+  Meteor.deps.await(function() { return obj.foo.equals(5); }, function() {
+    await_called += 1;
+  })
+  
+  var await_once_called = 0;
+  Meteor.deps.await_once(function() { return obj.foo.equals(5); }, function() {
+    await_once_called += 1;
+  })
+  
+  test.equal(await_called, 0);
+  test.equal(await_once_called, 0);
+  
+  obj.foo.set(5);
+  Meteor.flush();
+  test.equal(await_called, 1);
+  test.equal(await_once_called, 1);
+  
+  obj.foo.set(6);
+  Meteor.flush();
+  test.equal(await_called, 1);
+  test.equal(await_once_called, 1);
+  
+  obj.foo.set(5);
+  Meteor.flush();
+  test.equal(await_called, 2);
+  test.equal(await_once_called, 1);
 });

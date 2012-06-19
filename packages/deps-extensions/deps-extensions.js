@@ -74,16 +74,16 @@ Meteor.deps.add_reactive_variable = function(object, name, value) {
   };
 };
 
-// listen to a reactive fn until it returns true, at which point, call callback.
+// listen to a reactive fn and when it returns true call callback.
 //
 // Example (continuing from above): 
 //   Meteor.deps.await(function() { Router.current_page_equals('home'); }, function() { console.log('at home'); });
-Meteor.deps.await = function(test_fn, callback) {
-  var done = false
-  var context = new Meteor.deps.Context()
+Meteor.deps.await = function(test_fn, callback, once) {
+  var done = false;
+  var context = new Meteor.deps.Context();
   context.on_invalidate(function() {
-    if (!done)
-      Meteor.deps.await(test_fn, callback);
+    if (!(done && once))
+      Meteor.deps.await(test_fn, callback, once);
   });
     
   context.run(function() {
@@ -93,3 +93,6 @@ Meteor.deps.await = function(test_fn, callback) {
     }
   });
 };
+
+// convience function for await(fn, cb, true)
+Meteor.deps.await_once = function(fn, cb) { Meteor.deps.await(fn, cb, true) }
