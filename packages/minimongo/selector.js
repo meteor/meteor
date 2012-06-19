@@ -3,6 +3,10 @@ LocalCollection._f = {
   // XXX for _all and _in, consider building 'inquery' at compile time..
 
   _all: function (x, qval) {
+    // $all is only meaningful on arrays
+    if (!(x instanceof Array)) {
+      return false;
+    }
     // XXX should use a canonicalizing representation, so that we
     // don't get screwed by key order
     var parts = {};
