@@ -44,12 +44,4 @@
     return ret;
   };
 
-  Template.loginButtons.userName = function () {
-    var user = Meteor.user();
-    if (!user || !user.name)
-      return '';
-    return user.name;
-  };
-
-
 })();
