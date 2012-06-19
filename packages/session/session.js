@@ -26,7 +26,7 @@ Session = _.extend({}, {
   set: function (key, value) {
     var self = this;
     self._ensureKey(key);
-    self['set_' + key](value);
+    self[key].set(value);
   },
 
   get: function (key) {
@@ -38,7 +38,7 @@ Session = _.extend({}, {
   equals: function (key, value) {
     var self = this;
     self._ensureKey(key);
-    return self[key + '_equals'](value);
+    return self[key].equals(value);
   },
 
   _ensureKey: function (key) {

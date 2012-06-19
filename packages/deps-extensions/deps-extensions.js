@@ -5,10 +5,10 @@
 //   - Router.current_page(not_reactive = false): 
 //      reads the value of current_page, reactively?
 // 
-//   - Router.current_page_equals(value): 
+//   - Router.current_page.equals(value): 
 //      is current_page === value ala the session
 //
-//   - Router.set_current_page(value): 
+//   - Router.current_page.set(value): 
 //      changes the value of current_page, reactively
 //       (i.e. invalidates all contexts that have read this variable)
 Meteor.deps.add_reactive_variable = function(object, name, value) {
@@ -32,7 +32,7 @@ Meteor.deps.add_reactive_variable = function(object, name, value) {
     return variable;
   };
   
-  object[name + '_equals'] = function(value) {
+  object[name].equals = function(value) {
     var context = Meteor.deps.Context.current;
     if (context) {
       if (!(value in equals_contexts))
@@ -55,7 +55,7 @@ Meteor.deps.add_reactive_variable = function(object, name, value) {
     return variable === value;
   };
   
-  object['set_' + name] = function(new_value) {
+  object[name].set = function(new_value) {
     var old_value = variable;
     if (new_value === old_value)
       return;
