@@ -5,6 +5,8 @@
 //     For all details and documentation:
 //     http://backbonejs.org
 
+// Meteor changes occur inside <METEOR> </METEOR> -- dgreenspan
+
 (function(){
 
   // Initial Setup
@@ -994,6 +996,10 @@
     // an existing route, and `false` otherwise.
     start: function(options) {
       if (History.started) throw new Error("Backbone.history has already been started");
+      // <METEOR>
+      if (typeof window === 'undefined')
+        throw new Error("Backbone.History is client-only, can't start on the server");
+      // </METEOR>
       History.started = true;
 
       // Figure out the initial configuration. Do we need an iframe?
