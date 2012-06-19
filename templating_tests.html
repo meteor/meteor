@@ -136,6 +136,12 @@
 <template name="test_helpers_d">
   daisygetter={{daisygetter}}
   thisTest={{thisTest}}
+  {{#with fancy}}
+    ../thisTest={{../thisTest}}
+  {{/with}}
+  {{#with "foo"}}
+    ../fancy.currentFruit={{../fancy.currentFruit}}
+  {{/with}}
 </template>
 
 <template name="test_helpers_e">
@@ -145,7 +151,6 @@
   fancy.currentCountry.name={{fancy.currentCountry.name}}
   fancy.currentCountry.population={{fancy.currentCountry.population}}
   fancy.currentCountry.unicorns={{fancy.currentCountry.unicorns}}
-  fancy.currentCountry.daisyGetter={{fancy.currentCountry.daisyGetter}}
 </template>
 
 <template name="test_helpers_f">
@@ -155,7 +160,6 @@
   fancyhelper.currentCountry.name={{fancyhelper.currentCountry.name}}
   fancyhelper.currentCountry.population={{fancyhelper.currentCountry.population}}
   fancyhelper.currentCountry.unicorns={{fancyhelper.currentCountry.unicorns}}
-  fancyhelper.currentCountry.daisyGetter={{fancyhelper.currentCountry.daisyGetter}}
 </template>
 
 <template name="test_helpers_g">
