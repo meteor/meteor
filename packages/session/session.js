@@ -1,5 +1,6 @@
 Session = _.extend({}, {
   keys: [],
+  data: {},
   
   // XXX remove debugging method (or improve it, but anyway, don't
   // ship it in production)
@@ -26,26 +27,26 @@ Session = _.extend({}, {
   set: function (key, value) {
     var self = this;
     self._ensureKey(key);
-    self[key].set(value);
+    self.data[key].set(value);
   },
 
   get: function (key) {
     var self = this;
     self._ensureKey(key);
-    return self[key]();
+    return self.data[key]();
   },
 
   equals: function (key, value) {
     var self = this;
     self._ensureKey(key);
-    return self[key].equals(value);
+    return self.data[key].equals(value);
   },
 
   _ensureKey: function (key) {
     var self = this;
     if (_.indexOf(self.keys, key) == -1) {
       self.keys.push(key);
-      Meteor.deps.add_reactive_variable(self, key);
+      Meteor.deps.add_reactive_variable(self.data, key);
     }
   }
 });
@@ -56,7 +57,7 @@ if (Meteor._reload) {
     // XXX sanitize and make sure it's JSONible?
     var data = {};
     _.each(Session.keys, function(key) {
-      data[key] = Session[key](true);
+      data[key] = Session.data[key](true);
     });
     return [true, {data: data}];
   });
