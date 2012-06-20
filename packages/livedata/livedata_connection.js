@@ -3,6 +3,35 @@ if (Meteor.is_server) {
   var Future = __meteor_bootstrap__.require('fibers/future');
 }
 
+
+// cookies are used for session resumption on page reload
+var cookie;
+if (Meteor.is_client) {
+  cookie = function(name, value, minutes) {
+    name = 'Meteor.'+name;
+    if (value === undefined) {
+      var nameEQ = name + "=";
+      var ca = document.cookie.split(';');
+      for(var i=0;i < ca.length;i++) {
+        var c = ca[i];
+        c = c.trim();
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+      }
+      return null;
+    } else {
+      if (minutes) {
+        var date = new Date();
+        date.setTime(date.getTime()+(minutes*60*1000));
+        var expires = "; expires="+date.toGMTString();
+      }
+      else var expires = "";
+      document.cookie = name+"="+value+expires+"; path=/";
+    }
+  }
+} else {
+  cookie = function(){};
+}
+
 // list of subscription tokens outstanding during a
 // captureDependencies run. only set when we're doing a run. The fact
 // that this is a singleton means we can't do recursive
@@ -21,11 +50,13 @@ Meteor._LivedataConnection = function (url, restart_on_update) {
     // if we have two test streams, auto reload stuff will break because
     // the url is used as a key for the migration data.
     self.url = "/debug";
+    self.last_sessiond = null;
   } else {
     self.url = url;
+    self.last_session_id = cookie('last_session_id');
   }
 
-  self.last_session_id = null;
+  
   self.stores = {}; // name -> object with methods
   self.method_handlers = {}; // name -> func
   self.next_method_id = 1;
@@ -401,11 +432,13 @@ _.extend(Meteor._LivedataConnection.prototype, {
     if (typeof (msg.session) === "string") {
       var reconnected = (self.last_session_id === msg.session);
       self.last_session_id = msg.session;
+      cookie('last_session_id',self.last_session_id,15);
     }
 
-    if (reconnected)
+    // XXX reset on reconnect until DATA acks are implemented
+    //if (reconnected)
       // successful reconnection -- pick up where we left off.
-      return;
+    //  return;
 
     // Server doesn't have our data any more. Re-sync a new session.
 
