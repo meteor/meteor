@@ -17,7 +17,8 @@ Meteor.deps.add_reactive_variable = function(object, name, value) {
   var contexts = {}, equals_contexts = {};
   
   object[name] = function(not_reactive) {
-    if (not_reactive) 
+    // templates will pass in an object here, so we want to be sure they've passed true
+    if (not_reactive === true) 
       return variable;
     
     var context = Meteor.deps.Context.current;

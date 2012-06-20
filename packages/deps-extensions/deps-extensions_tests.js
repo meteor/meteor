@@ -42,6 +42,11 @@ Tinytest.add("add reactive variable reactivity", function(test) {
     test.equal(obj.bar(), 'default');
   });
   
+  // reading foo(true) shouldn't behave reactively
+  test_code_invalidates(test, obj, false, function() {
+    test.equal(obj.foo(true), 'first');
+  });
+  
   // this should invalidate as we go first -> second
   test_code_invalidates(test, obj, true, function() {
     test.equal(obj.foo.equals('first'), true);
