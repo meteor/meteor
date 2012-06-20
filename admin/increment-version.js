@@ -12,6 +12,7 @@ var _ = require('../app/lib/third/underscore.js');
 
 // What files to update. Relative to project root.
 var UPDATE_FILES = ['app/lib/updater.js',
+                    'app/meteor/post-upgrade.js',
                     'admin/install-s3.sh',
                     'admin/debian/changelog',
                     'admin/meteor.spec',
