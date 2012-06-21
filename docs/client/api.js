@@ -41,7 +41,7 @@ Template.api.publish = {
 
 Template.api.subscription_set = {
   id: "publish_set",
-  name: "<i>this</i>.set(collection, id, name, value)",
+  name: "<i>this</i>.set(collection, id, attributes)",
   locus: "Server",
   descr: ["Call inside publish function.  Queues a command to set attributes."],
   args: [
