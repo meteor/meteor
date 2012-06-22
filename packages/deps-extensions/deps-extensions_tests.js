@@ -10,6 +10,10 @@ Tinytest.add("add reactive variable basics", function(test) {
   test.equal(obj.foo(), 'random');
   test.equal(obj.foo.equals('default'), false);
   test.equal(obj.foo.equals('random'), true);
+  
+  // woops, better make sure resetting to the same value doesn't break us
+  obj.foo.set('random');
+  test.equal(obj.foo(), 'random');
 });
 
 

@@ -75,7 +75,7 @@ _.extend(Meteor.deps.add_reactive_variable, {
   set_variable: function(new_value, variable, contexts, equals_contexts) {
     var old_value = variable;
     if (new_value === old_value)
-      return;
+      return old_value;
 
     var invalidate = function (map) {
       if (map)
