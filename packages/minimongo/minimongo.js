@@ -482,7 +482,7 @@ LocalCollection.prototype.restore = function () {
     query.results = query.cursor._getRawObjects();
 
     if (!this.paused)
-      LocalCollection._diffQuery(old_results, query.results, query, true, ctor);
+      LocalCollection._diffQuery(old_results, query.results, query, true, this.ctor);
   }
 };
 
