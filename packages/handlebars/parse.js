@@ -27,17 +27,33 @@ Handlebars = {};
  */
 
 Handlebars.to_json_ast = function (code) {
-  var ast = require("handlebars").parse(code);
-  var _ = require('../../packages/underscore/underscore.js'); // XXX super lame
+  // We need handlebars and underscore, but this is bundle time, so
+  // we load them using 'require'.
+  // If we're in a unit test right now, we're actually in the server
+  // run-time environment; we have '_' but not 'require'.
+  // This is all very hacky.
+  var req = (typeof require === 'undefined' ?
+             __meteor_bootstrap__.require : require);
+  var _ = global._;
+  if (! _)
+    _ = req('../../packages/underscore/underscore.js'); // XXX super lame
+
+  var ast = req("handlebars").parse(code);
 
   var identifier = function (node) {
     if (node.type !== "ID")
       throw new Error("got ast node " + node.type + " for identifier");
     // drop node.isScoped. this is true if there was a 'this' or '.'
     // anywhere in the path. vanilla handlebars will turn off
-    // helpers lookup if isScoped is true (they're trying to handle
-    // 'this.a' but catch 'a.this.this' as collateral damage)
+    // helpers lookup if isScoped is true, but this is too restrictive
+    // for us.
     var ret = [node.depth];
+    // we still want to turn off helper lookup if path starts with 'this.'
+    // as in {{this.foo}}, which means it has to look different from {{foo}}
+    // in our AST.  signal the presence of 'this' in our AST using an empty
+    // path segment.
+    if (/^this\./.test(node.original))
+      ret.push('');
     return ret.concat(node.parts);
   };
 

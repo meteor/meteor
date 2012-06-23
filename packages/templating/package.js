@@ -43,7 +43,7 @@ Package.register_extension(
     // XXX super lame! we actually have to give paths relative to
     // app/inner/app.js, since that's who's evaling us.
     var html_scanner = require('../../packages/templating/html_scanner.js');
-    var results = html_scanner.scan(contents.toString('utf8'));
+    var results = html_scanner.scan(contents.toString('utf8'), source_path);
 
     if (results.head)
       bundle.add_resource({
@@ -60,7 +60,7 @@ Package.register_extension(
       });
 
     if (results.js) {
-      var path_part = path.dirname(serve_path)
+      var path_part = path.dirname(serve_path);
       if (path_part === '.')
         path_part = '';
       if (path_part.length && path_part !== '/')
@@ -82,8 +82,15 @@ Package.register_extension(
 
 Package.on_test(function (api) {
   api.use('tinytest');
+  api.use('htmljs');
+  api.use('test-helpers', 'client');
   api.add_files([
     'templating_tests.js',
     'templating_tests.html'
   ], 'client');
+  api.add_files([
+    '../handlebars/parse.js', // XXX hacky
+    'html_scanner.js',
+    'scanner_tests.js'
+  ], 'server');
 });

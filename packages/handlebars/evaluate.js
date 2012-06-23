@@ -55,6 +55,7 @@ Handlebars.registerHelper = function (name, func) {
   Handlebars._default_helpers[name] = func;
 };
 
+// Utility to HTML-escape a string.
 Handlebars._escape = (function() {
   var escape_map = {
     "<": "&lt;",
@@ -69,12 +70,12 @@ Handlebars._escape = (function() {
   };
 
   return function (x) {
-    // If Handlebars sees an &entity; in the input text, it won't quote
-    // it (won't replace it with &ampentity;). I'm not sure if that's
-    // the right choice -- it's definitely a heuristic..
-    return x.replace(/&(?!\w+;)|[<>"'`]/g, escape_one);
+    return x.replace(/[&<>"'`]/g, escape_one);
   };
 })();
+
+// be able to recognize default "this", which is different in different environments
+Handlebars._defaultThis = (function() { return this; })();
 
 Handlebars.evaluate = function (ast, data, options) {
   options = options || {};
@@ -94,19 +95,92 @@ Handlebars.evaluate = function (ast, data, options) {
   var eval_value = function (stack, id) {
     if (typeof(id) !== "object")
       return id;
-    if (id.length === 2 && id[0] === 0 && (id[1] in helpers))
-      return helpers[id[1]];
+
+    // follow '..' in {{../../foo.bar}}
     for (var i = 0; i < id[0]; i++) {
       if (!stack.parent)
         throw new Error("Too many '..' segments");
       else
         stack = stack.parent;
     }
-    var ret = stack.data;
-    for (var i = 1; i < id.length; i++)
-      // XXX error (and/or unknown key) handling
-      ret = ret[id[i]];
-    return ret;
+
+    if (id.length === 1)
+      // no name: {{this}}, {{..}}, {{../..}}
+      return stack.data;
+
+    var scopedToContext = false;
+    if (id[1] === '') {
+      // an empty path segment is our AST's way of encoding
+      // the presence of 'this.' at the beginning of the path.
+      id.splice(1, 1); // remove the ''
+      scopedToContext = true;
+    }
+
+    // when calling functions (helpers/methods/getters), dataThis
+    // tracks what to use for `this`.  For helpers, it's the
+    // current data context.  For getters and methods on the data
+    // context object, and on the return value of a helper, it's
+    // the object where we got the getter or method.
+    var dataThis = stack.data;
+
+    var data;
+    if (id[0] === 0 && (id[1] in helpers) && ! scopedToContext) {
+      // first path segment is a helper
+      data = helpers[id[1]];
+    } else {
+      if ((! data instanceof Object) &&
+          (typeof (function() {})[id[1]] !== 'undefined') &&
+          ! scopedToContext) {
+        // Give a helpful error message if the user tried to name
+        // a helper 'name', 'length', or some other built-in property
+        // of function objects.  Unfortunately, this case is very
+        // hard to detect, as Template.foo.name = ... will fail silently,
+        // and {{name}} will be silently empty if the property doesn't
+        // exist (per Handlebars rules).
+        // However, if there is no data context at all, we jump in.
+        throw new Error("Can't call a helper '"+id[1]+"' because "+
+                        "it is a built-in function property in JavaScript");
+      }
+      // first path segment is property of data context
+      data = (stack.data && stack.data[id[1]]);
+    }
+
+    // handle dots, as in {{foo.bar}}
+    for (var i = 2; i < id.length; i++) {
+      // Call functions when taking the dot, to support
+      // for example currentUser.name.
+      //
+      // In the case of {{foo.bar}}, we end up returning one of:
+      // - helpers.foo.bar
+      // - helpers.foo().bar
+      // - stack.data.foo.bar
+      // - stack.data.foo().bar.
+      //
+      // The caller does the final application with any
+      // arguments, as in {{foo.bar arg1 arg2}}, and passes
+      // the current data context in `this`.  Therefore,
+      // we use the current data context (`helperThis`)
+      // for all function calls.
+      if (typeof data === 'function') {
+        data = data.call(dataThis);
+        dataThis = data;
+      } else if (data === undefined || data === null) {
+        // Handlebars fails silently and returns "" if
+        // we start to access properties that don't exist.
+        data = '';
+      }
+
+      data = data[id[i]];
+    }
+
+    // ensure `this` is bound appropriately when the caller
+    // invokes `data` with any arguments.  For example,
+    // in {{foo.bar baz}}, the caller must supply `baz`,
+    // but we alone have `foo` (in `dataThis`).
+    if (typeof data === 'function')
+      return _.bind(data, dataThis);
+
+    return data;
   };
 
   // 'extra' will be clobbered, but not 'params'
@@ -153,26 +227,58 @@ Handlebars.evaluate = function (ast, data, options) {
       return x.toString();
     };
 
+    // wrap `fn` and `inverse` blocks in liveranges
+    // having event_data, if the data is different
+    // from the enclosing data.
+    var decorateBlockFn = function(fn, old_data) {
+      return function(data) {
+        var result = fn(data);
+        // don't create spurious ranges when data is same as before
+        // (or when transitioning between e.g. `window` and `undefined`)
+        if ((data || Handlebars._defaultThis) ===
+            (old_data || Handlebars._defaultThis)) {
+          return result;
+        } else {
+          return Meteor.ui.chunk(
+            function() { return result; },
+            { event_data: data });
+        }
+      };
+    };
+
+    // Handle the return value of a {{helper}}.
+    // Takes a:
+    //   string - escapes it
+    //   SafeString - returns the underlying string unescaped
+    //   other value - coerces to a string and escapes it
+    var maybeEscape = function(x) {
+      if (x instanceof Handlebars.SafeString)
+        return x.toString();
+      return Handlebars._escape(toString(x));
+    };
+
     _.each(elts, function (elt) {
       if (typeof(elt) === "string")
         buf.push(elt);
       else if (elt[0] === '{')
-        buf.push(Handlebars._escape(toString(invoke(stack, elt[1]))));
+        buf.push(maybeEscape(invoke(stack, elt[1])));
       else if (elt[0] === '!')
         buf.push(toString(invoke(stack, elt[1] || '')));
       else if (elt[0] === '#') {
-        var block = function (data) {
-          return template({parent: stack, data: data}, elt[2]);
-        };
+        var block = decorateBlockFn(
+          function (data) {
+            return template({parent: stack, data: data}, elt[2]);
+          }, stack.data);
         block.fn = block;
-        block.inverse = function (data) {
-          return template({parent: stack, data: data}, elt[3] || []);
-        };
-        buf.push(invoke(stack, elt[1], block));
+        block.inverse = decorateBlockFn(
+          function (data) {
+            return template({parent: stack, data: data}, elt[3] || []);
+          }, stack.data);
+        buf.push(toString(invoke(stack, elt[1], block)));
       } else if (elt[0] === '>') {
         if (!(elt[1] in partials))
           throw new Error("No such partial '" + elt[1] + "'");
-        buf.push(partials[elt[1]](stack.data));
+        buf.push(toString(partials[elt[1]](stack.data)));
       } else
         throw new Error("bad element in template");
     });
@@ -183,3 +289,9 @@ Handlebars.evaluate = function (ast, data, options) {
   return template({data: data, parent: null}, ast);
 };
 
+Handlebars.SafeString = function(string) {
+  this.string = string;
+};
+Handlebars.SafeString.prototype.toString = function() {
+  return this.string.toString();
+};

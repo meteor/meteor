@@ -45,12 +45,16 @@ create a nested tree of separate files, or anything in between.
 
 Files outside the `client` and `server`
 subdirectories are loaded on both the client and the server!  That's
-the place for model definitions and other functions.  Also, instead of
-putting client and server functions in different directories, you can
-use the [`is_client` and `is_server`](#meteor_is_client) variables
-to isolate JavaScript to one or the other side.
+the place for model definitions and other functions.  Meteor provides
+the variables [`is_client` and `is_server`](#meteor_is_client) so that
+your code can alter its behavior depending on whether it's running
+on the client or the server.
 
-CSS files work just the same: the client will get a bundle with all
+Any sensitive code that you don't want served to the client, such as code
+containing passwords or authentication mechanisms, should be
+kept in the `server` directory.
+
+CSS files are gathered together as well: the client will get a bundle with all
 the CSS in your tree (excluding the `server`
 and `public` subdirectories).
 
@@ -385,14 +389,7 @@ Helpers can also be used to pass in constant data.
 Finally, you can set the `events` property of a template function to a
 table of event handlers. The format is documented at [Event
 Maps](#eventmaps). The `this` argument to the event handler will be
-the template data.
-
-{{#warning}}
-For now, the event handler gets the template data from the *top
-level* of the current template, not the template data from the
-template context of the element that triggered the event. This will
-be changing.
-{{/warning}}
+the data context of the element that triggered the event.
 
     <!-- myapp.html -->
     <template name="scores">
@@ -547,9 +544,9 @@ created on.  To run on a different platform, you'll need to rebuild
 the native packages included in the bundle.  To do that, make sure you
 have <code>npm</code> available, and run the following:
 
-    $ cd bundle/server
+    $ cd bundle/server/node_modules
     $ rm -r fibers
-    $ npm install fibers@0.6.3
+    $ npm install fibers@0.6.5
 {{/warning}}
 
 {{/better_markdown}}

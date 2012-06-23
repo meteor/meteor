@@ -35,6 +35,24 @@ Meteor.http = Meteor.http || {};
     return url;
   };
 
+  // Fill in `response.data` if the content-type is JSON.
+  Meteor.http._populateData = function(response) {
+    // Read Content-Type header, up to a ';' if there is one.
+    // A typical header might be "application/json; charset=utf-8"
+    // or just "application/json".
+    var contentType = (response.headers['content-type'] || ';').split(';')[0];
+
+    // Only try to parse data as JSON if server sets correct content type.
+    if (_.include(['application/json', 'text/javascript'], contentType)) {
+      try {
+        response.data = JSON.parse(response.content);
+      } catch (err) {
+        response.data = null;
+      }
+    } else {
+      response.data = null;
+    }
+  };
 
   Meteor.http.get = function (/* varargs */) {
     return Meteor.http.call.apply(this, ["GET"].concat(_.toArray(arguments)));

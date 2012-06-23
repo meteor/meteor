@@ -58,3 +58,15 @@ OnscreenDiv.prototype.kill = function() {
 OnscreenDiv.prototype.remove = function() {
   this.div.parentNode.removeChild(this.div);
 };
+
+// Show the div (which is otherwise display:none),
+// for tests that require it or for debugging of tests.
+// If invisibly=true, make the div 0-height to obscure
+// the contents.
+OnscreenDiv.prototype.show = function(invisibly) {
+  this.div.style.display = "block";
+  if (invisibly) {
+    this.div.style.height = 0;
+    this.div.style.overflow = 'hidden';
+  }
+};

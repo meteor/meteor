@@ -18,6 +18,9 @@ Meteor._StreamServer = function () {
   var sockjs = __meteor_bootstrap__.require('sockjs');
   self.server = sockjs.createServer({
     prefix: '/sockjs', log: function(){},
+    // this is the default, but we code it explicitly because we depend
+    // on it in stream_client:HEARTBEAT_TIMEOUT
+    heartbeat_delay: 25000,
     jsessionid: false});
   self.server.installHandlers(__meteor_bootstrap__.app);
 

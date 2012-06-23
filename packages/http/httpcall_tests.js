@@ -70,7 +70,6 @@ testAsyncMulti("httpcall - basic", [
   }]);
 
 testAsyncMulti("httpcall - failure", [
-
   function(test, expect) {
 
     // Accessing unknown server (should fail to make any connection)
@@ -90,6 +89,12 @@ testAsyncMulti("httpcall - failure", [
 
         test.equal(result.statusCode, 500);
       }));
+
+  }
+]);
+
+testAsyncMulti("httpcall - timeout", [
+  function(test, expect) {
 
     // Should time out
     Meteor.http.call(
@@ -113,7 +118,8 @@ testAsyncMulti("httpcall - failure", [
         test.equal(data.method, "GET");
 
       }));
-  }]);
+  }
+]);
 
 testAsyncMulti("httpcall - redirect", [
 

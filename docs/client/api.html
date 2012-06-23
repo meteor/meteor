@@ -596,18 +596,19 @@ Example:
 
     // Show a list of posts that have been flagged, updating in realtime.
     // Put a link next to each post that deletes the post if clicked.
-    var frag = Meteor.renderList(Posts, {
-      selector: {flagged: true},
-      render: function (post) {
-        // In real code it'd be necessary to sanitize post.name
-        return $("<div>" + post.name +
-          " <span class='delete'>Delete</span></div>");
-      },
-      events: {
-        'click .delete': function () {
-          Posts.remove(this._id);
-        }
-      }
+    var frag = Meteor.ui.render(function() {
+      return Meteor.ui.listChunk(
+        Posts.find({flagged: true}),
+        function (post) {
+          // In real code it'd be necessary to sanitize post.name
+          return "<div>" + post.name +
+            " <span class='delete'>Delete</span></div>";
+        },
+        { events: {
+          'click .delete': function () {
+            Posts.remove(this._id);
+          }
+        }});
     });
     document.body.appendChild(frag);
 
@@ -933,7 +934,7 @@ reactive data sources used by that function. For more information, or
 to learn how to make your own reactive data sources, see
 [Reactivity](#reactivity).
 
-<!--
+{{!
 Meteor.ui.render runs html_func in a reactive context, then returns a
 DocumentFragment that can be inserted anywhere in a Document and that
 will automatically update itself in place whenever the context is
@@ -954,7 +955,7 @@ can use Meteor.ui.chunk to create a nested tree of invalidation
 contexts.
 [events]
 [more?]
--->
+}}
 
 
 Example:
@@ -995,7 +996,14 @@ When generating HTML from a function passed to [`Meteor.ui.render`](#meteor_ui_r
 
 Like `render`, `Meteor.ui.chunk` takes a function `html_func` that returns a HTML string. It calls that function, records the data that the function used (using a [reactive context](#meteor_ui_deps)), and arranges to rerun the function as necessary whenever the data changes. What's different from `render` is that it returns another HTML string, not a DocumentFragment. So, unlike `render`, `chunk` may be nested as deeply as you like, for example to render nested views or subtemplates.
 
-`chunk` can also be used to attach events to part of an HTML string, in much the same way that they could be attached to DOM elements. When the string is parsed into DOM elements by `render`, the event handlers will automatically be hooked up.
+`chunk` can also be used to attach events to part of an HTML string, in much the same way that they could be attached to DOM elements. When the string is parsed into DOM elements by `render`, the event handlers will automatically be hooked up. If `event_data` is provided, it sets the event data for _all_ events that occur that within the chunk, even when those events are handled by handlers declared in enclosing chunks.
+
+{{#note}}
+Note: In Internet Explorer 8 and
+earlier, if you manually add elements to a chunk after it has been
+rendered &mdash; for example, using jQuery or the DOM API &mdash; then handlers
+in event maps may not fire on these elements.  This is a limitation of the implementation.
+{{/note}}
 
 `chunk` works by creating a unique ID for the chunk, wrapping the HTML string in a comment that calls out that ID, and adding an entry to the chunk table for the current invocation of `render`. As `render` turns the HTML string into DOM nodes, it pulls out the comments and wires up the appropriate callbacks and pointers. On the other hand, if there is no current invocation of `render`, `chunk` just passes the string through unchanged. (In this case, if an event map is provided, it is ignored.)
 
@@ -1046,7 +1054,7 @@ It keeps the chunks updated as the results of the database query change. For exa
 
 If you provide `else_func`, then whenever the query returns no results, it will be called to render alternative content. You might use this to show a message like "No records match your query."
 
-You can provide an `events` option to attach a set of event handlers to each chunk that `listChunk` creates. When events fire, `this` in the event handler will contain the database record that triggered the event.
+You can provide an `events` option to attach a set of event handlers to each chunk that `listChunk` creates. `event_data` is set to the corresponding database record in each chunk, meaning that when any event fires within a chunk, `this` in the event handler will contain the appropriate database record.
 
 
 
@@ -1112,32 +1120,27 @@ the handlers for those events. The property can be in one of several
 forms:
 
 <dl>
-{{#dtdd "<em>eventname</em>"}}
-Matches a particular type of event, such as 'click'
+{{#dtdd "<em>eventtype</em>"}}
+Matches a particular type of event, such as 'click'.
 {{/dtdd}}
 
-{{#dtdd "<em>eventname selector</em>"}}
+{{#dtdd "<em>eventtype selector</em>"}}
 Matches a particular type of event, but only when it appears on
-an element that matches a certain CSS selector
+an element that matches a certain CSS selector.  
 {{/dtdd}}
 
 {{#dtdd "<em>event1, event2</em>"}}
-To handle more than one type of event with the same function, use a comma-separated list.{{/dtdd}}
-
+To handle more than one type of event with the same function, use a comma-separated list.
+{{/dtdd}}
 </dl>
 
 The handler function gets one argument, an object with information
-about the event. It will receive some additional context data
-in `this`, depending on the context (eg: with
-[`Meteor.ui.listChunk`](#meteor_ui_listchunk), you get the
-document; with a Handlebars template, you get the data being used to
-fill the template.)
-
-{{#warning}}
-Right now, the event handlers are wired up with jQuery, and the event
-object you receive is a jQuery event object. We would like to change
-this so that you are not required to use jQuery.
-{{/warning}}
+about the event. It will receive some additional context data in
+`this`, depending on the context of the element that generated the
+event.  In a Handlebars template, the element's context is the
+Handlebars data context, which is set by block helpers such as `#with`
+and `#each`.  When using [`Meteor.ui.chunk`](#meteor_ui_chunk), the
+data context is set using the `event_data` option.
 
 Example:
 
@@ -1151,6 +1154,127 @@ Example:
       // Fires when 'accept' is clicked, or a key is pressed
       'keydown, click .accept': function (event) { ... }
     }
+
+Most events bubble up the document tree from their originating
+element.  For example, `'click p'` catches a click anywhere in a
+paragraph, even if the click originated on a link, span, or some other
+element inside the paragraph.  The originating element of the event
+is available as the `target` property, while the element that matched
+the selector and is currently handling it is called `currentTarget`.
+
+    {
+      'click p': function (event) {
+        var paragraph = event.currentTarget; // always a P
+        var clickedElement = event.target; // could be the P or a child element
+      }
+    }
+
+If a selector matches multiple elements that an event bubbles to, it
+will be called multiple times, for example in the case of `'click
+div'` or `'click *'`.  If no selector is given, the handler
+will only be called once, on the original target element.
+
+The following properties and methods are available on the event object
+passed to handlers:
+
+<dl class="objdesc">
+{{#dtdd "type" "String"}}
+The event's type, such as "click", "blur" or "keypress".
+{{/dtdd}}
+
+{{#dtdd "target" "DOM Element"}}
+The element that originated the event.
+{{/dtdd}}
+
+{{#dtdd "currentTarget" "DOM Element"}}
+The element currently handling the event.  This is the element that
+matches the selector in the event map.  For events that bubble, it may
+be `target` or an ancestor of `target`, and its value changes as the
+event bubbles.
+{{/dtdd}}
+
+{{#dtdd "which" "Number"}}
+For mouse events, the number of the mouse button (1=left, 2=middle, 3=right).
+For key events, a character or key code.
+{{/dtdd}}
+
+{{#dtdd "stopPropagation()"}}
+Prevent the event from propagating (bubbling) up to other elements.
+Other event handlers matching the same element are still fired, in
+this and other event maps.
+{{/dtdd}}
+
+{{#dtdd "stopImmediatePropagation()"}}
+Prevent all additional event handlers from being run on this event,
+including other handlers in this event map, handlers reached by
+bubbling, and handlers in other event maps.
+{{/dtdd}}
+
+{{#dtdd "preventDefault()"}}
+Prevents the action the browser would normally take in response to this
+event, such as following a link or submitting a form.  Further handlers
+are still called, but cannot reverse the effect.
+{{/dtdd}}
+
+{{#dtdd "isPropagationStopped()"}}
+Returns whether `stopPropagation()` has been called for this event.
+{{/dtdd}}
+
+{{#dtdd "isImmediatePropagationStopped()"}}
+Returns whether `stopImmediatePropagation()` has been called for this event.
+{{/dtdd}}
+
+{{#dtdd "isDefaultPrevented()"}}
+Returns whether `preventDefault()` has been called for this event.
+{{/dtdd}}
+</dl>
+
+Returning `false` from a handler is the same as calling
+both `stopImmediatePropagation` and `preventDefault` on the event.
+
+Event types and their uses include:
+
+<dl class="objdesc">
+{{#dtdd "<code>click</code>"}}
+Mouse click on any element, including a link, button, form control, or div.
+Use `preventDefault()` to prevent a clicked link from being followed.
+Some ways of activating an element from the keyboard also fire `click`.
+{{/dtdd}}
+
+{{#dtdd "<code>dblclick</code>"}}
+Double-click.
+{{/dtdd}}
+
+{{#dtdd "<code>focus, blur</code>"}}
+A text input field or other form control gains or loses focus.  You
+can make any element focusable by giving it a `tabindex` property.
+Browsers differ on whether links, checkboxes, and radio buttons are
+natively focusable.  These events do not bubble.
+{{/dtdd}}
+
+{{#dtdd "<code>change</code>"}}
+A checkbox or radio button changes state.  For text fields, use
+`blur` or key events to respond to changes.
+{{/dtdd}}
+
+{{#dtdd "<code>mouseenter, mouseleave</code>"}} The pointer enters or
+leaves the bounds of an element.  These events do not bubble.
+{{/dtdd}}
+
+{{#dtdd "<code>mousedown, mouseup</code>"}}
+The mouse button is newly down or up.
+{{/dtdd}}
+
+{{#dtdd "<code>keydown, keypress, keyup</code>"}}
+The user presses a keyboard key.  `keypress` is most useful for
+catching typing in text fields, while `keydown` and `keyup` can be
+used for arrow keys or modifier keys.
+{{/dtdd}}
+</dl>
+
+Other DOM events are available as well, but for the events above,
+Meteor has taken some care to ensure that they work uniformly in all
+browsers.
 
 {{/api_box_inline}}
 
@@ -1299,7 +1423,7 @@ Example:
 
       // If we're inside a context, and it's not yet listening to
       // temperature changes..
-      if (context && !this.listeners[context.id])
+      if (context && !this.listeners[context.id]) {
         // .. add it to our list of contexts that care about the temperature ..
         this.listeners[context.id] = context;
 

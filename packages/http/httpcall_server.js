@@ -52,7 +52,7 @@ Meteor.http = Meteor.http || {};
 
     if (params_for_body) {
       content = Meteor.http._encodeParams(params_for_body);
-      headers['Content-Type'] = "x-www-form-urlencoded";
+      headers['Content-Type'] = "application/x-www-form-urlencoded";
     }
 
     _.extend(headers, options.headers || {});
@@ -111,15 +111,7 @@ Meteor.http = Meteor.http || {};
         response.content = body;
         response.headers = res.headers;
 
-        // only parse data if correct content type.
-        if (_.include(['application/json', 'text/javascript'],
-                      response.headers['content-type'])) {
-          try {
-            response.data = JSON.parse(response.content);
-          } catch (err) {
-            response.data = null;
-          }
-        };
+        Meteor.http._populateData(response);
 
         if (res.statusCode >= 400)
           error = new Error("failed");

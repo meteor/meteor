@@ -54,18 +54,31 @@ Meteor.ui._Patcher.prototype.diffpatch = function(copyCallback) {
         n && n !== after;
         n = n.nextSibling) {
 
+      var label = null;
+
       if (n.nodeType === 1) {
         if (n.id) {
-          func('#'+n.id, n);
-          continue;
+          label = '#'+n.id;
         } else if (n.getAttribute("name")) {
-          func(n.getAttribute("name"), n);
-          continue;
+          label = n.getAttribute("name");
+          // Radio button special case:  radio buttons
+          // in a group all have the same name.  Their value
+          // determines their identity.
+          // Checkboxes with the same name and different
+          // values are also sometimes used in apps, so
+          // we treat them similarly.
+          if (n.nodeName === 'INPUT' &&
+              (n.type === 'radio' || n.type === 'checkbox') &&
+              n.value)
+            label = label + ':' + n.value;
         }
       }
 
-      // not a labeled node; recurse
-      each_labeled_node(n, null, null, func);
+      if (label)
+        func(label, n);
+      else
+        // not a labeled node; recurse
+        each_labeled_node(n, null, null, func);
     }
   };
 
@@ -91,9 +104,14 @@ Meteor.ui._Patcher.prototype.diffpatch = function(copyCallback) {
         if (self.match(tgt, src, copyCallback)) {
           // match succeeded
           if (tgt.firstChild || src.firstChild) {
-            // recurse with a new Patcher!
-            var patcher = new Meteor.ui._Patcher(tgt, src);
-            patcher.diffpatch(copyCallback);
+            // Don't patch contents of TEXTAREA tag,
+            // which are only the initial contents but
+            // may affect the tag's .value in IE.
+            if (tgt.nodeName !== "TEXTAREA") {
+              // recurse with a new Patcher!
+              var patcher = new Meteor.ui._Patcher(tgt, src);
+              patcher.diffpatch(copyCallback);
+            }
           }
         }
         lastPos = targetNodeOrder[label];
@@ -316,26 +334,55 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
   // as of FF3, Safari4
   var target_focused = (tgt === document.activeElement);
 
-  // clear current attributes
+  // Is this a control with a user-mutated "value" property?
+  var has_user_value = (
+    (tgt.nodeName === "INPUT" &&
+     (tgt.type === "text")) ||
+      tgt.nodeName === "TEXTAREA");
+
+  ///// Clear current attributes
 
   if (tgt.style.cssText)
     tgt.style.cssText = '';
 
+  var isRadio = false;
   if (tgt.nodeName === "INPUT") {
+    // Record for later whether this is a radio button.
+    isRadio = (tgt.type === 'radio');
+    // Clearing the attributes of a checkbox won't necessarily
+    // uncheck it, eg in FF12, so we uncheck explicitly.
     if (typeof tgt.checked === "boolean")
       tgt.checked = false;
   }
 
   for(var i=tgtAttrs.length-1; i>=0; i--) {
     var attr = tgtAttrs[i];
+    // In old IE, attributes that are possible on a node
+    // but not actually present will show up in this loop
+    // with specified=false.  All other browsers support
+    // 'specified' (because it's part of the spec) and
+    // set it to true.
     if (! attr.specified)
       continue;
     var name = attr.name;
+    // Filter out attributes that are indexable by number
+    // but not by name.  This kills the weird "propdescname"
+    // attribute in IE 8.
     if (! tgtAttrs[name])
-      continue; // catches weird "propdescname" in IE 8
+      continue;
+    // Some properties don't mutate well, and we simply
+    // don't try to patch them.  For example, you can't
+    // change a control's type in IE.
     if (name === "id" || name === "type")
       continue;
-    // never delete value attribute, only overwrite the property
+    // Removing a radio button's "name" property and restoring
+    // it is harmless in most browsers but breaks in IE 7.
+    // It seems unlikely enough that a radio button will
+    // sometimes have a group and sometimes not.
+    if (isRadio && name === "name")
+      continue;
+    // Never delete the "value" attribute.  It's more effective
+    // to simply overwrite it in the next phase.
     if (name === "value")
       continue;
 
@@ -359,24 +406,28 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
     tgt.removeAttributeNode(attr);
   }
 
-  // copy over src's attributes
+  ///// Copy over src's attributes
 
   if (tgt.mergeAttributes) {
     // IE code path:
+    //
+    // Only IE (all versions) has mergeAttributes.
+    // It's probably a good bit faster in old IE than
+    // iterating over all the attributes, and the treatment
+    // of form controls is sufficiently different in IE from
+    // other browsers that we keep the special cases separate.
 
     tgt.mergeAttributes(src);
+
     if (typeof tgt.checked !== "undefined" ||
         typeof src.checked !== "undefined")
       tgt.checked = src.checked;
-    if (src.nodeName === "INPUT" && src.type === "text") {
-      if (! target_focused)
-        tgt.value = src.value;
-    }
+
     if (src.name)
       tgt.name = src.name;
 
   } else {
-    // non-IE code path:
+    // Non-IE code path:
 
     for(var i=0, L=srcAttrs.length; i<L; i++) {
       var srcA = srcAttrs.item(i);
@@ -394,13 +445,18 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
           tgt.className = src.className;
         } else if (name === "value") {
           // don't set attribute, just overwrite property
-          if (! target_focused)
-            tgt.value = src.value;
+          // (in next phase)
         } else {
           tgt.setAttribute(name, value);
         }
       }
     }
+  }
+
+  // Copy the control's value, only if tgt doesn't have focus.
+  if (has_user_value) {
+    if (! target_focused)
+      tgt.value = src.value;
   }
 
 };

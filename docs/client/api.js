@@ -812,7 +812,7 @@ Template.api.http_del = {
   id: "meteor_http_del",
   name: "Meteor.http.del(url, [options], [asyncCallback])",
   locus: "Anywhere",
-  descr: ["Send an HTTP DELETE request.  Equivalent to `Meteor.http.call(\"DELETE\", ...).  (Named `del` to avoid conflict with JavaScript's `delete``."]
+  descr: ["Send an HTTP DELETE request.  Equivalent to `Meteor.http.call(\"DELETE\", ...)`.  (Named `del` to avoid conflict with JavaScript's `delete`."]
 };
 
 

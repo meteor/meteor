@@ -370,7 +370,6 @@ Meteor.ui = Meteor.ui || {};
     }
 
     var copyFunc = function(t, s) {
-      Meteor.ui._resetEvents(t);
       Meteor.ui._LiveRange.transplant_tag(Meteor.ui._tag, t, s);
     };
 
@@ -392,13 +391,12 @@ Meteor.ui = Meteor.ui || {};
   Meteor.ui._wire_up = function(cx, range, html_func, react_data) {
     // wire events
     var data = react_data || {};
-    if (data.events) {
-      range.events = data.events;
+    if (data.events)
+      range.event_handlers = unpackEventMap(data.events);
+    if (data.event_data)
       range.event_data = data.event_data;
-    }
 
-    attach_primary_events(range);
-    Meteor.ui._prepareForEvents(range.firstNode(), range.lastNode());
+    attach_events(range);
 
     // record that if we see this range offscreen during a flush,
     // we are to kill the context (mark it killed and invalidate it).
@@ -415,6 +413,38 @@ Meteor.ui = Meteor.ui || {};
 
       Meteor.ui.render(html_func, react_data, range);
     });
+  };
+
+  // Convert an event map from the developer into an internal
+  // format for range.event_handlers.  The internal format is
+  // an array of objects with properties {type, selector, callback}.
+  // The array has an expando property `types`, which is a list
+  // of all the unique event types used (as an optimization for
+  // code that needs this info).
+  var unpackEventMap = function(events) {
+    var handlers = [];
+
+    var eventTypeSet = {};
+
+    // iterate over `spec: callback` map
+    _.each(events, function(callback, spec) {
+      var clauses = spec.split(/,\s+/);
+      // iterate over clauses of spec, e.g. ['click .foo', 'click .bar']
+      _.each(clauses, function (clause) {
+        var parts = clause.split(/\s+/);
+        if (parts.length === 0)
+          return;
+
+        var type = parts.shift();
+        var selector = parts.join(' ');
+
+        handlers.push({type:type, selector:selector, callback:callback});
+        eventTypeSet[type] = true;
+      });
+    });
+
+    handlers.types = _.keys(eventTypeSet);
+    return handlers;
   };
 
   Meteor.ui._wire_up_list =
@@ -538,9 +568,16 @@ Meteor.ui = Meteor.ui || {};
 
   // Attach events specified by `range` to top-level nodes in `range`.
   // The nodes may still be in a DocumentFragment.
-  var attach_primary_events = function(range) {
-    Meteor.ui._attachEvents(range.firstNode(), range.lastNode(),
-                            range.events, range.event_data);
+  var attach_events = function(range) {
+    if (! range.event_handlers)
+      return;
+
+    _.each(range.event_handlers.types, function(t) {
+      for(var n = range.firstNode(), after = range.lastNode().nextSibling;
+          n && n !== after;
+          n = n.nextSibling)
+        Meteor.ui._event.registerEventType(t, n);
+    });
   };
 
   // Attach events specified by enclosing ranges of `range`, at the
@@ -551,13 +588,93 @@ Meteor.ui = Meteor.ui || {};
   // without taking enclosing ranges into account, so additional event
   // handlers need to be attached.
   var attach_secondary_events = function(range) {
-    for(var r = range; r; r = r.findParent(true)) {
+    // Implementations of LiveEvents that use whole-document event capture
+    // (all except old IE) don't actually need any of this; this function
+    // could be a no-op.
+    for(var r = range; r; r = r.findParent()) {
       if (r === range)
         continue;
+      if (! r.event_handlers)
+        continue;
 
-      Meteor.ui._attachEvents(range.firstNode(), range.lastNode(),
-                              r.events, r.event_data);
+      var eventTypes = r.event_handlers.types;
+      _.each(eventTypes, function(t) {
+        for(var n = range.firstNode(), after = range.lastNode().nextSibling;
+            n && n !== after;
+            n = n.nextSibling)
+          Meteor.ui._event.registerEventType(t, n);
+      });
     }
   };
 
+  // Handle a currently-propagating event on a particular node.
+  // We walk all enclosing liveranges of the node, from the inside out,
+  // looking for matching handlers.  If the app calls stopPropagation(),
+  // we still call all handlers in all event maps for the current node.
+  // If the app calls "stopImmediatePropagation()", we don't call any
+  // more handlers.
+  Meteor.ui._handleEvent = function(event) {
+    var curNode = event.currentTarget;
+    if (! curNode)
+      return;
+
+    var innerRange = Meteor.ui._LiveRange.findRange(Meteor.ui._tag, curNode);
+    if (! innerRange)
+      return;
+
+    var type = event.type;
+
+    for(var range = innerRange; range; range = range.findParent()) {
+      var event_handlers = range.event_handlers;
+      if (! event_handlers)
+        continue;
+
+      for(var i=0, N=event_handlers.length; i<N; i++) {
+        var h = event_handlers[i];
+
+        if (h.type !== type)
+          continue;
+
+        var selector = h.selector;
+        if (selector) {
+          var contextNode = range.containerNode();
+          var results = $(contextNode).find(selector);
+          if (! _.contains(results, curNode))
+            continue;
+        } else {
+          // if no selector, only match the event target
+          if (curNode !== event.target)
+            continue;
+        }
+
+        var event_data = findEventData(event.target);
+
+        // Call the app's handler/callback
+        var returnValue = h.callback.call(event_data, event);
+
+        // allow app to `return false` from event handler, just like
+        // you can in a jquery event handler
+        if (returnValue === false) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+        }
+        if (event.isImmediatePropagationStopped())
+          break; // stop handling by this and other event maps
+      }
+    }
+
+  };
+
+  // find the innermost enclosing liverange that has event_data
+  var findEventData = function(node) {
+    var innerRange = Meteor.ui._LiveRange.findRange(Meteor.ui._tag, node);
+
+    for(var range = innerRange; range; range = range.findParent())
+      if (range.event_data)
+        return range.event_data;
+
+    return null;
+  };
+
+  Meteor.ui._event.setHandler(Meteor.ui._handleEvent);
 })();

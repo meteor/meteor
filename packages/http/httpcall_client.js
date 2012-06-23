@@ -125,15 +125,7 @@ Meteor.http = Meteor.http || {};
                 response.headers[m[1].toLowerCase()] = m[2];
             });
 
-            // only parse data if correct content type.
-            if (_.include(['application/json', 'text/javascript'],
-                          response.headers['content-type'])) {
-              try {
-                response.data = JSON.parse(response.content);
-              } catch (err) {
-                response.data = null;
-              }
-            };
+            Meteor.http._populateData(response);
 
             var error = null;
             if (xhr.status >= 400)

@@ -6,10 +6,13 @@ var respond = function(req, res) {
 
   res.statusCode = 200;
   res.setHeader("Content-Type", "text/html");
-  res.end('<script>'+
-          'window.onload = frameElement.loadFunc;'+
-          'window.onunload = frameElement.unloadFunc;'+
-          '</script>');
+  if (req.url === '/blank')
+    res.end();
+  else
+    res.end('<script>'+
+            'window.onload = frameElement.loadFunc;'+
+            'window.onunload = frameElement.unloadFunc;'+
+            '</script>');
 };
 
 var run_responder = function() {

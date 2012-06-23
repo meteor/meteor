@@ -10,10 +10,13 @@ call
 call xcxc
 call xcxc yzyz
 call xcxc {}
-call createApp
-call createApp []
-call createApp [{"name": "foo.meteor.com", "description": "abc"}]
-call createApp {}
+call vote
+call vote []
+call vote ["foo.meteor.com"]
+call vote ["madewith.meteor.com"]
+call vote {}
 
 help
+help sub
+help call
 

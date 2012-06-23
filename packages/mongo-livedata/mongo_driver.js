@@ -436,7 +436,9 @@ _Mongo.LiveResultsSet = function (cursor, options) {
   self.removed = options.removed;
 
   // run the first _poll() cycle synchronously.
+  self.poll_running = true;
   self._doPoll();
+  self.poll_running = false;
 
   // every once and a while, poll even if we don't think we're dirty,
   // for eventual consistency with database writes from outside the

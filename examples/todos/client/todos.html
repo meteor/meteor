@@ -20,27 +20,23 @@
   <h3>Todo Lists</h3>
   <div id="lists">
     {{#each lists}}
-      {{> list_item}}
+      <div class="list {{selected}}">
+        {{#if editing}}
+          <div class="edit">
+            <input class="list-name-input" id="list-name-input" type="text" value="{{name}}" />
+          </div>
+        {{else}}
+          <div class="display">
+            <div class="list-name {{name_class}}">
+              {{name}}
+            </div>
+          </div>
+        {{/if}}
+      </div>
     {{/each}}
   </div>
   <div id="createList">
     <input type="text" id="new-list" placeholder="New list" />
-  </div>
-</template>
-
-<template name="list_item">
-  <div class="list {{selected}}">
-    {{#if editing}}
-      <div class="edit">
-        <input class="list-name-input" id="list-name-input" type="text" value="{{name}}" />
-      </div>
-    {{else}}
-      <div class="display">
-        <div class="list-name {{name_class}}">
-          {{name}}
-        </div>
-      </div>
-    {{/if}}
   </div>
 </template>
 
@@ -74,7 +70,10 @@
     {{/if}}
     <div class="item-tags">
       {{#each tag_objs}}
-        {{> todo_tag}}
+        <div class="tag removable_tag">
+          <div class="name">{{tag}}</div>
+          <div class="remove"></div>
+        </div>
       {{/each}}
       {{#if adding_tag}}
         <div class="tag edittag">
@@ -89,25 +88,15 @@
   </li>
 </template>
 
-<template name="todo_tag">
-  <div class="tag removable_tag">
-    <div class="name">{{tag}}</div>
-    <div class="remove"></div>
-  </div>
-</template>
-
 <template name="tag_filter">
   <div id="tag-filter" class="tag-list">
     <div class="label">Show:</div>
     {{#each tags}}
-      {{> tag_item}}
+      <div class="tag {{selected}}">
+        {{tag_text}} <span class="count">({{count}})</span>
+      </div>
     {{/each}}
   </div>
 </template>
 
-<template name="tag_item">
-  <div class="tag {{selected}}">
-    {{tag_text}} <span class="count">({{count}})</span>
-  </div>
-</template>
 
