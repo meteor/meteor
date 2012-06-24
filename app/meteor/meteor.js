@@ -495,6 +495,10 @@ Commands.push({
       .boolean('password')
       .boolean('P')
       .describe('password', 'set a password for this deployment')
+      .alias('config', 'C')
+      .boolean('config')
+      .boolean('C')
+      .describe('config', 'obtain deploy values from config file')
       .alias('delete', 'D')
       .boolean('delete')
       .boolean('D')
@@ -531,13 +535,16 @@ Commands.push({
       process.exit(1);
     }
 
+    var site = new_argv._[1];
+    var config = new_argv.config ? deploy.parse_config(site) : {};
+
     if (new_argv.delete) {
       deploy.delete_app(new_argv._[1]);
     } else {
       // accept packages iff we're deploying tests
       var project_dir = path.resolve(require_project("bundle", new_argv.tests));
-      deploy.deploy_app(new_argv._[1], project_dir, new_argv.debug,
-                        new_argv.tests, new_argv.password);
+      deploy.deploy_app(site, project_dir, new_argv.debug,
+                        new_argv.tests, new_argv.password, config);
     }
   }
 });

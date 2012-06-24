@@ -9,6 +9,7 @@ var tty = require('tty');
 var request = require('request');
 var qs = require('querystring');
 var path = require('path');
+var fs = require('fs');
 var files = require('../lib/files.js');
 var _ = require('../lib/third/underscore.js');
 
@@ -41,13 +42,13 @@ var meteor_rpc = function (rpc_name, method, site, query_params, callback) {
 }
 
 var deploy_app = function (url, app_dir, opt_debug, opt_tests,
-                           opt_set_password) {
+                           opt_set_password, config) {
   var parsed_url = parse_url(url);
 
   // a bit contorted here to make sure we ask for the password before
   // launching the slow bundle process.
-
-  with_password(parsed_url.hostname, function (password) {
+  
+  var deploy = function (password) {
     if (opt_set_password)
       get_new_password(function (set_password) {
         bundle_and_deploy(parsed_url.hostname, app_dir, opt_debug, opt_tests,
@@ -56,7 +57,12 @@ var deploy_app = function (url, app_dir, opt_debug, opt_tests,
     else
       bundle_and_deploy(parsed_url.hostname, app_dir, opt_debug, opt_tests,
                         password);
-  });
+  };
+
+  if (config.password)
+    deploy(transform_password(config.password));
+  else
+    with_password(parsed_url.hostname, deploy);
 };
 
 var bundle_and_deploy = function (site, app_dir, opt_debug, opt_tests,
@@ -247,6 +253,24 @@ var run_mongo_shell = function (url) {
   });
 };
 
+var parse_config = function(site) {
+  // Get config values from (in order of precedence)
+  //   ~/.meteor/SITE/deploy.js
+  //   ~/.meteor/deploy.js
+  var home = process.env.HOME;
+
+  var readConf = function(confPath) {
+    try {
+      var conf = fs.readFileSync(path.join(home, confPath), 'utf8');
+      return JSON.parse(conf);
+    } catch(e) {
+      return {};
+    }
+  };
+
+  return _.extend({}, readConf('.meteor/deploy.js'), readConf(path.join('.meteor', site, 'deploy.js')));
+};
+
 // hash the password so we never send plaintext over the wire. Doesn't
 // actually make us more secure, but it means we won't leak a user's
 // password, which they might use on other sites too.
@@ -351,3 +375,4 @@ exports.mongo = mongo;
 exports.logs = logs;
 
 exports.run_mongo_shell = run_mongo_shell;
+exports.parse_config = parse_config;
