@@ -13,7 +13,8 @@ _.extend(Meteor._RemoteStoreDriver.prototype, {
     if (!(name in self.stores)) {
       var cls = {
         'string': _RedisString,
-        'hash': _RedisHash
+        'hash': _RedisHash,
+        'set': _RedisSet
       }[type];
       self.stores[name] = new cls(name);
     }
