@@ -253,10 +253,10 @@ var run_mongo_shell = function (url) {
   });
 };
 
+// Get config values from files (in order of precedence)
+//   ~/.meteor/SITE/deploy.js
+//   ~/.meteor/deploy.js
 var parse_config = function(site) {
-  // Get config values from (in order of precedence)
-  //   ~/.meteor/SITE/deploy.js
-  //   ~/.meteor/deploy.js
   var home = process.env.HOME;
 
   var readConf = function(confPath) {
@@ -268,7 +268,10 @@ var parse_config = function(site) {
     }
   };
 
-  return _.extend({}, readConf('.meteor/deploy.js'), readConf(path.join('.meteor', site, 'deploy.js')));
+  var global_config = readConf('.meteor/deploy.js');
+  var site_config = readConf(path.join('.meteor', site, 'deploy.js'));
+
+  return _.extend({}, global_config, site_config);
 };
 
 // hash the password so we never send plaintext over the wire. Doesn't
