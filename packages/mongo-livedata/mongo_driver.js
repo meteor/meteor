@@ -91,7 +91,7 @@ _Mongo.prototype._maybeBeginWrite = function () {
 // well-defined -- a write "has been made" if it's returned, and an
 // observer "has been notified" if its callback has returned.
 
-_Mongo.prototype.insert = function (collection_name, document) {
+_Mongo.prototype.insert = function (collection_name, ctor, document) {
   var self = this;
 
   if (collection_name === "___meteor_failure_test_collection" &&
@@ -133,7 +133,7 @@ _Mongo.prototype.insert = function (collection_name, document) {
     throw err;
 };
 
-_Mongo.prototype.remove = function (collection_name, selector) {
+_Mongo.prototype.remove = function (collection_name, ctor, selector) {
   var self = this;
 
   if (collection_name === "___meteor_failure_test_collection" &&
@@ -178,7 +178,7 @@ _Mongo.prototype.remove = function (collection_name, selector) {
     throw err;
 };
 
-_Mongo.prototype.update = function (collection_name, selector, mod, options) {
+_Mongo.prototype.update = function (collection_name, ctor, selector, mod, options) {
   var self = this;
 
   if (collection_name === "___meteor_failure_test_collection" &&
@@ -228,22 +228,22 @@ _Mongo.prototype.update = function (collection_name, selector, mod, options) {
     throw err;
 };
 
-_Mongo.prototype.find = function (collection_name, selector, options) {
+_Mongo.prototype.find = function (collection_name, ctor, selector, options) {
   var self = this;
 
   if (arguments.length === 1)
     selector = {};
 
-  return _Mongo._makeCursor(self, collection_name, selector, options);
+  return _Mongo._makeCursor(self, collection_name, ctor, selector, options);
 };
 
-_Mongo.prototype.findOne = function (collection_name, selector, options) {
+_Mongo.prototype.findOne = function (collection_name, ctor, selector, options) {
   var self = this;
 
   if (arguments.length === 1)
     selector = {};
 
-  return self.find(collection_name, selector, options).fetch()[0];
+  return self.find(collection_name, ctor, selector, options).fetch()[0];
 };
 
 // Cursors
@@ -251,7 +251,7 @@ _Mongo.prototype.findOne = function (collection_name, selector, options) {
 // Returns a _Mongo.Cursor, or throws an exception on
 // failure. Creating a cursor involves a database query, and we block
 // until it returns.
-_Mongo._makeCursor = function (mongo, collection_name, selector, options) {
+_Mongo._makeCursor = function (mongo, collection_name, ctor, selector, options) {
   var future = new Future;
 
   options = options || {};
@@ -271,12 +271,12 @@ _Mongo._makeCursor = function (mongo, collection_name, selector, options) {
   if (!(result[0]))
     throw result[1];
 
-  return new _Mongo.Cursor(mongo, collection_name, selector, options,
+  return new _Mongo.Cursor(mongo, collection_name, ctor, selector, options,
                            result[1]);
 };
 
 // Do not call directly. Use _Mongo._makeCursor instead.
-_Mongo.Cursor = function (mongo, collection_name, selector, options, cursor) {
+_Mongo.Cursor = function (mongo, collection_name, ctor, selector, options, cursor) {
   var self = this;
 
   if (!cursor)
@@ -285,6 +285,7 @@ _Mongo.Cursor = function (mongo, collection_name, selector, options, cursor) {
   // NB: 'options' and 'selector' have already been preprocessed by _makeCursor
   self.mongo = mongo;
   self.collection_name = collection_name;
+  self.ctor = ctor;
   self.selector = selector;
   self.options = options;
   self.cursor = cursor;
@@ -310,6 +311,8 @@ _Mongo.Cursor.prototype.forEach = function (callback) {
       // return duplicates
     } else {
       self.visited_ids[doc._id] = true;
+      if (self.ctor)
+        doc = new self.ctor(doc);
       callback(doc);
     }
   });
@@ -349,8 +352,13 @@ _Mongo.Cursor.prototype.fetch = function () {
   if (result[0])
     throw result[0];
   // dedup
-  return _.uniq(result[1], false, function(doc) {
+  var docs = _.uniq(result[1], false, function(doc) {
     return doc._id; });
+  
+  if (self.ctor)
+    docs = _.map(docs, function(doc) { return new self.ctor(doc); });
+  
+  return docs;
 };
 
 _Mongo.Cursor.prototype.count = function () {
@@ -388,6 +396,7 @@ _Mongo.LiveResultsSet = function (cursor, options) {
   // some other use of the cursor.
   self.cursor = _Mongo._makeCursor(cursor.mongo,
                                    cursor.collection_name,
+                                   self.ctor,
                                    cursor.selector,
                                    cursor.options);
 
@@ -489,7 +498,7 @@ _Mongo.LiveResultsSet.prototype._doPoll = function () {
   var new_results = self.cursor.fetch();
   var old_results = self.results;
 
-  LocalCollection._diffQuery(old_results, new_results, self);
+  LocalCollection._diffQuery(old_results, new_results, self, false, self.ctor);
   self.results = new_results;
 
 };

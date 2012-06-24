@@ -275,3 +275,71 @@ Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
   doStep();
 
 });
+
+Tinytest.addAsync("mongo-livedata - models", function (test, onComplete) {
+  var Model = function(attrs) {
+    this.attrs = attrs;
+  };
+  Model.prototype.is_model = function() { return true; };
+  assert_record = function(record) {
+    console.log('assert_record', record)
+    test.instanceOf(record, Model);
+    test.equal(record.is_model(), true);
+    test.equal(record.attrs.x, 1);
+  }
+  
+  var run = test.runId();
+  var coll;
+  if (Meteor.is_client) {
+    coll = new Meteor.Collection(null, null, null, Model); // local, unmanaged
+  } else {
+    coll = new Meteor.Collection("livedata_test_collection_"+run, null, null, Model);
+  }
+  
+  var log = '';
+  var obs = coll.find({run: run}, {sort: ["x"]}).observe({
+    added: function (doc, before_index) {
+      log += 'a(' + doc.x + ',' + before_index + ')';
+    },
+    changed: function (new_doc, at_index, old_doc) {
+      log += 'c(' + new_doc.x + ',' + at_index + ',' + old_doc.x + ')';
+    },
+    moved: function (doc, old_index, new_index) {
+      log += 'm(' + doc.x + ',' + old_index + ',' + new_index + ')';
+    },
+    removed: function (doc, at_index) {
+      log += 'r(' + doc.x + ',' + at_index + ')';
+    }
+  });
+
+  var captureObserve = function (f) {
+    if (Meteor.is_client) {
+      f();
+    } else {
+      var fence = new Meteor._WriteFence;
+      Meteor._CurrentWriteFence.withValue(fence, f);
+      fence.armAndWait();
+    }
+
+    var ret = log;
+    log = '';
+    return ret;
+  };
+
+  var expectObserve = function (expected, f) {
+    if (!(expected instanceof Array))
+      expected = [expected];
+
+    test.include(expected, captureObserve(f));
+  };
+
+  expectObserve('a(1,0)', function () {
+    var id = coll.insert({run: run, x: 1});
+    test.equal(id.length, 36);
+    test.equal(coll.find({run: run}).count(), 1);
+    assert_record(coll.findOne({run: run}));
+  });
+  
+  onComplete();
+});
+  

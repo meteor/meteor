@@ -5,11 +5,11 @@ Meteor._RemoteCollectionDriver = function (mongo_url) {
 };
 
 _.extend(Meteor._RemoteCollectionDriver.prototype, {
-  open: function (name) {
+  open: function (name, ctor) {
     var self = this;
     var ret = {};
     _.each(['find', 'findOne', 'insert', 'update', 'remove'], function (m) {
-      ret[m] = _.bind(self.mongo[m], self.mongo, name);
+      ret[m] = _.bind(self.mongo[m], self.mongo, name, ctor);
     });
     return ret;
   }

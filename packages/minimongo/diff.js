@@ -22,7 +22,14 @@ LocalCollection._diffQuery = function (old_results, new_results, observer, deepc
   });
 
   // "maybe deepcopy"
-  var mdc = (deepcopy ? function(v) { return LocalCollection._deepcopy(v, ctor); } : _.identity);
+  var mdc;
+  if (deepcopy) {
+    mdc = function(v) { return LocalCollection._deepcopy(v, ctor); };
+  } else if (ctor) {
+    mdc = function(v) { return new ctor(v); };
+  } else {
+    mdc = _.identity;
+  }
 
   // ALGORITHM:
   //
