@@ -411,7 +411,7 @@ LocalCollection._removeFromResults = function (query, doc, ctor) {
 
 LocalCollection._updateInResults = function (query, doc, old_doc, ctor) {
   var orig_idx = LocalCollection._findInResults(query, doc);
-  query.changed(LocalCollection._deepcopy(doc, ctor), orig_idx, old_doc);
+  query.changed(LocalCollection._deepcopy(doc, ctor), orig_idx, LocalCollection._deepcopy(old_doc, ctor));
 
   if (!query.sort_f)
     return;

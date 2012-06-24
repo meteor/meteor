@@ -281,11 +281,10 @@ Tinytest.addAsync("mongo-livedata - models", function (test, onComplete) {
     this.attrs = attrs;
   };
   Model.prototype.is_model = function() { return true; };
-  assert_record = function(record) {
-    console.log('assert_record', record)
+  assert_record = function(record, x) {
     test.instanceOf(record, Model);
     test.equal(record.is_model(), true);
-    test.equal(record.attrs.x, 1);
+    test.equal(record.attrs.x, x || 1);
   }
   
   var run = test.runId();
@@ -299,16 +298,16 @@ Tinytest.addAsync("mongo-livedata - models", function (test, onComplete) {
   var log = '';
   var obs = coll.find({run: run}, {sort: ["x"]}).observe({
     added: function (doc, before_index) {
-      log += 'a(' + doc.x + ',' + before_index + ')';
+      log += 'a(' + doc.attrs.x + ',' + before_index + ')';
     },
     changed: function (new_doc, at_index, old_doc) {
-      log += 'c(' + new_doc.x + ',' + at_index + ',' + old_doc.x + ')';
+      log += 'c(' + new_doc.attrs.x + ',' + at_index + ',' + old_doc.attrs.x + ')';
     },
     moved: function (doc, old_index, new_index) {
-      log += 'm(' + doc.x + ',' + old_index + ',' + new_index + ')';
+      log += 'm(' + doc.attrs.x + ',' + old_index + ',' + new_index + ')';
     },
     removed: function (doc, at_index) {
-      log += 'r(' + doc.x + ',' + at_index + ')';
+      log += 'r(' + doc.attrs.x + ',' + at_index + ')';
     }
   });
 
@@ -338,6 +337,19 @@ Tinytest.addAsync("mongo-livedata - models", function (test, onComplete) {
     test.equal(id.length, 36);
     test.equal(coll.find({run: run}).count(), 1);
     assert_record(coll.findOne({run: run}));
+    assert_record(coll.find({run: run}).fetch().shift());
+    
+    coll.find({run: run}).forEach(function(doc) {
+      assert_record(doc);
+    });
+  });
+  expectObserve('c(3,0,1)', function () {
+    coll.update({run: run}, {$inc: {x: 2}}, {multi: true});
+    assert_record(coll.findOne({run: run}), 3);
+  });
+  
+  expectObserve('r(3,0)', function () {
+    coll.remove({run: run});
   });
   
   onComplete();

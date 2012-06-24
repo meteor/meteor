@@ -396,7 +396,7 @@ _Mongo.LiveResultsSet = function (cursor, options) {
   // some other use of the cursor.
   self.cursor = _Mongo._makeCursor(cursor.mongo,
                                    cursor.collection_name,
-                                   self.ctor,
+                                   cursor.ctor,
                                    cursor.selector,
                                    cursor.options);
 
