@@ -309,7 +309,7 @@ LocalCollection.prototype.remove = function (selector) {
 
   // run live query callbacks _after_ we've removed the documents.
   for (var i = 0; i < query_remove.length; i++) {
-    LocalCollection._removeFromResults(query_remove[i][0], query_remove[i][1]);
+    LocalCollection._removeFromResults(query_remove[i][0], query_remove[i][1], self.ctor);
   }
 };
 
@@ -403,9 +403,9 @@ LocalCollection._insertInResults = function (query, doc, ctor) {
   }
 };
 
-LocalCollection._removeFromResults = function (query, doc) {
+LocalCollection._removeFromResults = function (query, doc, ctor) {
   var i = LocalCollection._findInResults(query, doc);
-  query.removed(doc, i);
+  query.removed(LocalCollection._deepcopy(doc, ctor), i);
   query.results.splice(i, 1);
 };
 

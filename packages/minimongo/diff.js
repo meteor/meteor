@@ -161,7 +161,7 @@ LocalCollection._diffQuery = function (old_results, new_results, observer, deepc
       var old_doc = old_results[old_idx];
       var is_in_new = new_presence_of_id[old_doc._id];
       if (! is_in_new) {
-        observer.removed && observer.removed(old_doc, new_idx + bump_list.length);
+        observer.removed && observer.removed(mdc(old_doc), new_idx + bump_list.length);
       } else {
         if (taken_list.length >= 1 && taken_list[0] === old_idx) {
           // already moved
