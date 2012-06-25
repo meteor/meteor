@@ -67,8 +67,8 @@ var run = function (bundle_dir) {
   var unsupported_html = fs.readFileSync(path.join(bundle_dir, 'unsupported.html'));
 
   app.use(function (req, res) {
-    if (req.url === '/favicon.ico') {
-      // prevent /favicon.ico from returning app_html
+    // prevent favicon.ico and robots.txt from returning app_html
+    if (_.indexOf(['/favicon.ico', '/robots.txt'], req.url) !== -1) {
       res.writeHead(404);
       res.end();
       return;
