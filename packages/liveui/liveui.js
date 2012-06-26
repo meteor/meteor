@@ -216,7 +216,12 @@ Meteor.ui = Meteor.ui || {};
 
     self._range = null;
     self._calculate = function() {
-      return html_func(this._data);
+      var html = html_func(this._data);
+
+      if (typeof html !== "string")
+        throw new Error("Render function must return a string");
+
+      return html;
     };
     self._msgs = [];
     self._msgCx = null;
@@ -250,22 +255,14 @@ Meteor.ui = Meteor.ui || {};
   Chunk.prototype._asHtml = function() {
     var self = this;
 
-    var html = self._context.run(function() {
-      return self._calculate();
-    });
-
-    if (typeof html !== "string")
-      throw new Error("Render function must return a string");
-
     if (! Meteor.ui._inRenderMode) {
       // no reactivity possible, so kill the chunk (on next flush)
       self.kill();
-      return html;
+      return self._calculate();
     } else {
       var id = self.id;
       newChunksById[id] = self;
-      return "<!-- STARTCHUNK_"+id+" -->" + html +
-        "<!-- ENDCHUNK_"+id+" -->";
+      return "<!-- CHUNK_"+id+" -->";
     }
   };
 
@@ -274,11 +271,16 @@ Meteor.ui = Meteor.ui || {};
   Chunk.prototype._asFragment = function() {
     var self = this;
     var frag = materialize(
-      function() { return self._asHtml(); },
-      // Events will be wired at flush time anyway, but the developer might
-      // expect them to be present immediately for some reason.  Unit tests
-      // rely on this.
-      wireEvents);
+      function() {
+        return self._context.run(function() {
+          return self._calculate();
+        });
+      });
+    self._gainRange(new Meteor.ui._LiveRange(Meteor.ui._tag, frag));
+    // Events will be wired at flush time anyway, but the developer might
+    // expect them to be present immediately for some reason.  Unit tests
+    // rely on this too.
+    wireEvents(self);
     // Indicate that we are at the root of a render.
     self._send("render");
     return frag;
@@ -311,17 +313,7 @@ Meteor.ui = Meteor.ui || {};
 
     var range = self._range;
 
-    // Table-body fix:  if tgtRange is in a table and srcParent
-    // contains a TR, wrap fragment in a TBODY on all browsers,
-    // so that it will display properly in IE.
-    if (range.containerNode().nodeName === "TABLE" &&
-        _.any(frag.childNodes,
-              function(n) { return n.nodeName === "TR"; })) {
-      var tbody = document.createElement("TBODY");
-      while (frag.firstChild)
-        tbody.appendChild(frag.firstChild);
-      frag.appendChild(tbody);
-    }
+    prepareFrag(frag, range.containerNode());
 
     // Since we are patching from a source DOM with LiveRanges onto
     // a clean target DOM, when we decide to keep a node from the
@@ -477,7 +469,7 @@ Meteor.ui = Meteor.ui || {};
   // given LiveRanges, we call chunkCallback on each one,
   // and then return a DocumentFragment of the materialized
   // DOM.
-  var materialize = function(calcHtml, chunkCallback) {
+  var materialize = function(calcHtml) {
 
     Meteor.ui._inRenderMode = true;
 
@@ -487,6 +479,9 @@ Meteor.ui = Meteor.ui || {};
     } finally {
       Meteor.ui._inRenderMode = false;
     }
+
+    var chunkMap = newChunksById;
+    newChunksById = {};
 
     var frag = Meteor.ui._htmlToFragment(html);
     if (! frag.firstChild)
@@ -508,95 +503,30 @@ Meteor.ui = Meteor.ui || {};
       }
     };
 
-    // walk comments and create ranges
-    var rangeStartNodes = {};
+    // walk comments and insert chunks
     each_comment(frag, function(n) {
+      var chunkCommentMatch = /^\s*CHUNK_(\S+)/.exec(n.nodeValue);
 
-      var rangeCommentMatch = /^\s*(START|END)CHUNK_(\S+)/.exec(n.nodeValue);
-      if (! rangeCommentMatch)
+      if (! chunkCommentMatch)
         return null;
 
-      var which = rangeCommentMatch[1];
-      var id = rangeCommentMatch[2];
+      var id = chunkCommentMatch[1];
 
-      if (which === "START") {
-        if (rangeStartNodes[id])
-          throw new Error("The return value of chunk can only be used once.");
-        rangeStartNodes[id] = n;
-
-        return null;
-      }
-      // else: which === "END"
-
-      var startNode = rangeStartNodes[id];
-      var endNode = n;
-      var next = endNode.nextSibling;
-
-      // try to remove comments
-      var a = startNode, b = endNode;
-      if (a.nextSibling && b.previousSibling) {
-        if (a.nextSibling === b) {
-          // replace two adjacent comments with one
-          endNode = startNode;
-          b.parentNode.removeChild(b);
-          startNode.nodeValue = 'placeholder';
-        } else {
-          // remove both comments
-          startNode = startNode.nextSibling;
-          endNode = endNode.previousSibling;
-          a.parentNode.removeChild(a);
-          b.parentNode.removeChild(b);
-        }
-      } else {
-        /* shouldn't happen; invalid HTML? */
+      var chunk = chunkMap[id];
+      if (chunk === "USED") {
+        // already used this chunk in this walk
+        throw new Error("The return value of chunk can only be used once.");
+      } else if (chunk) {
+        var frag = chunk._asFragment();
+        prepareFrag(frag, n.parentNode);
+        var next = frag.firstChild; // exists
+        n.parentNode.replaceChild(frag, n);
+        chunkMap[id] = "USED"; // mark as already used in this walk
+        return next;
       }
 
-      if (startNode.parentNode !== endNode.parentNode) {
-        // Try to fix messed-up comment ranges like
-        // <!-- #1 --><tbody> ... <!-- /#1 --></tbody>,
-        // which are extremely common with tables.  Tests
-        // fail in all browsers without this code.
-        if (startNode === endNode.parentNode ||
-            startNode === endNode.parentNode.previousSibling) {
-          startNode = endNode.parentNode.firstChild;
-        } else if (endNode === startNode.parentNode ||
-                   endNode === startNode.parentNode.nextSibling) {
-          endNode = startNode.parentNode.lastChild;
-        } else {
-          var r = new RegExp('<!--\\s*STARTCHUNK_'+id+'.*?-->', 'g');
-          var match = r.exec(html);
-          var help = "";
-          if (match) {
-            var comment_end = r.lastIndex;
-            var comment_start = comment_end - match[0].length;
-            var stripped_before = html.slice(0, comment_start).replace(
-                /<!--\s*(START|END)CHUNK.*?-->/g, '');
-            var stripped_after = html.slice(comment_end).replace(
-                /<!--\s*(START|END)CHUNK.*?-->/g, '');
-            var context_amount = 50;
-            var context = stripped_before.slice(-context_amount) +
-                  stripped_after.slice(0, context_amount);
-            help = " (possible unclosed near: "+context+")";
-          }
-          throw new Error("Could not create liverange in template. "+
-                          "Check for unclosed tags in your HTML."+help);
-        }
-      }
-
-      var range = new Meteor.ui._LiveRange(Meteor.ui._tag, startNode, endNode);
-      var chunk = newChunksById[id];
-      if (chunk) {
-        chunk._gainRange(range);
-        materializedChunks.push(chunk);
-      }
-
-      return next;
+      return null;
     });
-
-    newChunksById = {};
-
-    if (chunkCallback)
-      _.each(materializedChunks, chunkCallback);
 
     return frag;
   };
@@ -810,6 +740,22 @@ Meteor.ui = Meteor.ui || {};
       /* contains() exists on document on Chrome, but only on
        document.body on some other browsers. */
       return document.body.contains(node);
+    }
+  };
+
+  //////////////////// OTHER SUPPORT
+
+  var prepareFrag = function(frag, container) {
+    // Table-body fix:  if tgtRange is in a table and srcParent
+    // contains a TR, wrap fragment in a TBODY on all browsers,
+    // so that it will display properly in IE.
+    if (container.nodeName === "TABLE" &&
+        _.any(frag.childNodes,
+              function(n) { return n.nodeName === "TR"; })) {
+      var tbody = document.createElement("TBODY");
+      while (frag.firstChild)
+        tbody.appendChild(frag.firstChild);
+      frag.appendChild(tbody);
     }
   };
 

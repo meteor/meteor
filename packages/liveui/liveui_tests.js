@@ -713,11 +713,10 @@ Tinytest.add("liveui - chunks", function(test) {
     });
     return "";
   });
-  test.equal(Q.numListeners(), 1);
   Q.set("bar");
-  // flush() should invalidate the unused
-  // chunk but not assume it has been wired
-  // up with a LiveRange.
+  // might get an error on flush() if implementation
+  // deals poorly with unused chunks, or a listener
+  // still existing after flush.
   Meteor.flush();
   test.equal(Q.numListeners(), 0);
 
