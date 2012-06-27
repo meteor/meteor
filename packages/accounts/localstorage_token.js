@@ -1,8 +1,10 @@
 (function() {
   // To be used as the local storage key
   var loginTokenKey = "Meteor.loginToken";
+  var userIdKey = "Meteor.userId";
 
-  Meteor.accounts.storeLoginToken = function(token) {
+  Meteor.accounts.storeLoginToken = function(userId, token) {
+    localStorage.setItem(userIdKey, userId);
     localStorage.setItem(loginTokenKey, token);
 
     // to ensure that the localstorage poller doesn't end up trying to
@@ -11,6 +13,7 @@
   };
 
   Meteor.accounts.unstoreLoginToken = function() {
+    localStorage.removeItem(userIdKey);
     localStorage.removeItem(loginTokenKey);
 
     // to ensure that the localstorage poller doesn't end up trying to
@@ -22,6 +25,10 @@
     return localStorage.getItem(loginTokenKey);
   };
 
+  Meteor.accounts.storedUserId = function() {
+    return localStorage.getItem(userIdKey);
+  };
+
   Meteor.accounts.makeClientLoggedOut = function() {
     Meteor.accounts.unstoreLoginToken();
     Meteor.default_connection.setUserId(null);
@@ -29,7 +36,7 @@
   };
 
   Meteor.accounts.makeClientLoggedIn = function(userId, token) {
-    Meteor.accounts.storeLoginToken(token);
+    Meteor.accounts.storeLoginToken(userId, token);
     Meteor.default_connection.setUserId(userId);
     Meteor.default_connection.onReconnect = function() {
       Meteor.apply('login', [{resume: token}], {wait: true}, function(error, result) {
@@ -62,8 +69,13 @@ Meteor.startup(function() {
   // need to have installed the localStorage polyfill (see package
   // `localstorage-polyfill`)
   var token = Meteor.accounts.storedLoginToken();
-  if (token)
+  if (token) {
+    // On startup, optimistically present us as logged in while the
+    // request is in flight. This reduces page flicker on startup.
+    var userId = Meteor.accounts.storedUserId();
+    userId && Meteor.default_connection.setUserId(userId);
     Meteor.loginWithToken(token);
+  }
 
   // Poll local storage every 3 seconds to login if someone logged in in
   // another tab
