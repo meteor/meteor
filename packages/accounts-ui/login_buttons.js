@@ -27,6 +27,19 @@
       };
     },
 
+    'click #login-buttons-Weibo': function () {
+      try {
+        Meteor.loginWithWeibo();
+      } catch (e) {
+        if (e instanceof Meteor.accounts.ConfigError)
+          alert("Weibo API key not set. Configure app details with "
+                + "Meteor.accounts.weibo.config() and "
+                + "Meteor.accounts.weibo.setSecret()");
+        else
+          throw e;
+      };
+    },
+
     'click #login-buttons-logout': function() {
       Meteor.logout();
     }
@@ -40,6 +53,8 @@
       ret.push({name: 'Facebook'});
     if (Meteor.accounts.google)
       ret.push({name: 'Google'});
+    if (Meteor.accounts.weibo)
+      ret.push({name: 'Weibo'});
 
     return ret;
   };
