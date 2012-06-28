@@ -10,10 +10,9 @@
   app.removeAllListeners('request');
   app.addListener('request', function (req, res) {
 
-    // allow connections if any of:
-    // - they are already ssl.
-    // - they are only over localhost and don't hit real network.
-    // - they were handled by a proxy layer that did ssl.
+    // allow connections if they have been handled w/ ssl already
+    // (either by us or by a proxy) OR the connection is entirely over
+    // localhost (development mode).
     //
     // Note: someone could trick us into serving over non-ssl by setting
     // x-forwarded-for or x-forwarded-proto. Not much we can do there if
@@ -21,6 +20,9 @@
 
     var remoteAddress =
           req.connection.remoteAddress || req.socket.remoteAddress;
+    // Determine if the connection is only over localhost. Both we
+    // received it on localhost, and all proxies involved received on
+    // localhost.
     var isLocal = (
       remoteAddress === "127.0.0.1" &&
         (!req.headers['x-forwarded-for'] ||
@@ -28,11 +30,15 @@
            return /\s*127\.0\.0\.1\s*/.test(x);
          })));
 
-    if (!req.connection.pair &&
-        !isLocal &&
-        ( !req.headers['x-forwarded-proto'] ||
-          req.headers['x-forwarded-proto'].indexOf('https') === -1 ) )
-    {
+    // Determine if the connection was over SSL at any point. Either we
+    // received it as SSL, or a proxy did and translated it for us.
+    var isSsl = req.connection.pair ||
+        (req.headers['x-forwarded-proto'] &&
+         req.headers['x-forwarded-proto'].indexOf('https') !== -1);
+
+    if (!isLocal && !isSsl) {
+      // connection is not cool. send a 302 redirect!
+
       // if we don't have a host header, there's not a lot we can do. We
       // don't know how to redirect them.
       // XXX can we do better here?
@@ -49,6 +55,7 @@
       return;
     }
 
+    // connection is OK. Proceed normally.
     var args = arguments;
     _.each(oldAppListeners, function(oldListener) {
       oldListener.apply(app, args);
