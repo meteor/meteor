@@ -4,7 +4,7 @@
 ## know what shell the user has. Debian uses 'dash' for 'sh', for
 ## example.
 
-URLBASE="http://d3sqy0vbqsdhku.cloudfront.net"
+URLBASE="https://d3sqy0vbqsdhku.cloudfront.net"
 VERSION="0.3.7"
 PKGVERSION="${VERSION}-1"
 
