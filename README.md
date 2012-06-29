@@ -15,7 +15,7 @@ Documentation is available at http://docs.meteor.com/
 
 Install Meteor:
 
-    curl install.meteor.com | /bin/sh
+    curl https://install.meteor.com | /bin/sh
 
 Create a project:
 
