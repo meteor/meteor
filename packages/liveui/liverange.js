@@ -243,7 +243,7 @@ Meteor.ui = Meteor.ui || {};
 
       this._remove_entries(this._start, 0, this._start_idx);
       this._remove_entries(this._end, 1, 0, this._end_idx + 1);
-      
+
       if (this._start !== this._end) {
         // force-clean the top-level nodes in this, besides _start and _end
         for(var n = this._start.nextSibling;

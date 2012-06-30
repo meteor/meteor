@@ -11,14 +11,28 @@ Meteor.ui = Meteor.ui || {};
     if (Meteor.ui._inRenderMode)
       throw new Error("Can't nest Meteor.ui.render.");
 
-    return new Chunk(html_func, options)._asFragment();
+    return renderChunk(html_func, options, "fragment").containerNode();
   };
 
   Meteor.ui.chunk = function(html_func, options) {
     if (typeof html_func !== "function")
       throw new Error("Meteor.ui.chunk() requires a function as its first argument.");
 
-    return new Chunk(html_func, options)._asHtml();
+    if (Materializer.current)
+      return Materializer.current.placeholder(function(comment) {
+        // wrap a new LiveRange around the comment, inside any
+        // existing LiveRanges
+        var range = new Meteor.ui._LiveRange(
+          Meteor.ui._tag, comment, comment, true);
+        // replace, don't patch, the placeholder comment
+        renderChunk(html_func, options, "replace", range);
+      });
+
+    // not inside Meteor.ui.render, just return the full HTML
+    var html = html_func(options && options.data);
+    if (typeof html !== "string")
+      throw new Error("Render function must return a string");
+    return html;
   };
 
   Meteor.ui.listChunk = function (observable, doc_func, else_func, options) {
@@ -35,24 +49,18 @@ Meteor.ui = Meteor.ui || {};
     else_func = (typeof else_func === "function" ? else_func :
                  function() { return ""; });
 
-    // State:  Keeping track of our child chunks.
-    // At any time, if the list is empty, then docChunks is [] and
-    // elseChunk is a chunk; otherwise, docChunks is a list with a
-    // chunk for each document, and elseChunk is null.
-    var docChunks = [];
-    var elseChunk = new Chunk(else_func);
-    // The outer chunk that contains the other chunks and handles the
-    // updates.  We don't create the outer chunk until after we have
-    // called observable.observe(...) and handled the first wave of
-    // updates.
-    var outerChunk = null;
-
-    // Queue updates due to observe callbacks, to process at flush time
-    // when outerChunk's onupdate() fires.
+    var initialDocs = [];
     var queuedUpdates = [];
+    var outerRange = null;
+    var itemRanges = null;
+
     var enqueue = function(f) {
+      // if we are onscreen and this is the first func
+      // in the queue, schedule runQueuedUpdates.
+      if (outerRange && ! queuedUpdates.length)
+        Sarge.whenOnscreen(outerRange, runQueuedUpdates);
+
       queuedUpdates.push(f);
-      outerChunk && outerChunk.update();
     };
     var runQueuedUpdates = function() {
       _.each(queuedUpdates, function(qu) { qu(); });
@@ -60,488 +68,457 @@ Meteor.ui = Meteor.ui || {};
     };
 
     // Helper to insert a fragment into the document based on
-    // document chunk index.
+    // item index.
     var insertFrag = function(frag, i) {
-      if (i === docChunks.length)
-        docChunks[i-1]._range.insert_after(frag);
+      if (i === itemRanges.length)
+        itemRanges[i-1].insert_after(frag);
       else
-        docChunks[i]._range.insert_before(frag);
+        itemRanges[i].insert_before(frag);
     };
 
-    // Register our data callbacks on the observable.
-    //
-    // The initial state of the list will be set by callbacks that
-    // fire right away, typically (or always?) a sequence of "added"
-    // calls.  Since there is no outerChunk yet, we distinguish
-    // this case by outerChunk being falsy.
-    //
-    // Callbacks are responsible for maintaining the docChunks/elseChunk
-    // state, manipulating the DOM as appropriate, and calling kill()
-    // on chunks that are removed from the DOM so that they can be
-    // cleaned up immediately.  Using enqueue(...), they defer action
-    // until outerChunk.onupdate() is called.
     var handle = observable.observe({
       added: function(doc, before_idx) {
-        enqueue(function() {
-          var addedChunk = new Chunk(doc_func, {data: doc});
-
-          if (outerChunk) {
-            var frag = addedChunk._asFragment();
-            if (elseChunk)
-              // else case -> one item
-              outerChunk._range.replace_contents(frag);
-            else
-              insertFrag(frag, before_idx);
+        if (! handle)
+          initialDocs.splice(before_idx, 0, doc);
+        else enqueue(function() {
+          var oldRange, mode;
+          if (itemRanges.length === 0) {
+            oldRange = outerRange;
+            mode = "inside";
+          } else if (before_idx === itemRanges.length) {
+            oldRange = itemRanges[itemRanges.length - 1];
+            mode = "after";
+          } else {
+            oldRange = itemRanges[before_idx];
+            mode = "before";
           }
+          var range = renderChunk(doc_func, {data: doc}, mode, oldRange);
 
-          elseChunk && elseChunk.kill();
-          elseChunk = null;
-          docChunks.splice(before_idx, 0, addedChunk);
+          itemRanges.splice(before_idx, 0, range);
         });
       },
       removed: function(doc, at_idx) {
-        enqueue(function() {
-          if (outerChunk) {
-            if (docChunks.length === 1) {
-              // one item -> else case
-              elseChunk = new Chunk(else_func);
-              var frag = elseChunk._asFragment();
-              outerChunk._range.replace_contents(frag);
-            } else {
-              // remove item
-              var removedChunk = docChunks[at_idx];
-              removedChunk._range.extract();
-            }
-          }
+        if (! handle)
+          initialDocs.splice(at_idx, 1);
+        else enqueue(function() {
+          var range;
+          if (itemRanges.length === 1)
+            range = renderChunk(else_func, "inside", outerRange);
+          else
+            Sarge.shuck(itemRanges[at_idx].extract());
 
-          docChunks.splice(at_idx, 1)[0].kill();
+          itemRanges.splice(at_idx, 1);
         });
       },
       moved: function(doc, old_idx, new_idx) {
-        enqueue(function() {
-          if (old_idx === new_idx)
-            return;
+        if (old_idx === new_idx)
+          return;
 
-          var movedChunk = docChunks[old_idx];
-          var frag;
-          if (outerChunk) {
-            // We know the list has at least two items,
-            // at old_idx and new_idx, so `extract` will
-            // succeed.
-            var frag = movedChunk._range.extract();
-            // remove chunk from list at old index
-          }
-          docChunks.splice(old_idx, 1);
+        if (! handle)
+          initialDocs.splice(new_idx, 0,
+                             initialDocs.splice(old_idx, 1)[0]);
+        else enqueue(function() {
+          // We know the list has at least two items,
+          // at old_idx and new_idx, so `extract` will
+          // succeed.
+          var frag = itemRanges[old_idx].extract();
+          var range = itemRanges.splice(old_idx, 1)[0];
+          if (new_idx === itemRanges.length)
+            itemRanges[itemRanges.length - 1].insert_after(frag);
+          else
+            itemRanges[new_idx].insert_before(frag);
 
-          if (outerChunk)
-            insertFrag(frag, new_idx);
-
-          // insert chunk into list at new index
-          docChunks.splice(new_idx, 0, movedChunk);
+          itemRanges.splice(new_idx, 0, range);
         });
       },
       changed: function(doc, at_idx) {
-        enqueue(function() {
-          var chunk = docChunks[at_idx];
-          // set the chunk's data, which determines the argument
-          // to doc_func.
-          chunk._data = doc;
-          if (outerChunk)
-            chunk.update();
+        if (! handle)
+          initialDocs[at_idx] = doc;
+        else enqueue(function() {
+          renderChunk(doc_func, {data: doc}, "patch", itemRanges[at_idx]);
         });
       }
     });
 
-    // Process the updates generated by the initial observe(...).
-    runQueuedUpdates();
-
-    // Create the outer chunk by calculating the appropriate HTML
-    // and passing in the options we were given.
-    outerChunk = new Chunk(function() {
-      return _.map(
-        (elseChunk ? [elseChunk] : docChunks),
-        function(ch) { return ch._asHtml(); }).join('');
-    }, options);
-
-    // Override the normal behavior on update, which is to
-    // recalculate the HTML and diff/patch the DOM.
-    // Instead, we just run the incremental update functions
-    // we've queued.
-    outerChunk.onupdate = function() {
-      runQueuedUpdates();
-    };
-
-    // Finalizer: when chunk is cleaned up, kill the observer handle.
-    // This will happen even if the chunk is never used or listChunk
-    // wasn't called inside render, as all Chunks are eventually
-    // finalized after _asHtml() is called.
-    outerChunk.onkill = function() {
+    // if not reactive, release the query handle
+    if (! Materializer.current)
       handle.stop();
-    };
 
-    return outerChunk._asHtml();
-  };
+    // XXX support more/different public callbacks than
+    // the normal created/onscreen/offscreen?
 
-  //////////////////// CHUNK OBJECT
+    var originalOnscreen = options && options.onscreen;
+    var originalOffscreen = options && options.offscreen;
 
-  // A Chunk object ties together the following:
-  //
-  // - A function returning HTML (html_func -> self._calculate())
-  // - A LiveRange (self._range) in the DOM
-  // - A data object (options.data -> self._data)
-  // - Event handlers (options.events -> self._eventHandlers)
-  // - A rolling deps context for invalidation (self._context)
-  // - A message queue for taking actions at flush time
-  //
-  // Since context invalidations are deferred until "flush time" by
-  // Meteor.deps, it would be confusing at all levels if we sometimes
-  // updated the DOM at other times.  Flush time is also the point at
-  // which we can kill a chunk that is found to be offscreen (or was
-  // never materialized as DOM).  Because of this, we defer all actions
-  // until flush time via self._send(...).
-  //
-  // A newly-instantiated Chunk object is in an initial, "uncalculated"
-  // state, with no HTML or DOM generated yet, and no LiveRange.  The
-  // next step is to call either _asHtml() or _asFragment() to get
-  // initial HTML or a complete reactive fragment for the chunk.
-  // Once one of these methods is called, the chunk is guaranteed to
-  // be visited at flush time (via the message queue), when it will
-  // either survive, if it received a LiveRange and was added to the
-  // document, or be killed.
-
-  var Chunk = Meteor.ui._Chunk = function(html_func, options) {
-    var self = this;
-
-    options = options || {};
-
-    self._range = null;
-    self._calculate = function() {
-      var html = html_func(this._data);
-
-      if (typeof html !== "string")
-        throw new Error("Render function must return a string");
-
-      return html;
-    };
-    self._msgs = [];
-    self._msgCx = null;
-    self._data = (options.data || options.event_data || null); // XXX
-    self._eventHandlers =
-      options.events ? unpackEventMap(options.events) : null;
-    self._killed = false;
-    self._context = null;
-
-    // Allow Meteor.deps to signal us about a data change by
-    // invalidating self._context.  By the time we see the
-    // invalidation, it's flush time.  We immediately set up
-    // a new context for next time.
-    // Always having the latest context in an instance variable
-    // makes clean-up easier.
-    var ondirty = function() {
-      self._send("update");
-      self._context = new Meteor.deps.Context;
-      self._context.on_invalidate(ondirty);
-    };
-    self._context = new Meteor.deps.Context;
-    self._context.on_invalidate(ondirty);
-
-    // use original Context's unique id as our Chunk's unique id
-    self.id = self._context.id;
-  };
-
-  // Returns HTML for this newly-created chunk, annotated with
-  // comments containing the chunk's ID if we are in render mode.
-  // The HTML is determined by calling self._calculate().
-  Chunk.prototype._asHtml = function() {
-    var self = this;
-
-    if (! Meteor.ui._inRenderMode) {
-      // no reactivity possible, so kill the chunk (on next flush)
-      self.kill();
-      return self._calculate();
-    } else {
-      var id = self.id;
-      newChunksById[id] = self;
-      return "<!-- CHUNK_"+id+" -->";
-    }
-  };
-
-  // Returns a reactive fragment for this newly-created chunk
-  // by materializing the result of self._asHtml().
-  Chunk.prototype._asFragment = function() {
-    var self = this;
-    var frag = materialize(
-      function() {
-        return self._context.run(function() {
-          return self._calculate();
-        });
-      });
-    self._gainRange(new Meteor.ui._LiveRange(Meteor.ui._tag, frag));
-    // Events will be wired at flush time anyway, but the developer might
-    // expect them to be present immediately for some reason.  Unit tests
-    // rely on this too.
-    wireEvents(self);
-    // Indicate that we are at the root of a render.
-    self._send("render");
-    return frag;
-  };
-
-  // Called upon materialization of the chunk's HTML into DOM,
-  // marking the point where we have a LiveRange.
-  Chunk.prototype._gainRange = function(range) {
-    var self = this;
-    self._range = range;
-    range.chunk = self;
-    // Start the message queue.  Handling this message will cause
-    // an offscreen check and potentially kill the chunk
-    // if it never got used.
-    self._send("added");
-  };
-
-  // Callback to update or re-render this chunk in the DOM.
-  // Always called inside the chunk's dependency context.
-  Chunk.prototype.onupdate = function() {
-    // Default behavior on update is to recalculate the HTML
-    // and patch the new DOM into place.
-
-    var self = this;
-    var frag = materialize(function() {
-      return self._calculate();
-    });
-
-    // DIFF/PATCH
-
-    var range = self._range;
-
-    prepareFrag(frag, range.containerNode());
-
-    // Since we are patching from a source DOM with LiveRanges onto
-    // a clean target DOM, when we decide to keep a node from the
-    // target DOM we need to "transplant" (copy) the LiveRange data
-    // from the source node.
-    var copyFunc = function(t, s) {
-      Meteor.ui._LiveRange.transplant_tag(Meteor.ui._tag, t, s);
-    };
-
-    range.operate(function(start, end) {
-      // clear all LiveRanges on target
-      cleanup_range(new Meteor.ui._LiveRange(Meteor.ui._tag, start, end));
-
-      var patcher = new Meteor.ui._Patcher(
-        start.parentNode, frag,
-        start.previousSibling, end.nextSibling);
-      patcher.diffpatch(copyFunc);
-    });
-
-    // Indicate that we are at the root of a re-render.
-    self._send("render");
-  };
-
-  // Internal mechanism to enqueue a named message for this chunk,
-  // to be processed at flush time.
-  Chunk.prototype._send = function(message) {
-    var self = this;
-
-    self._msgs.push(message);
-
-    var processMessage = function(msg) {
-      if (self._killed)
-        return;
-
-      // If chunk is not onscreen at flush time, any message
-      // is treated like "kill".  All future messages will be
-      // ignored.
-      if (msg === "kill" || (! self._range) || _checkOffscreen(self._range)) {
-        // Pronounce this chunk dead.  We rely on this finalization to clean
-        // up the deps context, which is first created in the constructor.
-        // There are many ways for a chunk to die -- never rendered, never
-        // added to the DOM, removed as part of an update, removed
-        // surreptitiously -- but all roads lead here.
-        self._range = null; // can't count on LiveRange in onkill handler
-        self._killed = true;
-        self._context.invalidate();
-        self._context = null;
-        self.onkill && self.onkill();
-      } else if (msg === "added") {
-        // This chunk is part of the document for the first time.
-        wireEvents(self);
-      } else if (msg === "update") {
-        // Rerender this chunk in place, in whole or in part.
-        self._context.run(function() {
-          self.onupdate();
-        });
-      } else if (msg === "render") {
-        // This chunk is the root of a Meteor.ui.render or a reactive
-        // update.  Its descendent nodes are (most likely) new to the
-        // document.
-        wireEvents(self, true);
+    return Meteor.ui.chunk(function() {
+      if (initialDocs.length) {
+        return _.map(initialDocs, function(doc) {
+          return Meteor.ui.chunk(doc_func, {data: doc});
+        }).join('');
+      } else {
+        return Meteor.ui.chunk(else_func);
       }
-    };
-
-    // schedule message to be processed at flush time
-    if (! self._msgCx) {
-      var cx = new Meteor.deps.Context;
-      cx.on_invalidate(function() {
-        self._msgCx = null;
-        var msgs = self._msgs;
-        self._msgs = [];
-
-        _.each(msgs, processMessage);
-      });
-      cx.invalidate();
-      self._msgCx = cx;
-    };
+    }, _.extend({}, options, {
+      onscreen: function (start, end, range) {
+        outerRange = range;
+        itemRanges = [];
+        if (initialDocs.length) {
+          range.visit(function (is_start, r) {
+            is_start && itemRanges.push(r);
+            return false;
+          });
+        }
+        runQueuedUpdates();
+        originalOnscreen && originalOnscreen.call(this, start, end, range);
+      },
+      offscreen: function() {
+        handle.stop();
+        originalOffscreen && originalOffscreen.call(this);
+      }
+    }));
   };
 
-  // Kills this chunk.  Safe to call at any time from anywhere.
-  Chunk.prototype.kill = function() {
-    // schedule killing for flush time.
-    if (! this._killed)
-      this._send("kill");
-  };
-
-  // Updates this chunk, as if a data dependency changed.
-  Chunk.prototype.update = function() {
-    // we'll get an "update" message at flush time.
-    this._context.invalidate();
-  };
-
-  // Returns an array of immediate descendent chunks in the chunk
-  // hierarchy.
-  Chunk.prototype.childChunks = function() {
-    if (! this._range)
-      throw new Error("Chunk not rendered yet");
-
-    var chunks = [];
-    this._range.visit(function(is_start, r) {
-      if (! is_start)
-        return false;
-      if (! r.chunk)
-        return true; // allow for intervening LiveRanges
-      chunks.push(r.chunk);
-      return false;
-    });
-
-    return chunks;
-  };
-
-  // Returns this chunk's enclosing chunk in the hierarchy, if
-  // any, or null.
-  Chunk.prototype.parentChunk = function() {
-    if (! this._range)
-      throw new Error("Chunk not rendered yet");
-
-    for(var r = this._range.findParent(); r; r = r.findParent())
-      if (r.chunk)
-        return r.chunk;
-
-    return null;
-  };
-
-  // Finds the innermost enclosing chunk of a DOM node, if any, or
-  // returns null.
-  Meteor.ui._findChunk = function(node) {
-    var range = Meteor.ui._LiveRange.findRange(Meteor.ui._tag, node);
-
-    for(var r = range; r; r = r.findParent())
-      if (r.chunk)
-        return r.chunk;
-
-    return null;
-  };
-
-  //////////////////// MATERIALIZATION (HTML -> DOM)
+  //////////////////// RENDERCHUNK
 
   Meteor.ui._tag = "_liveui";
-  Meteor.ui._inRenderMode = false;
-  var newChunksById = {}; // id -> chunk
 
-  // Materializes HTML into DOM nodes and chunks.
-  //
-  // Calls calcHtml() in "render mode".  In render mode,
-  // chunks register themselves in the newChunksById map
-  // when they are converted into HTML and produce
-  // HTML comments marking where the chunks begin and
-  // end.  We use those comments to create LiveRanges
-  // and associate them with the chunks.
-  //
-  // Once the comments are found and the new chunks are
-  // given LiveRanges, we call chunkCallback on each one,
-  // and then return a DocumentFragment of the materialized
-  // DOM.
-  var materialize = function(calcHtml) {
+  var renderChunk = function(html_func, options, mode, oldRange) {
+    if (typeof options === "string") {
+      // support (html_func, mode, oldRange) form of arguments
+      oldRange = mode;
+      mode = options;
+      options = {};
+    }
+    options = options || {};
 
-    Meteor.ui._inRenderMode = true;
+    // XXX temporary backwards compatibility
+    if (options.event_data)
+      options.data = options.event_data;
 
-    var html;
-    try {
-      html = calcHtml();
-    } finally {
-      Meteor.ui._inRenderMode = false;
+    var range;
+    var container;
+    if (mode === "inside" || mode === "before" || mode === "after") {
+      range = null;
+      container = oldRange.containerNode();
+    } else if (mode === "replace" || mode === "patch") {
+      range = oldRange;
+      container = oldRange.containerNode();
+    } else if (mode === "fragment") {
+      range = null;
+      container = null;
+    } else {
+      throw new Error("Unknown renderChunk mode "+mode);
     }
 
-    var chunkMap = newChunksById;
-    newChunksById = {};
+    var cx = new Meteor.deps.Context;
+    var frag = cx.run(function() {
+      return (new Materializer(container)).toDOM(function() {
+        var html = html_func(options.data);
+        if (typeof html !== "string")
+          throw new Error("Render function must return a string");
+        return html;
+      });
+    });
 
-    var frag = Meteor.ui._htmlToFragment(html);
-    if (! frag.firstChild)
-      frag.appendChild(document.createComment("empty"));
+    var callCreated = function() {
+      range.chunkState = {};
+      if (options.created) {
+        // call options.created with our chunkState in this
+        var ret = options.created.call(range.chunkState);
+        // developer can return their own object to use as
+        // chunkState instead.
+        if (ret)
+          range.chunkState = ret;
+      };
+    };
 
-    var materializedChunks = [];
-
-    // Helper that invokes `f` on every comment node under `parent`.
-    // If `f` returns a node, visit that node next.
-    var each_comment = function(parent, f) {
-      for (var n = parent.firstChild; n;) {
-        if (n.nodeType === 8) { // comment
-          n = f(n) || n.nextSibling;
-          continue;
-        } else if (n.nodeType === 1) { // element
-          each_comment(n, f);
-        }
-        n = n.nextSibling;
+    var callOnscreen = function() {
+      if (options.onscreen) {
+        var ret = options.onscreen.call(
+          range.chunkState, range.firstNode(), range.lastNode(), range);
+        if (ret)
+          range.chunkState = ret;
       }
     };
 
-    // walk comments and insert chunks
-    each_comment(frag, function(n) {
-      var chunkCommentMatch = /^\s*CHUNK_(\S+)/.exec(n.nodeValue);
+    var callOffscreen = function() {
+      if (range.chunkState && options.offscreen)
+        options.offscreen.call(range.chunkState);
+    };
 
-      if (! chunkCommentMatch)
-        return null;
+    if (! range)
+      range = new Meteor.ui._LiveRange(Meteor.ui._tag, frag);
 
-      var id = chunkCommentMatch[1];
+    // Table-body fix:  if container is a table and frag
+    // contains a TR, wrap fragment in a TBODY on all browsers,
+    // so that it will display properly in IE.
+    if ((container && container.nodeName === "TABLE")
+        && _.any(frag.childNodes,
+                 function(n) { return n.nodeName === "TR"; })) {
+      var tbody = document.createElement("TBODY");
+      while (frag.firstChild)
+        tbody.appendChild(frag.firstChild);
+      frag.appendChild(tbody);
+    }
 
-      var chunk = chunkMap[id];
-      if (chunk === "USED") {
-        // already used this chunk in this walk
-        throw new Error("The return value of chunk can only be used once.");
-      } else if (chunk) {
-        var frag = chunk._asFragment();
-        prepareFrag(frag, n.parentNode);
-        var next = frag.firstChild; // exists
-        n.parentNode.replaceChild(frag, n);
-        chunkMap[id] = "USED"; // mark as already used in this walk
-        return next;
-      }
 
-      return null;
+    if (mode === "patch") {
+      // Rendering top level of the current update, with patching
+      range.operate(function(start, end) {
+        Sarge.shuck(start, end);
+
+        var patcher = new Meteor.ui._Patcher(
+          start.parentNode, frag,
+          start.previousSibling, end.nextSibling);
+        var copyFunc = function(t, s) {
+          Meteor.ui._LiveRange.transplant_tag(Meteor.ui._tag, t, s);
+        };
+        patcher.diffpatch(copyFunc);
+      });
+    } else if (mode === "replace") {
+      // Rendering a sub-chunk of the current update
+      Sarge.shuck(range.replace_contents(frag));
+    } else if (mode === "inside") {
+      Sarge.shuck(oldRange.replace_contents(frag));
+    } else if (mode === "before") {
+      oldRange.insert_before(frag);
+    } else if (mode === "after") {
+      oldRange.insert_after(frag);
+    } else if (mode === "fragment") {
+      // Rendering a fragment for Meteor.ui.render
+    }
+
+    Sarge.whenOnscreen(range, function() {
+      if (mode === "fragment")
+        wireEvents(range, true);
+      if (mode !== "patch") // XXX revisit when patching chunks
+        callCreated();
+      callOnscreen();
     });
 
-    return frag;
+    range.data = options.data;
+    if (options.events)
+      range.eventHandlers = unpackEventMap(options.events);
+    wireEvents(range, mode !== "fragment");
+
+    // in case we are patching an existing, valid range
+    range.context && range.context.invalidate();
+
+    range.context = cx;
+    range.update = function() {
+      var self = this;
+      Sarge.whenOnscreen(self, function() {
+        renderChunk(html_func, options, "patch", this);
+      });
+    };
+    range.destroy = function() {
+      range.context && range.context.invalidate();
+      callOffscreen();
+    };
+
+    cx.on_invalidate(function() {
+      if (range.context === cx) // make sure not an old cx
+        range.update();
+    });
+
+    return range;
   };
 
-  //////////////////// CHUNK EVENT SUPPORT
+  //////////////////// MATERIALIZER
 
-  var wireEvents = function(chunk, andEnclosing) {
-    // Attach events to top-level nodes in `chunk` as specified
+  // XXX check order of invalidate at multiple levels?
+
+  var Materializer = function () {
+    this.nextCommentId = 1;
+    this.replaceFuncs = {};
+  };
+  Materializer.current = null;
+
+  _.extend(Materializer.prototype, {
+    // Calls htmlFunc() with the current Materializer used to
+    // record comment placeholders for fragments.
+    toDOM: function (htmlFunc) {
+      var self = this;
+
+      // run htmlFunc with self as Materializer.current
+      var previous = Materializer.current;
+      Materializer.current = self;
+      try { var html = htmlFunc(); }
+      finally { Materializer.current = previous; }
+
+      var frag = Meteor.ui._htmlToFragment(html);
+      // empty frag becomes HTML comment <!--empty-->
+      if (! frag.firstChild)
+        frag.appendChild(document.createComment("empty"));
+
+      // Helper that invokes `f` on every comment node under `parent`.
+      // If `f` returns a node, visit that node next.
+      var each_comment = function(parent, f) {
+        for (var n = parent.firstChild; n;) {
+          if (n.nodeType === 8) { // COMMENT
+            n = (f(n) || n.nextSibling);
+            continue;
+          }
+          if (n.nodeType === 1) // ELEMENT
+            each_comment(n, f); // recurse
+          n = n.nextSibling;
+        }
+      };
+
+      var alreadyCalled = function () {
+        throw new Error("Can't include the same chunk in multiple places.");
+      };
+
+      each_comment(frag, function(comment) {
+        var commentValue = comment.nodeValue;
+        var replaceFunc = self.replaceFuncs[commentValue];
+        if (! replaceFunc)
+          return null; // some other <!-- comment -->
+
+        var precomment = (comment.previousSibling || null);
+        var parent = comment.parentNode;
+
+        replaceFunc(comment);
+        // plant a bomb to catch any duplicate chunk
+        self.replaceFuncs[commentValue] = alreadyCalled;
+
+        return precomment ? precomment.nextSibling : parent.firstChild;
+      });
+
+      return frag;
+    },
+
+    // Returns a new placeholder HTML comment as a string.
+    // When this comment materializes, replaceFunc will be
+    // called on it to replace it.
+    placeholder: function (replaceFunc) {
+      var commentValue = "CHUNK_"+(this.nextCommentId++);
+      this.replaceFuncs[commentValue] = replaceFunc;
+      return "<!--"+commentValue+"-->";
+    }
+
+  });
+
+  //////////////////// DOM SARGE (coordinates entry, exit, and signaling)
+
+  var Sarge = Meteor.ui._Sarge = {
+
+    // Call f with (this === range) the next time we see range
+    // alive and onscreen at flush time, if ever.
+    whenOnscreen: function(range, f) {
+      Sarge.atFlushTime(function() {
+        if (! Sarge.checkOffscreen(range))
+          f.call(range);
+      });
+    },
+
+    // Remove all LiveRanges on the range of nodes from start to end,
+    // properly disposing of any referenced chunks and cleaning the
+    // nodes.  May be called as shuck(fragment) or shuck(node) as well.
+    shuck: function (start, end) {
+      var wrapper = new Meteor.ui._LiveRange(Meteor.ui._tag, start, end);
+      wrapper.visit(function (is_start, range) {
+        is_start && Sarge.killRange(range);
+      });
+      wrapper.destroy(true);
+    },
+
+    // Mark a single range as killed and call its finalizer.
+    killRange: function(range) {
+      if (! range.killed) {
+        range.killed = true;
+        // only one of these ever scheduled per range:
+        Sarge.atFlushTime(function() {
+          range.destroy && range.destroy();
+        });
+      }
+    },
+
+    // Call f() at next flush time.  If it's already flush time,
+    // f will be added to the queue and called later in this
+    // flush.
+    atFlushTime: function (f) {
+      var cx = new Meteor.deps.Context;
+      cx.on_invalidate(function() { return f(); });
+      cx.invalidate();
+    },
+
+    // If range is offscreen, kill it and shuck the whole DOM tree.
+    // Returns true if the range is killed or already dead.
+    checkOffscreen: function(range) {
+      if (range.killed)
+        return true;
+
+      var node = range.firstNode();
+
+      if (node.parentNode &&
+          (Sarge.isNodeOnscreen(node) || Sarge.isNodeHeld(node)))
+        return false;
+
+      while (node.parentNode)
+        node = node.parentNode;
+
+      Sarge.shuck(node.firstChild, node.lastChild);
+
+      return true;
+    },
+
+    // Check whether a node is contained in the document.
+    isNodeOnscreen: function (node) {
+      // http://jsperf.com/is-element-in-the-dom
+
+      if (document.compareDocumentPosition)
+        return document.compareDocumentPosition(node) & 16;
+      else {
+        if (node.nodeType !== 1 /* Element */)
+          /* contains() doesn't work reliably on non-Elements. Fine on
+           Chrome, not so much on Safari and IE. */
+          node = node.parentNode;
+        if (node.nodeType === 11 /* DocumentFragment */ ||
+            node.nodeType === 9 /* Document */)
+          /* contains() chokes on DocumentFragments on IE8 */
+          return node === document;
+        /* contains() exists on document on Chrome, but only on
+         document.body on some other browsers. */
+        return document.body.contains(node);
+      }
+    },
+
+    // Internal facility, only used by tests, for holding onto
+    // DocumentFragments across flush().  Does ref-counting
+    // using hold() and release().
+    holdFrag: function (frag) {
+      frag._liveui_refs = (frag._liveui_refs || 0) + 1;
+    },
+    releaseFrag: function (frag) {
+      // Clean up on flush, if hits 0.  Wait to decrement
+      // so no one else cleans it up first.
+      Sarge.atFlushTime(function() {
+        // now decrement
+        --frag._liveui_refs;
+        if (! frag._liveui_refs)
+          Sarge.shuck(frag);
+      });
+    },
+    isNodeHeld: function (node) {
+      while (node.parentNode)
+        node = node.parentNode;
+
+      return node.nodeType !== 3 /*TEXT_NODE*/ && node._liveui_refs;
+    }
+  };
+
+  //////////////////// EVENT SUPPORT
+
+  var wireEvents = function(range, andEnclosing) {
+    // Attach events to top-level nodes in `range` as specified
     // by its event handlers.
     //
-    // If `andEnclosing` is true, we also walk up the chunk
+    // If `andEnclosing` is true, we also walk up the range
     // hierarchy looking for event types we need to handle
-    // based on handlers in ancestor chunks.  This is necessary
-    // when a chunk is updated or a rendered fragment is added
-    // to the DOM -- basically, when a chunk acquires ancestors.
+    // based on handlers in ancestor ranges.  This is necessary
+    // when a range is updated or a rendered fragment is added
+    // to the DOM -- basically, when a range acquires ancestors.
     //
     // In modern browsers (all except IE <= 8), this level of
     // subtlety is not actually required, because the implementation
@@ -549,14 +526,14 @@ Meteor.ui = Meteor.ui || {};
     // per type globally on the document.  However, the Old IE impl
     // takes advantage of it.
 
-    var range = chunk._range;
-
-    for(var c = chunk; c; c = c.parentChunk()) {
-      var handlers = c._eventHandlers;
+    var innerRange = range;
+    for(range = innerRange; range; range = range.findParent()) {
+      var handlers = range.eventHandlers;
 
       if (handlers) {
         _.each(handlers.types, function(t) {
-          for(var n = range.firstNode(), after = range.lastNode().nextSibling;
+          for(var n = innerRange.firstNode(),
+                  after = innerRange.lastNode().nextSibling;
               n && n !== after;
               n = n.nextSibling)
             Meteor.ui._event.registerEventType(t, n);
@@ -569,7 +546,7 @@ Meteor.ui = Meteor.ui || {};
   };
 
   // Convert an event map from the developer into an internal
-  // format for chunk._eventHandlers.  The internal format is
+  // format for range.eventHandlers.  The internal format is
   // an array of objects with properties {type, selector, callback}.
   // The array has an expando property `types`, which is a list
   // of all the unique event types used (as an optimization for
@@ -611,12 +588,12 @@ Meteor.ui = Meteor.ui || {};
     if (! curNode)
       return;
 
-    var innerChunk = Meteor.ui._findChunk(curNode);
+    var innerRange = Meteor.ui._LiveRange.findRange(Meteor.ui._tag, curNode);
 
     var type = event.type;
 
-    for(var chunk = innerChunk; chunk; chunk = chunk.parentChunk()) {
-      var event_handlers = chunk._eventHandlers;
+    for(var range = innerRange; range; range = range.findParent()) {
+      var event_handlers = range.eventHandlers;
       if (! event_handlers)
         continue;
 
@@ -628,7 +605,7 @@ Meteor.ui = Meteor.ui || {};
 
         var selector = h.selector;
         if (selector) {
-          var contextNode = chunk._range.containerNode();
+          var contextNode = range.containerNode();
           var results = $(contextNode).find(selector);
           if (! _.contains(results, curNode))
             continue;
@@ -638,10 +615,10 @@ Meteor.ui = Meteor.ui || {};
             continue;
         }
 
-        var event_data = findEventData(event.currentTarget);
+        var eventData = findEventData(event.currentTarget);
 
         // Call the app's handler/callback
-        var returnValue = h.callback.call(event_data, event);
+        var returnValue = h.callback.call(eventData, event);
 
         // allow app to `return false` from event handler, just like
         // you can in a jquery event handler
@@ -658,105 +635,16 @@ Meteor.ui = Meteor.ui || {};
 
   // find the innermost enclosing liverange that has event data
   var findEventData = function(node) {
-    var innerChunk = Meteor.ui._findChunk(node);
+    var innerRange = Meteor.ui._LiveRange.findRange(Meteor.ui._tag, node);
 
-    for(var chunk = innerChunk; chunk; chunk = chunk.parentChunk())
-      if (chunk._data)
-        return chunk._data;
+    for(var range = innerRange; range; range = range.findParent())
+      if (range.data)
+        return range.data;
 
     return null;
   };
 
   Meteor.ui._event.setHandler(handleEvent);
 
-
-  //////////////////// OFFSCREEN CHECKING AND CLEANUP
-
-  // Cleans up a range and its descendant ranges by killing
-  // any attached chunks (which removes the associated contexts
-  // from dependency tracking) and then destroying the LiveRanges
-  // (which removes the liverange data from the DOM).
-  var cleanup_range = function(range) {
-    range.visit(function(is_start, range) {
-      if (is_start)
-        range.chunk && range.chunk.kill();
-    });
-    range.destroy(true);
-  };
-
-  var _checkOffscreen = function(range) {
-    var node = range.firstNode();
-
-    if (node.parentNode &&
-        (Meteor.ui._onscreen(node) || Meteor.ui._is_held(node)))
-      return false;
-
-    cleanup_range(range);
-
-    return true;
-  };
-
-  // Internal facility, only used by tests, for holding onto
-  // DocumentFragments across flush().  Reference counts
-  // using hold() and release().
-  Meteor.ui._is_held = function(node) {
-    while (node.parentNode)
-      node = node.parentNode;
-
-    return node.nodeType !== 3 /*TEXT_NODE*/ && node._liveui_refs;
-  };
-  Meteor.ui._hold = function(frag) {
-    frag._liveui_refs = (frag._liveui_refs || 0) + 1;
-  };
-  Meteor.ui._release = function(frag) {
-    // Clean up on flush, if hits 0.
-    // Don't want to decrement
-    // _liveui_refs to 0 now because someone else might
-    // clean it up if it's not held.
-    var cx = new Meteor.deps.Context;
-    cx.on_invalidate(function() {
-      --frag._liveui_refs;
-      if (! frag._liveui_refs)
-        // wrap the frag in a new LiveRange that will be destroyed
-        cleanup_range(new Meteor.ui._LiveRange(Meteor.ui._tag, frag));
-    });
-    cx.invalidate();
-  };
-
-  Meteor.ui._onscreen = function (node) {
-    // http://jsperf.com/is-element-in-the-dom
-
-    if (document.compareDocumentPosition)
-      return document.compareDocumentPosition(node) & 16;
-    else {
-      if (node.nodeType !== 1 /* Element */)
-        /* contains() doesn't work reliably on non-Elements. Fine on
-         Chrome, not so much on Safari and IE. */
-        node = node.parentNode;
-      if (node.nodeType === 11 /* DocumentFragment */ ||
-          node.nodeType === 9 /* Document */)
-        /* contains() chokes on DocumentFragments on IE8 */
-        return node === document;
-      /* contains() exists on document on Chrome, but only on
-       document.body on some other browsers. */
-      return document.body.contains(node);
-    }
-  };
-
-  //////////////////// OTHER SUPPORT
-
-  var prepareFrag = function(frag, container) {
-    // Table-body fix:  if tgtRange is in a table and srcParent
-    // contains a TR, wrap fragment in a TBODY on all browsers,
-    // so that it will display properly in IE.
-    if (container.nodeName === "TABLE" &&
-        _.any(frag.childNodes,
-              function(n) { return n.nodeName === "TR"; })) {
-      var tbody = document.createElement("TBODY");
-      while (frag.firstChild)
-        tbody.appendChild(frag.firstChild);
-      frag.appendChild(tbody);
-    }
-  };
 
 })();

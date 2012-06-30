@@ -50,8 +50,9 @@ OnscreenDiv.prototype.kill = function() {
   var frag = document.createDocumentFragment();
   frag.appendChild(this.div);
   // instigate clean-up on next flush()
-  Meteor.ui._hold(frag);
-  Meteor.ui._release(frag);
+  Meteor.ui._Sarge.atFlushTime(function() {
+    Meteor.ui._Sarge.shuck(frag);
+  });
 };
 
 // remove the DIV from the document
