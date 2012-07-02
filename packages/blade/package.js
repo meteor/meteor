@@ -1,5 +1,15 @@
 var path = require('path');
-var blade = require('blade');
+var blade;
+//Hopefully, sometime soon I'll be able to get rid of this horrible hack...
+try {
+	blade = require('blade');
+}
+catch(e) {
+	//XXX super lame! we actually have to give paths relative to
+	// app/inner/app.js, since that's who's evaling us.
+	blade = require('../../packages/blade/node_modules/blade');
+}
+//-- end of horrible hack
 
 Package.describe({
 	summary: "Blade - HTML Template Compiler, inspired by Jade & Haml"
@@ -13,15 +23,15 @@ Package.register_extension("blade", function(bundle, srcPath, servePath, where) 
 	//Templates are assumed to be stored in "views/", so remove this from the name, if needed
 	if(templateName.substr(0, 6) == "views/")
 		templateName = templateName.substr(6);
-	//Finally, tell the Blade compiler where these views are stored, so that file includes work
-	//the location of meteor project = srcPath.substr(0, srcPath.length - servePath.length)
+	//Finally, tell the Blade compiler where these views are stored, so that file includes work.
+	//The location of meteor project = srcPath.substr(0, srcPath.length - servePath.length)
 	var basedir = srcPath.substr(0, srcPath.length - servePath.length) + "/views";
 	blade.compileFile(srcPath, {
-		'synchronous': true, //undocumented Blade property
+		'synchronous': true,
 		'basedir': basedir,
-		'cache': false, //disabled because we only compile each file once anyway?
-		'minify': false, //for debugging
-		'includeSource': true //for debugging
+		'cache': false, //disabled because we only compile each file once anyway
+		'minify': false, //would be nice to have access to `no_minify` bundler option
+		'includeSource': true //default to true for debugging
 	}, function(err, tmpl) {
 		if(err) throw err;
 		if(templateName == "head")
@@ -47,7 +57,7 @@ Package.register_extension("blade", function(bundle, srcPath, servePath, where) 
 		bundle.add_resource({
 			type: 'js',
 			path: "/views/" + templateName + ".js", //This can be changed to whatever
-			data: new Buffer("Meteor.startup(function(){blade.cachedViews[" +
+			data: new Buffer("blade.cachedViews[" +
 				//just put the template itself in blade.cachedViews
 				JSON.stringify(templateName + ".blade") + "]=" + tmpl.toString() + ";" +
 				//define a template with the proper name
@@ -65,12 +75,11 @@ Package.register_extension("blade", function(bundle, srcPath, servePath, where) 
 						"var ret = ''; blade.cachedViews[" + JSON.stringify(templateName + ".blade") +
 						"](data, function(err,html) {" +
 							"if(err) throw err; ret = html;" +
-						//so... by here, we can just return `ret`, and everything works okay
 						"});\n" +
+						//so... by here, we can just return `ret`, and everything works okay
 						"return ret;" +
 					"}" +
-				")" +
-			"});"),
+				");"),
 			where: where
 		});
 	});

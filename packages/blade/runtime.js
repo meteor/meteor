@@ -9,9 +9,20 @@
 (function() {
 	var runtime = typeof exports == "object" ? exports : {};
 	var cachedViews = {};
+	//Expose Blade runtime via window.blade, if we are running on the browser
 	if(runtime.client = typeof window != "undefined")
-		window.blade = {'runtime': runtime, 'cachedViews': cachedViews, 'cb': {}, 'rootURL': '/views'};
-
+		window.blade = {'runtime': runtime, 'cachedViews': cachedViews,
+			'cb': {}, 'mount': '/views/'};
+	
+	/* Convert special characters to HTML entities.
+		This function performs replacements similar to PHP's ubiquitous
+		htmlspecialchars function. The main difference here is that HTML
+		entities are not re-escaped; for example, "<Copyright &copy; 2012>"
+		will be escaped to: "&lt;Copyright &copy; 2012&gt;" instead of
+		"&lt;Copyright &amp;copy; 2012&gt;"
+		
+		See: http://php.net/manual/en/function.htmlspecialchars.php
+	*/
 	runtime.escape = function(str) {
 		return str == null ? "" : new String(str)
 			.replace(/&(?!\w+;)/g, '&amp;')
@@ -20,39 +31,60 @@
 			.replace(/"/g, '&quot;');
 	}
 	
+	/* This is a helper function that generates tag attributes and adds	them
+		to the buffer.
+		
+		attrs is an object of the following format:
+		{
+			"v": attribute_value,
+			"e": escape_flag,
+			"a": additional_classes_to_be_appended
+		}
+	*/
 	runtime.attrs = function(attrs, buf) {
 		for(var i in attrs)
 		{
-			if(attrs[i].val == null)
+			var attr = attrs[i];
+			//If the attribute value is null...
+			if(attr.v == null)
 			{
-				if(attrs[i].append != null)
-				{
-					attrs[i].val = attrs[i].append;
-					delete attrs[i].append;
-				}
+				if(attr.a == null)
+					continue; //Typically, we ignore attributes with null values
 				else
-					continue;
+				{
+					//If we need to append stuff, just swap value and append
+					attr.v = attr.a;
+					delete attr.a;
+				}
 			}
+			//Class attributes may be passed an Array or have classes that need to be appended
 			if(i == "class")
 			{
-				if(attrs[i].val instanceof Array)
-					attrs[i].val = attrs[i].val.join(" ");
-				if(attrs[i].append)
-					attrs[i].val = (attrs[i].val.length > 0 ? attrs[i].val + " " : "") + attrs[i].append;
+				if(attr.v instanceof Array)
+					attr.v = attr.v.join(" ");
+				if(attr.a)
+					attr.v = (attr.v.length > 0 ? attr.v + " " : "") + attr.a;
 			}
-			if(attrs[i].escape)
-				buf.push(" " + i + "=\"" + runtime.escape(attrs[i].val) + "\"");
+			//Add the attribute to the buffer
+			if(attr.e)
+				buf.push(" " + i + "=\"" + runtime.escape(attr.v) + "\"");
 			else
-				buf.push(" " + i + "=\"" + attrs[i].val + "\"");
+				buf.push(" " + i + "=\"" + attr.v + "\"");
 		}
 	}
 	
-	/* Load the template from a file
-		Default behavior in Node.JS is to compile the file using Blade.
-		Default behavior in browser is to load async using a script tag.
+	/* Load a compiled template, synchronously, if possible.
+	
 		loadTemplate(baseDir, filename, [compileOptions,] cb)
 		or
 		loadTemplate(filename, [compileOptions,] cb)
+		
+		Returns true if the file was loaded synchronously; false, if it could not be
+		loaded synchronously.
+	
+		Default behavior in Node.JS is to synchronously compile the file using Blade.
+		Default behavior in the browser is to load from the browser's cache, if
+		possible; otherwise, the template is loaded asynchronously via a script tag.
 	*/
 	runtime.loadTemplate = function(baseDir, filename, compileOptions, cb) {
 		//Reorganize arguments
@@ -71,40 +103,63 @@
 		{
 			filename = runtime.resolve(filename);
 			if(cachedViews[filename])
-				return cb(null, cachedViews[filename]);
+			{
+				cb(null, cachedViews[filename]);
+				return true;
+			}
 			var blade = window.blade;
 			if(blade.cb[filename])
 				throw new Error("Template is already loading. Be patient.");
+			//Create script tag
 			var st = document.createElement('script');
 			st.type = 'application/javascript';
 			st.async = true;
-			st.src = blade.rootURL + '/' + filename;
+			st.src = blade.mount + filename;
 			var s = document.getElementsByTagName('script')[0];
 			s.parentNode.insertBefore(st, s);
+			//Set a timer to throw an Error after a timeout expires.
 			var timer = setTimeout(function() {
 				delete blade.cb[filename];
 				st.parentNode.removeChild(st);
 				cb(new Error("Timeout Error: Blade Template [" + filename +
 					"] could not be loaded.") );
 			}, 15000);
-			blade.cb[filename] = function(ns) {
+			//Setup callback to be called by the template script
+			blade.cb[filename] = function(dependencies, unknownDependencies) {
 				clearTimeout(timer);
 				delete blade.cb[filename];
 				st.parentNode.removeChild(st);
-				cb(null, ns[filename]);
+				//Load all dependencies, too
+				if(dependencies.length > 0)
+				{
+					var done = 0;
+					for(var i = 0; i < dependencies.length; i++)
+						runtime.loadTemplate(baseDir, dependencies[i], compileOptions, function(err, tmpl) {
+							if(err) throw err;
+							if(++done == dependencies.length)
+								cb(null, cachedViews[filename]);
+						});
+				}
+				else
+					cb(null, cachedViews[filename]);
 			};
+			return false;
 		}
 		else
 		{
-			var blade = require('./blade');
-			blade.compileFile(baseDir + "/" + filename, compileOptions, function(err, wrapper) {
-				if(err) return cb(err);
-				cb(null, wrapper.template);
-			});
+			compileOptions.synchronous = true;
+			require('./blade').compileFile(baseDir + "/" + filename,
+				compileOptions, function(err, wrapper) {
+					if(err) return cb(err);
+					cb(null, wrapper.template);
+				}
+			);
+			return true;
 		}
 	}
 	
-	//This function is a hack to get the resolved URL, so that caching works okay with relative URLs
+	/* This function is a hack to get the resolved URL, so that caching works
+		okay with relative URLs */
 	runtime.resolve = function(filename) {
 		if(runtime.client) {
 			var x = document.createElement('div');
@@ -116,38 +171,53 @@
 		}
 	};
 	
-	runtime.include = function(relFilename, info, cb) {
-		var include = info.inc,
-			pFilename = info.filename,
+	runtime.include = function(relFilename, info) {
+		//Save template-specific information
+		var pInc = info.inc,
 			pBase = info.base,
 			pRel = info.rel,
+			pFilename = info.filename,
 			pLine = info.line,
 			pCol = info.col,
-			pSource = info.source;
-		function includeDone(err, html) {
-			if(!include) info.inc = false;
-			info.filename = pFilename;
-			info.base = pBase;
-			info.rel = pRel;
-			info.line = pLine;
-			info.col = pCol;
-			info.source = pSource;
-			cb(err);
-		}
+			pSource = info.source,
+			pLocals = info.locals;
 		info.inc = true;
 		//Append .blade for filenames without an extension
 		var ext = relFilename.split("/");
 		ext = ext[ext.length-1].indexOf(".");
 		if(ext < 0)
 			relFilename += ".blade";
+		//If exposing locals, the included view gets its own set of locals
+		if(arguments.length > 2)
+		{
+			info.locals = {};
+			for(var i = 2; i < arguments.length; i += 2)
+				info.locals[arguments[i]] = arguments[i+1];
+		}
 		//Now load the template and render it
-		runtime.loadTemplate(info.base, info.rel + "/" + relFilename,
+		var sync = runtime.loadTemplate(info.base, info.rel + "/" + relFilename,
 			runtime.compileOptions, function(err, tmpl) {
-				if(err) return cb(err);
-				tmpl(info.locals, includeDone, info);
+				if(err) throw err;
+				tmpl(info.locals, function(err, html) {
+					//This is run after the template has been rendered
+					if(err) throw err;
+					//Now, restore template-specific information
+					info.inc = pInc;
+					info.base = pBase;
+					info.rel = pRel;
+					info.filename = pFilename;
+					info.line = pLine;
+					info.col = pCol;
+					info.source = pSource;
+					info.locals = pLocals;
+				}, info);
 		});
+		if(!sync) throw new Error("Included file [" + info.rel + "/" + relFilename +
+			"] could not be loaded synchronously!");
 	}
 	
+	/* Capture the output of a function
+		and delete all blocks defined within the function */
 	runtime.capture = function(buf, info) {
 		var start = info.pos;
 		//Delete all blocks defined within the function
@@ -159,6 +229,7 @@
 		return buf.splice(start, buf.length - start).join("");
 	};
 	
+	/* Define a chunk, a function that returns HTML. */
 	runtime.chunk = function(name, func, info) {
 		info.chunk[name] = function() {
 			//This function needs to accept params and return HTML
@@ -167,17 +238,28 @@
 		};
 	};
 	
+	/* Copies error reporting information from a block's buffer to the main
+		buffer */
+	function blockError(buf, blockBuf) {
+		buf.filename = blockBuf.filename;
+		buf.line = blockBuf.line;
+		buf.col = blockBuf.col;
+	}
+	
+	/* Defines a block */
 	runtime.blockDef = function(blockName, buf, childFunc) {
 		var block = buf.blocks[blockName] = {
-			'parent': buf.block || null,
-			'buf': [],
-			'pos': buf.length,
-			'numChildren': 0
+			'parent': buf.block || null, //set parent block
+			'buf': [], //block get its own buffer
+			'pos': buf.length, //block knows where it goes in the main buffer
+			'numChildren': 0 //number of child blocks
 		};
-		//Copy properties from buf into block.buf
-		var copy = ['r', 'blocks', 'func', 'locals', 'cb'];
+		//Copy some properties from buf into block.buf
+		var copy = ['r', 'blocks', 'func', 'locals', 'cb', 'base', 'rel'];
 		for(var i in copy)
 			block.buf[copy[i]] = buf[copy[i]];
+		/* Set the block property of the buffer so that child blocks know
+		this is their parent */
 		block.buf.block = block;
 		//Update numChildren in parent block
 		if(block.parent)
@@ -190,11 +272,16 @@
 		else
 		{
 			try {childFunc(block.buf); }
-			catch(e) {buf.line = block.buf.line, buf.col = block.buf.col; throw e;}
+			catch(e) {blockError(buf, block.buf); throw e;}
 		}
-		return block;
 	};
 	
+	/* Render a parameterized block
+		type can be one of:
+			"a" ==> append (the default)
+			"p" ==> prepend
+			"r" ==> replace
+	*/
 	runtime.blockRender = function(type, blockName, buf) {
 		var block = buf.blocks[blockName];
 		if(block == null)
@@ -207,11 +294,11 @@
 		for(var i = 3; i < arguments.length; i++)
 			args[i-2] = arguments[i];
 		if(type == "r") //replace
-			block.buf.length = 0; //empty the array (this is an accepted approach, btw)
+			block.buf.length = 0; //an acceptable way to empty the array
 		var start = block.buf.length;
 		//Render the block
 		try{block.paramBlock.apply(this, args);}
-		catch(e) {buf.line = block.buf.line, buf.col = block.buf.col; throw e;}
+		catch(e) {blockError(buf, block.buf); throw e;}
 		if(type == "p")
 			prepend(block, buf, start);
 	}
@@ -227,6 +314,12 @@
 				buf.blocks[i].pos -= start;
 	}
 	
+	/* Append to, prepend to, or replace a defined block.
+		type can be one of:
+			"a" ==> append
+			"p" ==> prepend
+			"r" ==> replace
+	*/
 	runtime.blockMod = function(type, blockName, buf, childFunc) {
 		var block = buf.blocks[blockName];
 		if(block == null)
@@ -244,13 +337,15 @@
 		else
 		{
 			try {childFunc(block.buf);}
-			catch(e) {buf.line = block.buf.line, buf.col = block.buf.col; throw e;}
+			catch(e) {blockError(buf, block.buf); throw e;}
 		}
 		if(type == "p") //prepend
 			prepend(block, buf, start);
 	};
 	
-	/* Although runtime.done looks like a O(n^2) operation, I think it is
+	/* Inject all blocks into the appropriate spots in the main buffer.
+		This function is to be run when the template is done rendering.
+		Although runtime.done looks like a O(n^2) operation, I think it is
 		O(n * max_block_depth) where n is the number of blocks. */
 	runtime.done = function(buf) {
 		//Iterate through each block until done
@@ -279,6 +374,7 @@
 		}
 	};
 	
+	/* Adds error information to the error Object and returns it */
 	runtime.rethrow = function(err, info) {
 		if(info == null)
 			info = err;
