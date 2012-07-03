@@ -313,6 +313,8 @@ Meteor.ui = Meteor.ui || {};
       callOffscreen();
     };
 
+    range.branch = options.branch;
+
     cx.on_invalidate(function() {
       if (range.context === cx) // make sure not an old cx
         range.update();

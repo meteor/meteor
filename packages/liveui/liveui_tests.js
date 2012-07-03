@@ -2074,4 +2074,85 @@ Tinytest.add("liveui - controls", function(test) {
   div.kill();
 });
 
+Tinytest.add("liveui - chunk matching", function(test) {
+
+  // basic created / onscreen / offscreen callback flow
+
+  var buf;
+  var counts;
+
+  var testCallbacks = function(theNum /*, extend opts*/) {
+    return _.extend.apply(_, [{
+      created: function() {
+        this.num = String(theNum);
+        var howManyBefore = counts[this.num] || 0;
+        counts[this.num] = howManyBefore + 1;
+        for(var i=0;i<howManyBefore;i++)
+          this.num += "*"; // add stars
+        buf.push("c"+this.num);
+      },
+      onscreen: function(start, end, range) {
+        buf.push("on"+this.num);
+      },
+      offscreen: function() {
+        buf.push("off"+this.num);
+      }
+    }].concat(_.toArray(arguments).slice(1)));
+  };
+
+  buf = [];
+  counts = {};
+  var R = ReactiveVar("A");
+  var div = OnscreenDiv(Meteor.ui.render(function() {
+    return String(R.get());
+  }, testCallbacks(0)));
+
+  test.equal(buf, []);
+
+  test.equal(div.html(), "A");
+  Meteor.flush();
+  test.equal(buf, ["c0", "on0"]);
+  test.equal(div.html(), "A");
+
+  R.set("B");
+  Meteor.flush();
+  test.equal(buf, ["c0", "on0", "on0"]);
+  test.equal(div.html(), "B");
+
+
+  div.kill();
+  Meteor.flush();
+  test.equal(buf, ["c0", "on0", "on0", "off0"]);
+
+  // with a branch
+
+  buf = [];
+  counts = {};
+  R = ReactiveVar("A");
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    R.get();
+    return "<div>"+Meteor.ui.chunk(function() {
+      return "HI";
+    }, testCallbacks(1, {branch: "foo"}))+"</div>";
+  }, testCallbacks(0)));
+
+  test.equal(buf, []);
+  Meteor.flush();
+  // what order of chunks {0,1} is preferable??
+  // should be consistent but I'm not sure what makes most sense.
+  test.equal(buf, "c1,on1,c0,on0".split(','));
+  buf.length = 0;
+
+  R.set("B");
+  Meteor.flush();
+  test.equal(buf, "on1,on0".split(','));
+  buf.length = 0;
+
+  div.kill();
+  Meteor.flush();
+  buf.sort();
+  test.equal(buf, "off0,off1".split(','));
+});
+
+
 })();
