@@ -15,7 +15,7 @@ Package.on_use(function (api) {
 
   api.add_files(['liveevents_w3c.js', 'liveevents_now3c.js'], 'client');
   api.add_files(['liveevents.js'], 'client');
-  api.add_files(['liverange.js', 'liveui.js', 'innerhtml.js', 'smartpatch.js'],
+  api.add_files(['liverange.js', 'liveui.js', 'innerhtml.js', 'patcher.js'],
                 'client');
 });
 
