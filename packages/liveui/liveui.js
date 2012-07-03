@@ -20,8 +20,8 @@ Meteor.ui = Meteor.ui || {};
 
     if (Materializer.current)
       return Materializer.current.placeholder(function(comment) {
-        // wrap a new LiveRange around the comment, inside any
-        // existing LiveRanges
+        // Wrap a new LiveRange around the comment, which becomes
+        // the chunk's LiveRange.
         var range = new Meteor.ui._LiveRange(
           Meteor.ui._tag, comment, comment, true);
         // replace, don't patch, the placeholder comment

@@ -25,6 +25,11 @@ ReactiveVar.prototype.get = function() {
 };
 
 ReactiveVar.prototype.set = function(newValue) {
+  // detect equality and don't invalidate dependers
+  // when value is a primitive.
+  if ((typeof newValue !== 'object') && this._value === newValue)
+    return;
+
   this._value = newValue;
 
   for(var id in this._deps)
@@ -736,6 +741,54 @@ Tinytest.add("liveui - chunks", function(test) {
   test.equal(div.html(), "xhi");
   div.kill();
   Meteor.flush();
+
+  // more nesting
+
+  var num1 = ReactiveVar(false);
+  var num2 = ReactiveVar(false);
+  var num3 = ReactiveVar(false);
+  var numset = function(n) {
+    _.each([num1, num2, num3], function(v, i) {
+      v.set((i+1) === n);
+    });
+  };
+  numset(1);
+
+  var div = OnscreenDiv(Meteor.ui.render(function() {
+    return Meteor.ui.chunk(function() {
+      // This test was twiddled to try to catch a theorized bug
+      // around nested chunks with no surrounding nodes, but
+      // there was no bug.  Feel free to twiddle again.
+      return (num1.get() ? '' : '')+
+        Meteor.ui.chunk(function() {
+          return (num2.get() ? '' : '')+
+            Meteor.ui.chunk(function() {
+              return (num3.get() ? '3' : '')+'x';
+            });
+        });
+    });
+  }));
+  test.equal(div.html(), "x");
+  numset(2);
+  Meteor.flush();
+  test.equal(div.html(), "x");
+  numset(3);
+  Meteor.flush();
+  test.equal(div.html(), "3x");
+  numset(1);
+  Meteor.flush();
+  test.equal(div.html(), "x");
+  numset(3);
+  Meteor.flush();
+  test.equal(div.html(), "3x");
+  numset(2);
+  Meteor.flush();
+  test.equal(div.html(), "x");
+  div.kill();
+  Meteor.flush();
+  test.equal(num1.numListeners(), 0);
+  test.equal(num2.numListeners(), 0);
+  test.equal(num3.numListeners(), 0);
 });
 
 Tinytest.add("liveui - repeated chunk", function(test) {
@@ -1980,10 +2033,10 @@ Tinytest.add("liveui - controls", function(test) {
 
   // Textarea
 
-  R = ReactiveVar("test");
+  R = ReactiveVar({x:"test"});
   div = OnscreenDiv(Meteor.ui.render(function() {
     return '<textarea id="mytextarea">This is a '+
-      R.get()+'</textarea>';
+      R.get().x+'</textarea>';
   }));
   div.show(true);
 
@@ -1992,13 +2045,13 @@ Tinytest.add("liveui - controls", function(test) {
   test.equal(textarea.value, "This is a test");
 
   // value updates reactively
-  R.set("fridge");
+  R.set({x:"fridge"});
   Meteor.flush();
   test.equal(textarea.value, "This is a fridge");
 
   // ...unless focused
   focusElement(textarea);
-  R.set("frog");
+  R.set({x:"frog"});
   Meteor.flush();
   test.equal(textarea.value, "This is a fridge");
 
@@ -2006,14 +2059,14 @@ Tinytest.add("liveui - controls", function(test) {
   blurElement(textarea);
   Meteor.flush();
   test.equal(textarea.value, "This is a fridge");
-  R.set("frog");
+  R.set({x:"frog"});
   Meteor.flush();
   test.equal(textarea.value, "This is a frog");
 
   // Setting a value (similar to user typing) should
   // not prevent value from being updated reactively.
   textarea.value = "foobar";
-  R.set("photograph");
+  R.set({x:"photograph"});
   Meteor.flush();
   test.equal(textarea.value, "This is a photograph");
 
