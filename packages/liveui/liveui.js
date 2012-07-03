@@ -298,7 +298,8 @@ Meteor.ui = Meteor.ui || {};
       range.eventHandlers = unpackEventMap(options.events);
     wireEvents(range, mode !== "fragment");
 
-    // in case we are patching an existing, valid range
+    // in case we are rendering on top of an existing range
+    // with context, but not due to that context's invalidation.
     range.context && range.context.invalidate();
 
     range.context = cx;
@@ -316,8 +317,13 @@ Meteor.ui = Meteor.ui || {};
     range.branch = options.branch;
 
     cx.on_invalidate(function() {
-      if (range.context === cx) // make sure not an old cx
-        range.update();
+      // if range has a newer context than cx, then cx
+      // is just being invalidated in order to clean
+      // up its other dependencies.
+      if (range.context !== cx)
+        return;
+
+      range.update();
     });
 
     return range;
@@ -401,6 +407,10 @@ Meteor.ui = Meteor.ui || {};
   //////////////////// DOM SARGE (coordinates entry, exit, and signaling)
 
   var Sarge = Meteor.ui._Sarge = {
+
+    // XXX This object could keep state like lists of ranges to notify
+    // are onscreen or offscreen, instead of just using individual atFlushTime
+    // calls for everything.
 
     // Call f with (this === range) the next time we see range
     // alive and onscreen at flush time, if ever.
