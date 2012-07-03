@@ -265,6 +265,8 @@ Meteor.ui = Meteor.ui || {};
     if (mode === "patch") {
       // Rendering top level of the current update, with patching
       range.operate(function(start, end) {
+        // XXX match chunks before shuck
+
         Sarge.shuck(start, end);
 
         diffpatch(start.parentNode, frag,
@@ -641,21 +643,11 @@ Meteor.ui = Meteor.ui || {};
 
   Meteor.ui._event.setHandler(handleEvent);
 
-  //////////////////// PATCHER
 
-  // Perform a complete patching where nodes with the same `id` or `name`
-  // are matched.
-  //
-  // Any node that has either an "id" or "name" attribute is considered a
-  // "labeled" node, and these labeled nodes are candidates for preservation.
-  // For two labeled nodes, old and new, to match, they first must have the same
-  // label (that is, they have the same id, or neither has an id and they have
-  // the same name).  Labels are considered relative to the nearest enclosing
-  // labeled ancestor, and must be unique among the labeled nodes that share
-  // this nearest labeled ancestor.  Labeled nodes are also expected to stay
-  // in the same order, or else some of them won't be matched.
+  //////////////////// DIFF / PATCH
 
   var diffpatch = function(tgtParent, srcParent, tgtBefore, tgtAfter) {
+
     var copyFunc = function(t, s) {
       Meteor.ui._LiveRange.transplant_tag(Meteor.ui._tag, t, s);
     };
