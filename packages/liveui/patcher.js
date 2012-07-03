@@ -10,17 +10,15 @@ Meteor.ui = Meteor.ui || {};
 // of srcParent, which may be a DocumentFragment.
 //
 // To use a new Patcher, call `match` zero or more times followed by
-// `finish`.  Alternatively, just call `diffpatch` to use the standard
-// matching strategy.
+// `finish`.
 //
 // A match is a correspondence between an old node in the target region
 // and a new node in the source region that will replace it.  Based on
 // this correspondence, the target node is preserved and the attributes
 // and children of the source node are copied over it.  The `match`
-// method declares such a correspondence.  The `diffpatch` method
-// determines the correspondences and calls `match` and `finish`.
-// A Patcher that makes no matches just removes the target nodes
-// and inserts the source nodes in their place.
+// method declares such a correspondence.  A Patcher that makes no matches,
+// for example, just removes the target nodes and inserts the source nodes
+// in their place.
 //
 // Constructor:
 Meteor.ui._Patcher = function(tgtParent, srcParent, tgtBefore, tgtAfter) {
@@ -32,94 +30,6 @@ Meteor.ui._Patcher = function(tgtParent, srcParent, tgtBefore, tgtAfter) {
 
   this.lastKeptTgtNode = null;
   this.lastKeptSrcNode = null;
-};
-
-// Perform a complete patching where nodes with the same `id` or `name`
-// are matched.
-//
-// Any node that has either an "id" or "name" attribute is considered a
-// "labeled" node, and these labeled nodes are candidates for preservation.
-// For two labeled nodes, old and new, to match, they first must have the same
-// label (that is, they have the same id, or neither has an id and they have
-// the same name).  Labels are considered relative to the nearest enclosing
-// labeled ancestor, and must be unique among the labeled nodes that share
-// this nearest labeled ancestor.  Labeled nodes are also expected to stay
-// in the same order, or else some of them won't be matched.
-
-Meteor.ui._Patcher.prototype.diffpatch = function(copyCallback) {
-  var self = this;
-
-  var each_labeled_node = function(parent, before, after, func) {
-    for(var n = before ? before.nextSibling : parent.firstChild;
-        n && n !== after;
-        n = n.nextSibling) {
-
-      var label = null;
-
-      if (n.nodeType === 1) {
-        if (n.id) {
-          label = '#'+n.id;
-        } else if (n.getAttribute("name")) {
-          label = n.getAttribute("name");
-          // Radio button special case:  radio buttons
-          // in a group all have the same name.  Their value
-          // determines their identity.
-          // Checkboxes with the same name and different
-          // values are also sometimes used in apps, so
-          // we treat them similarly.
-          if (n.nodeName === 'INPUT' &&
-              (n.type === 'radio' || n.type === 'checkbox') &&
-              n.value)
-            label = label + ':' + n.value;
-        }
-      }
-
-      if (label)
-        func(label, n);
-      else
-        // not a labeled node; recurse
-        each_labeled_node(n, null, null, func);
-    }
-  };
-
-
-  var targetNodes = {};
-  var targetNodeOrder = {};
-  var targetNodeCounter = 0;
-
-  each_labeled_node(
-    self.tgtParent, self.tgtBefore, self.tgtAfter,
-    function(label, node) {
-      targetNodes[label] = node;
-      targetNodeOrder[label] = targetNodeCounter++;
-    });
-
-  var lastPos = -1;
-  each_labeled_node(
-    self.srcParent, null, null,
-    function(label, node) {
-      var tgt = targetNodes[label];
-      var src = node;
-      if (tgt && targetNodeOrder[label] > lastPos) {
-        if (self.match(tgt, src, copyCallback)) {
-          // match succeeded
-          if (tgt.firstChild || src.firstChild) {
-            // Don't patch contents of TEXTAREA tag,
-            // which are only the initial contents but
-            // may affect the tag's .value in IE.
-            if (tgt.nodeName !== "TEXTAREA") {
-              // recurse with a new Patcher!
-              var patcher = new Meteor.ui._Patcher(tgt, src);
-              patcher.diffpatch(copyCallback);
-            }
-          }
-        }
-        lastPos = targetNodeOrder[label];
-      }
-    });
-
-  self.finish();
-
 };
 
 

@@ -267,13 +267,8 @@ Meteor.ui = Meteor.ui || {};
       range.operate(function(start, end) {
         Sarge.shuck(start, end);
 
-        var patcher = new Meteor.ui._Patcher(
-          start.parentNode, frag,
-          start.previousSibling, end.nextSibling);
-        var copyFunc = function(t, s) {
-          Meteor.ui._LiveRange.transplant_tag(Meteor.ui._tag, t, s);
-        };
-        patcher.diffpatch(copyFunc);
+        diffpatch(start.parentNode, frag,
+                  start.previousSibling, end.nextSibling);
       });
     } else if (mode === "replace") {
       // Rendering a sub-chunk of the current update
@@ -645,6 +640,100 @@ Meteor.ui = Meteor.ui || {};
   };
 
   Meteor.ui._event.setHandler(handleEvent);
+
+  //////////////////// PATCHER
+
+  // Perform a complete patching where nodes with the same `id` or `name`
+  // are matched.
+  //
+  // Any node that has either an "id" or "name" attribute is considered a
+  // "labeled" node, and these labeled nodes are candidates for preservation.
+  // For two labeled nodes, old and new, to match, they first must have the same
+  // label (that is, they have the same id, or neither has an id and they have
+  // the same name).  Labels are considered relative to the nearest enclosing
+  // labeled ancestor, and must be unique among the labeled nodes that share
+  // this nearest labeled ancestor.  Labeled nodes are also expected to stay
+  // in the same order, or else some of them won't be matched.
+
+  var diffpatch = function(tgtParent, srcParent, tgtBefore, tgtAfter) {
+    var copyFunc = function(t, s) {
+      Meteor.ui._LiveRange.transplant_tag(Meteor.ui._tag, t, s);
+    };
+
+    var each_labeled_node = function(parent, before, after, func) {
+      for(var n = before ? before.nextSibling : parent.firstChild;
+          n && n !== after;
+          n = n.nextSibling) {
+
+        var label = null;
+
+        if (n.nodeType === 1) {
+          if (n.id) {
+            label = '#'+n.id;
+          } else if (n.getAttribute("name")) {
+            label = n.getAttribute("name");
+            // Radio button special case:  radio buttons
+            // in a group all have the same name.  Their value
+            // determines their identity.
+            // Checkboxes with the same name and different
+            // values are also sometimes used in apps, so
+            // we treat them similarly.
+            if (n.nodeName === 'INPUT' &&
+                (n.type === 'radio' || n.type === 'checkbox') &&
+                n.value)
+              label = label + ':' + n.value;
+          }
+        }
+
+        if (label)
+          func(label, n);
+        else
+          // not a labeled node; recurse
+          each_labeled_node(n, null, null, func);
+      }
+    };
+
+
+    var targetNodes = {};
+    var targetNodeOrder = {};
+    var targetNodeCounter = 0;
+
+    each_labeled_node(
+      tgtParent, tgtBefore, tgtAfter,
+      function(label, node) {
+        targetNodes[label] = node;
+        targetNodeOrder[label] = targetNodeCounter++;
+      });
+
+    var patcher = new Meteor.ui._Patcher(
+      tgtParent, srcParent, tgtBefore, tgtAfter);
+
+    var lastPos = -1;
+    each_labeled_node(
+      srcParent, null, null,
+      function(label, node) {
+        var tgt = targetNodes[label];
+        var src = node;
+        if (tgt && targetNodeOrder[label] > lastPos) {
+          if (patcher.match(tgt, src, copyFunc)) {
+            // match succeeded
+            if (tgt.firstChild || src.firstChild) {
+              // Don't patch contents of TEXTAREA tag,
+              // which are only the initial contents but
+              // may affect the tag's .value in IE.
+              if (tgt.nodeName !== "TEXTAREA") {
+                // recurse!
+                diffpatch(tgt, src);
+              }
+            }
+          }
+          lastPos = targetNodeOrder[label];
+        }
+      });
+
+    patcher.finish();
+
+  };
 
 
 })();
