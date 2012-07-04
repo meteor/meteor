@@ -47,7 +47,19 @@ var supported_browser = function (user_agent) {
   // return !(agent.family === 'IE' && +agent.major <= 5);
 };
 
-var run = function (bundle_dir) {
+// add any runtime configuration options needed to app_html
+var runtime_config = function (app_html) {
+  var insert = '';
+  if (process.env.DEFAULT_DDP_ENDPOINT)
+    insert += "__meteor_runtime_config__.DEFAULT_DDP_ENDPOINT = '" +
+      process.env.DEFAULT_DDP_ENDPOINT + "';";
+
+  app_html = app_html.replace("// ##RUNTIME_CONFIG##", insert);
+
+  return app_html;
+};
+
+var run = function () {
   var bundle_dir = path.join(__dirname, '..');
 
   // check environment
@@ -63,12 +75,14 @@ var run = function (bundle_dir) {
     app.use(gzippo.staticGzip(static_cacheable_path, {clientMaxAge: 1000 * 60 * 60 * 24 * 365}));
   app.use(gzippo.staticGzip(path.join(bundle_dir, 'static')));
 
-  var app_html = fs.readFileSync(path.join(bundle_dir, 'app.html'));
+  var app_html = fs.readFileSync(path.join(bundle_dir, 'app.html'), 'utf8');
   var unsupported_html = fs.readFileSync(path.join(bundle_dir, 'unsupported.html'));
 
+  app_html = runtime_config(app_html);
+
   app.use(function (req, res) {
-    if (req.url === '/favicon.ico') {
-      // prevent /favicon.ico from returning app_html
+    // prevent favicon.ico and robots.txt from returning app_html
+    if (_.indexOf(['/favicon.ico', '/robots.txt'], req.url) !== -1) {
       res.writeHead(404);
       res.end();
       return;

@@ -19,6 +19,8 @@ _Mongo = function (url) {
   self.collection_queue = [];
 
   MongoDB.connect(url, function(err, db) {
+    if (err)
+      throw err;
     self.db = db;
 
     // drain queue of pending callbacks

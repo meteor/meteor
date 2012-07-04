@@ -41,7 +41,7 @@ Template.api.publish = {
 
 Template.api.subscription_set = {
   id: "publish_set",
-  name: "<i>this</i>.set(collection, id, name, value)",
+  name: "<i>this</i>.set(collection, id, attributes)",
   locus: "Server",
   descr: ["Call inside publish function.  Queues a command to set attributes."],
   args: [
@@ -280,13 +280,13 @@ Template.api.find = {
   descr: ["Find the documents in a collection that match the selector."],
   args: [
     {name: "selector",
-     type: "Object &mdash; Mongo selector, or String",
+     type: "Object: Mongo selector, or String",
      type_link: "selectors",
      descr: "The query"}
   ],
   options: [
     {name: "sort",
-     type: "Object &mdash; sort specifier",
+     type: "Object: sort specifier",
      type_link: "sortspecifiers",
      descr: "Sort order (default: natural order)"},
     {name: "skip",
@@ -295,6 +295,10 @@ Template.api.find = {
     {name: "limit",
      type: "Number",
      descr: "Maximum number of results to return"},
+    {name: "fields",
+     type: "Object: field specifier",
+     type_link: "fieldspecifiers",
+     descr: "Dictionary of fields to return or exclude."},
     {name: "reactive",
      type: "Boolean",
      descr: "Default true; pass false to disable reactivity"}
@@ -308,18 +312,22 @@ Template.api.findone = {
   descr: ["Finds the first document that matches the selector, as ordered by sort and skip options."],
   args: [
     {name: "selector",
-     type: "Object &mdash; Mongo selector, or String",
+     type: "Object: Mongo selector, or String",
      type_link: "selectors",
      descr: "The query"}
   ],
   options: [
     {name: "sort",
-     type: "Object &mdash; sort specifier",
+     type: "Object: sort specifier",
      type_link: "sortspecifiers",
      descr: "Sort order (default: natural order)"},
     {name: "skip",
      type: "Number",
      descr: "Number of result to skip at the beginning"},
+    {name: "fields",
+     type: "Object: field specifier",
+     type_link: "fieldspecifiers",
+     descr: "Dictionary of fields to return or exclude."},
     {name: "reactive",
      type: "Boolean",
      descr: "Default true; pass false to disable reactivity"}
@@ -406,11 +414,11 @@ Template.api.update = {
   descr: ["Modify one or more documents in the collection"],
   args: [
     {name: "selector",
-     type: "Object &mdash; Mongo selector, or String",
+     type: "Object: Mongo selector, or String",
      type_link: "selectors",
      descr: "Specifies which documents to modify"},
     {name: "modifier",
-     type: "Object &mdash; Mongo modifier",
+     type: "Object: Mongo modifier",
      type_link: "modifiers",
      descr: "Specifies how to modify the documents"},
     {name: "callback",
@@ -431,7 +439,7 @@ Template.api.remove = {
   descr: ["Remove documents from the collection"],
   args: [
     {name: "selector",
-     type: "Object &mdash; Mongo selector, or String",
+     type: "Object: Mongo selector, or String",
      type_link: "selectors",
      descr: "Specifies which documents to remove"},
     {name: "callback",
@@ -453,6 +461,11 @@ Template.api.modifiers = {
 Template.api.sortspecifiers = {
   id: "sortspecifiers",
   name: "Sort Specifiers"
+};
+
+Template.api.fieldspecifiers = {
+  id: "fieldspecifiers",
+  name: "Field Specifiers"
 };
 
 Template.api.Context = {

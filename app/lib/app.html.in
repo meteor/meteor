@@ -4,6 +4,11 @@
 {{#each stylesheets}}  <link rel="stylesheet" href="{{this}}">
 {{/each}}
 
+<script type="text/javascript">
+__meteor_runtime_config__ = {};
+// ##RUNTIME_CONFIG##
+</script>
+
 {{#each scripts}}  <script type="text/javascript" src="{{this}}"></script>
 {{/each}}
 

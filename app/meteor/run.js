@@ -249,7 +249,7 @@ var DependencyWatcher = function (deps, app_dir, on_change) {
 
   self.app_dir = app_dir;
   self.on_change = on_change;
-  self.watches = {}; // path => fs.watch handle
+  self.watches = {}; // path => unwatch function with no arguments
   self.last_contents = {}; // path => last contents (array of filenames)
   self.mtimes = {}; // path => last seen mtime
 
@@ -296,7 +296,7 @@ _.extend(DependencyWatcher.prototype, {
     var self = this;
     self.on_change = function () {};
     for (var filepath in self.watches)
-      self.watches[filepath].close();
+      self.watches[filepath](); // unwatch
     self.watches = {};
   },
 
@@ -330,9 +330,8 @@ _.extend(DependencyWatcher.prototype, {
 
     if (!stats) {
       // A directory (or an uninteresting file) was removed
-      var watcher = self.watches[filepath];
-      if (watcher)
-        watcher.close();
+      var unwatch = self.watches[filepath];
+      unwatch && unwatch();
       delete self.watches[filepath];
       delete self.last_contents[filepath];
       delete self.mtimes[filepath];
@@ -343,9 +342,18 @@ _.extend(DependencyWatcher.prototype, {
     // monitor it if necessary
     if (!(filepath in self.watches) &&
         (is_interesting || stats.isDirectory())) {
-      self.watches[filepath] =
-        fs.watch(filepath, {interval: 500}, // poll a lot!
-                 _.bind(self._scan, self, false, filepath));
+      if (!stats.isDirectory()) {
+        // Intentionally not using fs.watch since it doesn't play well with
+        // vim (https://github.com/joyent/node/issues/3172)
+        fs.watchFile(filepath, {interval: 500}, // poll a lot!
+                     _.bind(self._scan, self, false, filepath));
+        self.watches[filepath] = function() { fs.unwatchFile(filepath); };
+      } else {
+        // fs.watchFile doesn't work for directories (as tested on ubuntu)
+        var watch = fs.watch(filepath, {interval: 500}, // poll a lot!
+                     _.bind(self._scan, self, false, filepath));
+        self.watches[filepath] = function() { watch.close(); };
+      }
       self.mtimes[filepath] = stats.mtime;
     }
 
