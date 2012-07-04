@@ -264,12 +264,11 @@ Meteor.ui = Meteor.ui || {};
 
     if (mode === "patch") {
       // Rendering top level of the current update, with patching
+      copyChunkState(range, frag);
       range.operate(function(start, end) {
-        // XXX match chunks before shuck
-
         Sarge.shuck(start, end);
 
-        diffpatch(start.parentNode, frag,
+        diffPatch(start.parentNode, frag,
                   start.previousSibling, end.nextSibling);
       });
     } else if (mode === "replace") {
@@ -288,7 +287,8 @@ Meteor.ui = Meteor.ui || {};
     Sarge.whenOnscreen(range, function() {
       if (mode === "fragment")
         wireEvents(range, true);
-      if (mode !== "patch") // XXX revisit when patching chunks
+
+      if (! range.chunkState)
         callCreated();
       callOnscreen();
     });
@@ -658,7 +658,54 @@ Meteor.ui = Meteor.ui || {};
 
   //////////////////// DIFF / PATCH
 
-  var diffpatch = function(tgtParent, srcParent, tgtBefore, tgtAfter) {
+  // Match branch keys and copy chunkState from liveranges in the
+  // interior of oldRange onto matching liveranges in newFrag.
+  var copyChunkState = function(oldRange, newFrag) {
+    if (! newFrag.firstChild)
+      return; // allow empty newFrag
+
+    var oldChunks = {};
+    var currentPath = [];
+
+    // visit the interior of outerRange and call
+    // `func(r, path)` on every range with a branch key,
+    // where `path` is a string representation of the
+    // branch key path
+    var eachKeyedChunk = function(outerRange, func) {
+      outerRange.visit(function(is_start, r) {
+        if (r.branch) {
+          if (is_start) {
+            currentPath.push(r.branch);
+            func(r, currentPath.join('\u0000'));
+          } else {
+            currentPath.pop();
+          }
+        }
+      });
+    };
+
+    // collect old chunks keyed by their branch key paths
+    eachKeyedChunk(oldRange, function(r, path) {
+      oldChunks[path] = r;
+    });
+
+    // create a temporary range around newFrag in order
+    // to visit it.
+    var tempRange = new Meteor.ui._LiveRange(Meteor.ui._tag, newFrag);
+    eachKeyedChunk(tempRange, function(r, path) {
+      var oldR = oldChunks[path];
+      if (oldR) {
+        // copy over chunkState
+        r.chunkState = oldR.chunkState;
+        oldR.chunkState = null; // don't call offscreen() on old range
+        // any second occurrence of `path` is ignored (not matched)
+        delete oldChunks[path];
+      }
+    });
+    tempRange.destroy();
+  };
+
+  var diffPatch = function(tgtParent, srcParent, tgtBefore, tgtAfter) {
 
     var copyFunc = function(t, s) {
       Meteor.ui._LiveRange.transplant_tag(Meteor.ui._tag, t, s);
@@ -727,7 +774,7 @@ Meteor.ui = Meteor.ui || {};
               // may affect the tag's .value in IE.
               if (tgt.nodeName !== "TEXTAREA") {
                 // recurse!
-                diffpatch(tgt, src);
+                diffPatch(tgt, src);
               }
             }
           }
