@@ -396,13 +396,17 @@ _Mongo.LiveResultsSet = function (cursor, options) {
   // some other use of the cursor.
   self.cursor = _Mongo._makeCursor(cursor.mongo,
                                    cursor.collection_name,
-                                   cursor.ctor,
+                                   null,
                                    cursor.selector,
                                    cursor.options);
 
   // expose collection name
   self.collection_name = cursor.collection_name;
-
+  
+  // the internal cursor uses raw mongo objects, but when we pass things out, 
+  // we want to 'modelize' them
+  self.ctor = cursor.ctor;
+  
   // previous results snapshot.  on each poll cycle, diffs against
   // results drives the callbacks.
   self.results = [];
