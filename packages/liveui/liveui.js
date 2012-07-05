@@ -1,5 +1,10 @@
 Meteor.ui = Meteor.ui || {};
 
+// TODO:
+//
+// - Match DOM elements in chunks based on "preserve"
+// - {constant:true} chunk options
+
 (function() {
 
   //////////////////// PUBLIC API

@@ -31,9 +31,14 @@ Handlebars._default_helpers = {
   },
   'each': function (data, options) {
     if (data && data.length > 0)
-      return _.map(data, options.fn).join('');
+      return _.map(data, function(x, i) {
+        // infer a branch key from the data
+        var branch = options.branch + '/' +
+              (x._id || (typeof x === 'string' ? x : null) || i);
+        return options.fn(x, branch);
+      }).join('');
     else
-      return options.inverse(this);
+      return options.inverse(this, options.branch+'/else');
   },
   'if': function (data, options) {
     if (!data || (data instanceof Array && !data.length))
@@ -239,7 +244,7 @@ Handlebars.evaluate = function (ast, data, options) {
     return apply(values, extra);
   };
 
-  var template = function (stack, elts) {
+  var template = function (stack, elts, basePCKey) {
     var buf = [];
 
     var toString = function (x) {
@@ -250,11 +255,12 @@ Handlebars.evaluate = function (ast, data, options) {
       return x.toString();
     };
 
-    // wrap `fn` and `inverse` blocks in liveranges
-    // having event_data, if the data is different
-    // from the enclosing data.
+    // wrap `fn` and `inverse` blocks in chunks having `data`, if the data
+    // is different from the enclosing data, so that the data is available
+    // at runtime for events.  Also accept an optional second argument
+    // for supplying a branch key, like partials have.
     var decorateBlockFn = function(fn, old_data) {
-      return function(data) {
+      return function(data, branch) {
         var result = fn(data);
         // don't create spurious ranges when data is same as before
         // (or when transitioning between e.g. `window` and `undefined`)
@@ -263,8 +269,8 @@ Handlebars.evaluate = function (ast, data, options) {
           return result;
         } else {
           return Meteor.ui.chunk(
-            function() { return result; },
-            { event_data: data });
+            function() { return result; }, {
+              data: data, branch: branch });
         }
       };
     };
@@ -280,7 +286,15 @@ Handlebars.evaluate = function (ast, data, options) {
       return Handlebars._escape(toString(x));
     };
 
-    _.each(elts, function (elt) {
+    // Construct a unique key for the current position
+    // in the AST.  Since template(...) is invoked recursively,
+    // the "PC" (program counter) key is hierarchical, consisting
+    // of one or more numbers, for example '0' or '1.3.0.1'.
+    var getPCKey = function(index) {
+      return (basePCKey ? basePCKey+'.' : '') + index;
+    };
+
+    _.each(elts, function (elt, index) {
       if (typeof(elt) === "string")
         buf.push(elt);
       else if (elt[0] === '{')
@@ -293,19 +307,31 @@ Handlebars.evaluate = function (ast, data, options) {
         // {{#block helper}}
         var block = decorateBlockFn(
           function (data) {
-            return template({parent: stack, data: data}, elt[2]);
+            return template({parent: stack, data: data}, elt[2],
+                            getPCKey(index));
           }, stack.data);
         block.fn = block;
         block.inverse = decorateBlockFn(
           function (data) {
-            return template({parent: stack, data: data}, elt[3] || []);
+            return template({parent: stack, data: data}, elt[3] || [],
+                            getPCKey(index));
           }, stack.data);
+        // this .branch becomes an option to the helper, and is only
+        // used if the helper uses it.
+        block.branch = elt[1]+"@"+getPCKey(index);
         buf.push(toString(invoke(stack, elt[1], block, true)));
       } else if (elt[0] === '>') {
         // {{> partial}}
-        if (!(elt[1] in partials))
-          throw new Error("No such partial '" + elt[1] + "'");
-        buf.push(toString(partials[elt[1]](stack.data)));
+        var partialName = elt[1];
+        if (!(partialName in partials))
+          throw new Error("No such partial '" + partialName + "'");
+        // Construct a unique branch identifier based on what partial
+        // we're in, what partial we're calling, and our index
+        // into the template AST (essentially the program counter).
+        // If "foo" calls "bar" at index 3, it looks like: bar@foo#3.
+        var branchKey = partialName+"@"+getPCKey(index);
+        // call the partial
+        buf.push(toString(partials[partialName](stack.data, branchKey)));
       } else
         throw new Error("bad element in template");
     });
@@ -313,7 +339,13 @@ Handlebars.evaluate = function (ast, data, options) {
     return buf.join('');
   };
 
-  return template({data: data, parent: null}, ast);
+  // Set the prefix for PC keys, which identify call sites in the AST
+  // for the purpose of chunk matching.
+  // `options.name` will be null in the body, but otherwise have a value,
+  // assuming `options` was assembled in templating/deftemplate.js.
+  var rootPCKey = (options.name||"")+"#";
+
+  return template({data: data, parent: null}, ast, rootPCKey);
 };
 
 Handlebars.SafeString = function(string) {
