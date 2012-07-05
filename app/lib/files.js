@@ -191,10 +191,22 @@ var files = module.exports = {
     else
       return path.join(__dirname, '../..');
   },
-
-  // Return where the packages are stored
-  get_package_dir: function () {
-    return path.join(__dirname, '../../packages');
+  
+  // if PACKAGE_DIRS env variable is set, and one ends in name, return that dir
+  // otherwise, return default package dir for name
+  get_package_dir: function (name) {
+    
+    if (process.env.PACKAGE_DIRS) {
+      var re = new RegExp('/' + name + '/?$');
+      var match = _.find(process.env.PACKAGE_DIRS.split(':'), function(dir) {
+        return re.exec(dir);
+      });
+      if (match)
+        return match;
+    }
+    
+    // if none of those worked, the default is:
+    return path.join(__dirname, '../../packages', name);
   },
 
   // Return the directory that contains the core tool (the top-level

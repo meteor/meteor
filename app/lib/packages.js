@@ -84,10 +84,10 @@ _.extend(Package.prototype, {
   init_from_library: function (name) {
     var self = this;
     self.name = name;
-    self.source_root = path.join(__dirname, '../../packages', name);
+    self.source_root = files.get_package_dir(name);
     self.serve_root = path.join('/packages', name);
-
-    var fullpath = path.join(files.get_package_dir(), name, 'package.js');
+    
+    var fullpath = path.join(self.source_root, 'package.js');
     var code = fs.readFileSync(fullpath).toString();
     // \n is necessary in case final line is a //-comment
     var wrapped = "(function(Package,require){" + code + "\n})";
