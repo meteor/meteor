@@ -20,18 +20,23 @@
 
     window.Template = window.Template || {};
 
-    var partial = function(data) {
+    // Define the function assigned to Template.<name>.
+    // First argument is Handlebars data, second argument is the
+    // branch key, which is calculated by the caller based
+    // on which invocation of the partial this is.
+    var partial = function(data, branch) {
       var getHtml = function() {
         return raw_func(data, {
           helpers: partial,
-          partials: Meteor._partials
+          partials: Meteor._partials,
+          name: name
         });
       };
 
 
       var react_data = { events: (name ? Template[name].events : {}),
-                         event_data: data,
-                         template_name: name };
+                         data: data,
+                         branch: branch };
 
       return Meteor.ui.chunk(getHtml, react_data);
     };
