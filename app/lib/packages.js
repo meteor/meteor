@@ -266,12 +266,14 @@ var packages = module.exports = {
   // a package object.
   list: function () {
     var ret = {};
-    var dir = files.get_package_dir();
-    _.each(fs.readdirSync(dir), function (name) {
-      // skip .meteor directory
-      if (path.existsSync(path.join(dir, name, 'package.js')))
-        ret[name] = packages.get(name);
-    });
+    
+    _.each(files.get_package_dirs(), function(dir) {
+      _.each(fs.readdirSync(dir), function (name) {
+        // skip .meteor directory
+        if (path.existsSync(path.join(dir, name, 'package.js')))
+          ret[name] = packages.get(name);
+      });      
+    })
 
     return ret;
   },

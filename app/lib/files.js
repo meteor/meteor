@@ -192,21 +192,31 @@ var files = module.exports = {
       return path.join(__dirname, '../..');
   },
   
-  // if PACKAGE_DIRS env variable is set, and one ends in name, return that dir
-  // otherwise, return default package dir for name
+  // returns a list of places where packages can be found.
+  // 1. directories set via process.env.PACKAGES_DIRS
+  // 2. default is packages/ in the meteor directory
+  // XXX: 3. a per project directory? (vendor/packages in rails parlance?)
+  get_package_dirs: function() {
+    var package_dirs = [path.join(__dirname, '../../packages')];
+    if (process.env.PACKAGE_DIRS)
+      package_dirs = process.env.PACKAGE_DIRS.split(':').concat(package_dirs);
+    
+    return package_dirs;
+  },
+  
+  // search package dirs for a package named name. 
+  // undefined if the package isn't in any dir
   get_package_dir: function (name) {
+    var ret;
+    _.find(this.get_package_dirs(), function(package_dir) {
+      var dir = path.join(package_dir, name);
+      if (path.existsSync(dir)) {
+        ret = dir;
+        return true;
+      }
+    });
     
-    if (process.env.PACKAGE_DIRS) {
-      var re = new RegExp('/' + name + '/?$');
-      var match = _.find(process.env.PACKAGE_DIRS.split(':'), function(dir) {
-        return re.exec(dir);
-      });
-      if (match)
-        return match;
-    }
-    
-    // if none of those worked, the default is:
-    return path.join(__dirname, '../../packages', name);
+    return ret;
   },
 
   // Return the directory that contains the core tool (the top-level
