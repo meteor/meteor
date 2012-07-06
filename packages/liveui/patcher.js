@@ -92,7 +92,7 @@ Meteor.ui._Patcher.prototype.match = function(tgtNode, srcNode, copyCallback) {
 
   var starting = ! lastKeptTgt;
   var finishing = ! tgt;
-  var elementContains = Meteor.ui._Patcher._elementContains;
+  var elementContains = Meteor.ui._elementContains;
 
   if (! starting) {
     // move lastKeptTgt/lastKeptSrc forward and out,
@@ -376,18 +376,4 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
       tgt.value = src.value;
   }
 
-};
-
-// returns true if element a properly contains element b
-Meteor.ui._Patcher._elementContains = function(a, b) {
-  if (a.nodeType !== 1 || b.nodeType !== 1) {
-    return false;
-  }
-  if (a.compareDocumentPosition) {
-    return a.compareDocumentPosition(b) & 0x10;
-  } else {
-    // Should be only old IE and maybe other old browsers here.
-    // Modern Safari has both methods but seems to get contains() wrong.
-    return a !== b && a.contains(b);
-  }
 };

@@ -2,7 +2,7 @@ Meteor.ui = Meteor.ui || {};
 
 // TODO:
 //
-// - Match DOM elements in chunks based on "preserve"
+// - Perform DOM patching based on "preserve"
 // - {constant:true} chunk options
 
 (function() {
@@ -269,7 +269,10 @@ Meteor.ui = Meteor.ui || {};
 
     if (mode === "patch") {
       // Rendering top level of the current update, with patching
-      copyChunkState(range, frag);
+
+      var nodeMatches = matchChunks(range, frag);
+      // XXX use nodeMatches
+
       range.operate(function(start, end) {
         Sarge.shuck(start, end);
 
@@ -491,23 +494,19 @@ Meteor.ui = Meteor.ui || {};
 
     // Check whether a node is contained in the document.
     isNodeOnscreen: function (node) {
-      // http://jsperf.com/is-element-in-the-dom
+      // Deal with all cases where node is not an element
+      // node descending from the body first...
+      if (node === document)
+        return true;
 
-      if (document.compareDocumentPosition)
-        return document.compareDocumentPosition(node) & 16;
-      else {
-        if (node.nodeType !== 1 /* Element */)
-          /* contains() doesn't work reliably on non-Elements. Fine on
-           Chrome, not so much on Safari and IE. */
-          node = node.parentNode;
-        if (node.nodeType === 11 /* DocumentFragment */ ||
-            node.nodeType === 9 /* Document */)
-          /* contains() chokes on DocumentFragments on IE8 */
-          return node === document;
-        /* contains() exists on document on Chrome, but only on
-         document.body on some other browsers. */
-        return document.body.contains(node);
-      }
+      if (node.nodeType !== 1 /* Element */)
+        node = node.parentNode;
+      if (! (node && node.nodeType === 1))
+        return false;
+      if (node === document.body)
+        return true;
+
+      return Meteor.ui._elementContains(document.body, node);
     },
 
     // Internal facility, only used by tests, for holding onto
@@ -632,7 +631,7 @@ Meteor.ui = Meteor.ui || {};
         var selector = h.selector;
         if (selector) {
           var contextNode = range.containerNode();
-          var results = $(contextNode).find(selector);
+          var results = Meteor.ui._findElement(contextNode, selector);
           if (! _.contains(results, curNode))
             continue;
         } else {
@@ -677,12 +676,13 @@ Meteor.ui = Meteor.ui || {};
 
   // Match branch keys and copy chunkState from liveranges in the
   // interior of oldRange onto matching liveranges in newFrag.
-  var copyChunkState = function(oldRange, newFrag) {
+  // Return pairs of matching DOM nodes to preserve.
+  var matchChunks = function(oldRange, newFrag) {
     if (! newFrag.firstChild)
-      return; // allow empty newFrag
+      return []; // allow empty newFrag
 
-    var oldChunks = {};
-    var currentPath = [];
+    var oldChunks = {}; // { path -> range }
+    var currentPath = []; // list of branch keys (path segments)
 
     // visit the interior of outerRange and call
     // `func(r, path)` on every range with a branch key,
@@ -706,25 +706,57 @@ Meteor.ui = Meteor.ui || {};
     // collect old chunks keyed by their branch key paths
     eachKeyedChunk(oldRange, function(r, path) {
       oldChunks[path] = r;
-
-      // XXX preserve
     });
+
+    // Run the selectors from preserveMap over the nodes
+    // in range and create a map { label -> node }.
+    var collectLabeledNodes = function(range, preserveMap) {
+      var labeledNodes = {};
+      _.each(preserveMap, function(labelFunc, sel) {
+        var matchingNodes = Meteor.ui._findElementInRange(
+          range.firstNode(), range.lastNode(), sel);
+        _.each(matchingNodes, function(n) {
+          // labelFunc can be a function or a constant,
+          // the latter for single-match selectors {'.foo': 1}
+          var pernodeLabel = (
+            typeof labelFunc === 'function' ? labelFunc(n) : labelFunc);
+          var fullLabel = sel+'/'+pernodeLabel;
+          // in case of duplicates, we ignore the second node (this one).
+          // eventually, the developer might want to get debug info.
+          if (! labeledNodes[fullLabel])
+            labeledNodes[fullLabel] = n;
+        });
+      });
+      return labeledNodes;
+    };
+
+    var nodeMatches = []; // [[oldNode, newNode], ...]
 
     // create a temporary range around newFrag in order
     // to visit it.
     var tempRange = new Meteor.ui._LiveRange(Meteor.ui._tag, newFrag);
     // visit new frag
     eachKeyedChunk(tempRange, function(r, path) {
-      var oldR = oldChunks[path];
-      if (oldR) {
+      var oldRange = oldChunks[path];
+      if (oldRange) {
         // copy over chunkState
-        r.chunkState = oldR.chunkState;
-        oldR.chunkState = null; // don't call offscreen() on old range
+        r.chunkState = oldRange.chunkState;
+        oldRange.chunkState = null; // don't call offscreen() on old range
         // any second occurrence of `path` is ignored (not matched)
         delete oldChunks[path];
+
+        var oldLabeledNodes = collectLabeledNodes(oldRange, r.preserve);
+        var newLabeledNodes = collectLabeledNodes(r, r.preserve);
+        _.each(newLabeledNodes, function(newNode, label) {
+          var oldNode = oldLabeledNodes[label];
+          if (oldNode)
+            nodeMatches.push([oldNode, newNode]);
+        });
       }
     });
     tempRange.destroy();
+
+    return nodeMatches;
   };
 
   var diffPatch = function(tgtParent, srcParent, tgtBefore, tgtAfter) {
@@ -807,6 +839,5 @@ Meteor.ui = Meteor.ui || {};
     patcher.finish();
 
   };
-
 
 })();
