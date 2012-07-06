@@ -320,6 +320,7 @@ Meteor.ui = Meteor.ui || {};
     };
 
     range.branch = options.branch;
+    range.preserve = normalizePreserveOption(options.preserve);
 
     cx.on_invalidate(function() {
       // if range has a newer context than cx, then cx
@@ -332,6 +333,17 @@ Meteor.ui = Meteor.ui || {};
     });
 
     return range;
+  };
+
+  var normalizePreserveOption = function(preserve) {
+    if (preserve && _.isArray(preserve)) {
+      var newPreserve = {};
+      _.each(preserve, function(sel) {
+        newPreserve[sel] = 1; // any constant
+      });
+      preserve = newPreserve;
+    }
+    return preserve;
   };
 
   //////////////////// MATERIALIZER
@@ -677,6 +689,8 @@ Meteor.ui = Meteor.ui || {};
     // where `path` is a string representation of the
     // branch key path
     var eachKeyedChunk = function(outerRange, func) {
+      // XXX call func on outerRange to support top-level unkeyed
+      // chunks, like frag resulting from Template.foo()??
       outerRange.visit(function(is_start, r) {
         if (r.branch) {
           if (is_start) {
@@ -692,11 +706,14 @@ Meteor.ui = Meteor.ui || {};
     // collect old chunks keyed by their branch key paths
     eachKeyedChunk(oldRange, function(r, path) {
       oldChunks[path] = r;
+
+      // XXX preserve
     });
 
     // create a temporary range around newFrag in order
     // to visit it.
     var tempRange = new Meteor.ui._LiveRange(Meteor.ui._tag, newFrag);
+    // visit new frag
     eachKeyedChunk(tempRange, function(r, path) {
       var oldR = oldChunks[path];
       if (oldR) {
