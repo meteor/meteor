@@ -282,7 +282,8 @@ var DependencyWatcher = function (deps, app_dir, on_change) {
     return new RegExp(pattern);
   });
   self.exclude_paths = [
-    path.join(app_dir, '.meteor', 'local')
+    path.join(app_dir, '.meteor', 'local'),
+    path.join(app_dir, 'public', 'node_modules')
   ];
 
   // Start monitoring

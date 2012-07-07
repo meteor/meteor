@@ -44,6 +44,9 @@ var files = module.exports = {
     // third, we don't update the app now if anything here changes
     if (filename.indexOf('/public/') !== -1) { return false; }
 
+    // Don't load the node_modules directory
+    if (filename.indexOf('/node_modules/') !== -1) { return false; }
+
     return true;
   },
 
