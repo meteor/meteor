@@ -508,7 +508,7 @@ _.extend(Bundle.prototype, {
     // --- Static assets ---
 
     if (is_app) {
-      if (path.existsSync(path.join(project_dir, 'public'))) {
+      if (fs.existsSync(path.join(project_dir, 'public'))) {
         files.cp_r(path.join(project_dir, 'public'),
                    path.join(build_path, 'static'), {ignore: ignore_files});
       }

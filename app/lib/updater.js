@@ -70,7 +70,7 @@ exports.git_sha = function () {
   var d = files.get_dev_bundle();
   var f = path.join(d, ".git_version.txt");
 
-  if (path.existsSync(f)) {
+  if (fs.existsSync(f)) {
     try {
       var contents = fs.readFileSync(f, 'utf8');
       contents = contents.replace(/\s+$/, "");
