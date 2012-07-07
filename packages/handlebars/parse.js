@@ -45,9 +45,15 @@ Handlebars.to_json_ast = function (code) {
       throw new Error("got ast node " + node.type + " for identifier");
     // drop node.isScoped. this is true if there was a 'this' or '.'
     // anywhere in the path. vanilla handlebars will turn off
-    // helpers lookup if isScoped is true (they're trying to handle
-    // 'this.a' but catch 'a.this.this' as collateral damage)
+    // helpers lookup if isScoped is true, but this is too restrictive
+    // for us.
     var ret = [node.depth];
+    // we still want to turn off helper lookup if path starts with 'this.'
+    // as in {{this.foo}}, which means it has to look different from {{foo}}
+    // in our AST.  signal the presence of 'this' in our AST using an empty
+    // path segment.
+    if (/^this\./.test(node.original))
+      ret.push('');
     return ret.concat(node.parts);
   };
 

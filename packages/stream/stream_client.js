@@ -162,11 +162,7 @@ _.extend(Meteor._Stream.prototype, {
       clearTimeout(self.connection_timer);
       self.connection_timer = null;
     }
-    if (self.heartbeat_timer)
-      clearTimeout(self.heartbeat_timer);
-    self.heartbeat_timer = setTimeout(
-      _.bind(self._heartbeat_timeout, self),
-      self.HEARTBEAT_TIMEOUT);
+    self._heartbeat_received();
 
 
     if (self.current_status.connected) {
@@ -247,6 +243,15 @@ _.extend(Meteor._Stream.prototype, {
     self._fake_connect_failed();
   },
 
+  _heartbeat_received: function () {
+    var self = this;
+    if (self.heartbeat_timer)
+      clearTimeout(self.heartbeat_timer);
+    self.heartbeat_timer = setTimeout(
+      _.bind(self._heartbeat_timeout, self),
+      self.HEARTBEAT_TIMEOUT);
+  },
+
   _retry_timeout: function (count) {
     var self = this;
 
@@ -321,6 +326,8 @@ _.extend(Meteor._Stream.prototype, {
             Meteor._debug("Exception while processing message", e.stack);
           }
         });
+
+      self._heartbeat_received();
     };
     self.socket.onclose = function () {
       // Meteor._debug("stream disconnect", _.toArray(arguments), (new Date()).toDateString());
@@ -332,13 +339,7 @@ _.extend(Meteor._Stream.prototype, {
     };
 
     self.socket.onheartbeat =  function () {
-      // reset heartbeat timer when we get a heartbeat.
-      if (self.heartbeat_timer) {
-        clearTimeout(self.heartbeat_timer);
-        self.heartbeat_timer = setTimeout(
-          _.bind(self._heartbeat_timeout, self),
-          self.HEARTBEAT_TIMEOUT);
-      }
+      self._heartbeat_received();
     };
 
     if (self.connection_timer)

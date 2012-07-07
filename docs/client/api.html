@@ -62,20 +62,20 @@ callbacks return.
 Example:
 
     // server: publish the current size of a collection
-    Meteor.publish("messages-count", function (roomId) {
+    Meteor.publish("counts-by-room", function (roomId) {
       var self = this;
       var uuid = Meteor.uuid();
       var count = 0;
 
-      handle = Room.find({room_id: roomId}).observe({
+      var handle = Messages.find({room_id: roomId}).observe({
         added: function (doc, idx) {
           count++;
-          self.set("messages-count", uuid, {count: count});
+          self.set("counts", uuid, {roomId: roomId, count: count});
           self.flush();
         },
         removed: function (doc, idx) {
           count--;
-          self.set("messages-count", uuid, {count: count});
+          self.set("counts", uuid, {roomId: roomId, count: count});
           self.flush();
         }
         // don't care about moved or changed
@@ -84,10 +84,21 @@ Example:
       // remove data and turn off observe when client unsubs
       self.onStop(function () {
         handle.stop();
-        self.unset("messages-count", uuid, ["count"]);
+        self.unset("counts", uuid, ["roomId", "count"]);
         self.flush();
       });
     });
+
+    // client: declare collection to hold count object
+    Counts = new Meteor.Collection("counts");
+
+    // client: autosubscribe to the count for the current room
+    Meteor.autosubscribe(function () {
+      Meteor.subscribe("counts-by-room", Session.get("roomId"));
+    });
+
+    // client: use the new collection
+    console.log("Current room has " + Counts.findOne().count + " messages.");
 
 {{#warning}}
 Meteor will emit a warning message if you call `Meteor.publish` in a
@@ -790,6 +801,26 @@ Sorts may be specified using your choice of several syntaxes:
 The last form will only work if your JavaScript implementation
 preserves the order of keys in objects. Most do, most of the time, but
 it's up to you to be sure.
+
+{{/api_box_inline}}
+
+{{#api_box_inline fieldspecifiers}}
+
+On the server, queries can specify a particular set of fields to include
+or exclude from the result object.  Minimongo ignores the field
+specifier.
+
+To exclude certain fields from the result objects, the field specifier
+is a dictionary whose keys are field names and whose values are `0`.
+
+    // Users.find({}, {fields: {password: 0, hash: 0}})
+
+To return an object that only includes the specified field, use `1` as
+the value.  The `_id` field is still included in the result.
+
+    // Users.find({}, {fields: {firstname: 1, lastname: 1}})
+
+It is not possible to mix inclusion and exclusion styles.
 
 {{/api_box_inline}}
 

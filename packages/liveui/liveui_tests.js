@@ -60,6 +60,7 @@ WrappedFrag.prototype.node = function() {
   return this.frag;
 };
 
+
 ///// TESTS /////
 
 Tinytest.add("liveui - one render", function(test) {
@@ -700,6 +701,42 @@ Tinytest.add("liveui - chunks", function(test) {
     });
   });
 
+
+  // unused chunk
+
+  var Q = ReactiveVar("foo");
+  Meteor.ui.render(function() {
+    // create a chunk, in render mode,
+    // but don't use it.
+    Meteor.ui.chunk(function() {
+      return Q.get();
+    });
+    return "";
+  });
+  test.equal(Q.numListeners(), 1);
+  Q.set("bar");
+  // flush() should invalidate the unused
+  // chunk but not assume it has been wired
+  // up with a LiveRange.
+  Meteor.flush();
+  test.equal(Q.numListeners(), 0);
+
+  // nesting
+
+  var stuff = ReactiveVar(true);
+  var div = OnscreenDiv(Meteor.ui.render(function() {
+    return Meteor.ui.chunk(function() {
+      return "x"+(stuff.get() ? 'y' : '') + Meteor.ui.chunk(function() {
+        return "hi";
+      });
+    });
+  }));
+  test.equal(div.html(), "xyhi");
+  stuff.set(false);
+  Meteor.flush();
+  test.equal(div.html(), "xhi");
+  div.kill();
+  Meteor.flush();
 });
 
 Tinytest.add("liveui - repeated chunk", function(test) {
@@ -802,6 +839,52 @@ Tinytest.add("liveui - leaderboard", function(test) {
   scores.kill();
   Meteor.flush();
   test.equal(selected_player.numListeners(), 0);
+});
+
+Tinytest.add("liveui - listChunk stop", function(test) {
+  // test listChunk outside of render mode, on custom observable
+
+  var numHandles = 0;
+  var observable = {
+    observe: function(x) {
+      x.added({_id:"123"}, 0);
+      x.added({_id:"456"}, 1);
+      var handle;
+      numHandles++;
+      return handle = {
+        stop: function() {
+          numHandles--;
+        }
+      };
+    }
+  };
+
+  test.equal(numHandles, 0);
+  var result = Meteor.ui.listChunk(observable, function(doc) {
+    return "#"+doc._id;
+  });
+  test.equal(result, "#123#456");
+  test.equal(numHandles, 0); // listChunk called handle.stop();
+
+
+  var R = ReactiveVar(1);
+  var frag = WrappedFrag(Meteor.ui.render(function() {
+    if (R.get() > 0)
+      return Meteor.ui.listChunk(observable, function() { return "*"; });
+    return "";
+  })).hold();
+  test.equal(numHandles, 1);
+  Meteor.flush();
+  test.equal(numHandles, 1);
+  R.set(2);
+  Meteor.flush();
+  test.equal(numHandles, 1);
+  R.set(-1);
+  Meteor.flush();
+  test.equal(numHandles, 0);
+
+  frag.release();
+  Meteor.flush();
 });
 
 Tinytest.add("liveui - listChunk table", function(test) {
@@ -1159,19 +1242,25 @@ Tinytest.add("liveui - basic tag contents", function(test) {
 });
 
 var eventmap = function(/*args*/) {
+  // support event_buf as final argument
+  var event_buf = null;
+  if (arguments.length && _.isArray(arguments[arguments.length-1])) {
+    event_buf = arguments[arguments.length-1];
+    arguments.length--;
+  }
   var events = {};
   _.each(arguments, function(esel) {
     var etyp = esel.split(' ')[0];
     events[esel] = function(evt) {
       if (evt.type !== etyp)
         throw new Error(etyp+" event arrived as "+evt.type);
-      this.push(esel);
+      (event_buf || this).push(esel);
     };
   });
   return events;
 };
 
-Tinytest.add("liveui - basic events", function(test) {
+Tinytest.add("liveui - event handling", function(test) {
   var event_buf = [];
   var getid = function(id) {
     return document.getElementById(id);
@@ -1336,6 +1425,54 @@ Tinytest.add("liveui - basic events", function(test) {
   div.kill();
   Meteor.flush();
 
+  // same thing, but with events wired by listChunk "added" and "removed"
+  event_buf.length = 0;
+  var lst = [];
+  lst.observe = function(callbacks) {
+    lst.callbacks = callbacks;
+    return {
+      stop: function() {
+        lst.callbacks = null;
+      }
+    };
+  };
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    var chkbx = function(doc) {
+      return '<input type="checkbox">'+(doc ? doc._id : 'else');
+    };
+    return '<div><p><span><b>'+
+      Meteor.ui.listChunk(lst, chkbx, chkbx,
+                          {events: eventmap('click input', event_buf),
+                           event_data:event_buf}) +
+      '</b></span></p></div>';
+  }, { events: eventmap('change b', 'change input', event_buf),
+       event_data:event_buf }));
+  Meteor.flush();
+  test.equal(div.text(), 'else');
+  // click on input
+  var doClick = function() {
+    clickElement(div.node().getElementsByTagName('input')[0]);
+    event_buf.sort(); // don't care about order
+    test.equal(event_buf, ['change b', 'change input', 'click input']);
+    event_buf.length = 0;
+  };
+  doClick();
+  // add item
+  lst.push({_id:'foo'});
+  lst.callbacks.added(lst[0], 0);
+  Meteor.flush();
+  test.equal(div.text(), 'foo');
+  doClick();
+  // remove item, back to "else" case
+  lst.callbacks.removed(lst[0], 0);
+  lst.pop();
+  Meteor.flush();
+  test.equal(div.text(), 'else');
+  doClick();
+  // cleanup
+  div.kill();
+  Meteor.flush();
+
   // test that 'click *' fires on bubble
   event_buf.length = 0;
   R = ReactiveVar('foo');
@@ -1353,6 +1490,27 @@ Tinytest.add("liveui - basic events", function(test) {
   test.equal(
     event_buf,
     ['click input', 'click *', 'click *', 'click *', 'click *', 'click *']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+  // clicking on a div in a nested chunk (without patching)
+  event_buf.length = 0;
+  R = ReactiveVar('foo');
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return R.get() + Meteor.ui.chunk(function() {
+      return '<span>ism</span>';
+    }, {events: eventmap("click"), event_data:event_buf});
+  }));
+  test.equal(div.text(), 'fooism');
+  clickElement(div.node().getElementsByTagName('SPAN')[0]);
+  test.equal(event_buf, ['click']);
+  event_buf.length = 0;
+  R.set('bar');
+  Meteor.flush();
+  test.equal(div.text(), 'barism');
+  clickElement(div.node().getElementsByTagName('SPAN')[0]);
+  test.equal(event_buf, ['click']);
   event_buf.length = 0;
   div.kill();
   Meteor.flush();
@@ -1607,7 +1765,7 @@ testAsyncMulti(
           var iframeDiv = OnscreenDiv(
             Meteor.ui.render(function() {
               return '<iframe name="'+frameName+'" '+
-                'src="'+IFRAME_URL_1+'">';
+                'src="'+IFRAME_URL_1+'"></iframe>';
             }));
           var iframe = iframeDiv.node().firstChild;
 
@@ -1809,9 +1967,5 @@ Tinytest.add("liveui - controls", function(test) {
 
   div.kill();
 });
-
-// TO TEST:
-// - events
-//   - attaching events in render, chunk, listChunk item, listChunk else
 
 })();

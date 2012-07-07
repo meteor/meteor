@@ -95,40 +95,92 @@ Handlebars.evaluate = function (ast, data, options) {
   var eval_value = function (stack, id) {
     if (typeof(id) !== "object")
       return id;
-    if (id.length === 2 && id[0] === 0 && (id[1] in helpers))
-      return helpers[id[1]]; // found helper
+
+    // follow '..' in {{../../foo.bar}}
     for (var i = 0; i < id[0]; i++) {
       if (!stack.parent)
         throw new Error("Too many '..' segments");
       else
         stack = stack.parent;
     }
-    var ret = stack.data;
-    if (id.length > 1 && typeof ret !== 'object') {
-      // Fail with better error than "can't read property of undefined".
-      // Looking up id[1] as a property will fail, because
-      // there is no data context object.  Probably the developer
-      // intended to use a helper that doesn't exist.
-      if (typeof (function() {})[id[1]] !== 'undefined') {
-        // An even more specific case for a helpful error.
-        // The developer probably tried to name a helper 'name',
-        // 'length', or some other built-in function property.
-        // Assignments to these properties are no-ops, so the
-        // helper declaration is undetectable.
-        // We can't always catch this mistake, because if there is any
-        // object as data context, it's legal for the developer to
-        // ask for {{name}} as a property of the object, perhaps an
-        // optional one.  But if there is no data context, we get
-        // to be helpful.
+
+    if (id.length === 1)
+      // no name: {{this}}, {{..}}, {{../..}}
+      return stack.data;
+
+    var scopedToContext = false;
+    if (id[1] === '') {
+      // an empty path segment is our AST's way of encoding
+      // the presence of 'this.' at the beginning of the path.
+      id.splice(1, 1); // remove the ''
+      scopedToContext = true;
+    }
+
+    // when calling functions (helpers/methods/getters), dataThis
+    // tracks what to use for `this`.  For helpers, it's the
+    // current data context.  For getters and methods on the data
+    // context object, and on the return value of a helper, it's
+    // the object where we got the getter or method.
+    var dataThis = stack.data;
+
+    var data;
+    if (id[0] === 0 && (id[1] in helpers) && ! scopedToContext) {
+      // first path segment is a helper
+      data = helpers[id[1]];
+    } else {
+      if ((! data instanceof Object) &&
+          (typeof (function() {})[id[1]] !== 'undefined') &&
+          ! scopedToContext) {
+        // Give a helpful error message if the user tried to name
+        // a helper 'name', 'length', or some other built-in property
+        // of function objects.  Unfortunately, this case is very
+        // hard to detect, as Template.foo.name = ... will fail silently,
+        // and {{name}} will be silently empty if the property doesn't
+        // exist (per Handlebars rules).
+        // However, if there is no data context at all, we jump in.
         throw new Error("Can't call a helper '"+id[1]+"' because "+
                         "it is a built-in function property in JavaScript");
       }
-      throw new Error("Unknown helper '"+id[1]+"'");
+      // first path segment is property of data context
+      data = (stack.data && stack.data[id[1]]);
     }
-    for (var i = 1; i < id.length; i++)
-      // XXX error (and/or unknown key) handling
-      ret = ret[id[i]];
-    return ret;
+
+    // handle dots, as in {{foo.bar}}
+    for (var i = 2; i < id.length; i++) {
+      // Call functions when taking the dot, to support
+      // for example currentUser.name.
+      //
+      // In the case of {{foo.bar}}, we end up returning one of:
+      // - helpers.foo.bar
+      // - helpers.foo().bar
+      // - stack.data.foo.bar
+      // - stack.data.foo().bar.
+      //
+      // The caller does the final application with any
+      // arguments, as in {{foo.bar arg1 arg2}}, and passes
+      // the current data context in `this`.  Therefore,
+      // we use the current data context (`helperThis`)
+      // for all function calls.
+      if (typeof data === 'function') {
+        data = data.call(dataThis);
+        dataThis = data;
+      } else if (data === undefined || data === null) {
+        // Handlebars fails silently and returns "" if
+        // we start to access properties that don't exist.
+        data = '';
+      }
+
+      data = data[id[i]];
+    }
+
+    // ensure `this` is bound appropriately when the caller
+    // invokes `data` with any arguments.  For example,
+    // in {{foo.bar baz}}, the caller must supply `baz`,
+    // but we alone have `foo` (in `dataThis`).
+    if (typeof data === 'function')
+      return _.bind(data, dataThis);
+
+    return data;
   };
 
   // 'extra' will be clobbered, but not 'params'
