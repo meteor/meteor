@@ -176,7 +176,7 @@ Commands.push({
       process.exit(1);
     }
 
-    if (path.existsSync(appname)) {
+    if (fs.existsSync(appname)) {
       process.stderr.write(appname + ": Already exists\n");
       process.exit(1);
     }
