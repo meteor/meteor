@@ -264,14 +264,14 @@ var read_password = function (callback) {
 
   var buf = '';
   process.stdin.resume();
-  tty.setRawMode(true);
+  process.stdin.setRawMode(true);
 
   // keypress
   process.stdin.on('keypress', function(c, key){
     if (key && 'enter' === key.name) {
       console.log();
       process.stdin.removeAllListeners('keypress');
-      tty.setRawMode(false);
+      process.stdin.setRawMode(false);
 
       // if they just hit enter, prompt again. let's not do this.
       // This means empty password is a valid password.
@@ -291,7 +291,7 @@ var read_password = function (callback) {
     if (key && key.ctrl && 'c' === key.name) {
       console.log();
       process.stdin.removeAllListeners('keypress');
-      tty.setRawMode(false);
+      process.stdin.setRawMode(false);
 
       process.kill(process.pid, 'SIGINT');
       return;
