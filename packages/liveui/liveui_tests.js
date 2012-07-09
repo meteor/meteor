@@ -65,6 +65,33 @@ WrappedFrag.prototype.node = function() {
   return this.frag;
 };
 
+///// MISC /////
+
+var legacyLabels = {
+  '*': function(n) {
+    var label = null;
+
+    if (n.nodeType === 1) {
+      if (n.id) {
+        label = '#'+n.id;
+      } else if (n.getAttribute("name")) {
+        label = n.getAttribute("name");
+        // Radio button special case:  radio buttons
+        // in a group all have the same name.  Their value
+        // determines their identity.
+        // Checkboxes with the same name and different
+        // values are also sometimes used in apps, so
+        // we treat them similarly.
+        if (n.nodeName === 'INPUT' &&
+            (n.type === 'radio' || n.type === 'checkbox') &&
+            n.value)
+          label = label + ':' + n.value;
+      }
+    }
+
+    return label;
+  }
+};
 
 ///// TESTS /////
 
@@ -412,7 +439,7 @@ Tinytest.add("liveui - preserved nodes (diff/patch)", function(test) {
     var structure = randomNodeList(null, 6);
     var frag = WrappedFrag(Meteor.ui.render(function() {
       return nodeListToHtml(structure, R.get());
-    })).hold();
+    }, {preserve: legacyLabels})).hold();
     test.equal(frag.html(), nodeListToHtml(structure, false) || "<!---->");
     fillInElementIdentities(structure, frag.node());
     var labeledNodes = collectLabeledNodeData(structure);
@@ -440,7 +467,7 @@ Tinytest.add("liveui - copied attributes", function(test) {
   var frag = WrappedFrag(Meteor.ui.render(function() {
     return '<div puppy="'+R1.get()+'"><div><div><div><input name="blah" kittycat="'+
       R2.get()+'"></div></div></div></div>';
-  })).hold();
+  }, { preserve: legacyLabels })).hold();
   var node1 = frag.node().firstChild;
   var node2 = frag.node().firstChild.getElementsByTagName("input")[0];
   test.equal(node1.nodeName, "DIV");

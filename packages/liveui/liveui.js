@@ -2,7 +2,6 @@ Meteor.ui = Meteor.ui || {};
 
 // TODO:
 //
-// - Perform DOM patching based on "preserve"
 // - {constant:true} chunk options
 
 (function() {
@@ -266,18 +265,19 @@ Meteor.ui = Meteor.ui || {};
       frag.appendChild(tbody);
     }
 
+    range.preserve = normalizePreserveOption(options.preserve);
 
     if (mode === "patch") {
       // Rendering top level of the current update, with patching
 
       var nodeMatches = matchChunks(range, frag);
-      // XXX use nodeMatches
 
       range.operate(function(start, end) {
         Sarge.shuck(start, end);
 
         diffPatch(start.parentNode, frag,
-                  start.previousSibling, end.nextSibling);
+                  start.previousSibling, end.nextSibling,
+                  nodeMatches);
       });
     } else if (mode === "replace") {
       // Rendering a sub-chunk of the current update
@@ -323,7 +323,6 @@ Meteor.ui = Meteor.ui || {};
     };
 
     range.branch = options.branch;
-    range.preserve = normalizePreserveOption(options.preserve);
 
     cx.on_invalidate(function() {
       // if range has a newer context than cx, then cx
@@ -689,8 +688,10 @@ Meteor.ui = Meteor.ui || {};
     // where `path` is a string representation of the
     // branch key path
     var eachKeyedChunk = function(outerRange, func) {
-      // XXX call func on outerRange to support top-level unkeyed
+      // call func on outerRange to support top-level unkeyed
       // chunks, like frag resulting from Template.foo()??
+      func(outerRange, '');
+      // visit interior of outerRange
       outerRange.visit(function(is_start, r) {
         if (r.branch) {
           if (is_start) {
@@ -720,11 +721,14 @@ Meteor.ui = Meteor.ui || {};
           // the latter for single-match selectors {'.foo': 1}
           var pernodeLabel = (
             typeof labelFunc === 'function' ? labelFunc(n) : labelFunc);
-          var fullLabel = sel+'/'+pernodeLabel;
-          // in case of duplicates, we ignore the second node (this one).
-          // eventually, the developer might want to get debug info.
-          if (! labeledNodes[fullLabel])
-            labeledNodes[fullLabel] = n;
+          // falsy pernodeLabel is not considered a label
+          if (pernodeLabel) {
+            var fullLabel = sel+'/'+pernodeLabel;
+            // in case of duplicates, we ignore the second node (this one).
+            // eventually, the developer might want to get debug info.
+            if (! labeledNodes[fullLabel])
+              labeledNodes[fullLabel] = n;
+          }
         });
       });
       return labeledNodes;
@@ -739,9 +743,15 @@ Meteor.ui = Meteor.ui || {};
     eachKeyedChunk(tempRange, function(r, path) {
       var oldRange = oldChunks[path];
       if (oldRange) {
-        // copy over chunkState
-        r.chunkState = oldRange.chunkState;
-        oldRange.chunkState = null; // don't call offscreen() on old range
+        if (r === tempRange) {
+          // top level; don't copy chunkState to tempRange!
+          // use oldRange.preserve for preservation
+          r = oldRange;
+        } else {
+          // copy over chunkState
+          r.chunkState = oldRange.chunkState;
+          oldRange.chunkState = null; // don't call offscreen() on old range
+        }
         // any second occurrence of `path` is ignored (not matched)
         delete oldChunks[path];
 
@@ -759,13 +769,13 @@ Meteor.ui = Meteor.ui || {};
     return nodeMatches;
   };
 
-  var diffPatch = function(tgtParent, srcParent, tgtBefore, tgtAfter) {
+  var diffPatch = function(tgtParent, srcParent, tgtBefore, tgtAfter, nodeMatches) {
 
     var copyFunc = function(t, s) {
       Meteor.ui._LiveRange.transplant_tag(Meteor.ui._tag, t, s);
     };
 
-    var each_labeled_node = function(parent, before, after, func) {
+    /*var each_labeled_node = function(parent, before, after, func) {
       for(var n = before ? before.nextSibling : parent.firstChild;
           n && n !== after;
           n = n.nextSibling) {
@@ -808,12 +818,53 @@ Meteor.ui = Meteor.ui || {};
       function(label, node) {
         targetNodes[label] = node;
         targetNodeOrder[label] = targetNodeCounter++;
-      });
+      });*/
+
 
     var patcher = new Meteor.ui._Patcher(
       tgtParent, srcParent, tgtBefore, tgtAfter);
 
-    var lastPos = -1;
+
+    var visitNodes = function(parent, before, after, func) {
+      for(var n = before ? before.nextSibling : parent.firstChild;
+          n && n !== after;
+          n = n.nextSibling) {
+        if (func(n) !== false && n.firstChild)
+          visitNodes(n, null, null, func);
+      }
+    };
+
+    var lastTgtMatch = null;
+
+    visitNodes(srcParent, null, null, function(src) {
+      // XXX inefficient to scan for match for every node!
+      var pair = _.find(nodeMatches, function(p) {
+        return p[1] === src;
+      });
+      if (pair) {
+        var tgt = pair[0];
+        if (! lastTgtMatch ||
+            Meteor.ui._elementOrder(lastTgtMatch, tgt) > 0) {
+          if (patcher.match(tgt, src, copyFunc)) {
+            // match succeeded
+            lastTgtMatch = tgt;
+            if (tgt.firstChild || src.firstChild) {
+              // Don't patch contents of TEXTAREA tag,
+              // which are only the initial contents but
+              // may affect the tag's .value in IE.
+              if (tgt.nodeName !== "TEXTAREA") {
+                // recurse!
+                diffPatch(tgt, src, null, null, nodeMatches);
+              }
+            }
+            return false; // tell visitNodes not to recurse
+          }
+        }
+      }
+      return true;
+    });
+
+    /*var lastPos = -1;
     each_labeled_node(
       srcParent, null, null,
       function(label, node) {
@@ -834,7 +885,7 @@ Meteor.ui = Meteor.ui || {};
           }
           lastPos = targetNodeOrder[label];
         }
-      });
+      });*/
 
     patcher.finish();
 

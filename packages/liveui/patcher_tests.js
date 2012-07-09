@@ -1,4 +1,4 @@
-Tinytest.add("smartpatch - basic", function(test) {
+Tinytest.add("patcher - basic", function(test) {
 
   var Patcher = Meteor.ui._Patcher;
 
@@ -121,7 +121,7 @@ Tinytest.add("smartpatch - basic", function(test) {
   _.each([["aaa","zzz"], ["",""], ["aaa",""], ["","zzz"]], rangeTest);
 });
 
-Tinytest.add("smartpatch - copyAttributes", function(test) {
+Tinytest.add("patcher - copyAttributes", function(test) {
 
   var attrTester = function(tagName, initial) {
     var node;
@@ -239,4 +239,3 @@ Tinytest.add("smartpatch - copyAttributes", function(test) {
 
 
 });
-

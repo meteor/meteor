@@ -31,7 +31,7 @@ Package.on_test(function (api) {
     'liveui_tests.js',
     'liveui_tests.html',
     'liverange_tests.js',
-    'smartpatch_tests.js',
+    'patcher_tests.js',
     'liveevents_tests.js'
   ], 'client');
 });
