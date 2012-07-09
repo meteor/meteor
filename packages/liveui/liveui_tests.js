@@ -68,7 +68,7 @@ WrappedFrag.prototype.node = function() {
 ///// MISC /////
 
 var legacyLabels = {
-  '*': function(n) {
+  '*[id], #[name]': function(n) {
     var label = null;
 
     if (n.nodeType === 1) {
@@ -155,7 +155,7 @@ Tinytest.add("liveui - one render", function(test) {
                   R.get()+'</b></p></div>');
     }
     return result.join('');
-  })).hold();
+  }, { preserve: legacyLabels })).hold();
   test.equal(frag.html(),
                '<div class="foo" id="x0" name="bar"><p><b>1</b></p></div>');
   R.set(3);
@@ -490,7 +490,7 @@ Tinytest.add("liveui - copied attributes", function(test) {
   R = ReactiveVar(false);
   frag = WrappedFrag(Meteor.ui.render(function() {
     return '<input id="foo" type="checkbox"' + (R.get() ? ' checked="checked"' : '') + '>';
-  })).hold();
+  }, { preserve: legacyLabels })).hold();
   var get_checked = function() { return !! frag.node().firstChild.checked; };
   test.equal(get_checked(), false);
   Meteor.flush();
@@ -510,7 +510,7 @@ Tinytest.add("liveui - copied attributes", function(test) {
   R = ReactiveVar(true);
   frag = WrappedFrag(Meteor.ui.render(function() {
     return '<input type="checkbox"' + (R.get() ? ' checked="checked"' : '') + '>';
-  })).hold();
+  }, { preserve: legacyLabels })).hold();
   test.equal(get_checked(), true);
   Meteor.flush();
   test.equal(get_checked(), true);
@@ -525,7 +525,7 @@ Tinytest.add("liveui - copied attributes", function(test) {
     R = ReactiveVar("apple");
     var div = OnscreenDiv(Meteor.ui.render(function() {
       return '<input id="foo" type="text" value="' + R.get() + '">';
-    }));
+    }, { preserve: legacyLabels }));
     var maybe_focus = function(div) {
       if (with_focus) {
         div.show();
@@ -557,7 +557,7 @@ Tinytest.add("liveui - copied attributes", function(test) {
     R = ReactiveVar("");
     div = OnscreenDiv(Meteor.ui.render(function() {
       return '<input id="foo" type="text" value="' + R.get() + '">';
-    }));
+    }, { preserve: legacyLabels }));
     maybe_focus(div);
     test.equal(get_value(), "");
     Meteor.flush();
@@ -580,7 +580,7 @@ Tinytest.add("liveui - bad labels", function(test) {
     var R = ReactiveVar(true);
     var frag = WrappedFrag(Meteor.ui.render(function() {
       return R.get() ? html1 : html2;
-    })).hold();
+    }, { preserve: legacyLabels })).hold();
 
     R.set(false);
     Meteor.flush();
@@ -853,7 +853,8 @@ Tinytest.add("liveui - leaderboard", function(test) {
           "click": function () {
             selected_player.set(this._id);
           }
-        }
+        },
+        preserve: legacyLabels
       });
   }));
 
@@ -987,7 +988,8 @@ Tinytest.add("liveui - listChunk table", function(test) {
       },
       function() {
         return "<tr><td>(nothing)</td></tr>";
-      }));
+      },
+      { preserve: legacyLabels }));
     buf.push('</table>');
     return buf.join('');
   })).hold();
@@ -1720,7 +1722,7 @@ var make_input_tester = function(render_func, events) {
     Meteor.ui.render(function() {
       R.get(); // create dependency
       return render_func();
-    }, { events: events, event_data: buf }));
+    }, { events: events, event_data: buf, preserve: legacyLabels }));
   div.show(true);
 
   var getbuf = function() {
@@ -2002,22 +2004,24 @@ Tinytest.add("liveui - controls", function(test) {
     });
     buf.push(R.get());
     return buf.join('');
-  }, {events: {
-    'change input': function(event) {
-      // IE 7 is known to fire change events on all
-      // the radio buttons with checked=false, as if
-      // each button were deselected before selecting
-      // the new one.
-      // However, browsers are consistent if we are
-      // getting a checked=true notification.
-      var btn = event.target;
-      if (btn.checked) {
-        var band = btn.value;
-        change_buf.push(band);
-        R.set(band);
+  }, {
+    events: {
+      'change input': function(event) {
+        // IE 7 is known to fire change events on all
+        // the radio buttons with checked=false, as if
+        // each button were deselected before selecting
+        // the new one.
+        // However, browsers are consistent if we are
+        // getting a checked=true notification.
+        var btn = event.target;
+        if (btn.checked) {
+          var band = btn.value;
+          change_buf.push(band);
+          R.set(band);
+        }
       }
-    }
-  }}));
+    },
+    preserve: legacyLabels }));
 
   Meteor.flush();
 
@@ -2064,7 +2068,7 @@ Tinytest.add("liveui - controls", function(test) {
   div = OnscreenDiv(Meteor.ui.render(function() {
     return '<textarea id="mytextarea">This is a '+
       R.get().x+'</textarea>';
-  }));
+  }, { preserve: legacyLabels }));
   div.show(true);
 
   var textarea = div.node().firstChild;

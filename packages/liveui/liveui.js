@@ -53,6 +53,13 @@ Meteor.ui = Meteor.ui || {};
     else_func = (typeof else_func === "function" ? else_func :
                  function() { return ""; });
 
+    var itemOpts = {};
+    if (options) {
+      // for `preserve` to affect item updates, must be set on each item
+      itemOpts.preserve = options.preserve;
+    }
+
+
     var initialDocs = [];
     var queuedUpdates = [];
     var outerRange = null;
@@ -96,7 +103,8 @@ Meteor.ui = Meteor.ui || {};
             oldRange = itemRanges[before_idx];
             mode = "before";
           }
-          var range = renderChunk(doc_func, {data: doc}, mode, oldRange);
+          var range = renderChunk(doc_func, _.extend({data: doc}, itemOpts),
+                                  mode, oldRange);
 
           itemRanges.splice(before_idx, 0, range);
         });
@@ -107,7 +115,7 @@ Meteor.ui = Meteor.ui || {};
         else enqueue(function() {
           var range;
           if (itemRanges.length === 1)
-            range = renderChunk(else_func, "inside", outerRange);
+            range = renderChunk(else_func, itemOpts, "inside", outerRange);
           else
             Sarge.shuck(itemRanges[at_idx].extract());
 
@@ -139,7 +147,8 @@ Meteor.ui = Meteor.ui || {};
         if (! handle)
           initialDocs[at_idx] = doc;
         else enqueue(function() {
-          renderChunk(doc_func, {data: doc}, "patch", itemRanges[at_idx]);
+          renderChunk(doc_func, _.extend({data: doc}, itemOpts),
+                      "patch", itemRanges[at_idx]);
         });
       }
     });
@@ -275,7 +284,7 @@ Meteor.ui = Meteor.ui || {};
       range.operate(function(start, end) {
         Sarge.shuck(start, end);
 
-        diffPatch(start.parentNode, frag,
+        patch(start.parentNode, frag,
                   start.previousSibling, end.nextSibling,
                   nodeMatches);
       });
@@ -480,7 +489,7 @@ Meteor.ui = Meteor.ui || {};
       var node = range.firstNode();
 
       if (node.parentNode &&
-          (Sarge.isNodeOnscreen(node) || Sarge.isNodeHeld(node)))
+          (Meteor.ui._isNodeOnscreen(node) || Sarge.isNodeHeld(node)))
         return false;
 
       while (node.parentNode)
@@ -489,23 +498,6 @@ Meteor.ui = Meteor.ui || {};
       Sarge.shuck(node.firstChild, node.lastChild);
 
       return true;
-    },
-
-    // Check whether a node is contained in the document.
-    isNodeOnscreen: function (node) {
-      // Deal with all cases where node is not an element
-      // node descending from the body first...
-      if (node === document)
-        return true;
-
-      if (node.nodeType !== 1 /* Element */)
-        node = node.parentNode;
-      if (! (node && node.nodeType === 1))
-        return false;
-      if (node === document.body)
-        return true;
-
-      return Meteor.ui._elementContains(document.body, node);
     },
 
     // Internal facility, only used by tests, for holding onto
@@ -743,20 +735,22 @@ Meteor.ui = Meteor.ui || {};
     eachKeyedChunk(tempRange, function(r, path) {
       var oldRange = oldChunks[path];
       if (oldRange) {
+        var preserveMap;
         if (r === tempRange) {
           // top level; don't copy chunkState to tempRange!
           // use oldRange.preserve for preservation
-          r = oldRange;
+          preserveMap = oldRange.preserve;
         } else {
           // copy over chunkState
           r.chunkState = oldRange.chunkState;
           oldRange.chunkState = null; // don't call offscreen() on old range
+          preserveMap = r.preserve;
         }
         // any second occurrence of `path` is ignored (not matched)
         delete oldChunks[path];
 
-        var oldLabeledNodes = collectLabeledNodes(oldRange, r.preserve);
-        var newLabeledNodes = collectLabeledNodes(r, r.preserve);
+        var oldLabeledNodes = collectLabeledNodes(oldRange, preserveMap);
+        var newLabeledNodes = collectLabeledNodes(r, preserveMap);
         _.each(newLabeledNodes, function(newNode, label) {
           var oldNode = oldLabeledNodes[label];
           if (oldNode)
@@ -769,57 +763,11 @@ Meteor.ui = Meteor.ui || {};
     return nodeMatches;
   };
 
-  var diffPatch = function(tgtParent, srcParent, tgtBefore, tgtAfter, nodeMatches) {
+  var patch = function(tgtParent, srcParent, tgtBefore, tgtAfter, nodeMatches) {
 
     var copyFunc = function(t, s) {
       Meteor.ui._LiveRange.transplant_tag(Meteor.ui._tag, t, s);
     };
-
-    /*var each_labeled_node = function(parent, before, after, func) {
-      for(var n = before ? before.nextSibling : parent.firstChild;
-          n && n !== after;
-          n = n.nextSibling) {
-
-        var label = null;
-
-        if (n.nodeType === 1) {
-          if (n.id) {
-            label = '#'+n.id;
-          } else if (n.getAttribute("name")) {
-            label = n.getAttribute("name");
-            // Radio button special case:  radio buttons
-            // in a group all have the same name.  Their value
-            // determines their identity.
-            // Checkboxes with the same name and different
-            // values are also sometimes used in apps, so
-            // we treat them similarly.
-            if (n.nodeName === 'INPUT' &&
-                (n.type === 'radio' || n.type === 'checkbox') &&
-                n.value)
-              label = label + ':' + n.value;
-          }
-        }
-
-        if (label)
-          func(label, n);
-        else
-          // not a labeled node; recurse
-          each_labeled_node(n, null, null, func);
-      }
-    };
-
-
-    var targetNodes = {};
-    var targetNodeOrder = {};
-    var targetNodeCounter = 0;
-
-    each_labeled_node(
-      tgtParent, tgtBefore, tgtAfter,
-      function(label, node) {
-        targetNodes[label] = node;
-        targetNodeOrder[label] = targetNodeCounter++;
-      });*/
-
 
     var patcher = new Meteor.ui._Patcher(
       tgtParent, srcParent, tgtBefore, tgtAfter);
@@ -854,7 +802,7 @@ Meteor.ui = Meteor.ui || {};
               // may affect the tag's .value in IE.
               if (tgt.nodeName !== "TEXTAREA") {
                 // recurse!
-                diffPatch(tgt, src, null, null, nodeMatches);
+                patch(tgt, src, null, null, nodeMatches);
               }
             }
             return false; // tell visitNodes not to recurse
@@ -863,29 +811,6 @@ Meteor.ui = Meteor.ui || {};
       }
       return true;
     });
-
-    /*var lastPos = -1;
-    each_labeled_node(
-      srcParent, null, null,
-      function(label, node) {
-        var tgt = targetNodes[label];
-        var src = node;
-        if (tgt && targetNodeOrder[label] > lastPos) {
-          if (patcher.match(tgt, src, copyFunc)) {
-            // match succeeded
-            if (tgt.firstChild || src.firstChild) {
-              // Don't patch contents of TEXTAREA tag,
-              // which are only the initial contents but
-              // may affect the tag's .value in IE.
-              if (tgt.nodeName !== "TEXTAREA") {
-                // recurse!
-                diffPatch(tgt, src);
-              }
-            }
-          }
-          lastPos = targetNodeOrder[label];
-        }
-      });*/
 
     patcher.finish();
 

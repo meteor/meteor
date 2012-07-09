@@ -31,7 +31,19 @@ Meteor.ui._elementContains = function(a, b) {
 // behavior is definitely better, and the way to implement it is to temporarily
 // assign an ID to contextNode (if it doesn't have one).
 Meteor.ui._findElement = function(contextNode, selector) {
-  return $(contextNode).find(selector);
+  if (contextNode.nodeType === 11 /* DocumentFragment */) {
+    // Sizzle doesn't work on a DocumentFragment, but it does work on
+    // a descendent of one.
+    var frag = contextNode;
+    var container = Meteor.ui._fragmentToContainer(frag);
+    var results = $(container).find(selector);
+    // put nodes back into frag
+    while (container.firstChild)
+      frag.appendChild(container.firstChild);
+    return results;
+  } else {
+    return $(contextNode).find(selector);
+  }
 };
 
 // Requires: `a` and `b` are element nodes in the same document tree.
@@ -91,4 +103,21 @@ Meteor.ui._findElementInRange = function(start, end, selector) {
     return (Meteor.ui._elementOrder(n, start) > 0) ||
       (Meteor.ui._elementOrder(end, n) > 0);
   });
+};
+
+// Check whether a node is contained in the document.
+Meteor.ui._isNodeOnscreen = function (node) {
+  // Deal with all cases where node is not an element
+  // node descending from the body first...
+  if (node === document)
+    return true;
+
+  if (node.nodeType !== 1 /* Element */)
+    node = node.parentNode;
+  if (! (node && node.nodeType === 1))
+    return false;
+  if (node === document.body)
+    return true;
+
+  return Meteor.ui._elementContains(document.body, node);
 };

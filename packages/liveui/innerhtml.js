@@ -110,9 +110,10 @@ _.extend(Meteor.ui, (function() {
 
       return frag;
     },
-    _fragmentToHtml: function(frag) {
-      frag = frag.cloneNode(true); // deep copy, don't touch original!
-
+    // Put children of frag into a suitable DOM node, e.g. a DIV
+    // or a TABLE as appropriate, for the purpose of using
+    // innerHTML or a Sizzle/jQuery selectors.
+    _fragmentToContainer: function(frag) {
       var doc = document; // node factory
 
       var firstElement = frag.firstChild;
@@ -138,7 +139,12 @@ _.extend(Meteor.ui, (function() {
         container.appendChild(frag);
       }
 
-      return container.innerHTML;
+      return container;
+    },
+    _fragmentToHtml: function(frag) {
+      frag = frag.cloneNode(true); // deep copy, don't touch original!
+
+      return Meteor.ui._fragmentToContainer(frag).innerHTML;
     },
     _rangeToHtml: function(liverange) {
       var frag = document.createDocumentFragment();
