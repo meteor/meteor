@@ -10,3 +10,7 @@ Package.on_use(function (api) {
   api.add_files('oauth2_server.js', 'server');
   api.add_files('oauth2_client.js', 'client');
 });
+
+Package.on_test(function (api) {
+  api.add_files("oauth2_tests.js", 'server');
+});
