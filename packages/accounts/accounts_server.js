@@ -98,10 +98,7 @@
       Meteor.users.update(user, {$set: newAttrs});
     };
 
-    if (!email)
-      throw new Meteor.Error("We don't yet support email-less users");
-
-    var userByEmail = Meteor.users.findOne({emails: email});
+    var userByEmail = email && Meteor.users.findOne({emails: email});
     var user;
     if (userByEmail) {
 
@@ -126,7 +123,7 @@
       var userByServiceUserId = Meteor.users.findOne(selector);
       if (userByServiceUserId) {
         user = userByServiceUserId;
-        if (user.emails.indexOf(email) === -1) {
+        if (email && user.emails.indexOf(email) === -1) {
           // The user may have changed the email address associated with
           // this service. Store the new one in addition to the old one.
           Meteor.users.update(user, {$push: {emails: email}});
@@ -140,7 +137,7 @@
         var attrs = {};
         attrs[serviceName] = _.extend({id: serviceUserId}, serviceData);
         return Meteor.users.insert(_.extend({}, userData, {
-          emails: [email],
+          emails: (email ? [email] : []),
           services: attrs
         }));
       }
