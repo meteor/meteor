@@ -1,9 +1,5 @@
 Meteor.ui = Meteor.ui || {};
 
-// TODO:
-//
-// - {constant:true} chunk options
-
 (function() {
 
   //////////////////// PUBLIC API
@@ -275,6 +271,7 @@ Meteor.ui = Meteor.ui || {};
     }
 
     range.preserve = normalizePreserveOption(options.preserve);
+    range.constant = options.constant;
 
     if (mode === "patch") {
       // Rendering top level of the current update, with patching
@@ -735,27 +732,36 @@ Meteor.ui = Meteor.ui || {};
     eachKeyedChunk(tempRange, function(r, path) {
       var oldRange = oldChunks[path];
       if (oldRange) {
-        var preserveMap;
+        // matched chunk
+        var rangeForOpts = r;
         if (r === tempRange) {
           // top level; don't copy chunkState to tempRange!
-          // use oldRange.preserve for preservation
-          preserveMap = oldRange.preserve;
+          // use oldRange for `preserve` and other options
+          rangeForOpts = oldRange;
         } else {
           // copy over chunkState
           r.chunkState = oldRange.chunkState;
           oldRange.chunkState = null; // don't call offscreen() on old range
-          preserveMap = r.preserve;
         }
         // any second occurrence of `path` is ignored (not matched)
         delete oldChunks[path];
 
-        var oldLabeledNodes = collectLabeledNodes(oldRange, preserveMap);
-        var newLabeledNodes = collectLabeledNodes(r, preserveMap);
-        _.each(newLabeledNodes, function(newNode, label) {
-          var oldNode = oldLabeledNodes[label];
-          if (oldNode)
-            nodeMatches.push([oldNode, newNode]);
-        });
+        var preserveMap = rangeForOpts.preserve;
+        var isConstant = rangeForOpts.constant;
+
+        if (isConstant) {
+          // add a quadruple
+          nodeMatches.push([oldRange.firstNode(), r.firstNode(),
+                            oldRange.lastNode(), r.lastNode()]);
+        } else {
+          var oldLabeledNodes = collectLabeledNodes(oldRange, preserveMap);
+          var newLabeledNodes = collectLabeledNodes(r, preserveMap);
+          _.each(newLabeledNodes, function(newNode, label) {
+            var oldNode = oldLabeledNodes[label];
+            if (oldNode)
+              nodeMatches.push([oldNode, newNode]);
+          });
+        }
       }
     });
     tempRange.destroy();
@@ -793,19 +799,25 @@ Meteor.ui = Meteor.ui || {};
         var tgt = pair[0];
         if (! lastTgtMatch ||
             Meteor.ui._elementOrder(lastTgtMatch, tgt) > 0) {
-          if (patcher.match(tgt, src, copyFunc)) {
-            // match succeeded
-            lastTgtMatch = tgt;
-            if (tgt.firstChild || src.firstChild) {
-              // Don't patch contents of TEXTAREA tag,
-              // which are only the initial contents but
-              // may affect the tag's .value in IE.
-              if (tgt.nodeName !== "TEXTAREA") {
-                // recurse!
-                patch(tgt, src, null, null, nodeMatches);
+          if (pair.length === 4) {
+            // range match!  for constant chunk
+            if (patcher.match(tgt, src, null, true))
+              patcher.skipToSiblings(pair[2], pair[3]);
+          } else {
+            if (patcher.match(tgt, src, copyFunc)) {
+              // match succeeded
+              lastTgtMatch = tgt;
+              if (tgt.firstChild || src.firstChild) {
+                // Don't patch contents of TEXTAREA tag,
+                // which are only the initial contents but
+                // may affect the tag's .value in IE.
+                if (tgt.nodeName !== "TEXTAREA") {
+                  // recurse!
+                  patch(tgt, src, null, null, nodeMatches);
+                }
               }
+              return false; // tell visitNodes not to recurse
             }
-            return false; // tell visitNodes not to recurse
           }
         }
       }

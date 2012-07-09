@@ -77,7 +77,8 @@ Meteor.ui._Patcher = function(tgtParent, srcParent, tgtBefore, tgtAfter) {
 // copyCallback is called on every new matched (tgt, src) pair
 // right after copying attributes.  It's a good time to transplant
 // liveranges and patch children.
-Meteor.ui._Patcher.prototype.match = function(tgtNode, srcNode, copyCallback) {
+Meteor.ui._Patcher.prototype.match = function(
+  tgtNode, srcNode, copyCallback, onlyAdvance) {
 
   // last nodes "kept" (matched/identified with each other)
   var lastKeptTgt = this.lastKeptTgtNode;
@@ -137,28 +138,36 @@ Meteor.ui._Patcher.prototype.match = function(tgtNode, srcNode, copyCallback) {
     this._replaceNodes(lastKeptTgt, null, lastKeptSrc, null,
                        this.tgtParent, this.srcParent);
   } else {
-    // Compare tag names and depths to make sure we can match nodes.
+    // Compare tag names and depths to make sure we can match nodes...
+    if (! onlyAdvance) {
+      if (tgt.nodeName !== src.nodeName)
+        return false;
+    }
+
     // Look at tags of parents until we hit parent of last-kept,
     // which we know is ok.
-    for(var a=tgt, b=src;
+    for(var a=tgt.parentNode, b=src.parentNode;
         a !== (starting ? this.tgtParent : lastKeptTgt.parentNode);
         a = a.parentNode, b = b.parentNode) {
-      if (b === (starting ? this.srcParent : lastKeptSrc.parentNode)) {
+      if (b === (starting ? this.srcParent : lastKeptSrc.parentNode))
         return false; // src is shallower, b hit top first
-      }
-      if (a.nodeName !== b.nodeName) {
+      if (a.nodeName !== b.nodeName)
         return false; // tag names don't match
-      }
     }
     if (b !== (starting ? this.srcParent : lastKeptSrc.parentNode)) {
       return false; // src is deeper, b didn't hit top when a did
     }
 
+    var firstIter = true;
     // move tgt and src backwards and out, replacing as we go
     while (true) {
-      Meteor.ui._Patcher._copyAttributes(tgt, src);
-      if (copyCallback)
-        copyCallback(tgt, src);
+      if (! (firstIter && onlyAdvance)) {
+        Meteor.ui._Patcher._copyAttributes(tgt, src);
+        if (copyCallback)
+          copyCallback(tgt, src);
+      }
+
+      firstIter = false;
 
       if ((starting ? this.tgtParent : lastKeptTgt.parentNode)
           === tgt.parentNode) {
@@ -176,6 +185,24 @@ Meteor.ui._Patcher.prototype.match = function(tgtNode, srcNode, copyCallback) {
 
   this.lastKeptTgtNode = tgtNode;
   this.lastKeptSrcNode = srcNode;
+
+  return true;
+};
+
+// After a match, skip ahead to later siblings of the last kept nodes,
+// without performing any replacements.
+Meteor.ui._Patcher.prototype.skipToSiblings = function(tgt, src) {
+  var lastTgt = this.lastKeptTgtNode;
+  var lastSrc = this.lastKeptSrcNode;
+
+  if (! (lastTgt && lastTgt.parentNode === tgt.parentNode))
+    return false;
+
+  if (! (lastSrc && lastSrc.parentNode === src.parentNode))
+    return false;
+
+  this.lastKeptTgtNode = tgt;
+  this.lastKeptSrcNode = src;
 
   return true;
 };
