@@ -125,7 +125,7 @@ which npm
 
 cd "$DIR/lib/node_modules"
 npm install connect@1.8.7 # not 2.x yet. sockjs doesn't work w/ new connect
-npm install gzippo@0.1.4
+npm install gzippo@0.1.7
 npm install optimist@0.3.1
 npm install coffee-script@1.3.1
 npm install less@1.3.0
