@@ -412,14 +412,14 @@ _.extend(Meteor._LivedataConnection.prototype, {
     }
   },
 
-  status: function () {
+  status: function (/*passthrough args*/) {
     var self = this;
-    return self.stream.status();
+    return self.stream.status.apply(self.stream, arguments);
   },
 
-  reconnect: function () {
+  reconnect: function (/*passthrough args*/) {
     var self = this;
-    return self.stream.reconnect();
+    return self.stream.reconnect.apply(self.stream, arguments);
   },
 
   ///

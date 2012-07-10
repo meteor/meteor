@@ -6,6 +6,30 @@ Tinytest.add("stream - status", function (test) {
   test.isTrue(status.status);
 });
 
+testAsyncMulti("stream - reconnect", [
+  function (test, expect) {
+    var callback = _.once(expect(function() {
+      var status;
+      status = Meteor.status();
+      test.equal(status.status, "connected");
+
+      Meteor.reconnect();
+      status = Meteor.status();
+      test.equal(status.status, "connected");
+
+      Meteor.reconnect({force: true});
+      status = Meteor.status();
+      test.equal(status.status, "waiting");
+    }));
+
+    if (Meteor.status().status !== "connected")
+      Meteor.default_connection.stream.on('reset', callback);
+    else
+      callback();
+  }
+]);
+
+
 Tinytest.add("stream - sockjs urls are computed correctly", function(test) {
   var testHasSockjsUrl = function(raw, expectedSockjsUrl) {
     test.equal(Meteor._Stream._toSockjsUrl(raw), expectedSockjsUrl);
