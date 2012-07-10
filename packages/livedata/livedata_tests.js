@@ -204,12 +204,14 @@ testAsyncMulti("livedata - basic method invocation", [
 ]);
 
 
+
+
 var checkBalances = function (test, a, b) {
   var alice = Ledger.findOne({name: "alice", world: test.runId()});
   var bob = Ledger.findOne({name: "bob", world: test.runId()});
   test.equal(alice.balance, a);
   test.equal(bob.balance, b);
-}
+};
 
 var onQuiesce = function (f) {
   if (Meteor.is_server)
@@ -224,6 +226,7 @@ testAsyncMulti("livedata - compound methods", [
   function (test) {
     if (Meteor.is_client)
       Meteor.subscribe("ledger", test.runId());
+
     Ledger.insert({name: "alice", balance: 100, world: test.runId()});
     Ledger.insert({name: "bob", balance: 50, world: test.runId()});
   },
@@ -236,7 +239,7 @@ testAsyncMulti("livedata - compound methods", [
     var release = expect();
     onQuiesce(function () {
       checkBalances(test, 90, 60);
-      Tinytest.defer(release);
+      Tinytest.defer(release); // XXX (why) do we need Tinytest.defer?
     });
   },
   function (test, expect) {

@@ -55,6 +55,12 @@ if (Meteor.is_server) {
 /*****/
 
 Ledger = new Meteor.Collection("ledger");
+Ledger.allow({
+  insert: function() { return true; },
+  update: function() { return true; },
+  remove: function() { return true; },
+  fetch: []
+});
 
 Meteor.startup(function () {
   if (Meteor.is_server)
