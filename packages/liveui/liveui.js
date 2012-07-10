@@ -781,21 +781,21 @@ Meteor.ui = Meteor.ui || {};
       tgtParent, srcParent, tgtBefore, tgtAfter);
 
 
-    var visitElements = function(parent, before, after, func) {
+    var visitNodes = function(parent, before, after, func) {
       for(var n = before ? before.nextSibling : parent.firstChild;
           n && n !== after;
           n = n.nextSibling) {
-        if (n.nodeType === 1) {
-          if (func(n) !== false && n.firstChild)
-            visitElements(n, null, null, func);
-        }
+        if (func(n) !== false && n.firstChild)
+          visitNodes(n, null, null, func);
       }
     };
 
     var lastTgtMatch = null;
 
-    visitElements(srcParent, null, null, function(src) {
+    visitNodes(srcParent, null, null, function(src) {
       // XXX inefficient to scan for match for every node!
+      // We could skip non-element nodes, except for "range matches"
+      // used for constant chunks, which may begin on a non-element.
       var pair = _.find(nodeMatches, function(p) {
         return p[1] === src;
       });

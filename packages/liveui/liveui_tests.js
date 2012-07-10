@@ -2185,12 +2185,130 @@ Tinytest.add("liveui - chunk matching", function(test) {
   test.equal(buf, "off0,off1".split(','));
 });
 
+
+Tinytest.add("liveui - constant chunk", function(test) {
+
+  var R, div;
+
+  // top-level { constant: true }
+
+  R = ReactiveVar(0);
+  var ranges = [];
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    R.get(); // create dependency
+    return '<b/><i/><u/>';
+  }, {
+    constant: true,
+    onscreen: function(start, end, range) {
+      ranges.push(range);
+    }
+  }));
+
+  var nodes = _.toArray(div.node().childNodes);
+  test.equal(nodes.length, 3);
+  Meteor.flush();
+  test.equal(ranges.length, 1);
+  R.set(1);
+  Meteor.flush();
+  test.equal(ranges.length, 2);
+  test.isTrue(ranges[0] === ranges[1]);
+  var nodes2 = _.toArray(div.node().childNodes);
+  test.equal(nodes2.length, 3);
+  test.isTrue(nodes[0] === nodes2[0]);
+  test.isTrue(nodes[1] === nodes2[1]);
+  test.isTrue(nodes[2] === nodes2[2]);
+  div.kill();
+  Meteor.flush();
+  test.equal(R.numListeners(), 0);
+
+  // non-top-level
+
+  // run test with and without branch
+  _.each([null, 'foo'], function(brnch) {
+    // run test with node before or after, or neither or both
+    _.each([false, true], function(nodeBefore) {
+      _.each([false, true], function(nodeAfter) {
+        var hasSpan = true;
+        var isConstant = true;
+
+        R = ReactiveVar('foo');
+        div = OnscreenDiv(Meteor.ui.render(function() {
+          R.get(); // create unconditional dependency
+          return (nodeBefore ? R.get() : '') +
+            Meteor.ui.chunk(function() {
+              return hasSpan ? '<span>stuff</span>' :
+                'blah';
+            }, { branch: brnch, constant: isConstant }) +
+            (nodeAfter ? R.get() : '');
+        }));
+
+        var span = div.node().getElementsByTagName('span')[0];
+        hasSpan = false;
+
+        test.equal(div.text(),
+                   (nodeBefore ? 'foo' : '')+
+                   'stuff'+
+                   (nodeAfter ? 'foo' : ''));
+
+        R.set('bar');
+        Meteor.flush();
+
+        // only absence of branch should cause the constant
+        // chunk to be re-rendered
+        test.equal(div.text(),
+                   (nodeBefore ? 'bar' : '')+
+                   (brnch ? 'stuff' : 'blah')+
+                   (nodeAfter ? 'bar' : ''));
+
+        R.set('baz');
+        Meteor.flush();
+
+        // should be repeatable (liveranges not damaged)
+        test.equal(div.text(),
+                   (nodeBefore ? 'baz' : '')+
+                   (brnch ? 'stuff' : 'blah')+
+                   (nodeAfter ? 'baz' : ''));
+
+        isConstant = false; // no longer constant:true!
+        R.set('qux');
+        Meteor.flush();
+        test.equal(div.text(),
+                   (nodeBefore ? 'qux' : '')+
+                   'blah'+
+                   (nodeAfter ? 'qux' : ''));
+
+        // turn constant back on
+        isConstant = true;
+        hasSpan = true;
+        R.set('popsicle');
+        debugger;
+        Meteor.flush();
+        // we don't get the span, instead old "blah" is preserved
+        test.equal(div.text(),
+                   (nodeBefore ? 'popsicle' : '')+
+                   (brnch ? 'blah' : 'stuff')+
+                   (nodeAfter ? 'popsicle' : ''));
+
+        isConstant = false;
+        R.set('hi');
+        Meteor.flush();
+        // now we get the span!
+        test.equal(div.text(),
+                   (nodeBefore ? 'hi' : '')+
+                   'stuff'+
+                   (nodeAfter ? 'hi' : ''));
+
+        div.kill();
+        Meteor.flush();
+      });
+    });
+  });
+
+
+});
+
+
 // TO TEST:
-// - options.constant
-//   - as top-level
-//   - below top-level
-//   - when it differs between old/new
-//   - preservation of surrounding liveranges
 // - chunk matching
 //   - Handlebars branch keys
 //   - top-level replacement always matches
