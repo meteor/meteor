@@ -8,7 +8,7 @@ Meteor._Stream = function (url) {
   self.event_callbacks = {}; // name -> [callback]
   self.server_id = null;
   self.sent_update_available = false;
-  self.force_fail = false;
+  self.force_fail = false; // for debugging.
 
   //// Constants
 
@@ -127,10 +127,16 @@ _.extend(Meteor._Stream.prototype, {
   },
 
   // Trigger a reconnect.
-  reconnect: function () {
+  reconnect: function (options) {
     var self = this;
-    if (self.current_status.connected)
-      return; // already connected. noop.
+
+    if (self.current_status.connected) {
+      if (options && options.force) {
+        // force reconnect.
+        self._disconnected();
+      } // else, noop.
+      return;
+    }
 
     // if we're mid-connection, stop it.
     if (self.current_status.status === "connecting") {
