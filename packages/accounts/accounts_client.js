@@ -30,7 +30,7 @@
 
   // If we're using Handlebars, register the {{currentUser}} global
   // helper
-  if (Handlebars) {
+  if (window.Handlebars) {
     Handlebars.registerHelper('currentUser', function () {
       return Meteor.user();
     });
