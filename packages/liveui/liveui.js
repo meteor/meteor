@@ -647,7 +647,7 @@ Meteor.ui = Meteor.ui || {};
             continue;
         }
 
-        var event_data = findEventData(event.target);
+        var event_data = findEventData(event.currentTarget);
 
         // Call the app's handler/callback
         var returnValue = h.callback.call(event_data, event);
