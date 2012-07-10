@@ -79,7 +79,8 @@
 
   // Updates or creates a user after we authenticate with a 3rd party
   //
-  // @param email {String} The user's email
+  // @param email {String|null} The user's email, or null if the service
+  //   doesn't provide one
   // @param userData {Object} attributes to store directly on the user object
   // @param serviceName {String} e.g. 'facebook' or 'google'
   // @param serviceUserId {?} user id in 3rd party service
