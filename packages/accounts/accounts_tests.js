@@ -16,7 +16,8 @@ Tinytest.add('accounts - updateOrCreateUser', function (test) {
     Meteor.users.findOne({emails: 'foo@bar.com'}).emails,
     ['foo@bar.com', 'foo2@bar.com']);
 
-  // users with no email (such as on weibo)
+  // users with no email (such as on weibo) that have the same weibo
+  // id get the same user
   Meteor.users.remove({});
   Meteor.accounts.updateOrCreateUser(null, {foo: 1}, 'weibo', 1, {});
   Meteor.accounts.updateOrCreateUser(null, {bar: 2}, 'weibo', 1, {});
@@ -24,4 +25,15 @@ Tinytest.add('accounts - updateOrCreateUser', function (test) {
   test.equal(Meteor.users.findOne().foo, 1);
   test.equal(Meteor.users.findOne().bar, 2);
   test.equal(Meteor.users.findOne().emails, []);
+
+  // users with no email (such as on weibo) that have different weibo
+  // ids get different users
+  Meteor.users.remove({});
+  Meteor.accounts.updateOrCreateUser(null, {foo: 1}, 'weibo', 1, {});
+  Meteor.accounts.updateOrCreateUser(null, {bar: 2}, 'weibo', 2, {});
+  test.equal(Meteor.users.find().count(), 2);
+  test.equal(Meteor.users.findOne({"services.weibo.id": 1}).foo, 1);
+  test.equal(Meteor.users.findOne({"services.weibo.id": 1}).emails, []);
+  test.equal(Meteor.users.findOne({"services.weibo.id": 2}).bar, 2);
+  test.equal(Meteor.users.findOne({"services.weibo.id": 2}).emails, []);
 });
