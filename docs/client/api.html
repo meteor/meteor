@@ -1167,9 +1167,10 @@ To handle more than one type of event with the same function, use a comma-separa
 
 The handler function gets one argument, an object with information
 about the event. It will receive some additional context data in
-`this`, depending on the context of the element that generated the
-event.  In a Handlebars template, the element's context is the
-Handlebars data context, which is set by block helpers such as `#with`
+`this`, depending on the context of the current element handling the event.
+In a Handlebars template,
+an element's context is the Handlebars data context where that element
+occurs, which is set by block helpers such as `#with`
 and `#each`.  When using [`Meteor.ui.chunk`](#meteor_ui_chunk), the
 data context is set using the `event_data` option.
 
@@ -1219,7 +1220,7 @@ The element that originated the event.
 
 {{#dtdd "currentTarget" "DOM Element"}}
 The element currently handling the event.  This is the element that
-matches the selector in the event map.  For events that bubble, it may
+matched the selector in the event map.  For events that bubble, it may
 be `target` or an ancestor of `target`, and its value changes as the
 event bubbles.
 {{/dtdd}}
