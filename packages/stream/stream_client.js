@@ -101,8 +101,6 @@ _.extend(Meteor._Stream.prototype, {
     if (!self.event_callbacks[name])
       self.event_callbacks[name] = [];
     self.event_callbacks[name].push(callback);
-    if (self.current_status.connected)
-      self.socket.on(name, callback);
   },
 
   // data is a utf8 string. Data sent while not connected is dropped on
