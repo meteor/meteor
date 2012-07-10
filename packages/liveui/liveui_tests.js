@@ -2185,5 +2185,32 @@ Tinytest.add("liveui - chunk matching", function(test) {
   test.equal(buf, "off0,off1".split(','));
 });
 
+// TO TEST:
+// - options.constant
+//   - as top-level
+//   - below top-level
+//   - when it differs between old/new
+//   - preservation of surrounding liveranges
+// - chunk matching
+//   - Handlebars branch keys
+//   - top-level replacement always matches
+//   - options.branch
+// - preserve nodes
+//   - API (one-match selectors, lambdas)
+//   - in lists
+// - onscreen/offscreen/created callbacks
+//   - timing of calls
+//   - custom vs. original object
+//   - arguments to offscreen
+//   - when differ between old/new
+//   - on listChunk
+// - old and new data
+
+// API Notes:
+// - { constant: true } requires branch key; doesn't preserve liveranges
+// - { preserve: ... } takes array of selectors or map of selector to value or lambda;
+//                     also requires branch key
+// - event this is calculated from currentTarget
+// - options.data; deprecate event_data?
 
 })();
