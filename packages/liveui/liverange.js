@@ -474,12 +474,15 @@ Meteor.ui = Meteor.ui || {};
   };
 
   // Move all liverange data represented in the DOM from sourceNode to
-  // targetNode.
+  // targetNode.  targetNode must be capable of receiving liverange tags
+  // (for example, a node that has been the first or last node of a liverange
+  // before; not a text node in IE).
   //
   // This is a low-level operation suitable for moving liveranges en masse
   // from one DOM tree to another, where transplant_tag is called on every
   // pair of nodes such that targetNode takes the place of sourceNode.
   Meteor.ui._LiveRange.transplant_tag = function(tag, targetNode, sourceNode) {
+
     if (! sourceNode[tag])
       return;
 
@@ -495,6 +498,28 @@ Meteor.ui = Meteor.ui || {};
       starts[i]._start = targetNode;
     for(var i=0;i<ends.length;i++)
       ends[i]._end = targetNode;
+  };
+
+  // Takes two sibling nodes tgtStart and tgtEnd with no LiveRange data on them
+  // and a LiveRange srcRange in a separate DOM tree.  Transplants srcRange
+  // to span from tgtStart to tgtEnd, and also copies info about enclosing ranges
+  // starting on srcRange._start or ending on srcRange._end.  tgtStart and tgtEnd
+  // must be capable of receiving liverange tags (for example, nodes that have
+  // held liverange data in the past; not text nodes in IE).
+  //
+  // This is a low-level operation suitable for moving liveranges en masse
+  // from one DOM tree to another.
+  Meteor.ui._LiveRange.transplant_range = function(tgtStart, tgtEnd, srcRange) {
+    srcRange._ensure_tag(tgtStart);
+    if (tgtEnd !== tgtStart)
+      srcRange._ensure_tag(tgtEnd);
+
+    srcRange._insert_entries(
+      tgtStart, 0, 0,
+      srcRange._start[srcRange.tag][0].slice(0, srcRange._start_idx + 1));
+    srcRange._insert_entries(
+      tgtEnd, 1, 0,
+      srcRange._end[srcRange.tag][1].slice(srcRange._end_idx));
   };
 
   // Inserts a DocumentFragment immediately before this range.

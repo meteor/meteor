@@ -750,9 +750,11 @@ Meteor.ui = Meteor.ui || {};
         var isConstant = rangeForOpts.constant;
 
         if (isConstant) {
-          // add a quadruple
-          nodeMatches.push([oldRange.firstNode(), r.firstNode(),
-                            oldRange.lastNode(), r.lastNode()]);
+          // add a range match
+          var a = [oldRange.firstNode(), r.firstNode(),
+                   oldRange.lastNode(), r.lastNode(), rangeForOpts];
+          a.rangeMatch = true;
+          nodeMatches.push(a);
         } else {
           var oldLabeledNodes = collectLabeledNodes(oldRange, preserveMap);
           var newLabeledNodes = collectLabeledNodes(r, preserveMap);
@@ -779,18 +781,20 @@ Meteor.ui = Meteor.ui || {};
       tgtParent, srcParent, tgtBefore, tgtAfter);
 
 
-    var visitNodes = function(parent, before, after, func) {
+    var visitElements = function(parent, before, after, func) {
       for(var n = before ? before.nextSibling : parent.firstChild;
           n && n !== after;
           n = n.nextSibling) {
-        if (func(n) !== false && n.firstChild)
-          visitNodes(n, null, null, func);
+        if (n.nodeType === 1) {
+          if (func(n) !== false && n.firstChild)
+            visitElements(n, null, null, func);
+        }
       }
     };
 
     var lastTgtMatch = null;
 
-    visitNodes(srcParent, null, null, function(src) {
+    visitElements(srcParent, null, null, function(src) {
       // XXX inefficient to scan for match for every node!
       var pair = _.find(nodeMatches, function(p) {
         return p[1] === src;
@@ -799,10 +803,13 @@ Meteor.ui = Meteor.ui || {};
         var tgt = pair[0];
         if (! lastTgtMatch ||
             Meteor.ui._elementOrder(lastTgtMatch, tgt) > 0) {
-          if (pair.length === 4) {
+          if (pair.rangeMatch) {
             // range match!  for constant chunk
-            if (patcher.match(tgt, src, null, true))
+            if (patcher.match(pair[0], pair[1], null, true)) {
               patcher.skipToSiblings(pair[2], pair[3]);
+              Meteor.ui._LiveRange.transplant_range(
+                pair[0], pair[2], pair[4]);
+            }
           } else {
             if (patcher.match(tgt, src, copyFunc)) {
               // match succeeded
