@@ -4,7 +4,8 @@
       throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.facebook.config first");
 
     var state = Meteor.uuid();
-    // XXX I think there's a smaller popup. Replace with appropriate URL.
+    var mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent);
+    var display = mobile ? 'touch' : 'popup';
 
     var scope = "email";
     if (Meteor.accounts.facebook._options &&
@@ -14,7 +15,7 @@
     var loginUrl =
           'https://www.facebook.com/dialog/oauth?client_id=' + Meteor.accounts.facebook._appId +
           '&redirect_uri=' + Meteor.accounts.facebook._appUrl + '/_oauth/facebook?close' +
-          '&scope=' + scope + '&state=' + state;
+          '&display=' + display + '&scope=' + scope + '&state=' + state;
 
     Meteor.accounts.oauth2.initiateLogin(state, loginUrl);
   };
