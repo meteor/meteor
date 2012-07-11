@@ -52,10 +52,15 @@
 })();
 
 // Login with a Meteor access token
-Meteor.loginWithToken = function (token) {
+//
+// XXX having errorCallback only here is weird since other login
+// methods will have different callbacks. Standardize this.
+Meteor.loginWithToken = function (token, errorCallback) {
   Meteor.apply('login', [{resume: token}], {wait: true}, function(error, result) {
-    if (error)
+    if (error) {
+      errorCallback();
       throw error;
+    }
 
     Meteor.accounts.makeClientLoggedIn(result.id, result.token);
   });
@@ -69,7 +74,9 @@ if (token) {
   // request is in flight. This reduces page flicker on startup.
   var userId = Meteor.accounts.storedUserId();
   userId && Meteor.default_connection.setUserId(userId);
-  Meteor.loginWithToken(token);
+  Meteor.loginWithToken(token, function () {
+    Meteor.accounts.makeClientLoggedOut();
+  });
 }
 
 // Poll local storage every 3 seconds to login if someone logged in in
