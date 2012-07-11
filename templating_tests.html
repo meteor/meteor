@@ -166,3 +166,19 @@
   platypus={{platypus}}
   this.platypus={{this.platypus}}
 </template>
+
+<template name="test_helpers_h">
+  (methodListFour 6 7 8 9={{methodListFour 6 7 8 9}})
+  (methodListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns={{methodListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns}})
+  (methodListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns={{methodListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns}})
+  (helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns={{helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns}})
+  (helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns={{helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns}})
+</template>
+
+<template name="test_helpers_i">
+  (uppercase apple={{#uppercase}}apple{{/uppercase}})
+  (altered banana={{#tr a="o" n="d"}}banana{{/tr}})
+  (nokeys={{#arg_and_dict "foo" x="foo"}}{{/arg_and_dict}})
+  (nokeys={{#arg_and_dict tree x="foo"}}{{/arg_and_dict}})
+  (biggie={{#get_arg helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns}}{{/get_arg}})
+</template>
