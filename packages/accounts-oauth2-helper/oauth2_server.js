@@ -71,17 +71,19 @@
     // Get or create user id
     var userInfo = service.handleOauthRequest(req.query);
 
-    var userId = Meteor.accounts.updateOrCreateUser(
-      userInfo.email, userInfo.userData, serviceName,
-      userInfo.serviceUserId, userInfo.serviceData);
+    if (userInfo) { // could be null if user declined permissions
+      var userId = Meteor.accounts.updateOrCreateUser(
+        userInfo.email, userInfo.userData, serviceName,
+        userInfo.serviceUserId, userInfo.serviceData);
 
-    // Generate and store a login token for reconnect
-    // XXX this could go in accounts_server.js instead
-    var loginToken = Meteor.accounts._loginTokens.insert({userId: userId});
+      // Generate and store a login token for reconnect
+      // XXX this could go in accounts_server.js instead
+      var loginToken = Meteor.accounts._loginTokens.insert({userId: userId});
 
-    // Store results to subsequent call to `login`
-    Meteor.accounts.oauth2._loginResultForState[req.query.state] =
-      {token: loginToken, id: userId};
+      // Store results to subsequent call to `login`
+      Meteor.accounts.oauth2._loginResultForState[req.query.state] =
+        {token: loginToken, id: userId};
+    }
 
     // We support ?close and ?redirect=URL. Any other query should
     // just serve a blank page
