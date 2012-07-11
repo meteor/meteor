@@ -375,10 +375,10 @@ in `this`:
 
 {{#note}}
 Handlebars note: `{{dstache}}#if league_is "junior"}}` is
-allowed because of a Meteor extension that allows nested helper
-calls. (Both `if` and `league_is` are
-technically helpers, and stock Handlebars only allows one helper
-invocation per expression.)
+allowed because of a Meteor extension that allows nesting a helper
+in a block helper. (Both `if` and `league_is` are
+technically helpers, and stock Handlebars would not invoke
+`league_is` here.)
 {{/note}}
 
 Helpers can also be used to pass in constant data.
