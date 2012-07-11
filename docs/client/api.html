@@ -206,10 +206,13 @@ exception it will be logged to the console.
 
 {{> api_box method_invocation_unblock}}
 
-On the server, methods from a given client run one at a time. The N+1th
+On the server, methods from a given client (and processing of
+`Meteor.subscribe` calls) run one at a time. The N+1th
 invocation from a client won't start until the Nth invocation
 returns. However, you can change this by calling `this.unblock`. This
 will allow the N+1th invocation to start running in a new fiber.
+(Existing subscriptions continue to send records to the client during
+method invocations.)
 
 {{> api_box error}}
 
