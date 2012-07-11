@@ -10,7 +10,7 @@
         // If the login method completes but new subcriptions haven't
         // yet been sent down to the client, this is the best we can
         // do
-        return {_id: userId};
+        return {_id: userId, loading: true};
       }
     } else {
       return null;

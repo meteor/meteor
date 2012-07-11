@@ -1,7 +1,13 @@
 <template name="loginButtons">
   <div id="login-buttons">
     {{#if currentUser}}
-      <div class="login-header">{{currentUser.name}}</div>
+      <div class="login-header">
+        {{#if currentUser.loading}}
+        <div class="loading"></div>
+        {{else}}
+        {{currentUser.name}}
+        {{/if}}
+      </div>
       <div class="login-button" id="login-buttons-logout">Logout</div>
     {{else}}
       {{#if services}}
