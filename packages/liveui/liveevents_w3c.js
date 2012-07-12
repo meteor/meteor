@@ -118,9 +118,20 @@ Meteor.ui._event._loadW3CImpl = function() {
     Meteor.ui._event._handleEventFunc(
       Meteor.ui._event._fixEvent(event));
 
-
-    // fire mouseleave after mouseout
-    if (simulateMouseEnterLeave && event.currentTarget !== event.relatedTarget && !jQuery.contains(event.currentTarget, event.relatedTarget)) {
+    // event ordering: fire mouseleave after mouseout
+    if (simulateMouseEnterLeave &&
+        // We respond to mouseover/mouseout here even on
+        // bubble, i.e. when event.currentTarget !== event.target,
+        // to ensure we see every enter and leave.
+        // We ignore the case where the mouse enters from
+        // a child or leaves to a child (by checking if
+        // relatedTarget is present and a descendent).
+        (! event.relatedTarget ||
+         (event.currentTarget !== event.relatedTarget &&
+          // XXX change this to call domutils.js when
+          // davidchunks branch lands
+          ! Meteor.ui._Patcher._elementContains(
+            event.currentTarget, event.relatedTarget)))) {
       if (event.type === 'mouseover'){
         sendUIEvent('mouseenter', event.currentTarget, false);
       }
