@@ -1363,7 +1363,7 @@ Tinytest.add("liveui - event handling", function(test) {
   div.kill();
   Meteor.flush();
 
-  // stopPropagationd doesn't prevent other event maps from
+  // stopPropagation doesn't prevent other event maps from
   // handling same node
   event_buf.length = 0;
   div = OnscreenDiv(Meteor.ui.render(function() {
@@ -1372,10 +1372,27 @@ Tinytest.add("liveui - event handling", function(test) {
         return '<span id="foozy" class="a b c">Hello</span>';
       }, {events: eventmap("click .c"), event_data:event_buf});
     }, {events: {"click .b": function(evt) {
-      event_buf.push("click .b"); evt.stopPropagation(); return false;}}});
+      event_buf.push("click .b"); evt.stopPropagation();}}});
   }, {events: eventmap("click .a"), event_data:event_buf}));
   clickElement(getid("foozy"));
   test.equal(event_buf, ['click .c', 'click .b', 'click .a']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+  // stopImmediatePropagation DOES
+  event_buf.length = 0;
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return Meteor.ui.chunk(function() {
+      return Meteor.ui.chunk(function() {
+        return '<span id="foozy" class="a b c">Hello</span>';
+      }, {events: eventmap("click .c"), event_data:event_buf});
+    }, {events: {"click .b": function(evt) {
+      event_buf.push("click .b");
+      evt.stopImmediatePropagation();}}});
+  }, {events: eventmap("click .a"), event_data:event_buf}));
+  clickElement(getid("foozy"));
+  test.equal(event_buf, ['click .c', 'click .b']);
   event_buf.length = 0;
   div.kill();
   Meteor.flush();
