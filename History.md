@@ -1,6 +1,32 @@
 
 ## vNEXT
 
+* HTTPS support
+  * Add `force-ssl` package to require site to load over HTTPS.
+  * Use HTTPS for install script and `meteor update`.
+  * Allow runtime configuration of default DDP endpoint.
+
+* Handlebars improvements
+  * Implement dotted path traversal for helpers and methods.
+  * Allow functions in helper arguments.
+  * Change helper nesting rules to allow functions as arguments.
+  * Use `{{this.foo}}` to avoid invoking helper `foo`.
+  * Make event handler `this` reflect the node that matched the selector instead of the event target node.
+  * Fix keyword arguments to helpers.
+
+* Add `nib` support to stylus package. #175
+
+* Upgrade bootstrap to version 2.0.4. #173
+
+* Print changelog after `meteor update`.
+
+* Fix issue with spurious heartbeat failures on busy connections.
+
+* Fix exception in minimongo when matching non-arrays using `$all`. #183
+
+* Fix serving an empty file when no cacheable assets exist. #179
+
+
 ## v0.3.7
 
 * Better parsing of `.html` template files

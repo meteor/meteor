@@ -183,26 +183,33 @@ Handlebars.evaluate = function (ast, data, options) {
     return data;
   };
 
-  // 'extra' will be clobbered, but not 'params'
-  var invoke = function (stack, params, extra) {
+  // 'extra' will be clobbered, but not 'params'.
+  // if (isNested), evaluate params.slice(1) as a nested
+  // helper invocation if there is at least one positional
+  // argument.  This is used for block helpers.
+  var invoke = function (stack, params, extra, isNested) {
     extra = extra || {};
     params = params.slice(0);
-    var last = params.pop();
-    if (typeof(last) === "object" && !(last instanceof Array))
-      extra.hash = last;
-    else
-      params.push(last);
 
-    // values[0] must be a function. if values[1] is a function, then
-    // apply values[1] to the remaining arguments, then apply
-    // values[0] to the results. otherwise, directly apply values[0]
-    // to the other arguments. if toplevel, also pass 'extra' as an
-    // argument.
-    var apply = function (values, toplevel) {
+    // remove hash (dictionary of keyword arguments) from
+    // the end of params, if present.
+    var last = params[params.length - 1];
+    var hash = {};
+    if (typeof(last) === "object" && !(last instanceof Array)) {
+      // evaluate hash values, which are currently invocations
+      // like [0, "foo"]
+      _.each(params.pop(), function(v,k) {
+        var result = eval_value(stack, v);
+        hash[k] = (typeof result === "function" ? result() : result);
+      });
+    }
+
+    var apply = function (values, extra) {
       var args = values.slice(1);
-      if (args.length && typeof (args[0]) === "function")
-        args = [apply(args)];
-      if (toplevel)
+      for(var i=0; i<args.length; i++)
+        if (typeof args[i] === "function")
+          args[i] = args[i](); // `this` already bound by eval_value
+      if (extra)
         args.push(extra);
       return values[0].apply(stack.data, args);
     };
@@ -213,7 +220,21 @@ Handlebars.evaluate = function (ast, data, options) {
 
     if (typeof(values[0]) !== "function")
       return values[0];
-    return apply(values, true);
+
+    if (isNested && values.length > 1) {
+      // at least one positional argument; not no args
+      // or only hash args.
+      if (typeof values[1] === "function")
+        // invoke the positional arguments
+        // (and hash arguments) as a nested helper invocation.
+        values = [values[0], apply(values.slice(1), {hash:hash})];
+      // keyword args don't go to the block helper, then.
+      extra.hash = {};
+    } else {
+      extra.hash = hash;
+    }
+
+    return apply(values, extra);
   };
 
   var template = function (stack, elts) {
@@ -261,10 +282,13 @@ Handlebars.evaluate = function (ast, data, options) {
       if (typeof(elt) === "string")
         buf.push(elt);
       else if (elt[0] === '{')
+        // {{double stache}}
         buf.push(maybeEscape(invoke(stack, elt[1])));
       else if (elt[0] === '!')
+        // {{{triple stache}}}
         buf.push(toString(invoke(stack, elt[1] || '')));
       else if (elt[0] === '#') {
+        // {{#block helper}}
         var block = decorateBlockFn(
           function (data) {
             return template({parent: stack, data: data}, elt[2]);
@@ -274,8 +298,9 @@ Handlebars.evaluate = function (ast, data, options) {
           function (data) {
             return template({parent: stack, data: data}, elt[3] || []);
           }, stack.data);
-        buf.push(toString(invoke(stack, elt[1], block)));
+        buf.push(toString(invoke(stack, elt[1], block, true)));
       } else if (elt[0] === '>') {
+        // {{> partial}}
         if (!(elt[1] in partials))
           throw new Error("No such partial '" + elt[1] + "'");
         buf.push(toString(partials[elt[1]](stack.data)));

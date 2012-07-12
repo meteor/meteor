@@ -1515,6 +1515,18 @@ Tinytest.add("liveui - event handling", function(test) {
   div.kill();
   Meteor.flush();
 
+  // Event data comes from event.currentTarget, not event.target
+  var data_buf = [];
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return "<ul>"+Meteor.ui.chunk(function() {
+      return '<li id="funyard">Hello</li>';
+    }, { event_data: {x:'listuff'} })+"</ul>";
+  }, { event_data: {x:'ulstuff'},
+       events: { 'click ul': function() { data_buf.push(this); }}}));
+  clickElement(getid("funyard"));
+  test.equal(data_buf, [{x:'ulstuff'}]);
+  div.kill();
+  Meteor.flush();
 });
 
 Tinytest.add("liveui - cleanup", function(test) {

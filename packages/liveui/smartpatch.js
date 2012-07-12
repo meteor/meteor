@@ -385,6 +385,9 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
     // to simply overwrite it in the next phase.
     if (name === "value")
       continue;
+    // Removing 'src' (e.g. in an iframe) can only be bad.
+    if (name === "src")
+      continue;
 
     // We want to patch any HTML attributes that were specified in the
     // source, but preserve DOM properties set programmatically.
@@ -446,6 +449,10 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
         } else if (name === "value") {
           // don't set attribute, just overwrite property
           // (in next phase)
+        } else if (name === "src") {
+          // only set if different.  protects iframes
+          if (src.src !== tgt.src)
+            tgt.src = src.src;
         } else {
           tgt.setAttribute(name, value);
         }
@@ -474,4 +481,3 @@ Meteor.ui._Patcher._elementContains = function(a, b) {
     return a !== b && a.contains(b);
   }
 };
-
