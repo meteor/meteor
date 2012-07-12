@@ -8,8 +8,11 @@
 
 * Handlebars improvements
   * Implement dotted path traversal for helpers and methods.
+  * Allow functions in helper arguments.
+  * Change helper nesting rules to allow functions as arguments.
   * Use `{{this.foo}}` to avoid invoking helper `foo`.
   * Make event handler `this` reflect the node that matched the selector instead of the event target node.
+  * Fix keyword arguments to helpers.
 
 * Add `nib` support to stylus package. #175
 
