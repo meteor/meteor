@@ -1448,7 +1448,7 @@ Tinytest.add("liveui - event handling", function(test) {
   }, { events: eventmap('change b', 'change input', event_buf),
        event_data:event_buf }));
   Meteor.flush();
-  test.equal(div.text(), 'else');
+  test.equal(div.text().match(/\S+/)[0], 'else');
   // click on input
   var doClick = function() {
     clickElement(div.node().getElementsByTagName('input')[0]);
@@ -1461,13 +1461,13 @@ Tinytest.add("liveui - event handling", function(test) {
   lst.push({_id:'foo'});
   lst.callbacks.added(lst[0], 0);
   Meteor.flush();
-  test.equal(div.text(), 'foo');
+  test.equal(div.text().match(/\S+/)[0], 'foo');
   doClick();
   // remove item, back to "else" case
   lst.callbacks.removed(lst[0], 0);
   lst.pop();
   Meteor.flush();
-  test.equal(div.text(), 'else');
+  test.equal(div.text().match(/\S+/)[0], 'else');
   doClick();
   // cleanup
   div.kill();
