@@ -292,6 +292,10 @@ Tinytest.add("templating - helpers and dots", function(test) {
   Template.test_helpers_i.get_arg = function(arg) {
     return arg;
   };
+  Template.test_helpers_i.two_args = function(arg1, arg2) {
+    return [typeof arg1 === "string",
+            typeof arg2 === "string"].join();
+  };
   Template.test_helpers_i.helperListFour = listFour;
 
   trials =
@@ -305,5 +309,7 @@ Tinytest.add("templating - helpers and dots", function(test) {
   test.equal(trials[3], "(nokeys=0)");
   test.equal(trials[4],
              '(biggie=eggs leaf guava 0 a:eggs b:leaf c:guava d:0)');
-  test.equal(trials.length, 5);
+  // can't pass > 1 positional arg to block helper
+  test.equal(trials[5], "(twoArgBlock=true,false)");
+  test.equal(trials.length, 6);
 });
