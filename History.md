@@ -1,6 +1,8 @@
 
 ## vNEXT
 
+## v0.3.8
+
 * HTTPS support
   * Add `force-ssl` package to require site to load over HTTPS.
   * Use HTTPS for install script and `meteor update`.
