@@ -2307,10 +2307,115 @@ Tinytest.add("liveui - constant chunk", function(test) {
 });
 
 
+Tinytest.add("liveui - branch keys", function(test) {
+
+  var R, div;
+
+  // Re-rendered Meteor.ui.render keeps same chunkState
+
+  var objs = [];
+  R = ReactiveVar("foo");
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return R.get();
+  }, {
+    onscreen: function() {
+      objs.push(this);
+    }
+  }));
+
+  Meteor.flush();
+  R.set("bar");
+  Meteor.flush();
+  R.set("baz");
+  Meteor.flush();
+
+  test.equal(objs.length, 3);
+  test.isTrue(objs[0] === objs[1]);
+  test.isTrue(objs[1] === objs[2]);
+
+  div.kill();
+  Meteor.flush();
+
+  // track chunk matching / re-rendering in detail
+
+  var buf;
+  var counts;
+
+  var testCallbacks = function(theNum /*, extend opts*/) {
+    return _.extend.apply(_, [{
+      created: function() {
+        this.num = String(theNum);
+        var howManyBefore = counts[this.num] || 0;
+        counts[this.num] = howManyBefore + 1;
+        for(var i=0;i<howManyBefore;i++)
+          this.num += "*"; // add stars
+        buf.push("c"+this.num);
+      },
+      onscreen: function(start, end, range) {
+        buf.push("on"+this.num);
+      },
+      offscreen: function() {
+        buf.push("off"+this.num);
+      }
+    }].concat(_.toArray(arguments).slice(1)));
+  };
+
+  var chunk = function(contents, num, branch) {
+    return Meteor.ui.chunk(function() {
+      if (typeof contents === "string")
+        return contents;
+      // supports ["foo", ... [contents2, num2, branch2], ...] form
+      if (_.isArray(contents))
+        return _.map(contents, function(x) {
+          if (typeof x === 'string')
+            return x;
+          return chunk(x[0], x[1], x[2]);
+        }).join('');
+      return contents();
+    }, testCallbacks(num, {branch: branch}));
+  };
+
+  buf = [];
+  counts = {};
+
+  R = ReactiveVar("foo");
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    if (R.get() === 'nothing')
+      return "no chunk!";
+    else
+      return chunk([['<span>apple</span>', 2, 'x'],
+                    ['<span>banana</span>', 3, 'y'],
+                    ['<span>kiwi</span>', 4, 'z']
+                   ], 1, 'fruit');
+  }));
+
+  Meteor.flush();
+  buf.sort();
+  test.equal(buf, ['c1', 'c2', 'c3', 'c4', 'on1', 'on2', 'on3', 'on4']);
+  buf.length = 0;
+
+  R.set("bar");
+  Meteor.flush();
+  buf.sort();
+  test.equal(buf, ['on1', 'on2', 'on3', 'on4']);
+  buf.length = 0;
+
+  R.set("nothing");
+  Meteor.flush();
+  buf.sort();
+  test.equal(buf, ['off1', 'off2', 'off3', 'off4']);
+  buf.length = 0;
+
+  div.kill();
+  Meteor.flush();
+
+  // XXX test some chunks not preserved; intermediate unkeyed chunks;
+  // duplicate branch keys; different order
+});
+
 // TO TEST:
 // - chunk matching
 //   - Handlebars branch keys
-//   - top-level replacement always matches
 //   - options.branch
 // - preserve nodes
 //   - API (one-match selectors, lambdas)
@@ -2318,7 +2423,7 @@ Tinytest.add("liveui - constant chunk", function(test) {
 // - onscreen/offscreen/created callbacks
 //   - timing of calls
 //   - custom vs. original object
-//   - arguments to offscreen
+//   - arguments to onscreen
 //   - when differ between old/new
 //   - on listChunk
 // - different old and new data
