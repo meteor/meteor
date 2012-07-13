@@ -10,10 +10,12 @@
   * Implement dotted path traversal for helpers and methods.
   * Allow functions in helper arguments.
   * Change helper nesting rules to allow functions as arguments.
-  * Use `{{this.foo}}` to avoid invoking helper `foo`.
+  * Fix `{{this.foo}}` to never invoke helper `foo`.
   * Make event handler `this` reflect the node that matched the selector instead of the event target node.
   * Fix keyword arguments to helpers.
 
+* Fix mouseenter and mouseleave events. #224
+  
 * Add `nib` support to stylus package. #175
 
 * Upgrade bootstrap to version 2.0.4. #173
