@@ -2322,13 +2322,12 @@ Tinytest.add("liveui - constant chunk", function(test) {
 //   - arguments to offscreen
 //   - when differ between old/new
 //   - on listChunk
-// - old and new data
+// - different old and new data
 
 // API Notes:
 // - { constant: true } requires branch key; doesn't preserve liveranges
 // - { preserve: ... } takes array of selectors or map of selector to value or lambda;
 //                     also requires branch key
-// - event this is calculated from currentTarget
 // - options.data; deprecate event_data?
 
 })();
