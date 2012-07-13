@@ -2105,7 +2105,7 @@ Tinytest.add("liveui - controls", function(test) {
   div.kill();
 });
 
-Tinytest.add("liveui - chunk matching", function(test) {
+Tinytest.add("liveui - basic chunk matching", function(test) {
 
   // basic created / onscreen / offscreen callback flow
 
@@ -2281,7 +2281,6 @@ Tinytest.add("liveui - constant chunk", function(test) {
         isConstant = true;
         hasSpan = true;
         R.set('popsicle');
-        debugger;
         Meteor.flush();
         // we don't get the span, instead old "blah" is preserved
         test.equal(div.text(),
