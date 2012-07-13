@@ -128,9 +128,7 @@ Meteor.ui._event._loadW3CImpl = function() {
         // relatedTarget is present and a descendent).
         (! event.relatedTarget ||
          (event.currentTarget !== event.relatedTarget &&
-          // XXX change this to call domutils.js when
-          // davidchunks branch lands
-          ! Meteor.ui._Patcher._elementContains(
+          ! Meteor.ui._elementContains(
             event.currentTarget, event.relatedTarget)))) {
       if (event.type === 'mouseover'){
         sendUIEvent('mouseenter', event.currentTarget, false);
