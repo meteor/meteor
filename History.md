@@ -14,13 +14,13 @@
   * Make event handler `this` reflect the node that matched the selector instead of the event target node.
   * Fix keyword arguments to helpers.
 
-* Fix mouseenter and mouseleave events. #224
-  
 * Add `nib` support to stylus package. #175
 
 * Upgrade bootstrap to version 2.0.4. #173
 
 * Print changelog after `meteor update`.
+
+* Fix mouseenter and mouseleave events. #224
 
 * Fix issue with spurious heartbeat failures on busy connections.
 
