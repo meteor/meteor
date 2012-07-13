@@ -72,7 +72,7 @@ var Package = function () {
     },
 
     register_extension: function (extension, callback) {
-      if (self.on_test)
+      if (extension in self.extensions)
         throw new Error("This package has already registered a handler for " +
                        extension);
       self.extensions[extension] = callback;
