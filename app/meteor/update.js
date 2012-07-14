@@ -61,7 +61,8 @@ updater.get_manifest(function (manifest) {
       env.NODE_PATH = modules_path;
 
       // launch it.
-      var postup_proc = spawn(nodejs_path, [postup_path], {env: env});
+      var postup_proc = spawn(
+          nodejs_path, [postup_path, updater.CURRENT_VERSION], {env: env});
       postup_proc.stderr.setEncoding('utf8');
       postup_proc.stderr.on('data', function (data) {
         process.stderr.write(data);
