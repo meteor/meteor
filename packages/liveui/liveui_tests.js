@@ -2375,6 +2375,8 @@ Tinytest.add("liveui - branch keys", function(test) {
     }, testCallbacks(num, {branch: branch}));
   };
 
+  ///// Chunk 1 contains 2,3,4, all should be matched
+
   buf = [];
   counts = {};
 
@@ -2409,7 +2411,42 @@ Tinytest.add("liveui - branch keys", function(test) {
   div.kill();
   Meteor.flush();
 
-  // XXX test some chunks not preserved; intermediate unkeyed chunks;
+  ///// Chunk 3 has no branch key, should be recreated
+
+  buf = [];
+  counts = {};
+
+  R = ReactiveVar("foo");
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    if (R.get() === 'nothing')
+      return "no chunk!";
+    else
+      return chunk([['<span>apple</span>', 2, 'x'],
+                    ['<span>banana</span>', 3, ''],
+                    ['<span>kiwi</span>', 4, 'z']
+                   ], 1, 'fruit');
+  }));
+
+  Meteor.flush();
+  buf.sort();
+  test.equal(buf, ['c1', 'c2', 'c3', 'c4', 'on1', 'on2', 'on3', 'on4']);
+  buf.length = 0;
+
+  R.set("bar");
+  Meteor.flush();
+  buf.sort();
+  test.equal(buf, ['c3*', 'off3', 'on1', 'on2', 'on3*', 'on4']);
+  buf.length = 0;
+
+  div.kill();
+  Meteor.flush();
+  buf.sort();
+  // killing the div should have given us offscreen calls for 1,2,3*,4
+  test.equal(buf, ['off1', 'off2', 'off3*', 'off4']);
+  buf.length = 0;
+
+
+  // XXX test intermediate unkeyed chunks;
   // duplicate branch keys; different order
 });
 
@@ -2427,6 +2464,7 @@ Tinytest.add("liveui - branch keys", function(test) {
 //   - when differ between old/new
 //   - on listChunk
 // - different old and new data
+// - options.data in general
 
 // API Notes:
 // - { constant: true } requires branch key; doesn't preserve liveranges
