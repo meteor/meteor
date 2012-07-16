@@ -1,5 +1,3 @@
-console.log("Upgrade complete.");
-
 try {
   // XXX can't get this from updater.js because in 0.3.7 and before the
   // updater didn't have the right NODE_PATH set. At some point we can
@@ -32,3 +30,5 @@ try {
 } catch (err) {
   // don't print a weird error message if something goes wrong.
 }
+
+console.log("Upgrade complete.");
