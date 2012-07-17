@@ -36,6 +36,8 @@
 
       var react_data = { events: (name ? Template[name].events : {}),
                          data: data,
+                         // legacy 'id' preservation
+                         //preserve: { '*[id]': function(n) { return n.id; } },
                          branch: branch };
 
       return Meteor.ui.chunk(getHtml, react_data);

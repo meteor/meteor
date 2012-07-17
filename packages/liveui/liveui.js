@@ -794,8 +794,9 @@ Meteor.ui = Meteor.ui || {};
 
     visitNodes(srcParent, null, null, function(src) {
       // XXX inefficient to scan for match for every node!
-      // We could skip non-element nodes, except for "range matches"
+      // We could at least skip non-element nodes, except for "range matches"
       // used for constant chunks, which may begin on a non-element.
+      // But really this shouldn't be a linear search.
       var pair = _.find(nodeMatches, function(p) {
         return p[1] === src;
       });
