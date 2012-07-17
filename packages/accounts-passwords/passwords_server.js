@@ -39,11 +39,11 @@
 
       var user = Meteor.users.findOne(selector);
       if (!user)
-        throw new Meteor.Error(403, "user not found");
+        throw new Meteor.Error(403, "User not found");
 
       if (!user.services || !user.services.password ||
           !user.services.password.srp)
-        throw new Meteor.Error(403, "user has no password set");
+        throw new Meteor.Error(403, "User has no password set");
 
       var verifier = user.services.password.srp;
       var srp = new Meteor._srp.Server(verifier);
@@ -68,7 +68,7 @@
 
     changePassword: function (options) {
       if (!this.userId())
-        throw new Meteor.Error(401, "must be logged in");
+        throw new Meteor.Error(401, "Must be logged in");
 
       // If options.M is set, it means we went through a challenge with
       // the old password.
@@ -82,10 +82,10 @@
         var serialized = Meteor.accounts._srpChallenges.findOne(
           {M: options.M});
         if (!serialized)
-          throw new Meteor.Error(403, "bad password");
+          throw new Meteor.Error(403, "Incorrect password");
         if (serialized.userId !== this.userId())
           // No monkey business!
-          throw new Meteor.Error(403, "bad password");
+          throw new Meteor.Error(403, "Incorrect password");
       }
 
       var verifier = options.srp;
@@ -110,12 +110,12 @@
       var username = options.username;
       var email = options.email;
       if (!username && !email)
-        throw new Meteor.Error(400, "need to set a username or email");
+        throw new Meteor.Error(400, "Need to set a username or email");
 
       if (username && Meteor.users.findOne({username: username}))
-        throw new Meteor.Error(403, "user already exists with username " + username);
+        throw new Meteor.Error(403, "User already exists with username " + username);
       if (email && Meteor.users.findOne({emails: email}))
-        throw new Meteor.Error(403, "user already exists with email " + email);
+        throw new Meteor.Error(403, "User already exists with email " + email);
 
       // XXX validate verifier
 
@@ -146,12 +146,12 @@
     if (!options.srp)
       return undefined; // don't handle
     if (!options.srp.M)
-      throw new Meteor.Error(400, "must pass M in options.srp");
+      throw new Meteor.Error(400, "Must pass M in options.srp");
 
     var serialized = Meteor.accounts._srpChallenges.findOne(
       {M: options.srp.M});
     if (!serialized)
-      throw new Meteor.Error(403, "bad password");
+      throw new Meteor.Error(403, "Incorrect password");
 
     var userId = serialized.userId;
     var loginToken = Meteor.accounts._loginTokens.insert({userId: userId});
@@ -180,11 +180,11 @@
     var selector = selectorFromUserQuery(options.user);
     var user = Meteor.users.findOne(selector);
     if (!user)
-      throw new Meteor.Error(403, "user not found");
+      throw new Meteor.Error(403, "User not found");
 
     if (!user.services || !user.services.password ||
         !user.services.password.srp)
-      throw new Meteor.Error(403, "user has no password set");
+      throw new Meteor.Error(403, "User has no password set");
 
     // Just check the verifier output when the same identity and salt
     // are passed. Don't bother with a full exchange.
@@ -193,7 +193,7 @@
       identity: verifier.identity, salt: verifier.salt});
 
     if (verifier.verifier !== newVerifier.verifier)
-      throw new Meteor.Error(403, "bad password");
+      throw new Meteor.Error(403, "Incorrect password");
 
     var loginToken = Meteor.accounts._loginTokens.insert({userId: user._id});
     return {token: loginToken, id: user._id};

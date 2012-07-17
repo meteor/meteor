@@ -44,6 +44,9 @@ h3 {
     right: 0;
     top: 0;
     bottom: 0;
+}
+
+#tag-filter, #main-pane, #side-pane, #bottom-pane {
     overflow: hidden;
 }
 
@@ -53,6 +56,10 @@ h3 {
     bottom: auto;
     background: #ddd;
     border-bottom: 1px solid #999;
+}
+
+#tag-filter {
+    height: 44px; /* same as in #top-tag-filter */
 }
 
 #help {

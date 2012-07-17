@@ -5,21 +5,89 @@
         {{#if currentUser.loading}}
         <div class="loading"></div>
         {{else}}
+        {{#if currentUser.name}}
         {{currentUser.name}}
+        {{else}}
+        {{currentUser.username}}
+        {{/if}}
         {{/if}}
       </div>
       <div class="login-button" id="login-buttons-logout">Logout</div>
     {{else}}
       {{#if services}}
-        {{#each services}}
-          <div class="login-button" id="login-buttons-{{name}}">
-            <div class="login-image" id="login-buttons-image-{{name}}"></div>
-            Login with {{name}}
-          </div>
-        {{/each}}
+        {{#if dropdown}}
+          {{> loginButtonsServicesDropdown}}
+        {{else}}
+          {{> loginButtonsServicesRow}}
+        {{/if}}
       {{else}}
         <div class="no-services">No login services configured.</div>
       {{/if}}
+    {{/if}}
+  </div>
+</template>
+
+<template name="loginButtonsServicesRow">
+  {{#each services}}
+    {{#if isPasswordService}}
+      {{#if hasOtherServices}}
+        <div class="or">
+          <span class="hline">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+          <span class="or-text">or</span>
+          <span class="hline">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+        </div>
+      {{/if}}
+      <div class="login-password-form">
+        <label id="login-username-label" for="login-username">Username</label>
+        <input id="login-username"/>
+
+        <label id="login-password-label" for="login-password">Password</label>
+        <input id="login-password" type="password"/>
+
+        {{> loginButtonsServicesRowDynamicPart}}
+      </div>
+    {{else}}
+      <div class="login-button" id="login-buttons-{{name}}">
+        <div class="login-image" id="login-buttons-image-{{name}}"></div>
+        Sign in with {{name}}
+      </div>
+    {{/if}}
+  {{/each}}
+</template>
+
+<!-- needed because of a liveui issue. https://app.asana.com/0/974383817758/1275404875524 -->
+<template name="loginButtonsServicesRowDynamicPart">
+  {{#if inSignupFlow}}
+  <label id="login-password-again-label" for="login-password-again">Password (again)</label>
+  <input id="login-password-again" type="password"/>
+  {{/if}}
+
+  {{#if errorMessage}}
+  <div class="error-message">{{errorMessage}}</div>
+  {{/if}}
+
+  <div class="login-button" id="login-buttons-password">
+    {{#if inSignupFlow}}
+    Create account
+    {{else}}
+    Sign in
+    {{/if}}
+  </div>
+
+  {{#unless inSignupFlow}}
+  <a id="signup-link">Create account</a>
+  {{/unless}}
+</template>
+
+<template name="loginButtonsServicesDropdown">
+  <div class="login-link-and-dropdown-list">
+    <a class="login-link-text">Sign in</a>
+    {{#if dropdownVisible}}
+    <div id="login-dropdown-list">
+      <a class="login-close-text">Close</a>
+      <div class="login-close-text-clear"></div>
+      {{> loginButtonsServicesRow}}
+    </div>
     {{/if}}
   </div>
 </template>

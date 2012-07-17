@@ -4,6 +4,9 @@
 
 <body>
   <div id="top-tag-filter">
+    <div class="login-bar">
+      {{> loginButtons}}
+    </div>
     {{> tag_filter}}
   </div>
 
@@ -111,8 +114,5 @@
         {{tag_text}} <span class="count">({{count}})</span>
       </div>
     {{/each}}
-    <div class="login-bar">
-      {{> loginButtons}}
-    </div>
   </div>
 </template>
