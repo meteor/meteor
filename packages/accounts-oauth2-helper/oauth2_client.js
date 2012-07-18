@@ -1,6 +1,9 @@
 (function () {
 
+  // Interface registry
   var interfaces = {
+    
+    // Defines a popup window interface (the default) for oauth2 authentication
     popup: function(url, options, afterLogin) {
       options = options || {};
       var width = options.width || 650;
