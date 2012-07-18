@@ -262,9 +262,10 @@ Handlebars.evaluate = function (ast, data, options) {
     var decorateBlockFn = function(fn, old_data) {
       return function(data, branch) {
         var result = fn(data);
-        // don't create spurious ranges when data is same as before
-        // (or when transitioning between e.g. `window` and `undefined`)
-        if ((data || Handlebars._defaultThis) ===
+        // don't create spurious ranges when no branch given and data is same
+        // as before (or when transitioning between e.g. `window` and
+        // `undefined`)
+        if (! branch && (data || Handlebars._defaultThis) ===
             (old_data || Handlebars._defaultThis)) {
           return result;
         } else {

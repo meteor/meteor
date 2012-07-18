@@ -14,6 +14,7 @@ Package.on_use(function (api, where) {
   api.add_files('stub_stream.js', where);
   api.add_files('onscreendiv.js', where);
   api.add_files('current_style.js', where);
+  api.add_files('reactivevar.js', where);
 });
 
 Package.on_test(function (api) {

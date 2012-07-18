@@ -183,3 +183,15 @@
   (biggie={{#get_arg helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns}}{{/get_arg}})
   (twoArgBlock={{#two_args "foo" "foo"}}{{/two_args}})
 </template>
+
+<template name="test_render_a">
+  {{foo}}<br><hr>
+</template>
+
+<template name="test_render_b">
+  {{#with 200}}{{foo}}<br><hr>{{/with}}
+</template>
+
+<template name="test_render_c">
+  <br><hr>
+</template>
