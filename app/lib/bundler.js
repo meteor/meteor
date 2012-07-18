@@ -284,7 +284,7 @@ var Bundle = function () {
             self.files[w][options.path] = data;
             self.js[w].push(options.path);
           } else {
-            throw new Error("Invalid wironment");
+            throw new Error("Invalid environment");
           }
         } else if (options.type === "css") {
           if (w !== "client")
