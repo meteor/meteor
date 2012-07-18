@@ -2,8 +2,10 @@
 
   Meteor._partials = {};
 
-  Meteor._hook_handlebars_each = function () {
-    Meteor._hook_handlebars_each = function(){}; // install the hook only once
+  // XXX Handlebars hooking is janky and gross
+
+  Meteor._hook_handlebars = function () {
+    Meteor._hook_handlebars = function(){}; // install the hook only once
 
     var orig = Handlebars._default_helpers.each;
     Handlebars._default_helpers.each = function (arg, options) {
@@ -12,11 +14,15 @@
 
       return Meteor.ui.listChunk(arg, options.fn, options.inverse, null);
     };
+
+    Handlebars._default_helpers.constant = function(options) {
+      // XXX
+    };
   };
 
 
   Meteor._def_template = function (name, raw_func) {
-    Meteor._hook_handlebars_each();
+    Meteor._hook_handlebars();
 
     window.Template = window.Template || {};
 
@@ -35,6 +41,7 @@
 
 
       var react_data = { events: (name ? Template[name].events : {}),
+                         preserve: (name ? Template[name].preserve: {}),
                          data: data,
                          // legacy 'id' preservation
                          //preserve: { '*[id]': function(n) { return n.id; } },

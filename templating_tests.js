@@ -313,3 +313,117 @@ Tinytest.add("templating - helpers and dots", function(test) {
   test.equal(trials[5], "(twoArgBlock=true,false)");
   test.equal(trials.length, 6);
 });
+
+
+Tinytest.add("templating - rendered template", function(test) {
+  var R = ReactiveVar('foo');
+  Template.test_render_a.foo = function() {
+    R.get();
+    return this.x + 1;
+  };
+
+  Template.test_render_a.preserve = ['br'];
+
+  var div = OnscreenDiv(
+    Meteor.ui.render(Template.test_render_a, {data: { x: 123 } }));
+
+  test.equal(div.text().match(/\S+/)[0], "124");
+
+  var br1 = div.node().getElementsByTagName('br')[0];
+  var hr1 = div.node().getElementsByTagName('hr')[0];
+  test.isTrue(br1);
+  test.isTrue(hr1);
+
+  R.set('bar');
+  Meteor.flush();
+  var br2 = div.node().getElementsByTagName('br')[0];
+  var hr2 = div.node().getElementsByTagName('hr')[0];
+  test.isTrue(br2);
+  test.isTrue(br1 === br2);
+  test.isTrue(hr2);
+  test.isFalse(hr1 === hr2);
+
+  /////
+
+  R = ReactiveVar('foo');
+
+  Template.test_render_b.foo = function() {
+    R.get();
+    return (+this) + 1;
+  };
+  Template.test_render_b.preserve = ['br'];
+
+  div = OnscreenDiv(
+    Meteor.ui.render(Template.test_render_b, {data: { x: 123 } }));
+
+  test.equal(div.text().match(/\S+/)[0], "201");
+
+  var br1 = div.node().getElementsByTagName('br')[0];
+  var hr1 = div.node().getElementsByTagName('hr')[0];
+  test.isTrue(br1);
+  test.isTrue(hr1);
+
+  R.set('bar');
+  Meteor.flush();
+  var br2 = div.node().getElementsByTagName('br')[0];
+  var hr2 = div.node().getElementsByTagName('hr')[0];
+  test.isTrue(br2);
+  test.isTrue(br1 === br2);
+  test.isTrue(hr2);
+  test.isFalse(hr1 === hr2);
+
+  /////
+
+  var stuff = new LocalCollection();
+  stuff.insert({foo:'bar'});
+
+  Template.test_render_c.preserve = ['br'];
+
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return Meteor.ui.listChunk(
+      stuff.find(), function(data) {
+        return Template.test_render_c(data, 'blah');
+      });
+  }));
+
+  var br1 = div.node().getElementsByTagName('br')[0];
+  var hr1 = div.node().getElementsByTagName('hr')[0];
+  test.isTrue(br1);
+  test.isTrue(hr1);
+
+  stuff.update({foo:'bar'}, {$set: {foo: 'baz'}});
+  Meteor.flush();
+  var br2 = div.node().getElementsByTagName('br')[0];
+  var hr2 = div.node().getElementsByTagName('hr')[0];
+  test.isTrue(br2);
+  test.isTrue(br1 === br2);
+  test.isTrue(hr2);
+  test.isFalse(hr1 === hr2);
+
+  /////
+
+  var stuff = new LocalCollection();
+  stuff.insert({foo:'bar'});
+
+  Template.test_render_c.preserve = ['br'];
+
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return Meteor.ui.listChunk(
+      stuff.find(), Template.test_render_c);
+  }));
+
+  var br1 = div.node().getElementsByTagName('br')[0];
+  var hr1 = div.node().getElementsByTagName('hr')[0];
+  test.isTrue(br1);
+  test.isTrue(hr1);
+
+  stuff.update({foo:'bar'}, {$set: {foo: 'baz'}});
+  Meteor.flush();
+  var br2 = div.node().getElementsByTagName('br')[0];
+  var hr2 = div.node().getElementsByTagName('hr')[0];
+  test.isTrue(br2);
+  test.isTrue(br1 === br2);
+  test.isTrue(hr2);
+  test.isFalse(hr1 === hr2);
+
+});
