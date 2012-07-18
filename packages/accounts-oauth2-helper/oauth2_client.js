@@ -40,6 +40,10 @@
     }
   };
 
+  // Register a callback for custom interfaces
+
+  // @param name {String} name of interface
+  // @param interface {Function} A function that launches the interface
   Meteor.accounts.oauth2.addInterface = function(name, interface) {
     interfaces[name] = interface;
   };
