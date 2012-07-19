@@ -1,14 +1,14 @@
 Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
   var http = __meteor_bootstrap__.require('http');
+  var email = Meteor.uuid() + "@example.com";
 
-  Meteor.users.remove({});
   Meteor.accounts._loginTokens.remove({});
   Meteor.accounts.oauth2._loginResultForState = {};
   Meteor.accounts.oauth2._services = {};
 
   // register a fake login service - foobook
   Meteor.accounts.oauth2.registerService("foobook", function (query) {
-    return {email: 'foo@bar.com', userData: {},
+    return {email: email, userData: {},
             serviceUserId: 1, serviceData: {}};
   });
 
@@ -19,7 +19,7 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
   Meteor.accounts.oauth2._handleRequest(req, new http.ServerResponse(req));
 
   // verify that a user is created
-  var user = Meteor.users.findOne({emails: 'foo@bar.com'});
+  var user = Meteor.users.findOne({emails: email});
   test.notEqual(user, undefined);
   test.equal(user.services.foobook.id, 1);
 

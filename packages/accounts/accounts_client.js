@@ -19,9 +19,9 @@
 
   Meteor.logout = function (callback) {
     Meteor.apply('logout', [], {wait: true}, function(error, result) {
-      if (error)
-        throw error;
-      else {
+      if (error) {
+        callback && callback(error);
+      } else {
         Meteor.accounts.makeClientLoggedOut();
         callback && callback();
       }
