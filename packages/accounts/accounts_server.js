@@ -40,7 +40,7 @@
     });
 
     if (result === undefined) {
-      throw new Meteor.Error("Unrecognized options for login request");
+      throw new Meteor.Error(400, "Unrecognized options for login request");
     } else {
       return result;
     }
@@ -61,7 +61,7 @@
       var loginToken = Meteor.accounts._loginTokens
             .findOne({_id: options.resume});
       if (!loginToken)
-        throw new Meteor.Error("Couldn't find login token");
+        throw new Meteor.Error(403, "Couldn't find login token");
 
       return {
         token: loginToken._id,

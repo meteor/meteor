@@ -9,9 +9,9 @@
 
   var selectorFromUserQuery = function (user) {
     if (!user)
-      throw new Meteor.Error("Must pass a user property in request");
+      throw new Meteor.Error(400, "Must pass a user property in request");
     if (_.keys(user).length !== 1)
-      throw new Meteor.Error("User property must have exactly one field");
+      throw new Meteor.Error(400, "User property must have exactly one field");
 
     var selector;
     if (user.id)
@@ -21,7 +21,7 @@
     else if (user.email)
       selector = {emails: user.email};
     else
-      throw new Meteor.Error("Must pass username, email, or id in request.user");
+      throw new Meteor.Error(400, "Must pass username, email, or id in request.user");
 
     return selector;
   };
@@ -39,11 +39,11 @@
 
       var user = Meteor.users.findOne(selector);
       if (!user)
-        throw new Meteor.Error("user not found");
+        throw new Meteor.Error(403, "user not found");
 
       if (!user.services || !user.services.password ||
           !user.services.password.srp)
-        throw new Meteor.Error("user has no password set");
+        throw new Meteor.Error(403, "user has no password set");
 
       var verifier = user.services.password.srp;
       var srp = new Meteor._srp.Server(verifier);
@@ -68,24 +68,24 @@
 
     changePassword: function (options) {
       if (!this.userId())
-        throw new Meteor.Error("must be logged in");
+        throw new Meteor.Error(401, "must be logged in");
 
       // If options.M is set, it means we went through a challenge with
       // the old password.
 
       // XXX && Meteor.accounts.config.unsafePasswordChanges check here!
       if (!options.M) {
-        throw new Meteor.Error("XXX no oldPassword unimplemented");
+        throw new Meteor.Error(500, "XXX no oldPassword unimplemented");
       }
 
       if (options.M) {
         var serialized = Meteor.accounts._srpChallenges.findOne(
           {M: options.M});
         if (!serialized)
-          throw new Meteor.Error("bad password");
+          throw new Meteor.Error(403, "bad password");
         if (serialized.userId !== this.userId())
           // No monkey business!
-          throw new Meteor.Error("bad password");
+          throw new Meteor.Error(403, "bad password");
       }
 
       var verifier = options.srp;
@@ -94,7 +94,7 @@
       }
       if (!verifier || !verifier.identity || !verifier.salt ||
           !verifier.verifier)
-        throw new Meteor.Error("Invalid verifier");
+        throw new Meteor.Error(400, "Invalid verifier");
 
       Meteor.users.update({_id: this.userId()},
                           {$set: {'services.password.srp': verifier}});
@@ -146,12 +146,12 @@
     if (!options.srp)
       return undefined; // don't handle
     if (!options.srp.M)
-      throw new Meteor.Error("must pass M in options.srp");
+      throw new Meteor.Error(400, "must pass M in options.srp");
 
     var serialized = Meteor.accounts._srpChallenges.findOne(
       {M: options.srp.M});
     if (!serialized)
-      throw new Meteor.Error("bad password");
+      throw new Meteor.Error(403, "bad password");
 
     var userId = serialized.userId;
     var loginToken = Meteor.accounts._loginTokens.insert({userId: userId});
@@ -180,11 +180,11 @@
     var selector = selectorFromUserQuery(options.user);
     var user = Meteor.users.findOne(selector);
     if (!user)
-      throw new Meteor.Error("user not found");
+      throw new Meteor.Error(403, "user not found");
 
     if (!user.services || !user.services.password ||
         !user.services.password.srp)
-      throw new Meteor.Error("user has no password set");
+      throw new Meteor.Error(403, "user has no password set");
 
     // Just check the verifier output when the same identity and salt
     // are passed. Don't bother with a full exchange.
@@ -193,7 +193,7 @@
       identity: verifier.identity, salt: verifier.salt});
 
     if (verifier.verifier !== newVerifier.verifier)
-      throw new Meteor.Error("bad password");
+      throw new Meteor.Error(403, "bad password");
 
     var loginToken = Meteor.accounts._loginTokens.insert({userId: user._id});
     return {token: loginToken, id: user._id};

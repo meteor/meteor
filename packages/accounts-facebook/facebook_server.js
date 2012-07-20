@@ -55,11 +55,7 @@
     }
 
     if (error_response) {
-      if (error_response.error) {
-        throw new Meteor.Error("Error trying to get access token from Facebook", error_response);
-      } else {
-        throw new Meteor.Error("Unexpected response when trying to get access token from Facebook", error_response);
-      }
+      throw new Meteor.Error(500, "Error trying to get access token from Facebook", error_response);
     } else {
       // Success!  Extract the facebook access token from the
       // response
@@ -72,7 +68,7 @@
       });
 
       if (!fbAccessToken)
-        throw new Meteor.Error("Couldn't find access token in HTTP response: " + response);
+        throw new Meteor.Error(500, "Couldn't find access token in HTTP response.");
       return fbAccessToken;
     }
   };

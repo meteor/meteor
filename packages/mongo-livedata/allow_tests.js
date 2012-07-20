@@ -108,12 +108,12 @@
       update: function(userId, docs) {
         // throw fields in first doc so that we can inspect them in test
         throw new Meteor.Error(
-          "Test: Fields in doc: " + _.keys(docs[0]).join(','));
+          999, "Test: Fields in doc: " + _.keys(docs[0]).join(','));
       },
       remove: function(userId, docs) {
         // throw fields in first doc so that we can inspect them in test
         throw new Meteor.Error(
-          "Test: Fields in doc: " + _.keys(docs[0]).join(','));
+          999, "Test: Fields in doc: " + _.keys(docs[0]).join(','));
       },
       fetch: ['field1']
     });
@@ -128,12 +128,12 @@
       update: function(userId, docs) {
         // throw fields in first doc so that we can inspect them in test
         throw new Meteor.Error(
-          "Test: Fields in doc: " + _.keys(docs[0]).join(','));
+          999, "Test: Fields in doc: " + _.keys(docs[0]).join(','));
       },
       remove: function(userId, docs) {
         // throw fields in first doc so that we can inspect them in test
         throw new Meteor.Error(
-          "Test: Fields in doc: " + _.keys(docs[0]).join(','));
+          999, "Test: Fields in doc: " + _.keys(docs[0]).join(','));
       },
       fetch: ['field1']
     });
@@ -160,7 +160,7 @@
       function (test, expect) {
         restrictedCollectionForPartialAllowTest.update(
           {world: test.runId()}, {$set: {updated: true}}, expect(function (err, res) {
-            test.equal(err.error, 'Access denied. No update validators set on restricted collection.');
+            test.equal(err.error, 403);
           }));
       }
     ]);
@@ -177,22 +177,22 @@
         restrictedCollectionForFetchTest.update(
           {world: test.runId()},
           {$set: {updated: true}}, expect(function (err, res) {
-            test.equal(err.error, "Test: Fields in doc: field1,field2,_id");
+            test.equal(err.reason, "Test: Fields in doc: field1,field2,_id");
           }));
         restrictedCollectionForFetchTest.remove(
           {world: test.runId()}, expect(function (err, res) {
-            test.equal(err.error, "Test: Fields in doc: field1,field2,_id");
+            test.equal(err.reason, "Test: Fields in doc: field1,field2,_id");
           }));
 
         restrictedCollectionForFetchAllTest.update(
           {world: test.runId()},
           {$set: {updated: true}}, expect(function (err, res) {
-            test.equal(err.error,
+            test.equal(err.reason,
                        "Test: Fields in doc: field1,field2,field3,world,_id");
           }));
         restrictedCollectionForFetchAllTest.remove(
           {world: test.runId()}, expect(function (err, res) {
-            test.equal(err.error,
+            test.equal(err.reason,
                        "Test: Fields in doc: field1,field2,field3,world,_id");
           }));
 
@@ -225,7 +225,7 @@
       },
       function (test, expect) {
         lockedDownCollection.insert({world: test.runId(), foo: 'bar'}, expect(function (err, res) {
-          test.equal(err.error, "Access denied");
+          test.equal(err.error, 403);
         }));
         Meteor.default_connection.onQuiesce(expect(function () {
           test.equal(lockedDownCollection.find({world: test.runId()}).count(), 0);
@@ -290,14 +290,14 @@
           // insert checks validator
           function (test, expect) {
             collection.insert({world: test.runId(), canInsert: false}, expect(function (err, res) {
-              test.equal(err.error, "Access denied");
+              test.equal(err.error, 403);
               test.equal(collection.find({world: test.runId()}).count(), 0);
             }));
           },
           // insert checks all validators
           function (test, expect) {
             collection.insert({world: test.runId(), canInsert: true}, expect(function (err, res) {
-              test.equal(err.error, "Access denied");
+              test.equal(err.error, 403);
               test.equal(collection.find({world: test.runId()}).count(), 0);
             }));
           },
@@ -343,9 +343,7 @@
               {canInsert: true, world: test.runId()},
               {newObject: 1},
               expect(function (err, res) {
-                test.equal(
-                  err.error,
-                  "Access denied. Can't replace document in restricted collection.");
+                test.equal(err.error, 403);
               }));
           },
 
@@ -363,7 +361,7 @@
               {world: test.runId(), canInsert: true, canUpdate: true},
               {$set: {"verySecret.field": 1}},
               expect(function (err, res) {
-                test.equal(err.error, "Access denied");
+                test.equal(err.error, 403);
               }));
           },
 
@@ -382,7 +380,7 @@
           // update fails when access is denied trying to set `verySecret`
           function (test, expect) {
             collection.update({world: test.runId(), canInsert: true}, {$set: {verySecret: true}}, expect(function (err, res) {
-              test.equal(err.error, "Access denied");
+              test.equal(err.error, 403);
               // nothing has changed
               test.equal(collection.find({world: test.runId()}).count(), 3);
               test.equal(collection.find({world: test.runId()}).fetch()[1].canInsert, true);
@@ -394,7 +392,7 @@
           // `verySecret`
           function (test, expect) {
             collection.update({world: test.runId(), canInsert: true}, {$set: {updated: true, verySecret: true}}, expect(function (err, res) {
-              test.equal(err.error, "Access denied");
+              test.equal(err.error, 403);
               // nothing has changed
               test.equal(collection.find({world: test.runId()}).count(), 3);
               test.equal(collection.find({world: test.runId()}).fetch()[1].canInsert, true);
@@ -406,7 +404,7 @@
           // have `canUpdate` set
           function (test, expect) {
             collection.update({world: test.runId(), canInsert: true}, {$set: {updated: true}}, expect(function (err, res) {
-              test.equal(err.error, "Access denied");
+              test.equal(err.error, 403);
               // nothing has changed
               test.equal(collection.find({world: test.runId()}).count(), 3);
               test.equal(collection.find({world: test.runId()}).fetch()[1].canInsert, true);
@@ -426,7 +424,7 @@
           // `canRemove` set
           function (test, expect) {
             collection.remove({world: test.runId(), canInsert: true}, expect(function (err, res) {
-              test.equal(err.error, "Access denied");
+              test.equal(err.error, 403);
               // nothing has changed
               test.equal(collection.find({world: test.runId()}).count(), 3);
             }));
@@ -434,7 +432,7 @@
           // another test that remove fails with no `canRemove` set
           function (test, expect) {
             collection.remove({world: test.runId(), canUpdate: true}, expect(function (err, res) {
-              test.equal(err.error, "Access denied");
+              test.equal(err.error, 403);
               // nothing has changed
               test.equal(collection.find({world: test.runId()}).count(), 3);
             }));

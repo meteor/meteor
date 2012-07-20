@@ -17,7 +17,7 @@
   //     - `null` if the user declined to give permissions
   Meteor.accounts.oauth2.registerService = function (name, handleOauthRequest) {
     if (Meteor.accounts.oauth2._services[name])
-      throw new Meteor.Error("Already registered the " + name + " OAuth2 service");
+      throw new Error("Already registered the " + name + " OAuth2 service");
 
     Meteor.accounts.oauth2._services[name] = {
       handleOauthRequest: handleOauthRequest

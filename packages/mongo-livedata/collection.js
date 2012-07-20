@@ -153,10 +153,10 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
       if (!this.is_simulation) {
         if (self._restricted) {
           if (!self._allowInsert(this.userId(), doc))
-            throw new Meteor.Error("Access denied");
+            throw new Meteor.Error(403, "Access denied");
         } else {
           if (!insecure)
-            throw new Meteor.Error("Access denied");
+            throw new Meteor.Error(403, "Access denied");
         }
       }
 
@@ -178,7 +178,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
             // update returns nothing.  allow exceptions to propagate.
             self._collection.update(selector, mutator, options);
           } else {
-            throw new Meteor.Error("Access denied");
+            throw new Meteor.Error(403, "Access denied");
           }
         }
       }
@@ -198,7 +198,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
             // insert returns nothing.  allow exceptions to propagate.
             self._collection.remove(selector);
           } else {
-            throw new Meteor.Error("Access denied");
+            throw new Meteor.Error(403, "Access denied");
           }
         }
       }
@@ -249,7 +249,7 @@ Meteor.Collection.prototype.allow = function(options) {
 // assuming the collection is restricted
 Meteor.Collection.prototype._allowInsert = function(userId, doc) {
   if (this._validators.insert.length === 0) {
-    throw new Meteor.Error("Accesd denied. No insert validators set on restricted collection.");
+    throw new Meteor.Error(403, "Access denied. No insert validators set on restricted collection.");
   }
 
   // all validators should return true
@@ -266,14 +266,14 @@ Meteor.Collection.prototype._validatedUpdate = function(userId, selector, mutato
   var self = this;
 
   if (self._validators.update.length === 0) {
-    throw new Meteor.Error("Access denied. No update validators set on restricted collection.");
+    throw new Meteor.Error(403, "Access denied. No update validators set on restricted collection.");
   }
 
   // compute modified fields
   var fields = [];
   _.each(mutator, function (params, op) {
     if (op[0] !== '$') {
-      throw new Meteor.Error("Access denied. Can't replace document in restricted collection.");
+      throw new Meteor.Error(403, "Access denied. Can't replace document in restricted collection.");
     } else {
       _.each(_.keys(params), function (field) {
         // treat dotted fields as if they are replacing their
@@ -310,7 +310,7 @@ Meteor.Collection.prototype._validatedUpdate = function(userId, selector, mutato
   if (_.any(self._validators.update, function(validator) {
     return !validator(userId, docs, fields, mutator);
   })) {
-    throw new Meteor.Error("Access denied");
+    throw new Meteor.Error(403, "Access denied");
   }
 
   // construct new $in selector to replace the original one
@@ -333,7 +333,7 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
   var self = this;
 
   if (self._validators.remove.length === 0) {
-    throw new Meteor.Error("Access denied. No remove validators set on restricted collection.");
+    throw new Meteor.Error(403, "Access denied. No remove validators set on restricted collection.");
   }
 
   var findOptions = {};
@@ -350,7 +350,7 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
   if (_.any(self._validators.remove, function(validator) {
     return !validator(userId, docs);
   })) {
-    throw new Meteor.Error("Access denied");
+    throw new Meteor.Error(403, "Access denied");
   }
 
   // construct new $in selector to replace the original one
