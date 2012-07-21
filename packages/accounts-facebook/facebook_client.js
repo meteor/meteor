@@ -6,6 +6,7 @@
     var state = Meteor.uuid();
     var mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent);
     var display = mobile ? 'touch' : 'popup';
+    var popupOptions = Meteor.accounts.facebook._options.popup;
 
     var scope = "email";
     if (Meteor.accounts.facebook._options &&
@@ -17,7 +18,7 @@
           '&redirect_uri=' + Meteor.accounts.facebook._appUrl + '/_oauth/facebook?close' +
           '&display=' + display + '&scope=' + scope + '&state=' + state;
 
-    Meteor.accounts.oauth2.initiateLogin(state, loginUrl);
+    Meteor.accounts.oauth2.initiateLogin(state, loginUrl, popupOptions);
   };
 
 })();

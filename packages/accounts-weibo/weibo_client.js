@@ -4,6 +4,8 @@
       throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.weibo.config first");
 
     var state = Meteor.uuid();
+    var popupOptions = Meteor.accounts.weibo._options.popup;
+
     // XXX need to support configuring access_type and scope
     var loginUrl =
           'https://api.weibo.com/oauth2/authorize' +
@@ -12,7 +14,7 @@
           '&redirect_uri=' + Meteor.accounts.weibo._appUrl + '/_oauth/weibo?close' +
           '&state=' + state;
 
-    Meteor.accounts.oauth2.initiateLogin(state, loginUrl);
+    Meteor.accounts.oauth2.initiateLogin(state, loginUrl, popupOptions);
   };
 
 }) ();
