@@ -5,8 +5,7 @@
   // @param url {String} url to page
   Meteor.accounts.oauth2.initiateLogin = function(state, url, options) {
 
-    options = (options || {});
-
+    options = (options || defaultPopup);
     var popup = openPopup(url, options);
 
     var checkPopupOpen = setInterval(function() {
@@ -35,6 +34,14 @@
         Meteor.accounts.makeClientLoggedIn(result.id, result.token);
       }
     });
+  };
+
+  var defaultPopup = {
+    centered: true,
+    features: {
+      width: 650,
+      height: 331
+    }
   };
 
   var openPopup = function(url, options) {
