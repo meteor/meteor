@@ -41,6 +41,8 @@
 
   var defaultPopup = {
     features: {
+      // XXX these dimensions worked well for facebook and google, but
+      // we might want to override this for other providers
       width: 650,
       height: 331
     }
