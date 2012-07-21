@@ -58,10 +58,9 @@
       features.top = top;
     }
 
-    var featuresString = _.reduce(features, function(list, val, key) {
-      list.push(key + '=' + val);
-      return list;
-    }, []).join(',');
+    var featuresString = _.map(features, function(val, key) {
+      return key + '=' + val;
+    }).join(',');
 
     var newwindow = window.open(url, 'Login', featuresString);
     if (newwindow.focus)
