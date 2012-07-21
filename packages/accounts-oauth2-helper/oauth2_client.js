@@ -9,7 +9,7 @@
     options || (options = {});
     options.features = _.extend(defaultPopup.features, options.features);
 
-    var popup = openPopup(url, options);
+    var popup = openCenteredPopup(url, options);
 
     var checkPopupOpen = setInterval(function() {
       if (popup.closed) {
@@ -46,7 +46,7 @@
     }
   };
 
-  var openPopup = function(url, options) {
+  var openCenteredPopup = function(url, options) {
     var features = options.features;
 
     var screenX = typeof window.screenX !== 'undefined'
