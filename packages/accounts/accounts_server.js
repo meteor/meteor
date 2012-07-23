@@ -74,31 +74,83 @@
 
 
   ///
+  /// CREATE USER HOOKS
+  ///
+  var onCreateUserHook = null;
+  Meteor.accounts.onCreateUser = function (func) {
+    if (onCreateUserHook)
+      throw new Error("Can only call onCreateUser once");
+    else
+      onCreateUserHook = func;
+  };
+
+  var defaultCreateUserHook = function (options, extra, user) {
+    if (!_.isEmpty(
+      _.intersection(
+        _.keys(extra),
+        ['services', 'private', 'username', 'email', 'emails'])))
+      throw new Error("Disallowed fields in extra");
+
+    return _.extend(user, extra);
+  };
+  Meteor.accounts.onCreateUserHook = function (options, extra, user) {
+    var fullUser;
+
+    if (onCreateUserHook) {
+      fullUser = onCreateUserHook(options, extra, user);
+
+      // This is *not* part of the API. We need this because we can't isolate
+      // the global server environment between tests, meaning we can't test
+      // both having a create user hook set and not having one set.
+      if (fullUser === 'TEST DEFAULT HOOK')
+        fullUser = defaultCreateUserHook(options, extra, user);
+    } else {
+      fullUser = defaultCreateUserHook(options, extra, user);
+    }
+
+    _.each(validateNewUserHooks, function (hook) {
+      if (!hook(user))
+        throw new Meteor.Error(403, "User validation failed");
+    });
+
+    return fullUser;
+  };
+
+  var validateNewUserHooks = [];
+  Meteor.accounts.validateNewUser = function (func) {
+    validateNewUserHooks.push(func);
+  };
+
+
+  ///
   /// MANAGING USER OBJECTS
   ///
 
   // Updates or creates a user after we authenticate with a 3rd party
   //
-  // @param email {String|null} The user's email, or null if the service
-  //   doesn't provide one
-  // @param userData {Object} attributes to store directly on the user object
-  // @param serviceName {String} e.g. 'facebook' or 'google'
-  // @param serviceUserId {?} user id in 3rd party service
-  // @param serviceData {Object} attributes to store on the user record's
-  //   specific service subobject
+  // @param options {Object}
+  //   - email (optional)
+  //   - services {Object} e.g. {facebook: {id: (facebook user id), ...}}
+  // @param extra {Object, optional} Any additional fields to place on the user objet
   // @returns {String} userId
-  Meteor.accounts.updateOrCreateUser = function(email,
-                                                userData,
-                                                serviceName,
-                                                serviceUserId,
-                                                serviceData) {
+  Meteor.accounts.updateOrCreateUser = function(options, extra) {
+    extra = extra || {};
+
     var updateUserData = function() {
       // don't overwrite existing fields
-      var newKeys = _.without(_.keys(userData), _.keys(user));
-      var newAttrs = _.pick(userData, newKeys);
+      var newKeys = _.without(_.keys(extra), _.keys(user));
+      var newAttrs = _.pick(extra, newKeys);
       Meteor.users.update(user, {$set: newAttrs});
     };
 
+    if (_.keys(options.services).length > 0) {
+      if (_.keys(options.services).length > 1) {
+        throw new Error("Can't pass more than one service to updateOrCreateUser");
+      }
+      var serviceName = _.keys(options.services)[0];
+    }
+
+    var email = options.email;
     var userByEmail = email && Meteor.users.findOne({emails: email});
     var user;
     if (userByEmail) {
@@ -106,27 +158,32 @@
       // If we know about this email address that is our user.
       // Update the information from this service.
       user = userByEmail;
-      if (!user.services || !user.services[serviceName]) {
+      if (options.services && (!user.services || !user.services[serviceName])) {
         var attrs = {};
-        attrs["services." + serviceName] = _.extend(
-          {id: serviceUserId}, serviceData);
+        attrs["services." + serviceName] = options.services[serviceName];
+
+        // XXX we will probably also need a hook for updating users,
+        // similar to Meteor.accounts.onCreateUser
         Meteor.users.update(user, {$set: attrs});
       }
 
       updateUserData();
       return user._id;
-    } else {
+    } else if (options.services) {
 
       // If not, look for a user with the appropriate service user id.
       // Update the user's email.
       var selector = {};
-      selector["services." + serviceName + ".id"] = serviceUserId;
+      selector["services." + serviceName + ".id"] = options.services[serviceName].id;
       var userByServiceUserId = Meteor.users.findOne(selector);
       if (userByServiceUserId) {
         user = userByServiceUserId;
         if (email && user.emails.indexOf(email) === -1) {
           // The user may have changed the email address associated with
           // this service. Store the new one in addition to the old one.
+
+          // XXX we will probably also need a hook for updating users,
+          // similar to Meteor.accounts.onCreateUser
           Meteor.users.update(user, {$push: {emails: email}});
         }
 
@@ -136,11 +193,13 @@
 
         // Create a new user
         var attrs = {};
-        attrs[serviceName] = _.extend({id: serviceUserId}, serviceData);
-        return Meteor.users.insert(_.extend({}, userData, {
+        attrs[serviceName] = options.services[serviceName];
+        var user = {
           emails: (email ? [email] : []),
           services: attrs
-        }));
+        };
+        user = Meteor.accounts.onCreateUserHook(options, extra, user);
+        return Meteor.users.insert(user);
       }
     }
   };

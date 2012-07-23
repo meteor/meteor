@@ -19,10 +19,11 @@
     var identity = getIdentity(accessToken);
 
     return {
-      email: identity.email,
-      userData: {name: identity.name},
-      serviceUserId: identity.id,
-      serviceData: {accessToken: accessToken}
+      options: {
+        email: identity.email,
+        services: {facebook: {id: identity.id, accessToken: accessToken}}
+      },
+      extra: {name: identity.name}
     };
   });
 

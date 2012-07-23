@@ -9,16 +9,12 @@
   // logging in.
   //
   // @param name {String} e.g. "google", "facebook"
-  // @param handleOauthRequest {Function(query): userInfo}
+  // @param handleOauthRequest {Function(query)}
   //   - query is an object with the parameters passed in the query string
-  //   - userInfo {Object} with following keys:
-  //     - email {String}
-  //     - userData {Object} attributes to store directly on the user object,
-  //                         such as "name"
-  //     - serviceUserId {?} The logging in user's id in the login service
-  //     - serviceData {Object} attributes to store on the user record's
-  //                            specific login service's subobject, such as
-  //                            "accessToken"
+  //   - return value is:
+  //     - {options: (options), extra: (optional extra)} (same as the
+  //       arguments to Meteor.accounts.updateOrCreateUser)
+  //     - `null` if the user declined to give permissions
   Meteor.accounts.oauth2.registerService = function (name, handleOauthRequest) {
     if (Meteor.accounts.oauth2._services[name])
       throw new Meteor.Error("Already registered the " + name + " OAuth2 service");
@@ -69,12 +65,10 @@
     var service = Meteor.accounts.oauth2._services[serviceName];
 
     // Get or create user id
-    var userInfo = service.handleOauthRequest(req.query);
+    var oauthResult = service.handleOauthRequest(req.query);
 
-    if (userInfo) { // could be null if user declined permissions
-      var userId = Meteor.accounts.updateOrCreateUser(
-        userInfo.email, userInfo.userData, serviceName,
-        userInfo.serviceUserId, userInfo.serviceData);
+    if (oauthResult) { // could be null if user declined permissions
+      var userId = Meteor.accounts.updateOrCreateUser(oauthResult.options, oauthResult.extra);
 
       // Generate and store a login token for reconnect
       // XXX this could go in accounts_server.js instead

@@ -1,23 +1,30 @@
 (function () {
 
-  // XXX options to add to new user
-  // XXX callback
-  Meteor.loginNewUser = function (username, email, password, callback) {
-    var verifier = Meteor._srp.generateVerifier(password);
+  Meteor.createUser = function (options, extra, callback) {
+    if (typeof extra === "function") {
+      callback = extra;
+      extra = {};
+    }
 
-    Meteor.apply('login', [
-      {newUser: {username: username, email: email, verifier: verifier}}
-    ], {wait: true}, function (error, result) {
-      if (error || !result) {
-        error = error || new Error("No result");
-        callback && callback(error);
-        return;
-      }
+    if (!options.password)
+      throw new Error("Must set options.password");
+    var verifier = Meteor._srp.generateVerifier(options.password);
+
+    // strip old password, replacing with the verifier object
+    delete options.password;
+    options.srp = verifier;
+
+    Meteor.apply('createUser', [options, extra], {wait: true},
+                 function (error, result) {
+                   if (error || !result) {
+                     error = error || new Error("No result");
+                     callback && callback(error);
+                     return;
+                   }
 
       Meteor.accounts.makeClientLoggedIn(result.id, result.token);
       callback && callback(undefined, {message: 'Success'});
     });
-
   };
 
   // @param selector {String|Object} One of the following:

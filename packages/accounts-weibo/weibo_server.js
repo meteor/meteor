@@ -19,9 +19,15 @@
     var identity = getIdentity(result.access_token, parseInt(result.uid, 10));
 
     return {
-      userData: {name: identity.name, screen_name: identity.screen_name},
-      serviceUserId: result.uid,
-      serviceData: {accessToken: result.access_token}
+      options: {
+        services: {
+          weibo: {
+            id: result.uid,
+            accessToken: result.accessToken,
+            screenName: identity.screen_name
+          }
+        }
+      }
     };
   });
 

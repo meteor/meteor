@@ -4,6 +4,8 @@
   // now, that is this test.
 
   var username = Meteor.uuid();
+  var username2 = Meteor.uuid();
+  var username3 = Meteor.uuid();
   var email = Meteor.uuid() + '@example.com';
   var password = 'password';
   var password2 = 'password2';
@@ -25,10 +27,11 @@
       var quiesceCallback = expect(function () {
         test.equal(Meteor.user().username, username);
       });
-      Meteor.loginNewUser(username, email, password, expect(function (error) {
-        test.equal(error, undefined);
-        Meteor.default_connection.onQuiesce(quiesceCallback);
-      }));
+      Meteor.createUser({username: username, email: email, password: password},
+                        expect(function (error) {
+                          test.equal(error, undefined);
+                          Meteor.default_connection.onQuiesce(quiesceCallback);
+                        }));
     },
     logoutStep,
     function (test, expect) {
@@ -118,14 +121,52 @@
         test.isTrue(error);
       }));
     },
-    // XXX test Meteor.accounts.config(unsafePasswordChanges)
-    //
-    // XXX test raw (non-srp) password setting. Need to send a method
-    // directly, there is no API for this. Test this once we have
-    // unsafePasswordChanges. Duplicating the password exchange code is
-    // gross.
-
+    logoutStep,
+    // create user with raw password
+    function (test, expect) {
+      Meteor.call('createUser', {username: username2, password: password2},
+                  expect(function (error, result) {
+                    test.equal(error, undefined);
+                    test.isTrue(result.id);
+                    test.isTrue(result.token);
+                    // emulate the real login behavior, so as not to confuse test.
+                    Meteor.accounts.makeClientLoggedIn(result.id, result.token);
+                    test.equal(Meteor.user().username, username2);
+                  }));
+    },
+    logoutStep,
+    function(test, expect) {
+      Meteor.loginWithPassword({username: username2}, password2,
+                               expect(function (error) {
+                                 test.equal(error, undefined);
+                                 test.equal(Meteor.user().username, username2);
+                               }));
+    },
+    logoutStep,
+    // test Meteor.accounts.validateNewUser
+    function(test, expect) {
+      Meteor.createUser({username: username3, password: password3},
+                        {invalid: true}, // should fail the new user validators
+                        expect(function (error) {
+                          test.equal(error.error, 403);
+                        }));
+    },
+    // test Meteor.accounts.onCreateUser
+    function(test, expect) {
+      Meteor.createUser({username: username3, password: password3},
+                        {testOnCreateUserHook: true}, expect(function () {
+        test.equal(Meteor.user().touchedByOnCreateUser, true);
+      }));
+    },
+    // can't call onCreateUserHook twice
+    function(test, expect) {
+      Meteor.call('setupMoreThanOneOnCreateUserHook',
+                  {testOnCreateUserHook: true}, expect(function (error) {
+        test.equal(error.error, 999);
+      }));
+    },
     logoutStep
+    // XXX test Meteor.accounts.config(unsafePasswordChanges)
   ]);
 
 }) ();

@@ -26,7 +26,6 @@
     return selector;
   };
 
-
   Meteor.methods({
     // @param request {Object} with fields:
     //   user: either {username: (username)}, {email: (email)}, or {id: (userId)}
@@ -66,6 +65,7 @@
 
       return challenge;
     },
+
     changePassword: function (options) {
       if (!this.userId())
         throw new Meteor.Error("must be logged in");
@@ -103,6 +103,41 @@
       if (serialized)
         ret.HAMK = serialized.HAMK;
       return ret;
+    },
+
+    createUser: function (options, extra) {
+      extra = extra || {};
+      var username = options.username;
+      var email = options.email;
+      if (!username && !email)
+        throw new Meteor.Error(400, "need to set a username or email");
+
+      if (username && Meteor.users.findOne({username: username}))
+        throw new Meteor.Error(403, "user already exists with username " + username);
+      if (email && Meteor.users.findOne({emails: email}))
+        throw new Meteor.Error(403, "user already exists with email " + email);
+
+      // XXX validate verifier
+
+      // raw password, should only be used over SSL!
+      if (options.password) {
+        if (options.srp)
+          throw new Meteor.Error(400, "Don't pass both password and srp in options");
+        options.srp = Meteor._srp.generateVerifier(options.password);
+      }
+
+      var user = {services: {password: {srp: options.srp}}};
+      if (username)
+        user.username = username;
+      if (email)
+        user.emails = [email];
+
+      user = Meteor.accounts.onCreateUserHook(options, extra, user);
+      var userId = Meteor.users.insert(user);
+
+      var loginToken = Meteor.accounts._loginTokens.insert({userId: userId});
+      this.setUserId(userId);
+      return {token: loginToken, id: userId};
     }
   });
 
@@ -129,7 +164,6 @@
 
     return {token: loginToken, id: userId, HAMK: serialized.HAMK};
   });
-
 
   // handler to login with plaintext password.
   //
@@ -164,35 +198,5 @@
     var loginToken = Meteor.accounts._loginTokens.insert({userId: user._id});
     return {token: loginToken, id: user._id};
   });
-
-
-
-  // handler to login with a new user
-  Meteor.accounts.registerLoginHandler(function (options) {
-    if (!options.newUser)
-      return undefined; // don't handle
-
-    if (!options.newUser.username)
-      throw new Meteor.Error("need to set a username");
-    var username = options.newUser.username;
-
-    if (Meteor.users.findOne({username: username}))
-      throw new Meteor.Error("user already exists");
-
-    // XXX validate verifier
-
-    // XXX use updateOrCreateUser
-
-    var user = {username: username,
-                emails: options.newUser.email ? [options.newUser.email] : [],
-                services: {password: {srp: options.newUser.verifier}}};
-    var userId = Meteor.users.insert(user);
-
-    var loginToken = Meteor.accounts._loginTokens.insert({userId: userId});
-
-    return {token: loginToken, id: userId};
-  });
-
-
 
 })();
