@@ -8,7 +8,7 @@ Meteor.ui = Meteor.ui || {};
     if (typeof html_func !== "function")
       throw new Error("Meteor.ui.render() requires a function as its first argument.");
 
-    if (Meteor.ui._inRenderMode)
+    if (Materializer.current)
       throw new Error("Can't nest Meteor.ui.render.");
 
     return renderChunk(html_func, options, "fragment").containerNode();
@@ -323,7 +323,7 @@ Meteor.ui = Meteor.ui || {};
         renderChunk(html_func, options, "patch", this);
       });
     };
-    range.destroy = function() {
+    range.destroyed = function() {
       range.context && range.context.invalidate();
       callOffscreen();
     };
@@ -463,7 +463,7 @@ Meteor.ui = Meteor.ui || {};
         range.killed = true;
         // only one of these ever scheduled per range:
         Sarge.atFlushTime(function() {
-          range.destroy && range.destroy();
+          range.destroyed && range.destroyed();
         });
       }
     },

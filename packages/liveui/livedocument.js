@@ -11,6 +11,7 @@ Meteor.ui._doc = Meteor.ui._doc || {};
   var MARKER_PARSE_REGEX = /^LIVEUI_(.*)$/;
 
   Meteor.ui._TAG = "_liveui";
+  Meteor.ui._HELD = "_liveui_refs"; // XXX _liveui_held
 
   Meteor.ui._doc._newAnnotations = {}; // {id -> options} until range created
   Meteor.ui._doc._newRanges = []; // [LiveRange, ...] until flush time
@@ -113,6 +114,8 @@ Meteor.ui._doc = Meteor.ui._doc || {};
           var range = new Meteor.ui._LiveRange(Meteor.ui._TAG, subFrag);
           // assign options to the LiveRange, including `id`
           _.extend(range, options);
+          // enqueue the new range for onscreen callback processing
+          Meteor.ui._doc._newRanges.push(range);
 
           var next = comment.nextSibling;
 
@@ -138,6 +141,11 @@ Meteor.ui._doc = Meteor.ui._doc || {};
       return frag;
     };
 
+    // at flush time, doCallbacks()
+    var cx = new Meteor.deps.Context;
+    cx.on_invalidate(Meteor.ui._doc._doCallbacks);
+    cx.invalidate();
+
     return makeFrag(topHtml);
   };
 
@@ -154,6 +162,43 @@ Meteor.ui._doc = Meteor.ui._doc || {};
     // Surround the HTML with comments
     return ("<!--" + LIVEUI_START_PREFIX + options.id + "-->" +
             html + "<!--" + LIVEUI_END_PREFIX + options.id + "-->");
+  };
+
+  Meteor.ui._doc.poke = function(range) {
+    // XXX like Sarge.checkOffscreen
+  };
+
+  Meteor.ui._doc.cleanNodes = function(start, end) {
+    // XXX like Sarge.shuck
+  };
+
+  Meteor.ui._doc._doCallbacks = function() {
+    _.each(Meteor.ui._doc._newRanges, function(range) {
+      if (range.onscreen) {
+        var node = range.firstNode();
+        if (! (node.parentNode &&
+               (Meteor.ui._isNodeOnscreen(node) ||
+                Meteor.ui._doc._isNodeHeld(node))))
+          return; // range was created but isn't in the document at flush time
+        range.onscreen();
+        // existence of `killed=false` means range went onscreen and we'll
+        // have to call offscreen() later
+        range.killed = false;
+      }
+    });
+
+    Meteor.ui._doc._newAnnotations = {};
+    Meteor.ui._doc._newRanges.length = 0;
+  };
+
+  // "node holding" is a facility used for unit tests where
+  // we don't GC a DocumentFragment at flush time.
+  Meteor.ui._doc._isNodeHeld = function(node) {
+    while (node.parentNode)
+      node = node.parentNode;
+
+    return node.nodeType !== 3 /*TEXT_NODE*/ &&
+      node[Meteor.ui._HELD];
   };
 
 })();

@@ -1,9 +1,12 @@
 Tinytest.add("livedocument - assembly", function(test) {
 
   var doTest = function(calc) {
+    var onscreens = [];
     var frag = Meteor.ui._doc.materialize(
       calc(function(str, expected) {
-        return Meteor.ui._doc.annotate(str);
+        return Meteor.ui._doc.annotate(str, {onscreen:function() {
+          onscreens.push(this.id);
+        }});
       }));
     var groups = [];
     var html = calc(function(str, expected, noRange) {
@@ -13,7 +16,8 @@ Tinytest.add("livedocument - assembly", function(test) {
         groups.push(str);
       return str;
     });
-    test.equal(WrappedFrag(frag).html(), html);
+    var f = WrappedFrag(frag);
+    test.equal(f.html(), html);
 
     var actualGroups = [];
     var tempRange = new Meteor.ui._LiveRange(Meteor.ui._TAG, frag);
@@ -22,6 +26,13 @@ Tinytest.add("livedocument - assembly", function(test) {
         actualGroups.push(Meteor.ui._rangeToHtml(rng));
     });
     test.equal(actualGroups.join(','), groups.join(','));
+
+    f.hold();
+    Meteor.flush();
+    test.equal(onscreens.length, groups.length);
+    var uniqueOnscreens = _.uniq(onscreens);
+    test.equal(uniqueOnscreens.length, onscreens.length);
+    f.release();
   };
 
   doTest(function(A) { return "<p>Hello</p>"; });
