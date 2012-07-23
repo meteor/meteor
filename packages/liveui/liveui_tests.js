@@ -1,32 +1,6 @@
 
 (function() {
 
-///// WrappedFrag /////
-
-var WrappedFrag = function(frag) {
-  if (! (this instanceof WrappedFrag))
-    return new WrappedFrag(frag);
-
-  this.frag = frag;
-};
-WrappedFrag.prototype.rawHtml = function() {
-  return Meteor.ui._fragmentToHtml(this.frag);
-};
-WrappedFrag.prototype.html = function() {
-  return canonicalizeHtml(this.rawHtml());
-};
-WrappedFrag.prototype.hold = function() {
-  return Meteor.ui._Sarge.holdFrag(this.frag), this;
-};
-WrappedFrag.prototype.release = function() {
-  return Meteor.ui._Sarge.releaseFrag(this.frag), this;
-};
-WrappedFrag.prototype.node = function() {
-  return this.frag;
-};
-
-///// MISC /////
-
 var legacyLabels = {
   '*[id], #[name]': function(n) {
     var label = null;

@@ -16,6 +16,7 @@ Package.on_use(function (api) {
   api.add_files(['domutils.js'], 'client');
   api.add_files(['liveevents_w3c.js', 'liveevents_now3c.js'], 'client');
   api.add_files(['liveevents.js'], 'client');
+  api.add_files(['livedocument.js'], 'client');
   api.add_files(['liverange.js', 'liveui.js', 'innerhtml.js', 'patcher.js'],
                 'client');
 });
@@ -27,6 +28,7 @@ Package.on_test(function (api) {
   api.add_files('form_responder.js', 'server');
 
   api.add_files([
+    'livedocument_tests.js',
     'liverange_test_helpers.js',
     'liveui_tests.js',
     'liveui_tests.html',
