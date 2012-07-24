@@ -37,7 +37,7 @@ Tinytest.add("livedocument - assembly", function(test) {
     test.equal(uniqueOnlives.length, onlives.length);
     test.equal(ondeads.length, 0);
     //f.release(); XXXX
-    Meteor.ui._doc.cleanNodes(f.node()); // WHY DOESN'T THIS WORK
+    Meteor.ui._doc.cleanNodes(f.node());
 
     var numRanges = onlives.length;
     onlives.length = 0;
