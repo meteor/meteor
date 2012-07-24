@@ -1,11 +1,14 @@
 Tinytest.add("livedocument - assembly", function(test) {
 
   var doTest = function(calc) {
-    var onscreens = [];
+    var onlives = [];
+    var ondeads = [];
     var frag = Meteor.ui._doc.materialize(
       calc(function(str, expected) {
-        return Meteor.ui._doc.annotate(str, {onscreen:function() {
-          onscreens.push(this.id);
+        return Meteor.ui._doc.annotate(str, {onlive: function() {
+          onlives.push(this.id);
+        }, ondead: function() {
+          ondeads.push(this.id);
         }});
       }));
     var groups = [];
@@ -29,10 +32,18 @@ Tinytest.add("livedocument - assembly", function(test) {
 
     f.hold();
     Meteor.flush();
-    test.equal(onscreens.length, groups.length);
-    var uniqueOnscreens = _.uniq(onscreens);
-    test.equal(uniqueOnscreens.length, onscreens.length);
-    f.release();
+    test.equal(onlives.length, groups.length);
+    var uniqueOnlives = _.uniq(onlives);
+    test.equal(uniqueOnlives.length, onlives.length);
+    test.equal(ondeads.length, 0);
+    //f.release(); XXXX
+    Meteor.ui._doc.cleanNodes(f.node()); // WHY DOESN'T THIS WORK
+
+    var numRanges = onlives.length;
+    onlives.length = 0;
+    Meteor.flush();
+    test.equal(onlives.length, 0);
+    test.equal(ondeads.length, numRanges);
   };
 
   doTest(function(A) { return "<p>Hello</p>"; });

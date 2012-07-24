@@ -17,6 +17,13 @@ Meteor.ui._doc = Meteor.ui._doc || {};
   Meteor.ui._doc._newRanges = []; // [LiveRange, ...] until flush time
   Meteor.ui._doc._nextId = 1;
 
+  // ranges (/annotations) become "live" (range.live) when they go
+  // onscreen, and "dead" (range.dead) when they go offscreen.
+  // There are onlive and ondead callbacks.  Every range either
+  // becomes live and then eventually dead, with both callbacks,
+  // or is never externally seen to materialize.  This is determined
+  // at flush time.
+
   // XXX to mention:
   // - turning ranges into frags separately helps deal with
   //   mismatched tags
@@ -114,7 +121,7 @@ Meteor.ui._doc = Meteor.ui._doc || {};
           var range = new Meteor.ui._LiveRange(Meteor.ui._TAG, subFrag);
           // assign options to the LiveRange, including `id`
           _.extend(range, options);
-          // enqueue the new range for onscreen callback processing
+          // enqueue the new range for callback processing
           Meteor.ui._doc._newRanges.push(range);
 
           var next = comment.nextSibling;
@@ -164,26 +171,46 @@ Meteor.ui._doc = Meteor.ui._doc || {};
             html + "<!--" + LIVEUI_END_PREFIX + options.id + "-->");
   };
 
-  Meteor.ui._doc.poke = function(range) {
-    // XXX like Sarge.checkOffscreen
+  // possibly GC range, firing synchronous ondead() callbacks
+  // for `range` and potentially other ranges if they are
+  // currently "live"
+  Meteor.ui._doc.touch = function(range) {
+    if (range.dead)
+      return;
+
+    var node = range.firstNode();
+    if (! (node.parentNode &&
+           (Meteor.ui._isNodeOnscreen(node) ||
+            Meteor.ui._doc._isNodeHeld(node)))) {
+      // range is offscreen!
+      // kill all ranges in this fragment or detached DOM tree,
+      // including `range`
+      while (node.parentNode)
+        node = node.parentNode;
+
+      Meteor.ui._doc.cleanNodes(node.firstChild, node.lastChild);
+    }
   };
 
   Meteor.ui._doc.cleanNodes = function(start, end) {
-    // XXX like Sarge.shuck
+    // should accept any (start,end) that the LiveRange constructor does
+    var wrapper = new Meteor.ui._LiveRange(Meteor.ui._TAG, start, end);
+    wrapper.visit(function (isStart, range) {
+      if (isStart && range.live) {
+        range.live = false;
+        range.dead = true;
+        range.ondead && range.ondead();
+      }
+    });
+    wrapper.destroy(true);
   };
 
   Meteor.ui._doc._doCallbacks = function() {
     _.each(Meteor.ui._doc._newRanges, function(range) {
-      if (range.onscreen) {
-        var node = range.firstNode();
-        if (! (node.parentNode &&
-               (Meteor.ui._isNodeOnscreen(node) ||
-                Meteor.ui._doc._isNodeHeld(node))))
-          return; // range was created but isn't in the document at flush time
-        range.onscreen();
-        // existence of `killed=false` means range went onscreen and we'll
-        // have to call offscreen() later
-        range.killed = false;
+      Meteor.ui._doc.touch(range);
+      if (! range.dead) {
+        range.live = true;
+        range.onlive && range.onlive();
       }
     });
 
