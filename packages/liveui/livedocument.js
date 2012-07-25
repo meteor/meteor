@@ -153,7 +153,18 @@ Meteor.ui._doc = Meteor.ui._doc || {};
     cx.on_invalidate(Meteor.ui._doc._doCallbacks);
     cx.invalidate();
 
-    return makeFrag(topHtml);
+    var oldNumRanges = Meteor.ui._doc._newRanges.length;
+
+    var topFrag = makeFrag(topHtml);
+
+    // call "materialized" callbacks immediately
+    for(var i=oldNumRanges, N=Meteor.ui._doc._newRanges.length;
+        i<N; i++) {
+      var r = Meteor.ui._doc._newRanges[i];
+      r.materialized && r.materialized();
+    }
+
+    return topFrag;
   };
 
   Meteor.ui._doc.annotate = function(html, options) {
@@ -179,6 +190,9 @@ Meteor.ui._doc = Meteor.ui._doc || {};
       return;
 
     var node = range.firstNode();
+    if (! node)
+      throw new Error("Double-GCed range: "+range.id);
+
     if (! (node.parentNode &&
            (Meteor.ui._isNodeOnscreen(node) ||
             Meteor.ui._doc._isNodeHeld(node)))) {
@@ -194,13 +208,19 @@ Meteor.ui._doc = Meteor.ui._doc || {};
 
   // accepts any (start,end) that the LiveRange constructor does,
   // including just (start) or (frag)
+  // Remove all LiveRanges on the range of nodes from start to end,
+  // properly killing them and cleaning the
+  // nodes.  May be called as cleanNodes(fragment) or cleanNodes(node) as well.
   Meteor.ui._doc.cleanNodes = function(start, end) {
     var wrapper = new Meteor.ui._LiveRange(Meteor.ui._TAG, start, end);
     wrapper.visit(function (isStart, range) {
-      if (isStart && range.live) {
-        range.live = false;
+      if (isStart && ! range.dead) {
         range.dead = true;
-        range.ondead && range.ondead();
+        if (range.live) {
+          // was live before, so fire callback
+          range.live = false;
+          range.ondead && range.ondead();
+        }
       }
     });
     wrapper.destroy(true);

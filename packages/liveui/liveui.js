@@ -81,7 +81,8 @@ Meteor.ui = Meteor.ui || {};
           update(range);
         });
       },
-      eventHandlers: options.events && unpackEventMap(options.events)
+      eventHandlers: options.events && unpackEventMap(options.events),
+      data: options.data
     };
     return Meteor.ui._doc.annotate(html, ann);
   };
@@ -503,22 +504,8 @@ Meteor.ui = Meteor.ui || {};
     // properly disposing of any referenced chunks and cleaning the
     // nodes.  May be called as shuck(fragment) or shuck(node) as well.
     shuck: function (start, end) {
-      var wrapper = new Meteor.ui._LiveRange(Meteor.ui._tag, start, end);
-      wrapper.visit(function (is_start, range) {
-        is_start && Sarge.killRange(range);
-      });
-      wrapper.destroy(true);
-    },
-
-    // Mark a single range as killed and call its finalizer.
-    killRange: function(range) {
-      if (! range.killed) {
-        range.killed = true;
-        // only one of these ever scheduled per range:
-        Sarge.atFlushTime(function() {
-          range.destroyed && range.destroyed();
-        });
-      }
+      // XXX
+      Meteor.ui._doc.cleanNodes(start, end);
     },
 
     // Call f() at next flush time.  If it's already flush time,
