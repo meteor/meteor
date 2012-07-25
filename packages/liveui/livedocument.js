@@ -192,8 +192,9 @@ Meteor.ui._doc = Meteor.ui._doc || {};
     }
   };
 
+  // accepts any (start,end) that the LiveRange constructor does,
+  // including just (start) or (frag)
   Meteor.ui._doc.cleanNodes = function(start, end) {
-    // should accept any (start,end) that the LiveRange constructor does
     var wrapper = new Meteor.ui._LiveRange(Meteor.ui._TAG, start, end);
     wrapper.visit(function (isStart, range) {
       if (isStart && range.live) {

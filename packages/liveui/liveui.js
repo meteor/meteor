@@ -4,36 +4,89 @@ Meteor.ui = Meteor.ui || {};
 
   //////////////////// PUBLIC API
 
-  Meteor.ui.render = function (html_func, options) {
-    if (typeof html_func !== "function")
+  Meteor.ui._inRender = false;
+
+  Meteor.ui.render = function (htmlFunc, options) {
+    if (typeof htmlFunc !== "function")
       throw new Error("Meteor.ui.render() requires a function as its first argument.");
 
-    if (Materializer.current)
+    if (Meteor.ui._inRender)
       throw new Error("Can't nest Meteor.ui.render.");
 
-    return renderChunk(html_func, options, "fragment").containerNode();
+    Meteor.ui._inRender = true;
+    try {
+      return Meteor.ui._doc.materialize(
+        Meteor.ui.chunk(htmlFunc, options));
+    } finally {
+      Meteor.ui._inRender = false;
+    }
   };
 
-  Meteor.ui.chunk = function(html_func, options) {
-    if (typeof html_func !== "function")
+  Meteor.ui.chunk = function(htmlFunc, options) {
+    if (typeof htmlFunc !== "function")
       throw new Error("Meteor.ui.chunk() requires a function as its first argument.");
 
-    if (Materializer.current)
-      return Materializer.current.placeholder(function(comment) {
-        // Wrap a new LiveRange around the comment, which becomes
-        // the chunk's LiveRange.
-        var range = new Meteor.ui._LiveRange(
-          Meteor.ui._tag, comment, comment, true);
-        // replace, don't patch, the placeholder comment
-        renderChunk(html_func, options, "replace", range);
-      });
+    options = options || {};
 
-    // not inside Meteor.ui.render, just return the full HTML
-    var html = html_func(options && options.data);
-    if (typeof html !== "string")
-      throw new Error("Render function must return a string");
-    return html;
+    // bind htmlFunc to options.data and warn if it doesn't
+    // return a string
+    var origHtmlFunc = htmlFunc;
+    htmlFunc = function() {
+      var html = origHtmlFunc(options.data);
+      if (typeof html !== "string")
+        throw new Error("Render function must return a string");
+      return html;
+    };
+
+    if (! Meteor.ui._inRender)
+      // not inside Meteor.ui.render, just return the HTML
+      // without annotations or dependencies
+      return htmlFunc();
+
+    // XXX temporary backwards compatibility?
+    if (options.event_data)
+      options.data = options.event_data;
+
+    // Re-run htmlFunc and update `range` if it's live.
+    var update = function(range) {
+      if (range.live) {
+        var newCx = new Meteor.deps.Context;
+        var frag = Meteor.ui._doc.materialize(
+          newCx.run(htmlFunc));
+
+        // Perform patching
+        var nodeMatches = matchChunks(range, frag);
+        range.operate(function(start, end) {
+          Meteor.ui._doc.cleanNodes(start, end);
+          patch(start.parentNode, frag,
+                start.previousSibling, end.nextSibling,
+                nodeMatches);
+        });
+        wireEvents(range, true);
+
+        newCx.on_invalidate(function() {
+          update(range);
+        });
+      }
+    };
+
+    var cx = new Meteor.deps.Context;
+    // run htmlFunc in a deps context!
+    var html = cx.run(htmlFunc);
+    var ann = {
+      onlive: function() {
+        var range = this;
+        wireEvents(range, true);
+        cx.on_invalidate(function() {
+          update(range);
+        });
+      },
+      eventHandlers: options.events && unpackEventMap(options.events)
+    };
+    return Meteor.ui._doc.annotate(html, ann);
   };
+
+  ///////////////////////////
 
   Meteor.ui.listChunk = function (observable, doc_func, else_func, options) {
     if (arguments.length === 3 && typeof else_func === "object") {
