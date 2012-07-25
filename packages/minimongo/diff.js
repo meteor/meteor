@@ -202,7 +202,7 @@ LocalCollection._diffQuery = function (old_results, new_results, observer, deepc
           scan_to(old_doc_idx);
           if (! _.isEqual(old_doc, new_doc)) {
             observer.changed && observer.changed(
-              mdc(new_doc), new_idx + bump_list.length, old_doc);
+              mdc(new_doc), new_idx + bump_list.length, mdc(old_doc));
           }
           old_idx++;
         } else {
