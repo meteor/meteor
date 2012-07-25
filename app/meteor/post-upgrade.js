@@ -1,10 +1,8 @@
-console.log("Upgrade complete.");
-
 try {
   // XXX can't get this from updater.js because in 0.3.7 and before the
   // updater didn't have the right NODE_PATH set. At some point we can
   // remove this and just use updater.CURRENT_VERSION.
-  var VERSION = "0.3.7";
+  var VERSION = "0.3.8";
 
   var fs = require('fs');
   var path = require('path');
@@ -32,3 +30,5 @@ try {
 } catch (err) {
   // don't print a weird error message if something goes wrong.
 }
+
+console.log("Upgrade complete.");

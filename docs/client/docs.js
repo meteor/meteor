@@ -1,4 +1,4 @@
-METEOR_VERSION = "0.3.7";
+METEOR_VERSION = "0.3.8";
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
@@ -190,6 +190,7 @@ var toc = [
     "backbone",
     "bootstrap",
     "coffeescript",
+    "force-ssl",
     "jquery",
     "less",
     "sass",

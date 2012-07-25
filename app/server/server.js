@@ -30,7 +30,7 @@ var init_keepalive = function () {
 
   setInterval(function () {
     keepalive_count ++;
-    if (keepalive_count >= 2) {
+    if (keepalive_count >= 3) {
       console.log("Failed to receive keepalive! Exiting.");
       process.exit(1);
     }
@@ -80,21 +80,6 @@ var run = function () {
 
   app_html = runtime_config(app_html);
 
-  app.use(function (req, res) {
-    // prevent favicon.ico and robots.txt from returning app_html
-    if (_.indexOf(['/favicon.ico', '/robots.txt'], req.url) !== -1) {
-      res.writeHead(404);
-      res.end();
-      return;
-    }
-
-    res.writeHead(200, {'Content-Type': 'text/html'});
-    if (supported_browser(req.headers['user-agent']))
-      res.write(app_html);
-    else
-      res.write(unsupported_html);
-    res.end();
-  });
 
   // read bundle config file
   var info_raw =
@@ -125,6 +110,22 @@ var run = function () {
       // error message on parse error. it's what require() uses to
       // generate its errors.
       require('vm').runInThisContext(code, filename, true);
+    });
+
+    app.use(function (req, res) {
+      // prevent favicon.ico and robots.txt from returning app_html
+      if (_.indexOf(['/favicon.ico', '/robots.txt'], req.url) !== -1) {
+        res.writeHead(404);
+        res.end();
+        return;
+      }
+
+      res.writeHead(200, {'Content-Type': 'text/html'});
+      if (supported_browser(req.headers['user-agent']))
+        res.write(app_html);
+      else
+        res.write(unsupported_html);
+      res.end();
     });
 
     // run the user startup hooks.

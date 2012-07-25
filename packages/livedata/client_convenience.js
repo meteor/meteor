@@ -2,7 +2,8 @@
   // By default, try to connect back to the same endpoint as the page
   // was served from.
   var ddp_endpoint = '/';
-  if (__meteor_runtime_config__.DEFAULT_DDP_ENDPOINT)
+  if (typeof __meteor_runtime_config__ !== "undefined" &&
+      __meteor_runtime_config__.DEFAULT_DDP_ENDPOINT)
     ddp_endpoint = __meteor_runtime_config__.DEFAULT_DDP_ENDPOINT;
 
   _.extend(Meteor, {

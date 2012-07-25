@@ -1363,7 +1363,7 @@ Tinytest.add("liveui - event handling", function(test) {
   div.kill();
   Meteor.flush();
 
-  // stopPropagationd doesn't prevent other event maps from
+  // stopPropagation doesn't prevent other event maps from
   // handling same node
   event_buf.length = 0;
   div = OnscreenDiv(Meteor.ui.render(function() {
@@ -1372,10 +1372,27 @@ Tinytest.add("liveui - event handling", function(test) {
         return '<span id="foozy" class="a b c">Hello</span>';
       }, {events: eventmap("click .c"), event_data:event_buf});
     }, {events: {"click .b": function(evt) {
-      event_buf.push("click .b"); evt.stopPropagation(); return false;}}});
+      event_buf.push("click .b"); evt.stopPropagation();}}});
   }, {events: eventmap("click .a"), event_data:event_buf}));
   clickElement(getid("foozy"));
   test.equal(event_buf, ['click .c', 'click .b', 'click .a']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+  // stopImmediatePropagation DOES
+  event_buf.length = 0;
+  div = OnscreenDiv(Meteor.ui.render(function() {
+    return Meteor.ui.chunk(function() {
+      return Meteor.ui.chunk(function() {
+        return '<span id="foozy" class="a b c">Hello</span>';
+      }, {events: eventmap("click .c"), event_data:event_buf});
+    }, {events: {"click .b": function(evt) {
+      event_buf.push("click .b");
+      evt.stopImmediatePropagation();}}});
+  }, {events: eventmap("click .a"), event_data:event_buf}));
+  clickElement(getid("foozy"));
+  test.equal(event_buf, ['click .c', 'click .b']);
   event_buf.length = 0;
   div.kill();
   Meteor.flush();
@@ -1448,7 +1465,7 @@ Tinytest.add("liveui - event handling", function(test) {
   }, { events: eventmap('change b', 'change input', event_buf),
        event_data:event_buf }));
   Meteor.flush();
-  test.equal(div.text(), 'else');
+  test.equal(div.text().match(/\S+/)[0], 'else');
   // click on input
   var doClick = function() {
     clickElement(div.node().getElementsByTagName('input')[0]);
@@ -1461,13 +1478,13 @@ Tinytest.add("liveui - event handling", function(test) {
   lst.push({_id:'foo'});
   lst.callbacks.added(lst[0], 0);
   Meteor.flush();
-  test.equal(div.text(), 'foo');
+  test.equal(div.text().match(/\S+/)[0], 'foo');
   doClick();
   // remove item, back to "else" case
   lst.callbacks.removed(lst[0], 0);
   lst.pop();
   Meteor.flush();
-  test.equal(div.text(), 'else');
+  test.equal(div.text().match(/\S+/)[0], 'else');
   doClick();
   // cleanup
   div.kill();

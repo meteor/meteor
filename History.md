@@ -1,6 +1,10 @@
 
 ## vNEXT
 
+* Fix `stopImmediatePropagation()`. #205
+
+## v0.3.8
+
 * HTTPS support
   * Add `force-ssl` package to require site to load over HTTPS.
   * Use HTTPS for install script and `meteor update`.
@@ -10,7 +14,7 @@
   * Implement dotted path traversal for helpers and methods.
   * Allow functions in helper arguments.
   * Change helper nesting rules to allow functions as arguments.
-  * Use `{{this.foo}}` to avoid invoking helper `foo`.
+  * Fix `{{this.foo}}` to never invoke helper `foo`.
   * Make event handler `this` reflect the node that matched the selector instead of the event target node.
   * Fix keyword arguments to helpers.
 
@@ -19,6 +23,8 @@
 * Upgrade bootstrap to version 2.0.4. #173
 
 * Print changelog after `meteor update`.
+
+* Fix mouseenter and mouseleave events. #224
 
 * Fix issue with spurious heartbeat failures on busy connections.
 
