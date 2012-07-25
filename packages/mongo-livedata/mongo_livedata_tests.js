@@ -337,9 +337,17 @@ Tinytest.addAsync("mongo-livedata - models", function (test, onComplete) {
     test.equal(id.length, 36);
     test.equal(coll.find({run: run}).count(), 1);
     assert_record(coll.findOne({run: run}));
+    // check without arguements
+    assert_record(coll.findOne());
+    
     assert_record(coll.find({run: run}).fetch().shift());
     
     coll.find({run: run}).forEach(function(doc) {
+      assert_record(doc);
+    });
+    
+    // check without arguements
+    coll.find().forEach(function(doc) {
       assert_record(doc);
     });
   });

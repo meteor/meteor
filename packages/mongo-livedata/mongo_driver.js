@@ -233,18 +233,18 @@ _Mongo.prototype.update = function (collection_name, ctor, selector, mod, option
 _Mongo.prototype.find = function (collection_name, ctor, selector, options) {
   var self = this;
 
-  if (arguments.length === 1)
+  if (arguments.length === 2)
     selector = {};
-
+  
   return _Mongo._makeCursor(self, collection_name, ctor, selector, options);
 };
 
 _Mongo.prototype.findOne = function (collection_name, ctor, selector, options) {
   var self = this;
 
-  if (arguments.length === 1)
+  if (arguments.length === 2)
     selector = {};
-
+  
   return self.find(collection_name, ctor, selector, options).fetch()[0];
 };
 
