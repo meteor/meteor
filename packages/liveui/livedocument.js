@@ -227,7 +227,12 @@ Meteor.ui._doc = Meteor.ui._doc || {};
   };
 
   Meteor.ui._doc._doCallbacks = function() {
-    _.each(Meteor.ui._doc._newRanges, function(range) {
+    // take newRanges local so it can be modified
+    var newRanges = Meteor.ui._doc._newRanges;
+    Meteor.ui._doc._newAnnotations = {};
+    Meteor.ui._doc._newRanges = [];
+
+    _.each(newRanges, function(range) {
       Meteor.ui._doc.touch(range);
       if (! range.dead) {
         range.live = true;
@@ -235,8 +240,6 @@ Meteor.ui._doc = Meteor.ui._doc || {};
       }
     });
 
-    Meteor.ui._doc._newAnnotations = {};
-    Meteor.ui._doc._newRanges.length = 0;
   };
 
   // "node holding" is a facility used for unit tests where

@@ -49,10 +49,17 @@ Meteor.ui = Meteor.ui || {};
 
     // Re-run htmlFunc and update `range` if it's live.
     var update = function(range) {
+      Meteor.ui._doc.touch(range);
       if (range.live) {
         var newCx = new Meteor.deps.Context;
-        var frag = Meteor.ui._doc.materialize(
-          newCx.run(htmlFunc));
+        var frag;
+        Meteor.ui._inRender = true;
+        try {
+          frag = Meteor.ui._doc.materialize(
+            newCx.run(htmlFunc));
+        } finally {
+          Meteor.ui._inRender = false;
+        }
 
         // Perform patching
         var nodeMatches = matchChunks(range, frag);
@@ -67,19 +74,24 @@ Meteor.ui = Meteor.ui || {};
         newCx.on_invalidate(function() {
           update(range);
         });
+        range.context = newCx;
       }
     };
 
-    var cx = new Meteor.deps.Context;
+    var firstCx = new Meteor.deps.Context;
     // run htmlFunc in a deps context!
-    var html = cx.run(htmlFunc);
+    var html = firstCx.run(htmlFunc);
     var ann = {
       onlive: function() {
         var range = this;
         wireEvents(range, true);
-        cx.on_invalidate(function() {
+        range.context = firstCx;
+        firstCx.on_invalidate(function() {
           update(range);
         });
+      },
+      ondead: function() {
+        this.context && this.context.invalidate();
       },
       eventHandlers: options.events && unpackEventMap(options.events),
       data: options.data
