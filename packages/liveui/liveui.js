@@ -61,6 +61,8 @@ Meteor.ui = Meteor.ui || {};
           Meteor.ui._inRender = false;
         }
 
+        Meteor.ui._wrapFragmentForContainer(frag, range.containerNode());
+
         // Perform patching
         var nodeMatches = matchChunks(range, frag);
         range.operate(function(start, end) {

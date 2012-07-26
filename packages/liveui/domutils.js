@@ -121,3 +121,17 @@ Meteor.ui._isNodeOnscreen = function (node) {
 
   return Meteor.ui._elementContains(document.body, node);
 };
+
+Meteor.ui._wrapFragmentForContainer = function(frag, container) {
+  if (container && container.nodeName === "TABLE" &&
+      _.any(frag.childNodes,
+            function(n) { return n.nodeName === "TR"; })) {
+    // Avoid putting a TR directly in a TABLE without an
+    // intervening TBODY, because it doesn't work in IE.  We do
+    // the same thing on all browsers for ease of testing
+    // and debugging.
+    var tbody = document.createElement("TBODY");
+    tbody.appendChild(frag);
+    frag.appendChild(tbody);
+  }
+};

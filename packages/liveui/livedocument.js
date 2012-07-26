@@ -126,20 +126,8 @@ Meteor.ui._doc = Meteor.ui._doc || {};
 
           var next = comment.nextSibling;
 
-          var container = comment.parentNode;
-          if (container && container.nodeName === "TABLE" &&
-              _.any(subFrag.childNodes,
-                    function(n) { return n.nodeName === "TR"; })) {
-            // Avoid putting a TR directly in a TABLE without an
-            // intervening TBODY, because it doesn't work in IE.  We do
-            // the same thing on all browsers for ease of testing
-            // and debugging.
-            var tbody = document.createElement("TBODY");
-            tbody.appendChild(subFrag);
-            comment.parentNode.replaceChild(tbody, comment);
-          } else {
-            comment.parentNode.replaceChild(subFrag, comment);
-          }
+          Meteor.ui._wrapFragmentForContainer(subFrag, comment.parentNode);
+          comment.parentNode.replaceChild(subFrag, comment);
 
           return next;
         }
