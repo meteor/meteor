@@ -9,7 +9,7 @@ Package.on_use(function (api) {
 
 Package.on_test(function (api) {
   api.use(['tinytest']);
-  api.use(['liverange', 'test-helpers'], 'client');
+  api.use(['liverange', 'test-helpers', 'domutils'], 'client');
 
   api.add_files([
     'liverange_test_helpers.js',

@@ -13,7 +13,7 @@ WrappedFrag = function(frag) {
 };
 
 WrappedFrag.prototype.rawHtml = function() {
-  return Meteor.ui._fragmentToHtml(this.frag);
+  return DomUtils.fragmentToHtml(this.frag);
 };
 
 WrappedFrag.prototype.html = function() {

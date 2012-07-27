@@ -50,7 +50,6 @@ Spark.render = function (htmlFunc) {
 
   // HERE
   //
-  // - Move LiveRange to global scope
   // - Create DomUtils package (or something like that)
   // - First thing in DomUtils is htmlToFragment from innerhtml.js
   //   - Later, will add stuff from domutils.js

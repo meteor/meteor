@@ -97,7 +97,7 @@ Meteor.ui._doc = Meteor.ui._doc || {};
     };
 
     var makeFrag = function(html) {
-      var frag = Meteor.ui._htmlToFragment(html);
+      var frag = DomUtils.htmlToFragment(html);
       // empty frag becomes HTML comment <!--empty-->
       if (! frag.firstChild)
         frag.appendChild(document.createComment("empty"));

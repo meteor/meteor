@@ -137,7 +137,7 @@ Tinytest.add("patcher - copyAttributes", function(test) {
         });
         buf.push('></', tagName, '>');
         var nodeHtml = buf.join('');
-        var frag = Meteor.ui._htmlToFragment(nodeHtml);
+        var frag = DomUtils.htmlToFragment(nodeHtml);
         var n = frag.firstChild;
         if (! node) {
           node = n;

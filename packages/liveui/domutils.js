@@ -35,7 +35,7 @@ Meteor.ui._findElement = function(contextNode, selector) {
     // Sizzle doesn't work on a DocumentFragment, but it does work on
     // a descendent of one.
     var frag = contextNode;
-    var container = Meteor.ui._fragmentToContainer(frag);
+    var container = DomUtils.fragmentToContainer(frag);
     var results = $(container).find(selector);
     // put nodes back into frag
     while (container.firstChild)

@@ -206,7 +206,7 @@ Tinytest.add("liveui - tables", function(test) {
   test.equal(R.numListeners(), 0);
 
   div = OnscreenDiv();
-  div.node().appendChild(Meteor.ui._htmlToFragment("<table><tr></tr></table>"));
+  div.node().appendChild(DomUtils.htmlToFragment("<table><tr></tr></table>"));
   R.set(3);
   div.node().getElementsByTagName("tr")[0].appendChild(Meteor.ui.render(
     function() {

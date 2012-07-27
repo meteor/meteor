@@ -13,7 +13,7 @@ var OnscreenDiv = function(optFrag) {
   if (! (this instanceof OnscreenDiv))
     return new OnscreenDiv(optFrag);
 
-  this.div = Meteor.ui._htmlToFragment(
+  this.div = DomUtils.htmlToFragment(
     '<div class="OnscreenDiv" style="display: none"></div>').firstChild;
   document.body.appendChild(this.div);
 

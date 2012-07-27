@@ -26,7 +26,7 @@ Tinytest.add("livedocument - assembly", function(test) {
     var tempRange = new LiveRange(Meteor.ui._TAG, frag);
     tempRange.visit(function(isStart, rng) {
       if (! isStart)
-        actualGroups.push(Meteor.ui._rangeToHtml(rng));
+        actualGroups.push(rangeToHtml(rng));
     });
     test.equal(actualGroups.join(','), groups.join(','));
 

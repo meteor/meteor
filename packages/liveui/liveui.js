@@ -444,7 +444,7 @@ Meteor.ui = Meteor.ui || {};
       try { var html = htmlFunc(); }
       finally { Materializer.current = previous; }
 
-      var frag = Meteor.ui._htmlToFragment(html);
+      var frag = DomUtils.htmlToFragment(html);
       // empty frag becomes HTML comment <!--empty-->
       if (! frag.firstChild)
         frag.appendChild(document.createComment("empty"));
