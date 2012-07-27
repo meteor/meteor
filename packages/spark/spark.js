@@ -18,7 +18,7 @@ _.extend(Spark._Renderer.prototype, {
     var chars =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     for (var i = 0; i < 8; i++) {
-      id += hexDigits.substr(Math.floor(Meteor.random() * 0x10), 1);
+      id += hexDigits.substr(Math.floor(Meteor.random() * 64), 1);
     }
     return id;
   },
