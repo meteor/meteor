@@ -4,7 +4,7 @@ Tinytest.add("templating - assembly", function (test) {
   // Test for a bug that made it to production -- after a replacement,
   // we need to also check the newly replaced node for replacements
   var frag = Meteor.ui.render(Template.test_assembly_a0);
-  test.equal(canonicalizeHtml(Meteor.ui._fragmentToHtml(frag)),
+  test.equal(canonicalizeHtml(DomUtils.fragmentToHtml(frag)),
                "Hi");
 
   // Another production bug -- we must use LiveRange to replace the
