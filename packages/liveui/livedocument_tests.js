@@ -23,7 +23,7 @@ Tinytest.add("livedocument - assembly", function(test) {
     test.equal(f.html(), html);
 
     var actualGroups = [];
-    var tempRange = new Meteor.ui._LiveRange(Meteor.ui._TAG, frag);
+    var tempRange = new LiveRange(Meteor.ui._TAG, frag);
     tempRange.visit(function(isStart, rng) {
       if (! isStart)
         actualGroups.push(Meteor.ui._rangeToHtml(rng));

@@ -28,7 +28,7 @@ _.extend(Spark._Renderer.prototype, {
   annotate: function (html, tag, what) {
     var id = tag + "-" + this.createId();
     this.annotations[id] = function (start, end) {
-      var range = new Meteor.ui._LiveRange(tag, start, end);
+      var range = new LiveRange(tag, start, end);
       if (what instanceof Function)
         what(range);
       else
@@ -67,7 +67,7 @@ Spark.setContext = function (html, context) {
 };
 
 Spark.getContext = function (node) {
-  var range = Meteor.ui._LiveRange.findRange("_context", node);
+  var range = LiveRange.findRange("_context", node);
   return range && range.context;
 }
 

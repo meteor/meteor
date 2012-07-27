@@ -4,7 +4,7 @@
 /******************************************************************************/
 
 var create = function (id, start, end, inner, tag) {
-  var ret = new Meteor.ui._LiveRange(tag || 'a', start, end, inner);
+  var ret = new LiveRange(tag || 'a', start, end, inner);
   ret.id = id;
   return ret;
 };
@@ -27,7 +27,7 @@ var dump = function (what, tag) {
 
   if (typeof what === 'object' && what.nodeType === 11 /* DocumentFragment */) {
     if (what.firstChild) {
-      var range = new Meteor.ui._LiveRange(tag || 'a', what);
+      var range = new LiveRange(tag || 'a', what);
       range.visit(emit, emit);
       range.destroy();
     }
@@ -43,11 +43,11 @@ var dump = function (what, tag) {
 // actual can be a range or a fragment
 var assert_dump = function (test, expected, actual, tag) {
   test.equal(dump(actual), expected, "Tree doesn't match");
-  if (actual instanceof Meteor.ui._LiveRange)
+  if (actual instanceof LiveRange)
     check_liverange_integrity(actual);
   else {
     if (actual.firstChild) {
-      var range = new Meteor.ui._LiveRange(tag || 'a', actual);
+      var range = new LiveRange(tag || 'a', actual);
       check_liverange_integrity(range);
       range.destroy();
     }
@@ -92,7 +92,7 @@ var assert_contained = function (r, expected) {
 Tinytest.add("liverange - single node", function (test) {
   var f = frag("<div id=1></div>");
   var r_a = create("a", f);
-  test.instanceOf(r_a, Meteor.ui._LiveRange);
+  test.instanceOf(r_a, LiveRange);
   assert_dump(test, "<a><1></1></a>", r_a);
   assert_dump(test, "<a><1></1></a>", f);
   assert_contained(r_a, {range: r_a, children: []});
@@ -481,7 +481,7 @@ var makeTestPattern = function(codedStr) {
       // close range
       var start = starts.pop();
       var range =
-            new Meteor.ui._LiveRange(
+            new LiveRange(
               self.tag, start[0].childNodes[start[1]],
               start[0].lastChild);
       range.letter = c.toUpperCase();
@@ -506,12 +506,12 @@ var makeTestPattern = function(codedStr) {
   };
 
   self.findRange = function(node) {
-    return Meteor.ui._LiveRange.findRange(self.tag, node);
+    return LiveRange.findRange(self.tag, node);
   };
 
   self.currentString = function() {
     var buf = [];
-    var tempRange = new Meteor.ui._LiveRange(self.tag, self.frag);
+    var tempRange = new LiveRange(self.tag, self.frag);
     tempRange.visit(function(is_start, range) {
       buf.push(is_start ?
                range.letter.toUpperCase() :
@@ -603,11 +603,11 @@ Tinytest.add("liverange - destroy", function(test) {
   var frag = document.createDocumentFragment();
   var txt = document.createComment("pudding");
   frag.appendChild(txt);
-  var rng5 = new Meteor.ui._LiveRange('_pudding', txt);
-  var rng4 = new Meteor.ui._LiveRange('_pudding', txt);
-  var rng3 = new Meteor.ui._LiveRange('_pudding', txt);
-  var rng2 = new Meteor.ui._LiveRange('_pudding', txt);
-  var rng1 = new Meteor.ui._LiveRange('_pudding', txt);
+  var rng5 = new LiveRange('_pudding', txt);
+  var rng4 = new LiveRange('_pudding', txt);
+  var rng3 = new LiveRange('_pudding', txt);
+  var rng2 = new LiveRange('_pudding', txt);
+  var rng1 = new LiveRange('_pudding', txt);
   rng1.num = 1;
   rng2.num = 2;
   rng3.num = 3;

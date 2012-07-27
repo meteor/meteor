@@ -91,7 +91,7 @@ Tinytest.add("patcher - basic", function(test) {
   test.isTrue(ret);
   assert_html(x, "<i><u>bar</u><s>baz</s></i>");
 
-  var LiveRange = Meteor.ui._LiveRange;
+  var LiveRange = LiveRange;
   var t = "_foo";
   var liverange = function(start, end, inner) {
     return new LiveRange(t, start, end, inner);

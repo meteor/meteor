@@ -324,7 +324,7 @@ Meteor.ui = Meteor.ui || {};
     };
 
     if (! range)
-      range = new Meteor.ui._LiveRange(Meteor.ui._tag, frag);
+      range = new LiveRange(Meteor.ui._tag, frag);
 
     // Table-body fix:  if container is a table and frag
     // contains a TR, wrap fragment in a TBODY on all browsers,
@@ -655,7 +655,7 @@ Meteor.ui = Meteor.ui || {};
     if (! curNode)
       return;
 
-    var innerRange = Meteor.ui._LiveRange.findRange(Meteor.ui._tag, curNode);
+    var innerRange = LiveRange.findRange(Meteor.ui._tag, curNode);
 
     var type = event.type;
 
@@ -702,7 +702,7 @@ Meteor.ui = Meteor.ui || {};
 
   // find the innermost enclosing liverange that has event data
   var findEventData = function(node) {
-    var innerRange = Meteor.ui._LiveRange.findRange(Meteor.ui._tag, node);
+    var innerRange = LiveRange.findRange(Meteor.ui._tag, node);
 
     for(var range = innerRange; range; range = range.findParent())
       if (range.data)
@@ -781,7 +781,7 @@ Meteor.ui = Meteor.ui || {};
 
     // create a temporary range around newFrag in order
     // to visit it.
-    var tempRange = new Meteor.ui._LiveRange(Meteor.ui._tag, newFrag);
+    var tempRange = new LiveRange(Meteor.ui._tag, newFrag);
     // visit new frag
     eachKeyedChunk(tempRange, function(r, path) {
       var oldRange = oldChunks[path];
@@ -828,7 +828,7 @@ Meteor.ui = Meteor.ui || {};
   var patch = function(tgtParent, srcParent, tgtBefore, tgtAfter, nodeMatches) {
 
     var copyFunc = function(t, s) {
-      Meteor.ui._LiveRange.transplant_tag(Meteor.ui._tag, t, s);
+      LiveRange.transplant_tag(Meteor.ui._tag, t, s);
     };
 
     var patcher = new Meteor.ui._Patcher(
@@ -862,7 +862,7 @@ Meteor.ui = Meteor.ui || {};
             // range match!  for constant chunk
             if (patcher.match(pair[0], pair[1], null, true)) {
               patcher.skipToSiblings(pair[2], pair[3]);
-              Meteor.ui._LiveRange.transplant_range(
+              LiveRange.transplant_range(
                 pair[0], pair[2], pair[4]);
             }
           } else {

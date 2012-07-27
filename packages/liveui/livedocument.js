@@ -118,7 +118,7 @@ Meteor.ui._doc = Meteor.ui._doc || {};
           Meteor.ui._doc._newAnnotations[id] = null;
 
           var subFrag = makeFrag(html);
-          var range = new Meteor.ui._LiveRange(Meteor.ui._TAG, subFrag);
+          var range = new LiveRange(Meteor.ui._TAG, subFrag);
           // assign options to the LiveRange, including `id`
           _.extend(range, options);
           // enqueue the new range for callback processing
@@ -200,7 +200,7 @@ Meteor.ui._doc = Meteor.ui._doc || {};
   // properly killing them and cleaning the
   // nodes.  May be called as cleanNodes(fragment) or cleanNodes(node) as well.
   Meteor.ui._doc.cleanNodes = function(start, end) {
-    var wrapper = new Meteor.ui._LiveRange(Meteor.ui._TAG, start, end);
+    var wrapper = new LiveRange(Meteor.ui._TAG, start, end);
     wrapper.visit(function (isStart, range) {
       if (isStart && ! range.dead) {
         range.dead = true;
