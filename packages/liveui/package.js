@@ -5,7 +5,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use('livedata');
-  api.use(['underscore', 'session'], 'client');
+  api.use(['underscore', 'session', 'liverange'], 'client');
 
   // XXX Depends on jquery because we need a selector engine to resolve
   // event maps. What would be nice is, if you've included jquery or
@@ -17,7 +17,7 @@ Package.on_use(function (api) {
   api.add_files(['liveevents_w3c.js', 'liveevents_now3c.js'], 'client');
   api.add_files(['liveevents.js'], 'client');
   api.add_files(['livedocument.js'], 'client');
-  api.add_files(['liverange.js', 'liveui.js', 'innerhtml.js', 'patcher.js'],
+  api.add_files(['liveui.js', 'innerhtml.js', 'patcher.js'],
                 'client');
 });
 
@@ -29,10 +29,8 @@ Package.on_test(function (api) {
 
   api.add_files([
     'livedocument_tests.js',
-    'liverange_test_helpers.js',
     'liveui_tests.js',
     'liveui_tests.html',
-    'liverange_tests.js',
     'patcher_tests.js',
     'liveevents_tests.js'
   ], 'client');
