@@ -61,7 +61,7 @@ Meteor.ui = Meteor.ui || {};
           Meteor.ui._inRender = false;
         }
 
-        Meteor.ui._wrapFragmentForContainer(frag, range.containerNode());
+        DomUtils.wrapFragmentForContainer(frag, range.containerNode());
 
         // Perform patching
         var nodeMatches = matchChunks(range, frag);
@@ -540,7 +540,7 @@ Meteor.ui = Meteor.ui || {};
       var node = range.firstNode();
 
       if (node.parentNode &&
-          (Meteor.ui._isNodeOnscreen(node) || Sarge.isNodeHeld(node)))
+          (DomUtils.isInDocument(node) || Sarge.isNodeHeld(node)))
         return false;
 
       while (node.parentNode)
@@ -673,7 +673,7 @@ Meteor.ui = Meteor.ui || {};
         var selector = h.selector;
         if (selector) {
           var contextNode = range.containerNode();
-          var results = Meteor.ui._findElement(contextNode, selector);
+          var results = DomUtils.findElement(contextNode, selector);
           if (! _.contains(results, curNode))
             continue;
         } else {
@@ -757,7 +757,7 @@ Meteor.ui = Meteor.ui || {};
     var collectLabeledNodes = function(range, preserveMap) {
       var labeledNodes = {};
       _.each(preserveMap, function(labelFunc, sel) {
-        var matchingNodes = Meteor.ui._findElementInRange(
+        var matchingNodes = DomUtils.findElementInRange(
           range.firstNode(), range.lastNode(), sel);
         _.each(matchingNodes, function(n) {
           // labelFunc can be a function or a constant,
@@ -857,7 +857,7 @@ Meteor.ui = Meteor.ui || {};
       if (pair) {
         var tgt = pair[0];
         if (! lastTgtMatch ||
-            Meteor.ui._elementOrder(lastTgtMatch, tgt) > 0) {
+            DomUtils.elementOrder(lastTgtMatch, tgt) > 0) {
           if (pair.rangeMatch) {
             // range match!  for constant chunk
             if (patcher.match(pair[0], pair[1], null, true)) {

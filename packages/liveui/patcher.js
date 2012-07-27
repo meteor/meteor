@@ -93,7 +93,6 @@ Meteor.ui._Patcher.prototype.match = function(
 
   var starting = ! lastKeptTgt;
   var finishing = ! tgt;
-  var elementContains = Meteor.ui._elementContains;
 
   if (! starting) {
     // move lastKeptTgt/lastKeptSrc forward and out,
@@ -101,7 +100,7 @@ Meteor.ui._Patcher.prototype.match = function(
     // replacing as we go.  If tgt/src is falsy, we make it to the
     // top level.
     while (lastKeptTgt.parentNode !== this.tgtParent &&
-           ! (tgt && elementContains(lastKeptTgt.parentNode, tgt))) {
+           ! (tgt && DomUtils.elementContains(lastKeptTgt.parentNode, tgt))) {
       // Last-kept nodes are inside parents that are not
       // parents of the newly matched nodes.  Must finish
       // replacing their contents and back out.

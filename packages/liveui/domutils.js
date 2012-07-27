@@ -21,7 +21,7 @@ Meteor.ui._elementContains = function(a, b) {
 // Returns an array of element nodes matching `selector`, where
 // the selector is interpreted as rooted at `contextNode`.
 // This means that all nodes that participate in the selector
-// must be descendents on contextNode.
+// must be descendents of contextNode.
 //
 // jQuery dependency to eventually replace with querySelectorAll
 // backed up by Sizzle in Old IE.  Note that querySelectorAll doesn't
@@ -46,9 +46,10 @@ Meteor.ui._findElement = function(contextNode, selector) {
   }
 };
 
-// Requires: `a` and `b` are element nodes in the same document tree.
 // Returns 0 if the nodes are the same or either one contains the other;
-// otherwise, 1 if (a,b) are in order and -1 if they are in the opposite order.
+// otherwise, 1 if a comes before b, or else -1 if b comes before a in
+// document order.
+// Requires: `a` and `b` are element nodes in the same document tree.
 Meteor.ui._elementOrder = function(a, b) {
   // See http://ejohn.org/blog/comparing-document-position/
   if (a === b)
@@ -66,8 +67,15 @@ Meteor.ui._elementOrder = function(a, b) {
   }
 };
 
-// Like `findElement` but uses a hypothetical LiveRange wrapping start..end
-// as the context.
+// Like `findElement` but searches the nodes from `start` to `end`
+// inclusive. `start` and `end` must be siblings, and they participate
+// in the search (they can be used to match selector components, and
+// they can appear in the returned results). It's as if the parent of
+// `start` and `end` serves as contextNode, but matches from children
+// that aren't between `start` and `end` (inclusive) are ignored.
+//
+// If `selector` involves sibling selectors, child index selectors, or
+// the like, the results are undefined.
 Meteor.ui._findElementInRange = function(start, end, selector) {
   end = (end || start);
 
@@ -122,6 +130,11 @@ Meteor.ui._isNodeOnscreen = function (node) {
   return Meteor.ui._elementContains(document.body, node);
 };
 
+// Wraps the contents of `frag`, a DocumentFragment, if necessary
+// to insert the fragment into `container`, a DOM element.
+// For example, if `frag` has TR nodes as children and container
+// is a TABLE, the children of `frag` will be wrapped with a
+// TBODY in place to work around IE quirks.
 Meteor.ui._wrapFragmentForContainer = function(frag, container) {
   if (container && container.nodeName === "TABLE" &&
       _.any(frag.childNodes,

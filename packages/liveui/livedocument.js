@@ -126,7 +126,7 @@ Meteor.ui._doc = Meteor.ui._doc || {};
 
           var next = comment.nextSibling;
 
-          Meteor.ui._wrapFragmentForContainer(subFrag, comment.parentNode);
+          DomUtils.wrapFragmentForContainer(subFrag, comment.parentNode);
           comment.parentNode.replaceChild(subFrag, comment);
 
           return next;
@@ -182,7 +182,7 @@ Meteor.ui._doc = Meteor.ui._doc || {};
       throw new Error("Double-GCed range: "+range.id);
 
     if (! (node.parentNode &&
-           (Meteor.ui._isNodeOnscreen(node) ||
+           (DomUtils.isInDocument(node) ||
             Meteor.ui._doc._isNodeHeld(node)))) {
       // range is offscreen!
       // kill all ranges in this fragment or detached DOM tree,
