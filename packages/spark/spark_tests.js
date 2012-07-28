@@ -64,3 +64,25 @@ Tinytest.add("spark - assembly", function (test) {
   test.isTrue(attrValue.indexOf('abc<!--') === 0, attrValue);
   test.isTrue(attrValue.indexOf('-->xyz') >= 0, attrValue);
 });
+
+
+Tinytest.add("spark - basic isolate", function (test) {
+
+  var R = ReactiveVar('foo');
+
+  var div = OnscreenDiv(Spark.render(function() {
+    return '<div>' + Spark.isolate(function() {
+      return '<span>' + R.get() + '</span>';
+    }) + '</div>';
+  }));
+
+  test.equal(div.html(), '<div><span>foo</span></div>');
+  R.set('bar');
+  test.equal(div.html(), '<div><span>foo</span></div>');
+  Meteor.flush();
+  test.equal(div.html(), '<div><span>bar</span></div>');
+  R.set('baz');
+  Meteor.flush();
+  test.equal(div.html(), '<div><span>baz</span></div>');
+  
+});

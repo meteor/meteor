@@ -136,6 +136,15 @@ Spark.isolate = function (htmlFunc) {
     renderer.annotate(ctx.run(htmlFunc), "_isolate", function (range) {
       ctx.on_invalidate(function () {
         // XXX update with patching
+        var frag = Spark.render(function () {
+          return Spark.isolate(htmlFunc);
+        });
+        var oldContents = range.replace_contents(frag); // (should patch)
+        range.destroy();
+        // (GC oldContents)
+
+        // later:
+        // GC, rewire, patching, etc.
       });
     });
 
