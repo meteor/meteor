@@ -125,7 +125,7 @@ Spark.setDataContext = function (html, dataContext) {
 Spark.getDataContext = function (node) {
   var range = LiveRange.findRange("_data", node);
   return range && range.data;
-}
+};
 
 Spark.isolate = function (htmlFunc) {
   var renderer = Spark._currentRenderer.get();
@@ -182,7 +182,7 @@ Spark.isolate = function (htmlFunc) {
 // `start` and `end` you may pass a fragment in `start`.
 Spark.finalize = function (start, end) {
   if (! start.parentNode && start.nodeType !== 11 /* DocumentFragment */) {
-    // Workaround for LiveRange's current lack of ability to contain
+    // Workaround for LiveRanges' current inability to contain
     // a node with no parentNode.
     var frag = document.createDocumentFragment();
     frag.appendChild(start);
