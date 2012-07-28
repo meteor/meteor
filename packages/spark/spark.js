@@ -2,7 +2,7 @@
 // in liverange-land they should probably start with "_"?
 
 
-Spark = Spark || {};
+Spark = {};
 
 Spark._currentRenderer = new Meteor.EnvironmentVariable;
 
@@ -18,66 +18,122 @@ _.extend(Spark._Renderer.prototype, {
     var chars =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     for (var i = 0; i < 8; i++) {
-      id += hexDigits.substr(Math.floor(Meteor.random() * 64), 1);
+      id += chars.substr(Math.floor(Meteor.random() * 64), 1);
     }
     return id;
   },
 
   // what can be a function that takes a LiveRange, or just a set of
-  // attributes to add to the liverange.
+  // attributes to add to the liverange.  tag and what are optional.
+  // if no tag is passed, no liverange will be created.
   annotate: function (html, tag, what) {
     var id = tag + "-" + this.createId();
     this.annotations[id] = function (start, end) {
+      if (! tag)
+        return;
       var range = new LiveRange(tag, start, end);
       if (what instanceof Function)
         what(range);
       else
         _.extend(range, what);
-    }
+    };
 
     return "<$" + id + ">" + html + "</$" + id + ">";
   }
 });
 
 Spark.render = function (htmlFunc) {
-  var renderer = new Spark.Renderer;
-  var html = Spark.currentRenderer.withValue(renderer, function () {
-    return Spark.barrier(htmlFunc);
+  var renderer = new Spark._Renderer;
+  var html = Spark._currentRenderer.withValue(renderer, function () {
+    return renderer.annotate(htmlFunc());
   });
 
-  // XXX turn html into DOM and attach liveranges
+  var fragById = {};
 
+  var replaceInclusions = function (container) {
+    var n = container.firstChild;
+    while (n) {
+      var next = n.nextSibling;
+      if (n.nodeType === 8) { // COMMENT
+        var frag = fragById[n.nodeValue];
+        if (frag === false) {
+          // id already used!
+          throw new Error("Spark HTML fragments may only be used once. " +
+                          "Second use in " +
+                          DomUtils.fragmentToHtml(container));
+        } else if (frag) {
+          fragById[n.nodeValue] = false; // mark as used
+          DomUtils.wrapFragmentForContainer(frag, n.parentNode);
+          n.parentNode.replaceChild(frag, n);
+        }
+      } else if (n.nodeType === 1) { // ELEMENT
+        replaceInclusions(n);
+      }
+      n = next;
+    }
+  };
 
-  // HERE
-  //
-  // - Create DomUtils package (or something like that)
-  // - First thing in DomUtils is htmlToFragment from innerhtml.js
-  //   - Later, will add stuff from domutils.js
-  //   - _rangeToHtml will go in LiveRange (possibly the test helpers)
+  var bufferStack = [[]];
+  var idStack = [];
 
+  var regex = /<(\/?)\$([^<>]+)>|<|[^<]+/g;
+  regex.lastIndex = 0;
+  var parts;
+  while ((parts = regex.exec(html))) {
+    var isOpen = ! parts[1];
+    var id = parts[2];
+    var annotationFunc = renderer.annotations[id];
+    if (! annotationFunc) {
+      bufferStack[bufferStack.length - 1].push(parts[0]);
+    } else if (isOpen) {
+      idStack.push(id);
+      bufferStack.push([]);
+    } else {
+      var idOnStack = idStack.pop();
+      if (idOnStack !== id)
+        throw new Error("Range mismatch: " + idOnStack + " / " + id);
+      var frag = DomUtils.htmlToFragment(bufferStack.pop().join(''));
+      replaceInclusions(frag);
+      // empty frag becomes HTML comment <!--empty--> so we have start/end
+      // nodes to pass to the annotation function
+      if (! frag.firstChild)
+        frag.appendChild(document.createComment("empty"));
+      annotationFunc(frag.firstChild, frag.lastChild);
+      if (! idStack.length)
+        // we're done; we just rendered the contents of the top-level
+        // annotation that we wrapped around htmlFunc ourselves.
+        // there may be unused fragments in fragById that include
+        // LiveRanges, but only if the user broke the rules by including
+        // an annotation somewhere besides element level, like inside
+        // an attribute (which is not allowed).
+        return frag;
+      fragById[id] = frag;
+      bufferStack[bufferStack.length - 1].push('<!--' + id + '-->');
+    }
+  }
 };
 
-Spark.setContext = function (html, context) {
+Spark.setDataContext = function (html, context) {
   var renderer = Spark._currentRenderer.get();
   if (!renderer)
     return html;
 
-  return renderer.annotate(html, "_context", { context: context });
+  return renderer.annotate(html, "_data", { context: context });
 };
 
-Spark.getContext = function (node) {
-  var range = LiveRange.findRange("_context", node);
+Spark.getDataContext = function (node) {
+  var range = LiveRange.findRange("_data", node);
   return range && range.context;
 }
 
-Spark.barrier = function (htmlFunc) {
+Spark.isolate = function (htmlFunc) {
   var renderer = Spark._currentRenderer.get();
   if (!renderer)
     return htmlFunc();
 
   var ctx = new Meteor.deps.Context;
   var html =
-    renderer.annotate(ctx.run(htmlFunc), "_barrier", function (range) {
+    renderer.annotate(ctx.run(htmlFunc), "_isolate", function (range) {
       ctx.on_invalidate(function () {
         // XXX update with patching
       });

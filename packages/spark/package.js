@@ -5,7 +5,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use('livedata');
-  api.use(['underscore', 'session'], 'client');
+  api.use(['underscore', 'session', 'domutils'], 'client');
 
   // XXX Depends on jquery because we need a selector engine to resolve
   // event maps. What would be nice is, if you've included jquery or
@@ -24,20 +24,10 @@ Package.on_use(function (api) {
 });
 
 Package.on_test(function (api) {
-/*
-  api.use(['tinytest', 'templating', 'htmljs']);
-  api.use(['liveui', 'test-helpers'], 'client');
-
-  api.add_files('form_responder.js', 'server');
+  api.use('tinytest');
+  api.use(['spark', 'test-helpers'], 'client');
 
   api.add_files([
-    'livedocument_tests.js',
-    'liverange_test_helpers.js',
-    'liveui_tests.js',
-    'liveui_tests.html',
-    'liverange_tests.js',
-    'patcher_tests.js',
-    'liveevents_tests.js'
+    'spark_tests.js'
   ], 'client');
-*/
 });
