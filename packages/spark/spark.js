@@ -113,17 +113,17 @@ Spark.render = function (htmlFunc) {
   }
 };
 
-Spark.setDataContext = function (html, context) {
+Spark.setDataContext = function (html, dataContext) {
   var renderer = Spark._currentRenderer.get();
   if (!renderer)
     return html;
 
-  return renderer.annotate(html, "_data", { context: context });
+  return renderer.annotate(html, "_data", { data: dataContext });
 };
 
 Spark.getDataContext = function (node) {
   var range = LiveRange.findRange("_data", node);
-  return range && range.context;
+  return range && range.data;
 }
 
 Spark.isolate = function (htmlFunc) {
@@ -132,21 +132,54 @@ Spark.isolate = function (htmlFunc) {
     return htmlFunc();
 
   var ctx = new Meteor.deps.Context;
+  var slain = false;
   var html =
     renderer.annotate(ctx.run(htmlFunc), "_isolate", function (range) {
+      range.finalize = function () {
+        // "Fast" GC path -- someone called _finalize on a document
+        // fragment that includes us, so we're cleaning up our
+        // invalidation context and going away.
+        slain = true;
+        ctx.invalidate();
+      };
+
       ctx.on_invalidate(function () {
-        // XXX update with patching
+        if (slain)
+          return; // killed by finalize
+
+        if (!DomUtils.isInDocument(range.firstNode())) {
+          // "Slow" GC path -- Evidently the user took some DOM nodes
+          // offscreen without telling us. Finalize them.
+          var node = range.firstNode();
+          while (node.parentNode)
+            node = node.parentNode;
+          Spark._finalize(node);
+          return;
+        }
+
+        // htmlFunc changed its mind about what it returns. Rerender it.
         var frag = Spark.render(function () {
           return Spark.isolate(htmlFunc);
         });
-        var oldContents = range.replace_contents(frag); // (should patch)
+        var oldContents = range.replace_contents(frag); // XXX should patch
+        Spark._finalize(oldContents);
         range.destroy();
-        // (GC oldContents)
-
-        // later:
-        // GC, rewire, patching, etc.
       });
     });
 
   return html;
+};
+
+
+// Delete all of the liveranges in the range of nodes between `start`
+// and `end`, and call their 'finalize' function if any. Or instead of
+// `start` and `end` you may pass a fragment in `start`.
+Spark._finalize = function (start, end) {
+  _.each(["_data", "_isolate"], function (tag) {
+    var wrapper = new LiveRange(tag, start, end);
+    wrapper.visit(function (isStart, range) {
+      isStart && range.finalize && finalize();
+    });
+    wrapper.destroy(true /* recursive */);
+  });
 };
