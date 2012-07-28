@@ -1,7 +1,6 @@
 // XXX figure out good liverange tag names. should they be symbolic constants?
 // in liverange-land they should probably start with "_"?
 
-
 Spark = {};
 
 Spark._currentRenderer = new Meteor.EnvironmentVariable;
@@ -41,6 +40,8 @@ _.extend(Spark._Renderer.prototype, {
     return "<$" + id + ">" + html + "</$" + id + ">";
   }
 });
+
+////////// PUBLIC API
 
 Spark.render = function (htmlFunc) {
   var renderer = new Spark._Renderer;
@@ -136,7 +137,7 @@ Spark.isolate = function (htmlFunc) {
   var html =
     renderer.annotate(ctx.run(htmlFunc), "_isolate", function (range) {
       range.finalize = function () {
-        // "Fast" GC path -- someone called _finalize on a document
+        // "Fast" GC path -- someone called finalize on a document
         // fragment that includes us, so we're cleaning up our
         // invalidation context and going away.
         slain = true;
@@ -145,7 +146,7 @@ Spark.isolate = function (htmlFunc) {
 
       ctx.on_invalidate(function () {
         if (slain)
-          return; // killed by finalize
+          return; // killed by finalize. range has already been destroyed.
 
         if (!DomUtils.isInDocument(range.firstNode())) {
           // "Slow" GC path -- Evidently the user took some DOM nodes
@@ -153,8 +154,13 @@ Spark.isolate = function (htmlFunc) {
           var node = range.firstNode();
           while (node.parentNode)
             node = node.parentNode;
-          Spark._finalize(node);
-          return;
+          if (node["_protect"]) {
+            // test code can use this property to mark a root-level node
+            // (such as a DocumentFragment) as immune from slow-path GC
+          } else {
+            Spark.finalize(node);
+            return;
+          }
         }
 
         // htmlFunc changed its mind about what it returns. Rerender it.
@@ -162,7 +168,7 @@ Spark.isolate = function (htmlFunc) {
           return Spark.isolate(htmlFunc);
         });
         var oldContents = range.replace_contents(frag); // XXX should patch
-        Spark._finalize(oldContents);
+        Spark.finalize(oldContents);
         range.destroy();
       });
     });
@@ -174,11 +180,11 @@ Spark.isolate = function (htmlFunc) {
 // Delete all of the liveranges in the range of nodes between `start`
 // and `end`, and call their 'finalize' function if any. Or instead of
 // `start` and `end` you may pass a fragment in `start`.
-Spark._finalize = function (start, end) {
+Spark.finalize = function (start, end) {
   _.each(["_data", "_isolate"], function (tag) {
     var wrapper = new LiveRange(tag, start, end);
     wrapper.visit(function (isStart, range) {
-      isStart && range.finalize && finalize();
+      isStart && range.finalize && range.finalize();
     });
     wrapper.destroy(true /* recursive */);
   });

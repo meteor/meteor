@@ -84,5 +84,87 @@ Tinytest.add("spark - basic isolate", function (test) {
   R.set('baz');
   Meteor.flush();
   test.equal(div.html(), '<div><span>baz</span></div>');
-  
+
+});
+
+Tinytest.add("liveui - one render", function(test) {
+
+  var R = ReactiveVar("foo");
+
+  var frag = WrappedFrag(Meteor.render(function() {
+    return R.get();
+  })).hold();
+
+  test.equal(R.numListeners(), 1);
+
+  // frag should be "foo" initially
+  test.equal(frag.html(), "foo");
+  R.set("bar");
+  // haven't flushed yet, so update won't have happened
+  test.equal(frag.html(), "foo");
+  Meteor.flush();
+  // flushed now, frag should say "bar"
+  test.equal(frag.html(), "bar");
+  frag.release(); // frag is now considered offscreen
+  Meteor.flush();
+  R.set("baz");
+  Meteor.flush();
+  // no update should have happened, offscreen range dep killed
+  test.equal(frag.html(), "bar");
+
+  // should be back to no listeners
+  test.equal(R.numListeners(), 0);
+
+  // empty return value should work, and show up as a comment
+  frag = WrappedFrag(Meteor.render(function() {
+    return "";
+  }));
+  test.equal(frag.html(), "<!---->");
+
+  // nodes coming and going at top level of fragment
+  R.set(true);
+  frag = WrappedFrag(Meteor.render(function() {
+    return R.get() ? "<div>hello</div><div>world</div>" : "";
+  })).hold();
+  test.equal(frag.html(), "<div>hello</div><div>world</div>");
+  R.set(false);
+  Meteor.flush();
+  test.equal(frag.html(), "<!---->");
+  R.set(true);
+  Meteor.flush();
+  test.equal(frag.html(), "<div>hello</div><div>world</div>");
+  test.equal(R.numListeners(), 1);
+  frag.release();
+  Meteor.flush();
+  test.equal(R.numListeners(), 0);
+
+  // more complicated changes
+  R.set(1);
+  frag = WrappedFrag(Meteor.render(function() {
+    var result = [];
+    for(var i=0; i<R.get(); i++) {
+      result.push('<div id="x'+i+'" class="foo" name="bar"><p><b>'+
+                  R.get()+'</b></p></div>');
+    }
+    return result.join('');
+  })).hold();
+  test.equal(frag.html(),
+               '<div class="foo" id="x0" name="bar"><p><b>1</b></p></div>');
+  R.set(3);
+  Meteor.flush();
+  test.equal(frag.html(),
+               '<div class="foo" id="x0" name="bar"><p><b>3</b></p></div>'+
+               '<div class="foo" id="x1" name="bar"><p><b>3</b></p></div>'+
+               '<div class="foo" id="x2" name="bar"><p><b>3</b></p></div>');
+  R.set(2);
+  Meteor.flush();
+  test.equal(frag.html(),
+               '<div class="foo" id="x0" name="bar"><p><b>2</b></p></div>'+
+               '<div class="foo" id="x1" name="bar"><p><b>2</b></p></div>');
+  frag.release();
+  Meteor.flush();
+  test.equal(R.numListeners(), 0);
+
+  // caller violating preconditions
+  test.equal(WrappedFrag(Meteor.render("foo")).html(), "foo");
 });

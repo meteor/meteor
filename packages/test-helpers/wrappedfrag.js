@@ -21,11 +21,24 @@ WrappedFrag.prototype.html = function() {
 };
 
 WrappedFrag.prototype.hold = function() {
-  return Meteor.ui._Sarge.holdFrag(this.frag), this;
+  // increments frag's GC protection reference count
+  this.frag["_protect"] = (this.frag["_protect"] || 0) + 1;
+  return this;
 };
 
 WrappedFrag.prototype.release = function() {
-  return Meteor.ui._Sarge.releaseFrag(this.frag), this;
+  var frag = this.frag;
+  // decrement frag's GC protection reference count
+  // Clean up on flush, if hits 0.  Wait to decrement
+  // so no one else cleans it up first.
+  var cx = new Meteor.deps.Context;
+  cx.on_invalidate(function() {
+    if (! --frag["_protect"]) {
+      Spark.finalize(frag);
+    }
+  });
+  cx.invalidate();
+  return this;
 };
 
 WrappedFrag.prototype.node = function() {
