@@ -181,6 +181,14 @@ Spark.isolate = function (htmlFunc) {
 // and `end`, and call their 'finalize' function if any. Or instead of
 // `start` and `end` you may pass a fragment in `start`.
 Spark.finalize = function (start, end) {
+  if (! start.parentNode && start.nodeType !== 11 /* DocumentFragment */) {
+    // Workaround for LiveRange's current lack of ability to contain
+    // a node with no parentNode.
+    var frag = document.createDocumentFragment();
+    frag.appendChild(start);
+    start = frag;
+    end = null;
+  }
   _.each(["_data", "_isolate"], function (tag) {
     var wrapper = new LiveRange(tag, start, end);
     wrapper.visit(function (isStart, range) {

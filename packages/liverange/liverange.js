@@ -75,6 +75,9 @@
   // and end are the first and last child of their parent respectively
   // or when caller is building up the range tree from the inside
   // out. Let's wait for the profiler to tell us to add this.
+  //
+  // XXX Should eventually support LiveRanges where start === end
+  // and start.parentNode is null.
   LiveRange = function (tag, start, end, inner) {
     if (start.nodeType === 11 /* DocumentFragment */) {
       end = start.lastChild;

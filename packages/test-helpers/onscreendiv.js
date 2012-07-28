@@ -46,13 +46,14 @@ OnscreenDiv.prototype.node = function() {
 // "fast GC" -- i.e., after the next Meteor.flush()
 // the DIV will be fully cleaned up by LiveUI.
 OnscreenDiv.prototype.kill = function() {
-  // remove DIV from document by putting it in a fragment
-  var frag = document.createDocumentFragment();
-  frag.appendChild(this.div);
-  // instigate clean-up on next flush()
-  Meteor.ui._Sarge.atFlushTime(function() {
-    Meteor.ui._Sarge.shuck(frag);
+  var self = this;
+  self.div.parentNode.removeChild(self.div);
+
+  var cx = new Meteor.deps.Context;
+  cx.on_invalidate(function() {
+    Spark.finalize(self.div);
   });
+  cx.invalidate();
 };
 
 // remove the DIV from the document

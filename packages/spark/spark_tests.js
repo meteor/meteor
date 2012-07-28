@@ -87,7 +87,7 @@ Tinytest.add("spark - basic isolate", function (test) {
 
 });
 
-Tinytest.add("liveui - one render", function(test) {
+Tinytest.add("spark - one render", function(test) {
 
   var R = ReactiveVar("foo");
 
@@ -167,4 +167,226 @@ Tinytest.add("liveui - one render", function(test) {
 
   // caller violating preconditions
   test.equal(WrappedFrag(Meteor.render("foo")).html(), "foo");
+});
+
+Tinytest.add("spark - slow path GC", function(test) {
+
+  var R = ReactiveVar(123);
+
+  var div = OnscreenDiv(Meteor.render(function() {
+    return "<p>The number is "+R.get()+".</p><hr><br><br><u>underlined</u>";
+  }));
+
+  test.equal(div.html(), "<p>The number is 123.</p><hr><br><br><u>underlined</u>");
+  test.equal(R.numListeners(), 1);
+  Meteor.flush();
+  R.set(456); // won't take effect until flush()
+  test.equal(div.html(), "<p>The number is 123.</p><hr><br><br><u>underlined</u>");
+  test.equal(R.numListeners(), 1);
+  Meteor.flush();
+  test.equal(div.html(), "<p>The number is 456.</p><hr><br><br><u>underlined</u>");
+  test.equal(R.numListeners(), 1);
+
+  div.remove();
+  R.set(789); // update should force div dependency to be GCed when div is updated
+  Meteor.flush();
+  test.equal(R.numListeners(), 0);
+});
+
+Tinytest.add("spark - isolate", function(test) {
+
+  var inc = function(v) {
+    v.set(v.get() + 1); };
+
+  var R1 = ReactiveVar(0);
+  var R2 = ReactiveVar(0);
+  var R3 = ReactiveVar(0);
+  var count1 = 0, count2 = 0, count3 = 0;
+
+  var frag = WrappedFrag(Meteor.render(function() {
+    return R1.get() + "," + (count1++) + " " +
+      Spark.isolate(function() {
+        return R2.get() + "," + (count2++) + " " +
+          Spark.isolate(function() {
+            return R3.get() + "," + (count3++);
+          });
+      });
+  })).hold();
+
+  test.equal(frag.html(), "0,0 0,0 0,0");
+
+  inc(R1); Meteor.flush();
+  test.equal(frag.html(), "1,1 0,1 0,1");
+
+  inc(R2); Meteor.flush();
+  test.equal(frag.html(), "1,1 1,2 0,2");
+
+  inc(R3); Meteor.flush();
+  test.equal(frag.html(), "1,1 1,2 1,3");
+
+  inc(R2); Meteor.flush();
+  test.equal(frag.html(), "1,1 2,3 1,4");
+
+  inc(R1); Meteor.flush();
+  test.equal(frag.html(), "2,2 2,4 1,5");
+
+  frag.release();
+  Meteor.flush();
+  test.equal(R1.numListeners(), 0);
+  test.equal(R2.numListeners(), 0);
+  test.equal(R3.numListeners(), 0);
+
+  R1.set(0);
+  R2.set(0);
+  R3.set(0);
+
+  frag = WrappedFrag(Meteor.render(function() {
+    var buf = [];
+    buf.push('<div class="foo', R1.get(), '">');
+    buf.push(Spark.isolate(function() {
+      var buf = [];
+      for(var i=0; i<R2.get(); i++) {
+        buf.push(Spark.isolate(function() {
+          return '<div>'+R3.get()+'</div>';
+        }));
+      }
+      return buf.join('');
+    }));
+    buf.push('</div>');
+    return buf.join('');
+  })).hold();
+
+  test.equal(frag.html(), '<div class="foo0"><!----></div>');
+  R2.set(3); Meteor.flush();
+  test.equal(frag.html(), '<div class="foo0">'+
+               '<div>0</div><div>0</div><div>0</div>'+
+               '</div>');
+
+  R3.set(5); Meteor.flush();
+  test.equal(frag.html(), '<div class="foo0">'+
+               '<div>5</div><div>5</div><div>5</div>'+
+               '</div>');
+
+  R1.set(7); Meteor.flush();
+  test.equal(frag.html(), '<div class="foo7">'+
+               '<div>5</div><div>5</div><div>5</div>'+
+               '</div>');
+
+  R2.set(1); Meteor.flush();
+  test.equal(frag.html(), '<div class="foo7">'+
+               '<div>5</div>'+
+               '</div>');
+
+  R1.set(11); Meteor.flush();
+  test.equal(frag.html(), '<div class="foo11">'+
+               '<div>5</div>'+
+               '</div>');
+
+  R2.set(2); Meteor.flush();
+  test.equal(frag.html(), '<div class="foo11">'+
+               '<div>5</div><div>5</div>'+
+               '</div>');
+
+  R3.set(4); Meteor.flush();
+  test.equal(frag.html(), '<div class="foo11">'+
+               '<div>4</div><div>4</div>'+
+               '</div>');
+
+  frag.release();
+
+  // calling isolate() outside of render mode
+  test.equal(Spark.isolate(function() { return "foo"; }), "foo");
+
+  // caller violating preconditions
+
+  test.throws(function() {
+    Meteor.render(function() {
+      return Spark.isolate("foo");
+    });
+  });
+
+
+  // unused isolate
+
+  var Q = ReactiveVar("foo");
+  Meteor.render(function() {
+    // create an isolate, in render mode,
+    // but don't use it.
+    Spark.isolate(function() {
+      return Q.get();
+    });
+    return "";
+  });
+  Q.set("bar");
+  // might get an error on flush() if implementation
+  // deals poorly with unused isolates, or a listener
+  // still existing after flush.
+  Meteor.flush();
+  test.equal(Q.numListeners(), 0);
+
+  // nesting
+
+  var stuff = ReactiveVar(true);
+  var div = OnscreenDiv(Meteor.render(function() {
+    return Spark.isolate(function() {
+      return "x"+(stuff.get() ? 'y' : '') + Spark.isolate(function() {
+        return "hi";
+      });
+    });
+  }));
+  test.equal(div.html(), "xyhi");
+  stuff.set(false);
+  Meteor.flush();
+  test.equal(div.html(), "xhi");
+  div.kill();
+  Meteor.flush();
+
+  // more nesting
+
+  var num1 = ReactiveVar(false);
+  var num2 = ReactiveVar(false);
+  var num3 = ReactiveVar(false);
+  var numset = function(n) {
+    _.each([num1, num2, num3], function(v, i) {
+      v.set((i+1) === n);
+    });
+  };
+  numset(1);
+
+  var div = OnscreenDiv(Meteor.render(function() {
+    return Spark.isolate(function() {
+      return (num1.get() ? '1' : '')+
+        Spark.isolate(function() {
+          return (num2.get() ? '2' : '')+
+            Spark.isolate(function() {
+              return (num3.get() ? '3' : '')+'x';
+            });
+        });
+    });
+  }));
+  test.equal(div.html(), "1x");
+  numset(2);
+  Meteor.flush();
+  test.equal(div.html(), "2x");
+  numset(3);
+  Meteor.flush();
+  test.equal(div.html(), "3x");
+  numset(1);
+  Meteor.flush();
+  test.equal(div.html(), "1x");
+  numset(3);
+  Meteor.flush();
+  test.equal(div.html(), "3x");
+  numset(2);
+  Meteor.flush();
+  test.equal(div.html(), "2x");
+  div.remove();
+  Meteor.flush();
+
+  // the real test for slow-path GC finalization:
+  num2.set(! num2.get());
+  Meteor.flush();
+  test.equal(num1.numListeners(), 0);
+  test.equal(num2.numListeners(), 0);
+  test.equal(num3.numListeners(), 0);
 });
