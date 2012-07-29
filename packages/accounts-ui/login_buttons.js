@@ -69,6 +69,19 @@
       };
     },
 
+    'click #login-buttons-Twitter': function () {
+      try {
+        Meteor.loginWithTwitter();
+      } catch (e) {
+        if (e instanceof Meteor.accounts.ConfigError)
+          alert("Twitter API key not set. Configure app details with "
+                + "Meteor.accounts.twitter.config() and "
+                + "Meteor.accounts.twitter.setSecret()");
+        else
+          throw e;
+      };
+    },
+
     'click #login-buttons-logout': function() {
       Meteor.logout();
       resetSession();
@@ -540,6 +553,8 @@
       ret.push({name: 'Google'});
     if (Meteor.accounts.weibo)
       ret.push({name: 'Weibo'});
+    if (Meteor.accounts.twitter)
+      ret.push({name: 'Twitter'});
 
     // make sure to put accounts last, since this is the order in the
     // ui as well

@@ -26,7 +26,7 @@
 
   // Listen to calls to `login` with an oauth option set
   Meteor.accounts.registerLoginHandler(function (options) {
-    if (!options.oauth)
+    if (!options.oauth || options.oauth.version !== 2)
       return undefined; // don't handle
 
     var result = Meteor.accounts.oauth2._loginResultForState[options.oauth.state];
