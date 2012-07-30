@@ -82,6 +82,8 @@ var querystring = __meteor_bootstrap__.require("querystring");
     var config = Meteor.accounts[serviceName];
     var oauth = new OAuth(config);
 
+    // If we get here with a callback url we need a request token to
+    // start the logic process
     if (req.query.callbackUrl) {
 
       // Get a request token to start auth process
@@ -91,6 +93,9 @@ var querystring = __meteor_bootstrap__.require("querystring");
       res.writeHead(302, {'Location': redirectUrl});
       res.end();
 
+    // If we get here without a callback url we've just
+    // returned from authentication via the oauth provider
+    
     } else {
 
       // XXX does checking for the verifier really make sense?
