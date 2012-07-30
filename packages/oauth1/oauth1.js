@@ -2,7 +2,7 @@
 // XXX Use oauth verifier
 
 OAuth = function(config) {
-  this.config = config;
+  _.extend(this, config);
 };
 
 OAuth.prototype._getAuthHeaderString = function(headers) {
@@ -17,11 +17,11 @@ OAuth.prototype.getRequestToken = function(callbackUrl) {
     oauth_callback: callbackUrl
   });
 
-  headers.oauth_signature = this._getSignature('POST', this.config._urls.requestToken, headers);
+  headers.oauth_signature = this._getSignature('POST', this._urls.requestToken, headers);
 
   var authString = this._getAuthHeaderString(headers);
 
-  var response = Meteor.http.post(this.config._urls.requestToken, {
+  var response = Meteor.http.post(this._urls.requestToken, {
     headers: {
       Authorization: authString
     }
@@ -40,11 +40,11 @@ OAuth.prototype.getAccessToken = function(oauthToken) {
     oauth_token: oauthToken
   });
 
-  headers.oauth_signature = this._getSignature('POST', this.config._urls.accessToken, headers);
+  headers.oauth_signature = this._getSignature('POST', this._urls.accessToken, headers);
 
   var authString = this._getAuthHeaderString(headers);
 
-  var response = Meteor.http.post(this.config._urls.accessToken, {
+  var response = Meteor.http.post(this._urls.accessToken, {
     headers: {
       Authorization: authString
     }
@@ -85,7 +85,7 @@ OAuth.prototype.get = function(url) {
 
 OAuth.prototype._buildHeader = function(headers) {
   return _.extend({
-    oauth_consumer_key: this.config._appId,
+    oauth_consumer_key: this._appId,
     oauth_nonce: Meteor.uuid().replace(/\W/g, ''),
     oauth_signature_method: 'HMAC-SHA1',
     oauth_timestamp: (new Date().valueOf()/1000).toFixed().toString(),
@@ -107,7 +107,7 @@ OAuth.prototype._getSignature = function(method, url, rawHeaders, oauthSecret) {
     encodeURIComponent(parameters)
   ].join('&');
 
-  var signingKey = encodeURIComponent(this.config._secret) + '&';
+  var signingKey = encodeURIComponent(this._secret) + '&';
   if (oauthSecret)
     signingKey += encodeURIComponent(oauthSecret);
 
