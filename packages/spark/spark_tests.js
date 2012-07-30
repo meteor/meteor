@@ -19,7 +19,7 @@ Tinytest.add("spark - assembly", function (test) {
     test.equal(f.html(), html);
 
     var actualGroups = [];
-    var tempRange = new LiveRange("_data", frag);
+    var tempRange = new LiveRange(Spark._ANNOTATION_DATA, frag);
     tempRange.visit(function(isStart, rng) {
       if (! isStart)
         actualGroups.push(rangeToHtml(rng));

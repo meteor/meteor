@@ -5,13 +5,24 @@ Spark = {};
 
 Spark._currentRenderer = new Meteor.EnvironmentVariable;
 
+Spark._ANNOTATION_DATA = "_spark_data";
+Spark._ANNOTATION_ISOLATE = "_spark_isolate";
+Spark._ANNOTATIONS = [Spark._ANNOTATION_DATA, Spark._ANNOTATION_ISOLATE];
+
 Spark._Renderer = function () {
   // Map from annotation ID to an annotation function, which is called
-  // at render time and receives (startNode, endNode.)
+  // at render time and receives (startNode, endNode).
   this.annotations = {};
 };
 
 _.extend(Spark._Renderer.prototype, {
+  // The annotation tags that we insert into HTML strings must be
+  // unguessable in order to not create potential cross-site scripting
+  // attack vectors, so we use random strings.  Even a well-written app
+  // that avoids XSS vulnerabilities might, for example, put
+  // unescaped < and > in HTML attribute values, where they are normally
+  // safe.  We can't assume that a string like '<1>' came from us
+  // and not arbitrary user-entered data.
   createId: function () {
     var id = "";
     var chars =
@@ -22,7 +33,7 @@ _.extend(Spark._Renderer.prototype, {
     return id;
   },
 
-  // what can be a function that takes a LiveRange, or just a set of
+  // `what` can be a function that takes a LiveRange, or just a set of
   // attributes to add to the liverange.  tag and what are optional.
   // if no tag is passed, no liverange will be created.
   annotate: function (html, tag, what) {
@@ -119,11 +130,13 @@ Spark.setDataContext = function (html, dataContext) {
   if (!renderer)
     return html;
 
-  return renderer.annotate(html, "_data", { data: dataContext });
+  return renderer.annotate(
+    html, Spark._ANNOTATION_DATA, { data: dataContext });
 };
 
 Spark.getDataContext = function (node) {
-  var range = LiveRange.findRange("_data", node);
+  var range = LiveRange.findRange(
+    Spark._ANNOTATION_DATA, node);
   return range && range.data;
 };
 
@@ -135,43 +148,45 @@ Spark.isolate = function (htmlFunc) {
   var ctx = new Meteor.deps.Context;
   var slain = false;
   var html =
-    renderer.annotate(ctx.run(htmlFunc), "_isolate", function (range) {
-      range.finalize = function () {
-        // "Fast" GC path -- someone called finalize on a document
-        // fragment that includes us, so we're cleaning up our
-        // invalidation context and going away.
-        slain = true;
-        ctx.invalidate();
-      };
+    renderer.annotate(
+      ctx.run(htmlFunc), Spark._ANNOTATION_ISOLATE,
+      function (range) {
+        range.finalize = function () {
+          // "Fast" GC path -- someone called finalize on a document
+          // fragment that includes us, so we're cleaning up our
+          // invalidation context and going away.
+          slain = true;
+          ctx.invalidate();
+        };
 
-      ctx.on_invalidate(function () {
-        if (slain)
-          return; // killed by finalize. range has already been destroyed.
+        ctx.on_invalidate(function () {
+          if (slain)
+            return; // killed by finalize. range has already been destroyed.
 
-        if (!DomUtils.isInDocument(range.firstNode())) {
-          // "Slow" GC path -- Evidently the user took some DOM nodes
-          // offscreen without telling us. Finalize them.
-          var node = range.firstNode();
-          while (node.parentNode)
-            node = node.parentNode;
-          if (node["_protect"]) {
-            // test code can use this property to mark a root-level node
-            // (such as a DocumentFragment) as immune from slow-path GC
-          } else {
-            Spark.finalize(node);
-            return;
+          if (!DomUtils.isInDocument(range.firstNode())) {
+            // "Slow" GC path -- Evidently the user took some DOM nodes
+            // offscreen without telling us. Finalize them.
+            var node = range.firstNode();
+            while (node.parentNode)
+              node = node.parentNode;
+            if (node["_protect"]) {
+              // test code can use this property to mark a root-level node
+              // (such as a DocumentFragment) as immune from slow-path GC
+            } else {
+              Spark.finalize(node);
+              return;
+            }
           }
-        }
 
-        // htmlFunc changed its mind about what it returns. Rerender it.
-        var frag = Spark.render(function () {
-          return Spark.isolate(htmlFunc);
+          // htmlFunc changed its mind about what it returns. Rerender it.
+          var frag = Spark.render(function () {
+            return Spark.isolate(htmlFunc);
+          });
+          var oldContents = range.replace_contents(frag); // XXX should patch
+          Spark.finalize(oldContents);
+          range.destroy();
         });
-        var oldContents = range.replace_contents(frag); // XXX should patch
-        Spark.finalize(oldContents);
-        range.destroy();
       });
-    });
 
   return html;
 };
@@ -189,7 +204,7 @@ Spark.finalize = function (start, end) {
     start = frag;
     end = null;
   }
-  _.each(["_data", "_isolate"], function (tag) {
+  _.each(Spark._ANNOTATIONS, function (tag) {
     var wrapper = new LiveRange(tag, start, end);
     wrapper.visit(function (isStart, range) {
       isStart && range.finalize && range.finalize();
