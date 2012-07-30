@@ -1,6 +1,3 @@
-// XXX figure out good liverange tag names. should they be symbolic constants?
-// in liverange-land they should probably start with "_"?
-
 Spark = {};
 
 Spark._currentRenderer = new Meteor.EnvironmentVariable;
