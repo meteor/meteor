@@ -24,3 +24,6 @@ Meteor.ui = Meteor.ui || {};
 // of this file).  Of course, the tests are assumed to still pass even if
 // it is `false`, in which case the extra checks aren't done.
 Meteor.ui._TEST_requirePreciseEventHandlers = true;
+
+
+// XXX figure out what we're doing with this
