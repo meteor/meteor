@@ -99,6 +99,8 @@
     
     } else {
 
+      // XXX Twitter's docs say to check that oauth_token is the
+      // same as the request token received in previous step
       // XXX does checking for the verifier really make sense?
       if (!req.query.oauth_token || !req.query.oauth_verifier) {
         // The user didn't authorize access
@@ -106,7 +108,7 @@
       }
 
       // Get the oauth token for signing requests
-      oauth.getAccessToken(req.query.oauth_token);
+      oauth.getAccessToken(req.query);
 
       // Get or create user id
       var oauthResult = service.handleOauthRequest(oauth);

@@ -1,8 +1,6 @@
 var crypto = __meteor_bootstrap__.require("crypto");
 var querystring = __meteor_bootstrap__.require("querystring");
 
-// XXX Use oauth verifier
-
 OAuth = function(config) {
   _.extend(this, config);
 };
@@ -19,13 +17,16 @@ OAuth.prototype.getRequestToken = function(callbackUrl) {
   this.requestToken = tokens.oauth_token;
 };
 
-OAuth.prototype.getAccessToken = function(oauthToken) {
-
+OAuth.prototype.getAccessToken = function(query) {
   var headers = this._buildHeader({
-    oauth_token: oauthToken
+    oauth_token: query.oauth_token
   });
 
-  var response = this._call('post', this._urls.accessToken, headers);
+  var params = {
+    oauth_verifier: query.oauth_verifier
+  };
+
+  var response = this._call('post', this._urls.accessToken, headers, params);
   var tokens = querystring.parse(response.content);
 
   this.accessToken = tokens.oauth_token;
@@ -36,7 +37,7 @@ OAuth.prototype.call = function(method, url) {
   var headers = this._buildHeader({
     oauth_token: this.accessToken
   });
-
+ 
   var response = this._call(method, url, headers);
 
   return response.data;
@@ -77,7 +78,7 @@ OAuth.prototype._getSignature = function(method, url, rawHeaders, oauthSecret) {
   return crypto.createHmac('SHA1', signingKey).update(signatureBase).digest('base64');
 };
 
-OAuth.prototype._call = function(method, url, headers) {
+OAuth.prototype._call = function(method, url, headers, params) {
   
   // Get the signature
   headers.oauth_signature = this._getSignature(method.toUpperCase(), url, headers, this.accessTokenSecret);
@@ -87,6 +88,7 @@ OAuth.prototype._call = function(method, url, headers) {
 
   // Make signed request
   var response = Meteor.http[method.toLowerCase()](url, {
+    params: params,
     headers: {
       Authorization: authString
     }
