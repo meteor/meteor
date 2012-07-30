@@ -4,7 +4,7 @@ Tinytest.add("spark - assembly", function (test) {
   var doTest = function(calc) {
     var frag = Spark.render(function() {
       return calc(function(str, expected) {
-        return Spark.setDataContext(str, null);
+        return Spark.setDataContext(null, str);
       });
     });
     var groups = [];
@@ -55,7 +55,7 @@ Tinytest.add("spark - assembly", function (test) {
 
   var frag = Spark.render(function() {
     return '<div foo="abc' +
-      Spark.setDataContext("bar", null) +
+      Spark.setDataContext(null, "bar") +
       'xyz">Hello</div>';
   });
   var div = frag.firstChild;
@@ -389,4 +389,91 @@ Tinytest.add("spark - isolate", function(test) {
   test.equal(num1.numListeners(), 0);
   test.equal(num2.numListeners(), 0);
   test.equal(num3.numListeners(), 0);
+});
+
+Tinytest.add("spark - data context", function (test) {
+  var d1 = {x: 1};
+  var d2 = {x: 2};
+  var d3 = {x: 3};
+  var d4 = {x: 4};
+  var d5 = {x: 5};
+
+  var traverse = function (frag) {
+    var out = '';
+    var walkChildren = function (parent) {
+      for (var node = parent.firstChild; node; node = node.nextSibling) {
+        if (node.nodeType !== 8 /* COMMENT */)  {
+          var data = Spark.getDataContext(node);
+          out += (data === null) ? "_" : data.x;
+        }
+        if (node.nodeType === 1 /* ELEMENT */)
+          walkChildren(node);
+      }
+    };
+    walkChildren(frag);
+    return out;
+  };
+
+  var testData = function (serialized, htmlFunc) {
+    test.equal(traverse(Spark.render(htmlFunc)), serialized);
+  }
+
+  testData("_", function () {
+    return "hi";
+  });
+
+  testData("__", function () {
+    return "<div>hi</div>";
+  });
+
+  testData("_1", function () {
+    return "<div>" + Spark.setDataContext(d1, "hi") + "</div>";
+  });
+
+  testData("21", function () {
+    return Spark.setDataContext(
+      d2, "<div>" + Spark.setDataContext(d1, "hi") + "</div>");
+  });
+
+  testData("21", function () {
+    return Spark.setDataContext(
+      d2, "<div>" +
+        Spark.setDataContext(d3,
+                             Spark.setDataContext(d1, "hi")) +
+        "</div>");
+  });
+
+  testData("23", function () {
+    return Spark.setDataContext(
+      d2, "<div>" +
+        Spark.setDataContext(d1,
+                             Spark.setDataContext(d3, "hi")) +
+        "</div>");
+  });
+
+  testData("23", function () {
+    var html = Spark.setDataContext(
+      d2, "<div>" +
+        Spark.setDataContext(d1,
+                             Spark.setDataContext(d3, "hi")) +
+        "</div>");
+    return Spark.setDataContext(d4, html);
+  });
+
+  testData("1_2", function () {
+    return Spark.setDataContext(d1, "hi") + " " +
+      Spark.setDataContext(d2, "there");
+  });
+
+  testData("_122_3__45", function () {
+    return "<div>" +
+      Spark.setDataContext(d1, "<div></div>") +
+      Spark.setDataContext(d2, "<div><div></div></div>") +
+      "<div></div>" +
+      Spark.setDataContext(d3, "<div></div") +
+      "<div><div></div></div>" +
+      Spark.setDataContext(d4, "<div>" +
+                           Spark.setDataContext(d5, "<div></div>") +
+                           "</div>");
+  });
 });

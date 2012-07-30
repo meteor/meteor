@@ -122,7 +122,7 @@ Spark.render = function (htmlFunc) {
   }
 };
 
-Spark.setDataContext = function (html, dataContext) {
+Spark.setDataContext = function (dataContext, html) {
   var renderer = Spark._currentRenderer.get();
   if (!renderer)
     return html;
