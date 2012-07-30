@@ -5,12 +5,6 @@ OAuth = function(config) {
   _.extend(this, config);
 };
 
-OAuth.prototype._getAuthHeaderString = function(headers) {
-  return 'OAuth ' +  _.map(headers, function(val, key) {
-    return encodeURIComponent(key) + '="' + encodeURIComponent(val) + '"'; 
-  }).sort().join(', ');
-};
-
 OAuth.prototype.getRequestToken = function(callbackUrl) {
 
   var headers = this._buildHeader({
@@ -34,27 +28,6 @@ OAuth.prototype.getAccessToken = function(oauthToken) {
 
   this.accessToken = tokens.oauth_token;
   this.accessTokenSecret = tokens.oauth_token_secret;
-};
-
-OAuth.prototype._call = function(method, url, headers) {
-  
-  // Get the signature
-  headers.oauth_signature = this._getSignature(method.toUpperCase(), url, headers, this.accessTokenSecret);
-
-  // Make a authorization string according to oauth1 spec
-  var authString = this._getAuthHeaderString(headers);
-
-  // Make signed request
-  var response = Meteor.http[method.toLowerCase()](url, {
-    headers: {
-      Authorization: authString
-    }
-  });
-
-  if (response.error)
-    throw response.error;
-    
-  return response;
 };
 
 OAuth.prototype.call = function(method, url) {
@@ -102,9 +75,36 @@ OAuth.prototype._getSignature = function(method, url, rawHeaders, oauthSecret) {
   return crypto.createHmac('SHA1', signingKey).update(signatureBase).digest('base64');
 };
 
+OAuth.prototype._call = function(method, url, headers) {
+  
+  // Get the signature
+  headers.oauth_signature = this._getSignature(method.toUpperCase(), url, headers, this.accessTokenSecret);
+
+  // Make a authorization string according to oauth1 spec
+  var authString = this._getAuthHeaderString(headers);
+
+  // Make signed request
+  var response = Meteor.http[method.toLowerCase()](url, {
+    headers: {
+      Authorization: authString
+    }
+  });
+
+  if (response.error)
+    throw response.error;
+    
+  return response;
+};
+
 OAuth.prototype._encodeHeader = function(header) {
   return _.reduce(header, function(memo, val, key) {
     memo[encodeURIComponent(key)] = encodeURIComponent(val);
     return memo;
   }, {});
+};
+
+OAuth.prototype._getAuthHeaderString = function(headers) {
+  return 'OAuth ' +  _.map(headers, function(val, key) {
+    return encodeURIComponent(key) + '="' + encodeURIComponent(val) + '"'; 
+  }).sort().join(', ');
 };
