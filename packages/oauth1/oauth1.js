@@ -1,3 +1,5 @@
+var crypto = __meteor_bootstrap__.require("crypto");
+var querystring = __meteor_bootstrap__.require("querystring");
 
 // XXX Use oauth verifier
 
