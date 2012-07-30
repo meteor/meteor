@@ -52,6 +52,10 @@ var querystring = __meteor_bootstrap__.require("querystring");
   // connect middleware
   Meteor.accounts.oauth1._handleRequest = function (req, res, next) {
 
+    // XXX Used _oauth1 so routing can differentiate between oauth1 and 2
+    // XXX I think the solution is to use a regex that includes the
+    // applicable providers, e.g. oauth 1 regex would contain (twitter|flickr)
+
     // req.url will be "/_oauth1/<service name>?<action>"
     var barePath = req.url.substring(0, req.url.indexOf('?'));
     var splitPath = barePath.split('/');
