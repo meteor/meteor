@@ -181,7 +181,7 @@ DomUtils = {};
   // array.)
   //
   // `contextNode` may be either a node, a document, or a DocumentFragment.
-  DomUtils.findElement = function(contextNode, selector) {
+  DomUtils.findAll = function(contextNode, selector) {
     // Eventually, we will remove the dependency on jQuery ($) and
     // implement this in terms of querySelectorAll on modern browsers
     // and Sizzle in old IE.  We'll use jQuery's trick for scoped
@@ -203,7 +203,13 @@ DomUtils = {};
     }
   };
 
-  // Like `findElement` but searches the nodes from `start` to `end`
+  // Like `findAll` but finds one element (or returns null).
+  DomUtils.find = function(contextNode, selector) {
+    var results = DomUtils.findAll(contextNode, selector);
+    return (results.length ? results[0] : null);
+  };
+
+  // Like `findAll` but searches the nodes from `start` to `end`
   // inclusive. `start` and `end` must be siblings, and they participate
   // in the search (they can be used to match selector components, and
   // they can appear in the returned results). It's as if the parent of
@@ -212,14 +218,14 @@ DomUtils = {};
   //
   // If `selector` involves sibling selectors, child index selectors, or
   // the like, the results are undefined.
-  DomUtils.findElementInRange = function(start, end, selector) {
+  DomUtils.findAllInRange = function(start, end, selector) {
     end = (end || start);
 
     var container = start.parentNode;
     if (! container) {
       if (start === end && (start.nodeType === 9 /* Document */ ||
                             start.nodeType === 11 /* DocumentFragment */))
-        return DomUtils.findElement(start, selector);
+        return DomUtils.findAll(start, selector);
       throw new Error("Can't find element in range on detached node");
     }
     if (end.parentNode !== container)
@@ -238,7 +244,7 @@ DomUtils = {};
     // resultsPlus includes matches that are contained by the range's
     // parent, but are outside of start..end, i.e. are descended from
     // (or are) a different sibling.
-    var resultsPlus = DomUtils.findElement(container, selector);
+    var resultsPlus = DomUtils.findAll(container, selector);
 
     // Filter the list of nodes to remove nodes that occur before start
     // or after end.
@@ -247,6 +253,12 @@ DomUtils = {};
       return (DomUtils.elementOrder(n, start) > 0) ||
         (DomUtils.elementOrder(end, n) > 0);
     });
+  };
+
+  // Like `findAllInRange` but finds one element (or returns null).
+  DomUtils.findInRange = function(start, end, selector) {
+    var results = DomUtils.findAllInRange(start, end, selector);
+    return (results.length ? results[0] : null);
   };
 
 
