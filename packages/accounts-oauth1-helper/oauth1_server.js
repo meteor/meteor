@@ -1,6 +1,3 @@
-var crypto = __meteor_bootstrap__.require("crypto");
-var querystring = __meteor_bootstrap__.require("querystring");
-
 (function () {
   var connect = __meteor_bootstrap__.require("connect");
 
