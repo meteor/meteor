@@ -101,8 +101,8 @@
 
       // XXX Twitter's docs say to check that oauth_token is the
       // same as the request token received in previous step
-      // XXX does checking for the verifier really make sense?
-      if (!req.query.oauth_token || !req.query.oauth_verifier) {
+
+      if (!req.query.oauth_token) {
         // The user didn't authorize access
         return null;
       }
