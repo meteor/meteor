@@ -673,7 +673,7 @@ Meteor.ui = Meteor.ui || {};
         var selector = h.selector;
         if (selector) {
           var contextNode = range.containerNode();
-          var results = DomUtils.findElement(contextNode, selector);
+          var results = DomUtils.findAll(contextNode, selector);
           if (! _.contains(results, curNode))
             continue;
         } else {
@@ -757,7 +757,7 @@ Meteor.ui = Meteor.ui || {};
     var collectLabeledNodes = function(range, preserveMap) {
       var labeledNodes = {};
       _.each(preserveMap, function(labelFunc, sel) {
-        var matchingNodes = DomUtils.findElementInRange(
+        var matchingNodes = DomUtils.findAllInRange(
           range.firstNode(), range.lastNode(), sel);
         _.each(matchingNodes, function(n) {
           // labelFunc can be a function or a constant,
