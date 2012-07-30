@@ -17,20 +17,9 @@ OAuth.prototype.getRequestToken = function(callbackUrl) {
     oauth_callback: callbackUrl
   });
 
-  headers.oauth_signature = this._getSignature('POST', this._urls.requestToken, headers);
-
-  var authString = this._getAuthHeaderString(headers);
-
-  var response = Meteor.http.post(this._urls.requestToken, {
-    headers: {
-      Authorization: authString
-    }
-  });
-  
-  if (response.error)
-    throw response.error;
-
+  var response = this._call('post', this._urls.requestToken, headers);
   var tokens = querystring.parse(response.content);
+
   this.requestToken = tokens.oauth_token;
 };
 
@@ -40,33 +29,22 @@ OAuth.prototype.getAccessToken = function(oauthToken) {
     oauth_token: oauthToken
   });
 
-  headers.oauth_signature = this._getSignature('POST', this._urls.accessToken, headers);
-
-  var authString = this._getAuthHeaderString(headers);
-
-  var response = Meteor.http.post(this._urls.accessToken, {
-    headers: {
-      Authorization: authString
-    }
-  });
-
-  if (response.error)
-    throw response.error;
-
+  var response = this._call('post', this._urls.accessToken, headers);
   var tokens = querystring.parse(response.content);
+
   this.accessToken = tokens.oauth_token;
   this.accessTokenSecret = tokens.oauth_token_secret;
 };
 
-OAuth.prototype.call = function(method, url) {
-  var headers = this._buildHeader({
-    oauth_token: this.accessToken
-  });
-
+OAuth.prototype._call = function(method, url, headers) {
+  
+  // Get the signature
   headers.oauth_signature = this._getSignature(method.toUpperCase(), url, headers, this.accessTokenSecret);
 
+  // Make a authorization string according to oauth1 spec
   var authString = this._getAuthHeaderString(headers);
 
+  // Make signed request
   var response = Meteor.http[method.toLowerCase()](url, {
     headers: {
       Authorization: authString
@@ -75,6 +53,16 @@ OAuth.prototype.call = function(method, url) {
 
   if (response.error)
     throw response.error;
+    
+  return response;
+};
+
+OAuth.prototype.call = function(method, url) {
+  var headers = this._buildHeader({
+    oauth_token: this.accessToken
+  });
+
+  var response = this._call(method, url, headers);
 
   return response.data;
 };
