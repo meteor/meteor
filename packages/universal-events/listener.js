@@ -1,4 +1,38 @@
-// XXX process comments
+// Meteor Universal Events -- Normalized cross-browser event handling library
+//
+// This module lets you set up a function f that will be called
+// whenever an event fires on any element in the DOM. Specifically,
+// when an event fires on node N, f will be called with N. Then, if
+// the event is a bubbling event, f will be called again with N's
+// parent, then called again with N's grandparent, etc, until the root
+// of the document is reached. This provides a good base on top of
+// which custom event handling systems can be implemented.
+//
+// f also receives the event object for the event that fired. The
+// event object is normalized and extended to smooth over
+// cross-browser differences in event handling. See the details in
+// setHandler.
+//
+// Usage:
+//   var listener = new UniversalEventListener(function (event) { ... });
+//   listener.addType("click");
+//
+// If you want to support IE <= 8, you must also call installHandler
+// on each subtree of DOM nodes on which you wish to receive events,
+// eg, before inserting them into the document.
+//
+// Universal Events works reliably for events that fire on any DOM
+// element. It may not work consistently across browsers for events
+// that fire on non-element nodes (eg, text nodes.) We're not sure if
+// it's possible to handle those events consistently across browsers,
+// but in any event, it's not a common use case.
+//
+// Implementation notes:
+//
+// Internally, there are two separate implementations, one for modern
+// browsers (in liveevents_w3c.js), and one for old browsers with no
+// event capturing support (in liveevents_now3c.js.) The correct
+// implementation will be chosen for you automatically at runtime.
 
 (function () {
 
@@ -68,20 +102,13 @@
   var deliver = function (event) {
     event = normalizeEvent(event);
     _.each(listeners, function (listener) {
-      if (listener.types[event.type])
-        // XXX if in debug mode, have extra checks
-        /*
-      // When in unit test mode, wrap the given handleEventFunc to
-      // block events we didn't register for explicitly.
-      // See description of this flag in liveevents_tests.js.
-      if (Meteor.ui._TEST_requirePreciseEventHandlers) {
-        if (! event.currentTarget['_liveui_test_eventtype_'+event.type])
-          return;
-      }
-
-*/
-        listener.handler.call(null, event);
-    });
+      if (listener.types[event.type]) {
+        // if in debug mode, filter out events where the user forgot
+        // to call installHandler, even if we're not on IE
+        if (!(listener._checkIECompliance &&
+              ! event.currentTarget['_liveui_test_eventtype_' + event.type]))
+          listener.handler.call(null, event);
+      });
   };
 
   // When IE8 is dead, we can remove this springboard logic.
@@ -97,13 +124,13 @@
 
   var typeCounts = {};
 
-  // XXX document: no guarantees about events on text nodes
   // For tests, you can set _checkIECompliance, which will throw an
   // error if installHandler was not called when it should have been
   // in order to support IE <= 8.
   UniversalEventListener = new function (handler, _checkIECompliance) {
     this.handler = handler;
     this.types = {}; // map from event type name to 'true'
+    this.checkIECompliance = _checkIECompliance;
     this.impl = getImpl();
     listeners.push(this);
   };
@@ -134,27 +161,22 @@
         return;
       this.impl.installHandler(node, type);
 
-      /*
+      if (this._checkIECompliance) {
+        // When in unit test mode, mark all the nodes in the current
+        // subtree. We will later block events on nodes that weren't
+        // marked. This tests that LiveUI is generating calls to
+        // registerEventType with proper subtree information, even in
+        // browsers that don't need it.
 
-    // When in unit test mode, mark all the nodes in the current subtree.
-    // We will later block events on nodes that weren't marked.  This
-    // tests that LiveUI is generating calls to registerEventType
-    // with proper subtree information, even in browsers that don't need
-    // it.
-    // See description of this flag in liveevents_tests.js.
-    if (Meteor.ui._TEST_requirePreciseEventHandlers) {
-      var n = subtreeRoot, t = eventType;
-      // set property to any non-primitive value (to prevent showing
-      // up as an HTML attribute in IE)
-      n['_liveui_test_eventtype_'+t] = n;
-      if (n.firstChild) {
-        _.each(n.getElementsByTagName('*'), function(x) {
-          x['_liveui_test_eventtype_'+t] = x;
-        });
+        // set property to any non-primitive value (to prevent showing
+        // up as an HTML attribute in IE)
+        node['_liveui_test_eventtype_' + type] = node;
+        if (node.firstChild) {
+          _.each(node.getElementsByTagName('*'), function (x) {
+            x['_liveui_test_eventtype_' + type] = x;
+          });
+        }
       }
-    }
-
-*/
     },
 
     destroy: function () {
@@ -172,31 +194,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-// LiveEvents -- Normalized cross-browser event handling library
-//
-// This module lets you set up a function f that will be called
-// whenever an event fires on any node in the DOM. Specifically, when
-// an event fires on node N, f will be called with N. Then, if the
-// event is a bubbling event, f will be called again with N's parent,
-// then called again with N's grandparent, etc, until the root of the
-// document is reached. This provides a good base on top of which
-// custom event handling semantics can be implemented.
-//
-// f also receives the event object for the event that fired. The
-// event object is normalized and extended to smooth over
-// cross-browser differences in event handling. See the details in
-// setHandler.
-//
-// To use, first call setHandler to set the handler function. (There
-// can be only one.) After that, it's necessary to call
-// registerEventType to indicate what events you'll be handling and
-// where in the document they could occur. setHandler and
-// registerEventType are the only public functions.
-//
-// Internally, there are two separate implementations, one for modern
-// browsers (in liveevents_w3c.js), and one for old browsers with no
-// event capturing support (in liveevents_now3c.js.) The correct
-// implementation will be chosen for you automatically at runtime.
 
 
   // Install the global event handler. After this function has been
