@@ -23,9 +23,9 @@
 //
 // Universal Events works reliably for events that fire on any DOM
 // element. It may not work consistently across browsers for events
-// that fire on non-element nodes (eg, text nodes.) We're not sure if
-// it's possible to handle those events consistently across browsers,
-// but in any event, it's not a common use case.
+// that are intended to fire on non-element nodes (eg, text nodes).
+// We're not sure if it's possible to handle those events consistently
+// across browsers, but in any event, it's not a common use case.
 //
 // Implementation notes:
 //
@@ -106,32 +106,36 @@
         // if in debug mode, filter out events where the user forgot
         // to call installHandler, even if we're not on IE
         if (!(listener._checkIECompliance &&
-              ! event.currentTarget['_liveui_test_eventtype_' + event.type]))
+              ! event.currentTarget['_uevents_test_eventtype_' + event.type]))
           listener.handler.call(null, event);
-      });
+      }
+    });
   };
 
   // When IE8 is dead, we can remove this springboard logic.
   var impl;
   var getImpl = function () {
-    if (!impl) {
-      impl = (document.addEventListener ? UniversalEventListener._impl.w3c :
-              UniversalEventListener._impl.ie);
-      impl.init();
-    }
+    if (! impl)
+      impl = (document.addEventListener ?
+              new UniversalEventListener._impl.w3c(deliver) :
+              new UniversalEventListener._impl.ie(deliver));
     return impl;
   };
 
   var typeCounts = {};
 
+
+  ////////// PUBLIC API
+
   // For tests, you can set _checkIECompliance, which will throw an
   // error if installHandler was not called when it should have been
   // in order to support IE <= 8.
-  UniversalEventListener = new function (handler, _checkIECompliance) {
+  UniversalEventListener = function (handler, _checkIECompliance) {
     this.handler = handler;
     this.types = {}; // map from event type name to 'true'
     this.checkIECompliance = _checkIECompliance;
     this.impl = getImpl();
+    this._checkIECompliance = _checkIECompliance;
     listeners.push(this);
   };
 
@@ -139,7 +143,8 @@
     addType: function (type) {
       if (!this.types[type]) {
         this.types[type] = true;
-        if ((typeCounts[type] = (typeCounts[type] || 0) + 1) === 1)
+        typeCounts[type] = (typeCounts[type] || 0) + 1;
+        if (typeCounts[type] === 1)
           this.impl.addType(type);
       }
     },
@@ -147,7 +152,8 @@
     removeType: function (type) {
       if (this.types[type]) {
         delete this.types[type];
-        if (!(--typeCounts[type]))
+        typeCounts[type]--;
+        if (! typeCounts[type])
           this.impl.removeType(type);
       }
     },
@@ -155,25 +161,27 @@
     // only necessary on IE <= 8
     // noop except on element nodes
     // idempotent
+    // assures events will be delivered on node and descendents
     installHandler: function (node, type) {
       // Only work on element nodes, not e.g. text nodes or fragments
-      if (subtreeRoot.nodeType !== 1)
+      if (node.nodeType !== 1)
         return;
       this.impl.installHandler(node, type);
 
+      // When in checkIECompliance mode, mark all the nodes in the current subtree.
+      // We will later block events on nodes that weren't marked.  This
+      // tests that Spark is generating calls to registerEventType
+      // with proper subtree information, even in browsers that don't need
+      // it.
       if (this._checkIECompliance) {
-        // When in unit test mode, mark all the nodes in the current
-        // subtree. We will later block events on nodes that weren't
-        // marked. This tests that LiveUI is generating calls to
-        // registerEventType with proper subtree information, even in
-        // browsers that don't need it.
-
-        // set property to any non-primitive value (to prevent showing
-        // up as an HTML attribute in IE)
-        node['_liveui_test_eventtype_' + type] = node;
+        // set flag to mark the node for this type, recording the
+        // fact that installHandler was called for this node and type.
+        // the property value can be any non-primitive value (to prevent
+        // showing up as an HTML attribute in IE) so we use `node` itself.
+        node['_uevents_test_eventtype_'+type] = node;
         if (node.firstChild) {
-          _.each(node.getElementsByTagName('*'), function (x) {
-            x['_liveui_test_eventtype_' + type] = x;
+          _.each(node.getElementsByTagName('*'), function(x) {
+            x['_uevents_test_eventtype_'+type] = x;
           });
         }
       }
@@ -183,7 +191,7 @@
       var self = this;
 
       listeners = _.without(listeners, self);
-      _.each(self.types, function (x, type) {
+      _.each(_.keys(self.types), function (type) {
         self.removeType(type);
       });
     }

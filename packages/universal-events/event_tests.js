@@ -1,5 +1,29 @@
 
-Meteor.ui = Meteor.ui || {};
+Tinytest.add("universal-events - basic", function(test) {
+
+  var msgs = [];
+
+  var listener = new UniversalEventListener(function(event) {
+    var node = event.currentTarget;
+    if (DomUtils.elementContains(document.body, node)) {
+      msgs.push(event.currentTarget.nodeName.toLowerCase());
+    }
+  });
+
+  var d = OnscreenDiv(Meteor.render("<div><span><b>Hello</b></span></div>"));
+  listener.addType('click');
+  listener.installHandler(d.node(), 'click');
+  clickElement(DomUtils.find(d.node(), "b"));
+  test.equal(msgs, ['b', 'span', 'div', 'div']);
+
+  listener.destroy();
+
+});
+
+
+
+
+// XXX process comments
 
 // LiveEvents is unit-tested by the LiveUI tests, because it was
 // originally extracted from liveui.js.
@@ -23,7 +47,7 @@ Meteor.ui = Meteor.ui || {};
 // This flag is set to `true` when running unit tests (via the inclusion
 // of this file).  Of course, the tests are assumed to still pass even if
 // it is `false`, in which case the extra checks aren't done.
-Meteor.ui._TEST_requirePreciseEventHandlers = true;
+//Meteor.ui._TEST_requirePreciseEventHandlers = true;
 
 
 // XXX figure out what we're doing with this

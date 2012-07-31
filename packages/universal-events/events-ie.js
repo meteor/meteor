@@ -1,12 +1,14 @@
 // XXX process comments
 
+UniversalEventListener._impl = UniversalEventListener._impl ||  {};
+
 // Singleton
 UniversalEventListener._impl.ie = function (deliver) {
   var self = this;
   this.deliver = deliver;
   this.curriedHandler = function (event) {
     self.handler.call(this, self, event);
-  });
+  };
 
   // submit forms that aren't preventDefaulted
   // XXX explain
@@ -32,20 +34,21 @@ _.extend(UniversalEventListener._impl.ie.prototype, {
   installHandler: function (node, type) {
     // use old-school event binding, so that we can
     // access the currentTarget as `this` in the handler.
-    var prop = 'on' + eventType;
+    // note: handler is never removed from node
+    var prop = 'on' + type;
 
-    if (subtreeRoot.nodeType === 1) { // ELEMENT
-      this._install(subtreeRoot, prop);
+    if (node.nodeType === 1) { // ELEMENT
+      this._install(node, prop);
 
       // hopefully fast traversal, since the browser is doing it
-      var descendents = subtreeRoot.getElementsByTagName('*');
+      var descendents = node.getElementsByTagName('*');
 
       for(var i=0, N = descendents.length; i<N; i++)
         this._install(descendents[i], prop);
     }
   },
 
-  _install: (node, prop) {
+  _install: function (node, prop) {
     var props = [prop];
 
     // install handlers for faking focus/blur if necessary
@@ -131,7 +134,7 @@ _.extend(UniversalEventListener._impl.ie.prototype, {
     }
 
     self.deliver(event);
-  };
+  }
 
 });
 

@@ -14,6 +14,8 @@
   var SIMULATE_FOCUS_BLUR = 1;
   var SIMULATE_FOCUSIN_FOCUSOUT = 2;
 
+  UniversalEventListener._impl = UniversalEventListener._impl ||  {};
+
   // Singleton
   UniversalEventListener._impl.w3c = function (deliver) {
     this.deliver = deliver;
@@ -55,7 +57,7 @@
     },
 
     removeType: function (type) {
-      this._unlisten(this._expandEventType(eventType));
+      this._unlisten(this._expandEventType(type));
     },
 
     installHandler: function (node, type) {
@@ -68,21 +70,21 @@
       // install handlers for the events used to fake events of this
       // type, in addition to handlers for the real type
 
-      if (focusBlurMode === SIMULATE_FOCUS_BLUR) {
-        if (eventType === 'focus')
+      if (this.focusBlurMode === SIMULATE_FOCUS_BLUR) {
+        if (type === 'focus')
           ret.push('focusin');
-        else if (eventType === 'blur')
+        else if (type === 'blur')
           ret.push('focusout');
-      } else if (focusBlurMode === SIMULATE_FOCUSIN_FOCUSOUT) {
-        if (eventType === 'focusin')
+      } else if (this.focusBlurMode === SIMULATE_FOCUSIN_FOCUSOUT) {
+        if (type === 'focusin')
           ret.push('focus');
-        else if (eventType === 'focusout')
+        else if (type === 'focusout')
           ret.push('blur');
       }
       if (this.simulateMouseEnterLeave) {
-        if (eventType === 'mouseenter')
+        if (type === 'mouseenter')
           ret.push('mouseover');
-        else if (eventType === 'mouseleave')
+        else if (type === 'mouseleave')
           ret.push('mouseout');
       }
 
@@ -90,16 +92,18 @@
     },
 
     _listen: function (types) {
+      var self = this;
       _.each(types, function (type) {
-        if ((this.typeCounts[type] = (this.typeCounts[type] || 0) + 1) === 1)
-          document.addEventListener(type, this.boundCapturer, true);
+        if ((self.typeCounts[type] = (self.typeCounts[type] || 0) + 1) === 1)
+          document.addEventListener(type, self.boundCapturer, true);
       });
     },
 
     _unlisten: function (types) {
+      var self = this;
       _.each(types, function (type) {
-        if (!(--this.typeCounts[type])) {
-          document.removeEventListener(type, this.boundCapturer);
+        if (!(--self.typeCounts[type])) {
+          document.removeEventListener(type, self.boundCapturer);
         }
       });
     },
@@ -148,12 +152,12 @@
 
       // fire synthetic focusin/focusout on blur/focus or vice versa
       if (event.currentTarget === event.target) {
-        if (focusBlurMode === SIMULATE_FOCUS_BLUR) {
+        if (this.focusBlurMode === SIMULATE_FOCUS_BLUR) {
           if (event.type === 'focusin')
             sendUIEvent('focus', event.target, false);
           else if (event.type === 'focusout')
             sendUIEvent('blur', event.target, false);
-        } else if (focusBlurMode === SIMULATE_FOCUSIN_FOCUSOUT) {
+        } else if (this.focusBlurMode === SIMULATE_FOCUSIN_FOCUSOUT) {
           if (event.type === 'focus')
             sendUIEvent('focusin', event.target, true);
           else if (event.type === 'blur')
@@ -161,12 +165,12 @@
         }
       }
       // only respond to synthetic events of the types we are faking
-      if (focusBlurMode === SIMULATE_FOCUS_BLUR) {
+      if (this.focusBlurMode === SIMULATE_FOCUS_BLUR) {
         if (event.type === 'focus' || event.type === 'blur') {
           if (! event.synthetic)
             return;
         }
-      } else if (focusBlurMode === SIMULATE_FOCUSIN_FOCUSOUT) {
+      } else if (this.focusBlurMode === SIMULATE_FOCUSIN_FOCUSOUT) {
         if (event.type === 'focusin' || event.type === 'focusout') {
           if (! event.synthetic)
             return;

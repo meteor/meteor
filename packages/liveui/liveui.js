@@ -603,7 +603,8 @@ Meteor.ui = Meteor.ui || {};
                   after = innerRange.lastNode().nextSibling;
               n && n !== after;
               n = n.nextSibling)
-            Meteor.ui._event.registerEventType(t, n);
+            universalListener.addType(t);
+            universalListener.installHandler(n, t);
         });
       }
 
@@ -711,7 +712,7 @@ Meteor.ui = Meteor.ui || {};
     return null;
   };
 
-  Meteor.ui._event.setHandler(handleEvent);
+  var universalListener = new UniversalEventListener(handleEvent);
 
 
   //////////////////// DIFF / PATCH

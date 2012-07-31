@@ -5,6 +5,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use('livedata');
+  api.use('universal-events');
   api.use(['underscore', 'session', 'liverange'], 'client');
 
   // XXX Depends on jquery because we need a selector engine to resolve
@@ -13,8 +14,6 @@ Package.on_use(function (api) {
   // you still want the event object normalization that jquery provides?)
   api.use('jquery');
 
-  api.add_files(['liveevents_w3c.js', 'liveevents_now3c.js'], 'client');
-  api.add_files(['liveevents.js'], 'client');
   api.add_files(['livedocument.js'], 'client');
   api.add_files(['liveui.js', 'patcher.js'],
                 'client');
@@ -30,7 +29,6 @@ Package.on_test(function (api) {
     'livedocument_tests.js',
     'liveui_tests.js',
     'liveui_tests.html',
-    'patcher_tests.js',
-    'liveevents_tests.js'
+    'patcher_tests.js'
   ], 'client');
 });
