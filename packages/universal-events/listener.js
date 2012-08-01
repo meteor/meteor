@@ -127,10 +127,9 @@
 
   ////////// PUBLIC API
 
-  // Create a new universal event listener. Until some event types are
-  // turned on with `addType`, it will not receive any
-  // events.
-  //
+  // Create a new universal event listener with a given handler.
+  // Until some event types are turned on with `addType`, the handler
+  // will not receive any events.
   //
   // Whenever an event of the appropriate type fires anywhere in the
   // document, `handler` will be called with one argument, the
@@ -141,9 +140,16 @@
   // bubbles up to the top of the tree.
   //
   // The event object that's passed to `handler` will be normalized
-  // across browsers so that it contains the following fields:
+  // across browsers so that it contains the following fields and
+  // methods:
   //
-  // [XXX list]
+  // - type
+  // - target
+  // - currentTarget
+  // - stopPropagation()
+  // - preventDefault()
+  // - isPropagationStopped()
+  // - isDefaultPrevented()
   //
   // NOTE: If you want compatibility with IE <= 8, you will need to
   // call `installHandler` to prepare each subtree of the DOM to receive
@@ -165,8 +171,10 @@
   };
 
   _.extend(UniversalEventListener.prototype, {
-    // XXX document
-    // idempotent
+    // Adds `type` to the set of event types that this listener will
+    // listen to and deliver to the handler.  A listener is guaranteed
+    // to only deliver events of types in the current listening set.
+    // If `type` is already in the set, this method has no effect.
     addType: function (type) {
       if (!this.types[type]) {
         this.types[type] = true;
@@ -176,8 +184,9 @@
       }
     },
 
-    // XXX document
-    // idempotent
+    // Removes `type` from the set of event types that this listener
+    // will listen to and deliver to the handler.  If `type` is not
+    // in the set, this method has no effect.
     removeType: function (type) {
       if (this.types[type]) {
         delete this.types[type];
@@ -187,12 +196,23 @@
       }
     },
 
-    // XXX document
-    // only necessary on IE <= 8
-    // noop except on element nodes
-    // idempotent
-    // assures events will be delivered on node and descendents
-    // can't rely on NOT getting events if you haven't called it, even in IE <= 8
+    // For IE <= 8, installs the necessary handler to receive events
+    // of type `type` on the DOM subtree rooted at `node` (that is,
+    // `node` and its descendents).
+    //
+    // For proper cross-browser event handling, call this method on
+    // any nodes you want to receive events on.  To support only
+    // modern browsers, it is not necessary to call `installHandler`
+    // at all.  In IE <= 8, you must call it to ensure proper behavior,
+    // but the implementation is allowed to deliver events anyway if
+    // it can.
+    //
+    // Only current descendents of `node` are affected; if new nodes are
+    // added to the subtree later, installHandler must be called again
+    // to ensure events are received on those nodes.
+    //
+    // It is safe to call installHandler any number of times on the same
+    // arguments (it is idempotent).
     installHandler: function (node, type) {
       // Only work on element nodes, not e.g. text nodes or fragments
       if (node.nodeType !== 1)
@@ -229,47 +249,3 @@
     }
   });
 })();
-
-
-///////////////////////////////////////////////////////////////////////////////
-
-
-
-
-  // Install the global event handler. After this function has been
-  // done, handleEventFunc(event) will be called whenever a DOM event
-  // fires or bubbles to a new node.
-  //
-  // 'event' will be a normalized version of the DOM event
-  // object. Some of the properties that are normalized include:
-  // - type
-  // - target
-  // - currentTarget
-  // - stopPropagation()
-  // - preventDefault()
-  // - isPropagationStopped()
-  // - isDefaultPrevented()
-  //
-  // This function should only be called once, ever, and must be
-  // called before registerEventType.
-//  Meteor.ui._event.setHandler = function(handleEventFunc) {
-
-
-  // After calling setHandler, this function must be called some
-  // number of times to enable handling of different events at
-  // different points in the document.
-  //
-  // Specifically, calling this function will ensure that events of
-  // type eventType will be successfully caught when they occur within
-  // the DOM subtree rooted at subtreeRoot (i.e. subtreeRoot and its
-  // descendents).  Only the current descendents are registered.
-  // If new nodes are added to the subtree later, they must be
-  // registered.
-  //
-  // If this function isn't called for a given event type T and
-  // subtree S, and T fires within S, then it's unspecified whether
-  // handleEventFunc will be called. (In browsers where we are able to
-  // catch events for the entire document using a capturing handler,
-  // it will be called. In browsers that don't support this, the event
-  // will be lost.)
-//  Meteor.ui._event.registerEventType = function(eventType, subtreeRoot) {
