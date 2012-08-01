@@ -51,8 +51,13 @@
     var barePath = req.url.substring(0, req.url.indexOf('?'));
     var splitPath = barePath.split('/');
 
+    // Find service based on url
+    var serviceName = splitPath[2];
+    var service = Meteor.accounts.oauth2._services[serviceName];
+
     // Any non-oauth request will continue down the default middlewares
-    if (splitPath[1] !== '_oauth') {
+    // Same goes for service that hasn't been registered
+    if (splitPath[1] !== '_oauth' || !service) {
       next();
       return;
     }
@@ -60,9 +65,6 @@
     // Make sure we prepare the login results before returning.
     // This way the subsequent call to the `login` method will be
     // immediate.
-
-    var serviceName = splitPath[2];
-    var service = Meteor.accounts.oauth2._services[serviceName];
 
     // Get or create user id
     var oauthResult = service.handleOauthRequest(req.query);

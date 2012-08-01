@@ -4,7 +4,7 @@
   Meteor.accounts.oauth1._services = {};
 
   // Register a handler for an OAuth1 service. The handler will be called
-  // when we get an incoming http request on /_oauth1/{serviceName}. This
+  // when we get an incoming http request on /_oauth/{serviceName}. This
   // handler should use that information to fetch data about the user
   // logging in.
   //
@@ -49,16 +49,17 @@
   // connect middleware
   Meteor.accounts.oauth1._handleRequest = function (req, res, next) {
 
-    // XXX Used _oauth1 so routing can differentiate between oauth1 and 2
-    // XXX I think the solution is to use a regex that includes the
-    // applicable providers, e.g. oauth 1 regex would contain (twitter|flickr)
-
-    // req.url will be "/_oauth1/<service name>?<action>"
+    // req.url will be "/_oauth/<service name>?<action>"
     var barePath = req.url.substring(0, req.url.indexOf('?'));
     var splitPath = barePath.split('/');
 
+    // Find service based on url
+    var serviceName = splitPath[2];
+    var service = Meteor.accounts.oauth1._services[serviceName];
+
     // Any non-oauth request will continue down the default middlewares
-    if (splitPath[1] !== '_oauth1') {
+    // Same goes for service that hasn't been registered
+    if (splitPath[1] !== '_oauth' || !service) {
       next();
       return;
     }
@@ -67,19 +68,12 @@
     // This way the subsequent call to the `login` method will be
     // immediate.
 
-    var serviceName = splitPath[2];
-    
-    // XXX check against a list of installed services too
-    if (!serviceName)
-      throw new Meteor.accounts.ConfigError("Service could not be found");
-
     // Make sure we're configured
     if (!Meteor.accounts[serviceName]._appId || !Meteor.accounts[serviceName]._appUrl)
       throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts." + serviceName + ".config first");
     if (!Meteor.accounts[serviceName]._secret)
       throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts." + serviceName + ".setSecret first");
 
-    var service = Meteor.accounts.oauth1._services[serviceName];
     var config = Meteor.accounts[serviceName];
     var oauth = new OAuth(config);
 

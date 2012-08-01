@@ -18,7 +18,7 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
 
   // simulate logging in using foobook
   var req = {method: "POST",
-             url: "/_oauth1/foobook?close",
+             url: "/_oauth/foobook?close",
              query: {state: "STATE"}};
   Meteor.accounts.oauth1._handleRequest(req, new http.ServerResponse(req));
 
