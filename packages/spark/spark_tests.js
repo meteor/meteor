@@ -1,3 +1,4 @@
+// XXX when testing spark, set the checkIECompliance flag on universal-events somehow
 
 Tinytest.add("spark - assembly", function (test) {
 

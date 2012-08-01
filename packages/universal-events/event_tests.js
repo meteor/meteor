@@ -1,53 +1,83 @@
 
 Tinytest.add("universal-events - basic", function(test) {
 
-  var msgs = [];
+  var runTest = function (testMissingHandlers) {
+    var msgs = [];
+    var listeners = [];
 
-  var listener = new UniversalEventListener(function(event) {
-    var node = event.currentTarget;
-    if (DomUtils.elementContains(document.body, node)) {
-      msgs.push(event.currentTarget.nodeName.toLowerCase());
-    }
-  });
+    var createListener = function () {
+      var out = [];
+      msgs.push(out);
+      var ret = new UniversalEventListener(function(event) {
+        var node = event.currentTarget;
+        if (DomUtils.elementContains(document.body, node)) {
+          out.push(event.currentTarget.nodeName.toLowerCase());
+        }
+      }, testMissingHandlers);
+      listeners.push(ret);
+      return ret;
+    };
 
-  var d = OnscreenDiv(Meteor.render("<div><span><b>Hello</b></span></div>"));
-  listener.addType('click');
-  listener.installHandler(d.node(), 'click');
-  clickElement(DomUtils.find(d.node(), "b"));
-  test.equal(msgs, ['b', 'span', 'div', 'div']);
+    var L1 = createListener();
 
-  listener.destroy();
+    var check = function (event, expected) {
+      _.each(msgs, function (m) {
+        m.length = 0;
+      });
+      simulateEvent(DomUtils.find(d.node(), "b"), event);
+      for (var i = 0; i < listeners.length; i++)
+        test.equal(msgs[i], testMissingHandlers ? [] : expected[i]);
+    };
 
+    var d = OnscreenDiv(Meteor.render("<div><span><b>Hello</b></span></div>"));
+    L1.addType('mousedown');
+    if (!testMissingHandlers)
+      L1.installHandler(d.node(), 'mousedown');
+    var x = ['b', 'span', 'div', 'div'];
+    check('mousedown', [x]);
+
+    check('mouseup', [[]]);
+
+    L1.removeType('mousedown');
+    check('mousedown', [[]]);
+    L1.removeType('mousedown');
+    check('mousedown', [[]]);
+
+    L1.addType('mousedown');
+    check('mousedown', [x]);
+    L1.addType('mousedown');
+    check('mousedown', [x]);
+    L1.removeType('mousedown');
+    check('mousedown', [[]]);
+
+    var L2 = createListener();
+    if (!testMissingHandlers)
+      L2.installHandler(d.node(), 'mousedown');
+
+    L1.addType('mousedown');
+    check('mousedown', [x, []]);
+    L2.addType('mousedown');
+    check('mousedown', [x, x]);
+    L2.addType('mousedown');
+    check('mousedown', [x, x]);
+    L1.removeType('mousedown');
+    check('mousedown', [[], x]);
+    L1.removeType('mousedown');
+    check('mousedown', [[], x]);
+    L2.removeType('mousedown');
+    check('mousedown', [[], []]);
+    L1.addType('mousedown');
+    check('mousedown', [x, []]);
+    L1.removeType('mousedown');
+    check('mousedown', [[], []]);
+    L2.addType('mousedown');
+    check('mousedown', [[], x]);
+    L2.removeType('mousedown');
+    check('mousedown', [[], []]);
+
+    d.kill();
+  };
+
+  runTest(false);
+  runTest(true);
 });
-
-
-
-
-// XXX process comments
-
-// LiveEvents is unit-tested by the LiveUI tests, because it was
-// originally extracted from liveui.js.
-
-
-// TEST FLAG: requirePreciseEventHandlers
-//
-// This flag enables extra checking that LiveUI is correctly registering new
-// DOM nodes with LiveEvents, even in browsers that don't require it.
-// If the checks fail, it means the tests would
-// fail anyway in Old IE, but this way we get to find out sooner.
-//
-// The reason for this set-up is that the main (W3C) implementation of
-// LiveEvents doesn't need to know when nodes are added to the DOM
-// via the "subtreeRoot" information in registerEventType.
-// However, the Old IE implementation does, so it's important that LiveUI
-// tell us specifically what nodes need event handlers.  When this
-// flag is true, we hold LiveUI to the same standard of specificity whether
-// or not we are running Old IE.
-//
-// This flag is set to `true` when running unit tests (via the inclusion
-// of this file).  Of course, the tests are assumed to still pass even if
-// it is `false`, in which case the extra checks aren't done.
-//Meteor.ui._TEST_requirePreciseEventHandlers = true;
-
-
-// XXX figure out what we're doing with this

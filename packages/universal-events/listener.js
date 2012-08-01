@@ -127,19 +127,46 @@
 
   ////////// PUBLIC API
 
-  // For tests, you can set _checkIECompliance, which will throw an
-  // error if installHandler was not called when it should have been
-  // in order to support IE <= 8.
+  // Create a new universal event listener. Until some event types are
+  // turned on with `addType`, it will not receive any
+  // events.
+  //
+  //
+  // Whenever an event of the appropriate type fires anywhere in the
+  // document, `handler` will be called with one argument, the
+  // event. If the event is a bubbling event (most events are
+  // bubbling, eg, 'click'), then `handler` will be called not only
+  // for the element that was the origin of the event (eg, the button
+  // that was clicked), but for each parent element as the event
+  // bubbles up to the top of the tree.
+  //
+  // The event object that's passed to `handler` will be normalized
+  // across browsers so that it contains the following fields:
+  //
+  // [XXX list]
+  //
+  // NOTE: If you want compatibility with IE <= 8, you will need to
+  // call `installHandler` to prepare each subtree of the DOM to receive
+  // the events you are interested in.
+  //
+  // Debugging only:
+  //
+  // The _checkIECompliance flag enables extra checking that the user
+  // is correctly registering new DOM nodes with installHandler, even
+  // in browsers that don't require it. In other words, when the flag
+  // is set, modern browsers will require the same API calls as IE <=
+  // 8. This is only used for tests and is private for now.
   UniversalEventListener = function (handler, _checkIECompliance) {
     this.handler = handler;
     this.types = {}; // map from event type name to 'true'
-    this.checkIECompliance = _checkIECompliance;
     this.impl = getImpl();
     this._checkIECompliance = _checkIECompliance;
     listeners.push(this);
   };
 
   _.extend(UniversalEventListener.prototype, {
+    // XXX document
+    // idempotent
     addType: function (type) {
       if (!this.types[type]) {
         this.types[type] = true;
@@ -149,6 +176,8 @@
       }
     },
 
+    // XXX document
+    // idempotent
     removeType: function (type) {
       if (this.types[type]) {
         delete this.types[type];
@@ -158,10 +187,12 @@
       }
     },
 
+    // XXX document
     // only necessary on IE <= 8
     // noop except on element nodes
     // idempotent
     // assures events will be delivered on node and descendents
+    // can't rely on NOT getting events if you haven't called it, even in IE <= 8
     installHandler: function (node, type) {
       // Only work on element nodes, not e.g. text nodes or fragments
       if (node.nodeType !== 1)
@@ -187,6 +218,7 @@
       }
     },
 
+    // XXX document
     destroy: function () {
       var self = this;
 
