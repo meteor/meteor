@@ -30,8 +30,8 @@
 // Implementation notes:
 //
 // Internally, there are two separate implementations, one for modern
-// browsers (in liveevents_w3c.js), and one for old browsers with no
-// event capturing support (in liveevents_now3c.js.) The correct
+// browsers (in events-w3c.js), and one for old browsers with no
+// event capturing support (in events-ie.js.) The correct
 // implementation will be chosen for you automatically at runtime.
 
 (function () {
@@ -143,7 +143,7 @@
   // across browsers so that it contains the following fields and
   // methods:
   //
-  // - type
+  // - type (e.g. "click")
   // - target
   // - currentTarget
   // - stopPropagation()
@@ -172,9 +172,8 @@
 
   _.extend(UniversalEventListener.prototype, {
     // Adds `type` to the set of event types that this listener will
-    // listen to and deliver to the handler.  A listener is guaranteed
-    // to only deliver events of types in the current listening set.
-    // If `type` is already in the set, this method has no effect.
+    // listen to and deliver to the handler.  Has no effect if `type`
+    // is already in the set.
     addType: function (type) {
       if (!this.types[type]) {
         this.types[type] = true;
@@ -185,8 +184,8 @@
     },
 
     // Removes `type` from the set of event types that this listener
-    // will listen to and deliver to the handler.  If `type` is not
-    // in the set, this method has no effect.
+    // will listen to and deliver to the handler.  Has no effect if `type`
+    // is not in the set.
     removeType: function (type) {
       if (this.types[type]) {
         delete this.types[type];
@@ -196,23 +195,26 @@
       }
     },
 
-    // For IE <= 8, installs the necessary handler to receive events
-    // of type `type` on the DOM subtree rooted at `node` (that is,
-    // `node` and its descendents).
+    // It is only necessary to call this method if you want to support
+    // IE <= 8. On those browsers, you must call this method on each
+    // set of nodes before adding them to the DOM (or at least, before
+    // expecting to receive events on them), and you must specify the
+    // types of events you'll be receiving.
     //
-    // For proper cross-browser event handling, call this method on
-    // any nodes you want to receive events on.  To support only
-    // modern browsers, it is not necessary to call `installHandler`
-    // at all.  In IE <= 8, you must call it to ensure proper behavior,
-    // but the implementation is allowed to deliver events anyway if
-    // it can.
-    //
-    // Only current descendents of `node` are affected; if new nodes are
-    // added to the subtree later, installHandler must be called again
-    // to ensure events are received on those nodes.
+    // `node` and all of its descendents will be set up to handle
+    // events of type `type` (eg, 'click'). Only current descendents
+    // of `node` are affected; if new nodes are added to the subtree
+    // later, installHandler must be called again to ensure events are
+    // received on those nodes. To set up to handle multiple event
+    // types, make multiple calls.
     //
     // It is safe to call installHandler any number of times on the same
     // arguments (it is idempotent).
+    //
+    // If you forget to call this function for a given node, it's
+    // unspecified whether you'll receive events on IE <= 8 (you may,
+    // you may not.) If you don't care about supporting IE <= 8 you
+    // can ignore this function.
     installHandler: function (node, type) {
       // Only work on element nodes, not e.g. text nodes or fragments
       if (node.nodeType !== 1)
@@ -238,7 +240,8 @@
       }
     },
 
-    // XXX document
+    // Tear down this UniversalEventListener so that no more events
+    // are delivered.
     destroy: function () {
       var self = this;
 

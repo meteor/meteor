@@ -1,7 +1,5 @@
-// XXX process comments
-
-// LiveEvents implementation that depends on the W3C event model,
-// i.e. addEventListener and capturing.  It's intended for all
+// Universal Events implementation that depends on the W3C event
+// model, i.e. addEventListener and capturing.  It's intended for all
 // browsers except IE <= 8.
 //
 // We take advantage of the fact that event handlers installed during

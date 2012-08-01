@@ -1,4 +1,23 @@
-// XXX process comments
+// Universal Events implementation for IE versions 6-8, which lack
+// addEventListener and event capturing.
+//
+// The strategy is very different.  We walk the subtree in question
+// and just attach the handler to all elements.  If the handler is
+// foo and the eventType is 'click', we assign node.onclick = foo
+// everywhere.  Since there is only one function object and we are
+// just assigning a property, hopefully this is somewhat lightweight.
+//
+// We use the node.onfoo method of binding events, also called "DOM0"
+// or the "traditional event registration", rather than the IE-native
+// node.attachEvent(...), mainly because we have the benefit of
+// referring to `this` from the handler in order to populate
+// event.currentTarget.  It seems that otherwise we'd have to create
+// a closure per node to remember what node we are handling.
+//
+// We polyfill the usual event properties from their various locations.
+// We also make 'change' and 'submit' bubble, and we fire 'change'
+// events on checkboxes and radio buttons immediately rather than
+// only when the user blurs them, another old IE quirk.
 
 UniversalEventListener._impl = UniversalEventListener._impl ||  {};
 
@@ -10,14 +29,19 @@ UniversalEventListener._impl.ie = function (deliver) {
     self.handler.call(this, self, event);
   };
 
-  // submit forms that aren't preventDefaulted
-  // XXX explain
+  // The 'submit' event on IE doesn't bubble.  We want to simulate
+  // bubbling submit to match other browsers, and to do that we use
+  // IE's own event machinery.  We can't dispatch events with arbitrary
+  // names in IE, so we appropriate the obscure "datasetcomplete" event
+  // for this purpose.
   document.attachEvent('ondatasetcomplete', function () {
     var evt = window.event;
     var target = evt && evt.srcElement;
     if (evt.synthetic && target &&
         target.nodeName === 'FORM' &&
         evt.returnValue !== false)
+      // No event handler called preventDefault on the simulated
+      // submit event.  That means the form should be submitted.
       target.submit();
   });
 };
@@ -137,28 +161,3 @@ _.extend(UniversalEventListener._impl.ie.prototype, {
   }
 
 });
-
-
-
-
-
-// LiveEvents implementation for "old IE" versions 6-8, which lack
-// addEventListener and event capturing.
-//
-// The strategy is very different.  We walk the subtree in question
-// and just attach the handler to all elements.  If the handler is
-// foo and the eventType is 'click', we assign node.onclick = foo
-// everywhere.  Since there is only one function object and we are
-// just assigning a property, hopefully this is somewhat lightweight.
-//
-// We use the node.onfoo method of binding events, also called "DOM0"
-// or the "traditional event registration", rather than the IE-native
-// node.attachEvent(...), mainly because we have the benefit of
-// referring to `this` from the handler in order to populate
-// event.currentTarget.  It seems that otherwise we'd have to create
-// a closure per node to remember what node we are handling.
-//
-// We polyfill the usual event properties from their various locations.
-// We also make 'change' and 'submit' bubble, and we fire 'change'
-// events on checkboxes and radio buttons immediately rather than
-// only when the user blurs them, another old IE quirk.
