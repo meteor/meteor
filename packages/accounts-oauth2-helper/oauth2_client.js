@@ -24,6 +24,8 @@
     Meteor.apply('login', [
       {oauth: {version: 2, state: state}}
     ], {wait: true}, function(error, result) {
+      // XXX this is the wrong thing to do with the error! It should be
+      // delivered to the user via a callback.
       if (error)
         throw error;
 

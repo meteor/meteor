@@ -33,6 +33,10 @@
     if (result === undefined) // not using `!result` since can be null
       // We weren't notified of the user authorizing the login.
       return null;
+    else if (result instanceof Error)
+      // We tried to login, but there was a fatal error. Report it back
+      // to the user.
+      throw result;
     else
       return result;
   });
@@ -48,6 +52,7 @@
   // connect middleware
   Meteor.accounts.oauth2._handleRequest = function (req, res, next) {
     // req.url will be "/_oauth/<service name>?<action>"
+    // NOTE: query param is mandatory.
     var barePath = req.url.substring(0, req.url.indexOf('?'));
     var splitPath = barePath.split('/');
 
@@ -64,19 +69,37 @@
     var serviceName = splitPath[2];
     var service = Meteor.accounts.oauth2._services[serviceName];
 
-    // Get or create user id
-    var oauthResult = service.handleOauthRequest(req.query);
+    try {
+      // Get or create user id
+      var oauthResult = service && service.handleOauthRequest(req.query);
 
-    if (oauthResult) { // could be null if user declined permissions
-      var userId = Meteor.accounts.updateOrCreateUser(oauthResult.options, oauthResult.extra);
+      // could be null if user declined permissions, or if there was an
+      // error of some sort.
+      if (oauthResult && req.query.state) {
+        var userId = Meteor.accounts.updateOrCreateUser(
+          oauthResult.options, oauthResult.extra);
 
-      // Generate and store a login token for reconnect
-      // XXX this could go in accounts_server.js instead
-      var loginToken = Meteor.accounts._loginTokens.insert({userId: userId});
+        // Generate and store a login token for reconnect
+        // XXX this could go in accounts_server.js instead
+        var loginToken = Meteor.accounts._loginTokens.insert({userId: userId});
 
-      // Store results to subsequent call to `login`
-      Meteor.accounts.oauth2._loginResultForState[req.query.state] =
-        {token: loginToken, id: userId};
+        // Store results to subsequent call to `login`
+        Meteor.accounts.oauth2._loginResultForState[req.query.state] =
+          {token: loginToken, id: userId};
+      }
+    } catch (err) {
+      // if we got thrown an error, save it off, it will get passed to
+      // the approporiate login call (if any) and reported there.
+      //
+      // The other option would be to display it in the popup tab that
+      // is still open at this point, ignoring the 'close' or 'redirect'
+      // we were passed. But then the developer wouldn't be able to
+      // style the error or react to it in any way.
+      if (req.query.state && err instanceof Error)
+        Meteor.accounts.oauth2._loginResultForState[req.query.state] = err;
+
+      // also log to the server console, so the developer sees it.
+      Meteor._debug("Exception in oauth2 handler", err);
     }
 
     // We support ?close and ?redirect=URL. Any other query should

@@ -2,6 +2,9 @@ Tinytest.add('accounts - updateOrCreateUser', function (test) {
   var email = Meteor.uuid() + "@example.com";
   var email2 = Meteor.uuid() + "@example.com";
 
+  // XXX test isolation fail! these tests use a fixed google, facebook,
+  // and weibo ids. This won't work with multiple tests running at once.
+
   // test that emails are matched correctly for users logging in
   // through different services
   Meteor.accounts.updateOrCreateUser({email: email, services: {facebook: {id: 1}}});

@@ -115,10 +115,19 @@
         test.equal(Meteor.user().username, username);
       }));
     },
-    // change w/ no old password.
+    // change w/ no old password. allowed due to config.
     function (test, expect) {
       Meteor.changePassword(null, password3, expect(function (error) {
-        test.isTrue(error);
+        test.equal(error, undefined);
+        test.equal(Meteor.user().username, username);
+      }));
+    },
+    logoutStep,
+    // new password, success
+    function (test, expect) {
+      Meteor.loginWithPassword(email, password3, expect(function (error) {
+        test.equal(error, undefined);
+        test.equal(Meteor.user().username, username);
       }));
     },
     logoutStep,
