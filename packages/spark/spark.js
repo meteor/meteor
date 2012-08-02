@@ -430,7 +430,6 @@ Spark.isolate = function (htmlFunc) {
 
           var oldContents = range.replace_contents(frag); // XXX should patch
           Spark.finalize(oldContents);
-          notifyWatchers(range.firstNode(), range.lastNode());
           range.destroy();
         });
       });
