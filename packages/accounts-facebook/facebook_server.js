@@ -4,7 +4,7 @@
     Meteor.accounts.facebook._secret = secret;
   };
 
-  Meteor.accounts.oauth2.registerService('facebook', function(query) {
+  Meteor.accounts.oauth.registerService('facebook', 2, function(query) {
     if (query.error) {
       // The user didn't authorize access
       return null;

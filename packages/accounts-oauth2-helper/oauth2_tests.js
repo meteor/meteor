@@ -7,7 +7,7 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
   Meteor.accounts.oauth2._services = {};
 
   // register a fake login service - foobook
-  Meteor.accounts.oauth2.registerService("foobook", function (query) {
+  Meteor.accounts.oauth.registerService("foobook", 2, function (query) {
     return {
       options: {
         email: email,

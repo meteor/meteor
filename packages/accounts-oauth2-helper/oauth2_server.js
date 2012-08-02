@@ -3,27 +3,6 @@
 
   Meteor.accounts.oauth2._services = {};
 
-  // Register a handler for an OAuth2 service. The handler will be called
-  // when we get an incoming http request on /_oauth/{serviceName}. This
-  // handler should use that information to fetch data about the user
-  // logging in.
-  //
-  // @param name {String} e.g. "google", "facebook"
-  // @param handleOauthRequest {Function(query)}
-  //   - query is an object with the parameters passed in the query string
-  //   - return value is:
-  //     - {options: (options), extra: (optional extra)} (same as the
-  //       arguments to Meteor.accounts.updateOrCreateUser)
-  //     - `null` if the user declined to give permissions
-  Meteor.accounts.oauth2.registerService = function (name, handleOauthRequest) {
-    if (Meteor.accounts.oauth2._services[name])
-      throw new Error("Already registered the " + name + " OAuth2 service");
-
-    Meteor.accounts.oauth2._services[name] = {
-      handleOauthRequest: handleOauthRequest
-    };
-  };
-
   // Listen to calls to `login` with an oauth option set
   Meteor.accounts.registerLoginHandler(function (options) {
     if (!options.oauth || options.oauth.version !== 2)
