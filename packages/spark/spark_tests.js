@@ -1,15 +1,19 @@
-// XXX when testing spark, set the checkIECompliance flag on universal-events somehow
+// XXX make sure that when tests use id="..." to trigger patching, "preserve" happens
+
+Spark._checkIECompliance = true;
+
+(function () {
 
 Tinytest.add("spark - assembly", function (test) {
 
-  var doTest = function(calc) {
-    var frag = Spark.render(function() {
-      return calc(function(str, expected) {
+  var doTest = function (calc) {
+    var frag = Spark.render(function () {
+      return calc(function (str, expected) {
         return Spark.setDataContext(null, str);
       });
     });
     var groups = [];
-    var html = calc(function(str, expected, noRange) {
+    var html = calc(function (str, expected, noRange) {
       if (arguments.length > 1)
         str = expected;
       if (! noRange)
@@ -20,41 +24,41 @@ Tinytest.add("spark - assembly", function (test) {
     test.equal(f.html(), html);
 
     var actualGroups = [];
-    var tempRange = new LiveRange(Spark._ANNOTATION_DATA, frag);
-    tempRange.visit(function(isStart, rng) {
-      if (! isStart)
+    var tempRange = new LiveRange(Spark._TAG, frag);
+    tempRange.visit(function (isStart, rng) {
+      if (! isStart && rng.type === Spark._ANNOTATION_DATA)
         actualGroups.push(rangeToHtml(rng));
     });
     test.equal(actualGroups.join(','), groups.join(','));
   };
 
-  doTest(function(A) { return "<p>Hello</p>"; });
-  doTest(function(A) { return "<td>Hello</td><td>World</td>"; });
-  doTest(function(A) { return "<td>"+A("Hello")+"</td>"; });
-  doTest(function(A) { return A("<td>"+A("Hello")+"</td>"); });
-  doTest(function(A) { return A(A(A(A(A(A("foo")))))); });
+  doTest(function (A) { return "<p>Hello</p>"; });
+  doTest(function (A) { return "<td>Hello</td><td>World</td>"; });
+  doTest(function (A) { return "<td>"+A("Hello")+"</td>"; });
+  doTest(function (A) { return A("<td>"+A("Hello")+"</td>"); });
+  doTest(function (A) { return A(A(A(A(A(A("foo")))))); });
   doTest(
-    function(A) { return "<div>Yo"+A("<p>Hello "+A(A("World")),"<p>Hello World</p>")+
+    function (A) { return "<div>Yo"+A("<p>Hello "+A(A("World")),"<p>Hello World</p>")+
                   "</div>"; });
-  doTest(function(A) {
+  doTest(function (A) {
     return A("<ul>"+A("<li>one","<li>one</li>")+
              A("<li>two","<li>two</li>")+
              A("<li>three","<li>three</li>"),
              "<ul><li>one</li><li>two</li><li>three</li></ul>"); });
 
-  doTest(function(A) {
+  doTest(function (A) {
     return A("<table>"+A("<tr>"+A("<td>"+A("Hi")+"</td>")+"</tr>")+"</table>",
              "<table><tbody><tr><td>Hi</td></tr></tbody></table>");
   });
 
-  test.throws(function() {
-    doTest(function(A) {
+  test.throws(function () {
+    doTest(function (A) {
       var z = A("Hello");
       return z+z;
     });
   });
 
-  var frag = Spark.render(function() {
+  var frag = Spark.render(function () {
     return '<div foo="abc' +
       Spark.setDataContext(null, "bar") +
       'xyz">Hello</div>';
@@ -67,12 +71,118 @@ Tinytest.add("spark - assembly", function (test) {
 });
 
 
+Tinytest.add("spark - basic tag contents", function (test) {
+
+  // adapted from nateps / metamorph
+
+  var do_onscreen = function (f) {
+    var div = OnscreenDiv();
+    var stuff = {
+      div: div,
+      node: _.bind(div.node, div),
+      render: function (rfunc) {
+        div.node().appendChild(Meteor.render(rfunc));
+      }
+    };
+
+    f.call(stuff);
+
+    div.kill();
+  };
+
+  var R, div;
+
+  // basic text replace
+
+  do_onscreen(function () {
+    R = ReactiveVar("one two three");
+    this.render(function () {
+      return R.get();
+    });
+    R.set("three four five six");
+    Meteor.flush();
+    test.equal(this.div.html(), "three four five six");
+  });
+
+  // work inside a table
+
+  do_onscreen(function () {
+    R = ReactiveVar("<tr><td>HI!</td></tr>");
+    this.render(function () {
+      return "<table id='morphing'>" + R.get() + "</table>";
+    });
+
+    test.equal($(this.node()).find("#morphing td").text(), "HI!");
+    R.set("<tr><td>BUH BYE!</td></tr>");
+    Meteor.flush();
+    test.equal($(this.node()).find("#morphing td").text(), "BUH BYE!");
+  });
+
+  // work inside a tbody
+
+  do_onscreen(function () {
+    R = ReactiveVar("<tr><td>HI!</td></tr>");
+    this.render(function () {
+      return "<table id='morphing'><tbody>" + R.get() + "</tbody></table>";
+    });
+
+    test.equal($(this.node()).find("#morphing td").text(), "HI!");
+    R.set("<tr><td>BUH BYE!</td></tr>");
+    Meteor.flush();
+    test.equal($(this.node()).find("#morphing td").text(), "BUH BYE!");
+  });
+
+  // work inside a tr
+
+  do_onscreen(function () {
+    R = ReactiveVar("<td>HI!</td>");
+    this.render(function () {
+      return "<table id='morphing'><tr>" + R.get() + "</tr></table>";
+    });
+
+    test.equal($(this.node()).find("#morphing td").text(), "HI!");
+    R.set("<td>BUH BYE!</td>");
+    Meteor.flush();
+    test.equal($(this.node()).find("#morphing td").text(), "BUH BYE!");
+  });
+
+  // work inside a ul
+
+  do_onscreen(function () {
+    R = ReactiveVar("<li>HI!</li>");
+    this.render(function () {
+      return "<ul id='morphing'>" + R.get() + "</ul>";
+    });
+
+    test.equal($(this.node()).find("#morphing li").text(), "HI!");
+    R.set("<li>BUH BYE!</li>");
+    Meteor.flush();
+    test.equal($(this.node()).find("#morphing li").text(), "BUH BYE!");
+  });
+
+  // work inside a select
+
+  do_onscreen(function () {
+    R = ReactiveVar("<option>HI!</option>");
+    this.render(function () {
+      return "<select id='morphing'>" + R.get() + "</select>";
+    });
+
+    test.equal($(this.node()).find("#morphing option").text(), "HI!");
+    R.set("<option>BUH BYE!</option>");
+    Meteor.flush();
+    test.equal($(this.node()).find("#morphing option").text(), "BUH BYE!");
+  });
+
+});
+
+
 Tinytest.add("spark - basic isolate", function (test) {
 
   var R = ReactiveVar('foo');
 
-  var div = OnscreenDiv(Spark.render(function() {
-    return '<div>' + Spark.isolate(function() {
+  var div = OnscreenDiv(Spark.render(function () {
+    return '<div>' + Spark.isolate(function () {
       return '<span>' + R.get() + '</span>';
     }) + '</div>';
   }));
@@ -88,11 +198,11 @@ Tinytest.add("spark - basic isolate", function (test) {
 
 });
 
-Tinytest.add("spark - one render", function(test) {
+Tinytest.add("spark - one render", function (test) {
 
   var R = ReactiveVar("foo");
 
-  var frag = WrappedFrag(Meteor.render(function() {
+  var frag = WrappedFrag(Meteor.render(function () {
     return R.get();
   })).hold();
 
@@ -117,14 +227,14 @@ Tinytest.add("spark - one render", function(test) {
   test.equal(R.numListeners(), 0);
 
   // empty return value should work, and show up as a comment
-  frag = WrappedFrag(Meteor.render(function() {
+  frag = WrappedFrag(Meteor.render(function () {
     return "";
   }));
   test.equal(frag.html(), "<!---->");
 
   // nodes coming and going at top level of fragment
   R.set(true);
-  frag = WrappedFrag(Meteor.render(function() {
+  frag = WrappedFrag(Meteor.render(function () {
     return R.get() ? "<div>hello</div><div>world</div>" : "";
   })).hold();
   test.equal(frag.html(), "<div>hello</div><div>world</div>");
@@ -141,7 +251,7 @@ Tinytest.add("spark - one render", function(test) {
 
   // more complicated changes
   R.set(1);
-  frag = WrappedFrag(Meteor.render(function() {
+  frag = WrappedFrag(Meteor.render(function () {
     var result = [];
     for(var i=0; i<R.get(); i++) {
       result.push('<div id="x'+i+'" class="foo" name="bar"><p><b>'+
@@ -170,11 +280,11 @@ Tinytest.add("spark - one render", function(test) {
   test.equal(WrappedFrag(Meteor.render("foo")).html(), "foo");
 });
 
-Tinytest.add("spark - slow path GC", function(test) {
+Tinytest.add("spark - slow path GC", function (test) {
 
   var R = ReactiveVar(123);
 
-  var div = OnscreenDiv(Meteor.render(function() {
+  var div = OnscreenDiv(Meteor.render(function () {
     return "<p>The number is "+R.get()+".</p><hr><br><br><u>underlined</u>";
   }));
 
@@ -194,9 +304,9 @@ Tinytest.add("spark - slow path GC", function(test) {
   test.equal(R.numListeners(), 0);
 });
 
-Tinytest.add("spark - isolate", function(test) {
+Tinytest.add("spark - isolate", function (test) {
 
-  var inc = function(v) {
+  var inc = function (v) {
     v.set(v.get() + 1); };
 
   var R1 = ReactiveVar(0);
@@ -204,11 +314,11 @@ Tinytest.add("spark - isolate", function(test) {
   var R3 = ReactiveVar(0);
   var count1 = 0, count2 = 0, count3 = 0;
 
-  var frag = WrappedFrag(Meteor.render(function() {
+  var frag = WrappedFrag(Meteor.render(function () {
     return R1.get() + "," + (count1++) + " " +
-      Spark.isolate(function() {
+      Spark.isolate(function () {
         return R2.get() + "," + (count2++) + " " +
-          Spark.isolate(function() {
+          Spark.isolate(function () {
             return R3.get() + "," + (count3++);
           });
       });
@@ -241,13 +351,13 @@ Tinytest.add("spark - isolate", function(test) {
   R2.set(0);
   R3.set(0);
 
-  frag = WrappedFrag(Meteor.render(function() {
+  frag = WrappedFrag(Meteor.render(function () {
     var buf = [];
     buf.push('<div class="foo', R1.get(), '">');
-    buf.push(Spark.isolate(function() {
+    buf.push(Spark.isolate(function () {
       var buf = [];
       for(var i=0; i<R2.get(); i++) {
-        buf.push(Spark.isolate(function() {
+        buf.push(Spark.isolate(function () {
           return '<div>'+R3.get()+'</div>';
         }));
       }
@@ -296,12 +406,12 @@ Tinytest.add("spark - isolate", function(test) {
   frag.release();
 
   // calling isolate() outside of render mode
-  test.equal(Spark.isolate(function() { return "foo"; }), "foo");
+  test.equal(Spark.isolate(function () { return "foo"; }), "foo");
 
   // caller violating preconditions
 
-  test.throws(function() {
-    Meteor.render(function() {
+  test.throws(function () {
+    Meteor.render(function () {
       return Spark.isolate("foo");
     });
   });
@@ -310,10 +420,10 @@ Tinytest.add("spark - isolate", function(test) {
   // unused isolate
 
   var Q = ReactiveVar("foo");
-  Meteor.render(function() {
+  Meteor.render(function () {
     // create an isolate, in render mode,
     // but don't use it.
-    Spark.isolate(function() {
+    Spark.isolate(function () {
       return Q.get();
     });
     return "";
@@ -328,9 +438,9 @@ Tinytest.add("spark - isolate", function(test) {
   // nesting
 
   var stuff = ReactiveVar(true);
-  var div = OnscreenDiv(Meteor.render(function() {
-    return Spark.isolate(function() {
-      return "x"+(stuff.get() ? 'y' : '') + Spark.isolate(function() {
+  var div = OnscreenDiv(Meteor.render(function () {
+    return Spark.isolate(function () {
+      return "x"+(stuff.get() ? 'y' : '') + Spark.isolate(function () {
         return "hi";
       });
     });
@@ -347,19 +457,19 @@ Tinytest.add("spark - isolate", function(test) {
   var num1 = ReactiveVar(false);
   var num2 = ReactiveVar(false);
   var num3 = ReactiveVar(false);
-  var numset = function(n) {
-    _.each([num1, num2, num3], function(v, i) {
+  var numset = function (n) {
+    _.each([num1, num2, num3], function (v, i) {
       v.set((i+1) === n);
     });
   };
   numset(1);
 
-  var div = OnscreenDiv(Meteor.render(function() {
-    return Spark.isolate(function() {
+  var div = OnscreenDiv(Meteor.render(function () {
+    return Spark.isolate(function () {
       return (num1.get() ? '1' : '')+
-        Spark.isolate(function() {
+        Spark.isolate(function () {
           return (num2.get() ? '2' : '')+
-            Spark.isolate(function() {
+            Spark.isolate(function () {
               return (num3.get() ? '3' : '')+'x';
             });
         });
@@ -482,7 +592,7 @@ Tinytest.add("spark - data context", function (test) {
 Tinytest.add("spark - tables", function (test) {
   var R = ReactiveVar(0);
 
-  var table = OnscreenDiv(Meteor.render(function() {
+  var table = OnscreenDiv(Meteor.render(function () {
     var buf = [];
     buf.push("<table>");
     for(var i=0; i<R.get(); i++)
@@ -520,7 +630,7 @@ Tinytest.add("spark - tables", function (test) {
 
   var div = OnscreenDiv();
   div.node().appendChild(document.createElement("TABLE"));
-  div.node().firstChild.appendChild(Meteor.render(function() {
+  div.node().firstChild.appendChild(Meteor.render(function () {
     var buf = [];
     for(var i=0; i<R.get(); i++)
       buf.push("<tr><td>"+(i+1)+"</td></tr>");
@@ -547,7 +657,7 @@ Tinytest.add("spark - tables", function (test) {
   div.node().appendChild(DomUtils.htmlToFragment("<table><tr></tr></table>"));
   R.set(3);
   div.node().getElementsByTagName("tr")[0].appendChild(Meteor.render(
-    function() {
+    function () {
       var buf = [];
       for(var i=0; i<R.get(); i++)
         buf.push("<td>"+(i+1)+"</td>");
@@ -564,3 +674,302 @@ Tinytest.add("spark - tables", function (test) {
   Meteor.flush();
   test.equal(R.numListeners(), 0);
 });
+
+var eventmap = function (/*args*/) {
+  // support event_buf as final argument
+  var event_buf = null;
+  if (arguments.length && _.isArray(arguments[arguments.length-1])) {
+    event_buf = arguments[arguments.length-1];
+    arguments.length--;
+  }
+  var events = {};
+  _.each(arguments, function (esel) {
+    var etyp = esel.split(' ')[0];
+    events[esel] = function (evt) {
+      if (evt.type !== etyp)
+        throw new Error(etyp+" event arrived as "+evt.type);
+      (event_buf || this).push(esel);
+    };
+  });
+  return events;
+};
+
+Tinytest.add("spark - event handling", function (test) {
+  var event_buf = [];
+  var getid = function (id) {
+    return document.getElementById(id);
+  };
+
+  var div;
+
+  var chunk = function (htmlFunc, options) {
+    var html = Spark.isolate(htmlFunc);
+    options = options || {};
+    if (options.events)
+      html = Spark.attachEvents(options.events, html);
+    if (options.event_data)
+      html = Spark.setDataContext(options.event_data, html);
+    return html;
+  };
+
+  var render = function (htmlFunc, options) {
+    return Spark.render(function () {
+      return chunk(htmlFunc, options);
+    });
+  };
+
+
+  // clicking on a div at top level
+  event_buf.length = 0;
+  div = OnscreenDiv(render(function () {
+    return '<div id="foozy">Foo</div>';
+  }, {events: eventmap("click"), event_data:event_buf}));
+  clickElement(getid("foozy"));
+  test.equal(event_buf, ['click']);
+  div.kill();
+  Meteor.flush();
+
+  // selector that specifies a top-level div
+  event_buf.length = 0;
+  div = OnscreenDiv(render(function () {
+    return '<div id="foozy">Foo</div>';
+  }, {events: eventmap("click div"), event_data:event_buf}));
+  clickElement(getid("foozy"));
+  test.equal(event_buf, ['click div']);
+  div.kill();
+  Meteor.flush();
+
+  // selector that specifies a second-level span
+  event_buf.length = 0;
+  div = OnscreenDiv(render(function () {
+    return '<div id="foozy"><span>Foo</span></div>';
+  }, {events: eventmap("click span"), event_data:event_buf}));
+  clickElement(getid("foozy").firstChild);
+  test.equal(event_buf, ['click span']);
+  div.kill();
+  Meteor.flush();
+
+  // replaced top-level elements still have event handlers
+  // even if replaced by an isolate above the handlers in the DOM
+  var R = ReactiveVar("p");
+  event_buf.length = 0;
+  div = OnscreenDiv(render(function () {
+    return chunk(function () {
+      return '<'+R.get()+' id="foozy">Hello</'+R.get()+'>';
+    });
+  }, {events: eventmap("click"), event_data:event_buf}));
+  clickElement(getid("foozy"));
+  test.equal(event_buf, ['click']);
+  event_buf.length = 0;
+  R.set("div"); // change tag, which is sure to replace element
+  Meteor.flush();
+  clickElement(getid("foozy")); // still clickable?
+  test.equal(event_buf, ['click']);
+  event_buf.length = 0;
+  R.set("p");
+  Meteor.flush();
+  clickElement(getid("foozy"));
+  test.equal(event_buf, ['click']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+  // bubbling from event on descendent of element matched
+  // by selector
+  event_buf.length = 0;
+  div = OnscreenDiv(render(function () {
+    return '<div id="foozy"><span><u><b>Foo</b></u></span>'+
+      '<span>Bar</span></div>';
+  }, {events: eventmap("click span"), event_data:event_buf}));
+  clickElement(
+    getid("foozy").firstChild.firstChild.firstChild);
+  test.equal(event_buf, ['click span']);
+  div.kill();
+  Meteor.flush();
+
+  // bubbling order (for same event, same render node, different selector nodes)
+  event_buf.length = 0;
+  div = OnscreenDiv(render(function () {
+    return '<div id="foozy"><span><u><b>Foo</b></u></span>'+
+      '<span>Bar</span></div>';
+  }, {events: eventmap("click span", "click b"), event_data:event_buf}));
+  clickElement(
+    getid("foozy").firstChild.firstChild.firstChild);
+  test.equal(event_buf, ['click b', 'click span']);
+  div.kill();
+  Meteor.flush();
+
+  // "bubbling" order for handlers at same level
+  event_buf.length = 0;
+  div = OnscreenDiv(render(function () {
+    return chunk(function () {
+      return chunk(function () {
+        return '<span id="foozy" class="a b c">Hello</span>';
+      }, {events: eventmap("click .c"), event_data:event_buf});
+    }, {events: eventmap("click .b"), event_data:event_buf});
+  }, {events: eventmap("click .a"), event_data:event_buf}));
+  clickElement(getid("foozy"));
+  test.equal(event_buf, ['click .c', 'click .b', 'click .a']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+  // stopPropagation doesn't prevent other event maps from
+  // handling same node
+  event_buf.length = 0;
+  div = OnscreenDiv(render(function () {
+    return chunk(function () {
+      return chunk(function () {
+        return '<span id="foozy" class="a b c">Hello</span>';
+      }, {events: eventmap("click .c"), event_data:event_buf});
+    }, {events: {"click .b": function (evt) {
+      event_buf.push("click .b"); evt.stopPropagation();}}});
+  }, {events: eventmap("click .a"), event_data:event_buf}));
+  clickElement(getid("foozy"));
+  test.equal(event_buf, ['click .c', 'click .b', 'click .a']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+  // stopImmediatePropagation DOES
+  event_buf.length = 0;
+  div = OnscreenDiv(render(function () {
+    return chunk(function () {
+      return chunk(function () {
+        return '<span id="foozy" class="a b c">Hello</span>';
+      }, {events: eventmap("click .c"), event_data:event_buf});
+    }, {events: {"click .b": function (evt) {
+      event_buf.push("click .b");
+      evt.stopImmediatePropagation();}}});
+  }, {events: eventmap("click .a"), event_data:event_buf}));
+  clickElement(getid("foozy"));
+  test.equal(event_buf, ['click .c', 'click .b']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+  // bubbling continues even with DOM change
+  event_buf.length = 0;
+  R = ReactiveVar(true);
+  div = OnscreenDiv(render(function () {
+    return chunk(function () {
+      return '<div id="blarn">'+(R.get()?'<span id="foozy">abcd</span>':'')+'</div>';
+    }, {events: { 'click span': function () {
+      event_buf.push('click span');
+      R.set(false);
+      Meteor.flush(); // kill the span
+    }, 'click div': function (evt) {
+      event_buf.push('click div');
+    }}});
+  }));
+  // click on span
+  clickElement(getid("foozy"));
+  test.expect_fail(); // doesn't seem to work in old IE
+  test.equal(event_buf, ['click span', 'click div']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+  // "deep reach" from high node down to replaced low node.
+  // Tests that attach_secondary_events actually does the
+  // right thing in IE.  Also tests change event bubbling
+  // and proper interpretation of event maps.
+  event_buf.length = 0;
+  R = ReactiveVar('foo');
+  div = OnscreenDiv(render(function () {
+    return '<div><p><span><b>'+
+      chunk(function () {
+        return '<input type="checkbox">'+R.get();
+      }, {events: eventmap('click input'), event_data:event_buf}) +
+      '</b></span></p></div>';
+  }, { events: eventmap('change b', 'change input'), event_data:event_buf }));
+  R.set('bar');
+  Meteor.flush();
+  // click on input
+  clickElement(div.node().getElementsByTagName('input')[0]);
+  event_buf.sort(); // don't care about order
+  test.equal(event_buf, ['change b', 'change input', 'click input']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+  // test that 'click *' fires on bubble
+  event_buf.length = 0;
+  R = ReactiveVar('foo');
+  div = OnscreenDiv(render(function () {
+    return '<div><p><span><b>'+
+      chunk(function () {
+        return '<input type="checkbox">'+R.get();
+      }, {events: eventmap('click input'), event_data:event_buf}) +
+      '</b></span></p></div>';
+  }, { events: eventmap('click *'), event_data:event_buf }));
+  R.set('bar');
+  Meteor.flush();
+  // click on input
+  clickElement(div.node().getElementsByTagName('input')[0]);
+  test.equal(
+    event_buf,
+    ['click input', 'click *', 'click *', 'click *', 'click *', 'click *']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+  // clicking on a div in a nested chunk (without patching)
+  event_buf.length = 0;
+  R = ReactiveVar('foo');
+  div = OnscreenDiv(render(function () {
+    return R.get() + chunk(function () {
+      return '<span>ism</span>';
+    }, {events: eventmap("click"), event_data:event_buf});
+  }));
+  test.equal(div.text(), 'fooism');
+  clickElement(div.node().getElementsByTagName('SPAN')[0]);
+  test.equal(event_buf, ['click']);
+  event_buf.length = 0;
+  R.set('bar');
+  Meteor.flush();
+  test.equal(div.text(), 'barism');
+  clickElement(div.node().getElementsByTagName('SPAN')[0]);
+  test.equal(event_buf, ['click']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+  // Test that reactive fragments manually inserted inside
+  // a reactive fragment eventually get wired.
+  event_buf.length = 0;
+  div = OnscreenDiv(render(function () {
+    return "<div></div>";
+  }, { events: eventmap("click span", event_buf) }));
+  Meteor.flush();
+  div.node().firstChild.appendChild(render(function () {
+    return '<span id="foozy">hello</span>';
+  }));
+  clickElement(getid("foozy"));
+  // implementation has no way to know we've inserted the fragment
+  test.equal(event_buf, []);
+  event_buf.length = 0;
+  Meteor.flush();
+  clickElement(getid("foozy"));
+  // now should be wired up
+  test.equal(event_buf, ['click span']);
+  event_buf.length = 0;
+  div.kill();
+  Meteor.flush();
+
+  // Event data comes from event.currentTarget, not event.target
+  var data_buf = [];
+  div = OnscreenDiv(render(function () {
+    return "<ul>"+chunk(function () {
+      return '<li id="funyard">Hello</li>';
+    }, { event_data: {x:'listuff'} })+"</ul>";
+  }, { event_data: {x:'ulstuff'},
+       events: { 'click ul': function () { data_buf.push(this); }}}));
+  clickElement(getid("funyard"));
+  test.equal(data_buf, [{x:'ulstuff'}]);
+  div.kill();
+  Meteor.flush();
+});
+
+
+})();
