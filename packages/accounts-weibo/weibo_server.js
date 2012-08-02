@@ -4,7 +4,7 @@
     Meteor.accounts.weibo._secret = secret;
   };
 
-  Meteor.accounts.oauth2.registerService('weibo', function(query) {
+  Meteor.accounts.oauth.registerService('weibo', 2, function(query) {
     if (query.error) {
       // The user didn't authorize access
       return null;
