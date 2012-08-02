@@ -5,15 +5,6 @@
   };
 
   Meteor.accounts.oauth.registerService('facebook', {version: 2}, function(query) {
-    if (query.error) {
-      // The user didn't authorize access
-      return null;
-    }
-
-    if (!Meteor.accounts.facebook._appId || !Meteor.accounts.facebook._appUrl)
-      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.facebook.config first");
-    if (!Meteor.accounts.facebook._secret)
-      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.facebook.setSecret first");
 
     var accessToken = getAccessToken(query);
     var identity = getIdentity(accessToken);
