@@ -17,7 +17,7 @@
           '&redirect_uri=' + Meteor.accounts.facebook._appUrl + '/_oauth/facebook?close' +
           '&display=' + display + '&scope=' + scope + '&state=' + state;
 
-    Meteor.accounts.oauth2.initiateLogin(state, loginUrl);
+    Meteor.accounts.oauth.initiateLogin(state, loginUrl, { oauthVersion: 2 });
   };
 
 })();

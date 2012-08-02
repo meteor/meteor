@@ -25,7 +25,7 @@
           '&redirect_uri=' + Meteor.accounts.google._appUrl + '/_oauth/google?close' +
           '&state=' + state;
 
-    Meteor.accounts.oauth2.initiateLogin(state, loginUrl);
+    Meteor.accounts.oauth.initiateLogin(state, loginUrl, { oauthVersion: 2 });
   };
 
 }) ();

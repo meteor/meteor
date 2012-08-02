@@ -7,7 +7,7 @@
     var callbackUrl = Meteor.accounts.twitter._appUrl + '/_oauth/twitter?close&state=' + state;
     var url = '/_oauth/twitter/request_token?callbackUrl=' + encodeURIComponent(callbackUrl)
 
-    Meteor.accounts.oauth1.initiateLogin(state, url);
+    Meteor.accounts.oauth.initiateLogin(state, url, { oauthVersion: 1 });
   };
 
 })();

@@ -12,7 +12,7 @@
           '&redirect_uri=' + Meteor.accounts.weibo._appUrl + '/_oauth/weibo?close' +
           '&state=' + state;
 
-    Meteor.accounts.oauth2.initiateLogin(state, loginUrl);
+    Meteor.accounts.oauth.initiateLogin(state, loginUrl, { oauthVersion: 2 });
   };
 
 }) ();
