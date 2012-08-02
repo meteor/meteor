@@ -1,10 +1,16 @@
+(function() {
+
 Spark = {};
 
 Spark._currentRenderer = new Meteor.EnvironmentVariable;
 
+// XXX document contract for each type of annotation?
 Spark._ANNOTATION_DATA = "_spark_data";
 Spark._ANNOTATION_ISOLATE = "_spark_isolate";
-Spark._ANNOTATIONS = [Spark._ANNOTATION_DATA, Spark._ANNOTATION_ISOLATE];
+Spark._ANNOTATION_EVENTS = "_spark_events";
+Spark._ANNOTATION_WATCH = "_spark_watch";
+Spark._ANNOTATIONS = [Spark._ANNOTATION_DATA, Spark._ANNOTATION_ISOLATE,
+                      Spark._ANNOTATION_EVENTS, Spark._ANNOTATION_WATCH];
 
 Spark._Renderer = function () {
   // Map from annotation ID to an annotation function, which is called
@@ -122,20 +128,143 @@ Spark.render = function (htmlFunc) {
   }
 };
 
-Spark.setDataContext = function (dataContext, html) {
-  var renderer = Spark._currentRenderer.get();
-  if (!renderer)
-    return html;
-
-  return renderer.annotate(
-    html, Spark._ANNOTATION_DATA, { data: dataContext });
+var withRenderer = function (f) {
+  return function (/* arguments */) {
+    var renderer = Spark._currentRenderer.get();
+    var args = _.toArray(arguments);
+    if (!renderer)
+      return args.pop();
+    args.push(renderer);
+    return f.apply(null, args);
+  };
 };
+
+Spark.setDataContext = withRenderer(function (dataContext, html, _renderer) {
+  return _renderer.annotate(
+    html, Spark._ANNOTATION_DATA, { data: dataContext });
+});
 
 Spark.getDataContext = function (node) {
   var range = LiveRange.findRange(
     Spark._ANNOTATION_DATA, node);
   return range && range.data;
 };
+
+var universalListener = null;
+var getListener = function () {
+  if (!universalListener)
+    universalListener = new UniversalEventListener(function (event) {
+      // Handle a currently-propagating event on a particular node.
+      // We walk all enclosing liveranges of the node, from the inside
+      // out, looking for matching handlers.  If the app calls
+      // stopPropagation(), we still call all handlers in all event
+      // maps for the current node.  If the app calls
+      // "stopImmediatePropagation()", we don't call any more
+      // handlers.
+
+      var range = LiveRange.findRange(Spark._ANNOTATION_EVENTS,
+                                      event.currentTarget);
+      while (range && !event.isImmediatePropagationStopped()) {
+        range.handler(event);
+        range = range.findParent();
+      }
+    });
+
+  return universalListener;
+};
+
+Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
+  var listener = getListener();
+
+  var handlerMap = {}; // type -> [{selector, callback}, ...]
+  // iterate over eventMap, which has form {"type selector, ...": callback},
+  // and populate handlerMap
+  _.each(eventMap, function(callback, spec) {
+    var clauses = spec.split(/,\s+/);
+    // iterate over clauses of spec, e.g. ['click .foo', 'click .bar']
+    _.each(clauses, function (clause) {
+      var parts = clause.split(/\s+/);
+      if (parts.length === 0)
+        return;
+
+      var type = parts.shift();
+      var selector = parts.join(' ');
+
+      handlerMap[type] = handlerMap[type] || [];
+      handlerMap[type].push({selector: selector, callback: callback});
+    });
+  });
+
+  var eventTypes = _.keys(handlerMap);
+
+  var installHandlers = function (range) {
+    _.each(eventTypes, function (t) {
+      for(var n = range.firstNode(),
+              after = range.lastNode().nextSibling;
+          n && n !== after;
+          n = n.nextSibling)
+        listener.installHandler(n, t);
+    });
+  };
+
+  html = _renderer.annotate(
+    html, Spark._ANNOTATION_WATCH, {
+      notify: function () {
+        installHandlers(this);
+      }
+    });
+
+  html = _renderer.annotate(
+    html, Spark._ANNOTATION_EVENTS, function (range) {
+      _.each(eventTypes, function (t) {
+        listener.addType(t);
+      });
+      installHandlers(range);
+
+      range.handler = function (event) {
+        var handlers = handlerMap[event.type] || [];
+
+        for (var i = 0; i < handlers.length; i++) {
+          var handler = handlers[i];
+          var callback = handler.callback;
+          var selector = handler.selector;
+
+          if (selector) {
+            // This ends up doing O(n) findAllInRange calls when an
+            // event bubbles up N level in the DOM. If this ends up
+            // being too slow, we could memoize findAllInRange across
+            // the processing of each event.
+            var results = DomUtils.findAllInRange(range.firstNode(),
+                                                  range.lastNode(), selector);
+            // This is a linear search through what could be a large
+            // result set.
+            if (! _.contains(results, event.currentTarget))
+              continue;
+          } else {
+            // if no selector, only match the event target
+            if (event.currentTarget !== event.target)
+              continue;
+          }
+
+          // Found a matching handler.
+          var eventData = Spark.getDataContext(event.currentTarget);
+          var returnValue = callback.call(eventData, event);
+
+          // allow app to `return false` from event handler, just like
+          // you can in a jquery event handler
+          if (returnValue === false) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+          }
+          if (event.isImmediatePropagationStopped())
+            break; // don't let any other handlers in this event map fire
+        }
+      };
+    });
+
+  return html;
+});
+
 
 Spark.isolate = function (htmlFunc) {
   var renderer = Spark._currentRenderer.get();
@@ -181,6 +310,7 @@ Spark.isolate = function (htmlFunc) {
           });
           var oldContents = range.replace_contents(frag); // XXX should patch
           Spark.finalize(oldContents);
+          notifyWatchers(range);
           range.destroy();
         });
       });
@@ -188,6 +318,19 @@ Spark.isolate = function (htmlFunc) {
   return html;
 };
 
+var notifyWatchers = function (range) {
+  // find the innermost WATCH annotation containing the nodes in `range`
+  var tempRange = new LiveRange(Spark._ANNOTATION_WATCH, range.firstNode(),
+                                range.lastNode(), true /* innermost */);
+  var walk = tempRange.findParent();
+  tempRange.destroy();
+
+  // tell all enclosing WATCH annotations that their contents changed
+  while (walk) {
+    walk.notify();
+    walk = walk.findParent();
+  }
+};
 
 // Delete all of the liveranges in the range of nodes between `start`
 // and `end`, and call their 'finalize' function if any. Or instead of
@@ -209,3 +352,5 @@ Spark.finalize = function (start, end) {
     wrapper.destroy(true /* recursive */);
   });
 };
+
+})();
