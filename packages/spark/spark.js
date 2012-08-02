@@ -440,7 +440,7 @@ Spark.isolate = function (htmlFunc) {
           });
           tempRange.destroy();
 
-          var oldContents = replaceContentsRespectingLandmarks(range, frag);
+          var oldContents = replaceContentsPreservingLandmarks(range, frag);
           Spark.finalize(oldContents);
           range.destroy();
         });
@@ -488,17 +488,17 @@ Spark.createLandmark = withRenderer(function (options, html, _renderer) {
 });
 
 // Find all pairs of landmarks (A, B) such that A is in range1, B is
-// in range2, and the branch keys of A and B are the same (with
-// respect to range1 and range2 respecively.) (The branch key of a
+// in range2, and the branch paths of A and B are the same (with
+// respect to range1 and range2 respecively.) (The branch path of a
 // landmark L with respect to a range R is the concatenation of all of
 // L's enclosing branch labels up to R.) For each such pair, call
 // func(A, B).
 //
 // range1 and range2 must not overlap; if they do, the results are
-// undefined. Branch keys should be unique within each range (there
-// should only be one landmark in range1 with a given branch key with
+// undefined. Branch paths should be unique within each range (there
+// should only be one landmark in range1 with a given branch path with
 // respect to range1); if not, this function will arbitrarily pick one
-// of the landmarks with a given key and ignore the rest.
+// of the landmarks with a given path and ignore the rest.
 var visitMatchingLandmarks = function (range1, range2, func) {
   var tree = {};
 
@@ -569,7 +569,7 @@ var moveLandmarks = function (oldRange, newRange) {
     dead.push(from); // don't destroy during visit
   });
   _.each(dead, function (r) {
-    // Destory the (now redundant) range so that its destroy callback
+    // Destroy the (now redundant) range so that its destroy callback
     // is not called.
     r.destroy();
   });
@@ -579,7 +579,7 @@ var moveLandmarks = function (oldRange, newRange) {
 // the old contents of `range`. If the old contents had any landmarks
 // that match landmarks in `frag`, move the landmarks over and perform
 // any node or region preservations that they request.
-var replaceContentsRespectingLandmarks = function (range, frag) {
+var replaceContentsPreservingLandmarks = function (range, frag) {
   var tempRange = new LiveRange(Spark._TAG, frag);
   var preservations = computePreservations(range, tempRange);
   moveLandmarks(range, tempRange);
