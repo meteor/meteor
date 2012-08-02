@@ -106,34 +106,7 @@ var withRenderer = function (f) {
 Spark.render = function (htmlFunc) {
   var renderer = new Spark._Renderer;
   var html = Spark._currentRenderer.withValue(renderer, function () {
-    return renderer.annotate(
-      htmlFunc(), Spark._ANNOTATION_NOTIFY, function (range) {
-        // This is a heuristic to benefit users that manually insert
-        // nodes into regions of the DOM that were rendered by Spark
-        // and have event maps. The heuristic is: at every flush, look
-        // for any nodes that were rendered by Spark since the last
-        // flush, and call notifyWatchers on them so that any
-        // *enclosing* event maps can wire up event handlers on the
-        // newly inserted nodes.
-        //
-        // This heuristic is only of relevance on IE6-8 and only if
-        // the user manually inserts nodes in the DOM (eg, through
-        // jQuery or appendChild). We're not sure it's the right thing
-        // and it could be removed at any time.
-        var finalized = false;
-        range.finalize = function () {
-          finalized = true;
-        };
-
-        var ctx = new Meteor.deps.Context;
-        ctx.on_invalidate(function () {
-          if (!finalized) {
-            notifyWatchers(range.firstNode(), range.lastNode());
-            range.destroy();
-          }
-        });
-        ctx.invalidate();
-      });
+    return renderer.annotate(htmlFunc());
   });
 
   var fragById = {};
@@ -163,6 +136,7 @@ Spark.render = function (htmlFunc) {
 
   var bufferStack = [[]];
   var idStack = [];
+  var ret;
 
   var regex = /<(\/?)\$([^<>]+)>|<|[^<]+/g;
   regex.lastIndex = 0;
@@ -187,18 +161,68 @@ Spark.render = function (htmlFunc) {
       if (! frag.firstChild)
         frag.appendChild(document.createComment("empty"));
       annotationFunc(frag.firstChild, frag.lastChild);
-      if (! idStack.length)
+      if (! idStack.length) {
         // we're done; we just rendered the contents of the top-level
         // annotation that we wrapped around htmlFunc ourselves.
         // there may be unused fragments in fragById that include
         // LiveRanges, but only if the user broke the rules by including
         // an annotation somewhere besides element level, like inside
         // an attribute (which is not allowed).
-        return frag;
+        ret = frag;
+        break;
+      }
       fragById[id] = frag;
       bufferStack[bufferStack.length - 1].push('<!--' + id + '-->');
     }
   }
+
+  // XXX break the below out into a new function, eg
+  // Spark.introduce(), that the user can use when manually inserting
+  // nodes (via, eg, jQuery?)
+
+  // Schedule setup tasks to run at the next flush, which is when the
+  // newly rendered fragment must be on the screen (if it doesn't want
+  // to get garbage-collected.)
+  var renderedRange = new LiveRange(Spark._TAG, ret);
+  var finalized = false;
+  renderedRange.finalize = function () {
+    finalized = true;
+  };
+
+  var ctx = new Meteor.deps.Context;
+  ctx.on_invalidate(function () {
+    if (finalized)
+      return;
+
+    if (!DomUtils.isInDocument(renderedRange.firstNode())) {
+      // We've detected that some nodes were taken off the screen
+      // without calling Spark.finalize(). This could be because the
+      // user rendered them, but didn't insert them in the document
+      // before the next flush(). Or it could be because they used to
+      // be onscreen, but they were manually taken offscreen (eg, with
+      // jQuery) and the user neglected to call finalize() on the
+      // removed nodes. Help the user out by finalizing the entire
+      // subtree that is offscreen.
+      var node = renderedRange.firstNode();
+      while (node.parentNode)
+        node = node.parentNode;
+      if (node["_protect"]) {
+        // test code can use this property to mark a root-level node
+        // (such as a DocumentFragment) as immune from
+        // autofinalization. effectively, the DocumentFragment is
+        // considered to be a first-class peer of `document`.
+      } else {
+        Spark.finalize(node);
+        return;
+      }
+    }
+
+    notifyWatchers(renderedRange.firstNode(), renderedRange.lastNode());
+    renderedRange.destroy();
+  });
+  ctx.invalidate();
+
+  return ret;
 };
 
 // Delete all of the liveranges in the range of nodes between `start`
@@ -384,9 +408,9 @@ Spark.isolate = function (htmlFunc) {
       ctx.run(htmlFunc), Spark._ANNOTATION_ISOLATE,
       function (range) {
         range.finalize = function () {
-          // "Fast" GC path -- someone called finalize on a document
-          // fragment that includes us, so we're cleaning up our
-          // invalidation context and going away.
+          // Spark.finalize() was called on us (presumably because we
+          // were removed from the document.) Tear down our structures
+          // without doing any more updates.
           slain = true;
           ctx.invalidate();
         };
@@ -394,21 +418,6 @@ Spark.isolate = function (htmlFunc) {
         ctx.on_invalidate(function () {
           if (slain)
             return; // killed by finalize. range has already been destroyed.
-
-          if (!DomUtils.isInDocument(range.firstNode())) {
-            // "Slow" GC path -- Evidently the user took some DOM nodes
-            // offscreen without telling us. Finalize them.
-            var node = range.firstNode();
-            while (node.parentNode)
-              node = node.parentNode;
-            if (node["_protect"]) {
-              // test code can use this property to mark a root-level node
-              // (such as a DocumentFragment) as immune from slow-path GC
-            } else {
-              Spark.finalize(node);
-              return;
-            }
-          }
 
           // htmlFunc changed its mind about what it returns. Rerender it.
           var frag = Spark.render(function () {
