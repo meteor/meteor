@@ -219,7 +219,7 @@ Spark.render = function (htmlFunc) {
       }
     }
 
-    notifyLandmarksOnscreen(range);
+    notifyLandmarksRendered(renderedRange);
     notifyWatchers(renderedRange.firstNode(), renderedRange.lastNode());
     renderedRange.destroy();
   });
@@ -475,43 +475,17 @@ Spark.createLandmark = withRenderer(function (options, html, _renderer) {
     html, Spark._ANNOTATION_LANDMARK, {
       preserve: preserve,
       constant: !! options.constant,
-      create: options.create || function () {},
-      render: options.render || function () {},
-      destroy: options.destroy || function () {},
+      createCallback: options.create || function () {},
+      renderCallback: options.render || function () {},
+      destroyCallback: options.destroy || function () {},
       created: false,
       state: {},
       finalize: function () {
         if (this.created)
-          this.destroy.call(this.state);
+          this.destroyCallback.call(this.state);
       }
     });
 });
-
-// Replace the contents of `range` with the fragment `frag`. Return
-// the old contents of `range`. If the old contents had any landmarks
-// that match landmarks in `frag`, move the landmarks over and perform
-// any node or region preservations that they request.
-var replaceContentsRespectingLandmarks = function (range, frag) {
-  var tempRange = new LiveRange(Spark._TAG, frag);
-  var preservations = computePreservations(range, tempRange);
-  moveLandmarks(range, tempRange);
-  tempRange.destroy();
-
-  // XXX should patch (using preservations)
-  return range.replace_contents(frag);
-};
-
-var notifyLandmarksOnscreen = function (range) {
-  range.visit(function (isStart, r) {
-    if (isStart && r.type == Spark._ANNOTATION_LANDMARK) {
-      if (!r.created) {
-        r.create.call(r.state);
-        r.created = true;
-      }
-      r.render.call(r.state);
-    }
-  });
-};
 
 // Find all pairs of landmarks (A, B) such that A is in range1, B is
 // in range2, and the branch keys of A and B are the same (with
@@ -595,152 +569,40 @@ var moveLandmarks = function (oldRange, newRange) {
     dead.push(from); // don't destroy during visit
   });
   _.each(dead, function (r) {
-    // XXX means that finalize won't get called on the range
+    // Destory the (now redundant) range so that its destroy callback
+    // is not called.
     r.destroy();
   });
 };
 
+// Replace the contents of `range` with the fragment `frag`. Return
+// the old contents of `range`. If the old contents had any landmarks
+// that match landmarks in `frag`, move the landmarks over and perform
+// any node or region preservations that they request.
+var replaceContentsRespectingLandmarks = function (range, frag) {
+  var tempRange = new LiveRange(Spark._TAG, frag);
+  var preservations = computePreservations(range, tempRange);
+  moveLandmarks(range, tempRange);
+  tempRange.destroy();
 
-/*
-var visitLandmarks = function(range, visit) {
-  var labelPath = [];
+  // XXX should patch (using preservations)
+  return range.replace_contents(frag);
+};
+
+// Find all the landmarks in `range` and let them know that they are
+// now onscreen. If it's their first time being onscreen, they need to
+// have their `create` callback called. And they need `render` whether
+// it is their first time or not.
+var notifyLandmarksRendered = function (range) {
   range.visit(function (isStart, r) {
-    if (r.type === Spark._ANNOTATION_LABEL) {
-      if (isStart)
-        labelPath.push(r.label);
-      else
-        labelPath.pop();
-    } else if (r.type === Spark._ANNOTATION_LANDMARK && isStart) {
-      visit(r, _.map(labelPath, encodeURIComponent).join('/');
+    if (isStart && r.type == Spark._ANNOTATION_LANDMARK) {
+      if (!r.created) {
+        r.createCallback.call(r.state);
+        r.created = true;
+      }
+      r.renderCallback.call(r.state);
     }
   });
 };
-*/
 
-
-
-
-  // Match branch keys and copy chunkState from liveranges in the
-  // interior of oldRange onto matching liveranges in newFrag.
-  // Return pairs of matching DOM nodes to preserve.
-  var matchChunks = function(oldRange, newFrag) {
-    if (! newFrag.firstChild)
-      return []; // allow empty newFrag
-
-    var oldChunks = {}; // { path -> range }
-    var currentPath = []; // list of branch keys (path segments)
-
-    // visit the interior of outerRange and call
-    // `func(r, path)` on every range with a branch key,
-    // where `path` is a string representation of the
-    // branch key path
-    var eachKeyedChunk = function(outerRange, func) {
-      // call func on outerRange to support top-level unkeyed
-      // chunks, like frag resulting from Template.foo()??
-      func(outerRange, '');
-      // visit interior of outerRange
-      outerRange.visit(function(is_start, r) {
-        if (r.branch) {
-          if (is_start) {
-            currentPath.push(r.branch);
-            func(r, currentPath.join('\u0000'));
-          } else {
-            currentPath.pop();
-          }
-        }
-      });
-    };
-
-    // collect old chunks keyed by their branch key paths
-    eachKeyedChunk(oldRange, function(r, path) {
-      oldChunks[path] = r;
-    });
-
-    // Run the selectors from preserveMap over the nodes
-    // in range and create a map { label -> node }.
-    var collectLabeledNodes = function(range, preserveMap) {
-      var labeledNodes = {};
-      _.each(preserveMap, function(labelFunc, sel) {
-        var matchingNodes = DomUtils.findAllInRange(
-          range.firstNode(), range.lastNode(), sel);
-        _.each(matchingNodes, function(n) {
-          // labelFunc can be a function or a constant,
-          // the latter for single-match selectors {'.foo': 1}
-          var pernodeLabel = (
-            typeof labelFunc === 'function' ? labelFunc(n) : labelFunc);
-          // falsy pernodeLabel is not considered a label
-          if (pernodeLabel) {
-            var fullLabel = sel+'/'+pernodeLabel;
-            // in case of duplicates, we ignore the second node (this one).
-            // eventually, the developer might want to get debug info.
-            if (! labeledNodes[fullLabel])
-              labeledNodes[fullLabel] = n;
-          }
-        });
-      });
-      return labeledNodes;
-    };
-
-    var nodeMatches = []; // [[oldNode, newNode], ...]
-
-    // create a temporary range around newFrag in order
-    // to visit it.
-    var tempRange = new LiveRange(Meteor.ui._tag, newFrag);
-    // visit new frag
-    eachKeyedChunk(tempRange, function(r, path) {
-      var oldRange = oldChunks[path];
-      if (oldRange) {
-        // matched chunk
-        var rangeForOpts = r;
-        if (r === tempRange) {
-          // top level; don't copy chunkState to tempRange!
-          // use oldRange for `preserve` and other options
-          rangeForOpts = oldRange;
-        } else {
-          // copy over chunkState
-          r.chunkState = oldRange.chunkState;
-          oldRange.chunkState = null; // don't call offscreen() on old range
-        }
-        // any second occurrence of `path` is ignored (not matched)
-        delete oldChunks[path];
-
-        var preserveMap = rangeForOpts.preserve;
-        var isConstant = rangeForOpts.constant;
-
-        if (isConstant) {
-          // add a range match
-          var a = [oldRange.firstNode(), r.firstNode(),
-                   oldRange.lastNode(), r.lastNode(), rangeForOpts];
-          a.rangeMatch = true;
-          nodeMatches.push(a);
-        } else {
-          var oldLabeledNodes = collectLabeledNodes(oldRange, preserveMap);
-          var newLabeledNodes = collectLabeledNodes(r, preserveMap);
-          _.each(newLabeledNodes, function(newNode, label) {
-            var oldNode = oldLabeledNodes[label];
-            if (oldNode)
-              nodeMatches.push([oldNode, newNode]);
-          });
-        }
-      }
-    });
-    tempRange.destroy();
-
-    return nodeMatches;
-  };
-
-
-
-
-
-
-
-
-
-
-
-
-var patch = function (oldRange, newFrag) {
-
-//           var oldContents = range.replace_contents(frag); // XXX should patch
- var processLandmarksAtPatchTime = function (
+})();
