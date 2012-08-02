@@ -23,6 +23,17 @@
       return;
     }
 
+    // Make sure we're configured
+    if (!Meteor.accounts[serviceName]._appId || !Meteor.accounts[serviceName]._appUrl)
+      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts." + serviceName + ".config first");
+    if (!Meteor.accounts[serviceName]._secret)
+      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts." + serviceName + ".setSecret first");
+
+    if (req.query.error) {
+      // The user didn't authorize access
+      return null;
+    }
+
     // Make sure we prepare the login results before returning.
     // This way the subsequent call to the `login` method will be
     // immediate.

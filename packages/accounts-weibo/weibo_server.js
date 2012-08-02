@@ -5,15 +5,6 @@
   };
 
   Meteor.accounts.oauth.registerService('weibo', {version: 2}, function(query) {
-    if (query.error) {
-      // The user didn't authorize access
-      return null;
-    }
-
-    if (!Meteor.accounts.weibo._appId || !Meteor.accounts.weibo._appUrl)
-      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.weibo.config first");
-    if (!Meteor.accounts.weibo._secret)
-      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.weibo.setSecret first");
 
     var accessToken = getAccessToken(query);
     var identity = getIdentity(accessToken.access_token, parseInt(accessToken.uid, 10));

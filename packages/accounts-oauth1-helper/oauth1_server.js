@@ -23,15 +23,15 @@
       return;
     }
 
-    // Make sure we prepare the login results before returning.
-    // This way the subsequent call to the `login` method will be
-    // immediate.
-
     // Make sure we're configured
     if (!Meteor.accounts[serviceName]._appId || !Meteor.accounts[serviceName]._appUrl)
       throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts." + serviceName + ".config first");
     if (!Meteor.accounts[serviceName]._secret)
       throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts." + serviceName + ".setSecret first");
+
+    // Make sure we prepare the login results before returning.
+    // This way the subsequent call to the `login` method will be
+    // immediate.
 
     var config = Meteor.accounts[serviceName];
     var oauth = new OAuth1(config);
