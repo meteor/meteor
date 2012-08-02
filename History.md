@@ -1,6 +1,8 @@
 
 ## vNEXT
 
+* Fix `stopImmediatePropagation()`. #205
+
 ## v0.3.8
 
 * HTTPS support

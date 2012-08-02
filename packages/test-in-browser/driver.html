@@ -72,9 +72,10 @@
       {{#if times}}
         <span class="xtimes">({{times}} times)</span>
       {{/if}}
-      {{#with get_details}}
+      {{#with details}}
         {{#if this}}
-          &mdash; {{this}}
+          &mdash; {{this.message}}
+          <pre>{{this.stack}}</pre>
         {{/if}}
       {{/with}}
       {{#if is_debuggable}}
