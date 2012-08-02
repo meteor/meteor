@@ -75,7 +75,7 @@
       throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts." + serviceName + ".setSecret first");
 
     var config = Meteor.accounts[serviceName];
-    var oauth = new OAuth(config);
+    var oauth = new OAuth1(config);
 
     // If we get here with a callback url we need a request token to
     // start the logic process
