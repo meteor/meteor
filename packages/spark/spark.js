@@ -525,7 +525,7 @@ var visitMatchingLandmarks = function (range1, range2, func) {
   };
 
   visit(range1, function (r, note) {
-    note.match = range;
+    note.match = r;
   });
 
   visit(range2, function (r, note) {

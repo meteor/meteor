@@ -47,7 +47,8 @@ OnscreenDiv.prototype.node = function() {
 // the DIV will be fully cleaned up by LiveUI.
 OnscreenDiv.prototype.kill = function() {
   var self = this;
-  self.div.parentNode.removeChild(self.div);
+  if (self.div.parentNode)
+    self.div.parentNode.removeChild(self.div);
 
   var cx = new Meteor.deps.Context;
   cx.on_invalidate(function() {

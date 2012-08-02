@@ -971,5 +971,52 @@ Tinytest.add("spark - event handling", function (test) {
   Meteor.flush();
 });
 
+Tinytest.add("spark - basic landmarks", function (test) {
+  var R = ReactiveVar("111");
+  var x = [];
+  var expect = function (what) {
+    test.equal(x, what);
+    x = [];
+  };
+
+  var X = {};
+
+  var div = OnscreenDiv(Spark.render(function () {
+    return Spark.isolate(function () {
+      return R.get() +
+        Spark.createLandmark({
+          create: function () {
+            x.push("c");
+            this.a = X;
+          },
+          render: function () {
+            x.push("r", this.a);
+          },
+          destroy: function () {
+            x.push("d", this.a);
+          }
+        }, "hi");
+    });
+  }));
+
+  expect([]);
+  Meteor.flush();
+  expect(["c", "r", X]);
+  Meteor.flush();
+  expect([]);
+  R.set("222");
+  expect([]);
+  Meteor.flush();
+  expect(["r", X]);
+  Meteor.flush();
+  expect([]);
+  div.remove();
+  expect([]);
+  Meteor.flush();
+  expect([]);
+  div.kill();
+  Meteor.flush();
+  expect(["d", X]);
+});
 
 })();
