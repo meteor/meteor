@@ -1,11 +1,11 @@
 var crypto = __meteor_bootstrap__.require("crypto");
 var querystring = __meteor_bootstrap__.require("querystring");
 
-OAuth = function(config) {
+OAuth1 = function(config) {
   _.extend(this, config);
 };
 
-OAuth.prototype.getRequestToken = function(callbackUrl) {
+OAuth1.prototype.getRequestToken = function(callbackUrl) {
 
   var headers = this._buildHeader({
     oauth_callback: callbackUrl
@@ -17,7 +17,7 @@ OAuth.prototype.getRequestToken = function(callbackUrl) {
   this.requestToken = tokens.oauth_token;
 };
 
-OAuth.prototype.getAccessToken = function(query) {
+OAuth1.prototype.getAccessToken = function(query) {
   var headers = this._buildHeader({
     oauth_token: query.oauth_token
   });
@@ -33,7 +33,7 @@ OAuth.prototype.getAccessToken = function(query) {
   this.accessTokenSecret = tokens.oauth_token_secret;
 };
 
-OAuth.prototype.call = function(method, url) {
+OAuth1.prototype.call = function(method, url) {
   var headers = this._buildHeader({
     oauth_token: this.accessToken
   });
@@ -43,11 +43,11 @@ OAuth.prototype.call = function(method, url) {
   return response.data;
 };
 
-OAuth.prototype.get = function(url) {
+OAuth1.prototype.get = function(url) {
   return this.call('get', url);
 };
 
-OAuth.prototype._buildHeader = function(headers) {
+OAuth1.prototype._buildHeader = function(headers) {
   return _.extend({
     oauth_consumer_key: this._appId,
     oauth_nonce: Meteor.uuid().replace(/\W/g, ''),
@@ -57,7 +57,7 @@ OAuth.prototype._buildHeader = function(headers) {
   }, headers);
 };
 
-OAuth.prototype._getSignature = function(method, url, rawHeaders, oauthSecret) {
+OAuth1.prototype._getSignature = function(method, url, rawHeaders, oauthSecret) {
 
   var headers = this._encodeHeader(rawHeaders);
 
@@ -78,7 +78,7 @@ OAuth.prototype._getSignature = function(method, url, rawHeaders, oauthSecret) {
   return crypto.createHmac('SHA1', signingKey).update(signatureBase).digest('base64');
 };
 
-OAuth.prototype._call = function(method, url, headers, params) {
+OAuth1.prototype._call = function(method, url, headers, params) {
   
   // Get the signature
   headers.oauth_signature = this._getSignature(method.toUpperCase(), url, headers, this.accessTokenSecret);
@@ -100,14 +100,14 @@ OAuth.prototype._call = function(method, url, headers, params) {
   return response;
 };
 
-OAuth.prototype._encodeHeader = function(header) {
+OAuth1.prototype._encodeHeader = function(header) {
   return _.reduce(header, function(memo, val, key) {
     memo[encodeURIComponent(key)] = encodeURIComponent(val);
     return memo;
   }, {});
 };
 
-OAuth.prototype._getAuthHeaderString = function(headers) {
+OAuth1.prototype._getAuthHeaderString = function(headers) {
   return 'OAuth ' +  _.map(headers, function(val, key) {
     return encodeURIComponent(key) + '="' + encodeURIComponent(val) + '"'; 
   }).sort().join(', ');
