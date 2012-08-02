@@ -22,7 +22,7 @@
   // nothing should happen.
   var tryLoginAfterPopupClosed = function(state, options) {
     Meteor.apply('login', [
-      {oauth: {version: options.oauthVersion, state: state}}
+      {oauth: {version: options.version, state: state}}
     ], {wait: true}, function(error, result) {
       if (error)
         throw error;

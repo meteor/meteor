@@ -4,7 +4,7 @@
     Meteor.accounts.google._secret = secret;
   };
 
-  Meteor.accounts.oauth.registerService('google', {oauthVersion: 2}, function(query) {
+  Meteor.accounts.oauth.registerService('google', {version: 2}, function(query) {
     if (query.error) {
       // The user didn't authorize access
       return null;
