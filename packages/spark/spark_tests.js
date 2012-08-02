@@ -478,3 +478,89 @@ Tinytest.add("spark - data context", function (test) {
                            "</div>");
   });
 });
+
+Tinytest.add("spark - tables", function (test) {
+  var R = ReactiveVar(0);
+
+  var table = OnscreenDiv(Meteor.render(function() {
+    var buf = [];
+    buf.push("<table>");
+    for(var i=0; i<R.get(); i++)
+      buf.push("<tr><td>"+(i+1)+"</td></tr>");
+    buf.push("</table>");
+    return buf.join('');
+  }));
+
+  R.set(1);
+  Meteor.flush();
+  test.equal(table.html(), "<table><tbody><tr><td>1</td></tr></tbody></table>");
+
+  R.set(10);
+  test.equal(table.html(), "<table><tbody><tr><td>1</td></tr></tbody></table>");
+  Meteor.flush();
+  test.equal(table.html(), "<table><tbody>"+
+               "<tr><td>1</td></tr>"+
+               "<tr><td>2</td></tr>"+
+               "<tr><td>3</td></tr>"+
+               "<tr><td>4</td></tr>"+
+               "<tr><td>5</td></tr>"+
+               "<tr><td>6</td></tr>"+
+               "<tr><td>7</td></tr>"+
+               "<tr><td>8</td></tr>"+
+               "<tr><td>9</td></tr>"+
+               "<tr><td>10</td></tr>"+
+               "</tbody></table>");
+
+  R.set(0);
+  Meteor.flush();
+  test.equal(table.html(), "<table></table>");
+  table.kill();
+  Meteor.flush();
+  test.equal(R.numListeners(), 0);
+
+  var div = OnscreenDiv();
+  div.node().appendChild(document.createElement("TABLE"));
+  div.node().firstChild.appendChild(Meteor.render(function() {
+    var buf = [];
+    for(var i=0; i<R.get(); i++)
+      buf.push("<tr><td>"+(i+1)+"</td></tr>");
+    return buf.join('');
+  }));
+  test.equal(div.html(), "<table><!----></table>");
+  R.set(3);
+  Meteor.flush();
+  test.equal(div.html(), "<table><tbody>"+
+               "<tr><td>1</td></tr>"+
+               "<tr><td>2</td></tr>"+
+               "<tr><td>3</td></tr>"+
+               "</tbody></table>");
+  test.equal(div.node().firstChild.rows.length, 3);
+  R.set(0);
+  Meteor.flush();
+  test.equal(div.html(), "<table><!----></table>");
+  div.kill();
+  Meteor.flush();
+
+  test.equal(R.numListeners(), 0);
+
+  div = OnscreenDiv();
+  div.node().appendChild(DomUtils.htmlToFragment("<table><tr></tr></table>"));
+  R.set(3);
+  div.node().getElementsByTagName("tr")[0].appendChild(Meteor.render(
+    function() {
+      var buf = [];
+      for(var i=0; i<R.get(); i++)
+        buf.push("<td>"+(i+1)+"</td>");
+      return buf.join('');
+    }));
+  test.equal(div.html(),
+               "<table><tbody><tr><td>1</td><td>2</td><td>3</td>"+
+               "</tr></tbody></table>");
+  R.set(1);
+  Meteor.flush();
+  test.equal(div.html(),
+               "<table><tbody><tr><td>1</td></tr></tbody></table>");
+  div.kill();
+  Meteor.flush();
+  test.equal(R.numListeners(), 0);
+});

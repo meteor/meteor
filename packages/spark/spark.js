@@ -308,6 +308,20 @@ Spark.isolate = function (htmlFunc) {
           var frag = Spark.render(function () {
             return Spark.isolate(htmlFunc);
           });
+
+          var tempRange = new LiveRange(Spark._ANNOTATION_ISOLATE, frag, null,
+                                        true /* inner */);
+          tempRange.operate(function (start, end) {
+            // Wrap contents of frag, *inside* the ISOLATE annotation,
+            // as appropriate for insertion into `range`. We want the
+            // wrapping inside the range so that if you have a <table>
+            // containing an isolate, and the isolate returns a <tr>
+            // sometimes and a <thead> other times, the wrapping will
+            // change as appropriate.
+            DomUtils.wrapFragmentForContainer(frag, range.containerNode());
+          });
+          tempRange.destroy();
+
           var oldContents = range.replace_contents(frag); // XXX should patch
           Spark.finalize(oldContents);
           notifyWatchers(range);
