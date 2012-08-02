@@ -3,26 +3,7 @@
 
   Meteor.accounts.oauth1._services = {};
 
-  // Listen to calls to `login` with an oauth option set
-  Meteor.accounts.registerLoginHandler(function (options) {
-    if (!options.oauth || options.oauth.version !== 1)
-      return undefined; // don't handle
-
-    var result = Meteor.accounts.oauth1._loginResultForState[options.oauth.state];
-    if (result === undefined) // not using `!result` since can be null
-      // We weren't notified of the user authorizing the login.
-      return null;
-    else
-      return result;
-  });
-
-  // When we get an incoming OAuth http request we complete the oauth
-  // handshake, account and token setup before responding.  The
-  // results are stored in this map which is then read when the login
-  // method is called. Maps state --> return value of `login`
-  //
-  // XXX we should periodically clear old entries
-  Meteor.accounts.oauth1._loginResultForState = {};
+  Meteor.accounts.oauth._setup({oauthVersion: 1});
 
   // connect middleware
   Meteor.accounts.oauth1._handleRequest = function (req, res, next) {
