@@ -37,6 +37,13 @@ var findParentOfType = function (type, range) {
   return range;
 };
 
+var notifyWatchers = function (start, end) {
+  var tempRange = new LiveRange(Spark._TAG, start, end, true /* innermost */);
+  for (var walk = tempRange; walk; walk = walk.findParent())
+    if (walk.type === Spark._ANNOTATION_WATCH)
+      walk.notify();
+  tempRange.destroy();
+};
 
 Spark._Renderer = function () {
   // Map from annotation ID to an annotation function, which is called
@@ -81,7 +88,20 @@ _.extend(Spark._Renderer.prototype, {
   }
 });
 
-////////// PUBLIC API
+var withRenderer = function (f) {
+  return function (/* arguments */) {
+    var renderer = Spark._currentRenderer.get();
+    var args = _.toArray(arguments);
+    if (!renderer)
+      return args.pop();
+    args.push(renderer);
+    return f.apply(null, args);
+  };
+};
+
+/******************************************************************************/
+/* Render and finalize                                                        */
+/******************************************************************************/
 
 Spark.render = function (htmlFunc) {
   var renderer = new Spark._Renderer;
@@ -181,16 +201,28 @@ Spark.render = function (htmlFunc) {
   }
 };
 
-var withRenderer = function (f) {
-  return function (/* arguments */) {
-    var renderer = Spark._currentRenderer.get();
-    var args = _.toArray(arguments);
-    if (!renderer)
-      return args.pop();
-    args.push(renderer);
-    return f.apply(null, args);
-  };
+// Delete all of the liveranges in the range of nodes between `start`
+// and `end`, and call their 'finalize' function if any. Or instead of
+// `start` and `end` you may pass a fragment in `start`.
+Spark.finalize = function (start, end) {
+  if (! start.parentNode && start.nodeType !== 11 /* DocumentFragment */) {
+    // Workaround for LiveRanges' current inability to contain
+    // a node with no parentNode.
+    var frag = document.createDocumentFragment();
+    frag.appendChild(start);
+    start = frag;
+    end = null;
+  }
+  var wrapper = new LiveRange(Spark._TAG, start, end);
+  wrapper.visit(function (isStart, range) {
+    isStart && range.finalize && range.finalize();
+  });
+  wrapper.destroy(true /* recursive */);
 };
+
+/******************************************************************************/
+/* Data contexts                                                              */
+/******************************************************************************/
 
 Spark.setDataContext = withRenderer(function (dataContext, html, _renderer) {
   return _renderer.annotate(
@@ -201,6 +233,10 @@ Spark.getDataContext = function (node) {
   var range = findRangeOfType(Spark._ANNOTATION_DATA, node);
   return range && range.data;
 };
+
+/******************************************************************************/
+/* Events                                                                     */
+/******************************************************************************/
 
 var universalListener = null;
 var getListener = function () {
@@ -332,6 +368,9 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
   return html;
 });
 
+/******************************************************************************/
+/* Isolate                                                                    */
+/******************************************************************************/
 
 Spark.isolate = function (htmlFunc) {
   var renderer = Spark._currentRenderer.get();
@@ -397,33 +436,6 @@ Spark.isolate = function (htmlFunc) {
       });
 
   return html;
-};
-
-var notifyWatchers = function (start, end) {
-  var tempRange = new LiveRange(Spark._TAG, start, end, true /* innermost */);
-  for (var walk = tempRange; walk; walk = walk.findParent())
-    if (walk.type === Spark._ANNOTATION_WATCH)
-      walk.notify();
-  tempRange.destroy();
-};
-
-// Delete all of the liveranges in the range of nodes between `start`
-// and `end`, and call their 'finalize' function if any. Or instead of
-// `start` and `end` you may pass a fragment in `start`.
-Spark.finalize = function (start, end) {
-  if (! start.parentNode && start.nodeType !== 11 /* DocumentFragment */) {
-    // Workaround for LiveRanges' current inability to contain
-    // a node with no parentNode.
-    var frag = document.createDocumentFragment();
-    frag.appendChild(start);
-    start = frag;
-    end = null;
-  }
-  var wrapper = new LiveRange(Spark._TAG, start, end);
-  wrapper.visit(function (isStart, range) {
-    isStart && range.finalize && range.finalize();
-  });
-  wrapper.destroy(true /* recursive */);
 };
 
 })();
