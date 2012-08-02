@@ -15,15 +15,16 @@
     if (!Meteor.accounts.weibo._secret)
       throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.weibo.setSecret first");
 
-    var result = getAccessToken(query);
-    var identity = getIdentity(result.access_token, parseInt(result.uid, 10));
+    var accessToken = getAccessToken(query);
+    var identity = getIdentity(accessToken.access_token, parseInt(accessToken.uid, 10));
 
     return {
       options: {
         services: {
           weibo: {
-            id: result.uid,
-            accessToken: result.accessToken
+            id: accessToken.uid,
+            accessToken: accessToken.accessToken,
+            screenName: identity.screen_name
           }
         }
       },
