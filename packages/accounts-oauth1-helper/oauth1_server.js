@@ -3,7 +3,7 @@
 
   Meteor.accounts.oauth1._services = {};
 
-  Meteor.accounts.oauth._setup({oauthVersion: 1});
+  Meteor.accounts.oauth._setup({version: 1});
 
   // connect middleware
   Meteor.accounts.oauth1._handleRequest = function (req, res, next) {

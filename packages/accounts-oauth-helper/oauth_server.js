@@ -13,10 +13,10 @@
   //       arguments to Meteor.accounts.updateOrCreateUser)
   //     - `null` if the user declined to give permissions
   Meteor.accounts.oauth.registerService = function (name, options, handleOauthRequest) {
-    var oauthAccounts = Meteor.accounts['oauth' + options.oauthVersion];
+    var oauthAccounts = Meteor.accounts['oauth' + options.version];
 
     if (oauthAccounts._services[name])
-      throw new Error("Already registered the " + name + " OAuth" + options.oauthVersion + " service");
+      throw new Error("Already registered the " + name + " OAuth" + options.version + " service");
 
     oauthAccounts._services[name] = {
       handleOauthRequest: handleOauthRequest
@@ -24,11 +24,11 @@
   };
 
   Meteor.accounts.oauth._setup = function(setupOptions) {
-    var oauthAccounts = Meteor.accounts['oauth' + setupOptions.oauthVersion];
+    var oauthAccounts = Meteor.accounts['oauth' + setupOptions.version];
 
     // Listen to calls to `login` with an oauth option set
     Meteor.accounts.registerLoginHandler(function (options) {
-      if (!options.oauth || options.oauth.version !== setupOptions.oauthVersion)
+      if (!options.oauth || options.oauth.version !== setupOptions.version)
         return undefined; // don't handle
 
       var result = oauthAccounts._loginResultForState[options.oauth.state];
