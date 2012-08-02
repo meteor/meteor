@@ -168,17 +168,6 @@ Template.event.events = {
   }
 };
 
-Template.event.get_details = function() {
-  var details = this.details;
-  if (! details) {
-    return null;
-  } else {
-    // XXX XXX We need something better than stringify!
-    // stringify([undefined]) === "[null]"
-    return JSON.stringify(details);
-  }
-};
-
 Template.event.is_debuggable = function() {
   return !!this.cookie;
 };
