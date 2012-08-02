@@ -8,32 +8,19 @@
   // connect middleware
   Meteor.accounts.oauth1._handleRequest = function (req, res, next) {
 
-    // req.url will be "/_oauth/<service name>?<action>"
-    var barePath = req.url.substring(0, req.url.indexOf('?'));
-    var splitPath = barePath.split('/');
+    var service = Meteor.accounts.oauth1._services[req._serviceName];
 
-    // Find service based on url
-    var serviceName = splitPath[2];
-    var service = Meteor.accounts.oauth1._services[serviceName];
-
-    // Any non-oauth request will continue down the default middlewares
-    // Same goes for service that hasn't been registered
-    if (splitPath[1] !== '_oauth' || !service) {
+    // Skip everything if there's no service set by the oauth middleware
+    if (!service) {
       next();
       return;
     }
-
-    // Make sure we're configured
-    if (!Meteor.accounts[serviceName]._appId || !Meteor.accounts[serviceName]._appUrl)
-      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts." + serviceName + ".config first");
-    if (!Meteor.accounts[serviceName]._secret)
-      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts." + serviceName + ".setSecret first");
 
     // Make sure we prepare the login results before returning.
     // This way the subsequent call to the `login` method will be
     // immediate.
 
-    var config = Meteor.accounts[serviceName];
+    var config = Meteor.accounts[req._serviceName];
     var oauth = new OAuth1(config);
 
     // If we get here with a callback url we need a request token to
@@ -96,16 +83,6 @@
     }
   };
 
-  // Listen on /_oauth/*
-  __meteor_bootstrap__.app
-    .use(connect.query())
-    .use(function(req, res, next) {
-      // Need to create a Fiber since we're using synchronous http
-      // calls and nothing else is wrapping this in a fiber
-      // automatically
-      Fiber(function () {
-        Meteor.accounts.oauth1._handleRequest(req, res, next);
-      }).run();
-    });
+  Meteor.accounts.oauth._loadMiddleWare(Meteor.accounts.oauth1._handleRequest);
 
 })();

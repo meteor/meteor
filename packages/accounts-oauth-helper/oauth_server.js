@@ -1,4 +1,5 @@
 (function () {
+  var connect = __meteor_bootstrap__.require("connect");
 
   // Register a handler for an OAuth service. The handler will be called
   // when we get an incoming http request on /_oauth/{serviceName}. This
@@ -48,5 +49,46 @@
     oauthAccounts._loginResultForState = {};
 
   };
+
+  // Handle _oauth paths, gets a bunch of stuff ready for the oauth implementation middleware
+  Meteor.accounts.oauth._handleRequest = function (req, res, next) {
+
+    // req.url will be "/_oauth/<service name>?<action>"
+    var barePath = req.url.substring(0, req.url.indexOf('?'));
+    var splitPath = barePath.split('/');
+
+    // Find service based on url
+    var serviceName = req._serviceName = splitPath[2];
+
+    // Any non-oauth request will continue down the default middlewares
+    // Same goes for service that hasn't been registered
+    if (splitPath[1] !== '_oauth') {
+      next();
+      return;
+    }
+
+    // Make sure we're configured
+    if (!Meteor.accounts[serviceName]._appId || !Meteor.accounts[serviceName]._appUrl)
+      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts." + serviceName + ".config first");
+    if (!Meteor.accounts[serviceName]._secret)
+      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts." + serviceName + ".setSecret first");
+
+    next();
+  };
+
+  Meteor.accounts.oauth._loadMiddleWare = function(middleware) {
+    __meteor_bootstrap__.app
+      .use(connect.query())
+      .use(function(req, res, next) {
+        // Need to create a Fiber since we're using synchronous http
+        // calls and nothing else is wrapping this in a fiber
+        // automatically
+        Fiber(function () {
+          middleware(req, res, next);
+        }).run();
+      });
+  };
+
+  Meteor.accounts.oauth._loadMiddleWare(Meteor.accounts.oauth._handleRequest);
 
 })();
