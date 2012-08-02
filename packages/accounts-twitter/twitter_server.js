@@ -4,7 +4,7 @@
     Meteor.accounts.twitter._secret = secret;
   };
 
-  Meteor.accounts.oauth.registerService('twitter', 1, function(oauth) {
+  Meteor.accounts.oauth.registerService('twitter', {oauthVersion: 1}, function(oauth) {
 
     var identity = oauth.get('https://api.twitter.com/1/account/verify_credentials.json');
 
