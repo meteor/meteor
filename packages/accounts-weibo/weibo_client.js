@@ -1,6 +1,6 @@
 (function () {
   Meteor.loginWithWeibo = function () {
-    if (!Meteor.accounts.weibo._clientId || !Meteor.accounts.weibo._appUrl)
+    if (!Meteor.accounts.weibo._appId || !Meteor.accounts.weibo._appUrl)
       throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.weibo.config first");
 
     var state = Meteor.uuid();
@@ -8,7 +8,7 @@
     var loginUrl =
           'https://api.weibo.com/oauth2/authorize' +
           '?response_type=code' +
-          '&client_id=' + Meteor.accounts.weibo._clientId +
+          '&client_id=' + Meteor.accounts.weibo._appId +
           '&redirect_uri=' + Meteor.accounts.weibo._appUrl + '/_oauth/weibo?close' +
           '&state=' + state;
 

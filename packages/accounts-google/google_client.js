@@ -1,6 +1,6 @@
 (function () {
   Meteor.loginWithGoogle = function () {
-    if (!Meteor.accounts.google._clientId || !Meteor.accounts.google._appUrl)
+    if (!Meteor.accounts.google._appId || !Meteor.accounts.google._appUrl)
       throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.google.config first");
 
     var state = Meteor.uuid();
@@ -20,7 +20,7 @@
     var loginUrl =
           'https://accounts.google.com/o/oauth2/auth' +
           '?response_type=code' +
-          '&client_id=' + Meteor.accounts.google._clientId +
+          '&client_id=' + Meteor.accounts.google._appId +
           '&scope=' + flat_scope +
           '&redirect_uri=' + Meteor.accounts.google._appUrl + '/_oauth/google?close' +
           '&state=' + state;

@@ -10,7 +10,7 @@
       return null;
     }
 
-    if (!Meteor.accounts.weibo._clientId || !Meteor.accounts.weibo._appUrl)
+    if (!Meteor.accounts.weibo._appId || !Meteor.accounts.weibo._appUrl)
       throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.weibo.config first");
     if (!Meteor.accounts.weibo._secret)
       throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.weibo.setSecret first");
@@ -36,7 +36,7 @@
     var result = Meteor.http.post(
       "https://api.weibo.com/oauth2/access_token", {params: {
         code: query.code,
-        client_id: Meteor.accounts.weibo._clientId,
+        client_id: Meteor.accounts.weibo._appId,
         client_secret: Meteor.accounts.weibo._secret,
         redirect_uri: Meteor.accounts.weibo._appUrl + "/_oauth/weibo?close",
         grant_type: 'authorization_code'
