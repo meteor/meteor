@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use('accounts', ['client', 'server']);
+  api.use('accounts-oauth-helper', 'client');
   api.use('oauth1', 'server');
 
   api.add_files('oauth1_common.js', ['client', 'server']);
