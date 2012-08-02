@@ -10,7 +10,7 @@
       return null;
     }
 
-    if (!Meteor.accounts.google._clientId || !Meteor.accounts.google._appUrl)
+    if (!Meteor.accounts.google._appId || !Meteor.accounts.google._appUrl)
       throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.google.config first");
     if (!Meteor.accounts.google._secret)
       throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.google.setSecret first");
@@ -31,7 +31,7 @@
     var result = Meteor.http.post(
       "https://accounts.google.com/o/oauth2/token", {params: {
         code: query.code,
-        client_id: Meteor.accounts.google._clientId,
+        client_id: Meteor.accounts.google._appId,
         client_secret: Meteor.accounts.google._secret,
         redirect_uri: Meteor.accounts.google._appUrl + "/_oauth/google?close",
         grant_type: 'authorization_code'
