@@ -269,9 +269,9 @@ Handlebars.evaluate = function (ast, data, options) {
             (old_data || Handlebars._defaultThis)) {
           return result;
         } else {
-          return Meteor.ui.chunk(
-            function() { return result; }, {
-              data: data, branch: branch });
+          return Spark.setDataContext(
+            data,
+            Spark.labelBranch(branch, result));
         }
       };
     };

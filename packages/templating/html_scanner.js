@@ -146,7 +146,7 @@ var html_scanner = {
       if (hasAttribs)
         throw parseError("Attributes on <body> not supported");
       results.js += "Meteor.startup(function(){" +
-        "document.body.appendChild(Meteor.ui.render(" +
+        "document.body.appendChild(Spark.render(" +
         "Meteor._def_template(null," + code + ")));});";
     }
   }
