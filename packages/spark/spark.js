@@ -1,10 +1,21 @@
+// XXX rename liverange methods to camelcase?
+
+// XXX adjust Spark API so that the modules (eg, list, events) could
+// have been written by third parties on top of the public API?
+
+// XXX rename isolate to reflect that it is the only root of
+// deps-based reactivity ('track'?)
+
+// XXX should test variable wrapping (eg TR vs THEAD) inside each
+// branch of Spark.list
+
 (function() {
 
 Spark = {};
 
 Spark._currentRenderer = new Meteor.EnvironmentVariable;
 
-Spark._TAG = "_spark_"+Meteor.uuid();
+Spark._TAG = "_spark_" + Meteor.uuid();
 // XXX document contract for each type of annotation?
 Spark._ANNOTATION_NOTIFY = "notify";
 Spark._ANNOTATION_DATA = "data";
@@ -13,6 +24,7 @@ Spark._ANNOTATION_EVENTS = "events";
 Spark._ANNOTATION_WATCH = "watch";
 Spark._ANNOTATION_LABEL = "label";
 Spark._ANNOTATION_LANDMARK = "landmark";
+Spark._ANNOTATION_LIST = "list";
 // XXX why do we need, eg, _ANNOTATION_ISOLATE? it has no semantics?
 
 // Set in tests to turn on extra UniversalEventListener sanity checks
@@ -65,7 +77,7 @@ _.extend(Spark._Renderer.prototype, {
   createId: function () {
     var id = "";
     var chars =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+_";
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     for (var i = 0; i < 8; i++) {
       id += chars.substr(Math.floor(Meteor.random() * 64), 1);
     }
@@ -76,7 +88,7 @@ _.extend(Spark._Renderer.prototype, {
   // attributes to add to the liverange.  tag and what are optional.
   // if no tag is passed, no liverange will be created.
   annotate: function (html, type, what) {
-    var id = type + "-" + this.createId();
+    var id = type + ":" + this.createId();
     this.annotations[id] = function (start, end) {
       if (! type)
         return;
@@ -450,6 +462,93 @@ Spark.isolate = function (htmlFunc) {
 };
 
 /******************************************************************************/
+/* Lists                                                                      */
+/******************************************************************************/
+
+Spark.list = function (cursor, itemFunc, elseFunc) {
+  elseFunc = elseFunc || function () { return ''; };
+
+  // If not in Spark.render, return static HTML.
+  var renderer = Spark._currentRenderer.get();
+  if (!renderer) {
+    // XXX messy and maybe not strictly correct. add a 'contents'
+    // method to observables that returns a snapshot.
+    var contents = [];
+    cursor.observe({
+      added: function (item, beforeIndex) {
+        contents.splice(beforeIndex, 0, item);
+      }
+    }).stop();
+
+    if (contents.length)
+      return _.map(contents, itemFunc).join();
+    else
+      return elseFunc();
+  }
+
+  // Inside Spark.render. Return live list.
+  return _renderer.annotate('', Spark._ANNOTATION_LIST, function (outerRange) {
+    var itemRanges = [];
+
+    var replaceWithElse = function () {
+      var frag = Spark.render(elseFunc);
+      DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
+      Spark.finalize(outerRange.replace_contents(frag));
+    };
+
+    var handle = cursor.observe({
+      added: function (item, beforeIndex) {
+        var frag = Spark.render(_.bind(itemFunc, null, item));
+        DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
+        var range = new LiveRange(Spark._TAG, frag);
+
+        if (! itemRanges.length) {
+          Spark.finalize(outerRange.replace_contents(frag));
+          itemRanges.push(range);
+        } else if (beforeIndex === itemRanges.length) {
+          itemRanges[itemRanges.length - 1].insert_after(frag);
+        } else {
+          itemRanges[beforeIndex].insert_before(frag);
+        }
+      },
+      removed: function (item, atIndex) {
+        if (itemRanges.length === 1)
+          replaceWithElse();
+        else
+          Spark.finalize(itemRanges[atIndex].extract());
+
+        itemRanges.splice(atIndex, 1);
+      },
+      moved: function (item, oldIndex, newIndex) {
+        if (oldIndex === newIndex)
+          return;
+
+        var frag = itemRange[oldIndex].extract();
+        var range = itemRanges.splice(oldIndex, 1)[0];
+        if (newIndex === itemRanges.length)
+          itemRanges[itemRanges.length - 1].insert_after(frag);
+        else
+          itemRanges[newIndex].insert_before(frag);
+
+        itemRanges.splice(newIndex, 0, range);
+      },
+      changed: function (item, atIndex) {
+        var frag = Spark.render(_.bind(itemFunc, null, item));
+        DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
+        replaceContentsPreservingLandmarks(itemRanges[atIndex], frag);
+      }
+    });
+
+    if (! itemRanges.length)
+      replaceWithElse();
+
+    outerRange.finalize = function () {
+      handle.stop();
+    };
+  });
+};
+
+/******************************************************************************/
 /* Labels and landmarks                                                       */
 /******************************************************************************/
 
@@ -545,7 +644,7 @@ var visitMatchingLandmarks = function (range1, range2, func) {
 //
 // A preserved (constant) region:
 //   {type: "region", fromStart: Node, fromEnd: Node,
-//      toStart: Node, toEnd: Node}
+//      newRange: LiveRange}
 var computePreservations = function (oldRange, newRange) {
   var preservations = [];
 
