@@ -7,3 +7,16 @@ Meteor.render = function (htmlFunc) {
       });
   });
 };
+
+Meteor.renderList = function (cursor, itemFunc, elseFunc) {
+  return Spark.render(function () {
+    return Spark.list(cursor, function (item) {
+      var html = Spark.isolate(_.bind(itemFunc, null, item));
+      if (item._id)
+        html = Spark.labelBranch(item._id, html);
+      return html;
+    }, function () {
+      return elseFunc ? Spark.isolate(elseFunc) : '';
+    });
+  });
+};
