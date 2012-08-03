@@ -17,10 +17,22 @@
       console.log("GB", url);
 
       // run phantomjs
-      var tmpfile = "/tmp/" +
-            (((1+Math.random())*0x1000000)|0).toString(16) + ".js";
-      fs.writeFile(
-        tmpfile,
+      // XXX make sure phantomjs in the path!
+      //
+      // Use '/dev/stdin' to avoid writing to a temporary file. Can't
+      // just omit the file, as PhantomJS takes that to mean 'use a
+      // REPL' and exits as soon as stdin closes.
+      var cp = spawn('phantomjs', ['--load-images=no', '/dev/stdin']);
+      cp.on('exit', function (code) {
+        // XXX look at code
+        res.end();
+      });
+      // phantomjs prints in utf8.
+      res.writeHead(200, {'Content-Type': 'text/html; charset=UTF-8'});
+
+      cp.stdout.pipe(res);
+
+      cp.stdin.write(
         "var url = '" + url + "';" +
 "var page = require('webpage').create();" +
 
@@ -49,24 +61,10 @@
 "    console.log(out);" +
 "    phantom.exit();" +
 "  }" +
-"}, 100);",
-        function (err) {
-          if (err) { // can't write file?
-            next();
-            return;
-          }
-          // XXX make sure phantomjs in the path!
-          var cp = spawn('phantomjs', ['--load-images=no', tmpfile]);
-          cp.on('exit', function (code) {
-            // XXX look at code
-            res.end();
-            fs.unlink(tmpfile);
-          });
-          // phantomjs prints in utf8.
-          res.writeHead(200, {'Content-Type': 'text/html; charset=UTF-8'});
+"}, 100);");
+      cp.stdin.end();
 
-          cp.stdout.pipe(res);
-        });
+
     } else {
       next();
     }
