@@ -1185,7 +1185,7 @@ var legacyLabels = {
 };
 
 
-Tinytest.add("spark - preserved nodes (diff/patch)", function(test) {
+Tinytest.add("spark - landmark preserve", function(test) {
 
   var rand;
 
@@ -1336,6 +1336,125 @@ Tinytest.add("spark - preserved nodes (diff/patch)", function(test) {
 
 });
 
+Tinytest.add("spark - landmark constant", function(test) {
 
+  var R, div;
+
+  // top-level { constant: true }
+
+  R = ReactiveVar(0);
+  var states = [];
+  div = OnscreenDiv(Meteor.render(function() {
+    R.get(); // create dependency
+    return Spark.createLandmark({
+      constant: true,
+      render: function() {
+        states.push(this);
+      }
+    }, '<b/><i/><u/>');
+  }));
+
+  var nodes = _.toArray(div.node().childNodes);
+  test.equal(nodes.length, 3);
+  Meteor.flush();
+  test.equal(states.length, 1);
+  R.set(1);
+  Meteor.flush();
+  test.equal(states.length, 2);
+  test.isTrue(states[0] === states[1]);
+  var nodes2 = _.toArray(div.node().childNodes);
+  test.equal(nodes2.length, 3);
+  test.isTrue(nodes[0] === nodes2[0]);
+  test.isTrue(nodes[1] === nodes2[1]);
+  test.isTrue(nodes[2] === nodes2[2]);
+  div.kill();
+  Meteor.flush();
+  test.equal(R.numListeners(), 0);
+
+  // non-top-level
+
+  var i = 1;
+  // run test with and without branch
+  _.each([false, true], function(matchLandmark) {
+    // run test with node before or after, or neither or both
+    _.each([false, true], function(nodeBefore) {
+      _.each([false, true], function(nodeAfter) {
+        var hasSpan = true;
+        var isConstant = true;
+
+        R = ReactiveVar('foo');
+        div = OnscreenDiv(Meteor.render(function() {
+          R.get(); // create unconditional dependency
+          var brnch = matchLandmark ? 'myBranch' : ('branch'+(++i));
+          return (nodeBefore ? R.get() : '') +
+            Spark.labelBranch(
+              brnch,
+              Spark.createLandmark({ constant: isConstant },
+                                   hasSpan ? '<span>stuff</span>' : 'blah')) +
+            (nodeAfter ? R.get() : '');
+        }));
+
+        var span = div.node().getElementsByTagName('span')[0];
+        hasSpan = false;
+
+        test.equal(div.text(),
+                   (nodeBefore ? 'foo' : '')+
+                   'stuff'+
+                   (nodeAfter ? 'foo' : ''));
+
+        R.set('bar');
+        Meteor.flush();
+
+        // only absence of branch should cause the constant
+        // chunk to be re-rendered
+        test.equal(div.text(),
+                   (nodeBefore ? 'bar' : '')+
+                   (matchLandmark ? 'stuff' : 'blah')+
+                   (nodeAfter ? 'bar' : ''));
+
+        R.set('baz');
+        Meteor.flush();
+
+        // should be repeatable (liveranges not damaged)
+        test.equal(div.text(),
+                   (nodeBefore ? 'baz' : '')+
+                   (matchLandmark ? 'stuff' : 'blah')+
+                   (nodeAfter ? 'baz' : ''));
+
+        isConstant = false; // no longer constant:true!
+        R.set('qux');
+        Meteor.flush();
+        test.equal(div.text(),
+                   (nodeBefore ? 'qux' : '')+
+                   'blah'+
+                   (nodeAfter ? 'qux' : ''));
+
+        // turn constant back on
+        isConstant = true;
+        hasSpan = true;
+        R.set('popsicle');
+        Meteor.flush();
+        // we don't get the span, instead old "blah" is preserved
+        test.equal(div.text(),
+                   (nodeBefore ? 'popsicle' : '')+
+                   (matchLandmark ? 'blah' : 'stuff')+
+                   (nodeAfter ? 'popsicle' : ''));
+
+        isConstant = false;
+        R.set('hi');
+        Meteor.flush();
+        // now we get the span!
+        test.equal(div.text(),
+                   (nodeBefore ? 'hi' : '')+
+                   'stuff'+
+                   (nodeAfter ? 'hi' : ''));
+
+        div.kill();
+        Meteor.flush();
+      });
+    });
+  });
+
+});
 
 })();

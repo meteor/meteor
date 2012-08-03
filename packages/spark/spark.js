@@ -553,7 +553,7 @@ var computePreservations = function (oldRange, newRange) {
       preservations.push({
         type: "region",
         fromStart: from.firstNode(), fromEnd: from.lastNode(),
-        newRange: newRange
+        newRange: to
       });
 
     _.each(to.preserve, function (nodeLabeler, selector) {
@@ -640,6 +640,7 @@ var notifyLandmarksRendered = function (range) {
         r.createCallback.call(r.state);
         r.created = true;
       }
+      // XXX should be render(start, end) ??
       r.renderCallback.call(r.state);
     }
   });
