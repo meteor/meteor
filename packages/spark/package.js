@@ -13,7 +13,7 @@ Package.on_use(function (api) {
   // you still want the event object normalization that jquery provides?)
   api.use('jquery');
 
-  api.add_files(['spark.js', 'convenience.js'], 'client');
+  api.add_files(['spark.js', 'patch.js', 'convenience.js'], 'client');
 /*
   api.add_files(['liveevents_w3c.js', 'liveevents_now3c.js'], 'client');
   api.add_files(['liveevents.js'], 'client');

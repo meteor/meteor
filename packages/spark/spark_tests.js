@@ -1158,4 +1158,184 @@ Tinytest.add("spark - labeled landmarks", function (test) {
 
 });
 
+var legacyLabels = {
+  '*[id], #[name]': function(n) {
+    var label = null;
+
+    if (n.nodeType === 1) {
+      if (n.id) {
+        label = '#'+n.id;
+      } else if (n.getAttribute("name")) {
+        label = n.getAttribute("name");
+        // Radio button special case:  radio buttons
+        // in a group all have the same name.  Their value
+        // determines their identity.
+        // Checkboxes with the same name and different
+        // values are also sometimes used in apps, so
+        // we treat them similarly.
+        if (n.nodeName === 'INPUT' &&
+            (n.type === 'radio' || n.type === 'checkbox') &&
+            n.value)
+          label = label + ':' + n.value;
+      }
+    }
+
+    return label;
+  }
+};
+
+
+Tinytest.add("spark - preserved nodes (diff/patch)", function(test) {
+
+  var rand;
+
+  var randomNodeList = function(optParentTag, depth) {
+    var atTopLevel = ! optParentTag;
+    var len = rand.nextIntBetween(atTopLevel ? 1 : 0, 6);
+    var buf = [];
+    for(var i=0; i<len; i++)
+      buf.push(randomNode(optParentTag, depth));
+    return buf;
+  };
+
+  var randomNode = function(optParentTag, depth) {
+    var n = {};
+
+    if (rand.nextBoolean()) {
+      // text node
+      n.text = rand.nextIdentifier(2);
+    } else {
+
+      n.tagName = rand.nextChoice((function() {
+        switch (optParentTag) {
+        case "p": return ['b', 'i', 'u'];
+        case "b": return ['i', 'u'];
+        case "i": return ['u'];
+        case "u": case "span": return ['span'];
+        default: return ['div', 'ins', 'center', 'p'];
+        }
+      })());
+
+      if (rand.nextBoolean())
+        n.id = rand.nextIdentifier();
+      if (rand.nextBoolean())
+        n.name = rand.nextIdentifier();
+
+      if (depth === 0) {
+        n.children = [];
+      } else {
+        n.children = randomNodeList(n.tagName, depth-1);
+      }
+    }
+
+    var existence = rand.nextChoice([[true, true], [false, true], [true, false]]);
+    n.existsBefore = existence[0];
+    n.existsAfter = existence[1];
+
+    return n;
+  };
+
+  var nodeListToHtml = function(list, is_after, optBuf) {
+    var buf = (optBuf || []);
+    _.each(list, function(n) {
+      if (is_after ? n.existsAfter : n.existsBefore) {
+        if (n.text) {
+          buf.push(n.text);
+        } else {
+          buf.push('<', n.tagName);
+          if (n.id)
+            buf.push(' id="', n.id, '"');
+          if (n.name)
+            buf.push(' name="', n.name, '"');
+          buf.push('>');
+          nodeListToHtml(n.children, is_after, buf);
+          buf.push('</', n.tagName, '>');
+        }
+      }
+    });
+    return optBuf ? null : buf.join('');
+  };
+
+  var fillInElementIdentities = function(list, parent, is_after) {
+    var elementsInList = _.filter(
+      list,
+      function(x) {
+        return (is_after ? x.existsAfter : x.existsBefore) && x.tagName;
+      });
+    var elementsInDom = _.filter(parent.childNodes,
+                                 function(x) { return x.nodeType === 1; });
+    test.equal(elementsInList.length, elementsInDom.length);
+    for(var i=0; i<elementsInList.length; i++) {
+      elementsInList[i].node = elementsInDom[i];
+      fillInElementIdentities(elementsInList[i].children,
+                              elementsInDom[i]);
+    }
+  };
+
+  var getParentChain = function(node) {
+    var buf = [];
+    while (node) {
+      buf.push(node);
+      node = node.parentNode;
+    }
+    return buf;
+  };
+
+  var isSameElements = function(a, b) {
+    if (a.length !== b.length)
+      return false;
+    for(var i=0; i<a.length; i++) {
+      if (a[i] !== b[i])
+        return false;
+    }
+    return true;
+  };
+
+  var collectLabeledNodeData = function(list, optArray) {
+    var buf = optArray || [];
+
+    _.each(list, function(x) {
+      if (x.tagName && x.existsBefore && x.existsAfter) {
+        if (x.name || x.id) {
+          buf.push({ node: x.node, parents: getParentChain(x.node) });
+        }
+        collectLabeledNodeData(x.children, buf);
+      }
+    });
+
+    return buf;
+  };
+
+  for(var i=0; i<5; i++) {
+    // Use non-deterministic randomness so we can have a shorter fuzz
+    // test (fewer iterations).  For deterministic (fully seeded)
+    // randomness, remove the call to Math.random().
+    rand = new SeededRandom("preserved nodes "+i+" "+Math.random());
+
+    var R = ReactiveVar(false);
+    var structure = randomNodeList(null, 6);
+    var frag = WrappedFrag(Meteor.render(function() {
+      return Spark.createLandmark(
+        {preserve: legacyLabels},
+        nodeListToHtml(structure, R.get()));
+    })).hold();
+    test.equal(frag.html(), nodeListToHtml(structure, false) || "<!---->");
+    fillInElementIdentities(structure, frag.node());
+    var labeledNodes = collectLabeledNodeData(structure);
+    R.set(true);
+    Meteor.flush();
+    test.equal(frag.html(), nodeListToHtml(structure, true) || "<!---->");
+    _.each(labeledNodes, function(x) {
+      test.isTrue(isSameElements(x.parents, getParentChain(x.node)));
+    });
+
+    frag.release();
+    Meteor.flush();
+    test.equal(R.numListeners(), 0);
+  }
+
+});
+
+
+
 })();

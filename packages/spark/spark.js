@@ -440,8 +440,7 @@ Spark.isolate = function (htmlFunc) {
           });
           tempRange.destroy();
 
-          var oldContents = replaceContentsPreservingLandmarks(range, frag);
-          Spark.finalize(oldContents);
+          replaceContentsPreservingLandmarks(range, frag);
           range.destroy();
         });
       });
@@ -466,10 +465,10 @@ Spark.createLandmark = withRenderer(function (options, html, _renderer) {
       preserve[selector] = true;
     });
   else
-    preserve = options.preserve;
+    preserve = options.preserve || {};
   for (var selector in preserve)
     if (typeof preserve[selector] !== 'function')
-      preserve[selector] = function () { return true; }
+      preserve[selector] = function () { return true; };
 
   return _renderer.annotate(
     html, Spark._ANNOTATION_LANDMARK, {
@@ -547,9 +546,43 @@ var visitMatchingLandmarks = function (range1, range2, func) {
 //   {type: "region", fromStart: Node, fromEnd: Node,
 //      toStart: Node, toEnd: Node}
 var computePreservations = function (oldRange, newRange) {
+  var preservations = [];
+
   visitMatchingLandmarks(oldRange, newRange, function (from, to) {
-    // XXX
+    if (to.constant)
+      preservations.push({
+        type: "region",
+        fromStart: from.firstNode(), fromEnd: from.lastNode(),
+        newRange: newRange
+      });
+
+    _.each(to.preserve, function (nodeLabeler, selector) {
+      var fromNodesByLabel = {}; // label -> node
+
+      var visitLabeledNodes = function (range, func) {
+        var nodes = DomUtils.findAllInRange(
+          range.firstNode(), range.lastNode(), selector);
+        _.each(nodes, function (n) {
+          var label = nodeLabeler(n);
+          label && func(n, label);
+        });
+      };
+
+      visitLabeledNodes(from, function (n, label) {
+        fromNodesByLabel[label] = n;
+      });
+
+      visitLabeledNodes(to, function (n, label) {
+        var match = fromNodesByLabel[label];
+        if (match) {
+          preservations.push({ type: "node", from: match, to: n });
+          fromNodesByLabel[label] = null;
+        }
+      });
+    });
   });
+
+  return preservations;
 };
 
 // Look for landmarks in oldRange that match landmarks in
@@ -575,7 +608,7 @@ var moveLandmarks = function (oldRange, newRange) {
   });
 };
 
-// Replace the contents of `range` with the fragment `frag`. Return
+// Replace the contents of `range` with the fragment `frag`. Finalize
 // the old contents of `range`. If the old contents had any landmarks
 // that match landmarks in `frag`, move the landmarks over and perform
 // any node or region preservations that they request.
@@ -585,8 +618,15 @@ var replaceContentsPreservingLandmarks = function (range, frag) {
   moveLandmarks(range, tempRange);
   tempRange.destroy();
 
-  // XXX should patch (using preservations)
-  return range.replace_contents(frag);
+  // patch (using preservations)
+  range.operate(function (start, end) {
+    // XXX this will destroy all liveranges, including ones
+    // inside constant regions whose DOM nodes we are going
+    // to preserve untouched
+    Spark.finalize(start, end);
+    Spark._patch(start.parentNode, frag, start.previousSibling,
+                 end.nextSibling, preservations);
+  });
 };
 
 // Find all the landmarks in `range` and let them know that they are
