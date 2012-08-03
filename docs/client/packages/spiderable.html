@@ -1,0 +1,33 @@
+<template name="pkg_spiderable">
+{{#better_markdown}}
+## `spiderable`
+
+The `spiderable` package makes an application crawlable by web
+spiders. It uses the <a href="https://developers.google.com/webmasters/ajax-crawling/">AJAX Crawling specification</a> published by Google
+to serve pre-rendered HTML to web spiders that follow the protocol
+(Google, Bing, Yandex, and more).
+
+In order to have links between multiple pages on a site visible to
+spiders, apps must use real links (eg `<a href="/about">`) rather than
+simply re-rendering portions of the page when an element is
+clicked. Apps should render their content based on the URL of the page
+and can use HTML5 push-state to alter the URL on the client without
+triggering a page reload. See the <a href="http://meteor.com">Todos
+example</a> for a demonstration.
+
+{{#warning}}
+The current implementation of the spiderable package is
+inefficient and is meant as an temporary solution. Expect significant
+changes to this package.
+{{/warning}}
+
+{{#warning}}
+If you deploy your application with `meteor bundle`, you must install
+`phantomjs` (<a href="http://phantomjs.org/">http://phantomjs.org</a>)
+somewhere in your `$PATH`. If you use `meteor deploy` this is already
+taken care of.
+{{/warning}}
+
+
+{{/better_markdown}}
+</template>
