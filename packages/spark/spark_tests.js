@@ -1,4 +1,5 @@
 // XXX make sure that when tests use id="..." to trigger patching, "preserve" happens
+// XXX test that events inside constant regions still work after patching
 
 Spark._checkIECompliance = true;
 
@@ -1025,9 +1026,12 @@ Tinytest.add("spark - labeled landmarks", function (test) {
     R.push(ReactiveVar(""));
 
   var x = [];
-  var expect = function (what) {
-    test.equal(x, what);
+  var s = [];
+  var expect = function (what_x, what_s) {
+    test.equal(x, what_x);
+    test.equal(s, what_s);
     x = [];
+    s = [];
   };
 
   var excludeLandmarks = [];
@@ -1035,26 +1039,32 @@ Tinytest.add("spark - labeled landmarks", function (test) {
     excludeLandmarks.push(ReactiveVar(false));
 
   var isolateLandmarks = ReactiveVar(false);
+  var serial = 1;
   var testLandmark = function (id, htmlFunc) {
+    if (excludeLandmarks[id].get())
+      return "";
+
     var f = function () {
+      var thisSerial = serial++;
+
       return Spark.createLandmark({
         create: function () {
           x.push("c", id);
+          s.push(thisSerial);
           this.id = id;
         },
         render: function () {
           x.push("r", id);
+          s.push(thisSerial);
           test.equal(this.id, id);
         },
         destroy: function () {
           x.push("d", id);
+          s.push(thisSerial);
           test.equal(this.id, id);
         }
       }, htmlFunc());
     };
-
-    if (excludeLandmarks[id].get())
-      return "";
 
     if (isolateLandmarks.get())
       return Spark.isolate(function () { return f(); });
@@ -1083,79 +1093,77 @@ Tinytest.add("spark - labeled landmarks", function (test) {
     });
   }));
 
-  expect([]);
+  expect([], []);
   Meteor.flush();
-  expect(["c", 1, "r", 1,
-          "c", 2, "r", 2,
-          "c", 3, "r", 3,
-          "c", 4, "r", 4,
-          "c", 5, "r", 5]);
+  expect(["c", 1, "r", 1, "c", 2, "r", 2, "c", 3, "r", 3,
+          "c", 4, "r", 4, "c", 5, "r", 5],
+         [1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
   for (var i = 0; i < 10; i++) {
     R[i].set(1);
-    expect([]);
+    expect([], []);
     Meteor.flush();
-    expect(["r", 1, "r", 2, "r", 3, "r", 4, "r", 5]);
+    expect(["r", 1, "r", 2, "r", 3, "r", 4, "r", 5],
+           [i*5 + 6, i*5 + 7, i*5 + 8, i*5 + 9, i*5 + 10]);
   };
 
   excludeLandmarks[2].set(true);
   Meteor.flush();
-  expect(["d", 2, "r", 1, "r", 3, "r", 4, "r", 5]);
+  expect(["d", 2, "r", 1, "r", 3, "r", 4, "r", 5],
+         [52, 56, 57, 58, 59]);
 
   excludeLandmarks[2].set(false);
   excludeLandmarks[3].set(true);
   Meteor.flush();
-  expect(["d", 3, "d", 4, "d", 5, "r", 1, "c", 2, "r", 2]);
+  expect(["d", 3, "d", 4, "d", 5, "r", 1, "c", 2, "r", 2],
+         [57, 58, 59, 60, 61, 61]);
 
   excludeLandmarks[2].set(true);
   excludeLandmarks[3].set(false);
   Meteor.flush();
-  expect(["d", 2, "r", 1, "c", 3, "r", 3, "c", 4, "r", 4, "c", 5, "r", 5]);
+  expect(["d", 2, "r", 1, "c", 3, "r", 3, "c", 4, "r", 4, "c", 5, "r", 5],
+         [61, 62, 63, 63, 64, 64, 65, 65]);
 
   excludeLandmarks[2].set(false);
   Meteor.flush();
-  expect(["r", 1, "c", 2, "r", 2, "r", 3, "r", 4, "r", 5]);
+  expect(["r", 1, "c", 2, "r", 2, "r", 3, "r", 4, "r", 5],
+         [66, 67, 67, 68, 69, 70]);
 
   isolateLandmarks.set(true);
   Meteor.flush();
-  expect(["r", 1, "r", 2, "r", 3, "r", 4, "r", 5]);
+  expect(["r", 1, "r", 2, "r", 3, "r", 4, "r", 5],
+         [71, 72, 73, 74, 75]);
 
   for (var i = 0; i < 10; i++) {
     var expected = [
-      ["r", 1, "r", 2, "r", 3, "r", 4, "r", 5],
-      ["r", 1],
-      ["r", 1, "r", 2, "r", 3, "r", 4, "r", 5],
-      ["r", 2],
-      ["r", 1, "r", 2, "r", 3, "r", 4, "r", 5],
-      ["r", 3, "r", 4, "r", 5],
-      ["r", 3, "r", 4, "r", 5],
-      ["r", 4, "r", 5],
-      ["r", 4, "r", 5],
-      ["r", 5]
+      [["r", 1, "r", 2, "r", 3, "r", 4, "r", 5], [76, 77, 78, 79, 80]],
+      [["r", 1], [81]],
+      [["r", 1, "r", 2, "r", 3, "r", 4, "r", 5], [82, 83, 84, 85, 86]],
+      [["r", 2], [87]],
+      [["r", 1, "r", 2, "r", 3, "r", 4, "r", 5], [88, 89, 90, 91, 92]],
+      [["r", 3, "r", 4, "r", 5], [93, 94, 95]],
+      [["r", 3, "r", 4, "r", 5], [96, 97, 98]],
+      [["r", 4, "r", 5], [99, 100]],
+      [["r", 4, "r", 5], [101, 102]],
+      [["r", 5], [103]]
     ][i];
     R[i].set(2);
-    expect([]);
+    expect([], []);
     Meteor.flush();
-    expect(expected);
+    expect.apply(null, expected);
   };
 
   excludeLandmarks[4].set(true);
   Meteor.flush();
-  expect(["d", 4, "d", 5, "r", 3]);
+  expect(["d", 4, "d", 5, "r", 3], [101, 103, 104]);
 
   excludeLandmarks[4].set(false);
   excludeLandmarks[5].set(true);
   Meteor.flush();
-  expect(["r", 3, "c", 4, "r", 4]);
+  expect(["r", 3, "c", 4, "r", 4], [105, 106, 106]);
 
   excludeLandmarks[5].set(false);
   Meteor.flush();
-  expect(["r", 4, "c", 5, "r", 5]);
-
-
-
-
-  // XXX test that callbacks are replaced each time
-
+  expect(["r", 4, "c", 5, "r", 5], [107, 108, 108]);
 });
 
 var legacyLabels = {
