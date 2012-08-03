@@ -15,6 +15,12 @@
 
 // XXX s/render/rendered/ (etc) in landmarks?
 
+// XXX consider how new patching semantics have changed, eg,
+// leaderboard. must create a landmark (with legacyLabels) inside each
+// item for patching to work, because the outer landmark with
+// legacyLabels isn't getting rerendered. (if that's actually what's
+// going on with the test failure)
+
 (function() {
 
 Spark = {};
@@ -487,13 +493,13 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
     }).stop();
 
     if (contents.length)
-      return _.map(contents, itemFunc).join();
+      return _.map(contents, itemFunc).join('');
     else
       return elseFunc();
   }
 
   // Inside Spark.render. Return live list.
-  return _renderer.annotate('', Spark._ANNOTATION_LIST, function (outerRange) {
+  return renderer.annotate('', Spark._ANNOTATION_LIST, function (outerRange) {
     var itemRanges = [];
 
     var replaceWithElse = function () {
@@ -510,12 +516,13 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
 
         if (! itemRanges.length) {
           Spark.finalize(outerRange.replace_contents(frag));
-          itemRanges.push(range);
         } else if (beforeIndex === itemRanges.length) {
           itemRanges[itemRanges.length - 1].insert_after(frag);
         } else {
           itemRanges[beforeIndex].insert_before(frag);
         }
+
+        itemRanges.splice(beforeIndex, 0, range);
       },
       removed: function (item, atIndex) {
         if (itemRanges.length === 1)
@@ -529,7 +536,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
         if (oldIndex === newIndex)
           return;
 
-        var frag = itemRange[oldIndex].extract();
+        var frag = itemRanges[oldIndex].extract();
         var range = itemRanges.splice(oldIndex, 1)[0];
         if (newIndex === itemRanges.length)
           itemRanges[itemRanges.length - 1].insert_after(frag);

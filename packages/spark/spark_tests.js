@@ -5,6 +5,58 @@ Spark._checkIECompliance = true;
 
 (function () {
 
+var legacyLabels = {
+  '*[id], #[name]': function(n) {
+    var label = null;
+
+    if (n.nodeType === 1) {
+      if (n.id) {
+        label = '#'+n.id;
+      } else if (n.getAttribute("name")) {
+        label = n.getAttribute("name");
+        // Radio button special case:  radio buttons
+        // in a group all have the same name.  Their value
+        // determines their identity.
+        // Checkboxes with the same name and different
+        // values are also sometimes used in apps, so
+        // we treat them similarly.
+        if (n.nodeName === 'INPUT' &&
+            (n.type === 'radio' || n.type === 'checkbox') &&
+            n.value)
+          label = label + ':' + n.value;
+      }
+    }
+
+    return label;
+  }
+};
+
+var renderWithLegacyLabels = function (htmlFunc) {
+  return Meteor.render(function () {
+    var html = htmlFunc();
+    return Spark.createLandmark({ preserve: legacyLabels }, html);
+  });
+};
+
+var eventmap = function (/*args*/) {
+  // support event_buf as final argument
+  var event_buf = null;
+  if (arguments.length && _.isArray(arguments[arguments.length-1])) {
+    event_buf = arguments[arguments.length-1];
+    arguments.length--;
+  }
+  var events = {};
+  _.each(arguments, function (esel) {
+    var etyp = esel.split(' ')[0];
+    events[esel] = function (evt) {
+      if (evt.type !== etyp)
+        throw new Error(etyp+" event arrived as "+evt.type);
+      (event_buf || this).push(esel);
+    };
+  });
+  return events;
+};
+
 Tinytest.add("spark - assembly", function (test) {
 
   var doTest = function (calc) {
@@ -69,6 +121,16 @@ Tinytest.add("spark - assembly", function (test) {
   var attrValue = div.getAttribute('foo');
   test.isTrue(attrValue.indexOf('abc<!--') === 0, attrValue);
   test.isTrue(attrValue.indexOf('-->xyz') >= 0, attrValue);
+});
+
+
+Tinytest.add("spark - repeat inclusion", function(test) {
+  test.throws(function() {
+    var frag = Spark.render(function() {
+      var x = Spark.setDataContext({}, "abc");
+      return x + x;
+    });
+  });
 });
 
 
@@ -281,7 +343,7 @@ Tinytest.add("spark - one render", function (test) {
   test.equal(WrappedFrag(Meteor.render("foo")).html(), "foo");
 });
 
-Tinytest.add("spark - slow path GC", function (test) {
+Tinytest.add("spark - heuristic finalize", function (test) {
 
   var R = ReactiveVar(123);
 
@@ -674,26 +736,21 @@ Tinytest.add("spark - tables", function (test) {
   div.kill();
   Meteor.flush();
   test.equal(R.numListeners(), 0);
-});
 
-var eventmap = function (/*args*/) {
-  // support event_buf as final argument
-  var event_buf = null;
-  if (arguments.length && _.isArray(arguments[arguments.length-1])) {
-    event_buf = arguments[arguments.length-1];
-    arguments.length--;
-  }
-  var events = {};
-  _.each(arguments, function (esel) {
-    var etyp = esel.split(' ')[0];
-    events[esel] = function (evt) {
-      if (evt.type !== etyp)
-        throw new Error(etyp+" event arrived as "+evt.type);
-      (event_buf || this).push(esel);
-    };
-  });
-  return events;
-};
+  div = OnscreenDiv(renderWithLegacyLabels(function() {
+    return '<table id="my-awesome-table">'+R.get()+'</table>';
+  }));
+  Meteor.flush();
+  R.set("<tr><td>Hello</td></tr>");
+  Meteor.flush();
+  test.equal(
+    div.html(),
+    '<table id="my-awesome-table"><tbody><tr><td>Hello</td></tr></tbody></table>');
+  div.kill();
+  Meteor.flush();
+
+  test.equal(R.numListeners(), 0);
+});
 
 Tinytest.add("spark - event handling", function (test) {
   var event_buf = [];
@@ -972,6 +1029,65 @@ Tinytest.add("spark - event handling", function (test) {
   Meteor.flush();
 });
 
+
+Tinytest.add("spark - list event handling", function(test) {
+  var event_buf = [];
+  var div;
+
+  // same thing, but with events wired by listChunk "added" and "removed"
+  event_buf.length = 0;
+  var lst = [];
+  lst.observe = function(callbacks) {
+    lst.callbacks = callbacks;
+    return {
+      stop: function() {
+        lst.callbacks = null;
+      }
+    };
+  };
+  div = OnscreenDiv(Meteor.render(function() {
+    var chkbx = function(doc) {
+      return '<input type="checkbox">'+(doc ? doc._id : 'else');
+    };
+    var html = '<div><p><span><b>' +
+      Spark.setDataContext(
+        event_buf, Spark.attachEvents(
+          eventmap('click input', event_buf), Spark.list(lst, chkbx, chkbx))) +
+      '</b></span></p></div>';
+    html = Spark.setDataContext(event_buf, html);
+    html = Spark.attachEvents(eventmap('change b', 'change input', event_buf),
+                              html);
+    return html;
+  }));
+  Meteor.flush();
+  test.equal(div.text().match(/\S+/)[0], 'else');
+  // click on input
+  var doClick = function() {
+    clickElement(div.node().getElementsByTagName('input')[0]);
+    event_buf.sort(); // don't care about order
+    test.equal(event_buf, ['change b', 'change input', 'click input']);
+    event_buf.length = 0;
+  };
+  doClick();
+  // add item
+  lst.push({_id:'foo'});
+  lst.callbacks.added(lst[0], 0);
+  Meteor.flush();
+  test.equal(div.text().match(/\S+/)[0], 'foo');
+  doClick();
+  // remove item, back to "else" case
+  lst.callbacks.removed(lst[0], 0);
+  lst.pop();
+  Meteor.flush();
+  test.equal(div.text().match(/\S+/)[0], 'else');
+  doClick();
+  // cleanup
+  div.kill();
+  Meteor.flush();
+
+});
+
+
 Tinytest.add("spark - basic landmarks", function (test) {
   var R = ReactiveVar("111");
   var x = [];
@@ -1166,31 +1282,162 @@ Tinytest.add("spark - labeled landmarks", function (test) {
   expect(["r", 4, "c", 5, "r", 5], [107, 108, 108]);
 });
 
-var legacyLabels = {
-  '*[id], #[name]': function(n) {
-    var label = null;
 
-    if (n.nodeType === 1) {
-      if (n.id) {
-        label = '#'+n.id;
-      } else if (n.getAttribute("name")) {
-        label = n.getAttribute("name");
-        // Radio button special case:  radio buttons
-        // in a group all have the same name.  Their value
-        // determines their identity.
-        // Checkboxes with the same name and different
-        // values are also sometimes used in apps, so
-        // we treat them similarly.
-        if (n.nodeName === 'INPUT' &&
-            (n.type === 'radio' || n.type === 'checkbox') &&
-            n.value)
-          label = label + ':' + n.value;
+Tinytest.add("spark - preserve copies attributes", function(test) {
+  // make sure attributes are correctly changed (i.e. copied)
+  // when preserving old nodes, either because they are labeled
+  // or because they are a parent of a labeled node.
+
+  var R1 = ReactiveVar("foo");
+  var R2 = ReactiveVar("abcd");
+
+  var frag = WrappedFrag(renderWithLegacyLabels(function() {
+    return '<div puppy="'+R1.get()+'"><div><div><div><input name="blah" kittycat="'+
+      R2.get()+'"></div></div></div></div>';
+  })).hold();
+  var node1 = frag.node().firstChild;
+  var node2 = frag.node().firstChild.getElementsByTagName("input")[0];
+  test.equal(node1.nodeName, "DIV");
+  test.equal(node2.nodeName, "INPUT");
+  test.equal(node1.getAttribute("puppy"), "foo");
+  test.equal(node2.getAttribute("kittycat"), "abcd");
+
+  R1.set("bar");
+  R2.set("efgh");
+  Meteor.flush();
+  test.equal(node1.getAttribute("puppy"), "bar");
+  test.equal(node2.getAttribute("kittycat"), "efgh");
+
+  frag.release();
+  Meteor.flush();
+  test.equal(R1.numListeners(), 0);
+  test.equal(R2.numListeners(), 0);
+
+  var R;
+  R = ReactiveVar(false);
+  frag = WrappedFrag(renderWithLegacyLabels(function() {
+    return '<input id="foo" type="checkbox"' + (R.get() ? ' checked="checked"' : '') + '>';
+  })).hold();
+  var get_checked = function() { return !! frag.node().firstChild.checked; };
+  test.equal(get_checked(), false);
+  Meteor.flush();
+  test.equal(get_checked(), false);
+  R.set(true);
+  test.equal(get_checked(), false);
+  Meteor.flush();
+  test.equal(get_checked(), true);
+  R.set(false);
+  test.equal(get_checked(), true);
+  Meteor.flush();
+  test.equal(get_checked(), false);
+  R.set(true);
+  Meteor.flush();
+  test.equal(get_checked(), true);
+  frag.release();
+  R = ReactiveVar(true);
+  frag = WrappedFrag(renderWithLegacyLabels(function() {
+    return '<input type="checkbox"' + (R.get() ? ' checked="checked"' : '') + '>';
+  })).hold();
+  test.equal(get_checked(), true);
+  Meteor.flush();
+  test.equal(get_checked(), true);
+  R.set(false);
+  test.equal(get_checked(), true);
+  Meteor.flush();
+  test.equal(get_checked(), false);
+  frag.release();
+
+
+  _.each([false, true], function(with_focus) {
+    R = ReactiveVar("apple");
+    var div = OnscreenDiv(renderWithLegacyLabels(function() {
+      return '<input id="foo" type="text" value="' + R.get() + '">';
+    }));
+    var maybe_focus = function(div) {
+      if (with_focus) {
+        div.show();
+        focusElement(div.node().firstChild);
       }
-    }
+    };
+    maybe_focus(div);
+    var get_value = function() { return div.node().firstChild.value; };
+    var set_value = function(v) { div.node().firstChild.value = v; };
+    var if_blurred = function(v, v2) {
+      return with_focus ? v2 : v; };
+    test.equal(get_value(), "apple");
+    Meteor.flush();
+    test.equal(get_value(), "apple");
+    R.set("");
+    test.equal(get_value(), "apple");
+    Meteor.flush();
+    test.equal(get_value(), if_blurred("", "apple"));
+    R.set("pear");
+    test.equal(get_value(), if_blurred("", "apple"));
+    Meteor.flush();
+    test.equal(get_value(), if_blurred("pear", "apple"));
+    set_value("jerry"); // like user typing
+    R.set("steve");
+    Meteor.flush();
+    // should overwrite user typing if blurred
+    test.equal(get_value(), if_blurred("steve", "jerry"));
+    div.kill();
+    R = ReactiveVar("");
+    div = OnscreenDiv(renderWithLegacyLabels(function() {
+      return '<input id="foo" type="text" value="' + R.get() + '">';
+    }));
+    maybe_focus(div);
+    test.equal(get_value(), "");
+    Meteor.flush();
+    test.equal(get_value(), "");
+    R.set("tom");
+    test.equal(get_value(), "");
+    Meteor.flush();
+    test.equal(get_value(), if_blurred("tom", ""));
+    div.kill();
+    Meteor.flush();
+  });
+});
 
-    return label;
-  }
-};
+Tinytest.add("spark - bad labels", function(test) {
+  // make sure patching behaves gracefully even when labels violate
+  // the rules that would allow preservation of nodes identity.
+
+  var go = function(html1, html2) {
+    var R = ReactiveVar(true);
+    var frag = WrappedFrag(renderWithLegacyLabels(function() {
+      return R.get() ? html1 : html2;
+    })).hold();
+
+    R.set(false);
+    Meteor.flush();
+    test.equal(frag.html(), html2);
+    frag.release();
+  };
+
+  go('hello', 'world');
+
+  // duplicate IDs (bad developer; but should patch correctly)
+  go('<div id="foo">hello</div><b id="foo">world</b>',
+     '<div id="foo">hi</div><b id="foo">there</b>');
+  go('<div id="foo"><b id="foo">hello</b></div>',
+     '<div id="foo"><b id="foo">hi</b></div>');
+  go('<div id="foo">hello</div><b id="foo">world</b>',
+     '<div id="foo"><b id="foo">hi</b></div>');
+
+  // tag name changes
+  go('<div id="foo">abcd</div>',
+     '<p id="foo">efgh</p>');
+
+  // parent chain changes at all
+  go('<div><div><div><p id="foo">test123</p></div></div></div>',
+     '<div><div><p id="foo">test123</p></div></div>');
+  go('<div><div><div><p id="foo">test123</p></div></div></div>',
+     '<div><ins><div><p id="foo">test123</p></div></ins></div>');
+
+  // ambiguous names
+  go('<ul><li name="me">1</li><li name="me">3</li><li name="me">3</li></ul>',
+     '<ul><li name="me">4</li><li name="me">5</li></ul>');
+});
 
 
 Tinytest.add("spark - landmark preserve", function(test) {
@@ -1322,10 +1569,8 @@ Tinytest.add("spark - landmark preserve", function(test) {
 
     var R = ReactiveVar(false);
     var structure = randomNodeList(null, 6);
-    var frag = WrappedFrag(Meteor.render(function() {
-      return Spark.createLandmark(
-        {preserve: legacyLabels},
-        nodeListToHtml(structure, R.get()));
+    var frag = WrappedFrag(renderWithLegacyLabels(function () {
+      return nodeListToHtml(structure, R.get());
     })).hold();
     test.equal(frag.html(), nodeListToHtml(structure, false) || "<!---->");
     fillInElementIdentities(structure, frag.node());
@@ -1464,5 +1709,1133 @@ Tinytest.add("spark - landmark constant", function(test) {
   });
 
 });
+
+
+Tinytest.add("spark - leaderboard", function(test) {
+  // use a simplified, local leaderboard to test some stuff
+
+  var players = new LocalCollection();
+  var selected_player = ReactiveVar();
+
+  var scores = OnscreenDiv(renderWithLegacyLabels(function() {
+    var html = Spark.list(
+      players.find({}, {sort: {score: -1}}),
+      function(player) {
+        var html = Spark.isolate(function () {
+          var style;
+          if (selected_player.get() === player._id)
+            style = "player selected";
+          else
+            style = "player";
+
+          return '<div class="' + style + '">' +
+            '<div class="name">' + player.name + '</div>' +
+            '<div name="score">' + player.score + '</div></div>';
+        });
+        html = Spark.setDataContext(player, html);
+        html = Spark.createLandmark({preserve: legacyLabels}, html);
+        html = Spark.labelBranch(player._id, html);
+        return html;
+      });
+    html = Spark.attachEvents({
+      "click": function () {
+        selected_player.set(this._id);
+      },
+    }, html);
+    return html;
+  }));
+
+  // back before we had scientists we had Vancian hussade players
+  var names = ["Glinnes Hulden", "Shira Hulden", "Denzel Warhound",
+               "Lute Casagave", "Akadie", "Thammas, Lord Gensifer",
+               "Ervil Savat", "Duissane Trevanyi", "Sagmondo Bandolio",
+               "Rhyl Shermatz", "Yalden Wirp", "Tyran Lucho",
+               "Bump Candolf", "Wilmer Guff", "Carbo Gilweg"];
+  for (var i = 0; i < names.length; i++)
+    players.insert({name: names[i], score: i*5});
+
+  var bump = function() {
+    players.update(selected_player.get(), {$inc: {score: 5}});
+  };
+
+  var findPlayerNameDiv = function(name) {
+    var divs = scores.node().getElementsByTagName('DIV');
+    return _.find(divs, function(div) {
+      return div.innerHTML === name;
+    });
+  };
+
+  Meteor.flush();
+  var glinnesNameNode = findPlayerNameDiv(names[0]);
+  test.isTrue(!! glinnesNameNode);
+  var glinnesScoreNode = glinnesNameNode.nextSibling;
+  test.equal(glinnesScoreNode.getAttribute("name"), "score");
+  clickElement(glinnesNameNode);
+  Meteor.flush();
+  glinnesNameNode = findPlayerNameDiv(names[0]);
+  test.isTrue(!! glinnesNameNode);
+  test.equal(glinnesNameNode.parentNode.className, 'player selected');
+  var glinnesId = players.findOne({name: names[0]})._id;
+  test.isTrue(!! glinnesId);
+  test.equal(selected_player.get(), glinnesId);
+  test.equal(
+    canonicalizeHtml(glinnesNameNode.parentNode.innerHTML),
+    '<div class="name">Glinnes Hulden</div><div name="score">0</div>');
+
+  bump();
+  Meteor.flush();
+
+  glinnesNameNode = findPlayerNameDiv(names[0], glinnesNameNode);
+  var glinnesScoreNode2 = glinnesNameNode.nextSibling;
+  test.equal(glinnesScoreNode2.getAttribute("name"), "score");
+  // move and patch should leave score node the same, because it
+  // has a name attribute!
+  test.equal(glinnesScoreNode, glinnesScoreNode2);
+  test.equal(glinnesNameNode.parentNode.className, 'player selected');
+  test.equal(
+    canonicalizeHtml(glinnesNameNode.parentNode.innerHTML),
+    '<div class="name">Glinnes Hulden</div><div name="score">5</div>');
+
+  bump();
+  Meteor.flush();
+
+  glinnesNameNode = findPlayerNameDiv(names[0], glinnesNameNode);
+  test.equal(
+    canonicalizeHtml(glinnesNameNode.parentNode.innerHTML),
+    '<div class="name">Glinnes Hulden</div><div name="score">10</div>');
+
+  scores.kill();
+  Meteor.flush();
+  test.equal(selected_player.numListeners(), 0);
+});
+
+
+Tinytest.add("spark - list cursor stop", function(test) {
+  // test Spark.list outside of render mode, on custom observable
+
+  var numHandles = 0;
+  var observable = {
+    observe: function(x) {
+      x.added({_id:"123"}, 0);
+      x.added({_id:"456"}, 1);
+      var handle;
+      numHandles++;
+      return handle = {
+        stop: function() {
+          numHandles--;
+        }
+      };
+    }
+  };
+
+  test.equal(numHandles, 0);
+  var result = Spark.list(observable, function(doc) {
+    return "#"+doc._id;
+  });
+  test.equal(result, "#123#456");
+  Meteor.flush();
+  // chunk killed because not created inside Spark.render
+  test.equal(numHandles, 0);
+
+
+  var R = ReactiveVar(1);
+  var frag = WrappedFrag(Meteor.render(function() {
+    if (R.get() > 0)
+      return Spark.list(observable, function() { return "*"; });
+    return "";
+  })).hold();
+  test.equal(numHandles, 1);
+  Meteor.flush();
+  test.equal(numHandles, 1);
+  R.set(2);
+  Meteor.flush();
+  test.equal(numHandles, 1);
+  R.set(-1);
+  Meteor.flush();
+  test.equal(numHandles, 0);
+
+  frag.release();
+  Meteor.flush();
+});
+
+Tinytest.add("spark - list table", function(test) {
+  var c = new LocalCollection();
+
+  c.insert({value: "fudge", order: "A"});
+  c.insert({value: "sundae", order: "B"});
+
+  var R = ReactiveVar();
+
+  var table = WrappedFrag(Meteor.render(function() {
+    var buf = [];
+    buf.push('<table>');
+    buf.push(Spark.list(
+      c.find({}, {sort: ['order']}),
+      function(doc) {
+        var html = Spark.isolate(function () {
+          return "<tr><td>"+doc.value + (doc.reactive ? R.get() : '')+
+            "</td></tr>";
+        });
+        html = Spark.createLandmark({preserve: legacyLabels}, html);
+        html = Spark.labelBranch(doc._id, html);
+        return html;
+      },
+      function() {
+        return "<tr><td>(nothing)</td></tr>";
+      }));
+    buf.push('</table>');
+    return buf.join('');
+  })).hold();
+
+  var lastHtml;
+
+  var shouldFlushTo = function(html) {
+    // same before flush
+    test.equal(table.html(), lastHtml);
+    Meteor.flush();
+    test.equal(table.html(), html);
+    lastHtml = html;
+  };
+  var tableOf = function(/*htmls*/) {
+    if (arguments.length === 0) {
+      return '<table></table>';
+    } else {
+      return '<table><tbody><tr><td>' +
+        _.toArray(arguments).join('</td></tr><tr><td>') +
+        '</td></tr></tbody></table>';
+    }
+  };
+
+  test.equal(table.html(), lastHtml = tableOf('fudge', 'sundae'));
+
+  // switch order
+  c.update({value: "fudge"}, {$set: {order: "BA"}});
+  shouldFlushTo(tableOf('sundae', 'fudge'));
+
+  // change text
+  c.update({value: "fudge"}, {$set: {value: "hello"}});
+  c.update({value: "sundae"}, {$set: {value: "world"}});
+  shouldFlushTo(tableOf('world', 'hello'));
+
+  // remove all
+  c.remove({});
+  shouldFlushTo(tableOf('(nothing)'));
+
+  c.insert({value: "1", order: "A"});
+  c.insert({value: "5", order: "B"});
+  c.insert({value: "3", order: "AB"});
+  c.insert({value: "7", order: "BB"});
+  c.insert({value: "2", order: "AA"});
+  c.insert({value: "4", order: "ABA"});
+  c.insert({value: "6", order: "BA"});
+  c.insert({value: "8", order: "BBA"});
+  shouldFlushTo(tableOf('1', '2', '3', '4', '5', '6', '7', '8'));
+
+  // make one item newly reactive
+  R.set('*');
+  c.update({value: "7"}, {$set: {reactive: true}});
+  shouldFlushTo(tableOf('1', '2', '3', '4', '5', '6', '7*', '8'));
+
+  R.set('!');
+  shouldFlushTo(tableOf('1', '2', '3', '4', '5', '6', '7!', '8'));
+
+  // move it
+  c.update({value: "7"}, {$set: {order: "A0"}});
+  shouldFlushTo(tableOf('1', '7!', '2', '3', '4', '5', '6', '8'));
+
+  // still reactive?
+  R.set('?');
+  shouldFlushTo(tableOf('1', '7?', '2', '3', '4', '5', '6', '8'));
+
+  // go nuts
+  c.update({value: '1'}, {$set: {reactive: true}});
+  c.update({value: '1'}, {$set: {reactive: false}});
+  c.update({value: '2'}, {$set: {reactive: true}});
+  c.update({value: '2'}, {$set: {order: "BBB"}});
+  R.set(';');
+  R.set('.');
+  shouldFlushTo(tableOf('1', '7.', '3', '4', '5', '6', '8', '2.'));
+
+  for(var i=1; i<=8; i++)
+    c.update({value: String(i)},
+             {$set: {reactive: true, value: '='+String(i)}});
+  R.set('!');
+  shouldFlushTo(tableOf('=1!', '=7!', '=3!', '=4!', '=5!', '=6!', '=8!', '=2!'));
+
+  for(var i=1; i<=8; i++)
+    c.update({value: '='+String(i)},
+             {$set: {order: "A"+i}});
+  shouldFlushTo(tableOf('=1!', '=2!', '=3!', '=4!', '=5!', '=6!', '=7!', '=8!'));
+
+  var valueFunc = function(n) { return '<b name="bold">'+n+'</b>'; };
+  for(var i=1; i<=8; i++)
+    c.update({value: '='+String(i)},
+             {$set: {value: valueFunc(i)}});
+  shouldFlushTo(tableOf.apply(
+    null,
+    _.map(_.range(1,9), function(n) { return valueFunc(n)+R.get(); })));
+
+  test.equal(table.node().firstChild.rows.length, 8);
+
+  var bolds = table.node().firstChild.getElementsByTagName('B');
+  test.equal(bolds.length, 8);
+  _.each(bolds, function(b) {
+    b.nifty = {}; // mark the nodes; non-primitive value won't appear in IE HTML
+  });
+
+  R.set('...');
+  shouldFlushTo(tableOf.apply(
+    null,
+    _.map(_.range(1,9), function(n) { return valueFunc(n)+R.get(); })));
+  var bolds2 = table.node().firstChild.getElementsByTagName('B');
+  test.equal(bolds2.length, 8);
+  // make sure patching is actually happening
+  _.each(bolds2, function(b) {
+    test.equal(!! b.nifty, true);
+  });
+
+  // change value func, and still we should be patching
+  var valueFunc2 = function(n) { return '<b name="bold">'+n+'</b><i>yeah</i>'; };
+  for(var i=1; i<=8; i++)
+    c.update({value: valueFunc(i)},
+             {$set: {value: valueFunc2(i)}});
+  shouldFlushTo(tableOf.apply(
+    null,
+    _.map(_.range(1,9), function(n) { return valueFunc2(n)+R.get(); })));
+  var bolds3 = table.node().firstChild.getElementsByTagName('B');
+  test.equal(bolds3.length, 8);
+  _.each(bolds3, function(b) {
+    test.equal(!! b.nifty, true);
+  });
+
+  table.release();
+
+});
+
+
+Tinytest.add("spark - list event data", function(test) {
+  // this is based on a bug
+
+  var lastClicked = null;
+  var R = ReactiveVar(0);
+  var later;
+  var div = OnscreenDiv(Meteor.render(function() {
+    var html = Spark.list(
+      {
+        observe: function(observer) {
+          observer.added({_id: '1', name: 'Foo'}, 0);
+          observer.added({_id: '2', name: 'Bar'}, 1);
+          // exercise callback path
+          later = function() {
+            observer.added({_id: '3', name: 'Baz'}, 2);
+            observer.added({_id: '4', name: 'Qux'}, 3);
+          };
+          return { stop: function() {} };
+        }
+      },
+      function(doc) {
+        var html = Spark.isolate(function () {
+          R.get(); // depend on R
+          return '<div>' + doc.name + '</div>';
+        });
+        html = Spark.setDataContext(doc, html);
+        return html;
+      }
+    );
+    html = Spark.attachEvents({
+      'click': function (event) {
+        lastClicked = this.name;
+        R.set(R.get() + 1); // signal all dependers on R
+      }
+    }, html);
+    return html;
+  }));
+
+  var item = function(name) {
+    return _.find(div.node().getElementsByTagName('div'), function(d) {
+      return d.innerHTML === name; });
+  };
+
+  later();
+  Meteor.flush();
+  test.equal(item("Foo").innerHTML, "Foo");
+  test.equal(item("Bar").innerHTML, "Bar");
+  test.equal(item("Baz").innerHTML, "Baz");
+  test.equal(item("Qux").innerHTML, "Qux");
+
+  var doClick = function(name) {
+    clickElement(item(name));
+    test.equal(lastClicked, name);
+    Meteor.flush();
+  };
+
+  doClick("Foo");
+  doClick("Bar");
+  doClick("Baz");
+  doClick("Qux");
+  doClick("Bar");
+  doClick("Foo");
+  doClick("Foo");
+  doClick("Foo");
+  doClick("Qux");
+  doClick("Baz");
+  doClick("Baz");
+  doClick("Baz");
+  doClick("Bar");
+  doClick("Baz");
+  doClick("Foo");
+  doClick("Qux");
+  doClick("Foo");
+
+  div.kill();
+  Meteor.flush();
+
+});
+
+
+Tinytest.add("spark - events on preserved nodes", function(test) {
+  var count = ReactiveVar(0);
+  var demo = OnscreenDiv(renderWithLegacyLabels(function() {
+    var html = Spark.isolate(function () {
+      return '<div class="button_demo">'+
+        '<input type="button" name="press" value="Press this button">'+
+        '<div>The button has been pressed '+count.get()+' times.</div>'+
+        '</div>';
+    });
+    html = Spark.attachEvents({
+      'click input': function() {
+        count.set(count.get() + 1);
+      }
+    }, html);
+    return html;
+  }));
+
+  var click = function() {
+    clickElement(demo.node().getElementsByTagName('input')[0]);
+  };
+
+  test.equal(count.get(), 0);
+  for(var i=0; i<10; i++) {
+    click();
+    Meteor.flush();
+    test.equal(count.get(), i+1);
+  }
+
+  demo.kill();
+  Meteor.flush();
+});
+
+
+Tinytest.add("spark - cleanup", function(test) {
+
+  // more exhaustive clean-up testing
+  var stuff = new LocalCollection();
+
+  var add_doc = function() {
+    stuff.insert({foo:'bar'}); };
+  var clear_docs = function() {
+    stuff.remove({}); };
+  var remove_one = function() {
+    stuff.remove(stuff.findOne()._id); };
+
+  add_doc(); // start the collection with a doc
+
+  var R = ReactiveVar("x");
+
+  var div = OnscreenDiv(Spark.render(function() {
+    return Spark.list(
+      stuff.find(),
+      function() {
+        return Spark.isolate(function () { return R.get()+"1"; });
+      },
+      function() {
+        return Spark.isolate(function () { return R.get()+"0"; });
+      });
+  }));
+
+  test.equal(div.text(), "x1");
+  Meteor.flush();
+  test.equal(div.text(), "x1");
+  test.equal(R.numListeners(), 1);
+
+  clear_docs();
+  Meteor.flush();
+  test.equal(div.text(), "x0");
+  test.equal(R.numListeners(), 1); // test clean-up of doc on remove
+
+  add_doc();
+  Meteor.flush();
+  test.equal(div.text(), "x1");
+  test.equal(R.numListeners(), 1); // test clean-up of "else" listeners
+
+  add_doc();
+  Meteor.flush();
+  test.equal(div.text(), "x1x1");
+  test.equal(R.numListeners(), 2);
+
+  remove_one();
+  Meteor.flush();
+  test.equal(div.text(), "x1");
+  test.equal(R.numListeners(), 1); // test clean-up of doc with other docs
+
+  div.kill();
+  Meteor.flush();
+  test.equal(R.numListeners(), 0);
+
+});
+
+
+var make_input_tester = function(render_func, events) {
+  var buf = [];
+
+  if (typeof render_func === "string") {
+    var render_str = render_func;
+    render_func = function() { return render_str; };
+  }
+  if (typeof events === "string") {
+    events = eventmap.apply(null, _.toArray(arguments).slice(1));
+  }
+
+  var R = ReactiveVar(0);
+  var div = OnscreenDiv(
+    renderWithLegacyLabels(function() {
+      R.get(); // create dependency
+      var html = render_func();
+      html = Spark.attachEvents(events, html);
+      html = Spark.setDataContext(buf, html);
+      return html;
+    }));
+  div.show(true);
+
+  var getbuf = function() {
+    var ret = buf.slice();
+    buf.length = 0;
+    return ret;
+  };
+
+  var self;
+  return self = {
+    focus: function(optCallback) {
+      focusElement(self.inputNode());
+
+      if (optCallback)
+        Meteor.defer(function() { optCallback(getbuf()); });
+      else
+        return getbuf();
+    },
+    blur: function(optCallback) {
+      blurElement(self.inputNode());
+
+      if (optCallback)
+        Meteor.defer(function() { optCallback(getbuf()); });
+      else
+        return getbuf();
+    },
+    click: function() {
+      clickElement(self.inputNode());
+      return getbuf();
+    },
+    kill: function() {
+      // clean up
+      div.kill();
+      Meteor.flush();
+    },
+    inputNode: function() {
+      return div.node().getElementsByTagName("input")[0];
+    },
+    redraw: function() {
+      R.set(R.get() + 1);
+      Meteor.flush();
+    }
+  };
+};
+
+// Note:  These tests MAY FAIL if the browser window doesn't have focus
+// (isn't frontmost) in some browsers, particularly Firefox.
+testAsyncMulti("spark - focus/blur events",
+  (function() {
+
+    var textLevel1 = '<input type="text" />';
+    var textLevel2 = '<span id="spanOfMurder"><input type="text" /></span>';
+
+    var focus_test = function(render_func, events, expected_results) {
+      return function(test, expect) {
+        var tester = make_input_tester(render_func, events);
+        var callback = expect(expected_results);
+        tester.focus(function(buf) {
+          tester.kill();
+          callback(buf);
+        });
+      };
+    };
+
+    var blur_test = function(render_func, events, expected_results) {
+      return function(test, expect) {
+        var tester = make_input_tester(render_func, events);
+        var callback = expect(expected_results);
+        tester.focus();
+        tester.blur(function(buf) {
+          tester.kill();
+          callback(buf);
+        });
+      };
+    };
+
+    return [
+
+      // focus on top-level input
+      focus_test(textLevel1, 'focus input', ['focus input']),
+
+      // focus on second-level input
+      // issue #108
+      focus_test(textLevel2, 'focus input', ['focus input']),
+
+      // focusin
+      focus_test(textLevel1, 'focusin input', ['focusin input']),
+      focus_test(textLevel2, 'focusin input', ['focusin input']),
+
+      // focusin bubbles
+      focus_test(textLevel2, 'focusin span', ['focusin span']),
+
+      // focus doesn't bubble
+      focus_test(textLevel2, 'focus span', []),
+
+      // blur works, doesn't bubble
+      blur_test(textLevel1, 'blur input', ['blur input']),
+      blur_test(textLevel2, 'blur input', ['blur input']),
+      blur_test(textLevel2, 'blur span', []),
+
+      // focusout works, bubbles
+      blur_test(textLevel1, 'focusout input', ['focusout input']),
+      blur_test(textLevel2, 'focusout input', ['focusout input']),
+      blur_test(textLevel2, 'focusout span', ['focusout span'])
+    ];
+  })());
+
+
+Tinytest.add("spark - change events", function(test) {
+
+  var checkboxLevel1 = '<input type="checkbox" />';
+  var checkboxLevel2 = '<span id="spanOfMurder">'+
+    '<input type="checkbox" id="checkboxy" /></span>';
+
+
+  // on top-level
+  var checkbox1 = make_input_tester(checkboxLevel1, 'change input');
+  test.equal(checkbox1.click(), ['change input']);
+  checkbox1.kill();
+
+  // on second-level (should bubble)
+  var checkbox2 = make_input_tester(checkboxLevel2,
+                                    'change input', 'change span');
+  test.equal(checkbox2.click(), ['change input', 'change span']);
+  test.equal(checkbox2.click(), ['change input', 'change span']);
+  checkbox2.redraw();
+  test.equal(checkbox2.click(), ['change input', 'change span']);
+  checkbox2.kill();
+
+  checkbox2 = make_input_tester(checkboxLevel2, 'change input');
+  test.equal(checkbox2.focus(), []);
+  test.equal(checkbox2.click(), ['change input']);
+  test.equal(checkbox2.blur(), []);
+  test.equal(checkbox2.click(), ['change input']);
+  checkbox2.kill();
+
+  var checkbox2 = make_input_tester(
+    checkboxLevel2,
+    'change input', 'change span', 'change div');
+  test.equal(checkbox2.click(), ['change input', 'change span']);
+  checkbox2.kill();
+
+});
+
+
+testAsyncMulti(
+  "spark - submit events",
+  (function() {
+    var hitlist = [];
+    var killLater = function(thing) {
+      hitlist.push(thing);
+    };
+
+    var LIVEUI_TEST_RESPONDER = "/liveui_test_responder";
+    var IFRAME_URL_1 = LIVEUI_TEST_RESPONDER + "/";
+    var IFRAME_URL_2 = "about:blank"; // most cross-browser-compatible
+    if (window.opera) // opera doesn't like 'about:blank' form target
+      IFRAME_URL_2 = LIVEUI_TEST_RESPONDER+"/blank";
+
+    return [
+      function(test, expect) {
+
+        // Submit events can be canceled with preventDefault, which prevents the
+        // browser's native form submission behavior.  This behavior takes some
+        // work to ensure cross-browser, so we want to test it.  To detect
+        // a form submission, we target the form at an iframe.  Iframe security
+        // makes this tricky.  What we do is load a page from the server that
+        // calls us back on 'load' and 'unload'.  We wait for 'load', set up the
+        // test, and then see if we get an 'unload' (due to the form submission
+        // going through) or not.
+        //
+        // This is quite a tricky implementation.
+
+        var withIframe = function(onReady1, onReady2) {
+          var frameName = "submitframe"+String(Math.random()).slice(2);
+          var iframeDiv = OnscreenDiv(
+            Meteor.render(function() {
+              return '<iframe name="'+frameName+'" '+
+                'src="'+IFRAME_URL_1+'"></iframe>';
+            }));
+          var iframe = iframeDiv.node().firstChild;
+
+          iframe.loadFunc = function() {
+            onReady1(frameName, iframe, iframeDiv);
+            onReady2(frameName, iframe, iframeDiv);
+          };
+          iframe.unloadFunc = function() {
+            iframe.DID_CHANGE_PAGE = true;
+          };
+        };
+        var expectCheckLater = function(options) {
+          var check = expect(function(iframe, iframeDiv) {
+            if (options.shouldSubmit)
+              test.isTrue(iframe.DID_CHANGE_PAGE);
+            else
+              test.isFalse(iframe.DID_CHANGE_PAGE);
+
+            // must do this inside expect() so it happens in time
+            killLater(iframeDiv);
+          });
+          var checkLater = function(frameName, iframe, iframeDiv) {
+            Tinytest.setTimeout(function() {
+              check(iframe, iframeDiv);
+            }, 500); // wait for frame to unload
+          };
+          return checkLater;
+        };
+        var buttonFormHtml = function(frameName) {
+          return '<div style="height:0;overflow:hidden">'+
+            '<form action="'+IFRAME_URL_2+'" target="'+
+            frameName+'">'+
+            '<span><input type="submit"></span>'+
+            '</form></div>';
+        };
+
+        // test that form submission by click fires event,
+        // and also actually submits
+        withIframe(function(frameName, iframe) {
+          var form = make_input_tester(
+            buttonFormHtml(frameName), 'submit form');
+          test.equal(form.click(), ['submit form']);
+          killLater(form);
+        }, expectCheckLater({shouldSubmit:true}));
+
+        // submit bubbles up
+        withIframe(function(frameName, iframe) {
+          var form = make_input_tester(
+            buttonFormHtml(frameName), 'submit form', 'submit div');
+          test.equal(form.click(), ['submit form', 'submit div']);
+          killLater(form);
+        }, expectCheckLater({shouldSubmit:true}));
+
+        // preventDefault works, still bubbles
+        withIframe(function(frameName, iframe) {
+          var form = make_input_tester(
+            buttonFormHtml(frameName), {
+              'submit form': function(evt) {
+                test.equal(evt.type, 'submit');
+                test.equal(evt.target.nodeName, 'FORM');
+                this.push('submit form');
+                evt.preventDefault();
+              },
+              'submit div': function(evt) {
+                test.equal(evt.type, 'submit');
+                test.equal(evt.target.nodeName, 'FORM');
+                this.push('submit div');
+              },
+              'submit a': function(evt) {
+                this.push('submit a');
+              }
+            }
+          );
+          test.equal(form.click(), ['submit form', 'submit div']);
+          killLater(form);
+        }, expectCheckLater({shouldSubmit:false}));
+
+      },
+      function(test, expect) {
+        _.each(hitlist, function(thing) {
+          thing.kill();
+        });
+        Meteor.flush();
+      }
+    ];
+  })());
+
+
+Tinytest.add("spark - controls", function(test) {
+
+  // Radio buttons
+
+  var R = ReactiveVar("");
+  var change_buf = [];
+  var div = OnscreenDiv(renderWithLegacyLabels(function() {
+    var buf = [];
+    buf.push("Band: ");
+    _.each(["AM", "FM", "XM"], function(band) {
+      var checked = (R.get() === band) ? 'checked="checked"' : '';
+      buf.push('<input type="radio" name="bands" '+
+               'value="'+band+'" '+checked+'/>');
+    });
+    buf.push(R.get());
+    var html = buf.join('');
+
+    html = Spark.attachEvents({
+      'change input': function(event) {
+        // IE 7 is known to fire change events on all
+        // the radio buttons with checked=false, as if
+        // each button were deselected before selecting
+        // the new one.
+        // However, browsers are consistent if we are
+        // getting a checked=true notification.
+        var btn = event.target;
+        if (btn.checked) {
+          var band = btn.value;
+          change_buf.push(band);
+          R.set(band);
+        }
+      }
+    }, html);
+    return html;
+  }));
+
+  Meteor.flush();
+
+  // get the three buttons; they should be considered 'labeled'
+  // by the patcher and not change identities!
+  var btns = _.toArray(div.node().getElementsByTagName("INPUT"));
+
+  test.equal(_.pluck(btns, 'checked'), [false, false, false]);
+  test.equal(div.text(), "Band: ");
+
+  clickElement(btns[0]);
+  test.equal(change_buf, ['AM']);
+  change_buf.length = 0;
+  Meteor.flush();
+  test.equal(_.pluck(btns, 'checked'), [true, false, false]);
+  test.equal(div.text(), "Band: AM");
+
+  clickElement(btns[1]);
+  test.equal(change_buf, ['FM']);
+  change_buf.length = 0;
+  Meteor.flush();
+  test.equal(_.pluck(btns, 'checked'), [false, true, false]);
+  test.equal(div.text(), "Band: FM");
+
+  clickElement(btns[2]);
+  test.equal(change_buf, ['XM']);
+  change_buf.length = 0;
+  Meteor.flush();
+  test.equal(_.pluck(btns, 'checked'), [false, false, true]);
+  test.equal(div.text(), "Band: XM");
+
+  clickElement(btns[1]);
+  test.equal(change_buf, ['FM']);
+  change_buf.length = 0;
+  Meteor.flush();
+  test.equal(_.pluck(btns, 'checked'), [false, true, false]);
+  test.equal(div.text(), "Band: FM");
+
+  div.kill();
+
+  // Textarea
+
+  R = ReactiveVar({x:"test"});
+  div = OnscreenDiv(renderWithLegacyLabels(function() {
+    return '<textarea id="mytextarea">This is a '+
+      R.get().x+'</textarea>';
+  }));
+  div.show(true);
+
+  var textarea = div.node().firstChild;
+  test.equal(textarea.nodeName, "TEXTAREA");
+  test.equal(textarea.value, "This is a test");
+
+  // value updates reactively
+  R.set({x:"fridge"});
+  Meteor.flush();
+  test.equal(textarea.value, "This is a fridge");
+
+  // ...unless focused
+  focusElement(textarea);
+  R.set({x:"frog"});
+  Meteor.flush();
+  test.equal(textarea.value, "This is a fridge");
+
+  // blurring and re-setting works
+  blurElement(textarea);
+  Meteor.flush();
+  test.equal(textarea.value, "This is a fridge");
+  R.set({x:"frog"});
+  Meteor.flush();
+  test.equal(textarea.value, "This is a frog");
+
+  // Setting a value (similar to user typing) should
+  // not prevent value from being updated reactively.
+  textarea.value = "foobar";
+  R.set({x:"photograph"});
+  Meteor.flush();
+  test.equal(textarea.value, "This is a photograph");
+
+
+  div.kill();
+});
+
+Tinytest.add("spark - oldschool landmark matching", function(test) {
+
+  // basic created / onscreen / offscreen callback flow
+  // (ported from old chunk-matching API)
+
+  var buf;
+  var counts;
+
+  var testCallbacks = function(theNum /*, extend opts*/) {
+    return _.extend.apply(_, [{
+      create: function() {
+        this.num = String(theNum);
+        var howManyBefore = counts[this.num] || 0;
+        counts[this.num] = howManyBefore + 1;
+        for(var i=0;i<howManyBefore;i++)
+          this.num += "*"; // add stars
+        buf.push("c"+this.num);
+      },
+      render: function(start, end, range) {
+        buf.push("on"+this.num);
+      },
+      destroy: function() {
+        buf.push("off"+this.num);
+      }
+    }].concat(_.toArray(arguments).slice(1)));
+  };
+
+  buf = [];
+  counts = {};
+  var R = ReactiveVar("A");
+  var div = OnscreenDiv(Meteor.render(function() {
+    var html = String(R.get());
+    html = Spark.createLandmark(testCallbacks(0), html);
+    return html;
+  }, testCallbacks(0)));
+
+  test.equal(buf, []);
+
+  test.equal(div.html(), "A");
+  Meteor.flush();
+  test.equal(buf, ["c0", "on0"]);
+  test.equal(div.html(), "A");
+
+  R.set("B");
+  Meteor.flush();
+  test.equal(buf, ["c0", "on0", "on0"]);
+  test.equal(div.html(), "B");
+
+
+  div.kill();
+  Meteor.flush();
+  test.equal(buf, ["c0", "on0", "on0", "off0"]);
+
+  // with a branch
+
+  buf = [];
+  counts = {};
+  R = ReactiveVar("A");
+  div = OnscreenDiv(Meteor.render(function() {
+    R.get();
+    var html = Spark.createLandmark(testCallbacks(1), html);
+    html = Spark.labelBranch("foo", html);
+    html = "<div>" + "</div>";
+    html = Spark.createLandmark(testCallbacks(0), html);
+    return html;
+  }));
+
+  test.equal(buf, []);
+  Meteor.flush();
+  // what order of chunks {0,1} is preferable??
+  // should be consistent but I'm not sure what makes most sense.
+  test.equal(buf, "c1,on1,c0,on0".split(','));
+  buf.length = 0;
+
+  R.set("B");
+  Meteor.flush();
+  test.equal(buf, "on1,on0".split(','));
+  buf.length = 0;
+
+  div.kill();
+  Meteor.flush();
+  buf.sort();
+  test.equal(buf, "off0,off1".split(','));
+});
+
+
+Tinytest.add("spark - oldschool branch keys", function(test) {
+
+  var R, div;
+
+  // Re-rendered Meteor.render keeps same landmark state
+
+  var objs = [];
+  R = ReactiveVar("foo");
+  div = OnscreenDiv(Meteor.render(function() {
+    var html = R.get();
+    html = Spark.createLandmark({
+      rendered: function () { objs.push(true); }
+    }, html);
+    return html;
+  }));
+
+  Meteor.flush();
+  R.set("bar");
+  Meteor.flush();
+  R.set("baz");
+  Meteor.flush();
+
+  test.equal(objs.length, 3);
+  test.isTrue(objs[0] === objs[1]);
+  test.isTrue(objs[1] === objs[2]);
+
+  div.kill();
+  Meteor.flush();
+
+  // track chunk matching / re-rendering in detail
+
+  var buf;
+  var counts;
+
+  var testCallbacks = function(theNum /*, extend opts*/) {
+    return _.extend.apply(_, [{
+      created: function() {
+        this.num = String(theNum);
+        var howManyBefore = counts[this.num] || 0;
+        counts[this.num] = howManyBefore + 1;
+        for(var i=0;i<howManyBefore;i++)
+          this.num += "*"; // add stars
+        buf.push("c"+this.num);
+      },
+      onscreen: function(start, end, range) {
+        buf.push("on"+this.num);
+      },
+      offscreen: function() {
+        buf.push("off"+this.num);
+      }
+    }].concat(_.toArray(arguments).slice(1)));
+  };
+
+  var chunk = function(contents, num, branch) {
+    if (typeof contents === "string")
+      html = contents;
+    else if (_.isArray(contents))
+      html = _.map(contents, function(x) {
+        if (typeof x === 'string')
+          return x;
+        return chunk(x[0], x[1], x[2]);
+      }).join('');
+    else
+      html = contents();
+
+    html = Spark.createLandmark(testCallbacks(num), html);
+    html = Spark.labelBranch(branch, html);
+  };
+
+  ///// Chunk 1 contains 2,3,4, all should be matched
+
+  buf = [];
+  counts = {};
+
+  R = ReactiveVar("foo");
+  div = OnscreenDiv(Meteor.render(function() {
+    if (R.get() === 'nothing')
+      return "no chunk!";
+    else
+      return chunk([['<span>apple</span>', 2, 'x'],
+                    ['<span>banana</span>', 3, 'y'],
+                    ['<span>kiwi</span>', 4, 'z']
+                   ], 1, 'fruit');
+  }));
+
+  Meteor.flush();
+  buf.sort();
+  test.equal(buf, ['c1', 'c2', 'c3', 'c4', 'on1', 'on2', 'on3', 'on4']);
+  buf.length = 0;
+
+  R.set("bar");
+  Meteor.flush();
+  buf.sort();
+  test.equal(buf, ['on1', 'on2', 'on3', 'on4']);
+  buf.length = 0;
+
+  R.set("nothing");
+  Meteor.flush();
+  buf.sort();
+  test.equal(buf, ['off1', 'off2', 'off3', 'off4']);
+  buf.length = 0;
+
+  div.kill();
+  Meteor.flush();
+
+  ///// Chunk 3 has no branch key, should be recreated
+
+  buf = [];
+  counts = {};
+
+  R = ReactiveVar("foo");
+  div = OnscreenDiv(Meteor.render(function() {
+    if (R.get() === 'nothing')
+      return "no chunk!";
+    else
+      return chunk([['<span>apple</span>', 2, 'x'],
+                    ['<span>banana</span>', 3, ''],
+                    ['<span>kiwi</span>', 4, 'z']
+                   ], 1, 'fruit');
+  }));
+
+  Meteor.flush();
+  buf.sort();
+  test.equal(buf, ['c1', 'c2', 'c3', 'c4', 'on1', 'on2', 'on3', 'on4']);
+  buf.length = 0;
+
+  R.set("bar");
+  Meteor.flush();
+  buf.sort();
+  test.equal(buf, ['c3*', 'off3', 'on1', 'on2', 'on3*', 'on4']);
+  buf.length = 0;
+
+  div.kill();
+  Meteor.flush();
+  buf.sort();
+  // killing the div should have given us offscreen calls for 1,2,3*,4
+  test.equal(buf, ['off1', 'off2', 'off3*', 'off4']);
+  buf.length = 0;
+
+
+  // XXX test intermediate unkeyed chunks;
+  // duplicate branch keys; different order
+});
+
+// XXX these are old notes copied from liveui_tests.js:
+// TO TEST:
+// - chunk matching
+//   - Handlebars branch keys
+//   - options.branch
+// - preserve nodes
+//   - API (one-match selectors, lambdas)
+//   - in lists
+// - onscreen/offscreen/created callbacks
+//   - timing of calls
+//   - custom vs. original object
+//   - arguments to onscreen
+//   - when differ between old/new
+//   - on listChunk
+// - different old and new data
+// - options.data in general
+
 
 })();
