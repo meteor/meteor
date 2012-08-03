@@ -12,7 +12,20 @@
       if (!(arg instanceof LocalCollection.Cursor))
         return orig.call(this, arg, options);
 
-      return Meteor.ui.listChunk(arg, options.fn, options.inverse, null);
+      return Spark.list(
+        arg,
+        function (item) {
+          var html = Spark.isolate(_.bind(options.fn, null, item)),
+          html = Spark.setDataContext(item, html);
+          if (item._id)
+            html = Spark.labelBranch(item._id, html);
+          return html;
+        },
+        function () {
+          return options.inverse ?
+            Spark.isolate(options.inverse) : '';
+        }
+      );
     };
 
     Handlebars._default_helpers.constant = function(options) {
@@ -30,24 +43,24 @@
     // First argument is Handlebars data, second argument is the
     // branch key, which is calculated by the caller based
     // on which invocation of the partial this is.
-    var partial = function(data, branch) {
-      var getHtml = function() {
+    var partial = function (data, branch) {
+      var html = Spark.isolate(function() {
         return raw_func(data, {
           helpers: partial,
           partials: Meteor._partials,
           name: name
         });
-      };
+      });
 
+      var t = name && Template[name];
+      if (t) {
+        html = Spark.attachEvents(t.events || {}, html);
+        html = Spark.createLandmark({ preserve: t.preserve || {} }, html);
+      }
 
-      var react_data = { events: (name ? Template[name].events : {}),
-                         preserve: (name ? Template[name].preserve: {}),
-                         data: data,
-                         // legacy 'id' preservation
-                         //preserve: { '*[id]': function(n) { return n.id; } },
-                         branch: branch };
-
-      return Meteor.ui.chunk(getHtml, react_data);
+      html = Spark.setDataContext(data, html);
+      html = Spark.labelBranch(branch, html);
+      return html;
     };
 
     // XXX hack.. copy all of Handlebars' built in helpers over to
