@@ -64,7 +64,7 @@ _.extend(Spark._Renderer.prototype, {
   createId: function () {
     var id = "";
     var chars =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+_";
     for (var i = 0; i < 8; i++) {
       id += chars.substr(Math.floor(Meteor.random() * 64), 1);
     }
