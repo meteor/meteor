@@ -13,6 +13,7 @@ Spark._ANNOTATION_EVENTS = "events";
 Spark._ANNOTATION_WATCH = "watch";
 Spark._ANNOTATION_LABEL = "label";
 Spark._ANNOTATION_LANDMARK = "landmark";
+// XXX why do we need, eg, _ANNOTATION_ISOLATE? it has no semantics?
 
 // Set in tests to turn on extra UniversalEventListener sanity checks
 Spark._checkIECompliance = false;
@@ -427,8 +428,8 @@ Spark.isolate = function (htmlFunc) {
             return Spark.isolate(htmlFunc);
           });
 
-          var tempRange = makeRange(Spark._ANNOTATION_ISOLATE, frag, null,
-                                    true /* inner */);
+          var tempRange = new LiveRange(Spark._TAG, frag, null,
+                                        true /* inner */);
           tempRange.operate(function (start, end) {
             // Wrap contents of frag, *inside* the ISOLATE annotation,
             // as appropriate for insertion into `range`. We want the
