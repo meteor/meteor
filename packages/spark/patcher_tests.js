@@ -1,6 +1,6 @@
-Tinytest.add("patcher - basic", function(test) {
+Tinytest.add("spark - patcher - basic", function(test) {
 
-  var Patcher = Meteor.ui._Patcher;
+  var Patcher = Spark._Patcher;
 
   var div = function(html) {
     var n = document.createElement("DIV");
@@ -91,7 +91,6 @@ Tinytest.add("patcher - basic", function(test) {
   test.isTrue(ret);
   assert_html(x, "<i><u>bar</u><s>baz</s></i>");
 
-  var LiveRange = LiveRange;
   var t = "_foo";
   var liverange = function(start, end, inner) {
     return new LiveRange(t, start, end, inner);
@@ -121,7 +120,7 @@ Tinytest.add("patcher - basic", function(test) {
   _.each([["aaa","zzz"], ["",""], ["aaa",""], ["","zzz"]], rangeTest);
 });
 
-Tinytest.add("patcher - copyAttributes", function(test) {
+Tinytest.add("spark - patcher - copyAttributes", function(test) {
 
   var attrTester = function(tagName, initial) {
     var node;
@@ -142,7 +141,7 @@ Tinytest.add("patcher - copyAttributes", function(test) {
         if (! node) {
           node = n;
         } else {
-          Meteor.ui._Patcher._copyAttributes(node, n);
+          Spark._Patcher._copyAttributes(node, n);
         }
         lastAttrs = {};
         _.each(allAttrNames, function(v,k) {

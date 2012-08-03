@@ -28,6 +28,7 @@ Package.on_test(function (api) {
   api.use(['spark', 'test-helpers'], 'client');
 
   api.add_files([
-    'spark_tests.js'
+    'spark_tests.js',
+    'patcher_tests.js'
   ], 'client');
 });

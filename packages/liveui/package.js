@@ -27,7 +27,6 @@ Package.on_test(function (api) {
 
   api.add_files([
     'livedocument_tests.js',
-    'liveui_tests.html',
-    'patcher_tests.js'
+    'liveui_tests.html'
   ], 'client');
 });
