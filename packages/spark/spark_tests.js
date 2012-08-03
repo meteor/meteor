@@ -1019,4 +1019,143 @@ Tinytest.add("spark - basic landmarks", function (test) {
   expect(["d", X]);
 });
 
+Tinytest.add("spark - labeled landmarks", function (test) {
+  var R = [];
+  for (var i = 0; i < 10; i++)
+    R.push(ReactiveVar(""));
+
+  var x = [];
+  var expect = function (what) {
+    test.equal(x, what);
+    x = [];
+  };
+
+  var excludeLandmarks = [];
+  for (var i = 0; i < 6; i++)
+    excludeLandmarks.push(ReactiveVar(false));
+
+  var isolateLandmarks = ReactiveVar(false);
+  var testLandmark = function (id, htmlFunc) {
+    var f = function () {
+      return Spark.createLandmark({
+        create: function () {
+          x.push("c", id);
+          this.id = id;
+        },
+        render: function () {
+          x.push("r", id);
+          test.equal(this.id, id);
+        },
+        destroy: function () {
+          x.push("d", id);
+          test.equal(this.id, id);
+        }
+      }, htmlFunc());
+    };
+
+    if (excludeLandmarks[id].get())
+      return "";
+
+    if (isolateLandmarks.get())
+      return Spark.isolate(function () { return f(); });
+    else
+      return f();
+  };
+
+  var label = Spark.labelBranch;
+
+  var dep = function (i) {
+    return R[i].get();
+  };
+
+  var div = OnscreenDiv(Spark.render(function () {
+    return Spark.isolate(function () {
+      return (
+        dep(0) +
+          testLandmark(1, function () {return "hi" + dep(1); }) +
+          label("a", dep(2) + testLandmark(2, function () { return "hi" + dep(3);})) +
+          label("b", dep(4) + testLandmark(3, function () { return "hi" + dep(5) +
+                label("c", dep(6) + testLandmark(4, function () { return "hi" + dep(7) +
+                      label("d",
+                            label("e",
+                                  dep(8) + label("f",
+                                                 testLandmark(5, function () { return "hi" + dep(9);}))));}));})));
+    });
+  }));
+
+  expect([]);
+  Meteor.flush();
+  expect(["c", 1, "r", 1,
+          "c", 2, "r", 2,
+          "c", 3, "r", 3,
+          "c", 4, "r", 4,
+          "c", 5, "r", 5]);
+  for (var i = 0; i < 10; i++) {
+    R[i].set(1);
+    expect([]);
+    Meteor.flush();
+    expect(["r", 1, "r", 2, "r", 3, "r", 4, "r", 5]);
+  };
+
+  excludeLandmarks[2].set(true);
+  Meteor.flush();
+  expect(["d", 2, "r", 1, "r", 3, "r", 4, "r", 5]);
+
+  excludeLandmarks[2].set(false);
+  excludeLandmarks[3].set(true);
+  Meteor.flush();
+  expect(["d", 3, "d", 4, "d", 5, "r", 1, "c", 2, "r", 2]);
+
+  excludeLandmarks[2].set(true);
+  excludeLandmarks[3].set(false);
+  Meteor.flush();
+  expect(["d", 2, "r", 1, "c", 3, "r", 3, "c", 4, "r", 4, "c", 5, "r", 5]);
+
+  excludeLandmarks[2].set(false);
+  Meteor.flush();
+  expect(["r", 1, "c", 2, "r", 2, "r", 3, "r", 4, "r", 5]);
+
+  isolateLandmarks.set(true);
+  Meteor.flush();
+  expect(["r", 1, "r", 2, "r", 3, "r", 4, "r", 5]);
+
+  for (var i = 0; i < 10; i++) {
+    var expected = [
+      ["r", 1, "r", 2, "r", 3, "r", 4, "r", 5],
+      ["r", 1],
+      ["r", 1, "r", 2, "r", 3, "r", 4, "r", 5],
+      ["r", 2],
+      ["r", 1, "r", 2, "r", 3, "r", 4, "r", 5],
+      ["r", 3, "r", 4, "r", 5],
+      ["r", 3, "r", 4, "r", 5],
+      ["r", 4, "r", 5],
+      ["r", 4, "r", 5],
+      ["r", 5]
+    ][i];
+    R[i].set(2);
+    expect([]);
+    Meteor.flush();
+    expect(expected);
+  };
+
+  excludeLandmarks[4].set(true);
+  Meteor.flush();
+  expect(["d", 4, "d", 5, "r", 3]);
+
+  excludeLandmarks[4].set(false);
+  excludeLandmarks[5].set(true);
+  Meteor.flush();
+  expect(["r", 3, "c", 4, "r", 4]);
+
+  excludeLandmarks[5].set(false);
+  Meteor.flush();
+  expect(["r", 4, "c", 5, "r", 5]);
+
+
+
+
+  // XXX test that callbacks are replaced each time
+
+});
+
 })();
