@@ -4,10 +4,16 @@
 // have been written by third parties on top of the public API?
 
 // XXX rename isolate to reflect that it is the only root of
-// deps-based reactivity ('track'?)
+// deps-based reactivity ('track'? 'compute'? 'sync'?)
 
 // XXX should test variable wrapping (eg TR vs THEAD) inside each
 // branch of Spark.list
+
+// XXX could render() get called too many times when using lists? a
+// list inside a list inside a list, then it's put onscreen, then
+// notifyLandmarksRendered is called 3 times?
+
+// XXX s/render/rendered/ (etc) in landmarks?
 
 (function() {
 
