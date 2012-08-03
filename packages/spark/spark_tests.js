@@ -2358,7 +2358,7 @@ testAsyncMulti(
       hitlist.push(thing);
     };
 
-    var LIVEUI_TEST_RESPONDER = "/liveui_test_responder";
+    var LIVEUI_TEST_RESPONDER = "/spark_test_responder";
     var IFRAME_URL_1 = LIVEUI_TEST_RESPONDER + "/";
     var IFRAME_URL_2 = "about:blank"; // most cross-browser-compatible
     if (window.opera) // opera doesn't like 'about:blank' form target
@@ -2819,6 +2819,7 @@ Tinytest.add("spark - oldschool branch keys", function(test) {
   // XXX test intermediate unkeyed chunks;
   // duplicate branch keys; different order
 });
+
 
 // XXX these are old notes copied from liveui_tests.js:
 // TO TEST:

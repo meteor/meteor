@@ -18,15 +18,3 @@ Package.on_use(function (api) {
   api.add_files(['liveui.js', 'patcher.js'],
                 'client');
 });
-
-Package.on_test(function (api) {
-  api.use(['tinytest', 'templating', 'htmljs']);
-  api.use(['liveui', 'test-helpers'], 'client');
-
-  api.add_files('form_responder.js', 'server');
-
-  api.add_files([
-    'livedocument_tests.js',
-    'liveui_tests.html'
-  ], 'client');
-});

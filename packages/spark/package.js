@@ -27,6 +27,8 @@ Package.on_test(function (api) {
   api.use('tinytest');
   api.use(['spark', 'test-helpers'], 'client');
 
+  api.add_files('test_form_responder.js', 'server');
+
   api.add_files([
     'spark_tests.js',
     'patcher_tests.js'
