@@ -11,6 +11,9 @@
 // XXX specify flush order someday (context dependencies? is this in
 // the domain of spark -- overdraw concerns?)
 
+// XXX if not on IE6-8, don't do the extra work (traversals for event
+// setup) those browsers require
+
 (function() {
 
 Spark = {};
@@ -251,6 +254,30 @@ Spark.render = function (htmlFunc) {
   return ret;
 };
 
+// Modify `range` so that it matches the result of
+// Spark.render(htmlFunc). If the old contents had any landmarks that
+// match landmarks in `frag`, move the landmarks over and perform any
+// node or region preservations that they request.
+Spark.renderToRange = function (range, htmlFunc) {
+  var frag = Spark.render(htmlFunc);
+  DomUtils.wrapFragmentForContainer(frag, range.containerNode());
+
+  var tempRange = new LiveRange(Spark._TAG, frag);
+  var preservations = computePreservations(range, tempRange);
+  moveLandmarks(range, tempRange);
+  tempRange.destroy();
+
+  // patch (using preservations)
+  range.operate(function (start, end) {
+    // XXX this will destroy all liveranges, including ones
+    // inside constant regions whose DOM nodes we are going
+    // to preserve untouched
+    Spark.finalize(start, end);
+    Spark._patch(start.parentNode, frag, start.previousSibling,
+                 end.nextSibling, preservations);
+  });
+};
+
 // Delete all of the liveranges in the range of nodes between `start`
 // and `end`, and call their 'finalize' function if any. Or instead of
 // `start` and `end` you may pass a fragment in `start`.
@@ -445,12 +472,9 @@ Spark.isolate = function (htmlFunc) {
           return; // killed by finalize. range has already been destroyed.
 
         ctx = new Meteor.deps.Context;
-        var frag = Spark.render(function () {
+        var frag = Spark.renderToRange(range, function () {
           return ctx.run(htmlFunc);
         });
-        DomUtils.wrapFragmentForContainer(frag, range.containerNode());
-        replaceContentsPreservingLandmarks(range, frag);
-
         ctx.on_invalidate(refresh);
       };
 
@@ -575,9 +599,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
         itemRanges.splice(newIndex, 0, range);
       }),
       changed: maybeDefer(function (item, atIndex) {
-        var frag = Spark.render(_.bind(itemFunc, null, item));
-        DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
-        replaceContentsPreservingLandmarks(itemRanges[atIndex], frag);
+        Spark.renderToRange(itemRanges[atIndex], _.bind(itemFunc, null, item));
       })
     });
 
@@ -798,27 +820,6 @@ var moveLandmarks = function (oldRange, newRange) {
     // Destroy the (now redundant) range so that its destroy callback
     // is not called.
     r.destroy();
-  });
-};
-
-// Replace the contents of `range` with the fragment `frag`. Finalize
-// the old contents of `range`. If the old contents had any landmarks
-// that match landmarks in `frag`, move the landmarks over and perform
-// any node or region preservations that they request.
-var replaceContentsPreservingLandmarks = function (range, frag) {
-  var tempRange = new LiveRange(Spark._TAG, frag);
-  var preservations = computePreservations(range, tempRange);
-  moveLandmarks(range, tempRange);
-  tempRange.destroy();
-
-  // patch (using preservations)
-  range.operate(function (start, end) {
-    // XXX this will destroy all liveranges, including ones
-    // inside constant regions whose DOM nodes we are going
-    // to preserve untouched
-    Spark.finalize(start, end);
-    Spark._patch(start.parentNode, frag, start.previousSibling,
-                 end.nextSibling, preservations);
   });
 };
 
