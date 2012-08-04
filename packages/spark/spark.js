@@ -290,17 +290,16 @@ _.extend(PreservationController.prototype, {
     self.roots.push({ context: context, preserve: preserve,
                       fromRange: fromRange, toRange: toRange});
   },
-  addConstantRegions: function (existingRange, newRange) {
+
+  addConstantRegion: function (from, to) {
     var self = this;
-    visitMatchingLandmarks(existingRange, newRange, function (from, to) {
-      if (to.constant)
-        self.regionPreservations.push({
-          type: "region",
-          fromStart: from.firstNode(), fromEnd: from.lastNode(),
-          newRange: to
-        });
+    self.regionPreservations.push({
+      type: "region",
+      fromStart: from.firstNode(), fromEnd: from.lastNode(),
+      newRange: to
     });
   },
+
   computePreservations: function (existingRange, newRange) {
     var self = this;
     var preservations = _.clone(self.regionPreservations);
@@ -391,11 +390,21 @@ Spark.renderToRange = function (range, htmlFunc) {
   // match landmarks, moving state and creating preservation roots
   visitLandmarkTree(landmarkTree, tempRange, function (landmark, node) {
     if (node.original) {
+      // copy state
       landmark.created = node.original.created;
       landmark.state = node.original.state;
       node.original.created = false;
+
+      // if constant landmark, add a region preservation
+      if (landmark.constant) {
+        pc.addConstantRegion(node.original, landmark);
+      }
+
+      // add a node preservation root
       pc.addRoot(node.original.containerNode(), landmark.preserve,
                  node.original, landmark);
+
+      // suppress future matching
       node.original = null;
     }
   });
@@ -407,8 +416,7 @@ Spark.renderToRange = function (range, htmlFunc) {
     pc.addRoot(walk.containerNode(), walk.preserve,
                range, tempRange);
 
-  // compute preservations
-  pc.addConstantRegions(range, tempRange);
+  // compute preservations (must do this before destorying tempRange)
   var preservations = pc.computePreservations(range, tempRange);
 
   tempRange.destroy();
@@ -817,33 +825,6 @@ var visitLandmarkTree = function (tree, range, func) {
         stack.pop();
     } else if (r.type === Spark._ANNOTATION_LANDMARK && isStart)
       func(r, top);
-  });
-};
-
-// Find all pairs of landmarks (A, B) such that A is in range1, B is
-// in range2, and the branch paths of A and B are the same (with
-// respect to range1 and range2 respecively.) (The branch path of a
-// landmark L with respect to a range R is the concatenation of all of
-// L's enclosing branch labels up to R.) For each such pair, call
-// func(A, B).
-//
-// range1 and range2 must not overlap; if they do, the results are
-// undefined. Branch paths should be unique within each range (there
-// should only be one landmark in range1 with a given branch path with
-// respect to range1); if not, this function will arbitrarily pick one
-// of the landmarks with a given path and ignore the rest.
-var visitMatchingLandmarks = function (range1, range2, func) {
-  var tree = {};
-
-  visitLandmarkTree(tree, range1, function (r, note) {
-    note.match = r;
-  });
-
-  visitLandmarkTree(tree, range2, function (r, note) {
-    if (note.match) {
-      func(note.match, r);
-      note.match = null;
-    }
   });
 };
 
