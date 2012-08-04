@@ -54,25 +54,26 @@
       cp.stdin.write(
         "var url = '" + url + "';" +
 "var page = require('webpage').create();" +
-
 "page.open(url);" +
 
-"var lastContent;" +
-"var settledCount = 0;" +
-"var count = 0;" +
-
 "setInterval(function() {" +
-"  var connected = page.evaluate(function () {" +
-"    return typeof Meteor !== 'undefined' && Meteor.status().connected;" +
+"  var ready = page.evaluate(function () {" +
+// The page is ready when after a flush() there are no unready
+// subscriptions.
+//
+// XXX this only takes into account the default connection, not any
+// other connections we've made with Meteor.connect.
+"    if (typeof Meteor !== 'undefined' && Meteor.status().connected) {" +
+"      Meteor.flush();" +
+          // abstraction violation! need a clean way to check this.
+"      for (var k in Meteor.default_connection.sub_ready_callbacks)" +
+"        return false;" +
+"      return true;" +
+"    }  " +
+"    return false;" +
 "  });" +
-"  if (!connected || page.content !== lastContent) {" +
-"    settledCount = 0;" +
-"    lastContent = page.content;" +
-"  } else {" +
-"    settledCount += 1;" +
-"  }" +
 
-"  if (settledCount >= 3 || count >= 100) {" +
+"  if (ready) {" +
 "    var out = page.content;" +
 "    out = out.replace(/<script[^>]+>(.|\\n|\\r)*?<\\/script\\s*>/ig, '');" +
 "    out = out.replace('<meta name=\"fragment\" content=\"!\">', '');" +
