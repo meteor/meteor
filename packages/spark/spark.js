@@ -427,33 +427,35 @@ Spark.isolate = function (htmlFunc) {
   if (!renderer)
     return htmlFunc();
 
-  var ctx;
-  var slain = false;
-  return renderer.annotate('', Spark._ANNOTATION_ISOLATE, function (range) {
-    range.finalize = function () {
-      // Spark.finalize() was called on us (presumably because we
-      // were removed from the document.) Tear down our structures
-      // without doing any more updates.
-      slain = true;
-      ctx.invalidate();
-    };
+  var ctx = new Meteor.deps.Context;
 
-    var refresh = function () {
-      if (slain)
-        return; // killed by finalize. range has already been destroyed.
+  return renderer.annotate(
+    ctx.run(htmlFunc), Spark._ANNOTATION_ISOLATE, function (range) {
+      range.finalize = function () {
+        // Spark.finalize() was called on us (presumably because we were
+        // removed from the document.) Tear down our structures without
+        // doing any more updates. note that range is about to be
+        // destroyed by finalize.
+        range = null;
+        ctx.invalidate();
+      };
 
-      ctx = new Meteor.deps.Context;
-      var frag = Spark.render(function () {
-        return ctx.run(htmlFunc);
-      });
-      DomUtils.wrapFragmentForContainer(frag, range.containerNode());
-      replaceContentsPreservingLandmarks(range, frag);
+      var refresh = function () {
+        if (! range)
+          return; // killed by finalize. range has already been destroyed.
+
+        ctx = new Meteor.deps.Context;
+        var frag = Spark.render(function () {
+          return ctx.run(htmlFunc);
+        });
+        DomUtils.wrapFragmentForContainer(frag, range.containerNode());
+        replaceContentsPreservingLandmarks(range, frag);
+
+        ctx.on_invalidate(refresh);
+      };
 
       ctx.on_invalidate(refresh);
-    };
-
-    refresh();
-  });
+    });
 };
 
 /******************************************************************************/
