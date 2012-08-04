@@ -1,7 +1,7 @@
 
 Tinytest.add("sass - presence", function(test) {
 
-  var d = OnscreenDiv(Meteor.ui.render(function() {
+  var d = OnscreenDiv(Meteor.render(function() {
     return '<p class="sass-unlucky-left-border"></p>'; }));
   d.node().style.display = 'block';
 

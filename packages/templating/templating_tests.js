@@ -3,7 +3,7 @@ Tinytest.add("templating - assembly", function (test) {
 
   // Test for a bug that made it to production -- after a replacement,
   // we need to also check the newly replaced node for replacements
-  var frag = Meteor.ui.render(Template.test_assembly_a0);
+  var frag = Meteor.render(Template.test_assembly_a0);
   test.equal(canonicalizeHtml(DomUtils.fragmentToHtml(frag)),
                "Hi");
 
@@ -14,7 +14,7 @@ Tinytest.add("templating - assembly", function (test) {
     return Session.get("stuff");
   };
   var onscreen = DIV({style: "display: none"}, [
-    Meteor.ui.render(Template.test_assembly_b0)]);
+    Meteor.render(Template.test_assembly_b0)]);
   document.body.appendChild(onscreen);
   test.equal(canonicalizeHtml(onscreen.innerHTML), "xyhi");
   Session.set("stuff", false);
@@ -41,7 +41,7 @@ Tinytest.add("templating - table assembly", function(test) {
 
   var table;
 
-  table = childWithTag(Meteor.ui.render(Template.test_table_a0), "TABLE");
+  table = childWithTag(Meteor.render(Template.test_table_a0), "TABLE");
 
   // table.rows is a great test, as it fails not only when TR/TD tags are
   // stripped due to improper html-to-fragment, but also when they are present
@@ -49,7 +49,7 @@ Tinytest.add("templating - table assembly", function(test) {
   test.equal(table.rows.length, 3);
 
   // this time with an explicit TBODY
-  table = childWithTag(Meteor.ui.render(Template.test_table_b0), "TABLE");
+  table = childWithTag(Meteor.render(Template.test_table_b0), "TABLE");
   test.equal(table.rows.length, 3);
 
   var c = new LocalCollection();
@@ -58,7 +58,7 @@ Tinytest.add("templating - table assembly", function(test) {
   c.insert({bar:'c'});
   var onscreen = DIV({style: "display: none;"});
   onscreen.appendChild(
-    Meteor.ui.render(_.bind(Template.test_table_each, null, {foo: c.find()})));
+    Meteor.render(_.bind(Template.test_table_each, null, {foo: c.find()})));
   document.body.appendChild(onscreen);
   table = childWithTag(onscreen, "TABLE");
 
@@ -82,15 +82,17 @@ Tinytest.add("templating - event handler this", function(test) {
 
   var event_buf = [];
   var tmpl = OnscreenDiv(
-    Meteor.ui.render(
-      function() {
-        return Template.test_event_data_with(
-          Template.test_event_data_with.ONE);
-      },
-      { events: { 'click': function() {
-        test.isTrue(this.str);
-        event_buf.push(this.str);
-      } }}));
+    Meteor.render(function () {
+      var html = Template.test_event_data_with(
+        Template.test_event_data_with.ONE);
+      html = Spark.attachEvents({
+        'click': function() {
+          test.isTrue(this.str);
+          event_buf.push(this.str);
+        }
+      }, html);
+      return html;
+    });
 
   var divs = tmpl.node().getElementsByTagName("div");
   test.equal(3, divs.length);
@@ -325,7 +327,10 @@ Tinytest.add("templating - rendered template", function(test) {
   Template.test_render_a.preserve = ['br'];
 
   var div = OnscreenDiv(
-    Meteor.ui.render(Template.test_render_a, {data: { x: 123 } }));
+    Meteor.render(function () {
+      var html = Template.test_render_a();
+      return Spark.setDataContext({ x: 123 }, html);
+    }));
 
   test.equal(div.text().match(/\S+/)[0], "124");
 
@@ -354,7 +359,10 @@ Tinytest.add("templating - rendered template", function(test) {
   Template.test_render_b.preserve = ['br'];
 
   div = OnscreenDiv(
-    Meteor.ui.render(Template.test_render_b, {data: { x: 123 } }));
+    Meteor.render(function () {
+      var html = Template.test_render_b();
+      return Spark.setDataContext({ x: 123 }, html);
+    }));
 
   test.equal(div.text().match(/\S+/)[0], "201");
 
@@ -379,12 +387,11 @@ Tinytest.add("templating - rendered template", function(test) {
 
   Template.test_render_c.preserve = ['br'];
 
-  div = OnscreenDiv(Meteor.ui.render(function() {
-    return Meteor.ui.listChunk(
-      stuff.find(), function(data) {
+  div = OnscreenDiv(
+    Meteor.renderList(
+      stuff.find(), function (data) {
         return Template.test_render_c(data, 'blah');
-      });
-  }));
+      }));
 
   var br1 = div.node().getElementsByTagName('br')[0];
   var hr1 = div.node().getElementsByTagName('hr')[0];
@@ -407,10 +414,8 @@ Tinytest.add("templating - rendered template", function(test) {
 
   Template.test_render_c.preserve = ['br'];
 
-  div = OnscreenDiv(Meteor.ui.render(function() {
-    return Meteor.ui.listChunk(
-      stuff.find(), Template.test_render_c);
-  }));
+  div = OnscreenDiv(Meteor.renderList(stuff.find(),
+                                      Template.test_render_c));
 
   var br1 = div.node().getElementsByTagName('br')[0];
   var hr1 = div.node().getElementsByTagName('hr')[0];

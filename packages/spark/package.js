@@ -4,8 +4,8 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use('livedata');
-  api.use(['underscore', 'session', 'domutils'], 'client');
+  api.use(['underscore', 'uuid', 'domutils', 'liverange', 'universal-events'],
+          'client');
 
   // XXX Depends on jquery because we need a selector engine to resolve
   // event maps. What would be nice is, if you've included jquery or

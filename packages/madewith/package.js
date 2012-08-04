@@ -3,7 +3,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['livedata', 'underscore', 'liveui', 'templating'], 'client');
+  api.use(['livedata', 'underscore', 'spark', 'templating'], 'client');
 
   api.add_files([
     'madewith.css',

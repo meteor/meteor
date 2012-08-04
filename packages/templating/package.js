@@ -11,7 +11,7 @@ Package.on_use(function (api) {
   // is encountered.. shouldn't be very hard, we just need a way to
   // get at 'api' from a register_extension handler
 
-  api.use(['underscore', 'liveui'], 'client');
+  api.use(['underscore', 'spark'], 'client');
 
   // provides the runtime logic to instantiate our templates
   api.add_files('deftemplate.js', 'client');
