@@ -1,5 +1,8 @@
 // XXX make sure that when tests use id="..." to trigger patching, "preserve" happens
 // XXX test that events inside constant regions still work after patching
+// XXX test arguments to landmark render callback
+// XXX test variable wrapping (eg TR vs THEAD) inside each branch of Spark.list?
+
 
 Spark._checkIECompliance = true;
 
@@ -2872,6 +2875,39 @@ Tinytest.add("spark - isolate inside landmark", function (test) {
   test.isTrue(foo1 === foo2);
 
 });
+
+Tinytest.add("spark - nested onscreen processing", function (test) {
+  var cursor = {
+    observe: function () { return { stop: function () {} }; }
+  };
+
+  var x = [];
+  var d = OnscreenDiv(Spark.render(function () {
+    return Spark.list(cursor, function () {}, function () {
+      return Spark.list(cursor, function () {}, function () {
+        return Spark.list(cursor, function () {}, function () {
+          var html = "hi";
+          html = Spark.createLandmark({
+            create: function () { x.push('c'); },
+            render: function () { x.push('r'); },
+            destroy: function () { x.push('d'); }
+          }, html);
+          return html;
+        });
+      });
+    });
+  }));
+
+  Meteor.flush();
+  test.equal(x.join(''), 'cr');
+  x = [];
+  d.kill();
+  Meteor.flush();
+  test.equal(x.join(''), 'd');
+});
+
+
+
 
 
 // XXX these are old notes copied from liveui_tests.js:

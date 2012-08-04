@@ -1,4 +1,4 @@
-// XXX rename liverange methods to camelcase?
+// XXX rename liverange methods to camelCase?
 
 // XXX adjust Spark API so that the modules (eg, list, events) could
 // have been written by third parties on top of the public API?
@@ -6,20 +6,7 @@
 // XXX rename isolate to reflect that it is the only root of
 // deps-based reactivity ('track'? 'compute'? 'sync'?)
 
-// XXX should test variable wrapping (eg TR vs THEAD) inside each
-// branch of Spark.list
-
-// XXX could render() get called too many times when using lists? a
-// list inside a list inside a list, then it's put onscreen, then
-// notifyLandmarksRendered is called 3 times?
-
 // XXX s/render/rendered/ (etc) in landmarks?
-
-// XXX in computePreservations, also need to generate preservations
-// based on enclosing landmarks that haven't changed!
-
-// XXX david's idea: DomUtils.find takes two node arguments, the
-// search root but also the virtual root for the selector
 
 // XXX specify flush order someday (context dependencies? is this in
 // the domain of spark -- overdraw concerns?)
@@ -247,6 +234,14 @@ Spark.render = function (htmlFunc) {
       }
     }
 
+    // This code can run several times on the same nodes (if the
+    // output of a render is included in a render), so it must be
+    // idempotent. This is not the best, asymptotically. There are
+    // things we could do to improve it, like leaving renderedRange in
+    // place and making notifyLandmarksRendered skip its contents (but
+    // this would require that we adjust isolate() -- see comment
+    // there about junk ranges), or letting each landmark schedule its
+    // own onscreen processing.
     notifyLandmarksRendered(renderedRange);
     notifyWatchers(renderedRange.firstNode(), renderedRange.lastNode());
     renderedRange.destroy();
@@ -468,6 +463,11 @@ Spark.isolate = function (htmlFunc) {
           });
           tempRange.destroy();
 
+          // Note that we depend on the fact that the ISOLATE
+          // liverange is the outermost liverange in frag (or will be
+          // once all temporary liveranges are destroyed.) If it were
+          // not, then every time we are invalidated we'll leave
+          // behind a few more junk liveranges.
           replaceContentsPreservingLandmarks(range, frag);
           range.destroy();
         });
@@ -843,7 +843,7 @@ var replaceContentsPreservingLandmarks = function (range, frag) {
 // Find all the landmarks in `range` and let them know that they are
 // now onscreen. If it's their first time being onscreen, they need to
 // have their `create` callback called. And they need `render` whether
-// it is their first time or not.
+// it is their first time or not. Idempotent.
 var notifyLandmarksRendered = function (range) {
   range.visit(function (isStart, r) {
     if (isStart && r.type == Spark._ANNOTATION_LANDMARK) {
@@ -851,8 +851,11 @@ var notifyLandmarksRendered = function (range) {
         r.createCallback.call(r.state);
         r.created = true;
       }
-      // XXX should be render(start, end) ??
-      r.renderCallback.call(r.state);
+      if (!r.rendered) {
+        // XXX should be render(start, end) ??
+        r.renderCallback.call(r.state);
+        r.rendered = true;
+      }
     }
   });
 };
