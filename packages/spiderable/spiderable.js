@@ -4,6 +4,9 @@
   var querystring = __meteor_bootstrap__.require('querystring');
   var app = __meteor_bootstrap__.app;
 
+  // how long to let phantomjs run before we kill it
+  var REQUEST_TIMEOUT = 15*1000;
+
   app.use(function (req, res, next) {
     if (/\?.*_escaped_fragment_=/.test(req.url)) {
       // get escaped fragment out of the url.
@@ -79,6 +82,13 @@
 "  }" +
 "}, 100);");
       cp.stdin.end();
+
+      // Just kill it if it takes too long.
+      setTimeout(function () {
+        if (cp && cp.pid) {
+          cp.kill();
+        }
+      }, REQUEST_TIMEOUT);
 
     } else {
       next();
