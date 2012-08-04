@@ -1740,7 +1740,7 @@ Tinytest.add("spark - leaderboard", function(test) {
     html = Spark.attachEvents({
       "click": function () {
         selected_player.set(this._id);
-      },
+      }
     }, html);
     return html;
   }));
@@ -2824,6 +2824,53 @@ Tinytest.add("spark - oldschool branch keys", function(test) {
 
   // XXX test intermediate unkeyed chunks;
   // duplicate branch keys; different order
+});
+
+Tinytest.add("spark - isolate inside landmark", function (test) {
+
+  // test that preservation maps from all landmarks are honored when
+  // an isolate is re-rendered, even the landmarks that are outside
+  // the isolate and therefore not involved in the re-render.
+
+  var R = ReactiveVar(1);
+  var d = OnscreenDiv(Spark.render(function () {
+    return Spark.createLandmark(
+      { preserve: ['.foo'] },
+      Spark.isolate(function () {
+        return '<hr class="foo"/>' + R.get();
+      }));
+  }));
+
+  var foo1 = d.node().firstChild;
+  test.equal(d.node().lastChild.nodeValue, '1');
+  R.set(2);
+  Meteor.flush();
+  var foo2 = d.node().firstChild;
+  test.equal(d.node().lastChild.nodeValue, '2');
+  test.isTrue(foo1 === foo2);
+
+  // test that selectors in a landmark preservation map are resolved
+  // relative to the landmark, not relative to the re-rendered
+  // fragment.  the selector may refer to nodes that are outside the
+  // re-rendered fragment, and the selector will still match.
+
+  R = ReactiveVar(1);
+  d = OnscreenDiv(Spark.render(function () {
+    return Spark.createLandmark(
+      { preserve: ['div .foo'] },
+      "<div>"+Spark.isolate(function () {
+        return '<hr class="foo"/>' + R.get();
+      })+"</div>");
+  }));
+
+  var foo1 = DomUtils.find(d.node(), '.foo');
+  test.equal(foo1.nextSibling.nodeValue, '1');
+  R.set(2);
+  Meteor.flush();
+  var foo2 = DomUtils.find(d.node(), '.foo');
+  test.equal(foo2.nextSibling.nodeValue, '2');
+  test.isTrue(foo1 === foo2);
+
 });
 
 

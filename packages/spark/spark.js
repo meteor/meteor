@@ -386,12 +386,12 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
           var selector = handler.selector;
 
           if (selector) {
-            // This ends up doing O(n) findAllInRange calls when an
+            // This ends up doing O(n) findAllClipped calls when an
             // event bubbles up N level in the DOM. If this ends up
-            // being too slow, we could memoize findAllInRange across
+            // being too slow, we could memoize findAllClipped across
             // the processing of each event.
-            var results = DomUtils.findAllInRange(range.firstNode(),
-                                                  range.lastNode(), selector);
+            var results = DomUtils.findAllClipped(
+              range.containerNode(), selector, range.firstNode(), range.lastNode());
             // This is a linear search through what could be a large
             // result set.
             if (! _.contains(results, event.currentTarget))
@@ -540,7 +540,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
     };
 
     // Decorator. If we're rendering the list for the first time, call
-    // the function immediately. Otherwise, defer it to flush time. 
+    // the function immediately. Otherwise, defer it to flush time.
     var maybeDefer = function (func) {
       return function (/* arguments */) {
         var args = _.toArray(arguments);
@@ -705,10 +705,18 @@ var visitMatchingLandmarks = function (range1, range2, func) {
 // A preserved (constant) region:
 //   {type: "region", fromStart: Node, fromEnd: Node,
 //      newRange: LiveRange}
-var computePreservations = function (oldRange, newRange) {
+//
+// `existingRange` is the range in the document whose contents are to
+// be replaced. `newRange` holds the new contents and is not part of
+// the document DOM tree.  The implementation will temporarily reparent
+// the nodes in `newRange` into the document to check for selector matches.
+var computePreservations = function (existingRange, newRange) {
   var preservations = [];
 
-  visitMatchingLandmarks(oldRange, newRange, function (from, to) {
+  var nodePreserveRoots = []; // keys 'landmark', 'fromRange', 'toRange'
+
+  // Consider landmarks that got rerendered and were matched
+  visitMatchingLandmarks(existingRange, newRange, function (from, to) {
     if (to.constant)
       preservations.push({
         type: "region",
@@ -716,31 +724,74 @@ var computePreservations = function (oldRange, newRange) {
         newRange: to
       });
 
-    _.each(to.preserve, function (nodeLabeler, selector) {
-      var fromNodesByLabel = {}; // label -> node
+    nodePreserveRoots.push({ context: from.containerNode(), preserve: to.preserve,
+                             fromRange: from, toRange: to });
+  });
 
-      var visitLabeledNodes = function (range, func) {
-        var nodes = DomUtils.findAllInRange(
-          range.firstNode(), range.lastNode(), selector);
-        _.each(nodes, function (n) {
-          var label = nodeLabeler(n);
-          label && func(n, label);
-        });
-      };
+  // Consider landmarks enclosing the updated region
+  var walk = existingRange;
+  while ((walk = findParentOfType(Spark._ANNOTATION_LANDMARK, walk)))
+    nodePreserveRoots.push({ context: walk.containerNode(), preserve: walk.preserve,
+                             fromRange: existingRange, toRange: newRange});
 
-      visitLabeledNodes(from, function (n, label) {
-        fromNodesByLabel[label] = n;
+  var visitLabeledNodes = function (context, clipRange, nodeLabeler, selector, func) {
+    var nodes = DomUtils.findAllClipped(
+      context, selector, clipRange.firstNode(), clipRange.lastNode());
+
+    _.each(nodes, function (n) {
+      var label = nodeLabeler(n);
+      label && func(n, label);
+    });
+  };
+
+  // Find the old incarnation of each of the preserved nodes
+  _.each(nodePreserveRoots, function (root) {
+    root.fromNodesByLabel = {};
+    _.each(root.preserve, function (nodeLabeler, selector) {
+      root.fromNodesByLabel[selector] = {};
+      visitLabeledNodes(root.context, root.fromRange, nodeLabeler, selector, function (n, label) {
+        root.fromNodesByLabel[selector][label] = n;
       });
+    });
+  });
 
-      visitLabeledNodes(to, function (n, label) {
-        var match = fromNodesByLabel[label];
+  // Temporarily put newRange into the document so that we can do
+  // properly contextualized selector queries against it.
+  //
+  // Create a temporary range around newRange, and also around any enclosing
+  // ranges that happen to also start and end on those nodes.  It is ok
+  // to temporarily put these in the document as well, because CSS selectors
+  // don't care and we will put them back.  `tempRange` will hold our place
+  // in the tree `newRange` came from.
+  var tempRange = new LiveRange(Spark._TAG, newRange.firstNode(), newRange.lastNode());
+  var commentFrag = document.createDocumentFragment();
+  commentFrag.appendChild(document.createComment(""));
+  var newRangeFrag = tempRange.replace_contents(commentFrag);
+  // `wrapperRange` will mark where we inserted newRange into the document.
+  var wrapperRange = new LiveRange(Spark._TAG, newRangeFrag);
+  existingRange.insert_before(newRangeFrag);
+
+
+  _.each(nodePreserveRoots, function (root) {
+    _.each(root.preserve, function (nodeLabeler, selector) {
+      visitLabeledNodes(root.context, root.toRange, nodeLabeler, selector, function (n, label) {
+        var match = root.fromNodesByLabel[selector][label];
         if (match) {
           preservations.push({ type: "node", from: match, to: n });
-          fromNodesByLabel[label] = null;
+          root.fromNodesByLabel[selector][label] = null;
         }
       });
     });
   });
+
+
+
+  // Extraction is legal because we're just taking the document
+  // back to the state it was in before insertBefore.
+  var extractedFrag = wrapperRange.extract();
+  wrapperRange.destroy();
+  tempRange.replace_contents(extractedFrag);
+  tempRange.destroy();
 
   return preservations;
 };

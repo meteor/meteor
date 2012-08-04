@@ -14,13 +14,6 @@ Package.on_use(function (api) {
   api.use('jquery');
 
   api.add_files(['spark.js', 'patch.js', 'convenience.js'], 'client');
-/*
-  api.add_files(['liveevents_w3c.js', 'liveevents_now3c.js'], 'client');
-  api.add_files(['liveevents.js'], 'client');
-  api.add_files(['livedocument.js'], 'client');
-  api.add_files(['liverange.js', 'liveui.js', 'innerhtml.js', 'patcher.js'],
-                'client');
-*/
 });
 
 Package.on_test(function (api) {

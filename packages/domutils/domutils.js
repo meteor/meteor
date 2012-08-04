@@ -218,46 +218,40 @@ DomUtils = {};
   //
   // If `selector` involves sibling selectors, child index selectors, or
   // the like, the results are undefined.
-  DomUtils.findAllInRange = function(start, end, selector) {
-    end = (end || start);
+  //
+  // precond: clipStart/clipEnd are descendents of contextNode
+  // XXX document
+  DomUtils.findAllClipped = function(contextNode, selector, clipStart, clipEnd) {
 
-    var container = start.parentNode;
-    if (! container) {
-      if (start === end && (start.nodeType === 9 /* Document */ ||
-                            start.nodeType === 11 /* DocumentFragment */))
-        return DomUtils.findAll(start, selector);
-      throw new Error("Can't find element in range on detached node");
-    }
-    if (end.parentNode !== container)
-      throw new Error("Bad range");
-
-    // narrow the range to exclude top-level non-elements (which can't be
-    // or contain matches) by moving the `start` pointer forward and `end`
-    // backward.
-    while (start !== end && start.nodeType !== 1)
-      start = start.nextSibling;
-    while (start !== end && end.nodeType !== 1)
-      end = end.previousSibling;
-    if (start.nodeType !== 1)
+    // Ensure the clip range starts and ends on element nodes.  This is possible
+    // to do without changing the result set because non-element nodes can't
+    // be or contain matches.
+    while (clipStart !== clipEnd && clipStart.nodeType !== 1)
+      clipStart = clipStart.nextSibling;
+    while (clipStart !== clipEnd && clipEnd.nodeType !== 1)
+      clipEnd = clipEnd.previousSibling;
+    if (clipStart.nodeType !== 1)
       return []; // no top-level elements!  start === end and it's not an element
 
-    // resultsPlus includes matches that are contained by the range's
-    // parent, but are outside of start..end, i.e. are descended from
-    // (or are) a different sibling.
-    var resultsPlus = DomUtils.findAll(container, selector);
+    // resultsPlus includes matches all matches descended from contextNode,
+    // including those that aren't in the clip range.
+    var resultsPlus = DomUtils.findAll(contextNode, selector);
 
     // Filter the list of nodes to remove nodes that occur before start
     // or after end.
     return _.reject(resultsPlus, function(n) {
+      // reject node if it contains the clip range
+      if (DomUtils.elementContains(n, clipStart))
+        return true;
       // reject node if (n,start) are in order or (end,n) are in order
-      return (DomUtils.elementOrder(n, start) > 0) ||
-        (DomUtils.elementOrder(end, n) > 0);
+      return (DomUtils.elementOrder(n, clipStart) > 0) ||
+        (DomUtils.elementOrder(clipEnd, n) > 0);
     });
   };
 
-  // Like `findAllInRange` but finds one element (or returns null).
-  DomUtils.findInRange = function(start, end, selector) {
-    var results = DomUtils.findAllInRange(start, end, selector);
+  // Like `findAllClipped` but finds one element (or returns null).
+  DomUtils.findClipped = function(contextNode, selector, clipStart, clipEnd) {
+    var results = DomUtils.findAllClipped(contextNode, selector, clipStart, clipEnd);
     return (results.length ? results[0] : null);
   };
 
