@@ -1721,21 +1721,21 @@ Tinytest.add("spark - leaderboard", function(test) {
     var html = Spark.list(
       players.find({}, {sort: {score: -1}}),
       function(player) {
-        var html = Spark.isolate(function () {
+        return Spark.isolate(function () {
           var style;
           if (selected_player.get() === player._id)
             style = "player selected";
           else
             style = "player";
 
-          return '<div class="' + style + '">' +
+          var html = '<div class="' + style + '">' +
             '<div class="name">' + player.name + '</div>' +
             '<div name="score">' + player.score + '</div></div>';
+          html = Spark.setDataContext(player, html);
+          html = Spark.createLandmark({preserve: legacyLabels}, html);
+          html = Spark.labelBranch(player._id, html);
+          return html;
         });
-        html = Spark.setDataContext(player, html);
-        html = Spark.createLandmark({preserve: legacyLabels}, html);
-        html = Spark.labelBranch(player._id, html);
-        return html;
       });
     html = Spark.attachEvents({
       "click": function () {
@@ -1872,13 +1872,13 @@ Tinytest.add("spark - list table", function(test) {
     buf.push(Spark.list(
       c.find({}, {sort: ['order']}),
       function(doc) {
-        var html = Spark.isolate(function () {
-          return "<tr><td>"+doc.value + (doc.reactive ? R.get() : '')+
+        return Spark.isolate(function () {
+          var html = "<tr><td>"+doc.value + (doc.reactive ? R.get() : '')+
             "</td></tr>";
+          html = Spark.createLandmark({preserve: legacyLabels}, html);
+          html = Spark.labelBranch(doc._id, html);
+          return html;
         });
-        html = Spark.createLandmark({preserve: legacyLabels}, html);
-        html = Spark.labelBranch(doc._id, html);
-        return html;
       },
       function() {
         return "<tr><td>(nothing)</td></tr>";
@@ -2650,9 +2650,9 @@ Tinytest.add("spark - oldschool landmark matching", function(test) {
   R = ReactiveVar("A");
   div = OnscreenDiv(Meteor.render(function() {
     R.get();
-    var html = Spark.createLandmark(testCallbacks(1), html);
+    var html = Spark.createLandmark(testCallbacks(1), "HI");
     html = Spark.labelBranch("foo", html);
-    html = "<div>" + "</div>";
+    html = "<div>" + html + "</div>";
     html = Spark.createLandmark(testCallbacks(0), html);
     return html;
   }));
@@ -2661,12 +2661,12 @@ Tinytest.add("spark - oldschool landmark matching", function(test) {
   Meteor.flush();
   // what order of chunks {0,1} is preferable??
   // should be consistent but I'm not sure what makes most sense.
-  test.equal(buf, "c1,on1,c0,on0".split(','));
+  test.equal(buf, "c0,on0,c1,on1".split(','));
   buf.length = 0;
 
   R.set("B");
   Meteor.flush();
-  test.equal(buf, "on1,on0".split(','));
+  test.equal(buf, "on0,on1".split(','));
   buf.length = 0;
 
   div.kill();
@@ -2687,7 +2687,7 @@ Tinytest.add("spark - oldschool branch keys", function(test) {
   div = OnscreenDiv(Meteor.render(function() {
     var html = R.get();
     html = Spark.createLandmark({
-      rendered: function () { objs.push(true); }
+      render: function () { objs.push(true); }
     }, html);
     return html;
   }));
@@ -2712,7 +2712,7 @@ Tinytest.add("spark - oldschool branch keys", function(test) {
 
   var testCallbacks = function(theNum /*, extend opts*/) {
     return _.extend.apply(_, [{
-      created: function() {
+      create: function() {
         this.num = String(theNum);
         var howManyBefore = counts[this.num] || 0;
         counts[this.num] = howManyBefore + 1;
@@ -2720,16 +2720,18 @@ Tinytest.add("spark - oldschool branch keys", function(test) {
           this.num += "*"; // add stars
         buf.push("c"+this.num);
       },
-      onscreen: function(start, end, range) {
+      render: function(start, end, range) {
         buf.push("on"+this.num);
       },
-      offscreen: function() {
+      destroy: function() {
         buf.push("off"+this.num);
       }
     }].concat(_.toArray(arguments).slice(1)));
   };
 
+  var counter = 1;
   var chunk = function(contents, num, branch) {
+    var html;
     if (typeof contents === "string")
       html = contents;
     else if (_.isArray(contents))
@@ -2741,8 +2743,12 @@ Tinytest.add("spark - oldschool branch keys", function(test) {
     else
       html = contents();
 
+    if (branch === null)
+      branch = "unique_branch_" + (counter++);
+
     html = Spark.createLandmark(testCallbacks(num), html);
     html = Spark.labelBranch(branch, html);
+    return html;
   };
 
   ///// Chunk 1 contains 2,3,4, all should be matched
@@ -2792,7 +2798,7 @@ Tinytest.add("spark - oldschool branch keys", function(test) {
       return "no chunk!";
     else
       return chunk([['<span>apple</span>', 2, 'x'],
-                    ['<span>banana</span>', 3, ''],
+                    ['<span>banana</span>', 3, null],
                     ['<span>kiwi</span>', 4, 'z']
                    ], 1, 'fruit');
   }));

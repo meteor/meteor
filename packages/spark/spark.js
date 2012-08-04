@@ -15,11 +15,14 @@
 
 // XXX s/render/rendered/ (etc) in landmarks?
 
-// XXX consider how new patching semantics have changed, eg,
-// leaderboard. must create a landmark (with legacyLabels) inside each
-// item for patching to work, because the outer landmark with
-// legacyLabels isn't getting rerendered. (if that's actually what's
-// going on with the test failure)
+// XXX in computePreservations, also need to generate preservations
+// based on enclosing landmarks that haven't changed!
+
+// XXX david's idea: DomUtils.find takes two node arguments, the
+// search root but also the virtual root for the selector
+
+// XXX specify flush order someday (context dependencies? is this in
+// the domain of spark -- overdraw concerns?)
 
 (function() {
 
@@ -477,6 +480,34 @@ Spark.isolate = function (htmlFunc) {
 /* Lists                                                                      */
 /******************************************************************************/
 
+// Run 'f' at flush()-time. If atFlushTime is called multiple times,
+// we guarantee that the 'f's will run in the order of their
+// respective atFlushTime calls.
+//
+// XXX either break this out into a separate package or fold it into
+// deps
+var atFlushQueue = [];
+var atFlushContext = null;
+var atFlushTime = function (f) {
+  atFlushQueue.push(f);
+
+  if (! atFlushContext) {
+    atFlushContext = new Meteor.deps.Context;
+    atFlushContext.on_invalidate(function () {
+      var f;
+      while (f = atFlushQueue.shift()) {
+        // Since atFlushContext is truthy, if f() calls atFlushTime
+        // reentrantly, it's guaranteed to append to atFlushQueue and
+        // not contruct a new atFlushContext.
+        f();
+      }
+      atFlushContext = null;
+    });
+
+    atFlushContext.invalidate();
+  }
+};
+
 Spark.list = function (cursor, itemFunc, elseFunc) {
   elseFunc = elseFunc || function () { return ''; };
 
@@ -508,8 +539,24 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
       Spark.finalize(outerRange.replace_contents(frag));
     };
 
+    // Decorator. If we're rendering the list for the first time, call
+    // the function immediately. Otherwise, defer it to flush time. 
+    var maybeDefer = function (func) {
+      return function (/* arguments */) {
+        var args = _.toArray(arguments);
+        var callFunc = function () {
+          func.apply(null, args);
+        };
+
+        if (! handle)
+          callFunc();
+        else
+          atFlushTime(callFunc);
+      };
+    };
+
     var handle = cursor.observe({
-      added: function (item, beforeIndex) {
+      added: maybeDefer(function (item, beforeIndex) {
         var frag = Spark.render(_.bind(itemFunc, null, item));
         DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
         var range = new LiveRange(Spark._TAG, frag);
@@ -523,16 +570,16 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
         }
 
         itemRanges.splice(beforeIndex, 0, range);
-      },
-      removed: function (item, atIndex) {
+      }),
+      removed: maybeDefer(function (item, atIndex) {
         if (itemRanges.length === 1)
           replaceWithElse();
         else
           Spark.finalize(itemRanges[atIndex].extract());
 
         itemRanges.splice(atIndex, 1);
-      },
-      moved: function (item, oldIndex, newIndex) {
+      }),
+      moved: maybeDefer(function (item, oldIndex, newIndex) {
         if (oldIndex === newIndex)
           return;
 
@@ -544,12 +591,12 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
           itemRanges[newIndex].insert_before(frag);
 
         itemRanges.splice(newIndex, 0, range);
-      },
-      changed: function (item, atIndex) {
+      }),
+      changed: maybeDefer(function (item, atIndex) {
         var frag = Spark.render(_.bind(itemFunc, null, item));
         DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
         replaceContentsPreservingLandmarks(itemRanges[atIndex], frag);
-      }
+      })
     });
 
     if (! itemRanges.length)
