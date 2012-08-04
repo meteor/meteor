@@ -123,12 +123,9 @@ var withRenderer = function (f) {
 /* Render and finalize                                                        */
 /******************************************************************************/
 
-Spark.render = function (htmlFunc) {
-  var renderer = new Spark._Renderer;
-  var html = Spark._currentRenderer.withValue(renderer, function () {
-    return renderer.annotate(htmlFunc());
-  });
-
+// Turn the `html` string into a fragment, applying the `annotations`
+// in the process.
+var materialize = function (html, annotations) {
   var fragById = {};
 
   var replaceInclusions = function (container) {
@@ -164,7 +161,7 @@ Spark.render = function (htmlFunc) {
   while ((parts = regex.exec(html))) {
     var isOpen = ! parts[1];
     var id = parts[2];
-    var annotationFunc = renderer.annotations[id];
+    var annotationFunc = annotations[id];
     if (! annotationFunc) {
       bufferStack[bufferStack.length - 1].push(parts[0]);
     } else if (isOpen) {
@@ -181,29 +178,28 @@ Spark.render = function (htmlFunc) {
       if (! frag.firstChild)
         frag.appendChild(document.createComment("empty"));
       annotationFunc(frag.firstChild, frag.lastChild);
-      if (! idStack.length) {
+      if (! idStack.length)
         // we're done; we just rendered the contents of the top-level
         // annotation that we wrapped around htmlFunc ourselves.
         // there may be unused fragments in fragById that include
         // LiveRanges, but only if the user broke the rules by including
         // an annotation somewhere besides element level, like inside
         // an attribute (which is not allowed).
-        ret = frag;
-        break;
-      }
+        return frag;
       fragById[id] = frag;
       bufferStack[bufferStack.length - 1].push('<!--' + id + '-->');
     }
   }
+};
 
-  // XXX break the below out into a new function, eg
-  // Spark.introduce(), that the user can use when manually inserting
-  // nodes (via, eg, jQuery?)
-
-  // Schedule setup tasks to run at the next flush, which is when the
-  // newly rendered fragment must be on the screen (if it doesn't want
-  // to get garbage-collected.)
-  var renderedRange = new LiveRange(Spark._TAG, ret);
+// Schedule setup tasks to run at the next flush, which is when the
+// newly rendered fragment must be on the screen (if it doesn't want
+// to get garbage-collected.)
+//
+// XXX expose in the public API, eg as Spark.introduce(), so the user
+// can call it when manually inserting nodes? (via, eg, jQuery?)
+var scheduleOnscreenSetup = function (frag) {
+  var renderedRange = new LiveRange(Spark._TAG, frag);
   var finalized = false;
   renderedRange.finalize = function () {
     finalized = true;
@@ -249,9 +245,20 @@ Spark.render = function (htmlFunc) {
     notifyWatchers(renderedRange.firstNode(), renderedRange.lastNode());
     renderedRange.destroy();
   });
-  ctx.invalidate();
 
-  return ret;
+  ctx.invalidate();
+};
+
+Spark.render = function (htmlFunc) {
+  var renderer = new Spark._Renderer;
+  var html = Spark._currentRenderer.withValue(renderer, function () {
+    return renderer.annotate(htmlFunc());
+  });
+
+  var frag = materialize(html, renderer.annotations);
+  scheduleOnscreenSetup(frag);
+
+  return frag;
 };
 
 // Modify `range` so that it matches the result of
