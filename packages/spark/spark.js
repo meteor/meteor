@@ -277,8 +277,8 @@ Spark.renderToRange = function (range, htmlFunc) {
   DomUtils.wrapFragmentForContainer(frag, range.containerNode());
 
   var tempRange = new LiveRange(Spark._TAG, frag);
+  moveLandmarkState(range, tempRange);
   var preservations = computePreservations(range, tempRange);
-  moveLandmarks(range, tempRange);
   tempRange.destroy();
 
   // patch (using preservations)
@@ -817,25 +817,16 @@ var computePreservations = function (existingRange, newRange) {
 };
 
 // Look for landmarks in oldRange that match landmarks in
-// newRange. Where matches are found, delete the landmark in newRange
-// and move the landmark in oldRange to take its place. Where matches
-// aren't found, leave the landmarks as they are.
-//
-// When a landmark in newRange is destroyed (by replacing it with an
-// existing landmark from oldRange), the landmark's destroy() callback
-// is not called. So this function should be called before created()
-// has been called on the landmarks in newRange.
-var moveLandmarks = function (oldRange, newRange) {
-  var dead = [];
+// newRange. Where matches are found, transplant the state from the
+// landmark in oldRange to the landmark in newRange. This clobbers any
+// state that the landmark in newRange may have had, so this function
+// should be called before created() has been called on the landmarks
+// in newRange.
+var moveLandmarkState = function (oldRange, newRange) {
   visitMatchingLandmarks(oldRange, newRange, function (from, to) {
     to.created = from.created;
     to.state = from.state;
-    dead.push(from); // don't destroy during visit
-  });
-  _.each(dead, function (r) {
-    // Destroy the (now redundant) range so that its destroy callback
-    // is not called.
-    r.destroy();
+    from.created = false;
   });
 };
 
