@@ -290,19 +290,6 @@ _.extend(PreservationController.prototype, {
     self.roots.push({ context: context, preserve: preserve,
                       fromRange: fromRange, toRange: toRange});
   },
-  addAllRoots: function (existingRange, newRange) {
-    var self = this;
-    // Consider landmarks that got rerendered and were matched
-    visitMatchingLandmarks(existingRange, newRange, function (from, to) {
-      self.addRoot(from.containerNode(), to.preserve, from, to);
-    });
-
-    // Consider landmarks enclosing the updated region
-    var walk = existingRange;
-    while ((walk = findParentOfType(Spark._ANNOTATION_LANDMARK, walk)))
-      self.addRoot(walk.containerNode(), walk.preserve,
-                   existingRange, newRange);
-  },
   addConstantRegions: function (existingRange, newRange) {
     var self = this;
     visitMatchingLandmarks(existingRange, newRange, function (from, to) {
@@ -384,6 +371,8 @@ _.extend(PreservationController.prototype, {
 // landmarks in `frag`, move the landmarks over and perform any node
 // or region preservations that they request.
 Spark.renderToRange = function (range, htmlFunc) {
+  var pc = new PreservationController;
+
   // Find all of the landmarks in the old contents of the range
   var landmarkTree = {};
   visitLandmarkTree(landmarkTree, range, function (landmark, node) {
@@ -399,19 +388,26 @@ Spark.renderToRange = function (range, htmlFunc) {
 
   var tempRange = new LiveRange(Spark._TAG, frag);
 
-  // move state of matching landmarks
+  // match landmarks, moving state and creating preservation roots
   visitLandmarkTree(landmarkTree, tempRange, function (landmark, node) {
     if (node.original) {
       landmark.created = node.original.created;
       landmark.state = node.original.state;
       node.original.created = false;
+      pc.addRoot(node.original.containerNode(), landmark.preserve,
+                 node.original, landmark);
       node.original = null;
     }
   });
 
+  // find preservation roots that come from landmarks enclosing the
+  // updated region
+  var walk = range;
+  while ((walk = findParentOfType(Spark._ANNOTATION_LANDMARK, walk)))
+    pc.addRoot(walk.containerNode(), walk.preserve,
+               range, tempRange);
+
   // compute preservations
-  var pc = new PreservationController;
-  pc.addAllRoots(range, tempRange);
   pc.addConstantRegions(range, tempRange);
   var preservations = pc.computePreservations(range, tempRange);
 
