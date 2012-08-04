@@ -14,23 +14,38 @@
       var newQuery = querystring.stringify(parsed);
       var newPath = preQuery + (newQuery ? "?" + newQuery : "");
       var url = "http://" + req.headers.host + newPath;
-      console.log("GB", url);
 
       // run phantomjs
-      // XXX make sure phantomjs in the path!
       //
       // Use '/dev/stdin' to avoid writing to a temporary file. Can't
       // just omit the file, as PhantomJS takes that to mean 'use a
       // REPL' and exits as soon as stdin closes.
       var cp = spawn('phantomjs', ['--load-images=no', '/dev/stdin']);
-      cp.on('exit', function (code) {
-        // XXX look at code
-        res.end();
-      });
-      // phantomjs prints in utf8.
-      res.writeHead(200, {'Content-Type': 'text/html; charset=UTF-8'});
 
-      cp.stdout.pipe(res);
+      var data = '';
+      cp.stdout.setEncoding('utf8');
+      cp.stdout.on('data', function (chunk) {
+        data += chunk;
+      });
+
+      cp.on('exit', function (code) {
+        if (0 === code && /<html>/i.test(data)) {
+          res.writeHead(200, {'Content-Type': 'text/html; charset=UTF-8'});
+          res.end(data);
+        } else {
+          // phantomjs failed. Don't send the error, instead send the
+          // normal page.
+          if (code === 127)
+            Meteor._debug("spiderable: phantomjs not installed. Download and install from http://phantomjs.org/");
+          else
+            Meteor._debug("spiderable: phantomjs failed:", code, data);
+
+          next();
+        }
+      });
+
+      // don't crash w/ EPIPE if phantomjs isn't installed.
+      cp.stdin.on('error', function () {});
 
       cp.stdin.write(
         "var url = '" + url + "';" +
@@ -63,7 +78,6 @@
 "  }" +
 "}, 100);");
       cp.stdin.end();
-
 
     } else {
       next();
