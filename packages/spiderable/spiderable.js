@@ -58,18 +58,10 @@
 
 "setInterval(function() {" +
 "  var ready = page.evaluate(function () {" +
-// The page is ready when after a flush() there are no unready
-// subscriptions.
-//
-// XXX this only takes into account the default connection, not any
-// other connections we've made with Meteor.connect.
 "    if (typeof Meteor !== 'undefined' && Meteor.status().connected) {" +
 "      Meteor.flush();" +
-          // abstraction violation! need a clean way to check this.
-"      for (var k in Meteor.default_connection.sub_ready_callbacks)" +
-"        return false;" +
-"      return true;" +
-"    }  " +
+"      return Meteor._LivedataConnection._allSubscriptionsReady();" +
+"    }" +
 "    return false;" +
 "  });" +
 
