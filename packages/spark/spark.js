@@ -427,53 +427,33 @@ Spark.isolate = function (htmlFunc) {
   if (!renderer)
     return htmlFunc();
 
-  var ctx = new Meteor.deps.Context;
+  var ctx;
   var slain = false;
-  var html =
-    renderer.annotate(
-      ctx.run(htmlFunc), Spark._ANNOTATION_ISOLATE,
-      function (range) {
-        range.finalize = function () {
-          // Spark.finalize() was called on us (presumably because we
-          // were removed from the document.) Tear down our structures
-          // without doing any more updates.
-          slain = true;
-          ctx.invalidate();
-        };
+  return renderer.annotate('', Spark._ANNOTATION_ISOLATE, function (range) {
+    range.finalize = function () {
+      // Spark.finalize() was called on us (presumably because we
+      // were removed from the document.) Tear down our structures
+      // without doing any more updates.
+      slain = true;
+      ctx.invalidate();
+    };
 
-        ctx.on_invalidate(function () {
-          if (slain)
-            return; // killed by finalize. range has already been destroyed.
+    var refresh = function () {
+      if (slain)
+        return; // killed by finalize. range has already been destroyed.
 
-          // htmlFunc changed its mind about what it returns. Rerender it.
-          var frag = Spark.render(function () {
-            return Spark.isolate(htmlFunc);
-          });
-
-          var tempRange = new LiveRange(Spark._TAG, frag, null,
-                                        true /* inner */);
-          tempRange.operate(function (start, end) {
-            // Wrap contents of frag, *inside* the ISOLATE annotation,
-            // as appropriate for insertion into `range`. We want the
-            // wrapping inside the range so that if you have a <table>
-            // containing an isolate, and the isolate returns a <tr>
-            // sometimes and a <thead> other times, the wrapping will
-            // change as appropriate.
-            DomUtils.wrapFragmentForContainer(frag, range.containerNode());
-          });
-          tempRange.destroy();
-
-          // Note that we depend on the fact that the ISOLATE
-          // liverange is the outermost liverange in frag (or will be
-          // once all temporary liveranges are destroyed.) If it were
-          // not, then every time we are invalidated we'll leave
-          // behind a few more junk liveranges.
-          replaceContentsPreservingLandmarks(range, frag);
-          range.destroy();
-        });
+      ctx = new Meteor.deps.Context;
+      var frag = Spark.render(function () {
+        return ctx.run(htmlFunc);
       });
+      DomUtils.wrapFragmentForContainer(frag, range.containerNode());
+      replaceContentsPreservingLandmarks(range, frag);
 
-  return html;
+      ctx.on_invalidate(refresh);
+    };
+
+    refresh();
+  });
 };
 
 /******************************************************************************/
