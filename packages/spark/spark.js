@@ -123,10 +123,16 @@ var withRenderer = function (f) {
 /* Render and finalize                                                        */
 /******************************************************************************/
 
-// Turn the `html` string into a fragment, applying the `annotations`
-// in the process.
-var materialize = function (html, annotations) {
+// Turn the `html` string into a fragment, applying the annotations
+// from 'renderer' in the process.
+var materialize = function (html, renderer) {
   var fragById = {};
+
+  // XXX refactor the parsing loop so we don't have to do this, and so
+  // we can just take 'annotations' instead of the whole renderer
+  // object
+  html = renderer.annotate(html);
+
 
   var replaceInclusions = function (container) {
     var n = container.firstChild;
@@ -161,7 +167,7 @@ var materialize = function (html, annotations) {
   while ((parts = regex.exec(html))) {
     var isOpen = ! parts[1];
     var id = parts[2];
-    var annotationFunc = annotations[id];
+    var annotationFunc = renderer.annotations[id];
     if (! annotationFunc) {
       bufferStack[bufferStack.length - 1].push(parts[0]);
     } else if (isOpen) {
@@ -251,11 +257,8 @@ var scheduleOnscreenSetup = function (frag) {
 
 Spark.render = function (htmlFunc) {
   var renderer = new Spark._Renderer;
-  var html = Spark._currentRenderer.withValue(renderer, function () {
-    return renderer.annotate(htmlFunc());
-  });
-
-  var frag = materialize(html, renderer.annotations);
+  var html = Spark._currentRenderer.withValue(renderer, htmlFunc);
+  var frag = materialize(html, renderer);
   scheduleOnscreenSetup(frag);
 
   return frag;
@@ -266,7 +269,11 @@ Spark.render = function (htmlFunc) {
 // match landmarks in `frag`, move the landmarks over and perform any
 // node or region preservations that they request.
 Spark.renderToRange = function (range, htmlFunc) {
-  var frag = Spark.render(htmlFunc);
+  var renderer = new Spark._Renderer;
+  var html = Spark._currentRenderer.withValue(renderer, htmlFunc);
+  var frag = materialize(html, renderer);
+  scheduleOnscreenSetup(frag);
+
   DomUtils.wrapFragmentForContainer(frag, range.containerNode());
 
   var tempRange = new LiveRange(Spark._TAG, frag);
