@@ -269,6 +269,12 @@ Spark.render = function (htmlFunc) {
 // landmarks in `frag`, move the landmarks over and perform any node
 // or region preservations that they request.
 Spark.renderToRange = function (range, htmlFunc) {
+  // Find all of the landmarks in the old contents of the range
+  var landmarkTree = {};
+  visitLandmarkTree(landmarkTree, range, function (landmark, node) {
+    node.original = landmark;
+  });
+
   var renderer = new Spark._Renderer;
   var html = Spark._currentRenderer.withValue(renderer, htmlFunc);
   var frag = materialize(html, renderer);
@@ -277,7 +283,18 @@ Spark.renderToRange = function (range, htmlFunc) {
   DomUtils.wrapFragmentForContainer(frag, range.containerNode());
 
   var tempRange = new LiveRange(Spark._TAG, frag);
-  moveLandmarkState(range, tempRange);
+
+  // move state of matching landmarks
+  visitLandmarkTree(landmarkTree, tempRange, function (landmark, node) {
+    if (node.original) {
+      landmark.created = node.original.created;
+      landmark.state = node.original.state;
+      node.original.created = false;
+      node.original = null;
+    }
+  });
+
+  // compute preservations
   var preservations = computePreservations(range, tempRange);
   tempRange.destroy();
 
@@ -814,20 +831,6 @@ var computePreservations = function (existingRange, newRange) {
   tempRange.destroy();
 
   return preservations;
-};
-
-// Look for landmarks in oldRange that match landmarks in
-// newRange. Where matches are found, transplant the state from the
-// landmark in oldRange to the landmark in newRange. This clobbers any
-// state that the landmark in newRange may have had, so this function
-// should be called before created() has been called on the landmarks
-// in newRange.
-var moveLandmarkState = function (oldRange, newRange) {
-  visitMatchingLandmarks(oldRange, newRange, function (from, to) {
-    to.created = from.created;
-    to.state = from.state;
-    from.created = false;
-  });
 };
 
 // Find all the landmarks in `range` and let them know that they are
