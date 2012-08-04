@@ -133,7 +133,6 @@ var materialize = function (html, renderer) {
   // object
   html = renderer.annotate(html);
 
-
   var replaceInclusions = function (container) {
     var n = container.firstChild;
     while (n) {
@@ -265,9 +264,10 @@ Spark.render = function (htmlFunc) {
 };
 
 // Modify `range` so that it matches the result of
-// Spark.render(htmlFunc). If the old contents had any landmarks that
-// match landmarks in `frag`, move the landmarks over and perform any
-// node or region preservations that they request.
+// Spark.render(htmlFunc). `range` must be in `document` (that is,
+// onscreen.) If the old contents had any landmarks that match
+// landmarks in `frag`, move the landmarks over and perform any node
+// or region preservations that they request.
 Spark.renderToRange = function (range, htmlFunc) {
   var renderer = new Spark._Renderer;
   var html = Spark._currentRenderer.withValue(renderer, htmlFunc);
@@ -664,6 +664,30 @@ Spark.createLandmark = withRenderer(function (options, html, _renderer) {
     });
 });
 
+
+// XXX could use docs, better name
+var visitLandmarkTree = function (tree, range, func) {
+  // Call 'func' for each landmark in 'range'. Pass two arguments to
+  // 'func', the range, and an extra "notes" object such that two
+  // landmarks receive the same (===) notes object iff they have the
+  // same branch path. 'func' can write to the notes object so long as
+  // it limits itself to attributes that do not start with '_'.
+  var stack = [tree];
+
+  range.visit(function (isStart, r) {
+    var top = stack[stack.length - 1];
+
+    if (r.type === Spark._ANNOTATION_LABEL) {
+      if (isStart) {
+        var key = '_' + r.label;
+        stack.push(top[key] = (top[key] || {}));
+      } else
+        stack.pop();
+    } else if (r.type === Spark._ANNOTATION_LANDMARK && isStart)
+      func(r, top);
+  });
+};
+
 // Find all pairs of landmarks (A, B) such that A is in range1, B is
 // in range2, and the branch paths of A and B are the same (with
 // respect to range1 and range2 respecively.) (The branch path of a
@@ -679,33 +703,11 @@ Spark.createLandmark = withRenderer(function (options, html, _renderer) {
 var visitMatchingLandmarks = function (range1, range2, func) {
   var tree = {};
 
-  // Call 'func' for each landmark in 'range'. Pass two arguments to
-  // 'func', the range, and an extra "notes" object such that two
-  // landmarks receive the same (===) notes object iff they have the
-  // same branch path. 'func' can write to the notes object so long as
-  // it limits itself to attributes that do not start with '_'.
-  var visit = function (range, func) {
-    var stack = [tree];
-
-    range.visit(function (isStart, r) {
-      var top = stack[stack.length - 1];
-
-      if (r.type === Spark._ANNOTATION_LABEL) {
-        if (isStart) {
-          var key = '_' + r.label;
-          stack.push(top[key] = (top[key] || {}));
-        } else
-          stack.pop();
-      } else if (r.type === Spark._ANNOTATION_LANDMARK && isStart)
-        func(r, top);
-    });
-  };
-
-  visit(range1, function (r, note) {
+  visitLandmarkTree(tree, range1, function (r, note) {
     note.match = r;
   });
 
-  visit(range2, function (r, note) {
+  visitLandmarkTree(tree, range2, function (r, note) {
     if (note.match) {
       func(note.match, r);
       note.match = null;
