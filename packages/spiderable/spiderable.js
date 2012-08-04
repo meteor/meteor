@@ -6,9 +6,10 @@
 
   app.use(function (req, res, next) {
     if (/\?.*_escaped_fragment_=/.test(req.url)) {
-      // get escaped fragment out of the url. Gross!
-      var preQuery = req.url.split("?")[0];
-      var queryStr = req.url.split("?")[1];
+      // get escaped fragment out of the url.
+      var idx = req.url.indexOf('?');
+      var preQuery = req.url.substr(0, idx);
+      var queryStr = req.url.substr(idx + 1);
       var parsed = querystring.parse(queryStr);
       delete parsed['_escaped_fragment_'];
       var newQuery = querystring.stringify(parsed);
