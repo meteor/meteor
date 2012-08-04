@@ -1627,7 +1627,7 @@ Tinytest.add("spark - landmark constant", function(test) {
   // non-top-level
 
   var i = 1;
-  // run test with and without branch
+  // run test with and without matching branch label
   _.each([false, true], function(matchLandmark) {
     // run test with node before or after, or neither or both
     _.each([false, true], function(nodeBefore) {
