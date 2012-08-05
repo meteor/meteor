@@ -92,7 +92,7 @@ Tinytest.add("templating - event handler this", function(test) {
         }
       }, html);
       return html;
-    });
+    }));
 
   var divs = tmpl.node().getElementsByTagName("div");
   test.equal(3, divs.length);
@@ -328,8 +328,7 @@ Tinytest.add("templating - rendered template", function(test) {
 
   var div = OnscreenDiv(
     Meteor.render(function () {
-      var html = Template.test_render_a();
-      return Spark.setDataContext({ x: 123 }, html);
+      return Template.test_render_a({ x: 123 });
     }));
 
   test.equal(div.text().match(/\S+/)[0], "124");
@@ -360,8 +359,7 @@ Tinytest.add("templating - rendered template", function(test) {
 
   div = OnscreenDiv(
     Meteor.render(function () {
-      var html = Template.test_render_b();
-      return Spark.setDataContext({ x: 123 }, html);
+      return Template.test_render_b({ x: 123 });
     }));
 
   test.equal(div.text().match(/\S+/)[0], "201");
