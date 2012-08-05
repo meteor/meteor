@@ -1165,6 +1165,7 @@ Tinytest.add("spark - labeled landmarks", function (test) {
 
     var f = function () {
       var thisSerial = serial++;
+      var html = htmlFunc();
 
       return Spark.createLandmark({
         create: function () {
@@ -1182,7 +1183,7 @@ Tinytest.add("spark - labeled landmarks", function (test) {
           s.push(thisSerial);
           test.equal(this.id, id);
         }
-      }, htmlFunc());
+      }, html);
     };
 
     if (isolateLandmarks.get())
@@ -1212,7 +1213,7 @@ Tinytest.add("spark - labeled landmarks", function (test) {
     });
   }));
 
-  expect(["c", 1, "c", 2, "c", 3, "c", 4, "c", 5], [1, 2, 3, 4, 5]);
+  expect(["c", 1, "c", 2, "c", 5, "c", 4, "c", 3], [1, 2, 5, 4, 3]);
   Meteor.flush();
   expect(["r", 1, "r", 2, "r", 3, "r", 4, "r", 5], [1, 2, 3, 4, 5]);
   for (var i = 0; i < 10; i++) {
@@ -1240,8 +1241,8 @@ Tinytest.add("spark - labeled landmarks", function (test) {
   excludeLandmarks[3].set(false);
   expect([], []);
   Meteor.flush();
-  expect(["c", 3, "c", 4, "c", 5, "d", 2, "r", 1, "r", 3, "r", 4, "r", 5],
-         [63, 64, 65, 61, 62, 63, 64, 65]);
+  expect(["c", 5, "c", 4, "c", 3, "d", 2, "r", 1, "r", 3, "r", 4, "r", 5],
+         [65, 64, 63, 61, 62, 63, 64, 65]);
 
   excludeLandmarks[2].set(false);
   expect([], []);
@@ -2666,11 +2667,11 @@ Tinytest.add("spark - oldschool landmark matching", function(test) {
     return html;
   }));
 
-  test.equal(buf, ["c0", "c1"]);
+  test.equal(buf, ["c1", "c0"]);
   Meteor.flush();
   // what order of chunks {0,1} is preferable??
   // should be consistent but I'm not sure what makes most sense.
-  test.equal(buf, "c0,c1,r0,r1".split(','));
+  test.equal(buf, "c1,c0,r0,r1".split(','));
   buf.length = 0;
 
   R.set("B");

@@ -65,14 +65,27 @@ var notifyWatchers = function (start, end) {
   tempRange.destroy();
 };
 
-Spark._Renderer = function () {
+Spark._Renderer = function (getLandmarkState) {
   // Map from annotation ID to an annotation function, which is called
   // at render time and receives (startNode, endNode).
   this.annotations = {};
 
   // A map of landmarks, organized by branch path in a tree.
-  // XXX document better
+  // XXX document better (see visitLandmarkTree)
   this.landmarkTree = {};
+
+  // Array of pointers into this.landmarkTree for
+  // visitLandmarkTree-style traversal of landmarks as rendering is
+  // happening (XXX document better)
+  this.labelStack = [this.landmarkTree];
+
+  // Function to call when a landmark is encountered during rendering
+  // (that is, when createLandmark is called) to get the state object
+  // for that landmark (from a previous version of the landmark.) Or
+  // return null if the landmark is new and a new state object should
+  // be created.
+  // XXX document better
+  this.getLandmarkState = getLandmarkState || function () { return null; };
 
   // Assembles the preservation information for patching.
   this.pc = new PreservationController;
@@ -266,16 +279,6 @@ Spark.render = function (htmlFunc) {
   var html = Spark._currentRenderer.withValue(renderer, htmlFunc);
   var frag = materialize(html, renderer);
 
-  // create landmarks
-  var tempRange = new LiveRange(Spark._TAG, frag);
-  visitLandmarkTree({}, tempRange, function (landmark, node) {
-    if (! landmark.created) { // guard for nested renders
-      landmark.createCallback.call(landmark.state);
-      landmark.created = true;
-    }
-  });
-  tempRange.destroy();
-
   scheduleOnscreenSetup(frag);
 
   return frag;
@@ -388,7 +391,16 @@ _.extend(PreservationController.prototype, {
 // landmarks in `frag`, move the landmarks over and perform any node
 // or region preservations that they request.
 Spark.renderToRange = function (range, htmlFunc) {
-  var renderer = new Spark._Renderer;
+  var getLandmarkState = function () {
+    var node = renderer.labelStack[this.labelStack.length - 1];
+
+    if (node.original && ! node.original.superceded) {
+      node.original.superceded = true; // prevent destroy(), second match
+      return node.original.state; // the old state
+    } else
+      return null;
+  };
+  var renderer = new Spark._Renderer(getLandmarkState);
 
   // Find all of the landmarks in the old contents of the range
   visitLandmarkTree(renderer.landmarkTree, range, function (landmark, node) {
@@ -403,33 +415,19 @@ Spark.renderToRange = function (range, htmlFunc) {
 
   var tempRange = new LiveRange(Spark._TAG, frag);
 
-  // match landmarks, moving state and creating preservation roots
+  // find preservation roots from matched landmarks inside the
+  // rerendered region
   var pc = renderer.pc;
-  visitLandmarkTree(renderer.landmarkTree, tempRange, function (landmark, node) {
-    if (node.original) {
-      // copy state
-      landmark.created = node.original.created;
-      landmark.state = node.original.state;
-      node.original.created = false; // prevent destroy()
+  visitLandmarkTree(
+    renderer.landmarkTree, tempRange, function (landmark, node) {
+      if (node.original) {
+        if (landmark.constant)
+          pc.addConstantRegion(node.original, landmark);
 
-      // if constant landmark, add a region preservation
-      if (landmark.constant) {
-        pc.addConstantRegion(node.original, landmark);
+        pc.addRoot(node.original.containerNode(), landmark.preserve,
+                   node.original, landmark);
       }
-
-      // add a node preservation root
-      pc.addRoot(node.original.containerNode(), landmark.preserve,
-                 node.original, landmark);
-
-      // suppress future matching
-      node.original = null;
-    } else {
-      if (! landmark.created) { // guard for nested renders
-        landmark.createCallback.call(landmark.state);
-        landmark.created = true;
-      }
-    }
-  });
+    });
 
   // find preservation roots that come from landmarks enclosing the
   // updated region
@@ -796,14 +794,32 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
 // or pass label === null to not drop a label after all (meaning that
 // this function is a noop)
 Spark.labelBranch = function (label, htmlFunc) {
-  var html = htmlFunc();
-
   var renderer = Spark._currentRenderer.get();
   if (! renderer || label === null)
-    return html;
+    return htmlFunc();
+
+  var stack = renderer.labelStack;
+  var top = stack[stack.length - 1];
+  var key = '_' + label;
+  stack.push(top[key] = (top[key] || {}));
+  var html = htmlFunc();
+  stack.pop();
 
   return renderer.annotate(
     html, Spark._ANNOTATION_LABEL, { label: label });
+
+  // XXX what happens if the user doesn't use the return value, or
+  // doesn't use it directly, eg, swaps the branches of the tree
+  // around? "that's an error?" the result would be that the apparent
+  // branch path of a landmark at render time would be different from
+  // its apparent branch path in the actual document. seems like the
+  // answer is to have labelBranch not drop an annotation, and keep
+  // the branch label info outside of the DOM in a parallel tree of
+  // labels and landmarks (likely similar to the one we're already
+  // keeping?) a little tricky since not every node in the label tree
+  // is actually populated with a landmark? (though we could change
+  // that I guess -- they would be landmarks without any specific DOM
+  // nodes?)
 };
 
 Spark.createLandmark = withRenderer(function (options, html, _renderer) {
@@ -819,20 +835,27 @@ Spark.createLandmark = withRenderer(function (options, html, _renderer) {
     if (typeof preserve[selector] !== 'function')
       preserve[selector] = function () { return true; };
 
+  var state = _renderer.getLandmarkState();
+  if (state === null) {
+    state = {};
+    options.create && options.create.call(state);
+  }
+
   return _renderer.annotate(
     html, Spark._ANNOTATION_LANDMARK, {
       preserve: preserve,
       constant: !! options.constant,
-      createCallback: options.create || function () {},
       renderCallback: options.render || function () {},
       destroyCallback: options.destroy || function () {},
-      created: false,
-      state: {},
+      state: state,
       finalize: function () {
-        if (this.created)
+        if (! this.superceded)
           this.destroyCallback.call(this.state);
       }
     });
+
+  // XXX need to arrange for destroyCallback to be called if the
+  // returned html is never materialized..
 });
 
 
@@ -866,9 +889,6 @@ var visitLandmarkTree = function (tree, range, func) {
 var notifyLandmarksRendered = function (range) {
   range.visit(function (isStart, r) {
     if (isStart && r.type == Spark._ANNOTATION_LANDMARK) {
-      if (!r.created)
-        throw new Error("onscreen landmark hasn't been created?");
-
       if (!r.rendered) {
         // XXX should be render(start, end) ??
         r.renderCallback.call(r.state);
