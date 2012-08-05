@@ -258,6 +258,17 @@ Spark.render = function (htmlFunc) {
   var renderer = new Spark._Renderer;
   var html = Spark._currentRenderer.withValue(renderer, htmlFunc);
   var frag = materialize(html, renderer);
+
+  // create landmarks
+  var tempRange = new LiveRange(Spark._TAG, frag);
+  visitLandmarkTree({}, tempRange, function (landmark, node) {
+    if (! landmark.created) { // guard for nested renders
+      landmark.createCallback.call(landmark.state);
+      landmark.created = true;
+    }
+  });
+  tempRange.destroy();
+
   scheduleOnscreenSetup(frag);
 
   return frag;
@@ -393,7 +404,7 @@ Spark.renderToRange = function (range, htmlFunc) {
       // copy state
       landmark.created = node.original.created;
       landmark.state = node.original.state;
-      node.original.created = false;
+      node.original.created = false; // prevent destroy()
 
       // if constant landmark, add a region preservation
       if (landmark.constant) {
@@ -406,6 +417,11 @@ Spark.renderToRange = function (range, htmlFunc) {
 
       // suppress future matching
       node.original = null;
+    } else {
+      if (! landmark.created) { // guard for nested renders
+        landmark.createCallback.call(landmark.state);
+        landmark.created = true;
+      }
     }
   });
 
@@ -835,10 +851,9 @@ var visitLandmarkTree = function (tree, range, func) {
 var notifyLandmarksRendered = function (range) {
   range.visit(function (isStart, r) {
     if (isStart && r.type == Spark._ANNOTATION_LANDMARK) {
-      if (!r.created) {
-        r.createCallback.call(r.state);
-        r.created = true;
-      }
+      if (!r.created)
+        throw new Error("onscreen landmark hasn't been created?");
+
       if (!r.rendered) {
         // XXX should be render(start, end) ??
         r.renderCallback.call(r.state);

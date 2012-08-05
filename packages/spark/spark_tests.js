@@ -1119,9 +1119,9 @@ Tinytest.add("spark - basic landmarks", function (test) {
     });
   }));
 
-  expect([]);
+  expect(["c"]);
   Meteor.flush();
-  expect(["c", "r", X]);
+  expect(["r", X]);
   Meteor.flush();
   expect([]);
   R.set("222");
@@ -1212,11 +1212,9 @@ Tinytest.add("spark - labeled landmarks", function (test) {
     });
   }));
 
-  expect([], []);
+  expect(["c", 1, "c", 2, "c", 3, "c", 4, "c", 5], [1, 2, 3, 4, 5]);
   Meteor.flush();
-  expect(["c", 1, "r", 1, "c", 2, "r", 2, "c", 3, "r", 3,
-          "c", 4, "r", 4, "c", 5, "r", 5],
-         [1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
+  expect(["r", 1, "r", 2, "r", 3, "r", 4, "r", 5], [1, 2, 3, 4, 5]);
   for (var i = 0; i < 10; i++) {
     R[i].set(1);
     expect([], []);
@@ -1226,28 +1224,33 @@ Tinytest.add("spark - labeled landmarks", function (test) {
   };
 
   excludeLandmarks[2].set(true);
+  expect([], []);
   Meteor.flush();
   expect(["d", 2, "r", 1, "r", 3, "r", 4, "r", 5],
          [52, 56, 57, 58, 59]);
 
   excludeLandmarks[2].set(false);
   excludeLandmarks[3].set(true);
+  expect([], []);
   Meteor.flush();
-  expect(["d", 3, "d", 4, "d", 5, "r", 1, "c", 2, "r", 2],
-         [57, 58, 59, 60, 61, 61]);
+  expect(["c", 2, "d", 3, "d", 4, "d", 5, "r", 1, "r", 2],
+         [61, 57, 58, 59, 60, 61]);
 
   excludeLandmarks[2].set(true);
   excludeLandmarks[3].set(false);
+  expect([], []);
   Meteor.flush();
-  expect(["d", 2, "r", 1, "c", 3, "r", 3, "c", 4, "r", 4, "c", 5, "r", 5],
-         [61, 62, 63, 63, 64, 64, 65, 65]);
+  expect(["c", 3, "c", 4, "c", 5, "d", 2, "r", 1, "r", 3, "r", 4, "r", 5],
+         [63, 64, 65, 61, 62, 63, 64, 65]);
 
   excludeLandmarks[2].set(false);
+  expect([], []);
   Meteor.flush();
-  expect(["r", 1, "c", 2, "r", 2, "r", 3, "r", 4, "r", 5],
-         [66, 67, 67, 68, 69, 70]);
+  expect(["c", 2, "r", 1, "r", 2, "r", 3, "r", 4, "r", 5],
+         [67, 66, 67, 68, 69, 70]);
 
   isolateLandmarks.set(true);
+  expect([], []);
   Meteor.flush();
   expect(["r", 1, "r", 2, "r", 3, "r", 4, "r", 5],
          [71, 72, 73, 74, 75]);
@@ -1278,11 +1281,11 @@ Tinytest.add("spark - labeled landmarks", function (test) {
   excludeLandmarks[4].set(false);
   excludeLandmarks[5].set(true);
   Meteor.flush();
-  expect(["r", 3, "c", 4, "r", 4], [105, 106, 106]);
+  expect(["c", 4, "r", 3, "r", 4], [106, 105, 106]);
 
   excludeLandmarks[5].set(false);
   Meteor.flush();
-  expect(["r", 4, "c", 5, "r", 5], [107, 108, 108]);
+  expect(["c", 5, "r", 4, "r", 5], [108, 107, 108]);
 });
 
 
@@ -2612,10 +2615,10 @@ Tinytest.add("spark - oldschool landmark matching", function(test) {
         buf.push("c"+this.num);
       },
       render: function(start, end, range) {
-        buf.push("on"+this.num);
+        buf.push("r"+this.num);
       },
       destroy: function() {
-        buf.push("off"+this.num);
+        buf.push("d"+this.num);
       }
     }].concat(_.toArray(arguments).slice(1)));
   };
@@ -2629,22 +2632,22 @@ Tinytest.add("spark - oldschool landmark matching", function(test) {
     return html;
   }, testCallbacks(0)));
 
-  test.equal(buf, []);
+  test.equal(buf, ["c0"]);
 
   test.equal(div.html(), "A");
   Meteor.flush();
-  test.equal(buf, ["c0", "on0"]);
+  test.equal(buf, ["c0", "r0"]);
   test.equal(div.html(), "A");
 
   R.set("B");
   Meteor.flush();
-  test.equal(buf, ["c0", "on0", "on0"]);
+  test.equal(buf, ["c0", "r0", "r0"]);
   test.equal(div.html(), "B");
 
 
   div.kill();
   Meteor.flush();
-  test.equal(buf, ["c0", "on0", "on0", "off0"]);
+  test.equal(buf, ["c0", "r0", "r0", "d0"]);
 
   // with a branch
 
@@ -2660,22 +2663,22 @@ Tinytest.add("spark - oldschool landmark matching", function(test) {
     return html;
   }));
 
-  test.equal(buf, []);
+  test.equal(buf, ["c0", "c1"]);
   Meteor.flush();
   // what order of chunks {0,1} is preferable??
   // should be consistent but I'm not sure what makes most sense.
-  test.equal(buf, "c0,on0,c1,on1".split(','));
+  test.equal(buf, "c0,c1,r0,r1".split(','));
   buf.length = 0;
 
   R.set("B");
   Meteor.flush();
-  test.equal(buf, "on0,on1".split(','));
+  test.equal(buf, "r0,r1".split(','));
   buf.length = 0;
 
   div.kill();
   Meteor.flush();
   buf.sort();
-  test.equal(buf, "off0,off1".split(','));
+  test.equal(buf, "d0,d1".split(','));
 });
 
 
