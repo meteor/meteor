@@ -2914,6 +2914,176 @@ Tinytest.add("spark - nested onscreen processing", function (test) {
   test.equal(x.join(''), 'd');
 });
 
+Tinytest.add("spark - getCurrentLandmark", function (test) {
+  var R = ReactiveVar(1);
+  var callbacks = 0;
+  var d = OnscreenDiv(Meteor.render(function () {
+    test.isTrue(Spark.getCurrentLandmark() === null);
+    var html = Spark.createLandmark({
+      create: function () {
+        this.a = 1;
+        this.renderCount = 0;
+        test.isFalse('b' in this);
+        callbacks++;
+      },
+      render: function () {
+        test.equal(this.a, 9);
+        test.equal(this.b, 2);
+        if (this.renderCount === 0)
+          test.isFalse('c' in this);
+        else
+          test.isTrue('c' in this);
+        this.renderCount++;
+        callbacks++;
+      },
+      destroy: function () {
+        test.equal(this.a, 9);
+        test.equal(this.b, 2);
+        test.equal(this.c, 3);
+        callbacks++;
+      }
+    }, '<span>hi</span>');
+
+    if (R.get() === 1) {
+      test.equal(callbacks, 1);
+      var lm = Spark.getCurrentLandmark();
+      test.equal(lm.a, 1);
+      lm.a = 9;
+      lm.b = 2;
+      test.isFalse('c' in lm);
+      test.equal(callbacks, 1);
+      lm = null;
+    }
+
+    if (R.get() === 2) {
+      var lm = Spark.getCurrentLandmark();
+      test.equal(callbacks, 2);
+      test.equal(lm.a, 9);
+      test.equal(lm.b, 2);
+      test.equal(lm.c, 3);
+      test.equal(lm.renderCount, 1);
+    }
+
+    if (R.get() >= 3) {
+      html += Spark.labelBranch('branch', function () {
+        test.isTrue(Spark.getCurrentLandmark() === null);
+        var html = Spark.createLandmark({
+          create: function () {
+            this.outer = true;
+          },
+          render: function () {
+            this.renderCount = (this.renderCount || 0) + 1;
+          }
+        }, '<span>outer</span>');
+        test.isTrue(Spark.getCurrentLandmark().outer);
+        test.equal(R.get() - 3, Spark.getCurrentLandmark().renderCount || 0);
+        html += Spark.labelBranch("a", function () {
+          test.isTrue(Spark.getCurrentLandmark() === null);
+          var html = Spark.createLandmark({
+            create: function () {
+              this.innerA = true;
+            },
+            render: function () {
+              this.renderCount = (this.renderCount || 0) + 1;
+            }
+          }, '<span>innerA</span>');
+          test.isTrue(Spark.getCurrentLandmark().innerA);
+          return html;
+        });
+        test.isFalse(Spark.getCurrentLandmark().innerA);
+        test.isTrue(Spark.getCurrentLandmark().outer);
+        test.equal(R.get() - 3, Spark.getCurrentLandmark().renderCount || 0);
+        if (R.get() === 3 || R.get() >= 5) {
+          html += Spark.labelBranch("b", function () {
+            test.isTrue(Spark.getCurrentLandmark() === null);
+            var html = Spark.createLandmark({
+              create: function () {
+                this.innerB = true;
+              },
+              render: function () {
+                this.renderCount = (this.renderCount || 0) + 1;
+              }
+            }, '<span>innerB</span>');
+            test.isTrue(Spark.getCurrentLandmark().innerB);
+            test.equal(R.get() === 3 ? 0 : R.get() - 5,
+                       Spark.getCurrentLandmark().renderCount || 0);
+            return html;
+          });
+        }
+        test.isTrue(Spark.getCurrentLandmark().outer);
+        return html;
+      }) ;
+    }
+    return html;
+  }));
+
+  var findOuter = function () {
+    return d.node().firstChild.nextSibling;
+  };
+
+  var findInnerA = function () {
+    return findOuter().nextSibling;
+  };
+
+  var findInnerB = function () {
+    return findInnerA().nextSibling;
+  };
+
+  test.equal(callbacks, 1);
+  Meteor.flush();
+  test.equal(callbacks, 2);
+  test.equal(null, Spark.getEnclosingLandmark(d.node()));
+  var enc = Spark.getEnclosingLandmark(d.node().firstChild);
+  test.equal(enc.a, 9);
+  test.equal(enc.b, 2);
+  test.isFalse('c' in enc);
+  enc.c = 3;
+  Meteor.flush();
+  test.equal(callbacks, 2);
+
+  R.set(2)
+  Meteor.flush();
+  test.equal(callbacks, 3);
+
+  R.set(3)
+  Meteor.flush();
+  test.equal(callbacks, 4);
+
+  test.isTrue(Spark.getEnclosingLandmark(findOuter()).outer);
+  test.isTrue(Spark.getEnclosingLandmark(findInnerA()).innerA);
+  test.isTrue(Spark.getEnclosingLandmark(findInnerB()).innerB);
+  test.equal(1, Spark.getEnclosingLandmark(findOuter()).renderCount);
+  test.equal(1, Spark.getEnclosingLandmark(findInnerA()).renderCount);
+  test.equal(1, Spark.getEnclosingLandmark(findInnerB()).renderCount);
+
+  R.set(4)
+  Meteor.flush();
+  test.equal(callbacks, 5);
+  test.equal(2, Spark.getEnclosingLandmark(findOuter()).renderCount);
+  test.equal(2, Spark.getEnclosingLandmark(findInnerA()).renderCount);
+
+  R.set(5)
+  Meteor.flush();
+  test.equal(callbacks, 6);
+  test.equal(3, Spark.getEnclosingLandmark(findOuter()).renderCount);
+  test.equal(3, Spark.getEnclosingLandmark(findInnerA()).renderCount);
+  test.equal(1, Spark.getEnclosingLandmark(findInnerB()).renderCount);
+
+  R.set(6)
+  Meteor.flush();
+  test.equal(callbacks, 7);
+  test.equal(4, Spark.getEnclosingLandmark(findOuter()).renderCount);
+  test.equal(4, Spark.getEnclosingLandmark(findInnerA()).renderCount);
+  test.equal(2, Spark.getEnclosingLandmark(findInnerB()).renderCount);
+
+  d.kill();
+  Meteor.flush();
+  test.equal(callbacks, 8);
+
+  Meteor.flush();
+  test.equal(callbacks, 8);
+});
+
 
 
 

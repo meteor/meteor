@@ -840,6 +840,8 @@ Spark.createLandmark = withRenderer(function (options, html, _renderer) {
     state = {};
     options.create && options.create.call(state);
   }
+  var top = _renderer.labelStack[_renderer.labelStack.length - 1];
+  top.current = state;
 
   return _renderer.annotate(
     html, Spark._ANNOTATION_LANDMARK, {
@@ -858,6 +860,23 @@ Spark.createLandmark = withRenderer(function (options, html, _renderer) {
   // returned html is never materialized..
 });
 
+// Call during rendering to get the (state object for) the landmark
+// with the current branch path (as determined by the
+// Spark.labelBranch calls on the stack), or null if createLandmark()
+// has not yet been called with this branch path during this render.
+Spark.getCurrentLandmark = function () {
+  var renderer = Spark._currentRenderer.get();
+  if (! renderer)
+    throw new Error("Only available during rendering");
+  var top = renderer.labelStack[renderer.labelStack.length - 1];
+  return top.current || null;
+};
+
+
+Spark.getEnclosingLandmark = function (node) {
+  var range = findRangeOfType(Spark._ANNOTATION_LANDMARK, node);
+  return range ? range.state : null;
+};
 
 // XXX could use docs, better name
 var visitLandmarkTree = function (tree, range, func) {
@@ -891,6 +910,10 @@ var notifyLandmarksRendered = function (range) {
     if (isStart && r.type == Spark._ANNOTATION_LANDMARK) {
       if (!r.rendered) {
         // XXX should be render(start, end) ??
+
+        // XXX should bubble up and notify parent landmarks too? for
+        // all the same reasons we need to do it for node
+        // preservation?
         r.renderCallback.call(r.state);
         r.rendered = true;
       }
