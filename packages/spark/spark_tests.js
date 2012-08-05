@@ -1215,20 +1215,20 @@ Tinytest.add("spark - labeled landmarks", function (test) {
 
   expect(["c", 1, "c", 2, "c", 5, "c", 4, "c", 3], [1, 2, 5, 4, 3]);
   Meteor.flush();
-  expect(["r", 1, "r", 2, "r", 3, "r", 4, "r", 5], [1, 2, 3, 4, 5]);
+  expect(["r", 1, "r", 2, "r", 5, "r", 4, "r", 3], [1, 2, 5, 4, 3]);
   for (var i = 0; i < 10; i++) {
     R[i].set(1);
     expect([], []);
     Meteor.flush();
-    expect(["r", 1, "r", 2, "r", 3, "r", 4, "r", 5],
-           [i*5 + 6, i*5 + 7, i*5 + 8, i*5 + 9, i*5 + 10]);
+    expect(["r", 1, "r", 2, "r", 5, "r", 4, "r", 3],
+           [i*5 + 6, i*5 + 7, i*5 + 10, i*5 + 9, i*5 + 8]);
   };
 
   excludeLandmarks[2].set(true);
   expect([], []);
   Meteor.flush();
-  expect(["d", 2, "r", 1, "r", 3, "r", 4, "r", 5],
-         [52, 56, 57, 58, 59]);
+  expect(["d", 2, "r", 1, "r", 5, "r", 4, "r", 3],
+         [52, 56, 59, 58, 57]);
 
   excludeLandmarks[2].set(false);
   excludeLandmarks[3].set(true);
@@ -1241,32 +1241,32 @@ Tinytest.add("spark - labeled landmarks", function (test) {
   excludeLandmarks[3].set(false);
   expect([], []);
   Meteor.flush();
-  expect(["c", 5, "c", 4, "c", 3, "d", 2, "r", 1, "r", 3, "r", 4, "r", 5],
-         [65, 64, 63, 61, 62, 63, 64, 65]);
+  expect(["c", 5, "c", 4, "c", 3, "d", 2, "r", 1, "r", 5, "r", 4, "r", 3],
+         [65, 64, 63, 61, 62, 65, 64, 63]);
 
   excludeLandmarks[2].set(false);
   expect([], []);
   Meteor.flush();
-  expect(["c", 2, "r", 1, "r", 2, "r", 3, "r", 4, "r", 5],
-         [67, 66, 67, 68, 69, 70]);
+  expect(["c", 2, "r", 1, "r", 2, "r", 5, "r", 4, "r", 3],
+         [67, 66, 67, 70, 69, 68]);
 
   isolateLandmarks.set(true);
   expect([], []);
   Meteor.flush();
-  expect(["r", 1, "r", 2, "r", 3, "r", 4, "r", 5],
-         [71, 72, 73, 74, 75]);
+  expect(["r", 1, "r", 2, "r", 5, "r", 4, "r", 3],
+         [71, 72, 75, 74, 73]);
 
   for (var i = 0; i < 10; i++) {
     var expected = [
-      [["r", 1, "r", 2, "r", 3, "r", 4, "r", 5], [76, 77, 78, 79, 80]],
+      [["r", 1, "r", 2, "r", 5, "r", 4, "r", 3], [76, 77, 80, 79, 78]],
       [["r", 1], [81]],
-      [["r", 1, "r", 2, "r", 3, "r", 4, "r", 5], [82, 83, 84, 85, 86]],
+      [["r", 1, "r", 2, "r", 5, "r", 4, "r", 3], [82, 83, 86, 85, 84]],
       [["r", 2], [87]],
-      [["r", 1, "r", 2, "r", 3, "r", 4, "r", 5], [88, 89, 90, 91, 92]],
-      [["r", 3, "r", 4, "r", 5], [93, 94, 95]],
-      [["r", 3, "r", 4, "r", 5], [96, 97, 98]],
-      [["r", 4, "r", 5], [99, 100]],
-      [["r", 4, "r", 5], [101, 102]],
+      [["r", 1, "r", 2, "r", 5, "r", 4, "r", 3], [88, 89, 92, 91, 90]],
+      [["r", 5, "r", 4, "r", 3], [95, 94, 93]],
+      [["r", 5, "r", 4, "r", 3], [98, 97, 96]],
+      [["r", 5, "r", 4], [100, 99]],
+      [["r", 5, "r", 4], [102, 101]],
       [["r", 5], [103]]
     ][i];
     R[i].set(2);
@@ -1282,11 +1282,11 @@ Tinytest.add("spark - labeled landmarks", function (test) {
   excludeLandmarks[4].set(false);
   excludeLandmarks[5].set(true);
   Meteor.flush();
-  expect(["c", 4, "r", 3, "r", 4], [106, 105, 106]);
+  expect(["c", 4, "r", 4, "r", 3], [106, 106, 105]);
 
   excludeLandmarks[5].set(false);
   Meteor.flush();
-  expect(["c", 5, "r", 4, "r", 5], [108, 107, 108]);
+  expect(["c", 5, "r", 5, "r", 4], [108, 108, 107]);
 });
 
 
@@ -2671,12 +2671,12 @@ Tinytest.add("spark - oldschool landmark matching", function(test) {
   Meteor.flush();
   // what order of chunks {0,1} is preferable??
   // should be consistent but I'm not sure what makes most sense.
-  test.equal(buf, "c1,c0,r0,r1".split(','));
+  test.equal(buf, "c1,c0,r1,r0".split(','));
   buf.length = 0;
 
   R.set("B");
   Meteor.flush();
-  test.equal(buf, "r0,r1".split(','));
+  test.equal(buf, "r1,r0".split(','));
   buf.length = 0;
 
   div.kill();

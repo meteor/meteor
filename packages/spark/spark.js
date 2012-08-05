@@ -14,6 +14,10 @@
 // XXX if not on IE6-8, don't do the extra work (traversals for event
 // setup) those browsers require
 
+// XXX flag errors if you have two landmarks with the same branch
+// path, or if you have multiple preserve nodes in a landmark with the
+// same selector and label
+
 (function() {
 
 Spark = {};
@@ -78,6 +82,9 @@ Spark._Renderer = function (getLandmarkState) {
   // visitLandmarkTree-style traversal of landmarks as rendering is
   // happening (XXX document better)
   this.labelStack = [this.landmarkTree];
+
+  // All landmark ranges created during this rendering.
+  this.landmarks = [];
 
   // Function to call when a landmark is encountered during rendering
   // (that is, when createLandmark is called) to get the state object
@@ -221,9 +228,13 @@ var materialize = function (html, renderer) {
 // newly rendered fragment must be on the screen (if it doesn't want
 // to get garbage-collected.)
 //
+// 'landmarks' is a list of the landmark ranges in 'frag'. It may be
+// omitted if frag doesn't contain any landmarks.
+//
 // XXX expose in the public API, eg as Spark.introduce(), so the user
-// can call it when manually inserting nodes? (via, eg, jQuery?)
-var scheduleOnscreenSetup = function (frag) {
+// can call it when manually inserting nodes? (via, eg, jQuery?) -- of
+// course in that case 'landmarks' would be empty.
+var scheduleOnscreenSetup = function (frag, landmarks) {
   var renderedRange = new LiveRange(Spark._TAG, frag);
   var finalized = false;
   renderedRange.finalize = function () {
@@ -258,15 +269,19 @@ var scheduleOnscreenSetup = function (frag) {
       }
     }
 
+    // Deliver render callbacks to all landmarks that are now
+    // onscreen (possibly not for the first time.)
+    //
+    // XXX should bubble up and notify parent landmarks too? for all
+    // the same reasons we need to do it for node preservation?
+    _.each(landmarks, function (landmark) {
+      landmark.renderCallback.call(landmark.state);
+    });
+
     // This code can run several times on the same nodes (if the
     // output of a render is included in a render), so it must be
     // idempotent. This is not the best, asymptotically. There are
-    // things we could do to improve it, like leaving renderedRange in
-    // place and making notifyLandmarksRendered skip its contents (but
-    // this would require that we adjust isolate() -- see comment
-    // there about junk ranges), or letting each landmark schedule its
-    // own onscreen processing.
-    notifyLandmarksRendered(renderedRange);
+    // things we could do to improve it.
     notifyWatchers(renderedRange.firstNode(), renderedRange.lastNode());
     renderedRange.destroy();
   });
@@ -279,7 +294,7 @@ Spark.render = function (htmlFunc) {
   var html = Spark._currentRenderer.withValue(renderer, htmlFunc);
   var frag = materialize(html, renderer);
 
-  scheduleOnscreenSetup(frag);
+  scheduleOnscreenSetup(frag, renderer.landmarks);
 
   return frag;
 };
@@ -385,11 +400,8 @@ _.extend(PreservationController.prototype, {
   }
 });
 
-// Modify `range` so that it matches the result of
-// Spark.render(htmlFunc). `range` must be in `document` (that is,
-// onscreen.) If the old contents had any landmarks that match
-// landmarks in `frag`, move the landmarks over and perform any node
-// or region preservations that they request.
+// `range` is a region of `document`. Modify it in-place so that it
+// matches the result of Spark.render(htmlFunc), preserving landmarks.
 Spark.renderToRange = function (range, htmlFunc) {
   var getLandmarkState = function () {
     var node = renderer.labelStack[this.labelStack.length - 1];
@@ -409,7 +421,7 @@ Spark.renderToRange = function (range, htmlFunc) {
 
   var html = Spark._currentRenderer.withValue(renderer, htmlFunc);
   var frag = materialize(html, renderer);
-  scheduleOnscreenSetup(frag);
+  scheduleOnscreenSetup(frag, renderer.landmarks);
 
   DomUtils.wrapFragmentForContainer(frag, range.containerNode());
 
@@ -436,7 +448,7 @@ Spark.renderToRange = function (range, htmlFunc) {
     pc.addRoot(walk.containerNode(), walk.preserve,
                range, tempRange);
 
-  // compute preservations (must do this before destorying tempRange)
+  // compute preservations (must do this before destroying tempRange)
   var preservations = pc.computePreservations(range, tempRange);
 
   tempRange.destroy();
@@ -844,16 +856,20 @@ Spark.createLandmark = withRenderer(function (options, html, _renderer) {
   top.current = state;
 
   return _renderer.annotate(
-    html, Spark._ANNOTATION_LANDMARK, {
-      preserve: preserve,
-      constant: !! options.constant,
-      renderCallback: options.render || function () {},
-      destroyCallback: options.destroy || function () {},
-      state: state,
-      finalize: function () {
-        if (! this.superceded)
-          this.destroyCallback.call(this.state);
-      }
+    html, Spark._ANNOTATION_LANDMARK, function (range) {
+      _.extend(range, {
+        preserve: preserve,
+        constant: !! options.constant,
+        renderCallback: options.render || function () {},
+        destroyCallback: options.destroy || function () {},
+        state: state,
+        finalize: function () {
+          if (! this.superceded)
+            this.destroyCallback.call(this.state);
+        }
+      });
+
+      _renderer.landmarks.push(range);
     });
 
   // XXX need to arrange for destroyCallback to be called if the
@@ -898,26 +914,6 @@ var visitLandmarkTree = function (tree, range, func) {
         stack.pop();
     } else if (r.type === Spark._ANNOTATION_LANDMARK && isStart)
       func(r, top);
-  });
-};
-
-// Find all the landmarks in `range` and let them know that they are
-// now onscreen. If it's their first time being onscreen, they need to
-// have their `create` callback called. And they need `render` whether
-// it is their first time or not. Idempotent.
-var notifyLandmarksRendered = function (range) {
-  range.visit(function (isStart, r) {
-    if (isStart && r.type == Spark._ANNOTATION_LANDMARK) {
-      if (!r.rendered) {
-        // XXX should be render(start, end) ??
-
-        // XXX should bubble up and notify parent landmarks too? for
-        // all the same reasons we need to do it for node
-        // preservation?
-        r.renderCallback.call(r.state);
-        r.rendered = true;
-      }
-    }
   });
 };
 
