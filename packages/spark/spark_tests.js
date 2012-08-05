@@ -1197,18 +1197,18 @@ Tinytest.add("spark - labeled landmarks", function (test) {
     return R[i].get();
   };
 
+  // this frog is pretty well boiled
   var div = OnscreenDiv(Spark.render(function () {
     return Spark.isolate(function () {
       return (
         dep(0) +
           testLandmark(1, function () {return "hi" + dep(1); }) +
-          label("a", dep(2) + testLandmark(2, function () { return "hi" + dep(3);})) +
-          label("b", dep(4) + testLandmark(3, function () { return "hi" + dep(5) +
-                label("c", dep(6) + testLandmark(4, function () { return "hi" + dep(7) +
-                      label("d",
-                            label("e",
-                                  dep(8) + label("f",
-                                                 testLandmark(5, function () { return "hi" + dep(9);}))));}));})));
+          label("a", function () { return dep(2) + testLandmark(2, function () { return "hi" + dep(3);});}) +
+          label("b", function () { return dep(4) + testLandmark(3, function () { return "hi" + dep(5) +                                                                      label("c", function () { return dep(6) + testLandmark(4, function () { return "hi" + dep(7) +
+                      label("d", function () {
+                            return label("e", function () {
+                                  return dep(8) + label("f", function () {
+                                                 return testLandmark(5, function () { return "hi" + dep(9);});});});});});});});}));
     });
   }));
 
@@ -1647,9 +1647,9 @@ Tinytest.add("spark - landmark constant", function(test) {
           var brnch = matchLandmark ? 'myBranch' : ('branch'+(++i));
           return (nodeBefore ? R.get() : '') +
             Spark.labelBranch(
-              brnch,
-              Spark.createLandmark({ constant: isConstant },
-                                   hasSpan ? '<span>stuff</span>' : 'blah')) +
+              brnch, function () {
+                return Spark.createLandmark({ constant: isConstant },
+                                            hasSpan ? '<span>stuff</span>' : 'blah');}) +
             (nodeAfter ? R.get() : '');
         }));
 
@@ -1727,20 +1727,21 @@ Tinytest.add("spark - leaderboard", function(test) {
     var html = Spark.list(
       players.find({}, {sort: {score: -1}}),
       function(player) {
-        return Spark.isolate(function () {
-          var style;
-          if (selected_player.get() === player._id)
-            style = "player selected";
-          else
-            style = "player";
+        return Spark.labelBranch(player._id, function () {
+          return Spark.isolate(function () {
+            var style;
+            if (selected_player.get() === player._id)
+              style = "player selected";
+            else
+              style = "player";
 
-          var html = '<div class="' + style + '">' +
-            '<div class="name">' + player.name + '</div>' +
-            '<div name="score">' + player.score + '</div></div>';
-          html = Spark.setDataContext(player, html);
-          html = Spark.createLandmark({preserve: legacyLabels}, html);
-          html = Spark.labelBranch(player._id, html);
-          return html;
+            var html = '<div class="' + style + '">' +
+              '<div class="name">' + player.name + '</div>' +
+              '<div name="score">' + player.score + '</div></div>';
+            html = Spark.setDataContext(player, html);
+            html = Spark.createLandmark({preserve: legacyLabels}, html);
+            return html;
+          });
         });
       });
     html = Spark.attachEvents({
@@ -1878,12 +1879,13 @@ Tinytest.add("spark - list table", function(test) {
     buf.push(Spark.list(
       c.find({}, {sort: ['order']}),
       function(doc) {
-        return Spark.isolate(function () {
-          var html = "<tr><td>"+doc.value + (doc.reactive ? R.get() : '')+
-            "</td></tr>";
-          html = Spark.createLandmark({preserve: legacyLabels}, html);
-          html = Spark.labelBranch(doc._id, html);
-          return html;
+        return Spark.labelBranch(doc._id, function () {
+          return Spark.isolate(function () {
+            var html = "<tr><td>"+doc.value + (doc.reactive ? R.get() : '')+
+              "</td></tr>";
+            html = Spark.createLandmark({preserve: legacyLabels}, html);
+            return html;
+          });
         });
       },
       function() {
@@ -2656,8 +2658,9 @@ Tinytest.add("spark - oldschool landmark matching", function(test) {
   R = ReactiveVar("A");
   div = OnscreenDiv(Meteor.render(function() {
     R.get();
-    var html = Spark.createLandmark(testCallbacks(1), "HI");
-    html = Spark.labelBranch("foo", html);
+    var html = Spark.labelBranch("foo", function () {
+      return Spark.createLandmark(testCallbacks(1), "HI");
+    });
     html = "<div>" + html + "</div>";
     html = Spark.createLandmark(testCallbacks(0), html);
     return html;
@@ -2737,24 +2740,25 @@ Tinytest.add("spark - oldschool branch keys", function(test) {
 
   var counter = 1;
   var chunk = function(contents, num, branch) {
-    var html;
-    if (typeof contents === "string")
-      html = contents;
-    else if (_.isArray(contents))
-      html = _.map(contents, function(x) {
-        if (typeof x === 'string')
-          return x;
-        return chunk(x[0], x[1], x[2]);
-      }).join('');
-    else
-      html = contents();
-
     if (branch === null)
       branch = "unique_branch_" + (counter++);
 
-    html = Spark.createLandmark(testCallbacks(num), html);
-    html = Spark.labelBranch(branch, html);
-    return html;
+    return Spark.labelBranch(branch, function () {
+      var html;
+      if (typeof contents === "string")
+        html = contents;
+      else if (_.isArray(contents))
+        html = _.map(contents, function(x) {
+          if (typeof x === 'string')
+            return x;
+          return chunk(x[0], x[1], x[2]);
+        }).join('');
+      else
+        html = contents();
+
+      html = Spark.createLandmark(testCallbacks(num), html);
+      return html;
+    });
   };
 
   ///// Chunk 1 contains 2,3,4, all should be matched

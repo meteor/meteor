@@ -261,17 +261,16 @@ Handlebars.evaluate = function (ast, data, options) {
     // for supplying a branch key, like partials have.
     var decorateBlockFn = function(fn, old_data) {
       return function(data, branch) {
-        var result = fn(data);
         // don't create spurious ranges when no branch given and data is same
         // as before (or when transitioning between e.g. `window` and
         // `undefined`)
         if (! branch && (data || Handlebars._defaultThis) ===
             (old_data || Handlebars._defaultThis)) {
-          return result;
+          return fn(data);
         } else {
           return Spark.setDataContext(
             data,
-            Spark.labelBranch(branch, result));
+            Spark.labelBranch(branch, _.bind(fn, null, data)));
         }
       };
     };

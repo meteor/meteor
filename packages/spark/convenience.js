@@ -11,10 +11,9 @@ Meteor.render = function (htmlFunc) {
 Meteor.renderList = function (cursor, itemFunc, elseFunc) {
   return Spark.render(function () {
     return Spark.list(cursor, function (item) {
-      var html = Spark.isolate(_.bind(itemFunc, null, item));
-      if (item._id)
-        html = Spark.labelBranch(item._id, html);
-      return html;
+      return Spark.labelBranch(item._id || null, function () {
+        return Spark.isolate(_.bind(itemFunc, null, item));
+      });
     }, function () {
       return elseFunc ? Spark.isolate(elseFunc) : '';
     });

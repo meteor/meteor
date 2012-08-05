@@ -786,10 +786,19 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
 /* Labels and landmarks                                                       */
 /******************************************************************************/
 
-Spark.labelBranch = withRenderer(function (label, html, _renderer) {
-  return _renderer.annotate(
+// label must be a string.
+// or pass label === null to not drop a label after all (meaning that
+// this function is a noop)
+Spark.labelBranch = function (label, htmlFunc) {
+  var html = htmlFunc();
+
+  var renderer = Spark._currentRenderer.get();
+  if (! renderer || label === null)
+    return html;
+
+  return renderer.annotate(
     html, Spark._ANNOTATION_LABEL, { label: label });
-});
+};
 
 Spark.createLandmark = withRenderer(function (options, html, _renderer) {
   // Normalize preserve map

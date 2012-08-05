@@ -15,11 +15,10 @@
       return Spark.list(
         arg,
         function (item) {
-          var html = Spark.isolate(_.bind(options.fn, null, item)),
-          html = Spark.setDataContext(item, html);
-          if (item._id)
-            html = Spark.labelBranch(item._id, html);
-          return html;
+          return Spark.labelBranch(item._id || null, function () {
+            var html = Spark.isolate(_.bind(options.fn, null, item));
+            return Spark.setDataContext(item, html);
+          });
         },
         function () {
           return options.inverse ?
@@ -44,23 +43,24 @@
     // branch key, which is calculated by the caller based
     // on which invocation of the partial this is.
     var partial = function (data, branch) {
-      var html = Spark.isolate(function() {
-        return raw_func(data, {
-          helpers: partial,
-          partials: Meteor._partials,
-          name: name
+      return Spark.labelBranch(branch, function () {
+        var html = Spark.isolate(function() {
+          return raw_func(data, {
+            helpers: partial,
+            partials: Meteor._partials,
+            name: name
+          });
         });
+
+        var t = name && Template[name];
+        if (t) {
+          html = Spark.attachEvents(t.events || {}, html);
+          html = Spark.createLandmark({ preserve: t.preserve || {} }, html);
+        }
+
+        html = Spark.setDataContext(data, html);
+        return html;
       });
-
-      var t = name && Template[name];
-      if (t) {
-        html = Spark.attachEvents(t.events || {}, html);
-        html = Spark.createLandmark({ preserve: t.preserve || {} }, html);
-      }
-
-      html = Spark.setDataContext(data, html);
-      html = Spark.labelBranch(branch, html);
-      return html;
     };
 
     // XXX hack.. copy all of Handlebars' built in helpers over to
