@@ -69,6 +69,13 @@ Spark._Renderer = function () {
   // Map from annotation ID to an annotation function, which is called
   // at render time and receives (startNode, endNode).
   this.annotations = {};
+
+  // A map of landmarks, organized by branch path in a tree.
+  // XXX document better
+  this.landmarkTree = {};
+
+  // Assembles the preservation information for patching.
+  this.pc = new PreservationController;
 };
 
 _.extend(Spark._Renderer.prototype, {
@@ -381,15 +388,13 @@ _.extend(PreservationController.prototype, {
 // landmarks in `frag`, move the landmarks over and perform any node
 // or region preservations that they request.
 Spark.renderToRange = function (range, htmlFunc) {
-  var pc = new PreservationController;
+  var renderer = new Spark._Renderer;
 
   // Find all of the landmarks in the old contents of the range
-  var landmarkTree = {};
-  visitLandmarkTree(landmarkTree, range, function (landmark, node) {
+  visitLandmarkTree(renderer.landmarkTree, range, function (landmark, node) {
     node.original = landmark;
   });
 
-  var renderer = new Spark._Renderer;
   var html = Spark._currentRenderer.withValue(renderer, htmlFunc);
   var frag = materialize(html, renderer);
   scheduleOnscreenSetup(frag);
@@ -399,7 +404,8 @@ Spark.renderToRange = function (range, htmlFunc) {
   var tempRange = new LiveRange(Spark._TAG, frag);
 
   // match landmarks, moving state and creating preservation roots
-  visitLandmarkTree(landmarkTree, tempRange, function (landmark, node) {
+  var pc = renderer.pc;
+  visitLandmarkTree(renderer.landmarkTree, tempRange, function (landmark, node) {
     if (node.original) {
       // copy state
       landmark.created = node.original.created;
