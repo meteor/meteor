@@ -23,7 +23,7 @@ var DEPLOY_HOSTNAME = 'deploy.meteor.com';
 // interactively prompt for here.
 
 var meteor_rpc = function (rpc_name, method, site, query_params, callback) {
-  var url = "http://" + DEPLOY_HOSTNAME + '/' + rpc_name + '/' + site;
+  var url = "https://" + DEPLOY_HOSTNAME + '/' + rpc_name + '/' + site;
 
   if (!_.isEmpty(query_params))
     url += '?' + qs.stringify(query_params);
@@ -309,7 +309,7 @@ var read_password = function (callback) {
 // called exactly once. Calls callback with the entered password, or
 // undefined if no password is required.
 var with_password = function (site, callback) {
-  var check_url = "http://" + DEPLOY_HOSTNAME + "/has_password/" + site;
+  var check_url = "https://" + DEPLOY_HOSTNAME + "/has_password/" + site;
 
   request(check_url, function (error, response, body) {
     if (error || response.statusCode !== 200) {
