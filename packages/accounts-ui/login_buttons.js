@@ -5,12 +5,21 @@
 
   var DROPDOWN_VISIBLE_KEY = 'Meteor.loginButtons.dropdownVisible';
   var IN_SIGNUP_FLOW_KEY = 'Meteor.loginButtons.inSignupFlow';
+  var IN_FORGOT_PASSWORD_FLOW_KEY = 'Meteor.loginButtons.inForgotPasswordFlow';
   var ERROR_MESSAGE_KEY = 'Meteor.loginButtons.errorMessage';
+  var INFO_MESSAGE_KEY = 'Meteor.loginButtons.infoMessage';
+  var RESET_PASSWORD_TOKEN_KEY = 'Meteor.loginButtons.resetPasswordToken';
 
   var resetSession = function () {
     Session.set(IN_SIGNUP_FLOW_KEY, false);
+    Session.set(IN_FORGOT_PASSWORD_FLOW_KEY, false);
     Session.set(DROPDOWN_VISIBLE_KEY, false);
+    resetMessages();
+  };
+
+  var resetMessages = function () {
     Session.set(ERROR_MESSAGE_KEY, null);
+    Session.set(INFO_MESSAGE_KEY, null);
   };
 
 
@@ -89,14 +98,16 @@
       loginOrSignup();
     },
     'click #signup-link': function () {
-      Session.set(ERROR_MESSAGE_KEY, null);
+      resetMessages();
       Session.set(IN_SIGNUP_FLOW_KEY, true);
+      Session.set(IN_FORGOT_PASSWORD_FLOW_KEY, false);
+    },
+    'click #forgot-password-link': function () {
+      resetMessages();
+      Session.set(IN_SIGNUP_FLOW_KEY, false);
+      Session.set(IN_FORGOT_PASSWORD_FLOW_KEY, true);
     },
     'keypress #login-username,#login-password,#login-password-again': function (event) {
-      if (event.keyCode === 13)
-        loginOrSignup();
-    },
-    'keypress #login-password-again': function (event) {
       if (event.keyCode === 13)
         loginOrSignup();
     }
@@ -114,17 +125,63 @@
     return getLoginServices().length > 1;
   };
 
+  Template.loginButtonsServicesRow.isForgotPasswordFlow = function () {
+    return Session.get(IN_FORGOT_PASSWORD_FLOW_KEY);
+  };
+
+  //
+  // loginButtonsMessage template
+  //
+
+  Template.loginButtonsMessages.errorMessage = function () {
+    return Session.get(ERROR_MESSAGE_KEY);
+  };
+
+  Template.loginButtonsMessages.infoMessage = function () {
+    return Session.get(INFO_MESSAGE_KEY);
+  };
+
 
   //
   // loginButtonsServicesRowDynamicPart template
   //
 
-  Template.loginButtonsServicesRowDynamicPart.errorMessage = function () {
-    return Session.get(ERROR_MESSAGE_KEY);
+  Template.loginButtonsServicesRowDynamicPart.inLoginFlow = function () {
+    return !Session.get(IN_SIGNUP_FLOW_KEY) && !Session.get(IN_FORGOT_PASSWORD_FLOW_KEY);
   };
 
   Template.loginButtonsServicesRowDynamicPart.inSignupFlow = function () {
     return Session.get(IN_SIGNUP_FLOW_KEY);
+  };
+
+
+  //
+  // forgotPasswordForm template
+  //
+  Template.forgotPasswordForm.events = {
+    'keypress #forgot-password-email': function (event) {
+      if (event.keyCode === 13)
+        forgotPassword();
+    },
+    'click #login-buttons-forgot-password': function () {
+      forgotPassword();
+    }
+  };
+
+  var forgotPassword = function () {
+    resetMessages();
+
+    var email = document.getElementById("forgot-password-email").value;
+    if (email.indexOf('@') !== -1) {
+      Meteor.forgotPassword({email: email}, function (error) {
+        if (error)
+          Session.set(ERROR_MESSAGE_KEY, error.reason);
+        else
+          Session.set(INFO_MESSAGE_KEY, "Email sent");
+      });
+    } else {
+      Session.set(ERROR_MESSAGE_KEY, "Invalid email");
+    }
   };
 
 
@@ -162,10 +219,52 @@
 
 
   //
+  // resetPasswordForm template
+  //
+
+  Template.resetPasswordForm.events = {
+    'click #reset-password-button': function () {
+      resetPassword();
+    },
+    'keypress #reset-password-new-password': function (event) {
+      if (event.keyCode === 13)
+        resetPassword();
+    }
+  };
+
+  var resetPassword = function () {
+    resetMessages();
+    var newPassword = document.getElementById('reset-password-new-password').value;
+    if (!validatePassword(newPassword))
+      return;
+
+    Meteor.resetPassword(
+      Session.get(RESET_PASSWORD_TOKEN_KEY), newPassword,
+      function (error) {
+        if (error) {
+          Session.set(ERROR_MESSAGE_KEY, error.reason);
+        } else {
+          Session.set(RESET_PASSWORD_TOKEN_KEY, null);
+          Meteor.accounts._preventAutoLogin = false;
+        }
+      });
+  };
+
+  Template.resetPasswordForm.inResetPasswordFlow = function () {
+    return Session.get(RESET_PASSWORD_TOKEN_KEY);
+  };
+
+  if (Meteor.accounts._resetPasswordToken) {
+    Session.set(RESET_PASSWORD_TOKEN_KEY, Meteor.accounts._resetPasswordToken);
+  }
+
+
+  //
   // helpers
   //
 
   var login = function () {
+    resetMessages();
     var username = document.getElementById('login-username').value;
     var password = document.getElementById('login-password').value;
 
@@ -177,25 +276,26 @@
   };
 
   var signup = function () {
+    resetMessages();
     var username = document.getElementById('login-username').value;
     var password = document.getElementById('login-password').value;
     var passwordAgain = document.getElementById('login-password-again').value;
 
     // XXX these will become configurable, and will be validated on
     // the server as well.
-    if (username.length < 3) {
-      Session.set(ERROR_MESSAGE_KEY, "Username must be at least 3 characters long");
-    } else if (password.length < 6) {
-      Session.set(ERROR_MESSAGE_KEY, "Password must be at least 6 characters long");
-    } else if (password !== passwordAgain) {
+    if (!validateUsername(username) || !validatePassword(password))
+      return;
+
+    if (password !== passwordAgain) {
       Session.set(ERROR_MESSAGE_KEY, "Passwords don't match");
-    } else {
-      Meteor.createUser({username: username, password: password}, function (error) {
-        if (error) {
-          Session.set(ERROR_MESSAGE_KEY, error.reason);
-        }
-      });
+      return;
     }
+
+    Meteor.createUser({username: username, password: password}, function (error) {
+      if (error) {
+        Session.set(ERROR_MESSAGE_KEY, error.reason);
+      }
+    });
   };
 
   var loginOrSignup = function () {
@@ -223,4 +323,24 @@
 
     return ret;
   };
+
+
+  // XXX improve these? should this be in accounts-passwords instead?
+  var validateUsername = function (username) {
+    if (username.length >= 3) {
+      return true;
+    } else {
+      Session.set(ERROR_MESSAGE_KEY, "Username must be at least 3 characters long");
+      return false;
+    }
+  };
+  var validatePassword = function (password) {
+    if (password.length >= 6) {
+      return true;
+    } else {
+      Session.set(ERROR_MESSAGE_KEY, "Password must be at least 6 characters long");
+      return false;
+    }
+  };
 })();
+

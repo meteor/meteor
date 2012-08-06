@@ -15,7 +15,9 @@
     margin-left: 4px;
 }
 
-#login-buttons .login-button {
+@login-buttons-accounts-dialog-width: 158px;
+
+#login-buttons .login-button, .accounts-dialog .login-button {
     float: left;
     cursor: pointer;
     padding: 1px 4px;
@@ -43,7 +45,7 @@
     margin-left: 5px; /* so that other elements aren't too close */
 }
 
-#login-dropdown-list .login-button {
+.accounts-dialog .login-button {
     width: 158px;
     margin-bottom: 4px;
 }
@@ -80,23 +82,12 @@
     clear: right;
 }
 
-#login-dropdown-list {
-    position: absolute;
+@login-buttons-accounts-dialog-padding-left: 8px;
+
+.accounts-dialog {
     border: 1px solid black;
     z-index: 1000;
-    width: 167px;
-    right: 0px;
-    top: 0px;
     background: white;
-
-    margin-top: -5px;
-    padding-top: 4px; /* = border-width - margin-top */
-
-    margin-right: -8px;
-    padding-right: 8px; /* = -margin-right */
-
-    padding-left: 8px;
-    padding-bottom: 8px;
 
     -moz-box-shadow:    -2px 3px 3px 1px rgba(0, 0, 0, 0.3);
     -webkit-box-shadow: -2px 3px 3px 1px rgba(0, 0, 0, 0.3);
@@ -105,6 +96,23 @@
     -moz-border-radius: 3px;
     -webkit-border-radius: 3px;
     border-radius: 3px;
+
+    margin-top: -5px;
+    padding-top: 4px; /* = border-width - margin-top */
+
+    margin-right: -8px;
+    padding-right: 8px; /* = -margin-right */
+
+    padding-left: @login-buttons-accounts-dialog-padding-left;
+    padding-bottom: 8px;
+
+    width: 167px;
+}
+
+#login-dropdown-list {
+    position: absolute;
+    right: 0px;
+    top: 0px;
 }
 
 #login-buttons .hline {
@@ -123,26 +131,66 @@
     font-weight: bold;
 }
 
-#login-buttons label {
+.accounts-dialog label {
     font-weight: bold;
     font-size: 80%;
 }
 
-#login-buttons .login-password-form input {
+.accounts-dialog input {
     width: 162px;
 }
 
-#login-buttons #login-buttons-password {
+.accounts-dialog .login-button-form-submit {
     margin-top: 8px;
 }
 
-#login-buttons .error-message {
-    color: red;
+.accounts-dialog .message {
     font-size: 80%;
     margin-top: 2px;
 }
 
+.accounts-dialog .error-message {
+    color: red;
+}
+
+.accounts-dialog .info-message {
+    color: green;
+}
+
+#login-buttons .additional-link {
+    font-size: 60%;
+}
+
 #login-buttons #signup-link {
     float: right;
-    font-size: 70%;
+}
+
+#login-buttons #forgot-password-link {
+    float: left;
+}
+
+#reset-password-form {
+    z-index: 1000;
+    position: fixed;
+
+    left: 50%;
+    margin-left: -(@login-buttons-accounts-dialog-width
+                 + @login-buttons-accounts-dialog-padding-left) / 2;
+
+    top: 50%;
+    margin-top: -40px; /* = approximately -height/2, though height can change */
+}
+
+.hide-background {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 999;
+
+    /* XXX consider replacing with DXImageTransform */
+    background-color: rgb(0.2, 0.2, 0.2); /* fallback for IE7-8 */
+
+    background-color: rgba(0, 0, 0, 0.7);
 }

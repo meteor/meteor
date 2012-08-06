@@ -66,23 +66,28 @@ Meteor.loginWithToken = function (token, errorCallback) {
   });
 };
 
-// Immediately try to log in via local storage, so that any DDP
-// messages are sent after we have established our user account
-var token = Meteor.accounts.storedLoginToken();
-if (token) {
-  // On startup, optimistically present us as logged in while the
-  // request is in flight. This reduces page flicker on startup.
-  var userId = Meteor.accounts.storedUserId();
-  userId && Meteor.default_connection.setUserId(userId);
-  Meteor.loginWithToken(token, function () {
-    Meteor.accounts.makeClientLoggedOut();
-  });
+if (!Meteor.accounts._preventAutoLogin) {
+  // Immediately try to log in via local storage, so that any DDP
+  // messages are sent after we have established our user account
+  var token = Meteor.accounts.storedLoginToken();
+  if (token) {
+    // On startup, optimistically present us as logged in while the
+    // request is in flight. This reduces page flicker on startup.
+    var userId = Meteor.accounts.storedUserId();
+    userId && Meteor.default_connection.setUserId(userId);
+    Meteor.loginWithToken(token, function () {
+      Meteor.accounts.makeClientLoggedOut();
+    });
+  }
 }
 
 // Poll local storage every 3 seconds to login if someone logged in in
 // another tab
 Meteor.accounts._lastLoginTokenWhenPolled = token;
 setInterval(function() {
+  if (Meteor.accounts._preventAutoLogin)
+    return;
+
   var currentLoginToken = Meteor.accounts.storedLoginToken();
 
   // != instead of !== just to make sure undefined and null are treated the same
@@ -94,4 +99,3 @@ setInterval(function() {
   }
   Meteor.accounts._lastLoginTokenWhenPolled = currentLoginToken;
 }, 3000);
-

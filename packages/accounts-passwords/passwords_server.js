@@ -137,6 +137,51 @@
       var loginToken = Meteor.accounts._loginTokens.insert({userId: userId});
       this.setUserId(userId);
       return {token: loginToken, id: userId};
+    },
+
+    forgotPassword: function (options) {
+      var email = options.email;
+      var baseUrl = options.baseUrl;
+      if (!email)
+        throw new Meteor.Error(400, "Need to set options.email");
+      if (!baseUrl)
+        throw new Meteor.Error(400, "Need to set options.baseUrl");
+
+      var user = Meteor.users.findOne({emails: email});
+      if (!user)
+        throw new Meteor.Error(403, "User not found");
+
+      var token = Meteor.uuid();
+      var creationTime = +(new Date);
+      Meteor.users.update(user._id, {$set: {
+        "services.password.reset": {
+          token: token,
+          creationTime: creationTime
+        }
+      }});
+
+      // XXX definitely *not* the final form!
+      Meteor.mail.send(email, Meteor.accounts.urls.resetPassword(baseUrl, token));
+    },
+
+    resetPassword: function (token, newVerifier) {
+      if (!token)
+        throw new Meteor.Error(400, "Need to pass token");
+      if (!newVerifier)
+        throw new Meteor.Error(400, "Need to pass newVerifier");
+
+      var user = Meteor.users.findOne({"services.password.reset.token": token});
+      if (!user)
+        throw new Meteor.Error(403, "Reset password link expired");
+
+      Meteor.users.update({_id: user._id}, {
+        $set: {'services.password.srp': newVerifier},
+        $unset: {'services.password.reset': 1}
+      });
+
+      var loginToken = Meteor.accounts._loginTokens.insert({userId: user._id});
+      this.setUserId(user._id);
+      return {token: loginToken, id: user._id};
     }
   });
 
@@ -199,3 +244,10 @@
   });
 
 })();
+
+
+Meteor.mail = {};
+Meteor.mail.send = function() {
+  console.log("Send mail:");
+  console.log(arguments);
+};
