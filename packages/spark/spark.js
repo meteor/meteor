@@ -93,7 +93,7 @@ Spark._Renderer = function () {
   this.currentBranch = this.newLabelStack();
 
   // All landmark ranges created during this rendering.
-  this.landmarks = [];
+  this.landmarkRanges = [];
 
   // Assembles the preservation information for patching.
   this.pc = new PreservationController;
@@ -253,13 +253,13 @@ var materialize = function (html, renderer) {
 // newly rendered fragment must be on the screen (if it doesn't want
 // to get garbage-collected.)
 //
-// 'landmarks' is a list of the landmark ranges in 'frag'. It may be
+// 'landmarkRanges' is a list of the landmark ranges in 'frag'. It may be
 // omitted if frag doesn't contain any landmarks.
 //
 // XXX expose in the public API, eg as Spark.introduce(), so the user
 // can call it when manually inserting nodes? (via, eg, jQuery?) -- of
-// course in that case 'landmarks' would be empty.
-var scheduleOnscreenSetup = function (frag, landmarks) {
+// course in that case 'landmarkRanges' would be empty.
+var scheduleOnscreenSetup = function (frag, landmarkRanges) {
   var renderedRange = new LiveRange(Spark._TAG, frag);
   var finalized = false;
   renderedRange.finalize = function () {
@@ -299,8 +299,8 @@ var scheduleOnscreenSetup = function (frag, landmarks) {
     //
     // XXX should bubble up and notify parent landmarks too? for all
     // the same reasons we need to do it for node preservation?
-    _.each(landmarks, function (landmark) {
-      landmark.renderCallback.call(landmark.state);
+    _.each(landmarkRanges, function (landmarkRange) {
+      landmarkRange.renderCallback.call(landmarkRange.landmark);
     });
 
     // This code can run several times on the same nodes (if the
@@ -319,7 +319,7 @@ Spark.render = function (htmlFunc) {
   var html = Spark._currentRenderer.withValue(renderer, htmlFunc);
   var frag = materialize(html, renderer);
 
-  scheduleOnscreenSetup(frag, renderer.landmarks);
+  scheduleOnscreenSetup(frag, renderer.landmarkRanges);
 
   return frag;
 };
@@ -341,7 +341,7 @@ Spark.render = function (htmlFunc) {
 // the document DOM tree.  The implementation will temporarily reparent
 // the nodes in `newRange` into the document to check for selector matches.
 var PreservationController = function () {
-  this.roots = []; // keys 'landmark', 'fromRange', 'toRange'
+  this.roots = []; // keys 'landmarkRange', 'fromRange', 'toRange'
   this.regionPreservations = [];
 };
 
@@ -451,13 +451,13 @@ Spark.renderToRange = function (range, htmlFunc) {
   };
 
   // Find all of the landmarks in the old contents of the range
-  visitLandmarksInRange(range, function (landmark, notes) {
-    notes.original = landmark;
+  visitLandmarksInRange(range, function (landmarkRange, notes) {
+    notes.originalRange = landmarkRange;
   });
 
   var html = Spark._currentRenderer.withValue(renderer, htmlFunc);
   var frag = materialize(html, renderer);
-  scheduleOnscreenSetup(frag, renderer.landmarks);
+  scheduleOnscreenSetup(frag, renderer.landmarkRanges);
 
   DomUtils.wrapFragmentForContainer(frag, range.containerNode());
 
@@ -467,13 +467,14 @@ Spark.renderToRange = function (range, htmlFunc) {
   // rerendered region
   var pc = renderer.pc;
   visitLandmarksInRange(
-    tempRange, function (landmark, notes) {
-      if (notes.original) {
-        if (landmark.constant)
-          pc.addConstantRegion(notes.original, landmark);
+    tempRange, function (landmarkRange, notes) {
+      if (notes.originalRange) {
+        if (landmarkRange.constant)
+          pc.addConstantRegion(notes.originalRange, landmarkRange);
 
-        pc.addRoot(notes.original.containerNode(), landmark.preserve,
-                   notes.original, landmark);
+        pc.addRoot(notes.originalRange.containerNode(),
+                   landmarkRange.preserve,
+                   notes.originalRange, landmarkRange);
       }
     });
 
@@ -901,20 +902,15 @@ Spark.createLandmark = withRenderer(function (options, html, _renderer) {
       preserve[selector] = function () { return true; };
 
   var notes = _renderer.currentBranch.getNotes();
-  // XXX 'state' has gotten to be a bad name for this variable
-  var state;
-  if (notes.original && ! notes.original.superceded) {
-    notes.original.superceded = true; // prevent destroy(), second match
-    state = notes.original.state; // the old state
+  var landmark;
+  if (notes.originalRange && ! notes.originalRange.superceded) {
+    notes.originalRange.superceded = true; // prevent destroy(), second match
+    landmark = notes.originalRange.landmark; // the old Landmark
   } else {
-    state = null;
+    landmark = new Spark.Landmark;
+    options.create && options.create.call(landmark);
   }
-
-  if (state === null) {
-    state = new Spark.Landmark;
-    options.create && options.create.call(state);
-  }
-  notes.current = state;
+  notes.landmark = landmark;
 
   return _renderer.annotate(
     html, Spark._ANNOTATION_LANDMARK, function (range) {
@@ -923,22 +919,22 @@ Spark.createLandmark = withRenderer(function (options, html, _renderer) {
         constant: !! options.constant,
         renderCallback: options.render || function () {},
         destroyCallback: options.destroy || function () {},
-        state: state,
+        landmark: landmark,
         finalize: function () {
           if (! this.superceded)
-            this.destroyCallback.call(this.state);
+            this.destroyCallback.call(this.landmark);
         }
       });
 
-      state._range = range;
-      _renderer.landmarks.push(range);
+      landmark._range = range;
+      _renderer.landmarkRanges.push(range);
     });
 
   // XXX need to arrange for destroyCallback to be called if the
   // returned html is never materialized..
 });
 
-// Call during rendering to get the (state object for) the landmark
+// Call during rendering to get the landmark
 // with the current branch path (as determined by the
 // Spark.labelBranch calls on the stack), or null if createLandmark()
 // has not yet been called with this branch path during this render.
@@ -947,13 +943,13 @@ Spark.getCurrentLandmark = function () {
   if (! renderer)
     throw new Error("Only available during rendering");
   var notes = renderer.currentBranch.getNotes();
-  return notes.current || null;
+  return notes.landmark || null;
 };
 
 
 Spark.getEnclosingLandmark = function (node) {
   var range = findRangeOfType(Spark._ANNOTATION_LANDMARK, node);
-  return range ? range.state : null;
+  return range ? range.landmark : null;
 };
 
 })();
