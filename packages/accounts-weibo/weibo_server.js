@@ -23,11 +23,11 @@
         services: {
           weibo: {
             id: result.uid,
-            accessToken: result.accessToken,
-            screenName: identity.screen_name
+            accessToken: result.accessToken
           }
         }
-      }
+      },
+      extra: {name: identity.screen_name}
     };
   });
 
