@@ -73,30 +73,27 @@ var notifyWatchers = function (start, end) {
   tempRange.destroy();
 };
 
-Spark._Renderer = function (getLandmarkState) {
+Spark._Renderer = function () {
   // Map from annotation ID to an annotation function, which is called
   // at render time and receives (startNode, endNode).
   this.annotations = {};
 
-  // A map of landmarks, organized by branch path in a tree.
-  // XXX document better (see visitLandmarkTree)
-  this.landmarkTree = {};
+  // Map from branch path to "notes" object, organized as a tree.
+  // Each node in the tree has child pointers named ('_'+label).
+  // Properties that don't start with '_' are arbitrary notes.
+  // For example, the "happiness" of the branch path consisting
+  // of labels "foo" and then "bar" would be
+  // `this._branchNotes._foo._bar.happiness`.
+  // Access to these notes is provided by LabelStack objects, of
+  // which `this.currentBranch` is one.
+  this._branchNotes = {};
 
-  // Array of pointers into this.landmarkTree for
-  // visitLandmarkTree-style traversal of landmarks as rendering is
-  // happening (XXX document better)
-  this.labelStack = [this.landmarkTree];
+  // The label stack representing the current branch path we
+  // are in (based on calls to `Spark.labelBranch(label, htmlFunc)`).
+  this.currentBranch = this.newLabelStack();
 
   // All landmark ranges created during this rendering.
   this.landmarks = [];
-
-  // Function to call when a landmark is encountered during rendering
-  // (that is, when createLandmark is called) to get the state object
-  // for that landmark (from a previous version of the landmark.) Or
-  // return null if the landmark is new and a new state object should
-  // be created.
-  // XXX document better
-  this.getLandmarkState = getLandmarkState || function () { return null; };
 
   // Assembles the preservation information for patching.
   this.pc = new PreservationController;
@@ -136,6 +133,30 @@ _.extend(Spark._Renderer.prototype, {
     };
 
     return "<$" + id + ">" + html + "</$" + id + ">";
+  },
+
+  // A LabelStack is a mutable branch path that you can modify
+  // by pushing or popping labels.  At any time, you can ask for
+  // this Renderer's notes for the current branch path.
+  // Renderer's `currentBranch` field is a LabelStack, but you
+  // can create your own for the purpose of walking the branches
+  // and accessing notes.
+  newLabelStack: function () {
+    var stack = [this._branchNotes];
+    return {
+      pushLabel: function (label) {
+        var top = stack[stack.length - 1];
+        var key = '_' + label;
+        stack.push(top[key] = (top[key] || {}));
+      },
+      popLabel: function () {
+        stack.pop();
+      },
+      getNotes: function () {
+        var top = stack[stack.length - 1];
+        return top;
+      }
+    };
   }
 });
 
@@ -407,20 +428,31 @@ _.extend(PreservationController.prototype, {
 // `range` is a region of `document`. Modify it in-place so that it
 // matches the result of Spark.render(htmlFunc), preserving landmarks.
 Spark.renderToRange = function (range, htmlFunc) {
-  var getLandmarkState = function () {
-    var node = renderer.labelStack[this.labelStack.length - 1];
+  var renderer = new Spark._Renderer();
 
-    if (node.original && ! node.original.superceded) {
-      node.original.superceded = true; // prevent destroy(), second match
-      return node.original.state; // the old state
-    } else
-      return null;
+  // Call 'func' for each landmark in 'range'. Pass two arguments to
+  // 'func', the range, and an extra "notes" object such that two
+  // landmarks receive the same (===) notes object iff they have the
+  // same branch path. 'func' can write to the notes object so long as
+  // it limits itself to attributes that do not start with '_'.
+  var visitLandmarksInRange = function (range, func) {
+    var stack = renderer.newLabelStack();
+
+    range.visit(function (isStart, r) {
+      if (r.type === Spark._ANNOTATION_LABEL) {
+        if (isStart)
+          stack.pushLabel(r.label);
+        else
+          stack.popLabel();
+      } else if (r.type === Spark._ANNOTATION_LANDMARK && isStart) {
+        func(r, stack.getNotes());
+      }
+    });
   };
-  var renderer = new Spark._Renderer(getLandmarkState);
 
   // Find all of the landmarks in the old contents of the range
-  visitLandmarkTree(renderer.landmarkTree, range, function (landmark, node) {
-    node.original = landmark;
+  visitLandmarksInRange(range, function (landmark, notes) {
+    notes.original = landmark;
   });
 
   var html = Spark._currentRenderer.withValue(renderer, htmlFunc);
@@ -434,14 +466,14 @@ Spark.renderToRange = function (range, htmlFunc) {
   // find preservation roots from matched landmarks inside the
   // rerendered region
   var pc = renderer.pc;
-  visitLandmarkTree(
-    renderer.landmarkTree, tempRange, function (landmark, node) {
-      if (node.original) {
+  visitLandmarksInRange(
+    tempRange, function (landmark, notes) {
+      if (notes.original) {
         if (landmark.constant)
-          pc.addConstantRegion(node.original, landmark);
+          pc.addConstantRegion(notes.original, landmark);
 
-        pc.addRoot(node.original.containerNode(), landmark.preserve,
-                   node.original, landmark);
+        pc.addRoot(notes.original.containerNode(), landmark.preserve,
+                   notes.original, landmark);
       }
     });
 
@@ -834,12 +866,9 @@ Spark.labelBranch = function (label, htmlFunc) {
   if (! renderer || label === null)
     return htmlFunc();
 
-  var stack = renderer.labelStack;
-  var top = stack[stack.length - 1];
-  var key = '_' + label;
-  stack.push(top[key] = (top[key] || {}));
+  renderer.currentBranch.pushLabel(label);
   var html = htmlFunc();
-  stack.pop();
+  renderer.currentBranch.popLabel();
 
   return renderer.annotate(
     html, Spark._ANNOTATION_LABEL, { label: label });
@@ -871,14 +900,21 @@ Spark.createLandmark = withRenderer(function (options, html, _renderer) {
     if (typeof preserve[selector] !== 'function')
       preserve[selector] = function () { return true; };
 
+  var notes = _renderer.currentBranch.getNotes();
   // XXX 'state' has gotten to be a bad name for this variable
-  var state = _renderer.getLandmarkState();
+  var state;
+  if (notes.original && ! notes.original.superceded) {
+    notes.original.superceded = true; // prevent destroy(), second match
+    state = notes.original.state; // the old state
+  } else {
+    state = null;
+  }
+
   if (state === null) {
     state = new Spark.Landmark;
     options.create && options.create.call(state);
   }
-  var top = _renderer.labelStack[_renderer.labelStack.length - 1];
-  top.current = state;
+  notes.current = state;
 
   return _renderer.annotate(
     html, Spark._ANNOTATION_LANDMARK, function (range) {
@@ -910,37 +946,14 @@ Spark.getCurrentLandmark = function () {
   var renderer = Spark._currentRenderer.get();
   if (! renderer)
     throw new Error("Only available during rendering");
-  var top = renderer.labelStack[renderer.labelStack.length - 1];
-  return top.current || null;
+  var notes = renderer.currentBranch.getNotes();
+  return notes.current || null;
 };
 
 
 Spark.getEnclosingLandmark = function (node) {
   var range = findRangeOfType(Spark._ANNOTATION_LANDMARK, node);
   return range ? range.state : null;
-};
-
-// XXX could use docs, better name
-var visitLandmarkTree = function (tree, range, func) {
-  // Call 'func' for each landmark in 'range'. Pass two arguments to
-  // 'func', the range, and an extra "notes" object such that two
-  // landmarks receive the same (===) notes object iff they have the
-  // same branch path. 'func' can write to the notes object so long as
-  // it limits itself to attributes that do not start with '_'.
-  var stack = [tree];
-
-  range.visit(function (isStart, r) {
-    var top = stack[stack.length - 1];
-
-    if (r.type === Spark._ANNOTATION_LABEL) {
-      if (isStart) {
-        var key = '_' + r.label;
-        stack.push(top[key] = (top[key] || {}));
-      } else
-        stack.pop();
-    } else if (r.type === Spark._ANNOTATION_LANDMARK && isStart)
-      func(r, top);
-  });
 };
 
 })();
