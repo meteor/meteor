@@ -3084,6 +3084,52 @@ Tinytest.add("spark - getCurrentLandmark", function (test) {
   test.equal(callbacks, 8);
 });
 
+Tinytest.add("spark - find/findAll on landmark", function (test) {
+  var l1, l2;
+  var R = ReactiveVar(1);
+
+  var d = OnscreenDiv(Spark.render(function () {
+    return "<div id=1>k</div><div id=2>" + Spark.labelBranch("a", function () {
+      var inner = Spark.labelBranch("b", function () {
+        return Spark.isolate(function () {
+          R.get();
+          return Spark.createLandmark({
+            create: function () {
+              test.instanceOf(this, Spark.Landmark);
+              if (l2)
+                test.equal(l2, this);
+              l2 = this;
+            }
+          }, "<span class='b' id=4>b4</span><span class='b' id=6>b6</span>");
+        });
+      });
+      var html =
+        Spark.createLandmark({
+          create: function () {
+            test.instanceOf(this, Spark.Landmark);
+            if (l1)
+              test.equal(l1, this);
+            l1 = this;
+          }
+        }, "<span class='a' id=3>a" + inner + "</span>");
+      return html;
+    }) + "<span class='c' id=5>c</span></div>";
+  }));
+
+  var ids = function (nodes) {
+    if (nodes instanceof Array)
+      nodes = [nodes];
+    return _.pluck(nodes, 'id').join('');
+  };
+
+  test.equal(ids(l1.find('.kitten')), '');
+  test.equal(ids(l2.find('.kitten')), '');
+
+//  test.equal(ids(l1.find('.a')), '3');
+//  test.equal(ids(l2.find('.a')), '');
+  // XXX work in progress
+});
+
 
 
 

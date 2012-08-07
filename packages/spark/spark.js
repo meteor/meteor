@@ -18,6 +18,10 @@
 // path, or if you have multiple preserve nodes in a landmark with the
 // same selector and label
 
+// getCurrentLandmark always searches up
+
+// getCurrentLandmark creates a dummy renderer if there isn't one
+
 (function() {
 
 Spark = {};
@@ -802,6 +806,26 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
 /* Labels and landmarks                                                       */
 /******************************************************************************/
 
+var nextLandmarkId = 1;
+
+Spark.Landmark = function () {
+  this.id = nextLandmarkId++;
+  this._range = null; // will be set when put onscreen
+};
+
+_.extend(Spark.Landmark.prototype, {
+  find: function (selector) {
+    var r = this._range;
+    return DomUtils.findClipped(r.containerNode(), selector,
+                                r.firstNode(), r.lastNode());
+  },
+  findAll: function (selector) {
+    var r = this._range;
+    return DomUtils.findAllClipped(r.containerNode(), selector,
+                                   r.firstNode(), r.lastNode());
+  }
+});
+
 // label must be a string.
 // or pass label === null to not drop a label after all (meaning that
 // this function is a noop)
@@ -847,9 +871,10 @@ Spark.createLandmark = withRenderer(function (options, html, _renderer) {
     if (typeof preserve[selector] !== 'function')
       preserve[selector] = function () { return true; };
 
+  // XXX 'state' has gotten to be a bad name for this variable
   var state = _renderer.getLandmarkState();
   if (state === null) {
-    state = {};
+    state = new Spark.Landmark;
     options.create && options.create.call(state);
   }
   var top = _renderer.labelStack[_renderer.labelStack.length - 1];
@@ -869,6 +894,7 @@ Spark.createLandmark = withRenderer(function (options, html, _renderer) {
         }
       });
 
+      state._range = range;
       _renderer.landmarks.push(range);
     });
 
