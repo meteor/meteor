@@ -21,8 +21,8 @@ var frag = function (html) {
 var dump = function (what, tag) {
   var ret = "";
 
-  var emit = function (is_start, obj) {
-    ret += (is_start ? "<": "</") + obj.id + ">";
+  var emit = function (isStart, obj) {
+    ret += (isStart ? "<": "</") + obj.id + ">";
   };
 
   if (typeof what === 'object' && what.nodeType === 11 /* DocumentFragment */) {
@@ -58,8 +58,8 @@ var contained_ranges = function (range) {
   var result = {range: range, children: []};
   var stack = [result];
 
-  range.visit(function (is_start, range) {
-    if (is_start) {
+  range.visit(function (isStart, range) {
+    if (isStart) {
       var record = {range: range, children: []};
       stack[stack.length - 1].children.push(record);
       stack.push(record);
@@ -108,14 +108,14 @@ Tinytest.add("liverange - single node", function (test) {
   test.equal(r_b.firstNode(), f.firstChild);
   test.equal(r_b.lastNode(), f.lastChild);
 
-  var ret1 = r_a.replace_contents(frag("<div id=2></div>"), true);
+  var ret1 = r_a.replaceContents(frag("<div id=2></div>"), true);
   test.equal(ret1.nodeType, 11 /* DocumentFragment */);
   assert_dump(test, "<1></1>", ret1);
   assert_dump(test, "<a><2></2></a>", r_a);
   assert_dump(test, "<b><a><2></2></a></b>", r_b);
   assert_dump(test, "<b><a><2></2></a></b>", f);
 
-  var ret2 = r_b.replace_contents(frag("<div id=3></div>"), true);
+  var ret2 = r_b.replaceContents(frag("<div id=3></div>"), true);
   assert_dump(test, "<a><2></2></a>", ret2);
   assert_dump(test, "<a><2></2></a>", r_a);
   assert_dump(test, "<b><3></3></b>", r_b);
@@ -166,14 +166,14 @@ Tinytest.add("liverange - empty replace", function (test) {
   f = frag("<div id=1></div>");
   r = create("z", f);
   test.throws(function() {
-    r.replace_contents(frag(""));
+    r.replaceContents(frag(""));
   });
 
   f = frag("<div id=1></div><div id=2></div><div id=3></div>");
   r = create("z", f.childNodes[1]);
   assert_dump(test, "<1></1><z><2></2></z><3></3>", f);
   test.throws(function() {
-    r.replace_contents(frag(""));
+    r.replaceContents(frag(""));
   });
 });
 
@@ -261,7 +261,7 @@ Tinytest.add("liverange - multiple nodes", function (test) {
   var r_o = create("o", f3.childNodes[0], f3.childNodes[0]);
   assert_dump(test, "<m><o><n><9></9></n></o><10></10><11></11></m>", f3);
 
-  var ret1 = r_i.replace_contents(f3, true);
+  var ret1 = r_i.replaceContents(f3, true);
   assert_dump(test, "", f3);
   assert_dump(test, "<2></2><f><c><a><e><3></3></e><d><b><4></4></b></d></a></c></f>", ret1);
   assert_dump(test, "<l><k><6></6><j><7><h><g><1></1><i><m><o><n><9></9></n></o><10></10><11></11></m></i></g></h><5></5></7><8></8></j></k></l>", f2);
@@ -512,12 +512,12 @@ var makeTestPattern = function(codedStr) {
   self.currentString = function() {
     var buf = [];
     var tempRange = new LiveRange(self.tag, self.frag);
-    tempRange.visit(function(is_start, range) {
-      buf.push(is_start ?
+    tempRange.visit(function(isStart, range) {
+      buf.push(isStart ?
                range.letter.toUpperCase() :
                range.letter.toLowerCase());
-    }, function(is_start, node) {
-      buf.push(is_start ? '[' : ']');
+    }, function(isStart, node) {
+      buf.push(isStart ? '[' : ']');
     });
     tempRange.destroy();
 
@@ -617,8 +617,8 @@ Tinytest.add("liverange - destroy", function(test) {
   rng4.destroy(true);
   // check that outer ranges are still there
   var buf = [];
-  rng1.visit(function(is_start, r) {
-    buf.push([is_start, r.num]);
+  rng1.visit(function(isStart, r) {
+    buf.push([isStart, r.num]);
   });
   test.equal(buf, [[true, 2], [true, 3], [false, 3], [false, 2]]);
 });

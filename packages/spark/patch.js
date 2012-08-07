@@ -2,7 +2,7 @@
 Spark._patch = function(tgtParent, srcParent, tgtBefore, tgtAfter, preservations) {
 
   var copyFunc = function(t, s) {
-    LiveRange.transplant_tag(Spark._TAG, t, s);
+    LiveRange.transplantTag(Spark._TAG, t, s);
   };
 
   var patcher = new Spark._Patcher(
@@ -44,7 +44,7 @@ Spark._patch = function(tgtParent, srcParent, tgtBefore, tgtAfter, preservations
             // without knowing or caring what DOM nodes are in pres.newRange,
             // transplant the range data to pres.fromStart and pres.fromEnd
             // (including references to enclosing ranges).
-            LiveRange.transplant_range(
+            LiveRange.transplantRange(
               pres.fromStart, pres.fromEnd, pres.newRange);
           }
         } else if (pres.type === 'node') {

@@ -372,10 +372,10 @@ _.extend(PreservationController.prototype, {
     var tempRange = new LiveRange(Spark._TAG, newRange.firstNode(), newRange.lastNode());
     var commentFrag = document.createDocumentFragment();
     commentFrag.appendChild(document.createComment(""));
-    var newRangeFrag = tempRange.replace_contents(commentFrag);
+    var newRangeFrag = tempRange.replaceContents(commentFrag);
     // `wrapperRange` will mark where we inserted newRange into the document.
     var wrapperRange = new LiveRange(Spark._TAG, newRangeFrag);
-    existingRange.insert_before(newRangeFrag);
+    existingRange.insertBefore(newRangeFrag);
 
     _.each(self.roots, function (root) {
       _.each(root.preserve, function (nodeLabeler, selector) {
@@ -393,7 +393,7 @@ _.extend(PreservationController.prototype, {
     // back to the state it was in before insertBefore.
     var extractedFrag = wrapperRange.extract();
     wrapperRange.destroy();
-    tempRange.replace_contents(extractedFrag);
+    tempRange.replaceContents(extractedFrag);
     tempRange.destroy();
 
     return preservations;
@@ -728,7 +728,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
     var replaceWithElse = function () {
       var frag = Spark.render(elseFunc);
       DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
-      Spark.finalize(outerRange.replace_contents(frag));
+      Spark.finalize(outerRange.replaceContents(frag));
     };
 
     // Decorator. If we're rendering the list for the first time, call
@@ -754,11 +754,11 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
         var range = new LiveRange(Spark._TAG, frag);
 
         if (! itemRanges.length) {
-          Spark.finalize(outerRange.replace_contents(frag));
+          Spark.finalize(outerRange.replaceContents(frag));
         } else if (beforeIndex === itemRanges.length) {
-          itemRanges[itemRanges.length - 1].insert_after(frag);
+          itemRanges[itemRanges.length - 1].insertAfter(frag);
         } else {
-          itemRanges[beforeIndex].insert_before(frag);
+          itemRanges[beforeIndex].insertBefore(frag);
         }
 
         itemRanges.splice(beforeIndex, 0, range);
@@ -778,9 +778,9 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
         var frag = itemRanges[oldIndex].extract();
         var range = itemRanges.splice(oldIndex, 1)[0];
         if (newIndex === itemRanges.length)
-          itemRanges[itemRanges.length - 1].insert_after(frag);
+          itemRanges[itemRanges.length - 1].insertAfter(frag);
         else
-          itemRanges[newIndex].insert_before(frag);
+          itemRanges[newIndex].insertBefore(frag);
 
         itemRanges.splice(newIndex, 0, range);
       }),

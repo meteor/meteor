@@ -106,7 +106,7 @@ Tinytest.add("spark - patcher - basic", function(test) {
                     tgt.firstNode().previousSibling,
                     tgt.lastNode().nextSibling);
     var copyCallback = function(tgt, src) {
-      LiveRange.transplant_tag(t, tgt, src);
+      LiveRange.transplantTag(t, tgt, src);
     };
     ret = p.match(tag(x, 'u'), tag(y, 'u'), copyCallback);
     test.isTrue(ret);
