@@ -223,12 +223,16 @@
   //
 
   Template.resetPasswordForm.events = {
-    'click #reset-password-button': function () {
+    'click #login-buttons-reset-password-button': function () {
       resetPassword();
     },
-    'keypress #reset-password-new-password': function (event) {
+    'keypress #login-buttons-reset-password-new-password': function (event) {
       if (event.keyCode === 13)
         resetPassword();
+    },
+    'click #login-buttons-cancel-reset-password': function () {
+      Session.set(RESET_PASSWORD_TOKEN_KEY, null);
+      Meteor.accounts._preventAutoLogin = false;
     }
   };
 
