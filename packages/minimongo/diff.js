@@ -4,7 +4,8 @@
 //           'removed' functions (each optional)
 // deepcopy: if true, elements of new_results that are passed to callbacks are
 //          deepcopied first
-LocalCollection._diffQuery = function (old_results, new_results, observer, deepcopy) {
+// ctor:  if deepcopy is true, pass this ctor into it
+LocalCollection._diffQuery = function (old_results, new_results, observer, deepcopy, ctor) {
 
   var new_presence_of_id = {};
   _.each(new_results, function (doc) {
@@ -21,7 +22,14 @@ LocalCollection._diffQuery = function (old_results, new_results, observer, deepc
   });
 
   // "maybe deepcopy"
-  var mdc = (deepcopy ? LocalCollection._deepcopy : _.identity);
+  var mdc;
+  if (deepcopy) {
+    mdc = function(v) { return LocalCollection._deepcopy(v, ctor); };
+  } else if (ctor) {
+    mdc = function(v) { return new ctor(v); };
+  } else {
+    mdc = _.identity;
+  }
 
   // ALGORITHM:
   //
@@ -160,7 +168,7 @@ LocalCollection._diffQuery = function (old_results, new_results, observer, deepc
       var old_doc = old_results[old_idx];
       var is_in_new = new_presence_of_id[old_doc._id];
       if (! is_in_new) {
-        observer.removed && observer.removed(old_doc, new_idx + bump_list.length);
+        observer.removed && observer.removed(mdc(old_doc), new_idx + bump_list.length);
       } else {
         if (taken_list.length >= 1 && taken_list[0] === old_idx) {
           // already moved
@@ -194,7 +202,7 @@ LocalCollection._diffQuery = function (old_results, new_results, observer, deepc
           scan_to(old_doc_idx);
           if (! _.isEqual(old_doc, new_doc)) {
             observer.changed && observer.changed(
-              mdc(new_doc), new_idx + bump_list.length, old_doc);
+              mdc(new_doc), new_idx + bump_list.length, mdc(old_doc));
           }
           old_idx++;
         } else {

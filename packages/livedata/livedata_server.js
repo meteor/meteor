@@ -540,10 +540,18 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
     var observe_handle = cursor.observe({
       added: function (obj) {
+        if (obj && ('_meteorRawData' in obj))
+          obj = obj._meteorRawData();
+        
         self.set(collection, obj._id, obj);
         self.flush();
       },
       changed: function (obj, old_idx, old_obj) {
+        if (obj && ('_meteorRawData' in obj))
+          obj = obj._meteorRawData();
+        if (old_obj && ('_meteorRawData' in old_obj))
+          old_obj = old_obj._meteorRawData();
+      
         var set = {};
         _.each(obj, function (v, k) {
           if (!_.isEqual(v, old_obj[k]))
@@ -555,6 +563,9 @@ _.extend(Meteor._LivedataSubscription.prototype, {
         self.flush();
       },
       removed: function (old_obj, old_idx) {
+        if (old_obj && ('_meteorRawData' in old_obj))
+          old_obj = old_obj._meteorRawData();
+        
         self.unset(collection, old_obj._id, _.keys(old_obj));
         self.flush();
       }

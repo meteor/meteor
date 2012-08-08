@@ -7,7 +7,7 @@
 
 // LiveResultsSet: the return value of a live query.
 
-LocalCollection = function () {
+LocalCollection = function (ctor) {
   this.docs = {}; // _id -> document (also containing id)
 
   this.next_qid = 1; // live query id generator
@@ -24,6 +24,9 @@ LocalCollection = function () {
 
   // True when observers are paused and we should not send callbacks.
   this.paused = false;
+  
+  // Store the constructor to be attached to each object pulled from the db
+  this.ctor = ctor;
 };
 
 // options may include sort, skip, limit, reactive
@@ -110,7 +113,7 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
                           moved: true});
 
   while (self.cursor_pos < self.db_objects.length)
-    callback(LocalCollection._deepcopy(self.db_objects[self.cursor_pos++]));
+    callback(LocalCollection._deepcopy(self.db_objects[self.cursor_pos++], self.collection.ctor));
 };
 
 LocalCollection.Cursor.prototype.map = function (callback) {
@@ -202,8 +205,8 @@ LocalCollection.Cursor.prototype.observe = function (options) {
 
   if (!options._suppress_initial && !self.collection.paused)
     for (var i = 0; i < query.results.length; i++)
-      query.added(LocalCollection._deepcopy(query.results[i]), i);
-
+      query.added(LocalCollection._deepcopy(query.results[i], self.collection.ctor), i);
+  
   var handle = new LocalCollection.LiveResultsSet;
   _.extend(handle, {
     collection: self.collection,
@@ -279,7 +282,7 @@ LocalCollection.prototype.insert = function (doc) {
   for (var qid in self.queries) {
     var query = self.queries[qid];
     if (query.selector_f(doc))
-      LocalCollection._insertInResults(query, doc);
+      LocalCollection._insertInResults(query, doc, self.ctor);
   }
 };
 
@@ -306,7 +309,7 @@ LocalCollection.prototype.remove = function (selector) {
 
   // run live query callbacks _after_ we've removed the documents.
   for (var i = 0; i < query_remove.length; i++) {
-    LocalCollection._removeFromResults(query_remove[i][0], query_remove[i][1]);
+    LocalCollection._removeFromResults(query_remove[i][0], query_remove[i][1], self.ctor);
   }
 };
 
@@ -359,15 +362,18 @@ LocalCollection.prototype._modifyAndNotify = function (doc, mod) {
     if (before && !after)
       LocalCollection._removeFromResults(query, doc);
     else if (!before && after)
-      LocalCollection._insertInResults(query, doc);
+      LocalCollection._insertInResults(query, doc, self.ctor);
     else if (before && after)
-      LocalCollection._updateInResults(query, doc, old_doc);
+      LocalCollection._updateInResults(query, doc, old_doc, self.ctor);
   }
 };
 
 // XXX findandmodify
 
-LocalCollection._deepcopy = function (v) {
+LocalCollection._deepcopy = function (v, ctor) {
+  if (typeof ctor !== 'undefined')
+    return new ctor(LocalCollection._deepcopy(v));
+  
   if (typeof v !== "object")
     return v;
   if (v === null)
@@ -387,25 +393,25 @@ LocalCollection._deepcopy = function (v) {
 // XXX the sorted-query logic below is laughably inefficient. we'll
 // need to come up with a better datastructure for this.
 
-LocalCollection._insertInResults = function (query, doc) {
+LocalCollection._insertInResults = function (query, doc, ctor) {
   if (!query.sort_f) {
-    query.added(LocalCollection._deepcopy(doc), query.results.length);
+    query.added(LocalCollection._deepcopy(doc, ctor), query.results.length);
     query.results.push(doc);
   } else {
     var i = LocalCollection._insertInSortedList(query.sort_f, query.results, doc);
-    query.added(LocalCollection._deepcopy(doc), i);
+    query.added(LocalCollection._deepcopy(doc, ctor), i);
   }
 };
 
-LocalCollection._removeFromResults = function (query, doc) {
+LocalCollection._removeFromResults = function (query, doc, ctor) {
   var i = LocalCollection._findInResults(query, doc);
-  query.removed(doc, i);
+  query.removed(LocalCollection._deepcopy(doc, ctor), i);
   query.results.splice(i, 1);
 };
 
-LocalCollection._updateInResults = function (query, doc, old_doc) {
+LocalCollection._updateInResults = function (query, doc, old_doc, ctor) {
   var orig_idx = LocalCollection._findInResults(query, doc);
-  query.changed(LocalCollection._deepcopy(doc), orig_idx, old_doc);
+  query.changed(LocalCollection._deepcopy(doc, ctor), orig_idx, LocalCollection._deepcopy(old_doc, ctor));
 
   if (!query.sort_f)
     return;
@@ -416,7 +422,7 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
   var new_idx = LocalCollection._insertInSortedList(query.sort_f,
                                                query.results, doc);
   if (orig_idx !== new_idx)
-    query.moved(LocalCollection._deepcopy(doc), orig_idx, new_idx);
+    query.moved(LocalCollection._deepcopy(doc, ctor), orig_idx, new_idx);
 };
 
 LocalCollection._findInResults = function (query, doc) {
@@ -476,7 +482,7 @@ LocalCollection.prototype.restore = function () {
     query.results = query.cursor._getRawObjects();
 
     if (!this.paused)
-      LocalCollection._diffQuery(old_results, query.results, query, true);
+      LocalCollection._diffQuery(old_results, query.results, query, true, this.ctor);
   }
 };
 
@@ -516,7 +522,7 @@ LocalCollection.prototype.resumeObservers = function () {
     var query = this.queries[qid];
     // Diff the current results against the snapshot and send to observers.
     // pass the query object for its observer callbacks.
-    LocalCollection._diffQuery(query.results_snapshot, query.results, query, true);
+    LocalCollection._diffQuery(query.results_snapshot, query.results, query, true, this.ctor);
     query.results_snapshot = null;
   }
 
