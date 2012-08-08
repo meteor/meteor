@@ -36,8 +36,8 @@ var legacyLabels = {
 
 var renderWithLegacyLabels = function (htmlFunc) {
   return Meteor.render(function () {
-    var html = htmlFunc();
-    return Spark.createLandmark({ preserve: legacyLabels }, html);
+    return Spark.createLandmark({ preserve: legacyLabels },
+                                htmlFunc);
   });
 };
 
@@ -1115,7 +1115,7 @@ Tinytest.add("spark - basic landmarks", function (test) {
           destroy: function () {
             x.push("d", this.a);
           }
-        }, "hi");
+        }, function() { return "hi"; });
     });
   }));
 
@@ -1165,7 +1165,6 @@ Tinytest.add("spark - labeled landmarks", function (test) {
 
     var f = function () {
       var thisSerial = serial++;
-      var html = htmlFunc();
 
       return Spark.createLandmark({
         create: function () {
@@ -1183,7 +1182,7 @@ Tinytest.add("spark - labeled landmarks", function (test) {
           s.push(thisSerial);
           test.equal(this.id, id);
         }
-      }, html);
+      }, htmlFunc);
     };
 
     if (isolateLandmarks.get())
@@ -1213,7 +1212,7 @@ Tinytest.add("spark - labeled landmarks", function (test) {
     });
   }));
 
-  expect(["c", 1, "c", 2, "c", 5, "c", 4, "c", 3], [1, 2, 5, 4, 3]);
+  expect(["c", 1, "c", 2, "c", 3, "c", 4, "c", 5], [1, 2, 3, 4, 5]);
   Meteor.flush();
   expect(["r", 1, "r", 2, "r", 5, "r", 4, "r", 3], [1, 2, 5, 4, 3]);
   for (var i = 0; i < 10; i++) {
@@ -1241,8 +1240,8 @@ Tinytest.add("spark - labeled landmarks", function (test) {
   excludeLandmarks[3].set(false);
   expect([], []);
   Meteor.flush();
-  expect(["c", 5, "c", 4, "c", 3, "d", 2, "r", 1, "r", 5, "r", 4, "r", 3],
-         [65, 64, 63, 61, 62, 65, 64, 63]);
+  expect(["c", 3, "c", 4, "c", 5, "d", 2, "r", 1, "r", 5, "r", 4, "r", 3],
+         [63, 64, 65, 61, 62, 65, 64, 63]);
 
   excludeLandmarks[2].set(false);
   expect([], []);
@@ -1611,7 +1610,7 @@ Tinytest.add("spark - landmark constant", function(test) {
       render: function() {
         states.push(this);
       }
-    }, '<b/><i/><u/>');
+    }, function() { return '<b/><i/><u/>'; });
   }));
 
   var nodes = _.toArray(div.node().childNodes);
@@ -1649,8 +1648,10 @@ Tinytest.add("spark - landmark constant", function(test) {
           return (nodeBefore ? R.get() : '') +
             Spark.labelBranch(
               brnch, function () {
-                return Spark.createLandmark({ constant: isConstant },
-                                            hasSpan ? '<span>stuff</span>' : 'blah');}) +
+                return Spark.createLandmark(
+                  { constant: isConstant },
+                  function() { return hasSpan ?
+                               '<span>stuff</span>' : 'blah'; });}) +
             (nodeAfter ? R.get() : '');
         }));
 
@@ -1740,7 +1741,9 @@ Tinytest.add("spark - leaderboard", function(test) {
               '<div class="name">' + player.name + '</div>' +
               '<div name="score">' + player.score + '</div></div>';
             html = Spark.setDataContext(player, html);
-            html = Spark.createLandmark({preserve: legacyLabels}, html);
+            html = Spark.createLandmark(
+              {preserve: legacyLabels},
+              function() { return html; });
             return html;
           });
         });
@@ -1884,7 +1887,9 @@ Tinytest.add("spark - list table", function(test) {
           return Spark.isolate(function () {
             var html = "<tr><td>"+doc.value + (doc.reactive ? R.get() : '')+
               "</td></tr>";
-            html = Spark.createLandmark({preserve: legacyLabels}, html);
+            html = Spark.createLandmark(
+              {preserve: legacyLabels},
+              function() { return html; });
             return html;
           });
         });

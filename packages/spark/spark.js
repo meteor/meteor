@@ -18,17 +18,7 @@
 // path, or if you have multiple preserve nodes in a landmark with the
 // same selector and label
 
-// XXX event handling passes args (event, landmark) to handler,
-// where `landmark` is the immediately enclosing landmark of the
-// attachEvents range.
-
-// XXX createLandmark takes an htmlFunc, which takes the landmark
-// as its argument.  There is no getCurrentLandmark.  If there's
-// no renderer, we createLandmark doesn't create an annotation,
-// but it does instantiate a new Landmark for the sake of the
-// htmlFunc (and create/destroy it inline).
-
-// XXX delete getEnclosingLandmark (unless used privately by tests)
+// XXX should functions with an htmlFunc use try/finally inside?
 
 (function() {
 
@@ -657,11 +647,15 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
 
           // Found a matching handler. Call it.
           var eventData = Spark.getDataContext(event.currentTarget);
+          var landmarkRange =
+                findParentOfType(Spark._ANNOTATION_LANDMARK, range);
+          var landmark = (landmarkRange && landmarkRange.landmark);
+
           // Note that the handler can do arbitrary things, like call
           // Meteor.flush() or otherwise remove and finalize parts of
           // the DOM.  We can't assume `range` is valid past this point,
           // and we'll check the `finalized` flag at the top of the loop.
-          var returnValue = callback.call(eventData, event);
+          var returnValue = callback.call(eventData, event, landmark);
 
           // allow app to `return false` from event handler, just like
           // you can in a jquery event handler
@@ -896,7 +890,17 @@ Spark.labelBranch = function (label, htmlFunc) {
   // nodes?)
 };
 
-Spark.createLandmark = withRenderer(function (options, html, _renderer) {
+Spark.createLandmark = function (options, htmlFunc) {
+  var renderer = Spark._currentRenderer.get();
+  if (! renderer) {
+    // no renderer -- create and destroy Landmark inline
+    var landmark = new Spark.Landmark;
+    options.create && options.create.call(landmark);
+    var html = htmlFunc(landmark);
+    options.destroy && options.destroy.call(landmark);
+    return html;
+  }
+
   // Normalize preserve map
   var preserve = {};
   if (options.preserve instanceof Array)
@@ -909,7 +913,7 @@ Spark.createLandmark = withRenderer(function (options, html, _renderer) {
     if (typeof preserve[selector] !== 'function')
       preserve[selector] = function () { return true; };
 
-  var notes = _renderer.currentBranch.getNotes();
+  var notes = renderer.currentBranch.getNotes();
   var landmark;
   if (notes.originalRange && ! notes.originalRange.superceded) {
     notes.originalRange.superceded = true; // prevent destroy(), second match
@@ -920,7 +924,8 @@ Spark.createLandmark = withRenderer(function (options, html, _renderer) {
   }
   notes.landmark = landmark;
 
-  return _renderer.annotate(
+  var html = htmlFunc(landmark);
+  return renderer.annotate(
     html, Spark._ANNOTATION_LANDMARK, function (range) {
       _.extend(range, {
         preserve: preserve,
@@ -935,27 +940,14 @@ Spark.createLandmark = withRenderer(function (options, html, _renderer) {
       });
 
       landmark._range = range;
-      _renderer.landmarkRanges.push(range);
+      renderer.landmarkRanges.push(range);
     });
 
   // XXX need to arrange for destroyCallback to be called if the
   // returned html is never materialized..
-});
-
-// Call during rendering to get the landmark
-// with the current branch path (as determined by the
-// Spark.labelBranch calls on the stack), or null if createLandmark()
-// has not yet been called with this branch path during this render.
-Spark.getCurrentLandmark = function () {
-  var renderer = Spark._currentRenderer.get();
-  if (! renderer)
-    throw new Error("Only available during rendering");
-  var notes = renderer.currentBranch.getNotes();
-  return notes.landmark || null;
 };
 
-
-Spark.getEnclosingLandmark = function (node) {
+Spark._getEnclosingLandmark = function (node) {
   var range = findRangeOfType(Spark._ANNOTATION_LANDMARK, node);
   return range ? range.landmark : null;
 };

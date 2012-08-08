@@ -55,7 +55,11 @@
         var t = name && Template[name];
         if (t) {
           html = Spark.attachEvents(t.events || {}, html);
-          html = Spark.createLandmark({ preserve: t.preserve || {} }, html);
+          html = Spark.createLandmark(
+            { preserve: t.preserve || {} },
+            // XXX actually, we need to make this landmark available
+            // to Forms and execute the template here.
+            function(landmark) { return html; });
         }
 
         html = Spark.setDataContext(data, html);
@@ -85,7 +89,3 @@
   };
 
 })();
-
-
-
-
