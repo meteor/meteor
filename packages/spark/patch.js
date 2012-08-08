@@ -39,7 +39,8 @@ Spark._patch = function(tgtParent, srcParent, tgtBefore, tgtAfter, preservations
           DomUtils.elementOrder(lastTgtMatch, tgt) > 0) {
         if (pres.type === 'region') {
           // preserved region for constant landmark
-          if (patcher.match(pres.fromStart, pres.newRange.firstNode(), null, true)) {
+          if (patcher.match(pres.fromStart, pres.newRange.firstNode(),
+                            copyFunc, true)) {
             patcher.skipToSiblings(pres.fromEnd, pres.newRange.lastNode());
             // without knowing or caring what DOM nodes are in pres.newRange,
             // transplant the range data to pres.fromStart and pres.fromEnd
