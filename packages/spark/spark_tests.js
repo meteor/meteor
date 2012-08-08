@@ -1620,8 +1620,7 @@ Tinytest.add("spark - landmark constant", function(test) {
   test.equal(states.length, 1);
   R.set(1);
   Meteor.flush();
-  test.equal(states.length, 2);
-  test.isTrue(states[0] === states[1]);
+  test.equal(states.length, 1); // no render callback on constant
   var nodes2 = _.toArray(div.node().childNodes);
   test.equal(nodes2.length, 3);
   test.isTrue(nodes[0] === nodes2[0]);
@@ -1642,6 +1641,8 @@ Tinytest.add("spark - landmark constant", function(test) {
         var hasSpan = true;
         var isConstant = true;
 
+        var crd = null; // [createCount, renderCount, destroyCount]
+
         R = ReactiveVar('foo');
         div = OnscreenDiv(Meteor.render(function() {
           R.get(); // create unconditional dependency
@@ -1650,7 +1651,17 @@ Tinytest.add("spark - landmark constant", function(test) {
             Spark.labelBranch(
               brnch, function () {
                 return Spark.createLandmark(
-                  { constant: isConstant },
+                  {
+                    constant: isConstant,
+                    create: function () {
+                      this.crd = [0,0,0];
+                      if (! crd)
+                        crd = this.crd; // capture first landmark's crd
+                      this.crd[0]++;
+                    },
+                    render: function () { this.crd[1]++; },
+                    destroy: function () { this.crd[2]++; }
+                  },
                   function() { return hasSpan ?
                                '<span>stuff</span>' : 'blah'; });}) +
             (nodeAfter ? R.get() : '');
@@ -1667,12 +1678,16 @@ Tinytest.add("spark - landmark constant", function(test) {
         R.set('bar');
         Meteor.flush();
 
-        // only absence of branch should cause the constant
+        // only non-matching landmark should cause the constant
         // chunk to be re-rendered
         test.equal(div.text(),
                    (nodeBefore ? 'bar' : '')+
                    (matchLandmark ? 'stuff' : 'blah')+
                    (nodeAfter ? 'bar' : ''));
+        // in non-matching case, first landmark is destroyed.
+        // otherwise, it is kept (and not re-rendered because
+        // it is constant)
+        test.equal(crd, matchLandmark ? [1,1,0] : [1,1,1]);
 
         R.set('baz');
         Meteor.flush();
@@ -1716,6 +1731,46 @@ Tinytest.add("spark - landmark constant", function(test) {
       });
     });
   });
+
+  // test that constant landmark gets render callback if it
+  // wasn't preserved.
+
+  var renderCount;
+
+  renderCount = 0;
+  R = ReactiveVar('div');
+  div = OnscreenDiv(Meteor.render(function () {
+    return '<' + R.get() + '>' + Spark.createLandmark(
+      {constant: true, render: function () { renderCount++; },
+       destroy: function () {
+         console.log(3, rangeToHtml(this._range.findParent()));
+       }},
+      function () {
+        if (R.get() === 'div class="hamburger"')
+          console.log(2);
+        return "hi";
+      }) +
+      '</' + R.get().split(' ')[0] + '>';
+  }));
+  Meteor.flush();
+  test.equal(renderCount, 1);
+
+  R.set('div class="hamburger"');
+  console.log(1);
+  Meteor.flush();
+  console.log(4);
+  // constant patched around, not re-rendered!
+  test.equal(renderCount, 1);
+
+  R.set('span class="hamburger"');
+  Meteor.flush();
+  // can't patch parent to a different tag
+  test.equal(renderCount, 2);
+
+  R.set('span');
+  Meteor.flush();
+  // can patch here, renderCount stays the same
+  test.equal(renderCount, 2);
 
 });
 

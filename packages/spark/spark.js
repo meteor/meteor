@@ -20,6 +20,8 @@
 
 // XXX should functions with an htmlFunc use try/finally inside?
 
+// XXX do render callbacks "bubble up" to enclosing landmarks?
+
 (function() {
 
 Spark = {};
@@ -298,7 +300,8 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
     // XXX should bubble up and notify parent landmarks too? for all
     // the same reasons we need to do it for node preservation?
     _.each(landmarkRanges, function (landmarkRange) {
-      landmarkRange.renderCallback.call(landmarkRange.landmark);
+      if (! landmarkRange.isPreservedConstant)
+        landmarkRange.renderCallback.call(landmarkRange.landmark);
     });
 
     // This code can run several times on the same nodes (if the
@@ -488,6 +491,8 @@ Spark.renderToRange = function (range, htmlFunc) {
 
   tempRange.destroy();
 
+  var results = {};
+
   // patch (using preservations)
   range.operate(function (start, end) {
     // XXX this will destroy all liveranges, including ones
@@ -495,7 +500,16 @@ Spark.renderToRange = function (range, htmlFunc) {
     // to preserve untouched
     Spark.finalize(start, end);
     Spark._patch(start.parentNode, frag, start.previousSibling,
-                 end.nextSibling, preservations);
+                 end.nextSibling, preservations, results);
+  });
+
+  _.each(results.regionPreservations, function (landmarkRange) {
+    // Rely on the fact that computePreservations only emits
+    // region preservations whose ranges are landmarks.
+    // This flag means that landmarkRange is a new constant landmark
+    // range that matched an old one *and* was DOM-preservable by
+    // the patcher.
+    landmarkRange.isPreservedConstant = true;
   });
 };
 
@@ -697,7 +711,7 @@ Spark.isolate = function (htmlFunc) {
           return; // killed by finalize. range has already been destroyed.
 
         ctx = new Meteor.deps.Context;
-        var frag = Spark.renderToRange(range, function () {
+        Spark.renderToRange(range, function () {
           return ctx.run(htmlFunc);
         });
         ctx.on_invalidate(refresh);
@@ -726,7 +740,7 @@ var atFlushTime = function (f) {
     atFlushContext = new Meteor.deps.Context;
     atFlushContext.on_invalidate(function () {
       var f;
-      while (f = atFlushQueue.shift()) {
+      while ((f = atFlushQueue.shift())) {
         // Since atFlushContext is truthy, if f() calls atFlushTime
         // reentrantly, it's guaranteed to append to atFlushQueue and
         // not contruct a new atFlushContext.

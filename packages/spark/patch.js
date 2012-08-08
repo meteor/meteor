@@ -1,5 +1,6 @@
 
-Spark._patch = function(tgtParent, srcParent, tgtBefore, tgtAfter, preservations) {
+Spark._patch = function(tgtParent, srcParent, tgtBefore, tgtAfter, preservations,
+                        results) {
 
   var copyFunc = function(t, s) {
     LiveRange.transplantTag(Spark._TAG, t, s);
@@ -17,6 +18,13 @@ Spark._patch = function(tgtParent, srcParent, tgtBefore, tgtAfter, preservations
         visitNodes(n, null, null, func);
     }
   };
+
+  // results arg is optional; it is mutated if provided; returned either way
+  results = (results || {});
+  // array of LiveRanges that were successfully preserved from
+  // the region preservations
+  var regionPreservations = (results.regionPreservations =
+                             results.regionPreservations || []);
 
   var lastTgtMatch = null;
 
@@ -47,6 +55,7 @@ Spark._patch = function(tgtParent, srcParent, tgtBefore, tgtAfter, preservations
             // (including references to enclosing ranges).
             LiveRange.transplantRange(
               pres.fromStart, pres.fromEnd, pres.newRange);
+            regionPreservations.push(pres.newRange);
           }
         } else if (pres.type === 'node') {
           if (patcher.match(tgt, src, copyFunc)) {
@@ -71,6 +80,7 @@ Spark._patch = function(tgtParent, srcParent, tgtBefore, tgtAfter, preservations
 
   patcher.finish();
 
+  return results;
 };
 
 
