@@ -3216,7 +3216,60 @@ Tinytest.add("spark - find/findAll on landmark", function (test) {
   check(true);
 });
 
+Tinytest.add("spark - landmark clean-up", function (test) {
 
+  var crd;
+  var makeCrd = function () {
+    var crd = [0,0,0];
+    crd.callbacks = {
+      create: function () { crd[0]++; },
+      render: function () { crd[1]++; },
+      destroy: function () { crd[2]++; }
+    };
+    return crd;
+  };
+
+  // not inside render
+  crd = makeCrd();
+  Spark.createLandmark(crd.callbacks, function () { return 'hi'; });
+  test.equal(crd, [1,0,1]);
+
+  // landmark never materialized
+  crd = makeCrd();
+  Spark.render(function() {
+    var html =
+          Spark.createLandmark(crd.callbacks, function () { return 'hi'; });
+    return '';
+  });
+  test.equal(crd, [1,0,1]);
+  Meteor.flush();
+  test.equal(crd, [1,0,1]);
+
+  // two landmarks, only one materialized at a time.
+  // one replaces the other
+  var crd1 = makeCrd();
+  var crd2 = makeCrd();
+  var R = ReactiveVar(1);
+  var div = OnscreenDiv(Meteor.render(function() {
+    return (R.get() === 1 ?
+            Spark.createLandmark(crd1.callbacks, function() { return 'hi'; }) :
+            Spark.createLandmark(crd2.callbacks, function() { return 'hi'; }));
+  }));
+  test.equal(crd1, [1,0,0]); // created
+  test.equal(crd2, [0,0,0]);
+  Meteor.flush();
+  test.equal(crd1, [1,1,0]); // rendered
+  test.equal(crd2, [0,0,0]);
+  R.set(2);
+  Meteor.flush();
+  test.equal(crd1, [1,1,0]); // not destroyed (callback replaced)
+  test.equal(crd2, [0,1,0]); // matched
+
+  div.kill();
+  Meteor.flush();
+  test.equal(crd1, [1,1,0]);
+  test.equal(crd2, [0,1,1]); // destroyed
+});
 
 
 

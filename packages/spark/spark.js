@@ -1,5 +1,3 @@
-// XXX rename liverange methods to camelCase?
-
 // XXX adjust Spark API so that the modules (eg, list, events) could
 // have been written by third parties on top of the public API?
 
@@ -120,10 +118,17 @@ _.extend(Spark._Renderer.prototype, {
   // `what` can be a function that takes a LiveRange, or just a set of
   // attributes to add to the liverange.  tag and what are optional.
   // if no tag is passed, no liverange will be created.
-  annotate: function (html, type, what) {
-    var id = type + ":" + this.createId();
+  annotate: function (html, type, what, unusedFunc) {
+    var id = (type || '') + ":" + this.createId();
     this.annotations[id] = function (start, end) {
+      if (! start) {
+        // materialize called us with no args because this annotation
+        // wasn't used
+        unusedFunc && unusedFunc();
+        return;
+      }
       if (! type)
+        // no type given; don't generate a LiveRange
         return;
       var range = makeRange(type, start, end);
       if (what instanceof Function)
@@ -157,9 +162,106 @@ _.extend(Spark._Renderer.prototype, {
         return top;
       }
     };
+  },
+
+  // Turn the `html` string into a fragment, applying the annotations
+  // from 'renderer' in the process.
+  materialize: function (htmlFunc) {
+    var self = this;
+
+    var html = Spark._currentRenderer.withValue(self, htmlFunc);
+    html = self.annotate(html); // wrap with an anonymous annotation
+
+    var fragById = {};
+    var replaceInclusions = function (container) {
+      var n = container.firstChild;
+      while (n) {
+        var next = n.nextSibling;
+        if (n.nodeType === 8) { // COMMENT
+          var frag = fragById[n.nodeValue];
+          if (frag === false) {
+            // id already used!
+            throw new Error("Spark HTML fragments may only be used once. " +
+                            "Second use in " +
+                            DomUtils.fragmentToHtml(container));
+          } else if (frag) {
+            fragById[n.nodeValue] = false; // mark as used
+            DomUtils.wrapFragmentForContainer(frag, n.parentNode);
+            n.parentNode.replaceChild(frag, n);
+          }
+        } else if (n.nodeType === 1) { // ELEMENT
+          replaceInclusions(n);
+        }
+        n = next;
+      }
+    };
+
+    var bufferStack = [[]];
+    var idStack = [];
+    var ret;
+
+    var regex = /<(\/?)\$([^<>]+)>|<|[^<]+/g;
+    regex.lastIndex = 0;
+    var parts;
+    while ((parts = regex.exec(html))) {
+      var isOpen = ! parts[1];
+      var id = parts[2];
+      var annotationFunc = self.annotations[id];
+      if (annotationFunc === false) {
+        throw new Error("Spark HTML fragments may be used only once. " +
+                        "Second use of: " +
+                        DomUtils.fragmentToHtml(fragById[id]));
+      } else if (! annotationFunc) {
+        bufferStack[bufferStack.length - 1].push(parts[0]);
+      } else if (isOpen) {
+        idStack.push(id);
+        bufferStack.push([]);
+      } else {
+        var idOnStack = idStack.pop();
+        if (idOnStack !== id)
+          throw new Error("Range mismatch: " + idOnStack + " / " + id);
+        var frag = DomUtils.htmlToFragment(bufferStack.pop().join(''));
+        replaceInclusions(frag);
+        // empty frag becomes HTML comment <!--empty--> so we have start/end
+        // nodes to pass to the annotation function
+        if (! frag.firstChild)
+          frag.appendChild(document.createComment("empty"));
+        annotationFunc(frag.firstChild, frag.lastChild);
+        self.annotations[id] = false; // mark as used
+        if (! idStack.length) {
+          // we're done; we just rendered the contents of the top-level
+          // annotation that we wrapped around htmlFunc ourselves.
+          // there may be unused fragments in fragById that include
+          // LiveRanges, but only if the user broke the rules by including
+          // an annotation somewhere besides element level, like inside
+          // an attribute (which is not allowed).
+          ret = frag;
+          break;
+        }
+        fragById[id] = frag;
+        bufferStack[bufferStack.length - 1].push('<!--' + id + '-->');
+      }
+    }
+
+    scheduleOnscreenSetup(ret, self.landmarkRanges);
+    self.landmarkRanges = [];
+
+    _.each(self.annotations, function(annotationFunc) {
+      if (annotationFunc)
+        // call annotation func with no arguments to mean "you weren't used"
+        annotationFunc();
+    });
+    self.annotations = {};
+
+    return ret;
   }
+
 });
 
+// Decorator for Spark annotations that take `html` and are
+// pass-through without a renderer.  With this decorator,
+// the annotation routine gets the current renderer, and
+// if there isn't one returns `html` (the last argument).
 var withRenderer = function (f) {
   return function (/* arguments */) {
     var renderer = Spark._currentRenderer.get();
@@ -174,80 +276,6 @@ var withRenderer = function (f) {
 /******************************************************************************/
 /* Render and finalize                                                        */
 /******************************************************************************/
-
-// Turn the `html` string into a fragment, applying the annotations
-// from 'renderer' in the process.
-var materialize = function (html, renderer) {
-  var fragById = {};
-
-  // XXX refactor the parsing loop so we don't have to do this, and so
-  // we can just take 'annotations' instead of the whole renderer
-  // object
-  html = renderer.annotate(html);
-
-  var replaceInclusions = function (container) {
-    var n = container.firstChild;
-    while (n) {
-      var next = n.nextSibling;
-      if (n.nodeType === 8) { // COMMENT
-        var frag = fragById[n.nodeValue];
-        if (frag === false) {
-          // id already used!
-          throw new Error("Spark HTML fragments may only be used once. " +
-                          "Second use in " +
-                          DomUtils.fragmentToHtml(container));
-        } else if (frag) {
-          fragById[n.nodeValue] = false; // mark as used
-          DomUtils.wrapFragmentForContainer(frag, n.parentNode);
-          n.parentNode.replaceChild(frag, n);
-        }
-      } else if (n.nodeType === 1) { // ELEMENT
-        replaceInclusions(n);
-      }
-      n = next;
-    }
-  };
-
-  var bufferStack = [[]];
-  var idStack = [];
-  var ret;
-
-  var regex = /<(\/?)\$([^<>]+)>|<|[^<]+/g;
-  regex.lastIndex = 0;
-  var parts;
-  while ((parts = regex.exec(html))) {
-    var isOpen = ! parts[1];
-    var id = parts[2];
-    var annotationFunc = renderer.annotations[id];
-    if (! annotationFunc) {
-      bufferStack[bufferStack.length - 1].push(parts[0]);
-    } else if (isOpen) {
-      idStack.push(id);
-      bufferStack.push([]);
-    } else {
-      var idOnStack = idStack.pop();
-      if (idOnStack !== id)
-        throw new Error("Range mismatch: " + idOnStack + " / " + id);
-      var frag = DomUtils.htmlToFragment(bufferStack.pop().join(''));
-      replaceInclusions(frag);
-      // empty frag becomes HTML comment <!--empty--> so we have start/end
-      // nodes to pass to the annotation function
-      if (! frag.firstChild)
-        frag.appendChild(document.createComment("empty"));
-      annotationFunc(frag.firstChild, frag.lastChild);
-      if (! idStack.length)
-        // we're done; we just rendered the contents of the top-level
-        // annotation that we wrapped around htmlFunc ourselves.
-        // there may be unused fragments in fragById that include
-        // LiveRanges, but only if the user broke the rules by including
-        // an annotation somewhere besides element level, like inside
-        // an attribute (which is not allowed).
-        return frag;
-      fragById[id] = frag;
-      bufferStack[bufferStack.length - 1].push('<!--' + id + '-->');
-    }
-  }
-};
 
 // Schedule setup tasks to run at the next flush, which is when the
 // newly rendered fragment must be on the screen (if it doesn't want
@@ -317,11 +345,7 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
 
 Spark.render = function (htmlFunc) {
   var renderer = new Spark._Renderer;
-  var html = Spark._currentRenderer.withValue(renderer, htmlFunc);
-  var frag = materialize(html, renderer);
-
-  scheduleOnscreenSetup(frag, renderer.landmarkRanges);
-
+  var frag = renderer.materialize(htmlFunc);
   return frag;
 };
 
@@ -456,9 +480,7 @@ Spark.renderToRange = function (range, htmlFunc) {
     notes.originalRange = landmarkRange;
   });
 
-  var html = Spark._currentRenderer.withValue(renderer, htmlFunc);
-  var frag = materialize(html, renderer);
-  scheduleOnscreenSetup(frag, renderer.landmarkRanges);
+  var frag = renderer.materialize(htmlFunc);
 
   DomUtils.wrapFragmentForContainer(frag, range.containerNode());
 
@@ -929,7 +951,9 @@ Spark.createLandmark = function (options, htmlFunc) {
 
   var notes = renderer.currentBranch.getNotes();
   var landmark;
-  if (notes.originalRange && ! notes.originalRange.superceded) {
+  if (notes.originalRange) {
+    if (notes.originalRange.superceded)
+      throw new Error("Can't create second landmark in same branch");
     notes.originalRange.superceded = true; // prevent destroy(), second match
     landmark = notes.originalRange.landmark; // the old Landmark
   } else {
@@ -955,10 +979,10 @@ Spark.createLandmark = function (options, htmlFunc) {
 
       landmark._range = range;
       renderer.landmarkRanges.push(range);
+    }, function () {
+      // "annotation not used" callback
+      options.destroy && options.destroy.call(landmark);
     });
-
-  // XXX need to arrange for destroyCallback to be called if the
-  // returned html is never materialized..
 };
 
 // used by unit tests
