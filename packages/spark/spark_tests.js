@@ -1741,13 +1741,8 @@ Tinytest.add("spark - landmark constant", function(test) {
   R = ReactiveVar('div');
   div = OnscreenDiv(Meteor.render(function () {
     return '<' + R.get() + '>' + Spark.createLandmark(
-      {constant: true, render: function () { renderCount++; },
-       destroy: function () {
-         console.log(3, rangeToHtml(this._range.findParent()));
-       }},
+      {constant: true, render: function () { renderCount++; }},
       function () {
-        if (R.get() === 'div class="hamburger"')
-          console.log(2);
         return "hi";
       }) +
       '</' + R.get().split(' ')[0] + '>';
@@ -1756,9 +1751,7 @@ Tinytest.add("spark - landmark constant", function(test) {
   test.equal(renderCount, 1);
 
   R.set('div class="hamburger"');
-  console.log(1);
   Meteor.flush();
-  console.log(4);
   // constant patched around, not re-rendered!
   test.equal(renderCount, 1);
 
