@@ -110,11 +110,14 @@
       var email = options.email;
       if (!username && !email)
         throw new Meteor.Error(400, "Need to set a username or email");
-
+      if (options.validation && !options.baseUrl)
+        throw new Meteor.Error(
+          400, "If options.validation is set, need to pass options.baseUrl");
       if (username && Meteor.users.findOne({username: username}))
         throw new Meteor.Error(403, "User already exists with username " + username);
-      if (email && Meteor.users.findOne({emails: email}))
+      if (email && Meteor.users.findOne({emails: email})) {
         throw new Meteor.Error(403, "User already exists with email " + email);
+      }
 
       // XXX validate verifier
 
@@ -133,6 +136,11 @@
 
       user = Meteor.accounts.onCreateUserHook(options, extra, user);
       var userId = Meteor.users.insert(user);
+
+      // If `options.validation` is set, register a token to validate
+      // the user's primary email, and send it to that address.
+      if (email && options.validation)
+        Meteor.accounts.sendValidationEmail(userId, email, options.baseUrl);
 
       var loginToken = Meteor.accounts._loginTokens.insert({userId: userId});
       this.setUserId(userId);
@@ -182,8 +190,47 @@
       var loginToken = Meteor.accounts._loginTokens.insert({userId: user._id});
       this.setUserId(user._id);
       return {token: loginToken, id: user._id};
+    },
+
+    validateEmail: function (token) {
+      if (!token)
+        throw new Meteor.Error(400, "Need to pass token");
+
+      var tokenDocument = Meteor.accounts._emailValidationTokens.findOne(
+        {token: token});
+      if (!tokenDocument)
+        throw new Meteor.Error(403, "Validate email link expired");
+      var userId = tokenDocument.userId;
+
+      Meteor.users.update({_id: userId},
+                          {$push: {validatedEmails: tokenDocument.email}});
+      Meteor.accounts._emailValidationTokens.remove({token: token});
+
+      var loginToken = Meteor.accounts._loginTokens.insert({userId: userId});
+      this.setUserId(userId);
+      return {token: loginToken, id: userId};
     }
   });
+
+  // send the user an email with a link that when opened marks that
+  // address as validated
+  Meteor.accounts.sendValidationEmail = function (userId, email, appBaseUrl) {
+    var token = Meteor.uuid();
+    var creationTime = +(new Date);
+    Meteor.accounts._emailValidationTokens.insert({
+      email: email,
+      token: token,
+      creationTime: creationTime,
+      userId: userId
+    });
+
+    // XXX Also generate a link using which someone can delete this
+    // account if they own said address but weren't those who created
+    // this account.
+    Meteor.mail.send(
+      email,
+      Meteor.accounts.urls.validateEmail(appBaseUrl, token));
+  };
 
   // handler to login with password
   Meteor.accounts.registerLoginHandler(function (options) {

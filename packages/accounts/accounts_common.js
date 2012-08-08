@@ -1,5 +1,8 @@
 if (!Meteor.accounts) {
   Meteor.accounts = {};
+}
+
+if (!Meteor.accounts._options) {
   Meteor.accounts._options = {};
 }
 

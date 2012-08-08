@@ -1,5 +1,4 @@
 (function () {
-
   Meteor.createUser = function (options, extra, callback) {
     if (typeof extra === "function") {
       callback = extra;
@@ -9,6 +8,10 @@
     if (!options.password)
       throw new Error("Must set options.password");
     var verifier = Meteor._srp.generateVerifier(options.password);
+
+    if (options.validation)
+      // needed because we generate a link back to the app
+      options.baseUrl = appBaseUrl();
 
     // strip old password, replacing with the verifier object
     delete options.password;
@@ -134,8 +137,8 @@
   Meteor.forgotPassword = function(options, callback) {
     if (!options.email)
       throw new Error("Must pass options.email");
-    options.baseUrl = window.location.protocol + "//"
-      + window.location.host + "/";
+    // needed because we generate a link back to the app
+    options.baseUrl = appBaseUrl();
     Meteor.call("forgotPassword", options, callback);
   };
 
@@ -147,9 +150,9 @@
   // @param callback (optional) {Function(error|undefined)}
   Meteor.resetPassword = function(token, newPassword, callback) {
     if (!token)
-      throw new Error("Need to pass options.token");
+      throw new Error("Need to pass token");
     if (!newPassword)
-      throw new Error("Need to pass options.newPassword");
+      throw new Error("Need to pass newPassword");
 
     var verifier = Meteor._srp.generateVerifier(newPassword);
     Meteor.apply(
@@ -163,6 +166,31 @@
         Meteor.accounts.makeClientLoggedIn(result.id, result.token);
         callback && callback();
       });
+  };
+
+  // Validates a user's email address based on a token originally
+  // created by Meteor.accounts.sendValidationEmail
+  //
+  // @param token {String}
+  // @param callback (optional) {Function(error|undefined)}
+  Meteor.validateEmail = function(token, callback) {
+    if (!token)
+      throw new Error("Need to pass token");
+
+    Meteor.call(
+      "validateEmail", token,
+      function (error, result) {
+        if (error || !result) {
+          error = error || new Error("No result from call to validateUser");
+          callback && callback(error);
+        }
+
+        callback && callback();
+      });
+  };
+
+  var appBaseUrl = function () {
+    return window.location.protocol + "//" + window.location.host + "/";
   };
 })();
 

@@ -88,7 +88,7 @@
     if (!_.isEmpty(
       _.intersection(
         _.keys(extra),
-        ['services', 'private', 'username', 'email', 'emails'])))
+        ['services', 'private', 'username', 'email', 'emails', 'validatedEmails'])))
       throw new Meteor.Error(400, "Disallowed fields in extra");
 
     if (Meteor.accounts._options.requireEmail &&
@@ -136,6 +136,8 @@
   ///
 
   // Updates or creates a user after we authenticate with a 3rd party
+  //
+  // NOTE: We trust any OAuth provider to properly validates email address
   //
   // @param options {Object}
   //   - email (optional)
@@ -194,6 +196,7 @@
           // XXX we will probably also need a hook for updating users,
           // similar to Meteor.accounts.onCreateUser
           Meteor.users.update(user, {$push: {emails: email}});
+          Meteor.users.update(user, {$push: {validatedEmails: email}});
         }
 
         updateUserData();
@@ -205,6 +208,7 @@
         attrs[serviceName] = options.services[serviceName];
         var user = {
           emails: (email ? [email] : []),
+          validatedEmails: (email ? [email] : []),
           services: attrs
         };
         user = Meteor.accounts.onCreateUserHook(options, extra, user);
@@ -231,7 +235,7 @@
   Meteor.default_server.onAutopublish(function () {
     var handler = function () {
       return Meteor.users.find(
-        {}, {fields: {services: 0, private: 0, emails: 0}});
+        {}, {fields: {services: 0, private: 0, emails: 0, validatedEmails: 0}});
     };
     Meteor.default_server.publish(null, handler, {is_auto: true});
   });

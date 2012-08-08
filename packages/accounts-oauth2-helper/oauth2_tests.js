@@ -27,6 +27,7 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
   var user = Meteor.users.findOne({emails: email});
   test.notEqual(user, undefined);
   test.equal(user.services.foobook.id, 1);
+  test.equal(user.verifiedEmails[0], email);
 
   // and that that user has a login token
   var token = Meteor.accounts._loginTokens.findOne({userId: user._id});
@@ -79,7 +80,7 @@ Tinytest.add("oauth2 - error in user creation", function (test) {
   test.equal(Meteor.accounts.oauth2._loginResultForState[state].error, 403);
 
   // verify error is handed back to login method.
-  test.throws(function () { 
+  test.throws(function () {
     Meteor.apply('login', [{oauth: {version: 2, state: state}}]);
   });
 

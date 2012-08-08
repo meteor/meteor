@@ -8,6 +8,6 @@ Meteor.accounts.urls.resetPassword = function (baseUrl, token) {
   return baseUrl + '#?reset-password/' + token;
 };
 
-Meteor.accounts.urls.validateUser = function (baseUrl, token) {
-  return baseUrl + '#?validate-user/' + token;
+Meteor.accounts.urls.validateEmail = function (baseUrl, token) {
+  return baseUrl + '#?validate-email/' + token;
 };
