@@ -1,11 +1,14 @@
 
 ## vNEXT
 
+## v0.3.9
+
 * Add `spiderable` package to allow web crawlers to index Meteor apps.
 
 * `meteor deploy` uses SSL to protect application deployment.
 
 * Fix `stopImmediatePropagation()`. #205
+
 
 ## v0.3.8
 
