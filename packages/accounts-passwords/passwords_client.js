@@ -131,7 +131,7 @@
   // @param options {Object}
   //   - email: (email)
   // @param callback (optional) {Function(error|undefined)}
-  Meteor.forgotPassword = function(options) {
+  Meteor.forgotPassword = function(options, callback) {
     if (!options.email)
       throw new Error("Must pass options.email");
     options.baseUrl = window.location.protocol + "//"
