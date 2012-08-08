@@ -1212,6 +1212,7 @@ Tinytest.add("spark - labeled landmarks", function (test) {
     });
   }));
 
+  // callback order is not specced
   expect(["c", 1, "c", 2, "c", 3, "c", 4, "c", 5], [1, 2, 3, 4, 5]);
   Meteor.flush();
   expect(["r", 1, "r", 2, "r", 5, "r", 4, "r", 3], [1, 2, 5, 4, 3]);
@@ -2635,8 +2636,9 @@ Tinytest.add("spark - oldschool landmark matching", function(test) {
   counts = {};
   var R = ReactiveVar("A");
   var div = OnscreenDiv(Meteor.render(function() {
-    var html = String(R.get());
-    html = Spark.createLandmark(testCallbacks(0), html);
+    var html = Spark.createLandmark(testCallbacks(0), function () {
+      return String(R.get());
+    });
     return html;
   }, testCallbacks(0)));
 
@@ -2664,19 +2666,20 @@ Tinytest.add("spark - oldschool landmark matching", function(test) {
   R = ReactiveVar("A");
   div = OnscreenDiv(Meteor.render(function() {
     R.get();
-    var html = Spark.labelBranch("foo", function () {
-      return Spark.createLandmark(testCallbacks(1), "HI");
+    return Spark.createLandmark(testCallbacks(0), function () {
+      var html = Spark.labelBranch("foo", function () {
+        return Spark.createLandmark(testCallbacks(1),
+                                    function () { return "HI"; });
+      });
+      return "<div>" + html + "</div>";
     });
-    html = "<div>" + html + "</div>";
-    html = Spark.createLandmark(testCallbacks(0), html);
-    return html;
   }));
 
-  test.equal(buf, ["c1", "c0"]);
+  test.equal(buf, ["c0", "c1"]);
   Meteor.flush();
   // what order of chunks {0,1} is preferable??
   // should be consistent but I'm not sure what makes most sense.
-  test.equal(buf, "c1,c0,r1,r0".split(','));
+  test.equal(buf, "c0,c1,r1,r0".split(','));
   buf.length = 0;
 
   R.set("B");
@@ -2700,11 +2703,9 @@ Tinytest.add("spark - oldschool branch keys", function(test) {
   var objs = [];
   R = ReactiveVar("foo");
   div = OnscreenDiv(Meteor.render(function() {
-    var html = R.get();
-    html = Spark.createLandmark({
+    return Spark.createLandmark({
       render: function () { objs.push(true); }
-    }, html);
-    return html;
+    }, function () { return R.get(); });
   }));
 
   Meteor.flush();
@@ -2750,20 +2751,20 @@ Tinytest.add("spark - oldschool branch keys", function(test) {
       branch = "unique_branch_" + (counter++);
 
     return Spark.labelBranch(branch, function () {
-      var html;
-      if (typeof contents === "string")
-        html = contents;
-      else if (_.isArray(contents))
-        html = _.map(contents, function(x) {
-          if (typeof x === 'string')
-            return x;
-          return chunk(x[0], x[1], x[2]);
-        }).join('');
-      else
-        html = contents();
-
-      html = Spark.createLandmark(testCallbacks(num), html);
-      return html;
+      return Spark.createLandmark(
+        testCallbacks(num),
+        function () {
+          if (typeof contents === "string")
+            return contents;
+          else if (_.isArray(contents))
+            return _.map(contents, function(x) {
+              if (typeof x === 'string')
+                return x;
+              return chunk(x[0], x[1], x[2]);
+            }).join('');
+          else
+            return contents();
+        });
     });
   };
 
@@ -2852,9 +2853,11 @@ Tinytest.add("spark - isolate inside landmark", function (test) {
   var d = OnscreenDiv(Spark.render(function () {
     return Spark.createLandmark(
       { preserve: ['.foo'] },
-      Spark.isolate(function () {
-        return '<hr class="foo"/>' + R.get();
-      }));
+      function () {
+        return Spark.isolate(function () {
+          return '<hr class="foo"/>' + R.get();
+        });
+      });
   }));
 
   var foo1 = d.node().firstChild;
@@ -2874,9 +2877,11 @@ Tinytest.add("spark - isolate inside landmark", function (test) {
   d = OnscreenDiv(Spark.render(function () {
     return Spark.createLandmark(
       { preserve: ['div .foo'] },
-      "<div>"+Spark.isolate(function () {
-        return '<hr class="foo"/>' + R.get();
-      })+"</div>");
+      function () {
+        return "<div>"+Spark.isolate(function () {
+          return '<hr class="foo"/>' + R.get();
+        })+"</div>";
+      });
   }));
 
   var foo1 = DomUtils.find(d.node(), '.foo');
@@ -2899,13 +2904,11 @@ Tinytest.add("spark - nested onscreen processing", function (test) {
     return Spark.list(cursor, function () {}, function () {
       return Spark.list(cursor, function () {}, function () {
         return Spark.list(cursor, function () {}, function () {
-          var html = "hi";
-          html = Spark.createLandmark({
+          return Spark.createLandmark({
             create: function () { x.push('c'); },
             render: function () { x.push('r'); },
             destroy: function () { x.push('d'); }
-          }, html);
-          return html;
+          }, function () { return "hi"; });
         });
       });
     });
@@ -2919,11 +2922,10 @@ Tinytest.add("spark - nested onscreen processing", function (test) {
   test.equal(x.join(''), 'd');
 });
 
-Tinytest.add("spark - getCurrentLandmark", function (test) {
+Tinytest.add("spark - current landmark", function (test) {
   var R = ReactiveVar(1);
   var callbacks = 0;
   var d = OnscreenDiv(Meteor.render(function () {
-    test.isTrue(Spark.getCurrentLandmark() === null);
     var html = Spark.createLandmark({
       create: function () {
         this.a = 1;
@@ -2947,31 +2949,33 @@ Tinytest.add("spark - getCurrentLandmark", function (test) {
         test.equal(this.c, 3);
         callbacks++;
       }
-    }, '<span>hi</span>');
+    }, function (lm) {
+      var html = '<span>hi</span>';
 
-    if (R.get() === 1) {
-      test.equal(callbacks, 1);
-      var lm = Spark.getCurrentLandmark();
-      test.equal(lm.a, 1);
-      lm.a = 9;
-      lm.b = 2;
-      test.isFalse('c' in lm);
-      test.equal(callbacks, 1);
-      lm = null;
-    }
+      if (R.get() === 1) {
+        test.equal(callbacks, 1);
+        test.equal(lm.a, 1);
+        lm.a = 9;
+        lm.b = 2;
+        test.isFalse('c' in lm);
+        test.equal(callbacks, 1);
+        lm = null;
+      }
 
-    if (R.get() === 2) {
-      var lm = Spark.getCurrentLandmark();
-      test.equal(callbacks, 2);
-      test.equal(lm.a, 9);
-      test.equal(lm.b, 2);
-      test.equal(lm.c, 3);
-      test.equal(lm.renderCount, 1);
-    }
+      if (R.get() === 2) {
+        test.equal(callbacks, 2);
+        test.equal(lm.a, 9);
+        test.equal(lm.b, 2);
+        test.equal(lm.c, 3);
+        test.equal(lm.renderCount, 1);
+      }
+
+      return html;
+    });
+
 
     if (R.get() >= 3) {
       html += Spark.labelBranch('branch', function () {
-        test.isTrue(Spark.getCurrentLandmark() === null);
         var html = Spark.createLandmark({
           create: function () {
             this.outer = true;
@@ -2979,28 +2983,30 @@ Tinytest.add("spark - getCurrentLandmark", function (test) {
           render: function () {
             this.renderCount = (this.renderCount || 0) + 1;
           }
-        }, '<span>outer</span>');
-        test.isTrue(Spark.getCurrentLandmark().outer);
-        test.equal(R.get() - 3, Spark.getCurrentLandmark().renderCount || 0);
-        html += Spark.labelBranch("a", function () {
-          test.isTrue(Spark.getCurrentLandmark() === null);
-          var html = Spark.createLandmark({
-            create: function () {
-              this.innerA = true;
-            },
-            render: function () {
-              this.renderCount = (this.renderCount || 0) + 1;
-            }
-          }, '<span>innerA</span>');
-          test.isTrue(Spark.getCurrentLandmark().innerA);
+        }, function (lm) {
+          var html = '<span>outer</span>';
+          test.isTrue(lm.outer);
+          test.equal(R.get() - 3, lm.renderCount || 0);
+          html += Spark.labelBranch("a", function () {
+            var html = Spark.createLandmark({
+              create: function () {
+                this.innerA = true;
+              },
+              render: function () {
+                this.renderCount = (this.renderCount || 0) + 1;
+              }
+            }, function (lm) {
+              var html = '<span>innerA</span>';
+              test.isTrue(lm.innerA);
+              return html;
+            });
+            return html;
+          });
           return html;
         });
-        test.isFalse(Spark.getCurrentLandmark().innerA);
-        test.isTrue(Spark.getCurrentLandmark().outer);
-        test.equal(R.get() - 3, Spark.getCurrentLandmark().renderCount || 0);
+
         if (R.get() === 3 || R.get() >= 5) {
           html += Spark.labelBranch("b", function () {
-            test.isTrue(Spark.getCurrentLandmark() === null);
             var html = Spark.createLandmark({
               create: function () {
                 this.innerB = true;
@@ -3008,16 +3014,18 @@ Tinytest.add("spark - getCurrentLandmark", function (test) {
               render: function () {
                 this.renderCount = (this.renderCount || 0) + 1;
               }
-            }, '<span>innerB</span>');
-            test.isTrue(Spark.getCurrentLandmark().innerB);
-            test.equal(R.get() === 3 ? 0 : R.get() - 5,
-                       Spark.getCurrentLandmark().renderCount || 0);
+            }, function (lm) {
+              var html = '<span>innerB</span>';
+              test.isTrue(lm.innerB);
+              test.equal(R.get() === 3 ? 0 : R.get() - 5,
+                         lm.renderCount || 0);
+              return html;
+            });
             return html;
           });
         }
-        test.isTrue(Spark.getCurrentLandmark().outer);
         return html;
-      }) ;
+      });
     }
     return html;
   }));
@@ -3037,8 +3045,8 @@ Tinytest.add("spark - getCurrentLandmark", function (test) {
   test.equal(callbacks, 1);
   Meteor.flush();
   test.equal(callbacks, 2);
-  test.equal(null, Spark.getEnclosingLandmark(d.node()));
-  var enc = Spark.getEnclosingLandmark(d.node().firstChild);
+  test.equal(null, Spark._getEnclosingLandmark(d.node()));
+  var enc = Spark._getEnclosingLandmark(d.node().firstChild);
   test.equal(enc.a, 9);
   test.equal(enc.b, 2);
   test.isFalse('c' in enc);
@@ -3054,32 +3062,32 @@ Tinytest.add("spark - getCurrentLandmark", function (test) {
   Meteor.flush();
   test.equal(callbacks, 4);
 
-  test.isTrue(Spark.getEnclosingLandmark(findOuter()).outer);
-  test.isTrue(Spark.getEnclosingLandmark(findInnerA()).innerA);
-  test.isTrue(Spark.getEnclosingLandmark(findInnerB()).innerB);
-  test.equal(1, Spark.getEnclosingLandmark(findOuter()).renderCount);
-  test.equal(1, Spark.getEnclosingLandmark(findInnerA()).renderCount);
-  test.equal(1, Spark.getEnclosingLandmark(findInnerB()).renderCount);
+  test.isTrue(Spark._getEnclosingLandmark(findOuter()).outer);
+  test.isTrue(Spark._getEnclosingLandmark(findInnerA()).innerA);
+  test.isTrue(Spark._getEnclosingLandmark(findInnerB()).innerB);
+  test.equal(1, Spark._getEnclosingLandmark(findOuter()).renderCount);
+  test.equal(1, Spark._getEnclosingLandmark(findInnerA()).renderCount);
+  test.equal(1, Spark._getEnclosingLandmark(findInnerB()).renderCount);
 
   R.set(4)
   Meteor.flush();
   test.equal(callbacks, 5);
-  test.equal(2, Spark.getEnclosingLandmark(findOuter()).renderCount);
-  test.equal(2, Spark.getEnclosingLandmark(findInnerA()).renderCount);
+  test.equal(2, Spark._getEnclosingLandmark(findOuter()).renderCount);
+  test.equal(2, Spark._getEnclosingLandmark(findInnerA()).renderCount);
 
   R.set(5)
   Meteor.flush();
   test.equal(callbacks, 6);
-  test.equal(3, Spark.getEnclosingLandmark(findOuter()).renderCount);
-  test.equal(3, Spark.getEnclosingLandmark(findInnerA()).renderCount);
-  test.equal(1, Spark.getEnclosingLandmark(findInnerB()).renderCount);
+  test.equal(3, Spark._getEnclosingLandmark(findOuter()).renderCount);
+  test.equal(3, Spark._getEnclosingLandmark(findInnerA()).renderCount);
+  test.equal(1, Spark._getEnclosingLandmark(findInnerB()).renderCount);
 
   R.set(6)
   Meteor.flush();
   test.equal(callbacks, 7);
-  test.equal(4, Spark.getEnclosingLandmark(findOuter()).renderCount);
-  test.equal(4, Spark.getEnclosingLandmark(findInnerA()).renderCount);
-  test.equal(2, Spark.getEnclosingLandmark(findInnerB()).renderCount);
+  test.equal(4, Spark._getEnclosingLandmark(findOuter()).renderCount);
+  test.equal(4, Spark._getEnclosingLandmark(findInnerA()).renderCount);
+  test.equal(2, Spark._getEnclosingLandmark(findInnerB()).renderCount);
 
   d.kill();
   Meteor.flush();
@@ -3094,31 +3102,37 @@ Tinytest.add("spark - find/findAll on landmark", function (test) {
   var R = ReactiveVar(1);
 
   var d = OnscreenDiv(Spark.render(function () {
-    return "<div id=1>k</div><div id=2>" + Spark.labelBranch("a", function () {
-      var inner = Spark.labelBranch("b", function () {
-        return Spark.isolate(function () {
-          R.get();
-          return Spark.createLandmark({
-            create: function () {
-              test.instanceOf(this, Spark.Landmark);
-              if (l2)
-                test.equal(l2, this);
-              l2 = this;
-            }
-          }, "<span class='b' id=4>b4</span><span class='b' id=6>b6</span>");
-        });
-      });
-      var html =
-        Spark.createLandmark({
+    return "<div id=1>k</div><div id=2>" +
+      Spark.labelBranch("a", function () {
+        return Spark.createLandmark({
           create: function () {
             test.instanceOf(this, Spark.Landmark);
             if (l1)
               test.equal(l1, this);
             l1 = this;
           }
-        }, "<span class='a' id=3>a" + inner + "</span>");
-      return html;
-    }) + "<span class='c' id=5>c</span></div>";
+        }, function () {
+          return "<span class='a' id=3>a" +
+            Spark.labelBranch("b", function () {
+              return Spark.isolate(
+                function () {
+                  R.get();
+                  return Spark.createLandmark(
+                    {
+                      create: function () {
+                        test.instanceOf(this, Spark.Landmark);
+                        if (l2)
+                          test.equal(l2, this);
+                        l2 = this;
+                      }
+                    }, function () {
+                      return "<span class='b' id=4>b4</span>" +
+                        "<span class='b' id=6>b6</span>";
+                    });
+                });
+            }) + "</span>";
+        });
+      }) + "<span class='c' id=5>c</span></div>";
   }));
 
   var ids = function (nodes) {

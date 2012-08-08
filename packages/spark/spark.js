@@ -947,6 +947,7 @@ Spark.createLandmark = function (options, htmlFunc) {
   // returned html is never materialized..
 };
 
+// used by unit tests
 Spark._getEnclosingLandmark = function (node) {
   var range = findRangeOfType(Spark._ANNOTATION_LANDMARK, node);
   return range ? range.landmark : null;
