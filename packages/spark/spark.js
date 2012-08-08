@@ -18,9 +18,17 @@
 // path, or if you have multiple preserve nodes in a landmark with the
 // same selector and label
 
-// getCurrentLandmark always searches up
+// XXX event handling passes args (event, landmark) to handler,
+// where `landmark` is the immediately enclosing landmark of the
+// attachEvents range.
 
-// getCurrentLandmark creates a dummy renderer if there isn't one
+// XXX createLandmark takes an htmlFunc, which takes the landmark
+// as its argument.  There is no getCurrentLandmark.  If there's
+// no renderer, we createLandmark doesn't create an annotation,
+// but it does instantiate a new Landmark for the sake of the
+// htmlFunc (and create/destroy it inline).
+
+// XXX delete getEnclosingLandmark (unless used privately by tests)
 
 (function() {
 
