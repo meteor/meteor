@@ -3191,17 +3191,36 @@ Tinytest.add("spark - find/findAll on landmark", function (test) {
   }));
 
   var ids = function (nodes) {
-    if (nodes instanceof Array)
-      nodes = [nodes];
+    if (!(nodes instanceof Array))
+      nodes = nodes ? [nodes] : [];
     return _.pluck(nodes, 'id').join('');
   };
 
-  test.equal(ids(l1.find('.kitten')), '');
-  test.equal(ids(l2.find('.kitten')), '');
+  var check = function (all) {
+    var f = all ? 'findAll' : 'find';
 
-//  test.equal(ids(l1.find('.a')), '3');
-//  test.equal(ids(l2.find('.a')), '');
-  // XXX work in progress
+    test.equal(ids(l1[f]('.kitten')), '');
+    test.equal(ids(l2[f]('.kitten')), '');
+
+    test.equal(ids(l1[f]('.a')), '3');
+    test.equal(ids(l2[f]('.a')), '');
+
+    test.equal(ids(l1[f]('.b')), all ? '46' : '4');
+    test.equal(ids(l2[f]('.b')), all ? '46' : '4');
+
+    test.equal(ids(l1[f]('.c')), '');
+    test.equal(ids(l2[f]('.c')), '');
+
+    test.equal(ids(l1[f]('.a .b')), all ? '46' : '4');
+    test.equal(ids(l2[f]('.a .b')), '');
+  };
+
+  check(false);
+  check(true);
+  R.set(2);
+  Meteor.flush();
+  check(false);
+  check(true);
 });
 
 
