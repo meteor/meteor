@@ -195,3 +195,12 @@
 <template name="test_render_c">
   <br><hr>
 </template>
+
+<template name="test_branches_a">
+  <span>{{var}}</span>
+  {{#myConstant}}<hr/>{{/myConstant}}
+  {{#if 1}}
+    {{#myConstant}}<hr/>{{/myConstant}}
+  {{/if}}
+  {{#myConstant}}<hr/>{{/myConstant}}
+</template>
