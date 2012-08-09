@@ -27,11 +27,23 @@
       );
     };
 
-    Handlebars._default_helpers.constant = function(options) {
-      // XXX
-    };
+    _.extend(Handlebars._default_helpers, {
+      isolate: function (options) {
+        return Spark.isolate(function () {
+          return options.fn(this);
+        });
+      },
+      constant: function (options) {
+        return Spark.createLandmark({ constant: true }, function () {
+          return options.fn(this);
+        });
+      }
+    });
   };
 
+  // map from landmark id, to the 'this' object for
+  // create/render/destroy callbacks on templates
+  var templateInstanceData = {};
 
   Meteor._def_template = function (name, raw_func) {
     Meteor._hook_handlebars();
@@ -44,23 +56,42 @@
     // on which invocation of the partial this is.
     var partial = function (data, branch) {
       return Spark.labelBranch(branch, function () {
-        var html = Spark.isolate(function() {
-          return raw_func(data, {
-            helpers: partial,
-            partials: Meteor._partials,
-            name: name
-          });
-        });
+        var tmpl = name && Template[name] || {};
 
-        var t = name && Template[name];
-        if (t) {
-          html = Spark.attachEvents(t.events || {}, html);
-          html = Spark.createLandmark(
-            { preserve: t.preserve || {} },
-            // XXX actually, we need to make this landmark available
-            // to Forms and execute the template here.
-            function(landmark) { return html; });
-        }
+        var html = Spark.createLandmark({
+          preserve: tmpl.preserve || {},
+          create: function () {
+            templateInstanceData[this.id] = {};
+            tmpl.create &&
+              tmpl.create.call(templateInstanceData[this.id]);
+          },
+          render: function () {
+            tmpl.render &&
+              tmpl.render.call(templateInstanceData[this.id], this);
+          },
+          destroy: function () {
+            tmpl.destroy &&
+              tmpl.destroy.call(templateInstanceData[this.id]);
+            delete templateInstanceData[this.id];
+          }
+        }, function (landmark) {
+          var html = Spark.isolate(function () {
+            // XXX Forms needs to run a hook before and after raw_func
+            // (and receive 'landmark')
+            return raw_func(data, {
+              helpers: partial,
+              partials: Meteor._partials,
+              name: name
+            });
+          });
+
+          // events need to be inside the landmark, not outside, so
+          // that when an event fires, you can retrieve the enclosing
+          // landmark to get the template data
+          if (tmpl.events)
+            html = Spark.attachEvents(tmpl.events, html);
+          return html;
+        });
 
         html = Spark.setDataContext(data, html);
         return html;

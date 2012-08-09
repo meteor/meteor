@@ -21,10 +21,11 @@ Handlebars.json_ast_to_func = function (ast) {
 //
 // partials take one argument, data
 
-// XXX handlebars' format for arguments is stupid. eg, options ===
-// options.fn. plow this stuff under. treat block arguments (fn,
-// inverse) as just another kind of argument, same as what is passed
-// in via named arguments.
+// XXX handlebars' format for arguments is not the clearest, likely
+// for backwards compatibility to mustache. eg, options ===
+// options.fn. take the opportunity to clean this up. treat block
+// arguments (fn, inverse) as just another kind of argument, same as
+// what is passed in via named arguments.
 Handlebars._default_helpers = {
   'with': function (data, options) {
     return options.fn(data);
