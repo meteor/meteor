@@ -12,6 +12,10 @@ if (! Session.get("z")) {
   Session.set("z", 1);
 }
 
+if (typeof Session.get("spinForward") !== 'boolean') {
+  Session.set("spinForward", true);
+}
+
 Template.redrawButtons.events = {
   'click input.x': function () {
     Session.set("x", Session.get("x") + 1);
@@ -26,7 +30,21 @@ Template.redrawButtons.events = {
   }
 };
 
-Template.preserveDemo.preserve = [ '.spinner' ];
+Template.preserveDemo.preserve = [ '.spinner', '.spinforward' ];
+
+Template.preserveDemo.spinForwardChecked = function () {
+  return Session.get('spinForward') ? 'checked="checked"' : '';
+};
+
+Template.preserveDemo.spinAnim = function () {
+  return Session.get('spinForward') ? 'spinForward' : 'spinBackward';
+};
+
+Template.preserveDemo.events = {
+  'change .spinforward' : function (event) {
+    Session.set('spinForward', event.currentTarget.checked);
+  }
+};
 
 Template.preserveDemo.x =
 Template.constantDemo.x =

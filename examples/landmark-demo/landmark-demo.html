@@ -20,7 +20,13 @@
 <template name="preserveDemo">
   <h2>Simple element preservation</h2>
   X={{x}}<br>
-  <div class="spinner">Wheeee</div><br>
+  <div class="spinner" style="-webkit-animation: {{spinAnim}} 2s infinite linear">
+    X={{x}}
+  </div>
+  <div>
+    <input type="checkbox" class="spinforward" {{spinForwardChecked}}>
+    Spin Forward
+  </div>
   X={{x}}
 </template>
 

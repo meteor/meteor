@@ -1,16 +1,20 @@
 /* CSS declarations go here */
 
-@-webkit-keyframes spin {
+@-webkit-keyframes spinForward {
   from {-webkit-transform: rotate(0deg);}
   to {-webkit-transform: rotate(360deg);}
 } 
 
+@-webkit-keyframes spinBackward {
+  from {-webkit-transform: rotate(360deg);}
+  to {-webkit-transform: rotate(0deg);}
+} 
+
 .spinner {
   width: 100px;
-  background: #ccc;
+  border: 2px solid black;
+  font-weight: bold;
   text-align: center;
-  -webkit-animation-name: spin;
-  -webkit-animation-duration:2s;
-  -webkit-animation-iteration-count:infinite;
-  -webkit-animation-timing-function:linear;
+  background: white;
 }
+
