@@ -19,7 +19,7 @@ Tinytest.add("templating - assembly", function (test) {
   test.equal(canonicalizeHtml(onscreen.innerHTML), "xyhi");
   Session.set("stuff", false);
   Meteor.flush();
-  test.equal(canonicalizeHtml(onscreen.innerHTML), "xhi");
+  test.equal(canonicalizeHtml(onscreen.innerHTML), "x<!---->hi");
   document.body.removeChild(onscreen);
   Meteor.flush();
 });
@@ -429,4 +429,44 @@ Tinytest.add("templating - rendered template", function(test) {
   test.isTrue(hr2);
   test.isFalse(hr1 === hr2);
 
+});
+
+Tinytest.add("templating - branch labels", function(test) {
+  var R = ReactiveVar('foo');
+  Template.test_branches_a.var = function () {
+    return R.get();
+  };
+
+  var elems = [];
+
+  // use constant landmarks to test that each
+  // block helper invocation gets a different label
+  Template.test_branches_a.myConstant = function (options) {
+    var data = this;
+    var firstRender = true;
+    return Spark.createLandmark({ constant: true,
+                                  render: function () {
+                                    if (! firstRender)
+                                      return;
+                                    firstRender = false;
+                                    var hr = this.find('hr');
+                                    hr.myIndex = elems.length;
+                                    elems.push(this.find('hr'));
+                                  }},
+                                function () {
+                                  return options.fn(data);
+                                });
+  };
+
+  var div = OnscreenDiv(Meteor.render(Template.test_branches_a));
+  Meteor.flush();
+  test.equal(DomUtils.find(div.node(), 'span').innerHTML, 'foo');
+  test.equal(elems.length, 3);
+
+  R.set('bar');
+  Meteor.flush();
+  // XXX
+
+  div.kill();
+  Meteor.flush();
 });

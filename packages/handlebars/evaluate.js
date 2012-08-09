@@ -31,15 +31,21 @@ Handlebars._default_helpers = {
     return options.fn(data);
   },
   'each': function (data, options) {
+    var parentData = this;
     if (data && data.length > 0)
       return _.map(data, function(x, i) {
         // infer a branch key from the data
-        var branch = options.branch + '/' +
-              (x._id || (typeof x === 'string' ? x : null) || i);
-        return options.fn(x, branch);
+        var branch = (x._id || (typeof x === 'string' ? x : null) || i);
+        return Spark.labelBranch(branch, function() {
+          return options.fn(x);
+        });
       }).join('');
     else
-      return options.inverse(this, options.branch+'/else');
+      return Spark.labelBranch(
+        'else',
+        function () {
+          return options.inverse(parentData);
+        });
   },
   'if': function (data, options) {
     if (!data || (data instanceof Array && !data.length))
@@ -258,21 +264,17 @@ Handlebars.evaluate = function (ast, data, options) {
 
     // wrap `fn` and `inverse` blocks in chunks having `data`, if the data
     // is different from the enclosing data, so that the data is available
-    // at runtime for events.  Also accept an optional second argument
-    // for supplying a branch key, like partials have.
+    // at runtime for events.
     var decorateBlockFn = function(fn, old_data) {
-      return function(data, branch) {
-        // don't create spurious ranges when no branch given and data is same
+      return function(data) {
+        // don't create spurious annotations when data is same
         // as before (or when transitioning between e.g. `window` and
         // `undefined`)
-        if (! branch && (data || Handlebars._defaultThis) ===
-            (old_data || Handlebars._defaultThis)) {
+        if ((data || Handlebars._defaultThis) ===
+            (old_data || Handlebars._defaultThis))
           return fn(data);
-        } else {
-          return Spark.setDataContext(
-            data,
-            Spark.labelBranch(branch, _.bind(fn, null, data)));
-        }
+        else
+          return Spark.setDataContext(data, fn(data));
       };
     };
 
@@ -317,10 +319,12 @@ Handlebars.evaluate = function (ast, data, options) {
             return template({parent: stack, data: data}, elt[3] || [],
                             getPCKey(index));
           }, stack.data);
-        // this .branch becomes an option to the helper, and is only
-        // used if the helper uses it.
-        block.branch = elt[1]+"@"+getPCKey(index);
-        buf.push(toString(invoke(stack, elt[1], block, true)));
+        // construct branch label
+        var branch = elt[1]+"@"+getPCKey(index);
+        var html = Spark.labelBranch(branch, function () {
+          return toString(invoke(stack, elt[1], block, true));
+        });
+        buf.push(html);
       } else if (elt[0] === '>') {
         // {{> partial}}
         var partialName = elt[1];
@@ -330,9 +334,12 @@ Handlebars.evaluate = function (ast, data, options) {
         // we're in, what partial we're calling, and our index
         // into the template AST (essentially the program counter).
         // If "foo" calls "bar" at index 3, it looks like: bar@foo#3.
-        var branchKey = partialName+"@"+getPCKey(index);
+        var branch = partialName+"@"+getPCKey(index);
         // call the partial
-        buf.push(toString(partials[partialName](stack.data, branchKey)));
+        var html = Spark.labelBranch(branch, function () {
+          return toString(partials[partialName](stack.data));
+        });
+        buf.push(html);
       } else
         throw new Error("bad element in template");
     });

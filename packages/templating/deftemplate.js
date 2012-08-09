@@ -51,51 +51,47 @@
     window.Template = window.Template || {};
 
     // Define the function assigned to Template.<name>.
-    // First argument is Handlebars data, second argument is the
-    // branch key, which is calculated by the caller based
-    // on which invocation of the partial this is.
-    var partial = function (data, branch) {
-      return Spark.labelBranch(branch, function () {
-        var tmpl = name && Template[name] || {};
 
-        var html = Spark.createLandmark({
-          preserve: tmpl.preserve || {},
-          create: function () {
-            templateInstanceData[this.id] = {};
-            tmpl.create &&
-              tmpl.create.call(templateInstanceData[this.id]);
-          },
-          render: function () {
-            tmpl.render &&
-              tmpl.render.call(templateInstanceData[this.id], this);
-          },
-          destroy: function () {
-            tmpl.destroy &&
-              tmpl.destroy.call(templateInstanceData[this.id]);
-            delete templateInstanceData[this.id];
-          }
-        }, function (landmark) {
-          var html = Spark.isolate(function () {
-            // XXX Forms needs to run a hook before and after raw_func
-            // (and receive 'landmark')
-            return raw_func(data, {
-              helpers: partial,
-              partials: Meteor._partials,
-              name: name
-            });
+    var partial = function (data) {
+      var tmpl = name && Template[name] || {};
+
+      var html = Spark.createLandmark({
+        preserve: tmpl.preserve || {},
+        create: function () {
+          templateInstanceData[this.id] = {};
+          tmpl.create &&
+            tmpl.create.call(templateInstanceData[this.id]);
+        },
+        render: function () {
+          tmpl.render &&
+            tmpl.render.call(templateInstanceData[this.id], this);
+        },
+        destroy: function () {
+          tmpl.destroy &&
+            tmpl.destroy.call(templateInstanceData[this.id]);
+          delete templateInstanceData[this.id];
+        }
+      }, function (landmark) {
+        var html = Spark.isolate(function () {
+          // XXX Forms needs to run a hook before and after raw_func
+          // (and receive 'landmark')
+          return raw_func(data, {
+            helpers: partial,
+            partials: Meteor._partials,
+            name: name
           });
-
-          // events need to be inside the landmark, not outside, so
-          // that when an event fires, you can retrieve the enclosing
-          // landmark to get the template data
-          if (tmpl.events)
-            html = Spark.attachEvents(tmpl.events, html);
-          return html;
         });
 
-        html = Spark.setDataContext(data, html);
+        // events need to be inside the landmark, not outside, so
+        // that when an event fires, you can retrieve the enclosing
+        // landmark to get the template data
+        if (tmpl.events)
+          html = Spark.attachEvents(tmpl.events, html);
         return html;
       });
+
+      html = Spark.setDataContext(data, html);
+      return html;
     };
 
     // XXX hack.. copy all of Handlebars' built in helpers over to
