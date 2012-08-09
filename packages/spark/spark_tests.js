@@ -1199,17 +1199,30 @@ Tinytest.add("spark - labeled landmarks", function (test) {
 
   // this frog is pretty well boiled
   var div = OnscreenDiv(Spark.render(function () {
-    return Spark.isolate(function () {
+    var html = Spark.isolate(function () {
       return (
         dep(0) +
           testLandmark(1, function () {return "hi" + dep(1); }) +
-          label("a", function () { return dep(2) + testLandmark(2, function () { return "hi" + dep(3);});}) +
-          label("b", function () { return dep(4) + testLandmark(3, function () { return "hi" + dep(5) +                                                                      label("c", function () { return dep(6) + testLandmark(4, function () { return "hi" + dep(7) +
-                      label("d", function () {
-                            return label("e", function () {
-                                  return dep(8) + label("f", function () {
-                                                 return testLandmark(5, function () { return "hi" + dep(9);});});});});});});});}));
+          label("a", function () {
+            return dep(2) +
+              testLandmark(2, function () { return "hi" + dep(3);});}) +
+          label("b", function () {
+            return dep(4) +
+              testLandmark(3, function () {
+                return "hi" + dep(5) +                                                                     label("c", function () {
+                  return dep(6) +
+                    testLandmark(4, function () {
+                      return "hi" + dep(7) +
+                        label("d", function () {
+                          return label("e", function () {
+                            return dep(8) +
+                              label("f", function () {
+                                return testLandmark(
+                                  5, function () { return "hi" + dep(9);}
+                                );});});});});});});}));
     });
+    console.log(html);
+    return html;
   }));
 
   // callback order is not specced
@@ -1265,9 +1278,9 @@ Tinytest.add("spark - labeled landmarks", function (test) {
       [["r", 1, "r", 2, "r", 5, "r", 4, "r", 3], [88, 89, 92, 91, 90]],
       [["r", 5, "r", 4, "r", 3], [95, 94, 93]],
       [["r", 5, "r", 4, "r", 3], [98, 97, 96]],
-      [["r", 5, "r", 4], [100, 99]],
-      [["r", 5, "r", 4], [102, 101]],
-      [["r", 5], [103]]
+      [["r", 5, "r", 4, "r", 3], [100, 99, 96]],
+      [["r", 5, "r", 4, "r", 3], [102, 101, 96]],
+      [["r", 5, "r", 4, "r", 3], [103, 101, 96]]
     ][i];
     R[i].set(2);
     expect([], []);
@@ -1286,7 +1299,7 @@ Tinytest.add("spark - labeled landmarks", function (test) {
 
   excludeLandmarks[5].set(false);
   Meteor.flush();
-  expect(["c", 5, "r", 5, "r", 4], [108, 108, 107]);
+  expect(["c", 5, "r", 5, "r", 4, "r", 3], [108, 108, 107, 105]);
 });
 
 

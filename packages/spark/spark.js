@@ -19,7 +19,8 @@
 // XXX should functions with an htmlFunc use try/finally inside?
 
 // XXX test that render callbacks bubble up to enclosing landmark
-// (code is written, needs a test)
+// (code is written, needs a test), specifically re-rendering an
+// isolate that doesn't contain any landmarks
 
 // XXX write a test that would have caught the X update case (an
 // isolate containing an each containing a landmark, the outer isolate
