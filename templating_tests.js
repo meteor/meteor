@@ -465,7 +465,12 @@ Tinytest.add("templating - branch labels", function(test) {
 
   R.set('bar');
   Meteor.flush();
-  // XXX
+  var elems2 = DomUtils.findAll(div.node(), 'hr');
+  elems2.sort(function(a, b) { return a.myIndex - b.myIndex; });
+  test.equal(elems[0], elems2[0]);
+  test.equal(elems[1], elems2[1]);
+  test.equal(elems[2], elems2[2]);
+  test.equal(DomUtils.find(div.node(), 'span').innerHTML, 'bar');
 
   div.kill();
   Meteor.flush();
