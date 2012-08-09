@@ -24,6 +24,6 @@ Package.on_test(function (api) {
 
   api.add_files([
     'spark_tests.js',
-    'patcher_tests.js'
+    'patch_tests.js'
   ], 'client');
 });
