@@ -6,7 +6,7 @@
   <h1>Landmark demo</h1>
   {{> redrawButtons }}
   {{> preserveDemo }}
-  <!--{{> constantDemo }} -->
+  {{> constantDemo }}
   {{> stateDemo }}
 </body>
 
@@ -20,7 +20,7 @@
 <template name="preserveDemo">
   <h2>Simple element preservation</h2>
   X={{x}}<br>
-  <input type="text"><br>
+  <input type="text" class="keep"><br>
   X={{x}}
 </template>
 
@@ -50,6 +50,7 @@
       Y={{y}}
     </div>
   {{/each}}
+  Interval timers running: {{timersRunning}}
   X={{x}}
 </template>
 

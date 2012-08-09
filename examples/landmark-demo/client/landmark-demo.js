@@ -26,7 +26,7 @@ Template.redrawButtons.events = {
   }
 };
 
-Template.preserveDemo.preserve = [ '.input' ];
+Template.preserveDemo.preserve = [ '.keep' ];
 
 Template.preserveDemo.x =
 Template.constantDemo.x =
@@ -46,8 +46,36 @@ Template.stateDemo.timers = function () {
   return Timers.find();
 };
 
+Template.stateDemo.timersRunning = function () {
+  return Session.get("timersRunning");
+};
+
 Template.timer.events = {
   'click .delete': function () {
     Timers.remove(this._id);
   }
+};
+
+Template.timer.create = function () {
+  /*
+  this.when = new Date();
+  this.node = null;
+  this.timer = setInterval(function () {
+  }, 500);
+  Session.set("timersRunning", (Session.get("timersRunning") || 0) + 1);
+  */
+};
+
+Template.timer.render = function (landmark) {
+/*
+  this.node = landmark.findOne(".elapsed");
+*/
+};
+
+
+Template.timer.destroy = function () {
+/*
+  clearInterval(this.timer);
+  Session.set("timersRunning", (Session.get("timersRunning") || 0) - 1);
+  */
 };
