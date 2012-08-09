@@ -21,6 +21,10 @@
 // XXX test that render callbacks bubble up to enclosing landmark
 // (code is written, needs a test)
 
+// XXX write a test that would have caught the X update case (an
+// isolate containing an each containing a landmark, the outer isolate
+// get invalidated, the landmarks should match instead of being recreated)
+
 (function() {
 
 Spark = {};
@@ -461,6 +465,15 @@ _.extend(PreservationController.prototype, {
   }
 });
 
+
+// XXX debugging
+var pathForRange = function (r) {
+  var path = [], r;
+  while ((r = findParentOfType(Spark._ANNOTATION_LABEL, r)))
+    path.unshift(r.label);
+  return path.join(' :: ');
+};
+
 // `range` is a region of `document`. Modify it in-place so that it
 // matches the result of Spark.render(htmlFunc), preserving landmarks.
 Spark.renderToRange = function (range, htmlFunc) {
@@ -486,8 +499,10 @@ Spark.renderToRange = function (range, htmlFunc) {
     });
   };
 
+  console.log("----- renderToRange -----");
   // Find all of the landmarks in the old contents of the range
   visitLandmarksInRange(range, function (landmarkRange, notes) {
+    console.log("existing: " + pathForRange(landmarkRange));
     notes.originalRange = landmarkRange;
   });
 
@@ -496,6 +511,11 @@ Spark.renderToRange = function (range, htmlFunc) {
   DomUtils.wrapFragmentForContainer(frag, range.containerNode());
 
   var tempRange = new LiveRange(Spark._TAG, frag);
+
+  // XXX XXX
+  visitLandmarksInRange(tempRange, function (tempRange, notes) {
+    console.log("new: " + pathForRange(tempRange));
+  });
 
   // find preservation roots from matched landmarks inside the
   // rerendered region
