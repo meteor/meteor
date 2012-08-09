@@ -83,7 +83,7 @@ Tinytest.add("spark - assembly", function (test) {
     var tempRange = new LiveRange(Spark._TAG, frag);
     tempRange.visit(function (isStart, rng) {
       if (! isStart && rng.type === Spark._ANNOTATION_DATA)
-        actualGroups.push(rangeToHtml(rng));
+        actualGroups.push(DomUtils.rangeToHtml(rng.firstNode(), rng.lastNode()));
     });
     test.equal(actualGroups.join(','), groups.join(','));
   };

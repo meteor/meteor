@@ -21,7 +21,6 @@ Package.on_use(function (api, where) {
   api.add_files('wrappedfrag.js', where);
   api.add_files('current_style.js', where);
   api.add_files('reactivevar.js', where);
-  api.add_files('liverange_helpers.js', where);
 });
 
 Package.on_test(function (api) {

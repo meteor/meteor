@@ -321,5 +321,24 @@ DomUtils = {};
     return DomUtils.elementContains(document.body, node);
   };
 
+  // Return an HTML string representation of the nodes from
+  // firstNode to lastNode, which must be siblings.
+  // The tags representing firstNode and lastNode are included,
+  // but not their parent or outer siblings.
+  DomUtils.rangeToHtml = function (firstNode, lastNode) {
+    var frag = document.createDocumentFragment();
+    for(var n = firstNode, after = lastNode.nextSibling;
+        n && n !== after;
+        n = n.nextSibling)
+      frag.appendChild(n.cloneNode(true)); // deep copy
+    return DomUtils.fragmentToHtml(frag);
+  };
+
+  // Return an HTML string representation of node, including its
+  // own open and close tag.
+  DomUtils.outerHtml = function (node) {
+    return DomUtils.rangeToHtml(node, node);
+  };
+
 
 })();
