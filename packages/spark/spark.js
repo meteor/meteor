@@ -18,7 +18,8 @@
 
 // XXX should functions with an htmlFunc use try/finally inside?
 
-// XXX do render callbacks "bubble up" to enclosing landmarks?
+// XXX test that render callbacks bubble up to enclosing landmark
+// (code is written, needs a test)
 
 (function() {
 
@@ -324,13 +325,23 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
 
     // Deliver render callbacks to all landmarks that are now
     // onscreen (possibly not for the first time.)
-    //
-    // XXX should bubble up and notify parent landmarks too? for all
-    // the same reasons we need to do it for node preservation?
     _.each(landmarkRanges, function (landmarkRange) {
       if (! landmarkRange.isPreservedConstant)
         landmarkRange.renderCallback.call(landmarkRange.landmark);
     });
+
+    // Deliver render callbacks to all landmarks that enclose the
+    // updated region.
+    //
+    // XXX unify with notifyWatchers. maybe remove _ANNOTATION_WATCH
+    // and just give everyone a contentsModified callback (sibling to
+    // 'finalize')
+    //
+    // future: include an argument in the callback to distinguish this
+    // case from the previous
+    var walk = renderedRange;
+    while ((walk = findParentOfType(Spark._ANNOTATION_LANDMARK, walk)))
+      walk.renderCallback.call(walk.landmark);
 
     // This code can run several times on the same nodes (if the
     // output of a render is included in a render), so it must be

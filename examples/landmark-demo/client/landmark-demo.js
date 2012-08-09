@@ -70,6 +70,11 @@ Template.stateDemo.timers = function () {
 };
 
 Template.timer.events = {
+  'click .reset': function () {
+    // XXX need to get the template state object
+    // XXX also probably need to have the landmark available..
+    Timers.remove(this._id);
+  },
   'click .delete': function () {
     Timers.remove(this._id);
   }
