@@ -1,0 +1,18 @@
+#aloha-devtool-source-viewer-panel .aloha-sidebar-panel-content-inner-text {
+	background: #fff;
+	box-shadow:         inset 0 0 8px rgba(0,0,0,0.5);
+	-moz-box-shadow:    inset 0 0 8px rgba(0,0,0,0.5);
+	-webkit-box-shadow: inset 0 0 8px rgba(0,0,0,0.5);
+}
+
+#aloha-devtool-source-viewer-content {
+	min-height: 400px;
+	margin: 0;
+	padding: 10px;
+	border: 0;
+	color: #888;
+	line-height: 1.2em;
+	font-size: 12px;
+	font-family: 'Bitstream Vera Sans Mono','Courier',monospace;
+	overflow: scroll;
+}

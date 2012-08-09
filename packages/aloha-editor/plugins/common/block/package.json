@@ -1,0 +1,11 @@
+{
+  "name": "block",
+  "description": "Aloha Editor block plugin",
+  "summary": "The block plugin manages block content that is not contenteditable",
+  "homepage": "http://example.com",
+  "author": "John Doe",
+  "version": "1.0",
+  "directories": {
+    "docs": "doc"
+  }
+}

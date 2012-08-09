@@ -1,0 +1,126 @@
+
+/* Images */
+.aloha-image-align-left {
+    background: url(../img/image-align-left.png);
+}
+
+.aloha-image-align-right {
+    background: url(../img/image-align-right.png);
+}
+
+.aloha-image-align-none {
+    background: url(../img/image-align-none.png);
+}
+
+.aloha-img.aloha-image-title {
+    background: url(../img/image-title.png);
+}
+
+.aloha-img.aloha-image-border {
+    background: url(../img/image-border.png);
+}
+
+.aloha-image-insert {
+    background: url(../img/image.gif) !important;
+}
+
+.aloha-img.aloha-image-padding-increase {
+	background: url(../img/padding-increase.gif);
+}
+
+.aloha-img.aloha-image-padding-decrease {
+	background: url(../img/padding-decrease.gif);
+}
+
+.aloha-img.aloha-image-size-increase {
+	background: url(../img/size-increase.gif);
+}
+
+.aloha-img.aloha-image-size-decrease {
+	background: url(../img/size-decrease.gif);
+}
+
+.aloha-default-file-icon {
+	background: url(../img/page.png);
+
+	width: 16px;
+	height:16px;
+	margin: 0;
+	padding:0;
+}
+
+/* Crop and Resize */
+.aloha-icon-cnr-resize, .aloha-icon-cnr-crop, .aloha-icon-cnr-reset {
+	background: url(../img/cropnresize.png);
+}
+
+.aloha-icon-cnr-crop {
+	background-position: -2px -2px !important;
+}
+
+.aloha-icon-cnr-reset {
+	background-position: -42px -2px !important;
+}
+
+.aloha-icon-cnr-ratio {
+	background-image: url(../img/cropnresize.png) !important;
+	background-position: -60px -2px !important;
+}
+
+#aloha-CropNResize-btns {
+	z-index: 10000;
+	width: 70px;
+	display: none;
+	position: absolute;
+}
+
+#aloha-CropNResize-btns button {
+	background: #ededed;
+	border: 1px solid #c6c6c6;
+	cursor: pointer;
+	color: #96ca03;
+	text-shadow: -1px -1px 1px rgba(0,0,0,0.3);
+	font-size: 16px;
+	border-radius: 3px;
+	-webkit-border-radius: 3px;
+	-moz-border-radius: 3px;
+	padding: 0px;
+	width: 23px;
+	height: 23px;
+	margin-right: 3px;
+}
+
+#aloha-CropNResize-btns button.cnr-crop-apply {
+	padding-left: 2px;
+}
+
+#aloha-CropNResize-btns button.cnr-crop-cancel {
+	color: #c92404;
+}
+
+/*
+ * fix to use big resize handle for images
+ */
+.aloha .ui-resizable-se {
+	width: 16px;
+	height: 16px;
+	background-position: -80px -224px !important;
+}
+
+
+.aloha-image-box-active {
+	-moz-box-shadow:	0px 2px 8px rgba(0, 0, 0, 0.2);
+	-webkit-box-shadow:	0px 2px 8px rgba(0, 0, 0, 0.2);
+	box-shadow:			0px 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.aloha-image-box-active .ui-resizable-handle.ui-resizable-nw {
+}
+.aloha-image-box-active .ui-resizable-handle.ui-resizable-ne {
+}
+.aloha-image-box-active .ui-resizable-handle.ui-resizable-se {
+}
+.aloha-image-box-active .ui-resizable-handle.ui-resizable-sw {
+}
+
+@import	"../vendor/jcrop/jquery.jcrop.css";

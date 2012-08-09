@@ -1,0 +1,12 @@
+Config example
+--------------
+
+"align": { 
+	// Allow align left, center and justify only for all elements
+	// 4 possibilities : left, center, right and justify
+	config : {
+		alignment: [ 'left','center','justify']
+	}
+}
+
+This plugin is release under the LGPL license.

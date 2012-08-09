@@ -1,0 +1,34 @@
+#aloha-devtool-profiler-container {
+	box-shadow:         inset 0 0 8px rgba(0,0,0,0.2);
+	-moz-box-shadow:    inset 0 0 8px rgba(0,0,0,0.2);
+	-webkit-box-shadow: inset 0 0 8px rgba(0,0,0,0.2);
+	padding: 5px;
+	font-family: 'Bitstream Vera Sans Mono','Courier',monospace;
+	font-size: 11px;
+	text-align: center;
+}
+
+#aloha-devtool-profiler-input {
+	width: 90%;
+	padding: 4px;
+	backgroud: #fff;
+	border: 1px solid #aaa;
+	box-shadow:         0 0 10px rgba(0,0,0,0.2);
+	-moz-box-shadow:    0 0 10px rgba(0,0,0,0.2);
+	-webkit-box-shadow: 0 0 10px rgba(0,0,0,0.2);
+	font-family: 'Bitstream Vera Sans Mono','Courier',monospace;
+	font-size: 11px;
+	text-align: left;
+}
+
+#aloha-devtool-profiler-console {
+	margin: 5px 0 0;
+	padding: 0;
+	line-height: 1em;
+	text-align: left;
+}
+#aloha-devtool-profiler-console li {
+	margin: 0;
+	padding: 4px;
+	border-top: 1px solid #eee;
+}

@@ -1,0 +1,55 @@
+/*!
+* Aloha Editor
+* Author & Copyright (c) 2010 Gentics Software GmbH
+* aloha-sales@gentics.com
+* Licensed unter the terms of http://www.aloha-editor.com/license.html
+*/
+
+.aloha-link-pointer {
+	cursor: pointer;
+}
+
+.aloha-link-text {
+	cursor: text;
+}
+
+.aloha-link-radioTarget {
+	width:auto !important;
+}
+
+.aloha-link-title-container {
+	padding:5px 5px;
+}
+
+.aloha-link-target-container {
+	padding:5px 5px;
+}
+
+.aloha-link-target-container li{
+	padding:0 !important;
+}
+
+.aloha-link-target-container fieldset {
+	border: 2px groove threedface !important;
+	padding-bottom: 5px;
+}
+
+.aloha-link-title-container fieldset {
+	border: 2px groove threedface !important;
+	padding-bottom: 5px;
+}
+
+.aloha-link-title-container fieldset  input[type=text]{
+	width:auto !important;
+	min-width:180px;
+}
+
+.aloha-link-target-container fieldset  input[type=text]{
+	width:auto !important;
+	min-width:180px;
+}
+
+.x-form-field.x-form-text.aloha-link-href-field {
+	color: #333 !important;
+	padding: 3px;
+}

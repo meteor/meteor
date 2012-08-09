@@ -1,0 +1,49 @@
+{
+	"name": "aloha-editor",
+	"version": "${version}",
+	"description": "The HTML5 WYSIWYG Editor",
+	"homepage": "https://github.com/alohaeditor/Aloha-Editor",
+	"keywords": [
+		"wysiwyg",
+		"editor",
+		"rte",
+		"html5",
+		"contenteditable"
+	],
+
+	"author": {
+		"name": "The Aloha Editor Team",
+		"email": "team@aloha-editor.org",
+		"web": "http://aloha-editor.org"
+	},
+	"maintainers": [
+		{
+			"name": "Haymo Meran",
+			"email": "h.meran@gentics.com",
+			"web": "http://haymo.org"
+		}
+	],
+	"contributors": [
+		{
+			"name": "The Aloha Editor Team",
+			"email": "team@aloha-editor.org",
+			"web": "http://aloha-editor.org"
+		}
+	],
+
+	"bugs": {
+		"web": "https://github.com/alohaeditor/Aloha-Editor/issues"
+	},
+
+	"licenses": [
+		{
+			"type": "GPLv2 or later",
+			"url": "http://www.gnu.org/licenses/gpl-2.0.html"
+		}
+	],
+
+	"repository" : {
+		"type" : "git",
+		"url" : "http://github.com/alohaeditor/Aloha-Editor.git"
+	}
+}

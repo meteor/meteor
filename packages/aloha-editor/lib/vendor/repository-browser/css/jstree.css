@@ -1,0 +1,88 @@
+/*
+ * jsTree browser theme 1.0
+ * Supported features: dots/no-dots, icons/no-icons, focused, loading
+ * Supported plugins: ui (hovered, clicked), checkbox, contextmenu, search
+ */
+
+.jstree li a {
+	display: inline-block;
+	padding: 4px;
+	border: 1px solid transparent;
+}
+.jstree-browser li > ins {
+	cursor: pointer;
+	background: url(../img/arrow-315-medium.png) no-repeat center center;
+}
+
+/*
+.jstree-browser ins { background-image:url("xd.png"); background-repeat:no-repeat; background-color:transparent; }
+.jstree-browser li { background-position:-90px 0; background-repeat:repeat-y; border-left: 1px dotted #ccc; }
+*/
+.jstree-browser li {
+	margin-left: 10px;
+	padding-left: 5px;
+	border-left: 1px dotted #ccc;
+}
+.jstree-browser li.jstree-last { background:transparent; }
+.jstree-browser > ul:first-child > li { border-left-width: 0; }
+
+.jstree-browser li > ins {
+	background: transparent no-repeat center center;
+	opacity: 0.7;
+	filter: alpha(opacity=70);
+}
+.jstree-browser li > ins:hover {
+	opacity: 1;
+	filter: alpha(opacity=100);
+}
+.jstree-browser li.jstree-open > ins {
+	background-image: url(../img/arrow-315-medium.png);
+	opacity: 1;
+	filter: alpha(opacity=100);
+}
+.jstree-browser li.jstree-closed > ins {
+	background-image: url(../img/arrow-000-medium.png);
+}
+.jstree-browser li.jstree-leaf > ins {
+	background-image: url(../img/control-stop-square-small.png);
+}
+/*
+.jstree-browser .jstree-hovered { background:#f9d53f; border:1px solid #f7b940; }
+.jstree-browser .jstree-clicked { background:#88c7ea; border:1px solid #48a3d2; }
+*/
+.jstree-browser .jstree-hovered {
+	color: #303539;
+}
+.jstree-browser .jstree-clicked {
+}
+.jstree-browser .jstree-hovered.jstree-clicked {
+}
+
+/* Folder */
+.jstree-browser a .jstree-icon {
+	background: url(../img/folder-horizontal-open.png) no-repeat center center;
+	cursor: pointer;
+}
+.jstree-browser a.jstree-loading .jstree-icon { background:url(../img/throbber.gif) center center no-repeat !important; }
+.jstree-browser a.jstree-clicked .jstree-icon   {
+	background-image: url(../img/folder-open.png);
+}
+
+/* IE6 BEGIN */
+/*
+.jstree-browser li, 
+.jstree-browser ins,
+#vakata-dragged.jstree-browser .jstree-invalid, 
+#vakata-dragged.jstree-browser .jstree-ok, 
+#jstree-marker.jstree-browser { _background-image:url("d.gif"); }
+.jstree-browser .jstree-open ins { _background-position:-72px 0; }
+.jstree-browser .jstree-closed ins { _background-position:-54px 0; }
+.jstree-browser .jstree-leaf ins { _background-position:-36px 0; }
+.jstree-browser a ins.jstree-icon { _background-position:-56px -19px; }
+#vakata-contextmenu.jstree-browser-context ins { _display:none; }
+#vakata-contextmenu.jstree-browser-context li { _zoom:1; }
+.jstree-browser .jstree-undetermined a .jstree-checkbox { _background-position:-20px -19px; }
+.jstree-browser .jstree-checked a .jstree-checkbox { _background-position:-38px -19px; }
+.jstree-browser .jstree-unchecked a .jstree-checkbox { _background-position:-2px -19px; }
+*/
+/* IE6 END */

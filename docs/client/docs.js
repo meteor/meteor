@@ -186,6 +186,7 @@ var toc = [
   ],
 
   "Packages", [ [
+    "aloha-editor",
     "amplify",
     "backbone",
     "bootstrap",

@@ -1,0 +1,38 @@
+.aloha-character-picker-overlay {
+    position: absolute;
+    display: none;
+    float: left;
+    padding: 3px;
+    top: 0;
+    left: 0;
+    border: 1px solid #afafaf;
+    border-collapse: separate;
+    background-color: #fff;
+    z-index: 999999;
+}
+
+.aloha-character-picker-overlay {
+	border-collapse:collapse;
+}
+
+.aloha-character-picker-overlay td {
+    width: 1.5em;
+    height: 1.5em;
+    border: 1px solid #afafaf;
+    font-size: 0.8em;
+    padding: 0.05em;
+}
+
+.aloha-character-picker-overlay td.mouseover {
+    border: 1px solid #fdea83;
+    background-color: #fefce1;
+}
+
+.aloha-character-picker-overlay td.focused {
+    border: 1px solid #407bcf;
+    background-color: #b9d6f9;
+}
+
+.aloha-icon-characterpicker {
+    background: url( '../img/icon.png' );
+}

@@ -1,0 +1,272 @@
+.aloha-sidebar-bar {
+	z-index: 999999999;
+	position: fixed;
+	top: 0;
+	left: 0;
+	text-align: left;
+	font-family: Arial, sans-serif;
+	font-size: 12px;
+	border-right: 1px solid #888;
+	-moz-box-shadow:    0px 0px 10px rgba(0, 0, 0, .5);
+	-webkit-box-shadow: 0px 0px 10px rgba(0, 0, 0, .5);
+	box-shadow:         0px 0px 10px rgba(0, 0, 0, .5);
+}
+.aloha-sidebar-bar.aloha-sidebar-right {
+	left: auto;
+	right: 0;
+	border-right-width: 0;
+	border-left: 1px solid #888;
+}
+.aloha-sidebar-inner {
+	position: relative;
+	background-color: #ccc;
+	background-image: -webkit-radial-gradient(
+		rgba(0, 0, 0, 0.0) 20%,
+		rgba(0, 0, 0, 0.2) 80%,
+		rgba(0, 0, 0, 0.3) 100%
+	);
+	background-image: -moz-radial-gradient(
+		rgba(0, 0, 0, 0.0) 20%,
+		rgba(0, 0, 0, 0.2) 80%,
+		rgba(0, 0, 0, 0.3) 100%
+	);
+}
+.aloha-sidebar-panels {
+	margin: 0;
+	padding: 15px 0;
+}
+.aloha-sidebar-panels li {
+	overflow: hidden;
+	margin: 0;
+	padding: 0 15px;
+}
+.aloha-sidebar-panel-top {
+	-webkit-border-top-left-radius:  5px;
+	-webkit-border-top-right-radius: 5px;
+	-moz-border-radius-topleft:      5px;
+	-moz-border-radius-topright:     5px;
+}
+.aloha-sidebar-panel-content.aloha-sidebar-panel-bottom {
+	padding-bottom: 0;
+	-webkit-border-bottom-left-radius:  5px;
+	-webkit-border-bottom-right-radius: 5px;
+	-moz-border-radius-bottomleft:      5px;
+	-moz-border-radius-bottomright:     5px;
+	border-bottom-width: 1px;
+}
+.aloha-sidebar-panel-title {
+	position: relative;
+	overflow: hidden;
+	padding: 8px 0 0 8px;
+	border: 1px solid rgba(0, 0, 0, 0.3);
+	border-bottom-width: 0;
+	background-color: #303539;
+	background-image: -webkit-gradient(
+		linear,
+		center top,
+		center bottom,
+		color-stop(0.00, #6c6f74),
+		color-stop(0.05, #4c4f54),
+		color-stop(0.10, #3f4448),
+		color-stop(0.45, #383d41),
+		color-stop(0.50, #303539),
+		color-stop(0.95, #33363b)
+	);
+	background-image: -moz-linear-gradient(
+		center top,
+		#6c6f74 0%,
+		#4c4f54 5%,
+		#3f4448 10%,
+		#383d41 45%,
+		#303539 50%,
+		#33363b 95%
+	);
+	color: #ccc;
+	cursor: pointer;
+	font-size: 13px;
+	font-weight: bold;
+	line-height: 1.5em;
+	text-shadow: 0 0 6px #23262b;
+}
+.aloha-sidebar-panel-title:hover {
+	color: #fff;
+}
+.aloha-sidebar-panel-title-arrow {
+	position: absolute;
+	top: 8px;
+	left: 8px;
+	width: 16px;
+	height: 16px;
+	background: url(../img/arrow.png) no-repeat center center;
+	opacity: 0.3;
+}
+.aloha-sidebar-panel-title:hover .aloha-sidebar-panel-title-arrow {
+	opacity: 0.9;
+}
+.aloha-sidebar-panel-title .aloha-sidebar-panel-title-arrow.aloha-sidebar-panel-title-arrow-down {
+	background-image: url(../img/arrow-down.png);
+}
+.aloha-sidebar-panel-title-text {
+	margin-left: 24px;
+	white-space: nowrap;
+}
+.aloha-sidebar-panel-content {
+	overflow: hidden;
+	height: 5px;
+	background: #303539;
+}
+.aloha-sidebar-panel-content-inner {
+	margin: 5px 0 0;
+	padding: 0;
+	color: #888;
+	background: #fff;
+	background-image: -webkit-radial-gradient(
+		rgba(0, 0, 0, 0.0) 50%,
+		rgba(0, 0, 0, 0.1) 90%,
+		rgba(0, 0, 0, 0.2) 100%
+	);
+	background-image: -moz-radial-gradient(
+		rgba(0, 0, 0, 0.0) 50%,
+		rgba(0, 0, 0, 0.1) 90%,
+		rgba(0, 0, 0, 0.2) 100%
+	);
+}
+.aloha-sidebar-panel-content input {
+	margin: 5px;
+	padding: 5px;
+}
+.aloha-sidebar-handle {
+	position: absolute;
+	top: 30px;
+	right: -30px;
+	width: 40px;
+	height: 30px;
+	overflow: hidden;
+	background-color: #303539;
+	background-image: -webkit-gradient(
+		linear,
+		center top,
+		center bottom,
+		color-stop(0.00, #6c6f74),
+		color-stop(0.05, #4c4f54),
+		color-stop(0.10, #3f4448),
+		color-stop(0.45, #383d41),
+		color-stop(0.50, #303539),
+		color-stop(0.95, #33363b)
+	);
+	background-image: -moz-linear-gradient(
+		center top,
+		#6c6f74 0%,
+		#4c4f54 5%,
+		#3f4448 10%,
+		#383d41 45%,
+		#303539 50%,
+		#33363b 95%
+	);
+	cursor: pointer;
+
+	-moz-box-shadow:    0px 0px 10px rgba(0, 0, 0, .5);
+	-webkit-box-shadow: 0px 0px 10px rgba(0, 0, 0, .5);
+	box-shadow:         0px 0px 10px rgba(0, 0, 0, .5);
+
+	border-top-right-radius:            5px;
+	border-bottom-right-radius:         5px;
+	-moz-border-radius-topright:        5px;
+	-moz-border-radius-bottomright:     5px;
+	-webkit-border-top-right-radius:    5px;
+	-webkit-border-bottom-right-radius: 5px;
+}
+.aloha-sidebar-right .aloha-sidebar-handle {
+	left: -30px;
+	border-top-right-radius:            0px;
+	border-bottom-right-radius:         0px;
+	-moz-border-radius-topright:        0px;
+	-moz-border-radius-bottomright:     0px;
+	-webkit-border-top-right-radius:    0px;
+	-webkit-border-bottom-right-radius: 0px;
+
+	border-top-left-radius:             5px;
+	border-bottom-left-radius:          5px;
+	-moz-border-radius-topleft:         5px;
+	-moz-border-radius-bottomleft:      5px;
+	-webkit-border-top-left-radius:     5px;
+	-webkit-border-bottom-left-radius:  5px;
+}
+.aloha-sidebar-handle-icon {
+	display: block;
+	position: absolute;
+	top: 5px;
+	right: 5px;
+	background: url(../img/arrow.png) no-repeat center center;
+	width: 20px;
+	height: 20px;
+	opacity: 0.5;
+}
+.aloha-sidebar-right .aloha-sidebar-handle-icon {
+	left: 5px;
+	right: auto;
+}
+.aloha-sidebar-handle-icon.aloha-sidebar-handle-icon-left {
+	background-image: url(../img/arrow-left.png);
+}
+.aloha-sidebar-panel-parent-path {
+	background-color: #303539;
+	background-image: -webkit-gradient(
+		linear,
+		center top,
+		center bottom,
+		color-stop(0.00, #6c6f74),
+		color-stop(0.05, #4c4f54),
+		color-stop(0.10, #3f4448),
+		color-stop(0.45, #383d41),
+		color-stop(0.50, #303539),
+		color-stop(0.95, #33363b)
+	);
+	background-image: -moz-linear-gradient(
+	center top,
+		#6c6f74 0%,
+		#4c4f54 5%,
+		#3f4448 10%,
+		#383d41 45%,
+		#303539 50%,
+		#33363b 95%
+	);
+	color: #fff;
+	cursor: pointer;
+	font-size: 12px;
+	text-shadow: 0 0 6px #23262b;
+	white-space: nowrap;
+	line-height: 1em;
+}
+.aloha-sidebar-panel-parent-path:hover {
+	opacity: 0.9;
+}
+.aloha-sidebar-panel-parent-path span {
+	display: inline-block;
+	padding: 0 10px 0 5px;
+	background: url(../img/breadcrumb-divider.png) no-repeat right center;
+	opacity: 0.25;
+	line-height: 1.6em;
+}
+.aloha-sidebar-panel-parent-path span:first-child {
+	font-weight: bold;
+	opacity: 0.8;
+}
+.aloha-sidebar-panel-parent-path span:last-child {
+	background: none;
+}
+.aloha-sidebar-panel-parent-content {
+	padding: 4px;
+	background-image: -webkit-gradient(
+		linear,
+		center top,
+		center bottom,
+		color-stop(0.0, rgba(0, 0, 0, 0.25)),
+		color-stop(0.05, rgba(0, 0, 0, 0.0))
+	);
+	background-image: -moz-linear-gradient(
+		center top,
+		rgba(0, 0, 0, 0.25) 0%,
+		rgba(0, 0, 0, 0.0) 5%
+	);
+}

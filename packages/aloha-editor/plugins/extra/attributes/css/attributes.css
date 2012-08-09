@@ -1,0 +1,12 @@
+/*!
+* Aloha Editor
+* Author & Copyright (c) 2010 Gentics Software GmbH
+* aloha-sales@gentics.com
+* Licensed unter the terms of http://www.aloha-editor.com/license.html
+*/
+.aloha-attributes-item label { display:block; margin-left: 5px; }
+.aloha-attributes-item input { display: block; width: 190px; margin-bottom: 10px; margin-top: 0px; }
+.aloha-attributes-container h2 { margin-left: 5px; }
+.aloha-attributes-newattribute label { margin-left: 5px; width: 46px; margin-right: 12px; display: inline-block; }
+.aloha-attributes-newattribute input{ margin-left: 5px; }
+.aloha-attributes-newattribute button { margin-left: 5px; margin-bottom: 5px; }

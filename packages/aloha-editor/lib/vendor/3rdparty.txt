@@ -1,0 +1,70 @@
+* Rangy, a cross-browser JavaScript range and selection library
+	http://code.google.com/p/rangy/
+	Copyright 2011, Tim Down
+	Licensed under the MIT license.
+	Version: 1.2.1
+	Build date: 8 October 2011
+
+* DOM Ranges for Internet Explorer (m2)
+	Copyright (c) 2009 Tim Cameron Ryan
+	Released under the MIT/X License
+	available at http://code.google.com/p/ierange/
+
+* Simple JavaScript Inheritance
+	By John Resig http://ejohn.org/
+	MIT Licensed.
+
+* JSON2
+    http://www.JSON.org/json2.js
+    2011-02-23
+    Public Domain.
+    NO WARRANTY EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
+    See http://www.JSON.org/js.html
+
+* Amplify Store - Persistent Client-Side Storage 1.1.0
+	Copyright 2011 appendTo LLC. (http://appendto.com/team)
+	Dual licensed under the MIT or GPL licenses.
+	http://appendto.com/open-source-licenses
+	http://amplifyjs.com
+
+* jqGrid  4.0.0 - jQuery Grid
+	Copyright (c) 2008, Tony Tomov, tony@trirand.com
+	Dual licensed under the MIT and GPL licenses
+	http://www.opensource.org/licenses/mit-license.php
+
+* jsTree 1.0-rc3
+	http://jstree.com/
+	Copyright (c) 2010 Ivan Bozhanov (vakata.com)
+	Licensed same as jquery - under the terms of either the MIT License or the GPL Version 2 License
+		http://www.opensource.org/licenses/mit-license.php
+		http://www.gnu.org/licenses/gpl.html
+
+* jquery.layout 1.3.0 - Release Candidate 30.51
+	Copyright (c) 2012
+		Fabrizio Balliano (http://www.fabrizioballiano.net)
+		Kevin Dalman (http://allpro.net)
+	Dual licensed under the GPL (http://www.gnu.org/licenses/gpl.html)
+	and MIT (http://www.opensource.org/licenses/mit-license.php) licenses.
+
+* jQuery JavaScript Library v1.7.2 (and other versions)
+	http://jquery.com/
+	Copyright 2011, John Resig
+	Dual licensed under the MIT or GPL Version 2 licenses.
+	http://jquery.org/license
+
+* jQuery UI 1.9m6
+	Copyright 2011, AUTHORS.txt (http://jqueryui.com/about)
+	Dual licensed under the MIT or GPL Version 2 licenses.
+	http://jquery.org/license
+
+* Sanitize
+  Copyright (c) 2010 by Gabriel Birke
+  licensed under the MIT license http://www.opensource.org/licenses/mit-license.php
+
+* RequireJS 2.0.4 Copyright (c) 2010-2012, The Dojo Foundation All Rights Reserved.
+	Available via the MIT or new BSD license.
+	see: http://github.com/jrburke/requirejs for details
+
+* cssx (Cujo Style Sheet eXtender)
+    Copyright (c) 2010 unscriptable.com
+    Available via AFLv2.1 8 (http://trac.dojotoolkit.org/browser/dojo/trunk/LICENSE#L43) or new BSD license (http://trac.dojotoolkit.org/browser/dojo/trunk/LICENSE#L13) 
