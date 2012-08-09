@@ -35,6 +35,11 @@ function () {
   return Session.get("x");
 };
 
+Template.stateDemo.y =
+function () {
+  return Session.get("y");
+};
+
 
 Template.stateDemo.events = {
   'click .create': function () {
@@ -46,36 +51,45 @@ Template.stateDemo.timers = function () {
   return Timers.find();
 };
 
-Template.stateDemo.timersRunning = function () {
-  return Session.get("timersRunning");
-};
-
 Template.timer.events = {
   'click .delete': function () {
     Timers.remove(this._id);
   }
 };
 
+Template.timer.z = function () {
+  return Session.get("z");
+};
+
 Template.timer.create = function () {
-  /*
-  this.when = new Date();
-  this.node = null;
-  this.timer = setInterval(function () {
-  }, 500);
-  Session.set("timersRunning", (Session.get("timersRunning") || 0) + 1);
-  */
+  var self = this;
+  console.log("timer create");
+  self.elapsed = 0;
+  self.node = null;
+  self.update = function () {
+    self.node.innerHTML = self.elapsed + " second" +
+      ((self.elapsed === 1) ? "" : "s");
+  }
 };
 
 Template.timer.render = function (landmark) {
-/*
-  this.node = landmark.findOne(".elapsed");
-*/
+  var self = this;
+  console.log("timer render");
+  self.node = landmark.find(".elapsed");
+  self.update();
+
+  if (! self.timer) {
+    var tick = function () {
+      self.elapsed++;
+      self.timer = setTimeout(tick, 1000);
+      self.update();
+    };
+    tick();
+  }
 };
 
 
 Template.timer.destroy = function () {
-/*
+  console.log("timer destroy");
   clearInterval(this.timer);
-  Session.set("timersRunning", (Session.get("timersRunning") || 0) - 1);
-  */
 };
