@@ -919,6 +919,12 @@ _.extend(Spark.Landmark.prototype, {
     var r = this._range;
     return DomUtils.findAllClipped(r.containerNode(), selector,
                                    r.firstNode(), r.lastNode());
+  },
+  firstNode: function () {
+    return this._range.firstNode();
+  },
+  lastNode: function () {
+    return this._range.lastNode();
   }
 });
 

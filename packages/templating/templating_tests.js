@@ -433,7 +433,7 @@ Tinytest.add("templating - rendered template", function(test) {
 
 Tinytest.add("templating - branch labels", function(test) {
   var R = ReactiveVar('foo');
-  Template.test_branches_a.var = function () {
+  Template.test_branches_a['var'] = function () {
     return R.get();
   };
 
@@ -474,4 +474,43 @@ Tinytest.add("templating - branch labels", function(test) {
 
   div.kill();
   Meteor.flush();
+});
+
+Tinytest.add("templating - matching in list", function (test) {
+  var c = new LocalCollection();
+  c.insert({letter:'a'});
+  c.insert({letter:'b'});
+  c.insert({letter:'c'});
+
+  _.extend(Template.test_listmatching_a0, {
+    'var': function () { return R.get(); },
+    c: function () { return c.find(); }
+  });
+
+  var buf = [];
+  _.extend(Template.test_listmatching_a1, {
+    create: function () { buf.push('+'); },
+    render: function (landmark) {
+      var letter = DomUtils.rangeToHtml(landmark.firstNode(),
+                                        landmark.lastNode()).match(/\S+/)[0];
+      buf.push('*'+letter);
+    },
+    destroy: function () { buf.push('-'); }
+  });
+
+  var R = ReactiveVar('foo');
+  var div = OnscreenDiv(Spark.render(Template.test_listmatching_a0));
+  Meteor.flush();
+
+  test.equal(DomUtils.find(div.node(), 'span').innerHTML, 'foo');
+  test.equal(div.html().match(/<p>(.*?)<\/p>/)[1].match(/\S+/g), ['a','b','c']);
+  test.equal(buf.join(''), '+++*a*b*c');
+
+  buf.length = 0;
+  R.set('bar');
+  Meteor.flush();
+  test.equal(DomUtils.find(div.node(), 'span').innerHTML, 'bar');
+  test.equal(div.html().match(/<p>(.*?)<\/p>/)[1].match(/\S+/g), ['a','b','c']);
+  test.equal(buf.join(''), '*a*b*c');
+
 });
