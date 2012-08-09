@@ -204,3 +204,16 @@
   {{/if}}
   {{#myConstant}}<hr/>{{/myConstant}}
 </template>
+
+<template name="test_listmatching_a0">
+  <span>{{var}}</span>
+  <p>
+    {{#each c}}
+      {{> test_listmatching_a1}}
+    {{/each}}
+  </p>
+</template>
+
+<template name="test_listmatching_a1">
+  {{letter}}
+</template>
