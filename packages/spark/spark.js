@@ -499,10 +499,8 @@ Spark.renderToRange = function (range, htmlFunc) {
     });
   };
 
-  console.log("----- renderToRange -----");
   // Find all of the landmarks in the old contents of the range
   visitLandmarksInRange(range, function (landmarkRange, notes) {
-    console.log("existing: " + pathForRange(landmarkRange));
     notes.originalRange = landmarkRange;
   });
 
@@ -511,11 +509,6 @@ Spark.renderToRange = function (range, htmlFunc) {
   DomUtils.wrapFragmentForContainer(frag, range.containerNode());
 
   var tempRange = new LiveRange(Spark._TAG, frag);
-
-  // XXX XXX
-  visitLandmarksInRange(tempRange, function (tempRange, notes) {
-    console.log("new: " + pathForRange(tempRange));
-  });
 
   // find preservation roots from matched landmarks inside the
   // rerendered region
