@@ -26,7 +26,7 @@ Template.redrawButtons.events = {
   }
 };
 
-Template.preserveDemo.preserve = [ '.keep' ];
+Template.preserveDemo.preserve = [ '.spinner' ];
 
 Template.preserveDemo.x =
 Template.constantDemo.x =
