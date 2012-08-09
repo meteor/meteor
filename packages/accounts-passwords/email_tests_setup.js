@@ -21,6 +21,11 @@
   Meteor.methods({
     getInterceptedEmails: function (email) {
       return interceptedEmails[email];
+    },
+
+    addEmailForTestAndValidate: function (email, appBaseUrl) {
+      Meteor.users.update({_id: this.userId()}, {$push: {emails: email}});
+      Meteor.accounts.sendValidationEmail(this.userId(), email, appBaseUrl);
     }
   });
 }) ();
