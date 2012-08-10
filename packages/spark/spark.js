@@ -42,6 +42,7 @@ Spark._ANNOTATION_WATCH = "watch";
 Spark._ANNOTATION_LABEL = "label";
 Spark._ANNOTATION_LANDMARK = "landmark";
 Spark._ANNOTATION_LIST = "list";
+Spark._ANNOTATION_LIST_ITEM = "item";
 // XXX why do we need, eg, _ANNOTATION_ISOLATE? it has no semantics?
 
 // Set in tests to turn on extra UniversalEventListener sanity checks
@@ -803,52 +804,75 @@ var atFlushTime = function (f) {
 Spark.list = function (cursor, itemFunc, elseFunc) {
   elseFunc = elseFunc || function () { return ''; };
 
-  // If not in Spark.render, return static HTML.
+  // Create a level of indirection around our cursor callbacks so we
+  // can change them later
+  var callbacks = {};
+  var observerCallbacks = {};
+  _.each(["added", "removed", "moved", "changed"], function (name) {
+    observerCallbacks[name] = function () {
+      return callbacks[name].apply(null, arguments);
+    };
+  });
+
+  // Get the current contents of the cursor.
+  // XXX currently we count on observe() using only added() to deliver
+  // the initial contents. are we allow to do that, or do we need to
+  // implement removed/moved/changed here as well?
+  var initialContents = [];
+  _.extend(callbacks, {
+    added: function (item, beforeIndex) {
+      initialContents.splice(beforeIndex, 0, item);
+    }
+  });
+  var handle = cursor.observe(observerCallbacks);
+
+  // Get the renderer, if any
   var renderer = Spark._currentRenderer.get();
-  if (!renderer) {
-    // XXX messy and maybe not strictly correct. add a 'contents'
-    // method to observables that returns a snapshot.
-    var contents = [];
-    cursor.observe({
-      added: function (item, beforeIndex) {
-        contents.splice(beforeIndex, 0, item);
-      }
-    }).stop();
+  var annotate = renderer ?
+    _.bind(renderer.annotate, renderer) :
+    function (html) { return html; };
 
-    if (contents.length)
-      return _.map(contents, itemFunc).join('');
-    else
-      return elseFunc();
+  // Render the initial contents. If we have a renderer, create a
+  // range around each item as well as around the list, and save them
+  // off for later.
+  var html = '';
+  var outerRange;
+  var itemRanges = [];
+  if (! initialContents.length)
+    html = elseFunc();
+  else {
+    for (var i = 0; i < initialContents.length; i++) {
+      (function (i) {
+        html += annotate(itemFunc(initialContents[i]),
+                         Spark._ANNOTATION_LIST_ITEM,
+                         function (range) {
+                           itemRanges[i] = range;
+                         });
+      })(i); // scope i to closure
+    }
   }
+  initialContents = null; // save memory
+  var cleanup = function () {
+    handle.stop();
+  };
+  html = annotate(html, Spark._ANNOTATION_LIST, function (range) {
+    outerRange = range;
+    outerRange.finalize = cleanup;
+  }, function () {
+    // We never ended up on the screen (caller discarded our return
+    // value)
+    cleanup();
+  });
 
-  // Inside Spark.render. Return live list.
-  return renderer.annotate('', Spark._ANNOTATION_LIST, function (outerRange) {
-    var itemRanges = [];
+  // No renderer? Then we have no way to update the returned html and
+  // we can close the observer.
+  if (! renderer)
+    cleanup();
 
-    var replaceWithElse = function () {
-      var frag = Spark.render(elseFunc);
-      DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
-      Spark.finalize(outerRange.replaceContents(frag));
-    };
-
-    // Decorator. If we're rendering the list for the first time, call
-    // the function immediately. Otherwise, defer it to flush time.
-    var maybeDefer = function (func) {
-      return function (/* arguments */) {
-        var args = _.toArray(arguments);
-        var callFunc = function () {
-          func.apply(null, args);
-        };
-
-        if (! handle)
-          callFunc();
-        else
-          atFlushTime(callFunc);
-      };
-    };
-
-    var handle = cursor.observe({
-      added: maybeDefer(function (item, beforeIndex) {
+  // The DOM update callbacks.
+  _.extend(callbacks, {
+    added: function (item, beforeIndex) {
+      atFlushTime(function () {
         var frag = Spark.render(_.bind(itemFunc, null, item));
         DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
         var range = new LiveRange(Spark._TAG, frag);
@@ -862,16 +886,24 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
         }
 
         itemRanges.splice(beforeIndex, 0, range);
-      }),
-      removed: maybeDefer(function (item, atIndex) {
-        if (itemRanges.length === 1)
-          replaceWithElse();
-        else
+      });
+    },
+
+    removed: function (item, atIndex) {
+      atFlushTime(function () {
+        if (itemRanges.length === 1) {
+          var frag = Spark.render(elseFunc);
+          DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
+          Spark.finalize(outerRange.replaceContents(frag));
+        } else
           Spark.finalize(itemRanges[atIndex].extract());
 
         itemRanges.splice(atIndex, 1);
-      }),
-      moved: maybeDefer(function (item, oldIndex, newIndex) {
+      });
+    },
+
+    moved: function (item, oldIndex, newIndex) {
+      atFlushTime(function () {
         if (oldIndex === newIndex)
           return;
 
@@ -883,19 +915,17 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
           itemRanges[newIndex].insertBefore(frag);
 
         itemRanges.splice(newIndex, 0, range);
-      }),
-      changed: maybeDefer(function (item, atIndex) {
+      });
+    },
+
+    changed: function (item, atIndex) {
+      atFlushTime(function () {
         Spark.renderToRange(itemRanges[atIndex], _.bind(itemFunc, null, item));
-      })
-    });
-
-    if (! itemRanges.length)
-      replaceWithElse();
-
-    outerRange.finalize = function () {
-      handle.stop();
-    };
+      });
+    }
   });
+
+  return html;
 };
 
 /******************************************************************************/
