@@ -217,3 +217,16 @@
 <template name="test_listmatching_a1">
   {{letter}}
 </template>
+
+<template name="test_isolate_a">
+  {{helper 1}}
+  {{#isolate}}
+    {{helper 2}}
+    {{#isolate}}
+      {{helper 3}}
+      {{#isolate}}
+        {{helper 4}}
+      {{/isolate}}
+    {{/isolate}}
+  {{/isolate}}
+</template>
