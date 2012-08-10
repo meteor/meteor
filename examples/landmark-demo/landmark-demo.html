@@ -3,11 +3,12 @@
 </head>
 
 <body>
-  <h1>Landmark demo</h1>
+  <h1>Spark demo</h1>
   {{> redrawButtons }}
   {{> preserveDemo }}
   {{> constantDemo }}
   {{> stateDemo }}
+  {{> d3Demo }}
 </body>
 
 <template name="redrawButtons">
@@ -64,4 +65,23 @@
   <input type="button" value="Reset" class="reset">
   <input type="button" value="Delete" class="delete">
   Z={{z}}
+</template>
+
+<template name="d3Demo">
+  <h2>Simple d3.js integration</h2>
+  {{> circles left}}
+  {{> circles right}}
+</template>
+
+<template name="circles">
+  <div style="float: left; padding-right: 20px;">
+    {{#constant}}
+      <svg width="200" height="200" class="xyzzy"></svg>
+    {{/constant}}
+    <br>
+    {{count}} circles<br>
+    <input type="button" value="Add" class="add">
+    <input type="button" value="Remove" class="remove">
+    <input type="button" value="Scram" class="scram">
+  </div>
 </template>
