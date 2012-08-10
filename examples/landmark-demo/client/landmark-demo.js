@@ -72,7 +72,7 @@ Template.stateDemo.timers = function () {
 Template.timer.events = {
   'click .reset': function (event, template) {
     template.data.elapsed = 0;
-    template.data.update();
+    updateTimer(template.data);
   },
   'click .delete': function () {
     Timers.remove(this._id);
@@ -83,28 +83,29 @@ Template.timer.z = function () {
   return Session.get("z");
 };
 
+var updateTimer = function (timer) {
+  timer.node.innerHTML = timer.elapsed + " second" +
+    ((timer.elapsed === 1) ? "" : "s");
+};
+
 Template.timer.create = function () {
   var self = this;
   console.log("timer create");
   self.elapsed = 0;
   self.node = null;
-  self.update = function () {
-    self.node.innerHTML = self.elapsed + " second" +
-      ((self.elapsed === 1) ? "" : "s");
-  }
 };
 
 Template.timer.render = function (landmark) {
   var self = this;
   console.log("timer render");
   self.node = landmark.find(".elapsed");
-  self.update();
+  updateTimer(self);
 
   if (! self.timer) {
     var tick = function () {
       self.elapsed++;
       self.timer = setTimeout(tick, 1000);
-      self.update();
+      updateTimer(self);
     };
     tick();
   }
