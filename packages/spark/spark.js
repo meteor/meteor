@@ -29,6 +29,8 @@
 // timer' button again. the problem is almost certainly in atFlushTime
 // (not hard to see what it is.)
 
+// XXX test hasDom().  Test `template` object more.
+
 (function() {
 
 Spark = {};
@@ -958,6 +960,9 @@ _.extend(Spark.Landmark.prototype, {
     var r = this._range;
     return DomUtils.findAllClipped(r.containerNode(), selector,
                                    r.firstNode(), r.lastNode());
+  },
+  hasDom: function () {
+    return !! this._range;
   }
 });
 
@@ -1036,8 +1041,10 @@ Spark.createLandmark = function (options, htmlFunc) {
         destroyCallback: options.destroy || function () {},
         landmark: landmark,
         finalize: function () {
-          if (! this.superceded)
+          if (! this.superceded) {
+            this.landmark._range = null;
             this.destroyCallback.call(this.landmark);
+          }
         }
       });
 

@@ -1223,7 +1223,6 @@ Tinytest.add("spark - labeled landmarks", function (test) {
                                   5, function () { return "hi" + dep(9);}
                                 );});});});});});});}));
     });
-    console.log(html);
     return html;
   }));
 

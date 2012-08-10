@@ -214,18 +214,11 @@ Template.circles.disabled = function () {
     '' : 'disabled="disabled"';
 };
 
-Template.circles.render = function (template) {
+Template.circles.render = function () {
   var self = this;
-  self.node = template.find("svg");
+  self.node = self.find("svg");
 
-  // XXX you really want to have template.data here. anything else is
-  // obnoxious. it's plenty well defined and it's useful.
-  var data = Spark.getDataContext(template._range.firstNode());
-
-  // XXX why doesn't this work?
-  //   var data = Spark.getDataContext(template.find("svg"));
-  // this does:
-  //   Spark.getDataContext(template.find("svg").parentNode)
+  var data = self.data;
 
   if (! self.handle) {
     // XXX template.firstRender would be handy here
