@@ -180,8 +180,10 @@ Template.circles.events = {
   },
   'click .remove': function () {
     var selected = Session.get("selectedCircle:" + this.group);
-    if (selected)
+    if (selected) {
       Circles.remove(selected);
+      Session.set("selectedCircle:" + this.group, null);
+    }
   },
   'click .scram': function () {
     Circles.find({group: this.group}).forEach(function (r) {
@@ -205,6 +207,11 @@ var colorToString = function (color) {
 
 Template.circles.count = function () {
   return Circles.find({group: this.group}).count();
+};
+
+Template.circles.disabled = function () {
+  return Session.get("selectedCircle:" + this.group) ?
+    '' : 'disabled="disabled"';
 };
 
 Template.circles.render = function (template) {
