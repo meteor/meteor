@@ -29,13 +29,15 @@
 
     _.extend(Handlebars._default_helpers, {
       isolate: function (options) {
+        var data = this;
         return Spark.isolate(function () {
-          return options.fn(this);
+          return options.fn(data);
         });
       },
       constant: function (options) {
+        var data = this;
         return Spark.createLandmark({ constant: true }, function () {
-          return options.fn(this);
+          return options.fn(data);
         });
       }
     });
@@ -46,17 +48,23 @@
   var templateInstanceData = {};
 
   var templateObjFromLandmark = function (landmark) {
-    var template = {
-      find: function (selector) {
-        return landmark.find(selector);
-      },
-      findAll: function (selector) {
-        return landmark.findAll(selector);
-      },
-      firstNode: landmark.firstNode(),
-      lastNode: landmark.lastNode(),
-      data: templateInstanceData[landmark.id]
-    };
+    var template = templateInstanceData[landmark.id] || (
+      templateInstanceData[landmark.id] = {
+        // set these once
+        find: function (selector) {
+          if (! landmark.hasDom())
+            throw new Error("Template not in DOM");
+          return landmark.find(selector);
+        },
+        findAll: function (selector) {
+          if (! landmark.hasDom())
+            throw new Error("Template not in DOM");
+          return landmark.findAll(selector);
+        }
+      });
+    // set these each time
+    template.firstNode = landmark.hasDom() ? landmark.firstNode() : null;
+    template.lastNode = landmark.hasDom() ? landmark.lastNode() : null;
     return template;
   };
 
@@ -73,18 +81,18 @@
       var html = Spark.createLandmark({
         preserve: tmpl.preserve || {},
         create: function () {
-          templateInstanceData[this.id] = {};
-          tmpl.create &&
-            tmpl.create.call(templateInstanceData[this.id]);
+          var template = templateObjFromLandmark(this);
+          template.data = data;
+          tmpl.create && tmpl.create.call(template);
         },
         render: function () {
-          tmpl.render &&
-            tmpl.render.call(templateInstanceData[this.id],
-                             templateObjFromLandmark(this));
+          var template = templateObjFromLandmark(this);
+          template.data = data;
+          tmpl.render && tmpl.render.call(template);
         },
         destroy: function () {
           tmpl.destroy &&
-            tmpl.destroy.call(templateInstanceData[this.id]);
+            tmpl.destroy.call(templateObjFromLandmark(this));
           delete templateInstanceData[this.id];
         }
       }, function (landmark) {

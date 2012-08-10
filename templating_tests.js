@@ -502,9 +502,9 @@ Tinytest.add("templating - matching in list", function (test) {
   var buf = [];
   _.extend(Template.test_listmatching_a1, {
     create: function () { buf.push('+'); },
-    render: function (template) {
-      var letter = DomUtils.rangeToHtml(template.firstNode,
-                                        template.lastNode).match(/\S+/)[0];
+    render: function () {
+      var letter = DomUtils.rangeToHtml(this.firstNode,
+                                        this.lastNode).match(/\S+/)[0];
       buf.push('*'+letter);
     },
     destroy: function () { buf.push('-'); }
@@ -577,19 +577,38 @@ Tinytest.add("templating - template arg", function (test) {
       template.find('i').innerHTML =
         (template.findAll('*').length)+"-element";
       template.lastNode.innerHTML += ' (the secret is '+
-        template.data.secret+')';
+        template.secret+')';
     }
   };
 
-  Template.test_template_arg_a.render = function (template) {
+  Template.test_template_arg_a.create = function() {
+    var self = this;
+    test.isFalse(self.firstNode);
+    test.isFalse(self.lastNode);
+    test.throws(function () { return self.find("*"); });
+    test.throws(function () { return self.findAll("*"); });
+  };
+
+  Template.test_template_arg_a.render = function () {
+    var template = this;
     template.firstNode.innerHTML = 'Greetings';
     template.lastNode.innerHTML = 'Line';
     template.find('i').innerHTML =
       (template.findAll('b').length)+"-bold";
-    template.data.secret = "strawberry pie";
+    template.secret = "strawberry "+template.data.food;
   };
 
-  var div = OnscreenDiv(Spark.render(Template.test_template_arg_a));
+  Template.test_template_arg_a.destroy = function() {
+    var self = this;
+    test.isFalse(self.firstNode);
+    test.isFalse(self.lastNode);
+    test.throws(function () { return self.find("*"); });
+    test.throws(function () { return self.findAll("*"); });
+  };
+
+  var div = OnscreenDiv(Spark.render(function () {
+    return Template.test_template_arg_a({food: "pie"});
+  }));
 
   test.equal(div.text(), "Foo Bar Baz");
   Meteor.flush();
