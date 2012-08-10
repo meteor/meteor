@@ -24,6 +24,16 @@
 // list() returns the expected HTML, Spark.createLandmark creates and
 // then destroys a landmark -- may already be tested?)
 
+// XXX in landmark-demo, if Template.timer.create throws an exception,
+// then it is never called again, even if you push the 'create a
+// timer' button again. the problem is almost certainly in atFlushTime
+// (not hard to see what it is.)
+
+// XXX align the arguments to the render() callback with the arguments
+// to events (instead of landmark, pass the 'template' object again?
+// that suggess that david is right and startNode() should be a
+// function.)
+
 (function() {
 
 Spark = {};
