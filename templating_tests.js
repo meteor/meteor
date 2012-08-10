@@ -502,9 +502,9 @@ Tinytest.add("templating - matching in list", function (test) {
   var buf = [];
   _.extend(Template.test_listmatching_a1, {
     create: function () { buf.push('+'); },
-    render: function (landmark) {
-      var letter = DomUtils.rangeToHtml(landmark.firstNode(),
-                                        landmark.lastNode()).match(/\S+/)[0];
+    render: function (template) {
+      var letter = DomUtils.rangeToHtml(template.firstNode,
+                                        template.lastNode).match(/\S+/)[0];
       buf.push('*'+letter);
     },
     destroy: function () { buf.push('-'); }
@@ -567,4 +567,36 @@ Tinytest.add("templating - isolate helper", function (test) {
   div.kill();
   Meteor.flush();
 
+});
+
+Tinytest.add("templating - template arg", function (test) {
+  Template.test_template_arg_a.events = {
+    click: function (event, template) {
+      template.firstNode.innerHTML = 'Hello';
+      template.lastNode.innerHTML = 'World';
+      template.find('i').innerHTML =
+        (template.findAll('*').length)+"-element";
+      template.lastNode.innerHTML += ' (the secret is '+
+        template.data.secret+')';
+    }
+  };
+
+  Template.test_template_arg_a.render = function (template) {
+    template.firstNode.innerHTML = 'Greetings';
+    template.lastNode.innerHTML = 'Line';
+    template.find('i').innerHTML =
+      (template.findAll('b').length)+"-bold";
+    template.data.secret = "strawberry pie";
+  };
+
+  var div = OnscreenDiv(Spark.render(Template.test_template_arg_a));
+
+  test.equal(div.text(), "Foo Bar Baz");
+  Meteor.flush();
+  test.equal(div.text(), "Greetings 1-bold Line");
+  clickElement(DomUtils.find(div.node(), 'i'));
+  test.equal(div.text(), "Hello 3-element World (the secret is strawberry pie)");
+
+  div.kill();
+  Meteor.flush();
 });

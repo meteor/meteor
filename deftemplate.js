@@ -45,6 +45,21 @@
   // create/render/destroy callbacks on templates
   var templateInstanceData = {};
 
+  var templateObjFromLandmark = function (landmark) {
+    var template = {
+      find: function (selector) {
+        return landmark.find(selector);
+      },
+      findAll: function (selector) {
+        return landmark.findAll(selector);
+      },
+      firstNode: landmark.firstNode(),
+      lastNode: landmark.lastNode(),
+      data: templateInstanceData[landmark.id]
+    };
+    return template;
+  };
+
   Meteor._def_template = function (name, raw_func) {
     Meteor._hook_handlebars();
 
@@ -64,7 +79,8 @@
         },
         render: function () {
           tmpl.render &&
-            tmpl.render.call(templateInstanceData[this.id], this);
+            tmpl.render.call(templateInstanceData[this.id],
+                             templateObjFromLandmark(this));
         },
         destroy: function () {
           tmpl.destroy &&
@@ -89,18 +105,8 @@
           var newEventMap = {};
           _.each(oldEventMap, function (handler, key) {
             newEventMap[key] = function (event, landmark) {
-              var template = {
-                find: function (selector) {
-                  return landmark.find(selector);
-                },
-                findAll: function (selector) {
-                  return landmark.findAll(selector);
-                },
-                firstNode: landmark.firstNode(),
-                lastNode: landmark.lastNode(),
-                data: templateInstanceData[landmark.id]
-              };
-              return handler.call(this, event, template);
+              return handler.call(this, event,
+                                  templateObjFromLandmark(landmark));
             };
           });
           return newEventMap;
