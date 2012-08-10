@@ -82,11 +82,35 @@
           });
         });
 
+        // take an event map with `function (event, template)` handlers
+        // and produce one with `function (event, landmark)` handlers
+        // for Spark, by inserting logic to create the template object.
+        var wrapEventMap = function (oldEventMap) {
+          var newEventMap = {};
+          _.each(oldEventMap, function (handler, key) {
+            newEventMap[key] = function (event, landmark) {
+              var template = {
+                find: function (selector) {
+                  return landmark.find(selector);
+                },
+                findAll: function (selector) {
+                  return landmark.findAll(selector);
+                },
+                firstNode: landmark.firstNode(),
+                lastNode: landmark.lastNode(),
+                data: templateInstanceData[landmark.id]
+              };
+              return handler.call(this, event, template);
+            };
+          });
+          return newEventMap;
+        };
+
         // events need to be inside the landmark, not outside, so
         // that when an event fires, you can retrieve the enclosing
         // landmark to get the template data
         if (tmpl.events)
-          html = Spark.attachEvents(tmpl.events, html);
+          html = Spark.attachEvents(wrapEventMap(tmpl.events), html);
         return html;
       });
 
