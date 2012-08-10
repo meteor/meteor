@@ -347,6 +347,9 @@ Tinytest.add("templating - rendered template", function(test) {
   test.isTrue(hr2);
   test.isFalse(hr1 === hr2);
 
+  div.kill();
+  Meteor.flush();
+
   /////
 
   R = ReactiveVar('foo');
@@ -378,6 +381,9 @@ Tinytest.add("templating - rendered template", function(test) {
   test.isTrue(hr2);
   test.isFalse(hr1 === hr2);
 
+  div.kill();
+  Meteor.flush();
+
   /////
 
   var stuff = new LocalCollection();
@@ -405,6 +411,9 @@ Tinytest.add("templating - rendered template", function(test) {
   test.isTrue(hr2);
   test.isFalse(hr1 === hr2);
 
+  div.kill();
+  Meteor.flush();
+
   /////
 
   var stuff = new LocalCollection();
@@ -428,6 +437,9 @@ Tinytest.add("templating - rendered template", function(test) {
   test.isTrue(br1 === br2);
   test.isTrue(hr2);
   test.isFalse(hr1 === hr2);
+
+  div.kill();
+  Meteor.flush();
 
 });
 
@@ -512,5 +524,47 @@ Tinytest.add("templating - matching in list", function (test) {
   test.equal(DomUtils.find(div.node(), 'span').innerHTML, 'bar');
   test.equal(div.html().match(/<p>(.*?)<\/p>/)[1].match(/\S+/g), ['a','b','c']);
   test.equal(buf.join(''), '*a*b*c');
+
+  div.kill();
+  Meteor.flush();
+
+});
+
+Tinytest.add("templating - isolate helper", function (test) {
+  var Rs = _.map(_.range(4), function () { return ReactiveVar(1); });
+  var touch = function (n) { Rs[n-1].get(); };
+  var bump = function (n) { Rs[n-1].set(Rs[n-1].get() + 1); };
+  var counts = _.map(_.range(4), function () { return 0; });
+  var tally = function (n) { return ++counts[n-1]; };
+
+  _.extend(Template.test_isolate_a, {
+    helper: function (n) {
+      touch(n);
+      return tally(n);
+    }
+  });
+
+  var div = OnscreenDiv(Meteor.render(Template.test_isolate_a));
+
+  var getTallies = function () {
+    return _.map(div.html().match(/\S+/g), Number);
+  };
+  var expect = function(str) {
+    test.equal(getTallies().join(','), str);
+  };
+
+  Meteor.flush();
+  expect("1,1,1,1");
+  bump(1);  Meteor.flush();  expect("2,2,2,2");
+  bump(2);  Meteor.flush();  expect("2,3,3,3");
+  bump(3);  Meteor.flush();  expect("2,3,4,4");
+  bump(4);  Meteor.flush();  expect("2,3,4,5");
+  Meteor.flush(); expect("2,3,4,5");
+  bump(3);  Meteor.flush();  expect("2,3,5,6");
+  bump(2);  Meteor.flush();  expect("2,4,6,7");
+  bump(1);  Meteor.flush();  expect("3,5,7,8");
+
+  div.kill();
+  Meteor.flush();
 
 });
