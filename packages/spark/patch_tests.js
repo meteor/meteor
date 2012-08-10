@@ -1,4 +1,4 @@
-Tinytest.add("spark - patcher - basic", function(test) {
+Tinytest.add("spark - patch - basic", function(test) {
 
   var Patcher = Spark._Patcher;
 
@@ -120,7 +120,7 @@ Tinytest.add("spark - patcher - basic", function(test) {
   _.each([["aaa","zzz"], ["",""], ["aaa",""], ["","zzz"]], rangeTest);
 });
 
-Tinytest.add("spark - patcher - copyAttributes", function(test) {
+Tinytest.add("spark - patch - copyAttributes", function(test) {
 
   var attrTester = function(tagName, initial) {
     var node;

@@ -262,6 +262,8 @@ Tinytest.add("spark - basic isolate", function (test) {
   Meteor.flush();
   test.equal(div.html(), '<div><span>baz</span></div>');
 
+  div.kill();
+  Meteor.flush();
 });
 
 Tinytest.add("spark - one render", function (test) {
@@ -1300,6 +1302,9 @@ Tinytest.add("spark - labeled landmarks", function (test) {
   excludeLandmarks[5].set(false);
   Meteor.flush();
   expect(["c", 5, "r", 5, "r", 4, "r", 3], [108, 108, 107, 105]);
+
+  div.kill();
+  Meteor.flush();
 });
 
 
@@ -1778,6 +1783,8 @@ Tinytest.add("spark - landmark constant", function(test) {
   // can patch here, renderCount stays the same
   test.equal(renderCount, 2);
 
+  div.kill();
+  Meteor.flush();
 });
 
 
@@ -2928,6 +2935,8 @@ Tinytest.add("spark - isolate inside landmark", function (test) {
   var foo2 = d.node().firstChild;
   test.equal(d.node().lastChild.nodeValue, '2');
   test.isTrue(foo1 === foo2);
+  d.kill();
+  Meteor.flush();
 
   // test that selectors in a landmark preservation map are resolved
   // relative to the landmark, not relative to the re-rendered
@@ -2952,7 +2961,8 @@ Tinytest.add("spark - isolate inside landmark", function (test) {
   var foo2 = DomUtils.find(d.node(), '.foo');
   test.equal(foo2.nextSibling.nodeValue, '2');
   test.isTrue(foo1 === foo2);
-
+  d.kill();
+  Meteor.flush();
 });
 
 Tinytest.add("spark - nested onscreen processing", function (test) {
@@ -3227,6 +3237,9 @@ Tinytest.add("spark - find/findAll on landmark", function (test) {
   Meteor.flush();
   check(false);
   check(true);
+
+  d.kill();
+  Meteor.flush();
 });
 
 Tinytest.add("spark - landmark clean-up", function (test) {
@@ -3327,3 +3340,35 @@ Tinytest.add("spark - bubbling render", function (test) {
 });
 
 })();
+
+Tinytest.add("spark - landmark arg", function (test) {
+  var div = OnscreenDiv(Spark.render(function () {
+    return Spark.createLandmark({
+      render: function () {
+        var landmark = this;
+        landmark.firstNode().innerHTML = 'Greetings';
+        landmark.lastNode().innerHTML = 'Line';
+        landmark.find('i').innerHTML =
+          (landmark.findAll('b').length)+"-bold";
+      }
+    }, function () {
+      return Spark.attachEvents({
+        'click': function (event, landmark) {
+          landmark.firstNode().innerHTML = 'Hello';
+          landmark.lastNode().innerHTML = 'World';
+          landmark.find('i').innerHTML =
+            (landmark.findAll('*').length)+"-element";
+        }
+      }, '<b>Foo</b> <i>Bar</i> <u>Baz</u>');
+    });
+  }));
+
+  test.equal(div.text(), "Foo Bar Baz");
+  Meteor.flush();
+  test.equal(div.text(), "Greetings 1-bold Line");
+  clickElement(DomUtils.find(div.node(), 'i'));
+  test.equal(div.text(), "Hello 3-element World");
+
+  div.kill();
+  Meteor.flush();
+});
