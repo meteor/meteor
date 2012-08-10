@@ -74,3 +74,4 @@ in several ways:
 * IRC: ```#meteor``` on ```irc.freenode.net```
 * Ask a question: http://stackoverflow.com/questions/tagged/meteor
 * Email us: ```contact@meteor.com```
+* How to contribute to Meteor: https://github.com/meteor/meteor/wiki
