@@ -3284,24 +3284,46 @@ Tinytest.add("spark - landmark clean-up", function (test) {
   test.equal(crd2, [0,1,1]); // destroyed
 });
 
+Tinytest.add("spark - bubbling render", function (test) {
+  var makeCrd = function () {
+    var crd = [0,0,0];
+    crd.callbacks = {
+      create: function () { crd[0]++; },
+      render: function () { crd[1]++; },
+      destroy: function () { crd[2]++; }
+    };
+    return crd;
+  };
 
+  var crd1 = makeCrd();
+  var crd2 = makeCrd();
 
-// XXX these are old notes copied from liveui_tests.js:
-// TO TEST:
-// - chunk matching
-//   - Handlebars branch keys
-//   - options.branch
-// - preserve nodes
-//   - API (one-match selectors, lambdas)
-//   - in lists
-// - onscreen/offscreen/created callbacks
-//   - timing of calls
-//   - custom vs. original object
-//   - arguments to onscreen
-//   - when differ between old/new
-//   - on listChunk
-// - different old and new data
-// - options.data in general
+  var R = ReactiveVar('foo');
+  var div = OnscreenDiv(Spark.render(function () {
+    return Spark.createLandmark(crd1.callbacks, function () {
+      return Spark.labelBranch('fred', function () {
+        return Spark.createLandmark(crd2.callbacks, function () {
+          return Spark.isolate(function () {
+            return R.get();
+          });
+        });
+      });
+    });
+  }));
 
+  Meteor.flush();
+  test.equal(div.html(), 'foo');
+  test.equal(crd1, [1,1,0]);
+  test.equal(crd2, [1,1,0]);
+
+  R.set('bar');
+  Meteor.flush();
+  test.equal(div.html(), 'bar');
+  test.equal(crd1, [1,2,0]);
+  test.equal(crd2, [1,2,0]);
+
+  div.kill();
+  Meteor.flush();
+});
 
 })();
