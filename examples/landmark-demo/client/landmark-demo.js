@@ -214,45 +214,6 @@ Template.circles.render = function () {
 
     d3.select(self.node).append("rect");
     self.handle = autorun(function () {
-      // XXX In an ideal world, we'd pass a cursor to .data(), and as
-      // long as we were within an autorun, the "right thing" would
-      // happen, meaning that d3 would process only the changed
-      // elements.
-      //
-      // You could model this as a getChanges() method on a cursor,
-      // which reactively returns the changes since you last called it
-      // (as an object with added, removed, moved, changed sections.)
-      // Except you should be able to have N per cursor.
-      //
-      // Actually, you could make a function Meteor.getChanges(cursor)
-      // that returns a changes function that has the above
-      // properties.
-      //
-      // Then, we'd need to reach inside d3's matching logic to make
-      // it detect a Meteor cursor and call getChanges ...
-      //
-      // XXX no, you need one getchanges per cursor per autorun. hmm.
-      // maybe a factory that memoizes them somehow? but, per autorun?
-      //
-      // Maybe:
-      // var stream = ChangeStream(cursor);
-      // autorun(function () { d3.select(...).stream(stream) ... }
-      // Streams are the factory described above. returns ChangeSets
-      //
-      // XXX what this doesn't answer is, what if you depend on other
-      // reactive values, eg Session.get("color")?
-      //
-      // XXX why can't we just do this stuff declaratively with
-      // Handlebars and an <svg> element? what does that imply about
-      // missing animation support in Spark?
-      //
-      // XXX make Session be a ReactiveDict (ReactiveMap?) and put the
-      // ReactiveDiff impl in packages/deps/tools.js. Keep the
-      // low-level deps machinery as it is (maybe add invalidation
-      // sequencing.) Rename Meteor.deps.Context =>
-      // InvalidationContext.
-      //
-      // XXX allow query selectors, sorts, to be lambdas?
       var circle = d3.select(self.node).selectAll("circle")
         .data(Circles.find({group: data.group}).fetch(),
               function (d) { return d._id; });
