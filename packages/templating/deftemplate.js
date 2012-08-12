@@ -47,6 +47,27 @@
   // create/render/destroy callbacks on templates
   var templateInstanceData = {};
 
+  //setup migration for template stores
+  var templateStoresByPath = {};
+  if (Meteor._reload) {
+    Meteor._reload.on_migrate('templateStores',function() {
+      var stores = {}
+      _.each(templateInstanceData,function(template) {
+        stores[template.path()] = template.store;
+      });
+      return [true,stores];
+    });
+    (function() {
+      var migration_data = Meteor._reload.migration_data('templateStores');
+      if (migration_data) {
+        templateStoresByPath = migration_data;
+
+        // should delete all template stores after first render ?
+        
+      }
+    })();
+  }
+
   var templateObjFromLandmark = function (landmark) {
     var template = templateInstanceData[landmark.id] || (
       templateInstanceData[landmark.id] = {
@@ -60,7 +81,30 @@
           if (! landmark.hasDom())
             throw new Error("Template not in DOM");
           return landmark.findAll(selector);
-        }
+        },
+
+        store: ReactiveDict(),
+
+        path: function() {
+          return "/" + $(this.firstNode).parents().andSelf().map(function() {
+            var $this = $(this);
+            var tagName = this.nodeName;
+            if ($this.siblings(tagName).length > 0) {
+                tagName += "[" + $this.prevAll(tagName).length + "]";
+            }
+            return tagName;
+          }).get().join("/");
+        },
+
+        set: function(key,value) {
+          return this.store.set(key,value);
+        },
+
+        get: function(key) {
+          return this.store.get(key);
+        },
+
+        firstRender: true
       });
     // set these each time
     template.firstNode = landmark.hasDom() ? landmark.firstNode() : null;
@@ -76,6 +120,7 @@
     // Define the function assigned to Template.<name>.
 
     var partial = function (data) {
+      data = data || {};
       var tmpl = name && Template[name] || {};
 
       var html = Spark.createLandmark({
@@ -89,6 +134,13 @@
           var template = templateObjFromLandmark(this);
           template.data = data;
           tmpl.render && tmpl.render.call(template);
+
+          //restore store
+          var path = template.path();
+          if (template.firstRender && path in templateStoresByPath) {
+            template.store.setMany(templateStoresByPath[path]);
+          }
+          template.firstRender = false;
         },
         destroy: function () {
           tmpl.destroy &&
@@ -96,6 +148,9 @@
           delete templateInstanceData[this.id];
         }
       }, function (landmark) {
+        // make template accessible from within helpers
+        data.template = templateObjFromLandmark(landmark);
+        
         var html = Spark.isolate(function () {
           // XXX Forms needs to run a hook before and after raw_func
           // (and receive 'landmark')
