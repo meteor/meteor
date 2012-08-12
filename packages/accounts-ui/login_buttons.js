@@ -233,7 +233,7 @@
     },
     'click #login-buttons-cancel-reset-password': function () {
       Session.set(RESET_PASSWORD_TOKEN_KEY, null);
-      Meteor.accounts._preventAutoLogin = false;
+      Meteor.accounts._enableAutoLogin();
     }
   };
 
@@ -250,7 +250,7 @@
           Session.set(ERROR_MESSAGE_KEY, error.reason);
         } else {
           Session.set(RESET_PASSWORD_TOKEN_KEY, null);
-          Meteor.accounts._preventAutoLogin = false;
+          Meteor.accounts._enableAutoLogin();
         }
       });
   };
@@ -281,7 +281,7 @@
   Meteor.startup(function () {
     if (Meteor.accounts._validateEmailToken) {
       Meteor.validateEmail(Meteor.accounts._validateEmailToken, function(error) {
-        Meteor.accounts._preventAutoLogin = false;
+        Meteor.accounts._enableAutoLogin();
         if (!error)
           Session.set(JUST_VALIDATED_USER_KEY, true);
         // XXX show something if there was an error.

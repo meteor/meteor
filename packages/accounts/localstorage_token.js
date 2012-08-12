@@ -84,7 +84,7 @@ if (!Meteor.accounts._preventAutoLogin) {
 // Poll local storage every 3 seconds to login if someone logged in in
 // another tab
 Meteor.accounts._lastLoginTokenWhenPolled = token;
-setInterval(function() {
+Meteor.accounts._pollStoredLoginToken = function() {
   if (Meteor.accounts._preventAutoLogin)
     return;
 
@@ -98,4 +98,13 @@ setInterval(function() {
       Meteor.logout();
   }
   Meteor.accounts._lastLoginTokenWhenPolled = currentLoginToken;
-}, 3000);
+};
+
+// Semi-internal API. Call this function to re-enable auto login after
+// if it was disabled at startup.
+Meteor.accounts._enableAutoLogin = function () {
+  Meteor.accounts._preventAutoLogin = false;
+  Meteor.accounts._pollStoredLoginToken();
+};
+
+setInterval(Meteor.accounts._pollStoredLoginToken, 3000);
