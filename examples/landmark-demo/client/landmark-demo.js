@@ -71,8 +71,8 @@ Template.stateDemo.timers = function () {
 
 Template.timer.events = {
   'click .reset': function (event, template) {
-    template.data.elapsed = 0;
-    updateTimer(template.data);
+    template.elapsed = 0;
+    updateTimer(template);
   },
   'click .delete': function () {
     Timers.remove(this._id);
@@ -95,10 +95,10 @@ Template.timer.create = function () {
   self.node = null;
 };
 
-Template.timer.render = function (landmark) {
+Template.timer.render = function () {
   var self = this;
   console.log("timer render");
-  self.node = landmark.find(".elapsed");
+  self.node = this.find(".elapsed");
   updateTimer(self);
 
   if (! self.timer) {
