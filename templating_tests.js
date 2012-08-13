@@ -769,7 +769,6 @@ Tinytest.add("templating - #each render callback", function (test) {
   entries.remove({x:'a'});
   test.equal(buf, []);
   Meteor.flush();
-  test.expect_fail();
   test.equal(buf, ['<div>b</div><div>c</div><div>d</div>']);
   buf.length = 0;
 
@@ -777,7 +776,8 @@ Tinytest.add("templating - #each render callback", function (test) {
   entries.update({x:'b'}, {$set: {x: 'z'}});
   test.equal(buf, []);
   Meteor.flush();
-  test.equal(buf, ['<div>c</div><div>d</div><div>z</div>']);
+  test.equal(buf, ['<div>c</div><div>d</div><div>z</div>',
+                   '<div>c</div><div>d</div><div>z</div>']);
   buf.length = 0;
 
   // test pure "moved"
@@ -816,7 +816,6 @@ Tinytest.add("templating - #each render callback", function (test) {
   Meteor.flush();
   test.equal(div.html().replace(/\s/g, ''),
              '<div>b</div><div>c</div><div>a</div>');
-  test.expect_fail();
   test.equal(buf, ['<div>b</div><div>c</div><div>a</div>']);
   buf.length = 0;
 
