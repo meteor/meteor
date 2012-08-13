@@ -872,6 +872,18 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   if (! renderer)
     cleanup();
 
+  // Called by `removed` and `moved` in order to cause render callbacks on
+  // parent landmarks.
+  // XXX This is not the final solution.  1) This code should be unified
+  // with the code in scheduleOnscreenSetup.  2) In general, lists are
+  // going to cause a lot of callbacks (one per collection callback).
+  // Maybe that will make sense if we give render callbacks subrange info.
+  var notifyParentsRendered = function () {
+    var walk = outerRange;
+    while ((walk = findParentOfType(Spark._ANNOTATION_LANDMARK, walk)))
+      walk.renderCallback.call(walk.landmark);
+  };
+
   // The DOM update callbacks.
   _.extend(callbacks, {
     added: function (item, beforeIndex) {
@@ -902,6 +914,8 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
           Spark.finalize(itemRanges[atIndex].extract());
 
         itemRanges.splice(atIndex, 1);
+
+        notifyParentsRendered();
       });
     },
 
@@ -918,6 +932,8 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
           itemRanges[newIndex].insertBefore(frag);
 
         itemRanges.splice(newIndex, 0, range);
+
+        notifyParentsRendered();
       });
     },
 
