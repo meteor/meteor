@@ -266,3 +266,15 @@
 <template name="test_template_events_b">
   <b>foo</b><u>bar</u><i>baz</i>
 </template>
+
+<template name="test_template_eachrender_a">
+  {{#each entries}}
+    <div>{{x}}</div>
+  {{/each}}
+</template>
+
+<template name="test_template_eachrender_b">
+  {{#each entries}}
+    <div>{{x}}</div>
+  {{/each}}
+</template>
