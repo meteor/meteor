@@ -136,7 +136,7 @@ Handlebars.evaluate = function (ast, data, options) {
     var dataThis = stack.data;
 
     var data;
-    if (id[0] === 0 && (id[1] in helpers) && ! scopedToContext) {
+    if (id[0] === 0 && helpers.hasOwnProperty(id[1]) && ! scopedToContext) {
       // first path segment is a helper
       data = helpers[id[1]];
     } else {

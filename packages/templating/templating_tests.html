@@ -234,3 +234,35 @@
 <template name="test_template_arg_a">
   <b>Foo</b> <i>Bar</i> <u>Baz</u>
 </template>
+
+<template name="test_template_preserve_a">
+  <span class="a">x</span>
+  <span class="b">x</span>
+  <span class="c">x</span>
+  <span class="d">x</span>
+  <span class="y">x</span>
+  <span class="e">x</span>
+  <span class="z">x</span>
+  <span class="f">x</span>
+  {{var}}
+</template>
+
+<template name="test_template_helpers_a">
+  {{foo}}{{bar}}{{baz}}
+</template>
+
+<template name="test_template_helpers_b">
+  {{name}}{{arity}}{{toString}}{{length}}{{var}}
+</template>
+
+<template name="test_template_helpers_c">
+  {{name}}{{arity}}{{toString}}{{length}}{{var}}
+</template>
+
+<template name="test_template_events_a">
+  <b>foo</b><u>bar</u><i>baz</i>
+</template>
+
+<template name="test_template_events_b">
+  <b>foo</b><u>bar</u><i>baz</i>
+</template>

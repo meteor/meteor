@@ -111,7 +111,8 @@ var html_scanner = {
 
   _handleTag: function (results, tag, attribs, contents, parseError) {
 
-    // trim the tag contents
+    // trim the tag contents.
+    // this is a courtesy and is also relied on by some unit tests.
     contents = contents.match(/^[ \t\r\n]*([\s\S]*?)[ \t\r\n]*$/)[1];
 
     // do we have 1 or more attribs?

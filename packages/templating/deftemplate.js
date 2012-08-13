@@ -70,7 +70,8 @@
 
   // XXX forms hooks into this to add "bind"?
   Meteor._template_decl_methods = {
-    _tmpl_data: {}, // methods store data here (event map, etc.)
+    // methods store data here (event map, etc.).  initialized per template.
+    _tmpl_data: null,
     // these functions must be generic (i.e. use `this`)
     events: function (eventMap) {
       var events =
@@ -90,7 +91,7 @@
     },
     helpers: function (helperMap) {
       var helpers =
-            (this._tmpl_data.events = (this._tmpl_data.events || {}));
+            (this._tmpl_data.helpers = (this._tmpl_data.helpers || {}));
       for(var h in helperMap)
         helpers[h] = helperMap[h];
     }
@@ -179,6 +180,7 @@
 
       Template[name] = partial;
       _.extend(partial, Meteor._template_decl_methods);
+      partial._tmpl_data = {};
 
       Meteor._partials[name] = partial;
     }
