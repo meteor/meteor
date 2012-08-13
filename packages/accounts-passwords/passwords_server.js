@@ -19,7 +19,7 @@
     else if (user.username)
       selector = {username: user.username};
     else if (user.email)
-      selector = {emails: user.email};
+      selector = {"emails.email": user.email};
     else
       throw new Meteor.Error(400, "Must pass username, email, or id in request.user");
 
@@ -115,7 +115,7 @@
           400, "If options.validation is set, need to pass options.baseUrl");
       if (username && Meteor.users.findOne({username: username}))
         throw new Meteor.Error(403, "User already exists with username " + username);
-      if (email && Meteor.users.findOne({emails: email})) {
+      if (email && Meteor.users.findOne({"emails.email": email})) {
         throw new Meteor.Error(403, "User already exists with email " + email);
       }
 
@@ -132,7 +132,7 @@
       if (username)
         user.username = username;
       if (email)
-        user.emails = [email];
+        user.emails = [{email: email, validated: false}];
 
       user = Meteor.accounts.onCreateUserHook(options, extra, user);
       var userId = Meteor.users.insert(user);
@@ -155,7 +155,7 @@
       if (!baseUrl)
         throw new Meteor.Error(400, "Need to set options.baseUrl");
 
-      var user = Meteor.users.findOne({emails: email});
+      var user = Meteor.users.findOne({"emails.email": email});
       if (!user)
         throw new Meteor.Error(403, "User not found");
 
@@ -201,9 +201,9 @@
       if (!tokenDocument)
         throw new Meteor.Error(403, "Validate email link expired");
       var userId = tokenDocument.userId;
-
-      Meteor.users.update({_id: userId},
-                          {$push: {validatedEmails: tokenDocument.email}});
+      var email = tokenDocument.email;
+      Meteor.users.update({_id: userId, "emails.email": email},
+                          {$set: {"emails.$.validated": true}});
       Meteor.accounts._emailValidationTokens.remove({token: token});
 
       var loginToken = Meteor.accounts._loginTokens.insert({userId: userId});

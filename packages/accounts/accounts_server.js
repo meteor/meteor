@@ -88,7 +88,7 @@
     if (!_.isEmpty(
       _.intersection(
         _.keys(extra),
-        ['services', 'private', 'username', 'email', 'emails', 'validatedEmails'])))
+        ['services', 'private', 'username', 'email', 'emails'])))
       throw new Meteor.Error(400, "Disallowed fields in extra");
 
     if (Meteor.accounts._options.requireEmail &&
@@ -162,7 +162,7 @@
     }
 
     var email = options.email;
-    var userByEmail = email && Meteor.users.findOne({emails: email});
+    var userByEmail = email && Meteor.users.findOne({"emails.email": email});
     var user;
     if (userByEmail) {
 
@@ -189,14 +189,17 @@
       var userByServiceUserId = Meteor.users.findOne(selector);
       if (userByServiceUserId) {
         user = userByServiceUserId;
-        if (email && user.emails.indexOf(email) === -1) {
-          // The user may have changed the email address associated with
-          // this service. Store the new one in addition to the old one.
+        if (email) {
+          // The user must have changed the email address associated
+          // with this service (since if we only reach this else
+          // clause if we didn't match the user by email to begin
+          // with). Store the new one in addition to the old one.
 
           // XXX we will probably also need a hook for updating users,
           // similar to Meteor.accounts.onCreateUser
-          Meteor.users.update(user, {$push: {emails: email}});
-          Meteor.users.update(user, {$push: {validatedEmails: email}});
+          Meteor.users.update(
+            {_id: user._id},
+            {$push: {emails: {email: email, validated: true}}});
         }
 
         updateUserData();
@@ -207,8 +210,7 @@
         var attrs = {};
         attrs[serviceName] = options.services[serviceName];
         var user = {
-          emails: (email ? [email] : []),
-          validatedEmails: (email ? [email] : []),
+          emails: (email ? [{email: email, validated: true}] : []),
           services: attrs
         };
         user = Meteor.accounts.onCreateUserHook(options, extra, user);
@@ -235,7 +237,7 @@
   Meteor.default_server.onAutopublish(function () {
     var handler = function () {
       return Meteor.users.find(
-        {}, {fields: {services: 0, private: 0, emails: 0, validatedEmails: 0}});
+        {}, {fields: {services: 0, private: 0, emails: 0}});
     };
     Meteor.default_server.publish(null, handler, {is_auto: true});
   });
