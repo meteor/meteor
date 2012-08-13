@@ -66,7 +66,20 @@ Tinytest.add("livedata stub - subscribe", function (test) {
     callback_fired = true;
   });
   test.isFalse(callback_fired);
-
+  
+  var subscription_complete = false;
+  var setup_context = function() {
+   var context = new Meteor.deps.Context();
+   context.on_invalidate(function() {
+     setup_context();
+   });
+   context.run(function() {
+     subscription_complete = sub.complete();
+   });
+  }
+  setup_context();
+  test.isFalse(subscription_complete);
+  
   var message = JSON.parse(stream.sent.shift());
   var id = message.id;
   delete message.id;
@@ -75,6 +88,9 @@ Tinytest.add("livedata stub - subscribe", function (test) {
   // get the sub satisfied. callback fires.
   stream.receive({msg: 'data', 'subs': [id]});
   test.isTrue(callback_fired);
+  
+  Meteor.flush();
+  test.isTrue(subscription_complete);
 });
 
 
