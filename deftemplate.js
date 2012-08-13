@@ -68,6 +68,34 @@
     return template;
   };
 
+  // XXX forms hooks into this to add "bind"?
+  Meteor._template_decl_methods = {
+    _tmpl_data: {}, // methods store data here (event map, etc.)
+    // these functions must be generic (i.e. use `this`)
+    events: function (eventMap) {
+      var events =
+            (this._tmpl_data.events = (this._tmpl_data.events || {}));
+      _.extend(events, eventMap);
+    },
+    preserve: function (preserveMap) {
+      var preserve =
+            (this._tmpl_data.preserve = (this._tmpl_data.preserve || {}));
+
+      if (_.isArray(preserveMap))
+        _.each(preserveMap, function (selector) {
+          preserve[selector] = true;
+        });
+      else
+        _.extend(preserve, preserveMap);
+    },
+    helpers: function (helperMap) {
+      var helpers =
+            (this._tmpl_data.events = (this._tmpl_data.events || {}));
+      for(var h in helperMap)
+        helpers[h] = helperMap[h];
+    }
+  };
+
   Meteor._def_template = function (name, raw_func) {
     Meteor._hook_handlebars();
 
@@ -77,9 +105,10 @@
 
     var partial = function (data) {
       var tmpl = name && Template[name] || {};
+      var tmplData = tmpl._tmpl_data || {};
 
       var html = Spark.createLandmark({
-        preserve: tmpl.preserve || {},
+        preserve: tmplData.preserve || {},
         create: function () {
           var template = templateObjFromLandmark(this);
           template.data = data;
@@ -100,7 +129,7 @@
           // XXX Forms needs to run a hook before and after raw_func
           // (and receive 'landmark')
           return raw_func(data, {
-            helpers: partial,
+            helpers: _.extend({}, partial, tmplData.helpers || {}),
             partials: Meteor._partials,
             name: name
           });
@@ -120,11 +149,15 @@
           return newEventMap;
         };
 
+        // support old Template.foo.events = {...} format
+        var events =
+              (tmpl.events !== Meteor._template_decl_methods.events ?
+               tmpl.events : tmplData.events);
         // events need to be inside the landmark, not outside, so
         // that when an event fires, you can retrieve the enclosing
         // landmark to get the template data
         if (tmpl.events)
-          html = Spark.attachEvents(wrapEventMap(tmpl.events), html);
+          html = Spark.attachEvents(wrapEventMap(events), html);
         return html;
       });
 
@@ -145,6 +178,7 @@
                         "'. Each template needs a unique name.");
 
       Template[name] = partial;
+      _.extend(partial, Meteor._template_decl_methods);
 
       Meteor._partials[name] = partial;
     }
