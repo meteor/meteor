@@ -734,3 +734,90 @@ Tinytest.add("templating - events", function (test) {
   Meteor.flush();
 
 });
+
+Tinytest.add("templating - #each render callback", function (test) {
+  // test that any list modification triggers a render callback on the
+  // enclosing template
+
+  var entries = new LocalCollection();
+  entries.insert({x:'a'});
+  entries.insert({x:'b'});
+  entries.insert({x:'c'});
+
+  var buf = [];
+
+  var tmpl = Template.test_template_eachrender_a;
+  tmpl.helpers({entries: function() {
+    return entries.find({}, {sort: ['x']}); }});
+  tmpl.render = function () {
+    buf.push(canonicalizeHtml(
+      DomUtils.rangeToHtml(this.firstNode, this.lastNode)).replace(/\s/g, ''));
+  };
+  var div = OnscreenDiv(Meteor.render(tmpl));
+  Meteor.flush();
+  test.equal(buf, ['<div>a</div><div>b</div><div>c</div>']);
+  buf.length = 0;
+
+  // added
+  entries.insert({x:'d'});
+  test.equal(buf, []);
+  Meteor.flush();
+  test.equal(buf, ['<div>a</div><div>b</div><div>c</div><div>d</div>']);
+  buf.length = 0;
+
+  // removed
+  entries.remove({x:'a'});
+  test.equal(buf, []);
+  Meteor.flush();
+  test.expect_fail();
+  test.equal(buf, ['<div>b</div><div>c</div><div>d</div>']);
+  buf.length = 0;
+
+  // moved/changed
+  entries.update({x:'b'}, {$set: {x: 'z'}});
+  test.equal(buf, []);
+  Meteor.flush();
+  test.equal(buf, ['<div>c</div><div>d</div><div>z</div>']);
+  buf.length = 0;
+
+  // test pure "moved"
+
+  tmpl = Template.test_template_eachrender_b;
+  var cbks = [];
+  var xs = ['a','b','c'];
+  tmpl.helpers({entries: function() {
+    return { observe: function (callbacks) {
+      cbks.push(callbacks);
+      _.each(xs, function(x, i) {
+        callbacks.added({x:x}, i);
+      });
+      return {
+        stop: function () {
+          cbks = _.without(cbks, callbacks);
+        }
+      };
+    }};
+  }});
+  tmpl.render = function () {
+    buf.push(canonicalizeHtml(
+      DomUtils.rangeToHtml(this.firstNode, this.lastNode)).replace(/\s/g, ''));
+  };
+  buf = [];
+  var div = OnscreenDiv(Meteor.render(tmpl));
+  test.equal(buf, []);
+  Meteor.flush();
+  test.equal(buf, ['<div>a</div><div>b</div><div>c</div>']);
+  buf.length = 0;
+
+  _.each(cbks, function (callbacks) {
+    callbacks.moved({x:'a'}, 0, 2);
+  });
+  test.equal(buf, []);
+  Meteor.flush();
+  test.equal(div.html().replace(/\s/g, ''),
+             '<div>b</div><div>c</div><div>a</div>');
+  test.expect_fail();
+  test.equal(buf, ['<div>b</div><div>c</div><div>a</div>']);
+  buf.length = 0;
+
+});
