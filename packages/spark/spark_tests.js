@@ -3374,12 +3374,19 @@ Tinytest.add("spark - bubbling render", function (test) {
 Tinytest.add("spark - landmark arg", function (test) {
   var div = OnscreenDiv(Spark.render(function () {
     return Spark.createLandmark({
+      create: function () {
+        test.isFalse(this.hasDom());
+      },
       render: function () {
         var landmark = this;
         landmark.firstNode().innerHTML = 'Greetings';
         landmark.lastNode().innerHTML = 'Line';
         landmark.find('i').innerHTML =
           (landmark.findAll('b').length)+"-bold";
+        test.isTrue(landmark.hasDom());
+      },
+      destroy: function () {
+        test.isFalse(this.hasDom());
       }
     }, function () {
       return Spark.attachEvents({

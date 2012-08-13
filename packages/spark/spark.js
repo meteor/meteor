@@ -25,8 +25,6 @@
 // timer' button again. the problem is almost certainly in atFlushTime
 // (not hard to see what it is.)
 
-// XXX test hasDom().  Test `template` object more.
-
 (function() {
 
 Spark = {};
