@@ -30,7 +30,7 @@ Template.redrawButtons.events = {
   }
 };
 
-Template.preserveDemo.preserve = [ '.spinner', '.spinforward' ];
+Template.preserveDemo.preserve([ '.spinner', '.spinforward' ]);
 
 Template.preserveDemo.spinForwardChecked = function () {
   return Session.get('spinForward') ? 'checked="checked"' : '';

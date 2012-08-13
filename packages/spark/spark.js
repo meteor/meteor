@@ -1008,7 +1008,7 @@ Spark.createLandmark = function (options, htmlFunc) {
 
   // Normalize preserve map
   var preserve = {};
-  if (options.preserve instanceof Array)
+  if (_.isArray(options.preserve))
     _.each(options.preserve, function (selector) {
       preserve[selector] = true;
     });

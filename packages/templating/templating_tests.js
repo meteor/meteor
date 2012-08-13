@@ -324,7 +324,7 @@ Tinytest.add("templating - rendered template", function(test) {
     return this.x + 1;
   };
 
-  Template.test_render_a.preserve = ['br'];
+  Template.test_render_a.preserve(['br']);
 
   var div = OnscreenDiv(
     Meteor.render(function () {
@@ -358,7 +358,7 @@ Tinytest.add("templating - rendered template", function(test) {
     R.get();
     return (+this) + 1;
   };
-  Template.test_render_b.preserve = ['br'];
+  Template.test_render_b.preserve(['br']);
 
   div = OnscreenDiv(
     Meteor.render(function () {
@@ -389,7 +389,7 @@ Tinytest.add("templating - rendered template", function(test) {
   var stuff = new LocalCollection();
   stuff.insert({foo:'bar'});
 
-  Template.test_render_c.preserve = ['br'];
+  Template.test_render_c.preserve(['br']);
 
   div = OnscreenDiv(
     Meteor.renderList(
@@ -419,7 +419,7 @@ Tinytest.add("templating - rendered template", function(test) {
   var stuff = new LocalCollection();
   stuff.insert({foo:'bar'});
 
-  Template.test_render_c.preserve = ['br'];
+  Template.test_render_c.preserve(['br']);
 
   div = OnscreenDiv(Meteor.renderList(stuff.find(),
                                       Template.test_render_c));
