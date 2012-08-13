@@ -619,3 +619,118 @@ Tinytest.add("templating - template arg", function (test) {
   div.kill();
   Meteor.flush();
 });
+
+Tinytest.add("templating - preserve", function (test) {
+  var R = ReactiveVar('foo');
+
+  var tmpl = Template.test_template_preserve_a;
+  tmpl.preserve(['.b']);
+  tmpl.preserve(['.c']);
+  tmpl.preserve({'.d': true});
+  tmpl.preserve({'span': function (n) {
+    return _.contains(['e','f'], n.className) && n.className;
+  }});
+  tmpl.preserve(['span.a']);
+  tmpl['var'] = function () { return R.get(); };
+
+  var div = OnscreenDiv(Meteor.render(tmpl));
+  Meteor.flush();
+  test.equal(div.node().lastChild.nodeValue.match(/\S+/)[0], 'foo');
+  var spans1 = {};
+  _.each(DomUtils.findAll(div.node(), 'span'), function (sp) {
+    spans1[sp.className] = sp;
+  });
+
+  R.set('bar');
+  Meteor.flush();
+  test.equal(div.node().lastChild.nodeValue.match(/\S+/)[0], 'bar');
+  var spans2 = {};
+  _.each(DomUtils.findAll(div.node(), 'span'), function (sp) {
+    spans2[sp.className] = sp;
+  });
+
+  test.isTrue(spans1.a === spans2.a);
+  test.isTrue(spans1.b === spans2.b);
+  test.isTrue(spans1.c === spans2.c);
+  test.isTrue(spans1.d === spans2.d);
+  test.isTrue(spans1.e === spans2.e);
+  test.isTrue(spans1.f === spans2.f);
+  test.isFalse(spans1.y === spans2.y);
+  test.isFalse(spans1.z === spans2.z);
+
+  div.kill();
+  Meteor.flush();
+});
+
+Tinytest.add("templating - helpers", function (test) {
+  var tmpl = Template.test_template_helpers_a;
+
+  tmpl.foo = 'z';
+  tmpl.helpers({bar: 'b'});
+  // helpers(...) takes precendence of assigned helper
+  tmpl.helpers({foo: 'a', baz: function() { return 'c'; }});
+
+  var div = OnscreenDiv(Meteor.render(tmpl));
+  test.equal(div.text().match(/\S+/)[0], 'abc');
+  div.kill();
+  Meteor.flush();
+
+  tmpl = Template.test_template_helpers_b;
+
+  tmpl.helpers({
+    'name': 'A',
+    'arity': 'B',
+    'toString': 'C',
+    'length': 4,
+    'var': 'D'
+  });
+
+  div = OnscreenDiv(Meteor.render(tmpl));
+  test.equal(div.text().match(/\S+/)[0], 'ABC4D');
+  div.kill();
+  Meteor.flush();
+
+  // test that helpers don't "leak"
+  tmpl = Template.test_template_helpers_c;
+  div = OnscreenDiv(Meteor.render(tmpl));
+  test.equal(div.text(), '');
+  div.kill();
+  Meteor.flush();
+});
+
+Tinytest.add("templating - events", function (test) {
+  var tmpl = Template.test_template_events_a;
+
+  var buf = [];
+
+  // old style
+  tmpl.events = {
+    'click b': function () { buf.push('b'); }
+  };
+
+  var div = OnscreenDiv(Meteor.render(tmpl));
+  clickElement(DomUtils.find(div.node(), 'b'));
+  test.equal(buf, ['b']);
+  div.kill();
+  Meteor.flush();
+
+  ///
+
+  tmpl = Template.test_template_events_b;
+  buf = [];
+  // new style
+  tmpl.events({
+    'click u': function () { buf.push('u'); }
+  });
+  tmpl.events({
+    'click i': function () { buf.push('i'); }
+  });
+
+  var div = OnscreenDiv(Meteor.render(tmpl));
+  clickElement(DomUtils.find(div.node(), 'u'));
+  clickElement(DomUtils.find(div.node(), 'i'));
+  test.equal(buf, ['u', 'i']);
+  div.kill();
+  Meteor.flush();
+
+});
