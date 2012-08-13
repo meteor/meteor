@@ -4,8 +4,6 @@
 // XXX rename isolate to reflect that it is the only root of
 // deps-based reactivity ('track'? 'compute'? 'sync'?)
 
-// XXX s/render/rendered/ (etc) in landmarks?
-
 // XXX specify flush order someday (context dependencies? is this in
 // the domain of spark -- overdraw concerns?)
 
