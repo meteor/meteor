@@ -18,8 +18,6 @@
 
 // XXX should functions with an htmlFunc use try/finally inside?
 
-// XXX test that lists are cleaned up if not materialized
-
 // XXX test that non-Spark.render case works for each function (eg,
 // list() returns the expected HTML, Spark.createLandmark creates and
 // then destroys a landmark -- may already be tested?)
