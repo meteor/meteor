@@ -80,18 +80,19 @@ Tinytest.add("templating - event handler this", function(test) {
   Template.test_event_data_with.TWO = {str: "two"};
   Template.test_event_data_with.THREE = {str: "three"};
 
+  Template.test_event_data_with.events({
+    'click': function(event, template) {
+      test.isTrue(this.str);
+      test.equal(template.data.str, "one");
+      event_buf.push(this.str);
+    }
+  });
+
   var event_buf = [];
   var tmpl = OnscreenDiv(
     Meteor.render(function () {
-      var html = Template.test_event_data_with(
+      return Template.test_event_data_with(
         Template.test_event_data_with.ONE);
-      html = Spark.attachEvents({
-        'click': function() {
-          test.isTrue(this.str);
-          event_buf.push(this.str);
-        }
-      }, html);
-      return html;
     }));
 
   var divs = tmpl.node().getElementsByTagName("div");
