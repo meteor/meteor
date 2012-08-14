@@ -51,7 +51,7 @@
   };
 
   // Handle _oauth paths, gets a bunch of stuff ready for the oauth implementation middleware
-  Meteor.accounts.oauth._prepareRequest = function (req) {
+  Meteor.accounts.oauth._requestServiceName = function (req) {
 
     // req.url will be "/_oauth/<service name>?<action>"
     var barePath = req.url.substring(0, req.url.indexOf('?'));
@@ -66,13 +66,21 @@
       return;
     }
 
-    // Make sure we're configured
-    if (!Meteor.accounts[serviceName]._appId || !Meteor.accounts[serviceName]._appUrl)
-      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts." + serviceName + ".config first");
-    if (!Meteor.accounts[serviceName]._secret)
-      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts." + serviceName + ".setSecret first");
-
     return serviceName;
+  };
+
+  // Make sure we're configured
+  Meteor.accounts.oauth._ensureConfigured = function(serviceName) {
+    var service = Meteor.accounts[serviceName];
+
+    _.each(Meteor.accounts[serviceName]._requireConfigs, function(key) {
+      var configKey = '_' + key;
+      if (!service[configKey])
+        throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts." + serviceName + ".config first");
+    });
+
+    if (!service._secret)
+      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts." + serviceName + ".setSecret first");
   };
 
   Meteor.accounts.oauth._loadMiddleWare = function(middleware) {
