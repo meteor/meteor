@@ -12,12 +12,7 @@ var test_got_message = function (test, stream, expected) {
   test.equal(got, expected);
 };
 
-var SESSION_ID = '17';
-
-Tinytest.add("livedata stub - receive data", function (test) {
-  var stream = new Meteor._StubStream();
-  var conn = new Meteor._LivedataConnection(stream);
-
+var startAndConnect = function(test, stream) {
   stream.reset(); // initial connection start.
 
   test_got_message(test, stream, {msg: 'connect'});
@@ -25,6 +20,15 @@ Tinytest.add("livedata stub - receive data", function (test) {
 
   stream.receive({msg: 'connected', session: SESSION_ID});
   test.length(stream.sent, 0);
+};
+
+var SESSION_ID = '17';
+
+Tinytest.add("livedata stub - receive data", function (test) {
+  var stream = new Meteor._StubStream();
+  var conn = new Meteor._LivedataConnection(stream);
+
+  startAndConnect(test, stream);
 
   // data comes in for unknown collection.
   var coll_name = Meteor.uuid();
@@ -46,19 +50,11 @@ Tinytest.add("livedata stub - receive data", function (test) {
   test.isUndefined(conn.queued[coll_name]);
 });
 
-
-
 Tinytest.add("livedata stub - subscribe", function (test) {
   var stream = new Meteor._StubStream();
   var conn = new Meteor._LivedataConnection(stream);
 
-  stream.reset(); // initial connection start.
-
-  test_got_message(test, stream, {msg: 'connect'});
-  test.length(stream.sent, 0);
-
-  stream.receive({msg: 'connected', session: SESSION_ID});
-  test.length(stream.sent, 0);
+  startAndConnect(test, stream);
 
   // subscribe
   var callback_fired = false;
@@ -82,11 +78,7 @@ Tinytest.add("livedata stub - this", function (test) {
   var stream = new Meteor._StubStream();
   var conn = new Meteor._LivedataConnection(stream);
 
-  stream.reset(); // initial connection start.
-  test_got_message(test, stream, {msg: 'connect'});
-
-  stream.receive({msg: 'connected', session: SESSION_ID});
-  test.length(stream.sent, 0);
+  startAndConnect(test, stream);
 
   conn.methods({test_this: function() {
     test.isTrue(this.is_simulation);
@@ -112,13 +104,7 @@ Tinytest.add("livedata stub - methods", function (test) {
   var stream = new Meteor._StubStream();
   var conn = new Meteor._LivedataConnection(stream);
 
-  stream.reset(); // initial connection start.
-
-  test_got_message(test, stream, {msg: 'connect'});
-  test.length(stream.sent, 0);
-
-  stream.receive({msg: 'connected', session: SESSION_ID});
-  test.length(stream.sent, 0);
+  startAndConnect(test, stream);
 
   var coll_name = Meteor.uuid();
   var coll = new Meteor.Collection(coll_name, conn);
@@ -211,13 +197,7 @@ Tinytest.add("livedata stub - sub methods", function (test) {
   var stream = new Meteor._StubStream();
   var conn = new Meteor._LivedataConnection(stream);
 
-  stream.reset(); // initial connection start.
-
-  test_got_message(test, stream, {msg: 'connect'});
-  test.length(stream.sent, 0);
-
-  stream.receive({msg: 'connected', session: SESSION_ID});
-  test.length(stream.sent, 0);
+  startAndConnect(test, stream);
 
   var coll_name = Meteor.uuid();
   var coll = new Meteor.Collection(coll_name, conn);
@@ -287,13 +267,7 @@ Tinytest.add("livedata stub - reconnect", function (test) {
   var stream = new Meteor._StubStream();
   var conn = new Meteor._LivedataConnection(stream);
 
-  stream.reset(); // initial connection start.
-
-  test_got_message(test, stream, {msg: 'connect'});
-  test.length(stream.sent, 0);
-
-  stream.receive({msg: 'connected', session: SESSION_ID});
-  test.length(stream.sent, 0);
+  startAndConnect(test, stream);
 
   var coll_name = Meteor.uuid();
   var coll = new Meteor.Collection(coll_name, conn);
@@ -342,9 +316,12 @@ Tinytest.add("livedata stub - reconnect", function (test) {
   conn.call('do_something', function () {
     method_callback_fired = true;
   });
+  conn.apply('do_something', [], {wait: true});
+
   test.isFalse(method_callback_fired);
 
   var method_message = JSON.parse(stream.sent.shift());
+  var wait_method_message = JSON.parse(stream.sent.shift());
   test.equal(method_message, {msg: 'method', method: 'do_something',
                               params: [], id:method_message.id});
 
@@ -354,13 +331,13 @@ Tinytest.add("livedata stub - reconnect", function (test) {
   test.equal(coll.find({c:3}).count(), 0);
   test.equal(counts, {added: 1, removed: 0, changed: 1, moved: 0});
 
-
   // stream reset. reconnect!
   // we send a connect, our pending messages, and our subs.
   stream.reset();
 
   test_got_message(test, stream, {msg: 'connect', session: SESSION_ID});
   test_got_message(test, stream, method_message);
+  test_got_message(test, stream, wait_method_message);
   test_got_message(test, stream, sub_message);
 
   // reconnect with different session id
@@ -376,10 +353,12 @@ Tinytest.add("livedata stub - reconnect", function (test) {
   test.equal(counts, {added: 1, removed: 0, changed: 1, moved: 0});
 
   // satisfy and return method callback
-  stream.receive({msg: 'data', methods: [method_message.id]});
+  stream.receive({msg: 'data',
+                  methods: [method_message.id, wait_method_message.id]});
 
   test.isFalse(method_callback_fired);
   stream.receive({msg: 'result', id:method_message.id, result:"bupkis"});
+  stream.receive({msg: 'result', id:wait_method_message.id, result:"bupkis"});
   test.isTrue(method_callback_fired);
 
   // still no update.
@@ -397,7 +376,196 @@ Tinytest.add("livedata stub - reconnect", function (test) {
   handle.stop();
 });
 
+Tinytest.add("livedata connection - reactive userId", function (test) {
+  var stream = new Meteor._StubStream();
+  var conn = new Meteor._LivedataConnection(stream);
+
+  test.equal(conn.userId(), null);
+  conn.setUserId(1337);
+  test.equal(conn.userId(), 1337);
+});
+
+Tinytest.add("livedata connection - two wait methods with reponse in order", function (test) {
+  var stream = new Meteor._StubStream();
+  var conn = new Meteor._LivedataConnection(stream);
+  startAndConnect(test, stream);
+
+  // setup method
+  conn.methods({do_something: function (x) {}});
+
+  var responses = [];
+  conn.apply('do_something', ['one!'], function() { responses.push('one'); });
+  var one_message = JSON.parse(stream.sent.shift());
+  test.equal(one_message.params, ['one!']);
+
+  conn.apply('do_something', ['two!'], {wait: true}, function() {
+    responses.push('two');
+  });
+  var two_message = JSON.parse(stream.sent.shift());
+  test.equal(two_message.params, ['two!']);
+  test.equal(responses, []);
+
+  conn.apply('do_something', ['three!'], function() {
+    responses.push('three');
+  });
+  conn.apply('do_something', ['four!'], {wait: true}, function() {
+    responses.push('four');
+  });
+
+  conn.apply('do_something', ['five!'], function() { responses.push('five'); });
+
+  // Verify that we did not send "three!" since we're waiting for
+  // "one!" and "two!" to send their response back
+  test.equal(stream.sent.length, 0);
+  stream.receive({msg: 'result', id: one_message.id});
+  test.equal(responses, ['one']);
+
+  test.equal(stream.sent.length, 0);
+  stream.receive({msg: 'result', id: two_message.id});
+  test.equal(responses, ['one', 'two']);
+
+  // Verify that we just sent "three!" and "four!" now that we got
+  // responses for "one!" and "two!"
+  test.equal(stream.sent.length, 2);
+  var three_message = JSON.parse(stream.sent.shift());
+  test.equal(three_message.params, ['three!']);
+  var four_message = JSON.parse(stream.sent.shift());
+  test.equal(four_message.params, ['four!']);
+
+  stream.receive({msg: 'result', id: three_message.id});
+  test.equal(responses, ['one', 'two', 'three']);
+
+  test.equal(stream.sent.length, 0);
+  stream.receive({msg: 'result', id: four_message.id});
+  test.equal(responses, ['one', 'two', 'three', 'four']);
+
+  // Verify that we just sent "five!"
+  test.equal(stream.sent.length, 1);
+  var five_message = JSON.parse(stream.sent.shift());
+  test.equal(five_message.params, ['five!']);
+});
+
+Tinytest.add("livedata connection - one wait method with response out of order", function (test) {
+  var stream = new Meteor._StubStream();
+  var conn = new Meteor._LivedataConnection(stream);
+  startAndConnect(test, stream);
+
+  // setup method
+  conn.methods({do_something: function (x) {}});
+
+  var responses = [];
+  conn.apply('do_something', ['one!'], function() { responses.push('one'); });
+  var one_message = JSON.parse(stream.sent.shift());
+  test.equal(one_message.params, ['one!']);
+
+  conn.apply('do_something', ['two!'], {wait: true}, function() {
+    responses.push('two');
+  });
+  var two_message = JSON.parse(stream.sent.shift());
+  test.equal(two_message.params, ['two!']);
+  test.equal(responses, []);
+
+  conn.apply('do_something', ['three!']);
+
+  // Verify that we did not send "three!" since we're waiting for
+  // "one!" and "two!" to send their response back
+  test.equal(stream.sent.length, 0);
+  stream.receive({msg: 'result', id: two_message.id});
+  test.equal(responses, []);
+
+  test.equal(stream.sent.length, 0);
+  stream.receive({msg: 'result', id: one_message.id});
+  test.equal(responses, ['one', 'two']); // Namely not two, one
+
+  // Verify that we just sent "three!" now that we got responses for
+  // "one!" and "two!"
+  test.equal(stream.sent.length, 1);
+  var three_message = JSON.parse(stream.sent.shift());
+  test.equal(three_message.params, ['three!']);
+
+  stream.receive({msg: 'result', id: three_message.id});
+  test.equal(stream.sent.length, 0);
+});
+
+Tinytest.add("livedata connection - onReconnect prepends messages correctly with a wait method", function(test) {
+  var stream = new Meteor._StubStream();
+  var conn = new Meteor._LivedataConnection(stream);
+  startAndConnect(test, stream);
+
+  // setup method
+  conn.methods({do_something: function (x) {}});
+
+  conn.onReconnect = function() {
+    conn.apply('do_something', ['reconnect one']);
+    conn.apply('do_something', ['reconnect two'], {wait: true});
+    conn.apply('do_something', ['reconnect three']);
+  };
+
+  conn.apply('do_something', ['one']);
+  conn.apply('do_something', ['two'], {wait: true});
+  conn.apply('do_something', ['three']);
+
+  // reconnect
+  stream.sent = [];
+  stream.reset();
+  test_got_message(
+    test, stream, {msg: 'connect', session: conn.last_session_id});
+
+  // Test that we sent what we expect to send, and we're blocked on
+  // what we expect to be blocked. The subsequent logic to correctly
+  // read the wait flag is tested separately.
+  test.equal(_.map(stream.sent, function(msg) {
+    return JSON.parse(msg).params[0];
+  }), ['reconnect one', 'reconnect two']);
+  test.equal(_.map(conn.blocked_methods, function(method) {
+    return [method.msg.params[0], method.wait];
+  }), [
+    ['reconnect three', undefined/*==false*/],
+    ['one', undefined/*==false*/],
+    ['two', true],
+    ['three', undefined/*==false*/]
+  ]);
+});
+
+Tinytest.add("livedata connection - onReconnect prepends messages correctly without a wait method", function(test) {
+  var stream = new Meteor._StubStream();
+  var conn = new Meteor._LivedataConnection(stream);
+  startAndConnect(test, stream);
+
+  // setup method
+  conn.methods({do_something: function (x) {}});
+
+  conn.onReconnect = function() {
+    conn.apply('do_something', ['reconnect one']);
+    conn.apply('do_something', ['reconnect two']);
+    conn.apply('do_something', ['reconnect three']);
+  };
+
+  conn.apply('do_something', ['one']);
+  conn.apply('do_something', ['two'], {wait: true});
+  conn.apply('do_something', ['three']);
+
+  // reconnect
+  stream.sent = [];
+  stream.reset();
+  test_got_message(
+    test, stream, {msg: 'connect', session: conn.last_session_id});
+
+  // Test that we sent what we expect to send, and we're blocked on
+  // what we expect to be blocked. The subsequent logic to correctly
+  // read the wait flag is tested separately.
+  test.equal(_.map(stream.sent, function(msg) {
+    return JSON.parse(msg).params[0];
+  }), ['reconnect one', 'reconnect two', 'reconnect three', 'one', 'two']);
+  test.equal(_.map(conn.blocked_methods, function(method) {
+    return [method.msg.params[0], method.wait];
+  }), [
+    ['three', undefined/*==false*/]
+  ]);
+});
+
 // XXX also test:
 // - reconnect, with session resume.
 // - restart on update flag
 // - on_update event
+// - reloading when the app changes, including session migration

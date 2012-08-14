@@ -335,13 +335,28 @@ To call methods on another Meteor application or subscribe to its data
 sets, call `Meteor.connect` with the URL of the application.
 `Meteor.connect` returns an object which provides:
 
-* `subscribe`
-* `methods` (to define stubs)
-* `call`
-* `apply`
-* `status`
-* `reconnect`
+* `subscribe` -
+  Subscribe to a record set. See
+  <a href="#meteor_subscribe">Meteor.subscribe</a>.
+* `call` -
+  Invoke a method. See <a href="#meteor_call">Meteor.call</a>.
+* `apply` -
+  Invoke a method with an argument array. See
+  <a href="#meteor_apply">Meteor.apply</a>.
+* `methods` -
+  Define client-only stubs for methods defined on the remote server. See
+  <a href="#meteor_methods">Meteor.methods</a>.
+* `status` -
+  Get the current connection status. See
+  <a href="#meteor_status">Meteor.status</a>.
+* `reconnect` -
+  See <a href="meteor_reconnect">Meteor.reconnect</a>.
+* `onReconnect` - Set this to a function to be called as the first step of
+  reconnecting. This function can call methods which will be executed before
+  any other outstanding methods. For example, this can be used to re-establish
+  the appropriate authentication context on the new connection.
 
+By default, clients open a connection to the server from which they're loaded.
 When you call `Meteor.subscribe`, `Meteor.status`, `Meteor.call`, and
 `Meteor.apply`, you are using a connection back to that default
 server.
@@ -1157,7 +1172,7 @@ Matches a particular type of event, such as 'click'.
 
 {{#dtdd "<em>eventtype selector</em>"}}
 Matches a particular type of event, but only when it appears on
-an element that matches a certain CSS selector.  
+an element that matches a certain CSS selector.
 {{/dtdd}}
 
 {{#dtdd "<em>event1, event2</em>"}}
