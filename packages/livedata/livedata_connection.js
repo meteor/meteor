@@ -760,7 +760,9 @@ _.extend(Meteor, {
   //     "http://subdomain.meteor.com/sockjs" (deprecated),
   //     "/sockjs" (deprecated)
   connect: function (url, _restartOnUpdate) {
-    return new Meteor._LivedataConnection(url, _restartOnUpdate);
+    var ret = new Meteor._LivedataConnection(url, _restartOnUpdate);
+    Meteor._LivedataConnection._allConnections.push(ret); // hack. see below.
+    return ret;
   },
 
   autosubscribe: function (sub_func) {
@@ -789,3 +791,14 @@ _.extend(Meteor, {
   }
 });
 
+
+// Hack for `spiderable` package: a way to see if the page is done
+// loading all the data it needs.
+Meteor._LivedataConnection._allConnections = [];
+Meteor._LivedataConnection._allSubscriptionsReady = function () {
+  return _.all(Meteor._LivedataConnection._allConnections, function (conn) {
+    for (var k in conn.sub_ready_callbacks)
+      return false;
+    return true;
+  });
+};

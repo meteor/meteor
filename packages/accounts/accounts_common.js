@@ -1,6 +1,12 @@
 if (!Meteor.accounts) {
   Meteor.accounts = {};
+  Meteor.accounts._options = {};
 }
+
+Meteor.accounts.config = function(options) {
+  Meteor.accounts._options = options;
+};
+
 
 // internal login tokens collection. Never published.
 Meteor.accounts._loginTokens = new Meteor.Collection(

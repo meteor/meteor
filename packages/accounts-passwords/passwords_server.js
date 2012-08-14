@@ -73,9 +73,8 @@
       // If options.M is set, it means we went through a challenge with
       // the old password.
 
-      // XXX && Meteor.accounts.config.unsafePasswordChanges check here!
-      if (!options.M) {
-        throw new Meteor.Error(500, "XXX no oldPassword unimplemented");
+      if (!options.M && !Meteor.accounts._options.unsafePasswordChanges) {
+        throw new Meteor.Error(403, "Old password required.");
       }
 
       if (options.M) {

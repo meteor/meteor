@@ -13,12 +13,12 @@
       options: {
         services: {
           weibo: {
-            id: accessToken.uid,
-            accessToken: accessToken.accessToken,
-            screenName: identity.screen_name
+            id: result.uid,
+            accessToken: result.accessToken
           }
         }
-      }
+      },
+      extra: {name: identity.screen_name}
     };
   });
 
