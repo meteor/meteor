@@ -8,7 +8,8 @@
   // connect middleware
   Meteor.accounts.oauth2._handleRequest = function (req, res, next) {
 
-    var service = Meteor.accounts.oauth2._services[req._serviceName];
+    var serviceName = Meteor.accounts.oauth._prepareRequest(req);
+    var service = Meteor.accounts.oauth2._services[serviceName];
 
     // Skip everything if there's no service set by the oauth middleware
     if (!service) {

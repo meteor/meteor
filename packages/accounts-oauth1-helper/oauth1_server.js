@@ -8,7 +8,8 @@
   // connect middleware
   Meteor.accounts.oauth1._handleRequest = function (req, res, next) {
 
-    var service = Meteor.accounts.oauth1._services[req._serviceName];
+    var serviceName = Meteor.accounts.oauth._prepareRequest(req);
+    var service = Meteor.accounts.oauth1._services[serviceName];
 
     // Skip everything if there's no service set by the oauth middleware
     if (!service) {
@@ -20,7 +21,7 @@
     // This way the subsequent call to the `login` method will be
     // immediate.
 
-    var config = Meteor.accounts[req._serviceName];
+    var config = Meteor.accounts[serviceName];
     var oauth = new OAuth1(config);
 
     // If we get here with a callback url we need a request token to

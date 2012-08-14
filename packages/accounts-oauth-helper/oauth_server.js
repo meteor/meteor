@@ -51,19 +51,18 @@
   };
 
   // Handle _oauth paths, gets a bunch of stuff ready for the oauth implementation middleware
-  Meteor.accounts.oauth._handleRequest = function (req, res, next) {
+  Meteor.accounts.oauth._prepareRequest = function (req) {
 
     // req.url will be "/_oauth/<service name>?<action>"
     var barePath = req.url.substring(0, req.url.indexOf('?'));
     var splitPath = barePath.split('/');
 
     // Find service based on url
-    var serviceName = req._serviceName = splitPath[2];
+    var serviceName = splitPath[2];
 
     // Any non-oauth request will continue down the default middlewares
     // Same goes for service that hasn't been registered
     if (splitPath[1] !== '_oauth') {
-      next();
       return;
     }
 
@@ -73,7 +72,7 @@
     if (!Meteor.accounts[serviceName]._secret)
       throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts." + serviceName + ".setSecret first");
 
-    next();
+    return serviceName;
   };
 
   Meteor.accounts.oauth._loadMiddleWare = function(middleware) {
@@ -88,7 +87,5 @@
         }).run();
       });
   };
-
-  Meteor.accounts.oauth._loadMiddleWare(Meteor.accounts.oauth._handleRequest);
 
 })();
