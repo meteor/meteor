@@ -27,7 +27,7 @@
     var result = Meteor.http.post(
       "https://api.weibo.com/oauth2/access_token", {params: {
         code: query.code,
-        client_id: Meteor.accounts.weibo._appId,
+        client_id: Meteor.accounts.weibo._clientId,
         client_secret: Meteor.accounts.weibo._secret,
         redirect_uri: Meteor.accounts.weibo._appUrl + "/_oauth/weibo?close",
         grant_type: 'authorization_code'

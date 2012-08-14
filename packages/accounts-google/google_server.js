@@ -22,7 +22,7 @@
     var result = Meteor.http.post(
       "https://accounts.google.com/o/oauth2/token", {params: {
         code: query.code,
-        client_id: Meteor.accounts.google._appId,
+        client_id: Meteor.accounts.google._clientId,
         client_secret: Meteor.accounts.google._secret,
         redirect_uri: Meteor.accounts.google._appUrl + "/_oauth/google?close",
         grant_type: 'authorization_code'

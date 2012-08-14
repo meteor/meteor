@@ -8,7 +8,7 @@
   // connect middleware
   Meteor.accounts.oauth1._handleRequest = function (req, res, next) {
 
-    var serviceName = Meteor.accounts.oauth._prepareRequest(req);
+    var serviceName = Meteor.accounts.oauth._requestServiceName(req);
     var service = Meteor.accounts.oauth1._services[serviceName];
 
     // Skip everything if there's no service set by the oauth middleware
@@ -16,6 +16,9 @@
       next();
       return;
     }
+
+    // Make sure we're configured
+    Meteor.accounts.oauth._ensureConfigured(serviceName);
 
     // Make sure we prepare the login results before returning.
     // This way the subsequent call to the `login` method will be
