@@ -30,6 +30,14 @@ Meteor._LivedataSession = function (server) {
 
   // map from collection name -> id -> key -> subscription id -> true
   self.provides_key = {};
+
+  // if set, ignore flush requests on any subsubcription on this
+  // session. when set this back to false, don't forget to call flush
+  // manually. this is sometimes needed because subscriptions
+  // frequently call flush
+  self.dontFlush = false;
+
+  self.userId = null;
 };
 
 _.extend(Meteor._LivedataSession.prototype, {
@@ -263,8 +271,12 @@ _.extend(Meteor._LivedataSession.prototype, {
         return;
       }
 
-      var invocation = new Meteor._MethodInvocation(false /* is_simulation */,
-                                                   unblock);
+      var setUserId = function(userId) {
+        self._setUserId(userId);
+      };
+
+      var invocation = new Meteor._MethodInvocation(
+        false /* is_simulation */, self.userId, setUserId, unblock);
       try {
         var ret =
           Meteor._CurrentWriteFence.withValue(fence, function () {
@@ -299,6 +311,14 @@ _.extend(Meteor._LivedataSession.prototype, {
     }
   },
 
+  // Sets the current user id in all appropriate contexts and reruns
+  // all subscriptions
+  _setUserId: function(userId) {
+    var self = this;
+    self.userId = userId;
+    this._rerunAllSubscriptions();
+  },
+
   _startSubscription: function (handler, priority, sub_id, params) {
     var self = this;
 
@@ -308,17 +328,23 @@ _.extend(Meteor._LivedataSession.prototype, {
     else
       self.universal_subs.push(sub);
 
-    var res = handler.apply(sub, params || []);
+    // Store a function to re-run the handler in case we want to rerun
+    // subscriptions, for example when the current user id changes
+    sub._runHandler = function() {
+      var res = handler.apply(sub, params || []);
 
-    // if Meteor._RemoteCollectionDriver is available (defined in
-    // mongo-livedata), automatically wire up handlers that return a
-    // Cursor.  otherwise, the handler is completely responsible for
-    // delivering its own data messages and registering stop
-    // functions.
-    //
-    // XXX generalize
-    if (Meteor._RemoteCollectionDriver && (res instanceof Meteor._Mongo.Cursor))
-      sub._publishCursor(res);
+      // if Meteor._RemoteCollectionDriver is available (defined in
+      // mongo-livedata), automatically wire up handlers that return a
+      // Cursor.  otherwise, the handler is completely responsible for
+      // delivering its own data messages and registering stop
+      // functions.
+      //
+      // XXX generalize
+      if (Meteor._RemoteCollectionDriver && (res instanceof Meteor._Mongo.Cursor))
+        sub._publishCursor(res);
+    };
+
+    sub._runHandler();
   },
 
   // tear down specified subscription
@@ -346,7 +372,30 @@ _.extend(Meteor._LivedataSession.prototype, {
     self.universal_subs = [];
   },
 
-  // return the current value for a particular key, as given by the
+  // Rerun all subscriptions without sending intermediate state down
+  // the wire
+  _rerunAllSubscriptions: function () {
+    var self = this;
+
+    var rerunSub = function(sub) {
+      sub._teardown();
+      sub._userId = self.userId;
+      sub._runHandler();
+    };
+    var flushSub = function(sub) {
+      sub.flush();
+    };
+
+    self.dontFlush = true;
+    _.each(self.named_subs, rerunSub);
+    _.each(self.universal_subs, rerunSub);
+
+    self.dontFlush = false;
+    _.each(self.named_subs, flushSub);
+    _.each(self.universal_subs, flushSub);
+  },
+
+  // RETURN the current value for a particular key, as given by the
   // current contents of each subscription's snapshot.
   _effectiveValueForKey: function (collection_name, id, key) {
     var self = this;
@@ -401,6 +450,8 @@ Meteor._LivedataSubscription = function (session, sub_id, priority) {
 
   // stop callbacks to g/c this sub.  called w/ zero arguments.
   this.stop_callbacks = [];
+
+  this._userId = session.userId;
 };
 
 _.extend(Meteor._LivedataSubscription.prototype, {
@@ -410,22 +461,7 @@ _.extend(Meteor._LivedataSubscription.prototype, {
     if (self.stopped)
       return;
 
-    // tell listeners, so they can clean up
-    for (var i = 0; i < this.stop_callbacks.length; i++)
-      (this.stop_callbacks[i])();
-
-    // remove our data from the client (possibly unshadowing data from
-    // lower priority subscriptions)
-    self.pending_data = {};
-    self.pending_complete = false;
-    for (var name in self.snapshot) {
-      self.pending_data[name] = {};
-      for (var id in self.snapshot[name]) {
-        self.pending_data[name][id] = {};
-        for (var key in self.snapshot[name][id])
-          self.pending_data[name][id][key] = undefined;
-      }
-    }
+    self._teardown();
     self.flush();
     self.stopped = true;
   },
@@ -465,6 +501,9 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
   flush: function () {
     var self = this;
+
+    if (self.session.dontFlush)
+      return;
 
     if (self.stopped)
       return;
@@ -532,6 +571,30 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
     self.pending_data = {};
     self.pending_complete = false;
+  },
+
+  userId: function() {
+    return this._userId;
+  },
+
+  _teardown: function() {
+    var self = this;
+    // tell listeners, so they can clean up
+    for (var i = 0; i < self.stop_callbacks.length; i++)
+      (self.stop_callbacks[i])();
+
+    // remove our data from the client (possibly unshadowing data from
+    // lower priority subscriptions)
+    self.pending_data = {};
+    self.pending_complete = false;
+    for (var name in self.snapshot) {
+      self.pending_data[name] = {};
+      for (var id in self.snapshot[name]) {
+        self.pending_data[name][id] = {};
+        for (var key in self.snapshot[name][id])
+          self.pending_data[name][id][key] = undefined;
+      }
+    }
   },
 
   _publishCursor: function (cursor, name) {
@@ -755,8 +818,18 @@ _.extend(Meteor._LivedataServer.prototype, {
     return this.apply(name, args, callback);
   },
 
-  apply: function (name, args, callback) {
+  // @param options {Optional Object}
+  // @param callback {Optional Function}
+  apply: function (name, args, options, callback) {
     var self = this;
+
+    // We were passed 3 arguments. They may be either (name, args, options)
+    // or (name, args, callback)
+    if (!callback && typeof options === 'function') {
+      callback = options;
+      options = {};
+    }
+    options = options || {};
 
     if (callback)
       // It's not really necessary to do this, since we immediately
@@ -773,7 +846,23 @@ _.extend(Meteor._LivedataServer.prototype, {
     if (!handler)
       var exception = new Meteor.Error(404, "Method not found");
     else {
-      var invocation = new Meteor._MethodInvocation(false /* is_simulation */);
+      // If this is a method call from within another method, get the
+      // user state from the outer method, otherwise don't allow
+      // setUserId to be called
+      var userId = null;
+      var setUserId = function() {
+        throw new Error("Can't call setUserId on a server initiated method call");
+      };
+      var currentInvocation = Meteor._CurrentInvocation.get();
+      if (currentInvocation) {
+        userId = currentInvocation.userId();
+        setUserId = function(userId) {
+          currentInvocation.setUserId(userId);
+        };
+      }
+
+      var invocation = new Meteor._MethodInvocation(
+        false /* is_simulation */, userId, setUserId);
       try {
         var ret = Meteor._CurrentInvocation.withValue(invocation, function () {
           return handler.apply(invocation, args);

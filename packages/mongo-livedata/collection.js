@@ -1,6 +1,7 @@
 // manager, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
-Meteor.Collection = function (name, manager, driver) {
+// XXX probably a good idea to change these arguments to be an options map
+Meteor.Collection = function (name, manager, driver, preventAutopublish) {
   var self = this;
 
   if (!name && (name !== null)) {
@@ -26,6 +27,7 @@ Meteor.Collection = function (name, manager, driver) {
   self._driver = driver;
   self._collection = driver.open(name);
   self._was_snapshot = false;
+  self._name = name;
 
   if (name && manager.registerStore) {
     // OK, we're going to be a slave, replicating some remote
@@ -85,34 +87,10 @@ Meteor.Collection = function (name, manager, driver) {
       throw new Error("There is already a collection named '" + name + "'");
   }
 
-  // mutation methods
-  if (manager) {
-    var m = {};
-    // XXX what if name has illegal characters in it?
-    self._prefix = '/' + name + '/';
-    m[self._prefix + 'insert'] = function (/* selector, options */) {
-      self._maybe_snapshot();
-      // insert returns nothing.  allow exceptions to propagate.
-      self._collection.insert.apply(self._collection, _.toArray(arguments));
-    };
-
-    m[self._prefix + 'update'] = function (/* selector, mutator, options */) {
-      self._maybe_snapshot();
-      // update returns nothing.  allow exceptions to propagate.
-      self._collection.update.apply(self._collection, _.toArray(arguments));
-    };
-
-    m[self._prefix + 'remove'] = function (/* selector */) {
-      self._maybe_snapshot();
-      // remove returns nothing.  allow exceptions to propagate.
-      self._collection.remove.apply(self._collection, _.toArray(arguments));
-    };
-
-    manager.methods(m);
-  }
+  self._defineMutationMethods();
 
   // autopublish
-  if (manager && manager.onAutopublish)
+  if (!preventAutopublish && manager && manager.onAutopublish)
     manager.onAutopublish(function () {
       var handler = function () { return self.find(); };
       manager.publish(null, handler, {is_auto: true});
@@ -142,6 +120,248 @@ _.extend(Meteor.Collection.prototype, {
   }
 
 });
+
+Meteor.Collection.prototype._defineMutationMethods = function() {
+  var self = this;
+
+  self._validators = {
+    insert: [],
+    update: [],
+    remove: [],
+    fetch: [],
+    fetchAllFields: false
+  };
+
+  if (!self._name)
+    return; // anonymous collection
+
+  // XXX what if name has illegal characters in it?
+  self._prefix = '/' + self._name + '/';
+
+  // since tests need to check the effects of adding and removing the
+  // `insecure` package, which sets Meteor.Collection.insecure, we
+  // need this var
+  var insecure = Meteor.Collection.insecure;
+
+  // mutation methods
+  if (self._manager) {
+    var m = {};
+    // XXX what if name has illegal characters in it?
+    m[self._prefix + 'insert'] = function (doc) {
+      self._maybe_snapshot();
+
+      if (!this.is_simulation) {
+        if (self._restricted) {
+          if (!self._allowInsert(this.userId(), doc))
+            throw new Meteor.Error(403, "Access denied");
+        } else {
+          if (!insecure)
+            throw new Meteor.Error(403, "Access denied");
+        }
+      }
+
+      // insert returns nothing.  allow exceptions to propagate.
+      self._collection.insert(doc);
+    };
+
+    m[self._prefix + 'update'] = function (selector, mutator, options) {
+      self._maybe_snapshot();
+
+      if (this.is_simulation) {
+        // insert returns nothing.  allow exceptions to propagate.
+        self._collection.update(selector, mutator, options);
+      } else {
+        if (self._restricted) {
+          self._validatedUpdate(this.userId(), selector, mutator, options);
+        } else {
+          if (insecure) {
+            // update returns nothing.  allow exceptions to propagate.
+            self._collection.update(selector, mutator, options);
+          } else {
+            throw new Meteor.Error(403, "Access denied");
+          }
+        }
+      }
+    };
+
+    m[self._prefix + 'remove'] = function (selector) {
+      self._maybe_snapshot();
+
+      if (this.is_simulation) {
+        // remove returns nothing.  allow exceptions to propagate.
+        self._collection.remove(selector);
+      } else {
+        if (self._restricted) {
+          self._validatedRemove(this.userId(), selector);
+        } else {
+          if (insecure) {
+            // insert returns nothing.  allow exceptions to propagate.
+            self._collection.remove(selector);
+          } else {
+            throw new Meteor.Error(403, "Access denied");
+          }
+        }
+      }
+    };
+
+    self._manager.methods(m);
+  }
+};
+
+// Restrict default mutators on collection. Can be called multiple
+// times, in which case all validators must be satisfied.
+//
+// options.insert {Function(userId, doc)}
+//   return true to allow the user to add this document
+//
+// options.update {Function(userId, docs, fields, modifier)}
+//   return true to allow the user to update these documents.
+//   `fields` is passed as an array of fields that are to be modified
+//
+// options.remove {Function(userId, docs)}
+//   return true to allow the user to remove these documents
+//
+// options.fetch {Array}
+//   Fields to fetch for these validators. If any call to allow does
+//   not have this option then all fields are loaded.
+Meteor.Collection.prototype.allow = function(options) {
+  var self = this;
+  self._restricted = true;
+
+  if (options.insert)
+    self._validators.insert.push(options.insert);
+  if (options.update)
+    self._validators.update.push(options.update);
+  if (options.remove)
+    self._validators.remove.push(options.remove);
+
+  if (!self._validators.fetchAllFields) {
+    if (options.fetch) {
+      self._validators.fetch = _.union(self._validators.fetch, options.fetch);
+    } else {
+      self._validators.fetchAllFields = true;
+      // clear fetch just to make sure we don't accidentally read it
+      self._validators.fetch = null;
+    }
+  }
+};
+
+// assuming the collection is restricted
+Meteor.Collection.prototype._allowInsert = function(userId, doc) {
+  if (this._validators.insert.length === 0) {
+    throw new Meteor.Error(403, "Access denied. No insert validators set on restricted collection.");
+  }
+
+  // all validators should return true
+  return !_.any(this._validators.insert, function(validator) {
+    return !validator(userId, doc);
+  });
+};
+
+// Simulate a mongo `update` operation while validating that the
+// access control rules set by calls to `allow` are satisfied. If all
+// pass, rewrite the mongo operation to use $in to set the list of
+// document ids to change ##ValidatedChange
+Meteor.Collection.prototype._validatedUpdate = function(userId, selector, mutator, options) {
+  var self = this;
+
+  if (self._validators.update.length === 0) {
+    throw new Meteor.Error(403, "Access denied. No update validators set on restricted collection.");
+  }
+
+  // compute modified fields
+  var fields = [];
+  _.each(mutator, function (params, op) {
+    if (op[0] !== '$') {
+      throw new Meteor.Error(403, "Access denied. Can't replace document in restricted collection.");
+    } else {
+      _.each(_.keys(params), function (field) {
+        // treat dotted fields as if they are replacing their
+        // top-level part
+        if (field.indexOf('.') !== -1)
+          field = field.substring(0, field.indexOf('.'));
+
+        // record the field we are trying to change
+        if (!_.contains(fields, field))
+          fields.push(field);
+      });
+    }
+  });
+
+  var findOptions = {};
+  if (!self._validators.fetchAllFields) {
+    findOptions.fields = {};
+    _.each(self._validators.fetch, function(fieldName) {
+      findOptions.fields[fieldName] = 1;
+    });
+  }
+
+  var docs;
+  if (options && options.multi) {
+    docs = self._collection.find(selector, findOptions).fetch();
+  } else {
+    var doc = self._collection.findOne(selector, findOptions);
+    if (!doc) // none satisfied!
+      return;
+    docs = [doc];
+  }
+
+  // verify that all validators return true
+  if (_.any(self._validators.update, function(validator) {
+    return !validator(userId, docs, fields, mutator);
+  })) {
+    throw new Meteor.Error(403, "Access denied");
+  }
+
+  // construct new $in selector to replace the original one
+  var idInClause = {};
+  idInClause.$in = _.map(docs, function(doc) {
+    return doc._id;
+  });
+  var idSelector = {_id: idInClause};
+
+  self._collection.update.call(
+    self._collection,
+    idSelector,
+    mutator,
+    options);
+};
+
+// Simulate a mongo `remove` operation while validating access control
+// rules. See #ValidatedChange
+Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
+  var self = this;
+
+  if (self._validators.remove.length === 0) {
+    throw new Meteor.Error(403, "Access denied. No remove validators set on restricted collection.");
+  }
+
+  var findOptions = {};
+  if (!self._validators.fetchAllFields) {
+    findOptions.fields = {};
+    _.each(self._validators.fetch, function(fieldName) {
+      findOptions.fields[fieldName] = 1;
+    });
+  }
+
+  var docs = self._collection.find(selector, findOptions).fetch();
+
+  // verify that all validators return true
+  if (_.any(self._validators.remove, function(validator) {
+    return !validator(userId, docs);
+  })) {
+    throw new Meteor.Error(403, "Access denied");
+  }
+
+  // construct new $in selector to replace the original one
+  var idInClause = {};
+  idInClause.$in = _.map(docs, function(doc) {
+    return doc._id;
+  });
+  var idSelector = {_id: idInClause};
+
+  self._collection.remove.call(self._collection, idSelector);
+};
 
 // 'insert' immediately returns the inserted document's new _id.  The
 // others return nothing.
@@ -177,7 +397,7 @@ _.each(["insert", "update", "remove"], function (name) {
     if (args.length && args[args.length - 1] instanceof Function)
       callback = args.pop();
 
-    if (Meteor.is_client && !callback)
+    if (Meteor.is_client && !callback) {
       // Client can't block, so it can't report errors by exception,
       // only by callback. If they forget the callback, give them a
       // default one that logs the error, so they aren't totally
@@ -187,6 +407,7 @@ _.each(["insert", "update", "remove"], function (name) {
         if (err)
           Meteor._debug(name + " failed: " + err.error + " -- " + err.reason);
       };
+    }
 
     if (name === "insert") {
       if (!args.length)
@@ -201,16 +422,17 @@ _.each(["insert", "update", "remove"], function (name) {
     if (self._manager && self._manager !== Meteor.default_server) {
       // just remote to another endpoint, propagate return value or
       // exception.
-      if (callback)
+      if (callback) {
         // asynchronous: on success, callback should return ret
         // (document ID for insert, undefined for update and
         // remove), not the method's result.
         self._manager.apply(self._prefix + name, args, function (error, result) {
           callback(error, !error && ret);
         });
-      else
+      } else {
         // synchronous: propagate exception
         self._manager.apply(self._prefix + name, args);
+      }
 
     } else {
       // it's my collection.  descend into the collection object
