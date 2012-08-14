@@ -123,6 +123,7 @@
           tmpl.render && tmpl.render.call(template);
         },
         destroy: function () {
+          // template.data is already set from previous callbacks
           tmpl.destroy &&
             tmpl.destroy.call(templateObjFromLandmark(this));
           delete templateInstanceData[this.id];
