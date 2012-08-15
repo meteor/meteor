@@ -76,7 +76,7 @@
         {{#if this}}
           {{#if type}}&mdash; {{type}}{{/if}}
           {{#each details}}
-            - <strong>{{key}}</strong> {{val}}
+            - <span class="failkey">{{key}}</span> {{val}}
           {{/each}}
         {{/if}}
         {{#if stack}}<pre>{{stack}}</pre>{{/if}}

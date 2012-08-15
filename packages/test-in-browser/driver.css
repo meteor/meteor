@@ -103,7 +103,10 @@
 .test_table .event .fail { color: #d00; }
 .test_table .event .exception { color: #d00; }
 .test_table .event .nodata { color: #ccc; font-style: italic; }
-.test_table .event .xtimes { font-weight: bold; }
+
+.test_table .event .xtimes,
+.test_table .event .failkey
+ { font-weight: bold; }
 
 .test_table .event .debug {
     display: none;
