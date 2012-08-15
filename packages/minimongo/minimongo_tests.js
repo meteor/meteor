@@ -362,6 +362,8 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$all: [2, 3]}}, {a: [2, 2]});
 
   nomatch({a: {$all: [1, 2]}}, {a: [[1, 2]]}); // tested against mongodb
+  nomatch({a: {$all: [1, 2]}}, {}); // tested against mongodb, field doesn't exist
+  nomatch({a: {$all: [1, 2]}}, {a: {foo: 'bar'}}); // tested against mongodb, field is not an object
 
   // $exists
   match({a: {$exists: true}}, {a: 12});

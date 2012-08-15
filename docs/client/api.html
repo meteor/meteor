@@ -62,20 +62,20 @@ callbacks return.
 Example:
 
     // server: publish the current size of a collection
-    Meteor.publish("messages-count", function (roomId) {
+    Meteor.publish("counts-by-room", function (roomId) {
       var self = this;
       var uuid = Meteor.uuid();
       var count = 0;
 
-      handle = Room.find({room_id: roomId}).observe({
+      var handle = Messages.find({room_id: roomId}).observe({
         added: function (doc, idx) {
           count++;
-          self.set("messages-count", uuid, {count: count});
+          self.set("counts", uuid, {roomId: roomId, count: count});
           self.flush();
         },
         removed: function (doc, idx) {
           count--;
-          self.set("messages-count", uuid, {count: count});
+          self.set("counts", uuid, {roomId: roomId, count: count});
           self.flush();
         }
         // don't care about moved or changed
@@ -84,10 +84,21 @@ Example:
       // remove data and turn off observe when client unsubs
       self.onStop(function () {
         handle.stop();
-        self.unset("messages-count", uuid, ["count"]);
+        self.unset("counts", uuid, ["roomId", "count"]);
         self.flush();
       });
     });
+
+    // client: declare collection to hold count object
+    Counts = new Meteor.Collection("counts");
+
+    // client: autosubscribe to the count for the current room
+    Meteor.autosubscribe(function () {
+      Meteor.subscribe("counts-by-room", Session.get("roomId"));
+    });
+
+    // client: use the new collection
+    console.log("Current room has " + Counts.findOne().count + " messages.");
 
 {{#warning}}
 Meteor will emit a warning message if you call `Meteor.publish` in a
@@ -793,6 +804,26 @@ it's up to you to be sure.
 
 {{/api_box_inline}}
 
+{{#api_box_inline fieldspecifiers}}
+
+On the server, queries can specify a particular set of fields to include
+or exclude from the result object.  Minimongo ignores the field
+specifier.
+
+To exclude certain fields from the result objects, the field specifier
+is a dictionary whose keys are field names and whose values are `0`.
+
+    // Users.find({}, {fields: {password: 0, hash: 0}})
+
+To return an object that only includes the specified field, use `1` as
+the value.  The `_id` field is still included in the result.
+
+    // Users.find({}, {fields: {firstname: 1, lastname: 1}})
+
+It is not possible to mix inclusion and exclusion styles.
+
+{{/api_box_inline}}
+
 <h2 id="session"><span>Session</span></h2>
 
 `Session` provides a global object on the client that you can use to
@@ -1136,9 +1167,10 @@ To handle more than one type of event with the same function, use a comma-separa
 
 The handler function gets one argument, an object with information
 about the event. It will receive some additional context data in
-`this`, depending on the context of the element that generated the
-event.  In a Handlebars template, the element's context is the
-Handlebars data context, which is set by block helpers such as `#with`
+`this`, depending on the context of the current element handling the event.
+In a Handlebars template,
+an element's context is the Handlebars data context where that element
+occurs, which is set by block helpers such as `#with`
 and `#each`.  When using [`Meteor.ui.chunk`](#meteor_ui_chunk), the
 data context is set using the `event_data` option.
 
@@ -1188,7 +1220,7 @@ The element that originated the event.
 
 {{#dtdd "currentTarget" "DOM Element"}}
 The element currently handling the event.  This is the element that
-matches the selector in the event map.  For events that bubble, it may
+matched the selector in the event map.  For events that bubble, it may
 be `target` or an ancestor of `target`, and its value changes as the
 event bubbles.
 {{/dtdd}}

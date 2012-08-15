@@ -1,4 +1,4 @@
-exports.CURRENT_VERSION = "0.3.7";
+exports.CURRENT_VERSION = "0.3.9";
 
 var fs = require("fs");
 var http = require("http");
@@ -23,7 +23,7 @@ var manifest_options = {
  * null on error)
  */
 exports.get_manifest = function (callback) {
-  var req = http.request(manifest_options, function(res) {
+  var req = https.request(manifest_options, function(res) {
     if (res.statusCode !== 200) {
       callback(null);
       return;

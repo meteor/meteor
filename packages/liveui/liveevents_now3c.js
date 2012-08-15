@@ -46,7 +46,7 @@ Meteor.ui._event._loadNoW3CImpl = function() {
     node[prop] = universalHandler;
   };
 
-  Meteor.ui._event.registerEventType = function(eventType, subtreeRoot) {
+  Meteor.ui._event.registerEventTypeImpl = function(eventType, subtreeRoot) {
     // use old-school event binding, so that we can
     // access the currentTarget as `this` in the handler.
     var prop = 'on'+eventType;

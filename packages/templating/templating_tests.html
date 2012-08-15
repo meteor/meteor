@@ -111,3 +111,75 @@
   {{fooprop}} {{{fooprop}}} {{barprop}} {{{barprop}}}
   {{#fooprop}}{{/fooprop}} {{#barprop}}{{/barprop}}
 </template>
+
+<template name="test_helpers_a">
+  platypus={{platypus}}
+  watermelon={{watermelon}}
+  daisy={{daisy}}
+  tree={{tree}}
+  warthog={{warthog}}
+</template>
+
+<template name="test_helpers_b">
+  unknown={{unknown}}
+  zero={{zero}}
+</template>
+
+<template name="test_helpers_c">
+  platypus.X={{platypus.X}}
+  watermelon.X={{watermelon.X}}
+  daisy.X={{daisy.X}}
+  tree.X={{tree.X}}
+  warthog.X={{warthog.X}}
+</template>
+
+<template name="test_helpers_d">
+  daisygetter={{daisygetter}}
+  thisTest={{thisTest}}
+  {{#with fancy}}
+    ../thisTest={{../thisTest}}
+  {{/with}}
+  {{#with "foo"}}
+    ../fancy.currentFruit={{../fancy.currentFruit}}
+  {{/with}}
+</template>
+
+<template name="test_helpers_e">
+  fancy.foo={{fancy.foo}}
+  fancy.apple.banana={{fancy.apple.banana}}
+  fancy.currentFruit={{fancy.currentFruit}}
+  fancy.currentCountry.name={{fancy.currentCountry.name}}
+  fancy.currentCountry.population={{fancy.currentCountry.population}}
+  fancy.currentCountry.unicorns={{fancy.currentCountry.unicorns}}
+</template>
+
+<template name="test_helpers_f">
+  fancyhelper.foo={{fancyhelper.foo}}
+  fancyhelper.apple.banana={{fancyhelper.apple.banana}}
+  fancyhelper.currentFruit={{fancyhelper.currentFruit}}
+  fancyhelper.currentCountry.name={{fancyhelper.currentCountry.name}}
+  fancyhelper.currentCountry.population={{fancyhelper.currentCountry.population}}
+  fancyhelper.currentCountry.unicorns={{fancyhelper.currentCountry.unicorns}}
+</template>
+
+<template name="test_helpers_g">
+  platypus={{platypus}}
+  this.platypus={{this.platypus}}
+</template>
+
+<template name="test_helpers_h">
+  (methodListFour 6 7 8 9={{methodListFour 6 7 8 9}})
+  (methodListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns={{methodListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns}})
+  (methodListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns={{methodListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns}})
+  (helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns={{helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns}})
+  (helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns={{helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns}})
+</template>
+
+<template name="test_helpers_i">
+  (uppercase apple={{#uppercase}}apple{{/uppercase}})
+  (altered banana={{#tr a="o" n="d"}}banana{{/tr}})
+  (nokeys={{#arg_and_dict "foo" x="foo"}}{{/arg_and_dict}})
+  (nokeys={{#arg_and_dict tree x="foo"}}{{/arg_and_dict}})
+  (biggie={{#get_arg helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns}}{{/get_arg}})
+  (twoArgBlock={{#two_args "foo" "foo"}}{{/two_args}})
+</template>

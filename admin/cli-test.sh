@@ -94,7 +94,7 @@ echo "show collections" | $METEOR mongo
 # kill meteor, see mongo is still running
 kill $METEOR_PID
 
-sleep 4 # XXX XXX lame. have to wait for inner app to die via keepalive!
+sleep 10 # XXX XXX lame. have to wait for inner app to die via keepalive!
 
 ! ps ax | grep "$METEOR_PID" | grep -v grep > /dev/null
 ps ax | grep -e "$MONGOMARK"  | grep -v grep > /dev/null

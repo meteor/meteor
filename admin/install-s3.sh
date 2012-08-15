@@ -4,8 +4,8 @@
 ## know what shell the user has. Debian uses 'dash' for 'sh', for
 ## example.
 
-URLBASE="http://d3sqy0vbqsdhku.cloudfront.net"
-VERSION="0.3.7"
+URLBASE="https://d3sqy0vbqsdhku.cloudfront.net"
+VERSION="0.3.9"
 PKGVERSION="${VERSION}-1"
 
 UNAME=`uname`

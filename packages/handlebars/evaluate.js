@@ -95,62 +95,121 @@ Handlebars.evaluate = function (ast, data, options) {
   var eval_value = function (stack, id) {
     if (typeof(id) !== "object")
       return id;
-    if (id.length === 2 && id[0] === 0 && (id[1] in helpers))
-      return helpers[id[1]]; // found helper
+
+    // follow '..' in {{../../foo.bar}}
     for (var i = 0; i < id[0]; i++) {
       if (!stack.parent)
         throw new Error("Too many '..' segments");
       else
         stack = stack.parent;
     }
-    var ret = stack.data;
-    if (id.length > 1 && typeof ret !== 'object') {
-      // Fail with better error than "can't read property of undefined".
-      // Looking up id[1] as a property will fail, because
-      // there is no data context object.  Probably the developer
-      // intended to use a helper that doesn't exist.
-      if (typeof (function() {})[id[1]] !== 'undefined') {
-        // An even more specific case for a helpful error.
-        // The developer probably tried to name a helper 'name',
-        // 'length', or some other built-in function property.
-        // Assignments to these properties are no-ops, so the
-        // helper declaration is undetectable.
-        // We can't always catch this mistake, because if there is any
-        // object as data context, it's legal for the developer to
-        // ask for {{name}} as a property of the object, perhaps an
-        // optional one.  But if there is no data context, we get
-        // to be helpful.
+
+    if (id.length === 1)
+      // no name: {{this}}, {{..}}, {{../..}}
+      return stack.data;
+
+    var scopedToContext = false;
+    if (id[1] === '') {
+      // an empty path segment is our AST's way of encoding
+      // the presence of 'this.' at the beginning of the path.
+      id.splice(1, 1); // remove the ''
+      scopedToContext = true;
+    }
+
+    // when calling functions (helpers/methods/getters), dataThis
+    // tracks what to use for `this`.  For helpers, it's the
+    // current data context.  For getters and methods on the data
+    // context object, and on the return value of a helper, it's
+    // the object where we got the getter or method.
+    var dataThis = stack.data;
+
+    var data;
+    if (id[0] === 0 && (id[1] in helpers) && ! scopedToContext) {
+      // first path segment is a helper
+      data = helpers[id[1]];
+    } else {
+      if ((! data instanceof Object) &&
+          (typeof (function() {})[id[1]] !== 'undefined') &&
+          ! scopedToContext) {
+        // Give a helpful error message if the user tried to name
+        // a helper 'name', 'length', or some other built-in property
+        // of function objects.  Unfortunately, this case is very
+        // hard to detect, as Template.foo.name = ... will fail silently,
+        // and {{name}} will be silently empty if the property doesn't
+        // exist (per Handlebars rules).
+        // However, if there is no data context at all, we jump in.
         throw new Error("Can't call a helper '"+id[1]+"' because "+
                         "it is a built-in function property in JavaScript");
       }
-      throw new Error("Unknown helper '"+id[1]+"'");
+      // first path segment is property of data context
+      data = (stack.data && stack.data[id[1]]);
     }
-    for (var i = 1; i < id.length; i++)
-      // XXX error (and/or unknown key) handling
-      ret = ret[id[i]];
-    return ret;
+
+    // handle dots, as in {{foo.bar}}
+    for (var i = 2; i < id.length; i++) {
+      // Call functions when taking the dot, to support
+      // for example currentUser.name.
+      //
+      // In the case of {{foo.bar}}, we end up returning one of:
+      // - helpers.foo.bar
+      // - helpers.foo().bar
+      // - stack.data.foo.bar
+      // - stack.data.foo().bar.
+      //
+      // The caller does the final application with any
+      // arguments, as in {{foo.bar arg1 arg2}}, and passes
+      // the current data context in `this`.  Therefore,
+      // we use the current data context (`helperThis`)
+      // for all function calls.
+      if (typeof data === 'function') {
+        data = data.call(dataThis);
+        dataThis = data;
+      } else if (data === undefined || data === null) {
+        // Handlebars fails silently and returns "" if
+        // we start to access properties that don't exist.
+        data = '';
+      }
+
+      data = data[id[i]];
+    }
+
+    // ensure `this` is bound appropriately when the caller
+    // invokes `data` with any arguments.  For example,
+    // in {{foo.bar baz}}, the caller must supply `baz`,
+    // but we alone have `foo` (in `dataThis`).
+    if (typeof data === 'function')
+      return _.bind(data, dataThis);
+
+    return data;
   };
 
-  // 'extra' will be clobbered, but not 'params'
-  var invoke = function (stack, params, extra) {
+  // 'extra' will be clobbered, but not 'params'.
+  // if (isNested), evaluate params.slice(1) as a nested
+  // helper invocation if there is at least one positional
+  // argument.  This is used for block helpers.
+  var invoke = function (stack, params, extra, isNested) {
     extra = extra || {};
     params = params.slice(0);
-    var last = params.pop();
-    if (typeof(last) === "object" && !(last instanceof Array))
-      extra.hash = last;
-    else
-      params.push(last);
 
-    // values[0] must be a function. if values[1] is a function, then
-    // apply values[1] to the remaining arguments, then apply
-    // values[0] to the results. otherwise, directly apply values[0]
-    // to the other arguments. if toplevel, also pass 'extra' as an
-    // argument.
-    var apply = function (values, toplevel) {
+    // remove hash (dictionary of keyword arguments) from
+    // the end of params, if present.
+    var last = params[params.length - 1];
+    var hash = {};
+    if (typeof(last) === "object" && !(last instanceof Array)) {
+      // evaluate hash values, which are currently invocations
+      // like [0, "foo"]
+      _.each(params.pop(), function(v,k) {
+        var result = eval_value(stack, v);
+        hash[k] = (typeof result === "function" ? result() : result);
+      });
+    }
+
+    var apply = function (values, extra) {
       var args = values.slice(1);
-      if (args.length && typeof (args[0]) === "function")
-        args = [apply(args)];
-      if (toplevel)
+      for(var i=0; i<args.length; i++)
+        if (typeof args[i] === "function")
+          args[i] = args[i](); // `this` already bound by eval_value
+      if (extra)
         args.push(extra);
       return values[0].apply(stack.data, args);
     };
@@ -161,7 +220,23 @@ Handlebars.evaluate = function (ast, data, options) {
 
     if (typeof(values[0]) !== "function")
       return values[0];
-    return apply(values, true);
+
+    if (isNested && values.length > 1) {
+      // at least one positional argument; not no args
+      // or only hash args.
+      var oneArg = values[1];
+      if (typeof oneArg === "function")
+        // invoke the positional arguments
+        // (and hash arguments) as a nested helper invocation.
+        oneArg = apply(values.slice(1), {hash:hash});
+      values = [values[0], oneArg];
+      // keyword args don't go to the block helper, then.
+      extra.hash = {};
+    } else {
+      extra.hash = hash;
+    }
+
+    return apply(values, extra);
   };
 
   var template = function (stack, elts) {
@@ -209,10 +284,13 @@ Handlebars.evaluate = function (ast, data, options) {
       if (typeof(elt) === "string")
         buf.push(elt);
       else if (elt[0] === '{')
+        // {{double stache}}
         buf.push(maybeEscape(invoke(stack, elt[1])));
       else if (elt[0] === '!')
+        // {{{triple stache}}}
         buf.push(toString(invoke(stack, elt[1] || '')));
       else if (elt[0] === '#') {
+        // {{#block helper}}
         var block = decorateBlockFn(
           function (data) {
             return template({parent: stack, data: data}, elt[2]);
@@ -222,8 +300,9 @@ Handlebars.evaluate = function (ast, data, options) {
           function (data) {
             return template({parent: stack, data: data}, elt[3] || []);
           }, stack.data);
-        buf.push(toString(invoke(stack, elt[1], block)));
+        buf.push(toString(invoke(stack, elt[1], block, true)));
       } else if (elt[0] === '>') {
+        // {{> partial}}
         if (!(elt[1] in partials))
           throw new Error("No such partial '" + elt[1] + "'");
         buf.push(toString(partials[elt[1]](stack.data)));

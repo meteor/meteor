@@ -647,8 +647,11 @@ Meteor.ui = Meteor.ui || {};
             continue;
         }
 
-        var event_data = findEventData(event.target);
+        var event_data = findEventData(event.currentTarget);
+
+        // Call the app's handler/callback
         var returnValue = h.callback.call(event_data, event);
+
         // allow app to `return false` from event handler, just like
         // you can in a jquery event handler
         if (returnValue === false) {
@@ -656,7 +659,7 @@ Meteor.ui = Meteor.ui || {};
           event.preventDefault();
         }
         if (event.isImmediatePropagationStopped())
-          break; // stop handling by this and other event maps
+          return; // stop handling by this and other event maps
       }
     }
 

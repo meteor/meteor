@@ -30,7 +30,7 @@ var init_keepalive = function () {
 
   setInterval(function () {
     keepalive_count ++;
-    if (keepalive_count >= 2) {
+    if (keepalive_count >= 3) {
       console.log("Failed to receive keepalive! Exiting.");
       process.exit(1);
     }
@@ -47,7 +47,19 @@ var supported_browser = function (user_agent) {
   // return !(agent.family === 'IE' && +agent.major <= 5);
 };
 
-var run = function (bundle_dir) {
+// add any runtime configuration options needed to app_html
+var runtime_config = function (app_html) {
+  var insert = '';
+  if (process.env.DEFAULT_DDP_ENDPOINT)
+    insert += "__meteor_runtime_config__.DEFAULT_DDP_ENDPOINT = '" +
+      process.env.DEFAULT_DDP_ENDPOINT + "';";
+
+  app_html = app_html.replace("// ##RUNTIME_CONFIG##", insert);
+
+  return app_html;
+};
+
+var run = function () {
   var bundle_dir = path.join(__dirname, '..');
 
   // check environment
@@ -59,8 +71,7 @@ var run = function (bundle_dir) {
 
   // webserver
   var app = connect.createServer();
-  var static_cacheable_gzippo = gzippo.staticGzip(path.join(bundle_dir, 'static_cacheable').replace(/\\/g, '/'), {clientMaxAge: 1000 * 60 * 60 * 24 * 365})
-  var static_gzippo = gzippo.staticGzip(path.join(bundle_dir, 'static').replace(/\\/g, '/'));
+
   var fixURLsecurityBug = function (func) {
     return function (req, res, next) {
       if (req)
@@ -69,27 +80,21 @@ var run = function (bundle_dir) {
       return func(req, res, next);
     }
   }
-  app.use(fixURLsecurityBug(static_cacheable_gzippo));
+
+  var static_cacheable_path = path.join(bundle_dir, 'static_cacheable');
+  if (path.existsSync(static_cacheable_path)) {
+    var static_cacheable_gzippo = gzippo.staticGzip(static_cacheable_path.replace(/\\/g, '/'), {clientMaxAge: 1000 * 60 * 60 * 24 * 365})
+    app.use(fixURLsecurityBug(static_cacheable_gzippo));
+  }
+
+  var static_gzippo = gzippo.staticGzip(path.join(bundle_dir, 'static').replace(/\\/g, '/'));
   app.use(fixURLsecurityBug(static_gzippo));
 
-  var app_html = fs.readFileSync(path.join(bundle_dir, 'app.html'));
+  var app_html = fs.readFileSync(path.join(bundle_dir, 'app.html'), 'utf8');
   var unsupported_html = fs.readFileSync(path.join(bundle_dir, 'unsupported.html'));
 
-  app.use(function (req, res) {
-    if (req.url === '/favicon.ico') {
-      // prevent /favicon.ico from returning app_html
-      res.writeHead(404);
-      res.end();
-      return;
-    }
+  app_html = runtime_config(app_html);
 
-    res.writeHead(200, {'Content-Type': 'text/html'});
-    if (supported_browser(req.headers['user-agent']))
-      res.write(app_html);
-    else
-      res.write(unsupported_html);
-    res.end();
-  });
 
   // read bundle config file
   var info_raw =
@@ -120,6 +125,22 @@ var run = function (bundle_dir) {
       // error message on parse error. it's what require() uses to
       // generate its errors.
       require('vm').runInThisContext(code, filename, true);
+    });
+
+    app.use(function (req, res) {
+      // prevent favicon.ico and robots.txt from returning app_html
+      if (_.indexOf(['/favicon.ico', '/robots.txt'], req.url) !== -1) {
+        res.writeHead(404);
+        res.end();
+        return;
+      }
+
+      res.writeHead(200, {'Content-Type': 'text/html'});
+      if (supported_browser(req.headers['user-agent']))
+        res.write(app_html);
+      else
+        res.write(unsupported_html);
+      res.end();
     });
 
     // run the user startup hooks.

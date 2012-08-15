@@ -35,7 +35,7 @@ Meteor.ui._event._loadW3CImpl = function() {
   var focusBlurMode = ('onfocusin' in document.createElement("DIV")) ?
         SIMULATE_NEITHER : SIMULATE_FOCUSIN_FOCUSOUT;
 
-  // mouseenter/mouseleave is non-bubbling mousein/mouseout.  It's
+  // mouseenter/mouseleave is non-bubbling mouseover/mouseout.  It's
   // standard but only IE and Opera seem to support it,
   // so we simulate it (which works in IE but not in Opera for some reason).
   var simulateMouseEnterLeave = (! window.opera);
@@ -118,13 +118,25 @@ Meteor.ui._event._loadW3CImpl = function() {
     Meteor.ui._event._handleEventFunc(
       Meteor.ui._event._fixEvent(event));
 
-    // fire mouseleave after mouseout
+    // event ordering: fire mouseleave after mouseout
     if (simulateMouseEnterLeave &&
-        (event.currentTarget === event.target)) {
-      if (event.type === 'mousein')
-        sendUIEvent('mouseenter', event.target, false);
+        // We respond to mouseover/mouseout here even on
+        // bubble, i.e. when event.currentTarget !== event.target,
+        // to ensure we see every enter and leave.
+        // We ignore the case where the mouse enters from
+        // a child or leaves to a child (by checking if
+        // relatedTarget is present and a descendent).
+        (! event.relatedTarget ||
+         (event.currentTarget !== event.relatedTarget &&
+          // XXX change this to call domutils.js when
+          // davidchunks branch lands
+          ! Meteor.ui._Patcher._elementContains(
+            event.currentTarget, event.relatedTarget)))) {
+      if (event.type === 'mouseover'){
+        sendUIEvent('mouseenter', event.currentTarget, false);
+      }
       else if (event.type === 'mouseout') {
-        sendUIEvent('mouseleave', event.target, false);
+        sendUIEvent('mouseleave', event.currentTarget, false);
       }
     }
   };
@@ -145,7 +157,7 @@ Meteor.ui._event._loadW3CImpl = function() {
     }
     if (simulateMouseEnterLeave) {
       if (eventType === 'mouseenter')
-        installCapturer('mousein');
+        installCapturer('mouseover');
       else if (eventType === 'mouseleave')
         installCapturer('mouseout');
     }
@@ -159,7 +171,7 @@ Meteor.ui._event._loadW3CImpl = function() {
 
   var eventsCaptured = {};
 
-  Meteor.ui._event.registerEventType = function(eventType, subtreeRoot) {
+  Meteor.ui._event.registerEventTypeImpl = function(eventType, subtreeRoot) {
     // We capture on the entire document, so don't actually care
     // about subtreeRoot!
     installCapturer(eventType);

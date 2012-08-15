@@ -53,8 +53,15 @@ updater.get_manifest(function (manifest) {
     // Launch post-upgrade script
     var nodejs_path = path.join(files.get_dev_bundle(), 'bin', 'node');
     var postup_path = path.join(files.get_core_dir(), 'meteor', 'post-upgrade.js');
+
     if (path.existsSync(nodejs_path) && path.existsSync(postup_path)) {
-      var postup_proc = spawn(nodejs_path, [postup_path]);
+      // setup environment.
+      var modules_path = path.join(files.get_dev_bundle(), 'lib', 'node_modules');
+      var env = _.extend({}, process.env);
+      env.NODE_PATH = modules_path;
+
+      // launch it.
+      var postup_proc = spawn(nodejs_path, [postup_path], {env: env});
       postup_proc.stderr.setEncoding('utf8');
       postup_proc.stderr.on('data', function (data) {
         process.stderr.write(data);
