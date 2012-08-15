@@ -12,10 +12,6 @@ if (! Session.get("z")) {
   Session.set("z", 1);
 }
 
-if (typeof Session.get("spinForward") !== 'boolean') {
-  Session.set("spinForward", true);
-}
-
 Template.redrawButtons.events = {
   'click input.x': function () {
     Session.set("x", Session.get("x") + 1);
@@ -32,17 +28,23 @@ Template.redrawButtons.events = {
 
 Template.preserveDemo.preserve([ '.spinner', '.spinforward' ]);
 
+Template.preserveDemo.create = function() {
+  if (typeof this.get("spinForward") !== 'boolean') {
+    this.set("spinForward", true);
+  }
+}
+
 Template.preserveDemo.spinForwardChecked = function () {
-  return Session.get('spinForward') ? 'checked="checked"' : '';
+  return this.template.get('spinForward') ? 'checked="checked"' : '';
 };
 
 Template.preserveDemo.spinAnim = function () {
-  return Session.get('spinForward') ? 'spinForward' : 'spinBackward';
+  return this.template.get('spinForward') ? 'spinForward' : 'spinBackward';
 };
 
 Template.preserveDemo.events = {
-  'change .spinforward' : function (event) {
-    Session.set('spinForward', event.currentTarget.checked);
+  'change .spinforward' : function (event,template) {
+    template.set('spinForward', event.currentTarget.checked);
   }
 };
 
@@ -153,7 +155,8 @@ Template.circles.events = {
     // XXX actually want to create a ReactiveVar on the template!
     // (but how will it be preserved across migration?)
     // (maybe template.get, template.set?? rather than form??)
-    Session.set("selectedCircle:" + this.group, evt.currentTarget.id);
+    template.set("selectedCircle:" + this.group, evt.currentTarget.id);
+    
   },
   'click .add': function () {
     Circles.insert({x: Meteor.random(), y: Meteor.random(),
@@ -166,11 +169,11 @@ Template.circles.events = {
                     group: this.group
                    });
   },
-  'click .remove': function () {
-    var selected = Session.get("selectedCircle:" + this.group);
+  'click .remove': function (evt,template) {
+    var selected = template.get("selectedCircle:" + this.group);
     if (selected) {
       Circles.remove(selected);
-      Session.set("selectedCircle:" + this.group, null);
+      template.set("selectedCircle:" + this.group, null);
     }
   },
   'click .scram': function () {
@@ -193,12 +196,12 @@ var colorToString = function (color) {
     + f(color.g) + "," + + f(color.b) + ")";
 };
 
-Template.circles.count = function () {
+Template.circles.count = function (arg1,arg2) {
   return Circles.find({group: this.group}).count();
 };
 
 Template.circles.disabled = function () {
-  return Session.get("selectedCircle:" + this.group) ?
+  return this.template.get("selectedCircle:" + this.group) ?
     '' : 'disabled="disabled"';
 };
 
@@ -296,7 +299,7 @@ Template.circles.render = function () {
         .remove();
 
       // XXX this doesn't animate as I'd hoped when you press Scram
-      var selectionId = Session.get("selectedCircle:" + data.group);
+      var selectionId = self.get("selectedCircle:" + data.group);
       var s = selectionId && Circles.findOne(selectionId);
       var rect = d3.select(self.node).select("rect");
       if (s)
