@@ -74,8 +74,12 @@
       {{/if}}
       {{#with get_details}}
         {{#if this}}
-          &mdash; {{this}}
+          {{#if type}}&mdash; {{type}}{{/if}}
+          {{#each details}}
+            - <strong>{{key}}</strong> {{val}}
+          {{/each}}
         {{/if}}
+        {{#if stack}}<pre>{{stack}}</pre>{{/if}}
       {{/with}}
       {{#if is_debuggable}}
         <span class="debug">[Debug]</span>
