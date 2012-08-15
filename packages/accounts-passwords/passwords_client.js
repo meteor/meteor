@@ -1,5 +1,7 @@
 (function () {
   Meteor.createUser = function (options, extra, callback) {
+    options = _.clone(options); // we'll be modifying options
+
     if (typeof extra === "function") {
       callback = extra;
       extra = {};
@@ -8,14 +10,13 @@
     if (!options.password)
       throw new Error("Must set options.password");
     var verifier = Meteor._srp.generateVerifier(options.password);
+    // strip old password, replacing with the verifier object
+    delete options.password;
+    options.srp = verifier;
 
     if (options.validation)
       // needed because we generate a link back to the app
       options.baseUrl = appBaseUrl();
-
-    // strip old password, replacing with the verifier object
-    delete options.password;
-    options.srp = verifier;
 
     Meteor.apply('createUser', [options, extra], {wait: true},
                  function (error, result) {

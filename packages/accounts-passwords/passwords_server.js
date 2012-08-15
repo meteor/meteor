@@ -104,49 +104,6 @@
       return ret;
     },
 
-    createUser: function (options, extra) {
-      extra = extra || {};
-      var username = options.username;
-      var email = options.email;
-      if (!username && !email)
-        throw new Meteor.Error(400, "Need to set a username or email");
-      if (options.validation && !options.baseUrl)
-        throw new Meteor.Error(
-          400, "If options.validation is set, need to pass options.baseUrl");
-      if (username && Meteor.users.findOne({username: username}))
-        throw new Meteor.Error(403, "User already exists with username " + username);
-      if (email && Meteor.users.findOne({"emails.email": email})) {
-        throw new Meteor.Error(403, "User already exists with email " + email);
-      }
-
-      // XXX validate verifier
-
-      // raw password, should only be used over SSL!
-      if (options.password) {
-        if (options.srp)
-          throw new Meteor.Error(400, "Don't pass both password and srp in options");
-        options.srp = Meteor._srp.generateVerifier(options.password);
-      }
-
-      var user = {services: {password: {srp: options.srp}}};
-      if (username)
-        user.username = username;
-      if (email)
-        user.emails = [{email: email, validated: false}];
-
-      user = Meteor.accounts.onCreateUserHook(options, extra, user);
-      var userId = Meteor.users.insert(user);
-
-      // If `options.validation` is set, register a token to validate
-      // the user's primary email, and send it to that address.
-      if (email && options.validation)
-        Meteor.accounts.sendValidationEmail(userId, email, options.baseUrl);
-
-      var loginToken = Meteor.accounts._loginTokens.insert({userId: userId});
-      this.setUserId(userId);
-      return {token: loginToken, id: userId};
-    },
-
     forgotPassword: function (options) {
       var email = options.email;
       var baseUrl = options.baseUrl;
@@ -289,6 +246,125 @@
     var loginToken = Meteor.accounts._loginTokens.insert({userId: user._id});
     return {token: loginToken, id: user._id};
   });
+
+
+
+
+  ////////////
+  // Creating users:
+
+
+  // Shared createUser function called from the createUser method, both
+  // if originates in client or server code. Calls user provided hooks,
+  // does the actual user insertion.
+  //
+  // returns userId or throws an error if it can't create
+  var createUser = function (options, extra) {
+    extra = extra || {};
+    var username = options.username;
+    var email = options.email;
+    if (!username && !email)
+      throw new Meteor.Error(400, "Need to set a username or email");
+
+    // XXX need to get base url on the server somehow, for welcome
+    // emails at least.
+    if (options.validation && !options.baseUrl)
+      throw new Meteor.Error(
+        400, "If options.validation is set, need to pass options.baseUrl");
+
+    if (username && Meteor.users.findOne({username: username}))
+      throw new Meteor.Error(403, "User already exists with username " + username);
+    if (email && Meteor.users.findOne({"emails.email": email})) {
+      throw new Meteor.Error(403, "User already exists with email " + email);
+    }
+
+    // Raw password. The meteor client doesn't send this, but a DDP
+    // client that didn't implement SRP could send this. This should
+    // only be done over SSL.
+    if (options.password) {
+      if (options.srp)
+        throw new Meteor.Error(400, "Don't pass both password and srp in options");
+      options.srp = Meteor._srp.generateVerifier(options.password);
+    }
+
+    var user = {services: {}};
+    if (options.srp)
+      user.services.password = {srp: options.srp}; // XXX validate verifier
+    if (username)
+      user.username = username;
+    if (email)
+      user.emails = [{email: email, validated: false}];
+
+    user = Meteor.accounts.onCreateUserHook(options, extra, user);
+    var userId = Meteor.users.insert(user);
+
+    // If `options.validation` is set, register a token to validate
+    // the user's primary email, and send it to that address.
+    if (email && options.validation)
+      Meteor.accounts.sendValidationEmail(userId, email, options.baseUrl);
+
+    // XXX send welcome email.
+    //
+    // Is a welcome email just a validation email with a password prompt
+    // as well?
+
+
+    return userId;
+  };
+
+  // method for create user. Requests come from the client.
+  Meteor.methods({
+    createUser: function (options, extra) {
+      if (Meteor.accounts._options.forbidSignups)
+        throw new Meteor.Error(403, "Signups forbidden");
+
+      var userId = createUser(options, extra);
+      // safety belt. createUser is supposed to throw on error. send 500
+      // error instead of creating a login token with empty userid.
+      if (!userId)
+        throw new Error("createUser failed to insert new user");
+
+      // client gets logged in as the new user afterwards.
+      var loginToken = Meteor.accounts._loginTokens.insert({userId: userId});
+      this.setUserId(userId);
+      return {token: loginToken, id: userId};
+    }
+  });
+
+  // Create user directly on the server.
+  //
+  // Unlike the client version, this does not log you in as this user
+  // after creation.
+  Meteor.createUser = function (options, extra, callback) {
+
+    if (typeof extra === "function") {
+      callback = extra;
+      extra = {};
+    }
+
+    // XXX relax these constraints!
+
+    if (callback) {
+      throw new Error("Meteor.createUser with callback not supported on the server yet.");
+    }
+
+    if (options.password || options.srp)
+      throw new Error("Meteor.createUser on the server does not let you set a password yet.");
+
+    if (!options.email)
+      throw new Error("Meteor.createUser on the server requires email.");
+    // XXX we don't have a base url, so we don't know how to generate links.
+    if (options.validation)
+      throw new Error("Validation email from server not supported yet.");
+
+
+
+    var userId = createUser(options, extra);
+    return userId;
+  };
+
+
+
 
 })();
 

@@ -1,4 +1,4 @@
-(function () {
+if (Meteor.is_client) (function () {
 
   // XXX note, only one test can do login/logout things at once! for
   // now, that is this test.
@@ -167,15 +167,41 @@
         test.equal(Meteor.user().touchedByOnCreateUser, true);
       }));
     },
-    // can't call onCreateUserHook twice
-    function(test, expect) {
-      Meteor.call('setupMoreThanOneOnCreateUserHook',
-                  {testOnCreateUserHook: true}, expect(function (error) {
-        test.equal(error.error, 999);
-      }));
-    },
     logoutStep
     // XXX test Meteor.accounts.config(unsafePasswordChanges)
   ]);
 
+}) ();
+
+
+if (Meteor.is_server) (function () {
+
+  Tinytest.add(
+    'passwords - setup more than one onCreateUserHook',
+    function (test) {
+      test.throws(function() {
+        Meteor.accounts.onCreateUser(function () {});
+      });
+    });
+
+
+  Tinytest.add(
+    'passwords - createUser hooks',
+    function (test) {
+      var email = Meteor.uuid() + '@example.com';
+      test.throws(function () {
+        Meteor.createUser({email: email},
+                          {invalid: true}); // should fail the new user validators
+        });
+
+      var userId = Meteor.createUser({email: email},
+                                     {testOnCreateUserHook: true});
+      test.isTrue(userId);
+      var user = Meteor.users.findOne(userId);
+      test.equal(user.touchedByOnCreateUser, true);
+    });
+
+
+
+  // XXX would be nice to test Meteor.accounts.config({forbidSignups: true})
 }) ();

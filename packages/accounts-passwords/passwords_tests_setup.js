@@ -11,16 +11,6 @@ Meteor.accounts.onCreateUser(function (options, extra, user) {
   }
 });
 
-Meteor.methods({
-  setupMoreThanOneOnCreateUserHook: function () {
-    try {
-      Meteor.accounts.onCreateUser(function () {});
-    } catch (exception) {
-      throw new Meteor.Error(999, "Test exception");
-    }
-  }
-});
-
 
 // Because this is global state that affects every client, we can't turn
 // it on and off during the tests. Doing so would mean two simultaneous
