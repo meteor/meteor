@@ -6,6 +6,12 @@ if (!Meteor.accounts._options) {
   Meteor.accounts._options = {};
 }
 
+// @param options {Object} an object with fields:
+// - unsafePasswordChanges {Boolean} allow changing password without the old one
+// - requireEmail {Boolean}
+// - requireUsername {Boolean}
+// - validateEmail {Boolean} Send validation emails to all new users
+//                           via the signup form
 Meteor.accounts.config = function(options) {
   Meteor.accounts._options = options;
 };

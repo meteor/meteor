@@ -100,18 +100,103 @@
     },
     'click #signup-link': function () {
       resetMessages();
+
+      // store values of fields before swtiching to the signup form
+      var username = elementValueById('login-username');
+      var email = elementValueById('login-email');
+      var usernameOrEmail = elementValueById('login-username-or-email');
+      var password = elementValueById('login-password');
+
       Session.set(IN_SIGNUP_FLOW_KEY, true);
       Session.set(IN_FORGOT_PASSWORD_FLOW_KEY, false);
+      // force the ui to update so that we have the approprate fields to fill in
+      Meteor.flush();
+
+      // update new fields with appropriate defaults
+      if (username !== null)
+        document.getElementById('login-username').value = username;
+      else if (email !== null)
+        document.getElementById('login-email').value = email;
+      else if (usernameOrEmail !== null)
+        if (usernameOrEmail.indexOf('@') === -1)
+          document.getElementById('login-username').value = usernameOrEmail;
+        else
+          document.getElementById('login-email').value = usernameOrEmail;
     },
     'click #forgot-password-link': function () {
       resetMessages();
+
+      // store values of fields before swtiching to the signup form
+      var email = elementValueById('login-email');
+      var usernameOrEmail = elementValueById('login-username-or-email');
+
       Session.set(IN_SIGNUP_FLOW_KEY, false);
       Session.set(IN_FORGOT_PASSWORD_FLOW_KEY, true);
+      // force the ui to update so that we have the approprate fields to fill in
+      Meteor.flush();
+
+      // update new fields with appropriate defaults
+      if (email !== null)
+        document.getElementById('forgot-password-email').value = email;
+      else if (usernameOrEmail !== null)
+        if (usernameOrEmail.indexOf('@') !== -1)
+          document.getElementById('forgot-password-email').value = usernameOrEmail;
+
     },
-    'keypress #login-username,#login-password,#login-password-again': function (event) {
+    'keypress #login-username,#login-email,#login-username-or-email,#login-password,#login-password-again': function (event) {
       if (event.keyCode === 13)
         loginOrSignup();
     }
+  };
+
+  Template.loginButtonsServicesRow.fields = function () {
+    var loginFields = [
+      {fieldName: 'username-or-email', fieldLabel: 'Username or Email',
+       visible: function () {
+         return Meteor.accounts._options.requireUsername
+           && Meteor.accounts._options.requireEmail;
+       }},
+      {fieldName: 'username', fieldLabel: 'Username',
+       visible: function () {
+         return Meteor.accounts._options.requireUsername
+           && !Meteor.accounts._options.requireEmail;
+       }},
+      {fieldName: 'email', fieldLabel: 'Email',
+       visible: function () {
+         return !Meteor.accounts._options.requireUsername;
+       }},
+      {fieldName: 'password', fieldLabel: 'Password', inputType: 'password',
+       visible: function () {
+         return true;
+       }}
+    ];
+
+    var signupFields = [
+      {fieldName: 'username', fieldLabel: 'Username',
+       visible: function () {
+         return Meteor.accounts._options.requireUsername;
+       }},
+      {fieldName: 'email', fieldLabel: 'Email',
+       visible: function () {
+         return !Meteor.accounts._options.requireUsername
+           || Meteor.accounts._options.requireEmail;
+       }},
+      {fieldName: 'password', fieldLabel: 'Password', inputType: 'password',
+       visible: function () {
+         return true;
+       }},
+      {fieldName: 'password-again', fieldLabel: 'Password (again)',
+       inputType: 'password',
+       visible: function () {
+         return Meteor.accounts._options.requireUsername
+           && !Meteor.accounts._options.requireEmail;
+       }}
+    ];
+
+    var fields = Session.get(IN_SIGNUP_FLOW_KEY) ? signupFields : loginFields;
+    return _.filter(fields, function(info) {
+      return info.visible();
+    });
   };
 
   Template.loginButtonsServicesRow.services = function () {
@@ -126,9 +211,23 @@
     return getLoginServices().length > 1;
   };
 
-  Template.loginButtonsServicesRow.isForgotPasswordFlow = function () {
+  Template.loginButtonsServicesRow.inForgotPasswordFlow = function () {
     return Session.get(IN_FORGOT_PASSWORD_FLOW_KEY);
   };
+
+  Template.loginButtonsServicesRow.inLoginFlow = function () {
+    return !Session.get(IN_SIGNUP_FLOW_KEY) && !Session.get(IN_FORGOT_PASSWORD_FLOW_KEY);
+  };
+
+  Template.loginButtonsServicesRow.inSignupFlow = function () {
+    return Session.get(IN_SIGNUP_FLOW_KEY);
+  };
+
+  Template.loginButtonsServicesRow.showForgotPasswordLink = function () {
+    return Meteor.accounts._options.requireEmail
+      || !Meteor.accounts._options.requireUsername;
+  };
+
 
   //
   // loginButtonsMessage template
@@ -140,19 +239,6 @@
 
   Template.loginButtonsMessages.infoMessage = function () {
     return Session.get(INFO_MESSAGE_KEY);
-  };
-
-
-  //
-  // loginButtonsServicesRowDynamicPart template
-  //
-
-  Template.loginButtonsServicesRowDynamicPart.inLoginFlow = function () {
-    return !Session.get(IN_SIGNUP_FLOW_KEY) && !Session.get(IN_FORGOT_PASSWORD_FLOW_KEY);
-  };
-
-  Template.loginButtonsServicesRowDynamicPart.inSignupFlow = function () {
-    return Session.get(IN_SIGNUP_FLOW_KEY);
   };
 
 
@@ -293,12 +379,33 @@
   // helpers
   //
 
+  var elementValueById = function(id) {
+    var element = document.getElementById(id);
+    if (!element)
+      return null;
+    else
+      return element.value;
+  };
+
   var login = function () {
     resetMessages();
-    var username = document.getElementById('login-username').value;
-    var password = document.getElementById('login-password').value;
 
-    Meteor.loginWithPassword(username, password, function (error, result) {
+    var username = elementValueById('login-username');
+    var email = elementValueById('login-email');
+    var usernameOrEmail = elementValueById('login-username-or-email');
+    var password = elementValueById('login-password');
+
+    var loginSelector;
+    if (username !== null)
+      loginSelector = {username: username};
+    else if (email !== null)
+      loginSelector = {email: email};
+    else if (usernameOrEmail !== null)
+      loginSelector = usernameOrEmail;
+    else
+      throw new Error("Unexpected -- no element to use as a login user selector");
+
+    Meteor.loginWithPassword(loginSelector, password, function (error, result) {
       if (error) {
         Session.set(ERROR_MESSAGE_KEY, error.reason);
       }
@@ -307,21 +414,43 @@
 
   var signup = function () {
     resetMessages();
-    var username = document.getElementById('login-username').value;
-    var password = document.getElementById('login-password').value;
-    var passwordAgain = document.getElementById('login-password-again').value;
 
-    // XXX these will become configurable, and will be validated on
-    // the server as well.
-    if (!validateUsername(username) || !validatePassword(password))
-      return;
+    var options = {}; // to be passed to Meteor.createUser
 
-    if (password !== passwordAgain) {
-      Session.set(ERROR_MESSAGE_KEY, "Passwords don't match");
-      return;
+    var username = elementValueById('login-username');
+    if (username !== null) {
+      if (!validateUsername(username))
+        return;
+      else
+        options.username = username;
     }
 
-    Meteor.createUser({username: username, password: password}, function (error) {
+    var email = elementValueById('login-email');
+    if (email !== null) {
+      if (!validateEmail(email))
+        return;
+      else
+        options.email = email;
+    }
+
+    var password = elementValueById('login-password');
+    if (!validatePassword(password))
+      return;
+    else
+      options.password = password;
+
+    var passwordAgain = elementValueById('login-password-again');
+    if (passwordAgain !== null) {
+      if (password !== passwordAgain) {
+        Session.set(ERROR_MESSAGE_KEY, "Passwords don't match");
+        return;
+      }
+    }
+
+    if (Meteor.accounts._options.validateEmails)
+      options.validation = true;
+
+    Meteor.createUser(options, function (error) {
       if (error) {
         Session.set(ERROR_MESSAGE_KEY, error.reason);
       }
@@ -356,11 +485,22 @@
 
 
   // XXX improve these? should this be in accounts-passwords instead?
+  //
+  // XXX these will become configurable, and will be validated on
+  // the server as well.
   var validateUsername = function (username) {
     if (username.length >= 3) {
       return true;
     } else {
       Session.set(ERROR_MESSAGE_KEY, "Username must be at least 3 characters long");
+      return false;
+    }
+  };
+  var validateEmail = function (email) {
+    if (email.indexOf('@') !== -1) {
+      return true;
+    } else {
+      Session.set(ERROR_MESSAGE_KEY, "Invalid email");
       return false;
     }
   };
