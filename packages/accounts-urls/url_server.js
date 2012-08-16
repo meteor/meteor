@@ -11,3 +11,7 @@ Meteor.accounts.urls.resetPassword = function (baseUrl, token) {
 Meteor.accounts.urls.validateEmail = function (baseUrl, token) {
   return baseUrl + '#?validate-email/' + token;
 };
+
+Meteor.accounts.urls.enrollAccount = function (baseUrl, token) {
+  return baseUrl + '#?enroll-account/' + token;
+};

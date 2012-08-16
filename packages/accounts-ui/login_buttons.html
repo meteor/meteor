@@ -145,6 +145,32 @@
   {{/if}}
 </template>
 
+<template name="enrollAccountForm">
+  {{#if inEnrollAccountFlow}}
+  <div class="hide-background"></div>
+
+  <div id="enroll-account-form" class="accounts-dialog">
+    <label id="enroll-account-password-label" for="enroll-account-password">
+      Choose a password
+    </label>
+
+    <div>
+      <input id="enroll-account-password" type="password" />
+    </div>
+
+    {{> loginButtonsMessages}}
+
+    <div class="login-button login-button-form-submit" id="login-buttons-enroll-account-button">
+      Create account
+    </div>
+
+    <a class="additional-link" id="login-buttons-cancel-enroll-account">
+      Cancel
+    </a>
+  </div>
+  {{/if}}
+</template>
+
 <template name="justValidatedUserForm">
   {{#if visible}}
   <div id="just-validated-user-form" class="accounts-dialog">
@@ -156,5 +182,6 @@
 
 <body>
   {{> resetPasswordForm}}
+  {{> enrollAccountForm}}
   {{> justValidatedUserForm}}
 </body>

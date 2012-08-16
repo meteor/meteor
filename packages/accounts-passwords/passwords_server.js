@@ -149,6 +149,28 @@
       return {token: loginToken, id: user._id};
     },
 
+    enrollAccount: function (token, newVerifier) {
+      if (!token)
+        throw new Meteor.Error(400, "Need to pass token");
+      if (!newVerifier)
+        throw new Meteor.Error(400, "Need to pass newVerifier");
+
+      var user = Meteor.users.findOne({"services.password.enroll.token": token});
+      if (!user)
+        throw new Meteor.Error(403, "Enroll account link expired");
+
+      Meteor.users.update({_id: user._id}, {
+        $set: {'services.password.srp': newVerifier},
+        $unset: {'services.password.enroll': 1}
+      });
+      Meteor.users.update({_id: user._id},
+                          {$set: {"emails.0.validated": true}});
+
+      var loginToken = Meteor.accounts._loginTokens.insert({userId: user._id});
+      this.setUserId(user._id);
+      return {token: loginToken, id: user._id};
+    },
+
     validateEmail: function (token) {
       if (!token)
         throw new Meteor.Error(400, "Need to pass token");
@@ -187,6 +209,24 @@
     Meteor.mail.send(
       email,
       Meteor.accounts.urls.validateEmail(appBaseUrl, token));
+  };
+
+  // send the user an email informing them that their account was
+  // created, with a link that when opened both marks their email as
+  // validated and forces them to choose their password
+  Meteor.accounts.sendEnrollmentEmail = function (userId, email, appBaseUrl) {
+    var token = Meteor.uuid();
+    var creationTime = +(new Date);
+    Meteor.users.update(userId, {$set: {
+      "services.password.enroll": {
+        token: token,
+        creationTime: creationTime
+      }
+    }});
+
+    Meteor.mail.send(
+      email,
+      Meteor.accounts.urls.enrollAccount(appBaseUrl, token));
   };
 
   // handler to login with password
@@ -303,12 +343,6 @@
     if (email && options.validation)
       Meteor.accounts.sendValidationEmail(userId, email, options.baseUrl);
 
-    // XXX send welcome email.
-    //
-    // Is a welcome email just a validation email with a password prompt
-    // as well?
-
-
     return userId;
   };
 
@@ -357,9 +391,9 @@
     if (options.validation)
       throw new Error("Validation email from server not supported yet.");
 
-
-
     var userId = createUser(options, extra);
+    /// XXX replace with real root url!
+    Meteor.accounts.sendEnrollmentEmail(userId, options.email, 'http://localhost:3000/');
     return userId;
   };
 

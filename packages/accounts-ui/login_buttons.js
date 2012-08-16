@@ -9,6 +9,7 @@
   var ERROR_MESSAGE_KEY = 'Meteor.loginButtons.errorMessage';
   var INFO_MESSAGE_KEY = 'Meteor.loginButtons.infoMessage';
   var RESET_PASSWORD_TOKEN_KEY = 'Meteor.loginButtons.resetPasswordToken';
+  var ENROLL_ACCOUNT_TOKEN_KEY = 'Meteor.loginButtons.enrollAccountToken';
   var JUST_VALIDATED_USER_KEY = 'Meteor.loginButtons.justValidatedUser';
 
   var resetSession = function () {
@@ -262,7 +263,7 @@
     if (email.indexOf('@') !== -1) {
       Meteor.forgotPassword({email: email}, function (error) {
         if (error)
-          Session.set(ERROR_MESSAGE_KEY, error.reason);
+          Session.set(ERROR_MESSAGE_KEY, error.reason || "Unknown error");
         else
           Session.set(INFO_MESSAGE_KEY, "Email sent");
       });
@@ -333,7 +334,7 @@
       Session.get(RESET_PASSWORD_TOKEN_KEY), newPassword,
       function (error) {
         if (error) {
-          Session.set(ERROR_MESSAGE_KEY, error.reason);
+          Session.set(ERROR_MESSAGE_KEY, error.reason || "Unknown error");
         } else {
           Session.set(RESET_PASSWORD_TOKEN_KEY, null);
           Meteor.accounts._enableAutoLogin();
@@ -351,6 +352,51 @@
 
 
   //
+  // enrollAccountForm template
+  //
+
+  Template.enrollAccountForm.events = {
+    'click #login-buttons-enroll-account-button': function () {
+      enrollAccount();
+    },
+    'keypress #enroll-account-password': function (event) {
+      if (event.keyCode === 13)
+        enrollAccount();
+    },
+    'click #login-buttons-cancel-enroll-account': function () {
+      Session.set(ENROLL_ACCOUNT_TOKEN_KEY, null);
+      Meteor.accounts._enableAutoLogin();
+    }
+  };
+
+  var enrollAccount = function () {
+    resetMessages();
+    var password = document.getElementById('enroll-account-password').value;
+    if (!validatePassword(password))
+      return;
+
+    Meteor.enrollAccount(
+      Session.get(ENROLL_ACCOUNT_TOKEN_KEY), password,
+      function (error) {
+        if (error) {
+          Session.set(ERROR_MESSAGE_KEY, error.reason || "Unknown error");
+        } else {
+          Session.set(ENROLL_ACCOUNT_TOKEN_KEY, null);
+          Meteor.accounts._enableAutoLogin();
+        }
+      });
+  };
+
+  Template.enrollAccountForm.inEnrollAccountFlow = function () {
+    return Session.get(ENROLL_ACCOUNT_TOKEN_KEY);
+  };
+
+  if (Meteor.accounts._enrollAccountToken) {
+    Session.set(ENROLL_ACCOUNT_TOKEN_KEY, Meteor.accounts._enrollAccountToken);
+  }
+
+
+  //
   // justValidatedUserForm template
   //
 
@@ -364,6 +410,7 @@
     return Session.get(JUST_VALIDATED_USER_KEY);
   };
 
+  // XXX why is this in Meteor.startup?
   Meteor.startup(function () {
     if (Meteor.accounts._validateEmailToken) {
       Meteor.validateEmail(Meteor.accounts._validateEmailToken, function(error) {
@@ -407,7 +454,7 @@
 
     Meteor.loginWithPassword(loginSelector, password, function (error, result) {
       if (error) {
-        Session.set(ERROR_MESSAGE_KEY, error.reason);
+        Session.set(ERROR_MESSAGE_KEY, error.reason || "Unknown error");
       }
     });
   };
@@ -452,7 +499,7 @@
 
     Meteor.createUser(options, function (error) {
       if (error) {
-        Session.set(ERROR_MESSAGE_KEY, error.reason);
+        Session.set(ERROR_MESSAGE_KEY, error.reason || "Unknown error");
       }
     });
   };

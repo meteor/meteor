@@ -18,7 +18,6 @@
     window.location.hash = '';
   }
 
-
   // reads a validate email token from the url's hash fragment, if
   // it's there.  also don't automatically log the user is, as for
   // reset password links.
@@ -33,6 +32,16 @@
   if (match) {
     Meteor.accounts._preventAutoLogin = true;
     Meteor.accounts._validateEmailToken = match[1];
+    window.location.hash = '';
+  }
+
+  // reads an account enrollment token from the url's hash fragment, if
+  // it's there.  also don't automatically log the user is, as for
+  // reset password links.
+  match = window.location.hash.match(/^\#\?enroll-account\/(.*)$/);
+  if (match) {
+    Meteor.accounts._preventAutoLogin = true;
+    Meteor.accounts._enrollAccountToken = match[1];
     window.location.hash = '';
   }
 })();
