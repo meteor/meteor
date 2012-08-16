@@ -1,6 +1,5 @@
 Package.describe({
-  summary: "Generate absolute URLs to the application",
-  internal: true
+  summary: "Generate absolute URLs to the application"
 });
 
 Package.on_use(function (api) {

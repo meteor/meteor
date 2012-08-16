@@ -186,6 +186,7 @@ var toc = [
   ],
 
   "Packages", [ [
+    "absolute-url",
     "amplify",
     "backbone",
     "bootstrap",
