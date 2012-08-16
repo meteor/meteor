@@ -131,6 +131,8 @@ h3 {
 
 #lists .list-name {
     cursor: pointer;
+    color: black;
+    text-decoration: none;
 }
 
 #createList {

@@ -88,6 +88,10 @@ Template.lists.events = {
   'mousedown .list': function (evt) { // select list
     Router.setList(this._id);
   },
+  'click .list': function (evt) {
+    // prevent clicks on <a> from refreshing the page.
+    evt.preventDefault();
+  },
   'dblclick .list': function (evt) { // start editing list name
     Session.set('editing_listname', this._id);
     Meteor.flush(); // force DOM redraw, so we can focus the edit field

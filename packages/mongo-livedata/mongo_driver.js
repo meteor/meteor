@@ -491,7 +491,7 @@ _Mongo.LiveResultsSet.prototype._doPoll = function () {
   var new_results = self.cursor.fetch();
   var old_results = self.results;
 
-  LocalCollection._diffQuery(old_results, new_results, self);
+  LocalCollection._diffQuery(old_results, new_results, self, true);
   self.results = new_results;
 
 };
