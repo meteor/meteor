@@ -65,15 +65,30 @@ var run = function () {
   // check environment
   var port = process.env.PORT ? parseInt(process.env.PORT) : 80;
   var mongo_url = process.env.MONGO_URL;
+
   if (!mongo_url)
     throw new Error("MONGO_URL must be set in environment");
 
   // webserver
   var app = connect.createServer();
+
+  var fixURLsecurityBug = function (func) {
+    return function (req, res, next) {
+      if (req)
+        req.url = req.url.replace(/\\/g, '/');
+
+      return func(req, res, next);
+    }
+  }
+
   var static_cacheable_path = path.join(bundle_dir, 'static_cacheable');
-  if (path.existsSync(static_cacheable_path))
-    app.use(gzippo.staticGzip(static_cacheable_path, {clientMaxAge: 1000 * 60 * 60 * 24 * 365}));
-  app.use(gzippo.staticGzip(path.join(bundle_dir, 'static')));
+  if (path.existsSync(static_cacheable_path)) {
+    var static_cacheable_gzippo = gzippo.staticGzip(static_cacheable_path.replace(/\\/g, '/'), {clientMaxAge: 1000 * 60 * 60 * 24 * 365})
+    app.use(fixURLsecurityBug(static_cacheable_gzippo));
+  }
+
+  var static_gzippo = gzippo.staticGzip(path.join(bundle_dir, 'static').replace(/\\/g, '/'));
+  app.use(fixURLsecurityBug(static_gzippo));
 
   var app_html = fs.readFileSync(path.join(bundle_dir, 'app.html'), 'utf8');
   var unsupported_html = fs.readFileSync(path.join(bundle_dir, 'unsupported.html'));
@@ -96,7 +111,7 @@ var run = function () {
 
     // load app code
     _.each(info.load, function (filename) {
-      var code = fs.readFileSync(path.join(bundle_dir, filename));
+      var code = fs.readFileSync(path.join(bundle_dir, filename).replace(/\\/g, '/'));
       // it's tempting to run the code in a new context so we can
       // precisely control the enviroment the user code sees. but,
       // this is harder than it looks. you get a situation where []
@@ -139,7 +154,7 @@ var run = function () {
 
   }).run();
 
-  if (argv.keepalive)
+  if (argv.keepalive && process.platform !== "win32")
     init_keepalive();
 };
 

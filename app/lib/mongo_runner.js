@@ -144,13 +144,16 @@ exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callbac
   var mongod_path = path.join(files.get_dev_bundle(), 'mongodb/bin/mongod');
 
   // store data in app_dir
+  var local_path = path.join(app_dir, '.meteor/local');
   var data_path = path.join(app_dir, '.meteor/local/db');
+
+  files.mkdir_p(local_path, 0755);
   files.mkdir_p(data_path, 0755);
   // add .gitignore if needed.
   files.add_to_gitignore(path.join(app_dir, '.meteor'), 'local');
 
   find_mongo_and_kill_it_dead(port, function (err) {
-    if (err) {
+    if (err && process.platform !== "win32") {
       launch_callback({reason: "Can't kill running mongo: " + err.reason});
       return;
     }

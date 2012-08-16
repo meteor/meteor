@@ -343,11 +343,18 @@ _.extend(DependencyWatcher.prototype, {
     if (!(filepath in self.watches) &&
         (is_interesting || stats.isDirectory())) {
       if (!stats.isDirectory()) {
-        // Intentionally not using fs.watch since it doesn't play well with
-        // vim (https://github.com/joyent/node/issues/3172)
-        fs.watchFile(filepath, {interval: 500}, // poll a lot!
-                     _.bind(self._scan, self, false, filepath));
-        self.watches[filepath] = function() { fs.unwatchFile(filepath); };
+	if (process.platform === "win32") {
+          // On Windows, retain the fs.watch method.
+          self.watches[filepath] =
+          fs.watch(filepath, {interval: 500}, // poll a lot!
+                   _.bind(self._scan, self, false, filepath));
+	} else {
+          // Intentionally not using fs.watch since it doesn't play well with
+          // vim (https://github.com/joyent/node/issues/3172)
+          fs.watchFile(filepath, {interval: 500}, // poll a lot!
+                       _.bind(self._scan, self, false, filepath));
+          self.watches[filepath] = function() { fs.unwatchFile(filepath); };
+        }
       } else {
         // fs.watchFile doesn't work for directories (as tested on ubuntu)
         var watch = fs.watch(filepath, {interval: 500}, // poll a lot!

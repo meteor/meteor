@@ -5,7 +5,10 @@ BUNDLE_VERSION=0.1.6
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
 UNAME=$(uname)
-if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
+
+if [[ "$UNAME" == CYGWIN* || "$UNAME" == MINGW* ]] ; then
+	ARCH="$(uname -m)"
+elif [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
     echo "Sorry, this OS is not supported."
     exit 1
 fi
@@ -31,9 +34,9 @@ fi
 # Find the script dir, following one level of symlink. Note that symlink
 # can be relative or absolute. Too bad 'readlink -f' is not portable.
 ORIG_DIR=$(pwd)
-cd $(dirname "$0")
-if [ -L "$(basename $0)" ] ; then
-    cd $(dirname $(readlink $(basename "$0") ) )
+cd "$(dirname "$0")"
+if [ -L "$(basename "$0")" ] ; then
+    cd "$(dirname $(readlink $(basename "$0") ) )"
 fi
 SCRIPT_DIR=$(pwd -P)
 cd "$ORIG_DIR"
@@ -68,7 +71,7 @@ function install_dev_bundle {
 }
 
 
-if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
+if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ] ; then
     # In a checkout.
     if [ ! -d "$SCRIPT_DIR/dev_bundle" ] ; then
         echo "It's the first time you've run Meteor from a git checkout."
@@ -82,6 +85,10 @@ if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
     fi
 
     DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
+    METEOR="$SCRIPT_DIR/app/meteor/meteor.js"
+elif [[ "$UNAME" == CYGWIN* || "$UNAME" == MINGW* ]] ; then
+    # dirname does not work on Windows, however just $SCRIPT_DIR does.
+    DEV_BUNDLE="$SCRIPT_DIR"
     METEOR="$SCRIPT_DIR/app/meteor/meteor.js"
 else
     # In an install
