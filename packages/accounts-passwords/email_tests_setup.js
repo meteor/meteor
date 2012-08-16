@@ -7,7 +7,7 @@
   var oldMeteorMailSend = Meteor.mail.send;
   var interceptedEmails = {}; // (email address) -> (array of contents)
 
-  Meteor.mail.send = function (email, content) {
+  Meteor.mail.send = function (email, subject, content) {
     if (email.indexOf('intercept') === -1) {
       oldMeteorMailSend(email, content);
     } else {

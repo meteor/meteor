@@ -122,8 +122,11 @@
         }
       }});
 
-      // XXX definitely *not* the final form!
-      Meteor.mail.send(email, Meteor.accounts.urls.resetPassword(token));
+      var resetPasswordUrl = Meteor.accounts.urls.resetPassword(token);
+      Meteor.mail.send(
+        email,
+        Meteor.accounts.emailTemplates.resetPassword.subject(user),
+        Meteor.accounts.emailTemplates.resetPassword.message(user, resetPasswordUrl));
     },
 
     resetPassword: function (token, newVerifier) {
@@ -207,9 +210,13 @@
     // XXX Also generate a link using which someone can delete this
     // account if they own said address but weren't those who created
     // this account.
+
+    var user = Meteor.users.findOne(userId);
+    var validateEmailUrl = Meteor.accounts.urls.validateEmail(token);
     Meteor.mail.send(
       email,
-      Meteor.accounts.urls.validateEmail(token));
+      Meteor.accounts.emailTemplates.validateEmail.subject(user),
+      Meteor.accounts.emailTemplates.validateEmail.message(user, validateEmailUrl));
   };
 
   // send the user an email informing them that their account was
@@ -225,9 +232,12 @@
       }
     }});
 
+    var user = Meteor.users.findOne(userId);
+    var enrollAccountUrl = Meteor.accounts.urls.enrollAccount(token);
     Meteor.mail.send(
       email,
-      Meteor.accounts.urls.enrollAccount(token));
+      Meteor.accounts.emailTemplates.enrollAccount.subject(user),
+      Meteor.accounts.emailTemplates.enrollAccount.message(user, enrollAccountUrl));
   };
 
   // handler to login with password

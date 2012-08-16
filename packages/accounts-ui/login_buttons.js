@@ -314,7 +314,7 @@
     'click #login-buttons-reset-password-button': function () {
       resetPassword();
     },
-    'keypress #login-buttons-reset-password-new-password': function (event) {
+    'keypress #reset-password-new-password': function (event) {
       if (event.keyCode === 13)
         resetPassword();
     },
