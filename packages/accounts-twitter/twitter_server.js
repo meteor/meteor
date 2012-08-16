@@ -14,7 +14,8 @@
           twitter: {
             id: identity.id,
             screenName: identity.screen_name,
-            accessToken: oauth.accessToken
+            accessToken: oauth.accessToken,
+            accessTokenSecret: oauth.accessTokenSecret
           }
         }
       },
