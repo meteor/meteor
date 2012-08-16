@@ -5,9 +5,11 @@
   var email1;
   var email2;
   var email3;
+  var email4;
 
   var resetPasswordToken;
   var validateEmailToken;
+  var enrollAccountToken;
 
   testAsyncMulti("accounts emails - reset password flow", [
     function (test, expect) {
@@ -130,6 +132,64 @@
     function (test, expect) {
       test.equal(Meteor.user().emails[1].email, email3);
       test.isFalse(Meteor.user().emails[1].validated);
+    },
+    function (test, expect) {
+      Meteor.logout(expect(function (error) {
+        test.equal(error, undefined);
+        test.equal(Meteor.user(), null);
+      }));
+    }
+  ]);
+
+  var getEnrollAccountToken = function (email, test, expect) {
+    Meteor.call("getInterceptedEmails", email, expect(function (error, result) {
+      test.notEqual(result, undefined);
+      test.equal(result.length, 1);
+      var content = result[0];
+
+      var match = content.match(
+        new RegExp(window.location.protocol + "//" +
+                   window.location.host + "/#\\?enroll-account/(\\S*)"));
+      test.isTrue(match);
+      enrollAccountToken = match[1];
+    }));
+  };
+
+  testAsyncMulti("accounts emails - enroll account flow", [
+    function (test, expect) {
+      email4 = Meteor.uuid() + "-intercept@example.com";
+      Meteor.call("createUserOnServer", email4,
+        expect(function (error, result) {
+          test.isFalse(error);
+          var user = result;
+          test.equal(user.emails.length, 1);
+          test.equal(user.emails[0].email, email4);
+          test.isFalse(user.emails[0].validated);
+        }));
+    },
+    function (test, expect) {
+      getEnrollAccountToken(email4, test, expect);
+    },
+    function (test, expect) {
+      Meteor.enrollAccount(enrollAccountToken, 'password', expect(function(error) {
+        test.isFalse(error);
+      }));
+      Meteor.default_connection.onQuiesce(expect(function () {
+        test.equal(Meteor.user().emails.length, 1);
+        test.equal(Meteor.user().emails[0].email, email4);
+        test.isTrue(Meteor.user().emails[0].validated);
+      }));
+    },
+    function (test, expect) {
+      Meteor.logout(expect(function (error) {
+        test.equal(error, undefined);
+        test.equal(Meteor.user(), null);
+      }));
+    },
+    function (test, expect) {
+      Meteor.loginWithPassword({email: email4}, 'password', expect(function(error) {
+        test.isFalse(error);
+      }));
     },
     function (test, expect) {
       Meteor.logout(expect(function (error) {

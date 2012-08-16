@@ -194,8 +194,13 @@ if (Meteor.is_server) (function () {
                           {invalid: true}); // should fail the new user validators
         });
 
+      // disable sending emails
+      var oldMeteorMailSend = Meteor.mail.send;
+      Meteor.mail.send = function() {};
       var userId = Meteor.createUser({email: email},
                                      {testOnCreateUserHook: true});
+      Meteor.mail.send = oldMeteorMailSend;
+
       test.isTrue(userId);
       var user = Meteor.users.findOne(userId);
       test.equal(user.touchedByOnCreateUser, true);

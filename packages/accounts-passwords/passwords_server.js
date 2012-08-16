@@ -369,6 +369,8 @@
   //
   // Unlike the client version, this does not log you in as this user
   // after creation.
+  //
+  // returns userId or throws an error if it can't create
   Meteor.createUser = function (options, extra, callback) {
 
     if (typeof extra === "function") {
