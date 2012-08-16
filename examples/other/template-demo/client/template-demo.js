@@ -1,5 +1,7 @@
 Timers = new Meteor.Collection(null);
 
+///////////////////////////////////////////////////////////////////////////////
+
 if (! Session.get("x")) {
   Session.set("x", 1);
 }
@@ -12,11 +14,23 @@ if (! Session.get("z")) {
   Session.set("z", 1);
 }
 
-if (typeof Session.get("spinForward") !== 'boolean') {
-  Session.set("spinForward", true);
-}
+Template.preserveDemo.x =
+Template.constantDemo.x =
+Template.stateDemo.x =
+function () {
+  return Session.get("x");
+};
 
-Template.redrawButtons.events = {
+Template.timer.y = function () {
+  return Session.get("y");
+};
+
+Template.stateDemo.z =
+function () {
+  return Session.get("z");
+};
+
+Template.page.events = {
   'click input.x': function () {
     Session.set("x", Session.get("x") + 1);
   },
@@ -29,6 +43,12 @@ Template.redrawButtons.events = {
     Session.set("z", Session.get("z") + 1);
   }
 };
+
+///////////////////////////////////////////////////////////////////////////////
+
+if (typeof Session.get("spinForward") !== 'boolean') {
+  Session.set("spinForward", true);
+}
 
 Template.preserveDemo.preserve([ '.spinner', '.spinforward' ]);
 
@@ -46,18 +66,24 @@ Template.preserveDemo.events = {
   }
 };
 
-Template.preserveDemo.x =
-Template.constantDemo.x =
-Template.stateDemo.x =
-function () {
-  return Session.get("x");
+///////////////////////////////////////////////////////////////////////////////
+
+Template.constantDemo.checked = function (which) {
+  return Session.get('mapchecked' + which) ? 'checked="checked"' : '';
 };
 
-Template.stateDemo.y =
-function () {
-  return Session.get("y");
+Template.constantDemo.show = function (which) {
+  return ! Session.get('mapchecked' + which);
 };
 
+Template.constantDemo.events = {
+  'change .remove' : function (event) {
+    var tgt = event.currentTarget;
+    Session.set('mapchecked' + tgt.getAttribute("which"), tgt.checked);
+  }
+};
+
+///////////////////////////////////////////////////////////////////////////////
 
 Template.stateDemo.events = {
   'click .create': function () {
@@ -79,10 +105,6 @@ Template.timer.events = {
   }
 };
 
-Template.timer.z = function () {
-  return Session.get("z");
-};
-
 var updateTimer = function (timer) {
   timer.node.innerHTML = timer.elapsed + " second" +
     ((timer.elapsed === 1) ? "" : "s");
@@ -90,14 +112,12 @@ var updateTimer = function (timer) {
 
 Template.timer.create = function () {
   var self = this;
-  console.log("timer create");
   self.elapsed = 0;
   self.node = null;
 };
 
 Template.timer.render = function () {
   var self = this;
-  console.log("timer render");
   self.node = this.find(".elapsed");
   updateTimer(self);
 
@@ -111,16 +131,19 @@ Template.timer.render = function () {
   }
 };
 
-
 Template.timer.destroy = function () {
-  console.log("timer destroy");
   clearInterval(this.timer);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// XXX move to Meteor.autorun?
-// (what else does it need to replace Meteor.autosubscribe?)
+// Run f(). Record its dependencies. Rerun it whenever the
+// dependencies change.
+//
+// Returns an object with a stop() method. Call stop() to stop the
+// rerunning.
+//
+// XXX this should go into Meteor core as Meteor.autorun
 var autorun = function (f) {
   var ctx;
   var slain = false;
@@ -149,10 +172,7 @@ Template.d3Demo.right = function () {
 };
 
 Template.circles.events = {
-  'click circle': function (evt, template) {
-    // XXX actually want to create a ReactiveVar on the template!
-    // (but how will it be preserved across migration?)
-    // (maybe template.get, template.set?? rather than form??)
+  'mousedown circle': function (evt, template) {
     Session.set("selectedCircle:" + this.group, evt.currentTarget.id);
   },
   'click .add': function () {
@@ -184,9 +204,6 @@ Template.circles.events = {
   }
 };
 
-Template.circles.create = function () {
-};
-
 var colorToString = function (color) {
   var f = function (x) { return Math.floor(x * 256); };
   return "rgb(" + f(color.r) + "," +
@@ -202,6 +219,9 @@ Template.circles.disabled = function () {
     '' : 'disabled="disabled"';
 };
 
+Template.circles.create = function () {
+};
+
 Template.circles.render = function () {
   var self = this;
   self.node = self.find("svg");
@@ -209,9 +229,6 @@ Template.circles.render = function () {
   var data = self.data;
 
   if (! self.handle) {
-    // XXX template.firstRender would be handy here
-    // (except that node's inside a constant region, so it's unnecessary)
-
     d3.select(self.node).append("rect");
     self.handle = autorun(function () {
       var circle = d3.select(self.node).selectAll("circle")
@@ -256,7 +273,6 @@ Template.circles.render = function () {
         .attr("r", 0)
         .remove();
 
-      // XXX this doesn't animate as I'd hoped when you press Scram
       var selectionId = Session.get("selectedCircle:" + data.group);
       var s = selectionId && Circles.findOne(selectionId);
       var rect = d3.select(self.node).select("rect");
