@@ -6,7 +6,8 @@ if (Meteor.is_client) (function () {
   var username = Meteor.uuid();
   var username2 = Meteor.uuid();
   var username3 = Meteor.uuid();
-  var email = Meteor.uuid() + '@example.com';
+  // use -intercept so that we don't print to the console
+  var email = Meteor.uuid() + '-intercept@example.com';
   var password = 'password';
   var password2 = 'password2';
   var password3 = 'password3';

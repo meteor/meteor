@@ -27,8 +27,8 @@
     function (test, expect) {
       Meteor.call("getInterceptedEmails", email1, expect(function (error, result) {
         test.notEqual(result, undefined);
-        test.equal(result.length, 1);
-        var content = result[0];
+        test.equal(result.length, 2); // the first is the email validation
+        var content = result[1];
 
         var match = content.match(
           new RegExp(window.location.protocol + "//" +
@@ -82,7 +82,7 @@
       email2 = Meteor.uuid() + "-intercept@example.com";
       email3 = Meteor.uuid() + "-intercept@example.com";
       Meteor.createUser(
-        {email: email2, password: 'foobar', validation: true},
+        {email: email2, password: 'foobar'},
         expect(function (error) {
           test.equal(error, undefined);
         }));
@@ -109,7 +109,6 @@
     function (test, expect) {
       Meteor.call(
         "addEmailForTestAndValidate", email3,
-        window.location.protocol + "//" + window.location.host + "/" /*appBaseUrl*/,
         expect(function (error, result) {
           test.isFalse(error);
         }));

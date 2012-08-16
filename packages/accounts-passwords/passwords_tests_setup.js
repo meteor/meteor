@@ -29,5 +29,6 @@ Meteor.accounts.config({
   // The 'accounts - updateOrCreateUser' test needs accounts without
   // usernames or emails, so we can't test with these on.
   requireEmail: false,
-  requireUsername: false
+  requireUsername: false,
+  validateEmails: true
 });

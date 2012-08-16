@@ -106,11 +106,8 @@
 
     forgotPassword: function (options) {
       var email = options.email;
-      var baseUrl = options.baseUrl;
-      if (!email)
+       if (!email)
         throw new Meteor.Error(400, "Need to set options.email");
-      if (!baseUrl)
-        throw new Meteor.Error(400, "Need to set options.baseUrl");
 
       var user = Meteor.users.findOne({"emails.email": email});
       if (!user)
@@ -126,7 +123,7 @@
       }});
 
       // XXX definitely *not* the final form!
-      Meteor.mail.send(email, Meteor.accounts.urls.resetPassword(baseUrl, token));
+      Meteor.mail.send(email, Meteor.accounts.urls.resetPassword(token));
     },
 
     resetPassword: function (token, newVerifier) {
@@ -197,7 +194,7 @@
 
   // send the user an email with a link that when opened marks that
   // address as validated
-  Meteor.accounts.sendValidationEmail = function (userId, email, appBaseUrl) {
+  Meteor.accounts.sendValidationEmail = function (userId, email) {
     var token = Meteor.uuid();
     var creationTime = +(new Date);
     Meteor.accounts._emailValidationTokens.insert({
@@ -212,13 +209,13 @@
     // this account.
     Meteor.mail.send(
       email,
-      Meteor.accounts.urls.validateEmail(appBaseUrl, token));
+      Meteor.accounts.urls.validateEmail(token));
   };
 
   // send the user an email informing them that their account was
   // created, with a link that when opened both marks their email as
   // validated and forces them to choose their password
-  Meteor.accounts.sendEnrollmentEmail = function (userId, email, appBaseUrl) {
+  Meteor.accounts.sendEnrollmentEmail = function (userId, email) {
     var token = Meteor.uuid();
     var creationTime = +(new Date);
     Meteor.users.update(userId, {$set: {
@@ -230,7 +227,7 @@
 
     Meteor.mail.send(
       email,
-      Meteor.accounts.urls.enrollAccount(appBaseUrl, token));
+      Meteor.accounts.urls.enrollAccount(token));
   };
 
   // handler to login with password
@@ -310,12 +307,6 @@
     if (!username && !email)
       throw new Meteor.Error(400, "Need to set a username or email");
 
-    // XXX need to get base url on the server somehow, for welcome
-    // emails at least.
-    if (options.validation && !options.baseUrl)
-      throw new Meteor.Error(
-        400, "If options.validation is set, need to pass options.baseUrl");
-
     if (username && Meteor.users.findOne({username: username}))
       throw new Meteor.Error(403, "User already exists with username " + username);
     if (email && Meteor.users.findOne({"emails.email": email})) {
@@ -341,12 +332,6 @@
 
     user = Meteor.accounts.onCreateUserHook(options, extra, user);
     var userId = Meteor.users.insert(user);
-
-    // If `options.validation` is set, register a token to validate
-    // the user's primary email, and send it to that address.
-    if (email && options.validation)
-      Meteor.accounts.sendValidationEmail(userId, email, options.baseUrl);
-
     return userId;
   };
 
@@ -361,6 +346,12 @@
       // error instead of creating a login token with empty userid.
       if (!userId)
         throw new Error("createUser failed to insert new user");
+
+      // If `Meteor.accounts._options.validateEmails` is set, register
+      // a token to validate the user's primary email, and send it to
+      // that address.
+      if (options.email && Meteor.accounts._options.validateEmails)
+        Meteor.accounts.sendValidationEmail(userId, options.email);
 
       // client gets logged in as the new user afterwards.
       var loginToken = Meteor.accounts._loginTokens.insert({userId: userId});
@@ -393,13 +384,9 @@
 
     if (!options.email)
       throw new Error("Meteor.createUser on the server requires email.");
-    // XXX we don't have a base url, so we don't know how to generate links.
-    if (options.validation)
-      throw new Error("Validation email from server not supported yet.");
 
     var userId = createUser(options, extra);
-    /// XXX replace with real root url!
-    Meteor.accounts.sendEnrollmentEmail(userId, options.email, 'http://localhost:3000/');
+    Meteor.accounts.sendEnrollmentEmail(userId, options.email);
     return userId;
   };
 

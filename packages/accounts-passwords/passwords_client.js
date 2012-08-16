@@ -14,10 +14,6 @@
     delete options.password;
     options.srp = verifier;
 
-    if (options.validation)
-      // needed because we generate a link back to the app
-      options.baseUrl = appBaseUrl();
-
     Meteor.apply('createUser', [options, extra], {wait: true},
                  function (error, result) {
                    if (error || !result) {
@@ -138,8 +134,6 @@
   Meteor.forgotPassword = function(options, callback) {
     if (!options.email)
       throw new Error("Must pass options.email");
-    // needed because we generate a link back to the app
-    options.baseUrl = appBaseUrl();
     Meteor.call("forgotPassword", options, callback);
   };
 
@@ -214,10 +208,6 @@
 
         callback && callback();
       });
-  };
-
-  var appBaseUrl = function () {
-    return window.location.protocol + "//" + window.location.host + "/";
   };
 })();
 
