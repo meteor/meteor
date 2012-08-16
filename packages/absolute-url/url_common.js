@@ -14,7 +14,12 @@
     if (path)
       url += path;
 
-    if (options.secure && /^http:/.test(url)) // startsWith(url, 'http:')
+    // turn http to http if secure option is set, and we're not talking
+    // to localhost.
+    if (options.secure &&
+        /^http:/.test(url) && // startsWith('http:')
+        !/http:\/\/localhost[:\/]/.test(url) && // doesn't match localhost
+        !/http:\/\/127\.0\.0\.1[:\/]/.test(url)) // or 127.0.0.1
       url = url.replace(/^http:/, 'https:');
 
     return url;
