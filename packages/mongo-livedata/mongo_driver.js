@@ -60,21 +60,6 @@ _Mongo._rewriteSelector = function (selector) {
     return selector;
 };
 
-_Mongo._rewriteSelector = function (selector) {
-  // shorthand -- scalars match _id
-  if ((typeof selector === 'string') || (typeof selector === 'number'))
-    selector = {_id: selector};
-
-  if (!selector || (('_id' in selector) && !selector._id))
-    // can't match anything
-    return {_id: Meteor.uuid()};
-  else if('_id' in selector && self.isObjectId(selector._id) )
-  	//Id is a mongodb ObjectID
-	return {_id: new MongoDB.BSONPure.ObjectID(selector._id)};
-  else
-    return selector;
-};
-
 // callback: lambda (err, collection) called when
 // collection is ready to go, or on error.
 _Mongo.prototype._withCollection = function(collection_name, callback) {
