@@ -50,9 +50,16 @@ var supported_browser = function (user_agent) {
 // add any runtime configuration options needed to app_html
 var runtime_config = function (app_html) {
   var insert = '';
-  if (process.env.DEFAULT_DDP_ENDPOINT)
-    insert += "__meteor_runtime_config__.DEFAULT_DDP_ENDPOINT = '" +
-      process.env.DEFAULT_DDP_ENDPOINT + "';";
+  if (typeof __meteor_runtime_config__ === 'undefined')
+    return app_html;
+
+  _.each(__meteor_runtime_config__, function (value, key) {
+    insert += "__meteor_runtime_config__."
+      + key
+      + " = '"
+      + value.replace(/'/g, '\\\'').replace(/\n/g, '\\n')
+      + "';\n";
+  });
 
   app_html = app_html.replace("// ##RUNTIME_CONFIG##", insert);
 
@@ -75,12 +82,6 @@ var run = function () {
     app.use(gzippo.staticGzip(static_cacheable_path, {clientMaxAge: 1000 * 60 * 60 * 24 * 365}));
   app.use(gzippo.staticGzip(path.join(bundle_dir, 'static')));
 
-  var app_html = fs.readFileSync(path.join(bundle_dir, 'app.html'), 'utf8');
-  var unsupported_html = fs.readFileSync(path.join(bundle_dir, 'unsupported.html'));
-
-  app_html = runtime_config(app_html);
-
-
   // read bundle config file
   var info_raw =
     fs.readFileSync(path.join(bundle_dir, 'app.json'), 'utf8');
@@ -88,6 +89,7 @@ var run = function () {
 
   // start up app
   __meteor_bootstrap__ = {require: require, startup_hooks: [], app: app};
+  __meteor_runtime_config__ = {};
   Fiber(function () {
     // (put in a fiber to let Meteor.db operations happen during loading)
 
@@ -111,6 +113,14 @@ var run = function () {
       // generate its errors.
       require('vm').runInThisContext(code, filename, true);
     });
+
+
+    // Actually serve HTML. This happens after user code, so that
+    // packages can insert connect middlewares.
+    var app_html = fs.readFileSync(path.join(bundle_dir, 'app.html'), 'utf8');
+    var unsupported_html = fs.readFileSync(path.join(bundle_dir, 'unsupported.html'));
+
+    app_html = runtime_config(app_html);
 
     app.use(function (req, res) {
       // prevent favicon.ico and robots.txt from returning app_html
