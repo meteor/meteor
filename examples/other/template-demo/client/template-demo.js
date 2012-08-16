@@ -240,10 +240,10 @@ Template.circles.render = function () {
           return d._id;
         })
         .attr("cx", function (d) {
-          return d.x * 200;
+          return d.x * 272;
         })
         .attr("cy", function (d) {
-          return d.y * 200;
+          return d.y * 272;
         })
         .attr("r", 50)
         .style("fill", function (d) {
@@ -254,13 +254,13 @@ Template.circles.render = function () {
       circle.transition()
         .duration(250)
         .attr("cx", function (d) {
-          return d.x * 200;
+          return d.x * 272;
         })
         .attr("cy", function (d) {
-          return d.y * 200;
+          return d.y * 272;
         })
         .attr("r", function (d) {
-          return d.r * 200;
+          return d.r * 272;
         })
         .style("fill", function (d) {
           return colorToString(d.color);
@@ -277,10 +277,10 @@ Template.circles.render = function () {
       var s = selectionId && Circles.findOne(selectionId);
       var rect = d3.select(self.node).select("rect");
       if (s)
-        rect.attr("x", (s.x - s.r) * 200)
-        .attr("y", (s.y - s.r) * 200)
-        .attr("width", s.r * 2 * 200)
-        .attr("height", s.r * 2 * 200)
+        rect.attr("x", (s.x - s.r) * 272)
+        .attr("y", (s.y - s.r) * 272)
+        .attr("width", s.r * 2 * 272)
+        .attr("height", s.r * 2 * 272)
         .attr("display", '')
         .style("fill", "none")
         .style("stroke", "red")
