@@ -181,6 +181,10 @@
         throw new Meteor.Error(403, "Validate email link expired");
       var userId = tokenDocument.userId;
       var email = tokenDocument.email;
+
+      // update the validated flag on the index in the emails array
+      // matching email (see
+      // http://www.mongodb.org/display/DOCS/Updating/#Updating-The%24positionaloperator)
       Meteor.users.update({_id: userId, "emails.email": email},
                           {$set: {"emails.$.validated": true}});
       Meteor.accounts._emailValidationTokens.remove({token: token});
