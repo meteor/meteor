@@ -1,5 +1,7 @@
 Tinytest.add("absolute-url - basics", function(test) {
 
+  test.equal(Meteor.absoluteUrl({rootUrl: 'http://asdf.com'}),
+             'http://asdf.com/');
   test.equal(Meteor.absoluteUrl(undefined, {rootUrl: 'http://asdf.com'}),
              'http://asdf.com/');
   test.equal(Meteor.absoluteUrl(undefined, {rootUrl: 'http://asdf.com/'}),
@@ -11,29 +13,27 @@ Tinytest.add("absolute-url - basics", function(test) {
              'http://asdf.com//foo');
 
   test.equal(Meteor.absoluteUrl('foo', {rootUrl: 'http://asdf.com',
-                                         secure: true}),
+                                        secure: true}),
              'https://asdf.com/foo');
   test.equal(Meteor.absoluteUrl('foo', {rootUrl: 'https://asdf.com',
-                                         secure: true}),
+                                        secure: true}),
              'https://asdf.com/foo');
   test.equal(Meteor.absoluteUrl('foo', {rootUrl: 'https://asdf.com',
-                                         secure: false}),
+                                        secure: false}),
              'https://asdf.com/foo');
 
   test.equal(Meteor.absoluteUrl('foo', {rootUrl: 'http://localhost',
-                                         secure: true}),
+                                        secure: true}),
              'http://localhost/foo');
   test.equal(Meteor.absoluteUrl('foo', {rootUrl: 'http://localhost:3000',
-                                         secure: true}),
+                                        secure: true}),
              'http://localhost:3000/foo');
   test.equal(Meteor.absoluteUrl('foo', {rootUrl: 'https://localhost:3000',
-                                         secure: true}),
+                                        secure: true}),
              'https://localhost:3000/foo');
   test.equal(Meteor.absoluteUrl('foo', {rootUrl: 'http://127.0.0.1:3000',
-                                         secure: true}),
+                                        secure: true}),
              'http://127.0.0.1:3000/foo');
-
-
 });
 
 

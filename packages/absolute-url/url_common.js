@@ -1,6 +1,11 @@
 (function () {
 
   Meteor.absoluteUrl = function (path, options) {
+    // path is optional
+    if (!options && typeof path === 'object') {
+      options = path;
+      path = undefined;
+    }
     // merge options with defaults
     options = _.extend({}, Meteor.absoluteUrl.defaultOptions, options || {});
 
@@ -8,7 +13,7 @@
     if (!url)
       throw new Error("Must pass options.rootUrl or set ROOT_URL in the server environment");
 
-    if (!/\/$/.test(url)) // !endsWith(url, '/')
+    if (!/\/$/.test(url)) // url ends with '/'
       url += '/';
 
     if (path)
@@ -17,7 +22,7 @@
     // turn http to http if secure option is set, and we're not talking
     // to localhost.
     if (options.secure &&
-        /^http:/.test(url) && // startsWith('http:')
+        /^http:/.test(url) && // url starts with 'http:'
         !/http:\/\/localhost[:\/]/.test(url) && // doesn't match localhost
         !/http:\/\/127\.0\.0\.1[:\/]/.test(url)) // or 127.0.0.1
       url = url.replace(/^http:/, 'https:');

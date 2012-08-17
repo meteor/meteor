@@ -53,15 +53,10 @@ var runtime_config = function (app_html) {
   if (typeof __meteor_runtime_config__ === 'undefined')
     return app_html;
 
-  _.each(__meteor_runtime_config__, function (value, key) {
-    insert += "__meteor_runtime_config__."
-      + key
-      + " = '"
-      + value.replace(/'/g, '\\\'').replace(/\n/g, '\\n')
-      + "';\n";
-  });
-
-  app_html = app_html.replace("// ##RUNTIME_CONFIG##", insert);
+  app_html = app_html.replace(
+    "// ##RUNTIME_CONFIG##",
+    "__meteor_runtime_config__ = " +
+      JSON.stringify(__meteor_runtime_config__) + ";");
 
   return app_html;
 };
@@ -116,7 +111,8 @@ var run = function () {
 
 
     // Actually serve HTML. This happens after user code, so that
-    // packages can insert connect middlewares.
+    // packages can insert connect middlewares and update
+    // __meteor_runtime_config__
     var app_html = fs.readFileSync(path.join(bundle_dir, 'app.html'), 'utf8');
     var unsupported_html = fs.readFileSync(path.join(bundle_dir, 'unsupported.html'));
 
