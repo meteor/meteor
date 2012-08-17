@@ -187,12 +187,13 @@ var start_server = function (bundle_path, port, mongo_url,
   proc.stdout.on('data', function (data) {
     if (!data) return;
 
+    var originalLength = data.length;
     // string must match server.js
-    if (data.match(/^LISTENING\s*$/)) {
+    data = data.replace(/^LISTENING\s*(?:\n|$)/m, '');
+    if (data.length != originalLength)
       on_listen_callback && on_listen_callback();
-    } else {
+    if (data)
       log_to_clients({stdout: data});
-    }
   });
 
   proc.stderr.setEncoding('utf8');
