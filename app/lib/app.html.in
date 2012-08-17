@@ -5,7 +5,6 @@
 {{/each}}
 
 <script type="text/javascript">
-__meteor_runtime_config__ = {};
 // ##RUNTIME_CONFIG##
 </script>
 
