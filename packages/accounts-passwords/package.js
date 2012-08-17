@@ -5,6 +5,7 @@ Package.describe({
 Package.on_use(function(api) {
   api.use('accounts', ['client', 'server']);
   api.use('srp', ['client', 'server']);
+  api.use('email', ['server']);
 
   api.add_files('email_templates.js', 'server');
   api.add_files('passwords_server.js', 'server');

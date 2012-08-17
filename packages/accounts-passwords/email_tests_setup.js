@@ -4,17 +4,18 @@
   // the string "intercept", storing them in an array that can then
   // be retrieved using the getInterceptedEmails method
   //
-  var oldMeteorMailSend = Meteor.mail.send;
+  var oldEmailSend = Email.send;
   var interceptedEmails = {}; // (email address) -> (array of contents)
 
-  Meteor.mail.send = function (email, subject, content) {
-    if (email.indexOf('intercept') === -1) {
-      oldMeteorMailSend(email, content);
+  Email.send = function (options) {
+    var to = options.to;
+    if (to.indexOf('intercept') === -1) {
+      oldEmailSend(options);
     } else {
-      if (!interceptedEmails[email])
-        interceptedEmails[email] = [];
+      if (!interceptedEmails[to])
+        interceptedEmails[to] = [];
 
-      interceptedEmails[email].push(content);
+      interceptedEmails[to].push(options.text);
     }
   };
 

@@ -196,11 +196,11 @@ if (Meteor.is_server) (function () {
         });
 
       // disable sending emails
-      var oldMeteorMailSend = Meteor.mail.send;
-      Meteor.mail.send = function() {};
+      var oldEmailSend = Email.send;
+      Email.send = function() {};
       var userId = Meteor.createUser({email: email},
                                      {testOnCreateUserHook: true});
-      Meteor.mail.send = oldMeteorMailSend;
+      Email.send = oldEmailSend;
 
       test.isTrue(userId);
       var user = Meteor.users.findOne(userId);

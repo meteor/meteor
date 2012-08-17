@@ -123,10 +123,11 @@
       }});
 
       var resetPasswordUrl = Meteor.accounts.urls.resetPassword(token);
-      Meteor.mail.send(
-        email,
-        Meteor.accounts.emailTemplates.resetPassword.subject(user),
-        Meteor.accounts.emailTemplates.resetPassword.message(user, resetPasswordUrl));
+      Email.send({
+        to: email,
+        from: Meteor.accounts.emailTemplates.from,
+        subject: Meteor.accounts.emailTemplates.resetPassword.subject(user),
+        text: Meteor.accounts.emailTemplates.resetPassword.text(user, resetPasswordUrl)});
     },
 
     resetPassword: function (token, newVerifier) {
@@ -213,10 +214,12 @@
 
     var user = Meteor.users.findOne(userId);
     var validateEmailUrl = Meteor.accounts.urls.validateEmail(token);
-    Meteor.mail.send(
-      email,
-      Meteor.accounts.emailTemplates.validateEmail.subject(user),
-      Meteor.accounts.emailTemplates.validateEmail.message(user, validateEmailUrl));
+    Email.send({
+      to: email,
+      from: Meteor.accounts.emailTemplates.from,
+      subject: Meteor.accounts.emailTemplates.validateEmail.subject(user),
+      text: Meteor.accounts.emailTemplates.validateEmail.text(user, validateEmailUrl)
+    });
   };
 
   // send the user an email informing them that their account was
@@ -234,10 +237,12 @@
 
     var user = Meteor.users.findOne(userId);
     var enrollAccountUrl = Meteor.accounts.urls.enrollAccount(token);
-    Meteor.mail.send(
-      email,
-      Meteor.accounts.emailTemplates.enrollAccount.subject(user),
-      Meteor.accounts.emailTemplates.enrollAccount.message(user, enrollAccountUrl));
+    Email.send({
+      to: email,
+      from: Meteor.accounts.emailTemplates.from,
+      subject: Meteor.accounts.emailTemplates.enrollAccount.subject(user),
+      text: Meteor.accounts.emailTemplates.enrollAccount.text(user, enrollAccountUrl)
+    });
   };
 
   // handler to login with password
@@ -404,10 +409,3 @@
 
 
 })();
-
-
-Meteor.mail = {};
-Meteor.mail.send = function() {
-  console.log("Send mail:");
-  console.log(arguments);
-};

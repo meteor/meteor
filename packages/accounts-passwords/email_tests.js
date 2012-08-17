@@ -129,8 +129,10 @@
       }));
     },
     function (test, expect) {
-      test.equal(Meteor.user().emails[1].email, email3);
-      test.isFalse(Meteor.user().emails[1].validated);
+      Meteor.default_connection.onQuiesce(expect(function () {
+        test.equal(Meteor.user().emails[1].email, email3);
+        test.isTrue(Meteor.user().emails[1].validated);
+      }));
     },
     function (test, expect) {
       Meteor.logout(expect(function (error) {
@@ -173,6 +175,8 @@
       Meteor.enrollAccount(enrollAccountToken, 'password', expect(function(error) {
         test.isFalse(error);
       }));
+    },
+    function (test, expect) {
       Meteor.default_connection.onQuiesce(expect(function () {
         test.equal(Meteor.user().emails.length, 1);
         test.equal(Meteor.user().emails[0].email, email4);

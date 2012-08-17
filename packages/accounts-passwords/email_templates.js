@@ -1,9 +1,11 @@
 Meteor.accounts.emailTemplates = {
+  from: "Meteor Accounts <no-reply@meteor.com>",
+
   resetPassword: {
     subject: function(user) {
       return "How to reset your password on " + Meteor.absoluteUrl();
     },
-    message: function(user, url) {
+    text: function(user, url) {
       var greeting = user.name ? ("Hello " + user.name + ",") : "Hello,";
       return greeting + "\n"
         + "\n"
@@ -18,7 +20,7 @@ Meteor.accounts.emailTemplates = {
     subject: function(user) {
       return "How to validate your account email on " + Meteor.absoluteUrl();
     },
-    message: function(user, url) {
+    text: function(user, url) {
       var greeting = user.name ? ("Hello " + user.name + ",") : "Hello,";
       return greeting + "\n"
         + "\n"
@@ -33,7 +35,7 @@ Meteor.accounts.emailTemplates = {
     subject: function(user) {
       return "An account has been created for you on " + Meteor.absoluteUrl();
     },
-    message: function(user, url) {
+    text: function(user, url) {
       var greeting = user.name ? ("Hello " + user.name + ",") : "Hello,";
       return greeting + "\n"
         + "\n"
