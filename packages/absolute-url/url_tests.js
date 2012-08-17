@@ -11,6 +11,8 @@ Tinytest.add("absolute-url - basics", function(test) {
              'http://asdf.com/foo');
   test.equal(Meteor.absoluteUrl('/foo', {rootUrl: 'http://asdf.com'}),
              'http://asdf.com//foo');
+  test.equal(Meteor.absoluteUrl('#foo', {rootUrl: 'http://asdf.com'}),
+             'http://asdf.com/#foo');
 
   test.equal(Meteor.absoluteUrl('foo', {rootUrl: 'http://asdf.com',
                                         secure: true}),
