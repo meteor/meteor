@@ -198,6 +198,9 @@ var toc = [
       {name: "Meteor.http.post", id: "meteor_http_post"},
       {name: "Meteor.http.put", id: "meteor_http_put"},
       {name: "Meteor.http.del", id: "meteor_http_del"}
+    ],
+    "Email", [
+      "Email.send"
     ]
   ],
 
