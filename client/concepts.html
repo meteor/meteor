@@ -541,6 +541,9 @@ server, we can recommend our friends at [MongoHQ](http://mongohq.com).
 
     $ PORT=3000 MONGO_URL=mongodb://localhost:27017/myapp node bundle/main.js
 
+Other packages may require other environment variables (for example, the `email`
+package requires a `MAIL_URL` environment variable).
+
 {{#warning}}
 For now, bundles will only run on the platform that the bundle was
 created on.  To run on a different platform, you'll need to rebuild
