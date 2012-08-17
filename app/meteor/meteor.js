@@ -86,8 +86,8 @@ Commands.push({
     var opt = require('optimist')
       .alias('port', 'p').default('port', 3000)
       .describe('port', 'Port to listen on. NOTE: Also uses port N+1 and N+2.')
-      .boolean('production')
-      .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
+      .default('env', 'development')
+      .describe('env', 'Environment to run this project in: development, staging, or production.')
       .usage(
 "Usage: meteor run [options]\n" +
 "\n" +
@@ -111,8 +111,7 @@ Commands.push({
     }
 
     var app_dir = require_project("run", true); // app or package
-    var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true };
-    require('./run.js').run(app_dir, bundle_opts, new_argv.port);
+    require('./run.js').run(app_dir, new_argv.env, new_argv.port);
   }
 });
 

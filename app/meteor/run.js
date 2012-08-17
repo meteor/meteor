@@ -447,7 +447,7 @@ var start_update_checks = function () {
 // This function never returns and will call process.exit() if it
 // can't continue. If you change this, remember to call
 // watcher.destroy() as appropriate.
-exports.run = function (app_dir, bundle_opts, port) {
+exports.run = function (app_dir, environment, port) {
   var outer_port = port || 3000;
   var inner_port = outer_port + 1;
   var mongo_port = outer_port + 2;
@@ -459,7 +459,24 @@ exports.run = function (app_dir, bundle_opts, port) {
         ("mongodb://127.0.0.1:" + mongo_port + "/meteor");
   var test_mongo_url = "mongodb://127.0.0.1:" + mongo_port + "/meteor_test";
 
+  var bundle_opts = {symlink_dev_bundle: true};
   var test_bundle_opts;
+
+  // As more bundle options are added they can be placed here based on the run environment
+  switch (environment) {
+    case "production":
+    case "staging":
+      bundle_opts.no_minify = false;
+      break;
+
+    case "development":
+    default:
+      bundle_opts.no_minify = true;
+      break;
+  }
+
+  process.env.METEOR_ENV = environment;
+
   if (files.is_app_dir(app_dir)) {
     // If we're an app, make separate test_bundle_opts to trigger a
     // separate runner.

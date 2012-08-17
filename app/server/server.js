@@ -50,6 +50,10 @@ var supported_browser = function (user_agent) {
 // add any runtime configuration options needed to app_html
 var runtime_config = function (app_html) {
   var insert = '';
+
+  // Make sure the environment is available on the client
+  insert += "__meteor_runtime_config__.METEOR_ENV = '" + process.env.METEOR_ENV + "';\n";
+
   if (process.env.DEFAULT_DDP_ENDPOINT)
     insert += "__meteor_runtime_config__.DEFAULT_DDP_ENDPOINT = '" +
       process.env.DEFAULT_DDP_ENDPOINT + "';";
