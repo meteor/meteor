@@ -1,3 +1,7 @@
+if (process.env.DEFAULT_DDP_ENDPOINT)
+  __meteor_runtime_config__.DEFAULT_DDP_ENDPOINT = process.env.DEFAULT_DDP_ENDPOINT;
+
+
 _.extend(Meteor, {
   default_server: new Meteor._LivedataServer,
 
