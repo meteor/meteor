@@ -143,6 +143,7 @@ npm install fibers@0.6.5
 npm install useragent@1.0.6
 npm install request@2.9.202
 npm install http-proxy@0.8.0
+npm install blade@2.0
 
 # unused, but kept in bundle for compatibility for a while.
 npm install connect-gzip@0.1.5
