@@ -17,4 +17,4 @@ _.extend(Meteor._RemoteCollectionDriver.prototype, {
 
 // singleton
 // XXX kind of hacky
-Meteor._RemoteCollectionDriver = new Meteor._RemoteCollectionDriver(__meteor_bootstrap__.mongo_url);
+Meteor._RemoteCollectionDriver = new Meteor._RemoteCollectionDriver(process.env.MONGO_URL);
