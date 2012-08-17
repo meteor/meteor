@@ -1,8 +1,8 @@
 Template.pkg_absolute_url.absoluteUrl = {
   id: "meteor_absoluteUrl",
-  name: "Meteor.absoluteUrl(path, [options])",
+  name: "Meteor.absoluteUrl([path], [options])",
   locus: "Anywhere",
-  descr: ["Generate an absolute URL to the application."],
+  descr: ["Generate an absolute URL pointing to the application."],
   args: [
     {name: "path",
      type: "String",
