@@ -4,7 +4,7 @@
     Meteor.accounts.google._secret = secret;
   };
 
-  Meteor.accounts.oauth.registerService('google', {version: 2}, function(query) {
+  Meteor.accounts.oauth.registerService('google', 2, function(query) {
 
     var accessToken = getAccessToken(query);
     var identity = getIdentity(accessToken);
