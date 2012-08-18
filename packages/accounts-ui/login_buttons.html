@@ -5,11 +5,7 @@
         {{#if currentUser.loading}}
         <div class="loading"></div>
         {{else}}
-        {{#if currentUser.name}}
-        {{currentUser.name}}
-        {{else}}
-        {{currentUser.username}}
-        {{/if}}
+        {{displayName}}
         {{/if}}
       </div>
       <div class="login-button" id="login-buttons-logout">Logout</div>

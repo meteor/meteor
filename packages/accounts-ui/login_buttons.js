@@ -91,6 +91,22 @@
     return getLoginServices();
   };
 
+  Template.loginButtons.displayName = function () {
+    var user = Meteor.user();
+    if (!user)
+      return '';
+
+    if (user.name)
+      return user.name;
+    if (user.username)
+      return user.username;
+    if (user.emails && user.emails[0] && user.emails[0] && user.emails[0].email)
+      return user.emails[0].email;
+
+    return '';
+  };
+
+
   //
   // loginButtonsServiceRow template
   //
