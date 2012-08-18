@@ -4,7 +4,7 @@
     Meteor.accounts.facebook._secret = secret;
   };
 
-  Meteor.accounts.oauth.registerService('facebook', {version: 2}, function(query) {
+  Meteor.accounts.oauth.registerService('facebook', 2, function(query) {
 
     var accessToken = getAccessToken(query);
     var identity = getIdentity(accessToken);

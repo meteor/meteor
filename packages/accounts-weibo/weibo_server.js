@@ -4,7 +4,7 @@
     Meteor.accounts.weibo._secret = secret;
   };
 
-  Meteor.accounts.oauth.registerService('weibo', {version: 2}, function(query) {
+  Meteor.accounts.oauth.registerService('weibo', 2, function(query) {
 
     var accessToken = getAccessToken(query);
     var identity = getIdentity(accessToken.access_token, parseInt(accessToken.uid, 10));
