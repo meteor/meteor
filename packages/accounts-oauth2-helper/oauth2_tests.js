@@ -6,11 +6,16 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
   // XXX XXX test isolation fail!  Avital: but actually -- why would
   // we run server tests more than once? or even more so in parallel?
   Meteor.accounts._loginTokens.remove({});
-  Meteor.accounts.oauth2._loginResultForState = {};
-  Meteor.accounts.oauth2._services = {};
+  Meteor.accounts.oauth._loginResultForState = {};
+  Meteor.accounts.oauth._services = {};
+
+  // XXX this shouldn't be necessary
+  Meteor.accounts.foobook = {};
+  Meteor.accounts.foobook._requireConfigs = [];
+  Meteor.accounts.foobook._secret = 'XXX';
 
   // register a fake login service - foobook
-  Meteor.accounts.oauth.registerService("foobook", {version: 2}, function (query) {
+  Meteor.accounts.oauth.registerService("foobook", 2, function (query) {
     return {
       options: {
         email: email,
@@ -23,7 +28,7 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
   var req = {method: "POST",
              url: "/_oauth/foobook?close",
              query: {state: "STATE"}};
-  Meteor.accounts.oauth2._handleRequest(req, new http.ServerResponse(req));
+  Meteor.accounts.oauth._middleware(req, new http.ServerResponse(req));
 
   // verify that a user is created
   var user = Meteor.users.findOne({"emails.email": email});
@@ -37,9 +42,9 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
 
   // and that the login result for that user is prepared
   test.equal(
-    Meteor.accounts.oauth2._loginResultForState['STATE'].id, user._id);
+    Meteor.accounts.oauth._loginResultForState['STATE'].id, user._id);
   test.equal(
-    Meteor.accounts.oauth2._loginResultForState['STATE'].token, token._id);
+    Meteor.accounts.oauth._loginResultForState['STATE'].token, token._id);
 });
 
 
@@ -48,8 +53,13 @@ Tinytest.add("oauth2 - error in user creation", function (test) {
   var email = Meteor.uuid() + "@example.com";
   var state = Meteor.uuid();
 
+  // XXX this shouldn't be necessary
+  Meteor.accounts.failbook = {};
+  Meteor.accounts.failbook._requireConfigs = [];
+  Meteor.accounts.failbook._secret = 'XXX';
+
   // register a failing login service
-  Meteor.accounts.oauth2.registerService("failbook", function (query) {
+  Meteor.accounts.oauth.registerService("failbook", 2, function (query) {
     return {
       options: {
         email: email,
@@ -72,14 +82,14 @@ Tinytest.add("oauth2 - error in user creation", function (test) {
   var req = {method: "POST",
              url: "/_oauth/failbook?close",
              query: {state: state}};
-  Meteor.accounts.oauth2._handleRequest(req, new http.ServerResponse(req));
+  Meteor.accounts.oauth._middleware(req, new http.ServerResponse(req));
 
   // verify that a user is not created
   var user = Meteor.users.findOne({"emails.email": email});
   test.equal(user, undefined);
 
   // verify an error is stored in login state
-  test.equal(Meteor.accounts.oauth2._loginResultForState[state].error, 403);
+  test.equal(Meteor.accounts.oauth._loginResultForState[state].error, 403);
 
   // verify error is handed back to login method.
   test.throws(function () {
@@ -87,3 +97,5 @@ Tinytest.add("oauth2 - error in user creation", function (test) {
   });
 
 });
+
+
