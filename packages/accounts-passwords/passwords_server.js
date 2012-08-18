@@ -73,7 +73,7 @@
       // If options.M is set, it means we went through a challenge with
       // the old password.
 
-      if (!options.M && !Meteor.accounts._options.unsafePasswordChanges) {
+      if (!options.M /* could allow unsafe password changes here */) {
         throw new Meteor.Error(403, "Old password required.");
       }
 

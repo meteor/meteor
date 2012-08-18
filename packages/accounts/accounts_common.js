@@ -7,7 +7,6 @@ if (!Meteor.accounts._options) {
 }
 
 // @param options {Object} an object with fields:
-// - unsafePasswordChanges {Boolean} allow changing password without the old one
 // - requireEmail {Boolean}
 // - requireUsername {Boolean}
 // - validateEmails {Boolean} Send validation emails to all new users
