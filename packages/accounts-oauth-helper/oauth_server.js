@@ -44,6 +44,10 @@
     if (result === undefined) // not using `!result` since can be null
       // We weren't notified of the user authorizing the login.
       return null;
+    else if (result instanceof Error)
+      // We tried to login, but there was a fatal error. Report it back
+      // to the user.
+      throw result;
     else
       return result;
   });
@@ -56,11 +60,11 @@
       // calls and nothing else is wrapping this in a fiber
       // automatically
       Fiber(function () {
-        middleware(req, res, next);
+        Meteor.accounts.oauth._middleware(req, res, next);
       }).run();
     });
 
-  var middleware = function (req, res, next) {
+  Meteor.accounts.oauth._middleware = function (req, res, next) {
     var serviceName = requestServiceName(req);
     if (!serviceName) {
       // not an oauth request. pass to next middleware.
