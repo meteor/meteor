@@ -168,14 +168,15 @@ var log_to_clients = function (msg) {
 
 ////////// Launch server process //////////
 
-var start_server = function (bundle_path, port, mongo_url,
+var start_server = function (bundle_path, outer_port, inner_port, mongo_url,
                              on_exit_callback, on_listen_callback) {
   // environment
   var env = {};
   for (var k in process.env)
     env[k] = process.env[k];
-  env.PORT = port;
+  env.PORT = inner_port;
   env.MONGO_URL = mongo_url;
+  env.ROOT_URL = 'http://localhost:' + outer_port;
 
   var proc = spawn(process.execPath,
                    [path.join(bundle_path, 'main.js'), '--keepalive'],
@@ -187,12 +188,13 @@ var start_server = function (bundle_path, port, mongo_url,
   proc.stdout.on('data', function (data) {
     if (!data) return;
 
+    var originalLength = data.length;
     // string must match server.js
-    if (data.match(/^LISTENING\s*$/)) {
+    data = data.replace(/^LISTENING\s*(?:\n|$)/m, '');
+    if (data.length != originalLength)
       on_listen_callback && on_listen_callback();
-    } else {
+    if (data)
       log_to_clients({stdout: data});
-    }
   });
 
   proc.stderr.setEncoding('utf8');
@@ -544,19 +546,21 @@ exports.run = function (app_dir, bundle_opts, port) {
 
     start_watching();
     Status.running = true;
-    server_handle = start_server(bundle_path, inner_port, mongo_url, function () {
-      // on server exit
-      Status.running = false;
-      Status.listening = false;
-      Status.soft_crashed();
-      if (!Status.crashing)
-        restart_server();
-    }, function () {
-      // on listen
-      Status.listening = true;
-      _.each(request_queue, function (f) { f(); });
-      request_queue = [];
-    });
+    server_handle = start_server(
+      bundle_path, outer_port, inner_port, mongo_url,
+      function () {
+        // on server exit
+        Status.running = false;
+        Status.listening = false;
+        Status.soft_crashed();
+        if (!Status.crashing)
+          restart_server();
+      }, function () {
+        // on listen
+        Status.listening = true;
+        _.each(request_queue, function (f) { f(); });
+        request_queue = [];
+      });
 
 
     // launch test bundle and server if needed.

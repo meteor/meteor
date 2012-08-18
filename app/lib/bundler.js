@@ -577,6 +577,7 @@ _.extend(Bundle.prototype, {
 "\n" +
 "  $ npm install fibers\n" +
 "  $ export MONGO_URL='mongodb://user:password@host:port/databasename'\n" +
+"  $ export ROOT_URL='http://example.com'\n" +
 "  $ node main.js\n" +
 "\n" +
 "Use the PORT environment variable to set the port where the\n" +
