@@ -9,7 +9,8 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
   Meteor.accounts.oauth._loginResultForState = {};
   Meteor.accounts.oauth._services = {};
 
-  // XXX this shouldn't be necessary
+  // XXX can we make this unnecessary? Not totally sold on _requireConfigs
+  // yet, but maybe I'm just being overly delicate.
   Meteor.accounts.foobook = {};
   Meteor.accounts.foobook._requireConfigs = [];
   Meteor.accounts.foobook._secret = 'XXX';
