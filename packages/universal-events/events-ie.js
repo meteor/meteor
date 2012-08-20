@@ -25,8 +25,8 @@ UniversalEventListener._impl = UniversalEventListener._impl ||  {};
 UniversalEventListener._impl.ie = function (deliver) {
   var self = this;
   this.deliver = deliver;
-  this.curriedHandler = function (event) {
-    self.handler.call(this, self, event);
+  this.curriedHandler = function () {
+    self.handler.call(this, self);
   };
 
   // The 'submit' event on IE doesn't bubble.  We want to simulate
@@ -82,18 +82,17 @@ _.extend(UniversalEventListener._impl.ie.prototype, {
       props.push('onfocusout');
     // install handlers for faking bubbling change/submit
     else if (prop === 'onchange') {
-      props.push('oncellchange');
       // if we're looking at a checkbox or radio button,
       // sign up for propertychange and NOT change
       if (node.nodeName === 'INPUT' &&
-          (node.type === 'checkbox' || node.type === 'radio')) {
-        props = _.without(props, "onchange");
-        props.push(['onpropertychange']);
-      }
+          (node.type === 'checkbox' || node.type === 'radio'))
+        props = ['onpropertychange'];
+      props.push('oncellchange');
     } else if (prop === 'onsubmit')
       props.push(node, 'ondatasetcomplete');
 
-    node[prop] = this.curriedHandler;
+    for(var i = 0; i < props.length; i++)
+      node[props[i]] = this.curriedHandler;
   },
 
   // This is the handler we assign to DOM nodes, so it shouldn't close over
@@ -102,8 +101,7 @@ _.extend(UniversalEventListener._impl.ie.prototype, {
   // This handler is called via this.curriedHandler. When it is called:
   //  - 'this' is the node currently handling the event (set by IE)
   //  - 'self' is what would normally be 'this'
-  //  - 'event' is the event that fired
-  handler: function (self, event) {
+  handler: function (self) {
     var sendEvent = function (ontype, target) {
       var e = document.createEventObject();
       e.synthetic = true;
@@ -142,7 +140,8 @@ _.extend(UniversalEventListener._impl.ie.prototype, {
       }
     }
     // ignore non-simulated events of types we simulate
-    if ((type === 'focus' || event.type === 'blur' || event.type === 'change' ||
+    if ((type === 'focus' || event.type === 'blur'
+         || event.type === 'change' ||
          event.type === 'submit') && ! event.synthetic) {
       if (event.type === 'submit')
         event.returnValue = false; // block all native submits, we will submit

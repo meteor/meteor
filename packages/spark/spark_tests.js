@@ -62,6 +62,14 @@ var eventmap = function (/*args*/) {
 
 Tinytest.add("spark - assembly", function (test) {
 
+  var furtherCanon = function(str) {
+    // further canonicalize innerHTML in IE by adding close
+    // li tags to "<ul><li>one<li>two<li>three</li></ul>"
+    return str.replace(/<li>(\w*)(?=<li>)/g, function(s) {
+      return s+"</li>";
+    });
+  };
+
   var doTest = function (calc) {
     var frag = Spark.render(function () {
       return calc(function (str, expected) {
@@ -77,13 +85,14 @@ Tinytest.add("spark - assembly", function (test) {
       return str;
     });
     var f = WrappedFrag(frag);
-    test.equal(f.html(), html);
+    test.equal(furtherCanon(f.html()), html);
 
     var actualGroups = [];
     var tempRange = new LiveRange(Spark._TAG, frag);
     tempRange.visit(function (isStart, rng) {
       if (! isStart && rng.type === Spark._ANNOTATION_DATA)
-        actualGroups.push(DomUtils.rangeToHtml(rng.firstNode(), rng.lastNode()));
+        actualGroups.push(furtherCanon(canonicalizeHtml(
+          DomUtils.rangeToHtml(rng.firstNode(), rng.lastNode()))));
     });
     test.equal(actualGroups.join(','), groups.join(','));
   };
@@ -595,7 +604,7 @@ Tinytest.add("spark - data context", function (test) {
 
   var testData = function (serialized, htmlFunc) {
     test.equal(traverse(Spark.render(htmlFunc)), serialized);
-  }
+  };
 
   testData("_", function () {
     return "hi";
@@ -640,7 +649,7 @@ Tinytest.add("spark - data context", function (test) {
   });
 
   testData("1_2", function () {
-    return Spark.setDataContext(d1, "hi") + " " +
+    return Spark.setDataContext(d1, "hi") + "-" +
       Spark.setDataContext(d2, "there");
   });
 
@@ -649,7 +658,7 @@ Tinytest.add("spark - data context", function (test) {
       Spark.setDataContext(d1, "<div></div>") +
       Spark.setDataContext(d2, "<div><div></div></div>") +
       "<div></div>" +
-      Spark.setDataContext(d3, "<div></div") +
+      Spark.setDataContext(d3, "<div></div>") +
       "<div><div></div></div>" +
       Spark.setDataContext(d4, "<div>" +
                            Spark.setDataContext(d5, "<div></div>") +
@@ -934,8 +943,8 @@ Tinytest.add("spark - event handling", function (test) {
   Meteor.flush();
 
   // "deep reach" from high node down to replaced low node.
-  // Tests that attach_secondary_events actually does the
-  // right thing in IE.  Also tests change event bubbling
+  // Tests that events are registered correctly to work in
+  // old IE.  Also tests change event bubbling
   // and proper interpretation of event maps.
   event_buf.length = 0;
   R = ReactiveVar('foo');
@@ -2959,11 +2968,11 @@ Tinytest.add("spark - isolate inside landmark", function (test) {
   }));
 
   var foo1 = d.node().firstChild;
-  test.equal(d.node().lastChild.nodeValue, '1');
+  test.equal(d.node().firstChild.nextSibling.nodeValue, '1');
   R.set(2);
   Meteor.flush();
   var foo2 = d.node().firstChild;
-  test.equal(d.node().lastChild.nodeValue, '2');
+  test.equal(d.node().firstChild.nextSibling.nodeValue, '2');
   test.isTrue(foo1 === foo2);
   d.kill();
   Meteor.flush();
@@ -2985,10 +2994,12 @@ Tinytest.add("spark - isolate inside landmark", function (test) {
   }));
 
   var foo1 = DomUtils.find(d.node(), '.foo');
+  test.equal(foo1.nodeName, 'HR');
   test.equal(foo1.nextSibling.nodeValue, '1');
   R.set(2);
   Meteor.flush();
   var foo2 = DomUtils.find(d.node(), '.foo');
+  test.equal(foo2.nodeName, 'HR');
   test.equal(foo2.nextSibling.nodeValue, '2');
   test.isTrue(foo1 === foo2);
   d.kill();
