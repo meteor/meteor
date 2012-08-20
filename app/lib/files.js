@@ -175,7 +175,8 @@ var files = module.exports = {
   // an installation.)
   in_checkout: function () {
     try {
-      if (path.existsSync(path.join(__dirname, "../../.git")))
+      if (path.existsSync(path.join(__dirname, "../../.git")) ||
+          path.existsSync(path.join(__dirname, "../../.gitignore")))
         return true;
     } catch (e) { console.log(e);}
 
