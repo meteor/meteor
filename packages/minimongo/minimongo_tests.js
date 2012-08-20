@@ -532,6 +532,14 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({"a.b": /a/}, {a: {b: "cat"}});
   nomatch({"a.b": /a/}, {a: {b: "dog"}});
 
+  // trying to access a dotted field that is undefined at some point
+  // down the chain
+  nomatch({"a.b": 1}, {x: 2});
+  nomatch({"a.b.c": 1}, {a: {x: 2}});
+  nomatch({"a.b.c": 1}, {a: {b: {x: 2}}});
+  nomatch({"a.b.c": 1}, {a: {b: 1}});
+  nomatch({"a.b.c": 1}, {a: {b: 0}});
+
   // dotted keypaths: literal objects
   match({"a.b": {c: 1}}, {a: {b: {c: 1}}});
   nomatch({"a.b": {c: 1}}, {a: {b: {c: 2}}});

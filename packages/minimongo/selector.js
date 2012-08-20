@@ -384,20 +384,22 @@ LocalCollection._exprForKeypathPredicate = function (keypath, value, literals) {
   }
 
   // now, deal with the orthogonal concern of dotted.key.paths and the
-  // (potentially multi-level) array searching they require
+  // (potentially multi-level) array searching they require.
+  // while at it, make sure to not throw an exception if we hit undefined while
+  // drilling down through the dotted parts
   var ret = '';
   var innermost = true;
   while (keyparts.length) {
     var part = keyparts.pop();
     var formal = keyparts.length ? "x" : "doc";
     if (innermost) {
-      ret = '(function(x){return ' + predcode + ';})(' + formal + '[' +
+      ret = '(function(x){return ' + predcode + ';})(' + formal + '&&' + formal + '[' +
         JSON.stringify(part) + '])';
       innermost = false;
     } else {
       // for all but the innermost level of a dotted expression,
       // if the runtime type is an array, search it
-      ret = 'f._matches(' + formal + '[' + JSON.stringify(part) +
+      ret = 'f._matches(' + formal + '&&' + formal + '[' + JSON.stringify(part) +
         '], function(x){return ' + ret + ';})';
     }
   }
