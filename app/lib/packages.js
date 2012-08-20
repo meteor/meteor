@@ -84,10 +84,10 @@ _.extend(Package.prototype, {
   init_from_library: function (name) {
     var self = this;
     self.name = name;
-    self.source_root = path.join(__dirname, '../../packages', name);
+    self.source_root = files.get_package_dir(name);
     self.serve_root = path.join('/packages', name);
-
-    var fullpath = path.join(files.get_package_dir(), name, 'package.js');
+    
+    var fullpath = path.join(self.source_root, 'package.js');
     var code = fs.readFileSync(fullpath).toString();
     // \n is necessary in case final line is a //-comment
     var wrapped = "(function(Package,require){" + code + "\n})";
@@ -266,12 +266,14 @@ var packages = module.exports = {
   // a package object.
   list: function () {
     var ret = {};
-    var dir = files.get_package_dir();
-    _.each(fs.readdirSync(dir), function (name) {
-      // skip .meteor directory
-      if (path.existsSync(path.join(dir, name, 'package.js')))
-        ret[name] = packages.get(name);
-    });
+    
+    _.each(files.get_package_dirs(), function(dir) {
+      _.each(fs.readdirSync(dir), function (name) {
+        // skip .meteor directory
+        if (path.existsSync(path.join(dir, name, 'package.js')))
+          ret[name] = packages.get(name);
+      });      
+    })
 
     return ret;
   },
