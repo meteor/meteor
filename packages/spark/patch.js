@@ -370,9 +370,12 @@ Spark._Patcher._copyAttributes = function(tgt, src) {
     // Record for later whether this is a radio button.
     isRadio = (tgt.type === 'radio');
     // Clearing the attributes of a checkbox won't necessarily
-    // uncheck it, eg in FF12, so we uncheck explicitly.
-    if (typeof tgt.checked === "boolean")
+    // uncheck it, eg in FF12, so we uncheck explicitly
+    // (if necessary; we don't want to generate spurious
+    // propertychange events in old IE).
+    if (tgt.checked === true && src.checked === false) {
       tgt.checked = false;
+    }
   }
 
   for(var i=tgtAttrs.length-1; i>=0; i--) {
@@ -442,8 +445,7 @@ Spark._Patcher._copyAttributes = function(tgt, src) {
 
     tgt.mergeAttributes(src);
 
-    if (typeof tgt.checked !== "undefined" ||
-        typeof src.checked !== "undefined")
+    if (typeof tgt.checked !== "undefined" && src.checked)
       tgt.checked = src.checked;
 
     if (src.name)
