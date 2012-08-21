@@ -75,11 +75,8 @@
     var service = Meteor.accounts.oauth._services[serviceName];
 
     // Skip everything if there's no service set by the oauth middleware
-    // XXX should we instead throw an error?
-    if (!service) {
-      next();
-      return;
-    }
+    if (!service)
+      throw new Error("Unexpected OAuth service " + serviceName);
 
     // Make sure we're configured
     ensureConfigured(serviceName);
