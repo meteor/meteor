@@ -1,6 +1,9 @@
 (function () {
   var connect = __meteor_bootstrap__.require("connect");
 
+  // A place to store request tokens pending verification
+  Meteor.accounts.oauth1._requestTokens = {};
+
   // connect middleware
   Meteor.accounts.oauth1._handleRequest = function (service, query, res) {
 
@@ -8,7 +11,7 @@
     // This way the subsequent call to the `login` method will be
     // immediate.
 
-    var config = Meteor.accounts[serviceName];
+    var config = Meteor.accounts[service.serviceName];
     var oauth = new OAuth1(config);
 
     // If we get here with a callback url we need a request token to
@@ -17,6 +20,9 @@
 
       // Get a request token to start auth process
       oauth.getRequestToken(query.callbackUrl);
+
+      // Keep track of request token so we can verify it on the next step
+      Meteor.accounts.oauth1._requestTokens[query.state] = oauth.requestToken;
 
       var redirectUrl = config._urls.authenticate + '?oauth_token=' + oauth.requestToken;
       res.writeHead(302, {'Location': redirectUrl});
@@ -27,13 +33,15 @@
 
     } else {
 
-      // XXX Twitter's docs say to check that oauth_token is the
-      // same as the request token received in previous step
+      // Get the user's request token so we can verify it and clear it
+      var requestToken = Meteor.accounts.oauth1._requestTokens[query.state];
+      delete Meteor.accounts.oauth1._requestTokens[query.state];
 
-      if (query.oauth_token) {
-        // The user authorized access
+      // Verify user authorized access and the oauth_token matches 
+      // the requestToken from previous step
+      if (query.oauth_token && query.oauth_token === requestToken) {
 
-        // Get the oauth token for signing requests
+        // Get the access token for signing requests
         oauth.getAccessToken(query);
 
         // Get or create user id
