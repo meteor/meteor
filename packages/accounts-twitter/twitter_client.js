@@ -5,7 +5,7 @@
 
     var state = Meteor.uuid();
     var callbackUrl = Meteor.accounts.twitter._appUrl + '/_oauth/twitter?close&state=' + state;
-    var url = '/_oauth/twitter/request_token?callbackUrl=' + encodeURIComponent(callbackUrl)
+    var url = '/_oauth/twitter/request_token?callbackUrl=' + encodeURIComponent(callbackUrl) + '&state=' + state
 
     Meteor.accounts.oauth.initiateLogin(state, url);
   };
