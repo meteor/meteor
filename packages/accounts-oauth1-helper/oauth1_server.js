@@ -1,9 +1,6 @@
 (function () {
   var connect = __meteor_bootstrap__.require("connect");
 
-  // XXX probably need to catch exceptions here as we do in oauth2_server.js
-  // or put that in oauth_server.js instead
-
   // connect middleware
   Meteor.accounts.oauth1._handleRequest = function (service, query, res) {
 
