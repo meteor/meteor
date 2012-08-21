@@ -4,7 +4,7 @@
   // XXX probably need to catch exceptions here as we do in oauth2_server.js
   // or put that in oauth_server.js instead
 
-  // A place to cache request tokens pending verification
+  // A place to store request tokens pending verification
   Meteor.accounts.oauth1._requestTokens = {};
 
   // connect middleware
