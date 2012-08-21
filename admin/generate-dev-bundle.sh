@@ -41,7 +41,8 @@ elif [[ "$UNAME" == CYGWIN* || "$UNAME" == MINGW* ]] ; then
 	command -v unzip >/dev/null 2>&1 || { echo >&2 "I require 'unzip' but it's not installed. Aborting."; exit 1; }
 	command -v tar >/dev/null 2>&1 || { echo >&2 "I require 'tar' but it's not installed. Aborting."; exit 1; }
 
-	MONGO_NAME="mongodb-win32-x86_64-2008plus-2.0.5"
+        # XXX Can be adapted to support both 32-bit and 64-bit, currently supports only 32-bit (2 GB memory limit).
+	MONGO_NAME="mongodb-win32-i386-2.0.7"
 	MONGO_URL="http://downloads.mongodb.org/win32/${MONGO_NAME}.zip"
 else
     echo "This OS not yet supported"
