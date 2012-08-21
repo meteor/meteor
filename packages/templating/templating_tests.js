@@ -504,8 +504,9 @@ Tinytest.add("templating - matching in list", function (test) {
   _.extend(Template.test_listmatching_a1, {
     create: function () { buf.push('+'); },
     render: function () {
-      var letter = DomUtils.rangeToHtml(this.firstNode,
-                                        this.lastNode).match(/\S+/)[0];
+      var letter = canonicalizeHtml(
+        DomUtils.rangeToHtml(this.firstNode,
+                             this.lastNode).match(/\S+/)[0]);
       buf.push('*'+letter);
     },
     destroy: function () { buf.push('-'); }
@@ -636,7 +637,8 @@ Tinytest.add("templating - preserve", function (test) {
 
   var div = OnscreenDiv(Meteor.render(tmpl));
   Meteor.flush();
-  test.equal(div.node().lastChild.nodeValue.match(/\S+/)[0], 'foo');
+  test.equal(DomUtils.find(div.node(), 'u').firstChild.nodeValue.match(
+      /\S+/)[0], 'foo');
   var spans1 = {};
   _.each(DomUtils.findAll(div.node(), 'span'), function (sp) {
     spans1[sp.className] = sp;
@@ -644,7 +646,8 @@ Tinytest.add("templating - preserve", function (test) {
 
   R.set('bar');
   Meteor.flush();
-  test.equal(div.node().lastChild.nodeValue.match(/\S+/)[0], 'bar');
+  test.equal(DomUtils.find(div.node(), 'u').firstChild.nodeValue.match(
+      /\S+/)[0], 'bar');
   var spans2 = {};
   _.each(DomUtils.findAll(div.node(), 'span'), function (sp) {
     spans2[sp.className] = sp;
@@ -687,14 +690,24 @@ Tinytest.add("templating - helpers", function (test) {
   });
 
   div = OnscreenDiv(Meteor.render(tmpl));
-  test.equal(div.text().match(/\S+/)[0], 'ABC4D');
+  var txt = div.text().match(/\S+/)[0];
+  test.isTrue(txt.match(/^ABC?4D$/));
+  // We don't get 'C' (the ability to name a helper {{toString}})
+  // in IE < 9 because of the famed DontEnum bug.  This could be
+  // fixed but it would require making all the code that handles
+  // the dictionary of helpers be DontEnum-aware.  In practice,
+  // the Object prototype method names (toString, hasOwnProperty,
+  // isPropertyOf, ...) make poor helper names and are unlikely
+  // to be used in apps.
+  test.expect_fail();
+  test.equal(txt, 'ABC4D');
   div.kill();
   Meteor.flush();
 
   // test that helpers don't "leak"
   tmpl = Template.test_template_helpers_c;
   div = OnscreenDiv(Meteor.render(tmpl));
-  test.equal(div.text(), '');
+  test.equal(div.text(), 'x');
   div.kill();
   Meteor.flush();
 });
