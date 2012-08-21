@@ -54,7 +54,8 @@ Tinytest.add("oauth2 - error in user creation", function (test) {
   var email = Meteor.uuid() + "@example.com";
   var state = Meteor.uuid();
 
-  // XXX this shouldn't be necessary
+  // XXX can we make this unnecessary? Not totally sold on _requireConfigs
+  // yet, but maybe I'm just being overly delicate.
   Meteor.accounts.failbook = {};
   Meteor.accounts.failbook._requireConfigs = [];
   Meteor.accounts.failbook._secret = 'XXX';
