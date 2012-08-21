@@ -129,6 +129,24 @@
       throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts." + serviceName + ".setSecret first");
   };
 
+  Meteor.accounts.oauth._renderOauthResults = function(res, query) {
+    // We support ?close and ?redirect=URL. Any other query should
+    // just serve a blank page
+    if ('close' in query) { // check with 'in' because we don't set a value
+      // Close the popup window
+      res.writeHead(200, {'Content-Type': 'text/html'});
+      var content =
+            '<html><head><script>window.close()</script></head></html>';
+      res.end(content, 'utf-8');
+    } else if (query.redirect) {
+      res.writeHead(302, {'Location': query.redirect});
+      res.end();
+    } else {
+      res.writeHead(200, {'Content-Type': 'text/html'});
+      res.end('', 'utf-8');
+    }
+  };
+
 })();
 
 
