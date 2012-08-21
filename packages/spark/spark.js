@@ -30,6 +30,7 @@
 Spark = {};
 
 Spark._currentRenderer = new Meteor.EnvironmentVariable;
+Spark._eventsDisabled = new Meteor.EnvironmentVariable;
 
 Spark._TAG = "_spark_" + Meteor.uuid();
 // XXX document contract for each type of annotation?
@@ -546,8 +547,14 @@ Spark.renderToRange = function (range, htmlFunc) {
     // inside constant regions whose DOM nodes we are going
     // to preserve untouched
     Spark.finalize(start, end);
-    Spark._patch(start.parentNode, frag, start.previousSibling,
-                 end.nextSibling, preservations, results);
+    // Disable events during patching.  If we don't do this, patching
+    // a checkbox in old IE will cause "change" events to fire on the
+    // partially-patched DOM.  Since the liverange tree needn't be
+    // well-formed, delivering events mid-patch is never right.
+    Spark._eventsDisabled.withValue(true, function () {
+      Spark._patch(start.parentNode, frag, start.previousSibling,
+                   end.nextSibling, preservations, results);
+    });
   });
 
   _.each(results.regionPreservations, function (landmarkRange) {
@@ -608,6 +615,9 @@ var getListener = function () {
       // before delivering events to the user. We precompute the list
       // of enclosing liveranges to defend against the case where user
       // event handlers change the DOM.
+
+      if (Spark._eventsDisabled.get())
+        return;
 
       var ranges = [];
       var walk = findRangeOfType(Spark._ANNOTATION_EVENTS,
