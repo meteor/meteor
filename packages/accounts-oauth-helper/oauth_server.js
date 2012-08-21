@@ -76,7 +76,6 @@
 
     // Skip everything if there's no service set by the oauth middleware
     // XXX should we instead throw an error?
-    // XXX we should catch all exceptions here as we do in oauth2_server.js
     if (!service) {
       next();
       return;
@@ -85,12 +84,27 @@
     // Make sure we're configured
     ensureConfigured(serviceName);
 
-    if (service.version === 1)
-      Meteor.accounts.oauth1._handleRequest(service, req.query, res);
-    else if (service.version === 2)
-      Meteor.accounts.oauth2._handleRequest(service, req.query, res);
-    else
-      throw new Error("Unexpected OAuth version " + service.version);
+    try {
+      if (service.version === 1)
+        Meteor.accounts.oauth1._handleRequest(service, req.query, res);
+      else if (service.version === 2)
+        Meteor.accounts.oauth2._handleRequest(service, req.query, res);
+      else
+        throw new Error("Unexpected OAuth version " + service.version);
+    } catch (err) {
+      // if we got thrown an error, save it off, it will get passed to
+      // the approporiate login call (if any) and reported there.
+      //
+      // The other option would be to display it in the popup tab that
+      // is still open at this point, ignoring the 'close' or 'redirect'
+      // we were passed. But then the developer wouldn't be able to
+      // style the error or react to it in any way.
+      if (req.query.state && err instanceof Error)
+        Meteor.accounts.oauth._loginResultForState[req.query.state] = err;
+
+      // also log to the server console, so the developer sees it.
+      Meteor._debug("Exception in oauth" + service.version + " handler", err);
+    }
   };
 
   // Handle _oauth paths, gets a bunch of stuff ready for the oauth implementation middleware
