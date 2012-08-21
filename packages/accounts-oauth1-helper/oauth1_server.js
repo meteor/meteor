@@ -1,9 +1,6 @@
 (function () {
   var connect = __meteor_bootstrap__.require("connect");
 
-  // XXX probably need to catch exceptions here as we do in oauth2_server.js
-  // or put that in oauth_server.js instead
-
   // A place to store request tokens pending verification
   Meteor.accounts.oauth1._requestTokens = {};
 
@@ -49,7 +46,8 @@
 
         // Get or create user id
         var oauthResult = service.handleOauthRequest(oauth);
-        var userId = Meteor.accounts.updateOrCreateUser(oauthResult.options, oauthResult.extra);
+        var userId = Meteor.accounts.updateOrCreateUser(
+          oauthResult.options, oauthResult.extra);
 
         // Generate and store a login token for reconnect
         // XXX this could go in accounts_server.js instead
