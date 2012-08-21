@@ -41,7 +41,8 @@
 
         // Get or create user id
         var oauthResult = service.handleOauthRequest(oauth);
-        var userId = Meteor.accounts.updateOrCreateUser(oauthResult.options, oauthResult.extra);
+        var userId = Meteor.accounts.updateOrCreateUser(
+          oauthResult.options, oauthResult.extra);
 
         // Generate and store a login token for reconnect
         // XXX this could go in accounts_server.js instead
