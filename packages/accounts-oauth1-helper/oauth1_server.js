@@ -11,7 +11,7 @@
     // This way the subsequent call to the `login` method will be
     // immediate.
 
-    var config = Meteor.accounts[serviceName];
+    var config = Meteor.accounts[service.serviceName];
     var oauth = new OAuth1(config);
 
     // If we get here with a callback url we need a request token to
