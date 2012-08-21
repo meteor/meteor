@@ -541,7 +541,7 @@ Spark.renderToRange = function (range, htmlFunc) {
 
   var results = {};
 
-  // patch (using preservations)
+  // Patch! (using preservations)
   range.operate(function (start, end) {
     // XXX this will destroy all liveranges, including ones
     // inside constant regions whose DOM nodes we are going
@@ -549,8 +549,8 @@ Spark.renderToRange = function (range, htmlFunc) {
     Spark.finalize(start, end);
     // Disable events during patching.  If we don't do this, patching
     // a checkbox in old IE will cause "change" events to fire on the
-    // partially-patched DOM.  Since the liverange tree needn't be
-    // well-formed, delivering events mid-patch is never right.
+    // partially-patched DOM.  Since the LiveRange tree needn't even
+    // be well-formed, delivering events mid-patch is never right.
     Spark._eventsDisabled.withValue(true, function () {
       Spark._patch(start.parentNode, frag, start.previousSibling,
                    end.nextSibling, preservations, results);

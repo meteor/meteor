@@ -2616,7 +2616,8 @@ Tinytest.add("spark - controls", function(test) {
         // IE 7 is known to fire change events on all
         // the radio buttons with checked=false, as if
         // each button were deselected before selecting
-        // the new one.
+        // the new one.  (Meteor doesn't normalize this
+        // behavior.)
         // However, browsers are consistent if we are
         // getting a checked=true notification.
         var btn = event.target;
