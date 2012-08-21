@@ -6,6 +6,9 @@ var exec = require('child_process').exec;
 var files = module.exports = {
   // A sort comparator to order files into load order.
   sort: function (a, b) {
+    a = a.replace(/\\/g, '/');
+    b = b.replace(/\\/g, '/');
+
     // main.* loaded last
     var ismain_a = (path.basename(a).indexOf('main.') === 0);
     var ismain_b = (path.basename(b).indexOf('main.') === 0);
