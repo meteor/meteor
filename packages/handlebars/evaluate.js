@@ -289,39 +289,50 @@ Handlebars.evaluate = function (ast, data, options) {
       return Handlebars._escape(toString(x));
     };
 
+    var curIndex;
     // Construct a unique key for the current position
     // in the AST.  Since template(...) is invoked recursively,
     // the "PC" (program counter) key is hierarchical, consisting
     // of one or more numbers, for example '0' or '1.3.0.1'.
-    var getPCKey = function(index) {
-      return (basePCKey ? basePCKey+'.' : '') + index;
+    var getPCKey = function() {
+      return (basePCKey ? basePCKey+'.' : '') + curIndex;
+    };
+    var branch = function(name, func) {
+      // Construct a unique branch identifier based on what partial
+      // we're in, what partial or helper we're calling, and our index
+      // into the template AST (essentially the program counter).
+      // If "foo" calls "bar" at index 3, it looks like: bar@foo#3.
+      return Spark.labelBranch(name + "@" + getPCKey(), func);
     };
 
     _.each(elts, function (elt, index) {
+      curIndex = index;
       if (typeof(elt) === "string")
         buf.push(elt);
       else if (elt[0] === '{')
         // {{double stache}}
-        buf.push(maybeEscape(invoke(stack, elt[1])));
+        buf.push(branch(elt[1], function () {
+          return maybeEscape(invoke(stack, elt[1]));
+        }));
       else if (elt[0] === '!')
         // {{{triple stache}}}
-        buf.push(toString(invoke(stack, elt[1] || '')));
+        buf.push(branch(elt[1], function () {
+          return toString(invoke(stack, elt[1] || ''));
+        }));
       else if (elt[0] === '#') {
         // {{#block helper}}
         var block = decorateBlockFn(
           function (data) {
             return template({parent: stack, data: data}, elt[2],
-                            getPCKey(index));
+                            getPCKey());
           }, stack.data);
         block.fn = block;
         block.inverse = decorateBlockFn(
           function (data) {
             return template({parent: stack, data: data}, elt[3] || [],
-                            getPCKey(index));
+                            getPCKey());
           }, stack.data);
-        // construct branch label
-        var branch = elt[1]+"@"+getPCKey(index);
-        var html = Spark.labelBranch(branch, function () {
+        var html = branch(elt[1], function () {
           return toString(invoke(stack, elt[1], block, true));
         });
         buf.push(html);
@@ -330,13 +341,8 @@ Handlebars.evaluate = function (ast, data, options) {
         var partialName = elt[1];
         if (!(partialName in partials))
           throw new Error("No such partial '" + partialName + "'");
-        // Construct a unique branch identifier based on what partial
-        // we're in, what partial we're calling, and our index
-        // into the template AST (essentially the program counter).
-        // If "foo" calls "bar" at index 3, it looks like: bar@foo#3.
-        var branch = partialName+"@"+getPCKey(index);
         // call the partial
-        var html = Spark.labelBranch(branch, function () {
+        var html = branch(partialName, function () {
           return toString(partials[partialName](stack.data));
         });
         buf.push(html);
