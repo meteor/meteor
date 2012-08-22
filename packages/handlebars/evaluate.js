@@ -208,7 +208,7 @@ Handlebars.evaluate = function (ast, data, options) {
     var last = params[params.length - 1];
     var hash = {};
     if (typeof(last) === "object" && !(last instanceof Array)) {
-      // evaluate hash values, which are currently invocations
+      // evaluate hash values, which are found as invocations
       // like [0, "foo"]
       _.each(params.pop(), function(v,k) {
         var result = eval_value(stack, v);
