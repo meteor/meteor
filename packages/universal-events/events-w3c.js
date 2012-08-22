@@ -101,7 +101,7 @@
       var self = this;
       _.each(types, function (type) {
         if (!(--self.typeCounts[type])) {
-          document.removeEventListener(type, self.boundCapturer);
+          document.removeEventListener(type, self.boundCapturer, true);
         }
       });
     },
@@ -131,10 +131,10 @@
 
       // Unbind the handlers later.
       setTimeout(function() {
-        target.removeEventListener(type, this.boundHandler);
+        target.removeEventListener(type, this.boundHandler, false);
         if (bubbles) {
           _.each(ancestors, function(n) {
-            n.removeEventListener(type, this.boundHandler);
+            n.removeEventListener(type, this.boundHandler, false);
           });
         };
       }, 0);
