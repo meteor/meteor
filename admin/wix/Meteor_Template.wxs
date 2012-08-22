@@ -1,38 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-	<Product Name="{{NAME}} {{VERSION}}" Id="*" UpgradeCode="7db9b152-9dd7-4f3c-9eb2-91d63bac445a"
-	Language="1033" Codepage="1252" Version="{{VERSION}}" Manufacturer="Meteor">
-		<Package Id="*" Keywords="Installer" Description="{{NAME}} {{VERSION}} Installer"
-		Comments="Meteor is a set of new technologies for building top-quality web apps in a fraction of the time, whether you're an expert developer or just getting started."
-		Manufacturer="Meteor" InstallerVersion="100" Languages="1033" Compressed="yes" SummaryCodepage="1252"/>
-		<Media Id='1' Cabinet='Meteor.cab' EmbedCab='yes'/>
-		<Directory Id='TARGETDIR' Name='SourceDir'>
-			<Directory Id='ProgramFilesFolder' Name='PFiles'>
-				<Directory Id='INSTALLDIR' Name='Meteor'>
-					<Component Id='Installation' Guid='2e3a08d0-db3e-42dd-bb47-e9a6d067b677'>
-						<CreateFolder/>
-						<Environment Id="PATH" Action="set" Part="last" Name="PATH" Permanent="no" System="yes" Value="[INSTALLDIR];[INSTALLDIR]bin"/>
-						<Environment Id="METEOR_PATH" Action="set" Part="all" Name="METEOR_PATH" Permanent="no" System="yes" Value="[INSTALLDIR]"/>
-						<Environment Id="NODE_PATH" Action="set" Part="all" Name="NODE_PATH" Permanent="no" System="yes" Value="[INSTALLDIR]lib\node_modules"/>
-					</Component>
-				</Directory>
-			</Directory>
-		</Directory>
+    <Product Name="{{NAME}} {{VERSION}}" Id="*" UpgradeCode="7db9b152-9dd7-4f3c-9eb2-91d63bac445a"
+    Language="1033" Codepage="1252" Version="{{VERSION}}" Manufacturer="Meteor">
+        <Package Id="*" Keywords="Installer" Description="{{NAME}} {{VERSION}} Installer"
+        Comments="Meteor is a set of new technologies for building top-quality web apps in a fraction of the time, whether you're an expert developer or just getting started."
+        Manufacturer="Meteor" InstallerVersion="100" Languages="1033" Compressed="yes" SummaryCodepage="1252"/>
+        <Media Id='1' Cabinet='Meteor.cab' EmbedCab='yes'/>
+        <Directory Id='TARGETDIR' Name='SourceDir'>
+            <Directory Id='ProgramFilesFolder' Name='PFiles'>
+                <Directory Id='INSTALLDIR' Name='Meteor'>
+                    <Component Id='Installation' Guid='2e3a08d0-db3e-42dd-bb47-e9a6d067b677'>
+                        <CreateFolder/>
+                        <Environment Id="PATH" Action="set" Part="last" Name="PATH" Permanent="no" System="yes" Value="[INSTALLDIR];[INSTALLDIR]bin"/>
+                        <Environment Id="METEOR_PATH" Action="set" Part="all" Name="METEOR_PATH" Permanent="no" System="yes" Value="[INSTALLDIR]"/>
+                        <Environment Id="NODE_PATH" Action="set" Part="all" Name="NODE_PATH" Permanent="no" System="yes" Value="[INSTALLDIR]lib\node_modules"/>
+                    </Component>
+                </Directory>
+            </Directory>
+        </Directory>
 {{FILES}}
-		<Feature Id='Meteor' Level='1'>
-			<ComponentGroupRef Id='Meteor'/>
-		</Feature>
-		<Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
-		<WixVariable Id="WixUILicenseRtf" Value="admin\\wix\\extra\\license.rtf" />
-		<WixVariable Id="WixUIBannerBmp" Value="admin\\wix\\extra\\banner.bmp" />
-		<WixVariable Id="WixUIDialogBmp" Value="admin\\wix\\extra\\dialog.bmp" />
-		<UIRef Id="WixUI_InstallDir" />
-		<Property Id="PREVIOUSVERSIONSINSTALLED" Secure="yes"/>
-		<Upgrade Id="7db9b152-9dd7-4f3c-9eb2-91d63bac445a">
-			<UpgradeVersion Minimum="0.0.0" Maximum="{{PREV_VERSION}}" Property="PREVIOUSVERSIONSINSTALLED" IncludeMinimum="yes" IncludeMaximum="yes"/>
-		</Upgrade>
-		<InstallExecuteSequence>
-			<RemoveExistingProducts Before="InstallInitialize"/>
-		</InstallExecuteSequence>
-	</Product>
+        <Feature Id='Meteor' Level='1'>
+            <ComponentGroupRef Id='Meteor'/>
+        </Feature>
+        <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
+        <WixVariable Id="WixUILicenseRtf" Value="admin\\wix\\extra\\license.rtf" />
+        <WixVariable Id="WixUIBannerBmp" Value="admin\\wix\\extra\\banner.bmp" />
+        <WixVariable Id="WixUIDialogBmp" Value="admin\\wix\\extra\\dialog.bmp" />
+        <UIRef Id="WixUI_InstallDir" />
+        <Property Id="PREVIOUSVERSIONSINSTALLED" Secure="yes"/>
+        <Upgrade Id="7db9b152-9dd7-4f3c-9eb2-91d63bac445a">
+            <UpgradeVersion Minimum="0.0.0" Maximum="{{PREV_VERSION}}" Property="PREVIOUSVERSIONSINSTALLED" IncludeMinimum="yes" IncludeMaximum="yes"/>
+        </Upgrade>
+        <InstallExecuteSequence>
+            <RemoveExistingProducts Before="InstallInitialize"/>
+        </InstallExecuteSequence>
+    </Product>
 </Wix>

@@ -349,7 +349,8 @@ _.extend(DependencyWatcher.prototype, {
                      _.bind(self._scan, self, false, filepath));
         self.watches[filepath] = function() { fs.unwatchFile(filepath); };
       } else {
-        // fs.watchFile doesn't work for directories (as tested on ubuntu, but works on win32)
+        // fs.watchFile doesn't work for directories (as tested on ubuntu)
+        //              and also doesn't work on win32
         var watch = fs.watch(filepath, {interval: 500}, // poll a lot!
                      _.bind(self._scan, self, false, filepath));
         self.watches[filepath] = function() { watch.close(); };

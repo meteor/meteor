@@ -256,7 +256,7 @@ var files = module.exports = {
   mkdir_p: function (dir, mode) {
     var p = path.resolve(dir);
     var ps_tmp = path.normalize(p).replace(/\\/g, '/');
-	 var ps = ps_tmp.split('/');
+    var ps = ps_tmp.split('/');
 
     if (path.existsSync(p)) {
       if (fs.statSync(p).isDirectory()) { return true;}

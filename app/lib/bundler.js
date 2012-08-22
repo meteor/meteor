@@ -500,7 +500,7 @@ _.extend(Bundle.prototype, {
       } else
         fs.symlinkSync(path.join(files.get_dev_bundle(), 'lib/node_modules'),
                      path.join(build_path, 'server/node_modules'), 'dir');
-	}
+    }
     else if (dev_bundle_mode === "copy")
       files.cp_r((process.platform !== "win32" ? path.join(files.get_dev_bundle(), 'lib/node_modules') : process.env.NODE_PATH),
                  path.join(build_path, 'server/node_modules'),
