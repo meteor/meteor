@@ -1473,7 +1473,7 @@ Tinytest.add("spark - bad labels", function(test) {
 });
 
 
-Tinytest.add("spark - landmark preserve", function(test) {
+Tinytest.add("spark - landmark patching", function(test) {
 
   var rand;
 
@@ -1602,8 +1602,10 @@ Tinytest.add("spark - landmark preserve", function(test) {
 
     var R = ReactiveVar(false);
     var structure = randomNodeList(null, 6);
-    var frag = WrappedFrag(renderWithLegacyLabels(function () {
-      return nodeListToHtml(structure, R.get());
+    var frag = WrappedFrag(Meteor.render(function () {
+      return Spark.createLandmark({ preserve: legacyLabels }, function () {
+        return nodeListToHtml(structure, R.get());
+      });
     })).hold();
     test.equal(frag.html(), nodeListToHtml(structure, false) || "<!---->");
     fillInElementIdentities(structure, frag.node());
