@@ -3423,3 +3423,32 @@ Tinytest.add("spark - landmark arg", function (test) {
   div.kill();
   Meteor.flush();
 });
+
+Tinytest.add("spark - landmark preserve", function (test) {
+  var R = ReactiveVar("foo");
+
+  var lmhr = function () {
+    return Spark.createLandmark({preserve:['hr']}, function () {
+      return '<hr/>';
+    });
+  };
+
+  var div = OnscreenDiv(Meteor.render(function () {
+    return "<div><span>" + R.get() + "</span>" +
+      Spark.labelBranch('A', lmhr) + Spark.labelBranch('B', lmhr) +
+      "</div>";
+  }));
+
+  test.equal(div.html(), '<div><span>foo</span><hr><hr></div>');
+  var hrs1 = DomUtils.findAll(div.node(), 'hr');
+  R.set("bar");
+  Meteor.flush();
+  test.equal(div.html(), '<div><span>bar</span><hr><hr></div>');
+  var hrs2 = DomUtils.findAll(div.node(), 'hr');
+
+  test.isTrue(hrs1[0] === hrs2[0]);
+  test.isTrue(hrs1[1] === hrs2[1]);
+
+  div.kill();
+  Meteor.flush();
+});

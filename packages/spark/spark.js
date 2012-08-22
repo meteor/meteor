@@ -387,9 +387,12 @@ var PreservationController = function () {
 };
 
 _.extend(PreservationController.prototype, {
-  addRoot: function (context, preserve, fromRange, toRange) {
+  // Specify preservations that should be in effect on a fromRange/toRange
+  // pair.  If specified, `optContextNode` should be an ancestor node of
+  // fromRange that selectors are to be considered relative to.
+  addRoot: function (preserve, fromRange, toRange, optContextNode) {
     var self = this;
-    self.roots.push({ context: context, preserve: preserve,
+    self.roots.push({ context: optContextNode, preserve: preserve,
                       fromRange: fromRange, toRange: toRange});
   },
 
@@ -407,6 +410,7 @@ _.extend(PreservationController.prototype, {
     var preservations = _.clone(self.regionPreservations);
 
     var visitLabeledNodes = function (context, clipRange, nodeLabeler, selector, func) {
+      context = (context || clipRange.containerNode());
       var nodes = DomUtils.findAllClipped(
         context, selector, clipRange.firstNode(), clipRange.lastNode());
 
@@ -414,16 +418,18 @@ _.extend(PreservationController.prototype, {
         var label = nodeLabeler(n);
         label && func(n, label);
       });
-  };
+    };
 
     // Find the old incarnation of each of the preserved nodes
     _.each(self.roots, function (root) {
       root.fromNodesByLabel = {};
       _.each(root.preserve, function (nodeLabeler, selector) {
         root.fromNodesByLabel[selector] = {};
-        visitLabeledNodes(root.context, root.fromRange, nodeLabeler, selector, function (n, label) {
-          root.fromNodesByLabel[selector][label] = n;
-        });
+        visitLabeledNodes(
+          root.context, root.fromRange, nodeLabeler, selector,
+          function (n, label) {
+            root.fromNodesByLabel[selector][label] = n;
+          });
       });
     });
 
@@ -520,8 +526,7 @@ Spark.renderToRange = function (range, htmlFunc) {
         if (landmarkRange.constant)
           pc.addConstantRegion(notes.originalRange, landmarkRange);
 
-        pc.addRoot(notes.originalRange.containerNode(),
-                   landmarkRange.preserve,
+        pc.addRoot(landmarkRange.preserve,
                    notes.originalRange, landmarkRange);
       }
     });
@@ -530,8 +535,7 @@ Spark.renderToRange = function (range, htmlFunc) {
   // updated region
   var walk = range;
   while ((walk = findParentOfType(Spark._ANNOTATION_LANDMARK, walk)))
-    pc.addRoot(walk.containerNode(), walk.preserve,
-               range, tempRange);
+    pc.addRoot(walk.preserve, range, tempRange, walk.containerNode());
 
   // compute preservations (must do this before destroying tempRange)
   var preservations = pc.computePreservations(range, tempRange);
