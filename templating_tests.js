@@ -458,7 +458,7 @@ Tinytest.add("templating - branch labels", function(test) {
     var data = this;
     var firstRender = true;
     return Spark.createLandmark({ constant: true,
-                                  render: function () {
+                                  rendered: function () {
                                     if (! firstRender)
                                       return;
                                     firstRender = false;
@@ -502,14 +502,14 @@ Tinytest.add("templating - matching in list", function (test) {
 
   var buf = [];
   _.extend(Template.test_listmatching_a1, {
-    create: function () { buf.push('+'); },
-    render: function () {
+    created: function () { buf.push('+'); },
+    rendered: function () {
       var letter = canonicalizeHtml(
         DomUtils.rangeToHtml(this.firstNode,
                              this.lastNode).match(/\S+/)[0]);
       buf.push('*'+letter);
     },
-    destroy: function () { buf.push('-'); }
+    destroyed: function () { buf.push('-'); }
   });
 
   var R = ReactiveVar('foo');
@@ -583,7 +583,7 @@ Tinytest.add("templating - template arg", function (test) {
     }
   };
 
-  Template.test_template_arg_a.create = function() {
+  Template.test_template_arg_a.created = function() {
     var self = this;
     test.isFalse(self.firstNode);
     test.isFalse(self.lastNode);
@@ -591,7 +591,7 @@ Tinytest.add("templating - template arg", function (test) {
     test.throws(function () { return self.findAll("*"); });
   };
 
-  Template.test_template_arg_a.render = function () {
+  Template.test_template_arg_a.rendered = function () {
     var template = this;
     template.firstNode.innerHTML = 'Greetings';
     template.lastNode.innerHTML = 'Line';
@@ -600,7 +600,7 @@ Tinytest.add("templating - template arg", function (test) {
     template.secret = "strawberry "+template.data.food;
   };
 
-  Template.test_template_arg_a.destroy = function() {
+  Template.test_template_arg_a.destroyed = function() {
     var self = this;
     test.isFalse(self.firstNode);
     test.isFalse(self.lastNode);
@@ -749,8 +749,8 @@ Tinytest.add("templating - events", function (test) {
 
 });
 
-Tinytest.add("templating - #each render callback", function (test) {
-  // test that any list modification triggers a render callback on the
+Tinytest.add("templating - #each rendered callback", function (test) {
+  // test that any list modification triggers a rendered callback on the
   // enclosing template
 
   var entries = new LocalCollection();
@@ -763,7 +763,7 @@ Tinytest.add("templating - #each render callback", function (test) {
   var tmpl = Template.test_template_eachrender_a;
   tmpl.helpers({entries: function() {
     return entries.find({}, {sort: ['x']}); }});
-  tmpl.render = function () {
+  tmpl.rendered = function () {
     buf.push(canonicalizeHtml(
       DomUtils.rangeToHtml(this.firstNode, this.lastNode)).replace(/\s/g, ''));
   };
@@ -815,7 +815,7 @@ Tinytest.add("templating - #each render callback", function (test) {
       };
     }};
   }});
-  tmpl.render = function () {
+  tmpl.rendered = function () {
     buf.push(canonicalizeHtml(
       DomUtils.rangeToHtml(this.firstNode, this.lastNode)).replace(/\s/g, ''));
   };
@@ -848,9 +848,9 @@ Tinytest.add("templating - landmarks in helpers", function (test) {
   var tmpl = Template.test_template_landmarks_a;
   tmpl.LM = function () {
     return new Handlebars.SafeString(
-      Spark.createLandmark({create: function () { buf.push('c'); },
-                            render: function () { buf.push('r'); },
-                            destroy: function () { buf.push('d'); }},
+      Spark.createLandmark({created: function () { buf.push('c'); },
+                            rendered: function () { buf.push('r'); },
+                            destroyed: function () { buf.push('d'); }},
                            function () { return 'x'; }));
   };
   tmpl.v = function () {
@@ -884,9 +884,9 @@ Tinytest.add("templating - bare each has no matching", function (test) {
   tmpl.abc = [{}, {}, {}];
   tmpl.LM = function () {
     return new Handlebars.SafeString(
-      Spark.createLandmark({create: function () { buf.push('c'); },
-                            render: function () { buf.push('r'); },
-                            destroy: function () { buf.push('d'); }},
+      Spark.createLandmark({created: function () { buf.push('c'); },
+                            rendered: function () { buf.push('r'); },
+                            destroyed: function () { buf.push('d'); }},
                            function () { return 'x'; }));
   };
   tmpl.v = function () {

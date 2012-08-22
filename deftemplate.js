@@ -46,7 +46,7 @@
   };
 
   // map from landmark id, to the 'this' object for
-  // create/render/destroy callbacks on templates
+  // created/rendered/destroyed callbacks on templates
   var templateInstanceData = {};
 
   var templateObjFromLandmark = function (landmark) {
@@ -112,20 +112,20 @@
 
       var html = Spark.createLandmark({
         preserve: tmplData.preserve || {},
-        create: function () {
+        created: function () {
           var template = templateObjFromLandmark(this);
           template.data = data;
-          tmpl.create && tmpl.create.call(template);
+          tmpl.created && tmpl.created.call(template);
         },
-        render: function () {
+        rendered: function () {
           var template = templateObjFromLandmark(this);
           template.data = data;
-          tmpl.render && tmpl.render.call(template);
+          tmpl.rendered && tmpl.rendered.call(template);
         },
-        destroy: function () {
+        destroyed: function () {
           // template.data is already set from previous callbacks
-          tmpl.destroy &&
-            tmpl.destroy.call(templateObjFromLandmark(this));
+          tmpl.destroyed &&
+            tmpl.destroyed.call(templateObjFromLandmark(this));
           delete templateInstanceData[this.id];
         }
       }, function (landmark) {
