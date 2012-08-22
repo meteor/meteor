@@ -172,6 +172,9 @@ Template.event.get_details = function() {
 
   var prepare = function(details) {
     return _.compact(_.map(details, function(val, key) {
+
+      // You can end up with a an undefined value, e.g. using
+      // isNull without providing a message attribute: isNull(1)
       if (!_.isUndefined(val))
         return {
           key: key,
