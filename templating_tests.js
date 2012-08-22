@@ -19,7 +19,7 @@ Tinytest.add("templating - assembly", function (test) {
   test.equal(canonicalizeHtml(onscreen.innerHTML), "xyhi");
   Session.set("stuff", false);
   Meteor.flush();
-  test.equal(canonicalizeHtml(onscreen.innerHTML), "x<!---->hi");
+  test.equal(canonicalizeHtml(onscreen.innerHTML), "xhi");
   document.body.removeChild(onscreen);
   Meteor.flush();
 });
@@ -794,6 +794,9 @@ Tinytest.add("templating - #each render callback", function (test) {
                    '<div>c</div><div>d</div><div>z</div>']);
   buf.length = 0;
 
+  div.kill();
+  Meteor.flush();
+
   // test pure "moved"
 
   tmpl = Template.test_template_eachrender_b;
@@ -833,4 +836,41 @@ Tinytest.add("templating - #each render callback", function (test) {
   test.equal(buf, ['<div>b</div><div>c</div><div>a</div>']);
   buf.length = 0;
 
+  div.kill();
+  Meteor.flush();
+});
+
+Tinytest.add("templating - landmarks in helpers", function (test) {
+  var buf = [];
+
+  var R = ReactiveVar('foo');
+
+  var tmpl = Template.test_template_landmarks_a;
+  tmpl.LM = function () {
+    return new Handlebars.SafeString(
+      Spark.createLandmark({create: function () { buf.push('c'); },
+                            render: function () { buf.push('r'); },
+                            destroy: function () { buf.push('d'); }},
+                           function () { return 'x'; }));
+  };
+  tmpl.v = function () {
+    return R.get();
+  };
+
+  var div = OnscreenDiv(Meteor.render(tmpl));
+  test.equal(div.text().match(/\S+/)[0], 'xxxxfoo');
+  Meteor.flush();
+  buf.sort();
+  test.equal(buf.join(''), 'ccccrrrr');
+  buf.length = 0;
+
+  R.set('bar');
+  Meteor.flush();
+  test.equal(div.text().match(/\S+/)[0], 'xxxxbar');
+  test.equal(buf.join(''), 'rrrr');
+  buf.length = 0;
+
+  div.kill();
+  Meteor.flush();
+  test.equal(buf.join(''), 'dddd');
 });
