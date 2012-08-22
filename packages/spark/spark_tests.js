@@ -3452,3 +3452,42 @@ Tinytest.add("spark - landmark preserve", function (test) {
   div.kill();
   Meteor.flush();
 });
+
+Tinytest.add("spark - branch annotation is optional", function (test) {
+  // test that labelBranch works on HTML that isn't element-balanced
+  // and doesn't fail by trying to emit an annotation when it contains
+  // no landmarks.
+
+  var R = ReactiveVar("foo");
+
+  var Rget = function () { return R.get(); };
+  var cnst = function (c) { return function () { return c; }; };
+  var lmhr = function () {
+    return Spark.createLandmark({preserve:['hr']}, function () {
+      return '<hr/>';
+    });
+  };
+
+  var div = OnscreenDiv(Meteor.render(function () {
+    return '<div class="' + Spark.labelBranch('A', Rget) + '">' +
+      Spark.labelBranch('B', cnst('</div><div>')) +
+      Spark.labelBranch('C', lmhr) + Spark.labelBranch('D', lmhr) +
+      '</div>';
+  }));
+
+  test.equal(div.html(), '<div class="foo"></div><div><hr><hr></div>');
+  var div1 = div.node().firstChild;
+  var hrs1 = DomUtils.findAll(div.node(), 'hr');
+  R.set("bar");
+  Meteor.flush();
+  test.equal(div.html(), '<div class="bar"></div><div><hr><hr></div>');
+  var div2 = div.node().firstChild;
+  var hrs2 = DomUtils.findAll(div.node(), 'hr');
+
+  test.isFalse(div1 === div2);
+  test.isTrue(hrs1[0] === hrs2[0]);
+  test.isTrue(hrs1[1] === hrs2[1]);
+
+  div.kill();
+  Meteor.flush();
+});
