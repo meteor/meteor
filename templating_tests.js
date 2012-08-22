@@ -874,3 +874,38 @@ Tinytest.add("templating - landmarks in helpers", function (test) {
   Meteor.flush();
   test.equal(buf.join(''), 'dddd');
 });
+
+Tinytest.add("templating - bare each has no matching", function (test) {
+  var buf = [];
+
+  var R = ReactiveVar('foo');
+
+  var tmpl = Template.test_template_bare_each_a;
+  tmpl.abc = [{}, {}, {}];
+  tmpl.LM = function () {
+    return new Handlebars.SafeString(
+      Spark.createLandmark({create: function () { buf.push('c'); },
+                            render: function () { buf.push('r'); },
+                            destroy: function () { buf.push('d'); }},
+                           function () { return 'x'; }));
+  };
+  tmpl.v = function () {
+    return R.get();
+  };
+
+  var div = OnscreenDiv(Meteor.render(tmpl));
+  Meteor.flush();
+  buf.sort();
+  test.equal(buf.join(''), 'cccrrr');
+  buf.length = 0;
+
+  R.set('bar');
+  Meteor.flush();
+  buf.sort();
+  test.equal(buf.join(''), 'cccdddrrr');
+  buf.length = 0;
+
+  div.kill();
+  Meteor.flush();
+  test.equal(buf.join(''), 'ddd');
+});
