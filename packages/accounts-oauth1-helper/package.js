@@ -12,7 +12,6 @@ Package.on_use(function (api) {
 });
 
 Package.on_test(function (api) {
-  // XXX Fix these!
-  // api.use('accounts-oauth1-helper', 'server');
-  // api.add_files("oauth1_tests.js", 'server');
+  api.use('accounts-oauth1-helper', 'server');
+  api.add_files("oauth1_tests.js", 'server');
 });
