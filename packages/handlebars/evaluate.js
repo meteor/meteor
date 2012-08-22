@@ -35,7 +35,8 @@ Handlebars._default_helpers = {
     if (data && data.length > 0)
       return _.map(data, function(x, i) {
         // infer a branch key from the data
-        var branch = (x._id || (typeof x === 'string' ? x : null) || i);
+        var branch = (x._id || (typeof x === 'string' ? x : null) ||
+                      Spark.UNIQUE_LABEL);
         return Spark.labelBranch(branch, function() {
           return options.fn(x);
         });

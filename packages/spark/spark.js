@@ -77,6 +77,15 @@ var notifyWatchers = function (start, end) {
   tempRange.destroy();
 };
 
+Spark._createId = function () {
+  var chars =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+  var id = "";
+  for (var i = 0; i < 8; i++)
+    id += chars.substr(Math.floor(Meteor.random() * 64), 1);
+  return id;
+};
+
 Spark._Renderer = function () {
   // Map from annotation ID to an annotation function, which is called
   // at render time and receives (startNode, endNode).
@@ -104,28 +113,18 @@ Spark._Renderer = function () {
 };
 
 _.extend(Spark._Renderer.prototype, {
-  // The annotation tags that we insert into HTML strings must be
-  // unguessable in order to not create potential cross-site scripting
-  // attack vectors, so we use random strings.  Even a well-written app
-  // that avoids XSS vulnerabilities might, for example, put
-  // unescaped < and > in HTML attribute values, where they are normally
-  // safe.  We can't assume that a string like '<1>' came from us
-  // and not arbitrary user-entered data.
-  createId: function () {
-    var id = "";
-    var chars =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-    for (var i = 0; i < 8; i++) {
-      id += chars.substr(Math.floor(Meteor.random() * 64), 1);
-    }
-    return id;
-  },
-
   // `what` can be a function that takes a LiveRange, or just a set of
   // attributes to add to the liverange.  tag and what are optional.
   // if no tag is passed, no liverange will be created.
   annotate: function (html, type, what, unusedFunc) {
-    var id = (type || '') + ":" + this.createId();
+    // The annotation tags that we insert into HTML strings must be
+    // unguessable in order to not create potential cross-site scripting
+    // attack vectors, so we use random strings.  Even a well-written app
+    // that avoids XSS vulnerabilities might, for example, put
+    // unescaped < and > in HTML attribute values, where they are normally
+    // safe.  We can't assume that a string like '<1>' came from us
+    // and not arbitrary user-entered data.
+    var id = (type || '') + ":" + Spark._createId();
     this.annotations[id] = function (start, end) {
       if (! start) {
         // materialize called us with no args because this annotation
@@ -991,6 +990,8 @@ _.extend(Spark.Landmark.prototype, {
   }
 });
 
+Spark.UNIQUE_LABEL = ['UNIQUE_LABEL'];
+
 // label must be a string.
 // or pass label === null to not drop a label after all (meaning that
 // this function is a noop)
@@ -998,6 +999,9 @@ Spark.labelBranch = function (label, htmlFunc) {
   var renderer = Spark._currentRenderer.get();
   if (! renderer || label === null)
     return htmlFunc();
+
+  if (label === Spark.UNIQUE_LABEL)
+    label = Spark._createId();
 
   renderer.currentBranch.pushLabel(label);
   var html = htmlFunc();

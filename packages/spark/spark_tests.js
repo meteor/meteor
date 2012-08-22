@@ -3491,3 +3491,38 @@ Tinytest.add("spark - branch annotation is optional", function (test) {
   div.kill();
   Meteor.flush();
 });
+
+Tinytest.add("spark - unique label", function (test) {
+  var buf = [];
+  var bufstr = function () {
+    buf.sort();
+    var str = buf.join('');
+    buf.length = 0;
+    return str;
+  };
+
+  var ublm = function () {
+    return Spark.labelBranch(Spark.UNIQUE_LABEL, function () {
+      return Spark.createLandmark({create: function () { buf.push('c'); },
+                                   render: function () { buf.push('r'); },
+                                   destroy: function () { buf.push('d'); }},
+                                  function () { return 'x'; });
+    });
+  };
+
+  var R = ReactiveVar("foo");
+
+  var div = OnscreenDiv(Meteor.render(function () {
+    return ublm() + ublm() + ublm() + R.get();
+  }));
+  Meteor.flush();
+  test.equal(bufstr(), 'cccrrr');
+  R.set('bar');
+  Meteor.flush();
+  test.equal(bufstr(), 'cccdddrrr');
+
+  div.kill();
+  Meteor.flush();
+  test.equal(bufstr(), 'ddd');
+
+});
