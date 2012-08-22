@@ -1,6 +1,6 @@
 if (!Meteor.accounts.twitter) {
   Meteor.accounts.twitter = {};
-  Meteor.accounts.twitter._requireConfigs = ['appId', 'appUrl'];
+  Meteor.accounts.twitter._requireConfigs = ['_appId', '_appUrl'];
 }
 
 Meteor.accounts.twitter.config = function(appId, appUrl, options) {
