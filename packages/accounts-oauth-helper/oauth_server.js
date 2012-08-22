@@ -131,8 +131,7 @@
     var service = Meteor.accounts[serviceName];
 
     _.each(Meteor.accounts[serviceName]._requireConfigs, function(key) {
-      var configKey = '_' + key;
-      if (!service[configKey])
+      if (!service[key])
         throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts." + serviceName + ".config first");
     });
 

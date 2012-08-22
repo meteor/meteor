@@ -1,6 +1,6 @@
 if (!Meteor.accounts.facebook) {
   Meteor.accounts.facebook = {};
-  Meteor.accounts.facebook._requireConfigs = ['appId', 'appUrl'];
+  Meteor.accounts.facebook._requireConfigs = ['_appId', '_appUrl'];
 }
 
 Meteor.accounts.facebook.config = function(appId, appUrl, options) {

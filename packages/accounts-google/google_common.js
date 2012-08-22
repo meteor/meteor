@@ -1,6 +1,6 @@
 if (!Meteor.accounts.google) {
   Meteor.accounts.google = {};
-  Meteor.accounts.google._requireConfigs = ['clientId', 'appUrl'];
+  Meteor.accounts.google._requireConfigs = ['_clientId', '_appUrl'];
 }
 
 Meteor.accounts.google.config = function(clientId, appUrl, options) {
