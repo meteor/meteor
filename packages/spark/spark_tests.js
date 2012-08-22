@@ -1,6 +1,6 @@
 // XXX make sure that when tests use id="..." to trigger patching, "preserve" happens
 // XXX test that events inside constant regions still work after patching
-// XXX test arguments to landmark render callback
+// XXX test arguments to landmark rendered callback
 // XXX test variable wrapping (eg TR vs THEAD) inside each branch of Spark.list?
 
 
@@ -1116,14 +1116,14 @@ Tinytest.add("spark - basic landmarks", function (test) {
     return Spark.isolate(function () {
       return R.get() +
         Spark.createLandmark({
-          create: function () {
+          created: function () {
             x.push("c");
             this.a = X;
           },
-          render: function () {
+          rendered: function () {
             x.push("r", this.a);
           },
-          destroy: function () {
+          destroyed: function () {
             x.push("d", this.a);
           }
         }, function() { return "hi"; });
@@ -1178,17 +1178,17 @@ Tinytest.add("spark - labeled landmarks", function (test) {
       var thisSerial = serial++;
 
       return Spark.createLandmark({
-        create: function () {
+        created: function () {
           x.push("c", id);
           s.push(thisSerial);
           this.id = id;
         },
-        render: function () {
+        rendered: function () {
           x.push("r", id);
           s.push(thisSerial);
           test.equal(this.id, id);
         },
-        destroy: function () {
+        destroyed: function () {
           x.push("d", id);
           s.push(thisSerial);
           test.equal(this.id, id);
@@ -1636,7 +1636,7 @@ Tinytest.add("spark - landmark constant", function(test) {
     R.get(); // create dependency
     return Spark.createLandmark({
       constant: true,
-      render: function() {
+      rendered: function() {
         states.push(this);
       }
     }, function() { return '<b/><i/><u/>'; });
@@ -1681,14 +1681,14 @@ Tinytest.add("spark - landmark constant", function(test) {
                 return Spark.createLandmark(
                   {
                     constant: isConstant,
-                    create: function () {
+                    created: function () {
                       this.crd = [0,0,0];
                       if (! crd)
                         crd = this.crd; // capture first landmark's crd
                       this.crd[0]++;
                     },
-                    render: function () { this.crd[1]++; },
-                    destroy: function () { this.crd[2]++; }
+                    rendered: function () { this.crd[1]++; },
+                    destroyed: function () { this.crd[2]++; }
                   },
                   function() { return hasSpan ?
                                '<span>stuff</span>' : 'blah'; });}) +
@@ -1760,7 +1760,7 @@ Tinytest.add("spark - landmark constant", function(test) {
     });
   });
 
-  // test that constant landmark gets render callback if it
+  // test that constant landmark gets rendered callback if it
   // wasn't preserved.
 
   var renderCount;
@@ -1769,7 +1769,7 @@ Tinytest.add("spark - landmark constant", function(test) {
   R = ReactiveVar('div');
   div = OnscreenDiv(Meteor.render(function () {
     return '<' + R.get() + '>' + Spark.createLandmark(
-      {constant: true, render: function () { renderCount++; }},
+      {constant: true, rendered: function () { renderCount++; }},
       function () {
         return "hi";
       }) +
@@ -2725,7 +2725,7 @@ Tinytest.add("spark - oldschool landmark matching", function(test) {
 
   var testCallbacks = function(theNum /*, extend opts*/) {
     return _.extend.apply(_, [{
-      create: function() {
+      created: function() {
         this.num = String(theNum);
         var howManyBefore = counts[this.num] || 0;
         counts[this.num] = howManyBefore + 1;
@@ -2733,10 +2733,10 @@ Tinytest.add("spark - oldschool landmark matching", function(test) {
           this.num += "*"; // add stars
         buf.push("c"+this.num);
       },
-      render: function(start, end, range) {
+      rendered: function(start, end, range) {
         buf.push("r"+this.num);
       },
-      destroy: function() {
+      destroyed: function() {
         buf.push("d"+this.num);
       }
     }].concat(_.toArray(arguments).slice(1)));
@@ -2814,7 +2814,7 @@ Tinytest.add("spark - oldschool branch keys", function(test) {
   R = ReactiveVar("foo");
   div = OnscreenDiv(Meteor.render(function() {
     return Spark.createLandmark({
-      render: function () { objs.push(true); }
+      rendered: function () { objs.push(true); }
     }, function () { return R.get(); });
   }));
 
@@ -2838,7 +2838,7 @@ Tinytest.add("spark - oldschool branch keys", function(test) {
 
   var testCallbacks = function(theNum /*, extend opts*/) {
     return _.extend.apply(_, [{
-      create: function() {
+      created: function() {
         this.num = String(theNum);
         var howManyBefore = counts[this.num] || 0;
         counts[this.num] = howManyBefore + 1;
@@ -2846,10 +2846,10 @@ Tinytest.add("spark - oldschool branch keys", function(test) {
           this.num += "*"; // add stars
         buf.push("c"+this.num);
       },
-      render: function(start, end, range) {
+      rendered: function(start, end, range) {
         buf.push("on"+this.num);
       },
-      destroy: function() {
+      destroyed: function() {
         buf.push("off"+this.num);
       }
     }].concat(_.toArray(arguments).slice(1)));
@@ -3020,9 +3020,9 @@ Tinytest.add("spark - nested onscreen processing", function (test) {
       return Spark.list(cursor, function () {}, function () {
         return Spark.list(cursor, function () {}, function () {
           return Spark.createLandmark({
-            create: function () { x.push('c'); },
-            render: function () { x.push('r'); },
-            destroy: function () { x.push('d'); }
+            created: function () { x.push('c'); },
+            rendered: function () { x.push('r'); },
+            destroyed: function () { x.push('d'); }
           }, function () { return "hi"; });
         });
       });
@@ -3042,13 +3042,13 @@ Tinytest.add("spark - current landmark", function (test) {
   var callbacks = 0;
   var d = OnscreenDiv(Meteor.render(function () {
     var html = Spark.createLandmark({
-      create: function () {
+      created: function () {
         this.a = 1;
         this.renderCount = 0;
         test.isFalse('b' in this);
         callbacks++;
       },
-      render: function () {
+      rendered: function () {
         test.equal(this.a, 9);
         test.equal(this.b, 2);
         if (this.renderCount === 0)
@@ -3058,7 +3058,7 @@ Tinytest.add("spark - current landmark", function (test) {
         this.renderCount++;
         callbacks++;
       },
-      destroy: function () {
+      destroyed: function () {
         test.equal(this.a, 9);
         test.equal(this.b, 2);
         test.equal(this.c, 3);
@@ -3092,10 +3092,10 @@ Tinytest.add("spark - current landmark", function (test) {
     if (R.get() >= 3) {
       html += Spark.labelBranch('branch', function () {
         var html = Spark.createLandmark({
-          create: function () {
+          created: function () {
             this.outer = true;
           },
-          render: function () {
+          rendered: function () {
             this.renderCount = (this.renderCount || 0) + 1;
           }
         }, function (lm) {
@@ -3104,10 +3104,10 @@ Tinytest.add("spark - current landmark", function (test) {
           test.equal(R.get() - 3, lm.renderCount || 0);
           html += Spark.labelBranch("a", function () {
             var html = Spark.createLandmark({
-              create: function () {
+              created: function () {
                 this.innerA = true;
               },
-              render: function () {
+              rendered: function () {
                 this.renderCount = (this.renderCount || 0) + 1;
               }
             }, function (lm) {
@@ -3123,10 +3123,10 @@ Tinytest.add("spark - current landmark", function (test) {
         if (R.get() === 3 || R.get() >= 5) {
           html += Spark.labelBranch("b", function () {
             var html = Spark.createLandmark({
-              create: function () {
+              created: function () {
                 this.innerB = true;
               },
-              render: function () {
+              rendered: function () {
                 this.renderCount = (this.renderCount || 0) + 1;
               }
             }, function (lm) {
@@ -3220,7 +3220,7 @@ Tinytest.add("spark - find/findAll on landmark", function (test) {
     return "<div id=1>k</div><div id=2>" +
       Spark.labelBranch("a", function () {
         return Spark.createLandmark({
-          create: function () {
+          created: function () {
             test.instanceOf(this, Spark.Landmark);
             if (l1)
               test.equal(l1, this);
@@ -3234,7 +3234,7 @@ Tinytest.add("spark - find/findAll on landmark", function (test) {
                   R.get();
                   return Spark.createLandmark(
                     {
-                      create: function () {
+                      created: function () {
                         test.instanceOf(this, Spark.Landmark);
                         if (l2)
                           test.equal(l2, this);
@@ -3292,9 +3292,9 @@ Tinytest.add("spark - landmark clean-up", function (test) {
   var makeCrd = function () {
     var crd = [0,0,0];
     crd.callbacks = {
-      create: function () { crd[0]++; },
-      render: function () { crd[1]++; },
-      destroy: function () { crd[2]++; }
+      created: function () { crd[0]++; },
+      rendered: function () { crd[1]++; },
+      destroyed: function () { crd[2]++; }
     };
     return crd;
   };
@@ -3345,9 +3345,9 @@ Tinytest.add("spark - bubbling render", function (test) {
   var makeCrd = function () {
     var crd = [0,0,0];
     crd.callbacks = {
-      create: function () { crd[0]++; },
-      render: function () { crd[1]++; },
-      destroy: function () { crd[2]++; }
+      created: function () { crd[0]++; },
+      rendered: function () { crd[1]++; },
+      destroyed: function () { crd[2]++; }
     };
     return crd;
   };
@@ -3388,10 +3388,10 @@ Tinytest.add("spark - bubbling render", function (test) {
 Tinytest.add("spark - landmark arg", function (test) {
   var div = OnscreenDiv(Spark.render(function () {
     return Spark.createLandmark({
-      create: function () {
+      created: function () {
         test.isFalse(this.hasDom());
       },
-      render: function () {
+      rendered: function () {
         var landmark = this;
         landmark.firstNode().innerHTML = 'Greetings';
         landmark.lastNode().innerHTML = 'Line';
@@ -3399,7 +3399,7 @@ Tinytest.add("spark - landmark arg", function (test) {
           (landmark.findAll('b').length)+"-bold";
         test.isTrue(landmark.hasDom());
       },
-      destroy: function () {
+      destroyed: function () {
         test.isFalse(this.hasDom());
       }
     }, function () {
@@ -3503,9 +3503,9 @@ Tinytest.add("spark - unique label", function (test) {
 
   var ublm = function () {
     return Spark.labelBranch(Spark.UNIQUE_LABEL, function () {
-      return Spark.createLandmark({create: function () { buf.push('c'); },
-                                   render: function () { buf.push('r'); },
-                                   destroy: function () { buf.push('d'); }},
+      return Spark.createLandmark({created: function () { buf.push('c'); },
+                                   rendered: function () { buf.push('r'); },
+                                   destroyed: function () { buf.push('d'); }},
                                   function () { return 'x'; });
     });
   };

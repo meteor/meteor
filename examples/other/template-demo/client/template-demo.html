@@ -107,22 +107,22 @@ X={{x}}<br>
   </p>
 
   <p>
-    You can get a <em>create</em> callback when a template is
-    initially rendered; a <em>render</em> when a template is placed on
+    You can get a <em>created</em> callback when a template is
+    initially rendered; a <em>rendered</em> when a template is placed on
     the screen and when any part of the template is redrawn; and
-    a <em>destroy</em> callback when a template is taken across the
+    a <em>destroyed</em> callback when a template is taken across the
     screen. All of these callbacks receive a common <em>template state
     object</em> in 'this' which allows you to attach data to each
     particular instance of a template.
   </p>
 
   <p>
-    In this case, <em>create</em> is used to create a new JavaScript
+    In this case, <em>created</em> is used to create a new JavaScript
     timer that updates the text of a &lt;span&gt; element every
-    second. <em>render</em> is used to find the &lt;span&gt; when it
+    second. <em>rendered</em> is used to find the &lt;span&gt; when it
     appears on the screen, and update the pointer when the
     &lt;span&gt; is redraw (say, when you press Y++ &mdash; since it
-    is not marked to be preserved.) <em>destroy</em> is used to cancel
+    is not marked to be preserved.) <em>destroyed</em> is used to cancel
     the timer when the template goes off the screen.
   </p>
 
@@ -156,7 +156,7 @@ X={{x}}<br>
   <p>
     Meteor fits naturally with the popular d3.js data visualization
     library by Michael Bostock. Just set up d3 from your
-    template's <em>render</em> callback. With Meteor, you can pass
+    template's <em>rendered</em> callback. With Meteor, you can pass
     data directly out of a Mongo query into d3, and your d3
     visualization will update in realtime, with no extra code! Try
     opening this page in two browser windows.

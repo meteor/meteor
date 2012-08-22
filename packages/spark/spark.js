@@ -20,7 +20,7 @@
 // list() returns the expected HTML, Spark.createLandmark creates and
 // then destroys a landmark -- may already be tested?)
 
-// XXX in landmark-demo, if Template.timer.create throws an exception,
+// XXX in landmark-demo, if Template.timer.created throws an exception,
 // then it is never called again, even if you push the 'create a
 // timer' button again. the problem is almost certainly in atFlushTime
 // (not hard to see what it is.)
@@ -342,7 +342,7 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
     // onscreen (possibly not for the first time.)
     _.each(landmarkRanges, function (landmarkRange) {
       if (! landmarkRange.isPreservedConstant)
-        landmarkRange.renderCallback.call(landmarkRange.landmark);
+        landmarkRange.rendered.call(landmarkRange.landmark);
     });
 
     // Deliver render callbacks to all landmarks that enclose the
@@ -356,7 +356,7 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
     // case from the previous
     var walk = renderedRange;
     while ((walk = findParentOfType(Spark._ANNOTATION_LANDMARK, walk)))
-      walk.renderCallback.call(walk.landmark);
+      walk.rendered.call(walk.landmark);
 
     // This code can run several times on the same nodes (if the
     // output of a render is included in a render), so it must be
@@ -891,7 +891,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   var notifyParentsRendered = function () {
     var walk = outerRange;
     while ((walk = findParentOfType(Spark._ANNOTATION_LANDMARK, walk)))
-      walk.renderCallback.call(walk.landmark);
+      walk.rendered.call(walk.landmark);
   };
 
   // The DOM update callbacks.
@@ -1036,9 +1036,9 @@ Spark.createLandmark = function (options, htmlFunc) {
   if (! renderer) {
     // no renderer -- create and destroy Landmark inline
     var landmark = new Spark.Landmark;
-    options.create && options.create.call(landmark);
+    options.created && options.created.call(landmark);
     var html = htmlFunc(landmark);
-    options.destroy && options.destroy.call(landmark);
+    options.destroyed && options.destroyed.call(landmark);
     return html;
   }
 
@@ -1060,11 +1060,11 @@ Spark.createLandmark = function (options, htmlFunc) {
   if (notes.originalRange) {
     if (notes.originalRange.superceded)
       throw new Error("Can't create second landmark in same branch");
-    notes.originalRange.superceded = true; // prevent destroy(), second match
+    notes.originalRange.superceded = true; // prevent destroyed(), second match
     landmark = notes.originalRange.landmark; // the old Landmark
   } else {
     landmark = new Spark.Landmark;
-    options.create && options.create.call(landmark);
+    options.created && options.created.call(landmark);
   }
   notes.landmark = landmark;
 
@@ -1074,13 +1074,13 @@ Spark.createLandmark = function (options, htmlFunc) {
       _.extend(range, {
         preserve: preserve,
         constant: !! options.constant,
-        renderCallback: options.render || function () {},
-        destroyCallback: options.destroy || function () {},
+        rendered: options.rendered || function () {},
+        destroyed: options.destroyed || function () {},
         landmark: landmark,
         finalize: function () {
           if (! this.superceded) {
             this.landmark._range = null;
-            this.destroyCallback.call(this.landmark);
+            this.destroyed.call(this.landmark);
           }
         }
       });
@@ -1089,7 +1089,7 @@ Spark.createLandmark = function (options, htmlFunc) {
       renderer.landmarkRanges.push(range);
     }, function () {
       // "annotation not used" callback
-      options.destroy && options.destroy.call(landmark);
+      options.destroyed && options.destroyed.call(landmark);
     });
 };
 
