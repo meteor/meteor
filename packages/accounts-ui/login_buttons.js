@@ -426,7 +426,10 @@
     return Session.get(JUST_VALIDATED_USER_KEY);
   };
 
-  // XXX why is this in Meteor.startup?
+
+  // Needs to be in Meteor.startup because of a package loading order
+  // issue. We can't be sure that accounts-passwords is loaded earlier
+  // than accounts-ui so Meteor.validateEmail might not be defined.
   Meteor.startup(function () {
     if (Meteor.accounts._validateEmailToken) {
       Meteor.validateEmail(Meteor.accounts._validateEmailToken, function(error) {
