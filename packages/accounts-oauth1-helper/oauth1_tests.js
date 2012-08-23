@@ -6,8 +6,8 @@ Tinytest.add("oauth1 - loginResultForState is stored", function (test) {
   var twitterfooAccessToken = Meteor.uuid();
   var twitterfooAccessTokenSecret = Meteor.uuid();
 
-  OAuth1.prototype.getRequestToken = function() {};
-  OAuth1.prototype.getAccessToken = function() {
+  OAuth1Binding.prototype.prepareRequestToken = function() {};
+  OAuth1Binding.prototype.prepareAccessToken = function() {
     this.accessToken = twitterfooAccessToken;
     this.accessTokenSecret = twitterfooAccessTokenSecret;
   };
@@ -18,8 +18,6 @@ Tinytest.add("oauth1 - loginResultForState is stored", function (test) {
   Meteor.accounts.oauth._loginResultForState = {};
   Meteor.accounts.oauth._services = {};
 
-  // XXX can we make this unnecessary? Not totally sold on _requireConfigs
-  // yet, but maybe I'm just being overly delicate.
   Meteor.accounts.twitterfoo = {};
   Meteor.accounts.twitterfoo._requireConfigs = [];
   Meteor.accounts.twitterfoo._secret = 'XXX';
@@ -42,7 +40,7 @@ Tinytest.add("oauth1 - loginResultForState is stored", function (test) {
 
   // simulate logging in using twitterfoo
   Meteor.accounts.oauth1._requestTokens['STATE'] = twitterfooAccessToken;
-  
+
   var req = {
     method: "POST",
     url: "/_oauth/twitterfoo?close",
@@ -80,8 +78,6 @@ Tinytest.add("oauth1 - error in user creation", function (test) {
   var twitterfailAccessToken = Meteor.uuid();
   var twitterfailAccessTokenSecret = Meteor.uuid();
 
-  // XXX can we make this unnecessary? Not totally sold on _requireConfigs
-  // yet, but maybe I'm just being overly delicate.
   Meteor.accounts.twitterfail = {};
   Meteor.accounts.twitterfail._requireConfigs = [];
   Meteor.accounts.twitterfail._secret = 'XXX';

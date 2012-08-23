@@ -10,8 +10,9 @@
   //
   // @param name {String} e.g. "google", "facebook"
   // @param version {Number} OAuth version (1 or 2)
-  // @param handleOauthRequest {Function(query)}
-  //   - query is an object with the parameters passed in the query string
+  // @param handleOauthRequest {Function(oauthBinding|query)}
+  //   - (For OAuth1 only) oauthBinding {OAuth1Binding} bound to the appropriate provider
+  //   - (For OAuth2 only) query {Object} parameters passed in query string
   //   - return value is:
   //     - {options: (options), extra: (optional extra)} (same as the
   //       arguments to Meteor.accounts.updateOrCreateUser)
@@ -65,23 +66,25 @@
     });
 
   Meteor.accounts.oauth._middleware = function (req, res, next) {
-    var serviceName = requestServiceName(req);
-    if (!serviceName) {
-      // not an oauth request. pass to next middleware.
-      next();
-      return;
-    }
-
-    var service = Meteor.accounts.oauth._services[serviceName];
-
-    // Skip everything if there's no service set by the oauth middleware
-    if (!service)
-      throw new Error("Unexpected OAuth service " + serviceName);
-
-    // Make sure we're configured
-    ensureConfigured(serviceName);
-
+    // Make sure to catch any exceptions because otherwise we'd crash
+    // the runner
     try {
+      var serviceName = oauthServiceName(req);
+      if (!serviceName) {
+        // not an oauth request. pass to next middleware.
+        next();
+        return;
+      }
+
+      var service = Meteor.accounts.oauth._services[serviceName];
+
+      // Skip everything if there's no service set by the oauth middleware
+      if (!service)
+        throw new Error("Unexpected OAuth service " + serviceName);
+
+      // Make sure we're configured
+      ensureConfigured(serviceName);
+
       if (service.version === 1)
         Meteor.accounts.oauth1._handleRequest(service, req.query, res);
       else if (service.version === 2)
@@ -100,29 +103,32 @@
         Meteor.accounts.oauth._loginResultForState[req.query.state] = err;
 
       // also log to the server console, so the developer sees it.
-      Meteor._debug("Exception in oauth" + service.version + " handler", err);
+      Meteor._debug("Exception in oauth request handler", err);
+
+      // close the popup. because nobody likes them just hanging
+      // there.  when someone sees this multiple times they might
+      // think to check server logs (we hope?)
+      closePopup(res);
     }
   };
 
-  // Handle _oauth paths, gets a bunch of stuff ready for the oauth implementation middleware
+  // Handle /_oauth/* paths and extract the service name
   //
   // @returns {String|null} e.g. "facebook", or null if this isn't an
   // oauth request
-  var requestServiceName = function (req) {
+  var oauthServiceName = function (req) {
 
     // req.url will be "/_oauth/<service name>?<action>"
     var barePath = req.url.substring(0, req.url.indexOf('?'));
     var splitPath = barePath.split('/');
 
+    // Any non-oauth request will continue down the default
+    // middlewares.
+    if (splitPath[1] !== '_oauth')
+      return null;
+
     // Find service based on url
     var serviceName = splitPath[2];
-
-    // Any non-oauth request will continue down the default middlewares
-    // Same goes for service that hasn't been registered
-    if (splitPath[1] !== '_oauth') {
-      return null;
-    }
-
     return serviceName;
   };
 
@@ -130,24 +136,22 @@
   var ensureConfigured = function(serviceName) {
     var service = Meteor.accounts[serviceName];
 
-    _.each(Meteor.accounts[serviceName]._requireConfigs, function(key) {
+    _.each(service._requireConfigs, function(key) {
       if (!service[key])
-        throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts." + serviceName + ".config first");
+        throw new Meteor.accounts.ConfigError(
+          "Need to call Meteor.accounts." + serviceName + ".config first");
     });
 
-    if (!service._secret)
-      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts." + serviceName + ".setSecret first");
+    if (Meteor.is_server && !service._secret)
+      throw new Meteor.accounts.ConfigError(
+        "Need to call Meteor.accounts." + serviceName + ".setSecret first");
   };
 
   Meteor.accounts.oauth._renderOauthResults = function(res, query) {
     // We support ?close and ?redirect=URL. Any other query should
     // just serve a blank page
     if ('close' in query) { // check with 'in' because we don't set a value
-      // Close the popup window
-      res.writeHead(200, {'Content-Type': 'text/html'});
-      var content =
-            '<html><head><script>window.close()</script></head></html>';
-      res.end(content, 'utf-8');
+      closePopup(res);
     } else if (query.redirect) {
       res.writeHead(302, {'Location': query.redirect});
       res.end();
@@ -155,6 +159,13 @@
       res.writeHead(200, {'Content-Type': 'text/html'});
       res.end('', 'utf-8');
     }
+  };
+
+  var closePopup = function(res) {
+    res.writeHead(200, {'Content-Type': 'text/html'});
+    var content =
+          '<html><head><script>window.close()</script></head></html>';
+    res.end(content, 'utf-8');
   };
 
 })();

@@ -7,45 +7,44 @@
   // connect middleware
   Meteor.accounts.oauth1._handleRequest = function (service, query, res) {
 
-    // Make sure we prepare the login results before returning.
-    // This way the subsequent call to the `login` method will be
-    // immediate.
-
     var config = Meteor.accounts[service.serviceName];
-    var oauth = new OAuth1(config);
+    var oauthBinding = new OAuth1Binding(config._consumerKey, config._secret, config._urls);
 
-    // If we get here with a callback url we need a request token to
-    // start the logic process
-    if (query.callbackUrl) {
+    if (query.requestTokenAndRedirect) {
+      // step 1 - get and store a request token
 
       // Get a request token to start auth process
-      oauth.getRequestToken(query.callbackUrl);
+      oauthBinding.prepareRequestToken(query.requestTokenAndRedirect);
 
       // Keep track of request token so we can verify it on the next step
-      Meteor.accounts.oauth1._requestTokens[query.state] = oauth.requestToken;
+      Meteor.accounts.oauth1._requestTokens[query.state] = oauthBinding.requestToken;
 
-      var redirectUrl = config._urls.authenticate + '?oauth_token=' + oauth.requestToken;
+      // redirect to provider login, which will redirect back to "step 2" below
+      var redirectUrl = config._urls.authenticate + '?oauth_token=' + oauthBinding.requestToken;
       res.writeHead(302, {'Location': redirectUrl});
       res.end();
 
-    // If we get here without a callback url we've just
-    // returned from authentication via the oauth provider
-
     } else {
+      // step 2, redirected from provider login - complete the login
+      // process: if the user authorized permissions, get an access
+      // token and access token secret and log in as user
 
       // Get the user's request token so we can verify it and clear it
       var requestToken = Meteor.accounts.oauth1._requestTokens[query.state];
       delete Meteor.accounts.oauth1._requestTokens[query.state];
 
-      // Verify user authorized access and the oauth_token matches 
+      // Verify user authorized access and the oauth_token matches
       // the requestToken from previous step
       if (query.oauth_token && query.oauth_token === requestToken) {
 
+        // Prepare the login results before returning.  This way the
+        // subsequent call to the `login` method will be immediate.
+
         // Get the access token for signing requests
-        oauth.getAccessToken(query);
+        oauthBinding.prepareAccessToken(query);
 
         // Get or create user id
-        var oauthResult = service.handleOauthRequest(oauth);
+        var oauthResult = service.handleOauthRequest(oauthBinding);
         var userId = Meteor.accounts.updateOrCreateUser(
           oauthResult.options, oauthResult.extra);
 
