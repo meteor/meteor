@@ -387,7 +387,7 @@ Helpers can also be used to pass in constant data.
     // Works fine with {{dstache}}#each sections}}
     Template.report.sections = ["Situation", "Complication", "Resolution"];
 
-Finally, you can set the `events` property of a template function to a
+Finally, you can use an `events` declaration on a template function to set up a
 table of event handlers. The format is documented at [Event
 Maps](#eventmaps). The `this` argument to the event handler will be
 the data context of the element that triggered the event.
@@ -406,11 +406,11 @@ the data context of the element that triggered the event.
     </{{! }}template>
 
     <!-- myapp.js -->
-    Template.player_score.events = {
+    Template.player_score.events({
       'click .give_points': function () {
         Users.update({_id: this._id}, {$inc: {score: 2}});
       }
-    };
+    });
 
 Putting it all together, here's an example of how you can inject
 arbitrary data into your templates, and have them update automatically

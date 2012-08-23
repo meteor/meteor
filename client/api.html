@@ -901,11 +901,11 @@ Example:
         "selected" : "";
     };
 
-    Template.post_item.events = {
+    Template.post_item.events({
       'click': function() {
         Session.set("selected_post", this._id);
       }
-    };
+    });
 
     // Using Session.equals here means that when the user clicks
     // on an item and changes the selection, only the newly selected
