@@ -909,3 +909,40 @@ Tinytest.add("templating - bare each has no matching", function (test) {
   Meteor.flush();
   test.equal(buf.join(''), 'ddd');
 });
+
+Tinytest.add("templating - templates are labeled", function (test) {
+  var buf = [];
+
+  var R = ReactiveVar('foo');
+
+  var tmpls = _.map([0,1,2,3], function (n) {
+    return Template['test_template_labels_a'+n];
+  });
+  tmpls[0].stuff = function () {
+    return tmpls[1]() + tmpls[2]() + tmpls[3]() + R.get();
+  };
+  _.each([tmpls[1], tmpls[2], tmpls[3]], function (tmpl) {
+    tmpl.preserve(['hr']);
+    tmpl.created = function () { buf.push('c'); };
+    tmpl.rendered = function () { buf.push('r'); };
+    tmpl.destroyed = function () { buf.push('d'); };
+  });
+
+  var div = OnscreenDiv(Meteor.render(tmpls[0]));
+  Meteor.flush();
+  test.equal(div.html(), "<hr><hr><hr>foo");
+  buf.sort();
+  test.equal(buf.join(''), 'cccrrr');
+  buf.length = 0;
+
+  R.set('bar');
+  Meteor.flush();
+  test.equal(div.html(), "<hr><hr><hr>bar");
+  buf.sort();
+  test.equal(buf.join(''), 'rrr');
+  buf.length = 0;
+
+  div.kill();
+  Meteor.flush();
+  test.equal(buf.join(''), 'ddd');
+});
