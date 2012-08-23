@@ -1,3 +1,4 @@
+[![build status](https://secure.travis-ci.org/meteor/meteor.png)](http://travis-ci.org/meteor/meteor)
 # Meteor
 
 Meteor is an ultra-simple environment for building modern web
