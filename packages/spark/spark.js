@@ -846,7 +846,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
     function (html) { return html; };
 
   // Render the initial contents. If we have a renderer, create a
-  // range around each item as well as around the list, and save atflushtimethem
+  // range around each item as well as around the list, and save them
   // off for later.
   var html = '';
   var outerRange;
@@ -901,7 +901,6 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
     added: function (item, beforeIndex) {
       atFlushTime(function () {
         if (cleanedup) return;
-        //XXX is this right;
         var frag = Spark.render(_.bind(itemFunc, null, item));
         DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
         var range = new LiveRange(Spark._TAG, frag);
