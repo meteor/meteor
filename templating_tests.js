@@ -572,7 +572,7 @@ Tinytest.add("templating - isolate helper", function (test) {
 });
 
 Tinytest.add("templating - template arg", function (test) {
-  Template.test_template_arg_a.events = {
+  Template.test_template_arg_a.events({
     click: function (event, template) {
       template.firstNode.innerHTML = 'Hello';
       template.lastNode.innerHTML = 'World';
@@ -581,7 +581,7 @@ Tinytest.add("templating - template arg", function (test) {
       template.lastNode.innerHTML += ' (the secret is '+
         template.secret+')';
     }
-  };
+  });
 
   Template.test_template_arg_a.created = function() {
     var self = this;
