@@ -52,7 +52,8 @@ var clear_selected_positions = function () {
 };
 
 Template.page.preserve({
-  'input[id]': function (n) { return n.id; }
+  'input[id]': function (n) { return n.id; },
+  'button[name=submit]': true
 });
 
 //////

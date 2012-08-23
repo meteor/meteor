@@ -30,7 +30,7 @@ function () {
   return Session.get("z");
 };
 
-Template.page.events = {
+Template.page.events({
   'click input.x': function () {
     Session.set("x", Session.get("x") + 1);
   },
@@ -42,7 +42,7 @@ Template.page.events = {
   'click input.z': function () {
     Session.set("z", Session.get("z") + 1);
   }
-};
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -60,11 +60,11 @@ Template.preserveDemo.spinAnim = function () {
   return Session.get('spinForward') ? 'spinForward' : 'spinBackward';
 };
 
-Template.preserveDemo.events = {
+Template.preserveDemo.events({
   'change .spinforward' : function (event) {
     Session.set('spinForward', event.currentTarget.checked);
   }
-};
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -76,26 +76,26 @@ Template.constantDemo.show = function (which) {
   return ! Session.get('mapchecked' + which);
 };
 
-Template.constantDemo.events = {
+Template.constantDemo.events({
   'change .remove' : function (event) {
     var tgt = event.currentTarget;
     Session.set('mapchecked' + tgt.getAttribute("which"), tgt.checked);
   }
-};
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 
-Template.stateDemo.events = {
+Template.stateDemo.events({
   'click .create': function () {
     Timers.insert({});
   }
-};
+});
 
 Template.stateDemo.timers = function () {
   return Timers.find();
 };
 
-Template.timer.events = {
+Template.timer.events({
   'click .reset': function (event, template) {
     template.elapsed = 0;
     updateTimer(template);
@@ -103,7 +103,7 @@ Template.timer.events = {
   'click .delete': function () {
     Timers.remove(this._id);
   }
-};
+});
 
 var updateTimer = function (timer) {
   timer.node.innerHTML = timer.elapsed + " second" +
@@ -171,7 +171,7 @@ Template.d3Demo.right = function () {
   return { group: "right" };
 };
 
-Template.circles.events = {
+Template.circles.events({
   'mousedown circle': function (evt, template) {
     Session.set("selectedCircle:" + this.group, evt.currentTarget.id);
   },
@@ -202,7 +202,7 @@ Template.circles.events = {
       });
     });
   }
-};
+});
 
 var colorToString = function (color) {
   var f = function (x) { return Math.floor(x * 256); };
