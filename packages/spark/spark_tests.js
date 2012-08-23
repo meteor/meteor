@@ -3526,3 +3526,50 @@ Tinytest.add("spark - unique label", function (test) {
   test.equal(bufstr(), 'ddd');
 
 });
+
+Tinytest.add("spark - list update", function (test) {
+  var R = ReactiveVar('foo');
+
+  var lst = [];
+  lst.callbacks = [];
+  lst.observe = function(callbacks) {
+    lst.callbacks.push(callbacks);
+    _.each(lst, function(x, i) {
+      callbacks.added(x, i);
+    });
+    return {
+      stop: function() {
+        lst.callbacks = _.without(lst.callbacks, callbacks);
+      }
+    };
+  };
+  lst.another = function () {
+    var i = lst.length;
+    lst.push({_id:'item'+i});
+    _.each(lst.callbacks, function (callbacks) {
+      callbacks.added(lst[i], i);
+    });
+  };
+  var div = OnscreenDiv(Meteor.render(function() {
+    return R.get() + Spark.list(lst, function () {
+      return '<hr>';
+    });
+  }));
+
+  lst.another();
+  Meteor.flush();
+  test.equal(div.html(), "foo<hr>");
+
+  lst.another();
+  R.set('bar');
+  Meteor.flush();
+  test.equal(div.html(), "bar<hr><hr>");
+
+  R.set('baz');
+  lst.another();
+  Meteor.flush();
+  test.equal(div.html(), "baz<hr><hr><hr>");
+
+  div.kill();
+  Meteor.flush();
+});
