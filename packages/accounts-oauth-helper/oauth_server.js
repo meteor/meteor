@@ -105,6 +105,14 @@
       // also log to the server console, so the developer sees it.
       Meteor._debug("Exception in oauth request handler", err);
 
+      // XXX the following is actually wrong. if someone wants to
+      // redirect rather than close once we are done with the OAuth
+      // flow, as supported by
+      // Meteor.accounts.oauth_renderOauthResults, this will still
+      // close the popup instead. Once we fully support the redirect
+      // flow (by supporting that in places such as
+      // packages/facebook/facebook_client.js) we should revisit this.
+      //
       // close the popup. because nobody likes them just hanging
       // there.  when someone sees this multiple times they might
       // think to check server logs (we hope?)

@@ -3,10 +3,9 @@ if (!Meteor.accounts.twitter) {
   Meteor.accounts.twitter._requireConfigs = ['_consumerKey', '_appUrl'];
 }
 
-Meteor.accounts.twitter.config = function(consumerKey, appUrl, options) {
+Meteor.accounts.twitter.config = function(consumerKey, appUrl) {
   Meteor.accounts.twitter._consumerKey = consumerKey;
   Meteor.accounts.twitter._appUrl = appUrl;
-  Meteor.accounts.twitter._options = options; // xcx don't need this
 };
 
 Meteor.accounts.twitter._urls = {
