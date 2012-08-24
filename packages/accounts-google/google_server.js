@@ -4,16 +4,7 @@
     Meteor.accounts.google._secret = secret;
   };
 
-  Meteor.accounts.oauth2.registerService('google', function(query) {
-    if (query.error) {
-      // The user didn't authorize access
-      return null;
-    }
-
-    if (!Meteor.accounts.google._clientId || !Meteor.accounts.google._appUrl)
-      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.google.config first");
-    if (!Meteor.accounts.google._secret)
-      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.google.setSecret first");
+  Meteor.accounts.oauth.registerService('google', 2, function(query) {
 
     var accessToken = getAccessToken(query);
     var identity = getIdentity(accessToken);

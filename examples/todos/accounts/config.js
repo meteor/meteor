@@ -1,5 +1,5 @@
 Meteor.accounts.config({
-  requireEmail: true,
+  requireEmail: false,
   requireUsername: false,
   validateEmails: true
 });

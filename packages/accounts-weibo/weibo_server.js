@@ -4,26 +4,18 @@
     Meteor.accounts.weibo._secret = secret;
   };
 
-  Meteor.accounts.oauth2.registerService('weibo', function(query) {
-    if (query.error) {
-      // The user didn't authorize access
-      return null;
-    }
+  Meteor.accounts.oauth.registerService('weibo', 2, function(query) {
 
-    if (!Meteor.accounts.weibo._clientId || !Meteor.accounts.weibo._appUrl)
-      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.weibo.config first");
-    if (!Meteor.accounts.weibo._secret)
-      throw new Meteor.accounts.ConfigError("Need to call Meteor.accounts.weibo.setSecret first");
-
-    var result = getAccessToken(query);
-    var identity = getIdentity(result.access_token, parseInt(result.uid, 10));
+    var accessToken = getAccessToken(query);
+    var identity = getIdentity(accessToken.access_token, parseInt(accessToken.uid, 10));
 
     return {
       options: {
         services: {
           weibo: {
-            id: result.uid,
-            accessToken: result.accessToken
+            id: accessToken.uid,
+            accessToken: accessToken.accessToken,
+            screenName: identity.screen_name
           }
         }
       },
