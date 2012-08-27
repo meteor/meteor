@@ -275,3 +275,43 @@ Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
   doStep();
 
 });
+
+Tinytest.addAsync("mongo-livedata - scribbling", function (test, onComplete) {
+  var run = test.runId();
+  var coll;
+  if (Meteor.is_client) {
+    coll = new Meteor.Collection(null); // local, unmanaged
+  } else {
+    coll = new Meteor.Collection("livedata_test_collection_"+run);
+  }
+
+  var runInFence = function (f) {
+    if (Meteor.is_client) {
+      f();
+    } else {
+      var fence = new Meteor._WriteFence;
+      Meteor._CurrentWriteFence.withValue(fence, f);
+      fence.armAndWait();
+    }
+  };
+
+  var numAddeds = 0;
+  var handle = coll.find({run: run}).observe({
+    added: function (o) {
+      // test that we can scribble on the object we get back from Mongo without
+      // breaking anything.  The worst possible scribble is messing with _id.
+      delete o._id;
+      numAddeds++;
+    }
+  });
+  _.each([123, 456, 789], function (abc) {
+    runInFence(function () {
+      coll.insert({run: run, abc: abc});
+    });
+  });
+  handle.stop();
+  // will be 6 (1+2+3) if we broke diffing!
+  test.equal(numAddeds, 3);
+
+  onComplete();
+});
