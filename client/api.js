@@ -529,7 +529,7 @@ Template.api.render = {
   ],
   options: [
     {name: "events",
-     type: "Object &mdash; event map",
+     type: "Object: event map",
      type_link: "eventmaps",
      descr: "Events to hook up to the rendered elements"},
     {name: "event_data",
@@ -551,7 +551,7 @@ Template.api.chunk = {
   ],
   options: [
     {name: "events",
-     type: "Object &mdash; event map",
+     type: "Object: event map",
      type_link: "eventmaps",
      descr: "Events to hook up to the rendered elements"},
     {name: "event_data",
@@ -580,7 +580,7 @@ Template.api.listChunk = {
   ],
   options: [
     {name: "events",
-     type: "Object &mdash; event map",
+     type: "Object: event map",
      type_link: "eventmaps",
      descr: "Events to hook up to the rendered elements"}
   ]
