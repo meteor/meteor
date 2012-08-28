@@ -321,6 +321,13 @@ Handlebars.registerHelper('better_markdown', function(fn) {
     return result;
   };
 
+  // This is a tower of terrible hacks.
+  // Replace Spark annotations <$...> ... </$...> with HTML comments, and
+  // space out the comments on their own lines.  This keeps them from
+  // interfering with Markdown's paragraph parsing.
+  // Really, running Markdown multiple times on the same string is just a
+  // bad idea.
+  input = input.replace(/<(\/?\$.*?)>/g, '<!--$1-->');
   input = input.replace(/<!--.*?-->/g, '\n\n$&\n\n');
 
   var hashedBlocks = {};
@@ -369,6 +376,8 @@ Handlebars.registerHelper('better_markdown', function(fn) {
   output = output.replace(/!!!!HTML:(.*?)!!!!/g, function(z, a) {
     return hashedBlocks[a];
   });
+
+  output = output.replace(/<!--(\/?\$.*?)-->/g, '<$1>');
 
   return output;
 });
