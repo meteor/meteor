@@ -28,6 +28,37 @@ put on the screen.
       });
     }
 
+{{> api_box flush }}
+
+Normally, when you make changes (like writing to the database),
+their impact (like updating the DOM) is delayed until the system is
+idle. This keeps things predictable &mdash; you can know that the DOM
+won't go changing out from under your code as it runs. It's also one
+of the things that makes Meteor fast.
+
+`Meteor.flush` forces all of the pending reactive updates to complete
+(for example, it ensures the DOM has been updated with your recent
+database changes.)  Call `flush` to apply those pending changes
+immediately. The main use for this is to make sure the DOM has been
+brought up to date with your latest changes, so you can manually
+manipulate it with jQuery or the like.
+
+When you call `flush`, any auto-updating DOM elements that are not on
+the screen may be cleaned up (meaning that Meteor will stop tracking
+and updating the elements, so that the browser's garbage collector can
+delete them.) So, if you manually call `flush`, you need to make sure
+that any auto-updating elements that you have created by calling
+[`Meteor.ui.render`](#meteor_ui_render) have already been inserted in the main
+DOM tree.
+
+Technically speaking, `flush` calls the [invalidation
+callbacks](#on_invalidate) on every [reactive context](#context) that
+has been [invalidated](#invalidate), but hasn't yet has its callbacks
+called. If the invalidation callbacks invalidate still more contexts,
+flush keeps flushing until everything is totally settled. The DOM
+elements are cleaned up because of logic in
+[`Meteor.ui.render`](#meteor_ui_render) that works through invalidations.
+
 <h2 id="publishandsubscribe"><span>Publish and subscribe</span></h2>
 
 These functions control how Meteor servers publish sets of records and
@@ -1112,36 +1143,6 @@ Example:
     });
     document.body.appendChild(frag);
 
-{{> api_box flush }}
-
-Normally, when you make changes (like writing to the database),
-their impact (like updating the DOM) is delayed until the system is
-idle. This keeps things predictable &mdash; you can know that the DOM
-won't go changing out from under your code as it runs. It's also one
-of the things that makes Meteor fast.
-
-`Meteor.flush` forces all of the pending reactive updates to complete
-(for example, it ensures the DOM has been updated with your recent
-database changes.)  Call `flush` to apply those pending changes
-immediately. The main use for this is to make sure the DOM has been
-brought up to date with your latest changes, so you can manually
-manipulate it with jQuery or the like.
-
-When you call `flush`, any auto-updating DOM elements that are not on
-the screen may be cleaned up (meaning that Meteor will stop tracking
-and updating the elements, so that the browser's garbage collector can
-delete them.) So, if you manually call `flush`, you need to make sure
-that any auto-updating elements that you have created by calling
-[`Meteor.ui.render`](#meteor_ui_render) have already been inserted in the main
-DOM tree.
-
-Technically speaking, `flush` calls the [invalidation
-callbacks](#on_invalidate) on every [reactive context](#context) that
-has been [invalidated](#invalidate), but hasn't yet has its callbacks
-called. If the invalidation callbacks invalidate still more contexts,
-flush keeps flushing until everything is totally settled. The DOM
-elements are cleaned up because of logic in
-[`Meteor.ui.render`](#meteor_ui_render) that works through invalidations.
 
 {{#api_box_inline eventmaps}}
 
