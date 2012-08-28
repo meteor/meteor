@@ -82,7 +82,8 @@ var toc = [
     "Core", [
       "Meteor.is_client",
       "Meteor.is_server",
-      "Meteor.startup"
+      "Meteor.startup",
+      "Meteor.flush"
     ],
 
     "Publish and subscribe", [
@@ -147,7 +148,6 @@ var toc = [
       "Meteor.ui.render",
       "Meteor.ui.chunk",
       "Meteor.ui.listChunk",
-      "Meteor.flush",
       {type: "spacer"},
       {name: "Event maps", style: "noncode"}
     ],
