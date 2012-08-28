@@ -145,12 +145,11 @@ var toc = [
     ],
 
     {name: "Templates", id: "templates_api"}, [
-      {prefix: "Template", instance: "myTemplate",
-       name: "rendered", id: "tmpldecl_rendered"},
-      {prefix: "Template", instance: "myTemplate",
-       name: "created", id: "tmpldecl_created"},
-      {prefix: "Template", instance: "myTemplate",
-       name: "destroyed", id: "tmpldecl_destroyed"}
+      {prefix: "Template", instance: "myTemplate", id: "tmpldecl"}, [
+        {name: "rendered", id: "tmpldecl_rendered"},
+        {name: "created", id: "tmpldecl_created"},
+        {name: "destroyed", id: "tmpldecl_destroyed"}
+      ]
     ],
 
     "Meteor.ui", [

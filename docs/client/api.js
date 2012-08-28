@@ -828,6 +828,13 @@ Template.api.http_del = {
   descr: ["Send an HTTP DELETE request.  Equivalent to `Meteor.http.call(\"DELETE\", ...)`.  (Named `del` to avoid conflict with JavaScript's `delete`."]
 };
 
+Template.api.tmpldecl = {
+  id: "tmpldecl",
+  name: "Template.<em>myTemplate</em>([data])",
+  locus: "Client",
+  descr: ["Access a template function by name."]
+};
+
 Template.api.tmpldecl_rendered = {
   id: "tmpldecl_rendered",
   name: "Template.<em>myTemplate</em>.rendered = function ( ) { ... }",
