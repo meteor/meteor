@@ -828,4 +828,23 @@ Template.api.http_del = {
   descr: ["Send an HTTP DELETE request.  Equivalent to `Meteor.http.call(\"DELETE\", ...)`.  (Named `del` to avoid conflict with JavaScript's `delete`."]
 };
 
+Template.api.tmpldecl_rendered = {
+  id: "tmpldecl_rendered",
+  name: "Template.<em>myTemplate</em>.rendered = function ( ) { ... }",
+  locus: "Client",
+  descr: ["Provide a callback when an instance of a template is rendered."]
+};
 
+Template.api.tmpldecl_created = {
+  id: "tmpldecl_created",
+  name: "Template.<em>myTemplate</em>.created = function ( ) { ... }",
+  locus: "Client",
+  descr: ["Provide a callback when an instance of a template is created."]
+};
+
+Template.api.tmpldecl_destroyed = {
+  id: "tmpldecl_destroyed",
+  name: "Template.<em>myTemplate</em>.destroyed = function ( ) { ... }",
+  locus: "Client",
+  descr: ["Provide a callback when an instance of a template is destroyed."]
+};

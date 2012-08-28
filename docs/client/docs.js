@@ -144,6 +144,15 @@ var toc = [
       "Session.equals"
     ],
 
+    {name: "Templates", id: "templates_api"}, [
+      {prefix: "Template", instance: "myTemplate",
+       name: "rendered", id: "tmpldecl_rendered"},
+      {prefix: "Template", instance: "myTemplate",
+       name: "created", id: "tmpldecl_created"},
+      {prefix: "Template", instance: "myTemplate",
+       name: "destroyed", id: "tmpldecl_destroyed"}
+    ],
+
     "Meteor.ui", [
       "Meteor.ui.render",
       "Meteor.ui.chunk",
