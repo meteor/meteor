@@ -14,7 +14,7 @@
         services: {
           weibo: {
             id: accessToken.uid,
-            accessToken: accessToken.accessToken,
+            accessToken: accessToken.access_token,
             screenName: identity.screen_name
           }
         }
