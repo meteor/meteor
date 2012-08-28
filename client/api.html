@@ -947,11 +947,32 @@ Example:
 
 <h2 id="templates_api"><span>Templates</span></h2>
 
+{{> api_box tmpldecl}}
+
+A template that you declare as `<{{! }}template name="foo"> ... </{{! }}template>`
+can be accessed as the function `Template.foo`.
+
+XXX Describe `data` arg, calling it to get HTML.  Each template may have many
+occurrences (/instances/invocations) on the page.  There are callbacks and
+directives you can specify on a template declaration that apply to all
+instances of the template.  Templates have a life cycle.  There are template
+instance objects.
+
 {{> api_box tmpldecl_rendered}}
 
 {{> api_box tmpldecl_created}}
 
 {{> api_box tmpldecl_destroyed}}
+
+* XXX bind, preserve, events, helpers, ...
+* XXX Template instance object
+* XXX constant
+* XXX link to Handlebars wiki page?
+* XXX Remove Meteor.ui.render, all references
+* XXX Add Meteor.render, Meteor.renderList
+* XXX Create Spark-only wiki page
+* XXX Mention Spark in template docs?
+* XXX Find home for all relevant material on New Template API wiki page
 
 <h2 id="meteor_ui"><span>Meteor.ui</span></h2>
 
