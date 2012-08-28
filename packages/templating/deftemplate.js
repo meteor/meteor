@@ -113,20 +113,35 @@
       var html = Spark.createLandmark({
         preserve: tmplData.preserve || {},
         created: function () {
+          var oldCtx = Meteor.deps.Context.current;
+          Meteor.deps.Context.current = null;
+
           var template = templateObjFromLandmark(this);
           template.data = data;
           tmpl.created && tmpl.created.call(template);
+
+          Meteor.deps.Context.current = oldCtx;
         },
         rendered: function () {
+          var oldCtx = Meteor.deps.Context.current;
+          Meteor.deps.Context.current = null;
+
           var template = templateObjFromLandmark(this);
           template.data = data;
           tmpl.rendered && tmpl.rendered.call(template);
+
+          Meteor.deps.Context.current = oldCtx;
         },
         destroyed: function () {
+          var oldCtx = Meteor.deps.Context.current;
+          Meteor.deps.Context.current = null;
+
           // template.data is already set from previous callbacks
           tmpl.destroyed &&
             tmpl.destroyed.call(templateObjFromLandmark(this));
           delete templateInstanceData[this.id];
+
+          Meteor.deps.Context.current = oldCtx;
         }
       }, function (landmark) {
         var html = Spark.isolate(function () {
