@@ -832,7 +832,12 @@ Template.api.tmpldecl = {
   id: "tmpldecl",
   name: "Template.<em>myTemplate</em>([data])",
   locus: "Client",
-  descr: ["Access a template function by name."]
+  descr: ["Call a template function by name to produce HTML."],
+  args: [
+    {name: "data",
+     type: "Object",
+     descr: 'The data context object with which to call the template.'}
+  ]
 };
 
 Template.api.tmpldecl_rendered = {

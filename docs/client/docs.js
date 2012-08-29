@@ -149,6 +149,13 @@ var toc = [
         {name: "rendered", id: "tmpldecl_rendered"},
         {name: "created", id: "tmpldecl_created"},
         {name: "destroyed", id: "tmpldecl_destroyed"}
+      ],
+      {name: "Template instances", id: "template_inst"}, [
+        {instance: "template", name: "findAll"},
+        {instance: "template", name: "find"},
+        {instance: "template", name: "firstNode"},
+        {instance: "template", name: "lastNode"},
+        {instance: "template", name: "data"}
       ]
     ],
 
