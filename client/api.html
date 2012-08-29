@@ -1032,18 +1032,55 @@ effects of `created`.  It fires once and is the last callback to fire.
 
 <h2 id="template_inst"><span>Template instances</span></h2>
 
-* XXX methods
-* Where available from (callbacks, event handlers; not helpers yet)
+A template instance object represents an occurrence of a template in
+the document.  It can be used to access the DOM, and it can be
+assigned properties that persist across page re-renderings.
 
-* XXX bind, preserve, events, helpers, ...
-* XXX Template instance object
-* XXX constant
-* XXX link to Handlebars wiki page?
-* XXX Remove Meteor.ui.render, all references
-* XXX Add Meteor.render, Meteor.renderList
-* XXX Create Spark-only wiki page
-* XXX Mention Spark in template docs?
-* XXX Find home for all relevant material on New Template API wiki page
+Template instance objects are found as the value of `this` in the
+`created`, `rendered`, and `destroyed` template callbacks, and as an
+argument to event handlers.
+
+In addition to the properties and functions described below, you can
+assign whatever properties of your own to the object.  Property names
+starting with `_` are guaranteed to be available for your use.  Use
+the `created` and `destroyed` callbacks to perform initialization or
+clean-up on the object.
+
+You can only access `findAll`, `find`, `firstNode`, and `lastNode`
+from the `rendered` callback and event handlers, not from `created`
+and `destroyed`, because they require the template instance to be
+in the DOM.
+
+{{> api_box template_findAll}}
+
+Returns an array of DOM elements matching `selector`.
+
+The template instance serves as the document root for the selector, so
+only elements inside the template can match parts of the selector.
+
+{{> api_box template_find}}
+
+Returns one DOM element matching `selector`, or `null` if there are no
+such elements.
+
+The template instance serves as the document root for the selector, so
+only elements inside the template can match parts of the selector.
+
+{{> api_box template_firstNode}}
+
+The two nodes `firstNode` and `lastNode` indicate the extent of the
+rendered template in the DOM.  These two nodes are siblings (they have
+the same parent), and `lastNode` comes after `firstNode`, or else they
+are the same node.  The rendered template includes these nodes, their
+intervening siblings, and their descendents.
+
+{{> api_box template_lastNode}}
+
+{{> api_box template_data}}
+
+This property provides access to the data context at the top level of
+the template.  It is updated each time the template is re-rendered.
+Access is read-only and non-reactive.
 
 
 

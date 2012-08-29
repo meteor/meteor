@@ -900,7 +900,6 @@ Template.api.tmpldecl_destroyed = {
   descr: ["Provide a callback when an instance of a template is destroyed."]
 };
 
-
 Template.api.tmpldecl_events = {
   id: "tmpldecl_events",
   name: "Template.<em>myTemplate</em>.events(eventMap)",
@@ -920,4 +919,49 @@ Template.api.tmpldecl_preserve = {
   name: "Template.<em>myTemplate</em>.preserve([selectors])",
   locus: "Client",
   descr: ["XXX"]
+};
+
+Template.api.template_findAll = {
+  id: "template_findAll",
+  name: "<em>this</em>.findAll(selector)",
+  locus: "Client",
+  descr: ["Find all elements matching `selector` in this template instance."],
+  args: [
+    {name: "selector",
+     type: "String",
+     descr: 'The CSS selector to match, scoped to the template contents.'}
+  ]
+};
+
+Template.api.template_find = {
+  id: "template_find",
+  name: "<em>this</em>.find(selector)",
+  locus: "Client",
+  descr: ["Find one element matching `selector` in this template instance."],
+  args: [
+    {name: "selector",
+     type: "String",
+     descr: 'The CSS selector to match, scoped to the template contents.'}
+  ]
+};
+
+Template.api.template_firstNode = {
+  id: "template_firstNode",
+  name: "<em>this</em>.firstNode",
+  locus: "Client",
+  descr: ["The first top-level DOM node in this template instance."]
+};
+
+Template.api.template_lastNode = {
+  id: "template_lastNode",
+  name: "<em>this</em>.lastNode",
+  locus: "Client",
+  descr: ["The last top-level DOM node in this template instance."]
+};
+
+Template.api.template_data = {
+  id: "template_data",
+  name: "<em>this</em>.data",
+  locus: "Client",
+  descr: ["The data context of this instance's latest invocation."]
 };
