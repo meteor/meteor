@@ -149,9 +149,9 @@ var toc = [
         {name: "rendered", id: "tmpldecl_rendered"},
         {name: "created", id: "tmpldecl_created"},
         {name: "destroyed", id: "tmpldecl_destroyed"},
-        {name: "preserve", id: "tmpldecl_preserve"},
+        {name: "events", id: "tmpldecl_events"},
         {name: "helpers", id: "tmpldecl_helpers"},
-        {name: "events", id: "tmpldecl_events"}
+        {name: "preserve", id: "tmpldecl_preserve"}
       ],
       {name: "Template instances", id: "template_inst"}, [
         {instance: "this", name: "findAll", id: "template_findAll"},
@@ -164,8 +164,8 @@ var toc = [
       "Meteor.renderList",
       {type: "spacer"},
       {name: "Event maps", style: "noncode"},
-      {name: "Constant regions", style: "noncode"},
-      {name: "Reactivity isolation", style: "noncode"}
+      {name: "Constant regions", style: "noncode", id: "constant"},
+      {name: "Reactivity isolation", style: "noncode", id: "isolate"}
      ],
 
     "Timers", [
