@@ -104,6 +104,16 @@
 
     window.Template = window.Template || {};
 
+    var contextFree = function(fn) {
+      var ctx = Meteor.deps.Context.current;
+      Meteor.deps.Context.current = null;
+      try {
+        fn();
+      } finally {
+        Meteor.deps.Context.current = ctx;
+      }
+    };
+
     // Define the function assigned to Template.<name>.
 
     var partial = function (data) {
@@ -113,35 +123,23 @@
       var html = Spark.createLandmark({
         preserve: tmplData.preserve || {},
         created: function () {
-          var oldCtx = Meteor.deps.Context.current;
-          Meteor.deps.Context.current = null;
-
-          var template = templateObjFromLandmark(this);
-          template.data = data;
-          tmpl.created && tmpl.created.call(template);
-
-          Meteor.deps.Context.current = oldCtx;
+          var self = this;
+          contextFree(function() {
+            var template = templateObjFromLandmark(self);
+            template.data = data;
+            tmpl.created && tmpl.created.call(template);
+          });
         },
         rendered: function () {
-          var oldCtx = Meteor.deps.Context.current;
-          Meteor.deps.Context.current = null;
-
           var template = templateObjFromLandmark(this);
           template.data = data;
           tmpl.rendered && tmpl.rendered.call(template);
-
-          Meteor.deps.Context.current = oldCtx;
         },
         destroyed: function () {
-          var oldCtx = Meteor.deps.Context.current;
-          Meteor.deps.Context.current = null;
-
           // template.data is already set from previous callbacks
-          tmpl.destroyed &&
+           tmpl.destroyed &&
             tmpl.destroyed.call(templateObjFromLandmark(this));
           delete templateInstanceData[this.id];
-
-          Meteor.deps.Context.current = oldCtx;
         }
       }, function (landmark) {
         var html = Spark.isolate(function () {
