@@ -1017,6 +1017,19 @@ being destroyed.
 This callback is most useful for cleaning up or undoing any external
 effects of `created`.  It fires once and is the last callback to fire.
 
+
+{{> api_box tmpldecl_events}}
+
+
+{{> api_box tmpldecl_helpers}}
+
+
+{{> api_box tmpldecl_preserve}}
+
+
+
+
+
 <h2 id="template_inst"><span>Template instances</span></h2>
 
 * XXX methods
@@ -1032,22 +1045,11 @@ effects of `created`.  It fires once and is the last callback to fire.
 * XXX Mention Spark in template docs?
 * XXX Find home for all relevant material on New Template API wiki page
 
-<h2 id="meteor_ui"><span>Meteor.ui</span></h2>
 
-`Meteor.ui` provides building blocks for creating reactive UIs out of strings of
-HTML, making it easy to create DOM elements that update
-automatically as data changes in
-[`Session`](#session) variables or in a
-[`Meteor.Collection`](#meteor_collection).  Meteor's built-in templates already use these functions, but if you prefer a different way of generating HTML,
-are integrating a new template language with Meteor, or need to compose a reactive
-snippet of HTML on the fly, then this package has what you need.
 
-This package is implemented on top of [`Meteor.deps`](#meteor_deps), which provides the
-data dependency tracking and invalidation system, while `Meteor.ui` contributes
-the ability to turn HTML into DOM elements, keep track of regions of the DOM that
-need updating, and patch old DOM content with new, recalculated content.
+<h2><span>XXX OLD</span></h2>
 
-{{> api_box render}}
+{{> api_box OLDrender}}
 
 `Meteor.ui.render` creates a `DocumentFragment` (a sequence of DOM
 nodes) that automatically updates in realtime. You pass in
@@ -1139,7 +1141,7 @@ Example:
     });
     document.body.appendChild(frag);
 
-{{> api_box chunk}}
+{{> api_box OLDchunk}}
 
 When generating HTML from a function passed to [`Meteor.ui.render`](#meteor_ui_render), you can use `Meteor.ui.chunk` to mark a substring of the HTML as separately reactive. If the data used to generate that substring changes, only the elements corresponding to that substring will be updated, not the elements before and after it.
 
@@ -1195,7 +1197,7 @@ Example:
     }, 2000);
 
 
-{{> api_box listChunk}}
+{{> api_box OLDlistChunk}}
 
 `listChunk` is like `chunk`, but instead of creating one chunk, it creates several, one for each record in the results of a database query.
 
@@ -1229,6 +1231,17 @@ Example:
         });
     });
     document.body.appendChild(frag);
+
+
+
+
+
+
+
+
+{{> api_box render}}
+
+{{> api_box renderList}}
 
 
 {{#api_box_inline eventmaps}}
@@ -1397,6 +1410,19 @@ Meteor has taken some care to ensure that they work uniformly in all
 browsers.
 
 {{/api_box_inline}}
+
+
+
+{{#api_box_inline constant}}
+constant
+{{/api_box_inline}}
+
+
+{{#api_box_inline isolate}}
+isolate
+{{/api_box_inline}}
+
+
 
 <h2 id="timers"><span>Timers</span></h2>
 

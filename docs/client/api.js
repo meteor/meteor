@@ -24,6 +24,14 @@ Template.api.startup = {
   ]
 };
 
+Template.api.flush = {
+  id: "meteor_flush",
+  name: "Meteor.flush()",
+  locus: "Client",
+  descr: ["Ensure that any reactive updates have finished. Allow auto-updating DOM element to be cleaned up if they are offscreen."]
+};
+
+
 Template.api.publish = {
   id: "meteor_publish",
   name: "Meteor.publish(name, func)",
@@ -517,7 +525,7 @@ Template.api.invalidate = {
 // writeFence
 // invalidationCrossbar
 
-Template.api.render = {
+Template.api.OLDrender = {
   id: "meteor_ui_render",
   name: "Meteor.ui.render(html_func, [options])",
   locus: "Client",
@@ -539,7 +547,7 @@ Template.api.render = {
   ]
 };
 
-Template.api.chunk = {
+Template.api.OLDchunk = {
   id: "meteor_ui_chunk",
   name: "Meteor.ui.chunk(html_func, [options])",
   locus: "Client",
@@ -561,7 +569,7 @@ Template.api.chunk = {
   ]
 };
 
-Template.api.listChunk = {
+Template.api.OLDlistChunk = {
   id: "meteor_ui_listchunk",
   name: "Meteor.ui.listChunk(observable, doc_func, [else_func], [options])",
   locus: "Client",
@@ -586,17 +594,46 @@ Template.api.listChunk = {
   ]
 };
 
-Template.api.flush = {
-  id: "meteor_flush",
-  name: "Meteor.flush()",
+
+Template.api.render = {
+  id: "meteor_render",
+  name: "Meteor.render(html)",
   locus: "Client",
-  descr: ["Ensure that any reactive updates have finished. Allow auto-updating DOM element to be cleaned up if they are offscreen."]
+  descr: ["Create DOM nodes that automatically update themselves as data changes."],
+  args: [
+    {name: "html",
+     type: "Either an string of HTML or a function returning a string of HTML",
+     descr: "Render function to be called, initially and whenever data changes"}
+  ]
 };
+
+Template.api.renderList = {
+  id: "meteor_renderlist",
+  name: "Meteor.renderList(cursor, itemHtml, emptyHtml)",
+  locus: "Client",
+  descr: ["Create DOM nodes that automatically update themselves as data changes."],
+  args: [
+    // XXX
+  ]
+};
+
 
 Template.api.eventmaps = {
   id: "eventmaps",
   name: "Event Maps"
 };
+
+Template.api.constant = {
+  id: "constant",
+  name: "Constant regions"
+};
+
+Template.api.isolate = {
+  id: "isolate",
+  name: "Reactivity isolation"
+};
+
+
 
 Template.api.setTimeout = {
   id: "meteor_settimeout",
@@ -828,6 +865,8 @@ Template.api.http_del = {
   descr: ["Send an HTTP DELETE request.  Equivalent to `Meteor.http.call(\"DELETE\", ...)`.  (Named `del` to avoid conflict with JavaScript's `delete`."]
 };
 
+
+// XXX move these up to right place
 Template.api.tmpldecl = {
   id: "tmpldecl",
   name: "Template.<em>myTemplate</em>([data])",
@@ -859,4 +898,26 @@ Template.api.tmpldecl_destroyed = {
   name: "Template.<em>myTemplate</em>.destroyed = function ( ) { ... }",
   locus: "Client",
   descr: ["Provide a callback when an instance of a template is destroyed."]
+};
+
+
+Template.api.tmpldecl_events = {
+  id: "tmpldecl_events",
+  name: "Template.<em>myTemplate</em>.events(eventMap)",
+  locus: "Client",
+  descr: ["XXX"]
+};
+
+Template.api.tmpldecl_helpers = {
+  id: "tmpldecl_helpers",
+  name: "Template.<em>myTemplate</em>.helpers(helpers)",
+  locus: "Client",
+  descr: ["XXX"]
+};
+
+Template.api.tmpldecl_preserve = {
+  id: "tmpldecl_preserve",
+  name: "Template.<em>myTemplate</em>.preserve([selectors])",
+  locus: "Client",
+  descr: ["XXX"]
 };
