@@ -148,24 +148,25 @@ var toc = [
       {prefix: "Template", instance: "myTemplate", id: "tmpldecl"}, [
         {name: "rendered", id: "tmpldecl_rendered"},
         {name: "created", id: "tmpldecl_created"},
-        {name: "destroyed", id: "tmpldecl_destroyed"}
+        {name: "destroyed", id: "tmpldecl_destroyed"},
+        {name: "preserve", id: "tmpldecl_preserve"},
+        {name: "helpers", id: "tmpldecl_helpers"},
+        {name: "events", id: "tmpldecl_events"}
       ],
       {name: "Template instances", id: "template_inst"}, [
-        {instance: "template", name: "findAll"},
-        {instance: "template", name: "find"},
-        {instance: "template", name: "firstNode"},
-        {instance: "template", name: "lastNode"},
-        {instance: "template", name: "data"}
-      ]
-    ],
-
-    "Meteor.ui", [
-      "Meteor.ui.render",
-      "Meteor.ui.chunk",
-      "Meteor.ui.listChunk",
+        {instance: "this", name: "findAll", id: "template_findAll"},
+        {instance: "this", name: "find", id: "template_find"},
+        {instance: "this", name: "firstNode", id: "template_firstNode"},
+        {instance: "this", name: "lastNode", id: "template_lastNode"},
+        {instance: "this", name: "data", id: "template_data"}
+      ],
+      "Meteor.render",
+      "Meteor.renderList",
       {type: "spacer"},
-      {name: "Event maps", style: "noncode"}
-    ],
+      {name: "Event maps", style: "noncode"},
+      {name: "Constant regions", style: "noncode"},
+      {name: "Reactivity isolation", style: "noncode"}
+     ],
 
     "Timers", [
       "Meteor.setTimeout",
