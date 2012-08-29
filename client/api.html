@@ -947,22 +947,82 @@ Example:
 
 <h2 id="templates_api"><span>Templates</span></h2>
 
+A template that you declare as `<{{! }}template name="foo"> ... </{{!
+}}template>` can be accessed as the function `Template.foo`, which
+returns a string of HTML when called.
+
+The same template may occur many times on the page, and these
+occurrences are called template instances.  Template instances have a
+life cycle of being created, put into the document, and later taken
+out of the document and destroyed.  Meteor manages these stages for
+you, including determining when a template instance has been removed
+or replaced and should be cleaned up.  You can associate data with a
+template instance, and you can access its DOM nodes when it is in the
+document.
+
+Additionally, Meteor will maintain a template instance and its state
+even if its surrounding HTML is re-rendered into new DOM nodes.  As
+long as the structure of template invocations is the same, Meteor will
+not consider any instances to have been created or destroyed.  You can
+request that the same DOM nodes be retained as well using `preserve`
+and `constant`.
+
+There are a number of callbacks and directives that you can specify on
+a named template and that apply to all instances of the template.
+They are described below.
+
 {{> api_box tmpldecl}}
 
-A template that you declare as `<{{! }}template name="foo"> ... </{{! }}template>`
-can be accessed as the function `Template.foo`.
+When called inside a template helper, the body of `Meteor.render`, or
+other settings where reactive HTML is being generated, the resulting
+HTML is annotated so that it renders as reactive DOM elements.
+Otherwise, the HTML is unadorned and static.
 
-XXX Describe `data` arg, calling it to get HTML.  Each template may have many
-occurrences (/instances/invocations) on the page.  There are callbacks and
-directives you can specify on a template declaration that apply to all
-instances of the template.  Templates have a life cycle.  There are template
-instance objects.
 
 {{> api_box tmpldecl_rendered}}
 
+This callback is called when an instance of Template.*myTemplate* is rendered into DOM nodes and put into the document for the first time, and again each time any part of the template is re-rendered.
+
+{{#note}}
+Since there's no way to tell which part of the template changed on re-render, the first rendered() received after created() is by far the most useful.
+{{/note}}
+
+In the body of the callback, `this` is a [template
+instance](#template_inst) object that is unique to this occurrence of
+the template and persists across re-renderings.  Use the `created` and
+`destroyed` callbacks to perform initialization or clean-up on the
+object.
+
 {{> api_box tmpldecl_created}}
 
+This callback is called when an invocation of *myTemplate* represents
+a new occurrence of the template and not a re-rendering of an existing
+template instance.  Inside the callback, `this` is the new [template
+instance](#template_inst) object.  Properties you set on this object
+will be visible from the `rendered` and `destroyed` callbacks and from
+event handlers.
+
+This callback fires once and is the first callback to fire.  Every
+`created` has a corresponding `destroyed`; that is, if you get a
+`created` callback with a certain template instance object in `this`,
+you will eventually get a `destroyed` callback for the same object.
+
 {{> api_box tmpldecl_destroyed}}
+
+This callback is called when an occurrence of a template is taken off
+the page for any reason and not replaced with a re-rendering.  Inside
+the callback, `this` is the [template instance](#template_inst) object
+being destroyed.
+
+This callback is most useful for cleaning up or undoing any external
+effects of `created`.  It fires once and is the last callback to fire.
+
+<h2 id="template_inst"><span>Template instances</span></h2>
+
+
+
+* XXX methods
+* Where available from (callbacks, event handlers; not helpers yet)
 
 * XXX bind, preserve, events, helpers, ...
 * XXX Template instance object
