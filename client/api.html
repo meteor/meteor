@@ -500,7 +500,7 @@ those changes may or may not appear in the result set.
 
 Cursors are a reactive data source.  The first time you retrieve a
 cursor's documents with `fetch`, `map`, or `forEach` inside a
-reactive context (eg, [`Meteor.ui.render`](#meteor_ui_render),
+reactive context (eg, [`Meteor.render`](#meteor_render),
 [`Meteor.autosubscribe`](#meteor_autosubscribe), Meteor will register a
 dependency on the underlying data.  Any change to the collection that
 changes the documents in a cursor will trigger a recomputation.  To
@@ -606,23 +606,6 @@ Example:
     // Delete all the log entries
     Logs.remove({});
 
-    // Show a list of posts that have been flagged, updating in realtime.
-    // Put a link next to each post that deletes the post if clicked.
-    var frag = Meteor.ui.render(function() {
-      return Meteor.ui.listChunk(
-        Posts.find({flagged: true}),
-        function (post) {
-          // In real code it'd be necessary to sanitize post.name
-          return "<div>" + post.name +
-            " <span class='delete'>Delete</span></div>";
-        },
-        { events: {
-          'click .delete': function () {
-            Posts.remove(this._id);
-          }
-        }});
-    });
-    document.body.appendChild(frag);
 
 <h2 id="meteor_collection_cursor"><span>Cursors</span></h2>
 
@@ -658,7 +641,7 @@ the matching documents.
 
     // Display a count of posts matching certain criteria. Automatically
     // keep it updated as the database changes.
-    var frag = Meteor.ui.render(function () {
+    var frag = Meteor.render(function () {
       var high_scoring = Posts.find({score: {$gt: 10}});
       return "<p>There are " + high_scoring.count() + " posts with " +
         "scores greater than 10</p>";
@@ -855,7 +838,7 @@ See [`Meteor.deps`](#meteor_deps) for another example.
 Example:
 
     Session.set("enemy", "Eastasia");
-    var frag = Meteor.ui.render(function () {
+    var frag = Meteor.render(function () {
       return "<p>We've always been at war with " +
         Session.get("enemy") + "</p>";
     });
