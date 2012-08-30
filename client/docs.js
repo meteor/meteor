@@ -82,8 +82,7 @@ var toc = [
     "Core", [
       "Meteor.is_client",
       "Meteor.is_server",
-      "Meteor.startup",
-      "Meteor.flush"
+      "Meteor.startup"
     ],
 
     "Publish and subscribe", [
@@ -181,7 +180,8 @@ var toc = [
         {instance: "context", name: "on_invalidate"},
         {instance: "context", name: "invalidate"}
       ],
-      {name: "Meteor.deps.Context.current", id: "current"}
+      {name: "Meteor.deps.Context.current", id: "current"},
+      "Meteor.flush"
     // ],
 
     // "Environment Variables", [
