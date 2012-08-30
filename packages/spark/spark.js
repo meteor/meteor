@@ -1073,7 +1073,18 @@ Spark.createLandmark = function (options, htmlFunc) {
     landmark = notes.originalRange.landmark; // the old Landmark
   } else {
     landmark = new Spark.Landmark;
-    options.created && options.created.call(landmark);
+    if (options.created) {
+      // Run callback outside the current Spark.isolate's deps context.
+      // XXX Can't call run() on null, so this is a hack.  Running inside
+      // a fresh context wouldn't be equivalent.
+      var oldCx = Meteor.deps.Context.current;
+      Meteor.deps.Context.current = null;
+      try {
+        options.created.call(landmark);
+      } finally {
+        Meteor.deps.Context.current = oldCx;
+      }
+    }
   }
   notes.landmark = landmark;
 

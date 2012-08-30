@@ -3573,3 +3573,51 @@ Tinytest.add("spark - list update", function (test) {
   div.kill();
   Meteor.flush();
 });
+
+Tinytest.add("spark - callback context", function (test) {
+  // Test that context in template callbacks is null.
+
+  var cxs = [];
+  var buf = [];
+
+  var R = ReactiveVar("foo");
+  var getCx = function () { return Meteor.deps.Context.current; };
+  var callbackFunc = function (ltr) {
+    return function () {
+      buf.push(ltr);
+      cxs.push(getCx());
+    };
+  };
+  var div = OnscreenDiv(Meteor.render(function () {
+    var cx = getCx();
+    test.isTrue(cx); // sanity check for getCx
+    var makeLandmark = function () {
+      return Spark.createLandmark({created: callbackFunc('c'),
+                                   rendered: callbackFunc('r'),
+                                   destroyed: callbackFunc('d')},
+                                  function () {
+                                    return '<span>'+R.get()+'</span>';
+                                  });
+    };
+    if (R.get() === 'foo')
+      var unused = makeLandmark(); // will cause created/destroyed
+    var html = Spark.labelBranch("foo", makeLandmark);
+    test.isTrue(getCx() === cx); // test that context was restored
+    return html;
+  }));
+  Meteor.flush();
+  R.set('bar');
+  Meteor.flush();
+  div.kill();
+  Meteor.flush();
+
+  test.equal(buf.join(''), 'ccdrrd');
+  test.equal(cxs.length, 6);
+  test.isFalse(cxs[0]);
+  test.isFalse(cxs[1]);
+  test.isFalse(cxs[2]);
+  test.isFalse(cxs[3]);
+  test.isFalse(cxs[4]);
+  test.isFalse(cxs[5]);
+
+});
