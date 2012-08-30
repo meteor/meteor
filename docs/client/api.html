@@ -1020,9 +1020,43 @@ effects of `created`.  It fires once and is the last callback to fire.
 
 {{> api_box tmpldecl_events}}
 
+Event handlers declared this way apply at all times to all instances
+of this template.  Multiple calls are cumulative.
+
+See [Event Maps](#eventmaps) for a detailed description of the event
+map format and how event handling works in Meteor.
+
+{{#note}}
+This syntax supersedes the previous syntax where you would
+assign an event map to `Template.myTemplate.events`, but for now, the
+old syntax still works.
+{{/note}}
+
 
 {{> api_box tmpldecl_helpers}}
 
+Each template has a local dictionary of helpers that are made available to it,
+and this call specifies helpers to add to the template's dictionary.
+
+Example:
+
+    Template.myTemplate.helpers({
+      foo: function () {
+        return Session.get("foo");
+      }
+    });
+
+In Handlebars, this helper would then be invoked as `{{dstache}}foo}}`.
+
+The following syntax is equivalent:
+
+    Template.myTemplate.foo = function () {
+      return Session.get("foo");
+    };
+
+However, this shorter syntax has the limitation that helper names may
+conflict with Meteor or JavaScript function properties such as `events` or
+`name`.
 
 {{> api_box tmpldecl_preserve}}
 
@@ -1303,14 +1337,14 @@ To handle more than one type of event with the same function, use a comma-separa
 {{/dtdd}}
 </dl>
 
-The handler function gets one argument, an object with information
-about the event. It will receive some additional context data in
-`this`, depending on the context of the current element handling the event.
-In a Handlebars template,
-an element's context is the Handlebars data context where that element
-occurs, which is set by block helpers such as `#with`
-and `#each`.  When using [`Meteor.ui.chunk`](#meteor_ui_chunk), the
-data context is set using the `event_data` option.
+The handler function receives two arguments: `event`, an object with
+information about the event, and `template`, a [template
+instance](#template_inst) for the template where the handler is
+defined.  The handler also receives some additional context data in
+`this`, depending on the context of the current element handling the
+event.  In a Handlebars template, an element's context is the
+Handlebars data context where that element occurs, which is set by
+block helpers such as `#with` and `#each`.
 
 Example:
 
