@@ -24,14 +24,6 @@ Template.api.startup = {
   ]
 };
 
-Template.api.flush = {
-  id: "meteor_flush",
-  name: "Meteor.flush()",
-  locus: "Client",
-  descr: ["Ensure that any reactive updates have finished. Allow auto-updating DOM element to be cleaned up if they are offscreen."]
-};
-
-
 Template.api.publish = {
   id: "meteor_publish",
   name: "Meteor.publish(name, func)",
@@ -483,13 +475,6 @@ Template.api.Context = {
   descr: ["Create an invalidation context. Invalidation contexts are used to run a piece of code, and record its dependencies so it can be rerun later if one of its inputs changes.", "An invalidation context is basically just a list of callbacks for an event that can fire only once. The [`on_invalidate`](#on_invalidate) method adds a callback to the list, and the [`invalidate`](#invalidate) method fires the event."]
 };
 
-Template.api.current = {
-  id: "current",
-  name: "Meteor.deps.Context.current",
-  locus: "Client",
-  descr: ["The current [`invalidation context`](#context), or `null` if not being called from inside [`run`](#run)."]
-};
-
 Template.api.run = {
   id: "run",
   name: "<em>context</em>.run(func)",
@@ -520,6 +505,21 @@ Template.api.invalidate = {
   locus: "Client",
   descr: ["Add this context to the list of contexts that will have their `on_invalidate|on_invalidate` callbacks called by the next call to [`Meteor.flush`](#meteor_flush)."]
 };
+
+Template.api.current = {
+  id: "current",
+  name: "Meteor.deps.Context.current",
+  locus: "Client",
+  descr: ["The current [`invalidation context`](#context), or `null` if not being called from inside [`run`](#run)."]
+};
+
+Template.api.flush = {
+  id: "meteor_flush",
+  name: "Meteor.flush()",
+  locus: "Client",
+  descr: ["Ensure that any reactive updates have finished. Allow auto-updating DOM element to be cleaned up if they are offscreen."]
+};
+
 
 
 // writeFence
