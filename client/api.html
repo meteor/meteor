@@ -1381,9 +1381,35 @@ browsers.
 
 
 {{#api_box_inline constant}}
-constant
-{{/api_box_inline}}
 
+You can mark a region of a template as "constant" and not subject to
+re-rendering using the
+`{{dstache}}#constant}}...{{dstache}}/constant}}` block helper.
+Content inside the `#constant` block helper is preserved exactly as-is
+even if the enclosing template is re-rendered.  Changes to other parts
+of the template are patched in around it in the same manner as
+`preserve`.  Unlike individual node preservation, a constant region
+retains not only the identities of its nodes but also their attributes
+and contents.  The contents of the block will only be evaluated once
+per occurrence of the enclosing template.
+
+Constant regions allow non-Meteor content to be embedded in a Meteor
+template.  Many third-party widgets create and manage their own DOM
+nodes programmatically. Typically, you put an empty element in your
+template, which the widget or library will then populate with
+children. Normally, when Meteor re-renders the enclosing template it
+would remove the new children, since the template says it should be
+empty. If the container is wrapped in a `#constant` block, however, it
+is left alone; whatever content is currently in the DOM remains.
+
+{{#note}}
+Constant regions are intended for embedding non-Meteor content.
+Event handlers and reactive dependencies don't currently work
+correctly inside constant regions.
+{{/note}}
+
+
+{{/api_box_inline}}
 
 {{#api_box_inline isolate}}
 isolate
