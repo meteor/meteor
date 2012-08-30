@@ -1,4 +1,88 @@
-Meteor.ui = Meteor.ui || {};
+
+Spark._patch = function(tgtParent, srcParent, tgtBefore, tgtAfter, preservations,
+                        results) {
+
+  var copyFunc = function(t, s) {
+    LiveRange.transplantTag(Spark._TAG, t, s);
+  };
+
+  var patcher = new Spark._Patcher(
+    tgtParent, srcParent, tgtBefore, tgtAfter);
+
+
+  var visitNodes = function(parent, before, after, func) {
+    for(var n = before ? before.nextSibling : parent.firstChild;
+        n && n !== after;
+        n = n.nextSibling) {
+      if (func(n) !== false && n.firstChild)
+        visitNodes(n, null, null, func);
+    }
+  };
+
+  // results arg is optional; it is mutated if provided; returned either way
+  results = (results || {});
+  // array of LiveRanges that were successfully preserved from
+  // the region preservations
+  var regionPreservations = (results.regionPreservations =
+                             results.regionPreservations || []);
+
+  var lastTgtMatch = null;
+
+  visitNodes(srcParent, null, null, function(src) {
+    // XXX inefficient to scan for match for every node!
+    // We could at least skip non-element nodes, except for "range matches"
+    // used for constant chunks, which may begin on a non-element.
+    // But really this shouldn't be a linear search.
+    var pres = _.find(preservations, function (p) {
+      // find preserved region starting at `src`, if any
+      return p.type === 'region' && p.newRange.firstNode() === src;
+    }) || _.find(preservations, function (p) {
+      // else, find preservation of `src`
+      return p.type === 'node' && p.to === src;
+    });
+
+    if (pres) {
+      var tgt = (pres.type === 'region' ? pres.fromStart : pres.from);
+      if (! lastTgtMatch ||
+          DomUtils.elementOrder(lastTgtMatch, tgt) > 0) {
+        if (pres.type === 'region') {
+          // preserved region for constant landmark
+          if (patcher.match(pres.fromStart, pres.newRange.firstNode(),
+                            copyFunc, true)) {
+            patcher.skipToSiblings(pres.fromEnd, pres.newRange.lastNode());
+            // without knowing or caring what DOM nodes are in pres.newRange,
+            // transplant the range data to pres.fromStart and pres.fromEnd
+            // (including references to enclosing ranges).
+            LiveRange.transplantRange(
+              pres.fromStart, pres.fromEnd, pres.newRange);
+            regionPreservations.push(pres.newRange);
+          }
+        } else if (pres.type === 'node') {
+          if (patcher.match(tgt, src, copyFunc)) {
+            // match succeeded
+            lastTgtMatch = tgt;
+            if (tgt.firstChild || src.firstChild) {
+              // Don't patch contents of TEXTAREA tag,
+              // which are only the initial contents but
+              // may affect the tag's .value in IE.
+              if (tgt.nodeName !== "TEXTAREA") {
+                // recurse!
+                Spark._patch(tgt, src, null, null, preservations);
+              }
+            }
+            return false; // tell visitNodes not to recurse
+          }
+        }
+      }
+    }
+    return true;
+  });
+
+  patcher.finish();
+
+  return results;
+};
+
 
 // A Patcher manages the controlled replacement of a region of the DOM.
 // The target region is changed in place to match the source region.
@@ -10,20 +94,18 @@ Meteor.ui = Meteor.ui || {};
 // of srcParent, which may be a DocumentFragment.
 //
 // To use a new Patcher, call `match` zero or more times followed by
-// `finish`.  Alternatively, just call `diffpatch` to use the standard
-// matching strategy.
+// `finish`.
 //
 // A match is a correspondence between an old node in the target region
 // and a new node in the source region that will replace it.  Based on
 // this correspondence, the target node is preserved and the attributes
 // and children of the source node are copied over it.  The `match`
-// method declares such a correspondence.  The `diffpatch` method
-// determines the correspondences and calls `match` and `finish`.
-// A Patcher that makes no matches just removes the target nodes
-// and inserts the source nodes in their place.
+// method declares such a correspondence.  A Patcher that makes no matches,
+// for example, just removes the target nodes and inserts the source nodes
+// in their place.
 //
 // Constructor:
-Meteor.ui._Patcher = function(tgtParent, srcParent, tgtBefore, tgtAfter) {
+Spark._Patcher = function(tgtParent, srcParent, tgtBefore, tgtAfter) {
   this.tgtParent = tgtParent;
   this.srcParent = srcParent;
 
@@ -32,94 +114,6 @@ Meteor.ui._Patcher = function(tgtParent, srcParent, tgtBefore, tgtAfter) {
 
   this.lastKeptTgtNode = null;
   this.lastKeptSrcNode = null;
-};
-
-// Perform a complete patching where nodes with the same `id` or `name`
-// are matched.
-//
-// Any node that has either an "id" or "name" attribute is considered a
-// "labeled" node, and these labeled nodes are candidates for preservation.
-// For two labeled nodes, old and new, to match, they first must have the same
-// label (that is, they have the same id, or neither has an id and they have
-// the same name).  Labels are considered relative to the nearest enclosing
-// labeled ancestor, and must be unique among the labeled nodes that share
-// this nearest labeled ancestor.  Labeled nodes are also expected to stay
-// in the same order, or else some of them won't be matched.
-
-Meteor.ui._Patcher.prototype.diffpatch = function(copyCallback) {
-  var self = this;
-
-  var each_labeled_node = function(parent, before, after, func) {
-    for(var n = before ? before.nextSibling : parent.firstChild;
-        n && n !== after;
-        n = n.nextSibling) {
-
-      var label = null;
-
-      if (n.nodeType === 1) {
-        if (n.id) {
-          label = '#'+n.id;
-        } else if (n.getAttribute("name")) {
-          label = n.getAttribute("name");
-          // Radio button special case:  radio buttons
-          // in a group all have the same name.  Their value
-          // determines their identity.
-          // Checkboxes with the same name and different
-          // values are also sometimes used in apps, so
-          // we treat them similarly.
-          if (n.nodeName === 'INPUT' &&
-              (n.type === 'radio' || n.type === 'checkbox') &&
-              n.value)
-            label = label + ':' + n.value;
-        }
-      }
-
-      if (label)
-        func(label, n);
-      else
-        // not a labeled node; recurse
-        each_labeled_node(n, null, null, func);
-    }
-  };
-
-
-  var targetNodes = {};
-  var targetNodeOrder = {};
-  var targetNodeCounter = 0;
-
-  each_labeled_node(
-    self.tgtParent, self.tgtBefore, self.tgtAfter,
-    function(label, node) {
-      targetNodes[label] = node;
-      targetNodeOrder[label] = targetNodeCounter++;
-    });
-
-  var lastPos = -1;
-  each_labeled_node(
-    self.srcParent, null, null,
-    function(label, node) {
-      var tgt = targetNodes[label];
-      var src = node;
-      if (tgt && targetNodeOrder[label] > lastPos) {
-        if (self.match(tgt, src, copyCallback)) {
-          // match succeeded
-          if (tgt.firstChild || src.firstChild) {
-            // Don't patch contents of TEXTAREA tag,
-            // which are only the initial contents but
-            // may affect the tag's .value in IE.
-            if (tgt.nodeName !== "TEXTAREA") {
-              // recurse with a new Patcher!
-              var patcher = new Meteor.ui._Patcher(tgt, src);
-              patcher.diffpatch(copyCallback);
-            }
-          }
-        }
-        lastPos = targetNodeOrder[label];
-      }
-    });
-
-  self.finish();
-
 };
 
 
@@ -167,7 +161,8 @@ Meteor.ui._Patcher.prototype.diffpatch = function(copyCallback) {
 // copyCallback is called on every new matched (tgt, src) pair
 // right after copying attributes.  It's a good time to transplant
 // liveranges and patch children.
-Meteor.ui._Patcher.prototype.match = function(tgtNode, srcNode, copyCallback) {
+Spark._Patcher.prototype.match = function(
+  tgtNode, srcNode, copyCallback, onlyAdvance) {
 
   // last nodes "kept" (matched/identified with each other)
   var lastKeptTgt = this.lastKeptTgtNode;
@@ -182,7 +177,6 @@ Meteor.ui._Patcher.prototype.match = function(tgtNode, srcNode, copyCallback) {
 
   var starting = ! lastKeptTgt;
   var finishing = ! tgt;
-  var elementContains = Meteor.ui._Patcher._elementContains;
 
   if (! starting) {
     // move lastKeptTgt/lastKeptSrc forward and out,
@@ -190,7 +184,7 @@ Meteor.ui._Patcher.prototype.match = function(tgtNode, srcNode, copyCallback) {
     // replacing as we go.  If tgt/src is falsy, we make it to the
     // top level.
     while (lastKeptTgt.parentNode !== this.tgtParent &&
-           ! (tgt && elementContains(lastKeptTgt.parentNode, tgt))) {
+           ! (tgt && DomUtils.elementContains(lastKeptTgt.parentNode, tgt))) {
       // Last-kept nodes are inside parents that are not
       // parents of the newly matched nodes.  Must finish
       // replacing their contents and back out.
@@ -216,9 +210,9 @@ Meteor.ui._Patcher.prototype.match = function(tgtNode, srcNode, copyCallback) {
     // ancestor of <c/> on the left rather than a sibling of an
     // ancestor.
     if (! finishing &&
-        (elementContains(lastKeptSrc, src) ||
+        (DomUtils.elementContains(lastKeptSrc, src) ||
          ! (lastKeptSrc.parentNode === this.srcParent ||
-            elementContains(lastKeptSrc.parentNode, src)))) {
+            DomUtils.elementContains(lastKeptSrc.parentNode, src)))) {
       return false;
     }
   }
@@ -227,28 +221,36 @@ Meteor.ui._Patcher.prototype.match = function(tgtNode, srcNode, copyCallback) {
     this._replaceNodes(lastKeptTgt, null, lastKeptSrc, null,
                        this.tgtParent, this.srcParent);
   } else {
-    // Compare tag names and depths to make sure we can match nodes.
+    // Compare tag names and depths to make sure we can match nodes...
+    if (! onlyAdvance) {
+      if (tgt.nodeName !== src.nodeName)
+        return false;
+    }
+
     // Look at tags of parents until we hit parent of last-kept,
     // which we know is ok.
-    for(var a=tgt, b=src;
+    for(var a=tgt.parentNode, b=src.parentNode;
         a !== (starting ? this.tgtParent : lastKeptTgt.parentNode);
         a = a.parentNode, b = b.parentNode) {
-      if (b === (starting ? this.srcParent : lastKeptSrc.parentNode)) {
+      if (b === (starting ? this.srcParent : lastKeptSrc.parentNode))
         return false; // src is shallower, b hit top first
-      }
-      if (a.nodeName !== b.nodeName) {
+      if (a.nodeName !== b.nodeName)
         return false; // tag names don't match
-      }
     }
     if (b !== (starting ? this.srcParent : lastKeptSrc.parentNode)) {
       return false; // src is deeper, b didn't hit top when a did
     }
 
+    var firstIter = true;
     // move tgt and src backwards and out, replacing as we go
     while (true) {
-      Meteor.ui._Patcher._copyAttributes(tgt, src);
-      if (copyCallback)
-        copyCallback(tgt, src);
+      if (! (firstIter && onlyAdvance)) {
+        Spark._Patcher._copyAttributes(tgt, src);
+        if (copyCallback)
+          copyCallback(tgt, src);
+      }
+
+      firstIter = false;
 
       if ((starting ? this.tgtParent : lastKeptTgt.parentNode)
           === tgt.parentNode) {
@@ -270,11 +272,29 @@ Meteor.ui._Patcher.prototype.match = function(tgtNode, srcNode, copyCallback) {
   return true;
 };
 
+// After a match, skip ahead to later siblings of the last kept nodes,
+// without performing any replacements.
+Spark._Patcher.prototype.skipToSiblings = function(tgt, src) {
+  var lastTgt = this.lastKeptTgtNode;
+  var lastSrc = this.lastKeptSrcNode;
+
+  if (! (lastTgt && lastTgt.parentNode === tgt.parentNode))
+    return false;
+
+  if (! (lastSrc && lastSrc.parentNode === src.parentNode))
+    return false;
+
+  this.lastKeptTgtNode = tgt;
+  this.lastKeptSrcNode = src;
+
+  return true;
+};
+
 // Completes patching assuming no more matches.
 //
 // Patchers are single-use, so no more methods can be called
 // on the Patcher.
-Meteor.ui._Patcher.prototype.finish = function() {
+Spark._Patcher.prototype.finish = function() {
   return this.match(null, null);
 };
 
@@ -284,7 +304,7 @@ Meteor.ui._Patcher.prototype.finish = function() {
 //
 // Precondition: tgtBefore and tgtAfter have same parent; either may be falsy,
 // but not both, unless optTgtParent is provided.  Same with srcBefore/srcAfter.
-Meteor.ui._Patcher.prototype._replaceNodes = function(
+Spark._Patcher.prototype._replaceNodes = function(
   tgtBefore, tgtAfter, srcBefore, srcAfter, optTgtParent, optSrcParent)
 {
   var tgtParent = optTgtParent || (tgtBefore || tgtAfter).parentNode;
@@ -326,7 +346,7 @@ Meteor.ui._Patcher.prototype._replaceNodes = function(
 //
 // This is complicated by form controls and the fact that old IE
 // can't keep the difference straight between properties and attributes.
-Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
+Spark._Patcher._copyAttributes = function(tgt, src) {
   var srcAttrs = src.attributes;
   var tgtAttrs = tgt.attributes;
 
@@ -350,9 +370,12 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
     // Record for later whether this is a radio button.
     isRadio = (tgt.type === 'radio');
     // Clearing the attributes of a checkbox won't necessarily
-    // uncheck it, eg in FF12, so we uncheck explicitly.
-    if (typeof tgt.checked === "boolean")
+    // uncheck it, eg in FF12, so we uncheck explicitly
+    // (if necessary; we don't want to generate spurious
+    // propertychange events in old IE).
+    if (tgt.checked === true && src.checked === false) {
       tgt.checked = false;
+    }
   }
 
   for(var i=tgtAttrs.length-1; i>=0; i--) {
@@ -422,8 +445,7 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
 
     tgt.mergeAttributes(src);
 
-    if (typeof tgt.checked !== "undefined" ||
-        typeof src.checked !== "undefined")
+    if (typeof tgt.checked !== "undefined" && src.checked)
       tgt.checked = src.checked;
 
     if (src.name)
@@ -466,18 +488,4 @@ Meteor.ui._Patcher._copyAttributes = function(tgt, src) {
       tgt.value = src.value;
   }
 
-};
-
-// returns true if element a properly contains element b
-Meteor.ui._Patcher._elementContains = function(a, b) {
-  if (a.nodeType !== 1 || b.nodeType !== 1) {
-    return false;
-  }
-  if (a.compareDocumentPosition) {
-    return a.compareDocumentPosition(b) & 0x10;
-  } else {
-    // Should be only old IE and maybe other old browsers here.
-    // Modern Safari has both methods but seems to get contains() wrong.
-    return a !== b && a.contains(b);
-  }
 };

@@ -1,0 +1,44 @@
+body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, san-serif;
+    width: 600px;
+    margin: auto;
+    padding: 25px 50px;
+    border: 5px dashed #ccc;
+    border-style: none dashed;
+}
+
+h2 {
+    margin-top: 50px;
+    text-decoration: underline;
+}
+
+.clearboth {
+    clear: both;
+}
+
+@-webkit-keyframes spinForward {
+    from {-webkit-transform: rotate(0deg);}
+    to {-webkit-transform: rotate(360deg);}
+}
+
+@-webkit-keyframes spinBackward {
+    from {-webkit-transform: rotate(360deg);}
+    to {-webkit-transform: rotate(0deg);}
+}
+
+.spinner {
+    width: 100px;
+    border: 2px solid black;
+    font-weight: bold;
+    text-align: center;
+    background: white;
+}
+
+.circles {
+    float: left;
+    padding-right: 20px;
+}
+
+.circles svg {
+    border: 2px solid #333;
+}

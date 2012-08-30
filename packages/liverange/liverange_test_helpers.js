@@ -10,25 +10,25 @@ var check_liverange_integrity = function (range) {
     for (var i = 0; i < data[0].length; i++) {
       if (data[0][i]._start !== node)
         throw new Error("integrity check failed - incorrect _start");
-      if (data[0][i]._start_idx !== i)
-        throw new Error("integrity check failed - incorrect _start_idx");
+      if (data[0][i]._startIndex !== i)
+        throw new Error("integrity check failed - incorrect _startIndex");
     }
     for (var i = 0; i < data[1].length; i++) {
       if (data[1][i]._end !== node)
         throw new Error("integrity check failed - incorrect _end");
-      if (data[1][i]._end_idx !== i)
-        throw new Error("integrity check failed - incorrect _end_idx");
+      if (data[1][i]._endIndex !== i)
+        throw new Error("integrity check failed - incorrect _endIndex");
     }
   };
 
-  range.visit(function (is_start, range) {
-    if (is_start)
+  range.visit(function (isStart, range) {
+    if (isStart)
       stack.push(range);
     else
       if (range !== stack.pop())
         throw new Error("integrity check failed - unbalanced range");
-  }, function (is_start, node) {
-    if (is_start) {
+  }, function (isStart, node) {
+    if (isStart) {
       check_node(node);
       stack.push(node);
     }
@@ -40,5 +40,3 @@ var check_liverange_integrity = function (range) {
   if (stack.length)
     throw new Error("integrity check failed - missing close tags");
 };
-
-

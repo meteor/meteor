@@ -128,7 +128,7 @@ _.extend(Package.prototype, {
       // stack -- has to come before user packages, because we don't
       // (presently) require packages to declare dependencies on
       // 'standard meteor stuff' like minimongo.
-      api.use(['deps', 'session', 'livedata', 'mongo-livedata', 'liveui',
+      api.use(['deps', 'session', 'livedata', 'mongo-livedata', 'spark',
                'templating', 'startup', 'past']);
       api.use(require('./project.js').get_packages(app_dir));
 

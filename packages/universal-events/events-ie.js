@@ -1,7 +1,4 @@
-Meteor.ui = Meteor.ui || {};
-Meteor.ui._event = Meteor.ui._event || {};
-
-// LiveEvents implementation for "old IE" versions 6-8, which lack
+// Universal Events implementation for IE versions 6-8, which lack
 // addEventListener and event capturing.
 //
 // The strategy is very different.  We walk the subtree in question
@@ -22,56 +19,97 @@ Meteor.ui._event = Meteor.ui._event || {};
 // events on checkboxes and radio buttons immediately rather than
 // only when the user blurs them, another old IE quirk.
 
-Meteor.ui._event._loadNoW3CImpl = function() {
+UniversalEventListener._impl = UniversalEventListener._impl ||  {};
 
-  var installHandler = function(node, prop) {
+// Singleton
+UniversalEventListener._impl.ie = function (deliver) {
+  var self = this;
+  this.deliver = deliver;
+  this.curriedHandler = function () {
+    self.handler.call(this, self);
+  };
+
+  // The 'submit' event on IE doesn't bubble.  We want to simulate
+  // bubbling submit to match other browsers, and to do that we use
+  // IE's own event machinery.  We can't dispatch events with arbitrary
+  // names in IE, so we appropriate the obscure "datasetcomplete" event
+  // for this purpose.
+  document.attachEvent('ondatasetcomplete', function () {
+    var evt = window.event;
+    var target = evt && evt.srcElement;
+    if (evt.synthetic && target &&
+        target.nodeName === 'FORM' &&
+        evt.returnValue !== false)
+      // No event handler called preventDefault on the simulated
+      // submit event.  That means the form should be submitted.
+      target.submit();
+  });
+};
+
+_.extend(UniversalEventListener._impl.ie.prototype, {
+  addType: function (type) {
+    // not necessary for IE
+  },
+
+  removeType: function (type) {
+    // not necessary for IE
+  },
+
+  installHandler: function (node, type) {
+    // use old-school event binding, so that we can
+    // access the currentTarget as `this` in the handler.
+    // note: handler is never removed from node
+    var prop = 'on' + type;
+
+    if (node.nodeType === 1) { // ELEMENT
+      this._install(node, prop);
+
+      // hopefully fast traversal, since the browser is doing it
+      var descendents = node.getElementsByTagName('*');
+
+      for(var i=0, N = descendents.length; i<N; i++)
+        this._install(descendents[i], prop);
+    }
+  },
+
+  _install: function (node, prop) {
+    var props = [prop];
+
     // install handlers for faking focus/blur if necessary
     if (prop === 'onfocus')
-      installHandler(node, 'onfocusin');
+      props.push('onfocusin');
     else if (prop === 'onblur')
-      installHandler(node, 'onfocusout');
+      props.push('onfocusout');
     // install handlers for faking bubbling change/submit
     else if (prop === 'onchange') {
-      installHandler(node, 'oncellchange');
       // if we're looking at a checkbox or radio button,
       // sign up for propertychange and NOT change
       if (node.nodeName === 'INPUT' &&
-          (node.type === 'checkbox' || node.type === 'radio')) {
-        installHandler(node, 'onpropertychange');
-        return;
-      }
+          (node.type === 'checkbox' || node.type === 'radio'))
+        props = ['onpropertychange'];
+      props.push('oncellchange');
     } else if (prop === 'onsubmit')
-      installHandler(node, 'ondatasetcomplete');
+      props.push(node, 'ondatasetcomplete');
 
-    node[prop] = universalHandler;
-  };
-
-  Meteor.ui._event.registerEventTypeImpl = function(eventType, subtreeRoot) {
-    // use old-school event binding, so that we can
-    // access the currentTarget as `this` in the handler.
-    var prop = 'on'+eventType;
-
-    if (subtreeRoot.nodeType === 1) { // ELEMENT
-      installHandler(subtreeRoot, prop);
-
-      // hopefully fast traversal, since the browser is doing it
-      var descendents = subtreeRoot.getElementsByTagName('*');
-
-      for(var i=0, N = descendents.length; i<N; i++)
-        installHandler(descendents[i], prop);
-    }
-  };
-
-  var sendEvent = function(ontype, target) {
-    var e = document.createEventObject();
-    e.synthetic = true;
-    target.fireEvent(ontype, e);
-    return e.returnValue;
-  };
+    for(var i = 0; i < props.length; i++)
+      node[props[i]] = this.curriedHandler;
+  },
 
   // This is the handler we assign to DOM nodes, so it shouldn't close over
   // anything that would create a circular reference leading to a memory leak.
-  var universalHandler = function() {
+  //
+  // This handler is called via this.curriedHandler. When it is called:
+  //  - 'this' is the node currently handling the event (set by IE)
+  //  - 'self' is what would normally be 'this'
+  handler: function (self) {
+    var sendEvent = function (ontype, target) {
+      var e = document.createEventObject();
+      e.synthetic = true;
+      target.fireEvent(ontype, e);
+      return e.returnValue;
+    };
+
+
     var event = window.event;
     var type = event.type;
     var target = event.srcElement || document;
@@ -102,7 +140,8 @@ Meteor.ui._event._loadNoW3CImpl = function() {
       }
     }
     // ignore non-simulated events of types we simulate
-    if ((type === 'focus' || event.type === 'blur' || event.type === 'change' ||
+    if ((type === 'focus' || event.type === 'blur'
+         || event.type === 'change' ||
          event.type === 'submit') && ! event.synthetic) {
       if (event.type === 'submit')
         event.returnValue = false; // block all native submits, we will submit
@@ -117,18 +156,7 @@ Meteor.ui._event._loadNoW3CImpl = function() {
       type = event.type = 'submit';
     }
 
-    Meteor.ui._event._handleEventFunc(
-      Meteor.ui._event._fixEvent(event));
-  };
+    self.deliver(event);
+  }
 
-  // submit forms that aren't preventDefaulted
-  document.attachEvent('ondatasetcomplete', function() {
-    var evt = window.event;
-    var target = evt && evt.srcElement;
-    if (evt.synthetic && target &&
-        target.nodeName === 'FORM' &&
-        evt.returnValue !== false)
-      target.submit();
-  });
-
-};
+});
