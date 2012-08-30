@@ -42,6 +42,9 @@ var Package = function () {
   // registered source file handlers
   self.extensions = {};
 
+  // registered bundler hooks
+  self.bundleHooks = {};
+
   // functions that can be called when the package is scanned
   self.api = {
     // keys
@@ -76,6 +79,14 @@ var Package = function () {
         throw new Error("This package has already registered a handler for " +
                        extension);
       self.extensions[extension] = callback;
+    },
+
+    // registers a bundler hook to be run once.
+    // will get called when the bundling process starts.
+    registerBundleHook: function(hookName, callback) {
+      if (self.on_test)
+        throw new Error("This package has already registered a hook named " + hookName);
+      self.bundleHooks[hookName] = callback;
     }
   };
 };
