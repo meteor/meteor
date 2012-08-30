@@ -4,6 +4,8 @@ DomUtils = {};
 
 (function() {
 
+  var Sizzle = window.Sizzle || $.find;
+
   ///// Common look-up tables used by htmlToFragment et al.
 
   var testDiv = document.createElement("div");
@@ -182,9 +184,9 @@ DomUtils = {};
   //
   // `contextNode` may be either a node, a document, or a DocumentFragment.
   DomUtils.findAll = function(contextNode, selector) {
-    // Eventually, we will remove the dependency on jQuery ($) and
+    // Eventually, we will remove the dependency on Sizzle and
     // implement this in terms of querySelectorAll on modern browsers
-    // and Sizzle in old IE.  We'll use jQuery's trick for scoped
+    // and Sizzle in old IE.  We'll use Sizzle's trick for scoped
     // querySelectorAll which involves temporarily assigning an ID to
     // contextNode (if it doesn't have one) and prepending the ID to
     // the selector.
@@ -193,13 +195,13 @@ DomUtils = {};
       // a descendent of one.
       var frag = contextNode;
       var container = DomUtils.fragmentToContainer(frag);
-      var results = $(container).find(selector);
+      var results = Sizzle(selector, container);
       // put nodes back into frag
       while (container.firstChild)
         frag.appendChild(container.firstChild);
       return results;
     } else {
-      return $(contextNode).find(selector);
+      return Sizzle(selector, contextNode);
     }
   };
 
