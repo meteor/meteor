@@ -805,8 +805,8 @@ Template.api.http_del = {
 
 
 // XXX move these up to right place
-Template.api.tmpldecl = {
-  id: "tmpldecl",
+Template.api.template_call = {
+  id: "template_call",
   name: "Template.<em>myTemplate</em>([data])",
   locus: "Client",
   descr: ["Call a template function by name to produce HTML."],
@@ -817,29 +817,29 @@ Template.api.tmpldecl = {
   ]
 };
 
-Template.api.tmpldecl_rendered = {
-  id: "tmpldecl_rendered",
+Template.api.template_rendered = {
+  id: "template_rendered",
   name: "Template.<em>myTemplate</em>.rendered = function ( ) { ... }",
   locus: "Client",
   descr: ["Provide a callback when an instance of a template is rendered."]
 };
 
-Template.api.tmpldecl_created = {
-  id: "tmpldecl_created",
+Template.api.template_created = {
+  id: "template_created",
   name: "Template.<em>myTemplate</em>.created = function ( ) { ... }",
   locus: "Client",
   descr: ["Provide a callback when an instance of a template is created."]
 };
 
-Template.api.tmpldecl_destroyed = {
-  id: "tmpldecl_destroyed",
+Template.api.template_destroyed = {
+  id: "template_destroyed",
   name: "Template.<em>myTemplate</em>.destroyed = function ( ) { ... }",
   locus: "Client",
   descr: ["Provide a callback when an instance of a template is destroyed."]
 };
 
-Template.api.tmpldecl_events = {
-  id: "tmpldecl_events",
+Template.api.template_events = {
+  id: "template_events",
   name: "Template.<em>myTemplate</em>.events(eventMap)",
   locus: "Client",
   descr: ["Specify event handlers for this template."],
@@ -851,8 +851,8 @@ Template.api.tmpldecl_events = {
   ]
 };
 
-Template.api.tmpldecl_helpers = {
-  id: "tmpldecl_helpers",
+Template.api.template_helpers = {
+  id: "template_helpers",
   name: "Template.<em>myTemplate</em>.helpers(helpers)",
   locus: "Client",
   descr: ["Specify template helpers available to this template."],
@@ -863,8 +863,8 @@ Template.api.tmpldecl_helpers = {
   ]
 };
 
-Template.api.tmpldecl_preserve = {
-  id: "tmpldecl_preserve",
+Template.api.template_preserve = {
+  id: "template_preserve",
   name: "Template.<em>myTemplate</em>.preserve(selectors)",
   locus: "Client",
   descr: ["Specify rules for preserving individual DOM elements on re-render."],
