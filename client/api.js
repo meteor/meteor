@@ -521,99 +521,37 @@ Template.api.flush = {
 };
 
 
-
 // writeFence
 // invalidationCrossbar
 
-Template.api.OLDrender = {
-  id: "meteor_ui_render",
-  name: "Meteor.ui.render(html_func, [options])",
-  locus: "Client",
-  descr: ["Create DOM nodes that automatically update themselves as data changes."],
-  args: [
-    {name: "html_func",
-     type: "Function returning a string of HTML",
-     descr: "Render function to be called, initially and whenever data changes"}
-  ],
-  options: [
-    {name: "events",
-     type: "Object: event map",
-     type_link: "eventmaps",
-     descr: "Events to hook up to the rendered elements"},
-    {name: "event_data",
-     type: "Any value",
-     descr: "Value to bind to `this` in event handlers"
-    }
-  ]
-};
-
-Template.api.OLDchunk = {
-  id: "meteor_ui_chunk",
-  name: "Meteor.ui.chunk(html_func, [options])",
-  locus: "Client",
-  descr: ["Inside [`Meteor.ui.render`](#meteor_ui_render), give special behavior to a range of HTML."],
-  args: [
-    {name: "html_func",
-     type: "Function returning a string of HTML",
-     descr: "Render function to be called, initially and whenever data changes"}
-  ],
-  options: [
-    {name: "events",
-     type: "Object: event map",
-     type_link: "eventmaps",
-     descr: "Events to hook up to the rendered elements"},
-    {name: "event_data",
-     type: "Any value",
-     descr: "Value to bind to `this` in event handlers"
-    }
-  ]
-};
-
-Template.api.OLDlistChunk = {
-  id: "meteor_ui_listchunk",
-  name: "Meteor.ui.listChunk(observable, doc_func, [else_func], [options])",
-  locus: "Client",
-  descr: ["Observe a database query and create annotated HTML that will be reactively updated when rendered with [`Meteor.ui.render`](#meteor_ui_render)."],
-  args: [
-    {name: "observable",
-     type: "Cursor",
-     type_link: "meteor_collection_cursor",
-     descr: "Query cursor to observe, as a reactive source of ordered documents"},
-    {name: "doc_func",
-     type: "Function taking a document and returning HTML",
-     descr: "Render function to be called for each document"},
-    {name: "else_func",
-     type: "Function returning HTML",
-     descr: "Render function to be called when query is empty"}
-  ],
-  options: [
-    {name: "events",
-     type: "Object: event map",
-     type_link: "eventmaps",
-     descr: "Events to hook up to the rendered elements"}
-  ]
-};
-
-
 Template.api.render = {
   id: "meteor_render",
-  name: "Meteor.render(html)",
+  name: "Meteor.render(htmlFunc)",
   locus: "Client",
   descr: ["Create DOM nodes that automatically update themselves as data changes."],
   args: [
-    {name: "html",
-     type: "Either an string of HTML or a function returning a string of HTML",
-     descr: "Render function to be called, initially and whenever data changes"}
+    {name: "htmlFunc",
+     type: "Function returning a string of HTML",
+     descr: "Function that generates HTML to be rendered.  Called immediately and re-run whenever data changes.  May also be a string of HTML instead of a function."}
   ]
 };
 
 Template.api.renderList = {
   id: "meteor_renderlist",
-  name: "Meteor.renderList(cursor, itemHtml, emptyHtml)",
+  name: "Meteor.renderList(observable, docFunc, [elseFunc])",
   locus: "Client",
-  descr: ["Create DOM nodes that automatically update themselves as data changes."],
+  descr: ["Create DOM nodes that automatically update themselves based on the results of a database query."],
   args: [
-    // XXX
+    {name: "observable",
+     type: "Cursor",
+     type_link: "meteor_collection_cursor",
+     descr: "Query cursor to observe, as a reactive source of ordered documents."},
+    {name: "docFunc",
+     type: "Function taking a document and returning HTML",
+     descr: "Render function to be called for each document."},
+    {name: "elseFunc",
+     type: "Function returning HTML",
+     descr: "Optional.  Render function to be called when query is empty."}
   ]
 };
 
@@ -875,7 +813,7 @@ Template.api.tmpldecl = {
   args: [
     {name: "data",
      type: "Object",
-     descr: 'The data context object with which to call the template.'}
+     descr: 'Optional. The data context object with which to call the template.'}
   ]
 };
 
