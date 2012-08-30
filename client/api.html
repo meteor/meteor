@@ -1013,8 +1013,74 @@ conflict with Meteor or JavaScript function properties such as `events` or
 
 {{> api_box tmpldecl_preserve}}
 
+You can "preserve" a DOM element during re-rendering, leaving the
+existing element in place in the document, while replacing the
+surrounding HTML.  This means that re-rendering a template need not
+disturb text fields, iframes, and other sensitive elements it
+contains.  The elements to preserve must be present both as nodes in
+the (old) DOM and as tags in the new HTML.  Meteor will patch the DOM
+around the preserved elements.
 
+If you want to preserve a whole region of the DOM, an element and its
+children, or nodes not rendered by Meteor, use a [constant
+region](#constant).
 
+Preservation is useful in a variety of cases where replacing a DOM
+element with an identical or modified element would not have the same
+effect as retaining the original element.  These include:
+
+* Input text fields and other form controls
+* Elements with CSS animations
+* Iframes
+* Nodes with references kept in JavaScript code
+
+You provide a list of selectors, each of which is guaranteed to match
+at most one element in the template at any given time.  When the
+template is re-rendered, the selector is run on the old DOM and the
+new DOM, and Meteor will reuse the old element in place while working
+in any HTML changes around it.
+
+The second form of `preserve` takes a labeling function for each
+selector, and allows the selectors to match multiple nodes.  For
+example, if you want to preserve all iframes in the template, you
+could supply the selector "iframe" and then a function that produces a
+unique string for each one, for example based on the iframe's "id"
+attribute.  The node-labeling function takes a node and returns a
+label string or false, to exclude the node from preservation.
+
+For example, to preserve all `<input>` elements with ids in template 'foo', use:
+
+    Template.foo.preserve({
+      'input[id]': function (node) { return node.id; }
+    });
+
+Selectors are interpreted as rooted at the top level of the template.
+Each occurrence of the template operates independently, so the
+selectors do not have to be unique on the entire page, only within one
+occurrence of the template.  Selectors may refer to nodes in
+sub-templates of the template having the `preserve` directive.
+
+Preserving a node does *not* preserve its attributes or contents,
+which will reflect whatever the re-rendered template's HTML says they
+should be.  As a special case, form fields that have focus retain
+their entered text, cursor position, and all relevant input state
+(e.g. for international text input).  Iframes retain their navigation
+state and animations continue to run as long as their parameters
+haven't changed.
+
+Preservation of a given node will be skipped if it isn't possible
+because of constraints inherent in the DOM API.  For example, an
+element's tag name can't be changed, and moving a node to a different
+parent is equivalent to removing and re-inserting it, which is
+typically just as disruptive as recreating it from scratch.  For this
+reason, nodes that are re-ordered or re-parented by an update will not
+be preserved.
+
+{{#note}}
+Previous versions of Meteor had an implicit page-wide `preserve`
+directive that labeled nodes by their "id" and "name" attributes,
+which has been removed in favor of this explicit, opt-in mechanism.
+{{/note}}
 
 
 <h2 id="template_inst"><span>Template instances</span></h2>
