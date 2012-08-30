@@ -904,14 +904,26 @@ Template.api.tmpldecl_events = {
   id: "tmpldecl_events",
   name: "Template.<em>myTemplate</em>.events(eventMap)",
   locus: "Client",
-  descr: ["XXX"]
+  descr: ["Specifies event handlers for this template."],
+  args: [
+    {name: "eventMap",
+     type: "Object: event map",
+     type_link: "eventmaps",
+     descr: "Event handlers to associate with this template."}
+  ]
 };
 
 Template.api.tmpldecl_helpers = {
   id: "tmpldecl_helpers",
   name: "Template.<em>myTemplate</em>.helpers(helpers)",
   locus: "Client",
-  descr: ["XXX"]
+  descr: ["Specifies template helpers available to this template."],
+  args: [
+    {name: "helpers",
+     type: "Object",
+     descr: "Dictionary of helper functions by name."}
+  ]
+
 };
 
 Template.api.tmpldecl_preserve = {
