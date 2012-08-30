@@ -1,16 +1,24 @@
 
 ## vNEXT
 
-* Breaking API changes
-  * Input elements no longer preserved based on `id` and `name` attributes. Use [`preserve`](http://docs.meteor.com/#tmpldecl_preserve) instead.
-  * All `Meteor.ui` functions removed. Use `Meteor.render`, `Meteor.renderList`, and [Spark](https://github.com/meteor/meteor/wiki/Spark) functions instead.
-  * New template functions (eg. `created`, `rendered`, etc) may collide with existing helpers. Use `Template.foo.helpers()` to avoid conflicts.
+* Merge Spark, a new live page update engine
+  * Breaking API changes
+    * Input elements no longer preserved based on `id` and `name` attributes. Use [`preserve`](http://docs.meteor.com/#tmpldecl_preserve) instead.
 
-* New Template features
-  * Allow embedding non-Meteor widgets (eg. Google Maps) using [`{{#constant}}`](http://docs.meteor.com/#constant)
-  * Callbacks when templates are rendered. See http://docs.meteor.com/#tmpldecl_rendered
-  * Explicit control of which nodes are preserved during re-rendering. See http://docs.meteor.com/#tmpldecl_preserve
-  * Easily find nodes within a template in event handlers and callbacks. See http://docs.meteor.com/#template_find
+    * All `Meteor.ui` functions removed. Use `Meteor.render`, `Meteor.renderList`, and [Spark](https://github.com/meteor/meteor/wiki/Spark) functions instead.
+
+    * New template functions (eg. `created`, `rendered`, etc) may collide with existing helpers. Use `Template.foo.helpers()` to avoid conflicts.
+
+  * New Template features
+
+    * Allow embedding non-Meteor widgets (eg. Google Maps) using [`{{#constant}}`](http://docs.meteor.com/#constant)
+
+    * Callbacks when templates are rendered. See http://docs.meteor.com/#tmpldecl_rendered
+
+    * Explicit control of which nodes are preserved during re-rendering. See http://docs.meteor.com/#tmpldecl_preserve
+
+    * Easily find nodes within a template in event handlers and callbacks. See http://docs.meteor.com/#template_find
+
 
 * Use PACKAGE_DIRS environment variable to override package location. #227
 
