@@ -3,7 +3,7 @@
 
 * Merge Spark, a new live page update engine
   * Breaking API changes
-    * Input elements no longer preserved based on `id` and `name` attributes. Use [`preserve`](http://docs.meteor.com/#tmpldecl_preserve) instead.
+    * Input elements no longer preserved based on `id` and `name` attributes. Use [`preserve`](http://docs.meteor.com/#template_preserve) instead.
 
     * All `Meteor.ui` functions removed. Use `Meteor.render`, `Meteor.renderList`, and [Spark](https://github.com/meteor/meteor/wiki/Spark) functions instead.
 
@@ -13,9 +13,9 @@
 
     * Allow embedding non-Meteor widgets (eg. Google Maps) using [`{{#constant}}`](http://docs.meteor.com/#constant)
 
-    * Callbacks when templates are rendered. See http://docs.meteor.com/#tmpldecl_rendered
+    * Callbacks when templates are rendered. See http://docs.meteor.com/#template_rendered
 
-    * Explicit control of which nodes are preserved during re-rendering. See http://docs.meteor.com/#tmpldecl_preserve
+    * Explicit control of which nodes are preserved during re-rendering. See http://docs.meteor.com/#template_preserve
 
     * Easily find nodes within a template in event handlers and callbacks. See http://docs.meteor.com/#template_find
 

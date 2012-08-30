@@ -924,7 +924,7 @@ There are a number of callbacks and directives that you can specify on
 a named template and that apply to all instances of the template.
 They are described below.
 
-{{> api_box tmpldecl}}
+{{> api_box template_call}}
 
 When called inside a template helper, the body of `Meteor.render`, or
 other settings where reactive HTML is being generated, the resulting
@@ -932,7 +932,7 @@ HTML is annotated so that it renders as reactive DOM elements.
 Otherwise, the HTML is unadorned and static.
 
 
-{{> api_box tmpldecl_rendered}}
+{{> api_box template_rendered}}
 
 This callback is called when an instance of Template.*myTemplate* is rendered into DOM nodes and put into the document for the first time, and again each time any part of the template is re-rendered.
 
@@ -946,7 +946,7 @@ the template and persists across re-renderings.  Use the `created` and
 `destroyed` callbacks to perform initialization or clean-up on the
 object.
 
-{{> api_box tmpldecl_created}}
+{{> api_box template_created}}
 
 This callback is called when an invocation of *myTemplate* represents
 a new occurrence of the template and not a re-rendering of an existing
@@ -960,7 +960,7 @@ This callback fires once and is the first callback to fire.  Every
 `created` callback with a certain template instance object in `this`,
 you will eventually get a `destroyed` callback for the same object.
 
-{{> api_box tmpldecl_destroyed}}
+{{> api_box template_destroyed}}
 
 This callback is called when an occurrence of a template is taken off
 the page for any reason and not replaced with a re-rendering.  Inside
@@ -971,7 +971,7 @@ This callback is most useful for cleaning up or undoing any external
 effects of `created`.  It fires once and is the last callback to fire.
 
 
-{{> api_box tmpldecl_events}}
+{{> api_box template_events}}
 
 Event handlers declared this way apply at all times to all instances
 of this template.  Multiple calls are cumulative.
@@ -986,7 +986,7 @@ old syntax still works.
 {{/note}}
 
 
-{{> api_box tmpldecl_helpers}}
+{{> api_box template_helpers}}
 
 Each template has a local dictionary of helpers that are made available to it,
 and this call specifies helpers to add to the template's dictionary.
@@ -1011,7 +1011,7 @@ However, this shorter syntax has the limitation that helper names may
 conflict with Meteor or JavaScript function properties such as `events` or
 `name`.
 
-{{> api_box tmpldecl_preserve}}
+{{> api_box template_preserve}}
 
 You can "preserve" a DOM element during re-rendering, leaving the
 existing element in place in the document, while replacing the
