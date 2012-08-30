@@ -904,7 +904,7 @@ Template.api.tmpldecl_events = {
   id: "tmpldecl_events",
   name: "Template.<em>myTemplate</em>.events(eventMap)",
   locus: "Client",
-  descr: ["Specifies event handlers for this template."],
+  descr: ["Specify event handlers for this template."],
   args: [
     {name: "eventMap",
      type: "Object: event map",
@@ -917,20 +917,24 @@ Template.api.tmpldecl_helpers = {
   id: "tmpldecl_helpers",
   name: "Template.<em>myTemplate</em>.helpers(helpers)",
   locus: "Client",
-  descr: ["Specifies template helpers available to this template."],
+  descr: ["Specify template helpers available to this template."],
   args: [
     {name: "helpers",
      type: "Object",
      descr: "Dictionary of helper functions by name."}
   ]
-
 };
 
 Template.api.tmpldecl_preserve = {
   id: "tmpldecl_preserve",
-  name: "Template.<em>myTemplate</em>.preserve([selectors])",
+  name: "Template.<em>myTemplate</em>.preserve(selectors)",
   locus: "Client",
-  descr: ["XXX"]
+  descr: ["Specify rules for preserving individual DOM elements on re-render."],
+  args: [
+    {name: "selectors",
+     type: "Array or Object",
+     descr: "Array of selectors that each match at most one element, such as `['.thing1', '.thing2']`, or, alternatively, a dictionary of selectors and node-labeling functions (see below)."}
+  ]
 };
 
 Template.api.template_findAll = {
