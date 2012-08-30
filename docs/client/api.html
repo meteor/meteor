@@ -1412,7 +1412,23 @@ correctly inside constant regions.
 {{/api_box_inline}}
 
 {{#api_box_inline isolate}}
-isolate
+
+Each template runs in its own reactive context.  When the template
+accesses a reactive data source, such as by calling `Session.get` or
+making a database query, this establishes a data dependency that will
+cause the whole template to be re-rendered when the data changes.
+This means that the amount of re-rendering for a particular change
+is affected by how you've divided your HTML into templates.
+
+Typically, the exact extent of re-rendering is not crucial, but if you
+want more control, such as for performance reasons, you can use the
+`{{dstache}}#isolate}}...{{dstache}}/isolate}}` helper.  Data
+dependencies established inside an `#isolate` block are localized to
+the block and will not in themselves cause the parent template to be
+re-rendered.  This block helper essentially conveys the reactivity
+benefits you would get by pulling the content out into a new
+sub-template.
+
 {{/api_box_inline}}
 
 
