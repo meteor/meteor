@@ -13,7 +13,7 @@ try {
   var topDir = files.get_dev_bundle();
   var changelogPath = path.join(topDir, 'History.md');
 
-  if (path.existsSync(changelogPath)) {
+  if (fs.existsSync(changelogPath)) {
     var changelogData = fs.readFileSync(changelogPath, 'utf8');
     var changelogSections = changelogData.split(/\n\#\#/);
 
