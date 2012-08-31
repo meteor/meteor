@@ -56,56 +56,7 @@ git clone git://github.com/joyent/node.git
 cd node
 git checkout v0.8.8
 
-
-
-# on linux, build a static openssl to link against. Everything else we
-# dynamically link against is pretty stable.
-#
-# This is pretty hacky, but there doesn't seem to be any other way to do
-# this in the node 0.6 build system. The build system is all different
-# in 0.7, so this will have to change when we upgrade
-if [ "$UNAME" == "Linux" ] ; then
-    curl http://www.openssl.org/source/openssl-1.0.0i.tar.gz | tar -xz
-    cd openssl-1.0.0i
-    ./config --prefix="$DIR/build/openssl-out" no-shared
-    make install
-    NODE_CONFIG_FLAGS=(
-        "--openssl-includes=$DIR/build/openssl-out/include"
-        "--openssl-libpath=$DIR/build/openssl-out/lib" )
-    cd "$DIR/build/node"
-    patch -p1 <<EOF
---- a/wscript
-+++ b/wscript
-@@ -348,17 +348,23 @@ def configure(conf):
-       if sys.platform.startswith('win32'):
-         openssl_lib_names += ['ws2_32', 'gdi32']
- 
-+      # XXX METEOR Horrible hack for static openssl!
-+      static_linkflags = ["-Wl,-Bstatic","-lssl","-lcrypto"]
-+      openssl_lib_names += ['dl']
-+
-       libssl = conf.check_cc(lib=openssl_lib_names,
-                              header_name='openssl/ssl.h',
-                              function_name='SSL_library_init',
-                              includes=openssl_includes,
-                              libpath=openssl_libpath,
-+                             linkflags=static_linkflags,
-                              uselib_store='OPENSSL')
- 
-       libcrypto = conf.check_cc(lib='crypto',
-                                 header_name='openssl/crypto.h',
-                                 includes=openssl_includes,
-                                 libpath=openssl_libpath,
-+                                linkflags=static_linkflags,
-                                 uselib_store='OPENSSL')
- 
-       if libcrypto and libssl:
-EOF
-
-fi
-
-
-./configure --prefix="$DIR" ${NODE_CONFIG_FLAGS[*]}
+./configure --prefix="$DIR"
 make -j4
 make install
 
