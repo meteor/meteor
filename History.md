@@ -1,6 +1,8 @@
 
 ## vNEXT
 
+## v0.4.0
+
 * Merge Spark, a new live page update engine
   * Breaking API changes
     * Input elements no longer preserved based on `id` and `name` attributes. Use [`preserve`](http://docs.meteor.com/#template_preserve) instead.
