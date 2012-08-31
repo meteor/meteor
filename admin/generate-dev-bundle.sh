@@ -12,7 +12,7 @@ if [ "$UNAME" == "Linux" ] ; then
         echo "Meteor only supports i686 and x86_64 for now."
         exit 1
     fi
-    MONGO_NAME="mongodb-linux-${ARCH}-2.0.2"
+    MONGO_NAME="mongodb-linux-${ARCH}-2.2.0"
     MONGO_URL="http://fastdl.mongodb.org/linux/${MONGO_NAME}.tgz"
 elif [ "$UNAME" == "Darwin" ] ; then
     SYSCTL_64BIT=$(sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0)
@@ -29,7 +29,7 @@ elif [ "$UNAME" == "Darwin" ] ; then
         exit 1
     fi
 
-    MONGO_NAME="mongodb-osx-${ARCH}-2.0.2"
+    MONGO_NAME="mongodb-osx-${ARCH}-2.2.0"
     MONGO_URL="http://fastdl.mongodb.org/osx/${MONGO_NAME}.tgz"
 else
     echo "This OS not yet supported"
@@ -54,14 +54,8 @@ cd build
 
 git clone git://github.com/joyent/node.git
 cd node
-git checkout v0.6.17
+git checkout v0.8.8
 
-# use newer v8. This fixes an issue with node-fibers:
-# https://github.com/laverdet/node-fibers/issues/28
-echo checking out v8
-rm -rf deps/v8
-git clone http://github.com/v8/v8.git deps/v8
-(cd deps/v8 && git checkout 3.9.24)
 
 
 # on linux, build a static openssl to link against. Everything else we
@@ -111,9 +105,8 @@ EOF
 fi
 
 
-export JOBS=4
 ./configure --prefix="$DIR" ${NODE_CONFIG_FLAGS[*]}
-make
+make -j4
 make install
 
 # export path so we use our new node for later builds
@@ -124,31 +117,28 @@ which node
 which npm
 
 cd "$DIR/lib/node_modules"
-npm install connect@1.8.7 # not 2.x yet. sockjs doesn't work w/ new connect
+npm install connect@1.9.2 # not 2.x yet. sockjs doesn't work w/ new connect
 npm install gzippo@0.1.7
-npm install optimist@0.3.1
-npm install coffee-script@1.3.1
+npm install optimist@0.3.4
+npm install coffee-script@1.3.3
 npm install less@1.3.0
 npm install sass@0.5.0
-npm install stylus@0.28.1
-npm install nib@0.7.0
-npm install mime@1.2.5
-npm install semver@1.0.13
-npm install handlebars@1.0.5beta
-npm install mongodb@0.9.9-8
-npm install uglify-js@1.2.6
-npm install clean-css@0.3.2
-npm install progress@0.0.4
-npm install fibers@0.6.5
-npm install useragent@1.0.6
-npm install request@2.9.202
-npm install http-proxy@0.8.0
-npm install simplesmtp@0.1.19
-npm install mailcomposer@0.1.15
+npm install stylus@0.29.0
+npm install nib@0.8.2
+npm install mime@1.2.7
+npm install semver@1.0.14
+npm install handlebars@1.0.6-2
+npm install mongodb@1.1.5
+npm install uglify-js@1.3.3
+npm install clean-css@0.6.0
+npm install progress@0.0.5
+npm install fibers@0.6.8
+npm install useragent@1.1.0
+npm install request@2.11.0
+npm install http-proxy@0.8.2
+npm install simplesmtp@0.1.20
+npm install mailcomposer@0.1.17
 npm install stream-buffers@0.2.3
-
-# unused, but kept in bundle for compatibility for a while.
-npm install connect-gzip@0.1.5
 
 # Sockjs has a broken optional dependancy, and npm optional dependancies
 # don't seem to quite work. Fake it out with a checkout.
@@ -156,14 +146,6 @@ git clone http://github.com/akdubya/rbytes.git
 npm install sockjs@0.3.1
 rm -rf rbytes
 
-# Disable mtime check in fibers. Fixes problem when packaging tools
-# don't preserve mtimes.
-cat > fibers/fibers.js <<EOF
-// meteor removed mtime check here.
-
-// Injects 'Fiber' and 'yield' in to global
-require('./src/fibers');
-EOF
 
 cd "$DIR"
 curl "$MONGO_URL" | tar -xz
