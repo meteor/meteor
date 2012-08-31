@@ -139,6 +139,7 @@ npm install http-proxy@0.8.2
 npm install simplesmtp@0.1.20
 npm install mailcomposer@0.1.17
 npm install stream-buffers@0.2.3
+npm install keypress@0.1.0
 
 # Sockjs has a broken optional dependancy, and npm optional dependancies
 # don't seem to quite work. Fake it out with a checkout.
