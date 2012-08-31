@@ -934,11 +934,7 @@ Otherwise, the HTML is unadorned and static.
 
 {{> api_box template_rendered}}
 
-This callback is called when an instance of Template.*myTemplate* is rendered into DOM nodes and put into the document for the first time, and again each time any part of the template is re-rendered.
-
-{{#note}}
-Since there's no way to tell which part of the template changed on re-render, the first rendered() received after created() is by far the most useful.
-{{/note}}
+This callback is called once when an instance of Template.*myTemplate* is rendered into DOM nodes and put into the document for the first time, and again each time any part of the template is re-rendered.
 
 In the body of the callback, `this` is a [template
 instance](#template_inst) object that is unique to this occurrence of
@@ -973,15 +969,14 @@ effects of `created`.  It fires once and is the last callback to fire.
 
 {{> api_box template_events}}
 
-Event handlers declared this way apply at all times to all instances
-of this template.  Multiple calls are cumulative.
+Declare event handers for instances of this template. Multiple calls add
+new event handlers in addition to the existing ones.
 
 See [Event Maps](#eventmaps) for a detailed description of the event
 map format and how event handling works in Meteor.
 
 {{#note}}
-This syntax supersedes the previous syntax where you would
-assign an event map to `Template.myTemplate.events`, but for now, the
+This syntax replaces the previous syntax: `Template.myTemplate.events = {...}`, but for now, the
 old syntax still works.
 {{/note}}
 
@@ -1001,29 +996,22 @@ Example:
 
 In Handlebars, this helper would then be invoked as `{{dstache}}foo}}`.
 
-The following syntax is equivalent:
+The following syntax is equivalent, but won't work for reserved property
+names:
 
     Template.myTemplate.foo = function () {
       return Session.get("foo");
     };
 
-However, this shorter syntax has the limitation that helper names may
-conflict with Meteor or JavaScript function properties such as `events` or
-`name`.
-
 {{> api_box template_preserve}}
 
 You can "preserve" a DOM element during re-rendering, leaving the
-existing element in place in the document, while replacing the
+existing element in place in the document while replacing the
 surrounding HTML.  This means that re-rendering a template need not
 disturb text fields, iframes, and other sensitive elements it
 contains.  The elements to preserve must be present both as nodes in
-the (old) DOM and as tags in the new HTML.  Meteor will patch the DOM
+the old DOM and as tags in the new HTML.  Meteor will patch the DOM
 around the preserved elements.
-
-If you want to preserve a whole region of the DOM, an element and its
-children, or nodes not rendered by Meteor, use a [constant
-region](#constant).
 
 Preservation is useful in a variety of cases where replacing a DOM
 element with an identical or modified element would not have the same
@@ -1034,19 +1022,20 @@ effect as retaining the original element.  These include:
 * Iframes
 * Nodes with references kept in JavaScript code
 
-You provide a list of selectors, each of which is guaranteed to match
-at most one element in the template at any given time.  When the
-template is re-rendered, the selector is run on the old DOM and the
-new DOM, and Meteor will reuse the old element in place while working
-in any HTML changes around it.
+If you want to preserve a whole region of the DOM, an element and its
+children, or nodes not rendered by Meteor, use a [constant
+region](#constant) instead.
 
-The second form of `preserve` takes a labeling function for each
-selector, and allows the selectors to match multiple nodes.  For
-example, if you want to preserve all iframes in the template, you
-could supply the selector "iframe" and then a function that produces a
-unique string for each one, for example based on the iframe's "id"
-attribute.  The node-labeling function takes a node and returns a
-label string or false, to exclude the node from preservation.
+To preserve nodes, pass a list of selectors each of which should match
+at most one element in the template.  When the template is re-rendered,
+the selector is run on the old DOM and the new DOM, and Meteor will
+reuse the old element in place while working in any HTML changes around
+it.
+
+A second form of `preserve` takes a labeling function for each selector
+and allows the selectors to match multiple nodes. The node-labeling
+function takes a node and returns a label string that is unique for each
+node, or `false` to exclude the node from preservation.
 
 For example, to preserve all `<input>` elements with ids in template 'foo', use:
 
@@ -1055,46 +1044,42 @@ For example, to preserve all `<input>` elements with ids in template 'foo', use:
     });
 
 Selectors are interpreted as rooted at the top level of the template.
-Each occurrence of the template operates independently, so the
-selectors do not have to be unique on the entire page, only within one
-occurrence of the template.  Selectors may refer to nodes in
-sub-templates of the template having the `preserve` directive.
+Each occurrence of the template operates independently, so the selectors
+do not have to be unique on the entire page, only within one occurrence
+of the template.  Selectors will match nodes even if they are in
+sub-templates.
 
-Preserving a node does *not* preserve its attributes or contents,
-which will reflect whatever the re-rendered template's HTML says they
-should be.  As a special case, form fields that have focus retain
-their entered text, cursor position, and all relevant input state
-(e.g. for international text input).  Iframes retain their navigation
-state and animations continue to run as long as their parameters
-haven't changed.
+Preserving a node does *not* preserve its attributes or contents. They
+will be updated to reflect the new HTML. Text in input fields is not
+preserved unless the input field has focus, in which case the cursor and
+selection are left intact. Iframes retain their navigation state and
+animations continue to run as long as their parameters haven't changed.
 
-Preservation of a given node will be skipped if it isn't possible
-because of constraints inherent in the DOM API.  For example, an
-element's tag name can't be changed, and moving a node to a different
-parent is equivalent to removing and re-inserting it, which is
-typically just as disruptive as recreating it from scratch.  For this
-reason, nodes that are re-ordered or re-parented by an update will not
-be preserved.
+There are some cases where nodes can not be preserved because of
+constraints inherent in the DOM API. For example, an element's tag name
+can't be changed, and it can't be moved relative to its parent or other
+preserved nodes.  For this reason, nodes that are re-ordered or
+re-parented by an update will not be preserved.
 
 {{#note}}
 Previous versions of Meteor had an implicit page-wide `preserve`
-directive that labeled nodes by their "id" and "name" attributes,
-which has been removed in favor of this explicit, opt-in mechanism.
+directive that labeled nodes by their "id" and "name" attributes.
+This has been removed in favor of the explicit, opt-in mechanism.
 {{/note}}
 
 
 <h2 id="template_inst"><span>Template instances</span></h2>
 
 A template instance object represents an occurrence of a template in
-the document.  It can be used to access the DOM, and it can be
+the document.  It can be used to access the DOM and it can be
 assigned properties that persist across page re-renderings.
 
 Template instance objects are found as the value of `this` in the
-`created`, `rendered`, and `destroyed` template callbacks, and as an
+`created`, `rendered`, and `destroyed` template callbacks and as an
 argument to event handlers.
 
 In addition to the properties and functions described below, you can
-assign whatever properties of your own to the object.  Property names
+assign additional properties of your choice to the object.  Property names
 starting with `_` are guaranteed to be available for your use.  Use
 the `created` and `destroyed` callbacks to perform initialization or
 clean-up on the object.
@@ -1108,24 +1093,26 @@ in the DOM.
 
 Returns an array of DOM elements matching `selector`.
 
-The template instance serves as the document root for the selector, so
-only elements inside the template can match parts of the selector.
+The template instance serves as the document root for the selector. Only
+elements inside the template and its sub-templates can match parts of
+the selector.
 
 {{> api_box template_find}}
 
 Returns one DOM element matching `selector`, or `null` if there are no
 such elements.
 
-The template instance serves as the document root for the selector, so
-only elements inside the template can match parts of the selector.
+The template instance serves as the document root for the selector. Only
+elements inside the template and its sub-templates can match parts of
+the selector.
 
 {{> api_box template_firstNode}}
 
 The two nodes `firstNode` and `lastNode` indicate the extent of the
-rendered template in the DOM.  These two nodes are siblings (they have
-the same parent), and `lastNode` comes after `firstNode`, or else they
-are the same node.  The rendered template includes these nodes, their
-intervening siblings, and their descendents.
+rendered template in the DOM.  The rendered template includes these
+nodes, their intervening siblings, and their descendents.  These two
+nodes are siblings (they have the same parent), and `lastNode` comes
+after `firstNode`, or else they are the same node.
 
 {{> api_box template_lastNode}}
 
@@ -1139,12 +1126,15 @@ Access is read-only and non-reactive.
 {{> api_box render}}
 
 `Meteor.render` creates a `DocumentFragment` (a sequence of DOM nodes)
-that automatically updates in realtime. You pass in `htmlFunc`, a
-function that returns an HTML string. `Meteor.render` calls your
-function and turns the output into DOM nodes. Meanwhile, it tracks the
-data that was used when `htmlFunc` ran, and automatically wires up
-callbacks so that whenever any of the data changes, `htmlFunc` is
-re-run and the DOM nodes are updated in place.
+that automatically updates in realtime. Most Meteor apps don't need to
+call this directly, they use templates and Meteor handles the rendering.
+
+Pass in `htmlFunc`, a function that returns an HTML
+string. `Meteor.render` calls the function and turns the output into
+DOM nodes. Meanwhile, it tracks the data that was used when `htmlFunc`
+ran, and automatically wires up callbacks so that whenever any of the
+data changes, `htmlFunc` is re-run and the DOM nodes are updated in
+place.
 
 You may insert the returned `DocumentFragment` directly into the DOM
 wherever you would like it to appear. The inserted nodes will continue
@@ -1174,13 +1164,15 @@ Example:
 {{> api_box renderList}}
 
 Creates a `DocumentFragment` that automatically updates as the results
-of a database query change.  This is more efficient than using
-`Meteor.render` to render HTML for a list of documents.  For example,
-if a new document is created in the database that matches the query, a
-new item will be rendered and inserted at the appropriate place in the
-DOM without re-rendering the other elements.  Similarly, if a document
-changes position in a sorted query, the DOM nodes will simply be moved
-and not re-rendered.
+of a database query change. Most Meteor apps use `{{dstache}}#each}}` in
+a template instead of calling this directly.
+
+`renderList` is more efficient than using `Meteor.render` to render HTML
+for a list of documents.  For example, if a new document is created in
+the database that matches the query, a new item will be rendered and
+inserted at the appropriate place in the DOM without re-rendering the
+other elements.  Similarly, if a document changes position in a sorted
+query, the DOM nodes will simply be moved and not re-rendered.
 
 `docFunc` is called as needed to generate HTML for each document.  If
 you provide `elseFunc`, then whenever the query returns no results, it

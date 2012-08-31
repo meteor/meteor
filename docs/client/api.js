@@ -545,7 +545,7 @@ Template.api.renderList = {
     {name: "observable",
      type: "Cursor",
      type_link: "meteor_collection_cursor",
-     descr: "Query cursor to observe, as a reactive source of ordered documents."},
+     descr: "Query cursor to observe as a reactive source of ordered documents."},
     {name: "docFunc",
      type: "Function taking a document and returning HTML",
      descr: "Render function to be called for each document."},
