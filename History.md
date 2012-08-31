@@ -9,6 +9,8 @@
 
     * New template functions (eg. `created`, `rendered`, etc) may collide with existing helpers. Use `Template.foo.helpers()` to avoid conflicts.
 
+    * New syntax for declaring event maps. Use `Template.foo.events({...})`. For backwards compatibility, both syntaxes are allowed for now.
+
   * New Template features
 
     * Allow embedding non-Meteor widgets (eg. Google Maps) using [`{{#constant}}`](http://docs.meteor.com/#constant)
@@ -18,6 +20,8 @@
     * Explicit control of which nodes are preserved during re-rendering. See http://docs.meteor.com/#template_preserve
 
     * Easily find nodes within a template in event handlers and callbacks. See http://docs.meteor.com/#template_find
+
+    * Allow parts of a template to be independently reactive with the [`{{#isolate}}`](http://docs.meteor.com/#isolate) block helper.
 
 
 * Use PACKAGE_DIRS environment variable to override package location. #227
