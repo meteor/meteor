@@ -12,6 +12,13 @@ var path = require('path');
 var files = require('../lib/files.js');
 var _ = require('../lib/third/underscore.js');
 
+// This magic incantation seems to both fix the "meteor mongo" repl
+// and keep Node from bringing down the Emacs shell on exit.
+if (process.stdin.isTTY)
+  // Call a special function that we monkey-patched into
+  // node/src/tty_wrap.cc.  It sets fcntl's O_NONBLOCK to a boolean.
+  process.stdin._handle.setNonBlocking(false);
+
 //
 // configuration
 //

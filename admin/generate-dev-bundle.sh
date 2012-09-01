@@ -56,6 +56,80 @@ git clone git://github.com/joyent/node.git
 cd node
 git checkout v0.8.8
 
+patch -p1 <<EOF
+diff --git a/src/tty_wrap.cc b/src/tty_wrap.cc
+index fde8717..2420e7e 100644
+--- a/src/tty_wrap.cc
++++ b/src/tty_wrap.cc
+@@ -19,6 +19,7 @@
+ // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+ // USE OR OTHER DEALINGS IN THE SOFTWARE.
+ 
++#include <fcntl.h>
+ #include "node.h"
+ #include "node_buffer.h"
+ #include "req_wrap.h"
+@@ -68,6 +69,8 @@ void TTYWrap::Initialize(Handle<Object> target) {
+   NODE_SET_PROTOTYPE_METHOD(t, "getWindowSize", TTYWrap::GetWindowSize);
+   NODE_SET_PROTOTYPE_METHOD(t, "setRawMode", SetRawMode);
+ 
++  NODE_SET_PROTOTYPE_METHOD(t, "setNonBlocking", TTYWrap::SetNonBlocking);
++
+   NODE_SET_METHOD(target, "isTTY", IsTTY);
+   NODE_SET_METHOD(target, "guessHandleType", GuessHandleType);
+ 
+@@ -121,6 +124,37 @@ Handle<Value> TTYWrap::IsTTY(const Arguments& args) {
+   return uv_guess_handle(fd) == UV_TTY ? v8::True() : v8::False();
+ }
+ 
++Handle<Value> TTYWrap::SetNonBlocking(const Arguments& args) {
++  HandleScope scope;
++
++  UNWRAP(TTYWrap)
++
++  int fd = wrap->handle_.fd;
++  int set = args[0]->IsTrue();
++  int r = 0;
++
++  /// uv__nonblock
++  int flags;
++
++  if ((flags = fcntl(fd, F_GETFL)) == -1) {
++    r = -1;
++  } else {
++
++    if (set) {
++      flags |= O_NONBLOCK;
++    } else {
++      flags &= ~O_NONBLOCK;
++    }
++
++    int r;
++    if (fcntl(fd, F_SETFL, flags) == -1) {
++      r = -1;
++    }
++  }
++  ///
++
++  return scope.Close(Integer::New(r));
++}
+ 
+ Handle<Value> TTYWrap::GetWindowSize(const Arguments& args) {
+   HandleScope scope;
+diff --git a/src/tty_wrap.h b/src/tty_wrap.h
+index 4a3341a..bac0d0f 100644
+--- a/src/tty_wrap.h
++++ b/src/tty_wrap.h
+@@ -48,6 +48,7 @@ class TTYWrap : StreamWrap {
+   static Handle<Value> IsTTY(const Arguments& args);
+   static Handle<Value> GetWindowSize(const Arguments& args);
+   static Handle<Value> SetRawMode(const Arguments& args);
++  static Handle<Value> SetNonBlocking(const Arguments& args);
+   static Handle<Value> New(const Arguments& args);
+ 
+   uv_tty_t handle_;
+EOF
+
 ./configure --prefix="$DIR"
 make -j4
 make install
