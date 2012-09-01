@@ -27,11 +27,13 @@ Session = _.extend({}, {
     }
   },
 
-  set: function (key, value) {
+  set: function (key, value, trigger) {
     var self = this;
 
+    trigger = trigger == null || typeof trigger == 'undefined' ? false : true;
+	
     var old_value = self.keys[key];
-    if (value === old_value)
+    if (value === old_value && !trigger) 
       return;
     self.keys[key] = value;
 
