@@ -116,12 +116,12 @@ Template.test.test_class = function() {
   return classes.join(' ');
 };
 
-Template.test.events = {
+Template.test.events({
   'click .testname': function() {
     this.expanded = ! this.expanded;
     _resultsChanged();
   }
-};
+});
 
 Template.test.eventsArray = function() {
   var events = _.filter(this.events, function(e) {
@@ -158,7 +158,7 @@ Template.test.eventsArray = function() {
   });
 };
 
-Template.event.events = {
+Template.event.events({
   'click .debug': function () {
     // the way we manage groupPath, shortName, cookies, etc, is really
     // messy. needs to be aggressively refactored.
@@ -166,7 +166,7 @@ Template.event.events = {
                   test: this.cookie.shortName});
     Meteor._debugTest(this.cookie, reportResults);
   }
-};
+});
 
 Template.event.get_details = function() {
   var details = this.details;

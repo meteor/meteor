@@ -21,19 +21,32 @@ Handlebars.json_ast_to_func = function (ast) {
 //
 // partials take one argument, data
 
-// XXX handlebars' format for arguments is stupid. eg, options ===
-// options.fn. plow this stuff under. treat block arguments (fn,
-// inverse) as just another kind of argument, same as what is passed
-// in via named arguments.
+// XXX handlebars' format for arguments is not the clearest, likely
+// for backwards compatibility to mustache. eg, options ===
+// options.fn. take the opportunity to clean this up. treat block
+// arguments (fn, inverse) as just another kind of argument, same as
+// what is passed in via named arguments.
 Handlebars._default_helpers = {
   'with': function (data, options) {
     return options.fn(data);
   },
   'each': function (data, options) {
+    var parentData = this;
     if (data && data.length > 0)
-      return _.map(data, options.fn).join('');
+      return _.map(data, function(x, i) {
+        // infer a branch key from the data
+        var branch = (x._id || (typeof x === 'string' ? x : null) ||
+                      Spark.UNIQUE_LABEL);
+        return Spark.labelBranch(branch, function() {
+          return options.fn(x);
+        });
+      }).join('');
     else
-      return options.inverse(this);
+      return Spark.labelBranch(
+        'else',
+        function () {
+          return options.inverse(parentData);
+        });
   },
   'if': function (data, options) {
     if (!data || (data instanceof Array && !data.length))
@@ -124,7 +137,7 @@ Handlebars.evaluate = function (ast, data, options) {
     var dataThis = stack.data;
 
     var data;
-    if (id[0] === 0 && (id[1] in helpers) && ! scopedToContext) {
+    if (id[0] === 0 && helpers.hasOwnProperty(id[1]) && ! scopedToContext) {
       // first path segment is a helper
       data = helpers[id[1]];
     } else {
@@ -196,7 +209,7 @@ Handlebars.evaluate = function (ast, data, options) {
     var last = params[params.length - 1];
     var hash = {};
     if (typeof(last) === "object" && !(last instanceof Array)) {
-      // evaluate hash values, which are currently invocations
+      // evaluate hash values, which are found as invocations
       // like [0, "foo"]
       _.each(params.pop(), function(v,k) {
         var result = eval_value(stack, v);
@@ -239,7 +252,7 @@ Handlebars.evaluate = function (ast, data, options) {
     return apply(values, extra);
   };
 
-  var template = function (stack, elts) {
+  var template = function (stack, elts, basePCKey) {
     var buf = [];
 
     var toString = function (x) {
@@ -250,22 +263,19 @@ Handlebars.evaluate = function (ast, data, options) {
       return x.toString();
     };
 
-    // wrap `fn` and `inverse` blocks in liveranges
-    // having event_data, if the data is different
-    // from the enclosing data.
+    // wrap `fn` and `inverse` blocks in chunks having `data`, if the data
+    // is different from the enclosing data, so that the data is available
+    // at runtime for events.
     var decorateBlockFn = function(fn, old_data) {
       return function(data) {
-        var result = fn(data);
-        // don't create spurious ranges when data is same as before
-        // (or when transitioning between e.g. `window` and `undefined`)
+        // don't create spurious annotations when data is same
+        // as before (or when transitioning between e.g. `window` and
+        // `undefined`)
         if ((data || Handlebars._defaultThis) ===
-            (old_data || Handlebars._defaultThis)) {
-          return result;
-        } else {
-          return Meteor.ui.chunk(
-            function() { return result; },
-            { event_data: data });
-        }
+            (old_data || Handlebars._defaultThis))
+          return fn(data);
+        else
+          return Spark.setDataContext(data, fn(data));
       };
     };
 
@@ -280,32 +290,63 @@ Handlebars.evaluate = function (ast, data, options) {
       return Handlebars._escape(toString(x));
     };
 
-    _.each(elts, function (elt) {
+    var curIndex;
+    // Construct a unique key for the current position
+    // in the AST.  Since template(...) is invoked recursively,
+    // the "PC" (program counter) key is hierarchical, consisting
+    // of one or more numbers, for example '0' or '1.3.0.1'.
+    var getPCKey = function() {
+      return (basePCKey ? basePCKey+'.' : '') + curIndex;
+    };
+    var branch = function(name, func) {
+      // Construct a unique branch identifier based on what partial
+      // we're in, what partial or helper we're calling, and our index
+      // into the template AST (essentially the program counter).
+      // If "foo" calls "bar" at index 3, it looks like: bar@foo#3.
+      return Spark.labelBranch(name + "@" + getPCKey(), func);
+    };
+
+    _.each(elts, function (elt, index) {
+      curIndex = index;
       if (typeof(elt) === "string")
         buf.push(elt);
       else if (elt[0] === '{')
         // {{double stache}}
-        buf.push(maybeEscape(invoke(stack, elt[1])));
+        buf.push(branch(elt[1], function () {
+          return maybeEscape(invoke(stack, elt[1]));
+        }));
       else if (elt[0] === '!')
         // {{{triple stache}}}
-        buf.push(toString(invoke(stack, elt[1] || '')));
+        buf.push(branch(elt[1], function () {
+          return toString(invoke(stack, elt[1] || ''));
+        }));
       else if (elt[0] === '#') {
         // {{#block helper}}
         var block = decorateBlockFn(
           function (data) {
-            return template({parent: stack, data: data}, elt[2]);
+            return template({parent: stack, data: data}, elt[2],
+                            getPCKey());
           }, stack.data);
         block.fn = block;
         block.inverse = decorateBlockFn(
           function (data) {
-            return template({parent: stack, data: data}, elt[3] || []);
+            return template({parent: stack, data: data}, elt[3] || [],
+                            getPCKey());
           }, stack.data);
-        buf.push(toString(invoke(stack, elt[1], block, true)));
+        var html = branch(elt[1], function () {
+          return toString(invoke(stack, elt[1], block, true));
+        });
+        buf.push(html);
       } else if (elt[0] === '>') {
         // {{> partial}}
-        if (!(elt[1] in partials))
-          throw new Error("No such partial '" + elt[1] + "'");
-        buf.push(toString(partials[elt[1]](stack.data)));
+        var partialName = elt[1];
+        if (!(partialName in partials))
+          throw new Error("No such partial '" + partialName + "'");
+        // call the partial
+        var html = branch(partialName, function () {
+          return toString(partials[partialName](stack.data));
+        });
+        buf.push(html);
       } else
         throw new Error("bad element in template");
     });
@@ -313,7 +354,13 @@ Handlebars.evaluate = function (ast, data, options) {
     return buf.join('');
   };
 
-  return template({data: data, parent: null}, ast);
+  // Set the prefix for PC keys, which identify call sites in the AST
+  // for the purpose of chunk matching.
+  // `options.name` will be null in the body, but otherwise have a value,
+  // assuming `options` was assembled in templating/deftemplate.js.
+  var rootPCKey = (options.name||"")+"#";
+
+  return template({data: data, parent: null}, ast, rootPCKey);
 };
 
 Handlebars.SafeString = function(string) {

@@ -199,7 +199,7 @@ Tinytest.add("minimongo - cursors", function (test) {
 Tinytest.add("minimongo - misc", function (test) {
   // deepcopy
   var a = {a: [1, 2, 3], b: "x", c: true, d: {x: 12, y: [12]},
-           f: null};
+           f: null, g: new Date()};
   var b = LocalCollection._deepcopy(a);
   test.isTrue(LocalCollection._f._equal(a, b));
   a.a.push(4);
@@ -211,7 +211,10 @@ Tinytest.add("minimongo - misc", function (test) {
   test.equal(b.d.z, 15);
   a.d.y.push(88);
   test.length(b.d.y, 1);
-
+  test.equal(a.g, b.g)
+  b.g.setDate(b.g.getDate() + 1);
+  test.notEqual(a.g, b.g)
+  
   a = {x: function () {}};
   b = LocalCollection._deepcopy(a);
   a.x.a = 14;
@@ -531,6 +534,14 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({"a.b": [1,2,3]}, {a: {b: [4]}});
   match({"a.b": /a/}, {a: {b: "cat"}});
   nomatch({"a.b": /a/}, {a: {b: "dog"}});
+
+  // trying to access a dotted field that is undefined at some point
+  // down the chain
+  nomatch({"a.b": 1}, {x: 2});
+  nomatch({"a.b.c": 1}, {a: {x: 2}});
+  nomatch({"a.b.c": 1}, {a: {b: {x: 2}}});
+  nomatch({"a.b.c": 1}, {a: {b: 1}});
+  nomatch({"a.b.c": 1}, {a: {b: 0}});
 
   // dotted keypaths: literal objects
   match({"a.b": {c: 1}}, {a: {b: {c: 1}}});

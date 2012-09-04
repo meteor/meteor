@@ -1,6 +1,6 @@
 var canonicalizeHtml = function(html) {
   var h = html;
-  // kill IE-specific comments inserted by Meteor liveui
+  // kill IE-specific comments inserted by Spark
   h = h.replace(/<!--IE-->/g, '');
   // ignore exact text of comments
   h = h.replace(/<!--.*?-->/g, '<!---->');

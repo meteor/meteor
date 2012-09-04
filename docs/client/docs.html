@@ -11,7 +11,7 @@
   </div>
   <div id="main">
     <div id="top"></div>
-    <h1 class="main-headline">Meteor 0.3.9</h1>
+    <h1 class="main-headline">Meteor 0.4.0</h1>
     {{> introduction }}
     {{> concepts }}
     {{> api }}
@@ -28,7 +28,7 @@
   {{/if}}
   {{#if type "section"}}
     <h{{depth}}><a href="#{{id}}" class="{{maybe_current}} {{style}}">
-        {{#if instance}}<i>{{instance}}</i>.{{/if}}{{name}}
+        {{#if prefix}}{{prefix}}.{{/if}}{{#if instance}}<i>{{instance}}</i>.{{/if}}{{name}}
     </a></h{{depth}}>
   {{/if}}
   {{/each}}

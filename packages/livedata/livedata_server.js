@@ -726,7 +726,7 @@ Meteor._LivedataServer = function () {
   // minutes. Also run result cache cleanup.
   // XXX at scale, we'll want to have a separate timer for each
   // session, and stagger them
-  setInterval(function () {
+  Meteor.setInterval(function () {
     var now = +(new Date);
     _.each(self.sessions, function (s) {
       s.cleanup();

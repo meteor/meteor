@@ -481,13 +481,6 @@ Template.api.Context = {
   descr: ["Create an invalidation context. Invalidation contexts are used to run a piece of code, and record its dependencies so it can be rerun later if one of its inputs changes.", "An invalidation context is basically just a list of callbacks for an event that can fire only once. The [`on_invalidate`](#on_invalidate) method adds a callback to the list, and the [`invalidate`](#invalidate) method fires the event."]
 };
 
-Template.api.current = {
-  id: "current",
-  name: "Meteor.deps.Context.current",
-  locus: "Client",
-  descr: ["The current [`invalidation context`](#context), or `null` if not being called from inside [`run`](#run)."]
-};
-
 Template.api.run = {
   id: "run",
   name: "<em>context</em>.run(func)",
@@ -519,77 +512,11 @@ Template.api.invalidate = {
   descr: ["Add this context to the list of contexts that will have their `on_invalidate|on_invalidate` callbacks called by the next call to [`Meteor.flush`](#meteor_flush)."]
 };
 
-
-// writeFence
-// invalidationCrossbar
-
-Template.api.render = {
-  id: "meteor_ui_render",
-  name: "Meteor.ui.render(html_func, [options])",
+Template.api.current = {
+  id: "current",
+  name: "Meteor.deps.Context.current",
   locus: "Client",
-  descr: ["Create DOM nodes that automatically update themselves as data changes."],
-  args: [
-    {name: "html_func",
-     type: "Function returning a string of HTML",
-     descr: "Render function to be called, initially and whenever data changes"}
-  ],
-  options: [
-    {name: "events",
-     type: "Object &mdash; event map",
-     type_link: "eventmaps",
-     descr: "Events to hook up to the rendered elements"},
-    {name: "event_data",
-     type: "Any value",
-     descr: "Value to bind to `this` in event handlers"
-    }
-  ]
-};
-
-Template.api.chunk = {
-  id: "meteor_ui_chunk",
-  name: "Meteor.ui.chunk(html_func, [options])",
-  locus: "Client",
-  descr: ["Inside [`Meteor.ui.render`](#meteor_ui_render), give special behavior to a range of HTML."],
-  args: [
-    {name: "html_func",
-     type: "Function returning a string of HTML",
-     descr: "Render function to be called, initially and whenever data changes"}
-  ],
-  options: [
-    {name: "events",
-     type: "Object &mdash; event map",
-     type_link: "eventmaps",
-     descr: "Events to hook up to the rendered elements"},
-    {name: "event_data",
-     type: "Any value",
-     descr: "Value to bind to `this` in event handlers"
-    }
-  ]
-};
-
-Template.api.listChunk = {
-  id: "meteor_ui_listchunk",
-  name: "Meteor.ui.listChunk(observable, doc_func, [else_func], [options])",
-  locus: "Client",
-  descr: ["Observe a database query and create annotated HTML that will be reactively updated when rendered with [`Meteor.ui.render`](#meteor_ui_render)."],
-  args: [
-    {name: "observable",
-     type: "Cursor",
-     type_link: "meteor_collection_cursor",
-     descr: "Query cursor to observe, as a reactive source of ordered documents"},
-    {name: "doc_func",
-     type: "Function taking a document and returning HTML",
-     descr: "Render function to be called for each document"},
-    {name: "else_func",
-     type: "Function returning HTML",
-     descr: "Render function to be called when query is empty"}
-  ],
-  options: [
-    {name: "events",
-     type: "Object &mdash; event map",
-     type_link: "eventmaps",
-     descr: "Events to hook up to the rendered elements"}
-  ]
+  descr: ["The current [`invalidation context`](#context), or `null` if not being called from inside [`run`](#run)."]
 };
 
 Template.api.flush = {
@@ -599,10 +526,58 @@ Template.api.flush = {
   descr: ["Ensure that any reactive updates have finished. Allow auto-updating DOM element to be cleaned up if they are offscreen."]
 };
 
+
+// writeFence
+// invalidationCrossbar
+
+Template.api.render = {
+  id: "meteor_render",
+  name: "Meteor.render(htmlFunc)",
+  locus: "Client",
+  descr: ["Create DOM nodes that automatically update themselves as data changes."],
+  args: [
+    {name: "htmlFunc",
+     type: "Function returning a string of HTML",
+     descr: "Function that generates HTML to be rendered.  Called immediately and re-run whenever data changes.  May also be a string of HTML instead of a function."}
+  ]
+};
+
+Template.api.renderList = {
+  id: "meteor_renderlist",
+  name: "Meteor.renderList(observable, docFunc, [elseFunc])",
+  locus: "Client",
+  descr: ["Create DOM nodes that automatically update themselves based on the results of a database query."],
+  args: [
+    {name: "observable",
+     type: "Cursor",
+     type_link: "meteor_collection_cursor",
+     descr: "Query cursor to observe as a reactive source of ordered documents."},
+    {name: "docFunc",
+     type: "Function taking a document and returning HTML",
+     descr: "Render function to be called for each document."},
+    {name: "elseFunc",
+     type: "Function returning HTML",
+     descr: "Optional.  Render function to be called when query is empty."}
+  ]
+};
+
+
 Template.api.eventmaps = {
   id: "eventmaps",
   name: "Event Maps"
 };
+
+Template.api.constant = {
+  id: "constant",
+  name: "Constant regions"
+};
+
+Template.api.isolate = {
+  id: "isolate",
+  name: "Reactivity isolation"
+};
+
+
 
 Template.api.setTimeout = {
   id: "meteor_settimeout",
@@ -835,3 +810,118 @@ Template.api.http_del = {
 };
 
 
+// XXX move these up to right place
+Template.api.template_call = {
+  id: "template_call",
+  name: "Template.<em>myTemplate</em>([data])",
+  locus: "Client",
+  descr: ["Call a template function by name to produce HTML."],
+  args: [
+    {name: "data",
+     type: "Object",
+     descr: 'Optional. The data context object with which to call the template.'}
+  ]
+};
+
+Template.api.template_rendered = {
+  id: "template_rendered",
+  name: "Template.<em>myTemplate</em>.rendered = function ( ) { ... }",
+  locus: "Client",
+  descr: ["Provide a callback when an instance of a template is rendered."]
+};
+
+Template.api.template_created = {
+  id: "template_created",
+  name: "Template.<em>myTemplate</em>.created = function ( ) { ... }",
+  locus: "Client",
+  descr: ["Provide a callback when an instance of a template is created."]
+};
+
+Template.api.template_destroyed = {
+  id: "template_destroyed",
+  name: "Template.<em>myTemplate</em>.destroyed = function ( ) { ... }",
+  locus: "Client",
+  descr: ["Provide a callback when an instance of a template is destroyed."]
+};
+
+Template.api.template_events = {
+  id: "template_events",
+  name: "Template.<em>myTemplate</em>.events(eventMap)",
+  locus: "Client",
+  descr: ["Specify event handlers for this template."],
+  args: [
+    {name: "eventMap",
+     type: "Object: event map",
+     type_link: "eventmaps",
+     descr: "Event handlers to associate with this template."}
+  ]
+};
+
+Template.api.template_helpers = {
+  id: "template_helpers",
+  name: "Template.<em>myTemplate</em>.helpers(helpers)",
+  locus: "Client",
+  descr: ["Specify template helpers available to this template."],
+  args: [
+    {name: "helpers",
+     type: "Object",
+     descr: "Dictionary of helper functions by name."}
+  ]
+};
+
+Template.api.template_preserve = {
+  id: "template_preserve",
+  name: "Template.<em>myTemplate</em>.preserve(selectors)",
+  locus: "Client",
+  descr: ["Specify rules for preserving individual DOM elements on re-render."],
+  args: [
+    {name: "selectors",
+     type: "Array or Object",
+     descr: "Array of selectors that each match at most one element, such as `['.thing1', '.thing2']`, or, alternatively, a dictionary of selectors and node-labeling functions (see below)."}
+  ]
+};
+
+Template.api.template_findAll = {
+  id: "template_findAll",
+  name: "<em>this</em>.findAll(selector)",
+  locus: "Client",
+  descr: ["Find all elements matching `selector` in this template instance."],
+  args: [
+    {name: "selector",
+     type: "String",
+     descr: 'The CSS selector to match, scoped to the template contents.'}
+  ]
+};
+
+Template.api.template_find = {
+  id: "template_find",
+  name: "<em>this</em>.find(selector)",
+  locus: "Client",
+  descr: ["Find one element matching `selector` in this template instance."],
+  args: [
+    {name: "selector",
+     type: "String",
+     descr: 'The CSS selector to match, scoped to the template contents.'}
+  ]
+};
+
+Template.api.template_firstNode = {
+  id: "template_firstNode",
+  name: "<em>this</em>.firstNode",
+  locus: "Client",
+  descr: ["The first top-level DOM node in this template instance."]
+};
+
+Template.api.template_lastNode = {
+  id: "template_lastNode",
+  name: "<em>this</em>.lastNode",
+  locus: "Client",
+  descr: ["The last top-level DOM node in this template instance."]
+};
+
+Template.api.template_data = {
+  id: "template_data",
+  name: "<em>this</em>.data",
+  locus: "Client",
+  descr: ["The data context of this instance's latest invocation."]
+};
