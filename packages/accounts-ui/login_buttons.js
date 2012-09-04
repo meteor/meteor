@@ -152,6 +152,8 @@
           document.getElementById('login-username').value = usernameOrEmail;
         else
           document.getElementById('login-email').value = usernameOrEmail;
+
+      document.getElementById('login-password').value = password;
     },
     'click #forgot-password-link': function () {
       resetMessages();
