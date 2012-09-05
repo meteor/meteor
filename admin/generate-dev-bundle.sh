@@ -174,7 +174,7 @@ npm install mongodb@1.1.5
 npm install uglify-js@1.3.3
 npm install clean-css@0.6.0
 npm install progress@0.0.5
-npm install fibers@0.6.8
+npm install fibers@0.6.9
 npm install useragent@1.1.0
 npm install request@2.11.0
 npm install http-proxy@0.8.2
