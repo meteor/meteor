@@ -179,9 +179,11 @@ npm install useragent@1.1.0
 npm install request@2.11.0
 npm install http-proxy@0.8.2
 npm install simplesmtp@0.1.20
-npm install mailcomposer@0.1.17
 npm install stream-buffers@0.2.3
 npm install keypress@0.1.0
+ # pinned at older version. 0.1.16+ uses mimelib, not mimelib-noiconv
+ # which make the dev bundle much bigger. We need a better solution.
+npm install mailcomposer@0.1.15
 
 # Sockjs has a broken optional dependancy, and npm optional dependancies
 # don't seem to quite work. Fake it out with a checkout.
@@ -198,7 +200,7 @@ mv "$MONGO_NAME" mongodb
 # could be deleted from git dev_bundle but not sure which we'll end up
 # needing.
 cd mongodb/bin
-rm bsondump mongodump mongoexport mongofiles mongoimport mongorestore mongos mongosniff mongostat mongotop
+rm bsondump mongodump mongoexport mongofiles mongoimport mongorestore mongos mongosniff mongostat mongotop mongooplog mongoperf
 cd ../..
 
 
