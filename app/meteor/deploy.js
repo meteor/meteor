@@ -13,18 +13,24 @@ var files = require('../lib/files.js');
 var _ = require('../lib/third/underscore.js');
 var keypress = require('keypress');
 
-// This magic incantation seems to both fix the "meteor mongo" repl
-// and keep Node from bringing down the Emacs shell on exit.
-if (process.stdin.isTTY)
-  // Call a special function that we monkey-patched into
-  // node/src/tty_wrap.cc.  It sets fcntl's O_NONBLOCK to a boolean.
-  process.stdin._handle.setNonBlocking(false);
-
 //
 // configuration
 //
 
 var DEPLOY_HOSTNAME = process.env.DEPLOY_HOSTNAME || 'deploy.meteor.com';
+
+
+// Set stdin to be blocking, reversing node's normal setting of
+// O_NONBLOCK on process.stdin.
+//
+// This uses a meteor hack to node. See admin/generate-dev-bundle.sh.
+//
+// This fixes the "meteor mongo" repl and keeps node from bringing down
+// the Emacs shell on exit.
+if (process.stdin.isTTY &&
+    process.stdin._handle && process.stdin._handle.setBlocking)
+  process.stdin._handle.setBlocking(true);
+
 
 // available RPCs are: deploy (with set-password), delete, logs,
 // mongo_cred.  each RPC might require a password, which we
@@ -46,7 +52,7 @@ var meteor_rpc = function (rpc_name, method, site, query_params, callback) {
   });
 
   return r;
-}
+};
 
 var deploy_app = function (url, app_dir, opt_debug, opt_tests,
                            opt_set_password) {
