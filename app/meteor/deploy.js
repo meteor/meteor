@@ -335,7 +335,7 @@ var with_password = function (site, callback) {
 var get_new_password = function (callback) {
   process.stdout.write("New Password: ");
   read_password(function (p1) {
-    process.stdout.write("Confirm Password: ");
+    process.stdout.write("New Password (again): ");
     read_password(function (p2) {
       if (p1 === p2) {
         callback(p1);
