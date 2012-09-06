@@ -754,7 +754,7 @@ var parse = function (tokenizer) {
   var varDecl = varDeclFunc(false);
 
   var variableStatement = named(
-    'variables',
+    'var',
     seq(token('var'), unpack(list(varDecl, token(','))),
         maybeSemicolon));
 

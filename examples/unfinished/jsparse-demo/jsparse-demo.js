@@ -60,7 +60,7 @@ if (Meteor.is_client) {
       var curPos = 0;
       var unclosedInfos = [];
       var statementHeads = makeSet(
-        ('functionDecl expression label block variables ' +
+        ('functionDecl expression label block var ' +
          'if for do while return continue break throw with switch ' +
          'try debugger empty').split(' '));
       var toHtml = function (obj) {
