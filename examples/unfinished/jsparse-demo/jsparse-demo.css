@@ -91,7 +91,8 @@ html, body { height: 100%; }
   border-radius: 5px;
   cursor: pointer;
   overflow: hidden;
-  position: relative;
+  /* position:relative breaks overflow:hidden effect of rounded corners? */
+  position: static;
 }
 
 .box.head {
