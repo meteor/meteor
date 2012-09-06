@@ -93,7 +93,7 @@ Meteor.accounts._pollStoredLoginToken = function() {
   // != instead of !== just to make sure undefined and null are treated the same
   if (Meteor.accounts._lastLoginTokenWhenPolled != currentLoginToken) {
     if (currentLoginToken)
-      Meteor.loginWithToken(currentLoginToken);
+      Meteor.loginWithToken(currentLoginToken); // XXX should we pass a callback here?
     else
       Meteor.logout();
   }
