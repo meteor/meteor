@@ -6,9 +6,9 @@ html, body { height: 100%; }
   position: absolute;
   width: 100%;
   top: 0;
-  height: 40px;
-  overflow: auto;
+  height: 39px;
   border-bottom: 1px solid #555;
+  overflow: auto;
   background: #cfc;
 }
 
@@ -25,6 +25,8 @@ html, body { height: 100%; }
 }
 
 #inputarea textarea {
+  border: 0;
+  border-right: 1px solid #555;
   position: absolute;
   height: 100%;
   left: 0;
