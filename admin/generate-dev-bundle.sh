@@ -57,17 +57,17 @@ cd node
 git checkout v0.8.8
 
 # Patch node to allow unsetting O_NONBLOCK on TTYs. This is a gross hack
-# to work-around node setting process.stdin non-blocking.
+# to work around node setting process.stdin to be non-blocking.
 #
-# This is needed to allow spawning a mongo command line process to the
-# users terminal (eg 'meteor mongo'). It also fixes behavior in
+# This is needed to allow spawning a mongo command-line process to the
+# user's terminal (eg 'meteor mongo'). It also fixes behavior in
 # emacs-shell mode.
 #
 # Related github issue:
 # https://github.com/joyent/node/issues/3584
 # Discussion of implementing process.stdout.setBlocking(bool):
 # http://piscisaureus.no.de/libuv/2012-06-29#00:40:38.256
-# Emacs bug this fixes:
+# Emacs bug this works around:
 # http://debbugs.gnu.org/cgi/bugreport.cgi?bug=2602
 patch -p1 <<EOF
 diff --git a/src/tty_wrap.cc b/src/tty_wrap.cc
