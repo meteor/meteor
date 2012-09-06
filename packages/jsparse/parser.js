@@ -10,7 +10,6 @@
 // maybe conform to the spec's token input to the syntactic grammar?
 
 // XXX track line/col position, for errors and maybe token info
-// XXX implement `required(parser, prev)`
 
 var isArray = function (obj) {
   return obj && (typeof obj === 'object') && (typeof obj.length === 'number');
@@ -156,8 +155,24 @@ var lookAheadToken = function (text) {
 
 ///// NON-TERMINAL PARSER CONSTRUCTORS
 
-// Combinators that take names must provide descriptions.
-// Otherwise, it is up to the call to provide a description.
+// call as: runRequired(parser, tokenizer[, prevToken])
+// to run parser(tokenizer) and assert it matches
+var runRequired = function (parser, tokenizer, prevToken) {
+  return revalue(
+    tokenizer ? parser(tokenizer) : parser,
+    function (v, t) {
+      if (! v)
+        throw parseError(t || tokenizer, parser, prevToken);
+      return v;
+    });
+};
+
+var runMaybeRequired = function (require, parser, tokenizer, prevToken) {
+  if (require)
+    return runRequired(parser, tokenizer, prevToken);
+  else
+    return parser(tokenizer);
+};
 
 // Polymorphic in parsers and results; an experiment.
 var named = function(name, parserOrResult) {
@@ -229,9 +244,9 @@ var binaryLeft = function (termParser, opParser) {
 
       var op;
       while ((op = opParser(t))) {
-        result = named('binary', [result, op, termParser(t)]);
-        if (! result[result.length - 1])
-          throw parseError(t, termParser, result[result.length - 2]);
+        result = named(
+          'binary',
+          [result, op, runRequired(termParser, t, op)]);
       }
       return result;
     });
@@ -252,11 +267,8 @@ var list = function (itemParser, sepParser) {
 
       if (sepParser) {
         var sep;
-        while ((sep = sepParser(t))) {
-          result.push(sep, itemParser(t));
-          if (! result[result.length - 1])
-            throw parseError(t, itemParser, result[result.length - 2]);
-        }
+        while ((sep = sepParser(t)))
+          result.push(sep, runRequired(itemParser, t, sep));
       } else {
         var item;
         while ((item = itemParser(t)))
@@ -280,12 +292,12 @@ var seq = function (/*parsers*/) {
     function (t) {
       var result = [];
       for (var i = 0, N = args.length; i < N; i++) {
-        var r = args[i](t);
-        if (! r) {
-          if (i === 0)
-            return null; // not committed on first item
-          throw parseError(t, args[i]);
-        }
+        // first item in sequence can fail, and we
+        // fail (without error); after that, error on failure
+        var r = runMaybeRequired(i > 0, args[i], t);
+        if (! r)
+          return null;
+
         if (r.unpack) // append array!
           result.push.apply(result, r);
         else
@@ -470,9 +482,9 @@ var parse = function (tokenizer) {
   var dotEnding = seq(token('.'), tokenClass('IDENTIFIER'));
   var bracketEnding = seq(token('['), expressionPtr, token(']'));
   var callArgs = seq(token('('),
-                      unpack(opt(list(assignmentExpressionPtr,
-                                      token(',')), lookAheadToken(')'))),
-                      token(')'));
+                     unpack(opt(list(assignmentExpressionPtr,
+                                     token(',')), lookAheadToken(')'))),
+                     token(')'));
 
   var newKeyword = token('new');
 
@@ -500,14 +512,12 @@ var parse = function (tokenizer) {
       // of this lhsExpression.  It is preceded by zero or more `new`
       // keywords, and followed by any sequence of (...), [...],
       // and .foo add-ons.
-      var result = primaryOrFunctionExpression(t);
-      if (! result) {
-        if (! news.length)
-          return null; // not committed
-        else
-          throw parseError(t, primaryOrFunctionExpression,
-                           news[news.length - 1]);
-      }
+      // if we have 'new' keywords, we are committed and must
+      // match an expression or error.
+      var result = runMaybeRequired(news.length, primaryOrFunctionExpression,
+                                    t, news[news.length - 1]);
+      if (! result)
+        return null;
 
       // Our plan of attack is to apply each dot, bracket, or call
       // as we come across it.  Whether a call is a `new` call depends
@@ -559,13 +569,12 @@ var parse = function (tokenizer) {
     'expression',
     function (t) {
       var unaries = unaryList(t);
-      var result = postfixExpression(t);
-      if (! result) {
-        if (unaries.length)
-          // committed, have to error
-          throw parseError(t, postfixExpression, unaries[unaries.length - 1]);
+      // if we have unaries, we are committed and
+      // have to match an expression or error.
+      var result = runMaybeRequired(unaries.length, postfixExpression,
+                                    t, unaries[unaries.length - 1]);
+      if (! result)
         return null;
-      }
 
       while (unaries.length)
         result = named('unary', [unaries.pop(), result]);
@@ -634,12 +643,9 @@ var parse = function (tokenizer) {
           // and then fold them up at the end.
           var parts = [r];
           var op;
-          while (r.lhs && (op = assignOp(t))) {
-            r = conditionalExpressionFunc(noIn)(t);
-            if (! r)
-              throw parseError(t, conditionalExpressionFunc(noIn), r);
-            parts.push(op, r);
-          }
+          while (r.lhs && (op = assignOp(t)))
+            parts.push(op,
+                       runRequired(conditionalExpressionFunc(noIn), t, op));
 
           var result = parts.pop();
           while (parts.length) {
@@ -716,13 +722,11 @@ var parse = function (tokenizer) {
     var expr = exprStmnt[1];
     var maybeSemi = exprStmnt[2];
     if (expr[0] !== 'identifier' || ! isArray(maybeSemi)) {
-      if (! noColon(t))
-        // For better error messages, if there is a colon
-        // at the end of the expression, fail now and
-        // say "Expected semicolon" instead of failing
-        // later saying "Expected statement" after the
-        // colon.
-        throw parseError(t, noColon);
+      // For better error messages, for example in `1+1:`,
+      // if there is a colon at the end of the expression,
+      // fail now and say "Expected semicolon" instead of failing
+      // later saying "Expected statement" at the colon.
+      runRequired(noColon, t);
       return exprStmnt;
     }
 
@@ -807,9 +811,7 @@ var parse = function (tokenizer) {
              throw parseError(t, secondThirdClauses);
            // if we don't see 'in' at this point, it's probably
            // a missing semicolon
-           rest = inExprExpectingSemi(t);
-           if (! rest)
-             throw parseError(t, inExprExpectingSemi);
+           rest = runRequired(inExprExpectingSemi, t);
          }
 
          return [firstExpr].concat(rest);
