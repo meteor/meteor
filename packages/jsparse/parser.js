@@ -2,6 +2,10 @@
 
 // XXX unit tests
 
+// What we don't have from ECMA-262 5.1:
+//  - object literal trailing comma
+//  - object literal get/set
+
 var parse = function (tokenizer) {
   var noLineTerminatorHere = describe(
     'noLineTerminator', function (t) {
