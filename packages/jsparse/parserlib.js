@@ -1,5 +1,7 @@
 ///// TOKENIZER AND PARSER COMBINATORS
 
+// XXX make Parser object with parse method?
+// XXX rework describe, call "expecting"?
 // XXX track line/col position, for errors and maybe token info
 // XXX unit tests
 
