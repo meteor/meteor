@@ -59,14 +59,20 @@ if (Meteor.is_client) {
     if (ast) {
       var curPos = 0;
       var unclosedInfos = [];
+      var statementHeads = makeSet(
+        ('functionDecl expression label block variables ' +
+         'if for do while return continue break throw with switch ' +
+         'try debugger').split(' '));
       var toHtml = function (obj) {
         if (_.isArray(obj)) {
           var head = obj[0] || 'none';
           var rest = obj.slice(1);
           var info = { startPos: curPos };
+          var isStatement = statementHeads[head];
           var html = Spark.setDataContext(
             info,
-            '<div class="box named"><div class="box head">' +
+            '<div class="box named' + (isStatement ? ' statement' : '') +
+              '"><div class="box head">' +
               Handlebars._escape(head) + '</div>' +
               _.map(rest, toHtml).join('') + '</div>');
           unclosedInfos.push(info);
@@ -78,10 +84,14 @@ if (Meteor.is_client) {
           });
           curPos = obj.pos + obj.text.length;
           unclosedInfos.length = 0;
+          var text = obj.text;
+          // insert zero-width spaces to allow wrapping
+          text = text.replace(/\w{10}/g, "$&\n");
+          text = Handlebars._escape(text);
+          text = text.replace(/\n/g, '&shy;');
           return Spark.setDataContext(
             obj,
-            '<div class="box token">' +
-              Handlebars._escape(obj.text) + '</div>');
+            '<div class="box token">' + text + '</div>');
         } else {
           // other?
           return '<div class="box other">' +

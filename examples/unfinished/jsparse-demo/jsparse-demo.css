@@ -78,6 +78,10 @@ html, body { height: 100%; }
   background: #fff;
 }
 
+.box.statement {
+  display: block;
+}
+
 #output > .box {
   margin-top: 5px;
 }
@@ -87,6 +91,7 @@ html, body { height: 100%; }
   border-radius: 5px;
   cursor: pointer;
   overflow: hidden;
+  position: relative;
 }
 
 .box.head {
