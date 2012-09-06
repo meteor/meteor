@@ -175,7 +175,7 @@ var runMaybeRequired = function (require, parser, tokenizer, prevToken) {
 };
 
 // Polymorphic in parsers and results; an experiment.
-var named = function(name, parserOrResult) {
+var named = function (name, parserOrResult) {
   return describe(
     name,
     revalue(
@@ -596,17 +596,17 @@ var parse = function (tokenizer) {
     function (noIn) {
       // high to low precedence
       var binaryOps = [token('* / %'),
-                 token('+ -'),
-                 token('<< >> >>>'),
-                 or(token('< > <= >='),
-                    noIn ? token('instanceof') :
-                    token('instanceof in')),
-                 token('== != === !=='),
-                 token('&'),
-                 token('^'),
-                 token('|'),
-                 token('&&'),
-                 token('||')];
+                       token('+ -'),
+                       token('<< >> >>>'),
+                       or(token('< > <= >='),
+                          noIn ? token('instanceof') :
+                          token('instanceof in')),
+                       token('== != === !=='),
+                       token('&'),
+                       token('^'),
+                       token('|'),
+                       token('&&'),
+                       token('||')];
       return describe(
         'expression',
         binaryLeft(unaryExpression, binaryOps));
@@ -859,7 +859,7 @@ var parse = function (tokenizer) {
     seq(token('case'), expression, token(':'),
         unpack(opt(statements, or(lookAheadToken('}'),
                                   lookAheadToken('case default'))))));
-var switchDefault = named(
+  var switchDefault = named(
     'default',
     seq(token('default'), token(':'),
         unpack(opt(statements, or(lookAheadToken('}'),

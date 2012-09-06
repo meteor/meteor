@@ -145,7 +145,7 @@ if (Meteor.is_client) {
     }
   };
 
-  var selectInputText = function(start, end) {
+  var selectInputText = function (start, end) {
     var textarea = DomUtils.find(document, '#inputarea textarea');
     selectTextInArea(textarea, start, end);
   };
