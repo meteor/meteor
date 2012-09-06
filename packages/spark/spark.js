@@ -704,16 +704,32 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
           var selector = handler.selector;
 
           if (selector) {
+            // Check if event.currentTarget matches `selector`,
+            // scoped to `range`.
+            // As an efficiency hack, give the node we are looking
+            // for an id so the selector will match only it.
+            var node = event.currentTarget;
+            var tempId;
+            if (! node.id)
+              node.setAttribute('id', tempId = 'spark_currentTarget');
+            var escapedNodeId = node.id.replace(/'/g, "\\$&");
+            // XXX OLD COMMENT
             // This ends up doing O(n) findAllClipped calls when an
             // event bubbles up N level in the DOM. If this ends up
             // being too slow, we could memoize findAllClipped across
             // the processing of each event.
-            var results = DomUtils.findAllClipped(
-              range.containerNode(), selector, range.firstNode(), range.lastNode());
-            // This is a linear search through what could be a large
-            // result set.
-            if (! _.contains(results, event.currentTarget))
-              continue;
+            try {
+              var result = DomUtils.findClipped(
+                range.containerNode(),
+                selector + "[id='" + escapedNodeId + "']",
+                range.firstNode(), range.lastNode());
+
+              if (result !== node)
+                continue;
+            } finally {
+              if (tempId)
+                node.removeAttribute('id');
+            }
           } else {
             // if no selector, only match the event target
             if (event.currentTarget !== event.target)
