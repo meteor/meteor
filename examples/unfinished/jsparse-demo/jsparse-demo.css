@@ -103,6 +103,7 @@ html, body { height: 100%; }
 
 .box.head:last-child {
   margin: 0;
+  border-bottom: 0;
 }
 
 .box.token {
@@ -130,3 +131,8 @@ html, body { height: 100%; }
   background: #58b;
   border-bottom: 1px solid #448;
 }
+
+.box.named[mousehover] > .box.head:last-child {
+  border-bottom: 0;
+}
+

@@ -61,7 +61,7 @@ if (Meteor.is_client) {
       var unclosedInfos = [];
       var toHtml = function (obj) {
         if (_.isArray(obj)) {
-          var head = obj[0] || 'nothing';
+          var head = obj[0] || 'none';
           var rest = obj.slice(1);
           var info = { startPos: curPos };
           var html = Spark.setDataContext(

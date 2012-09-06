@@ -80,7 +80,7 @@ var parseError = function (t, expected, after) {
              "Unexpected token");
   if (after)
     str += " after " + (after.text ? "`" + after.text + "`" : after);
-  var pos = t.lastPos;
+  var pos = t.pos;
   str += " at position " + pos;
   str += ", found " + (t.peekText ? "`" + t.peekText + "`" : "EOF");
   var e = new Error(str);
@@ -670,12 +670,17 @@ var parse = function (tokenizer) {
   var maybeSemicolon = describe(
     'semicolon',
     or(token(';'),
-       // the rest of these produce empty `[]` boxes
-       lookAheadToken('}'),
-       lookAheadTokenClass('EOF'),
-       function (t) {
-         return t.isLineTerminatorHere ? [] : null;
-       }));
+       revalue(
+         or(
+           lookAheadToken('}'),
+           lookAheadTokenClass('EOF'),
+           function (t) {
+             return t.isLineTerminatorHere ? [] : null;
+           }),
+         function (v) {
+           return v && named(';', []);
+         })));
+
 
   var expressionStatement = named(
     'expression',
@@ -710,7 +715,7 @@ var parse = function (tokenizer) {
 
     var expr = exprStmnt[1];
     var maybeSemi = exprStmnt[2];
-    if (expr[0] !== 'identifier' || maybeSemi.length) {
+    if (expr[0] !== 'identifier' || ! isArray(maybeSemi)) {
       if (! noColon(t))
         // For better error messages, if there is a colon
         // at the end of the expression, fail now and
