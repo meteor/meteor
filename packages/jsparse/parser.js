@@ -53,8 +53,23 @@ var parse = function (tokenizer) {
   var arrayLiteral =
         named('array',
               seq(token('['),
-                  unpack(opt(list(assignmentExpressionPtr,
-                                  token(',')), lookAheadToken(']'))),
+                  unpack(opt(list(token(',')))),
+                  unpack(
+                    opt(
+                      list(
+                        describe(
+                          'expression',
+                          or(assignmentExpressionPtr,
+                             // count a peeked-at ']' as an expression
+                             // to support elisions at end, e.g.
+                             // `[1,2,3,,,,,,]`.  Because it's unpacked,
+                             // the look-ahead won't show up in the
+                             // parse tree.
+                             unpack(lookAheadToken(']')))),
+                        // list seperator is one or more commas
+                        // to support elision
+                        unpack(list(token(',')))),
+                      lookAheadToken(']'))),
                   token(']')));
 
   var propertyName = describe('propertyName', or(

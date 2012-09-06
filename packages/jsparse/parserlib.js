@@ -249,22 +249,34 @@ var binaryLeft = function (termParser, opParser) {
 // `x` => ["x"]
 // `x,y` => ["x", ",", "y"]
 // `x,y,z` => ["x", ",", "y", ",", "z"]
+// Respects `unpack`.
 var list = function (itemParser, sepParser) {
+  var push = function(array, newThing) {
+    if (newThing.unpack)
+      array.push.apply(array, newThing);
+    else
+      array.push(newThing);
+  };
   return describe(
     itemParser.description,
     function (t) {
-      var result = [itemParser(t)];
-      if (! result[0])
+      var result = [];
+      var firstItem = itemParser(t);
+      if (! firstItem)
         return null;
+      push(result, firstItem);
 
       if (sepParser) {
         var sep;
-        while ((sep = sepParser(t)))
-          result.push(sep, runRequired(itemParser, t, sep));
+        while ((sep = sepParser(t))) {
+          push(result, sep);
+          push(result, runRequired(itemParser, t,
+                                   sep.unpack ? sep[sep.length - 1] : sep));
+        }
       } else {
         var item;
         while ((item = itemParser(t)))
-          result.push(item);
+          push(result, item);
       }
       return result;
     });
