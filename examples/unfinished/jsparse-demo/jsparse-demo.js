@@ -65,7 +65,7 @@ if (Meteor.is_client) {
          'try debugger empty').split(' '));
       var toHtml = function (obj) {
         if (_.isArray(obj)) {
-          var head = obj[0] || 'empty';
+          var head = obj[0] || '';
           var rest = obj.slice(1);
           var info = { startPos: curPos };
           var isStatement = statementHeads[head];

@@ -373,6 +373,13 @@ var opt = function (parser, afterLookAhead) {
 // if it's called on a parser.  This func is allowed to then
 // run more parsers.
 var revalue = function (parserOrValue, valueTransformFunc) {
+  if (typeof valueTransformFunc !== 'function') {
+    var value = valueTransformFunc;
+    valueTransformFunc = function (v) {
+      return (v ? value : null);
+    };
+  }
+
   if (typeof parserOrValue === 'function')
     // it's a parser
     return describe(parserOrValue.description,

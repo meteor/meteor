@@ -77,9 +77,9 @@ var parse = function (tokenizer) {
                   token(']')));
 
   var propertyName = describe('propertyName', or(
-    named('identifier', tokenClass('IDENTIFIER')),
-    named('number', tokenClass('NUMBER')),
-    named('string', tokenClass('STRING'))));
+    named('idProp', tokenClass('IDENTIFIER')),
+    named('numProp', tokenClass('NUMBER')),
+    named('strProp', tokenClass('STRING'))));
   var nameColonValue = describe(
     'name:value',
     named('prop', seq(propertyName, token(':'), assignmentExpressionPtr)));
@@ -95,8 +95,8 @@ var parse = function (tokenizer) {
   var functionFunc = function (nameRequired) {
     return seq(token('function'),
                (nameRequired ? tokenClass('IDENTIFIER') :
-                opt(tokenClass('IDENTIFIER'),
-                    lookAheadToken('('))),
+                or(tokenClass('IDENTIFIER'),
+                   revalue(lookAheadToken('('), named('nil', [])))),
                token('('),
                unpack(opt(list(tokenClass('IDENTIFIER'), token(',')),
                           lookAheadToken(')'))),
@@ -270,7 +270,7 @@ var parse = function (tokenizer) {
     });
   var conditionalExpression = conditionalExpressionFunc(false);
 
-  var assignOp = token('= *= /= %= += -= <<= >>= >>>= &= ^= |= ');
+  var assignOp = token('= *= /= %= += -= <<= >>= >>>= &= ^= |=');
 
   var assignmentExpressionFunc = memoizeBooleanFunc(
     function (noIn) {
@@ -326,14 +326,10 @@ var parse = function (tokenizer) {
            lookAheadTokenClass('EOF'),
            function (t) {
              return t.isLineTerminatorHere ? [] : null;
-           }),
-         function (v) {
-           return v && named(';', []);
-         })));
-
+           }), named(';', []))));
 
   var expressionStatement = named(
-    'expression',
+    'expressionStmnt',
     negLookAhead(
       or(lookAheadToken('{'), lookAheadToken('function')),
       seq(expression,
@@ -378,13 +374,13 @@ var parse = function (tokenizer) {
     if (! rest)
       return exprStmnt;
 
-    return named('label',
+    return named('labelStmnt',
                  [expr[1]].concat(rest));
   };
 
-  var emptyStatement = named('empty', token(';')); // not maybeSemicolon
+  var emptyStatement = named('emptyStmnt', token(';')); // not maybeSemicolon
 
-  var blockStatement = named('block', seq(
+  var blockStatement = named('blockStmnt', seq(
     token('{'), unpack(opt(statements, lookAheadToken('}'))),
     token('}')));
 
@@ -398,18 +394,18 @@ var parse = function (tokenizer) {
   var varDecl = varDeclFunc(false);
 
   var variableStatement = named(
-    'var',
+    'varStmnt',
     seq(token('var'), unpack(list(varDecl, token(','))),
         maybeSemicolon));
 
   // A paren that may be followed by a statement
   // beginning with a regex literal.
-  var parenBeforeStatement = preSlashToken(')', false);
+  var closeParenBeforeStatement = preSlashToken(')', false);
 
   var ifStatement = named(
-    'if',
+    'ifStmnt',
     seq(token('if'), token('('), expression,
-        parenBeforeStatement, statementPtr,
+        closeParenBeforeStatement, statementPtr,
         unpack(opt(seq(token('else'), statementPtr)))));
 
   var secondThirdClauses = describe(
@@ -417,14 +413,14 @@ var parse = function (tokenizer) {
     lookAhead(lookAheadToken(';'),
               seq(
                 token(';'),
-                opt(expressionPtr, lookAheadToken(';')),
+                opt(expressionPtr, revalue(lookAheadToken(';'), named('nil', []))),
                 token(';'),
-                opt(expressionPtr, lookAheadToken(')')))));
+                opt(expressionPtr, revalue(lookAheadToken(')'), named('nil', []))))));
   var inExpr = seq(token('in'), expression);
   var inExprExpectingSemi = describe('semicolon',
                                      seq(token('in'), expression));
-  var forClauses = named(
-    'forClauses',
+  var forSpec = revalue(named(
+    'forSpec',
     or(seq(token('var'),
            varDeclFunc(true),
            describe(
@@ -439,7 +435,7 @@ var parse = function (tokenizer) {
        // get the case where the first clause is empty out of the way.
        // the lookAhead's return value is the empty placeholder for the
        // missing expression.
-       seq(lookAheadToken(';'), unpack(secondThirdClauses)),
+       seq(revalue(lookAheadToken(';'), named('nil', [])), unpack(secondThirdClauses)),
        // custom parser the non-var case because we have to
        // read the first expression before we know if there's
        // an "in".
@@ -459,43 +455,63 @@ var parse = function (tokenizer) {
          }
 
          return [firstExpr].concat(rest);
-       }));
+       })),
+                           function (clauses) {
+                             // There are four kinds of for-loop, and we call the
+                             // part between the parens one of forSpec, forVarSpec,
+                             // forInSpec, and forVarInSpec.  Having parsed it
+                             // already, we rewrite the node name based on how
+                             // many items came out.  forIn and forVarIn always
+                             // have 3 and 4 items respectively.  for has 5
+                             // (the optional expressions are present as nils).
+                             // forVar has 6 or more, because `for(var x;;);`
+                             // produces [`var` `x` `;` nil `;` nil].
+                             if (! clauses)
+                               return null;
+                             if (clauses.length === 4)
+                               clauses[0] = 'forInSpec';
+                             else if (clauses.length === 5)
+                               clauses[0] = 'forVarInSpec';
+                             else if (clauses.length >= 7)
+                               clauses[0] = 'forVarSpec';
+                             return clauses;
+                           });
 
   var iterationStatement = or(
-    named('do', seq(token('do'), statementPtr, token('while'),
-                    token('('), expression, token(')'),
-                    maybeSemicolon)),
-    named('while', seq(token('while'), token('('), expression,
-                       parenBeforeStatement, statementPtr)),
+    named('doStmnt', seq(token('do'), statementPtr, token('while'),
+                         token('('), expression, token(')'),
+                         maybeSemicolon)),
+    named('whileStmnt', seq(token('while'), token('('), expression,
+                            closeParenBeforeStatement, statementPtr)),
     // semicolons must be real, not maybeSemicolons
-    named('for', seq(
-      token('for'), token('('), forClauses, parenBeforeStatement,
+    named('forStmnt', seq(
+      token('for'), token('('), forSpec, closeParenBeforeStatement,
       statementPtr)));
 
   var returnStatement = named(
-    'return',
-    seq(token('return'), opt(
-      lookAhead(noLineTerminatorHere, expression)),
+    'returnStmnt',
+    seq(token('return'), or(
+      lookAhead(noLineTerminatorHere, expression), constant(named('nil', []))),
         maybeSemicolon));
   var continueStatement = named(
-    'continue',
-    seq(token('continue'), opt(
-      lookAhead(noLineTerminatorHere, tokenClass('IDENTIFIER'))),
+    'continueStmnt',
+    seq(token('continue'), or(
+      lookAhead(noLineTerminatorHere, tokenClass('IDENTIFIER')), constant(named('nil', []))),
         maybeSemicolon));
   var breakStatement = named(
-    'break',
-    seq(token('break'), opt(
-      lookAhead(noLineTerminatorHere, tokenClass('IDENTIFIER'))),
+    'breakStmnt',
+    seq(token('break'), or(
+      lookAhead(noLineTerminatorHere, tokenClass('IDENTIFIER')), constant(named('nil', []))),
         maybeSemicolon));
   var throwStatement = named(
-    'throw',
+    'throwStmnt',
     seq(token('throw'),
         lookAhead(noLineTerminatorHere, expression),
         maybeSemicolon));
 
   var withStatement = named(
-    'with',
-    seq(token('with'), token('('), expression, parenBeforeStatement,
+    'withStmnt',
+    seq(token('with'), token('('), expression, closeParenBeforeStatement,
         statementPtr));
 
   var switchCase = named(
@@ -510,7 +526,7 @@ var parse = function (tokenizer) {
                                   lookAheadToken('case'))))));
 
   var switchStatement = named(
-    'switch',
+    'switchStmnt',
     seq(token('switch'), token('('), expression, token(')'),
         token('{'), unpack(opt(list(switchCase),
                                or(lookAheadToken('}'),
@@ -523,18 +539,20 @@ var parse = function (tokenizer) {
     'catchOrFinally',
     lookAhead(lookAheadToken('catch finally'),
               seq(
-                opt(named(
+                or(named(
                   'catch',
                   seq(token('catch'), token('('), tokenClass('IDENTIFIER'),
-                      token(')'), blockStatement))),
-                opt(named(
+                      token(')'), blockStatement)),
+                   constant(named('nil', []))),
+                or(named(
                   'finally',
-                  seq(token('finally'), blockStatement))))));
+                  seq(token('finally'), blockStatement)),
+                   constant(named('nil', []))))));
   var tryStatement = named(
-    'try',
+    'tryStmnt',
     seq(token('try'), blockStatement, unpack(catchFinally)));
   var debuggerStatement = named(
-    'debugger', seq(token('debugger'), maybeSemicolon));
+    'debuggerStmnt', seq(token('debugger'), maybeSemicolon));
 
   var statement = describe('statement',
                            or(expressionOrLabelStatement,
@@ -576,7 +594,7 @@ var parse = function (tokenizer) {
                                            function (v, t) {
                                              if (! v)
                                                return null;
-                                             // eat the last "EOF" so that
+                                             // eat the ending "EOF" so that
                                              // our position is updated
                                              t.consume();
                                              return unpack([]);
