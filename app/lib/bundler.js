@@ -237,7 +237,7 @@ var Bundle = function () {
     /**
      * This is the ultimate low-level API to add data to the bundle.
      *
-     * type: "js", "css", "head", "body"
+     * type: "js", "css", "head", "body", "static"
      *
      * where: an environment, or a list of one or more environments
      * ("client", "server", "tests") -- for non-JS resources, the only
