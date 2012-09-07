@@ -1,7 +1,7 @@
 
 
 var makeTester = function (test) {
-  var parseTestASTFormat = function (str) {
+  var parseTestFormat = function (str) {
     var results = [];
     var ptrStack = [];
     var ptr = results;
@@ -41,7 +41,7 @@ var makeTester = function (test) {
       throw new Error("Mismatched parentheses in " + str);
     return results[0];
   };
-  var stringifyTestASTFormat = function (obj) {
+  var stringifyTestFormat = function (obj) {
     if (typeof obj === "string") {
       if (obj.charAt(0) === '(' || obj.charAt(0) === ')')
         return '`' + obj + '`';
@@ -51,15 +51,15 @@ var makeTester = function (test) {
       if (! obj.length)
         return '()';
       else
-        return (stringifyTestASTFormat(obj[0]) + '(' +
-                _.map(obj.slice(1), stringifyTestASTFormat).join(' ') +
+        return (stringifyTestFormat(obj[0]) + '(' +
+                _.map(obj.slice(1), stringifyTestFormat).join(' ') +
                 ')');
     }
   };
 
   return {
-    goodParse: function (code, expectedAstString) {
-      var expectedAst = parseTestASTFormat(expectedAstString);
+    goodParse: function (code, expectedTreeString) {
+      var expectedTree = parseTestFormat(expectedTreeString);
 
       // first use lexer to collect all tokens
       var lexer = new Lexer(code);
@@ -73,21 +73,16 @@ var makeTester = function (test) {
       lexer = new Lexer(code);
 
       var tokenizer = new Tokenizer(code);
-      var ast = parse(tokenizer);
+      var tree = parse(tokenizer);
 
       var nextTokenIndex = 0;
       var informalize = function (part) {
-        if (_.isArray(part)) {
-          if (part.length === 0) {
-            // This is an EMPTY -- `[]`.  All good, pass it through
-            return [];
-          } else {
-            // This is a NODE (non-terminal).  Make sure it actually is.
-            if (! (part[0] && typeof part[0] === "string"))
-              test.fail("Not a node name: " + part[0]);
-            return part.slice(0, 1).concat(
-              _.map(part.slice(1), informalize));
-          }
+        if (_.isArray(part) && part.length) {
+          // This is a NODE (non-terminal).  Make sure it actually is.
+          if (! (part[0] && typeof part[0] === "string"))
+            test.fail("Not a node name: " + part[0]);
+          return part.slice(0, 1).concat(
+            _.map(part.slice(1), informalize));
         } else if (typeof part === 'object' && part.text &&
                    (typeof part.pos === 'number')) {
           // This is a TOKEN (terminal).
@@ -101,17 +96,17 @@ var makeTester = function (test) {
                                     part.pos + part.text.length), part.text);
           return part.text;
         } else {
-          test.fail("Unknown AST part: " + part);
+          test.fail("Unknown tree part: " + part);
           return [];
         }
       };
 
-      var actualAst = informalize(ast);
+      var actualTree = informalize(tree);
       if (nextTokenIndex !== allTokensInOrder.length)
         test.fail("Too few tokens: " + nextTokenIndex);
 
-      test.equal(stringifyTestASTFormat(actualAst),
-                 stringifyTestASTFormat(expectedAst));
+      test.equal(stringifyTestFormat(actualTree),
+                 stringifyTestFormat(expectedTree));
     }
     // XXX write badParse
   };

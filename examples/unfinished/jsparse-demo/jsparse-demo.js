@@ -36,10 +36,10 @@ if (Meteor.is_client) {
 
     // PARSER
     var html;
-    var ast = null;
+    var tree = null;
     var lexer = new Lexer(input);
     try {
-      ast = parse(new Tokenizer(lexer)) || [];
+      tree = parse(new Tokenizer(lexer)) || [];
     } catch (parseError) {
       var errorPos = lexer.lastPos;
       var errorLen = lexer.text.length;
@@ -56,7 +56,7 @@ if (Meteor.is_client) {
       html += '<div class="parseerrormessage">' +
         Handlebars._escape(parseError.toString()) + '</div>';
     }
-    if (ast) {
+    if (tree) {
       var curPos = 0;
       var unclosedInfos = [];
       var statementHeads = makeSet(
@@ -99,7 +99,7 @@ if (Meteor.is_client) {
             Handlebars._escape(JSON.stringify(obj)) + '</div>';
         }
       };
-      html = toHtml(ast);
+      html = toHtml(tree);
       curPos = lexer.pos;
       _.each(unclosedInfos, function (info) {
         info.endPos = curPos;
