@@ -149,7 +149,9 @@ EOF
 
 ./configure --prefix="$DIR"
 make -j4
-make install
+make install PORTABLE=1
+# PORTABLE=1 is a node hack to make npm look relative to itself instead
+# of hard coding the PREFIX.
 
 # export path so we use our new node for later builds
 export PATH="$DIR/bin:$PATH"
