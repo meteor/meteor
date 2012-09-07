@@ -98,7 +98,7 @@ var files = module.exports = {
   // given a path, returns true if it is a meteor application (has a
   // .meteor directory with a 'packages' file). false otherwise.
   is_app_dir: function (filepath) {
-    return path.existsSync(path.join(filepath, '.meteor/packages'));
+    return fs.existsSync(path.join(filepath, '.meteor/packages'));
   },
 
   // given a path, returns true if it is a meteor package (is a
@@ -106,7 +106,7 @@ var files = module.exports = {
   //
   // Note that a directory can be both a package _and_ an application.
   is_package_dir: function (filepath) {
-    return path.existsSync(path.join(filepath, 'package.js'));
+    return fs.existsSync(path.join(filepath, 'package.js'));
   },
 
   // given a path, return true if this is a collection of packages.
@@ -116,7 +116,7 @@ var files = module.exports = {
     // is better than confusing the hell out of someone who names their
     // project 'packages'
     return path.basename(filepath) === 'packages' &&
-      path.existsSync(path.join(filepath, 'meteor/package.js'));
+      fs.existsSync(path.join(filepath, 'meteor/package.js'));
   },
 
   // given a predicate function and a starting path, traverse upwards
@@ -154,7 +154,7 @@ var files = module.exports = {
   // file, if the exact line does not already exist in the file.
   add_to_gitignore: function (dir_path, entry) {
     var filepath = path.join(dir_path, ".gitignore");
-    if (path.existsSync(filepath)) {
+    if (fs.existsSync(filepath)) {
       var data = fs.readFileSync(filepath, 'utf8');
       var lines = data.split(/\n/);
       if (_.any(lines, function (x) { return x === entry; })) {
@@ -175,7 +175,7 @@ var files = module.exports = {
   // an installation.)
   in_checkout: function () {
     try {
-      if (path.existsSync(path.join(__dirname, "../../.git")))
+      if (fs.existsSync(path.join(__dirname, "../../.git")))
         return true;
     } catch (e) { console.log(e);}
 
@@ -210,7 +210,7 @@ var files = module.exports = {
     var ret;
     _.find(this.get_package_dirs(), function(package_dir) {
       var dir = path.join(package_dir, name);
-      if (path.existsSync(dir)) {
+      if (fs.existsSync(dir)) {
         ret = dir;
         return true;
       }
@@ -264,7 +264,7 @@ var files = module.exports = {
     var p = path.resolve(dir);
     var ps = path.normalize(p).split('/');
 
-    if (path.existsSync(p)) {
+    if (fs.existsSync(p)) {
       if (fs.statSync(p).isDirectory()) { return true;}
       return false;
     }
@@ -277,7 +277,7 @@ var files = module.exports = {
     fs.mkdirSync(p, mode);
 
     // double check we exist now
-    if (!path.existsSync(p) ||
+    if (!fs.existsSync(p) ||
         !fs.statSync(p).isDirectory())
       return false; // wtf
     return true;

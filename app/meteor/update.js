@@ -54,7 +54,7 @@ updater.get_manifest(function (manifest) {
     var nodejs_path = path.join(files.get_dev_bundle(), 'bin', 'node');
     var postup_path = path.join(files.get_core_dir(), 'meteor', 'post-upgrade.js');
 
-    if (path.existsSync(nodejs_path) && path.existsSync(postup_path)) {
+    if (fs.existsSync(nodejs_path) && fs.existsSync(postup_path)) {
       // setup environment.
       var modules_path = path.join(files.get_dev_bundle(), 'lib', 'node_modules');
       var env = _.extend({}, process.env);
@@ -81,8 +81,8 @@ updater.get_manifest(function (manifest) {
     if (0 === process.getuid()) {
       // already root. just spawn the command.
       return spawn(cmd, args);
-    } else if (path.existsSync("/bin/sudo") ||
-               path.existsSync("/usr/bin/sudo")) {
+    } else if (fs.existsSync("/bin/sudo") ||
+               fs.existsSync("/usr/bin/sudo")) {
       // spawn a sudo
       console.log("Since this system includes sudo, Meteor will request root privileges to");
       console.log("install. You may be prompted for a password. If you prefer to not use");
@@ -192,7 +192,7 @@ updater.get_manifest(function (manifest) {
 
         // untar complete. swap directories
         var old_base_dir = base_dir.slice(0,-1) + ".old";
-        if (path.existsSync(old_base_dir))
+        if (fs.existsSync(old_base_dir))
           files.rm_recursive(old_base_dir); // rm -rf !!
 
         fs.renameSync(base_dir, old_base_dir);
