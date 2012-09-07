@@ -17,5 +17,11 @@ override_dh_prep:
 	tar -C debian/tmp/usr/lib -xzf $(TARBALL)
 	echo -n 'deb' > debian/tmp/usr/lib/meteor/.package_stamp
 
+# node fibers distributes copies of the library pre-compiled for many
+# different architectures. This confuses shlibdeps. Just ignore the
+# fibers library.
+override_dh_shlibdeps:
+	dh_shlibdeps -Xfibers.node
+
 %:
 	dh $@ 

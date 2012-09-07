@@ -2,7 +2,7 @@
 
 set -e
 
-BUNDLE_VERSION=0.2.1
+BUNDLE_VERSION=0.2.2
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -57,17 +57,17 @@ cd node
 git checkout v0.8.8
 
 # Patch node to allow unsetting O_NONBLOCK on TTYs. This is a gross hack
-# to work-around node setting process.stdin non-blocking.
+# to work around node setting process.stdin to be non-blocking.
 #
-# This is needed to allow spawning a mongo command line process to the
-# users terminal (eg 'meteor mongo'). It also fixes behavior in
+# This is needed to allow spawning a mongo command-line process to the
+# user's terminal (eg 'meteor mongo'). It also fixes behavior in
 # emacs-shell mode.
 #
 # Related github issue:
 # https://github.com/joyent/node/issues/3584
 # Discussion of implementing process.stdout.setBlocking(bool):
 # http://piscisaureus.no.de/libuv/2012-06-29#00:40:38.256
-# Emacs bug this fixes:
+# Emacs bug this works around:
 # http://debbugs.gnu.org/cgi/bugreport.cgi?bug=2602
 patch -p1 <<EOF
 diff --git a/src/tty_wrap.cc b/src/tty_wrap.cc
@@ -149,7 +149,9 @@ EOF
 
 ./configure --prefix="$DIR"
 make -j4
-make install
+make install PORTABLE=1
+# PORTABLE=1 is a node hack to make npm look relative to itself instead
+# of hard coding the PREFIX.
 
 # export path so we use our new node for later builds
 export PATH="$DIR/bin:$PATH"
