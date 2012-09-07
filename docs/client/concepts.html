@@ -189,7 +189,7 @@ application with error-prone logic.
 
 These Meteor functions run your code in a reactive context:
 
-* [`Meteor.ui.render`](#meteor_ui_render) and [`Meteor.ui.chunk`](#meteor_ui_chunk)
+* [`Meteor.render`](#meteor_render) and [`Meteor.renderList`](#meteor_renderlist)
 * [`Meteor.autosubscribe`](#meteor_autosubscribe)
 * [Templates](#templates)
 
@@ -220,7 +220,7 @@ generate it.
 This optional feature works with any HTML templating library, or even
 with HTML you generate manually from Javascript. Here's an example:
 
-    var fragment = Meteor.ui.render(
+    var fragment = Meteor.render(
       function () {
         var name = Session.get("name") || "Anonymous";
         return "<div>Hello, " + name + "</div>";
@@ -229,25 +229,18 @@ with HTML you generate manually from Javascript. Here's an example:
 
     Session.set("name", "Bob"); // page updates automatically!
 
-[`Meteor.ui.render`](#meteor_ui_render) takes a rendering function,
-that is, a function that returns some HTML as a string. It returns an
-auto-updating `DocumentFragment`. When there is a change to data used
-by the rendering function, it is re-run. The DOM nodes in the
-`DocumentFragment` then update themselves in-place, no matter where
-they were inserted on the page.
-
-It's completely automatic. [`Meteor.ui.render`](#meteor_ui_render)
-uses [reactive contexts](#reactivity) to discover what data is used by
-the rendering function. From within
-[`Meteor.ui.render`](#meteor_ui_render), you can use
-[`Meteor.ui.chunk`](#meteor_ui_chunk) to customize how much of the
-HTML is rerendered on a data change, or
-[`Meteor.ui.listChunk`](#meteor_ui_listchunk) to efficiently track a
-live database query.
+[`Meteor.render`](#meteor_render) takes a rendering function, that is, a
+function that returns some HTML as a string. It returns an auto-updating
+`DocumentFragment`. When there is a change to data used by the rendering
+function, it is re-run. The DOM nodes in the `DocumentFragment` then
+update themselves in-place, no matter where they were inserted on the
+page. It's completely automatic. [`Meteor.render`](#meteor_render) uses
+[reactive contexts](#reactivity) to discover what data is used by the
+rendering function.
 
 Most of the time, though, you won't call these functions directly
 &mdash; you'll just use your favorite templating package, such as
-Handlebars or Jade. The `render` and `chunk` functions are intended
+Handlebars or Jade. The `render` and `renderList` functions are intended
 for people that are implementing new templating systems.
 
 Meteor normally batches up any needed updates and executes them only
@@ -276,12 +269,12 @@ redrawn. The user could be in for a bumpy ride, as the focus, the
 cursor position, the partially entered text, and the accented
 character input state will be lost when the `<input>` is recreated.
 
-This is another problem that Meteor solves automatically. Just make
-sure that each of your focusable elements either has a unique `id`, or
-has a `name` that is unique within the closest parent that has an
-`id`. Meteor will preserve these elements even when their enclosing
-template is rerendered, but will still update their children and copy
-over any attribute changes.
+This is another problem that Meteor solves for you. You can specify
+elements to preserve when templates are re-rendered with the
+[`preserve`](#template_preserve) directive on the template. Meteor will
+preserve these elements even when their enclosing template is
+rerendered, but will still update their children and copy over any
+attribute changes.
 
 {{/better_markdown}}
 </template>
@@ -325,9 +318,9 @@ function `Template.hello`, passing any data for the template:
 
 This returns a string. To use the template along with the [`Live
 HTML`](#livehtml) system, and get DOM elements that update
-automatically in place, use [`Meteor.ui.render`](#meteor_ui_render):
+automatically in place, use [`Meteor.render`](#meteor_render):
 
-    Meteor.ui.render(function () {
+    Meteor.render(function () {
       return Template.hello({first: "Alyssa", last: "Hacker"});
     })
       => automatically updating DOM elements
@@ -387,7 +380,7 @@ Helpers can also be used to pass in constant data.
     // Works fine with {{dstache}}#each sections}}
     Template.report.sections = ["Situation", "Complication", "Resolution"];
 
-Finally, you can set the `events` property of a template function to a
+Finally, you can use an `events` declaration on a template function to set up a
 table of event handlers. The format is documented at [Event
 Maps](#eventmaps). The `this` argument to the event handler will be
 the data context of the element that triggered the event.
@@ -406,11 +399,11 @@ the data context of the element that triggered the event.
     </{{! }}template>
 
     <!-- myapp.js -->
-    Template.player_score.events = {
+    Template.player_score.events({
       'click .give_points': function () {
         Users.update({_id: this._id}, {$inc: {score: 2}});
       }
-    };
+    });
 
 Putting it all together, here's an example of how you can inject
 arbitrary data into your templates, and have them update automatically
@@ -430,7 +423,7 @@ discussion.
 
     <!-- in the console -->
     > Session.set("weather", "cloudy");
-    > document.body.appendChild(Meteor.ui.render(Template.forecast));
+    > document.body.appendChild(Meteor.render(Template.forecast));
     In DOM:  <div>It'll be cloudy tonight</div>
 
     > Session.set("weather", "cool and dry");

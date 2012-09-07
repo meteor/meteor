@@ -1,6 +1,42 @@
 
 ## vNEXT
 
+## v0.4.0
+
+* Merge Spark, a new live page update engine
+  * Breaking API changes
+    * Input elements no longer preserved based on `id` and `name` attributes. Use [`preserve`](http://docs.meteor.com/#template_preserve) instead.
+
+    * All `Meteor.ui` functions removed. Use `Meteor.render`, `Meteor.renderList`, and [Spark](https://github.com/meteor/meteor/wiki/Spark) functions instead.
+
+    * New template functions (eg. `created`, `rendered`, etc) may collide with existing helpers. Use `Template.foo.helpers()` to avoid conflicts.
+
+    * New syntax for declaring event maps. Use `Template.foo.events({...})`. For backwards compatibility, both syntaxes are allowed for now.
+
+  * New Template features
+
+    * Allow embedding non-Meteor widgets (eg. Google Maps) using [`{{#constant}}`](http://docs.meteor.com/#constant)
+
+    * Callbacks when templates are rendered. See http://docs.meteor.com/#template_rendered
+
+    * Explicit control of which nodes are preserved during re-rendering. See http://docs.meteor.com/#template_preserve
+
+    * Easily find nodes within a template in event handlers and callbacks. See http://docs.meteor.com/#template_find
+
+    * Allow parts of a template to be independently reactive with the [`{{#isolate}}`](http://docs.meteor.com/#isolate) block helper.
+
+
+* Use PACKAGE_DIRS environment variable to override package location. #227
+
+* Add `absolute-url` package to construct URLs pointing to the application.
+
+* Allow modifying documents returned by `observe` callbacks. #209
+
+* Fix periodic crash after client disconnect. #212
+
+* Fix minimingo crash on dotted queries with undefined keys. #126
+
+
 ## v0.3.9
 
 * Add `spiderable` package to allow web crawlers to index Meteor apps.

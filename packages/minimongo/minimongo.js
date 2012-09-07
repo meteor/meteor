@@ -378,6 +378,8 @@ LocalCollection._deepcopy = function (v, ctor) {
     return v;
   if (v === null)
     return null; // null has typeof "object"
+  if (v instanceof Date)
+    return new Date(v.getTime());
   if (_.isArray(v)) {
     var ret = v.slice(0);
     for (var i = 0; i < v.length; i++)

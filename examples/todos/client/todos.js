@@ -40,42 +40,36 @@ Meteor.autosubscribe(function () {
 
 ////////// Helpers for in-place editing //////////
 
-// Returns an event_map key for attaching "ok/cancel" events to
-// a text input (given by selector)
-var okcancel_events = function (selector) {
-  return 'keyup '+selector+', keydown '+selector+', focusout '+selector;
-};
+// Returns an event map that handles the "escape" and "return" keys and
+// "blur" events on a text input (given by selector) and interprets them
+// as "ok" or "cancel".
+var okCancelEvents = function (selector, callbacks) {
+  var ok = callbacks.ok || function () {};
+  var cancel = callbacks.cancel || function () {};
 
-// Creates an event handler for interpreting "escape", "return", and "blur"
-// on a text field and calling "ok" or "cancel" callbacks.
-var make_okcancel_handler = function (options) {
-  var ok = options.ok || function () {};
-  var cancel = options.cancel || function () {};
-
-  return function (evt) {
-    if (evt.type === "keydown" && evt.which === 27) {
-      // escape = cancel
-      cancel.call(this, evt);
-
-    } else if (evt.type === "keyup" && evt.which === 13 ||
-               evt.type === "focusout") {
-      // blur/return/enter = ok/submit if non-empty
-      var value = String(evt.target.value || "");
-      if (value)
-        ok.call(this, value, evt);
-      else
+  var events = {};
+  events['keyup '+selector+', keydown '+selector+', focusout '+selector] =
+    function (evt) {
+      if (evt.type === "keydown" && evt.which === 27) {
+        // escape = cancel
         cancel.call(this, evt);
-    }
-  };
+
+      } else if (evt.type === "keyup" && evt.which === 13 ||
+                 evt.type === "focusout") {
+        // blur/return/enter = ok/submit if non-empty
+        var value = String(evt.target.value || "");
+        if (value)
+          ok.call(this, value, evt);
+        else
+          cancel.call(this, evt);
+      }
+    };
+  return events;
 };
 
-// Finds a text input in the DOM by id and focuses it.
-var focus_field_by_id = function (id) {
-  var input = document.getElementById(id);
-  if (input) {
-    input.focus();
-    input.select();
-  }
+var activateInput = function (input) {
+  input.focus();
+  input.select();
 };
 
 ////////// Lists //////////
@@ -84,7 +78,7 @@ Template.lists.lists = function () {
   return Lists.find({}, {sort: {name: 1}});
 };
 
-Template.lists.events = {
+Template.lists.events({
   'mousedown .list': function (evt) { // select list
     Router.setList(this._id);
   },
@@ -92,15 +86,27 @@ Template.lists.events = {
     // prevent clicks on <a> from refreshing the page.
     evt.preventDefault();
   },
-  'dblclick .list': function (evt) { // start editing list name
+  'dblclick .list': function (evt, tmpl) { // start editing list name
     Session.set('editing_listname', this._id);
     Meteor.flush(); // force DOM redraw, so we can focus the edit field
-    focus_field_by_id("list-name-input");
+    activateInput(tmpl.find("#list-name-input"));
   }
-};
+});
 
-Template.lists.events[ okcancel_events('#list-name-input') ] =
-  make_okcancel_handler({
+// Attach events to keydown, keyup, and blur on "New list" input box.
+Template.lists.events(okCancelEvents(
+  '#new-list',
+  {
+    ok: function (text, evt) {
+      var id = Lists.insert({name: text});
+      Router.setList(id);
+      evt.target.value = "";
+    }
+  }));
+
+Template.lists.events(okCancelEvents(
+  '#list-name-input',
+  {
     ok: function (value) {
       Lists.update(this._id, {$set: {name: value}});
       Session.set('editing_listname', null);
@@ -108,17 +114,7 @@ Template.lists.events[ okcancel_events('#list-name-input') ] =
     cancel: function () {
       Session.set('editing_listname', null);
     }
-  });
-
-// Attach events to keydown, keyup, and blur on "New list" input box.
-Template.lists.events[ okcancel_events('#new-list') ] =
-  make_okcancel_handler({
-    ok: function (text, evt) {
-      var id = Lists.insert({name: text});
-      Router.setList(id);
-      evt.target.value = "";
-    }
-  });
+  }));
 
 Template.lists.selected = function () {
   return Session.equals('list_id', this._id) ? 'selected' : '';
@@ -132,16 +128,19 @@ Template.lists.editing = function () {
   return Session.equals('editing_listname', this._id);
 };
 
+// Preserve text input fields so that they aren't replaced
+// while the user is typing in them.
+Template.lists.preserve(['#list-name-input', '#new-list']);
+
 ////////// Todos //////////
 
 Template.todos.any_list_selected = function () {
   return !Session.equals('list_id', null);
 };
 
-Template.todos.events = {};
-
-Template.todos.events[ okcancel_events('#new-todo') ] =
-  make_okcancel_handler({
+Template.todos.events(okCancelEvents(
+  '#new-todo',
+  {
     ok: function (text, evt) {
       var tag = Session.get('tag_filter');
       Todos.insert({
@@ -153,7 +152,7 @@ Template.todos.events[ okcancel_events('#new-todo') ] =
       });
       evt.target.value = '';
     }
-  });
+  }));
 
 Template.todos.todos = function () {
   // Determine which todos to display in main pane,
@@ -170,6 +169,8 @@ Template.todos.todos = function () {
 
   return Todos.find(sel, {sort: {timestamp: 1}});
 };
+
+Template.todos.preserve(['#new-todo']);
 
 Template.todo_item.tag_objs = function () {
   var todo_id = this._id;
@@ -194,7 +195,7 @@ Template.todo_item.adding_tag = function () {
   return Session.equals('editing_addtag', this._id);
 };
 
-Template.todo_item.events = {
+Template.todo_item.events({
   'click .check': function () {
     Todos.update(this._id, {$set: {done: !this.done}});
   },
@@ -203,16 +204,16 @@ Template.todo_item.events = {
     Todos.remove(this._id);
   },
 
-  'click .addtag': function (evt) {
+  'click .addtag': function (evt, tmpl) {
     Session.set('editing_addtag', this._id);
     Meteor.flush(); // update DOM before focus
-    focus_field_by_id("edittag-input");
+    activateInput(tmpl.find("#edittag-input"));
   },
 
-  'dblclick .display .todo-text': function (evt) {
+  'dblclick .display .todo-text': function (evt, tmpl) {
     Session.set('editing_itemname', this._id);
     Meteor.flush(); // update DOM before focus
-    focus_field_by_id("todo-input");
+    activateInput(tmpl.find("#todo-input"));
   },
 
   'click .remove': function (evt) {
@@ -225,11 +226,11 @@ Template.todo_item.events = {
       Todos.update({_id: id}, {$pull: {tags: tag}});
     }, 300);
   }
+});
 
-};
-
-Template.todo_item.events[ okcancel_events('#todo-input') ] =
-  make_okcancel_handler({
+Template.todo_item.events(okCancelEvents(
+  '#todo-input',
+  {
     ok: function (value) {
       Todos.update(this._id, {$set: {text: value}});
       Session.set('editing_itemname', null);
@@ -237,10 +238,11 @@ Template.todo_item.events[ okcancel_events('#todo-input') ] =
     cancel: function () {
       Session.set('editing_itemname', null);
     }
-  });
+  }));
 
-Template.todo_item.events[ okcancel_events('#edittag-input') ] =
-  make_okcancel_handler({
+Template.todo_item.events(okCancelEvents(
+  '#edittag-input',
+  {
     ok: function (value) {
       Todos.update(this._id, {$addToSet: {tags: value}});
       Session.set('editing_addtag', null);
@@ -248,7 +250,9 @@ Template.todo_item.events[ okcancel_events('#edittag-input') ] =
     cancel: function () {
       Session.set('editing_addtag', null);
     }
-  });
+  }));
+
+Template.todo_item.preserve(['#todo-input', '#edittag-input']);
 
 ////////// Tag Filter //////////
 
@@ -282,14 +286,14 @@ Template.tag_filter.selected = function () {
   return Session.equals('tag_filter', this.tag) ? 'selected' : '';
 };
 
-Template.tag_filter.events = {
+Template.tag_filter.events({
   'mousedown .tag': function () {
     if (Session.equals('tag_filter', this.tag))
       Session.set('tag_filter', null);
     else
       Session.set('tag_filter', this.tag);
   }
-};
+});
 
 ////////// Tracking selected list in URL //////////
 

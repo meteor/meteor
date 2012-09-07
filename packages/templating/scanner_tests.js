@@ -24,7 +24,7 @@ Tinytest.add("templating - html scanner", function (test) {
   };
 
   var BODY_PREAMBLE = "Meteor.startup(function(){" +
-        "document.body.appendChild(Meteor.ui.render(" +
+        "document.body.appendChild(Spark.render(" +
         "Meteor._def_template(null,";
   var BODY_POSTAMBLE = ")));});";
   var TEMPLATE_PREAMBLE = "Meteor._def_template(";

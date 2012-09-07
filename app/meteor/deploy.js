@@ -16,7 +16,7 @@ var _ = require('../lib/third/underscore.js');
 // configuration
 //
 
-var DEPLOY_HOSTNAME = 'deploy.meteor.com';
+var DEPLOY_HOSTNAME = process.env.DEPLOY_HOSTNAME || 'deploy.meteor.com';
 
 // available RPCs are: deploy (with set-password), delete, logs,
 // mongo_cred.  each RPC might require a password, which we

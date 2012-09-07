@@ -1,4 +1,4 @@
-METEOR_VERSION = "0.3.9";
+METEOR_VERSION = "0.4.0";
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
@@ -143,14 +143,29 @@ var toc = [
       "Session.equals"
     ],
 
-    "Meteor.ui", [
-      "Meteor.ui.render",
-      "Meteor.ui.chunk",
-      "Meteor.ui.listChunk",
-      "Meteor.flush",
+    {name: "Templates", id: "templates_api"}, [
+      {prefix: "Template", instance: "myTemplate", id: "template_call"}, [
+        {name: "rendered", id: "template_rendered"},
+        {name: "created", id: "template_created"},
+        {name: "destroyed", id: "template_destroyed"},
+        {name: "events", id: "template_events"},
+        {name: "helpers", id: "template_helpers"},
+        {name: "preserve", id: "template_preserve"}
+      ],
+      {name: "Template instances", id: "template_inst"}, [
+        {instance: "this", name: "findAll", id: "template_findAll"},
+        {instance: "this", name: "find", id: "template_find"},
+        {instance: "this", name: "firstNode", id: "template_firstNode"},
+        {instance: "this", name: "lastNode", id: "template_lastNode"},
+        {instance: "this", name: "data", id: "template_data"}
+      ],
+      "Meteor.render",
+      "Meteor.renderList",
       {type: "spacer"},
-      {name: "Event maps", style: "noncode"}
-    ],
+      {name: "Event maps", style: "noncode"},
+      {name: "Constant regions", style: "noncode", id: "constant"},
+      {name: "Reactivity isolation", style: "noncode", id: "isolate"}
+     ],
 
     "Timers", [
       "Meteor.setTimeout",
@@ -165,7 +180,8 @@ var toc = [
         {instance: "context", name: "on_invalidate"},
         {instance: "context", name: "invalidate"}
       ],
-      {name: "Meteor.deps.Context.current", id: "current"}
+      {name: "Meteor.deps.Context.current", id: "current"},
+      "Meteor.flush"
     // ],
 
     // "Environment Variables", [
@@ -186,6 +202,7 @@ var toc = [
   ],
 
   "Packages", [ [
+    "absolute-url",
     "amplify",
     "backbone",
     "bootstrap",
@@ -320,6 +337,13 @@ Handlebars.registerHelper('better_markdown', function(fn) {
     return result;
   };
 
+  // This is a tower of terrible hacks.
+  // Replace Spark annotations <$...> ... </$...> with HTML comments, and
+  // space out the comments on their own lines.  This keeps them from
+  // interfering with Markdown's paragraph parsing.
+  // Really, running Markdown multiple times on the same string is just a
+  // bad idea.
+  input = input.replace(/<(\/?\$.*?)>/g, '<!--$1-->');
   input = input.replace(/<!--.*?-->/g, '\n\n$&\n\n');
 
   var hashedBlocks = {};
@@ -368,6 +392,8 @@ Handlebars.registerHelper('better_markdown', function(fn) {
   output = output.replace(/!!!!HTML:(.*?)!!!!/g, function(z, a) {
     return hashedBlocks[a];
   });
+
+  output = output.replace(/<!--(\/?\$.*?)-->/g, '<$1>');
 
   return output;
 });

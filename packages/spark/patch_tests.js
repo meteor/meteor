@@ -1,6 +1,6 @@
-Tinytest.add("smartpatch - basic", function(test) {
+Tinytest.add("spark - patch - basic", function(test) {
 
-  var Patcher = Meteor.ui._Patcher;
+  var Patcher = Spark._Patcher;
 
   var div = function(html) {
     var n = document.createElement("DIV");
@@ -91,7 +91,6 @@ Tinytest.add("smartpatch - basic", function(test) {
   test.isTrue(ret);
   assert_html(x, "<i><u>bar</u><s>baz</s></i>");
 
-  var LiveRange = Meteor.ui._LiveRange;
   var t = "_foo";
   var liverange = function(start, end, inner) {
     return new LiveRange(t, start, end, inner);
@@ -107,7 +106,7 @@ Tinytest.add("smartpatch - basic", function(test) {
                     tgt.firstNode().previousSibling,
                     tgt.lastNode().nextSibling);
     var copyCallback = function(tgt, src) {
-      LiveRange.transplant_tag(t, tgt, src);
+      LiveRange.transplantTag(t, tgt, src);
     };
     ret = p.match(tag(x, 'u'), tag(y, 'u'), copyCallback);
     test.isTrue(ret);
@@ -121,7 +120,7 @@ Tinytest.add("smartpatch - basic", function(test) {
   _.each([["aaa","zzz"], ["",""], ["aaa",""], ["","zzz"]], rangeTest);
 });
 
-Tinytest.add("smartpatch - copyAttributes", function(test) {
+Tinytest.add("spark - patch - copyAttributes", function(test) {
 
   var attrTester = function(tagName, initial) {
     var node;
@@ -137,12 +136,12 @@ Tinytest.add("smartpatch - copyAttributes", function(test) {
         });
         buf.push('></', tagName, '>');
         var nodeHtml = buf.join('');
-        var frag = Meteor.ui._htmlToFragment(nodeHtml);
+        var frag = DomUtils.htmlToFragment(nodeHtml);
         var n = frag.firstChild;
         if (! node) {
           node = n;
         } else {
-          Meteor.ui._Patcher._copyAttributes(node, n);
+          Spark._Patcher._copyAttributes(node, n);
         }
         lastAttrs = {};
         _.each(allAttrNames, function(v,k) {
@@ -239,4 +238,3 @@ Tinytest.add("smartpatch - copyAttributes", function(test) {
 
 
 });
-
