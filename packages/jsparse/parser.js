@@ -77,9 +77,9 @@ var parse = function (tokenizer) {
                   token(']')));
 
   var propertyName = describe('propertyName', or(
-    named('idProp', tokenClass('IDENTIFIER')),
-    named('numProp', tokenClass('NUMBER')),
-    named('strProp', tokenClass('STRING'))));
+    named('idPropName', tokenClass('IDENTIFIER')),
+    named('numPropName', tokenClass('NUMBER')),
+    named('strPropName', tokenClass('STRING'))));
   var nameColonValue = describe(
     'name:value',
     named('prop', seq(propertyName, token(':'), assignmentExpressionPtr)));
