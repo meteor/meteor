@@ -148,8 +148,7 @@ var lookAheadToken = function (text) {
 
 ///// NON-TERMINAL PARSER CONSTRUCTORS
 
-// call as: runRequired(parser, tokenizer)
-// to run parser(tokenizer) and assert it matches
+// run parser(tokenizer) and assert it matches
 var runRequired = function (parser, tokenizer) {
   return revalue(
     tokenizer ? parser(tokenizer) : parser,
@@ -161,10 +160,7 @@ var runRequired = function (parser, tokenizer) {
 };
 
 var runMaybeRequired = function (require, parser, tokenizer) {
-  if (require)
-    return runRequired(parser, tokenizer);
-  else
-    return parser(tokenizer);
+  return require ? runRequired(parser, tokenizer) : parser(tokenizer);
 };
 
 // Polymorphic in parsers and results; an experiment.

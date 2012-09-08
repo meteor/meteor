@@ -1,7 +1,6 @@
 ///// JAVASCRIPT PARSER
 
 // XXX unit tests
-// XXX remove prevToken argument from calls to runRequired and maybeRunRequired here.
 
 // What we don't have from ECMA-262 5.1:
 //  - object literal trailing comma
@@ -159,8 +158,8 @@ var parse = function (tokenizer) {
       // and .foo add-ons.
       // if we have 'new' keywords, we are committed and must
       // match an expression or error.
-      var result = runMaybeRequired(news.length, primaryOrFunctionExpression,
-                                    t, news[news.length - 1]);
+      var result = runMaybeRequired(
+        news.length, primaryOrFunctionExpression, t);
       if (! result)
         return null;
 
@@ -216,8 +215,7 @@ var parse = function (tokenizer) {
       var unaries = unaryList(t);
       // if we have unaries, we are committed and
       // have to match an expression or error.
-      var result = runMaybeRequired(unaries.length, postfixExpression,
-                                    t, unaries[unaries.length - 1]);
+      var result = runMaybeRequired(unaries.length, postfixExpression, t);
       if (! result)
         return null;
 
@@ -290,7 +288,7 @@ var parse = function (tokenizer) {
           var op;
           while (r.lhs && (op = assignOp(t)))
             parts.push(op,
-                       runRequired(conditionalExpressionFunc(noIn), t, op));
+                       runRequired(conditionalExpressionFunc(noIn), t));
 
           var result = parts.pop();
           while (parts.length) {
