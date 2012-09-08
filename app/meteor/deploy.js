@@ -11,12 +11,26 @@ var qs = require('querystring');
 var path = require('path');
 var files = require('../lib/files.js');
 var _ = require('../lib/third/underscore.js');
+var keypress = require('keypress');
 
 //
 // configuration
 //
 
 var DEPLOY_HOSTNAME = process.env.DEPLOY_HOSTNAME || 'deploy.meteor.com';
+
+
+// Set stdin to be blocking, reversing node's normal setting of
+// O_NONBLOCK on process.stdin.
+//
+// This uses a meteor hack to node. See admin/generate-dev-bundle.sh.
+//
+// This fixes the "meteor mongo" repl and keeps node from bringing down
+// the Emacs shell on exit.
+if (process.stdin.isTTY &&
+    process.stdin._handle && process.stdin._handle.setBlocking)
+  process.stdin._handle.setBlocking(true);
+
 
 // available RPCs are: deploy (with set-password), delete, logs,
 // mongo_cred.  each RPC might require a password, which we
@@ -38,7 +52,7 @@ var meteor_rpc = function (rpc_name, method, site, query_params, callback) {
   });
 
   return r;
-}
+};
 
 var deploy_app = function (url, app_dir, opt_debug, opt_tests,
                            opt_set_password) {
@@ -88,9 +102,6 @@ var bundle_and_deploy = function (site, app_dir, opt_debug, opt_tests,
   var tar = spawn('tar', ['czf', '-', 'bundle'], {cwd: build_dir});
 
   var rpc = meteor_rpc('deploy', 'POST', site, opts, function (err, body) {
-    // XXX this is gross. maybe some way to automate?
-    process.stdin.destroy(); // clean up after maybe_password
-
     if (err) {
       process.stderr.write("\nError deploying application: " + body + "\n");
       process.exit(1);
@@ -130,8 +141,6 @@ var delete_app = function (url) {
     if (password) opts.password = password;
 
     meteor_rpc('deploy', 'DELETE', parsed_url.hostname, opts, function (err, body) {
-      process.stdin.destroy(); // clean up after with_password
-
       if (err) {
         process.stderr.write("Error deleting application: " + body + "\n");
         process.exit(1);
@@ -161,11 +170,6 @@ var mongo = function (url, just_credential) {
         // just print the URL
         process.stdout.write(body + "\n");
 
-        // only do this if we're printing the URL. Don't do it if
-        // we're running the mongo shell, since that will close off
-        // stdin for the shell.
-        process.stdin.destroy(); // clean up after with_password
-
       } else {
         // pause stdin so we don't try to read it while mongo is
         // running.
@@ -184,8 +188,6 @@ var logs = function (url) {
     if (password) opts.password = password;
 
     meteor_rpc('logs', 'GET', parsed_url.hostname, opts, function (err, body) {
-      process.stdin.destroy(); // clean up after with_password
-
       if (err) {
         process.stderr.write(body + '\n');
         process.exit(1);
@@ -241,10 +243,7 @@ var run_mongo_shell = function (url) {
 
   var proc = spawn(mongo_path,
                    args,
-                   { customFds: [0, 1, 2] });
-  proc.on('exit', function () {
-    process.stdin.destroy(); // clean up after maybe_password
-  });
+                   { stdio: 'inherit' });
 };
 
 // hash the password so we never send plaintext over the wire. Doesn't
@@ -263,15 +262,16 @@ var read_password = function (callback) {
   // https://github.com/visionmedia/commander.js/blob/master/lib/commander.js
 
   var buf = '';
-  process.stdin.resume();
-  tty.setRawMode(true);
+  process.stdin.setRawMode(true);
 
   // keypress
+  keypress(process.stdin);
   process.stdin.on('keypress', function(c, key){
     if (key && 'enter' === key.name) {
       console.log();
+      process.stdin.pause();
       process.stdin.removeAllListeners('keypress');
-      tty.setRawMode(false);
+      process.stdin.setRawMode(false);
 
       // if they just hit enter, prompt again. let's not do this.
       // This means empty password is a valid password.
@@ -290,8 +290,9 @@ var read_password = function (callback) {
     // raw mode masks control-c. make sure users can get out.
     if (key && key.ctrl && 'c' === key.name) {
       console.log();
+      process.stdin.pause();
       process.stdin.removeAllListeners('keypress');
-      tty.setRawMode(false);
+      process.stdin.setRawMode(false);
 
       process.kill(process.pid, 'SIGINT');
       return;
@@ -300,6 +301,7 @@ var read_password = function (callback) {
     buf += c;
   });
 
+  process.stdin.resume();
 };
 
 // Check if a particular endpoint requires a password. If so, prompt for
@@ -333,7 +335,7 @@ var with_password = function (site, callback) {
 var get_new_password = function (callback) {
   process.stdout.write("New Password: ");
   read_password(function (p1) {
-    process.stdout.write("Confirm Password: ");
+    process.stdout.write("New Password (again): ");
     read_password(function (p2) {
       if (p1 === p2) {
         callback(p1);
