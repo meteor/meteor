@@ -10,10 +10,11 @@ html, body { height: 100%; }
   border-bottom: 1px solid #555;
   overflow: auto;
   background: #cfc;
+  font-size: 12px;
 }
 
 #topbarinner {
-  padding: 10px;
+  padding: 7px;
   font-family: sans-serif;
 }
 

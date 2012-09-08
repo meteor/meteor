@@ -59,22 +59,16 @@ if (Meteor.is_client) {
     if (tree) {
       var curPos = 0;
       var unclosedInfos = [];
-      var statementHeads = makeSet(
-        ('functionDecl expression label block var ' +
-         'if for do while return continue break throw with switch ' +
-         'try debugger empty').split(' '));
       var toHtml = function (obj) {
         if (_.isArray(obj)) {
           var head = obj[0] || '';
           var rest = obj.slice(1);
           var info = { startPos: curPos };
-          var isStatement = statementHeads[head];
+          var isStatement = (head.indexOf('Stmnt') >= 0);
           var html = Spark.setDataContext(
             info,
             '<div class="box named' + (isStatement ? ' statement' : '') +
-              '"><div class="box head">' +
-              Handlebars._escape(head + (isStatement ? ' statement' : '')) +
-              '</div>' +
+              '"><div class="box head">' + Handlebars._escape(head) + '</div>' +
               _.map(rest, toHtml).join('') + '</div>');
           unclosedInfos.push(info);
           return html;
