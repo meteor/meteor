@@ -647,6 +647,12 @@ Examples:
 When called in a reactive context, `map` registers dependencies on
 the matching documents.
 
+<!-- The following is not yet implemented, but users shouldn't assume
+     sequential execution anyway because that will break. -->
+On the server, if `callback` yields, other calls to `callback` may occur while
+the first call is waiting. If strict sequential execution is necessary, use
+`forEach` instead.
+
 {{> api_box cursor_fetch}}
 
 When called in a reactive context, `fetch` registers dependencies on
