@@ -74,7 +74,7 @@ var run = function () {
   // webserver
   var app = connect.createServer();
   var static_cacheable_path = path.join(bundle_dir, 'static_cacheable');
-  if (path.existsSync(static_cacheable_path))
+  if (fs.existsSync(static_cacheable_path))
     app.use(gzippo.staticGzip(static_cacheable_path, {clientMaxAge: 1000 * 60 * 60 * 24 * 365}));
   app.use(gzippo.staticGzip(path.join(bundle_dir, 'static')));
 

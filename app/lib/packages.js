@@ -72,9 +72,9 @@ var Package = function () {
     },
 
     register_extension: function (extension, callback) {
-      if (self.on_test)
+      if (_.has(self.extensions, extension))
         throw new Error("This package has already registered a handler for " +
-                       extension);
+                        extension);
       self.extensions[extension] = callback;
     }
   };
@@ -270,7 +270,7 @@ var packages = module.exports = {
     _.each(files.get_package_dirs(), function(dir) {
       _.each(fs.readdirSync(dir), function (name) {
         // skip .meteor directory
-        if (path.existsSync(path.join(dir, name, 'package.js')))
+        if (fs.existsSync(path.join(dir, name, 'package.js')))
           ret[name] = packages.get(name);
       });      
     })

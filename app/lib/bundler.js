@@ -236,7 +236,7 @@ var Bundle = function () {
     /**
      * This is the ultimate low-level API to add data to the bundle.
      *
-     * type: "js", "css", "head", "body"
+     * type: "js", "css", "head", "body", "static"
      *
      * where: an environment, or a list of one or more environments
      * ("client", "server", "tests") -- for non-JS resources, the only
@@ -507,7 +507,7 @@ _.extend(Bundle.prototype, {
     // --- Static assets ---
 
     if (is_app) {
-      if (path.existsSync(path.join(project_dir, 'public'))) {
+      if (fs.existsSync(path.join(project_dir, 'public'))) {
         files.cp_r(path.join(project_dir, 'public'),
                    path.join(build_path, 'static'), {ignore: ignore_files});
       }

@@ -358,7 +358,7 @@ Template.api.cursor_foreach = {
   id: "foreach",
   name: "<em>cursor</em>.forEach(callback)",
   locus: "Anywhere",
-  descr: ["Call the callback function once for each matching document."],
+  descr: ["Call `callback` once for each matching document, sequentially and synchronously."],
   args: [
     {name: "callback",
      type: "Function",

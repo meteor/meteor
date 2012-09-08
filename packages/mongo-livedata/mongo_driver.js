@@ -294,33 +294,31 @@ _Mongo.Cursor = function (mongo, collection_name, selector, options, cursor) {
   self.visited_ids = {};
 };
 
+// XXX Make more like ECMA forEach:
+//     https://github.com/meteor/meteor/pull/63#issuecomment-5320050
 _Mongo.Cursor.prototype.forEach = function (callback) {
   var self = this;
-  var future = new Future;
 
-  callback = Meteor.bindEnvironment(callback, function (e) {
-    // XXX improve error message (and how we report it)
-    Meteor._debug("Exception while running Meteor.Collection forEach callback"
-                  + e.stack);
-  });
+  var wrappedNextObject = Future.wrap(self.cursor.nextObject.bind(self.cursor));
 
-  self.cursor.each(function (err, doc) {
-    if (err || !doc || !doc._id) {
-      future.ret(err);
-    } else if (self.visited_ids[doc._id]) {
-      // already seen this doc;  Mongo cursors can
-      // return duplicates
-    } else {
-      self.visited_ids[doc._id] = true;
-      callback(doc);
-    }
-  });
-
-  var err = future.wait();
-  if (err)
-    throw err;
+  // We implement the loop ourself instead of using self.cursor.each, because
+  // "each" will call its callback outside of a fiber which makes it much more
+  // complex to make this function synchronous.
+  while (true) {
+    var doc = wrappedNextObject().wait();
+    if (!doc || !doc._id)
+      return;
+    // Have we already seen this doc (Mongo cursors can return duplicates)?
+    if (self.visited_ids[doc._id])
+      continue;
+    self.visited_ids[doc._id] = true;
+    callback(doc);
+  }
 };
 
+// XXX Make more like ECMA map:
+//     https://github.com/meteor/meteor/pull/63#issuecomment-5320050
+// XXX Allow overlapping callback executions if callback yields.
 _Mongo.Cursor.prototype.map = function (callback) {
   var self = this;
   var res = [];
