@@ -5,19 +5,12 @@ var makeTester = function (test) {
     var results = [];
     var ptrStack = [];
     var ptr = results;
-    _.each(str.match(/\s?\(|\)|`.*?`|`|[^\s()`]+/g), function (txt) {
-      var whitespaceBeforeOpen = false;
-      if (/^\s\($/.test(txt)) {
-        // paren preceded by whitespace
-        txt = '(';
-        whitespaceBeforeOpen = true;
-      }
+    _.each(str.match(/\(|\)|`.*?`|`|[^\s()`]+/g), function (txt) {
       switch (txt.charAt(0)) {
       case '(':
-        var newArray =
-              ((! whitespaceBeforeOpen) && ptr.length &&
-               (typeof ptr[ptr.length - 1] === "string")) ?
-              [ptr.pop()] : [];
+        if (! ptr.length || (typeof ptr[ptr.length - 1] !== "string"))
+          throw new Error("Nameless node in " + str);
+        var newArray = [ptr.pop()];
         ptr.push(newArray);
         ptrStack.push(ptr);
         ptr = newArray;
@@ -115,25 +108,25 @@ var makeTester = function (test) {
 
 Tinytest.add("jsparse - basics", function (test) {
   var tester = makeTester(test);
-  tester.goodParse('1', "program(expression(number(1) ;()))");
-  tester.goodParse('1 + 1', "program(expression(binary(number(1) + number(1)) ;()))");
-  tester.goodParse('1*2+3*4', "program(expression(binary(binary(number(1) * number(2)) + " +
+  tester.goodParse('1', "program(expressionStmnt(number(1) ;()))");
+  tester.goodParse('1 + 1', "program(expressionStmnt(binary(number(1) + number(1)) ;()))");
+  tester.goodParse('1*2+3*4', "program(expressionStmnt(binary(binary(number(1) * number(2)) + " +
                 "binary(number(3) * number(4))) ;()))");
-  tester.goodParse('1 + 1;', "program(expression(binary(number(1) + number(1)) ;))");
-  tester.goodParse('1 + 1;;', "program(expression(binary(number(1) + number(1)) ;) empty(;))");
+  tester.goodParse('1 + 1;', "program(expressionStmnt(binary(number(1) + number(1)) ;))");
+  tester.goodParse('1 + 1;;', "program(expressionStmnt(binary(number(1) + number(1)) ;) emptyStmnt(;))");
   tester.goodParse('', "program()");
   tester.goodParse('\n', "program()");
-  tester.goodParse(';;;\n\n;\n', "program(empty(;) empty(;) empty(;) empty(;))");
-  tester.goodParse('foo', "program(expression(identifier(foo) ;()))");
-  tester.goodParse('foo();', "program(expression(call(identifier(foo) `(` `)`) ;))");
-  tester.goodParse('var x = 3', "program(var(var varDecl(x = number(3)) ;()))");
-  tester.goodParse('++x;', "program(expression(unary(++ identifier(x)) ;))");
-  tester.goodParse('x++;', "program(expression(postfix(identifier(x) ++) ;))");
+  tester.goodParse(';;;\n\n;\n', "program(emptyStmnt(;) emptyStmnt(;) emptyStmnt(;) emptyStmnt(;))");
+  tester.goodParse('foo', "program(expressionStmnt(identifier(foo) ;()))");
+  tester.goodParse('foo();', "program(expressionStmnt(call(identifier(foo) `(` `)`) ;))");
+  tester.goodParse('var x = 3', "program(varStmnt(var varDecl(x = number(3)) ;()))");
+  tester.goodParse('++x;', "program(expressionStmnt(unary(++ identifier(x)) ;))");
+  tester.goodParse('x++;', "program(expressionStmnt(postfix(identifier(x) ++) ;))");
   tester.goodParse(
     'throw new Error',
-    "program(throw(throw new(new identifier(Error)) ;()))");
+    "program(throwStmnt(throw new(new identifier(Error)) ;()))");
   tester.goodParse(
     'var x = function () { return 123; };',
-    'program(var(var varDecl(x = functionExpr(function () `(` `)` ' +
-      '{ return(return number(123) ;) })) ;))');
+    'program(varStmnt(var varDecl(x = functionExpr(function nil() `(` `)` ' +
+      '{ returnStmnt(return number(123) ;) })) ;))');
 });
