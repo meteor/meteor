@@ -1,5 +1,68 @@
 
 
+var allNodeNames = [
+  ";",
+  "array",
+  "assignment",
+  "binary",
+  "blockStmnt",
+  "boolean",
+  "bracket",
+  "breakStmnt",
+  "call",
+  "case",
+  "catch",
+  "comma",
+  "continueStmnt",
+  "debuggerStmnt",
+  "default",
+  "doStmnt",
+  "dot",
+  "emptyStmnt",
+  "expressionStmnt",
+  "finally",
+  "forInSpec",
+  "forSpec",
+  "forStmnt",
+  "forVarInSpec",
+  "forVarSpec",
+  "functionDecl",
+  "functionExpr",
+  "idPropName",
+  "identifier",
+  "ifStmnt",
+  "labelStmnt",
+  "new",
+  "newcall",
+  "nil",
+  "null",
+  "numPropName",
+  "number",
+  "object",
+  "parens",
+  "postfix",
+  "program",
+  "prop",
+  "regex",
+  "returnStmnt",
+  "strPropName",
+  "string",
+  "switchStmnt",
+  "ternary",
+  "this",
+  "throwStmnt",
+  "tryStmnt",
+  "unary",
+  "varDecl",
+  "varStmnt",
+  "whileStmnt",
+  "withStmnt"
+];
+
+var allNodeNamesSet = {};
+_.each(allNodeNames, function (n) { allNodeNamesSet[n] = true; });
+
+
 var makeTester = function (test) {
   var parseTestFormat = function (str) {
     var results = [];
@@ -72,7 +135,8 @@ var makeTester = function (test) {
       var informalize = function (part) {
         if (_.isArray(part) && part.length) {
           // This is a NODE (non-terminal).  Make sure it actually is.
-          if (! (part[0] && typeof part[0] === "string"))
+          if (! (part[0] && typeof part[0] === "string" &&
+                 allNodeNamesSet[part[0]] === true))
             test.fail("Not a node name: " + part[0]);
           return part.slice(0, 1).concat(
             _.map(part.slice(1), informalize));
