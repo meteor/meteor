@@ -123,9 +123,31 @@ var makeTester = function (test) {
       test.isTrue(error);
       test.equal(error.message, constructMessage(pos, text));
     },
-    badParse: function (code, expecting) {
-//      var constructMessage = function (expecting, pos, found
-      //XXX
+    badParse: function (code) {
+      var constructMessage = function (whatExpected, pos, found, after) {
+        return "Expected " + whatExpected + " after `" + after +
+          "` at position " + pos + ", found " +
+          (found ? "`" + found + "`" : "EOF");
+      };
+      var pos = code.indexOf('`');
+      var whatExpected = code.match(/`(.*?)`/)[1];
+      code = code.replace(/`.*?`/g, '');
+
+      var parsed = false;
+      var error = null;
+      try {
+        var lexer = new Lexer(code);
+        var tokenizer = new Tokenizer(code);
+        var tree = parse(tokenizer);
+        parsed = true;
+      } catch (e) {
+        error = e;
+      }
+      test.isFalse(parsed);
+      test.isTrue(error);
+      var after = tokenizer.text;
+      var found = tokenizer.peekText;
+      test.equal(error.message, constructMessage(whatExpected, pos, found, after));
     }
   };
 };
@@ -154,6 +176,10 @@ Tinytest.add("jsparse - basics", function (test) {
     'var x = function () { return 123; };',
     'program(varStmnt(var varDecl(x = functionExpr(function nil() `(` `)` ' +
       '{ returnStmnt(return number(123) ;) })) ;))');
+
+  tester.badParse("var x = `expression`");
+  tester.badParse("1 `semicolon`1");
+  tester.badParse("1+1`semicolon`:");
 });
 
 Tinytest.add("jsparse - tokenization errors", function (test) {
