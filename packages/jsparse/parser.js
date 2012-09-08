@@ -1,6 +1,7 @@
 ///// JAVASCRIPT PARSER
 
 // XXX unit tests
+// XXX remove prevToken argument from calls to runRequired and maybeRunRequired here.
 
 // What we don't have from ECMA-262 5.1:
 //  - object literal trailing comma

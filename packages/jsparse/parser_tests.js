@@ -101,7 +101,7 @@ var makeTester = function (test) {
       test.equal(stringifyTestFormat(actualTree),
                  stringifyTestFormat(expectedTree));
     },
-    badToken: function (code, expectedMessage) {
+    badToken: function (code) {
       var constructMessage = function (pos, text) {
         return "Bad token at position " + pos + ", text `" + text + "`";
       };
@@ -122,8 +122,11 @@ var makeTester = function (test) {
       test.isFalse(parsed);
       test.isTrue(error);
       test.equal(error.message, constructMessage(pos, text));
+    },
+    badParse: function (code, expecting) {
+//      var constructMessage = function (expecting, pos, found
+      //XXX
     }
-    // XXX write badParse
   };
 };
 

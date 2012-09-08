@@ -66,13 +66,12 @@ var describe = function (description, parser) {
 
 // Call this as `throw parseError(...)`.
 // `expected` is a parser, `after` is a string.
-var parseError = function (t, expected, after) {
+var parseError = function (t, expected) {
   var str = (expected.description ? "Expected " + expected.description :
              // all parsers that might error should have descriptions,
              // but just in case:
              "Unexpected token");
-  if (after)
-    str += " after " + (after.text ? "`" + after.text + "`" : after);
+  str += " after `" + t.text + "`";
   var pos = t.pos;
   str += " at position " + pos;
   str += ", found " + (t.peekText ? "`" + t.peekText + "`" : "EOF");
@@ -149,21 +148,21 @@ var lookAheadToken = function (text) {
 
 ///// NON-TERMINAL PARSER CONSTRUCTORS
 
-// call as: runRequired(parser, tokenizer[, prevToken])
+// call as: runRequired(parser, tokenizer)
 // to run parser(tokenizer) and assert it matches
-var runRequired = function (parser, tokenizer, prevToken) {
+var runRequired = function (parser, tokenizer) {
   return revalue(
     tokenizer ? parser(tokenizer) : parser,
     function (v, t) {
       if (! v)
-        throw parseError(t || tokenizer, parser, prevToken);
+        throw parseError(t || tokenizer, parser);
       return v;
     });
 };
 
-var runMaybeRequired = function (require, parser, tokenizer, prevToken) {
+var runMaybeRequired = function (require, parser, tokenizer) {
   if (require)
-    return runRequired(parser, tokenizer, prevToken);
+    return runRequired(parser, tokenizer);
   else
     return parser(tokenizer);
 };
@@ -324,7 +323,7 @@ var unpack = function (arrayParser) {
 // lookAhead parser must never consume
 var lookAhead = function (lookAheadParser, nextParser) {
   return describe(
-    lookAheadParser.description,
+    nextParser.description,
     function (t) {
       if (! lookAheadParser(t))
         return null;
