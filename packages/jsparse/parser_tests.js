@@ -100,6 +100,28 @@ var makeTester = function (test) {
 
       test.equal(stringifyTestFormat(actualTree),
                  stringifyTestFormat(expectedTree));
+    },
+    badToken: function (code, expectedMessage) {
+      var constructMessage = function (pos, text) {
+        return "Bad token at position " + pos + ", text `" + text + "`";
+      };
+      var pos = code.indexOf('`');
+      var text = code.match(/`(.*?)`/)[1];
+      code = code.replace(/`/g, '');
+
+      var parsed = false;
+      var error = null;
+      try {
+        var lexer = new Lexer(code);
+        var tokenizer = new Tokenizer(code);
+        var tree = parse(tokenizer);
+        parsed = true;
+      } catch (e) {
+        error = e;
+      }
+      test.isFalse(parsed);
+      test.isTrue(error);
+      test.equal(error.message, constructMessage(pos, text));
     }
     // XXX write badParse
   };
@@ -129,4 +151,10 @@ Tinytest.add("jsparse - basics", function (test) {
     'var x = function () { return 123; };',
     'program(varStmnt(var varDecl(x = functionExpr(function nil() `(` `)` ' +
       '{ returnStmnt(return number(123) ;) })) ;))');
+});
+
+Tinytest.add("jsparse - tokenization errors", function (test) {
+  var tester = makeTester(test);
+  tester.badToken("123`@`");
+  tester.badToken("thisIsATestOf = `'unterminated `\n strings'");
 });
