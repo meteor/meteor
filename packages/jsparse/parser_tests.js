@@ -1,4 +1,6 @@
 
+// XXX test treatment of comments, including multilines with newlines
+
 var allNodeNames = [
   ";",
   "array",
@@ -300,6 +302,7 @@ Tinytest.add("jsparse - tokenization errors", function (test) {
 Tinytest.add("jsparse - syntax forms", function (test) {
   var tester = makeTester(test);
   var trials = [
+    // STATEMENTS
     ['1',
      'program(expressionStmnt(number(1) ;()))'],
     ['1;;;;2',
@@ -420,8 +423,64 @@ Tinytest.add("jsparse - syntax forms", function (test) {
     ["try {} finally {}",
      "program(tryStmnt(try blockStmnt({ }) nil() finally(finally blockStmnt({ }))))"],
     ["try {} catch (e) {}",
-     "program(tryStmnt(try blockStmnt({ }) catch(catch `(` e `)` blockStmnt({ })) nil()))"]
-    // label, debugger ...
+     "program(tryStmnt(try blockStmnt({ }) catch(catch `(` e `)` blockStmnt({ })) nil()))"],
+    ["a:;",
+     "program(labelStmnt(a : emptyStmnt(;)))"],
+    ["{x:1}",
+     "program(blockStmnt({ labelStmnt(x : expressionStmnt(number(1) ;())) }))"],
+    ["{x:y:z:1}",
+     "program(blockStmnt({ labelStmnt(x : labelStmnt(y : " +
+     "labelStmnt(z : expressionStmnt(number(1) ;())))) }))"],
+    [";;foo:\nfor(;;);",
+     "program(emptyStmnt(;) emptyStmnt(;) labelStmnt(foo : " +
+     "forStmnt(for `(` forSpec(nil() ; nil() ; nil()) `)` emptyStmnt(;))))"],
+    ["debugger",
+     "program(debuggerStmnt(debugger ;()))"],
+    ["debugger;",
+     "program(debuggerStmnt(debugger ;))"],
+    ["function foo() {}",
+     "program(functionDecl(function foo `(` `)` { }))"],
+    ["function foo() {function bar() {}}",
+     "program(functionDecl(function foo `(` `)` { functionDecl(function bar `(` `)` { }) }))"],
+    [";;function f() {};;",
+     "program(emptyStmnt(;) emptyStmnt(;) functionDecl(function f `(` `)` { }) " +
+     "emptyStmnt(;) emptyStmnt(;))"],
+
+    // EXPRESSIONS
+    ["null + this - 3 + true",
+     "program(expressionStmnt(binary(binary(binary(null(null) + this(this)) - " +
+     "number(3)) + boolean(true)) ;()))"],
+    ["a / /b/mgi / c",
+     "program(expressionStmnt(binary(binary(identifier(a) / " +
+     "regex(/b/mgi)) / identifier(c)) ;()))"],
+    ["'a' + \"\" + \"b\" + '\\''",
+     "program(expressionStmnt(binary(binary(binary(string('a') + string(\"\")) + " +
+     "string(\"b\")) + string('\\'')) ;()))"],
+    ["_ + x0123 + $",
+     "program(expressionStmnt(binary(binary(identifier(_) + " +
+     "identifier(x0123)) + identifier($)) ;()))"],
+    ["if ((x = 1)) return ((1+2))*((1<<2));",
+     "program(ifStmnt(if `(` parens(`(` assignment(identifier(x) = number(1)) `)`) " +
+     "`)` returnStmnt(return binary(parens(`(` parens(`(` binary(number(1) + " +
+     "number(2)) `)`) `)`) * parens(`(` parens(`(` binary(number(1) << number(2)) " +
+     "`)`) `)`)) ;)))"],
+    ["[];",
+     "program(expressionStmnt(array([ ]) ;))"],
+    ["[,,,];",
+     "program(expressionStmnt(array([ , , , ]) ;))"],
+    ["[(1,2),,3];",
+     "program(expressionStmnt(array([ parens(`(` comma(number(1) , " +
+     "number(2)) `)`) , , number(3) ]) ;))"],
+    ["({});",
+     "program(expressionStmnt(parens(`(` object({ }) `)`) ;))"],
+    ["({1:1});",
+     "program(expressionStmnt(parens(`(` object({ prop(numPropName(1) : number(1)) }) `)`) ;))"],
+    ["({x:true});",
+     "program(expressionStmnt(parens(`(` object({ prop(idPropName(x) : boolean(true)) }) `)`) ;))"],
+    ["({'a':b, c:'d', 1:null});",
+     "program(expressionStmnt(parens(`(` object({ prop(strPropName('a') : " +
+     "identifier(b)) , prop(idPropName(c) : string('d')) , prop(numPropName(1) " +
+     ": null(null)) }) `)`) ;))"]
   ];
   _.each(trials, function (tr) {
     tester.goodParse(tr[0], tr[1]);
@@ -459,8 +518,15 @@ Tinytest.add("jsparse - bad parses", function (test) {
     'try {} catch`(`;',
     'try {} catch(e)`block`;',
     '1+1`semicolon`:',
-    '{a:`statement`}'
-    ];
+    '{a:`statement`}',
+    'function `IDENTIFIER`() {}',
+    'foo: `statement`function foo() {}',
+    '[`expression`=',
+    '[,,`expression`=',
+    '({`name:value`true:3})',
+    '({1:2,3`:`})',
+    '({1:2,`name:value`'
+  ];
   _.each(trials, function (tr) {
     tester.badParse(tr);
   });
