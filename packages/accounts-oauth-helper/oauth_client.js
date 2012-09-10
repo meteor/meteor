@@ -10,7 +10,7 @@
     var popup = openCenteredPopup(url, 650, 331);
 
     var checkPopupOpen = setInterval(function() {
-      if (popup.closed) {
+      if (popup.closed || popup.closed === undefined) {
         clearInterval(checkPopupOpen);
         tryLoginAfterPopupClosed(state);
       }
