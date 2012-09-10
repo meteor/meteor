@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Full-featured JaavScript parser"
+  summary: "Full-featured JavaScript parser"
 });
 
 Package.on_use(function (api) {
