@@ -946,3 +946,28 @@ Tinytest.add("templating - templates are labeled", function (test) {
   Meteor.flush();
   test.equal(buf.join(''), 'ddd');
 });
+
+Tinytest.add("templating - unlabeled cursor", function (test) {
+  var R = ReactiveVar("foo");
+
+  var div = OnscreenDiv(Meteor.render(function () {
+    R.get(); // create dependency
+    return Template.test_unlabeled_cursor_a0(
+      {observe: function (callbacks) {
+        callbacks.added({}, 0);
+        callbacks.added({}, 1);
+        callbacks.added({}, 2);
+        return { stop: function () {} };
+      }}
+    );
+  }));
+
+  R.set("bar");
+  // This will fail with "can't create second landmark in branch"
+  // unless _id-less objects returned from a cursor are given
+  // unique branch labels in an {{#each}}.
+  Meteor.flush();
+
+  div.kill();
+  Meteor.flush();
+});
