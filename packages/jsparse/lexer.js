@@ -67,7 +67,7 @@ var rPunctuator = new RegExp(
   // '*' for '*=', etc.
     .split(' ').sort(function (a,b) { return b.length - a.length; })
     .join('|'), 'g');
-var rDivPunctuator = /\/|\/=/g;
+var rDivPunctuator = /\/=?/g;
 // Section 7.8.3
 var rHexLiteral = /0x[0-9a-fA-F]+$/g;
 var rOctLiteral = /0[0-7]+/g; // deprecated
