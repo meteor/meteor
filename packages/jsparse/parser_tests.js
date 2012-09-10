@@ -1,5 +1,4 @@
 
-
 var allNodeNames = [
   ";",
   "array",
@@ -135,7 +134,7 @@ var parseToTreeString = function (code) {
 var makeTester = function (test) {
   return {
     // Parse code and make sure it matches expectedTreeString.
-    goodParse: function (code, expectedTreeString) {
+    goodParse: function (code, expectedTreeString, regexTokenHints) {
       var expectedTree = parseTreeString(expectedTreeString);
 
       // first use lexer to collect all tokens
@@ -146,6 +145,8 @@ var makeTester = function (test) {
           test.fail("Lexer error at " + lexer.lastPos);
         if (Lexer.isToken(lexer.type))
           allTokensInOrder.push({ pos: lexer.lastPos, text: lexer.text });
+        if (regexTokenHints && regexTokenHints[allTokensInOrder.length])
+          lexer.divisionPermitted = false;
       }
       lexer = new Lexer(code);
 
@@ -224,14 +225,19 @@ var makeTester = function (test) {
     // saying "Expected statement".  The test "1 `semicolon`2" will try
     // to parse "1 2" and assert that the error "Expected semicolon"
     // appeared after the space and before the 2.
+    //
+    // A second backtick-quoted string is used as the "found" token
+    // in the error message.
     badParse: function (code) {
       var constructMessage = function (whatExpected, pos, found, after) {
         return "Expected " + whatExpected + " after `" + after +
-          "` at position " + pos + ", found " +
-          (found ? "`" + found + "`" : "EOF");
+          "` at position " + pos + ", found " + found;
       };
       var pos = code.indexOf('`');
-      var whatExpected = code.match(/`(.*?)`/)[1];
+
+      var backticked = code.match(/`.*?`/g);
+      var whatExpected = backticked[0] && backticked[0].slice(1,-1);
+      var found = backticked[1] && backticked[1].slice(1, -1);
       code = code.replace(/`.*?`/g, '');
 
       var parsed = false;
@@ -247,8 +253,10 @@ var makeTester = function (test) {
       test.isFalse(parsed);
       test.isTrue(error);
       var after = tokenizer.text;
-      var found = tokenizer.peekText;
-      test.equal(error.message, constructMessage(whatExpected, pos, found, after));
+      found = (found || (tokenizer.peekText ? '`' + tokenizer.peekText + '`'
+                         : 'EOF'));
+      test.equal(error.message,
+                 constructMessage(whatExpected, pos, found, after));
     }
   };
 };
@@ -382,8 +390,38 @@ Tinytest.add("jsparse - syntax forms", function (test) {
     ["break foo;",
      "program(breakStmnt(break foo ;))"],
     ["break\n  foo;",
-     "program(breakStmnt(break nil() ;()) expressionStmnt(identifier(foo) ;))"]
-    // throwStmnt, ...
+     "program(breakStmnt(break nil() ;()) expressionStmnt(identifier(foo) ;))"],
+    ["throw e;",
+     "program(throwStmnt(throw identifier(e) ;))"],
+    ["throw e",
+     "program(throwStmnt(throw identifier(e) ;()))"],
+    ["throw new Error;",
+     "program(throwStmnt(throw new(new identifier(Error)) ;))"],
+    ["with(x);",
+     "program(withStmnt(with `(` identifier(x) `)` emptyStmnt(;)))"],
+    ["with(a=b) {}",
+     "program(withStmnt(with `(` assignment(identifier(a) = identifier(b)) `)` blockStmnt({ })))"],
+    ["switch(x) {}",
+     "program(switchStmnt(switch `(` identifier(x) `)` { }))"],
+    ["switch(x) {case 1:case 2:case 3:default:case 4:}",
+     "program(switchStmnt(switch `(` identifier(x) `)` { " +
+     "case(case number(1) :) case(case number(2) :) case(case number(3) :) " +
+     "default(default :) case(case number(4) :) }))"],
+    ["switch(x) {\ncase 1:\n  return\ncase 2:\ncase 3:\n  throw e}",
+     "program(switchStmnt(switch `(` identifier(x) `)` { " +
+     "case(case number(1) : returnStmnt(return nil() ;())) " +
+     "case(case number(2) :) case(case number(3) : " +
+     "throwStmnt(throw identifier(e) ;())) }))"],
+    ["switch(x) {default:;}",
+     "program(switchStmnt(switch `(` identifier(x) `)` { default(default : emptyStmnt(;)) }))"],
+    ["try {} catch (e) {} finally {}",
+     "program(tryStmnt(try blockStmnt({ }) catch(catch `(` e `)` blockStmnt({ })) " +
+     "finally(finally blockStmnt({ }))))"],
+    ["try {} finally {}",
+     "program(tryStmnt(try blockStmnt({ }) nil() finally(finally blockStmnt({ }))))"],
+    ["try {} catch (e) {}",
+     "program(tryStmnt(try blockStmnt({ }) catch(catch `(` e `)` blockStmnt({ })) nil()))"]
+    // label, debugger ...
   ];
   _.each(trials, function (tr) {
     tester.goodParse(tr[0], tr[1]);
@@ -408,9 +446,61 @@ Tinytest.add("jsparse - bad parses", function (test) {
     'for (`forSpec`);',
     'for (1\n`semicolon`2\n3);',
     'continue `semicolon`1+1;',
-    'break `semicolon`1+1;'
-  ];
+    'break `semicolon`1+1;',
+    'throw`expression`',
+    'throw`expression`;',
+    'throw\n`expression``end of line`e',
+    'throw `expression`=;',
+    'with(`expression`);',
+    'switch(`expression`)',
+    'switch(x)`{`;',
+    'try`block`',
+    'try {}`catch`',
+    'try {} catch`(`;',
+    'try {} catch(e)`block`;',
+    '1+1`semicolon`:',
+    '{a:`statement`}'
+    ];
   _.each(trials, function (tr) {
     tester.badParse(tr);
   });
+});
+
+Tinytest.add("jsparse - regex division ambiguity", function (test) {
+  var tester = makeTester(test);
+  tester.goodParse("if (e) /f/g;",
+                   "program(ifStmnt(if `(` identifier(e) `)` expressionStmnt(regex(/f/g) ;)))",
+                   {4: true});
+  tester.goodParse("++/x/.y;",
+                   "program(expressionStmnt(unary(++ dot(regex(/x/) . y)) ;))",
+                   {1: true});
+  tester.goodParse("x++/2/g;",
+                   "program(expressionStmnt(binary(binary(postfix(identifier(x) ++) / " +
+                   "number(2)) / identifier(g)) ;))");
+  tester.goodParse("(1+1)/2/g;",
+                   "program(expressionStmnt(binary(binary(parens(`(` binary(number(1) + " +
+                   "number(1)) `)`) / " +
+                   "number(2)) / identifier(g)) ;))");
+  tester.goodParse("/x/",
+                   "program(expressionStmnt(regex(/x/) ;()))");
+});
+
+Tinytest.add("jsparse - semicolon insertion", function (test) {
+  var tester = makeTester(test);
+  // Spec section 7.9.2
+  tester.badParse("{ 1 `semicolon`2 } 3");
+  tester.goodParse("{ 1\n2 } 3", "program(blockStmnt({ expressionStmnt(number(1) " +
+                   ";()) expressionStmnt(number(2) ;()) }) expressionStmnt(number(3) ;()))");
+  tester.badParse("for (a; b\n`semicolon`)");
+  tester.goodParse("return\na + b",
+                   "program(returnStmnt(return nil() ;()) " +
+                   "expressionStmnt(binary(identifier(a) + identifier(b)) ;()))");
+  tester.goodParse("a = b\n++c",
+                   "program(expressionStmnt(assignment(identifier(a) = identifier(b)) ;())" +
+                   "expressionStmnt(unary(++ identifier(c)) ;()))");
+  tester.badParse("if (a > b)\n`statement`else c = d");
+  tester.goodParse("a = b + c\n(d + e).print()",
+                   "program(expressionStmnt(assignment(identifier(a) = " +
+                   "binary(identifier(b) + call(dot(call(identifier(c) `(` " +
+                   "binary(identifier(d) + identifier(e)) `)`) . print) `(` `)`))) ;()))");
 });

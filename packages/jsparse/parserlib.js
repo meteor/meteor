@@ -66,7 +66,7 @@ var describe = function (description, parser) {
 
 // Call this as `throw parseError(...)`.
 // `expected` is a parser, `after` is a string.
-var parseError = function (t, expected) {
+var parseError = function (t, expected, found) {
   var str = (expected.description ? "Expected " + expected.description :
              // all parsers that might error should have descriptions,
              // but just in case:
@@ -74,7 +74,7 @@ var parseError = function (t, expected) {
   str += " after `" + t.text + "`";
   var pos = t.pos;
   str += " at position " + pos;
-  str += ", found " + (t.peekText ? "`" + t.peekText + "`" : "EOF");
+  str += ", found " + (found || (t.peekText ? "`" + t.peekText + "`" : "EOF"));
   var e = new Error(str);
   return e;
 };

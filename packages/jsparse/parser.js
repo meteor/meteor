@@ -379,9 +379,9 @@ var parse = function (tokenizer) {
 
   var emptyStatement = named('emptyStmnt', token(';')); // not maybeSemicolon
 
-  var blockStatement = named('blockStmnt', seq(
+  var blockStatement = describe('block', named('blockStmnt', seq(
     token('{'), unpack(opt(statements, lookAheadToken('}'))),
-    token('}')));
+    token('}'))));
 
   var varDeclFunc = memoizeBooleanFunc(function (noIn) {
     return named(
@@ -411,9 +411,9 @@ var parse = function (tokenizer) {
     'semicolon',
     lookAhead(lookAheadToken(';'),
               seq(
-                token(';'),
+                describe('semicolon', token(';')),
                 opt(expressionPtr, revalue(lookAheadToken(';'), named('nil', []))),
-                token(';'),
+                describe('semicolon', token(';')),
                 opt(expressionPtr, revalue(lookAheadToken(')'), named('nil', []))))));
   var inExpr = seq(token('in'), expression);
   var inExprExpectingSemi = describe('semicolon',
@@ -505,7 +505,14 @@ var parse = function (tokenizer) {
   var throwStatement = named(
     'throwStmnt',
     seq(token('throw'),
-        lookAhead(noLineTerminatorHere, expression),
+        lookAhead(revalue(noLineTerminatorHere,
+                          function (v, t) {
+                            if (v)
+                              return v;
+                            if (t.peekText)
+                              throw parseError(t, expression, 'end of line');
+                            return null;
+                          }), expression),
         maybeSemicolon));
 
   var withStatement = named(
@@ -535,7 +542,7 @@ var parse = function (tokenizer) {
         token('}')));
 
   var catchFinally = describe(
-    'catchOrFinally',
+    'catch',
     lookAhead(lookAheadToken('catch finally'),
               seq(
                 or(named(

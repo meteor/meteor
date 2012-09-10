@@ -11,5 +11,7 @@ Package.on_test(function (api) {
   api.use('tinytest');
   api.use('jsparse', 'client');
 
-  api.add_files('parser_tests.js', ['client', 'server']);
+  api.add_files('parser_tests.js',
+                'client'); // for faster loading
+                //['client', 'server']);
 });
