@@ -1,6 +1,4 @@
 
-// XXX test treatment of comments, including multilines with newlines
-
 var allNodeNames = [
   ";",
   "array",
@@ -170,10 +168,14 @@ var makeTester = function (test) {
           if (nextTokenIndex >= allTokensInOrder.length)
             test.fail("Too many tokens: " + (nextTokenIndex + 1));
           var referenceToken = allTokensInOrder[nextTokenIndex++];
-          test.equal(part.text, referenceToken.text);
-          test.equal(part.pos, referenceToken.pos);
-          test.equal(code.substring(part.pos,
-                                    part.pos + part.text.length), part.text);
+          if (part.text !== referenceToken.text)
+            test.fail(part.text + " !== " + referenceToken.text);
+          if (part.pos !== referenceToken.pos)
+            test.fail(part.pos + " !== " + referenceToken.pos);
+          if (code.substring(part.pos,
+                             part.pos + part.text.length) !== part.text)
+            test.fail("Didn't see " + part.text + " at " + part.pos +
+                      " in " + code);
         } else {
           test.fail("Unknown tree part: " + part);
         }
@@ -445,6 +447,8 @@ Tinytest.add("jsparse - syntax forms", function (test) {
     [";;function f() {};;",
      "program(emptyStmnt(;) emptyStmnt(;) functionDecl(function f `(` `)` { }) " +
      "emptyStmnt(;) emptyStmnt(;))"],
+    ["function foo(a,b,c) {}",
+     "program(functionDecl(function foo `(` a , b , c `)` { }))"],
 
     // EXPRESSIONS
     ["null + this - 3 + true",
@@ -480,7 +484,91 @@ Tinytest.add("jsparse - syntax forms", function (test) {
     ["({'a':b, c:'d', 1:null});",
      "program(expressionStmnt(parens(`(` object({ prop(strPropName('a') : " +
      "identifier(b)) , prop(idPropName(c) : string('d')) , prop(numPropName(1) " +
-     ": null(null)) }) `)`) ;))"]
+     ": null(null)) }) `)`) ;))"],
+    ["(function () {});",
+     "program(expressionStmnt(parens(`(` functionExpr(function nil() `(` `)` { }) `)`) ;))"],
+    ["(function foo() {});",
+     "program(expressionStmnt(parens(`(` functionExpr(function foo `(` `)` { }) `)`) ;))"],
+    ["x = function () {}.y;",
+     "program(expressionStmnt(assignment(identifier(x) = dot(functionExpr(" +
+     "function nil() `(` `)` { }) . y)) ;))"],
+    ["(function (a) {})",
+     "program(expressionStmnt(parens(`(` functionExpr(function nil() " +
+     "`(` a `)` { }) `)`) ;()))"],
+    ["(function (a,b,c) {})",
+     "program(expressionStmnt(parens(`(` functionExpr(function nil() `(` " +
+     "a , b , c `)` { }) `)`) ;()))"],
+    ["foo.bar.baz;",
+     "program(expressionStmnt(dot(dot(identifier(foo) . bar) . baz) ;))"],
+    ["foo[bar,bar][baz].qux[1+1];",
+     "program(expressionStmnt(bracket(dot(bracket(bracket(identifier(foo) " +
+     "[ comma(identifier(bar) , identifier(bar)) ]) [ identifier(baz) ]) . qux) " +
+     "[ binary(number(1) + number(1)) ]) ;))"],
+    ["new new a.b.c[d]",
+     "program(expressionStmnt(new(new new(new bracket(dot(dot(identifier(a) " +
+     ". b) . c) [ identifier(d) ]))) ;()))"],
+    ["new new a.b.c[d]()",
+     "program(expressionStmnt(new(new newcall(new " +
+     "bracket(dot(dot(identifier(a) . b) . c) [ identifier(d) ]) `(` `)`)) ;()))"],
+    ["new new a.b.c[d]()()",
+     "program(expressionStmnt(newcall(new newcall(new " +
+     "bracket(dot(dot(identifier(a) . b) . c) [ identifier(d) ]) `(` `)`) `(` `)`) ;()))"],
+    ["new foo(x).bar(y)",
+     "program(expressionStmnt(call(dot(newcall(new identifier(foo) `(` " +
+     "identifier(x) `)`) . bar) `(` identifier(y) `)`) ;()))"],
+    ["new new foo().bar",
+     "program(expressionStmnt(new(new dot(newcall(new identifier(foo) `(` `)`) . bar)) ;()))"],
+    ["delete void typeof - + ~ ! -- ++ x;",
+     "program(expressionStmnt(unary(delete unary(void unary(typeof unary(- unary(+ " +
+     "unary(~ unary(! unary(-- unary(++ identifier(x)))))))))) ;))"],
+    ["x++ + ++y",
+     "program(expressionStmnt(binary(postfix(identifier(x) ++) + " +
+     "unary(++ identifier(y))) ;()))"],
+    ["1*2+3*4",
+     "program(expressionStmnt(binary(binary(number(1) * number(2)) " +
+     "+ binary(number(3) * number(4))) ;()))"],
+    ["a*b/c%d+e-f<<g>>h>>>i<j>k<=l>=m instanceof n in o==p!=q===r!==s&t^u|v&&w||x",
+     "program(expressionStmnt(binary(binary(binary(binary(binary(binary(binary(" +
+     "binary(binary(binary(binary(binary(binary(binary(binary(binary(binary(binary(" +
+     "binary(binary(binary(binary(binary(identifier(a) * identifier(b)) / " +
+     "identifier(c)) % identifier(d)) + identifier(e)) - identifier(f)) << identifier(g)) " +
+     ">> identifier(h)) >>> identifier(i)) < identifier(j)) > identifier(k)) <= " +
+     "identifier(l)) >= identifier(m)) instanceof identifier(n)) in identifier(o)) == " +
+     "identifier(p)) != identifier(q)) === identifier(r)) !== identifier(s)) & " +
+     "identifier(t)) ^ identifier(u)) | identifier(v)) && identifier(w)) || " +
+     "identifier(x)) ;()))"],
+    ["a||b&&c|d^e&f!==g===h!=i==j in k instanceof l>=m<=n<o<p>>>q>>r<<s-t+u%v/w*x",
+     "program(expressionStmnt(binary(identifier(a) || binary(identifier(b) && " +
+     "binary(identifier(c) | binary(identifier(d) ^ binary(identifier(e) & " +
+     "binary(binary(binary(binary(identifier(f) !== identifier(g)) === identifier(h)) " +
+     "!= identifier(i)) == binary(binary(binary(binary(binary(binary(identifier(j) in " +
+     "identifier(k)) instanceof identifier(l)) >= identifier(m)) <= identifier(n)) < " +
+     "identifier(o)) < binary(binary(binary(identifier(p) >>> identifier(q)) >> " +
+     "identifier(r)) << binary(binary(identifier(s) - identifier(t)) + " +
+     "binary(binary(binary(identifier(u) % identifier(v)) / identifier(w)) * " +
+     "identifier(x))))))))))) ;()))"],
+    ["a?b:c",
+     "program(expressionStmnt(ternary(identifier(a) ? identifier(b) : " +
+     "identifier(c)) ;()))"],
+    ["1==2?3=4:5=6",
+     "program(expressionStmnt(ternary(binary(number(1) == number(2)) ? " +
+     "assignment(number(3) = number(4)) : assignment(number(5) = number(6))) ;()))"],
+    ["1=2,3=4",
+     "program(expressionStmnt(comma(assignment(number(1) = number(2)) , " +
+     "assignment(number(3) = number(4))) ;()))"],
+    ["a=b=c=d",
+     "program(expressionStmnt(assignment(identifier(a) = assignment(identifier(b) " +
+     "= assignment(identifier(c) = identifier(d)))) ;()))"],
+    ["x[0]=x[1]=true",
+     "program(expressionStmnt(assignment(bracket(identifier(x) [ number(0) ]) = " +
+     "assignment(bracket(identifier(x) [ number(1) ]) = boolean(true))) ;()))"],
+    ["a*=b/=c%=d+=e-=f<<=g>>=h>>>=i&=j^=k|=l",
+     "program(expressionStmnt(assignment(identifier(a) *= assignment(identifier(b) " +
+     "/= assignment(identifier(c) %= assignment(identifier(d) += " +
+     "assignment(identifier(e) -= assignment(identifier(f) <<= " +
+     "assignment(identifier(g) >>= assignment(identifier(h) >>>= " +
+     "assignment(identifier(i) &= assignment(identifier(j) ^= " +
+     "assignment(identifier(k) |= identifier(l)))))))))))) ;()))"]
   ];
   _.each(trials, function (tr) {
     tester.goodParse(tr[0], tr[1]);
@@ -525,7 +613,8 @@ Tinytest.add("jsparse - bad parses", function (test) {
     '[,,`expression`=',
     '({`name:value`true:3})',
     '({1:2,3`:`})',
-    '({1:2,`name:value`'
+    '({1:2,`name:value`',
+    'x.`IDENTIFIER`true'
   ];
   _.each(trials, function (tr) {
     tester.badParse(tr);
@@ -569,4 +658,13 @@ Tinytest.add("jsparse - semicolon insertion", function (test) {
                    "program(expressionStmnt(assignment(identifier(a) = " +
                    "binary(identifier(b) + call(dot(call(identifier(c) `(` " +
                    "binary(identifier(d) + identifier(e)) `)`) . print) `(` `)`))) ;()))");
+});
+
+Tinytest.add("jsparse - comments", function (test) {
+  var tester = makeTester(test);
+  // newline in multi-line comment makes it into a line break for semicolon
+  // insertion purposes
+  tester.badParse("1/**/`semicolon`2");
+  tester.goodParse("1/*\n*/2",
+                   "program(expressionStmnt(number(1) ;()) expressionStmnt(number(2) ;()))");
 });
