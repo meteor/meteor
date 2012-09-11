@@ -3,7 +3,7 @@ Package.describe({
 });
 
 Package.on_use(function(api) {
-  api.use('accounts', ['client', 'server']);
+  api.use('accounts-base', ['client', 'server']);
   api.use('srp', ['client', 'server']);
   api.use('email', ['server']);
 

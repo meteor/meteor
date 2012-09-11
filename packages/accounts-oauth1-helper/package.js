@@ -5,6 +5,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use('accounts-oauth-helper', 'client');
+  api.use('accounts-base', ['client', 'server']);
 
   api.add_files('oauth1_binding.js', 'server');
   api.add_files('oauth1_common.js', ['client', 'server']);
