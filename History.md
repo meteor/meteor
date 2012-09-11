@@ -5,26 +5,28 @@
 
 * Merge Spark, a new live page update engine
   * Breaking API changes
-    * Input elements no longer preserved based on `id` and `name` attributes. Use [`preserve`](http://docs.meteor.com/#template_preserve) instead.
-
-    * All `Meteor.ui` functions removed. Use `Meteor.render`, `Meteor.renderList`, and [Spark](https://github.com/meteor/meteor/wiki/Spark) functions instead.
-
-    * New template functions (eg. `created`, `rendered`, etc) may collide with existing helpers. Use `Template.foo.helpers()` to avoid conflicts.
-
-    * New syntax for declaring event maps. Use `Template.foo.events({...})`. For backwards compatibility, both syntaxes are allowed for now.
-
+     * Input elements no longer preserved based on `id` and `name`
+       attributes. Use [`preserve`](http://docs.meteor.com/#template_preserve)
+       instead.
+     * All `Meteor.ui` functions removed. Use `Meteor.render`,
+       `Meteor.renderList`, and
+       [Spark](https://github.com/meteor/meteor/wiki/Spark) functions instead.
+     * New template functions (eg. `created`, `rendered`, etc) may collide with
+       existing helpers. Use `Template.foo.helpers()` to avoid conflicts.
+     * New syntax for declaring event maps. Use
+       `Template.foo.events({...})`. For backwards compatibility, both syntaxes
+       are allowed for now.
   * New Template features
-
-    * Allow embedding non-Meteor widgets (eg. Google Maps) using [`{{#constant}}`](http://docs.meteor.com/#constant)
-
-    * Callbacks when templates are rendered. See http://docs.meteor.com/#template_rendered
-
-    * Explicit control of which nodes are preserved during re-rendering. See http://docs.meteor.com/#template_preserve
-
-    * Easily find nodes within a template in event handlers and callbacks. See http://docs.meteor.com/#template_find
-
-    * Allow parts of a template to be independently reactive with the [`{{#isolate}}`](http://docs.meteor.com/#isolate) block helper.
-
+     * Allow embedding non-Meteor widgets (eg. Google Maps) using
+       [`{{#constant}}`](http://docs.meteor.com/#constant)
+     * Callbacks when templates are rendered. See
+       http://docs.meteor.com/#template_rendered
+     * Explicit control of which nodes are preserved during re-rendering. See
+       http://docs.meteor.com/#template_preserve
+     * Easily find nodes within a template in event handlers and callbacks. See
+       http://docs.meteor.com/#template_find
+     * Allow parts of a template to be independently reactive with the
+       [`{{#isolate}}`](http://docs.meteor.com/#isolate) block helper.
 
 * Use PACKAGE_DIRS environment variable to override package location. #227
 
@@ -58,7 +60,8 @@
   * Allow functions in helper arguments.
   * Change helper nesting rules to allow functions as arguments.
   * Fix `{{this.foo}}` to never invoke helper `foo`.
-  * Make event handler `this` reflect the node that matched the selector instead of the event target node.
+  * Make event handler `this` reflect the node that matched the selector instead
+    of the event target node.
   * Fix keyword arguments to helpers.
 
 * Add `nib` support to stylus package. #175
@@ -86,7 +89,8 @@
 
 * Form control improvements
   * Fix reactive radio buttons in Internet Explorer.
-  * Fix reactive textareas to update consistently across browsers, matching text field behavior.
+  * Fix reactive textareas to update consistently across browsers, matching text
+    field behavior.
 
 * `http` package bug fixes:
   * Send correct Content-Type when POSTing `params` from the server. #172
@@ -96,18 +100,24 @@
 
 * Fix intermittent "Cursor is closed" mongo error.
 
-* Fix "Cannot read property 'nextSibling' of null" error in certain nested templates. #142
+* Fix "Cannot read property 'nextSibling' of null" error in certain nested
+  templates. #142
 
-* Add heartbeat timer on the client to notice when the server silently goes away.
+* Add heartbeat timer on the client to notice when the server silently goes
+  away.
 
 
 ## v0.3.6
 
-* Rewrite event handling. `this` in event handlers now refers to the data context of the element that generated the event, *not* the top-level data context of the template where the event is declared.
+* Rewrite event handling. `this` in event handlers now refers to the data
+  context of the element that generated the event, *not* the top-level data
+  context of the template where the event is declared.
 
-* Add /websocket endpoint for raw websockets. Pass websockets through development mode proxy.
+* Add /websocket endpoint for raw websockets. Pass websockets through
+  development mode proxy.
 
-* Simplified API for Meteor.connect, which now receives a URL to a Meteor app rather than to a sockjs endpoint.
+* Simplified API for Meteor.connect, which now receives a URL to a Meteor app
+  rather than to a sockjs endpoint.
 
 * Fix livedata to support subscriptions with overlapping documents.
 
@@ -131,7 +141,8 @@
 
 * Make `backbone` package also run on the server.
 
-* Add `bare` option to coffee-script compilation so variables can be shared between multiple coffee-script file. #85
+* Add `bare` option to coffee-script compilation so variables can be shared
+  between multiple coffee-script file. #85
 
 * Upgrade many dependency versions. User visible highlights:
  * node.js 0.6.15
@@ -156,7 +167,8 @@
 
 * Fix issue with spaces in directory names. #39
 
-* Workaround browser caching issues in development mode by using query parameters on all JavaScript and CSS requests.
+* Workaround browser caching issues in development mode by using query
+  parameters on all JavaScript and CSS requests.
 
 * Many documentation and test fixups.
 
