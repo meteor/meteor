@@ -163,6 +163,8 @@ var node = function (name, childrenParser) {
     var children = childrenParser.parse(t);
     if (! children)
       return null;
+    if (! isArray(children))
+      children = [children];
     return new ParseNode(name, children);
   });
 };
@@ -246,6 +248,7 @@ var unary = function (name, termParser, opParser) {
 // `x` => ["x"]
 // `x,y` => ["x", ",", "y"]
 // `x,y,z` => ["x", ",", "y", ",", "z"]
+// Unpacks.
 var list = function (itemParser, sepParser) {
   var push = function(array, newThing) {
     if (isArray(newThing))
@@ -277,6 +280,7 @@ var list = function (itemParser, sepParser) {
     });
 };
 
+// Unpacks arrays (nested seqs).
 var seq = function (/*parsers*/) {
   var args = arguments;
   if (! args.length)

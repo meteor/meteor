@@ -124,7 +124,7 @@ var parse = function (tokenizer) {
 
   var primaryOrFunctionExpression =
         expecting('expression',
-                  or(node('this', seq(token('this'))),
+                  or(node('this', token('this')), // XXXX remove unnecessary seqs in node(...) args
                      node('identifier', seq(tokenClass('IDENTIFIER'))),
                      node('number', seq(tokenClass('NUMBER'))),
                      node('boolean', seq(tokenClass('BOOLEAN'))),
