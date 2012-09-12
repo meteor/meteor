@@ -264,10 +264,12 @@ var makeTester = function (test) {
       }
       test.isFalse(parsed);
       test.isTrue(error);
-      var after = tokenizer.oldToken;
-      found = (found || tokenizer.newToken);
-      test.equal(error.message,
-                 constructMessage(whatExpected, pos, found, after));
+      if (! parsed && error) {
+        var after = tokenizer.oldToken;
+        found = (found || tokenizer.newToken);
+        test.equal(error.message,
+                   constructMessage(whatExpected, pos, found, after));
+      }
     }
   };
 };
@@ -560,9 +562,9 @@ Tinytest.add("jsparse - syntax forms", function (test) {
     ["1==2?3=4:5=6",
      "program(expressionStmnt(ternary(binary(number(1) == number(2)) ? " +
      "assignment(number(3) = number(4)) : assignment(number(5) = number(6))) ;()))"],
-    ["1=2,3=4",
-     "program(expressionStmnt(comma(assignment(number(1) = number(2)) , " +
-     "assignment(number(3) = number(4))) ;()))"],
+    ["a=b,c=d",
+     "program(expressionStmnt(comma(assignment(identifier(a) = identifier(b)) , " +
+     "assignment(identifier(c) = identifier(d))) ;()))"],
     ["a=b=c=d",
      "program(expressionStmnt(assignment(identifier(a) = assignment(identifier(b) " +
      "= assignment(identifier(c) = identifier(d)))) ;()))"],
@@ -626,7 +628,9 @@ Tinytest.add("jsparse - bad parses", function (test) {
     '({1:2,`name:value`',
     'x.`IDENTIFIER`true',
     'foo;`semicolon`:;',
-    '1;`statement`='
+    '1;`statement`=',
+    'a+b`semicolon`=c;',
+    'for(1+1 `semicolon`in {});'
   ];
   _.each(trials, function (tr) {
     tester.badParse(tr);

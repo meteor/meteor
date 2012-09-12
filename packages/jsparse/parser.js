@@ -1,10 +1,5 @@
 ///// JAVASCRIPT PARSER
 
-// XXX unit tests
-
-// XXX SeqParser
-// XXX better way to declare parsers, including boolean flagged ones
-
 // What we don't have from ECMA-262 5.1:
 //  - object literal trailing comma
 //  - object literal get/set
@@ -23,6 +18,12 @@ var parse = function (tokenizer) {
     'noLineTerminator', assertion(function (t) {
       return ! t.isLineTerminatorHere;
     }));
+
+  var nonLHSExpressionNames = makeSet(
+    'unary binary postfix ternary assignment comma'.split(' '));
+  var isExpressionLHS = function (exprNode) {
+    return ! nonLHSExpressionNames[exprNode.name];
+  };
 
   // Like token, but marks tokens that need to defy the lexer's
   // heuristic about whether the next '/' is a division or
@@ -214,10 +215,6 @@ var parse = function (tokenizer) {
       while (news.length)
         result = new ParseNode('new', [news.pop(), result]);
 
-      // mark any LeftHandSideExpression, for the benefit of
-      // assignmentExpression
-      result.lhs = true;
-
       return result;
     });
 
@@ -310,7 +307,7 @@ var parse = function (tokenizer) {
           // and then fold them up at the end.
           var parts = [r];
           var op;
-          while (r.lhs && (op = assignOp.parse(t)))
+          while (isExpressionLHS(r) &&(op = assignOp.parse(t)))
             parts.push(op,
                        conditionalExpressionMaybeNoIn[noIn].parse(
                          t, {required: true}));
@@ -488,7 +485,7 @@ var parse = function (tokenizer) {
            if (! rest) {
              // we need a left-hand-side expression for a
              // `for (x in y)` loop.
-             if (! firstExpr.lhs)
+             if (! isExpressionLHS(firstExpr))
                throw parseError(t, secondThirdClauses);
              // if we don't see 'in' at this point, it's probably
              // a missing semicolon

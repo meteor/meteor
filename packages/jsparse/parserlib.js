@@ -1,7 +1,6 @@
 ///// TOKENIZER AND PARSER COMBINATORS
 
 // XXX track line/col position, for errors and maybe token info
-// XXX unit tests
 
 var isArray = function (obj) {
   return obj && (typeof obj === 'object') && (typeof obj.length === 'number');
@@ -46,33 +45,41 @@ Tokenizer = function (codeOrLexer) {
   this.consume();
 };
 
-_.extend(Tokenizer.prototype, {
-  // consumes the token (peekType, peekText) and moves
-  // it into (type, text), loading the next token
-  // into (peekType, peekText).  A token is a lexeme
-  // besides WHITESPACE, COMMENT, and NEWLINE.
-  consume: function () {
-    var self = this;
-    var lexer = self.lexer;
-    self.oldToken = self.newToken;
-    self.isLineTerminatorHere = false;
-    var lex;
-    do {
-      lex = lexer.next();
-      if (lex.isError())
-        throw new Error("Bad token at position " + lex.startPos() +
-                        ", text `" + lex.text() + "`");
-      else if (lex.type() === "NEWLINE")
-        self.isLineTerminatorHere = true;
-      else if (lex.type() === "COMMENT" && ! /^.*$/.test(lex.text()))
-        // multiline comments containing line terminators count
-        // as line terminators.
-        self.isLineTerminatorHere = true;
-    } while (! lex.isEOF() && ! lex.isToken());
-    self.newToken = lex;
-    self.pos = lex.startPos();
-  }
-});
+// UPDATE DOCS
+// consumes the token (peekType, peekText) and moves
+// it into (type, text), loading the next token
+// into (peekType, peekText).  A token is a lexeme
+// besides WHITESPACE, COMMENT, and NEWLINE.
+Tokenizer.prototype.consume = function () {
+  var self = this;
+  var lexer = self.lexer;
+  self.oldToken = self.newToken;
+  self.isLineTerminatorHere = false;
+  var lex;
+  do {
+    lex = lexer.next();
+    if (lex.isError())
+      throw new Error("Bad token at position " + lex.startPos() +
+                      ", text `" + lex.text() + "`");
+    else if (lex.type() === "NEWLINE")
+      self.isLineTerminatorHere = true;
+    else if (lex.type() === "COMMENT" && ! /^.*$/.test(lex.text()))
+      // multiline comments containing line terminators count
+      // as line terminators.
+      self.isLineTerminatorHere = true;
+  } while (! lex.isEOF() && ! lex.isToken());
+  self.newToken = lex;
+  self.pos = lex.startPos();
+};
+
+Tokenizer.prototype.getErrorMessage = function (expecting, found) {
+  var msg = (expecting ? "Expected " + expecting : "Unexpected token");
+  msg += " after " + this.oldToken;
+  var pos = this.pos;
+  msg += " at position " + pos;
+  msg += ", found " + (found || this.newToken);
+  return msg;
+};
 
 // A parser that consume()s has to succeed.
 // Similarly, a parser that fails can't have consumed.
@@ -86,17 +93,7 @@ var expecting = function (expecting, parser) {
 // Call this as `throw parseError(...)`.
 // `expected` is a parser, `after` is a string.
 var parseError = function (t, expectedParser, found) {
-  var str = (expectedParser.expecting ? "Expected " +
-             expectedParser.expecting :
-             // all parsers that might error should have descriptions,
-             // but just in case:
-             "Unexpected token");
-  str += " after " + t.oldToken;
-  var pos = t.pos;
-  str += " at position " + pos;
-  str += ", found " + (found || t.newToken);
-  var e = new Error(str);
-  return e;
+  return new Error(t.getErrorMessage(expectedParser.expecting, found));
 };
 
 ///// TERMINAL PARSER CONSTRUCTORS
