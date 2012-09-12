@@ -1,7 +1,6 @@
 ///// TOKENIZER AND PARSER COMBINATORS
 
 // XXX make Parser object with parse method?
-// XXX rework describe, call "expecting"?
 // XXX track line/col position, for errors and maybe token info
 // XXX unit tests
 
@@ -16,6 +15,26 @@ var ParseNode = function (name, children) {
   if (! isArray(children))
     throw new Error("Expected array in new ParseNode(" + name + ", ...)");
 };
+
+ParseNode.NIL = new ParseNode('nil', []);
+
+var Parser = function (expecting, runFunc) {
+  this.expecting = expecting;
+  this._run = runFunc;
+};
+
+_.extend(Parser.prototype, {
+  parse: function (t, options) {
+    var result = this._run(t);
+
+    if (options) {
+      if (options.required && ! result)
+        throw parseError(t, this);
+    }
+
+    return result;
+  }
+});
 
 Tokenizer = function (codeOrLexer) {
   // XXX rethink codeOrLexer later
@@ -66,16 +85,17 @@ _.extend(Tokenizer.prototype, {
 // A parser that consume()s has to succeed.
 // Similarly, a parser that fails can't have consumed.
 
-// mutates the parser; don't describe an existing parser.
-var describe = function (description, parser) {
-  parser.description = description;
+// mutates the parser
+var expecting = function (expecting, parser) {
+  parser.expecting = expecting;
   return parser;
 };
 
 // Call this as `throw parseError(...)`.
 // `expected` is a parser, `after` is a string.
-var parseError = function (t, expected, found) {
-  var str = (expected.description ? "Expected " + expected.description :
+var parseError = function (t, expectedParser, found) {
+  var str = (expectedParser.expecting ? "Expected " +
+             expectedParser.expecting :
              // all parsers that might error should have descriptions,
              // but just in case:
              "Unexpected token");
@@ -89,14 +109,14 @@ var parseError = function (t, expected, found) {
 
 ///// TERMINAL PARSER CONSTRUCTORS
 
-var _tokenClassImpl = function (type, text, dontConsume) {
+var _tokenClassImpl = function (type, text, onlyLook) {
   var textSet = (text ? makeSet(text.split(' ')) : null);
-  var description = (text ? text.split(' ').join(', ') : type);
-  return describe(
-    description,
+  var expecting = (text ? text.split(' ').join(', ') : type);
+  return new Parser(
+    expecting,
     function (t) {
       if (t.peekType == type && (!text || textSet[t.peekText])) {
-        if (dontConsume)
+        if (onlyLook)
           return [];
         var ret = {text: t.peekText, pos: t.pos};
         t.consume();
@@ -106,10 +126,10 @@ var _tokenClassImpl = function (type, text, dontConsume) {
     });
 };
 
-var _tokenImpl = function (text, dontConsume) {
+var _tokenImpl = function (text, onlyLook) {
   if (/\w/.test(text))
-    return _tokenClassImpl('KEYWORD', text, dontConsume);
-  return _tokenClassImpl('PUNCTUATION', text, dontConsume);
+    return _tokenClassImpl('KEYWORD', text, onlyLook);
+  return _tokenClassImpl('PUNCTUATION', text, onlyLook);
 };
 
 var tokenClass = function (type, text) {
@@ -120,28 +140,6 @@ var tokenClass = function (type, text) {
 
 var token = function (text) {
   return _tokenImpl(text);
-};
-
-// Like token, but marks tokens that need to defy the lexer's
-// heuristic about whether the next '/' is a division or
-// starts a regex.
-var preSlashToken = function (text, divisionNotRegex) {
-  var impl = _tokenImpl(text);
-  return describe(impl.description,
-                  function (t) {
-                    // temporarily set divisionPermitted,
-                    // restoring it if we don't match.
-                    var oldValue = t.lexer.divisionPermitted;
-                    var result;
-                    try {
-                      t.lexer.divisionPermitted = divisionNotRegex;
-                      result = impl(t);
-                      return result;
-                    } finally {
-                      if (! result)
-                        t.lexer.divisionPermitted = oldValue;
-                    }
-                  });
 };
 
 // NON-CONSUMING PARSER CONSTRUCTORS
@@ -156,45 +154,28 @@ var lookAheadToken = function (text) {
 
 ///// NON-TERMINAL PARSER CONSTRUCTORS
 
-// run parser(tokenizer) and assert it matches
-var runRequired = function (parser, tokenizer) {
-  return revalue(
-    tokenizer ? parser(tokenizer) : parser,
-    function (v, t) {
-      if (! v)
-        throw parseError(t || tokenizer, parser);
-      return v;
-    });
-};
-
-var runMaybeRequired = function (require, parser, tokenizer) {
-  return require ? runRequired(parser, tokenizer) : parser(tokenizer);
-};
-
-// Polymorphic in parsers and results; an experiment.
-var named = function (name, parserOrResult) {
-  return describe(
-    name,
-    revalue(
-      parserOrResult,
-      function (value) {
-        if (! value)
-          return null;
-        return new ParseNode(name, Array.prototype.slice.call(value));
-      }));
+var node = function (name, childrenParser) {
+  return new Parser(name, function (t) {
+    var children = childrenParser.parse(t);
+    if (! children)
+      return null;
+    return new ParseNode(name, children);
+  });
 };
 
 var or = function (/*parsers*/) {
   var args = arguments;
-  return function (t) {
-    var result;
-    for(var i = 0, N = args.length; i < N; i++) {
-      result = args[i](t);
-      if (result)
-        return result;
-    }
-    return null;
-  };
+  return new Parser(
+    null,
+    function (t) {
+      var result;
+      for(var i = 0, N = args.length; i < N; i++) {
+        result = args[i].parse(t);
+        if (result)
+          return result;
+      }
+      return null;
+    });
 };
 
 // Parses a left-recursive expression with zero or more occurrences
@@ -220,18 +201,18 @@ var binaryLeft = function (termParser, opParser) {
     }
   }
 
-  return describe(
-    termParser.description,
+  return new Parser(
+    termParser.expecting,
     function (t) {
-      var result = termParser(t);
+      var result = termParser.parse(t);
       if (! result)
         return null;
 
       var op;
-      while ((op = opParser(t))) {
-        result = named(
+      while ((op = opParser.parse(t))) {
+        result = new ParseNode(
           'binary',
-          [result, op, runRequired(termParser, t, op)]);
+          [result, op, termParser.parse(t, {required: true})]);
       }
       return result;
     });
@@ -250,25 +231,24 @@ var list = function (itemParser, sepParser) {
     else
       array.push(newThing);
   };
-  return describe(
-    itemParser.description,
+  return new Parser(
+    itemParser.expecting,
     function (t) {
       var result = [];
-      var firstItem = itemParser(t);
+      var firstItem = itemParser.parse(t);
       if (! firstItem)
         return null;
       push(result, firstItem);
 
       if (sepParser) {
         var sep;
-        while ((sep = sepParser(t))) {
+        while ((sep = sepParser.parse(t))) {
           push(result, sep);
-          push(result, runRequired(itemParser, t,
-                                   sep.unpack ? sep[sep.length - 1] : sep));
+          push(result, itemParser.parse(t, {required: true}));
         }
       } else {
         var item;
-        while ((item = itemParser(t)))
+        while ((item = itemParser.parse(t)))
           push(result, item);
       }
       return result;
@@ -278,20 +258,17 @@ var list = function (itemParser, sepParser) {
 var seq = function (/*parsers*/) {
   var args = arguments;
   if (! args.length)
-    return describe("(empty)",
-                    function (t) { return []; });
+    return new Parser("(empty)",
+                      function (t) { return []; });
 
-  var description = args[0].description;
-  for (var i = 1; i < args.length; i++)
-    description += " " + args[i].description;
-  return describe(
-    description,
+  return new Parser(
+    args[0].expecting,
     function (t) {
       var result = [];
       for (var i = 0, N = args.length; i < N; i++) {
         // first item in sequence can fail, and we
         // fail (without error); after that, error on failure
-        var r = runMaybeRequired(i > 0, args[i], t);
+        var r = args[i].parse(t, {required: i > 0});
         if (! r)
           return null;
 
@@ -304,8 +281,12 @@ var seq = function (/*parsers*/) {
     });
 };
 
-var unpack = function (arrayParser) {
-  return revalue(arrayParser, function (v) {
+var unpack = function (arrayOrParser) {
+  if (isArray(arrayOrParser)) {
+    arrayOrParser.unpack = true;
+    return arrayOrParser;
+  }
+  return revalue(arrayOrParser, function (v) {
     if (v && isArray(v))
       v.unpack = true;
     return v;
@@ -314,35 +295,36 @@ var unpack = function (arrayParser) {
 
 // lookAhead parser must never consume
 var lookAhead = function (lookAheadParser, nextParser) {
-  return describe(
-    nextParser.description,
+  return new Parser(
+    nextParser.expecting,
     function (t) {
-      if (! lookAheadParser(t))
+      if (! lookAheadParser.parse(t))
         return null;
-      return nextParser(t);
+      return nextParser.parse(t);
     });
 };
+
 var negLookAhead = function (lookAheadParser, nextParser) {
   if (! nextParser)
-    return function (t) {
-      return lookAheadParser(t) ? null : [];
-    };
+    return new Parser(
+      null,
+      function (t) {
+        return lookAheadParser.parse(t) ? null : [];
+      });
 
-  return describe(
-    nextParser.description,
+  return new Parser(
+    nextParser.expecting,
     function (t) {
-      if (lookAheadParser(t))
+      if (lookAheadParser.parse(t))
         return null;
-      return nextParser(t);
+      return nextParser.parse(t);
     });
 };
 
 // parser that looks at nothing and returns result
 var constant = function (result) {
-  // no description
-  return function (t) {
-    return result;
-  };
+  return new Parser(null,
+                    function (t) { return result; });
 };
 
 // afterLookAhead allows the parser to fail rather than
@@ -356,14 +338,13 @@ var constant = function (result) {
 // instead of "Expected ;" when the optional expression
 // turns out to be an illegal `var`.
 var opt = function (parser, afterLookAhead) {
-  return describe(parser.description,
-                  or(parser, afterLookAhead ? afterLookAhead : seq()));
+  return expecting(parser.expecting,
+                   or(parser, afterLookAhead ? afterLookAhead : seq()));
 };
 
-// note: valueTransformFunc gets the tokenizer as a second argument
-// if it's called on a parser.  This func is allowed to then
-// run more parsers.
-var revalue = function (parserOrValue, valueTransformFunc) {
+// note: valueTransformFunc gets the tokenizer as a second argument.
+// This func is allowed to then run more parsers.
+var revalue = function (parser, valueTransformFunc) {
   if (typeof valueTransformFunc !== 'function') {
     var value = valueTransformFunc;
     valueTransformFunc = function (v) {
@@ -371,12 +352,9 @@ var revalue = function (parserOrValue, valueTransformFunc) {
     };
   }
 
-  if (typeof parserOrValue === 'function')
-    // it's a parser
-    return describe(parserOrValue.description,
-                    function (t) {
-                      return valueTransformFunc(parserOrValue(t), t);
-                    });
-  else
-    return valueTransformFunc(parserOrValue);
+  return new Parser(
+    parser.expecting,
+    function (t) {
+      return valueTransformFunc(parser.parse(t), t);
+    });
 };
