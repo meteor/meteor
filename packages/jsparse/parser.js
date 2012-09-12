@@ -171,37 +171,35 @@ JSParser.prototype.getSyntaxTree = function () {
       });
   };
 
-  // These "pointers" allow grammar circularity, i.e. accessing
+  // Mark some productions "lazy" to allow grammar circularity, i.e. accessing
   // later parsers from earlier ones.
-  var expressionMaybeNoInPtr = booleanFlaggedParser(
-    function (noIn) {
-      return new Parser(
-        "expression",
-        function (t) {
-          return expressionMaybeNoIn[noIn].parse(t);
-        });
-    });
-  var expressionPtr = expressionMaybeNoInPtr[false];
+  // These lazy versions will be replaced with real ones, which they will
+  // access when run.
+  var expressionMaybeNoIn = {
+    'false': Parsers.lazy(
+      'expression',
+      function () { return expressionMaybeNoIn[false]; }),
+    'true': Parsers.lazy(
+      'expression',
+      function () { return expressionMaybeNoIn[true]; })
+  };
+  var expression = expressionMaybeNoIn[false];
 
-  var assignmentExpressionMaybeNoInPtr = booleanFlaggedParser(
-    function (noIn) {
-      return new Parser(
-        "expression",
-        function (t) {
-          return assignmentExpressionMaybeNoIn[noIn].parse(t);
-        });
-    });
-  var assignmentExpressionPtr = assignmentExpressionMaybeNoInPtr[false];
+  var assignmentExpressionMaybeNoIn = {
+    'false': Parsers.lazy(
+      'expression',
+      function () { return assignmentExpressionMaybeNoIn[false]; }),
+    'true': Parsers.lazy(
+      'expression',
+      function () { return assignmentExpressionMaybeNoIn[true]; })
+  };
+  var assignmentExpression = assignmentExpressionMaybeNoIn[false];
 
-  var functionBodyPtr = new Parser(
-    "functionBody", function (t) {
-      return functionBody.parse(t);
-    });
-
-  var statementPtr = new Parser(
-    "statement", function (t) {
-      return statement.parse(t);
-    });
+  var functionBody = Parsers.lazy(
+    'statement', function () { return functionBody; });
+  var statement = Parsers.lazy(
+    'statement', function () { return statement; });
+  ////
 
   var arrayLiteral =
         node('array',
@@ -212,7 +210,7 @@ JSParser.prototype.getSyntaxTree = function () {
                    list(
                      expecting(
                        'expression',
-                       or(assignmentExpressionPtr,
+                       or(assignmentExpression,
                           // count a peeked-at ']' as an expression
                           // to support elisions at end, e.g.
                           // `[1,2,3,,,,,,]`.
@@ -228,7 +226,7 @@ JSParser.prototype.getSyntaxTree = function () {
     node('strPropName', tokenType('STRING'))));
   var nameColonValue = expecting(
     'propertyName',
-    node('prop', seq(propertyName, token(':'), assignmentExpressionPtr)));
+    node('prop', seq(propertyName, token(':'), assignmentExpression)));
 
   var objectLiteral =
         node('object',
@@ -249,7 +247,7 @@ JSParser.prototype.getSyntaxTree = function () {
                     list(tokenType('IDENTIFIER'), token(','))),
                  token(')'),
                  token('{'),
-                 functionBodyPtr,
+                 functionBody,
                  token('}'));
     });
   var functionExpression = node('functionExpr',
@@ -265,16 +263,16 @@ JSParser.prototype.getSyntaxTree = function () {
                      node('regex', tokenType('REGEX')),
                      node('string', tokenType('STRING')),
                      node('parens',
-                          seq(token('('), expressionPtr, token(')'))),
+                          seq(token('('), expression, token(')'))),
                      arrayLiteral,
                      objectLiteral,
                      functionExpression));
 
   var dotEnding = seq(token('.'), tokenType('IDENTIFIER'));
-  var bracketEnding = seq(token('['), expressionPtr, token(']'));
+  var bracketEnding = seq(token('['), expression, token(']'));
   var callArgs = seq(token('('),
                      or(lookAheadToken(')'),
-                        list(assignmentExpressionPtr,
+                        list(assignmentExpression,
                              token(','))),
                      token(')'));
 
@@ -402,8 +400,8 @@ JSParser.prototype.getSyntaxTree = function () {
           seq(binaryExpressionMaybeNoIn[noIn],
               opt(seq(
                 token('?'),
-                assignmentExpressionPtr, token(':'),
-                assignmentExpressionMaybeNoInPtr[noIn]))),
+                assignmentExpression, token(':'),
+                assignmentExpressionMaybeNoIn[noIn]))),
           function (v) {
             if (v.length === 1)
               return v[0];
@@ -414,7 +412,7 @@ JSParser.prototype.getSyntaxTree = function () {
 
   var assignOp = token('= *= /= %= += -= <<= >>= >>>= &= ^= |=');
 
-  var assignmentExpressionMaybeNoIn = booleanFlaggedParser(
+  assignmentExpressionMaybeNoIn = booleanFlaggedParser(
     function (noIn) {
       return new Parser(
         'expression',
@@ -442,9 +440,9 @@ JSParser.prototype.getSyntaxTree = function () {
           return result;
         });
     });
-  var assignmentExpression = assignmentExpressionMaybeNoIn[false];
+  assignmentExpression = assignmentExpressionMaybeNoIn[false];
 
-  var expressionMaybeNoIn = booleanFlaggedParser(
+  expressionMaybeNoIn = booleanFlaggedParser(
     function (noIn) {
       return expecting(
         'expression',
@@ -456,11 +454,11 @@ JSParser.prototype.getSyntaxTree = function () {
             return new ParseNode('comma', v);
           }));
     });
-  var expression = expressionMaybeNoIn[false];
+  expression = expressionMaybeNoIn[false];
 
   // STATEMENTS
 
-  var statements = list(statementPtr);
+  var statements = list(statement);
 
   // implements JavaScript's semicolon "insertion" rules
   var maybeSemicolon = expecting(
@@ -498,7 +496,7 @@ JSParser.prototype.getSyntaxTree = function () {
   // expressionOrLabelStatement parses the expression and
   // then rewrites the result if it is an identifier
   // followed by a colon.
-  var labelColonAndStatement = seq(token(':'), statementPtr);
+  var labelColonAndStatement = seq(token(':'), statement);
   var noColon = expecting(
     'semicolon', not(lookAheadToken(':')));
   var expressionOrLabelStatement = new Parser(
@@ -557,8 +555,8 @@ JSParser.prototype.getSyntaxTree = function () {
   var ifStatement = node(
     'ifStmnt',
     seq(token('if'), token('('), expression,
-        closeParenBeforeStatement, statementPtr,
-        opt(seq(token('else'), statementPtr))));
+        closeParenBeforeStatement, statement,
+        opt(seq(token('else'), statement))));
 
   var secondThirdClauses = expecting(
     'semicolon',
@@ -567,11 +565,11 @@ JSParser.prototype.getSyntaxTree = function () {
           expecting('semicolon', token(';')),
           or(and(lookAheadToken(';'),
                  constant(NIL)),
-             expressionPtr),
+             expression),
           expecting('semicolon', token(';')),
           or(and(lookAheadToken(')'),
                  constant(NIL)),
-             expressionPtr))));
+             expression))));
   var inExpr = seq(token('in'), expression);
   var inExprExpectingSemi = expecting('semicolon',
                                       seq(token('in'), expression));
@@ -636,15 +634,15 @@ JSParser.prototype.getSyntaxTree = function () {
                           });
 
   var iterationStatement = or(
-    node('doStmnt', seq(token('do'), statementPtr, token('while'),
+    node('doStmnt', seq(token('do'), statement, token('while'),
                         token('('), expression, token(')'),
                         maybeSemicolon)),
     node('whileStmnt', seq(token('while'), token('('), expression,
-                           closeParenBeforeStatement, statementPtr)),
+                           closeParenBeforeStatement, statement)),
     // semicolons must be real, not maybeSemicolons
     node('forStmnt', seq(
       token('for'), token('('), forSpec, closeParenBeforeStatement,
-      statementPtr)));
+      statement)));
 
   var returnStatement = node(
     'returnStmnt',
@@ -679,7 +677,7 @@ JSParser.prototype.getSyntaxTree = function () {
   var withStatement = node(
     'withStmnt',
     seq(token('with'), token('('), expression, closeParenBeforeStatement,
-        statementPtr));
+        statement));
 
   var switchCase = node(
     'case',
@@ -724,21 +722,21 @@ JSParser.prototype.getSyntaxTree = function () {
   var debuggerStatement = node(
     'debuggerStmnt', seq(token('debugger'), maybeSemicolon));
 
-  var statement = expecting('statement',
-                            or(expressionOrLabelStatement,
-                               emptyStatement,
-                               blockStatement,
-                               variableStatement,
-                               ifStatement,
-                               iterationStatement,
-                               returnStatement,
-                               continueStatement,
-                               breakStatement,
-                               withStatement,
-                               switchStatement,
-                               throwStatement,
-                               tryStatement,
-                               debuggerStatement));
+  statement = expecting('statement',
+                        or(expressionOrLabelStatement,
+                           emptyStatement,
+                           blockStatement,
+                           variableStatement,
+                           ifStatement,
+                           iterationStatement,
+                           returnStatement,
+                           continueStatement,
+                           breakStatement,
+                           withStatement,
+                           switchStatement,
+                           throwStatement,
+                           tryStatement,
+                           debuggerStatement));
 
   // PROGRAM
 
@@ -748,7 +746,7 @@ JSParser.prototype.getSyntaxTree = function () {
   var sourceElement = or(functionDecl, statement);
   var sourceElements = list(sourceElement);
 
-  var functionBody = expecting(
+  functionBody = expecting(
     'functionBody', or(lookAheadToken('}'), sourceElements));
 
   var program = node(

@@ -254,16 +254,13 @@ Parsers.mapResult = function (parser, func) {
     });
 };
 
-Parsers.lazy = function (parserFunc) {
+Parsers.lazy = function (expecting, parserFunc) {
   var inner = null;
-  var outer = new Parser(null, function (t) {
-    if (! inner) {
+  return new Parser(expecting, function (t) {
+    if (! inner)
       inner = parserFunc();
-      outer.expecting = inner.expecting;
-    }
     return inner.parse(t);
   });
-  return outer;
 };
 
 })();

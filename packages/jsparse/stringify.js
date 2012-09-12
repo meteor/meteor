@@ -93,7 +93,7 @@ ParseNode.unstringify = function (str) {
   });
 
   // Make "item" lazy so it can be recursive.
-  var item = Parsers.lazy(function () { return item; });
+  var item = Parsers.lazy('token', function () { return item; });
 
   // Parse a single node or token.
   item = Parsers.mapResult(
