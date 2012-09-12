@@ -48,8 +48,6 @@ var assertion = function (test) {
     });
 };
 
-///// NON-TERMINAL PARSER CONSTRUCTORS
-
 var node = function (name, childrenParser) {
   return new Parser(name, function (t) {
     var children = childrenParser.parse(t);
