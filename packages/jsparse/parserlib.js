@@ -16,86 +16,6 @@ ParseNode = function (name, children) {
     throw new Error("Expected array in new ParseNode(" + name + ", ...)");
 };
 
-ParseNode.prototype.stringify = function () {
-  return ParseNode.stringify(this);
-};
-
-var escapeTokenString = function (str) {
-  if (/[\s()`]/.test(str))
-    return '`' + str.replace(/`/g, '``') + '`';
-  else if (! str)
-    return '``';
-  else
-    return str;
-};
-
-// The "tree string" format is a simple format for representing syntax trees.
-//
-// For example, the parse of `x++;` is written as:
-// "program(expressionStmnt(postfix(identifier(x) ++) ;))"
-//
-// A Node is written as "name(item1 item2 item3)", with additional whitespace
-// allowed anywhere between the name, parentheses, and items.
-//
-// Tokens don't need to be escaped unless they contain '(', ')', whitespace, or
-// backticks, or are empty.  If they do, they can be written enclosed in backticks.
-// To escape a backtick within backticks, double it.
-//
-// `stringify` generates "canonical" tree strings, which have no extra escaping
-// or whitespace, just one space between items in a Node.
-
-ParseNode.stringify = function (tree) {
-  if (tree instanceof ParseNode)
-    return (escapeTokenString(tree.name) + '(' +
-            _.map(tree.children, ParseNode.stringify).join(' ') +
-            ')');
-
-  // Treat a token object or string as a token.
-  if (typeof tree.text === 'function')
-    tree = tree.text();
-  else if (tree.text)
-    tree = tree.text;
-  return escapeTokenString(String(tree));
-};
-
-ParseNode.unstringify = function (str) {
-  var results = [];
-  var ptrStack = [];
-  var ptr = results;
-  _.each(str.match(/\(|\)|`([^`]||``)*`|`|[^\s()`]+/g), function (txt) {
-    switch (txt.charAt(0)) {
-    case '(':
-      if (! ptr.length || (typeof ptr[ptr.length - 1] !== "string"))
-        throw new Error("Nameless node in " + str);
-      var newArray = [ptr.pop()];
-      ptr.push(newArray);
-      ptrStack.push(ptr);
-      ptr = newArray;
-      break;
-    case ')':
-      ptr = ptrStack.pop();
-      var nodeArray = ptr.pop();
-      ptr.push(new ParseNode(nodeArray[0], nodeArray.slice(1)));
-      break;
-    case '`':
-      if (txt.length === 1)
-        throw new Error("Mismatched ` in " + str);
-      if (txt.length === 2)
-        ptr.push('');
-      else
-        ptr.push(txt.slice(1, -1).replace(/``/g, '`'));
-      break;
-    default:
-      ptr.push(txt);
-      break;
-    }
-    if (results.length > 1)
-      throw new Error("Not expecting " + txt + " in " + str);
-  });
-  if (ptr !== results)
-    throw new Error("Mismatched parentheses in " + str);
-  return results[0];
-};
 
 Parser = function (expecting, runFunc) {
   this.expecting = expecting;
@@ -332,6 +252,18 @@ Parsers.mapResult = function (parser, func) {
       var v = parser.parse(t);
       return v ? func(v, t) : null;
     });
+};
+
+Parsers.lazy = function (parserFunc) {
+  var inner = null;
+  var outer = new Parser(null, function (t) {
+    if (! inner) {
+      inner = parserFunc();
+      outer.expecting = inner.expecting;
+    }
+    return inner.parse(t);
+  });
+  return outer;
 };
 
 })();

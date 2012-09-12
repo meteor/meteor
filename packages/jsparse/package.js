@@ -3,7 +3,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.add_files(['lexer.js', 'parserlib.js', 'parser.js'],
+  api.add_files(['lexer.js', 'parserlib.js', 'stringify.js', 'parser.js'],
                 ['client', 'server']);
 });
 
