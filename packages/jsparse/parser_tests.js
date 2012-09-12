@@ -616,15 +616,16 @@ Tinytest.add("jsparse - bad parses", function (test) {
     'foo: `statement`function foo() {}',
     '[`expression`=',
     '[,,`expression`=',
-    '({`name:value`true:3})',
+    '({`propertyName`true:3})',
     '({1:2,3`:`})',
-    '({1:2,`name:value`',
+    '({1:2,`propertyName`',
     'x.`IDENTIFIER`true',
     'foo;`semicolon`:;',
     '1;`statement`=',
     'a+b`semicolon`=c;',
     'for(1+1 `semicolon`in {});',
-    '`statement`='
+    '`statement`=',
+    'for(;`expression`var;) {}'
   ];
   _.each(trials, function (tr) {
     tester.badParse(tr);

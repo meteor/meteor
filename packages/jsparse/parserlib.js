@@ -41,50 +41,6 @@ var expecting = function (expecting, parser) {
   return parser;
 };
 
-///// TERMINAL PARSER CONSTRUCTORS
-
-var _tokenClassImpl = function (type, text, onlyLook) {
-  var textSet = (text ? makeSet(text.split(' ')) : null);
-  var expecting = (text ? text.split(' ').join(', ') : type);
-  return new Parser(
-    expecting,
-    function (t) {
-      if (t.newToken.type() == type && (!text || textSet[t.newToken.text()])) {
-        if (onlyLook)
-          return [];
-        t.consumeNewToken();
-        return t.oldToken;
-      }
-      return null;
-    });
-};
-
-var _tokenImpl = function (text, onlyLook) {
-  if (/\w/.test(text))
-    return _tokenClassImpl('KEYWORD', text, onlyLook);
-  return _tokenClassImpl('PUNCTUATION', text, onlyLook);
-};
-
-var tokenClass = function (type, text) {
-  if (type === "ERROR" || type === "EOF")
-    throw new Error("Can't create EOF or ERROR tokens, can only look ahead");
-  return _tokenClassImpl(type, text);
-};
-
-var token = function (text) {
-  return _tokenImpl(text);
-};
-
-// NON-CONSUMING PARSER CONSTRUCTORS
-
-var lookAheadTokenClass = function (type, text) {
-  return _tokenClassImpl(type, text, true);
-};
-
-var lookAheadToken = function (text) {
-  return _tokenImpl(text, true);
-};
-
 var assertion = function (test) {
   return new Parser(
     null, function (t) {
@@ -276,19 +232,8 @@ var constant = function (result) {
                     function (t) { return result; });
 };
 
-// afterLookAhead allows the parser to fail rather than
-// succeed if would otherwise fail at a position where
-// afterLookAhead doesn't match, potentially providing
-// a better error message.  For example, the illegal
-// object literal `{true:1}` will stop at the `true`
-// and say something like "expected property name"
-// instead of "expected }".  As another example,
-// `for(;var;) {}` will lead to "Expected expression"
-// instead of "Expected ;" when the optional expression
-// turns out to be an illegal `var`.
 var opt = function (parser) {
-  return expecting(parser.expecting,
-                   or(parser, seq()));
+  return expecting(parser.expecting, or(parser, seq()));
 };
 
 var mapResult = function (parser, func) {

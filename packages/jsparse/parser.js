@@ -56,6 +56,48 @@ JSParser.prototype.getSyntaxTree = function () {
     };
   };
 
+  // Takes a space-separated list of either punctuation or keyword tokens
+  var lookAheadToken = function (tokens) {
+    var type = (/\w/.test(tokens) ? 'KEYWORD' : 'PUNCTUATION');
+    var textSet = makeSet(tokens.split(' '));
+    return expecting(
+      tokens.split(' ').join(', '),
+      assertion(function (t) {
+        return (t.newToken.type() === type && textSet[t.newToken.text()]);
+      }));
+  };
+
+  var lookAheadTokenType = function (type) {
+    return expecting(type, assertion(function (t) {
+      return t.newToken.type() === type;
+    }));
+  };
+
+  // Takes a space-separated list of either punctuation or keyword tokens
+  var token = function (tokens) {
+    var type = (/\w/.test(tokens) ? 'KEYWORD' : 'PUNCTUATION');
+    var textSet = makeSet(tokens.split(' '));
+    return new Parser(
+      tokens.split(' ').join(', '),
+      function (t) {
+        if (t.newToken.type() === type && textSet[t.newToken.text()]) {
+          t.consumeNewToken();
+          return t.oldToken;
+        }
+        return null;
+      });
+  };
+
+  var tokenType = function (type) {
+    return new Parser(type, function (t) {
+      if (t.newToken.type() === type) {
+        t.consumeNewToken();
+        return t.oldToken;
+      }
+      return null;
+    });
+  };
+
   var noLineTerminatorHere = expecting(
     'noLineTerminator', assertion(function (t) {
       return ! t.isLineTerminatorHere;
@@ -142,11 +184,11 @@ JSParser.prototype.getSyntaxTree = function () {
                  token(']')));
 
   var propertyName = expecting('propertyName', or(
-    node('idPropName', seq(tokenClass('IDENTIFIER'))),
-    node('numPropName', seq(tokenClass('NUMBER'))),
-    node('strPropName', seq(tokenClass('STRING')))));
+    node('idPropName', seq(tokenType('IDENTIFIER'))),
+    node('numPropName', seq(tokenType('NUMBER'))),
+    node('strPropName', seq(tokenType('STRING')))));
   var nameColonValue = expecting(
-    'name:value',
+    'propertyName',
     node('prop', seq(propertyName, token(':'), assignmentExpressionPtr)));
 
   var objectLiteral =
@@ -160,12 +202,12 @@ JSParser.prototype.getSyntaxTree = function () {
   var functionMaybeNameRequired = booleanFlaggedParser(
     function (nameRequired) {
       return seq(token('function'),
-                 (nameRequired ? tokenClass('IDENTIFIER') :
-                  or(tokenClass('IDENTIFIER'),
+                 (nameRequired ? tokenType('IDENTIFIER') :
+                  or(tokenType('IDENTIFIER'),
                      and(lookAheadToken('('), constant(NIL)))),
                  token('('),
                  or(lookAheadToken(')'),
-                    list(tokenClass('IDENTIFIER'), token(','))),
+                    list(tokenType('IDENTIFIER'), token(','))),
                  token(')'),
                  token('{'),
                  functionBodyPtr,
@@ -177,19 +219,19 @@ JSParser.prototype.getSyntaxTree = function () {
   var primaryOrFunctionExpression =
         expecting('expression',
                   or(node('this', token('this')), // XXXX remove unnecessary seqs in node(...) args
-                     node('identifier', seq(tokenClass('IDENTIFIER'))),
-                     node('number', seq(tokenClass('NUMBER'))),
-                     node('boolean', seq(tokenClass('BOOLEAN'))),
-                     node('null', seq(tokenClass('NULL'))),
-                     node('regex', seq(tokenClass('REGEX'))),
-                     node('string', seq(tokenClass('STRING'))),
+                     node('identifier', seq(tokenType('IDENTIFIER'))),
+                     node('number', seq(tokenType('NUMBER'))),
+                     node('boolean', seq(tokenType('BOOLEAN'))),
+                     node('null', seq(tokenType('NULL'))),
+                     node('regex', seq(tokenType('REGEX'))),
+                     node('string', seq(tokenType('STRING'))),
                      node('parens',
                           seq(token('('), expressionPtr, token(')'))),
                      arrayLiteral,
                      objectLiteral,
                      functionExpression));
 
-  var dotEnding = seq(token('.'), tokenClass('IDENTIFIER'));
+  var dotEnding = seq(token('.'), tokenType('IDENTIFIER'));
   var bracketEnding = seq(token('['), expressionPtr, token(']'));
   var callArgs = seq(token('('),
                      or(lookAheadToken(')'),
@@ -390,7 +432,7 @@ JSParser.prototype.getSyntaxTree = function () {
        and(
          or(
            lookAheadToken('}'),
-           lookAheadTokenClass('EOF'),
+           lookAheadTokenType('EOF'),
            assertion(function (t) {
              return t.isLineTerminatorHere;
            })),
@@ -460,7 +502,7 @@ JSParser.prototype.getSyntaxTree = function () {
   var varDeclMaybeNoIn = booleanFlaggedParser(function (noIn) {
     return node(
       'varDecl',
-      seq(tokenClass('IDENTIFIER'),
+      seq(tokenType('IDENTIFIER'),
           opt(seq(token('='),
                   assignmentExpressionMaybeNoIn[noIn]))));
   });
@@ -575,12 +617,12 @@ JSParser.prototype.getSyntaxTree = function () {
   var continueStatement = node(
     'continueStmnt',
     seq(token('continue'), or(
-      and(noLineTerminatorHere, tokenClass('IDENTIFIER')), constant(NIL)),
+      and(noLineTerminatorHere, tokenType('IDENTIFIER')), constant(NIL)),
         maybeSemicolon));
   var breakStatement = node(
     'breakStmnt',
     seq(token('break'), or(
-      and(noLineTerminatorHere, tokenClass('IDENTIFIER')), constant(NIL)),
+      and(noLineTerminatorHere, tokenType('IDENTIFIER')), constant(NIL)),
         maybeSemicolon));
   var throwStatement = node(
     'throwStmnt',
@@ -589,7 +631,7 @@ JSParser.prototype.getSyntaxTree = function () {
                // If there is a line break here and more tokens after,
                // we want to error appropriately.  `throw \n e` should
                // complain about the "end of line", not the `e`.
-               and(not(lookAheadTokenClass("EOF")),
+               and(not(lookAheadTokenType("EOF")),
                    new Parser(null,
                               function (t) {
                                 throw t.getParseError('expression', 'end of line');
@@ -632,7 +674,7 @@ JSParser.prototype.getSyntaxTree = function () {
         seq(
           or(node(
             'catch',
-            seq(token('catch'), token('('), tokenClass('IDENTIFIER'),
+            seq(token('catch'), token('('), tokenType('IDENTIFIER'),
                 token(')'), blockStatement)),
              constant(NIL)),
           or(node(
@@ -676,7 +718,7 @@ JSParser.prototype.getSyntaxTree = function () {
     'program',
     seq(opt(sourceElements),
         // If not at EOF, complain "expecting statement"
-        expecting('statement', lookAheadTokenClass("EOF"))));
+        expecting('statement', lookAheadTokenType("EOF"))));
 
   return program.parse(this);
 };
