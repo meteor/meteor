@@ -56,7 +56,7 @@ ParseNode.stringify = function (tree) {
   // Treat a token object or string as a token.
   if (typeof tree.text === 'function')
     tree = tree.text();
-  else if (tree.text)
+  else if (typeof tree.text === 'string')
     tree = tree.text;
   return backtickEscape(String(tree));
 };

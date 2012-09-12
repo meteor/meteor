@@ -205,6 +205,14 @@ Lexeme.prototype.isEOF = function () {
   return this._type === "EOF";
 };
 
+Lexeme.prototype.prev = function () {
+  return this._prev;
+};
+
+Lexeme.prototype.next = function () {
+  return this._next;
+};
+
 Lexeme.prototype.toString = function () {
   return this.isError() ? "ERROR" :
     this.isEOF() ? "EOF" : "`" + this.text() + "`";
@@ -287,8 +295,8 @@ JSLexer.prototype.next = function () {
     self.pos = pos;
     var lex = new JSLexer.Lexeme(origPos, type, code.substring(origPos, pos));
     if (self.lastLexeme) {
-      self.lastLexeme.next = lex;
-      lex.prev = self.lastLexeme;
+      self.lastLexeme._next = lex;
+      lex._prev = self.lastLexeme;
     }
     self.lastLexeme = lex;
     if (lex.isToken())
