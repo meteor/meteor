@@ -9,6 +9,14 @@ var isArray = function (obj) {
   return obj && (typeof obj === 'object') && (typeof obj.length === 'number');
 };
 
+var ParseNode = function (name, children) {
+  this.name = name;
+  this.children = children;
+
+  if (! isArray(children))
+    throw new Error("Expected array in new ParseNode(" + name + ", ...)");
+};
+
 Tokenizer = function (codeOrLexer) {
   // XXX rethink codeOrLexer later
   this.lexer = (codeOrLexer instanceof Lexer ? codeOrLexer :
@@ -172,19 +180,7 @@ var named = function (name, parserOrResult) {
       function (value) {
         if (! value)
           return null;
-
-        var result;
-        if (isArray(value) && ! value.named)
-          // bare array, prepend the name
-          result = [name].concat(Array.prototype.slice.call(value));
-        else
-          // token or named array; construct a new named array
-          result = [name, value];
-
-        // don't name the same thing twice
-        result.named = true;
-
-        return result;
+        return new ParseNode(name, Array.prototype.slice.call(value));
       }));
 };
 

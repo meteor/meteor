@@ -73,7 +73,7 @@ _.each(allNodeNames, function (n) { allNodeNamesSet[n] = true; });
 // backticks.  If they do, they can be written enclosed in backticks.  To escape
 // a backtick within backticks, double it.
 //
-// `stringifyNode` generates "canonical" tree strings, which have no extra escaping
+// `stringifyTree` generates "canonical" tree strings, which have no extra escaping
 // or whitespace, just one space between items in a Node.
 
 var parseTreeString = function (str) {
@@ -92,6 +92,8 @@ var parseTreeString = function (str) {
       break;
     case ')':
       ptr = ptrStack.pop();
+      var nodeArray = ptr.pop();
+      ptr.push(new ParseNode(nodeArray[0], nodeArray.slice(1)));
       break;
     case '`':
       if (txt.length === 1)
@@ -109,26 +111,29 @@ var parseTreeString = function (str) {
     throw new Error("Mismatched parentheses in " + str);
   return results[0];
 };
-var stringifyNode = function (obj) {
-  if (obj.text)
-    obj = obj.text;
-  if (typeof obj === "string") {
-    if (/[\s()`]/.test(obj))
-      return '`' + obj.replace(/`/g, '``') + '`';
-    else
-      return obj;
-  } else {
-    return (stringifyNode(obj[0]) + '(' +
-            _.map(obj.slice(1), stringifyNode).join(' ') +
+var escapeTokenString = function (str) {
+  if (/[\s()`]/.test(str))
+    return '`' + str.replace(/`/g, '``') + '`';
+  else
+    return str;
+};
+var stringifyTree = function (tree) {
+  if (tree instanceof ParseNode)
+    return (escapeTokenString(tree.name) + '(' +
+            _.map(tree.children, stringifyTree).join(' ') +
             ')');
-  }
+
+  // Treat a token object or string as a token.
+  if (tree.text)
+    tree = tree.text;
+  return escapeTokenString(tree);
 };
 
 var parseToTreeString = function (code) {
   var lexer = new Lexer(code);
   var tokenizer = new Tokenizer(code);
   var tree = parse(tokenizer);
-  return stringifyNode(tree);
+  return stringifyTree(tree);
 };
 
 var makeTester = function (test) {
@@ -154,30 +159,31 @@ var makeTester = function (test) {
       var actualTree = parse(tokenizer);
 
       var nextTokenIndex = 0;
-      var check = function (part) {
-        if (_.isArray(part) && part.length) {
-          // This is a NODE (non-terminal).  Make sure it actually is.
-          if (! (part[0] && typeof part[0] === "string" &&
-                 allNodeNamesSet[part[0]] === true))
-            test.fail("Not a node name: " + part[0]);
-          _.each(part.slice(1), check);
-        } else if (typeof part === 'object' && part.text &&
-                   (typeof part.pos === 'number')) {
+      var check = function (tree) {
+        if (tree instanceof ParseNode) {
+          // This is a NODE (non-terminal).
+          var nodeName = tree.name;
+          if (! (nodeName && typeof nodeName === "string" &&
+                 allNodeNamesSet[nodeName] === true))
+            test.fail("Not a node name: " + nodeName);
+          _.each(tree.children, check);
+        } else if (typeof tree === 'object' && tree.text &&
+                   (typeof tree.pos === 'number')) {
           // This is a TOKEN (terminal).
           // Make sure we are visiting every token once, in order.
           if (nextTokenIndex >= allTokensInOrder.length)
             test.fail("Too many tokens: " + (nextTokenIndex + 1));
           var referenceToken = allTokensInOrder[nextTokenIndex++];
-          if (part.text !== referenceToken.text)
-            test.fail(part.text + " !== " + referenceToken.text);
-          if (part.pos !== referenceToken.pos)
-            test.fail(part.pos + " !== " + referenceToken.pos);
-          if (code.substring(part.pos,
-                             part.pos + part.text.length) !== part.text)
-            test.fail("Didn't see " + part.text + " at " + part.pos +
+          if (tree.text !== referenceToken.text)
+            test.fail(tree.text + " !== " + referenceToken.text);
+          if (tree.pos !== referenceToken.pos)
+            test.fail(tree.pos + " !== " + referenceToken.pos);
+          if (code.substring(tree.pos,
+                             tree.pos + tree.text.length) !== tree.text)
+            test.fail("Didn't see " + tree.text + " at " + tree.pos +
                       " in " + code);
         } else {
-          test.fail("Unknown tree part: " + part);
+          test.fail("Unknown tree part: " + tree);
         }
       };
 
@@ -185,8 +191,8 @@ var makeTester = function (test) {
       if (nextTokenIndex !== allTokensInOrder.length)
         test.fail("Too few tokens: " + nextTokenIndex);
 
-      test.equal(stringifyNode(actualTree),
-                 stringifyNode(expectedTree), code);
+      test.equal(stringifyTree(actualTree),
+                 stringifyTree(expectedTree), code);
     },
     // Takes code with part of it surrounding with backticks.
     // Removes the two backtick characters, tries to parse the code,
@@ -614,7 +620,8 @@ Tinytest.add("jsparse - bad parses", function (test) {
     '({`name:value`true:3})',
     '({1:2,3`:`})',
     '({1:2,`name:value`',
-    'x.`IDENTIFIER`true'
+    'x.`IDENTIFIER`true',
+    'foo;`semicolon`:;'
   ];
   _.each(trials, function (tr) {
     tester.badParse(tr);

@@ -60,16 +60,16 @@ if (Meteor.is_client) {
       var curPos = 0;
       var unclosedInfos = [];
       var toHtml = function (obj) {
-        if (_.isArray(obj)) {
-          var head = obj[0] || '';
-          var rest = obj.slice(1);
+        if (obj instanceof ParseNode) {
+          var head = obj.name || '';
+          var children = obj.children;
           var info = { startPos: curPos };
           var isStatement = (head.indexOf('Stmnt') >= 0);
           var html = Spark.setDataContext(
             info,
             '<div class="box named' + (isStatement ? ' statement' : '') +
               '"><div class="box head">' + Handlebars._escape(head) + '</div>' +
-              _.map(rest, toHtml).join('') + '</div>');
+              _.map(children, toHtml).join('') + '</div>');
           unclosedInfos.push(info);
           return html;
         } else if (obj.text) {

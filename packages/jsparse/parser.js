@@ -77,9 +77,9 @@ var parse = function (tokenizer) {
                   token(']')));
 
   var propertyName = describe('propertyName', or(
-    named('idPropName', tokenClass('IDENTIFIER')),
-    named('numPropName', tokenClass('NUMBER')),
-    named('strPropName', tokenClass('STRING'))));
+    named('idPropName', seq(tokenClass('IDENTIFIER'))),
+    named('numPropName', seq(tokenClass('NUMBER'))),
+    named('strPropName', seq(tokenClass('STRING')))));
   var nameColonValue = describe(
     'name:value',
     named('prop', seq(propertyName, token(':'), assignmentExpressionPtr)));
@@ -110,13 +110,13 @@ var parse = function (tokenizer) {
 
   var primaryOrFunctionExpression =
         describe('expression',
-                 or(named('this', token('this')),
-                    named('identifier', tokenClass('IDENTIFIER')),
-                    named('number', tokenClass('NUMBER')),
-                    named('boolean', tokenClass('BOOLEAN')),
-                    named('null', tokenClass('NULL')),
-                    named('regex', tokenClass('REGEX')),
-                    named('string', tokenClass('STRING')),
+                 or(named('this', seq(token('this'))),
+                    named('identifier', seq(tokenClass('IDENTIFIER'))),
+                    named('number', seq(tokenClass('NUMBER'))),
+                    named('boolean', seq(tokenClass('BOOLEAN'))),
+                    named('null', seq(tokenClass('NULL'))),
+                    named('regex', seq(tokenClass('REGEX'))),
+                    named('string', seq(tokenClass('STRING'))),
                     named('parens',
                           seq(token('('), expressionPtr, token(')'))),
                     arrayLiteral,
@@ -340,7 +340,7 @@ var parse = function (tokenizer) {
                       // an implicit semicolon.  This
                       // is safe because a colon can never legally
                       // follow a semicolon anyway.
-                      lookAheadToken(':'))))));
+                      revalue(lookAheadToken(':'), named(';', [])))))));
 
   // it's hard to parse statement labels, as in
   // `foo: x = 1`, because we can't tell from the
@@ -358,13 +358,16 @@ var parse = function (tokenizer) {
     if (! exprStmnt)
       return null;
 
-    var expr = exprStmnt[1];
-    var maybeSemi = exprStmnt[2];
-    if (expr[0] !== 'identifier' || ! isArray(maybeSemi)) {
-      // For better error messages, for example in `1+1:`,
-      // if there is a colon at the end of the expression,
-      // fail now and say "Expected semicolon" instead of failing
-      // later saying "Expected statement" at the colon.
+    var expr = exprStmnt.children[0];
+    var maybeSemi = exprStmnt.children[1];
+    if (expr.name !== 'identifier' ||
+        ! (maybeSemi instanceof ParseNode)) {
+      // We either have a non-identifier expression or a present
+      // semicolon.  This is not a label.
+      //
+      // Fail now if we are looking at a colon, causing an
+      // error message on input like `1+1:` of the same kind
+      // you'd get without statement label parsing.
       runRequired(noColon, t);
       return exprStmnt;
     }
@@ -374,10 +377,10 @@ var parse = function (tokenizer) {
       return exprStmnt;
 
     return named('labelStmnt',
-                 [expr[1]].concat(rest));
+                 [expr.children[0]].concat(rest));
   };
 
-  var emptyStatement = named('emptyStmnt', token(';')); // not maybeSemicolon
+  var emptyStatement = named('emptyStmnt', seq(token(';'))); // not maybeSemicolon
 
   var blockStatement = describe('block', named('blockStmnt', seq(
     token('{'), unpack(opt(statements, lookAheadToken('}'))),
@@ -467,12 +470,13 @@ var parse = function (tokenizer) {
                              // produces [`var` `x` `;` nil `;` nil].
                              if (! clauses)
                                return null;
-                             if (clauses.length === 4)
-                               clauses[0] = 'forInSpec';
-                             else if (clauses.length === 5)
-                               clauses[0] = 'forVarInSpec';
-                             else if (clauses.length >= 7)
-                               clauses[0] = 'forVarSpec';
+                             var numChildren = clauses.children.length;
+                             if (numChildren === 3)
+                               return new ParseNode('forInSpec', clauses.children);
+                             else if (numChildren === 4)
+                               return new ParseNode('forVarInSpec', clauses.children);
+                             else if (numChildren >= 6)
+                               return new ParseNode('forVarSpec', clauses.children);
                              return clauses;
                            });
 
