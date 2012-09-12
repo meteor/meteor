@@ -2,10 +2,10 @@
 
 // XXX unit tests
 
-// XXX remove unnecessary ParseNode.NILs in lookaheads
+// XXX examine uses of lookAhead(...)
 // XXX SeqParser
-// XXX find all revalues, see if constant ones are necessary.
-//     API may be confusing if constant affects only non-null.
+// XXX examine when revalue(...) takes a constant vs. func, break into two
+// XXX chain revalue(...)?  Chain other things?
 
 // What we don't have from ECMA-262 5.1:
 //  - object literal trailing comma
@@ -46,8 +46,6 @@ var parse = function (tokenizer) {
     return revalue(
       arrayParser,
       function (parts) {
-        if (! parts)
-          return null;
         return (parts.length === 1) ?
           parts[0] : new ParseNode(name, parts);
       });
@@ -122,7 +120,7 @@ var parse = function (tokenizer) {
     return seq(token('function'),
                (nameRequired ? tokenClass('IDENTIFIER') :
                 or(tokenClass('IDENTIFIER'),
-                   revalue(lookAheadToken('('), ParseNode.NIL))),
+                   lookAhead(lookAheadToken('('), constant(ParseNode.NIL)))),
                token('('),
                opt(list(tokenClass('IDENTIFIER'), token(',')),
                    lookAheadToken(')')),
@@ -347,14 +345,15 @@ var parse = function (tokenizer) {
   var maybeSemicolon = expecting(
     'semicolon',
     or(token(';'),
-       revalue(
+       lookAhead(
          or(
            lookAheadToken('}'),
            lookAheadTokenClass('EOF'),
-           new Parser(null,
+           new Parser("lineTerminator",
                       function (t) {
                         return t.isLineTerminatorHere ? [] : null;
-                      })), new ParseNode(';', []))));
+                      })),
+         constant(new ParseNode(';', [])))));
 
   var expressionStatement = node(
     'expressionStmnt',
@@ -369,7 +368,7 @@ var parse = function (tokenizer) {
                        // an implicit semicolon.  This
                        // is safe because a colon can never legally
                        // follow a semicolon anyway.
-                       revalue(lookAheadToken(':'), new ParseNode(';', [])))))));
+                       lookAhead(lookAheadToken(':'), constant(new ParseNode(';', []))))))));
 
   // it's hard to parse statement labels, as in
   // `foo: x = 1`, because we can't tell from the
@@ -446,9 +445,11 @@ var parse = function (tokenizer) {
     lookAhead(lookAheadToken(';'),
               seq(
                 expecting('semicolon', token(';')),
-                opt(expressionPtr, revalue(lookAheadToken(';'), ParseNode.NIL)),
+                opt(expressionPtr, lookAhead(lookAheadToken(';'),
+                                             constant(ParseNode.NIL))),
                 expecting('semicolon', token(';')),
-                opt(expressionPtr, revalue(lookAheadToken(')'), ParseNode.NIL)))));
+                opt(expressionPtr, lookAhead(lookAheadToken(')'),
+                                             constant(ParseNode.NIL))))));
   var inExpr = seq(token('in'), expression);
   var inExprExpectingSemi = expecting('semicolon',
                                       seq(token('in'), expression));
@@ -468,7 +469,8 @@ var parse = function (tokenizer) {
        // get the case where the first clause is empty out of the way.
        // the lookAhead's return value is the empty placeholder for the
        // missing expression.
-       seq(revalue(lookAheadToken(';'), ParseNode.NIL), secondThirdClauses),
+       seq(lookAhead(lookAheadToken(';'),
+                     constant(ParseNode.NIL)), secondThirdClauses),
        // custom parser the non-var case because we have to
        // read the first expression before we know if there's
        // an "in".
@@ -501,8 +503,6 @@ var parse = function (tokenizer) {
                           // (the optional expressions are present as nils).
                           // forVar has 6 or more, because `for(var x;;);`
                           // produces [`var` `x` `;` nil `;` nil].
-                          if (! clauses)
-                            return null;
                           var numChildren = clauses.children.length;
                           if (numChildren === 3)
                             return new ParseNode('forInSpec', clauses.children);
@@ -542,14 +542,16 @@ var parse = function (tokenizer) {
   var throwStatement = node(
     'throwStmnt',
     seq(token('throw'),
-        lookAhead(revalue(noLineTerminatorHere,
-                          function (v, t) {
-                            if (v)
-                              return v;
-                            if (t.peekText)
-                              throw parseError(t, expression, 'end of line');
-                            return null;
-                          }), expression),
+        lookAhead(new Parser(null,
+                             function (t) {
+                               var v = noLineTerminatorHere.parse(t);
+                               if (v)
+                                 return v;
+                               if (t.peekText)
+                                 throw parseError(t, expression, 'end of line');
+                               // EOF:
+                               return null;
+                             }), expression),
         maybeSemicolon));
 
   var withStatement = node(
@@ -635,8 +637,6 @@ var parse = function (tokenizer) {
                           expecting('statement',
                                     revalue(lookAheadTokenClass("EOF"),
                                             function (v, t) {
-                                              if (! v)
-                                                return null;
                                               // eat the ending "EOF" so that
                                               // our position is updated
                                               t.consume();

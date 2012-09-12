@@ -621,7 +621,8 @@ Tinytest.add("jsparse - bad parses", function (test) {
     '({1:2,3`:`})',
     '({1:2,`name:value`',
     'x.`IDENTIFIER`true',
-    'foo;`semicolon`:;'
+    'foo;`semicolon`:;',
+    'throw`expression`'
   ];
   _.each(trials, function (tr) {
     tester.badParse(tr);

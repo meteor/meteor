@@ -329,19 +329,24 @@ var opt = function (parser, afterLookAhead) {
                    or(parser, afterLookAhead ? afterLookAhead : seq()));
 };
 
+// Takes a parser and runs a function on its output
+// when the parser matches.
 // note: valueTransformFunc gets the tokenizer as a second argument.
 // This func is allowed to then run more parsers.
 var revalue = function (parser, valueTransformFunc) {
   if (typeof valueTransformFunc !== 'function') {
     var value = valueTransformFunc;
     valueTransformFunc = function (v) {
-      return (v ? value : null);
+      return value;
     };
   }
 
   return new Parser(
     parser.expecting,
     function (t) {
-      return valueTransformFunc(parser.parse(t), t);
+      var v = parser.parse(t);
+      if (! v)
+        return null;
+      return valueTransformFunc(v, t);
     });
 };
