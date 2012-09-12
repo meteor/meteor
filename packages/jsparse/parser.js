@@ -4,6 +4,7 @@
 
 // XXX SeqParser
 // XXX better way to declare parsers, including boolean flagged ones
+// XXX examine 'opt'
 
 // What we don't have from ECMA-262 5.1:
 //  - object literal trailing comma
@@ -223,23 +224,11 @@ var parse = function (tokenizer) {
                   return v[0];
                 return new ParseNode('postfix', v);
               }));
-  var unaryList = opt(list(or(token('delete void typeof'),
-                              preSlashToken('++ -- + - ~ !', false))));
-  var unaryExpression = new Parser(
-    'expression',
-    function (t) {
-      var unaries = unaryList.parse(t);
-      // if we have unaries, we are committed and
-      // have to match an expression or error.
-      var result = postfixExpression.parse(
-        t, {required: unaries.length});
-      if (! result)
-        return null;
 
-      while (unaries.length)
-        result = new ParseNode('unary', [unaries.pop(), result]);
-      return result;
-    });
+  var unaryExpression = unary(
+    'unary', postfixExpression,
+    or(token('delete void typeof'),
+       preSlashToken('++ -- + - ~ !', false)));
 
   var memoizeBooleanFunc = function (func) {
     var trueResult, falseResult;

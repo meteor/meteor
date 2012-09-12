@@ -222,6 +222,25 @@ var binaryLeft = function (name, termParser, opParsers) {
     });
 };
 
+var unary = function (name, termParser, opParser) {
+  var unaryList = opt(list(opParser));
+  return new Parser(
+    termParser.expecting,
+    function (t) {
+      var unaries = unaryList.parse(t);
+      // if we have unaries, we are committed and
+      // have to match an expression or error.
+      var result = termParser.parse(
+        t, {required: unaries.length});
+      if (! result)
+        return null;
+
+      while (unaries.length)
+        result = new ParseNode(name, [unaries.pop(), result]);
+      return result;
+    });
+};
+
 // Parses a list of one or more items with a separator, listing the
 // items and separators.  (Separator is optional.)  For example:
 // `x` => ["x"]
