@@ -1,6 +1,5 @@
 ///// TOKENIZER AND PARSER COMBINATORS
 
-// XXX make Parser object with parse method?
 // XXX track line/col position, for errors and maybe token info
 // XXX unit tests
 
@@ -15,8 +14,6 @@ var ParseNode = function (name, children) {
   if (! isArray(children))
     throw new Error("Expected array in new ParseNode(" + name + ", ...)");
 };
-
-ParseNode.NIL = new ParseNode('nil', []);
 
 var Parser = function (expecting, runFunc) {
   this.expecting = expecting;
@@ -152,6 +149,13 @@ var lookAheadToken = function (text) {
   return _tokenImpl(text, true);
 };
 
+var assertion = function (test) {
+  return new Parser(
+    null, function (t) {
+      return test(t) ? [] : null;
+    });
+};
+
 ///// NON-TERMINAL PARSER CONSTRUCTORS
 
 var node = function (name, childrenParser) {
@@ -187,7 +191,7 @@ var or = function (/*parsers*/) {
 //
 // opParser can also be an array of op parsers from high to low
 // precedence (tightest-binding first)
-var binaryLeft = function (termParser, opParser) {
+var binaryLeft = function (name, termParser, opParser) {
   if (isArray(opParser)) {
     if (opParser.length === 1) {
       // take single opParser out of its array
@@ -196,7 +200,7 @@ var binaryLeft = function (termParser, opParser) {
       // pop off last opParser (non-destructively) and replace
       // termParser with a recursive binaryLeft on the remaining
       // ops.
-      termParser = binaryLeft(termParser, opParser.slice(0, -1));
+      termParser = binaryLeft(name, termParser, opParser.slice(0, -1));
       opParser = opParser[opParser.length - 1];
     }
   }
@@ -211,7 +215,7 @@ var binaryLeft = function (termParser, opParser) {
       var op;
       while ((op = opParser.parse(t))) {
         result = new ParseNode(
-          'binary',
+          name,
           [result, op, termParser.parse(t, {required: true})]);
       }
       return result;
@@ -257,8 +261,7 @@ var list = function (itemParser, sepParser) {
 var seq = function (/*parsers*/) {
   var args = arguments;
   if (! args.length)
-    return new Parser("(empty)",
-                      function (t) { return []; });
+    return constant([]);
 
   return new Parser(
     args[0].expecting,
@@ -280,31 +283,31 @@ var seq = function (/*parsers*/) {
     });
 };
 
-// lookAhead parser must never consume
-var lookAhead = function (lookAheadParser, nextParser) {
+// parsers except last must never consume
+var and = function (/*parsers*/) {
+  var args = arguments;
+  if (! args.length)
+    return constant([]);
+
   return new Parser(
-    nextParser.expecting,
+    args[args.length - 1].expecting,
     function (t) {
-      if (! lookAheadParser.parse(t))
-        return null;
-      return nextParser.parse(t);
+      var result;
+      for(var i = 0, N = args.length; i < N; i++) {
+        result = args[i].parse(t);
+        if (! result)
+          return null;
+      }
+      return result;
     });
 };
 
-var negLookAhead = function (lookAheadParser, nextParser) {
-  if (! nextParser)
-    return new Parser(
-      null,
-      function (t) {
-        return lookAheadParser.parse(t) ? null : [];
-      });
-
+// parser must not consume
+var not = function (parser) {
   return new Parser(
-    nextParser.expecting,
+    null,
     function (t) {
-      if (lookAheadParser.parse(t))
-        return null;
-      return nextParser.parse(t);
+      return parser.parse(t) ? null : [];
     });
 };
 

@@ -2,20 +2,22 @@
 
 // XXX unit tests
 
-// XXX examine uses of lookAhead(...)
 // XXX SeqParser
 // XXX examine when revalue(...) takes a constant vs. func, break into two
 // XXX chain revalue(...)?  Chain other things?
+// XXX better way to declare parsers, including boolean flagged ones
 
 // What we don't have from ECMA-262 5.1:
 //  - object literal trailing comma
 //  - object literal get/set
 
 var parse = function (tokenizer) {
-  var noLineTerminatorHere = new Parser(
-    'noLineTerminator', function (t) {
-      return t.isLineTerminatorHere ? null : [];
-    });
+  var NIL = new ParseNode('nil', []);
+
+  var noLineTerminatorHere = expecting(
+    'noLineTerminator', assertion(function (t) {
+      return ! t.isLineTerminatorHere;
+    }));
 
   // Like token, but marks tokens that need to defy the lexer's
   // heuristic about whether the next '/' is a division or
@@ -110,17 +112,17 @@ var parse = function (tokenizer) {
 
   var objectLiteral =
         node('object',
-              seq(token('{'),
-                  opt(list(nameColonValue,
-                           token(',')), lookAheadToken('}')),
-                  token('}')));
+             seq(token('{'),
+                 opt(list(nameColonValue,
+                          token(',')), lookAheadToken('}')),
+                 token('}')));
 
   // not memoized; only call at construction time
   var functionFunc = function (nameRequired) {
     return seq(token('function'),
                (nameRequired ? tokenClass('IDENTIFIER') :
                 or(tokenClass('IDENTIFIER'),
-                   lookAhead(lookAheadToken('('), constant(ParseNode.NIL)))),
+                   and(lookAheadToken('('), constant(NIL)))),
                token('('),
                opt(list(tokenClass('IDENTIFIER'), token(',')),
                    lookAheadToken(')')),
@@ -130,7 +132,7 @@ var parse = function (tokenizer) {
                token('}'));
   };
   var functionExpression = node('functionExpr',
-                                 functionFunc(false));
+                                functionFunc(false));
 
   var primaryOrFunctionExpression =
         expecting('expression',
@@ -228,9 +230,9 @@ var parse = function (tokenizer) {
     nodeIfMultipart(
       'postfix',
       seq(lhsExpression,
-          opt(lookAhead(noLineTerminatorHere,
-                        lookAhead(postfixLookahead,
-                                  postfixToken))))));
+          opt(and(noLineTerminatorHere,
+                  postfixLookahead,
+                  postfixToken)))));
   var unaryList = opt(list(or(token('delete void typeof'),
                               preSlashToken('++ -- + - ~ !', false))));
   var unaryExpression = new Parser(
@@ -277,7 +279,7 @@ var parse = function (tokenizer) {
                        token('||')];
       return expecting(
         'expression',
-        binaryLeft(unaryExpression, binaryOps));
+        binaryLeft('binary', unaryExpression, binaryOps));
     });
   var binaryExpression = binaryExpressionFunc(false);
 
@@ -345,20 +347,19 @@ var parse = function (tokenizer) {
   var maybeSemicolon = expecting(
     'semicolon',
     or(token(';'),
-       lookAhead(
+       and(
          or(
            lookAheadToken('}'),
            lookAheadTokenClass('EOF'),
-           new Parser("lineTerminator",
-                      function (t) {
-                        return t.isLineTerminatorHere ? [] : null;
-                      })),
+           assertion(function (t) {
+             return t.isLineTerminatorHere;
+           })),
          constant(new ParseNode(';', [])))));
 
   var expressionStatement = node(
     'expressionStmnt',
-    negLookAhead(
-      or(lookAheadToken('{'), lookAheadToken('function')),
+    and(
+      not(or(lookAheadToken('{'), lookAheadToken('function'))),
       seq(expression,
           expecting('semicolon',
                     or(maybeSemicolon,
@@ -368,7 +369,8 @@ var parse = function (tokenizer) {
                        // an implicit semicolon.  This
                        // is safe because a colon can never legally
                        // follow a semicolon anyway.
-                       lookAhead(lookAheadToken(':'), constant(new ParseNode(';', []))))))));
+                       and(lookAheadToken(':'),
+                           constant(new ParseNode(';', []))))))));
 
   // it's hard to parse statement labels, as in
   // `foo: x = 1`, because we can't tell from the
@@ -379,8 +381,7 @@ var parse = function (tokenizer) {
   // followed by a colon.
   var labelColonAndStatement = seq(token(':'), statementPtr);
   var noColon = expecting(
-    'semicolon',
-    negLookAhead(lookAheadToken(':')));
+    'semicolon', not(lookAheadToken(':')));
   var expressionOrLabelStatement = new Parser(
     null,
     function (t) {
@@ -442,14 +443,14 @@ var parse = function (tokenizer) {
 
   var secondThirdClauses = expecting(
     'semicolon',
-    lookAhead(lookAheadToken(';'),
-              seq(
-                expecting('semicolon', token(';')),
-                opt(expressionPtr, lookAhead(lookAheadToken(';'),
-                                             constant(ParseNode.NIL))),
-                expecting('semicolon', token(';')),
-                opt(expressionPtr, lookAhead(lookAheadToken(')'),
-                                             constant(ParseNode.NIL))))));
+    and(lookAheadToken(';'),
+        seq(
+          expecting('semicolon', token(';')),
+          opt(expressionPtr, and(lookAheadToken(';'),
+                                 constant(NIL))),
+          expecting('semicolon', token(';')),
+          opt(expressionPtr, and(lookAheadToken(')'),
+                                 constant(NIL))))));
   var inExpr = seq(token('in'), expression);
   var inExprExpectingSemi = expecting('semicolon',
                                       seq(token('in'), expression));
@@ -469,8 +470,8 @@ var parse = function (tokenizer) {
        // get the case where the first clause is empty out of the way.
        // the lookAhead's return value is the empty placeholder for the
        // missing expression.
-       seq(lookAhead(lookAheadToken(';'),
-                     constant(ParseNode.NIL)), secondThirdClauses),
+       seq(and(lookAheadToken(';'),
+               constant(NIL)), secondThirdClauses),
        // custom parser the non-var case because we have to
        // read the first expression before we know if there's
        // an "in".
@@ -515,10 +516,10 @@ var parse = function (tokenizer) {
 
   var iterationStatement = or(
     node('doStmnt', seq(token('do'), statementPtr, token('while'),
-                         token('('), expression, token(')'),
-                         maybeSemicolon)),
+                        token('('), expression, token(')'),
+                        maybeSemicolon)),
     node('whileStmnt', seq(token('while'), token('('), expression,
-                            closeParenBeforeStatement, statementPtr)),
+                           closeParenBeforeStatement, statementPtr)),
     // semicolons must be real, not maybeSemicolons
     node('forStmnt', seq(
       token('for'), token('('), forSpec, closeParenBeforeStatement,
@@ -527,31 +528,31 @@ var parse = function (tokenizer) {
   var returnStatement = node(
     'returnStmnt',
     seq(token('return'), or(
-      lookAhead(noLineTerminatorHere, expression), constant(ParseNode.NIL)),
+      and(noLineTerminatorHere, expression), constant(NIL)),
         maybeSemicolon));
   var continueStatement = node(
     'continueStmnt',
     seq(token('continue'), or(
-      lookAhead(noLineTerminatorHere, tokenClass('IDENTIFIER')), constant(ParseNode.NIL)),
+      and(noLineTerminatorHere, tokenClass('IDENTIFIER')), constant(NIL)),
         maybeSemicolon));
   var breakStatement = node(
     'breakStmnt',
     seq(token('break'), or(
-      lookAhead(noLineTerminatorHere, tokenClass('IDENTIFIER')), constant(ParseNode.NIL)),
+      and(noLineTerminatorHere, tokenClass('IDENTIFIER')), constant(NIL)),
         maybeSemicolon));
   var throwStatement = node(
     'throwStmnt',
     seq(token('throw'),
-        lookAhead(new Parser(null,
-                             function (t) {
-                               var v = noLineTerminatorHere.parse(t);
-                               if (v)
-                                 return v;
-                               if (t.peekText)
-                                 throw parseError(t, expression, 'end of line');
-                               // EOF:
-                               return null;
-                             }), expression),
+        and(new Parser(null,
+                       function (t) {
+                         var v = noLineTerminatorHere.parse(t);
+                         if (v)
+                           return v;
+                         if (t.peekText)
+                           throw parseError(t, expression, 'end of line');
+                         // EOF:
+                         return null;
+                       }), expression),
         maybeSemicolon));
 
   var withStatement = node(
@@ -582,17 +583,17 @@ var parse = function (tokenizer) {
 
   var catchFinally = expecting(
     'catch',
-    lookAhead(lookAheadToken('catch finally'),
-              seq(
-                or(node(
-                  'catch',
-                  seq(token('catch'), token('('), tokenClass('IDENTIFIER'),
-                      token(')'), blockStatement)),
-                   constant(ParseNode.NIL)),
-                or(node(
-                  'finally',
-                  seq(token('finally'), blockStatement)),
-                   constant(ParseNode.NIL)))));
+    and(lookAheadToken('catch finally'),
+        seq(
+          or(node(
+            'catch',
+            seq(token('catch'), token('('), tokenClass('IDENTIFIER'),
+                token(')'), blockStatement)),
+             constant(NIL)),
+          or(node(
+            'finally',
+            seq(token('finally'), blockStatement)),
+             constant(NIL)))));
   var tryStatement = node(
     'tryStmnt',
     seq(token('try'), blockStatement, catchFinally));
@@ -618,7 +619,7 @@ var parse = function (tokenizer) {
   // PROGRAM
 
   var functionDecl = node('functionDecl',
-                           functionFunc(true));
+                          functionFunc(true));
 
   var sourceElement = or(statement, functionDecl);
   var sourceElements = list(sourceElement);
@@ -628,20 +629,20 @@ var parse = function (tokenizer) {
                                    lookAheadToken('}')));
 
   var program = node('program',
-                      seq(opt(sourceElements),
-                          // we rely on the fact that opt(sourceElements)
-                          // will never fail, and non-first arguments
-                          // to seq are required to succeed -- meaning
-                          // this parser will never fail without throwing
-                          // a parse error.
-                          expecting('statement',
-                                    revalue(lookAheadTokenClass("EOF"),
-                                            function (v, t) {
-                                              // eat the ending "EOF" so that
-                                              // our position is updated
-                                              t.consume();
-                                              return v;
-                                            }))));
+                     seq(opt(sourceElements),
+                         // we rely on the fact that opt(sourceElements)
+                         // will never fail, and non-first arguments
+                         // to seq are required to succeed -- meaning
+                         // this parser will never fail without throwing
+                         // a parse error.
+                         expecting('statement',
+                                   revalue(lookAheadTokenClass("EOF"),
+                                           function (v, t) {
+                                             // eat the ending "EOF" so that
+                                             // our position is updated
+                                             t.consume();
+                                             return v;
+                                           }))));
 
   return program.parse(tokenizer);
 };
