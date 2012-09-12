@@ -170,7 +170,7 @@ var node = function (name, childrenParser) {
 var or = function (/*parsers*/) {
   var args = arguments;
   return new Parser(
-    null,
+    args[args.length - 1].expecting,
     function (t) {
       var result;
       for(var i = 0, N = args.length; i < N; i++) {
@@ -346,9 +346,9 @@ var constant = function (result) {
 // `for(;var;) {}` will lead to "Expected expression"
 // instead of "Expected ;" when the optional expression
 // turns out to be an illegal `var`.
-var opt = function (parser, afterLookAhead) {
+var opt = function (parser) {
   return expecting(parser.expecting,
-                   or(parser, afterLookAhead ? afterLookAhead : seq()));
+                   or(parser, seq()));
 };
 
 var mapResult = function (parser, func) {
