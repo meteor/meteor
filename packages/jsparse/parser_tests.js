@@ -61,83 +61,12 @@ var allNodeNames = [
 var allNodeNamesSet = {};
 _.each(allNodeNames, function (n) { allNodeNamesSet[n] = true; });
 
-// The "tree string" format is a simple format for representing syntax trees.
-//
-// For example, the parse of `x++;` is written as:
-// "program(expressionStmnt(postfix(identifier(x) ++) ;))"
-//
-// A Node is written as "name(item1 item2 item3)", with additional whitespace
-// allowed anywhere between the name, parentheses, and items.
-//
-// Tokens don't need to be escaped unless they contain '(', ')', whitespace, or
-// backticks.  If they do, they can be written enclosed in backticks.  To escape
-// a backtick within backticks, double it.
-//
-// `stringifyTree` generates "canonical" tree strings, which have no extra escaping
-// or whitespace, just one space between items in a Node.
-
-var parseTreeString = function (str) {
-  var results = [];
-  var ptrStack = [];
-  var ptr = results;
-  _.each(str.match(/\(|\)|`([^`]||``)*`|`|[^\s()`]+/g), function (txt) {
-    switch (txt.charAt(0)) {
-    case '(':
-      if (! ptr.length || (typeof ptr[ptr.length - 1] !== "string"))
-        throw new Error("Nameless node in " + str);
-      var newArray = [ptr.pop()];
-      ptr.push(newArray);
-      ptrStack.push(ptr);
-      ptr = newArray;
-      break;
-    case ')':
-      ptr = ptrStack.pop();
-      var nodeArray = ptr.pop();
-      ptr.push(new ParseNode(nodeArray[0], nodeArray.slice(1)));
-      break;
-    case '`':
-      if (txt.length === 1)
-        throw new Error("Mismatched ` in " + str);
-      ptr.push(txt.slice(1, -1).replace(/``/g, '`'));
-      break;
-    default:
-      ptr.push(txt);
-      break;
-    }
-    if (results.length > 1)
-      throw new Error("Not expecting " + txt + " in " + str);
-  });
-  if (ptr !== results)
-    throw new Error("Mismatched parentheses in " + str);
-  return results[0];
-};
-var escapeTokenString = function (str) {
-  if (/[\s()`]/.test(str))
-    return '`' + str.replace(/`/g, '``') + '`';
-  else
-    return str;
-};
-var stringifyTree = function (tree) {
-  if (tree instanceof ParseNode)
-    return (escapeTokenString(tree.name) + '(' +
-            _.map(tree.children, stringifyTree).join(' ') +
-            ')');
-
-  // Treat a token object or string as a token.
-  if (tree.text)
-    tree = tree.text();
-  return escapeTokenString(tree);
-};
-
-var parseToTreeString = function (code) {
-  return stringifyTree(new JSParser(code).getSyntaxTree());
-};
 
 var makeTester = function (test) {
   return {
     // Parse code and make sure it matches expectedTreeString.
     goodParse: function (code, expectedTreeString, regexTokenHints) {
-      var expectedTree = parseTreeString(expectedTreeString);
+      var expectedTree = ParseNode.unstringify(expectedTreeString);
 
       // first use lexer to collect all tokens
       var lexer = new JSLexer(code);
@@ -189,8 +118,8 @@ var makeTester = function (test) {
 
       test.equal(parser.pos, code.length);
 
-      test.equal(stringifyTree(actualTree),
-                 stringifyTree(expectedTree), code);
+      test.equal(ParseNode.stringify(actualTree),
+                 ParseNode.stringify(expectedTree), code);
     },
     // Takes code with part of it surrounding with backticks.
     // Removes the two backtick characters, tries to parse the code,
@@ -578,9 +507,6 @@ Tinytest.add("jsparse - syntax forms", function (test) {
     tester.goodParse(tr[0], tr[1]);
   });
 });
-
-// Generating a trial:
-//(function (s) { return JSON.stringify([s, parseToTreeString(s)]); })('...')
 
 Tinytest.add("jsparse - bad parses", function (test) {
   var tester = makeTester(test);

@@ -28,12 +28,25 @@ var makeSet = function (array) {
 };
 
 
-JSParser = function (code) {
+JSParser = function (code, options) {
   this.lexer = new JSLexer(code);
   this.oldToken = null;
   this.newToken = null;
   this.pos = 0;
   this.isLineTerminatorHere = false;
+
+  options = options || {};
+  // pass {tokens:'strings'} to get strings for
+  // tokens instead of token objects
+  if (options.tokens === 'strings') {
+    this.tokenFunc = function (tok) {
+      return tok.text();
+    };
+  } else {
+    this.tokenFunc = function (tok) {
+      return tok;
+    };
+  }
 
   this.consumeNewToken();
 };
@@ -71,6 +84,8 @@ JSParser.prototype.getParseError = function (expecting, found) {
 };
 
 JSParser.prototype.getSyntaxTree = function () {
+  var self = this;
+
   var NIL = new ParseNode('nil', []);
 
   var booleanFlaggedParser = function (parserConstructFunc) {
@@ -106,7 +121,7 @@ JSParser.prototype.getSyntaxTree = function () {
       function (t) {
         if (t.newToken.type() === type && textSet[t.newToken.text()]) {
           t.consumeNewToken();
-          return t.oldToken;
+          return self.tokenFunc(t.oldToken);
         }
         return null;
       });
@@ -116,7 +131,7 @@ JSParser.prototype.getSyntaxTree = function () {
     return new Parser(type, function (t) {
       if (t.newToken.type() === type) {
         t.consumeNewToken();
-        return t.oldToken;
+        return self.tokenFunc(t.oldToken);
       }
       return null;
     });
