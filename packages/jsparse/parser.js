@@ -12,6 +12,13 @@
 var parse = function (tokenizer) {
   var NIL = new ParseNode('nil', []);
 
+  var booleanFlaggedParser = function (parserConstructFunc) {
+    return {
+      false: parserConstructFunc(false),
+      true: parserConstructFunc(true)
+    };
+  };
+
   var noLineTerminatorHere = expecting(
     'noLineTerminator', assertion(function (t) {
       return ! t.isLineTerminatorHere;
@@ -42,23 +49,25 @@ var parse = function (tokenizer) {
 
   // These "pointers" allow grammar circularity, i.e. accessing
   // later parsers from earlier ones.
-  var expressionPtrFunc = function (noIn) {
-    return new Parser(
-      "expression",
-      function (t) {
-        return expressionFunc(noIn).parse(t);
-      });
-  };
-  var expressionPtr = expressionPtrFunc(false);
+  var expressionMaybeNoInPtr = booleanFlaggedParser(
+    function (noIn) {
+      return new Parser(
+        "expression",
+        function (t) {
+          return expressionMaybeNoIn[noIn].parse(t);
+        });
+    });
+  var expressionPtr = expressionMaybeNoInPtr[false];
 
-  var assignmentExpressionPtrFunc = function (noIn) {
-    return new Parser(
-      "expression",
-      function (t) {
-        return assignmentExpressionFunc(noIn).parse(t);
-      });
-  };
-  var assignmentExpressionPtr = assignmentExpressionPtrFunc(false);
+  var assignmentExpressionMaybeNoInPtr = booleanFlaggedParser(
+    function (noIn) {
+      return new Parser(
+        "expression",
+        function (t) {
+          return assignmentExpressionMaybeNoIn[noIn].parse(t);
+        });
+    });
+  var assignmentExpressionPtr = assignmentExpressionMaybeNoInPtr[false];
 
   var functionBodyPtr = new Parser(
     "functionBody", function (t) {
@@ -105,22 +114,22 @@ var parse = function (tokenizer) {
                          token(','))),
                  token('}')));
 
-  // not memoized; only call at construction time
-  var functionFunc = function (nameRequired) {
-    return seq(token('function'),
-               (nameRequired ? tokenClass('IDENTIFIER') :
-                or(tokenClass('IDENTIFIER'),
-                   and(lookAheadToken('('), constant(NIL)))),
-               token('('),
-               or(lookAheadToken(')'),
-                  list(tokenClass('IDENTIFIER'), token(','))),
-               token(')'),
-               token('{'),
-               functionBodyPtr,
-               token('}'));
-  };
+  var functionMaybeNameRequired = booleanFlaggedParser(
+    function (nameRequired) {
+      return seq(token('function'),
+                 (nameRequired ? tokenClass('IDENTIFIER') :
+                  or(tokenClass('IDENTIFIER'),
+                     and(lookAheadToken('('), constant(NIL)))),
+                 token('('),
+                 or(lookAheadToken(')'),
+                    list(tokenClass('IDENTIFIER'), token(','))),
+                 token(')'),
+                 token('{'),
+                 functionBodyPtr,
+                 token('}'));
+    });
   var functionExpression = node('functionExpr',
-                                functionFunc(false));
+                                functionMaybeNameRequired[false]);
 
   var primaryOrFunctionExpression =
         expecting('expression',
@@ -231,18 +240,21 @@ var parse = function (tokenizer) {
     or(token('delete void typeof'),
        preSlashToken('++ -- + - ~ !', false)));
 
-  var memoizeBooleanFunc = function (func) {
-    var trueResult, falseResult;
-    return function (flag) {
-      if (flag)
-        return trueResult || (trueResult = func(true));
-      else
-        return falseResult || (falseResult = func(false));
-    };
-  };
+  // The "noIn" business is all to facilitate parsing
+  // of for-in constructs, though the cases that make
+  // this required are quite obscure.
+  // The `for(var x in y)` form is allowed to take
+  // an initializer for `x` (which is only useful for
+  // its side effects, or if `y` has no properties).
+  // So an example might be:
+  // `for(var x = a().b in c);`
+  // In this example, `var x = a().b` is parsed without
+  // the `in`, which would otherwise be part of the
+  // varDecl, using varDeclNoIn.
 
-  // actually this is the spec's LogicalORExpression
-  var binaryExpressionFunc = memoizeBooleanFunc(
+  // Our binaryExpression is the spec's LogicalORExpression,
+  // which includes all the higher-precendence operators.
+  var binaryExpressionMaybeNoIn = booleanFlaggedParser(
     function (noIn) {
       // high to low precedence
       var binaryOps = [token('* / %'),
@@ -261,34 +273,34 @@ var parse = function (tokenizer) {
         'expression',
         binaryLeft('binary', unaryExpression, binaryOps));
     });
-  var binaryExpression = binaryExpressionFunc(false);
+  var binaryExpression = binaryExpressionMaybeNoIn[false];
 
-  var conditionalExpressionFunc = memoizeBooleanFunc(
+  var conditionalExpressionMaybeNoIn = booleanFlaggedParser(
     function (noIn) {
       return expecting(
         'expression',
         mapResult(
-          seq(binaryExpressionFunc(noIn),
+          seq(binaryExpressionMaybeNoIn[noIn],
               opt(seq(
                 token('?'),
-                assignmentExpressionPtrFunc(false), token(':'),
-                assignmentExpressionPtrFunc(noIn)))),
+                assignmentExpressionPtr, token(':'),
+                assignmentExpressionMaybeNoInPtr[noIn]))),
           function (v) {
             if (v.length === 1)
               return v[0];
             return new ParseNode('ternary', v);
           }));
     });
-  var conditionalExpression = conditionalExpressionFunc(false);
+  var conditionalExpression = conditionalExpressionMaybeNoIn[false];
 
   var assignOp = token('= *= /= %= += -= <<= >>= >>>= &= ^= |=');
 
-  var assignmentExpressionFunc = memoizeBooleanFunc(
+  var assignmentExpressionMaybeNoIn = booleanFlaggedParser(
     function (noIn) {
       return new Parser(
         'expression',
         function (t) {
-          var r = conditionalExpressionFunc(noIn).parse(t);
+          var r = conditionalExpressionMaybeNoIn[noIn].parse(t);
           if (! r)
             return null;
 
@@ -300,7 +312,7 @@ var parse = function (tokenizer) {
           var op;
           while (r.lhs && (op = assignOp.parse(t)))
             parts.push(op,
-                       conditionalExpressionFunc(noIn).parse(
+                       conditionalExpressionMaybeNoIn[noIn].parse(
                          t, {required: true}));
 
           var result = parts.pop();
@@ -312,21 +324,21 @@ var parse = function (tokenizer) {
           return result;
         });
     });
-  var assignmentExpression = assignmentExpressionFunc(false);
+  var assignmentExpression = assignmentExpressionMaybeNoIn[false];
 
-  var expressionFunc = memoizeBooleanFunc(
+  var expressionMaybeNoIn = booleanFlaggedParser(
     function (noIn) {
       return expecting(
         'expression',
         mapResult(
-          list(assignmentExpressionFunc(noIn), token(',')),
+          list(assignmentExpressionMaybeNoIn[noIn], token(',')),
           function (v) {
             if (v.length === 1)
               return v[0];
             return new ParseNode('comma', v);
           }));
     });
-  var expression = expressionFunc(false);
+  var expression = expressionMaybeNoIn[false];
 
   // STATEMENTS
 
@@ -406,14 +418,14 @@ var parse = function (tokenizer) {
     token('{'), or(lookAheadToken('}'), statements),
     token('}'))));
 
-  var varDeclFunc = memoizeBooleanFunc(function (noIn) {
+  var varDeclMaybeNoIn = booleanFlaggedParser(function (noIn) {
     return node(
       'varDecl',
       seq(tokenClass('IDENTIFIER'),
           opt(seq(token('='),
-                  assignmentExpressionFunc(noIn)))));
+                  assignmentExpressionMaybeNoIn[noIn]))));
   });
-  var varDecl = varDeclFunc(false);
+  var varDecl = varDeclMaybeNoIn[false];
 
   var variableStatement = node(
     'varStmnt',
@@ -448,7 +460,7 @@ var parse = function (tokenizer) {
   var forSpec = mapResult(node(
     'forSpec',
     or(seq(token('var'),
-           varDeclFunc(true),
+           varDeclMaybeNoIn[true],
            expecting(
              'commaOrIn',
              or(inExpr,
@@ -456,7 +468,7 @@ var parse = function (tokenizer) {
                   or(
                     lookAheadToken(';'),
                     seq(token(','),
-                        list(varDeclFunc(true), token(',')))),
+                        list(varDeclMaybeNoIn[true], token(',')))),
                   secondThirdClauses)))),
        // get the case where the first clause is empty out of the way.
        // the lookAhead's return value is the empty placeholder for the
@@ -469,7 +481,7 @@ var parse = function (tokenizer) {
        new Parser(
          null,
          function (t) {
-           var firstExpr = expressionFunc(true).parse(t);
+           var firstExpr = expressionMaybeNoIn[true].parse(t);
            if (! firstExpr)
              return null;
            var rest = secondThirdClauses.parse(t);
@@ -612,15 +624,14 @@ var parse = function (tokenizer) {
 
   // PROGRAM
 
-  var functionDecl = node('functionDecl',
-                          functionFunc(true));
+  var functionDecl = node(
+    'functionDecl', functionMaybeNameRequired[true]);
 
   var sourceElement = or(statement, functionDecl);
   var sourceElements = list(sourceElement);
 
-  var functionBody = expecting('functionBody',
-                               or(lookAheadToken('}'),
-                                 sourceElements));
+  var functionBody = expecting(
+    'functionBody', or(lookAheadToken('}'), sourceElements));
 
   var program = node(
     'program',
