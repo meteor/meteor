@@ -6,6 +6,20 @@
 
 (function () {
 
+var expecting = Parser.expecting;
+
+var assertion = Parsers.assertion;
+var node = Parsers.node;
+var or = Parsers.or;
+var and = Parsers.and;
+var not = Parsers.not;
+var list = Parsers.list;
+var seq = Parsers.seq;
+var opt = Parsers.opt;
+var constant = Parsers.constant;
+var mapResult = Parsers.mapResult;
+
+
 var makeSet = function (array) {
   var s = {};
   for (var i = 0, N = array.length; i < N; i++)
@@ -326,7 +340,7 @@ JSParser.prototype.getSyntaxTree = function () {
                 return new ParseNode('postfix', v);
               }));
 
-  var unaryExpression = unary(
+  var unaryExpression = Parsers.unary(
     'unary', postfixExpression,
     or(token('delete void typeof'),
        preSlashToken('++ -- + - ~ !', false)));
@@ -362,7 +376,7 @@ JSParser.prototype.getSyntaxTree = function () {
                        token('||')];
       return expecting(
         'expression',
-        binaryLeft('binary', unaryExpression, binaryOps));
+        Parsers.binaryLeft('binary', unaryExpression, binaryOps));
     });
   var binaryExpression = binaryExpressionMaybeNoIn[false];
 
