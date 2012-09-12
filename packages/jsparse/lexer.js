@@ -283,6 +283,10 @@ Lexer.prototype.next = function () {
     }
     self.pos = pos;
     var lex = new Lexeme(origPos, type, code.substring(origPos, pos));
+    if (self.lastLexeme) {
+      self.lastLexeme.next = lex;
+      lex.prev = self.lastLexeme;
+    }
     self.lastLexeme = lex;
     if (lex.isToken())
       self.divisionPermitted = guessIsDivisionPermittedAfterToken(lex);
