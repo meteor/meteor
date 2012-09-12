@@ -69,6 +69,12 @@ git checkout v0.8.8
 # http://piscisaureus.no.de/libuv/2012-06-29#00:40:38.256
 # Emacs bug this works around:
 # http://debbugs.gnu.org/cgi/bugreport.cgi?bug=2602
+#
+# NOTE: there is now an unreleased fix in libuv that fixes this issue:
+# https://github.com/joyent/node/issues/3994
+# Once this is released, we can remove this hack. This will fix the
+# mongo shell issue, though we may still need to do something like
+# "spawn('true', [], {stdio: 'inherit'})" to fix the emacs shell issue.
 patch -p1 <<EOF
 diff --git a/src/tty_wrap.cc b/src/tty_wrap.cc
 index fde8717..62cf939 100644
