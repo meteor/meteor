@@ -37,11 +37,11 @@ if (Meteor.is_client) {
     // PARSER
     var html;
     var tree = null;
-    var lexer = new Lexer(input);
+    var parser = new JSParser(input);
     try {
-      tree = parse(new Tokenizer(lexer)) || [];
+      tree = parser.getSyntaxTree();
     } catch (parseError) {
-      var errorLexeme = lexer.lastLexeme;
+      var errorLexeme = parser.lexer.lastLexeme;
 
       html = Handlebars._escape(
         input.substring(0, errorLexeme.startPos()));
@@ -92,7 +92,7 @@ if (Meteor.is_client) {
         }
       };
       html = toHtml(tree);
-      curPos = lexer.pos;
+      curPos = parser.lexer.pos;
       _.each(unclosedInfos, function (info) {
         info.endPos = curPos;
       });

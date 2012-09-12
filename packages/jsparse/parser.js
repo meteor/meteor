@@ -4,7 +4,49 @@
 //  - object literal trailing comma
 //  - object literal get/set
 
-var parse = function (tokenizer) {
+var JSParser = function (code) {
+  this.lexer = new Lexer(code);
+  this.oldToken = null;
+  this.newToken = null;
+  this.pos = 0;
+  this.isLineTerminatorHere = false;
+
+  this.consumeNewToken();
+};
+
+JSParser.prototype.consumeNewToken = function () {
+  var self = this;
+  var lexer = self.lexer;
+  self.oldToken = self.newToken;
+  self.isLineTerminatorHere = false;
+  var lex;
+  do {
+    lex = lexer.next();
+    if (lex.isError())
+      throw new Error("Bad token at position " + lex.startPos() +
+                      ", text `" + lex.text() + "`");
+    else if (lex.type() === "NEWLINE")
+      self.isLineTerminatorHere = true;
+    else if (lex.type() === "COMMENT" && ! /^.*$/.test(lex.text()))
+      // multiline comments containing line terminators count
+      // as line terminators.
+      self.isLineTerminatorHere = true;
+  } while (! lex.isEOF() && ! lex.isToken());
+  self.newToken = lex;
+  self.pos = lex.startPos();
+};
+
+JSParser.prototype.getParseError = function (expecting, found) {
+  var msg = (expecting ? "Expected " + expecting : "Unexpected token");
+  if (this.oldToken)
+    msg += " after " + this.oldToken;
+  var pos = this.pos;
+  msg += " at position " + pos;
+  msg += ", found " + (found || this.newToken);
+  return new Error(msg);
+};
+
+JSParser.prototype.getSyntaxTree = function () {
   var NIL = new ParseNode('nil', []);
 
   var booleanFlaggedParser = function (parserConstructFunc) {
@@ -636,5 +678,5 @@ var parse = function (tokenizer) {
         // If not at EOF, complain "expecting statement"
         expecting('statement', lookAheadTokenClass("EOF"))));
 
-  return program.parse(tokenizer);
+  return program.parse(this);
 };

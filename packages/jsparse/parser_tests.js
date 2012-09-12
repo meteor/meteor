@@ -130,10 +130,7 @@ var stringifyTree = function (tree) {
 };
 
 var parseToTreeString = function (code) {
-  var lexer = new Lexer(code);
-  var tokenizer = new Tokenizer(code);
-  var tree = parse(tokenizer);
-  return stringifyTree(tree);
+  return stringifyTree(new JSParser(code).getSyntaxTree());
 };
 
 var makeTester = function (test) {
@@ -155,9 +152,8 @@ var makeTester = function (test) {
           lexer.divisionPermitted = false;
       }
 
-      lexer = new Lexer(code);
-      var tokenizer = new Tokenizer(lexer);
-      var actualTree = parse(tokenizer);
+      var parser = new JSParser(code);
+      var actualTree = parser.getSyntaxTree();
 
       var nextTokenIndex = 0;
       var check = function (tree) {
@@ -191,7 +187,7 @@ var makeTester = function (test) {
       if (nextTokenIndex !== allTokensInOrder.length)
         test.fail("Too few tokens: " + nextTokenIndex);
 
-      test.equal(lexer.pos, code.length);
+      test.equal(parser.pos, code.length);
 
       test.equal(stringifyTree(actualTree),
                  stringifyTree(expectedTree), code);
@@ -215,9 +211,7 @@ var makeTester = function (test) {
       var parsed = false;
       var error = null;
       try {
-        var lexer = new Lexer(code);
-        var tokenizer = new Tokenizer(code);
-        var tree = parse(tokenizer);
+        var tree = new JSParser(code).getSyntaxTree();
         parsed = true;
       } catch (e) {
         error = e;
@@ -254,10 +248,9 @@ var makeTester = function (test) {
 
       var parsed = false;
       var error = null;
+      var parser = new JSParser(code);
       try {
-        var lexer = new Lexer(code);
-        var tokenizer = new Tokenizer(code);
-        var tree = parse(tokenizer);
+        var tree = parser.getSyntaxTree();
         parsed = true;
       } catch (e) {
         error = e;
@@ -265,8 +258,8 @@ var makeTester = function (test) {
       test.isFalse(parsed);
       test.isTrue(error);
       if (! parsed && error) {
-        var after = tokenizer.oldToken;
-        found = (found || tokenizer.newToken);
+        var after = parser.oldToken;
+        found = (found || parser.newToken);
         test.equal(error.message,
                    constructMessage(whatExpected, pos, found, after));
       }

@@ -32,56 +32,6 @@ _.extend(Parser.prototype, {
   }
 });
 
-Tokenizer = function (codeOrLexer) {
-  // XXX rethink codeOrLexer later
-  this.lexer = (codeOrLexer instanceof Lexer ? codeOrLexer :
-                new Lexer(codeOrLexer));
-  this.newToken = null;
-  this.oldToken = null;
-  this.pos = 0;
-  this.isLineTerminatorHere = false;
-
-  // load newToken
-  this.consume();
-};
-
-// UPDATE DOCS
-// consumes the token (peekType, peekText) and moves
-// it into (type, text), loading the next token
-// into (peekType, peekText).  A token is a lexeme
-// besides WHITESPACE, COMMENT, and NEWLINE.
-Tokenizer.prototype.consume = function () {
-  var self = this;
-  var lexer = self.lexer;
-  self.oldToken = self.newToken;
-  self.isLineTerminatorHere = false;
-  var lex;
-  do {
-    lex = lexer.next();
-    if (lex.isError())
-      throw new Error("Bad token at position " + lex.startPos() +
-                      ", text `" + lex.text() + "`");
-    else if (lex.type() === "NEWLINE")
-      self.isLineTerminatorHere = true;
-    else if (lex.type() === "COMMENT" && ! /^.*$/.test(lex.text()))
-      // multiline comments containing line terminators count
-      // as line terminators.
-      self.isLineTerminatorHere = true;
-  } while (! lex.isEOF() && ! lex.isToken());
-  self.newToken = lex;
-  self.pos = lex.startPos();
-};
-
-Tokenizer.prototype.getParseError = function (expecting, found) {
-  var msg = (expecting ? "Expected " + expecting : "Unexpected token");
-  if (this.oldToken)
-    msg += " after " + this.oldToken;
-  var pos = this.pos;
-  msg += " at position " + pos;
-  msg += ", found " + (found || this.newToken);
-  return new Error(msg);
-};
-
 // A parser that consume()s has to succeed.
 // Similarly, a parser that fails can't have consumed.
 
@@ -102,7 +52,7 @@ var _tokenClassImpl = function (type, text, onlyLook) {
       if (t.newToken.type() == type && (!text || textSet[t.newToken.text()])) {
         if (onlyLook)
           return [];
-        t.consume();
+        t.consumeNewToken();
         return t.oldToken;
       }
       return null;
