@@ -909,7 +909,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
       later(function () {
         var frag = Spark.render(_.bind(itemFunc, null, item));
         DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
-        var range = new LiveRange(Spark._TAG, frag);
+        var range = makeRange(Spark._ANNOTATION_LIST_ITEM, frag);
 
         if (! itemRanges.length) {
           Spark.finalize(outerRange.replaceContents(frag));
