@@ -19,18 +19,16 @@ var Parser = function (expecting, runFunc) {
   this._run = runFunc;
 };
 
-_.extend(Parser.prototype, {
-  parse: function (t, options) {
-    var result = this._run(t);
+Parser.prototype.parse = function (t, options) {
+  var result = this._run(t);
 
-    if (options) {
-      if (options.required && ! result)
-        throw t.getParseError(this.expecting);
-    }
-
-    return result;
+  if (options) {
+    if (options.required && ! result)
+      throw t.getParseError(this.expecting);
   }
-});
+
+  return result;
+};
 
 // A parser that consume()s has to succeed.
 // Similarly, a parser that fails can't have consumed.

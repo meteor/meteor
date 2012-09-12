@@ -1,4 +1,5 @@
-////////// HELPERS
+
+(function () {
 
 var regexEscape = function (str) {
   return str.replace(/[\][^$\\.*+?(){}|]/g, '\\$&');
@@ -138,14 +139,14 @@ var keywordsBeforeDivision = makeSet('this'.split(' '));
 var guessIsDivisionPermittedAfterToken = function (tok) {
   // Figure out if a '/' character should be interpreted as division
   // rather than the start of a regular expression when it follows the
-  // token (type,text), which must be a token lexeme per
-  // Lexer.isToken.  The beginning of section 7 of the spec briefly
+  // token, which must be a token lexeme per isToken().
+  // The beginning of section 7 of the spec briefly
   // explains what's going on; basically the lexical grammar can't
   // distinguish, for example, `e/f/g` (division) from `e=/f/g`
   // (assignment of a regular expression), among many other variations.
   //
   // THIS IS ONLY A HEURISTIC, though it will rarely fail.
-  // Here are the two cases I know of:
+  // Here are the two cases I know of where help from the parser is needed:
   //  - if (foo)
   //        /ba/.test("banana") && console.log("matches");
   //    (Close paren of a control structure before a statement starting with
@@ -233,12 +234,14 @@ Lexeme.prototype.toString = function () {
 //           Thie flag can be read and set manually to affect the
 //           parsing of the next token.
 
-var Lexer = function (code) {
+JSLexer = function (code) {
   this.code = code;
   this.pos = 0;
   this.divisionPermitted = false;
   this.lastLexeme = null;
 };
+
+JSLexer.Lexeme = Lexeme;
 
 // XXXX UPDATE DOCS
 // Return the type of the next of lexeme starting at `pos`, and advance
@@ -255,7 +258,7 @@ var Lexer = function (code) {
 // Other Tokens: IDENTIFIER, KEYWORD, PUNCTUATION
 // ... and ERROR
 
-Lexer.prototype.next = function () {
+JSLexer.prototype.next = function () {
   var self = this;
   var code = self.code;
   var origPos = self.pos;
@@ -282,7 +285,7 @@ Lexer.prototype.next = function () {
       pos = origPos + 1;
     }
     self.pos = pos;
-    var lex = new Lexeme(origPos, type, code.substring(origPos, pos));
+    var lex = new JSLexer.Lexeme(origPos, type, code.substring(origPos, pos));
     if (self.lastLexeme) {
       self.lastLexeme.next = lex;
       lex.prev = self.lastLexeme;
@@ -382,3 +385,5 @@ Lexer.prototype.next = function () {
   var word = code.substring(origPos, pos);
   return lexeme(keywordLookup[' '+word] || 'IDENTIFIER');
 };
+
+})();

@@ -4,8 +4,18 @@
 //  - object literal trailing comma
 //  - object literal get/set
 
-var JSParser = function (code) {
-  this.lexer = new Lexer(code);
+(function () {
+
+var makeSet = function (array) {
+  var s = {};
+  for (var i = 0, N = array.length; i < N; i++)
+    s[array[i]] = true;
+  return s;
+};
+
+
+JSParser = function (code) {
+  this.lexer = new JSLexer(code);
   this.oldToken = null;
   this.newToken = null;
   this.pos = 0;
@@ -722,3 +732,5 @@ JSParser.prototype.getSyntaxTree = function () {
 
   return program.parse(this);
 };
+
+})();

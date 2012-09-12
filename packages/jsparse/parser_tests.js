@@ -140,7 +140,7 @@ var makeTester = function (test) {
       var expectedTree = parseTreeString(expectedTreeString);
 
       // first use lexer to collect all tokens
-      var lexer = new Lexer(code);
+      var lexer = new JSLexer(code);
       var allTokensInOrder = [];
       while (! lexer.next().isEOF()) {
         var lex = lexer.lastLexeme;
