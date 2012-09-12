@@ -223,10 +223,9 @@ var binaryLeft = function (termParser, opParser) {
 // `x` => ["x"]
 // `x,y` => ["x", ",", "y"]
 // `x,y,z` => ["x", ",", "y", ",", "z"]
-// Respects `unpack`.
 var list = function (itemParser, sepParser) {
   var push = function(array, newThing) {
-    if (newThing.unpack)
+    if (isArray(newThing))
       array.push.apply(array, newThing);
     else
       array.push(newThing);
@@ -272,25 +271,13 @@ var seq = function (/*parsers*/) {
         if (! r)
           return null;
 
-        if (r.unpack) // append array!
+        if (isArray(r)) // append array!
           result.push.apply(result, r);
         else
           result.push(r);
       }
       return result;
     });
-};
-
-var unpack = function (arrayOrParser) {
-  if (isArray(arrayOrParser)) {
-    arrayOrParser.unpack = true;
-    return arrayOrParser;
-  }
-  return revalue(arrayOrParser, function (v) {
-    if (v && isArray(v))
-      v.unpack = true;
-    return v;
-  });
 };
 
 // lookAhead parser must never consume

@@ -86,23 +86,20 @@ var parse = function (tokenizer) {
   var arrayLiteral =
         node('array',
              seq(token('['),
-                 unpack(opt(list(token(',')))),
-                 unpack(
-                   opt(
-                     list(
-                       expecting(
-                         'expression',
-                         or(assignmentExpressionPtr,
-                            // count a peeked-at ']' as an expression
-                            // to support elisions at end, e.g.
-                            // `[1,2,3,,,,,,]`.  Because it's unpacked,
-                            // the look-ahead won't show up in the
-                            // parse tree.
-                            unpack(lookAheadToken(']')))),
-                       // list seperator is one or more commas
-                       // to support elision
-                       unpack(list(token(',')))),
-                     lookAheadToken(']'))),
+                 opt(list(token(','))),
+                 opt(
+                   list(
+                     expecting(
+                       'expression',
+                       or(assignmentExpressionPtr,
+                          // count a peeked-at ']' as an expression
+                          // to support elisions at end, e.g.
+                          // `[1,2,3,,,,,,]`.
+                          lookAheadToken(']'))),
+                     // list seperator is one or more commas
+                     // to support elision
+                     list(token(','))),
+                   lookAheadToken(']')),
                  token(']')));
 
   var propertyName = expecting('propertyName', or(
@@ -116,8 +113,8 @@ var parse = function (tokenizer) {
   var objectLiteral =
         node('object',
               seq(token('{'),
-                  unpack(opt(list(nameColonValue,
-                                  token(',')), lookAheadToken('}'))),
+                  opt(list(nameColonValue,
+                           token(',')), lookAheadToken('}')),
                   token('}')));
 
   // not memoized; only call at construction time
@@ -127,11 +124,11 @@ var parse = function (tokenizer) {
                 or(tokenClass('IDENTIFIER'),
                    revalue(lookAheadToken('('), ParseNode.NIL))),
                token('('),
-               unpack(opt(list(tokenClass('IDENTIFIER'), token(',')),
-                          lookAheadToken(')'))),
+               opt(list(tokenClass('IDENTIFIER'), token(',')),
+                   lookAheadToken(')')),
                token(')'),
                token('{'),
-               unpack(functionBodyPtr),
+               functionBodyPtr,
                token('}'));
   };
   var functionExpression = node('functionExpr',
@@ -155,8 +152,8 @@ var parse = function (tokenizer) {
   var dotEnding = seq(token('.'), tokenClass('IDENTIFIER'));
   var bracketEnding = seq(token('['), expressionPtr, token(']'));
   var callArgs = seq(token('('),
-                     unpack(opt(list(assignmentExpressionPtr,
-                                     token(',')), lookAheadToken(')'))),
+                     opt(list(assignmentExpressionPtr,
+                              token(',')), lookAheadToken(')')),
                      token(')'));
 
   var newKeyword = token('new');
@@ -233,9 +230,9 @@ var parse = function (tokenizer) {
     nodeIfMultipart(
       'postfix',
       seq(lhsExpression,
-          unpack(opt(lookAhead(noLineTerminatorHere,
-                               lookAhead(postfixLookahead,
-                                         postfixToken)))))));
+          opt(lookAhead(noLineTerminatorHere,
+                        lookAhead(postfixLookahead,
+                                  postfixToken))))));
   var unaryList = opt(list(or(token('delete void typeof'),
                               preSlashToken('++ -- + - ~ !', false))));
   var unaryExpression = new Parser(
@@ -292,10 +289,10 @@ var parse = function (tokenizer) {
         'expression',
         nodeIfMultipart(
           'ternary',
-          seq(binaryExpressionFunc(noIn), unpack(opt(seq(
+          seq(binaryExpressionFunc(noIn), opt(seq(
             token('?'),
             assignmentExpressionPtrFunc(false), token(':'),
-            assignmentExpressionPtrFunc(noIn)))))));
+            assignmentExpressionPtrFunc(noIn))))));
     });
   var conditionalExpression = conditionalExpressionFunc(false);
 
@@ -417,21 +414,21 @@ var parse = function (tokenizer) {
   var emptyStatement = node('emptyStmnt', seq(token(';'))); // not maybeSemicolon
 
   var blockStatement = expecting('block', node('blockStmnt', seq(
-    token('{'), unpack(opt(statements, lookAheadToken('}'))),
+    token('{'), opt(statements, lookAheadToken('}')),
     token('}'))));
 
   var varDeclFunc = memoizeBooleanFunc(function (noIn) {
     return node(
       'varDecl',
       seq(tokenClass('IDENTIFIER'),
-          unpack(opt(seq(token('='),
-                         assignmentExpressionFunc(noIn))))));
+          opt(seq(token('='),
+                  assignmentExpressionFunc(noIn)))));
   });
   var varDecl = varDeclFunc(false);
 
   var variableStatement = node(
     'varStmnt',
-    seq(token('var'), unpack(list(varDecl, token(','))),
+    seq(token('var'), list(varDecl, token(',')),
         maybeSemicolon));
 
   // A paren that may be followed by a statement
@@ -442,7 +439,7 @@ var parse = function (tokenizer) {
     'ifStmnt',
     seq(token('if'), token('('), expression,
         closeParenBeforeStatement, statementPtr,
-        unpack(opt(seq(token('else'), statementPtr)))));
+        opt(seq(token('else'), statementPtr))));
 
   var secondThirdClauses = expecting(
     'semicolon',
@@ -461,17 +458,17 @@ var parse = function (tokenizer) {
            varDeclFunc(true),
            expecting(
              'commaOrIn',
-             or(unpack(inExpr),
-                unpack(seq(
-                  unpack(opt(
+             or(inExpr,
+                seq(
+                  opt(
                     seq(token(','),
-                        unpack(list(varDeclFunc(true), token(',')))),
-                    lookAheadToken(';'))),
-                  unpack(secondThirdClauses)))))),
+                        list(varDeclFunc(true), token(','))),
+                    lookAheadToken(';')),
+                  secondThirdClauses)))),
        // get the case where the first clause is empty out of the way.
        // the lookAhead's return value is the empty placeholder for the
        // missing expression.
-       seq(revalue(lookAheadToken(';'), ParseNode.NIL), unpack(secondThirdClauses)),
+       seq(revalue(lookAheadToken(';'), ParseNode.NIL), secondThirdClauses),
        // custom parser the non-var case because we have to
        // read the first expression before we know if there's
        // an "in".
@@ -563,22 +560,22 @@ var parse = function (tokenizer) {
   var switchCase = node(
     'case',
     seq(token('case'), expression, token(':'),
-        unpack(opt(statements, or(lookAheadToken('}'),
-                                  lookAheadToken('case default'))))));
+        opt(statements, or(lookAheadToken('}'),
+                           lookAheadToken('case default')))));
   var switchDefault = node(
     'default',
     seq(token('default'), token(':'),
-        unpack(opt(statements, or(lookAheadToken('}'),
-                                  lookAheadToken('case'))))));
+        opt(statements, or(lookAheadToken('}'),
+                           lookAheadToken('case')))));
 
   var switchStatement = node(
     'switchStmnt',
     seq(token('switch'), token('('), expression, token(')'),
-        token('{'), unpack(opt(list(switchCase),
-                               or(lookAheadToken('}'),
-                                  lookAheadToken('default')))),
-        unpack(opt(seq(switchDefault,
-                       unpack(opt(list(switchCase)))))),
+        token('{'), opt(list(switchCase),
+                        or(lookAheadToken('}'),
+                           lookAheadToken('default'))),
+        opt(seq(switchDefault,
+                opt(list(switchCase)))),
         token('}')));
 
   var catchFinally = expecting(
@@ -596,7 +593,7 @@ var parse = function (tokenizer) {
                    constant(ParseNode.NIL)))));
   var tryStatement = node(
     'tryStmnt',
-    seq(token('try'), blockStatement, unpack(catchFinally)));
+    seq(token('try'), blockStatement, catchFinally));
   var debuggerStatement = node(
     'debuggerStmnt', seq(token('debugger'), maybeSemicolon));
 
@@ -629,7 +626,7 @@ var parse = function (tokenizer) {
                                    lookAheadToken('}')));
 
   var program = node('program',
-                      seq(unpack(opt(sourceElements)),
+                      seq(opt(sourceElements),
                           // we rely on the fact that opt(sourceElements)
                           // will never fail, and non-first arguments
                           // to seq are required to succeed -- meaning
@@ -643,7 +640,7 @@ var parse = function (tokenizer) {
                                               // eat the ending "EOF" so that
                                               // our position is updated
                                               t.consume();
-                                              return unpack([]);
+                                              return v;
                                             }))));
 
   return program.parse(tokenizer);
