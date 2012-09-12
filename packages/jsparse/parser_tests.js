@@ -154,9 +154,9 @@ var makeTester = function (test) {
         if (regexTokenHints && regexTokenHints[allTokensInOrder.length])
           lexer.divisionPermitted = false;
       }
-      lexer = new Lexer(code);
 
-      var tokenizer = new Tokenizer(code);
+      lexer = new Lexer(code);
+      var tokenizer = new Tokenizer(lexer);
       var actualTree = parse(tokenizer);
 
       var nextTokenIndex = 0;
@@ -191,7 +191,7 @@ var makeTester = function (test) {
       if (nextTokenIndex !== allTokensInOrder.length)
         test.fail("Too few tokens: " + nextTokenIndex);
 
-      test.equal(tokenizer.pos, code.length);
+      test.equal(lexer.pos, code.length);
 
       test.equal(stringifyTree(actualTree),
                  stringifyTree(expectedTree), code);
@@ -242,7 +242,7 @@ var makeTester = function (test) {
     // in the error message.
     badParse: function (code) {
       var constructMessage = function (whatExpected, pos, found, after) {
-        return "Expected " + whatExpected + " after " + after +
+        return "Expected " + whatExpected + (after ? " after " + after : "") +
           " at position " + pos + ", found " + found;
       };
       var pos = code.indexOf('`');
@@ -630,7 +630,8 @@ Tinytest.add("jsparse - bad parses", function (test) {
     'foo;`semicolon`:;',
     '1;`statement`=',
     'a+b`semicolon`=c;',
-    'for(1+1 `semicolon`in {});'
+    'for(1+1 `semicolon`in {});',
+    '`statement`='
   ];
   _.each(trials, function (tr) {
     tester.badParse(tr);

@@ -486,7 +486,7 @@ var parse = function (tokenizer) {
              // we need a left-hand-side expression for a
              // `for (x in y)` loop.
              if (! isExpressionLHS(firstExpr))
-               throw parseError(t, secondThirdClauses);
+               throw t.getParseError("semicolon");
              // if we don't see 'in' at this point, it's probably
              // a missing semicolon
              rest = inExprExpectingSemi.parse(t, {required: true});
@@ -550,7 +550,7 @@ var parse = function (tokenizer) {
                and(not(lookAheadTokenClass("EOF")),
                    new Parser(null,
                               function (t) {
-                                throw parseError(t, expression, 'end of line');
+                                throw t.getParseError('expression', 'end of line');
                               }))),
             expression),
         maybeSemicolon));

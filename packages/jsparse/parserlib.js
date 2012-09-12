@@ -25,7 +25,7 @@ _.extend(Parser.prototype, {
 
     if (options) {
       if (options.required && ! result)
-        throw parseError(t, this);
+        throw t.getParseError(this.expecting);
     }
 
     return result;
@@ -72,13 +72,14 @@ Tokenizer.prototype.consume = function () {
   self.pos = lex.startPos();
 };
 
-Tokenizer.prototype.getErrorMessage = function (expecting, found) {
+Tokenizer.prototype.getParseError = function (expecting, found) {
   var msg = (expecting ? "Expected " + expecting : "Unexpected token");
-  msg += " after " + this.oldToken;
+  if (this.oldToken)
+    msg += " after " + this.oldToken;
   var pos = this.pos;
   msg += " at position " + pos;
   msg += ", found " + (found || this.newToken);
-  return msg;
+  return new Error(msg);
 };
 
 // A parser that consume()s has to succeed.
@@ -88,12 +89,6 @@ Tokenizer.prototype.getErrorMessage = function (expecting, found) {
 var expecting = function (expecting, parser) {
   parser.expecting = expecting;
   return parser;
-};
-
-// Call this as `throw parseError(...)`.
-// `expected` is a parser, `after` is a string.
-var parseError = function (t, expectedParser, found) {
-  return new Error(t.getErrorMessage(expectedParser.expecting, found));
 };
 
 ///// TERMINAL PARSER CONSTRUCTORS
@@ -222,7 +217,7 @@ var unary = function (name, termParser, opParser) {
     function (t) {
       var unaries = unaryList.parse(t);
       // if we have unaries, we are committed and
-      // have to match an expression or error.
+      // have to match a term or error.
       var result = termParser.parse(
         t, {required: unaries.length});
       if (! result)
