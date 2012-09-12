@@ -184,9 +184,9 @@ JSParser.prototype.getSyntaxTree = function () {
                  token(']')));
 
   var propertyName = expecting('propertyName', or(
-    node('idPropName', seq(tokenType('IDENTIFIER'))),
-    node('numPropName', seq(tokenType('NUMBER'))),
-    node('strPropName', seq(tokenType('STRING')))));
+    node('idPropName', tokenType('IDENTIFIER')),
+    node('numPropName', tokenType('NUMBER')),
+    node('strPropName', tokenType('STRING'))));
   var nameColonValue = expecting(
     'propertyName',
     node('prop', seq(propertyName, token(':'), assignmentExpressionPtr)));
@@ -218,13 +218,13 @@ JSParser.prototype.getSyntaxTree = function () {
 
   var primaryOrFunctionExpression =
         expecting('expression',
-                  or(node('this', token('this')), // XXXX remove unnecessary seqs in node(...) args
-                     node('identifier', seq(tokenType('IDENTIFIER'))),
-                     node('number', seq(tokenType('NUMBER'))),
-                     node('boolean', seq(tokenType('BOOLEAN'))),
-                     node('null', seq(tokenType('NULL'))),
-                     node('regex', seq(tokenType('REGEX'))),
-                     node('string', seq(tokenType('STRING'))),
+                  or(node('this', token('this')),
+                     node('identifier', tokenType('IDENTIFIER')),
+                     node('number', tokenType('NUMBER')),
+                     node('boolean', tokenType('BOOLEAN')),
+                     node('null', tokenType('NULL')),
+                     node('regex', tokenType('REGEX')),
+                     node('string', tokenType('STRING')),
                      node('parens',
                           seq(token('('), expressionPtr, token(')'))),
                      arrayLiteral,
@@ -493,7 +493,7 @@ JSParser.prototype.getSyntaxTree = function () {
                            [expr.children[0]].concat(rest));
     });
 
-  var emptyStatement = node('emptyStmnt', seq(token(';'))); // not maybeSemicolon
+  var emptyStatement = node('emptyStmnt', token(';')); // required semicolon
 
   var blockStatement = expecting('block', node('blockStmnt', seq(
     token('{'), or(lookAheadToken('}'), statements),
