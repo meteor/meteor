@@ -102,13 +102,19 @@ Parser = function (expecting, runFunc) {
   this._run = runFunc;
 };
 
-Parser.prototype.parse = function (t, options) {
+Parser.prototype.parse = function (t) {
+  return this._run(t);
+};
+
+Parser.prototype.parseRequired = function (t) {
+  return this.parseRequiredIf(t, true);
+};
+
+Parser.prototype.parseRequiredIf = function (t, required) {
   var result = this._run(t);
 
-  if (options) {
-    if (options.required && ! result)
-      throw t.getParseError(this.expecting);
-  }
+  if (required && ! result)
+    throw t.getParseError(this.expecting);
 
   return result;
 };
@@ -192,7 +198,7 @@ Parsers.binaryLeft = function (name, termParser, opParsers) {
       while ((op = opParser.parse(t))) {
         result = new ParseNode(
           name,
-          [result, op, termParser.parse(t, {required: true})]);
+          [result, op, termParser.parseRequired(t)]);
       }
       return result;
     });
@@ -206,8 +212,7 @@ Parsers.unary = function (name, termParser, opParser) {
       var unaries = unaryList.parse(t);
       // if we have unaries, we are committed and
       // have to match a term or error.
-      var result = termParser.parse(
-        t, {required: unaries.length});
+      var result = termParser.parseRequiredIf(t, unaries.length);
       if (! result)
         return null;
 
@@ -243,7 +248,7 @@ Parsers.list = function (itemParser, sepParser) {
         var sep;
         while ((sep = sepParser.parse(t))) {
           push(result, sep);
-          push(result, itemParser.parse(t, {required: true}));
+          push(result, itemParser.parseRequired(t));
         }
       } else {
         var item;
@@ -267,7 +272,7 @@ Parsers.seq = function (/*parsers*/) {
       for (var i = 0, N = args.length; i < N; i++) {
         // first item in sequence can fail, and we
         // fail (without error); after that, error on failure
-        var r = args[i].parse(t, {required: i > 0});
+        var r = args[i].parseRequiredIf(t, i > 0);
         if (! r)
           return null;
 

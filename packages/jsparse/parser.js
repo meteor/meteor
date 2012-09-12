@@ -306,8 +306,7 @@ JSParser.prototype.getSyntaxTree = function () {
       // and .foo add-ons.
       // if we have 'new' keywords, we are committed and must
       // match an expression or error.
-      var result = primaryOrFunctionExpression.parse(
-        t, {required: news.length});
+      var result = primaryOrFunctionExpression.parseRequiredIf(t, news.length);
       if (! result)
         return null;
 
@@ -432,8 +431,7 @@ JSParser.prototype.getSyntaxTree = function () {
           var op;
           while (isExpressionLHS(r) &&(op = assignOp.parse(t)))
             parts.push(op,
-                       conditionalExpressionMaybeNoIn[noIn].parse(
-                         t, {required: true}));
+                       conditionalExpressionMaybeNoIn[noIn].parseRequired(t));
 
           var result = parts.pop();
           while (parts.length) {
@@ -520,7 +518,7 @@ JSParser.prototype.getSyntaxTree = function () {
         // Fail now if we are looking at a colon, causing an
         // error message on input like `1+1:` of the same kind
         // you'd get without statement label parsing.
-        noColon.parse(t, {required: true});
+        noColon.parseRequired(t);
         return exprStmnt;
       }
 
@@ -612,7 +610,7 @@ JSParser.prototype.getSyntaxTree = function () {
                throw t.getParseError("semicolon");
              // if we don't see 'in' at this point, it's probably
              // a missing semicolon
-             rest = inExprExpectingSemi.parse(t, {required: true});
+             rest = inExprExpectingSemi.parseRequired(t);
            }
 
            return [firstExpr].concat(rest);
