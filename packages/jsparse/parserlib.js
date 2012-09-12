@@ -37,15 +37,12 @@ Tokenizer = function (codeOrLexer) {
   // XXX rethink codeOrLexer later
   this.lexer = (codeOrLexer instanceof Lexer ? codeOrLexer :
                 new Lexer(codeOrLexer));
-  this.peekType = null;
-  this.peekText = null;
-  this.tokenType = null;
-  this.tokenText = null;
-  this.lastPos = 0;
+  this.newToken = null;
+  this.oldToken = null;
   this.pos = 0;
   this.isLineTerminatorHere = false;
 
-  // load peekType and peekText
+  // load newToken
   this.consume();
 };
 
@@ -57,25 +54,23 @@ _.extend(Tokenizer.prototype, {
   consume: function () {
     var self = this;
     var lexer = self.lexer;
-    self.type = self.peekType;
-    self.text = self.peekText;
-    self.lastPos = self.pos;
+    self.oldToken = self.newToken;
     self.isLineTerminatorHere = false;
+    var lex;
     do {
-      lexer.next();
-      if (lexer.type === "ERROR")
-        throw new Error("Bad token at position " + lexer.lastPos +
-                        ", text `" + lexer.text + "`");
-      else if (lexer.type === "NEWLINE")
+      lex = lexer.next();
+      if (lex.isError())
+        throw new Error("Bad token at position " + lex.startPos() +
+                        ", text `" + lex.text() + "`");
+      else if (lex.type() === "NEWLINE")
         self.isLineTerminatorHere = true;
-      else if (lexer.type === "COMMENT" && ! /^.*$/.test(lexer.text))
+      else if (lex.type() === "COMMENT" && ! /^.*$/.test(lex.text()))
         // multiline comments containing line terminators count
         // as line terminators.
         self.isLineTerminatorHere = true;
-    } while (lexer.type !== "EOF" && ! Lexer.isToken(lexer.type));
-    self.peekType = lexer.type;
-    self.peekText = lexer.text;
-    self.pos = lexer.lastPos;
+    } while (! lex.isEOF() && ! lex.isToken());
+    self.newToken = lex;
+    self.pos = lex.startPos();
   }
 });
 
@@ -96,10 +91,10 @@ var parseError = function (t, expectedParser, found) {
              // all parsers that might error should have descriptions,
              // but just in case:
              "Unexpected token");
-  str += " after `" + t.text + "`";
+  str += " after " + t.oldToken;
   var pos = t.pos;
   str += " at position " + pos;
-  str += ", found " + (found || (t.peekText ? "`" + t.peekText + "`" : "EOF"));
+  str += ", found " + (found || t.newToken);
   var e = new Error(str);
   return e;
 };
@@ -112,12 +107,11 @@ var _tokenClassImpl = function (type, text, onlyLook) {
   return new Parser(
     expecting,
     function (t) {
-      if (t.peekType == type && (!text || textSet[t.peekText])) {
+      if (t.newToken.type() == type && (!text || textSet[t.newToken.text()])) {
         if (onlyLook)
           return [];
-        var ret = {text: t.peekText, pos: t.pos};
         t.consume();
-        return ret;
+        return t.oldToken;
       }
       return null;
     });

@@ -125,7 +125,7 @@ var stringifyTree = function (tree) {
 
   // Treat a token object or string as a token.
   if (tree.text)
-    tree = tree.text;
+    tree = tree.text();
   return escapeTokenString(tree);
 };
 
@@ -145,11 +145,12 @@ var makeTester = function (test) {
       // first use lexer to collect all tokens
       var lexer = new Lexer(code);
       var allTokensInOrder = [];
-      while (lexer.next() !== 'EOF') {
-        if (lexer.type === 'ERROR')
-          test.fail("Lexer error at " + lexer.lastPos);
-        if (Lexer.isToken(lexer.type))
-          allTokensInOrder.push({ pos: lexer.lastPos, text: lexer.text });
+      while (! lexer.next().isEOF()) {
+        var lex = lexer.lastLexeme;
+        if (lex.isError())
+          test.fail("Lexer error at " + lex.startPos());
+        if (lex.isToken())
+          allTokensInOrder.push(lex);
         if (regexTokenHints && regexTokenHints[allTokensInOrder.length])
           lexer.divisionPermitted = false;
       }
@@ -167,20 +168,19 @@ var makeTester = function (test) {
                  allNodeNamesSet[nodeName] === true))
             test.fail("Not a node name: " + nodeName);
           _.each(tree.children, check);
-        } else if (typeof tree === 'object' && tree.text &&
-                   (typeof tree.pos === 'number')) {
+        } else if (typeof tree === 'object' &&
+                   typeof tree.text === 'function') {
           // This is a TOKEN (terminal).
           // Make sure we are visiting every token once, in order.
           if (nextTokenIndex >= allTokensInOrder.length)
             test.fail("Too many tokens: " + (nextTokenIndex + 1));
           var referenceToken = allTokensInOrder[nextTokenIndex++];
-          if (tree.text !== referenceToken.text)
-            test.fail(tree.text + " !== " + referenceToken.text);
-          if (tree.pos !== referenceToken.pos)
-            test.fail(tree.pos + " !== " + referenceToken.pos);
-          if (code.substring(tree.pos,
-                             tree.pos + tree.text.length) !== tree.text)
-            test.fail("Didn't see " + tree.text + " at " + tree.pos +
+          if (tree.text() !== referenceToken.text())
+            test.fail(tree.text() + " !== " + referenceToken.text());
+          if (tree.startPos() !== referenceToken.startPos())
+            test.fail(tree.startPos() + " !== " + referenceToken.startPos());
+          if (code.substring(tree.startPos(), tree.endPos()) !== tree.text())
+            test.fail("Didn't see " + tree.text() + " at " + tree.startPos() +
                       " in " + code);
         } else {
           test.fail("Unknown tree part: " + tree);
@@ -190,6 +190,8 @@ var makeTester = function (test) {
       check(actualTree);
       if (nextTokenIndex !== allTokensInOrder.length)
         test.fail("Too few tokens: " + nextTokenIndex);
+
+      test.equal(tokenizer.pos, code.length);
 
       test.equal(stringifyTree(actualTree),
                  stringifyTree(expectedTree), code);
@@ -240,8 +242,8 @@ var makeTester = function (test) {
     // in the error message.
     badParse: function (code) {
       var constructMessage = function (whatExpected, pos, found, after) {
-        return "Expected " + whatExpected + " after `" + after +
-          "` at position " + pos + ", found " + found;
+        return "Expected " + whatExpected + " after " + after +
+          " at position " + pos + ", found " + found;
       };
       var pos = code.indexOf('`');
 
@@ -262,9 +264,8 @@ var makeTester = function (test) {
       }
       test.isFalse(parsed);
       test.isTrue(error);
-      var after = tokenizer.text;
-      found = (found || (tokenizer.peekText ? '`' + tokenizer.peekText + '`'
-                         : 'EOF'));
+      var after = tokenizer.oldToken;
+      found = (found || tokenizer.newToken);
       test.equal(error.message,
                  constructMessage(whatExpected, pos, found, after));
     }
@@ -574,7 +575,9 @@ Tinytest.add("jsparse - syntax forms", function (test) {
      "assignment(identifier(e) -= assignment(identifier(f) <<= " +
      "assignment(identifier(g) >>= assignment(identifier(h) >>>= " +
      "assignment(identifier(i) &= assignment(identifier(j) ^= " +
-     "assignment(identifier(k) |= identifier(l)))))))))))) ;()))"]
+     "assignment(identifier(k) |= identifier(l)))))))))))) ;()))"],
+    ["1;\n\n\n\n/* foo */\n// bar\n", // trailing whitespace and comments
+     "program(expressionStmnt(number(1) ;))"]
   ];
   _.each(trials, function (tr) {
     tester.goodParse(tr[0], tr[1]);
@@ -602,6 +605,7 @@ Tinytest.add("jsparse - bad parses", function (test) {
     'break `semicolon`1+1;',
     'throw`expression`',
     'throw`expression`;',
+    'throw\n`expression`',
     'throw\n`expression``end of line`e',
     'throw `expression`=;',
     'with(`expression`);',
@@ -622,7 +626,7 @@ Tinytest.add("jsparse - bad parses", function (test) {
     '({1:2,`name:value`',
     'x.`IDENTIFIER`true',
     'foo;`semicolon`:;',
-    'throw`expression`'
+    '1;`statement`='
   ];
   _.each(trials, function (tr) {
     tester.badParse(tr);

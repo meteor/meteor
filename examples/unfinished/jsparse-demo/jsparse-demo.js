@@ -41,16 +41,14 @@ if (Meteor.is_client) {
     try {
       tree = parse(new Tokenizer(lexer)) || [];
     } catch (parseError) {
-      var errorPos = lexer.lastPos;
-      var errorLen = lexer.text.length;
+      var errorLexeme = lexer.lastLexeme;
 
-      html = Handlebars._escape(input.substring(0, errorPos));
+      html = Handlebars._escape(
+        input.substring(0, errorLexeme.startPos()));
       html += Spark.setDataContext(
-        {errorPos: errorPos,
-         errorLen: errorLen},
+        errorLexeme,
         '<span class="parseerror">' +
-          Handlebars._escape(input.substring(errorPos, errorPos + errorLen) ||
-                             '<EOF>') +
+          Handlebars._escape(errorLexeme.text() || '<EOF>') +
           '</span>');
       html = html.replace(/(?!.)\s/g, '<br>');
       html += '<div class="parseerrormessage">' +
@@ -77,9 +75,9 @@ if (Meteor.is_client) {
           _.each(unclosedInfos, function (info) {
             info.endPos = curPos;
           });
-          curPos = obj.pos + obj.text.length;
+          curPos = obj.endPos();
           unclosedInfos.length = 0;
-          var text = obj.text;
+          var text = obj.text();
           // insert zero-width spaces to allow wrapping
           text = text.replace(/.{20}/g, "$&\n");
           text = Handlebars._escape(text);
@@ -117,10 +115,7 @@ if (Meteor.is_client) {
       event.stopImmediatePropagation();
     },
     'click .box.token': function (event) {
-      var token = this;
-      var startPos = token.pos;
-      var endPos = startPos + token.text.length;
-      selectInputText(startPos, endPos);
+      selectInputText(this.startPos(), this.endPos());
       return false;
     },
     'click .box.named': function (event) {
@@ -128,9 +123,7 @@ if (Meteor.is_client) {
       return false;
     },
     'click .parseerror': function (event) {
-      var startPos = this.errorPos;
-      var endPos = startPos + this.errorLen;
-      selectInputText(startPos, endPos);
+      selectInputText(this.startPos(), this.endPos());
       return false;
     }
   });

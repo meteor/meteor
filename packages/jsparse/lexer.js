@@ -135,7 +135,7 @@ var nonTokenTypes = makeSet('WHITESPACE COMMENT NEWLINE EOF ERROR'.split(' '));
 var punctuationBeforeDivision = makeSet('] ) } ++ --'.split(' '));
 var keywordsBeforeDivision = makeSet('this'.split(' '));
 
-var guessIsDivisionPermittedAfterToken = function (type, text) {
+var guessIsDivisionPermittedAfterToken = function (tok) {
   // Figure out if a '/' character should be interpreted as division
   // rather than the start of a regular expression when it follows the
   // token (type,text), which must be a token lexeme per
@@ -154,13 +154,13 @@ var guessIsDivisionPermittedAfterToken = function (type, text) {
   //  - ++ /foo/.abc
   //    (Prefix `++` or `--` before an expression starting with a regex
   //     literal.  This will run but I can't see any use for it.)
-  switch (type) {
+  switch (tok.type()) {
   case "PUNCTUATION":
     // few punctuators can end an expression, but e.g. `)`
-    return !! punctuationBeforeDivision[text];
+    return !! punctuationBeforeDivision[tok.text()];
   case "KEYWORD":
     // few keywords can end an expression, but e.g. `this`
-    return !! keywordsBeforeDivision[text];
+    return !! keywordsBeforeDivision[tok.text()];
   case "IDENTIFIER":
     return true;
   default: // literal
@@ -170,11 +170,51 @@ var guessIsDivisionPermittedAfterToken = function (type, text) {
 
 ////////// PUBLIC API
 
+var Lexeme = function (pos, type, text) {
+  this._pos = pos;
+  this._type = type;
+  this._text = text;
+};
+
+Lexeme.prototype.startPos = function () {
+  return this._pos;
+};
+
+Lexeme.prototype.endPos = function () {
+  return this._pos + this._text.length;
+};
+
+Lexeme.prototype.type = function () {
+  return this._type;
+};
+
+Lexeme.prototype.text = function () {
+  return this._text;
+};
+
+Lexeme.prototype.isToken = function () {
+  return ! nonTokenTypes[this._type];
+};
+
+Lexeme.prototype.isError = function () {
+  return this._type === "ERROR";
+};
+
+Lexeme.prototype.isEOF = function () {
+  return this._type === "EOF";
+};
+
+Lexeme.prototype.toString = function () {
+  return this.isError() ? "ERROR" :
+    this.isEOF() ? "EOF" : "`" + this.text() + "`";
+};
+
 // Create a Lexer for the given string of JavaScript code.
 //
 // A lexer keeps a pointer `pos` into the string that is
 // advanced when you ask for the next lexeme with `next()`.
 //
+// XXXXX UPDATE DOCS
 // Properties:
 //   code: Original JavaScript code string.
 //   pos:  Current index into the string.  You can assign to it
@@ -196,16 +236,11 @@ var guessIsDivisionPermittedAfterToken = function (type, text) {
 var Lexer = function (code) {
   this.code = code;
   this.pos = 0;
-  this.lastPos = 0;
-  this.text = "";
-  this.type = null;
   this.divisionPermitted = false;
+  this.lastLexeme = null;
 };
 
-Lexer.isToken = function (type) {
-  return ! nonTokenTypes[type];
-};
-
+// XXXX UPDATE DOCS
 // Return the type of the next of lexeme starting at `pos`, and advance
 // `pos` to the end of the lexeme.  The text of the lexeme is available
 // in `text`.  The text is always the substring of `code` between the
@@ -246,13 +281,12 @@ Lexer.prototype.next = function () {
       type = 'ERROR';
       pos = origPos + 1;
     }
-    self.lastPos = origPos;
     self.pos = pos;
-    self.text = code.substring(origPos, pos);
-    self.type = type;
-    if (Lexer.isToken(type))
-      self.divisionPermitted = guessIsDivisionPermittedAfterToken(type, self.text);
-    return type;
+    var lex = new Lexeme(origPos, type, code.substring(origPos, pos));
+    self.lastLexeme = lex;
+    if (lex.isToken())
+      self.divisionPermitted = guessIsDivisionPermittedAfterToken(lex);
+    return lex;
   };
 
   if (pos === code.length)

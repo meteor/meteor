@@ -546,16 +546,16 @@ var parse = function (tokenizer) {
   var throwStatement = node(
     'throwStmnt',
     seq(token('throw'),
-        and(new Parser(null,
-                       function (t) {
-                         var v = noLineTerminatorHere.parse(t);
-                         if (v)
-                           return v;
-                         if (t.peekText)
-                           throw parseError(t, expression, 'end of line');
-                         // EOF:
-                         return null;
-                       }), expression),
+        and(or(noLineTerminatorHere,
+               // If there is a line break here and more tokens after,
+               // we want to error appropriately.  `throw \n e` should
+               // complain about the "end of line", not the `e`.
+               and(not(lookAheadTokenClass("EOF")),
+                   new Parser(null,
+                              function (t) {
+                                throw parseError(t, expression, 'end of line');
+                              }))),
+            expression),
         maybeSemicolon));
 
   var withStatement = node(
@@ -627,7 +627,7 @@ var parse = function (tokenizer) {
   var functionDecl = node(
     'functionDecl', functionMaybeNameRequired[true]);
 
-  var sourceElement = or(statement, functionDecl);
+  var sourceElement = or(functionDecl, statement);
   var sourceElements = list(sourceElement);
 
   var functionBody = expecting(
@@ -636,20 +636,8 @@ var parse = function (tokenizer) {
   var program = node(
     'program',
     seq(opt(sourceElements),
-        // we rely on the fact that opt(sourceElements)
-        // will never fail, and non-first arguments
-        // to seq are required to succeed -- meaning
-        // this parser will never fail without throwing
-        // a parse error.
-        expecting('statement',
-                  mapResult(
-                    lookAheadTokenClass("EOF"),
-                    function (v, t) {
-                      // eat the ending "EOF" so that
-                      // our position is updated
-                      t.consume();
-                      return v;
-                    }))));
+        // If not at EOF, complain "expecting statement"
+        expecting('statement', lookAheadTokenClass("EOF"))));
 
   return program.parse(tokenizer);
 };
