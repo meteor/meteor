@@ -189,20 +189,20 @@ var or = function (/*parsers*/) {
 // `1+2` => ["binary", "1", "+", "2"]
 // `1+2+3` => ["binary", ["binary", "1", "+", "2"], "+", "3"]
 //
-// opParser can also be an array of op parsers from high to low
+// opParsers is an array of op parsers from high to low
 // precedence (tightest-binding first)
-var binaryLeft = function (name, termParser, opParser) {
-  if (isArray(opParser)) {
-    if (opParser.length === 1) {
-      // take single opParser out of its array
-      opParser = opParser[0];
-    } else {
-      // pop off last opParser (non-destructively) and replace
-      // termParser with a recursive binaryLeft on the remaining
-      // ops.
-      termParser = binaryLeft(name, termParser, opParser.slice(0, -1));
-      opParser = opParser[opParser.length - 1];
-    }
+var binaryLeft = function (name, termParser, opParsers) {
+  var opParser;
+
+  if (opParsers.length === 1) {
+    // take single opParser out of its array
+    opParser = opParsers[0];
+  } else {
+    // pop off last opParser (non-destructively) and replace
+    // termParser with a recursive binaryLeft on the remaining
+    // ops.
+    termParser = binaryLeft(name, termParser, opParsers.slice(0, -1));
+    opParser = opParsers[opParsers.length - 1];
   }
 
   return new Parser(
@@ -332,24 +332,11 @@ var opt = function (parser, afterLookAhead) {
                    or(parser, afterLookAhead ? afterLookAhead : seq()));
 };
 
-// Takes a parser and runs a function on its output
-// when the parser matches.
-// note: valueTransformFunc gets the tokenizer as a second argument.
-// This func is allowed to then run more parsers.
-var revalue = function (parser, valueTransformFunc) {
-  if (typeof valueTransformFunc !== 'function') {
-    var value = valueTransformFunc;
-    valueTransformFunc = function (v) {
-      return value;
-    };
-  }
-
+var mapResult = function (parser, func) {
   return new Parser(
     parser.expecting,
     function (t) {
       var v = parser.parse(t);
-      if (! v)
-        return null;
-      return valueTransformFunc(v, t);
+      return v ? func(v, t) : null;
     });
 };

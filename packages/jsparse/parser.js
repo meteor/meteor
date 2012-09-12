@@ -3,8 +3,6 @@
 // XXX unit tests
 
 // XXX SeqParser
-// XXX examine when revalue(...) takes a constant vs. func, break into two
-// XXX chain revalue(...)?  Chain other things?
 // XXX better way to declare parsers, including boolean flagged ones
 
 // What we don't have from ECMA-262 5.1:
@@ -39,17 +37,6 @@ var parse = function (tokenizer) {
           if (! result)
             t.lexer.divisionPermitted = oldValue;
         }
-      });
-  };
-
-  // Function that takes one-item arrays to their single item and names other
-  // arrays with `name`.  Works on parsers too.
-  var nodeIfMultipart = function (name, arrayParser) {
-    return revalue(
-      arrayParser,
-      function (parts) {
-        return (parts.length === 1) ?
-          parts[0] : new ParseNode(name, parts);
       });
   };
 
@@ -227,12 +214,15 @@ var parse = function (tokenizer) {
   var postfixLookahead = lookAheadToken('++ --');
   var postfixExpression = expecting(
     'expression',
-    nodeIfMultipart(
-      'postfix',
-      seq(lhsExpression,
-          opt(and(noLineTerminatorHere,
-                  postfixLookahead,
-                  postfixToken)))));
+    mapResult(seq(lhsExpression,
+                  opt(and(noLineTerminatorHere,
+                          postfixLookahead,
+                          postfixToken))),
+              function (v) {
+                if (v.length === 1)
+                  return v[0];
+                return new ParseNode('postfix', v);
+              }));
   var unaryList = opt(list(or(token('delete void typeof'),
                               preSlashToken('++ -- + - ~ !', false))));
   var unaryExpression = new Parser(
@@ -287,12 +277,17 @@ var parse = function (tokenizer) {
     function (noIn) {
       return expecting(
         'expression',
-        nodeIfMultipart(
-          'ternary',
-          seq(binaryExpressionFunc(noIn), opt(seq(
-            token('?'),
-            assignmentExpressionPtrFunc(false), token(':'),
-            assignmentExpressionPtrFunc(noIn))))));
+        mapResult(
+          seq(binaryExpressionFunc(noIn),
+              opt(seq(
+                token('?'),
+                assignmentExpressionPtrFunc(false), token(':'),
+                assignmentExpressionPtrFunc(noIn)))),
+          function (v) {
+            if (v.length === 1)
+              return v[0];
+            return new ParseNode('ternary', v);
+          }));
     });
   var conditionalExpression = conditionalExpressionFunc(false);
 
@@ -333,9 +328,13 @@ var parse = function (tokenizer) {
     function (noIn) {
       return expecting(
         'expression',
-        nodeIfMultipart(
-          'comma',
-          list(assignmentExpressionFunc(noIn), token(','))));
+        mapResult(
+          list(assignmentExpressionFunc(noIn), token(',')),
+          function (v) {
+            if (v.length === 1)
+              return v[0];
+            return new ParseNode('comma', v);
+          }));
     });
   var expression = expressionFunc(false);
 
@@ -454,7 +453,7 @@ var parse = function (tokenizer) {
   var inExpr = seq(token('in'), expression);
   var inExprExpectingSemi = expecting('semicolon',
                                       seq(token('in'), expression));
-  var forSpec = revalue(node(
+  var forSpec = mapResult(node(
     'forSpec',
     or(seq(token('var'),
            varDeclFunc(true),
@@ -494,25 +493,25 @@ var parse = function (tokenizer) {
 
            return [firstExpr].concat(rest);
          }))),
-                        function (clauses) {
-                          // There are four kinds of for-loop, and we call the
-                          // part between the parens one of forSpec, forVarSpec,
-                          // forInSpec, and forVarInSpec.  Having parsed it
-                          // already, we rewrite the node name based on how
-                          // many items came out.  forIn and forVarIn always
-                          // have 3 and 4 items respectively.  for has 5
-                          // (the optional expressions are present as nils).
-                          // forVar has 6 or more, because `for(var x;;);`
-                          // produces [`var` `x` `;` nil `;` nil].
-                          var numChildren = clauses.children.length;
-                          if (numChildren === 3)
-                            return new ParseNode('forInSpec', clauses.children);
-                          else if (numChildren === 4)
-                            return new ParseNode('forVarInSpec', clauses.children);
-                          else if (numChildren >= 6)
-                            return new ParseNode('forVarSpec', clauses.children);
-                          return clauses;
-                        });
+                          function (clauses) {
+                            // There are four kinds of for-loop, and we call the
+                            // part between the parens one of forSpec, forVarSpec,
+                            // forInSpec, and forVarInSpec.  Having parsed it
+                            // already, we rewrite the node name based on how
+                            // many items came out.  forIn and forVarIn always
+                            // have 3 and 4 items respectively.  for has 5
+                            // (the optional expressions are present as nils).
+                            // forVar has 6 or more, because `for(var x;;);`
+                            // produces [`var` `x` `;` nil `;` nil].
+                            var numChildren = clauses.children.length;
+                            if (numChildren === 3)
+                              return new ParseNode('forInSpec', clauses.children);
+                            else if (numChildren === 4)
+                              return new ParseNode('forVarInSpec', clauses.children);
+                            else if (numChildren >= 6)
+                              return new ParseNode('forVarSpec', clauses.children);
+                            return clauses;
+                          });
 
   var iterationStatement = or(
     node('doStmnt', seq(token('do'), statementPtr, token('while'),
@@ -628,21 +627,23 @@ var parse = function (tokenizer) {
                                opt(sourceElements,
                                    lookAheadToken('}')));
 
-  var program = node('program',
-                     seq(opt(sourceElements),
-                         // we rely on the fact that opt(sourceElements)
-                         // will never fail, and non-first arguments
-                         // to seq are required to succeed -- meaning
-                         // this parser will never fail without throwing
-                         // a parse error.
-                         expecting('statement',
-                                   revalue(lookAheadTokenClass("EOF"),
-                                           function (v, t) {
-                                             // eat the ending "EOF" so that
-                                             // our position is updated
-                                             t.consume();
-                                             return v;
-                                           }))));
+  var program = node(
+    'program',
+    seq(opt(sourceElements),
+        // we rely on the fact that opt(sourceElements)
+        // will never fail, and non-first arguments
+        // to seq are required to succeed -- meaning
+        // this parser will never fail without throwing
+        // a parse error.
+        expecting('statement',
+                  mapResult(
+                    lookAheadTokenClass("EOF"),
+                    function (v, t) {
+                      // eat the ending "EOF" so that
+                      // our position is updated
+                      t.consume();
+                      return v;
+                    }))));
 
   return program.parse(tokenizer);
 };
