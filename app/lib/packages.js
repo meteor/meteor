@@ -87,6 +87,9 @@ _.extend(Package.prototype, {
     self.source_root = files.get_package_dir(name);
     self.serve_root = path.join('/packages', name);
     
+    if (!self.source_root)
+      throw new Error("The package named " + self.name + " does not exist.");
+    
     var fullpath = path.join(self.source_root, 'package.js');
     var code = fs.readFileSync(fullpath).toString();
     // \n is necessary in case final line is a //-comment
