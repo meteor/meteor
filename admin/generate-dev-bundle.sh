@@ -192,6 +192,8 @@ npm install keypress@0.1.0
  # pinned at older version. 0.1.16+ uses mimelib, not mimelib-noiconv
  # which make the dev bundle much bigger. We need a better solution.
 npm install mailcomposer@0.1.15
+# When adding new node modules (or any software) to the dev bundle, remember to
+# update LICENSE.txt!
 
 # Sockjs has a broken optional dependancy, and npm optional dependancies
 # don't seem to quite work. Fake it out with a checkout.
