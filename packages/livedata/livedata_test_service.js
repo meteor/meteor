@@ -6,8 +6,8 @@ Meteor.methods({
   },
   exception: function (where, intended) {
     var shouldThrow =
-      (Meteor.is_server && where === "server") ||
-      (Meteor.is_client && where === "client") ||
+      (Meteor.isServer && where === "server") ||
+      (Meteor.isClient && where === "client") ||
       where === "both";
 
     if (shouldThrow) {
@@ -27,11 +27,11 @@ Meteor.methods({
 Ledger = new Meteor.Collection("ledger");
 
 Meteor.startup(function () {
-  if (Meteor.is_server)
+  if (Meteor.isServer)
     Ledger.remove({}); // XXX can this please be Ledger.remove()?
 });
 
-if (Meteor.is_server)
+if (Meteor.isServer)
   Meteor.publish('ledger', function (world) {
     return Ledger.find({world: world}, {key: {collection: 'ledger',
                                               world: world}});
@@ -42,7 +42,7 @@ Meteor.methods({
     var from = Ledger.findOne({name: from_name, world: world});
     var to = Ledger.findOne({name: to_name, world: world});
 
-    if (Meteor.is_server)
+    if (Meteor.isServer)
       cheat = false;
 
     if (!from)

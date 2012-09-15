@@ -54,7 +54,7 @@ Session = _.extend({}, {
 
     if (context && !(context.id in self.key_deps[key])) {
       self.key_deps[key][context.id] = context;
-      context.on_invalidate(function () {
+      context.onInvalidate(function () {
         delete self.key_deps[key][context.id];
       });
     }
@@ -79,7 +79,7 @@ Session = _.extend({}, {
 
       if (!(context.id in self.key_value_deps[key][value])) {
         self.key_value_deps[key][value][context.id] = context;
-        context.on_invalidate(function () {
+        context.onInvalidate(function () {
           delete self.key_value_deps[key][value][context.id];
 
           // clean up [key][value] if it's now empty, so we don't use

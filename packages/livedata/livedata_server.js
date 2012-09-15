@@ -269,8 +269,8 @@ _.extend(Meteor._LivedataSession.prototype, {
         return;
       }
 
-      var invocation = new Meteor._MethodInvocation(false /* is_simulation */,
-                                                   unblock);
+      var invocation = new Meteor._MethodInvocation(false /* isSimulation */,
+                                                    unblock);
       try {
         var ret =
           Meteor._CurrentWriteFence.withValue(fence, function () {
@@ -779,7 +779,7 @@ _.extend(Meteor._LivedataServer.prototype, {
     if (!handler)
       var exception = new Meteor.Error(404, "Method not found");
     else {
-      var invocation = new Meteor._MethodInvocation(false /* is_simulation */);
+      var invocation = new Meteor._MethodInvocation(false /* isSimulation */);
       try {
         var ret = Meteor._CurrentInvocation.withValue(invocation, function () {
           return handler.apply(invocation, args);

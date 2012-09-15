@@ -9,7 +9,7 @@ Chat.schema({room: String, message: String,
              username: String, created: Number});
 */
 
-if (Meteor.is_server) {
+if (Meteor.isServer) {
   Meteor.publish('rooms', function () {
     return Rooms.find();
   });

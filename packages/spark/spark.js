@@ -324,7 +324,7 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
   };
 
   var ctx = new Meteor.deps.Context;
-  ctx.on_invalidate(function () {
+  ctx.onInvalidate(function () {
     if (finalized)
       return;
 
@@ -783,10 +783,10 @@ Spark.isolate = function (htmlFunc) {
         Spark.renderToRange(range, function () {
           return ctx.run(htmlFunc);
         });
-        ctx.on_invalidate(refresh);
+        ctx.onInvalidate(refresh);
       };
 
-      ctx.on_invalidate(refresh);
+      ctx.onInvalidate(refresh);
     });
 };
 
@@ -807,7 +807,7 @@ var atFlushTime = function (f) {
 
   if (! atFlushContext) {
     atFlushContext = new Meteor.deps.Context;
-    atFlushContext.on_invalidate(function () {
+    atFlushContext.onInvalidate(function () {
       var f;
       while ((f = atFlushQueue.shift())) {
         // Since atFlushContext is truthy, if f() calls atFlushTime
