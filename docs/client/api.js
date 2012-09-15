@@ -963,6 +963,10 @@ Template.api.email_send = {
     {name: "html",
      type: "String",
      descr: rfc('mail body (HTML)')
+    },
+    {name: "attachments",
+     type: "Array",
+     descr: "Array of objects describing attachments."
     }
   ]
 };
