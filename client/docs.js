@@ -280,21 +280,19 @@ Handlebars.registerHelper('note', function(fn) {
   return Template.note_helper(fn(this));
 });
 
-Handlebars.registerHelper('dtdd', function(nameOrOptions, maybeFn) {
-  var name, type, fn;
-  if (nameOrOptions.hash) {
-    // {{#dtdd name="foo" type="bar}}
-    name = nameOrOptions.hash.name;
-    type = nameOrOptions.hash.type;
-    fn = nameOrOptions.fn;
+// "name" argument may be provided as part of options.hash instead.
+Handlebars.registerHelper('dtdd', function(name, options) {
+  if (options && options.hash) {
+    // {{#dtdd name}}
+    options.hash.name = name;
   } else {
-    // {#dtdd name}}
-    name = nameOrOptions;
-    fn = maybeFn.fn;
-    // no type
+    // {{#dtdd name="foo" type="bar"}}
+    options = name;
   }
 
-  return Template.dtdd_helper({descr: fn(this), name: name, type: type});
+  return Template.dtdd_helper({descr: options.fn(this),
+                               name: options.hash.name,
+                               type: options.hash.type});
 });
 
 Handlebars.registerHelper('better_markdown', function(fn) {
