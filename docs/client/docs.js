@@ -277,16 +277,21 @@ Handlebars.registerHelper('note', function(fn) {
   return Template.note_helper(fn(this));
 });
 
-Handlebars.registerHelper('dtdd', function(name, optType, fn) {
-  var type = null;
-  // handle optional positional argument (messy)
-  if (! fn)
-    fn = optType; // two arguments
-  else
-    type = optType; // three arguments
+Handlebars.registerHelper('dtdd', function(nameOrOptions, maybeFn) {
+  var name, type, fn;
+  if (nameOrOptions.hash) {
+    // {{#dtdd name="foo" type="bar}}
+    name = nameOrOptions.hash.name;
+    type = nameOrOptions.hash.type;
+    fn = nameOrOptions.fn;
+  } else {
+    // {#dtdd name}}
+    name = nameOrOptions;
+    fn = maybeFn.fn;
+    // no type
+  }
 
-  return Template.dtdd_helper(
-    {descr: fn(this), name:name, type:type}, true);
+  return Template.dtdd_helper({descr: fn(this), name: name, type: type});
 });
 
 Handlebars.registerHelper('better_markdown', function(fn) {
