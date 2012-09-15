@@ -1276,22 +1276,22 @@ The following properties and methods are available on the event object
 passed to handlers:
 
 <dl class="objdesc">
-{{#dtdd "type" "String"}}
+{{#dtdd name="type" type="String"}}
 The event's type, such as "click", "blur" or "keypress".
 {{/dtdd}}
 
-{{#dtdd "target" "DOM Element"}}
+{{#dtdd name="target" type="DOM Element"}}
 The element that originated the event.
 {{/dtdd}}
 
-{{#dtdd "currentTarget" "DOM Element"}}
+{{#dtdd name="currentTarget" type="DOM Element"}}
 The element currently handling the event.  This is the element that
 matched the selector in the event map.  For events that bubble, it may
 be `target` or an ancestor of `target`, and its value changes as the
 event bubbles.
 {{/dtdd}}
 
-{{#dtdd "which" "Number"}}
+{{#dtdd name="which" type="Number"}}
 For mouse events, the number of the mouse button (1=left, 2=middle, 3=right).
 For key events, a character or key code.
 {{/dtdd}}
