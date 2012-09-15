@@ -154,22 +154,27 @@ DomUtils = {};
     return container;
   };
 
-  // Returns true if element a properly contains element b.
-  // Only works on element nodes (e.g. not text nodes).
+  // Returns true if element a contains node b and is not node b.
   DomUtils.elementContains = function(a, b) {
-    // Note: Some special-casing would be required to implement this method
-    // where a and b aren't necessarily elements, e.g. b is a text node,
-    // because contains() doesn't seem to work reliably on some browsers
-    // including IE.
-    if (a.nodeType !== 1 || b.nodeType !== 1) {
-      return false; // a and b are not both elements
-    }
+    if (a.nodeType !== 1) /* ELEMENT */
+      return false;
+    if (a === b)
+      return false;
+
     if (a.compareDocumentPosition) {
       return a.compareDocumentPosition(b) & 0x10;
     } else {
       // Should be only old IE and maybe other old browsers here.
-      // Modern Safari has both methods but seems to get contains() wrong.
-      return a !== b && a.contains(b);
+      // Modern Safari has both functions but seems to get contains() wrong.
+      // IE can't handle b being a text node.  We work around this
+      // by doing a direct parent test now.
+      b = b.parentNode;
+      if (! (b && b.nodeType === 1)) /* ELEMENT */
+        return false;
+      if (a === b)
+        return true;
+
+      return a.contains(b);
     }
   };
 

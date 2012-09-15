@@ -245,7 +245,8 @@ Spark._Patcher.prototype.match = function(
     // move tgt and src backwards and out, replacing as we go
     while (true) {
       if (! (firstIter && onlyAdvance)) {
-        Spark._Patcher._copyAttributes(tgt, src);
+        if (tgt.nodeType === 1) /* ELEMENT */
+          Spark._Patcher._copyAttributes(tgt, src);
         if (copyCallback)
           copyCallback(tgt, src);
       }
