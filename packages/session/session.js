@@ -1,31 +1,9 @@
 // XXX could use some tests
 
 Session = _.extend({}, {
-  keys: {},
-  key_deps: {}, // key -> context id -> context
-  key_value_deps: {}, // key -> value -> context id -> context
-
-  // XXX remove debugging method (or improve it, but anyway, don't
-  // ship it in production)
-  dump_state: function () {
-    var self = this;
-    console.log("=== Session state ===");
-    for (var key in self.key_deps) {
-      var ids = _.keys(self.key_deps[key]);
-      if (!ids.length)
-        continue;
-      console.log(key + ": " + _.reject(ids, function (x) {return x === "_once"}).join(' '));
-    }
-
-    for (var key in self.key_value_deps) {
-      for (var value in self.key_value_deps[key]) {
-        var ids = _.keys(self.key_value_deps[key][value]);
-        if (!ids.length)
-          continue;
-        console.log(key + "(" + value + "): " + _.reject(ids, function (x) {return x === "_once";}).join(' '));
-      }
-    }
-  },
+  keys: {}, // key -> value
+  key_deps: {}, // key -> ContextSet
+  key_value_deps: {}, // key -> value -> ContextSet
 
   set: function (key, value) {
     var self = this;
@@ -35,30 +13,24 @@ Session = _.extend({}, {
       return;
     self.keys[key] = value;
 
-    var invalidate = function (map) {
-      if (map)
-        for (var id in map)
-          map[id].invalidate();
+    var invalidateAll = function (set) {
+      set && set.invalidateAll();
     };
 
-    self._ensureKey(key);
-    invalidate(self.key_deps[key]);
-    invalidate(self.key_value_deps[key][old_value]);
-    invalidate(self.key_value_deps[key][value]);
+    invalidateAll(self.key_deps[key]);
+    if (self.key_value_deps[key]) {
+      invalidateAll(self.key_value_deps[key][old_value]);
+      invalidateAll(self.key_value_deps[key][value]);
+    }
   },
 
   get: function (key) {
     var self = this;
     var context = Meteor.deps.Context.current;
-    self._ensureKey(key);
-
-    if (context && !(context.id in self.key_deps[key])) {
-      self.key_deps[key][context.id] = context;
-      context.on_invalidate(function () {
-        delete self.key_deps[key][context.id];
-      });
+    if (context) {
+      self._ensureKey(key);
+      self.key_deps[key].add(context);
     }
-
     return self.keys[key];
   },
 
@@ -74,19 +46,17 @@ Session = _.extend({}, {
 
     if (context) {
       self._ensureKey(key);
+
       if (!(value in self.key_value_deps[key]))
-        self.key_value_deps[key][value] = {};
+        self.key_value_deps[key][value] = new Meteor.deps.ContextSet;
 
-      if (!(context.id in self.key_value_deps[key][value])) {
-        self.key_value_deps[key][value][context.id] = context;
+      var isNew = self.key_value_deps[key][value].add(context);
+      if (isNew) {
         context.on_invalidate(function () {
-          delete self.key_value_deps[key][value][context.id];
-
           // clean up [key][value] if it's now empty, so we don't use
           // O(n) memory for n = values seen ever
-          for (var x in self.key_value_deps[key][value])
-            return;
-          delete self.key_value_deps[key][value];
+          if (self.key_value_deps[key][value].isEmpty())
+            delete self.key_value_deps[key][value];
         });
       }
     }
@@ -97,8 +67,8 @@ Session = _.extend({}, {
   _ensureKey: function (key) {
     var self = this;
     if (!(key in self.key_deps)) {
-      self.key_deps[key] = {};
-      self.key_value_deps[key] = {};
+      self.key_deps[key] = new Meteor.deps.ContextSet;
+      self.key_value_deps[key] = new Meteor.deps.ContextSet;
     }
   }
 });
