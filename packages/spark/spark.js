@@ -29,7 +29,20 @@
 
 Spark = {};
 
-Spark._currentRenderer = new Meteor.EnvironmentVariable;
+Spark._currentRenderer = (function () {
+  var current = null;
+  return {
+    get: function () {
+      return current;
+    },
+    withValue: function (v, func) {
+      var previous = current;
+      current = v;
+      try { return func(); }
+      finally { current = previous; }
+    }
+  };
+})();
 
 Spark._TAG = "_spark_" + Meteor.uuid();
 // XXX document contract for each type of annotation?
