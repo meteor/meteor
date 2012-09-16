@@ -1,5 +1,7 @@
 (function () {
 
+  ////////// Meteor.deps.ContextSet
+
   // Constructor for an empty ContextSet.
   //
   // A ContextSet is used to hold a set of Meteor.deps.Contexts that
@@ -51,4 +53,32 @@
   };
 
   Meteor.deps.ContextSet = ContextSet;
+
+  ////////// Meteor.autorun
+
+  // Run f(). Record its dependencies. Rerun it whenever the
+  // dependencies change.
+  //
+  // Returns an object with a stop() method. Call stop() to stop the
+  // rerunning.  Also passes this object as an argument to f.
+  Meteor.autorun = function (f) {
+    var ctx;
+    var slain = false;
+    var handle = {
+      stop: function () {
+        slain = true;
+        ctx.invalidate();
+      }
+    };
+    var rerun = function () {
+      if (slain)
+        return;
+      ctx = new Meteor.deps.Context;
+      ctx.run(function () { f.call(this, handle); });
+      ctx.on_invalidate(rerun);
+    };
+    rerun();
+    return handle;
+  };
+
 })();
