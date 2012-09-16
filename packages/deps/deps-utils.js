@@ -1,15 +1,17 @@
 (function () {
 
   // Constructor for an empty ContextSet.
+  //
+  // A ContextSet is used to hold a set of Meteor.deps.Contexts that
+  // are to be invalidated at some future time.  If a Context in the
+  // set becomes invalidated for any reason, it's immediately removed
+  // from the set.
   var ContextSet = function () {
     this._contextsById = {};
   };
 
-  // Adds the Context `ctx` to the set (if it is
-  // not already present).  The Context will only
-  // remain in the set as long as it has not been
-  // invalidated.
-  // Returns true if the context was newly added.
+  // Adds the Context `ctx` to this set if it is not already
+  // present.  Returns true if the context is new to this set.
   ContextSet.prototype.add = function (ctx) {
     var self = this;
     if (ctx && ! (ctx.id in self._contextsById)) {
@@ -22,9 +24,8 @@
     return false;
   };
 
-  // Adds the current Context to the set, if there is
-  // one.  Returns true if there is a current Context
-  // and it is new to the set.
+  // Adds the current Context to this set if there is one.  Returns
+  // true if there is a current Context and it's new to the set.
   ContextSet.prototype.addCurrentContext = function () {
     var self = this;
     var context = Meteor.deps.Context.current;
@@ -33,8 +34,8 @@
     return self.add(context);
   };
 
-  // Invalidate all Contexts in the set and remove
-  // them from the set.
+  // Invalidate all Contexts in this set.  They will be removed
+  // from the set as a consequence.
   ContextSet.prototype.invalidateAll = function () {
     var self = this;
     for (var id in self._contextsById)
