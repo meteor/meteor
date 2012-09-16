@@ -971,3 +971,28 @@ Tinytest.add("templating - unlabeled cursor", function (test) {
   div.kill();
   Meteor.flush();
 });
+
+Tinytest.add("templating - constant text patching", function (test) {
+  // Issue #323.
+
+  var tmpl = Template.test_constant_text_a0;
+
+  var R = ReactiveVar("foo");
+
+  tmpl.preserve(['p']);
+  tmpl.v = function () {
+    return R.get();
+  };
+
+  var div = OnscreenDiv(Meteor.render(tmpl));
+  Meteor.flush();
+
+  R.set("bar");
+  // This flush will fail if we can't patch the constant region,
+  // which starts with a text node, after preserving the preceding
+  // paragraph.
+  Meteor.flush();
+
+  div.kill();
+  Meteor.flush();
+});
