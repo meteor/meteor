@@ -22,7 +22,7 @@
 
 // XXX in landmark-demo, if Template.timer.created throws an exception,
 // then it is never called again, even if you push the 'create a
-// timer' button again. the problem is almost certainly in atFlushTime
+// timer' button again. the problem is almost certainly in atFlush
 // (not hard to see what it is.)
 
 (function() {
@@ -323,8 +323,7 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
     finalized = true;
   };
 
-  var ctx = new Meteor.deps.Context;
-  ctx.on_invalidate(function () {
+  Meteor.atFlush(function () {
     if (finalized)
       return;
 
@@ -378,8 +377,6 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
     notifyWatchers(renderedRange.firstNode(), renderedRange.lastNode());
     renderedRange.destroy();
   });
-
-  ctx.invalidate();
 };
 
 Spark.render = function (htmlFunc) {
@@ -800,34 +797,6 @@ Spark.isolate = function (htmlFunc) {
 /* Lists                                                                      */
 /******************************************************************************/
 
-// Run 'f' at flush()-time. If atFlushTime is called multiple times,
-// we guarantee that the 'f's will run in the order of their
-// respective atFlushTime calls.
-//
-// XXX either break this out into a separate package or fold it into
-// deps
-var atFlushQueue = [];
-var atFlushContext = null;
-var atFlushTime = function (f) {
-  atFlushQueue.push(f);
-
-  if (! atFlushContext) {
-    atFlushContext = new Meteor.deps.Context;
-    atFlushContext.on_invalidate(function () {
-      var f;
-      while ((f = atFlushQueue.shift())) {
-        // Since atFlushContext is truthy, if f() calls atFlushTime
-        // reentrantly, it's guaranteed to append to atFlushQueue and
-        // not contruct a new atFlushContext.
-        f();
-      }
-      atFlushContext = null;
-    });
-
-    atFlushContext.invalidate();
-  }
-};
-
 Spark.list = function (cursor, itemFunc, elseFunc) {
   elseFunc = elseFunc || function () { return ''; };
 
@@ -911,7 +880,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   };
 
   var later = function (f) {
-    atFlushTime(function () {
+    Meteor.atFlush(function () {
       if (! stopped)
         f();
     });

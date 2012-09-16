@@ -81,4 +81,37 @@
     return handle;
   };
 
+  ////////// Meteor.atFlush
+
+  // Run 'f' at Meteor.flush()-time. If atFlush is called multiple times,
+  // we guarantee that the 'f's will run in the same order that
+  // atFlush was called on them.  If we are inside a Meteor.flush() already,
+  // f will be scheduled as part of the current flush().
+
+  var atFlushQueue = [];
+  var atFlushContext = null;
+  Meteor.atFlush = function (f) {
+    atFlushQueue.push(f);
+
+    if (! atFlushContext) {
+      atFlushContext = new Meteor.deps.Context;
+      atFlushContext.on_invalidate(function () {
+        var f;
+        while ((f = atFlushQueue.shift())) {
+          // Since atFlushContext is truthy, if f() calls atFlush
+          // reentrantly, it's guaranteed to append to atFlushQueue and
+          // not contruct a new atFlushContext.
+          try {
+            f();
+          } catch (e) {
+            Meteor._debug("Exception from Meteor.atFlush:", e);
+          }
+        }
+        atFlushContext = null;
+      });
+
+      atFlushContext.invalidate();
+    }
+  };
+
 })();
