@@ -216,6 +216,15 @@ DomUtils = {};
     return (results.length ? results[0] : null);
   };
 
+  var isElementInClipRange = function (elem, clipStart, clipEnd) {
+    // elem is not in clip range if it contains the clip range
+    if (DomUtils.elementContains(elem, clipStart))
+      return false;
+    // elem is in clip range if clipStart <= elem <= clipEnd
+    return (DomUtils.compareElementIndex(clipStart, elem) <= 0) &&
+      (DomUtils.compareElementIndex(elem, clipEnd) <= 0);
+  };
+
   // Like `findAll` but searches the nodes from `start` to `end`
   // inclusive. `start` and `end` must be siblings, and they participate
   // in the search (they can be used to match selector components, and
@@ -247,21 +256,54 @@ DomUtils = {};
     // Filter the list of nodes to remove nodes that occur before start
     // or after end.
     return _.reject(resultsPlus, function(n) {
-      // reject node if it contains the clip range
-      if (DomUtils.elementContains(n, clipStart))
-        return true;
-      // reject node if (n,start) are in order or (end,n) are in order
-      return (DomUtils.compareElementIndex(n, clipStart) < 0) ||
-        (DomUtils.compareElementIndex(clipEnd, n) < 0);
+      return ! isElementInClipRange(n, clipStart, clipEnd);
     });
   };
 
   // Like `findAllClipped` but finds one element (or returns null).
   DomUtils.findClipped = function(contextNode, selector, clipStart, clipEnd) {
-    var results = DomUtils.findAllClipped(contextNode, selector, clipStart, clipEnd);
+    var results = DomUtils.findAllClipped(
+      contextNode, selector, clipStart, clipEnd);
     return (results.length ? results[0] : null);
   };
 
+  var matchesSelectorMaybeClipped = function(element, contextNode, selector,
+                                             clipStart, clipEnd) {
+    var tempId;
+    if (! element.id)
+      element.setAttribute('id', tempId = 'DomUtils_matchesSelector_target');
+    try {
+      var escapedNodeId = element.id.replace(/'/g, "\\$&");
+      var trimmedSelector = selector.match(/\S.*?(?=\s*$)/)[0];
+      // appending [id='foo'] to a selector with no whitespace ought to
+      // simply restrict the set of possible outputs regardless of the
+      // form of the selector.
+      var doctoredSelector = trimmedSelector + "[id='" + escapedNodeId + "']";
+      var result;
+      if (clipStart)
+        result = DomUtils.findClipped(contextNode, doctoredSelector,
+                                      clipStart, clipEnd);
+      else
+        result = DomUtils.find(contextNode, doctoredSelector);
+      return (result === element);
+    } finally {
+      if (tempId)
+        element.removeAttribute("id");
+    }
+  };
+
+  // Check if `element` matches `selector`, scoped to `contextNode`.
+  DomUtils.matchesSelector = function (element, contextNode, selector) {
+    return matchesSelectorMaybeClipped(element, contextNode, selector);
+  };
+
+  // Check if `element` matches `selector`, scoped to `contextNode`,
+  // clipped to ordered siblings `clipStart`..`clipEnd`.
+  DomUtils.matchesSelectorClipped = function (element, contextNode, selector,
+                                              clipStart, clipEnd) {
+    return matchesSelectorMaybeClipped(element, contextNode, selector,
+                                       clipStart, clipEnd);
+  };
 
   // Returns 0 if the nodes are the same or either one contains the other;
   // otherwise, -1 if a comes before b, or else 1 if b comes before a in
