@@ -216,7 +216,7 @@ testAsyncMulti("livedata - compound methods", [
     var release = expect();
     onQuiesce(function () {
       checkBalances(test, 90, 60);
-      Tinytest.defer(release);
+      Meteor.defer(release);
     });
   },
   function (test, expect) {
@@ -233,7 +233,7 @@ testAsyncMulti("livedata - compound methods", [
     var release = expect();
     onQuiesce(function () {
       checkBalances(test, 90, 60);
-      Tinytest.defer(release);
+      Meteor.defer(release);
     });
   }
 ]);
