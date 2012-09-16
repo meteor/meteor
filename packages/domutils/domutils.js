@@ -251,8 +251,8 @@ DomUtils = {};
       if (DomUtils.elementContains(n, clipStart))
         return true;
       // reject node if (n,start) are in order or (end,n) are in order
-      return (DomUtils.elementOrder(n, clipStart) > 0) ||
-        (DomUtils.elementOrder(clipEnd, n) > 0);
+      return (DomUtils.compareElementIndex(n, clipStart) < 0) ||
+        (DomUtils.compareElementIndex(clipEnd, n) < 0);
     });
   };
 
@@ -264,23 +264,23 @@ DomUtils = {};
 
 
   // Returns 0 if the nodes are the same or either one contains the other;
-  // otherwise, 1 if a comes before b, or else -1 if b comes before a in
+  // otherwise, -1 if a comes before b, or else 1 if b comes before a in
   // document order.
   // Requires: `a` and `b` are element nodes in the same document tree.
-  DomUtils.elementOrder = function(a, b) {
+  DomUtils.compareElementIndex = function(a, b) {
     // See http://ejohn.org/blog/comparing-document-position/
     if (a === b)
       return 0;
     if (a.compareDocumentPosition) {
       var n = a.compareDocumentPosition(b);
-      return ((n & 0x18) ? 0 : ((n & 0x4) ? 1 : -1));
+      return ((n & 0x18) ? 0 : ((n & 0x4) ? -1 : 1));
     } else {
       // Only old IE is known to not have compareDocumentPosition (though Safari
       // originally lacked it).  Thankfully, IE gives us a way of comparing elements
       // via the "sourceIndex" property.
       if (a.contains(b) || b.contains(a))
         return 0;
-      return (a.sourceIndex < b.sourceIndex ? 1 : -1);
+      return (a.sourceIndex < b.sourceIndex ? -1 : 1);
     }
   };
 

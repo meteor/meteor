@@ -44,7 +44,7 @@ Spark._patch = function(tgtParent, srcParent, tgtBefore, tgtAfter, preservations
     if (pres) {
       var tgt = (pres.type === 'region' ? pres.fromStart : pres.from);
       if (! lastTgtMatch ||
-          DomUtils.elementOrder(lastTgtMatch, tgt) > 0) {
+          DomUtils.compareElementIndex(lastTgtMatch, tgt) < 0) {
         if (pres.type === 'region') {
           // preserved region for constant landmark
           if (patcher.match(pres.fromStart, pres.newRange.firstNode(),
