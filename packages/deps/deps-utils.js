@@ -22,6 +22,17 @@
     return false;
   };
 
+  // Adds the current Context to the set, if there is
+  // one.  Returns true if there is a current Context
+  // and it is new to the set.
+  ContextSet.prototype.addCurrentContext = function () {
+    var self = this;
+    var context = Meteor.deps.Context.current;
+    if (! context)
+      return false;
+    return self.add(context);
+  };
+
   // Invalidate all Contexts in the set and remove
   // them from the set.
   ContextSet.prototype.invalidateAll = function () {

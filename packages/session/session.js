@@ -26,11 +26,8 @@ Session = _.extend({}, {
 
   get: function (key) {
     var self = this;
-    var context = Meteor.deps.Context.current;
-    if (context) {
-      self._ensureKey(key);
-      self.keyDeps[key].add(context);
-    }
+    self._ensureKey(key);
+    self.keyDeps[key].addCurrentContext();
     return self.keys[key];
   },
 
