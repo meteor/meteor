@@ -767,32 +767,33 @@ Spark.isolate = function (htmlFunc) {
   if (!renderer)
     return htmlFunc();
 
-  var ctx = new Meteor.deps.Context;
-
-  return renderer.annotate(
-    ctx.run(htmlFunc), Spark._ANNOTATION_ISOLATE, function (range) {
-      range.finalize = function () {
-        // Spark.finalize() was called on us (presumably because we were
-        // removed from the document.) Tear down our structures without
-        // doing any more updates. note that range is about to be
-        // destroyed by finalize.
-        range = null;
-        ctx.invalidate();
-      };
-
-      var refresh = function () {
-        if (! range)
-          return; // killed by finalize. range has already been destroyed.
-
-        ctx = new Meteor.deps.Context;
-        Spark.renderToRange(range, function () {
-          return ctx.run(htmlFunc);
+  var range;
+  var firstRun = true;
+  var retHtml;
+  Meteor.autorun(function (handle) {
+    if (firstRun) {
+      retHtml = renderer.annotate(
+        htmlFunc(), Spark._ANNOTATION_ISOLATE,
+        function (r) {
+          // annotation used; got a range
+          range = r;
+          range.finalize = function () {
+            // Spark.finalize() was called on our range (presumably
+            // because it was removed from the document.)  Kill
+            // this context and stop rerunning.
+            handle.stop();
+          };
+        }, function () {
+          // annotation not used; kill our context
+          handle.stop();
         });
-        ctx.on_invalidate(refresh);
-      };
+      firstRun = false;
+    } else {
+      Spark.renderToRange(range, htmlFunc);
+    }
+  });
 
-      ctx.on_invalidate(refresh);
-    });
+  return retHtml;
 };
 
 /******************************************************************************/
