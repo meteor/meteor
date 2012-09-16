@@ -66,7 +66,7 @@ Session = _.extend({}, {
     var self = this;
     if (!(key in self.keyDeps)) {
       self.keyDeps[key] = new Meteor.deps.ContextSet;
-      self.keyValueDeps[key] = new Meteor.deps.ContextSet;
+      self.keyValueDeps[key] = {};
     }
   }
 });
