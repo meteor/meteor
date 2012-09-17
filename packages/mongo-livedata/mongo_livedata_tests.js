@@ -287,7 +287,7 @@ Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
       test.isTrue(max_counters[k] >= counters[k], k);
     });
 
-    Tinytest.defer(doStep);
+    Meteor.defer(doStep);
   };
 
   doStep();

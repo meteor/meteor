@@ -925,3 +925,51 @@ Template.api.template_data = {
   locus: "Client",
   descr: ["The data context of this instance's latest invocation."]
 };
+
+var rfc = function (descr) {
+  return ('<a href="http://tools.ietf.org/html/rfc5322" target="_blank">RFC5322'
+          + '</a> ' + descr);
+};
+
+Template.api.email_send = {
+  id: "email_send",
+  name: "Email.send(options)",
+  locus: "Server",
+  descr: ["Send an email. Throws an `Error` on failure to contact mail " +
+          "server or if mail server returns an error."],
+  options: [
+    {name: "from",
+     type: "String",
+     descr: rfc('"From:" address (required)')
+    },
+    {name: "to",
+     type: "String or Array of strings",
+     descr: rfc('"To:" address[es]')
+    },
+    {name: "cc",
+     type: "String or Array of strings",
+     descr: rfc('"Cc:" address[es]')
+    },
+    {name: "bcc",
+     type: "String or Array of strings",
+     descr: rfc('"Bcc:" address[es]')
+    },
+    {name: "replyTo",
+     type: "String or Array of strings",
+     descr: rfc('"Reply-To:" address[es]')
+    },
+    {name: "subject",
+     type: "String",
+     descr: rfc('"Subject:" line')
+    },
+    {name: "text",
+     type: "String",
+     descr: rfc('mail body (plain text)')
+    },
+    {name: "html",
+     type: "String",
+     descr: rfc('mail body (HTML)')
+    }
+  ]
+};
+

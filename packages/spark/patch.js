@@ -44,7 +44,7 @@ Spark._patch = function(tgtParent, srcParent, tgtBefore, tgtAfter, preservations
     if (pres) {
       var tgt = (pres.type === 'region' ? pres.fromStart : pres.from);
       if (! lastTgtMatch ||
-          DomUtils.elementOrder(lastTgtMatch, tgt) > 0) {
+          DomUtils.compareElementIndex(lastTgtMatch, tgt) < 0) {
         if (pres.type === 'region') {
           // preserved region for constant landmark
           if (patcher.match(pres.fromStart, pres.newRange.firstNode(),
@@ -245,7 +245,8 @@ Spark._Patcher.prototype.match = function(
     // move tgt and src backwards and out, replacing as we go
     while (true) {
       if (! (firstIter && onlyAdvance)) {
-        Spark._Patcher._copyAttributes(tgt, src);
+        if (tgt.nodeType === 1) /* ELEMENT */
+          Spark._Patcher._copyAttributes(tgt, src);
         if (copyCallback)
           copyCallback(tgt, src);
       }

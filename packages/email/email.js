@@ -2,8 +2,6 @@ Email = {};
 
 (function () {
   var Future = __meteor_bootstrap__.require('fibers/future');
-  // js2-mode AST blows up when parsing 'future.return()', so alias.
-  Future.prototype.ret = Future.prototype.return;
   var urlModule = __meteor_bootstrap__.require('url');
   var MailComposer = __meteor_bootstrap__.require('mailcomposer').MailComposer;
 
@@ -22,17 +20,24 @@ Email = {};
     }
 
     var simplesmtp = __meteor_bootstrap__.require('simplesmtp');
-    return simplesmtp.createClientPool(
+    var pool = simplesmtp.createClientPool(
       port,  // Defaults to 25
       mailUrl.hostname,  // Defaults to "localhost"
       { secureConnection: (port === 465),
         // XXX allow maxConnections to be configured?
         auth: auth });
+
+    pool._future_wrapped_sendMail = _.bind(Future.wrap(pool.sendMail), pool);
+    return pool;
   };
 
+  // We construct smtpPool at the first call to Email.send, so that
+  // Meteor.startup code can set $MAIL_URL.
   var smtpPool = null;
-  if (process.env.MAIL_URL) {
-    smtpPool = makePool(process.env.MAIL_URL);
+  var maybeMakePool = function () {
+    if (!smtpPool && process.env.MAIL_URL) {
+      smtpPool = makePool(process.env.MAIL_URL);
+    }
   };
 
   Email._next_devmode_mail_id = 0;
@@ -58,22 +63,16 @@ Email = {};
   };
 
   var smtpSend = function (mc) {
-    var future = new Future;
-    smtpPool.sendMail(mc, function (err, responseObj) {
-      future.ret([err, responseObj]);
-    });
-    var errAndResponse = future.wait();
-    // XXX figure out error handling
-    if (errAndResponse[0])
-      throw errAndResponse[0];
-    console.log(errAndResponse[1]);
+    smtpPool._future_wrapped_sendMail(mc).wait();
   };
 
   /**
    * Send an email.
    *
    * Connects to the mail server configured via the MAIL_URL environment
-   * variable. If unset, prints formatted message to stdout. May yield.
+   * variable. If unset, prints formatted message to stdout. The "from" option
+   * is required, and at least one of "to", "cc", and "bcc" must be provided;
+   * all other options are optional.
    *
    * @param options
    * @param options.from {String} RFC5322 "From:" address
@@ -83,14 +82,15 @@ Email = {};
    * @param options.replyTo {String|String[]} RFC5322 "Reply-To:" address[es]
    * @param options.subject {String} RFC5322 "Subject:" line
    * @param options.text {String} RFC5322 mail body (plain text)
+   * @param options.html {String} RFC5322 mail body (HTML)
    */
   Email.send = function (options) {
     var mc = new MailComposer();
 
     // setup message data
-    // XXX support HTML body
-    // XXX support attachments
     // XXX support arbitrary headers
+    // XXX support attachments (once we have a client/server-compatible binary
+    //     Buffer class)
     mc.setMessageOption({
       from: options.from,
       to: options.to,
@@ -98,8 +98,11 @@ Email = {};
       bcc: options.bcc,
       replyTo: options.replyTo,
       subject: options.subject,
-      text: options.text
+      text: options.text,
+      html: options.html
     });
+
+    maybeMakePool();
 
     if (smtpPool) {
       smtpSend(mc);

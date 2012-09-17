@@ -190,8 +190,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
       return false;
     self.stores[name] = store;
 
-    store.beginUpdate();
-    _.each(self.queued[name] || [], function (msg) {
+    var queued = self.queued[name] || [];
+    store.beginUpdate(queued.length);
+    _.each(queued, function (msg) {
       store.update(msg);
     });
     store.endUpdate();
@@ -527,7 +528,19 @@ _.extend(Meteor._LivedataConnection.prototype, {
     // We have quiesced. Blow away local changes and replace
     // with authoritative changes from server.
 
-    _.each(self.stores, function (s) { s.beginUpdate(); });
+    var messagesPerStore = {};
+    _.each(self.pending_data, function (msg) {
+      if (msg.collection && msg.id && self.stores[msg.collection]) {
+        if (_.has(messagesPerStore, msg.collection))
+          ++messagesPerStore[msg.collection];
+        else
+          messagesPerStore[msg.collection] = 1;
+      }
+    });
+
+    _.each(self.stores, function (s, name) {
+      s.beginUpdate(_.has(messagesPerStore, name) ? messagesPerStore[name] : 0);
+    });
 
     _.each(self.pending_data, function (msg) {
       // Reset message from reconnect. Blow away everything.

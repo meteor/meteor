@@ -245,6 +245,12 @@ _.extend(Meteor._LivedataSession.prototype, {
       // done.
       var fence = new Meteor._WriteFence;
       fence.onAllCommitted(function () {
+        // Retire the fence so that future writes are allowed.
+        // This means that callbacks like timers are free to use
+        // the fence, and if they fire before it's armed (for
+        // example, because the method waits for them) their
+        // writes will be included in the fence.
+        fence.retire();
         self.send({
           msg: 'data', methods: [msg.id]});
       });

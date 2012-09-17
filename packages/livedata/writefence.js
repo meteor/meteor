@@ -6,6 +6,7 @@ Meteor._WriteFence = function () {
 
   self.armed = false;
   self.fired = false;
+  self.retired = false;
   self.outstanding_writes = 0;
   self.completion_callbacks = [];
 };
@@ -23,6 +24,9 @@ _.extend(Meteor._WriteFence.prototype, {
   // (calls its callbacks because all writes have committed.)
   beginWrite: function () {
     var self = this;
+
+    if (self.retired)
+      return { committed: function () {} };
 
     if (self.fired)
       throw new Error("fence has already activated -- too late to add writes");
@@ -77,5 +81,14 @@ _.extend(Meteor._WriteFence.prototype, {
       _.each(self.completion_callbacks, function (f) {f(self);});
       self.completion_callbacks = [];
     }
+  },
+
+  // Deactivate this fence so that adding more writes has no effect.
+  // The fence must have already fired.
+  retire: function () {
+    var self = this;
+    if (! self.fired)
+      throw new Error("Can't retire a fence that hasn't fired.");
+    self.retired = true;
   }
 });

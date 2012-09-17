@@ -29,7 +29,20 @@
 
 Spark = {};
 
-Spark._currentRenderer = new Meteor.EnvironmentVariable;
+Spark._currentRenderer = (function () {
+  var current = null;
+  return {
+    get: function () {
+      return current;
+    },
+    withValue: function (v, func) {
+      var previous = current;
+      current = v;
+      try { return func(); }
+      finally { current = previous; }
+    }
+  };
+})();
 
 Spark._TAG = "_spark_" + Meteor.uuid();
 // XXX document contract for each type of annotation?
@@ -704,16 +717,11 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
           var selector = handler.selector;
 
           if (selector) {
-            // This ends up doing O(n) findAllClipped calls when an
-            // event bubbles up N level in the DOM. If this ends up
-            // being too slow, we could memoize findAllClipped across
-            // the processing of each event.
-            var results = DomUtils.findAllClipped(
-              range.containerNode(), selector, range.firstNode(), range.lastNode());
-            // This is a linear search through what could be a large
-            // result set.
-            if (! _.contains(results, event.currentTarget))
+            if (! DomUtils.matchesSelectorClipped(
+              event.currentTarget, range.containerNode(), selector,
+              range.firstNode(), range.lastNode())) {
               continue;
+            }
           } else {
             // if no selector, only match the event target
             if (event.currentTarget !== event.target)
@@ -909,7 +917,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
       later(function () {
         var frag = Spark.render(_.bind(itemFunc, null, item));
         DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
-        var range = new LiveRange(Spark._TAG, frag);
+        var range = makeRange(Spark._ANNOTATION_LIST_ITEM, frag);
 
         if (! itemRanges.length) {
           Spark.finalize(outerRange.replaceContents(frag));

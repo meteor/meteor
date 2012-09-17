@@ -2530,7 +2530,7 @@ testAsyncMulti(
             killLater(iframeDiv);
           });
           var checkLater = function(frameName, iframe, iframeDiv) {
-            Tinytest.setTimeout(function() {
+            Meteor.setTimeout(function() {
               check(iframe, iframeDiv);
             }, 500); // wait for frame to unload
           };

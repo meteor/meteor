@@ -286,27 +286,35 @@ LocalCollection.prototype.insert = function (doc) {
 LocalCollection.prototype.remove = function (selector) {
   var self = this;
   var remove = [];
-  var query_remove = [];
 
-  var selector_f = LocalCollection._compileSelector(selector);
-  for (var id in self.docs) {
-    var doc = self.docs[id];
-    if (selector_f(doc)) {
-      remove.push(id);
-      for (var qid in self.queries) {
-        var query = self.queries[qid];
-        if (query.selector_f(doc))
-          query_remove.push([query, doc]);
+  // Avoid O(n) for "remove a single doc by ID".
+  if (LocalCollection._selectorIsId(selector)) {
+    if (_.has(self.docs, selector))
+      remove.push(selector);
+  } else {
+    var selector_f = LocalCollection._compileSelector(selector);
+    for (var id in self.docs) {
+      var doc = self.docs[id];
+      if (selector_f(doc)) {
+        remove.push(id);
       }
     }
   }
+
+  var queryRemove = [];
   for (var i = 0; i < remove.length; i++) {
-    delete self.docs[remove[i]];
+    var removeId = remove[i];
+    var removeDoc = self.docs[removeId];
+    _.each(self.queries, function (query) {
+      if (query.selector_f(removeDoc))
+        queryRemove.push([query, removeDoc]);
+    });
+    delete self.docs[removeId];
   }
 
   // run live query callbacks _after_ we've removed the documents.
-  for (var i = 0; i < query_remove.length; i++) {
-    LocalCollection._removeFromResults(query_remove[i][0], query_remove[i][1]);
+  for (var i = 0; i < queryRemove.length; i++) {
+    LocalCollection._removeFromResults(queryRemove[i][0], queryRemove[i][1]);
   }
 };
 

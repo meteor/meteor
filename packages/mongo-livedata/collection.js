@@ -34,12 +34,17 @@ Meteor.Collection = function (name, manager, driver, preventAutopublish) {
     // database, except possibly with some temporary divergence while
     // we have unacknowledged RPC's.
     var ok = manager.registerStore(name, {
-      // Called at the beginning of a batch of updates. We're supposed
-      // to start by backing out any local writes and returning to the
-      // last state delivered by the server.
-      beginUpdate: function () {
-        // pause observers so users don't see flicker.
-        self._collection.pauseObservers();
+      // Called at the beginning of a batch of updates. We're supposed to start
+      // by backing out any local writes and returning to the last state
+      // delivered by the server. batchSize is the number of update calls to
+      // expect.
+      beginUpdate: function (batchSize) {
+        // pause observers so users don't see flicker, either from restoring a
+        // snapshot and then applying the (hopefully similar) change from the
+        // server, or just from running multiple queued messages affecting the
+        // same queries.
+        if (self._was_snapshot || batchSize > 1)
+          self._collection.pauseObservers();
 
         // restore db snapshot
         if (self._was_snapshot) {
