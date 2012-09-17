@@ -12,7 +12,7 @@ Meteor.Collection = function (name, manager, driver, preventAutopublish) {
 
   // note: nameless collections never have a manager
   manager = name && (manager ||
-                     (Meteor.is_client ?
+                     (Meteor.isClient ?
                       Meteor.default_connection : Meteor.default_server));
 
   if (!driver) {
@@ -402,7 +402,7 @@ _.each(["insert", "update", "remove"], function (name) {
     if (args.length && args[args.length - 1] instanceof Function)
       callback = args.pop();
 
-    if (Meteor.is_client && !callback) {
+    if (Meteor.isClient && !callback) {
       // Client can't block, so it can't report errors by exception,
       // only by callback. If they forget the callback, give them a
       // default one that logs the error, so they aren't totally

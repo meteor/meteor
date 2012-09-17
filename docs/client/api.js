@@ -1,13 +1,13 @@
-Template.api.is_client = {
-  id: "meteor_is_client",
-  name: "Meteor.is_client",
+Template.api.isClient = {
+  id: "meteor_isclient",
+  name: "Meteor.isClient",
   locus: "Anywhere",
   descr: ["Boolean variable.  True if running in client environment."]
 };
 
-Template.api.is_server = {
-  id: "meteor_is_server",
-  name: "Meteor.is_server",
+Template.api.isServer = {
+  id: "meteor_isserver",
+  name: "Meteor.isServer",
   locus: "Anywhere",
   descr: ["Boolean variable.  True if running in server environment."]
 };
@@ -164,9 +164,9 @@ Template.api.method_invocation_unblock = {
   descr: ["Call inside method invocation.  Allow subsequent method from this client to begin running in a new fiber."]
 };
 
-Template.api.method_invocation_is_simulation = {
-  id: "method_is_simulation",
-  name: "<i>this</i>.is_simulation",
+Template.api.method_invocation_isSimulation = {
+  id: "method_issimulation",
+  name: "<i>this</i>.isSimulation",
   locus: "Anywhere",
   descr: ["Access inside method invocation.  Boolean value, true if this invocation is a stub."]
 };
@@ -478,7 +478,7 @@ Template.api.Context = {
   id: "context",
   name: "new Meteor.deps.Context",
   locus: "Client",
-  descr: ["Create an invalidation context. Invalidation contexts are used to run a piece of code, and record its dependencies so it can be rerun later if one of its inputs changes.", "An invalidation context is basically just a list of callbacks for an event that can fire only once. The [`on_invalidate`](#on_invalidate) method adds a callback to the list, and the [`invalidate`](#invalidate) method fires the event."]
+  descr: ["Create an invalidation context. Invalidation contexts are used to run a piece of code, and record its dependencies so it can be rerun later if one of its inputs changes.", "An invalidation context is basically just a list of callbacks for an event that can fire only once. The [`onInvalidate`](#oninvalidate) method adds a callback to the list, and the [`invalidate`](#invalidate) method fires the event."]
 };
 
 Template.api.run = {
@@ -493,9 +493,9 @@ Template.api.run = {
   ]
 };
 
-Template.api.on_invalidate = {
-  id: "on_invalidate",
-  name: "<em>context</em>.on_invalidate(callback)",
+Template.api.onInvalidate = {
+  id: "oninvalidate",
+  name: "<em>context</em>.onInvalidate(callback)",
   locus: "Client",
   descr: ["Registers `callback` to be called when this context is invalidated. `callback` will be run exactly once."],
   args: [
@@ -509,7 +509,7 @@ Template.api.invalidate = {
   id: "invalidate",
   name: "<em>context</em>.invalidate()",
   locus: "Client",
-  descr: ["Add this context to the list of contexts that will have their `on_invalidate|on_invalidate` callbacks called by the next call to [`Meteor.flush`](#meteor_flush)."]
+  descr: ["Add this context to the list of contexts that will have their [`onInvalidate`](#oninvalidate) callbacks called by the next call to [`Meteor.flush`](#meteor_flush)."]
 };
 
 Template.api.current = {
@@ -700,7 +700,7 @@ Template.api.set = {
   args: [
     {name: "key",
      type: "String",
-     descr: "The key to set, eg, `selected_item`"},
+     descr: "The key to set, eg, `selectedItem`"},
     {name: "value",
      type: "Any type",
      descr: "The new value for `key`"}

@@ -37,7 +37,7 @@
 
     // calls f immediately if this context was already
     // invalidated. receives one argument, the context.
-    on_invalidate: function (f) {
+    onInvalidate: function (f) {
       if (this._invalidated)
         f(this);
       else

@@ -5,7 +5,7 @@ _.extend(Meteor, {
 
   setTimeout: function (f, duration) {
     if (Meteor._CurrentInvocation) {
-      if (Meteor._CurrentInvocation.get() && Meteor._CurrentInvocation.get().is_simulation)
+      if (Meteor._CurrentInvocation.get() && Meteor._CurrentInvocation.get().isSimulation)
         throw new Error("Can't set timers inside simulations");
 
       var f_with_ci = f;
@@ -20,7 +20,7 @@ _.extend(Meteor, {
 
   setInterval: function (f, duration) {
     if (Meteor._CurrentInvocation) {
-      if (Meteor._CurrentInvocation.get() && Meteor._CurrentInvocation.get().is_simulation)
+      if (Meteor._CurrentInvocation.get() && Meteor._CurrentInvocation.get().isSimulation)
         throw new Error("Can't set timers inside simulations");
 
       var f_with_ci = f;

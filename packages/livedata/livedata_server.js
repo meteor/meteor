@@ -282,7 +282,7 @@ _.extend(Meteor._LivedataSession.prototype, {
       };
 
       var invocation = new Meteor._MethodInvocation(
-        false /* is_simulation */, self.userId, setUserId, unblock);
+        false /* isSimulation */, self.userId, setUserId, unblock);
       try {
         var ret =
           Meteor._CurrentWriteFence.withValue(fence, function () {
@@ -868,7 +868,7 @@ _.extend(Meteor._LivedataServer.prototype, {
       }
 
       var invocation = new Meteor._MethodInvocation(
-        false /* is_simulation */, userId, setUserId);
+        false /* isSimulation */, userId, setUserId);
       try {
         var ret = Meteor._CurrentInvocation.withValue(invocation, function () {
           return handler.apply(invocation, args);

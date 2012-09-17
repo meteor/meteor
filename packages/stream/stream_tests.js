@@ -4,6 +4,9 @@ Tinytest.add("stream - status", function (test) {
   var status = Meteor.status();
   test.equal(typeof status, "object");
   test.isTrue(status.status);
+  // Make sure backward-compatiblity names are defined.
+  test.equal(status.retryCount, status.retry_count);
+  test.equal(status.retryTime, status.retry_time);
 });
 
 testAsyncMulti("stream - reconnect", [

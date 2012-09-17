@@ -51,7 +51,7 @@ OnscreenDiv.prototype.kill = function() {
     self.div.parentNode.removeChild(self.div);
 
   var cx = new Meteor.deps.Context;
-  cx.on_invalidate(function() {
+  cx.onInvalidate(function() {
     Spark.finalize(self.div);
   });
   cx.invalidate();

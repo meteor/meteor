@@ -80,8 +80,8 @@ var toc = [
 
   "API", [
     "Core", [
-      "Meteor.is_client",
-      "Meteor.is_server",
+      "Meteor.isClient",
+      "Meteor.isServer",
       "Meteor.startup"
     ],
 
@@ -100,7 +100,7 @@ var toc = [
 
     {name: "Methods", id: "methods_header"}, [
       "Meteor.methods", [
-        {instance: "this", name: "is_simulation", id: "method_is_simulation"},
+        {instance: "this", name: "isSimulation", id: "method_issimulation"},
         {instance: "this", name: "unblock", id: "method_unblock"}
       ],
       "Meteor.Error",
@@ -177,7 +177,7 @@ var toc = [
     "Meteor.deps", [
       {name: "Meteor.deps.Context", id: "context"}, [
         {instance: "context", name: "run"},
-        {instance: "context", name: "on_invalidate"},
+        {instance: "context", name: "onInvalidate", id: "oninvalidate"},
         {instance: "context", name: "invalidate"}
       ],
       {name: "Meteor.deps.Context.current", id: "current"},

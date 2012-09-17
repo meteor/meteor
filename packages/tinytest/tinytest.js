@@ -38,7 +38,7 @@ _.extend(TestCaseResults.prototype, {
     var self = this;
 
     if (self.stop_at_offset === 0) {
-      if (Meteor.is_client) {
+      if (Meteor.isClient) {
         // Only supported on the browser for now..
         var now = (+new Date);
         debugger;
@@ -351,7 +351,7 @@ _.extend(TestRun.prototype, {
     var testGroups = _.values(
       _.groupBy(self.manager.ordered_tests,
                 function(t) {
-                  if (Meteor.is_server)
+                  if (Meteor.isServer)
                     return "SERVER";
                   if (t.async)
                     return "ASYNC";
