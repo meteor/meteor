@@ -34,6 +34,8 @@ DomUtils = {};
   // - apps that want jQuery's selector extensions (:visible, :input, etc.)
   // - apps that include jQuery anyway
   // - apps that want IE 7 support
+  //
+  // XXX others? zepto?
   var findAllBySelector = (window.Sizzle
                            || (window.jQuery && window.jQuery.find)
                            || qsaFindAllBySelector);
