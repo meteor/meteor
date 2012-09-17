@@ -89,7 +89,7 @@ DomUtils = {};
 
   // Parse an HTML string, which may contain multiple top-level tags,
   // and return a DocumentFragment.
-  DomUtils.htmlToFragment = function(html) {
+  DomUtils.htmlToFragment = function (html) {
     var doc = document; // node factory
     var frag = doc.createDocumentFragment();
 
@@ -119,7 +119,7 @@ DomUtils = {};
       if (quirks.tbodyInsertion && ! rtbody.test(html)) {
         // Any tbody we find was created by the browser.
         var tbodies = container.getElementsByTagName("tbody");
-        _.each(tbodies, function(n) {
+        _.each(tbodies, function (n) {
           if (! n.firstChild) {
             // spurious empty tbody
             n.parentNode.removeChild(n);
@@ -146,7 +146,7 @@ DomUtils = {};
   // Return an HTML string representing the contents of frag,
   // a DocumentFragment.  (This is what innerHTML would do if
   // it were defined on DocumentFragments.)
-  DomUtils.fragmentToHtml = function(frag) {
+  DomUtils.fragmentToHtml = function (frag) {
     frag = frag.cloneNode(true); // deep copy, don't touch original!
 
     return DomUtils.fragmentToContainer(frag).innerHTML;
@@ -157,7 +157,7 @@ DomUtils = {};
   // is as simple as creating a DIV, but in the case of a fragment
   // containing TRs, for example, it's necessary to create a TABLE and
   // a TBODY and return the TBODY.
-  DomUtils.fragmentToContainer = function(frag) {
+  DomUtils.fragmentToContainer = function (frag) {
     var doc = document; // node factory
 
     var firstElement = frag.firstChild;
@@ -187,7 +187,7 @@ DomUtils = {};
   };
 
   // Returns true if element a contains node b and is not node b.
-  DomUtils.elementContains = function(a, b) {
+  DomUtils.elementContains = function (a, b) {
     if (a.nodeType !== 1) /* ELEMENT */
       return false;
     if (a === b)
@@ -242,7 +242,7 @@ DomUtils = {};
   };
 
   // Like `findAll` but finds one element (or returns null).
-  DomUtils.find = function(contextNode, selector) {
+  DomUtils.find = function (contextNode, selector) {
     var results = DomUtils.findAll(contextNode, selector);
     return (results.length ? results[0] : null);
   };
@@ -268,7 +268,7 @@ DomUtils = {};
   //
   // precond: clipStart/clipEnd are descendents of contextNode
   // XXX document
-  DomUtils.findAllClipped = function(contextNode, selector, clipStart, clipEnd) {
+  DomUtils.findAllClipped = function (contextNode, selector, clipStart, clipEnd) {
 
     // Ensure the clip range starts and ends on element nodes.  This is possible
     // to do without changing the result set because non-element nodes can't
@@ -286,13 +286,13 @@ DomUtils = {};
 
     // Filter the list of nodes to remove nodes that occur before start
     // or after end.
-    return _.reject(resultsPlus, function(n) {
+    return _.reject(resultsPlus, function (n) {
       return ! isElementInClipRange(n, clipStart, clipEnd);
     });
   };
 
   // Like `findAllClipped` but finds one element (or returns null).
-  DomUtils.findClipped = function(contextNode, selector, clipStart, clipEnd) {
+  DomUtils.findClipped = function (contextNode, selector, clipStart, clipEnd) {
     var results = DomUtils.findAllClipped(
       contextNode, selector, clipStart, clipEnd);
     return (results.length ? results[0] : null);
@@ -361,7 +361,7 @@ DomUtils = {};
   // otherwise, -1 if a comes before b, or else 1 if b comes before a in
   // document order.
   // Requires: `a` and `b` are element nodes in the same document tree.
-  DomUtils.compareElementIndex = function(a, b) {
+  DomUtils.compareElementIndex = function (a, b) {
     // See http://ejohn.org/blog/comparing-document-position/
     if (a === b)
       return 0;
@@ -385,10 +385,10 @@ DomUtils = {};
   //
   // `frag` is a DocumentFragment and will be modified in
   // place. `container` is a DOM element.
-  DomUtils.wrapFragmentForContainer = function(frag, container) {
+  DomUtils.wrapFragmentForContainer = function (frag, container) {
     if (container && container.nodeName === "TABLE" &&
         _.any(frag.childNodes,
-              function(n) { return n.nodeName === "TR"; })) {
+              function (n) { return n.nodeName === "TR"; })) {
       // Avoid putting a TR directly in a TABLE without an
       // intervening TBODY, because it doesn't work in IE.  We do
       // the same thing on all browsers for ease of testing
