@@ -107,7 +107,7 @@ testAsyncMulti("livedata - basic method invocation", [
 
   // test that `wait: false` is respected
   function (test, expect) {
-    if (Meteor.is_client) {
+    if (Meteor.isClient) {
       Meteor.apply("delayedTrue", [], {wait: false}, expect(function(err, res) {
         test.equal(res, false);
       }));
@@ -117,7 +117,7 @@ testAsyncMulti("livedata - basic method invocation", [
 
   // test that `wait: true` is respected
   function(test, expect) {
-    if (Meteor.is_client) {
+    if (Meteor.isClient) {
       Meteor.apply("delayedTrue", [], {wait: true}, expect(function(err, res) {
         test.equal(res, true);
       }));
@@ -292,7 +292,7 @@ var eavesdropOnCollection = function(livedata_connection,
 
 testAsyncMulti("livedata - changing userid reruns subscriptions without flapping data on the wire", [
   function(test, expect) {
-    if (Meteor.is_client) {
+    if (Meteor.isClient) {
       var messages = [];
       var undoEavesdrop = eavesdropOnCollection(
         Meteor.default_connection, "objectsWithUsers", messages);
@@ -364,7 +364,7 @@ testAsyncMulti("livedata - changing userid reruns subscriptions without flapping
       });
     }
   }, function(test, expect) {
-    if (Meteor.is_client) {
+    if (Meteor.isClient) {
       Meteor.subscribe("recordUserIdOnStop");
       Meteor.apply("setUserId", [100], {wait: true}, expect(function() {}));
       Meteor.apply("setUserId", [101], {wait: true}, expect(function() {}));
@@ -376,7 +376,7 @@ testAsyncMulti("livedata - changing userid reruns subscriptions without flapping
 ]);
 
 Tinytest.add("livedata - setUserId fails when called from server", function(test) {
-  if (Meteor.is_server) {
+  if (Meteor.isServer) {
     test.equal(errorThrownWhenCallingSetUserIdDirectlyOnServer.message,
                "Can't call setUserId on a server initiated method call");
   }

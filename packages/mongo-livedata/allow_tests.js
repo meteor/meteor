@@ -7,7 +7,7 @@
     var collection = new Meteor.Collection(name);
     Meteor.Collection.insecure = oldInsecure;
 
-    if (Meteor.is_server) {
+    if (Meteor.isServer) {
       Meteor.publish("collection-" + name, function() {
         return collection.find();
       });
@@ -84,7 +84,7 @@
   }];
 
 
-  if (Meteor.is_server) {
+  if (Meteor.isServer) {
     _.each(allows, function (allow) {
       _.each([
         restrictedCollectionDefaultSecure,
@@ -142,7 +142,7 @@
     });
   }
 
-  if (Meteor.is_server) {
+  if (Meteor.isServer) {
     Tinytest.add("collection - calling allow restricts", function (test) {
       var collection = new Meteor.Collection(null);
       test.equal(collection._restricted, undefined);
@@ -153,7 +153,7 @@
     });
   }
 
-  if (Meteor.is_client) {
+  if (Meteor.isClient) {
     // test that if allow is called once then the collection is
     // restricted, and that other mutations aren't allowed
     testAsyncMulti("collection - partial allow", [
@@ -200,7 +200,7 @@
     ]);
   }
 
-  if (Meteor.is_client) {
+  if (Meteor.isClient) {
     testAsyncMulti("collection - insecure", [
       function (test, expect) {
         insecureCollection.callClearMethod(test.runId(), expect(function () {

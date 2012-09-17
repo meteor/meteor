@@ -150,7 +150,7 @@
           "Need to call Meteor.accounts." + serviceName + ".config first");
     });
 
-    if (Meteor.is_server && !service._secret)
+    if (Meteor.isServer && !service._secret)
       throw new Meteor.accounts.ConfigError(
         "Need to call Meteor.accounts." + serviceName + ".setSecret first");
   };

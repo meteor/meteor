@@ -1,4 +1,4 @@
-if (Meteor.is_client) (function () {
+if (Meteor.isClient) (function () {
 
   // XXX note, only one test can do login/logout things at once! for
   // now, that is this test.
@@ -159,7 +159,7 @@ if (Meteor.is_client) (function () {
 }) ();
 
 
-if (Meteor.is_server) (function () {
+if (Meteor.isServer) (function () {
 
   Tinytest.add(
     'passwords - setup more than one onCreateUserHook',

@@ -431,7 +431,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
     var context = Meteor.deps && Meteor.deps.Context.current;
     if (context && !(context.id in self._userIdListeners)) {
       self._userIdListeners[context.id] = context;
-      context.on_invalidate(function () {
+      context.onInvalidate(function () {
         delete self._userIdListeners[context.id];
       });
     }

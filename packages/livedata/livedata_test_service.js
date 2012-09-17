@@ -25,7 +25,7 @@ Meteor.methods({
 // Methods to help test applying methods with `wait: true`: delayedTrue
 // returns true 500ms after being run unless makeDelayedTrueImmediatelyReturnFalse
 // was run in the meanwhile
-if (Meteor.is_server) {
+if (Meteor.isServer) {
   var delayed_true_future;
   var delayed_true_times;
   Meteor.methods({
@@ -104,7 +104,7 @@ Meteor.methods({
 
 objectsWithUsers = new Meteor.Collection("objectsWithUsers");
 
-if (Meteor.is_server) {
+if (Meteor.isServer) {
   objectsWithUsers.remove({});
   objectsWithUsers.insert({name: "owned by none", ownerUserIds: [null]});
   objectsWithUsers.insert({name: "owned by one - a", ownerUserIds: [1]});
@@ -140,7 +140,7 @@ if (Meteor.is_server) {
 
 /// Helper for "livedata - setUserId fails when called on server"
 
-if (Meteor.is_server) {
+if (Meteor.isServer) {
   Meteor.startup(function() {
     errorThrownWhenCallingSetUserIdDirectlyOnServer = null;
     try {

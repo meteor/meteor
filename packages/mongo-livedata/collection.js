@@ -155,7 +155,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
     m[self._prefix + 'insert'] = function (doc) {
       self._maybe_snapshot();
 
-      if (!this.is_simulation) {
+      if (!this.isSimulation) {
         if (self._restricted) {
           if (!self._allowInsert(this.userId(), doc))
             throw new Meteor.Error(403, "Access denied");
@@ -172,7 +172,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
     m[self._prefix + 'update'] = function (selector, mutator, options) {
       self._maybe_snapshot();
 
-      if (this.is_simulation) {
+      if (this.isSimulation) {
         // insert returns nothing.  allow exceptions to propagate.
         self._collection.update(selector, mutator, options);
       } else {
@@ -192,7 +192,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
     m[self._prefix + 'remove'] = function (selector) {
       self._maybe_snapshot();
 
-      if (this.is_simulation) {
+      if (this.isSimulation) {
         // remove returns nothing.  allow exceptions to propagate.
         self._collection.remove(selector);
       } else {
