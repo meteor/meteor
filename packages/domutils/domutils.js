@@ -2,9 +2,35 @@
 
 DomUtils = {};
 
-(function() {
+(function () {
 
-  var Sizzle = window.Sizzle || $.find;
+  var qsaFindAllBySelector = function (selector, contextNode) {
+    // the search is constrained to descendants of `ancestor`,
+    // but it doesn't affect the scope of the query.
+    var ancestor = contextNode;
+
+    return withElementId(
+      contextNode, "DomUtils_findAllBySelector_scope",
+      function (idSelector) {
+        // scope the entire selector to contextNode by prepending
+        // id of contextNode to the selector.
+        var doctoredSelector = _.map(selector.split(','), function (selec) {
+          return idSelector + " " + selec;
+        }).join(',');
+        return ancestor.querySelectorAll(doctoredSelector);
+      });
+  };
+
+  // We have our own, querySelectorAll-based implementation of scoped
+  // selector matching; it's all you need in IE 8+ and modern browsers.
+  //
+  // However, we use Sizzle or jQuery if it's present on the client because of:
+  // - apps that want jQuery's selector extensions (:visible, :input, etc.)
+  // - apps that include jQuery anyway
+  // - apps that want IE 7 support
+  var findAllBySelector = (window.Sizzle
+                           || (window.jQuery && window.jQuery.find)
+                           || qsaFindAllBySelector);
 
   ///// Common look-up tables used by htmlToFragment et al.
 
@@ -188,26 +214,25 @@ DomUtils = {};
   // array.)
   //
   // `contextNode` may be either a node, a document, or a DocumentFragment.
-  DomUtils.findAll = function(contextNode, selector) {
-    // Eventually, we will remove the dependency on Sizzle and
-    // implement this in terms of querySelectorAll on modern browsers
-    // and Sizzle in old IE.  We'll use Sizzle's trick for scoped
-    // querySelectorAll which involves temporarily assigning an ID to
-    // contextNode (if it doesn't have one) and prepending the ID to
-    // the selector.
+  DomUtils.findAll = function (contextNode, selector) {
     if (contextNode.nodeType === 11 /* DocumentFragment */) {
-      // Sizzle doesn't work on a DocumentFragment, but it does work on
-      // a descendent of one.
+      // contextNode is a DocumentFragment.
+      //
+      // We don't expect to be able to run selectors on a DocumentFragment
+      // (Sizzle won't work) but we can on a normal elements that aren't
+      // in the document.  Fortunately we can manipulate offscreen nodes
+      // as much as we want as long as we put them back the way they were
+      // when we're done.
       var frag = contextNode;
       var container = DomUtils.fragmentToContainer(frag);
-      var results = Sizzle(selector, container);
+      var results = findAllBySelector(selector, container);
       // put nodes back into frag
       while (container.firstChild)
         frag.appendChild(container.firstChild);
       return results;
-    } else {
-      return Sizzle(selector, contextNode);
     }
+
+    return findAllBySelector(selector, contextNode);
   };
 
   // Like `findAll` but finds one element (or returns null).
@@ -267,29 +292,50 @@ DomUtils = {};
     return (results.length ? results[0] : null);
   };
 
-  var matchesSelectorMaybeClipped = function(element, contextNode, selector,
-                                             clipStart, clipEnd) {
-    var tempId;
-    if (! element.id)
-      element.setAttribute('id', tempId = 'DomUtils_matchesSelector_target');
+  // Executes `func` while ensuring that `element` has an ID.  If `element`
+  // doesn't have an ID, it is assigned `magicId` temporarily.
+  // Calls func with a selector of the form "[id='...']" as an argument.
+  var withElementId = function (element, magicId, func) {
+    var didSetId = false;
+    if (! element.id) {
+      element.setAttribute('id', magicId);
+      didSetId = true;
+    }
     try {
       var escapedNodeId = element.id.replace(/'/g, "\\$&");
-      var trimmedSelector = selector.match(/\S.*?(?=\s*$)/)[0];
-      // appending [id='foo'] to a selector with no whitespace ought to
-      // simply restrict the set of possible outputs regardless of the
-      // form of the selector.
-      var doctoredSelector = trimmedSelector + "[id='" + escapedNodeId + "']";
-      var result;
-      if (clipStart)
-        result = DomUtils.findClipped(contextNode, doctoredSelector,
-                                      clipStart, clipEnd);
-      else
-        result = DomUtils.find(contextNode, doctoredSelector);
-      return (result === element);
+      return func("[id='" + escapedNodeId + "']");
     } finally {
-      if (tempId)
-        element.removeAttribute("id");
+      if (didSetId)
+        element.removeAttribute('id');
     }
+  };
+
+  var matchesSelectorMaybeClipped = function (element, contextNode, selector,
+                                             clipStart, clipEnd) {
+    var selecs = selector.split(',');
+    for(var i = 0, N = selecs.length; i < N; i++) {
+      var matches = withElementId(
+        element, "DomUtils_matchesSelector_target",
+        function (idSelector) {
+          var trimmedSelector = selector.match(/\S.*?(?=\s*$)/)[0];
+          // appending [id='foo'] to a selector with no whitespace ought to
+          // simply restrict the set of possible outputs regardless of the
+          // form of the selector.
+          var doctoredSelector = trimmedSelector + idSelector;
+          var result;
+          if (clipStart)
+            result = DomUtils.findClipped(contextNode, doctoredSelector,
+                                          clipStart, clipEnd);
+          else
+            result = DomUtils.find(contextNode, doctoredSelector);
+          return (result === element);
+        });
+
+      if (matches)
+        return true;
+    }
+
+    return false;
   };
 
   // Check if `element` matches `selector`, scoped to `contextNode`.

@@ -9,7 +9,7 @@ Spark._checkIECompliance = true;
 (function () {
 
 var legacyLabels = {
-  '*[id], #[name]': function(n) {
+  '*[id], *[name]': function(n) {
     var label = null;
 
     if (n.nodeType === 1) {
