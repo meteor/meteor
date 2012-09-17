@@ -16,9 +16,8 @@
     run: function (f) {
       var previous = Context.current;
       Context.current = this;
-      try { var ret = f(); }
+      try { return f(); }
       finally { Context.current = previous; }
-      return ret;
     },
 
     // we specifically guarantee that this doesn't call any

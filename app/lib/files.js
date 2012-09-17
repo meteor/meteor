@@ -210,7 +210,7 @@ var files = module.exports = {
     var ret;
     _.find(this.get_package_dirs(), function(package_dir) {
       var dir = path.join(package_dir, name);
-      if (fs.existsSync(dir)) {
+      if (fs.existsSync(path.join(dir, 'package.js'))) {
         ret = dir;
         return true;
       }

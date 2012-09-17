@@ -1276,22 +1276,22 @@ The following properties and methods are available on the event object
 passed to handlers:
 
 <dl class="objdesc">
-{{#dtdd "type" "String"}}
+{{#dtdd name="type" type="String"}}
 The event's type, such as "click", "blur" or "keypress".
 {{/dtdd}}
 
-{{#dtdd "target" "DOM Element"}}
+{{#dtdd name="target" type="DOM Element"}}
 The element that originated the event.
 {{/dtdd}}
 
-{{#dtdd "currentTarget" "DOM Element"}}
+{{#dtdd name="currentTarget" type="DOM Element"}}
 The element currently handling the event.  This is the element that
 matched the selector in the event map.  For events that bubble, it may
 be `target` or an ancestor of `target`, and its value changes as the
 event bubbles.
 {{/dtdd}}
 
-{{#dtdd "which" "Number"}}
+{{#dtdd name="which" type="Number"}}
 For mouse events, the number of the mouse button (1=left, 2=middle, 3=right).
 For key events, a character or key code.
 {{/dtdd}}
@@ -1752,6 +1752,28 @@ Example asynchronous HTTP call:
 {{> api_box http_put}}
 {{> api_box http_del}}
 
+
+<h2 id="email"><span>Email</span></h2>
+
+The `email` package allows sending email from a Meteor app. To use it, add the
+package to your project with `$ meteor add email`.
+
+The server reads from the `MAIL_URL` environment variable to determine how to
+send mail. Currently, Meteor supports sending mail over SMTP; the `MAIL_URL`
+environment variable should be of the form
+`smtp://USERNAME:PASSWORD@HOST:PORT/`. For apps deployed with `meteor deploy`,
+`MAIL_URL` defaults to an account (provided by
+<a href="http://www.mailgun.com/" target="_blank">Mailgun</a>) which allows
+apps to send up to 200 emails per day; you may override this default by
+assigning to `process.env.MAIL_URL` before your first call to `Email.send`.
+
+If `MAIL_URL` is not set (eg, when running your application locally),
+`Email.send` outputs the message to standard output instead.
+
+{{> api_box email_send }}
+
+You must provide the `from` option and at least one of `to`, `cc`, and `bcc`;
+all other options are optional.
 
 {{/better_markdown}}
 </template>

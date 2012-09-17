@@ -29,7 +29,20 @@
 
 Spark = {};
 
-Spark._currentRenderer = new Meteor.EnvironmentVariable;
+Spark._currentRenderer = (function () {
+  var current = null;
+  return {
+    get: function () {
+      return current;
+    },
+    withValue: function (v, func) {
+      var previous = current;
+      current = v;
+      try { return func(); }
+      finally { current = previous; }
+    }
+  };
+})();
 
 Spark._TAG = "_spark_" + Meteor.uuid();
 // XXX document contract for each type of annotation?
@@ -704,31 +717,10 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
           var selector = handler.selector;
 
           if (selector) {
-            // Check if event.currentTarget matches `selector`,
-            // scoped to `range`.
-            // As an efficiency hack, give the node we are looking
-            // for an id so the selector will match only it.
-            var node = event.currentTarget;
-            var tempId;
-            if (! node.id)
-              node.setAttribute('id', tempId = 'spark_currentTarget');
-            var escapedNodeId = node.id.replace(/'/g, "\\$&");
-            // XXX OLD COMMENT
-            // This ends up doing O(n) findAllClipped calls when an
-            // event bubbles up N level in the DOM. If this ends up
-            // being too slow, we could memoize findAllClipped across
-            // the processing of each event.
-            try {
-              var result = DomUtils.findClipped(
-                range.containerNode(),
-                selector + "[id='" + escapedNodeId + "']",
-                range.firstNode(), range.lastNode());
-
-              if (result !== node)
-                continue;
-            } finally {
-              if (tempId)
-                node.removeAttribute('id');
+            if (! DomUtils.matchesSelectorClipped(
+              event.currentTarget, range.containerNode(), selector,
+              range.firstNode(), range.lastNode())) {
+              continue;
             }
           } else {
             // if no selector, only match the event target
@@ -925,7 +917,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
       later(function () {
         var frag = Spark.render(_.bind(itemFunc, null, item));
         DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
-        var range = new LiveRange(Spark._TAG, frag);
+        var range = makeRange(Spark._ANNOTATION_LIST_ITEM, frag);
 
         if (! itemRanges.length) {
           Spark.finalize(outerRange.replaceContents(frag));

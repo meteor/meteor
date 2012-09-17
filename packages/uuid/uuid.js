@@ -117,4 +117,4 @@ Meteor.uuid = function () {
 
   var uuid = s.join("");
   return uuid;
-}
+};

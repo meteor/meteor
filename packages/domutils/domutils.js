@@ -154,22 +154,27 @@ DomUtils = {};
     return container;
   };
 
-  // Returns true if element a properly contains element b.
-  // Only works on element nodes (e.g. not text nodes).
+  // Returns true if element a contains node b and is not node b.
   DomUtils.elementContains = function(a, b) {
-    // Note: Some special-casing would be required to implement this method
-    // where a and b aren't necessarily elements, e.g. b is a text node,
-    // because contains() doesn't seem to work reliably on some browsers
-    // including IE.
-    if (a.nodeType !== 1 || b.nodeType !== 1) {
-      return false; // a and b are not both elements
-    }
+    if (a.nodeType !== 1) /* ELEMENT */
+      return false;
+    if (a === b)
+      return false;
+
     if (a.compareDocumentPosition) {
       return a.compareDocumentPosition(b) & 0x10;
     } else {
       // Should be only old IE and maybe other old browsers here.
-      // Modern Safari has both methods but seems to get contains() wrong.
-      return a !== b && a.contains(b);
+      // Modern Safari has both functions but seems to get contains() wrong.
+      // IE can't handle b being a text node.  We work around this
+      // by doing a direct parent test now.
+      b = b.parentNode;
+      if (! (b && b.nodeType === 1)) /* ELEMENT */
+        return false;
+      if (a === b)
+        return true;
+
+      return a.contains(b);
     }
   };
 
@@ -211,6 +216,15 @@ DomUtils = {};
     return (results.length ? results[0] : null);
   };
 
+  var isElementInClipRange = function (elem, clipStart, clipEnd) {
+    // elem is not in clip range if it contains the clip range
+    if (DomUtils.elementContains(elem, clipStart))
+      return false;
+    // elem is in clip range if clipStart <= elem <= clipEnd
+    return (DomUtils.compareElementIndex(clipStart, elem) <= 0) &&
+      (DomUtils.compareElementIndex(elem, clipEnd) <= 0);
+  };
+
   // Like `findAll` but searches the nodes from `start` to `end`
   // inclusive. `start` and `end` must be siblings, and they participate
   // in the search (they can be used to match selector components, and
@@ -242,40 +256,73 @@ DomUtils = {};
     // Filter the list of nodes to remove nodes that occur before start
     // or after end.
     return _.reject(resultsPlus, function(n) {
-      // reject node if it contains the clip range
-      if (DomUtils.elementContains(n, clipStart))
-        return true;
-      // reject node if (n,start) are in order or (end,n) are in order
-      return (DomUtils.elementOrder(n, clipStart) > 0) ||
-        (DomUtils.elementOrder(clipEnd, n) > 0);
+      return ! isElementInClipRange(n, clipStart, clipEnd);
     });
   };
 
   // Like `findAllClipped` but finds one element (or returns null).
   DomUtils.findClipped = function(contextNode, selector, clipStart, clipEnd) {
-    var results = DomUtils.findAllClipped(contextNode, selector, clipStart, clipEnd);
+    var results = DomUtils.findAllClipped(
+      contextNode, selector, clipStart, clipEnd);
     return (results.length ? results[0] : null);
   };
 
+  var matchesSelectorMaybeClipped = function(element, contextNode, selector,
+                                             clipStart, clipEnd) {
+    var tempId;
+    if (! element.id)
+      element.setAttribute('id', tempId = 'DomUtils_matchesSelector_target');
+    try {
+      var escapedNodeId = element.id.replace(/'/g, "\\$&");
+      var trimmedSelector = selector.match(/\S.*?(?=\s*$)/)[0];
+      // appending [id='foo'] to a selector with no whitespace ought to
+      // simply restrict the set of possible outputs regardless of the
+      // form of the selector.
+      var doctoredSelector = trimmedSelector + "[id='" + escapedNodeId + "']";
+      var result;
+      if (clipStart)
+        result = DomUtils.findClipped(contextNode, doctoredSelector,
+                                      clipStart, clipEnd);
+      else
+        result = DomUtils.find(contextNode, doctoredSelector);
+      return (result === element);
+    } finally {
+      if (tempId)
+        element.removeAttribute("id");
+    }
+  };
+
+  // Check if `element` matches `selector`, scoped to `contextNode`.
+  DomUtils.matchesSelector = function (element, contextNode, selector) {
+    return matchesSelectorMaybeClipped(element, contextNode, selector);
+  };
+
+  // Check if `element` matches `selector`, scoped to `contextNode`,
+  // clipped to ordered siblings `clipStart`..`clipEnd`.
+  DomUtils.matchesSelectorClipped = function (element, contextNode, selector,
+                                              clipStart, clipEnd) {
+    return matchesSelectorMaybeClipped(element, contextNode, selector,
+                                       clipStart, clipEnd);
+  };
 
   // Returns 0 if the nodes are the same or either one contains the other;
-  // otherwise, 1 if a comes before b, or else -1 if b comes before a in
+  // otherwise, -1 if a comes before b, or else 1 if b comes before a in
   // document order.
   // Requires: `a` and `b` are element nodes in the same document tree.
-  DomUtils.elementOrder = function(a, b) {
+  DomUtils.compareElementIndex = function(a, b) {
     // See http://ejohn.org/blog/comparing-document-position/
     if (a === b)
       return 0;
     if (a.compareDocumentPosition) {
       var n = a.compareDocumentPosition(b);
-      return ((n & 0x18) ? 0 : ((n & 0x4) ? 1 : -1));
+      return ((n & 0x18) ? 0 : ((n & 0x4) ? -1 : 1));
     } else {
       // Only old IE is known to not have compareDocumentPosition (though Safari
       // originally lacked it).  Thankfully, IE gives us a way of comparing elements
       // via the "sourceIndex" property.
       if (a.contains(b) || b.contains(a))
         return 0;
-      return (a.sourceIndex < b.sourceIndex ? 1 : -1);
+      return (a.sourceIndex < b.sourceIndex ? -1 : 1);
     }
   };
 
