@@ -314,7 +314,13 @@ _.extend(Meteor._LivedataSession.prototype, {
     else
       self.universal_subs.push(sub);
 
-    var res = handler.apply(sub, params || []);
+    try {
+      var res = handler.apply(sub, params || []);
+    } catch (e) {
+      Meteor._debug("Internal exception while starting subscription", sub_id,
+                    e.stack);
+      return;
+    }
 
     // if Meteor._RemoteCollectionDriver is available (defined in
     // mongo-livedata), automatically wire up handlers that return a
