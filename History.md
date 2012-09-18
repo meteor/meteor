@@ -1,6 +1,63 @@
 
 ## vNEXT
 
+## v0.4.1
+
+* New `email` smart package, with [`Email.send`](http://docs.meteor.com/#email)
+  API.
+
+* Upgrade Node from 0.6.17 to 0.8.8, as well as many Node modules in the dev
+  bundle; those that are user-exposed are:
+  * coffee-script: 1.3.3 (from 1.3.1)
+  * stylus: 0.29.0 (from 0.28.1)
+  * nib: 0.8.2 (from 0.7.0)
+
+* All publicly documented APIs now use `camelCase` rather than
+  `under_scores`. The old spellings continue to work for now. New names are:
+  - `Meteor.isClient`/`isServer`
+  - `this.isSimulation` inside a method invocation
+  - `Meteor.deps.Context.onInvalidate`
+  - `Meteor.status().retryCount`/`retryTime`
+
+* Spark improvements
+  * Optimize selector matching for event maps.
+  * `Spark._currentRenderer` shouldn't persist into timer callbacks.
+  * Fix bug caused by interaction between `Template.foo.preserve` and
+    `{{#constant}}`. #323
+  * Allow `{{#each}}` over a collection of objects without `_id`. #281
+  * Added a script to build a standalone spark.js that does not depend on
+    Meteor.
+  * Meteor and Spark no longer depend on jQuery unless you need IE7
+    support. (All Meteor apps still include jQuery, for now.)
+
+* If you use `Meteor.setTimer`/`setInterval`/`defer` inside a method invocation,
+  and the callback is invoked before all writes directly created by the
+  invocation are committed, and the callback creates writes, then those writes
+  will be added to the same "write fence" as the method's own writes, causing
+  the client to wait for those writes to be committed before quiescing.
+
+* Make `Meteor.Cursor.forEach` fully synchronous even if the user's callback
+  yields. #321.
+
+* Upgrade bootstrap to version 2.1.1. #336, #337, #288, #293
+
+* Change the implementation of the `meteor deploy` password prompt to not crash
+  Emacs M-x shell.
+
+* Optimize `LocalCollection.remove(id)` to be O(1) rather than O(n).
+
+* Avoid running full query result diffs on the client when unnecessary.
+
+* Better error reporting when a package in `.meteor/packages` does not exist.
+
+* Better error reporting for coffeescript. #331
+
+* Better error handling in `Handlebars.Exception`.
+
+
+Patches contributed by GitHub users fivethirty, tmeasday, and xenolf.
+
+
 ## v0.4.0
 
 * Merge Spark, a new live page update engine
