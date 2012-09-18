@@ -39,6 +39,8 @@
 * Make `Meteor.Cursor.forEach` fully synchronous even if the user's callback
   yields. #321.
 
+* Recover from exceptions thrown in `Meteor.publish` handlers.
+
 * Upgrade bootstrap to version 2.1.1. #336, #337, #288, #293
 
 * Change the implementation of the `meteor deploy` password prompt to not crash
