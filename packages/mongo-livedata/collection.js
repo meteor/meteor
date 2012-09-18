@@ -155,14 +155,12 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
     m[self._prefix + 'insert'] = function (doc) {
       self._maybe_snapshot();
 
-      if (!this.isSimulation) {
-        if (self._restricted) {
-          if (!self._allowInsert(this.userId(), doc))
-            throw new Meteor.Error(403, "Access denied");
-        } else {
-          if (!insecure)
-            throw new Meteor.Error(403, "Access denied");
-        }
+      if (self._restricted) {
+        if (!self._allowInsert(this.userId(), doc))
+          throw new Meteor.Error(403, "Access denied");
+      } else {
+        if (!insecure)
+          throw new Meteor.Error(403, "Access denied");
       }
 
       // insert returns nothing.  allow exceptions to propagate.
@@ -172,19 +170,14 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
     m[self._prefix + 'update'] = function (selector, mutator, options) {
       self._maybe_snapshot();
 
-      if (this.isSimulation) {
-        // insert returns nothing.  allow exceptions to propagate.
-        self._collection.update(selector, mutator, options);
+      if (self._restricted) {
+        self._validatedUpdate(this.userId(), selector, mutator, options);
       } else {
-        if (self._restricted) {
-          self._validatedUpdate(this.userId(), selector, mutator, options);
+        if (insecure) {
+          // update returns nothing.  allow exceptions to propagate.
+          self._collection.update(selector, mutator, options);
         } else {
-          if (insecure) {
-            // update returns nothing.  allow exceptions to propagate.
-            self._collection.update(selector, mutator, options);
-          } else {
-            throw new Meteor.Error(403, "Access denied");
-          }
+          throw new Meteor.Error(403, "Access denied");
         }
       }
     };
@@ -192,19 +185,14 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
     m[self._prefix + 'remove'] = function (selector) {
       self._maybe_snapshot();
 
-      if (this.isSimulation) {
-        // remove returns nothing.  allow exceptions to propagate.
-        self._collection.remove(selector);
+      if (self._restricted) {
+        self._validatedRemove(this.userId(), selector);
       } else {
-        if (self._restricted) {
-          self._validatedRemove(this.userId(), selector);
+        if (insecure) {
+          // insert returns nothing.  allow exceptions to propagate.
+          self._collection.remove(selector);
         } else {
-          if (insecure) {
-            // insert returns nothing.  allow exceptions to propagate.
-            self._collection.remove(selector);
-          } else {
-            throw new Meteor.Error(403, "Access denied");
-          }
+          throw new Meteor.Error(403, "Access denied");
         }
       }
     };
