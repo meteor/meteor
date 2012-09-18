@@ -3,7 +3,7 @@
 
 Players = new Meteor.Collection("players");
 
-if (Meteor.is_client) {
+if (Meteor.isClient) {
   Template.leaderboard.players = function () {
     return Players.find({}, {sort: {score: -1, name: 1}});
   };
@@ -31,7 +31,7 @@ if (Meteor.is_client) {
 }
 
 // On server startup, create some players if the database is empty.
-if (Meteor.is_server) {
+if (Meteor.isServer) {
   Meteor.startup(function () {
     if (Players.find().count() === 0) {
       var names = ["Ada Lovelace",

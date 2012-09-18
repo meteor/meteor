@@ -258,7 +258,7 @@ LocalCollection.Cursor.prototype._markAsReactive = function (options) {
     // recreated. so we might want to let it linger for a little
     // while and repurpose it if it comes back. this will save us
     // work because we won't have to redo the initial find.
-    context.on_invalidate(handle.stop);
+    context.onInvalidate(handle.stop);
   }
 };
 

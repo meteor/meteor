@@ -722,16 +722,11 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
           var selector = handler.selector;
 
           if (selector) {
-            // This ends up doing O(n) findAllClipped calls when an
-            // event bubbles up N level in the DOM. If this ends up
-            // being too slow, we could memoize findAllClipped across
-            // the processing of each event.
-            var results = DomUtils.findAllClipped(
-              range.containerNode(), selector, range.firstNode(), range.lastNode());
-            // This is a linear search through what could be a large
-            // result set.
-            if (! _.contains(results, event.currentTarget))
+            if (! DomUtils.matchesSelectorClipped(
+              event.currentTarget, range.containerNode(), selector,
+              range.firstNode(), range.lastNode())) {
               continue;
+            }
           } else {
             // if no selector, only match the event target
             if (event.currentTarget !== event.target)

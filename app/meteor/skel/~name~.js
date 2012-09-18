@@ -1,4 +1,4 @@
-if (Meteor.is_client) {
+if (Meteor.isClient) {
   Template.hello.greeting = function () {
     return "Welcome to ~name~.";
   };
@@ -12,7 +12,7 @@ if (Meteor.is_client) {
   };
 }
 
-if (Meteor.is_server) {
+if (Meteor.isServer) {
   Meteor.startup(function () {
     // code to run on server at startup
   });

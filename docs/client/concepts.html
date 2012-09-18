@@ -46,7 +46,7 @@ create a nested tree of separate files, or anything in between.
 Files outside the `client` and `server`
 subdirectories are loaded on both the client and the server!  That's
 the place for model definitions and other functions.  Meteor provides
-the variables [`is_client` and `is_server`](#meteor_is_client) so that
+the variables [`isClient` and `isServer`](#meteor_isclient) so that
 your code can alter its behavior depending on whether it's running
 on the client or the server.
 
@@ -115,8 +115,8 @@ queries and updates.
 
     // server: publish all room documents, and per-room messages
     Meteor.publish("chatrooms");
-    Meteor.publish("messages", function (room_id) {
-      return Messages.find({room: room_id});
+    Meteor.publish("messages", function (roomId) {
+      return Messages.find({room: roomId});
     });
 
     // client: subscribe to all rooms, and messages in the first room
@@ -339,15 +339,15 @@ functions in JavaScript. Just add the helper functions directly on the
 `Template.[template name]` object. For example, in this template:
 
     <template name="players">
-      {{dstache}}#each top_scorers}}
+      {{dstache}}#each topScorers}}
         <div>{{dstache}}name}}</div>
       {{dstache}}/each}}
     </{{! }}template>
 
-instead of passing in `top_scorers` as data when we call the
+instead of passing in `topScorers` as data when we call the
 template function, we could define a function on `Template.players`:
 
-    Template.players.top_scorers = function () {
+    Template.players.topScorers = function () {
       return Users.find({score: {$gt: 100}}, {sort: {score: -1}});
     };
 
@@ -360,28 +360,28 @@ Helpers can take arguments, and they receive the current template data
 in `this`:
 
     // in a JavaScript file
-    Template.players.league_is = function (league) {
+    Template.players.leagueIs = function (league) {
       return this.league === league;
     };
 
     <!-- in a HTML file -->
     <template name="players">
-      {{dstache}}#each top_scorers}}
-        {{dstache}}#if league_is "junior"}}
+      {{dstache}}#each topScorers}}
+        {{dstache}}#if leagueIs "junior"}}
           <div>Junior: {{dstache}}name}}</div>
         {{dstache}}/if}}
-        {{dstache}}#if league_is "senior"}}
+        {{dstache}}#if leagueIs "senior"}}
           <div>Senior: {{dstache}}name}}</div>
         {{dstache}}/if}}
       {{dstache}}/each}}
     </{{! }}template>
 
 {{#note}}
-Handlebars note: `{{dstache}}#if league_is "junior"}}` is
+Handlebars note: `{{dstache}}#if leagueIs "junior"}}` is
 allowed because of a Meteor extension that allows nesting a helper
-in a block helper. (Both `if` and `league_is` are
+in a block helper. (Both `if` and `leagueIs` are
 technically helpers, and stock Handlebars would not invoke
-`league_is` here.)
+`leagueIs` here.)
 {{/note}}
 
 Helpers can also be used to pass in constant data.
@@ -397,19 +397,19 @@ the data context of the element that triggered the event.
     <!-- myapp.html -->
     <template name="scores">
       {{dstache}}#each player}}
-        {{dstache}}> player_score}}
+        {{dstache}}> playerScore}}
       {{dstache}}/each}}
     </{{! }}template>
 
-    <template name="player_score">
+    <template name="playerScore">
       <div>{{dstache}}name}}: {{dstache}}score}}
-        <span class="give_points">Give points</span>
+        <span class="givePoints">Give points</span>
       </div>
     </{{! }}template>
 
     <!-- myapp.js -->
-    Template.player_score.events({
-      'click .give_points': function () {
+    Template.playerScore.events({
+      'click .givePoints': function () {
         Users.update({_id: this._id}, {$inc: {score: 2}});
       }
     });
