@@ -18,7 +18,7 @@
     var self = this;
     if (ctx && ! (ctx.id in self._contextsById)) {
       self._contextsById[ctx.id] = ctx;
-      ctx.on_invalidate(function () {
+      ctx.onInvalidate(function () {
         delete self._contextsById[ctx.id];
       });
       return true;
@@ -75,7 +75,7 @@
         return;
       ctx = new Meteor.deps.Context;
       ctx.run(function () { f.call(this, handle); });
-      ctx.on_invalidate(rerun);
+      ctx.onInvalidate(rerun);
     };
     rerun();
     return handle;
@@ -95,7 +95,7 @@
 
     if (! atFlushContext) {
       atFlushContext = new Meteor.deps.Context;
-      atFlushContext.on_invalidate(function () {
+      atFlushContext.onInvalidate(function () {
         var f;
         while ((f = atFlushQueue.shift())) {
           // Since atFlushContext is truthy, if f() calls atFlush

@@ -50,7 +50,7 @@ Session = _.extend({}, {
 
       var isNew = self.keyValueDeps[key][value].add(context);
       if (isNew) {
-        context.on_invalidate(function () {
+        context.onInvalidate(function () {
           // clean up [key][value] if it's now empty, so we don't use
           // O(n) memory for n = values seen ever
           if (self.keyValueDeps[key][value].isEmpty())
