@@ -19,7 +19,9 @@
         }
       },
       extra: {
-        name: identity.name
+        profile: {
+          name: identity.name
+        }
       }
     };
   });

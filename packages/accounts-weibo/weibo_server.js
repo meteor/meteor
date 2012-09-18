@@ -19,7 +19,7 @@
           }
         }
       },
-      extra: {name: identity.screen_name}
+      extra: {profile: {name: identity.screen_name}}
     };
   });
 

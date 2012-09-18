@@ -14,7 +14,7 @@
         email: identity.email,
         services: {google: {id: identity.id, accessToken: accessToken}}
       },
-      extra: {name: identity.name}
+      extra: {profile: {name: identity.name}}
     };
   });
 

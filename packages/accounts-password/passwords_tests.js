@@ -3,14 +3,6 @@ if (Meteor.isClient) (function () {
   // XXX note, only one test can do login/logout things at once! for
   // now, that is this test.
 
-  var username = Meteor.uuid();
-  var username2 = Meteor.uuid();
-  var username3 = Meteor.uuid();
-  // use -intercept so that we don't print to the console
-  var email = Meteor.uuid() + '-intercept@example.com';
-  var password = 'password';
-  var password2 = 'password2';
-  var password3 = 'password3';
 
   var logoutStep = function (test, expect) {
     Meteor.logout(expect(function (error) {
@@ -19,7 +11,27 @@ if (Meteor.isClient) (function () {
     }));
   };
 
+
+  // declare variable outside the testAsyncMulti, so we can refer to
+  // them from multiple tests, but initialize them to new values inside
+  // the test so when we use the 'debug' link in the tests, they get new
+  // values and the tests don't fail.
+  var username, username2, username3;
+  var email;
+  var password, password2, password3;
+
   testAsyncMulti("passwords - long series", [
+    function (test, expect) {
+      username = Meteor.uuid();
+      username2 = Meteor.uuid();
+      username3 = Meteor.uuid();
+      // use -intercept so that we don't print to the console
+      email = Meteor.uuid() + '-intercept@example.com';
+      password = 'password';
+      password2 = 'password2';
+      password3 = 'password3';
+    },
+
     function (test, expect) {
       // XXX argh quiescence + tests === wtf. and i have no idea why
       // this was necessary here and not in other places. probably
@@ -150,7 +162,7 @@ if (Meteor.isClient) (function () {
     function(test, expect) {
       Meteor.createUser({username: username3, password: password3},
                         {testOnCreateUserHook: true}, expect(function () {
-        test.equal(Meteor.user().touchedByOnCreateUser, true);
+        test.equal(Meteor.user().profile.touchedByOnCreateUser, true);
       }));
     },
     logoutStep
@@ -188,7 +200,7 @@ if (Meteor.isServer) (function () {
 
       test.isTrue(userId);
       var user = Meteor.users.findOne(userId);
-      test.equal(user.touchedByOnCreateUser, true);
+      test.equal(user.profile.touchedByOnCreateUser, true);
     });
 
 

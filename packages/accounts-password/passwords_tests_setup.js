@@ -4,7 +4,8 @@ Meteor.accounts.validateNewUser(function (user) {
 
 Meteor.accounts.onCreateUser(function (options, extra, user) {
   if (extra.testOnCreateUserHook) {
-    user.touchedByOnCreateUser = true;
+    user.profile = (user.profile || {});
+    user.profile.touchedByOnCreateUser = true;
     return user;
   } else {
     return 'TEST DEFAULT HOOK';

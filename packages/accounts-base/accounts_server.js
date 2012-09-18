@@ -88,7 +88,7 @@
     if (!_.isEmpty(
       _.intersection(
         _.keys(extra),
-        ['services', 'private', 'username', 'email', 'emails'])))
+        ['services', 'username', 'email', 'emails'])))
       throw new Meteor.Error(400, "Disallowed fields in extra");
 
     if (Meteor.accounts._options.requireEmail &&
@@ -228,7 +228,7 @@
   Meteor.publish(null, function() {
     if (this.userId())
       return Meteor.users.find({_id: this.userId()},
-                               {fields: {services: 0, private: 0}});
+                               {fields: {profile: 1, username: 1, emails: 1}});
     else
       return null;
   }, {is_auto: true});
@@ -237,9 +237,41 @@
   Meteor.default_server.onAutopublish(function () {
     var handler = function () {
       return Meteor.users.find(
-        {}, {fields: {services: 0, private: 0, emails: 0}});
+        {}, {fields: {profile: 1, username: 1}});
     };
     Meteor.default_server.publish(null, handler, {is_auto: true});
   });
+
+  ///
+  /// RESTRICTING WRITES TO USER OBJECTS
+  ///
+
+  Meteor.users.allow({
+    // clients can't insert or remove users
+    insert: function () { return false; },
+    remove: function () { return false; },
+    // clients can modify the profile field of their own document, and
+    // nothing else.
+    update: function (userId, docs, fields, modifier) {
+      // if there is more than one doc, at least one of them isn't our
+      // user record.
+      if (docs.length !== 1)
+        return false;
+      // make sure it is our record
+      var user = docs[0];
+      if (user._id !== userId)
+        return false;
+
+      // user can only modify the 'profile' field. sets to multiple
+      // sub-keys (eg profile.foo and profile.bar) are merged into entry
+      // in the fields list.
+      if (fields.length !== 1 || fields[0] !== 'profile')
+        return false;
+
+      return true;
+    },
+    fields: ['_id'] // we only look at _id.
+  });
+
 }) ();
 
