@@ -12,4 +12,4 @@ fi
 
 cd "$ORIGDIR"
 export NODE_PATH="$TOPDIR/dev_bundle/lib/node_modules"
-exec "$TOPDIR/dev_bundle/bin/node" $*
+exec "$TOPDIR/dev_bundle/bin/node" "$@"
