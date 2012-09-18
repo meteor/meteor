@@ -6,6 +6,7 @@ Package.on_use(function (api) {
   api.use('underscore', 'server');
   api.use('localstorage-polyfill', 'client');
   api.use('accounts-urls', 'client');
+  api.use('session', 'client'); // XXX is this a bad abstraction?
 
   // need this because of the Meteor.users collection but in the future
   // we'd probably want to abstract this away

@@ -35,4 +35,18 @@
       return Meteor.user();
     });
   }
+
+  // manage a session variable that specifies whether all of the configuration
+  // documents in mongo have been loaded
+  var ACCOUNTS_CONFIGURED_KEY = "Meteor.accounts.configured";
+
+  Meteor.subscribe("Meteor.accounts.configuration", function () {
+    Session.set(ACCOUNTS_CONFIGURED_KEY, true);
+  });
+
+  // used by accounts-ui to hide the login button until we have all
+  // the configuration loaded
+  Meteor.accounts.configured = function () {
+    return Session.get(ACCOUNTS_CONFIGURED_KEY);
+  };
 })();

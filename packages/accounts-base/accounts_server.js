@@ -221,7 +221,7 @@
 
 
   ///
-  /// PUBLISHING USER OBJECTS
+  /// PUBLISHING DATA
   ///
 
   // Always publish the current user's record to the client.
@@ -231,7 +231,7 @@
                                {fields: {services: 0, private: 0}});
     else
       return null;
-  }, {is_auto: true});
+  });
 
   // If autopublish is on, also publish everyone else's user record.
   Meteor.default_server.onAutopublish(function () {
@@ -241,5 +241,22 @@
     };
     Meteor.default_server.publish(null, handler, {is_auto: true});
   });
+
+  // Publish all login service configuration fields other than secret.
+  Meteor.publish("Meteor.accounts.configuration", function () {
+    return Meteor.accounts.configuration.find({}, {fields: {secret: 0}});
+  });
+
+  // Allow a one-time configuration for a login service.
+  Meteor.accounts.configuration.allow({}); // disallow mutators
+  Meteor.methods({
+    "Meteor.accounts.configure": function(options) {
+      if (!Meteor.accounts.configuration.findOne({service: options.service}))
+        Meteor.accounts.configuration.insert(options);
+      else
+        throw new Error("Service " + options.service + " already configured");
+    }
+  });
+
 }) ();
 
