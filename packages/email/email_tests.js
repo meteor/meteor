@@ -1,6 +1,9 @@
 streamBuffers = __meteor_bootstrap__.require('stream-buffers');
 
 Tinytest.add("email - dev mode smoke test", function (test) {
+  // This only tests dev mode, so don't run the test if this is deployed.
+  if (process.env.MAIL_URL) return;
+
   var old_stream = Email._output_stream;
   try {
     Email._output_stream = new streamBuffers.WritableStreamBuffer;
