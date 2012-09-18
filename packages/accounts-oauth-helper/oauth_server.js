@@ -142,17 +142,9 @@
 
   // Make sure we're configured
   var ensureConfigured = function(serviceName) {
-    var service = Meteor.accounts[serviceName];
-
-    _.each(service._requireConfigs, function(key) {
-      if (!service[key])
-        throw new Meteor.accounts.ConfigError(
-          "Need to call Meteor.accounts." + serviceName + ".config first");
-    });
-
-    if (Meteor.isServer && !service._secret)
-      throw new Meteor.accounts.ConfigError(
-        "Need to call Meteor.accounts." + serviceName + ".setSecret first");
+    if (!Meteor.accounts.configuration.findOne({service: serviceName})) {
+      throw new Meteor.accounts.ConfigError("Service not configured");
+    };
   };
 
   Meteor.accounts.oauth._renderOauthResults = function(res, query) {

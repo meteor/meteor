@@ -7,8 +7,14 @@
   // connect middleware
   Meteor.accounts.oauth1._handleRequest = function (service, query, res) {
 
-    var config = Meteor.accounts[service.serviceName];
-    var oauthBinding = new OAuth1Binding(config._consumerKey, config._secret, config._urls);
+    var config = Meteor.accounts.configuration.findOne({service: service.serviceName});
+    if (!config) {
+      throw new Meteor.accounts.ConfigError("Service " + service.serviceName + " not configured");
+    }
+
+    var urls = Meteor.accounts[service.serviceName]._urls;
+    var oauthBinding = new OAuth1Binding(
+      config.consumerKey, config.secret, urls);
 
     if (query.requestTokenAndRedirect) {
       // step 1 - get and store a request token
@@ -20,7 +26,7 @@
       Meteor.accounts.oauth1._requestTokens[query.state] = oauthBinding.requestToken;
 
       // redirect to provider login, which will redirect back to "step 2" below
-      var redirectUrl = config._urls.authenticate + '?oauth_token=' + oauthBinding.requestToken;
+      var redirectUrl = urls.authenticate + '?oauth_token=' + oauthBinding.requestToken;
       res.writeHead(302, {'Location': redirectUrl});
       res.end();
 

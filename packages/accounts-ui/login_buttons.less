@@ -15,7 +15,7 @@
     margin-left: 4px;
 }
 
-@login-buttons-accounts-dialog-width: 158px;
+@login-buttons-accounts-dialog-width: 178px;
 
 #login-buttons .login-button, .accounts-dialog .login-button {
     float: left;
@@ -41,12 +41,20 @@
     -o-border-radius: 3px;
 }
 
+#login-buttons .login-button-disabled, .accounts-dialog .login-button-disabled {
+    color: #ccc;
+}
+
+#login-buttons .configure-button {
+    background: red;
+}
+
 #login-buttons .login-link-text {
     margin-left: 5px; /* so that other elements aren't too close */
 }
 
 .accounts-dialog .login-button {
-    width: 158px;
+    width: @login-buttons-accounts-dialog-width;
     margin-bottom: 4px;
 }
 
@@ -106,7 +114,7 @@
     padding-left: @login-buttons-accounts-dialog-padding-left;
     padding-bottom: 8px;
 
-    width: 167px;
+    width: @login-buttons-accounts-dialog-width + 9; /* not sure what this 9 is */
 }
 
 #login-dropdown-list {
@@ -137,7 +145,7 @@
 }
 
 .accounts-dialog input {
-    width: 162px;
+    width: @login-buttons-accounts-dialog-width + 4;
 }
 
 .accounts-dialog .login-button-form-submit {
@@ -177,7 +185,7 @@
     float: left;
 }
 
-#enroll-account-form, #reset-password-form, #just-validated-user-form {
+#enroll-account-form, #reset-password-form, #just-validated-user-form, #configure-login-services-dialog {
     z-index: 1000;
     position: fixed;
 
@@ -187,6 +195,18 @@
 
     top: 50%;
     margin-top: -40px; /* = approximately -height/2, though height can change */
+}
+
+@configure-login-services-dialog-width: 530px;
+#configure-login-services-dialog {
+    width: @configure-login-services-dialog-width;
+    margin-left: -(@configure-login-services-dialog-width
+                 + @login-buttons-accounts-dialog-padding-left) / 2;
+    margin-top: -180px; /* = approximately -height/2, though height can change */
+}
+
+#configure-login-services-dialog .login-button-configure {
+    float: right;
 }
 
 #just-validated-dismiss-button {
@@ -206,3 +226,39 @@
 
     background-color: rgba(0, 0, 0, 0.7);
 }
+
+#configure-login-services-dialog table {
+    width: 100%;
+}
+
+#configure-login-services-dialog .configuration_labels {
+    width: 30%;
+}
+
+#configure-login-services-dialog .configuration_inputs {
+    width: 70%;
+}
+
+#configure-login-services-dialog input {
+    width: 100%;
+    font-family: "Courier New", Courier, monospace;
+}
+
+#configure-login-services-dialog ol {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+#configure-login-services-dialog .new-section {
+    margin-top: 10px;
+}
+
+#configure-login-services-dialog ol li {
+    margin-left: 30px;
+}
+
+#configure-login-services-dialog .url {
+  font-family: "Courier New", Courier, monospace;
+}
+
+

@@ -193,7 +193,7 @@
 
 
   ///
-  /// PUBLISHING USER OBJECTS
+  /// PUBLISHING DATA
   ///
 
   // Always publish the current user's record to the client.
@@ -213,6 +213,23 @@
     };
     Meteor.default_server.publish(null, handler, {is_auto: true});
   });
+
+  // Publish all login service configuration fields other than secret.
+  Meteor.publish("loginServiceConfiguration", function () {
+    return Meteor.accounts.configuration.find({}, {fields: {secret: 0}});
+  });
+
+  // Allow a one-time configuration for a login service.
+  Meteor.accounts.configuration.allow({}); // disallow mutators
+  Meteor.methods({
+    "configureLoginService": function(options) {
+      if (!Meteor.accounts.configuration.findOne({service: options.service}))
+        Meteor.accounts.configuration.insert(options);
+      else
+        throw new Meteor.Error(403, "Service " + options.service + " already configured");
+    }
+  });
+
 
   ///
   /// RESTRICTING WRITES TO USER OBJECTS

@@ -8,9 +8,9 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
   Meteor.accounts.oauth._loginResultForState = {};
   Meteor.accounts.oauth._services = {};
 
+  if (!Meteor.accounts.configuration.findOne({service: 'foobook'}))
+    Meteor.accounts.configuration.insert({service: 'foobook'});
   Meteor.accounts.foobook = {};
-  Meteor.accounts.foobook._requireConfigs = [];
-  Meteor.accounts.foobook._secret = 'XXX';
 
   // register a fake login service - foobook
   Meteor.accounts.oauth.registerService("foobook", 2, function (query) {
@@ -49,9 +49,9 @@ Tinytest.add("oauth2 - error in user creation", function (test) {
   var state = Meteor.uuid();
   var failbookId = Meteor.uuid();
 
+  if (!Meteor.accounts.configuration.findOne({service: 'failbook'}))
+    Meteor.accounts.configuration.insert({service: 'failbook'});
   Meteor.accounts.failbook = {};
-  Meteor.accounts.failbook._requireConfigs = [];
-  Meteor.accounts.failbook._secret = 'XXX';
 
   // register a failing login service
   Meteor.accounts.oauth.registerService("failbook", 2, function (query) {

@@ -1,9 +1,5 @@
 (function () {
 
-  Meteor.accounts.weibo.setSecret = function (secret) {
-    Meteor.accounts.weibo._secret = secret;
-  };
-
   Meteor.accounts.oauth.registerService('weibo', 2, function(query) {
 
     var accessToken = getAccessToken(query);
@@ -24,12 +20,16 @@
   });
 
   var getAccessToken = function (query) {
+    var config = Meteor.accounts.configuration.findOne({service: 'weibo'});
+    if (!config)
+      throw new Meteor.accounts.ConfigError("Service not configured");
+
     var result = Meteor.http.post(
       "https://api.weibo.com/oauth2/access_token", {params: {
         code: query.code,
-        client_id: Meteor.accounts.weibo._clientId,
-        client_secret: Meteor.accounts.weibo._secret,
-        redirect_uri: Meteor.accounts.weibo._appUrl + "/_oauth/weibo?close",
+        client_id: config.clientId,
+        client_secret: config.secret,
+        redirect_uri: Meteor.absoluteUrl("_oauth/weibo?close", {replaceLocalhost: true}),
         grant_type: 'authorization_code'
       }});
 

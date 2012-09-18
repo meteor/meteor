@@ -31,7 +31,17 @@ Meteor.users = new Meteor.Collection(
   null /*driver*/,
   true /*preventAutopublish*/);
 
+// Table containing documents with configuration options for each
+// login service
+Meteor.accounts.configuration = new Meteor.Collection(
+  "accounts._loginServiceConfiguration",
+  null /*manager*/,
+  null /*driver*/,
+  true /*preventAutopublish*/);
+
 // Thrown when trying to use a login service which is not configured
 Meteor.accounts.ConfigError = function(description) {
   this.message = description;
 };
+Meteor.accounts.ConfigError.prototype = new Error();
+Meteor.accounts.ConfigError.prototype.name = 'Meteor.accounts.ConfigError';

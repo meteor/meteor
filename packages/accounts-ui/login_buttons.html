@@ -11,10 +11,12 @@
       <div class="login-button" id="login-buttons-logout">Logout</div>
     {{else}}
       {{#if services}}
-        {{#if dropdown}}
-          {{> loginButtonsServicesDropdown}}
-        {{else}}
-          {{> loginButtonsServicesRow}}
+        {{#if configurationLoaded}}
+          {{#if dropdown}}
+            {{> loginButtonsServicesDropdown}}
+          {{else}}
+            {{> loginButtonsServicesRow}}
+          {{/if}}
         {{/if}}
       {{else}}
         <div class="no-services">No login services configured.</div>
@@ -65,10 +67,17 @@
       </div>
       {{/if}}
     {{else}}
-      <div class="login-button" id="login-buttons-{{name}}">
-        <div class="login-image" id="login-buttons-image-{{name}}"></div>
-        Sign in with {{name}}
-      </div>
+      {{#if configured}}
+        <div class="login-button" id="login-buttons-{{name}}">
+          <div class="login-image" id="login-buttons-image-{{name}}"></div>
+          Sign in with {{name}}
+        </div>
+      {{else}}
+        <div class="login-button configure-button" id="login-buttons-{{name}}">
+          <div class="login-image" id="login-buttons-image-{{name}}"></div>
+          Configure {{name}} Login
+        </div>
+      {{/if}}
     {{/if}}
   {{/each}}
 </template>
@@ -176,8 +185,48 @@
   {{/if}}
 </template>
 
+<template name="configureLoginServicesDialog">
+  {{#if visible}}
+  <div id="configure-login-services-dialog" class="accounts-dialog">
+    {{{configurationSteps}}}
+
+    <p>
+      Now, copy over some details.
+    </p>
+    <p>
+      <table>
+        <colgroup>
+          <col span="1" class="configuration_labels">
+          <col span="1" class="configuration_inputs">
+        </colgroup>
+        {{#each configurationFields}}
+        <tr>
+          <td>
+            <label for="configure-login-services-dialog-{{property}}">{{label}}</label>
+          </td>
+          <td>
+            <input id="configure-login-services-dialog-{{property}}" />
+          </td>
+        </tr>
+        {{/each}}
+      </table>
+    </p>
+    <div class="new-section">
+      <div class="login-button" id="configure-login-services-dismiss-button">I'll do this later</div>
+      {{#isolate}}
+      <div class="login-button login-button-configure {{#if saveDisabled}}login-button-disabled{{/if}}"
+           id="configure-login-services-dialog-save-configuration">
+        Save Configuration
+      </div>
+      {{/isolate}}
+    </div>
+  </div>
+  {{/if}}
+</template>
+
 <body>
   {{> resetPasswordForm}}
   {{> enrollAccountForm}}
   {{> justValidatedUserForm}}
+  {{> configureLoginServicesDialog}}
 </body>

@@ -1,0 +1,28 @@
+<template name="configureLoginServicesDialogForGoogle">
+  <p>
+    First, you'll need to get a Google Client ID. Follow these steps:
+  </p>
+  <ol>
+    <li>
+      Visit <a href="https://code.google.com/apis/console/" target="blank">https://code.google.com/apis/console/</a>
+    </li>
+    <li>
+      Open the "API Access" tab
+    </li>
+    <li>
+      Create another Client ID
+    </li>
+    <li>
+      Expand (more options)
+    </li>
+    <li>
+      Set Authorized Redirect URIs to: <span class="url">{{siteUrl}}_oauth/google?close</span>
+    </li>
+    <li>
+      Set Authorizes Javascript Origins to: <span class="url">{{siteUrl}}</span>
+    </li>
+    <li>
+      Create client ID
+    </li>
+  </ol>
+</template>
