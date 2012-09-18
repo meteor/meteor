@@ -25,6 +25,7 @@
   * Fix bug caused by interaction between `Template.foo.preserve` and
     `{{#constant}}`. #323
   * Allow `{{#each}}` over a collection of objects without `_id`. #281
+  * Spark now supports Firefox 3.6.
   * Added a script to build a standalone spark.js that does not depend on
     Meteor (it depends on jQuery or Sizzle if you need IE7 support,
     and otherwise is fully standalone).
