@@ -1,6 +1,5 @@
 Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
   var http = __meteor_bootstrap__.require('http');
-  var email = Meteor.uuid() + "@example.com";
   var foobookId = Meteor.uuid();
 
   // XXX XXX test isolation fail!  Avital: but actually -- why would
@@ -17,7 +16,6 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
   Meteor.accounts.oauth.registerService("foobook", 2, function (query) {
     return {
       options: {
-        email: email,
         services: {foobook: {id: foobookId}}
       }
     };
@@ -30,10 +28,9 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
   Meteor.accounts.oauth._middleware(req, new http.ServerResponse(req));
 
   // verify that a user is created
-  var user = Meteor.users.findOne({"emails.address": email});
+  var user = Meteor.users.findOne({"services.foobook.id": foobookId});
   test.notEqual(user, undefined);
   test.equal(user.services.foobook.id, foobookId);
-  test.equal(user.emails[0], {address: email, validated: true});
 
   // and that that user has a login token
   var token = Meteor.accounts._loginTokens.findOne({userId: user._id});
@@ -49,8 +46,8 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
 
 Tinytest.add("oauth2 - error in user creation", function (test) {
   var http = __meteor_bootstrap__.require('http');
-  var email = Meteor.uuid() + "@example.com";
   var state = Meteor.uuid();
+  var failbookId = Meteor.uuid();
 
   Meteor.accounts.failbook = {};
   Meteor.accounts.failbook._requireConfigs = [];
@@ -60,8 +57,7 @@ Tinytest.add("oauth2 - error in user creation", function (test) {
   Meteor.accounts.oauth.registerService("failbook", 2, function (query) {
     return {
       options: {
-        email: email,
-        services: {foobook: {id: Meteor.uuid()}}
+        services: {failbook: {id: failbookId}}
       },
       extra: {
         invalid: true
@@ -83,7 +79,7 @@ Tinytest.add("oauth2 - error in user creation", function (test) {
   Meteor.accounts.oauth._middleware(req, new http.ServerResponse(req));
 
   // verify that a user is not created
-  var user = Meteor.users.findOne({"emails.address": email});
+  var user = Meteor.users.findOne({"services.failbook.id": failbookId});
   test.equal(user, undefined);
 
   // verify an error is stored in login state

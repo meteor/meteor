@@ -11,8 +11,11 @@
 
     return {
       options: {
-        email: identity.email,
-        services: {google: {id: identity.id, accessToken: accessToken}}
+        services: {google: {
+          id: identity.id,
+          accessToken: accessToken,
+          email: identity.email
+        }}
       },
       extra: {profile: {name: identity.name}}
     };
