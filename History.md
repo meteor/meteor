@@ -21,20 +21,17 @@
 
 * Spark improvements
   * Optimize selector matching for event maps.
-  * `Spark._currentRenderer` shouldn't persist into timer callbacks.
+  * Fix `Spark._currentRenderer` behavior in timer callbacks.
   * Fix bug caused by interaction between `Template.foo.preserve` and
     `{{#constant}}`. #323
   * Allow `{{#each}}` over a collection of objects without `_id`. #281
   * Added a script to build a standalone spark.js that does not depend on
-    Meteor.
-  * Meteor and Spark no longer depend on jQuery unless you need IE7
-    support. (All Meteor apps still include jQuery, for now.)
+    Meteor (it depends on jQuery or Sizzle if you need IE7 support,
+    and otherwise is fully standalone).
 
-* If you use `Meteor.setTimer`/`setInterval`/`defer` inside a method invocation,
-  and the callback is invoked before all writes directly created by the
-  invocation are committed, and the callback creates writes, then those writes
-  will be added to the same "write fence" as the method's own writes, causing
-  the client to wait for those writes to be committed before quiescing.
+* Database writes from within `Meteor.setTimeout`/`setInterval`/`defer` will be
+  batched with other writes from the current method invocation if they start
+  before the method completes.
 
 * Make `Meteor.Cursor.forEach` fully synchronous even if the user's callback
   yields. #321.
@@ -48,7 +45,8 @@
 
 * Optimize `LocalCollection.remove(id)` to be O(1) rather than O(n).
 
-* Avoid running full query result diffs on the client when unnecessary.
+* Optimize client-side database performance when receiving updated data from the
+  server outside of method calls.
 
 * Better error reporting when a package in `.meteor/packages` does not exist.
 
