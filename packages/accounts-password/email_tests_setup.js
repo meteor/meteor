@@ -27,7 +27,7 @@
     addEmailForTestAndValidate: function (email) {
       Meteor.users.update(
         {_id: this.userId()},
-        {$push: {emails: {email: email, validated: false}}});
+        {$push: {emails: {address: email, validated: false}}});
       Meteor.accounts.sendValidationEmail(this.userId(), email);
     },
 

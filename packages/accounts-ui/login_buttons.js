@@ -113,8 +113,8 @@
       return user.name;
     if (user.username)
       return user.username;
-    if (user.emails && user.emails[0] && user.emails[0] && user.emails[0].email)
-      return user.emails[0].email;
+    if (user.emails && user.emails[0] && user.emails[0].address)
+      return user.emails[0].address;
 
     return '';
   };

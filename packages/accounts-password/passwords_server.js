@@ -19,7 +19,7 @@
     else if (user.username)
       selector = {username: user.username};
     else if (user.email)
-      selector = {"emails.email": user.email};
+      selector = {"emails.address": user.email};
     else
       throw new Meteor.Error(400, "Must pass username, email, or id in request.user");
 
@@ -109,7 +109,7 @@
        if (!email)
         throw new Meteor.Error(400, "Need to set options.email");
 
-      var user = Meteor.users.findOne({"emails.email": email});
+      var user = Meteor.users.findOne({"emails.address": email});
       if (!user)
         throw new Meteor.Error(403, "User not found");
 
@@ -186,7 +186,7 @@
       // update the validated flag on the index in the emails array
       // matching email (see
       // http://www.mongodb.org/display/DOCS/Updating/#Updating-The%24positionaloperator)
-      Meteor.users.update({_id: userId, "emails.email": email},
+      Meteor.users.update({_id: userId, "emails.address": email},
                           {$set: {"emails.$.validated": true}});
       Meteor.accounts._emailValidationTokens.remove({token: token});
 
@@ -324,7 +324,7 @@
 
     if (username && Meteor.users.findOne({username: username}))
       throw new Meteor.Error(403, "User already exists with username " + username);
-    if (email && Meteor.users.findOne({"emails.email": email})) {
+    if (email && Meteor.users.findOne({"emails.address": email})) {
       throw new Meteor.Error(403, "User already exists with email " + email);
     }
 
@@ -343,7 +343,7 @@
     if (username)
       user.username = username;
     if (email)
-      user.emails = [{email: email, validated: false}];
+      user.emails = [{address: email, validated: false}];
 
     user = Meteor.accounts.onCreateUserHook(options, extra, user);
     var userId = Meteor.users.insert(user);

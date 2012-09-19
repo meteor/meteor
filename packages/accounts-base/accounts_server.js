@@ -162,7 +162,7 @@
     }
 
     var email = options.email;
-    var userByEmail = email && Meteor.users.findOne({"emails.email": email});
+    var userByEmail = email && Meteor.users.findOne({"emails.address": email});
     var user;
     if (userByEmail) {
 
@@ -199,7 +199,7 @@
           // similar to Meteor.accounts.onCreateUser
           Meteor.users.update(
             {_id: user._id},
-            {$push: {emails: {email: email, validated: true}}});
+            {$push: {emails: {address: email, validated: true}}});
         }
 
         updateUserData();
@@ -210,7 +210,7 @@
         var attrs = {};
         attrs[serviceName] = options.services[serviceName];
         var user = {
-          emails: (email ? [{email: email, validated: true}] : []),
+          emails: (email ? [{address: email, validated: true}] : []),
           services: attrs
         };
         user = Meteor.accounts.onCreateUserHook(options, extra, user);

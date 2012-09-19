@@ -89,7 +89,7 @@
     },
     function (test, expect) {
       test.equal(Meteor.user().emails.length, 1);
-      test.equal(Meteor.user().emails[0].email, email2);
+      test.equal(Meteor.user().emails[0].address, email2);
       test.isFalse(Meteor.user().emails[0].validated);
     },
     function (test, expect) {
@@ -102,7 +102,7 @@
       // ARGH! ON QUIESCE!!
       Meteor.default_connection.onQuiesce(expect(function () {
         test.equal(Meteor.user().emails.length, 1);
-        test.equal(Meteor.user().emails[0].email, email2);
+        test.equal(Meteor.user().emails[0].address, email2);
         test.isTrue(Meteor.user().emails[0].validated);
       }));
     },
@@ -116,7 +116,7 @@
     function (test, expect) {
       Meteor.default_connection.onQuiesce(expect(function () {
         test.equal(Meteor.user().emails.length, 2);
-        test.equal(Meteor.user().emails[1].email, email3);
+        test.equal(Meteor.user().emails[1].address, email3);
         test.isFalse(Meteor.user().emails[1].validated);
       }));
     },
@@ -130,7 +130,7 @@
     },
     function (test, expect) {
       Meteor.default_connection.onQuiesce(expect(function () {
-        test.equal(Meteor.user().emails[1].email, email3);
+        test.equal(Meteor.user().emails[1].address, email3);
         test.isTrue(Meteor.user().emails[1].validated);
       }));
     },
@@ -164,7 +164,7 @@
           test.isFalse(error);
           var user = result;
           test.equal(user.emails.length, 1);
-          test.equal(user.emails[0].email, email4);
+          test.equal(user.emails[0].address, email4);
           test.isFalse(user.emails[0].validated);
         }));
     },
@@ -179,7 +179,7 @@
     function (test, expect) {
       Meteor.default_connection.onQuiesce(expect(function () {
         test.equal(Meteor.user().emails.length, 1);
-        test.equal(Meteor.user().emails[0].email, email4);
+        test.equal(Meteor.user().emails[0].address, email4);
         test.isTrue(Meteor.user().emails[0].validated);
       }));
     },

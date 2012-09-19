@@ -15,16 +15,16 @@ Tinytest.add('accounts - updateOrCreateUser', function (test) {
   Meteor.accounts.updateOrCreateUser({email: email, services: {google: {id: googleId}}});
 
   test.equal(
-    Meteor.users.findOne({"emails.email": email}).services.facebook.id, facebookId);
+    Meteor.users.findOne({"emails.address": email}).services.facebook.id, facebookId);
   test.equal(
-    Meteor.users.findOne({"emails.email": email}).services.google.id, googleId);
+    Meteor.users.findOne({"emails.address": email}).services.google.id, googleId);
 
   // test that if the user changes their email on the login service
   // we store the new one in addition to the old one
   Meteor.accounts.updateOrCreateUser({email: email2, services: {facebook: {id: facebookId}}});
   test.equal(
-    Meteor.users.findOne({"emails.email": email}).emails,
-    [{email: email, validated: true}, {email: email2, validated: true}]);
+    Meteor.users.findOne({"emails.address": email}).emails,
+    [{address: email, validated: true}, {address: email2, validated: true}]);
 
   // cleanup
   Meteor.users.remove({emails: {$in: [email, email2]}});

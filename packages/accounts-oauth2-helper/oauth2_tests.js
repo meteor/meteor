@@ -30,10 +30,10 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
   Meteor.accounts.oauth._middleware(req, new http.ServerResponse(req));
 
   // verify that a user is created
-  var user = Meteor.users.findOne({"emails.email": email});
+  var user = Meteor.users.findOne({"emails.address": email});
   test.notEqual(user, undefined);
   test.equal(user.services.foobook.id, foobookId);
-  test.equal(user.emails[0], {email: email, validated: true});
+  test.equal(user.emails[0], {address: email, validated: true});
 
   // and that that user has a login token
   var token = Meteor.accounts._loginTokens.findOne({userId: user._id});
@@ -83,7 +83,7 @@ Tinytest.add("oauth2 - error in user creation", function (test) {
   Meteor.accounts.oauth._middleware(req, new http.ServerResponse(req));
 
   // verify that a user is not created
-  var user = Meteor.users.findOne({"emails.email": email});
+  var user = Meteor.users.findOne({"emails.address": email});
   test.equal(user, undefined);
 
   // verify an error is stored in login state
