@@ -1,0 +1,147 @@
+
+* { padding: 0; margin: 0; }
+html, body { height: 100%; }
+
+#topbar {
+  position: absolute;
+  width: 100%;
+  top: 0;
+  height: 39px;
+  border-bottom: 1px solid #555;
+  overflow: auto;
+  background: #cfc;
+  font-size: 12px;
+}
+
+#topbarinner {
+  padding: 7px;
+  font-family: sans-serif;
+}
+
+#main {
+  position: absolute;
+  width: 100%;
+  top: 40px;
+  bottom: 0;
+}
+
+#inputarea textarea {
+  border: 0;
+  border-right: 1px solid #555;
+  position: absolute;
+  height: 100%;
+  left: 0;
+  right: 50%;
+  font-family: monospace;
+  font-size: 100%;
+}
+
+#output {
+  position: absolute;
+  height: 100%;
+  left: 50%;
+  right: 0;
+  overflow: auto;
+
+  font-family: monospace;
+}
+
+#inputarea textarea, #output {
+  line-height: 130%;
+}
+
+.lex { border: 1px solid #333; }
+
+.lex_keyword { background: #0f0; }
+.lex_identifier { background: #ff0; }
+.lex_punctuation { background: #0ff; }
+.lex_error { background: #f00; }
+.lex_whitespace { background: #fcc; }
+.lex_comment { background: #ccc; }
+
+.lex_regex { background: #f0f; }
+.lex_null { background: #dac; }
+.lex_boolean { background: #faf; }
+.lex_number { background: #c3f; }
+.lex_string { background: #fc3; }
+
+.parseerror {
+  background: #f99;
+  border: 1px solid blue;
+  cursor: pointer;
+}
+.parseerrormessage { color: #c00; }
+
+.box {
+  display: inline-block;
+  margin: 5px;
+  margin-top: 0;
+  background: #fff;
+}
+
+.box.statement {
+  display: block;
+}
+
+#output > .box {
+  margin-top: 5px;
+}
+
+.box.named {
+  border: 1px solid #888;
+  border-radius: 5px;
+  cursor: pointer;
+  overflow: hidden;
+  /* position:relative breaks overflow:hidden effect of rounded corners? */
+  position: static;
+}
+
+.box.head {
+  font-family: sans-serif;
+  font-size: 70%;
+  font-weight: bold;
+  display: block;
+  margin-left: 0;
+  margin-right: 0;
+  background: #ccc;
+  color: #000;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom: 1px solid #888;
+}
+
+.box.head:last-child {
+  margin: 0;
+  border-bottom: 0;
+}
+
+.box.token {
+  background: #ddd;
+  /*border: 1px solid #999;*/
+  border: 1px solid #00f;
+  cursor: pointer;
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 120%;
+  padding: 1px;
+}
+
+.box.named[mousehover] {
+  background: #cdf;
+  border: 1px solid #448;
+}
+
+.box.token[mousehover] {
+  background: #ace;
+  border: 1px solid #448;    
+}
+
+.box.named[mousehover] > .box.head {
+  background: #58b;
+  border-bottom: 1px solid #448;
+}
+
+.box.named[mousehover] > .box.head:last-child {
+  border-bottom: 0;
+}
+

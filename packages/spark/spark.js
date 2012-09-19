@@ -91,8 +91,9 @@ var notifyWatchers = function (start, end) {
 };
 
 Spark._createId = function () {
+  // Chars can't include '-' to be safe inside HTML comments.
   var chars =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+_";
   var id = "";
   for (var i = 0; i < 8; i++)
     id += chars.substr(Math.floor(Meteor.random() * 64), 1);
