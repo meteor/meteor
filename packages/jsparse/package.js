@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "Full-featured JavaScript parser"
+  summary: "Full-featured JavaScript parser",
+  internal: true
 });
 
 Package.on_use(function (api) {
@@ -12,6 +13,8 @@ Package.on_test(function (api) {
   api.use('jsparse', 'client');
 
   api.add_files('parser_tests.js',
-                'client'); // for faster loading
+                // Test just on client for faster running; should run
+                // identically on server.
+                'client');
                 //['client', 'server']);
 });

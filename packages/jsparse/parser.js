@@ -1,6 +1,6 @@
 ///// JAVASCRIPT PARSER
 
-// What we don't have from ECMA-262 5.1:
+// What we don't support from ECMA-262 5.1:
 //  - object literal trailing comma
 //  - object literal get/set
 
