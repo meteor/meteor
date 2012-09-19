@@ -8,11 +8,6 @@ Package.on_use(function (api) {
   // server has been instantiated.
   api.use('livedata', 'server');
 
-  // we don't really depend on absolute-url, but we do modify its
-  // behavior. If there were a way to say "if the other package is
-  // loaded, make sure we come after it", we should do that here.
-  api.use('absolute-url', ['client', 'server']);
-
   api.add_files('force_ssl_common.js', ['client', 'server']);
   api.add_files('force_ssl_server.js', 'server');
 

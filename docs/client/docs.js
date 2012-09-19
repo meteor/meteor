@@ -82,7 +82,8 @@ var toc = [
     "Core", [
       "Meteor.isClient",
       "Meteor.isServer",
-      "Meteor.startup"
+      "Meteor.startup",
+      "Meteor.absoluteUrl"
     ],
 
     "Publish and subscribe", [
@@ -205,7 +206,6 @@ var toc = [
   ],
 
   "Packages", [ [
-    "absolute-url",
     "amplify",
     "backbone",
     "bootstrap",
