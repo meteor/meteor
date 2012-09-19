@@ -24,7 +24,12 @@
       // Use '/dev/stdin' to avoid writing to a temporary file. Can't
       // just omit the file, as PhantomJS takes that to mean 'use a
       // REPL' and exits as soon as stdin closes.
-      var cp = spawn('phantomjs', ['--load-images=no', '/dev/stdin']);
+      //
+      // However, Node 0.8 broke the ability to open /dev/stdin in the
+      // subprocess; see https://gist.github.com/3751746 for the gory
+      // details. Work around this with a not-so-useless use of cat.
+      var cp = spawn('bash',
+                     ['-c', 'cat | phantomjs --load-images=no /dev/stdin']);
 
       var data = '';
       cp.stdout.setEncoding('utf8');
