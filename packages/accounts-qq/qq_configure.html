@@ -1,0 +1,24 @@
+<template name="configureLoginServicesDialogForQQ">
+  <p>
+    First, you'll need to register your app on Tencent site. Follow these steps:
+  </p>
+  <ol>
+    <li>
+      Visit <a href="http://connect.qq.com/manage/" target="_blank">http://connect.qq.com/manage/</a>
+    </li>
+    <li>
+      Click the "添加网站/应用" button
+    </li>
+    <li>
+      Input your host URL and follow the instructions to validate that domain. 
+    </li>
+    <li>
+      Select application type as 'website'(网站)
+    </li>
+    <li>
+      Set OAuth2.0 authorized callback page (授权回调页) to: <span class="url">{{siteUrl}}_oauth/qq?close</span>
+      <small>Please note that tencent does not support localhost so you would have to provide a real hostname. 
+        Also make sure you set up ROOT_URL for absolute url package to work correctly.</small>
+    </li>
+  </ol>
+</template>

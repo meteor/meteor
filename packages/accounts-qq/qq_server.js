@@ -1,9 +1,6 @@
 (function() {
-
-  Meteor.accounts.qq.setSecret = function(secret) {
-    Meteor.accounts.qq._secret = secret;
-  };
-
+  var config = Meteor.accounts.configuration.findOne({service: 'qq'});
+  
   Meteor.accounts.oauth.registerService('qq', 2, function(query) {
 
     var accessToken = getAccessToken(query);
@@ -26,12 +23,14 @@
   });
 
   var getAccessToken = function(query) {
+    if (!config)
+      throw new Meteor.accounts.ConfigError("Service not configured");
     var result = Meteor.http.get("https://graph.qq.com/oauth2.0/token", {
       params : {
         code : query.code,
-        client_id : Meteor.accounts.qq._clientId,
-        client_secret : Meteor.accounts.qq._secret,
-        redirect_uri : Meteor.accounts.qq._appUrl + "/_oauth/qq?close",
+        client_id : config.clientId,
+        client_secret : config.secret,
+        redirect_uri : Meteor.absoluteUrl("_oauth/qq?close"),
         grant_type : 'authorization_code'
       }
     });
@@ -70,7 +69,7 @@
     var userInfoResult = Meteor.http.get("https://graph.qq.com/user/get_user_info", {
       params : {
         access_token : accessToken,
-        oauth_consumer_key : Meteor.accounts.qq._clientId,
+        oauth_consumer_key : config.clientId,
         openid : openId
       }
     });
