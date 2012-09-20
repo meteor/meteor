@@ -175,7 +175,7 @@
           document.getElementById('forgot-password-email').value = usernameOrEmail;
 
     },
-    'keypress #login-username,#login-email,#login-username-or-email,#login-password,#login-password-again': function (event) {
+    'keypress #login-username, keypress #login-email, keypress #login-username-or-email, keypress #login-password, keypress #login-password-again': function (event) {
       if (event.keyCode === 13)
         loginOrSignup();
     }
