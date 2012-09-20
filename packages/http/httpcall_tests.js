@@ -69,7 +69,7 @@ testAsyncMulti("httpcall - basic", [
               "/foo?fruit=apple&dog=Spot+the+dog");
   }]);
 
-testAsyncMulti("httpcall - failure", [
+testAsyncMulti("httpcall - errors", [
   function(test, expect) {
 
     // Accessing unknown server (should fail to make any connection)
