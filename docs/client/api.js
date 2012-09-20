@@ -25,7 +25,7 @@ Template.api.startup = {
 };
 
 Template.api.absoluteUrl = {
-  id: "meteor_absoluteUrl",
+  id: "meteor_absoluteurl",
   name: "Meteor.absoluteUrl([path], [options])",
   locus: "Anywhere",
   descr: ["Generate an absolute URL pointing to the application. The server "
@@ -44,6 +44,9 @@ Template.api.absoluteUrl = {
      type: "Boolean",
      descr: "Create an HTTPS URL."
     },
+    {name: "replaceLocalhost",
+     type: "Boolean",
+     descr: "Replace localhost with 127.0.0.1. Useful for services that don't recognize localhost as a domain name."},
     {name: "rootUrl",
      type: "String",
      descr: "Override the default ROOT_URL from the server environment. For example: \"`http://foo.example.com`\""
