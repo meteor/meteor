@@ -89,6 +89,20 @@
         }
       };
     },
+    
+    'click #login-buttons-QQ': function () {
+      try {
+        Meteor.loginWithQQ();
+      } catch (e) {
+        // XXX consider doing this differently so that we don't use exceptions
+        // for flow control
+        if (e instanceof Meteor.accounts.ConfigError) {
+          configureService("QQ");
+        } else {
+          throw e;
+        }
+      }
+    },
 
     'click #login-buttons-logout': function() {
       Meteor.logout();
@@ -656,6 +670,8 @@
       ret.push({name: 'Weibo'});
     if (Meteor.accounts.twitter)
       ret.push({name: 'Twitter'});
+    if (Meteor.accounts.qq)
+      ret.push({name: 'QQ'});
 
     // make sure to put accounts last, since this is the order in the
     // ui as well
