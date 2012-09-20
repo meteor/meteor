@@ -103,6 +103,10 @@
     return _.extend(user, extra);
   };
   Meteor.accounts.onCreateUserHook = function (options, extra, user) {
+    // add created at timestamp (and protect passed in user object from
+    // modification)
+    user = _.extend({createdAt: +(new Date)}, user);
+
     var fullUser;
 
     if (onCreateUserHook) {
@@ -118,13 +122,22 @@
     }
 
     _.each(validateNewUserHooks, function (hook) {
-      if (!hook(user))
+      if (!hook(fullUser))
         throw new Meteor.Error(403, "User validation failed");
     });
 
-    // XXX check for existing user with duplicate email or username.
-    // better here than the two places we call it (and immediately
-    // follow with an insert)
+    // check for existing user with duplicate email or username.
+    if (fullUser.username &&
+        Meteor.users.findOne({username: fullUser.username}))
+      throw new Meteor.Error(403, "Username already exists.");
+
+    if (fullUser.emails) {
+      var addresses = _.map(fullUser.emails, function (e) {
+        return e.address; });
+      if (Meteor.users.findOne({'emails.address': {$in: addresses}}))
+        throw new Meteor.Error(403, "Email already exists.");
+    }
+
 
     return fullUser;
   };

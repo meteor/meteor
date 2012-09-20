@@ -39,3 +39,94 @@ Tinytest.add('accounts - updateOrCreateUser', function (test) {
 
 });
 
+Tinytest.add('accounts - onCreateUserHook username', function (test) {
+  var userIn = {
+    username: Meteor.uuid()
+  };
+
+  // user does not already exist. return a user object with fields set.
+  var userOut = Meteor.accounts.onCreateUserHook(
+    userIn,
+    {profile: {name: 'Foo Bar'}},
+    userIn
+  );
+
+  test.equal(typeof userOut.createdAt, 'number');
+  test.equal(userOut.profile.name, 'Foo Bar');
+  test.equal(userOut.username, userIn.username);
+
+  // insert the user
+  var uid = Meteor.users.insert(userOut);
+
+  // run the hook again. now the user exists, so it throws an error.
+  test.throws(function () {
+    Meteor.accounts.onCreateUserHook(
+      userIn,
+      {profile: {name: 'Foo Bar'}},
+      userIn
+    );
+  });
+
+  // cleanup
+  Meteor.users.remove(uid);
+
+});
+
+Tinytest.add('accounts - onCreateUserHook email', function (test) {
+  var email1 = Meteor.uuid();
+  var email2 = Meteor.uuid();
+  var email3 = Meteor.uuid();
+  var userIn = {
+    emails: [{address: email1, verified: false},
+             {address: email2, verified: true}]
+  };
+
+  // user does not already exist. return a user object with fields set.
+  var userOut = Meteor.accounts.onCreateUserHook(
+    userIn,
+    {profile: {name: 'Foo Bar'}},
+    userIn
+  );
+
+  test.equal(typeof userOut.createdAt, 'number');
+  test.equal(userOut.profile.name, 'Foo Bar');
+  test.equal(userOut.emails, userIn.emails);
+
+  // insert the user
+  var uid = Meteor.users.insert(userOut);
+
+  // run the hook again with the exact same emails.
+  // run the hook again. now the user exists, so it throws an error.
+  test.throws(function () {
+    Meteor.accounts.onCreateUserHook(
+      userIn,
+      {profile: {name: 'Foo Bar'}},
+      userIn
+    );
+  });
+
+  // now with only one of them.
+  test.throws(function () {
+    Meteor.accounts.onCreateUserHook(
+      {}, {}, {emails: [{address: email1}]}
+    );
+  });
+
+  test.throws(function () {
+    Meteor.accounts.onCreateUserHook(
+      {}, {}, {emails: [{address: email2}]}
+    );
+  });
+
+
+  // a third email works.
+  var user3 = Meteor.accounts.onCreateUserHook(
+      {}, {}, {emails: [{address: email3}]}
+  );
+  test.equal(typeof userOut.createdAt, 'number');
+
+
+  // cleanup
+  Meteor.users.remove(uid);
+
+});
