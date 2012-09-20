@@ -114,11 +114,11 @@
         throw new Meteor.Error(403, "User not found");
 
       var token = Meteor.uuid();
-      var creationTime = +(new Date);
+      var when = +(new Date);
       Meteor.users.update(user._id, {$set: {
         "services.password.reset": {
           token: token,
-          creationTime: creationTime
+          when: when
         }
       }});
 
@@ -200,11 +200,11 @@
   // address as validated
   Meteor.accounts.sendValidationEmail = function (userId, email) {
     var token = Meteor.uuid();
-    var creationTime = +(new Date);
+    var when = +(new Date);
     Meteor.accounts._emailValidationTokens.insert({
       email: email,
       token: token,
-      creationTime: creationTime,
+      when: when,
       userId: userId
     });
 
@@ -227,11 +227,11 @@
   // validated and forces them to choose their password
   Meteor.accounts.sendEnrollmentEmail = function (userId, email) {
     var token = Meteor.uuid();
-    var creationTime = +(new Date);
+    var when = +(new Date);
     Meteor.users.update(userId, {$set: {
       "services.password.enroll": {
         token: token,
-        creationTime: creationTime
+        when: when
       }
     }});
 
