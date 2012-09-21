@@ -33,7 +33,7 @@ var unicodeClass = function (abbrev) {
 // We are taking advantage of the fact that we are parsing JS from JS in
 // regexes like this by "passing through" the spec's definition of whitespace,
 // which is the same in regexes and the lexical grammar.
-var rWhiteSpace = /(?=.)\s+?((?!.)|(?=\S))/g;
+var rWhiteSpace = /[^\S\u000A\u000D\u2028\u2029]+/g;
 // Section 7.3
 // Match one line terminator.  Same as (?!.)[\s\S] but more explicit.
 var rLineTerminator = /[\u000A\u000D\u2028\u2029]/g;

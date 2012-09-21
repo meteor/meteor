@@ -39,10 +39,8 @@ Parser.prototype.parseRequiredIf = function (t, required) {
   return result;
 };
 
-// mutates the parser
 Parser.expecting = function (expecting, parser) {
-  parser.expecting = expecting;
-  return parser;
+  return new Parser(expecting, parser._run);
 };
 
 
