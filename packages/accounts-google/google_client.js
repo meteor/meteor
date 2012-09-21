@@ -1,8 +1,10 @@
 (function () {
-  Meteor.loginWithGoogle = function () {
+  Meteor.loginWithGoogle = function (callback) {
     var config = Meteor.accounts.configuration.findOne({service: 'google'});
-    if (!config)
-      throw new Meteor.accounts.ConfigError("Service not configured");
+    if (!config) {
+      callback && callback(new Meteor.accounts.ConfigError("Service not configured"));
+      return;
+    }
 
     var state = Meteor.uuid();
 
@@ -26,7 +28,7 @@
           '&redirect_uri=' + Meteor.absoluteUrl('_oauth/google?close') +
           '&state=' + state;
 
-    Meteor.accounts.oauth.initiateLogin(state, loginUrl);
+    Meteor.accounts.oauth.initiateLogin(state, loginUrl, callback);
   };
 
 }) ();

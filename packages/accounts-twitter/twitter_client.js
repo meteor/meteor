@@ -1,8 +1,10 @@
 (function () {
-  Meteor.loginWithTwitter = function () {
+  Meteor.loginWithTwitter = function (callback) {
     var config = Meteor.accounts.configuration.findOne({service: 'twitter'});
-    if (!config)
-      throw new Meteor.accounts.ConfigError("Service not configured");
+    if (!config) {
+      callback && callback(new Meteor.accounts.ConfigError("Service not configured"));
+      return;
+    }
 
     var state = Meteor.uuid();
     // We need to keep state across the next two 'steps' so we're adding
@@ -19,7 +21,7 @@
           + encodeURIComponent(callbackUrl)
           + '&state=' + state;
 
-    Meteor.accounts.oauth.initiateLogin(state, url);
+    Meteor.accounts.oauth.initiateLogin(state, url, callback);
   };
 
 })();

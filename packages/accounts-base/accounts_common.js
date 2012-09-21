@@ -45,3 +45,13 @@ Meteor.accounts.ConfigError = function(description) {
 };
 Meteor.accounts.ConfigError.prototype = new Error();
 Meteor.accounts.ConfigError.prototype.name = 'Meteor.accounts.ConfigError';
+
+// Thrown when the user cancels the login process (eg, closes an oauth
+// popup, declines retina scan, etc)
+Meteor.accounts.LoginCancelledError = function(description) {
+  this.message = description;
+  this.cancelled = true;
+};
+Meteor.accounts.LoginCancelledError.prototype = new Error();
+Meteor.accounts.LoginCancelledError.prototype.name = 'Meteor.accounts.LoginCancelledError';
+

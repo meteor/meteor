@@ -1,8 +1,10 @@
 (function () {
-  Meteor.loginWithFacebook = function () {
+  Meteor.loginWithFacebook = function (callback) {
     var config = Meteor.accounts.configuration.findOne({service: 'facebook'});
-    if (!config)
-      throw new Meteor.accounts.ConfigError("Service not configured");
+    if (!config) {
+      callback && callback(new Meteor.accounts.ConfigError("Service not configured"));
+      return;
+    }
 
     var state = Meteor.uuid();
     var mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent);
@@ -18,7 +20,7 @@
           '&redirect_uri=' + Meteor.absoluteUrl('_oauth/facebook?close') +
           '&display=' + display + '&scope=' + scope + '&state=' + state;
 
-    Meteor.accounts.oauth.initiateLogin(state, loginUrl);
+    Meteor.accounts.oauth.initiateLogin(state, loginUrl, callback);
   };
 
 })();

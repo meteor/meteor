@@ -41,35 +41,55 @@
 
   Template.loginButtons.events = {
     'click #login-buttons-Facebook': function () {
-      if (Meteor.accounts.configuration.findOne({service: 'facebook'})) {
-        Meteor.loginWithFacebook();
-      } else {
-        configureService("Facebook"); // XXX refactor "Facebook" -> "facebook"
-      }
+      resetMessages();
+      Meteor.loginWithFacebook(function (e) {
+        if (!e || e instanceof Meteor.accounts.LoginCancelledError) {
+          // do nothing
+        } else if (e instanceof Meteor.accounts.ConfigError) {
+          configureService("Facebook"); // XXX refactor "Facebook" -> "facebook"
+        } else {
+          Session.set(ERROR_MESSAGE_KEY, e.reason || "Unknown error");
+        }
+      });
     },
 
     'click #login-buttons-Google': function () {
-      if (Meteor.accounts.configuration.findOne({service: 'google'})) {
-        Meteor.loginWithGoogle();
-      } else {
-        configureService("Google");
-      }
+      resetMessages();
+      Meteor.loginWithGoogle(function (e) {
+        if (!e || e instanceof Meteor.accounts.LoginCancelledError) {
+          // do nothing
+        } else if (e instanceof Meteor.accounts.ConfigError) {
+          configureService("Google");
+        } else {
+          Session.set(ERROR_MESSAGE_KEY, e.reason || "Unknown error");
+        }
+      });
     },
 
     'click #login-buttons-Weibo': function () {
-      if (Meteor.accounts.configuration.findOne({service: 'weibo'})) {
-        Meteor.loginWithWeibo();
-      } else {
-        configureService("Weibo");
-      }
+      resetMessages();
+      Meteor.loginWithWeibo(function (e) {
+        if (!e || e instanceof Meteor.accounts.LoginCancelledError) {
+          // do nothing
+        } else if (e instanceof Meteor.accounts.ConfigError) {
+          configureService("Weibo");
+        } else {
+          Session.set(ERROR_MESSAGE_KEY, e.reason || "Unknown error");
+        }
+      });
     },
 
     'click #login-buttons-Twitter': function () {
-      if (Meteor.accounts.configuration.findOne({service: 'twitter'})) {
-        Meteor.loginWithTwitter();
-      } else {
-        configureService("Twitter");
-      }
+      resetMessages();
+      Meteor.loginWithTwitter(function (e) {
+        if (!e || e instanceof Meteor.accounts.LoginCancelledError) {
+          // do nothing
+        } else if (e instanceof Meteor.accounts.ConfigError) {
+          configureService("Twitter");
+        } else {
+          Session.set(ERROR_MESSAGE_KEY, e.reason || "Unknown error");
+        }
+      });
     },
 
     'click #login-buttons-logout': function() {

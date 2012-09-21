@@ -1,8 +1,10 @@
 (function () {
-  Meteor.loginWithWeibo = function () {
+  Meteor.loginWithWeibo = function (callback) {
     var config = Meteor.accounts.configuration.findOne({service: 'weibo'});
-    if (!config)
-      throw new Meteor.accounts.ConfigError("Service not configured");
+    if (!config) {
+      callback && callback(new Meteor.accounts.ConfigError("Service not configured"));
+      return;
+    }
 
     var state = Meteor.uuid();
     // XXX need to support configuring access_type and scope
@@ -13,7 +15,7 @@
           '&redirect_uri=' + Meteor.absoluteUrl('_oauth/weibo?close', {replaceLocalhost: true}) +
           '&state=' + state;
 
-    Meteor.accounts.oauth.initiateLogin(state, loginUrl);
+    Meteor.accounts.oauth.initiateLogin(state, loginUrl, callback);
   };
 
 }) ();
