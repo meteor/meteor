@@ -337,7 +337,13 @@ _.extend(Meteor._LivedataSession.prototype, {
     // Store a function to re-run the handler in case we want to rerun
     // subscriptions, for example when the current user id changes
     sub._runHandler = function() {
-      var res = handler.apply(sub, params || []);
+      try {
+        var res = handler.apply(sub, params || []);
+      } catch (e) {
+        Meteor._debug("Internal exception while starting subscription", sub_id,
+                      e.stack);
+        return;
+      }
 
       // if Meteor._RemoteCollectionDriver is available (defined in
       // mongo-livedata), automatically wire up handlers that return a

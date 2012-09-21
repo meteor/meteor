@@ -5,11 +5,10 @@ DomUtils = {};
 (function () {
 
   var qsaFindAllBySelector = function (selector, contextNode) {
+    // If IE7 users report the following error message, you
+    // can fix it with "meteor add jquery".
     if (! document.querySelectorAll)
-      // IE 7
-      throw new Error(
-        "This browser doesn't support querySelectorAll. " +
-          "You need Sizzle or jQuery (`meteor add jquery`).");
+      throw new Error("This browser doesn't support querySelectorAll.");
 
     // the search is constrained to descendants of `ancestor`,
     // but it doesn't affect the scope of the query.

@@ -1,8 +1,9 @@
 #!/bin/bash
 
 set -e
+set -u
 
-BUNDLE_VERSION=0.2.2
+BUNDLE_VERSION=0.2.3
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -182,7 +183,6 @@ npm install mongodb@1.1.5
 npm install uglify-js@1.3.3
 npm install clean-css@0.6.0
 npm install progress@0.0.5
-npm install fibers@0.6.9
 npm install useragent@1.1.0
 npm install request@2.11.0
 npm install http-proxy@0.8.2
@@ -200,6 +200,19 @@ npm install mailcomposer@0.1.15
 git clone http://github.com/akdubya/rbytes.git
 npm install sockjs@0.3.1
 rm -rf rbytes
+
+npm install fibers@0.6.9
+# Fibers ships with compiled versions of its C code for a dozen platforms. This
+# bloats our dev bundle, and confuses dpkg-buildpackage and rpmbuild into
+# thinking that the packages need to depend on both 32- and 64-bit versions of
+# libstd++. Remove all the ones other than our architecture. (Expression based
+# on build.js in fibers source.)
+FIBERS_ARCH=$(node -p -e 'process.platform + "-" + process.arch + "-v8-" + /[0-9]+\.[0-9]+/.exec(process.versions.v8)[0]')
+cd fibers/bin
+mv $FIBERS_ARCH ..
+rm -rf *
+mv ../$FIBERS_ARCH .
+cd ../..
 
 
 cd "$DIR"

@@ -164,7 +164,7 @@ _Mongo.prototype.remove = function (collection_name, selector) {
       return;
     }
 
-    collection.remove(selector, {/* XXXsafe: true*/}, function (err) {
+    collection.remove(selector, {safe: true}, function (err) {
       if (err) {
         future.ret(err);
         return;

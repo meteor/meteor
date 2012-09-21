@@ -1,6 +1,64 @@
 
 ## vNEXT
 
+## v0.4.1
+
+* New `email` smart package, with [`Email.send`](http://docs.meteor.com/#email)
+  API.
+
+* Upgrade Node from 0.6.17 to 0.8.8, as well as many Node modules in the dev
+  bundle; those that are user-exposed are:
+  * coffee-script: 1.3.3 (from 1.3.1)
+  * stylus: 0.29.0 (from 0.28.1)
+  * nib: 0.8.2 (from 0.7.0)
+
+* All publicly documented APIs now use `camelCase` rather than
+  `under_scores`. The old spellings continue to work for now. New names are:
+  - `Meteor.isClient`/`isServer`
+  - `this.isSimulation` inside a method invocation
+  - `Meteor.deps.Context.onInvalidate`
+  - `Meteor.status().retryCount`/`retryTime`
+
+* Spark improvements
+  * Optimize selector matching for event maps.
+  * Fix `Spark._currentRenderer` behavior in timer callbacks.
+  * Fix bug caused by interaction between `Template.foo.preserve` and
+    `{{#constant}}`. #323
+  * Allow `{{#each}}` over a collection of objects without `_id`. #281
+  * Spark now supports Firefox 3.6.
+  * Added a script to build a standalone spark.js that does not depend on
+    Meteor (it depends on jQuery or Sizzle if you need IE7 support,
+    and otherwise is fully standalone).
+
+* Database writes from within `Meteor.setTimeout`/`setInterval`/`defer` will be
+  batched with other writes from the current method invocation if they start
+  before the method completes.
+
+* Make `Meteor.Cursor.forEach` fully synchronous even if the user's callback
+  yields. #321.
+
+* Recover from exceptions thrown in `Meteor.publish` handlers.
+
+* Upgrade bootstrap to version 2.1.1. #336, #337, #288, #293
+
+* Change the implementation of the `meteor deploy` password prompt to not crash
+  Emacs M-x shell.
+
+* Optimize `LocalCollection.remove(id)` to be O(1) rather than O(n).
+
+* Optimize client-side database performance when receiving updated data from the
+  server outside of method calls.
+
+* Better error reporting when a package in `.meteor/packages` does not exist.
+
+* Better error reporting for coffeescript. #331
+
+* Better error handling in `Handlebars.Exception`.
+
+
+Patches contributed by GitHub users fivethirty, tmeasday, and xenolf.
+
+
 ## v0.4.0
 
 * Merge Spark, a new live page update engine
