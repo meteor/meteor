@@ -1,0 +1,40 @@
+<template name="configureLoginServicesDialogForQQ">
+  <p>
+    First, you'll need to register your app on Tencent site. Follow these steps:
+  </p>
+  <ol>
+    <li>
+      Visit <a href="http://connect.qq.com/manage/" target="_blank">http://connect.qq.com/manage/</a>
+    </li>
+    <li>
+      Click the "添加网站/应用" button
+    </li>
+    <li>
+      Input your host URL and follow the instructions to validate that domain.
+    </li>
+    <li>
+      Select application type as '网站'(website)
+    </li>
+    <li>
+      Set OAuth2.0 authorized callback page (授权回调页) to: <span class="url">{{siteUrl}}_oauth/qq?close</span>
+    </li>
+    <li>
+      Development Instructions
+      <p>
+        Tencent does not support localhost and any raw IPs or even non-80 ports so you would have to provide a real host
+        name and run your app in port 80, all of which would require root priviledge:
+      </p>
+      <ol>
+        <li>
+          <small><i>export ROOT_URL={{siteUrl}}</i></small> to set up root url for absolute url to work;
+        </li>
+        <li>
+          <small><i>Add an entry in your OS's host file (*nix: /etc/hosts) </i></small> to bind your local IP to {{siteUrl}};
+        </li>
+        <li>
+          <small><i>sudo -E meteor -p 80 </i></small>to run your meteor app in port 80.
+        </li>
+      </ol>
+    </li>
+  </ol>
+</template>
