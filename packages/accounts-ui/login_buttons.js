@@ -91,6 +91,19 @@
         }
       });
     },
+    
+    'click #login-buttons-QQ': function () {
+      resetMessages();
+      Meteor.loginWithQQ(function (e) {
+        if (!e || e instanceof Meteor.accounts.LoginCancelledError) {
+          // do nothing
+        } else if (e instanceof Meteor.accounts.ConfigError) {
+          configureService("QQ");
+        } else {
+          Session.set(ERROR_MESSAGE_KEY, e.reason || "Unknown error");
+        }
+      });
+    },
 
     'click #login-buttons-logout': function() {
       Meteor.logout();
@@ -662,6 +675,8 @@
       ret.push({name: 'Weibo'});
     if (Meteor.accounts.twitter)
       ret.push({name: 'Twitter'});
+    if (Meteor.accounts.qq)
+      ret.push({name: 'QQ'});
 
     // make sure to put accounts last, since this is the order in the
     // ui as well
