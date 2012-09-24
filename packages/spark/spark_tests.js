@@ -14,7 +14,7 @@ var legacyLabels = {
 
     if (n.nodeType === 1) {
       if (n.id) {
-        label = '#'+n.id;
+        label = '#' + n.id;
       } else if (n.getAttribute("name")) {
         label = n.getAttribute("name");
         // Radio button special case:  radio buttons
@@ -27,6 +27,19 @@ var legacyLabels = {
             (n.type === 'radio' || n.type === 'checkbox') &&
             n.value)
           label = label + ':' + n.value;
+
+        // include parent names and IDs up to enclosing ID
+        // in the label
+        while (n.parentNode &&
+               n.parentNode.nodeType === 1) { // ELEMENT
+          n = n.parentNode;
+          if (n.id) {
+            label = '#' + n.id + "/" + label;
+            break;
+          } else if (n.getAttribute('name')) {
+            label = n.getAttribute('name') + "/" + label;
+          }
+        }
       }
     }
 
@@ -3437,8 +3450,6 @@ Tinytest.add("spark - bubbling render", function (test) {
   Meteor.flush();
 });
 
-})();
-
 Tinytest.add("spark - landmark arg", function (test) {
   var div = OnscreenDiv(Spark.render(function () {
     return Spark.createLandmark({
@@ -3675,3 +3686,38 @@ Tinytest.add("spark - callback context", function (test) {
   test.isFalse(cxs[5]);
 
 });
+
+Tinytest.add("spark - legacy preserve names", function (test) {
+  var R = ReactiveVar("foo");
+  var R2 = ReactiveVar("apple");
+
+  var div = OnscreenDiv(renderWithLegacyLabels(function () {
+    R.get(); // create dependency
+    return ('<div id="aaa"><div><input name="field"></div></div>' +
+            '<div id="bbb"><div><input name="field"></div></div>' +
+            '<div id="ccc"><div>' + Spark.isolate(function () {
+              R2.get();
+              return '<input name="field">'; }) + '</div></div>' +
+            '<input type="text">');
+  }));
+
+
+  var inputs1 = _.toArray(div.node().getElementsByTagName('input'));
+  R.set('bar');
+  Meteor.flush();
+  var inputs2 = _.toArray(div.node().getElementsByTagName('input'));
+  test.isTrue(inputs1[0] === inputs2[0]);
+  test.isTrue(inputs1[1] === inputs2[1]);
+  test.isTrue(inputs1[2] === inputs2[2]);
+  test.isTrue(inputs1[3] !== inputs2[3]);
+
+  R2.set('banana');
+  Meteor.flush();
+  var inputs3 = _.toArray(div.node().getElementsByTagName('input'));
+  test.isTrue(inputs1[2] === inputs3[2]);
+
+  div.kill();
+  Meteor.flush();
+});
+
+})();
