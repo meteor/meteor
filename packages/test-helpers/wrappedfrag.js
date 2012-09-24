@@ -32,7 +32,7 @@ WrappedFrag.prototype.release = function() {
   // Clean up on flush, if hits 0.  Wait to decrement
   // so no one else cleans it up first.
   var cx = new Meteor.deps.Context;
-  cx.on_invalidate(function() {
+  cx.onInvalidate(function() {
     if (! --frag["_protect"]) {
       Spark.finalize(frag);
     }

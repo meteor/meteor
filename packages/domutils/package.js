@@ -4,7 +4,14 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
+  // XXX
+  // Doesn't actually require jQuery (but uses it if available).
+  //
+  // For now we are going to keep shipping jQuery with all apps
+  // so as not to break existing apps, but any time now we will
+  // cut this dependency.
   api.use('jquery', 'client');
+
   api.add_files('domutils.js', 'client');
 });
 

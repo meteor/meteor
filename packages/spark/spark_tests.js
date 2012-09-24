@@ -9,7 +9,7 @@ Spark._checkIECompliance = true;
 (function () {
 
 var legacyLabels = {
-  '*[id], #[name]': function(n) {
+  '*[id], *[name]': function(n) {
     var label = null;
 
     if (n.nodeType === 1) {
@@ -2530,7 +2530,7 @@ testAsyncMulti(
             killLater(iframeDiv);
           });
           var checkLater = function(frameName, iframe, iframeDiv) {
-            Tinytest.setTimeout(function() {
+            Meteor.setTimeout(function() {
               check(iframe, iframeDiv);
             }, 500); // wait for frame to unload
           };

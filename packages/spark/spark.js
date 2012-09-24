@@ -29,7 +29,20 @@
 
 Spark = {};
 
-Spark._currentRenderer = new Meteor.EnvironmentVariable;
+Spark._currentRenderer = (function () {
+  var current = null;
+  return {
+    get: function () {
+      return current;
+    },
+    withValue: function (v, func) {
+      var previous = current;
+      current = v;
+      try { return func(); }
+      finally { current = previous; }
+    }
+  };
+})();
 
 Spark._TAG = "_spark_" + Meteor.uuid();
 // XXX document contract for each type of annotation?
@@ -78,8 +91,9 @@ var notifyWatchers = function (start, end) {
 };
 
 Spark._createId = function () {
+  // Chars can't include '-' to be safe inside HTML comments.
   var chars =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+_";
   var id = "";
   for (var i = 0; i < 8; i++)
     id += chars.substr(Math.floor(Meteor.random() * 64), 1);
@@ -311,7 +325,7 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
   };
 
   var ctx = new Meteor.deps.Context;
-  ctx.on_invalidate(function () {
+  ctx.onInvalidate(function () {
     if (finalized)
       return;
 
@@ -704,16 +718,11 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
           var selector = handler.selector;
 
           if (selector) {
-            // This ends up doing O(n) findAllClipped calls when an
-            // event bubbles up N level in the DOM. If this ends up
-            // being too slow, we could memoize findAllClipped across
-            // the processing of each event.
-            var results = DomUtils.findAllClipped(
-              range.containerNode(), selector, range.firstNode(), range.lastNode());
-            // This is a linear search through what could be a large
-            // result set.
-            if (! _.contains(results, event.currentTarget))
+            if (! DomUtils.matchesSelectorClipped(
+              event.currentTarget, range.containerNode(), selector,
+              range.firstNode(), range.lastNode())) {
               continue;
+            }
           } else {
             // if no selector, only match the event target
             if (event.currentTarget !== event.target)
@@ -775,10 +784,10 @@ Spark.isolate = function (htmlFunc) {
         Spark.renderToRange(range, function () {
           return ctx.run(htmlFunc);
         });
-        ctx.on_invalidate(refresh);
+        ctx.onInvalidate(refresh);
       };
 
-      ctx.on_invalidate(refresh);
+      ctx.onInvalidate(refresh);
     });
 };
 
@@ -799,7 +808,7 @@ var atFlushTime = function (f) {
 
   if (! atFlushContext) {
     atFlushContext = new Meteor.deps.Context;
-    atFlushContext.on_invalidate(function () {
+    atFlushContext.onInvalidate(function () {
       var f;
       while ((f = atFlushQueue.shift())) {
         // Since atFlushContext is truthy, if f() calls atFlushTime
@@ -909,7 +918,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
       later(function () {
         var frag = Spark.render(_.bind(itemFunc, null, item));
         DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
-        var range = new LiveRange(Spark._TAG, frag);
+        var range = makeRange(Spark._ANNOTATION_LIST_ITEM, frag);
 
         if (! itemRanges.length) {
           Spark.finalize(outerRange.replaceContents(frag));

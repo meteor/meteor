@@ -1,6 +1,6 @@
 // XXX namespacing
 
-Meteor._MethodInvocation = function (is_simulation, unblock) {
+Meteor._MethodInvocation = function (isSimulation, unblock) {
   var self = this;
 
   // true if we're running not the actual method, but a stub (that is,
@@ -9,7 +9,10 @@ Meteor._MethodInvocation = function (is_simulation, unblock) {
   // except in a client such as a browser, since there's no point in
   // running stubs unless you have a zero-latency connection to the
   // user.
-  this.is_simulation = is_simulation;
+  this.isSimulation = isSimulation;
+
+  // XXX Backwards compatibility only. Remove this before 1.0.
+  this.is_simulation = isSimulation;
 
   // call this function to allow other method invocations (from the
   // same client) to continue running without waiting for this one to

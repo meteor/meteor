@@ -27,7 +27,7 @@ ReactiveVar.prototype.get = function() {
   if (context && !(context.id in this._deps)) {
     this._deps[context.id] = context;
     var self = this;
-    context.on_invalidate(function() {
+    context.onInvalidate(function() {
       delete self._deps[context.id];
     });
   }

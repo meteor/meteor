@@ -72,9 +72,9 @@ var Package = function () {
     },
 
     register_extension: function (extension, callback) {
-      if (self.on_test)
+      if (_.has(self.extensions, extension))
         throw new Error("This package has already registered a handler for " +
-                       extension);
+                        extension);
       self.extensions[extension] = callback;
     }
   };
@@ -86,6 +86,9 @@ _.extend(Package.prototype, {
     self.name = name;
     self.source_root = files.get_package_dir(name);
     self.serve_root = path.join('/packages', name);
+    
+    if (!self.source_root)
+      throw new Error("The package named " + self.name + " does not exist.");
     
     var fullpath = path.join(self.source_root, 'package.js');
     var code = fs.readFileSync(fullpath).toString();
@@ -270,7 +273,7 @@ var packages = module.exports = {
     _.each(files.get_package_dirs(), function(dir) {
       _.each(fs.readdirSync(dir), function (name) {
         // skip .meteor directory
-        if (path.existsSync(path.join(dir, name, 'package.js')))
+        if (fs.existsSync(path.join(dir, name, 'package.js')))
           ret[name] = packages.get(name);
       });      
     })

@@ -122,11 +122,11 @@ var testAsyncMulti = function (name, funcs) {
         onComplete();
       else {
         var em = new ExpectationManager(test, function () {
-          Tinytest.clearTimeout(timer);
+          Meteor.clearTimeout(timer);
           runNext();
         });
 
-        var timer = Tinytest.setTimeout(function () {
+        var timer = Meteor.setTimeout(function () {
           if (em.cancel()) {
             test.fail({type: "timeout", message: "Async batch timed out"});
             onComplete();
@@ -139,7 +139,7 @@ var testAsyncMulti = function (name, funcs) {
         } catch (exception) {
           if (em.cancel())
             test.exception(exception);
-          Tinytest.clearTimeout(timer);
+          Meteor.clearTimeout(timer);
           // Because we called test.exception, we're not to call onComplete.
           return;
         }

@@ -89,6 +89,8 @@ Tinytest.add("livedata stub - this", function (test) {
   test.length(stream.sent, 0);
 
   conn.methods({test_this: function() {
+    test.isTrue(this.isSimulation);
+    // XXX Backwards compatibility only. Remove this before 1.0.
     test.isTrue(this.is_simulation);
     this.unblock(); // should be a no-op
   }});

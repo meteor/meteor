@@ -2,9 +2,42 @@
 
 DomUtils = {};
 
-(function() {
+(function () {
 
-  var Sizzle = window.Sizzle || $.find;
+  var qsaFindAllBySelector = function (selector, contextNode) {
+    // If IE7 users report the following error message, you
+    // can fix it with "meteor add jquery".
+    if (! document.querySelectorAll)
+      throw new Error("This browser doesn't support querySelectorAll.");
+
+    // the search is constrained to descendants of `ancestor`,
+    // but it doesn't affect the scope of the query.
+    var ancestor = contextNode;
+
+    return withElementId(
+      contextNode, "DomUtils_findAllBySelector_scope",
+      function (idSelector) {
+        // scope the entire selector to contextNode by prepending
+        // id of contextNode to the selector.
+        var doctoredSelector = _.map(selector.split(','), function (selec) {
+          return idSelector + " " + selec;
+        }).join(',');
+        return ancestor.querySelectorAll(doctoredSelector);
+      });
+  };
+
+  // We have our own, querySelectorAll-based implementation of scoped
+  // selector matching; it's all you need in IE 8+ and modern browsers.
+  //
+  // However, we use Sizzle or jQuery if it's present on the client because of:
+  // - apps that want jQuery's selector extensions (:visible, :input, etc.)
+  // - apps that include jQuery anyway
+  // - apps that want IE 7 support
+  //
+  // XXX others? zepto?
+  var findAllBySelector = (window.Sizzle
+                           || (window.jQuery && window.jQuery.find)
+                           || qsaFindAllBySelector);
 
   ///// Common look-up tables used by htmlToFragment et al.
 
@@ -57,7 +90,7 @@ DomUtils = {};
 
   // Parse an HTML string, which may contain multiple top-level tags,
   // and return a DocumentFragment.
-  DomUtils.htmlToFragment = function(html) {
+  DomUtils.htmlToFragment = function (html) {
     var doc = document; // node factory
     var frag = doc.createDocumentFragment();
 
@@ -87,7 +120,7 @@ DomUtils = {};
       if (quirks.tbodyInsertion && ! rtbody.test(html)) {
         // Any tbody we find was created by the browser.
         var tbodies = container.getElementsByTagName("tbody");
-        _.each(tbodies, function(n) {
+        _.each(tbodies, function (n) {
           if (! n.firstChild) {
             // spurious empty tbody
             n.parentNode.removeChild(n);
@@ -114,7 +147,7 @@ DomUtils = {};
   // Return an HTML string representing the contents of frag,
   // a DocumentFragment.  (This is what innerHTML would do if
   // it were defined on DocumentFragments.)
-  DomUtils.fragmentToHtml = function(frag) {
+  DomUtils.fragmentToHtml = function (frag) {
     frag = frag.cloneNode(true); // deep copy, don't touch original!
 
     return DomUtils.fragmentToContainer(frag).innerHTML;
@@ -125,7 +158,7 @@ DomUtils = {};
   // is as simple as creating a DIV, but in the case of a fragment
   // containing TRs, for example, it's necessary to create a TABLE and
   // a TBODY and return the TBODY.
-  DomUtils.fragmentToContainer = function(frag) {
+  DomUtils.fragmentToContainer = function (frag) {
     var doc = document; // node factory
 
     var firstElement = frag.firstChild;
@@ -154,22 +187,27 @@ DomUtils = {};
     return container;
   };
 
-  // Returns true if element a properly contains element b.
-  // Only works on element nodes (e.g. not text nodes).
-  DomUtils.elementContains = function(a, b) {
-    // Note: Some special-casing would be required to implement this method
-    // where a and b aren't necessarily elements, e.g. b is a text node,
-    // because contains() doesn't seem to work reliably on some browsers
-    // including IE.
-    if (a.nodeType !== 1 || b.nodeType !== 1) {
-      return false; // a and b are not both elements
-    }
+  // Returns true if element a contains node b and is not node b.
+  DomUtils.elementContains = function (a, b) {
+    if (a.nodeType !== 1) /* ELEMENT */
+      return false;
+    if (a === b)
+      return false;
+
     if (a.compareDocumentPosition) {
       return a.compareDocumentPosition(b) & 0x10;
     } else {
       // Should be only old IE and maybe other old browsers here.
-      // Modern Safari has both methods but seems to get contains() wrong.
-      return a !== b && a.contains(b);
+      // Modern Safari has both functions but seems to get contains() wrong.
+      // IE can't handle b being a text node.  We work around this
+      // by doing a direct parent test now.
+      b = b.parentNode;
+      if (! (b && b.nodeType === 1)) /* ELEMENT */
+        return false;
+      if (a === b)
+        return true;
+
+      return a.contains(b);
     }
   };
 
@@ -183,32 +221,40 @@ DomUtils = {};
   // array.)
   //
   // `contextNode` may be either a node, a document, or a DocumentFragment.
-  DomUtils.findAll = function(contextNode, selector) {
-    // Eventually, we will remove the dependency on Sizzle and
-    // implement this in terms of querySelectorAll on modern browsers
-    // and Sizzle in old IE.  We'll use Sizzle's trick for scoped
-    // querySelectorAll which involves temporarily assigning an ID to
-    // contextNode (if it doesn't have one) and prepending the ID to
-    // the selector.
+  DomUtils.findAll = function (contextNode, selector) {
     if (contextNode.nodeType === 11 /* DocumentFragment */) {
-      // Sizzle doesn't work on a DocumentFragment, but it does work on
-      // a descendent of one.
+      // contextNode is a DocumentFragment.
+      //
+      // We don't expect to be able to run selectors on a DocumentFragment
+      // (Sizzle won't work) but we can on a normal elements that aren't
+      // in the document.  Fortunately we can manipulate offscreen nodes
+      // as much as we want as long as we put them back the way they were
+      // when we're done.
       var frag = contextNode;
       var container = DomUtils.fragmentToContainer(frag);
-      var results = Sizzle(selector, container);
+      var results = findAllBySelector(selector, container);
       // put nodes back into frag
       while (container.firstChild)
         frag.appendChild(container.firstChild);
       return results;
-    } else {
-      return Sizzle(selector, contextNode);
     }
+
+    return findAllBySelector(selector, contextNode);
   };
 
   // Like `findAll` but finds one element (or returns null).
-  DomUtils.find = function(contextNode, selector) {
+  DomUtils.find = function (contextNode, selector) {
     var results = DomUtils.findAll(contextNode, selector);
     return (results.length ? results[0] : null);
+  };
+
+  var isElementInClipRange = function (elem, clipStart, clipEnd) {
+    // elem is not in clip range if it contains the clip range
+    if (DomUtils.elementContains(elem, clipStart))
+      return false;
+    // elem is in clip range if clipStart <= elem <= clipEnd
+    return (DomUtils.compareElementIndex(clipStart, elem) <= 0) &&
+      (DomUtils.compareElementIndex(elem, clipEnd) <= 0);
   };
 
   // Like `findAll` but searches the nodes from `start` to `end`
@@ -223,7 +269,7 @@ DomUtils = {};
   //
   // precond: clipStart/clipEnd are descendents of contextNode
   // XXX document
-  DomUtils.findAllClipped = function(contextNode, selector, clipStart, clipEnd) {
+  DomUtils.findAllClipped = function (contextNode, selector, clipStart, clipEnd) {
 
     // Ensure the clip range starts and ends on element nodes.  This is possible
     // to do without changing the result set because non-element nodes can't
@@ -241,41 +287,95 @@ DomUtils = {};
 
     // Filter the list of nodes to remove nodes that occur before start
     // or after end.
-    return _.reject(resultsPlus, function(n) {
-      // reject node if it contains the clip range
-      if (DomUtils.elementContains(n, clipStart))
-        return true;
-      // reject node if (n,start) are in order or (end,n) are in order
-      return (DomUtils.elementOrder(n, clipStart) > 0) ||
-        (DomUtils.elementOrder(clipEnd, n) > 0);
+    return _.reject(resultsPlus, function (n) {
+      return ! isElementInClipRange(n, clipStart, clipEnd);
     });
   };
 
   // Like `findAllClipped` but finds one element (or returns null).
-  DomUtils.findClipped = function(contextNode, selector, clipStart, clipEnd) {
-    var results = DomUtils.findAllClipped(contextNode, selector, clipStart, clipEnd);
+  DomUtils.findClipped = function (contextNode, selector, clipStart, clipEnd) {
+    var results = DomUtils.findAllClipped(
+      contextNode, selector, clipStart, clipEnd);
     return (results.length ? results[0] : null);
   };
 
+  // Executes `func` while ensuring that `element` has an ID.  If `element`
+  // doesn't have an ID, it is assigned `magicId` temporarily.
+  // Calls func with a selector of the form "[id='...']" as an argument.
+  var withElementId = function (element, magicId, func) {
+    var didSetId = false;
+    if (! element.id) {
+      element.setAttribute('id', magicId);
+      didSetId = true;
+    }
+    try {
+      var escapedNodeId = element.id.replace(/'/g, "\\$&");
+      return func("[id='" + escapedNodeId + "']");
+    } finally {
+      if (didSetId)
+        element.removeAttribute('id');
+    }
+  };
+
+  var matchesSelectorMaybeClipped = function (element, contextNode, selector,
+                                             clipStart, clipEnd) {
+    var selecs = selector.split(',');
+    for(var i = 0, N = selecs.length; i < N; i++) {
+      var matches = withElementId(
+        element, "DomUtils_matchesSelector_target",
+        function (idSelector) {
+          var trimmedSelector = selector.match(/\S.*?(?=\s*$)/)[0];
+          // appending [id='foo'] to a selector with no whitespace ought to
+          // simply restrict the set of possible outputs regardless of the
+          // form of the selector.
+          var doctoredSelector = trimmedSelector + idSelector;
+          var result;
+          if (clipStart)
+            result = DomUtils.findClipped(contextNode, doctoredSelector,
+                                          clipStart, clipEnd);
+          else
+            result = DomUtils.find(contextNode, doctoredSelector);
+          return (result === element);
+        });
+
+      if (matches)
+        return true;
+    }
+
+    return false;
+  };
+
+  // Check if `element` matches `selector`, scoped to `contextNode`.
+  DomUtils.matchesSelector = function (element, contextNode, selector) {
+    return matchesSelectorMaybeClipped(element, contextNode, selector);
+  };
+
+  // Check if `element` matches `selector`, scoped to `contextNode`,
+  // clipped to ordered siblings `clipStart`..`clipEnd`.
+  DomUtils.matchesSelectorClipped = function (element, contextNode, selector,
+                                              clipStart, clipEnd) {
+    return matchesSelectorMaybeClipped(element, contextNode, selector,
+                                       clipStart, clipEnd);
+  };
 
   // Returns 0 if the nodes are the same or either one contains the other;
-  // otherwise, 1 if a comes before b, or else -1 if b comes before a in
+  // otherwise, -1 if a comes before b, or else 1 if b comes before a in
   // document order.
   // Requires: `a` and `b` are element nodes in the same document tree.
-  DomUtils.elementOrder = function(a, b) {
+  DomUtils.compareElementIndex = function (a, b) {
     // See http://ejohn.org/blog/comparing-document-position/
     if (a === b)
       return 0;
     if (a.compareDocumentPosition) {
       var n = a.compareDocumentPosition(b);
-      return ((n & 0x18) ? 0 : ((n & 0x4) ? 1 : -1));
+      return ((n & 0x18) ? 0 : ((n & 0x4) ? -1 : 1));
     } else {
       // Only old IE is known to not have compareDocumentPosition (though Safari
       // originally lacked it).  Thankfully, IE gives us a way of comparing elements
       // via the "sourceIndex" property.
       if (a.contains(b) || b.contains(a))
         return 0;
-      return (a.sourceIndex < b.sourceIndex ? 1 : -1);
+      return (a.sourceIndex < b.sourceIndex ? -1 : 1);
     }
   };
 
@@ -286,10 +386,10 @@ DomUtils = {};
   //
   // `frag` is a DocumentFragment and will be modified in
   // place. `container` is a DOM element.
-  DomUtils.wrapFragmentForContainer = function(frag, container) {
+  DomUtils.wrapFragmentForContainer = function (frag, container) {
     if (container && container.nodeName === "TABLE" &&
         _.any(frag.childNodes,
-              function(n) { return n.nodeName === "TR"; })) {
+              function (n) { return n.nodeName === "TR"; })) {
       // Avoid putting a TR directly in a TABLE without an
       // intervening TBODY, because it doesn't work in IE.  We do
       // the same thing on all browsers for ease of testing

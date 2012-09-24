@@ -223,7 +223,8 @@ Copyright (c) 2011 Esa-Matti Suuronen esa-matti@suuronen.org
 
 
 ----------
-https://github.com/TooTallNate/node-gyp
+node-gyp: https://github.com/TooTallNate/node-gyp
+keypress: https://github.com/TooTallNate/keypress
 ----------
 
 Copyright (c) 2012 Nathan Rajlich <nathan@tootallnate.net>
@@ -324,6 +325,36 @@ nib: https://github.com/visionmedia/nib
 
 Copyright (c) 2011 TJ Holowaychuk <tj@vision-media.ca>
 
+
+----------
+config-chain: https://github.com/dominictarr/config-chain
+----------
+
+Copyright (c) 2011 Dominic Tarr
+
+
+----------
+node-async: https://github.com/caolan/async
+----------
+
+Copyright (c) 2010 Caolan McMahon
+
+
+----------
+node-combined-stream: https://github.com/felixge/node-combined-stream
+node-delayed-stream: https://github.com/felixge/node-delayed-stream
+----------
+
+Copyright (c) 2011 Debuggable Limited <felix@debuggable.com>
+
+
+----------
+node-retry: https://github.com/felixge/node-retry
+----------
+
+Copyright (c) 2011:
+Tim Koschützki (tim@debuggable.com)
+Felix Geisendörfer (felix@debuggable.com)
 
 
 
@@ -549,9 +580,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 ----------
 node-tar: https://github.com/isaacs/node-tar
 fstream: https://github.com/isaacs/fstream
+fstream-npm: https://github.com/isaacs/fstream-npm
 read: https://github.com/isaacs/read
 block-stream: https://github.com/isaacs/block-stream
 node-glob: https://github.com/isaacs/node-glob
+chownr: https://github.com/isaacs/chownr
+uid-number: https://github.com/isaacs/uid-number
 ----------
 
 Copyright (c) Isaac Z. Schlueter
@@ -579,6 +613,44 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
+
+
+----------
+lockfile: https://github.com/isaacs/lockfile
+npm-registry-client: https://github.com/isaacs/npm-registry-client
+npmlog: https://github.com/isaacs/npmlog
+once: https://github.com/isaacs/once
+osenv: https://github.com/isaacs/osenv
+mute-stream: https://github.com/isaacs/mute-stream
+----------
+
+Copyright (c) Isaac Z. Schlueter ("Author")
+All rights reserved.
+
+The BSD License
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 ----------
@@ -655,6 +727,31 @@ required for its use.
 =====
 Other
 =====
+
+----------
+mimelib: https://github.com/andris9/mimelib
+mailcomposer: https://github.com/andris9/mailcomposer
+simplesmtp: https://github.com/andris9/simplesmtp
+rai: https://github.com/andris9/rai
+----------
+
+Copyright (c) 2012 Andris Reinman
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
 
 ----------
 inherits: https://github.com/isaacs/inherits

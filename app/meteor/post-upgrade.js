@@ -2,7 +2,7 @@ try {
   // XXX can't get this from updater.js because in 0.3.7 and before the
   // updater didn't have the right NODE_PATH set. At some point we can
   // remove this and just use updater.CURRENT_VERSION.
-  var VERSION = "0.4.0";
+  var VERSION = "0.4.1";
 
   var fs = require('fs');
   var path = require('path');
@@ -13,7 +13,7 @@ try {
   var topDir = files.get_dev_bundle();
   var changelogPath = path.join(topDir, 'History.md');
 
-  if (path.existsSync(changelogPath)) {
+  if (fs.existsSync(changelogPath)) {
     var changelogData = fs.readFileSync(changelogPath, 'utf8');
     var changelogSections = changelogData.split(/\n\#\#/);
 

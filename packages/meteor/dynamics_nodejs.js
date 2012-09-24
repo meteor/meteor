@@ -38,10 +38,16 @@
   });
 
   // Meteor application code is always supposed to be run inside a
-  // fiber. If an environment-bound function is called from outside a
-  // fiber, it'll return undefined immediately and kick off a new
-  // fiber to execute the function, whose return value will then be
-  // ignored. If it's called inside a fiber, it works normally (the
+  // fiber. bindEnvironment ensures that the function it wraps is run from
+  // inside a fiber and ensures it sees the values of Meteor environment
+  // variables that are set at the time bindEnvironment is called.
+  //
+  // If an environment-bound function is called from outside a fiber (eg, from
+  // an asynchronous callback from a non-Meteor library such as MongoDB), it'll
+  // kick off a new fiber to execute the function, and returns undefined as soon
+  // as that fiber returns or yields (and func's return value is ignored).
+  //
+  // If it's called inside a fiber, it works normally (the
   // return value of the function will be passed through, and no new
   // fiber will be created.)
   Meteor.bindEnvironment = function (func, onException, _this) {

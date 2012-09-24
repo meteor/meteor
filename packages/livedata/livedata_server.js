@@ -237,6 +237,12 @@ _.extend(Meteor._LivedataSession.prototype, {
       // done.
       var fence = new Meteor._WriteFence;
       fence.onAllCommitted(function () {
+        // Retire the fence so that future writes are allowed.
+        // This means that callbacks like timers are free to use
+        // the fence, and if they fire before it's armed (for
+        // example, because the method waits for them) their
+        // writes will be included in the fence.
+        fence.retire();
         self.send({
           msg: 'data', methods: [msg.id]});
       });
@@ -263,8 +269,8 @@ _.extend(Meteor._LivedataSession.prototype, {
         return;
       }
 
-      var invocation = new Meteor._MethodInvocation(false /* is_simulation */,
-                                                   unblock);
+      var invocation = new Meteor._MethodInvocation(false /* isSimulation */,
+                                                    unblock);
       try {
         var ret =
           Meteor._CurrentWriteFence.withValue(fence, function () {
@@ -308,7 +314,13 @@ _.extend(Meteor._LivedataSession.prototype, {
     else
       self.universal_subs.push(sub);
 
-    var res = handler.apply(sub, params || []);
+    try {
+      var res = handler.apply(sub, params || []);
+    } catch (e) {
+      Meteor._debug("Internal exception while starting subscription", sub_id,
+                    e.stack);
+      return;
+    }
 
     // if Meteor._RemoteCollectionDriver is available (defined in
     // mongo-livedata), automatically wire up handlers that return a
@@ -773,7 +785,7 @@ _.extend(Meteor._LivedataServer.prototype, {
     if (!handler)
       var exception = new Meteor.Error(404, "Method not found");
     else {
-      var invocation = new Meteor._MethodInvocation(false /* is_simulation */);
+      var invocation = new Meteor._MethodInvocation(false /* isSimulation */);
       try {
         var ret = Meteor._CurrentInvocation.withValue(invocation, function () {
           return handler.apply(invocation, args);

@@ -1,4 +1,4 @@
-if (Meteor.is_server) {
+if (Meteor.isServer) {
   // XXX namespacing
   var Future = __meteor_bootstrap__.require('fibers/future');
 }
@@ -181,8 +181,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
       return false;
     self.stores[name] = store;
 
-    store.beginUpdate();
-    _.each(self.queued[name] || [], function (msg) {
+    var queued = self.queued[name] || [];
+    store.beginUpdate(queued.length);
+    _.each(queued, function (msg) {
       store.update(msg);
     });
     store.endUpdate();
@@ -268,8 +269,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
                       name + "'", e.stack);
       });
 
-    var is_simulation = enclosing && enclosing.is_simulation;
-    if (Meteor.is_client) {
+    var isSimulation = enclosing && enclosing.isSimulation;
+    if (Meteor.isClient) {
       // If on a client, run the stub, if we have one. The stub is
       // supposed to make some temporary writes to the database to
       // give the user a smooth experience until the actual result of
@@ -284,7 +285,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
       // of the stub as our return value.
       var stub = self.method_handlers[name];
       if (stub) {
-        var invocation = new Meteor._MethodInvocation(true /* is_simulation */);
+        var invocation = new Meteor._MethodInvocation(true /* isSimulation */);
         try {
           var ret = Meteor._CurrentInvocation.withValue(invocation,function () {
             return stub.apply(invocation, args);
@@ -300,7 +301,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
       // the client (since we only bother with stubs and simulations
       // on the client.) If there was not stub, we'll end up returning
       // undefined.
-      if (is_simulation) {
+      if (isSimulation) {
         if (callback) {
           callback(exception, ret);
           return;
@@ -326,7 +327,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
     // If the caller didn't give a callback, decide what to do.
     if (!callback) {
-      if (Meteor.is_client)
+      if (Meteor.isClient)
         // On the client, we don't have fibers, so we can't block. The
         // only thing we can do is to return undefined and discard the
         // result of the RPC.
@@ -453,7 +454,19 @@ _.extend(Meteor._LivedataConnection.prototype, {
     // We have quiesced. Blow away local changes and replace
     // with authoritative changes from server.
 
-    _.each(self.stores, function (s) { s.beginUpdate(); });
+    var messagesPerStore = {};
+    _.each(self.pending_data, function (msg) {
+      if (msg.collection && msg.id && self.stores[msg.collection]) {
+        if (_.has(messagesPerStore, msg.collection))
+          ++messagesPerStore[msg.collection];
+        else
+          messagesPerStore[msg.collection] = 1;
+      }
+    });
+
+    _.each(self.stores, function (s, name) {
+      s.beginUpdate(_.has(messagesPerStore, name) ? messagesPerStore[name] : 0);
+    });
 
     _.each(self.pending_data, function (msg) {
       // Reset message from reconnect. Blow away everything.
@@ -584,7 +597,7 @@ _.extend(Meteor, {
     var local_subs = [];
     var context = new Meteor.deps.Context();
 
-    context.on_invalidate(function () {
+    context.onInvalidate(function () {
       // recurse.
       Meteor.autosubscribe(sub_func);
       // unsub after re-subbing, to avoid bouncing.

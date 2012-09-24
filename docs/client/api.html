@@ -10,8 +10,8 @@ available just on the client, just on the server, or *Anywhere*.
 
 <h2 id="core"><span>Meteor Core</span></h2>
 
-{{> api_box is_client}}
-{{> api_box is_server}}
+{{> api_box isClient}}
+{{> api_box isServer}}
 {{> api_box startup}}
 
 On a server, the function will run as soon as the server process is
@@ -20,7 +20,7 @@ is ready and any `<body>` templates from your `.html` files have been
 put on the screen.
 
     // On server startup, if the database is empty, create some initial data.
-    if (Meteor.is_server) {
+    if (Meteor.isServer) {
       Meteor.startup(function () {
         if (Rooms.find().count() === 0) {
           Rooms.insert({name: "Initial room"});
@@ -46,7 +46,7 @@ will publish that cursor's documents.
 
     // server: publish the rooms collection, minus secret info.
     Meteor.publish("rooms", function () {
-      return Rooms.find({}, {fields: {secret_info: false}});
+      return Rooms.find({}, {fields: {secretInfo: false}});
     });
 
 Otherwise, the publish function can <i>set</i> and <i>unset</i>
@@ -68,7 +68,7 @@ Example:
       var uuid = Meteor.uuid();
       var count = 0;
 
-      var handle = Messages.find({room_id: roomId}).observe({
+      var handle = Messages.find({roomId: roomId}).observe({
         added: function (doc, idx) {
           count++;
           self.set("counts", uuid, {roomId: roomId, count: count});
@@ -197,7 +197,7 @@ remotely by clients.  They should return a value or throw an exception.
 Inside your method invocation, `this` is bound to a method invocation
 object, which provides the following:
 
-* `is_simulation`: a boolean value, true if this invocation is a stub.
+* `isSimulation`: a boolean value, true if this invocation is a stub.
 * `unblock`: when called, allows the next method from this client to
 begin running.
 
@@ -214,7 +214,7 @@ intended to *simulate* the result of what the server's method will do,
 but without waiting for the round trip delay.  If a stub throws an
 exception it will be logged to the console.
 
-{{> api_box method_invocation_is_simulation}}
+{{> api_box method_invocation_isSimulation}}
 
 {{> api_box method_invocation_unblock}}
 
@@ -309,16 +309,16 @@ the server. The return value is an object with the following fields:
   new connection), and <code>waiting</code> (failed to connect and
   waiting to try to reconnect).</dd>
 
-<dt><span class="name">retry_count</span>
+<dt><span class="name">retryCount</span>
   <span class="type">Number</span></dt>
 <dd>The number of times the client has tried to reconnect since the
   connection was lost. 0 when connected.</dd>
 
-<dt><span class="name">retry_time</span>
+<dt><span class="name">retryTime</span>
   <span class="type">Number or undefined</span></dt>
 <dd>The estimated time of the next reconnection attempt. To turn this
   into an interval until the next reconnection, use
-  <code>retry_time - (new Date()).getTime()</code>. This key will
+  <code>retryTime - (new Date()).getTime()</code>. This key will
   be set only when <code>status</code> is <code>waiting</code>.
 </dd>
 </dl>
@@ -381,13 +381,13 @@ compatible with the popular Mongo database API.  The same database API
 works on both the client and the server (see below).
 
     // return array of my messages
-    var my_messages = Messages.find({user_id:Session.get('my_user_id')}).fetch();
+    var myMessages = Messages.find({userId: Session.get('myUserId')}).fetch();
 
     // create a new message
     Messages.insert({text: "Hello, world!"});
 
     // mark my first message as "important"
-    Messages.update(my_messages[0].id, {$set: {important: true}});
+    Messages.update(myMessages[0].id, {$set: {important: true}});
 
 If you pass a `name` when you create the collection, then you are
 declaring a persistent collection &mdash; one that is stored on the
@@ -537,9 +537,9 @@ undefined.  If the insert is successful, `error` is undefined and
 
 Example:
 
-    var groceries_id = Lists.insert({name: "Groceries"});
-    Items.insert({list: groceries_id, name: "Watercress"});
-    Items.insert({list: groceries_id, name: "Persimmons"});
+    var groceriesId = Lists.insert({name: "Groceries"});
+    Items.insert({list: groceriesId, name: "Watercress"});
+    Items.insert({list: groceriesId, name: "Persimmons"});
 
 {{> api_box update}}
 
@@ -620,9 +620,9 @@ the matching documents.
 Examples:
 
     // Print the titles of the five top-scoring posts
-    var top_posts = Posts.find({}, {sort: {score: -1}, limit: 5});
+    var topPosts = Posts.find({}, {sort: {score: -1}, limit: 5});
     var count = 0;
-    top_posts.forEach(function (post) {
+    topPosts.forEach(function (post) {
       console.log("Title of post " + count + ": " + post.title);
       count += 1;
     });
@@ -631,6 +631,12 @@ Examples:
 
 When called in a reactive context, `map` registers dependencies on
 the matching documents.
+
+<!-- The following is not yet implemented, but users shouldn't assume
+     sequential execution anyway because that will break. -->
+On the server, if `callback` yields, other calls to `callback` may occur while
+the first call is waiting. If strict sequential execution is necessary, use
+`forEach` instead.
 
 {{> api_box cursor_fetch}}
 
@@ -642,8 +648,8 @@ the matching documents.
     // Display a count of posts matching certain criteria. Automatically
     // keep it updated as the database changes.
     var frag = Meteor.render(function () {
-      var high_scoring = Posts.find({score: {$gt: 10}});
-      return "<p>There are " + high_scoring.count() + " posts with " +
+      var highScoring = Posts.find({score: {$gt: 10}});
+      return "<p>There are " + highScoring.count() + " posts with " +
         "scores greater than 10</p>";
     });
     document.body.appendChild(frag);
@@ -666,29 +672,29 @@ query result.
 `callbacks` may have the following functions as properties:
 
 <dl class="callbacks">
-{{#dtdd "added(document, before_index)"}}
+{{#dtdd "added(document, beforeIndex)"}}
 A new document entered the result set. It was inserted
 immediately before the document currently at the
-position `before_index`. Or if it was inserted at the end
-of the list, `before_index` will be equal to the (prior)
+position `beforeIndex`. Or if it was inserted at the end
+of the list, `beforeIndex` will be equal to the (prior)
 length of the list.
 {{/dtdd}}
 
-{{#dtdd "changed(new_document, at_index, old_document)"}}
-The contents of the document at position `at_index`
-changed to `new_document`, was previously `old_document`.
+{{#dtdd "changed(newDocument, atIndex, oldDocument)"}}
+The contents of the document at position `atIndex`
+changed to `newDocument`, was previously `oldDocument`.
 {{/dtdd}}
 
-{{#dtdd "moved(document, old_index, new_index)"}}
+{{#dtdd "moved(document, oldIndex, newIndex)"}}
 A document changed its position in the result set,
-from `old_index` to `new_index`. For your
+from `oldIndex` to `newIndex`. For your
 convenience, its current contents is `document`. (This will
 only fire immediately after `changed`.
 {{/dtdd}}
 
-{{#dtdd "removed(old_document, at_index)"}}
-The document at position `at_index`, which was previously
-`old_document`, is no longer in the result set.
+{{#dtdd "removed(oldDocument, atIndex)"}}
+The document at position `atIndex`, which was previously
+`oldDocument`, is no longer in the result set.
 {{/dtdd}}
 </dl>
 
@@ -704,7 +710,7 @@ Example:
 
     // Keep track of how many administrators are online.
     var count = 0;
-    var query = Users.find({admin: true, online_now: true});
+    var query = Users.find({admin: true, onlineNow: true});
     var handle = query.observe({
       added: function (user) {
         count++;
@@ -815,9 +821,9 @@ store an arbitrary set of key-value pairs. Use it to store things like
 the currently selected item in a list.
 
 What's special about `Session` is that it's reactive. If
-you call [`Session.get`](#session_get)`("current_list")`
+you call [`Session.get`](#session_get)`("currentList")`
 from inside a template, the template will automatically be rerendered
-whenever [`Session.set`](#session_set) is called.
+whenever [`Session.set`](#session_set)`("currentList", x)` is called.
 
 {{> api_box set}}
 
@@ -861,33 +867,33 @@ These two expressions do the same thing:
 
 Example:
 
-    <template name="posts_view">
+    <template name="postsView">
     {{dstache}}! Show a dynamically updating list of items. Let the user click on an
         item to select it. The selected item is given a CSS class so it
         can be rendered differently. }}
 
     {{dstache}}#each posts}}
-      {{dstache}}> post_item }}
+      {{dstache}}> postItem }}
     {{dstache}}/each}}
     </{{! }}template>
 
-    <template name="post_item">
-      <div class="{{dstache}}post_class}}">{{dstache}}title}}</div>
+    <template name="postItem">
+      <div class="{{dstache}}postClass}}">{{dstache}}title}}</div>
     </{{! }}template>
 
     ///// in JS file
-    Template.posts_view.posts = function() {
+    Template.postsView.posts = function() {
       return Posts.find();
     };
 
-    Template.post_item.post_class = function() {
-      return Session.equals("selected_post", this._id) ?
+    Template.postItem.postClass = function() {
+      return Session.equals("selectedPost", this._id) ?
         "selected" : "";
     };
 
-    Template.post_item.events({
+    Template.postItem.events({
       'click': function() {
-        Session.set("selected_post", this._id);
+        Session.set("selectedPost", this._id);
       }
     });
 
@@ -1270,22 +1276,22 @@ The following properties and methods are available on the event object
 passed to handlers:
 
 <dl class="objdesc">
-{{#dtdd "type" "String"}}
+{{#dtdd name="type" type="String"}}
 The event's type, such as "click", "blur" or "keypress".
 {{/dtdd}}
 
-{{#dtdd "target" "DOM Element"}}
+{{#dtdd name="target" type="DOM Element"}}
 The element that originated the event.
 {{/dtdd}}
 
-{{#dtdd "currentTarget" "DOM Element"}}
+{{#dtdd name="currentTarget" type="DOM Element"}}
 The element currently handling the event.  This is the element that
 matched the selector in the event map.  For events that bubble, it may
 be `target` or an ancestor of `target`, and its value changes as the
 event bubbles.
 {{/dtdd}}
 
-{{#dtdd "which" "Number"}}
+{{#dtdd name="which" type="Number"}}
 For mouse events, the number of the mouse button (1=left, 2=middle, 3=right).
 For key events, a character or key code.
 {{/dtdd}}
@@ -1465,7 +1471,7 @@ sources.
 
 Create an invalidation context by calling this constructor, then run
 some code inside the context with [`run`](#run). Finally, register a
-callback with [`on_invalidate`](#on_invalidate) that will get called
+callback with [`onInvalidate`](#oninvalidate) that will get called
 when the code you run wants to signal that it should be rerun.
 
 Code can see if it's running inside an invalidation context by reading
@@ -1475,7 +1481,7 @@ from inside a context.  If it wants to participate in the reactivity
 system, it should save this context away, and later call the
 [`invalidate`](#invalidate) method on the context when it wants to
 signal that something has changed. If it does this, it should also use
-[`on_invalidate`](#on_invalidate) to set up a cleanup function so that
+[`onInvalidate`](#oninvalidate) to set up a cleanup function so that
 it can know when to stop listening for changes.
 
 Invalidation contexts have an attribute `id` which is a unique positive
@@ -1492,7 +1498,7 @@ previous value. It returns the result of calling `func`.
 It's fine for `run` to be called recursively. `current` will return the
 innermost context.
 
-{{> api_box on_invalidate }}
+{{> api_box onInvalidate }}
 
 If this context hasn't been invalidated yet, adds `callback` to the list
 of callbacks that will be called when [`invalidate`](#invalidate) is
@@ -1502,25 +1508,25 @@ immediately.
 Typically this function will have two kinds of callers:
 
 * The function that creates the invalidation context will use the
-  `on_invalidate` callback as a signal to rerun the code in the context,
+  `onInvalidate` callback as a signal to rerun the code in the context,
   to see what new value it returns. In order to rerun the code, it'll
-  create a fresh invalidation context and reregister its `on_invalidate`
+  create a fresh invalidation context and reregister its `onInvalidate`
   callback on that new context. When that context is invalidated the
   cycle will repeat.
 
 * Functions that are sources of reactive data will save
   [`Meteor.deps.Context.current`](#current) into some kind of list of
-  listeners. They'll use the `on_invalidate` callback to remove the
+  listeners. They'll use the `onInvalidate` callback to remove the
   context from their listener list.
 
 Example:
 
     // Print the current username to the console.  Will re-run every time
     // the username changes.
-    var log_current_username = function () {
+    var logCurrentUsername = function () {
       var update = function () {
         var ctx = new Meteor.deps.Context();  // invalidation context
-        ctx.on_invalidate(update);         // rerun update() on invalidation
+        ctx.onInvalidate(update);             // rerun update() on invalidation
         ctx.run(function () {
           var username = Session.get("username");
           console.log("The current username is now", username);
@@ -1530,10 +1536,10 @@ Example:
     };
 
     // Example use. Since Session is reactive (meaning that it knows how
-    // to use Meteor.deps to record its dependencies), log_current_username
+    // to use Meteor.deps to record its dependencies), logCurrentUsername
     // will be re-run whenever Session.set is called for "username".
     Session.set("username", "matt");
-    log_current_username(); // prints matt
+    logCurrentUsername(); // prints matt
     Session.set("username", "geoff"); // immediately prints geoff
     Session.set("username", "geoff"); // won't print: Session won't trigger
                                       // invalidation if the value is the same.
@@ -1542,7 +1548,7 @@ Example:
 
 If this function has already been called on this context, it does
 nothing (a mathematician would say that it is "idempotent.") Otherwise
-it calls each [`on_invalidate`](#on_invalidate) function registered on
+it calls each [`onInvalidate`](#oninvalidate) function registered on
 the context.
 
 The functions aren't called immediately &mdash; instead, they will be
@@ -1565,7 +1571,7 @@ Example:
 
     // Function to get the temperature (and, if called in a reactive
     // context, start listening for changes to the temperature.)
-    Weather.prototype.get_temp = function () {
+    Weather.prototype.getTemp = function () {
       var context = Meteor.deps.Context.current;
 
       // If we're inside a context, and it's not yet listening to
@@ -1576,7 +1582,7 @@ Example:
 
         // .. and remember to take it off our list when it goes away.
         var self = this;
-        context.on_invalidate(function () {
+        context.onInvalidate(function () {
           delete self.listeners[context.id];
         });
       }
@@ -1587,20 +1593,20 @@ Example:
 
     // Function to set the temperature, and notify anyone that might be
     // listening for temperature updates.
-    Weather.prototype.set_temp = function (new_temp) {
-      if (this.temperature === new_temp)
+    Weather.prototype.setTemp = function (newTemp) {
+      if (this.temperature === newTemp)
         return; // don't want to trigger invalidation if there's no change.
 
       // Set the temperature
-      this.temperature = new_temp;
+      this.temperature = newTemp;
 
       // Notify any contexts that care about temperature changes
-      for (var context_id in this.listeners)
-        // This will trigger the on_invalidate function above, but not
+      for (var contextId in this.listeners)
+        // This will trigger the onInvalidate function above, but not
         // immediately -- only when Meteor.flush() is called, or at the end
         // of the event loop. So we know that this.listeners will be
         // emptied, but it won't change while we're trying to loop over it.
-        this.listeners[context_id].invalidate();
+        this.listeners[contextId].invalidate();
     };
 
 {{> api_box current }}
@@ -1637,7 +1643,7 @@ that any auto-updating elements that you have created by calling
 DOM tree.
 
 Technically speaking, `flush` calls the [invalidation
-callbacks](#on_invalidate) on every [reactive context](#context) that
+callbacks](#oninvalidate) on every [reactive context](#context) that
 has been [invalidated](#invalidate), but hasn't yet has its callbacks
 called. If the invalidation callbacks invalidate still more contexts,
 flush keeps flushing until everything is totally settled. The DOM
@@ -1721,10 +1727,10 @@ Contents of the result object:
 
 Example server method:
 
-    Meteor.methods({check_twitter: function (user_id) {
+    Meteor.methods({checkTwitter: function (userId) {
       this.unblock();
       var result = Meteor.http.call("GET", "http://api.twitter.com/xxx",
-                                    {params: {user: user_id}});
+                                    {params: {user: userId}});
       if (result.statusCode === 200)
          return true
       return false;
@@ -1746,6 +1752,28 @@ Example asynchronous HTTP call:
 {{> api_box http_put}}
 {{> api_box http_del}}
 
+
+<h2 id="email"><span>Email</span></h2>
+
+The `email` package allows sending email from a Meteor app. To use it, add the
+package to your project with `$ meteor add email`.
+
+The server reads from the `MAIL_URL` environment variable to determine how to
+send mail. Currently, Meteor supports sending mail over SMTP; the `MAIL_URL`
+environment variable should be of the form
+`smtp://USERNAME:PASSWORD@HOST:PORT/`. For apps deployed with `meteor deploy`,
+`MAIL_URL` defaults to an account (provided by
+<a href="http://www.mailgun.com/" target="_blank">Mailgun</a>) which allows
+apps to send up to 200 emails per day; you may override this default by
+assigning to `process.env.MAIL_URL` before your first call to `Email.send`.
+
+If `MAIL_URL` is not set (eg, when running your application locally),
+`Email.send` outputs the message to standard output instead.
+
+{{> api_box email_send }}
+
+You must provide the `from` option and at least one of `to`, `cc`, and `bcc`;
+all other options are optional.
 
 {{/better_markdown}}
 </template>

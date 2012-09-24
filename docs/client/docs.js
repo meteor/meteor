@@ -1,4 +1,4 @@
-METEOR_VERSION = "0.4.0";
+METEOR_VERSION = "0.4.1";
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
@@ -80,8 +80,8 @@ var toc = [
 
   "API", [
     "Core", [
-      "Meteor.is_client",
-      "Meteor.is_server",
+      "Meteor.isClient",
+      "Meteor.isServer",
       "Meteor.startup"
     ],
 
@@ -100,7 +100,7 @@ var toc = [
 
     {name: "Methods", id: "methods_header"}, [
       "Meteor.methods", [
-        {instance: "this", name: "is_simulation", id: "method_is_simulation"},
+        {instance: "this", name: "isSimulation", id: "method_issimulation"},
         {instance: "this", name: "unblock", id: "method_unblock"}
       ],
       "Meteor.Error",
@@ -177,7 +177,7 @@ var toc = [
     "Meteor.deps", [
       {name: "Meteor.deps.Context", id: "context"}, [
         {instance: "context", name: "run"},
-        {instance: "context", name: "on_invalidate"},
+        {instance: "context", name: "onInvalidate", id: "oninvalidate"},
         {instance: "context", name: "invalidate"}
       ],
       {name: "Meteor.deps.Context.current", id: "current"},
@@ -198,6 +198,9 @@ var toc = [
       {name: "Meteor.http.post", id: "meteor_http_post"},
       {name: "Meteor.http.put", id: "meteor_http_put"},
       {name: "Meteor.http.del", id: "meteor_http_del"}
+    ],
+    "Email", [
+      "Email.send"
     ]
   ],
 
@@ -277,16 +280,19 @@ Handlebars.registerHelper('note', function(fn) {
   return Template.note_helper(fn(this));
 });
 
-Handlebars.registerHelper('dtdd', function(name, optType, fn) {
-  var type = null;
-  // handle optional positional argument (messy)
-  if (! fn)
-    fn = optType; // two arguments
-  else
-    type = optType; // three arguments
+// "name" argument may be provided as part of options.hash instead.
+Handlebars.registerHelper('dtdd', function(name, options) {
+  if (options && options.hash) {
+    // {{#dtdd name}}
+    options.hash.name = name;
+  } else {
+    // {{#dtdd name="foo" type="bar"}}
+    options = name;
+  }
 
-  return Template.dtdd_helper(
-    {descr: fn(this), name:name, type:type}, true);
+  return Template.dtdd_helper({descr: options.fn(this),
+                               name: options.hash.name,
+                               type: options.hash.type});
 });
 
 Handlebars.registerHelper('better_markdown', function(fn) {
