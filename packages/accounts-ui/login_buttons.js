@@ -71,11 +71,11 @@
 	  Meteor.loginWithGithub(function (e) {
 		if (!e || e instanceof Meteor.accounts.LoginCancelledError) {
 			// do nothing
-	  } else if (e instanceof Meteor.accounts.ConfigError) {
-		configureService("Github");
-	  } else {
+	    } else if (e instanceof Meteor.accounts.ConfigError) {
+		  configureService("Github");
+	    } else {
 		  Session.set(ERROR_MESSAGE_KEY, e.reason || "Unknown error");
-	  }
+	    }
 	  });
 	},
     
