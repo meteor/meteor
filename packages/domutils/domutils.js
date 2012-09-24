@@ -42,7 +42,7 @@ DomUtils = {};
   ///// Common look-up tables used by htmlToFragment et al.
 
   var testDiv = document.createElement("div");
-  testDiv.innerHTML = "   <link/><table></table>";
+  testDiv.innerHTML = "   <link/><table></table><select><!----></select>";
 
   // Tests that, if true, indicate browser quirks present.
   var quirks = {
@@ -53,7 +53,12 @@ DomUtils = {};
     tbodyInsertion: testDiv.getElementsByTagName("tbody").length > 0,
 
     // IE loses some tags in some environments (requiring extra wrapper).
-    tagsLost: testDiv.getElementsByTagName("link").length === 0
+    tagsLost: testDiv.getElementsByTagName("link").length === 0,
+
+    // IE <= 8 loses HTML comments in <select> and <option> tags.
+    // Assert that we have IE's mergeAttributes to use in our work-around.
+    commentsLost: ((! testDiv.getElementsByTagName("select")[0].firstChild)
+                   && testDiv.mergeAttributes)
   };
 
   // Set up map of wrappers for different nodes.
@@ -107,10 +112,18 @@ DomUtils = {};
       var firstTagMatch = rtagName.exec(html);
       var firstTag = (firstTagMatch ? firstTagMatch[1].toLowerCase() : "");
       var wrapData = wrapMap[firstTag] || wrapMap._default;
+      var fullHtml = wrapData[1] + html + wrapData[2];
+      if (quirks.commentsLost) {
+        // rewrite <select> and <option> tags into fake tags
+        fullHtml = fullHtml.replace(/<\s*(select|option)\b/ig,
+                                    '<ins domutilsrealtagname="$1"');
+        fullHtml = fullHtml.replace(/<\/\s*(select|option)\b/ig,
+                                    '</ins');
+      }
 
       var container = doc.createElement("div");
       // insert wrapped HTML into a DIV
-      container.innerHTML = wrapData[1] + html + wrapData[2];
+      container.innerHTML = fullHtml;
       // set "container" to inner node of wrapper
       var unwraps = wrapData[0];
       while (unwraps--) {
@@ -134,6 +147,31 @@ DomUtils = {};
           container.insertBefore(doc.createTextNode(wsMatch[0]),
                                  container.firstChild);
         }
+      }
+
+      if (quirks.commentsLost) {
+        // replace fake select tags with real <select> tags
+        var fakeTags = [];
+        // getElementsByTagName returns a "live" collection, so avoid
+        // factorings of this code that iterate over it while mutating
+        // the DOM.
+        // Here we build an array of fake tags and iterate over that.
+        _.each(container.getElementsByTagName("ins"), function (ins) {
+          if (ins.getAttribute("domutilsrealtagname"))
+            fakeTags.push(ins);
+        });
+        _.each(fakeTags, function (fakeTag) {
+          var realTag = document.createElement(
+            fakeTag.getAttribute('domutilsrealtagname'));
+          fakeTag.removeAttribute('domutilsrealtagname');
+          // copy all attributes
+          realTag.mergeAttributes(fakeTag, false);
+          // move all children
+          while (fakeTag.firstChild)
+            realTag.appendChild(fakeTag.firstChild);
+          // replace
+          fakeTag.parentNode.replaceChild(realTag, fakeTag);
+        });
       }
 
       // Reparent children of container to frag.

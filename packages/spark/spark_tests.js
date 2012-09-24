@@ -146,7 +146,7 @@ Tinytest.add("spark - repeat inclusion", function(test) {
 });
 
 
-Tinytest.add("spark - basic tag contents", function (test) {
+Tinytest.add("spark - replace tag contents", function (test) {
 
   // adapted from nateps / metamorph
 
@@ -247,6 +247,60 @@ Tinytest.add("spark - basic tag contents", function (test) {
     R.set("<option>BUH BYE!</option>");
     Meteor.flush();
     test.equal($(this.node()).find("#morphing option").text(), "BUH BYE!");
+  });
+
+  // list of select options
+
+  do_onscreen(function () {
+    var c = new LocalCollection();
+    c.insert({name: 'Hamburger', value: 1});
+    c.insert({name: 'Cheeseburger', value: 2});
+    this.render(function () {
+      return "<select id='morphing' name='fred'>" +
+        Spark.list(c.find({}, {sort: ['value']}), function (doc) {
+          return '<option value="' + doc.value + '">' + doc.name + '</option>';
+        }) +
+        "</select>";
+    });
+
+    var furtherCanon = function (html) {
+      return html.replace(/\s*selected="selected"/g, '');
+    };
+
+    test.equal(furtherCanon(this.div.html()),
+               '<select id="morphing" name="fred">' +
+               '<option value="1">Hamburger</option>' +
+               '<option value="2">Cheeseburger</option>' +
+               '</select>');
+    c.insert({name: 'Chicken Snickers', value: 8});
+    Meteor.flush();
+    test.equal(furtherCanon(this.div.html()),
+               '<select id="morphing" name="fred">' +
+               '<option value="1">Hamburger</option>' +
+               '<option value="2">Cheeseburger</option>' +
+               '<option value="8">Chicken Snickers</option>' +
+               '</select>');
+    c.remove({value: 1});
+    c.remove({value: 2});
+    Meteor.flush();
+    test.equal(furtherCanon(this.div.html()),
+               '<select id="morphing" name="fred">' +
+               '<option value="8">Chicken Snickers</option>' +
+               '</select>');
+    c.remove({});
+    Meteor.flush();
+    test.equal(furtherCanon(this.div.html()),
+               '<select id="morphing" name="fred">' +
+               '<!---->' +
+               '</select>');
+    c.insert({name: 'Hamburger', value: 1});
+    c.insert({name: 'Cheeseburger', value: 2});
+    Meteor.flush();
+    test.equal(furtherCanon(this.div.html()),
+               '<select id="morphing" name="fred">' +
+               '<option value="1">Hamburger</option>' +
+               '<option value="2">Cheeseburger</option>' +
+               '</select>');
   });
 
 });
