@@ -65,7 +65,20 @@
         }
       });
     },
-
+    
+    'click #login-buttons-Github': function () {
+	  resetMessages();
+	  Meteor.loginWithGithub(function (e) {
+		if (!e || e instanceof Meteor.accounts.LoginCancelledError) {
+			// do nothing
+	  } else if (e instanceof Meteor.accounts.ConfigError) {
+		configureService("Github");
+	  } else {
+		  Session.set(ERROR_MESSAGE_KEY, e.reason || "Unknown error");
+	  }
+	  });
+	},
+    
     'click #login-buttons-Weibo': function () {
       resetMessages();
       Meteor.loginWithWeibo(function (e) {
@@ -658,6 +671,8 @@
       ret.push({name: 'Facebook'});
     if (Meteor.accounts.google)
       ret.push({name: 'Google'});
+    if (Meteor.accounts.github)
+        ret.push({name: 'Github'});
     if (Meteor.accounts.weibo)
       ret.push({name: 'Weibo'});
     if (Meteor.accounts.twitter)
