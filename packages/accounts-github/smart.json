@@ -1,0 +1,8 @@
+{
+  "name": "accounts-github",
+  "description": "Github OAuth2 login service for use with Meteor Auth",
+  "homepage": "https://github.com/Jabbslad/accounts-github",
+  "author": "Jamie Atkinson <jabbslad@gmail.com>",
+  "version": "0.1.0",
+  "git": "https://github.com/Jabbslad/accounts-github.git"
+}
