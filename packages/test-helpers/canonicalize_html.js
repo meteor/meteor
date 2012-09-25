@@ -18,7 +18,7 @@ var canonicalizeHtml = function(html) {
     attrList.sort();
     for(var i=0; i<attrList.length; i++) {
       var a = attrList[i].split('=');
-      if (a.length < 1)
+      if (a.length < 2)
         a.push(a[0]); // things like checked=checked, in theory
       var key = a[0];
       var value = a[1];

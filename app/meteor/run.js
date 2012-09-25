@@ -176,7 +176,7 @@ var start_server = function (bundle_path, outer_port, inner_port, mongo_url,
     env[k] = process.env[k];
   env.PORT = inner_port;
   env.MONGO_URL = mongo_url;
-  env.ROOT_URL = 'http://localhost:' + outer_port;
+  env.ROOT_URL = env.ROOT_URL || ('http://localhost:' + outer_port);
 
   var proc = spawn(process.execPath,
                    [path.join(bundle_path, 'main.js'), '--keepalive'],

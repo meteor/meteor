@@ -63,7 +63,9 @@
 
 "setInterval(function() {" +
 "  var ready = page.evaluate(function () {" +
-"    if (typeof Meteor !== 'undefined' && Meteor.status().connected) {" +
+"    if (typeof Meteor !== 'undefined' " +
+"        && typeof(Meteor.status) !== 'undefined' " +
+"        && Meteor.status().connected) {" +
 "      Meteor.flush();" +
 "      return Meteor._LivedataConnection._allSubscriptionsReady();" +
 "    }" +
