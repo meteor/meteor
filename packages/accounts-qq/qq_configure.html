@@ -1,6 +1,6 @@
 <template name="configureLoginServicesDialogForQQ">
   <p>
-    First, you'll need to register your app on Tencent site. Follow these steps:
+    First, you'll need to register your app on the Tencent QQ site. Follow these steps:
   </p>
   <ol>
     <li>
@@ -18,11 +18,12 @@
     <li>
       Set OAuth2.0 authorized callback page (授权回调页) to: <span class="url">{{siteUrl}}_oauth/qq?close</span>
     </li>
+    {{#if isLocalhost}}
     <li>
-      Development Instructions
+      Local Development Instructions
       <p>
         Tencent does not support localhost and any raw IPs or even non-80 ports so you would have to provide a real host
-        name and run your app in port 80, all of which would require root priviledge:
+        name and run your app in port 80, all of which would require root privilege:
       </p>
       <ol>
         <li>
@@ -36,5 +37,6 @@
         </li>
       </ol>
     </li>
+    {{/if}}
   </ol>
 </template>

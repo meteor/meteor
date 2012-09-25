@@ -1,5 +1,5 @@
 Package.describe({
-  summary : "Login service for Tencent QQ accounts"
+  summary: "Login service for Tencent QQ accounts"
 });
 
 Package.on_use(function(api) {
