@@ -90,6 +90,20 @@ var notifyWatchers = function (start, end) {
   tempRange.destroy();
 };
 
+var eventGuardActive = false;
+// Spark does DOM manipulation inside an event guard to prevent events
+// like "blur" from firing.  It would be nice to deliver these events
+// in some cases, but running fresh event handling code on an invalid
+// LiveRange tree can easily produce errors.
+// This guard was motivated by seeing errors in Todos when switching
+// windows while an input field is focused.
+var withEventGuard = function (func) {
+  var previous = eventGuardActive;
+  eventGuardActive = true;
+  try { return func(); }
+  finally { eventGuardActive = previous; }
+};
+
 Spark._createId = function () {
   // Chars can't include '-' to be safe inside HTML comments.
   var chars =
@@ -569,13 +583,15 @@ Spark.renderToRange = function (range, htmlFunc) {
   var results = {};
 
   // Patch! (using preservations)
-  range.operate(function (start, end) {
-    // XXX this will destroy all liveranges, including ones
-    // inside constant regions whose DOM nodes we are going
-    // to preserve untouched
-    Spark.finalize(start, end);
-    Spark._patch(start.parentNode, frag, start.previousSibling,
-                 end.nextSibling, preservations, results);
+  withEventGuard(function () {
+    range.operate(function (start, end) {
+      // XXX this will destroy all liveranges, including ones
+      // inside constant regions whose DOM nodes we are going
+      // to preserve untouched
+      Spark.finalize(start, end);
+      Spark._patch(start.parentNode, frag, start.previousSibling,
+                   end.nextSibling, preservations, results);
+    });
   });
 
   _.each(results.regionPreservations, function (landmarkRange) {
@@ -636,6 +652,10 @@ var getListener = function () {
       // before delivering events to the user. We precompute the list
       // of enclosing liveranges to defend against the case where user
       // event handlers change the DOM.
+
+      if (eventGuardActive)
+        // swallow the event
+        return;
 
       var ranges = [];
       var walk = findRangeOfType(Spark._ANNOTATION_EVENTS,
@@ -908,7 +928,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   var later = function (f) {
     atFlushTime(function () {
       if (! stopped)
-        f();
+        withEventGuard(f);
     });
   };
 
