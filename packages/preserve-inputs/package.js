@@ -4,9 +4,5 @@ Package.describe({
 
 Package.on_use(function (api, where) {
   api.use(['underscore', 'spark', 'templating']);
-  api.add_files(["labeler.js", "preserve-inputs.js"], "client");
+  api.add_files("preserve-inputs.js", "client");
 });
-
-/*Package.on_test(function (api) {
-  api.add_files('labeler.js', 'client');
-});*/
