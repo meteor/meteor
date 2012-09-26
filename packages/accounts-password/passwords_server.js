@@ -304,6 +304,15 @@
   });
 
 
+  Meteor.setPassword = function (userId, newPassword) {
+    var user = Meteor.users.findOne(userId);
+    if (!user)
+      throw new Meteor.Error(403, "User not found");
+    var newVerifier = Meteor._srp.generateVerifier(newPassword);
+
+    Meteor.users.update({_id: user._id}, {
+      $set: {'services.password.srp': newVerifier}});
+  };
 
 
   ////////////
@@ -388,20 +397,27 @@
       extra = {};
     }
 
-    // XXX relax these constraints!
-
+    // XXX allow an optional callback?
     if (callback) {
       throw new Error("Meteor.createUser with callback not supported on the server yet.");
     }
 
-    if (options.password || options.srp)
-      throw new Error("Meteor.createUser on the server does not let you set a password yet.");
-
-    if (!options.email)
-      throw new Error("Meteor.createUser on the server requires email.");
-
     var userId = createUser(options, extra);
-    Meteor.accounts.sendEnrollmentEmail(userId, options.email);
+
+    // send email if the user has an email and no password
+    var user = Meteor.users.findOne(userId);
+    if (
+        // user has email address
+      (user && user.emails && user.emails.length &&
+       user.emails[0].address) &&
+        // and does not have a password
+      !(user.services && user.services.password &&
+        user.services.password.srp)) {
+
+      var email = user.emails[0].address;
+      Meteor.accounts.sendEnrollmentEmail(userId, email);
+    }
+
     return userId;
   };
 

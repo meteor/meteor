@@ -204,6 +204,36 @@ if (Meteor.isServer) (function () {
     });
 
 
+  Tinytest.add(
+    'passwords - setPassword',
+    function (test) {
+      var username = Meteor.uuid();
+
+      var userId = Meteor.createUser({username: username}, {});
+
+      var user = Meteor.users.findOne(userId);
+      // no services yet.
+      test.equal(user.services.password, undefined);
+
+      // set a new password.
+      Meteor.setPassword(userId, 'new password');
+      user = Meteor.users.findOne(userId);
+      var oldVerifier = user.services.password.srp;
+      test.isTrue(user.services.password.srp);
+
+      // reset with the same password, see we get a different verifier
+      Meteor.setPassword(userId, 'new password');
+      user = Meteor.users.findOne(userId);
+      var newVerifier = user.services.password.srp;
+      test.notEqual(oldVerifier.salt, newVerifier.salt);
+      test.notEqual(oldVerifier.identity, newVerifier.identity);
+      test.notEqual(oldVerifier.verifier, newVerifier.verifier);
+
+      // cleanup
+      Meteor.users.remove(userId);
+    });
+
+
 
   // XXX would be nice to test Meteor.accounts.config({forbidSignups: true})
 }) ();
