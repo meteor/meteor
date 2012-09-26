@@ -138,34 +138,16 @@
 
       var user = Meteor.users.findOne({"services.password.reset.token": token});
       if (!user)
-        throw new Meteor.Error(403, "Reset password link expired");
+        throw new Meteor.Error(403, "Token expired");
 
       Meteor.users.update({_id: user._id}, {
         $set: {'services.password.srp': newVerifier},
         $unset: {'services.password.reset': 1}
       });
-
-      var loginToken = Meteor.accounts._loginTokens.insert({userId: user._id});
-      this.setUserId(user._id);
-      return {token: loginToken, id: user._id};
-    },
-
-    enrollAccount: function (token, newVerifier) {
-      if (!token)
-        throw new Meteor.Error(400, "Need to pass token");
-      if (!newVerifier)
-        throw new Meteor.Error(400, "Need to pass newVerifier");
-
-      var user = Meteor.users.findOne({"services.password.enroll.token": token});
-      if (!user)
-        throw new Meteor.Error(403, "Enroll account link expired");
-
-      Meteor.users.update({_id: user._id}, {
-        $set: {'services.password.srp': newVerifier},
-        $unset: {'services.password.enroll': 1}
-      });
+      // verify their email. they got the password reset email.
       Meteor.users.update({_id: user._id},
                           {$set: {"emails.0.validated": true}});
+
 
       var loginToken = Meteor.accounts._loginTokens.insert({userId: user._id});
       this.setUserId(user._id);
@@ -229,7 +211,7 @@
     var token = Meteor.uuid();
     var when = +(new Date);
     Meteor.users.update(userId, {$set: {
-      "services.password.enroll": {
+      "services.password.reset": {
         token: token,
         when: when
       }

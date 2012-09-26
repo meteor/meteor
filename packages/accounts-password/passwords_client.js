@@ -163,32 +163,6 @@
       });
   };
 
-  // Sets a user's first password based on a token originally created by
-  // Meteor.enrollAccount, and then logs in the matching user.
-  //
-  // @param token {String}
-  // @param password {String}
-  // @param callback (optional) {Function(error|undefined)}
-  Meteor.enrollAccount = function(token, password, callback) {
-    if (!token)
-      throw new Error("Need to pass token");
-    if (!password)
-      throw new Error("Need to pass password");
-
-    var verifier = Meteor._srp.generateVerifier(password);
-    Meteor.apply(
-      "enrollAccount", [token, verifier], {wait: true},
-      function (error, result) {
-        if (error || !result) {
-          error = error || new Error("No result from call to enrollAccount");
-          callback && callback(error);
-        }
-
-        Meteor.accounts.makeClientLoggedIn(result.id, result.token);
-        callback && callback();
-      });
-  };
-
   // Validates a user's email address based on a token originally
   // created by Meteor.accounts.sendValidationEmail
   //

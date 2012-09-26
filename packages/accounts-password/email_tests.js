@@ -172,7 +172,7 @@
       getEnrollAccountToken(email4, test, expect);
     },
     function (test, expect) {
-      Meteor.enrollAccount(enrollAccountToken, 'password', expect(function(error) {
+      Meteor.resetPassword(enrollAccountToken, 'password', expect(function(error) {
         test.isFalse(error);
       }));
     },

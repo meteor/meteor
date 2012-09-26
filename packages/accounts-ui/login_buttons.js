@@ -424,7 +424,7 @@
     if (!validatePassword(password))
       return;
 
-    Meteor.enrollAccount(
+    Meteor.resetPassword(
       Session.get(ENROLL_ACCOUNT_TOKEN_KEY), password,
       function (error) {
         if (error) {
