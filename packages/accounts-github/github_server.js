@@ -14,7 +14,8 @@
 			  github: {
 				  id: identity.id, 
 				  accessToken: accessToken,
-				  email: identity.email
+				  email: identity.email,
+				  username: identity.login
 		  }}
       },
       extra: {profile: {name: identity.name}}
@@ -45,7 +46,6 @@
     var result = Meteor.http.get(
       "https://api.github.com/user",
       {params: {access_token: accessToken}});
-
     if (result.error)
       throw result.error;
     return result.data;
