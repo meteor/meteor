@@ -55,7 +55,7 @@ cd build
 
 git clone git://github.com/joyent/node.git
 cd node
-git checkout v0.8.10
+git checkout v0.8.11
 
 ./configure --prefix="$DIR"
 make -j4
