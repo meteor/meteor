@@ -726,7 +726,7 @@ Template.api.set = {
      type: "String",
      descr: "The key to set, eg, `selectedItem`"},
     {name: "value",
-     type: "Any type",
+     type: "String, Number, Boolean, null, or undefined",
      descr: "The new value for `key`"}
   ]
 };
