@@ -1,0 +1,22 @@
+<template name="configureLoginServicesDialogForGithub">
+  <p>
+    First, you'll need to get a Github Client ID. Follow these steps:
+  </p>
+  <ol>
+    <li>
+      Visit <a href="https://github.com/settings/applications/new" target="blank">https://github.com/settings/applications/new</a>
+    </li>
+    <li>
+      Enter your application name.
+    </li>
+    <li>
+      Set URL to to: <span class="url">{{siteUrl}}</span>
+    </li>
+    <li>
+      Set callback URL to: <span class="url">{{siteUrl}}_oauth/github?close</span>
+    </li>
+    <li>
+      Create the application.
+    </li>
+  </ol>
+</template>
