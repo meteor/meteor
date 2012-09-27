@@ -75,6 +75,10 @@ Meteor._LivedataConnection = function (url, options) {
   // yet ready.
   self.sub_ready_callbacks = {};
 
+  // Per-connection scratch area. This is only used internally, but we
+  // should have real and documented API for this sort of thing someday.
+  self.sessionData = {};
+
   // just for testing
   self.quiesce_callbacks = [];
 
@@ -319,8 +323,11 @@ _.extend(Meteor._LivedataConnection.prototype, {
         var setUserId = function(userId) {
           self.setUserId(userId);
         };
-        var invocation = new Meteor._MethodInvocation(
-          true /* isSimulation */, self.userId(), setUserId);
+        var invocation = new Meteor._MethodInvocation({
+          isSimulation: true,
+          userId: self.userId(), setUserId: setUserId,
+          sessionData: self.sessionData
+        });
         try {
           var ret = Meteor._CurrentInvocation.withValue(invocation,function () {
             return stub.apply(invocation, args);
