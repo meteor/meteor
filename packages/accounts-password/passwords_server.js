@@ -1,18 +1,5 @@
 (function () {
 
-  // internal verifier collection. Never published.
-  Accounts._srpChallenges = new Meteor.Collection(
-    "accounts._srpChallenges",
-    null /*manager*/,
-    null /*driver*/,
-    true /*preventAutopublish*/);
-  // Don't let people write to the collection, even in insecure
-  // mode. There's no good reason for people to be fishing around in this
-  // table, and it is _really_ insecure to allow it as users could easily
-  // steal sessions and impersonate other users. Users can override by
-  // calling more allows later, if they really want.
-  Accounts._srpChallenges.allow({});
-
   // internal email validation tokens collection. Never published.
   Accounts._emailValidationTokens = new Meteor.Collection(
     "accounts._emailValidationTokens",
@@ -65,19 +52,10 @@
       var srp = new Meteor._srp.Server(verifier);
       var challenge = srp.issueChallenge({A: request.A});
 
-      // XXX It would be better to put this on the session
-      // somehow. However, this gets complicated when interacting with
-      // reconnect on the client. The client should detect the reconnect
-      // and re-start the exchange.
-      // https://app.asana.com/0/988582960612/1278583012594
-      //
-      // Instead we store M and HAMK from SRP (abstraction violation!)
-      // and let any session login if it knows M. This is somewhat
-      // insecure, if you don't use SSL someone can sniff your traffic
-      // and then log in as you (but no more insecure than reconnect
-      // tokens).
-      var serialized = { userId: user._id, M: srp.M, HAMK: srp.HAMK };
-      Accounts._srpChallenges.insert(serialized);
+      // save off results in the current session so we can verify them
+      // later.
+      this._sessionData.srpChallenge =
+        { userId: user._id, M: srp.M, HAMK: srp.HAMK };
 
       return challenge;
     },
@@ -94,9 +72,8 @@
       }
 
       if (options.M) {
-        var serialized = Accounts._srpChallenges.findOne(
-          {M: options.M});
-        if (!serialized)
+        var serialized = this._sessionData.srpChallenge;
+        if (!serialized || serialized.M !== options.M)
           throw new Meteor.Error(403, "Incorrect password");
         if (serialized.userId !== this.userId())
           // No monkey business!
@@ -250,9 +227,11 @@
     if (!options.srp.M)
       throw new Meteor.Error(400, "Must pass M in options.srp");
 
-    var serialized = Accounts._srpChallenges.findOne(
-      {M: options.srp.M});
-    if (!serialized)
+    // we're always called from within a 'login' method, so this should
+    // be safe.
+    var currentInvocation = Meteor._CurrentInvocation.get();
+    var serialized = currentInvocation._sessionData.srpChallenge;
+    if (!serialized || serialized.M !== options.srp.M)
       throw new Meteor.Error(403, "Incorrect password");
 
     var userId = serialized.userId;
