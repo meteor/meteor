@@ -1,7 +1,11 @@
 (function () {
 
+  Meteor.userId = function () {
+    return Meteor.default_connection.userId();
+  };
+
   Meteor.user = function () {
-    var userId = Meteor.default_connection.userId();
+    var userId = Meteor.userId();
     if (userId) {
       var result = Meteor.users.findOne(userId);
       if (result) {

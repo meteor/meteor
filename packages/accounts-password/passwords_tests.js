@@ -165,7 +165,28 @@ if (Meteor.isClient) (function () {
         test.equal(Meteor.user().profile.touchedByOnCreateUser, true);
       }));
     },
-    logoutStep
+
+    // test Meteor.user(). This test properly belongs in
+    // accounts-base/accounts_tests.js, but this is where the tests that
+    // actually log in are.
+    function(test, expect) {
+      var clientUser = Meteor.user();
+      Meteor.call('testMeteorUser', expect(function (err, result) {
+        test.equal(result._id, clientUser._id);
+        test.equal(result.profile.touchedByOnCreateUser, true);
+        test.equal(err, undefined);
+      }));
+    },
+    logoutStep,
+    function(test, expect) {
+      var clientUser = Meteor.user();
+      test.equal(clientUser, null);
+      Meteor.call('testMeteorUser', expect(function (err, result) {
+        test.equal(err, undefined);
+        test.equal(result, null);
+      }));
+    }
+
   ]);
 
 }) ();
@@ -234,6 +255,14 @@ if (Meteor.isServer) (function () {
     });
 
 
+  // This test properly belongs in accounts-base/accounts_tests.js, but
+  // this is where the tests that actually log in are.
+  Tinytest.add('accounts - user() out of context', function (test) {
+    // basic server context, no method.
+    test.throws(function () {
+      Meteor.user();
+    });
+  });
 
   // XXX would be nice to test Meteor.accounts.config({forbidSignups: true})
 }) ();

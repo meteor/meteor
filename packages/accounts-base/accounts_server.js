@@ -74,6 +74,32 @@
 
 
   ///
+  /// CURRENT USER
+  ///
+  Meteor.userId = function () {
+    // This function only works if called inside a method. In theory, it
+    // could also be called from publish statements, since they also
+    // have a userId associated with them. However, given that publish
+    // functions aren't reactive, using any of the infomation from
+    // Meteor.user() in a publish function will always use the value
+    // from when the function first runs. This is likely not what the
+    // user expects. The way to make this work in a publish is to do
+    // Meteor.find(this.userId()).observe and recompute when the user
+    // record changes.
+    var currentInvocation = Meteor._CurrentInvocation.get();
+    if (!currentInvocation || !currentInvocation.userId)
+      throw new Error("Meteor.userId can only be invoked in method calls.");
+    return currentInvocation.userId();
+  };
+
+  Meteor.user = function () {
+    var userId = Meteor.userId();
+    if (!userId)
+      return null;
+    return Meteor.users.findOne(userId);
+  };
+
+  ///
   /// CREATE USER HOOKS
   ///
   var onCreateUserHook = null;

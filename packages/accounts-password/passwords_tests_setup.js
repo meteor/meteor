@@ -32,3 +32,10 @@ Meteor.accounts.config({
   requireEmail: false,
   requireUsername: false
 });
+
+
+// This test properly belongs in accounts-base/accounts_tests.js, but
+// this is where the tests that actually log in are.
+Meteor.methods({
+  testMeteorUser: function () { return Meteor.user(); }
+});
