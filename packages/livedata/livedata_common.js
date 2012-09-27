@@ -1,7 +1,6 @@
 // XXX namespacing
 
-Meteor._MethodInvocation = function (isSimulation, userId,
-                                     globallySetUserId, unblock) {
+Meteor._MethodInvocation = function (options) {
   var self = this;
 
   // true if we're running not the actual method, but a stub (that is,
@@ -11,22 +10,26 @@ Meteor._MethodInvocation = function (isSimulation, userId,
   // purposes). not currently true except in a client such as a browser,
   // since there's usually no point in running stubs unless you have a
   // zero-latency connection to the user.
-  this.isSimulation = isSimulation;
+  this.isSimulation = options.isSimulation;
 
   // XXX Backwards compatibility only. Remove this before 1.0.
-  this.is_simulation = isSimulation;
+  this.is_simulation = this.isSimulation;
 
   // call this function to allow other method invocations (from the
   // same client) to continue running without waiting for this one to
   // complete.
-  this.unblock = unblock || function () {};
+  this.unblock = options.unblock || function () {};
 
   // current user id
-  this._userId = userId;
+  this._userId = options.userId;
 
   // sets current user id in all appropriate server contexts and
   // reruns subscriptions
-  this._setUserId = globallySetUserId || function () {};
+  this._setUserId = options.setUserId || function () {};
+
+  // Scratch data scoped to this connection (livedata_connection on the
+  // client, livedata_session on the server).
+  this.sessionData = options.sessionData;
 };
 
 _.extend(Meteor._MethodInvocation.prototype, {
