@@ -198,7 +198,7 @@ npm install mailcomposer@0.1.15
 # Sockjs has a broken optional dependancy, and npm optional dependancies
 # don't seem to quite work. Fake it out with a checkout.
 git clone http://github.com/akdubya/rbytes.git
-npm install sockjs@0.3.1
+npm install sockjs@0.3.3
 rm -rf rbytes
 
 npm install fibers@0.6.9
