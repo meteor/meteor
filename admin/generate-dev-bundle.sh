@@ -3,7 +3,7 @@
 set -e
 set -u
 
-BUNDLE_VERSION=0.2.3
+BUNDLE_VERSION=0.2.5
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -55,104 +55,7 @@ cd build
 
 git clone git://github.com/joyent/node.git
 cd node
-git checkout v0.8.8
-
-# Patch node to allow unsetting O_NONBLOCK on TTYs. This is a gross hack
-# to work around node setting process.stdin to be non-blocking.
-#
-# This is needed to allow spawning a mongo command-line process to the
-# user's terminal (eg 'meteor mongo'). It also fixes behavior in
-# emacs-shell mode.
-#
-# Related github issue:
-# https://github.com/joyent/node/issues/3584
-# Discussion of implementing process.stdout.setBlocking(bool):
-# http://piscisaureus.no.de/libuv/2012-06-29#00:40:38.256
-# Emacs bug this works around:
-# http://debbugs.gnu.org/cgi/bugreport.cgi?bug=2602
-#
-# NOTE: there is now an unreleased fix in libuv that fixes this issue:
-# https://github.com/joyent/node/issues/3994
-# Once this is released, we can remove this hack. This will fix the
-# mongo shell issue, though we may still need to do something like
-# "spawn('true', [], {stdio: 'inherit'})" to fix the emacs shell issue.
-patch -p1 <<EOF
-diff --git a/src/tty_wrap.cc b/src/tty_wrap.cc
-index fde8717..62cf939 100644
---- a/src/tty_wrap.cc
-+++ b/src/tty_wrap.cc
-@@ -26,6 +26,8 @@
- #include "stream_wrap.h"
- #include "tty_wrap.h"
- 
-+#include "fcntl.h" // meteor
-+
- namespace node {
- 
- using v8::Object;
-@@ -67,6 +69,8 @@ void TTYWrap::Initialize(Handle<Object> target) {
- 
-   NODE_SET_PROTOTYPE_METHOD(t, "getWindowSize", TTYWrap::GetWindowSize);
-   NODE_SET_PROTOTYPE_METHOD(t, "setRawMode", SetRawMode);
-+  // meteor
-+  NODE_SET_PROTOTYPE_METHOD(t, "setBlocking", TTYWrap::SetBlocking);
- 
-   NODE_SET_METHOD(target, "isTTY", IsTTY);
-   NODE_SET_METHOD(target, "guessHandleType", GuessHandleType);
-@@ -158,6 +162,39 @@ Handle<Value> TTYWrap::SetRawMode(const Arguments& args) {
- }
- 
- 
-+// meteor
-+Handle<Value> TTYWrap::SetBlocking(const Arguments& args) {
-+  HandleScope scope;
-+
-+  UNWRAP(TTYWrap)
-+
-+  int fd = wrap->handle_.fd;
-+  int set = args[0]->IsTrue();
-+  int r = 0;
-+
-+  // implementation copied from uv__nonblock.
-+  int flags;
-+
-+  if ((flags = fcntl(fd, F_GETFL)) == -1) {
-+    r = -1;
-+  } else {
-+
-+    // reverse of uv__nonblock. setBlocking vs setNonBlocking.
-+    if (set) {
-+      flags &= ~O_NONBLOCK;
-+    } else {
-+      flags |= O_NONBLOCK;
-+    }
-+
-+    if (fcntl(fd, F_SETFL, flags) == -1) {
-+      r = -1;
-+    }
-+  }
-+
-+  return scope.Close(Integer::New(r));
-+}
-+
-+
- Handle<Value> TTYWrap::New(const Arguments& args) {
-   HandleScope scope;
- 
-diff --git a/src/tty_wrap.h b/src/tty_wrap.h
-index 4a3341a..01aa119 100644
---- a/src/tty_wrap.h
-+++ b/src/tty_wrap.h
-@@ -48,6 +48,7 @@ class TTYWrap : StreamWrap {
-   static Handle<Value> IsTTY(const Arguments& args);
-   static Handle<Value> GetWindowSize(const Arguments& args);
-   static Handle<Value> SetRawMode(const Arguments& args);
-+  static Handle<Value> SetBlocking(const Arguments& args); // meteor
-   static Handle<Value> New(const Arguments& args);
- 
-   uv_tty_t handle_;
-EOF
-
+git checkout v0.8.11
 
 ./configure --prefix="$DIR"
 make -j4
@@ -198,7 +101,7 @@ npm install mailcomposer@0.1.15
 # Sockjs has a broken optional dependancy, and npm optional dependancies
 # don't seem to quite work. Fake it out with a checkout.
 git clone http://github.com/akdubya/rbytes.git
-npm install sockjs@0.3.1
+npm install sockjs@0.3.3
 rm -rf rbytes
 
 npm install fibers@0.6.9

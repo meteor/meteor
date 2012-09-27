@@ -30,6 +30,12 @@ Session = _.extend({}, {
   set: function (key, value) {
     var self = this;
 
+    if (typeof value !== 'string' &&
+        typeof value !== 'number' &&
+        typeof value !== 'boolean' &&
+        value !== null && value !== undefined)
+      throw new Error("Session.set: value can't be an object");
+
     var old_value = self.keys[key];
     if (value === old_value)
       return;
