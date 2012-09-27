@@ -12,6 +12,13 @@ fi
 
 cd "$ORIGDIR"
 export NODE_PATH="$TOPDIR/dev_bundle/lib/node_modules"
+
+if [ "$EMACS" == t ]; then
+    # Emacs shell doesn't need readline and interprets the ANSI characters as
+    # garbage.
+    export NODE_NO_READLINE=1
+fi
+
 "$TOPDIR/dev_bundle/bin/node" "$@"
 
 # Node sets stdin to non-blocking, which causes Emacs shell to die after it
