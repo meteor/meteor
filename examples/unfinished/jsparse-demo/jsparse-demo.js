@@ -128,8 +128,6 @@ if (Meteor.is_client) {
     }
   });
 
-  Template.page.preserve(['#inputarea textarea']);
-
   var selectTextInArea = function (e, start, end){
     e.focus();
     if (e.setSelectionRange) {
