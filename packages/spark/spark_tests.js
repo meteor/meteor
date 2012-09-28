@@ -13,7 +13,7 @@ Spark._checkIECompliance = true;
 Spark._globalPreserves = {};
 
 var idNameLabels = {
-  '*[id], *[name]': PreserveInputs.idNameLabeler
+  '*[id], *[name]': Spark._idNameLabeler
 };
 
 var renderWithPreservation = function (htmlFunc) {

@@ -3,6 +3,6 @@ Package.describe({
 });
 
 Package.on_use(function (api, where) {
-  api.use(['underscore', 'spark', 'templating']);
+  api.use(['underscore', 'spark']);
   api.add_files("preserve-inputs.js", "client");
 });
