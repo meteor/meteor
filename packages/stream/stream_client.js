@@ -1,9 +1,19 @@
-// @param url {String} URL to Meteor app or sockjs endpoint (deprecated)
-//   "http://subdomain.meteor.com/sockjs" or "/sockjs"
+// @param url {Function|String} URL or URL-producing function to Meteor app or
+//   sockjs endpoint (deprecated) "http://subdomain.meteor.com/sockjs" or
+//   "/sockjs"
 Meteor._Stream = function (url) {
   var self = this;
 
-  self.url = Meteor._Stream._toSockjsUrl(url);
+  if (typeof(url) === 'string') {
+    self.url = function () {
+      return url.replace(/MeteorWildcard/g, Meteor.uuid);
+    };
+  } else if (typeof(url) === 'function') {
+    self.url = url;
+  } else {
+    throw new Error("Stream url must be string or function: " + url);
+  }
+
   self.socket = null;
   self.event_callbacks = {}; // name -> [callback]
   self.server_id = null;
@@ -313,12 +323,16 @@ _.extend(Meteor._Stream.prototype, {
     var self = this;
     self._cleanup_socket(); // cleanup the old socket, if there was one.
 
-    self.socket = new SockJS(self.url, undefined, {
-      debug: false, protocols_whitelist: [
-        // only allow polling protocols. no websockets or streaming.
-        // streaming makes safari spin, and websockets hurt chrome.
-        'xdr-polling', 'xhr-polling', 'iframe-xhr-polling', 'jsonp-polling'
-      ]});
+    // Generate a new URL each time we open a connection, so that we can connect
+    // to random hostnames and get around browser per-host connection limits.
+    self.socket = new SockJS(
+      Meteor._Stream._toSockjsUrl(self.url()),
+      undefined,
+      { debug: false, protocols_whitelist: [
+          // only allow polling protocols. no websockets or streaming.
+          // streaming makes safari spin, and websockets hurt chrome.
+          'xdr-polling', 'xhr-polling', 'iframe-xhr-polling', 'jsonp-polling'
+        ]});
     self.socket.onmessage = function (data) {
       // first message we get when we're connecting goes to _connected,
       // which connects us. All subsequent messages (while connected) go to

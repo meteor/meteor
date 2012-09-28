@@ -10,20 +10,11 @@ if (Meteor.isServer) {
 // XXX namespacing
 Meteor._capture_subs = null;
 
-// @param url {String|Object} URL to Meteor app or sockjs endpoint (deprecated),
-//     or an object as a test hook (see code)
+// @param url {Function|String|Object} URL or URL-producing function to Meteor
+//     app or sockjs endpoint (deprecated), or an object as a test hook (see
+//     code)
 Meteor._LivedataConnection = function (url, restart_on_update) {
   var self = this;
-
-  // as a test hook, allow passing a stream instead of a url.
-  if (typeof url === "object") {
-    self.stream = url;
-    // if we have two test streams, auto reload stuff will break because
-    // the url is used as a key for the migration data.
-    self.url = "/debug";
-  } else {
-    self.url = url;
-  }
 
   self.last_session_id = null;
   self.stores = {}; // name -> object with methods
@@ -64,8 +55,13 @@ Meteor._LivedataConnection = function (url, restart_on_update) {
     return [true];
   });
 
-  // Setup stream (if not overriden above)
-  self.stream = self.stream || new Meteor._Stream(self.url);
+  // Set up stream. As a test hook, allow passing a stream instead of an url or
+  // url-producing function.
+  if (typeof url === "object") {
+    self.stream = url;
+  } else {
+    self.stream = new Meteor._Stream(url);
+  }
 
   self.stream.on('message', function (raw_msg) {
     try {
@@ -561,7 +557,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
 });
 
 _.extend(Meteor, {
-  // @param url {String} URL to Meteor app, or to sockjs endpoint (deprecated),
+  // @param url {String|Function} URL or URL-producing function to Meteor app,
+  //   or to sockjs endpoint (deprecated),
   //     e.g.:
   //     "subdomain.meteor.com",
   //     "http://subdomain.meteor.com",
