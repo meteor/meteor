@@ -40,7 +40,7 @@ Meteor._LivedataConnection = function (url, restart_on_update) {
   // name -> updates for (yet to be created) collection
   self.queued = {};
   // if we're blocking a migration, the retry func
-  self.retry_migrate = null;
+  self._retryMigrate = null;
 
   // metadata for subscriptions
   self.subs = new LocalCollection;
@@ -53,12 +53,11 @@ Meteor._LivedataConnection = function (url, restart_on_update) {
 
 
   // Setup auto-reload persistence.
-  var reload_key = "Server-" + url;
-  Meteor._reload.on_migrate(reload_key, function (retry) {
+  Meteor._reload.onMigrate(function (retry) {
     if (!self._readyToMigrate()) {
-      if (self.retry_migrate)
+      if (self._retryMigrate)
         throw new Error("Two migrations in progress?");
-      self.retry_migrate = retry;
+      self._retryMigrate = retry;
       return false;
     }
 
@@ -542,9 +541,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
     // if we were blocking a migration, see if it's now possible to
     // continue
-    if (self.retry_migrate && self._readyToMigrate()) {
-      self.retry_migrate();
-      self.retry_migrate = null;
+    if (self._retryMigrate && self._readyToMigrate()) {
+      self._retryMigrate();
+      self._retryMigrate = null;
     }
   },
 
