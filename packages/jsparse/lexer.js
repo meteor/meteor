@@ -325,7 +325,9 @@ JSLexer.prototype.next = function () {
     if (match && (match.index !== pos))
       match = null;
     // Record the end position of the match back into `pos`.
-    if (match)
+    // Avoid an IE7 bug where lastIndex is incremented when
+    // the match has 0 length.
+    if (match && match[0].length !== 0)
       pos = regex.lastIndex;
     return match;
   };
