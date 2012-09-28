@@ -11,7 +11,7 @@ PreserveInputs.selector = _.map(inputTags, function (t) {
 PreserveInputs.idNameLabeler = function(n) {
   var label = null;
 
-  if (n.nodeType === 1) {
+  if (n.nodeType === 1 /*ELEMENT_NODE*/) {
     if (n.id) {
       label = '#' + n.id;
     } else if (n.getAttribute("name")) {
@@ -30,8 +30,8 @@ PreserveInputs.idNameLabeler = function(n) {
       // include parent names and IDs up to enclosing ID
       // in the label
       while (n.parentNode &&
-             n.parentNode.nodeType === 1) { // ELEMENT
-          n = n.parentNode;
+             n.parentNode.nodeType === 1 /*ELEMENT_NODE*/) {
+        n = n.parentNode;
         if (n.id) {
           label = '#' + n.id + "/" + label;
           break;
