@@ -65,7 +65,7 @@
 
     // The response content in /me requires trickly JSONP callback to parse
     var meContent = {};
-    var callbackExp = /callback\((.+)\)/;
+    var callbackExp = /^\s*callback\s*\((.+)\)\s*;\s*$/;
     var matched = meResult.content.match(callbackExp);
     if (matched && matched.length === 2) {
       meContent = JSON.parse(matched[1]);
@@ -73,6 +73,8 @@
         console.log("Error in getting account's open id, details: " + meContent.error);
         throw new Error(meContent.error);
       }
+    } else {
+      throw new Error("Error in getting account's open id");
     }
 
     var userInfoResult = Meteor.http.get("https://graph.qq.com/user/get_user_info", {
