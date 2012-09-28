@@ -121,7 +121,7 @@
         var status = p.callback(tryReload);
         if (!status[0])
           return; // not ready yet..
-        if (status.length > 1)
+        if (status.length > 1 && p.name)
           migrationData[p.name] = status[1];
       };
 
