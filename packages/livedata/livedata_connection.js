@@ -648,6 +648,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
         if (i !== self.blocked_methods.length) {
           self.outstanding_wait_method = self.blocked_methods[i];
           self.blocked_methods = _.rest(self.blocked_methods, i+1);
+        } else {
+          self.blocked_methods = [];
         }
 
         // Send any new outstanding methods after we reshift the

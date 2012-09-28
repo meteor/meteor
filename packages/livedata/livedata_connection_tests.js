@@ -484,6 +484,8 @@ Tinytest.add("livedata connection - one wait method with response out of order",
   test.equal(stream.sent.length, 1);
   var three_message = JSON.parse(stream.sent.shift());
   test.equal(three_message.params, ['three!']);
+  // Since we sent it, it should no longer be in "blocked_methods".
+  test.equal(conn.blocked_methods, []);
 
   stream.receive({msg: 'result', id: three_message.id});
   test.equal(stream.sent.length, 0);
