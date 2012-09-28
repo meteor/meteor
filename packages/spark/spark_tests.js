@@ -8,10 +8,6 @@ Spark._checkIECompliance = true;
 
 (function () {
 
-// deactivate the automatic global preservation we get
-// from including the preserve-inputs package
-Spark._globalPreserves = {};
-
 var idNameLabels = {
   '*[id], *[name]': Spark._idNameLabeler
 };
