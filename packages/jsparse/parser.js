@@ -90,8 +90,8 @@ JSParser.prototype.getSyntaxTree = function () {
 
   var booleanFlaggedParser = function (parserConstructFunc) {
     return {
-      false: parserConstructFunc(false),
-      true: parserConstructFunc(true)
+      'false': parserConstructFunc(false),
+      'true': parserConstructFunc(true)
     };
   };
 
