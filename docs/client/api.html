@@ -1021,11 +1021,12 @@ the old DOM and as tags in the new HTML.  Meteor will patch the DOM
 around the preserved elements.
 
 {{#note}}
-New Meteor apps that you create include the `preserve-inputs` package,
-which automatically preserves elements of type `input`, `textarea`,
-`button`, `select`, and `option` that have unique `id` attributes or
-that have `name` attributes that are unique within an enclosing
-element with an `id` attribute.
+By default, new Meteor apps automatically include the
+`preserve-inputs` package.  This preserves all elements of type
+`input`, `textarea`, `button`, `select`, and `option` that have unique
+`id` attributes or that have `name` attributes that are unique within
+an enclosing element with an `id` attribute.  To turn off this default
+behavior, simply remove the `preserve-inputs` package.
 {{/note}}
 
 Preservation is useful in a variety of cases where replacing a DOM

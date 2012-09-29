@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Preserve inputs and other form elements by ID"
+  summary: "Automatically preserve all form fields that have a unique id"
 });
 
 Package.on_use(function (api, where) {

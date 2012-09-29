@@ -1,6 +1,6 @@
 (function () {
 
-  Spark._idNameLabeler = function(n) {
+  Spark._labelFromIdOrName = function(n) {
     var label = null;
 
     if (n.nodeType === 1 /*ELEMENT_NODE*/) {

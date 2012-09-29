@@ -7,6 +7,6 @@ var selector = _.map(inputTags, function (t) {
 }).join(', ');
 
 
-Spark._globalPreserves[selector] = Spark._idNameLabeler;
+Spark._globalPreserves[selector] = Spark._labelFromIdOrName;
 
 })();

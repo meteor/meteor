@@ -8,8 +8,13 @@ Spark._checkIECompliance = true;
 
 (function () {
 
+// Tests can use {preserve: idNameLabels} or renderWithPreservation
+// to cause any element with an id or name to be preserved.  This effect
+// is similar to what the preserve-inputs package does, though it applies
+// to all elements, not just inputs.
+
 var idNameLabels = {
-  '*[id], *[name]': Spark._idNameLabeler
+  '*[id], *[name]': Spark._labelFromIdOrName
 };
 
 var renderWithPreservation = function (htmlFunc) {
