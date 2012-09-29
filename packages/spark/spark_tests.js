@@ -8,49 +8,18 @@ Spark._checkIECompliance = true;
 
 (function () {
 
-var legacyLabels = {
-  '*[id], *[name]': function(n) {
-    var label = null;
+// Tests can use {preserve: idNameLabels} or renderWithPreservation
+// to cause any element with an id or name to be preserved.  This effect
+// is similar to what the preserve-inputs package does, though it applies
+// to all elements, not just inputs.
 
-    if (n.nodeType === 1) {
-      if (n.id) {
-        label = '#' + n.id;
-      } else if (n.getAttribute("name")) {
-        label = n.getAttribute("name");
-        // Radio button special case:  radio buttons
-        // in a group all have the same name.  Their value
-        // determines their identity.
-        // Checkboxes with the same name and different
-        // values are also sometimes used in apps, so
-        // we treat them similarly.
-        if (n.nodeName === 'INPUT' &&
-            (n.type === 'radio' || n.type === 'checkbox') &&
-            n.value)
-          label = label + ':' + n.value;
-
-        // include parent names and IDs up to enclosing ID
-        // in the label
-        while (n.parentNode &&
-               n.parentNode.nodeType === 1) { // ELEMENT
-          n = n.parentNode;
-          if (n.id) {
-            label = '#' + n.id + "/" + label;
-            break;
-          } else if (n.getAttribute('name')) {
-            label = n.getAttribute('name') + "/" + label;
-          }
-        }
-      }
-    }
-
-    return label;
-  }
+var idNameLabels = {
+  '*[id], *[name]': Spark._labelFromIdOrName
 };
 
-var renderWithLegacyLabels = function (htmlFunc) {
+var renderWithPreservation = function (htmlFunc) {
   return Meteor.render(function () {
-    return Spark.createLandmark({ preserve: legacyLabels },
-                                htmlFunc);
+    return Spark.createLandmark({ preserve: idNameLabels}, htmlFunc);
   });
 };
 
@@ -818,7 +787,7 @@ Tinytest.add("spark - tables", function (test) {
   Meteor.flush();
   test.equal(R.numListeners(), 0);
 
-  div = OnscreenDiv(renderWithLegacyLabels(function() {
+  div = OnscreenDiv(renderWithPreservation(function() {
     return '<table id="my-awesome-table">'+R.get()+'</table>';
   }));
   Meteor.flush();
@@ -1391,7 +1360,7 @@ Tinytest.add("spark - preserve copies attributes", function(test) {
   var R1 = ReactiveVar("foo");
   var R2 = ReactiveVar("abcd");
 
-  var frag = WrappedFrag(renderWithLegacyLabels(function() {
+  var frag = WrappedFrag(renderWithPreservation(function() {
     return '<div puppy="'+R1.get()+'"><div><div><div><input name="blah" kittycat="'+
       R2.get()+'"></div></div></div></div>';
   })).hold();
@@ -1415,7 +1384,7 @@ Tinytest.add("spark - preserve copies attributes", function(test) {
 
   var R;
   R = ReactiveVar(false);
-  frag = WrappedFrag(renderWithLegacyLabels(function() {
+  frag = WrappedFrag(renderWithPreservation(function() {
     return '<input id="foo" type="checkbox"' + (R.get() ? ' checked="checked"' : '') + '>';
   })).hold();
   var get_checked = function() { return !! frag.node().firstChild.checked; };
@@ -1435,7 +1404,7 @@ Tinytest.add("spark - preserve copies attributes", function(test) {
   test.equal(get_checked(), true);
   frag.release();
   R = ReactiveVar(true);
-  frag = WrappedFrag(renderWithLegacyLabels(function() {
+  frag = WrappedFrag(renderWithPreservation(function() {
     return '<input type="checkbox"' + (R.get() ? ' checked="checked"' : '') + '>';
   })).hold();
   test.equal(get_checked(), true);
@@ -1450,7 +1419,7 @@ Tinytest.add("spark - preserve copies attributes", function(test) {
 
   _.each([false, true], function(with_focus) {
     R = ReactiveVar("apple");
-    var div = OnscreenDiv(renderWithLegacyLabels(function() {
+    var div = OnscreenDiv(renderWithPreservation(function() {
       return '<input id="foo" type="text" value="' + R.get() + '">';
     }));
     var maybe_focus = function(div) {
@@ -1482,7 +1451,7 @@ Tinytest.add("spark - preserve copies attributes", function(test) {
     test.equal(get_value(), if_blurred("steve", "jerry"));
     div.kill();
     R = ReactiveVar("");
-    div = OnscreenDiv(renderWithLegacyLabels(function() {
+    div = OnscreenDiv(renderWithPreservation(function() {
       return '<input id="foo" type="text" value="' + R.get() + '">';
     }));
     maybe_focus(div);
@@ -1504,7 +1473,7 @@ Tinytest.add("spark - bad labels", function(test) {
 
   var go = function(html1, html2) {
     var R = ReactiveVar(true);
-    var frag = WrappedFrag(renderWithLegacyLabels(function() {
+    var frag = WrappedFrag(renderWithPreservation(function() {
       return R.get() ? html1 : html2;
     })).hold();
 
@@ -1670,7 +1639,7 @@ Tinytest.add("spark - landmark patching", function(test) {
     var R = ReactiveVar(false);
     var structure = randomNodeList(null, 6);
     var frag = WrappedFrag(Meteor.render(function () {
-      return Spark.createLandmark({ preserve: legacyLabels }, function () {
+      return Spark.createLandmark({ preserve: idNameLabels }, function () {
         return nodeListToHtml(structure, R.get());
       });
     })).hold();
@@ -1871,7 +1840,7 @@ Tinytest.add("spark - leaderboard", function(test) {
   var players = new LocalCollection();
   var selected_player = ReactiveVar();
 
-  var scores = OnscreenDiv(renderWithLegacyLabels(function() {
+  var scores = OnscreenDiv(renderWithPreservation(function() {
     var html = Spark.list(
       players.find({}, {sort: {score: -1}}),
       function(player) {
@@ -1888,7 +1857,7 @@ Tinytest.add("spark - leaderboard", function(test) {
               '<div name="score">' + player.score + '</div></div>';
             html = Spark.setDataContext(player, html);
             html = Spark.createLandmark(
-              {preserve: legacyLabels},
+              {preserve: idNameLabels},
               function() { return html; });
             return html;
           });
@@ -2034,7 +2003,7 @@ Tinytest.add("spark - list table", function(test) {
             var html = "<tr><td>"+doc.value + (doc.reactive ? R.get() : '')+
               "</td></tr>";
             html = Spark.createLandmark(
-              {preserve: legacyLabels},
+              {preserve: idNameLabels},
               function() { return html; });
             return html;
           });
@@ -2255,7 +2224,7 @@ Tinytest.add("spark - list event data", function(test) {
 
 Tinytest.add("spark - events on preserved nodes", function(test) {
   var count = ReactiveVar(0);
-  var demo = OnscreenDiv(renderWithLegacyLabels(function() {
+  var demo = OnscreenDiv(renderWithPreservation(function() {
     var html = Spark.isolate(function () {
       return '<div class="button_demo">'+
         '<input type="button" name="press" value="Press this button">'+
@@ -2389,7 +2358,7 @@ var make_input_tester = function(render_func, events) {
 
   var R = ReactiveVar(0);
   var div = OnscreenDiv(
-    renderWithLegacyLabels(function() {
+    renderWithPreservation(function() {
       R.get(); // create dependency
       var html = render_func();
       html = Spark.attachEvents(events, html);
@@ -2669,7 +2638,7 @@ Tinytest.add("spark - controls", function(test) {
 
   var R = ReactiveVar("");
   var change_buf = [];
-  var div = OnscreenDiv(renderWithLegacyLabels(function() {
+  var div = OnscreenDiv(renderWithPreservation(function() {
     var buf = [];
     buf.push("Band: ");
     _.each(["AM", "FM", "XM"], function(band) {
@@ -2742,7 +2711,7 @@ Tinytest.add("spark - controls", function(test) {
   // Textarea
 
   R = ReactiveVar({x:"test"});
-  div = OnscreenDiv(renderWithLegacyLabels(function() {
+  div = OnscreenDiv(renderWithPreservation(function() {
     return '<textarea id="mytextarea">This is a '+
       R.get().x+'</textarea>';
   }));
@@ -3691,7 +3660,7 @@ Tinytest.add("spark - legacy preserve names", function (test) {
   var R = ReactiveVar("foo");
   var R2 = ReactiveVar("apple");
 
-  var div = OnscreenDiv(renderWithLegacyLabels(function () {
+  var div = OnscreenDiv(renderWithPreservation(function () {
     R.get(); // create dependency
     return ('<div id="aaa"><div><input name="field"></div></div>' +
             '<div id="bbb"><div><input name="field"></div></div>' +

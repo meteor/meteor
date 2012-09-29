@@ -51,11 +51,6 @@ var clear_selected_positions = function () {
     Session.set('selected_' + pos, false);
 };
 
-Template.page.preserve({
-  'input[id]': function (n) { return n.id; },
-  'button[name=submit]': true
-});
-
 //////
 ////// lobby template: shows everyone not currently playing, and
 ////// offers a button to start a fresh game.
