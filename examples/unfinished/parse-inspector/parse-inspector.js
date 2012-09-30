@@ -5,7 +5,7 @@ if (Meteor.is_client) {
     if (! Session.get("input"))
       Session.set("input", "var x = 3");
     if (! Session.get("output-type"))
-      Session.set("output-type", "parse");
+      Session.set("output-type", "jsparse");
   });
 
   Template.page.input = function () {
@@ -17,7 +17,7 @@ if (Meteor.is_client) {
 
     var outputType = Session.get("output-type");
 
-    if (outputType === "lex") {
+    if (outputType === "jslex") {
       // LEXER
 
       var lexer = new JSLexer(input);
@@ -43,7 +43,7 @@ if (Meteor.is_client) {
       } while (! L.isError() && ! L.isEOF());
       return new Handlebars.SafeString(html);
 
-    } else if (outputType === "parse") {
+    } else if (outputType === "jsparse") {
 
       // PARSER
       var html;
@@ -152,8 +152,8 @@ if (Meteor.is_client) {
   });
 
   Template.page.outputTypes = [
-    {name: "Lex", value: "lex"},
-    {name: "Parse", value: "parse"}
+    {name: "JS Lex", value: "jslex"},
+    {name: "JS Parse", value: "jsparse"}
   ];
 
   Template.page.is_outputtype_selected = function (which) {
