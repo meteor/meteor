@@ -200,7 +200,7 @@
     if (user) {
       // don't overwrite existing fields
       // XXX subobjects (aka 'profile', 'services')?
-      var newKeys = _.without(_.keys(extra), _.keys(user));
+      var newKeys = _.difference(_.keys(extra), _.keys(user));
       var newAttrs = _.pick(extra, newKeys);
       Meteor.users.update(user._id, {$set: newAttrs});
 
