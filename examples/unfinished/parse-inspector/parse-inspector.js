@@ -148,7 +148,7 @@ if (Meteor.is_client) {
     'click .lex': function (event) {
       selectInputText(this.startPos(), this.endPos());
       return false;
-    },
+    }
   });
 
   Template.page.outputTypes = [
