@@ -16,10 +16,10 @@ if (Meteor.is_client) {
     var input = Session.get("input") || "";
 
     var outputType = Session.get("output-type");
-    
+
     if (outputType === "lex") {
       // LEXER
-      
+
       var lexer = new JSLexer(input);
       var html = "";
       var L;
@@ -42,18 +42,18 @@ if (Meteor.is_client) {
             content + '</span>');
       } while (! L.isError() && ! L.isEOF());
       return new Handlebars.SafeString(html);
-      
+
     } else if (outputType === "parse") {
-      
+
       // PARSER
       var html;
       var tree = null;
-      var parser = new JSParser(input);
+      var parser = new JSParser(input, {includeComments: true});
       try {
         tree = parser.getSyntaxTree();
       } catch (parseError) {
         var errorLexeme = parser.lexer.lastLexeme;
-        
+
         html = Handlebars._escape(
           input.substring(0, errorLexeme.startPos()));
         html += Spark.setDataContext(
@@ -73,7 +73,9 @@ if (Meteor.is_client) {
             var head = obj.name || '';
             var children = obj.children;
             var info = { startPos: curPos };
-            var isStatement = (head.indexOf('Stmnt') >= 0);
+            var isStatement = (head.indexOf('Stmnt') >= 0 ||
+                               head === "comment" ||
+                               head === "functionDecl");
             var html = Spark.setDataContext(
               info,
               '<div class="box named' + (isStatement ? ' statement' : '') +
@@ -90,9 +92,10 @@ if (Meteor.is_client) {
             unclosedInfos.length = 0;
             var text = obj.text();
             // insert zero-width spaces to allow wrapping
-            text = text.replace(/.{20}/g, "$&\n");
+            text = text.replace(/.{20}/g, "$&\u200b");
             text = Handlebars._escape(text);
-            text = text.replace(/\n/g, '&#8203;');
+            text = text.replace(/\u200b/g, '&#8203;');
+            text = text.replace(/\n/g, '<br>');
             return Spark.setDataContext(
               obj,
               '<div class="box token">' + text + '</div>');
@@ -152,7 +155,7 @@ if (Meteor.is_client) {
     {name: "Lex", value: "lex"},
     {name: "Parse", value: "parse"}
   ];
-  
+
   Template.page.is_outputtype_selected = function (which) {
     return Session.equals("output-type", which) ? "selected" : "";
   };
