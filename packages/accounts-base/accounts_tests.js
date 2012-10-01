@@ -12,7 +12,7 @@ Tinytest.add('accounts - updateOrCreateUser', function (test) {
 
   // create again with the same id, see that we get the same user
   var uid2 = Meteor.accounts.updateOrCreateUser(
-    {services: {facebook: {id: facebookId}}}, {bar: 2});
+    {services: {facebook: {id: facebookId}}}, {foo: 1000, bar: 2}); // foo: 1000 shouldn't overwrite
   test.equal(uid1, uid2);
   test.equal(Meteor.users.find({"services.facebook.id": facebookId}).count(), 1);
   test.equal(Meteor.users.findOne(uid1).foo, 1);
