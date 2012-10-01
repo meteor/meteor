@@ -26,7 +26,7 @@
       if (error) {
         callback && callback(error);
       } else {
-        Meteor.accounts.makeClientLoggedOut();
+        Accounts.makeClientLoggedOut();
         callback && callback();
       }
     });
@@ -55,7 +55,7 @@
   // loginServiceConfiguration subscription is ready. Used by
   // accounts-ui to hide the login button until we have all the
   // configuration loaded
-  Meteor.accounts.loginServicesConfigured = function () {
+  Accounts.loginServicesConfigured = function () {
     if (loginServicesConfigured)
       return true;
 

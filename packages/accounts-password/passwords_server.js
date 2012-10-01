@@ -1,7 +1,7 @@
 (function () {
 
   // internal verifier collection. Never published.
-  Meteor.accounts._srpChallenges = new Meteor.Collection(
+  Accounts._srpChallenges = new Meteor.Collection(
     "accounts._srpChallenges",
     null /*manager*/,
     null /*driver*/,
@@ -11,16 +11,16 @@
   // table, and it is _really_ insecure to allow it as users could easily
   // steal sessions and impersonate other users. Users can override by
   // calling more allows later, if they really want.
-  Meteor.accounts._srpChallenges.allow({});
+  Accounts._srpChallenges.allow({});
 
   // internal email validation tokens collection. Never published.
-  Meteor.accounts._emailValidationTokens = new Meteor.Collection(
+  Accounts._emailValidationTokens = new Meteor.Collection(
     "accounts._emailValidationTokens",
     null /*manager*/,
     null /*driver*/,
     true /*preventAutopublish*/);
   // also lock down email validation. These can be used to log in.
-  Meteor.accounts._emailValidationTokens.allow({});
+  Accounts._emailValidationTokens.allow({});
 
 
   var selectorFromUserQuery = function (user) {
@@ -77,7 +77,7 @@
       // and then log in as you (but no more insecure than reconnect
       // tokens).
       var serialized = { userId: user._id, M: srp.M, HAMK: srp.HAMK };
-      Meteor.accounts._srpChallenges.insert(serialized);
+      Accounts._srpChallenges.insert(serialized);
 
       return challenge;
     },
@@ -94,7 +94,7 @@
       }
 
       if (options.M) {
-        var serialized = Meteor.accounts._srpChallenges.findOne(
+        var serialized = Accounts._srpChallenges.findOne(
           {M: options.M});
         if (!serialized)
           throw new Meteor.Error(403, "Incorrect password");
@@ -138,12 +138,12 @@
         }
       }});
 
-      var resetPasswordUrl = Meteor.accounts.urls.resetPassword(token);
+      var resetPasswordUrl = Accounts.urls.resetPassword(token);
       Email.send({
         to: email,
-        from: Meteor.accounts.emailTemplates.from,
-        subject: Meteor.accounts.emailTemplates.resetPassword.subject(user),
-        text: Meteor.accounts.emailTemplates.resetPassword.text(user, resetPasswordUrl)});
+        from: Accounts.emailTemplates.from,
+        subject: Accounts.emailTemplates.resetPassword.subject(user),
+        text: Accounts.emailTemplates.resetPassword.text(user, resetPasswordUrl)});
     },
 
     resetPassword: function (token, newVerifier) {
@@ -165,7 +165,7 @@
                           {$set: {"emails.0.validated": true}});
 
 
-      var loginToken = Meteor.accounts._loginTokens.insert({userId: user._id});
+      var loginToken = Accounts._loginTokens.insert({userId: user._id});
       this.setUserId(user._id);
       return {token: loginToken, id: user._id};
     },
@@ -174,7 +174,7 @@
       if (!token)
         throw new Meteor.Error(400, "Need to pass token");
 
-      var tokenDocument = Meteor.accounts._emailValidationTokens.findOne(
+      var tokenDocument = Accounts._emailValidationTokens.findOne(
         {token: token});
       if (!tokenDocument)
         throw new Meteor.Error(403, "Validate email link expired");
@@ -186,9 +186,9 @@
       // http://www.mongodb.org/display/DOCS/Updating/#Updating-The%24positionaloperator)
       Meteor.users.update({_id: userId, "emails.address": email},
                           {$set: {"emails.$.validated": true}});
-      Meteor.accounts._emailValidationTokens.remove({token: token});
+      Accounts._emailValidationTokens.remove({token: token});
 
-      var loginToken = Meteor.accounts._loginTokens.insert({userId: userId});
+      var loginToken = Accounts._loginTokens.insert({userId: userId});
       this.setUserId(userId);
       return {token: loginToken, id: userId};
     }
@@ -196,10 +196,10 @@
 
   // send the user an email with a link that when opened marks that
   // address as validated
-  Meteor.accounts.sendValidationEmail = function (userId, email) {
+  Accounts.sendValidationEmail = function (userId, email) {
     var token = Meteor.uuid();
     var when = +(new Date);
-    Meteor.accounts._emailValidationTokens.insert({
+    Accounts._emailValidationTokens.insert({
       email: email,
       token: token,
       when: when,
@@ -211,19 +211,19 @@
     // this account.
 
     var user = Meteor.users.findOne(userId);
-    var validateEmailUrl = Meteor.accounts.urls.validateEmail(token);
+    var validateEmailUrl = Accounts.urls.validateEmail(token);
     Email.send({
       to: email,
-      from: Meteor.accounts.emailTemplates.from,
-      subject: Meteor.accounts.emailTemplates.validateEmail.subject(user),
-      text: Meteor.accounts.emailTemplates.validateEmail.text(user, validateEmailUrl)
+      from: Accounts.emailTemplates.from,
+      subject: Accounts.emailTemplates.validateEmail.subject(user),
+      text: Accounts.emailTemplates.validateEmail.text(user, validateEmailUrl)
     });
   };
 
   // send the user an email informing them that their account was
   // created, with a link that when opened both marks their email as
   // validated and forces them to choose their password
-  Meteor.accounts.sendEnrollmentEmail = function (userId, email) {
+  Accounts.sendEnrollmentEmail = function (userId, email) {
     var token = Meteor.uuid();
     var when = +(new Date);
     Meteor.users.update(userId, {$set: {
@@ -234,29 +234,29 @@
     }});
 
     var user = Meteor.users.findOne(userId);
-    var enrollAccountUrl = Meteor.accounts.urls.enrollAccount(token);
+    var enrollAccountUrl = Accounts.urls.enrollAccount(token);
     Email.send({
       to: email,
-      from: Meteor.accounts.emailTemplates.from,
-      subject: Meteor.accounts.emailTemplates.enrollAccount.subject(user),
-      text: Meteor.accounts.emailTemplates.enrollAccount.text(user, enrollAccountUrl)
+      from: Accounts.emailTemplates.from,
+      subject: Accounts.emailTemplates.enrollAccount.subject(user),
+      text: Accounts.emailTemplates.enrollAccount.text(user, enrollAccountUrl)
     });
   };
 
   // handler to login with password
-  Meteor.accounts.registerLoginHandler(function (options) {
+  Accounts.registerLoginHandler(function (options) {
     if (!options.srp)
       return undefined; // don't handle
     if (!options.srp.M)
       throw new Meteor.Error(400, "Must pass M in options.srp");
 
-    var serialized = Meteor.accounts._srpChallenges.findOne(
+    var serialized = Accounts._srpChallenges.findOne(
       {M: options.srp.M});
     if (!serialized)
       throw new Meteor.Error(403, "Incorrect password");
 
     var userId = serialized.userId;
-    var loginToken = Meteor.accounts._loginTokens.insert({userId: userId});
+    var loginToken = Accounts._loginTokens.insert({userId: userId});
 
     // XXX we should remove srpChallenge documents from mongo, but we
     // need to make sure reconnects still work (meaning we can't
@@ -274,8 +274,8 @@
   // over the wire, it should only be run over SSL!
   //
   // Also, it might be nice if servers could turn this off. Or maybe it
-  // should be opt-in, not opt-out? Meteor.accounts.config option?
-  Meteor.accounts.registerLoginHandler(function (options) {
+  // should be opt-in, not opt-out? Accounts.config option?
+  Accounts.registerLoginHandler(function (options) {
     if (!options.password || !options.user)
       return undefined; // don't handle
 
@@ -297,7 +297,7 @@
     if (verifier.verifier !== newVerifier.verifier)
       throw new Meteor.Error(403, "Incorrect password");
 
-    var loginToken = Meteor.accounts._loginTokens.insert({userId: user._id});
+    var loginToken = Accounts._loginTokens.insert({userId: user._id});
     return {token: loginToken, id: user._id};
   });
 
@@ -352,7 +352,7 @@
     if (email)
       user.emails = [{address: email, validated: false}];
 
-    user = Meteor.accounts.onCreateUserHook(options, extra, user);
+    user = Accounts.onCreateUserHook(options, extra, user);
     var userId = Meteor.users.insert(user);
     return userId;
   };
@@ -360,7 +360,7 @@
   // method for create user. Requests come from the client.
   Meteor.methods({
     createUser: function (options, extra) {
-      if (Meteor.accounts._options.forbidSignups)
+      if (Accounts._options.forbidSignups)
         throw new Meteor.Error(403, "Signups forbidden");
 
       var userId = createUser(options, extra);
@@ -369,14 +369,14 @@
       if (!userId)
         throw new Error("createUser failed to insert new user");
 
-      // If `Meteor.accounts._options.validateEmails` is set, register
+      // If `Accounts._options.validateEmails` is set, register
       // a token to validate the user's primary email, and send it to
       // that address.
-      if (options.email && Meteor.accounts._options.validateEmails)
-        Meteor.accounts.sendValidationEmail(userId, options.email);
+      if (options.email && Accounts._options.validateEmails)
+        Accounts.sendValidationEmail(userId, options.email);
 
       // client gets logged in as the new user afterwards.
-      var loginToken = Meteor.accounts._loginTokens.insert({userId: userId});
+      var loginToken = Accounts._loginTokens.insert({userId: userId});
       this.setUserId(userId);
       return {token: loginToken, id: userId};
     }
@@ -413,7 +413,7 @@
         user.services.password.srp)) {
 
       var email = user.emails[0].address;
-      Meteor.accounts.sendEnrollmentEmail(userId, email);
+      Accounts.sendEnrollmentEmail(userId, email);
     }
 
     return userId;

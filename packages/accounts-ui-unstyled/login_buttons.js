@@ -13,7 +13,7 @@
   var JUST_VALIDATED_USER_KEY = 'Meteor.loginButtons.justValidatedUser';
   var CONFIGURE_LOGIN_SERVICES_DIALOG_VISIBLE = 'Meteor.loginButtons.configureLoginServicesDialogVisible';
   var CONFIGURE_LOGIN_SERVICES_DIALOG_SERVICE_NAME = "Meteor.loginButtons.configureLoginServicesDialogServiceName";
-  var CONFIGURE_LOGIN_SERVICES_DIALOG_SAVE_ENABLED = "Meteor.accounts.facebook.saveEnabled";
+  var CONFIGURE_LOGIN_SERVICES_DIALOG_SAVE_ENABLED = "Accounts.facebook.saveEnabled";
 
 
   var resetSession = function () {
@@ -43,9 +43,9 @@
     'click #login-buttons-Facebook': function () {
       resetMessages();
       Meteor.loginWithFacebook(function (e) {
-        if (!e || e instanceof Meteor.accounts.LoginCancelledError) {
+        if (!e || e instanceof Accounts.LoginCancelledError) {
           // do nothing
-        } else if (e instanceof Meteor.accounts.ConfigError) {
+        } else if (e instanceof Accounts.ConfigError) {
           configureService("Facebook"); // XXX refactor "Facebook" -> "facebook"
         } else {
           Session.set(ERROR_MESSAGE_KEY, e.reason || "Unknown error");
@@ -56,9 +56,9 @@
     'click #login-buttons-Google': function () {
       resetMessages();
       Meteor.loginWithGoogle(function (e) {
-        if (!e || e instanceof Meteor.accounts.LoginCancelledError) {
+        if (!e || e instanceof Accounts.LoginCancelledError) {
           // do nothing
-        } else if (e instanceof Meteor.accounts.ConfigError) {
+        } else if (e instanceof Accounts.ConfigError) {
           configureService("Google");
         } else {
           Session.set(ERROR_MESSAGE_KEY, e.reason || "Unknown error");
@@ -69,9 +69,9 @@
     'click #login-buttons-Weibo': function () {
       resetMessages();
       Meteor.loginWithWeibo(function (e) {
-        if (!e || e instanceof Meteor.accounts.LoginCancelledError) {
+        if (!e || e instanceof Accounts.LoginCancelledError) {
           // do nothing
-        } else if (e instanceof Meteor.accounts.ConfigError) {
+        } else if (e instanceof Accounts.ConfigError) {
           configureService("Weibo");
         } else {
           Session.set(ERROR_MESSAGE_KEY, e.reason || "Unknown error");
@@ -82,9 +82,9 @@
     'click #login-buttons-Twitter': function () {
       resetMessages();
       Meteor.loginWithTwitter(function (e) {
-        if (!e || e instanceof Meteor.accounts.LoginCancelledError) {
+        if (!e || e instanceof Accounts.LoginCancelledError) {
           // do nothing
-        } else if (e instanceof Meteor.accounts.ConfigError) {
+        } else if (e instanceof Accounts.ConfigError) {
           configureService("Twitter");
         } else {
           Session.set(ERROR_MESSAGE_KEY, e.reason || "Unknown error");
@@ -115,7 +115,7 @@
   };
 
   Template.loginButtons.configurationLoaded = function () {
-    return Meteor.accounts.loginServicesConfigured();
+    return Accounts.loginServicesConfigured();
   };
 
   Template.loginButtons.displayName = function () {
@@ -211,17 +211,17 @@
     var loginFields = [
       {fieldName: 'username-or-email', fieldLabel: 'Username or Email',
        visible: function () {
-         return Meteor.accounts._options.requireUsername
-           && Meteor.accounts._options.requireEmail;
+         return Accounts._options.requireUsername
+           && Accounts._options.requireEmail;
        }},
       {fieldName: 'username', fieldLabel: 'Username',
        visible: function () {
-         return Meteor.accounts._options.requireUsername
-           && !Meteor.accounts._options.requireEmail;
+         return Accounts._options.requireUsername
+           && !Accounts._options.requireEmail;
        }},
       {fieldName: 'email', fieldLabel: 'Email',
        visible: function () {
-         return !Meteor.accounts._options.requireUsername;
+         return !Accounts._options.requireUsername;
        }},
       {fieldName: 'password', fieldLabel: 'Password', inputType: 'password',
        visible: function () {
@@ -232,12 +232,12 @@
     var signupFields = [
       {fieldName: 'username', fieldLabel: 'Username',
        visible: function () {
-         return Meteor.accounts._options.requireUsername;
+         return Accounts._options.requireUsername;
        }},
       {fieldName: 'email', fieldLabel: 'Email',
        visible: function () {
-         return !Meteor.accounts._options.requireUsername
-           || Meteor.accounts._options.requireEmail;
+         return !Accounts._options.requireUsername
+           || Accounts._options.requireEmail;
        }},
       {fieldName: 'password', fieldLabel: 'Password', inputType: 'password',
        visible: function () {
@@ -246,8 +246,8 @@
       {fieldName: 'password-again', fieldLabel: 'Password (again)',
        inputType: 'password',
        visible: function () {
-         return Meteor.accounts._options.requireUsername
-           && !Meteor.accounts._options.requireEmail;
+         return Accounts._options.requireUsername
+           && !Accounts._options.requireEmail;
        }}
     ];
 
@@ -282,12 +282,12 @@
   };
 
   Template.loginButtonsServicesRow.showForgotPasswordLink = function () {
-    return Meteor.accounts._options.requireEmail
-      || !Meteor.accounts._options.requireUsername;
+    return Accounts._options.requireEmail
+      || !Accounts._options.requireUsername;
   };
 
   Template.loginButtonsServicesRow.configured = function () {
-    return !!Meteor.accounts.configuration.findOne({service: this.name.toLowerCase()});
+    return !!Accounts.configuration.findOne({service: this.name.toLowerCase()});
   };
 
 
@@ -381,7 +381,7 @@
     },
     'click #login-buttons-cancel-reset-password': function () {
       Session.set(RESET_PASSWORD_TOKEN_KEY, null);
-      Meteor.accounts._enableAutoLogin();
+      Accounts._enableAutoLogin();
     }
   };
 
@@ -398,7 +398,7 @@
           Session.set(ERROR_MESSAGE_KEY, error.reason || "Unknown error");
         } else {
           Session.set(RESET_PASSWORD_TOKEN_KEY, null);
-          Meteor.accounts._enableAutoLogin();
+          Accounts._enableAutoLogin();
         }
       });
   };
@@ -407,8 +407,8 @@
     return Session.get(RESET_PASSWORD_TOKEN_KEY);
   };
 
-  if (Meteor.accounts._resetPasswordToken) {
-    Session.set(RESET_PASSWORD_TOKEN_KEY, Meteor.accounts._resetPasswordToken);
+  if (Accounts._resetPasswordToken) {
+    Session.set(RESET_PASSWORD_TOKEN_KEY, Accounts._resetPasswordToken);
   }
 
 
@@ -426,7 +426,7 @@
     },
     'click #login-buttons-cancel-enroll-account': function () {
       Session.set(ENROLL_ACCOUNT_TOKEN_KEY, null);
-      Meteor.accounts._enableAutoLogin();
+      Accounts._enableAutoLogin();
     }
   };
 
@@ -443,7 +443,7 @@
           Session.set(ERROR_MESSAGE_KEY, error.reason || "Unknown error");
         } else {
           Session.set(ENROLL_ACCOUNT_TOKEN_KEY, null);
-          Meteor.accounts._enableAutoLogin();
+          Accounts._enableAutoLogin();
         }
       });
   };
@@ -452,8 +452,8 @@
     return Session.get(ENROLL_ACCOUNT_TOKEN_KEY);
   };
 
-  if (Meteor.accounts._enrollAccountToken) {
-    Session.set(ENROLL_ACCOUNT_TOKEN_KEY, Meteor.accounts._enrollAccountToken);
+  if (Accounts._enrollAccountToken) {
+    Session.set(ENROLL_ACCOUNT_TOKEN_KEY, Accounts._enrollAccountToken);
   }
 
 
@@ -476,9 +476,9 @@
   // issue. We can't be sure that accounts-password is loaded earlier
   // than accounts-ui so Meteor.validateEmail might not be defined.
   Meteor.startup(function () {
-    if (Meteor.accounts._validateEmailToken) {
-      Meteor.validateEmail(Meteor.accounts._validateEmailToken, function(error) {
-        Meteor.accounts._enableAutoLogin();
+    if (Accounts._validateEmailToken) {
+      Meteor.validateEmail(Accounts._validateEmailToken, function(error) {
+        Accounts._enableAutoLogin();
         if (!error)
           Session.set(JUST_VALIDATED_USER_KEY, true);
         // XXX show something if there was an error.
@@ -645,7 +645,7 @@
       }
     }
 
-    if (Meteor.accounts._options.validateEmails)
+    if (Accounts._options.validateEmails)
       options.validation = true;
 
     Meteor.createUser(options, function (error) {
@@ -665,19 +665,19 @@
   var getLoginServices = function () {
     var ret = [];
     // XXX It would be nice if there were an automated way to read the
-    // list of services, such as _.each(Meteor.accounts.services, ...)
-    if (Meteor.accounts.facebook)
+    // list of services, such as _.each(Accounts.services, ...)
+    if (Accounts.facebook)
       ret.push({name: 'Facebook'});
-    if (Meteor.accounts.google)
+    if (Accounts.google)
       ret.push({name: 'Google'});
-    if (Meteor.accounts.weibo)
+    if (Accounts.weibo)
       ret.push({name: 'Weibo'});
-    if (Meteor.accounts.twitter)
+    if (Accounts.twitter)
       ret.push({name: 'Twitter'});
 
     // make sure to put accounts last, since this is the order in the
     // ui as well
-    if (Meteor.accounts.passwords)
+    if (Accounts.passwords)
       ret.push({name: 'Password'});
 
     return ret;

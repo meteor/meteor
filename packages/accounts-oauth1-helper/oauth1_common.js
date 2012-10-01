@@ -1,1 +1,1 @@
-Meteor.accounts.oauth1 = {};
+Accounts.oauth1 = {};

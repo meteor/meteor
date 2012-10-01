@@ -1,8 +1,8 @@
 (function () {
   Meteor.loginWithTwitter = function (callback) {
-    var config = Meteor.accounts.configuration.findOne({service: 'twitter'});
+    var config = Accounts.configuration.findOne({service: 'twitter'});
     if (!config) {
-      callback && callback(new Meteor.accounts.ConfigError("Service not configured"));
+      callback && callback(new Accounts.ConfigError("Service not configured"));
       return;
     }
 
@@ -21,7 +21,7 @@
           + encodeURIComponent(callbackUrl)
           + '&state=' + state;
 
-    Meteor.accounts.oauth.initiateLogin(state, url, callback);
+    Accounts.oauth.initiateLogin(state, url, callback);
   };
 
 })();

@@ -1,6 +1,6 @@
 (function () {
 
-  Meteor.accounts.oauth.registerService('weibo', 2, function(query) {
+  Accounts.oauth.registerService('weibo', 2, function(query) {
 
     var accessToken = getAccessToken(query);
     var identity = getIdentity(accessToken.access_token, parseInt(accessToken.uid, 10));
@@ -20,9 +20,9 @@
   });
 
   var getAccessToken = function (query) {
-    var config = Meteor.accounts.configuration.findOne({service: 'weibo'});
+    var config = Accounts.configuration.findOne({service: 'weibo'});
     if (!config)
-      throw new Meteor.accounts.ConfigError("Service not configured");
+      throw new Accounts.ConfigError("Service not configured");
 
     var result = Meteor.http.post(
       "https://api.weibo.com/oauth2/access_token", {params: {

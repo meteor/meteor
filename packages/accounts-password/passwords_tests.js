@@ -95,7 +95,7 @@ if (Meteor.isClient) (function () {
           test.isTrue(result.id);
           test.isTrue(result.token);
           // emulate the real login behavior, so as not to confuse test.
-          Meteor.accounts.makeClientLoggedIn(result.id, result.token);
+          Accounts.makeClientLoggedIn(result.id, result.token);
           test.equal(Meteor.user().username, username);
       }));
     },
@@ -137,7 +137,7 @@ if (Meteor.isClient) (function () {
                     test.isTrue(result.id);
                     test.isTrue(result.token);
                     // emulate the real login behavior, so as not to confuse test.
-                    Meteor.accounts.makeClientLoggedIn(result.id, result.token);
+                    Accounts.makeClientLoggedIn(result.id, result.token);
                     test.equal(Meteor.user().username, username2);
                   }));
     },
@@ -150,7 +150,7 @@ if (Meteor.isClient) (function () {
                                }));
     },
     logoutStep,
-    // test Meteor.accounts.validateNewUser
+    // test Accounts.validateNewUser
     function(test, expect) {
       Meteor.createUser({username: username3, password: password3},
                         {invalid: true}, // should fail the new user validators
@@ -158,7 +158,7 @@ if (Meteor.isClient) (function () {
                           test.equal(error.error, 403);
                         }));
     },
-    // test Meteor.accounts.onCreateUser
+    // test Accounts.onCreateUser
     function(test, expect) {
       Meteor.createUser({username: username3, password: password3},
                         {testOnCreateUserHook: true}, expect(function () {
@@ -198,7 +198,7 @@ if (Meteor.isServer) (function () {
     'passwords - setup more than one onCreateUserHook',
     function (test) {
       test.throws(function() {
-        Meteor.accounts.onCreateUser(function () {});
+        Accounts.onCreateUser(function () {});
       });
     });
 
@@ -264,5 +264,5 @@ if (Meteor.isServer) (function () {
     });
   });
 
-  // XXX would be nice to test Meteor.accounts.config({forbidSignups: true})
+  // XXX would be nice to test Accounts.config({forbidSignups: true})
 }) ();

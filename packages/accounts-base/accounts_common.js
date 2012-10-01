@@ -1,9 +1,9 @@
-if (!Meteor.accounts) {
-  Meteor.accounts = {};
+if (!Accounts) {
+  Accounts = {};
 }
 
-if (!Meteor.accounts._options) {
-  Meteor.accounts._options = {};
+if (!Accounts._options) {
+  Accounts._options = {};
 }
 
 // @param options {Object} an object with fields:
@@ -11,13 +11,13 @@ if (!Meteor.accounts._options) {
 // - requireUsername {Boolean}
 // - validateEmails {Boolean} Send validation emails to all new users
 //                            via the signup form
-Meteor.accounts.config = function(options) {
-  Meteor.accounts._options = options;
+Accounts.config = function(options) {
+  Accounts._options = options;
 };
 
 
 // internal login tokens collection. Never published.
-Meteor.accounts._loginTokens = new Meteor.Collection(
+Accounts._loginTokens = new Meteor.Collection(
   "accounts._loginTokens",
   null /*manager*/,
   null /*driver*/,
@@ -27,7 +27,7 @@ Meteor.accounts._loginTokens = new Meteor.Collection(
 // table, and it is _really_ insecure to allow it as users could easily
 // steal sessions and impersonate other users. Users can override by
 // calling more allows later, if they really want.
-Meteor.accounts._loginTokens.allow({});
+Accounts._loginTokens.allow({});
 
 
 // Users table. Don't use the normal autopublish, since we want to hide
@@ -43,7 +43,7 @@ Meteor.users = new Meteor.Collection(
 
 // Table containing documents with configuration options for each
 // login service
-Meteor.accounts.configuration = new Meteor.Collection(
+Accounts.configuration = new Meteor.Collection(
   "accounts._loginServiceConfiguration",
   null /*manager*/,
   null /*driver*/,
@@ -56,18 +56,18 @@ Meteor.accounts.configuration = new Meteor.Collection(
 
 
 // Thrown when trying to use a login service which is not configured
-Meteor.accounts.ConfigError = function(description) {
+Accounts.ConfigError = function(description) {
   this.message = description;
 };
-Meteor.accounts.ConfigError.prototype = new Error();
-Meteor.accounts.ConfigError.prototype.name = 'Meteor.accounts.ConfigError';
+Accounts.ConfigError.prototype = new Error();
+Accounts.ConfigError.prototype.name = 'Accounts.ConfigError';
 
 // Thrown when the user cancels the login process (eg, closes an oauth
 // popup, declines retina scan, etc)
-Meteor.accounts.LoginCancelledError = function(description) {
+Accounts.LoginCancelledError = function(description) {
   this.message = description;
   this.cancelled = true;
 };
-Meteor.accounts.LoginCancelledError.prototype = new Error();
-Meteor.accounts.LoginCancelledError.prototype.name = 'Meteor.accounts.LoginCancelledError';
+Accounts.LoginCancelledError.prototype = new Error();
+Accounts.LoginCancelledError.prototype.name = 'Accounts.LoginCancelledError';
 

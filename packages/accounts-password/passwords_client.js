@@ -22,7 +22,7 @@
                      return;
                    }
 
-      Meteor.accounts.makeClientLoggedIn(result.id, result.token);
+      Accounts.makeClientLoggedIn(result.id, result.token);
       callback && callback(undefined, {message: 'Success'});
     });
   };
@@ -68,7 +68,7 @@
           return;
         }
 
-        Meteor.accounts.makeClientLoggedIn(result.id, result.token);
+        Accounts.makeClientLoggedIn(result.id, result.token);
         callback && callback();
       });
     });
@@ -158,13 +158,13 @@
           callback && callback(error);
         }
 
-        Meteor.accounts.makeClientLoggedIn(result.id, result.token);
+        Accounts.makeClientLoggedIn(result.id, result.token);
         callback && callback();
       });
   };
 
   // Validates a user's email address based on a token originally
-  // created by Meteor.accounts.sendValidationEmail
+  // created by Accounts.sendValidationEmail
   //
   // @param token {String}
   // @param callback (optional) {Function(error|undefined)}

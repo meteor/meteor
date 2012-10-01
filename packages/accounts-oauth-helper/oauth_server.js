@@ -1,7 +1,7 @@
 (function () {
   var connect = __meteor_bootstrap__.require("connect");
 
-  Meteor.accounts.oauth._services = {};
+  Accounts.oauth._services = {};
 
   // Register a handler for an OAuth service. The handler will be called
   // when we get an incoming http request on /_oauth/{serviceName}. This
@@ -15,13 +15,13 @@
   //   - (For OAuth2 only) query {Object} parameters passed in query string
   //   - return value is:
   //     - {options: (options), extra: (optional extra)} (same as the
-  //       arguments to Meteor.accounts.updateOrCreateUser)
+  //       arguments to Accounts.updateOrCreateUser)
   //     - `null` if the user declined to give permissions
-  Meteor.accounts.oauth.registerService = function (name, version, handleOauthRequest) {
-    if (Meteor.accounts.oauth._services[name])
+  Accounts.oauth.registerService = function (name, version, handleOauthRequest) {
+    if (Accounts.oauth._services[name])
       throw new Error("Already registered the " + name + " OAuth service");
 
-    Meteor.accounts.oauth._services[name] = {
+    Accounts.oauth._services[name] = {
       serviceName: name,
       version: version,
       handleOauthRequest: handleOauthRequest
@@ -34,14 +34,14 @@
   // method is called. Maps state --> return value of `login`
   //
   // XXX we should periodically clear old entries
-  Meteor.accounts.oauth._loginResultForState = {};
+  Accounts.oauth._loginResultForState = {};
 
   // Listen to calls to `login` with an oauth option set
-  Meteor.accounts.registerLoginHandler(function (options) {
+  Accounts.registerLoginHandler(function (options) {
     if (!options.oauth)
       return undefined; // don't handle
 
-    var result = Meteor.accounts.oauth._loginResultForState[options.oauth.state];
+    var result = Accounts.oauth._loginResultForState[options.oauth.state];
     if (result === undefined) // not using `!result` since can be null
       // We weren't notified of the user authorizing the login.
       return null;
@@ -61,11 +61,11 @@
       // calls and nothing else is wrapping this in a fiber
       // automatically
       Fiber(function () {
-        Meteor.accounts.oauth._middleware(req, res, next);
+        Accounts.oauth._middleware(req, res, next);
       }).run();
     });
 
-  Meteor.accounts.oauth._middleware = function (req, res, next) {
+  Accounts.oauth._middleware = function (req, res, next) {
     // Make sure to catch any exceptions because otherwise we'd crash
     // the runner
     try {
@@ -76,7 +76,7 @@
         return;
       }
 
-      var service = Meteor.accounts.oauth._services[serviceName];
+      var service = Accounts.oauth._services[serviceName];
 
       // Skip everything if there's no service set by the oauth middleware
       if (!service)
@@ -86,9 +86,9 @@
       ensureConfigured(serviceName);
 
       if (service.version === 1)
-        Meteor.accounts.oauth1._handleRequest(service, req.query, res);
+        Accounts.oauth1._handleRequest(service, req.query, res);
       else if (service.version === 2)
-        Meteor.accounts.oauth2._handleRequest(service, req.query, res);
+        Accounts.oauth2._handleRequest(service, req.query, res);
       else
         throw new Error("Unexpected OAuth version " + service.version);
     } catch (err) {
@@ -100,7 +100,7 @@
       // we were passed. But then the developer wouldn't be able to
       // style the error or react to it in any way.
       if (req.query.state && err instanceof Error)
-        Meteor.accounts.oauth._loginResultForState[req.query.state] = err;
+        Accounts.oauth._loginResultForState[req.query.state] = err;
 
       // also log to the server console, so the developer sees it.
       Meteor._debug("Exception in oauth request handler", err);
@@ -108,7 +108,7 @@
       // XXX the following is actually wrong. if someone wants to
       // redirect rather than close once we are done with the OAuth
       // flow, as supported by
-      // Meteor.accounts.oauth_renderOauthResults, this will still
+      // Accounts.oauth_renderOauthResults, this will still
       // close the popup instead. Once we fully support the redirect
       // flow (by supporting that in places such as
       // packages/facebook/facebook_client.js) we should revisit this.
@@ -142,12 +142,12 @@
 
   // Make sure we're configured
   var ensureConfigured = function(serviceName) {
-    if (!Meteor.accounts.configuration.findOne({service: serviceName})) {
-      throw new Meteor.accounts.ConfigError("Service not configured");
+    if (!Accounts.configuration.findOne({service: serviceName})) {
+      throw new Accounts.ConfigError("Service not configured");
     };
   };
 
-  Meteor.accounts.oauth._renderOauthResults = function(res, query) {
+  Accounts.oauth._renderOauthResults = function(res, query) {
     // We support ?close and ?redirect=URL. Any other query should
     // just serve a blank page
     if ('close' in query) { // check with 'in' because we don't set a value

@@ -1,8 +1,8 @@
-Meteor.accounts.validateNewUser(function (user) {
+Accounts.validateNewUser(function (user) {
   return !user.invalid;
 });
 
-Meteor.accounts.onCreateUser(function (options, extra, user) {
+Accounts.onCreateUser(function (options, extra, user) {
   if (extra.testOnCreateUserHook) {
     user.profile = (user.profile || {});
     user.profile.touchedByOnCreateUser = true;
@@ -25,7 +25,7 @@ Meteor.accounts.onCreateUser(function (options, extra, user) {
 //
 // For now, we just test the one configuration state. You can comment
 // out each configuration option and see that the tests fail.
-Meteor.accounts.config({
+Accounts.config({
   validateEmails: true,
   // The 'accounts - updateOrCreateUser' test needs accounts without
   // usernames or emails, so we can't test with these on.

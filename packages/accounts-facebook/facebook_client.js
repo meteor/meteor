@@ -1,8 +1,8 @@
 (function () {
   Meteor.loginWithFacebook = function (callback) {
-    var config = Meteor.accounts.configuration.findOne({service: 'facebook'});
+    var config = Accounts.configuration.findOne({service: 'facebook'});
     if (!config) {
-      callback && callback(new Meteor.accounts.ConfigError("Service not configured"));
+      callback && callback(new Accounts.ConfigError("Service not configured"));
       return;
     }
 
@@ -11,16 +11,16 @@
     var display = mobile ? 'touch' : 'popup';
 
     var scope = "email";
-    if (Meteor.accounts.facebook._options &&
-        Meteor.accounts.facebook._options.scope)
-      scope = Meteor.accounts.facebook._options.scope.join(',');
+    if (Accounts.facebook._options &&
+        Accounts.facebook._options.scope)
+      scope = Accounts.facebook._options.scope.join(',');
 
     var loginUrl =
           'https://www.facebook.com/dialog/oauth?client_id=' + config.appId +
           '&redirect_uri=' + Meteor.absoluteUrl('_oauth/facebook?close') +
           '&display=' + display + '&scope=' + scope + '&state=' + state;
 
-    Meteor.accounts.oauth.initiateLogin(state, loginUrl, callback);
+    Accounts.oauth.initiateLogin(state, loginUrl, callback);
   };
 
 })();

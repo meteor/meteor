@@ -5,13 +5,13 @@ Tinytest.add('accounts - updateOrCreateUser', function (test) {
 
 
   // create an account with facebook
-  var uid1 = Meteor.accounts.updateOrCreateUser(
+  var uid1 = Accounts.updateOrCreateUser(
     {services: {facebook: {id: facebookId}}}, {foo: 1});
   test.equal(Meteor.users.find({"services.facebook.id": facebookId}).count(), 1);
   test.equal(Meteor.users.findOne({"services.facebook.id": facebookId}).foo, 1);
 
   // create again with the same id, see that we get the same user
-  var uid2 = Meteor.accounts.updateOrCreateUser(
+  var uid2 = Accounts.updateOrCreateUser(
     {services: {facebook: {id: facebookId}}}, {foo: 1000, bar: 2}); // foo: 1000 shouldn't overwrite
   test.equal(uid1, uid2);
   test.equal(Meteor.users.find({"services.facebook.id": facebookId}).count(), 1);
@@ -23,9 +23,9 @@ Tinytest.add('accounts - updateOrCreateUser', function (test) {
 
 
   // users that have different service ids get different users
-  uid1 = Meteor.accounts.updateOrCreateUser(
+  uid1 = Accounts.updateOrCreateUser(
     {services: {weibo: {id: weiboId1}}}, {foo: 1});
-  uid2 = Meteor.accounts.updateOrCreateUser(
+  uid2 = Accounts.updateOrCreateUser(
     {services: {weibo: {id: weiboId2}}}, {bar: 2});
   test.equal(Meteor.users.find({"services.weibo.id": {$in: [weiboId1, weiboId2]}}).count(), 2);
   test.equal(Meteor.users.findOne({"services.weibo.id": weiboId1}).foo, 1);
@@ -45,7 +45,7 @@ Tinytest.add('accounts - onCreateUserHook username', function (test) {
   };
 
   // user does not already exist. return a user object with fields set.
-  var userOut = Meteor.accounts.onCreateUserHook(
+  var userOut = Accounts.onCreateUserHook(
     userIn,
     {profile: {name: 'Foo Bar'}},
     userIn
@@ -60,7 +60,7 @@ Tinytest.add('accounts - onCreateUserHook username', function (test) {
 
   // run the hook again. now the user exists, so it throws an error.
   test.throws(function () {
-    Meteor.accounts.onCreateUserHook(
+    Accounts.onCreateUserHook(
       userIn,
       {profile: {name: 'Foo Bar'}},
       userIn
@@ -82,7 +82,7 @@ Tinytest.add('accounts - onCreateUserHook email', function (test) {
   };
 
   // user does not already exist. return a user object with fields set.
-  var userOut = Meteor.accounts.onCreateUserHook(
+  var userOut = Accounts.onCreateUserHook(
     userIn,
     {profile: {name: 'Foo Bar'}},
     userIn
@@ -98,7 +98,7 @@ Tinytest.add('accounts - onCreateUserHook email', function (test) {
   // run the hook again with the exact same emails.
   // run the hook again. now the user exists, so it throws an error.
   test.throws(function () {
-    Meteor.accounts.onCreateUserHook(
+    Accounts.onCreateUserHook(
       userIn,
       {profile: {name: 'Foo Bar'}},
       userIn
@@ -107,20 +107,20 @@ Tinytest.add('accounts - onCreateUserHook email', function (test) {
 
   // now with only one of them.
   test.throws(function () {
-    Meteor.accounts.onCreateUserHook(
+    Accounts.onCreateUserHook(
       {}, {}, {emails: [{address: email1}]}
     );
   });
 
   test.throws(function () {
-    Meteor.accounts.onCreateUserHook(
+    Accounts.onCreateUserHook(
       {}, {}, {emails: [{address: email2}]}
     );
   });
 
 
   // a third email works.
-  var user3 = Meteor.accounts.onCreateUserHook(
+  var user3 = Accounts.onCreateUserHook(
       {}, {}, {emails: [{address: email3}]}
   );
   test.equal(typeof userOut.createdAt, 'number');

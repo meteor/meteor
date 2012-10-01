@@ -1,9 +1,9 @@
-if (!Meteor.accounts.weibo) {
-  Meteor.accounts.weibo = {};
-  Meteor.accounts.weibo._requireConfigs = ['_clientId', '_appUrl'];
+if (!Accounts.weibo) {
+  Accounts.weibo = {};
+  Accounts.weibo._requireConfigs = ['_clientId', '_appUrl'];
 }
 
-Meteor.accounts.weibo.config = function(clientId, appUrl) {
-  Meteor.accounts.weibo._clientId = clientId;
-  Meteor.accounts.weibo._appUrl = appUrl;
+Accounts.weibo.config = function(clientId, appUrl) {
+  Accounts.weibo._clientId = clientId;
+  Accounts.weibo._appUrl = appUrl;
 };
