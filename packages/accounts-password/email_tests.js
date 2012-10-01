@@ -38,7 +38,7 @@
       }));
     },
     function (test, expect) {
-      Meteor.resetPassword(resetPasswordToken, "newPassword", expect(function(error) {
+      Accounts.resetPassword(resetPasswordToken, "newPassword", expect(function(error) {
         test.isFalse(error);
       }));
     },
@@ -172,7 +172,7 @@
       getEnrollAccountToken(email4, test, expect);
     },
     function (test, expect) {
-      Meteor.resetPassword(enrollAccountToken, 'password', expect(function(error) {
+      Accounts.resetPassword(enrollAccountToken, 'password', expect(function(error) {
         test.isFalse(error);
       }));
     },

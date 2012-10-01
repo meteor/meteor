@@ -391,7 +391,7 @@
     if (!validatePassword(newPassword))
       return;
 
-    Meteor.resetPassword(
+    Accounts.resetPassword(
       Session.get(RESET_PASSWORD_TOKEN_KEY), newPassword,
       function (error) {
         if (error) {
@@ -436,7 +436,7 @@
     if (!validatePassword(password))
       return;
 
-    Meteor.resetPassword(
+    Accounts.resetPassword(
       Session.get(ENROLL_ACCOUNT_TOKEN_KEY), password,
       function (error) {
         if (error) {

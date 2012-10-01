@@ -143,7 +143,7 @@
   // @param token {String}
   // @param newPassword {String}
   // @param callback (optional) {Function(error|undefined)}
-  Meteor.resetPassword = function(token, newPassword, callback) {
+  Accounts.resetPassword = function(token, newPassword, callback) {
     if (!token)
       throw new Error("Need to pass token");
     if (!newPassword)
