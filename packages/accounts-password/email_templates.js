@@ -1,9 +1,10 @@
 Meteor.accounts.emailTemplates = {
   from: "Meteor Accounts <no-reply@meteor.com>",
+  siteName: Meteor.absoluteUrl().replace(/^https?:\/\//, '').replace(/\/$/, ''),
 
   resetPassword: {
     subject: function(user) {
-      return "How to reset your password on " + Meteor.absoluteUrl();
+      return "How to reset your password on " + Meteor.accounts.emailTemplates.siteName;
     },
     text: function(user, url) {
       var greeting = (user.profile && user.profile.name) ?
@@ -19,7 +20,7 @@ Meteor.accounts.emailTemplates = {
   },
   validateEmail: {
     subject: function(user) {
-      return "How to validate your account email on " + Meteor.absoluteUrl();
+      return "How to validate your account email on " + Meteor.accounts.emailTemplates.siteName;
     },
     text: function(user, url) {
       var greeting = (user.profile && user.profile.name) ?
@@ -35,7 +36,7 @@ Meteor.accounts.emailTemplates = {
   },
   enrollAccount: {
     subject: function(user) {
-      return "An account has been created for you on " + Meteor.absoluteUrl();
+      return "An account has been created for you on " + Meteor.accounts.emailTemplates.siteName;
     },
     text: function(user, url) {
       var greeting = (user.profile && user.profile.name) ?
