@@ -1,4 +1,4 @@
-if (!Accounts)
+if (typeof Accounts === 'undefined')
   Accounts = {};
 
 if (!Accounts.urls)

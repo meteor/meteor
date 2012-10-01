@@ -1,5 +1,5 @@
 (function () {
-  if (!Accounts)
+  if (typeof Accounts === 'undefined')
     Accounts = {};
 
   // reads a reset password token from the url's hash fragment, if it's
