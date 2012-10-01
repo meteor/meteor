@@ -388,7 +388,7 @@
   // after creation.
   //
   // returns userId or throws an error if it can't create
-  Meteor.createUser = function (options, extra, callback) {
+  Accounts.createUser = function (options, extra, callback) {
 
     if (typeof extra === "function") {
       callback = extra;

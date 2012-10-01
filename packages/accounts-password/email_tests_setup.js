@@ -32,7 +32,7 @@
     },
 
     createUserOnServer: function (email) {
-      var userId = Meteor.createUser({email: email});
+      var userId = Accounts.createUser({email: email});
       return Meteor.users.findOne(userId);
     }
   });

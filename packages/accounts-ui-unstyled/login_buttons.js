@@ -648,7 +648,7 @@
     if (Accounts._options.validateEmails)
       options.validation = true;
 
-    Meteor.createUser(options, function (error) {
+    Accounts.createUser(options, function (error) {
       if (error) {
         Session.set(ERROR_MESSAGE_KEY, error.reason || "Unknown error");
       }

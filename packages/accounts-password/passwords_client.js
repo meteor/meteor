@@ -1,5 +1,5 @@
 (function () {
-  Meteor.createUser = function (options, extra, callback) {
+  Accounts.createUser = function (options, extra, callback) {
     options = _.clone(options); // we'll be modifying options
 
     if (typeof extra === "function") {
