@@ -322,7 +322,7 @@
 
     var email = document.getElementById("forgot-password-email").value;
     if (email.indexOf('@') !== -1) {
-      Meteor.forgotPassword({email: email}, function (error) {
+      Accounts.forgotPassword({email: email}, function (error) {
         if (error)
           Session.set(ERROR_MESSAGE_KEY, error.reason || "Unknown error");
         else

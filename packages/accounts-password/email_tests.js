@@ -20,7 +20,7 @@
                         }));
     },
     function (test, expect) {
-      Meteor.forgotPassword({email: email1}, expect(function (error) {
+      Accounts.forgotPassword({email: email1}, expect(function (error) {
         test.equal(error, undefined);
       }));
     },
