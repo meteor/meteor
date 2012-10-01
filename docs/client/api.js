@@ -278,8 +278,8 @@ Template.api.connect = {
   descr: ["Connect to the server of a different Meteor application to subscribe to its document sets and invoke its remote methods."],
   args: [
     {name: "url",
-     type: "String or function",
-     descr: "The URL of another Meteor application. May be a function returning an URL string, or an URL string. The function will be called each time an URL is needed (immediately and on reconnects); it is expected to always return URLs pointing to the same server, but may add randomness to the hostname in order to get around browser per-hostname connection limitations. If a string is provided and it contains the string `MeteorWildcard`, that substring will be replaced by a random string of alphanumerics and hyphens."}
+     type: "String",
+     descr: "The URL of another Meteor application."}
   ]
 };
 
