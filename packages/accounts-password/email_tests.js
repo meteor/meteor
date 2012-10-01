@@ -96,7 +96,7 @@
       getValidateEmailToken(email2, test, expect);
     },
     function (test, expect) {
-      Meteor.validateEmail(validateEmailToken, expect(function(error) {
+      Accounts.validateEmail(validateEmailToken, expect(function(error) {
         test.isFalse(error);
       }));
       // ARGH! ON QUIESCE!!
@@ -124,7 +124,7 @@
       getValidateEmailToken(email3, test, expect);
     },
     function (test, expect) {
-      Meteor.validateEmail(validateEmailToken, expect(function(error) {
+      Accounts.validateEmail(validateEmailToken, expect(function(error) {
         test.isFalse(error);
       }));
     },

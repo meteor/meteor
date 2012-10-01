@@ -168,7 +168,7 @@
   //
   // @param token {String}
   // @param callback (optional) {Function(error|undefined)}
-  Meteor.validateEmail = function(token, callback) {
+  Accounts.validateEmail = function(token, callback) {
     if (!token)
       throw new Error("Need to pass token");
 

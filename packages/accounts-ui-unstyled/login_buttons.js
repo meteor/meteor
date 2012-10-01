@@ -474,10 +474,10 @@
 
   // Needs to be in Meteor.startup because of a package loading order
   // issue. We can't be sure that accounts-password is loaded earlier
-  // than accounts-ui so Meteor.validateEmail might not be defined.
+  // than accounts-ui so Accounts.validateEmail might not be defined.
   Meteor.startup(function () {
     if (Accounts._validateEmailToken) {
-      Meteor.validateEmail(Accounts._validateEmailToken, function(error) {
+      Accounts.validateEmail(Accounts._validateEmailToken, function(error) {
         Accounts._enableAutoLogin();
         if (!error)
           Session.set(JUST_VALIDATED_USER_KEY, true);
