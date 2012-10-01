@@ -3,7 +3,7 @@
   var loginTokenKey = "Meteor.loginToken";
   var userIdKey = "Meteor.userId";
 
-  Accounts.storeLoginToken = function(userId, token) {
+  Accounts._storeLoginToken = function(userId, token) {
     localStorage.setItem(userIdKey, userId);
     localStorage.setItem(loginTokenKey, token);
 
@@ -12,7 +12,7 @@
     Accounts._lastLoginTokenWhenPolled = token;
   };
 
-  Accounts.unstoreLoginToken = function() {
+  Accounts._unstoreLoginToken = function() {
     localStorage.removeItem(userIdKey);
     localStorage.removeItem(loginTokenKey);
 
@@ -21,27 +21,27 @@
     Accounts._lastLoginTokenWhenPolled = null;
   };
 
-  Accounts.storedLoginToken = function() {
+  Accounts._storedLoginToken = function() {
     return localStorage.getItem(loginTokenKey);
   };
 
-  Accounts.storedUserId = function() {
+  Accounts._storedUserId = function() {
     return localStorage.getItem(userIdKey);
   };
 
-  Accounts.makeClientLoggedOut = function() {
-    Accounts.unstoreLoginToken();
+  Accounts._makeClientLoggedOut = function() {
+    Accounts._unstoreLoginToken();
     Meteor.default_connection.setUserId(null);
     Meteor.default_connection.onReconnect = null;
   };
 
-  Accounts.makeClientLoggedIn = function(userId, token) {
-    Accounts.storeLoginToken(userId, token);
+  Accounts._makeClientLoggedIn = function(userId, token) {
+    Accounts._storeLoginToken(userId, token);
     Meteor.default_connection.setUserId(userId);
     Meteor.default_connection.onReconnect = function() {
       Meteor.apply('login', [{resume: token}], {wait: true}, function(error, result) {
         if (error) {
-          Accounts.makeClientLoggedOut();
+          Accounts._makeClientLoggedOut();
           throw error;
         } else {
           // nothing to do
@@ -62,21 +62,21 @@ Meteor.loginWithToken = function (token, errorCallback) {
       throw error;
     }
 
-    Accounts.makeClientLoggedIn(result.id, result.token);
+    Accounts._makeClientLoggedIn(result.id, result.token);
   });
 };
 
 if (!Accounts._preventAutoLogin) {
   // Immediately try to log in via local storage, so that any DDP
   // messages are sent after we have established our user account
-  var token = Accounts.storedLoginToken();
+  var token = Accounts._storedLoginToken();
   if (token) {
     // On startup, optimistically present us as logged in while the
     // request is in flight. This reduces page flicker on startup.
-    var userId = Accounts.storedUserId();
+    var userId = Accounts._storedUserId();
     userId && Meteor.default_connection.setUserId(userId);
     Meteor.loginWithToken(token, function () {
-      Accounts.makeClientLoggedOut();
+      Accounts._makeClientLoggedOut();
     });
   }
 }
@@ -88,7 +88,7 @@ Accounts._pollStoredLoginToken = function() {
   if (Accounts._preventAutoLogin)
     return;
 
-  var currentLoginToken = Accounts.storedLoginToken();
+  var currentLoginToken = Accounts._storedLoginToken();
 
   // != instead of !== just to make sure undefined and null are treated the same
   if (Accounts._lastLoginTokenWhenPolled != currentLoginToken) {

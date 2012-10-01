@@ -22,7 +22,7 @@
                      return;
                    }
 
-      Accounts.makeClientLoggedIn(result.id, result.token);
+      Accounts._makeClientLoggedIn(result.id, result.token);
       callback && callback(undefined, {message: 'Success'});
     });
   };
@@ -68,7 +68,7 @@
           return;
         }
 
-        Accounts.makeClientLoggedIn(result.id, result.token);
+        Accounts._makeClientLoggedIn(result.id, result.token);
         callback && callback();
       });
     });
@@ -158,7 +158,7 @@
           callback && callback(error);
         }
 
-        Accounts.makeClientLoggedIn(result.id, result.token);
+        Accounts._makeClientLoggedIn(result.id, result.token);
         callback && callback();
       });
   };

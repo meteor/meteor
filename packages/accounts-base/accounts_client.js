@@ -26,7 +26,7 @@
       if (error) {
         callback && callback(error);
       } else {
-        Accounts.makeClientLoggedOut();
+        Accounts._makeClientLoggedOut();
         callback && callback();
       }
     });

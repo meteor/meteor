@@ -95,7 +95,7 @@ if (Meteor.isClient) (function () {
           test.isTrue(result.id);
           test.isTrue(result.token);
           // emulate the real login behavior, so as not to confuse test.
-          Accounts.makeClientLoggedIn(result.id, result.token);
+          Accounts._makeClientLoggedIn(result.id, result.token);
           test.equal(Meteor.user().username, username);
       }));
     },
@@ -137,7 +137,7 @@ if (Meteor.isClient) (function () {
                     test.isTrue(result.id);
                     test.isTrue(result.token);
                     // emulate the real login behavior, so as not to confuse test.
-                    Accounts.makeClientLoggedIn(result.id, result.token);
+                    Accounts._makeClientLoggedIn(result.id, result.token);
                     test.equal(Meteor.user().username, username2);
                   }));
     },

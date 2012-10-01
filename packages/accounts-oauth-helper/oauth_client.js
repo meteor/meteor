@@ -47,7 +47,7 @@
         callback &&
           callback(new Accounts.LoginCancelledError("Popup closed"));
       } else {
-        Accounts.makeClientLoggedIn(result.id, result.token);
+        Accounts._makeClientLoggedIn(result.id, result.token);
         callback && callback();
       }
     });
