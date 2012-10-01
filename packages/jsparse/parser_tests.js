@@ -545,7 +545,11 @@ Tinytest.add("jsparse - syntax forms", function (test) {
      "program(comment(/*foo*/) comment(/*bar*/) comment(//baz))"],
     ["//foo\n//bar\nfunction aaa() {}\nfunction bbb() {}",
      "program(comment(//foo) comment(//bar) functionDecl(function aaa `(` `)` { }) " +
-     "functionDecl(function bbb `(` `)` { }))"]
+     "functionDecl(function bbb `(` `)` { }))"],
+    // comments don't interfere with parse
+    ["if (true)\n//comment\nfoo();",
+     "program(ifStmnt(if `(` boolean(true) `)` " +
+     "expressionStmnt(call(identifier(foo) `(` `)`) ;)))"]
   ];
   _.each(trials, function (tr) {
     tester.goodParse(tr[0], tr[1]);

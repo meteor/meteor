@@ -52,10 +52,10 @@ JSParser = function (code, options) {
     };
   }
 
-  // pass {includeComments: true} to include comments in the AST.
-  // For a comment to be included, it must occur where a statement
-  // could occur, and it must be preceded by only comments and
-  // whitespace on the same line.
+  // pass {includeComments: true} to include comments in the AST.  For
+  // a comment to be included, it must occur where a series of
+  // statements could occur, and it must be preceded by only comments
+  // and whitespace on the same line.
   if (options.includeComments) {
     this.includeComments = true;
   }
@@ -471,7 +471,49 @@ JSParser.prototype.getSyntaxTree = function () {
 
   // STATEMENTS
 
-  var statements = list(statement);
+  var comment = node('comment', new Parser(null, function (t) {
+    if (! t.includeComments)
+      return null;
+
+    // Match a COMMENT lexeme between oldToken and newToken.
+    //
+    // This is an unusual Parser because it doesn't match and consume
+    // newToken, but instead uses the next()/prev() API on lexemes.
+    // It assumes it can walk the linked list backwards from newToken
+    // (though not necessarily forwards).
+    //
+    // We start at the last comment we've visited for this
+    // oldToken/newToken pair, if any, or else oldToken, or else the
+    // beginning of the token stream.  We ignore comments that are
+    // preceded by any non-comment source code on the same line.
+    var lexeme = (t.lastCommentConsumed || t.oldToken || null);
+    if (! lexeme) {
+      // no oldToken, must be on first token.  walk backwards
+      // to start with first lexeme (which may be a comment
+      // or whitespace)
+      lexeme = t.newToken;
+      while (lexeme.prev())
+        lexeme = lexeme.prev();
+    } else {
+      // start with lexeme after last token or comment consumed
+      lexeme = lexeme.next();
+    }
+    var seenNewline = ((! t.oldToken) || t.lastCommentConsumed || false);
+    while (lexeme !== t.newToken) {
+      var type = lexeme.type();
+      if (type === "NEWLINE") {
+        seenNewline = true;
+      } else if (type === "COMMENT") {
+        t.lastCommentConsumed = lexeme;
+        if (seenNewline)
+          return lexeme;
+      }
+      lexeme = lexeme.next();
+    }
+    return null;
+  }));
+
+  var statements = list(or(comment, statement));
 
   // implements JavaScript's semicolon "insertion" rules
   var maybeSemicolon = expecting(
@@ -735,52 +777,8 @@ JSParser.prototype.getSyntaxTree = function () {
   var debuggerStatement = node(
     'debuggerStmnt', seq(token('debugger'), maybeSemicolon));
 
-  var comment = node('comment', new Parser(null, function (t) {
-    if (! t.includeComments)
-      return null;
-
-    // Match a COMMENT lexeme between oldToken and newToken.
-    //
-    // This is an unusual Parser because it doesn't match and consume
-    // newToken, but instead uses the next()/prev() API on lexemes.
-    // It assumes it can walk the linked list backwards from newToken
-    // (though not necessarily forwards).
-    //
-    // We start at the last comment we've visited for this
-    // oldToken/newToken pair, if any, or else oldToken, or else the
-    // beginning of the token stream.  We ignore comments that are
-    // preceded by any non-comment source code on the same line.
-    var lexeme = (t.lastCommentConsumed || t.oldToken || null);
-    if (! lexeme) {
-      // no oldToken, must be on first token.  walk backwards
-      // to start with first lexeme (which may be a comment
-      // or whitespace)
-      lexeme = t.newToken;
-      while (lexeme.prev())
-        lexeme = lexeme.prev();
-    } else {
-      // start with lexeme after last token or comment consumed
-      lexeme = lexeme.next();
-    }
-    var seenNewline = ((! t.oldToken) || t.lastCommentConsumed || false);
-    while (lexeme !== t.newToken) {
-      var type = lexeme.type();
-      if (type === "NEWLINE") {
-        seenNewline = true;
-      } else if (type === "COMMENT") {
-        t.lastCommentConsumed = lexeme;
-        if (seenNewline)
-          return lexeme;
-      }
-      lexeme = lexeme.next();
-    }
-    return null;
-  }));
-
-
   statement = expecting('statement',
-                        or(comment,
-                           expressionOrLabelStatement,
+                        or(expressionOrLabelStatement,
                            emptyStatement,
                            blockStatement,
                            variableStatement,
@@ -804,7 +802,7 @@ JSParser.prototype.getSyntaxTree = function () {
   // includeComments mode.  A statement can't start with 'function'
   // anyway, so the order doesn't matter otherwise.
   var sourceElement = or(statement, functionDecl);
-  var sourceElements = list(sourceElement);
+  var sourceElements = list(or(comment, sourceElement));
 
   functionBody = expecting(
     'functionBody', or(lookAheadToken('}'), sourceElements));
