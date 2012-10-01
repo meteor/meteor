@@ -78,7 +78,7 @@
   // @param oldPassword {String|null}
   // @param newPassword {String}
   // @param callback {Function(error|undefined)}
-  Meteor.changePassword = function (oldPassword, newPassword, callback) {
+  Accounts.changePassword = function (oldPassword, newPassword, callback) {
     if (!Meteor.user()) {
       callback && callback(new Error("Must be logged in to change password."));
       return;

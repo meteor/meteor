@@ -101,14 +101,14 @@ if (Meteor.isClient) (function () {
     },
     // change password with bad old password.
     function (test, expect) {
-      Meteor.changePassword(password2, password2, expect(function (error) {
+      Accounts.changePassword(password2, password2, expect(function (error) {
         test.isTrue(error);
         test.equal(Meteor.user().username, username);
       }));
     },
     // change password with good old password.
     function (test, expect) {
-      Meteor.changePassword(password, password2, expect(function (error) {
+      Accounts.changePassword(password, password2, expect(function (error) {
         test.equal(error, undefined);
         test.equal(Meteor.user().username, username);
       }));
