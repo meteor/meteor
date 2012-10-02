@@ -1,6 +1,9 @@
 
 ## vNEXT
 
+
+## v0.4.2
+
 * Fix connection failure on iOS6. SockJS 0.3.3 includes this fix.
 
 * The new `preserve-inputs` package, included by default in new Meteor apps,
