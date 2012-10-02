@@ -130,9 +130,9 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
   var self = this;
 
   self._validators = {
-    insert: [],
-    update: [],
-    remove: [],
+    insert: {allow: [], deny: []},
+    update: {allow: [], deny: []},
+    remove: {allow: [], deny: []},
     fetch: [],
     fetchAllFields: false
   };
@@ -146,6 +146,8 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
   // since tests need to check the effects of adding and removing the
   // `insecure` package, which sets Meteor.Collection.insecure, we
   // need this var
+  //
+  // XXX is this the package ordering issues?
   var insecure = Meteor.Collection.insecure;
 
   // mutation methods
@@ -213,6 +215,8 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
   }
 };
 
+// XXX rework doc comment
+//
 // Restrict default mutators on collection. Can be called multiple
 // times, in which case all validators must be satisfied.
 //
@@ -234,11 +238,11 @@ Meteor.Collection.prototype.allow = function(options) {
   self._restricted = true;
 
   if (options.insert)
-    self._validators.insert.push(options.insert);
+    self._validators.insert.allow.push(options.insert);
   if (options.update)
-    self._validators.update.push(options.update);
+    self._validators.update.allow.push(options.update);
   if (options.remove)
-    self._validators.remove.push(options.remove);
+    self._validators.remove.allow.push(options.remove);
 
   if (!self._validators.fetchAllFields) {
     if (options.fetch) {
@@ -251,26 +255,64 @@ Meteor.Collection.prototype.allow = function(options) {
   }
 };
 
+Meteor.Collection.prototype.deny = function(options) {
+  var self = this;
+  self._restricted = true;
+
+  if (options.insert)
+    self._validators.insert.deny.push(options.insert);
+  if (options.update)
+    self._validators.update.deny.push(options.update);
+  if (options.remove)
+    self._validators.remove.deny.push(options.remove);
+
+  // XXX dup from allow
+  if (!self._validators.fetchAllFields) {
+    if (options.fetch) {
+      self._validators.fetch = _.union(self._validators.fetch, options.fetch);
+    } else {
+      self._validators.fetchAllFields = true;
+      // clear fetch just to make sure we don't accidentally read it
+      self._validators.fetch = null;
+    }
+  }
+};
+
+
+
 // assuming the collection is restricted
 Meteor.Collection.prototype._allowInsert = function(userId, doc) {
-  if (this._validators.insert.length === 0) {
+  var self = this;
+
+  if (self._validators.insert.allow.length === 0) {
     throw new Meteor.Error(403, "Access denied. No insert validators set on restricted collection.");
   }
 
-  // all validators should return true
-  return !_.any(this._validators.insert, function(validator) {
-    return !validator(userId, doc);
-  });
+  // any deny returning true means access denied.
+  if (_.any(self._validators.insert.deny, function (validator) {
+    return validator(userId, doc);
+  }))
+    return false;
+
+  // any allow returns true means allow.
+  if (_.any(self._validators.insert.allow, function (validator) {
+    return validator(userId, doc);
+  }))
+    return true;
+
+  // otherwise, denied
+  return false;
 };
 
-// Simulate a mongo `update` operation while validating that the
-// access control rules set by calls to `allow` are satisfied. If all
+// Simulate a mongo `update` operation while validating that the access
+// control rules set by calls to `allow/deny` are satisfied. If all
 // pass, rewrite the mongo operation to use $in to set the list of
 // document ids to change ##ValidatedChange
 Meteor.Collection.prototype._validatedUpdate = function(userId, selector, mutator, options) {
   var self = this;
 
-  if (self._validators.update.length === 0) {
+  // short circuit. If no allows are set, we know this won't be allowed.
+  if (self._validators.update.allow.length === 0) {
     throw new Meteor.Error(403, "Access denied. No update validators set on restricted collection.");
   }
 
@@ -306,13 +348,20 @@ Meteor.Collection.prototype._validatedUpdate = function(userId, selector, mutato
     docs = self._collection.find(selector, findOptions).fetch();
   } else {
     var doc = self._collection.findOne(selector, findOptions);
-    if (!doc) // none satisfied!
+    if (!doc)  // none satisfied!
       return;
     docs = [doc];
   }
 
-  // verify that all validators return true
-  if (_.any(self._validators.update, function(validator) {
+  // call user validators.
+  // Any deny returns true means denied.
+  if (_.any(self._validators.update.deny, function(validator) {
+    return validator(userId, docs, fields, mutator);
+  })) {
+    throw new Meteor.Error(403, "Access denied");
+  }
+  // Any allow returns true means proceed. Throw error if they all fail.
+  if (_.all(self._validators.update.allow, function(validator) {
     return !validator(userId, docs, fields, mutator);
   })) {
     throw new Meteor.Error(403, "Access denied");
@@ -337,7 +386,8 @@ Meteor.Collection.prototype._validatedUpdate = function(userId, selector, mutato
 Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
   var self = this;
 
-  if (self._validators.remove.length === 0) {
+  // short circuit if there is no way it will pass.
+  if (self._validators.remove.allow.length === 0) {
     throw new Meteor.Error(403, "Access denied. No remove validators set on restricted collection.");
   }
 
@@ -351,8 +401,15 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
 
   var docs = self._collection.find(selector, findOptions).fetch();
 
-  // verify that all validators return true
-  if (_.any(self._validators.remove, function(validator) {
+  // call user validators.
+  // Any deny returns true means denied.
+  if (_.any(self._validators.remove.deny, function(validator) {
+    return validator(userId, docs);
+  })) {
+    throw new Meteor.Error(403, "Access denied");
+  }
+  // Any allow returns true means proceed. Throw error if they all fail.
+  if (_.all(self._validators.remove.allow, function(validator) {
     return !validator(userId, docs);
   })) {
     throw new Meteor.Error(403, "Access denied");
