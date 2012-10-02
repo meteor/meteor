@@ -13,6 +13,7 @@
                 '?client_id=' + config.clientId +
                 '&redirect_uri=' + Meteor.absoluteUrl('_oauth/instagram?close=close', {replaceLocalhost: true}) +
                 '&response_type=code' +
+                '&scope=' + config.scope +
                 '&state=' + state;
 
         Meteor.accounts.oauth.initiateLogin(state, loginUrl, callback);

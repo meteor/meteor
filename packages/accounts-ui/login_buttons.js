@@ -92,6 +92,19 @@
       });
     },
 
+    'click #login-buttons-Instagram': function () {
+      resetMessages();
+      Meteor.loginWithInstagram(function (e) {
+          if (!e || e instanceof Meteor.accounts.LoginCancelledError) {
+              // do nothing
+          } else if (e instanceof Meteor.accounts.ConfigError) {
+              configureService("Instagram");
+          } else {
+              Session.set(ERROR_MESSAGE_KEY, e.reason || "Unknown error");
+          }
+      });
+    },
+
     'click #login-buttons-logout': function() {
       Meteor.logout();
       resetSession();
@@ -662,6 +675,8 @@
       ret.push({name: 'Weibo'});
     if (Meteor.accounts.twitter)
       ret.push({name: 'Twitter'});
+    if (Meteor.accounts.instagram)
+      ret.push({name: 'Instagram'});
 
     // make sure to put accounts last, since this is the order in the
     // ui as well
