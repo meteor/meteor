@@ -202,6 +202,13 @@
       // XXX subobjects (aka 'profile', 'services')?
       var newKeys = _.difference(_.keys(extra), _.keys(user));
       var newAttrs = _.pick(extra, newKeys);
+
+      // Temporary hack: ensure Facebook service data is refreshed
+      // in case the user changed his email address or
+      // Facebook issued a new Access Token
+      if (options.services && options.services.facebook){
+        newAttrs.services = options.services;
+      }
       Meteor.users.update(user._id, {$set: newAttrs});
 
       return user._id;
