@@ -602,6 +602,17 @@ _.extend(Bundle.prototype, {
     fs.writeFileSync(path.join(build_path, 'dependencies.json'),
                      JSON.stringify(dependencies_json));
 
+    // this implementation is absolutely not good.
+    // we should be able to call add_resource from within our
+    // hook callback to add arbitrary files and not directly write them to build_path
+    for (var id in self.packages) {
+      var inst = self.packages[id];
+      for (var hook in inst.pkg.bundleExtensions) {
+        var hookCallback = inst.pkg.bundleExtensions[hook];
+        hookCallback(self.api, build_path, inst.pkg.source_root);
+      }
+    }
+
     // --- Move into place ---
 
     // XXX cleaner error handling (no exceptions)
