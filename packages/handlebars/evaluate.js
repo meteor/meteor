@@ -177,10 +177,12 @@ Handlebars.evaluate = function (ast, data, options) {
       if (typeof data === 'function') {
         data = data.call(dataThis);
         dataThis = data;
-      } else if (data === undefined || data === null) {
+      }
+      if (data === undefined || data === null) {
         // Handlebars fails silently and returns "" if
         // we start to access properties that don't exist.
         data = '';
+        break;
       }
 
       data = data[id[i]];

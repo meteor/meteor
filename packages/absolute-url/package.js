@@ -1,17 +1,10 @@
 Package.describe({
-  summary: "Generate absolute URLs pointing to the application"
+  summary: "DEPRECATED: Generate absolute URLs pointing to the application",
+  internal: true
 });
 
 Package.on_use(function (api) {
-  // note server before common. usually it is the other way around, but
-  // in this case server must load first.
-  api.add_files('url_server.js', 'server');
-  api.add_files('url_common.js', ['client', 'server']);
-});
-
-Package.on_test(function (api) {
-  api.use('absolute-url', ['client', 'server']);
-  api.use('tinytest');
-
-  api.add_files('url_tests.js', ['client', 'server']);
+  console.log('DEPRECATED. The `absolute-url` package has been folded into '
+              + 'the `meteor` package and should not be used directly. Run '
+              + '`meteor remove absolute-url` to resolve this.');
 });

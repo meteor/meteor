@@ -7,7 +7,8 @@ Package.on_use(function (api) {
   api.use(['underscore', 'uuid', 'domutils', 'liverange', 'universal-events'],
           'client');
 
-  api.add_files(['spark.js', 'patch.js', 'convenience.js'], 'client');
+  api.add_files(['spark.js', 'patch.js', 'convenience.js',
+                 'utils.js'], 'client');
 });
 
 Package.on_test(function (api) {

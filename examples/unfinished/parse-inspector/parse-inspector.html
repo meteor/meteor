@@ -1,0 +1,34 @@
+<head>
+  <title>jsparser</title>
+</head>
+
+<body>
+  {{> page}}
+</body>
+
+<template name="page">
+  <div id="topbar">
+    <div id="topbarinner">
+      This is a demo of the new <code>jsparse</code> package.
+      <strong>Edit</strong> code on the left.
+      <strong>Click</strong> on an outlined box on the right
+      to select it in the code.  The full spec is supported.
+    </div>
+  </div>
+  <div id="main">
+    <div id="inputarea">{{!
+whitespace is significant here; browser swallows initial
+    newline in textarea
+}}<textarea id="inputtextarea">
+{{input}}</textarea>
+    </div>
+    <div id="outputoptions">
+      {{#each outputTypes}}
+      <ins class="output-type {{is_outputtype_selected value}}">{{name}}</ins>
+      {{/each}}
+    </div>
+    <div id="output">
+      {{output}}
+    </div>
+  </div>
+</template>

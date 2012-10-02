@@ -128,10 +128,6 @@ Template.lists.editing = function () {
   return Session.equals('editing_listname', this._id);
 };
 
-// Preserve text input fields so that they aren't replaced
-// while the user is typing in them.
-Template.lists.preserve(['#list-name-input', '#new-list']);
-
 ////////// Todos //////////
 
 Template.todos.any_list_selected = function () {
@@ -169,8 +165,6 @@ Template.todos.todos = function () {
 
   return Todos.find(sel, {sort: {timestamp: 1}});
 };
-
-Template.todos.preserve(['#new-todo']);
 
 Template.todo_item.tag_objs = function () {
   var todo_id = this._id;
@@ -251,8 +245,6 @@ Template.todo_item.events(okCancelEvents(
       Session.set('editing_addtag', null);
     }
   }));
-
-Template.todo_item.preserve(['#todo-input', '#edittag-input']);
 
 ////////// Tag Filter //////////
 

@@ -192,6 +192,8 @@ Tinytest.add("templating - helpers and dots", function(test) {
     daisy: 'petal',
     tree: function() { return 'leaf'; },
     thisTest: function() { return this.tree(); },
+    getNull: function() { return null; },
+    getUndefined: function () { return; },
     fancy: getFancyObject(),
     methodListFour: listFour
   };
@@ -217,7 +219,10 @@ Tinytest.add("templating - helpers and dots", function(test) {
     'watermelon.X=',
     'daisy.X=',
     'tree.X=',
-    'warthog.X='
+    'warthog.X=',
+    'getNull.X=',
+    'getUndefined.X=',
+    'getUndefined.X.Y='
   ]);
 
   test.equal(Template.test_helpers_d(dataObj).match(/\S+/g), [

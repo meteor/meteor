@@ -40,7 +40,7 @@ Meteor._LivedataConnection = function (url, restart_on_update) {
   // name -> updates for (yet to be created) collection
   self.queued = {};
   // if we're blocking a migration, the retry func
-  self.retry_migrate = null;
+  self._retryMigrate = null;
 
   // metadata for subscriptions
   self.subs = new LocalCollection;
@@ -53,29 +53,15 @@ Meteor._LivedataConnection = function (url, restart_on_update) {
 
 
   // Setup auto-reload persistence.
-  var reload_key = "Server-" + url;
-  var reload_data = Meteor._reload.migration_data(reload_key);
-  if (typeof reload_data === "object") {
-    if (typeof reload_data.next_method_id === "number")
-      self.next_method_id = reload_data.next_method_id;
-    if (typeof reload_data.outstanding_methods === "object")
-      self.outstanding_methods = reload_data.outstanding_methods;
-    // pending messages will be transmitted on initial stream 'reset'
-  }
-  Meteor._reload.on_migrate(reload_key, function (retry) {
+  Meteor._reload.onMigrate(function (retry) {
     if (!self._readyToMigrate()) {
-      if (self.retry_migrate)
+      if (self._retryMigrate)
         throw new Error("Two migrations in progress?");
-      self.retry_migrate = retry;
+      self._retryMigrate = retry;
       return false;
     }
 
-    var methods = _.map(self.outstanding_methods, function (m) {
-      return {msg: m.msg};
-    });
-
-    return [true, {next_method_id: self.next_method_id,
-                   outstanding_methods: methods}];
+    return [true];
   });
 
   // Setup stream (if not overriden above)
@@ -555,9 +541,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
     // if we were blocking a migration, see if it's now possible to
     // continue
-    if (self.retry_migrate && self._readyToMigrate()) {
-      self.retry_migrate();
-      self.retry_migrate = null;
+    if (self._retryMigrate && self._readyToMigrate()) {
+      self._retryMigrate();
+      self._retryMigrate = null;
     }
   },
 
@@ -570,12 +556,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
   // true if we're OK for a migration to happen
   _readyToMigrate: function () {
     var self = this;
-    return _.all(self.outstanding_methods, function (m) {
-      // Callbacks can't be preserved across migrations, so we can't
-      // migrate as long as there is an outstanding requests with a
-      // callback.
-      return !m.callback;
-    });
+    return self.outstanding_methods.length === 0;
   }
 });
 
