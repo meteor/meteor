@@ -40,7 +40,7 @@
 * New internal `jsparse` smart package. Not yet exposed publicly.
 
 
-Patch contributed by GitHub users yanivoliver.
+Patch contributed by GitHub user yanivoliver.
 
 
 ## v0.4.1
