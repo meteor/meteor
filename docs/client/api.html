@@ -1035,6 +1035,15 @@ contains.  The elements to preserve must be present both as nodes in
 the old DOM and as tags in the new HTML.  Meteor will patch the DOM
 around the preserved elements.
 
+{{#note}}
+By default, new Meteor apps automatically include the
+`preserve-inputs` package.  This preserves all elements of type
+`input`, `textarea`, `button`, `select`, and `option` that have unique
+`id` attributes or that have `name` attributes that are unique within
+an enclosing element with an `id` attribute.  To turn off this default
+behavior, simply remove the `preserve-inputs` package.
+{{/note}}
+
 Preservation is useful in a variety of cases where replacing a DOM
 element with an identical or modified element would not have the same
 effect as retaining the original element.  These include:

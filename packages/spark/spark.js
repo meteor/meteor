@@ -60,6 +60,8 @@ Spark._ANNOTATION_LIST_ITEM = "item";
 // Set in tests to turn on extra UniversalEventListener sanity checks
 Spark._checkIECompliance = false;
 
+Spark._globalPreserves = {};
+
 var makeRange = function (type, start, end, inner) {
   var range = new LiveRange(Spark._TAG, start, end, inner);
   range.type = type;
@@ -574,6 +576,8 @@ Spark.renderToRange = function (range, htmlFunc) {
   var walk = range;
   while ((walk = findParentOfType(Spark._ANNOTATION_LANDMARK, walk)))
     pc.addRoot(walk.preserve, range, tempRange, walk.containerNode());
+
+  pc.addRoot(Spark._globalPreserves, range, tempRange);
 
   // compute preservations (must do this before destroying tempRange)
   var preservations = pc.computePreservations(range, tempRange);

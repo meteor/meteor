@@ -19,8 +19,13 @@
     <div id="inputarea">{{!
 whitespace is significant here; browser swallows initial
     newline in textarea
-}}<textarea>
+}}<textarea id="inputtextarea">
 {{input}}</textarea>
+    </div>
+    <div id="outputoptions">
+      {{#each outputTypes}}
+      <ins class="output-type {{is_outputtype_selected value}}">{{name}}</ins>
+      {{/each}}
     </div>
     <div id="output">
       {{output}}

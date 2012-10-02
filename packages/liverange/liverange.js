@@ -50,19 +50,21 @@
   // false (the default), the new range will be outside all of them
   // (will contain all of them), or if inner is true, then it will be
   // inside all of them (be contained by all of them.) If there are no
-  // other ranges that contain this exact set of nodes, then 'inner'
-  // is ignored because the nesting of the new range with respect to
-  // other ranges is uniquely determined.
+  // other ranges tagged 'tag' that contain this exact set of nodes,
+  // then 'inner' is ignored because the nesting of the new range with
+  // respect to other ranges is uniquely determined. (Nesting of
+  // ranges with different tags is undefined.)
   //
   // To track the range as it's relocated, some of the DOM nodes that
-  // are part of the range will have an expando attribute 0Aset on
-  // them. The name of the expando attribute will be 'tag', so pick
-  // something that won't collide.
+  // are part of the range will have an expando attribute set on
+  // them. The name of the expando attribute will be the value of
+  // 'tag', so pick something that won't collide.
   //
   // Instead of start and end, you can pass a document or
   // documentfragment for start and leave end undefined. Or you can
   // pass a node for start and leave end undefined, in which case end
-  // === start.
+  // === start. If start and end are distinct nodes, they must be
+  // siblings.
   //
   // You can set any attributes you like on the returned LiveRange
   // object, with two exceptions. First, attribute names that start

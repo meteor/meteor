@@ -1,6 +1,48 @@
 
 ## vNEXT
 
+* Fix connection failure on iOS6. SockJS 0.3.3 includes this fix.
+
+* The new `preserve-inputs` package, included by default in new Meteor apps,
+  restores the pre-v0.4.0 behavior of "preserving" all form input elements by ID
+  and name during re-rendering; users who want more precise control over
+  preservation can still use the APIs added in v0.4.0.
+
+* A few changes to the `Meteor.absoluteUrl` function:
+  - Added a `replaceLocalhost` option.
+  - The `ROOT_URL` environment variable is respected by `meteor run`.
+  - It is now included in all apps via the `meteor` package. Apps that
+    explicitly added the now-deprecated `absolute-url` smart package will log a
+    deprecation warning.
+
+* Upgrade Node from 0.8.8 to 0.8.11.
+
+* If a Handlebars helper function `foo` returns null, you can now run do
+  `{{foo.bar}}` without error, just like when `foo` is a non-existent property.
+
+* If you pass a non-scalar object to `Session.set`, an error will now be thrown
+  (matching the behavior of `Session.equals`). #215
+
+* HTML pages are now served with a `charset=utf-8` Content-Type header. #264
+
+* The contents of `<select>` tags can now be reactive even in IE 7 and 8.
+
+* The `meteor` tool no longer gets confused if a parent directory of your
+  project is named `public`. #352
+
+* Fix a race condition in the `spiderable` package which could include garbage
+  in the spidered page.
+
+* The REPL run by `admin/node.sh` no longer crashes Emacs M-x shell on exit.
+
+* Refactor internal `reload` API.
+
+* New internal `jsparse` smart package. Not yet exposed publicly.
+
+
+Patch contributed by GitHub user yanivoliver.
+
+
 ## v0.4.1
 
 * New `email` smart package, with [`Email.send`](http://docs.meteor.com/#email)
