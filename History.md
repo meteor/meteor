@@ -15,7 +15,7 @@
   `{{foo.bar}}` without error, just like when `foo` is a non-existent property.
 
 * If you pass a non-scalar object to `Session.set`, an error will now be thrown
-  (as `Session.equals` already did). #215
+  (matching the behavior of `Session.equals`). #215
 
 * HTML pages are now served with a charset=utf-8 Content-Type header. #264
 
@@ -28,8 +28,8 @@
   in the spidered page.
 
 * A few changes to the `Meteor.absoluteUrl` function:
-  - Added a `replaceLocalhost` option
-  - The `ROOT_URL` environment variable is respected by `meteor run`
+  - Added a `replaceLocalhost` option.
+  - The `ROOT_URL` environment variable is respected by `meteor run`.
   - It is now included in all apps via the `meteor` package. Apps that
     explicitly added the now-deprecated `absolute-url` smart package will log a
     deprecation warning.
