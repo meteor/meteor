@@ -180,6 +180,7 @@
           callback && callback(error);
         }
 
+        Accounts._makeClientLoggedIn(result.id, result.token);
         callback && callback();
       });
   };
