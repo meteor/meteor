@@ -312,37 +312,28 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
     m[self._prefix + 'insert'] = function (doc) {
       self._maybe_snapshot();
 
-      if (!this.isSimulation) {
-        if (self._restricted) {
-          if (!self._allowInsert(this.userId(), doc))
-            throw new Meteor.Error(403, "Access denied");
-        } else {
-          if (!self._isInsecure())
-            throw new Meteor.Error(403, "Access denied");
-        }
+      if (this.isSimulation) {
+        self._collection.insert(doc);
+      } else if (self._restricted) {
+        self._validatedInsert(this.userId(), doc);
+      } else if (self._isInsecure()) {
+        self._collection.insert(doc);
+      } else {
+        throw new Meteor.Error(403, "Access denied");
       }
-
-      // insert returns nothing.  allow exceptions to propagate.
-      self._collection.insert(doc);
     };
 
     m[self._prefix + 'update'] = function (selector, mutator, options) {
       self._maybe_snapshot();
 
       if (this.isSimulation) {
-        // insert returns nothing.  allow exceptions to propagate.
+        self._collection.update(selector, mutator, options);
+      } else if (self._restricted) {
+        self._validatedUpdate(this.userId(), selector, mutator, options);
+      } else if (self._isInsecure()) {
         self._collection.update(selector, mutator, options);
       } else {
-        if (self._restricted) {
-          self._validatedUpdate(this.userId(), selector, mutator, options);
-        } else {
-          if (self._isInsecure()) {
-            // update returns nothing.  allow exceptions to propagate.
-            self._collection.update(selector, mutator, options);
-          } else {
-            throw new Meteor.Error(403, "Access denied");
-          }
-        }
+        throw new Meteor.Error(403, "Access denied");
       }
     };
 
@@ -350,19 +341,13 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
       self._maybe_snapshot();
 
       if (this.isSimulation) {
-        // remove returns nothing.  allow exceptions to propagate.
+        self._collection.remove(selector);
+      } else if (self._restricted) {
+        self._validatedRemove(this.userId(), selector);
+      } else if (self._isInsecure()) {
         self._collection.remove(selector);
       } else {
-        if (self._restricted) {
-          self._validatedRemove(this.userId(), selector);
-        } else {
-          if (self._isInsecure()) {
-            // insert returns nothing.  allow exceptions to propagate.
-            self._collection.remove(selector);
-          } else {
-            throw new Meteor.Error(403, "Access denied");
-          }
-        }
+        throw new Meteor.Error(403, "Access denied");
       }
     };
 
@@ -392,28 +377,29 @@ Meteor.Collection.prototype._isInsecure = function () {
   return self._insecure;
 };
 
-// assuming the collection is restricted
-Meteor.Collection.prototype._allowInsert = function(userId, doc) {
+Meteor.Collection.prototype._validatedInsert = function(userId, doc) {
   var self = this;
 
+  // short circuit if there is no way it will pass.
   if (self._validators.insert.allow.length === 0) {
     throw new Meteor.Error(403, "Access denied. No insert validators set on restricted collection.");
   }
 
-  // any deny returning true means access denied.
-  if (_.any(self._validators.insert.deny, function (validator) {
+  // call user validators.
+  // Any deny returns true means denied.
+  if (_.any(self._validators.insert.deny, function(validator) {
     return validator(userId, doc);
-  }))
-    return false;
+  })) {
+    throw new Meteor.Error(403, "Access denied");
+  }
+  // Any allow returns true means proceed. Throw error if they all fail.
+  if (_.all(self._validators.insert.allow, function(validator) {
+    return !validator(userId, doc);
+  })) {
+    throw new Meteor.Error(403, "Access denied");
+  }
 
-  // any allow returns true means allow.
-  if (_.any(self._validators.insert.allow, function (validator) {
-    return validator(userId, doc);
-  }))
-    return true;
-
-  // otherwise, denied
-  return false;
+  self._collection.insert.call(self._collection, doc);
 };
 
 // Simulate a mongo `update` operation while validating that the access
