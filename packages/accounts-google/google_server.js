@@ -1,9 +1,5 @@
 (function () {
 
-  Accounts.google.setSecret = function (secret) {
-    Accounts.google._secret = secret;
-  };
-
   Accounts.oauth.registerService('google', 2, function(query) {
 
     var accessToken = getAccessToken(query);

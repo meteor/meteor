@@ -13,7 +13,7 @@
   var JUST_VALIDATED_USER_KEY = 'Meteor.loginButtons.justValidatedUser';
   var CONFIGURE_LOGIN_SERVICES_DIALOG_VISIBLE = 'Meteor.loginButtons.configureLoginServicesDialogVisible';
   var CONFIGURE_LOGIN_SERVICES_DIALOG_SERVICE_NAME = "Meteor.loginButtons.configureLoginServicesDialogServiceName";
-  var CONFIGURE_LOGIN_SERVICES_DIALOG_SAVE_ENABLED = "Accounts.facebook.saveEnabled";
+  var CONFIGURE_LOGIN_SERVICES_DIALOG_SAVE_ENABLED = "Meteor.loginButtons.saveEnabled";
 
 
   var resetSession = function () {
