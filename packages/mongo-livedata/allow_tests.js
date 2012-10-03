@@ -228,7 +228,7 @@
       }
     ]);
 
-    // test that if allow is called once then the collection is
+    // test that if deny is called once then the collection is
     // restricted, and that other mutations aren't allowed
     testAsyncMulti("collection - partial deny", [
       function (test, expect) {

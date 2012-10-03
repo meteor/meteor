@@ -250,9 +250,9 @@ _.each(["insert", "update", "remove"], function (name) {
 //
 // allow and deny can be called multiple times. The validators are
 // evaluated as follows:
-// 1) If any deny() function returns true, the request is denied.
-// 2) If any allow() function returns true, the requested is allowed.
-// 3) The request is denied.
+// - If any deny() function returns true, the request is denied.
+// - Otherwise, if any allow() function returns true, the requested is allowed.
+// - Otherwise, the request is denied.
 
 Meteor.Collection.prototype.allow = function(options) {
   var self = this;
@@ -393,7 +393,7 @@ Meteor.Collection.prototype._validatedInsert = function(userId, doc) {
 
   // short circuit if there is no way it will pass.
   if (self._validators.insert.allow.length === 0) {
-    throw new Meteor.Error(403, "Access denied. No insert validators set on restricted collection.");
+    throw new Meteor.Error(403, "Access denied. No allow validators set on restricted collection.");
   }
 
   // call user validators.
@@ -422,7 +422,7 @@ Meteor.Collection.prototype._validatedUpdate = function(userId, selector, mutato
 
   // short circuit. If no allows are set, we know this won't be allowed.
   if (self._validators.update.allow.length === 0) {
-    throw new Meteor.Error(403, "Access denied. No update validators set on restricted collection.");
+    throw new Meteor.Error(403, "Access denied. No allow validators set on restricted collection.");
   }
 
   // compute modified fields
@@ -497,7 +497,7 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
 
   // short circuit if there is no way it will pass.
   if (self._validators.remove.allow.length === 0) {
-    throw new Meteor.Error(403, "Access denied. No remove validators set on restricted collection.");
+    throw new Meteor.Error(403, "Access denied. No allow validators set on restricted collection.");
   }
 
   var findOptions = {};

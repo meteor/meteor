@@ -262,9 +262,6 @@
   ///
 
   Meteor.users.allow({
-    // clients can't insert or remove users
-    insert: function () { return false; },
-    remove: function () { return false; },
     // clients can modify the profile field of their own document, and
     // nothing else.
     update: function (userId, docs, fields, modifier) {
