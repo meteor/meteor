@@ -168,6 +168,18 @@
           document.getElementById('login-email').value = usernameOrEmail;
 
       document.getElementById('login-password').value = password;
+
+      // Forge redrawing the `login-dropdown-list` element because of
+      // a bizarre Chrome bug in which part of the DIV is not redrawn
+      // in case you had tried to unsuccessfully log in before
+      // switching to the signup form.
+      //
+      // Found tip on how to force a redraw on
+      // http://stackoverflow.com/questions/3485365/how-can-i-force-webkit-to-redraw-repaint-to-propagate-style-changes/3485654#3485654
+      var redraw = document.getElementById('login-dropdown-list');
+      redraw.style.display = 'none';
+      redraw.offsetHeight; // it seems that this line does nothing but is necessary for the redraw to work
+      redraw.style.display = 'block';
     },
     'click #forgot-password-link': function () {
       resetMessages();
