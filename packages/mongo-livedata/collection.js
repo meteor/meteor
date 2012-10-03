@@ -102,6 +102,11 @@ Meteor.Collection = function (name, manager, driver, preventAutopublish) {
     });
 };
 
+///
+/// Main collection API
+///
+
+
 _.extend(Meteor.Collection.prototype, {
   find: function (/* selector, options */) {
     // Collection.find() (return all docs) behaves differently
@@ -126,247 +131,6 @@ _.extend(Meteor.Collection.prototype, {
 
 });
 
-Meteor.Collection.prototype._defineMutationMethods = function() {
-  var self = this;
-
-  self._validators = {
-    insert: [],
-    update: [],
-    remove: [],
-    fetch: [],
-    fetchAllFields: false
-  };
-
-  if (!self._name)
-    return; // anonymous collection
-
-  // XXX what if name has illegal characters in it?
-  self._prefix = '/' + self._name + '/';
-
-  // since tests need to check the effects of adding and removing the
-  // `insecure` package, which sets Meteor.Collection.insecure, we
-  // need this var
-  var insecure = Meteor.Collection.insecure;
-
-  // mutation methods
-  if (self._manager) {
-    var m = {};
-    // XXX what if name has illegal characters in it?
-    m[self._prefix + 'insert'] = function (doc) {
-      self._maybe_snapshot();
-
-      if (!this.isSimulation) {
-        if (self._restricted) {
-          if (!self._allowInsert(this.userId(), doc))
-            throw new Meteor.Error(403, "Access denied");
-        } else {
-          if (!insecure)
-            throw new Meteor.Error(403, "Access denied");
-        }
-      }
-
-      // insert returns nothing.  allow exceptions to propagate.
-      self._collection.insert(doc);
-    };
-
-    m[self._prefix + 'update'] = function (selector, mutator, options) {
-      self._maybe_snapshot();
-
-      if (this.isSimulation) {
-        // insert returns nothing.  allow exceptions to propagate.
-        self._collection.update(selector, mutator, options);
-      } else {
-        if (self._restricted) {
-          self._validatedUpdate(this.userId(), selector, mutator, options);
-        } else {
-          if (insecure) {
-            // update returns nothing.  allow exceptions to propagate.
-            self._collection.update(selector, mutator, options);
-          } else {
-            throw new Meteor.Error(403, "Access denied");
-          }
-        }
-      }
-    };
-
-    m[self._prefix + 'remove'] = function (selector) {
-      self._maybe_snapshot();
-
-      if (this.isSimulation) {
-        // remove returns nothing.  allow exceptions to propagate.
-        self._collection.remove(selector);
-      } else {
-        if (self._restricted) {
-          self._validatedRemove(this.userId(), selector);
-        } else {
-          if (insecure) {
-            // insert returns nothing.  allow exceptions to propagate.
-            self._collection.remove(selector);
-          } else {
-            throw new Meteor.Error(403, "Access denied");
-          }
-        }
-      }
-    };
-
-    self._manager.methods(m);
-  }
-};
-
-// Restrict default mutators on collection. Can be called multiple
-// times, in which case all validators must be satisfied.
-//
-// options.insert {Function(userId, doc)}
-//   return true to allow the user to add this document
-//
-// options.update {Function(userId, docs, fields, modifier)}
-//   return true to allow the user to update these documents.
-//   `fields` is passed as an array of fields that are to be modified
-//
-// options.remove {Function(userId, docs)}
-//   return true to allow the user to remove these documents
-//
-// options.fetch {Array}
-//   Fields to fetch for these validators. If any call to allow does
-//   not have this option then all fields are loaded.
-Meteor.Collection.prototype.allow = function(options) {
-  var self = this;
-  self._restricted = true;
-
-  if (options.insert)
-    self._validators.insert.push(options.insert);
-  if (options.update)
-    self._validators.update.push(options.update);
-  if (options.remove)
-    self._validators.remove.push(options.remove);
-
-  if (!self._validators.fetchAllFields) {
-    if (options.fetch) {
-      self._validators.fetch = _.union(self._validators.fetch, options.fetch);
-    } else {
-      self._validators.fetchAllFields = true;
-      // clear fetch just to make sure we don't accidentally read it
-      self._validators.fetch = null;
-    }
-  }
-};
-
-// assuming the collection is restricted
-Meteor.Collection.prototype._allowInsert = function(userId, doc) {
-  if (this._validators.insert.length === 0) {
-    throw new Meteor.Error(403, "Access denied. No insert validators set on restricted collection.");
-  }
-
-  // all validators should return true
-  return !_.any(this._validators.insert, function(validator) {
-    return !validator(userId, doc);
-  });
-};
-
-// Simulate a mongo `update` operation while validating that the
-// access control rules set by calls to `allow` are satisfied. If all
-// pass, rewrite the mongo operation to use $in to set the list of
-// document ids to change ##ValidatedChange
-Meteor.Collection.prototype._validatedUpdate = function(userId, selector, mutator, options) {
-  var self = this;
-
-  if (self._validators.update.length === 0) {
-    throw new Meteor.Error(403, "Access denied. No update validators set on restricted collection.");
-  }
-
-  // compute modified fields
-  var fields = [];
-  _.each(mutator, function (params, op) {
-    if (op[0] !== '$') {
-      throw new Meteor.Error(403, "Access denied. Can't replace document in restricted collection.");
-    } else {
-      _.each(_.keys(params), function (field) {
-        // treat dotted fields as if they are replacing their
-        // top-level part
-        if (field.indexOf('.') !== -1)
-          field = field.substring(0, field.indexOf('.'));
-
-        // record the field we are trying to change
-        if (!_.contains(fields, field))
-          fields.push(field);
-      });
-    }
-  });
-
-  var findOptions = {};
-  if (!self._validators.fetchAllFields) {
-    findOptions.fields = {};
-    _.each(self._validators.fetch, function(fieldName) {
-      findOptions.fields[fieldName] = 1;
-    });
-  }
-
-  var docs;
-  if (options && options.multi) {
-    docs = self._collection.find(selector, findOptions).fetch();
-  } else {
-    var doc = self._collection.findOne(selector, findOptions);
-    if (!doc) // none satisfied!
-      return;
-    docs = [doc];
-  }
-
-  // verify that all validators return true
-  if (_.any(self._validators.update, function(validator) {
-    return !validator(userId, docs, fields, mutator);
-  })) {
-    throw new Meteor.Error(403, "Access denied");
-  }
-
-  // construct new $in selector to replace the original one
-  var idInClause = {};
-  idInClause.$in = _.map(docs, function(doc) {
-    return doc._id;
-  });
-  var idSelector = {_id: idInClause};
-
-  self._collection.update.call(
-    self._collection,
-    idSelector,
-    mutator,
-    options);
-};
-
-// Simulate a mongo `remove` operation while validating access control
-// rules. See #ValidatedChange
-Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
-  var self = this;
-
-  if (self._validators.remove.length === 0) {
-    throw new Meteor.Error(403, "Access denied. No remove validators set on restricted collection.");
-  }
-
-  var findOptions = {};
-  if (!self._validators.fetchAllFields) {
-    findOptions.fields = {};
-    _.each(self._validators.fetch, function(fieldName) {
-      findOptions.fields[fieldName] = 1;
-    });
-  }
-
-  var docs = self._collection.find(selector, findOptions).fetch();
-
-  // verify that all validators return true
-  if (_.any(self._validators.remove, function(validator) {
-    return !validator(userId, docs);
-  })) {
-    throw new Meteor.Error(403, "Access denied");
-  }
-
-  // construct new $in selector to replace the original one
-  var idInClause = {};
-  idInClause.$in = _.map(docs, function(doc) {
-    return doc._id;
-  });
-  var idSelector = {_id: idInClause};
-
-  self._collection.remove.call(self._collection, idSelector);
-};
 
 // 'insert' immediately returns the inserted document's new _id.  The
 // others return nothing.
@@ -461,3 +225,311 @@ _.each(["insert", "update", "remove"], function (name) {
     return ret;
   };
 });
+
+
+///
+/// Remote methods and access control.
+///
+
+// Restrict default mutators on collection. allow() and deny() take the
+// same options:
+//
+// options.insert {Function(userId, doc)}
+//   return true to allow/deny adding this document
+//
+// options.update {Function(userId, docs, fields, modifier)}
+//   return true to allow/deny updating these documents.
+//   `fields` is passed as an array of fields that are to be modified
+//
+// options.remove {Function(userId, docs)}
+//   return true to allow/deny removing these documents
+//
+// options.fetch {Array}
+//   Fields to fetch for these validators. If any call to allow or deny
+//   does not have this option then all fields are loaded.
+//
+// allow and deny can be called multiple times. The validators are
+// evaluated as follows:
+// - If any deny() function returns true, the request is denied.
+// - Otherwise, if any allow() function returns true, the requested is allowed.
+// - Otherwise, the request is denied.
+
+Meteor.Collection.prototype.allow = function(options) {
+  var self = this;
+  self._restricted = true;
+
+  if (options.insert)
+    self._validators.insert.allow.push(options.insert);
+  if (options.update)
+    self._validators.update.allow.push(options.update);
+  if (options.remove)
+    self._validators.remove.allow.push(options.remove);
+
+  // Only update the fetch fields if we're passed things that affect
+  // fetching. This way allow({}) doesn't result in setting
+  // fetchAllFields
+  if (options.update || options.remove || options.fetch)
+    self._updateFetch(options.fetch);
+};
+
+Meteor.Collection.prototype.deny = function(options) {
+  var self = this;
+  self._restricted = true;
+
+  if (options.insert)
+    self._validators.insert.deny.push(options.insert);
+  if (options.update)
+    self._validators.update.deny.push(options.update);
+  if (options.remove)
+    self._validators.remove.deny.push(options.remove);
+
+  // same as allow. see above.
+  if (options.update || options.remove || options.fetch)
+    self._updateFetch(options.fetch);
+};
+
+
+Meteor.Collection.prototype._defineMutationMethods = function() {
+  var self = this;
+
+  // set to true once we call any allow or deny methods. If true, use
+  // allow/deny semanitcs. If false, use insecure mode semanitcs.
+  self._restricted = false;
+
+  // Insecure mode (default to allowing writes). Defaults to 'undefined'
+  // which means use the global Meteor.Collection.insecure.  This
+  // property can be overriden by tests or packages wishing to change
+  // insecure mode behavior of their collections.
+  self._insecure = undefined;
+
+  self._validators = {
+    insert: {allow: [], deny: []},
+    update: {allow: [], deny: []},
+    remove: {allow: [], deny: []},
+    fetch: [],
+    fetchAllFields: false
+  };
+
+  if (!self._name)
+    return; // anonymous collection
+
+  // XXX what if name has illegal characters in it?
+  self._prefix = '/' + self._name + '/';
+
+  // mutation methods
+  if (self._manager) {
+    var m = {};
+    // XXX what if name has illegal characters in it?
+    m[self._prefix + 'insert'] = function (doc) {
+      self._maybe_snapshot();
+
+      if (this.isSimulation) {
+        self._collection.insert(doc);
+      } else if (self._restricted) {
+        self._validatedInsert(this.userId(), doc);
+      } else if (self._isInsecure()) {
+        self._collection.insert(doc);
+      } else {
+        throw new Meteor.Error(403, "Access denied");
+      }
+    };
+
+    m[self._prefix + 'update'] = function (selector, mutator, options) {
+      self._maybe_snapshot();
+
+      if (this.isSimulation) {
+        self._collection.update(selector, mutator, options);
+      } else if (self._restricted) {
+        self._validatedUpdate(this.userId(), selector, mutator, options);
+      } else if (self._isInsecure()) {
+        self._collection.update(selector, mutator, options);
+      } else {
+        throw new Meteor.Error(403, "Access denied");
+      }
+    };
+
+    m[self._prefix + 'remove'] = function (selector) {
+      self._maybe_snapshot();
+
+      if (this.isSimulation) {
+        self._collection.remove(selector);
+      } else if (self._restricted) {
+        self._validatedRemove(this.userId(), selector);
+      } else if (self._isInsecure()) {
+        self._collection.remove(selector);
+      } else {
+        throw new Meteor.Error(403, "Access denied");
+      }
+    };
+
+    self._manager.methods(m);
+  }
+};
+
+
+Meteor.Collection.prototype._updateFetch = function (fields) {
+  var self = this;
+
+  if (!self._validators.fetchAllFields) {
+    if (fields) {
+      self._validators.fetch = _.union(self._validators.fetch, fields);
+    } else {
+      self._validators.fetchAllFields = true;
+      // clear fetch just to make sure we don't accidentally read it
+      self._validators.fetch = null;
+    }
+  }
+};
+
+Meteor.Collection.prototype._isInsecure = function () {
+  var self = this;
+  if (self._insecure === undefined)
+    return Meteor.Collection.insecure;
+  return self._insecure;
+};
+
+Meteor.Collection.prototype._validatedInsert = function(userId, doc) {
+  var self = this;
+
+  // short circuit if there is no way it will pass.
+  if (self._validators.insert.allow.length === 0) {
+    throw new Meteor.Error(403, "Access denied. No allow validators set on restricted collection.");
+  }
+
+  // call user validators.
+  // Any deny returns true means denied.
+  if (_.any(self._validators.insert.deny, function(validator) {
+    return validator(userId, doc);
+  })) {
+    throw new Meteor.Error(403, "Access denied");
+  }
+  // Any allow returns true means proceed. Throw error if they all fail.
+  if (_.all(self._validators.insert.allow, function(validator) {
+    return !validator(userId, doc);
+  })) {
+    throw new Meteor.Error(403, "Access denied");
+  }
+
+  self._collection.insert.call(self._collection, doc);
+};
+
+// Simulate a mongo `update` operation while validating that the access
+// control rules set by calls to `allow/deny` are satisfied. If all
+// pass, rewrite the mongo operation to use $in to set the list of
+// document ids to change ##ValidatedChange
+Meteor.Collection.prototype._validatedUpdate = function(userId, selector, mutator, options) {
+  var self = this;
+
+  // short circuit. If no allows are set, we know this won't be allowed.
+  if (self._validators.update.allow.length === 0) {
+    throw new Meteor.Error(403, "Access denied. No allow validators set on restricted collection.");
+  }
+
+  // compute modified fields
+  var fields = [];
+  _.each(mutator, function (params, op) {
+    if (op[0] !== '$') {
+      throw new Meteor.Error(403, "Access denied. Can't replace document in restricted collection.");
+    } else {
+      _.each(_.keys(params), function (field) {
+        // treat dotted fields as if they are replacing their
+        // top-level part
+        if (field.indexOf('.') !== -1)
+          field = field.substring(0, field.indexOf('.'));
+
+        // record the field we are trying to change
+        if (!_.contains(fields, field))
+          fields.push(field);
+      });
+    }
+  });
+
+  var findOptions = {};
+  if (!self._validators.fetchAllFields) {
+    findOptions.fields = {};
+    _.each(self._validators.fetch, function(fieldName) {
+      findOptions.fields[fieldName] = 1;
+    });
+  }
+
+  var docs;
+  if (options && options.multi) {
+    docs = self._collection.find(selector, findOptions).fetch();
+  } else {
+    var doc = self._collection.findOne(selector, findOptions);
+    if (!doc)  // none satisfied!
+      return;
+    docs = [doc];
+  }
+
+  // call user validators.
+  // Any deny returns true means denied.
+  if (_.any(self._validators.update.deny, function(validator) {
+    return validator(userId, docs, fields, mutator);
+  })) {
+    throw new Meteor.Error(403, "Access denied");
+  }
+  // Any allow returns true means proceed. Throw error if they all fail.
+  if (_.all(self._validators.update.allow, function(validator) {
+    return !validator(userId, docs, fields, mutator);
+  })) {
+    throw new Meteor.Error(403, "Access denied");
+  }
+
+  // construct new $in selector to replace the original one
+  var idInClause = {};
+  idInClause.$in = _.map(docs, function(doc) {
+    return doc._id;
+  });
+  var idSelector = {_id: idInClause};
+
+  self._collection.update.call(
+    self._collection,
+    idSelector,
+    mutator,
+    options);
+};
+
+// Simulate a mongo `remove` operation while validating access control
+// rules. See #ValidatedChange
+Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
+  var self = this;
+
+  // short circuit if there is no way it will pass.
+  if (self._validators.remove.allow.length === 0) {
+    throw new Meteor.Error(403, "Access denied. No allow validators set on restricted collection.");
+  }
+
+  var findOptions = {};
+  if (!self._validators.fetchAllFields) {
+    findOptions.fields = {};
+    _.each(self._validators.fetch, function(fieldName) {
+      findOptions.fields[fieldName] = 1;
+    });
+  }
+
+  var docs = self._collection.find(selector, findOptions).fetch();
+
+  // call user validators.
+  // Any deny returns true means denied.
+  if (_.any(self._validators.remove.deny, function(validator) {
+    return validator(userId, docs);
+  })) {
+    throw new Meteor.Error(403, "Access denied");
+  }
+  // Any allow returns true means proceed. Throw error if they all fail.
+  if (_.all(self._validators.remove.allow, function(validator) {
+    return !validator(userId, docs);
+  })) {
+    throw new Meteor.Error(403, "Access denied");
+  }
+
+  // construct new $in selector to replace the original one
+  var idInClause = {};
+  idInClause.$in = _.map(docs, function(doc) {
+    return doc._id;
+  });
+  var idSelector = {_id: idInClause};
+
+  self._collection.remove.call(self._collection, idSelector);
+};
