@@ -243,7 +243,7 @@
   // Publish all login service configuration fields other than secret.
   Meteor.publish("loginServiceConfiguration", function () {
     return Meteor.accounts.configuration.find({}, {fields: {secret: 0}});
-  });
+  }, {is_auto: true}); // not techincally autopublish, but stops the warning.
 
   // Allow a one-time configuration for a login service.
   Meteor.accounts.configuration.allow({}); // disallow mutators
