@@ -102,6 +102,11 @@ Meteor.Collection = function (name, manager, driver, preventAutopublish) {
     });
 };
 
+///
+/// Main collection API
+///
+
+
 _.extend(Meteor.Collection.prototype, {
   find: function (/* selector, options */) {
     // Collection.find() (return all docs) behaves differently
@@ -125,6 +130,170 @@ _.extend(Meteor.Collection.prototype, {
   }
 
 });
+
+
+// 'insert' immediately returns the inserted document's new _id.  The
+// others return nothing.
+//
+// Otherwise, the semantics are exactly like other methods: they take
+// a callback as an optional last argument; if no callback is
+// provided, they block until the operation is complete, and throw an
+// exception if it fails; if a callback is provided, then they don't
+// necessarily block, and they call the callback when they finish with
+// error and result arguments.  (The insert method provides the
+// document ID as its result; update and remove don't provide a result.)
+//
+// On the client, blocking is impossible, so if a callback
+// isn't provided, they just return immediately and any error
+// information is lost.
+//
+// There's one more tweak. On the client, if you don't provide a
+// callback, then if there is an error, a message will be logged with
+// Meteor._debug.
+//
+// The intent (though this is actually determined by the underlying
+// drivers) is that the operations should be done synchronously, not
+// generating their result until the database has acknowledged
+// them. In the future maybe we should provide a flag to turn this
+// off.
+_.each(["insert", "update", "remove"], function (name) {
+  Meteor.Collection.prototype[name] = function (/* arguments */) {
+    var self = this;
+    var args = _.toArray(arguments);
+    var callback;
+    var ret;
+
+    if (args.length && args[args.length - 1] instanceof Function)
+      callback = args.pop();
+
+    if (Meteor.isClient && !callback) {
+      // Client can't block, so it can't report errors by exception,
+      // only by callback. If they forget the callback, give them a
+      // default one that logs the error, so they aren't totally
+      // baffled if their writes don't work because their database is
+      // down.
+      callback = function (err) {
+        if (err)
+          Meteor._debug(name + " failed: " + err.error + " -- " + err.reason);
+      };
+    }
+
+    if (name === "insert") {
+      if (!args.length)
+        throw new Error("insert requires an argument");
+      // shallow-copy the document and generate an ID
+      args[0] = _.extend({}, args[0]);
+      if ('_id' in args[0])
+        throw new Error("Do not pass an _id to insert. Meteor will generate the _id for you.");
+      ret = args[0]._id = Meteor.uuid();
+    }
+
+    if (self._manager && self._manager !== Meteor.default_server) {
+      // just remote to another endpoint, propagate return value or
+      // exception.
+      if (callback) {
+        // asynchronous: on success, callback should return ret
+        // (document ID for insert, undefined for update and
+        // remove), not the method's result.
+        self._manager.apply(self._prefix + name, args, function (error, result) {
+          callback(error, !error && ret);
+        });
+      } else {
+        // synchronous: propagate exception
+        self._manager.apply(self._prefix + name, args);
+      }
+
+    } else {
+      // it's my collection.  descend into the collection object
+      // and propagate any exception.
+      try {
+        self._collection[name].apply(self._collection, args);
+      } catch (e) {
+        if (callback) {
+          callback(e);
+          return null;
+        }
+        throw e;
+      }
+
+      // on success, return *ret*, not the manager's return value.
+      callback && callback(null, ret);
+    }
+
+    // both sync and async, unless we threw an exception, return ret
+    // (new document ID for insert, undefined otherwise).
+    return ret;
+  };
+});
+
+
+///
+/// Remote methods and access control.
+///
+
+// XXX rework doc comment
+//
+// Restrict default mutators on collection. Can be called multiple
+// times, in which case all validators must be satisfied.
+//
+// options.insert {Function(userId, doc)}
+//   return true to allow the user to add this document
+//
+// options.update {Function(userId, docs, fields, modifier)}
+//   return true to allow the user to update these documents.
+//   `fields` is passed as an array of fields that are to be modified
+//
+// options.remove {Function(userId, docs)}
+//   return true to allow the user to remove these documents
+//
+// options.fetch {Array}
+//   Fields to fetch for these validators. If any call to allow does
+//   not have this option then all fields are loaded.
+Meteor.Collection.prototype.allow = function(options) {
+  var self = this;
+  self._restricted = true;
+
+  if (options.insert)
+    self._validators.insert.allow.push(options.insert);
+  if (options.update)
+    self._validators.update.allow.push(options.update);
+  if (options.remove)
+    self._validators.remove.allow.push(options.remove);
+
+  if (!self._validators.fetchAllFields) {
+    if (options.fetch) {
+      self._validators.fetch = _.union(self._validators.fetch, options.fetch);
+    } else {
+      self._validators.fetchAllFields = true;
+      // clear fetch just to make sure we don't accidentally read it
+      self._validators.fetch = null;
+    }
+  }
+};
+
+Meteor.Collection.prototype.deny = function(options) {
+  var self = this;
+  self._restricted = true;
+
+  if (options.insert)
+    self._validators.insert.deny.push(options.insert);
+  if (options.update)
+    self._validators.update.deny.push(options.update);
+  if (options.remove)
+    self._validators.remove.deny.push(options.remove);
+
+  // XXX dup from allow
+  if (!self._validators.fetchAllFields) {
+    if (options.fetch) {
+      self._validators.fetch = _.union(self._validators.fetch, options.fetch);
+    } else {
+      self._validators.fetchAllFields = true;
+      // clear fetch just to make sure we don't accidentally read it
+      self._validators.fetch = null;
+    }
+  }
+};
+
 
 Meteor.Collection.prototype._defineMutationMethods = function() {
   var self = this;
@@ -214,70 +383,6 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
     self._manager.methods(m);
   }
 };
-
-// XXX rework doc comment
-//
-// Restrict default mutators on collection. Can be called multiple
-// times, in which case all validators must be satisfied.
-//
-// options.insert {Function(userId, doc)}
-//   return true to allow the user to add this document
-//
-// options.update {Function(userId, docs, fields, modifier)}
-//   return true to allow the user to update these documents.
-//   `fields` is passed as an array of fields that are to be modified
-//
-// options.remove {Function(userId, docs)}
-//   return true to allow the user to remove these documents
-//
-// options.fetch {Array}
-//   Fields to fetch for these validators. If any call to allow does
-//   not have this option then all fields are loaded.
-Meteor.Collection.prototype.allow = function(options) {
-  var self = this;
-  self._restricted = true;
-
-  if (options.insert)
-    self._validators.insert.allow.push(options.insert);
-  if (options.update)
-    self._validators.update.allow.push(options.update);
-  if (options.remove)
-    self._validators.remove.allow.push(options.remove);
-
-  if (!self._validators.fetchAllFields) {
-    if (options.fetch) {
-      self._validators.fetch = _.union(self._validators.fetch, options.fetch);
-    } else {
-      self._validators.fetchAllFields = true;
-      // clear fetch just to make sure we don't accidentally read it
-      self._validators.fetch = null;
-    }
-  }
-};
-
-Meteor.Collection.prototype.deny = function(options) {
-  var self = this;
-  self._restricted = true;
-
-  if (options.insert)
-    self._validators.insert.deny.push(options.insert);
-  if (options.update)
-    self._validators.update.deny.push(options.update);
-  if (options.remove)
-    self._validators.remove.deny.push(options.remove);
-
-  // XXX dup from allow
-  if (!self._validators.fetchAllFields) {
-    if (options.fetch) {
-      self._validators.fetch = _.union(self._validators.fetch, options.fetch);
-    } else {
-      self._validators.fetchAllFields = true;
-      // clear fetch just to make sure we don't accidentally read it
-      self._validators.fetch = null;
-    }
-  }
-};
-
 
 
 // assuming the collection is restricted
@@ -424,97 +529,3 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
 
   self._collection.remove.call(self._collection, idSelector);
 };
-
-// 'insert' immediately returns the inserted document's new _id.  The
-// others return nothing.
-//
-// Otherwise, the semantics are exactly like other methods: they take
-// a callback as an optional last argument; if no callback is
-// provided, they block until the operation is complete, and throw an
-// exception if it fails; if a callback is provided, then they don't
-// necessarily block, and they call the callback when they finish with
-// error and result arguments.  (The insert method provides the
-// document ID as its result; update and remove don't provide a result.)
-//
-// On the client, blocking is impossible, so if a callback
-// isn't provided, they just return immediately and any error
-// information is lost.
-//
-// There's one more tweak. On the client, if you don't provide a
-// callback, then if there is an error, a message will be logged with
-// Meteor._debug.
-//
-// The intent (though this is actually determined by the underlying
-// drivers) is that the operations should be done synchronously, not
-// generating their result until the database has acknowledged
-// them. In the future maybe we should provide a flag to turn this
-// off.
-_.each(["insert", "update", "remove"], function (name) {
-  Meteor.Collection.prototype[name] = function (/* arguments */) {
-    var self = this;
-    var args = _.toArray(arguments);
-    var callback;
-    var ret;
-
-    if (args.length && args[args.length - 1] instanceof Function)
-      callback = args.pop();
-
-    if (Meteor.isClient && !callback) {
-      // Client can't block, so it can't report errors by exception,
-      // only by callback. If they forget the callback, give them a
-      // default one that logs the error, so they aren't totally
-      // baffled if their writes don't work because their database is
-      // down.
-      callback = function (err) {
-        if (err)
-          Meteor._debug(name + " failed: " + err.error + " -- " + err.reason);
-      };
-    }
-
-    if (name === "insert") {
-      if (!args.length)
-        throw new Error("insert requires an argument");
-      // shallow-copy the document and generate an ID
-      args[0] = _.extend({}, args[0]);
-      if ('_id' in args[0])
-        throw new Error("Do not pass an _id to insert. Meteor will generate the _id for you.");
-      ret = args[0]._id = Meteor.uuid();
-    }
-
-    if (self._manager && self._manager !== Meteor.default_server) {
-      // just remote to another endpoint, propagate return value or
-      // exception.
-      if (callback) {
-        // asynchronous: on success, callback should return ret
-        // (document ID for insert, undefined for update and
-        // remove), not the method's result.
-        self._manager.apply(self._prefix + name, args, function (error, result) {
-          callback(error, !error && ret);
-        });
-      } else {
-        // synchronous: propagate exception
-        self._manager.apply(self._prefix + name, args);
-      }
-
-    } else {
-      // it's my collection.  descend into the collection object
-      // and propagate any exception.
-      try {
-        self._collection[name].apply(self._collection, args);
-      } catch (e) {
-        if (callback) {
-          callback(e);
-          return null;
-        }
-        throw e;
-      }
-
-      // on success, return *ret*, not the manager's return value.
-      callback && callback(null, ret);
-    }
-
-    // both sync and async, unless we threw an exception, return ret
-    // (new document ID for insert, undefined otherwise).
-    return ret;
-  };
-});
