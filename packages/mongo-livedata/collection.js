@@ -260,15 +260,7 @@ Meteor.Collection.prototype.allow = function(options) {
   if (options.remove)
     self._validators.remove.allow.push(options.remove);
 
-  if (!self._validators.fetchAllFields) {
-    if (options.fetch) {
-      self._validators.fetch = _.union(self._validators.fetch, options.fetch);
-    } else {
-      self._validators.fetchAllFields = true;
-      // clear fetch just to make sure we don't accidentally read it
-      self._validators.fetch = null;
-    }
-  }
+  self._updateFetch(options.fetch);
 };
 
 Meteor.Collection.prototype.deny = function(options) {
@@ -282,21 +274,22 @@ Meteor.Collection.prototype.deny = function(options) {
   if (options.remove)
     self._validators.remove.deny.push(options.remove);
 
-  // XXX dup from allow
-  if (!self._validators.fetchAllFields) {
-    if (options.fetch) {
-      self._validators.fetch = _.union(self._validators.fetch, options.fetch);
-    } else {
-      self._validators.fetchAllFields = true;
-      // clear fetch just to make sure we don't accidentally read it
-      self._validators.fetch = null;
-    }
-  }
+  self._updateFetch(options.fetch);
 };
 
 
 Meteor.Collection.prototype._defineMutationMethods = function() {
   var self = this;
+
+  // set to true once we call any allow or deny methods. If true, use
+  // allow/deny semanitcs. If false, use insecure mode semanitcs.
+  self._restricted = false;
+
+  // Insecure mode (default to allowing writes). Defaults to 'undefined'
+  // which means use the global Meteor.Collection.insecure.  This
+  // property can be overriden by tests or packages wishing to change
+  // insecure mode behavior of their collections.
+  self._insecure = undefined;
 
   self._validators = {
     insert: {allow: [], deny: []},
@@ -312,13 +305,6 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
   // XXX what if name has illegal characters in it?
   self._prefix = '/' + self._name + '/';
 
-  // since tests need to check the effects of adding and removing the
-  // `insecure` package, which sets Meteor.Collection.insecure, we
-  // need this var
-  //
-  // XXX is this the package ordering issues?
-  var insecure = Meteor.Collection.insecure;
-
   // mutation methods
   if (self._manager) {
     var m = {};
@@ -331,7 +317,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
           if (!self._allowInsert(this.userId(), doc))
             throw new Meteor.Error(403, "Access denied");
         } else {
-          if (!insecure)
+          if (!self._isInsecure())
             throw new Meteor.Error(403, "Access denied");
         }
       }
@@ -350,7 +336,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
         if (self._restricted) {
           self._validatedUpdate(this.userId(), selector, mutator, options);
         } else {
-          if (insecure) {
+          if (self._isInsecure()) {
             // update returns nothing.  allow exceptions to propagate.
             self._collection.update(selector, mutator, options);
           } else {
@@ -370,7 +356,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
         if (self._restricted) {
           self._validatedRemove(this.userId(), selector);
         } else {
-          if (insecure) {
+          if (self._isInsecure()) {
             // insert returns nothing.  allow exceptions to propagate.
             self._collection.remove(selector);
           } else {
@@ -384,6 +370,27 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
   }
 };
 
+
+Meteor.Collection.prototype._updateFetch = function (fields) {
+  var self = this;
+
+  if (!self._validators.fetchAllFields) {
+    if (fields) {
+      self._validators.fetch = _.union(self._validators.fetch, fields);
+    } else {
+      self._validators.fetchAllFields = true;
+      // clear fetch just to make sure we don't accidentally read it
+      self._validators.fetch = null;
+    }
+  }
+};
+
+Meteor.Collection.prototype._isInsecure = function () {
+  var self = this;
+  if (self._insecure === undefined)
+    return Meteor.Collection.insecure;
+  return self._insecure;
+};
 
 // assuming the collection is restricted
 Meteor.Collection.prototype._allowInsert = function(userId, doc) {

@@ -7,10 +7,8 @@
   // helper for defining a collection, subscribing to it, and defining
   // a method to clear it
   var defineCollection = function(name, insecure) {
-    var oldInsecure = Meteor.Collection.insecure;
-    Meteor.Collection.insecure = insecure;
     var collection = new Meteor.Collection(name);
-    Meteor.Collection.insecure = oldInsecure;
+    collection._insecure = insecure;
 
     if (Meteor.isServer) {
       Meteor.publish("collection-" + name, function() {
@@ -190,12 +188,32 @@
   if (Meteor.isServer) {
     Tinytest.add("collection - calling allow restricts", function (test) {
       var collection = new Meteor.Collection(null);
-      test.equal(collection._restricted, undefined);
+      test.equal(collection._restricted, false);
       collection.allow({
         insert: function() {}
       });
       test.equal(collection._restricted, true);
     });
+
+    Tinytest.add("collection - global insecure", function (test) {
+      // note: This test alters the global insecure status! This may
+      // collide with itself if run multiple times (but is better than
+      // the old test which had the same problem)
+      var oldGlobalInsecure = Meteor.Collection.insecure;
+
+      Meteor.Collection.insecure = true;
+      var collection = new Meteor.Collection(null);
+      test.equal(collection._isInsecure(), true);
+
+      Meteor.Collection.insecure = false;
+      test.equal(collection._isInsecure(), false);
+
+      collection._insecure = true;
+      test.equal(collection._isInsecure(), true);
+
+      Meteor.Collection.insecure = oldGlobalInsecure;
+    });
+
   }
 
   if (Meteor.isClient) {
