@@ -88,7 +88,7 @@
     // record changes.
     var currentInvocation = Meteor._CurrentInvocation.get();
     if (!currentInvocation || !currentInvocation.userId)
-      throw new Error("Meteor.userId can only be invoked in method calls.");
+      throw new Error("Meteor.userId can only be invoked in method calls. Use this.userId() in publish functions.");
     return currentInvocation.userId();
   };
 
