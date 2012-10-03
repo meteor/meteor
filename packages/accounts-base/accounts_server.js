@@ -20,7 +20,7 @@
     }
   });
 
-  Meteor.accounts._loginHandlers = [];
+  Accounts._loginHandlers = [];
 
   // Try all of the registered login handlers until one of them
   // doesn't return `undefined` (NOT null), meaning it handled this
@@ -28,7 +28,7 @@
   var tryAllLoginHandlers = function (options) {
     var result = undefined;
 
-    _.find(Meteor.accounts._loginHandlers, function(handler) {
+    _.find(Accounts._loginHandlers, function(handler) {
 
       var maybeResult = handler(options);
       if (maybeResult !== undefined) {
@@ -51,14 +51,14 @@
   // - `undefined`, meaning don't handle;
   // - `null`, meaning the user didn't actually log in;
   // - {id: userId, accessToken: *}, if the user logged in successfully.
-  Meteor.accounts.registerLoginHandler = function(handler) {
-    Meteor.accounts._loginHandlers.push(handler);
+  Accounts.registerLoginHandler = function(handler) {
+    Accounts._loginHandlers.push(handler);
   };
 
   // support reconnecting using a meteor login token
-  Meteor.accounts.registerLoginHandler(function(options) {
+  Accounts.registerLoginHandler(function(options) {
     if (options.resume) {
-      var loginToken = Meteor.accounts._loginTokens
+      var loginToken = Accounts._loginTokens
             .findOne({_id: options.resume});
       if (!loginToken)
         throw new Meteor.Error(403, "Couldn't find login token");
@@ -103,7 +103,7 @@
   /// CREATE USER HOOKS
   ///
   var onCreateUserHook = null;
-  Meteor.accounts.onCreateUser = function (func) {
+  Accounts.onCreateUser = function (func) {
     if (onCreateUserHook)
       throw new Error("Can only call onCreateUser once");
     else
@@ -117,18 +117,18 @@
         ['services', 'username', 'email', 'emails'])))
       throw new Meteor.Error(400, "Disallowed fields in extra");
 
-    if (Meteor.accounts._options.requireEmail &&
+    if (Accounts._options.requireEmail &&
         (!user.emails || !user.emails.length))
       throw new Meteor.Error(400, "Email address required.");
 
-    if (Meteor.accounts._options.requireUsername &&
+    if (Accounts._options.requireUsername &&
         !user.username)
       throw new Meteor.Error(400, "Username required.");
 
 
     return _.extend(user, extra);
   };
-  Meteor.accounts.onCreateUserHook = function (options, extra, user) {
+  Accounts.onCreateUserHook = function (options, extra, user) {
     // add created at timestamp (and protect passed in user object from
     // modification)
     user = _.extend({createdAt: +(new Date)}, user);
@@ -169,7 +169,7 @@
   };
 
   var validateNewUserHooks = [];
-  Meteor.accounts.validateNewUser = function (func) {
+  Accounts.validateNewUser = function (func) {
     validateNewUserHooks.push(func);
   };
 
@@ -184,7 +184,7 @@
   //   - services {Object} e.g. {facebook: {id: (facebook user id), ...}}
   // @param extra {Object, optional} Any additional fields to place on the user objet
   // @returns {String} userId
-  Meteor.accounts.updateOrCreateUser = function(options, extra) {
+  Accounts.updateOrCreateUser = function(options, extra) {
     extra = extra || {};
 
     if (_.keys(options.services).length !== 1)
@@ -212,7 +212,7 @@
       user = {
         services: attrs
       };
-      user = Meteor.accounts.onCreateUserHook(options, extra, user);
+      user = Accounts.onCreateUserHook(options, extra, user);
       return Meteor.users.insert(user);
     }
   };
@@ -242,15 +242,15 @@
 
   // Publish all login service configuration fields other than secret.
   Meteor.publish("loginServiceConfiguration", function () {
-    return Meteor.accounts.configuration.find({}, {fields: {secret: 0}});
+    return Accounts.configuration.find({}, {fields: {secret: 0}});
   }, {is_auto: true}); // not techincally autopublish, but stops the warning.
 
   // Allow a one-time configuration for a login service.
-  Meteor.accounts.configuration.allow({}); // disallow mutators
+  Accounts.configuration.allow({}); // disallow mutators
   Meteor.methods({
     "configureLoginService": function(options) {
-      if (!Meteor.accounts.configuration.findOne({service: options.service}))
-        Meteor.accounts.configuration.insert(options);
+      if (!Accounts.configuration.findOne({service: options.service}))
+        Accounts.configuration.insert(options);
       else
         throw new Meteor.Error(403, "Service " + options.service + " already configured");
     }

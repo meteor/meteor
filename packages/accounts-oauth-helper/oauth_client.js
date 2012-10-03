@@ -6,7 +6,7 @@
   // @param callback {Function} Callback function to call on
   //   completion. Takes one argument, null on success, or Error on
   //   error.
-  Meteor.accounts.oauth.initiateLogin = function(state, url, callback) {
+  Accounts.oauth.initiateLogin = function(state, url, callback) {
     // XXX these dimensions worked well for facebook and google, but
     // it's sort of weird to have these here. Maybe an optional
     // argument instead?
@@ -45,9 +45,9 @@
         // the server doesn't see the request but does close the
         // window. This seems unlikely.
         callback &&
-          callback(new Meteor.accounts.LoginCancelledError("Popup closed"));
+          callback(new Accounts.LoginCancelledError("Popup closed"));
       } else {
-        Meteor.accounts.makeClientLoggedIn(result.id, result.token);
+        Accounts._makeClientLoggedIn(result.id, result.token);
         callback && callback();
       }
     });

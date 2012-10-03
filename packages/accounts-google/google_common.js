@@ -1,7 +1,7 @@
-if (!Meteor.accounts.google) {
-  Meteor.accounts.google = {};
+if (!Accounts.google) {
+  Accounts.google = {};
 }
 
-Meteor.accounts.google.config = function(options) {
-  Meteor.accounts.google._options = options;
+Accounts.google.config = function(options) {
+  Accounts.google._options = options;
 };

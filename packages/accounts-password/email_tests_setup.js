@@ -28,11 +28,11 @@
       Meteor.users.update(
         {_id: this.userId()},
         {$push: {emails: {address: email, validated: false}}});
-      Meteor.accounts.sendValidationEmail(this.userId(), email);
+      Accounts.sendValidationEmail(this.userId(), email);
     },
 
     createUserOnServer: function (email) {
-      var userId = Meteor.createUser({email: email});
+      var userId = Accounts.createUser({email: email});
       return Meteor.users.findOne(userId);
     }
   });

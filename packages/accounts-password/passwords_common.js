@@ -1,1 +1,1 @@
-Meteor.accounts.passwords = {};
+Accounts.passwords = {};

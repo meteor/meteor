@@ -14,13 +14,13 @@
   testAsyncMulti("accounts emails - reset password flow", [
     function (test, expect) {
       email1 = Meteor.uuid() + "-intercept@example.com";
-      Meteor.createUser({email: email1, password: 'foobar'},
+      Accounts.createUser({email: email1, password: 'foobar'},
                         expect(function (error) {
                           test.equal(error, undefined);
                         }));
     },
     function (test, expect) {
-      Meteor.forgotPassword({email: email1}, expect(function (error) {
+      Accounts.forgotPassword({email: email1}, expect(function (error) {
         test.equal(error, undefined);
       }));
     },
@@ -38,7 +38,7 @@
       }));
     },
     function (test, expect) {
-      Meteor.resetPassword(resetPasswordToken, "newPassword", expect(function(error) {
+      Accounts.resetPassword(resetPasswordToken, "newPassword", expect(function(error) {
         test.isFalse(error);
       }));
     },
@@ -81,7 +81,7 @@
     function (test, expect) {
       email2 = Meteor.uuid() + "-intercept@example.com";
       email3 = Meteor.uuid() + "-intercept@example.com";
-      Meteor.createUser(
+      Accounts.createUser(
         {email: email2, password: 'foobar'},
         expect(function (error) {
           test.equal(error, undefined);
@@ -96,7 +96,7 @@
       getValidateEmailToken(email2, test, expect);
     },
     function (test, expect) {
-      Meteor.validateEmail(validateEmailToken, expect(function(error) {
+      Accounts.validateEmail(validateEmailToken, expect(function(error) {
         test.isFalse(error);
       }));
       // ARGH! ON QUIESCE!!
@@ -124,7 +124,7 @@
       getValidateEmailToken(email3, test, expect);
     },
     function (test, expect) {
-      Meteor.validateEmail(validateEmailToken, expect(function(error) {
+      Accounts.validateEmail(validateEmailToken, expect(function(error) {
         test.isFalse(error);
       }));
     },
@@ -172,7 +172,7 @@
       getEnrollAccountToken(email4, test, expect);
     },
     function (test, expect) {
-      Meteor.resetPassword(enrollAccountToken, 'password', expect(function(error) {
+      Accounts.resetPassword(enrollAccountToken, 'password', expect(function(error) {
         test.isFalse(error);
       }));
     },

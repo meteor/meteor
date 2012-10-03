@@ -1,10 +1,6 @@
 (function () {
 
-  Meteor.accounts.google.setSecret = function (secret) {
-    Meteor.accounts.google._secret = secret;
-  };
-
-  Meteor.accounts.oauth.registerService('google', 2, function(query) {
+  Accounts.oauth.registerService('google', 2, function(query) {
 
     var accessToken = getAccessToken(query);
     var identity = getIdentity(accessToken);
@@ -22,9 +18,9 @@
   });
 
   var getAccessToken = function (query) {
-    var config = Meteor.accounts.configuration.findOne({service: 'google'});
+    var config = Accounts.configuration.findOne({service: 'google'});
     if (!config)
-      throw new Meteor.accounts.ConfigError("Service not configured");
+      throw new Accounts.ConfigError("Service not configured");
 
     var result = Meteor.http.post(
       "https://accounts.google.com/o/oauth2/token", {params: {

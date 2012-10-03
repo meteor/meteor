@@ -2,17 +2,17 @@
   var connect = __meteor_bootstrap__.require("connect");
 
   // A place to store request tokens pending verification
-  Meteor.accounts.oauth1._requestTokens = {};
+  Accounts.oauth1._requestTokens = {};
 
   // connect middleware
-  Meteor.accounts.oauth1._handleRequest = function (service, query, res) {
+  Accounts.oauth1._handleRequest = function (service, query, res) {
 
-    var config = Meteor.accounts.configuration.findOne({service: service.serviceName});
+    var config = Accounts.configuration.findOne({service: service.serviceName});
     if (!config) {
-      throw new Meteor.accounts.ConfigError("Service " + service.serviceName + " not configured");
+      throw new Accounts.ConfigError("Service " + service.serviceName + " not configured");
     }
 
-    var urls = Meteor.accounts[service.serviceName]._urls;
+    var urls = Accounts[service.serviceName]._urls;
     var oauthBinding = new OAuth1Binding(
       config.consumerKey, config.secret, urls);
 
@@ -23,7 +23,7 @@
       oauthBinding.prepareRequestToken(query.requestTokenAndRedirect);
 
       // Keep track of request token so we can verify it on the next step
-      Meteor.accounts.oauth1._requestTokens[query.state] = oauthBinding.requestToken;
+      Accounts.oauth1._requestTokens[query.state] = oauthBinding.requestToken;
 
       // redirect to provider login, which will redirect back to "step 2" below
       var redirectUrl = urls.authenticate + '?oauth_token=' + oauthBinding.requestToken;
@@ -36,8 +36,8 @@
       // token and access token secret and log in as user
 
       // Get the user's request token so we can verify it and clear it
-      var requestToken = Meteor.accounts.oauth1._requestTokens[query.state];
-      delete Meteor.accounts.oauth1._requestTokens[query.state];
+      var requestToken = Accounts.oauth1._requestTokens[query.state];
+      delete Accounts.oauth1._requestTokens[query.state];
 
       // Verify user authorized access and the oauth_token matches
       // the requestToken from previous step
@@ -51,22 +51,22 @@
 
         // Get or create user id
         var oauthResult = service.handleOauthRequest(oauthBinding);
-        var userId = Meteor.accounts.updateOrCreateUser(
+        var userId = Accounts.updateOrCreateUser(
           oauthResult.options, oauthResult.extra);
 
         // Generate and store a login token for reconnect
         // XXX this could go in accounts_server.js instead
-        var loginToken = Meteor.accounts._loginTokens.insert({userId: userId});
+        var loginToken = Accounts._loginTokens.insert({userId: userId});
 
         // Store results to subsequent call to `login`
-        Meteor.accounts.oauth._loginResultForState[query.state] =
+        Accounts.oauth._loginResultForState[query.state] =
           {token: loginToken, id: userId};
       }
     }
 
     // Either close the window, redirect, or render nothing
     // if all else fails
-    Meteor.accounts.oauth._renderOauthResults(res, query);
+    Accounts.oauth._renderOauthResults(res, query);
   };
 
 })();

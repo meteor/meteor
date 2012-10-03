@@ -1,7 +1,7 @@
-if (!Meteor.accounts.facebook) {
-  Meteor.accounts.facebook = {};
+if (!Accounts.facebook) {
+  Accounts.facebook = {};
 }
 
-Meteor.accounts.facebook.config = function(options) {
-  Meteor.accounts.facebook._options = options;
+Accounts.facebook.config = function(options) {
+  Accounts.facebook._options = options;
 };

@@ -1,6 +1,6 @@
 (function () {
-  if (!Meteor.accounts)
-    Meteor.accounts = {};
+  if (typeof Accounts === 'undefined')
+    Accounts = {};
 
   // reads a reset password token from the url's hash fragment, if it's
   // there. if so prevent automatically logging in since it could be
@@ -13,8 +13,8 @@
   var match;
   match = window.location.hash.match(/^\#\?reset-password\/(.*)$/);
   if (match) {
-    Meteor.accounts._preventAutoLogin = true;
-    Meteor.accounts._resetPasswordToken = match[1];
+    Accounts._preventAutoLogin = true;
+    Accounts._resetPasswordToken = match[1];
     window.location.hash = '';
   }
 
@@ -30,8 +30,8 @@
   // in line with the hash fragment approach)
   match = window.location.hash.match(/^\#\?validate-email\/(.*)$/);
   if (match) {
-    Meteor.accounts._preventAutoLogin = true;
-    Meteor.accounts._validateEmailToken = match[1];
+    Accounts._preventAutoLogin = true;
+    Accounts._validateEmailToken = match[1];
     window.location.hash = '';
   }
 
@@ -40,8 +40,8 @@
   // reset password links.
   match = window.location.hash.match(/^\#\?enroll-account\/(.*)$/);
   if (match) {
-    Meteor.accounts._preventAutoLogin = true;
-    Meteor.accounts._enrollAccountToken = match[1];
+    Accounts._preventAutoLogin = true;
+    Accounts._enrollAccountToken = match[1];
     window.location.hash = '';
   }
 })();

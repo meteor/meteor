@@ -14,16 +14,16 @@ Tinytest.add("oauth1 - loginResultForState is stored", function (test) {
 
   // XXX XXX test isolation fail!  Avital: but actually -- why would
   // we run server tests more than once? or even more so in parallel?
-  Meteor.accounts._loginTokens.remove({});
-  Meteor.accounts.oauth._loginResultForState = {};
-  Meteor.accounts.oauth._services = {};
+  Accounts._loginTokens.remove({});
+  Accounts.oauth._loginResultForState = {};
+  Accounts.oauth._services = {};
 
-  if (!Meteor.accounts.configuration.findOne({service: 'twitterfoo'}))
-    Meteor.accounts.configuration.insert({service: 'twitterfoo'});
-  Meteor.accounts.twitterfoo = {};
+  if (!Accounts.configuration.findOne({service: 'twitterfoo'}))
+    Accounts.configuration.insert({service: 'twitterfoo'});
+  Accounts.twitterfoo = {};
 
   // register a fake login service - twitterfoo
-  Meteor.accounts.oauth.registerService("twitterfoo", 1, function (query) {
+  Accounts.oauth.registerService("twitterfoo", 1, function (query) {
     return {
       options: {
         services: {
@@ -39,7 +39,7 @@ Tinytest.add("oauth1 - loginResultForState is stored", function (test) {
   });
 
   // simulate logging in using twitterfoo
-  Meteor.accounts.oauth1._requestTokens['STATE'] = twitterfooAccessToken;
+  Accounts.oauth1._requestTokens['STATE'] = twitterfooAccessToken;
 
   var req = {
     method: "POST",
@@ -50,7 +50,7 @@ Tinytest.add("oauth1 - loginResultForState is stored", function (test) {
     }
   };
 
-  Meteor.accounts.oauth._middleware(req, new http.ServerResponse(req));
+  Accounts.oauth._middleware(req, new http.ServerResponse(req));
 
   // verify that a user is created
   var user = Meteor.users.findOne({"services.twitter.screenName": twitterfooName});
@@ -59,14 +59,14 @@ Tinytest.add("oauth1 - loginResultForState is stored", function (test) {
   test.equal(user.services.twitter.accessTokenSecret, twitterfooAccessTokenSecret);
 
   // and that that user has a login token
-  var token = Meteor.accounts._loginTokens.findOne({userId: user._id});
+  var token = Accounts._loginTokens.findOne({userId: user._id});
   test.notEqual(token, undefined);
 
   // and that the login result for that user is prepared
   test.equal(
-    Meteor.accounts.oauth._loginResultForState['STATE'].id, user._id);
+    Accounts.oauth._loginResultForState['STATE'].id, user._id);
   test.equal(
-    Meteor.accounts.oauth._loginResultForState['STATE'].token, token._id);
+    Accounts.oauth._loginResultForState['STATE'].token, token._id);
 });
 
 
@@ -78,15 +78,15 @@ Tinytest.add("oauth1 - error in user creation", function (test) {
   var twitterfailAccessToken = Meteor.uuid();
   var twitterfailAccessTokenSecret = Meteor.uuid();
 
-  if (!Meteor.accounts.configuration.findOne({service: 'twitterfail'}))
-    Meteor.accounts.configuration.insert({service: 'twitterfail'});
-  Meteor.accounts.twitterfail = {};
+  if (!Accounts.configuration.findOne({service: 'twitterfail'}))
+    Accounts.configuration.insert({service: 'twitterfail'});
+  Accounts.twitterfail = {};
 
   // Wire up access token so that verification passes
-  Meteor.accounts.oauth1._requestTokens[state] = twitterfailAccessToken;
+  Accounts.oauth1._requestTokens[state] = twitterfailAccessToken;
 
   // register a failing login service
-  Meteor.accounts.oauth.registerService("twitterfail", 1, function (query) {
+  Accounts.oauth.registerService("twitterfail", 1, function (query) {
     return {
       options: {
         services: {
@@ -106,7 +106,7 @@ Tinytest.add("oauth1 - error in user creation", function (test) {
 
   // a way to fail new users. duplicated from passwords_tests, but
   // shouldn't hurt.
-  Meteor.accounts.validateNewUser(function (user) {
+  Accounts.validateNewUser(function (user) {
     return !user.invalid;
   });
 
@@ -121,14 +121,14 @@ Tinytest.add("oauth1 - error in user creation", function (test) {
     }
   };
 
-  Meteor.accounts.oauth._middleware(req, new http.ServerResponse(req));
+  Accounts.oauth._middleware(req, new http.ServerResponse(req));
 
   // verify that a user is not created
   var user = Meteor.users.findOne({"services.twitter.screenName": twitterfailName});
   test.equal(user, undefined);
 
   // verify an error is stored in login state
-  test.equal(Meteor.accounts.oauth._loginResultForState[state].error, 403);
+  test.equal(Accounts.oauth._loginResultForState[state].error, 403);
 
   // verify error is handed back to login method.
   test.throws(function () {

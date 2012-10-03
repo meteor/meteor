@@ -1,17 +1,17 @@
-if (!Meteor.accounts)
-  Meteor.accounts = {};
+if (typeof Accounts === 'undefined')
+  Accounts = {};
 
-if (!Meteor.accounts.urls)
-  Meteor.accounts.urls = {};
+if (!Accounts.urls)
+  Accounts.urls = {};
 
-Meteor.accounts.urls.resetPassword = function (token) {
+Accounts.urls.resetPassword = function (token) {
   return Meteor.absoluteUrl('#?reset-password/' + token);
 };
 
-Meteor.accounts.urls.validateEmail = function (token) {
+Accounts.urls.validateEmail = function (token) {
   return Meteor.absoluteUrl('#?validate-email/' + token);
 };
 
-Meteor.accounts.urls.enrollAccount = function (token) {
+Accounts.urls.enrollAccount = function (token) {
   return Meteor.absoluteUrl('#?enroll-account/' + token);
 };

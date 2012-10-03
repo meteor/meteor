@@ -1,6 +1,6 @@
 (function () {
 
-  Meteor.accounts.oauth.registerService('facebook', 2, function(query) {
+  Accounts.oauth.registerService('facebook', 2, function(query) {
 
     var accessToken = getAccessToken(query);
     var identity = getIdentity(accessToken);
@@ -18,9 +18,9 @@
   });
 
   var getAccessToken = function (query) {
-    var config = Meteor.accounts.configuration.findOne({service: 'facebook'});
+    var config = Accounts.configuration.findOne({service: 'facebook'});
     if (!config)
-      throw new Meteor.accounts.ConfigError("Service not configured");
+      throw new Accounts.ConfigError("Service not configured");
 
     // Request an access token
     var result = Meteor.http.get(

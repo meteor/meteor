@@ -1,5 +1,5 @@
 (function () {
-  Meteor.createUser = function (options, extra, callback) {
+  Accounts.createUser = function (options, extra, callback) {
     options = _.clone(options); // we'll be modifying options
 
     if (typeof extra === "function") {
@@ -22,7 +22,7 @@
                      return;
                    }
 
-      Meteor.accounts.makeClientLoggedIn(result.id, result.token);
+      Accounts._makeClientLoggedIn(result.id, result.token);
       callback && callback(undefined, {message: 'Success'});
     });
   };
@@ -68,7 +68,7 @@
           return;
         }
 
-        Meteor.accounts.makeClientLoggedIn(result.id, result.token);
+        Accounts._makeClientLoggedIn(result.id, result.token);
         callback && callback();
       });
     });
@@ -78,7 +78,7 @@
   // @param oldPassword {String|null}
   // @param newPassword {String}
   // @param callback {Function(error|undefined)}
-  Meteor.changePassword = function (oldPassword, newPassword, callback) {
+  Accounts.changePassword = function (oldPassword, newPassword, callback) {
     if (!Meteor.user()) {
       callback && callback(new Error("Must be logged in to change password."));
       return;
@@ -131,7 +131,7 @@
   // @param options {Object}
   //   - email: (email)
   // @param callback (optional) {Function(error|undefined)}
-  Meteor.forgotPassword = function(options, callback) {
+  Accounts.forgotPassword = function(options, callback) {
     if (!options.email)
       throw new Error("Must pass options.email");
     Meteor.call("forgotPassword", options, callback);
@@ -143,7 +143,7 @@
   // @param token {String}
   // @param newPassword {String}
   // @param callback (optional) {Function(error|undefined)}
-  Meteor.resetPassword = function(token, newPassword, callback) {
+  Accounts.resetPassword = function(token, newPassword, callback) {
     if (!token)
       throw new Error("Need to pass token");
     if (!newPassword)
@@ -158,17 +158,17 @@
           callback && callback(error);
         }
 
-        Meteor.accounts.makeClientLoggedIn(result.id, result.token);
+        Accounts._makeClientLoggedIn(result.id, result.token);
         callback && callback();
       });
   };
 
   // Validates a user's email address based on a token originally
-  // created by Meteor.accounts.sendValidationEmail
+  // created by Accounts.sendValidationEmail
   //
   // @param token {String}
   // @param callback (optional) {Function(error|undefined)}
-  Meteor.validateEmail = function(token, callback) {
+  Accounts.validateEmail = function(token, callback) {
     if (!token)
       throw new Error("Need to pass token");
 
