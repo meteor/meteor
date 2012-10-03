@@ -231,24 +231,29 @@ _.each(["insert", "update", "remove"], function (name) {
 /// Remote methods and access control.
 ///
 
-// XXX rework doc comment
-//
-// Restrict default mutators on collection. Can be called multiple
-// times, in which case all validators must be satisfied.
+// Restrict default mutators on collection. allow() and deny() take the
+// same options:
 //
 // options.insert {Function(userId, doc)}
-//   return true to allow the user to add this document
+//   return true to allow/deny adding this document
 //
 // options.update {Function(userId, docs, fields, modifier)}
-//   return true to allow the user to update these documents.
+//   return true to allow/deny updating these documents.
 //   `fields` is passed as an array of fields that are to be modified
 //
 // options.remove {Function(userId, docs)}
-//   return true to allow the user to remove these documents
+//   return true to allow/deny removing these documents
 //
 // options.fetch {Array}
-//   Fields to fetch for these validators. If any call to allow does
-//   not have this option then all fields are loaded.
+//   Fields to fetch for these validators. If any call to allow or deny
+//   does not have this option then all fields are loaded.
+//
+// allow and deny can be called multiple times. The validators are
+// evaluated as follows:
+// 1) If any deny() function returns true, the request is denied.
+// 2) If any allow() function returns true, the requested is allowed.
+// 3) The request is denied.
+
 Meteor.Collection.prototype.allow = function(options) {
   var self = this;
   self._restricted = true;
@@ -260,7 +265,11 @@ Meteor.Collection.prototype.allow = function(options) {
   if (options.remove)
     self._validators.remove.allow.push(options.remove);
 
-  self._updateFetch(options.fetch);
+  // Only update the fetch fields if we're passed things that affect
+  // fetching. This way allow({}) doesn't result in setting
+  // fetchAllFields
+  if (options.update || options.remove || options.fetch)
+    self._updateFetch(options.fetch);
 };
 
 Meteor.Collection.prototype.deny = function(options) {
@@ -274,7 +283,9 @@ Meteor.Collection.prototype.deny = function(options) {
   if (options.remove)
     self._validators.remove.deny.push(options.remove);
 
-  self._updateFetch(options.fetch);
+  // same as allow. see above.
+  if (options.update || options.remove || options.fetch)
+    self._updateFetch(options.fetch);
 };
 
 

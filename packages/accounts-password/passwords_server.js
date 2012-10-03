@@ -6,6 +6,22 @@
     null /*manager*/,
     null /*driver*/,
     true /*preventAutopublish*/);
+  // Don't let people write to the collection, even in insecure
+  // mode. There's no good reason for people to be fishing around in this
+  // table, and it is _really_ insecure to allow it as users could easily
+  // steal sessions and impersonate other users. Users can override by
+  // calling more allows later, if they really want.
+  Meteor.accounts._srpChallenges.allow({});
+
+  // internal email validation tokens collection. Never published.
+  Meteor.accounts._emailValidationTokens = new Meteor.Collection(
+    "accounts._emailValidationTokens",
+    null /*manager*/,
+    null /*driver*/,
+    true /*preventAutopublish*/);
+  // also lock down email validation. These can be used to log in.
+  Meteor.accounts._emailValidationTokens.allow({});
+
 
   var selectorFromUserQuery = function (user) {
     if (!user)
