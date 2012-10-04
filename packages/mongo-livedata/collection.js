@@ -449,7 +449,10 @@ Meteor.Collection.prototype._validatedUpdate = function(
     throw new Meteor.Error(403, "Access denied");
   }
 
-  // construct new $in selector to replace the original one
+  // Construct new $in selector to augment the original one. This means we'll
+  // never update any doc we didn't validate. We keep around the original
+  // selector so that we don't mutate any docs that have been updated to no
+  // longer match the original selector.
   var idInClause = {};
   idInClause.$in = _.map(docs, function(doc) {
     return doc._id;
@@ -458,7 +461,7 @@ Meteor.Collection.prototype._validatedUpdate = function(
 
   self._collection.update.call(
     self._collection,
-    idSelector,
+    {$and: [selector, idSelector]},
     mutator,
     options);
 };
