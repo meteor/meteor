@@ -24,6 +24,36 @@ Template.api.startup = {
   ]
 };
 
+Template.api.absoluteUrl = {
+  id: "meteor_absoluteurl",
+  name: "Meteor.absoluteUrl([path], [options])",
+  locus: "Anywhere",
+  descr: ["Generate an absolute URL pointing to the application. The server "
+          + "reads from the `ROOT_URL` environment variable to determine "
+          + "where it is running. This is taken care of automatically for "
+          + "apps deployed with `meteor deploy`, but must be provided when "
+          + "using `meteor bundle`."],
+  args: [
+    {name: "path",
+     type: "String",
+     descr: 'A path to append to the root URL. Do not include a leading "`/`".'
+    }
+  ],
+  options: [
+    {name: "secure",
+     type: "Boolean",
+     descr: "Create an HTTPS URL."
+    },
+    {name: "replaceLocalhost",
+     type: "Boolean",
+     descr: "Replace localhost with 127.0.0.1. Useful for services that don't recognize localhost as a domain name."},
+    {name: "rootUrl",
+     type: "String",
+     descr: "Override the default ROOT_URL from the server environment. For example: \"`http://foo.example.com`\""
+    }
+  ]
+};
+
 Template.api.publish = {
   id: "meteor_publish",
   name: "Meteor.publish(name, func)",
@@ -696,7 +726,7 @@ Template.api.set = {
      type: "String",
      descr: "The key to set, eg, `selectedItem`"},
     {name: "value",
-     type: "Any type",
+     type: "String, Number, Boolean, null, or undefined",
      descr: "The new value for `key`"}
   ]
 };

@@ -282,7 +282,9 @@ _.extend(TestManager.prototype, {
   addCase: function (test) {
     var self = this;
     if (test.name in self.tests)
-      throw new Error("Every test needs a unique name, but there are two tests named '" + name + "'");
+      throw new Error(
+        "Every test needs a unique name, but there are two tests named '" +
+          test.name + "'");
     self.tests[test.name] = test;
     self.ordered_tests.push(test);
   },

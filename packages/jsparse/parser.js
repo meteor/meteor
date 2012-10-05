@@ -34,6 +34,10 @@ JSParser = function (code, options) {
   this.newToken = null;
   this.pos = 0;
   this.isLineTerminatorHere = false;
+  this.includeComments = false;
+  // the last COMMENT lexeme between oldToken and newToken
+  // that we've consumed, if any.
+  this.lastCommentConsumed = null;
 
   options = options || {};
   // pass {tokens:'strings'} to get strings for
@@ -48,7 +52,13 @@ JSParser = function (code, options) {
     };
   }
 
-  this.consumeNewToken();
+  // pass {includeComments: true} to include comments in the AST.  For
+  // a comment to be included, it must occur where a series of
+  // statements could occur, and it must be preceded by only comments
+  // and whitespace on the same line.
+  if (options.includeComments) {
+    this.includeComments = true;
+  }
 };
 
 JSParser.prototype.consumeNewToken = function () {
@@ -71,6 +81,7 @@ JSParser.prototype.consumeNewToken = function () {
   } while (! lex.isEOF() && ! lex.isToken());
   self.newToken = lex;
   self.pos = lex.startPos();
+  self.lastCommentConsumed = null;
 };
 
 JSParser.prototype.getParseError = function (expecting, found) {
@@ -86,12 +97,14 @@ JSParser.prototype.getParseError = function (expecting, found) {
 JSParser.prototype.getSyntaxTree = function () {
   var self = this;
 
+  self.consumeNewToken();
+
   var NIL = new ParseNode('nil', []);
 
   var booleanFlaggedParser = function (parserConstructFunc) {
     return {
-      false: parserConstructFunc(false),
-      true: parserConstructFunc(true)
+      'false': parserConstructFunc(false),
+      'true': parserConstructFunc(true)
     };
   };
 
@@ -458,7 +471,49 @@ JSParser.prototype.getSyntaxTree = function () {
 
   // STATEMENTS
 
-  var statements = list(statement);
+  var comment = node('comment', new Parser(null, function (t) {
+    if (! t.includeComments)
+      return null;
+
+    // Match a COMMENT lexeme between oldToken and newToken.
+    //
+    // This is an unusual Parser because it doesn't match and consume
+    // newToken, but instead uses the next()/prev() API on lexemes.
+    // It assumes it can walk the linked list backwards from newToken
+    // (though not necessarily forwards).
+    //
+    // We start at the last comment we've visited for this
+    // oldToken/newToken pair, if any, or else oldToken, or else the
+    // beginning of the token stream.  We ignore comments that are
+    // preceded by any non-comment source code on the same line.
+    var lexeme = (t.lastCommentConsumed || t.oldToken || null);
+    if (! lexeme) {
+      // no oldToken, must be on first token.  walk backwards
+      // to start with first lexeme (which may be a comment
+      // or whitespace)
+      lexeme = t.newToken;
+      while (lexeme.prev())
+        lexeme = lexeme.prev();
+    } else {
+      // start with lexeme after last token or comment consumed
+      lexeme = lexeme.next();
+    }
+    var seenNewline = ((! t.oldToken) || t.lastCommentConsumed || false);
+    while (lexeme !== t.newToken) {
+      var type = lexeme.type();
+      if (type === "NEWLINE") {
+        seenNewline = true;
+      } else if (type === "COMMENT") {
+        t.lastCommentConsumed = lexeme;
+        if (seenNewline)
+          return lexeme;
+      }
+      lexeme = lexeme.next();
+    }
+    return null;
+  }));
+
+  var statements = list(or(comment, statement));
 
   // implements JavaScript's semicolon "insertion" rules
   var maybeSemicolon = expecting(
@@ -743,8 +798,11 @@ JSParser.prototype.getSyntaxTree = function () {
   var functionDecl = node(
     'functionDecl', functionMaybeNameRequired[true]);
 
-  var sourceElement = or(functionDecl, statement);
-  var sourceElements = list(sourceElement);
+  // Look for statement before functionDecl, to catch comments in
+  // includeComments mode.  A statement can't start with 'function'
+  // anyway, so the order doesn't matter otherwise.
+  var sourceElement = or(statement, functionDecl);
+  var sourceElements = list(or(comment, sourceElement));
 
   functionBody = expecting(
     'functionBody', or(lookAheadToken('}'), sourceElements));

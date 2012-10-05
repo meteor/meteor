@@ -5,7 +5,7 @@
 Meteor._FailureTestCollection =
   new Meteor.Collection("___meteor_failure_test_collection");
 
-testAsyncMulti("mongo-livedata - database failure reporting", [
+testAsyncMulti("mongo-livedata - database error reporting", [
   function (test, expect) {
     var ftc = Meteor._FailureTestCollection;
 

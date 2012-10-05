@@ -1,4 +1,8 @@
 
+(function() {
+
+var parserTestOptions = { includeComments: true };
+
 var allNodeNames = [
   ";",
   "array",
@@ -12,6 +16,7 @@ var allNodeNames = [
   "case",
   "catch",
   "comma",
+  "comment",
   "continueStmnt",
   "debuggerStmnt",
   "default",
@@ -81,7 +86,7 @@ var makeTester = function (test) {
           lexer.divisionPermitted = false;
       }
 
-      var parser = new JSParser(code);
+      var parser = new JSParser(code, parserTestOptions);
       var actualTree = parser.getSyntaxTree();
 
       var nextTokenIndex = 0;
@@ -97,16 +102,21 @@ var makeTester = function (test) {
                    typeof tree.text === 'function') {
           // This is a TOKEN (terminal).
           // Make sure we are visiting every token once, in order.
-          if (nextTokenIndex >= allTokensInOrder.length)
-            test.fail("Too many tokens: " + (nextTokenIndex + 1));
-          var referenceToken = allTokensInOrder[nextTokenIndex++];
-          if (tree.text() !== referenceToken.text())
-            test.fail(tree.text() + " !== " + referenceToken.text());
-          if (tree.startPos() !== referenceToken.startPos())
-            test.fail(tree.startPos() + " !== " + referenceToken.startPos());
-          if (code.substring(tree.startPos(), tree.endPos()) !== tree.text())
-            test.fail("Didn't see " + tree.text() + " at " + tree.startPos() +
-                      " in " + code);
+          // Make an exception for any comment lexemes present,
+          // because we couldn't know whether to include them in
+          // allTokensInOrder.
+          if (tree.type() !== "COMMENT") {
+            if (nextTokenIndex >= allTokensInOrder.length)
+              test.fail("Too many tokens: " + (nextTokenIndex + 1));
+            var referenceToken = allTokensInOrder[nextTokenIndex++];
+            if (tree.text() !== referenceToken.text())
+              test.fail(tree.text() + " !== " + referenceToken.text());
+            if (tree.startPos() !== referenceToken.startPos())
+              test.fail(tree.startPos() + " !== " + referenceToken.startPos());
+            if (code.substring(tree.startPos(), tree.endPos()) !== tree.text())
+              test.fail("Didn't see " + tree.text() + " at " + tree.startPos() +
+                        " in " + code);
+          }
         } else {
           test.fail("Unknown tree part: " + tree);
         }
@@ -140,7 +150,7 @@ var makeTester = function (test) {
       var parsed = false;
       var error = null;
       try {
-        var tree = new JSParser(code).getSyntaxTree();
+        var tree = new JSParser(code, parserTestOptions).getSyntaxTree();
         parsed = true;
       } catch (e) {
         error = e;
@@ -177,7 +187,7 @@ var makeTester = function (test) {
 
       var parsed = false;
       var error = null;
-      var parser = new JSParser(code);
+      var parser = new JSParser(code, parserTestOptions);
       try {
         var tree = parser.getSyntaxTree();
         parsed = true;
@@ -501,7 +511,45 @@ Tinytest.add("jsparse - syntax forms", function (test) {
      "assignment(identifier(i) &= assignment(identifier(j) ^= " +
      "assignment(identifier(k) |= identifier(l)))))))))))) ;()))"],
     ["1;\n\n\n\n/* foo */\n// bar\n", // trailing whitespace and comments
-     "program(expressionStmnt(number(1) ;))"]
+     "program(expressionStmnt(number(1) ;) comment(`/* foo */`) comment(`// bar`))"],
+    // includeComments option; comments in AST
+    ["//foo",
+     "program(comment(//foo))"],
+    ["//foo\n",
+     "program(comment(//foo))"],
+    ["/*foo*/",
+     "program(comment(/*foo*/))"],
+    ["/*foo*/\n",
+     "program(comment(/*foo*/))"],
+    [";\n//foo",
+     "program(emptyStmnt(;) comment(//foo))"],
+    [";\n/*foo*/",
+     "program(emptyStmnt(;) comment(/*foo*/))"],
+    [";\n//foo\n;",
+     "program(emptyStmnt(;) comment(//foo) emptyStmnt(;))"],
+    [";\n/*foo*/\n;",
+     "program(emptyStmnt(;) comment(/*foo*/) emptyStmnt(;))"],
+    [";\n//foo\n//bar\n;",
+     "program(emptyStmnt(;) comment(//foo) comment(//bar) emptyStmnt(;))"],
+    [";\n/*foo*/ /*bar*/\n;",
+     "program(emptyStmnt(;) comment(/*foo*/) comment(/*bar*/) emptyStmnt(;))"],
+    [";//foo\n//bar\n;",
+     "program(emptyStmnt(;) comment(//bar) emptyStmnt(;))"],
+    [";/*foo*/\n/*bar*/\n;",
+     "program(emptyStmnt(;) comment(/*bar*/) emptyStmnt(;))"],
+    [";/*foo*//*bar*///baz\n;",
+     "program(emptyStmnt(;) emptyStmnt(;))"],
+    [";/*foo*//*bar*///baz",
+     "program(emptyStmnt(;))"],
+    ["/*foo*//*bar*///baz",
+     "program(comment(/*foo*/) comment(/*bar*/) comment(//baz))"],
+    ["//foo\n//bar\nfunction aaa() {}\nfunction bbb() {}",
+     "program(comment(//foo) comment(//bar) functionDecl(function aaa `(` `)` { }) " +
+     "functionDecl(function bbb `(` `)` { }))"],
+    // comments don't interfere with parse
+    ["if (true)\n//comment\nfoo();",
+     "program(ifStmnt(if `(` boolean(true) `)` " +
+     "expressionStmnt(call(identifier(foo) `(` `)`) ;)))"]
   ];
   _.each(trials, function (tr) {
     tester.goodParse(tr[0], tr[1]);
@@ -605,3 +653,22 @@ Tinytest.add("jsparse - comments", function (test) {
   tester.goodParse("1/*\n*/2",
                    "program(expressionStmnt(number(1) ;()) expressionStmnt(number(2) ;()))");
 });
+
+Tinytest.add("jsparse - initial lex error", function (test) {
+  var doTest = function (code) {
+    // this shouldn't throw
+    var parser = new JSParser(code, parserTestOptions);
+    // this should throw
+    try {
+      parser.getSyntaxTree();
+      test.fail();
+    } catch (e) {
+      test.isTrue(/^Bad token/.test(e.message), e.message);
+    }
+  };
+
+  doTest('/');
+  doTest('@');
+});
+
+})();

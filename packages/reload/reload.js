@@ -83,14 +83,20 @@
   // function. The retry function will return immediately, but will
   // schedule the migration to be retried, meaning that every package
   // will be polled once again for its migration data. If they are all
-  // ready this time, then the migration will happen.
-  Meteor._reload.on_migrate = function (name, callback) {
+  // ready this time, then the migration will happen. name must be set if there
+  // is migration data.
+  Meteor._reload.onMigrate = function (name, callback) {
+    if (!callback) {
+      // name not provided, so first arg is callback.
+      callback = name;
+      name = undefined;
+    }
     providers.push({name: name, callback: callback});
   };
 
   // Called by packages when they start up.
   // Returns the object that was saved, or undefined if none saved.
-  Meteor._reload.migration_data = function (name) {
+  Meteor._reload.migrationData = function (name) {
     return old_data[name];
   };
 
@@ -108,24 +114,24 @@
     var tryReload = function () { _.defer(function () {
       // Make sure each package is ready to go, and collect their
       // migration data
-      var migration_data = {};
+      var migrationData = {};
       var remaining = _.clone(providers);
       while (remaining.length) {
         var p = remaining.shift();
         var status = p.callback(tryReload);
         if (!status[0])
           return; // not ready yet..
-        if (status.length > 1)
-          migration_data[p.name] = status[1];
+        if (status.length > 1 && p.name)
+          migrationData[p.name] = status[1];
       };
 
       try {
         // Persist the migration data
         var json = JSON.stringify({
-          time: (new Date()).getTime(), data: migration_data, reload: true
+          time: (new Date()).getTime(), data: migrationData, reload: true
         });
       } catch (err) {
-        Meteor._debug("Couldn't serialize data for migration", migration_data);
+        Meteor._debug("Couldn't serialize data for migration", migrationData);
         throw err;
       }
 
