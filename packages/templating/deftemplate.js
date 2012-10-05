@@ -146,7 +146,7 @@
           // for Spark, by inserting logic to create the template object.
           var wrapEventMap = function (oldEventMap) {
             var newEventMap = {};
-            _.each(oldEventMap, function (handler, key) {
+            _.each((oldEventMap || []), function (handler, key) {
               newEventMap[key] = function (event, landmark) {
                 return handler.call(this, event,
                                     templateObjFromLandmark(landmark));
