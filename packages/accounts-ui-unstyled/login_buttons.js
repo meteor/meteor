@@ -66,6 +66,19 @@
       });
     },
 
+    'click #login-buttons-Github': function () {
+      resetMessages();
+      Meteor.loginWithGithub(function (e) {
+        if (!e || e instanceof Accounts.LoginCancelledError) {
+          // do nothing
+        } else if (e instanceof Accounts.ConfigError) {
+          configureService("Github");
+        } else {
+          Session.set(ERROR_MESSAGE_KEY, e.reason || "Unknown error");
+        }
+      });
+    },
+
     'click #login-buttons-Weibo': function () {
       resetMessages();
       Meteor.loginWithWeibo(function (e) {
@@ -674,6 +687,8 @@
       ret.push({name: 'Weibo'});
     if (Accounts.twitter)
       ret.push({name: 'Twitter'});
+    if (Accounts.github)
+      ret.push({name: 'Github'});
 
     // make sure to put accounts last, since this is the order in the
     // ui as well
