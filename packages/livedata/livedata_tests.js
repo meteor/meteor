@@ -375,7 +375,7 @@ testAsyncMulti("livedata - changing userid reruns subscriptions without flapping
   }
 ]);
 
-Tinytest.add("livedata - setUserId fails when called from server", function(test) {
+Tinytest.add("livedata - setUserId error when called from server", function(test) {
   if (Meteor.isServer) {
     test.equal(errorThrownWhenCallingSetUserIdDirectlyOnServer.message,
                "Can't call setUserId on a server initiated method call");
