@@ -2,10 +2,7 @@
 
   // internal email validation tokens collection. Never published.
   Accounts._emailValidationTokens = new Meteor.Collection(
-    "accounts._emailValidationTokens",
-    null /*manager*/,
-    null /*driver*/,
-    true /*preventAutopublish*/);
+    "accounts._emailValidationTokens", {_preventAutopublish: true});
   // also lock down email validation. These can be used to log in.
   Accounts._emailValidationTokens.allow({});
 

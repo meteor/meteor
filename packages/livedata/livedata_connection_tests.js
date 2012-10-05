@@ -44,6 +44,8 @@ Tinytest.add("livedata stub - receive data", function (test) {
   // break throught the black box and test internal state
   test.length(conn.queued[coll_name], 1);
 
+  // XXX: Test that the old signature of passing manager directly instead of in
+  // options works.
   var coll = new Meteor.Collection(coll_name, conn);
 
   // queue has been emptied and doc is in db.
@@ -116,7 +118,7 @@ Tinytest.add("livedata stub - methods", function (test) {
   startAndConnect(test, stream);
 
   var coll_name = Meteor.uuid();
-  var coll = new Meteor.Collection(coll_name, conn);
+  var coll = new Meteor.Collection(coll_name, {manager: conn});
 
   // setup method
   conn.methods({do_something: function (x) {
@@ -209,7 +211,7 @@ Tinytest.add("livedata stub - sub methods", function (test) {
   startAndConnect(test, stream);
 
   var coll_name = Meteor.uuid();
-  var coll = new Meteor.Collection(coll_name, conn);
+  var coll = new Meteor.Collection(coll_name, {manager: conn});
 
   // setup methods
   conn.methods({
@@ -279,7 +281,7 @@ Tinytest.add("livedata stub - reconnect", function (test) {
   startAndConnect(test, stream);
 
   var coll_name = Meteor.uuid();
-  var coll = new Meteor.Collection(coll_name, conn);
+  var coll = new Meteor.Collection(coll_name, {manager: conn});
 
   // setup observers
   var counts = {added: 0, removed: 0, changed: 0, moved: 0};

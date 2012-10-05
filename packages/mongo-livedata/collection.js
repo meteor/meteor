@@ -1,8 +1,19 @@
 // manager, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
-// XXX probably a good idea to change these arguments to be an options map
-Meteor.Collection = function (name, manager, driver, preventAutopublish) {
+Meteor.Collection = function (name, options) {
   var self = this;
+  if (options && options.methods) {
+    // Backwards compatibility hack with original signature (which passed
+    // "manager" directly instead of in options. (Managers must have a "methods"
+    // method.)
+    // XXX remove before 1.0
+    options = {manager: options};
+  }
+  options = _.extend({
+    manager: undefined,
+    _driver: undefined,
+    _preventAutopublish: false
+  }, options);
 
   if (!name && (name !== null)) {
     Meteor._debug("Warning: creating anonymous collection. It will not be " +
@@ -11,29 +22,27 @@ Meteor.Collection = function (name, manager, driver, preventAutopublish) {
   }
 
   // note: nameless collections never have a manager
-  manager = name && (manager ||
-                     (Meteor.isClient ?
-                      Meteor.default_connection : Meteor.default_server));
+  self._manager = name && (options.manager ||
+                           (Meteor.isClient ?
+                            Meteor.default_connection : Meteor.default_server));
 
-  if (!driver) {
-    if (name && manager === Meteor.default_server &&
+  if (!options._driver) {
+    if (name && self._manager === Meteor.default_server &&
         Meteor._RemoteCollectionDriver)
-      driver = Meteor._RemoteCollectionDriver;
+      options._driver = Meteor._RemoteCollectionDriver;
     else
-      driver = Meteor._LocalCollectionDriver;
+      options._driver = Meteor._LocalCollectionDriver;
   }
 
-  self._manager = manager;
-  self._driver = driver;
-  self._collection = driver.open(name);
+  self._collection = options._driver.open(name);
   self._was_snapshot = false;
   self._name = name;
 
-  if (name && manager.registerStore) {
+  if (name && self._manager.registerStore) {
     // OK, we're going to be a slave, replicating some remote
     // database, except possibly with some temporary divergence while
     // we have unacknowledged RPC's.
-    var ok = manager.registerStore(name, {
+    var ok = self._manager.registerStore(name, {
       // Called at the beginning of a batch of updates. We're supposed to start
       // by backing out any local writes and returning to the last state
       // delivered by the server. batchSize is the number of update calls to
@@ -95,10 +104,11 @@ Meteor.Collection = function (name, manager, driver, preventAutopublish) {
   self._defineMutationMethods();
 
   // autopublish
-  if (!preventAutopublish && manager && manager.onAutopublish)
-    manager.onAutopublish(function () {
+  if (!options._preventAutopublish &&
+      self._manager && self._manager.onAutopublish)
+    self._manager.onAutopublish(function () {
       var handler = function () { return self.find(); };
-      manager.publish(null, handler, {is_auto: true});
+      self._manager.publish(null, handler, {is_auto: true});
     });
 };
 
