@@ -1,1 +1,1 @@
-Accounts.passwords = {};
+Accounts.password = {};

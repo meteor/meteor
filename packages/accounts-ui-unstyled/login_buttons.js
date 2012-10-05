@@ -4,8 +4,12 @@
   //
 
   var DROPDOWN_VISIBLE_KEY = 'Meteor.loginButtons.dropdownVisible';
+
+  // XXX consider replacing these with one key that has an enum for values.
   var IN_SIGNUP_FLOW_KEY = 'Meteor.loginButtons.inSignupFlow';
   var IN_FORGOT_PASSWORD_FLOW_KEY = 'Meteor.loginButtons.inForgotPasswordFlow';
+  var IN_CHANGE_PASSWORD_FLOW_KEY = 'Meteor.loginButtons.inChangePasswordFlow';
+
   var ERROR_MESSAGE_KEY = 'Meteor.loginButtons.errorMessage';
   var INFO_MESSAGE_KEY = 'Meteor.loginButtons.infoMessage';
   var RESET_PASSWORD_TOKEN_KEY = 'Meteor.loginButtons.resetPasswordToken';
@@ -19,6 +23,7 @@
   var resetSession = function () {
     Session.set(IN_SIGNUP_FLOW_KEY, false);
     Session.set(IN_FORGOT_PASSWORD_FLOW_KEY, false);
+    Session.set(IN_CHANGE_PASSWORD_FLOW_KEY, false);
     Session.set(DROPDOWN_VISIBLE_KEY, false);
     resetMessages();
   };
@@ -40,62 +45,58 @@
   };
 
   Template.loginButtons.events = {
-    'click #login-buttons-Facebook': function () {
+    'click #login-buttons-facebook': function () {
       resetMessages();
-      Meteor.loginWithFacebook(function (e) {
-        if (!e || e instanceof Accounts.LoginCancelledError) {
-          // do nothing
-        } else if (e instanceof Accounts.ConfigError) {
-          configureService("Facebook"); // XXX refactor "Facebook" -> "facebook"
-        } else {
-          Session.set(ERROR_MESSAGE_KEY, e.reason || "Unknown error");
-        }
-      });
+      Meteor.loginWithFacebook(makeLoginCallback('facebook'));
     },
 
-    'click #login-buttons-Google': function () {
+    'click #login-buttons-google': function () {
       resetMessages();
-      Meteor.loginWithGoogle(function (e) {
-        if (!e || e instanceof Accounts.LoginCancelledError) {
-          // do nothing
-        } else if (e instanceof Accounts.ConfigError) {
-          configureService("Google");
-        } else {
-          Session.set(ERROR_MESSAGE_KEY, e.reason || "Unknown error");
-        }
-      });
+      Meteor.loginWithGoogle(makeLoginCallback('google'));
     },
 
-    'click #login-buttons-Weibo': function () {
+    'click #login-buttons-weibo': function () {
       resetMessages();
-      Meteor.loginWithWeibo(function (e) {
-        if (!e || e instanceof Accounts.LoginCancelledError) {
-          // do nothing
-        } else if (e instanceof Accounts.ConfigError) {
-          configureService("Weibo");
-        } else {
-          Session.set(ERROR_MESSAGE_KEY, e.reason || "Unknown error");
-        }
-      });
+      Meteor.loginWithWeibo(makeLoginCallback('weibo'));
     },
 
-    'click #login-buttons-Twitter': function () {
+    'click #login-buttons-twitter': function () {
       resetMessages();
-      Meteor.loginWithTwitter(function (e) {
-        if (!e || e instanceof Accounts.LoginCancelledError) {
-          // do nothing
-        } else if (e instanceof Accounts.ConfigError) {
-          configureService("Twitter");
-        } else {
-          Session.set(ERROR_MESSAGE_KEY, e.reason || "Unknown error");
-        }
-      });
+      Meteor.loginWithTwitter(makeLoginCallback('twitter'));
+    },
+
+    'click #login-name-link': function () {
+      Session.set(DROPDOWN_VISIBLE_KEY, true);
+      Meteor.flush();
+      correctDropdownZIndexes();
+    },
+
+    'click .login-close-text': function () {
+      resetSession();
+    },
+
+    'click #login-buttons-open-change-password': function() {
+      resetMessages();
+      Session.set(IN_CHANGE_PASSWORD_FLOW_KEY, true);
     },
 
     'click #login-buttons-logout': function() {
-      Meteor.logout();
-      resetSession();
+      Meteor.logout(resetSession);
     }
+  };
+
+  var makeLoginCallback = function(service) {
+    return function (e) {
+      if (!e) {
+        resetSession();
+      } else if (e instanceof Accounts.LoginCancelledError) {
+        // do nothing
+      } else if (e instanceof Accounts.ConfigError) {
+        configureService(service);
+      } else {
+        Session.set(ERROR_MESSAGE_KEY, e.reason || "Unknown error");
+      }
+    };
   };
 
   // decide whether we should show a dropdown rather than a row of
@@ -104,7 +105,7 @@
     var services = getLoginServices();
 
     var hasPasswordService = _.any(services, function (service) {
-      return service.name === 'Password';
+      return service.name === 'password';
     });
 
     return hasPasswordService || services.length > 1;
@@ -118,19 +119,39 @@
     return Accounts.loginServicesConfigured();
   };
 
-  Template.loginButtons.displayName = function () {
+
+  //
+  // loginButtonsLoggedInRow template
+  //
+  Template.loginButtonsLoggedInRow.displayName = function () {
+    return displayName();
+  };
+
+
+  //
+  // loginButtonsLoggedInDropdown template
+  //
+
+  Template.loginButtonsLoggedInDropdown.displayName = function () {
+    return displayName();
+  };
+
+  Template.loginButtonsLoggedInDropdown.inChangePasswordFlow = function () {
+    return Session.get(IN_CHANGE_PASSWORD_FLOW_KEY);
+  };
+
+  Template.loginButtonsLoggedInDropdown.dropdownVisible = function () {
+    return Session.get(DROPDOWN_VISIBLE_KEY);
+  };
+
+  Template.loginButtonsLoggedInDropdown.allowChangingPassword = function () {
+    // it would be more correct to check whether the user has a password set,
+    // but in order to do that we'd have to send more data down to the client,
+    // and it'd be preferable not to send down the entire service.password document.
+    //
+    // instead we use the heuristic: if the user has a username or email set.
     var user = Meteor.user();
-    if (!user)
-      return '';
-
-    if (user.profile && user.profile.name)
-      return user.profile.name;
-    if (user.username)
-      return user.username;
-    if (user.emails && user.emails[0] && user.emails[0].address)
-      return user.emails[0].address;
-
-    return '';
+    return user.username || (user.emails && user.emails[0] && user.emails[0].address);
   };
 
 
@@ -262,7 +283,7 @@
   };
 
   Template.loginButtonsServicesRow.isPasswordService = function () {
-    return this.name === 'Password';
+    return this.name === 'password';
   };
 
   Template.loginButtonsServicesRow.hasOtherServices = function () {
@@ -288,6 +309,10 @@
 
   Template.loginButtonsServicesRow.configured = function () {
     return !!Accounts.configuration.findOne({service: this.name.toLowerCase()});
+  };
+
+  Template.loginButtonsServicesRow.capitalizedName = function () {
+    return capitalize(this.name);
   };
 
 
@@ -339,23 +364,10 @@
   //
 
   Template.loginButtonsServicesDropdown.events = {
-    'click .login-link-text': function () {
+    'click #login-sign-in-link': function () {
       Session.set(DROPDOWN_VISIBLE_KEY, true);
-      // IE <= 7 has a z-index bug that means we can't just give the
-      // dropdown a z-index and expect it to stack above the rest of
-      // the page even if nothing else has a z-index.  The nature of
-      // the bug is that all positioned elements are considered to
-      // have z-index:0 (not auto) and therefore start new stacking
-      // contexts, with ties broken by page order.
-      //
-      // The fix, then is to give z-index:1 to all ancestors
-      // of the dropdown having z-index:0.
       Meteor.flush();
-      for(var n = document.getElementById('login-dropdown-list').parentNode;
-          n.nodeName !== 'BODY';
-          n = n.parentNode)
-        if (n.style.zIndex === 0)
-          n.style.zIndex = 1;
+      correctDropdownZIndexes();
     },
     'click .login-close-text': function () {
       resetSession();
@@ -487,6 +499,40 @@
   });
 
   //
+  // loginButtonsChangePassword template
+  //
+
+  Template.loginButtonsChangePassword.events({
+    'keypress #login-old-password, keypress #login-password, keypress #login-password-again': function (event) {
+      if (event.keyCode === 13)
+        changePassword();
+    },
+    'click #login-buttons-do-change-password': function () {
+      changePassword();
+    }
+  });
+
+  Template.loginButtonsChangePassword.fields = function () {
+    return [
+      {fieldName: 'old-password', fieldLabel: 'Current Password', inputType: 'password',
+       visible: function () {
+         return true;
+       }},
+      {fieldName: 'password', fieldLabel: 'New Password', inputType: 'password',
+       visible: function () {
+         return true;
+       }},
+      {fieldName: 'password-again', fieldLabel: 'New Password (again)',
+       inputType: 'password',
+       visible: function () {
+         return Meteor.accounts._options.requireUsername
+           && !Meteor.accounts._options.requireEmail;
+       }}
+    ];
+  };
+
+
+  //
   // configureLoginServicesDialog template
   //
 
@@ -497,7 +543,7 @@
     'click #configure-login-services-dialog-save-configuration': function () {
       if (Session.get(CONFIGURE_LOGIN_SERVICES_DIALOG_SAVE_ENABLED)) {
         // Prepare the configuration document for this login service
-        var serviceName = Session.get(CONFIGURE_LOGIN_SERVICES_DIALOG_SERVICE_NAME).toLowerCase();
+        var serviceName = Session.get(CONFIGURE_LOGIN_SERVICES_DIALOG_SERVICE_NAME);
         var configuration = {
           service: serviceName
         };
@@ -548,7 +594,7 @@
   // template should be defined in the service's package
   var configureLoginServicesDialogTemplateForService = function () {
     var serviceName = Session.get(CONFIGURE_LOGIN_SERVICES_DIALOG_SERVICE_NAME);
-    return Template['configureLoginServicesDialogFor' + serviceName];
+    return Template['configureLoginServicesDialogFor' + capitalize(serviceName)];
   };
 
   var configurationFields = function () {
@@ -576,6 +622,21 @@
   //
   // helpers
   //
+
+  var displayName = function () {
+    var user = Meteor.user();
+    if (!user)
+      return '';
+
+    if (user.profile && user.profile.name)
+      return user.profile.name;
+    if (user.username)
+      return user.username;
+    if (user.emails && user.emails[0] && user.emails[0].address)
+      return user.emails[0].address;
+
+    return '';
+  };
 
   var elementValueById = function(id) {
     var element = document.getElementById(id);
@@ -606,6 +667,8 @@
     Meteor.loginWithPassword(loginSelector, password, function (error, result) {
       if (error) {
         Session.set(ERROR_MESSAGE_KEY, error.reason || "Unknown error");
+      } else {
+        resetSession();
       }
     });
   };
@@ -637,13 +700,8 @@
     else
       options.password = password;
 
-    var passwordAgain = elementValueById('login-password-again');
-    if (passwordAgain !== null) {
-      if (password !== passwordAgain) {
-        Session.set(ERROR_MESSAGE_KEY, "Passwords don't match");
-        return;
-      }
-    }
+    if (!matchPasswordAgainIfPresent())
+      return;
 
     if (Accounts._options.validateEmails)
       options.validation = true;
@@ -651,6 +709,8 @@
     Accounts.createUser(options, function (error) {
       if (error) {
         Session.set(ERROR_MESSAGE_KEY, error.reason || "Unknown error");
+      } else {
+        resetSession();
       }
     });
   };
@@ -662,23 +722,66 @@
       login();
   };
 
+  var changePassword = function () {
+    resetMessages();
+
+    var oldPassword = elementValueById('login-old-password');
+
+    var password = elementValueById('login-password');
+    if (!validatePassword(password))
+      return;
+
+    if (!matchPasswordAgainIfPresent())
+      return;
+
+    Accounts.changePassword(oldPassword, password, function (error) {
+      if (error) {
+        Session.set(ERROR_MESSAGE_KEY, error.reason || "Unknown error");
+      } else {
+        Session.set(INFO_MESSAGE_KEY, "Password changed");
+      }
+    });
+  };
+
+  var matchPasswordAgainIfPresent = function () {
+    var passwordAgain = elementValueById('login-password-again');
+    if (passwordAgain !== null) {
+      var password = elementValueById('login-password');
+      if (password !== passwordAgain) {
+        Session.set(ERROR_MESSAGE_KEY, "Passwords don't match");
+        return false;
+      }
+    }
+    return true;
+  };
+
+  var correctDropdownZIndexes = function () {
+    // IE <= 7 has a z-index bug that means we can't just give the
+    // dropdown a z-index and expect it to stack above the rest of
+    // the page even if nothing else has a z-index.  The nature of
+    // the bug is that all positioned elements are considered to
+    // have z-index:0 (not auto) and therefore start new stacking
+    // contexts, with ties broken by page order.
+    //
+    // The fix, then is to give z-index:1 to all ancestors
+    // of the dropdown having z-index:0.
+    for(var n = document.getElementById('login-dropdown-list').parentNode;
+        n.nodeName !== 'BODY';
+        n = n.parentNode)
+      if (n.style.zIndex === 0)
+        n.style.zIndex = 1;
+  };
+
   var getLoginServices = function () {
     var ret = [];
-    // XXX It would be nice if there were an automated way to read the
-    // list of services, such as _.each(Accounts.services, ...)
-    if (Accounts.facebook)
-      ret.push({name: 'Facebook'});
-    if (Accounts.google)
-      ret.push({name: 'Google'});
-    if (Accounts.weibo)
-      ret.push({name: 'Weibo'});
-    if (Accounts.twitter)
-      ret.push({name: 'Twitter'});
-
-    // make sure to put accounts last, since this is the order in the
-    // ui as well
-    if (Accounts.passwords)
-      ret.push({name: 'Password'});
+    // make sure to put password last, since this is how it is styled
+    // in the ui as well.
+    _.each(
+      ['facebook', 'google', 'weibo', 'twitter', 'password'],
+      function (service) {
+        if (Accounts[service])
+          ret.push({name: service});
+      });
 
     return ret;
   };
@@ -711,6 +814,12 @@
       Session.set(ERROR_MESSAGE_KEY, "Password must be at least 6 characters long");
       return false;
     }
+  };
+
+  // XXX from http://epeli.github.com/underscore.string/lib/underscore.string.js
+  var capitalize = function(str){
+    str = str == null ? '' : String(str);
+    return str.charAt(0).toUpperCase() + str.slice(1);
   };
 })();
 

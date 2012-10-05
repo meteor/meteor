@@ -1,14 +1,11 @@
 <template name="loginButtons">
   <div id="login-buttons">
     {{#if currentUser}}
-      <div class="login-header">
-        {{#if currentUser.loading}}
-        <div class="loading"></div>
-        {{else}}
-        {{displayName}}
-        {{/if}}
-      </div>
-      <div class="login-button" id="login-buttons-logout">Logout</div>
+      {{#if dropdown}}
+        {{> loginButtonsLoggedInDropdown}}
+      {{else}}
+        {{> loginButtonsLoggedInRow}}
+      {{/if}}
     {{else}}
       {{#if services}}
         {{#if configurationLoaded}}
@@ -23,6 +20,44 @@
       {{/if}}
     {{/if}}
   </div>
+</template>
+
+<template name="loginButtonsLoggedInDropdown">
+  <div class="login-link-and-dropdown-list">
+    {{#if currentUser.loading}}
+    <div class="loading"></div>
+    {{else}}
+    <a class="login-link-text" id="login-name-link">
+      {{displayName}} ▾
+    </a>
+    {{#if dropdownVisible}}
+    <div id="login-dropdown-list" class="accounts-dialog">
+      <a class="login-close-text">Close</a>
+      <div class="login-close-text-clear"></div>
+
+      {{#if inChangePasswordFlow}}
+      {{> loginButtonsChangePassword}}
+      {{else}}
+      {{#if allowChangingPassword}}
+      <div class="login-button" id="login-buttons-open-change-password">Change password</div>
+      {{/if}}
+      <div class="login-button" id="login-buttons-logout">Logout</div>
+      {{/if}}
+    </div>
+    {{/if}}
+    {{/if}}
+  </div>
+</template>
+
+<template name="loginButtonsLoggedInRow">
+  <div class="login-header">
+    {{#if currentUser.loading}}
+    <div class="loading"></div>
+    {{else}}
+    {{displayName}}
+    {{/if}}
+  </div>
+  <div class="login-button" id="login-buttons-logout">Logout</div>
 </template>
 
 <template name="loginButtonsServicesRow">
@@ -70,12 +105,12 @@
       {{#if configured}}
         <div class="login-button" id="login-buttons-{{name}}">
           <div class="login-image" id="login-buttons-image-{{name}}"></div>
-          Sign in with {{name}}
+          Sign in with {{capitalizedName}}
         </div>
       {{else}}
         <div class="login-button configure-button" id="login-buttons-{{name}}">
           <div class="login-image" id="login-buttons-image-{{name}}"></div>
-          Configure {{name}} Login
+          Configure {{capitalizedName}} Login
         </div>
       {{/if}}
     {{/if}}
@@ -100,7 +135,7 @@
 
 <template name="loginButtonsServicesDropdown">
   <div class="login-link-and-dropdown-list">
-    <a class="login-link-text">Sign in</a>
+    <a class="login-link-text" id="login-sign-in-link">Sign in ▾</a>
     {{#if dropdownVisible}}
     <div id="login-dropdown-list" class="accounts-dialog">
       <a class="login-close-text">Close</a>
@@ -121,6 +156,18 @@
     <div class="login-button login-button-form-submit" id="login-buttons-forgot-password">
       Reset password
     </div>
+  </div>
+</template>
+
+<template name="loginButtonsChangePassword">
+  {{#each fields}}
+  {{> loginButtonsFormField}}
+  {{/each}}
+
+  {{> loginButtonsMessages}}
+
+  <div class="login-button login-button-form-submit" id="login-buttons-do-change-password">
+    Change password
   </div>
 </template>
 
