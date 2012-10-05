@@ -12,8 +12,16 @@ Meteor._capture_subs = null;
 
 // @param url {String|Object} URL to Meteor app or sockjs endpoint (deprecated),
 //     or an object as a test hook (see code)
-Meteor._LivedataConnection = function (url, restart_on_update) {
+// Options:
+//   reloadOnUpdate: should we try to reload when the server says
+//                      there's new code available?
+//   reloadWithOutstanding: is it OK to reload if there are outstanding methods?
+Meteor._LivedataConnection = function (url, options) {
   var self = this;
+  options = _.extend({
+    reloadOnUpdate: false,
+    reloadWithOutstanding: false
+  }, options);
 
   // as a test hook, allow passing a stream instead of a url.
   if (typeof url === "object") {
@@ -70,18 +78,19 @@ Meteor._LivedataConnection = function (url, restart_on_update) {
   // just for testing
   self.quiesce_callbacks = [];
 
-
-  // Setup auto-reload persistence.
-  Meteor._reload.onMigrate(function (retry) {
-    if (!self._readyToMigrate()) {
-      if (self._retryMigrate)
-        throw new Error("Two migrations in progress?");
-      self._retryMigrate = retry;
-      return false;
-    } else {
-      return [true];
-    }
-  });
+  // Block auto-reload while we're waiting for method responses.
+  if (!options.reloadWithOutstanding) {
+    Meteor._reload.onMigrate(function (retry) {
+      if (!self._readyToMigrate()) {
+        if (self._retryMigrate)
+          throw new Error("Two migrations in progress?");
+        self._retryMigrate = retry;
+        return false;
+      } else {
+        return [true];
+      }
+    });
+  }
 
   // Setup stream (if not overriden above)
   self.stream = self.stream || new Meteor._Stream(self.url);
@@ -151,7 +160,7 @@ Meteor._LivedataConnection = function (url, restart_on_update) {
     });
   });
 
-  if (restart_on_update) {
+  if (options.reloadOnUpdate) {
     self.stream.on('update_available', function () {
       // Start trying to migrate to a new version. Until all packages
       // signal that they're ready for a migration, the app will
@@ -775,8 +784,9 @@ _.extend(Meteor, {
   //     "/",
   //     "http://subdomain.meteor.com/sockjs" (deprecated),
   //     "/sockjs" (deprecated)
-  connect: function (url, _restartOnUpdate) {
-    var ret = new Meteor._LivedataConnection(url, _restartOnUpdate);
+  connect: function (url, _reloadOnUpdate) {
+    var ret = new Meteor._LivedataConnection(
+      url, {reloadOnUpdate: _reloadOnUpdate});
     Meteor._LivedataConnection._allConnections.push(ret); // hack. see below.
     return ret;
   },
