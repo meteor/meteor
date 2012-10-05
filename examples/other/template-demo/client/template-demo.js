@@ -201,6 +201,9 @@ Template.circles.events({
         }
       });
     });
+  },
+  'click .clear': function () {
+    Circles.remove({group: this.group});
   }
 });
 
