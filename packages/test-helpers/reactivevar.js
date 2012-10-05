@@ -19,7 +19,7 @@ var ReactiveVar = function(initialValue) {
 
   this._value = (typeof initialValue === "undefined" ? null :
                  initialValue);
-  this._deps = new Meteor.deps.ContextSet;
+  this._deps = new Meteor.deps._ContextSet;
 };
 
 ReactiveVar.prototype.get = function() {

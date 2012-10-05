@@ -50,7 +50,7 @@ OnscreenDiv.prototype.kill = function() {
   if (self.div.parentNode)
     self.div.parentNode.removeChild(self.div);
 
-  Meteor.atFlush(function () {
+  Meteor._atFlush(function () {
     Spark.finalize(self.div);
   });
 };

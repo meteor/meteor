@@ -1,20 +1,21 @@
 (function () {
+  // XXX Document, test, and remove the leading underscore from everything.
 
-  ////////// Meteor.deps.ContextSet
+  ////////// Meteor.deps._ContextSet
 
-  // Constructor for an empty ContextSet.
+  // Constructor for an empty _ContextSet.
   //
-  // A ContextSet is used to hold a set of Meteor.deps.Contexts that
+  // A _ContextSet is used to hold a set of Meteor.deps.Contexts that
   // are to be invalidated at some future time.  If a Context in the
   // set becomes invalidated for any reason, it's immediately removed
   // from the set.
-  var ContextSet = function () {
+  var _ContextSet = function () {
     this._contextsById = {};
   };
 
   // Adds the Context `ctx` to this set if it is not already
   // present.  Returns true if the context is new to this set.
-  ContextSet.prototype.add = function (ctx) {
+  _ContextSet.prototype.add = function (ctx) {
     var self = this;
     if (ctx && ! (ctx.id in self._contextsById)) {
       self._contextsById[ctx.id] = ctx;
@@ -28,7 +29,7 @@
 
   // Adds the current Context to this set if there is one.  Returns
   // true if there is a current Context and it's new to the set.
-  ContextSet.prototype.addCurrentContext = function () {
+  _ContextSet.prototype.addCurrentContext = function () {
     var self = this;
     var context = Meteor.deps.Context.current;
     if (! context)
@@ -38,30 +39,30 @@
 
   // Invalidate all Contexts in this set.  They will be removed
   // from the set as a consequence.
-  ContextSet.prototype.invalidateAll = function () {
+  _ContextSet.prototype.invalidateAll = function () {
     var self = this;
     for (var id in self._contextsById)
       self._contextsById[id].invalidate();
   };
 
   // Returns true if there are no Contexts in this set.
-  ContextSet.prototype.isEmpty = function () {
+  _ContextSet.prototype.isEmpty = function () {
     var self = this;
     for(var id in self._contextsById)
       return false;
     return true;
   };
 
-  Meteor.deps.ContextSet = ContextSet;
+  Meteor.deps._ContextSet = _ContextSet;
 
-  ////////// Meteor.autorun
+  ////////// Meteor._autorun
 
   // Run f(). Record its dependencies. Rerun it whenever the
   // dependencies change.
   //
   // Returns an object with a stop() method. Call stop() to stop the
   // rerunning.  Also passes this object as an argument to f.
-  Meteor.autorun = function (f) {
+  Meteor._autorun = function (f) {
     var ctx;
     var slain = false;
     var handle = {
@@ -81,7 +82,7 @@
     return handle;
   };
 
-  ////////// Meteor.atFlush
+  ////////// Meteor._atFlush
 
   // Run 'f' at Meteor.flush()-time. If atFlush is called multiple times,
   // we guarantee that the 'f's will run in the same order that
@@ -90,7 +91,7 @@
 
   var atFlushQueue = [];
   var atFlushContext = null;
-  Meteor.atFlush = function (f) {
+  Meteor._atFlush = function (f) {
     atFlushQueue.push(f);
 
     if (! atFlushContext) {
@@ -104,7 +105,7 @@
           try {
             f();
           } catch (e) {
-            Meteor._debug("Exception from Meteor.atFlush:", e);
+            Meteor._debug("Exception from Meteor._atFlush:", e);
           }
         }
         atFlushContext = null;

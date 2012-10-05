@@ -2,8 +2,8 @@
 
 Session = _.extend({}, {
   keys: {}, // key -> value
-  keyDeps: {}, // key -> ContextSet
-  keyValueDeps: {}, // key -> value -> ContextSet
+  keyDeps: {}, // key -> _ContextSet
+  keyValueDeps: {}, // key -> value -> _ContextSet
 
   set: function (key, value) {
     var self = this;
@@ -52,7 +52,7 @@ Session = _.extend({}, {
       self._ensureKey(key);
 
       if (!(value in self.keyValueDeps[key]))
-        self.keyValueDeps[key][value] = new Meteor.deps.ContextSet;
+        self.keyValueDeps[key][value] = new Meteor.deps._ContextSet;
 
       var isNew = self.keyValueDeps[key][value].add(context);
       if (isNew) {
@@ -71,7 +71,7 @@ Session = _.extend({}, {
   _ensureKey: function (key) {
     var self = this;
     if (!(key in self.keyDeps)) {
-      self.keyDeps[key] = new Meteor.deps.ContextSet;
+      self.keyDeps[key] = new Meteor.deps._ContextSet;
       self.keyValueDeps[key] = {};
     }
   }

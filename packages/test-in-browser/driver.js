@@ -171,7 +171,7 @@ Template.event.is_debuggable = function() {
 
 
 var resultTree = [];
-var resultDeps = new Meteor.deps.ContextSet;
+var resultDeps = new Meteor.deps._ContextSet;
 
 var _resultsChanged = function() {
   resultDeps.invalidateAll();

@@ -345,7 +345,7 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
     finalized = true;
   };
 
-  Meteor.atFlush(function () {
+  Meteor._atFlush(function () {
     if (finalized)
       return;
 
@@ -795,7 +795,7 @@ Spark.isolate = function (htmlFunc) {
   var range;
   var firstRun = true;
   var retHtml;
-  Meteor.autorun(function (handle) {
+  Meteor._autorun(function (handle) {
     if (firstRun) {
       retHtml = renderer.annotate(
         htmlFunc(), Spark._ANNOTATION_ISOLATE,
@@ -911,7 +911,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   };
 
   var later = function (f) {
-    Meteor.atFlush(function () {
+    Meteor._atFlush(function () {
       if (! stopped)
         withEventGuard(f);
     });
