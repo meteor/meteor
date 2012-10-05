@@ -314,6 +314,7 @@
 
     (function () {
       var collection = restrictedCollectionForUpdateOptionsTest;
+      var id1;
       testAsyncMulti("collection - update options", [
         // init
         function (test, expect) {
@@ -325,20 +326,32 @@
         // put a few objects
         function (test, expect) {
           var doc = {canInsert: true, canUpdate: true, world: test.runId()};
+          id1 = collection.insert(doc);
           collection.insert(doc);
           collection.insert(doc);
           collection.insert(doc, expect(function (err, res) {
             test.isFalse(err);
-            test.equal(collection.find({world: test.runId()}).count(), 3);
+            test.equal(collection.find({world: test.runId()}).count(), 4);
           }));
+        },
+        // update by id
+        function (test, expect) {
+          collection.update(
+            id1,
+            {$set: {updated: true}},
+            expect(function (err, res) {
+              test.isFalse(err);
+              test.equal(collection.find({world: test.runId(), updated: true}).count(), 1);
+            }));
         },
         // update without the `multi` option
         function (test, expect) {
           collection.update(
-            {world: test.runId()},
+            {updated: {$exists: false}, world: test.runId()},
             {$set: {updated: true}},
             expect(function (err, res) {
-              test.equal(collection.find({world: test.runId(), updated: true}).count(), 1);
+              test.isFalse(err);
+              test.equal(collection.find({world: test.runId(), updated: true}).count(), 2);
             }));
         },
         // update with the `multi` option
@@ -348,7 +361,8 @@
             {$set: {updated: true}},
             {multi: true},
             expect(function (err, res) {
-              test.equal(collection.find({world: test.runId(), updated: true}).count(), 3);
+              test.isFalse(err);
+              test.equal(collection.find({world: test.runId(), updated: true}).count(), 4);
             }));
         }
       ]);

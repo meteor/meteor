@@ -428,6 +428,8 @@ Meteor.Collection.prototype._validatedUpdate = function(
   var docs;
   if (options && options.multi) {
     docs = self._collection.find(selector, findOptions).fetch();
+    if (docs.length === 0)  // none satisfied!
+      return;
   } else {
     var doc = self._collection.findOne(selector, findOptions);
     if (!doc)  // none satisfied!
@@ -449,18 +451,30 @@ Meteor.Collection.prototype._validatedUpdate = function(
     throw new Meteor.Error(403, "Access denied");
   }
 
-  // construct new $in selector to replace the original one
+  // Construct new $in selector to augment the original one. This means we'll
+  // never update any doc we didn't validate. We keep around the original
+  // selector so that we don't mutate any docs that have been updated to no
+  // longer match the original selector.
   var idInClause = {};
   idInClause.$in = _.map(docs, function(doc) {
     return doc._id;
   });
   var idSelector = {_id: idInClause};
 
+  var fullSelector;
+  if (LocalCollection._selectorIsId(selector)) {
+    // If the original selector was just a lookup by _id, no need to "and" it
+    // with the idSelector (and it won't work anyway without explicitly
+    // comparing with _id).
+    if (docs.length !== 1 || docs[0]._id !== selector)
+      throw new Error("Lookup by ID " + selector + " found something else");
+    fullSelector = selector;
+  } else {
+    fullSelector = {$and: [selector, idSelector]};
+  }
+
   self._collection.update.call(
-    self._collection,
-    idSelector,
-    mutator,
-    options);
+    self._collection, fullSelector, mutator, options);
 };
 
 // Simulate a mongo `remove` operation while validating access control
@@ -477,6 +491,8 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
   }
 
   var docs = self._collection.find(selector, findOptions).fetch();
+  if (docs.length === 0)  // none satisfied!
+    return;
 
   // call user validators.
   // Any deny returns true means denied.
