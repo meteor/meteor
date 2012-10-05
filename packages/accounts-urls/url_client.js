@@ -11,7 +11,7 @@
   // strings so that the reset password token is not sent over the wire
   // on the http request
   var match;
-  match = window.location.hash.match(/^\#\?reset-password\/(.*)$/);
+  match = window.location.hash.match(/^\#\/reset-password\/(.*)$/);
   if (match) {
     Accounts._preventAutoLogin = true;
     Accounts._resetPasswordToken = match[1];
@@ -28,7 +28,7 @@
   // would be faster but less DDP-ish (and more specifically, any
   // non-web DDP app, such as an iOS client, would do something more
   // in line with the hash fragment approach)
-  match = window.location.hash.match(/^\#\?validate-email\/(.*)$/);
+  match = window.location.hash.match(/^\#\/validate-email\/(.*)$/);
   if (match) {
     Accounts._preventAutoLogin = true;
     Accounts._validateEmailToken = match[1];
@@ -38,7 +38,7 @@
   // reads an account enrollment token from the url's hash fragment, if
   // it's there.  also don't automatically log the user is, as for
   // reset password links.
-  match = window.location.hash.match(/^\#\?enroll-account\/(.*)$/);
+  match = window.location.hash.match(/^\#\/enroll-account\/(.*)$/);
   if (match) {
     Accounts._preventAutoLogin = true;
     Accounts._enrollAccountToken = match[1];
