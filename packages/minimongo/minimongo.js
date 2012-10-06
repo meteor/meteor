@@ -151,7 +151,7 @@ LocalCollection.LiveResultsSet = function () {};
 //    - added (object, before_index)
 //    - changed (new_object, at_index, old_object)
 //    - moved (object, old_index, new_index) - can only fire with changed()
-//    - removed (id, at_index, object)
+//    - removed (object, at_index)
 //
 // attributes available on returned query handle:
 //  * stop(): end updates
@@ -164,8 +164,6 @@ LocalCollection.LiveResultsSet = function () {};
 // XXX maybe callbacks should take a list of objects, to expose transactions?
 // XXX maybe support field limiting (to limit what you're notified on)
 // XXX maybe support limit/skip
-// XXX it'd be helpful if removed got the object that just left the
-// query, not just its id
 
 LocalCollection.Cursor.prototype.observe = function (options) {
   var self = this;
