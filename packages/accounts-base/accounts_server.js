@@ -245,8 +245,8 @@
     return Accounts.configuration.find({}, {fields: {secret: 0}});
   }, {is_auto: true}); // not techincally autopublish, but stops the warning.
 
-  // Allow a one-time configuration for a login service.
-  Accounts.configuration.allow({}); // disallow mutators
+  // Allow a one-time configuration for a login service. Modifications
+  // to this collection are also allowed in insecure mode.
   Meteor.methods({
     "configureLoginService": function(options) {
       if (!Accounts.configuration.findOne({service: options.service}))
