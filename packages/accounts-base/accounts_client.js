@@ -43,12 +43,10 @@
   // XXX this can be simplified if we merge in
   // https://github.com/meteor/meteor/pull/273
   var loginServicesConfigured = false;
-  var loginServicesConfiguredListeners = {}; // context.id -> context
+  var loginServicesConfiguredListeners = new Meteor.deps._ContextSet;
   Meteor.subscribe("loginServiceConfiguration", function () {
     loginServicesConfigured = true;
-    _.each(loginServicesConfiguredListeners, function(context) {
-      context.invalidate();
-    });
+    loginServicesConfiguredListeners.invalidateAll();
   });
 
   // A reactive function returning whether the
@@ -60,9 +58,7 @@
       return true;
 
     // not yet complete, save the context for invalidation once we are.
-    var context = Meteor.deps.Context.current;
-    if (context)
-      loginServicesConfiguredListeners[context.id] = context;
+    loginServicesConfiguredListeners.addCurrentContext();
     return false;
   };
 })();
