@@ -19,19 +19,11 @@ var ReactiveVar = function(initialValue) {
 
   this._value = (typeof initialValue === "undefined" ? null :
                  initialValue);
-  this._deps = {};
+  this._deps = new Meteor.deps._ContextSet;
 };
 
 ReactiveVar.prototype.get = function() {
-  var context = Meteor.deps.Context.current;
-  if (context && !(context.id in this._deps)) {
-    this._deps[context.id] = context;
-    var self = this;
-    context.onInvalidate(function() {
-      delete self._deps[context.id];
-    });
-  }
-
+  this._deps.addCurrentContext();
   return this._value;
 };
 
@@ -43,11 +35,9 @@ ReactiveVar.prototype.set = function(newValue) {
 
   this._value = newValue;
 
-  for(var id in this._deps)
-    this._deps[id].invalidate();
-
+  this._deps.invalidateAll();
 };
 
 ReactiveVar.prototype.numListeners = function() {
-  return _.keys(this._deps).length;
+  return _.keys(this._deps._contextsById).length;
 };
