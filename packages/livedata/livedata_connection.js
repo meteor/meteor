@@ -445,26 +445,20 @@ _.extend(Meteor._LivedataConnection.prototype, {
   ///
   userId: function () {
     var self = this;
-    var context = Meteor.deps && Meteor.deps.Context.current;
-    if (context && !(context.id in self._userIdListeners)) {
-      self._userIdListeners[context.id] = context;
-      context.onInvalidate(function () {
-        delete self._userIdListeners[context.id];
-      });
-    }
+    if (self._userIdListeners)
+      self._userIdListeners.addCurrentContext();
     return self._userId;
   },
 
   setUserId: function (userId) {
     var self = this;
     self._userId = userId;
-    _.each(self._userIdListeners, function (context) {
-      context.invalidate();
-    });
+    if (self._userIdListeners)
+      self._userIdListeners.invalidateAll();
   },
 
   _userId: null,
-  _userIdListeners: {}, // context.id -> context
+  _userIdListeners: Meteor.deps && new Meteor.deps._ContextSet,
 
   // PRIVATE: called when we are up-to-date with the server. intended
   // for use only in tests. currently, you are very limited in what
