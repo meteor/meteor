@@ -4,15 +4,11 @@
     var identity = oauthBinding.get('https://api.twitter.com/1/account/verify_credentials.json');
 
     return {
-      options: {
-        services: {
-          twitter: {
-            id: identity.id,
-            screenName: identity.screen_name,
-            accessToken: oauthBinding.accessToken,
-            accessTokenSecret: oauthBinding.accessTokenSecret
-          }
-        }
+      serviceData: {
+        id: identity.id,
+        screenName: identity.screen_name,
+        accessToken: oauthBinding.accessToken,
+        accessTokenSecret: oauthBinding.accessTokenSecret
       },
       extra: {
         profile: {

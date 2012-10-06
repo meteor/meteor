@@ -51,8 +51,8 @@
 
         // Get or create user id
         var oauthResult = service.handleOauthRequest(oauthBinding);
-        var userId = Accounts.updateOrCreateUser(
-          oauthResult.options, oauthResult.extra);
+        var userId = Accounts.updateOrCreateUserFromExternalService(
+          service.serviceName, oauthResult.serviceData, oauthResult.extra);
 
         // Generate and store a login token for reconnect
         // XXX this could go in accounts_server.js instead

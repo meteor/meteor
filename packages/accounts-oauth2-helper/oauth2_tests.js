@@ -14,11 +14,7 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
 
   // register a fake login service - foobook
   Accounts.oauth.registerService("foobook", 2, function (query) {
-    return {
-      options: {
-        services: {foobook: {id: foobookId}}
-      }
-    };
+    return {serviceData: {id: foobookId}};
   });
 
   // simulate logging in using foobook
@@ -56,8 +52,8 @@ Tinytest.add("oauth2 - error in user creation", function (test) {
   // register a failing login service
   Accounts.oauth.registerService("failbook", 2, function (query) {
     return {
-      options: {
-        services: {failbook: {id: failbookId}}
+      serviceData: {
+        id: failbookId
       },
       extra: {
         invalid: true

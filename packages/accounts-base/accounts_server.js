@@ -178,41 +178,48 @@
   /// MANAGING USER OBJECTS
   ///
 
-  // Updates or creates a user after we authenticate with a 3rd party
+  // Updates or creates a user after we authenticate with a 3rd party.
   //
-  // @param options {Object}
-  //   - services {Object} e.g. {facebook: {id: (facebook user id), ...}}
-  // @param extra {Object, optional} Any additional fields to place on the user objet
+  // @param serviceName {String} Service name (eg, twitter).
+  // @param serviceData {Object} Data to store in the user's record
+  //        under services[serviceName]. Must include an "id" field
+  //        which is a unique identifier for the user in the service.
+  // @param extra {Object, optional} Any additional fields to place on the user
+  //        object
   // @returns {String} userId
-  Accounts.updateOrCreateUser = function(options, extra) {
+  Accounts.updateOrCreateUserFromExternalService = function(
+    serviceName, serviceData, extra) {
     extra = extra || {};
 
-    if (_.keys(options.services).length !== 1)
-      throw new Error("Must pass exactly one service to updateOrCreateUser");
-    var serviceName = _.keys(options.services)[0];
+    if (serviceName === "password" || serviceName === "resume")
+      throw new Error(
+        "Can't use updateOrCreateUserFromExternalService with internal service "
+          + serviceName);
+    if (!_.has(serviceData, 'id'))
+      throw new Error(
+        "Service data for service " + serviceName + " must include id");
 
     // Look for a user with the appropriate service user id.
     var selector = {};
-    selector["services." + serviceName + ".id"] =
-      options.services[serviceName].id;
+    selector["services." + serviceName + ".id"] = serviceData.id;
     var user = Meteor.users.findOne(selector);
 
     if (user) {
       // don't overwrite existing fields
       // XXX subobjects (aka 'profile', 'services')?
       var newKeys = _.difference(_.keys(extra), _.keys(user));
-      var newAttrs = _.pick(extra, newKeys);
-      Meteor.users.update(user._id, {$set: newAttrs});
-
+      if (!_.isEmpty(newKeys)) {
+        var newAttrs = _.pick(extra, newKeys);
+        Meteor.users.update(user._id, {$set: newAttrs});
+      }
       return user._id;
     } else {
       // Create a new user
-      var attrs = {};
-      attrs[serviceName] = options.services[serviceName];
-      user = {
-        services: attrs
-      };
-      user = Accounts.onCreateUserHook(options, extra, user);
+      var servicesClause = {};
+      servicesClause[serviceName] = serviceData;
+      user = {services: servicesClause};
+      user = Accounts.onCreateUserHook(
+        {services: servicesClause}, extra, user);
       return Meteor.users.insert(user);
     }
   };

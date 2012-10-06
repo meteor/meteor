@@ -6,14 +6,10 @@
     var identity = getIdentity(accessToken.access_token, parseInt(accessToken.uid, 10));
 
     return {
-      options: {
-        services: {
-          weibo: {
-            id: accessToken.uid,
-            accessToken: accessToken.access_token,
-            screenName: identity.screen_name
-          }
-        }
+      serviceData: {
+        id: accessToken.uid,
+        accessToken: accessToken.access_token,
+        screenName: identity.screen_name
       },
       extra: {profile: {name: identity.screen_name}}
     };

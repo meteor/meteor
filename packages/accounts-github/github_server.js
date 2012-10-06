@@ -5,14 +5,11 @@
     var identity = getIdentity(accessToken);
 
     return {
-      options: {
-	services: {
-	  github: {
-	    id: identity.id,
-	    accessToken: accessToken,
-	    email: identity.email,
-	    username: identity.login
-	  }}
+      serviceData: {
+        id: identity.id,
+        accessToken: accessToken,
+	email: identity.email,
+	username: identity.login
       },
       extra: {profile: {name: identity.name}}
     };

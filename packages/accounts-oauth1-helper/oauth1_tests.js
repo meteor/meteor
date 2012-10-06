@@ -25,15 +25,11 @@ Tinytest.add("oauth1 - loginResultForState is stored", function (test) {
   // register a fake login service - twitterfoo
   Accounts.oauth.registerService("twitterfoo", 1, function (query) {
     return {
-      options: {
-        services: {
-          twitter: {
-            id: twitterfooId,
-            screenName: twitterfooName,
-            accessToken: twitterfooAccessToken,
-            accessTokenSecret: twitterfooAccessTokenSecret
-          }
-        }
+      serviceData: {
+        id: twitterfooId,
+        screenName: twitterfooName,
+        accessToken: twitterfooAccessToken,
+        accessTokenSecret: twitterfooAccessTokenSecret
       }
     };
   });
@@ -49,14 +45,16 @@ Tinytest.add("oauth1 - loginResultForState is stored", function (test) {
       oauth_token: twitterfooAccessToken
     }
   };
-
   Accounts.oauth._middleware(req, new http.ServerResponse(req));
 
   // verify that a user is created
-  var user = Meteor.users.findOne({"services.twitter.screenName": twitterfooName});
+  var user = Meteor.users.findOne(
+    {"services.twitterfoo.screenName": twitterfooName});
   test.notEqual(user, undefined);
-  test.equal(user.services.twitter.accessToken, twitterfooAccessToken);
-  test.equal(user.services.twitter.accessTokenSecret, twitterfooAccessTokenSecret);
+  test.equal(user.services.twitterfoo.accessToken,
+             twitterfooAccessToken);
+  test.equal(user.services.twitterfoo.accessTokenSecret,
+             twitterfooAccessTokenSecret);
 
   // and that that user has a login token
   var token = Accounts._loginTokens.findOne({userId: user._id});
@@ -88,15 +86,11 @@ Tinytest.add("oauth1 - error in user creation", function (test) {
   // register a failing login service
   Accounts.oauth.registerService("twitterfail", 1, function (query) {
     return {
-      options: {
-        services: {
-          twitter: {
-            id: twitterfailId,
-            screenName: twitterfailName,
-            accessToken: twitterfailAccessToken,
-            accessTokenSecret: twitterfailAccessTokenSecret
-          }
-        }
+      serviceData: {
+        id: twitterfailId,
+        screenName: twitterfailName,
+        accessToken: twitterfailAccessToken,
+        accessTokenSecret: twitterfailAccessTokenSecret
       },
       extra: {
         invalid: true
