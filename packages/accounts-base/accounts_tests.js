@@ -6,13 +6,13 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService', function (test)
 
   // create an account with facebook
   var uid1 = Accounts.updateOrCreateUserFromExternalService(
-    'facebook', {id: facebookId}, {foo: 1});
+    'facebook', {id: facebookId}, {foo: 1}).id;
   test.equal(Meteor.users.find({"services.facebook.id": facebookId}).count(), 1);
   test.equal(Meteor.users.findOne({"services.facebook.id": facebookId}).foo, 1);
 
   // create again with the same id, see that we get the same user
   var uid2 = Accounts.updateOrCreateUserFromExternalService(
-    'facebook', {id: facebookId}, {foo: 1000, bar: 2}); // foo: 1000 shouldn't overwrite
+    'facebook', {id: facebookId}, {foo: 1000, bar: 2}).id; // foo: 1000 shouldn't overwrite
   test.equal(uid1, uid2);
   test.equal(Meteor.users.find({"services.facebook.id": facebookId}).count(), 1);
   test.equal(Meteor.users.findOne(uid1).foo, 1);
@@ -24,9 +24,9 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService', function (test)
 
   // users that have different service ids get different users
   uid1 = Accounts.updateOrCreateUserFromExternalService(
-    'weibo', {id: weiboId1}, {foo: 1});
+    'weibo', {id: weiboId1}, {foo: 1}).id;
   uid2 = Accounts.updateOrCreateUserFromExternalService(
-    'weibo', {id: weiboId2}, {bar: 2});
+    'weibo', {id: weiboId2}, {bar: 2}).id;
   test.equal(Meteor.users.find({"services.weibo.id": {$in: [weiboId1, weiboId2]}}).count(), 2);
   test.equal(Meteor.users.findOne({"services.weibo.id": weiboId1}).foo, 1);
   test.equal(Meteor.users.findOne({"services.weibo.id": weiboId1}).emails, undefined);

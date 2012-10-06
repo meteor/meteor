@@ -186,7 +186,8 @@
   //        which is a unique identifier for the user in the service.
   // @param extra {Object, optional} Any additional fields to place on the user
   //        object
-  // @returns {String} userId
+  // @returns {Object} Object with token and id keys, like the result
+  //        of the "login" method.
   Accounts.updateOrCreateUserFromExternalService = function(
     serviceName, serviceData, extra) {
     extra = extra || {};
@@ -203,6 +204,7 @@
     var selector = {};
     selector["services." + serviceName + ".id"] = serviceData.id;
     var user = Meteor.users.findOne(selector);
+    var result = {};
 
     if (user) {
       // don't overwrite existing fields
@@ -212,7 +214,7 @@
         var newAttrs = _.pick(extra, newKeys);
         Meteor.users.update(user._id, {$set: newAttrs});
       }
-      return user._id;
+      result.id = user._id;
     } else {
       // Create a new user
       var servicesClause = {};
@@ -220,8 +222,10 @@
       user = {services: servicesClause};
       user = Accounts.onCreateUserHook(
         {services: servicesClause}, extra, user);
-      return Meteor.users.insert(user);
+      result.id = Meteor.users.insert(user);
     }
+    result.token = Accounts._loginTokens.insert({userId: result.id});
+    return result;
   };
 
 

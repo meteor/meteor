@@ -49,18 +49,13 @@
         // Get the access token for signing requests
         oauthBinding.prepareAccessToken(query);
 
-        // Get or create user id
+        // Run service-specific handler.
         var oauthResult = service.handleOauthRequest(oauthBinding);
-        var userId = Accounts.updateOrCreateUserFromExternalService(
-          service.serviceName, oauthResult.serviceData, oauthResult.extra);
 
-        // Generate and store a login token for reconnect
-        // XXX this could go in accounts_server.js instead
-        var loginToken = Accounts._loginTokens.insert({userId: userId});
-
-        // Store results to subsequent call to `login`
+        // Get or create user doc and login token for reconnect.
         Accounts.oauth._loginResultForState[query.state] =
-          {token: loginToken, id: userId};
+          Accounts.updateOrCreateUserFromExternalService(
+            service.serviceName, oauthResult.serviceData, oauthResult.extra);
       }
     }
 
