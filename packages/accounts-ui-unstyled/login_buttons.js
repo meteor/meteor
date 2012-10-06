@@ -12,6 +12,8 @@
 
   var ERROR_MESSAGE_KEY = 'Meteor.loginButtons.errorMessage';
   var INFO_MESSAGE_KEY = 'Meteor.loginButtons.infoMessage';
+  var SHOW_MESSAGES_DIALOG_KEY = 'Meteor.loginButtons.showMessagesDialog';
+
   var RESET_PASSWORD_TOKEN_KEY = 'Meteor.loginButtons.resetPasswordToken';
   var ENROLL_ACCOUNT_TOKEN_KEY = 'Meteor.loginButtons.enrollAccountToken';
   var JUST_VALIDATED_USER_KEY = 'Meteor.loginButtons.justValidatedUser';
@@ -91,15 +93,15 @@
   };
 
   var makeLoginCallback = function(service) {
-    return function (e) {
-      if (!e) {
+    return function (err) {
+      if (!err) {
         resetSession();
-      } else if (e instanceof Accounts.LoginCancelledError) {
+      } else if (err instanceof Accounts.LoginCancelledError) {
         // do nothing
-      } else if (e instanceof Accounts.ConfigError) {
+      } else if (err instanceof Accounts.ConfigError) {
         configureService(service);
       } else {
-        Session.set(ERROR_MESSAGE_KEY, e.reason || "Unknown error");
+        Session.set(ERROR_MESSAGE_KEY, err.reason || "Unknown error");
       }
     };
   };
@@ -107,13 +109,7 @@
   // decide whether we should show a dropdown rather than a row of
   // buttons
   Template.loginButtons.dropdown = function () {
-    var services = getLoginServices();
-
-    var hasPasswordService = _.any(services, function (service) {
-      return service.name === 'password';
-    });
-
-    return hasPasswordService || services.length > 1;
+    return dropdown();
   };
 
   Template.loginButtons.services = function () {
@@ -295,6 +291,10 @@
     return getLoginServices().length > 1;
   };
 
+  Template.loginButtonsServicesRow.hasPasswordService = function () {
+    return hasPasswordService();
+  };
+
   Template.loginButtonsServicesRow.inForgotPasswordFlow = function () {
     return Session.get(IN_FORGOT_PASSWORD_FLOW_KEY);
   };
@@ -381,6 +381,10 @@
 
   Template.loginButtonsServicesDropdown.dropdownVisible = function () {
     return Session.get(DROPDOWN_VISIBLE_KEY);
+  };
+
+  Template.loginButtonsServicesDropdown.hasPasswordService = function () {
+    return hasPasswordService();
   };
 
 
@@ -488,6 +492,21 @@
     return Session.get(JUST_VALIDATED_USER_KEY);
   };
 
+
+  //
+  // loginButtonsMessagesDialog template
+  //
+
+  Template.loginButtonsMessagesDialog.events({
+    'click #messages-dialog-dismiss-button': function () {
+      resetMessages();
+    }
+  });
+
+  Template.loginButtonsMessagesDialog.visible = function () {
+    var hasMessage = Session.get(INFO_MESSAGE_KEY) || Session.get(ERROR_MESSAGE_KEY);
+    return !dropdown() && hasMessage;
+  };
 
   // Needs to be in Meteor.startup because of a package loading order
   // issue. We can't be sure that accounts-password is loaded earlier
@@ -789,6 +808,16 @@
       });
 
     return ret;
+  };
+
+  var hasPasswordService = function () {
+    return _.any(getLoginServices(), function (service) {
+      return service.name === 'password';
+    });
+  };
+
+  var dropdown = function () {
+    return hasPasswordService() || getLoginServices().length > 1;
   };
 
 

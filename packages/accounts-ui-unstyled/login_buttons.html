@@ -16,7 +16,7 @@
           {{/if}}
         {{/if}}
       {{else}}
-        <div class="no-services">No login services configured.</div>
+        <div class="no-services">No login services configured</div>
       {{/if}}
     {{/if}}
   </div>
@@ -141,6 +141,10 @@
       <a class="login-close-text">Close</a>
       <div class="login-close-text-clear"></div>
       {{> loginButtonsServicesRow}}
+
+      {{#unless hasPasswordService}}
+        {{> loginButtonsMessages}}
+      {{/unless}}
     </div>
     {{/if}}
   </div>
@@ -175,7 +179,7 @@
   {{#if inResetPasswordFlow}}
   <div class="hide-background"></div>
 
-  <div id="reset-password-form" class="accounts-dialog">
+  <div class="accounts-dialog accounts-centered-dialog">
     <label id="reset-password-new-password-label" for="reset-password-new-password">
       New password
     </label>
@@ -201,7 +205,7 @@
   {{#if inEnrollAccountFlow}}
   <div class="hide-background"></div>
 
-  <div id="enroll-account-form" class="accounts-dialog">
+  <div class="accounts-dialog accounts-centered-dialog">
     <label id="enroll-account-password-label" for="enroll-account-password">
       Choose a password
     </label>
@@ -225,16 +229,26 @@
 
 <template name="justValidatedUserForm">
   {{#if visible}}
-  <div id="just-validated-user-form" class="accounts-dialog">
-    Email validated.
+  <div class="accounts-dialog accounts-centered-dialog">
+    Email validated
     <div class="login-button" id="just-validated-dismiss-button">Dismiss</div>
+  </div>
+  {{/if}}
+</template>
+
+<!-- if we're not showing a dropdown, we need some other place to show messages -->
+<template name="loginButtonsMessagesDialog">
+  {{#if visible}}
+  <div class="accounts-dialog accounts-centered-dialog">
+    {{> loginButtonsMessages}}
+    <div class="login-button" id="messages-dialog-dismiss-button">Dismiss</div>
   </div>
   {{/if}}
 </template>
 
 <template name="configureLoginServicesDialog">
   {{#if visible}}
-  <div id="configure-login-services-dialog" class="accounts-dialog">
+  <div id="configure-login-services-dialog" class="accounts-dialog accounts-centered-dialog">
     {{{configurationSteps}}}
 
     <p>
@@ -275,5 +289,6 @@
   {{> resetPasswordForm}}
   {{> enrollAccountForm}}
   {{> justValidatedUserForm}}
+  {{> loginButtonsMessagesDialog}}
   {{> configureLoginServicesDialog}}
 </body>
