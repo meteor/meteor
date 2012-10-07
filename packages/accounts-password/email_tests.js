@@ -11,6 +11,8 @@
   var validateEmailToken;
   var enrollAccountToken;
 
+  Accounts._isolateLoginTokenForTest();
+
   testAsyncMulti("accounts emails - reset password flow", [
     function (test, expect) {
       email1 = Meteor.uuid() + "-intercept@example.com";
@@ -65,6 +67,7 @@
 
   var getValidateEmailToken = function (email, test, expect) {
     Meteor.call("getInterceptedEmails", email, expect(function (error, result) {
+      test.isFalse(error);
       test.notEqual(result, undefined);
       test.equal(result.length, 1);
       var content = result[0];
@@ -77,15 +80,28 @@
     }));
   };
 
+  var waitUntilLoggedIn = function (test, expect) {
+    var unblockNextFunction = expect();
+    var quiesceCallback = function () {
+      Meteor._autorun(function (handle) {
+        if (!Meteor.userLoaded()) return;
+        handle.stop();
+        unblockNextFunction();
+      });
+    };
+    return expect(function (error) {
+      test.equal(error, undefined);
+      Meteor.default_connection.onQuiesce(quiesceCallback);
+    });
+  };
+
   testAsyncMulti("accounts emails - validate email flow", [
     function (test, expect) {
       email2 = Meteor.uuid() + "-intercept@example.com";
       email3 = Meteor.uuid() + "-intercept@example.com";
       Accounts.createUser(
         {email: email2, password: 'foobar'},
-        expect(function (error) {
-          test.equal(error, undefined);
-        }));
+        waitUntilLoggedIn(test, expect));
     },
     function (test, expect) {
       test.equal(Meteor.user().emails.length, 1);
@@ -96,15 +112,21 @@
       getValidateEmailToken(email2, test, expect);
     },
     function (test, expect) {
-      Accounts.validateEmail(validateEmailToken, expect(function(error) {
-        test.isFalse(error);
+      // Log out, to test that validateEmail logs us back in. (And if we don't
+      // do that, waitUntilLoggedIn won't be able to prevent race conditions.)
+      Meteor.logout(expect(function (error) {
+        test.equal(error, undefined);
+        test.equal(Meteor.user(), null);
       }));
-      // ARGH! ON QUIESCE!!
-      Meteor.default_connection.onQuiesce(expect(function () {
-        test.equal(Meteor.user().emails.length, 1);
-        test.equal(Meteor.user().emails[0].address, email2);
-        test.isTrue(Meteor.user().emails[0].validated);
-      }));
+    },
+    function (test, expect) {
+      Accounts.validateEmail(validateEmailToken,
+                             waitUntilLoggedIn(test, expect));
+    },
+    function (test, expect) {
+      test.equal(Meteor.user().emails.length, 1);
+      test.equal(Meteor.user().emails[0].address, email2);
+      test.isTrue(Meteor.user().emails[0].validated);
     },
     function (test, expect) {
       Meteor.call(
@@ -124,15 +146,20 @@
       getValidateEmailToken(email3, test, expect);
     },
     function (test, expect) {
-      Accounts.validateEmail(validateEmailToken, expect(function(error) {
-        test.isFalse(error);
+      // Log out, to test that validateEmail logs us back in. (And if we don't
+      // do that, waitUntilLoggedIn won't be able to prevent race conditions.)
+      Meteor.logout(expect(function (error) {
+        test.equal(error, undefined);
+        test.equal(Meteor.user(), null);
       }));
     },
     function (test, expect) {
-      Meteor.default_connection.onQuiesce(expect(function () {
-        test.equal(Meteor.user().emails[1].address, email3);
-        test.isTrue(Meteor.user().emails[1].validated);
-      }));
+      Accounts.validateEmail(validateEmailToken,
+                             waitUntilLoggedIn(test, expect));
+    },
+    function (test, expect) {
+      test.equal(Meteor.user().emails[1].address, email3);
+      test.isTrue(Meteor.user().emails[1].validated);
     },
     function (test, expect) {
       Meteor.logout(expect(function (error) {
@@ -172,16 +199,13 @@
       getEnrollAccountToken(email4, test, expect);
     },
     function (test, expect) {
-      Accounts.resetPassword(enrollAccountToken, 'password', expect(function(error) {
-        test.isFalse(error);
-      }));
+      Accounts.resetPassword(enrollAccountToken, 'password',
+                             waitUntilLoggedIn(test, expect));
     },
     function (test, expect) {
-      Meteor.default_connection.onQuiesce(expect(function () {
-        test.equal(Meteor.user().emails.length, 1);
-        test.equal(Meteor.user().emails[0].address, email4);
-        test.isTrue(Meteor.user().emails[0].validated);
-      }));
+      test.equal(Meteor.user().emails.length, 1);
+      test.equal(Meteor.user().emails[0].address, email4);
+      test.isTrue(Meteor.user().emails[0].validated);
     },
     function (test, expect) {
       Meteor.logout(expect(function (error) {
@@ -190,9 +214,13 @@
       }));
     },
     function (test, expect) {
-      Meteor.loginWithPassword({email: email4}, 'password', expect(function(error) {
-        test.isFalse(error);
-      }));
+      Meteor.loginWithPassword({email: email4}, 'password',
+                               waitUntilLoggedIn(test ,expect));
+    },
+    function (test, expect) {
+      test.equal(Meteor.user().emails.length, 1);
+      test.equal(Meteor.user().emails[0].address, email4);
+      test.isTrue(Meteor.user().emails[0].validated);
     },
     function (test, expect) {
       Meteor.logout(expect(function (error) {

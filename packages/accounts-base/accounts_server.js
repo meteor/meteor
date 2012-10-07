@@ -233,13 +233,22 @@
   /// PUBLISHING DATA
   ///
 
-  // Always publish the current user's record to the client.
-  Meteor.publish(null, function() {
+  // Publish the current user's record to the client.
+  // XXX This should just be a universal subscription, but we want to know when
+  //     we've gotten the data after a 'login' method, which currently requires
+  //     us to unsub, sub, and wait for onComplete. This is wasteful because
+  //     we're actually guaranteed to have the data by the time that 'login'
+  //     returns. But we don't expose a callback to Meteor.apply which lets us
+  //     know when the data has been processed (ie, quiescence, or at least
+  //     partial quiescence).
+  Meteor.publish("meteor.currentUser", function() {
     if (this.userId)
       return Meteor.users.find({_id: this.userId},
                                {fields: {profile: 1, username: 1, emails: 1}});
-    else
+    else {
+      this.complete();
       return null;
+    }
   }, {is_auto: true});
 
   // If autopublish is on, also publish everyone else's user record.
@@ -252,7 +261,7 @@
   });
 
   // Publish all login service configuration fields other than secret.
-  Meteor.publish("loginServiceConfiguration", function () {
+  Meteor.publish("meteor.loginServiceConfiguration", function () {
     return Accounts.configuration.find({}, {fields: {secret: 0}});
   }, {is_auto: true}); // not techincally autopublish, but stops the warning.
 

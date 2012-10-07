@@ -3,6 +3,7 @@ if (Meteor.isClient) (function () {
   // XXX note, only one test can do login/logout things at once! for
   // now, that is this test.
 
+  Accounts._isolateLoginTokenForTest();
 
   var logoutStep = function (test, expect) {
     Meteor.logout(expect(function (error) {
@@ -11,6 +12,25 @@ if (Meteor.isClient) (function () {
     }));
   };
 
+  var verifyUsername = function (someUsername, test, expect) {
+    var callWhenLoaded = expect(function() {
+      test.equal(Meteor.user().username, someUsername);
+    });
+    return function () {
+      Meteor._autorun(function(handle) {
+        if (!Meteor.userLoaded()) return;
+        handle.stop();
+        callWhenLoaded();
+      });
+    };
+  };
+  var loggedInAs = function (someUsername, test, expect) {
+    var quiesceCallback = verifyUsername(someUsername, test, expect);
+    return expect(function (error) {
+      test.equal(error, undefined);
+      Meteor.default_connection.onQuiesce(quiesceCallback);
+    });
+  };
 
   // declare variable outside the testAsyncMulti, so we can refer to
   // them from multiple tests, but initialize them to new values inside
@@ -33,46 +53,29 @@ if (Meteor.isClient) (function () {
     },
 
     function (test, expect) {
-      // XXX argh quiescence + tests === wtf. and i have no idea why
-      // this was necessary here and not in other places. probably
-      // because it's dependant on how long method call chains are in
-      // other tests
-      var quiesceCallback = expect(function () {
-        test.equal(Meteor.user().username, username);
-      });
-      Accounts.createUser({username: username, email: email, password: password},
-                        expect(function (error) {
-                          test.equal(error, undefined);
-                          Meteor.default_connection.onQuiesce(quiesceCallback);
-                        }));
+      Accounts.createUser(
+        {username: username, email: email, password: password},
+        loggedInAs(username, test, expect));
     },
     logoutStep,
     function (test, expect) {
-      Meteor.loginWithPassword(username, password, expect(function (error) {
-        test.equal(error, undefined);
-        test.equal(Meteor.user().username, username);
-      }));
+      Meteor.loginWithPassword(username, password,
+                               loggedInAs(username, test, expect));
     },
     logoutStep,
     function (test, expect) {
-      Meteor.loginWithPassword({username: username}, password, expect(function (error) {
-        test.equal(error, undefined);
-        test.equal(Meteor.user().username, username);
-      }));
+      Meteor.loginWithPassword({username: username}, password,
+                               loggedInAs(username, test, expect));
     },
     logoutStep,
     function (test, expect) {
-      Meteor.loginWithPassword(email, password, expect(function (error) {
-        test.equal(error, undefined);
-        test.equal(Meteor.user().username, username);
-      }));
+      Meteor.loginWithPassword(email, password,
+                               loggedInAs(username, test, expect));
     },
     logoutStep,
     function (test, expect) {
-      Meteor.loginWithPassword({email: email}, password, expect(function (error) {
-        test.equal(error, undefined);
-        test.equal(Meteor.user().username, username);
-      }));
+      Meteor.loginWithPassword({email: email}, password,
+                               loggedInAs(username, test, expect));
     },
     logoutStep,
     // plain text password. no API for this, have to send a raw message.
@@ -87,6 +90,7 @@ if (Meteor.isClient) (function () {
       }));
     },
     function (test, expect) {
+      var quiesceCallback = verifyUsername(username, test, expect);
       Meteor.call(
         // right password
         'login', {user: {email: email}, password: password},
@@ -96,22 +100,21 @@ if (Meteor.isClient) (function () {
           test.isTrue(result.token);
           // emulate the real login behavior, so as not to confuse test.
           Accounts._makeClientLoggedIn(result.id, result.token);
-          test.equal(Meteor.user().username, username);
+          Meteor.default_connection.onQuiesce(quiesceCallback);
       }));
     },
-    // change password with bad old password.
+    // change password with bad old password. we stay logged in.
     function (test, expect) {
+      var quiesceCallback = verifyUsername(username, test, expect);
       Accounts.changePassword(password2, password2, expect(function (error) {
         test.isTrue(error);
-        test.equal(Meteor.user().username, username);
+        Meteor.default_connection.onQuiesce(quiesceCallback);
       }));
     },
     // change password with good old password.
     function (test, expect) {
-      Accounts.changePassword(password, password2, expect(function (error) {
-        test.equal(error, undefined);
-        test.equal(Meteor.user().username, username);
-      }));
+      Accounts.changePassword(password, password2,
+                              loggedInAs(username, test, expect));
     },
     logoutStep,
     // old password, failed login
@@ -123,14 +126,13 @@ if (Meteor.isClient) (function () {
     },
     // new password, success
     function (test, expect) {
-      Meteor.loginWithPassword(email, password2, expect(function (error) {
-        test.equal(error, undefined);
-        test.equal(Meteor.user().username, username);
-      }));
+      Meteor.loginWithPassword(email, password2,
+                               loggedInAs(username, test, expect));
     },
     logoutStep,
     // create user with raw password
     function (test, expect) {
+      var quiesceCallback = verifyUsername(username2, test, expect);
       Meteor.call('createUser', {username: username2, password: password2},
                   expect(function (error, result) {
                     test.equal(error, undefined);
@@ -138,16 +140,13 @@ if (Meteor.isClient) (function () {
                     test.isTrue(result.token);
                     // emulate the real login behavior, so as not to confuse test.
                     Accounts._makeClientLoggedIn(result.id, result.token);
-                    test.equal(Meteor.user().username, username2);
+                    Meteor.default_connection.onQuiesce(quiesceCallback);
                   }));
     },
     logoutStep,
     function(test, expect) {
       Meteor.loginWithPassword({username: username2}, password2,
-                               expect(function (error) {
-                                 test.equal(error, undefined);
-                                 test.equal(Meteor.user().username, username2);
-                               }));
+                               loggedInAs(username2, test, expect));
     },
     logoutStep,
     // test Accounts.validateNewUser
@@ -173,10 +172,13 @@ if (Meteor.isClient) (function () {
     },
     // test Accounts.onCreateUser
     function(test, expect) {
-      Accounts.createUser({username: username3, password: password3},
-                        {testOnCreateUserHook: true}, expect(function () {
-        test.equal(Meteor.user().profile.touchedByOnCreateUser, true);
-      }));
+      Accounts.createUser(
+        {username: username3, password: password3},
+        {testOnCreateUserHook: true},
+        loggedInAs(username3, test, expect));
+    },
+    function(test, expect) {
+      test.equal(Meteor.user().profile.touchedByOnCreateUser, true);
     },
 
     // test Meteor.user(). This test properly belongs in

@@ -3,6 +3,14 @@
   var loginTokenKey = "Meteor.loginToken";
   var userIdKey = "Meteor.userId";
 
+  // Call this from the top level of the test file for any test that does
+  // logging in and out, to protect multiple tabs running the same tests
+  // simultaneously from interfering with each others' localStorage.
+  Accounts._isolateLoginTokenForTest = function () {
+    loginTokenKey = loginTokenKey + Meteor.uuid();
+    userIdKey = userIdKey + Meteor.uuid();
+  };
+
   Accounts._storeLoginToken = function(userId, token) {
     localStorage.setItem(userIdKey, userId);
     localStorage.setItem(loginTokenKey, token);
@@ -27,27 +35,6 @@
 
   Accounts._storedUserId = function() {
     return localStorage.getItem(userIdKey);
-  };
-
-  Accounts._makeClientLoggedOut = function() {
-    Accounts._unstoreLoginToken();
-    Meteor.default_connection.setUserId(null);
-    Meteor.default_connection.onReconnect = null;
-  };
-
-  Accounts._makeClientLoggedIn = function(userId, token) {
-    Accounts._storeLoginToken(userId, token);
-    Meteor.default_connection.setUserId(userId);
-    Meteor.default_connection.onReconnect = function() {
-      Meteor.apply('login', [{resume: token}], {wait: true}, function(error, result) {
-        if (error) {
-          Accounts._makeClientLoggedOut();
-          throw error;
-        } else {
-          // nothing to do
-        }
-      });
-    };
   };
 })();
 

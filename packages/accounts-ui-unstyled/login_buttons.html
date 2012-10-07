@@ -13,10 +13,10 @@
     {{> loginButtonsLoggedInDropdown}}
   {{else}}
     <div class="login-header">
-      {{#if currentUser.loading}} {{! XXX this will change }}
-        <div class="loading"></div>
-      {{else}}
+      {{#if currentUserLoaded}}
         {{displayName}}
+      {{else}}
+        <div class="loading"></div>
       {{/if}}
     </div>
     <div class="login-button" id="login-buttons-logout">Logout</div>

@@ -3,9 +3,7 @@
 <!--           -->
 <template name="loginButtonsLoggedInDropdown">
   <div class="login-link-and-dropdown-list">
-    {{#if currentUser.loading}}
-      <div class="loading"></div>
-    {{else}}
+    {{#if currentUserLoaded}}
       <a class="login-link-text" id="login-name-link">
         {{displayName}} ▾
       </a>
@@ -22,6 +20,8 @@
           {{/if}}
         </div>
       {{/if}}
+    {{else}}
+      <div class="loading"></div>
     {{/if}}
   </div>
 </template>
