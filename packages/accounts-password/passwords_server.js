@@ -87,6 +87,8 @@
           !verifier.verifier)
         throw new Meteor.Error(400, "Invalid verifier");
 
+      // XXX this should invalidate all login tokens other than the current one
+      // (or it should assign a new login token, replacing existing ones)
       Meteor.users.update({_id: this.userId},
                           {$set: {'services.password.srp': verifier}});
 
@@ -132,18 +134,25 @@
       if (!user)
         throw new Meteor.Error(403, "Token expired");
 
+      var stampedLoginToken = Accounts._generateStampedLoginToken();
+
+      // Update the user record by:
+      // - Changing the password verifier to the new one
+      // - Replacing all valid login tokens with new ones (changing
+      //   password should invalidate existing sessions).
+      // - Forgetting about the reset token that was just used
+      // - Verifying their email, since they got the password reset via email.
+      //   XXX we should store the email address used in services.password.reset
+      //       so that we validate the correct email here, not the first one
       Meteor.users.update({_id: user._id}, {
-        $set: {'services.password.srp': newVerifier},
+        $set: {'services.password.srp': newVerifier,
+               'services.resume.loginTokens': [stampedLoginToken],
+               'emails.0.validated': true},
         $unset: {'services.password.reset': 1}
       });
-      // verify their email. they got the password reset email.
-      Meteor.users.update({_id: user._id},
-                          {$set: {"emails.0.validated": true}});
 
-
-      var loginToken = Accounts._loginTokens.insert({userId: user._id});
       this.setUserId(user._id);
-      return {token: loginToken, id: user._id};
+      return {token: stampedLoginToken.token, id: user._id};
     },
 
     validateEmail: function (token) {
@@ -157,16 +166,17 @@
       var userId = tokenDocument.userId;
       var email = tokenDocument.email;
 
+      var stampedLoginToken = Accounts._generateStampedLoginToken();
       // update the validated flag on the index in the emails array
       // matching email (see
       // http://www.mongodb.org/display/DOCS/Updating/#Updating-The%24positionaloperator)
-      Meteor.users.update({_id: userId, "emails.address": email},
-                          {$set: {"emails.$.validated": true}});
+      Meteor.users.update({_id: userId, "emails.address": email}, {
+        $set: {"emails.$.validated": true},
+        $push: {"services.resume.loginTokens": stampedLoginToken}});
       Accounts._emailValidationTokens.remove({token: token});
 
-      var loginToken = Accounts._loginTokens.insert({userId: userId});
       this.setUserId(userId);
-      return {token: loginToken, id: userId};
+      return {token: stampedLoginToken.token, id: userId};
     }
   });
 
@@ -236,15 +246,15 @@
     delete currentInvocation._sessionData.srpChallenge;
 
     var userId = serialized.userId;
-    var loginToken = Accounts._loginTokens.insert({userId: userId});
+    var user = Meteor.users.findOne(userId);
+    // Was the user deleted since the start of this challenge?
+    if (!user)
+      throw new Meteor.Error(403, "User not found");
+    var stampedLoginToken = Accounts._generateStampedLoginToken();
+    Meteor.users.update(
+      userId, {$push: {'services.resume.loginTokens': stampedLoginToken}});
 
-    // XXX we should remove srpChallenge documents from mongo, but we
-    // need to make sure reconnects still work (meaning we can't
-    // remove them right after they've been used). This will also be
-    // fixed if we store challenges in session.
-    // https://app.asana.com/0/988582960612/1278583012594
-
-    return {token: loginToken, id: userId, HAMK: serialized.HAMK};
+    return {token: stampedLoginToken.token, id: userId, HAMK: serialized.HAMK};
   });
 
   // handler to login with plaintext password.
@@ -277,8 +287,11 @@
     if (verifier.verifier !== newVerifier.verifier)
       throw new Meteor.Error(403, "Incorrect password");
 
-    var loginToken = Accounts._loginTokens.insert({userId: user._id});
-    return {token: loginToken, id: user._id};
+    var stampedLoginToken = Accounts._generateStampedLoginToken();
+    Meteor.users.update(
+      user._id, {$push: {'services.resume.loginTokens': stampedLoginToken}});
+
+    return {token: stampedLoginToken.token, id: user._id};
   });
 
 

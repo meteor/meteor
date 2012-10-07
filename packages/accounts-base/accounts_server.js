@@ -56,16 +56,20 @@
   };
 
   // support reconnecting using a meteor login token
+  Accounts._generateStampedLoginToken = function () {
+    return {token: Meteor.uuid(), when: +(new Date)};
+  };
+
   Accounts.registerLoginHandler(function(options) {
     if (options.resume) {
-      var loginToken = Accounts._loginTokens
-            .findOne({_id: options.resume});
-      if (!loginToken)
+      var user = Meteor.users.findOne(
+        {"services.resume.loginTokens.token": options.resume});
+      if (!user)
         throw new Meteor.Error(403, "Couldn't find login token");
 
       return {
-        token: loginToken._id,
-        id: loginToken.userId
+        token: options.resume,
+        id: user._id
       };
     } else {
       return undefined;
@@ -164,9 +168,18 @@
         throw new Meteor.Error(403, "Email already exists.");
     }
 
-    var result = {id: Meteor.users.insert(fullUser)};
-    if (options.generateLoginToken)
-      result.token = Accounts._loginTokens.insert({userId: result.id});
+    var result = {};
+    if (options.generateLoginToken) {
+      var stampedToken = Accounts._generateStampedLoginToken();
+      result.token = stampedToken.token;
+      Meteor._ensure(fullUser, 'services', 'resume');
+      if (_.has(fullUser.services.resume, 'loginTokens'))
+        fullUser.services.resume.loginTokens.push(stampedToken);
+      else
+        fullUser.services.resume.loginTokens = [stampedToken];
+    }
+
+    result.id = Meteor.users.insert(fullUser);
 
     return result;
   };
@@ -212,19 +225,23 @@
       // don't overwrite existing fields
       // XXX subobjects (aka 'profile', 'services')?
       var newKeys = _.difference(_.keys(extra), _.keys(user));
-      if (!_.isEmpty(newKeys)) {
-        var newAttrs = _.pick(extra, newKeys);
-        Meteor.users.update(user._id, {$set: newAttrs});
-      }
-      return {id: user._id,
-              token: Accounts._loginTokens.insert({userId: user._id})};
+      var newAttrs = _.pick(extra, newKeys);
+      var stampedToken = Accounts._generateStampedLoginToken();
+      var result = {token: stampedToken.token};
+      Meteor.users.update(
+        user._id,
+        {$set: newAttrs, $push: {'services.resume.loginTokens': stampedToken}});
+      result.id = user._id;
+      return result;
     } else {
-      // Create a new user
+      // Create a new user.
       var servicesClause = {};
       servicesClause[serviceName] = serviceData;
-      user = {services: servicesClause};
-      return Accounts.insertUserDoc(
-        {services: servicesClause, generateLoginToken: true}, extra, user);
+      var insertOptions = {services: servicesClause, generateLoginToken: true};
+      // Build a user doc; clone to make sure sure mutating
+      // insertOptions.services doesn't affect user.services or vice versa.
+      user = {services: JSON.parse(JSON.stringify(servicesClause))};
+      return Accounts.insertUserDoc(insertOptions, extra, user);
     }
   };
 

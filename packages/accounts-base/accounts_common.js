@@ -14,18 +14,6 @@ Accounts.config = function(options) {
   Accounts._options = options;
 };
 
-
-// internal login tokens collection. Never published.
-Accounts._loginTokens = new Meteor.Collection(
-  "meteor_accounts_loginTokens", {_preventAutopublish: true});
-// Don't let people write to the collection, even in insecure
-// mode. There's no good reason for people to be fishing around in this
-// table, and it is _really_ insecure to allow it as users could easily
-// steal sessions and impersonate other users. Users can override by
-// calling more allows later, if they really want.
-Accounts._loginTokens.allow({});
-
-
 // Users table. Don't use the normal autopublish, since we want to hide
 // some fields. Code to autopublish this is in accounts_server.js.
 // XXX Allow users to configure this collection name.

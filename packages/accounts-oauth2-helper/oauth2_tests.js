@@ -4,7 +4,6 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
 
   // XXX XXX test isolation fail!  Avital: but actually -- why would
   // we run server tests more than once? or even more so in parallel?
-  Accounts._loginTokens.remove({});
   Accounts.oauth._loginResultForState = {};
   Accounts.oauth._services = {};
 
@@ -29,14 +28,15 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
   test.equal(user.services.foobook.id, foobookId);
 
   // and that that user has a login token
-  var token = Accounts._loginTokens.findOne({userId: user._id});
+  test.equal(user.services.resume.loginTokens.length, 1);
+  var token = user.services.resume.loginTokens[0].token;
   test.notEqual(token, undefined);
 
   // and that the login result for that user is prepared
   test.equal(
     Accounts.oauth._loginResultForState['STATE'].id, user._id);
   test.equal(
-    Accounts.oauth._loginResultForState['STATE'].token, token._id);
+    Accounts.oauth._loginResultForState['STATE'].token, token);
 });
 
 
