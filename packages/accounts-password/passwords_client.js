@@ -138,7 +138,7 @@
   };
 
   // Resets a password based on a token originally created by
-  // Meteor.forgotPassword, and then logs in the matching user.
+  // Accounts.forgotPassword, and then logs in the matching user.
   //
   // @param token {String}
   // @param newPassword {String}
