@@ -371,6 +371,62 @@ Template.api.findone = {
   ]
 };
 
+Template.api.insert = {
+  id: "insert",
+  name: "<em>collection</em>.insert(doc, [callback])",
+  locus: "Anywhere",
+  descr: ["Insert a document in the collection.  Returns its unique _id."],
+  args: [
+    {name: "doc",
+     type: "Object",
+     descr: "The document to insert. Should not yet have an _id attribute."},
+    {name: "callback",
+     type: "Function",
+     descr: "Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second."}
+  ]
+};
+
+Template.api.update = {
+  id: "update",
+  name: "<em>collection</em>.update(selector, modifier, [options], [callback])",
+  locus: "Anywhere",
+  descr: ["Modify one or more documents in the collection"],
+  args: [
+    {name: "selector",
+     type: "Object: Mongo selector, or String",
+     type_link: "selectors",
+     descr: "Specifies which documents to modify"},
+    {name: "modifier",
+     type: "Object: Mongo modifier",
+     type_link: "modifiers",
+     descr: "Specifies how to modify the documents"},
+    {name: "callback",
+     type: "Function",
+     descr: "Optional.  If present, called with an error object as its argument."}
+  ],
+  options: [
+    {name: "multi",
+     type: "Boolean",
+     descr: "True to modify all matching documents; false to only modify one of the matching documents (the default)."}
+  ]
+};
+
+Template.api.remove = {
+  id: "remove",
+  name: "<em>collection</em>.remove(selector, [callback])",
+  locus: "Anywhere",
+  descr: ["Remove documents from the collection"],
+  args: [
+    {name: "selector",
+     type: "Object: Mongo selector, or String",
+     type_link: "selectors",
+     descr: "Specifies which documents to remove"},
+    {name: "callback",
+     type: "Function",
+     descr: "Optional.  If present, called with an error object as its argument."}
+  ]
+};
+
 Template.api.cursor_count = {
   id: "count",
   name: "<em>cursor</em>.count()",
@@ -426,62 +482,6 @@ Template.api.cursor_observe = {
     {name: "callbacks",
      type: "Object (may include added, changed, moved, removed callbacks)",
      descr: "Functions to call to deliver the result set as it changes"}
-  ]
-};
-
-Template.api.insert = {
-  id: "insert",
-  name: "<em>collection</em>.insert(doc, [callback])",
-  locus: "Anywhere",
-  descr: ["Insert a document in the collection.  Returns its unique _id."],
-  args: [
-    {name: "doc",
-     type: "Object",
-     descr: "The document to insert. Should not yet have an _id attribute."},
-    {name: "callback",
-     type: "Function",
-     descr: "Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second."}
-  ]
-};
-
-Template.api.update = {
-  id: "update",
-  name: "<em>collection</em>.update(selector, modifier, [options], [callback])",
-  locus: "Anywhere",
-  descr: ["Modify one or more documents in the collection"],
-  args: [
-    {name: "selector",
-     type: "Object: Mongo selector, or String",
-     type_link: "selectors",
-     descr: "Specifies which documents to modify"},
-    {name: "modifier",
-     type: "Object: Mongo modifier",
-     type_link: "modifiers",
-     descr: "Specifies how to modify the documents"},
-    {name: "callback",
-     type: "Function",
-     descr: "Optional.  If present, called with an error object as its argument."}
-  ],
-  options: [
-    {name: "multi",
-     type: "Boolean",
-     descr: "True to modify all matching documents; false to only modify one of the matching documents (the default)."}
-  ]
-};
-
-Template.api.remove = {
-  id: "remove",
-  name: "<em>collection</em>.remove(selector, [callback])",
-  locus: "Anywhere",
-  descr: ["Remove documents from the collection"],
-  args: [
-    {name: "selector",
-     type: "Object: Mongo selector, or String",
-     type_link: "selectors",
-     descr: "Specifies which documents to remove"},
-    {name: "callback",
-     type: "Function",
-     descr: "Optional.  If present, called with an error object as its argument."}
   ]
 };
 
