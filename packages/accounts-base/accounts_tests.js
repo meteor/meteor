@@ -39,28 +39,26 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService', function (test)
 
 });
 
-Tinytest.add('accounts - onCreateUserHook username', function (test) {
+Tinytest.add('accounts - insertUserDoc username', function (test) {
   var userIn = {
     username: Meteor.uuid()
   };
 
-  // user does not already exist. return a user object with fields set.
-  var userOut = Accounts.onCreateUserHook(
+  // user does not already exist. create a user object with fields set.
+  var result = Accounts.insertUserDoc(
     userIn,
     {profile: {name: 'Foo Bar'}},
     userIn
   );
+  var userOut = Meteor.users.findOne(result.id);
 
   test.equal(typeof userOut.createdAt, 'number');
   test.equal(userOut.profile.name, 'Foo Bar');
   test.equal(userOut.username, userIn.username);
 
-  // insert the user
-  var uid = Meteor.users.insert(userOut);
-
   // run the hook again. now the user exists, so it throws an error.
   test.throws(function () {
-    Accounts.onCreateUserHook(
+    Accounts.insertUserDoc(
       userIn,
       {profile: {name: 'Foo Bar'}},
       userIn
@@ -68,11 +66,11 @@ Tinytest.add('accounts - onCreateUserHook username', function (test) {
   });
 
   // cleanup
-  Meteor.users.remove(uid);
+  Meteor.users.remove(result.id);
 
 });
 
-Tinytest.add('accounts - onCreateUserHook email', function (test) {
+Tinytest.add('accounts - insertUserDoc email', function (test) {
   var email1 = Meteor.uuid();
   var email2 = Meteor.uuid();
   var email3 = Meteor.uuid();
@@ -81,24 +79,22 @@ Tinytest.add('accounts - onCreateUserHook email', function (test) {
              {address: email2, verified: true}]
   };
 
-  // user does not already exist. return a user object with fields set.
-  var userOut = Accounts.onCreateUserHook(
+  // user does not already exist. create a user object with fields set.
+  var result = Accounts.insertUserDoc(
     userIn,
     {profile: {name: 'Foo Bar'}},
     userIn
   );
+  var userOut = Meteor.users.findOne(result.id);
 
   test.equal(typeof userOut.createdAt, 'number');
   test.equal(userOut.profile.name, 'Foo Bar');
   test.equal(userOut.emails, userIn.emails);
 
-  // insert the user
-  var uid = Meteor.users.insert(userOut);
-
   // run the hook again with the exact same emails.
   // run the hook again. now the user exists, so it throws an error.
   test.throws(function () {
-    Accounts.onCreateUserHook(
+    Accounts.insertUserDoc(
       userIn,
       {profile: {name: 'Foo Bar'}},
       userIn
@@ -107,26 +103,26 @@ Tinytest.add('accounts - onCreateUserHook email', function (test) {
 
   // now with only one of them.
   test.throws(function () {
-    Accounts.onCreateUserHook(
+    Accounts.insertUserDoc(
       {}, {}, {emails: [{address: email1}]}
     );
   });
 
   test.throws(function () {
-    Accounts.onCreateUserHook(
+    Accounts.insertUserDoc(
       {}, {}, {emails: [{address: email2}]}
     );
   });
 
 
   // a third email works.
-  var user3 = Accounts.onCreateUserHook(
+  var result3 = Accounts.insertUserDoc(
       {}, {}, {emails: [{address: email3}]}
   );
-  test.equal(typeof userOut.createdAt, 'number');
-
+  var user3 = Meteor.users.findOne(result3.id);
+  test.equal(typeof user3.createdAt, 'number');
 
   // cleanup
-  Meteor.users.remove(uid);
-
+  Meteor.users.remove(result.id);
+  Meteor.users.remove(result3.id);
 });

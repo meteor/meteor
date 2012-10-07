@@ -128,7 +128,7 @@
 
     return _.extend(user, extra);
   };
-  Accounts.onCreateUserHook = function (options, extra, user) {
+  Accounts.insertUserDoc = function (options, extra, user) {
     // add created at timestamp (and protect passed in user object from
     // modification)
     user = _.extend({createdAt: +(new Date)}, user);
@@ -164,8 +164,11 @@
         throw new Meteor.Error(403, "Email already exists.");
     }
 
+    var result = {id: Meteor.users.insert(fullUser)};
+    if (options.generateLoginToken)
+      result.token = Accounts._loginTokens.insert({userId: result.id});
 
-    return fullUser;
+    return result;
   };
 
   var validateNewUserHooks = [];
@@ -204,7 +207,6 @@
     var selector = {};
     selector["services." + serviceName + ".id"] = serviceData.id;
     var user = Meteor.users.findOne(selector);
-    var result = {};
 
     if (user) {
       // don't overwrite existing fields
@@ -214,18 +216,16 @@
         var newAttrs = _.pick(extra, newKeys);
         Meteor.users.update(user._id, {$set: newAttrs});
       }
-      result.id = user._id;
+      return {id: user._id,
+              token: Accounts._loginTokens.insert({userId: user._id})};
     } else {
       // Create a new user
       var servicesClause = {};
       servicesClause[serviceName] = serviceData;
       user = {services: servicesClause};
-      user = Accounts.onCreateUserHook(
-        {services: servicesClause}, extra, user);
-      result.id = Meteor.users.insert(user);
+      return Accounts.insertUserDoc(
+        {services: servicesClause, generateLoginToken: true}, extra, user);
     }
-    result.token = Accounts._loginTokens.insert({userId: result.id});
-    return result;
   };
 
 

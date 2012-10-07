@@ -297,7 +297,8 @@
   // if originates in client or server code. Calls user provided hooks,
   // does the actual user insertion.
   //
-  // returns userId or throws an error if it can't create
+  // returns an object with id: userId, and (if options.generateLoginToken is
+  // set) token: loginToken.
   var createUser = function (options, extra) {
     extra = extra || {};
     var username = options.username;
@@ -328,33 +329,33 @@
     if (email)
       user.emails = [{address: email, validated: false}];
 
-    user = Accounts.onCreateUserHook(options, extra, user);
-    var userId = Meteor.users.insert(user);
-    return userId;
+    return Accounts.insertUserDoc(options, extra, user);
   };
 
   // method for create user. Requests come from the client.
   Meteor.methods({
     createUser: function (options, extra) {
+      options = _.clone(options);
+      options.generateLoginToken = true;
       if (Accounts._options.forbidSignups)
         throw new Meteor.Error(403, "Signups forbidden");
 
-      var userId = createUser(options, extra);
-      // safety belt. createUser is supposed to throw on error. send 500
-      // error instead of creating a login token with empty userid.
-      if (!userId)
+      // Create user. result contains id and token.
+      var result = createUser(options, extra);
+      // safety belt. createUser is supposed to throw on error. send 500 error
+      // instead of sending a validation email with empty userid.
+      if (!result.id)
         throw new Error("createUser failed to insert new user");
 
       // If `Accounts._options.validateEmails` is set, register
       // a token to validate the user's primary email, and send it to
       // that address.
       if (options.email && Accounts._options.validateEmails)
-        Accounts.sendValidationEmail(userId, options.email);
+        Accounts.sendValidationEmail(result.id, options.email);
 
       // client gets logged in as the new user afterwards.
-      var loginToken = Accounts._loginTokens.insert({userId: userId});
-      this.setUserId(userId);
-      return {token: loginToken, id: userId};
+      this.setUserId(result.id);
+      return result;
     }
   });
 
@@ -365,7 +366,8 @@
   //
   // returns userId or throws an error if it can't create
   Accounts.createUser = function (options, extra, callback) {
-
+    options = _.clone(options);
+    options.generateLoginToken = false;
     if (typeof extra === "function") {
       callback = extra;
       extra = {};
@@ -376,7 +378,7 @@
       throw new Error("Meteor.createUser with callback not supported on the server yet.");
     }
 
-    var userId = createUser(options, extra);
+    var userId = createUser(options, extra).id;
 
     // send email if the user has an email and no password
     var user = Meteor.users.findOne(userId);
