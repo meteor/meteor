@@ -212,12 +212,29 @@ _.extend(Meteor._LivedataConnection.prototype, {
     }
 
     // return an object with a stop method.
-    var token = {stop: function () {
-      if (!id) return; // must have an id (local from above).
-      // just update the database. observe takes care of the rest.
-      self.subs.update({_id: id}, {$inc: {count: -1}});
-    }};
-
+    var token = {
+      stop: function () {
+        if (!id) return; // must have an id (local from above).
+        // just update the database. observe takes care of the rest.
+        self.subs.update({_id: id}, {$inc: {count: -1}});
+      },
+      isReady: function() {
+        if (!self.sub_ready_callbacks[id])
+          return true;
+        
+        // not yet complete, save the context for invalidation once we are
+        token._contexts.addCurrentContext();
+        
+        return false;
+      },
+      _contexts : new Meteor.deps._ContextSet()
+    };
+    
+    // invalidate all saved contexts
+    self.sub_ready_callbacks[id].push(function() { 
+      token._contexts.invalidateAll();
+    });
+    
     if (Meteor._capture_subs)
       Meteor._capture_subs.push(token);
 
