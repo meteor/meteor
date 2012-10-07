@@ -67,18 +67,11 @@ Tinytest.add("livedata stub - subscribe", function (test) {
   });
   test.isFalse(callback_fired);
   
-  var subscription_complete = false;
-  var setup_context = function() {
-   var context = new Meteor.deps.Context();
-   context.on_invalidate(function() {
-     setup_context();
-   });
-   context.run(function() {
-     subscription_complete = sub.complete();
-   });
-  }
-  setup_context();
-  test.isFalse(subscription_complete);
+  var subscriptionReady = false;
+  Meteor._autorun(function() {
+    subscriptionReady = sub.isReady()
+  });
+  test.isFalse(subscriptionReady);
   
   var message = JSON.parse(stream.sent.shift());
   var id = message.id;
@@ -90,7 +83,7 @@ Tinytest.add("livedata stub - subscribe", function (test) {
   test.isTrue(callback_fired);
   
   Meteor.flush();
-  test.isTrue(subscription_complete);
+  test.isTrue(subscriptionReady);
 });
 
 

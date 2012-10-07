@@ -218,28 +218,23 @@ _.extend(Meteor._LivedataConnection.prototype, {
         // just update the database. observe takes care of the rest.
         self.subs.update({_id: id}, {$inc: {count: -1}});
       },
-      complete: function() {
+      isReady: function() {
         if (!self.sub_ready_callbacks[id])
           return true;
         
         // not yet complete, save the context for invalidation once we are
-        var context = Meteor.deps.Context.current;
-        if (context)
-          this._contexts[context.id] = context;
-          
+        token._contexts.addCurrentContext();
+        
         return false;
       },
-      _contexts : {}
+      _contexts : new Meteor.deps._ContextSet()
     };
     
     // invalidate all saved contexts
     self.sub_ready_callbacks[id].push(function() { 
-      _.each(token._contexts, function(context) {
-        context.invalidate();
-      });
+      token._contexts.invalidateAll();
     });
     
-
     if (Meteor._capture_subs)
       Meteor._capture_subs.push(token);
 
