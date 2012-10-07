@@ -145,6 +145,14 @@ Template.api.subscription_onStop = {
   ]
 };
 
+Template.api.subscription_userId = {
+  id: "publish_userId",
+  name: "<i>this</i>.userId()",
+  locus: "Server",
+  descr: ["Returns the id of current user, or `null` if no user logged in. The publish function is rerun when this changes."]
+};
+
+
 Template.api.subscribe = {
   id: "meteor_subscribe",
   name: "Meteor.subscribe(name [, arg1, arg2, ... ] [, onComplete])",
@@ -184,6 +192,25 @@ Template.api.methods = {
     {name: "methods",
      type: "Object",
      descr: "Dictionary whose keys are method names and values are functions."}
+  ]
+};
+
+Template.api.method_invocation_userId = {
+  id: "method_userId",
+  name: "<i>this</i>.userId()",
+  locus: "Anywhere",
+  descr: ["Returns the id of current user, or `null` if no user logged in.  XXX Will remain constant."]
+};
+
+Template.api.method_invocation_setUserId = {
+  id: "method_setUserId",
+  name: "<i>this</i>.setUserId(userId)",
+  locus: "Server",
+  descr: ["Set the userId for this session. This affects all future method calls. Pass `null` to log the user out."],
+  args: [
+    {name: "userId",
+     type: "String",
+     descr: "XXX"}
   ]
 };
 
@@ -427,6 +454,31 @@ Template.api.remove = {
   ]
 };
 
+Template.api.allow = {
+  id: "allow",
+  name: "<em>collection</em>.allow(options)",
+  locus: "Server",
+  descr: ["Control access to XXX"],
+  options: [
+    {name: "insert",
+     type: "Function",
+     descr: "XXX"}
+  ]
+};
+
+Template.api.deny = {
+  id: "deny",
+  name: "<em>collection</em>.deny(options)",
+  locus: "Server",
+  descr: ["Control access to XXX"],
+  options: [
+    {name: "insert",
+     type: "Function",
+     descr: "XXX"}
+  ]
+};
+
+
 Template.api.cursor_count = {
   id: "count",
   name: "<em>cursor</em>.count()",
@@ -607,6 +659,381 @@ Template.api.isolate = {
   id: "isolate",
   name: "Reactivity isolation"
 };
+
+
+
+Template.api.user = {
+  id: "meteor_user",
+  name: "Meteor.user()",
+  locus: "XXX client+methods",
+  descr: ["Returns the current user object, of null if not logged in. A reactive data source."]
+};
+
+Template.api.userId = {
+  id: "meteor_userid",
+  name: "Meteor.userId()",
+  locus: "XXX client+methods",
+  descr: ["Returns the current user id, of null if not logged in. A reactive data source."]
+};
+
+
+Template.api.users = {
+  id: "meteor_users",
+  name: "Meteor.users",
+  locus: "Anywhere",
+  descr: ["A XXXlinkify Collection holding user documents."]
+};
+
+
+Template.api.logout = {
+  id: "meteor_logout",
+  name: "Meteor.logout([callback])",
+  locus: "Client",
+  descr: ["Log the user out."],
+  args: [
+    {
+      name: "callback",
+      type: "Function",
+      descr: "XXX"
+    }
+  ]
+};
+
+
+Template.api.loginWithPassword = {
+  id: "meteor_loginwithpassword",
+  name: "Meteor.loginWithPassword(user, password, [callback])",
+  locus: "Client",
+  descr: ["Log the user in."],
+  args: [
+    {
+      name: "user",
+      type: "Object or String",
+      descr: "XXX"
+    },
+    {
+      name: "password",
+      type: "String",
+      descr: "XXX"
+    },
+    {
+      name: "callback",
+      type: "Function",
+      descr: "XXX"
+    }
+  ]
+};
+
+
+Template.api.loginWithFacebook = {
+  id: "meteor_loginwithfacebook",
+  name: "Meteor.loginWithFacebook([callback])",
+  locus: "Client",
+  descr: ["Log the user in."],
+  args: [
+    {
+      name: "callback",
+      type: "Function",
+      descr: "XXX"
+    }
+  ]
+};
+
+Template.api.loginWithGithub = {
+  id: "meteor_loginwithgithub",
+  name: "Meteor.loginWithGithub([callback])",
+  locus: "Client",
+  descr: ["Log the user in."],
+  args: [
+    {
+      name: "callback",
+      type: "Function",
+      descr: "XXX"
+    }
+  ]
+};
+
+Template.api.loginWithGoogle = {
+  id: "meteor_loginwithgoogle",
+  name: "Meteor.loginWithGoogle([callback])",
+  locus: "Client",
+  descr: ["Log the user in."],
+  args: [
+    {
+      name: "callback",
+      type: "Function",
+      descr: "XXX"
+    }
+  ]
+};
+
+Template.api.loginWithTwitter = {
+  id: "meteor_loginwithtwitter",
+  name: "Meteor.loginWithTwitter([callback])",
+  locus: "Client",
+  descr: ["Log the user in."],
+  args: [
+    {
+      name: "callback",
+      type: "Function",
+      descr: "XXX"
+    }
+  ]
+};
+
+Template.api.loginWithWeibo = {
+  id: "meteor_loginwithweibo",
+  name: "Meteor.loginWithWeibo([callback])",
+  locus: "Client",
+  descr: ["Log the user in."],
+  args: [
+    {
+      name: "callback",
+      type: "Function",
+      descr: "XXX"
+    }
+  ]
+};
+
+
+Template.api.accounts_createUser = {
+  id: "accounts_createuser",
+  name: "Accounts.createUser(options, extra, [callback])",
+  locus: "Anywhere",
+  descr: ["Create a new user."],
+  args: [
+    {
+      name: "options",
+      type: "Object",
+      descr: "XXX"
+    },
+    {
+      name: "extra",
+      type: "Object",
+      descr: "XXX"
+    },
+    {
+      name: "callback",
+      type: "Function",
+      descr: "XXX"
+    }
+  ],
+  options: [
+    {
+      name: "username",
+      type: "String",
+      descr: "XXX"
+    },
+    {
+      name: "email",
+      type: "String",
+      descr: "XXX"
+    },
+    {
+      name: "password",
+      type: "String",
+      descr: "XXX"
+    }
+  ]
+};
+
+Template.api.accounts_changePassword = {
+  id: "accounts_changepassword",
+  name: "Accounts.changePassword(oldPassword, newPassword, [callback])",
+  locus: "Client",
+  descr: ["Change the users password. Must be logged in."],
+  args: [
+    {
+      name: "oldPassword",
+      type: "String",
+      descr: "XXX"
+    },
+    {
+      name: "newPassword",
+      type: "String",
+      descr: "XXX"
+    },
+    {
+      name: "callback",
+      type: "Function",
+      descr: "XXX"
+    }
+  ]
+};
+
+Template.api.accounts_forgotPassword = {
+  id: "accounts_forgotpassword",
+  name: "Accounts.forgotPassword(options, [callback])",
+  locus: "Client",
+  descr: ["Request a forgot password email"],
+  args: [
+    {
+      name: "callback",
+      type: "Function",
+      descr: "XXX"
+    }
+  ],
+  options: [
+    {
+      name: "email",
+      type: "String",
+      descr: "The email address to send a password reminder to."
+    }
+  ]
+};
+
+Template.api.accounts_resetPassword = {
+  id: "accounts_resetpassword",
+  name: "Accounts.resetPassword(token, newPassword, [callback])",
+  locus: "Client",
+  descr: ["Reset the password for a user, using the token from email. Logs you in afterwards."],
+  args: [
+    {
+      name: "token",
+      type: "String",
+      descr: "XXX"
+    },
+    {
+      name: "newPassword",
+      type: "String",
+      descr: "XXX"
+    },
+    {
+      name: "callback",
+      type: "Function",
+      descr: "XXX"
+    }
+  ],
+  options: [
+    {
+      name: "email",
+      type: "String",
+      descr: "The email address to send a password reminder to."
+    }
+  ]
+};
+
+Template.api.accounts_validateEmail = {
+  id: "accounts_validateemail",
+  name: "Accounts.validateEmail(token, [callback])",
+  locus: "Client",
+  descr: ["Marks the user's email address as validated. Logs the user in afterwards."],
+  args: [
+    {
+      name: "token",
+      type: "String",
+      descr: "XXX"
+    },
+    {
+      name: "callback",
+      type: "Function",
+      descr: "XXX"
+    }
+  ]
+};
+
+
+
+
+Template.api.accounts_config = {
+  id: "accounts_config",
+  name: "Accounts.config(options)",
+  locus: "Anywhere",
+  descr: ["Set global accounts options."],
+  options: [
+    {
+      name: "validateEmail",
+      type: "Boolean",
+      descr: "If true, new users with an email address will receive a verifcation email."
+    },
+    {
+      name: "forbidSignups",
+      type: "Boolean",
+      descr: "If true, new user signups will be rejected. Server-side user creation via XXXlinkify createUser is still allowed."
+    }
+  ]
+};
+
+Template.api.accounts_emailTemplates = {
+  id: "accounts_emailtemplates",
+  name: "Accounts.emailTemplates",
+  locus: "Anywhere",
+  descr: ["XXX"]
+};
+
+
+Template.api.accounts_validateNewUser = {
+  id: "accounts_validatenewuser",
+  name: "Accounts.validateNewUser(func)",
+  locus: "Server",
+  descr: ["Set up a new user validator."],
+  args: [
+    {
+      name: "func",
+      type: "Function",
+      descr: "Validator function. Takes a new user object, and returns true to allow the creation or false to abort."
+    }
+  ]
+};
+
+Template.api.accounts_onCreateUser = {
+  id: "accounts_oncreateuser",
+  name: "Accounts.onCreateUser(func)",
+  locus: "Server",
+  descr: ["Set up a new user mangler XXX."],
+  args: [
+    {
+      name: "func",
+      type: "Function",
+      descr: "Validator function. Takes `(options, extra, user)`. Return the new user, or throw an `Error`."
+    }
+  ]
+};
+
+
+Template.api.accounts_setPassword = {
+  id: "accounts_setpassword",
+  name: "Accounts.setPassword(userId, newPassword)",
+  locus: "Server",
+  descr: ["Force change the password for a user."],
+  args: [
+    {
+      name: "userId",
+      type: "String",
+      descr: "XXX"
+    },
+    {
+      name: "newPassword",
+      type: "String",
+      descr: "XXX"
+    }
+  ]
+};
+
+Template.api.accounts_configuration = {
+  id: "accounts_configuration",
+  name: "Accounts.configuration",
+  locus: "Anywhere",
+  descr: ["A XXXlinkify Collection holding login service info."]
+};
+
+
+Template.api.accounts_facebook_config = {
+  id: "accounts_facebook_config",
+  name: "Accounts.facebook.config(options)",
+  locus: "Anywhere",
+  descr: ["XXX REMOVE!"]
+};
+
+Template.api.accounts_google_config = {
+  id: "accounts_google_config",
+  name: "Accounts.google.config(options)",
+  locus: "Anywhere",
+  descr: ["XXX REMOVE!"]
+};
+
+
+
 
 
 

@@ -120,6 +120,8 @@ is the place to stop the observes.
 
 {{> api_box subscription_stop}}
 
+{{> api_box subscription_userId}}
+
 {{> api_box subscribe}}
 
 When you subscribe to a record set, it tells the server to send records
@@ -214,6 +216,10 @@ stub is ignored.  Stubs are run for their side-effects: they are
 intended to *simulate* the result of what the server's method will do,
 but without waiting for the round trip delay.  If a stub throws an
 exception it will be logged to the console.
+
+{{> api_box method_invocation_userId}}
+
+{{> api_box method_invocation_setUserId}}
 
 {{> api_box method_invocation_isSimulation}}
 
@@ -621,6 +627,27 @@ Example:
 
     // Delete all the log entries
     Logs.remove({});
+
+
+{{> api_box allow}}
+
+<dl class="callbacks">
+{{#dtdd "insert(userId, doc)"}}
+blah blah
+{{/dtdd}}
+
+{{#dtdd "update(userId, docs, fields, modifier)"}}
+blah
+{{/dtdd}}
+
+{{#dtdd "remove(userId, docs)"}}
+blah
+{{/dtdd}}
+
+</dl>
+
+
+{{> api_box deny}}
 
 
 <h2 id="meteor_collection_cursor"><span>Cursors</span></h2>
@@ -1458,6 +1485,41 @@ sub-template.
 
 {{/api_box_inline}}
 
+
+
+<h2 id="accounts_api"><span>Accounts</span></h2>
+
+{{> api_box user}}
+
+{{> api_box userId}}
+
+{{> api_box users}}
+
+XXX schema?
+
+{{> api_box logout}}
+{{> api_box loginWithPassword}}
+{{> api_box loginWithFacebook}}
+{{> api_box loginWithGithub}}
+{{> api_box loginWithGoogle}}
+{{> api_box loginWithTwitter}}
+{{> api_box loginWithWeibo}}
+
+{{> api_box accounts_createUser}}
+{{> api_box accounts_changePassword}}
+{{> api_box accounts_forgotPassword}}
+{{> api_box accounts_resetPassword}}
+{{> api_box accounts_validateEmail}}
+
+{{> api_box accounts_config}}
+{{> api_box accounts_emailTemplates}}
+{{> api_box accounts_validateNewUser}}
+{{> api_box accounts_onCreateUser}}
+{{> api_box accounts_setPassword}}
+{{> api_box accounts_configuration}}
+
+{{> api_box accounts_facebook_config}}
+{{> api_box accounts_google_config}}
 
 
 <h2 id="timers"><span>Timers</span></h2>

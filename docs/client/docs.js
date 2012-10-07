@@ -93,7 +93,8 @@ var toc = [
         {instance: "this", name: "complete", id: "publish_complete"},
         {instance: "this", name: "flush", id: "publish_flush"},
         {instance: "this", name: "onStop", id: "publish_onstop"},
-        {instance: "this", name: "stop", id: "publish_stop"}
+        {instance: "this", name: "stop", id: "publish_stop"},
+        {instance: "this", name: "userId", id: "publish_userId"}
       ],
       "Meteor.subscribe",
       "Meteor.autosubscribe"
@@ -101,6 +102,8 @@ var toc = [
 
     {name: "Methods", id: "methods_header"}, [
       "Meteor.methods", [
+        {instance: "this", name: "userId", id: "method_userId"},
+        {instance: "this", name: "setUserId", id: "method_setUserId"},
         {instance: "this", name: "isSimulation", id: "method_issimulation"},
         {instance: "this", name: "unblock", id: "method_unblock"}
       ],
@@ -121,7 +124,9 @@ var toc = [
         {instance: "collection", name: "findOne"},
         {instance: "collection", name: "insert"},
         {instance: "collection", name: "update"},
-        {instance: "collection", name: "remove"}
+        {instance: "collection", name: "remove"},
+        {instance: "collection", name: "allow"},
+        {instance: "collection", name: "deny"}
       ],
 
       "Meteor.Collection.Cursor", [
@@ -167,6 +172,39 @@ var toc = [
       {name: "Constant regions", style: "noncode", id: "constant"},
       {name: "Reactivity isolation", style: "noncode", id: "isolate"}
      ],
+
+    {name: "Accounts", id: "accounts_api"}, [
+      "Meteor.user",
+      "Meteor.userId",
+      "Meteor.users",
+      "Meteor.logout",
+      "Meteor.loginWithPassword",
+      "Meteor.loginWithFacebook",
+      "Meteor.loginWithGithub",
+      "Meteor.loginWithGoogle",
+      "Meteor.loginWithTwitter",
+      "Meteor.loginWithWeibo",
+      {type: "spacer"},
+
+      "Accounts.createUser",
+      "Accounts.changePassword",
+      "Accounts.forgotPassword",
+      "Accounts.resetPassword",
+      "Accounts.validateEmail",
+      {type: "spacer"},
+
+      "Accounts.config",
+      "Accounts.emailTemplates",
+      "Accounts.validateNewUser",
+      "Accounts.onCreateUser",
+      "Accounts.setPassword",
+      "Accounts.configuration",
+      {type: "spacer"},
+
+      "Accounts.facebook.config",
+      "Accounts.google.config"
+    ],
+
 
     "Timers", [
       "Meteor.setTimeout",
