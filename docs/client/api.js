@@ -1,13 +1,13 @@
-Template.api.is_client = {
-  id: "meteor_is_client",
-  name: "Meteor.is_client",
+Template.api.isClient = {
+  id: "meteor_isclient",
+  name: "Meteor.isClient",
   locus: "Anywhere",
   descr: ["Boolean variable.  True if running in client environment."]
 };
 
-Template.api.is_server = {
-  id: "meteor_is_server",
-  name: "Meteor.is_server",
+Template.api.isServer = {
+  id: "meteor_isserver",
+  name: "Meteor.isServer",
   locus: "Anywhere",
   descr: ["Boolean variable.  True if running in server environment."]
 };
@@ -21,6 +21,36 @@ Template.api.startup = {
     {name: "func",
      type: "Function",
      descr: "A function to run on startup."}
+  ]
+};
+
+Template.api.absoluteUrl = {
+  id: "meteor_absoluteurl",
+  name: "Meteor.absoluteUrl([path], [options])",
+  locus: "Anywhere",
+  descr: ["Generate an absolute URL pointing to the application. The server "
+          + "reads from the `ROOT_URL` environment variable to determine "
+          + "where it is running. This is taken care of automatically for "
+          + "apps deployed with `meteor deploy`, but must be provided when "
+          + "using `meteor bundle`."],
+  args: [
+    {name: "path",
+     type: "String",
+     descr: 'A path to append to the root URL. Do not include a leading "`/`".'
+    }
+  ],
+  options: [
+    {name: "secure",
+     type: "Boolean",
+     descr: "Create an HTTPS URL."
+    },
+    {name: "replaceLocalhost",
+     type: "Boolean",
+     descr: "Replace localhost with 127.0.0.1. Useful for services that don't recognize localhost as a domain name."},
+    {name: "rootUrl",
+     type: "String",
+     descr: "Override the default ROOT_URL from the server environment. For example: \"`http://foo.example.com`\""
+    }
   ]
 };
 
@@ -164,9 +194,9 @@ Template.api.method_invocation_unblock = {
   descr: ["Call inside method invocation.  Allow subsequent method from this client to begin running in a new fiber."]
 };
 
-Template.api.method_invocation_is_simulation = {
-  id: "method_is_simulation",
-  name: "<i>this</i>.is_simulation",
+Template.api.method_invocation_isSimulation = {
+  id: "method_issimulation",
+  name: "<i>this</i>.isSimulation",
   locus: "Anywhere",
   descr: ["Access inside method invocation.  Boolean value, true if this invocation is a stub."]
 };
@@ -352,7 +382,7 @@ Template.api.cursor_foreach = {
   id: "foreach",
   name: "<em>cursor</em>.forEach(callback)",
   locus: "Anywhere",
-  descr: ["Call the callback function once for each matching document."],
+  descr: ["Call `callback` once for each matching document, sequentially and synchronously."],
   args: [
     {name: "callback",
      type: "Function",
@@ -383,7 +413,7 @@ Template.api.cursor_rewind = {
 Template.api.cursor_observe = {
   id: "observe",
   name: "<em>cursor</em>.observe(callbacks)",
-  locus: "Client",
+  locus: "Anywhere",
   descr: ["Watch a query.  Receive callbacks as the result set changes."],
   args: [
     {name: "callbacks",
@@ -472,14 +502,7 @@ Template.api.Context = {
   id: "context",
   name: "new Meteor.deps.Context",
   locus: "Client",
-  descr: ["Create an invalidation context. Invalidation contexts are used to run a piece of code, and record its dependencies so it can be rerun later if one of its inputs changes.", "An invalidation context is basically just a list of callbacks for an event that can fire only once. The [`on_invalidate`](#on_invalidate) method adds a callback to the list, and the [`invalidate`](#invalidate) method fires the event."]
-};
-
-Template.api.current = {
-  id: "current",
-  name: "Meteor.deps.Context.current",
-  locus: "Client",
-  descr: ["The current [`invalidation context`](#context), or `null` if not being called from inside [`run`](#run)."]
+  descr: ["Create an invalidation context. Invalidation contexts are used to run a piece of code, and record its dependencies so it can be rerun later if one of its inputs changes.", "An invalidation context is basically just a list of callbacks for an event that can fire only once. The [`onInvalidate`](#oninvalidate) method adds a callback to the list, and the [`invalidate`](#invalidate) method fires the event."]
 };
 
 Template.api.run = {
@@ -494,9 +517,9 @@ Template.api.run = {
   ]
 };
 
-Template.api.on_invalidate = {
-  id: "on_invalidate",
-  name: "<em>context</em>.on_invalidate(callback)",
+Template.api.onInvalidate = {
+  id: "oninvalidate",
+  name: "<em>context</em>.onInvalidate(callback)",
   locus: "Client",
   descr: ["Registers `callback` to be called when this context is invalidated. `callback` will be run exactly once."],
   args: [
@@ -510,80 +533,14 @@ Template.api.invalidate = {
   id: "invalidate",
   name: "<em>context</em>.invalidate()",
   locus: "Client",
-  descr: ["Add this context to the list of contexts that will have their `on_invalidate|on_invalidate` callbacks called by the next call to [`Meteor.flush`](#meteor_flush)."]
+  descr: ["Add this context to the list of contexts that will have their [`onInvalidate`](#oninvalidate) callbacks called by the next call to [`Meteor.flush`](#meteor_flush)."]
 };
 
-
-// writeFence
-// invalidationCrossbar
-
-Template.api.render = {
-  id: "meteor_ui_render",
-  name: "Meteor.ui.render(html_func, [options])",
+Template.api.current = {
+  id: "current",
+  name: "Meteor.deps.Context.current",
   locus: "Client",
-  descr: ["Create DOM nodes that automatically update themselves as data changes."],
-  args: [
-    {name: "html_func",
-     type: "Function returning a string of HTML",
-     descr: "Render function to be called, initially and whenever data changes"}
-  ],
-  options: [
-    {name: "events",
-     type: "Object &mdash; event map",
-     type_link: "eventmaps",
-     descr: "Events to hook up to the rendered elements"},
-    {name: "event_data",
-     type: "Any value",
-     descr: "Value to bind to `this` in event handlers"
-    }
-  ]
-};
-
-Template.api.chunk = {
-  id: "meteor_ui_chunk",
-  name: "Meteor.ui.chunk(html_func, [options])",
-  locus: "Client",
-  descr: ["Inside [`Meteor.ui.render`](#meteor_ui_render), give special behavior to a range of HTML."],
-  args: [
-    {name: "html_func",
-     type: "Function returning a string of HTML",
-     descr: "Render function to be called, initially and whenever data changes"}
-  ],
-  options: [
-    {name: "events",
-     type: "Object &mdash; event map",
-     type_link: "eventmaps",
-     descr: "Events to hook up to the rendered elements"},
-    {name: "event_data",
-     type: "Any value",
-     descr: "Value to bind to `this` in event handlers"
-    }
-  ]
-};
-
-Template.api.listChunk = {
-  id: "meteor_ui_listchunk",
-  name: "Meteor.ui.listChunk(observable, doc_func, [else_func], [options])",
-  locus: "Client",
-  descr: ["Observe a database query and create annotated HTML that will be reactively updated when rendered with [`Meteor.ui.render`](#meteor_ui_render)."],
-  args: [
-    {name: "observable",
-     type: "Cursor",
-     type_link: "meteor_collection_cursor",
-     descr: "Query cursor to observe, as a reactive source of ordered documents"},
-    {name: "doc_func",
-     type: "Function taking a document and returning HTML",
-     descr: "Render function to be called for each document"},
-    {name: "else_func",
-     type: "Function returning HTML",
-     descr: "Render function to be called when query is empty"}
-  ],
-  options: [
-    {name: "events",
-     type: "Object &mdash; event map",
-     type_link: "eventmaps",
-     descr: "Events to hook up to the rendered elements"}
-  ]
+  descr: ["The current [`invalidation context`](#context), or `null` if not being called from inside [`run`](#run)."]
 };
 
 Template.api.flush = {
@@ -593,10 +550,58 @@ Template.api.flush = {
   descr: ["Ensure that any reactive updates have finished. Allow auto-updating DOM element to be cleaned up if they are offscreen."]
 };
 
+
+// writeFence
+// invalidationCrossbar
+
+Template.api.render = {
+  id: "meteor_render",
+  name: "Meteor.render(htmlFunc)",
+  locus: "Client",
+  descr: ["Create DOM nodes that automatically update themselves as data changes."],
+  args: [
+    {name: "htmlFunc",
+     type: "Function returning a string of HTML",
+     descr: "Function that generates HTML to be rendered.  Called immediately and re-run whenever data changes.  May also be a string of HTML instead of a function."}
+  ]
+};
+
+Template.api.renderList = {
+  id: "meteor_renderlist",
+  name: "Meteor.renderList(observable, docFunc, [elseFunc])",
+  locus: "Client",
+  descr: ["Create DOM nodes that automatically update themselves based on the results of a database query."],
+  args: [
+    {name: "observable",
+     type: "Cursor",
+     type_link: "meteor_collection_cursor",
+     descr: "Query cursor to observe as a reactive source of ordered documents."},
+    {name: "docFunc",
+     type: "Function taking a document and returning HTML",
+     descr: "Render function to be called for each document."},
+    {name: "elseFunc",
+     type: "Function returning HTML",
+     descr: "Optional.  Render function to be called when query is empty."}
+  ]
+};
+
+
 Template.api.eventmaps = {
   id: "eventmaps",
   name: "Event Maps"
 };
+
+Template.api.constant = {
+  id: "constant",
+  name: "Constant regions"
+};
+
+Template.api.isolate = {
+  id: "isolate",
+  name: "Reactivity isolation"
+};
+
+
 
 Template.api.setTimeout = {
   id: "meteor_settimeout",
@@ -719,9 +724,9 @@ Template.api.set = {
   args: [
     {name: "key",
      type: "String",
-     descr: "The key to set, eg, `selected_item`"},
+     descr: "The key to set, eg, `selectedItem`"},
     {name: "value",
-     type: "Any type",
+     type: "JSON-able object or undefined",
      descr: "The new value for `key`"}
   ]
 };
@@ -730,7 +735,7 @@ Template.api.get = {
   id: "session_get",
   name: "Session.get(key)",
   locus: "Client",
-  descr: ["Get the value of a session variable. If inside a [`Meteor.deps`](#meteor_deps) context, invalidate the context the next time the value of the variable is changed by [`Session.set`](#session_set)."],
+  descr: ["Get the value of a session variable. If inside a [`Meteor.deps`](#meteor_deps) context, invalidate the context the next time the value of the variable is changed by [`Session.set`](#session_set). This returns a clone of the session value, so if it's an object or an array, mutating the returned value has no effect on the value stored in the session."],
   args: [
     {name: "key",
      type: "String",
@@ -828,4 +833,167 @@ Template.api.http_del = {
   descr: ["Send an HTTP DELETE request.  Equivalent to `Meteor.http.call(\"DELETE\", ...)`.  (Named `del` to avoid conflict with JavaScript's `delete`."]
 };
 
+
+// XXX move these up to right place
+Template.api.template_call = {
+  id: "template_call",
+  name: "Template.<em>myTemplate</em>([data])",
+  locus: "Client",
+  descr: ["Call a template function by name to produce HTML."],
+  args: [
+    {name: "data",
+     type: "Object",
+     descr: 'Optional. The data context object with which to call the template.'}
+  ]
+};
+
+Template.api.template_rendered = {
+  id: "template_rendered",
+  name: "Template.<em>myTemplate</em>.rendered = function ( ) { ... }",
+  locus: "Client",
+  descr: ["Provide a callback when an instance of a template is rendered."]
+};
+
+Template.api.template_created = {
+  id: "template_created",
+  name: "Template.<em>myTemplate</em>.created = function ( ) { ... }",
+  locus: "Client",
+  descr: ["Provide a callback when an instance of a template is created."]
+};
+
+Template.api.template_destroyed = {
+  id: "template_destroyed",
+  name: "Template.<em>myTemplate</em>.destroyed = function ( ) { ... }",
+  locus: "Client",
+  descr: ["Provide a callback when an instance of a template is destroyed."]
+};
+
+Template.api.template_events = {
+  id: "template_events",
+  name: "Template.<em>myTemplate</em>.events(eventMap)",
+  locus: "Client",
+  descr: ["Specify event handlers for this template."],
+  args: [
+    {name: "eventMap",
+     type: "Object: event map",
+     type_link: "eventmaps",
+     descr: "Event handlers to associate with this template."}
+  ]
+};
+
+Template.api.template_helpers = {
+  id: "template_helpers",
+  name: "Template.<em>myTemplate</em>.helpers(helpers)",
+  locus: "Client",
+  descr: ["Specify template helpers available to this template."],
+  args: [
+    {name: "helpers",
+     type: "Object",
+     descr: "Dictionary of helper functions by name."}
+  ]
+};
+
+Template.api.template_preserve = {
+  id: "template_preserve",
+  name: "Template.<em>myTemplate</em>.preserve(selectors)",
+  locus: "Client",
+  descr: ["Specify rules for preserving individual DOM elements on re-render."],
+  args: [
+    {name: "selectors",
+     type: "Array or Object",
+     descr: "Array of selectors that each match at most one element, such as `['.thing1', '.thing2']`, or, alternatively, a dictionary of selectors and node-labeling functions (see below)."}
+  ]
+};
+
+Template.api.template_findAll = {
+  id: "template_findAll",
+  name: "<em>this</em>.findAll(selector)",
+  locus: "Client",
+  descr: ["Find all elements matching `selector` in this template instance."],
+  args: [
+    {name: "selector",
+     type: "String",
+     descr: 'The CSS selector to match, scoped to the template contents.'}
+  ]
+};
+
+Template.api.template_find = {
+  id: "template_find",
+  name: "<em>this</em>.find(selector)",
+  locus: "Client",
+  descr: ["Find one element matching `selector` in this template instance."],
+  args: [
+    {name: "selector",
+     type: "String",
+     descr: 'The CSS selector to match, scoped to the template contents.'}
+  ]
+};
+
+Template.api.template_firstNode = {
+  id: "template_firstNode",
+  name: "<em>this</em>.firstNode",
+  locus: "Client",
+  descr: ["The first top-level DOM node in this template instance."]
+};
+
+Template.api.template_lastNode = {
+  id: "template_lastNode",
+  name: "<em>this</em>.lastNode",
+  locus: "Client",
+  descr: ["The last top-level DOM node in this template instance."]
+};
+
+Template.api.template_data = {
+  id: "template_data",
+  name: "<em>this</em>.data",
+  locus: "Client",
+  descr: ["The data context of this instance's latest invocation."]
+};
+
+var rfc = function (descr) {
+  return ('<a href="http://tools.ietf.org/html/rfc5322" target="_blank">RFC5322'
+          + '</a> ' + descr);
+};
+
+Template.api.email_send = {
+  id: "email_send",
+  name: "Email.send(options)",
+  locus: "Server",
+  descr: ["Send an email. Throws an `Error` on failure to contact mail " +
+          "server or if mail server returns an error."],
+  options: [
+    {name: "from",
+     type: "String",
+     descr: rfc('"From:" address (required)')
+    },
+    {name: "to",
+     type: "String or Array of strings",
+     descr: rfc('"To:" address[es]')
+    },
+    {name: "cc",
+     type: "String or Array of strings",
+     descr: rfc('"Cc:" address[es]')
+    },
+    {name: "bcc",
+     type: "String or Array of strings",
+     descr: rfc('"Bcc:" address[es]')
+    },
+    {name: "replyTo",
+     type: "String or Array of strings",
+     descr: rfc('"Reply-To:" address[es]')
+    },
+    {name: "subject",
+     type: "String",
+     descr: rfc('"Subject:" line')
+    },
+    {name: "text",
+     type: "String",
+     descr: rfc('mail body (plain text)')
+    },
+    {name: "html",
+     type: "String",
+     descr: rfc('mail body (HTML)')
+    }
+  ]
+};
 

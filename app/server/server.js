@@ -50,11 +50,13 @@ var supported_browser = function (user_agent) {
 // add any runtime configuration options needed to app_html
 var runtime_config = function (app_html) {
   var insert = '';
-  if (process.env.DEFAULT_DDP_ENDPOINT)
-    insert += "__meteor_runtime_config__.DEFAULT_DDP_ENDPOINT = '" +
-      process.env.DEFAULT_DDP_ENDPOINT + "';";
+  if (typeof __meteor_runtime_config__ === 'undefined')
+    return app_html;
 
-  app_html = app_html.replace("// ##RUNTIME_CONFIG##", insert);
+  app_html = app_html.replace(
+    "// ##RUNTIME_CONFIG##",
+    "__meteor_runtime_config__ = " +
+      JSON.stringify(__meteor_runtime_config__) + ";");
 
   return app_html;
 };
@@ -64,22 +66,17 @@ var run = function () {
 
   // check environment
   var port = process.env.PORT ? parseInt(process.env.PORT) : 80;
-  var mongo_url = process.env.MONGO_URL;
-  if (!mongo_url)
+
+  // check for a valid MongoDB URL right away
+  if (!process.env.MONGO_URL)
     throw new Error("MONGO_URL must be set in environment");
 
   // webserver
   var app = connect.createServer();
   var static_cacheable_path = path.join(bundle_dir, 'static_cacheable');
-  if (path.existsSync(static_cacheable_path))
+  if (fs.existsSync(static_cacheable_path))
     app.use(gzippo.staticGzip(static_cacheable_path, {clientMaxAge: 1000 * 60 * 60 * 24 * 365}));
   app.use(gzippo.staticGzip(path.join(bundle_dir, 'static')));
-
-  var app_html = fs.readFileSync(path.join(bundle_dir, 'app.html'), 'utf8');
-  var unsupported_html = fs.readFileSync(path.join(bundle_dir, 'unsupported.html'));
-
-  app_html = runtime_config(app_html);
-
 
   // read bundle config file
   var info_raw =
@@ -88,11 +85,9 @@ var run = function () {
 
   // start up app
   __meteor_bootstrap__ = {require: require, startup_hooks: [], app: app};
+  __meteor_runtime_config__ = {};
   Fiber(function () {
     // (put in a fiber to let Meteor.db operations happen during loading)
-
-    // pass in database info
-    __meteor_bootstrap__.mongo_url = mongo_url;
 
     // load app code
     _.each(info.load, function (filename) {
@@ -112,6 +107,15 @@ var run = function () {
       require('vm').runInThisContext(code, filename, true);
     });
 
+
+    // Actually serve HTML. This happens after user code, so that
+    // packages can insert connect middlewares and update
+    // __meteor_runtime_config__
+    var app_html = fs.readFileSync(path.join(bundle_dir, 'app.html'), 'utf8');
+    var unsupported_html = fs.readFileSync(path.join(bundle_dir, 'unsupported.html'));
+
+    app_html = runtime_config(app_html);
+
     app.use(function (req, res) {
       // prevent favicon.ico and robots.txt from returning app_html
       if (_.indexOf(['/favicon.ico', '/robots.txt'], req.url) !== -1) {
@@ -120,7 +124,7 @@ var run = function () {
         return;
       }
 
-      res.writeHead(200, {'Content-Type': 'text/html'});
+      res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
       if (supported_browser(req.headers['user-agent']))
         res.write(app_html);
       else

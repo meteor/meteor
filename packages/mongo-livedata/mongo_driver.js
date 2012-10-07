@@ -164,7 +164,7 @@ _Mongo.prototype.remove = function (collection_name, selector) {
       return;
     }
 
-    collection.remove(selector, {/* XXXsafe: true*/}, function (err) {
+    collection.remove(selector, {safe: true}, function (err) {
       if (err) {
         future.ret(err);
         return;
@@ -290,37 +290,41 @@ _Mongo.Cursor = function (mongo, collection_name, selector, options, cursor) {
   self.selector = selector;
   self.options = options;
   self.cursor = cursor;
+  self._synchronousNextObject = Future.wrap(cursor.nextObject.bind(cursor));
+  self._synchronousCount = Future.wrap(cursor.count.bind(cursor));
 
   self.visited_ids = {};
 };
 
-_Mongo.Cursor.prototype.forEach = function (callback) {
+_Mongo.Cursor.prototype._nextObject = function () {
   var self = this;
-  var future = new Future;
-
-  callback = Meteor.bindEnvironment(callback, function (e) {
-    // XXX improve error message (and how we report it)
-    Meteor._debug("Exception while running Meteor.Collection forEach callback"
-                  + e.stack);
-  });
-
-  self.cursor.each(function (err, doc) {
-    if (err || !doc || !doc._id) {
-      future.ret(err);
-    } else if (self.visited_ids[doc._id]) {
-      // already seen this doc;  Mongo cursors can
-      // return duplicates
-    } else {
-      self.visited_ids[doc._id] = true;
-      callback(doc);
-    }
-  });
-
-  var err = future.wait();
-  if (err)
-    throw err;
+  while (true) {
+    var doc = self._synchronousNextObject().wait();
+    if (!doc || !doc._id) return null;
+    if (self.visited_ids[doc._id]) continue;
+    self.visited_ids[doc._id] = true;
+    return doc;
+  }
 };
 
+// XXX Make more like ECMA forEach:
+//     https://github.com/meteor/meteor/pull/63#issuecomment-5320050
+_Mongo.Cursor.prototype.forEach = function (callback) {
+  var self = this;
+
+  // We implement the loop ourself instead of using self.cursor.each, because
+  // "each" will call its callback outside of a fiber which makes it much more
+  // complex to make this function synchronous.
+  while (true) {
+    var doc = self._nextObject();
+    if (!doc) return;
+    callback(doc);
+  }
+};
+
+// XXX Make more like ECMA map:
+//     https://github.com/meteor/meteor/pull/63#issuecomment-5320050
+// XXX Allow overlapping callback executions if callback yields.
 _Mongo.Cursor.prototype.map = function (callback) {
   var self = this;
   var res = [];
@@ -341,32 +345,12 @@ _Mongo.Cursor.prototype.rewind = function () {
 
 _Mongo.Cursor.prototype.fetch = function () {
   var self = this;
-  var future = new Future;
-
-  self.cursor.toArray(function (err, res) {
-    future.ret([err, res]);
-  });
-
-  var result = future.wait();
-  if (result[0])
-    throw result[0];
-  // dedup
-  return _.uniq(result[1], false, function(doc) {
-    return doc._id; });
+  return self.map(_.identity);
 };
 
 _Mongo.Cursor.prototype.count = function () {
   var self = this;
-  var future = new Future;
-
-  self.cursor.count(function (err, res) {
-    future.ret([err, res]);
-  });
-
-  var result = future.wait();
-  if (result[0])
-    throw result[0];
-  return result[1];
+  return self._synchronousCount().wait();
 };
 
 // options to contain:
@@ -491,7 +475,7 @@ _Mongo.LiveResultsSet.prototype._doPoll = function () {
   var new_results = self.cursor.fetch();
   var old_results = self.results;
 
-  LocalCollection._diffQuery(old_results, new_results, self);
+  LocalCollection._diffQuery(old_results, new_results, self, true);
   self.results = new_results;
 
 };

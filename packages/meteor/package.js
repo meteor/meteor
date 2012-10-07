@@ -40,6 +40,11 @@ Package.on_use(function (api, where) {
   api.use('underscore', ['client', 'server']);
   api.add_files('dynamics_browser.js', 'client');
   api.add_files('dynamics_nodejs.js', 'server');
+
+  // note server before common. usually it is the other way around, but
+  // in this case server must load first.
+  api.add_files('url_server.js', 'server');
+  api.add_files('url_common.js', ['client', 'server']);
 });
 
 Package.on_test(function (api) {
@@ -50,4 +55,6 @@ Package.on_test(function (api) {
 
   api.add_files('helpers_test.js', ['client', 'server']);
   api.add_files('dynamics_test.js', ['client', 'server']);
+
+  api.add_files('url_tests.js', ['client', 'server']);
 });

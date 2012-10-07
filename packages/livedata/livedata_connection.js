@@ -1,4 +1,4 @@
-if (Meteor.is_server) {
+if (Meteor.isServer) {
   // XXX namespacing
   var Future = __meteor_bootstrap__.require('fibers/future');
 }
@@ -40,7 +40,7 @@ Meteor._LivedataConnection = function (url, restart_on_update) {
   // name -> updates for (yet to be created) collection
   self.queued = {};
   // if we're blocking a migration, the retry func
-  self.retry_migrate = null;
+  self._retryMigrate = null;
 
   // metadata for subscriptions
   self.subs = new LocalCollection;
@@ -53,29 +53,15 @@ Meteor._LivedataConnection = function (url, restart_on_update) {
 
 
   // Setup auto-reload persistence.
-  var reload_key = "Server-" + url;
-  var reload_data = Meteor._reload.migration_data(reload_key);
-  if (typeof reload_data === "object") {
-    if (typeof reload_data.next_method_id === "number")
-      self.next_method_id = reload_data.next_method_id;
-    if (typeof reload_data.outstanding_methods === "object")
-      self.outstanding_methods = reload_data.outstanding_methods;
-    // pending messages will be transmitted on initial stream 'reset'
-  }
-  Meteor._reload.on_migrate(reload_key, function (retry) {
+  Meteor._reload.onMigrate(function (retry) {
     if (!self._readyToMigrate()) {
-      if (self.retry_migrate)
+      if (self._retryMigrate)
         throw new Error("Two migrations in progress?");
-      self.retry_migrate = retry;
+      self._retryMigrate = retry;
       return false;
     }
 
-    var methods = _.map(self.outstanding_methods, function (m) {
-      return {msg: m.msg};
-    });
-
-    return [true, {next_method_id: self.next_method_id,
-                   outstanding_methods: methods}];
+    return [true];
   });
 
   // Setup stream (if not overriden above)
@@ -181,8 +167,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
       return false;
     self.stores[name] = store;
 
-    store.beginUpdate();
-    _.each(self.queued[name] || [], function (msg) {
+    var queued = self.queued[name] || [];
+    store.beginUpdate(queued.length);
+    _.each(queued, function (msg) {
       store.update(msg);
     });
     store.endUpdate();
@@ -290,8 +277,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
                       name + "'", e.stack);
       });
 
-    var is_simulation = enclosing && enclosing.is_simulation;
-    if (Meteor.is_client) {
+    var isSimulation = enclosing && enclosing.isSimulation;
+    if (Meteor.isClient) {
       // If on a client, run the stub, if we have one. The stub is
       // supposed to make some temporary writes to the database to
       // give the user a smooth experience until the actual result of
@@ -306,7 +293,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
       // of the stub as our return value.
       var stub = self.method_handlers[name];
       if (stub) {
-        var invocation = new Meteor._MethodInvocation(true /* is_simulation */);
+        var invocation = new Meteor._MethodInvocation(true /* isSimulation */);
         try {
           var ret = Meteor._CurrentInvocation.withValue(invocation,function () {
             return stub.apply(invocation, args);
@@ -322,7 +309,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
       // the client (since we only bother with stubs and simulations
       // on the client.) If there was not stub, we'll end up returning
       // undefined.
-      if (is_simulation) {
+      if (isSimulation) {
         if (callback) {
           callback(exception, ret);
           return;
@@ -348,7 +335,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
     // If the caller didn't give a callback, decide what to do.
     if (!callback) {
-      if (Meteor.is_client)
+      if (Meteor.isClient)
         // On the client, we don't have fibers, so we can't block. The
         // only thing we can do is to return undefined and discard the
         // result of the RPC.
@@ -475,7 +462,19 @@ _.extend(Meteor._LivedataConnection.prototype, {
     // We have quiesced. Blow away local changes and replace
     // with authoritative changes from server.
 
-    _.each(self.stores, function (s) { s.beginUpdate(); });
+    var messagesPerStore = {};
+    _.each(self.pending_data, function (msg) {
+      if (msg.collection && msg.id && self.stores[msg.collection]) {
+        if (_.has(messagesPerStore, msg.collection))
+          ++messagesPerStore[msg.collection];
+        else
+          messagesPerStore[msg.collection] = 1;
+      }
+    });
+
+    _.each(self.stores, function (s, name) {
+      s.beginUpdate(_.has(messagesPerStore, name) ? messagesPerStore[name] : 0);
+    });
 
     _.each(self.pending_data, function (msg) {
       // Reset message from reconnect. Blow away everything.
@@ -564,9 +563,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
     // if we were blocking a migration, see if it's now possible to
     // continue
-    if (self.retry_migrate && self._readyToMigrate()) {
-      self.retry_migrate();
-      self.retry_migrate = null;
+    if (self._retryMigrate && self._readyToMigrate()) {
+      self._retryMigrate();
+      self._retryMigrate = null;
     }
   },
 
@@ -579,12 +578,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
   // true if we're OK for a migration to happen
   _readyToMigrate: function () {
     var self = this;
-    return _.all(self.outstanding_methods, function (m) {
-      // Callbacks can't be preserved across migrations, so we can't
-      // migrate as long as there is an outstanding requests with a
-      // callback.
-      return !m.callback;
-    });
+    return self.outstanding_methods.length === 0;
   }
 });
 
@@ -606,7 +600,7 @@ _.extend(Meteor, {
     var local_subs = [];
     var context = new Meteor.deps.Context();
 
-    context.on_invalidate(function () {
+    context.onInvalidate(function () {
       // recurse.
       Meteor.autosubscribe(sub_func);
       // unsub after re-subbing, to avoid bouncing.

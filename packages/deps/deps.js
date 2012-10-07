@@ -16,9 +16,8 @@
     run: function (f) {
       var previous = Context.current;
       Context.current = this;
-      try { var ret = f(); }
+      try { return f(); }
       finally { Context.current = previous; }
-      return ret;
     },
 
     // we specifically guarantee that this doesn't call any
@@ -38,7 +37,7 @@
 
     // calls f immediately if this context was already
     // invalidated. receives one argument, the context.
-    on_invalidate: function (f) {
+    onInvalidate: function (f) {
       if (this._invalidated)
         f(this);
       else
@@ -60,7 +59,11 @@
 
         _.each(pending, function (ctx) {
           _.each(ctx._callbacks, function (f) {
-            f(ctx); // XXX wrap in try?
+            try {
+              f(ctx);
+            } catch (e) {
+              Meteor._debug("Exception from Meteor.flush:", e);
+            }
           });
           delete ctx._callbacks; // maybe help the GC
         });

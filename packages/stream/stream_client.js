@@ -42,14 +42,15 @@ Meteor._Stream = function (url) {
 
   //// Reactive status
   self.current_status = {
-    status: "connecting", connected: false, retry_count: 0
+    status: "connecting", connected: false, retryCount: 0,
+    // XXX Backwards compatibility only. Remove this before 1.0.
+    retry_count: 0
   };
 
-  self.status_listeners = {}; // context.id -> context
+  self.status_listeners = (Meteor.deps && new Meteor.deps._ContextSet);
   self.status_changed = function () {
-    _.each(self.status_listeners, function (context) {
-      context.invalidate();
-    });
+    if (self.status_listeners)
+      self.status_listeners.invalidateAll();
   };
 
   //// Retry logic
@@ -118,13 +119,8 @@ _.extend(Meteor._Stream.prototype, {
   // Get current status. Reactive.
   status: function () {
     var self = this;
-    var context = Meteor.deps && Meteor.deps.Context.current;
-    if (context && !(context.id in self.status_listeners)) {
-      self.status_listeners[context.id] = context;
-      context.on_invalidate(function () {
-        delete self.status_listeners[context.id];
-      });
-    }
+    if (self.status_listeners)
+      self.status_listeners.addCurrentContext();
     return self.current_status;
   },
 
@@ -142,7 +138,9 @@ _.extend(Meteor._Stream.prototype, {
     if (self.retry_timer)
       clearTimeout(self.retry_timer);
     self.retry_timer = null;
-    self.current_status.retry_count -= 1; // don't count manual retries
+    self.current_status.retryCount -= 1; // don't count manual retries
+    // XXX Backwards compatibility only. Remove this before 1.0.
+    self.current_status.retry_count = self.current_status.retryCount;
     self._retry_now();
   },
 
@@ -193,7 +191,9 @@ _.extend(Meteor._Stream.prototype, {
     // update status
     self.current_status.status = "connected";
     self.current_status.connected = true;
-    self.current_status.retry_count = 0;
+    self.current_status.retryCount = 0;
+    // XXX Backwards compatibility only. Remove before 1.0.
+    self.current_status.retry_count = self.current_status.retryCount;
     self.status_changed();
 
     // fire resets. This must come after status change so that clients
@@ -271,14 +271,16 @@ _.extend(Meteor._Stream.prototype, {
   _retry_later: function () {
     var self = this;
 
-    var timeout = self._retry_timeout(self.current_status.retry_count);
+    var timeout = self._retry_timeout(self.current_status.retryCount);
     if (self.retry_timer)
       clearTimeout(self.retry_timer);
     self.retry_timer = setTimeout(_.bind(self._retry_now, self), timeout);
 
     self.current_status.status = "waiting";
     self.current_status.connected = false;
-    self.current_status.retry_time = (new Date()).getTime() + timeout;
+    self.current_status.retryTime = (new Date()).getTime() + timeout;
+    // XXX Backwards compatibility only. Remove this before 1.0.
+    self.current_status.retry_time = self.current_status.retryTime;
     self.status_changed();
   },
 
@@ -288,9 +290,13 @@ _.extend(Meteor._Stream.prototype, {
     if (self.force_fail)
       return;
 
-    self.current_status.retry_count += 1;
+    self.current_status.retryCount += 1;
+    // XXX Backwards compatibility only. Remove this before 1.0.
+    self.current_status.retry_count = self.current_status.retryCount;
     self.current_status.status = "connecting";
     self.current_status.connected = false;
+    delete self.current_status.retryTime;
+    // XXX Backwards compatibility only. Remove this before 1.0.
     delete self.current_status.retry_time;
     self.status_changed();
 
@@ -315,16 +321,7 @@ _.extend(Meteor._Stream.prototype, {
         self._connected(data.data);
       else if (self.current_status.connected)
         _.each(self.event_callbacks.message, function (callback) {
-          try {
-            callback(data.data);
-          } catch (e) {
-            // XXX sockjs catches and silently ignores any exceptions
-            // that we raise here. not sure what we should do, but for
-            // now, just print the exception so you are at least aware
-            // that something went wrong.
-            // XXX improve error message
-            Meteor._debug("Exception while processing message", e.stack);
-          }
+          callback(data.data);
         });
 
       self._heartbeat_received();

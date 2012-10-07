@@ -1,4 +1,4 @@
 Meteor = {
-  is_client: true,
-  is_server: false
+  isClient: true,
+  isServer: false
 };

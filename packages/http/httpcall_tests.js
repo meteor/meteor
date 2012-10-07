@@ -3,7 +3,7 @@
 // URL prefix for tests to talk to
 var _XHR_URL_PREFIX = "/http_test_responder";
 var url_prefix = function () {
-  if (Meteor.is_server && _XHR_URL_PREFIX.indexOf("http") !== 0) {
+  if (Meteor.isServer && _XHR_URL_PREFIX.indexOf("http") !== 0) {
     var address = __meteor_bootstrap__.app.address();
     _XHR_URL_PREFIX = "http://127.0.0.1:" + address.port + _XHR_URL_PREFIX;
   }
@@ -36,7 +36,7 @@ testAsyncMulti("httpcall - basic", [
 
       Meteor.http.call("GET", url_prefix()+url, options, expect(callback));
 
-      if (Meteor.is_server) {
+      if (Meteor.isServer) {
         // test sync version
         var result = Meteor.http.call("GET", url_prefix()+url, options);
         callback(result.error, result);
@@ -69,7 +69,7 @@ testAsyncMulti("httpcall - basic", [
               "/foo?fruit=apple&dog=Spot+the+dog");
   }]);
 
-testAsyncMulti("httpcall - failure", [
+testAsyncMulti("httpcall - errors", [
   function(test, expect) {
 
     // Accessing unknown server (should fail to make any connection)
@@ -160,7 +160,7 @@ testAsyncMulti("httpcall - redirect", [
             }
           }));
       };
-      if (Meteor.is_client && ! followRedirects) {
+      if (Meteor.isClient && ! followRedirects) {
         // not supported, should fail
         test.throws(do_it);
       } else {
@@ -187,7 +187,7 @@ testAsyncMulti("httpcall - methods", [
           test.equal(data.url, "/foo");
           // IE <= 8 turns seems to turn POSTs with no body into
           // GETs, inexplicably.
-          if (Meteor.is_client && $.browser.msie && $.browser.version <= 8
+          if (Meteor.isClient && $.browser.msie && $.browser.version <= 8
               && meth === "POST")
             meth = "GET";
           test.equal(data.method, meth);

@@ -192,9 +192,8 @@ LocalCollection._diffQuery = function (old_results, new_results, observer, deepc
             Meteor._debug("Assertion failed while diffing: nonmonotonic lcs data");
           // no move
           scan_to(old_doc_idx);
-          if (! _.isEqual(old_doc, new_doc)) {
-            observer.changed && observer.changed(
-              mdc(new_doc), new_idx + bump_list.length, old_doc);
+          if (observer.changed && ! _.isEqual(old_doc, new_doc)) {
+            observer.changed(mdc(new_doc), new_idx + bump_list.length, old_doc);
           }
           old_idx++;
         } else {
@@ -222,8 +221,8 @@ LocalCollection._diffQuery = function (old_results, new_results, observer, deepc
           }
           if (from_idx != to_idx)
             observer.moved && observer.moved(mdc(old_doc), from_idx, to_idx);
-          if (! _.isEqual(old_doc, new_doc)) {
-            observer.changed && observer.changed(mdc(new_doc), to_idx, old_doc);
+          if (observer.changed && ! _.isEqual(old_doc, new_doc)) {
+            observer.changed(mdc(new_doc), to_idx, old_doc);
           }
         }
       }

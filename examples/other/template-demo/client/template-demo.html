@@ -1,0 +1,183 @@
+<head>
+  <title>Advanced Template Demo</title>
+</head>
+
+<body>
+  {{> page}}
+</body>
+
+<template name="page">
+  <h1>Advanced Template Demo</h1>
+  <p>
+    This demo shows off the advanced features of Meteor's optional
+    Spark-based templating system, including constant regions, node
+    preservation, per-template state, and template lifecycle
+    callbacks.
+  </p>
+
+  {{> preserveDemo }}
+  {{> constantDemo }}
+  {{> stateDemo }}
+  {{> d3Demo }}
+</template>
+
+<template name="preserveDemo">
+  <h2>Element preservation</h2>
+
+  <input type="button" value="X++" class="x">
+
+  <p>
+    Elements can be <em>preserved</em>, meaning that they will not be
+    disturbed even as their attributes, children, or siblings
+    change. In this example, when you press the X++ button, the CSS
+    animation continues uninterrupted.
+  </p>
+
+
+X={{x}}<br>
+  <div class="spinner" style="-webkit-animation: {{spinAnim}} 2s infinite linear">
+    X={{x}}
+  </div>
+  <div>
+    <input type="checkbox" class="spinforward" {{spinForwardChecked}}>
+    Spin Forward
+  </div>
+  X={{x}}
+</template>
+
+<template name="constantDemo">
+  <h2>Constant regions</h2>
+
+  <div>
+    <input type="button" value="X++" class="x"> <br>
+    <input type="checkbox" class="remove" which="1" {{checked 1}}>
+    Remove map 1<br>
+    <input type="checkbox" class="remove" which="2" {{checked 2}}>
+    Remove map 2
+  </div>
+  <br>
+
+  <p>
+    Parts of a template can be marked as <em>constant</em>, meaning
+    that Meteor will leave the entire region alone (even as its
+    siblings change.) This is great for embedding non-Meteor
+    widgets. Try scrolling the two Google Maps embeds below. When you
+    press X++, the maps stay where they are.
+  </p>
+
+  <p>
+    Try using the checkboxes to remove either or both of the
+    maps. When you remove a map, Spark tracks the <em>identity</em> of
+    the constant regions so that it knows which DOM nodes to keep and
+    which DOM nodes to throw away. In the case of the Handlebars
+    package, the identity is based on the actual template call stack
+    that rendered the constant region.
+  </p>
+
+  X={{x}}<br>
+
+  {{#if show 1}}
+    {{#constant}}
+<div style="float: left; padding-right: 20px;">
+<iframe width="290" height="290" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://maps.google.com/maps?f=q&amp;source=s_q&amp;hl=en&amp;geocode=&amp;q=140+10th+Street,+San+Francisco,+CA&amp;aq=0&amp;oq=140+10th+s&amp;sll=37.7577,-122.4376&amp;sspn=0.166931,0.329247&amp;ie=UTF8&amp;hq=&amp;hnear=140+10th+St,+San+Francisco,+California+94103&amp;t=m&amp;ll=37.774921,-122.415419&amp;spn=0.013569,0.017252&amp;z=14&amp;iwloc=A&amp;output=embed"></iframe><br /><small><a href="https://maps.google.com/maps?f=q&amp;source=embed&amp;hl=en&amp;geocode=&amp;q=140+10th+Street,+San+Francisco,+CA&amp;aq=0&amp;oq=140+10th+s&amp;sll=37.7577,-122.4376&amp;sspn=0.166931,0.329247&amp;ie=UTF8&amp;hq=&amp;hnear=140+10th+St,+San+Francisco,+California+94103&amp;t=m&amp;ll=37.774921,-122.415419&amp;spn=0.013569,0.017252&amp;z=14&amp;iwloc=A" style="color:#0000FF;text-align:left">View Larger Map</a></small>
+</div>
+    {{/constant}}
+  {{/if}}
+
+  {{#if show 2}}
+    {{#constant}}
+<div>
+<iframe width="290" height="290" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://maps.google.com/maps?f=q&amp;source=s_q&amp;hl=en&amp;geocode=&amp;q=880+Harrison+Street,+San+Francisco,+CA&amp;aq=0&amp;oq=880+harrison&amp;sll=37.7577,-122.4376&amp;sspn=0.166931,0.329247&amp;ie=UTF8&amp;hq=&amp;hnear=880+Harrison+St,+San+Francisco,+California+94107&amp;t=m&amp;ll=37.779534,-122.411213&amp;spn=0.013568,0.01708&amp;z=14&amp;iwloc=A&amp;output=embed"></iframe><br /><small><a href="https://maps.google.com/maps?f=q&amp;source=embed&amp;hl=en&amp;geocode=&amp;q=880+Harrison+Street,+San+Francisco,+CA&amp;aq=0&amp;oq=880+harrison&amp;sll=37.7577,-122.4376&amp;sspn=0.166931,0.329247&amp;ie=UTF8&amp;hq=&amp;hnear=880+Harrison+St,+San+Francisco,+California+94107&amp;t=m&amp;ll=37.779534,-122.411213&amp;spn=0.013568,0.01708&amp;z=14&amp;iwloc=A" style="color:#0000FF;text-align:left">View Larger Map</a></small>
+</div>
+    {{/constant}}
+  {{/if}}
+
+  <div class="clearboth"> </div>
+
+  X={{x}}
+</template>
+
+<template name="stateDemo">
+  <h2>Template callbacks</h2>
+
+  <p>
+    <input type="button" value="X++" class="x">
+    <input type="button" value="Y++" class="y">
+    <input type="button" value="Z++" class="z">
+  </p>
+
+  <p>
+    You can get a <em>created</em> callback when a template is
+    initially rendered; a <em>rendered</em> when a template is placed on
+    the screen and when any part of the template is redrawn; and
+    a <em>destroyed</em> callback when a template is taken across the
+    screen. All of these callbacks receive a common <em>template state
+    object</em> in 'this' which allows you to attach data to each
+    particular instance of a template.
+  </p>
+
+  <p>
+    In this case, <em>created</em> is used to create a new JavaScript
+    timer that updates the text of a &lt;span&gt; element every
+    second. <em>rendered</em> is used to find the &lt;span&gt; when it
+    appears on the screen, and update the pointer when the
+    &lt;span&gt; is redraw (say, when you press Y++ &mdash; since it
+    is not marked to be preserved.) <em>destroyed</em> is used to cancel
+    the timer when the template goes off the screen.
+  </p>
+
+  <p>
+    The template state is used to hold the current time count and a
+    reference to the &lt;span&gt; object to update. That's why there
+    can be multiple copies of the same template, each with a different
+    value for the counter.
+  </p>
+
+  X={{x}}<br>
+  <input type="button" value="Create a timer" class="create"><br>
+  {{#each timers}}
+    <div>
+      {{> timer}}
+      Z={{z}}
+    </div>
+  {{/each}}
+  X={{x}}
+</template>
+
+<template name="timer">
+  <span class="elapsed"></span>
+  <input type="button" value="Reset" class="reset">
+  <input type="button" value="Delete" class="delete">
+  Y={{y}}
+</template>
+
+<template name="d3Demo">
+  <h2>Simple d3.js integration</h2>
+  <p>
+    Meteor fits naturally with the popular d3.js data visualization
+    library by Michael Bostock. Just set up d3 from your
+    template's <em>rendered</em> callback. With Meteor, you can pass
+    data directly out of a Mongo query into d3, and your d3
+    visualization will update in realtime, with no extra code! Try
+    opening this page in two browser windows.
+  </p>
+
+  {{> circles left}}
+  {{> circles right}}
+  <div class="clearboth"> </div>
+
+</template>
+
+<template name="circles">
+  <div class="circles">
+    {{#constant}}
+      <svg width="272" height="272"></svg>
+    {{/constant}}
+    <br>
+    {{count}} circles<br>
+    <input type="button" value="Add" class="add">
+    <input type="button" value="Remove" class="remove" {{{disabled}}}>
+    <input type="button" value="Scram" class="scram">
+    <input type="button" value="Clear" class="clear">
+  </div>
+</template>

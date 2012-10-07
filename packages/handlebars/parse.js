@@ -40,6 +40,10 @@ Handlebars.to_json_ast = function (code) {
 
   var ast = req("handlebars").parse(code);
 
+  // Recreate Handlebars.Exception to properly report error messages
+  // and stack traces. (https://github.com/wycats/handlebars.js/issues/226)
+  makeHandlebarsExceptionsVisible(req);
+
   var identifier = function (node) {
     if (node.type !== "ID")
       throw new Error("got ast node " + node.type + " for identifier");
@@ -140,4 +144,15 @@ Handlebars.to_json_ast = function (code) {
   if (ast.type !== "program")
     throw new Error("got ast node " + node.type + " at toplevel");
   return template(ast.statements);
+};
+
+var makeHandlebarsExceptionsVisible = function (req) {
+  req("handlebars").Exception = function(message) {
+    this.message = message;
+    // In Node, if we don't do this we don't see the message displayed
+    // nor the right stack trace.
+    Error.captureStackTrace(this, arguments.callee);
+  };
+  req("handlebars").Exception.prototype = new Error();
+  req("handlebars").Exception.prototype.name = 'Handlebars.Exception';
 };

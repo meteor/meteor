@@ -48,9 +48,9 @@ if [ "$UNAME" == "Linux" ] ; then
 
 
     echo "Building RPM"
-    rpmbuild -bb --define="TARBALL $TARBALL" "$TOPDIR/admin/meteor.spec"
-
-    # XXX how to set rpm build dir to not be ~/rpmbuild
-    cp ~/rpmbuild/RPMS/*/*.rpm "$OUTDIR"
-
+    RPMDIR="$TMPDIR/rpm"
+    mkdir $RPMDIR
+    rpmbuild -bb --define="TARBALL $TARBALL" \
+        --define="_topdir $RPMDIR" "$TOPDIR/admin/meteor.spec"
+    cp $RPMDIR/RPMS/*/*.rpm "$OUTDIR"
 fi

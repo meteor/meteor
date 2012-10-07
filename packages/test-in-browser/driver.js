@@ -12,19 +12,12 @@ Meteor.startup(function () {
 });
 
 Template.test_table.running = function() {
-  var cx = Meteor.deps.Context.current;
-  if (cx) {
-    resultDeps.push(cx);
-  }
-
+  resultDeps.addCurrentContext();
   return running;
 };
 
 Template.test_table.passed = function() {
-  var cx = Meteor.deps.Context.current;
-  if (cx) {
-    resultDeps.push(cx);
-  }
+  resultDeps.addCurrentContext();
 
   // walk whole tree to look for failed tests
   var walk = function (groups) {
@@ -53,10 +46,7 @@ Template.test_table.passed = function() {
 
 
 Template.test_table.total_test_time = function() {
-  var cx = Meteor.deps.Context.current;
-  if (cx) {
-    resultDeps.push(cx);
-  }
+  resultDeps.addCurrentContext();
 
   // walk whole tree to get all tests
   var walk = function (groups) {
@@ -79,11 +69,7 @@ Template.test_table.total_test_time = function() {
 
 
 Template.test_table.data = function() {
-  var cx = Meteor.deps.Context.current;
-  if (cx) {
-    resultDeps.push(cx);
-  }
-
+  resultDeps.addCurrentContext();
   return resultTree;
 };
 
@@ -116,12 +102,12 @@ Template.test.test_class = function() {
   return classes.join(' ');
 };
 
-Template.test.events = {
+Template.test.events({
   'click .testname': function() {
     this.expanded = ! this.expanded;
     _resultsChanged();
   }
-};
+});
 
 Template.test.eventsArray = function() {
   var events = _.filter(this.events, function(e) {
@@ -158,7 +144,7 @@ Template.test.eventsArray = function() {
   });
 };
 
-Template.event.events = {
+Template.event.events({
   'click .debug': function () {
     // the way we manage groupPath, shortName, cookies, etc, is really
     // messy. needs to be aggressively refactored.
@@ -166,7 +152,7 @@ Template.event.events = {
                   test: this.cookie.shortName});
     Meteor._debugTest(this.cookie, reportResults);
   }
-};
+});
 
 Template.event.get_details = function() {
   var details = this.details;
@@ -185,13 +171,10 @@ Template.event.is_debuggable = function() {
 
 
 var resultTree = [];
-var resultDeps = [];
+var resultDeps = new Meteor.deps._ContextSet;
 
 var _resultsChanged = function() {
-  _.each(resultDeps, function(cx) {
-    cx.invalidate();
-  });
-  resultDeps.length = 0;
+  resultDeps.invalidateAll();
 };
 
 var _testTime = function(t) {

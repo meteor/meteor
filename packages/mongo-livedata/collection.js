@@ -11,7 +11,7 @@ Meteor.Collection = function (name, manager, driver) {
 
   // note: nameless collections never have a manager
   manager = name && (manager ||
-                     (Meteor.is_client ?
+                     (Meteor.isClient ?
                       Meteor.default_connection : Meteor.default_server));
 
   if (!driver) {
@@ -32,12 +32,17 @@ Meteor.Collection = function (name, manager, driver) {
     // database, except possibly with some temporary divergence while
     // we have unacknowledged RPC's.
     var ok = manager.registerStore(name, {
-      // Called at the beginning of a batch of updates. We're supposed
-      // to start by backing out any local writes and returning to the
-      // last state delivered by the server.
-      beginUpdate: function () {
-        // pause observers so users don't see flicker.
-        self._collection.pauseObservers();
+      // Called at the beginning of a batch of updates. We're supposed to start
+      // by backing out any local writes and returning to the last state
+      // delivered by the server. batchSize is the number of update calls to
+      // expect.
+      beginUpdate: function (batchSize) {
+        // pause observers so users don't see flicker, either from restoring a
+        // snapshot and then applying the (hopefully similar) change from the
+        // server, or just from running multiple queued messages affecting the
+        // same queries.
+        if (self._was_snapshot || batchSize > 1)
+          self._collection.pauseObservers();
 
         // restore db snapshot
         if (self._was_snapshot) {
@@ -177,7 +182,7 @@ _.each(["insert", "update", "remove"], function (name) {
     if (args.length && args[args.length - 1] instanceof Function)
       callback = args.pop();
 
-    if (Meteor.is_client && !callback)
+    if (Meteor.isClient && !callback)
       // Client can't block, so it can't report errors by exception,
       // only by callback. If they forget the callback, give them a
       // default one that logs the error, so they aren't totally

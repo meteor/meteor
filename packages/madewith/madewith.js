@@ -26,7 +26,7 @@
     return shortname;
   };
 
-  Template.madewith.events = {
+  Template.madewith.events({
     'click .madewith_upvote': function(event) {
       var app = apps.findOne();
       if (app) {
@@ -37,5 +37,5 @@
         event.preventDefault();
       }
     }
-  };
+  });
 })();
