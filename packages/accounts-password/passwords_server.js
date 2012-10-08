@@ -75,6 +75,8 @@
         if (serialized.userId !== this.userId())
           // No monkey business!
           throw new Meteor.Error(403, "Incorrect password");
+        // Only can use challenges once.
+        delete this._sessionData.srpChallenge;
       }
 
       var verifier = options.srp;
@@ -230,6 +232,8 @@
     var serialized = currentInvocation._sessionData.srpChallenge;
     if (!serialized || serialized.M !== options.srp.M)
       throw new Meteor.Error(403, "Incorrect password");
+    // Only can use challenges once.
+    delete currentInvocation._sessionData.srpChallenge;
 
     var userId = serialized.userId;
     var loginToken = Accounts._loginTokens.insert({userId: userId});
