@@ -1,12 +1,4 @@
 (function () {
-
-  // internal email validation tokens collection. Never published.
-  Accounts._emailValidationTokens = new Meteor.Collection(
-    "meteor_accounts_emailValidationTokens", {_preventAutopublish: true});
-  // also lock down email validation. These can be used to log in.
-  Accounts._emailValidationTokens.allow({});
-
-
   var selectorFromUserQuery = function (user) {
     if (!user)
       throw new Meteor.Error(400, "Must pass a user property in request");
@@ -159,45 +151,48 @@
       if (!token)
         throw new Meteor.Error(400, "Need to pass token");
 
-      var tokenDocument = Accounts._emailValidationTokens.findOne(
-        {token: token});
-      if (!tokenDocument)
+      var user = Meteor.users.findOne({'emails.validationTokens.token': token});
+      if (!user)
         throw new Meteor.Error(403, "Validate email link expired");
-      var userId = tokenDocument.userId;
-      var email = tokenDocument.email;
 
+      // Log the user in with a new login token.
       var stampedLoginToken = Accounts._generateStampedLoginToken();
-      // update the validated flag on the index in the emails array
-      // matching email (see
-      // http://www.mongodb.org/display/DOCS/Updating/#Updating-The%24positionaloperator)
-      Meteor.users.update({_id: userId, "emails.address": email}, {
-        $set: {"emails.$.validated": true},
-        $push: {"services.resume.loginTokens": stampedLoginToken}});
-      Accounts._emailValidationTokens.remove({token: token});
 
-      this.setUserId(userId);
-      return {token: stampedLoginToken.token, id: userId};
+      // By including the token again in the query, we can use 'emails.$' in the
+      // modifier to get a reference to the specific object in the emails
+      // array. See
+      // http://www.mongodb.org/display/DOCS/Updating/#Updating-The%24positionaloperator)
+      // http://www.mongodb.org/display/DOCS/Updating#Updating-%24pull
+      Meteor.users.update(
+        {_id: user._id, 'emails.validationTokens.token': token}, {
+          $set: {'emails.$.validated': true},
+          $pull: {'emails.$.validationTokens': {token: token}},
+          $push: {'services.resume.loginTokens': stampedLoginToken}});
+
+      this.setUserId(user._id);
+      return {token: stampedLoginToken.token, id: user._id};
     }
   });
 
   // send the user an email with a link that when opened marks that
   // address as validated
   Accounts.sendValidationEmail = function (userId, email) {
-    var token = Meteor.uuid();
-    var when = +(new Date);
-    Accounts._emailValidationTokens.insert({
-      email: email,
-      token: token,
-      when: when,
-      userId: userId
-    });
-
     // XXX Also generate a link using which someone can delete this
     // account if they own said address but weren't those who created
     // this account.
 
-    var user = Meteor.users.findOne(userId);
-    var validateEmailUrl = Accounts.urls.validateEmail(token);
+    // XXX if Meteor.Collection.update returned the number of updated records
+    // like Mongo's update does, we could do this as a single update rather than
+    // as a slower and racier read/modify/write
+    var user = Meteor.users.findOne({_id: userId, 'emails.address': email});
+    if (!user)
+      throw new Meteor.Error(403, "Email address not found for validation");
+    var stampedToken = {token: Meteor.uuid(), when: +(new Date)};
+    Meteor.users.update({_id: userId, 'emails.address': email},
+                        {$push: {'emails.$.validationTokens': stampedToken}});
+
+    var validateEmailUrl = Accounts.urls.validateEmail(stampedToken.token);
+
     Email.send({
       to: email,
       from: Accounts.emailTemplates.from,

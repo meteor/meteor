@@ -260,8 +260,12 @@
   //     partial quiescence).
   Meteor.publish("meteor.currentUser", function() {
     if (this.userId)
-      return Meteor.users.find({_id: this.userId},
-                               {fields: {profile: 1, username: 1, emails: 1}});
+      return Meteor.users.find(
+        {_id: this.userId},
+        {fields: {profile: 1, username: 1,
+                  // We do let the UI know if emails are validated but we don't
+                  // want to publish the validationTokens field!
+                  'emails.address': 1, 'emails.validated': 1}});
     else {
       this.complete();
       return null;

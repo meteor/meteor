@@ -107,6 +107,8 @@
       test.equal(Meteor.user().emails.length, 1);
       test.equal(Meteor.user().emails[0].address, email2);
       test.isFalse(Meteor.user().emails[0].validated);
+      // We should NOT be publishing validation tokens!
+      test.isFalse(_.has(Meteor.user().emails[0], 'validationTokens'));
     },
     function (test, expect) {
       getValidateEmailToken(email2, test, expect);
