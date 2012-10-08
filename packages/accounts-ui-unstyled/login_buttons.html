@@ -1,294 +1,50 @@
 <template name="loginButtons">
   <div id="login-buttons">
     {{#if currentUser}}
-      {{#if dropdown}}
-        {{> loginButtonsLoggedInDropdown}}
-      {{else}}
-        {{> loginButtonsLoggedInRow}}
-      {{/if}}
+      {{> loginButtonsLoggedIn}}
     {{else}}
-      {{#if services}}
-        {{#if configurationLoaded}}
-          {{#if dropdown}}
-            {{> loginButtonsServicesDropdown}}
-          {{else}}
-            {{> loginButtonsServicesRow}}
-          {{/if}}
-        {{/if}}
-      {{else}}
-        <div class="no-services">No login services configured</div>
-      {{/if}}
+      {{> loginButtonsLoggedOut}}
     {{/if}}
   </div>
 </template>
 
-<template name="loginButtonsLoggedInDropdown">
-  <div class="login-link-and-dropdown-list">
-    {{#if currentUser.loading}}
-    <div class="loading"></div>
-    {{else}}
-    <a class="login-link-text" id="login-name-link">
-      {{displayName}} ▾
-    </a>
-    {{#if dropdownVisible}}
-    <div id="login-dropdown-list" class="accounts-dialog">
-      <a class="login-close-text">Close</a>
-      <div class="login-close-text-clear"></div>
-
-      {{#if inChangePasswordFlow}}
-      {{> loginButtonsChangePassword}}
+<template name="loginButtonsLoggedIn">
+  {{#if dropdown}}
+    {{> loginButtonsLoggedInDropdown}}
+  {{else}}
+    <div class="login-header">
+      {{#if currentUser.loading}} {{! XXX this will change }}
+        <div class="loading"></div>
       {{else}}
-      {{#if allowChangingPassword}}
-      <div class="login-button" id="login-buttons-open-change-password">Change password</div>
-      {{/if}}
-      <div class="login-button" id="login-buttons-logout">Logout</div>
+        {{displayName}}
       {{/if}}
     </div>
-    {{/if}}
-    {{/if}}
-  </div>
+    <div class="login-button" id="login-buttons-logout">Logout</div>
+  {{/if}}
 </template>
 
-<template name="loginButtonsLoggedInRow">
-  <div class="login-header">
-    {{#if currentUser.loading}}
-    <div class="loading"></div>
-    {{else}}
-    {{displayName}}
-    {{/if}}
-  </div>
-  <div class="login-button" id="login-buttons-logout">Logout</div>
-</template>
-
-<template name="loginButtonsServicesRow">
-  {{#each services}}
-    {{#if isPasswordService}}
-      {{#if hasOtherServices}}
-        <div class="or">
-          <span class="hline">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-          <span class="or-text">or</span>
-          <span class="hline">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-        </div>
-      {{/if}}
-      {{#if inForgotPasswordFlow}}
-      {{> forgotPasswordForm}}
+<template name="loginButtonsLoggedOut">
+  {{#if services}} {{! if at least one service is configured }}
+    {{#if configurationLoaded}}
+      {{#if dropdown}} {{! if more than one service configured, or password is configured}}
+        {{> loginButtonsLoggedOutDropdown}}
       {{else}}
-      <div class="login-form login-password-form">
-        {{#each fields}}
-          {{> loginButtonsFormField}}
-        {{/each}}
-
-        {{> loginButtonsMessages}}
-
-        <div class="login-button login-button-form-submit" id="login-buttons-password">
-          {{#if inSignupFlow}}
-          Create account
-          {{else}}
-          Sign in
-          {{/if}}
-        </div>
-
-        {{#if inLoginFlow}}
-        <div class="additional-link-container">
-          <a id="signup-link" class="additional-link">Create account</a>
-        </div>
-
-        {{#if showForgotPasswordLink}}
-        <div class="additional-link-container">
-          <a id="forgot-password-link" class="additional-link">Forgot password</a>
-        </div>
-        {{/if}}
-        {{/if}}
-      </div>
-      {{/if}}
-    {{else}}
-      {{#if configured}}
-        <div class="login-button" id="login-buttons-{{name}}">
-          <div class="login-image" id="login-buttons-image-{{name}}"></div>
-          Sign in with {{capitalizedName}}
-        </div>
-      {{else}}
-        <div class="login-button configure-button" id="login-buttons-{{name}}">
-          <div class="login-image" id="login-buttons-image-{{name}}"></div>
-          Configure {{capitalizedName}} Login
-        </div>
+        {{#with singleService}} {{! at this point there must be only one configured services }}
+          {{> loginButtonsLoggedOutSingleLoginButton}}
+        {{/with}}
       {{/if}}
     {{/if}}
-  {{/each}}
+  {{else}}
+    <div class="no-services">No login services configured</div>
+  {{/if}}
 </template>
 
-<template name="loginButtonsFormField">
-  <label id="login-{{fieldName}}-label" for="login-{{fieldName}}">
-    {{fieldLabel}}
-  </label>
-  <input id="login-{{fieldName}}" type="{{inputType}}" />
-</template>
-
+<!-- used in various places to display messages to user -->
 <template name="loginButtonsMessages">
   {{#if errorMessage}}
-  <div class="message error-message">{{errorMessage}}</div>
+    <div class="message error-message">{{errorMessage}}</div>
   {{/if}}
   {{#if infoMessage}}
-  <div class="message info-message">{{infoMessage}}</div>
+    <div class="message info-message">{{infoMessage}}</div>
   {{/if}}
 </template>
-
-<template name="loginButtonsServicesDropdown">
-  <div class="login-link-and-dropdown-list">
-    <a class="login-link-text" id="login-sign-in-link">Sign in ▾</a>
-    {{#if dropdownVisible}}
-    <div id="login-dropdown-list" class="accounts-dialog">
-      <a class="login-close-text">Close</a>
-      <div class="login-close-text-clear"></div>
-      {{> loginButtonsServicesRow}}
-
-      {{#unless hasPasswordService}}
-        {{> loginButtonsMessages}}
-      {{/unless}}
-    </div>
-    {{/if}}
-  </div>
-</template>
-
-<template name="forgotPasswordForm">
-  <div class="login-form">
-    <label id="forgot-password-email-label" for="forgot-password-email">Email</label>
-    <input id="forgot-password-email"/>
-
-    {{> loginButtonsMessages}}
-
-    <div class="login-button login-button-form-submit" id="login-buttons-forgot-password">
-      Reset password
-    </div>
-  </div>
-</template>
-
-<template name="loginButtonsChangePassword">
-  {{#each fields}}
-  {{> loginButtonsFormField}}
-  {{/each}}
-
-  {{> loginButtonsMessages}}
-
-  <div class="login-button login-button-form-submit" id="login-buttons-do-change-password">
-    Change password
-  </div>
-</template>
-
-<template name="resetPasswordForm">
-  {{#if inResetPasswordFlow}}
-  <div class="hide-background"></div>
-
-  <div class="accounts-dialog accounts-centered-dialog">
-    <label id="reset-password-new-password-label" for="reset-password-new-password">
-      New password
-    </label>
-
-    <div>
-      <input id="reset-password-new-password" type="password" />
-    </div>
-
-    {{> loginButtonsMessages}}
-
-    <div class="login-button login-button-form-submit" id="login-buttons-reset-password-button">
-      Reset password
-    </div>
-
-    <a class="additional-link" id="login-buttons-cancel-reset-password">
-      Cancel
-    </a>
-  </div>
-  {{/if}}
-</template>
-
-<template name="enrollAccountForm">
-  {{#if inEnrollAccountFlow}}
-  <div class="hide-background"></div>
-
-  <div class="accounts-dialog accounts-centered-dialog">
-    <label id="enroll-account-password-label" for="enroll-account-password">
-      Choose a password
-    </label>
-
-    <div>
-      <input id="enroll-account-password" type="password" />
-    </div>
-
-    {{> loginButtonsMessages}}
-
-    <div class="login-button login-button-form-submit" id="login-buttons-enroll-account-button">
-      Create account
-    </div>
-
-    <a class="additional-link" id="login-buttons-cancel-enroll-account">
-      Cancel
-    </a>
-  </div>
-  {{/if}}
-</template>
-
-<template name="justValidatedUserForm">
-  {{#if visible}}
-  <div class="accounts-dialog accounts-centered-dialog">
-    Email validated
-    <div class="login-button" id="just-validated-dismiss-button">Dismiss</div>
-  </div>
-  {{/if}}
-</template>
-
-<!-- if we're not showing a dropdown, we need some other place to show messages -->
-<template name="loginButtonsMessagesDialog">
-  {{#if visible}}
-  <div class="accounts-dialog accounts-centered-dialog">
-    {{> loginButtonsMessages}}
-    <div class="login-button" id="messages-dialog-dismiss-button">Dismiss</div>
-  </div>
-  {{/if}}
-</template>
-
-<template name="configureLoginServicesDialog">
-  {{#if visible}}
-  <div id="configure-login-services-dialog" class="accounts-dialog accounts-centered-dialog">
-    {{{configurationSteps}}}
-
-    <p>
-      Now, copy over some details.
-    </p>
-    <p>
-      <table>
-        <colgroup>
-          <col span="1" class="configuration_labels">
-          <col span="1" class="configuration_inputs">
-        </colgroup>
-        {{#each configurationFields}}
-        <tr>
-          <td>
-            <label for="configure-login-services-dialog-{{property}}">{{label}}</label>
-          </td>
-          <td>
-            <input id="configure-login-services-dialog-{{property}}" />
-          </td>
-        </tr>
-        {{/each}}
-      </table>
-    </p>
-    <div class="new-section">
-      <div class="login-button" id="configure-login-services-dismiss-button">I'll do this later</div>
-      {{#isolate}}
-      <div class="login-button login-button-configure {{#if saveDisabled}}login-button-disabled{{/if}}"
-           id="configure-login-services-dialog-save-configuration">
-        Save Configuration
-      </div>
-      {{/isolate}}
-    </div>
-  </div>
-  {{/if}}
-</template>
-
-<body>
-  {{> resetPasswordForm}}
-  {{> enrollAccountForm}}
-  {{> justValidatedUserForm}}
-  {{> loginButtonsMessagesDialog}}
-  {{> configureLoginServicesDialog}}
-</body>

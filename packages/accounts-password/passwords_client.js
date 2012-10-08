@@ -156,6 +156,7 @@
         if (error || !result) {
           error = error || new Error("No result from call to resetPassword");
           callback && callback(error);
+          return;
         }
 
         Accounts._makeClientLoggedIn(result.id, result.token);
@@ -178,6 +179,7 @@
         if (error || !result) {
           error = error || new Error("No result from call to validateUser");
           callback && callback(error);
+          return;
         }
 
         Accounts._makeClientLoggedIn(result.id, result.token);

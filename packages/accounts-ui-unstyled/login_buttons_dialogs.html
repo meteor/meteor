@@ -1,0 +1,122 @@
+<body>
+  {{> resetPasswordDialog}}
+  {{> enrollAccountDialog}}
+  {{> justValidatedUserDialog}}
+  {{> configureLoginServiceDialog}}
+
+  <!-- if we're not showing a dropdown, we need some other place to show messages -->
+  {{> loginButtonsMessagesDialog}}
+</body>
+
+<template name="resetPasswordDialog">
+  {{#if inResetPasswordFlow}}
+    <div class="hide-background"></div>
+
+    <div class="accounts-dialog accounts-centered-dialog">
+      <label id="reset-password-new-password-label" for="reset-password-new-password">
+        New password
+      </label>
+
+      <div>
+        <input id="reset-password-new-password" type="password" />
+      </div>
+
+      {{> loginButtonsMessages}}
+
+      <div class="login-button login-button-form-submit" id="login-buttons-reset-password-button">
+        Set password
+      </div>
+
+      <a class="additional-link" id="login-buttons-cancel-reset-password">
+        Cancel
+      </a>
+    </div>
+  {{/if}}
+</template>
+
+<template name="enrollAccountDialog">
+  {{#if inEnrollAccountFlow}}
+    <div class="hide-background"></div>
+
+    <div class="accounts-dialog accounts-centered-dialog">
+      <label id="enroll-account-password-label" for="enroll-account-password">
+        Choose a password
+      </label>
+
+      <div>
+        <input id="enroll-account-password" type="password" />
+      </div>
+
+      {{> loginButtonsMessages}}
+
+      <div class="login-button login-button-form-submit" id="login-buttons-enroll-account-button">
+        Create account
+      </div>
+
+      <a class="additional-link" id="login-buttons-cancel-enroll-account">
+        Cancel
+      </a>
+    </div>
+  {{/if}}
+</template>
+
+<template name="justValidatedUserDialog">
+  {{#if visible}}
+    <div class="accounts-dialog accounts-centered-dialog">
+      Email validated
+      <div class="login-button" id="just-validated-dismiss-button">Dismiss</div>
+    </div>
+  {{/if}}
+</template>
+
+<template name="configureLoginServiceDialog">
+  {{#if visible}}
+    <div id="configure-login-service-dialog" class="accounts-dialog accounts-centered-dialog">
+      {{{configurationSteps}}}
+
+      <p>
+        Now, copy over some details.
+      </p>
+      <p>
+        <table>
+          <colgroup>
+            <col span="1" class="configuration_labels">
+            <col span="1" class="configuration_inputs">
+          </colgroup>
+          {{#each configurationFields}}
+            <tr>
+              <td>
+                <label for="configure-login-service-dialog-{{property}}">{{label}}</label>
+              </td>
+              <td>
+                <input id="configure-login-service-dialog-{{property}}" />
+              </td>
+            </tr>
+          {{/each}}
+        </table>
+      </p>
+      <div class="new-section">
+        <div class="login-button" id="configure-login-service-dismiss-button">
+          I'll do this later
+        </div>
+        {{#isolate}}
+          <div class="login-button login-button-configure {{#if saveDisabled}}login-button-disabled{{/if}}"
+             id="configure-login-service-dialog-save-configuration">
+            Save Configuration
+          </div>
+        {{/isolate}}
+      </div>
+    </div>
+  {{/if}}
+</template>
+
+<template name="loginButtonsMessagesDialog">
+  {{#if visible}}
+    <div class="accounts-dialog accounts-centered-dialog" id="login-buttons-message-dialog">
+      {{> loginButtonsMessages}}
+      <div class="login-button" id="messages-dialog-dismiss-button">Dismiss</div>
+    </div>
+  {{/if}}
+</template>
+
+

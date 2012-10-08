@@ -152,9 +152,14 @@
     margin-top: 8px;
 }
 
-#login-buttons .message {
+.accounts-dialog .message {
     font-size: 80%;
     margin-top: 2px;
+}
+
+#login-buttons-message-dialog .message {
+    /* we intentionally want it bigger on this dialog since it's the only thing displayed */
+    font-size: 100%;
 }
 
 .accounts-dialog .error-message {
@@ -197,15 +202,15 @@
     margin-top: -40px; /* = approximately -height/2, though height can change */
 }
 
-@configure-login-services-dialog-width: 530px;
-#configure-login-services-dialog {
-    width: @configure-login-services-dialog-width;
-    margin-left: -(@configure-login-services-dialog-width
+@configure-login-service-dialog-width: 530px;
+#configure-login-service-dialog {
+    width: @configure-login-service-dialog-width;
+    margin-left: -(@configure-login-service-dialog-width
                  + @login-buttons-accounts-dialog-padding-left) / 2;
     margin-top: -180px; /* = approximately -height/2, though height can change */
 }
 
-#configure-login-services-dialog .login-button-configure {
+#configure-login-service-dialog .login-button-configure {
     float: right;
 }
 
@@ -227,37 +232,37 @@
     background-color: rgba(0, 0, 0, 0.7);
 }
 
-#configure-login-services-dialog table {
+#configure-login-service-dialog table {
     width: 100%;
 }
 
-#configure-login-services-dialog .configuration_labels {
+#configure-login-service-dialog .configuration_labels {
     width: 30%;
 }
 
-#configure-login-services-dialog .configuration_inputs {
+#configure-login-service-dialog .configuration_inputs {
     width: 70%;
 }
 
-#configure-login-services-dialog input {
+#configure-login-service-dialog input {
     width: 100%;
     font-family: "Courier New", Courier, monospace;
 }
 
-#configure-login-services-dialog ol {
+#configure-login-service-dialog ol {
     margin-top: 10px;
     margin-bottom: 10px;
 }
 
-#configure-login-services-dialog .new-section {
+#configure-login-service-dialog .new-section {
     margin-top: 10px;
 }
 
-#configure-login-services-dialog ol li {
+#configure-login-service-dialog ol li {
     margin-left: 30px;
 }
 
-#configure-login-services-dialog .url {
+#configure-login-service-dialog .url {
   font-family: "Courier New", Courier, monospace;
 }
 

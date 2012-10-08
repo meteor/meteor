@@ -1,8 +1,8 @@
-Template.configureLoginServicesDialogForGoogle.siteUrl = function () {
+Template.configureLoginServiceDialogForGoogle.siteUrl = function () {
   return Meteor.absoluteUrl();
 };
 
-Template.configureLoginServicesDialogForGoogle.fields = function () {
+Template.configureLoginServiceDialogForGoogle.fields = function () {
   return [
     {property: 'clientId', label: 'Client ID'},
     {property: 'secret', label: 'Client secret'}
