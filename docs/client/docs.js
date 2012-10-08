@@ -1,6 +1,14 @@
 METEOR_VERSION = "0.5.2";
 
 Meteor.startup(function () {
+  // XXX DON'T DEPLOY THIS
+  // Report the page HTML to the server so it can be dumped
+  // to disk.  Guard it with a sanity check so we don't hammer
+  // the production server.
+  if (/^localhost:/.test(window.location.host))
+    Meteor.call('reportPageHtml', Template.page());
+
+
   // XXX this is broken by the new multi-page layout.  Also, it was
   // broken before the multi-page layout because it had illegible
   // colors. Just turn it off for now. We'll fix it and turn it on

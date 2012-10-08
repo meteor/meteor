@@ -6,6 +6,10 @@
 </head>
 
 <body>
+  {{> page}}
+</body>
+
+<template name="page">
   <div id="nav">
     {{> nav }}
   </div>
@@ -18,7 +22,7 @@
     {{> packages }}
     {{> commandline }}
   </div>
-</body>
+</template>
 
 <template name="nav">
 <div id="nav-inner">
