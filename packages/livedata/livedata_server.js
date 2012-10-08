@@ -331,6 +331,12 @@ _.extend(Meteor._LivedataSession.prototype, {
     var self = this;
     self.userId = userId;
     this._rerunAllSubscriptions();
+
+    // XXX figure out the login token that was just used, and set up an observe
+    // on the user doc so that deleting the user or the login token disconnects
+    // the session. For now, if you want to make sure that your deleted users
+    // don't have any continuing sessions, you can restart the server, but we
+    // should make it automatic.
   },
 
   _startSubscription: function (handler, priority, sub_id, params) {
