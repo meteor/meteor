@@ -199,18 +199,18 @@ Template.api.method_invocation_userId = {
   id: "method_userId",
   name: "<i>this</i>.userId()",
   locus: "Anywhere",
-  descr: ["Returns the id of current user, or `null` if no user logged in.  XXX Will remain constant."]
+  descr: ["Returns the id of the current user, or `null` if no user is logged in."]
 };
 
 Template.api.method_invocation_setUserId = {
   id: "method_setUserId",
   name: "<i>this</i>.setUserId(userId)",
   locus: "Server",
-  descr: ["Set the userId for this session. This affects all future method calls. Pass `null` to log the user out."],
+  descr: ["Set a user id for this session."],
   args: [
     {name: "userId",
      type: "String",
-     descr: "XXX"}
+     descr: "The id of the user for this connection, or `null` to log the user out."}
   ]
 };
 
@@ -458,11 +458,14 @@ Template.api.allow = {
   id: "allow",
   name: "<em>collection</em>.allow(options)",
   locus: "Server",
-  descr: ["Control access to XXX"],
+  descr: ["Specify access control functions to allow clients to write to this collection using the default Mongo mutator methods."],
   options: [
-    {name: "insert",
+    {name: "insert, update, remove",
      type: "Function",
-     descr: "XXX"}
+     descr: "Access control functions that are called for each client-initiated database write. Return true to allow the write. See below for details on the arguments to access control functions. You can specify any combination of the three functions."},
+    {name: "fetch",
+     type: "Array of Strings",
+     descr: "Specific fields to retrieve when reading documents from the database to pass to `update` and `remove` access control functions. If this is not specified, all fields are retrieved. Specifying which fields to fetch can be a performance improvement."}
   ]
 };
 
@@ -470,11 +473,14 @@ Template.api.deny = {
   id: "deny",
   name: "<em>collection</em>.deny(options)",
   locus: "Server",
-  descr: ["Control access to XXX"],
+  descr: ["Specify access control functions to forbid clients from writing to this collection using the default Mongo mutator methods."],
   options: [
-    {name: "insert",
+    {name: "insert, update, remove",
      type: "Function",
-     descr: "XXX"}
+     descr: "Access control functions that are called for each client-initiated database write. Return true to deny the write. See <a href='#allow'>`allow`</a> for details."},
+    {name: "fetch",
+     type: "Array of Strings",
+     descr: "Specific fields to retrieve when reading documents from the database to pass to `update` and `remove` access control functions. If this is not specified, all fields are retrieved. Specifying which fields to fetch can be a performance improvement."}
   ]
 };
 

@@ -203,6 +203,8 @@ object, which provides the following:
 * `isSimulation`: a boolean value, true if this invocation is a stub.
 * `unblock`: when called, allows the next method from this client to
 begin running.
+* `userId`: a function that returns the id of the current user.
+* `setUserId`: a function that associates the current client with a user.
 
 Calling `methods` on the client defines *stub* functions associated with
 server methods of the same name.  You don't have to define a stub for
@@ -217,9 +219,22 @@ intended to *simulate* the result of what the server's method will do,
 but without waiting for the round trip delay.  If a stub throws an
 exception it will be logged to the console.
 
+
 {{> api_box method_invocation_userId}}
 
+The user for a method is determined when the method starts running and
+will not change during method execution, even if `unblock` is called.
+
 {{> api_box method_invocation_setUserId}}
+
+Calling this function from a method will result in all future methods
+received on the same connection having their `userId` set to the
+provided value. Future calls to `this.userId` in the same method will
+also return the new value.
+
+Values should correspond to the `_id` field of a document in the
+<a href="#meteor_users">`Meteor.users`</a> collection.
+
 
 {{> api_box method_invocation_isSimulation}}
 
@@ -631,23 +646,140 @@ Example:
 
 {{> api_box allow}}
 
+`allow` and its sibling function <a href='#deny'>`deny`</a> control
+permission to write to the server database from the client using
+auto-generated `insert`, `update` and `remove` methods. This lets
+clients use the same API as the server to update the database while
+maintaining the ability to enforce security against rogue clients.
+
+Writes initiated on the server, such as from a method, are always
+allowed. The `allow` and <a href='#deny'>`deny`</a> functions only
+control the client's access to the server database API. Using custom <a
+href="#methods_header">methods</a> instead of `allow`ing direct database
+access is a good approach to creating a secure app, but it is sometimes
+easier and faster to develop with a simple access control function based
+approach to security.
+
+Each access control function receives the `userId` of the currently
+logged in user (or `null` if the user is not logged in) as the first
+argument, and the document or documents in question as the second
+argument. If the function returns `true`, it indicates that the write
+should be allowed (in the case of `allow`) or denied (in the case of
+`deny`). If the function returns false it does not allow or deny the
+request. If no other `allow` statement allows the request, it is denied.
+
+
 <dl class="callbacks">
 {{#dtdd "insert(userId, doc)"}}
-blah blah
+`doc` is the document the client wants to insert.
 {{/dtdd}}
 
 {{#dtdd "update(userId, docs, fields, modifier)"}}
-blah
+`docs` is an array of documents that the client is asking to modify. These
+are fetched from the database and have not yet had the request modifications
+applied. If you pass the `fetch` argument to `allow` and `deny`, these
+documents can contain a subset of the database fields, which can be a
+performance improvement.
+
+`fields` is a list of top level fields in the document the client is
+asking to modify. If the client asks to modify a sub-field
+(eg with `{$set: {'foo.bar': true}}`) this will contain only the top level
+field (eg `['foo']`).
+
+`modifier` is the raw mongo modifier the client sent. Many uses will not
+need to inspect this parameter.
 {{/dtdd}}
 
 {{#dtdd "remove(userId, docs)"}}
-blah
+`docs` is the list of documents the client is asking to remove. As with
+`update` above, the `fetch` option controls which fields are populated
+in `docs`.
 {{/dtdd}}
 
 </dl>
 
 
+Example: XXX test me!
+
+    // Create a collection where users can only write documents that
+    // they 'own' using an 'owner' field in each document.
+    Posts = new Meteor.Collection("posts");
+
+    Posts.allow({
+      insert: function (userId, doc) {
+        // the user must be logged in, and the document must be owned by the user
+        return (userId && doc.owner === userId);
+      },
+      update: function (userId, docs, fields, modifier) {
+        // can only change your own documents
+        return _.all(docs, function(doc) {
+          return doc.owner === userId;
+        });
+      },
+      remove: function (userId, docs) {
+        // can only remove your own documents
+        return _.all(docs, function(doc) {
+          return doc.owner === userId;
+        });
+      },
+      fetch: ['owner']
+    });
+
+    Posts.deny({
+      update: function (userId, docs, fields, modifier) {
+        // can't change owners
+        return _.contains(fields, 'owner');
+      },
+      remove: function (userId, docs) {
+        // can't remove locked documents
+        return _.any(docs, function (doc) {
+          return doc.locked;
+        });
+      },
+      fetch: ['locked']
+    });
+
+
+
+`allow` and `deny` can be called multiple times to allow or deny
+  additional actions. The access control functions are evaluated as follows:
+
+- If any deny function returns true, the request is denied.
+- Otherwise, if any allow function returns true, the request is allowed.
+- Otherwise, the request is denied.
+
+In other words, the results of multiple functions are logically `OR`-ed
+together. The execution order of multiple functions is not specified,
+and execution of validators is not guaranteed. If the system can
+determine the result after executing only a subset of the validators, it
+will not call the remaining ones.
+
+The `insecure` package controls what is allowed when you do not call
+`allow` or `deny` on a collection. With the `insecure` package
+installed, all writes are allowed on collections that have never had
+`allow` or `deny` called. This can be useful during development, to
+quickly prototype differnt schemas without worring about security. Calling
+`allow({})` on a collection will disable all client writes, even when
+the `insecure` package is loaded.
+
+
+
 {{> api_box deny}}
+
+This is the sibling function to <a href='#allow'>`allow`</a>, it takes
+the same arguments. The only difference is that when an access control
+function registered with `deny` returns true, the request is denied
+instead of allowed.
+
+Calling `deny` only has an effect when there are also calls to <a
+href='#allow'>`allow`</a>. If there are no <a href='#allow'>`allow`</a>
+functions registered, `deny` functions are not called, as there is no
+way the request would be permitted.
+
+`deny` functions take precedence over <a href='#allow'>`allow`</a>
+functions. If any `deny` function returns true the request is denied and
+the <a href='#allow'>`allow`</a> functions are not evaluated.
+
 
 
 <h2 id="meteor_collection_cursor"><span>Cursors</span></h2>

@@ -265,6 +265,10 @@ dl.callbacks dt .name, dl.methods dt .name {
   font-size: 1.1em;
 }
 
+dl.callbacks {
+  margin-left: 1.5em;
+}
+
 #main dd p {
     margin-top: 0.5em;
 }
