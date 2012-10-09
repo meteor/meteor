@@ -13,6 +13,31 @@
 
 @login-buttons-accounts-dialog-width: 178px;
 
+#login-buttons {
+  display: inline-block;
+}
+
+/*
+  To get an inline block in IE <= 7, you need to either:
+
+  * set `display: inline` on a block element and trigger hasLayout; or
+  * set `display: inline-block` on a naturally-inline element like SPAN or INS.
+
+  We take the first approach so that login-buttons can be a DIV.  In
+  IE <=7, then, the `display: inline-block` directive above triggers
+  hasLayout, and then the hack-protected directive below overrides it
+  with `display: inline`.
+
+  The selector below matches `#login-buttons` in IE 6-7 and nothing on
+  other browsers.  It is intended to be both future-proof (valid CSS) and
+  minifier-safe.  See
+  http://www.impressivewebs.com/ie7-ie8-css-hacks/.
+*/
+
+* html #login-buttons, *:first-child+html #login-buttons {
+  display: inline;
+}
+
 #login-buttons .login-button, .accounts-dialog .login-button {
     float: left;
     cursor: pointer;
