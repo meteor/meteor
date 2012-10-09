@@ -191,11 +191,12 @@ providers like `Session`, on the other hand, make note of
 the context they are called from and what data was requested, and they
 are prepared to send an invalidation signal when the data changes.
 
-This simple pattern has wide applicability.  Above, the programmer is
-saved from writing unsubscribe/resubscribe calls and making sure they
-are called at the right time.  In general, Meteor can eliminate whole
-classes of data propagation code which would otherwise clog up your
-application with error-prone logic.
+This simple pattern (reactive context + reactive data source) has wide
+applicability.  Above, the programmer is saved from writing
+unsubscribe/resubscribe calls and making sure they are called at the
+right time.  In general, Meteor can eliminate whole classes of data
+propagation code which would otherwise clog up your application with
+error-prone logic.
 
 These Meteor functions run your code in a reactive context:
 
