@@ -147,9 +147,9 @@ Template.api.subscription_onStop = {
 
 Template.api.subscription_userId = {
   id: "publish_userId",
-  name: "<i>this</i>.userId()",
+  name: "<i>this</i>.userId",
   locus: "Server",
-  descr: ["Returns the id of current user, or `null` if no user logged in. The publish function is rerun when this changes."]
+  descr: ["The id of logged-in user, or `null` if no user is logged in."]
 };
 
 
@@ -197,20 +197,20 @@ Template.api.methods = {
 
 Template.api.method_invocation_userId = {
   id: "method_userId",
-  name: "<i>this</i>.userId()",
+  name: "<i>this</i>.userId",
   locus: "Anywhere",
-  descr: ["Returns the id of the current user, or `null` if no user is logged in."]
+  descr: ["The id of the user that made this method call, or `null` if no user was logged in."]
 };
 
 Template.api.method_invocation_setUserId = {
   id: "method_setUserId",
   name: "<i>this</i>.setUserId(userId)",
   locus: "Server",
-  descr: ["Set a user id for this session."],
+  descr: ["Set the logged in user."],
   args: [
     {name: "userId",
-     type: "String",
-     descr: "The id of the user for this connection, or `null` to log the user out."}
+     type: "String or null",
+     descr: "The value that should be returned by `userId` on this connection."}
   ]
 };
 
@@ -458,14 +458,14 @@ Template.api.allow = {
   id: "allow",
   name: "<em>collection</em>.allow(options)",
   locus: "Server",
-  descr: ["Specify access control functions to allow clients to write to this collection using the default Mongo mutator methods."],
+  descr: ["Allow users to write directly to this collection from client code, subject to limitations you define."],
   options: [
     {name: "insert, update, remove",
      type: "Function",
-     descr: "Access control functions that are called for each client-initiated database write. Return true to allow the write. See below for details on the arguments to access control functions. You can specify any combination of the three functions."},
+     descr: "Functions that look at a proposed modification to the database and return true if it should be allowed."},
     {name: "fetch",
-     type: "Array of Strings",
-     descr: "Specific fields to retrieve when reading documents from the database to pass to `update` and `remove` access control functions. If this is not specified, all fields are retrieved. Specifying which fields to fetch can be a performance improvement."}
+     type: "Array of String",
+     descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions."}
   ]
 };
 
@@ -473,14 +473,14 @@ Template.api.deny = {
   id: "deny",
   name: "<em>collection</em>.deny(options)",
   locus: "Server",
-  descr: ["Specify access control functions to forbid clients from writing to this collection using the default Mongo mutator methods."],
+  descr: ["Override `allow` rules."],
   options: [
     {name: "insert, update, remove",
      type: "Function",
-     descr: "Access control functions that are called for each client-initiated database write. Return true to deny the write. See <a href='#allow'>`allow`</a> for details."},
+     descr: "Functions that look at a proposed modification to the database and return true if it should be denied, even if an `allow` rule says otherwise."},
     {name: "fetch",
      type: "Array of Strings",
-     descr: "Specific fields to retrieve when reading documents from the database to pass to `update` and `remove` access control functions. If this is not specified, all fields are retrieved. Specifying which fields to fetch can be a performance improvement."}
+     descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions."}
   ]
 };
 
