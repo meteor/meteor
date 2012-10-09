@@ -87,9 +87,9 @@
     // Meteor.find(this.userId()).observe and recompute when the user
     // record changes.
     var currentInvocation = Meteor._CurrentInvocation.get();
-    if (!currentInvocation || !currentInvocation.userId)
-      throw new Error("Meteor.userId can only be invoked in method calls. Use this.userId() in publish functions.");
-    return currentInvocation.userId();
+    if (!currentInvocation)
+      throw new Error("Meteor.userId can only be invoked in method calls. Use this.userId in publish functions.");
+    return currentInvocation.userId;
   };
 
   Meteor.user = function () {
@@ -235,8 +235,8 @@
 
   // Always publish the current user's record to the client.
   Meteor.publish(null, function() {
-    if (this.userId())
-      return Meteor.users.find({_id: this.userId()},
+    if (this.userId)
+      return Meteor.users.find({_id: this.userId},
                                {fields: {profile: 1, username: 1, emails: 1}});
     else
       return null;

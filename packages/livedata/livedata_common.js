@@ -21,7 +21,7 @@ Meteor._MethodInvocation = function (options) {
   this.unblock = options.unblock || function () {};
 
   // current user id
-  this._userId = options.userId;
+  this.userId = options.userId;
 
   // sets current user id in all appropriate server contexts and
   // reruns subscriptions
@@ -35,12 +35,8 @@ Meteor._MethodInvocation = function (options) {
 };
 
 _.extend(Meteor._MethodInvocation.prototype, {
-  userId: function() {
-    return this._userId;
-  },
-
   setUserId: function(userId) {
-    this._userId = userId;
+    this.userId = userId;
     this._setUserId(userId);
   }
 });

@@ -58,7 +58,7 @@
     },
 
     changePassword: function (options) {
-      if (!this.userId())
+      if (!this.userId)
         throw new Meteor.Error(401, "Must be logged in");
 
       // If options.M is set, it means we went through a challenge with
@@ -72,7 +72,7 @@
         var serialized = this._sessionData.srpChallenge;
         if (!serialized || serialized.M !== options.M)
           throw new Meteor.Error(403, "Incorrect password");
-        if (serialized.userId !== this.userId())
+        if (serialized.userId !== this.userId)
           // No monkey business!
           throw new Meteor.Error(403, "Incorrect password");
         // Only can use challenges once.
@@ -87,7 +87,7 @@
           !verifier.verifier)
         throw new Meteor.Error(400, "Invalid verifier");
 
-      Meteor.users.update({_id: this.userId()},
+      Meteor.users.update({_id: this.userId},
                           {$set: {'services.password.srp': verifier}});
 
       var ret = {passwordChanged: true};

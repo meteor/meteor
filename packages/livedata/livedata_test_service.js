@@ -114,7 +114,7 @@ if (Meteor.isServer) {
   objectsWithUsers.insert({name: "owned by two - b", ownerUserIds: [2]});
 
   Meteor.publish("objectsWithUsers", function() {
-    return objectsWithUsers.find({ownerUserIds: this.userId()},
+    return objectsWithUsers.find({ownerUserIds: this.userId},
                                  {fields: {ownerUserIds: 0}});
   });
 
@@ -122,7 +122,7 @@ if (Meteor.isServer) {
   Meteor.publish("recordUserIdOnStop", function() {
     var self = this;
     self.onStop(function() {
-      userIdWhenStopped = self.userId();
+      userIdWhenStopped = self.userId;
     });
   });
 

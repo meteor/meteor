@@ -399,7 +399,7 @@ _.extend(Meteor._LivedataSession.prototype, {
 
     var rerunSub = function(sub) {
       sub._teardown();
-      sub._userId = self.userId;
+      sub.userId = self.userId;
       sub._runHandler();
     };
     var flushSub = function(sub) {
@@ -477,7 +477,7 @@ Meteor._LivedataSubscription = function (session, sub_id, priority) {
   // stop callbacks to g/c this sub.  called w/ zero arguments.
   this.stop_callbacks = [];
 
-  this._userId = session.userId;
+  this.userId = session.userId;
 };
 
 _.extend(Meteor._LivedataSubscription.prototype, {
@@ -597,10 +597,6 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
     self.pending_data = {};
     self.pending_complete = false;
-  },
-
-  userId: function() {
-    return this._userId;
   },
 
   _teardown: function() {

@@ -345,7 +345,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
 
           var validatedMethodName =
                 '_validated' + method.charAt(0).toUpperCase() + method.slice(1);
-          var argsWithUserId = [this.userId()].concat(_.toArray(arguments));
+          var argsWithUserId = [this.userId].concat(_.toArray(arguments));
           self[validatedMethodName].apply(self, argsWithUserId);
         } else {
           throw new Meteor.Error(403, "Access denied");

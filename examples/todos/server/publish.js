@@ -19,7 +19,7 @@ Meteor.publish('todos', function (list_id) {
   return Todos.find({
     list_id: list_id,
     privateTo: {
-      $in: [null, this.userId()]
+      $in: [null, this.userId]
     }
   });
 });
