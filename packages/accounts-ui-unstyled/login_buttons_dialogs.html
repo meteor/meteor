@@ -1,14 +1,14 @@
 <body>
-  {{> resetPasswordDialog}}
-  {{> enrollAccountDialog}}
-  {{> justValidatedUserDialog}}
-  {{> configureLoginServiceDialog}}
+  {{> _resetPasswordDialog}}
+  {{> _enrollAccountDialog}}
+  {{> _justValidatedUserDialog}}
+  {{> _configureLoginServiceDialog}}
 
   <!-- if we're not showing a dropdown, we need some other place to show messages -->
-  {{> loginButtonsMessagesDialog}}
+  {{> _loginButtonsMessagesDialog}}
 </body>
 
-<template name="resetPasswordDialog">
+<template name="_resetPasswordDialog">
   {{#if inResetPasswordFlow}}
     <div class="hide-background"></div>
 
@@ -21,7 +21,7 @@
         <input id="reset-password-new-password" type="password" />
       </div>
 
-      {{> loginButtonsMessages}}
+      {{> _loginButtonsMessages}}
 
       <div class="login-button login-button-form-submit" id="login-buttons-reset-password-button">
         Set password
@@ -34,7 +34,7 @@
   {{/if}}
 </template>
 
-<template name="enrollAccountDialog">
+<template name="_enrollAccountDialog">
   {{#if inEnrollAccountFlow}}
     <div class="hide-background"></div>
 
@@ -47,7 +47,7 @@
         <input id="enroll-account-password" type="password" />
       </div>
 
-      {{> loginButtonsMessages}}
+      {{> _loginButtonsMessages}}
 
       <div class="login-button login-button-form-submit" id="login-buttons-enroll-account-button">
         Create account
@@ -60,7 +60,7 @@
   {{/if}}
 </template>
 
-<template name="justValidatedUserDialog">
+<template name="_justValidatedUserDialog">
   {{#if visible}}
     <div class="accounts-dialog accounts-centered-dialog">
       Email validated
@@ -69,7 +69,7 @@
   {{/if}}
 </template>
 
-<template name="configureLoginServiceDialog">
+<template name="_configureLoginServiceDialog">
   {{#if visible}}
     <div id="configure-login-service-dialog" class="accounts-dialog accounts-centered-dialog">
       {{{configurationSteps}}}
@@ -110,10 +110,10 @@
   {{/if}}
 </template>
 
-<template name="loginButtonsMessagesDialog">
+<template name="_loginButtonsMessagesDialog">
   {{#if visible}}
     <div class="accounts-dialog accounts-centered-dialog" id="login-buttons-message-dialog">
-      {{> loginButtonsMessages}}
+      {{> _loginButtonsMessages}}
       <div class="login-button" id="messages-dialog-dismiss-button">Dismiss</div>
     </div>
   {{/if}}

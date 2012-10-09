@@ -20,30 +20,30 @@
   // loginButtonsLoggedInDropdown template and related
   //
 
-  Template.loginButtonsLoggedInDropdown.events({
+  Template._loginButtonsLoggedInDropdown.events({
     'click #login-buttons-open-change-password': function() {
       loginButtonsSession.resetMessages();
       loginButtonsSession.set('inChangePasswordFlow', true);
     }
   });
 
-  Template.loginButtonsLoggedInDropdown.displayName = function () {
+  Template._loginButtonsLoggedInDropdown.displayName = function () {
     return Accounts._loginButtons.displayName();
   };
 
-  Template.loginButtonsLoggedInDropdown.inChangePasswordFlow = function () {
+  Template._loginButtonsLoggedInDropdown.inChangePasswordFlow = function () {
     return loginButtonsSession.get('inChangePasswordFlow');
   };
 
-  Template.loginButtonsLoggedInDropdown.inMessageOnlyFlow = function () {
+  Template._loginButtonsLoggedInDropdown.inMessageOnlyFlow = function () {
     return loginButtonsSession.get('inMessageOnlyFlow');
   };
 
-  Template.loginButtonsLoggedInDropdown.dropdownVisible = function () {
+  Template._loginButtonsLoggedInDropdown.dropdownVisible = function () {
     return loginButtonsSession.get('dropdownVisible');
   };
 
-  Template.loginButtonsLoggedInDropdownActions.allowChangingPassword = function () {
+  Template._loginButtonsLoggedInDropdownActions.allowChangingPassword = function () {
     // it would be more correct to check whether the user has a password set,
     // but in order to do that we'd have to send more data down to the client,
     // and it'd be preferable not to send down the entire service.password document.
@@ -58,7 +58,7 @@
   // loginButtonsLoggedOutDropdown template and related
   //
 
-  Template.loginButtonsLoggedOutDropdown.events({
+  Template._loginButtonsLoggedOutDropdown.events({
     'click #login-buttons-password': function () {
       loginOrSignup();
     },
@@ -157,7 +157,7 @@
   });
 
   // additional classes that can be helpful in styling the dropdown
-  Template.loginButtonsLoggedOutDropdown.additionalClasses = function () {
+  Template._loginButtonsLoggedOutDropdown.additionalClasses = function () {
     if (!Accounts.password) {
       return false;
     } else {
@@ -171,31 +171,31 @@
     }
   };
 
-  Template.loginButtonsLoggedOutDropdown.dropdownVisible = function () {
+  Template._loginButtonsLoggedOutDropdown.dropdownVisible = function () {
     return loginButtonsSession.get('dropdownVisible');
   };
 
-  Template.loginButtonsLoggedOutDropdown.hasPasswordService = function () {
+  Template._loginButtonsLoggedOutDropdown.hasPasswordService = function () {
     return Accounts._loginButtons.hasPasswordService();
   };
 
-  Template.loginButtonsLoggedOutAllServices.services = function () {
+  Template._loginButtonsLoggedOutAllServices.services = function () {
     return Accounts._loginButtons.getLoginServices();
   };
 
-  Template.loginButtonsLoggedOutAllServices.isPasswordService = function () {
+  Template._loginButtonsLoggedOutAllServices.isPasswordService = function () {
     return this.name === 'password';
   };
 
-  Template.loginButtonsLoggedOutAllServices.hasOtherServices = function () {
+  Template._loginButtonsLoggedOutAllServices.hasOtherServices = function () {
     return Accounts._loginButtons.getLoginServices().length > 1;
   };
 
-  Template.loginButtonsLoggedOutAllServices.hasPasswordService = function () {
+  Template._loginButtonsLoggedOutAllServices.hasPasswordService = function () {
     return Accounts._loginButtons.hasPasswordService();
   };
 
-  Template.loginButtonsLoggedOutPasswordService.fields = function () {
+  Template._loginButtonsLoggedOutPasswordService.fields = function () {
     var loginFields = [
       {fieldName: 'username-or-email', fieldLabel: 'Username or Email',
        visible: function () {
@@ -242,19 +242,19 @@
     return loginButtonsSession.get('inSignupFlow') ? signupFields : loginFields;
   };
 
-  Template.loginButtonsLoggedOutPasswordService.inForgotPasswordFlow = function () {
+  Template._loginButtonsLoggedOutPasswordService.inForgotPasswordFlow = function () {
     return loginButtonsSession.get('inForgotPasswordFlow');
   };
 
-  Template.loginButtonsLoggedOutPasswordService.inLoginFlow = function () {
+  Template._loginButtonsLoggedOutPasswordService.inLoginFlow = function () {
     return !loginButtonsSession.get('inSignupFlow') && !loginButtonsSession.get('inForgotPasswordFlow');
   };
 
-  Template.loginButtonsLoggedOutPasswordService.inSignupFlow = function () {
+  Template._loginButtonsLoggedOutPasswordService.inSignupFlow = function () {
     return loginButtonsSession.get('inSignupFlow');
   };
 
-  Template.loginButtonsLoggedOutPasswordService.showForgotPasswordLink = function () {
+  Template._loginButtonsLoggedOutPasswordService.showForgotPasswordLink = function () {
     return Accounts._options.requireEmail
       || !Accounts._options.requireUsername;
   };
@@ -264,7 +264,7 @@
   // loginButtonsChangePassword template
   //
 
-  Template.loginButtonsChangePassword.events({
+  Template._loginButtonsChangePassword.events({
     'keypress #login-old-password, keypress #login-password, keypress #login-password-again': function (event) {
       if (event.keyCode === 13)
         changePassword();
@@ -274,7 +274,7 @@
     }
   });
 
-  Template.loginButtonsChangePassword.fields = function () {
+  Template._loginButtonsChangePassword.fields = function () {
     return [
       {fieldName: 'old-password', fieldLabel: 'Current Password', inputType: 'password',
        visible: function () {

@@ -37,7 +37,7 @@
   // resetPasswordDialog template
   //
 
-  Template.resetPasswordDialog.events({
+  Template._resetPasswordDialog.events({
     'click #login-buttons-reset-password-button': function () {
       resetPassword();
     },
@@ -69,7 +69,7 @@
       });
   };
 
-  Template.resetPasswordDialog.inResetPasswordFlow = function () {
+  Template._resetPasswordDialog.inResetPasswordFlow = function () {
     return loginButtonsSession.get('resetPasswordToken');
   };
 
@@ -78,7 +78,7 @@
   // enrollAccountDialog template
   //
 
-  Template.enrollAccountDialog.events({
+  Template._enrollAccountDialog.events({
     'click #login-buttons-enroll-account-button': function () {
       enrollAccount();
     },
@@ -110,7 +110,7 @@
       });
   };
 
-  Template.enrollAccountDialog.inEnrollAccountFlow = function () {
+  Template._enrollAccountDialog.inEnrollAccountFlow = function () {
     return loginButtonsSession.get('enrollAccountToken');
   };
 
@@ -119,13 +119,13 @@
   // justValidatedUserDialog template
   //
 
-  Template.justValidatedUserDialog.events({
+  Template._justValidatedUserDialog.events({
     'click #just-validated-dismiss-button': function () {
       loginButtonsSession.set('justValidatedUser', false);
     }
   });
 
-  Template.justValidatedUserDialog.visible = function () {
+  Template._justValidatedUserDialog.visible = function () {
     return loginButtonsSession.get('justValidatedUser');
   };
 
@@ -134,13 +134,13 @@
   // loginButtonsMessagesDialog template
   //
 
-  Template.loginButtonsMessagesDialog.events({
+  Template._loginButtonsMessagesDialog.events({
     'click #messages-dialog-dismiss-button': function () {
       loginButtonsSession.resetMessages();
     }
   });
 
-  Template.loginButtonsMessagesDialog.visible = function () {
+  Template._loginButtonsMessagesDialog.visible = function () {
     var hasMessage = loginButtonsSession.get('infoMessage') || loginButtonsSession.get('errorMessage');
     return !Accounts._loginButtons.dropdown() && hasMessage;
   };
@@ -150,7 +150,7 @@
   // configureLoginServiceDialog template
   //
 
-  Template.configureLoginServiceDialog.events({
+  Template._configureLoginServiceDialog.events({
     'click #configure-login-service-dismiss-button': function () {
       loginButtonsSession.set('configureLoginServiceDialogVisible', false);
     },
@@ -208,20 +208,20 @@
     return template.fields();
   };
 
-  Template.configureLoginServiceDialog.configurationFields = function () {
+  Template._configureLoginServiceDialog.configurationFields = function () {
     return configurationFields();
   };
 
-  Template.configureLoginServiceDialog.visible = function () {
+  Template._configureLoginServiceDialog.visible = function () {
     return loginButtonsSession.get('configureLoginServiceDialogVisible');
   };
 
-  Template.configureLoginServiceDialog.configurationSteps = function () {
+  Template._configureLoginServiceDialog.configurationSteps = function () {
     // renders the appropriate template
     return configureLoginServiceDialogTemplateForService()();
   };
 
-  Template.configureLoginServiceDialog.saveDisabled = function () {
+  Template._configureLoginServiceDialog.saveDisabled = function () {
     return loginButtonsSession.get('configureLoginServiceDialogSaveDisabled');
   };
 

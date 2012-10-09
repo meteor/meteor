@@ -2,7 +2,7 @@
   // for convenience
   var loginButtonsSession = Accounts._loginButtonsSession;
 
-  Template.loginButtonsLoggedOutSingleLoginButton.events({
+  Template._loginButtonsLoggedOutSingleLoginButton.events({
     'click .login-button': function () {
       var serviceName = this.name;
       loginButtonsSession.resetMessages();
@@ -20,11 +20,11 @@
     }
   });
 
-  Template.loginButtonsLoggedOutSingleLoginButton.configured = function () {
+  Template._loginButtonsLoggedOutSingleLoginButton.configured = function () {
     return !!Accounts.configuration.findOne({service: this.name});
   };
 
-  Template.loginButtonsLoggedOutSingleLoginButton.capitalizedName = function () {
+  Template._loginButtonsLoggedOutSingleLoginButton.capitalizedName = function () {
     if (this.name === 'github')
       // XXX we should allow service packages to set their capitalized name
       return 'GitHub';

@@ -1,7 +1,7 @@
 <!--           -->
 <!-- LOGGED IN -->
 <!--           -->
-<template name="loginButtonsLoggedInDropdown">
+<template name="_loginButtonsLoggedInDropdown">
   <div class="login-link-and-dropdown-list">
     {{#if currentUserLoaded}}
       <a class="login-link-text" id="login-name-link">
@@ -14,12 +14,12 @@
           <div class="login-close-text-clear"></div>
 
           {{#if inMessageOnlyFlow}}
-            {{> loginButtonsMessages}}
+            {{> _loginButtonsMessages}}
           {{else}}
             {{#if inChangePasswordFlow}}
-              {{> loginButtonsChangePassword}}
+              {{> _loginButtonsChangePassword}}
             {{else}}
-              {{> loginButtonsLoggedInDropdownActions}}
+              {{> _loginButtonsLoggedInDropdownActions}}
             {{/if}}
           {{/if}}
         </div>
@@ -30,7 +30,7 @@
   </div>
 </template>
 
-<template name="loginButtonsLoggedInDropdownActions">
+<template name="_loginButtonsLoggedInDropdownActions">
   {{#if allowChangingPassword}}
     <div class="login-button" id="login-buttons-open-change-password">
       Change password
@@ -45,37 +45,37 @@
 <!--            -->
 <!-- LOGGED OUT -->
 <!--            -->
-<template name="loginButtonsLoggedOutDropdown">
+<template name="_loginButtonsLoggedOutDropdown">
   <div class="login-link-and-dropdown-list {{additionalClasses}}">
     <a class="login-link-text" id="login-sign-in-link">Sign in ▾</a>
     {{#if dropdownVisible}}
     <div id="login-dropdown-list" class="accounts-dialog">
       <a class="login-close-text">Close</a>
       <div class="login-close-text-clear"></div>
-      {{> loginButtonsLoggedOutAllServices}}
+      {{> _loginButtonsLoggedOutAllServices}}
     </div>
     {{/if}}
   </div>
 </template>
 
-<template name="loginButtonsLoggedOutAllServices">
+<template name="_loginButtonsLoggedOutAllServices">
   {{#each services}}
     {{#if isPasswordService}}
       {{#if hasOtherServices}} {{! the password service will always come last }}
-        {{> loginButtonsLoggedOutPasswordServiceSeparator}}
+        {{> _loginButtonsLoggedOutPasswordServiceSeparator}}
       {{/if}}
-      {{> loginButtonsLoggedOutPasswordService}}
+      {{> _loginButtonsLoggedOutPasswordService}}
     {{else}}
-      {{> loginButtonsLoggedOutSingleLoginButton}}
+      {{> _loginButtonsLoggedOutSingleLoginButton}}
     {{/if}}
   {{/each}}
 
   {{#unless hasPasswordService}}
-    {{> loginButtonsMessages}}
+    {{> _loginButtonsMessages}}
   {{/unless}}
 </template>
 
-<template name="loginButtonsLoggedOutPasswordServiceSeparator">
+<template name="_loginButtonsLoggedOutPasswordServiceSeparator">
   <div class="or">
     <span class="hline">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
     <span class="or-text">or</span>
@@ -83,16 +83,16 @@
   </div>
 </template>
 
-<template name="loginButtonsLoggedOutPasswordService">
+<template name="_loginButtonsLoggedOutPasswordService">
   {{#if inForgotPasswordFlow}}
-    {{> forgotPasswordForm}}
+    {{> _forgotPasswordForm}}
   {{else}}
     <div class="login-form login-password-form">
       {{#each fields}}
-        {{> loginButtonsFormField}}
+        {{> _loginButtonsFormField}}
       {{/each}}
 
-      {{> loginButtonsMessages}}
+      {{> _loginButtonsMessages}}
 
       <div class="login-button login-button-form-submit" id="login-buttons-password">
         {{#if inSignupFlow}}
@@ -115,36 +115,36 @@
       {{/if}}
 
       {{#if inSignupFlow}}
-        {{> loginButtonsBackToLoginLink}}
+        {{> _loginButtonsBackToLoginLink}}
       {{/if}}
     </div>
   {{/if}}
 </template>
 
-<template name="forgotPasswordForm">
+<template name="_forgotPasswordForm">
   <div class="login-form">
     <div id="forgot-password-email-label-and-input"> {{! XXX we should probably use loginButtonsFormField }}
       <label id="forgot-password-email-label" for="forgot-password-email">Email</label>
       <input id="forgot-password-email"/>
     </div>
 
-    {{> loginButtonsMessages}}
+    {{> _loginButtonsMessages}}
 
     <div class="login-button login-button-form-submit" id="login-buttons-forgot-password">
       Reset password
     </div>
 
-    {{> loginButtonsBackToLoginLink}}
+    {{> _loginButtonsBackToLoginLink}}
   </div>
 </template>
 
-<template name="loginButtonsBackToLoginLink">
+<template name="_loginButtonsBackToLoginLink">
   <div class="additional-link-container">
     <a id="back-to-login-link" class="additional-link">Sign in</a>
   </div>
 </template>
 
-<template name="loginButtonsFormField">
+<template name="_loginButtonsFormField">
   {{#if visible}}
     <div id="login-{{fieldName}}-label-and-input">
       <label id="login-{{fieldName}}-label" for="login-{{fieldName}}">
@@ -155,12 +155,12 @@
   {{/if}}
 </template>
 
-<template name="loginButtonsChangePassword">
+<template name="_loginButtonsChangePassword">
   {{#each fields}}
-    {{> loginButtonsFormField}}
+    {{> _loginButtonsFormField}}
   {{/each}}
 
-  {{> loginButtonsMessages}}
+  {{> _loginButtonsMessages}}
 
   <div class="login-button login-button-form-submit" id="login-buttons-do-change-password">
     Change password

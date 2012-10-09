@@ -1,16 +1,16 @@
 <template name="loginButtons">
   <div id="login-buttons">
     {{#if currentUser}}
-      {{> loginButtonsLoggedIn}}
+      {{> _loginButtonsLoggedIn}}
     {{else}}
-      {{> loginButtonsLoggedOut}}
+      {{> _loginButtonsLoggedOut}}
     {{/if}}
   </div>
 </template>
 
-<template name="loginButtonsLoggedIn">
+<template name="_loginButtonsLoggedIn">
   {{#if dropdown}}
-    {{> loginButtonsLoggedInDropdown}}
+    {{> _loginButtonsLoggedInDropdown}}
   {{else}}
     <div class="login-header">
       {{#if currentUserLoaded}}
@@ -23,14 +23,14 @@
   {{/if}}
 </template>
 
-<template name="loginButtonsLoggedOut">
+<template name="_loginButtonsLoggedOut">
   {{#if services}} {{! if at least one service is configured }}
     {{#if configurationLoaded}}
       {{#if dropdown}} {{! if more than one service configured, or password is configured}}
-        {{> loginButtonsLoggedOutDropdown}}
+        {{> _loginButtonsLoggedOutDropdown}}
       {{else}}
         {{#with singleService}} {{! at this point there must be only one configured services }}
-          {{> loginButtonsLoggedOutSingleLoginButton}}
+          {{> _loginButtonsLoggedOutSingleLoginButton}}
         {{/with}}
       {{/if}}
     {{/if}}
@@ -40,7 +40,7 @@
 </template>
 
 <!-- used in various places to display messages to user -->
-<template name="loginButtonsMessages">
+<template name="_loginButtonsMessages">
   {{#if errorMessage}}
     <div class="message error-message">{{errorMessage}}</div>
   {{/if}}
