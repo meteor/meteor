@@ -873,7 +873,7 @@ Example:
 
 {{> api_box equals}}
 
-These two expressions do the same thing:
+If value is a scalar, then these two expressions do the same thing:
 
     (1) Session.get("key") === value
     (2) Session.equals("key", value)
@@ -919,6 +919,10 @@ Example:
     //
     // If Session.get had been used instead of Session.equals, then
     // when the selection changed, all the items would be re-rendered.
+
+For object and array session values, you cannot use `Session.equals`; instead,
+you need to use the `underscore` package and write
+`_.isEqual(Session.get(key), value)`.
 
 <h2 id="templates_api"><span>Templates</span></h2>
 
