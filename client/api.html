@@ -122,6 +122,9 @@ is the place to stop the observes.
 
 {{> api_box subscription_userId}}
 
+This is constant. However, if the logged-in user changes, the publish
+function is rerun with the new value.
+
 {{> api_box subscribe}}
 
 When you subscribe to a record set, it tells the server to send records
@@ -222,19 +225,25 @@ exception it will be logged to the console.
 
 {{> api_box method_invocation_userId}}
 
-The user for a method is determined when the method starts running and
-will not change during method execution, even if `unblock` is called.
+The user id is an arbitrary string &mdash; typically the id of the user
+record in the database. You can set it with the `setUserId` function. If
+you're using the Meteor accounts system then this is handled for you.
 
 {{> api_box method_invocation_setUserId}}
 
-Calling this function from a method will result in all future methods
-received on the same connection having their `userId` set to the
-provided value. Future calls to `this.userId` in the same method will
-also return the new value.
+Call this function to change the currently logged in user on the
+connection that made this method call. This simply sets the value of
+`userId` for future method calls received on this connection. Pass
+`null` to log out the connection.
 
-Values should correspond to the `_id` field of a document in the
+If you are using the built-in Meteor accounts system then this should correspond to
+the `_id` field of a document in the
 <a href="#meteor_users">`Meteor.users`</a> collection.
 
+`setUserId` is not retroactive. It affects the current method call and
+any future method calls on the connection. Any previous method calls on
+this connection will still see the value of `userId` that was in effect
+when they started.
 
 {{> api_box method_invocation_isSimulation}}
 
@@ -646,63 +655,78 @@ Example:
 
 {{> api_box allow}}
 
-`allow` and its sibling function <a href='#deny'>`deny`</a> control
-permission to write to the server database from the client using
-auto-generated `insert`, `update` and `remove` methods. This lets
-clients use the same API as the server to update the database while
-maintaining the ability to enforce security against rogue clients.
+When a client calls `insert`, `update`, or `remove` on a collection, the
+collection's `allow` and <a href='#deny'>`deny`</a> callbacks are called
+on the server to determine if the write should be allowed. If at least
+one `allow` callback allows the write, and no `deny` callbacks deny the
+write, then the write is allowed to proceed.
 
-Writes initiated on the server, such as from a method, are always
-allowed. The `allow` and <a href='#deny'>`deny`</a> functions only
-control the client's access to the server database API. Using custom <a
-href="#methods_header">methods</a> instead of `allow`ing direct database
-access is a good approach to creating a secure app, but it is sometimes
-easier and faster to develop with a simple access control function based
-approach to security.
+These checks are run only when a client tries to write to the database
+directly, for example by calling `update` from inside an event
+handler. Server code is trusted and isn't subject to `allow` and `deny`
+restrictions. That includes methods that are called with `Meteor.call`
+&mdash; they are expected to do their own access checking rather than
+relying on `allow` and `deny`.
 
-Each access control function receives the `userId` of the currently
-logged in user (or `null` if the user is not logged in) as the first
-argument, and the document or documents in question as the second
-argument. If the function returns `true`, it indicates that the write
-should be allowed (in the case of `allow`) or denied (in the case of
-`deny`). If the function returns false it does not allow or deny the
-request. If no other `allow` statement allows the request, it is denied.
+You can call `allow` as many times as you like, and each call can
+include any combination of `insert`, `update`, and `remove`
+functions. The functions should return `true` if they think the
+operation should be allowed. Otherwise they should return `false`, or
+nothing at all (`undefined`). In that case Meteor will continue
+searching through any other `allow` rules on the collection.
 
+The available callbacks are:
 
 <dl class="callbacks">
 {{#dtdd "insert(userId, doc)"}}
-`doc` is the document the client wants to insert.
+The user `userId` wants to insert the document `doc` into the
+collection. Return `true` if this should be allowed.
 {{/dtdd}}
 
 {{#dtdd "update(userId, docs, fields, modifier)"}}
-`docs` is an array of documents that the client is asking to modify. These
-are fetched from the database and have not yet had the request modifications
-applied. If you pass the `fetch` argument to `allow` and `deny`, these
-documents can contain a subset of the database fields, which can be a
-performance improvement.
+The user `userId` wants to update some documents. Meteor has fetched the
+documents from the database and they are available in `docs` as an
+array. Return `true` if the user should be allowed to change these
+documents.
 
-`fields` is a list of top level fields in the document the client is
-asking to modify. If the client asks to modify a sub-field
-(eg with `{$set: {'foo.bar': true}}`) this will contain only the top level
-field (eg `['foo']`).
+Additional details about the proposed modification are in `fields` and
+`modifier`. `fields` is the top-level fields in the document that the
+client wishes to modify, for example `['name', 'score']`. `modifier` is
+the raw Mongo modifier that the client wants to execute, for example
+`{$set: {'name.first': "Alice"}, $inc: {score: 1}}`.
 
-`modifier` is the raw mongo modifier the client sent. Many uses will not
-need to inspect this parameter.
+Only Mongo modifiers are supported (operations like `$set` and `$push`.)
+If the user tries to replace the entire document rather than use
+$-modifiers, the request will be denied without checking the `allow`
+functions.
+
 {{/dtdd}}
 
 {{#dtdd "remove(userId, docs)"}}
-`docs` is the list of documents the client is asking to remove. As with
-`update` above, the `fetch` option controls which fields are populated
-in `docs`.
+The user `userId` wants to remove some documents. Meteor has fetched the
+documents from the database and they are available in `docs` as an
+array. Return `true` if the user should be allowed to remove these
+documents.
 {{/dtdd}}
 
 </dl>
 
+By default, when Meteor fetches the documents from the database for the
+`docs` array, it will retrieve all of the fields in the documents. For
+efficiency you may instead want to retrieve just the fields that are
+actually needed by your functions. This is enabled by the `fetch`
+option. Set `fetch` to an array of the field names that should be
+retrieved.
 
 Example: XXX test me!
 
-    // Create a collection where users can only write documents that
-    // they 'own' using an 'owner' field in each document.
+    // Create a collection where users can only modify documents that
+    // they own. Ownership is tracked by an 'owner' field on each
+    // document. All documents must be owned by the user that created
+    // them and ownership can't be changed. Only a document's owner
+    // is allowed to delete it, and the 'locked' attribute can be
+    // set on a document to prevent its accidental deletion.
+
     Posts = new Meteor.Collection("posts");
 
     Posts.allow({
@@ -736,51 +760,45 @@ Example: XXX test me!
           return doc.locked;
         });
       },
-      fetch: ['locked']
+      fetch: ['locked'] // no need to fetch 'owner'
     });
 
+If you never set up any `allow` rules on a collection then all client
+writes to the collection will be denied, and it will only be possible to
+write to the collection from server-side code. In this case you will
+have to create a method for each possible write that clients are allowed
+to do. You'll then call these methods with `Meteor.call` rather than
+having the clients call `insert`, `update`, and `remove` directly on the
+collection.
 
+Meteor also has a special "insecure mode" for quickly prototyping new
+applications. In insecure mode, if you haven't set up any `allow` or
+`deny` rules on a collection, then all users have full write access to
+the collection. This is the only effect of insecure mode. If you call
+`allow` or `deny` at all, even `allow({})`, then access is checked just
+like normal. __New Meteor projects start in insecure mode by default.__ To
+turn it off just type `meteor remove insecure`.
 
-`allow` and `deny` can be called multiple times to allow or deny
-  additional actions. The access control functions are evaluated as follows:
-
-- If any deny function returns true, the request is denied.
-- Otherwise, if any allow function returns true, the request is allowed.
-- Otherwise, the request is denied.
-
-In other words, the results of multiple functions are logically `OR`-ed
-together. The execution order of multiple functions is not specified,
-and execution of validators is not guaranteed. If the system can
-determine the result after executing only a subset of the validators, it
-will not call the remaining ones.
-
-The `insecure` package controls what is allowed when you do not call
-`allow` or `deny` on a collection. With the `insecure` package
-installed, all writes are allowed on collections that have never had
-`allow` or `deny` called. This can be useful during development, to
-quickly prototype differnt schemas without worring about security. Calling
-`allow({})` on a collection will disable all client writes, even when
-the `insecure` package is loaded.
-
-
+{{#note}}
+For `update` and `remove`, documents will be affected only if they match
+the selector both at the time the documents are fetched to run the
+`allow` and `deny` rules, __and__ at the time that the operation is
+actually executed. This is accomplished by rewriting the selector to
+`{$and: [(original selector), {$in: {_id: [(ids of documents fetched
+and checked by allow and deny)]}}]}`.
+{{/note}}
 
 {{> api_box deny}}
 
-This is the sibling function to <a href='#allow'>`allow`</a>, it takes
-the same arguments. The only difference is that when an access control
-function registered with `deny` returns true, the request is denied
-instead of allowed.
+This works just like <a href='#allow'>`allow`</a>, except it lets you
+make sure that certain writes are definitely denied, even if there is an
+`allow` rule that says that they should be permitted.
 
-Calling `deny` only has an effect when there are also calls to <a
-href='#allow'>`allow`</a>. If there are no <a href='#allow'>`allow`</a>
-functions registered, `deny` functions are not called, as there is no
-way the request would be permitted.
-
-`deny` functions take precedence over <a href='#allow'>`allow`</a>
-functions. If any `deny` function returns true the request is denied and
-the <a href='#allow'>`allow`</a> functions are not evaluated.
-
-
+When a client tries to write to a collection, the Meteor server first
+checks the collection's `deny` rules. If none of them return true then
+it checks the collection's `allow` rules. Meteor allows the write only
+if no `deny` rules return `true` and at least one `allow` rule returns
+`true`.
 
 <h2 id="meteor_collection_cursor"><span>Cursors</span></h2>
 
