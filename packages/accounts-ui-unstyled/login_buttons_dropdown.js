@@ -96,10 +96,9 @@
           document.getElementById('login-username').value = usernameOrEmail;
       else
         document.getElementById('login-email').value = usernameOrEmail;
+      // "login-password" is preserved thanks to the preserve-inputs package
 
-      document.getElementById('login-password').value = password;
-
-      // Forge redrawing the `login-dropdown-list` element because of
+      // Force redrawing the `login-dropdown-list` element because of
       // a bizarre Chrome bug in which part of the DIV is not redrawn
       // in case you had tried to unsuccessfully log in before
       // switching to the signup form.
@@ -131,11 +130,46 @@
           document.getElementById('forgot-password-email').value = usernameOrEmail;
 
     },
+    'click #back-to-login-link': function () {
+      loginButtonsSession.resetMessages();
+
+      var username = elementValueById('login-username');
+      var email = elementValueById('login-email')
+            || elementValueById('forgot-password-email'); // Ughh. Standardize on names?
+
+      loginButtonsSession.set('inSignupFlow', false);
+      loginButtonsSession.set('inForgotPasswordFlow', false);
+      // force the ui to update so that we have the approprate fields to fill in
+      Meteor.flush();
+
+      if (document.getElementById('login-username'))
+        document.getElementById('login-username').value = username;
+      if (document.getElementById('login-email'))
+        document.getElementById('login-email').value = email;
+      // "login-password" is preserved thanks to the preserve-inputs package
+      if (document.getElementById('login-username-or-email'))
+        document.getElementById('login-username-or-email').value = email || username;
+    },
     'keypress #login-username, keypress #login-email, keypress #login-username-or-email, keypress #login-password, keypress #login-password-again': function (event) {
       if (event.keyCode === 13)
         loginOrSignup();
     }
   });
+
+  // additional classes that can be helpful in styling the dropdown
+  Template.loginButtonsLoggedOutDropdown.additionalClasses = function () {
+    if (!Accounts.password) {
+      return false;
+    } else {
+      if (loginButtonsSession.get('inSignupFlow')) {
+        return 'login-form-create-account';
+      } else if (loginButtonsSession.get('inForgotPasswordFlow')) {
+        return 'login-form-forgot-password';
+      } else {
+        return 'login-form-sign-in';
+      }
+    }
+  };
 
   Template.loginButtonsLoggedOutDropdown.dropdownVisible = function () {
     return loginButtonsSession.get('dropdownVisible');

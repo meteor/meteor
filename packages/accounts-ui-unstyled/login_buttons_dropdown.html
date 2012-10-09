@@ -46,7 +46,7 @@
 <!-- LOGGED OUT -->
 <!--            -->
 <template name="loginButtonsLoggedOutDropdown">
-  <div class="login-link-and-dropdown-list">
+  <div class="login-link-and-dropdown-list {{additionalClasses}}">
     <a class="login-link-text" id="login-sign-in-link">Sign in ▾</a>
     {{#if dropdownVisible}}
     <div id="login-dropdown-list" class="accounts-dialog">
@@ -62,13 +62,8 @@
   {{#each services}}
     {{#if isPasswordService}}
       {{#if hasOtherServices}} {{! the password service will always come last }}
-        <div class="or">
-          <span class="hline">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-          <span class="or-text">or</span>
-          <span class="hline">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-        </div>
+        {{> loginButtonsLoggedOutPasswordServiceSeparator}}
       {{/if}}
-
       {{> loginButtonsLoggedOutPasswordService}}
     {{else}}
       {{> loginButtonsLoggedOutSingleLoginButton}}
@@ -78,6 +73,14 @@
   {{#unless hasPasswordService}}
     {{> loginButtonsMessages}}
   {{/unless}}
+</template>
+
+<template name="loginButtonsLoggedOutPasswordServiceSeparator">
+  <div class="or">
+    <span class="hline">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+    <span class="or-text">or</span>
+    <span class="hline">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+  </div>
 </template>
 
 <template name="loginButtonsLoggedOutPasswordService">
@@ -110,30 +113,46 @@
           </div>
         {{/if}}
       {{/if}}
-    </div>
-  {{/if}}
-</template>
 
-<template name="loginButtonsFormField">
-  {{#if visible}}
-    <label id="login-{{fieldName}}-label" for="login-{{fieldName}}">
-      {{fieldLabel}}
-    </label>
-    <input id="login-{{fieldName}}" type="{{inputType}}" />
+      {{#if inSignupFlow}}
+        {{> loginButtonsBackToLoginLink}}
+      {{/if}}
+    </div>
   {{/if}}
 </template>
 
 <template name="forgotPasswordForm">
   <div class="login-form">
-    <label id="forgot-password-email-label" for="forgot-password-email">Email</label>
-    <input id="forgot-password-email"/>
+    <div id="forgot-password-email-label-and-input"> {{! XXX we should probably use loginButtonsFormField }}
+      <label id="forgot-password-email-label" for="forgot-password-email">Email</label>
+      <input id="forgot-password-email"/>
+    </div>
 
     {{> loginButtonsMessages}}
 
     <div class="login-button login-button-form-submit" id="login-buttons-forgot-password">
       Reset password
     </div>
+
+    {{> loginButtonsBackToLoginLink}}
   </div>
+</template>
+
+<template name="loginButtonsBackToLoginLink">
+  <div class="additional-link-container">
+    <a id="back-to-login-link" class="additional-link">Sign in</a>
+  </div>
+</template>
+
+<template name="loginButtonsFormField">
+  {{#if visible}}
+    <div id="login-{{fieldName}}-label-and-input">
+      <label id="login-{{fieldName}}-label" for="login-{{fieldName}}">
+        {{fieldLabel}}
+      </label>
+      <input id="login-{{fieldName}}" type="{{inputType}}" />
+    </div>
+  {{/if}}
 </template>
 
 <template name="loginButtonsChangePassword">
