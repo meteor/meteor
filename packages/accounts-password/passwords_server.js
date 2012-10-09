@@ -104,6 +104,7 @@
       Meteor.users.update(user._id, {$set: {
         "services.password.reset": {
           token: token,
+          email: email,
           when: when
         }
       }});
@@ -125,6 +126,9 @@
       var user = Meteor.users.findOne({"services.password.reset.token": token});
       if (!user)
         throw new Meteor.Error(403, "Token expired");
+      var email = user.services.password.reset.email;
+      if (!_.include(_.pluck(user.emails || [], 'address'), email))
+        throw new Meteor.Error(403, "Token has invalid email address");
 
       var stampedLoginToken = Accounts._generateStampedLoginToken();
 
@@ -134,12 +138,10 @@
       //   password should invalidate existing sessions).
       // - Forgetting about the reset token that was just used
       // - Verifying their email, since they got the password reset via email.
-      //   XXX we should store the email address used in services.password.reset
-      //       so that we validate the correct email here, not the first one
-      Meteor.users.update({_id: user._id}, {
+      Meteor.users.update({_id: user._id, 'emails.address': email}, {
         $set: {'services.password.srp': newVerifier,
                'services.resume.loginTokens': [stampedLoginToken],
-               'emails.0.validated': true},
+               'emails.$.validated': true},
         $unset: {'services.password.reset': 1}
       });
 
@@ -201,15 +203,17 @@
     });
   };
 
-  // send the user an email informing them that their account was
-  // created, with a link that when opened both marks their email as
-  // validated and forces them to choose their password
+  // send the user an email informing them that their account was created, with
+  // a link that when opened both marks their email as validated and forces them
+  // to choose their password. The email must be one of the addresses in the
+  // user's emails field.
   Accounts.sendEnrollmentEmail = function (userId, email) {
     var token = Meteor.uuid();
     var when = +(new Date);
     Meteor.users.update(userId, {$set: {
       "services.password.reset": {
         token: token,
+        email: email,
         when: when
       }
     }});
