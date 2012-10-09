@@ -92,7 +92,7 @@
           callback && callback(
             error || new Error("No result from changePassword."));
         } else {
-          callback();
+          callback && callback();
         }
       });
     } else { // oldPassword
@@ -115,9 +115,9 @@
           } else {
             if (!srp.verifyConfirmation(result)) {
               // Monkey business!
-              callback(new Error("Old password verification failed."));
+              callback && callback(new Error("Old password verification failed."));
             } else {
-              callback();
+              callback && callback();
             }
           }
         });
