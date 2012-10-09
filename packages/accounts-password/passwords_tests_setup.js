@@ -1,4 +1,6 @@
 Accounts.validateNewUser(function (user) {
+  if (user.invalidAndThrowException)
+    throw new Meteor.Error(403, "An exception thrown within Accounts.validateNewUser");
   return !user.invalid;
 });
 

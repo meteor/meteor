@@ -156,6 +156,19 @@ if (Meteor.isClient) (function () {
                         {invalid: true}, // should fail the new user validators
                         expect(function (error) {
                           test.equal(error.error, 403);
+                          test.equal(
+                            error.reason,
+                            "User validation failed");
+                        }));
+    },
+    logoutStep,
+    function(test, expect) {
+      Accounts.createUser({username: username3, password: password3},
+                        {invalidAndThrowException: true}, // should fail the new user validator with a special exception
+                        expect(function (error) {
+                          test.equal(
+                            error.reason,
+                            "An exception thrown within Accounts.validateNewUser");
                         }));
     },
     // test Accounts.onCreateUser
