@@ -1647,6 +1647,14 @@ sub-template.
 
 XXX schema?
 
+{{> api_box userLoaded}}
+
+{{#note}}
+We realize this is inconvenient. It is a temporary solution. In the
+future we will either make it unnecessary or fold it into a more
+general mechanism.
+{{/note}}
+
 {{> api_box logout}}
 {{> api_box loginWithPassword}}
 {{> api_box loginWithFacebook}}
@@ -1659,17 +1667,18 @@ XXX schema?
 {{> api_box accounts_changePassword}}
 {{> api_box accounts_forgotPassword}}
 {{> api_box accounts_resetPassword}}
-{{> api_box accounts_validateEmail}}
+{{> api_box accounts_setPassword}}
+{{> api_box accounts_verifyEmail}}
+
+{{> api_box accounts_sendResetPasswordEmail}}
+{{> api_box accounts_sendVerificationEmail}}
+{{> api_box accounts_sendEnrollmentEmail}}
+{{> api_box accounts_emailTemplates}}
 
 {{> api_box accounts_config}}
-{{> api_box accounts_emailTemplates}}
+{{> api_box accounts_ui_config}}
 {{> api_box accounts_validateNewUser}}
 {{> api_box accounts_onCreateUser}}
-{{> api_box accounts_setPassword}}
-{{> api_box accounts_configuration}}
-
-{{> api_box accounts_facebook_config}}
-{{> api_box accounts_google_config}}
 
 
 <h2 id="timers"><span>Timers</span></h2>

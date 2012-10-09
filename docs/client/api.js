@@ -671,15 +671,23 @@ Template.api.isolate = {
 Template.api.user = {
   id: "meteor_user",
   name: "Meteor.user()",
-  locus: "XXX client+methods",
-  descr: ["Returns the current user object, of null if not logged in. A reactive data source."]
+  locus: "Anywhere but subscriptions",
+  descr: ["Returns the current user object, or null if not logged in. A reactive data source."]
 };
+
+Template.api.userLoaded = {
+  id: "meteor_userloaded",
+  name: "Meteor.userLoaded()",
+  locus: "Client",
+  descr: ["XXX"]
+};
+
 
 Template.api.userId = {
   id: "meteor_userid",
   name: "Meteor.userId()",
-  locus: "XXX client+methods",
-  descr: ["Returns the current user id, of null if not logged in. A reactive data source."]
+  locus: "Anywhere but subscriptions",
+  descr: ["Returns the current user id, or null if not logged in. A reactive data source."]
 };
 
 
@@ -733,13 +741,20 @@ Template.api.loginWithPassword = {
 
 Template.api.loginWithFacebook = {
   id: "meteor_loginwithfacebook",
-  name: "Meteor.loginWithFacebook([callback])",
+  name: "Meteor.loginWithFacebook([options], [callback])",
   locus: "Client",
   descr: ["Log the user in."],
   args: [
     {
       name: "callback",
       type: "Function",
+      descr: "XXX"
+    }
+  ],
+  options: [
+    {
+      name: "requestPermissions",
+      type: "Array of Strings",
       descr: "XXX"
     }
   ]
@@ -747,7 +762,7 @@ Template.api.loginWithFacebook = {
 
 Template.api.loginWithGithub = {
   id: "meteor_loginwithgithub",
-  name: "Meteor.loginWithGithub([callback])",
+  name: "Meteor.loginWithGithub([options], [callback])",
   locus: "Client",
   descr: ["Log the user in."],
   args: [
@@ -756,18 +771,32 @@ Template.api.loginWithGithub = {
       type: "Function",
       descr: "XXX"
     }
+  ],
+  options: [
+    {
+      name: "requestPermissions",
+      type: "Array of Strings",
+      descr: "XXX"
+    }
   ]
 };
 
 Template.api.loginWithGoogle = {
   id: "meteor_loginwithgoogle",
-  name: "Meteor.loginWithGoogle([callback])",
+  name: "Meteor.loginWithGoogle([options], [callback])",
   locus: "Client",
   descr: ["Log the user in."],
   args: [
     {
       name: "callback",
       type: "Function",
+      descr: "XXX"
+    }
+  ],
+  options: [
+    {
+      name: "requestPermissions",
+      type: "Array of Strings",
       descr: "XXX"
     }
   ]
@@ -919,11 +948,30 @@ Template.api.accounts_resetPassword = {
   ]
 };
 
-Template.api.accounts_validateEmail = {
-  id: "accounts_validateemail",
-  name: "Accounts.validateEmail(token, [callback])",
+Template.api.accounts_setPassword = {
+  id: "accounts_setpassword",
+  name: "Accounts.setPassword(userId, newPassword)",
+  locus: "Server",
+  descr: ["Force change the password for a user."],
+  args: [
+    {
+      name: "userId",
+      type: "String",
+      descr: "XXX"
+    },
+    {
+      name: "newPassword",
+      type: "String",
+      descr: "XXX"
+    }
+  ]
+};
+
+Template.api.accounts_verifyEmail = {
+  id: "accounts_verifyemail",
+  name: "Accounts.verifyEmail(token, [callback])",
   locus: "Client",
-  descr: ["Marks the user's email address as validated. Logs the user in afterwards."],
+  descr: ["Marks the user's email address as verified. Logs the user in afterwards."],
   args: [
     {
       name: "token",
@@ -939,23 +987,60 @@ Template.api.accounts_validateEmail = {
 };
 
 
-
-
-Template.api.accounts_config = {
-  id: "accounts_config",
-  name: "Accounts.config(options)",
-  locus: "Anywhere",
-  descr: ["Set global accounts options."],
-  options: [
+Template.api.accounts_sendResetPasswordEmail = {
+  id: "accounts_sendresetpasswordemail",
+  name: "Accounts.sendResetPasswordEmail(userId, [email])",
+  locus: "Server",
+  descr: ["Send an email with a link the user can use to reset their password."],
+  args: [
     {
-      name: "validateEmail",
-      type: "Boolean",
-      descr: "If true, new users with an email address will receive a verifcation email."
+      name: "userId",
+      type: "String",
+      descr: "XXX"
     },
     {
-      name: "forbidSignups",
-      type: "Boolean",
-      descr: "If true, new user signups will be rejected. Server-side user creation via XXXlinkify createUser is still allowed."
+      name: "email",
+      type: "String",
+      descr: "Optional. If passed, must be one of the email addresses in user.emails."
+    }
+  ]
+};
+
+Template.api.accounts_sendVerificationEmail = {
+  id: "accounts_sendverificationemail",
+  name: "Accounts.sendVerificationEmail(userId, [email])",
+  locus: "Server",
+  descr: ["Send an email with a link the user can use verify their email address."],
+  args: [
+    {
+      name: "userId",
+      type: "String",
+      descr: "XXX"
+    },
+    {
+      name: "email",
+      type: "String",
+      descr: "Optional. If passed, must be one of the email addresses in user.emails."
+    }
+  ]
+};
+
+
+Template.api.accounts_sendEnrollmentEmail = {
+  id: "accounts_sendenrollmentemail",
+  name: "Accounts.sendEnrollmentEmail(userId, [email])",
+  locus: "Server",
+  descr: ["Send an email with a link the user can use to set their initial password."],
+  args: [
+    {
+      name: "userId",
+      type: "String",
+      descr: "XXX"
+    },
+    {
+      name: "email",
+      type: "String",
+      descr: "Optional. If passed, must be one of the email addresses in user.emails."
     }
   ]
 };
@@ -967,6 +1052,45 @@ Template.api.accounts_emailTemplates = {
   descr: ["XXX"]
 };
 
+
+
+Template.api.accounts_config = {
+  id: "accounts_config",
+  name: "Accounts.config(options)",
+  locus: "Anywhere",
+  descr: ["Set global accounts options."],
+  options: [
+    {
+      name: "sendVerificationEmail",
+      type: "Boolean",
+      descr: "If true, new users with an email address will receive an address verification email."
+    },
+    {
+      name: "forbidClientAccountCreation",
+      type: "Boolean",
+      descr: "If true, new user signups will be rejected. Server-side user creation via XXXlinkify createUser is still allowed."
+    }
+  ]
+};
+
+Template.api.accounts_ui_config = {
+  id: "accounts_ui_config",
+  name: "Accounts.ui.config(options)",
+  locus: "Client",
+  descr: ["Set LoginButtons UI options."],
+  options: [
+    {
+      name: "requestPermissions",
+      type: "Object",
+      descr: "what to pass to requestPermissions for each service. eg `{facebook: ['user_activity']}`"
+    },
+    {
+      name: "passwordSignupFields",
+      type: "String",
+      descr: "'`USERNAME_AND_EMAIL`', '`USERNAME_AND_OPTIONAL_EMAIL`', '`USERNAME_ONLY`', or '`EMAIL_ONLY`' (default)"
+    }
+  ]
+};
 
 Template.api.accounts_validateNewUser = {
   id: "accounts_validatenewuser",
@@ -995,50 +1119,6 @@ Template.api.accounts_onCreateUser = {
     }
   ]
 };
-
-
-Template.api.accounts_setPassword = {
-  id: "accounts_setpassword",
-  name: "Accounts.setPassword(userId, newPassword)",
-  locus: "Server",
-  descr: ["Force change the password for a user."],
-  args: [
-    {
-      name: "userId",
-      type: "String",
-      descr: "XXX"
-    },
-    {
-      name: "newPassword",
-      type: "String",
-      descr: "XXX"
-    }
-  ]
-};
-
-Template.api.accounts_configuration = {
-  id: "accounts_configuration",
-  name: "Accounts.configuration",
-  locus: "Anywhere",
-  descr: ["A XXXlinkify Collection holding login service info."]
-};
-
-
-Template.api.accounts_facebook_config = {
-  id: "accounts_facebook_config",
-  name: "Accounts.facebook.config(options)",
-  locus: "Anywhere",
-  descr: ["XXX REMOVE!"]
-};
-
-Template.api.accounts_google_config = {
-  id: "accounts_google_config",
-  name: "Accounts.google.config(options)",
-  locus: "Anywhere",
-  descr: ["XXX REMOVE!"]
-};
-
-
 
 
 

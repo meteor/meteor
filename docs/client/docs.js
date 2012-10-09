@@ -177,6 +177,7 @@ var toc = [
       "Meteor.user",
       "Meteor.userId",
       "Meteor.users",
+      "Meteor.userLoaded",
       "Meteor.logout",
       "Meteor.loginWithPassword",
       "Meteor.loginWithFacebook",
@@ -190,19 +191,20 @@ var toc = [
       "Accounts.changePassword",
       "Accounts.forgotPassword",
       "Accounts.resetPassword",
-      "Accounts.validateEmail",
+      "Accounts.setPassword",
+      "Accounts.verifyEmail",
+      {type: "spacer"},
+
+      "Accounts.sendResetPasswordEmail",
+      "Accounts.sendVerificationEmail",
+      "Accounts.sendEnrollmentEmail",
+      "Accounts.emailTemplates",
       {type: "spacer"},
 
       "Accounts.config",
-      "Accounts.emailTemplates",
+      "Accounts.ui.config",
       "Accounts.validateNewUser",
-      "Accounts.onCreateUser",
-      "Accounts.setPassword",
-      "Accounts.configuration",
-      {type: "spacer"},
-
-      "Accounts.facebook.config",
-      "Accounts.google.config"
+      "Accounts.onCreateUser"
     ],
 
 
