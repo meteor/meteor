@@ -170,7 +170,7 @@
         // Configure this login service
         Meteor.call("configureLoginService", configuration, function (error, result) {
           if (error)
-            Meteor._debug("Error configurating login service " + serviceName, error);
+            Meteor._debug("Error configuring login service " + serviceName, error);
           else
             loginButtonsSession.set('configureLoginServiceDialogVisible', false);
         });

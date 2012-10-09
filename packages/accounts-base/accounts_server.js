@@ -260,10 +260,14 @@
   // to this collection are also allowed in insecure mode.
   Meteor.methods({
     "configureLoginService": function(options) {
-      if (!Accounts.configuration.findOne({service: options.service}))
-        Accounts.configuration.insert(options);
-      else
+      // Don't let random users configure a service we haven't added yet (so
+      // that when we do later add it, it's set up with their configuration
+      // instead of ours).
+      if (!Accounts[options.service])
+        throw new Meteor.Error(403, "Service unknown");
+      if (Accounts.configuration.findOne({service: options.service}))
         throw new Meteor.Error(403, "Service " + options.service + " already configured");
+      Accounts.configuration.insert(options);
     }
   });
 
