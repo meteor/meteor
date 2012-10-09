@@ -62,7 +62,7 @@
             try {
               f(ctx);
             } catch (e) {
-              Meteor._debug("Exception from Meteor.flush:", e);
+              Meteor._debug("Exception from Meteor.flush:", e.stack);
             }
           });
           delete ctx._callbacks; // maybe help the GC

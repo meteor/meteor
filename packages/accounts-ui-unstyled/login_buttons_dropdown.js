@@ -249,8 +249,8 @@
       {fieldName: 'password-again', fieldLabel: 'New Password (again)',
        inputType: 'password',
        visible: function () {
-         return Meteor.accounts._options.requireUsername
-           && !Meteor.accounts._options.requireEmail;
+         return Accounts._options.requireUsername
+           && !Accounts._options.requireEmail;
        }}
     ];
   };
