@@ -215,6 +215,31 @@ _Mongo.prototype.findOne = function (collection_name, selector, options) {
   return self.find(collection_name, selector, options).fetch()[0];
 };
 
+// We'll actually design an index API later. For now, we just pass through to
+// Mongo's, but make it synchronous.
+_Mongo.prototype._ensureIndex = function (collectionName, index, options) {
+  var self = this;
+
+  // We expect this function to be called at startup, not from within a method,
+  // so we don't interact with the write fence.
+  var future = new Future;
+  self._withCollection(collectionName, function (err, collection) {
+    if (err) {
+      future.throw(err);
+      return;
+    }
+    // XXX do we have to bindEnv or Fiber.run this callback?
+    collection.ensureIndex(index, options, function (err, indexName) {
+      if (err) {
+        future.throw(err);
+        return;
+      }
+      future.ret();
+    });
+  });
+  future.wait();
+};
+
 // Cursors
 
 // Returns a _Mongo.Cursor, or throws an exception on

@@ -236,6 +236,14 @@ _.each(["insert", "update", "remove"], function (name) {
   };
 });
 
+// We'll actually design an index API later. For now, we just pass through to
+// Mongo's, but make it synchronous.
+Meteor.Collection.prototype._ensureIndex = function (index, options) {
+  var self = this;
+  if (!self._collection._ensureIndex)
+    throw new Error("Can only call _ensureIndex on server collections");
+  self._collection._ensureIndex(index, options);
+};
 
 ///
 /// Remote methods and access control.

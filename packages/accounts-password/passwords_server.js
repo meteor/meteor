@@ -362,12 +362,6 @@
     if (!username && !email)
       throw new Meteor.Error(400, "Need to set a username or email");
 
-    if (username && Meteor.users.findOne({username: username}))
-      throw new Meteor.Error(403, "User already exists with username " + username);
-    if (email && Meteor.users.findOne({"emails.address": email})) {
-      throw new Meteor.Error(403, "User already exists with email " + email);
-    }
-
     // Raw password. The meteor client doesn't send this, but a DDP
     // client that didn't implement SRP could send this. This should
     // only be done over SSL.
@@ -444,7 +438,9 @@
     return userId;
   };
 
-
-
-
+  // PASSWORD-SPECIFIC INDEXES ON USERS
+  Meteor.users._ensureIndex('emails.validationTokens.token',
+                            {unique: 1, sparse: 1});
+  Meteor.users._ensureIndex('emails.password.reset.token',
+                            {unique: 1, sparse: 1});
 })();

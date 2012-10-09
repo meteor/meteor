@@ -153,18 +153,6 @@
         throw new Meteor.Error(403, "User validation failed");
     });
 
-    // check for existing user with duplicate email or username.
-    if (fullUser.username &&
-        Meteor.users.findOne({username: fullUser.username}))
-      throw new Meteor.Error(403, "Username already exists.");
-
-    if (fullUser.emails) {
-      var addresses = _.map(fullUser.emails, function (e) {
-        return e.address; });
-      if (Meteor.users.findOne({'emails.address': {$in: addresses}}))
-        throw new Meteor.Error(403, "Email already exists.");
-    }
-
     var result = {};
     if (options.generateLoginToken) {
       var stampedToken = Accounts._generateStampedLoginToken();
@@ -176,7 +164,21 @@
         fullUser.services.resume.loginTokens = [stampedToken];
     }
 
-    result.id = Meteor.users.insert(fullUser);
+    try {
+      result.id = Meteor.users.insert(fullUser);
+    } catch (e) {
+      // XXX string parsing sucks, maybe
+      // https://jira.mongodb.org/browse/SERVER-3069 will get fixed one day
+      if (e.name !== 'MongoError') throw e;
+      var match = e.err.match(/^E11000 duplicate key error index: ([^ ]+)/);
+      if (!match) throw e;
+      if (match[1].indexOf('$emails.address') !== -1)
+        throw new Meteor.Error(403, "Email already exists.");
+      if (match[1].indexOf('username') !== -1)
+        throw new Meteor.Error(403, "Username already exists.");
+      // XXX better error reporting for services.facebook.id duplicate, etc
+      throw e;
+    }
 
     return result;
   };
@@ -327,5 +329,10 @@
     fields: ['_id'] // we only look at _id.
   });
 
+  /// DEFAULT INDEXES ON USERS
+  Meteor.users._ensureIndex('username', {unique: 1, sparse: 1});
+  Meteor.users._ensureIndex('emails.address', {unique: 1, sparse: 1});
+  Meteor.users._ensureIndex('services.resume.loginTokens.token',
+                            {unique: 1, sparse: 1});
 }) ();
 
