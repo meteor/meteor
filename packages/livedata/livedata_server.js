@@ -883,7 +883,7 @@ _.extend(Meteor._LivedataServer.prototype, {
       };
       var currentInvocation = Meteor._CurrentInvocation.get();
       if (currentInvocation) {
-        userId = currentInvocation.userId();
+        userId = currentInvocation.userId;
         setUserId = function(userId) {
           currentInvocation.setUserId(userId);
         };
