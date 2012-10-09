@@ -18,16 +18,16 @@ Accounts.emailTemplates = {
         + "Thanks.\n";
     }
   },
-  validateEmail: {
+  confirmEmail: {
     subject: function(user) {
-      return "How to validate your account email on " + Accounts.emailTemplates.siteName;
+      return "How to confirm your account email on " + Accounts.emailTemplates.siteName;
     },
     text: function(user, url) {
       var greeting = (user.profile && user.profile.name) ?
             ("Hello " + user.profile.name + ",") : "Hello,";
       return greeting + "\n"
         + "\n"
-        + "To validate your account email, simply click the link below.\n"
+        + "To confirm your account email, simply click the link below.\n"
         + "\n"
         + url + "\n"
         + "\n"

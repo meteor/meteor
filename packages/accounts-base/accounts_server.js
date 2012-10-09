@@ -263,9 +263,9 @@
       return Meteor.users.find(
         {_id: this.userId},
         {fields: {profile: 1, username: 1,
-                  // We do let the UI know if emails are validated but we don't
-                  // want to publish the validationTokens field!
-                  'emails.address': 1, 'emails.validated': 1}});
+                  // We do let the UI know if emails are confirmed but we don't
+                  // want to publish the confirmationTokens field!
+                  'emails.address': 1, 'emails.confirmed': 1}});
     else {
       this.complete();
       return null;

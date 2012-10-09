@@ -370,9 +370,6 @@
     if (!matchPasswordAgainIfPresent())
       return;
 
-    if (Accounts._options.validateEmails)
-      options.validation = true;
-
     Accounts.createUser(options, function (error) {
       if (error) {
         loginButtonsSession.set('errorMessage', error.reason || "Unknown error");

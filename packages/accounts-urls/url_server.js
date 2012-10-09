@@ -8,8 +8,8 @@ Accounts.urls.resetPassword = function (token) {
   return Meteor.absoluteUrl('#/reset-password/' + token);
 };
 
-Accounts.urls.validateEmail = function (token) {
-  return Meteor.absoluteUrl('#/validate-email/' + token);
+Accounts.urls.confirmEmail = function (token) {
+  return Meteor.absoluteUrl('#/confirm-email/' + token);
 };
 
 Accounts.urls.enrollAccount = function (token) {

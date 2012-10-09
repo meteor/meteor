@@ -1,7 +1,7 @@
 <body>
   {{> _resetPasswordDialog}}
   {{> _enrollAccountDialog}}
-  {{> _justValidatedUserDialog}}
+  {{> _justConfirmedEmailDialog}}
   {{> _configureLoginServiceDialog}}
 
   <!-- if we're not showing a dropdown, we need some other place to show messages -->
@@ -60,11 +60,11 @@
   {{/if}}
 </template>
 
-<template name="_justValidatedUserDialog">
+<template name="_justConfirmedEmailDialog">
   {{#if visible}}
     <div class="accounts-dialog accounts-centered-dialog">
-      Email validated
-      <div class="login-button" id="just-validated-dismiss-button">Dismiss</div>
+      Email confirmed
+      <div class="login-button" id="just-confirmed-dismiss-button">Dismiss</div>
     </div>
   {{/if}}
 </template>

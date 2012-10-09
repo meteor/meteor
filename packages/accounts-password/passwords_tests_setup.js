@@ -28,11 +28,7 @@ Accounts.onCreateUser(function (options, extra, user) {
 // For now, we just test the one configuration state. You can comment
 // out each configuration option and see that the tests fail.
 Accounts.config({
-  validateEmails: true,
-  // The 'accounts - updateOrCreateUserFromExternalService' test needs accounts
-  // without usernames or emails, so we can't test with these on.
-  requireEmail: false,
-  requireUsername: false
+  sendConfirmationEmail: true
 });
 
 

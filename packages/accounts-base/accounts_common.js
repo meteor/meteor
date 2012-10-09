@@ -6,10 +6,11 @@ if (!Accounts._options) {
 }
 
 // @param options {Object} an object with fields:
-// - requireEmail {Boolean}
-// - requireUsername {Boolean}
-// - validateEmails {Boolean} Send validation emails to all new users
-//                            via the signup form
+// - sendConfirmationEmail {Boolean}
+//     Send email address confirmation emails to new users created from
+//     client signups.
+// - forbidSignups {Boolean}
+//     Do not allow clients to create accounts directly.
 Accounts.config = function(options) {
   Accounts._options = options;
 };

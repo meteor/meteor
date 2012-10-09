@@ -13,7 +13,7 @@
 
     'resetPasswordToken',
     'enrollAccountToken',
-    'justValidatedUser',
+    'justConfirmedEmail',
 
     'configureLoginServiceDialogVisible',
     'configureLoginServiceDialogServiceName',
