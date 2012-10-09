@@ -6,7 +6,7 @@
     'click .login-button': function () {
       var serviceName = this.name;
       loginButtonsSession.resetMessages();
-      Meteor["loginWith" + capitalize(serviceName)](function (err) {
+      var callback = function (err) {
         if (!err) {
           loginButtonsSession.closeDropdown();
         } else if (err instanceof Accounts.LoginCancelledError) {
@@ -16,7 +16,15 @@
         } else {
           loginButtonsSession.set('errorMessage', err.reason || "Unknown error");
         }
-      });
+      };
+
+      var loginWithService = Meteor["loginWith" + capitalize(serviceName)];
+
+      var options = {}; // use default scope unless specified
+      if (Accounts.ui._options.requestScope[serviceName])
+        options.scope = Accounts.ui._options.requestScope[serviceName];
+
+      loginWithService(options, callback);
     }
   });
 
