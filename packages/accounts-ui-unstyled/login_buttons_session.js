@@ -6,6 +6,7 @@
     'inSignupFlow',
     'inForgotPasswordFlow',
     'inChangePasswordFlow',
+    'inMessageOnlyFlow',
 
     'errorMessage',
     'infoMessage',
@@ -42,6 +43,7 @@
       this.set('inSignupFlow', false);
       this.set('inForgotPasswordFlow', false);
       this.set('inChangePasswordFlow', false);
+      this.set('inMessageOnlyFlow', false);
       this.set('dropdownVisible', false);
       this.resetMessages();
     },

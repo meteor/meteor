@@ -35,6 +35,10 @@
     return loginButtonsSession.get('inChangePasswordFlow');
   };
 
+  Template.loginButtonsLoggedInDropdown.inMessageOnlyFlow = function () {
+    return loginButtonsSession.get('inMessageOnlyFlow');
+  };
+
   Template.loginButtonsLoggedInDropdown.dropdownVisible = function () {
     return loginButtonsSession.get('dropdownVisible');
   };
@@ -376,6 +380,8 @@
       if (error) {
         loginButtonsSession.set('errorMessage', error.reason || "Unknown error");
       } else {
+        loginButtonsSession.set('inChangePasswordFlow', false);
+        loginButtonsSession.set('inMessageOnlyFlow', true);
         loginButtonsSession.set('infoMessage', "Password changed");
       }
     });

@@ -13,10 +13,14 @@
           <a class="login-close-text">Close</a>
           <div class="login-close-text-clear"></div>
 
-          {{#if inChangePasswordFlow}}
-            {{> loginButtonsChangePassword}}
+          {{#if inMessageOnlyFlow}}
+            {{> loginButtonsMessages}}
           {{else}}
-            {{> loginButtonsLoggedInDropdownActions}}
+            {{#if inChangePasswordFlow}}
+              {{> loginButtonsChangePassword}}
+            {{else}}
+              {{> loginButtonsLoggedInDropdownActions}}
+            {{/if}}
           {{/if}}
         </div>
       {{/if}}
