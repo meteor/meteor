@@ -14,7 +14,7 @@ Package.on_use(function(api) {
 });
 
 Package.on_test(function(api) {
-  api.use(['accounts-password', 'tinytest', 'test-helpers']);
+  api.use(['accounts-password', 'tinytest', 'test-helpers', 'deps']);
   api.add_files('passwords_tests_setup.js', 'server');
   api.add_files('passwords_tests.js', ['client', 'server']);
   api.add_files('email_tests_setup.js', 'server');

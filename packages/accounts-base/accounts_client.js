@@ -12,11 +12,12 @@
     return currentUserSubscriptionData && currentUserSubscriptionData.loaded;
   };
 
+  // This calls userId and userLoaded, both of which are reactive.
   Meteor.user = function () {
     var userId = Meteor.userId();
     if (!userId)
       return null;
-    if (currentUserSubscriptionData && currentUserSubscriptionData.loaded)
+    if (Meteor.userLoaded())
       return Meteor.users.findOne(userId);
     // Not yet loaded: return a minimal object.
     return {_id: userId};
