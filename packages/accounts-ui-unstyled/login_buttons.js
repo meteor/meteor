@@ -123,6 +123,9 @@
     }
   };
   Accounts._loginButtons.validateEmail = function (email) {
+    if (Accounts.ui._newUserWithPasswordHas() === "USERNAME_AND_OPTIONAL_EMAIL" && email === '')
+      return true;
+
     if (email.indexOf('@') !== -1) {
       return true;
     } else {

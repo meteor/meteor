@@ -127,15 +127,6 @@
       throw new Meteor.Error(400, "Disallowed fields in extra");
     }
 
-    if (Accounts._options.requireEmail &&
-        (!user.emails || !user.emails.length))
-      throw new Meteor.Error(400, "Email address required.");
-
-    if (Accounts._options.requireUsername &&
-        !user.username)
-      throw new Meteor.Error(400, "Username required.");
-
-
     return _.extend(user, extra);
   };
   Accounts.insertUserDoc = function (options, extra, user) {
