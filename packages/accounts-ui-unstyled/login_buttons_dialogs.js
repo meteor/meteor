@@ -163,7 +163,8 @@
         };
         _.each(configurationFields(), function(field) {
           configuration[field.property] = document.getElementById(
-            'configure-login-service-dialog-' + field.property).value;
+            'configure-login-service-dialog-' + field.property).value
+            .replace(/^\s*|\s*$/g, ""); // trim;
         });
 
         // Configure this login service
