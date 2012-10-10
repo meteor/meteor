@@ -12,7 +12,14 @@ if (!Accounts._options) {
 // - forbidClientAccountCreation {Boolean}
 //     Do not allow clients to create accounts directly.
 Accounts.config = function(options) {
-  Accounts._options = options;
+  _.each(["sendConfirmationEmail", "forbidClientAccountCreation"], function(key) {
+    if (key in options) {
+      if (key in Accounts._options)
+        throw new Error("Can't set `" + key + "` more than once");
+      else
+        Accounts._options[key] = options[key];
+    }
+  });
 };
 
 // Users table. Don't use the normal autopublish, since we want to hide
