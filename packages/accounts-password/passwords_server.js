@@ -99,22 +99,7 @@
       if (!user)
         throw new Meteor.Error(403, "User not found");
 
-      var token = Meteor.uuid();
-      var when = +(new Date);
-      Meteor.users.update(user._id, {$set: {
-        "services.password.reset": {
-          token: token,
-          email: email,
-          when: when
-        }
-      }});
-
-      var resetPasswordUrl = Accounts.urls.resetPassword(token);
-      Email.send({
-        to: email,
-        from: Accounts.emailTemplates.from,
-        subject: Accounts.emailTemplates.resetPassword.subject(user),
-        text: Accounts.emailTemplates.resetPassword.text(user, resetPasswordUrl)});
+      Accounts.sendResetPasswordEmail(user._id, email);
     },
 
     resetPassword: function (token, newVerifier) {
@@ -176,6 +161,40 @@
     }
   });
 
+
+  // send the user an email with a link that when opened allows the user
+  // to set a new password, without the old password.
+  Accounts.sendResetPasswordEmail = function (userId, email) {
+    // Make sure the user exists, and email is one of their addresses.
+    var user = Meteor.users.findOne(userId);
+    if (!user)
+      throw new Error("Can't find user");
+    // pick the first email if we weren't passed an email.
+    if (!email && user.emails && user.emails[0])
+      email = user.emails[0].address;
+    // make sure we have a valid email
+    if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
+      throw new Error("No such email for user.");
+
+    var token = Meteor.uuid();
+    var when = +(new Date);
+    Meteor.users.update(userId, {$set: {
+      "services.password.reset": {
+        token: token,
+        email: email,
+        when: when
+      }
+    }});
+
+    var resetPasswordUrl = Accounts.urls.resetPassword(token);
+    Email.send({
+      to: email,
+      from: Accounts.emailTemplates.from,
+      subject: Accounts.emailTemplates.resetPassword.subject(user),
+      text: Accounts.emailTemplates.resetPassword.text(user, resetPasswordUrl)});
+  };
+
+
   // send the user an email with a link that when opened marks that
   // address as confirmed
   Accounts.sendConfirmationEmail = function (userId, email) {
@@ -183,18 +202,25 @@
     // account if they own said address but weren't those who created
     // this account.
 
-    // XXX if Meteor.Collection.update returned the number of updated records
-    // like Mongo's update does, we could do this as a single update rather than
-    // as a slower and racier read/modify/write
-    var user = Meteor.users.findOne({_id: userId, 'emails.address': email});
+    // Make sure the user exists, and email is one of their addresses.
+    var user = Meteor.users.findOne(userId);
     if (!user)
-      throw new Meteor.Error(403, "Email address not found for confirmation");
+      throw new Error("Can't find user");
+    // pick the first unconfirmed email if we weren't passed an email.
+    if (!email) {
+      email = _.find(user.emails || [], function (e) { return !e.confirmed; });
+      email = (email || {}).address;
+    }
+    // make sure we have a valid email
+    if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
+      throw new Error("No such email for user.");
+
+
     var stampedToken = {token: Meteor.uuid(), when: +(new Date)};
     Meteor.users.update({_id: userId, 'emails.address': email},
                         {$push: {'emails.$.confirmationTokens': stampedToken}});
 
     var confirmEmailUrl = Accounts.urls.confirmEmail(stampedToken.token);
-
     Email.send({
       to: email,
       from: Accounts.emailTemplates.from,
@@ -206,8 +232,22 @@
   // send the user an email informing them that their account was created, with
   // a link that when opened both marks their email as confirmed and forces them
   // to choose their password. The email must be one of the addresses in the
-  // user's emails field.
+  // user's emails field, or undefined to pick the first email automatically.
   Accounts.sendEnrollmentEmail = function (userId, email) {
+    // XXX refactor! This is basically identical to sendResetPasswordEmail.
+
+    // Make sure the user exists, and email is in their addresses.
+    var user = Meteor.users.findOne(userId);
+    if (!user)
+      throw new Error("Can't find user");
+    // pick the first email if we weren't passed an email.
+    if (!email && user.emails && user.emails[0])
+      email = user.emails[0].address;
+    // make sure we have a valid email
+    if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
+      throw new Error("No such email for user.");
+
+
     var token = Meteor.uuid();
     var when = +(new Date);
     Meteor.users.update(userId, {$set: {
@@ -218,7 +258,6 @@
       }
     }});
 
-    var user = Meteor.users.findOne(userId);
     var enrollAccountUrl = Accounts.urls.enrollAccount(token);
     Email.send({
       to: email,
@@ -227,6 +266,7 @@
       text: Accounts.emailTemplates.enrollAccount.text(user, enrollAccountUrl)
     });
   };
+
 
   // handler to login with password
   Accounts.registerLoginHandler(function (options) {
@@ -400,20 +440,6 @@
     }
 
     var userId = createUser(options, extra).id;
-
-    // send email if the user has an email and no password
-    var user = Meteor.users.findOne(userId);
-    if (
-        // user has email address
-      (user && user.emails && user.emails.length &&
-       user.emails[0].address) &&
-        // and does not have a password
-      !(user.services && user.services.password &&
-        user.services.password.srp)) {
-
-      var email = user.emails[0].address;
-      Accounts.sendEnrollmentEmail(userId, email);
-    }
 
     return userId;
   };

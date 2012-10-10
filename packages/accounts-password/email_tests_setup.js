@@ -33,6 +33,7 @@
 
     createUserOnServer: function (email) {
       var userId = Accounts.createUser({email: email});
+      Accounts.sendEnrollmentEmail(userId);
       return Meteor.users.findOne(userId);
     }
   });
