@@ -25,7 +25,7 @@
       throw new Error("Invalid key in loginButtonsSession: " + key);
   };
 
-  KEY_PREFIX = "Meteor.loginButtons.";
+  var KEY_PREFIX = "Meteor.loginButtons.";
 
   // XXX we should have a better pattern for code private to a package like this one
   Accounts._loginButtonsSession = {
