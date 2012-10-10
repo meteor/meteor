@@ -203,7 +203,10 @@ Tinytest.add("minimongo - misc", function (test) {
   var a = {a: [1, 2, 3], b: "x", c: true, d: {x: 12, y: [12]},
            f: null, g: new Date()};
   var b = LocalCollection._deepcopy(a);
-  test.isTrue(LocalCollection._f._equal(a, b));
+  // minimongo doesn't support Dates, so we *can't* test
+  // LocalCollection._f._equal here! (Currently _equal considers all dates equal
+  // on most browsers except IE7 where it considers all dates unequal.)
+  test.equal(a, b);
   a.a.push(4);
   test.length(b.a, 3);
   a.c = false;
@@ -213,10 +216,10 @@ Tinytest.add("minimongo - misc", function (test) {
   test.equal(b.d.z, 15);
   a.d.y.push(88);
   test.length(b.d.y, 1);
-  test.equal(a.g, b.g)
+  test.equal(a.g, b.g);
   b.g.setDate(b.g.getDate() + 1);
-  test.notEqual(a.g, b.g)
-  
+  test.notEqual(a.g, b.g);
+
   a = {x: function () {}};
   b = LocalCollection._deepcopy(a);
   a.x.a = 14;

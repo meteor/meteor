@@ -42,7 +42,7 @@ var files = module.exports = {
     // first, we only want to exclude APP_ROOT/public, not some deeper public
     // second, we don't really like this at all
     // third, we don't update the app now if anything here changes
-    if (filename.indexOf('/public/') !== -1) { return false; }
+    if (base === 'public') { return false; }
 
     return true;
   },
@@ -210,7 +210,7 @@ var files = module.exports = {
     var ret;
     _.find(this.get_package_dirs(), function(package_dir) {
       var dir = path.join(package_dir, name);
-      if (fs.existsSync(dir)) {
+      if (fs.existsSync(path.join(dir, 'package.js'))) {
         ret = dir;
         return true;
       }

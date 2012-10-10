@@ -4,7 +4,34 @@ Tinytest.add("stream - status", function (test) {
   var status = Meteor.status();
   test.equal(typeof status, "object");
   test.isTrue(status.status);
+  // Make sure backward-compatiblity names are defined.
+  test.equal(status.retryCount, status.retry_count);
+  test.equal(status.retryTime, status.retry_time);
 });
+
+testAsyncMulti("stream - reconnect", [
+  function (test, expect) {
+    var callback = _.once(expect(function() {
+      var status;
+      status = Meteor.status();
+      test.equal(status.status, "connected");
+
+      Meteor.reconnect();
+      status = Meteor.status();
+      test.equal(status.status, "connected");
+
+      Meteor.reconnect({force: true});
+      status = Meteor.status();
+      test.equal(status.status, "waiting");
+    }));
+
+    if (Meteor.status().status !== "connected")
+      Meteor.default_connection.stream.on('reset', callback);
+    else
+      callback();
+  }
+]);
+
 
 Tinytest.add("stream - sockjs urls are computed correctly", function(test) {
   var testHasSockjsUrl = function(raw, expectedSockjsUrl) {

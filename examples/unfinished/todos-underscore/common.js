@@ -11,7 +11,7 @@ Todos.schema({text: String,
               tags: [String]});
 */
 
-if (Meteor.is_server) {
+if (Meteor.isServer) {
   Meteor.publish('lists', function () {
     return Lists.find();
   });

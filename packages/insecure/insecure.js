@@ -1,0 +1,1 @@
+Meteor.Collection.insecure = true;

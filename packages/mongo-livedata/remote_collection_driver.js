@@ -8,13 +8,15 @@ _.extend(Meteor._RemoteCollectionDriver.prototype, {
   open: function (name, ctor) {
     var self = this;
     var ret = {};
-    _.each(['find', 'findOne', 'insert', 'update', 'remove'], function (m) {
-      ret[m] = _.bind(self.mongo[m], self.mongo, name, ctor);
-    });
+    _.each(
+      ['find', 'findOne', 'insert', 'update', 'remove', '_ensureIndex'],
+      function (m) {
+        ret[m] = _.bind(self.mongo[m], self.mongo, name, ctor);
+      });
     return ret;
   }
 });
 
 // singleton
 // XXX kind of hacky
-Meteor._RemoteCollectionDriver = new Meteor._RemoteCollectionDriver(__meteor_bootstrap__.mongo_url);
+Meteor._RemoteCollectionDriver = new Meteor._RemoteCollectionDriver(process.env.MONGO_URL);

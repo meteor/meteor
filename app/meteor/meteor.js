@@ -110,7 +110,7 @@ Commands.push({
       process.exit(1);
     }
 
-    var app_dir = require_project("run", true); // app or package
+    var app_dir = path.resolve(require_project("run", true)); // app or package
     var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true };
     require('./run.js').run(app_dir, bundle_opts, new_argv.port);
   }

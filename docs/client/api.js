@@ -1,13 +1,13 @@
-Template.api.is_client = {
-  id: "meteor_is_client",
-  name: "Meteor.is_client",
+Template.api.isClient = {
+  id: "meteor_isclient",
+  name: "Meteor.isClient",
   locus: "Anywhere",
   descr: ["Boolean variable.  True if running in client environment."]
 };
 
-Template.api.is_server = {
-  id: "meteor_is_server",
-  name: "Meteor.is_server",
+Template.api.isServer = {
+  id: "meteor_isserver",
+  name: "Meteor.isServer",
   locus: "Anywhere",
   descr: ["Boolean variable.  True if running in server environment."]
 };
@@ -21,6 +21,36 @@ Template.api.startup = {
     {name: "func",
      type: "Function",
      descr: "A function to run on startup."}
+  ]
+};
+
+Template.api.absoluteUrl = {
+  id: "meteor_absoluteurl",
+  name: "Meteor.absoluteUrl([path], [options])",
+  locus: "Anywhere",
+  descr: ["Generate an absolute URL pointing to the application. The server "
+          + "reads from the `ROOT_URL` environment variable to determine "
+          + "where it is running. This is taken care of automatically for "
+          + "apps deployed with `meteor deploy`, but must be provided when "
+          + "using `meteor bundle`."],
+  args: [
+    {name: "path",
+     type: "String",
+     descr: 'A path to append to the root URL. Do not include a leading "`/`".'
+    }
+  ],
+  options: [
+    {name: "secure",
+     type: "Boolean",
+     descr: "Create an HTTPS URL."
+    },
+    {name: "replaceLocalhost",
+     type: "Boolean",
+     descr: "Replace localhost with 127.0.0.1. Useful for services that don't recognize localhost as a domain name."},
+    {name: "rootUrl",
+     type: "String",
+     descr: "Override the default ROOT_URL from the server environment. For example: \"`http://foo.example.com`\""
+    }
   ]
 };
 
@@ -164,9 +194,9 @@ Template.api.method_invocation_unblock = {
   descr: ["Call inside method invocation.  Allow subsequent method from this client to begin running in a new fiber."]
 };
 
-Template.api.method_invocation_is_simulation = {
-  id: "method_is_simulation",
-  name: "<i>this</i>.is_simulation",
+Template.api.method_invocation_isSimulation = {
+  id: "method_issimulation",
+  name: "<i>this</i>.isSimulation",
   locus: "Anywhere",
   descr: ["Access inside method invocation.  Boolean value, true if this invocation is a stub."]
 };
@@ -209,7 +239,7 @@ Template.api.meteor_call = {
 
 Template.api.meteor_apply = {
   id: "meteor_apply",
-  name: "Meteor.apply(name, params [, asyncCallback])",
+  name: "Meteor.apply(name, params [, options] [, asyncCallback])",
   locus: "Anywhere",
   descr: ["Invoke a method passing an array of arguments."],
   args: [
@@ -222,6 +252,12 @@ Template.api.meteor_apply = {
     {name: "asyncCallback",
      type: "Function",
      descr: "Optional callback.  If passed, the method runs asynchronously, instead of synchronously, and calls asyncCallback passing either the error or the result."}
+  ],
+  options: [
+    {name: "wait",
+     type: "Boolean",
+     descr: "(Client only) If true, don't send any subsequent method calls until this one is completed. "
+            + "Only run the callback for this method once all previous method calls have completed."}
   ]
 };
 
@@ -258,18 +294,19 @@ Template.api.connect = {
 
 Template.api.meteor_collection = {
   id: "meteor_collection",
-  name: "new Meteor.Collection(name, manager)", // driver undocumented
+  name: "new Meteor.Collection(name, [options])",
   locus: "Anywhere",
   descr: ["Constructor for a Collection"],
   args: [
     {name: "name",
      type: "String",
-     descr: "The name of the collection.  If null, creates an unmanaged (unsynchronized) local collection."},
+     descr: "The name of the collection.  If null, creates an unmanaged (unsynchronized) local collection."}
+  ],
+  options: [
     {name: "manager",
      type: "Object",
      descr: "The Meteor connection that will manage this collection, defaults to `Meteor` if null.  Unmanaged (`name` is null) collections cannot specify a manager."
     }
-    // driver
   ]
 };
 
@@ -472,7 +509,7 @@ Template.api.Context = {
   id: "context",
   name: "new Meteor.deps.Context",
   locus: "Client",
-  descr: ["Create an invalidation context. Invalidation contexts are used to run a piece of code, and record its dependencies so it can be rerun later if one of its inputs changes.", "An invalidation context is basically just a list of callbacks for an event that can fire only once. The [`on_invalidate`](#on_invalidate) method adds a callback to the list, and the [`invalidate`](#invalidate) method fires the event."]
+  descr: ["Create an invalidation context. Invalidation contexts are used to run a piece of code, and record its dependencies so it can be rerun later if one of its inputs changes.", "An invalidation context is basically just a list of callbacks for an event that can fire only once. The [`onInvalidate`](#oninvalidate) method adds a callback to the list, and the [`invalidate`](#invalidate) method fires the event."]
 };
 
 Template.api.run = {
@@ -487,9 +524,9 @@ Template.api.run = {
   ]
 };
 
-Template.api.on_invalidate = {
-  id: "on_invalidate",
-  name: "<em>context</em>.on_invalidate(callback)",
+Template.api.onInvalidate = {
+  id: "oninvalidate",
+  name: "<em>context</em>.onInvalidate(callback)",
   locus: "Client",
   descr: ["Registers `callback` to be called when this context is invalidated. `callback` will be run exactly once."],
   args: [
@@ -503,7 +540,7 @@ Template.api.invalidate = {
   id: "invalidate",
   name: "<em>context</em>.invalidate()",
   locus: "Client",
-  descr: ["Add this context to the list of contexts that will have their `on_invalidate|on_invalidate` callbacks called by the next call to [`Meteor.flush`](#meteor_flush)."]
+  descr: ["Add this context to the list of contexts that will have their [`onInvalidate`](#oninvalidate) callbacks called by the next call to [`Meteor.flush`](#meteor_flush)."]
 };
 
 Template.api.current = {
@@ -694,9 +731,9 @@ Template.api.set = {
   args: [
     {name: "key",
      type: "String",
-     descr: "The key to set, eg, `selected_item`"},
+     descr: "The key to set, eg, `selectedItem`"},
     {name: "value",
-     type: "Any type",
+     type: "JSON-able object or undefined",
      descr: "The new value for `key`"}
   ]
 };
@@ -705,7 +742,7 @@ Template.api.get = {
   id: "session_get",
   name: "Session.get(key)",
   locus: "Client",
-  descr: ["Get the value of a session variable. If inside a [`Meteor.deps`](#meteor_deps) context, invalidate the context the next time the value of the variable is changed by [`Session.set`](#session_set)."],
+  descr: ["Get the value of a session variable. If inside a [`Meteor.deps`](#meteor_deps) context, invalidate the context the next time the value of the variable is changed by [`Session.set`](#session_set). This returns a clone of the session value, so if it's an object or an array, mutating the returned value has no effect on the value stored in the session."],
   args: [
     {name: "key",
      type: "String",
@@ -730,7 +767,7 @@ Template.api.equals = {
 
 Template.api.httpcall = {
   id: "meteor_http_call",
-  name: "Meteor.http.call(method, url, [options], [asyncCallback])",
+  name: "Meteor.http.call(method, url [, options] [, asyncCallback])",
   locus: "Anywhere",
   descr: ["Perform an outbound HTTP request."],
   args: [
@@ -919,3 +956,51 @@ Template.api.template_data = {
   locus: "Client",
   descr: ["The data context of this instance's latest invocation."]
 };
+
+var rfc = function (descr) {
+  return ('<a href="http://tools.ietf.org/html/rfc5322" target="_blank">RFC5322'
+          + '</a> ' + descr);
+};
+
+Template.api.email_send = {
+  id: "email_send",
+  name: "Email.send(options)",
+  locus: "Server",
+  descr: ["Send an email. Throws an `Error` on failure to contact mail " +
+          "server or if mail server returns an error."],
+  options: [
+    {name: "from",
+     type: "String",
+     descr: rfc('"From:" address (required)')
+    },
+    {name: "to",
+     type: "String or Array of strings",
+     descr: rfc('"To:" address[es]')
+    },
+    {name: "cc",
+     type: "String or Array of strings",
+     descr: rfc('"Cc:" address[es]')
+    },
+    {name: "bcc",
+     type: "String or Array of strings",
+     descr: rfc('"Bcc:" address[es]')
+    },
+    {name: "replyTo",
+     type: "String or Array of strings",
+     descr: rfc('"Reply-To:" address[es]')
+    },
+    {name: "subject",
+     type: "String",
+     descr: rfc('"Subject:" line')
+    },
+    {name: "text",
+     type: "String",
+     descr: rfc('mail body (plain text)')
+    },
+    {name: "html",
+     type: "String",
+     descr: rfc('mail body (HTML)')
+    }
+  ]
+};
+

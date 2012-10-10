@@ -44,6 +44,9 @@ h3 {
     right: 0;
     top: 0;
     bottom: 0;
+}
+
+#tag-filter, #main-pane, #side-pane, #bottom-pane {
     overflow: hidden;
 }
 
@@ -53,6 +56,10 @@ h3 {
     bottom: auto;
     background: #ddd;
     border-bottom: 1px solid #999;
+}
+
+#tag-filter {
+    height: 44px; /* same as in #top-tag-filter */
 }
 
 #help {
@@ -261,3 +268,19 @@ h3 {
     width: 80px;
 }
 
+.toggle-privacy-wrapper {
+    float: right;
+    width: 110px;
+}
+
+.toggle-privacy {
+    margin-top: 15px;
+    float: right;
+    cursor: pointer;
+}
+
+.login-bar {
+    float: right;
+    /* center login buttons vertically in our top bar */
+    padding: 10px 10px 0px 0px;
+}

@@ -36,6 +36,27 @@ Tinytest.add("absolute-url - basics", function(test) {
   test.equal(Meteor.absoluteUrl('foo', {rootUrl: 'http://127.0.0.1:3000',
                                         secure: true}),
              'http://127.0.0.1:3000/foo');
+
+  // test replaceLocalhost
+  test.equal(Meteor.absoluteUrl('foo', {rootUrl: 'http://localhost:3000',
+                                        replaceLocalhost: true}),
+             'http://127.0.0.1:3000/foo');
+  test.equal(Meteor.absoluteUrl('foo', {rootUrl: 'http://localhost',
+                                        replaceLocalhost: true}),
+             'http://127.0.0.1/foo');
+  test.equal(Meteor.absoluteUrl('foo', {rootUrl: 'http://127.0.0.1:3000',
+                                        replaceLocalhost: true}),
+             'http://127.0.0.1:3000/foo');
+  test.equal(Meteor.absoluteUrl('foo', {rootUrl: 'http://127.0.0.1',
+                                        replaceLocalhost: true}),
+             'http://127.0.0.1/foo');
+  // don't replace just any localhost
+  test.equal(Meteor.absoluteUrl('foo', {rootUrl: 'http://foo.com/localhost',
+                                        replaceLocalhost: true}),
+             'http://foo.com/localhost/foo');
+  test.equal(Meteor.absoluteUrl('foo', {rootUrl: 'http://foo.localhost.com',
+                                        replaceLocalhost: true}),
+             'http://foo.localhost.com/foo');
 });
 
 

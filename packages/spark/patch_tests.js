@@ -185,11 +185,11 @@ Tinytest.add("spark - patch - copyAttributes", function(test) {
                      {id:'foo', 'class':'bar',
                       style:'border:1px solid blue;', name:'baz'});
   a.check();
-  test.equal(a.node().style.borderColor, "blue");
+  test.equal(a.node().style.borderLeftColor, "blue");
 
   a.copy({id: "foo", style:'border:1px solid red'});
   a.check();
-  test.equal(a.node().style.borderColor, "red");
+  test.equal(a.node().style.borderLeftColor, "red");
 
   a.copy({id: "foo", 'class':'ha'});
   a.check();

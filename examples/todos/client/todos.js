@@ -19,7 +19,6 @@ Session.set('editing_listname', null);
 // When editing todo text, ID of the todo
 Session.set('editing_itemname', null);
 
-
 // Subscribe to 'lists' collection on startup.
 // Select a list once data has arrived.
 Meteor.subscribe('lists', function () {
@@ -128,10 +127,6 @@ Template.lists.editing = function () {
   return Session.equals('editing_listname', this._id);
 };
 
-// Preserve text input fields so that they aren't replaced
-// while the user is typing in them.
-Template.lists.preserve(['#list-name-input', '#new-list']);
-
 ////////// Todos //////////
 
 Template.todos.any_list_selected = function () {
@@ -169,8 +164,6 @@ Template.todos.todos = function () {
 
   return Todos.find(sel, {sort: {timestamp: 1}});
 };
-
-Template.todos.preserve(['#new-todo']);
 
 Template.todo_item.tag_objs = function () {
   var todo_id = this._id;
@@ -223,10 +216,21 @@ Template.todo_item.events({
     evt.target.parentNode.style.opacity = 0;
     // wait for CSS animation to finish
     Meteor.setTimeout(function () {
-      Todos.update({_id: id}, {$pull: {tags: tag}});
+      Todos.update(id, {$pull: {tags: tag}});
     }, 300);
+  },
+
+  'click .make-public': function () {
+    Todos.update(this._id, {$set: {privateTo: null}});
+  },
+
+  'click .make-private': function () {
+    Todos.update(this._id, {$set: {
+      privateTo: Meteor.user()._id
+    }});
   }
 });
+
 
 Template.todo_item.events(okCancelEvents(
   '#todo-input',
@@ -251,8 +255,6 @@ Template.todo_item.events(okCancelEvents(
       Session.set('editing_addtag', null);
     }
   }));
-
-Template.todo_item.preserve(['#todo-input', '#edittag-input']);
 
 ////////// Tag Filter //////////
 

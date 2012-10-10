@@ -109,7 +109,7 @@ Meteor.methods({
     }
 
     // now only on the server, check against dictionary and score it.
-    if (Meteor.is_server) {
+    if (Meteor.isServer) {
       if (DICTIONARY.indexOf(word.word.toLowerCase()) === -1) {
         Words.update(word._id, {$set: {score: 0, state: 'bad'}});
       } else {
@@ -121,7 +121,7 @@ Meteor.methods({
 });
 
 
-if (Meteor.is_server) {
+if (Meteor.isServer) {
   // publish all the non-idle players.
   Meteor.publish('players', function () {
     return Players.find({idle: false});
