@@ -24,6 +24,6 @@
 	  '&redirect_uri=' + Meteor.absoluteUrl('_oauth/github?close') +
 	  '&state=' + state;
 
-    Accounts.oauth.initiateLogin(state, loginUrl, callback);
+    Accounts.oauth.initiateLogin(state, loginUrl, callback, {width: 900, height: 450});
   };
 }) ();

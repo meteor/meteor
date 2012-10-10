@@ -6,15 +6,20 @@
   // @param callback {Function} Callback function to call on
   //   completion. Takes one argument, null on success, or Error on
   //   error.
-  Accounts.oauth.initiateLogin = function(state, url, callback) {
+  // @param dimensions {optional Object(width, height)} The dimensions of
+  //   the popup. If not passed defaults to something sane
+  Accounts.oauth.initiateLogin = function(state, url, callback, dimensions) {
     // XXX these dimensions worked well for facebook and google, but
     // it's sort of weird to have these here. Maybe an optional
     // argument instead?
-    var popup = openCenteredPopup(url, 650, 331);
+    var popup = openCenteredPopup(
+      url,
+      (dimensions && dimensions.width) || 650,
+      (dimensions && dimensions.height) || 331);
 
     var checkPopupOpen = setInterval(function() {
-      // Fix for #328 - added a second test criteria (popup.closed === undefined) 
-      // to humour this Android quirk: 
+      // Fix for #328 - added a second test criteria (popup.closed === undefined)
+      // to humour this Android quirk:
       // http://code.google.com/p/android/issues/detail?id=21061
       if (popup.closed || popup.closed === undefined) {
         clearInterval(checkPopupOpen);
