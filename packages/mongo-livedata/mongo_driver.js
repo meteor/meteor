@@ -105,13 +105,6 @@ _Mongo.prototype.insert = function (collection_name, document) {
 
   var write = self._maybeBeginWrite();
 
-  var finish = Meteor.bindEnvironment(function () {
-    Meteor.refresh({collection: collection_name});
-    write.committed();
-  }, function (e) {
-    Meteor._debug("Exception while completing insert: " + e.stack);
-  });
-
   var future = new Future;
   self._withCollection(collection_name, function (err, collection) {
     if (err) {
@@ -120,17 +113,13 @@ _Mongo.prototype.insert = function (collection_name, document) {
     }
 
     collection.insert(document, {safe: true}, function (err) {
-      if (err) {
-        future.ret(err);
-        return;
-      }
-
-      finish();
-      future.ret();
+      future.ret(err);
     });
   });
 
   var err = future.wait();
+  Meteor.refresh({collection: collection_name});
+  write.committed();
   if (err)
     throw err;
 };
@@ -147,13 +136,6 @@ _Mongo.prototype.remove = function (collection_name, selector) {
 
   var write = self._maybeBeginWrite();
 
-  var finish = Meteor.bindEnvironment(function () {
-    Meteor.refresh({collection: collection_name});
-    write.committed();
-  }, function (e) {
-    Meteor._debug("Exception while completing remove: " + e.stack);
-  });
-
   // XXX does not allow options. matches the client.
   selector = _Mongo._rewriteSelector(selector);
 
@@ -165,17 +147,13 @@ _Mongo.prototype.remove = function (collection_name, selector) {
     }
 
     collection.remove(selector, {safe: true}, function (err) {
-      if (err) {
-        future.ret(err);
-        return;
-      }
-
-      finish();
-      future.ret();
+      future.ret(err);
     });
   });
 
   var err = future.wait();
+  Meteor.refresh({collection: collection_name});
+  write.committed();
   if (err)
     throw err;
 };
@@ -191,13 +169,6 @@ _Mongo.prototype.update = function (collection_name, selector, mod, options) {
   }
 
   var write = self._maybeBeginWrite();
-
-  var finish = Meteor.bindEnvironment(function () {
-    Meteor.refresh({collection: collection_name});
-    write.committed();
-  }, function (e) {
-    Meteor._debug("Exception while completing update: " + e.stack);
-  });
 
   selector = _Mongo._rewriteSelector(selector);
   if (!options) options = {};
@@ -215,17 +186,13 @@ _Mongo.prototype.update = function (collection_name, selector, mod, options) {
     if (options.multi) opts.multi = true;
 
     collection.update(selector, mod, opts, function (err) {
-      if (err) {
-        future.ret(err);
-        return;
-      }
-
-      finish();
-      future.ret();
+      future.ret(err);
     });
   });
 
   var err = future.wait();
+  Meteor.refresh({collection: collection_name});
+  write.committed();
   if (err)
     throw err;
 };
@@ -246,6 +213,32 @@ _Mongo.prototype.findOne = function (collection_name, selector, options) {
     selector = {};
 
   return self.find(collection_name, selector, options).fetch()[0];
+};
+
+// We'll actually design an index API later. For now, we just pass through to
+// Mongo's, but make it synchronous.
+_Mongo.prototype._ensureIndex = function (collectionName, index, options) {
+  var self = this;
+  options = _.extend({safe: true}, options);
+
+  // We expect this function to be called at startup, not from within a method,
+  // so we don't interact with the write fence.
+  var future = new Future;
+  self._withCollection(collectionName, function (err, collection) {
+    if (err) {
+      future.throw(err);
+      return;
+    }
+    // XXX do we have to bindEnv or Fiber.run this callback?
+    collection.ensureIndex(index, options, function (err, indexName) {
+      if (err) {
+        future.throw(err);
+        return;
+      }
+      future.ret();
+    });
+  });
+  future.wait();
 };
 
 // Cursors

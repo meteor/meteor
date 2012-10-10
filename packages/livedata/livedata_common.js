@@ -1,24 +1,45 @@
 // XXX namespacing
 
-Meteor._MethodInvocation = function (isSimulation, unblock) {
+Meteor._MethodInvocation = function (options) {
   var self = this;
 
   // true if we're running not the actual method, but a stub (that is,
-  // if we're on the client and presently running a simulation of a
-  // server-side method for latency compensation purposes). never true
-  // except in a client such as a browser, since there's no point in
-  // running stubs unless you have a zero-latency connection to the
-  // user.
-  this.isSimulation = isSimulation;
+  // if we're on a client (which may be a browser, or in the future a
+  // server connecting to another server) and presently running a
+  // simulation of a server-side method for latency compensation
+  // purposes). not currently true except in a client such as a browser,
+  // since there's usually no point in running stubs unless you have a
+  // zero-latency connection to the user.
+  this.isSimulation = options.isSimulation;
 
   // XXX Backwards compatibility only. Remove this before 1.0.
-  this.is_simulation = isSimulation;
+  this.is_simulation = this.isSimulation;
 
   // call this function to allow other method invocations (from the
   // same client) to continue running without waiting for this one to
   // complete.
-  this.unblock = unblock || function () {};
+  this.unblock = options.unblock || function () {};
+
+  // current user id
+  this.userId = options.userId;
+
+  // sets current user id in all appropriate server contexts and
+  // reruns subscriptions
+  this._setUserId = options.setUserId || function () {};
+
+  // Scratch data scoped to this connection (livedata_connection on the
+  // client, livedata_session on the server). This is only used
+  // internally, but we should have real and documented API for this
+  // sort of thing someday.
+  this._sessionData = options.sessionData;
 };
+
+_.extend(Meteor._MethodInvocation.prototype, {
+  setUserId: function(userId) {
+    this.userId = userId;
+    this._setUserId(userId);
+  }
+});
 
 Meteor._CurrentInvocation = new Meteor.EnvironmentVariable;
 

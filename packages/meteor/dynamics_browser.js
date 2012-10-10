@@ -27,6 +27,9 @@
   });
 
   Meteor.bindEnvironment = function (func, onException, _this) {
+    // needed in order to be able to create closures inside func and
+    // have the closed variables not change back to their original
+    // values
     var boundValues = _.clone(currentValues);
 
     if (!onException)

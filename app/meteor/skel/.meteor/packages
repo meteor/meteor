@@ -4,4 +4,5 @@
 # but you can also edit it by hand.
 
 autopublish
+insecure
 preserve-inputs

@@ -239,7 +239,7 @@ Template.api.meteor_call = {
 
 Template.api.meteor_apply = {
   id: "meteor_apply",
-  name: "Meteor.apply(name, params [, asyncCallback])",
+  name: "Meteor.apply(name, params [, options] [, asyncCallback])",
   locus: "Anywhere",
   descr: ["Invoke a method passing an array of arguments."],
   args: [
@@ -252,6 +252,12 @@ Template.api.meteor_apply = {
     {name: "asyncCallback",
      type: "Function",
      descr: "Optional callback.  If passed, the method runs asynchronously, instead of synchronously, and calls asyncCallback passing either the error or the result."}
+  ],
+  options: [
+    {name: "wait",
+     type: "Boolean",
+     descr: "(Client only) If true, don't send any subsequent method calls until this one is completed. "
+            + "Only run the callback for this method once all previous method calls have completed."}
   ]
 };
 
@@ -288,18 +294,19 @@ Template.api.connect = {
 
 Template.api.meteor_collection = {
   id: "meteor_collection",
-  name: "new Meteor.Collection(name, manager)", // driver undocumented
+  name: "new Meteor.Collection(name, [options])",
   locus: "Anywhere",
   descr: ["Constructor for a Collection"],
   args: [
     {name: "name",
      type: "String",
-     descr: "The name of the collection.  If null, creates an unmanaged (unsynchronized) local collection."},
+     descr: "The name of the collection.  If null, creates an unmanaged (unsynchronized) local collection."}
+  ],
+  options: [
     {name: "manager",
      type: "Object",
      descr: "The Meteor connection that will manage this collection, defaults to `Meteor` if null.  Unmanaged (`name` is null) collections cannot specify a manager."
     }
-    // driver
   ]
 };
 
@@ -760,7 +767,7 @@ Template.api.equals = {
 
 Template.api.httpcall = {
   id: "meteor_http_call",
-  name: "Meteor.http.call(method, url, [options], [asyncCallback])",
+  name: "Meteor.http.call(method, url [, options] [, asyncCallback])",
   locus: "Anywhere",
   descr: ["Perform an outbound HTTP request."],
   args: [
