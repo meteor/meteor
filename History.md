@@ -1,6 +1,7 @@
 
 ## vNEXT
 
+* Added support for TypeScript
 
 ## v0.4.2
 
