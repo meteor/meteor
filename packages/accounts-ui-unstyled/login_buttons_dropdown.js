@@ -272,6 +272,10 @@
       Accounts.ui._passwordSignupFields());
   };
 
+  Template._loginButtonsFormField.inputType = function () {
+    return this.inputType || "text";
+  };
+
 
   //
   // loginButtonsChangePassword template
