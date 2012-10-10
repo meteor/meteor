@@ -381,6 +381,11 @@
   // after creation.
   //
   // returns userId or throws an error if it can't create
+  //
+  // XXX add another argument ("server options") that gets sent to onCreateUser,
+  // which is always empty when called from the createUser method? eg, "admin:
+  // true", which we want to prevent the client from setting, but which a custom
+  // method calling Accounts.createUser could set?
   Accounts.createUser = function (options, extra, callback) {
     options = _.clone(options);
     options.generateLoginToken = false;

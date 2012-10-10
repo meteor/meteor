@@ -114,12 +114,18 @@
       onCreateUserHook = func;
   };
 
+  // XXX see comment on Accounts.createUser in passwords_server about adding a
+  // third "server options" argument.
   var defaultCreateUserHook = function (options, extra, user) {
-    if (!_.isEmpty(
-      _.intersection(
-        _.keys(extra),
-        ['services', 'username', 'email', 'emails'])))
+    // This hook gets 'extra' directly from the createUser method, so make sure
+    // we don't allow users to set any fields at creation time that they won't
+    // later be able to set according to the default Meteor.users.allow. Set
+    // your own onCreateUser if you want users to be able to specify other
+    // fields at creation time.
+    if (_.any(extra, function(value, key) {return key != 'profile';})) {
+      console.log(JSON.stringify(extra));
       throw new Meteor.Error(400, "Disallowed fields in extra");
+    }
 
     if (Accounts._options.requireEmail &&
         (!user.emails || !user.emails.length))

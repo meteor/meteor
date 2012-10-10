@@ -1,7 +1,7 @@
 Accounts.validateNewUser(function (user) {
-  if (user.invalidAndThrowException)
+  if (user.profile && user.profile.invalidAndThrowException)
     throw new Meteor.Error(403, "An exception thrown within Accounts.validateNewUser");
-  return !user.invalid;
+  return !(user.profile && user.profile.invalid);
 });
 
 Accounts.onCreateUser(function (options, extra, user) {

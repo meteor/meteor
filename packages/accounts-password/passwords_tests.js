@@ -200,18 +200,21 @@ if (Meteor.isClient) (function () {
     // test Accounts.validateNewUser
     function(test, expect) {
       Accounts.createUser({username: username3, password: password3},
-                        {invalid: true}, // should fail the new user validators
-                        expect(function (error) {
-                          test.equal(error.error, 403);
-                          test.equal(
-                            error.reason,
-                            "User validation failed");
-                        }));
+                          // should fail the new user validators
+                          {profile: {invalid: true}},
+                          expect(function (error) {
+                            test.equal(error.error, 403);
+                            test.equal(
+                              error.reason,
+                              "User validation failed");
+                          }));
     },
     logoutStep,
     function(test, expect) {
       Accounts.createUser({username: username3, password: password3},
-                        {invalidAndThrowException: true}, // should fail the new user validator with a special exception
+                           // should fail the new user validator with a special
+                           // exception
+                          {profile: {invalidAndThrowException: true}},
                         expect(function (error) {
                           test.equal(
                             error.reason,
@@ -271,8 +274,8 @@ if (Meteor.isServer) (function () {
     function (test) {
       var email = Meteor.uuid() + '@example.com';
       test.throws(function () {
-        Accounts.createUser({email: email},
-                            {invalid: true}); // should fail the new user validators
+        // should fail the new user validators
+        Accounts.createUser({email: email}, {profile: {invalid: true}});
         });
 
       // disable sending emails

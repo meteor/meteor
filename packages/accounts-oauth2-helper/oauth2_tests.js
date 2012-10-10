@@ -56,7 +56,7 @@ Tinytest.add("oauth2 - error in user creation", function (test) {
         id: failbookId
       },
       extra: {
-        invalid: true
+        profile: {invalid: true}
       }
     };
   });
@@ -64,7 +64,7 @@ Tinytest.add("oauth2 - error in user creation", function (test) {
   // a way to fail new users. duplicated from passwords_tests, but
   // shouldn't hurt.
   Accounts.validateNewUser(function (user) {
-    return !user.invalid;
+    return !(user.profile && user.profile.invalid);
   });
 
   // simulate logging in with failure

@@ -6,17 +6,19 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService', function (test)
 
   // create an account with facebook
   var uid1 = Accounts.updateOrCreateUserFromExternalService(
-    'facebook', {id: facebookId}, {foo: 1}).id;
+    'facebook', {id: facebookId}, {profile: {foo: 1}}).id;
   test.equal(Meteor.users.find({"services.facebook.id": facebookId}).count(), 1);
-  test.equal(Meteor.users.findOne({"services.facebook.id": facebookId}).foo, 1);
+  test.equal(Meteor.users.findOne({"services.facebook.id": facebookId}).profile.foo, 1);
 
-  // create again with the same id, see that we get the same user
+  // create again with the same id, see that we get the same user. profile
+  // doesn't get overwritten in this implementation (though we should do
+  // something better with merging later).
   var uid2 = Accounts.updateOrCreateUserFromExternalService(
-    'facebook', {id: facebookId}, {foo: 1000, bar: 2}).id; // foo: 1000 shouldn't overwrite
+    'facebook', {id: facebookId}, {profile: {foo: 1000, bar: 2}}).id;
   test.equal(uid1, uid2);
   test.equal(Meteor.users.find({"services.facebook.id": facebookId}).count(), 1);
-  test.equal(Meteor.users.findOne(uid1).foo, 1);
-  test.equal(Meteor.users.findOne(uid1).bar, 2);
+  test.equal(Meteor.users.findOne(uid1).profile.foo, 1);
+  test.equal(Meteor.users.findOne(uid1).profile.bar, undefined);
 
   // cleanup
   Meteor.users.remove(uid1);
@@ -24,13 +26,13 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService', function (test)
 
   // users that have different service ids get different users
   uid1 = Accounts.updateOrCreateUserFromExternalService(
-    'weibo', {id: weiboId1}, {foo: 1}).id;
+    'weibo', {id: weiboId1}, {profile: {foo: 1}}).id;
   uid2 = Accounts.updateOrCreateUserFromExternalService(
-    'weibo', {id: weiboId2}, {bar: 2}).id;
+    'weibo', {id: weiboId2}, {profile: {bar: 2}}).id;
   test.equal(Meteor.users.find({"services.weibo.id": {$in: [weiboId1, weiboId2]}}).count(), 2);
-  test.equal(Meteor.users.findOne({"services.weibo.id": weiboId1}).foo, 1);
+  test.equal(Meteor.users.findOne({"services.weibo.id": weiboId1}).profile.foo, 1);
   test.equal(Meteor.users.findOne({"services.weibo.id": weiboId1}).emails, undefined);
-  test.equal(Meteor.users.findOne({"services.weibo.id": weiboId2}).bar, 2);
+  test.equal(Meteor.users.findOne({"services.weibo.id": weiboId2}).profile.bar, 2);
   test.equal(Meteor.users.findOne({"services.weibo.id": weiboId2}).emails, undefined);
 
   // cleanup
