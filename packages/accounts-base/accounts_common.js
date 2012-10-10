@@ -9,7 +9,7 @@ if (!Accounts._options) {
 // - sendConfirmationEmail {Boolean}
 //     Send email address confirmation emails to new users created from
 //     client signups.
-// - forbidSignups {Boolean}
+// - forbidClientAccountCreation {Boolean}
 //     Do not allow clients to create accounts directly.
 Accounts.config = function(options) {
   Accounts._options = options;

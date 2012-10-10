@@ -330,5 +330,5 @@ if (Meteor.isServer) (function () {
     });
   });
 
-  // XXX would be nice to test Accounts.config({forbidSignups: true})
+  // XXX would be nice to test Accounts.config({forbidClientAccountCreation: true})
 }) ();

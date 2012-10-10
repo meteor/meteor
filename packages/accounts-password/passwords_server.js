@@ -353,7 +353,7 @@
     createUser: function (options, extra) {
       options = _.clone(options);
       options.generateLoginToken = true;
-      if (Accounts._options.forbidSignups)
+      if (Accounts._options.forbidClientAccountCreation)
         throw new Meteor.Error(403, "Signups forbidden");
 
       // Create user. result contains id and token.
