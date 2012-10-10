@@ -223,7 +223,11 @@ _.extend(Meteor._LivedataConnection.prototype, {
     if (args.length && typeof args[args.length - 1] === "function")
       var callback = args.pop();
 
-    var existing = self.subs.find({name: name, args: args}, {reactive: false}).fetch();
+    // Look for existing subs (ignore those with count=0, since they're going to
+    // get removed on the next time through the event loop).
+    var existing = self.subs.find(
+      {name: name, args: args, count: {$gt: 0}},
+      {reactive: false}).fetch();
 
     if (existing && existing[0]) {
       // already subbed, inc count.
