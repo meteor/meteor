@@ -36,6 +36,6 @@ Accounts.ui.config = function(options) {
 };
 
 Accounts.ui._passwordSignupFields = function () {
-  return Accounts.ui._options.passwordSignupFields || "USERNAME_AND_OPTIONAL_EMAIL";
+  return Accounts.ui._options.passwordSignupFields || "EMAIL_ONLY";
 };
 
