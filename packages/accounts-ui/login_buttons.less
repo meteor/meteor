@@ -109,10 +109,14 @@ out-of-the-box in more apps.
 }
 
 #login-buttons .login-close-text {
-    float: right;
+    float: left;
     position: relative;
     left: 1px; /* = #login-buttons.border-width */
     padding-bottom: 3px;
+}
+
+.login-buttons-dropdown-hangs-left #login-buttons .login-close-text {
+    float: right;
 }
 
 #login-buttons .login-close-text-clear {
@@ -155,8 +159,11 @@ out-of-the-box in more apps.
 
 #login-dropdown-list {
     position: absolute;
-    right: 0px;
     top: 0px;
+}
+
+.login-buttons-dropdown-hangs-left #login-dropdown-list {
+    right: 0px;
 }
 
 #login-buttons .hline {
