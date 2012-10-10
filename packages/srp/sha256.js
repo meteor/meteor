@@ -10,7 +10,8 @@ Meteor._srp.SHA256 = (function () {
 /**
 *
 *  Secure Hash Algorithm (SHA256)
-*  http://www.webtoolkit.info/
+*  http://www.webtoolkit.info/javascript-sha256.html
+*  http://anmar.eu.org/projects/jssha2/
 *
 *  Original code by Angel Marin, Paul Johnston.
 *
@@ -95,7 +96,13 @@ function SHA256(s){
 	}
  
 	function Utf8Encode(string) {
-		string = string.replace(/\r\n/g,"\n");
+		// METEOR change:
+		// The webtoolkit.info version of this code added this
+		// Utf8Encode function (which does seem necessary for dealing
+		// with arbitrary Unicode), but the following line seems
+		// problematic:
+		//
+		// string = string.replace(/\r\n/g,"\n");
 		var utftext = "";
  
 		for (var n = 0; n < string.length; n++) {
