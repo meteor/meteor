@@ -1,3 +1,79 @@
+//////////////////// MIXINS
+
+// Minimal, well-documented, general-purpose CSS mixins.
+// (Some are same as Bootstrap.)
+
+////////// Box-Sizing: Border-Box
+
+// Setting `box-sizing: border-box` on an element causes the CSS
+// layout algorithm to interpret `width` and `height` declarations
+// as referring to the size of the border box (outside the border),
+// not the content box as usual (inside the padding).
+//
+// This is especially useful for stretching a form element to the
+// width of its container even if the form element has arbitrary
+// padding and borders, which can be done using `width: 100%`.
+//
+// Browser support is IE 8+ and all modern browsers, with the caveat
+// that `-moz-box-sizing` in Firefox is considered to have some
+// buggy or non-compliant behavior.  For example, min/max-width/height
+// may not interact correctly.  Box-sizing is thus not a feature to
+// base a major layout system around.
+//
+// See https://bugzilla.mozilla.org/show_bug.cgi?id=243412.
+.box-sizing-by-border () {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+////////// Border-Radius
+
+// These vendor prefixes should be sufficient.  For example, an Opera
+// prefix is not necessary.
+
+.border-radius(@radius) {
+  -webkit-border-radius: @radius;
+  -moz-border-radius: @radius;
+  border-radius: @radius;
+}
+
+.border-top-left-radius(@radius) {
+  -webkit-border-top-left-radius: @radius;
+  -moz-border-radius-topleft: @radius;
+  border-top-left-radius: @radius;
+}
+
+.border-top-right-radius(@radius) {
+  -webkit-border-top-right-radius: @radius;
+  -moz-border-radius-topright: @radius;
+  border-top-right-radius: @radius;
+}
+
+.border-bottom-right-radius(@radius) {
+  -webkit-border-bottom-right-radius: @radius;
+  -moz-border-radius-bottomright: @radius;
+  border-bottom-right-radius: @radius;
+}
+
+.border-bottom-left-radius(@radius) {
+  -webkit-border-bottom-left-radius: @radius;
+  -moz-border-radius-bottomleft: @radius;
+  border-bottom-left-radius: @radius;
+}
+
+////////// Display: Inline-block
+
+.display-inline-block () {
+  display: inline-block;
+
+  // IE 7 hacks:
+  //*display: inline;
+  //*zoom: 1;
+}
+
+//////////////////// LOGIN BUTTONS
+
 #login-buttons .login-header {
     float: left;
     padding-right: 2px;
@@ -14,16 +90,10 @@
 @login-buttons-accounts-dialog-width: 178px;
 
 #login-buttons {
-  display: inline-block;
-  /* Achieve `display: inline-block` on a block element in IE 7; see
-     http://uncorkedstudios.com/2011/12/12/how-to-fix-the-ie7-and-inline-block-css-bug/
-  */
-  *display: inline;
-  zoom: 1;
+  .display-inline-block();
 }
 
 #login-buttons .login-button, .accounts-dialog .login-button {
-    float: left;
     cursor: pointer;
     padding: 1px 4px;
     height: 20px;
@@ -40,10 +110,7 @@
     border: 1px solid #062C50;
     border-top-color: #103372;
     border-left-color: #103372;
-    border-radius: 3px;
-    -webkit-border-radius: 3px;
-    -moz-border-radius: 3px;
-    -o-border-radius: 3px;
+    .border-radius(3px);
 }
 
 #login-buttons .login-header {
@@ -71,7 +138,7 @@ the app's CSS, and that isn't the goal because the app can style them.
 This rule is a compromise that should take precedence over some very
 broad rules but be overridden by more specific ones.
 
-Add more directives here if they help the dialogs look good
+Add more declarations here if they help the dialogs look good
 out-of-the-box in more apps.
 */
 
@@ -83,7 +150,8 @@ out-of-the-box in more apps.
 }
 
 .accounts-dialog .login-button {
-    width: @login-buttons-accounts-dialog-width;
+    display: block;
+    width: auto;
     margin-bottom: 4px;
 }
 
@@ -134,9 +202,7 @@ out-of-the-box in more apps.
     -webkit-box-shadow: 0 3px 6px 1px rgba(0, 0, 0, 0.3);
     box-shadow:         0 3px 6px 1px rgba(0, 0, 0, 0.3);
 
-    -moz-border-radius: 3px;
-    -webkit-border-radius: 3px;
-    border-radius: 3px;
+    .border-radius(3px);
 
     margin-top: -5px;
     padding-top: 4px; /* = border-width - margin-top */
@@ -188,7 +254,15 @@ out-of-the-box in more apps.
 }
 
 .accounts-dialog input {
-    width: @login-buttons-accounts-dialog-width + 4;
+    // Be compatible with Bootstrap and apps that customize padding
+    // and border on inputs.  Be pixel-accurate in IE 8+.
+    .box-sizing-by-border();
+    width: 100%;
+    // Given that any `height` declaration will describe the total
+    // height including padding, prop the text field open a little
+    // bit if there is a small specified height.
+    // This plays nice with Bootstrap.
+    min-height: 30px;
 }
 
 .accounts-dialog .login-button-form-submit {
@@ -259,8 +333,12 @@ out-of-the-box in more apps.
     margin-top: -180px; /* = approximately -height/2, though height can change */
 }
 
-#configure-login-service-dialog .login-button-configure {
-    float: right;
+#configure-login-service-dialog-save-configuration {
+  float: right;
+}
+
+#configure-login-service-dismiss-button {
+  float: left;
 }
 
 #just-verified-dismiss-button, #messages-dialog-dismiss-button {
