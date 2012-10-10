@@ -105,13 +105,6 @@ _Mongo.prototype.insert = function (collection_name, document) {
 
   var write = self._maybeBeginWrite();
 
-  var finish = Meteor.bindEnvironment(function () {
-    Meteor.refresh({collection: collection_name});
-    write.committed();
-  }, function (e) {
-    Meteor._debug("Exception while completing insert: " + e.stack);
-  });
-
   var future = new Future;
   self._withCollection(collection_name, function (err, collection) {
     if (err) {
@@ -120,17 +113,13 @@ _Mongo.prototype.insert = function (collection_name, document) {
     }
 
     collection.insert(document, {safe: true}, function (err) {
-      if (err) {
-        future.ret(err);
-        return;
-      }
-
-      finish();
-      future.ret();
+      future.ret(err);
     });
   });
 
   var err = future.wait();
+  Meteor.refresh({collection: collection_name});
+  write.committed();
   if (err)
     throw err;
 };
@@ -147,13 +136,6 @@ _Mongo.prototype.remove = function (collection_name, selector) {
 
   var write = self._maybeBeginWrite();
 
-  var finish = Meteor.bindEnvironment(function () {
-    Meteor.refresh({collection: collection_name});
-    write.committed();
-  }, function (e) {
-    Meteor._debug("Exception while completing remove: " + e.stack);
-  });
-
   // XXX does not allow options. matches the client.
   selector = _Mongo._rewriteSelector(selector);
 
@@ -165,17 +147,13 @@ _Mongo.prototype.remove = function (collection_name, selector) {
     }
 
     collection.remove(selector, {safe: true}, function (err) {
-      if (err) {
-        future.ret(err);
-        return;
-      }
-
-      finish();
-      future.ret();
+      future.ret(err);
     });
   });
 
   var err = future.wait();
+  Meteor.refresh({collection: collection_name});
+  write.committed();
   if (err)
     throw err;
 };
@@ -191,13 +169,6 @@ _Mongo.prototype.update = function (collection_name, selector, mod, options) {
   }
 
   var write = self._maybeBeginWrite();
-
-  var finish = Meteor.bindEnvironment(function () {
-    Meteor.refresh({collection: collection_name});
-    write.committed();
-  }, function (e) {
-    Meteor._debug("Exception while completing update: " + e.stack);
-  });
 
   selector = _Mongo._rewriteSelector(selector);
   if (!options) options = {};
@@ -215,17 +186,13 @@ _Mongo.prototype.update = function (collection_name, selector, mod, options) {
     if (options.multi) opts.multi = true;
 
     collection.update(selector, mod, opts, function (err) {
-      if (err) {
-        future.ret(err);
-        return;
-      }
-
-      finish();
-      future.ret();
+      future.ret(err);
     });
   });
 
   var err = future.wait();
+  Meteor.refresh({collection: collection_name});
+  write.committed();
   if (err)
     throw err;
 };
