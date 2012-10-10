@@ -62,6 +62,26 @@
     margin-left: 5px; /* so that other elements aren't too close */
 }
 
+.accounts-dialog * { /* precendence of this selector is significant */
+/*
+A base for our dialog CSS, to reset browser styles and protect against
+the app's CSS.  Dialogs include the dropdown, config modals, and the
+reset password modal.  We can't completely isolate the dialogs from
+the app's CSS, and that isn't the goal because the app can style them.
+This rule is a compromise that should take precedence over some very
+broad rules but be overridden by more specific ones.
+
+Add more directives here if they help the dialogs look good
+out-of-the-box in more apps.
+*/
+
+  padding: 0;
+  margin: 0;
+  line-height: inherit;
+  color: inherit;
+  font: inherit;
+}
+
 .accounts-dialog .login-button {
     width: @login-buttons-accounts-dialog-width;
     margin-bottom: 4px;
@@ -123,7 +143,14 @@
     padding-left: @login-buttons-accounts-dialog-padding-left;
     padding-bottom: 8px;
 
+    margin-left: 0;
+    margin-bottom: 0;
+
     width: @login-buttons-accounts-dialog-width + 9; /* not sure what this 9 is */
+
+    font-size: 16px;
+    color: #333;
+    line-height: 1.6;
 }
 
 #login-dropdown-list {
