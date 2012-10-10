@@ -348,14 +348,26 @@
     var password = elementValueById('login-password');
 
     var loginSelector;
-    if (username !== null)
-      loginSelector = {username: username};
-    else if (email !== null)
-      loginSelector = {email: email};
-    else if (usernameOrEmail !== null)
-      loginSelector = usernameOrEmail;
-    else
+    if (username !== null) {
+      if (!Accounts._loginButtons.validateUsername(username))
+        return;
+      else
+        loginSelector = {username: username};
+    } else if (email !== null) {
+      if (!Accounts._loginButtons.validateEmail(email))
+        return;
+      else
+        loginSelector = {email: email};
+    } else if (usernameOrEmail !== null) {
+      // XXX not sure how we should validate this. but this seems good enough (for now),
+      // since an email must have at least 3 characters anyways
+      if (!Accounts._loginButtons.validateUsername(usernameOrEmail))
+        return;
+      else
+        loginSelector = usernameOrEmail;
+    } else {
       throw new Error("Unexpected -- no element to use as a login user selector");
+    }
 
     Meteor.loginWithPassword(loginSelector, password, function (error, result) {
       if (error) {
