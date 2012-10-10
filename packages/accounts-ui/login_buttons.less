@@ -72,10 +72,35 @@
   //*zoom: 1;
 }
 
+////////// Gradients
+
+.vertical-gradient (@topColor: #fff, @bottomColor: #000) {
+    // Fallback in absence of gradients
+    background-color: mix(@topColor, @bottomColor, 60%);
+    // FF 3.6+
+    background-image: -moz-linear-gradient(top, @topColor, @bottomColor);
+    // Safari 4+, Chrome 2+
+    background-image: -webkit-gradient(linear, 0 0, 0 100%, from(@topColor), to(@bottomColor));
+    // Safari 5.1+, Chrome 10+
+    background-image: -webkit-linear-gradient(top, @topColor, @bottomColor);
+    // Opera 11.10
+    background-image: -o-linear-gradient(top, @topColor, @bottomColor);
+    // Standard, IE10
+    background-image: linear-gradient(to bottom, @topColor, @bottomColor);
+    background-repeat: repeat-x;
+     // IE9 and down
+    filter: e(%("progid:DXImageTransform.Microsoft.gradient(topColorstr='%d', bottomColorstr='%d', GradientType=0)",argb(@topColor),argb(@bottomColor)));
+}
+
+.reset-ie-gradient () {
+  filter: e(%("progid:DXImageTransform.Microsoft.gradient(enabled = false)"));
+}
+
 //////////////////// LOGIN BUTTONS
 
 @login-buttons-accounts-dialog-width: 178px;
 #login-buttons {
+
   .display-inline-block();
 
   .login-header {
@@ -93,24 +118,30 @@
 
 #login-buttons .login-button, .accounts-dialog .login-button {
     cursor: pointer;
-    padding: 1px 4px;
+    padding: 1px 8px;
     height: 20px;
 
     font-size: 80%;
     font-family: 'Helvetica Neue', Helvetica, Arial, default;
     line-height: 1.5;
-    color: white;
-    text-shadow: #062C50 0px 1px 0px;
 
     text-align: center;
 
-    background: #79859D;
-    border: 1px solid #062C50;
-    border-top-color: #103372;
-    border-left-color: #103372;
     .border-radius(3px);
 
-    text-shadow: 0px -1px 0px #3b64bd; color: #ffffff; background-color: #5982DB; background-image: -moz-linear-gradient(top, #77a0f9, #3b64bd); background-image: -ms-linear-gradient(top, #77a0f9, #3b64bd); background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#77a0f9), to(#3b64bd)); background-image: -webkit-linear-gradient(top, #77a0f9, #3b64bd); background-image: -o-linear-gradient(top, #77a0f9, #3b64bd); background-image: linear-gradient(top, #77a0f9, #3b64bd); filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#77a0f9', endColorstr='#3b64bd', GradientType=0); border-color: #5982DB #3b64bd #3b64bd #5982DB; border-color: rgba(0, 0, 0, 0.25) rgba(0, 0, 0, 0.35) rgba(0, 0, 0, 0.35) rgba(0, 0, 0, 0.25);
+    color: #ffffff;
+    text-shadow: 0px -1px 0px rgba(0, 0, 0, 0.5);
+
+    @topColor: #a5acc9;
+    @bottomColor: #616884;
+    .vertical-gradient(@topColor, @bottomColor);
+    border: 1px solid mix(@bottomColor, #000, 60%);
+    box-shadow: 0 1px 1px rgba(255, 255, 255, 0.5) inset;
+    &:active {
+      box-shadow: none;
+      .vertical-gradient(mix(@bottomColor, @topColor, 30%),
+                         mix(@bottomColor, #000, 80%));
+    }
 }
 
 #login-buttons .login-button-disabled, .accounts-dialog .login-button-disabled {
@@ -118,18 +149,17 @@
 }
 
 
-.accounts-dialog * { /* precendence of this selector is significant */
-/*
-A base for our dialog CSS, to reset browser styles and protect against
-the app's CSS.  Dialogs include the dropdown, config modals, and the
-reset password modal.  We can't completely isolate the dialogs from
-the app's CSS, and that isn't the goal because the app can style them.
-This rule is a compromise that should take precedence over some very
-broad rules but be overridden by more specific ones.
+// precendence of this selector is significant
+.accounts-dialog * {
+    // A base for our dialog CSS, to reset browser styles and protect against
+    // the app's CSS.  Dialogs include the dropdown, config modals, and the
+    // reset password modal.  We can't completely isolate the dialogs from
+    // the app's CSS, and that isn't the goal because the app can style them.
+    // This rule is a compromise that should take precedence over some very
+    // broad rules but be overridden by more specific ones.
 
-Add more declarations here if they help the dialogs look good
-out-of-the-box in more apps.
-*/
+    // Add more declarations here if they help the dialogs look good
+    // out-of-the-box in more apps.
 
   padding: 0;
   margin: 0;
@@ -146,7 +176,15 @@ out-of-the-box in more apps.
 
 #login-buttons {
   .login-header { margin-right: 4px; }
-  .configure-button { text-shadow: 0px -1px 0px #e12600; color: #ffffff; background-color: #FF4409; background-image: -moz-linear-gradient(top, #ff6227, #e12600); background-image: -ms-linear-gradient(top, #ff6227, #e12600); background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#ff6227), to(#e12600)); background-image: -webkit-linear-gradient(top, #ff6227, #e12600); background-image: -o-linear-gradient(top, #ff6227, #e12600); background-image: linear-gradient(top, #ff6227, #e12600); filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff6227', endColorstr='#e12600', GradientType=0); border-color: #FF4409 #e12600 #e12600 #FF4409; border-color: rgba(0, 0, 0, 0.25) rgba(0, 0, 0, 0.35) rgba(0, 0, 0, 0.35) rgba(0, 0, 0, 0.25); }
+  .configure-button, .configure-button:active {
+    .border-radius(3px);
+    background: white;
+    color: red;
+    text-decoration: underline;
+    text-shadow: none;
+    border: none;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5) inset;
+  }
   .login-link-text { margin-left: 5px; /* so that other elements aren't too close */ }
 
   .login-image {
@@ -323,4 +361,10 @@ out-of-the-box in more apps.
     background-color: rgb(0.2, 0.2, 0.2); /* fallback for IE7-8 */
 
     background-color: rgba(0, 0, 0, 0.7);
+}
+
+input[type=text], input[type=password] {
+  padding: 4px;
+  border: 1px solid #999;
+  line-height: 1;
 }
