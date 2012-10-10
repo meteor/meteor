@@ -219,6 +219,7 @@ _Mongo.prototype.findOne = function (collection_name, selector, options) {
 // Mongo's, but make it synchronous.
 _Mongo.prototype._ensureIndex = function (collectionName, index, options) {
   var self = this;
+  options = _.extend({safe: true}, options);
 
   // We expect this function to be called at startup, not from within a method,
   // so we don't interact with the write fence.
