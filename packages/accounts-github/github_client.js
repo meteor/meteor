@@ -6,7 +6,7 @@
       options = {};
     }
 
-    var config = Accounts.configuration.findOne({service: 'github'});
+    var config = Accounts.loginServiceConfiguration.findOne({service: 'github'});
     if (!config) {
       callback && callback(new Accounts.ConfigError("Service not configured"));
       return;
@@ -14,7 +14,7 @@
     var state = Meteor.uuid();
 
     var required_scope = ['user'];
-    var scope = _.union((options && options.scope) || [], required_scope);
+    var scope = _.union((options && options.requestPermissions) || [], required_scope);
     var flat_scope = _.map(scope, encodeURIComponent).join('+');
 
     var loginUrl =

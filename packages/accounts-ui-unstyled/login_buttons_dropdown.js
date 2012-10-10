@@ -202,15 +202,15 @@
        visible: function () {
          return _.contains(
            ["USERNAME_AND_EMAIL", "USERNAME_AND_OPTIONAL_EMAIL"],
-           Accounts.ui._newUserWithPasswordHas());
+           Accounts.ui._passwordSignupFields());
        }},
       {fieldName: 'username', fieldLabel: 'Username',
        visible: function () {
-         return Accounts.ui._newUserWithPasswordHas() === "USERNAME_ONLY";
+         return Accounts.ui._passwordSignupFields() === "USERNAME_ONLY";
        }},
       {fieldName: 'email', fieldLabel: 'Email',
        visible: function () {
-         return Accounts.ui._newUserWithPasswordHas() === "EMAIL_ONLY";
+         return Accounts.ui._passwordSignupFields() === "EMAIL_ONLY";
        }},
       {fieldName: 'password', fieldLabel: 'Password', inputType: 'password',
        visible: function () {
@@ -223,17 +223,17 @@
        visible: function () {
          return _.contains(
            ["USERNAME_AND_EMAIL", "USERNAME_AND_OPTIONAL_EMAIL", "USERNAME_ONLY"],
-           Accounts.ui._newUserWithPasswordHas());
+           Accounts.ui._passwordSignupFields());
        }},
       {fieldName: 'email', fieldLabel: 'Email',
        visible: function () {
          return _.contains(
            ["USERNAME_AND_EMAIL", "EMAIL_ONLY"],
-           Accounts.ui._newUserWithPasswordHas());
+           Accounts.ui._passwordSignupFields());
        }},
       {fieldName: 'email', fieldLabel: 'Email (optional)',
        visible: function () {
-         return Accounts.ui._newUserWithPasswordHas() === "USERNAME_AND_OPTIONAL_EMAIL";
+         return Accounts.ui._passwordSignupFields() === "USERNAME_AND_OPTIONAL_EMAIL";
        }},
       {fieldName: 'password', fieldLabel: 'Password', inputType: 'password',
        visible: function () {
@@ -247,7 +247,7 @@
          // the "forgot password" flow.
          return _.contains(
            ["USERNAME_AND_OPTIONAL_EMAIL", "USERNAME_ONLY"],
-           Accounts.ui._newUserWithPasswordHas());
+           Accounts.ui._passwordSignupFields());
        }}
     ];
 
@@ -269,7 +269,7 @@
   Template._loginButtonsLoggedOutPasswordService.showForgotPasswordLink = function () {
     return _.contains(
       ["USERNAME_AND_EMAIL", "USERNAME_AND_OPTIONAL_EMAIL", "EMAIL_ONLY"],
-      Accounts.ui._newUserWithPasswordHas());
+      Accounts.ui._passwordSignupFields());
   };
 
 
@@ -305,7 +305,7 @@
          // the "forgot password" flow.
          return _.contains(
            ["USERNAME_AND_OPTIONAL_EMAIL", "USERNAME_ONLY"],
-           Accounts.ui._newUserWithPasswordHas());
+           Accounts.ui._passwordSignupFields());
        }}
     ];
   };

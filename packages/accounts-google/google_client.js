@@ -6,7 +6,7 @@
       options = {};
     }
 
-    var config = Accounts.configuration.findOne({service: 'google'});
+    var config = Accounts.loginServiceConfiguration.findOne({service: 'google'});
     if (!config) {
       callback && callback(new Accounts.ConfigError("Service not configured"));
       return;
@@ -17,8 +17,8 @@
     // always need this to get user id from google.
     var required_scope = ['https://www.googleapis.com/auth/userinfo.profile'];
     var scope = ['https://www.googleapis.com/auth/userinfo.email'];
-    if (options && options.scope)
-      scope = options.scope;
+    if (options && options.requestPermissions)
+      scope = options.requestPermissions;
     scope = _.union(scope, required_scope);
     var flat_scope = _.map(scope, encodeURIComponent).join('+');
 

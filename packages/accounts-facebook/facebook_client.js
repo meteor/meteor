@@ -6,7 +6,7 @@
       options = {};
     }
 
-    var config = Accounts.configuration.findOne({service: 'facebook'});
+    var config = Accounts.loginServiceConfiguration.findOne({service: 'facebook'});
     if (!config) {
       callback && callback(new Accounts.ConfigError("Service not configured"));
       return;
@@ -17,8 +17,8 @@
     var display = mobile ? 'touch' : 'popup';
 
     var scope = "email";
-    if (options && options.scope)
-      scope = options.scope.join(',');
+    if (options && options.requestPermissions)
+      scope = options.requestPermissions.join(',');
 
     var loginUrl =
           'https://www.facebook.com/dialog/oauth?client_id=' + config.appId +

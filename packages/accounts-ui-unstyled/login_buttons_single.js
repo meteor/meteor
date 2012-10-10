@@ -21,8 +21,8 @@
       var loginWithService = Meteor["loginWith" + capitalize(serviceName)];
 
       var options = {}; // use default scope unless specified
-      if (Accounts.ui._options.requestScope[serviceName])
-        options.scope = Accounts.ui._options.requestScope[serviceName];
+      if (Accounts.ui._options.requestPermissions[serviceName])
+        options.requestPermissions = Accounts.ui._options.requestPermissions[serviceName];
 
       loginWithService(options, callback);
     }
