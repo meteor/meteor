@@ -1,6 +1,6 @@
 (function () {
   Meteor.loginWithTwitter = function (callback) {
-    var config = Accounts.configuration.findOne({service: 'twitter'});
+    var config = Accounts.loginServiceConfiguration.findOne({service: 'twitter'});
     if (!config) {
       callback && callback(new Accounts.ConfigError("Service not configured"));
       return;

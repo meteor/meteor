@@ -142,7 +142,7 @@
 
   // Make sure we're configured
   var ensureConfigured = function(serviceName) {
-    if (!Accounts.configuration.findOne({service: serviceName})) {
+    if (!Accounts.loginServiceConfiguration.findOne({service: serviceName})) {
       throw new Accounts.ConfigError("Service not configured");
     };
   };

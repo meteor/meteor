@@ -21,7 +21,7 @@
   });
 
   Template._loginButtonsLoggedOutSingleLoginButton.configured = function () {
-    return !!Accounts.configuration.findOne({service: this.name});
+    return !!Accounts.loginServiceConfiguration.findOne({service: this.name});
   };
 
   Template._loginButtonsLoggedOutSingleLoginButton.capitalizedName = function () {

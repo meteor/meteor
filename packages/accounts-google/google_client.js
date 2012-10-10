@@ -1,6 +1,6 @@
 (function () {
   Meteor.loginWithGoogle = function (callback) {
-    var config = Accounts.configuration.findOne({service: 'google'});
+    var config = Accounts.loginServiceConfiguration.findOne({service: 'google'});
     if (!config) {
       callback && callback(new Accounts.ConfigError("Service not configured"));
       return;

@@ -1,6 +1,6 @@
 (function () {
   Meteor.loginWithFacebook = function (callback) {
-    var config = Accounts.configuration.findOne({service: 'facebook'});
+    var config = Accounts.loginServiceConfiguration.findOne({service: 'facebook'});
     if (!config) {
       callback && callback(new Accounts.ConfigError("Service not configured"));
       return;

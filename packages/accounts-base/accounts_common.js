@@ -25,7 +25,7 @@ Meteor.users = new Meteor.Collection("users", {_preventAutopublish: true});
 
 // Table containing documents with configuration options for each
 // login service
-Accounts.configuration = new Meteor.Collection(
+Accounts.loginServiceConfiguration = new Meteor.Collection(
   "meteor_accounts_loginServiceConfiguration", {_preventAutopublish: true});
 // Leave this collection open in insecure mode. In theory, someone could
 // hijack your oauth connect requests to a different endpoint or appId,

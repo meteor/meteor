@@ -1,6 +1,6 @@
 (function () {
   Meteor.loginWithWeibo = function (callback) {
-    var config = Accounts.configuration.findOne({service: 'weibo'});
+    var config = Accounts.loginServiceConfiguration.findOne({service: 'weibo'});
     if (!config) {
       callback && callback(new Accounts.ConfigError("Service not configured"));
       return;

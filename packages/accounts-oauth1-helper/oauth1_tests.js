@@ -17,8 +17,8 @@ Tinytest.add("oauth1 - loginResultForState is stored", function (test) {
   Accounts.oauth._loginResultForState = {};
   Accounts.oauth._services = {};
 
-  if (!Accounts.configuration.findOne({service: 'twitterfoo'}))
-    Accounts.configuration.insert({service: 'twitterfoo'});
+  if (!Accounts.loginServiceConfiguration.findOne({service: 'twitterfoo'}))
+    Accounts.loginServiceConfiguration.insert({service: 'twitterfoo'});
   Accounts.twitterfoo = {};
 
   // register a fake login service - twitterfoo
@@ -76,8 +76,8 @@ Tinytest.add("oauth1 - error in user creation", function (test) {
   var twitterfailAccessToken = Meteor.uuid();
   var twitterfailAccessTokenSecret = Meteor.uuid();
 
-  if (!Accounts.configuration.findOne({service: 'twitterfail'}))
-    Accounts.configuration.insert({service: 'twitterfail'});
+  if (!Accounts.loginServiceConfiguration.findOne({service: 'twitterfail'}))
+    Accounts.loginServiceConfiguration.insert({service: 'twitterfail'});
   Accounts.twitterfail = {};
 
   // Wire up access token so that verification passes

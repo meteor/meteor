@@ -16,7 +16,7 @@
   });
 
   var getAccessToken = function (query) {
-    var config = Accounts.configuration.findOne({service: 'github'});
+    var config = Accounts.loginServiceConfiguration.findOne({service: 'github'});
     if (!config)
       throw new Accounts.ConfigError("Service not configured");
 

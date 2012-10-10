@@ -7,7 +7,7 @@
   // connect middleware
   Accounts.oauth1._handleRequest = function (service, query, res) {
 
-    var config = Accounts.configuration.findOne({service: service.serviceName});
+    var config = Accounts.loginServiceConfiguration.findOne({service: service.serviceName});
     if (!config) {
       throw new Accounts.ConfigError("Service " + service.serviceName + " not configured");
     }

@@ -1,6 +1,6 @@
 (function () {
   Meteor.loginWithGithub = function (callback) {
-    var config = Accounts.configuration.findOne({service: 'github'});
+    var config = Accounts.loginServiceConfiguration.findOne({service: 'github'});
     if (!config) {
       callback && callback(new Accounts.ConfigError("Service not configured"));
       return;

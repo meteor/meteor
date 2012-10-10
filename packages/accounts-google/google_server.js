@@ -16,7 +16,7 @@
   });
 
   var getAccessToken = function (query) {
-    var config = Accounts.configuration.findOne({service: 'google'});
+    var config = Accounts.loginServiceConfiguration.findOne({service: 'google'});
     if (!config)
       throw new Accounts.ConfigError("Service not configured");
 

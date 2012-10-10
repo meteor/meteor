@@ -16,7 +16,7 @@
   });
 
   var getAccessToken = function (query) {
-    var config = Accounts.configuration.findOne({service: 'facebook'});
+    var config = Accounts.loginServiceConfiguration.findOne({service: 'facebook'});
     if (!config)
       throw new Accounts.ConfigError("Service not configured");
 

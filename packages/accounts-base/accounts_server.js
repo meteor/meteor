@@ -289,7 +289,7 @@
 
   // Publish all login service configuration fields other than secret.
   Meteor.publish("meteor.loginServiceConfiguration", function () {
-    return Accounts.configuration.find({}, {fields: {secret: 0}});
+    return Accounts.loginServiceConfiguration.find({}, {fields: {secret: 0}});
   }, {is_auto: true}); // not techincally autopublish, but stops the warning.
 
   // Allow a one-time configuration for a login service. Modifications
@@ -301,9 +301,9 @@
       // instead of ours).
       if (!Accounts[options.service])
         throw new Meteor.Error(403, "Service unknown");
-      if (Accounts.configuration.findOne({service: options.service}))
+      if (Accounts.loginServiceConfiguration.findOne({service: options.service}))
         throw new Meteor.Error(403, "Service " + options.service + " already configured");
-      Accounts.configuration.insert(options);
+      Accounts.loginServiceConfiguration.insert(options);
     }
   });
 

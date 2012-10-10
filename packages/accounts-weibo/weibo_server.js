@@ -16,7 +16,7 @@
   });
 
   var getAccessToken = function (query) {
-    var config = Accounts.configuration.findOne({service: 'weibo'});
+    var config = Accounts.loginServiceConfiguration.findOne({service: 'weibo'});
     if (!config)
       throw new Accounts.ConfigError("Service not configured");
 
