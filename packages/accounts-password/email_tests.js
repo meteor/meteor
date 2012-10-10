@@ -8,7 +8,7 @@
   var email4;
 
   var resetPasswordToken;
-  var confirmEmailToken;
+  var verifyEmailToken;
   var enrollAccountToken;
 
   Accounts._isolateLoginTokenForTest();
@@ -29,7 +29,7 @@
     function (test, expect) {
       Meteor.call("getInterceptedEmails", email1, expect(function (error, result) {
         test.notEqual(result, undefined);
-        test.equal(result.length, 2); // the first is the email confirmation
+        test.equal(result.length, 2); // the first is the email verification
         var content = result[1];
 
         var match = content.match(
@@ -65,7 +65,7 @@
     }
   ]);
 
-  var getConfirmEmailToken = function (email, test, expect) {
+  var getVerifyEmailToken = function (email, test, expect) {
     Meteor.call("getInterceptedEmails", email, expect(function (error, result) {
       test.isFalse(error);
       test.notEqual(result, undefined);
@@ -74,9 +74,9 @@
 
       var match = content.match(
         new RegExp(window.location.protocol + "//" +
-                   window.location.host + "/#\\/confirm-email/(\\S*)"));
+                   window.location.host + "/#\\/verify-email/(\\S*)"));
       test.isTrue(match);
-      confirmEmailToken = match[1];
+      verifyEmailToken = match[1];
     }));
   };
 
@@ -95,7 +95,7 @@
     });
   };
 
-  testAsyncMulti("accounts emails - confirm email flow", [
+  testAsyncMulti("accounts emails - verify email flow", [
     function (test, expect) {
       email2 = Meteor.uuid() + "-intercept@example.com";
       email3 = Meteor.uuid() + "-intercept@example.com";
@@ -106,15 +106,15 @@
     function (test, expect) {
       test.equal(Meteor.user().emails.length, 1);
       test.equal(Meteor.user().emails[0].address, email2);
-      test.isFalse(Meteor.user().emails[0].confirmed);
-      // We should NOT be publishing confirmation tokens!
-      test.isFalse(_.has(Meteor.user().emails[0], 'confirmationTokens'));
+      test.isFalse(Meteor.user().emails[0].verified);
+      // We should NOT be publishing verification tokens!
+      test.isFalse(_.has(Meteor.user().emails[0], 'verificationTokens'));
     },
     function (test, expect) {
-      getConfirmEmailToken(email2, test, expect);
+      getVerifyEmailToken(email2, test, expect);
     },
     function (test, expect) {
-      // Log out, to test that confirmEmail logs us back in. (And if we don't
+      // Log out, to test that verifyEmail logs us back in. (And if we don't
       // do that, waitUntilLoggedIn won't be able to prevent race conditions.)
       Meteor.logout(expect(function (error) {
         test.equal(error, undefined);
@@ -122,17 +122,17 @@
       }));
     },
     function (test, expect) {
-      Accounts.confirmEmail(confirmEmailToken,
+      Accounts.verifyEmail(verifyEmailToken,
                             waitUntilLoggedIn(test, expect));
     },
     function (test, expect) {
       test.equal(Meteor.user().emails.length, 1);
       test.equal(Meteor.user().emails[0].address, email2);
-      test.isTrue(Meteor.user().emails[0].confirmed);
+      test.isTrue(Meteor.user().emails[0].verified);
     },
     function (test, expect) {
       Meteor.call(
-        "addEmailForTestAndConfirm", email3,
+        "addEmailForTestAndVerify", email3,
         expect(function (error, result) {
           test.isFalse(error);
         }));
@@ -141,14 +141,14 @@
       Meteor.default_connection.onQuiesce(expect(function () {
         test.equal(Meteor.user().emails.length, 2);
         test.equal(Meteor.user().emails[1].address, email3);
-        test.isFalse(Meteor.user().emails[1].confirmed);
+        test.isFalse(Meteor.user().emails[1].verified);
       }));
     },
     function (test, expect) {
-      getConfirmEmailToken(email3, test, expect);
+      getVerifyEmailToken(email3, test, expect);
     },
     function (test, expect) {
-      // Log out, to test that confirmEmail logs us back in. (And if we don't
+      // Log out, to test that verifyEmail logs us back in. (And if we don't
       // do that, waitUntilLoggedIn won't be able to prevent race conditions.)
       Meteor.logout(expect(function (error) {
         test.equal(error, undefined);
@@ -156,12 +156,12 @@
       }));
     },
     function (test, expect) {
-      Accounts.confirmEmail(confirmEmailToken,
+      Accounts.verifyEmail(verifyEmailToken,
                             waitUntilLoggedIn(test, expect));
     },
     function (test, expect) {
       test.equal(Meteor.user().emails[1].address, email3);
-      test.isTrue(Meteor.user().emails[1].confirmed);
+      test.isTrue(Meteor.user().emails[1].verified);
     },
     function (test, expect) {
       Meteor.logout(expect(function (error) {
@@ -194,7 +194,7 @@
           var user = result;
           test.equal(user.emails.length, 1);
           test.equal(user.emails[0].address, email4);
-          test.isFalse(user.emails[0].confirmed);
+          test.isFalse(user.emails[0].verified);
         }));
     },
     function (test, expect) {
@@ -207,7 +207,7 @@
     function (test, expect) {
       test.equal(Meteor.user().emails.length, 1);
       test.equal(Meteor.user().emails[0].address, email4);
-      test.isTrue(Meteor.user().emails[0].confirmed);
+      test.isTrue(Meteor.user().emails[0].verified);
     },
     function (test, expect) {
       Meteor.logout(expect(function (error) {
@@ -222,7 +222,7 @@
     function (test, expect) {
       test.equal(Meteor.user().emails.length, 1);
       test.equal(Meteor.user().emails[0].address, email4);
-      test.isTrue(Meteor.user().emails[0].confirmed);
+      test.isTrue(Meteor.user().emails[0].verified);
     },
     function (test, expect) {
       Meteor.logout(expect(function (error) {

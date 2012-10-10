@@ -164,20 +164,20 @@
       });
   };
 
-  // Confirms a user's email address based on a token originally
-  // created by Accounts.sendConfirmationEmail
+  // Verifies a user's email address based on a token originally
+  // created by Accounts.sendVerificationEmail
   //
   // @param token {String}
   // @param callback (optional) {Function(error|undefined)}
-  Accounts.confirmEmail = function(token, callback) {
+  Accounts.verifyEmail = function(token, callback) {
     if (!token)
       throw new Error("Need to pass token");
 
     Meteor.call(
-      "confirmEmail", token,
+      "verifyEmail", token,
       function (error, result) {
         if (error || !result) {
-          error = error || new Error("No result from call to confirmUser");
+          error = error || new Error("No result from call to verifyEmail");
           callback && callback(error);
           return;
         }

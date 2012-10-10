@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Generate and consume reset password and confirm account URLs",
+  summary: "Generate and consume reset password and verify account URLs",
   internal: true
 });
 

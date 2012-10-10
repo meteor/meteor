@@ -24,11 +24,11 @@
       return interceptedEmails[email];
     },
 
-    addEmailForTestAndConfirm: function (email) {
+    addEmailForTestAndVerify: function (email) {
       Meteor.users.update(
         {_id: this.userId},
-        {$push: {emails: {address: email, confirmed: false}}});
-      Accounts.sendConfirmationEmail(this.userId, email);
+        {$push: {emails: {address: email, verified: false}}});
+      Accounts.sendVerificationEmail(this.userId, email);
     },
 
     createUserOnServer: function (email) {

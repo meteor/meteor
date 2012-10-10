@@ -126,7 +126,7 @@
       Meteor.users.update({_id: user._id, 'emails.address': email}, {
         $set: {'services.password.srp': newVerifier,
                'services.resume.loginTokens': [stampedLoginToken],
-               'emails.$.confirmed': true},
+               'emails.$.verified': true},
         $unset: {'services.password.reset': 1}
       });
 
@@ -134,13 +134,13 @@
       return {token: stampedLoginToken.token, id: user._id};
     },
 
-    confirmEmail: function (token) {
+    verifyEmail: function (token) {
       if (!token)
         throw new Meteor.Error(400, "Need to pass token");
 
-      var user = Meteor.users.findOne({'emails.confirmationTokens.token': token});
+      var user = Meteor.users.findOne({'emails.verificationTokens.token': token});
       if (!user)
-        throw new Meteor.Error(403, "Confirm email link expired");
+        throw new Meteor.Error(403, "Verify email link expired");
 
       // Log the user in with a new login token.
       var stampedLoginToken = Accounts._generateStampedLoginToken();
@@ -151,9 +151,9 @@
       // http://www.mongodb.org/display/DOCS/Updating/#Updating-The%24positionaloperator)
       // http://www.mongodb.org/display/DOCS/Updating#Updating-%24pull
       Meteor.users.update(
-        {_id: user._id, 'emails.confirmationTokens.token': token}, {
-          $set: {'emails.$.confirmed': true},
-          $pull: {'emails.$.confirmationTokens': {token: token}},
+        {_id: user._id, 'emails.verificationTokens.token': token}, {
+          $set: {'emails.$.verified': true},
+          $pull: {'emails.$.verificationTokens': {token: token}},
           $push: {'services.resume.loginTokens': stampedLoginToken}});
 
       this.setUserId(user._id);
@@ -196,8 +196,8 @@
 
 
   // send the user an email with a link that when opened marks that
-  // address as confirmed
-  Accounts.sendConfirmationEmail = function (userId, email) {
+  // address as verified
+  Accounts.sendVerificationEmail = function (userId, email) {
     // XXX Also generate a link using which someone can delete this
     // account if they own said address but weren't those who created
     // this account.
@@ -206,9 +206,9 @@
     var user = Meteor.users.findOne(userId);
     if (!user)
       throw new Error("Can't find user");
-    // pick the first unconfirmed email if we weren't passed an email.
+    // pick the first unverified email if we weren't passed an email.
     if (!email) {
-      email = _.find(user.emails || [], function (e) { return !e.confirmed; });
+      email = _.find(user.emails || [], function (e) { return !e.verified; });
       email = (email || {}).address;
     }
     // make sure we have a valid email
@@ -218,19 +218,19 @@
 
     var stampedToken = {token: Meteor.uuid(), when: +(new Date)};
     Meteor.users.update({_id: userId, 'emails.address': email},
-                        {$push: {'emails.$.confirmationTokens': stampedToken}});
+                        {$push: {'emails.$.verificationTokens': stampedToken}});
 
-    var confirmEmailUrl = Accounts.urls.confirmEmail(stampedToken.token);
+    var verifyEmailUrl = Accounts.urls.verifyEmail(stampedToken.token);
     Email.send({
       to: email,
       from: Accounts.emailTemplates.from,
-      subject: Accounts.emailTemplates.confirmEmail.subject(user),
-      text: Accounts.emailTemplates.confirmEmail.text(user, confirmEmailUrl)
+      subject: Accounts.emailTemplates.verifyEmail.subject(user),
+      text: Accounts.emailTemplates.verifyEmail.text(user, verifyEmailUrl)
     });
   };
 
   // send the user an email informing them that their account was created, with
-  // a link that when opened both marks their email as confirmed and forces them
+  // a link that when opened both marks their email as verified and forces them
   // to choose their password. The email must be one of the addresses in the
   // user's emails field, or undefined to pick the first email automatically.
   Accounts.sendEnrollmentEmail = function (userId, email) {
@@ -383,7 +383,7 @@
     if (username)
       user.username = username;
     if (email)
-      user.emails = [{address: email, confirmed: false}];
+      user.emails = [{address: email, verified: false}];
 
     return Accounts.insertUserDoc(options, extra, user);
   };
@@ -399,15 +399,15 @@
       // Create user. result contains id and token.
       var result = createUser(options, extra);
       // safety belt. createUser is supposed to throw on error. send 500 error
-      // instead of sending a confirmation email with empty userid.
+      // instead of sending a verification email with empty userid.
       if (!result.id)
         throw new Error("createUser failed to insert new user");
 
-      // If `Accounts._options.sendConfirmationEmail` is set, register
-      // a token to confirm the user's primary email, and send it to
+      // If `Accounts._options.sendVerificationEmail` is set, register
+      // a token to verify the user's primary email, and send it to
       // that address.
-      if (options.email && Accounts._options.sendConfirmationEmail)
-        Accounts.sendConfirmationEmail(result.id, options.email);
+      if (options.email && Accounts._options.sendVerificationEmail)
+        Accounts.sendVerificationEmail(result.id, options.email);
 
       // client gets logged in as the new user afterwards.
       this.setUserId(result.id);

@@ -6,13 +6,13 @@ if (!Accounts._options) {
 }
 
 // @param options {Object} an object with fields:
-// - sendConfirmationEmail {Boolean}
-//     Send email address confirmation emails to new users created from
+// - sendVerificationEmail {Boolean}
+//     Send email address verification emails to new users created from
 //     client signups.
 // - forbidClientAccountCreation {Boolean}
 //     Do not allow clients to create accounts directly.
 Accounts.config = function(options) {
-  _.each(["sendConfirmationEmail", "forbidClientAccountCreation"], function(key) {
+  _.each(["sendVerificationEmail", "forbidClientAccountCreation"], function(key) {
     if (key in options) {
       if (key in Accounts._options)
         throw new Error("Can't set `" + key + "` more than once");

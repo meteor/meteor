@@ -18,20 +18,20 @@
     window.location.hash = '';
   }
 
-  // reads a confirm email token from the url's hash fragment, if
+  // reads a verify email token from the url's hash fragment, if
   // it's there.  also don't automatically log the user is, as for
   // reset password links.
   //
   // XXX we don't need to use hash fragments in this case, and having
   // the token appear in the url's path would allow us to use a custom
-  // middleware instead of confirming the email on pageload, which
+  // middleware instead of verifying the email on pageload, which
   // would be faster but less DDP-ish (and more specifically, any
   // non-web DDP app, such as an iOS client, would do something more
   // in line with the hash fragment approach)
-  match = window.location.hash.match(/^\#\/confirm-email\/(.*)$/);
+  match = window.location.hash.match(/^\#\/verify-email\/(.*)$/);
   if (match) {
     Accounts._preventAutoLogin = true;
-    Accounts._confirmEmailToken = match[1];
+    Accounts._verifyEmailToken = match[1];
     window.location.hash = '';
   }
 
