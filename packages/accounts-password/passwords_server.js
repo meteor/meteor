@@ -355,8 +355,7 @@
   //
   // returns an object with id: userId, and (if options.generateLoginToken is
   // set) token: loginToken.
-  var createUser = function (options, extra) {
-    extra = extra || {};
+  var createUser = function (options) {
     var username = options.username;
     var email = options.email;
     if (!username && !email)
@@ -379,19 +378,19 @@
     if (email)
       user.emails = [{address: email, verified: false}];
 
-    return Accounts.insertUserDoc(options, extra, user);
+    return Accounts.insertUserDoc(options, user);
   };
 
   // method for create user. Requests come from the client.
   Meteor.methods({
-    createUser: function (options, extra) {
+    createUser: function (options) {
       options = _.clone(options);
       options.generateLoginToken = true;
       if (Accounts._options.forbidClientAccountCreation)
         throw new Meteor.Error(403, "Signups forbidden");
 
       // Create user. result contains id and token.
-      var result = createUser(options, extra);
+      var result = createUser(options);
       // safety belt. createUser is supposed to throw on error. send 500 error
       // instead of sending a verification email with empty userid.
       if (!result.id)
@@ -420,20 +419,16 @@
   // which is always empty when called from the createUser method? eg, "admin:
   // true", which we want to prevent the client from setting, but which a custom
   // method calling Accounts.createUser could set?
-  Accounts.createUser = function (options, extra, callback) {
+  Accounts.createUser = function (options, callback) {
     options = _.clone(options);
     options.generateLoginToken = false;
-    if (typeof extra === "function") {
-      callback = extra;
-      extra = {};
-    }
 
     // XXX allow an optional callback?
     if (callback) {
       throw new Error("Meteor.createUser with callback not supported on the server yet.");
     }
 
-    var userId = createUser(options, extra).id;
+    var userId = createUser(options).id;
 
     return userId;
   };

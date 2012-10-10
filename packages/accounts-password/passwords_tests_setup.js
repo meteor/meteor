@@ -4,9 +4,9 @@ Accounts.validateNewUser(function (user) {
   return !(user.profile && user.profile.invalid);
 });
 
-Accounts.onCreateUser(function (options, extra, user) {
-  if (extra.testOnCreateUserHook) {
-    user.profile = (user.profile || {});
+Accounts.onCreateUser(function (options, user) {
+  if (options.testOnCreateUserHook) {
+    user.profile = user.profile || {};
     user.profile.touchedByOnCreateUser = true;
     return user;
   } else {

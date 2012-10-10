@@ -92,7 +92,7 @@ Tinytest.add("oauth1 - error in user creation", function (test) {
         accessToken: twitterfailAccessToken,
         accessTokenSecret: twitterfailAccessTokenSecret
       },
-      extra: {
+      options: {
         profile: {invalid: true}
       }
     };

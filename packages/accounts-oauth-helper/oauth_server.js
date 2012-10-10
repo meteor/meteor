@@ -14,7 +14,7 @@
   //   - (For OAuth1 only) oauthBinding {OAuth1Binding} bound to the appropriate provider
   //   - (For OAuth2 only) query {Object} parameters passed in query string
   //   - return value is:
-  //     - {serviceData, (optional extra)} where serviceData should end
+  //     - {serviceData:, (optional options:)} where serviceData should end
   //       up in the user's services[name] field
   //     - `null` if the user declined to give permissions
   Accounts.oauth.registerService = function (name, version, handleOauthRequest) {
