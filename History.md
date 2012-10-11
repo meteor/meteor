@@ -3,7 +3,8 @@
 
 * This release introduces Meteor Accounts, a full-featured auth system that supports
   - fine-grained user-based control over database reads and writes
-  - federated login with Facebook, GitHub, Google, Twitter, and Weibo
+  - federated login with any OAuth provider (with built-in support for
+    Facebook, GitHub, Google, Twitter, and Weibo)
   - secure password login
   - email validation and password recovery
   - an optional set of UI widgets implementing standard login/signup/password
