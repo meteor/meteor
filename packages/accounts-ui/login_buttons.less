@@ -27,41 +27,6 @@
   box-sizing: border-box;
 }
 
-////////// Border-Radius
-
-// These vendor prefixes should be sufficient.  For example, an Opera
-// prefix is not necessary.
-
-.border-radius(@radius) {
-  -webkit-border-radius: @radius;
-  -moz-border-radius: @radius;
-  border-radius: @radius;
-}
-
-.border-top-left-radius(@radius) {
-  -webkit-border-top-left-radius: @radius;
-  -moz-border-radius-topleft: @radius;
-  border-top-left-radius: @radius;
-}
-
-.border-top-right-radius(@radius) {
-  -webkit-border-top-right-radius: @radius;
-  -moz-border-radius-topright: @radius;
-  border-top-right-radius: @radius;
-}
-
-.border-bottom-right-radius(@radius) {
-  -webkit-border-bottom-right-radius: @radius;
-  -moz-border-radius-bottomright: @radius;
-  border-bottom-right-radius: @radius;
-}
-
-.border-bottom-left-radius(@radius) {
-  -webkit-border-bottom-left-radius: @radius;
-  -moz-border-radius-bottomleft: @radius;
-  border-bottom-left-radius: @radius;
-}
-
 ////////// Box-Shadow
 
 .box-shadow (...) {
@@ -154,7 +119,7 @@
     @bottomColor: darken(@topColor, 25%);
 
     .vertical-gradient(@topColor, @bottomColor);
-    .border-radius(4px);
+    border-radius: 4px;
     border: 1px solid mix(@bottomColor, rgba(0,0,0,0.3), 30%);
     .box-shadow(0 1px 3px rgba(0,0,0,0.5));
 
@@ -258,7 +223,7 @@
   background: white;
 
   .box-shadow(0 3px 6px 1px rgba(0, 0, 0, 0.3));
-  .border-radius(4px);
+  border-radius: 4px;
 
   padding: 8px 16px;
   margin: -10px 0 0 -16px;
