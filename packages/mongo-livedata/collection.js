@@ -74,7 +74,7 @@ Meteor.Collection = function (name, options) {
           self._collection.remove(msg.id);
         } else if (doc) {
           var mutator = {$set: msg.set, $unset: {}};
-          _.each(msg.unset, function (propname) {
+          _.each((msg.unset || []), function (propname) {
             mutator.$unset[propname] = 1;
           });
           // XXX error check return value from update.
