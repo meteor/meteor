@@ -671,23 +671,16 @@ Template.api.isolate = {
 Template.api.user = {
   id: "meteor_user",
   name: "Meteor.user()",
-  locus: "Anywhere but subscriptions",
-  descr: ["Returns the current user object, or null if not logged in. A reactive data source."]
-};
-
-Template.api.userLoaded = {
-  id: "meteor_userloaded",
-  name: "Meteor.userLoaded()",
-  locus: "Client",
-  descr: ["XXX"]
+  locus: "Anywhere but publish functions",
+  descr: ["Get the current user record, or `null` if no user is logged in. A reactive data source."]
 };
 
 
 Template.api.userId = {
   id: "meteor_userid",
   name: "Meteor.userId()",
-  locus: "Anywhere but subscriptions",
-  descr: ["Returns the current user id, or null if not logged in. A reactive data source."]
+  locus: "Anywhere but publish functions",
+  descr: ["Get the current user id, or `null` if no user is logged in. A reactive data source."]
 };
 
 
@@ -695,8 +688,16 @@ Template.api.users = {
   id: "meteor_users",
   name: "Meteor.users",
   locus: "Anywhere",
-  descr: ["A XXXlinkify Collection holding user documents."]
+  descr: ["A <a href='#collections'>Meteor.Collection</a> containing user documents."]
 };
+
+Template.api.userLoaded = {
+  id: "meteor_userloaded",
+  name: "Meteor.userLoaded()",
+  locus: "Client",
+  descr: ["Determine if the current user document is fully loaded in <a href='#meteor_users'>Meteor.users</a>. A reactive data source."]
+};
+
 
 
 Template.api.logout = {
@@ -708,7 +709,7 @@ Template.api.logout = {
     {
       name: "callback",
       type: "Function",
-      descr: "XXX"
+      descr: "Optional callback. Called with no arguments on success, or with a single `Error` argument on failure."
     }
   ]
 };
@@ -718,156 +719,80 @@ Template.api.loginWithPassword = {
   id: "meteor_loginwithpassword",
   name: "Meteor.loginWithPassword(user, password, [callback])",
   locus: "Client",
-  descr: ["Log the user in."],
+  descr: ["Log the user in with a password."],
   args: [
     {
       name: "user",
       type: "Object or String",
-      descr: "XXX"
+      descr: "Either a string interpreted as a username or an email; or an object with a single key: `email`, `username` or `id`."
     },
     {
       name: "password",
       type: "String",
-      descr: "XXX"
+      descr: "The user's password. This is __not__ sent in plain text over the wire &mdash; it is secured with <a href='http://en.wikipedia.org/wiki/Secure_Remote_Password_protocol' target='_blank'>SRP</a>."
     },
     {
       name: "callback",
       type: "Function",
-      descr: "XXX"
+      descr: "Optional callback. Called with no arguments on success, or with a single `Error` argument on failure."
     }
   ]
 };
 
 
-Template.api.loginWithFacebook = {
-  id: "meteor_loginwithfacebook",
-  name: "Meteor.loginWithFacebook([options], [callback])",
+Template.api.loginWithOAuth = {
+  id: "meteor_loginwithoauth",
+  name: "Meteor.loginWith<i>OAuthProvider</i>([options], [callback])",
   locus: "Client",
-  descr: ["Log the user in."],
+  descr: ["Log the user in using an external OAuth service."],
   args: [
     {
       name: "callback",
       type: "Function",
-      descr: "XXX"
+      descr: "Optional callback. Called with no arguments on success, or with a single `Error` argument on failure."
     }
   ],
   options: [
     {
       name: "requestPermissions",
       type: "Array of Strings",
-      descr: "XXX"
+      descr: "A list of permissions to request from the user."
     }
   ]
 };
-
-Template.api.loginWithGithub = {
-  id: "meteor_loginwithgithub",
-  name: "Meteor.loginWithGithub([options], [callback])",
-  locus: "Client",
-  descr: ["Log the user in."],
-  args: [
-    {
-      name: "callback",
-      type: "Function",
-      descr: "XXX"
-    }
-  ],
-  options: [
-    {
-      name: "requestPermissions",
-      type: "Array of Strings",
-      descr: "XXX"
-    }
-  ]
-};
-
-Template.api.loginWithGoogle = {
-  id: "meteor_loginwithgoogle",
-  name: "Meteor.loginWithGoogle([options], [callback])",
-  locus: "Client",
-  descr: ["Log the user in."],
-  args: [
-    {
-      name: "callback",
-      type: "Function",
-      descr: "XXX"
-    }
-  ],
-  options: [
-    {
-      name: "requestPermissions",
-      type: "Array of Strings",
-      descr: "XXX"
-    }
-  ]
-};
-
-Template.api.loginWithTwitter = {
-  id: "meteor_loginwithtwitter",
-  name: "Meteor.loginWithTwitter([callback])",
-  locus: "Client",
-  descr: ["Log the user in."],
-  args: [
-    {
-      name: "callback",
-      type: "Function",
-      descr: "XXX"
-    }
-  ]
-};
-
-Template.api.loginWithWeibo = {
-  id: "meteor_loginwithweibo",
-  name: "Meteor.loginWithWeibo([callback])",
-  locus: "Client",
-  descr: ["Log the user in."],
-  args: [
-    {
-      name: "callback",
-      type: "Function",
-      descr: "XXX"
-    }
-  ]
-};
-
 
 Template.api.accounts_createUser = {
   id: "accounts_createuser",
-  name: "Accounts.createUser(options, extra, [callback])",
+  name: "Accounts.createUser(options, [callback])",
   locus: "Anywhere",
   descr: ["Create a new user."],
   args: [
     {
-      name: "options",
-      type: "Object",
-      descr: "XXX"
-    },
-    {
-      name: "extra",
-      type: "Object",
-      descr: "XXX"
-    },
-    {
       name: "callback",
       type: "Function",
-      descr: "XXX"
+      descr: "Client only, optional callback. Called with no arguments on success, or with a single `Error` argument on failure."
     }
   ],
   options: [
     {
       name: "username",
       type: "String",
-      descr: "XXX"
+      descr: "A unique name for this user."
     },
     {
       name: "email",
       type: "String",
-      descr: "XXX"
+      descr: "The user's email address."
     },
     {
       name: "password",
       type: "String",
-      descr: "XXX"
+      descr: "The user's password. This is __not__ sent in plain text over the wire."
+    },
+    {
+      name: "profile",
+      type: "Object",
+      descr: "The user's profile, typically including the `name` field."
     }
   ]
 };
@@ -876,22 +801,22 @@ Template.api.accounts_changePassword = {
   id: "accounts_changepassword",
   name: "Accounts.changePassword(oldPassword, newPassword, [callback])",
   locus: "Client",
-  descr: ["Change the users password. Must be logged in."],
+  descr: ["Change the current user's password. Must be logged in."],
   args: [
     {
       name: "oldPassword",
       type: "String",
-      descr: "XXX"
+      descr: "The user's current password. This is __not__ sent in plain text over the wire."
     },
     {
       name: "newPassword",
       type: "String",
-      descr: "XXX"
+      descr: "A new password for the user. This is __not__ sent in plain text over the wire."
     },
     {
       name: "callback",
       type: "Function",
-      descr: "XXX"
+      descr: "Optional callback. Called with no arguments on success, or with a single `Error` argument on failure."
     }
   ]
 };
@@ -900,19 +825,19 @@ Template.api.accounts_forgotPassword = {
   id: "accounts_forgotpassword",
   name: "Accounts.forgotPassword(options, [callback])",
   locus: "Client",
-  descr: ["Request a forgot password email"],
+  descr: ["Request a forgot password email."],
   args: [
     {
       name: "callback",
       type: "Function",
-      descr: "XXX"
+      descr: "Optional callback. Called with no arguments on success, or with a single `Error` argument on failure."
     }
   ],
   options: [
     {
       name: "email",
       type: "String",
-      descr: "The email address to send a password reminder to."
+      descr: "The email address to send a password reset link."
     }
   ]
 };
@@ -921,48 +846,41 @@ Template.api.accounts_resetPassword = {
   id: "accounts_resetpassword",
   name: "Accounts.resetPassword(token, newPassword, [callback])",
   locus: "Client",
-  descr: ["Reset the password for a user, using the token from email. Logs you in afterwards."],
+  descr: ["Reset the password for a user using a token received in email. Logs the user in afterwards."],
   args: [
     {
       name: "token",
       type: "String",
-      descr: "XXX"
+      descr: "The token retrieved from the reset password URL."
     },
     {
       name: "newPassword",
       type: "String",
-      descr: "XXX"
+      descr: "A new password for the user. This is __not__ sent in plain text over the wire."
     },
     {
       name: "callback",
       type: "Function",
-      descr: "XXX"
+      descr: "Optional callback. Called with no arguments on success, or with a single `Error` argument on failure."
     }
   ],
-  options: [
-    {
-      name: "email",
-      type: "String",
-      descr: "The email address to send a password reminder to."
-    }
-  ]
 };
 
 Template.api.accounts_setPassword = {
   id: "accounts_setpassword",
   name: "Accounts.setPassword(userId, newPassword)",
   locus: "Server",
-  descr: ["Force change the password for a user."],
+  descr: ["Forcibly change the password for a user."],
   args: [
     {
       name: "userId",
       type: "String",
-      descr: "XXX"
+      descr: "The id of the user to update."
     },
     {
       name: "newPassword",
       type: "String",
-      descr: "XXX"
+      descr: "A new password for the user."
     }
   ]
 };
@@ -976,12 +894,12 @@ Template.api.accounts_verifyEmail = {
     {
       name: "token",
       type: "String",
-      descr: "XXX"
+      descr: "The token retrieved from the verification URL."
     },
     {
       name: "callback",
       type: "Function",
-      descr: "XXX"
+      descr: "Optional callback. Called with no arguments on success, or with a single `Error` argument on failure."
     }
   ]
 };
@@ -996,12 +914,31 @@ Template.api.accounts_sendResetPasswordEmail = {
     {
       name: "userId",
       type: "String",
-      descr: "XXX"
+      descr: "The id of the user to send email to."
     },
     {
       name: "email",
       type: "String",
-      descr: "Optional. If passed, must be one of the email addresses in user.emails."
+      descr: "Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list."
+    }
+  ]
+};
+
+Template.api.accounts_sendEnrollmentEmail = {
+  id: "accounts_sendenrollmentemail",
+  name: "Accounts.sendEnrollmentEmail(userId, [email])",
+  locus: "Server",
+  descr: ["Send an email with a link the user can use to set their initial password."],
+  args: [
+    {
+      name: "userId",
+      type: "String",
+      descr: "The id of the user to send email to."
+    },
+    {
+      name: "email",
+      type: "String",
+      descr: "Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list."
     }
   ]
 };
@@ -1015,35 +952,17 @@ Template.api.accounts_sendVerificationEmail = {
     {
       name: "userId",
       type: "String",
-      descr: "XXX"
+      descr: "The id of the user to send email to."
     },
     {
       name: "email",
       type: "String",
-      descr: "Optional. If passed, must be one of the email addresses in user.emails."
+      descr: "Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first unverified email in the list."
     }
   ]
 };
 
 
-Template.api.accounts_sendEnrollmentEmail = {
-  id: "accounts_sendenrollmentemail",
-  name: "Accounts.sendEnrollmentEmail(userId, [email])",
-  locus: "Server",
-  descr: ["Send an email with a link the user can use to set their initial password."],
-  args: [
-    {
-      name: "userId",
-      type: "String",
-      descr: "XXX"
-    },
-    {
-      name: "email",
-      type: "String",
-      descr: "Optional. If passed, must be one of the email addresses in user.emails."
-    }
-  ]
-};
 
 Template.api.accounts_emailTemplates = {
   id: "accounts_emailtemplates",
@@ -1063,12 +982,12 @@ Template.api.accounts_config = {
     {
       name: "sendVerificationEmail",
       type: "Boolean",
-      descr: "If true, new users with an email address will receive an address verification email."
+      descr: "New users with an email address will receive an address verification email."
     },
     {
       name: "forbidClientAccountCreation",
       type: "Boolean",
-      descr: "If true, new user signups will be rejected. Server-side user creation via XXXlinkify createUser is still allowed."
+      descr: "<a href='#accounts_createuser'>`createUser`</a> requests from the client will be rejected."
     }
   ]
 };
@@ -1077,17 +996,17 @@ Template.api.accounts_ui_config = {
   id: "accounts_ui_config",
   name: "Accounts.ui.config(options)",
   locus: "Client",
-  descr: ["Set LoginButtons UI options."],
+  descr: ["Set Accounts UI options for the `loginButtons` template."],
   options: [
     {
       name: "requestPermissions",
       type: "Object",
-      descr: "what to pass to requestPermissions for each service. eg `{facebook: ['user_activity']}`"
+      descr: "Which permissions to request from the user for each OAuth service. For example: `{facebook: ['user_likes'], github: ['user', 'repo']}`"
     },
     {
       name: "passwordSignupFields",
       type: "String",
-      descr: "'`USERNAME_AND_EMAIL`', '`USERNAME_AND_OPTIONAL_EMAIL`', '`USERNAME_ONLY`', or '`EMAIL_ONLY`' (default)"
+      descr: "Which fields to display in the user creation form. One of '`USERNAME_AND_EMAIL`', '`USERNAME_AND_OPTIONAL_EMAIL`', '`USERNAME_ONLY`', or '`EMAIL_ONLY`' (default)."
     }
   ]
 };
@@ -1096,12 +1015,12 @@ Template.api.accounts_validateNewUser = {
   id: "accounts_validatenewuser",
   name: "Accounts.validateNewUser(func)",
   locus: "Server",
-  descr: ["Set up a new user validator."],
+  descr: ["Set restrictions on new user creation."],
   args: [
     {
       name: "func",
       type: "Function",
-      descr: "Validator function. Takes a new user object, and returns true to allow the creation or false to abort."
+      descr: "Called whenever a new user is created. Takes the new user object, and returns true to allow the creation or false to abort."
     }
   ]
 };
@@ -1110,12 +1029,12 @@ Template.api.accounts_onCreateUser = {
   id: "accounts_oncreateuser",
   name: "Accounts.onCreateUser(func)",
   locus: "Server",
-  descr: ["Set up a new user mangler XXX."],
+  descr: ["Customize new user creation."],
   args: [
     {
       name: "func",
       type: "Function",
-      descr: "Validator function. Takes `(options, extra, user)`. Return the new user, or throw an `Error`."
+      descr: "Called whenever a new user is created. Return the new user ojbject, or throw an `Error` to abort the creation."
     }
   ]
 };
