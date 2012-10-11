@@ -75,6 +75,7 @@ var toc = [
     "Live HTML",
     "Templates",
     "Smart Packages",
+    "Accounts",
     "Deploying"
   ],
 
