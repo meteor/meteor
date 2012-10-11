@@ -198,8 +198,9 @@
 
 #login-buttons {
   .login-header { margin-right: 4px; }
-  .configure-button, .configure-button:active {
+  .configure-button {
     font-size: 12px;
+    line-height: 20px;
     margin-top: 6px;
     margin-bottom: 6px;
 
@@ -207,10 +208,9 @@
     text-decoration: underline;
     text-shadow: none;
     border: none;
-    .box-shadow(0 2px 5px rgba(0,0,0,0.5) inset);
-  }
-  .configure-button:active {
-    background: #b10;
+    .box-shadow(0 1px 3px rgba(0,0,0,0.5));
+
+    &:active { background: #b10; .box-shadow(0 1px 3px rgba(0,0,0,0.5) inset); }
   }
 
   .login-link-text {
