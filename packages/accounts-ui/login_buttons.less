@@ -137,7 +137,6 @@
 }
 
 #login-buttons .login-button, .accounts-dialog .login-button {
-    display: inline-block;
     cursor: pointer;
     .unselectable();
     padding: 2px 8px;
@@ -157,8 +156,9 @@
     @topColor: #a5acc9;
     @bottomColor: #616884;
     .vertical-gradient(@topColor, @bottomColor);
-    border: 1px solid mix(@bottomColor, #000, 60%);
+    border: 1px solid mix(@bottomColor, rgba(0,0,0,0.3), 30%);
     .box-shadow(0 1px 1px rgba(255, 255, 255, 0.5) inset);
+
     &:active {
       .box-shadow(none);
       .vertical-gradient(mix(@bottomColor, @topColor, 30%),
@@ -205,10 +205,8 @@
     margin-top: 6px;
     margin-bottom: 6px;
 
-    .vertical-gradient(#f53, #f22);
-    text-decoration: underline;
+    .vertical-gradient(#f53, darken(#f53, 15%));
     text-shadow: none;
-    border: none;
     .box-shadow(0 1px 3px rgba(0,0,0,0.5));
 
     &:active { background: #b10; .box-shadow(0 1px 3px rgba(0,0,0,0.5) inset); }
