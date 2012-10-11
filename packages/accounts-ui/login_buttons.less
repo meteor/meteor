@@ -30,7 +30,7 @@
 ////////// Box-Shadow
 
 .box-shadow (...) {
-    box-shadow: @arguments;
+  box-shadow: @arguments;
 }
 
 ////////// Display: Inline-block
@@ -46,21 +46,21 @@
 ////////// Gradients
 
 .vertical-gradient (@topColor: #fff, @bottomColor: #000) {
-    // Fallback in absence of gradients
-    background-color: mix(@topColor, @bottomColor, 60%);
-    // FF 3.6+
-    background-image: -moz-linear-gradient(top, @topColor, @bottomColor);
-    // Safari 4+, Chrome 2+
-    background-image: -webkit-gradient(linear, 0 0, 0 100%, from(@topColor), to(@bottomColor));
-    // Safari 5.1+, Chrome 10+
-    background-image: -webkit-linear-gradient(top, @topColor, @bottomColor);
-    // Opera 11.10
-    background-image: -o-linear-gradient(top, @topColor, @bottomColor);
-    // Standard, IE10
-    background-image: linear-gradient(to bottom, @topColor, @bottomColor);
-    background-repeat: repeat-x;
-     // IE9 and down
-    filter: e(%("progid:DXImageTransform.Microsoft.gradient(topColorstr='%d', bottomColorstr='%d', GradientType=0)",argb(@topColor),argb(@bottomColor)));
+  // Fallback in absence of gradients
+  background-color: mix(@topColor, @bottomColor, 60%);
+  // FF 3.6+
+  background-image: -moz-linear-gradient(top, @topColor, @bottomColor);
+  // Safari 4+, Chrome 2+
+  background-image: -webkit-gradient(linear, 0 0, 0 100%, from(@topColor), to(@bottomColor));
+  // Safari 5.1+, Chrome 10+
+  background-image: -webkit-linear-gradient(top, @topColor, @bottomColor);
+  // Opera 11.10
+  background-image: -o-linear-gradient(top, @topColor, @bottomColor);
+  // Standard, IE10
+  background-image: linear-gradient(to bottom, @topColor, @bottomColor);
+  background-repeat: repeat-x;
+   // IE9 and down
+  filter: e(%("progid:DXImageTransform.Microsoft.gradient(topColorstr='%d', bottomColorstr='%d', GradientType=0)",argb(@topColor),argb(@bottomColor)));
 }
 
 .reset-ie-gradient () {
@@ -70,15 +70,15 @@
 ////////// Unselectable
 
 .unselectable () {
-    -webkit-user-select: none; // Chrome/Safari
-    -moz-user-select: none; // Firefox
-    -ms-user-select: none; // IE10+
+  -webkit-user-select: none; // Chrome/Safari
+  -moz-user-select: none; // Firefox
+  -ms-user-select: none; // IE10+
 
-    // These delarations not implemented in browsers yet:
-    -o-user-select: none;
-    user-select: none;
+  // These delarations not implemented in browsers yet:
+  -o-user-select: none;
+  user-select: none;
 
-    // In IE <= 9 and Opera, need unselectable="on" in the HTML.
+  // In IE <= 9 and Opera, need unselectable="on" in the HTML.
 }
 
 //////////////////// LOGIN BUTTONS
@@ -102,50 +102,50 @@
 }
 
 #login-buttons .login-button, .accounts-dialog .login-button {
-    cursor: pointer;
-    .unselectable();
-    padding: 4px 8px;
+  cursor: pointer;
+  .unselectable();
+  padding: 4px 8px;
 
-    font-size: 80%;
-    font-family: 'Helvetica Neue', Helvetica, Arial, default;
-    line-height: 1.5;
+  font-size: 80%;
+  font-family: 'Helvetica Neue', Helvetica, Arial, default;
+  line-height: 1.5;
 
-    text-align: center;
-    color: #fff;
-    text-shadow: 0px -1px 1px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  color: #fff;
+  text-shadow: 0px -1px 1px rgba(0, 0, 0, 0.5);
 
-    @topColor: #a5acc9;
-    @bottomColor: darken(@topColor, 25%);
+  @topColor: #a5acc9;
+  @bottomColor: darken(@topColor, 25%);
 
-    .vertical-gradient(@topColor, @bottomColor);
-    border-radius: 4px;
-    border: 1px solid mix(@bottomColor, rgba(0,0,0,0.3), 30%);
-    .box-shadow(0 1px 3px rgba(0,0,0,0.5));
+  .vertical-gradient(@topColor, @bottomColor);
+  border-radius: 4px;
+  border: 1px solid mix(@bottomColor, rgba(0,0,0,0.3), 30%);
+  .box-shadow(0 1px 3px rgba(0,0,0,0.5));
 
-    &:active {
-      .box-shadow(none);
-      .vertical-gradient(mix(@bottomColor, @topColor, 30%),
-                         mix(@bottomColor, #000, 80%));
-    }
+  &:active {
+    .box-shadow(none);
+    .vertical-gradient(mix(@bottomColor, @topColor, 30%),
+                       mix(@bottomColor, #000, 80%));
+  }
 
-    &.login-button-disabled, &.login-button-disabled:active {
-        color: #ddd;
-        .box-shadow(none);
-        background: #999;
-    }
+  &.login-button-disabled, &.login-button-disabled:active {
+    color: #ddd;
+    .box-shadow(none);
+    background: #999;
+  }
 }
 
 // precendence of this selector is significant
 .accounts-dialog * {
-    // A base for our dialog CSS, to reset browser styles and protect against
-    // the app's CSS.  Dialogs include the dropdown, config modals, and the
-    // reset password modal.  We can't completely isolate the dialogs from
-    // the app's CSS, and that isn't the goal because the app can style them.
-    // This rule is a compromise that should take precedence over some very
-    // broad rules but be overridden by more specific ones.
+  // A base for our dialog CSS, to reset browser styles and protect against
+  // the app's CSS.  Dialogs include the dropdown, config modals, and the
+  // reset password modal.  We can't completely isolate the dialogs from
+  // the app's CSS, and that isn't the goal because the app can style them.
+  // This rule is a compromise that should take precedence over some very
+  // broad rules but be overridden by more specific ones.
 
-    // Add more declarations here if they help the dialogs look good
-    // out-of-the-box in more apps.
+  // Add more declarations here if they help the dialogs look good
+  // out-of-the-box in more apps.
 
   padding: 0;
   margin: 0;
@@ -155,9 +155,9 @@
 }
 
 .accounts-dialog .login-button {
-    display: block;
-    width: auto;
-    margin-bottom: 4px;
+  display: block;
+  width: auto;
+  margin-bottom: 4px;
 }
 
 #login-buttons {
@@ -262,8 +262,8 @@
 }
 
 #login-dropdown-list {
-    position: absolute;
-    top: 0px;
+  position: absolute;
+  top: 0px;
 }
 
 .login-buttons-dropdown-hangs-left #login-dropdown-list {
@@ -276,17 +276,17 @@
 }
 
 .accounts-centered-dialog {
-    font-family: 'Helvetica Neue', Helvetica, Arial, default;
+  font-family: 'Helvetica Neue', Helvetica, Arial, default;
 
-    z-index: 1001;
-    position: fixed;
+  z-index: 1001;
+  position: fixed;
 
-    left: 50%;
-    margin-left: -(@login-buttons-accounts-dialog-width
-                 + @meteor-accounts-base-padding) / 2;
+  left: 50%;
+  margin-left: -(@login-buttons-accounts-dialog-width
+               + @meteor-accounts-base-padding) / 2;
 
-    top: 50%;
-    margin-top: -40px; /* = approximately -height/2, though height can change */
+  top: 50%;
+  margin-top: -40px; /* = approximately -height/2, though height can change */
 }
 
 @configure-login-service-dialog-width: 530px;
@@ -323,21 +323,21 @@
 }
 
 #just-verified-dismiss-button, #messages-dialog-dismiss-button {
-    margin-top: 4px;
+  margin-top: 4px;
 }
 
 .hide-background {
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 999;
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 999;
 
-    /* XXX consider replacing with DXImageTransform */
-    background-color: rgb(0.2, 0.2, 0.2); /* fallback for IE7-8 */
+  /* XXX consider replacing with DXImageTransform */
+  background-color: rgb(0.2, 0.2, 0.2); /* fallback for IE7-8 */
 
-    background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgba(0, 0, 0, 0.7);
 }
 
 input[type=text], input[type=email], input[type=password] {
