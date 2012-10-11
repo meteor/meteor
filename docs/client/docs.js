@@ -75,6 +75,7 @@ var toc = [
     "Live HTML",
     "Templates",
     "Smart Packages",
+    "Accounts",
     "Deploying"
   ],
 
@@ -93,7 +94,8 @@ var toc = [
         {instance: "this", name: "complete", id: "publish_complete"},
         {instance: "this", name: "flush", id: "publish_flush"},
         {instance: "this", name: "onStop", id: "publish_onstop"},
-        {instance: "this", name: "stop", id: "publish_stop"}
+        {instance: "this", name: "stop", id: "publish_stop"},
+        {instance: "this", name: "userId", id: "publish_userId"}
       ],
       "Meteor.subscribe",
       "Meteor.autosubscribe"
@@ -101,6 +103,8 @@ var toc = [
 
     {name: "Methods", id: "methods_header"}, [
       "Meteor.methods", [
+        {instance: "this", name: "userId", id: "method_userId"},
+        {instance: "this", name: "setUserId", id: "method_setUserId"},
         {instance: "this", name: "isSimulation", id: "method_issimulation"},
         {instance: "this", name: "unblock", id: "method_unblock"}
       ],
@@ -121,7 +125,9 @@ var toc = [
         {instance: "collection", name: "findOne"},
         {instance: "collection", name: "insert"},
         {instance: "collection", name: "update"},
-        {instance: "collection", name: "remove"}
+        {instance: "collection", name: "remove"},
+        {instance: "collection", name: "allow"},
+        {instance: "collection", name: "deny"}
       ],
 
       "Meteor.Collection.Cursor", [
@@ -168,6 +174,41 @@ var toc = [
       {name: "Reactivity isolation", style: "noncode", id: "isolate"}
      ],
 
+    {name: "Accounts", id: "accounts_api"}, [
+      "Meteor.user",
+      "Meteor.userId",
+      "Meteor.users",
+      "Meteor.userLoaded",
+      "Meteor.logout",
+      "Meteor.loginWithPassword",
+      {name: "Meteor.loginWithFacebook", id: "meteor_loginwithoauth"},
+      {name: "Meteor.loginWithGithub", id: "meteor_loginwithoauth"},
+      {name: "Meteor.loginWithGoogle", id: "meteor_loginwithoauth"},
+      {name: "Meteor.loginWithTwitter", id: "meteor_loginwithoauth"},
+      {name: "Meteor.loginWithWeibo", id: "meteor_loginwithoauth"},
+      {type: "spacer"},
+
+      "Accounts.createUser",
+      "Accounts.changePassword",
+      "Accounts.forgotPassword",
+      "Accounts.resetPassword",
+      "Accounts.setPassword",
+      "Accounts.verifyEmail",
+      {type: "spacer"},
+
+      "Accounts.sendResetPasswordEmail",
+      "Accounts.sendEnrollmentEmail",
+      "Accounts.sendVerificationEmail",
+      "Accounts.emailTemplates",
+      {type: "spacer"},
+
+      "Accounts.config",
+      "Accounts.ui.config",
+      "Accounts.validateNewUser",
+      "Accounts.onCreateUser"
+    ],
+
+
     "Timers", [
       "Meteor.setTimeout",
       "Meteor.setInterval",
@@ -206,6 +247,7 @@ var toc = [
   ],
 
   "Packages", [ [
+    "accounts-ui",
     "amplify",
     "backbone",
     "bootstrap",

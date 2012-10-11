@@ -120,6 +120,11 @@ is the place to stop the observes.
 
 {{> api_box subscription_stop}}
 
+{{> api_box subscription_userId}}
+
+This is constant. However, if the logged-in user changes, the publish
+function is rerun with the new value.
+
 {{> api_box subscribe}}
 
 When you subscribe to a record set, it tells the server to send records
@@ -201,6 +206,8 @@ object, which provides the following:
 * `isSimulation`: a boolean value, true if this invocation is a stub.
 * `unblock`: when called, allows the next method from this client to
 begin running.
+* `userId`: a function that returns the id of the current user.
+* `setUserId`: a function that associates the current client with a user.
 
 Calling `methods` on the client defines *stub* functions associated with
 server methods of the same name.  You don't have to define a stub for
@@ -214,6 +221,29 @@ stub is ignored.  Stubs are run for their side-effects: they are
 intended to *simulate* the result of what the server's method will do,
 but without waiting for the round trip delay.  If a stub throws an
 exception it will be logged to the console.
+
+
+{{> api_box method_invocation_userId}}
+
+The user id is an arbitrary string &mdash; typically the id of the user
+record in the database. You can set it with the `setUserId` function. If
+you're using the Meteor accounts system then this is handled for you.
+
+{{> api_box method_invocation_setUserId}}
+
+Call this function to change the currently logged in user on the
+connection that made this method call. This simply sets the value of
+`userId` for future method calls received on this connection. Pass
+`null` to log out the connection.
+
+If you are using the built-in Meteor accounts system then this should correspond to
+the `_id` field of a document in the
+<a href="#meteor_users">`Meteor.users`</a> collection.
+
+`setUserId` is not retroactive. It affects the current method call and
+any future method calls on the connection. Any previous method calls on
+this connection will still see the value of `userId` that was in effect
+when they started.
 
 {{> api_box method_invocation_isSimulation}}
 
@@ -622,6 +652,153 @@ Example:
     // Delete all the log entries
     Logs.remove({});
 
+
+{{> api_box allow}}
+
+When a client calls `insert`, `update`, or `remove` on a collection, the
+collection's `allow` and <a href='#deny'>`deny`</a> callbacks are called
+on the server to determine if the write should be allowed. If at least
+one `allow` callback allows the write, and no `deny` callbacks deny the
+write, then the write is allowed to proceed.
+
+These checks are run only when a client tries to write to the database
+directly, for example by calling `update` from inside an event
+handler. Server code is trusted and isn't subject to `allow` and `deny`
+restrictions. That includes methods that are called with `Meteor.call`
+&mdash; they are expected to do their own access checking rather than
+relying on `allow` and `deny`.
+
+You can call `allow` as many times as you like, and each call can
+include any combination of `insert`, `update`, and `remove`
+functions. The functions should return `true` if they think the
+operation should be allowed. Otherwise they should return `false`, or
+nothing at all (`undefined`). In that case Meteor will continue
+searching through any other `allow` rules on the collection.
+
+The available callbacks are:
+
+<dl class="callbacks">
+{{#dtdd "insert(userId, doc)"}}
+The user `userId` wants to insert the document `doc` into the
+collection. Return `true` if this should be allowed.
+{{/dtdd}}
+
+{{#dtdd "update(userId, docs, fields, modifier)"}}
+The user `userId` wants to update some documents. Meteor has fetched the
+documents from the database and they are available in `docs` as an
+array. Return `true` if the user should be allowed to change these
+documents.
+
+Additional details about the proposed modification are in `fields` and
+`modifier`. `fields` is the top-level fields in the document that the
+client wishes to modify, for example `['name', 'score']`. `modifier` is
+the raw Mongo modifier that the client wants to execute, for example
+`{$set: {'name.first': "Alice"}, $inc: {score: 1}}`.
+
+Only Mongo modifiers are supported (operations like `$set` and `$push`.)
+If the user tries to replace the entire document rather than use
+$-modifiers, the request will be denied without checking the `allow`
+functions.
+
+{{/dtdd}}
+
+{{#dtdd "remove(userId, docs)"}}
+The user `userId` wants to remove some documents. Meteor has fetched the
+documents from the database and they are available in `docs` as an
+array. Return `true` if the user should be allowed to remove these
+documents.
+{{/dtdd}}
+
+</dl>
+
+By default, when Meteor fetches the documents from the database for the
+`docs` array, it will retrieve all of the fields in the documents. For
+efficiency you may instead want to retrieve just the fields that are
+actually needed by your functions. This is enabled by the `fetch`
+option. Set `fetch` to an array of the field names that should be
+retrieved.
+
+Example: XXX test me!
+
+    // Create a collection where users can only modify documents that
+    // they own. Ownership is tracked by an 'owner' field on each
+    // document. All documents must be owned by the user that created
+    // them and ownership can't be changed. Only a document's owner
+    // is allowed to delete it, and the 'locked' attribute can be
+    // set on a document to prevent its accidental deletion.
+
+    Posts = new Meteor.Collection("posts");
+
+    Posts.allow({
+      insert: function (userId, doc) {
+        // the user must be logged in, and the document must be owned by the user
+        return (userId && doc.owner === userId);
+      },
+      update: function (userId, docs, fields, modifier) {
+        // can only change your own documents
+        return _.all(docs, function(doc) {
+          return doc.owner === userId;
+        });
+      },
+      remove: function (userId, docs) {
+        // can only remove your own documents
+        return _.all(docs, function(doc) {
+          return doc.owner === userId;
+        });
+      },
+      fetch: ['owner']
+    });
+
+    Posts.deny({
+      update: function (userId, docs, fields, modifier) {
+        // can't change owners
+        return _.contains(fields, 'owner');
+      },
+      remove: function (userId, docs) {
+        // can't remove locked documents
+        return _.any(docs, function (doc) {
+          return doc.locked;
+        });
+      },
+      fetch: ['locked'] // no need to fetch 'owner'
+    });
+
+If you never set up any `allow` rules on a collection then all client
+writes to the collection will be denied, and it will only be possible to
+write to the collection from server-side code. In this case you will
+have to create a method for each possible write that clients are allowed
+to do. You'll then call these methods with `Meteor.call` rather than
+having the clients call `insert`, `update`, and `remove` directly on the
+collection.
+
+Meteor also has a special "insecure mode" for quickly prototyping new
+applications. In insecure mode, if you haven't set up any `allow` or
+`deny` rules on a collection, then all users have full write access to
+the collection. This is the only effect of insecure mode. If you call
+`allow` or `deny` at all, even `allow({})`, then access is checked just
+like normal. __New Meteor projects start in insecure mode by default.__ To
+turn it off just type `meteor remove insecure`.
+
+{{#note}}
+For `update` and `remove`, documents will be affected only if they match
+the selector both at the time the documents are fetched to run the
+`allow` and `deny` rules, __and__ at the time that the operation is
+actually executed. This is accomplished by rewriting the selector to
+`{$and: [(original selector), {$in: {_id: [(ids of documents fetched
+and checked by allow and deny)]}}]}`.
+{{/note}}
+
+{{> api_box deny}}
+
+This works just like <a href='#allow'>`allow`</a>, except it lets you
+make sure that certain writes are definitely denied, even if there is an
+`allow` rule that says that they should be permitted.
+
+When a client tries to write to a collection, the Meteor server first
+checks the collection's `deny` rules. If none of them return true then
+it checks the collection's `allow` rules. Meteor allows the write only
+if no `deny` rules return `true` and at least one `allow` rule returns
+`true`.
 
 <h2 id="meteor_collection_cursor"><span>Cursors</span></h2>
 
@@ -1457,6 +1634,84 @@ benefits you would get by pulling the content out into a new
 sub-template.
 
 {{/api_box_inline}}
+
+
+
+<h2 id="accounts_api"><span>Accounts</span></h2>
+
+XXX intro text
+
+{{> api_box user}}
+
+- {_id: foo} if not userLoaded.
+- schema / common fields
+
+
+{{> api_box userId}}
+
+{{> api_box users}}
+
+- on the client, current user. on the server all users.
+- examples of usage?
+- schema
+- default publish and allow for profile
+
+{{> api_box userLoaded}}
+
+- more text
+
+{{#note}}
+We realize this is inconvenient. It is a temporary solution. In the
+future we will either make it unnecessary or fold it into a more
+general mechanism.
+{{/note}}
+
+{{> api_box logout}}
+
+{{> api_box loginWithPassword}}
+
+{{> api_box loginWithOAuth}}
+
+- example scopes
+
+{{> api_box accounts_createUser}}
+
+- logs you in on the client
+- diff between client and server
+- username and/or email. which are optional.
+- default user hook adds profile, override w/ onCreateUser
+- not for oauth
+
+{{> api_box accounts_changePassword}}
+
+{{> api_box accounts_forgotPassword}}
+
+- triggers sendResetPasswordEmail
+- document where the token goes in Accounts._whatever?
+- youre responsibility to get it into resetPassword
+
+{{> api_box accounts_resetPassword}}
+
+- don't need to call if you have accounts-ui
+
+{{> api_box accounts_setPassword}}
+
+{{> api_box accounts_verifyEmail}}
+
+- pass token from sendVerificationEmail
+- what changes in the schema
+
+{{> api_box accounts_sendResetPasswordEmail}}
+{{> api_box accounts_sendEnrollmentEmail}}
+{{> api_box accounts_sendVerificationEmail}}
+{{> api_box accounts_emailTemplates}}
+
+{{> api_box accounts_config}}
+{{> api_box accounts_ui_config}}
+{{> api_box accounts_validateNewUser}}
+{{> api_box accounts_onCreateUser}}
+
+- takes `options`, `user`
 
 
 
