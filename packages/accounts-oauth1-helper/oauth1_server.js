@@ -55,7 +55,7 @@
         // Get or create user doc and login token for reconnect.
         Accounts.oauth._loginResultForState[query.state] =
           Accounts.updateOrCreateUserFromExternalService(
-            service.serviceName, oauthResult.serviceData, oauthResult.extra);
+            service.serviceName, oauthResult.serviceData, oauthResult.options);
       }
     }
 

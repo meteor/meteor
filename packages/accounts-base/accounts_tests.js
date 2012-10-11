@@ -6,20 +6,24 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService', function (test)
 
   // create an account with facebook
   var uid1 = Accounts.updateOrCreateUserFromExternalService(
-    'facebook', {id: facebookId}, {profile: {foo: 1}}).id;
-  test.equal(Meteor.users.find({"services.facebook.id": facebookId}).count(), 1);
-  test.equal(Meteor.users.findOne({"services.facebook.id": facebookId}).profile.foo, 1);
+    'facebook', {id: facebookId, monkey: 42}, {profile: {foo: 1}}).id;
+  var users = Meteor.users.find({"services.facebook.id": facebookId}).fetch();
+  test.length(users, 1);
+  test.equal(users[0].profile.foo, 1);
+  test.equal(users[0].services.facebook.monkey, 42);
 
-  // create again with the same id, see that we get the same user. profile
-  // doesn't get overwritten in this implementation (though we should do
-  // something better with merging later).
+  // create again with the same id, see that we get the same user.
+  // it should update services.facebook but not profile.
   var uid2 = Accounts.updateOrCreateUserFromExternalService(
-    'facebook', {id: facebookId}, {profile: {foo: 1000, bar: 2}}).id;
+    'facebook', {id: facebookId, llama: 50},
+    {profile: {foo: 1000, bar: 2}}).id;
   test.equal(uid1, uid2);
-  test.equal(Meteor.users.find({"services.facebook.id": facebookId}).count(), 1);
-  test.equal(Meteor.users.findOne(uid1).profile.foo, 1);
-  test.equal(Meteor.users.findOne(uid1).profile.bar, undefined);
-
+  users = Meteor.users.find({"services.facebook.id": facebookId}).fetch();
+  test.length(users, 1);
+  test.equal(users[0].profile.foo, 1);
+  test.equal(users[0].profile.bar, undefined);
+  test.equal(users[0].services.facebook.llama, 50);
+  test.equal(users[0].services.facebook.monkey, undefined);
   // cleanup
   Meteor.users.remove(uid1);
 
@@ -48,7 +52,6 @@ Tinytest.add('accounts - insertUserDoc username', function (test) {
 
   // user does not already exist. create a user object with fields set.
   var result = Accounts.insertUserDoc(
-    userIn,
     {profile: {name: 'Foo Bar'}},
     userIn
   );
@@ -61,7 +64,6 @@ Tinytest.add('accounts - insertUserDoc username', function (test) {
   // run the hook again. now the user exists, so it throws an error.
   test.throws(function () {
     Accounts.insertUserDoc(
-      userIn,
       {profile: {name: 'Foo Bar'}},
       userIn
     );
@@ -83,7 +85,6 @@ Tinytest.add('accounts - insertUserDoc email', function (test) {
 
   // user does not already exist. create a user object with fields set.
   var result = Accounts.insertUserDoc(
-    userIn,
     {profile: {name: 'Foo Bar'}},
     userIn
   );
@@ -97,7 +98,6 @@ Tinytest.add('accounts - insertUserDoc email', function (test) {
   // run the hook again. now the user exists, so it throws an error.
   test.throws(function () {
     Accounts.insertUserDoc(
-      userIn,
       {profile: {name: 'Foo Bar'}},
       userIn
     );
@@ -106,20 +106,20 @@ Tinytest.add('accounts - insertUserDoc email', function (test) {
   // now with only one of them.
   test.throws(function () {
     Accounts.insertUserDoc(
-      {}, {}, {emails: [{address: email1}]}
+      {}, {emails: [{address: email1}]}
     );
   });
 
   test.throws(function () {
     Accounts.insertUserDoc(
-      {}, {}, {emails: [{address: email2}]}
+      {}, {emails: [{address: email2}]}
     );
   });
 
 
   // a third email works.
   var result3 = Accounts.insertUserDoc(
-      {}, {}, {emails: [{address: email3}]}
+      {}, {emails: [{address: email3}]}
   );
   var user3 = Meteor.users.findOne(result3.id);
   test.equal(typeof user3.createdAt, 'number');

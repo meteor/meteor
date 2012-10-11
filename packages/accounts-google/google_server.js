@@ -11,7 +11,7 @@
         accessToken: accessToken,
         email: identity.email
       },
-      extra: {profile: {name: identity.name}}
+      options: {profile: {name: identity.name}}
     };
   });
 

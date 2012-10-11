@@ -4,9 +4,9 @@ Accounts.validateNewUser(function (user) {
   return !(user.profile && user.profile.invalid);
 });
 
-Accounts.onCreateUser(function (options, extra, user) {
-  if (extra.testOnCreateUserHook) {
-    user.profile = (user.profile || {});
+Accounts.onCreateUser(function (options, user) {
+  if (options.testOnCreateUserHook) {
+    user.profile = user.profile || {};
     user.profile.touchedByOnCreateUser = true;
     return user;
   } else {
@@ -35,5 +35,11 @@ Accounts.config({
 // This test properly belongs in accounts-base/accounts_tests.js, but
 // this is where the tests that actually log in are.
 Meteor.methods({
-  testMeteorUser: function () { return Meteor.user(); }
+  testMeteorUser: function () { return Meteor.user(); },
+  clearUsernameAndProfile: function () {
+    if (!this.userId)
+      throw new Error("Not logged in!");
+    Meteor.users.update(this.userId,
+                        {$unset: {profile: 1, username: 1}});
+  }
 });

@@ -115,21 +115,13 @@
   };
 
   // XXX see comment on Accounts.createUser in passwords_server about adding a
-  // third "server options" argument.
-  var defaultCreateUserHook = function (options, extra, user) {
-    // This hook gets 'extra' directly from the createUser method, so make sure
-    // we don't allow users to set any fields at creation time that they won't
-    // later be able to set according to the default Meteor.users.allow. Set
-    // your own onCreateUser if you want users to be able to specify other
-    // fields at creation time.
-    if (_.any(extra, function(value, key) {return key != 'profile';})) {
-      console.log(JSON.stringify(extra));
-      throw new Meteor.Error(400, "Disallowed fields in extra");
-    }
-
-    return _.extend(user, extra);
+  // second "server options" argument.
+  var defaultCreateUserHook = function (options, user) {
+    if (options.profile)
+      user.profile = options.profile;
+    return user;
   };
-  Accounts.insertUserDoc = function (options, extra, user) {
+  Accounts.insertUserDoc = function (options, user) {
     // add created at timestamp (and protect passed in user object from
     // modification)
     user = _.extend({createdAt: +(new Date)}, user);
@@ -137,15 +129,15 @@
     var fullUser;
 
     if (onCreateUserHook) {
-      fullUser = onCreateUserHook(options, extra, user);
+      fullUser = onCreateUserHook(options, user);
 
       // This is *not* part of the API. We need this because we can't isolate
       // the global server environment between tests, meaning we can't test
       // both having a create user hook set and not having one set.
       if (fullUser === 'TEST DEFAULT HOOK')
-        fullUser = defaultCreateUserHook(options, extra, user);
+        fullUser = defaultCreateUserHook(options, user);
     } else {
-      fullUser = defaultCreateUserHook(options, extra, user);
+      fullUser = defaultCreateUserHook(options, user);
     }
 
     _.each(validateNewUserHooks, function (hook) {
@@ -199,13 +191,13 @@
   // @param serviceData {Object} Data to store in the user's record
   //        under services[serviceName]. Must include an "id" field
   //        which is a unique identifier for the user in the service.
-  // @param extra {Object, optional} Any additional fields to place on the user
-  //        object
+  // @param options {Object, optional} Other options to pass to insertUserDoc
+  //        (eg, profile)
   // @returns {Object} Object with token and id keys, like the result
   //        of the "login" method.
   Accounts.updateOrCreateUserFromExternalService = function(
-    serviceName, serviceData, extra) {
-    extra = extra || {};
+    serviceName, serviceData, options) {
+    options = _.clone(options || {});
 
     if (serviceName === "password" || serviceName === "resume")
       throw new Error(
@@ -221,26 +213,28 @@
     var user = Meteor.users.findOne(selector);
 
     if (user) {
-      // don't overwrite existing fields
-      // XXX subobjects (aka 'profile', 'services')?
-      var newKeys = _.difference(_.keys(extra), _.keys(user));
-      var newAttrs = _.pick(extra, newKeys);
+      // We *don't* process options (eg, profile) for update, but we do replace
+      // the serviceData (eg, so that we keep an unexpired access token and
+      // don't cache old email addresses in serviceData.email).
+      // XXX provide an onUpdateUser hook which would let apps update
+      //     the profile too
       var stampedToken = Accounts._generateStampedLoginToken();
-      var result = {token: stampedToken.token};
+      var setAttrs = {};
+      setAttrs["services." + serviceName] = serviceData;
+      // XXX Maybe we should re-use the selector above and notice if the update
+      //     touches nothing?
       Meteor.users.update(
         user._id,
-        {$set: newAttrs, $push: {'services.resume.loginTokens': stampedToken}});
-      result.id = user._id;
-      return result;
+        {$set: setAttrs,
+         $push: {'services.resume.loginTokens': stampedToken}});
+      return {token: stampedToken.token, id: user._id};
     } else {
-      // Create a new user.
-      var servicesClause = {};
-      servicesClause[serviceName] = serviceData;
-      var insertOptions = {services: servicesClause, generateLoginToken: true};
-      // Build a user doc; clone to make sure sure mutating
-      // insertOptions.services doesn't affect user.services or vice versa.
-      user = {services: JSON.parse(JSON.stringify(servicesClause))};
-      return Accounts.insertUserDoc(insertOptions, extra, user);
+      // Create a new user with the service data. Pass other options through to
+      // insertUserDoc.
+      user = {services: {}};
+      user.services[serviceName] = serviceData;
+      options.generateLoginToken = true;
+      return Accounts.insertUserDoc(options, user);
     }
   };
 
