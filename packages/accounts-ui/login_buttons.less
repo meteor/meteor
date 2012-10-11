@@ -124,7 +124,6 @@
   .display-inline-block();
 
   .login-header {
-    float: left;
     padding-right: 2px;
     line-height: 1.5;
     font-family: 'Helvetica Neue', Helvetica, Arial, default;
@@ -257,7 +256,7 @@
     float: right;
 }
 
-@login-buttons-accounts-dialog-padding-left: 8px;
+@meteor-accounts-base-padding: 8px;
 
 .accounts-dialog {
   border: 1px solid #666;
@@ -267,19 +266,9 @@
   .box-shadow(0 3px 6px 1px rgba(0, 0, 0, 0.3));
   .border-radius(4px);
 
-  margin-top: -5px;
-  padding-top: 4px; /* = border-width - margin-top */
+  padding: @meteor-accounts-base-padding @meteor-accounts-base-padding * 2;
 
-  margin-right: -8px;
-  padding-right: 8px; /* = -margin-right */
-
-  padding-left: @login-buttons-accounts-dialog-padding-left;
-  padding-bottom: 8px;
-
-  margin-left: 0;
-  margin-bottom: 0;
-
-  width: @login-buttons-accounts-dialog-width + 9; /* not sure what this 9 is */
+  width: @login-buttons-accounts-dialog-width;
 
   // Labels and links inherit app's font with this line commented out:
   //font-family: 'Helvetica Neue', Helvetica, Arial, default;
@@ -335,7 +324,7 @@
 
     left: 50%;
     margin-left: -(@login-buttons-accounts-dialog-width
-                 + @login-buttons-accounts-dialog-padding-left) / 2;
+                 + @meteor-accounts-base-padding) / 2;
 
     top: 50%;
     margin-top: -40px; /* = approximately -height/2, though height can change */
@@ -346,7 +335,7 @@
 #configure-login-service-dialog {
   width: @configure-login-service-dialog-width;
   margin-left: -(@configure-login-service-dialog-width
-               + @login-buttons-accounts-dialog-padding-left) / 2;
+               + @meteor-accounts-base-padding) / 2;
   margin-top: -180px; /* = approximately -height/2, though height can change */
 
   table { width: 100%; }
