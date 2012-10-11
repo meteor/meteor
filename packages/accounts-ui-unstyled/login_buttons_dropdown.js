@@ -208,7 +208,7 @@
        visible: function () {
          return Accounts.ui._passwordSignupFields() === "USERNAME_ONLY";
        }},
-      {fieldName: 'email', fieldLabel: 'Email',
+      {fieldName: 'email', fieldLabel: 'Email', inputType: 'email',
        visible: function () {
          return Accounts.ui._passwordSignupFields() === "EMAIL_ONLY";
        }},
@@ -225,13 +225,13 @@
            ["USERNAME_AND_EMAIL", "USERNAME_AND_OPTIONAL_EMAIL", "USERNAME_ONLY"],
            Accounts.ui._passwordSignupFields());
        }},
-      {fieldName: 'email', fieldLabel: 'Email',
+      {fieldName: 'email', fieldLabel: 'Email', inputType: 'email',
        visible: function () {
          return _.contains(
            ["USERNAME_AND_EMAIL", "EMAIL_ONLY"],
            Accounts.ui._passwordSignupFields());
        }},
-      {fieldName: 'email', fieldLabel: 'Email (optional)',
+      {fieldName: 'email', fieldLabel: 'Email (optional)', inputType: 'email',
        visible: function () {
          return Accounts.ui._passwordSignupFields() === "USERNAME_AND_OPTIONAL_EMAIL";
        }},
