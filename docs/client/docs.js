@@ -247,6 +247,7 @@ var toc = [
   ],
 
   "Packages", [ [
+    "accounts-ui",
     "amplify",
     "backbone",
     "bootstrap",
