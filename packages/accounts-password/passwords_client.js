@@ -1,11 +1,6 @@
 (function () {
-  Accounts.createUser = function (options, extra, callback) {
+  Accounts.createUser = function (options, callback) {
     options = _.clone(options); // we'll be modifying options
-
-    if (typeof extra === "function") {
-      callback = extra;
-      extra = {};
-    }
 
     if (!options.password)
       throw new Error("Must set options.password");
@@ -14,7 +9,7 @@
     delete options.password;
     options.srp = verifier;
 
-    Meteor.apply('createUser', [options, extra], {wait: true},
+    Meteor.apply('createUser', [options], {wait: true},
                  function (error, result) {
                    if (error || !result) {
                      error = error || new Error("No result");

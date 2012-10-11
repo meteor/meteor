@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Require this application always use transport layer encryption"
+  summary: "Require this application to use secure transport (HTTPS)"
 });
 
 Package.on_use(function (api) {

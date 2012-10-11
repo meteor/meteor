@@ -17,9 +17,9 @@
     function (test, expect) {
       email1 = Meteor.uuid() + "-intercept@example.com";
       Accounts.createUser({email: email1, password: 'foobar'},
-                        expect(function (error) {
-                          test.equal(error, undefined);
-                        }));
+                          expect(function (error) {
+                            test.equal(error, undefined);
+                          }));
     },
     function (test, expect) {
       Accounts.forgotPassword({email: email1}, expect(function (error) {

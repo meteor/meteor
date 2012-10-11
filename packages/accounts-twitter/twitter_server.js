@@ -10,7 +10,7 @@
         accessToken: oauthBinding.accessToken,
         accessTokenSecret: oauthBinding.accessTokenSecret
       },
-      extra: {
+      options: {
         profile: {
           name: identity.name
         }

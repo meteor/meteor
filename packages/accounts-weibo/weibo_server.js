@@ -11,7 +11,7 @@
         accessToken: accessToken.access_token,
         screenName: identity.screen_name
       },
-      extra: {profile: {name: identity.screen_name}}
+      options: {profile: {name: identity.screen_name}}
     };
   });
 

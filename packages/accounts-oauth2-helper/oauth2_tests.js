@@ -55,7 +55,7 @@ Tinytest.add("oauth2 - error in user creation", function (test) {
       serviceData: {
         id: failbookId
       },
-      extra: {
+      options: {
         profile: {invalid: true}
       }
     };
