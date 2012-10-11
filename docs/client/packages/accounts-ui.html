@@ -2,9 +2,26 @@
 {{#better_markdown}}
 ## `accounts-ui`
 
-A full featured login interface.
+A turn-key user interface for Meteor Accounts.
 
-`XXX loginButtons` and `XXX loginButtonsRight`.
+To add Accounts and a set of login controls to an application add the
+`accounts-ui` package and one or more login provider package:
+`accounts-password`, `accounts-facebook`, `accounts-github`,
+`accounts-google`, `accounts-twitter`, and `accounts-weibo`.
+
+Then simply add the `{{dstache}}loginButtons}}` helper to an HTML
+file. This will place a login widget on the page. If there is only one
+OAuth provider configured, this will add one login/logout button. If you
+use `accounts-password` or have more than one OAuth provider, this will
+add a 'Sign in' link which opens a dropdown menu with login options. To
+make the login dropdown right aligned, use `{{dstache}}loginButtons halign=right}}`.
+
+`accounts-ui` also includes modal popup dialogs to handle links from
+<a href="#accounts_sendresetpasswordemail">`sendResetPasswordEmail`</a>, <a href="#accounts_sendverificationemail">`sendVerificationEmail`</a>,
+and <a href="#accounts_sendenrollmentemail">`sendEnrollmentEmail`</a>. These
+do not have be manually placed in HTML, they are automatically activated
+when the URLs are loaded.
+
 
 
 {{/better_markdown}}
