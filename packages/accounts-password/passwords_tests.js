@@ -231,7 +231,6 @@ if (Meteor.isClient) (function () {
     function(test, expect) {
       test.equal(Meteor.user().profile.touchedByOnCreateUser, true);
     },
-
     // test Meteor.user(). This test properly belongs in
     // accounts-base/accounts_tests.js, but this is where the tests that
     // actually log in are.
@@ -241,6 +240,14 @@ if (Meteor.isClient) (function () {
         test.equal(result._id, clientUser._id);
         test.equal(result.profile.touchedByOnCreateUser, true);
         test.equal(err, undefined);
+      }));
+    },
+    function(test, expect) {
+      Meteor.call('clearUsernameAndProfile');
+      Meteor.default_connection.onQuiesce(expect(function() {
+        test.isTrue(Meteor.userId());
+        var user = Meteor.user();
+        test.equal(user, {_id: Meteor.userId()});
       }));
     },
     logoutStep,
