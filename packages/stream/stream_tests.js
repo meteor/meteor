@@ -20,7 +20,7 @@ testAsyncMulti("stream - reconnect", [
       status = Meteor.status();
       test.equal(status.status, "connected");
 
-      Meteor.reconnect({force: true});
+      Meteor.reconnect({_force: true});
       status = Meteor.status();
       test.equal(status.status, "waiting");
     }));

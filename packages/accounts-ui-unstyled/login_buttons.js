@@ -93,7 +93,7 @@
     // make sure to put password last, since this is how it is styled
     // in the ui as well.
     _.each(
-      ['facebook', 'google', 'weibo', 'twitter', 'github', 'password'],
+      ['facebook', 'github', 'google', 'twitter', 'weibo', 'password'],
       function (service) {
         if (Accounts[service])
           ret.push({name: service});

@@ -127,7 +127,7 @@ _.extend(Meteor._Stream.prototype, {
     var self = this;
 
     if (self.current_status.connected) {
-      if (options && options.force) {
+      if (options && options._force) {
         // force reconnect.
         self._disconnected();
       } // else, noop.

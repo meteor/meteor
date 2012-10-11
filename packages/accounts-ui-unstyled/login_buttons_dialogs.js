@@ -155,7 +155,8 @@
       loginButtonsSession.set('configureLoginServiceDialogVisible', false);
     },
     'click #configure-login-service-dialog-save-configuration': function () {
-      if (loginButtonsSession.get('configureLoginServiceDialogVisible')) {
+      if (loginButtonsSession.get('configureLoginServiceDialogVisible') &&
+          ! loginButtonsSession.get('configureLoginServiceDialogSaveDisabled')) {
         // Prepare the configuration document for this login service
         var serviceName = loginButtonsSession.get('configureLoginServiceDialogServiceName');
         var configuration = {
