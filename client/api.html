@@ -1639,15 +1639,26 @@ sub-template.
 
 <h2 id="accounts_api"><span>Accounts</span></h2>
 
+XXX intro text
+
 {{> api_box user}}
+
+- {_id: foo} if not userLoaded.
+- schema / common fields
+
 
 {{> api_box userId}}
 
 {{> api_box users}}
 
-XXX schema?
+- on the client, current user. on the server all users.
+- examples of usage?
+- schema
+- default publish and allow for profile
 
 {{> api_box userLoaded}}
+
+- more text
 
 {{#note}}
 We realize this is inconvenient. It is a temporary solution. In the
@@ -1656,29 +1667,52 @@ general mechanism.
 {{/note}}
 
 {{> api_box logout}}
+
 {{> api_box loginWithPassword}}
-{{> api_box loginWithFacebook}}
-{{> api_box loginWithGithub}}
-{{> api_box loginWithGoogle}}
-{{> api_box loginWithTwitter}}
-{{> api_box loginWithWeibo}}
+
+{{> api_box loginWithOAuth}}
+
+- example scopes
 
 {{> api_box accounts_createUser}}
+
+- logs you in on the client
+- diff between client and server
+- username and/or email. which are optional.
+- default user hook adds profile, override w/ onCreateUser
+- not for oauth
+
 {{> api_box accounts_changePassword}}
+
 {{> api_box accounts_forgotPassword}}
+
+- triggers sendResetPasswordEmail
+- document where the token goes in Accounts._whatever?
+- youre responsibility to get it into resetPassword
+
 {{> api_box accounts_resetPassword}}
+
+- don't need to call if you have accounts-ui
+
 {{> api_box accounts_setPassword}}
+
 {{> api_box accounts_verifyEmail}}
 
+- pass token from sendVerificationEmail
+- what changes in the schema
+
 {{> api_box accounts_sendResetPasswordEmail}}
-{{> api_box accounts_sendVerificationEmail}}
 {{> api_box accounts_sendEnrollmentEmail}}
+{{> api_box accounts_sendVerificationEmail}}
 {{> api_box accounts_emailTemplates}}
 
 {{> api_box accounts_config}}
 {{> api_box accounts_ui_config}}
 {{> api_box accounts_validateNewUser}}
 {{> api_box accounts_onCreateUser}}
+
+- takes `options`, `user`
+
 
 
 <h2 id="timers"><span>Timers</span></h2>

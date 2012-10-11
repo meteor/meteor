@@ -180,11 +180,11 @@ var toc = [
       "Meteor.userLoaded",
       "Meteor.logout",
       "Meteor.loginWithPassword",
-      "Meteor.loginWithFacebook",
-      "Meteor.loginWithGithub",
-      "Meteor.loginWithGoogle",
-      "Meteor.loginWithTwitter",
-      "Meteor.loginWithWeibo",
+      {name: "Meteor.loginWithFacebook", id: "meteor_loginwithoauth"},
+      {name: "Meteor.loginWithGithub", id: "meteor_loginwithoauth"},
+      {name: "Meteor.loginWithGoogle", id: "meteor_loginwithoauth"},
+      {name: "Meteor.loginWithTwitter", id: "meteor_loginwithoauth"},
+      {name: "Meteor.loginWithWeibo", id: "meteor_loginwithoauth"},
       {type: "spacer"},
 
       "Accounts.createUser",
@@ -196,8 +196,8 @@ var toc = [
       {type: "spacer"},
 
       "Accounts.sendResetPasswordEmail",
-      "Accounts.sendVerificationEmail",
       "Accounts.sendEnrollmentEmail",
+      "Accounts.sendVerificationEmail",
       "Accounts.emailTemplates",
       {type: "spacer"},
 
