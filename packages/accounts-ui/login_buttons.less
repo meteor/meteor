@@ -139,7 +139,7 @@
 #login-buttons .login-button, .accounts-dialog .login-button {
     cursor: pointer;
     .unselectable();
-    padding: 2px 8px;
+    padding: 4px 8px;
     height: 20px;
 
     font-size: 80%;
@@ -147,17 +147,16 @@
     line-height: 1.5;
 
     text-align: center;
-
-    .border-radius(4px);
-
-    color: #ffffff;
-    text-shadow: 0px -1px 0px rgba(0, 0, 0, 0.5);
+    color: #fff;
+    text-shadow: 0px -1px 1px rgba(0, 0, 0, 0.5);
 
     @topColor: #a5acc9;
-    @bottomColor: #616884;
+    @bottomColor: darken(@topColor, 25%);
+
     .vertical-gradient(@topColor, @bottomColor);
+    .border-radius(4px);
     border: 1px solid mix(@bottomColor, rgba(0,0,0,0.3), 30%);
-    .box-shadow(0 1px 1px rgba(255, 255, 255, 0.5) inset);
+    .box-shadow(0 1px 3px rgba(0,0,0,0.5));
 
     &:active {
       .box-shadow(none);
@@ -200,13 +199,8 @@
 #login-buttons {
   .login-header { margin-right: 4px; }
   .configure-button {
-    font-size: 12px;
-    line-height: 20px;
-    margin-top: 6px;
-    margin-bottom: 6px;
 
     .vertical-gradient(#f53, darken(#f53, 15%));
-    text-shadow: none;
     .box-shadow(0 1px 3px rgba(0,0,0,0.5));
 
     &:active { background: #b10; .box-shadow(0 1px 3px rgba(0,0,0,0.5) inset); }
@@ -297,7 +291,7 @@
   .message { font-size: 80%; margin-top: 2px; }
   .error-message { color: red; }
   .info-message { color: green; }
-  .additional-link { font-size: 60%; }
+  .additional-link { font-size: 80%; }
 
   #login-buttons-cancel-reset-password { float: right; }
   #login-buttons-cancel-enroll-account { float: right; }
