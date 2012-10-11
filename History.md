@@ -46,6 +46,11 @@
 * Better error handling for failed Mongo writes from inside methods; previously,
   errors here could cause clients to stop processing data from the server.
 
+
+Patches contributed by GitHub users bradens, possibilities, zhangcheng, and
+75lb.
+
+
 ## v0.4.2
 
 * Fix connection failure on iOS6. SockJS 0.3.3 includes this fix.
