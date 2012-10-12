@@ -1,13 +1,14 @@
 <!--
     NOTE: You shouldn't use these templates directly. Instead, use the global
     {{loginButtons}} template. For positioning on the right side of your app,
-    try {{loginButtons halign="right"}}
+    try {{loginButtons align="right"}}
   -->
 
 <template name="_loginButtonsRight">
-  {{! wrap loginButtons in a container div which should be styled to make
-      any dropdowns hang to the left instead of the right. }}
-  <div class="login-buttons-dropdown-hangs-left">
+  {{! put loginButtons in a wrapper div which should be styled to make
+      any dropdowns open with their right edge aligned with the right edge of
+      their container, sticking out to the left. }}
+  <div class="login-buttons-dropdown-align-right">
     {{> _loginButtons}}
   </div>
 </template>

@@ -115,7 +115,7 @@ if (Meteor.isClient) {
     return Session.get('settings')[kv[0]] === kv[1];
   };
 
-  Template.page.halign = function () {
+  Template.page.dropdownAlign = function () {
     var settings = this;
     return settings.alignRight ? 'right' : 'left';
   };
