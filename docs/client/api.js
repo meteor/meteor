@@ -1034,7 +1034,7 @@ Template.api.accounts_onCreateUser = {
     {
       name: "func",
       type: "Function",
-      descr: "Called whenever a new user is created. Return the new user ojbject, or throw an `Error` to abort the creation."
+      descr: "Called whenever a new user is created. Return the new user object, or throw an `Error` to abort the creation."
     }
   ]
 };
