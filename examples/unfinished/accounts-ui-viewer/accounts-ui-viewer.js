@@ -1,3 +1,4 @@
+
 Meteor.users.allow({update: function () { return true; }});
 
 if (Meteor.isClient) {
@@ -38,7 +39,7 @@ if (Meteor.isClient) {
 
   if (! Session.get('settings'))
     Session.set('settings', {
-      openLeft: false,
+      alignRight: false,
       positioning: "relative",
       numServices: 3,
       hasPasswords: true,
@@ -65,8 +66,6 @@ if (Meteor.isClient) {
   Template.page.outerClass = function () {
     var settings = Session.get('settings');
     var classes = [];
-    if (settings.openLeft)
-      classes.push('login-buttons-dropdown-hangs-left');
     return classes.join(' ');
   };
 
@@ -113,6 +112,11 @@ if (Meteor.isClient) {
       return false;
 
     return Session.get('settings')[kv[0]] === kv[1];
+  };
+
+  Template.page.halign = function () {
+    var settings = this;
+    return settings.alignRight ? 'right' : 'left';
   };
 
   var fakeLogin = function () {

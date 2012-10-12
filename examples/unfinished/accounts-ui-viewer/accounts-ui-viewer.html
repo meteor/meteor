@@ -17,9 +17,9 @@
 <template name="page">
   <div id="controlpane">
     <div class="group">
-      <h3>Dropdown opens:</h3>
-      {{radio "openLeft" "false" "Right"}}
-      {{radio "openLeft" "true" "Left"}}
+      <h3>Dropdown align edge:</h3>
+      {{radio "alignRight" "false" "Left"}}
+      {{radio "alignRight" "true" "Right"}}
     </div>
     <div class="group">
       <h3>Positioning:</h3>
@@ -106,7 +106,7 @@
         {{#if match "positioning:inline"}}
           Here is a place to sign in, yay!
         {{/if}}
-        {{loginButtons}}
+        {{loginButtons halign=halign}}
         {{#if match "positioning:inline"}}
           Isn't that great?
         {{/if}}
