@@ -17,7 +17,7 @@ if (Meteor.isClient) (function () {
       test.equal(Meteor.user().username, someUsername);
     });
     return function () {
-      Meteor._autorun(function(handle) {
+      Meteor.autorun(function(handle) {
         if (!Meteor.userLoaded()) return;
         handle.stop();
         callWhenLoaded();
@@ -70,7 +70,7 @@ if (Meteor.isClient) (function () {
       // Set up a reactive context that only refreshes when Meteor.user() is
       // invalidated.
       var user;
-      var handle1 = Meteor._autorun(function () {
+      var handle1 = Meteor.autorun(function () {
         user = Meteor.user();
       });
       // At the beginning, we're not logged in.
@@ -86,7 +86,7 @@ if (Meteor.isClient) (function () {
         handle1.stop();
       });
       var waitForLoaded = expect(function () {
-        Meteor._autorun(function(handle2) {
+        Meteor.autorun(function(handle2) {
           if (!Meteor.userLoaded()) return;
           handle2.stop();
           callWhenLoaded();
