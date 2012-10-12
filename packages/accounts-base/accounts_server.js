@@ -126,8 +126,18 @@
     // modification)
     user = _.extend({createdAt: +(new Date)}, user);
 
-    var fullUser;
+    var result = {};
+    if (options.generateLoginToken) {
+      var stampedToken = Accounts._generateStampedLoginToken();
+      result.token = stampedToken.token;
+      Meteor._ensure(user, 'services', 'resume');
+      if (_.has(user.services.resume, 'loginTokens'))
+        user.services.resume.loginTokens.push(stampedToken);
+      else
+        user.services.resume.loginTokens = [stampedToken];
+    }
 
+    var fullUser;
     if (onCreateUserHook) {
       fullUser = onCreateUserHook(options, user);
 
@@ -144,17 +154,6 @@
       if (!hook(fullUser))
         throw new Meteor.Error(403, "User validation failed");
     });
-
-    var result = {};
-    if (options.generateLoginToken) {
-      var stampedToken = Accounts._generateStampedLoginToken();
-      result.token = stampedToken.token;
-      Meteor._ensure(fullUser, 'services', 'resume');
-      if (_.has(fullUser.services.resume, 'loginTokens'))
-        fullUser.services.resume.loginTokens.push(stampedToken);
-      else
-        fullUser.services.resume.loginTokens = [stampedToken];
-    }
 
     try {
       result.id = Meteor.users.insert(fullUser);
