@@ -1,0 +1,97 @@
+<head>
+  <title>All Tomorrow's Parties</title>
+</head>
+
+<body>
+  {{> page}}
+</body>
+
+<template name="page">
+  {{> loginButtons}}
+  <h1>All Tomorrow's Parties</h1>
+
+  {{#if showCreateDialog}}
+    {{> createDialog}}
+  {{/if}}
+
+
+  <div class="left-panel">
+    <p>Double click to post a party!</p>
+    {{> map}}
+  </div>
+
+  {{> details}}
+</template>
+
+
+<template name="createDialog">
+  <div class="mask"> </div>
+  <div class="popup">
+    Create event<br>
+    Title: <input type="text" class="title"><br>
+
+    Description<br><textarea class="description"></textarea><br>
+
+    <input type="button" value="Add" class="save">
+    <input type="button" value="Cancel" class="cancel">
+  </div>
+</template>
+
+<template name="map">
+  <div class="map">
+    {{#constant}}
+      <svg width="500" height="500">
+        <g class="circles"></g>
+        <g class="labels"></g>
+      </svg>
+    {{/constant}}
+  </div>
+</template>
+
+<template name="details">
+  <div class="details">
+    {{#if party}}
+      {{#with party}}
+        <h1>{{title}}</h1>
+        Posted by {{creatorName}} &mdash;
+        {{#if attending}}
+          {{attending}} confirmed guests
+        {{else}}
+          Nobody going yet
+        {{/if}}<br>
+
+        {{description}}<br>
+
+        {{#if currentUser}}
+          <input type="button" value="I'm going!" class="rsvp_yes">
+          <input type="button" value="Maybe" class="rsvp_maybe">
+          <input type="button" value="No" class="rsvp_no">
+        {{else}}
+          Sign in to RSVP
+        {{/if}}
+        <br>
+
+        {{#each rsvps}}
+          {{rsvpEmail}}: {{rsvpStatus}}<br>
+        {{/each}}
+
+        {{#if public}}
+          Everyone: invited<br>
+        {{else}}
+          {{#each outstandingInvitations}}
+            {{email}}: invited<br>
+          {{/each}}
+        {{/if}}
+
+        {{#if canRemove}}
+          <div><input type="button" value="Remove event" class="remove"></div>
+        {{/if}}
+
+          <br>
+        XXX rsvps, invite editing (if private)
+      {{/with}}
+    {{else}}
+      Click a party to select it
+    {{/if}}
+  </div>
+</template>
