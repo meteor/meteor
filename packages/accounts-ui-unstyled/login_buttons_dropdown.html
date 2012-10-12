@@ -2,7 +2,7 @@
 <!-- LOGGED IN -->
 <!--           -->
 <template name="_loginButtonsLoggedInDropdown">
-  <section class="login-link-and-dropdown-list">
+  <div class="login-link-and-dropdown-list">
     {{#if currentUserLoaded}}
       <a class="login-link-text" id="login-name-link">
         {{displayName}} ▾
@@ -27,7 +27,7 @@
     {{else}}
       <div class="loading"></div>
     {{/if}}
-  </section>
+  </div>
 </template>
 
 <template name="_loginButtonsLoggedInDropdownActions">
