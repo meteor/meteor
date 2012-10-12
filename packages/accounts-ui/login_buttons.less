@@ -89,6 +89,11 @@
 
   .display-inline-block();
 
+  // This seems to keep the height of the line from
+  // being sensitive to the presence of the unicode down arrow,
+  // which otherwise bumps the baseline down by 1px.
+  line-height: 1;
+
   .login-header {
     display: inline-block;
     padding-right: 2px;
@@ -175,10 +180,6 @@
     &:active { background: #b10; .box-shadow(0 1px 3px rgba(0,0,0,0.5) inset); }
   }
 
-  .login-link-text {
-    margin-left: 5px; /* so that other elements aren't too close */
-  }
-
   .login-image {
     float: left;
     margin: 2px 5px 2px 0px;
@@ -189,14 +190,12 @@
   .no-services { color: red; }
 
   .login-link-and-dropdown-list {
-    right: 5px;
     position: relative;
   }
   .login-close-text {
     float: left;
     position: relative;
-    left: 1px; /* = #login-buttons.border-width */
-    padding-bottom: 3px;
+    padding-bottom: 8px;
   }
 
   .login-close-text-clear { clear: both; }
@@ -220,9 +219,10 @@
 }
 
 @meteor-accounts-base-padding: 8px;
+@meteor-accounts-dialog-border-width: 1px;
 
 .accounts-dialog {
-  border: 1px solid rgba(0, 0, 0, 0.4);
+  border: @meteor-accounts-dialog-border-width solid rgba(0, 0, 0, 0.4);
   z-index: 1000;
   background: white;
 
@@ -238,7 +238,13 @@
   //font-family: 'Helvetica Neue', Helvetica, Arial, default;
   font-size: 16px;
   color: #333;
-  line-height: 1.6;
+
+  // XXX Make the dropdown and dialogs look good without a top-level
+  // line-height: 1.6.  For now, we apply it to everything except
+  // the "Close" link, which we want to have the same line-height
+  // as the "Sign in" link.
+  & > * { line-height: 1.6; }
+  & > .login-close-text { line-height: inherit; }
 
   label, .title {
     font-weight: bold;
@@ -285,11 +291,19 @@
 
 #login-dropdown-list {
   position: absolute;
-  top: 0px;
+  // The top-left of the border-box of the dropdown is absolutely
+  // positioned within its container, so we need to compensate
+  // for the border.  The padding is already compensated for by
+  // negative margins on the dropdown.
+  // XXX We could use negative margins to compensate for the
+  // border too.
+  top: -@meteor-accounts-dialog-border-width;
+  left: -@meteor-accounts-dialog-border-width;
 }
 
 .login-buttons-dropdown-align-right #login-dropdown-list {
-    right: 0px;
+  left: auto;
+  right: -@meteor-accounts-dialog-border-width;
 }
 
 #login-buttons-message-dialog .message {
