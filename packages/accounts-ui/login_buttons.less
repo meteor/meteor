@@ -259,6 +259,23 @@
   .info-message { color: green; }
   .additional-link { font-size: 80%; }
 
+  .accounts-close {
+    position: absolute;
+    top: 0;
+    right: 5px;
+
+    font-size: 20px;
+    font-weight: bold;
+    line-height: 20px;
+    text-decoration: none;
+    color: #000;
+    opacity: 0.4;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+
   #login-buttons-cancel-reset-password { float: right; }
   #login-buttons-cancel-enroll-account { float: right; }
 }
@@ -320,7 +337,7 @@
   float: right;
 }
 
-#configure-login-service-dismiss-button {
+.configure-login-service-dismiss-button {
   float: left;
 }
 
