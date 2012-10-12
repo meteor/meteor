@@ -23,6 +23,9 @@
     }
   });
 
+  Template._loginButtons.preserve({
+    'input[id]': Spark._labelFromIdOrName
+  });
 
   //
   // loginButtonLoggedOut template
