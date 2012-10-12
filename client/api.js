@@ -608,13 +608,6 @@ Template.api.current = {
   descr: ["The current [`invalidation context`](#context), or `null` if not being called from inside [`run`](#run)."]
 };
 
-Template.api.flush = {
-  id: "meteor_flush",
-  name: "Meteor.flush()",
-  locus: "Client",
-  descr: ["Ensure that any reactive updates have finished. Allow auto-updating DOM element to be cleaned up if they are offscreen."]
-};
-
 Template.api.autorun = {
   id: "meteor_autorun",
   name: "Meteor.autorun(func)",
@@ -625,6 +618,13 @@ Template.api.autorun = {
      type: "Function",
      descr: "The function to run. It receives one argument: the same handle that `Meteor.autorun` returns."}
   ]
+};
+
+Template.api.flush = {
+  id: "meteor_flush",
+  name: "Meteor.flush()",
+  locus: "Client",
+  descr: ["Ensure that any reactive updates have finished. Allow auto-updating DOM element to be cleaned up if they are offscreen."]
 };
 
 

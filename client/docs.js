@@ -223,8 +223,8 @@ var toc = [
         {instance: "context", name: "invalidate"}
       ],
       {name: "Meteor.deps.Context.current", id: "current"},
-      "Meteor.flush",
-      "Meteor.autorun"
+      "Meteor.autorun",
+      "Meteor.flush"
     // ],
 
     // "Environment Variables", [
