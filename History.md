@@ -47,8 +47,8 @@
   errors here could cause clients to stop processing data from the server.
 
 
-Patches contributed by GitHub users bradens, possibilities, zhangcheng, and
-75lb.
+Patches contributed by GitHub users bradens, dandv, dybskiy, possibilities,
+zhangcheng, and 75lb.
 
 
 ## v0.4.2
