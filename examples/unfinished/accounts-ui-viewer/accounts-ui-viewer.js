@@ -3,6 +3,7 @@ Meteor.users.allow({update: function () { return true; }});
 if (Meteor.isClient) {
 
   Accounts.STASH = _.extend({}, Accounts);
+  Accounts.STASH.userLoaded = Meteor.userLoaded;
 
   var handleSetting = function (key, value) {
     if (key === "numServices") {
@@ -29,6 +30,9 @@ if (Meteor.isClient) {
       }
     } else if (key === "signupFields") {
       Accounts.ui._options.passwordSignupFields = value;
+    } else if (key === "fakeUserNotLoaded") {
+      Meteor.userLoaded = (value ? function () { return false; } :
+                           Accounts.STASH.userLoaded);
     }
   };
 
@@ -38,7 +42,8 @@ if (Meteor.isClient) {
       positioning: "relative",
       numServices: 3,
       hasPasswords: true,
-      signupFields: 'EMAIL_ONLY'
+      signupFields: 'EMAIL_ONLY',
+      fakeUserNotLoaded: false
     });
   else
     _.each(Session.get('settings'), function (v,k) {
