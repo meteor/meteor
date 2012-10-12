@@ -151,7 +151,7 @@
   //
 
   Template._configureLoginServiceDialog.events({
-    'click #configure-login-service-dismiss-button': function () {
+    'click .configure-login-service-dismiss-button': function () {
       loginButtonsSession.set('configureLoginServiceDialogVisible', false);
     },
     'click #configure-login-service-dialog-save-configuration': function () {
