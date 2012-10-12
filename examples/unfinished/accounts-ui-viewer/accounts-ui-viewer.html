@@ -99,19 +99,25 @@
       {{radio "fakeUserNotLoaded" "false" "Off"}}
       {{radio "fakeUserNotLoaded" "true" "Pretend userLoaded=false"}}
     </div>
+    <div class="group">
+      <h3>Background Color</h3>
+      {{radio "bgcolor" "white" "White"}}
+      {{radio "bgcolor" "black" "Black"}}
+      {{radio "bgcolor" "red" "Red"}}
+    </div>
   </div>
-  <div id="previewpane" class="{{settingsClass}}">
-    {{#with settings}}
-      <div id="preview-wrapper" class="{{outerClass}}">
-        {{#if match "positioning:inline"}}
-          Here is a place to sign in, yay!
-        {{/if}}
-        {{loginButtons halign=halign}}
-        {{#if match "positioning:inline"}}
-          Isn't that great?
-        {{/if}}
-      </div>
-    {{/with}}
+  {{#with settings}}
+  <div id="previewpane" class="{{settingsClass}}" style="background:{{bgcolor}}">
+    <div id="preview-wrapper" class="{{outerClass}}">
+      {{#if match "positioning:inline"}}
+        Here is a place to sign in, yay!
+      {{/if}}
+      {{loginButtons halign=halign}}
+      {{#if match "positioning:inline"}}
+        Isn't that great?
+      {{/if}}
+    </div>
     <div id="pos-indicator"></div>
   </div>
+  {{/with}}
 </template>

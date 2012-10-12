@@ -44,7 +44,8 @@ if (Meteor.isClient) {
       numServices: 3,
       hasPasswords: true,
       signupFields: 'EMAIL_ONLY',
-      fakeUserNotLoaded: false
+      fakeUserNotLoaded: false,
+      bgcolor: 'white'
     });
   else
     _.each(Session.get('settings'), function (v,k) {
