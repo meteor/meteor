@@ -968,7 +968,7 @@ Template.api.accounts_emailTemplates = {
   id: "accounts_emailtemplates",
   name: "Accounts.emailTemplates",
   locus: "Anywhere",
-  descr: ["XXX"]
+  descr: ["Options to customize emails sent from the Accounts system."]
 };
 
 
