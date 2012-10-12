@@ -612,7 +612,7 @@ Template.api.autorun = {
   id: "meteor_autorun",
   name: "Meteor.autorun(func)",
   locus: "Client",
-  descr: ["Runs a function immediately, and reruns it whenever its dependencies change. Returns a handle that provides a `stop` method, which will prevent further reruns."],
+  descr: ["Run a function and rerun it whenever its dependencies change. Returns a handle that provides a `stop` method, which will prevent further reruns."],
   args: [
     {name: "func",
      type: "Function",
