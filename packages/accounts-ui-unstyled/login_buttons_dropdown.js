@@ -4,7 +4,7 @@
 
   // events shared between loginButtonsLoggedOutDropdown and
   // loginButtonsLoggedInDropdown
-  Template.loginButtons.events({
+  Template._loginButtons.events({
     'click #login-name-link, click #login-sign-in-link': function () {
       loginButtonsSession.set('dropdownVisible', true);
       Meteor.flush();
