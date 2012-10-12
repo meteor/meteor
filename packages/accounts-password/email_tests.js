@@ -83,7 +83,7 @@
   var waitUntilLoggedIn = function (test, expect) {
     var unblockNextFunction = expect();
     var quiesceCallback = function () {
-      Meteor._autorun(function (handle) {
+      Meteor.autorun(function (handle) {
         if (!Meteor.userLoaded()) return;
         handle.stop();
         unblockNextFunction();

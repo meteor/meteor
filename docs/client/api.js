@@ -615,6 +615,18 @@ Template.api.flush = {
   descr: ["Ensure that any reactive updates have finished. Allow auto-updating DOM element to be cleaned up if they are offscreen."]
 };
 
+Template.api.autorun = {
+  id: "meteor_autorun",
+  name: "Meteor.autorun(func)",
+  locus: "Client",
+  descr: ["Runs a function immediately, and reruns it whenever its dependencies change. Returns a handle that provides a `stop` method, which will prevent further reruns."],
+  args: [
+    {name: "func",
+     type: "Function",
+     descr: "The function to run. It receives one argument: the same handle that `Meteor.autorun` returns."}
+  ]
+};
+
 
 // writeFence
 // invalidationCrossbar

@@ -22,6 +22,9 @@
 
   For more information on Meteor Accounts, see http://docs.meteor.com/#accounts
 
+* The new function `Meteor.autorun` allows you run any code in a reactive
+  context. See http://docs.meteor.com/#meteor_autorun
+
 * Arrays and objects can now be stored in the `Session`; mutating the value you
   retrieve with `Session.get` does not affect the value in the session.
 

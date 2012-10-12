@@ -1934,7 +1934,32 @@ flush keeps flushing until everything is totally settled. The DOM
 elements are cleaned up by logic that is triggered by context invalidations.
 
 
+{{> api_box autorun }}
 
+`Meteor.autorun` allows you to set up your own reactive context, where you can
+perform arbitrary actions when dependencies change. For example, you can monitor
+a cursor (which is a reactive data source) and aggregate it into a session
+variable:
+
+    Meteor.autorun(function() {
+      var oldest = _.max(Monkeys.find().fetch(), function (monkey) {
+        return monkey.age;
+      });
+      if (oldest)
+        Session.set("oldest", oldest.name);
+    });
+
+Or you can wait for a session variable to get a certain value, and do something
+the first time it does so, using the `stop` handle to prevent further runs:
+
+    Meteor.autorun(function(handle) {
+      if (!Session.equals("shouldAlert", true)) return;
+      handle.stop();
+      alert("Oh no!");
+    });
+
+Like all reactive sources, the rerun occurs at the time of the next
+[`Meteor.flush`](#meteor_flush).
 
 
 <h2 id="meteor_http"><span>Meteor.http</span></h2>
