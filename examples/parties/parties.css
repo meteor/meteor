@@ -1,1 +1,6 @@
 /* CSS declarations go here */
+
+.map {
+    background-image: url('/soma.jpeg');
+    background-position: -20px -20px;
+}

@@ -142,7 +142,7 @@ Template.map.rendered = function () {
           return party.public ? 'red' : 'blue';
         })
         .style('opacity', function (party) {
-          return selected === party._id ? 1 : 0.2;
+          return selected === party._id ? 1 : 0.4;
         });
 
       marker.transition()
@@ -160,7 +160,7 @@ Template.map.rendered = function () {
           return party.public ? 'red' : 'blue';
         })
         .style('opacity', function (party) {
-          return selected === party._id ? 1 : 0.2;
+          return selected === party._id ? 1 : 0.4;
         })
         .ease("cubic-out");
 
