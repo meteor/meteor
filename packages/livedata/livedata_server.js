@@ -750,16 +750,24 @@ Meteor._LivedataServer = function () {
     });
   });
 
-  // Every minute, clean up sessions that have been abandoned for 15
-  // minutes. Also run result cache cleanup.
+  // Every minute, clean up sessions that have been abandoned for a
+  // minute. Also run result cache cleanup.
   // XXX at scale, we'll want to have a separate timer for each
-  // session, and stagger them
+  //     session, and stagger them
+  // XXX when we get resume working again, we might keep sessions
+  //     open longer (but stop running their diffs!)
   Meteor.setInterval(function () {
     var now = +(new Date);
-    _.each(self.sessions, function (s) {
+    var destroyedIds = [];
+    _.each(self.sessions, function (s, id) {
       s.cleanup();
-      if (!s.socket && (now - s.last_detach_time) > 15 * 60 * 1000)
+      if (!s.socket && (now - s.last_detach_time) > 60 * 1000) {
         s.destroy();
+        destroyedIds.push(id);
+      }
+    });
+    _.each(destroyedIds, function (id) {
+      delete self.sessions[id];
     });
   }, 1 * 60 * 1000);
 };
