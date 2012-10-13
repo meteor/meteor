@@ -28,33 +28,37 @@ Meteor.methods({
 // decreasing the timeout makes the "wait: false" test flakier (ie, the timeout
 // could fire before processing the second method).
 if (Meteor.isServer) {
-  var delayed_true_future;
-  var delayed_true_times;
+  // Keys are random tokens, used to isolate multiple test invocations from each
+  // other.
+  var waiters = {};
 
-  var returnThroughFuture = function (x) {
+  var returnThroughFuture = function (token, returnValue) {
     // Make sure that when we call return, the fields are already cleared.
-    var f = delayed_true_future;
-    delayed_true_future = null;
-    delayed_true_times = null;
-    f['return'](x);
+    var record = waiters[token];
+    if (!record)
+      return;
+    delete waiters[token];
+    record.future['return'](returnValue);
   };
 
   Meteor.methods({
-    delayedTrue: function() {
-      delayed_true_future = new Future();
-      delayed_true_times = Meteor.setTimeout(function() {
-        returnThroughFuture(true);
-      }, 1000);
+    delayedTrue: function(token) {
+      var record = waiters[token] = {
+        future: new Future(),
+        timer: Meteor.setTimeout(function() {
+          returnThroughFuture(token, true);
+        }, 1000)
+      };
 
       this.unblock();
-      return delayed_true_future.wait();
+      return record.future.wait();
     },
-    makeDelayedTrueImmediatelyReturnFalse: function() {
-      if (!delayed_true_future)
+    makeDelayedTrueImmediatelyReturnFalse: function(token) {
+      var record = waiters[token];
+      if (!record)
         return; // since delayedTrue's timeout had already run
-
-      if (delayed_true_times) clearTimeout(delayed_true_times);
-      returnThroughFuture(false);
+      clearTimeout(record.timer);
+      returnThroughFuture(token, false);
     }
   });
 }
