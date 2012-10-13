@@ -112,8 +112,9 @@ Template.map.rendered = function () {
   self.node = this.find("svg");
 
   if (! self.handle) {
-    // XXX need to make this public
     self.handle = Meteor.autorun(function () {
+      var selected = Session.get('selected');
+
       var marker = d3.select(self.node).select(".circles").selectAll("circle")
         .data(Parties.find().fetch(),
               function (party) { return party._id; });
@@ -138,7 +139,10 @@ Template.map.rendered = function () {
           return 10 + attending(party) * 10;
         })
         .style("fill", function (party) {
-          return party.public ? "red" : "blue";
+          return party.public ? 'red' : 'blue';
+        })
+        .style('opacity', function (party) {
+          return selected === party._id ? 1 : 0.2;
         });
 
       marker.transition()
@@ -153,7 +157,10 @@ Template.map.rendered = function () {
           return 10 + attending(party) * 10;
         })
         .style("fill", function (party) {
-          return party.public ? "red" : "blue";
+          return party.public ? 'red' : 'blue';
+        })
+        .style('opacity', function (party) {
+          return selected === party._id ? 1 : 0.2;
         })
         .ease("cubic-out");
 
