@@ -22,20 +22,29 @@ Meteor.methods({
   }
 });
 
-// Methods to help test applying methods with `wait: true`: delayedTrue
-// returns true 500ms after being run unless makeDelayedTrueImmediatelyReturnFalse
-// was run in the meanwhile
+// Methods to help test applying methods with `wait: true`: delayedTrue returns
+// true 1s after being run unless makeDelayedTrueImmediatelyReturnFalse was run
+// in the meanwhile. Increasing the timeout makes the "wait: true" test slower;
+// decreasing the timeout makes the "wait: false" test flakier (ie, the timeout
+// could fire before processing the second method).
 if (Meteor.isServer) {
   var delayed_true_future;
   var delayed_true_times;
+
+  var returnThroughFuture = function (x) {
+    // Make sure that when we call return, the fields are already cleared.
+    var f = delayed_true_future;
+    delayed_true_future = null;
+    delayed_true_times = null;
+    f['return'](x);
+  };
+
   Meteor.methods({
     delayedTrue: function() {
       delayed_true_future = new Future();
       delayed_true_times = Meteor.setTimeout(function() {
-        delayed_true_future['return'](true);
-        delayed_true_future = null;
-        delayed_true_times = null;
-      }, 500);
+        returnThroughFuture(true);
+      }, 1000);
 
       this.unblock();
       return delayed_true_future.wait();
@@ -45,9 +54,7 @@ if (Meteor.isServer) {
         return; // since delayedTrue's timeout had already run
 
       if (delayed_true_times) clearTimeout(delayed_true_times);
-      delayed_true_future['return'](false);
-      delayed_true_future = null;
-      delayed_true_times = null;
+      returnThroughFuture(false);
     }
   });
 }
