@@ -16,7 +16,11 @@
 
 
   <div class="left-panel">
-    <p>Double click to post a party!</p>
+    {{#if currentUser}}
+      <p>Double click to post a party!</p>
+    {{else}}
+      <p>Sign in to post a party!</p>
+    {{/if}}
     {{> map}}
   </div>
 

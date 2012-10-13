@@ -98,6 +98,9 @@ Template.map.events = {
     Session.set("selected", event.currentTarget.id);
   },
   'dblclick svg': function (event, template) {
+    // must be logged in
+    if (!Meteor.userId())
+      return;
     var coords = relMouseCoords(event.currentTarget, event);
     Session.set("createCoords", {
       x: coords.x / 500, // XXX event.currentTarget.width?
