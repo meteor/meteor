@@ -1,6 +1,7 @@
 // XXX I want to collect first/last name when a user signs up by username/password
 
 Meteor.subscribe("directory");
+Meteor.subscribe("parties");
 
 Template.page.showCreateDialog = function () {
   return Session.get("showCreateDialog");

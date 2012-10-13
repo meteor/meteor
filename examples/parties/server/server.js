@@ -1,5 +1,10 @@
 // XXX autopublish warning is printed on each restart. super spammy!
 
 Meteor.publish("directory", function () {
-  return Meteor.users.find({}, {fields: {_id: 1, emails: 1}});
+  // XXX too easy to accidentally publish the list of validation tokens
+  return Meteor.users.find({}, {fields: {"emails.address": 1}});
+});
+
+Meteor.publish("parties", function () {
+  return Parties.find({$or: [{"public": true}, {canSee: this.userId}]});
 });
