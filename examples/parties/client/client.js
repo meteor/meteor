@@ -111,7 +111,7 @@ Template.map.rendered = function () {
 
   if (! self.handle) {
     // XXX need to make this public
-    self.handle = Meteor._autorun(function () {
+    self.handle = Meteor.autorun(function () {
       var marker = d3.select(self.node).select(".circles").selectAll("circle")
         .data(Parties.find().fetch(),
               function (party) { return party._id; });
