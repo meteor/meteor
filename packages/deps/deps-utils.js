@@ -105,7 +105,7 @@
           try {
             f();
           } catch (e) {
-            Meteor._debug("Exception from Meteor._atFlush:", e);
+            Meteor._debug("Exception from Meteor._atFlush:", e.stack);
           }
         }
         atFlushContext = null;
