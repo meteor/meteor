@@ -8,14 +8,14 @@
 Parties = new Meteor.Collection("parties");
 
 Parties.allow({
-  insert: function (userId, doc) {
+  insert: function (userId, party) {
     return false; // use createParty method instead
   },
-  update: function (userId, docs, fields, modifier) {
-    return true; // XXX
+  update: function (userId, parties, fields, modifier) {
+    return false; // use rsvp method instead
   },
-  remove: function (userId, docs) {
-    return true;
+  remove: function (userId, parties) {
+    return true; // deny is called later
   }
 });
 
@@ -31,7 +31,7 @@ var attending = function(party) {
 Parties.deny({
   remove: function (userId, parties) {
     return _.any(parties, function(party) {
-      return attending(party) > 0;
+      return party.owner !== userId || attending(party) > 0;
     });
   }
 });
