@@ -50,6 +50,10 @@ Meteor.methods({
            options.y >= 0 && options.y <= 1))
       // XXX should get rid of the error code
       throw new Meteor.Error(400, "Required parameter missing");
+    if (options.title.length > 100)
+      throw new Meteor.Error(413, "Title too long");
+    if (options.description.length > 1000)
+      throw new Meteor.Error(413, "Description too long");
     if (! this.userId)
       throw new Meteor.Error(403, "You must be logged in");
 
