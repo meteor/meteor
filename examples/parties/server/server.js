@@ -6,5 +6,6 @@ Meteor.publish("directory", function () {
 });
 
 Meteor.publish("parties", function () {
-  return Parties.find({$or: [{"public": true}, {canSee: this.userId}]});
+  return Parties.find(
+    {$or: [{"public": true}, {canSee: this.userId}]});
 });

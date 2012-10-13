@@ -2,7 +2,6 @@
   owner: user id
   x, y: Number (screen coordinates)
   title, description: String
-  attending: Number (count)
   public: Boolean
   canSee: list of user id's that it's shared with (ignored if public)
 */
@@ -20,21 +19,22 @@ Parties.allow({
   }
 });
 
+var attending = function(party) {
+  return _.reduce(party.rsvps, function(memo, rsvp) {
+    if (rsvp.rsvp === 'yes')
+      return memo + 1;
+    else
+      return memo;
+  }, 0);
+};
+
 Parties.deny({
   remove: function (userId, parties) {
-    return _.any(parties, function (party) {
-      // Can't delete a party with RSVP's
-      return party.attending > 0;
+    return _.any(parties, function(party) {
+      return attending(party) > 0;
     });
   }
 });
-
-/*
-  user
-  party
-  rsvp: String ("yes", "no", "maybe")
- */
-Rsvps = new Meteor.Collection("rsvps");
 
 Meteor.methods({
   // title, description, x, y, public
@@ -59,9 +59,9 @@ Meteor.methods({
       y: options.y,
       title: options.title,
       description: options.description,
-      attending: 0,
       public: !! options.public,
-      canSee: []
+      canSee: [],
+      rsvps: []
     });
   },
 
@@ -70,24 +70,34 @@ Meteor.methods({
       throw new Meteor.Error(403, "You must be logged in to RSVP");
     if (! _.contains(['yes', 'no', 'maybe'], rsvp))
       throw new Meteor.Error(400, "Invalid RSVP");
+    var party = Parties.findOne(partyId);
+    if (! party)
+      throw new Meteor.Error(404, "No such party");
+    if (! party.public && ! _.contains(party.canSee, this.userId))
+      throw new Meteor.Error(403, "No such party"); // private, but let's not tell this to the user
 
-    var oldAttendance;
-    var attendance = (rsvp === 'yes') ? 1 : 0;
+    var rsvpIndex = _.indexOf(_.pluck(party.rsvps, 'user'), this.userId);
+    if (rsvpIndex !== -1) {
+      // update existing rsvp entry
 
-    // XXX race condition -- need upsert
-    var record = Rsvps.findOne({user: this.userId, party: partyId});
-    if (record) {
-      var oldAttendance = (record.rsvp === 'yes') ? 1 : 0;
-      Rsvps.update(record._id, {$set: {rsvp: rsvp}});
+      if (Meteor.isServer) {
+        // update the appropriate rsvp entry with $
+        Parties.update(
+          {_id: partyId, "rsvps.user": this.userId},
+          {$set: {"rsvps.$.rsvp": rsvp}});
+      } else {
+        // minimongo doesn't yet support $ in modifier. reconstruct
+        // the modifier to be of the form:
+        //   {$set: {"rsvps.<index>.rsvp"}}
+        var modifier = {$set: {}};
+        modifier.$set["rsvps." + rsvpIndex + ".rsvp"] = rsvp;
+        Parties.update(partyId, modifier);
+      }
     } else {
-      oldAttendance = 0;
-      Rsvps.insert({user: this.userId, party: partyId, rsvp: rsvp});
-    }
-
-    Parties.update(partyId, {$inc: {attending: attendance - oldAttendance}});
-
-    if (! record) {
-      record = {user: this.userId, party: partyId}
+      // add new rsvp entry
+      Parties.update(
+        partyId,
+        {$push: {rsvps: {user: this.userId, rsvp: rsvp}}});
     }
   }
 });

@@ -2,6 +2,7 @@
 
 Meteor.subscribe("directory");
 Meteor.subscribe("parties");
+Meteor.subscribe("rsvps");
 
 Template.page.showCreateDialog = function () {
   return Session.get("showCreateDialog");
@@ -27,7 +28,7 @@ Template.details.creatorName = function () {
 };
 
 Template.details.rsvps = function () {
-  return Rsvps.find({party: this._id});
+  return Parties.findOne(this._id).rsvps;
 };
 
 Template.details.rsvpEmail = function () {
@@ -44,7 +45,7 @@ Template.details.rsvpStatus = function () {
 
 
 Template.details.canRemove = function () {
-  return this.owner === Meteor.userId() && this.attending === 0;
+  return this.owner === Meteor.userId() && attending(this) === 0;
 };
 
 // XXX show which button is currently selected
@@ -134,7 +135,7 @@ Template.map.rendered = function () {
         // XXX match area
         // (duplicated below)
         .attr("r", function (party) {
-          return 10 + party.attending * 10;
+          return 10 + attending(party) * 10;
         })
         .style("fill", function (party) {
           return party.public ? "red" : "blue";
@@ -149,7 +150,7 @@ Template.map.rendered = function () {
           return party.y * 500;
         })
         .attr("r", function (party) {
-          return 10 + party.attending * 10;
+          return 10 + attending(party) * 10;
         })
         .style("fill", function (party) {
           return party.public ? "red" : "blue";
@@ -169,7 +170,7 @@ Template.map.rendered = function () {
         .attr("y", function (party) {
           return party.y * 500;
         })
-        .text(function (party) {return party.attending;});
+        .text(function (party) {return attending(party);});
 
       labels.transition().duration(250)
         .attr("x", function (party) {
@@ -178,7 +179,7 @@ Template.map.rendered = function () {
         .attr("y", function (party) {
           return party.y * 500;
         })
-        .text(function (party) {return party.attending;});
+        .text(function (party) {return attending(party);});
 
       labels.exit().remove();
 
