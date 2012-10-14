@@ -209,6 +209,7 @@ Template.createDialog.events = {
   'click .save': function (event, template) {
     var title = template.find(".title").value;
     var description = template.find(".description").value;
+    var public = !template.find(".private").checked;
 
     if (title.length && description.length) {
       var coords = Session.get("createCoords");
@@ -217,7 +218,10 @@ Template.createDialog.events = {
         description: description,
         x: coords.x,
         y: coords.y,
-        public: true // XXX
+        public: public
+      }, function(error, party) {
+        if (!error)
+          Session.set("selected", party);
       });
       Session.set("showCreateDialog", false);
     } else {

@@ -57,7 +57,7 @@ Meteor.methods({
     if (! this.userId)
       throw new Meteor.Error(403, "You must be logged in");
 
-    Parties.insert({
+    return Parties.insert({
       owner: this.userId,
       x: options.x,
       y: options.y,

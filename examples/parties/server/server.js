@@ -7,5 +7,5 @@ Meteor.publish("directory", function () {
 
 Meteor.publish("parties", function () {
   return Parties.find(
-    {$or: [{"public": true}, {canSee: this.userId}]});
+    {$or: [{"public": true}, {canSee: this.userId}, {owner: this.userId}]});
 });
