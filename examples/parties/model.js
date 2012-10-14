@@ -77,7 +77,7 @@ Meteor.methods({
     var party = Parties.findOne(partyId);
     if (! party)
       throw new Meteor.Error(404, "No such party");
-    if (! party.public && ! _.contains(party.canSee, this.userId))
+    if (! party.public && party.owner !== this.userId && !_.contains(party.canSee, this.userId))
       throw new Meteor.Error(403, "No such party"); // private, but let's not tell this to the user
 
     var rsvpIndex = _.indexOf(_.pluck(party.rsvps, 'user'), this.userId);
