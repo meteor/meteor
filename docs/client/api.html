@@ -50,8 +50,8 @@ will publish that cursor's documents.
       return Rooms.find({}, {fields: {secretInfo: false}});
     });
 
-Otherwise, the publish function can `set` and `unset`
-individual record attributes on a client, use these methods provided by
+Otherwise, the publish function can [`set`](#publish_set) and [`unset`](#publish_unset)
+individual record attributes on a client. These methods are provided by
 `this` in your publish function.
 
 <!-- discuss complete -->
