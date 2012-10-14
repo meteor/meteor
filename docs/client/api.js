@@ -65,7 +65,7 @@ Template.api.publish = {
      descr: "Name of the attribute set.  If `null`, the set has no name, and the record set is automatically sent to all connected clients."},
     {name: "func",
      type: "Function",
-     descr: "Function called on the server each time a client subscribes.  Inside function, `this` is the publish handler object, described below.  If the client passed arguments to `subscribe`, the function is called with the same arguments."}
+     descr: "Function called on the server each time a client subscribes.  Inside the function, `this` is the publish handler object, described below.  If the client passed arguments to `subscribe`, the function is called with the same arguments."}
   ]
 };
 
@@ -73,7 +73,7 @@ Template.api.subscription_set = {
   id: "publish_set",
   name: "<i>this</i>.set(collection, id, attributes)",
   locus: "Server",
-  descr: ["Call inside publish function.  Queues a command to set attributes."],
+  descr: ["Call inside a publish function.  Queues a command to set attributes."],
   args: [
     {name: "collection",
      type: "String",
@@ -94,7 +94,7 @@ Template.api.subscription_unset = {
   id: "publish_unset",
   name: "<i>this</i>.unset(collection, id, keys)",
   locus: "Server",
-  descr: ["Call inside publish function.  Queues a command to unset attributes."],
+  descr: ["Call inside a publish function.  Queues a command to unset attributes."],
   args: [
     {name: "collection",
      type: "String",
@@ -115,28 +115,28 @@ Template.api.subscription_complete = {
   id: "publish_complete",
   name: "<i>this</i>.complete()",
   locus: "Server",
-  descr: ["Call inside publish function.  Queues a command to mark this subscription as complete (initial attributes are set)."]
+  descr: ["Call inside a publish function.  Queues a command to mark this subscription as complete (initial attributes are set)."]
 };
 
 Template.api.subscription_flush = {
   id: "publish_flush",
   name: "<i>this</i>.flush()",
   locus: "Server",
-  descr: ["Call inside publish function.  Sends all the pending set, unset, and complete messages to the client."]
+  descr: ["Call inside a publish function.  Sends all the pending set, unset, and complete messages to the client."]
 };
 
 Template.api.subscription_stop = {
   id: "publish_stop",
   name: "<i>this</i>.stop()",
   locus: "Server",
-  descr: ["Call inside publish function.  Stops this client's subscription."]
+  descr: ["Call inside a publish function.  Stops this client's subscription."]
 };
 
 Template.api.subscription_onStop = {
   id: "publish_onstop",
   name: "<i>this</i>.onStop(func)",
   locus: "Server",
-  descr: ["Call inside publish function.  Registers a callback function to run when the subscription is stopped."],
+  descr: ["Call inside a publish function.  Registers a callback function to run when the subscription is stopped."],
   args: [
     {name: "func",
      type: "Function",
@@ -218,14 +218,14 @@ Template.api.method_invocation_unblock = {
   id: "method_unblock",
   name: "<i>this</i>.unblock()",
   locus: "Server",
-  descr: ["Call inside method invocation.  Allow subsequent method from this client to begin running in a new fiber."]
+  descr: ["Call inside a method invocation.  Allow subsequent method from this client to begin running in a new fiber."]
 };
 
 Template.api.method_invocation_isSimulation = {
   id: "method_issimulation",
   name: "<i>this</i>.isSimulation",
   locus: "Anywhere",
-  descr: ["Access inside method invocation.  Boolean value, true if this invocation is a stub."]
+  descr: ["Access inside a method invocation.  Boolean value, true if this invocation is a stub."]
 };
 
 Template.api.error = {
@@ -1447,4 +1447,3 @@ Template.api.email_send = {
     }
   ]
 };
-
