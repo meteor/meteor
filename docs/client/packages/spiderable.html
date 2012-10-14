@@ -23,10 +23,11 @@ In order to have links between multiple pages on a site visible to
 spiders, apps must use real links (eg `<a href="/about">`) rather than
 simply re-rendering portions of the page when an element is
 clicked. Apps should render their content based on the URL of the page
-and can use HTML5 push-state to alter the URL on the client without
-triggering a page reload. See the <a target="_blank"
-href="http://meteor.com/examples/todos">Todos example</a> for a
-demonstration.
+and can use
+<a target="_blank" href="https://developer.mozilla.org/en-US/docs/DOM/Manipulating_the_browser_history">HTML5 pushState</a>
+to alter the URL on the client without triggering a page reload. See the
+<a target="_blank" href="http://meteor.com/examples/todos">Todos example</a>
+for a demonstration.
 
 
 {{#warning}}
