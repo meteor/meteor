@@ -129,8 +129,8 @@ function is rerun with the new value.
 
 When you subscribe to a record set, it tells the server to send records
 to the client.  The client stores these records in local Minimongo
-collections, with the same name as the `collection` argument to `set`.
-Meteor will queue incoming attributes until you declare the
+collections, with the same name as the `name` argument to `subscribe`.
+Meteor will queue incoming records until you declare the
 `Meteor.Collection` on the client with the matching collection name.
 
     // okay to subscribe (and possibly receive data) before declaring
