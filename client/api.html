@@ -1233,6 +1233,73 @@ prompted to grant access to their account in the pop-up dialog. Values for the
 - Google: <https://developers.google.com/accounts/docs/OAuth2Login#scopeparameter>
 - Twitter, Weibo: `requestPermissions` currently not supported
 
+{{> api_box accounts_config}}
+{{> api_box accounts_ui_config}}
+
+Example:
+
+    Accounts.ui.config({
+      requestPermissions: {
+        facebook: ['user_likes'],
+        github: ['user', 'repo']
+      },
+      passwordSignupFields: 'USERNAME_AND_OPTIONAL_EMAIL'
+    });
+
+{{> api_box accounts_validateNewUser}}
+
+This can be called multiple times. If any of the functions return
+`false` the new user creation is aborted.
+
+Example:
+
+    // All users must have a username longer than 3 characters.
+    Accounts.validateNewUser(function (user) {
+        return user.username && user.username.length >= 3;
+    });
+
+{{> api_box accounts_onCreateUser}}
+
+Use this when you need to do more than simply accept or reject new user
+creation. With this function you can programatically control the
+contents of new user documents.
+
+The function you pass will be called with two arguments: `options` and
+`user`. The `options` argument comes
+from [`Accounts.createUser`](#accounts_createuser) for
+password-based users or from an external service login flow. `options` may come
+from an untrusted client so make to validate any values you read from
+it. The `user` argument is created on the server and contains a
+proposed user object with all the automatically generated fields
+required for the user to log in.
+
+The function should return a new user object with whatever modifications
+are desired. The returned object is inserted directly into
+the [`Meteor.users`](#meteor_users) collection.
+
+The default create user function simply copies `options.profile` into
+the new user document. Calling `onCreateUser` overrides the default
+hook. This can only be called once.
+
+Example:
+
+    // Make members of the GitHub 'meteor' group into admins.
+    Accounts.onCreateUser(function(options, user) {
+      // http://developer.github.com/v3/orgs/members/#get-member
+      if (!Meteor.http.get(
+            "https://api.github.com/orgs/meteor/members/" +
+            user.services.github.username +
+            "?access_token=" + user.services.github.accessToken
+           ).error) {
+        user.admin = true;
+      }
+      return user;
+    });
+
+
+<h2 id="accounts_passwords"><span>Passwords</span></h2>
+
+XXX intro text mentioning SRP
 
 {{> api_box accounts_createUser}}
 
@@ -1352,69 +1419,6 @@ Example:
          + url;
     };
 
-
-{{> api_box accounts_config}}
-{{> api_box accounts_ui_config}}
-
-Example:
-
-    Accounts.ui.config({
-      requestPermissions: {
-        facebook: ['user_likes'],
-        github: ['user', 'repo']
-      },
-      passwordSignupFields: 'USERNAME_AND_OPTIONAL_EMAIL'
-    });
-
-{{> api_box accounts_validateNewUser}}
-
-This can be called multiple times. If any of the functions return
-`false` the new user creation is aborted.
-
-Example:
-
-    // All users must have a username longer than 3 characters.
-    Accounts.validateNewUser(function (user) {
-        return user.username && user.username.length >= 3;
-    });
-
-{{> api_box accounts_onCreateUser}}
-
-Use this when you need to do more than simply accept or reject new user
-creation. With this function you can programatically control the
-contents of new user documents.
-
-The function you pass will be called with two arguments: `options` and
-`user`. The `options` argument comes
-from [`Accounts.createUser`](#accounts_createuser) for
-password-based users or from an external service login flow. `options` may come
-from an untrusted client so make to validate any values you read from
-it. The `user` argument is created on the server and contains a
-proposed user object with all the automatically generated fields
-required for the user to log in.
-
-The function should return a new user object with whatever modifications
-are desired. The returned object is inserted directly into
-the [`Meteor.users`](#meteor_users) collection.
-
-The default create user function simply copies `options.profile` into
-the new user document. Calling `onCreateUser` overrides the default
-hook. This can only be called once.
-
-Example:
-
-    // Make members of the GitHub 'meteor' group into admins.
-    Accounts.onCreateUser(function(options, user) {
-      // http://developer.github.com/v3/orgs/members/#get-member
-      if (!Meteor.http.get(
-            "https://api.github.com/orgs/meteor/members/" +
-            user.services.github.username +
-            "?access_token=" + user.services.github.accessToken
-           ).error) {
-        user.admin = true;
-      }
-      return user;
-    });
 
 <h2 id="templates_api"><span>Templates</span></h2>
 
