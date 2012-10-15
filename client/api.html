@@ -963,9 +963,10 @@ place by changing some of its fields. Some examples:
     // 'supporters' array
     {$inc: {votes: 2}, $push: {supporters: "Traz"}}
 
-But if a modifier doesn't contain any $-operators, then it is
-instead interpreted as a literal document, and completely replaces
-whatever was previously in the database.
+But if a modifier doesn't contain any $-operators, then it is instead
+interpreted as a literal document, and completely replaces whatever was
+previously in the database. (Literal document modifiers are not currently
+supported by [validated updates](#allow).)
 
     // Find the document with id "123", and completely replace it.
     Users.update({_id: "123"}, {name: "Alice", friends: ["Bob"]});
