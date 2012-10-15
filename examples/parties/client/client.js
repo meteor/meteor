@@ -2,7 +2,6 @@
 
 Meteor.subscribe("directory");
 Meteor.subscribe("parties");
-Meteor.subscribe("rsvps");
 
 Template.page.showCreateDialog = function () {
   return Session.get("showCreateDialog");
@@ -31,13 +30,16 @@ Template.details.creatorName = function () {
   return owner.emails[0].address;
 };
 
-Template.details.rsvps = function () {
-  return Parties.findOne(this._id).rsvps;
-};
-
+// RSVB subdocument looks like {user: userId, rsvp: "yes"}
 Template.details.rsvpEmail = function () {
   var user = Meteor.users.findOne(this.user);
   return user.emails[0].address;
+};
+
+Template.details.rsvpStatus = function () {
+  if (this.rsvp === "yes") return "Going";
+  if (this.rsvp === "maybe") return "Maybe";
+  return "No";
 };
 
 Template.details.outstandingInvitations = function () {
@@ -51,12 +53,6 @@ Template.details.invitationEmail = function () {
   return this.emails[0].address;
 };
 
-
-Template.details.rsvpStatus = function () {
-  if (this.rsvp === "yes") return "Going";
-  if (this.rsvp === "maybe") return "Maybe";
-  return "No";
-};
 
 Template.details.canInvite = function () {
   return ! this.public && this.owner === Meteor.userId();
