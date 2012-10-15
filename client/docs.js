@@ -144,7 +144,8 @@ var toc = [
       {type: "spacer"},
       {name: "Selectors", style: "noncode"},
       {name: "Modifiers", style: "noncode"},
-      {name: "Sort specifiers", style: "noncode"}
+      {name: "Sort specifiers", style: "noncode"},
+      {name: "Field specifiers", style: "noncode"}
     ],
 
     "Session", [
