@@ -47,7 +47,14 @@ will publish that cursor's documents.
 
     // server: publish the rooms collection, minus secret info.
     Meteor.publish("rooms", function () {
-      return Rooms.find({}, {fields: {secretInfo: false}});
+      return Rooms.find({}, {fields: {secretInfo: 0}});
+    });
+
+    // ... and publish secret info for rooms where the logged-in user
+    // is an admin. If the client subscribes to both streams, the records
+    // are merged together into the same documents in the Rooms collection.
+    Meteor.publish("adminSecretInfo", function () {
+      return Rooms.find({admin: this.userId}, {fields: {secretInfo: 1}});
     });
 
 Otherwise, the publish function can [`set`](#publish_set) and
@@ -108,6 +115,11 @@ project that includes the `autopublish` package.  Your publish function
 will still work.
 {{/warning}}
 
+{{> api_box subscription_userId}}
+
+This is constant. However, if the logged-in user changes, the publish
+function is rerun with the new value.
+
 {{> api_box subscription_set}}
 {{> api_box subscription_unset}}
 {{> api_box subscription_complete}}
@@ -119,11 +131,6 @@ If you call [`observe`](#observe) in your publish handler, this
 is the place to stop the observes.
 
 {{> api_box subscription_stop}}
-
-{{> api_box subscription_userId}}
-
-This is constant. However, if the logged-in user changes, the publish
-function is rerun with the new value.
 
 {{> api_box subscribe}}
 
