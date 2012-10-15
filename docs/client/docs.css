@@ -437,10 +437,10 @@ pre {
 /* ipad landscape and desktop */
 #main {
     width: 600px;
-    margin-left: 310px; /* nav width + padding */
+    margin-left: 330px; /* nav width + padding */
 }
 #nav {
-    width: 250px;
+    width: 270px;
 }
 .github-ribbon {
     display: block;
