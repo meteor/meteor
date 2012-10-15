@@ -452,7 +452,8 @@ Specifically, when you pass a `name`, here's what happens:
 
 * On the server, a collection with that name is created on a backend
 Mongo server. When you call methods on that collection on the server,
-they translate directly into normal Mongo operations.
+they translate directly into normal Mongo operations (after checking that
+they match your [access control rules](#allow)).
 
 * On the client, a Minimongo instance is
 created. Minimongo is essentially an in-memory, non-persistent
@@ -479,13 +480,8 @@ the package:
 
     $ meteor remove autopublish
 
-{{#warning}}
-Currently the client is given full write access to the collection. They
-can execute arbitrary Mongo update commands. Once we build
-authentication, you will be able to limit the client's direct access to
-insert, update, and remove.  We are also considering validators and
-other ORM-like functionality.
-{{/warning}}
+and instead call [`Meteor.publish`](#meteor_publish) to specify which parts of
+your collection should be published to which users.
 
     // Create a collection called Posts and put a document in it. The
     // document will be immediately visible in the local copy of the
