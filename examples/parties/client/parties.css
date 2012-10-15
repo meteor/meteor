@@ -1,3 +1,11 @@
+.header {
+    padding: 40px 0;
+}
+
+.details {
+    margin-top: -18px;
+}
+
 .mask {
     position: absolute;
     width: 100%;
@@ -8,7 +16,7 @@
     opacity: .4;
     z-index: 1;
 }
-
+/*
 .popup {
     position: absolute;
     z-index: 2;
@@ -33,4 +41,12 @@
 .map {
     border: 1px solid black;
     margin-right: 50px;
+}
+*/
+
+.map {
+    background-image: url('/soma.jpeg');
+    background-position: -20px -20px;
+    width: 500px;
+    height: 500px;
 }

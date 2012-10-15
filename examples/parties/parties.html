@@ -1,5 +1,6 @@
 <head>
   <title>All Tomorrow's Parties</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 
 <body>
@@ -7,8 +8,6 @@
 </body>
 
 <template name="page">
-  {{loginButtons}}
-  <h1>All Tomorrow's Parties</h1>
 
   {{#if showCreateDialog}}
     {{> createDialog}}
@@ -18,45 +17,103 @@
     {{> inviteDialog}}
   {{/if}}
 
-  <div class="left-panel">
-    {{#if currentUser}}
-      <p>Double click to post a party!</p>
-    {{else}}
-      <p>Sign in to post a party!</p>
-    {{/if}}
-    {{> map}}
-  </div>
 
-  {{> details}}
+  <div class="container">
+    <div class="row">
+      <div class="span1"> </div>
+      <div class="span10">
+
+    <div class="header row">
+      <div class="span5">
+        <h1>All Tomorrow's Parties</h1>
+        {{#if currentUser}}
+          <!--<p><small>Double click to post a party!</small></p>-->
+        {{/if}}
+      </div>
+      <div class="span5">
+        <div style="float: right">
+          {{loginButtons}}
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="span5">
+        {{> map}}
+      </div>
+      <div class="span1"> </div>
+      <div class="span4">
+        {{> details}}
+      </div>
+    </div>
+
+
+      </div>
+      <div class="span1"> </div>
+    </div>
+
+
+  </div>
 </template>
 
 <template name="createDialog">
   <div class="mask"> </div>
-  <div class="popup">
-    Create event<br>
-    Title: <input type="text" class="title"><br>
+  <div class="popup modal">
+    <div class="modal-header">
+      <button type="button" class="close cancel">&times;</button>
+      <h3>Add party</h3>
+    </div>
 
-    Description<br><textarea class="description"></textarea><br>
-    <input type="checkbox" class="private">Private party</input><br>
+    <div class="modal-body">
 
-    <input type="button" value="Add" class="save">
-    <input type="button" value="Cancel" class="cancel">
+      <label>Title</label>
+      <input type="text" class="title">
+
+      <label>Description</label>
+
+      <textarea class="description"></textarea>
+
+      <label class="checkbox">
+        <input type="checkbox" class="private"> Private party
+      </label>
+
+    </div>
+
+ <div class="modal-footer">
+    <a href="#" class="btn cancel">Cancel</a>
+    <a href="#" class="btn btn-primary save">Add party</a>
+  </div>
+</div>
+<!--
+    <div class="modal-footer">
+
+
+      <input type="button" value="Cancel" class="btn close">
+      <input type="button" value="Add" class="btn btn-primary save">
+    </div>-->
   </div>
 </template>
 
 <template name="inviteDialog">
   <div class="mask"> </div>
-  <div class="popup">
-    Invite people<br>
+  <div class="popup modal">
+    <div class="modal-header">
+      <button type="button" class="close done">&times;</button>
+      <h3>Invite people</h3>
+    </div>
 
-    {{#each uninvited}}
-      {{email}}
-      <input type="button" value="Invite" class="invite">
-    {{else}}
-      Everyone on the site is already invited.
-    {{/each}}
+    <div class="modal-body">
+      {{#each uninvited}}
+        {{email}}
+        <input type="button" value="Invite" class="invite">
+      {{else}}
+        Everyone on the site has been invited.
+      {{/each}}
+    </div>
 
-    <input type="button" value="Done" class="close">
+    <div class="modal-footer">
+      <a href="#" class="btn btn-primary done">Done</a>
+    </div>
   </div>
 </template>
 
@@ -76,18 +133,16 @@
     {{#if party}}
       {{#with party}}
         <h1>{{title}}</h1>
-        Posted by {{creatorName}}<br>
 
-        {{description}}<br>
-
-        {{#if currentUser}}
-          <input type="button" value="I'm going!" class="rsvp_yes">
-          <input type="button" value="Maybe" class="rsvp_maybe">
-          <input type="button" value="No" class="rsvp_no">
-        {{else}}
-          Sign in to RSVP
+        {{#if canRemove}}
+          <div class="alert alert-info"><small>
+              You posted this party and nobody is signed up to go, so if
+              you like, you could
+              <b><a href="#" class="remove">delete this listing</a></b>.
+          </small></div>
         {{/if}}
-        <br>
+
+        <p>{{description}}</p>
 
         {{#each rsvps}}
           {{rsvpEmail}}: {{rsvpStatus}}<br>
@@ -104,11 +159,17 @@
           {{/if}}
         {{/if}}
 
-        {{#if canRemove}}
-          You posted this party and nobody is signed up to go, so if
-          you like, you could
-          <a href="#" class="remove">delete this listing</a>.
-        {{/if}}
+        <p><small>Posted by {{creatorName}}</small></p>
+
+        <p>
+          {{#if currentUser}}
+            <input type="button" value="I'm going!" class="rsvp_yes">
+            <input type="button" value="Maybe" class="rsvp_maybe">
+            <input type="button" value="No" class="rsvp_no">
+          {{else}}
+            <i>Sign in to RSVP for this party.</i>
+          {{/if}}
+        </p>
       {{/with}}
     {{else}}
       Click a party to select it

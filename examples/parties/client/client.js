@@ -260,8 +260,9 @@ Template.inviteDialog.events = {
   'click .invite': function (event, template) {
     Meteor.call('invite', Session.get("selected"), this._id);
   },
-  'click .close': function (event, template) {
+  'click .done': function (event, template) {
     Session.set("showInviteDialog", false);
+    return false;
   }
 };
 
