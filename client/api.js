@@ -1008,12 +1008,12 @@ Template.api.accounts_ui_config = {
   id: "accounts_ui_config",
   name: "Accounts.ui.config(options)",
   locus: "Client",
-  descr: ["Set Accounts UI options for the `loginButtons` template."],
+  descr: ["Configure the behavior of `{{loginButtons}}`."],
   options: [
     {
       name: "requestPermissions",
       type: "Object",
-      descr: "Which permissions to request from the user for each OAuth service. For example: `{facebook: ['user_likes'], github: ['user', 'repo']}`"
+      descr: "Which [permissions](#meteor_loginwithoauth) to request from the user for each OAuth service."
     },
     {
       name: "passwordSignupFields",
