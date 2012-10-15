@@ -1283,16 +1283,9 @@ hook. This can only be called once.
 
 Example:
 
-    // Make members of the GitHub 'meteor' group into admins.
+    // Support for playing D&D: Roll 3d6 for dexterity
     Accounts.onCreateUser(function(options, user) {
-      // http://developer.github.com/v3/orgs/members/#get-member
-      if (!Meteor.http.get(
-            "https://api.github.com/orgs/meteor/members/" +
-            user.services.github.username +
-            "?access_token=" + user.services.github.accessToken
-           ).error) {
-        user.admin = true;
-      }
+      user.dexterity = _.random(1, 6) + _.random(1, 6) + _.random(1, 6)
       return user;
     });
 
