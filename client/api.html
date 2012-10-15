@@ -550,8 +550,8 @@ those changes may or may not appear in the result set.
 
 Cursors are a reactive data source.  The first time you retrieve a
 cursor's documents with `fetch`, `map`, or `forEach` inside a
-reactive context (eg, [`Meteor.render`](#meteor_render),
-[`Meteor.autosubscribe`](#meteor_autosubscribe), Meteor will register a
+reactive context (eg, [`Meteor.render`](#meteor_render) or
+[`Meteor.autosubscribe`](#meteor_autosubscribe)), Meteor will register a
 dependency on the underlying data.  Any change to the collection that
 changes the documents in a cursor will trigger a recomputation.  To
 disable this behavior, pass `{reactive: false}` as an option to
