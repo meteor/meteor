@@ -752,11 +752,11 @@ Template.api.loginWithPassword = {
 };
 
 
-Template.api.loginWithOAuth = {
-  id: "meteor_loginwithoauth",
-  name: "Meteor.loginWith<i>OAuthProvider</i>([options], [callback])",
+Template.api.loginWithExternalService = {
+  id: "meteor_loginwithexternalservice",
+  name: "Meteor.loginWith<i>ExternalService</i>([options], [callback])",
   locus: "Client",
-  descr: ["Log the user in using an external OAuth service."],
+  descr: ["Log the user in using an external service."],
   args: [
     {
       name: "callback",
@@ -1013,7 +1013,7 @@ Template.api.accounts_ui_config = {
     {
       name: "requestPermissions",
       type: "Object",
-      descr: "Which [permissions](#meteor_loginwithoauth) to request from the user for each OAuth service."
+      descr: "Which [permissions](#requestpermissions) to request from the user for each external service."
     },
     {
       name: "passwordSignupFields",
