@@ -773,6 +773,76 @@ Template.api.loginWithExternalService = {
   ]
 };
 
+
+
+Template.api.accounts_config = {
+  id: "accounts_config",
+  name: "Accounts.config(options)",
+  locus: "Anywhere",
+  descr: ["Set global accounts options."],
+  options: [
+    {
+      name: "sendVerificationEmail",
+      type: "Boolean",
+      descr: "New users with an email address will receive an address verification email."
+    },
+    {
+      name: "forbidClientAccountCreation",
+      type: "Boolean",
+      descr: "[`createUser`](#accounts_createuser) requests from the client will be rejected."
+    }
+  ]
+};
+
+Template.api.accounts_ui_config = {
+  id: "accounts_ui_config",
+  name: "Accounts.ui.config(options)",
+  locus: "Client",
+  descr: ["Configure the behavior of `{{loginButtons}}`."],
+  options: [
+    {
+      name: "requestPermissions",
+      type: "Object",
+      descr: "Which [permissions](#requestpermissions) to request from the user for each external service."
+    },
+    {
+      name: "passwordSignupFields",
+      type: "String",
+      descr: "Which fields to display in the user creation form. One of '`USERNAME_AND_EMAIL`', '`USERNAME_AND_OPTIONAL_EMAIL`', '`USERNAME_ONLY`', or '`EMAIL_ONLY`' (default)."
+    }
+  ]
+};
+
+Template.api.accounts_validateNewUser = {
+  id: "accounts_validatenewuser",
+  name: "Accounts.validateNewUser(func)",
+  locus: "Server",
+  descr: ["Set restrictions on new user creation."],
+  args: [
+    {
+      name: "func",
+      type: "Function",
+      descr: "Called whenever a new user is created. Takes the new user object, and returns true to allow the creation or false to abort."
+    }
+  ]
+};
+
+Template.api.accounts_onCreateUser = {
+  id: "accounts_oncreateuser",
+  name: "Accounts.onCreateUser(func)",
+  locus: "Server",
+  descr: ["Customize new user creation."],
+  args: [
+    {
+      name: "func",
+      type: "Function",
+      descr: "Called whenever a new user is created. Return the new user object, or throw an `Error` to abort the creation."
+    }
+  ]
+};
+
+
+
 Template.api.accounts_createUser = {
   id: "accounts_createuser",
   name: "Accounts.createUser(options, [callback])",
@@ -982,75 +1052,6 @@ Template.api.accounts_emailTemplates = {
   locus: "Anywhere",
   descr: ["Options to customize emails sent from the Accounts system."]
 };
-
-
-
-Template.api.accounts_config = {
-  id: "accounts_config",
-  name: "Accounts.config(options)",
-  locus: "Anywhere",
-  descr: ["Set global accounts options."],
-  options: [
-    {
-      name: "sendVerificationEmail",
-      type: "Boolean",
-      descr: "New users with an email address will receive an address verification email."
-    },
-    {
-      name: "forbidClientAccountCreation",
-      type: "Boolean",
-      descr: "[`createUser`](#accounts_createuser) requests from the client will be rejected."
-    }
-  ]
-};
-
-Template.api.accounts_ui_config = {
-  id: "accounts_ui_config",
-  name: "Accounts.ui.config(options)",
-  locus: "Client",
-  descr: ["Configure the behavior of `{{loginButtons}}`."],
-  options: [
-    {
-      name: "requestPermissions",
-      type: "Object",
-      descr: "Which [permissions](#requestpermissions) to request from the user for each external service."
-    },
-    {
-      name: "passwordSignupFields",
-      type: "String",
-      descr: "Which fields to display in the user creation form. One of '`USERNAME_AND_EMAIL`', '`USERNAME_AND_OPTIONAL_EMAIL`', '`USERNAME_ONLY`', or '`EMAIL_ONLY`' (default)."
-    }
-  ]
-};
-
-Template.api.accounts_validateNewUser = {
-  id: "accounts_validatenewuser",
-  name: "Accounts.validateNewUser(func)",
-  locus: "Server",
-  descr: ["Set restrictions on new user creation."],
-  args: [
-    {
-      name: "func",
-      type: "Function",
-      descr: "Called whenever a new user is created. Takes the new user object, and returns true to allow the creation or false to abort."
-    }
-  ]
-};
-
-Template.api.accounts_onCreateUser = {
-  id: "accounts_oncreateuser",
-  name: "Accounts.onCreateUser(func)",
-  locus: "Server",
-  descr: ["Customize new user creation."],
-  args: [
-    {
-      name: "func",
-      type: "Function",
-      descr: "Called whenever a new user is created. Return the new user object, or throw an `Error` to abort the creation."
-    }
-  ]
-};
-
 
 
 

@@ -176,6 +176,13 @@ var toc = [
       {name: "Meteor.loginWithWeibo", id: "meteor_loginwithexternalservice"},
       {type: "spacer"},
 
+      "Accounts.config",
+      "Accounts.ui.config",
+      "Accounts.validateNewUser",
+      "Accounts.onCreateUser"
+    ],
+
+    {name: "Passwords", id: "accounts_passwords"}, [
       "Accounts.createUser",
       "Accounts.changePassword",
       "Accounts.forgotPassword",
@@ -187,13 +194,7 @@ var toc = [
       "Accounts.sendResetPasswordEmail",
       "Accounts.sendEnrollmentEmail",
       "Accounts.sendVerificationEmail",
-      "Accounts.emailTemplates",
-      {type: "spacer"},
-
-      "Accounts.config",
-      "Accounts.ui.config",
-      "Accounts.validateNewUser",
-      "Accounts.onCreateUser"
+      "Accounts.emailTemplates"
     ],
 
     {name: "Templates", id: "templates_api"}, [
