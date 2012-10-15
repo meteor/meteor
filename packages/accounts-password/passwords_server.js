@@ -138,13 +138,15 @@
       if (!token)
         throw new Meteor.Error(400, "Need to pass token");
 
-      var user = Meteor.users.findOne({'emailVerificationTokens.token': token});
+      var user = Meteor.users.findOne(
+        {'services.email.verificationTokens.token': token});
       if (!user)
         throw new Meteor.Error(403, "Verify email link expired");
 
-      var tokenRecord = _.find(user.emailVerificationTokens, function (t) {
-        return t.token == token;
-      });
+      var tokenRecord = _.find(user.services.email.verificationTokens,
+                               function (t) {
+                                 return t.token == token;
+                               });
       if (!tokenRecord)
         throw new Meteor.Error(403, "Verify email link expired");
 
@@ -166,7 +168,7 @@
         {_id: user._id,
          'emails.address': tokenRecord.address},
         {$set: {'emails.$.verified': true},
-         $pull: {emailVerificationTokens: {token: token}},
+         $pull: {'services.email.verificationTokens': {token: token}},
          $push: {'services.resume.loginTokens': stampedLoginToken}});
 
       this.setUserId(user._id);
@@ -234,8 +236,9 @@
       token: Meteor.uuid(),
       address: address,
       when: +(new Date)};
-    Meteor.users.update({_id: userId},
-                        {$push: {emailVerificationTokens: tokenRecord}});
+    Meteor.users.update(
+      {_id: userId},
+      {$push: {'services.email.verificationTokens': tokenRecord}});
 
     var verifyEmailUrl = Accounts.urls.verifyEmail(tokenRecord.token);
     Email.send({
