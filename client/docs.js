@@ -60,6 +60,9 @@ Meteor.startup(function () {
       ignore_waypoints = false;
     });
   });
+
+  // Make external links open in a new tab.
+  $('a:not([href^="#")').attr('target', '_blank');
 });
 
 var toc = [
