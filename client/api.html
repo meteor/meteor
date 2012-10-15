@@ -319,8 +319,9 @@ only to the server.)
 
 {{> api_box meteor_apply}}
 
-`Meteor.apply` is just like `Meteor.call`, but it allows the
-arguments to be passed as an array.
+`Meteor.apply` is just like `Meteor.call`, except that the method arguments are
+passed as an array rather than directly as arguments, and you can specify
+options about how the client executes the method.
 
 <h2 id="connections"><span>Server connections</span></h2>
 
