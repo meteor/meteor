@@ -25,10 +25,7 @@
 
     <div class="header row">
       <div class="span5">
-        <h1>All Tomorrow's Parties</h1>
-        {{#if currentUser}}
-          <!--<p><small>Double click to post a party!</small></p>-->
-        {{/if}}
+        <h3 style="margin-bottom: 0px">All Tomorrow's Parties</h3>
       </div>
       <div class="span5">
         <div style="float: right">
@@ -38,10 +35,14 @@
     </div>
 
     <div class="row">
-      <div class="span5">
+      <div class="span6">
         {{> map}}
+        {{#if currentUser}}
+          <div class="pagination-centered">
+            <em><small>Double click the map to post a party!</small></em>
+          </div>
+        {{/if}}
       </div>
-      <div class="span1"> </div>
       <div class="span4">
         {{> details}}
       </div>
@@ -58,7 +59,7 @@
 
 <template name="createDialog">
   <div class="mask"> </div>
-  <div class="popup modal">
+  <div class="modal">
     <div class="modal-header">
       <button type="button" class="close cancel">&times;</button>
       <h3>Add party</h3>
@@ -67,14 +68,15 @@
     <div class="modal-body">
 
       <label>Title</label>
-      <input type="text" class="title">
+      <input type="text" class="title span5">
 
       <label>Description</label>
 
-      <textarea class="description"></textarea>
+      <textarea class="description span5"></textarea>
 
       <label class="checkbox">
-        <input type="checkbox" class="private"> Private party
+        <input type="checkbox" class="private">
+        Private party &mdash; invitees only
       </label>
 
     </div>
@@ -84,19 +86,12 @@
     <a href="#" class="btn btn-primary save">Add party</a>
   </div>
 </div>
-<!--
-    <div class="modal-footer">
-
-
-      <input type="button" value="Cancel" class="btn close">
-      <input type="button" value="Add" class="btn btn-primary save">
-    </div>-->
   </div>
 </template>
 
 <template name="inviteDialog">
   <div class="mask"> </div>
-  <div class="popup modal">
+  <div class="modal">
     <div class="modal-header">
       <button type="button" class="close done">&times;</button>
       <h3>Invite people</h3>
@@ -104,8 +99,10 @@
 
     <div class="modal-body">
       {{#each uninvited}}
-        {{email}}
-        <input type="button" value="Invite" class="invite">
+        <div class="invite-row">
+          <a href="#" class="btn invite">Invite</a>
+          {{email}}
+        </div>
       {{else}}
         Everyone on the site has been invited.
       {{/each}}
@@ -134,6 +131,24 @@
       {{#with party}}
         <h1>{{title}}</h1>
 
+        <div class="description">{{description}}</div>
+
+        {{> attendance}}
+
+        <div class="rsvp-buttons">
+          {{#if currentUser}}
+            <input type="button" value="I'm going!"
+                   class="btn btn-small rsvp_yes {{maybeChosen "yes"}}">
+            <input type="button" value="Maybe"
+                   class="btn btn-small rsvp_maybe {{maybeChosen "maybe"}}">
+            <input type="button" value="No"
+                   class="btn btn-small rsvp_no {{maybeChosen "no"}}">
+          {{else}}
+            <i>Sign in to RSVP for this party.</i>
+          {{/if}}
+          <p><small>Posted by {{creatorName}}</small></p>
+        </div>
+
         {{#if canRemove}}
           <div class="alert alert-info"><small>
               You posted this party and nobody is signed up to go, so if
@@ -142,37 +157,60 @@
           </small></div>
         {{/if}}
 
-        <p>{{description}}</p>
 
-        {{#each rsvps}}
-          {{rsvpEmail}}: {{rsvpStatus}}<br>
-        {{/each}}
-
-        {{#if public}}
-          Everyone: invited<br>
-        {{else}}
-          {{#each outstandingInvitations}}
-            {{invitationEmail}}: invited<br>
-          {{/each}}
-          {{#if canInvite}}
-            <input type="button" value="Invite some people" class="invite"><br>
-          {{/if}}
-        {{/if}}
-
-        <p><small>Posted by {{creatorName}}</small></p>
-
-        <p>
-          {{#if currentUser}}
-            <input type="button" value="I'm going!" class="rsvp_yes">
-            <input type="button" value="Maybe" class="rsvp_maybe">
-            <input type="button" value="No" class="rsvp_no">
-          {{else}}
-            <i>Sign in to RSVP for this party.</i>
-          {{/if}}
-        </p>
       {{/with}}
     {{else}}
+      <h1 class="muted pagination-centered">
       Click a party to select it
+      </h1>
     {{/if}}
+  </div>
+</template>
+
+
+<template name="attendance">
+  <div class="attendance well well-small">
+    <div class="muted who"><b>Who</b></div>
+    {{#if public}}
+      <div>
+        <b>Everyone</b>
+        <span class="label label-inverse pull-right">Invited</span>
+      </div>
+    {{/if}}
+
+    {{#each rsvps}}
+      <div>
+        {{rsvpEmail}}
+        {{#if rsvpIs "yes"}}
+          <span class="label label-success pull-right">Going</span>
+        {{/if}}
+        {{#if rsvpIs "maybe"}}
+          <span class="label label-info pull-right">Maybe</span>
+        {{/if}}
+        {{#if rsvpIs "no"}}
+          <span class="label label pull-right">No</span>
+        {{/if}}
+      </div>
+    {{/each}}
+
+    {{#unless public}}
+      {{#each outstandingInvitations}}
+        <div>
+          {{invitationEmail}}
+          <span class="label label-inverse pull-right">Invited</span>
+        </div>
+      {{/each}}
+    {{/unless}}
+
+    {{#if nobody}}
+      <div>Nobody.</div>
+    {{/if}}
+
+    {{#if canInvite}}
+      <div class="invite">
+        <a href="#" class="btn btn-mini invite">Invite people</a>
+      </div>
+    {{/if}}
+
   </div>
 </template>

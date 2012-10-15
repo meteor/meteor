@@ -1,5 +1,5 @@
 .header {
-    padding: 40px 0;
+    padding: 20px 0;
 }
 
 .details {
@@ -16,33 +16,31 @@
     opacity: .4;
     z-index: 1;
 }
-/*
-.popup {
-    position: absolute;
-    z-index: 2;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    margin: auto;
-    height: 200px;
-    width: 200px;
+
+.invite-row .invite {
+    margin: 10px 10px 10px 0;
 }
 
-
-.left-panel {
-    float: left;
+.rsvp-buttons {
+    text-align: center;
+    margin: 40px 0 40px 0;
 }
 
-.right-panel {
-    display: inline;
+.description {
+    margin: 20px 0 20px 0;
 }
 
-.map {
-    border: 1px solid black;
-    margin-right: 50px;
+.attendance .who {
+    margin-bottom: 5px;
 }
-*/
+
+.attendance .invite {
+    text-align: center;
+}
+
+input.chosen {
+    font-weight: bold;
+}
 
 .map {
     background-image: url('/soma.jpeg');

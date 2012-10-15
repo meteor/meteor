@@ -11,6 +11,17 @@ Template.page.showInviteDialog = function () {
   return Session.get("showInviteDialog");
 };
 
+// If no party selected, select one.
+Meteor.startup(function () {
+  Meteor.autorun(function () {
+    if (! Session.get("selected")) {
+      var party = Parties.findOne();
+      if (party)
+        Session.set("selected", party._id);
+    }
+  });
+});
+
 ///////////////////////////////////////////////////////////////////////////////
 // Party details sidebar
 ///////////////////////////////////////////////////////////////////////////////
@@ -21,8 +32,6 @@ Template.details.party = function () {
 
 Template.details.creatorName = function () {
   var owner = Meteor.users.findOne(this.owner);
-  if (! owner)
-    return "unknown"; // XXX eliminate (by having clean data)
   if (owner._id === Meteor.userId())
     return "me";
   // XXX this (not having 'emails' just be an array of string, for the
@@ -30,36 +39,44 @@ Template.details.creatorName = function () {
   return owner.emails[0].address;
 };
 
-// RSVB subdocument looks like {user: userId, rsvp: "yes"}
-Template.details.rsvpEmail = function () {
+Template.attendance.rsvpEmail = function () {
   var user = Meteor.users.findOne(this.user);
   return user.emails[0].address;
 };
 
-Template.details.rsvpStatus = function () {
-  if (this.rsvp === "yes") return "Going";
-  if (this.rsvp === "maybe") return "Maybe";
-  return "No";
-};
-
-Template.details.outstandingInvitations = function () {
+Template.attendance.outstandingInvitations = function () {
   var party = Parties.findOne(this._id);
   // take out the people that have already rsvp'd
   var people = _.difference(party.invited, _.pluck(party.rsvps, 'user'));
   return Meteor.users.find({_id: {$in: people}});
 };
 
-Template.details.invitationEmail = function () {
+Template.attendance.invitationEmail = function () {
   return this.emails[0].address;
 };
 
+Template.attendance.rsvpIs = function (what) {
+  return this.rsvp === what;
+};
 
-Template.details.canInvite = function () {
+Template.attendance.nobody = function () {
+  return ! this.public && (this.rsvps.length + this.invited.length === 0);
+};
+
+Template.attendance.canInvite = function () {
   return ! this.public && this.owner === Meteor.userId();
 };
 
 Template.details.canRemove = function () {
   return this.owner === Meteor.userId() && attending(this) === 0;
+};
+
+Template.details.maybeChosen = function (what) {
+  var myRsvp = _.find(this.rsvps, function (r) {
+    return r.user === Meteor.userId();
+  }) || {};
+
+  return what == myRsvp.rsvp ? "chosen btn-inverse" : "";
 };
 
 // XXX show which button is currently selected
@@ -79,6 +96,7 @@ Template.details.events({
   },
   'click .invite': function () {
     Session.set("showInviteDialog", true);
+    return false;
   },
   'click .remove': function () {
     Parties.remove(this._id);
@@ -237,9 +255,12 @@ Template.createDialog.events = {
         x: coords.x,
         y: coords.y,
         public: public
-      }, function(error, party) {
-        if (!error)
+      }, function (error, party) {
+        if (! error) {
           Session.set("selected", party);
+          if (! public)
+            Session.set("showInviteDialog", true);
+        }
       });
       Session.set("showCreateDialog", false);
     } else {
@@ -268,6 +289,11 @@ Template.inviteDialog.events = {
 
 Template.inviteDialog.uninvited = function () {
   var party = Parties.findOne(Session.get("selected"));
+  if (! party)
+    // XXX this happens on code push when the invite dialog is
+    // open. easy enough to add a guard, but what's the big picture?
+    // do we have to do this everywhere?
+    return [];
   var invited = _.clone(party.invited);
   invited.push(party.owner);
   return Meteor.users.find({_id: {$nin: invited}});
