@@ -154,30 +154,6 @@ var toc = [
       "Session.equals"
     ],
 
-    {name: "Templates", id: "templates_api"}, [
-      {prefix: "Template", instance: "myTemplate", id: "template_call"}, [
-        {name: "rendered", id: "template_rendered"},
-        {name: "created", id: "template_created"},
-        {name: "destroyed", id: "template_destroyed"},
-        {name: "events", id: "template_events"},
-        {name: "helpers", id: "template_helpers"},
-        {name: "preserve", id: "template_preserve"}
-      ],
-      {name: "Template instances", id: "template_inst"}, [
-        {instance: "this", name: "findAll", id: "template_findAll"},
-        {instance: "this", name: "find", id: "template_find"},
-        {instance: "this", name: "firstNode", id: "template_firstNode"},
-        {instance: "this", name: "lastNode", id: "template_lastNode"},
-        {instance: "this", name: "data", id: "template_data"}
-      ],
-      "Meteor.render",
-      "Meteor.renderList",
-      {type: "spacer"},
-      {name: "Event maps", style: "noncode"},
-      {name: "Constant regions", style: "noncode", id: "constant"},
-      {name: "Reactivity isolation", style: "noncode", id: "isolate"}
-     ],
-
     {name: "Accounts", id: "accounts_api"}, [
       "Meteor.user",
       "Meteor.userId",
@@ -212,6 +188,29 @@ var toc = [
       "Accounts.onCreateUser"
     ],
 
+    {name: "Templates", id: "templates_api"}, [
+      {prefix: "Template", instance: "myTemplate", id: "template_call"}, [
+        {name: "rendered", id: "template_rendered"},
+        {name: "created", id: "template_created"},
+        {name: "destroyed", id: "template_destroyed"},
+        {name: "events", id: "template_events"},
+        {name: "helpers", id: "template_helpers"},
+        {name: "preserve", id: "template_preserve"}
+      ],
+      {name: "Template instances", id: "template_inst"}, [
+        {instance: "this", name: "findAll", id: "template_findAll"},
+        {instance: "this", name: "find", id: "template_find"},
+        {instance: "this", name: "firstNode", id: "template_firstNode"},
+        {instance: "this", name: "lastNode", id: "template_lastNode"},
+        {instance: "this", name: "data", id: "template_data"}
+      ],
+      "Meteor.render",
+      "Meteor.renderList",
+      {type: "spacer"},
+      {name: "Event maps", style: "noncode"},
+      {name: "Constant regions", style: "noncode", id: "constant"},
+      {name: "Reactivity isolation", style: "noncode", id: "isolate"}
+     ],
 
     "Timers", [
       "Meteor.setTimeout",
