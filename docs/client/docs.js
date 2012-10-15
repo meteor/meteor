@@ -92,13 +92,13 @@ var toc = [
 
     "Publish and subscribe", [
       "Meteor.publish", [
+        {instance: "this", name: "userId", id: "publish_userId"},
         {instance: "this", name: "set", id: "publish_set"},
         {instance: "this", name: "unset", id: "publish_unset"},
         {instance: "this", name: "complete", id: "publish_complete"},
         {instance: "this", name: "flush", id: "publish_flush"},
         {instance: "this", name: "onStop", id: "publish_onstop"},
-        {instance: "this", name: "stop", id: "publish_stop"},
-        {instance: "this", name: "userId", id: "publish_userId"}
+        {instance: "this", name: "stop", id: "publish_stop"}
       ],
       "Meteor.subscribe",
       "Meteor.autosubscribe"
