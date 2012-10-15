@@ -232,9 +232,9 @@ exception it will be logged to the console.
 
 {{> api_box method_invocation_userId}}
 
-The user id is an arbitrary string &mdash; typically the id of the user
-record in the database. You can set it with the `setUserId` function. If
-you're using the Meteor accounts system then this is handled for you.
+The user id is an arbitrary string &mdash; typically the id of the user record
+in the database. You can set it with the `setUserId` function. If you're using
+the [Meteor accounts system](#accounts_api) then this is handled for you.
 
 {{> api_box method_invocation_setUserId}}
 
@@ -243,9 +243,9 @@ connection that made this method call. This simply sets the value of
 `userId` for future method calls received on this connection. Pass
 `null` to log out the connection.
 
-If you are using the built-in Meteor accounts system then this should correspond
-to the `_id` field of a document in the [`Meteor.users`](#meteor_users)
-collection.
+If you are using the [built-in Meteor accounts system](#accounts_api) then this
+should correspond to the `_id` field of a document in the
+[`Meteor.users`](#meteor_users) collection.
 
 `setUserId` is not retroactive. It affects the current method call and
 any future method calls on the connection. Any previous method calls on
