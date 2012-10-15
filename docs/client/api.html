@@ -1896,6 +1896,16 @@ Example:
 {{> api_box accounts_config}}
 {{> api_box accounts_ui_config}}
 
+Example:
+
+    Accounts.ui.config({
+      requestPermissions: {
+        facebook: ['user_likes'],
+        github: ['user', 'repo']
+      },
+      passwordSignupFields: 'USERNAME_AND_OPTIONAL_EMAIL'
+    });
+
 {{> api_box accounts_validateNewUser}}
 
 This can be called multiple times. If any of the functions return
