@@ -436,7 +436,7 @@ pre {
 @media (min-width: 1024px) {
 /* ipad landscape and desktop */
 #main {
-    width: 600px;
+    width: 610px;
     margin-left: 330px; /* nav width + padding */
 }
 #nav {
