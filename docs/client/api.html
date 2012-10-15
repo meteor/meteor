@@ -1108,6 +1108,315 @@ For object and array session values, you cannot use `Session.equals`; instead,
 you need to use the `underscore` package and write
 `_.isEqual(Session.get(key), value)`.
 
+
+
+<h2 id="accounts_api"><span>Accounts</span></h2>
+
+XXX intro text
+
+{{> api_box user}}
+
+Retreives the user record for the current user from
+the [`Meteor.users`](#meteor_users) collection.
+
+On the client this will be a subset of the fields in the document, only
+those that are published from the server are available on the client. By
+default the server publishes `username`, `emails`, and
+`profile`. See [`Meteor.users`](#meteor_users) for more on
+the fields used user documents.
+
+If the user is logged in but the user's database record is not fully
+loaded yet, this returns an object with only the `_id` field set. During
+this period [`userLoaded`](#meteor_userloaded) will return
+`false`.
+
+{{> api_box userId}}
+
+{{> api_box users}}
+
+This collection contains one document per user. Example user document:
+
+    {
+      _id: "bbca5d6a-2156-41c4-89da-0329e8c99a4f" // userId
+      username: "cool_kid_13", // unique name
+      emails: [
+        // each email address can only belong to one user.
+        { address: "cool@example.com", verified: true },
+        { address: "another@different.com", verified: false }
+      ],
+      profile: {
+        // The profile is writable by the user by default.
+        name: "Joe Schmoe"
+      },
+      services: {
+        facebook: {
+          id: "709050", // facebook id
+          accessToken: "AAACCgdX7G2...AbV9AZDZD"
+        },
+        resume: {
+          loginTokens: [
+            { token: "97e8c205-c7e4-47c9-9bea-8e2ccc0694cd",
+              when: 1349761684048 }
+          ]
+        }
+      }
+    }
+
+
+Like all [Meteor.Collection](#collections)s, you can access all
+documents on the server, but only those specifically published by the server are
+available on the client.
+
+By default, the current user's `username`, `emails` and `profile` are
+published to the client. You can publish additional fields for the
+current user with:
+
+    Meteor.publish("userData", function () {
+      return Meteor.users.find({_id: this.userId},
+                               {fields: {'other': 1, 'things': 1}});
+    });
+
+If the `autopublish` package is installed, the `username` and `profile` fields
+for all users are published to all clients. To publish specific fields from all
+users:
+
+    Meteor.publish("allUserData", function () {
+      return Meteor.users.find({}, {fields: {'nested.things': 1}});
+    });
+
+Users are by default allowed to specify their own `profile` field with
+[`Accounts.createUser`](#accounts_createuser) and modify it with
+`Meteor.users.update`. To allow users to edit additional fields, use
+[`Meteor.users.allow`](#allow). To forbid users from making any modifications to
+their user document:
+
+    Meteor.users.deny({update: function () { return true; }});
+
+
+{{> api_box userLoaded}}
+
+There are some cases when the client knows the id of the logged in user
+but has not yet received the user data from the server. For example, if
+the user is logged in and reloads the page the user data will be
+unavailable during initial page load.
+
+During these periods, `userLoaded` will return false
+and [`user`](#meteor_user) will return an object with only
+the `_id` key.
+
+{{#note}}
+We realize this is inconvenient. It is a temporary solution. In the
+future we will either make it unnecessary or fold it into a more
+general mechanism.
+{{/note}}
+
+{{> api_box logout}}
+
+{{> api_box loginWithPassword}}
+
+{{> api_box loginWithOAuth}}
+
+These functions initiate the login process with a third party OAuth
+provider (eg: Facebook, Google, etc). When called they open a new pop-up
+window that loads the provider's login page. Once the user has logged in
+with the provider, the pop-up window is closed and the Meteor client
+logs in to the Meteor server with the information provided by the OAuth
+provider.
+
+If the user has not already granted all the permissions requested they will be
+prompted to grant access to their account in the pop-up dialog. Values for the
+`requestPermissions` parameter differ for each login service:
+
+- Facebook: <http://developers.facebook.com/docs/authentication/permissions/>
+- GitHub: <http://developer.github.com/v3/oauth/#scopes>
+- Google: <https://developers.google.com/accounts/docs/OAuth2Login#scopeparameter>
+
+Currently, `loginWithTwitter` and `loginWithWeibo` do not support
+`requestPermissions`.
+
+
+{{> api_box accounts_createUser}}
+
+On the client this function logs in as the newly created user on
+successful completion. On the server, it returns the newly created user
+id.
+
+On the client, you must pass `password` and one of `username` or `email`
+&mdash; enough information for the user to be able to log in again
+later. On the server, you can pass any subset of these options, but the
+user will not be able to log in until it has an identifier and a
+password.
+
+To create an account without a password on the server and still let the
+user pick their own password, call `createUser` with the `email` option
+and then
+call [`Accounts.sendEnrollmentEmail`](#accounts_sendenrollmentemail). This
+will send the user an email with a link to set their initial password.
+
+By default the `profile` option is added directly to the new user document. To
+override this behavior, use [`Accounts.onCreateUser`](#accounts_createuser).
+
+This function is only used for creating users with passwords. The OAuth
+login flows do not use this function.
+
+
+{{> api_box accounts_changePassword}}
+
+{{> api_box accounts_forgotPassword}}
+
+This triggers a call
+to [`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail)
+on the server. Pass the token the user receives in this email
+to [`Accounts.resetPassword`](#accounts_resetpassword) to
+complete the password reset process.
+
+If you are using the [`accounts-ui` package](#pkg_accounts_ui), this is handled
+automatically. Otherwise, it is your responsiblity to prompt the user for the
+new password and call `resetPassword`.
+
+- XXX token goes to `Accounts._resetPasswordToken`.
+
+{{> api_box accounts_resetPassword}}
+
+This function accepts tokens generated
+by [`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail)
+and
+[`Accounts.sendEnrollmentEmail`](#accounts_sendenrollmentemail)
+
+{{> api_box accounts_setPassword}}
+
+{{> api_box accounts_verifyEmail}}
+
+This function accepts tokens generated
+by [`Accounts.sendVerificationEmail`](#accounts_sendverificationemail). It
+sets the `emails.verified` field in the user record.
+
+{{> api_box accounts_sendResetPasswordEmail}}
+
+The token in this email should be passed
+to [`Accounts.resetPassword`](#accounts_resetpassword).
+
+To customize the contents of the email, see
+[`Accounts.emailTemplates`](#accounts_emailtemplates).
+
+{{> api_box accounts_sendEnrollmentEmail}}
+
+The token in this email should be passed
+to [`Accounts.resetPassword`](#accounts_resetpassword).
+
+To customize the contents of the email, see
+[`Accounts.emailTemplates`](#accounts_emailtemplates).
+
+{{> api_box accounts_sendVerificationEmail}}
+
+The token in this email should be passed
+to [`Accounts.verifyEmail`](#accounts_verifyemail).
+
+To customize the contents of the email, see
+[`Accounts.emailTemplates`](#accounts_emailtemplates).
+
+{{> api_box accounts_emailTemplates}}
+
+This is an `Object` with several fields that are used to generate text
+for the emails by `sendResetPasswordEmail`, `sendEnrollmentEmail`, and
+`sendVerificationEmail`.
+
+Override fields of the object by assigning to them:
+
+- `from`: A `String` with an [RFC5322](http://tools.ietf.org/html/rfc5322) From
+   address. By default email is from `no-reply@meteor.com`. If you wish to
+   receive email from users asking for help with their account, be sure to set
+   this to an email address that you can receive email at.
+- `siteName`: The public name of your application. Defaults to the DNS name of
+   the application (eg: `awesome.meteor.com`).
+- `resetPassword`: An `Object` with two fields:
+ - `resetPassword.subject`: A `Function` that takes a user object and returns
+   a `String` for the subject line of a reset password email.
+ - `resetPassword.text`: A `Function` that takes a user object and a url, and
+   returns the body text for a reset password email.
+- `enrollAccount`: Same as `resetPassword`, but for initial password setup for
+   new accounts.
+- `verifyEmail`: Same as `resetPassword`, but for verifying the users email
+   address.
+
+
+Example:
+
+    Accounts.emailTemplates.siteName = "AwesomeSite";
+    Accounts.emailTemplates.from = "AwesomeSite Admin <accounts@example.com>";
+    Accounts.emailTemplates.enrollAccount.subject = function (user) {
+        return "Welcome to Awesome Town, " + user.profile.name;
+    };
+    Accounts.emailTemplates.enrollAccount.text = function (user, url) {
+       return "You have been selected to participate in building better future!"
+         + " To activate your account, simply click the link below:\n\n"
+         + url;
+    };
+
+
+{{> api_box accounts_config}}
+{{> api_box accounts_ui_config}}
+
+Example:
+
+    Accounts.ui.config({
+      requestPermissions: {
+        facebook: ['user_likes'],
+        github: ['user', 'repo']
+      },
+      passwordSignupFields: 'USERNAME_AND_OPTIONAL_EMAIL'
+    });
+
+{{> api_box accounts_validateNewUser}}
+
+This can be called multiple times. If any of the functions return
+`false` the new user creation is aborted.
+
+Example:
+
+    // All users must have a username longer than 3 characters.
+    Accounts.validateNewUser(function (user) {
+        return user.username && user.username.length >= 3;
+    });
+
+{{> api_box accounts_onCreateUser}}
+
+Use this when you need to do more than simply accept or reject new user
+creation. With this function you can programatically control the
+contents of new user documents.
+
+The function you pass will be called with two arguments: `options` and
+`user`. The `options` argument comes
+from [`Accounts.createUser`](#accounts_createuser) for
+password-based users or from the OAuth login flow. `options` may come
+from an untrusted client so make to validate any values you read from
+it. The `user` argument is created on the server and contains a
+proposed user object with all the automatically generated fields
+required for the user to log in.
+
+The function should return a new user object with whatever modifications
+are desired. The returned object is inserted directly into
+the [`Meteor.users`](#meteor_users) collection.
+
+The default create user function simply copies `options.profile` into
+the new user document. Calling `onCreateUser` overrides the default
+hook. This can only be called once.
+
+Example:
+
+    // Make members of the GitHub 'meteor' group into admins.
+    Accounts.onCreateUser(function(options, user) {
+      // http://developer.github.com/v3/orgs/members/#get-member
+      if (!Meteor.http.get(
+            "https://api.github.com/orgs/meteor/members/" +
+            user.services.github.username +
+            "?access_token=" + user.services.github.accessToken
+           ).error) {
+        user.admin = true;
+      }
+      return user;
+    });
+
 <h2 id="templates_api"><span>Templates</span></h2>
 
 A template that you declare as `<{{! }}template name="foo"> ... </{{!
@@ -1644,315 +1953,6 @@ benefits you would get by pulling the content out into a new
 sub-template.
 
 {{/api_box_inline}}
-
-
-
-<h2 id="accounts_api"><span>Accounts</span></h2>
-
-XXX intro text
-
-{{> api_box user}}
-
-Retreives the user record for the current user from
-the [`Meteor.users`](#meteor_users) collection.
-
-On the client this will be a subset of the fields in the document, only
-those that are published from the server are available on the client. By
-default the server publishes `username`, `emails`, and
-`profile`. See [`Meteor.users`](#meteor_users) for more on
-the fields used user documents.
-
-If the user is logged in but the user's database record is not fully
-loaded yet, this returns an object with only the `_id` field set. During
-this period [`userLoaded`](#meteor_userloaded) will return
-`false`.
-
-{{> api_box userId}}
-
-{{> api_box users}}
-
-This collection contains one document per user. Example user document:
-
-    {
-      _id: "bbca5d6a-2156-41c4-89da-0329e8c99a4f" // userId
-      username: "cool_kid_13", // unique name
-      emails: [
-        // each email address can only belong to one user.
-        { address: "cool@example.com", verified: true },
-        { address: "another@different.com", verified: false }
-      ],
-      profile: {
-        // The profile is writable by the user by default.
-        name: "Joe Schmoe"
-      },
-      services: {
-        facebook: {
-          id: "709050", // facebook id
-          accessToken: "AAACCgdX7G2...AbV9AZDZD"
-        },
-        resume: {
-          loginTokens: [
-            { token: "97e8c205-c7e4-47c9-9bea-8e2ccc0694cd",
-              when: 1349761684048 }
-          ]
-        }
-      }
-    }
-
-
-Like all [Meteor.Collection](#collections)s, you can access all
-documents on the server, but only those specifically published by the server are
-available on the client.
-
-By default, the current user's `username`, `emails` and `profile` are
-published to the client. You can publish additional fields for the
-current user with:
-
-    Meteor.publish("userData", function () {
-      return Meteor.users.find({_id: this.userId},
-                               {fields: {'other': 1, 'things': 1}});
-    });
-
-If the `autopublish` package is installed, the `username` and `profile` fields
-for all users are published to all clients. To publish specific fields from all
-users:
-
-    Meteor.publish("allUserData", function () {
-      return Meteor.users.find({}, {fields: {'nested.things': 1}});
-    });
-
-Users are by default allowed to specify their own `profile` field with
-[`Accounts.createUser`](#accounts_createuser) and modify it with
-`Meteor.users.update`. To allow users to edit additional fields, use
-[`Meteor.users.allow`](#allow). To forbid users from making any modifications to
-their user document:
-
-    Meteor.users.deny({update: function () { return true; }});
-
-
-{{> api_box userLoaded}}
-
-There are some cases when the client knows the id of the logged in user
-but has not yet received the user data from the server. For example, if
-the user is logged in and reloads the page the user data will be
-unavailable during initial page load.
-
-During these periods, `userLoaded` will return false
-and [`user`](#meteor_user) will return an object with only
-the `_id` key.
-
-{{#note}}
-We realize this is inconvenient. It is a temporary solution. In the
-future we will either make it unnecessary or fold it into a more
-general mechanism.
-{{/note}}
-
-{{> api_box logout}}
-
-{{> api_box loginWithPassword}}
-
-{{> api_box loginWithOAuth}}
-
-These functions initiate the login process with a third party OAuth
-provider (eg: Facebook, Google, etc). When called they open a new pop-up
-window that loads the provider's login page. Once the user has logged in
-with the provider, the pop-up window is closed and the Meteor client
-logs in to the Meteor server with the information provided by the OAuth
-provider.
-
-If the user has not already granted all the permissions requested they will be
-prompted to grant access to their account in the pop-up dialog. Values for the
-`requestPermissions` parameter differ for each login service:
-
-- Facebook: <http://developers.facebook.com/docs/authentication/permissions/>
-- GitHub: <http://developer.github.com/v3/oauth/#scopes>
-- Google: <https://developers.google.com/accounts/docs/OAuth2Login#scopeparameter>
-
-Currently, `loginWithTwitter` and `loginWithWeibo` do not support
-`requestPermissions`.
-
-
-{{> api_box accounts_createUser}}
-
-On the client this function logs in as the newly created user on
-successful completion. On the server, it returns the newly created user
-id.
-
-On the client, you must pass `password` and one of `username` or `email`
-&mdash; enough information for the user to be able to log in again
-later. On the server, you can pass any subset of these options, but the
-user will not be able to log in until it has an identifier and a
-password.
-
-To create an account without a password on the server and still let the
-user pick their own password, call `createUser` with the `email` option
-and then
-call [`Accounts.sendEnrollmentEmail`](#accounts_sendenrollmentemail). This
-will send the user an email with a link to set their initial password.
-
-By default the `profile` option is added directly to the new user document. To
-override this behavior, use [`Accounts.onCreateUser`](#accounts_createuser).
-
-This function is only used for creating users with passwords. The OAuth
-login flows do not use this function.
-
-
-{{> api_box accounts_changePassword}}
-
-{{> api_box accounts_forgotPassword}}
-
-This triggers a call
-to [`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail)
-on the server. Pass the token the user receives in this email
-to [`Accounts.resetPassword`](#accounts_resetpassword) to
-complete the password reset process.
-
-If you are using the [`accounts-ui` package](#pkg_accounts_ui), this is handled
-automatically. Otherwise, it is your responsiblity to prompt the user for the
-new password and call `resetPassword`.
-
-- XXX token goes to `Accounts._resetPasswordToken`.
-
-{{> api_box accounts_resetPassword}}
-
-This function accepts tokens generated
-by [`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail)
-and
-[`Accounts.sendEnrollmentEmail`](#accounts_sendenrollmentemail)
-
-{{> api_box accounts_setPassword}}
-
-{{> api_box accounts_verifyEmail}}
-
-This function accepts tokens generated
-by [`Accounts.sendVerificationEmail`](#accounts_sendverificationemail). It
-sets the `emails.verified` field in the user record.
-
-{{> api_box accounts_sendResetPasswordEmail}}
-
-The token in this email should be passed
-to [`Accounts.resetPassword`](#accounts_resetpassword).
-
-To customize the contents of the email, see
-[`Accounts.emailTemplates`](#accounts_emailtemplates).
-
-{{> api_box accounts_sendEnrollmentEmail}}
-
-The token in this email should be passed
-to [`Accounts.resetPassword`](#accounts_resetpassword).
-
-To customize the contents of the email, see
-[`Accounts.emailTemplates`](#accounts_emailtemplates).
-
-{{> api_box accounts_sendVerificationEmail}}
-
-The token in this email should be passed
-to [`Accounts.verifyEmail`](#accounts_verifyemail).
-
-To customize the contents of the email, see
-[`Accounts.emailTemplates`](#accounts_emailtemplates).
-
-{{> api_box accounts_emailTemplates}}
-
-This is an `Object` with several fields that are used to generate text
-for the emails by `sendResetPasswordEmail`, `sendEnrollmentEmail`, and
-`sendVerificationEmail`.
-
-Override fields of the object by assigning to them:
-
-- `from`: A `String` with an [RFC5322](http://tools.ietf.org/html/rfc5322) From
-   address. By default email is from `no-reply@meteor.com`. If you wish to
-   receive email from users asking for help with their account, be sure to set
-   this to an email address that you can receive email at.
-- `siteName`: The public name of your application. Defaults to the DNS name of
-   the application (eg: `awesome.meteor.com`).
-- `resetPassword`: An `Object` with two fields:
- - `resetPassword.subject`: A `Function` that takes a user object and returns
-   a `String` for the subject line of a reset password email.
- - `resetPassword.text`: A `Function` that takes a user object and a url, and
-   returns the body text for a reset password email.
-- `enrollAccount`: Same as `resetPassword`, but for initial password setup for
-   new accounts.
-- `verifyEmail`: Same as `resetPassword`, but for verifying the users email
-   address.
-
-
-Example:
-
-    Accounts.emailTemplates.siteName = "AwesomeSite";
-    Accounts.emailTemplates.from = "AwesomeSite Admin <accounts@example.com>";
-    Accounts.emailTemplates.enrollAccount.subject = function (user) {
-        return "Welcome to Awesome Town, " + user.profile.name;
-    };
-    Accounts.emailTemplates.enrollAccount.text = function (user, url) {
-       return "You have been selected to participate in building better future!"
-         + " To activate your account, simply click the link below:\n\n"
-         + url;
-    };
-
-
-{{> api_box accounts_config}}
-{{> api_box accounts_ui_config}}
-
-Example:
-
-    Accounts.ui.config({
-      requestPermissions: {
-        facebook: ['user_likes'],
-        github: ['user', 'repo']
-      },
-      passwordSignupFields: 'USERNAME_AND_OPTIONAL_EMAIL'
-    });
-
-{{> api_box accounts_validateNewUser}}
-
-This can be called multiple times. If any of the functions return
-`false` the new user creation is aborted.
-
-Example:
-
-    // All users must have a username longer than 3 characters.
-    Accounts.validateNewUser(function (user) {
-        return user.username && user.username.length >= 3;
-    });
-
-{{> api_box accounts_onCreateUser}}
-
-Use this when you need to do more than simply accept or reject new user
-creation. With this function you can programatically control the
-contents of new user documents.
-
-The function you pass will be called with two arguments: `options` and
-`user`. The `options` argument comes
-from [`Accounts.createUser`](#accounts_createuser) for
-password-based users or from the OAuth login flow. `options` may come
-from an untrusted client so make to validate any values you read from
-it. The `user` argument is created on the server and contains a
-proposed user object with all the automatically generated fields
-required for the user to log in.
-
-The function should return a new user object with whatever modifications
-are desired. The returned object is inserted directly into
-the [`Meteor.users`](#meteor_users) collection.
-
-The default create user function simply copies `options.profile` into
-the new user document. Calling `onCreateUser` overrides the default
-hook. This can only be called once.
-
-Example:
-
-    // Make members of the GitHub 'meteor' group into admins.
-    Accounts.onCreateUser(function(options, user) {
-      // http://developer.github.com/v3/orgs/members/#get-member
-      if (!Meteor.http.get(
-            "https://api.github.com/orgs/meteor/members/" +
-            user.services.github.username +
-            "?access_token=" + user.services.github.accessToken
-           ).error) {
-        user.admin = true;
-      }
-      return user;
-    });
 
 
 <h2 id="timers"><span>Timers</span></h2>
