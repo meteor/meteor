@@ -1283,9 +1283,12 @@ hook. This can only be called once.
 
 Example:
 
+<!-- XXX replace d6 with _.random once we have underscore 1.4.2 -->
+
     // Support for playing D&D: Roll 3d6 for dexterity
     Accounts.onCreateUser(function(options, user) {
-      user.dexterity = _.random(1, 6) + _.random(1, 6) + _.random(1, 6)
+      var d6 = function () { return Math.floor(Math.random() * 6) + 1; };
+      user.dexterity = d6() + d6() + d6();
       return user;
     });
 
