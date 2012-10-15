@@ -150,9 +150,9 @@ attribute.)
 
 If all of the attributes in a document are removed, Meteor
 will remove the (now empty) document.  If you want to publish empty
-documents, just use a placeholder attribute.
+documents, just use a placeholder attribute:
 
-    // Clicks.insert({exists: true});
+    Clicks.insert({exists: true});
 
 {{> api_box autosubscribe}}
 
