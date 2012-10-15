@@ -97,8 +97,8 @@ server's master database.  When a matching document in that database
 changes, Meteor automatically synchronizes that change to every
 subscribed client.
 
-To manage the client caches, your server code <b>publishes</b> sets of
-documents, and your client code <b>subscribes</b> to those sets.  For
+To manage the client caches, your server code *publishes* sets of
+documents, and your client code *subscribes* to those sets.  For
 example, if you are building a chat system, the server might publish two
 sets: the set of all rooms, and the set of all messages in a given room.
 Each client would subscribe to the master set of available rooms and the
@@ -126,7 +126,7 @@ queries and updates.
 
 Document modifications also propagate automatically.  Modification
 instructions like `insert`, `remove`, and `update` are executed
-immediately on the client's cached data.  <i>At the same time</i>, the
+immediately on the client's cached data.  *At the same time*, the
 client sends that instruction up to the server, which executes the same
 change against the master database.  Usually the client and server
 agree, but should they differ (permissions checking or overlapping with
@@ -137,8 +137,8 @@ subscription automatically receive an updated document.
     // create new message, executes on both client and server.
     Messages.insert({room: 2413, text: "hello!"});
 
-Putting it all together, these techniques accomplish <i>latency
-compensation</i>.  Clients hold a fresh copy of the data they need, and
+Putting it all together, these techniques accomplish *latency
+compensation*.  Clients hold a fresh copy of the data they need, and
 never need to wait for a roundtrip to the server.  And when clients
 modify data, those modifications can run locally without waiting for the
 confirmation from the server, while still giving the server final say
@@ -191,11 +191,12 @@ providers like `Session`, on the other hand, make note of
 the context they are called from and what data was requested, and they
 are prepared to send an invalidation signal when the data changes.
 
-This simple pattern has wide applicability.  Above, the programmer is
-saved from writing unsubscribe/resubscribe calls and making sure they
-are called at the right time.  In general, Meteor can eliminate whole
-classes of data propagation code which would otherwise clog up your
-application with error-prone logic.
+This simple pattern (reactive context + reactive data source) has wide
+applicability.  Above, the programmer is saved from writing
+unsubscribe/resubscribe calls and making sure they are called at the
+right time.  In general, Meteor can eliminate whole classes of data
+propagation code which would otherwise clog up your application with
+error-prone logic.
 
 These Meteor functions run your code in a reactive context:
 
@@ -206,17 +207,17 @@ These Meteor functions run your code in a reactive context:
 
 And the reactive data sources that can trigger changes are:
 
-* <a href="#session">Session</a> variables
-* Database queries on <a href="#find">Collections</a>
-* <a href="#meteor_status">`Meteor.status`</a>
-* <a href="#meteor_user">`Meteor.user`</a>
-* <a href="#meteor_userid">`Meteor.userId`</a>
-* <a href="#meteor_userloaded">`Meteor.userLoaded`</a>
+* [`Session`](#session) variables
+* Database queries on [Collections](#find)
+* [`Meteor.status`](#meteor_status)
+* [`Meteor.user`](#meteor_user)
+* [`Meteor.userId`](#meteor_userid)
+* [`Meteor.userLoaded`](#meteor_userloaded)
 
 Meteor's <a href="https://github.com/meteor/meteor/blob/master/packages/deps/deps.js" target="_blank">implementation</a>
 of reactivity is short and sweet, about 50 lines of code.  You can
 hook into it yourself to add new reactive contexts or data sources,
-using the <a href="#meteor_deps">Meteor.deps</a> module.
+using the [`Meteor.deps`](#meteor_deps) module.
 
 {{/better_markdown}}
 </template>
@@ -313,8 +314,8 @@ available as a function on the global `Template` object.
 Today, the only templating system that has been packaged for Meteor is
 Handlebars. Let us know what templating systems you'd like to use with
 Meteor. Meanwhile, see
-the <a href="http://www.handlebarsjs.com/">Handlebars documentation</a>
-and <a href="https://github.com/meteor/meteor/wiki/Handlebars">Meteor
+the <a href="http://www.handlebarsjs.com/" target="_blank">Handlebars documentation</a>
+and <a href="https://github.com/meteor/meteor/wiki/Handlebars" target="_blank">Meteor
 Handlebars extensions</a>.
 {{/note}}
 
@@ -460,30 +461,28 @@ JavaScript programs. They can inject code into the client or the
 server, or hook new functions into the bundler, so they can extend the
 Meteor environment in arbitrary ways. Some examples of packages are:
 
-* The <a href="#coffeescript">coffeescript</a> package extends the
-  bundler, automatically compiling any <code>.coffee</code> files in
+* The [coffeescript](#coffeescript) package extends the
+  bundler, automatically compiling any `.coffee` files in
   your tree.  Once added, you can write your application in CoffeeScript
   instead of JavaScript.
 
-* The <a href="#jquery">jQuery</a>
-  and <a href="#backbone">Backbone</a> packages are examples of using
+* The [jQuery](#jquery) and [Backbone](#backbone) packages are examples of using
   Meteor to prepackage client JavaScript libraries. You could get
   the same result by copying the JavaScript files into your tree, but
   it's faster to add a package.
 
-* The <a href="#underscore">underscore</a> package extends both the
+* The [underscore](#underscore) package extends both the
   client and server environments.  Many of the core Meteor features,
   including Minimongo, the Session object, and reactive Handlebars
   templates, are implemented as internal packages automatically
   included with every Meteor application.
 
 You can see a list of available packages
-with <a href="#meteorlist">meteor list</a>,
-add packages to your project
-with <a href="#meteoradd">meteor add</a>, and remove them
-with <a href="#meteorremove">meteor remove</a>.
+with [`meteor list`](#meteorlist), add packages to your project
+with [`meteor add`](#meteoradd), and remove them
+with [`meteor remove`](#meteorremove).
 
-See the <a href="#packages">Package List</a> section for a description
+See the [Package List](#packages) section for a description
 of the existing packages.
 
 {{#warning}}
@@ -529,8 +528,8 @@ HTML, and CSS.
 
 <h3 class="nosection">Running on Meteor's infrastructure</h3>
 
-The easiest way to deploy your application is to use <b>meteor
-deploy</b>.  We provide it because it's what, personally, we've always
+The easiest way to deploy your application is to use `meteor
+deploy`.  We provide it because it's what, personally, we've always
 wanted: an easy way to take an app idea, flesh it out over a weekend,
 and put it out there for the world to use, with nothing getting in the
 way of creativity.
@@ -544,7 +543,7 @@ update, Meteor will preserve the existing data and just refresh the
 code.
 
 You can also deploy to your own domain.  Just set up the hostname you
-want to use as a CNAME to <code>origin.meteor.com</code>,
+want to use as a CNAME to `origin.meteor.com`,
 then deploy to that name.
 
     $ meteor deploy www.myapp.com
@@ -577,7 +576,7 @@ package requires a `MAIL_URL` environment variable).
 For now, bundles will only run on the platform that the bundle was
 created on.  To run on a different platform, you'll need to rebuild
 the native packages included in the bundle.  To do that, make sure you
-have <code>npm</code> available, and run the following:
+have `npm` available, and run the following:
 
     $ cd bundle/server/node_modules
     $ rm -r fibers

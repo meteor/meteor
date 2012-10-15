@@ -700,14 +700,14 @@ Template.api.users = {
   id: "meteor_users",
   name: "Meteor.users",
   locus: "Anywhere",
-  descr: ["A <a href='#collections'>Meteor.Collection</a> containing user documents."]
+  descr: ["A [Meteor.Collection](#collections) containing user documents."]
 };
 
 Template.api.userLoaded = {
   id: "meteor_userloaded",
   name: "Meteor.userLoaded()",
   locus: "Client",
-  descr: ["Determine if the current user document is fully loaded in <a href='#meteor_users'>Meteor.users</a>. A reactive data source."]
+  descr: ["Determine if the current user document is fully loaded in [`Meteor.users`](#meteor_users). A reactive data source."]
 };
 
 
@@ -999,7 +999,7 @@ Template.api.accounts_config = {
     {
       name: "forbidClientAccountCreation",
       type: "Boolean",
-      descr: "<a href='#accounts_createuser'>`createUser`</a> requests from the client will be rejected."
+      descr: "[`createUser`](#accounts_createuser) requests from the client will be rejected."
     }
   ]
 };
