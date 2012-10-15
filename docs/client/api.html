@@ -382,7 +382,7 @@ sets, call `Meteor.connect` with the URL of the application.
   Get the current connection status. See
   [Meteor.status](#meteor_status).
 * `reconnect` -
-  See <a href="meteor_reconnect">Meteor.reconnect</a>.
+  See [Meteor.reconnect](#meteor_reconnect).
 * `onReconnect` - Set this to a function to be called as the first step of
   reconnecting. This function can call methods which will be executed before
   any other outstanding methods. For example, this can be used to re-establish
@@ -589,10 +589,9 @@ Example:
 
 {{> api_box update}}
 
-Modify documents that match `selector` as
-given by `modifier` (see <a href="#modifiers">modifier
-documentation</a>).  By default, modify only one matching document.
-If `multi` is true, modify all matching documents.
+Modify documents that match `selector` as given by `modifier` (see [modifier
+documentation](#modifiers)).  By default, modify only one matching document.  If
+`multi` is true, modify all matching documents.
 
 Instead of a selector, you can pass a string, which will be
 interpreted as an `_id`.
@@ -656,7 +655,7 @@ Example:
 {{> api_box allow}}
 
 When a client calls `insert`, `update`, or `remove` on a collection, the
-collection's `allow` and <a href='#deny'>`deny`</a> callbacks are called
+collection's `allow` and [`deny`](#deny) callbacks are called
 on the server to determine if the write should be allowed. If at least
 one `allow` callback allows the write, and no `deny` callbacks deny the
 write, then the write is allowed to proceed.
@@ -790,7 +789,7 @@ and checked by allow and deny)]}}]}`.
 
 {{> api_box deny}}
 
-This works just like <a href='#allow'>`allow`</a>, except it lets you
+This works just like [`allow`](#allow), except it lets you
 make sure that certain writes are definitely denied, even if there is an
 `allow` rule that says that they should be permitted.
 
@@ -943,7 +942,8 @@ But they can also contain more complicated tests:
     // Matches documents where fruit is one of three possibilities
     {fruit: {$in: ["peach", "plum", "pear"]}}
 
-See the <a href="http://www.mongodb.org/display/DOCS/Advanced+Queries" target="_blank">complete documentation.</a>
+See the [complete
+documentation](http://www.mongodb.org/display/DOCS/Advanced+Queries).
 
 {{/api_box_inline}}
 
@@ -966,7 +966,9 @@ whatever was previously in the database.
     // Find the document with id "123", and completely replace it.
     Users.update({_id: "123"}, {name: "Alice", friends: ["Bob"]});
 
-See the <a href="http://www.mongodb.org/display/DOCS/Updating#Updating-ModifierOperations" target="_blank">full list of modifiers.</a>
+See the [full list of
+modifiers](http://www.mongodb.org/display/DOCS/Updating#Updating-ModifierOperations)
+full list of modifiers.
 
 {{/api_box_inline}}
 
@@ -1693,7 +1695,7 @@ This collection contains one document per user. Example user document:
     }
 
 
-Like all <a href='#collections'>Meteor.Collection</a>s, you can access all
+Like all [Meteor.Collection](#collections)s, you can access all
 documents on the server, but only those specifically published by the server are
 available on the client.
 
@@ -1757,9 +1759,9 @@ If the user has not already granted all the permissions requested they will be
 prompted to grant access to their account in the pop-up dialog. Values for the
 `requestPermissions` parameter differ for each login service:
 
-- Facebook: <a href="http://developers.facebook.com/docs/authentication/permissions/">http://developers.facebook.com/docs/authentication/permissions/</a>
-- GitHub: <a href="http://developer.github.com/v3/oauth/#scopes">http://developer.github.com/v3/oauth/#scopes</a>
-- Google: <a href="https://developers.google.com/accounts/docs/OAuth2Login#scopeparameter">https://developers.google.com/accounts/docs/OAuth2Login#scopeparameter</a>
+- Facebook: <http://developers.facebook.com/docs/authentication/permissions/>
+- GitHub: <http://developer.github.com/v3/oauth/#scopes>
+- Google: <https://developers.google.com/accounts/docs/OAuth2Login#scopeparameter>
 
 Currently, `loginWithTwitter` and `loginWithWeibo` do not support
 `requestPermissions`.
@@ -1800,9 +1802,9 @@ on the server. Pass the token the user receives in this email
 to [`Accounts.resetPassword`](#accounts_resetpassword) to
 complete the password reset process.
 
-If you are using the <a href="#pkg_accounts_ui">`accounts-ui`
-  package</a>, this is handled automatically. Otherwise, it is your
-responsiblity to prompt the user for the new password and call `resetPassword`.
+If you are using the [`accounts-ui` package](#pkg_accounts_ui), this is handled
+automatically. Otherwise, it is your responsiblity to prompt the user for the
+new password and call `resetPassword`.
 
 - XXX token goes to `Accounts._resetPasswordToken`.
 
@@ -1853,11 +1855,10 @@ for the emails by `sendResetPasswordEmail`, `sendEnrollmentEmail`, and
 
 Override fields of the object by assigning to them:
 
-- `from`: A `String` with an <a href="http://tools.ietf.org/html/rfc5322"
-   target="_blank">RFC5322</a> From address. By default email is from
-   `no-reply@meteor.com`. If you wish to receive email from users asking for help
-   with their account, be sure to set this to an email address that you can receive
-   email at.
+- `from`: A `String` with an [RFC5322](http://tools.ietf.org/html/rfc5322) From
+   address. By default email is from `no-reply@meteor.com`. If you wish to
+   receive email from users asking for help with their account, be sure to set
+   this to an email address that you can receive email at.
 - `siteName`: The public name of your application. Defaults to the DNS name of
    the application (eg: `awesome.meteor.com`).
 - `resetPassword`: An `Object` with two fields:
@@ -2297,9 +2298,9 @@ send mail. Currently, Meteor supports sending mail over SMTP; the `MAIL_URL`
 environment variable should be of the form
 `smtp://USERNAME:PASSWORD@HOST:PORT/`. For apps deployed with `meteor deploy`,
 `MAIL_URL` defaults to an account (provided by
-<a href="http://www.mailgun.com/" target="_blank">Mailgun</a>) which allows
-apps to send up to 200 emails per day; you may override this default by
-assigning to `process.env.MAIL_URL` before your first call to `Email.send`.
+[Mailgun](http://www.mailgun.com/)) which allows apps to send up to 200 emails
+per day; you may override this default by assigning to `process.env.MAIL_URL`
+before your first call to `Email.send`.
 
 If `MAIL_URL` is not set (eg, when running your application locally),
 `Email.send` outputs the message to standard output instead.

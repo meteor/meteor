@@ -741,7 +741,7 @@ Template.api.loginWithPassword = {
     {
       name: "password",
       type: "String",
-      descr: "The user's password. This is __not__ sent in plain text over the wire &mdash; it is secured with <a href='http://en.wikipedia.org/wiki/Secure_Remote_Password_protocol' target='_blank'>SRP</a>."
+      descr: "The user's password. This is __not__ sent in plain text over the wire &mdash; it is secured with [SRP](http://en.wikipedia.org/wiki/Secure_Remote_Password_protocol)."
     },
     {
       name: "callback",
@@ -1402,8 +1402,7 @@ Template.api.template_data = {
 };
 
 var rfc = function (descr) {
-  return ('<a href="http://tools.ietf.org/html/rfc5322" target="_blank">RFC5322'
-          + '</a> ' + descr);
+  return '[RFC5322](http://tools.ietf.org/html/rfc5322) ' + descr;
 };
 
 Template.api.email_send = {

@@ -108,8 +108,7 @@ your client model code.
 
 Meteor's protocol for distributing document updates is database
 agnostic.  By default, Meteor applications use the
-familiar <a target="_blank"
-href="http://www.mongodb.org/display/DOCS/Manual">MongoDB API</a>:
+familiar [MongoDB API](http://www.mongodb.org/display/DOCS/Manual):
 servers store documents in MongoDB collections, and clients cache those
 documents in a client-side cache that implements the same Mongo API for
 queries and updates.
@@ -160,11 +159,10 @@ reading until the accounts section?
 
 <h2 id="reactivity">Reactivity</h2>
 
-Meteor embraces the concept of
-<a target="_blank" href="http://en.wikipedia.org/wiki/Reactive_programming">
-reactive programming</a>. This means that you can write your code in a
-simple imperative style, and the result will be automatically
-recalculated whenever data changes that your code depends on.
+Meteor embraces the concept of [reactive
+programming](http://en.wikipedia.org/wiki/Reactive_programming). This means that
+you can write your code in a simple imperative style, and the result will be
+automatically recalculated whenever data changes that your code depends on.
 
     Meteor.autosubscribe(function () {
       Meteor.subscribe("messages", Session.get("currentRoomId"));
@@ -208,10 +206,11 @@ And the reactive data sources that can trigger changes are:
 * [`Meteor.userId`](#meteor_userid)
 * [`Meteor.userLoaded`](#meteor_userloaded)
 
-Meteor's <a href="https://github.com/meteor/meteor/blob/master/packages/deps/deps.js" target="_blank">implementation</a>
-of reactivity is short and sweet, about 50 lines of code.  You can
-hook into it yourself to add new reactive contexts or data sources,
-using the [`Meteor.deps`](#meteor_deps) module.
+Meteor's
+[implementation](https://github.com/meteor/meteor/blob/master/packages/deps/deps.js)
+of reactivity is short and sweet, about 50 lines of code.  You can hook into it
+yourself to add new reactive contexts or data sources, using the
+[`Meteor.deps`](#meteor_deps) module.
 
 {{/better_markdown}}
 </template>
@@ -261,15 +260,14 @@ the new elements using a library like jQuery. In that case, call
 [`Meteor.flush`](#meteor_flush) to bring the DOM up to date
 immediately.
 
-When live-updating DOM elements are taken off the screen, they are
-automatically cleaned up &mdash; their callbacks are torn down, any
-associated database queries are stopped, and they stop updating. For
-this reason, you never have to worry about
-the <a href="http://lostechies.com/derickbailey/2011/09/15/zombies-run-managing-page-transitions-in-backbone-apps/"
-target="_blank">zombie templates</a> that plague hand-written update
-logic. To protect your elements from cleanup, just make sure that they
-on-screen before your code returns to the event loop, or before any
-call you make to [`Meteor.flush`](#meteor_flush).
+When live-updating DOM elements are taken off the screen, they are automatically
+cleaned up &mdash; their callbacks are torn down, any associated database
+queries are stopped, and they stop updating. For this reason, you never have to
+worry about the [zombie
+templates](http://lostechies.com/derickbailey/2011/09/15/zombies-run-managing-page-transitions-in-backbone-apps/)
+that plague hand-written update logic. To protect your elements from cleanup,
+just make sure that they on-screen before your code returns to the event loop,
+or before any call you make to [`Meteor.flush`](#meteor_flush).
 
 Another thorny problem in hand-written applications is element
 preservation. Suppose the user is typing text into an `<input>`
@@ -307,10 +305,9 @@ available as a function on the global `Template` object.
 {{#note}}
 Today, the only templating system that has been packaged for Meteor is
 Handlebars. Let us know what templating systems you'd like to use with
-Meteor. Meanwhile, see
-the <a href="http://www.handlebarsjs.com/" target="_blank">Handlebars documentation</a>
-and <a href="https://github.com/meteor/meteor/wiki/Handlebars" target="_blank">Meteor
-Handlebars extensions</a>.
+Meteor. Meanwhile, see the [Handlebars
+documentation](http://www.handlebarsjs.com/) and [Meteor Handlebars
+extensions](https://github.com/meteor/meteor/wiki/Handlebars).
 {{/note}}
 
 A template with a `name` of `hello` is rendered by calling the
