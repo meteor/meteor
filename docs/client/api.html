@@ -1214,15 +1214,16 @@ general mechanism.
 
 {{> api_box loginWithPassword}}
 
-{{> api_box loginWithOAuth}}
+{{> api_box loginWithExternalService}}
 
-These functions initiate the login process with a third party OAuth
-provider (eg: Facebook, Google, etc). When called they open a new pop-up
+These functions initiate the login process with an external
+service (eg: Facebook, Google, etc), using OAuth. When called they open a new pop-up
 window that loads the provider's login page. Once the user has logged in
 with the provider, the pop-up window is closed and the Meteor client
-logs in to the Meteor server with the information provided by the OAuth
-provider.
+logs in to the Meteor server with the information provided by the external
+service.
 
+<a id="requestpermissions" name="requestpermissions" />
 If the user has not already granted all the permissions requested they will be
 prompted to grant access to their account in the pop-up dialog. Values for the
 `requestPermissions` parameter differ for each login service:
@@ -1230,9 +1231,7 @@ prompted to grant access to their account in the pop-up dialog. Values for the
 - Facebook: <http://developers.facebook.com/docs/authentication/permissions/>
 - GitHub: <http://developer.github.com/v3/oauth/#scopes>
 - Google: <https://developers.google.com/accounts/docs/OAuth2Login#scopeparameter>
-
-Currently, `loginWithTwitter` and `loginWithWeibo` do not support
-`requestPermissions`.
+- Twitter, Weibo: currently not supported
 
 
 {{> api_box accounts_createUser}}
@@ -1256,8 +1255,8 @@ will send the user an email with a link to set their initial password.
 By default the `profile` option is added directly to the new user document. To
 override this behavior, use [`Accounts.onCreateUser`](#accounts_createuser).
 
-This function is only used for creating users with passwords. The OAuth
-login flows do not use this function.
+This function is only used for creating users with passwords. The external
+service login flows do not use this function.
 
 
 {{> api_box accounts_changePassword}}
@@ -1388,7 +1387,7 @@ contents of new user documents.
 The function you pass will be called with two arguments: `options` and
 `user`. The `options` argument comes
 from [`Accounts.createUser`](#accounts_createuser) for
-password-based users or from the OAuth login flow. `options` may come
+password-based users or from an extenal service login flow. `options` may come
 from an untrusted client so make to validate any values you read from
 it. The `user` argument is created on the server and contains a
 proposed user object with all the automatically generated fields
