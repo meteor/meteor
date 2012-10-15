@@ -775,12 +775,12 @@ having the clients call `insert`, `update`, and `remove` directly on the
 collection.
 
 Meteor also has a special "insecure mode" for quickly prototyping new
-applications. In insecure mode, if you haven't set up any `allow` or
-`deny` rules on a collection, then all users have full write access to
-the collection. This is the only effect of insecure mode. If you call
-`allow` or `deny` at all, even `allow({})`, then access is checked just
-like normal. __New Meteor projects start in insecure mode by default.__ To
-turn it off just type `meteor remove insecure`.
+applications. In insecure mode, if you haven't set up any `allow` or `deny`
+rules on a collection, then all users have full write access to the
+collection. This is the only effect of insecure mode. If you call `allow` or
+`deny` at all on a collection, even `Posts.allow({})`, then access is checked
+just like normal on that collection. __New Meteor projects start in insecure
+mode by default.__ To turn it off just type `meteor remove insecure`.
 
 {{#note}}
 For `update` and `remove`, documents will be affected only if they match
