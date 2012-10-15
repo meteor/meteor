@@ -275,7 +275,7 @@ This is how to invoke a method.  It will run the method on the server.
 If a stub is available, it will also run the stub on the client.
 
 If you include a callback function as the last argument (which can't be
-an argument to the method, since functions aren't serializeable), the
+an argument to the method, since functions aren't serializable), the
 method will run asynchronously: it will return nothing in particular and
 will not throw an exception.  When the method is complete (which may or
 may not happen before `Meteor.call` returns), the callback will be
