@@ -253,6 +253,7 @@ var toc = [
     "backbone",
     "bootstrap",
     "coffeescript",
+    "d3",
     "force-ssl",
     "jquery",
     "less",
