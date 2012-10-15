@@ -62,7 +62,7 @@ Meteor.startup(function () {
   });
 
   // Make external links open in a new tab.
-  $('a:not([href^="#")').attr('target', '_blank');
+  $('a:not([href^="#"])').attr('target', '_blank');
 });
 
 var toc = [
