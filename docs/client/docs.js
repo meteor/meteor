@@ -48,17 +48,25 @@ Meteor.startup(function () {
     }
   });
 
+  window.onhashchange = function () {
+    scrollToSection(location.hash);
+  };
+
+  var scrollToSection = function (section) {
+    ignore_waypoints = true;
+    Session.set("section", section.substr(1));
+    scroller().animate({
+      scrollTop: $(section).offset().top
+    }, 500, 'swing', function () {
+      window.location.hash = section;
+      ignore_waypoints = false;
+    });
+  };
+
   $('#main, #nav').delegate("a[href^='#']", 'click', function (evt) {
     evt.preventDefault();
     var sel = $(this).attr('href');
-    ignore_waypoints = true;
-    Session.set("section", sel.substr(1));
-    scroller().animate({
-      scrollTop: $(sel).offset().top
-    }, 500, 'swing', function () {
-      window.location.hash = sel;
-      ignore_waypoints = false;
-    });
+    scrollToSection(sel);
   });
 
   // Make external links open in a new tab.
