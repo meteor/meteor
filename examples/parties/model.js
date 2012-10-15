@@ -3,7 +3,9 @@
   x, y: Number (screen coordinates)
   title, description: String
   public: Boolean
-  canSee: list of user id's that it's shared with (ignored if public)
+  invited: list of user id's that it's shared with, not including
+    the owner (ignored if public)
+  rsvps: XXX document, fields are 'user' and 'rsvp'
 */
 Parties = new Meteor.Collection("parties");
 
@@ -20,7 +22,7 @@ Parties.allow({
 });
 
 var attending = function(party) {
-  return _.reduce(party.rsvps, function(memo, rsvp) {
+  return _.reduce(party.rsvps, function (memo, rsvp) {
     if (rsvp.rsvp === 'yes')
       return memo + 1;
     else
@@ -30,7 +32,7 @@ var attending = function(party) {
 
 Parties.deny({
   remove: function (userId, parties) {
-    return _.any(parties, function(party) {
+    return _.any(parties, function (party) {
       return party.owner !== userId || attending(party) > 0;
     });
   }
@@ -64,9 +66,20 @@ Meteor.methods({
       title: options.title,
       description: options.description,
       public: !! options.public,
-      canSee: [],
+      invited: [],
       rsvps: []
     });
+  },
+
+  invite: function (partyId, userId) {
+    var party = Parties.findOne(partyId);
+    if (! party || party.owner !== this.userId)
+      throw new Meteor.Error(404, "No such party");
+    if (party.public)
+      throw new Meteor.Error(400,
+                             "That party is public. No need to invite people.");
+    if (userId !== party.owner)
+      Parties.update(partyId, { $addToSet: { invited: userId } });
   },
 
   rsvp: function (partyId, rsvp) {
@@ -77,7 +90,7 @@ Meteor.methods({
     var party = Parties.findOne(partyId);
     if (! party)
       throw new Meteor.Error(404, "No such party");
-    if (! party.public && party.owner !== this.userId && !_.contains(party.canSee, this.userId))
+    if (! party.public && party.owner !== this.userId && !_.contains(party.invited, this.userId))
       throw new Meteor.Error(403, "No such party"); // private, but let's not tell this to the user
 
     var rsvpIndex = _.indexOf(_.pluck(party.rsvps, 'user'), this.userId);

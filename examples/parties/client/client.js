@@ -8,6 +8,10 @@ Template.page.showCreateDialog = function () {
   return Session.get("showCreateDialog");
 };
 
+Template.page.showInviteDialog = function () {
+  return Session.get("showInviteDialog");
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Party details sidebar
 ///////////////////////////////////////////////////////////////////////////////
@@ -36,13 +40,27 @@ Template.details.rsvpEmail = function () {
   return user.emails[0].address;
 };
 
+Template.details.outstandingInvitations = function () {
+  var party = Parties.findOne(this._id);
+  // take out the people that have already rsvp'd
+  var people = _.difference(party.invited, _.pluck(party.rsvps, 'user'));
+  return Meteor.users.find({_id: {$in: people}});
+};
+
+Template.details.invitationEmail = function () {
+  return this.emails[0].address;
+};
+
+
 Template.details.rsvpStatus = function () {
   if (this.rsvp === "yes") return "Going";
   if (this.rsvp === "maybe") return "Maybe";
   return "No";
 };
 
-
+Template.details.canInvite = function () {
+  return ! this.public && this.owner === Meteor.userId();
+};
 
 Template.details.canRemove = function () {
   return this.owner === Meteor.userId() && attending(this) === 0;
@@ -63,8 +81,12 @@ Template.details.events({
     Meteor.call("rsvp", Session.get("selected"), "no");
     return false;
   },
+  'click .invite': function () {
+    Session.set("showInviteDialog", true);
+  },
   'click .remove': function () {
     Parties.remove(this._id);
+    return false;
   }
 });
 
@@ -202,7 +224,7 @@ Template.map.destroyed = function () {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// Create Event dialog
+// Create Party dialog
 ///////////////////////////////////////////////////////////////////////////////
 
 Template.createDialog.events = {
@@ -232,4 +254,28 @@ Template.createDialog.events = {
   'click .cancel': function () {
     Session.set("showCreateDialog", false);
   }
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Invite dialog
+///////////////////////////////////////////////////////////////////////////////
+
+Template.inviteDialog.events = {
+  'click .invite': function (event, template) {
+    Meteor.call('invite', Session.get("selected"), this._id);
+  },
+  'click .close': function (event, template) {
+    Session.set("showInviteDialog", false);
+  }
+};
+
+Template.inviteDialog.uninvited = function () {
+  var party = Parties.findOne(Session.get("selected"));
+  var invited = _.clone(party.invited);
+  invited.push(party.owner);
+  return Meteor.users.find({_id: {$nin: invited}});
+};
+
+Template.inviteDialog.email = function () {
+  return this.emails[0].address;
 };

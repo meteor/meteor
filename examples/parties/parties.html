@@ -14,6 +14,9 @@
     {{> createDialog}}
   {{/if}}
 
+  {{#if showInviteDialog}}
+    {{> inviteDialog}}
+  {{/if}}
 
   <div class="left-panel">
     {{#if currentUser}}
@@ -27,7 +30,6 @@
   {{> details}}
 </template>
 
-
 <template name="createDialog">
   <div class="mask"> </div>
   <div class="popup">
@@ -35,10 +37,26 @@
     Title: <input type="text" class="title"><br>
 
     Description<br><textarea class="description"></textarea><br>
-    <input type="checkbox" class="private">Private party?</input><br>
+    <input type="checkbox" class="private">Private party</input><br>
 
     <input type="button" value="Add" class="save">
     <input type="button" value="Cancel" class="cancel">
+  </div>
+</template>
+
+<template name="inviteDialog">
+  <div class="mask"> </div>
+  <div class="popup">
+    Invite people<br>
+
+    {{#each uninvited}}
+      {{email}}
+      <input type="button" value="Invite" class="invite">
+    {{else}}
+      Everyone on the site is already invited.
+    {{/each}}
+
+    <input type="button" value="Done" class="close">
   </div>
 </template>
 
@@ -58,12 +76,7 @@
     {{#if party}}
       {{#with party}}
         <h1>{{title}}</h1>
-        Posted by {{creatorName}} &mdash;
-        {{#if attending}}
-          {{attending}} confirmed guests
-        {{else}}
-          Nobody going yet
-        {{/if}}<br>
+        Posted by {{creatorName}}<br>
 
         {{description}}<br>
 
@@ -84,16 +97,18 @@
           Everyone: invited<br>
         {{else}}
           {{#each outstandingInvitations}}
-            {{email}}: invited<br>
+            {{invitationEmail}}: invited<br>
           {{/each}}
+          {{#if canInvite}}
+            <input type="button" value="Invite some people" class="invite"><br>
+          {{/if}}
         {{/if}}
 
         {{#if canRemove}}
-          <div><input type="button" value="Remove event" class="remove"></div>
+          You posted this party and nobody is signed up to go, so if
+          you like, you could
+          <a href="#" class="remove">delete this listing</a>.
         {{/if}}
-
-          <br>
-        XXX rsvps, invite editing (if private)
       {{/with}}
     {{else}}
       Click a party to select it
