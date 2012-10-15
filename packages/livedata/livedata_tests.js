@@ -108,20 +108,25 @@ testAsyncMulti("livedata - basic method invocation", [
   // test that `wait: false` is respected
   function (test, expect) {
     if (Meteor.isClient) {
-      Meteor.apply("delayedTrue", [], {wait: false}, expect(function(err, res) {
-        test.equal(res, false);
-      }));
-      Meteor.apply("makeDelayedTrueImmediatelyReturnFalse", []);
+      // For test isolation
+      var token = Meteor.uuid();
+      Meteor.apply(
+        "delayedTrue", [token], {wait: false}, expect(function(err, res) {
+          test.equal(res, false);
+        }));
+      Meteor.apply("makeDelayedTrueImmediatelyReturnFalse", [token]);
     }
   },
 
   // test that `wait: true` is respected
   function(test, expect) {
     if (Meteor.isClient) {
-      Meteor.apply("delayedTrue", [], {wait: true}, expect(function(err, res) {
-        test.equal(res, true);
-      }));
-      Meteor.apply("makeDelayedTrueImmediatelyReturnFalse", []);
+      var token = Meteor.uuid();
+      Meteor.apply(
+        "delayedTrue", [token], {wait: true}, expect(function(err, res) {
+          test.equal(res, true);
+        }));
+      Meteor.apply("makeDelayedTrueImmediatelyReturnFalse", [token]);
     }
   },
 

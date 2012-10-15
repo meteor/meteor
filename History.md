@@ -1,6 +1,8 @@
 
 ## vNEXT
 
+## v0.5.0
+
 * This release introduces Meteor Accounts, a full-featured auth system that supports
   - fine-grained user-based control over database reads and writes
   - federated login with any OAuth provider (with built-in support for

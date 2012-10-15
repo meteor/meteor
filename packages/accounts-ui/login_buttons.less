@@ -60,8 +60,11 @@
   // Standard, IE10
   background-image: linear-gradient(to bottom, @topColor, @bottomColor);
   background-repeat: repeat-x;
-   // IE9 and down
-  filter: e(%("progid:DXImageTransform.Microsoft.gradient(topColorstr='%d', bottomColorstr='%d', GradientType=0)",argb(@topColor),argb(@bottomColor)));
+  // IE9 and down
+  // XXX This gradient hack causes gradients to overflow the rounded corners
+  // in IE9.  We make the same call as Bootstrap here: keep the rounded
+  // corners and withhold the gradients.
+  //  filter: e(%("progid:DXImageTransform.Microsoft.gradient(startColorstr='%d', endColorstr='%d', GradientType=0)",argb(@topColor),argb(@bottomColor)));
 }
 
 .reset-ie-gradient () {
@@ -129,7 +132,7 @@
 
   .vertical-gradient(@topColor, @bottomColor);
   border-radius: 4px;
-  border: 1px solid mix(@bottomColor, rgba(0,0,0,0.3), 30%);
+  border: 1px solid mix(@bottomColor, #000, 30%);
   .box-shadow(0 1px 3px rgba(0,0,0,0.5));
 
   &:active {
@@ -222,7 +225,7 @@
 @meteor-accounts-dialog-border-width: 1px;
 
 .accounts-dialog {
-  border: @meteor-accounts-dialog-border-width solid rgba(0, 0, 0, 0.4);
+  border: @meteor-accounts-dialog-border-width solid #777;
   z-index: 1000;
   background: white;
 
@@ -251,15 +254,22 @@
     font-size: 80%;
   }
   input {
-    // Be compatible with Bootstrap and apps that customize padding
-    // and border on inputs.  Be pixel-accurate in IE 8+.
+    // Be pixel-accurate in IE 8+ regardless of our borders and
+    // paddings, at the expense of IE 7.
+    // Any heights or widths applied to this element will set the
+    // size of the border box (including padding and borders)
+    // instead of the content box.  This makes it possible to
+    // do width 100%.
     .box-sizing-by-border();
     width: 100%;
-    // Given that any `height` declaration will describe the total
-    // height including padding, prop the text field open a little
-    // bit if there is a small specified height.
-    // This plays nice with Bootstrap.
-    min-height: 30px;
+    // A fix purely for the "meteor add bootstrap" experience.
+    // Bootstrap sets "height: 20px" on form fields, which is too
+    // small when applied to the border box.  People have complained
+    // that Bootstrap takes this approach for the sake of IE 7:
+    // https://github.com/twitter/bootstrap/issues/2935
+    // Our work-around is to override Bootstrap's rule (with higher
+    // precedence).
+    &[type] { height: auto; }
   }
 
   .login-button-form-submit { margin-top: 8px; }
