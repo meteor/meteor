@@ -405,7 +405,7 @@ collection with `new Meteor.Collection`.
 
 {{> api_box meteor_collection}}
 
-Calling this function is analogous to declaring a model in an
+Calling this function is analogous to declaring a model in a
 traditional ORM (Object-Relation Mapper)-centric framework. It sets up a
 *collection* (a storage space for records, or "documents") that can be
 used to store a particular type of information, like users, posts,
@@ -629,20 +629,20 @@ Find all of the documents that match `selector` and delete them from the
 collection. Or instead of a selector, you may pass a string, to delete
 the document with that `_id`.  As a safety measure, do nothing if the
 selector is undefined.  If the selector is `{}`, remove all the
-documents from the collection.)
+documents from the collection.
 
 On the server, if you don't provide a callback, then `remove` blocks
 until the database acknowledges the write, or throws an exception if
 something went wrong.  If you do provide a callback, `remove` returns
 immediately.  Once the remove completes, the callback is called with a
 single error argument in the case of failure, or no arguments if the
-update was successful.
+remove was successful.
 
 On the client, `remove` never blocks.  If you do not provide a callback
 and the remove fails on the server, then Meteor will log a warning to
 the console.  If you provide a callback, Meteor will call that function
 with an error argument if there was an error, or no arguments if the
-update was successful.
+remove was successful.
 
 Example:
 
@@ -875,13 +875,13 @@ length of the list.
 
 {{#dtdd "changed(newDocument, atIndex, oldDocument)"}}
 The contents of the document at position `atIndex`
-changed to `newDocument`, was previously `oldDocument`.
+(`oldDocument`) changed to `newDocument`.
 {{/dtdd}}
 
 {{#dtdd "moved(document, oldIndex, newIndex)"}}
 A document changed its position in the result set,
 from `oldIndex` to `newIndex`. For your
-convenience, its current contents is `document`. (This will
+convenience, its current contents is `document`. This will
 only fire immediately after `changed`.
 {{/dtdd}}
 
