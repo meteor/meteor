@@ -355,7 +355,7 @@ Template.api.find = {
      descr: "Sort order (default: natural order)"},
     {name: "skip",
      type: "Number",
-     descr: "Number of result to skip at the beginning"},
+     descr: "Number of results to skip at the beginning"},
     {name: "limit",
      type: "Number",
      descr: "Maximum number of results to return"},
@@ -365,7 +365,7 @@ Template.api.find = {
      descr: "Dictionary of fields to return or exclude."},
     {name: "reactive",
      type: "Boolean",
-     descr: "Default true; pass false to disable reactivity"}
+     descr: "Default `true`; pass `false` to disable reactivity"}
   ]
 };
 
@@ -387,7 +387,7 @@ Template.api.findone = {
      descr: "Sort order (default: natural order)"},
     {name: "skip",
      type: "Number",
-     descr: "Number of result to skip at the beginning"},
+     descr: "Number of results to skip at the beginning"},
     {name: "fields",
      type: "Object: field specifier",
      type_link: "fieldspecifiers",
@@ -538,7 +538,7 @@ Template.api.cursor_observe = {
   descr: ["Watch a query.  Receive callbacks as the result set changes."],
   args: [
     {name: "callbacks",
-     type: "Object (may include added, changed, moved, removed callbacks)",
+     type: "Object (may include `added`, `changed`, `moved`, `removed` callbacks)",
      descr: "Functions to call to deliver the result set as it changes"}
   ]
 };
@@ -1353,7 +1353,7 @@ Template.api.template_preserve = {
   args: [
     {name: "selectors",
      type: "Array or Object",
-     descr: "Array of selectors that each match at most one element, such as `['.thing1', '.thing2']`, or, alternatively, a dictionary of selectors and node-labeling functions (see below)."}
+     descr: "Array of CSS selectors that each match at most one element, such as `['.thing1', '.thing2']`, or, alternatively, a dictionary of selectors and node-labeling functions (see below)."}
   ]
 };
 
