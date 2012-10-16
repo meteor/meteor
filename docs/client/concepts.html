@@ -93,7 +93,7 @@ the client to avoid slow roundtrips to the server, and carefully
 orchestrate invalidation messages to every client as data changes.
 
 In Meteor, the client and server share the same database API.  The same
-exact application code -- like validators and computed properties -- can
+exact application code &mdash; like validators and computed properties &mdash; can
 often run in both places.  But while code running on the server has
 direct access to the database, code running on the client does *not*.
 This distinction is the basis for Meteor's data security model.
@@ -179,8 +179,8 @@ remains untouched, and no other client sees the update.
 Meteor has a cute trick, though.  When a client issues a write to the
 server, it also updates its local cache immediately, without waiting for
 the server's response.  This means the screen will redraw right away.
-If the server accepted the update -- what ought to happen most of the
-time in a properly behaving client -- then the client got a jump on the
+If the server accepted the update &mdash; what ought to happen most of the
+time in a properly behaving client &mdash; then the client got a jump on the
 change and didn't have to wait for the round trip to update its own
 screen.  If the server rejects the change, Meteor patches up the
 client's cache with the server's result.
