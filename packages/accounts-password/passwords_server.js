@@ -445,7 +445,7 @@
 
     // XXX allow an optional callback?
     if (callback) {
-      throw new Error("Meteor.createUser with callback not supported on the server yet.");
+      throw new Error("Accounts.createUser with callback not supported on the server yet.");
     }
 
     var userId = createUser(options).id;
