@@ -21,7 +21,7 @@ Parties.allow({
   }
 });
 
-var attending = function(party) {
+var attending = function (party) {
   return _.reduce(party.rsvps, function (memo, rsvp) {
     if (rsvp.rsvp === 'yes')
       return memo + 1;
@@ -37,6 +37,20 @@ Parties.deny({
     });
   }
 });
+
+var displayName = function (user) {
+  if (user.profile && user.profile.name)
+    return user.profile.name;
+  return user.emails[0].address;
+};
+
+var contactEmail = function (user) {
+  if (user.emails && user.emails.length)
+    return user.emails[0].address;
+  if (user.services.facebook && user.services.facebook.email)
+    return user.services.facebook.email;
+  return null;
+};
 
 Meteor.methods({
   // title, description, x, y, public
@@ -78,8 +92,24 @@ Meteor.methods({
     if (party.public)
       throw new Meteor.Error(400,
                              "That party is public. No need to invite people.");
-    if (userId !== party.owner)
+    if (userId !== party.owner && ! _.contains(party.invited, userId)) {
       Parties.update(partyId, { $addToSet: { invited: userId } });
+
+      var from = contactEmail(Meteor.users.findOne(this.userId));
+      var to = contactEmail(Meteor.users.findOne(userId));
+      if (Meteor.isServer && to) {
+        Email.send({
+          from: "noreply@example.com",
+          to: to,
+          replyTo: from || undefined,
+          subject: "PARTY: " + party.title,
+          text:
+"Hey, I just invited you to '" + party.title + "' on All Tomorrow's Parties.\n" +
+"\n" +
+"Come check it out at: " + Meteor.absoluteUrl() + "\n"
+        });
+      }
+    }
   },
 
   rsvp: function (partyId, rsvp) {

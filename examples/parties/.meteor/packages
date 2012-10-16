@@ -8,3 +8,6 @@ accounts-ui
 accounts-password
 d3
 bootstrap
+email
+accounts-facebook
+accounts-twitter

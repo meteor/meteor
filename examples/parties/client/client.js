@@ -34,14 +34,12 @@ Template.details.creatorName = function () {
   var owner = Meteor.users.findOne(this.owner);
   if (owner._id === Meteor.userId())
     return "me";
-  // XXX this (not having 'emails' just be an array of string, for the
-  // common case) really kind of sucks
-  return owner.emails[0].address;
+  return displayName(owner);
 };
 
-Template.attendance.rsvpEmail = function () {
+Template.attendance.rsvpName = function () {
   var user = Meteor.users.findOne(this.user);
-  return user.emails[0].address;
+  return displayName(user);
 };
 
 Template.attendance.outstandingInvitations = function () {
@@ -51,8 +49,8 @@ Template.attendance.outstandingInvitations = function () {
   return Meteor.users.find({_id: {$in: people}});
 };
 
-Template.attendance.invitationEmail = function () {
-  return this.emails[0].address;
+Template.attendance.invitationName = function () {
+  return displayName(this);
 };
 
 Template.attendance.rsvpIs = function (what) {
@@ -299,6 +297,6 @@ Template.inviteDialog.uninvited = function () {
   return Meteor.users.find({_id: {$nin: invited}});
 };
 
-Template.inviteDialog.email = function () {
-  return this.emails[0].address;
+Template.inviteDialog.displayName = function () {
+  return displayName(this);
 };
