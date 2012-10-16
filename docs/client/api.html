@@ -1134,10 +1134,11 @@ this period [`userLoaded`](#meteor_userloaded) will return
 
 {{> api_box users}}
 
-This collection contains one document per user. Example user document:
+This collection contains one document per registered user. Here's an example
+user document:
 
     {
-      _id: "bbca5d6a-2156-41c4-89da-0329e8c99a4f" // userId
+      _id: "bbca5d6a-2156-41c4-89da-0329e8c99a4f",  // Meteor.userId()
       username: "cool_kid_13", // unique name
       emails: [
         // each email address can only belong to one user.
@@ -1162,6 +1163,21 @@ This collection contains one document per user. Example user document:
       }
     }
 
+A user document can contain any data you want to store about a user. Meteor
+treats the following fields specially:
+
+- `username`: a unique String identifying the user.
+- `emails`: an Array of Objects with keys `address` and `verified`;
+  an email address may belong to at most one user. `verified` is
+  a Boolean which is true if the user has [verified the
+  address](#accounts_verifyemail) with a token sent over email.
+- `profile`: an Object which (by default) the user can create
+  and update with any data.
+- `services`: an Object containing data used by particular
+  login services. For example, its `reset` field contains
+  tokens used by [forgot password](#accounts_forgotpassword) links,
+  and its `resume` field contains tokens used to keep you
+  logged in between sessions.
 
 Like all [Meteor.Collection](#collections)s, you can access all
 documents on the server, but only those specifically published by the server are
