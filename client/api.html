@@ -1248,14 +1248,22 @@ Example:
 
 {{> api_box accounts_validateNewUser}}
 
-This can be called multiple times. If any of the functions return
-`false` the new user creation is aborted.
+This can be called multiple times. If any of the functions return `false` or
+throw an error, the new user creation is aborted. To set a specific error
+message (which will be displayed by [`accounts-ui`](#accountsui)), throw a new
+[`Meteor.Error`](#meteor_error).
 
 Example:
 
-    // All users must have a username longer than 3 characters.
+    // Validate username, sending a specific error message on failure.
     Accounts.validateNewUser(function (user) {
-        return user.username && user.username.length >= 3;
+      if (user.username && user.username.length >= 3)
+        return true;
+      throw new Meteor.Error(403, "Username must have at least 3 characters");
+    });
+    // Validate username, without a specific error message.
+    Accounts.validateNewUser(function (user) {
+      return user.username !== "root";
     });
 
 {{> api_box accounts_onCreateUser}}
