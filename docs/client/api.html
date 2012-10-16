@@ -1281,9 +1281,9 @@ it. The `user` argument is created on the server and contains a
 proposed user object with all the automatically generated fields
 required for the user to log in.
 
-The function should return a new user object with whatever modifications
-are desired. The returned object is inserted directly into
-the [`Meteor.users`](#meteor_users) collection.
+The function should return the user document (either the one passed in or a
+newly-created object) with whatever modifications are desired. The returned
+document is inserted directly into the [`Meteor.users`](#meteor_users) collection.
 
 The default create user function simply copies `options.profile` into
 the new user document. Calling `onCreateUser` overrides the default
