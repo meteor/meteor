@@ -1112,7 +1112,20 @@ you need to use the `underscore` package and write
 
 <h2 id="accounts_api"><span>Accounts</span></h2>
 
-XXX intro text
+The Meteor Accounts system builds on top of the `userId` support in
+[`publish`](#publish_userId) and [`methods`](#method_userId). The core
+packages add the concept of user documents stored in the database, and
+additional packages add [secure password
+authentication](#accounts_passwords), [integration with third party
+login services](#meteor_loginwithexternalservice), and a [pre-built user
+interface](#accountsui).
+
+The basic Accounts system is in the `accounts-base` package, but
+applications typically include this automatically by adding one of the
+login provider packages: `accounts-password`, `accounts-facebook`,
+`accounts-github`, `accounts-google`, `accounts-twitter`, or
+`accounts-weibo`.
+
 
 {{> api_box user}}
 
@@ -1253,6 +1266,9 @@ prompted to grant access to their account in the pop-up dialog. Values for the
 
 XXX mention provider packages
 
+XXX mention configuring keys
+
+
 {{> api_box accounts_config}}
 {{> api_box accounts_ui_config}}
 
@@ -1326,10 +1342,10 @@ Example:
 
 <h2 id="accounts_passwords"><span>Passwords</span></h2>
 
-The `accounts-password` package implements a complete system for
-password based authentication. In addition to the basic username and
-password based sign-in process it also supports email based sign-in
-including address verification and password recovery emails.
+The `accounts-password` package contains a full system for password
+based authentication. In addition to the basic username and password
+based sign-in process it also supports email based sign-in including
+address verification and password recovery emails.
 
 Unlike most web applications, the Meteor client does not send the user's
 password directly to the server. It uses the [Secure Remote Password
@@ -1341,7 +1357,7 @@ database is compromised.
 To add password support to your application, run `$ meteor add
 accounts-password`. You can construct your own user interface using the
 functions below, or use the [`accounts-ui` package](#accountsui) to
-include a turn-key user interface for password-based sign-in.
+include a turn-key user interface for password based sign-in.
 
 
 {{> api_box accounts_createUser}}
@@ -2250,7 +2266,7 @@ elements are cleaned up by logic that is triggered by context invalidations.
 <h2 id="meteor_http"><span>Meteor.http</span></h2>
 
 `Meteor.http` provides an HTTP API on the client and server.  To use
-these functions, add the HTTP package to your project with `meteor add
+these functions, add the HTTP package to your project with `$ meteor add
 http`.
 
 {{> api_box httpcall}}
