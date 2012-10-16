@@ -186,6 +186,43 @@
   //
 
   if (Meteor.isServer) {
+    Tinytest.add("collection - allow and deny validate options", function (test) {
+      var collection = new Meteor.Collection(null);
+
+      test.throws(function () {
+        collection.allow({invalidOption: true});
+      });
+      test.throws(function () {
+        collection.deny({invalidOption: true});
+      });
+
+      _.each(['insert', 'update', 'remove', 'fetch'], function (key) {
+        var options = {};
+        options[key] = true;
+        test.throws(function () {
+          collection.allow(options);
+        });
+        test.throws(function () {
+          collection.deny(options);
+        });
+      });
+
+      _.each(['insert', 'update', 'remove'], function (key) {
+        var options = {};
+        options[key] = ['an array']; // this should be a function, not an array
+        test.throws(function () {
+          collection.allow(options);
+        });
+        test.throws(function () {
+          collection.deny(options);
+        });
+      });
+
+      test.throws(function () {
+        collection.allow({fetch: function () {}}); // this should be an array
+      });
+    });
+
     Tinytest.add("collection - calling allow restricts", function (test) {
       var collection = new Meteor.Collection(null);
       test.equal(collection._restricted, false);

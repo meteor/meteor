@@ -40,6 +40,9 @@
 * Meteor now provides a compatible replacement for the DOM `localStorage`
   facility that works in IE7, in the `localstorage-polyfill` smart package.
 
+* Meteor now packages the D3 library for manipulating documents based on data in
+  a smart package called `d3`.
+
 * `Meteor.Collection` now takes its optional `manager` argument (used to
   associate a collection with a server you've connected to with
   `Meteor.connect`) as a named option. (The old call syntax continues to work

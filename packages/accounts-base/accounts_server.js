@@ -316,7 +316,7 @@
 
       return true;
     },
-    fields: ['_id'] // we only look at _id.
+    fetch: ['_id'] // we only look at _id.
   });
 
   /// DEFAULT INDEXES ON USERS

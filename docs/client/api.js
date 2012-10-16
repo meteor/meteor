@@ -741,7 +741,7 @@ Template.api.loginWithPassword = {
     {
       name: "password",
       type: "String",
-      descr: "The user's password. This is __not__ sent in plain text over the wire &mdash; it is secured with <a href='http://en.wikipedia.org/wiki/Secure_Remote_Password_protocol' target='_blank'>SRP</a>."
+      descr: "The user's password. This is __not__ sent in plain text over the wire &mdash; it is secured with [SRP](http://en.wikipedia.org/wiki/Secure_Remote_Password_protocol)."
     },
     {
       name: "callback",
@@ -752,11 +752,11 @@ Template.api.loginWithPassword = {
 };
 
 
-Template.api.loginWithOAuth = {
-  id: "meteor_loginwithoauth",
-  name: "Meteor.loginWith<i>OAuthProvider</i>([options], [callback])",
+Template.api.loginWithExternalService = {
+  id: "meteor_loginwithexternalservice",
+  name: "Meteor.loginWith<i>ExternalService</i>([options], [callback])",
   locus: "Client",
-  descr: ["Log the user in using an external OAuth service."],
+  descr: ["Log the user in using an external service."],
   args: [
     {
       name: "callback",
@@ -772,6 +772,76 @@ Template.api.loginWithOAuth = {
     }
   ]
 };
+
+
+
+Template.api.accounts_config = {
+  id: "accounts_config",
+  name: "Accounts.config(options)",
+  locus: "Anywhere",
+  descr: ["Set global accounts options."],
+  options: [
+    {
+      name: "sendVerificationEmail",
+      type: "Boolean",
+      descr: "New users with an email address will receive an address verification email."
+    },
+    {
+      name: "forbidClientAccountCreation",
+      type: "Boolean",
+      descr: "[`createUser`](#accounts_createuser) requests from the client will be rejected."
+    }
+  ]
+};
+
+Template.api.accounts_ui_config = {
+  id: "accounts_ui_config",
+  name: "Accounts.ui.config(options)",
+  locus: "Client",
+  descr: ["Configure the behavior of [`{{loginButtons}}`](#accountsui)."],
+  options: [
+    {
+      name: "requestPermissions",
+      type: "Object",
+      descr: "Which [permissions](#requestpermissions) to request from the user for each external service."
+    },
+    {
+      name: "passwordSignupFields",
+      type: "String",
+      descr: "Which fields to display in the user creation form. One of '`USERNAME_AND_EMAIL`', '`USERNAME_AND_OPTIONAL_EMAIL`', '`USERNAME_ONLY`', or '`EMAIL_ONLY`' (default)."
+    }
+  ]
+};
+
+Template.api.accounts_validateNewUser = {
+  id: "accounts_validatenewuser",
+  name: "Accounts.validateNewUser(func)",
+  locus: "Server",
+  descr: ["Set restrictions on new user creation."],
+  args: [
+    {
+      name: "func",
+      type: "Function",
+      descr: "Called whenever a new user is created. Takes the new user object, and returns true to allow the creation or false to abort."
+    }
+  ]
+};
+
+Template.api.accounts_onCreateUser = {
+  id: "accounts_oncreateuser",
+  name: "Accounts.onCreateUser(func)",
+  locus: "Server",
+  descr: ["Customize new user creation."],
+  args: [
+    {
+      name: "func",
+      type: "Function",
+      descr: "Called whenever a new user is created. Return the new user object, or throw an `Error` to abort the creation."
+    }
+  ]
+};
+
+
 
 Template.api.accounts_createUser = {
   id: "accounts_createuser",
@@ -982,75 +1052,6 @@ Template.api.accounts_emailTemplates = {
   locus: "Anywhere",
   descr: ["Options to customize emails sent from the Accounts system."]
 };
-
-
-
-Template.api.accounts_config = {
-  id: "accounts_config",
-  name: "Accounts.config(options)",
-  locus: "Anywhere",
-  descr: ["Set global accounts options."],
-  options: [
-    {
-      name: "sendVerificationEmail",
-      type: "Boolean",
-      descr: "New users with an email address will receive an address verification email."
-    },
-    {
-      name: "forbidClientAccountCreation",
-      type: "Boolean",
-      descr: "[`createUser`](#accounts_createuser) requests from the client will be rejected."
-    }
-  ]
-};
-
-Template.api.accounts_ui_config = {
-  id: "accounts_ui_config",
-  name: "Accounts.ui.config(options)",
-  locus: "Client",
-  descr: ["Set Accounts UI options for the `loginButtons` template."],
-  options: [
-    {
-      name: "requestPermissions",
-      type: "Object",
-      descr: "Which permissions to request from the user for each OAuth service. For example: `{facebook: ['user_likes'], github: ['user', 'repo']}`"
-    },
-    {
-      name: "passwordSignupFields",
-      type: "String",
-      descr: "Which fields to display in the user creation form. One of '`USERNAME_AND_EMAIL`', '`USERNAME_AND_OPTIONAL_EMAIL`', '`USERNAME_ONLY`', or '`EMAIL_ONLY`' (default)."
-    }
-  ]
-};
-
-Template.api.accounts_validateNewUser = {
-  id: "accounts_validatenewuser",
-  name: "Accounts.validateNewUser(func)",
-  locus: "Server",
-  descr: ["Set restrictions on new user creation."],
-  args: [
-    {
-      name: "func",
-      type: "Function",
-      descr: "Called whenever a new user is created. Takes the new user object, and returns true to allow the creation or false to abort."
-    }
-  ]
-};
-
-Template.api.accounts_onCreateUser = {
-  id: "accounts_oncreateuser",
-  name: "Accounts.onCreateUser(func)",
-  locus: "Server",
-  descr: ["Customize new user creation."],
-  args: [
-    {
-      name: "func",
-      type: "Function",
-      descr: "Called whenever a new user is created. Return the new user object, or throw an `Error` to abort the creation."
-    }
-  ]
-};
-
 
 
 
@@ -1402,8 +1403,7 @@ Template.api.template_data = {
 };
 
 var rfc = function (descr) {
-  return ('<a href="http://tools.ietf.org/html/rfc5322" target="_blank">RFC5322'
-          + '</a> ' + descr);
+  return '[RFC5322](http://tools.ietf.org/html/rfc5322) ' + descr;
 };
 
 Template.api.email_send = {

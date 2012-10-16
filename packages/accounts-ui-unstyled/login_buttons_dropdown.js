@@ -385,7 +385,7 @@
   var signup = function () {
     loginButtonsSession.resetMessages();
 
-    var options = {}; // to be passed to Meteor.createUser
+    var options = {}; // to be passed to Accounts.createUser
 
     var username = trimmedElementValueById('login-username');
     if (username !== null) {

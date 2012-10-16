@@ -13,14 +13,13 @@
     }
     var state = Meteor.uuid();
 
-    var required_scope = ['user'];
-    var scope = _.union((options && options.requestPermissions) || [], required_scope);
-    var flat_scope = _.map(scope, encodeURIComponent).join('+');
+    var scope = (options && options.requestPermissions) || [];
+    var flatScope = _.map(scope, encodeURIComponent).join('+');
 
     var loginUrl =
 	  'https://github.com/login/oauth/authorize' +
 	  '?client_id=' + config.clientId +
-	  '&scope=' + flat_scope +
+	  '&scope=' + flatScope +
 	  '&redirect_uri=' + Meteor.absoluteUrl('_oauth/github?close') +
 	  '&state=' + state;
 
