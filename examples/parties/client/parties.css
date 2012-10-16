@@ -48,3 +48,25 @@ input.chosen {
     width: 500px;
     height: 500px;
 }
+
+.map circle.public {
+    fill: #49AFCD;
+}
+
+.map circle.private {
+    fill: #DA4F49;
+}
+
+.map text {
+    text-anchor: middle;
+    fill: white;
+    font-weight: bold;
+}
+
+.map circle.callout {
+    stroke-width: 5px;
+    stroke-dasharray: 9, 5;
+    stroke-opacity: .8;
+    fill: none;
+    stroke: red;
+}
