@@ -81,11 +81,11 @@ var toc = [
   ],
   "Concepts", [
     "Structuring your app",
-    "Data",
+    "Data and security",
     "Reactivity",
     "Live HTML",
     "Templates",
-    "Smart Packages",
+    "Smart packages",
     "Accounts",
     "Deploying"
   ],
