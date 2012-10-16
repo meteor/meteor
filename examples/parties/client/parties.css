@@ -43,6 +43,7 @@ input.chosen {
 }
 
 .map {
+    position: relative;
     background-image: url('/soma.jpeg');
     background-position: -20px -20px;
     width: 500px;
@@ -69,4 +70,12 @@ input.chosen {
     stroke-opacity: .8;
     fill: none;
     stroke: red;
+}
+
+.attribution {
+    position: absolute;
+    bottom: 0;
+    background-color: white;
+    padding: 3px;
+    padding-bottom: 0;
 }

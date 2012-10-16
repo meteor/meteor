@@ -1774,3 +1774,17 @@ maintained libraries. The externally maintained libraries used by Node are:
     THE SOFTWARE.
   """
 
+
+
+----------
+OpenStreetMap: http://openstreetmap.org/
+  (San Francisco SOMA map in examples/parties/public/soma.jpeg)
+----------
+
+OpenStreetMap is open data, licensed under the Open Data Commons Open Database
+License (ODbL): http://opendatacommons.org/licenses/odbl/1.0/.  Any rights in
+individual contents of the database are licensed under the Database Contents
+License: http://opendatacommons.org/licenses/dbcl/1.0/ The cartography is
+licensed under the under the Creative Commons Attribution-ShareAlike 2.0 license
+(CC-BY-SA). Full information is available at
+http://www.openstreetmap.org/copyright
