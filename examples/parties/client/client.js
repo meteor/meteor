@@ -110,7 +110,7 @@ var coordsRelativeToElement = function (element, event) {
   return { x: x, y: y };
 };
 
-Template.map.events = {
+Template.map.events({
   'mousedown circle, mousedown text': function (event, template) {
     Session.set("selected", event.currentTarget.id);
   },
@@ -120,7 +120,7 @@ Template.map.events = {
     var coords = coordsRelativeToElement(event.currentTarget, event);
     openCreateDialog(coords.x / 500, coords.y / 500);
   }
-};
+});
 
 Template.map.rendered = function () {
   var self = this;
@@ -205,7 +205,7 @@ Template.page.showCreateDialog = function () {
   return Session.get("showCreateDialog");
 };
 
-Template.createDialog.events = {
+Template.createDialog.events({
   'click .save': function (event, template) {
     var title = template.find(".title").value;
     var description = template.find(".description").value;
@@ -236,7 +236,7 @@ Template.createDialog.events = {
   'click .cancel': function () {
     Session.set("showCreateDialog", false);
   }
-};
+});
 
 Template.createDialog.error = function () {
   return Session.get("createError");
@@ -253,7 +253,7 @@ Template.page.showInviteDialog = function () {
   return Session.get("showInviteDialog");
 };
 
-Template.inviteDialog.events = {
+Template.inviteDialog.events({
   'click .invite': function (event, template) {
     Meteor.call('invite', Session.get("selected"), this._id);
   },
@@ -261,7 +261,7 @@ Template.inviteDialog.events = {
     Session.set("showInviteDialog", false);
     return false;
   }
-};
+});
 
 Template.inviteDialog.uninvited = function () {
   var party = Parties.findOne(Session.get("selected"));
