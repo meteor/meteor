@@ -8,7 +8,6 @@
 </body>
 
 <template name="page">
-
   {{#if showCreateDialog}}
     {{> createDialog}}
   {{/if}}
@@ -17,99 +16,38 @@
     {{> inviteDialog}}
   {{/if}}
 
-
   <div class="container">
     <div class="row">
       <div class="span1"> </div>
+
       <div class="span10">
-
-    <div class="header row">
-      <div class="span5">
-        <h3 style="margin-bottom: 0px">All Tomorrow's Parties</h3>
-      </div>
-      <div class="span5">
-        <div style="float: right">
-          {{loginButtons align="right"}}
-        </div>
-      </div>
-    </div>
-
-    <div class="row">
-      <div class="span6">
-        {{> map}}
-        {{#if currentUser}}
-          <div class="pagination-centered">
-            <em><small>Double click the map to post a party!</small></em>
+        <div class="header row">
+          <div class="span5">
+            <h3 style="margin-bottom: 0px">All Tomorrow's Parties</h3>
           </div>
-        {{/if}}
-      </div>
-      <div class="span4">
-        {{> details}}
-      </div>
-    </div>
-
-
-      </div>
-      <div class="span1"> </div>
-    </div>
-
-
-  </div>
-</template>
-
-<template name="createDialog">
-  <div class="mask"> </div>
-  <div class="modal">
-    <div class="modal-header">
-      <button type="button" class="close cancel">&times;</button>
-      <h3>Add party</h3>
-    </div>
-
-    <div class="modal-body">
-
-      <label>Title</label>
-      <input type="text" class="title span5">
-
-      <label>Description</label>
-
-      <textarea class="description span5"></textarea>
-
-      <label class="checkbox">
-        <input type="checkbox" class="private">
-        Private party &mdash; invitees only
-      </label>
-
-    </div>
-
- <div class="modal-footer">
-    <a href="#" class="btn cancel">Cancel</a>
-    <a href="#" class="btn btn-primary save">Add party</a>
-  </div>
-</div>
-  </div>
-</template>
-
-<template name="inviteDialog">
-  <div class="mask"> </div>
-  <div class="modal">
-    <div class="modal-header">
-      <button type="button" class="close done">&times;</button>
-      <h3>Invite people</h3>
-    </div>
-
-    <div class="modal-body">
-      {{#each uninvited}}
-        <div class="invite-row">
-          <a href="#" class="btn invite">Invite</a>
-          {{displayName}}
+          <div class="span5">
+            <div style="float: right">
+              {{loginButtons align="right"}}
+            </div>
+          </div>
         </div>
-      {{else}}
-        Everyone on the site has already been invited.
-      {{/each}}
-    </div>
 
-    <div class="modal-footer">
-      <a href="#" class="btn btn-primary done">Done</a>
+        <div class="row">
+          <div class="span6">
+            {{> map}}
+            {{#if currentUser}}
+            <div class="pagination-centered">
+              <em><small>Double click the map to post a party!</small></em>
+            </div>
+            {{/if}}
+          </div>
+          <div class="span4">
+            {{> details}}
+          </div>
+        </div>
+      </div>
+
+      <div class="span1"> </div>
     </div>
   </div>
 </template>
@@ -117,7 +55,7 @@
 <template name="map">
   <div class="map">
     {{#constant}}
-      <svg width="480" height="480">
+      <svg width="500" height="500">
         <circle class="callout" cx=-100 cy=-100></circle>
         <g class="circles"></g>
         <g class="labels"></g>
@@ -157,8 +95,6 @@
               <b><a href="#" class="remove">delete this listing</a></b>.
           </small></div>
         {{/if}}
-
-
       {{/with}}
     {{else}}
       <h1 class="muted pagination-centered">
@@ -171,7 +107,6 @@
     {{/if}}
   </div>
 </template>
-
 
 <template name="attendance">
   <div class="attendance well well-small">
@@ -216,6 +151,63 @@
         <a href="#" class="btn btn-mini invite">Invite people</a>
       </div>
     {{/if}}
-
   </div>
 </template>
+
+<template name="createDialog">
+  <div class="mask"> </div>
+  <div class="modal">
+    <div class="modal-header">
+      <button type="button" class="close cancel">&times;</button>
+      <h3>Add party</h3>
+    </div>
+
+    <div class="modal-body">
+      {{#if error}}
+        <div class="alert alert-error">{{error}}</div>
+      {{/if}}
+
+      <label>Title</label>
+      <input type="text" class="title span5">
+
+      <label>Description</label>
+      <textarea class="description span5"></textarea>
+
+      <label class="checkbox">
+        <input type="checkbox" class="private">
+        Private party &mdash; invitees only
+      </label>
+    </div>
+
+    <div class="modal-footer">
+      <a href="#" class="btn cancel">Cancel</a>
+      <a href="#" class="btn btn-primary save">Add party</a>
+    </div>
+  </div>
+</template>
+
+<template name="inviteDialog">
+  <div class="mask"> </div>
+  <div class="modal">
+    <div class="modal-header">
+      <button type="button" class="close done">&times;</button>
+      <h3>Invite people</h3>
+    </div>
+
+    <div class="modal-body">
+      {{#each uninvited}}
+        <div class="invite-row">
+          <a href="#" class="btn invite">Invite</a>
+          {{displayName}}
+        </div>
+      {{else}}
+        Everyone on the site has already been invited.
+      {{/each}}
+    </div>
+
+    <div class="modal-footer">
+      <a href="#" class="btn btn-primary done">Done</a>
+    </div>
+  </div>
+</template>
+

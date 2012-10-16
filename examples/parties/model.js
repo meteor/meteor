@@ -1,76 +1,60 @@
+// All Tomorrow's Parties -- data model
+// Loaded on both the client and the server
+
+///////////////////////////////////////////////////////////////////////////////
+// Parties
+
 /*
-  owner: user id
-  x, y: Number (screen coordinates)
-  title, description: String
-  public: Boolean
-  invited: list of user id's that it's shared with, not including
-    the owner (ignored if public)
-  rsvps: XXX document, fields are 'user' and 'rsvp'
+  Each party is represented by a document in the Parties collection:
+    owner: user id
+    x, y: Number (screen coordinates in the interval [0, 1])
+    title, description: String
+    public: Boolean
+    invited: Array of user id's that are invited (only if !public)
+    rsvps: Array of objects like {user: userId, rsvp: "yes"} (or "no"/"maybe")
 */
 Parties = new Meteor.Collection("parties");
 
 Parties.allow({
   insert: function (userId, party) {
-    return false; // use createParty method instead
+    return false; // no cowboy inserts -- use createParty method
   },
   update: function (userId, parties, fields, modifier) {
     return _.all(parties, function (party) {
       if (userId !== party.owner)
         return false; // not the owner
+
       var allowed = ["title", "description", "x", "y"];
       if (_.difference(fields, allowed).length)
         return false; // tried to write to forbidden field
 
-      // XXX validate that they keep the right types, and don't write
-      // stupidly long strings to the database. since all we have is a
-      // modifier that take a little logic.
-
+      // A good improvement would be to validate the type of the new
+      // value of the field (and if a string, the length.) In the
+      // future Meteor will have a schema system to makes that easier.
       return true;
     });
   },
   remove: function (userId, parties) {
     return ! _.any(parties, function (party) {
+      // deny if not the owner, or if other people are going
       return party.owner !== userId || attending(party) > 0;
     });
   }
 });
 
 var attending = function (party) {
-  return _.reduce(party.rsvps, function (memo, rsvp) {
-    if (rsvp.rsvp === 'yes')
-      return memo + 1;
-    else
-      return memo;
-  }, 0);
-};
-
-var displayName = function (user) {
-  if (user.profile && user.profile.name)
-    return user.profile.name;
-  return user.emails[0].address;
-};
-
-var contactEmail = function (user) {
-  if (user.emails && user.emails.length)
-    return user.emails[0].address;
-  if (user.services.facebook && user.services.facebook.email)
-    return user.services.facebook.email;
-  return null;
+  return (_.groupBy(party.rsvps, 'rsvp').yes || []).length;
 };
 
 Meteor.methods({
-  // title, description, x, y, public
-  // XXX limit a user to a certain number of parties
+  // options should include: title, description, x, y, public
   createParty: function (options) {
     options = options || {};
     if (! (typeof options.title === "string" && options.title.length &&
            typeof options.description === "string" &&
            options.description.length &&
-           typeof options.x === "number" &&
-           options.x >= 0 && options.x <= 1 &&
-           typeof options.y === "number" &&
-           options.y >= 0 && options.y <= 1))
-      // XXX should get rid of the error code
+           typeof options.x === "number" && options.x >= 0 && options.x <= 1 &&
+           typeof options.y === "number" && options.y >= 0 && options.y <= 1))
       throw new Meteor.Error(400, "Required parameter missing");
     if (options.title.length > 100)
       throw new Meteor.Error(413, "Title too long");
@@ -104,15 +88,16 @@ Meteor.methods({
       var from = contactEmail(Meteor.users.findOne(this.userId));
       var to = contactEmail(Meteor.users.findOne(userId));
       if (Meteor.isServer && to) {
+        // This code only runs on the server. If you didn't want clients
+        // to be able to see it, you could move it to a separate file.
         Email.send({
           from: "noreply@example.com",
           to: to,
           replyTo: from || undefined,
           subject: "PARTY: " + party.title,
           text:
-"Hey, I just invited you to '" + party.title + "' on All Tomorrow's Parties.\n" +
-"\n" +
-"Come check it out at: " + Meteor.absoluteUrl() + "\n"
+"Hey, I just invited you to '" + party.title + "' on All Tomorrow's Parties." +
+"\n\nCome check it out: " + Meteor.absoluteUrl() + "\n"
         });
       }
     }
@@ -126,8 +111,10 @@ Meteor.methods({
     var party = Parties.findOne(partyId);
     if (! party)
       throw new Meteor.Error(404, "No such party");
-    if (! party.public && party.owner !== this.userId && !_.contains(party.invited, this.userId))
-      throw new Meteor.Error(403, "No such party"); // private, but let's not tell this to the user
+    if (! party.public && party.owner !== this.userId &&
+        !_.contains(party.invited, this.userId))
+      // private, but let's not tell this to the user
+      throw new Meteor.Error(403, "No such party");
 
     var rsvpIndex = _.indexOf(_.pluck(party.rsvps, 'user'), this.userId);
     if (rsvpIndex !== -1) {
@@ -139,18 +126,37 @@ Meteor.methods({
           {_id: partyId, "rsvps.user": this.userId},
           {$set: {"rsvps.$.rsvp": rsvp}});
       } else {
-        // minimongo doesn't yet support $ in modifier. reconstruct
-        // the modifier to be of the form:
-        //   {$set: {"rsvps.<index>.rsvp"}}
+        // minimongo doesn't yet support $ in modifier. as a temporary
+        // workaround, make a modifier that uses an index. this is
+        // safe on the client since there's only one thread.
         var modifier = {$set: {}};
         modifier.$set["rsvps." + rsvpIndex + ".rsvp"] = rsvp;
         Parties.update(partyId, modifier);
       }
+
+      // Possible improvement: send email to the other people that are
+      // coming to the party.
     } else {
       // add new rsvp entry
-      Parties.update(
-        partyId,
-        {$push: {rsvps: {user: this.userId, rsvp: rsvp}}});
+      Parties.update(partyId,
+                     {$push: {rsvps: {user: this.userId, rsvp: rsvp}}});
     }
   }
 });
+
+///////////////////////////////////////////////////////////////////////////////
+// Users
+
+var displayName = function (user) {
+  if (user.profile && user.profile.name)
+    return user.profile.name;
+  return user.emails[0].address;
+};
+
+var contactEmail = function (user) {
+  if (user.emails && user.emails.length)
+    return user.emails[0].address;
+  if (user.services && user.services.facebook && user.services.facebook.email)
+    return user.services.facebook.email;
+  return null;
+};

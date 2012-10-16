@@ -1,15 +1,7 @@
-// XXX I want to collect first/last name when a user signs up by username/password
+// All Tomorrow's Parties -- client
 
 Meteor.subscribe("directory");
 Meteor.subscribe("parties");
-
-Template.page.showCreateDialog = function () {
-  return Session.get("showCreateDialog");
-};
-
-Template.page.showInviteDialog = function () {
-  return Session.get("showInviteDialog");
-};
 
 // If no party selected, select one.
 Meteor.startup(function () {
@@ -24,7 +16,6 @@ Meteor.startup(function () {
 
 ///////////////////////////////////////////////////////////////////////////////
 // Party details sidebar
-///////////////////////////////////////////////////////////////////////////////
 
 Template.details.party = function () {
   return Parties.findOne(Session.get("selected"));
@@ -41,6 +32,44 @@ Template.details.creatorName = function () {
   return displayName(owner);
 };
 
+Template.details.canRemove = function () {
+  return this.owner === Meteor.userId() && attending(this) === 0;
+};
+
+Template.details.maybeChosen = function (what) {
+  var myRsvp = _.find(this.rsvps, function (r) {
+    return r.user === Meteor.userId();
+  }) || {};
+
+  return what == myRsvp.rsvp ? "chosen btn-inverse" : "";
+};
+
+Template.details.events({
+  'click .rsvp_yes': function () {
+    Meteor.call("rsvp", Session.get("selected"), "yes");
+    return false;
+  },
+  'click .rsvp_maybe': function () {
+    Meteor.call("rsvp", Session.get("selected"), "maybe");
+    return false;
+  },
+  'click .rsvp_no': function () {
+    Meteor.call("rsvp", Session.get("selected"), "no");
+    return false;
+  },
+  'click .invite': function () {
+    openInviteDialog();
+    return false;
+  },
+  'click .remove': function () {
+    Parties.remove(this._id);
+    return false;
+  }
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// Party attendance widget
+
 Template.attendance.rsvpName = function () {
   var user = Meteor.users.findOne(this.user);
   return displayName(user);
@@ -48,9 +77,10 @@ Template.attendance.rsvpName = function () {
 
 Template.attendance.outstandingInvitations = function () {
   var party = Parties.findOne(this._id);
-  // take out the people that have already rsvp'd
-  var people = _.difference(party.invited, _.pluck(party.rsvps, 'user'));
-  return Meteor.users.find({_id: {$in: people}});
+  return Meteor.users.find({$and: [
+    {_id: {$in: party.invited}}, // they're invited
+    {_id: {$nin: _.pluck(party.rsvps, 'user')}} // but haven't RSVP'd
+  ]});
 };
 
 Template.attendance.invitationName = function () {
@@ -69,102 +99,49 @@ Template.attendance.canInvite = function () {
   return ! this.public && this.owner === Meteor.userId();
 };
 
-Template.details.canRemove = function () {
-  return this.owner === Meteor.userId() && attending(this) === 0;
-};
-
-Template.details.maybeChosen = function (what) {
-  var myRsvp = _.find(this.rsvps, function (r) {
-    return r.user === Meteor.userId();
-  }) || {};
-
-  return what == myRsvp.rsvp ? "chosen btn-inverse" : "";
-};
-
-// XXX show which button is currently selected
-Template.details.events({
-  // XXX demonstrate error handling?
-  'click .rsvp_yes': function () {
-    Meteor.call("rsvp", Session.get("selected"), "yes");
-    return false;
-  },
-  'click .rsvp_maybe': function () {
-    Meteor.call("rsvp", Session.get("selected"), "maybe");
-    return false;
-  },
-  'click .rsvp_no': function () {
-    Meteor.call("rsvp", Session.get("selected"), "no");
-    return false;
-  },
-  'click .invite': function () {
-    Session.set("showInviteDialog", true);
-    return false;
-  },
-  'click .remove': function () {
-    Parties.remove(this._id);
-    return false;
-  }
-});
-
 ///////////////////////////////////////////////////////////////////////////////
 // Map display
-///////////////////////////////////////////////////////////////////////////////
 
-// XXX fold into package? domutils?
 // http://stackoverflow.com/questions/55677/how-do-i-get-the-coordinates-of-a-mouse-click-on-a-canvas-element
-function relMouseCoords (element, event) {
-  var totalOffsetX = 0;
-  var totalOffsetY = 0;
-  var canvasX = 0;
-  var canvasY = 0;
-  var currentElement = element;
+var coordsRelativeToElement = function (element, event) {
+  var totalOffsetX = 0, totalOffsetY = 0;
 
   do {
-    totalOffsetX += currentElement.offsetLeft - currentElement.scrollLeft;
-    totalOffsetY += currentElement.offsetTop - currentElement.scrollTop;
-  }
-  while (currentElement = currentElement.offsetParent)
+    totalOffsetX += element.offsetLeft - element.scrollLeft;
+    totalOffsetY += element.offsetTop - element.scrollTop;
+  } while (element = element.offsetParent);
 
-  canvasX = event.pageX - totalOffsetX;
-  canvasY = event.pageY - totalOffsetY;
-
-  return {x: canvasX, y: canvasY};
-}
+  return {
+    x: event.pageX - totalOffsetX,
+    y: event.pageY - totalOffsetY
+  };
+};
 
 Template.map.events = {
   'mousedown circle, mousedown text': function (event, template) {
     Session.set("selected", event.currentTarget.id);
   },
   'dblclick svg': function (event, template) {
-    // must be logged in
-    if (!Meteor.userId())
+    if (! Meteor.userId()) // must be logged in to create events
       return;
-    var coords = relMouseCoords(event.currentTarget, event);
-    Session.set("createCoords", {
-      x: coords.x / 500, // XXX event.currentTarget.width?
-      y: coords.y / 500
-    });
-    Session.set("showCreateDialog", true);
+    var coords = coordsRelativeToElement(event.currentTarget, event);
+    openCreateDialog(coords.x / 500, coords.y / 500);
   }
 };
 
 Template.map.rendered = function () {
   var self = this;
-  self.node = this.find("svg");
+  self.node = self.find("svg");
 
   if (! self.handle) {
     self.handle = Meteor.autorun(function () {
       var selected = Session.get('selected');
       var selectedParty = selected && Parties.findOne(selected);
-
       var radius = function (party) {
         return 10 + Math.sqrt(attending(party)) * 10;
       };
 
       // Draw a circle for each party
-      var circles = d3.select(self.node).select(".circles").selectAll("circle")
-        .data(Parties.find().fetch(), function (party) { return party._id; });
-
       var updateCircles = function (group) {
         group.attr("id", function (party) { return party._id; })
         .attr("cx", function (party) { return party.x * 500; })
@@ -178,14 +155,14 @@ Template.map.rendered = function () {
         });
       };
 
-      updateCircles(circles.enter().append("circle"));
-      updateCircles(circles.transition().duration(250).ease("cubic-out"));
-      circles.exit().remove();
-
-      // Label each with the current attendance count
-      var labels = d3.select(self.node).select(".labels").selectAll("text")
+      var circles = d3.select(self.node).select(".circles").selectAll("circle")
         .data(Parties.find().fetch(), function (party) { return party._id; });
 
+      updateCircles(circles.enter().append("circle"));
+      updateCircles(circles.transition().duration(250).ease("cubic-out"));
+      circles.exit().transition().duration(250).attr("r", 0).remove();
+
+      // Label each with the current attendance count
       var updateLabels = function (group) {
         group.attr("id", function (party) { return party._id; })
         .text(function (party) {return attending(party) || '';})
@@ -195,6 +172,9 @@ Template.map.rendered = function () {
           return radius(party) * 1.25 + "px";
         });
       };
+
+      var labels = d3.select(self.node).select(".labels").selectAll("text")
+        .data(Parties.find().fetch(), function (party) { return party._id; });
 
       updateLabels(labels.enter().append("text"));
       updateLabels(labels.transition().duration(250).ease("cubic-out"));
@@ -221,16 +201,25 @@ Template.map.destroyed = function () {
 
 ///////////////////////////////////////////////////////////////////////////////
 // Create Party dialog
-///////////////////////////////////////////////////////////////////////////////
+
+var openCreateDialog = function (x, y) {
+  Session.set("createCoords", {x: x, y: y});
+  Session.set("createError", null);
+  Session.set("showCreateDialog", true);
+};
+
+Template.page.showCreateDialog = function () {
+  return Session.get("showCreateDialog");
+};
 
 Template.createDialog.events = {
   'click .save': function (event, template) {
     var title = template.find(".title").value;
     var description = template.find(".description").value;
-    var public = !template.find(".private").checked;
+    var public = ! template.find(".private").checked;
+    var coords = Session.get("createCoords");
 
     if (title.length && description.length) {
-      var coords = Session.get("createCoords");
       Meteor.call('createParty', {
         title: title,
         description: description,
@@ -241,12 +230,13 @@ Template.createDialog.events = {
         if (! error) {
           Session.set("selected", party);
           if (! public && Meteor.users.find().count() > 1)
-            Session.set("showInviteDialog", true);
+            openInviteDialog();
         }
       });
       Session.set("showCreateDialog", false);
     } else {
-      // XXX show validation failure
+      Session.set("createError",
+                  "It needs a title and a description, or why bother?");
     }
   },
 
@@ -255,9 +245,20 @@ Template.createDialog.events = {
   }
 };
 
+Template.createDialog.error = function () {
+  return Session.get("createError");
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Invite dialog
-///////////////////////////////////////////////////////////////////////////////
+
+var openInviteDialog = function () {
+  Session.set("showInviteDialog", true);
+};
+
+Template.page.showInviteDialog = function () {
+  return Session.get("showInviteDialog");
+};
 
 Template.inviteDialog.events = {
   'click .invite': function (event, template) {
@@ -272,13 +273,9 @@ Template.inviteDialog.events = {
 Template.inviteDialog.uninvited = function () {
   var party = Parties.findOne(Session.get("selected"));
   if (! party)
-    // XXX this happens on code push when the invite dialog is
-    // open. easy enough to add a guard, but what's the big picture?
-    // do we have to do this everywhere?
-    return [];
-  var invited = _.clone(party.invited);
-  invited.push(party.owner);
-  return Meteor.users.find({_id: {$nin: invited}});
+    return []; // party hasn't loaded yet
+  return Meteor.users.find({$nor: [{_id: {$in: party.invited}},
+                                   {_id: party.owner}]});
 };
 
 Template.inviteDialog.displayName = function () {

@@ -1,4 +1,4 @@
-// XXX autopublish warning is printed on each restart. super spammy!
+// All Tomorrow's Parties -- server
 
 Meteor.publish("directory", function () {
   return Meteor.users.find({}, {fields: {emails: 1, profile: 1}});
