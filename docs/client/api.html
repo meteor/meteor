@@ -1243,7 +1243,9 @@ general mechanism.
 
 {{> api_box loginWithPassword}}
 
-XXX needs link to passwords section and mention the package
+This function is provided by the `accounts-password` package. See the
+[Passwords](#accounts_passwords) section below.
+
 
 {{> api_box loginWithExternalService}}
 
@@ -1256,43 +1258,48 @@ service.
 
 <a id="requestpermissions" name="requestpermissions" />
 
-In addition to identifying the user to your application, this login process also
-generates an access token that can be used with the site's API to perform
-various actions on behalf of the user. (Meteor doesn't provide custom bindings
-for these APIs, but [Meteor.http](#meteor_http) might be helpful.) Use the
-`requestPermissions` parameter to specify exactly which actions your application
-wants to perform; these will be listed for the user in the popup. The supported
-values for `requestPermissions` differ for each login service and are documented
-at their developer sites:
+In addition to identifying the user to your application, some services
+have APIs that allow you to take action on behalf of the user. To
+request specific permissions from the user, pass the
+`requestPermissions` option the login function. This will cause the user
+to be presented with an additional page in the pop-up dialog to permit
+access to their data. The user's `accessToken` &mdash; with permissions
+to access the service's API &mdash; is stored in the `services` field of
+the user document. The supported values for `requestPermissions` differ
+for each login service and are documented on their respective developer
+sites:
 
 - Facebook: <http://developers.facebook.com/docs/authentication/permissions/>
 - GitHub: <http://developer.github.com/v3/oauth/#scopes>
 - Google: <https://developers.google.com/accounts/docs/OAuth2Login#scopeparameter>
 - Twitter, Weibo: `requestPermissions` currently not supported
 
+External login services typically require registering and configuring
+your application before use. The easiest way to do this is with the
+[`accounts-ui` package](#accountsui) which presents a step-by-step guide
+to configuring each service. However, the data can be also be entered
+manually in the `Accounts.loginServiceConfiguration` collection. For
+example:
 
-If the user has not already granted all the permissions requested they will be
-prompted to grant access to their account in the pop-up dialog.  XXX probably
-not necessary
+    Accounts.loginServiceConfiguration.insert({
+      service: "weibo",
+      clientId: "1292962797",
+      secret: "75a730b58f5691de5522789070c319bc"
+    });
+
 
 Each external service has its own login provider package and login function. For
 example, to support GitHub login, run `$ meteor add accounts-github` and use the
 `Meteor.loginWithGithub` function:
 
     Meteor.loginWithGithub({
-      // XXX fix this comment
-      // Get an access token (saved in the user's `services.github.accessToken`
-      // field) that can be used with the GitHub API to read and write the
-      // user's GitHub profile and public repositories.
       requestPermissions: ['user', 'public_repo']
     }, function (err) {
       if (err)
         Session.set('errorMessage', err.reason || 'Unknown error');
     });
 
-Before you can log in with an external provider in your application, you need to
-register your application with the provider and copy some configuration data
-into your app's database. The easiest XXX finish
+
 
 
 {{> api_box accounts_config}}
@@ -2365,7 +2372,7 @@ Example server method:
 
     Meteor.methods({checkTwitter: function (userId) {
       this.unblock();
-      var result = Meteor.http.call("GET", "http://api.twitter.com/xxx",
+      var result = Meteor.http.call("GET", "http://api.twitter.com/xyz",
                                     {params: {user: userId}});
       if (result.statusCode === 200)
          return true
@@ -2374,7 +2381,7 @@ Example server method:
 
 Example asynchronous HTTP call:
 
-    Meteor.http.call("POST", "http://api.twitter.com/xxx",
+    Meteor.http.call("POST", "http://api.twitter.com/xyz",
                      {data: {some: "json", stuff: 1}},
                      function (error, result) {
                        if (result.statusCode === 200) {
