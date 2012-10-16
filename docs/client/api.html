@@ -1230,6 +1230,8 @@ general mechanism.
 
 {{> api_box loginWithPassword}}
 
+XXX needs link to passwords section and mention the package
+
 {{> api_box loginWithExternalService}}
 
 These functions initiate the login process with an external
@@ -1248,6 +1250,8 @@ prompted to grant access to their account in the pop-up dialog. Values for the
 - GitHub: <http://developer.github.com/v3/oauth/#scopes>
 - Google: <https://developers.google.com/accounts/docs/OAuth2Login#scopeparameter>
 - Twitter, Weibo: `requestPermissions` currently not supported
+
+XXX mention provider packages
 
 {{> api_box accounts_config}}
 {{> api_box accounts_ui_config}}
@@ -1322,7 +1326,27 @@ Example:
 
 <h2 id="accounts_passwords"><span>Passwords</span></h2>
 
-XXX intro text mentioning SRP
+The `accounts-password` package implements a complete system for password-based
+authentication. In addition to the basic password-based signing process, it also
+includes support for email-based password recovery.
+
+Instead of sending user passwords over the wire and storing them directly in the
+database, Meteor uses the [Secure Remote Password
+protocol](http://en.wikipedia.org/wiki/Secure_Remote_Password_protocol). XXX
+
+XXX package needed
+
+XXX SRP / secure / wire
+
+XXX gives you all these cool features like emails
+
+XXX username/email
+
+To add password support to your application, run `$ meteor add
+accounts-password`. Then, either build a user interface using the functions
+documented in this section, or use the [`accounts-ui` package](#accountsui) to
+include a turn-key user interface for password login including user creation,
+password change, and "forgot password" links.
 
 {{> api_box accounts_createUser}}
 
