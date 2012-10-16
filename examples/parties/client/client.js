@@ -30,6 +30,10 @@ Template.details.party = function () {
   return Parties.findOne(Session.get("selected"));
 };
 
+Template.details.anyParties = function () {
+  return Parties.find().count() > 0;
+};
+
 Template.details.creatorName = function () {
   var owner = Meteor.users.findOne(this.owner);
   if (owner._id === Meteor.userId())
@@ -173,7 +177,7 @@ Template.map.rendered = function () {
         // XXX match area
         // (duplicated below)
         .attr("r", function (party) {
-          return 10 + attending(party) * 10;
+          return 10 + Math.sqrt(attending(party)) * 10;
         })
         .style("fill", function (party) {
           return party.public ? 'red' : 'blue';
@@ -191,7 +195,7 @@ Template.map.rendered = function () {
           return party.y * 500;
         })
         .attr("r", function (party) {
-          return 10 + attending(party) * 10;
+          return 10 + Math.sqrt(attending(party)) * 8;
         })
         .style("fill", function (party) {
           return party.public ? 'red' : 'blue';
@@ -256,7 +260,7 @@ Template.createDialog.events = {
       }, function (error, party) {
         if (! error) {
           Session.set("selected", party);
-          if (! public)
+          if (! public && Meteor.users.find().count() > 1)
             Session.set("showInviteDialog", true);
         }
       });

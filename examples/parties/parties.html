@@ -104,7 +104,7 @@
           {{displayName}}
         </div>
       {{else}}
-        Everyone on the site has been invited.
+        Everyone on the site has already been invited.
       {{/each}}
     </div>
 
@@ -161,7 +161,11 @@
       {{/with}}
     {{else}}
       <h1 class="muted pagination-centered">
-      Click a party to select it
+        {{#if anyParties}}
+          Click a party to select it
+        {{else}}
+          Sign in and double click the map to post a party
+        {{/if}}
       </h1>
     {{/if}}
   </div>
