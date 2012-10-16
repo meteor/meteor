@@ -14,10 +14,24 @@ Parties.allow({
     return false; // use createParty method instead
   },
   update: function (userId, parties, fields, modifier) {
-    return false; // use rsvp method instead
+    return _.all(parties, function (party) {
+      if (userId !== party.owner)
+        return false; // not the owner
+      var allowed = ["title", "description", "x", "y"];
+      if (_.difference(fields, allowed).length)
+        return false; // tried to write to forbidden field
+
+      // XXX validate that they keep the right types, and don't write
+      // stupidly long strings to the database. since all we have is a
+      // modifier that take a little logic.
+
+      return true;
+    });
   },
   remove: function (userId, parties) {
-    return true; // deny is called later
+    return ! _.any(parties, function (party) {
+      return party.owner !== userId || attending(party) > 0;
+    });
   }
 });
 
@@ -29,14 +43,6 @@ var attending = function (party) {
       return memo;
   }, 0);
 };
-
-Parties.deny({
-  remove: function (userId, parties) {
-    return _.any(parties, function (party) {
-      return party.owner !== userId || attending(party) > 0;
-    });
-  }
-});
 
 var displayName = function (user) {
   if (user.profile && user.profile.name)
