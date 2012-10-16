@@ -184,7 +184,7 @@ _.each(["insert", "update", "remove"], function (name) {
       // down.
       callback = function (err) {
         if (err)
-          Meteor._debug(name + " failed: " + err.error + " -- " + err.reason);
+          Meteor._debug(name + " failed: " + (err.reason || err.stack));
       };
     }
 
