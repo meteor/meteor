@@ -102,19 +102,12 @@ Template.attendance.canInvite = function () {
 ///////////////////////////////////////////////////////////////////////////////
 // Map display
 
-// http://stackoverflow.com/questions/55677/how-do-i-get-the-coordinates-of-a-mouse-click-on-a-canvas-element
+// Use jquery to get the position clicked relative to the map element.
 var coordsRelativeToElement = function (element, event) {
-  var totalOffsetX = 0, totalOffsetY = 0;
-
-  do {
-    totalOffsetX += element.offsetLeft - element.scrollLeft;
-    totalOffsetY += element.offsetTop - element.scrollTop;
-  } while (element = element.offsetParent);
-
-  return {
-    x: event.pageX - totalOffsetX,
-    y: event.pageY - totalOffsetY
-  };
+  var offset = $(element).offset();
+  var x = event.pageX - offset.left;
+  var y = event.pageY - offset.top;
+  return { x: x, y: y };
 };
 
 Template.map.events = {
