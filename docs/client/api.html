@@ -1255,18 +1255,44 @@ logs in to the Meteor server with the information provided by the external
 service.
 
 <a id="requestpermissions" name="requestpermissions" />
-If the user has not already granted all the permissions requested they will be
-prompted to grant access to their account in the pop-up dialog. Values for the
-`requestPermissions` parameter differ for each login service:
+
+In addition to identifying the user to your application, this login process also
+generates an access token that can be used with the site's API to perform
+various actions on behalf of the user. (Meteor doesn't provide custom bindings
+for these APIs, but [Meteor.http](#meteor_http) might be helpful.) Use the
+`requestPermissions` parameter to specify exactly which actions your application
+wants to perform; these will be listed for the user in the popup. The supported
+values for `requestPermissions` differ for each login service and are documented
+at their developer sites:
 
 - Facebook: <http://developers.facebook.com/docs/authentication/permissions/>
 - GitHub: <http://developer.github.com/v3/oauth/#scopes>
 - Google: <https://developers.google.com/accounts/docs/OAuth2Login#scopeparameter>
 - Twitter, Weibo: `requestPermissions` currently not supported
 
-XXX mention provider packages
 
-XXX mention configuring keys
+If the user has not already granted all the permissions requested they will be
+prompted to grant access to their account in the pop-up dialog.  XXX probably
+not necessary
+
+Each external service has its own login provider package and login function. For
+example, to support GitHub login, run `$ meteor add accounts-github` and use the
+`Meteor.loginWithGithub` function:
+
+    Meteor.loginWithGithub({
+      // XXX fix this comment
+      // Get an access token (saved in the user's `services.github.accessToken`
+      // field) that can be used with the GitHub API to read and write the
+      // user's GitHub profile and public repositories.
+      requestPermissions: ['user', 'public_repo']
+    }, function (err) {
+      if (err)
+        Session.set('errorMessage', err.reason || 'Unknown error');
+    });
+
+Before you can log in with an external provider in your application, you need to
+register your application with the provider and copy some configuration data
+into your app's database. The easiest XXX finish
 
 
 {{> api_box accounts_config}}
