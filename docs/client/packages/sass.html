@@ -7,10 +7,15 @@ expresions. With the `sass` package installed, `.sass` files in your
 application are automatically compiled to CSS and the results are
 included in the client CSS bundle.
 
-See <a href="https://github.com/visionmedia/sass.js">https://github.com/visionmedia/sass.js</a>
-for the JavaScript implementation of the Sass language
-and <a href="http://sass-lang.com/">http://sass-lang.com/</a> for the
-original project.
+See <https://github.com/visionmedia/sass.js> for the JavaScript implementation
+of the Sass language and <http://sass-lang.com/> for the original project.
+
+{{#warning}}
+The Sass JavaScript implementation used by Node is unmaintained and doesn't
+implement the newest language syntax documented at <http://sass-lang.com/>. It
+may be removed from a future version of Meteor; consider using [Less](#less) or
+[Stylus](#stylus) instead.
+{{/warning}}
 
 {{/better_markdown}}
 </template>

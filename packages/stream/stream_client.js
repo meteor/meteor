@@ -8,7 +8,7 @@ Meteor._Stream = function (url) {
   self.event_callbacks = {}; // name -> [callback]
   self.server_id = null;
   self.sent_update_available = false;
-  self.force_fail = false;
+  self.force_fail = false; // for debugging.
 
   //// Constants
 
@@ -47,11 +47,10 @@ Meteor._Stream = function (url) {
     retry_count: 0
   };
 
-  self.status_listeners = {}; // context.id -> context
+  self.status_listeners = (Meteor.deps && new Meteor.deps._ContextSet);
   self.status_changed = function () {
-    _.each(self.status_listeners, function (context) {
-      context.invalidate();
-    });
+    if (self.status_listeners)
+      self.status_listeners.invalidateAll();
   };
 
   //// Retry logic
@@ -103,8 +102,6 @@ _.extend(Meteor._Stream.prototype, {
     if (!self.event_callbacks[name])
       self.event_callbacks[name] = [];
     self.event_callbacks[name].push(callback);
-    if (self.current_status.connected)
-      self.socket.on(name, callback);
   },
 
   // data is a utf8 string. Data sent while not connected is dropped on
@@ -120,21 +117,22 @@ _.extend(Meteor._Stream.prototype, {
   // Get current status. Reactive.
   status: function () {
     var self = this;
-    var context = Meteor.deps && Meteor.deps.Context.current;
-    if (context && !(context.id in self.status_listeners)) {
-      self.status_listeners[context.id] = context;
-      context.onInvalidate(function () {
-        delete self.status_listeners[context.id];
-      });
-    }
+    if (self.status_listeners)
+      self.status_listeners.addCurrentContext();
     return self.current_status;
   },
 
   // Trigger a reconnect.
-  reconnect: function () {
+  reconnect: function (options) {
     var self = this;
-    if (self.current_status.connected)
-      return; // already connected. noop.
+
+    if (self.current_status.connected) {
+      if (options && options._force) {
+        // force reconnect.
+        self._disconnected();
+      } // else, noop.
+      return;
+    }
 
     // if we're mid-connection, stop it.
     if (self.current_status.status === "connecting") {

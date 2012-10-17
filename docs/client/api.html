@@ -3,10 +3,10 @@
 
 <h1 id="api">The Meteor API</h1>
 
-Your Javascript code can run in two environments: the <i>client</i>
-(browser), and the <i>server</i> (a Node.js container on a server).  For
-each function in this API reference, we'll indicate if the function is
-available just on the client, just on the server, or *Anywhere*.
+Your Javascript code can run in two environments: the *client* (browser), and
+the *server* (a [Node.js](http://nodejs.org/) container on a server).  For each
+function in this API reference, we'll indicate if the function is available just
+on the client, just on the server, or *Anywhere*.
 
 <h2 id="core"><span>Meteor Core</span></h2>
 
@@ -47,18 +47,25 @@ will publish that cursor's documents.
 
     // server: publish the rooms collection, minus secret info.
     Meteor.publish("rooms", function () {
-      return Rooms.find({}, {fields: {secretInfo: false}});
+      return Rooms.find({}, {fields: {secretInfo: 0}});
     });
 
-Otherwise, the publish function can <i>set</i> and <i>unset</i>
-individual record attributes on a client, use these methods provided by
-`this` in your publish function.
+    // ... and publish secret info for rooms where the logged-in user
+    // is an admin. If the client subscribes to both streams, the records
+    // are merged together into the same documents in the Rooms collection.
+    Meteor.publish("adminSecretInfo", function () {
+      return Rooms.find({admin: this.userId}, {fields: {secretInfo: 1}});
+    });
+
+Otherwise, the publish function can [`set`](#publish_set) and
+[`unset`](#publish_unset) individual record attributes on a client. These
+methods are provided by `this` in your publish function.
 
 <!-- discuss complete -->
 
-In particular, if you use observe() to watch changes to the database, be
-sure to call `this.flush` from inside your observe callbacks.  Methods
-that update the database are considered finished when the observe
+In particular, if you use [`observe`](#observe) to watch changes to the
+database, be sure to call `this.flush` from inside your observe callbacks.
+Methods that update the database are considered finished when the `observe`
 callbacks return.
 
 Example:
@@ -108,6 +115,11 @@ project that includes the `autopublish` package.  Your publish function
 will still work.
 {{/warning}}
 
+{{> api_box subscription_userId}}
+
+This is constant. However, if the logged-in user changes, the publish
+function is rerun with the new value.
+
 {{> api_box subscription_set}}
 {{> api_box subscription_unset}}
 {{> api_box subscription_complete}}
@@ -145,9 +157,9 @@ attribute.)
 
 If all of the attributes in a document are removed, Meteor
 will remove the (now empty) document.  If you want to publish empty
-documents, just use a placeholder attribute.
+documents, just use a placeholder attribute:
 
-    // Clicks.insert({exists: true});
+    Clicks.insert({exists: true});
 
 {{> api_box autosubscribe}}
 
@@ -201,6 +213,8 @@ object, which provides the following:
 * `isSimulation`: a boolean value, true if this invocation is a stub.
 * `unblock`: when called, allows the next method from this client to
 begin running.
+* `userId`: the id of the current user.
+* `setUserId`: a function that associates the current client with a user.
 
 Calling `methods` on the client defines *stub* functions associated with
 server methods of the same name.  You don't have to define a stub for
@@ -214,6 +228,29 @@ stub is ignored.  Stubs are run for their side-effects: they are
 intended to *simulate* the result of what the server's method will do,
 but without waiting for the round trip delay.  If a stub throws an
 exception it will be logged to the console.
+
+
+{{> api_box method_invocation_userId}}
+
+The user id is an arbitrary string &mdash; typically the id of the user record
+in the database. You can set it with the `setUserId` function. If you're using
+the [Meteor accounts system](#accounts_api) then this is handled for you.
+
+{{> api_box method_invocation_setUserId}}
+
+Call this function to change the currently logged in user on the
+connection that made this method call. This simply sets the value of
+`userId` for future method calls received on this connection. Pass
+`null` to log out the connection.
+
+If you are using the [built-in Meteor accounts system](#accounts_api) then this
+should correspond to the `_id` field of a document in the
+[`Meteor.users`](#meteor_users) collection.
+
+`setUserId` is not retroactive. It affects the current method call and
+any future method calls on the connection. Any previous method calls on
+this connection will still see the value of `userId` that was in effect
+when they started.
 
 {{> api_box method_invocation_isSimulation}}
 
@@ -238,7 +275,7 @@ This is how to invoke a method.  It will run the method on the server.
 If a stub is available, it will also run the stub on the client.
 
 If you include a callback function as the last argument (which can't be
-an argument to the method, since functions aren't serializeable), the
+an argument to the method, since functions aren't serializable), the
 method will run asynchronously: it will return nothing in particular and
 will not throw an exception.  When the method is complete (which may or
 may not happen before `Meteor.call` returns), the callback will be
@@ -282,8 +319,9 @@ only to the server.)
 
 {{> api_box meteor_apply}}
 
-`Meteor.apply` is just like `Meteor.call`, but it allows the
-arguments to be passed as an array.
+`Meteor.apply` is just like `Meteor.call`, except that the method arguments are
+passed as an array rather than directly as arguments, and you can specify
+options about how the client executes the method.
 
 <h2 id="connections"><span>Server connections</span></h2>
 
@@ -305,9 +343,9 @@ the server. The return value is an object with the following fields:
 <dt><span class="name">status</span>
   <span class="type">String</span></dt>
 <dd>Describes the current reconnection status. The possible
-  values are <code>connected</code> (the connection is up and
-  running), <code>connecting</code> (disconnected and trying to open a
-  new connection), and <code>waiting</code> (failed to connect and
+  values are `connected` (the connection is up and
+  running), `connecting` (disconnected and trying to open a
+  new connection), and `waiting` (failed to connect and
   waiting to try to reconnect).</dd>
 
 <dt><span class="name">retryCount</span>
@@ -319,15 +357,15 @@ the server. The return value is an object with the following fields:
   <span class="type">Number or undefined</span></dt>
 <dd>The estimated time of the next reconnection attempt. To turn this
   into an interval until the next reconnection, use
-  <code>retryTime - (new Date()).getTime()</code>. This key will
-  be set only when <code>status</code> is <code>waiting</code>.
+  `retryTime - (new Date()).getTime()`. This key will
+  be set only when `status` is `waiting`.
 </dd>
 </dl>
 
 Instead of using callbacks to notify you on changes, this is
-a <a href="#reactivity">reactive</a> data source. You can use it in a
-<a href="#templates">template</a> or <a href="#meteor_deps">invalidation
-context</a> to get realtime updates.
+a [reactive](#reactivity) data source. You can use it in a
+[template](#templates) or [invalidation](#meteor_deps)
+context to get realtime updates.
 
 {{> api_box reconnect}}
 
@@ -337,13 +375,28 @@ To call methods on another Meteor application or subscribe to its data
 sets, call `Meteor.connect` with the URL of the application.
 `Meteor.connect` returns an object which provides:
 
-* `subscribe`
-* `methods` (to define stubs)
-* `call`
-* `apply`
-* `status`
-* `reconnect`
+* `subscribe` -
+  Subscribe to a record set. See
+  [Meteor.subscribe](#meteor_subscribe).
+* `call` -
+  Invoke a method. See [Meteor.call](#meteor_call).
+* `apply` -
+  Invoke a method with an argument array. See
+  [Meteor.apply](#meteor_apply).
+* `methods` -
+  Define client-only stubs for methods defined on the remote server. See
+  [Meteor.methods](#meteor_methods).
+* `status` -
+  Get the current connection status. See
+  [Meteor.status](#meteor_status).
+* `reconnect` -
+  See [Meteor.reconnect](#meteor_reconnect).
+* `onReconnect` - Set this to a function to be called as the first step of
+  reconnecting. This function can call methods which will be executed before
+  any other outstanding methods. For example, this can be used to re-establish
+  the appropriate authentication context on the new connection.
 
+By default, clients open a connection to the server from which they're loaded.
 When you call `Meteor.subscribe`, `Meteor.status`, `Meteor.call`, and
 `Meteor.apply`, you are using a connection back to that default
 server.
@@ -399,7 +452,8 @@ Specifically, when you pass a `name`, here's what happens:
 
 * On the server, a collection with that name is created on a backend
 Mongo server. When you call methods on that collection on the server,
-they translate directly into normal Mongo operations.
+they translate directly into normal Mongo operations (after checking that
+they match your [access control rules](#allow)).
 
 * On the client, a Minimongo instance is
 created. Minimongo is essentially an in-memory, non-persistent
@@ -426,13 +480,8 @@ the package:
 
     $ meteor remove autopublish
 
-{{#warning}}
-Currently the client is given full write access to the collection. They
-can execute arbitrary Mongo update commands. Once we build
-authentication, you will be able to limit the client's direct access to
-insert, update, and remove.  We are also considering validators and
-other ORM-like functionality.
-{{/warning}}
+and instead call [`Meteor.publish`](#meteor_publish) to specify which parts of
+your collection should be published to which users.
 
     // Create a collection called Posts and put a document in it. The
     // document will be immediately visible in the local copy of the
@@ -501,8 +550,8 @@ those changes may or may not appear in the result set.
 
 Cursors are a reactive data source.  The first time you retrieve a
 cursor's documents with `fetch`, `map`, or `forEach` inside a
-reactive context (eg, [`Meteor.render`](#meteor_render),
-[`Meteor.autosubscribe`](#meteor_autosubscribe), Meteor will register a
+reactive context (eg, [`Meteor.render`](#meteor_render) or
+[`Meteor.autosubscribe`](#meteor_autosubscribe)), Meteor will register a
 dependency on the underlying data.  Any change to the collection that
 changes the documents in a cursor will trigger a recomputation.  To
 disable this behavior, pass `{reactive: false}` as an option to
@@ -544,10 +593,9 @@ Example:
 
 {{> api_box update}}
 
-Modify documents that match `selector` as
-given by `modifier` (see <a href="#modifiers">modifier
-documentation</a>).  By default, modify only one matching document.
-If `multi` is true, modify all matching documents.
+Modify documents that match `selector` as given by `modifier` (see [modifier
+documentation](#modifiers)).  By default, modify only one matching document.  If
+`multi` is true, modify all matching documents.
 
 Instead of a selector, you can pass a string, which will be
 interpreted as an `_id`.
@@ -607,6 +655,153 @@ Example:
     // Delete all the log entries
     Logs.remove({});
 
+
+{{> api_box allow}}
+
+When a client calls `insert`, `update`, or `remove` on a collection, the
+collection's `allow` and [`deny`](#deny) callbacks are called
+on the server to determine if the write should be allowed. If at least
+one `allow` callback allows the write, and no `deny` callbacks deny the
+write, then the write is allowed to proceed.
+
+These checks are run only when a client tries to write to the database
+directly, for example by calling `update` from inside an event
+handler. Server code is trusted and isn't subject to `allow` and `deny`
+restrictions. That includes methods that are called with `Meteor.call`
+&mdash; they are expected to do their own access checking rather than
+relying on `allow` and `deny`.
+
+You can call `allow` as many times as you like, and each call can
+include any combination of `insert`, `update`, and `remove`
+functions. The functions should return `true` if they think the
+operation should be allowed. Otherwise they should return `false`, or
+nothing at all (`undefined`). In that case Meteor will continue
+searching through any other `allow` rules on the collection.
+
+The available callbacks are:
+
+<dl class="callbacks">
+{{#dtdd "insert(userId, doc)"}}
+The user `userId` wants to insert the document `doc` into the
+collection. Return `true` if this should be allowed.
+{{/dtdd}}
+
+{{#dtdd "update(userId, docs, fields, modifier)"}}
+The user `userId` wants to update some documents. Meteor has fetched the
+documents from the database and they are available in `docs` as an
+array. Return `true` if the user should be allowed to change these
+documents.
+
+Additional details about the proposed modification are in `fields` and
+`modifier`. `fields` is the top-level fields in the document that the
+client wishes to modify, for example `['name', 'score']`. `modifier` is
+the raw Mongo modifier that the client wants to execute, for example
+`{$set: {'name.first': "Alice"}, $inc: {score: 1}}`.
+
+Only Mongo modifiers are supported (operations like `$set` and `$push`.)
+If the user tries to replace the entire document rather than use
+$-modifiers, the request will be denied without checking the `allow`
+functions.
+
+{{/dtdd}}
+
+{{#dtdd "remove(userId, docs)"}}
+The user `userId` wants to remove some documents. Meteor has fetched the
+documents from the database and they are available in `docs` as an
+array. Return `true` if the user should be allowed to remove these
+documents.
+{{/dtdd}}
+
+</dl>
+
+By default, when Meteor fetches the documents from the database for the
+`docs` array, it will retrieve all of the fields in the documents. For
+efficiency you may instead want to retrieve just the fields that are
+actually needed by your functions. This is enabled by the `fetch`
+option. Set `fetch` to an array of the field names that should be
+retrieved.
+
+Example:
+
+    // Create a collection where users can only modify documents that
+    // they own. Ownership is tracked by an 'owner' field on each
+    // document. All documents must be owned by the user that created
+    // them and ownership can't be changed. Only a document's owner
+    // is allowed to delete it, and the 'locked' attribute can be
+    // set on a document to prevent its accidental deletion.
+
+    Posts = new Meteor.Collection("posts");
+
+    Posts.allow({
+      insert: function (userId, doc) {
+        // the user must be logged in, and the document must be owned by the user
+        return (userId && doc.owner === userId);
+      },
+      update: function (userId, docs, fields, modifier) {
+        // can only change your own documents
+        return _.all(docs, function(doc) {
+          return doc.owner === userId;
+        });
+      },
+      remove: function (userId, docs) {
+        // can only remove your own documents
+        return _.all(docs, function(doc) {
+          return doc.owner === userId;
+        });
+      },
+      fetch: ['owner']
+    });
+
+    Posts.deny({
+      update: function (userId, docs, fields, modifier) {
+        // can't change owners
+        return _.contains(fields, 'owner');
+      },
+      remove: function (userId, docs) {
+        // can't remove locked documents
+        return _.any(docs, function (doc) {
+          return doc.locked;
+        });
+      },
+      fetch: ['locked'] // no need to fetch 'owner'
+    });
+
+If you never set up any `allow` rules on a collection then all client
+writes to the collection will be denied, and it will only be possible to
+write to the collection from server-side code. In this case you will
+have to create a method for each possible write that clients are allowed
+to do. You'll then call these methods with `Meteor.call` rather than
+having the clients call `insert`, `update`, and `remove` directly on the
+collection.
+
+Meteor also has a special "insecure mode" for quickly prototyping new
+applications. In insecure mode, if you haven't set up any `allow` or `deny`
+rules on a collection, then all users have full write access to the
+collection. This is the only effect of insecure mode. If you call `allow` or
+`deny` at all on a collection, even `Posts.allow({})`, then access is checked
+just like normal on that collection. __New Meteor projects start in insecure
+mode by default.__ To turn it off just type `meteor remove insecure`.
+
+{{#note}}
+For `update` and `remove`, documents will be affected only if they match
+the selector both at the time the documents are fetched to run the
+`allow` and `deny` rules, __and__ at the time that the operation is
+actually executed. This is accomplished by rewriting the selector to
+`{$and: [(original selector), {$in: {_id: [(ids of documents fetched
+and checked by allow and deny)]}}]}`.
+{{/note}}
+
+{{> api_box deny}}
+
+This works just like [`allow`](#allow), except it lets you
+make sure that certain writes are definitely denied, even if there is an
+`allow` rule that says that they should be permitted.
+
+When a client tries to write to a collection, the Meteor server first
+checks the collection's `deny` rules. If none of them return true then
+it checks the collection's `allow` rules. Meteor allows the write only
+if no `deny` rules return `true` and at least one `allow` rule returns
+`true`.
 
 <h2 id="meteor_collection_cursor"><span>Cursors</span></h2>
 
@@ -751,7 +946,8 @@ But they can also contain more complicated tests:
     // Matches documents where fruit is one of three possibilities
     {fruit: {$in: ["peach", "plum", "pear"]}}
 
-See the <a href="http://www.mongodb.org/display/DOCS/Advanced+Queries" target="_blank">complete documentation.</a>
+See the [complete
+documentation](http://www.mongodb.org/display/DOCS/Advanced+Queries).
 
 {{/api_box_inline}}
 
@@ -767,14 +963,17 @@ place by changing some of its fields. Some examples:
     // 'supporters' array
     {$inc: {votes: 2}, $push: {supporters: "Traz"}}
 
-But if a modifier doesn't contain any $-operators, then it is
-instead interpreted as a literal document, and completely replaces
-whatever was previously in the database.
+But if a modifier doesn't contain any $-operators, then it is instead
+interpreted as a literal document, and completely replaces whatever was
+previously in the database. (Literal document modifiers are not currently
+supported by [validated updates](#allow).)
 
     // Find the document with id "123", and completely replace it.
     Users.update({_id: "123"}, {name: "Alice", friends: ["Bob"]});
 
-See the <a href="http://www.mongodb.org/display/DOCS/Updating#Updating-ModifierOperations" target="_blank">full list of modifiers.</a>
+See the [full list of
+modifiers](http://www.mongodb.org/display/DOCS/Updating#Updating-ModifierOperations)
+full list of modifiers.
 
 {{/api_box_inline}}
 
@@ -858,7 +1057,7 @@ Example:
 
 {{> api_box equals}}
 
-These two expressions do the same thing:
+If value is a scalar, then these two expressions do the same thing:
 
     (1) Session.get("key") === value
     (2) Session.equals("key", value)
@@ -905,6 +1104,415 @@ Example:
     // If Session.get had been used instead of Session.equals, then
     // when the selection changed, all the items would be re-rendered.
 
+For object and array session values, you cannot use `Session.equals`; instead,
+you need to use the `underscore` package and write
+`_.isEqual(Session.get(key), value)`.
+
+
+
+<h2 id="accounts_api"><span>Accounts</span></h2>
+
+The Meteor Accounts system builds on top of the `userId` support in
+[`publish`](#publish_userId) and [`methods`](#method_userId). The core
+packages add the concept of user documents stored in the database, and
+additional packages add [secure password
+authentication](#accounts_passwords), [integration with third party
+login services](#meteor_loginwithexternalservice), and a [pre-built user
+interface](#accountsui).
+
+The basic Accounts system is in the `accounts-base` package, but
+applications typically include this automatically by adding one of the
+login provider packages: `accounts-password`, `accounts-facebook`,
+`accounts-github`, `accounts-google`, `accounts-twitter`, or
+`accounts-weibo`.
+
+
+{{> api_box user}}
+
+Retreives the user record for the current user from
+the [`Meteor.users`](#meteor_users) collection.
+
+On the client this will be a subset of the fields in the document, only
+those that are published from the server are available on the client. By
+default the server publishes `username`, `emails`, and
+`profile`. See [`Meteor.users`](#meteor_users) for more on
+the fields used in user documents.
+
+If the user is logged in but the user's database record is not fully
+loaded yet, this returns an object with only the `_id` field set. During
+this period [`userLoaded`](#meteor_userloaded) will return
+`false`.
+
+{{> api_box userId}}
+
+{{> api_box users}}
+
+This collection contains one document per registered user. Here's an example
+user document:
+
+    {
+      _id: "bbca5d6a-2156-41c4-89da-0329e8c99a4f",  // Meteor.userId()
+      username: "cool_kid_13", // unique name
+      emails: [
+        // each email address can only belong to one user.
+        { address: "cool@example.com", verified: true },
+        { address: "another@different.com", verified: false }
+      ],
+      createdAt: 1349761684042,
+      profile: {
+        // The profile is writable by the user by default.
+        name: "Joe Schmoe"
+      },
+      services: {
+        facebook: {
+          id: "709050", // facebook id
+          accessToken: "AAACCgdX7G2...AbV9AZDZD"
+        },
+        resume: {
+          loginTokens: [
+            { token: "97e8c205-c7e4-47c9-9bea-8e2ccc0694cd",
+              when: 1349761684048 }
+          ]
+        }
+      }
+    }
+
+A user document can contain any data you want to store about a user. Meteor
+treats the following fields specially:
+
+- `username`: a unique String identifying the user.
+- `emails`: an Array of Objects with keys `address` and `verified`;
+  an email address may belong to at most one user. `verified` is
+  a Boolean which is true if the user has [verified the
+  address](#accounts_verifyemail) with a token sent over email.
+- `createdAt`: a numeric timestamp (milliseconds since January 1 1970)
+   of the time the user document was created.
+- `profile`: an Object which (by default) the user can create
+  and update with any data.
+- `services`: an Object containing data used by particular
+  login services. For example, its `reset` field contains
+  tokens used by [forgot password](#accounts_forgotpassword) links,
+  and its `resume` field contains tokens used to keep you
+  logged in between sessions.
+
+Like all [Meteor.Collection](#collections)s, you can access all
+documents on the server, but only those specifically published by the server are
+available on the client.
+
+By default, the current user's `username`, `emails` and `profile` are
+published to the client. You can publish additional fields for the
+current user with:
+
+    Meteor.publish("userData", function () {
+      return Meteor.users.find({_id: this.userId},
+                               {fields: {'other': 1, 'things': 1}});
+    });
+
+If the `autopublish` package is installed, the `username` and `profile` fields
+for all users are published to all clients. To publish specific fields from all
+users:
+
+    Meteor.publish("allUserData", function () {
+      return Meteor.users.find({}, {fields: {'nested.things': 1}});
+    });
+
+Users are by default allowed to specify their own `profile` field with
+[`Accounts.createUser`](#accounts_createuser) and modify it with
+`Meteor.users.update`. To allow users to edit additional fields, use
+[`Meteor.users.allow`](#allow). To forbid users from making any modifications to
+their user document:
+
+    Meteor.users.deny({update: function () { return true; }});
+
+
+{{> api_box userLoaded}}
+
+There are some cases when the client knows the id of the logged in user
+but has not yet received the user data from the server. For example, if
+the user is logged in and reloads the page the user data will be
+unavailable during initial page load.
+
+During these periods, `userLoaded` will return false
+and [`user`](#meteor_user) will return an object with only
+the `_id` key.
+
+{{#note}}
+We realize this is inconvenient. It is a temporary solution. In the
+future we will either make it unnecessary or fold it into a more
+general mechanism.
+{{/note}}
+
+{{> api_box logout}}
+
+{{> api_box loginWithPassword}}
+
+This function is provided by the `accounts-password` package. See the
+[Passwords](#accounts_passwords) section below.
+
+
+{{> api_box loginWithExternalService}}
+
+These functions initiate the login process with an external
+service (eg: Facebook, Google, etc), using OAuth. When called they open a new pop-up
+window that loads the provider's login page. Once the user has logged in
+with the provider, the pop-up window is closed and the Meteor client
+logs in to the Meteor server with the information provided by the external
+service.
+
+<a id="requestpermissions" name="requestpermissions" />
+
+In addition to identifying the user to your application, some services
+have APIs that allow you to take action on behalf of the user. To
+request specific permissions from the user, pass the
+`requestPermissions` option the login function. This will cause the user
+to be presented with an additional page in the pop-up dialog to permit
+access to their data. The user's `accessToken` &mdash; with permissions
+to access the service's API &mdash; is stored in the `services` field of
+the user document. The supported values for `requestPermissions` differ
+for each login service and are documented on their respective developer
+sites:
+
+- Facebook: <http://developers.facebook.com/docs/authentication/permissions/>
+- GitHub: <http://developer.github.com/v3/oauth/#scopes>
+- Google: <https://developers.google.com/accounts/docs/OAuth2Login#scopeparameter>
+- Twitter, Weibo: `requestPermissions` currently not supported
+
+External login services typically require registering and configuring
+your application before use. The easiest way to do this is with the
+[`accounts-ui` package](#accountsui) which presents a step-by-step guide
+to configuring each service. However, the data can be also be entered
+manually in the `Accounts.loginServiceConfiguration` collection. For
+example:
+
+    Accounts.loginServiceConfiguration.insert({
+      service: "weibo",
+      clientId: "1292962797",
+      secret: "75a730b58f5691de5522789070c319bc"
+    });
+
+
+Each external service has its own login provider package and login function. For
+example, to support GitHub login, run `$ meteor add accounts-github` and use the
+`Meteor.loginWithGithub` function:
+
+    Meteor.loginWithGithub({
+      requestPermissions: ['user', 'public_repo']
+    }, function (err) {
+      if (err)
+        Session.set('errorMessage', err.reason || 'Unknown error');
+    });
+
+
+
+
+{{> api_box accounts_config}}
+{{> api_box accounts_ui_config}}
+
+Example:
+
+    Accounts.ui.config({
+      requestPermissions: {
+        facebook: ['user_likes'],
+        github: ['user', 'repo']
+      },
+      passwordSignupFields: 'USERNAME_AND_OPTIONAL_EMAIL'
+    });
+
+{{> api_box accounts_validateNewUser}}
+
+This can be called multiple times. If any of the functions return `false` or
+throw an error, the new user creation is aborted. To set a specific error
+message (which will be displayed by [`accounts-ui`](#accountsui)), throw a new
+[`Meteor.Error`](#meteor_error).
+
+Example:
+
+    // Validate username, sending a specific error message on failure.
+    Accounts.validateNewUser(function (user) {
+      if (user.username && user.username.length >= 3)
+        return true;
+      throw new Meteor.Error(403, "Username must have at least 3 characters");
+    });
+    // Validate username, without a specific error message.
+    Accounts.validateNewUser(function (user) {
+      return user.username !== "root";
+    });
+
+{{> api_box accounts_onCreateUser}}
+
+Use this when you need to do more than simply accept or reject new user
+creation. With this function you can programatically control the
+contents of new user documents.
+
+The function you pass will be called with two arguments: `options` and
+`user`. The `options` argument comes
+from [`Accounts.createUser`](#accounts_createuser) for
+password-based users or from an external service login flow. `options` may come
+from an untrusted client so make sure to validate any values you read from
+it. The `user` argument is created on the server and contains a
+proposed user object with all the automatically generated fields
+required for the user to log in.
+
+The function should return the user document (either the one passed in or a
+newly-created object) with whatever modifications are desired. The returned
+document is inserted directly into the [`Meteor.users`](#meteor_users) collection.
+
+The default create user function simply copies `options.profile` into
+the new user document. Calling `onCreateUser` overrides the default
+hook. This can only be called once.
+
+Example:
+
+<!-- XXX replace d6 with _.random once we have underscore 1.4.2 -->
+
+    // Support for playing D&D: Roll 3d6 for dexterity
+    Accounts.onCreateUser(function(options, user) {
+      var d6 = function () { return Math.floor(Math.random() * 6) + 1; };
+      user.dexterity = d6() + d6() + d6();
+      // We still want the default hook's 'profile' behavior.
+      if (options.profile)
+        user.profile = options.profile;
+      return user;
+    });
+
+
+<h2 id="accounts_passwords"><span>Passwords</span></h2>
+
+The `accounts-password` package contains a full system for password
+based authentication. In addition to the basic username and password
+based sign-in process it also supports email based sign-in including
+address verification and password recovery emails.
+
+Unlike most web applications, the Meteor client does not send the user's
+password directly to the server. It uses the [Secure Remote Password
+protocol](http://en.wikipedia.org/wiki/Secure_Remote_Password_protocol)
+to ensure the server never sees the user's plain-text password. This
+helps protect against embarrassing password leaks if the server's
+database is compromised.
+
+To add password support to your application, run `$ meteor add
+accounts-password`. You can construct your own user interface using the
+functions below, or use the [`accounts-ui` package](#accountsui) to
+include a turn-key user interface for password based sign-in.
+
+
+{{> api_box accounts_createUser}}
+
+On the client this function logs in as the newly created user on
+successful completion. On the server, it returns the newly created user
+id.
+
+On the client, you must pass `password` and one of `username` or `email`
+&mdash; enough information for the user to be able to log in again
+later. On the server, you can pass any subset of these options, but the
+user will not be able to log in until it has an identifier and a
+password.
+
+To create an account without a password on the server and still let the
+user pick their own password, call `createUser` with the `email` option
+and then
+call [`Accounts.sendEnrollmentEmail`](#accounts_sendenrollmentemail). This
+will send the user an email with a link to set their initial password.
+
+By default the `profile` option is added directly to the new user document. To
+override this behavior, use [`Accounts.onCreateUser`](#accounts_createuser).
+
+This function is only used for creating users with passwords. The external
+service login flows do not use this function.
+
+
+{{> api_box accounts_changePassword}}
+
+{{> api_box accounts_forgotPassword}}
+
+This triggers a call
+to [`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail)
+on the server. Pass the token the user receives in this email
+to [`Accounts.resetPassword`](#accounts_resetpassword) to
+complete the password reset process.
+
+If you are using the [`accounts-ui` package](#pkg_accounts_ui), this is handled
+automatically. Otherwise, it is your responsiblity to prompt the user for the
+new password and call `resetPassword`.
+
+{{> api_box accounts_resetPassword}}
+
+This function accepts tokens generated
+by [`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail)
+and
+[`Accounts.sendEnrollmentEmail`](#accounts_sendenrollmentemail).
+
+{{> api_box accounts_setPassword}}
+
+{{> api_box accounts_verifyEmail}}
+
+This function accepts tokens generated
+by [`Accounts.sendVerificationEmail`](#accounts_sendverificationemail). It
+sets the `emails.verified` field in the user record.
+
+{{> api_box accounts_sendResetPasswordEmail}}
+
+The token in this email should be passed
+to [`Accounts.resetPassword`](#accounts_resetpassword).
+
+To customize the contents of the email, see
+[`Accounts.emailTemplates`](#accounts_emailtemplates).
+
+{{> api_box accounts_sendEnrollmentEmail}}
+
+The token in this email should be passed
+to [`Accounts.resetPassword`](#accounts_resetpassword).
+
+To customize the contents of the email, see
+[`Accounts.emailTemplates`](#accounts_emailtemplates).
+
+{{> api_box accounts_sendVerificationEmail}}
+
+The token in this email should be passed
+to [`Accounts.verifyEmail`](#accounts_verifyemail).
+
+To customize the contents of the email, see
+[`Accounts.emailTemplates`](#accounts_emailtemplates).
+
+{{> api_box accounts_emailTemplates}}
+
+This is an `Object` with several fields that are used to generate text
+for the emails by `sendResetPasswordEmail`, `sendEnrollmentEmail`, and
+`sendVerificationEmail`.
+
+Override fields of the object by assigning to them:
+
+- `from`: A `String` with an [RFC5322](http://tools.ietf.org/html/rfc5322) From
+   address. By default email is from `no-reply@meteor.com`. If you wish to
+   receive email from users asking for help with their account, be sure to set
+   this to an email address that you can receive email at.
+- `siteName`: The public name of your application. Defaults to the DNS name of
+   the application (eg: `awesome.meteor.com`).
+- `resetPassword`: An `Object` with two fields:
+ - `resetPassword.subject`: A `Function` that takes a user object and returns
+   a `String` for the subject line of a reset password email.
+ - `resetPassword.text`: A `Function` that takes a user object and a url, and
+   returns the body text for a reset password email.
+- `enrollAccount`: Same as `resetPassword`, but for initial password setup for
+   new accounts.
+- `verifyEmail`: Same as `resetPassword`, but for verifying the users email
+   address.
+
+
+Example:
+
+    Accounts.emailTemplates.siteName = "AwesomeSite";
+    Accounts.emailTemplates.from = "AwesomeSite Admin <accounts@example.com>";
+    Accounts.emailTemplates.enrollAccount.subject = function (user) {
+        return "Welcome to Awesome Town, " + user.profile.name;
+    };
+    Accounts.emailTemplates.enrollAccount.text = function (user, url) {
+       return "You have been selected to participate in building a better future!"
+         + " To activate your account, simply click the link below:\n\n"
+         + url;
+    };
+
+
 <h2 id="templates_api"><span>Templates</span></h2>
 
 A template that you declare as `<{{! }}template name="foo"> ... </{{!
@@ -941,7 +1549,9 @@ Otherwise, the HTML is unadorned and static.
 
 {{> api_box template_rendered}}
 
-This callback is called once when an instance of Template.*myTemplate* is rendered into DOM nodes and put into the document for the first time, and again each time any part of the template is re-rendered.
+This callback is called once when an instance of Template.*myTemplate* is
+rendered into DOM nodes and put into the document for the first time, and again
+each time any part of the template is re-rendered.
 
 In the body of the callback, `this` is a [template
 instance](#template_inst) object that is unique to this occurrence of
@@ -983,8 +1593,8 @@ See [Event Maps](#eventmaps) for a detailed description of the event
 map format and how event handling works in Meteor.
 
 {{#note}}
-This syntax replaces the previous syntax: `Template.myTemplate.events = {...}`, but for now, the
-old syntax still works.
+This syntax replaces the previous syntax: `Template.myTemplate.events = {...}`,
+but for now, the old syntax still works.
 {{/note}}
 
 
@@ -1233,11 +1843,12 @@ Matches a particular type of event, such as 'click'.
 
 {{#dtdd "<em>eventtype selector</em>"}}
 Matches a particular type of event, but only when it appears on
-an element that matches a certain CSS selector.  
+an element that matches a certain CSS selector.
 {{/dtdd}}
 
 {{#dtdd "<em>event1, event2</em>"}}
-To handle more than one type of event with the same function, use a comma-separated list.
+To handle more than one type of event with the same function, use a
+comma-separated list.
 {{/dtdd}}
 </dl>
 
@@ -1440,7 +2051,6 @@ sub-template.
 {{/api_box_inline}}
 
 
-
 <h2 id="timers"><span>Timers</span></h2>
 
 Meteor uses global environment variables
@@ -1468,7 +2078,7 @@ dependencies &mdash; it "just works". The mechanism is simple and
 efficient. When you call a function that supports reactive updates
 (say, a database query), it automatically saves the current
 "invalidation context" object if any (say, the current template being
-rendered.) Later, when the data changes, it can "invalidates" this
+rendered.) Later, when the data changes, it can "invalidate" this
 context (tell the template to rerender itself.) The whole
 implementation is about 50 lines of code.
 
@@ -1628,6 +2238,34 @@ might think of it as a dynamically scoped ("special") variable. (That
 just means that [`run`](#run) sets it, runs some user-supplied code, and
 then restores its previous value.)
 
+{{> api_box autorun }}
+
+`Meteor.autorun` allows you to set up your own reactive context, where you can
+perform arbitrary actions when dependencies change. For example, you can monitor
+a cursor (which is a reactive data source) and aggregate it into a session
+variable:
+
+    Meteor.autorun(function() {
+      var oldest = _.max(Monkeys.find().fetch(), function (monkey) {
+        return monkey.age;
+      });
+      if (oldest)
+        Session.set("oldest", oldest.name);
+    });
+
+Or you can wait for a session variable to get a certain value, and do something
+the first time it does so, using the `stop` handle to prevent further runs:
+
+    Meteor.autorun(function(handle) {
+      if (!Session.equals("shouldAlert", true)) return;
+      handle.stop();
+      alert("Oh no!");
+    });
+
+The function is invoked immediately and &mdash; like all reactive
+sources &mdash; the rerun occurs at the time of the next
+[`Meteor.flush`](#meteor_flush).
+
 
 {{> api_box flush }}
 
@@ -1661,12 +2299,10 @@ elements are cleaned up by logic that is triggered by context invalidations.
 
 
 
-
-
 <h2 id="meteor_http"><span>Meteor.http</span></h2>
 
 `Meteor.http` provides an HTTP API on the client and server.  To use
-these functions, add the HTTP package to your project with `meteor add
+these functions, add the HTTP package to your project with `$ meteor add
 http`.
 
 {{> api_box httpcall}}
@@ -1739,7 +2375,7 @@ Example server method:
 
     Meteor.methods({checkTwitter: function (userId) {
       this.unblock();
-      var result = Meteor.http.call("GET", "http://api.twitter.com/xxx",
+      var result = Meteor.http.call("GET", "http://api.twitter.com/xyz",
                                     {params: {user: userId}});
       if (result.statusCode === 200)
          return true
@@ -1748,7 +2384,7 @@ Example server method:
 
 Example asynchronous HTTP call:
 
-    Meteor.http.call("POST", "http://api.twitter.com/xxx",
+    Meteor.http.call("POST", "http://api.twitter.com/xyz",
                      {data: {some: "json", stuff: 1}},
                      function (error, result) {
                        if (result.statusCode === 200) {
@@ -1773,9 +2409,9 @@ send mail. Currently, Meteor supports sending mail over SMTP; the `MAIL_URL`
 environment variable should be of the form
 `smtp://USERNAME:PASSWORD@HOST:PORT/`. For apps deployed with `meteor deploy`,
 `MAIL_URL` defaults to an account (provided by
-<a href="http://www.mailgun.com/" target="_blank">Mailgun</a>) which allows
-apps to send up to 200 emails per day; you may override this default by
-assigning to `process.env.MAIL_URL` before your first call to `Email.send`.
+[Mailgun](http://www.mailgun.com/)) which allows apps to send up to 200 emails
+per day; you may override this default by assigning to `process.env.MAIL_URL`
+before your first call to `Email.send`.
 
 If `MAIL_URL` is not set (eg, when running your application locally),
 `Email.send` outputs the message to standard output instead.

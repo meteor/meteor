@@ -42,6 +42,11 @@ _.extend(Meteor, {
   },
 
   // won't be necessary once we clobber the global setTimeout
+  //
+  // XXX consider making this guarantee ordering of defer'd callbacks, like
+  // Meteor._atFlush or Node's nextTick (in practice). Then tests can do:
+  //    callSomethingThatDefersSomeWork();
+  //    Meteor.defer(expect(somethingThatValidatesThatTheWorkHappened));
   defer: function (f) {
     // Older Firefox will pass an argument to the setTimeout callback
     // function, indicating the "actual lateness." It's non-standard,

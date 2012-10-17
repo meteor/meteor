@@ -1,6 +1,65 @@
 
 ## vNEXT
 
+## v0.5.0
+
+* This release introduces Meteor Accounts, a full-featured auth system that supports
+  - fine-grained user-based control over database reads and writes
+  - federated login with any OAuth provider (with built-in support for
+    Facebook, GitHub, Google, Twitter, and Weibo)
+  - secure password login
+  - email validation and password recovery
+  - an optional set of UI widgets implementing standard login/signup/password
+    change/logout flows
+
+  When you upgrade to Meteor 0.5.0, existing apps will lose the ability to write
+  to the database from the client. To restore this, either:
+  - configure each of your collections with
+    [`collection.allow`](http://docs.meteor.com/#allow) and
+    [`collection.deny`](http://docs.meteor.com/#deny) calls to specify which
+    users can perform which write operations, or
+  - add the `insecure` smart package (which is included in new apps by default)
+    to restore the old behavior where anyone can write to any collection which
+    has not been configured with `allow` or `deny`
+
+  For more information on Meteor Accounts, see
+  http://docs.meteor.com/#dataandsecurity and
+  http://docs.meteor.com/#accounts_api
+
+* The new function `Meteor.autorun` allows you run any code in a reactive
+  context. See http://docs.meteor.com/#meteor_autorun
+
+* Arrays and objects can now be stored in the `Session`; mutating the value you
+  retrieve with `Session.get` does not affect the value in the session.
+
+* On the client, `Meteor.apply` takes a new `wait` option, which ensures that no
+  further method calls are sent to the server until this method is finished; it
+  is used for login and logout methods in order to keep the user ID
+  well-defined. You can also specifiy an `onReconnect` handler which is run when
+  re-establishing a connection; Meteor Accounts uses this to log back in on
+  reconnect.
+
+* Meteor now provides a compatible replacement for the DOM `localStorage`
+  facility that works in IE7, in the `localstorage-polyfill` smart package.
+
+* Meteor now packages the D3 library for manipulating documents based on data in
+  a smart package called `d3`.
+
+* `Meteor.Collection` now takes its optional `manager` argument (used to
+  associate a collection with a server you've connected to with
+  `Meteor.connect`) as a named option. (The old call syntax continues to work
+  for now.)
+
+* Fix a bug where trying to immediately resubscribe to a record set after
+  unsubscribing could fail silently.
+
+* Better error handling for failed Mongo writes from inside methods; previously,
+  errors here could cause clients to stop processing data from the server.
+
+
+Patches contributed by GitHub users bradens, dandv, dybskiy, possibilities,
+zhangcheng, and 75lb.
+
 
 ## v0.4.2
 

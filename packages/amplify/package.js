@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Cross browser API for Persistant Storage, PubSub and Request."
+  summary: "API for Persistant Storage, PubSub and Request"
 });
 
 Package.on_use(function (api) {

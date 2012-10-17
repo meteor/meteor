@@ -1,5 +1,7 @@
 Meteor.startup(function () {
   Meteor._ServerTestResults.remove();
+  // Index is definitely not unique and doesn't need to be sparse.
+  Meteor._ServerTestResults._ensureIndex('run_id');
 });
 
 Meteor.publish('tinytest/results', function (run_id) {

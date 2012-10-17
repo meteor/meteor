@@ -50,11 +50,9 @@ OnscreenDiv.prototype.kill = function() {
   if (self.div.parentNode)
     self.div.parentNode.removeChild(self.div);
 
-  var cx = new Meteor.deps.Context;
-  cx.onInvalidate(function() {
+  Meteor._atFlush(function () {
     Spark.finalize(self.div);
   });
-  cx.invalidate();
 };
 
 // remove the DIV from the document

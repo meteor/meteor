@@ -59,7 +59,11 @@
 
         _.each(pending, function (ctx) {
           _.each(ctx._callbacks, function (f) {
-            f(ctx); // XXX wrap in try?
+            try {
+              f(ctx);
+            } catch (e) {
+              Meteor._debug("Exception from Meteor.flush:", e.stack);
+            }
           });
           delete ctx._callbacks; // maybe help the GC
         });
