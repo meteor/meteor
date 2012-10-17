@@ -114,7 +114,7 @@ Template.map.events({
   'mousedown circle, mousedown text': function (event, template) {
     Session.set("selected", event.currentTarget.id);
   },
-  'dblclick svg': function (event, template) {
+  'dblclick .map': function (event, template) {
     if (! Meteor.userId()) // must be logged in to create events
       return;
     var coords = coordsRelativeToElement(event.currentTarget, event);
