@@ -22,9 +22,9 @@
     to restore the old behavior where anyone can write to any collection which
     has not been configured with `allow` or `deny`
 
-  For more information on Meteor Accounts, see:
-     http://docs.meteor.com/#dataandsecurity
-     http://docs.meteor.com/#accounts_api
+  For more information on Meteor Accounts, see
+  http://docs.meteor.com/#dataandsecurity and
+  http://docs.meteor.com/#accounts_api
 
 * The new function `Meteor.autorun` allows you run any code in a reactive
   context. See http://docs.meteor.com/#meteor_autorun
