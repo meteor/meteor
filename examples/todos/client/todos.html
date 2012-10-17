@@ -4,9 +4,6 @@
 
 <body>
   <div id="top-tag-filter">
-    <div class="login-bar">
-      {{loginButtons align="right"}}
-    </div>
     {{> tag_filter}}
   </div>
 
@@ -69,21 +66,6 @@
       <div class="display">
         <input class="check" name="markdone" type="checkbox" {{{done_checkbox}}} />
         <div class="todo-text">{{text}}</div>
-      </div>
-    {{/if}}
-    {{#if currentUser}}
-      <div class="toggle-privacy-wrapper">
-      <div class="toggle-privacy tag">
-        {{#if privateTo}}
-          <span class="make-public">
-            make public
-          </span>
-        {{else}}
-          <span class="make-private">
-            make private
-          </span>
-        {{/if}}
-      </div>
       </div>
     {{/if}}
     <div class="item-tags">

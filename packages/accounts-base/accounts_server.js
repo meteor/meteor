@@ -254,10 +254,7 @@
     if (this.userId)
       return Meteor.users.find(
         {_id: this.userId},
-        {fields: {profile: 1, username: 1,
-                  // We do let the UI know if emails are verified but we don't
-                  // want to publish the verificationTokens field!
-                  'emails.address': 1, 'emails.verified': 1}});
+        {fields: {profile: 1, username: 1, emails: 1}});
     else {
       this.complete();
       return null;
@@ -319,7 +316,7 @@
 
       return true;
     },
-    fields: ['_id'] // we only look at _id.
+    fetch: ['_id'] // we only look at _id.
   });
 
   /// DEFAULT INDEXES ON USERS

@@ -138,23 +138,38 @@
       if (!token)
         throw new Meteor.Error(400, "Need to pass token");
 
-      var user = Meteor.users.findOne({'emails.verificationTokens.token': token});
+      var user = Meteor.users.findOne(
+        {'services.email.verificationTokens.token': token});
       if (!user)
         throw new Meteor.Error(403, "Verify email link expired");
+
+      var tokenRecord = _.find(user.services.email.verificationTokens,
+                               function (t) {
+                                 return t.token == token;
+                               });
+      if (!tokenRecord)
+        throw new Meteor.Error(403, "Verify email link expired");
+
+      var emailsRecord = _.find(user.emails, function (e) {
+        return e.address == tokenRecord.address;
+      });
+      if (!emailsRecord)
+        throw new Meteor.Error(403, "Verify email link is for unknown address");
 
       // Log the user in with a new login token.
       var stampedLoginToken = Accounts._generateStampedLoginToken();
 
-      // By including the token again in the query, we can use 'emails.$' in the
+      // By including the address in the query, we can use 'emails.$' in the
       // modifier to get a reference to the specific object in the emails
       // array. See
       // http://www.mongodb.org/display/DOCS/Updating/#Updating-The%24positionaloperator)
       // http://www.mongodb.org/display/DOCS/Updating#Updating-%24pull
       Meteor.users.update(
-        {_id: user._id, 'emails.verificationTokens.token': token}, {
-          $set: {'emails.$.verified': true},
-          $pull: {'emails.$.verificationTokens': {token: token}},
-          $push: {'services.resume.loginTokens': stampedLoginToken}});
+        {_id: user._id,
+         'emails.address': tokenRecord.address},
+        {$set: {'emails.$.verified': true},
+         $pull: {'services.email.verificationTokens': {token: token}},
+         $push: {'services.resume.loginTokens': stampedLoginToken}});
 
       this.setUserId(user._id);
       return {token: stampedLoginToken.token, id: user._id};
@@ -197,32 +212,37 @@
 
   // send the user an email with a link that when opened marks that
   // address as verified
-  Accounts.sendVerificationEmail = function (userId, email) {
+  Accounts.sendVerificationEmail = function (userId, address) {
     // XXX Also generate a link using which someone can delete this
     // account if they own said address but weren't those who created
     // this account.
 
-    // Make sure the user exists, and email is one of their addresses.
+    // Make sure the user exists, and address is one of their addresses.
     var user = Meteor.users.findOne(userId);
     if (!user)
       throw new Error("Can't find user");
-    // pick the first unverified email if we weren't passed an email.
-    if (!email) {
-      email = _.find(user.emails || [], function (e) { return !e.verified; });
-      email = (email || {}).address;
+    // pick the first unverified address if we weren't passed an address.
+    if (!address) {
+      var email = _.find(user.emails || [],
+                         function (e) { return !e.verified; });
+      address = (email || {}).address;
     }
-    // make sure we have a valid email
-    if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
-      throw new Error("No such email for user.");
+    // make sure we have a valid address
+    if (!address || !_.contains(_.pluck(user.emails || [], 'address'), address))
+      throw new Error("No such email address for user.");
 
 
-    var stampedToken = {token: Meteor.uuid(), when: +(new Date)};
-    Meteor.users.update({_id: userId, 'emails.address': email},
-                        {$push: {'emails.$.verificationTokens': stampedToken}});
+    var tokenRecord = {
+      token: Meteor.uuid(),
+      address: address,
+      when: +(new Date)};
+    Meteor.users.update(
+      {_id: userId},
+      {$push: {'services.email.verificationTokens': tokenRecord}});
 
-    var verifyEmailUrl = Accounts.urls.verifyEmail(stampedToken.token);
+    var verifyEmailUrl = Accounts.urls.verifyEmail(tokenRecord.token);
     Email.send({
-      to: email,
+      to: address,
       from: Accounts.emailTemplates.from,
       subject: Accounts.emailTemplates.verifyEmail.subject(user),
       text: Accounts.emailTemplates.verifyEmail.text(user, verifyEmailUrl)
@@ -425,7 +445,7 @@
 
     // XXX allow an optional callback?
     if (callback) {
-      throw new Error("Meteor.createUser with callback not supported on the server yet.");
+      throw new Error("Accounts.createUser with callback not supported on the server yet.");
     }
 
     var userId = createUser(options).id;

@@ -107,8 +107,8 @@
       test.equal(Meteor.user().emails.length, 1);
       test.equal(Meteor.user().emails[0].address, email2);
       test.isFalse(Meteor.user().emails[0].verified);
-      // We should NOT be publishing verification tokens!
-      test.isFalse(_.has(Meteor.user().emails[0], 'verificationTokens'));
+      // We should NOT be publishing things like verification tokens!
+      test.isFalse(_.has(Meteor.user(), 'services'));
     },
     function (test, expect) {
       getVerifyEmailToken(email2, test, expect);

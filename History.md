@@ -1,6 +1,8 @@
 
 ## vNEXT
 
+## v0.5.0
+
 * This release introduces Meteor Accounts, a full-featured auth system that supports
   - fine-grained user-based control over database reads and writes
   - federated login with any OAuth provider (with built-in support for
@@ -20,7 +22,9 @@
     to restore the old behavior where anyone can write to any collection which
     has not been configured with `allow` or `deny`
 
-  For more information on Meteor Accounts, see http://docs.meteor.com/#accounts
+  For more information on Meteor Accounts, see
+  http://docs.meteor.com/#dataandsecurity and
+  http://docs.meteor.com/#accounts_api
 
 * The new function `Meteor.autorun` allows you run any code in a reactive
   context. See http://docs.meteor.com/#meteor_autorun
@@ -37,6 +41,9 @@
 
 * Meteor now provides a compatible replacement for the DOM `localStorage`
   facility that works in IE7, in the `localstorage-polyfill` smart package.
+
+* Meteor now packages the D3 library for manipulating documents based on data in
+  a smart package called `d3`.
 
 * `Meteor.Collection` now takes its optional `manager` argument (used to
   associate a collection with a server you've connected to with

@@ -183,13 +183,8 @@ _.each(["insert", "update", "remove"], function (name) {
       // baffled if their writes don't work because their database is
       // down.
       callback = function (err) {
-        if (err) {
-          if (err instanceof Meteor.Error) {
-            Meteor._debug(name + " failed: " + err.error + " -- " + err.reason);
-          } else {
-            Meteor._debug(name + " failed: " + err.message);
-          }
-        }
+        if (err)
+          Meteor._debug(name + " failed: " + (err.reason || err.stack));
       };
     }
 
@@ -286,19 +281,34 @@ Meteor.Collection.prototype._ensureIndex = function (index, options) {
 
 (function () {
   var addValidator = function(allowOrDeny, options) {
+    // validate keys
+    var VALID_KEYS = ['insert', 'update', 'remove', 'fetch'];
+    _.each(_.keys(options), function (key) {
+      if (!_.contains(VALID_KEYS, key))
+        throw new Error(allowOrDeny + ": Invalid key: " + key);
+    });
+
     var self = this;
     self._restricted = true;
 
     _.each(['insert', 'update', 'remove'], function (name) {
-      if (options[name])
+      if (options[name]) {
+        if (!(options[name] instanceof Function)) {
+          throw new Error(allowOrDeny + ": Value for `" + name + "` must be a function");
+        }
         self._validators[name][allowOrDeny].push(options[name]);
+      }
     });
 
     // Only update the fetch fields if we're passed things that affect
     // fetching. This way allow({}) and allow({insert: f}) don't result in
     // setting fetchAllFields
-    if (options.update || options.remove || options.fetch)
+    if (options.update || options.remove || options.fetch) {
+      if (options.fetch && !(options.fetch instanceof Array)) {
+        throw new Error(allowOrDeny + ": Value for `fetch` must be an array");
+      }
       self._updateFetch(options.fetch);
+    }
   };
 
   Meteor.Collection.prototype.allow = function(options) {
