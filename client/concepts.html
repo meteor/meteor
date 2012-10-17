@@ -12,7 +12,6 @@ when writing those apps.
 {{> reactivity }}
 {{> livehtml }}
 {{> templates }}
-{{> accounts }}
 {{> packages_concept }}
 {{> deploying }}
 </template>
@@ -191,6 +190,16 @@ never need to wait for a roundtrip to the server. And when clients
 modify data, those modifications can run locally without waiting for the
 confirmation from the server, while still giving the server final say
 over the requested change.
+
+Meteor provides low-level APIs that allows any login system to take advantage of
+the data and RPC security features, but most developers will want to use [Meteor
+Accounts](#accounts_api), our full-featured authentication system featuring both
+secure login with passwords and integration with external services such as
+Facebook and Twitter. To help you make your app secure as quickly as possible,
+you can even use [Accounts UI](#accountsui), a pre-built user interface which
+lets you add a complete login and signup system to your app with just one line
+of code. It even contains password change, email-based password reset, and
+configuration wizards for the external service providers.
 
 {{#note}}
 The current release of Meteor supports MongoDB, the popular document
@@ -482,27 +491,6 @@ discussion.
 
     > Session.set("weather", "cool and dry");
     In DOM:  <div>It'll be cool and dry tonight</div>
-
-{{/better_markdown}}
-</template>
-
-<template name="accounts">
-{{#better_markdown}}
-
-<h2 id="accounts">Accounts</h2>
-
-Meteor has an Accounts system.
-
-- simplest integration
- - add accounts-ui accounts-password
- - and XXX loginButtons}} to app
-
-- which packages
-
-- can build own accounts-ui
-
-- link to api section
-
 
 {{/better_markdown}}
 </template>

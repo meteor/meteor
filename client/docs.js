@@ -85,7 +85,6 @@ var toc = [
     "Reactivity",
     "Live HTML",
     "Templates",
-    "Accounts",
     "Smart packages",
     "Deploying"
   ],
