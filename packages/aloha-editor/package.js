@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Aloha Editor -- makes HTML5 contentEditable editable"
+  summary: "Aloha Editor -- HTML5 contentEditable WYSIWYG editor"
 });
 
 Package.on_use(function (api) {
