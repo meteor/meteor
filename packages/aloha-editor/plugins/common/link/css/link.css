@@ -1,10 +1,3 @@
-/*!
-* Aloha Editor
-* Author & Copyright (c) 2010 Gentics Software GmbH
-* aloha-sales@gentics.com
-* Licensed unter the terms of http://www.aloha-editor.com/license.html
-*/
-
 .aloha-link-pointer {
 	cursor: pointer;
 }
@@ -25,8 +18,13 @@
 	padding:5px 5px;
 }
 
-.aloha-link-target-container li{
+.aloha-link-target-container ul {
+	margin-left: 0px;
+}
+
+.aloha-link-target-container li {
 	padding:0 !important;
+	list-style: none;
 }
 
 .aloha-link-target-container fieldset {

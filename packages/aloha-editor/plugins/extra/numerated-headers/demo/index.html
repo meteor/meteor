@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+	<title>Numerated Headers</title>
+	
+	<link rel="stylesheet" href="index.css" type="text/css">
+
+	<style>
+		.hor-minimalist-a
+		{
+			background: #fff;
+			border-collapse: collapse;
+			text-align: left;
+		}
+		.hor-minimalist-a th
+		{
+			font-size: 130%;
+			font-weight: normal;
+			padding: 10px 8px;
+			border-bottom: 2px solid #6678b1;
+		}
+		.hor-minimalist-a td
+		{
+			padding: 9px 8px 0px 8px;
+		}
+		.hor-minimalist-a tbody tr:hover td
+		{
+			color: #009;
+		}
+
+		.box-table-a
+		{
+			text-align: left;
+			border-collapse: collapse;
+		}
+		.box-table-a th
+		{
+			font-size: 115%;
+			font-weight: normal;
+			padding: 8px;
+			background: #b9c9fe;
+			border-top: 4px solid #aabcfe;
+			border-bottom: 1px solid #fff;
+		}
+		.box-table-a td
+		{
+			padding: 8px;
+			background: #e8edff;
+			border-bottom: 1px solid #fff;
+			border-top: 1px solid transparent;
+		}
+		.box-table-a tr:hover td
+		{
+			background: #d0dafd;
+		}
+
+		.hor-zebra
+		{
+			text-align: left;
+			border-collapse: collapse;
+		}
+		.hor-zebra th
+		{
+			font-size: 130%;
+			font-weight: bold;
+			padding: 10px 8px;
+			border-bottom: 2px solid #6678b1;
+
+		}
+		.hor-zebra td
+		{
+			padding: 8px;
+		}
+		.hor-zebra tr:nth-child(2n+1) td
+		{
+			background: #e8edff;
+		}
+
+		td.bigbold {
+			font-size: 200%;
+			font-weight: bold;
+		}
+		td.redwhite {
+			background-color: red;
+			color: white;
+			font-weight: bold;
+		}
+
+		.aloha-placeholder {
+			background: #ddd;
+			color: #666;
+			margin: 5px 0 0 0;
+		}
+
+		#typo3span {
+			display: block;
+		}
+	</style>
+	<link rel="stylesheet" href="../../../../css/aloha.css" type="text/css">
+	<script src="js/aloha-config.js" language="javascript"></script>
+	<script src="../../../../lib/aloha.js" data-aloha-plugins="common/format,common/highlighteditables,common/list,common/link,common/undo,common/paste,common/block,extra/numerated-headers"></script>
+</head>
+<body>
+	<div id="main">
+		<div id="tree-div"></div>
+		<h1 id="title">Numerated Headers Example</h1>
+		<p> just click into the editable area:</p>
+		<div id="bodyContent">
+			
+			<div id="content" class="article">
+				<p>Each specified header will be decorated with a prepended numeration.</p>
+					<h1>Headline 1</h1>
+					<h2>Headline 2</h2>
+					<h3>Headline 3</h3>
+					<h4>Headline 4</h4>
+					<h5>Headline 5</h5>
+					<h6>Headline 6</h6>
+					<p>Here we test, a <a title="" href="http://aloha-editor.org">link</a> and other formattings such as 
+					<b>bold</b>, <i>italic</i> or <del>deleted text</del>. You may also use formattings for maths 2
+					<sup>2</sup> = 4 or chemical formulas like CO<sub>2</sub>.
+					Or you may edit tables as you do in office products.</p>
+
+			</div>
+		</div>
+	</div>
+	<script type="text/javascript">
+	// http://requirejs.org/docs/errors.html#mismatch
+	// ../../plugins/common/link/extra/linklist.js
+
+	// Bind to Aloha Ready Event
+	Aloha.ready( function() {
+		var $ = Aloha.jQuery;
+		$('#content').aloha();
+			
+	});
+	</script>
+</body>
+</html>

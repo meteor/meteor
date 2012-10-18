@@ -1,8 +1,9 @@
 Package.describe({
-  summary: "Aloha! HTML5 contentEditable WYSIWYG editor"
+  summary: "Aloha Editor -- makes HTML5 contentEditable editable"
 });
 
 Package.on_use(function (api) {
+  //api.use('jquery');
   api.add_files('lib/require.js', 'client');
   api.add_files('lib/vendor/jquery-1.7.1.js', 'client');
   api.add_files('css/aloha.css', 'client');

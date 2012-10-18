@@ -1,0 +1,359 @@
+
+/*--------------------------------------+
+ | Gentics Software GmbH                |
+ +--------------------------------------+
+ | Aloha.browser                        |
+ +--------------------------------------+
+ | browser.css                          |
+ +--------------------------------------*/
+
+/**
+ *
+ * Modal
+ *
+ **********************************************************************/
+.aloha-browser-modal-overlay {
+	position: fixed;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	height: 100%;
+	width: 100%;
+	z-index: 999;
+	
+	background-image: -webkit-radial-gradient(
+		rgba(127, 127, 127, 0.5) 0%,
+		rgba(127, 127, 127, 0.6) 40%,
+		rgba(0,   0,   0,   0.7) 100%
+	);
+	background-image: -moz-radial-gradient(
+		rgba(127, 127, 127, 0.5),
+		rgba(127, 127, 127, 0.6) 40%,
+		rgba(0,   0,   0,   0.7)
+	);
+}
+.aloha-browser-modal-window {
+	position: fixed;
+	top: 0;
+	left: 0;
+	z-index: 9999;
+}
+
+.aloha-browser {
+	font-weight: 30px;
+}
+
+/**
+ *
+ * ui-layout
+ *
+ **********************************************************************/
+.ui-layout-resizer {
+	background-color: #303539;
+	background-image: -webkit-gradient(
+    	linear,
+    	left center,
+    	right center,
+    	color-stop(0.00, #303539),
+    	color-stop(0.30, #4c4f54),
+    	color-stop(0.70, #6c6f74),
+    	color-stop(1.00, #303539)
+	);
+	background-image: -moz-linear-gradient(
+    	left center,
+		#303539 0%,
+		#4c4f54 30%,
+		#6c6f74 70%,
+    	#303539 100%
+	);
+	filter: progid:DXImageTransform.Microsoft.Gradient(
+		startColorstr='#4c4f54',
+		endColorstr='#303539',
+		gradientType='0'
+	);
+}
+.ui-layout-toggler {
+	border: 1px solid #355ea0;
+	background-color: #508ac9;
+	background-image: -webkit-gradient(
+    	linear,
+    	right center,
+    	left center,
+    	color-stop(0.00, #81add2),
+    	color-stop(0.10, #5693cc),
+    	color-stop(0.45, #5b9acf),
+    	color-stop(0.60, #508ac9),
+    	color-stop(1.00, #456eb0)
+	);
+	background-image: -moz-linear-gradient(
+    	right center,
+		#81add2 0%,
+		#5693cc 10%,
+		#5b9acf 45%,
+    	#508ac9 60%,
+    	#456eb0 100%
+	);
+	filter: progid:DXImageTransform.Microsoft.Gradient(
+		startColorstr='#81add2',
+		endColorstr='#456eb0',
+		gradientType='0'
+	);
+}
+.ui-layout-toggler:hover {
+	opacity: 0.5;
+	filter: alpha(opacity=50);
+}
+ 
+.ui-draggable-dragging {
+	opacity: 0.85;
+	/* filter: alpha(opacity=85); */
+}
+
+.aloha-browser-shadow {
+	background: transparent;
+	-moz-box-shadow:	0 10px 25px rgba(0, 0, 0, .5);
+	-webkit-box-shadow:	0 10px 25px rgba(0, 0, 0, .5);
+	box-shadow:			0 10px 25px rgba(0, 0, 0, .5);
+}
+.aloha-browser-rounded-top {
+	border-radius-topleft:			 6px;
+	-moz-border-radius-topleft:		 6px;
+	-webkit-border-top-left-radius:	 6px;
+	border-radius-topright:			 6px;
+	-moz-border-radius-topright:	 6px;
+	-webkit-border-top-right-radius: 6px;
+}
+.aloha-browser-grid {
+	height: 300px;
+	border: 1px solid #33363b;
+}
+.aloha-browser-clear {
+	float: none;
+	clear: both;
+}
+
+/**
+ * List
+ */
+.aloha-browser-list a {
+	color: #777;
+	text-decoration: none;
+}
+.aloha-browser-list .ui-state-hover  a {
+	color: #fff;
+	text-decoration: underline;
+}
+.aloha-browser-list-altrow {
+	background: rgba(0, 0, 0, 0.05);
+}
+.aloha-browser-list-resizable {
+}
+.aloha-browser-list-icon {
+	width: 100%;
+	height: 16px;
+	background: transparent no-repeat center center;
+}
+.aloha-browser-icon-document {
+	background: url(../img/page.png) no-repeat center center;
+}
+.aloha-browser-grab-handle {
+	cursor: default;
+}
+
+.aloha-browser-btns {
+	position: absolute;
+	top: 5px;
+	right: 5px;
+}
+	.aloha-browser-btn {
+		display: inline-block;
+		float: left;
+		margin: -1px 5px 0 0;
+		padding: 0 4px;
+		border: 1px solid #355ea0;
+		background-color: #508ac9;
+		background-image: -webkit-gradient(
+			linear,
+			center top,
+			center bottom,
+			color-stop(0.00, #81add2),
+			color-stop(0.10, #5693cc),
+			color-stop(0.45, #5b9acf),
+			color-stop(0.60, #508ac9),
+			color-stop(1.00, #456eb0)
+		);
+		background-image: -moz-linear-gradient(
+			center top,
+			#81add2 0%,
+			#5693cc 10%,
+			#5b9acf 45%,
+			#508ac9 60%,
+			#456eb0 100%
+		);
+		filter: progid:DXImageTransform.Microsoft.Gradient(
+			startColorstr='#81add2',
+			endColorstr='#456eb0',
+			gradientType='0'
+		);
+		
+		border-radius:			4px;
+		-moz-border-radius:		4px;
+		-webkit-border-radius:	4px;
+		
+		opacity: 0.8;
+		filter: alpha(opacity=80);
+		
+		line-height: 22px;
+		color: #fff;
+		text-shadow: 0 0 4px #23262b;
+	}
+		.aloha-browser-btn:hover {
+			opacity: 0.9;
+			filter: alpha(opacity=90);
+		}
+		.aloha-browser-btn.aloha-browser-pressed {
+			opacity: 1;
+			filter: alpha(opacity=100);
+		}
+	.aloha-browser-btns input {
+		float: left;
+		
+		width: 200px;
+		height: 13px;
+		padding: 4px 2px;
+		
+		border: 1px solid #ccc;
+		background-color: #fff;
+		background-image: -webkit-gradient(
+			linear,
+			left top,
+			left bottom,
+			color-stop(0.00, #bbb),
+			color-stop(0.10, #ddd),
+			color-stop(0.30, #eee),
+			color-stop(1.00, #fff)
+		);
+		background-image: -moz-linear-gradient(
+			center top,
+			#ccc 0%,
+			#ddd 10%,
+			#eee 30%,
+			#fff 100%
+		);
+		filter: progid:DXImageTransform.Microsoft.Gradient(
+			startColorstr='#dddddd',
+			endColorstr='#ffffff',
+			gradientType='0'
+		);
+		
+		color: #555;
+		font-size: 13px;
+	}
+
+.aloha-browser-search-btn {
+	border-radius-topleft:				0;
+	-moz-border-radius-topleft:			0;
+	-webkit-border-top-left-radius:		0;
+	border-radius-bottomleft:		    0;
+	-moz-border-radius-bottomleft:		0;
+	-webkit-border-bottom-left-radius:	0;
+	cursor: pointer;
+}
+	.aloha-browser-search-icon {
+		width: 16px;
+		height: 16px;
+		display: inline-block;
+		background: url(../img/magnifier-left.png) no-repeat center center;
+		vertical-align: middle;
+	}
+
+/**
+ * Tree
+ **/
+.aloha-browser-tree {
+	padding-left: 4px;
+	
+	overflow: scroll;
+	
+	background-color: #fff;
+	background-image: -webkit-radial-gradient(
+		#fff 50%,
+		rgba(200, 200, 200, 0.3) 90%,
+		rgba(200, 200, 200, 0.4) 100%
+	);
+	background-image: -moz-radial-gradient(
+		#fff 50%,
+		rgba(200, 200, 200, 0.3) 90%,
+		rgba(200, 200, 200, 0.4) 100%
+	);
+	
+	color: red;
+	font-size: 12px;
+}
+.aloha-browser-tree-header {
+	overflow: hidden;
+	
+	position: relative;
+	
+	border-radius-topleft:			4px;
+	-moz-border-radius-topleft:		4px;
+	-webkit-border-top-left-radius:	4px;
+	
+	height: 18px;
+	
+	padding: 8px;
+	
+	background-color: #303539;
+	background-image: -webkit-gradient(
+    	linear,
+    	center top,
+    	center bottom,
+    	color-stop(0.00, #6c6f74),
+    	color-stop(0.05, #4c4f54),
+    	color-stop(0.10, #3f4448),
+    	color-stop(0.45, #383d41),
+    	color-stop(0.50, #303539),
+    	color-stop(0.95, #33363b),
+    	color-stop(1.00, #4c4f54)
+	);
+	background-image: -moz-linear-gradient(
+    	center top,
+		#6c6f74 0%,
+		#4c4f54 5%,
+		#3f4448 10%,
+    	#383d41 45%,
+    	#303539 50%,
+    	#33363b 95%,
+    	#4c4f54 100%
+	);
+	filter: progid:DXImageTransform.Microsoft.Gradient(
+		startColorstr='#383d41',
+		endColorstr='#303539',
+		gradientType='0'
+	);
+	
+	color: #ddd;
+	text-shadow: 0 0 4px #23262b;
+	font-weight: bold;
+	font-size: 13px;
+	
+	white-space: nowrap;
+}
+
+/**
+ * List icons
+ */
+.aloha-browser-icon {
+	width: 20px;
+	height: 20px;
+	margin: 0 auto;
+	background-repeat: no-repeat;
+	background-position: center center
+}
+.aloha-browser-icon-website {
+	background-image: url(../img/page.png);
+}
+.aloha-browser-icon-image {
+	background-image: url(../img/picture.png);
+}

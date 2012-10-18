@@ -1,0 +1,24 @@
+/**
+ * Aloha CSS reset.
+ * Original by Eric Meyer. Modified for use in Aloha.
+ * Every element used in the Aloha Editor UI should have a an appropriate reset here.
+ */
+
+/* http://meyerweb.com/eric/tools/css/reset/ 
+   v2.0 | 20110126
+   License: none (public domain)
+*/
+
+.aloha div, .aloha span, .aloha button, .aloha a, .aloha img,
+.aloha ol, .aloha ul, .aloha li, .aloha label {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 100%;
+	font: inherit;
+	vertical-align: baseline;
+}
+/* HTML5 display-role reset for older browsers */
+.aloha ol, .aloha ul {
+	list-style: none;
+}

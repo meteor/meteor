@@ -7,6 +7,6 @@
 // aloha-bare.js (which doesn't include either requirejs or jQuery) and
 // let the implementer worry exactly how to set up jQuery and requirejs
 // to suit his needs.
-Aloha = Aloha || {};
+Aloha = window.Aloha || {};
 Aloha.settings = Aloha.settings || {};
 Aloha.settings.jQuery = Aloha.settings.jQuery || jQuery.noConflict(true);

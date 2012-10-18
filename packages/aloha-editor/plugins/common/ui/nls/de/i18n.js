@@ -52,5 +52,17 @@ define({
 
 	// cite
 	"button.quote.label": "Selektion als Zitat formatieren",
-	"button.blockquote.label": "Selektion als Blockzitat formatieren"
+	"button.blockquote.label": "Selektion als Blockzitat formatieren",
+
+	// Tabs
+	"tab.format.label": "Formatieren",
+	"tab.insert.label": "Einf\u00fcgen",
+	"tab.abbr.label": "Abk\u00fcrzung",
+	"tab.img.label": "Bild",
+	"tab.link.label": "Verweis",
+	"tab.list.label": "Liste",
+	"tab.table.label": "Tabelle",
+	"tab.col.label": "Tabellenspalte",
+	"tab.row.label": "Tabellenzeile",
+	"tab.wai-lang.label": "Sprachauszeichnung"
 });

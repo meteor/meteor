@@ -123,4 +123,11 @@
 .aloha-image-box-active .ui-resizable-handle.ui-resizable-sw {
 }
 
+.aloha.aloha-toolbar .aloha-image-input-label .aloha-ui-label-text {
+	/* give labels a reasonable static width so that the url, title, width,
+	   height labeled input elements will align vertically */
+	display: inline-block;
+	width: 31px;
+}
+
 @import	"../vendor/jcrop/jquery.jcrop.css";

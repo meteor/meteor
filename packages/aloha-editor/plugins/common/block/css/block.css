@@ -104,3 +104,7 @@
 .aloha-block-dropzone {
 	background-color: #eeeeff;
 }
+
+.aloha .ui-state-default .aloha-icon.aloha-icon-toggledragdrop {
+	background: url(../../../../img/base.png) -416px 0px;
+}

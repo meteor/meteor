@@ -1,0 +1,12 @@
+#content {
+	margin-left:  auto;
+    margin-right: auto;
+    position: relative; 
+}
+
+.ui-wrapper {
+	margin-left:  auto  !important;
+    margin-right: auto  !important;
+    position: relative  !important;
+ 
+}

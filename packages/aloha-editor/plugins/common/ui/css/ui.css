@@ -379,33 +379,33 @@
 }
 
 /* TODO: merge with icons image file */
-.aloha .aloha-icon-tree { background-image: url(../img/tree.png); }
+.aloha .ui-state-default .aloha-icon-tree           { background-image: url(../img/tree.png); }
 
-.aloha .aloha-icon-bold           { background-position: 0 0; }
-.aloha .aloha-icon-italic         { background-position: -16px 0; }
-.aloha .aloha-icon-underline      { background-position: -32px 0; }
-.aloha .aloha-icon-strikethrough  { background-position: -48px 0; }
-.aloha .aloha-icon-subscript      { background-position: -64px 0; }
-.aloha .aloha-icon-superscript    { background-position: -80px 0; }
-.aloha .aloha-icon-createTable    { background-position: -96px 0; }
-.aloha .aloha-icon-addcolumnleft  { background-position: -112px 0; }
-.aloha .aloha-icon-addcolumnright { background-position: -128px 0; }
-.aloha .aloha-icon-addrowbefore   { background-position: -144px 0; }
-.aloha .aloha-icon-addrowafter    { background-position: -160px 0; }
-.aloha .aloha-icon-deleterows     { background-position: -176px 0; }
-.aloha .aloha-icon-deletecolumns  { background-position: -192px 0; }
-.aloha .aloha-icon-table-caption  { background-position: -320px 0; }
-.aloha .aloha-icon-rowheader      { background-position: -352px 0; }
-.aloha .aloha-icon-columnheader   { background-position: -368px 0; }
-.aloha .aloha-icon-mergecells     { background-position: -384px 0; }
-.aloha .aloha-icon-splitcells     { background-position: -400px 0; }
-.aloha .aloha-icon-orderedlist    { background-position: -272px 0; }
-.aloha .aloha-icon-unorderedlist  { background-position: -256px 0; }
-.aloha .aloha-icon-link           { background-position: -288px 0; }
-.aloha .aloha-icon-unlink         { background-position: -304px 0; }
-.aloha .aloha-icon-abbr           { background-position: -336px 0; }
-.aloha .aloha-icon-emphasis { background-image: url(../img/em.png); }
-.aloha .aloha-icon-strong { background-image: url(../img/strong.png); }
+.aloha .ui-state-default .aloha-icon-bold           { background-position: 0 0; }
+.aloha .ui-state-default .aloha-icon-italic         { background-position: -16px 0; }
+.aloha .ui-state-default .aloha-icon-underline      { background-position: -32px 0; }
+.aloha .ui-state-default .aloha-icon-strikethrough  { background-position: -48px 0; }
+.aloha .ui-state-default .aloha-icon-subscript      { background-position: -64px 0; }
+.aloha .ui-state-default .aloha-icon-superscript    { background-position: -80px 0; }
+.aloha .ui-state-default .aloha-icon-createTable    { background-position: -96px 0; }
+.aloha .ui-state-default .aloha-icon-addcolumnleft  { background-position: -112px 0; }
+.aloha .ui-state-default .aloha-icon-addcolumnright { background-position: -128px 0; }
+.aloha .ui-state-default .aloha-icon-addrowbefore   { background-position: -144px 0; }
+.aloha .ui-state-default .aloha-icon-addrowafter    { background-position: -160px 0; }
+.aloha .ui-state-default .aloha-icon-deleterows     { background-position: -176px 0; }
+.aloha .ui-state-default .aloha-icon-deletecolumns  { background-position: -192px 0; }
+.aloha .ui-state-default .aloha-icon-table-caption  { background-position: -320px 0; }
+.aloha .ui-state-default .aloha-icon-rowheader      { background-position: -352px 0; }
+.aloha .ui-state-default .aloha-icon-columnheader   { background-position: -368px 0; }
+.aloha .ui-state-default .aloha-icon-mergecells     { background-position: -384px 0; }
+.aloha .ui-state-default .aloha-icon-splitcells     { background-position: -400px 0; }
+.aloha .ui-state-default .aloha-icon-orderedlist    { background-position: -272px 0; }
+.aloha .ui-state-default .aloha-icon-unorderedlist  { background-position: -256px 0; }
+.aloha .ui-state-default .aloha-icon-link           { background-position: -288px 0; }
+.aloha .ui-state-default .aloha-icon-unlink         { background-position: -304px 0; }
+.aloha .ui-state-default .aloha-icon-abbr           { background-position: -336px 0; }
+.aloha .ui-state-default .aloha-icon-emphasis       { background-image: url(../img/em.png); }
+.aloha .ui-state-default .aloha-icon-strong         { background-image: url(../img/strong.png); }
 
 .aloha .ui-state-default .aloha-icon-indent {
 	background: url(../../../../img/text_indent.png) no-repeat center center;
@@ -672,4 +672,18 @@
 	font-family: Verdana,Arial,sans-serif/*{ffDefault}*/;
 	background: #ffffff/*{bgColorContent}*/;
 	color: #222222/*{fcContent}*/;
+}
+
+.aloha-toolbar .aloha-ui-label {
+	display: inline-block;
+	/* Always display labels next to the component */
+	white-space: nowrap;
+	/* same height as toolbar buttons */
+	height: 23px;
+	/* compensate for the 1px border on buttons */
+	margin: 2px 2px 0;
+}
+
+.aloha.aloha-toolbar .aloha-ui-label-text {
+	margin-right: 2px;
 }

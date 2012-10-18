@@ -22,7 +22,6 @@
 .ui-jqgrid .ui-icon-desc {margin-top:3px;height:12px;}
 .ui-jqgrid .ui-i-asc {margin-top:0px;height:16px;}
 .ui-jqgrid .ui-i-desc {margin-top:0px;margin-left:13px;height:16px;}
-.ui-jqgrid .ui-jqgrid-sortable {cursor:pointer;}
 .ui-jqgrid tr.ui-search-toolbar th { border-top-width: 1px; border-top-color: inherit; border-top-style: ridge }
 tr.ui-search-toolbar input {margin: 1px 0px 0px 0px}
 tr.ui-search-toolbar select {margin: 1px 0px 0px 0px}
@@ -57,7 +56,7 @@ tr.ui-search-toolbar select {margin: 1px 0px 0px 0px}
 .ui-jqgrid .ui-pg-input { height:13px;font-size:.8em; margin: 0em;}
 .ui-jqgrid .ui-pg-selbox {font-size:.8em; line-height:18px; display:block; height:18px; margin: 0em;}
 .ui-jqgrid .ui-separator {display: none; height: 18px; border-left: 1px solid #ccc ; border-right: 1px solid #ccc ; margin: 1px; float: right;}
-.ui-jqgrid .ui-paging-info {font-weight: normal; height: 19px; margin: 0; line-height: 1em;}
+.ui-jqgrid .ui-paging-info {font-weight: normal; height: 19px; margin: 0; line-height: 1em; padding-right: 10px;}
 .ui-jqgrid .ui-jqgrid-pager .ui-pg-div {padding:1px 0;float:left;list-style-image:none;list-style-position:outside;list-style-type:none;position:relative;}
 .ui-jqgrid .ui-jqgrid-pager .ui-pg-button { cursor:pointer; }
 .ui-jqgrid .ui-jqgrid-pager .ui-pg-div  span.ui-icon {float:left;margin:0 2px;}
@@ -79,12 +78,14 @@ tr.ui-search-toolbar select {margin: 1px 0px 0px 0px}
 	width: ~"expression(this.parentNode.offsetWidth+'px')";
 	height: ~"expression(this.parentNode.offsetHeight+'px')";
 }
-
-* html .jqgrid-overlay {
+* .jqgrid-overlay iframe {
+	position:absolute;
+	top:0;
+	left:0;
+	z-index:-1;
 	width: ~"expression(this.parentNode.offsetWidth+'px')";
 	height: ~"expression(this.parentNode.offsetHeight+'px')";
 }
-
 /* Tree Grid */
 .ui-jqgrid .tree-wrap   {position: relative; height: 18px; float: left; overflow: hidden; white-space: nowrap;}
 .ui-jqgrid .tree-minus {position: absolute; height: 18px; width: 18px; overflow: hidden;}
@@ -240,16 +241,13 @@ tr.ui-search-toolbar select {margin: 1px 0px 0px 0px}
 	filter: alpha(opacity=50);
 }
 .ui-jqgrid .s-ico {
-	display: inline-block;
+	display: none;
 }
 .ui-jqgrid .ui-grid-ico-sort {
-	display: inline-block;
-	height: 16px;
-	width: 16px;
-	padding: 0px;
-	margin: -12px 0 0 10px;
-	opacity: 0.7;
-	filter: alpha(opacity=70);
+	display: none;
+}
+.ui-jqgrid-sortable {
+	cursor: default;
 }
 .ui-jqgrid .ui-icon-asc {
 	background: url(../img/sort-alphabet.png) no-repeat center center;
@@ -405,7 +403,6 @@ tr.ui-search-toolbar select {margin: 1px 0px 0px 0px}
 	
 	background: url(../img/throbber.gif) no-repeat left center;
 }
-
 .ui-jqgrid .jqgrid-overlay {display:none; z-index:100;}
 
 /**
@@ -434,10 +431,7 @@ tr.ui-search-toolbar select {margin: 1px 0px 0px 0px}
 		rgba(0,   0,   0,   0.7)
 	);
 }
-
-
-
-.repository-browser-modal-window {
+div.repository-browser-modal-window {
 	position: fixed;
 	top: 0;
 	left: 0;
@@ -517,9 +511,9 @@ tr.ui-search-toolbar select {margin: 1px 0px 0px 0px}
 
 .repository-browser-shadow {
 	background: transparent;
-	-moz-box-shadow:	0 0 10px rgba(0,0,0,0.2);
-	-webkit-box-shadow:	0 0 10px rgba(0,0,0,0.2);
-	box-shadow:			0 0 10px rgba(0,0,0,0.2);
+	-moz-box-shadow:    0 0 10px rgba(0,0,0,0.2);
+	-webkit-box-shadow: 0 0 10px rgba(0,0,0,0.2);
+	box-shadow:         0 0 10px rgba(0,0,0,0.2);
 }
 .repository-browser-rounded-top {
 	border-radius-topleft:			 2px;
@@ -750,10 +744,13 @@ tr.ui-search-toolbar select {margin: 1px 0px 0px 0px}
 }
 
 /**
+ *
  * Customize from here:
+ *
  *****************************************************************************/
 
  .repository-browser-search-field,
  .repository-browser-search-btn {
 	 display: none; 
  }
+

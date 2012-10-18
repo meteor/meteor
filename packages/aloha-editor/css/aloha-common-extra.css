@@ -3,6 +3,7 @@
  * file that exclude some plugins.
  */
 @import "aloha-core.css";
+@import "../plugins/common/abbr/css/abbr.css";
 @import "../plugins/common/ui/css/ui.css";
 @import "../plugins/common/link/css/link.css";
 @import "../plugins/common/characterpicker/css/characterpicker.css";
