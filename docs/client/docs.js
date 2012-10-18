@@ -1,4 +1,4 @@
-METEOR_VERSION = "0.3.9";
+METEOR_VERSION = "0.5.0";
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
@@ -48,18 +48,29 @@ Meteor.startup(function () {
     }
   });
 
+  window.onhashchange = function () {
+    scrollToSection(location.hash);
+  };
+
+  var scrollToSection = function (section) {
+    ignore_waypoints = true;
+    Session.set("section", section.substr(1));
+    scroller().animate({
+      scrollTop: $(section).offset().top
+    }, 500, 'swing', function () {
+      window.location.hash = section;
+      ignore_waypoints = false;
+    });
+  };
+
   $('#main, #nav').delegate("a[href^='#']", 'click', function (evt) {
     evt.preventDefault();
     var sel = $(this).attr('href');
-    ignore_waypoints = true;
-    Session.set("section", sel.substr(1));
-    scroller().animate({
-      scrollTop: $(sel).offset().top
-    }, 500, 'swing', function () {
-      window.location.hash = sel;
-      ignore_waypoints = false;
-    });
+    scrollToSection(sel);
   });
+
+  // Make external links open in a new tab.
+  $('a:not([href^="#"])').attr('target', '_blank');
 });
 
 var toc = [
@@ -70,23 +81,25 @@ var toc = [
   ],
   "Concepts", [
     "Structuring your app",
-    "Data",
+    "Data and security",
     "Reactivity",
     "Live HTML",
     "Templates",
-    "Smart Packages",
+    "Smart packages",
     "Deploying"
   ],
 
   "API", [
     "Core", [
-      "Meteor.is_client",
-      "Meteor.is_server",
-      "Meteor.startup"
+      "Meteor.isClient",
+      "Meteor.isServer",
+      "Meteor.startup",
+      "Meteor.absoluteUrl"
     ],
 
     "Publish and subscribe", [
       "Meteor.publish", [
+        {instance: "this", name: "userId", id: "publish_userId"},
         {instance: "this", name: "set", id: "publish_set"},
         {instance: "this", name: "unset", id: "publish_unset"},
         {instance: "this", name: "complete", id: "publish_complete"},
@@ -100,7 +113,9 @@ var toc = [
 
     {name: "Methods", id: "methods_header"}, [
       "Meteor.methods", [
-        {instance: "this", name: "is_simulation", id: "method_is_simulation"},
+        {instance: "this", name: "userId", id: "method_userId"},
+        {instance: "this", name: "setUserId", id: "method_setUserId"},
+        {instance: "this", name: "isSimulation", id: "method_issimulation"},
         {instance: "this", name: "unblock", id: "method_unblock"}
       ],
       "Meteor.Error",
@@ -120,7 +135,9 @@ var toc = [
         {instance: "collection", name: "findOne"},
         {instance: "collection", name: "insert"},
         {instance: "collection", name: "update"},
-        {instance: "collection", name: "remove"}
+        {instance: "collection", name: "remove"},
+        {instance: "collection", name: "allow"},
+        {instance: "collection", name: "deny"}
       ],
 
       "Meteor.Collection.Cursor", [
@@ -134,7 +151,8 @@ var toc = [
       {type: "spacer"},
       {name: "Selectors", style: "noncode"},
       {name: "Modifiers", style: "noncode"},
-      {name: "Sort specifiers", style: "noncode"}
+      {name: "Sort specifiers", style: "noncode"},
+      {name: "Field specifiers", style: "noncode"}
     ],
 
     "Session", [
@@ -143,14 +161,64 @@ var toc = [
       "Session.equals"
     ],
 
-    "Meteor.ui", [
-      "Meteor.ui.render",
-      "Meteor.ui.chunk",
-      "Meteor.ui.listChunk",
-      "Meteor.flush",
+    {name: "Accounts", id: "accounts_api"}, [
+      "Meteor.user",
+      "Meteor.userId",
+      "Meteor.users",
+      "Meteor.userLoaded",
+      "Meteor.logout",
+      "Meteor.loginWithPassword",
+      {name: "Meteor.loginWithFacebook", id: "meteor_loginwithexternalservice"},
+      {name: "Meteor.loginWithGithub", id: "meteor_loginwithexternalservice"},
+      {name: "Meteor.loginWithGoogle", id: "meteor_loginwithexternalservice"},
+      {name: "Meteor.loginWithTwitter", id: "meteor_loginwithexternalservice"},
+      {name: "Meteor.loginWithWeibo", id: "meteor_loginwithexternalservice"},
       {type: "spacer"},
-      {name: "Event maps", style: "noncode"}
+
+      "Accounts.config",
+      "Accounts.ui.config",
+      "Accounts.validateNewUser",
+      "Accounts.onCreateUser"
     ],
+
+    {name: "Passwords", id: "accounts_passwords"}, [
+      "Accounts.createUser",
+      "Accounts.changePassword",
+      "Accounts.forgotPassword",
+      "Accounts.resetPassword",
+      "Accounts.setPassword",
+      "Accounts.verifyEmail",
+      {type: "spacer"},
+
+      "Accounts.sendResetPasswordEmail",
+      "Accounts.sendEnrollmentEmail",
+      "Accounts.sendVerificationEmail",
+      "Accounts.emailTemplates"
+    ],
+
+    {name: "Templates", id: "templates_api"}, [
+      {prefix: "Template", instance: "myTemplate", id: "template_call"}, [
+        {name: "rendered", id: "template_rendered"},
+        {name: "created", id: "template_created"},
+        {name: "destroyed", id: "template_destroyed"},
+        {name: "events", id: "template_events"},
+        {name: "helpers", id: "template_helpers"},
+        {name: "preserve", id: "template_preserve"}
+      ],
+      {name: "Template instances", id: "template_inst"}, [
+        {instance: "this", name: "findAll", id: "template_findAll"},
+        {instance: "this", name: "find", id: "template_find"},
+        {instance: "this", name: "firstNode", id: "template_firstNode"},
+        {instance: "this", name: "lastNode", id: "template_lastNode"},
+        {instance: "this", name: "data", id: "template_data"}
+      ],
+      "Meteor.render",
+      "Meteor.renderList",
+      {type: "spacer"},
+      {name: "Event maps", style: "noncode"},
+      {name: "Constant regions", style: "noncode", id: "constant"},
+      {name: "Reactivity isolation", style: "noncode", id: "isolate"}
+     ],
 
     "Timers", [
       "Meteor.setTimeout",
@@ -162,10 +230,12 @@ var toc = [
     "Meteor.deps", [
       {name: "Meteor.deps.Context", id: "context"}, [
         {instance: "context", name: "run"},
-        {instance: "context", name: "on_invalidate"},
+        {instance: "context", name: "onInvalidate", id: "oninvalidate"},
         {instance: "context", name: "invalidate"}
       ],
-      {name: "Meteor.deps.Context.current", id: "current"}
+      {name: "Meteor.deps.Context.current", id: "current"},
+      "Meteor.autorun",
+      "Meteor.flush"
     // ],
 
     // "Environment Variables", [
@@ -182,15 +252,20 @@ var toc = [
       {name: "Meteor.http.post", id: "meteor_http_post"},
       {name: "Meteor.http.put", id: "meteor_http_put"},
       {name: "Meteor.http.del", id: "meteor_http_del"}
+    ],
+    "Email", [
+      "Email.send"
     ]
   ],
 
   "Packages", [ [
+    "accounts-ui",
     "aloha-editor",
     "amplify",
     "backbone",
     "bootstrap",
     "coffeescript",
+    "d3",
     "force-ssl",
     "jquery",
     "less",
@@ -261,16 +336,19 @@ Handlebars.registerHelper('note', function(fn) {
   return Template.note_helper(fn(this));
 });
 
-Handlebars.registerHelper('dtdd', function(name, optType, fn) {
-  var type = null;
-  // handle optional positional argument (messy)
-  if (! fn)
-    fn = optType; // two arguments
-  else
-    type = optType; // three arguments
+// "name" argument may be provided as part of options.hash instead.
+Handlebars.registerHelper('dtdd', function(name, options) {
+  if (options && options.hash) {
+    // {{#dtdd name}}
+    options.hash.name = name;
+  } else {
+    // {{#dtdd name="foo" type="bar"}}
+    options = name;
+  }
 
-  return Template.dtdd_helper(
-    {descr: fn(this), name:name, type:type}, true);
+  return Template.dtdd_helper({descr: options.fn(this),
+                               name: options.hash.name,
+                               type: options.hash.type});
 });
 
 Handlebars.registerHelper('better_markdown', function(fn) {
@@ -321,6 +399,13 @@ Handlebars.registerHelper('better_markdown', function(fn) {
     return result;
   };
 
+  // This is a tower of terrible hacks.
+  // Replace Spark annotations <$...> ... </$...> with HTML comments, and
+  // space out the comments on their own lines.  This keeps them from
+  // interfering with Markdown's paragraph parsing.
+  // Really, running Markdown multiple times on the same string is just a
+  // bad idea.
+  input = input.replace(/<(\/?\$.*?)>/g, '<!--$1-->');
   input = input.replace(/<!--.*?-->/g, '\n\n$&\n\n');
 
   var hashedBlocks = {};
@@ -369,6 +454,8 @@ Handlebars.registerHelper('better_markdown', function(fn) {
   output = output.replace(/!!!!HTML:(.*?)!!!!/g, function(z, a) {
     return hashedBlocks[a];
   });
+
+  output = output.replace(/<!--(\/?\$.*?)-->/g, '<$1>');
 
   return output;
 });

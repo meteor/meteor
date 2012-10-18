@@ -151,7 +151,7 @@ LocalCollection.LiveResultsSet = function () {};
 //    - added (object, before_index)
 //    - changed (new_object, at_index, old_object)
 //    - moved (object, old_index, new_index) - can only fire with changed()
-//    - removed (id, at_index, object)
+//    - removed (object, at_index)
 //
 // attributes available on returned query handle:
 //  * stop(): end updates
@@ -164,8 +164,6 @@ LocalCollection.LiveResultsSet = function () {};
 // XXX maybe callbacks should take a list of objects, to expose transactions?
 // XXX maybe support field limiting (to limit what you're notified on)
 // XXX maybe support limit/skip
-// XXX it'd be helpful if removed got the object that just left the
-// query, not just its id
 
 LocalCollection.Cursor.prototype.observe = function (options) {
   var self = this;
@@ -258,7 +256,7 @@ LocalCollection.Cursor.prototype._markAsReactive = function (options) {
     // recreated. so we might want to let it linger for a little
     // while and repurpose it if it comes back. this will save us
     // work because we won't have to redo the initial find.
-    context.on_invalidate(handle.stop);
+    context.onInvalidate(handle.stop);
   }
 };
 
@@ -286,27 +284,35 @@ LocalCollection.prototype.insert = function (doc) {
 LocalCollection.prototype.remove = function (selector) {
   var self = this;
   var remove = [];
-  var query_remove = [];
 
-  var selector_f = LocalCollection._compileSelector(selector);
-  for (var id in self.docs) {
-    var doc = self.docs[id];
-    if (selector_f(doc)) {
-      remove.push(id);
-      for (var qid in self.queries) {
-        var query = self.queries[qid];
-        if (query.selector_f(doc))
-          query_remove.push([query, doc]);
+  // Avoid O(n) for "remove a single doc by ID".
+  if (LocalCollection._selectorIsId(selector)) {
+    if (_.has(self.docs, selector))
+      remove.push(selector);
+  } else {
+    var selector_f = LocalCollection._compileSelector(selector);
+    for (var id in self.docs) {
+      var doc = self.docs[id];
+      if (selector_f(doc)) {
+        remove.push(id);
       }
     }
   }
+
+  var queryRemove = [];
   for (var i = 0; i < remove.length; i++) {
-    delete self.docs[remove[i]];
+    var removeId = remove[i];
+    var removeDoc = self.docs[removeId];
+    _.each(self.queries, function (query) {
+      if (query.selector_f(removeDoc))
+        queryRemove.push([query, removeDoc]);
+    });
+    delete self.docs[removeId];
   }
 
   // run live query callbacks _after_ we've removed the documents.
-  for (var i = 0; i < query_remove.length; i++) {
-    LocalCollection._removeFromResults(query_remove[i][0], query_remove[i][1]);
+  for (var i = 0; i < queryRemove.length; i++) {
+    LocalCollection._removeFromResults(queryRemove[i][0], queryRemove[i][1]);
   }
 };
 
@@ -372,6 +378,8 @@ LocalCollection._deepcopy = function (v) {
     return v;
   if (v === null)
     return null; // null has typeof "object"
+  if (v instanceof Date)
+    return new Date(v.getTime());
   if (_.isArray(v)) {
     var ret = v.slice(0);
     for (var i = 0; i < v.length; i++)

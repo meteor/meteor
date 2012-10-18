@@ -1,15 +1,15 @@
 sub
-sub xcxc
-sub xcxc yzyz
-sub xcxc {}
+sub undefinedSub
+sub undefinedSub someArg
+sub undefinedSub {}
 sub allApps
 sub myApp "foo.bar"
 sub myApp ["foo.meteor.com"]
 
 call
-call xcxc
-call xcxc yzyz
-call xcxc {}
+call undefinedMethod
+call undefinedMethod yzyz
+call undefinedMethod {}
 call vote
 call vote []
 call vote ["foo.meteor.com"]

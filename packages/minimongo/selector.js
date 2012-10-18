@@ -266,7 +266,7 @@ LocalCollection._compileSelector = function (selector) {
     return function (doc) {return selector.call(doc);};
 
   // shorthand -- scalars match _id
-  if ((typeof selector === "string") || (typeof selector === "number"))
+  if (LocalCollection._selectorIsId(selector))
     selector = {_id: selector};
 
   // protect against dangerous selectors.  falsey and {_id: falsey}
@@ -282,6 +282,11 @@ LocalCollection._compileSelector = function (selector) {
        LocalCollection._exprForSelector(selector, literals) +
        ";};})");
   return _func(LocalCollection._f, literals);
+};
+
+// Is this selector just shorthand for lookup by _id?
+LocalCollection._selectorIsId = function (selector) {
+  return (typeof selector === "string") || (typeof selector === "number");
 };
 
 // XXX implement ordinal indexing: 'people.2.name'
@@ -384,20 +389,22 @@ LocalCollection._exprForKeypathPredicate = function (keypath, value, literals) {
   }
 
   // now, deal with the orthogonal concern of dotted.key.paths and the
-  // (potentially multi-level) array searching they require
+  // (potentially multi-level) array searching they require.
+  // while at it, make sure to not throw an exception if we hit undefined while
+  // drilling down through the dotted parts
   var ret = '';
   var innermost = true;
   while (keyparts.length) {
     var part = keyparts.pop();
     var formal = keyparts.length ? "x" : "doc";
     if (innermost) {
-      ret = '(function(x){return ' + predcode + ';})(' + formal + '[' +
+      ret = '(function(x){return ' + predcode + ';})(' + formal + '&&' + formal + '[' +
         JSON.stringify(part) + '])';
       innermost = false;
     } else {
       // for all but the innermost level of a dotted expression,
       // if the runtime type is an array, search it
-      ret = 'f._matches(' + formal + '[' + JSON.stringify(part) +
+      ret = 'f._matches(' + formal + '&&' + formal + '[' + JSON.stringify(part) +
         '], function(x){return ' + ret + ';})';
     }
   }

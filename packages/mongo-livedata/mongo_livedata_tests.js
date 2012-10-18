@@ -5,7 +5,7 @@
 Meteor._FailureTestCollection =
   new Meteor.Collection("___meteor_failure_test_collection");
 
-testAsyncMulti("mongo-livedata - database failure reporting", [
+testAsyncMulti("mongo-livedata - database error reporting", [
   function (test, expect) {
     var ftc = Meteor._FailureTestCollection;
 
@@ -14,7 +14,7 @@ testAsyncMulti("mongo-livedata - database failure reporting", [
     };
 
     _.each(["insert", "remove", "update"], function (op) {
-      if (Meteor.is_server) {
+      if (Meteor.isServer) {
         test.throws(function () {
           ftc[op]({fail: true});
         });
@@ -22,7 +22,7 @@ testAsyncMulti("mongo-livedata - database failure reporting", [
         ftc[op]({fail: true}, expect(exception));
       }
 
-      if (Meteor.is_client) {
+      if (Meteor.isClient) {
         ftc[op]({fail: true}, expect(exception));
 
         // This would log to console in normal operation.
@@ -37,7 +37,7 @@ testAsyncMulti("mongo-livedata - database failure reporting", [
 Tinytest.addAsync("mongo-livedata - basics", function (test, onComplete) {
   var run = test.runId();
   var coll, coll2;
-  if (Meteor.is_client) {
+  if (Meteor.isClient) {
     coll = new Meteor.Collection(null); // local, unmanaged
     coll2 = new Meteor.Collection(null); // local, unmanaged
   } else {
@@ -62,7 +62,7 @@ Tinytest.addAsync("mongo-livedata - basics", function (test, onComplete) {
   });
 
   var captureObserve = function (f) {
-    if (Meteor.is_client) {
+    if (Meteor.isClient) {
       f();
     } else {
       var fence = new Meteor._WriteFence;
@@ -106,10 +106,28 @@ Tinytest.addAsync("mongo-livedata - basics", function (test, onComplete) {
   test.equal(coll.findOne({run: run}, {sort: {x: -1}, skip: 0}).x, 4);
   test.equal(coll.findOne({run: run}, {sort: {x: -1}, skip: 1}).x, 1);
 
+  // sleep function from fibers docs.
+  var sleep = function(ms) {
+    var fiber = Fiber.current;
+    setTimeout(function() {
+      fiber.run();
+    }, ms);
+    Fiber.yield();
+  };
+
   var cur = coll.find({run: run}, {sort: ["x"]});
   var total = 0;
   cur.forEach(function (doc) {
     total *= 10;
+    if (Meteor.isServer) {
+      // Verify that the callbacks from forEach run sequentially and that
+      // forEach waits for them to complete (issue# 321). If they do not run
+      // sequentially, then the second callback could execute during the first
+      // callback's sleep sleep and the *= 10 will occur before the += 1, then
+      // total (at test.equal time) will be 5. If forEach does not wait for the
+      // callbacks to complete, then total (at test.equal time) will be 0.
+      sleep(5);
+    }
     total += doc.x;
     // verify the meteor environment is set up here
     coll2.insert({total:total});
@@ -155,7 +173,7 @@ Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
 
   var run = test.runId();
   var coll;
-  if (Meteor.is_client) {
+  if (Meteor.isClient) {
     coll = new Meteor.Collection(null); // local, unmanaged
   } else {
     coll = new Meteor.Collection("livedata_test_collection_"+run);
@@ -201,7 +219,7 @@ Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
   };
 
   var finishObserve = function (f) {
-    if (Meteor.is_client) {
+    if (Meteor.isClient) {
       f();
     } else {
       var fence = new Meteor._WriteFence;
@@ -220,7 +238,7 @@ Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
     var max_counters = _.clone(counters);
 
     finishObserve(function () {
-      if (Meteor.is_server)
+      if (Meteor.isServer)
         obs._suspendPolling();
 
       // Do a batch of 1-10 operations
@@ -253,7 +271,7 @@ Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
           max_counters.remove++;
         }
       }
-      if (Meteor.is_server)
+      if (Meteor.isServer)
         obs._resumePolling();
 
     });
@@ -269,9 +287,49 @@ Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
       test.isTrue(max_counters[k] >= counters[k], k);
     });
 
-    Tinytest.defer(doStep);
+    Meteor.defer(doStep);
   };
 
   doStep();
 
+});
+
+Tinytest.addAsync("mongo-livedata - scribbling", function (test, onComplete) {
+  var run = test.runId();
+  var coll;
+  if (Meteor.isClient) {
+    coll = new Meteor.Collection(null); // local, unmanaged
+  } else {
+    coll = new Meteor.Collection("livedata_test_collection_"+run);
+  }
+
+  var runInFence = function (f) {
+    if (Meteor.isClient) {
+      f();
+    } else {
+      var fence = new Meteor._WriteFence;
+      Meteor._CurrentWriteFence.withValue(fence, f);
+      fence.armAndWait();
+    }
+  };
+
+  var numAddeds = 0;
+  var handle = coll.find({run: run}).observe({
+    added: function (o) {
+      // test that we can scribble on the object we get back from Mongo without
+      // breaking anything.  The worst possible scribble is messing with _id.
+      delete o._id;
+      numAddeds++;
+    }
+  });
+  _.each([123, 456, 789], function (abc) {
+    runInFence(function () {
+      coll.insert({run: run, abc: abc});
+    });
+  });
+  handle.stop();
+  // will be 6 (1+2+3) if we broke diffing!
+  test.equal(numAddeds, 3);
+
+  onComplete();
 });

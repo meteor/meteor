@@ -3,6 +3,10 @@
 </head>
 
 <body>
+  {{> page}}
+</body>
+
+<template name="page">
   <div id="main">
     <div id="left">
       {{> board }}
@@ -14,7 +18,7 @@
       {{> scores }}
     </div>
   </div>
-</body>
+</template>
 
 <template name="board">
   <div id="clock">

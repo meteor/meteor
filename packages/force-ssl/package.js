@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Require this application always use transport layer encryption"
+  summary: "Require this application to use secure transport (HTTPS)"
 });
 
 Package.on_use(function (api) {
@@ -7,6 +7,8 @@ Package.on_use(function (api) {
   // make sure we come after livedata, so we load after the sockjs
   // server has been instantiated.
   api.use('livedata', 'server');
+
+  api.add_files('force_ssl_common.js', ['client', 'server']);
   api.add_files('force_ssl_server.js', 'server');
 
   // Another thing we could do is add a force_ssl_client.js file that

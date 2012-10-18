@@ -1,0 +1,218 @@
+<head>
+  <title>All Tomorrow's Parties</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body>
+  {{> page}}
+</body>
+
+<template name="page">
+  {{#if showCreateDialog}}
+    {{> createDialog}}
+  {{/if}}
+
+  {{#if showInviteDialog}}
+    {{> inviteDialog}}
+  {{/if}}
+
+  <div class="container">
+    <div class="row">
+      <div class="span1"> </div>
+
+      <div class="span10">
+        <div class="header row">
+          <div class="span5">
+            <h3 style="margin-bottom: 0px">All Tomorrow's Parties</h3>
+          </div>
+          <div class="span5">
+            <div style="float: right">
+              {{loginButtons align="right"}}
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="span6">
+            {{> map}}
+            {{#if currentUser}}
+            <div class="pagination-centered">
+              <em><small>Double click the map to post a party!</small></em>
+            </div>
+            {{/if}}
+          </div>
+          <div class="span4">
+            {{> details}}
+          </div>
+        </div>
+      </div>
+
+      <div class="span1"> </div>
+    </div>
+  </div>
+</template>
+
+<template name="map">
+  <div class="map">
+    {{#constant}}
+      <svg width="500" height="500">
+        <circle class="callout" cx=-100 cy=-100></circle>
+        <g class="circles"></g>
+        <g class="labels"></g>
+      </svg>
+    {{/constant}}
+    <div>
+      <small class="attribution muted">&copy;
+        <a href="http://www.openstreetmap.org/?lat=37.78212&lon=-122.40146&zoom=15&layers=M"
+           target="_blank">OpenStreetMap</a> contributors</small>
+    </div>
+  </div>
+</template>
+
+<template name="details">
+  <div class="details">
+    {{#if party}}
+      {{#with party}}
+        <h1>{{title}}</h1>
+
+        <div class="description">{{description}}</div>
+
+        {{> attendance}}
+
+        <div class="rsvp-buttons">
+          {{#if currentUser}}
+            <input type="button" value="I'm going!"
+                   class="btn btn-small rsvp_yes {{maybeChosen "yes"}}">
+            <input type="button" value="Maybe"
+                   class="btn btn-small rsvp_maybe {{maybeChosen "maybe"}}">
+            <input type="button" value="No"
+                   class="btn btn-small rsvp_no {{maybeChosen "no"}}">
+          {{else}}
+            <i>Sign in to RSVP for this party.</i>
+          {{/if}}
+          <p><small>Posted by {{creatorName}}</small></p>
+        </div>
+
+        {{#if canRemove}}
+          <div class="alert alert-info"><small>
+              You posted this party and nobody is signed up to go, so if
+              you like, you could
+              <b><a href="#" class="remove">delete this listing</a></b>.
+          </small></div>
+        {{/if}}
+      {{/with}}
+    {{else}}
+      <h1 class="muted pagination-centered">
+        {{#if anyParties}}
+          Click a party to select it
+        {{else}}
+          Sign in and double click the map to post a party
+        {{/if}}
+      </h1>
+    {{/if}}
+  </div>
+</template>
+
+<template name="attendance">
+  <div class="attendance well well-small">
+    <div class="muted who"><b>Who</b></div>
+    {{#if public}}
+      <div>
+        <b>Everyone</b>
+        <span class="label label-inverse pull-right">Invited</span>
+      </div>
+    {{/if}}
+
+    {{#each rsvps}}
+      <div>
+        {{rsvpName}}
+        {{#if rsvpIs "yes"}}
+          <span class="label label-success pull-right">Going</span>
+        {{/if}}
+        {{#if rsvpIs "maybe"}}
+          <span class="label label-info pull-right">Maybe</span>
+        {{/if}}
+        {{#if rsvpIs "no"}}
+          <span class="label label pull-right">No</span>
+        {{/if}}
+      </div>
+    {{/each}}
+
+    {{#unless public}}
+      {{#each outstandingInvitations}}
+        <div>
+          {{invitationName}}
+          <span class="label label-inverse pull-right">Invited</span>
+        </div>
+      {{/each}}
+    {{/unless}}
+
+    {{#if nobody}}
+      <div>Nobody.</div>
+    {{/if}}
+
+    {{#if canInvite}}
+      <div class="invite">
+        <a href="#" class="btn btn-mini invite">Invite people</a>
+      </div>
+    {{/if}}
+  </div>
+</template>
+
+<template name="createDialog">
+  <div class="mask"> </div>
+  <div class="modal">
+    <div class="modal-header">
+      <button type="button" class="close cancel">&times;</button>
+      <h3>Add party</h3>
+    </div>
+
+    <div class="modal-body">
+      {{#if error}}
+        <div class="alert alert-error">{{error}}</div>
+      {{/if}}
+
+      <label>Title</label>
+      <input type="text" class="title span5">
+
+      <label>Description</label>
+      <textarea class="description span5"></textarea>
+
+      <label class="checkbox">
+        <input type="checkbox" class="private">
+        Private party &mdash; invitees only
+      </label>
+    </div>
+
+    <div class="modal-footer">
+      <a href="#" class="btn cancel">Cancel</a>
+      <a href="#" class="btn btn-primary save">Add party</a>
+    </div>
+  </div>
+</template>
+
+<template name="inviteDialog">
+  <div class="mask"> </div>
+  <div class="modal">
+    <div class="modal-header">
+      <button type="button" class="close done">&times;</button>
+      <h3>Invite people</h3>
+    </div>
+
+    <div class="modal-body">
+      {{#each uninvited}}
+        <div class="invite-row">
+          <a href="#" class="btn invite">Invite</a>
+          {{displayName}}
+        </div>
+      {{else}}
+        Everyone on the site has already been invited.
+      {{/each}}
+    </div>
+
+    <div class="modal-footer">
+      <a href="#" class="btn btn-primary done">Done</a>
+    </div>
+  </div>
+</template>
+

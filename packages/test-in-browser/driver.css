@@ -44,6 +44,7 @@
   line-height: 24px;
   vertical-align: middle;
   text-decoration: underline;
+  cursor: pointer;
 }
 
 .test_table .groupname {

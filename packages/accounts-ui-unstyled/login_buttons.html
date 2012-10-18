@@ -1,0 +1,70 @@
+<!--
+    NOTE: You shouldn't use these templates directly. Instead, use the global
+    {{loginButtons}} template. For positioning on the right side of your app,
+    try {{loginButtons align="right"}}
+  -->
+
+<template name="_loginButtonsRight">
+  {{! put loginButtons in a wrapper element which should be styled to make
+      any dropdowns open with their right edge aligned with the right edge of
+      their container, sticking out to the left. }}
+  <div class="login-buttons-dropdown-align-right">
+    {{> _loginButtons}}
+  </div>
+</template>
+
+<!-- an alias for _loginButtons -->
+<template name="_loginButtonsLeft">
+  {{> _loginButtons}}
+</template>
+
+<template name="_loginButtons">
+  <div id="login-buttons">
+    {{#if currentUser}}
+      {{> _loginButtonsLoggedIn}}
+    {{else}}
+      {{> _loginButtonsLoggedOut}}
+    {{/if}}
+  </div>
+</template>
+
+<template name="_loginButtonsLoggedIn">
+  {{#if dropdown}}
+    {{> _loginButtonsLoggedInDropdown}}
+  {{else}}
+    <div class="login-header">
+      {{#if currentUserLoaded}}
+        {{displayName}}
+      {{else}}
+        <div class="loading">&nbsp;</div>
+      {{/if}}
+    </div>
+    <div class="login-button single-login-button" id="login-buttons-logout">Sign Out</div>
+  {{/if}}
+</template>
+
+<template name="_loginButtonsLoggedOut">
+  {{#if services}} {{! if at least one service is configured }}
+    {{#if configurationLoaded}}
+      {{#if dropdown}} {{! if more than one service configured, or password is configured}}
+        {{> _loginButtonsLoggedOutDropdown}}
+      {{else}}
+        {{#with singleService}} {{! at this point there must be only one configured services }}
+          {{> _loginButtonsLoggedOutSingleLoginButton}}
+        {{/with}}
+      {{/if}}
+    {{/if}}
+  {{else}}
+    <div class="no-services">No login services configured</div>
+  {{/if}}
+</template>
+
+<!-- used in various places to display messages to user -->
+<template name="_loginButtonsMessages">
+  {{#if errorMessage}}
+    <div class="message error-message">{{errorMessage}}</div>
+  {{/if}}
+  {{#if infoMessage}}
+    <div class="message info-message">{{infoMessage}}</div>
+  {{/if}}
+</template>

@@ -85,7 +85,7 @@ Template.lobby.disabled = function () {
 };
 
 
-Template.lobby.events = {
+Template.lobby.events({
   'keyup input#myname': function (evt) {
     var name = $('#lobby input#myname').val().trim();
     Players.update(Session.get('player_id'), {$set: {name: name}});
@@ -93,7 +93,7 @@ Template.lobby.events = {
   'click button.startgame': function () {
     Meteor.call('start_new_game');
   }
-};
+});
 
 //////
 ////// board template: renders the board and the clock given the
@@ -125,13 +125,13 @@ Template.board.clock = function () {
   return min + ':' + (sec < 10 ? ('0' + sec) : sec);
 };
 
-Template.board.events = {
+Template.board.events({
   'click .square': function (evt) {
     var textbox = $('#scratchpad input');
     textbox.val(textbox.val() + evt.target.innerHTML);
     textbox.focus();
   }
-};
+});
 
 //////
 ////// scratchpad is where we enter new words.
@@ -141,7 +141,7 @@ Template.scratchpad.show = function () {
   return game() && game().clock > 0;
 };
 
-Template.scratchpad.events = {
+Template.scratchpad.events({
   'click button, keyup input': function (evt) {
     var textbox = $('#scratchpad input');
     // if we clicked the button or hit enter
@@ -160,17 +160,17 @@ Template.scratchpad.events = {
       set_selected_positions(textbox.val());
     }
   }
-};
+});
 
 Template.postgame.show = function () {
   return game() && game().clock === 0;
 };
 
-Template.postgame.events = {
+Template.postgame.events({
   'click button': function (evt) {
     Players.update(Session.get('player_id'), {$set: {game_id: null}});
   }
-}
+});
 
 //////
 ////// scores shows everyone's score and word list.

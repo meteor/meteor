@@ -72,9 +72,9 @@ var Package = function () {
     },
 
     register_extension: function (extension, callback) {
-      if (self.on_test)
+      if (_.has(self.extensions, extension))
         throw new Error("This package has already registered a handler for " +
-                       extension);
+                        extension);
       self.extensions[extension] = callback;
     }
   };
@@ -84,10 +84,13 @@ _.extend(Package.prototype, {
   init_from_library: function (name) {
     var self = this;
     self.name = name;
-    self.source_root = path.join(__dirname, '../../packages', name);
+    self.source_root = files.get_package_dir(name);
     self.serve_root = path.join('/packages', name);
-
-    var fullpath = path.join(files.get_package_dir(), name, 'package.js');
+    
+    if (!self.source_root)
+      throw new Error("The package named " + self.name + " does not exist.");
+    
+    var fullpath = path.join(self.source_root, 'package.js');
     var code = fs.readFileSync(fullpath).toString();
     // \n is necessary in case final line is a //-comment
     var wrapped = "(function(Package,require){" + code + "\n})";
@@ -128,7 +131,7 @@ _.extend(Package.prototype, {
       // stack -- has to come before user packages, because we don't
       // (presently) require packages to declare dependencies on
       // 'standard meteor stuff' like minimongo.
-      api.use(['deps', 'session', 'livedata', 'mongo-livedata', 'liveui',
+      api.use(['deps', 'session', 'livedata', 'mongo-livedata', 'spark',
                'templating', 'startup', 'past']);
       api.use(require('./project.js').get_packages(app_dir));
 
@@ -266,12 +269,14 @@ var packages = module.exports = {
   // a package object.
   list: function () {
     var ret = {};
-    var dir = files.get_package_dir();
-    _.each(fs.readdirSync(dir), function (name) {
-      // skip .meteor directory
-      if (path.existsSync(path.join(dir, name, 'package.js')))
-        ret[name] = packages.get(name);
-    });
+    
+    _.each(files.get_package_dirs(), function(dir) {
+      _.each(fs.readdirSync(dir), function (name) {
+        // skip .meteor directory
+        if (fs.existsSync(path.join(dir, name, 'package.js')))
+          ret[name] = packages.get(name);
+      });      
+    })
 
     return ret;
   },

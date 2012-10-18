@@ -110,7 +110,7 @@ Commands.push({
       process.exit(1);
     }
 
-    var app_dir = require_project("run", true); // app or package
+    var app_dir = path.resolve(require_project("run", true)); // app or package
     var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true };
     require('./run.js').run(app_dir, bundle_opts, new_argv.port);
   }
@@ -152,7 +152,7 @@ Commands.push({
 
     var example_dir = path.join(__dirname, '../../examples');
     var examples = _.reject(fs.readdirSync(example_dir), function (e) {
-      return (e === 'unfinished');
+      return (e === 'unfinished' || e === 'other');
     });
 
     if (argv._.length === 1) {
@@ -176,7 +176,7 @@ Commands.push({
       process.exit(1);
     }
 
-    if (path.existsSync(appname)) {
+    if (fs.existsSync(appname)) {
       process.stderr.write(appname + ": Already exists\n");
       process.exit(1);
     }
