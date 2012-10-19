@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>Aloha, Images!</title>
+
+
+<script type="text/javascript">
+	
+	(function(window, undefined) {
+
+		function _onCropped(image, props) {
+
+			var canvas = document.createElement('canvas'),
+			 	context = canvas.getContext("2d"),
+			 	img = image.get(0),
+			 	finalprops = {},
+			 	ratio = {img:{}, disp: {}};
+			
+			ratio.img.h = img.height;// image natural height
+			ratio.img.w = img.width;// image natural width
+			ratio.disp.h = image.height(); // image diplay heigth
+			ratio.disp.w = image.width(); // image diplay width
+			ratio.h = (ratio.img.h / ratio.disp.h);
+			ratio.w = (ratio.img.w / ratio.disp.w);
+			
+			/* 
+			var sourceX = 150;
+	        var sourceY = 0;
+	        var sourceWidth = 150;
+	        var sourceHeight = 150;
+	        var destWidth = sourceWidth;
+	        var destHeight = sourceHeight;
+	        var destX = canvas.width / 2 - destWidth / 2;
+	        var destY = canvas.height / 2 - destHeight / 2;
+			context.drawImage(imageObj, sourceX, sourceY, sourceWidth, sourceHeight, destX, destY, destWidth, destHeight);
+			 */
+			 
+			// props are related to displayed size of image.
+			// apply w/h ratio to props to get fprops which will be related to 'real' image dimensions
+			finalprops.x = props.x * ratio.w;
+			finalprops.y = props.y * ratio.h;
+			finalprops.w = props.w * ratio.w;
+			finalprops.h = props.h * ratio.h;
+			context.drawImage(img,
+					finalprops.x, finalprops.y,
+					finalprops.w, finalprops.h,
+					0,0,
+//					props.x2, props.y2,
+					props.w, props.h);
+			$('body').append(canvas);
+		}
+
+		if (window.Aloha === undefined || window.Aloha === null) {
+			var Aloha = window.Aloha = {};		
+		}
+		
+		Aloha.settings = {
+
+			logLevels: {'error': true, 'warn': true, 'info': true, 'debug': false},
+				
+			'plugins': {
+				'image': {
+					'fixedAspectRatio': false,
+					'maxWidth': 1024,
+					'minWidth': 10,
+					'maxHeight': 786,
+					'minHeight': 10,
+					'globalselector': '.global',
+					'ui': {
+						'oneTab': false
+					}
+				}
+			}
+		};
+    
+    })(window);
+	</script>
+
+	<script src="../../../../lib/aloha.js" data-aloha-plugins="common/format, common/highlighteditables, common/image"></script>
+
+	<link rel="stylesheet" href="../../../../css/aloha.css" id="aloha-style-include" type="text/css">
+	<link rel="stylesheet" href="../../../../demo/common/index.css" type="text/css">
+	
+</head>
+<body>
+  <div id="main">
+  
+		<div id="tree-div"></div>
+		<h1 id="title">Aloha, Images!</h1>
+		<div id="bodyContent">
+			<div id="teaser" class="shorttext">
+				<p>This example will show you how to use the Image plugin found at <a href="https://github.com/alohaeditor/Aloha-Plugin-Image">https://github.com/alohaeditor/Aloha-Plugin-Image</a>.</p>
+			</div>
+			<div id="content" class="article">
+			
+				<p><img src="cropnresize.jpg"></p>
+				<p>Click the image to start resizing right away, as a resize handle will appear in it's south-east corner.</p>
+			
+				<p><em>Note:</em> This is a very simple example, that will not allow subsequent cropping actions, or cropping combined with resizing.</p>
+			</div>
+			
+			Outside of the editable
+			<p><img class="global" src="cropnresize.jpg"></p>
+		</div>
+		
+		
+  </div>
+	
+	
+	<script type="text/javascript">
+	Aloha.ready( function(){
+		var $ = Aloha.jQuery;
+		$('#title').aloha();
+		$('#teaser').aloha();
+		$('#content').aloha();
+	});
+  </script>
+</body>
+</html>

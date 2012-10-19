@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Aloha, link checker!</title>
+<script>GENTICS_Aloha_base="../../../";</script>
+<script type="text/javascript" src="../../../core/include.js"></script>
+<script type="text/javascript" src="../../../plugins/com.gentics.aloha.plugins.Link/plugin.js"></script>
+<script type="text/javascript" src="../plugin.js"></script>
+ 
+
+<link rel="stylesheet" href="AlohaLinkChecker.css" />
+
+<!-- turn an element into editable Aloha continuous text -->
+<script type="text/javascript">
+GENTICS.Aloha.settings = {
+	logLevels: {'error': true, 'warn': true, 'info': true, 'debug': false},
+	errorhandling : false,
+	ribbon: false,	
+	"i18n": {
+		// let the system detect the users language
+		//"acceptLanguage": '<?=$_SERVER['HTTP_ACCEPT_LANGUAGE']?>'
+		"acceptLanguage": 'de-de,de;q=0.8,it;q=0.6,en-us;q=0.7,en;q=0.2'
+	},
+	"plugins": {
+	 	"com.gentics.aloha.plugins.LinkChecker": {
+	 		'config': ['a'],
+	 		// use a proxy when you call it through a webserver
+//	 		'proxyUrl': 'http://localhost:8888/Sites/Aloha-Editor/WebContent/plugins/com.gentics.aloha.plugins.LinkChecker/proxy.php?url='
+		}
+  	}
+};
+
+$(document).ready(function() {
+	$('#content').aloha();
+});  
+</script>
+<style type="text/css">
+
+.GENTICS_link_error {
+	color: red;
+}
+
+.GENTICS_link_warn {
+	color: red;
+}
+</style>
+</head>
+<body>
+<div id="main"> 
+<div id="bodyContent">
+<div id="content" class="article">
+<h1>Aloha</h1>
+<h2>Etymology</h2>
+<p>The word <a href="http://en.wikipedia.org/wiki/Aloha" target="_blank" class="external">aloha</a> derives from the Proto-Polynesian root <i>*qalofa</i>. It has cognates in other Polynesian languages, such as Samoan alofa
+and Māori aroha, also meaning "love."</p>
+<p><a href="http://aloha-editor.com/invalid">invalid Aloha Editor</a> is the word's most advanced browser based Editor made with aloha passion.</p>
+<p>A folk etymology claims that it derives from a compound of the <a href="http://en.wikipedia.org/wiki/Hawaii" target="_blank" class="external">Hawaiian</a> words alo meaning "presence", "front", "face", or "share"; and
+ha, meaning "breath of life" or "essence of life." Although alo does indeed mean "presence" etc., the word for breath is spelled with a macron
+or kahakō over the a (hā) whereas the word aloha does not have a long a.</p>
+<p>Links are the web's <a title="Aloha Editor rocks." href="http://rocket-power.org/not-working">Rocket Power</a>.</p>
+<h2>Usage</h2>
+<p>Before contact with the West, the words used for greeting were welina and anoai. Today, "aloha kakahiaka" is the phrase for "good
+morning." "Aloha ʻauinalā" means "good afternoon" and "aloha ahiahi" means "good evening." "Aloha kākou" is a common form of "welcome to all."</p>
+<p>In modern Hawaiʻi, numerous businesses have aloha in their names, with more than 3 pages of listings in the Oʻahu phone book alone.</p>
+<h2>Trends</h2>
+<p>Recent trends are popularizing the term elsewhere in the United States. Popular entertainer, Broadway star and Hollywood actress Bette
+Midler, born in Honolulu, uses the greeting frequently in national appearances. The word was also used frequently in the hit television drama
+Hawaii Five-O. In the influential 1982 film comedy Fast Times at Ridgemont High, the eccentric teacher Mr. Hand makes use of the greeting. The
+Aloha Spirit is a major concept in Lilo and Stitch, a very popular Disney series of movies and TV shows, set in Hawaiʻi. The drama series Lost,
+shot in Hawaiʻi, has a thank you note at the end of the credits saying "We thank the people of Hawaiʻi and their Aloha Spirit". Aloha is a term
+also used in the Nickelodeon program Rocket Power.</p>
+<ul>
+	<li>Arguably the most famous historical Hawaiian song, "Aloha ʻOe" was written by the last queen of Hawaii, Liliʻuokalani.</li>
+	<li>The term inspired the name of the ALOHA Protocol introduced in the 1970s by the University of Hawaii.</li>
+	<li>In Hawaii someone can be said to have or show aloha in the way they treat others; whether family, friend, neighbor or stranger.</li>
+</ul>
+</div>
+</div>
+</div>
+</body>
+</html>

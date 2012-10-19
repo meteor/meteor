@@ -260,6 +260,7 @@ var toc = [
 
   "Packages", [ [
     "accounts-ui",
+    "aloha-editor",
     "amplify",
     "backbone",
     "bootstrap",

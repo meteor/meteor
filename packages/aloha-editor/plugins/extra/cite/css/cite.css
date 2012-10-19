@@ -1,0 +1,49 @@
+.aloha-cite-button {
+	background: url(../img/icon_cite.png) no-repeat !important;
+}
+.aloha-cite-block-button {
+	background: url(../img/blockquote.png) no-repeat !important;
+	border: 1px solid none !important;
+	border-radius: 3px 3px 3px 3px;
+    height: 44px !important;
+    width: 54px !important;
+}
+.aloha-cite-pressed {
+	border: 2px solid #3B73D7 !important;
+}
+
+.aloha-cite-wrapper {
+	/* background: #efd25d; */
+	/* background: rgba(0, 0, 0, 0.1); */
+}
+q.aloha-cite-wrapper {
+	/* background: #ffd25d; */
+}
+blockquote.aloha-cite-wrapper {
+	/* background: #dfd25d; */
+}
+
+/* background: none repeat scroll 0 0 rgba(0, 0, 0, 0.3);
+box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1), 0 1px 7px 0 rgba(0, 0, 0, 0.8) inset; */
+
+.aloha-cite-panel-label {
+	padding: 5px;
+}
+.aloha-cite-panel-field {
+}
+.aloha-cite-panel-btns {
+	padding: 5px;
+}
+.aloha-cite-panel-btns button {
+	width: 100%;
+}
+
+.aloha-cite-panel-field input,
+.aloha-cite-panel-field textarea {
+	width: 190px;
+	padding: 5px;
+	color: #555;
+	font-family: Arial, sans-serif;
+	font-size: 12px;
+	line-height: 1em;
+}

@@ -1,0 +1,78 @@
+/*!
+* Aloha Editor
+* Author & Copyright (c) 2010 Gentics Software GmbH
+* aloha-sales@gentics.com
+* Licensed unter the terms of http://www.aloha-editor.com/license.html
+*/
+.aloha-icon-metaview { background: url(../img/button.png) no-repeat 0px 0px !important; }
+
+.aloha-metaview p, .aloha-metaview pre,
+.aloha-metaview h1, .aloha-metaview h2,
+.aloha-metaview h3, .aloha-metaview h4,
+.aloha-metaview h5, .aloha-metaview h6,
+.aloha-metaview blockquote, .aloha-metaview ol,
+.aloha-metaview ul, .aloha-metaview div,
+.aloha-metaview dl, .aloha-metaview dt,
+.aloha-metaview dd, .aloha-metaview td,
+.aloha-metaview th, .aloha-metaview table, 
+.aloha-metaview caption, .aloha-metaview hr {
+	background: white no-repeat 2px 2px;
+	padding: 8px 5px 5px;
+	margin: 10px;
+	border: 1px solid #ddd;
+	min-height: 1em;
+}
+
+.aloha-metaview caption { margin-bottom:0px; }
+
+/* IE HACK START - IE RENDERS FUNNY BOXES WHEN SOMETHING IN A CONTENTEDITABLE HAS A MIN-HEIGHT SET*/
+
+* .aloha-metaview p,	 * .aloha-metaview pre,
+* .aloha-metaview h1,	 * .aloha-metaview h2,
+* .aloha-metaview h3,	 * .aloha-metaview h4,
+* .aloha-metaview h5, * .aloha-metaview h6,
+* .aloha-metaview blockquote, * .aloha-metaview ol,
+* .aloha-metaview ul, * .aloha-metaview div,
+* .aloha-metaview dl, * .aloha-metaview dt,
+* .aloha-metaview dd, * .aloha-metaview td,
+* .aloha-metaview th, * .aloha-metaview table,
+* .aloha-metaview caption,* .aloha-metaview caption hr {
+	min-height: auto;
+}
+
+/* IE HACK END*/
+
+
+/* HTML ELEMENTS*/
+.aloha-metaview ul, .aloha-metaview ol { border-left: 20px solid #ddd; padding: 0px 5px; }
+
+.aloha-metaview p { background-image: url(../img/p.png); }
+.aloha-metaview pre { background-image: url(../img/pre.png); }
+.aloha-metaview h1 { background-image: url(../img/h1.png); }
+.aloha-metaview h2 { background-image: url(../img/h2.png); }
+.aloha-metaview h3 { background-image: url(../img/h3.png); }
+.aloha-metaview h4 { background-image: url(../img/h4.png); }
+.aloha-metaview h5 { background-image: url(../img/h5.png); }
+.aloha-metaview h6 { background-image: url(../img/h6.png); }
+.aloha-metaview blockquote { background-image: url(../img/blockquote.png); }
+.aloha-metaview div { background-image: url(../img/div.png); }
+.aloha-metaview dl { background-image: url(../img/dl.png); }
+.aloha-metaview dt { background-image: url(../img/dt.png); }
+.aloha-metaview dd { background-image: url(../img/dd.png); }
+.aloha-metaview td { background-image: url(../img/td.png); }
+.aloha-metaview th { background-image: url(../img/th.png); }
+.aloha-metaview table { background-image: url(../img/table.png); }
+.aloha-metaview caption { background-image: url(../img/caption.png); }
+.aloha-metaview hr { background-image: url(../img/hr.png); }
+
+.aloha-metaview abbr[title], .aloha-metaview dfn[title] { border-bottom: 1px dotted; cursor: help; }
+.aloha-metaview [lang] { background-image:url(../../wai-lang/img/button.png); padding-left: 20px; border: 1px dotted #ddd; background-color: #ccc; background-repeat: no-repeat; background-position: left center;}
+
+/* @todo add also the other languages which are available */
+
+.aloha-metaview q { background-image:url(../img/icon_cite.png); padding-left: 20px; border: 1px dotted #ddd; background-color: #ccc; background-repeat: no-repeat; background-position: left center;}
+
+.aloha-metaview a { background-image:url(../img/anchor.png); padding-left: 20px; border: 1px dotted #ddd; background-color: #ccc; background-repeat: no-repeat; background-position: left center;}
+
+/* EXCEPTION FOR TABLE PLUGIN ELEMENTS*/
+

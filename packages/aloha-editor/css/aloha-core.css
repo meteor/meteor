@@ -1,0 +1,19 @@
+@import "aloha-reset.css";
+@import "aloha-sidebar.css";
+@import "../lib/vendor/repository-browser/css/repository-browser.css";
+
+.aloha-editable {
+	min-height: 1.2em;
+	outline: none;
+}
+.aloha-editable ::selection,
+.aloha-editable ::-moz-selection {
+	background: #80B5F2;
+	color: white;
+}
+.aloha-textarea {
+	overflow: hidden;
+	border:1px solid #ccc;
+	padding:6px;
+	overflow:auto;
+}

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<title>Aloha, World!</title>
+	<script src="../../lib/require.js" data-main="../../lib/aloha.js" id="aloha-script-include" data-plugins="common/format,common/highlighteditables,common/list,common/undo,common/paste,common/image"></script>
+	<link rel="stylesheet" href="../../css/aloha.css" id="aloha-style-include">
+	<link rel="stylesheet" href="../../demo/common/index.css" type="text/css">
+	<script type="text/javascript">
+	if (window.Aloha === undefined || window.Aloha === null)
+		Aloha = {};
+
+		Aloha.settings = {
+		"plugins": {
+		 	"com.gentics.aloha.plugins.Image": {
+				onCropped : function (image, props) {
+					// invoke the image cropper crop.php
+					image
+						.width(props.w) // set width
+						.height(props.h) // and height to new values
+						.attr("src", "crop.php?src=" // and adjust src to the cropped image
+							+ image.attr('src')
+							+ "&x=" + props.x 
+							+ "&y=" + props.y
+							+ "&w=" + props.w
+							+ "&h=" + props.h
+						);
+					jQuery("#info").append("<li>Cropped \"" + image.attr("src") + "\"</li>");
+				},
+				onResized : function (image) {
+					// this is the point where you would add a server-side image-resizer
+					jQuery("#info").append("<li>Resized \"" + image.attr("src") + "\"</li>");
+				},
+				onReset : function (image) {
+					// handle resetting the image
+					jQuery("#info").append("<li>Resetted \"" + image.attr("src") + "\" to it's initial state</li>");
+				},
+				aspectRatio : false, // if set to false the aspectRatio will not be maintained anymore when resizing
+				maxHeight : 500, // supply a maximum height for resizing
+				minHeight : 200, // and a minimum height
+				maxWidth : 700, // maximum image width for resizing
+				minWidth : 200, // and minimum width
+				grid : 100 // snap to an invisible grid when resizing
+			}
+		}
+	};
+
+	require.ready(function() {
+		// Prepare
+		var	$ = window.jQuery,
+			$body = $('body');
+
+		$body.bind('aloha',function(){
+			$('#title').aloha();
+			$('#teaser').aloha();
+			$('#content').aloha();
+		});
+	});
+	</script>
+</head>
+<body>
+<div id="main"> 
+<h1 id="title">Aloha, Images! (Extended Version :)</h1>
+<div id="bodyContent">
+<div id="teaser" class="shorttext">
+<p>This <b>extended example</b> is intended for developers planning to use the the CropNResize plugin found at <a href="https://github.com/alohaeditor/Aloha-Plugin-CropNResize">https://github.com/alohaeditor/Aloha-Plugin-CropNResize</a>. It displays the whole set of configuration options currently available. Well, just take a look at the code.</p>
+</div>
+<div id="content" class="article">
+<p>Click the image to start resizing right away, as a resize handle will appear in it's south-east corner.</p>
+<p><img src="cropnresize.jpg" /></p>
+</div>
+</div>
+<ol id="info"></ol>
+</div>
+</body>
+</html>

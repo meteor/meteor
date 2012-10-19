@@ -1,0 +1,110 @@
+.aloha-block table.debug-block {
+	background: #EEEEEE;
+	border: 1px dashed #999999;
+	border-radius: 7px;
+	margin: 5px 0;
+	padding: 4px;
+	width: 100%;
+}
+.aloha-editable-active .aloha-block, .aloha-block.aloha-block-highlighted {
+	cursor: pointer;
+	box-shadow: 0 0 0px 3px #FFE767; /* We use box-shadow because of a Firefox rendering bug with "outline" */
+}
+.aloha-block.aloha-block-active, .aloha-block.aloha-block-active:hover {
+	box-shadow: 0 0 0px 3px #80B5F2; /* We use box-shadow because of a Firefox rendering bug with "outline" */
+}
+
+
+/* IE8 will use outline for highlighting */
+.aloha-ie8 .aloha-block:hover {
+	outline: 3px solid #FFE767; /* IE does not support box-shadow, thus we need to use border */
+}
+.aloha-ie8 .aloha-block.aloha-block-active, .aloha-ie8 .aloha-block.aloha-block-active:hover {
+	outline: 3px solid #80B5F2; /* IE does not support box-shadow, thus we need to use border */
+}
+/* IE7 will use border for outlining */
+.aloha-ie7 .aloha-block:hover {
+	border: 3px solid #FFE767; /* IE does not support box-shadow, thus we need to use border */
+	margin: -3px;
+}
+.aloha-ie7 .aloha-block.aloha-block-active, .aloha-ie7 .aloha-block.aloha-block-active:hover {
+	border: 3px solid #80B5F2; /* IE does not support box-shadow, thus we need to use border */
+	margin: -3px;
+}
+
+/** DRAG DROP **/
+/* Display cursor for drag/drop */
+.aloha-block-droppable {
+	border-left: 1px solid red;
+	margin-left:-1px;
+}
+.aloha-ie7 .aloha-block-droppable {
+	margin-left:0; /* IE7 cannot handle the negative margin... */
+}
+
+.aloha-block-droppable.aloha-block-droppable-right {
+	margin-left:0 !important;
+	border-left: none !important;
+	margin-right:-1px;
+	border-right: 1px solid red;
+}
+
+.aloha-block-droppable-blocklevel {
+	position:relative;
+}
+.aloha-block-blockleveldragdropline {
+	position:absolute;
+	width: 100%;
+	height:2px;
+	background-color:red;
+	bottom:0;
+
+}
+/** OTHER **/
+
+.aloha-block .aloha-editable {
+	cursor: auto;
+}
+
+.aloha-block {
+	position:relative;
+}
+.aloha-block:hover > .aloha-block-draghandle,
+.aloha-block-active > .aloha-block-draghandle {
+	display:block;
+}
+.aloha-block-draghandle {
+	position:absolute;
+	left:0;
+	top:-13px;
+	width:24px;
+	height:12px;
+	overflow:hidden;
+	display:none;
+	background:url(../img/toolbar-draghandle.gif);
+	border-top:1px solid #CCC;
+	border-left:1px solid #CCC;
+	border-right:1px solid #CCC;
+	border-top-left-radius:5px;
+	border-top-right-radius:5px;
+}
+/* Hide drag handle while dragging takes place */
+.aloha-block.ui-draggable-dragging .aloha-block-draghandle {
+	display: none;
+}
+
+.aloha-block-editor label {
+	display:block;
+}
+
+.aloha-block-dropInlineElementIntoEmptyBlock {
+	border: 1px solid red;
+}
+
+.aloha-block-dropzone {
+	background-color: #eeeeff;
+}
+
+.aloha .ui-state-default .aloha-icon.aloha-icon-toggledragdrop {
+	background: url(../../../../img/base.png) -416px 0px;
+}

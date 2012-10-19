@@ -1,0 +1,14 @@
+.GENTICS_button.GENTICS_button_googleTranslate_en {
+	background-image: url(../img/en.png) !important;
+}
+
+.GENTICS_button.GENTICS_button_googleTranslate_de {
+	background-image: url(../img/de.png) !important;
+}
+
+.GENTICS_button.GENTICS_button_googleTranslate_fr {
+	background-image: url(../img/fr.png) !important;
+}
+.GENTICS_button.GENTICS_button_googleTranslate_it {
+	background-image: url(../img/it.png) !important;
+}

@@ -1,0 +1,22 @@
+/*!
+* Aloha Editor
+* Author & Copyright (c) 2011 Gentics Software GmbH
+* aloha-sales@gentics.com
+* Licensed unter the terms of http://www.aloha-editor.com/license.html
+*/
+
+.aloha-icon-wai-lang { background: url(../img/button.png) no-repeat 0px 0px !important; }
+.aloha-icon-wai-lang-remove { background: url(../img/remove-button.png) no-repeat 0px 0px !important; }
+
+.aloha .aloha-wai-lang-img-item {
+	height: 18px;
+}
+.aloha .aloha-wai-lang-img {
+	/* 16x11 */
+	margin: 3px 5px 0px 2px;
+}
+
+.aloha .aloha-wai-lang-label-item {
+	display: inline;
+	font-weight: bold;
+}

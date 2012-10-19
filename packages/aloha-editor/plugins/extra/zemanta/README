@@ -1,0 +1,5 @@
+// @todo
+// http://developer.zemanta.com/docs/sdk/
+// increase API limit for "demo" api key
+// tags are not added to a input field atm
+// error: Uncaught ReferenceError: _gat is not defined

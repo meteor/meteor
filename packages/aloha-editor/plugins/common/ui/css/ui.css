@@ -1,0 +1,689 @@
+
+@import "jquery-ui-1.9m6.css";
+
+/* Workaround for dialogs that are appended directly to the body and
+ * can't be placed inside a .aloha context element.
+ *  Styles removed from jquery-ui.css and placed here. */
+/*
+ * jQuery UI Dialog 1.9m6
+ *
+ * Copyright 2011, AUTHORS.txt (http://jqueryui.com/about)
+ * Dual licensed under the MIT or GPL Version 2 licenses.
+ * http://jquery.org/license
+ *
+ * http://docs.jquery.com/UI/Dialog#theming
+ */
+
+.aloha.ui-dialog { position: absolute; padding: .2em; width: 300px; overflow: hidden; }
+.aloha.ui-dialog .ui-dialog-titlebar { padding: .4em 1em; position: relative;  }
+.aloha.ui-dialog .ui-dialog-title { float: left; margin: .1em 16px .1em 0; } 
+.aloha.ui-dialog .ui-dialog-titlebar-close { position: absolute; right: .3em; top: 50%; width: 19px; margin: -10px 0 0 0; padding: 1px; height: 18px; }
+.aloha.ui-dialog .ui-dialog-titlebar-close span { display: block; margin: 1px; }
+.aloha.ui-dialog .ui-dialog-titlebar-close:hover, .aloha .ui-dialog .ui-dialog-titlebar-close:focus { padding: 0; }
+.aloha.ui-dialog .ui-dialog-content { position: relative; border: 0; padding: .5em 1em; background: none; overflow: auto; zoom: 1; }
+.aloha.ui-dialog .ui-dialog-buttonpane { text-align: left; border-width: 1px 0 0 0; background-image: none; margin: .5em 0 0 0; padding: .3em 1em .5em .4em; }
+.aloha.ui-dialog .ui-dialog-buttonpane .ui-dialog-buttonset { float: right; }
+.aloha.ui-dialog .ui-dialog-buttonpane button { margin: .5em .4em .5em 0; cursor: pointer; }
+.aloha.ui-dialog .ui-resizable-se { width: 14px; height: 14px; right: 3px; bottom: 3px; }
+.aloha.ui-draggable .ui-dialog-titlebar { cursor: move; }
+
+/* Part of the workaround for dialogs.
+ * Styles copied from jquery-ui.css and placed here. */
+.aloha.ui-widget { font-family: Verdana,Arial,sans-serif; font-size: 1.1em; }
+.aloha.ui-widget .ui-widget { font-size: 1em; }
+.aloha.ui-widget input, .aloha .ui-widget select, .aloha .ui-widget textarea, .aloha .ui-widget button { font-family: Verdana,Arial,sans-serif; font-size: 1em; }
+.aloha.ui-widget-content { border: 1px solid #aaaaaa; background: #ffffff; color: #222222; }
+.aloha.ui-widget-content a { color: #222222; }
+
+/* Part of the workaround for dialogs.
+ * We cannot prepend a context class to ui-widget-overlay since it is
+ * appended to the body and there is no configuration option to specifiy
+ * a custom class. This is problematic since it may overwrite a user's
+ * style. The user has the option of giving his style more priority.
+ * Style removed from jquery-ui.css and placed here. */
+/* !! .aloha context left out on purpose see above */
+.ui-widget-overlay {
+	position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+	background: #aaaaaa;
+    opacity: .3;
+    filter:Alpha(Opacity=30);
+}
+
+.aloha .aloha-ui-toolbar .ui-corner-all, .aloha .aloha-ui-toolbar .ui-corner-top, .aloha .aloha-ui-toolbar .ui-corner-left, .aloha .aloha-ui-toolbar .ui-corner-tl {
+	-moz-border-radius-topleft:     0px;
+	-webkit-border-top-left-radius: 0px;
+	-khtml-border-top-left-radius:  0px;
+	border-top-left-radius:         0px;
+}
+.aloha .aloha-ui-toolbar .ui-corner-all, .aloha .aloha-ui-toolbar .ui-corner-top, .aloha .aloha-ui-toolbar .ui-corner-right, .aloha .aloha-ui-toolbar .ui-corner-tr {
+	-moz-border-radius-topright:     0px;
+	-webkit-border-top-right-radius: 0px;
+	-khtml-border-top-right-radius:  0px;
+	border-top-right-radius:         0px;
+}
+.aloha .aloha-ui-toolbar .ui-corner-all, .aloha .aloha-ui-toolbar .ui-corner-bottom, .aloha .aloha-ui-toolbar .ui-corner-left, .aloha .aloha-ui-toolbar .ui-corner-bl {
+	-moz-border-radius-bottomleft:     0px;
+	-webkit-border-bottom-left-radius: 0px;
+	-khtml-border-bottom-left-radius:  0px;
+	border-bottom-left-radius:         0px;
+}
+.aloha .aloha-ui-toolbar .ui-corner-all, .aloha .aloha-ui-toolbar .ui-corner-bottom, .aloha .aloha-ui-toolbar .ui-corner-right, .aloha .aloha-ui-toolbar .ui-corner-br {
+	-moz-border-radius-bottomright:     0px;
+	-webkit-border-bottom-right-radius: 0px;
+	-khtml-border-bottom-right-radius:  0px;
+	border-bottom-right-radius:         0px;
+}
+
+/* === toolbar === */
+
+.aloha .aloha-ui-toolbar {
+	text-align: left;
+	width: 609px;
+}
+.aloha .aloha-ui-toolbar .ui-button-icon-only {
+	background-color: transparent;
+	border-color: transparent;
+	-moz-border-radius:    2px;
+	-khtml-border-radius:  2px;
+	-webkit-border-radius: 2px;
+	border-radius:         2px;
+}
+.aloha .aloha-ui-toolbar .ui-button-icon-only:hover {
+	border-color: #999;
+	background-color: #e6e6e6;
+	background-image:         linear-gradient(bottom, rgba(0,0,0,0.05) 0%, rgba(255,255,255,0.4) 40%);
+	background-image:      -o-linear-gradient(bottom, rgba(0,0,0,0.05) 0%, rgba(255,255,255,0.4) 40%);
+	background-image:    -moz-linear-gradient(bottom, rgba(0,0,0,0.05) 0%, rgba(255,255,255,0.4) 40%);
+	background-image: -webkit-linear-gradient(bottom, rgba(0,0,0,0.05) 0%, rgba(255,255,255,0.4) 40%);
+	background-image:     -ms-linear-gradient(bottom, rgba(0,0,0,0.05) 0%, rgba(255,255,255,0.4) 40%);
+}
+.aloha .aloha-ui-toolbar .ui-tabs {
+	font-size: 11px;
+	font-family: tahoma, arial, helvetica;
+	line-height: normal;
+	padding: 0;
+}
+.aloha .aloha-ui-toolbar .ui-tabs-nav li {
+	border: 1px solid #aaa;
+	margin: 0 1px;
+}
+.aloha .aloha-ui-toolbar .ui-tabs-nav li,
+.aloha .aloha-ui-toolbar .ui-tabs-nav li a {
+	cursor: default;
+	color: #333;
+	text-decoration: none;
+	-moz-border-radius-topleft:      2px;
+	-webkit-border-top-left-radius:  2px;
+	-khtml-border-top-left-radius:   2px;
+	border-top-left-radius:          2px;
+	-moz-border-radius-topright:     2px;
+	-webkit-border-top-right-radius: 2px;
+	-khtml-border-top-right-radius:  2px;
+	border-top-right-radius:         2px;
+}
+.aloha .aloha-ui-toolbar .ui-tabs-nav li a {
+	padding: 0.2em 0.6em;
+	border-bottom: 0px;
+	border-top: 1px solid #f0f0f0;
+	background-image:         linear-gradient(bottom, rgba(0,0,0,0.05) 70%, rgba(0,0,0,0.1) 90%);
+	background-image:      -o-linear-gradient(bottom, rgba(0,0,0,0.05) 70%, rgba(0,0,0,0.1) 90%);
+	background-image:    -moz-linear-gradient(bottom, rgba(0,0,0,0.05) 70%, rgba(0,0,0,0.1) 90%);
+	background-image: -webkit-linear-gradient(bottom, rgba(0,0,0,0.05) 70%, rgba(0,0,0,0.1) 90%);
+	background-image:     -ms-linear-gradient(bottom, rgba(0,0,0,0.05) 70%, rgba(0,0,0,0.1) 90%);
+}
+.aloha .aloha-ui-toolbar .ui-tabs-nav li.ui-state-active {
+	font-weight: bold;
+	background: #f0f0f0;
+}
+.aloha .aloha-ui-toolbar .ui-tabs-nav li.ui-state-active a {
+	background: #f0f0f0;
+	background-image:         linear-gradient(bottom, rgba(255,255,255,0) 70%, rgba(255,255,255,0.5) 90%);
+	background-image:      -o-linear-gradient(bottom, rgba(255,255,255,0) 70%, rgba(255,255,255,0.5) 90%);
+	background-image:    -moz-linear-gradient(bottom, rgba(255,255,255,0) 70%, rgba(255,255,255,0.5) 90%);
+	background-image: -webkit-linear-gradient(bottom, rgba(255,255,255,0) 70%, rgba(255,255,255,0.5) 90%);
+	background-image:     -ms-linear-gradient(bottom, rgba(255,255,255,0) 70%, rgba(255,255,255,0.5) 90%);
+}
+.aloha .aloha-ui-toolbar .ui-widget-content {
+	min-width: 130px;
+	border: 0px;
+	background: transparent;
+}
+.aloha .aloha-ui-toolbar .ui-widget-header {
+	padding-right: 30px;
+	border: 0px;
+	-moz-border-radius-topleft:      2px;
+	-webkit-border-top-left-radius:  2px;
+	-khtml-border-top-left-radius:   2px;
+	border-top-left-radius:          2px;
+	-moz-border-radius-topright:     2px;
+	-webkit-border-top-right-radius: 2px;
+	-khtml-border-top-right-radius:  2px;
+	border-top-right-radius:         2px;
+	background: transparent;
+	background-image:         linear-gradient(bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 10%);
+	background-image:      -o-linear-gradient(bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 10%);
+	background-image:    -moz-linear-gradient(bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 10%);
+	background-image: -webkit-linear-gradient(bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 10%);
+	background-image:     -ms-linear-gradient(bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 10%);
+}
+.aloha .aloha-ui-toolbar.aloha-ui-hover .ui-widget-header {
+	cursor: move;
+	background: #777;
+	background: rgba(0,0,0,0.3);
+	background-image:         linear-gradient(bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.3) 20%);
+	background-image:      -o-linear-gradient(bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.3) 20%);
+	background-image:    -moz-linear-gradient(bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.3) 20%);
+	background-image: -webkit-linear-gradient(bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.3) 20%);
+	background-image:     -ms-linear-gradient(bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.3) 20%);
+}
+.aloha .aloha-ui-toolbar .ui-tabs-panel {
+	padding: 2px;
+	background: #f0f0f0;
+	border: 1px solid #d0d0d0;
+	box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+
+	-moz-border-radius-bottomleft:      2px;
+	-webkit-border-bottom-left-radius:  2px;
+	-khtml-border-bottom-left-radius:   2px;
+	border-bottom-left-radius:          2px;
+	-moz-border-radius-bottomright:     2px;
+	-webkit-border-bottom-right-radius: 2px;
+	-khtml-border-bottom-right-radius:  2px;
+	border-bottom-right-radius:         2px;
+}
+.aloha .aloha-ui-toolbar li.ui-state-active {
+	border: 1px solid #d0d0d0;
+}
+.aloha .aloha-ui-toolbar .aloha-ui-pin {
+	position: absolute;
+	display: none;
+	top: 0.8em;
+	right: 0.4em;
+	width: 20px;
+	height: 10px;
+	background: url('../../../../img/pin.png') no-repeat;
+	cursor: pointer;
+}
+.aloha .aloha-ui-toolbar .aloha-ui-pin-down {
+	background-position: -16px 0;
+}
+.aloha .aloha-ui-toolbar.aloha-ui-hover .aloha-ui-pin {
+	display: block;
+}
+
+
+
+/* === dropdown menu === */
+.aloha .aloha-ui-toolbar .aloha-ui-menubutton-menu,
+.aloha .aloha-ui-toolbar .aloha-ui-menubutton-menu .ui-menu,
+.aloha .aloha-ui-menubutton-menu,
+.aloha .aloha-ui-menubutton-menu .ui-menu {
+	position: absolute;
+	padding: 0.4em 0;
+	background: #f0f0f0;
+	border: 1px solid #d0d0d0;
+	box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+	-moz-border-radius:    0px;
+	-khtml-border-radius:  0px;
+	-webkit-border-radius: 0px;
+	border-radius:         0px;
+	font-size: 11px;
+	text-align: left;
+}
+.aloha .aloha-ui-menubutton-menu .ui-menu-item a {
+	white-space: nowrap;
+	padding-left: 10px;
+	color: #212121;
+	-moz-border-radius:    0px;
+	-khtml-border-radius:  0px;
+	-webkit-border-radius: 0px;
+	border-radius:         0px;
+	border-color: transparent;
+}
+.aloha .aloha-ui-menubutton-menu .ui-menu-item a.ui-state-active {
+	background: #dadada;
+}
+/* The following margin and padding ensure that the triangle icon of submenus
+   doesn't overlap with the text (only for IE, looks ok in chrome without
+   these rules) */
+.aloha .aloha-ui-menubutton-menu .ui-menu-item .ui-menu-icon {
+	margin-right: -16px;
+}
+/* See previous rule */
+.aloha .aloha-ui-menubutton-menu .ui-menu-item a {
+	padding-right: 20px;
+}
+.aloha .aloha-ui-menubutton-menu .aloha-ui-inline-icon {
+	/* These margins align the inline icons of each menu item with the
+       text of the menu items */
+	margin-bottom: -4px;
+	margin-right: 5px;
+}
+/* This rule and the next will position the icon of an icon-only menu
+   button more properly with the secondary dropdown icon */
+.aloha .aloha-ui-menubutton-expand .aloha-ui-inline-icon-container {
+	margin-right: -4px;
+	margin-left: 4px;
+}
+/* See previous rule */
+.aloha .aloha-ui-menubutton-expand .ui-button-icon-secondary {
+	right: 3px;
+}
+.aloha .aloha-ui-menubutton-iehack .aloha-ui-menubutton-menu .ui-menu-item a {
+	/* It was impossible to get the menu items and expand icons work on IE7 without specifying a fixed width. */
+	width: 200px;
+	/* Override the default nowrap for menu items because we now have a fixed width to work with */
+	white-space: normal;
+	/* Works around menu items jumping around by one pixel when hovered over */
+	display: inline-block;
+}
+/* === dropdown menu === */
+
+
+/* === menubutton === */
+.aloha .aloha-ui-menubutton-container {
+	height: 24px;
+	font-size: 11px;
+	border: 1px solid transparent;
+	float: left;
+	-moz-border-radius:    4px;
+	-khtml-border-radius:  4px;
+	-webkit-border-radius: 4px;
+	border-radius:         4px;
+}
+.aloha .aloha-ui-menubutton-container .ui-buttonset {
+	margin: 0px;
+}
+.aloha .aloha-ui-menubutton-container .ui-button {
+	height: 24px;
+	background: transparent;
+	-moz-border-radius:    4px;
+	-khtml-border-radius:  4px;
+	-webkit-border-radius: 4px;
+	border-radius:         4px;
+	padding: 0px;
+	border-width: 0;
+}
+.aloha .ui-buttonset .ui-button.aloha-ui-menubutton-action {
+	border-right: 1px solid transparent;
+	-moz-border-radius-topright:     0px;
+	-webkit-border-top-right-radius: 0px;
+	-khtml-border-top-right-radius:  0px;
+	border-top-right-radius:         0px;
+	-moz-border-radius-bottomright:     0px;
+	-webkit-border-bottom-right-radius: 0px;
+	-khtml-border-bottom-right-radius:  0px;
+	border-bottom-right-radius:         0px;
+}
+.aloha .ui-button.aloha-ui-menubutton-expand {
+	min-width: 18px;
+	border-left: 1px solid transparent;
+	-moz-border-radius-topleft:     0px;
+	-webkit-border-top-left-radius: 0px;
+	-khtml-border-top-left-radius:  0px;
+	border-top-left-radius:         0px;
+	-moz-border-radius-bottomleft:     0px;
+	-webkit-border-bottom-left-radius: 0px;
+	-khtml-border-bottom-left-radius:  0px;
+	border-bottom-left-radius:         0px;
+}
+.aloha .aloha-ui-menubutton-container .ui-button-text {
+	font-size: 11px;
+}
+.aloha .aloha-ui-menubutton-expand.aloha-ui-menubutton-single {
+	-moz-border-radius:    4px;
+	-khtml-border-radius:  4px;
+	-webkit-border-radius: 4px;
+	border-radius:         4px;
+	border-width: 0;
+}
+.aloha .aloha-ui-menubutton-container .ui-button-icon-primary {
+	left: 0px;
+}
+.aloha .aloha-ui-menubutton-container:hover {
+	border-color: #bbb;
+}
+.aloha .aloha-ui-menubutton-container:hover .ui-button {
+	background-color: #e6e6e6;
+	background-image:         linear-gradient(bottom, rgba(0,0,0,0.05) 0%, rgba(255,255,255,0.4) 40%);
+	background-image:      -o-linear-gradient(bottom, rgba(0,0,0,0.05) 0%, rgba(255,255,255,0.4) 40%);
+	background-image:    -moz-linear-gradient(bottom, rgba(0,0,0,0.05) 0%, rgba(255,255,255,0.4) 40%);
+	background-image: -webkit-linear-gradient(bottom, rgba(0,0,0,0.05) 0%, rgba(255,255,255,0.4) 40%);
+	background-image:     -ms-linear-gradient(bottom, rgba(0,0,0,0.05) 0%, rgba(255,255,255,0.4) 40%);
+}
+.aloha .aloha-ui-menubutton-container:hover .aloha-ui-menubutton-expand {
+	border-color: #bbb;
+}
+.aloha .aloha-ui-menubutton-container:hover .aloha-ui-menubutton-action {
+	border-color: rgba(255,255,255,0.5);
+}
+.aloha .aloha-ui-menubutton-container.aloha-ui-menubutton-pressed {
+	border-color: #999;
+}
+.aloha .aloha-ui-menubutton-container.aloha-ui-menubutton-pressed .ui-button {
+	background: #ccc;
+	box-shadow: inset 0px 0px 4px rgba(0,0,0,0.2);
+}
+.aloha .aloha-ui-menubutton-single .ui-button-text {
+	/* Ensures that the secondary icon (right icon) doesn't overlap with the button text. */
+	padding-right: 2.1em;
+}
+/* === /menubutton === */
+
+
+
+/* === icons === */
+
+.aloha .ui-state-default .aloha-icon {
+	background-image: url(../img/format-inline.png);
+}
+
+/* TODO: merge with icons image file */
+.aloha .ui-state-default .aloha-icon-tree           { background-image: url(../img/tree.png); }
+
+.aloha .ui-state-default .aloha-icon-bold           { background-position: 0 0; }
+.aloha .ui-state-default .aloha-icon-italic         { background-position: -16px 0; }
+.aloha .ui-state-default .aloha-icon-underline      { background-position: -32px 0; }
+.aloha .ui-state-default .aloha-icon-strikethrough  { background-position: -48px 0; }
+.aloha .ui-state-default .aloha-icon-subscript      { background-position: -64px 0; }
+.aloha .ui-state-default .aloha-icon-superscript    { background-position: -80px 0; }
+.aloha .ui-state-default .aloha-icon-createTable    { background-position: -96px 0; }
+.aloha .ui-state-default .aloha-icon-addcolumnleft  { background-position: -112px 0; }
+.aloha .ui-state-default .aloha-icon-addcolumnright { background-position: -128px 0; }
+.aloha .ui-state-default .aloha-icon-addrowbefore   { background-position: -144px 0; }
+.aloha .ui-state-default .aloha-icon-addrowafter    { background-position: -160px 0; }
+.aloha .ui-state-default .aloha-icon-deleterows     { background-position: -176px 0; }
+.aloha .ui-state-default .aloha-icon-deletecolumns  { background-position: -192px 0; }
+.aloha .ui-state-default .aloha-icon-table-caption  { background-position: -320px 0; }
+.aloha .ui-state-default .aloha-icon-rowheader      { background-position: -352px 0; }
+.aloha .ui-state-default .aloha-icon-columnheader   { background-position: -368px 0; }
+.aloha .ui-state-default .aloha-icon-mergecells     { background-position: -384px 0; }
+.aloha .ui-state-default .aloha-icon-splitcells     { background-position: -400px 0; }
+.aloha .ui-state-default .aloha-icon-orderedlist    { background-position: -272px 0; }
+.aloha .ui-state-default .aloha-icon-unorderedlist  { background-position: -256px 0; }
+.aloha .ui-state-default .aloha-icon-link           { background-position: -288px 0; }
+.aloha .ui-state-default .aloha-icon-unlink         { background-position: -304px 0; }
+.aloha .ui-state-default .aloha-icon-abbr           { background-position: -336px 0; }
+.aloha .ui-state-default .aloha-icon-emphasis       { background-image: url(../img/em.png); }
+.aloha .ui-state-default .aloha-icon-strong         { background-image: url(../img/strong.png); }
+
+.aloha .ui-state-default .aloha-icon-indent {
+	background: url(../../../../img/text_indent.png) no-repeat center center;
+}
+.aloha .ui-state-default .aloha-icon-outdent {
+	background: url(../../../../img/text_indent_remove.png) no-repeat center center;
+}
+
+/* === inline icons (<img> instead of class) === */
+
+.aloha .ui-button-icon-only .aloha-ui-inline-icon-container {
+	/* These width height and margin settings will allow an inline icon
+       almost as big as the button */
+	width: 18px;
+	height: 18px;
+	margin-top: -10px;
+	margin-left: -9px;
+}
+
+.aloha .aloha-ui-inline-icon-container {
+	/* Overwrite jqueryui icon style text-indent: -9999px; to support
+       <img> icons (inline icons) instead of class icons */
+	text-indent: 0px;
+}
+
+.aloha .ui-button-text-icon-primary .ui-button-icon-primary {
+	margin-left: 4px;
+}
+
+/* === large icons === */
+
+.aloha .ui-state-default .aloha-large-icon {
+    /* TODO merge with icons image file */
+	background-image: url("../img/format-block.png");
+	width: 54px;
+	height: 44px;
+	/* TODO doesn't work without important */
+	margin-left: -27px !important;
+	margin-top: -22px !important;
+}
+/* It does not suffice to make just the icon large, the button itself must also be made larger */
+.aloha .aloha-large-button {
+	width: 60px !important;
+	/* TODO doesn't work without important */
+	height: 50px !important;
+}
+
+.aloha .aloha-large-icon-h1  { background-position: -52px 0; }
+.aloha .aloha-large-icon-h2  { background-position: -104px 0; }
+.aloha .aloha-large-icon-h3  { background-position: -156px 0; }
+.aloha .aloha-large-icon-h4  { background-position: -208px 0; }
+.aloha .aloha-large-icon-h5  { background-position: -260px 0; }
+.aloha .aloha-large-icon-h6  { background-position: -312px 0; }
+.aloha .aloha-large-icon-pre { background-position: -364px 0; }
+
+/**** multi-split-button ****/
+
+.aloha .aloha-multisplit-active {
+	/* TODO this just gives the active multi-split item a border which
+			however isn't very visually distinctive */
+	/* Override ui-state-default with important */
+	border: 1px solid #aaaaaa !important;
+}
+
+/**** button states ****/
+
+.aloha .aloha-button-active {
+	/* Override ui-state-default with important */
+	border: 1px solid #aaaaaa !important;
+	/* Override ui-state-default with important */
+	background: #ffffff !important;
+}
+
+/** jquery-ui icons used by Aloha **/
+
+
+/* TODO take the jqueryui icons out from the jqueryui icon sprite map
+   and merge with other icons into an aloha specific sprite map */
+.aloha .ui-state-default .aloha-jqueryui-icon { background-image: url(../img/jqueryui/ui-icons_222222_256x240.png); }
+/* triangle and carat are used by the ribbon plugin for the drop down and expand icons */
+.aloha .ui-icon-triangle-1-s { background-position: -64px -16px; }
+.aloha .ui-icon-carat-1-e { background: url(../img/jqueryui/ui-icons_222222_256x240.png) no-repeat -30px -16px; }
+/* the gripsmall is used by the image plugin */
+.aloha .ui-icon-gripsmall-diagonal-se { background: url(../img/jqueryui/ui-icons_222222_256x240.png) no-repeat; }
+
+.aloha .aloha-multisplit {
+	position: relative;
+	width: 260px;
+	height: 50px;
+	overflow: hidden;
+	margin: 0 auto;
+}
+.aloha .aloha-multisplit-open {
+	overflow: visible;
+}
+.aloha .aloha-multisplit-content {
+	text-align: left;
+	position: relative;
+	width: 245px;
+}
+.aloha .aloha-multisplit-open .aloha-multisplit-content {
+	background: #ccc;
+	box-shadow: inset 0 0 15px rgba(0,0,0,0.25);
+}
+.aloha .aloha-multisplit .aloha-multisplit-toggle {
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 15px;
+	height: 50px;
+	overflow: hidden;
+	border-width: 0px;
+	background-color: #f0f0f0;
+	background-image: url(../img/multisplit-open.gif);
+	background-repeat: no-repeat;
+	background-position: bottom center;
+	text-indent: -99999px;
+	margin: 0;
+}
+.aloha .aloha-multisplit-open .aloha-multisplit-toggle {
+	background-image: url(../img/multisplit-close.gif);
+}
+.aloha .aloha-multisplit .ui-button-icon-only.aloha-multisplit-toggle:hover {
+	background-color: #fff;
+	border-color: #e6e6e6;
+}
+.aloha .aloha-multisplit .ui-button-icon-only {
+	background: #e6e6e6;
+	border-color: lightGrey;
+}
+.aloha .aloha-multisplit .ui-button-icon-only.aloha-multisplit-active {
+	background: #3B73D7;
+}
+.aloha .aloha-multisplit .aloha-ui-multisplit-fullwidth {
+	display: block;
+	width: 100%;
+	background: #f0f0f0 url('../img/removeformat.png') no-repeat 6px 3px;
+	border: 1px solid #bbb;
+	padding-left: 18px;
+	text-align: left;
+}
+.aloha .aloha-multisplit .aloha-ui-multisplit-fullwidth:hover {
+	border-color: #999;
+}
+
+.aloha .aloha-ui-component-group {
+	float: left;
+	border: 1px solid #e0e0e0;
+	box-shadow: inset 0 0 10px #fff;
+	-moz-border-radius:    4px;
+	-khtml-border-radius:  4px;
+	-webkit-border-radius: 4px;
+	border-radius:         4px;
+	padding: 2px;
+	margin: 2px;
+	vertical-align: top;
+}
+
+.aloha .aloha-ui-clear {
+	float: none;
+	clear: both;
+}
+
+/* === Aloha Dialog === */
+.aloha.aloha-dialog {
+	padding: 0 2px 2px;
+	border: 1px solid #999;
+	background: #f0f0f0;
+	box-shadow: 0px 5px 20px rgba(0,0,0,0.2);
+	color: #555;
+	font-size: 12px;
+	text-align: left;
+	-moz-border-radius:    4px;
+	-khtml-border-radius:  4px;
+	-webkit-border-radius: 4px;
+	border-radius:         4px;
+}
+.aloha.aloha-dialog .ui-dialog-titlebar {
+	padding: 4px;
+	border-width: 0;
+	background: transparent;
+	font: bold 12px tahoma,arial,verdana,sans-serif;
+	color: #555;
+}
+.aloha.aloha-dialog .ui-dialog-content {
+	min-height: 25px !important;
+	color: #555;
+}
+.aloha.aloha-dialog .ui-dialog-buttonpane {
+	padding: 0;
+	border-width: 0;
+	background: transparent;
+}
+.aloha.aloha-dialog .ui-button,
+.aloha.aloha-dialog .ui-dialog-titlebar-close {
+	outline: none;
+	background-color: #e6e6e6;
+	background-image:         linear-gradient(bottom, rgba(0,0,0,0.05) 0%, rgba(255,255,255,0.2) 50%);
+	background-image:      -o-linear-gradient(bottom, rgba(0,0,0,0.05) 0%, rgba(255,255,255,0.2) 50%);
+	background-image:    -moz-linear-gradient(bottom, rgba(0,0,0,0.05) 0%, rgba(255,255,255,0.2) 50%);
+	background-image: -webkit-linear-gradient(bottom, rgba(0,0,0,0.05) 0%, rgba(255,255,255,0.2) 50%);
+	background-image:     -ms-linear-gradient(bottom, rgba(0,0,0,0.05) 0%, rgba(255,255,255,0.2) 50%);
+}
+.aloha.aloha-dialog .ui-dialog-titlebar-close {
+	padding: 0;
+	border: 1px solid #ccc;
+	margin-top: -7px;
+}
+.aloha.aloha-dialog .ui-dialog-titlebar-close:hover {
+	border-color: #999;
+}
+.aloha.aloha-dialog .ui-icon-closethick {
+	background: url(../img/jqueryui/ui-icons_222222_256x240.png) no-repeat -80px -128px;
+}
+
+.aloha-ui-hidden {
+	display: none;
+}
+
+/* === auto complete === */
+.aloha .ui-autocomplete.ui-widget-content {
+	background: #fff;
+	border: 1px solid #ddd;
+	box-shadow: 1px 2px 10px rgba(0,0,0,0.25);
+	padding: 3px;
+	-moz-border-radius:    0;
+	-khtml-border-radius:  0;
+	-webkit-border-radius: 0;
+	border-radius:         0;
+}
+
+.aloha .ui-autocomplete .ui-menu-item a {
+	text-align: left;
+	font-size: 12px;
+	-moz-border-radius:    0;
+	-khtml-border-radius:  0;
+	-webkit-border-radius: 0;
+	border-radius:         0;
+	border-color: transparent;
+}
+
+.aloha .ui-autocomplete .ui-menu-item a.ui-state-focus {
+	background: #3B73D7;
+	color: #fff;
+}
+
+.aloha.ui-tooltip {
+	font-size: 10px;
+	line-height: 1.2em;
+	/* margin-top: 30px; synchonized with ribbon plugin document top spacing*/
+	padding: 4px 6px;
+	border: 1px solid #ccc;
+	z-index: 999999;
+
+	/* The following styles were taken from jqueryui and pasted
+       here. The reason is that tooltips are appended to the body (and
+       there is no appendTo option for tooltips) which makes it difficult
+       to just wrap the aloha context around it. */
+	position:absolute;
+	-o-box-shadow: 0 0 5px #aaa;
+	-moz-box-shadow: 0 0 5px #aaa;
+	-webkit-box-shadow: 0 0 5px #aaa;
+	box-shadow: 0 0 5px #aaa;
+	font-family: Verdana,Arial,sans-serif/*{ffDefault}*/;
+	background: #ffffff/*{bgColorContent}*/;
+	color: #222222/*{fcContent}*/;
+}
+
+.aloha-toolbar .aloha-ui-label {
+	display: inline-block;
+	/* Always display labels next to the component */
+	white-space: nowrap;
+	/* same height as toolbar buttons */
+	height: 23px;
+	/* compensate for the 1px border on buttons */
+	margin: 2px 2px 0;
+}
+
+.aloha.aloha-toolbar .aloha-ui-label-text {
+	margin-right: 2px;
+}

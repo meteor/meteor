@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Aloha, Drag And Drop Files !</title>
+<script>GENTICS_Aloha_base="../../../";</script>
+<script type="text/javascript" src="../../../dep/jquery-1.5.1.js"></script>
+<script type="text/javascript" src="../../../aloha.js" id="aloha-script-include" data-plugins="format,dragndropfiles,image,link"></script>
+<link rel="stylesheet" href="../../../aloha.css" id="aloha-style-include" type="text/css"/>
+<link rel="stylesheet" href="style.css" type="text/css"/>
+
+<!-- turn an element into editable Aloha continuous text -->
+
+</head>
+<body>
+<div id="main"> 
+<div id="bodyContent">
+<div id="content" class="article">
+<h1>Aloha</h1>
+<h2>Etymology</h2>
+<p>The word <a href="http://en.wikipedia.org/wiki/Aloha" target="_blank" class="external">aloha</a> derives from the Proto-Polynesian root <i>*qalofa</i>. It has cognates in other Polynesian languages, such as Samoan alofa
+and Māori aroha, also meaning "love."</p>
+<p><a href="http://aloha-editor.com/">Aloha Editor</a> is the word's most advanced browser based Editor made with aloha passion.</p>
+<p>A folk etymology claims that it derives from a compound of the <a href="http://en.wikipedia.org/wiki/Hawaii" target="_blank" class="external">Hawaiian</a> words alo meaning "presence", "front", "face", or "share"; and
+ha, meaning "breath of life" or "essence of life." Although alo does indeed mean "presence" etc., the word for breath is spelled with a macron
+or kahakō over the a (hā) whereas the word aloha does not have a long a.</p>
+<h2>Usage</h2>
+<p>Before contact with the West, the words used for greeting were welina and anoai. Today, "aloha kakahiaka" is the phrase for "good
+morning." "Aloha ʻauinalā" means "good afternoon" and "aloha ahiahi" means "good evening." "Aloha kākou" is a common form of "welcome to all."</p>
+<p>In modern Hawaiʻi, numerous businesses have aloha in their names, with more than 3 pages of listings in the Oʻahu phone book alone.</p>
+<h2>Trends</h2>
+<p>Recent trends are popularizing the term elsewhere in the United States. Popular entertainer, Broadway star and Hollywood actress Bette
+Midler, born in Honolulu, uses the greeting frequently in national appearances. The word was also used frequently in the hit television drama
+Hawaii Five-O. In the influential 1982 film comedy Fast Times at Ridgemont High, the eccentric teacher Mr. Hand makes use of the greeting. The
+Aloha Spirit is a major concept in Lilo and Stitch, a very popular Disney series of movies and TV shows, set in Hawaiʻi. The drama series Lost,
+shot in Hawaiʻi, has a thank you note at the end of the credits saying "We thank the people of Hawaiʻi and their Aloha Spirit". Aloha is a term
+also used in the Nickelodeon program Rocket Power.</p>
+<ul>
+	<li>Arguably the most famous historical Hawaiian song, "Aloha ʻOe" was written by the last queen of Hawaii, Liliʻuokalani.</li>
+	<li>The term inspired the name of the ALOHA Protocol introduced in the 1970s by the University of Hawaii.</li>
+	<li>In Hawaii someone can be said to have or show aloha in the way they treat others; whether family, friend, neighbor or stranger.</li>
+</ul>
+</div>
+</div>
+</div>
+<script type="text/javascript">
+
+
+(function(window,document) {
+	var
+		$ = window.jQuery,
+		GENTICS = window.GENTICS,
+		$body = $('body');
+	Aloha.settings = {
+			logLevels: {'error': true, 'warn': true, 'info': true, 'debug': true},
+			errorhandling : false,
+			ribbon: false,	
+			"i18n": {
+				// let the system detect the users language
+				//"acceptLanguage": '<?=$_SERVER['HTTP_ACCEPT_LANGUAGE']?>'
+				"acceptLanguage": 'fr,de-de,de;q=0.8,it;q=0.6,en-us;q=0.7,en;q=0.2'
+			},
+			"plugins": {
+				"format": {
+					// all elements with no specific configuration get this configuration
+					config : [ 'b', 'i','sub','sup'],
+						editables : {
+						// no formatting allowed for title
+						'#title'	: [ ],
+						// content is a DIV and has class .article so it gets both buttons
+						'#content'	: [ 'b', 'i', 'p', 'title', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'removeFormat']
+						}
+				},
+				"dragndropfiles": {
+					config : { 'drop' : {'max_file_size': '200000',
+			   										 'upload': {//'uploader_class':GENTICS.Aloha.Uploader, //this is the default
+			   										 			'config': {
+				   										 			'url': '/content/',
+				   										 			'extra_headers':{'Accept':'application/json'},
+				   										 			'additional_params': {"location":""},
+							   										'www_encoded': false }}}}
+				},
+			 	"table": {
+					config: ['table']
+				},
+				"image": {
+   					config : { 'img': { 'max_width': '50px',
+							'max_height': '50px' }},
+				  	editables : {
+						'#title'	: {},
+				  	}
+				}
+		  	}
+		};
+	$body.bind('alohaReady',function(){
+		$('#content').aloha();
+	});
+})(window, document);  
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+#zemanta-head, #zemanta-control {
+	display: none;
+}
+
+#zemanta-suggested-tags {
+	margin: 10px 0 5px 0;
+}
+
+#zemanta-suggested-links {
+	margin: 5px 0 5px 0;
+}
+
+.zemanta-pixie, .zemanta-help {
+	display: none;
+}
+
+.zemanta-related-title {
+	padding: 25px 0 0 0;
+	font-weight: bold;
+}
+
+button.aloha-button-zemanta {
+	background-image: url(../img/zemanta-mini-logo.png) !important;
+}

@@ -423,6 +423,13 @@ Copyright 2012 Twitter, Inc.
 
 
 ----------
+aloha-editor: http://aloha-editor.org
+----------
+
+Copyright (c) Gentics Software GmbH.
+
+
+----------
 bson: https://github.com/mongodb/js-bson
 ----------
 

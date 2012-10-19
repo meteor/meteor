@@ -1,0 +1,54 @@
+.aloha.aloha-ribbon { 
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+}
+.aloha .aloha-ribbon-toolbar { 
+    position: relative;
+	z-index: 90000;
+	display: none;
+	padding: 0.2em 0.4em;
+	border-top: 1px solid #f0f0f0;
+	background: #f0f0f0;
+	box-shadow: 0px 0px 5px rgba(0,0,0,0.1);
+	-moz-border-radius:    0px;
+	-khtml-border-radius:  0px;
+	-webkit-border-radius: 0px;
+	border-radius:         0px;
+	background-image:         linear-gradient(bottom, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.1) 90%);
+	background-image:      -o-linear-gradient(bottom, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.1) 90%);
+	background-image:    -moz-linear-gradient(bottom, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.1) 90%);
+	background-image: -webkit-linear-gradient(bottom, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.1) 90%);
+	background-image:     -ms-linear-gradient(bottom, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.1) 90%);
+}
+.aloha .aloha-ribbon-toolbar .aloha-ui-menubutton-container {
+	margin-left: 4px;
+}
+.aloha .aloha-ribbon-toolbar .aloha-ribbon-in,
+.aloha .aloha-ribbon-toolbar .aloha-ribbon-out {
+	height: 24px;
+	width: 24px;
+	background-color: transparent;
+	background-repeat: no-repeat;
+	background-position: center center;
+	border-color: transparent;
+	border-width: 1px !important;
+}
+.aloha .aloha-ribbon-toolbar .aloha-ribbon-in:hover,
+.aloha .aloha-ribbon-toolbar .aloha-ribbon-out:hover {
+	background-color: #f0f0f0;
+	border-color: #bbb;
+}
+.aloha .aloha-ribbon-toolbar .aloha-ribbon-in {
+	/* Override jquery-ui float:left for menubar buttons */
+	float: right !important;
+	background-image: url('../img/fade-in.png') !important;
+}
+.aloha .aloha-ribbon-toolbar .aloha-ribbon-out {
+	float: left;
+	background-image: url('../img/fade-out.png') !important;
+}
+.aloha .aloha-ribbon-icon {
+	float: left;
+}

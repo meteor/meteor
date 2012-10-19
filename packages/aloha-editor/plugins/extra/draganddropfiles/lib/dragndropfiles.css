@@ -1,0 +1,110 @@
+.GENTICS_drop_file_box {
+	width: 64px;
+	height: 64px;
+	margin:0;
+	padding:0;
+	float:left;
+	border: solid 1px grey;
+	}
+
+.GENTICS_drop_file_icon {
+	position: relative;
+	top: 24px;
+	left:24px;
+	width: 16px;
+	height:16px;
+	margin: 0;
+	padding:0;
+	}
+.GENTICS_drop_file_default {
+	width: 16px;
+	height:16px;
+	margin: 0;
+	padding:0;
+	background-image: url(resources/images/page.png) !important;
+}
+
+.GENTICS_drop_file_details {
+	position: relative;
+	top: 24px;
+	width:60px;
+	height:24px;
+	text-align:center;
+	}
+	
+/* Uploader styles */
+
+div.x-grid3-header-offset {
+	display: none;
+	} 
+div.karacos_uploader_status_icon {
+	position: relative;
+	}
+.x-grid3-td-progress-cell {
+    padding: 0;
+}
+
+.x-grid3-td-progress-cell .x-grid3-cell-inner {
+    padding: 0;
+    position: relative;
+    height: 21px;
+}
+
+.x-grid3-cell-inner {
+	display: bloc;
+    position: relative;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    color:black;
+}
+
+.x-grid3-cell-background {
+    background: #E0E8F3; /*url(../../resources/images/default/qtip/bg.gif) repeat-x scroll 0 -1px;*/
+    white-space: nowrap;
+}
+.x-grid3-td-progress-cell .low {
+    background: #11aa11;
+}
+.x-grid3-td-progress-cell .medium {
+    background: #f1fa1a;
+}
+.x-grid3-td-progress-cell .high {
+    background: #ee1111;
+}
+
+.GENTICS_uploader-progress-cell-foreground {
+    color: #000;
+    background-color: #9CBFEE;
+    white-space: nowrap;
+    overflow: hidden
+}
+
+.GENTICS_uploader-progress-cell-inner-right {
+    text-align: right;
+}
+
+.GENTICS_uploader-progress-cell-inner-center {
+    text-align: center;
+}
+
+.GENTICS_uploader-progress-cell .GENTICS_uploader-progress-cell-inner div {
+    padding: 3px 0 0 4px;
+}
+
+.GENTICS_uploader-progress-cell-inner-right div {
+    padding: 3px 4px 0 0;
+    position: relative;
+}
+
+.GENTICS_uploader-progress-cell-inner-center div {
+    padding: 3px 0 0 0;
+    position: relative;
+}
+
+.GENTICS_uploader-progress-cell-inner-left div {
+    padding: 3px 0 0 4px;
+    position: relative;
+}

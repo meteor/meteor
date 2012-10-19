@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>Aloha, Images!</title>
+
+	<script type="text/javascript" src="../../../../lib/vendor/jquery-1.6.1.js"></script>
+	<script type="text/javascript" src="../vendor/ui/jquery-ui-1.8.10.custom.min.js"></script>
+	<link href="../vendor/ui/ui-lightness/jquery-ui-1.8.10.cropnresize.css" rel="stylesheet" type="text/css" />
+	<link rel="stylesheet" href="../../../../demo/common/index.css"	type="text/css">
+	<link rel="stylesheet" href="test.css"	type="text/css">
+
+</head>
+<body>
+<script type="text/javascript">
+		$(document).ready(function() {
+			
+			$("#myimg").resizable({
+				grid: 10,
+				minHeight: 10,
+				minWidth: 10,
+				maxHeight: 800,
+				maxWidth: 900, 
+				handles: 'ne, se, sw, nw',
+					stop : function (event, ui) {
+						console.log("stop");
+					}
+				
+				});
+			
+		});
+	</script>
+
+<div id="main">
+<div id="content">
+<img id="myimg" src="../demo/cropnresize.jpg" width="200px"	height="135px">
+</div>
+</div>
+</body>
+</html>

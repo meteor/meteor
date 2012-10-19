@@ -1,0 +1,7 @@
+{
+	"js": [
+		"dep/diff_match_patch_uncompressed.js",
+		"dep/undo.js",
+		"src/undo.js"
+	]
+}
