@@ -135,10 +135,11 @@ is the place to stop the observes.
 {{> api_box subscribe}}
 
 When you subscribe to a record set, it tells the server to send records
-to the client.  The client stores these records in local Minimongo
-collections, with the same name as the `collection` argument to `set`.
-Meteor will queue incoming attributes until you declare the
-`Meteor.Collection` on the client with the matching collection name.
+to the client.  The client stores these records in local [Minimongo
+collections](#meteor_collection), with the same name as the `collection`
+argument to `set`.  Meteor will queue incoming attributes until you
+declare the [`Meteor.Collection`](#meteor_collection) on the client with
+the matching collection name.
 
     // okay to subscribe (and possibly receive data) before declaring
     // the client collection that will hold it.  assume "allplayers"
