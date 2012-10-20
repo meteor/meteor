@@ -149,6 +149,8 @@ var toc = [
         {instance: "cursor", name: "observe"}
       ],
       {type: "spacer"},
+      "Meteor.uuid",
+      {type: "spacer"},
       {name: "Selectors", style: "noncode"},
       {name: "Modifiers", style: "noncode"},
       {name: "Sort specifiers", style: "noncode"},

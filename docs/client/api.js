@@ -543,6 +543,14 @@ Template.api.cursor_observe = {
   ]
 };
 
+Template.api.uuid = {
+  id: "meteor_uuid",
+  name: "Meteor.uuid()",
+  locus: "Anywhere",
+  descr: ["Returns a Univerally Unique Identifier."],
+  args: [ ]
+};
+
 Template.api.selectors = {
   id: "selectors",
   name: "Mongo-style Selectors"
