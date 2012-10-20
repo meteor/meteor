@@ -922,6 +922,27 @@ Example:
     // After five seconds, stop keeping the count.
     setTimeout(function () {handle.stop();}, 5000);
 
+{{> api_box uuid}}
+
+This returns a random text string such as
+"b6df7139-df0b-4daa-8c9e-b432a90bc048" that is likely to be unique in
+the whole world. The format of the string complies with the RFC 4122
+v4 format.
+
+{{#note}}
+  Currently Meteor uses this function to generate `_id` fields for new
+  Mongo documents. In the future we will likely switch to native
+  binary Mongo IDs. At that point this function will be deprecated or
+  moved into a separate package.
+{{/note}}
+
+{{#note}}
+  In the current implementation,the returned string is derived from a
+  pseudorandom number generator that is seeded with the current
+  time. The UUIDs generated definitely are not random enough to be
+  used for cryptographic or security purposes.
+{{/note}}
+
 {{#api_box_inline selectors}}
 
 In its simplest form, a selector is just a set of keys that must
