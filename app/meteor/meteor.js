@@ -88,6 +88,10 @@ Commands.push({
       .describe('port', 'Port to listen on. NOTE: Also uses port N+1 and N+2.')
       .boolean('production')
       .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
+      .boolean('debug')
+      .describe('debug', 'Run in debug mode for node-inspector')
+      .boolean('debug_brk')
+      .describe('debug_brk', 'Run in debug mode and break on first line')
       .usage(
 "Usage: meteor run [options]\n" +
 "\n" +
@@ -111,7 +115,8 @@ Commands.push({
     }
 
     var app_dir = path.resolve(require_project("run", true)); // app or package
-    var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true };
+    var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true, 
+        debug: new_argv.debug, debug_brk: new_argv.debug_brk};
     require('./run.js').run(app_dir, bundle_opts, new_argv.port);
   }
 });

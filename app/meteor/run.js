@@ -15,6 +15,7 @@ var _ = require('../lib/third/underscore.js');
 
 ////////// Globals //////////
 
+var debug, debug_brk;
 // list of log objects from the child process.
 var server_log = [];
 
@@ -178,9 +179,23 @@ var start_server = function (bundle_path, outer_port, inner_port, mongo_url,
   env.MONGO_URL = mongo_url;
   env.ROOT_URL = env.ROOT_URL || ('http://localhost:' + outer_port);
 
-  var proc = spawn(process.execPath,
+  //spawn inner server, with debug enabled if requested
+  if (debug_brk){  console.log('Debug break on first line');
+    	var proc = spawn(process.execPath,
+                  ['--debug-brk', path.join(bundle_path, 'main.js'), '--keepalive'],
+                  {env: env});
+		} else {
+  if (debug) {  var proc = spawn(process.execPath,
+                   ['--debug', path.join(bundle_path, 'main.js'), '--keepalive'],
+                   {env: env});
+		}  else {
+                var proc = spawn(process.execPath,
                    [path.join(bundle_path, 'main.js'), '--keepalive'],
                    {env: env});
+
+  } }
+
+
 
   // XXX deal with test server logging differently?!
 
@@ -450,6 +465,8 @@ var start_update_checks = function () {
 // can't continue. If you change this, remember to call
 // watcher.destroy() as appropriate.
 exports.run = function (app_dir, bundle_opts, port) {
+  debug = bundle_opts.debug;
+  debug_brk = bundle_opts.debug_brk;
   var outer_port = port || 3000;
   var inner_port = outer_port + 1;
   var mongo_port = outer_port + 2;
