@@ -445,7 +445,6 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
   ///
   /// Reactive user system
-  /// XXX Can/should this be generalized pattern?
   ///
   userId: function () {
     var self = this;
@@ -456,6 +455,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
   setUserId: function (userId) {
     var self = this;
+    // Avoid invalidating listeners if setUserId is called with current value.
+    if (self._userId === userId)
+      return;
     self._userId = userId;
     if (self._userIdListeners)
       self._userIdListeners.invalidateAll();
