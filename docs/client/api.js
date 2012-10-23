@@ -547,7 +547,7 @@ Template.api.uuid = {
   id: "meteor_uuid",
   name: "Meteor.uuid()",
   locus: "Anywhere",
-  descr: ["Returns a Univerally Unique Identifier."],
+  descr: ["Returns a Universally Unique Identifier."],
   args: [ ]
 };
 
