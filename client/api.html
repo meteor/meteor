@@ -924,10 +924,9 @@ Example:
 
 {{> api_box uuid}}
 
-This returns a random text string such as
-"b6df7139-df0b-4daa-8c9e-b432a90bc048" that is likely to be unique in
-the whole world. The format of the string complies with the RFC 4122
-v4 format.
+This returns a random text string such as `b6df7139-df0b-4daa-8c9e-b432a90bc048`
+that is likely to be unique in the whole world. The format of the string
+complies with the [RFC 4122](http://tools.ietf.org/html/rfc4122) v4 format.
 
 {{#note}}
   Currently Meteor uses this function to generate `_id` fields for new
@@ -937,7 +936,7 @@ v4 format.
 {{/note}}
 
 {{#note}}
-  In the current implementation,the returned string is derived from a
+  In the current implementation, the returned string is derived from a
   pseudorandom number generator that is seeded with the current
   time. The UUIDs generated definitely are not random enough to be
   used for cryptographic or security purposes.
