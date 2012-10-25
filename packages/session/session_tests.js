@@ -78,7 +78,7 @@
 
   Tinytest.add('session - context invalidation for get', function (test) {
     var xGetExecutions = 0;
-    Meteor._autorun(function () {
+    Meteor.autorun(function () {
       ++xGetExecutions;
       Session.get('x');
     });
@@ -99,7 +99,7 @@
 
   Tinytest.add('session - context invalidation for equals', function (test) {
     var xEqualsExecutions = 0;
-    Meteor._autorun(function () {
+    Meteor.autorun(function () {
       ++xEqualsExecutions;
       Session.equals('x', 5);
     });
@@ -132,7 +132,7 @@
     function (test) {
       // Make sure the special casing for equals undefined works.
       var yEqualsExecutions = 0;
-      Meteor._autorun(function () {
+      Meteor.autorun(function () {
         ++yEqualsExecutions;
         Session.equals('y', undefined);
       });

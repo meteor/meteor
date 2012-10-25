@@ -25,7 +25,7 @@
         </div>
       {{/if}}
     {{else}}
-      <div class="loading"></div>
+      <div class="loading">&nbsp;</div>
     {{/if}}
   </div>
 </template>
@@ -38,7 +38,7 @@
   {{/if}}
 
   <div class="login-button" id="login-buttons-logout">
-    Logout
+    Sign out
   </div>
 </template>
 
@@ -125,7 +125,7 @@
   <div class="login-form">
     <div id="forgot-password-email-label-and-input"> {{! XXX we should probably use loginButtonsFormField }}
       <label id="forgot-password-email-label" for="forgot-password-email">Email</label>
-      <input id="forgot-password-email" type="text"/>
+      <input id="forgot-password-email" type="email"/>
     </div>
 
     {{> _loginButtonsMessages}}

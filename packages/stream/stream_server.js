@@ -21,6 +21,13 @@ Meteor._StreamServer = function () {
     // this is the default, but we code it explicitly because we depend
     // on it in stream_client:HEARTBEAT_TIMEOUT
     heartbeat_delay: 25000,
+    // The default disconnect_delay is 5 seconds, but if the server ends up CPU
+    // bound for that much time, SockJS might not notice that the user has
+    // reconnected because the timer (of disconnect_delay ms) can fire before
+    // SockJS processes the new connection. Eventually we'll fix this by not
+    // combining CPU-heavy processing with SockJS termination (eg a proxy which
+    // converts to Unix sockets) but for now, raise the delay.
+    disconnect_delay: 60 * 1000,
     jsessionid: false});
   self.server.installHandlers(__meteor_bootstrap__.app);
 

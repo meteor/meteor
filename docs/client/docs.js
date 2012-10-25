@@ -1,4 +1,4 @@
-METEOR_VERSION = "0.4.2";
+METEOR_VERSION = "0.5.0";
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
@@ -48,18 +48,29 @@ Meteor.startup(function () {
     }
   });
 
+  window.onhashchange = function () {
+    scrollToSection(location.hash);
+  };
+
+  var scrollToSection = function (section) {
+    ignore_waypoints = true;
+    Session.set("section", section.substr(1));
+    scroller().animate({
+      scrollTop: $(section).offset().top
+    }, 500, 'swing', function () {
+      window.location.hash = section;
+      ignore_waypoints = false;
+    });
+  };
+
   $('#main, #nav').delegate("a[href^='#']", 'click', function (evt) {
     evt.preventDefault();
     var sel = $(this).attr('href');
-    ignore_waypoints = true;
-    Session.set("section", sel.substr(1));
-    scroller().animate({
-      scrollTop: $(sel).offset().top
-    }, 500, 'swing', function () {
-      window.location.hash = sel;
-      ignore_waypoints = false;
-    });
+    scrollToSection(sel);
   });
+
+  // Make external links open in a new tab.
+  $('a:not([href^="#"])').attr('target', '_blank');
 });
 
 var toc = [
@@ -70,11 +81,11 @@ var toc = [
   ],
   "Concepts", [
     "Structuring your app",
-    "Data",
+    "Data and security",
     "Reactivity",
     "Live HTML",
     "Templates",
-    "Smart Packages",
+    "Smart packages",
     "Deploying"
   ],
 
@@ -88,6 +99,7 @@ var toc = [
 
     "Publish and subscribe", [
       "Meteor.publish", [
+        {instance: "this", name: "userId", id: "publish_userId"},
         {instance: "this", name: "set", id: "publish_set"},
         {instance: "this", name: "unset", id: "publish_unset"},
         {instance: "this", name: "complete", id: "publish_complete"},
@@ -101,6 +113,8 @@ var toc = [
 
     {name: "Methods", id: "methods_header"}, [
       "Meteor.methods", [
+        {instance: "this", name: "userId", id: "method_userId"},
+        {instance: "this", name: "setUserId", id: "method_setUserId"},
         {instance: "this", name: "isSimulation", id: "method_issimulation"},
         {instance: "this", name: "unblock", id: "method_unblock"}
       ],
@@ -121,7 +135,9 @@ var toc = [
         {instance: "collection", name: "findOne"},
         {instance: "collection", name: "insert"},
         {instance: "collection", name: "update"},
-        {instance: "collection", name: "remove"}
+        {instance: "collection", name: "remove"},
+        {instance: "collection", name: "allow"},
+        {instance: "collection", name: "deny"}
       ],
 
       "Meteor.Collection.Cursor", [
@@ -135,13 +151,49 @@ var toc = [
       {type: "spacer"},
       {name: "Selectors", style: "noncode"},
       {name: "Modifiers", style: "noncode"},
-      {name: "Sort specifiers", style: "noncode"}
+      {name: "Sort specifiers", style: "noncode"},
+      {name: "Field specifiers", style: "noncode"}
     ],
 
     "Session", [
       "Session.set",
       "Session.get",
       "Session.equals"
+    ],
+
+    {name: "Accounts", id: "accounts_api"}, [
+      "Meteor.user",
+      "Meteor.userId",
+      "Meteor.users",
+      "Meteor.userLoaded",
+      "Meteor.logout",
+      "Meteor.loginWithPassword",
+      {name: "Meteor.loginWithFacebook", id: "meteor_loginwithexternalservice"},
+      {name: "Meteor.loginWithGithub", id: "meteor_loginwithexternalservice"},
+      {name: "Meteor.loginWithGoogle", id: "meteor_loginwithexternalservice"},
+      {name: "Meteor.loginWithTwitter", id: "meteor_loginwithexternalservice"},
+      {name: "Meteor.loginWithWeibo", id: "meteor_loginwithexternalservice"},
+      {type: "spacer"},
+
+      "Accounts.config",
+      "Accounts.ui.config",
+      "Accounts.validateNewUser",
+      "Accounts.onCreateUser"
+    ],
+
+    {name: "Passwords", id: "accounts_passwords"}, [
+      "Accounts.createUser",
+      "Accounts.changePassword",
+      "Accounts.forgotPassword",
+      "Accounts.resetPassword",
+      "Accounts.setPassword",
+      "Accounts.verifyEmail",
+      {type: "spacer"},
+
+      "Accounts.sendResetPasswordEmail",
+      "Accounts.sendEnrollmentEmail",
+      "Accounts.sendVerificationEmail",
+      "Accounts.emailTemplates"
     ],
 
     {name: "Templates", id: "templates_api"}, [
@@ -182,6 +234,7 @@ var toc = [
         {instance: "context", name: "invalidate"}
       ],
       {name: "Meteor.deps.Context.current", id: "current"},
+      "Meteor.autorun",
       "Meteor.flush"
     // ],
 
@@ -206,10 +259,12 @@ var toc = [
   ],
 
   "Packages", [ [
+    "accounts-ui",
     "amplify",
     "backbone",
     "bootstrap",
     "coffeescript",
+    "d3",
     "force-ssl",
     "jquery",
     "less",

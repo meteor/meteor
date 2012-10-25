@@ -4,7 +4,7 @@
 
   // events shared between loginButtonsLoggedOutDropdown and
   // loginButtonsLoggedInDropdown
-  Template.loginButtons.events({
+  Template._loginButtons.events({
     'click #login-name-link, click #login-sign-in-link': function () {
       loginButtonsSession.set('dropdownVisible', true);
       Meteor.flush();
@@ -208,7 +208,7 @@
        visible: function () {
          return Accounts.ui._passwordSignupFields() === "USERNAME_ONLY";
        }},
-      {fieldName: 'email', fieldLabel: 'Email',
+      {fieldName: 'email', fieldLabel: 'Email', inputType: 'email',
        visible: function () {
          return Accounts.ui._passwordSignupFields() === "EMAIL_ONLY";
        }},
@@ -225,13 +225,13 @@
            ["USERNAME_AND_EMAIL", "USERNAME_AND_OPTIONAL_EMAIL", "USERNAME_ONLY"],
            Accounts.ui._passwordSignupFields());
        }},
-      {fieldName: 'email', fieldLabel: 'Email',
+      {fieldName: 'email', fieldLabel: 'Email', inputType: 'email',
        visible: function () {
          return _.contains(
            ["USERNAME_AND_EMAIL", "EMAIL_ONLY"],
            Accounts.ui._passwordSignupFields());
        }},
-      {fieldName: 'email', fieldLabel: 'Email (optional)',
+      {fieldName: 'email', fieldLabel: 'Email (optional)', inputType: 'email',
        visible: function () {
          return Accounts.ui._passwordSignupFields() === "USERNAME_AND_OPTIONAL_EMAIL";
        }},
@@ -385,7 +385,7 @@
   var signup = function () {
     loginButtonsSession.resetMessages();
 
-    var options = {}; // to be passed to Meteor.createUser
+    var options = {}; // to be passed to Accounts.createUser
 
     var username = trimmedElementValueById('login-username');
     if (username !== null) {

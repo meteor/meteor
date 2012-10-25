@@ -356,6 +356,11 @@ Copyright (c) 2011:
 Tim Koschützki (tim@debuggable.com)
 Felix Geisendörfer (felix@debuggable.com)
 
+----------
+node-form-data: https://github.com/felixge/node-form-data
+----------
+
+Copyright (c) 2012 Felix Geisendörfer (felix@debuggable.com) and contributors
 
 
 ==============
@@ -622,6 +627,11 @@ npmlog: https://github.com/isaacs/npmlog
 once: https://github.com/isaacs/once
 osenv: https://github.com/isaacs/osenv
 mute-stream: https://github.com/isaacs/mute-stream
+couch-login: https://github.com/isaacs/couch-login
+npmconf: https://github.com/isaacs/npmconf
+read-installed: https://github.com/isaacs/read-installed
+read-package-json: https://github.com/isaacs/read-package-json
+promzard: https://github.com/isaacs/promzard
 ----------
 
 Copyright (c) Isaac Z. Schlueter ("Author")
@@ -752,6 +762,38 @@ OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISE
 OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
+----------
+D3: http://d3js.org/
+----------
+
+Copyright (c) 2012, Michael Bostock
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* The name Michael Bostock may not be used to endorse or promote products
+  derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL MICHAEL BOSTOCK BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 
 =============
 Public Domain
@@ -839,6 +881,36 @@ By Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/)
    TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
 
   0. You just DO WHAT THE FUCK YOU WANT TO.
+
+
+----------
+node-stream-buffer: https://github.com/samcday/node-stream-buffer
+----------
+
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <http://unlicense.org/>
 
 
 ----------
@@ -1702,3 +1774,17 @@ maintained libraries. The externally maintained libraries used by Node are:
     THE SOFTWARE.
   """
 
+
+
+----------
+OpenStreetMap: http://openstreetmap.org/
+  (San Francisco SOMA map in examples/parties/public/soma.jpeg)
+----------
+
+OpenStreetMap is open data, licensed under the Open Data Commons Open Database
+License (ODbL): http://opendatacommons.org/licenses/odbl/1.0/.  Any rights in
+individual contents of the database are licensed under the Database Contents
+License: http://opendatacommons.org/licenses/dbcl/1.0/ The cartography is
+licensed under the under the Creative Commons Attribution-ShareAlike 2.0 license
+(CC-BY-SA). Full information is available at
+http://www.openstreetmap.org/copyright

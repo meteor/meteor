@@ -55,14 +55,14 @@
 
   Meteor.deps._ContextSet = _ContextSet;
 
-  ////////// Meteor._autorun
+  ////////// Meteor.autorun
 
   // Run f(). Record its dependencies. Rerun it whenever the
   // dependencies change.
   //
   // Returns an object with a stop() method. Call stop() to stop the
   // rerunning.  Also passes this object as an argument to f.
-  Meteor._autorun = function (f) {
+  Meteor.autorun = function (f) {
     var ctx;
     var slain = false;
     var handle = {
@@ -105,7 +105,7 @@
           try {
             f();
           } catch (e) {
-            Meteor._debug("Exception from Meteor._atFlush:", e);
+            Meteor._debug("Exception from Meteor._atFlush:", e.stack);
           }
         }
         atFlushContext = null;

@@ -5,8 +5,17 @@
   // for convenience
   var loginButtonsSession = Accounts._loginButtonsSession;
 
+  Handlebars.registerHelper(
+    "loginButtons",
+    function (options) {
+      if (options.hash.align === "right")
+        return new Handlebars.SafeString(Template._loginButtonsRight());
+      else
+        return new Handlebars.SafeString(Template._loginButtonsLeft());
+    });
+
   // shared between dropdown and single mode
-  Template.loginButtons.events({
+  Template._loginButtons.events({
     'click #login-buttons-logout': function() {
       Meteor.logout(function () {
         loginButtonsSession.closeDropdown();
@@ -14,6 +23,9 @@
     }
   });
 
+  Template._loginButtons.preserve({
+    'input[id]': Spark._labelFromIdOrName
+  });
 
   //
   // loginButtonLoggedOut template
@@ -143,4 +155,3 @@
   };
 
 })();
-

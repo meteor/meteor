@@ -17,7 +17,7 @@ if (Meteor.isClient) (function () {
       test.equal(Meteor.user().username, someUsername);
     });
     return function () {
-      Meteor._autorun(function(handle) {
+      Meteor.autorun(function(handle) {
         if (!Meteor.userLoaded()) return;
         handle.stop();
         callWhenLoaded();
@@ -70,7 +70,7 @@ if (Meteor.isClient) (function () {
       // Set up a reactive context that only refreshes when Meteor.user() is
       // invalidated.
       var user;
-      var handle1 = Meteor._autorun(function () {
+      var handle1 = Meteor.autorun(function () {
         user = Meteor.user();
       });
       // At the beginning, we're not logged in.
@@ -86,7 +86,7 @@ if (Meteor.isClient) (function () {
         handle1.stop();
       });
       var waitForLoaded = expect(function () {
-        Meteor._autorun(function(handle2) {
+        Meteor.autorun(function(handle2) {
           if (!Meteor.userLoaded()) return;
           handle2.stop();
           callWhenLoaded();
@@ -199,9 +199,9 @@ if (Meteor.isClient) (function () {
     logoutStep,
     // test Accounts.validateNewUser
     function(test, expect) {
-      Accounts.createUser({username: username3, password: password3},
-                          // should fail the new user validators
-                          {profile: {invalid: true}},
+      Accounts.createUser({username: username3, password: password3,
+                           // should fail the new user validators
+                           profile: {invalid: true}},
                           expect(function (error) {
                             test.equal(error.error, 403);
                             test.equal(
@@ -211,10 +211,10 @@ if (Meteor.isClient) (function () {
     },
     logoutStep,
     function(test, expect) {
-      Accounts.createUser({username: username3, password: password3},
+      Accounts.createUser({username: username3, password: password3,
                            // should fail the new user validator with a special
                            // exception
-                          {profile: {invalidAndThrowException: true}},
+                           profile: {invalidAndThrowException: true}},
                         expect(function (error) {
                           test.equal(
                             error.reason,
@@ -224,14 +224,13 @@ if (Meteor.isClient) (function () {
     // test Accounts.onCreateUser
     function(test, expect) {
       Accounts.createUser(
-        {username: username3, password: password3},
-        {testOnCreateUserHook: true},
+        {username: username3, password: password3,
+         testOnCreateUserHook: true},
         loggedInAs(username3, test, expect));
     },
     function(test, expect) {
       test.equal(Meteor.user().profile.touchedByOnCreateUser, true);
     },
-
     // test Meteor.user(). This test properly belongs in
     // accounts-base/accounts_tests.js, but this is where the tests that
     // actually log in are.
@@ -241,6 +240,14 @@ if (Meteor.isClient) (function () {
         test.equal(result._id, clientUser._id);
         test.equal(result.profile.touchedByOnCreateUser, true);
         test.equal(err, undefined);
+      }));
+    },
+    function(test, expect) {
+      Meteor.call('clearUsernameAndProfile');
+      Meteor.default_connection.onQuiesce(expect(function() {
+        test.isTrue(Meteor.userId());
+        var user = Meteor.user();
+        test.equal(user, {_id: Meteor.userId()});
       }));
     },
     logoutStep,
@@ -275,14 +282,14 @@ if (Meteor.isServer) (function () {
       var email = Meteor.uuid() + '@example.com';
       test.throws(function () {
         // should fail the new user validators
-        Accounts.createUser({email: email}, {profile: {invalid: true}});
+        Accounts.createUser({email: email, profile: {invalid: true}});
         });
 
       // disable sending emails
       var oldEmailSend = Email.send;
       Email.send = function() {};
-      var userId = Accounts.createUser({email: email},
-                                       {testOnCreateUserHook: true});
+      var userId = Accounts.createUser({email: email,
+                                        testOnCreateUserHook: true});
       Email.send = oldEmailSend;
 
       test.isTrue(userId);
@@ -296,7 +303,7 @@ if (Meteor.isServer) (function () {
     function (test) {
       var username = Meteor.uuid();
 
-      var userId = Accounts.createUser({username: username}, {});
+      var userId = Accounts.createUser({username: username});
 
       var user = Meteor.users.findOne(userId);
       // no services yet.

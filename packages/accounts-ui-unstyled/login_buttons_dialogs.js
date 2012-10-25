@@ -151,11 +151,12 @@
   //
 
   Template._configureLoginServiceDialog.events({
-    'click #configure-login-service-dismiss-button': function () {
+    'click .configure-login-service-dismiss-button': function () {
       loginButtonsSession.set('configureLoginServiceDialogVisible', false);
     },
     'click #configure-login-service-dialog-save-configuration': function () {
-      if (loginButtonsSession.get('configureLoginServiceDialogVisible')) {
+      if (loginButtonsSession.get('configureLoginServiceDialogVisible') &&
+          ! loginButtonsSession.get('configureLoginServiceDialogSaveDisabled')) {
         // Prepare the configuration document for this login service
         var serviceName = loginButtonsSession.get('configureLoginServiceDialogServiceName');
         var configuration = {
@@ -176,7 +177,10 @@
         });
       }
     },
-    'input': function (event) {
+    // IE8 doesn't support the 'input' event, so we'll run this on the keyup as
+    // well. (Keeping the 'input' event means that this also fires when you use
+    // the mouse to change the contents of the field, eg 'Cut' menu item.)
+    'input, keyup input': function (event) {
       // if the event fired on one of the configuration input fields,
       // check whether we should enable the 'save configuration' button
       if (event.target.id.indexOf('configure-login-service-dialog') === 0)

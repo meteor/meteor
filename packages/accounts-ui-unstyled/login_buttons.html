@@ -1,4 +1,24 @@
-<template name="loginButtons">
+<!--
+    NOTE: You shouldn't use these templates directly. Instead, use the global
+    {{loginButtons}} template. For positioning on the right side of your app,
+    try {{loginButtons align="right"}}
+  -->
+
+<template name="_loginButtonsRight">
+  {{! put loginButtons in a wrapper element which should be styled to make
+      any dropdowns open with their right edge aligned with the right edge of
+      their container, sticking out to the left. }}
+  <div class="login-buttons-dropdown-align-right">
+    {{> _loginButtons}}
+  </div>
+</template>
+
+<!-- an alias for _loginButtons -->
+<template name="_loginButtonsLeft">
+  {{> _loginButtons}}
+</template>
+
+<template name="_loginButtons">
   <div id="login-buttons">
     {{#if currentUser}}
       {{> _loginButtonsLoggedIn}}
@@ -16,10 +36,10 @@
       {{#if currentUserLoaded}}
         {{displayName}}
       {{else}}
-        <div class="loading"></div>
+        <div class="loading">&nbsp;</div>
       {{/if}}
     </div>
-    <div class="login-button" id="login-buttons-logout">Logout</div>
+    <div class="login-button single-login-button" id="login-buttons-logout">Sign Out</div>
   {{/if}}
 </template>
 

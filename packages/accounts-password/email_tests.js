@@ -17,9 +17,9 @@
     function (test, expect) {
       email1 = Meteor.uuid() + "-intercept@example.com";
       Accounts.createUser({email: email1, password: 'foobar'},
-                        expect(function (error) {
-                          test.equal(error, undefined);
-                        }));
+                          expect(function (error) {
+                            test.equal(error, undefined);
+                          }));
     },
     function (test, expect) {
       Accounts.forgotPassword({email: email1}, expect(function (error) {
@@ -83,7 +83,7 @@
   var waitUntilLoggedIn = function (test, expect) {
     var unblockNextFunction = expect();
     var quiesceCallback = function () {
-      Meteor._autorun(function (handle) {
+      Meteor.autorun(function (handle) {
         if (!Meteor.userLoaded()) return;
         handle.stop();
         unblockNextFunction();
@@ -107,8 +107,8 @@
       test.equal(Meteor.user().emails.length, 1);
       test.equal(Meteor.user().emails[0].address, email2);
       test.isFalse(Meteor.user().emails[0].verified);
-      // We should NOT be publishing verification tokens!
-      test.isFalse(_.has(Meteor.user().emails[0], 'verificationTokens'));
+      // We should NOT be publishing things like verification tokens!
+      test.isFalse(_.has(Meteor.user(), 'services'));
     },
     function (test, expect) {
       getVerifyEmailToken(email2, test, expect);
