@@ -18,7 +18,7 @@
                    }
 
       Accounts._makeClientLoggedIn(result.id, result.token);
-      callback && callback(undefined, {message: 'Success'});
+      callback && callback();
     });
   };
 
