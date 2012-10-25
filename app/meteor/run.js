@@ -178,9 +178,12 @@ var start_server = function (bundle_path, outer_port, inner_port, mongo_url,
   env.MONGO_URL = mongo_url;
   env.ROOT_URL = env.ROOT_URL || ('http://localhost:' + outer_port);
 
-  var proc = spawn(process.execPath,
-                   [path.join(bundle_path, 'main.js'), '--keepalive'],
-                   {env: env});
+  var procArgs = [path.join(bundle_path, 'main.js'), '--keepalive'];
+  if (env.DEBUG){
+    procArgs.unshift("--debug");
+  }
+
+  var proc = spawn(process.execPath, procArgs, {env: env});
 
   // XXX deal with test server logging differently?!
 
