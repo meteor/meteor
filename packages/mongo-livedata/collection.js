@@ -486,6 +486,11 @@ Meteor.Collection.prototype._validatedUpdate = function(
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
+  
+  // make the docs look like what meteor expects if we are using a model
+  docs = _.map(docs, function(doc) {
+    return '_meteorRawData' in doc ? doc._meteorRawData() : doc;
+  });
 
   // Construct new $in selector to augment the original one. This means we'll
   // never update any doc we didn't validate. We keep around the original
@@ -543,6 +548,11 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
+  
+  // make the docs look like what meteor expects if we are using a model
+  docs = _.map(docs, function(doc) {
+    return '_meteorRawData' in doc ? doc._meteorRawData() : doc;
+  });
 
   // construct new $in selector to replace the original one
   var idInClause = {};
