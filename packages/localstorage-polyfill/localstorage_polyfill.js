@@ -33,6 +33,12 @@ if (!window.localStorage) {
           + "support. Logging in from one tab will not cause another "
           + "tab to be logged in.");
 
+      // XXX This doesn't actually work in Firefox with dom.storage.enabled =
+      // false: the assignment to window.localStorage is ignored. If we care at
+      // all about this use case, we should probably define Meteor.localStorage
+      // instead of doing a polyfill. (This causes this package's test to fail
+      // in that situation.)
+
       return {
         _data: {},
 
