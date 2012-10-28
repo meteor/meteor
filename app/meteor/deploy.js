@@ -32,13 +32,17 @@ if (process.env.EMACS == "t") {
 // mongo_cred.  each RPC might require a password, which we
 // interactively prompt for here.
 
-var meteor_rpc = function (rpc_name, method, site, query_params, callback) {
+var meteor_rpc = function (rpc_name, method, site, query_params, proxy, callback) {
   var url = "https://" + DEPLOY_HOSTNAME + '/' + rpc_name + '/' + site;
 
   if (!_.isEmpty(query_params))
     url += '?' + qs.stringify(query_params);
 
-  var r = request({method: method, url: url}, function (error, response, body) {
+  var requestArgs = {method: method, url: url};
+  if (proxy) {
+      requestArgs.proxy = proxy;
+  }
+  var r = request(requestArgs, function (error, response, body) {
     if (error || ((response.statusCode !== 200)
                   && (response.statusCode !== 201)))
       // pass some non-falsy error back to callback
@@ -51,26 +55,28 @@ var meteor_rpc = function (rpc_name, method, site, query_params, callback) {
 };
 
 var deploy_app = function (url, app_dir, opt_debug, opt_tests,
-                           opt_set_password) {
+                           opt_set_password, proxy) {
   var parsed_url = parse_url(url);
 
   // a bit contorted here to make sure we ask for the password before
   // launching the slow bundle process.
 
-  with_password(parsed_url.hostname, function (password) {
-    if (opt_set_password)
+  with_password(parsed_url.hostname, proxy, function (password) {
+    if (opt_set_password) {
       get_new_password(function (set_password) {
         bundle_and_deploy(parsed_url.hostname, app_dir, opt_debug, opt_tests,
-                          password, set_password);
+                          password, set_password, proxy);
       });
-    else
+    }
+    else {
       bundle_and_deploy(parsed_url.hostname, app_dir, opt_debug, opt_tests,
-                        password);
+                        password, null, proxy);
+    }
   });
 };
 
 var bundle_and_deploy = function (site, app_dir, opt_debug, opt_tests,
-                                  password, set_password) {
+                                  password, set_password, proxy) {
   var build_dir = path.join(app_dir, '.meteor/local/build_tar');
   var bundle_path = path.join(build_dir, 'bundle');
   var bundle_opts = { skip_dev_bundle: true, no_minify: !!opt_debug,
@@ -97,9 +103,9 @@ var bundle_and_deploy = function (site, app_dir, opt_debug, opt_tests,
   var tar = child_process.spawn(
     'tar', ['czf', '-', 'bundle'], {cwd: build_dir});
 
-  var rpc = meteor_rpc('deploy', 'POST', site, opts, function (err, body) {
+  var rpc = meteor_rpc('deploy', 'POST', site, opts, proxy, function (err, body) {
     if (err) {
-      process.stderr.write("\nError deploying application: " + body + "\n");
+      process.stderr.write("\nError deploying application: " + body || err + "\n");
       process.exit(1);
     }
 
@@ -129,16 +135,16 @@ var bundle_and_deploy = function (site, app_dir, opt_debug, opt_tests,
   tar.stdout.pipe(rpc);
 };
 
-var delete_app = function (url) {
+var delete_app = function (url, proxy) {
   var parsed_url = parse_url(url);
 
-  with_password(parsed_url.hostname, function (password) {
+  with_password(parsed_url.hostname, proxy, function (password) {
     var opts = {};
     if (password) opts.password = password;
 
-    meteor_rpc('deploy', 'DELETE', parsed_url.hostname, opts, function (err, body) {
+    meteor_rpc('deploy', 'DELETE', parsed_url.hostname, opts, proxy, function (err, body) {
       if (err) {
-        process.stderr.write("Error deleting application: " + body + "\n");
+        process.stderr.write("Error deleting application: " + body || err + "\n");
         process.exit(1);
       }
 
@@ -149,16 +155,16 @@ var delete_app = function (url) {
 
 // either print the mongo credential (just_credential is true) or open
 // a mongo shell.
-var mongo = function (url, just_credential) {
+var mongo = function (url, just_credential, proxy) {
   var parsed_url = parse_url(url);
 
   with_password(parsed_url.hostname, function (password) {
     var opts = {};
     if (password) opts.password = password;
 
-    meteor_rpc('mongo', 'GET', parsed_url.hostname, opts, function (err, body) {
+    meteor_rpc('mongo', 'GET', parsed_url.hostname, opts, proxy, function (err, body) {
       if (err) {
-        process.stderr.write(body + "\n");
+        process.stderr.write(body || err + "\n");
         process.exit(1);
       }
 
@@ -176,16 +182,16 @@ var mongo = function (url, just_credential) {
   });
 };
 
-var logs = function (url) {
+var logs = function (url, proxy) {
   var parsed_url = parse_url(url);
 
-  with_password(parsed_url.hostname, function (password) {
+  with_password(parsed_url.hostname, proxy, function (password) {
     var opts = {};
     if (password) opts.password = password;
 
-    meteor_rpc('logs', 'GET', parsed_url.hostname, opts, function (err, body) {
+    meteor_rpc('logs', 'GET', parsed_url.hostname, opts, proxy, function (err, body) {
       if (err) {
-        process.stderr.write(body + '\n');
+        process.stderr.write(body || err + '\n');
         process.exit(1);
       }
 
@@ -305,10 +311,13 @@ var read_password = function (callback) {
 // takes an site name and callback function(password). This is always
 // called exactly once. Calls callback with the entered password, or
 // undefined if no password is required.
-var with_password = function (site, callback) {
+var with_password = function (site, proxy, callback) {
   var check_url = "https://" + DEPLOY_HOSTNAME + "/has_password/" + site;
-
-  request(check_url, function (error, response, body) {
+  var requestArgs = {url: check_url};
+  if (proxy) {
+      requestArgs.proxy = proxy;
+  }
+  request(requestArgs, function (error, response, body) {
     if (error || response.statusCode !== 200) {
       callback();
 

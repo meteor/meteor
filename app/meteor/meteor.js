@@ -499,6 +499,10 @@ Commands.push({
       .boolean('delete')
       .boolean('D')
       .describe('delete', "permanently delete this deployment")
+      .alias('proxy', 'X')
+      .string('proxy')
+      .string('X')
+      .describe('proxy', 'use a proxy server')
       .boolean('debug')
       .describe('debug', 'deploy in debug mode (don\'t minify, etc)')
       .boolean('tests')
@@ -506,7 +510,7 @@ Commands.push({
       .usage(
         // XXX document --tests in the future, once we publicly
         // support tests
-"Usage: meteor deploy <site> [--password] [--delete] [--debug]\n" +
+"Usage: meteor deploy <site> [--password] [--delete] [--debug] [--proxy=<server address>]\n" +
 "\n" +
 "Deploys the project in your current directory to Meteor's servers.\n" +
 "\n" +
@@ -521,7 +525,10 @@ Commands.push({
 "\n" +
 "The --password flag sets an administrative password for the domain.  Once\n" +
 "set, any subsequent 'deploy', 'logs', or 'mongo' command will prompt for\n" +
-"the password.  You can change the password with a second 'deploy' command."
+"the password.  You can change the password with a second 'deploy' command." +
+"\n" +
+"The --proxy argument allows specifying a proxy server to use for application \n" +
+"deployment or deletion."
       );
 
     new_argv = opt.argv;
@@ -532,12 +539,12 @@ Commands.push({
     }
 
     if (new_argv.delete) {
-      deploy.delete_app(new_argv._[1]);
+      deploy.delete_app(new_argv._[1], new_argv.proxy);
     } else {
       // accept packages iff we're deploying tests
       var project_dir = path.resolve(require_project("bundle", new_argv.tests));
       deploy.deploy_app(new_argv._[1], project_dir, new_argv.debug,
-                        new_argv.tests, new_argv.password);
+                        new_argv.tests, new_argv.password, new_argv.proxy);
     }
   }
 });
@@ -546,15 +553,22 @@ Commands.push({
   name: "logs",
   help: "Show logs for specified site",
   func: function (argv) {
-    if (argv.help || argv._.length < 1 || argv._.length > 2) {
-      process.stdout.write(
-"Usage: meteor logs <site>\n" +
+    var opt = require('optimist')
+      .alias('proxy', 'X')
+      .string('proxy')
+      .string('X')
+      .describe('proxy', 'use a proxy server')
+      .usage(
+"Usage: meteor logs <site> [--proxy=<server address>]\n" +
 "\n" +
 "Retrieves the server logs for the requested site.\n");
+      
+    if (argv.help || opt.argv._.length != 2) {
+      process.stdout.write(opt.help());
       process.exit(1);
     }
-
-    deploy.logs(argv._[0]);
+    
+    deploy.logs(argv._[0], opt.argv.proxy);      
   }
 });
 
