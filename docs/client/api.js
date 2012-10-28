@@ -65,7 +65,7 @@ Template.api.publish = {
      descr: "Name of the attribute set.  If `null`, the set has no name, and the record set is automatically sent to all connected clients."},
     {name: "func",
      type: "Function",
-     descr: "Function called on the server each time a client subscribes.  Inside function, `this` is the publish handler object, described below.  If the client passed arguments to `subscribe`, the function is called with the same arguments."}
+     descr: "Function called on the server each time a client subscribes.  Inside the function, `this` is the publish handler object, described below.  If the client passed arguments to `subscribe`, the function is called with the same arguments."}
   ]
 };
 
@@ -149,7 +149,7 @@ Template.api.subscription_userId = {
   id: "publish_userId",
   name: "<i>this</i>.userId",
   locus: "Server",
-  descr: ["The id of logged-in user, or `null` if no user is logged in."]
+  descr: ["The id of the logged-in user, or `null` if no user is logged in."]
 };
 
 
@@ -236,7 +236,7 @@ Template.api.error = {
   args: [
     {name: "error",
      type: "Number",
-     descr: "A numeric error code, likely similar to a HTTP code (eg, 404, 500)."},
+     descr: "A numeric error code, likely similar to an HTTP code (eg, 404, 500)."},
     {name: "reason",
      type: "String",
      descr: "Optional.  A short human-readable summary of the error, like 'Not Found'."},
@@ -598,7 +598,7 @@ Template.api.onInvalidate = {
   args: [
     {name: "callback",
      type: "Function",
-     descr: "Function to be called on invalidation. Receives one argument, the context that was invalidated"}
+     descr: "Function to be called on invalidation. Receives one argument, the context that was invalidated."}
   ]
 };
 
@@ -632,7 +632,7 @@ Template.api.flush = {
   id: "meteor_flush",
   name: "Meteor.flush()",
   locus: "Client",
-  descr: ["Ensure that any reactive updates have finished. Allow auto-updating DOM element to be cleaned up if they are offscreen."]
+  descr: ["Ensure that any reactive updates have finished. Allow auto-updating DOM elements to be cleaned up if they are offscreen."]
 };
 
 
@@ -1290,7 +1290,7 @@ Template.api.http_del = {
   id: "meteor_http_del",
   name: "Meteor.http.del(url, [options], [asyncCallback])",
   locus: "Anywhere",
-  descr: ["Send an HTTP DELETE request.  Equivalent to `Meteor.http.call(\"DELETE\", ...)`.  (Named `del` to avoid conflict with JavaScript's `delete`."]
+  descr: ["Send an HTTP DELETE request.  Equivalent to `Meteor.http.call(\"DELETE\", ...)`.  (Named `del` to avoid conflict with JavaScript's `delete`.)"]
 };
 
 
