@@ -4,13 +4,14 @@
   var querystring = __meteor_bootstrap__.require('querystring');
   var urlParser = __meteor_bootstrap__.require('url');
   var app = __meteor_bootstrap__.app;
+  var agents = ['facebookexternalhit']; // list of bot-agents to serve (possibly make this list configurable by user)
 
   // how long to let phantomjs run before we kill it
   var REQUEST_TIMEOUT = 15*1000;
 
   app.use(function (req, res, next) {
-    if (/\?.*_escaped_fragment_=/.test(req.url) || req.headers['user-agent'].indexOf('facebookexternalhit') !== -1) {
-      // reassemblying url without escaped fragment if exists
+    if (/\?.*_escaped_fragment_=/.test(req.url) || agents.indexOf(req.headers['user-agent']) !== -1) {
+      // reassembling url without escaped fragment if exists
       var parsedUrl = urlParser.parse(req.url);
       var parsedQuery = querystring.parse(parsedUrl.query);
       delete parsedQuery['_escaped_fragment_'];
