@@ -465,7 +465,7 @@ Template.api.allow = {
      descr: "Functions that look at a proposed modification to the database and return true if it should be allowed."},
     {name: "fetch",
      type: "Array of String",
-     descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions."}
+     descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `insert`, `update` and `remove` functions."}
   ]
 };
 
@@ -480,7 +480,7 @@ Template.api.deny = {
      descr: "Functions that look at a proposed modification to the database and return true if it should be denied, even if an `allow` rule says otherwise."},
     {name: "fetch",
      type: "Array of Strings",
-     descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions."}
+     descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `insert`, `update` and `remove` functions."}
   ]
 };
 
