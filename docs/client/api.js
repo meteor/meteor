@@ -73,7 +73,7 @@ Template.api.subscription_set = {
   id: "publish_set",
   name: "<i>this</i>.set(collection, id, attributes)",
   locus: "Server",
-  descr: ["Call inside publish function.  Queues a command to set attributes."],
+  descr: ["Call inside the publish function.  Queues a command to set attributes."],
   args: [
     {name: "collection",
      type: "String",
@@ -94,7 +94,7 @@ Template.api.subscription_unset = {
   id: "publish_unset",
   name: "<i>this</i>.unset(collection, id, keys)",
   locus: "Server",
-  descr: ["Call inside publish function.  Queues a command to unset attributes."],
+  descr: ["Call inside the publish function.  Queues a command to unset attributes."],
   args: [
     {name: "collection",
      type: "String",
@@ -115,28 +115,28 @@ Template.api.subscription_complete = {
   id: "publish_complete",
   name: "<i>this</i>.complete()",
   locus: "Server",
-  descr: ["Call inside publish function.  Queues a command to mark this subscription as complete (initial attributes are set)."]
+  descr: ["Call inside the publish function.  Queues a command to mark this subscription as complete (initial attributes are set)."]
 };
 
 Template.api.subscription_flush = {
   id: "publish_flush",
   name: "<i>this</i>.flush()",
   locus: "Server",
-  descr: ["Call inside publish function.  Sends all the pending set, unset, and complete messages to the client."]
+  descr: ["Call inside the publish function.  Sends all the pending set, unset, and complete messages to the client."]
 };
 
 Template.api.subscription_stop = {
   id: "publish_stop",
   name: "<i>this</i>.stop()",
   locus: "Server",
-  descr: ["Call inside publish function.  Stops this client's subscription."]
+  descr: ["Call inside the publish function.  Stops this client's subscription."]
 };
 
 Template.api.subscription_onStop = {
   id: "publish_onstop",
   name: "<i>this</i>.onStop(func)",
   locus: "Server",
-  descr: ["Call inside publish function.  Registers a callback function to run when the subscription is stopped."],
+  descr: ["Call inside the publish function.  Registers a callback function to run when the subscription is stopped."],
   args: [
     {name: "func",
      type: "Function",
@@ -149,7 +149,7 @@ Template.api.subscription_userId = {
   id: "publish_userId",
   name: "<i>this</i>.userId",
   locus: "Server",
-  descr: ["The id of the logged-in user, or `null` if no user is logged in."]
+  descr: ["Property of the publish handler object. The id of the logged-in user, or `null` if no user is logged in."]
 };
 
 
@@ -218,14 +218,14 @@ Template.api.method_invocation_unblock = {
   id: "method_unblock",
   name: "<i>this</i>.unblock()",
   locus: "Server",
-  descr: ["Call inside method invocation.  Allow subsequent method from this client to begin running in a new fiber."]
+  descr: ["Call inside a method invocation.  Allow subsequent method from this client to begin running in a new fiber."]
 };
 
 Template.api.method_invocation_isSimulation = {
   id: "method_issimulation",
   name: "<i>this</i>.isSimulation",
   locus: "Anywhere",
-  descr: ["Access inside method invocation.  Boolean value, true if this invocation is a stub."]
+  descr: ["Access inside a method invocation.  Boolean value, true if this invocation is a stub."]
 };
 
 Template.api.error = {
@@ -1065,7 +1065,7 @@ Template.api.accounts_emailTemplates = {
 
 Template.api.setTimeout = {
   id: "meteor_settimeout",
-  name: "Meteor.setTimeout",
+  name: "Meteor.setTimeout(func, delay)",
   locus: "Anywhere",
   descr: ["Call a function in the future after waiting for a specified delay."],
   args: [
@@ -1084,7 +1084,7 @@ Template.api.setTimeout = {
 
 Template.api.setInterval = {
   id: "meteor_setinterval",
-  name: "Meteor.setInterval",
+  name: "Meteor.setInterval(func, delay)",
   locus: "Anywhere",
   descr: ["Call a function repeatedly, with a time delay between calls."],
   args: [
@@ -1103,28 +1103,28 @@ Template.api.setInterval = {
 
 Template.api.clearTimeout = {
   id: "meteor_cleartimeout",
-  name: "Meteor.clearTimeout",
+  name: "Meteor.clearTimeout(id)",
   locus: "Anywhere",
   descr: ["Cancel a function call scheduled by `Meteor.setTimeout`."],
   args: [
     {
       name: "id",
       type: "Number",
-      descr: "The handle returned from setTimeout"
+      descr: "The handle returned by `Meteor.setTimeout`"
     }
   ]
 };
 
 Template.api.clearInterval = {
   id: "meteor_clearinterval",
-  name: "Meteor.clearInterval",
+  name: "Meteor.clearInterval(id)",
   locus: "Anywhere",
   descr: ["Cancel a repeating function call scheduled by `Meteor.setInterval`."],
   args: [
     {
       name: "id",
       type: "Number",
-      descr: "The handle returned from setInterval"
+      descr: "The handle returned by `Meteor.setInterval`"
     }
   ]
 };
