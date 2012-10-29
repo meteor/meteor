@@ -90,6 +90,11 @@ Example:
         // don't care about moved or changed
       });
 
+      // Observe only returns after the initial added callbacks have
+      // run.  Now mark the subscription as ready.
+      self.complete();
+      self.flush();
+
       // remove data and turn off observe when client unsubs
       self.onStop(function () {
         handle.stop();
