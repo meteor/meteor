@@ -1,39 +1,63 @@
-Meteor.startup(function () {
-  Meteor._ServerTestResults.remove();
-  // Index is definitely not unique and doesn't need to be sparse.
-  Meteor._ServerTestResults._ensureIndex('run_id');
-});
+(function () {
+  var handlesForRun = {};
+  var reportsForRun = {};
 
-Meteor.publish('tinytest/results', function (run_id) {
-  return Meteor._ServerTestResults.find({run_id: run_id},
-                                        {key: {collection: 'tinytest_results',
-                                               run_id: run_id}});
-});
+  Meteor.publish(Meteor._ServerTestResultsSubscription, function (runId) {
+    var self = this;
+    if (!_.has(handlesForRun, runId))
+      handlesForRun[runId] = [self];
+    else
+      handlesForRun[runId].push(self);
+    self.onStop(function () {
+      handlesForRun[runId] = _.without(handlesForRun[runId], self);
+    });
+    if (_.has(reportsForRun, runId)) {
+      self.set(Meteor._ServerTestResultsCollection, runId,
+               reportsForRun[runId]);
+    }
+    self.complete();
+    self.flush();
+  });
 
-Meteor.methods({
-  'tinytest/run': function (run_id) {
-    this.unblock();
+  Meteor.methods({
+    'tinytest/run': function (runId) {
+      this.unblock();
 
-    // XXX using private API === lame
-    var Future = __meteor_bootstrap__.require('fibers/future');
-    var future = new Future;
+      // XXX using private API === lame
+      var Future = __meteor_bootstrap__.require('fibers/future');
+      var future = new Future;
 
-    var onReport = function (report) {
-      if (! Fiber.current) {
-        Meteor._debug("Trying to report a test not in a fiber! "+
-                      "You probably forgot to wrap a callback in bindEnvironment.");
-        console.trace();
-      }
-      Meteor._ServerTestResults.insert({run_id: run_id, report: report});
-      Meteor.refresh({collection: 'tinytest_results', run_id: run_id});
-    };
+      reportsForRun[runId] = {};
 
-    var onComplete = function() {
-      future.ret();
-    };
+      var onReport = function (report) {
+        if (! Fiber.current) {
+          Meteor._debug("Trying to report a test not in a fiber! "+
+                        "You probably forgot to wrap a callback in bindEnvironment.");
+          console.trace();
+        }
+        var dummyKey = Meteor.uuid();
+        var setObject = {};
+        setObject[dummyKey] = report;
+        _.each(handlesForRun[runId], function (handle) {
+          handle.set(Meteor._ServerTestResultsCollection, runId, setObject);
+          handle.flush();
+        });
+        // Save for future subscriptions.
+        reportsForRun[runId][dummyKey] = report;
+      };
 
-    Meteor._runTests(onReport, onComplete);
+      var onComplete = function() {
+        _.each(handlesForRun[runId], function (handle) {
+          handle.stop();
+        });
+        delete handlesForRun[runId];
+        delete reportsForRun[runId];
+        future.ret();
+      };
 
-    future.wait();
-  }
-});
+      Meteor._runTests(onReport, onComplete);
+
+      future.wait();
+    }
+  });
+}());
