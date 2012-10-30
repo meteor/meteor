@@ -6,22 +6,21 @@ var semver = require('semver');
 
 var optimist = require('optimist');
 
-var updater = require('../app/lib/updater.js');
-var _ = require('../app/lib/third/underscore.js');
-
+var updater = require(path.join(__dirname, '..', 'app', 'lib', 'updater.js'));
+var _ = require(path.join(__dirname, '..', 'app', 'lib', 'third', 'underscore.js'));
 
 // What files to update. Relative to project root.
-var UPDATE_FILES = ['app/lib/updater.js',
-                    'app/meteor/post-upgrade.js',
-                    'admin/install-s3.sh',
-                    'admin/debian/changelog',
-                    'admin/meteor.spec',
-                    'docs/client/docs.js',
-                    'docs/client/docs.html',
-                    ['admin/manifest.json', 'g']];
+var UPDATE_FILES = [path.join('app', 'lib', 'updater.js'),
+                    path.join('app', 'meteor', 'post-upgrade.js'),
+                    path.join('admin', 'install-s3.sh'),
+                    path.join('admin', 'debian', 'changelog'),
+                    path.join('admin', 'meteor.spec'),
+                    path.join('docs', 'client', 'docs.js'),
+                    path.join('docs', 'client', 'docs.html'),
+                    [path.join('admin', 'manifest.json'), 'g']];
 
 // Files to update for dev_bundle
-var BUNDLE_FILES = ['admin/generate-dev-bundle.sh', 'meteor'];
+var BUNDLE_FILES = [path.join('admin', 'generate-dev-bundle.sh'), 'meteor'];
 
 
 var opt = require('optimist')
