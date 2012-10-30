@@ -77,7 +77,7 @@ var bundle_and_deploy = function (site, app_dir, opt_debug, opt_tests,
                       include_tests: opt_tests };
 
   process.stdout.write('Deploying to ' + site + '.  Bundling ... ');
-  var bundler = require(__dirname, '..', 'lib', 'bundler.js');
+  var bundler = require(path.join(__dirname, '..', 'lib', 'bundler.js'));
   var errors = bundler.bundle(app_dir, bundle_path, bundle_opts);
   if (errors) {
     process.stdout.write("\n\nErrors prevented deploying:\n");
