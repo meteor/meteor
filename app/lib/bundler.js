@@ -24,14 +24,14 @@
 // various environment variables (such as PORT and MONGO_URL). The enclosed node
 // application is expected to do the rest, including serving /static.
 
-var files = require('./files.js');
-var packages = require('./packages.js');
-var crypto = require('crypto');
 var path = require('path');
+var files = require(path.join(__dirname, 'files.js'));
+var packages = require(path.join(__dirname, 'packages.js'));
+var crypto = require('crypto');
 var fs = require('fs');
 var uglify = require('uglify-js');
 var cleanCSS = require('clean-css');
-var _ = require('./third/underscore.js');
+var _ = require(path.join(__dirname, 'third', 'underscore.js'));
 
 // files to ignore when bundling. node has no globs, so use regexps
 var ignore_files = [
@@ -405,7 +405,7 @@ _.extend(Bundle.prototype, {
     var hash = crypto.createHash('sha1');
     hash.update(final_code);
     var digest = hash.digest('hex');
-    var name = '/' + digest + ".js";
+    var name = path.sep + digest + ".js";
 
     self.files.client_cacheable[name] = new Buffer(final_code);
     self.js.client = [name];
@@ -424,7 +424,7 @@ _.extend(Bundle.prototype, {
     hash = crypto.createHash('sha1');
     hash.update(final_css);
     digest = hash.digest('hex');
-    name = '/' + digest + ".css";
+    name = path.sep + digest + ".css";
 
     self.files.client_cacheable[name] = new Buffer(final_css);
     self.css = [name];
@@ -468,7 +468,7 @@ _.extend(Bundle.prototype, {
     var is_app = files.is_app_dir(project_dir);
 
     if (is_app)
-      dependencies_json.app.push('.meteor/packages');
+      dependencies_json.app.push(path.join('.meteor', 'packages'));
 
     // --- Set up build area ---
 
@@ -483,18 +483,18 @@ _.extend(Bundle.prototype, {
 
     // --- Core runner code ---
 
-    files.cp_r(path.join(__dirname, '../server'),
+    files.cp_r(path.join(__dirname, '..', 'server'),
                path.join(build_path, 'server'), {ignore: ignore_files});
     dependencies_json.core.push('server');
 
     // --- Third party dependencies ---
 
     if (dev_bundle_mode === "symlink")
-      fs.symlinkSync(path.join(files.get_dev_bundle(), 'lib/node_modules'),
-                     path.join(build_path, 'server/node_modules'));
+      fs.symlinkSync(path.join(files.get_dev_bundle(), 'lib', 'node_modules'),
+                     path.join(build_path, 'server', 'node_modules'));
     else if (dev_bundle_mode === "copy")
-      files.cp_r(path.join(files.get_dev_bundle(), 'lib/node_modules'),
-                 path.join(build_path, 'server/node_modules'),
+      files.cp_r(path.join(files.get_dev_bundle(), 'lib', 'node_modules'),
+                 path.join(build_path, 'server', 'node_modules'),
                  {ignore: ignore_files});
     else
       /* dev_bundle_mode === "skip" */;
@@ -559,16 +559,16 @@ _.extend(Bundle.prototype, {
 
     fs.writeFileSync(path.join(build_path, 'app.html'),
                      self._generate_app_html());
-    dependencies_json.core.push('lib/app.html.in');
+    dependencies_json.core.push(path.join('lib', 'app.html.in'));
 
     fs.writeFileSync(path.join(build_path, 'unsupported.html'),
                      fs.readFileSync(path.join(__dirname, "unsupported.html")));
-    dependencies_json.core.push('lib/unsupported.html');
+    dependencies_json.core.push(path.join('lib', 'unsupported.html'));
 
     // --- Documentation, and running from the command line ---
 
     fs.writeFileSync(path.join(build_path, 'main.js'),
-"require(require('path').join(__dirname, 'server/server.js'));\n");
+"require(require('path').join(__dirname, 'server', 'server.js'));\n");
 
     fs.writeFileSync(path.join(build_path, 'README'),
 "This is a Meteor application bundle. It has only one dependency,\n" +

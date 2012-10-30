@@ -1,6 +1,6 @@
 var fs = require("fs");
 var path = require('path');
-var _ = require('./third/underscore.js');
+var _ = require(path.join(__dirname, 'third', 'underscore.js'));
 
 var files = module.exports = {
   // A sort comparator to order files into load order.
@@ -13,15 +13,15 @@ var files = module.exports = {
     }
 
     // /lib/ loaded first
-    var islib_a = (a.indexOf('/lib/') !== -1);
-    var islib_b = (b.indexOf('/lib/') !== -1);
+    var islib_a = (a.indexOf(path.sep + 'lib' + path.sep) !== -1);
+    var islib_b = (b.indexOf(path.sep + 'lib' + path.sep) !== -1);
     if (islib_a !== islib_b) {
       return (islib_a ? -1 : 1);
     }
 
     // deeper paths loaded first.
-    var len_a = a.split('/').length;
-    var len_b = b.split('/').length;
+    var len_a = a.split(path.sep).length;
+    var len_b = b.split(path.sep).length;
     if (len_a !== len_b) {
       return (len_a < len_b ? 1 : -1);
     }
@@ -98,7 +98,7 @@ var files = module.exports = {
   // given a path, returns true if it is a meteor application (has a
   // .meteor directory with a 'packages' file). false otherwise.
   is_app_dir: function (filepath) {
-    return fs.existsSync(path.join(filepath, '.meteor/packages'));
+    return fs.existsSync(path.join(filepath, '.meteor', 'packages'));
   },
 
   // given a path, returns true if it is a meteor package (is a
@@ -116,7 +116,7 @@ var files = module.exports = {
     // is better than confusing the hell out of someone who names their
     // project 'packages'
     return path.basename(filepath) === 'packages' &&
-      fs.existsSync(path.join(filepath, 'meteor/package.js'));
+      fs.existsSync(path.join(filepath, 'meteor', 'package.js'));
   },
 
   // given a predicate function and a starting path, traverse upwards
@@ -175,7 +175,7 @@ var files = module.exports = {
   // an installation.)
   in_checkout: function () {
     try {
-      if (fs.existsSync(path.join(__dirname, "../../.git")))
+      if (fs.existsSync(path.join(__dirname, '..', '..', '.git')))
         return true;
     } catch (e) { console.log(e);}
 
@@ -186,10 +186,10 @@ var files = module.exports = {
   // install, or (checkout root)/dev_bundle in a checkout..)
   get_dev_bundle: function () {
     if (files.in_checkout()) {
-      return path.join(__dirname, '../../dev_bundle');
+      return path.join(__dirname, '..', '..', 'dev_bundle');
     }
     else
-      return path.join(__dirname, '../..');
+      return path.join(__dirname, '..', '..');
   },
   
   // returns a list of places where packages can be found.
@@ -197,7 +197,7 @@ var files = module.exports = {
   // 2. default is packages/ in the meteor directory
   // XXX: 3. a per project directory? (vendor/packages in rails parlance?)
   get_package_dirs: function() {
-    var package_dirs = [path.join(__dirname, '../../packages')];
+    var package_dirs = [path.join(__dirname, '..', '..', 'packages')];
     if (process.env.PACKAGE_DIRS)
       package_dirs = process.env.PACKAGE_DIRS.split(':').concat(package_dirs);
     
@@ -222,7 +222,7 @@ var files = module.exports = {
   // Return the directory that contains the core tool (the top-level
   // 'app' directory)
   get_core_dir: function () {
-    return path.join(__dirname, '../../app');
+    return path.join(__dirname, '..', '..', 'app');
   },
 
   // Try to find the prettiest way to present a path to the
@@ -262,7 +262,7 @@ var files = module.exports = {
   // a directory and we couldn't make it one.
   mkdir_p: function (dir, mode) {
     var p = path.resolve(dir);
-    var ps = path.normalize(p).split('/');
+    var ps = path.normalize(p).split(path.sep);
 
     if (fs.existsSync(p)) {
       if (fs.statSync(p).isDirectory()) { return true;}
@@ -270,7 +270,7 @@ var files = module.exports = {
     }
 
     // doesn't exist. recurse to build parent.
-    var success = files.mkdir_p(ps.slice(0,-1).join('/'), mode);
+    var success = files.mkdir_p(ps.slice(0,-1).join(path.sep), mode);
     // parent is not a directory.
     if (!success) { return false; }
 
@@ -328,7 +328,7 @@ var files = module.exports = {
     // find /tmp
     var tmp_dir = _.first(_.map(['TMPDIR', 'TMP', 'TEMP'], function (t) {
       return process.env[t];
-    }).filter(_.identity)) || '/tmp';
+    }).filter(_.identity)) || path.sep + 'tmp';
     tmp_dir = fs.realpathSync(tmp_dir);
 
     // make the directory. give it 3 tries in case of collisions from

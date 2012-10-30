@@ -42,7 +42,7 @@ Package.register_extension(
 
     // XXX super lame! we actually have to give paths relative to
     // app/inner/app.js, since that's who's evaling us.
-    var html_scanner = require('../../packages/templating/html_scanner.js');
+    var html_scanner = require(path.join('..', '..', 'packages', 'templating', 'html_scanner.js'));
     var results = html_scanner.scan(contents.toString('utf8'), source_path);
 
     if (results.head)
@@ -63,8 +63,8 @@ Package.register_extension(
       var path_part = path.dirname(serve_path);
       if (path_part === '.')
         path_part = '';
-      if (path_part.length && path_part !== '/')
-        path_part = path_part + "/";
+      if (path_part.length && path_part !== path.sep)
+        path_part = path_part + path.sep;
       var ext = path.extname(source_path);
       var basename = path.basename(serve_path, ext);
       serve_path = path_part + "template." + basename + ".js";
@@ -89,7 +89,7 @@ Package.on_test(function (api) {
     'templating_tests.html'
   ], 'client');
   api.add_files([
-    '../handlebars/parse.js', // XXX hacky
+    path.join('..', 'handlebars', 'parse.js'), // XXX hacky
     'html_scanner.js',
     'scanner_tests.js'
   ], 'server');

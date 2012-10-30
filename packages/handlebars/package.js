@@ -3,11 +3,13 @@
 // internal package that should get shipped down to the client iff you
 // have a precompiled handlebars template in your project.
 
+var path = require('path');
+
 Package.describe({
   summary: "Simple semantic templating language"
 });
 
-require('../../packages/handlebars/parse.js'); // XXX lame!!
+require(path.join('..', '..', 'packages', 'handlebars', 'parse.js')); // XXX lame!!
 
 Package.on_use(function (api) {
   // XXX should only be sent if we have handlebars templates in the app..
