@@ -1,6 +1,6 @@
 if (Meteor.isServer) {
   // XXX namespacing
-  var Future = __meteor_bootstrap__.require('fibers/future');
+  var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
 }
 
 // list of subscription tokens outstanding during a

@@ -14,7 +14,7 @@ var useragent = require('useragent');
 
 // this is a copy of underscore that will be shipped just for use by
 // this file, server.js.
-var _ = require('./underscore.js');
+var _ = require(path.join(__dirname, 'underscore.js'));
 
 // Keepalives so that when the outer server dies unceremoniously and
 // doesn't kill us, we quit ourselves. A little gross, but better than
@@ -118,7 +118,7 @@ var run = function () {
 
     app.use(function (req, res) {
       // prevent favicon.ico and robots.txt from returning app_html
-      if (_.indexOf(['/favicon.ico', '/robots.txt'], req.url) !== -1) {
+      if (_.indexOf([path.sep + 'favicon.ico', path.sep + 'robots.txt'], req.url) !== -1) {
         res.writeHead(404);
         res.end();
         return;
