@@ -247,6 +247,38 @@ LocalCollection._f = {
     // 127: maxkey
     if (ta === 13) // javascript code
       throw Error("Sorting not supported on Javascript code"); // XXX
+  },
+  /**Compare 2 arrays of [lon,lat] to see if they have a max distance of 25 km**/
+  _near : function(x,b){
+    var unit = 6371; //km
+    var maxdistance = (this.maxDistance)? this.maxDistance : 25;
+    if(x.length < 2 || b.length<2)
+        throw Error("You need 2 values");
+    var lon1 = x[0];
+    var lat1 = x[1];
+    var lon2 = b[0];
+    var lat2 = b[1];
+    /** Possible for shorter runtime need to check **/
+    var i = Math.abs(parseInt(lat2-lat1));
+    if(i != 1 && i* 69.172 > maxdistance)
+        return false;
+    /** Main **/
+    var dLat = (lat2-lat1)*Math.PI/180;
+    var dLon = (lon2-lon1)*Math.PI/180;
+    lat1 = lat1*Math.PI/180;
+    lat2 = lat2*Math.PI/180;
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2); 
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+    var distance = unit * c;
+    this.maxDistance = undefined;
+    if(distance <= maxdistance)
+        return true;
+  },
+  /**Set the maximum distance for $near query**/
+  _setMaxDistance : function(a){
+    this.maxDistance = a;
+    return true;	
   }
 };
 
@@ -452,9 +484,14 @@ LocalCollection._exprForOperatorTest = function (op, literals) {
     return LocalCollection._exprForOperatorTest({$regex: op}, literals);
   } else {
     var clauses = [];
-    for (var type in op)
-      clauses.push(LocalCollection._exprForConstraint(type, op[type],
+    for (var type in op){
+      if(type=='$maxDistance'){
+        clauses.unshift('f._setMaxDistance('+ JSON.stringify(op[type]) + ')');
+      }else{
+        clauses.push(LocalCollection._exprForConstraint(type, op[type],
                                                       op, literals));
+      }
+    }
     if (clauses.length === 0)
       return 'true';
     return '(' + clauses.join('&&') + ')';
@@ -543,6 +580,8 @@ LocalCollection._exprForConstraint = function (type, arg, others,
     // we should follow mongo's behavior?
     expr = '!' + LocalCollection._exprForOperatorTest(arg, literals);
     search = null;
+  } else if( type === '$near'){
+    expr = 'f._near(x,' + JSON.stringify(arg) + ')';
   } else {
     throw Error("Unrecognized key in selector: " + type);
   }

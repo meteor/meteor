@@ -559,6 +559,10 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({"a.b": {$in: [{x: 1}, {x: 2}, {x: 3}]}}, {a: {b: [{x: 2}]}});
   match({"a.b": {$in: [1, 2, 3]}}, {a: {b: [4, 2]}});
   nomatch({"a.b": {$in: [1, 2, 3]}}, {a: {b: [4]}});
+  
+  match({"a.b": {$near: [4.104123115539551,51.190102913249426]}},{a: {b: [[4.0970976,51.1935336]]}});
+  match({"a.b": {$near: [-74.0059731,40.7143528],$maxDistance:1000000000000}},{a: {b: [[4.0970976,51.1935336]]}}); 
+  nomatch({"a.b": {$near: [-74.0059731,40.7143528]}}, {a: {b: [[4.0970976,51.1935336]]}});
 
   // XXX still needs tests:
   // - $or, $and, $nor, $where
