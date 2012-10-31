@@ -629,12 +629,12 @@ _.extend(Meteor._LivedataSubscription.prototype, {
     var self = this;
     var collection = name || cursor.collection_name;
 
-    var observe_handle = cursor.observe({
+    var observe_handle = cursor._observeUnordered({
       added: function (obj) {
         self.set(collection, obj._id, obj);
         self.flush();
       },
-      changed: function (obj, old_idx, old_obj) {
+      changed: function (obj, old_obj) {
         var set = {};
         _.each(obj, function (v, k) {
           if (!_.isEqual(v, old_obj[k]))
@@ -645,7 +645,7 @@ _.extend(Meteor._LivedataSubscription.prototype, {
         self.unset(collection, obj._id, dead_keys);
         self.flush();
       },
-      removed: function (old_obj, old_idx) {
+      removed: function (old_obj) {
         self.unset(collection, old_obj._id, _.keys(old_obj));
         self.flush();
       }

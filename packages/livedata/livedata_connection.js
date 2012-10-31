@@ -176,7 +176,7 @@ Meteor._LivedataConnection = function (url, options) {
   // we never terminate the observe(), since there is no way to
   // destroy a LivedataConnection.. but this shouldn't matter, since we're
   // the only one that holds a reference to the self.subs collection
-  self.subs_token = self.subs.find({}).observe({
+  self.subs_token = self.subs.find({})._observeUnordered({
     added: function (sub) {
       self.stream.send(JSON.stringify({
         msg: 'sub', id: sub._id, name: sub.name, params: sub.args}));

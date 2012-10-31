@@ -13,7 +13,9 @@ LocalCollection = function () {
   this.next_qid = 1; // live query id generator
 
   // qid -> live query object. keys:
-  //  results: array of current results
+  //  ordered: bool. ordered queries have moved callbacks and callbacks
+  //           take indices.
+  //  results: array (ordered) or object (unordered) of current results
   //  results_snapshot: snapshot of results. null if not paused.
   //  cursor: Cursor object for the query.
   //  selector_f, sort_f, (callbacks): functions
@@ -71,6 +73,8 @@ LocalCollection.Cursor = function (collection, selector, options) {
     this.limit = options.limit;
   }
 
+  // db_objects is a list of the objects that match the cursor. (It's always a
+  // list, never an object: LocalCollection.Cursor is always ordered.)
   this.db_objects = null;
   this.cursor_pos = 0;
 
@@ -101,10 +105,11 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
   var doc;
 
   if (self.db_objects === null)
-    self.db_objects = self._getRawObjects();
+    self.db_objects = self._getRawObjects(true);
 
   if (self.reactive)
-    self._markAsReactive({added: true,
+    self._markAsReactive({ordered: true,
+                          added: true,
                           removed: true,
                           changed: true,
                           moved: true});
@@ -135,10 +140,10 @@ LocalCollection.Cursor.prototype.count = function () {
   var self = this;
 
   if (self.reactive)
-    self._markAsReactive({added: true, removed: true});
+    self._markAsReactive({ordered: false, added: true, removed: true});
 
   if (self.db_objects === null)
-    self.db_objects = self._getRawObjects();
+    self.db_objects = self._getRawObjects(true);
 
   return self.db_objects.length;
 };
@@ -147,11 +152,15 @@ LocalCollection.Cursor.prototype.count = function () {
 LocalCollection.LiveResultsSet = function () {};
 
 // options to contain:
-//  * callbacks:
+//  * callbacks for observe():
 //    - added (object, before_index)
 //    - changed (new_object, at_index, old_object)
 //    - moved (object, old_index, new_index) - can only fire with changed()
 //    - removed (object, at_index)
+//  * callbacks for _observeUnordered():
+//    - added (object)
+//    - changed (new_object)
+//    - removed (object)
 //
 // attributes available on returned query handle:
 //  * stop(): end updates
@@ -165,70 +174,108 @@ LocalCollection.LiveResultsSet = function () {};
 // XXX maybe support field limiting (to limit what you're notified on)
 // XXX maybe support limit/skip
 
-LocalCollection.Cursor.prototype.observe = function (options) {
-  var self = this;
+_.extend(LocalCollection.Cursor.prototype, {
+  observe: function (options) {
+    var self = this;
+    return self._observeInternal(true, options);
+  },
+  _observeUnordered: function (options) {
+    var self = this;
+    return self._observeInternal(false, options);
+  },
+  _observeInternal: function (ordered, options) {
+    var self = this;
 
-  if (self.skip || self.limit)
-    throw new Error("cannot observe queries with skip or limit");
+    if (self.skip || self.limit)
+      throw new Error("cannot observe queries with skip or limit");
 
-  var qid = self.collection.next_qid++;
+    var qid = self.collection.next_qid++;
 
-  // XXX merge this object w/ "this" Cursor.  they're the same.
-  var query = self.collection.queries[qid] = {
-    selector_f: self.selector_f, // not fast pathed
-    sort_f: self.sort_f,
-    results: [],
-    results_snapshot: self.collection.paused ? [] : null,
-    cursor: this
-  };
-  query.results = self._getRawObjects();
-
-  // wrap callbacks we were passed. callbacks only fire when not paused
-  // and are never undefined.
-  var if_not_paused = function (f) {
-    if (!f)
-      return function () {};
-    return function (/*args*/) {
-      if (!self.collection.paused)
-        f.apply(this, arguments);
+    // XXX merge this object w/ "this" Cursor.  they're the same.
+    var query = self.collection.queries[qid] = {
+      selector_f: self.selector_f, // not fast pathed
+      sort_f: ordered && self.sort_f,
+      results_snapshot: null,
+      ordered: ordered,
+      cursor: this
     };
-  };
-  query.added = if_not_paused(options.added);
-  query.changed = if_not_paused(options.changed);
-  query.moved = if_not_paused(options.moved);
-  query.removed = if_not_paused(options.removed);
+    query.results = self._getRawObjects(ordered);
+    if (self.collection.paused)
+      query.results_snapshot = (ordered ? [] : {});
 
-  if (!options._suppress_initial && !self.collection.paused)
-    for (var i = 0; i < query.results.length; i++)
-      query.added(LocalCollection._deepcopy(query.results[i]), i);
+    // wrap callbacks we were passed. callbacks only fire when not paused and
+    // are never undefined (except that query.moved is undefined for unordered
+    // callbacks).
+    var if_not_paused = function (f) {
+      if (!f)
+        return function () {};
+      return function (/*args*/) {
+        if (!self.collection.paused)
+          f.apply(this, arguments);
+      };
+    };
+    query.added = if_not_paused(options.added);
+    query.changed = if_not_paused(options.changed);
+    query.removed = if_not_paused(options.removed);
+    if (ordered)
+      query.moved = if_not_paused(options.moved);
 
-  var handle = new LocalCollection.LiveResultsSet;
-  _.extend(handle, {
-    collection: self.collection,
-    stop: function () {
-      delete self.collection.queries[qid];
+    if (!options._suppress_initial && !self.collection.paused) {
+      _.each(query.results, function (doc, i) {
+        query.added(LocalCollection._deepcopy(doc),
+                    ordered ? i : undefined);
+      });
     }
-  });
-  return handle;
-};
 
-// constructs sorted array of matching objects, but doesn't copy them.
-// respects sort, skip, and limit properties of the query.
-// if sort_f is falsey, no sort -- you get the natural order
-LocalCollection.Cursor.prototype._getRawObjects = function () {
+    var handle = new LocalCollection.LiveResultsSet;
+    _.extend(handle, {
+      collection: self.collection,
+      stop: function () {
+        delete self.collection.queries[qid];
+      }
+    });
+    return handle;
+  }
+});
+
+// Returns a collection of matching objects, but doesn't deep copy them.
+//
+// If ordered is set, returns a sorted array, respecting sort_f, skip, and limit
+// properties of the query.  if sort_f is falsey, no sort -- you get the natural
+// order.
+//
+// If ordered is not set, returns an object mapping from ID to doc (sort_f, skip
+// and limit should not be set).
+LocalCollection.Cursor.prototype._getRawObjects = function (ordered) {
   var self = this;
+
+  var results = ordered ? [] : {};
 
   // fast path for single ID value
-  if (self.selector_id && (self.selector_id in self.collection.docs))
-    return [self.collection.docs[self.selector_id]];
+  if (self.selector_id) {
+    if (_.has(self.collection.docs, self.selector_id)) {
+      var selectedDoc = self.collection.docs[self.selector_id];
+      if (ordered)
+        results.push(selectedDoc);
+      else
+        results[self.selector_id] = selectedDoc;
+    }
+    return results;
+  }
 
   // slow path for arbitrary selector, sort, skip, limit
-  var results = [];
   for (var id in self.collection.docs) {
     var doc = self.collection.docs[id];
-    if (self.selector_f(doc))
-      results.push(doc);
+    if (self.selector_f(doc)) {
+      if (ordered)
+        results.push(doc);
+      else
+        results[id] = doc;
+    }
   }
+
+  if (!ordered)
+    return results;
 
   if (self.sort_f)
     results.sort(self.sort_f);
@@ -238,6 +285,8 @@ LocalCollection.Cursor.prototype._getRawObjects = function () {
   return results.slice(idx_start, idx_end);
 };
 
+// XXX Maybe we need a version of observe that just calls a callback if
+// anything changed.
 LocalCollection.Cursor.prototype._markAsReactive = function (options) {
   var self = this;
 
@@ -245,12 +294,19 @@ LocalCollection.Cursor.prototype._markAsReactive = function (options) {
 
   if (context) {
     var invalidate = _.bind(context.invalidate, context);
-
-    var handle = self.observe({added: options.added && invalidate,
-                               removed: options.removed && invalidate,
-                               changed: options.changed && invalidate,
-                               moved: options.moved && invalidate,
-                               _suppress_initial: true});
+    var handle;
+    if (options.ordered) {
+      handle = self.observe({added: options.added && invalidate,
+                             removed: options.removed && invalidate,
+                             changed: options.changed && invalidate,
+                             moved: options.moved && invalidate,
+                             _suppress_initial: true});
+    } else {
+      handle = self._observeUnordered({added: options.added && invalidate,
+                                       removed: options.removed && invalidate,
+                                       changed: options.changed && invalidate,
+                                       _suppress_initial: true});
+    }
 
     // XXX in many cases, the query will be immediately
     // recreated. so we might want to let it linger for a little
@@ -351,15 +407,21 @@ LocalCollection.prototype._modifyAndNotify = function (doc, mod) {
   var self = this;
 
   var matched_before = {};
-  for (var qid in self.queries)
-    matched_before[qid] = self.queries[qid].selector_f(doc);
+  for (var qid in self.queries) {
+    var query = self.queries[qid];
+    if (query.ordered) {
+      matched_before[qid] = query.selector_f(doc);
+    } else {
+      matched_before[qid] = _.has(query.results, doc._id);
+    }
+  }
 
   var old_doc = LocalCollection._deepcopy(doc);
 
   LocalCollection._modify(doc, mod);
 
-  for (var qid in self.queries) {
-    var query = self.queries[qid];
+  for (qid in self.queries) {
+    query = self.queries[qid];
     var before = matched_before[qid];
     var after = query.selector_f(doc);
     if (before && !after)
@@ -396,23 +458,44 @@ LocalCollection._deepcopy = function (v) {
 // need to come up with a better datastructure for this.
 
 LocalCollection._insertInResults = function (query, doc) {
-  if (!query.sort_f) {
-    query.added(LocalCollection._deepcopy(doc), query.results.length);
-    query.results.push(doc);
+  if (query.ordered) {
+    if (!query.sort_f) {
+      query.added(LocalCollection._deepcopy(doc), query.results.length);
+      query.results.push(doc);
+    } else {
+      var i = LocalCollection._insertInSortedList(
+        query.sort_f, query.results, doc);
+      query.added(LocalCollection._deepcopy(doc), i);
+    }
   } else {
-    var i = LocalCollection._insertInSortedList(query.sort_f, query.results, doc);
-    query.added(LocalCollection._deepcopy(doc), i);
+    query.added(LocalCollection._deepcopy(doc));
+    query.results[doc._id] = doc;
   }
 };
 
 LocalCollection._removeFromResults = function (query, doc) {
-  var i = LocalCollection._findInResults(query, doc);
-  query.removed(doc, i);
-  query.results.splice(i, 1);
+  if (query.ordered) {
+    var i = LocalCollection._findInOrderedResults(query, doc);
+    query.removed(doc, i);
+    query.results.splice(i, 1);
+  } else {
+    var id = doc._id;  // in case callback mutates doc
+    query.removed(doc);
+    delete query.results[id];
+  }
 };
 
 LocalCollection._updateInResults = function (query, doc, old_doc) {
-  var orig_idx = LocalCollection._findInResults(query, doc);
+  if (doc._id !== old_doc._id)
+    throw new Error("Can't change a doc's _id while updating");
+
+  if (!query.ordered) {
+    query.changed(LocalCollection._deepcopy(doc), old_doc);
+    query.results[doc._id] = doc;
+    return;
+  }
+
+  var orig_idx = LocalCollection._findInOrderedResults(query, doc);
   query.changed(LocalCollection._deepcopy(doc), orig_idx, old_doc);
 
   if (!query.sort_f)
@@ -421,13 +504,15 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
   // just take it out and put it back in again, and see if the index
   // changes
   query.results.splice(orig_idx, 1);
-  var new_idx = LocalCollection._insertInSortedList(query.sort_f,
-                                               query.results, doc);
+  var new_idx = LocalCollection._insertInSortedList(
+    query.sort_f, query.results, doc);
   if (orig_idx !== new_idx)
     query.moved(LocalCollection._deepcopy(doc), orig_idx, new_idx);
 };
 
-LocalCollection._findInResults = function (query, doc) {
+LocalCollection._findInOrderedResults = function (query, doc) {
+  if (!query.ordered)
+    throw new Error("Can't call _findInOrderedResults on unordered query");
   for (var i = 0; i < query.results.length; i++)
     if (query.results[i] === doc)
       return i;
@@ -479,12 +564,14 @@ LocalCollection.prototype.restore = function () {
   for (var qid in this.queries) {
     var query = this.queries[qid];
 
-    var old_results = query.results;
+    var oldResults = query.results;
 
-    query.results = query.cursor._getRawObjects();
+    query.results = query.cursor._getRawObjects(query.ordered);
 
-    if (!this.paused)
-      LocalCollection._diffQuery(old_results, query.results, query, true);
+    if (!this.paused) {
+      LocalCollection._diffQuery(
+        query.ordered, oldResults, query.results, query, true);
+    }
   }
 };
 
@@ -524,9 +611,9 @@ LocalCollection.prototype.resumeObservers = function () {
     var query = this.queries[qid];
     // Diff the current results against the snapshot and send to observers.
     // pass the query object for its observer callbacks.
-    LocalCollection._diffQuery(query.results_snapshot, query.results, query, true);
+    LocalCollection._diffQuery(
+      query.ordered, query.results_snapshot, query.results, query, true);
     query.results_snapshot = null;
   }
-
 };
 
