@@ -276,6 +276,7 @@ LocalCollection._f = {
     var distance = unit * c;
     this.maxDistance = undefined;
     if(distance <= maxdistance)
+    	x.distance = distance;
         return true;
   },
   /**Set the maximum distance for $near query**/
