@@ -91,13 +91,25 @@
 #login-buttons {
 
   .display-inline-block();
+  margin-right: 0.01px; // Fixes display on IE8: http://www.compsoft.co.uk/Blog/2009/11/inline-block-not-quite-inline-blocking.html
 
   // This seems to keep the height of the line from
   // being sensitive to the presence of the unicode down arrow,
   // which otherwise bumps the baseline down by 1px.
   line-height: 1;
 
-  .login-header {
+  .login-button {
+    position: relative; // so that we can position the image absolutely within the button
+  }
+
+  .login-buttons-with-only-one-button {
+    display: inline-block;
+    .login-button { display: inline-block; }
+    .login-text-and-button {
+      display: inline-block;
+    }
+  }
+  .login-display-name {
     display: inline-block;
     padding-right: 2px;
     line-height: 1.5;
@@ -110,8 +122,6 @@
     background-position: center center;
     background-repeat: no-repeat;
   }
-
-  .single-login-button { display: inline-block; }
 }
 
 #login-buttons .login-button, .accounts-dialog .login-button {
@@ -168,13 +178,12 @@
 }
 
 .accounts-dialog .login-button {
-  display: block;
   width: auto;
   margin-bottom: 4px;
 }
 
 #login-buttons {
-  .login-header { margin-right: 4px; }
+  .login-display-name { margin-right: 4px; }
   .configure-button {
 
     .vertical-gradient(#f53, darken(#f53, 15%));
@@ -184,10 +193,16 @@
   }
 
   .login-image {
-    float: left;
-    margin: 2px 5px 2px 0px;
+    display: inline-block;
+    position: absolute;
+    left: 6px;
+    top: 6px;
     width: 16px;
     height: 16px;
+  }
+
+  .text-besides-image {
+    margin-left: 18px;
   }
 
   .no-services { color: red; }
@@ -217,7 +232,7 @@
     text-decoration: underline;
 }
 
-.login-buttons-dropdown-align-right #login-buttons .login-close-text {
+#login-buttons.login-buttons-dropdown-align-right .login-close-text {
     float: right;
 }
 
@@ -311,11 +326,7 @@
   left: -@meteor-accounts-dialog-border-width;
 }
 
-.login-buttons-dropdown-align-right {
-  display: inline-block;
-}
-
-.login-buttons-dropdown-align-right #login-dropdown-list {
+#login-buttons.login-buttons-dropdown-align-right #login-dropdown-list {
   left: auto;
   right: -@meteor-accounts-dialog-border-width;
 }

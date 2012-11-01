@@ -64,12 +64,6 @@ if (Meteor.isClient) {
     return classes.join(' ');
   };
 
-  Template.page.outerClass = function () {
-    var settings = Session.get('settings');
-    var classes = [];
-    return classes.join(' ');
-  };
-
   var keyValueFromId = function (id) {
     var match;
     if (id && (match = /^(.*?):(.*)$/.exec(id))) {

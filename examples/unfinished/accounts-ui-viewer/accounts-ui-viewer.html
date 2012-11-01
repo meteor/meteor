@@ -108,7 +108,7 @@
   </div>
   {{#with settings}}
   <div id="previewpane" class="{{settingsClass}}" style="background:{{bgcolor}}">
-    <div id="preview-wrapper" class="{{outerClass}}">
+    <div id="preview-wrapper">
       {{#if match "positioning:inline"}}
         Here is a place to sign in, yay!
       {{/if}}
@@ -118,6 +118,11 @@
       {{/if}}
     </div>
     <div id="pos-indicator"></div>
+    {{#unless match "positioning:absolute"}}
+      <div style="clear:both">
+        A line that shouldn't move when logging in and logging out
+      </div>
+    {{/unless}}
   </div>
   {{/with}}
 </template>
