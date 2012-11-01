@@ -79,6 +79,7 @@ _.extend(Meteor._LivedataSession.prototype, {
   // may have led us to believe otherwise.
   detach: function (socket) {
     var self = this;
+    if (Meteor.hooks && Meteor.hooks.detach) Meteor.hooks.detach.call(socket);
     if (socket === self.socket) {
       self.socket = null;
       self.last_detach_time = +(new Date);
