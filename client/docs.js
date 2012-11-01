@@ -177,6 +177,10 @@ var toc = [
       {name: "Meteor.loginWithWeibo", id: "meteor_loginwithexternalservice"},
       {type: "spacer"},
 
+      {name: "{{currentUser}}", id: "meteor_currentuser"},
+      {name: "{{currentUserLoaded}}", id: "meteor_currentuserloaded"},
+      {type: "spacer"},
+
       "Accounts.config",
       "Accounts.ui.config",
       "Accounts.validateNewUser",
