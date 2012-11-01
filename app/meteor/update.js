@@ -7,10 +7,10 @@ var url = require("url");
 
 var ProgressBar = require('progress');
 
-var updater = require("../lib/updater.js");
-var files = require("../lib/files.js");
+var updater = require(path.join(__dirname, "..", "lib", "updater.js"));
+var files = require(path.join(__dirname, "..", "lib", "files.js"));
 
-var _ = require('../lib/third/underscore.js');
+var _ = require(path.join(__dirname, '..', 'lib', 'third', 'underscore.js'));
 
 // refuse to update if we're in a git checkout.
 if (files.in_checkout()) {
@@ -171,7 +171,7 @@ updater.get_manifest(function (manifest) {
       "-" + arch + "-" + manifest.version + ".tar.gz";
 
     download_callback = function (tar_path) {
-      var base_dir = path.join(__dirname, "../../");
+      var base_dir = path.join(__dirname, "..", "..");
       var tmp_dir = path.join(base_dir, "tmp");
       // XXX error check!
       try { fs.mkdirSync(tmp_dir, 0755); } catch (err) { }
@@ -196,7 +196,7 @@ updater.get_manifest(function (manifest) {
           files.rm_recursive(old_base_dir); // rm -rf !!
 
         fs.renameSync(base_dir, old_base_dir);
-        fs.renameSync(old_base_dir + "/tmp/meteor", base_dir);
+        fs.renameSync(path.join(old_base_dir, "tmp", "meteor"), base_dir);
 
         // success!
         run_post_upgrade();

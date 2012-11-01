@@ -48,15 +48,18 @@ Email = {};
   var devModeSend = function (mc) {
     var devmode_mail_id = Email._next_devmode_mail_id++;
 
+    // Make sure we use whatever stream was set at the time of the Email.send
+    // call even in the 'end' callback, in case there are multiple concurrent
+    // test runs.
+    var stream = Email._output_stream;
+    
     // This approach does not prevent other writers to stdout from interleaving.
-    Email._output_stream.write("====== BEGIN MAIL #" + devmode_mail_id +
-                               " ======\n");
+    stream.write("====== BEGIN MAIL #" + devmode_mail_id + " ======\n");
     mc.streamMessage();
-    mc.pipe(Email._output_stream, {end: false});
+    mc.pipe(stream, {end: false});
     var future = new Future;
     mc.on('end', function () {
-      Email._output_stream.write("====== END MAIL #" + devmode_mail_id +
-                                 " ======\n");
+      stream.write("====== END MAIL #" + devmode_mail_id + " ======\n");
       future.ret();
     });
     future.wait();

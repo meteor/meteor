@@ -6,7 +6,7 @@ var https = require("https");
 var path = require("path");
 var semver = require("semver");
 
-var files = require("./files.js");
+var files = require(path.join(__dirname, 'files.js'));
 
 var manifest_options = {
 /* uncomment for testing

@@ -1,7 +1,7 @@
-var files = require('../lib/files.js');
 var path = require('path');
-var _ = require('../lib/third/underscore.js');
-var deploy = require('./deploy');
+var files = require(path.join(__dirname, '..', 'lib', 'files.js'));
+var _ = require(path.join(__dirname, '..', 'lib', 'third', 'underscore.js'));
+var deploy = require(path.join(__dirname, 'deploy'));
 var fs = require("fs");
 
 var usage = function() {
@@ -59,7 +59,7 @@ cmd + ": You're not in a Meteor project directory.\n" +
 
 var find_mongo_port = function (cmd, callback) {
   var app_dir = require_project(cmd);
-  var mongo_runner = require('../lib/mongo_runner.js');
+  var mongo_runner = require(path.join(__dirname, '..', 'lib', 'mongo_runner.js'));
   mongo_runner.find_mongo_port(app_dir, callback);
 };
 
@@ -112,7 +112,7 @@ Commands.push({
 
     var app_dir = path.resolve(require_project("run", true)); // app or package
     var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true };
-    require('./run.js').run(app_dir, bundle_opts, new_argv.port);
+    require(path.join(__dirname, 'run.js')).run(app_dir, bundle_opts, new_argv.port);
   }
 });
 
@@ -150,7 +150,7 @@ Commands.push({
     var new_argv = opt.argv;
     var appname;
 
-    var example_dir = path.join(__dirname, '../../examples');
+    var example_dir = path.join(__dirname, '..', '..', 'examples');
     var examples = _.reject(fs.readdirSync(example_dir), function (e) {
       return (e === 'unfinished' || e === 'other');
     });
@@ -242,7 +242,7 @@ Commands.push({
       process.exit(1);
     }
 
-    require('./update.js');
+    require(path.join(__dirname, 'update.js'));
   }
 });
 
@@ -261,8 +261,8 @@ Commands.push({
     }
 
     var app_dir = require_project('add');
-    var packages = require('../lib/packages.js');
-    var project = require('../lib/project.js');
+    var packages = require(path.join(__dirname, '..', 'lib', 'packages.js'));
+    var project = require(path.join(__dirname, '..', 'lib', 'project.js'));
     var all = packages.list();
     var using = {};
     _.each(project.get_packages(app_dir), function (name) {
@@ -298,8 +298,8 @@ Commands.push({
     }
 
     var app_dir = require_project('remove');
-    var packages = require('../lib/packages.js');
-    var project = require('../lib/project.js');
+    var packages = require(path.join(__dirname, '..', 'lib', 'packages.js'));
+    var project = require(path.join(__dirname, '..', 'lib', 'project.js'));
     var using = {};
     _.each(project.get_packages(app_dir), function (name) {
       using[name] = true;
@@ -333,7 +333,7 @@ Commands.push({
 
     if (argv.using) {
       var app_dir = require_project('list --using');
-      var using = require('../lib/project.js').get_packages(app_dir);
+      var using = require(path.join(__dirname, '..', 'lib', 'project.js')).get_packages(app_dir);
 
       if (using.length) {
         _.each(using, function (name) {
@@ -350,7 +350,7 @@ Commands.push({
       return;
     }
 
-    var list = require('../lib/packages.js').list();
+    var list = require(path.join(__dirname, '..', 'lib', 'packages.js')).list();
     var names = _.keys(list);
     names.sort();
     var pkgs = [];
@@ -358,7 +358,7 @@ Commands.push({
       pkgs.push(list[name]);
     });
     process.stdout.write("\n" +
-                         require('../lib/packages.js').format_list(pkgs) +
+                         require(path.join(__dirname, '..', 'lib', 'packages.js')).format_list(pkgs) +
                          "\n");
   }
 });
@@ -388,11 +388,11 @@ Commands.push({
     // machines, but worth it for humans)
 
     var app_dir = path.resolve(require_project("bundle"));
-    var build_dir = path.join(app_dir, '.meteor/local/build_tar');
+    var build_dir = path.join(app_dir, '.meteor', 'local', 'build_tar');
     var bundle_path = path.join(build_dir, 'bundle');
     var output_path = path.resolve(argv._[0]); // get absolute path
 
-    var bundler = require('../lib/bundler.js');
+    var bundler = require(path.join(__dirname, '..', 'lib', 'bundler.js'));
     var errors = bundler.bundle(app_dir, bundle_path);
     if (errors) {
       process.stdout.write("Errors prevented bundling:\n");
@@ -583,7 +583,7 @@ Commands.push({
         process.exit(1);
       }
 
-      var local_dir = path.join(app_dir, '.meteor/local');
+      var local_dir = path.join(app_dir, '.meteor', 'local');
       files.rm_recursive(local_dir);
 
       process.stdout.write("Project reset.\n");
@@ -608,7 +608,7 @@ var main = function() {
   }
 
   if (argv.version) {
-    var updater = require('../lib/updater.js');
+    var updater = require(path.join(__dirname, '..', 'lib', 'updater.js'));
     var sha = updater.git_sha();
 
     process.stdout.write("Meteor version " + updater.CURRENT_VERSION);
