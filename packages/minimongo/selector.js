@@ -252,10 +252,13 @@ LocalCollection._f = {
   _near : function(x,b){
     var unit = 6371; //km
     var maxdistance = (this.maxDistance)? this.maxDistance : 25;
-    if(x.length < 2 || b.length<2)
-        throw Error("You need 2 values");
-    var lon1 = x[0];
-    var lat1 = x[1];
+    if(!x){
+    	return false;
+    }
+    if(!((x.lon && x.lat) || (x.x && x.y))|| b.length<2)
+        return false;
+    var lon1 = x.lon?x.lon:x.x;
+    var lat1 = x.lat?x.lat:x.y;
     var lon2 = b[0];
     var lat2 = b[1];
     /** Possible for shorter runtime need to check **/
@@ -282,8 +285,13 @@ LocalCollection._f = {
   },
   /**Copy $within from mongo**/
   _withIn : function(point,shape){
- 	var x = point[0];
- 	var y = point[1];
+  	if(!point){
+    	return false;
+    }
+    if(!((point.lon && point.lat) || (point.x && point.y)))
+        return false;
+ 	var x = point.x?point.x:point.lon;
+ 	var y = point.y?point.y:point.lat;
  	
  	if(shape.$box){
  		var xTop  = shape.$box[0][0];
@@ -540,6 +548,7 @@ LocalCollection._exprForOperatorTest = function (op, literals) {
   } else {
     var clauses = [];
     for (var type in op){
+    	
       if(type=='$maxDistance'){
         clauses.unshift('f._setMaxDistance('+ JSON.stringify(op[type]) + ')');
       }else{
