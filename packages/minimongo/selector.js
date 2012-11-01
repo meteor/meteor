@@ -279,7 +279,62 @@ LocalCollection._f = {
   _setMaxDistance : function(a){
     this.maxDistance = a;
     return true;	
-  }
+  },
+  /**Copy $within from mongo**/
+  _withIn : function(point,shape){
+ 	var x = point[0];
+ 	var y = point[1];
+ 	
+ 	if(shape.$box){
+ 		var xTop  = shape.$box[0][0];
+ 		var yTop  = shape.$box[0][1];
+ 		var xBottom = shape.$box[1][0];
+ 		var yBottom = shape.$box[1][1];
+ 		if(xBottom<xTop){
+ 			var temp = xTop;
+ 			xTop = xBottom;
+ 			xBottom = temp;
+ 		}
+ 		if(yBottom<yTop){
+ 			var temp = yTop;
+ 			yTop = xBottom;
+ 			yBottom = temp;
+ 		}
+ 		return (x>xTop && x<xBottom) && (y>yTop && y<yBottom);
+ 	}else if(shape.$circle){
+ 		var xCenter = shape.$circle[0][0];
+ 		var yCenter = shape.$circle[0][1];
+ 		var radius = shape.$circle[1];
+ 		var pyth = Math.sqrt(Math.pow((x-xCenter),2) + Math.pow((y-yCenter),2));
+ 		return pyth <= radius;
+ 	}else if(shape.$polygon){
+ 		var polygons = shape.$polygon;
+ 		//polygons.push(polygons[0]);
+ 		var length = polygons.length;
+ 		var x1 = polygons[0][0];
+ 		var y1 = polygons[0][1];
+ 		var within = false;
+ 		for(var i = 0;i<length;i++){
+ 			var x2 = polygons[i%length][0];
+ 			var y2 = polygons[i%length][1];
+ 			if(y>Math.min(y1,y2)){
+ 				if(y<=Math.max(y1,y2)){
+ 					if(x<=Math.max(x1,x2)){
+ 						if(y1 != y2){
+ 							var xintersect = (y-y1)*(x2-x1)/(y2-y1)+x1;
+ 						}
+ 						if(x1== x2 || x<=xintersect){
+ 							within = !within;
+ 						}
+ 					}
+ 				}
+ 			}
+ 			x1 = x2;
+ 			y1 = y2;
+ 		}
+ 		return within;
+ 	}
+ }
 };
 
 // For unit tests. True if the given document matches the given
@@ -582,7 +637,9 @@ LocalCollection._exprForConstraint = function (type, arg, others,
     search = null;
   } else if( type === '$near'){
     expr = 'f._near(x,' + JSON.stringify(arg) + ')';
-  } else {
+  } else if (type === '$within'){
+  	expr = 'f._withIn(x,' + JSON.stringify(arg) + ')';
+  }else {
     throw Error("Unrecognized key in selector: " + type);
   }
 

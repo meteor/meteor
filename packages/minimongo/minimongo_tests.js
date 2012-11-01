@@ -564,6 +564,20 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({"a.b": {$near: [-74.0059731,40.7143528],$maxDistance:1000000000000}},{a: {b: [[4.0970976,51.1935336]]}}); 
   nomatch({"a.b": {$near: [-74.0059731,40.7143528]}}, {a: {b: [[4.0970976,51.1935336]]}});
 
+  match({"a.b" : {$within : {$box : [[0,0],[100,100]]}}}, {a: {b: [[50,50]]}});
+  match({"a.b" : {$within : {$box : [[0,0],[36,100]]}}}, {a: {b: [[20,50]]}});
+  nomatch({"a.b" : {$within : {$box : [[10,25],[36,100]]}}}, {a: {b: [[50,50]]}});
+  nomatch({"a.b" : {$within : {$box : [[0,0],[100,100]]}}}, {a: {b: [[120,30]]}});
+  
+  match({"a.b" : {$within : {$circle : [[0,0],100]}}}, {a: {b: [[50,50]]}});
+  match({"a.b" : {$within : {$circle: [[25,25],50]}}}, {a: {b: [[20,50]]}});
+  nomatch({"a.b" : {$within : {$circle : [[0,0],25]}}}, {a: {b: [[50,50]]}});
+  nomatch({"a.b" : {$within : {$circle: [[0,0],100]}}}, {a: {b: [[120,30]]}});
+  
+  match({"a.b" : {$within : {$polygon : [[0,0], [0,50], [50,50], [50,0]]}}}, {a: {b: [[25,25]]}});
+  match({"a.b" : {$within : {$polygon: [[100,120], [100,100], [120,100], [240,200]]}}}, {a: {b: [[101,101]]}});
+  nomatch({"a.b" : {$within : {$polygon : [[100,120], [100,100], [120,100], [240,200]]}}}, {a: {b: [[50,50]]}});
+  nomatch({"a.b" : {$within : {$polygon: [[100,120], [100,100], [120,100], [240,200]]}}}, {a: {b: [[120,30]]}});
   // XXX still needs tests:
   // - $or, $and, $nor, $where
   // - $elemMatch
