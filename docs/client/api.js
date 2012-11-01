@@ -695,6 +695,12 @@ Template.api.user = {
   descr: ["Get the current user record, or `null` if no user is logged in. A reactive data source."]
 };
 
+Template.api.currentUser = {
+  id: "meteor_currentuser",
+  name: "{{currentUser}}",
+  locus: "Handlebars templates",
+  descr: ["Calls [Meteor.user()](#meteor_user). Use `{{#if currentUser}}` to check whether the user is logged in."]
+};
 
 Template.api.userId = {
   id: "meteor_userid",
@@ -716,6 +722,13 @@ Template.api.userLoaded = {
   name: "Meteor.userLoaded()",
   locus: "Client",
   descr: ["Determine if the current user document is fully loaded in [`Meteor.users`](#meteor_users). A reactive data source."]
+};
+
+Template.api.currentUserLoaded = {
+  id: "meteor_currentuserloaded",
+  name: "{{currentUserLoaded}}",
+  locus: "Handlebars templates",
+  descr: ["Calls [Meteor.userLoaded()](#meteor_userloaded)."]
 };
 
 

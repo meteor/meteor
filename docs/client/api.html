@@ -1330,6 +1330,13 @@ example, to support GitHub login, run `$ meteor add accounts-github` and use the
 
 
 
+{{> api_box currentUser}}
+{{> api_box currentUserLoaded}}
+{{#note}}
+We realize this is inconvenient. It is a temporary solution. In the
+future we will either make it unnecessary or fold it into a more
+general mechanism.
+{{/note}}
 
 {{> api_box accounts_config}}
 {{> api_box accounts_ui_config}}
@@ -1457,7 +1464,7 @@ on the server. Pass the token the user receives in this email
 to [`Accounts.resetPassword`](#accounts_resetpassword) to
 complete the password reset process.
 
-If you are using the [`accounts-ui` package](#pkg_accounts_ui), this is handled
+If you are using the [`accounts-ui` package](#accountsui), this is handled
 automatically. Otherwise, it is your responsiblity to prompt the user for the
 new password and call `resetPassword`.
 
