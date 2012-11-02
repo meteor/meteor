@@ -104,6 +104,8 @@ git clone http://github.com/akdubya/rbytes.git
 npm install sockjs@0.3.3
 rm -rf rbytes
 
+# If you update the version of fibers in the dev bundle, also update the "npm
+# install" command in docs/client/concepts.html.
 npm install fibers@0.6.9
 # Fibers ships with compiled versions of its C code for a dozen platforms. This
 # bloats our dev bundle, and confuses dpkg-buildpackage and rpmbuild into
