@@ -266,6 +266,10 @@
     return loginButtonsSession.get('inSignupFlow');
   };
 
+  Template._loginButtonsLoggedOutPasswordService.showCreateAccountLink = function () {
+    return !Accounts._options.forbidClientAccountCreation;
+  };
+
   Template._loginButtonsLoggedOutPasswordService.showForgotPasswordLink = function () {
     return _.contains(
       ["USERNAME_AND_EMAIL", "USERNAME_AND_OPTIONAL_EMAIL", "EMAIL_ONLY"],
