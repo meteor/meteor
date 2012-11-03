@@ -160,12 +160,16 @@ Template.event.get_details = function() {
     return _.compact(_.map(details, function(val, key) {
 
       // You can end up with a an undefined value, e.g. using
-      // isNull without providing a message attribute: isNull(1)
-      if (!_.isUndefined(val))
+      // isNull without providing a message attribute: isNull(1).
+      // No need to display those.
+      if (!_.isUndefined(val)) {
         return {
           key: key,
           val: val
         };
+      } else {
+        return undefined;
+      }
     }));
   };
 
@@ -176,9 +180,10 @@ Template.event.get_details = function() {
   } else {
 
     var type = details.type;
-    delete details.type;
-
     var stack = details.stack;
+
+    details = _.clone(details);
+    delete details.type;
     delete details.stack;
 
     return {
