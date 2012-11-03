@@ -22,7 +22,14 @@ LocalCollection = function () {
   this.queries = {};
 
   // when we have a snapshot, this will contain a deep copy of 'docs'.
+  // XXX This is used for full-database quiescence, which is being
+  //     replaced by per-object quiescence. Remove this once
+  //     the transition is done.
   this.current_snapshot = null;
+
+  // null if not saving originals; a map from id to original document value if
+  // saving originals. See comments before saveOriginals().
+  this._savedOriginals = null;
 
   // True when observers are paused and we should not send callbacks.
   this.paused = false;
@@ -326,7 +333,11 @@ LocalCollection.prototype.insert = function (doc) {
   // XXX deal with mongo's binary id type?
   if (!('_id' in doc))
     doc._id = LocalCollection.uuid();
-  // XXX check to see that there is no object with this _id yet?
+
+  if (_.has(self.docs, doc._id))
+    throw new Error("Duplicate _id '" + doc._id + "'");
+
+  self._saveOriginal(doc._id, undefined);
   self.docs[doc._id] = doc;
 
   // trigger live queries that match
@@ -363,6 +374,7 @@ LocalCollection.prototype.remove = function (selector) {
       if (query.selector_f(removeDoc))
         queryRemove.push([query, removeDoc]);
     });
+    self._saveOriginal(removeId, removeDoc);
     delete self.docs[removeId];
   }
 
@@ -383,6 +395,8 @@ LocalCollection.prototype.update = function (selector, mod, options) {
   for (var id in self.docs) {
     var doc = self.docs[id];
     if (selector_f(doc)) {
+      // XXX Should we save the original even if mod ends up being a no-op?
+      self._saveOriginal(id, doc);
       self._modifyAndNotify(doc, mod);
       if (!options.multi)
         return;
@@ -392,14 +406,13 @@ LocalCollection.prototype.update = function (selector, mod, options) {
 
   if (options.upsert) {
     throw Error("upsert not yet implemented");
-  }
-
-  if (options.upsert && !any) {
-    // XXX is this actually right? don't we have to resolve/delete
-    // $-ops or something like that?
-    insert = LocalCollection._deepcopy(selector);
-    LocalCollection._modify(insert, mod);
-    self.insert(insert);
+    if (!any) {
+      // XXX is this actually right? don't we have to resolve/delete $-ops or
+      // something like that?
+      var insert = LocalCollection._deepcopy(selector);
+      LocalCollection._modify(insert, mod);
+      self.insert(insert);
+    }
   }
 };
 
@@ -534,6 +547,42 @@ LocalCollection._insertInSortedList = function (cmp, array, value) {
 
   array.push(value);
   return array.length - 1;
+};
+
+// To track what documents are affected by a piece of code, call saveOriginals()
+// before it and retrieveOriginals() after it. retrieveOriginals returns an
+// object whose keys are the ids of the documents that were affected since the
+// call to saveOriginals(), and the values are equal to the document's contents
+// at the time of saveOriginals. (In the case of an inserted document, undefined
+// is the value.) You must alternate between calls to saveOriginals() and
+// retrieveOriginals().
+LocalCollection.prototype.saveOriginals = function () {
+  var self = this;
+  if (self._savedOriginals)
+    throw new Error("Called saveOriginals twice without retrieveOriginals");
+  self._savedOriginals = {};
+};
+LocalCollection.prototype.retrieveOriginals = function () {
+  var self = this;
+  if (!self._savedOriginals)
+    throw new Error("Called retrieveOriginals without saveOriginals");
+
+  var originals = self._savedOriginals;
+  self._savedOriginals = null;
+  return originals;
+};
+
+LocalCollection.prototype._saveOriginal = function (id, doc) {
+  var self = this;
+  // Are we even trying to save originals?
+  if (!self._savedOriginals)
+    return;
+  // Have we previously mutated the original (and so 'doc' is not actually
+  // original)?  (Note the 'has' check rather than truth: we store undefined
+  // here for inserted docs!)
+  if (_.has(self._savedOriginals, id))
+    return;
+  self._savedOriginals[id] = LocalCollection._deepcopy(doc);
 };
 
 // At most one snapshot can exist at once. If one already existed,
