@@ -74,7 +74,7 @@
       {{/if}}
       {{#with get_details}}
         {{#if this}}
-          <!--
+          {{!
             `type` can be any of the following or a
             custom assertion type
 
@@ -87,7 +87,7 @@
             * NaN
             * include
             * length
-          -->
+          }}
           {{#if type}}&mdash; {{type}}{{/if}}
           {{#each details}}
             - <span class="failkey">{{key}}</span> {{val}}
