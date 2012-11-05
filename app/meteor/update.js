@@ -191,7 +191,7 @@ updater.get_manifest(function (manifest) {
         }
 
         // untar complete. swap directories
-        var old_base_dir = base_dir.slice + ".old";
+        var old_base_dir = base_dir + ".old";
         if (fs.existsSync(old_base_dir))
           files.rm_recursive(old_base_dir); // rm -rf !!
 
