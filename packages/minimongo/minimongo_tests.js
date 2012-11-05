@@ -127,6 +127,10 @@ _.each(['observe', '_observeUnordered'], function (observeMethod) {
     test.equal(c.find(undefined).count(), 0);
     test.equal(c.find().count(), 3);
 
+    c.insert({foo: {bar: 'baz'}});
+    test.equal(c.find({foo: {bam: 'baz'}}).count(), 0);
+    test.equal(c.find({foo: {bar: 'baz'}}).count(), 1);
+
     var ev = "";
     var makecb = function (tag) {
       return {
