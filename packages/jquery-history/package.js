@@ -4,5 +4,9 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use('jquery');
-  api.add_files('jquery.history.js', 'client');
+  api.add_files(['json2.js',
+                 'history.adapter.jquery.js',
+                 'history.html4.js',
+                 'history.js'],
+                'client');
 });
