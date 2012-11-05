@@ -538,7 +538,7 @@ Template.api.cursor_observe = {
   descr: ["Watch a query.  Receive callbacks as the result set changes."],
   args: [
     {name: "callbacks",
-     type: "Object (may include `added`, `changed`, `moved`, `removed` callbacks)",
+     type: "Object (may include <code>added</code>, <code>changed</code>, <code>moved</code>, and <code>removed</code> callbacks)",
      descr: "Functions to call to deliver the result set as it changes"}
   ]
 };
