@@ -16,6 +16,14 @@ var useragent = require('useragent');
 // this file, server.js.
 var _ = require(path.join(__dirname, 'underscore.js'));
 
+// This code is duplicated in app/server/server.js.
+var MIN_NODE_VERSION = 'v0.8.11';
+if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
+  process.stderr.write(
+    'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
+  process.exit(1);
+}
+
 // Keepalives so that when the outer server dies unceremoniously and
 // doesn't kill us, we quit ourselves. A little gross, but better than
 // pidfiles.

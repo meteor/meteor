@@ -4,6 +4,14 @@ var _ = require(path.join(__dirname, '..', 'lib', 'third', 'underscore.js'));
 var deploy = require(path.join(__dirname, 'deploy'));
 var fs = require("fs");
 
+// This code is duplicated in app/server/server.js.
+var MIN_NODE_VERSION = 'v0.8.11';
+if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
+  process.stderr.write(
+    'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
+  process.exit(1);
+}
+
 var usage = function() {
   process.stdout.write(
 "Usage: meteor [--version] [--help] <command> [<args>]\n" +
