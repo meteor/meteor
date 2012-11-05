@@ -149,7 +149,7 @@ Template.api.subscription_userId = {
   id: "publish_userId",
   name: "<i>this</i>.userId",
   locus: "Server",
-  descr: ["Property of the publish handler object. The id of the logged-in user, or `null` if no user is logged in."]
+  descr: ["Access inside the publish function. The id of the logged-in user, or `null` if no user is logged in."]
 };
 
 

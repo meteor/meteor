@@ -340,32 +340,31 @@ This method returns the status of the connection between the client and
 the server. The return value is an object with the following fields:
 
 <dl class="objdesc">
-<dt><span class="name">connected</span>
-  <span class="type">Boolean</span></dt>
-<dd>True if currently connected to the server. If false, changes and
+{{#dtdd name="connected" type="Boolean"}}
+  True if currently connected to the server. If false, changes and
   method invocations will be queued up until the connection is
-  reestablished.</dd>
+  reestablished.
+{{/dtdd}}
 
-<dt><span class="name">status</span>
-  <span class="type">String</span></dt>
-<dd>Describes the current reconnection status. The possible
-  values are <code>connected</code> (the connection is up and
-  running), <code>connecting</code> (disconnected and trying to open a
-  new connection), and <code>waiting</code> (failed to connect and
-  waiting to try to reconnect).</dd>
+{{#dtdd name="status" type="String"}}
+  Describes the current reconnection status. The possible
+  values are `connected` (the connection is up and
+  running), `connecting` (disconnected and trying to open a
+  new connection), and `waiting` (failed to connect and
+  waiting to try to reconnect).
+{{/dtdd}}
 
-<dt><span class="name">retryCount</span>
-  <span class="type">Number</span></dt>
-<dd>The number of times the client has tried to reconnect since the
-  connection was lost. 0 when connected.</dd>
+{{#dtdd name="retryCount" type="Number"}}
+  The number of times the client has tried to reconnect since the
+  connection was lost. 0 when connected.
+{{/dtdd}}
 
-<dt><span class="name">retryTime</span>
-  <span class="type">Number or undefined</span></dt>
-<dd>The estimated time of the next reconnection attempt. To turn this
+{{#dtdd name="retryTime" type="Number or undefined"}}
+  The estimated time of the next reconnection attempt. To turn this
   into an interval until the next reconnection, use
-  <code>retryTime - (new Date()).getTime()</code>. This key will
-  be set only when <code>status</code> is <code>waiting</code>.
-</dd>
+  `retryTime - (new Date()).getTime()`. This key will
+  be set only when `status` is `waiting`.
+{{/dtdd}}
 </dl>
 
 Instead of using callbacks to notify you on changes, this is
@@ -786,7 +785,7 @@ rules on a collection, then all users have full write access to the
 collection. This is the only effect of insecure mode. If you call `allow` or
 `deny` at all on a collection, even `Posts.allow({})`, then access is checked
 just like normal on that collection. __New Meteor projects start in insecure
-mode by default.__ To turn it off just run `meteor remove insecure`.
+mode by default.__ To turn it off just run `$ meteor remove insecure`.
 
 {{#note}}
 For `update` and `remove`, documents will be affected only if they match
@@ -1317,7 +1316,7 @@ example:
 
 
 Each external service has its own login provider package and login function. For
-example, to support GitHub login, run `meteor add accounts-github` and use the
+example, to support GitHub login, run `$ meteor add accounts-github` and use the
 `Meteor.loginWithGithub` function:
 
     Meteor.loginWithGithub({
@@ -1422,7 +1421,7 @@ to ensure the server never sees the user's plain-text password. This
 helps protect against embarrassing password leaks if the server's
 database is compromised.
 
-To add password support to your application, run `meteor add
+To add password support to your application, run `$ meteor add
 accounts-password`. You can construct your own user interface using the
 functions below, or use the [`accounts-ui` package](#accountsui) to
 include a turn-key user interface for password-based sign-in.
@@ -2340,7 +2339,7 @@ elements are cleaned up by logic that is triggered by context invalidations.
 <h2 id="meteor_http"><span>Meteor.http</span></h2>
 
 `Meteor.http` provides an HTTP API on the client and server.  To use
-these functions, add the HTTP package to your project with `meteor add
+these functions, add the HTTP package to your project with `$ meteor add
 http`.
 
 {{> api_box httpcall}}
@@ -2440,7 +2439,7 @@ Example asynchronous HTTP call:
 <h2 id="email"><span>Email</span></h2>
 
 The `email` package allows sending email from a Meteor app. To use it, add the
-package to your project with `meteor add email`.
+package to your project with `$ meteor add email`.
 
 The server reads from the `MAIL_URL` environment variable to determine how to
 send mail. Currently, Meteor supports sending mail over SMTP; the `MAIL_URL`
