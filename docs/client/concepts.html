@@ -43,12 +43,12 @@ client.  It minifies this bundle and serves it to each new client.
 You're free to use a single JavaScript file for your entire application, or
 create a nested tree of separate files, or anything in between.
 
-Files outside the `client` and `server`
-subdirectories are loaded on both the client and the server!  That's
-the place for model definitions and other functions.  Meteor provides
-the variables [`isClient` and `isServer`](#meteor_isclient) so that
-your code can alter its behavior depending on whether it's running
-on the client or the server.
+Files outside the `client`, `server` and `tests` subdirectories are loaded on
+both the client and the server!  That's the place for model definitions and
+other functions.  Meteor provides the variables [`isClient` and
+`isServer`](#meteor_isclient) so that your code can alter its behavior depending
+on whether it's running on the client or the server. (Files in directories named
+`tests` are not loaded anywhere.)
 
 Any sensitive code that you don't want served to the client, such as code
 containing passwords or authentication mechanisms, should be
