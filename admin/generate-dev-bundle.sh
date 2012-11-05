@@ -78,7 +78,6 @@ npm install gzippo@0.1.7
 npm install optimist@0.3.4
 npm install coffee-script@1.3.3
 npm install less@1.3.0
-npm install sass@0.5.0
 npm install stylus@0.29.0
 npm install nib@0.8.2
 npm install mime@1.2.7
