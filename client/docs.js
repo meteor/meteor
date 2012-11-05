@@ -274,7 +274,6 @@ var toc = [
     "force-ssl",
     "jquery",
     "less",
-    "sass",
     "spiderable",
     "stylus",
     "showdown",
