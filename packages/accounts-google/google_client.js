@@ -36,7 +36,7 @@
           '&scope=' + flat_scope +
           '&redirect_uri=' + Meteor.absoluteUrl('_oauth/google?close') +
           '&state=' + state +
-          '&access_type=' + accessType
+          '&access_type=' + accessType;
 
     Accounts.oauth.initiateLogin(state, loginUrl, callback);
   };
