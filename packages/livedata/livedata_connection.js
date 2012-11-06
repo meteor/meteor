@@ -389,7 +389,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
     // Send the RPC. Note that on the client, it is important that the
     // stub have finished before we send the RPC (or at least we need
-    // to guaranteed that the snapshot is not restored until the stub
+    // to guarantee that the snapshot is not restored until the stub
     // has stopped doing writes.)
     var msg = {
       msg: 'method',
@@ -418,7 +418,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
       self.stream.send(JSON.stringify(msg));
     }
 
-    // Even if we are waiting on other method calls mark this method
+    // Even if we are waiting on other method calls, mark this method
     // as unsatisfied so that the user never ends up seeing
     // intermediate versions of the server's datastream
     self.unsatisfied_methods[msg.id] = true;
