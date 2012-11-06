@@ -8,6 +8,11 @@ var fs = require('fs');
 
 Package.register_extension(
   'styl', function(bundle, source_path, serve_path, where) {
+    // ignore this file if it starts with an _, 
+    // it's file that will be included by others.
+    if (source_path.match(/\/_[^\/]*$/))
+      return;
+    
     serve_path = serve_path + '.css';
 
     var contents = fs.readFileSync(source_path);
