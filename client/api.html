@@ -95,11 +95,9 @@ Example:
       self.complete();
       self.flush();
 
-      // remove data and turn off observe when client unsubs
+      // stop observing the cursor when client unsubs
       self.onStop(function () {
         handle.stop();
-        self.unset("counts", uuid, ["roomId", "count"]);
-        self.flush();
       });
     });
 
