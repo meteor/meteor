@@ -167,7 +167,7 @@ var toc = [
       "Meteor.user",
       "Meteor.userId",
       "Meteor.users",
-      "Meteor.userLoaded",
+      "Meteor.loggingIn",
       "Meteor.logout",
       "Meteor.loginWithPassword",
       {name: "Meteor.loginWithFacebook", id: "meteor_loginwithexternalservice"},
@@ -177,8 +177,8 @@ var toc = [
       {name: "Meteor.loginWithWeibo", id: "meteor_loginwithexternalservice"},
       {type: "spacer"},
 
-      {name: "{{currentUser}}", id: "meteor_currentuser"},
-      {name: "{{currentUserLoaded}}", id: "meteor_currentuserloaded"},
+      {name: "{{currentUser}}", id: "template_currentuser"},
+      {name: "{{loggingIn}}", id: "template_loggingin"},
       {type: "spacer"},
 
       "Accounts.config",
