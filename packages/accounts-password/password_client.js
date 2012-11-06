@@ -9,16 +9,10 @@
     delete options.password;
     options.srp = verifier;
 
-    Meteor.apply('createUser', [options], {wait: true},
-                 function (error, result) {
-                   if (error || !result) {
-                     error = error || new Error("No result");
-                     callback && callback(error);
-                     return;
-                   }
-
-      Accounts._makeClientLoggedIn(result.id, result.token);
-      callback && callback();
+    Accounts.callLoginMethod({
+      methodName: 'createUser',
+      methodArguments: [options],
+      userCallback: callback
     });
   };
 
@@ -49,23 +43,13 @@
       }
 
       var response = srp.respondToChallenge(result);
-      Meteor.apply('login', [
-        {srp: response}
-      ], {wait: true}, function (error, result) {
-        if (error || !result) {
-          error = error || new Error("No result from call to login");
-          callback && callback(error);
-          return;
-        }
-
-        if (!srp.verifyConfirmation({HAMK: result.HAMK})) {
-          callback && callback(new Error("Server is cheating!"));
-          return;
-        }
-
-        Accounts._makeClientLoggedIn(result.id, result.token);
-        callback && callback();
-      });
+      Accounts.callLoginMethod({
+        methodArguments: [{srp: response}],
+        validateResult: function (result) {
+          if (!srp.verifyConfirmation({HAMK: result.HAMK}))
+            throw new Error("Server is cheating!");
+        },
+        userCallback: callback});
     });
   };
 
@@ -145,18 +129,10 @@
       throw new Error("Need to pass newPassword");
 
     var verifier = Meteor._srp.generateVerifier(newPassword);
-    Meteor.apply(
-      "resetPassword", [token, verifier], {wait: true},
-      function (error, result) {
-        if (error || !result) {
-          error = error || new Error("No result from call to resetPassword");
-          callback && callback(error);
-          return;
-        }
-
-        Accounts._makeClientLoggedIn(result.id, result.token);
-        callback && callback();
-      });
+    Accounts.callLoginMethod({
+      methodName: 'resetPassword',
+      methodArguments: [token, verifier],
+      userCallback: callback});
   };
 
   // Verifies a user's email address based on a token originally
@@ -168,18 +144,10 @@
     if (!token)
       throw new Error("Need to pass token");
 
-    Meteor.call(
-      "verifyEmail", token,
-      function (error, result) {
-        if (error || !result) {
-          error = error || new Error("No result from call to verifyEmail");
-          callback && callback(error);
-          return;
-        }
-
-        Accounts._makeClientLoggedIn(result.id, result.token);
-        callback && callback();
-      });
+    Accounts.callLoginMethod({
+      methodName: 'verifyEmail',
+      methodArguments: [token],
+      userCallback: callback});
   };
 })();
 

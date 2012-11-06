@@ -32,7 +32,11 @@
       {{else}}
         {{#with singleService}} {{! at this point there must be only one configured services }}
           <div class="login-buttons-with-only-one-button">
-            {{> _loginButtonsLoggedOutSingleLoginButton}}
+            {{#if loggingIn}}
+              {{> _loginButtonsLoggingIn}}
+            {{else}}
+              {{> _loginButtonsLoggedOutSingleLoginButton}}
+            {{/if}}
           </div>
         {{/with}}
       {{/if}}
@@ -50,4 +54,8 @@
   {{#if infoMessage}}
     <div class="message info-message">{{infoMessage}}</div>
   {{/if}}
+</template>
+
+<template name="_loginButtonsLoggingIn">
+  <div class="loading">&nbsp;</div>
 </template>

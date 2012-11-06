@@ -248,19 +248,19 @@ Template.api.error = {
 
 Template.api.meteor_call = {
   id: "meteor_call",
-  name: "Meteor.call(func, arg1, arg2, ... [, asyncCallback])",
+  name: "Meteor.call(name, param1, param2, ... [, asyncCallback])",
   locus: "Anywhere",
   descr: ["Invokes a method passing any number of arguments."],
   args: [
-    {name: "func",
+    {name: "name",
      type: "String",
      descr: "Name of method to invoke"},
-    {name: "arg1, arg2, ...",
+    {name: "param1, param2, ...",
      type: "JSON",
      descr: "Optional method arguments"},
     {name: "asyncCallback",
      type: "Function",
-     descr: "Optional callback.  If passed, the method runs asynchronously, instead of synchronously, and calls asyncCallback passing either the error or the result."}
+     descr: "Optional callback, which is called asynchronously with the error or result after the method is complete. If not provided, the method runs synchronously if possible (see below)."}
   ]
 };
 
@@ -278,13 +278,15 @@ Template.api.meteor_apply = {
      descr: "Method arguments"},
     {name: "asyncCallback",
      type: "Function",
-     descr: "Optional callback.  If passed, the method runs asynchronously, instead of synchronously, and calls asyncCallback passing either the error or the result."}
+     descr: "Optional callback; same semantics as in [`Meteor.call`](#meteor_call)."}
   ],
   options: [
     {name: "wait",
      type: "Boolean",
-     descr: "(Client only) If true, don't send any subsequent method calls until this one is completed. "
-            + "Only run the callback for this method once all previous method calls have completed."}
+     descr: "(Client only) If true, don't send this method until all previous method calls have completed, and don't send any subsequent method calls until this one is completed."},
+    {name: "onResultReceived",
+     type: "Function",
+     descr: "(Client only) This callback is invoked with the error or result of the method (just like `asyncCallback`) as soon as the error or result is available. The local cache may not yet reflect the writes performed by the method."}
   ]
 };
 
@@ -317,7 +319,6 @@ Template.api.connect = {
 };
 
 // onAutopublish
-// onQuiesce
 
 Template.api.meteor_collection = {
   id: "meteor_collection",
@@ -696,7 +697,7 @@ Template.api.user = {
 };
 
 Template.api.currentUser = {
-  id: "meteor_currentuser",
+  id: "template_currentuser",
   name: "{{currentUser}}",
   locus: "Handlebars templates",
   descr: ["Calls [Meteor.user()](#meteor_user). Use `{{#if currentUser}}` to check whether the user is logged in."]
@@ -717,18 +718,18 @@ Template.api.users = {
   descr: ["A [Meteor.Collection](#collections) containing user documents."]
 };
 
-Template.api.userLoaded = {
-  id: "meteor_userloaded",
-  name: "Meteor.userLoaded()",
+Template.api.loggingIn = {
+  id: "meteor_loggingin",
+  name: "Meteor.loggingIn()",
   locus: "Client",
-  descr: ["Determine if the current user document is fully loaded in [`Meteor.users`](#meteor_users). A reactive data source."]
+  descr: ["True if a login method (such as `Meteor.loginWithPassword`, `Meteor.loginWithFacebook`, or `Accounts.createUser`) is currently in progress. A reactive data source."]
 };
 
-Template.api.currentUserLoaded = {
-  id: "meteor_currentuserloaded",
-  name: "{{currentUserLoaded}}",
+Template.api.loggingInTemplate = {
+  id: "template_loggingin",
+  name: "{{loggingIn}}",
   locus: "Handlebars templates",
-  descr: ["Calls [Meteor.userLoaded()](#meteor_userloaded)."]
+  descr: ["Calls [Meteor.loggingIn()](#meteor_loggingin)."]
 };
 
 

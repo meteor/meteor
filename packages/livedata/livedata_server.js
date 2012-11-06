@@ -912,7 +912,11 @@ _.extend(Meteor._LivedataServer.prototype, {
       }
     }
 
-    // Return the result in whichever way the caller asked for it
+    // Return the result in whichever way the caller asked for it. Note that we
+    // do NOT block on the write fence in an analogous way to how the client
+    // blocks on the relevant data being visible, so you are NOT guaranteed that
+    // cursor observe callbacks have fired when your callback is invoked. (We
+    // can change this if there's a real use case.)
     if (callback) {
       callback(exception, ret);
       return;

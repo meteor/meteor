@@ -233,6 +233,12 @@ intended to *simulate* the result of what the server's method will do,
 but without waiting for the round trip delay.  If a stub throws an
 exception it will be logged to the console.
 
+You use methods all the time, because the database mutators
+([`insert`](#insert), [`update`](#update), [`remove`](#remove)) are implemented
+as methods. When you call any of these functions on the client, you're invoking
+their stub version that update the local cache, and sending the same write
+request to the server. When the server responds, the client updates the local
+cache with the writes that actually occurred on the server.
 
 {{> api_box method_invocation_userId}}
 
@@ -275,8 +281,11 @@ function throws a different exception, then it will be mapped to
 
 {{> api_box meteor_call}}
 
-This is how to invoke a method.  It will run the method on the server.
-If a stub is available, it will also run the stub on the client.
+This is how to invoke a method.  It will run the method on the server.  If a
+stub is available, it will also run the stub on the client.  (See also
+[`Meteor.apply`](#meteor_apply), which is identical to `Meteor.call` except that
+you specify the parameters as an array instead of as separate arguments and you
+can specify a few options controlling how the method is executed.)
 
 If you include a callback function as the last argument (which can't be
 an argument to the method, since functions aren't serializable), the
@@ -314,12 +323,15 @@ a stub synchronously, and that is why it's okay for the client to use
 the synchronous `Meteor.call` form from inside a method body, as
 described earlier.
 
-You use this functionality all the time, because the database mutators
-(`insert`, `update`, `remove`) are essentially methods. When you call
-them on the client (whether from inside a method or at top level), you're
-invoking their stub versions that update the local cache, instead of
-their "real" versions that update the database (using credentials known
-only to the server).
+Meteor tracks the database writes performed by methods, both on the client and
+the server, and does not invoke `asyncCallback` until all of the server's writes
+replace the stub's writes in the local cache. In some cases, there can be a lag
+between the method's return value being available and the writes being visible:
+for example, if another method still outstanding wrote to the same document, the
+local cache may not be up to date until the other method finishes as well. If
+you want to process the method's result as soon as it arrives from the server,
+even if the method's writes are not available yet, you can specify an
+`onResultReceived` callback to [`Meteor.apply`](#meteor_apply).
 
 {{> api_box meteor_apply}}
 
@@ -1160,11 +1172,6 @@ client). By default the server publishes `username`, `emails`, and
 `profile`. See [`Meteor.users`](#meteor_users) for more on
 the fields used in user documents.
 
-If the user is logged in but the user's database record is not fully
-loaded yet, this returns an object with only the `_id` field set. During
-this period [`userLoaded`](#meteor_userloaded) will return
-`false`.
-
 {{> api_box userId}}
 
 {{> api_box users}}
@@ -1247,22 +1254,10 @@ their user document:
     Meteor.users.deny({update: function () { return true; }});
 
 
-{{> api_box userLoaded}}
+{{> api_box loggingIn}}
 
-There are some cases when the client knows the id of the logged in user
-but has not yet received the user data from the server. For example, if
-the user is logged in and reloads the page the user data will be
-unavailable during initial page load.
-
-During these periods, `userLoaded` will return false
-and [`user`](#meteor_user) will return an object with only
-the `_id` key.
-
-{{#note}}
-We realize this is inconvenient. It is a temporary solution. In the
-future we will either make it unnecessary or fold it into a more
-general mechanism.
-{{/note}}
+For example, [the `accounts-ui` package](#accountsui) uses this to display an
+animation while the login request is being processed.
 
 {{> api_box logout}}
 
@@ -1331,13 +1326,7 @@ example, to support GitHub login, run `$ meteor add accounts-github` and use the
 
 
 {{> api_box currentUser}}
-{{> api_box currentUserLoaded}}
-{{#note}}
-We realize this is inconvenient. It is a temporary solution. In the
-future we will either make it unnecessary or fold it into a more
-general mechanism.
-{{/note}}
-
+{{> api_box loggingInTemplate}}
 {{> api_box accounts_config}}
 {{> api_box accounts_ui_config}}
 

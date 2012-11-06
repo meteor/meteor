@@ -32,30 +32,18 @@
   // access in the popup this should log the user in, otherwise
   // nothing should happen.
   var tryLoginAfterPopupClosed = function(state, callback) {
-    Meteor.apply('login', [
-      {oauth: {state: state}}
-    ], {wait: true}, function(error, result) {
-      if (error) {
-        // got an error from the server. report it back.
-        callback && callback(error);
-      } else if (!result) {
-        // got an empty response from the server. This means our oauth
-        // state wasn't recognized, which could be either because the
-        // popup was closed by the user before completion, or some sort
-        // of error where the oauth provider didn't talk to our server
-        // correctly and closed the popup somehow.
-        //
-        // we assume it was user canceled, and report it as such. this
-        // will mask failures where things are misconfigured such that
-        // the server doesn't see the request but does close the
-        // window. This seems unlikely.
-        callback &&
-          callback(new Accounts.LoginCancelledError("Popup closed"));
-      } else {
-        Accounts._makeClientLoggedIn(result.id, result.token);
-        callback && callback();
-      }
-    });
+    Accounts.callLoginMethod({
+      methodArguments: [{oauth: {state: state}}],
+      userCallback: callback && function (err) {
+        // Allow server to specify a specify subclass of errors. We should come
+        // up with a more generic way to do this!
+        if (err && err instanceof Meteor.Error &&
+            err.error === Accounts.LoginCancelledError.numericError) {
+          callback(new Accounts.LoginCancelledError(err.details));
+        } else {
+          callback(err);
+        }
+      }});
   };
 
   var openCenteredPopup = function(url, width, height) {

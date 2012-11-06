@@ -1061,93 +1061,6 @@ Tinytest.add("minimongo - diff", function (test) {
 });
 
 
-Tinytest.add("minimongo - snapshot", function (test) {
-  var operations = [];
-  var cbs = log_callbacks(operations);
-
-  var c = new LocalCollection();
-  var h = c.find({}).observe(cbs);
-
-  // snapshot empty, restore immediately.
-
-  test.equal(c.find().count(), 0);
-  test.length(operations, 0);
-  c.snapshot();
-  test.equal(c.find().count(), 0);
-  test.length(operations, 0);
-  c.restore();
-  test.equal(c.find().count(), 0);
-  test.length(operations, 0);
-
-
-  // snapshot empty, add new docs
-
-  test.equal(c.find().count(), 0);
-  test.length(operations, 0);
-
-  c.snapshot();
-  test.equal(c.find().count(), 0);
-
-  c.insert({_id: 1, a: 1});
-  test.equal(c.find().count(), 1);
-  test.equal(operations.shift(), ['added', {a:1}, 0]);
-  c.insert({_id: 2, b: 2});
-  test.equal(c.find().count(), 2);
-  test.equal(operations.shift(), ['added', {b:2}, 1]);
-
-  c.restore();
-
-  test.equal(c.find().count(), 0);
-  test.equal(operations.shift(), ['removed', 1, 0, {a:1}]);
-  test.equal(operations.shift(), ['removed', 2, 0, {b:2}]);
-
-
-  // snapshot with contents. see we get add, update and remove.
-  // depends on observer update order from diffQuery.
-  // reorder test statements if this changes.
-
-  c.insert({_id: 1, a: 1});
-  test.equal(c.find().count(), 1);
-  test.equal(operations.shift(), ['added', {a:1}, 0]);
-  c.insert({_id: 2, b: 2});
-  test.equal(c.find().count(), 2);
-  test.equal(operations.shift(), ['added', {b:2}, 1]);
-
-  c.snapshot();
-  test.equal(c.find().count(), 2);
-
-  c.remove({_id: 1});
-  test.equal(c.find().count(), 1);
-  test.equal(operations.shift(), ['removed', 1, 0, {a:1}]);
-  c.insert({_id: 3, c: 3});
-  test.equal(c.find().count(), 2);
-  test.equal(operations.shift(), ['added', {c:3}, 1]);
-  c.update({_id: 2}, {$set: {b: 4}});
-  test.equal(operations.shift(), ['changed', {b:4}, 0, {b:2}]);
-
-  c.restore();
-  test.equal(c.find().count(), 2);
-  test.equal(operations.shift(), ['added', {a:1}, 0]);
-  test.equal(operations.shift(), ['changed', {b:2}, 1, {b:4}]);
-  test.equal(operations.shift(), ['removed', 3, 2, {c:3}]);
-
-
-  // snapshot with stuff. restore immediately. no changes.
-
-  test.equal(c.find().count(), 2);
-  test.length(operations, 0);
-  c.snapshot();
-  test.equal(c.find().count(), 2);
-  test.length(operations, 0);
-  c.restore();
-  test.equal(c.find().count(), 2);
-  test.length(operations, 0);
-
-
-
-  h.stop();
-});
-
 Tinytest.add("minimongo - saveOriginals", function (test) {
   // set up some data
   var c = new LocalCollection();
@@ -1240,37 +1153,6 @@ Tinytest.add("minimongo - pause", function (test) {
   c.resumeObservers();
   test.equal(operations.shift(), ['changed', {a:3}, 0, {a:1}]);
   test.length(operations, 0);
-
-
-  // snapshot/restore, same results
-  c.snapshot();
-
-  c.insert({_id: 2, b: 2});
-  test.equal(operations.shift(), ['added', {b:2}, 1]);
-
-  c.pauseObservers();
-  c.restore();
-  c.insert({_id: 2, b: 2});
-  test.length(operations, 0);
-
-  c.resumeObservers();
-  test.length(operations, 0);
-
-  // snapshot/restore, different results
-  c.snapshot();
-
-  c.insert({_id: 3, c: 3});
-  test.equal(operations.shift(), ['added', {c:3}, 2]);
-
-  c.pauseObservers();
-  c.restore();
-  c.insert({_id: 3, c: 4});
-  test.length(operations, 0);
-
-  c.resumeObservers();
-  test.equal(operations.shift(), ['changed', {c:4}, 2, {c:3}]);
-  test.length(operations, 0);
-
 
   h.stop();
 });

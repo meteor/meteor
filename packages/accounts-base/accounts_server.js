@@ -22,9 +22,9 @@
 
   Accounts._loginHandlers = [];
 
-  // Try all of the registered login handlers until one of them
-  // doesn't return `undefined` (NOT null), meaning it handled this
-  // call to `login`. Return that return value.
+  // Try all of the registered login handlers until one of them doesn't return
+  // `undefined`, meaning it handled this call to `login`. Return that return
+  // value, which ought to be a {id/token} pair.
   var tryAllLoginHandlers = function (options) {
     var result = undefined;
 
@@ -49,8 +49,8 @@
   // @param handler {Function} A function that receives an options object
   // (as passed as an argument to the `login` method) and returns one of:
   // - `undefined`, meaning don't handle;
-  // - `null`, meaning the user didn't actually log in;
-  // - {id: userId, accessToken: *}, if the user logged in successfully.
+  // - {id: userId, token: *}, if the user logged in successfully.
+  // - throw an error, if the user failed to log in.
   Accounts.registerLoginHandler = function(handler) {
     Accounts._loginHandlers.push(handler);
   };
@@ -243,14 +243,7 @@
   ///
 
   // Publish the current user's record to the client.
-  // XXX This should just be a universal subscription, but we want to know when
-  //     we've gotten the data after a 'login' method, which currently requires
-  //     us to unsub, sub, and wait for onComplete. This is wasteful because
-  //     we're actually guaranteed to have the data by the time that 'login'
-  //     returns. But we don't expose a callback to Meteor.apply which lets us
-  //     know when the data has been processed (ie, quiescence, or at least
-  //     partial quiescence).
-  Meteor.publish("meteor.currentUser", function() {
+  Meteor.publish(null, function() {
     if (this.userId)
       return Meteor.users.find(
         {_id: this.userId},

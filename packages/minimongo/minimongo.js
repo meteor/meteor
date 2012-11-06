@@ -21,12 +21,6 @@ LocalCollection = function () {
   //  selector_f, sort_f, (callbacks): functions
   this.queries = {};
 
-  // when we have a snapshot, this will contain a deep copy of 'docs'.
-  // XXX This is used for full-database quiescence, which is being
-  //     replaced by per-object quiescence. Remove this once
-  //     the transition is done.
-  this.current_snapshot = null;
-
   // null if not saving originals; a map from id to original document value if
   // saving originals. See comments before saveOriginals().
   this._savedOriginals = null;
@@ -584,46 +578,6 @@ LocalCollection.prototype._saveOriginal = function (id, doc) {
     return;
   self._savedOriginals[id] = LocalCollection._deepcopy(doc);
 };
-
-// At most one snapshot can exist at once. If one already existed,
-// overwrite it.
-// XXX document (at some point)
-// XXX test
-// XXX obviously this particular implementation will not be very efficient
-LocalCollection.prototype.snapshot = function () {
-  this.current_snapshot = {};
-  for (var id in this.docs)
-    this.current_snapshot[id] = JSON.parse(JSON.stringify(this.docs[id]));
-};
-
-// Restore (and destroy) the snapshot. If no snapshot exists, raise an
-// exception.
-// XXX document (at some point)
-// XXX test
-LocalCollection.prototype.restore = function () {
-  if (!this.current_snapshot)
-    throw new Error("No current snapshot");
-  this.docs = this.current_snapshot;
-  this.current_snapshot = null;
-
-  // Rerun all queries from scratch. (XXX should do something more
-  // efficient -- diffing at least; ideally, take the snapshot in an
-  // efficient way, say with an undo log, so that we can efficiently
-  // tell what changed).
-  for (var qid in this.queries) {
-    var query = this.queries[qid];
-
-    var oldResults = query.results;
-
-    query.results = query.cursor._getRawObjects(query.ordered);
-
-    if (!this.paused) {
-      LocalCollection._diffQuery(
-        query.ordered, oldResults, query.results, query, true);
-    }
-  }
-};
-
 
 // Pause the observers. No callbacks from observers will fire until
 // 'resumeObservers' is called.

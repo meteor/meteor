@@ -3,29 +3,25 @@
 <!--           -->
 <template name="_loginButtonsLoggedInDropdown">
   <div class="login-link-and-dropdown-list">
-    {{#if currentUserLoaded}}
-      <a class="login-link-text" id="login-name-link">
-        {{displayName}} ▾
-      </a>
+    <a class="login-link-text" id="login-name-link">
+      {{displayName}} ▾
+    </a>
 
-      {{#if dropdownVisible}}
-        <div id="login-dropdown-list" class="accounts-dialog">
-          <a class="login-close-text">Close</a>
-          <div class="login-close-text-clear"></div>
+    {{#if dropdownVisible}}
+      <div id="login-dropdown-list" class="accounts-dialog">
+        <a class="login-close-text">Close</a>
+        <div class="login-close-text-clear"></div>
 
-          {{#if inMessageOnlyFlow}}
-            {{> _loginButtonsMessages}}
+        {{#if inMessageOnlyFlow}}
+          {{> _loginButtonsMessages}}
+        {{else}}
+          {{#if inChangePasswordFlow}}
+            {{> _loginButtonsChangePassword}}
           {{else}}
-            {{#if inChangePasswordFlow}}
-              {{> _loginButtonsChangePassword}}
-            {{else}}
-              {{> _loginButtonsLoggedInDropdownActions}}
-            {{/if}}
+            {{> _loginButtonsLoggedInDropdownActions}}
           {{/if}}
-        </div>
-      {{/if}}
-    {{else}}
-      <div class="loading">&nbsp;</div>
+        {{/if}}
+      </div>
     {{/if}}
   </div>
 </template>
@@ -51,9 +47,17 @@
     {{#if dropdownVisible}}
     <div id="login-dropdown-list" class="accounts-dialog">
       <a class="login-close-text">Close</a>
+      {{#if loggingIn}}
+        {{> _loginButtonsLoggingIn}}
+      {{/if}}
       <div class="login-close-text-clear"></div>
       {{> _loginButtonsLoggedOutAllServices}}
     </div>
+    {{else}}
+      {{#if loggingIn}}
+        {{! Not normally visible, but if the user closes the dropdown during login.}}
+        {{> _loginButtonsLoggingIn}}
+      {{/if}}
     {{/if}}
   </div>
 </template>

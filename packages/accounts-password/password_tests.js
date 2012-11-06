@@ -11,24 +11,10 @@ if (Meteor.isClient) (function () {
       test.equal(Meteor.user(), null);
     }));
   };
-
-  var verifyUsername = function (someUsername, test, expect) {
-    var callWhenLoaded = expect(function() {
-      test.equal(Meteor.user().username, someUsername);
-    });
-    return function () {
-      Meteor.autorun(function(handle) {
-        if (!Meteor.userLoaded()) return;
-        handle.stop();
-        callWhenLoaded();
-      });
-    };
-  };
   var loggedInAs = function (someUsername, test, expect) {
-    var quiesceCallback = verifyUsername(someUsername, test, expect);
     return expect(function (error) {
       test.equal(error, undefined);
-      Meteor.default_connection.onQuiesce(quiesceCallback);
+      test.equal(Meteor.user().username, someUsername);
     });
   };
 
@@ -51,7 +37,6 @@ if (Meteor.isClient) (function () {
       password2 = 'password2';
       password3 = 'password3';
     },
-
     function (test, expect) {
       Accounts.createUser(
         {username: username, email: email, password: password},
@@ -64,50 +49,26 @@ if (Meteor.isClient) (function () {
     },
     logoutStep,
     // This next step tests reactive contexts which are reactive on
-    // Meteor.user() without explicitly calling Meteor.userLoaded() --- we want
-    // to make sure that user loading finishing invalidates them too.
+    // Meteor.user().
     function (test, expect) {
       // Set up a reactive context that only refreshes when Meteor.user() is
       // invalidated.
-      var user;
-      var handle1 = Meteor.autorun(function () {
-        user = Meteor.user();
+      var loaded = false;
+      var handle = Meteor.autorun(function () {
+        if (Meteor.user() && Meteor.user().emails)
+          loaded = true;
       });
       // At the beginning, we're not logged in.
-      test.equal(user, null);
-
-      // This will get called once a second context (which does explicitly call
-      // Meteor.userLoaded()) tells us we are ready.
-      var callWhenLoaded = expect(function () {
-        Meteor.flush();
-        // ... and this means that the first context did refresh and give us
-        // data.
-        test.isTrue(user.emails);
-        handle1.stop();
-      });
-      var waitForLoaded = expect(function () {
-        Meteor.autorun(function(handle2) {
-          if (!Meteor.userLoaded()) return;
-          handle2.stop();
-          callWhenLoaded();
-        });
-      });
+      test.isFalse(loaded);
       Meteor.loginWithPassword(username, password, expect(function (error) {
         test.equal(error, undefined);
         test.notEqual(Meteor.userId(), null);
-        // Since userId has changed, the first autorun has been invalidated, so
-        // flush will re-run it and user will become not null.  In the *CURRENT
-        // IMPLEMENTATION*, we will have just called _makeClientLoggedIn which
-        // just started a new meteor.currentUser subscription. There is no way
-        // that it is complete yet because we haven't gotten back to the event
-        // loop to actually get the data, so user.emails hasn't been populated
-        // yet. (That said, if we redo how userLoaded is implemented to not
-        // involve unsub/sub, it's possible that this test may become flaky by
-        // the test.isFalse failing.)
+        // By the time of the login callback, the user should be loaded.
+        test.isTrue(Meteor.user().emails);
+        // Flushing should get us the autorun as well.
         Meteor.flush();
-        test.notEqual(user, null);
-        test.isFalse(user.emails);
-        waitForLoaded();
+        test.isTrue(loaded);
+        handle.stop();
       }));
     },
     logoutStep,
@@ -126,37 +87,29 @@ if (Meteor.isClient) (function () {
                                loggedInAs(username, test, expect));
     },
     logoutStep,
-    // plain text password. no API for this, have to send a raw message.
+    // plain text password. no API for this, have to invoke callLoginMethod
+    // directly.
     function (test, expect) {
-      Meteor.call(
+      Accounts.callLoginMethod({
         // wrong password
-        'login', {user: {email: email}, password: password2},
-        expect(function (error, result) {
+        methodArguments: [{user: {email: email}, password: password2}],
+        userCallback: expect(function (error) {
           test.isTrue(error);
-          test.isFalse(result);
           test.isFalse(Meteor.user());
-      }));
+        })});
     },
     function (test, expect) {
-      var quiesceCallback = verifyUsername(username, test, expect);
-      Meteor.call(
+      Accounts.callLoginMethod({
         // right password
-        'login', {user: {email: email}, password: password},
-        expect(function (error, result) {
-          test.equal(error, undefined);
-          test.isTrue(result.id);
-          test.isTrue(result.token);
-          // emulate the real login behavior, so as not to confuse test.
-          Accounts._makeClientLoggedIn(result.id, result.token);
-          Meteor.default_connection.onQuiesce(quiesceCallback);
-      }));
+        methodArguments: [{user: {email: email}, password: password}],
+        userCallback: loggedInAs(username, test, expect)
+      });
     },
     // change password with bad old password. we stay logged in.
     function (test, expect) {
-      var quiesceCallback = verifyUsername(username, test, expect);
       Accounts.changePassword(password2, password2, expect(function (error) {
         test.isTrue(error);
-        Meteor.default_connection.onQuiesce(quiesceCallback);
+        test.equal(Meteor.user().username, username);
       }));
     },
     // change password with good old password.
@@ -178,18 +131,14 @@ if (Meteor.isClient) (function () {
                                loggedInAs(username, test, expect));
     },
     logoutStep,
-    // create user with raw password
+    // create user with raw password (no API, need to invoke callLoginMethod
+    // directly)
     function (test, expect) {
-      var quiesceCallback = verifyUsername(username2, test, expect);
-      Meteor.call('createUser', {username: username2, password: password2},
-                  expect(function (error, result) {
-                    test.equal(error, undefined);
-                    test.isTrue(result.id);
-                    test.isTrue(result.token);
-                    // emulate the real login behavior, so as not to confuse test.
-                    Accounts._makeClientLoggedIn(result.id, result.token);
-                    Meteor.default_connection.onQuiesce(quiesceCallback);
-                  }));
+      Accounts.callLoginMethod({
+        methodName: 'createUser',
+        methodArguments: [{username: username2, password: password2}],
+        userCallback: loggedInAs(username2, test, expect)
+      });
     },
     logoutStep,
     function(test, expect) {
@@ -243,8 +192,7 @@ if (Meteor.isClient) (function () {
       }));
     },
     function(test, expect) {
-      Meteor.call('clearUsernameAndProfile');
-      Meteor.default_connection.onQuiesce(expect(function() {
+      Meteor.call('clearUsernameAndProfile', expect(function() {
         test.isTrue(Meteor.userId());
         var user = Meteor.user();
         test.equal(user, {_id: Meteor.userId()});
