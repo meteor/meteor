@@ -27,7 +27,7 @@
 
     // Let's always write out online vs offline in mongo to keep track.
 
-    var access_type = = config.accessType;
+    var access_type = config.accessType;
      if (!access_type) {
         access_type = 'online'
      }
