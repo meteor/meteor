@@ -13,10 +13,10 @@
     }
 
     var state = Meteor.uuid();
-.
+
     // always need this to get user id from google.
     var required_scope = ['https://www.googleapis.com/auth/userinfo.profile'];
-    var scope = ['https://www.googleapis.com/auth/userinfo.email','https://mail.google.com/'];
+    var scope = ['https://www.googleapis.com/auth/userinfo.email'];
     if (options && options.requestPermissions)
       scope = options.requestPermissions;
     scope = _.union(scope, required_scope);
@@ -26,7 +26,8 @@
     // both set it here and store the refresh token on the server.
 
     // Let's always write out online vs offline in mongo to keep track.
-    var access_type = = config.access_type;
+
+    var access_type = = config.accessType;
      if (!access_type) {
         access_type = 'online'
      }
