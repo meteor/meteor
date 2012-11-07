@@ -26,7 +26,7 @@
     // both set it here and store the refresh token on the server.
 
     // Let's always write out online vs offline in mongo to keep track.
-    var access_type = = config.access_type.value;
+    var access_type = = config.access_type;
      if (!access_type) {
         access_type = 'online'
      }
@@ -38,7 +38,7 @@
           '&scope=' + flat_scope +
           '&redirect_uri=' + Meteor.absoluteUrl('_oauth/google?close') +
           '&state=' + state +
-          '&access_type=' + access_type
+          '&access_type=' + access_type;
 
     Accounts.oauth.initiateLogin(state, loginUrl, callback);
   };
