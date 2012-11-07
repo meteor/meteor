@@ -11,11 +11,6 @@ Meteor._WriteFence = function () {
   self.completion_callbacks = [];
 };
 
-// The current write fence. When there is a current write fence, code
-// that writes to databases should register their writes with it using
-// beginWrite().
-Meteor._CurrentWriteFence = new Meteor.EnvironmentVariable;
-
 _.extend(Meteor._WriteFence.prototype, {
   // Start tracking a write, and return an object to represent it. The
   // object has a single method, committed(). This method should be
@@ -62,6 +57,7 @@ _.extend(Meteor._WriteFence.prototype, {
   },
 
   // Convenience function. Arms the fence, then blocks until it fires.
+  // Only can be called on the server.
   armAndWait: function () {
     var self = this;
     var future = new Future;
