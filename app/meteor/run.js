@@ -458,8 +458,8 @@ exports.run = function (app_dir, bundle_opts, port) {
   var test_bundle_path = path.join(app_dir, '.meteor/local/build_test');
   // Allow override and use of external mongo. Matches code in launch_mongo.
   var mongo_url = process.env.MONGO_URL ||
-        ("mongodb://127.0.0.1:" + mongo_port + "/meteor");
-  var test_mongo_url = "mongodb://127.0.0.1:" + mongo_port + "/meteor_test";
+        ("mongodb://"+(process.env.METEOR_IP?process.env.METEOR_IP:'localhost')+":" + mongo_port + "/meteor");
+  var test_mongo_url = "mongodb://"+(process.env.METEOR_IP?process.env.METEOR_IP:'localhost')+":" + mongo_port + "/meteor_test";
 
   var test_bundle_opts;
   if (files.is_app_dir(app_dir)) {
