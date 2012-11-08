@@ -86,6 +86,8 @@ Commands.push({
     var opt = require('optimist')
       .alias('port', 'p').default('port', 3000)
       .describe('port', 'Port to listen on. NOTE: Also uses port N+1 and N+2.')
+      .describe('inner-port', 'Inner port to listen on instead of N+1 and N+2, it\'ll use inner-port+1 and inner-port+2.')
+      .describe('b', 'Bind to a specific IP address.')
       .boolean('production')
       .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
       .usage(
@@ -109,6 +111,9 @@ Commands.push({
       process.stdout.write(opt.help());
       process.exit(1);
     }
+
+    if (new_argv['inner-port']) process.env.METEOR_INNER_PORT = parseInt(new_argv['inner-port']);
+    if (new_argv.b) process.env.METEOR_IP = new_argv.b;
 
     var app_dir = path.resolve(require_project("run", true)); // app or package
     var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true };

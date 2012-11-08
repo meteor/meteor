@@ -82,14 +82,14 @@ var start_proxy = function (outer_port, inner_port, callback) {
     } else if (Status.listening) {
       // server is listening. things are hunky dory!
       proxy.proxyRequest(req, res, {
-        host: '127.0.0.1', port: inner_port
+        host: (process.env.METEOR_IP?process.env.METEOR_IP:'localhost'), port: inner_port
       });
     } else {
       // Not listening yet. Queue up request.
       var buffer = httpProxy.buffer(req);
       request_queue.push(function () {
         proxy.proxyRequest(req, res, {
-          host: '127.0.0.1', port: inner_port,
+          host: (process.env.METEOR_IP?process.env.METEOR_IP:'localhost'), port: inner_port,
           buffer: buffer
         });
       });
@@ -101,14 +101,14 @@ var start_proxy = function (outer_port, inner_port, callback) {
     if (Status.listening) {
       // server is listening. things are hunky dory!
       p.proxy.proxyWebSocketRequest(req, socket, head, {
-        host: '127.0.0.1', port: inner_port
+        host: (process.env.METEOR_IP?process.env.METEOR_IP:'localhost'), port: inner_port
       });
     } else {
       // Not listening yet. Queue up request.
       var buffer = httpProxy.buffer(req);
       request_queue.push(function () {
         p.proxy.proxyWebSocketRequest(req, socket, head, {
-          host: '127.0.0.1', port: inner_port,
+          host: (process.env.METEOR_IP?process.env.METEOR_IP:'localhost'), port: inner_port,
           buffer: buffer
         });
       });
@@ -176,7 +176,7 @@ var start_server = function (bundle_path, outer_port, inner_port, mongo_url,
     env[k] = process.env[k];
   env.PORT = inner_port;
   env.MONGO_URL = mongo_url;
-  env.ROOT_URL = env.ROOT_URL || ('http://localhost:' + outer_port);
+  env.ROOT_URL = env.ROOT_URL || ('http://'+(process.env.METEOR_IP?process.env.METEOR_IP:'localhost')+':' + outer_port);
 
   var proc = spawn(process.execPath,
                    [path.join(bundle_path, 'main.js'), '--keepalive'],
@@ -451,15 +451,15 @@ var start_update_checks = function () {
 // watcher.destroy() as appropriate.
 exports.run = function (app_dir, bundle_opts, port) {
   var outer_port = port || 3000;
-  var inner_port = outer_port + 1;
-  var mongo_port = outer_port + 2;
-  var test_port = outer_port + 3;
+  var inner_port = parseInt(process.env.METEOR_INNER_PORT?process.env.METEOR_INNER_PORT:outer_port) + 1;
+  var mongo_port = parseInt(process.env.METEOR_INNER_PORT?process.env.METEOR_INNER_PORT:outer_port) + 2;
+  var test_port = parseInt(process.env.METEOR_INNER_PORT?process.env.METEOR_INNER_PORT:outer_port) + 3;
   var bundle_path = path.join(app_dir, '.meteor/local/build');
   var test_bundle_path = path.join(app_dir, '.meteor/local/build_test');
   // Allow override and use of external mongo. Matches code in launch_mongo.
   var mongo_url = process.env.MONGO_URL ||
-        ("mongodb://127.0.0.1:" + mongo_port + "/meteor");
-  var test_mongo_url = "mongodb://127.0.0.1:" + mongo_port + "/meteor_test";
+        ("mongodb://"+(process.env.METEOR_IP?process.env.METEOR_IP:'localhost')+":" + mongo_port + "/meteor");
+  var test_mongo_url = "mongodb://"+(process.env.METEOR_IP?process.env.METEOR_IP:'localhost')+":" + mongo_port + "/meteor_test";
 
   var test_bundle_opts;
   if (files.is_app_dir(app_dir)) {
@@ -635,7 +635,7 @@ exports.run = function (app_dir, bundle_opts, port) {
       process.stdout.write("Initializing mongo database... this may take a moment.\n");
     }, 3000);
     process_startup_printer = function () {
-      process.stdout.write("Running on: http://localhost:" + outer_port + "/\n");
+      process.stdout.write("Running on: http://"+(process.env.METEOR_IP?process.env.METEOR_IP:'localhost')+":" + outer_port + "/\n");
     };
 
     start_update_checks();
