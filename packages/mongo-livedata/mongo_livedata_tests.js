@@ -131,7 +131,7 @@ Tinytest.addAsync("mongo-livedata - basics", function (test, onComplete) {
     total += doc.x;
     // verify the meteor environment is set up here
     coll2.insert({total:total});
-  })
+  });
   test.equal(total, 14);
 
   cur.rewind();
