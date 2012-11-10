@@ -11,9 +11,6 @@ var path = __meteor_bootstrap__.require('path');
 var MongoDB = __meteor_bootstrap__.require('mongodb');
 var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
 
-// js2-mode AST blows up when parsing 'future.return()', so alias.
-Future.prototype.ret = Future.prototype.return;
-
 _Mongo = function (url) {
   var self = this;
 
