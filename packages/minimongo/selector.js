@@ -1,3 +1,6 @@
+// Cache for generated (eval'ed) selector functions
+LocalCollection._selectorFunctionsCache = {}
+
 // helpers used by compiled selector code
 LocalCollection._f = {
   // XXX for _all and _in, consider building 'inquery' at compile time..
@@ -282,13 +285,21 @@ LocalCollection._compileSelector = function (selector) {
   if (_.size(selector) === 1 && ("_id" in selector))
     return function (doc) {return doc._id === selector._id;};
 
-  // eval() does not return a value in IE8, nor does the spec say it
-  // should. Assign to a local to get the value, instead.
-  var _func;
-  eval("_func = (function(f,literals){return function(doc){return " +
-       LocalCollection._exprForSelector(selector, literals) +
-       ";};})");
-  return _func(LocalCollection._f, literals);
+  // eval'ing functions is expensive, therefore we cache them, assuming
+  // that typically queries tend to be issued more than once.
+  var _cache_key = JSON.stringify(selector) + JSON.stringify(literals)
+  if (_cache_key in LocalCollection._selectorFunctionsCache) {
+    return LocalCollection._selectorFunctionsCache[_cache_key](LocalCollection._f, literals);
+  } else {
+    // eval() does not return a value in IE8, nor does the spec say it
+    // should. Assign to a local to get the value, instead.
+    var _func;
+    eval("_func = (function(f,literals){return function(doc){return " +
+         LocalCollection._exprForSelector(selector, literals) +
+         ";};})");
+    LocalCollection._selectorFunctionsCache[_cache_key] = _func;
+    return _func(LocalCollection._f, literals);
+  }
 };
 
 // Is this selector just shorthand for lookup by _id?
