@@ -277,6 +277,11 @@ LocalCollection._compileSelector = function (selector) {
   if (!selector || (('_id' in selector) && !selector._id))
     return function (doc) {return false;};
 
+  // fast path for simply matching the _id of a document and nothing
+  // else.
+  if (_.size(selector) === 1 && ("_id" in selector))
+    return function (doc) {return doc._id === selector._id;};
+
   // eval() does not return a value in IE8, nor does the spec say it
   // should. Assign to a local to get the value, instead.
   var _func;
