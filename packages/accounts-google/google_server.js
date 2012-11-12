@@ -7,15 +7,25 @@
     var refreshToken = response.refresh_token;
     var identity = getIdentity(accessToken);
 
+    if (!refreshToken) {
+
+        // Not all responses will include a refresh token, and we don't want to override an existing one with a null
+        // value if we actually already have one.
+        refreshToken = getRefreshToken(identity.id);
+    }
+
     return {
-      serviceData: {
-        id: identity.id,
-        accessToken: accessToken,
-        refreshToken: refreshToken,
-        email: identity.email
-      },
-      options: {profile: {name: identity.name}}
-    };
+                serviceData: {
+                  id: identity.id,
+                  accessToken: accessToken,
+                  refreshToken: refreshToken,
+                  email: identity.email
+                },
+                options: {profile: {name: identity.name}}
+           };
+
+
+    return serviceData;
   });
 
   var getAccessToken = function (query) {
@@ -38,6 +48,14 @@
       throw result.data;
     return result.data;
   };
+
+  var getRefreshToken = function (id) {
+      var user = Meteor.users.findOne({'services.google.id': id});
+      if (!user)
+        return null;
+
+      return user.services.google.refreshToken;
+    };
 
   var getIdentity = function (accessToken) {
     var result = Meteor.http.get(
