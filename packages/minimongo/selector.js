@@ -277,6 +277,10 @@ LocalCollection._compileSelector = function (selector) {
   if (!selector || (('_id' in selector) && !selector._id))
     return function (doc) {return false;};
 
+  // return every document if the selector is an empty object
+  if (_.size(selector) === 0)
+    return function(doc) {return true;};
+
   // eval() does not return a value in IE8, nor does the spec say it
   // should. Assign to a local to get the value, instead.
   var _func;
