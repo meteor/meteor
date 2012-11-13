@@ -47,7 +47,7 @@
           Accounts._makeClientLoggedOut();
           throw error;
         } else {
-          // nothing to do
+            Accounts.ui && Accounts.ui._performOnSuccessCallback && Accounts.ui._performOnSuccessCallback();
         }
       });
     };
@@ -65,6 +65,8 @@
         data.loaded = true;
         userLoadedListeners.invalidateAll();
       });
+
+    Accounts.ui && Accounts.ui._performOnSuccessCallback && Accounts.ui._performOnSuccessCallback();
   };
 
   Meteor.logout = function (callback) {
