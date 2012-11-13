@@ -132,6 +132,11 @@ cd mongodb/bin
 rm bsondump mongodump mongoexport mongofiles mongoimport mongorestore mongos mongosniff mongostat mongotop mongooplog mongoperf
 cd ../..
 
+# Clean up an unneeded directory accidentally installed by the
+# node-mongo-native driver. This will be fixed in later versions, but
+# for now we have to manually remove it.
+# https://github.com/mongodb/node-mongodb-native/issues/736
+rm -rf lib/node_modules/mongodb/.coverage_data
 
 
 echo BUNDLING
