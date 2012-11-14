@@ -99,7 +99,8 @@ var bundle_and_deploy = function (site, app_dir, opt_debug, opt_tests,
 
   var rpc = meteor_rpc('deploy', 'POST', site, opts, function (err, body) {
     if (err) {
-      process.stderr.write("\nError deploying application: " + body + "\n");
+      var errorMessage = (body || ("Connection error (" + err.message + ")"));
+      process.stderr.write("\nError deploying application: " + errorMessage + "\n");
       process.exit(1);
     }
 
