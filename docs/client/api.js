@@ -260,7 +260,7 @@ Template.api.meteor_call = {
      descr: "Optional method arguments"},
     {name: "asyncCallback",
      type: "Function",
-     descr: "Optional callback.  If passed, the method runs asynchronously, instead of synchronously, and calls asyncCallback passing either the error or the result."}
+     descr: "Optional callback.  If passed, the method runs asynchronously, instead of synchronously, and calls asyncCallback passing either the error or the result. Note that synchronous server method calls are not possible client side."}
   ]
 };
 
@@ -278,7 +278,7 @@ Template.api.meteor_apply = {
      descr: "Method arguments"},
     {name: "asyncCallback",
      type: "Function",
-     descr: "Optional callback.  If passed, the method runs asynchronously, instead of synchronously, and calls asyncCallback passing either the error or the result."}
+     descr: "Optional callback.  If passed, the method runs asynchronously, instead of synchronously, and calls asyncCallback passing either the error or the result. Note that synchronous server method calls are not possible client side."}
   ],
   options: [
     {name: "wait",
