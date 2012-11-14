@@ -7,6 +7,60 @@ LocalCollection._containsObject = function (list, obj) {
   return false;
 }
 
+LocalCollection._gt = function (otherVal, val) {
+  if ((val === "null") && (otherVal === null)) {
+    return true;
+  } else if (_.isArray(otherVal)) {
+    return _.max(otherVal) > val;
+  } else if (_.isObject(otherVal) && _.isObject(val)) {
+    for (var selKey in val) {
+      if (selKey in otherVal) {
+        if (_.isArray(val[selKey])) {
+          v = _.min(val[selKey]);
+        } else {
+          v = val[selKey];
+        }
+        if (_.isArray(otherVal[selKey])) {
+          d = _.min(otherVal[selKey]);
+        } else {
+          d = otherVal[selKey];
+        }
+        return d > v
+      }
+    }
+  } else {
+    return otherVal > val;
+  }
+
+}
+
+LocalCollection._lt = function (otherVal, val) {
+  if ((val === "null") && (otherVal === null)) {
+    return true;
+  } else if (_.isArray(otherVal)) {
+    return _.min(otherVal) < val;
+  } else if (_.isObject(otherVal) && _.isObject(val)) {
+    for (var selKey in val) {
+      if (selKey in otherVal) {
+        if (_.isArray(val[selKey])) {
+          v = _.min(val[selKey]);
+        } else {
+          v = val[selKey];
+        }
+        if (_.isArray(otherVal[selKey])) {
+          d = _.min(otherVal[selKey]);
+        } else {
+          d = otherVal[selKey];
+        }
+        return d < v
+      }
+    }
+  } else {
+    return otherVal < val;
+  }
+
+}
+
 LocalCollection._checkType = function(type, value) {
   switch (type) {
     case 1:
@@ -40,26 +94,14 @@ LocalCollection._checkType = function(type, value) {
   }
 }
 
-LocalCollection._deepCheckType = function (value, type) {
-  if (_.isArray(value)) {
-    for (var i = 0, len_i = value.length; i < len_i; i++) {
-      if (typeof value[i] === type) {
-        return true;
-      }
-    }
-    return false;
-  } else {
-    return typeof value === type;
-  }
-}
 LocalCollection._selectorOperators = {
-  "$in": function(selectorKey, value, docBranch) {
+  "$in": function(key, selectorValue, docBranch) {
     if (!_.isArray(docBranch)) {
       docBranch = [docBranch];
     }
-    if (!(LocalCollection._containsObject(value, docBranch))) {
+    if (!(LocalCollection._containsObject(selectorValue, docBranch))) {
       for (var i = 0, len_i = docBranch.length; i < len_i; i++) {
-        if (LocalCollection._containsObject(value, docBranch[i])) {
+        if (LocalCollection._containsObject(selectorValue, docBranch[i])) {
           return true;
         }
       }
@@ -68,70 +110,59 @@ LocalCollection._selectorOperators = {
       return true;
     }
   },
-  "$all": function(selectorKey, value, docBranch) {
+
+  "$all": function(key, selectorValue, docBranch) {
     if (!_.isArray(docBranch)) {
       docBranch = [docBranch];
     }
-    for (var i = 0, len_i = value.length; i < len_i; i++) {
-      if (!(LocalCollection._containsObject(docBranch, value[i]))) {
+    for (var i = 0, len_i = selectorValue.length; i < len_i; i++) {
+      if (!(LocalCollection._containsObject(docBranch, selectorValue[i]))) {
         return false;
       }
     }
     return true;
   },
-  "$lt": function(selectorKey, value, docBranch) {
-    if ((value === "null") && (docBranch === null)) {
-      return true;
-    } else if (_.isArray(docBranch)) {
-      return _.min(docBranch) < value;
-    } else {
-      return docBranch < value;
-    }
+
+  "$lt": function(key, selectorValue, docBranch) {
+    return LocalCollection._lt(docBranch, selectorValue, _.min);
   },
-  "$lte": function(selectorKey, value, docBranch) {
-    if (_.isArray(docBranch)) {
-      return _.min(docBranch) <= value;
-    } else {
-      return docBranch <= value;
-    }
+
+  "$lte": function(key, selectorValue, docBranch) {
+    return (_.isEqual(selectorValue, docBranch)) || LocalCollection._lt(docBranch, selectorValue);
   },
-  "$gt": function(selectorKey, value, docBranch) {
-    if ((value === "null") && (docBranch === null)) {
-      return true;
-    } else if (_.isArray(docBranch)) {
-      return _.max(docBranch) > value;
-    } else {
-      return docBranch > value;
-    }
+
+  "$gt": function(key, selectorValue, docBranch) {
+    return LocalCollection._gt(docBranch, selectorValue);
+   },
+
+  "$gte": function(key, selectorValue, docBranch) {
+    return (_.isEqual(selectorValue, docBranch)) || LocalCollection._gt(docBranch, selectorValue);
   },
-  "$gte": function(selectorKey, value, docBranch) {
-    if (_.isArray(docBranch)) {
-      return _.max(docBranch) >= value;
-    } else {
-      return docBranch >= value;
-    }
-  },
-  "$ne": function(selectorKey, value, docBranch) {
-    if (_.isEqual(value, docBranch)) {
+
+  "$ne": function(key, selectorValue, docBranch) {
+    if (_.isEqual(selectorValue, docBranch)) {
       return false;
     } else {
       if (_.isArray(docBranch)) {
-        return !LocalCollection._containsObject(docBranch, value)
+        return !LocalCollection._containsObject(docBranch, selectorValue)
       }
       return true;
     }
   },
-  "$nin": function(selectorKey, value, docBranch) {
-    return !LocalCollection._selectorOperators["$in"](selectorKey, value, docBranch);
+
+  "$nin": function(key, selectorValue, docBranch) {
+    return !LocalCollection._selectorOperators["$in"](key, selectorValue, docBranch);
   },
-  "$exists": function(selectorKey, value, docBranch) {
-    return (value && (docBranch !== undefined)) || (!value && (docBranch === undefined))
+
+  "$exists": function(key, selectorValue, docBranch) {
+    return (selectorValue && (docBranch !== undefined)) || (!selectorValue && (docBranch === undefined))
   },
-  "$mod": function(selectorKey, value, docBranch) {
-    if (!(docBranch % value[0] === value[1])) {
+
+  "$mod": function(key, selectorValue, docBranch) {
+    if (!(docBranch % selectorValue[0] === selectorValue[1])) {
       if (_.isArray(docBranch)) {
         for (var i = 0, len_i = docBranch.length; i < len_i; i++) {
-          if (docBranch[i] % value[0] === value[1]) {
+          if (docBranch[i] % selectorValue[0] === selectorValue[1]) {
             return true;
           }
         }
@@ -141,30 +172,33 @@ LocalCollection._selectorOperators = {
       return true;
     }
   },
-  "$and": function(selectorKey, value, docBranch) {
+
+  "$and": function(key, selectorValue, docBranch) {
     var selectorBranch, _i, _len;
-    for (_i = 0, _len = value.length; _i < _len; _i++) {
-      selectorBranch = value[_i];
+    for (_i = 0, _len = selectorValue.length; _i < _len; _i++) {
+      selectorBranch = selectorValue[_i];
       if (!(LocalCollection._evaluateSelector(null, selectorBranch, docBranch))) {
         return false;
       }
     }
     return true;
   },
-  "$or": function(selectorKey, value, docBranch) {
+
+  "$or": function(key, selectorValue, docBranch) {
     var selectorBranch, _i, _len;
-    for (_i = 0, _len = value.length; _i < _len; _i++) {
-      selectorBranch = value[_i];
+    for (_i = 0, _len = selectorValue.length; _i < _len; _i++) {
+      selectorBranch = selectorValue[_i];
       if (!(LocalCollection._evaluateSelector(null, selectorBranch, docBranch))) {
         return true;
       }
     }
     return false;
   },
-  "$nor": function(selectorKey, value, docBranch) {
+
+  "$nor": function(key, selectorValue, docBranch) {
     var selectorBranch, _i, _len;
-    for (_i = 0, _len = value.length; _i < _len; _i++) {
-      selectorBranch = value[_i];
+    for (_i = 0, _len = selectorValue.length; _i < _len; _i++) {
+      selectorBranch = selectorValue[_i];
       if (!(LocalCollection._evaluateSelector(null, selectorBranch, docBranch))) {
         return false;
       }
@@ -172,45 +206,56 @@ LocalCollection._selectorOperators = {
     return true;
   },
   
-  "$not": function(selectorKey, value, docBranch) {
-    return !(LocalCollection._evaluateSelector(null, value, docBranch));
+  "$not": function(key, selectorValue, docBranch, selectorBranch) {
+    if (_.isObject(selectorValue) && !_.isArray(selectorValue) && !(selectorValue instanceof RegExp)) {
+      return !(LocalCollection._evaluateSelector(key, selectorValue, docBranch));
+    } else {
+      if (selectorValue instanceof RegExp) {
+        return !(selectorValue.test(docBranch))
+      }
+      // Don't check for stuff that should be $ne territory
+    }
   },
 
-  "$size": function(selectorKey, value, docBranch) {
+  "$size": function(key, selectorValue, docBranch) {
     if (_.isObject(docBranch)) {
-      return value === _.size(docBranch);
+      return selectorValue === _.size(docBranch);
     } else {
       return false;
     }
   },
 
-  "$type": function(selectorKey, value, docBranch) {
+  "$type": function(key, selectorValue, docBranch) {
     if (_.isArray(docBranch)) {
       for (var i = 0, len_i = docBranch.length; i < len_i; i++) {
-        if (LocalCollection._checkType(value, docBranch[i])) {
+        if (LocalCollection._checkType(selectorValue, docBranch[i])) {
           return true;
         }
       }
       return false;
     } else {
-      return LocalCollection._checkType(value, docBranch);
+      return LocalCollection._checkType(selectorValue, docBranch);
     }
   },
 
-  "$regex": function(selectorKey, value, docBranch, selectorBranch) {
-    if (value instanceof RegExp) {
-      return value.test(docBranch);
-    } else {
-      if ("$options" in selectorBranch) {
-        options = selectorBranch["$options"];
+  "$regex": function(key, selectorValue, docBranch, selectorBranch) {
+    var options = undefined;
+    if ("$options" in selectorBranch) {
+      options = selectorBranch["$options"];
+    }
+    if (selectorValue instanceof RegExp) {
+      if (options === undefined) {
+        return selectorValue.test(docBranch);
       } else {
-        options = "";
+        // if there are options given with $options, we use them instead
+        return new RegExp(selectorValue.source, options).test(docBranch);
       }
-      return new RegExp(value, options).test(docBranch);
-    }
+    } 
+    return new RegExp(selectorValue, options).test(docBranch);
   },
 
-  "$options": function(selectorKey, value, docBranch) {
+  "$options": function(key, selectorValue, docBranch) {
+    // evaluation happens at the $regex function above
     return true;
   },
 
@@ -477,19 +522,18 @@ LocalCollection._matches = function (selector, doc) {
   return (LocalCollection._compileSelector(selector))(doc);
 };
 
-
-LocalCollection._evaluateSelector = function(selectorKey, selectorBranch, docBranch) {
-  for (var key in selectorBranch) {
-    var value = selectorBranch[key];
-    if (key[0] === "$") {
-      if (!LocalCollection._selectorOperators[key](selectorKey, value, docBranch, selectorBranch)) {
+LocalCollection._evaluateSelector = function(outerKey, selectorBranch, docBranch) {
+  for (var innerKey in selectorBranch) {
+    var selectorValue = selectorBranch[innerKey];
+    if (innerKey[0] === "$") {
+      if (!LocalCollection._selectorOperators[innerKey](outerKey, selectorValue, docBranch, selectorBranch)) {
         return false;
       }
-    } else if (key.indexOf(".") >= 0) {
-      // if the key uses dot-notation, we move up one layer and recurse.
-      var keyParts = key.split(".");
+    } else if (innerKey.indexOf(".") >= 0) {
+      // if the innerKey uses dot-notation, we move up one layer and recurse.
+      var keyParts = innerKey.split(".");
       var newValue = {};
-      newValue[keyParts.slice(1).join(".")] = value;
+      newValue[keyParts.slice(1).join(".")] = selectorValue;
       if (!(keyParts[0] in docBranch)) {
         return false;
       }
@@ -497,8 +541,8 @@ LocalCollection._evaluateSelector = function(selectorKey, selectorBranch, docBra
     } else {
       // check if there are no operators, but instead a normal object.
       var isNormalObject = true;
-      if (_.isObject(value)) {
-        for (selKey in value) {
+      if (_.isObject(selectorValue) && !(selectorValue instanceof RegExp) && !_.isArray(selectorValue)) {
+        for (var selKey in selectorValue) {
           if (selKey[0] === "$") {
             isNormalObject = false;
             break;
@@ -506,26 +550,29 @@ LocalCollection._evaluateSelector = function(selectorKey, selectorBranch, docBra
         }
       }
 
-      if (!(_.isArray(value)) && !isNormalObject) {
-        if (!(LocalCollection._evaluateSelector(key, value, docBranch[key]))) {
+      if (!isNormalObject) {
+        if (!(LocalCollection._evaluateSelector(innerKey, selectorValue, docBranch[innerKey]))) {
           return false;
         }
       } else {
-        // stringify b/c that preserves key order
-        if (JSON.stringify(docBranch[key]) !== JSON.stringify(value)) {
-          if (_.isArray(docBranch[key])) { // maybe it's an array?
+        if (selectorValue instanceof RegExp) {
+          return selectorValue.test(docBranch[innerKey]);
+        }
+        // stringify b/c that preserves innerKey order
+        if (JSON.stringify(docBranch[innerKey]) !== JSON.stringify(selectorValue)) {
+          if (_.isArray(docBranch[innerKey])) { // maybe it's an array?
             var inArray = false;
-            for (var i = 0, len_i = docBranch[key].length; i < len_i; i++) {
-              if (JSON.stringify(docBranch[key][i]) === JSON.stringify(value)) {
+            for (var i = 0, len_i = docBranch[innerKey].length; i < len_i; i++) {
+              if (JSON.stringify(docBranch[innerKey][i]) === JSON.stringify(selectorValue)) {
                 inArray = true;
                 break;
               }
             }
             if (!(inArray)) {
-              return false
+              return false;
             }
-          } else if (value === null) { // maybe it's querying for a non-existing field?
-            if (key in docBranch) {
+          } else if (selectorValue === null) { // maybe it's querying for a non-existing field?
+            if (innerKey in docBranch) {
               return false;
             }
           } else {
