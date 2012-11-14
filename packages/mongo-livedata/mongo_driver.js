@@ -1,3 +1,4 @@
+(function(){
 /**
  * Provide a synchronous Collection API using fibers, backed by
  * MongoDB.  This is only for use on the server, and mostly identical
@@ -505,3 +506,4 @@ _Mongo.LiveResultsSet.prototype.stop = function () {
 _.extend(Meteor, {
   _Mongo: _Mongo
 });
+})();
