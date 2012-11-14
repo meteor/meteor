@@ -1,3 +1,222 @@
+LocalCollection._containsObject = function (list, obj) {
+  for (var i = 0, len_i = list.length; i < len_i; i++) {
+    if (_.isEqual(obj, list[i])) {
+      return true;
+    }
+  }
+  return false;
+}
+
+LocalCollection._checkType = function(type, value) {
+  switch (type) {
+    case 1:
+      return typeof value === "number";
+    case 2:
+      return typeof value === "string";
+    case 3:
+      return value instanceof Object;
+    case 4:
+      return value instanceof Array;
+    case 8:
+      return typeof value === "boolean";
+    case 10:
+      return value === null;
+    case 11:
+      return value instanceof RegExp
+    case 13:
+      return typeof value === "function"
+    default:
+      return false;
+  }
+}
+
+LocalCollection._deepCheckType = function (value, type) {
+  if (_.isArray(value)) {
+    for (var i = 0, len_i = value.length; i < len_i; i++) {
+      if (typeof value[i] === type) {
+        return true;
+      }
+    }
+    return false;
+  } else {
+    return typeof value === type;
+  }
+}
+LocalCollection._selectorOperators = {
+  "$in": function(selectorKey, value, docBranch) {
+    if (!_.isArray(docBranch)) {
+      docBranch = [docBranch];
+    }
+    if (!(LocalCollection._containsObject(value, docBranch))) {
+      for (var i = 0, len_i = docBranch.length; i < len_i; i++) {
+        if (LocalCollection._containsObject(value, docBranch[i])) {
+          return true;
+        }
+      }
+      return false;
+    } else {
+      return true;
+    }
+  },
+  "$all": function(selectorKey, value, docBranch) {
+    if (!_.isArray(docBranch)) {
+      docBranch = [docBranch];
+    }
+    for (var i = 0, len_i = value.length; i < len_i; i++) {
+      if (!(LocalCollection._containsObject(docBranch, value[i]))) {
+        return false;
+      }
+    }
+    return true;
+  },
+  "$lt": function(selectorKey, value, docBranch) {
+    if ((value === "null") && (docBranch === null)) {
+      return true;
+    } else if (_.isArray(docBranch)) {
+      return _.min(docBranch) < value;
+    } else {
+      return docBranch < value;
+    }
+  },
+  "$lte": function(selectorKey, value, docBranch) {
+    if (_.isArray(docBranch)) {
+      return _.min(docBranch) <= value;
+    } else {
+      return docBranch <= value;
+    }
+  },
+  "$gt": function(selectorKey, value, docBranch) {
+    if ((value === "null") && (docBranch === null)) {
+      return true;
+    } else if (_.isArray(docBranch)) {
+      return _.max(docBranch) > value;
+    } else {
+      return docBranch > value;
+    }
+  },
+  "$gte": function(selectorKey, value, docBranch) {
+    if (_.isArray(docBranch)) {
+      return _.max(docBranch) >= value;
+    } else {
+      return docBranch >= value;
+    }
+  },
+  "$ne": function(selectorKey, value, docBranch) {
+    if (_.isEqual(value, docBranch)) {
+      return false;
+    } else {
+      if (_.isArray(docBranch)) {
+        return !LocalCollection._containsObject(docBranch, value)
+      }
+      return true;
+    }
+  },
+  "$nin": function(selectorKey, value, docBranch) {
+    return !LocalCollection._selectorOperators["$in"](selectorKey, value, docBranch);
+  },
+  "$exists": function(selectorKey, value, docBranch) {
+    return (value && (docBranch !== undefined)) || (!value && (docBranch === undefined))
+  },
+  "$mod": function(selectorKey, value, docBranch) {
+    if (!(docBranch % value[0] === value[1])) {
+      if (_.isArray(docBranch)) {
+        for (var i = 0, len_i = docBranch.length; i < len_i; i++) {
+          if (docBranch[i] % value[0] === value[1]) {
+            return true;
+          }
+        }
+      }
+      return false;
+    } else {
+      return true;
+    }
+  },
+  "$and": function(selectorKey, value, docBranch) {
+    var selectorBranch, _i, _len;
+    for (_i = 0, _len = value.length; _i < _len; _i++) {
+      selectorBranch = value[_i];
+      if (!(LocalCollection._evaluateSelector(null, selectorBranch, docBranch))) {
+        return false;
+      }
+    }
+    return true;
+  },
+  "$or": function(selectorKey, value, docBranch) {
+    var selectorBranch, _i, _len;
+    for (_i = 0, _len = value.length; _i < _len; _i++) {
+      selectorBranch = value[_i];
+      if (!(LocalCollection._evaluateSelector(null, selectorBranch, docBranch))) {
+        return true;
+      }
+    }
+    return false;
+  },
+  "$nor": function(selectorKey, value, docBranch) {
+    var selectorBranch, _i, _len;
+    for (_i = 0, _len = value.length; _i < _len; _i++) {
+      selectorBranch = value[_i];
+      if (!(LocalCollection._evaluateSelector(null, selectorBranch, docBranch))) {
+        return false;
+      }
+    }
+    return true;
+  },
+  
+  "$not": function(selectorKey, value, docBranch) {
+    return !(LocalCollection._evaluateSelector(null, value, docBranch));
+  },
+
+  "$size": function(selectorKey, value, docBranch) {
+    if (_.isObject(docBranch)) {
+      return value === _.size(docBranch);
+    } else {
+      return false;
+    }
+  },
+
+  "$type": function(selectorKey, value, docBranch) {
+    if (_.isArray(docBranch)) {
+      for (var i = 0, len_i = docBranch.length; i < len_i; i++) {
+        if (LocalCollection._checkType(value, docBranch[i])) {
+          return true;
+        }
+      }
+      return false;
+    } else {
+      return LocalCollection._checkType(value, docBranch);
+    }
+    // XXX support some/all of these:
+    // 5, binary data
+    // 7, object id
+    // 9, date
+    // 14, symbol
+    // 15, javascript code with scope
+    // 16, 18: 32-bit/64-bit integer
+    // 17, timestamp
+    // 255, minkey
+    // 127, maxkey
+  },
+
+  "$regex": function(selectorKey, value, docBranch, selectorBranch) {
+    if (value instanceof RegExp) {
+      return value.test(docBranch);
+    } else {
+      if ("$options" in selectorBranch) {
+        options = selectorBranch["$options"];
+      } else {
+        options = "";
+      }
+      return new RegExp(value, options).test(docBranch);
+    }
+  },
+
+  "$options": function(selectorKey, value, docBranch) {
+    return true;
+  },
+
+};
+
+
 // helpers used by compiled selector code
 LocalCollection._f = {
   // XXX for _all and _in, consider building 'inquery' at compile time..
@@ -258,6 +477,68 @@ LocalCollection._matches = function (selector, doc) {
   return (LocalCollection._compileSelector(selector))(doc);
 };
 
+
+LocalCollection._evaluateSelector = function(selectorKey, selectorBranch, docBranch) {
+  var key, keyParts, newValue, value;
+  for (key in selectorBranch) {
+    value = selectorBranch[key];
+    if (key[0] === "$") {
+      if (!LocalCollection._selectorOperators[key](selectorKey, value, docBranch, selectorBranch)) {
+        return false;
+      }
+    } else if (key.indexOf(".") >= 0) {
+      // if the key uses dot-notation, we move up one layer and recurse.
+      keyParts = key.split(".");
+      newValue = {};
+      newValue[keyParts.slice(1).join(".")] = value;
+      if (!(keyParts[0] in docBranch)) {
+        return false;
+      }
+      return LocalCollection._evaluateSelector(null, newValue, docBranch[keyParts[0]]);
+    } else {
+      // check if there are no operators, but instead a normal object.
+      var isNormalObject = true;
+      if (_.isObject(value)) {
+        for (selKey in value) {
+          if (selKey[0] === "$") {
+            isNormalObject = false;
+            break;
+          }
+        }
+      }
+
+      if (!(_.isArray(value)) && !isNormalObject) {
+        if (!(LocalCollection._evaluateSelector(key, value, docBranch[key]))) {
+          return false;
+        }
+      } else {
+        // stringify b/c that preserves key order
+        if (JSON.stringify(docBranch[key]) !== JSON.stringify(value)) {
+          if (_.isArray(docBranch[key])) { // maybe it's an array?
+            var inArray = false;
+            for (var i = 0, len_i = docBranch[key].length; i < len_i; i++) {
+              if (JSON.stringify(docBranch[key][i]) === JSON.stringify(value)) {
+                inArray = true;
+                break;
+              }
+            }
+            if (!(inArray)) {
+              return false
+            }
+          } else if (value === null) { // maybe it's querying for a non-existing field?
+            if (key in docBranch) {
+              return false;
+            }
+          } else {
+            return false;
+          }
+        }
+      }
+    }
+  }
+  return true;
+};
+
 // Given a selector, return a function that takes one argument, a
 // document, and returns true if the document matches the selector,
 // else false.
@@ -270,12 +551,18 @@ LocalCollection._compileSelector = function (selector) {
   // shorthand -- scalars match _id
   if (LocalCollection._selectorIsId(selector))
     selector = {_id: selector};
-
+  
   // protect against dangerous selectors.  falsey and {_id: falsey}
   // are both likely programmer error, and not what you want,
   // particularly for destructive operations.
   if (!selector || (('_id' in selector) && !selector._id))
     return function (doc) {return false;};
+
+  var _func = function(doc) {
+    return LocalCollection._evaluateSelector(null, selector, doc);
+  };
+  return _func;
+
 
   // eval() does not return a value in IE8, nor does the spec say it
   // should. Assign to a local to get the value, instead.
