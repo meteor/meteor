@@ -277,6 +277,15 @@ LocalCollection._compileSelector = function (selector) {
   if (!selector || (('_id' in selector) && !selector._id))
     return function (doc) {return false;};
 
+  // fast path for simple queries with just one field (like _id)
+  // without any modifiers.
+  if (_.size(selector) === 1) {
+    for (key in selector) {
+      if (LocalCollection._selectorIsId(selector[key]))
+        return function (doc) {return doc[key] === selector[key];};
+    }
+  }
+
   // eval() does not return a value in IE8, nor does the spec say it
   // should. Assign to a local to get the value, instead.
   var _func;
