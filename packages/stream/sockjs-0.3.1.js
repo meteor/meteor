@@ -205,6 +205,7 @@ utils.isSameOriginUrl = function(url_a, url_b) {
 };
 
 // <METEOR>
+// https://github.com/sockjs/sockjs-client/issues/79
 utils.isSameOriginScheme = function(url_a, url_b) {
     if (!url_b) url_b = _window.location.href;
 
@@ -1162,6 +1163,7 @@ SockJS.prototype._applyInfo = function(info, rtt, protocols_whitelist) {
     var probed = utils.probeProtocols();
     that._protocols = utils.detectProtocols(probed, protocols_whitelist, info);
 // <METEOR>
+// https://github.com/sockjs/sockjs-client/issues/79
     // Hack to avoid XDR when using different protocols
     // We're on IE trying to do cross-protocol. jsonp only.
     if (!utils.isSameOriginScheme(that._base_url) &&
@@ -1967,6 +1969,7 @@ var createInfoReceiver = function(base_url) {
         return new InfoReceiver(base_url, utils.XHRCorsObject);
     case 2:
 // <METEOR>
+// https://github.com/sockjs/sockjs-client/issues/79
         // XDR doesn't work across different schemes
         // http://blogs.msdn.com/b/ieinternals/archive/2010/05/13/xdomainrequest-restrictions-limitations-and-workarounds.aspx
         if (utils.isSameOriginScheme(base_url))
