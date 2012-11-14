@@ -1306,6 +1306,10 @@ to configuring each service. However, the data can be also be entered
 manually in the `Accounts.loginServiceConfiguration` collection. For
 example:
 
+    // first, remove configuration entry in case service is already configured
+    Accounts.loginServiceConfiguration.remove({
+      service: "weibo"
+    });
     Accounts.loginServiceConfiguration.insert({
       service: "weibo",
       clientId: "1292962797",
