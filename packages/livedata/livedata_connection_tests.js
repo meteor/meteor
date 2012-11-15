@@ -854,6 +854,9 @@ Tinytest.add("livedata connection - two wait methods", function (test) {
   var conn = newConnection(stream);
   startAndConnect(test, stream);
 
+  var collName = Meteor.uuid();
+  var coll = new Meteor.Collection(collName, {manager: conn});
+
   // setup method
   conn.methods({do_something: function (x) {}});
 
@@ -885,6 +888,14 @@ Tinytest.add("livedata connection - two wait methods", function (test) {
   // 'one!'.
   test.equal(stream.sent.length, 0);
 
+  // Receive some data. "one" is not a wait method and there are no stubs, so it
+  // gets applied immediately.
+  test.equal(coll.find().count(), 0);
+  stream.receive({msg: 'data', collection: collName,
+                  id: 'foo', set: {x: 1}});
+  test.equal(coll.find().count(), 1);
+  test.equal(coll.findOne('foo'), {_id: 'foo', x: 1});
+
   // Let "one!" finish. Both messages are required to fire the callback.
   stream.receive({msg: 'result', id: one_message.id});
   test.equal(responses, []);
@@ -898,10 +909,20 @@ Tinytest.add("livedata connection - two wait methods", function (test) {
   // But still haven't sent "three!".
   test.equal(stream.sent.length, 0);
 
+  // Receive more data. "two" is a wait method, so the data doesn't get applied
+  // yet.
+  stream.receive({msg: 'data', collection: collName,
+                  id: 'foo', set: {y: 3}});
+  test.equal(coll.find().count(), 1);
+  test.equal(coll.findOne('foo'), {_id: 'foo', x: 1});
+
   // Let "two!" finish, with its end messages in the opposite order to "one!".
   stream.receive({msg: 'data', methods: [two_message.id]});
   test.equal(responses, ['one']);
   test.equal(stream.sent.length, 0);
+  // data-done message is enough to allow data to be written.
+  test.equal(coll.find().count(), 1);
+  test.equal(coll.findOne('foo'), {_id: 'foo', x: 1, y: 3});
   stream.receive({msg: 'result', id: two_message.id});
   test.equal(responses, ['one', 'two']);
 
@@ -1017,7 +1038,7 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
     return JSON.parse(msg).params[0];
   }), ['reconnect one', 'reconnect two', 'reconnect three', 'one']);
 
-  // black-box test:
+  // white-box test:
   test.equal(_.map(conn._outstandingMethodBlocks, function (block) {
     return [block.wait, _.map(block.methods, function (method) {
       return JSON.parse(method._message).params[0];
