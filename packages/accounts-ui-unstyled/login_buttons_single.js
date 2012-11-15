@@ -14,7 +14,7 @@
         } else if (err instanceof Accounts.ConfigError) {
           loginButtonsSession.configureService(serviceName);
         } else {
-          loginButtonsSession.set('errorMessage', err.reason || "Unknown error");
+          loginButtonsSession.errorMessage(err.reason || "Unknown error");
         }
       };
 

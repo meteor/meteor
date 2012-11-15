@@ -43,20 +43,24 @@
 <!--            -->
 <template name="_loginButtonsLoggedOutDropdown">
   <div class="login-link-and-dropdown-list {{additionalClasses}}">
-    <a class="login-link-text" id="login-sign-in-link">Sign in ▾</a>
     {{#if dropdownVisible}}
-    <div id="login-dropdown-list" class="accounts-dialog">
-      <a class="login-close-text">Close</a>
-      {{#if loggingIn}}
-        {{> _loginButtonsLoggingIn}}
-      {{/if}}
-      <div class="login-close-text-clear"></div>
-      {{> _loginButtonsLoggedOutAllServices}}
-    </div>
+      {{! This text is covered by the dropdown, but duplicating it here
+          makes the position of "Close" match the position of this text. }}
+      <a class="login-link-text" id="login-sign-in-link">Sign in ▾</a>
+      <div id="login-dropdown-list" class="accounts-dialog">
+        <a class="login-close-text">Close</a>
+        {{#if loggingIn}}
+          {{> _loginButtonsLoggingIn}}
+        {{/if}}
+        <div class="login-close-text-clear"></div>
+        {{> _loginButtonsLoggedOutAllServices}}
+      </div>
     {{else}}
       {{#if loggingIn}}
         {{! Not normally visible, but if the user closes the dropdown during login.}}
         {{> _loginButtonsLoggingIn}}
+      {{else}}
+        <a class="login-link-text" id="login-sign-in-link">Sign in ▾</a>
       {{/if}}
     {{/if}}
   </div>
