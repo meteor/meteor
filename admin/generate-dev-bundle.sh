@@ -55,6 +55,8 @@ cd build
 
 git clone git://github.com/joyent/node.git
 cd node
+# When upgrading node versions, also update the values of MIN_NODE_VERSION at
+# the top of app/meteor/meteor.js and app/server/server.js.
 git checkout v0.8.11
 
 ./configure --prefix="$DIR"
@@ -76,7 +78,6 @@ npm install gzippo@0.1.7
 npm install optimist@0.3.4
 npm install coffee-script@1.3.3
 npm install less@1.3.0
-npm install sass@0.5.0
 npm install stylus@0.29.0
 npm install nib@0.8.2
 npm install mime@1.2.7
@@ -104,6 +105,8 @@ git clone http://github.com/akdubya/rbytes.git
 npm install sockjs@0.3.3
 rm -rf rbytes
 
+# If you update the version of fibers in the dev bundle, also update the "npm
+# install" command in docs/client/concepts.html.
 npm install fibers@0.6.9
 # Fibers ships with compiled versions of its C code for a dozen platforms. This
 # bloats our dev bundle, and confuses dpkg-buildpackage and rpmbuild into

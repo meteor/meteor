@@ -149,6 +149,8 @@ var toc = [
         {instance: "cursor", name: "observe"}
       ],
       {type: "spacer"},
+      "Meteor.uuid",
+      {type: "spacer"},
       {name: "Selectors", style: "noncode"},
       {name: "Modifiers", style: "noncode"},
       {name: "Sort specifiers", style: "noncode"},
@@ -165,7 +167,7 @@ var toc = [
       "Meteor.user",
       "Meteor.userId",
       "Meteor.users",
-      "Meteor.userLoaded",
+      "Meteor.loggingIn",
       "Meteor.logout",
       "Meteor.loginWithPassword",
       {name: "Meteor.loginWithFacebook", id: "meteor_loginwithexternalservice"},
@@ -173,6 +175,10 @@ var toc = [
       {name: "Meteor.loginWithGoogle", id: "meteor_loginwithexternalservice"},
       {name: "Meteor.loginWithTwitter", id: "meteor_loginwithexternalservice"},
       {name: "Meteor.loginWithWeibo", id: "meteor_loginwithexternalservice"},
+      {type: "spacer"},
+
+      {name: "{{currentUser}}", id: "template_currentuser"},
+      {name: "{{loggingIn}}", id: "template_loggingin"},
       {type: "spacer"},
 
       "Accounts.config",
@@ -268,7 +274,6 @@ var toc = [
     "force-ssl",
     "jquery",
     "less",
-    "sass",
     "spiderable",
     "stylus",
     "showdown",

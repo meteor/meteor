@@ -610,6 +610,7 @@ _.extend(Meteor._LivedataSubscription.prototype, {
     // tell listeners, so they can clean up
     for (var i = 0; i < self.stop_callbacks.length; i++)
       (self.stop_callbacks[i])();
+    self.stop_callbacks = [];
 
     // remove our data from the client (possibly unshadowing data from
     // lower priority subscriptions)
@@ -629,7 +630,7 @@ _.extend(Meteor._LivedataSubscription.prototype, {
     var self = this;
     var collection = name || cursor.collection_name;
 
-    var observe_handle = cursor.observe({
+    var observe_handle = cursor._observeUnordered({
       added: function (obj) {
         if (obj && ('_meteorRawData' in obj))
           obj = obj._meteorRawData();
@@ -637,12 +638,12 @@ _.extend(Meteor._LivedataSubscription.prototype, {
         self.set(collection, obj._id, obj);
         self.flush();
       },
-      changed: function (obj, old_idx, old_obj) {
+      changed: function (obj, old_obj) {
         if (obj && ('_meteorRawData' in obj))
           obj = obj._meteorRawData();
         if (old_obj && ('_meteorRawData' in old_obj))
           old_obj = old_obj._meteorRawData();
-      
+        
         var set = {};
         _.each(obj, function (v, k) {
           if (!_.isEqual(v, old_obj[k]))
@@ -653,7 +654,7 @@ _.extend(Meteor._LivedataSubscription.prototype, {
         self.unset(collection, obj._id, dead_keys);
         self.flush();
       },
-      removed: function (old_obj, old_idx) {
+      removed: function (old_obj) {
         if (old_obj && ('_meteorRawData' in old_obj))
           old_obj = old_obj._meteorRawData();
         
@@ -922,7 +923,11 @@ _.extend(Meteor._LivedataServer.prototype, {
       }
     }
 
-    // Return the result in whichever way the caller asked for it
+    // Return the result in whichever way the caller asked for it. Note that we
+    // do NOT block on the write fence in an analogous way to how the client
+    // blocks on the relevant data being visible, so you are NOT guaranteed that
+    // cursor observe callbacks have fired when your callback is invoked. (We
+    // can change this if there's a real use case.)
     if (callback) {
       callback(exception, ret);
       return;

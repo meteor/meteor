@@ -123,12 +123,14 @@ LocalCollection._f = {
       // usually, but not for keys that parse as ints.)
       var b_keys = [];
       for (var x in b)
-        b_keys.push(b[x]);
+        b_keys.push(x);
       var i = 0;
       for (var x in a) {
         if (i >= b_keys.length)
           return false;
-        if (!match(a[x], b_keys[i]))
+        if (x !== b_keys[i])
+          return false;
+        if (!match(a[x], b[b_keys[i]]))
           return false;
         i++;
       }

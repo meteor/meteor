@@ -4,7 +4,7 @@ Meteor.users.allow({update: function () { return true; }});
 if (Meteor.isClient) {
 
   Accounts.STASH = _.extend({}, Accounts);
-  Accounts.STASH.userLoaded = Meteor.userLoaded;
+  Accounts.STASH.loggingIn = Meteor.loggingIn;
 
   var handleSetting = function (key, value) {
     if (key === "numServices") {
@@ -31,9 +31,9 @@ if (Meteor.isClient) {
       }
     } else if (key === "signupFields") {
       Accounts.ui._options.passwordSignupFields = value;
-    } else if (key === "fakeUserNotLoaded") {
-      Meteor.userLoaded = (value ? function () { return false; } :
-                           Accounts.STASH.userLoaded);
+    } else if (key === "fakeLoggingIn") {
+      Meteor.loggingIn = (value ? function () { return true; } :
+                          Accounts.STASH.loggingIn);
     }
   };
 
@@ -44,7 +44,7 @@ if (Meteor.isClient) {
       numServices: 3,
       hasPasswords: true,
       signupFields: 'EMAIL_ONLY',
-      fakeUserNotLoaded: false,
+      fakeLoggingIn: false,
       bgcolor: 'white'
     });
   else
@@ -61,12 +61,6 @@ if (Meteor.isClient) {
     var classes = [];
     if (settings.positioning)
       classes.push('positioning-' + settings.positioning.toLowerCase());
-    return classes.join(' ');
-  };
-
-  Template.page.outerClass = function () {
-    var settings = Session.get('settings');
-    var classes = [];
     return classes.join(' ');
   };
 

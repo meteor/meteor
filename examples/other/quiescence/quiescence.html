@@ -1,0 +1,35 @@
+<head>
+  <title>quiescence</title>
+</head>
+
+<body>
+  {{> clock}}
+  {{> updated}}
+  {{> stream}}
+</body>
+
+<template name="clock">
+  <h1>Current time</h1>
+  <p>{{time}}</p>
+</template>
+
+<template name="updated">
+  <h1>Update object</h1>
+  <p>The magic number is {{magic}}. Click the button to set it to a random
+     integer in the client stub. The server will add 0.5 the that integer.</p>
+  <button id='update-button'>Update</button>
+</template>
+
+<template name="stream">
+  <h1>Stream in results</h1>
+  <p>Click the button. Note that the results stream in instead of appearing all
+     at once. Note that the clock continues to tick while the streaming method
+     is running. Note that the "update" button above works while the streaming
+     method is running (ie, the server's "add 0.5" is processed).</p>
+  <button id='stream-button'>Stream</button>
+  <ul>
+    {{#each results}}
+      <li>{{text}}</li>
+    {{/each}}
+  </ul>
+</template>

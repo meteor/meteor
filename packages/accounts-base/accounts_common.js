@@ -62,8 +62,12 @@ Accounts.ConfigError.prototype.name = 'Accounts.ConfigError';
 // popup, declines retina scan, etc)
 Accounts.LoginCancelledError = function(description) {
   this.message = description;
-  this.cancelled = true;
 };
+
+// This is used to transmit specific subclass errors over the wire. We should
+// come up with a more generic way to do this (eg, with some sort of symbolic
+// error code rather than a number).
+Accounts.LoginCancelledError.numericError = 0x8acdc2f;
 Accounts.LoginCancelledError.prototype = new Error();
 Accounts.LoginCancelledError.prototype.name = 'Accounts.LoginCancelledError';
 

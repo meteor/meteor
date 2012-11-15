@@ -9,9 +9,9 @@
     "loginButtons",
     function (options) {
       if (options.hash.align === "right")
-        return new Handlebars.SafeString(Template._loginButtonsRight());
+        return new Handlebars.SafeString(Template._loginButtons({align: "right"}));
       else
-        return new Handlebars.SafeString(Template._loginButtonsLeft());
+        return new Handlebars.SafeString(Template._loginButtons({align: "left"}));
     });
 
   // shared between dropdown and single mode
@@ -62,7 +62,13 @@
     return Accounts._loginButtons.dropdown();
   };
 
-  Template._loginButtonsLoggedIn.displayName = function () {
+
+
+  //
+  // loginButtonsLoggedInSingleLogoutButton template
+  //
+
+  Template._loginButtonsLoggedInSingleLogoutButton.displayName = function () {
     return Accounts._loginButtons.displayName();
   };
 

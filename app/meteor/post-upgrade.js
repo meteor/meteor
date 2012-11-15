@@ -6,9 +6,9 @@ try {
 
   var fs = require('fs');
   var path = require('path');
-  var files = require("../lib/files.js");
+  var files = require(path.join(__dirname, "..", "lib", "files.js"));
 
-  var _ = require("../lib/third/underscore.js");
+  var _ = require(path.join(__dirname, "..", "lib", "third", "underscore.js"));
 
   var topDir = files.get_dev_bundle();
   var changelogPath = path.join(topDir, 'History.md');

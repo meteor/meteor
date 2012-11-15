@@ -97,7 +97,7 @@
           document.getElementById('login-username').value = usernameOrEmail;
       else
         document.getElementById('login-email').value = usernameOrEmail;
-      // "login-password" is preserved thanks to the preserve-inputs package
+      // "login-password" is preserved, since password fields aren't updated by Spark.
 
       // Force redrawing the `login-dropdown-list` element because of
       // a bizarre Chrome bug in which part of the DIV is not redrawn
@@ -147,7 +147,7 @@
         document.getElementById('login-username').value = username;
       if (document.getElementById('login-email'))
         document.getElementById('login-email').value = email;
-      // "login-password" is preserved thanks to the preserve-inputs package
+      // "login-password" is preserved, since password fields aren't updated by Spark.
       if (document.getElementById('login-username-or-email'))
         document.getElementById('login-username-or-email').value = email || username;
     },
@@ -264,6 +264,10 @@
 
   Template._loginButtonsLoggedOutPasswordService.inSignupFlow = function () {
     return loginButtonsSession.get('inSignupFlow');
+  };
+
+  Template._loginButtonsLoggedOutPasswordService.showCreateAccountLink = function () {
+    return !Accounts._options.forbidClientAccountCreation;
   };
 
   Template._loginButtonsLoggedOutPasswordService.showForgotPasswordLink = function () {

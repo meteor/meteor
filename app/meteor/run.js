@@ -6,12 +6,12 @@ var spawn = require('child_process').spawn;
 
 var httpProxy = require('http-proxy');
 
-var files = require('../lib/files.js');
-var updater = require('../lib/updater.js');
-var bundler = require('../lib/bundler.js');
-var mongo_runner = require('../lib/mongo_runner.js');
+var files = require(path.join(__dirname, '..', 'lib', 'files.js'));
+var updater = require(path.join(__dirname, '..', 'lib', 'updater.js'));
+var bundler = require(path.join(__dirname, '..', 'lib', 'bundler.js'));
+var mongo_runner = require(path.join(__dirname, '..', 'lib', 'mongo_runner.js'));
 
-var _ = require('../lib/third/underscore.js');
+var _ = require(path.join(__dirname, '..', 'lib', 'third', 'underscore.js'));
 
 ////////// Globals //////////
 
@@ -454,8 +454,8 @@ exports.run = function (app_dir, bundle_opts, port) {
   var inner_port = outer_port + 1;
   var mongo_port = outer_port + 2;
   var test_port = outer_port + 3;
-  var bundle_path = path.join(app_dir, '.meteor/local/build');
-  var test_bundle_path = path.join(app_dir, '.meteor/local/build_test');
+  var bundle_path = path.join(app_dir, '.meteor', 'local', 'build');
+  var test_bundle_path = path.join(app_dir, '.meteor', 'local', 'build_test');
   // Allow override and use of external mongo. Matches code in launch_mongo.
   var mongo_url = process.env.MONGO_URL ||
         ("mongodb://127.0.0.1:" + mongo_port + "/meteor");

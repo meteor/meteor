@@ -80,8 +80,7 @@ Meteor.startup(function () {
 
 if (Meteor.isServer)
   Meteor.publish('ledger', function (world) {
-    return Ledger.find({world: world}, {key: {collection: 'ledger',
-                                              world: world}});
+    return Ledger.find({world: world});
   });
 
 Meteor.methods({
@@ -129,22 +128,24 @@ if (Meteor.isServer) {
                                  {fields: {ownerUserIds: 0}});
   });
 
-  userIdWhenStopped = null;
-  Meteor.publish("recordUserIdOnStop", function() {
+  (function () {
+    var userIdWhenStopped = null;
+    Meteor.publish("recordUserIdOnStop", function() {
     var self = this;
-    self.onStop(function() {
-      userIdWhenStopped = self.userId;
+      self.onStop(function() {
+        userIdWhenStopped = self.userId;
+      });
     });
-  });
 
-  Meteor.methods({
-    setUserId: function(userId) {
-      this.setUserId(userId);
-    },
-    userIdWhenStopped: function() {
-      return userIdWhenStopped;
-    }
-  });
+    Meteor.methods({
+      setUserId: function(userId) {
+        this.setUserId(userId);
+      },
+      userIdWhenStopped: function() {
+        return userIdWhenStopped;
+      }
+    });
+  })();
 }
 
 /*****/

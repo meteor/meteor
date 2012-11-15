@@ -95,9 +95,9 @@
       {{button "modals" "justVerifiedEmail" "Verified Email"}}
     </div>
     <div class="group">
-      <h3>Spinner (must be logged in)</h3>
-      {{radio "fakeUserNotLoaded" "false" "Off"}}
-      {{radio "fakeUserNotLoaded" "true" "Pretend userLoaded=false"}}
+      <h3>Logging-in Spinner</h3>
+      {{radio "fakeLoggingIn" "false" "Off"}}
+      {{radio "fakeLoggingIn" "true" "Pretend loggingIn=true"}}
     </div>
     <div class="group">
       <h3>Background Color</h3>
@@ -108,7 +108,7 @@
   </div>
   {{#with settings}}
   <div id="previewpane" class="{{settingsClass}}" style="background:{{bgcolor}}">
-    <div id="preview-wrapper" class="{{outerClass}}">
+    <div id="preview-wrapper">
       {{#if match "positioning:inline"}}
         Here is a place to sign in, yay!
       {{/if}}
@@ -118,6 +118,11 @@
       {{/if}}
     </div>
     <div id="pos-indicator"></div>
+    {{#unless match "positioning:absolute"}}
+      <div style="clear:both">
+        A line that shouldn't move when logging in and logging out
+      </div>
+    {{/unless}}
   </div>
   {{/with}}
 </template>

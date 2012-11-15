@@ -61,7 +61,7 @@ Otherwise, the publish function can [`set`](#publish_set) and
 [`unset`](#publish_unset) individual record attributes on a client. These
 methods are provided by `this` in your publish function.
 
-<!-- discuss complete -->
+<!-- TODO discuss complete -->
 
 In particular, if you use [`observe`](#observe) to watch changes to the
 database, be sure to call `this.flush` from inside your observe callbacks.
@@ -90,11 +90,14 @@ Example:
         // don't care about moved or changed
       });
 
-      // remove data and turn off observe when client unsubs
+      // Observe only returns after the initial added callbacks have
+      // run.  Now mark the subscription as ready.
+      self.complete();
+      self.flush();
+
+      // stop observing the cursor when client unsubs
       self.onStop(function () {
         handle.stop();
-        self.unset("counts", uuid, ["roomId", "count"]);
-        self.flush();
       });
     });
 
@@ -135,10 +138,11 @@ is the place to stop the observes.
 {{> api_box subscribe}}
 
 When you subscribe to a record set, it tells the server to send records
-to the client.  The client stores these records in local Minimongo
-collections, with the same name as the `collection` argument to `set`.
-Meteor will queue incoming attributes until you declare the
-`Meteor.Collection` on the client with the matching collection name.
+to the client.  The client stores these records in local [Minimongo
+collections](#meteor_collection), with the same name as the `collection`
+argument to `set`.  Meteor will queue incoming attributes until you
+declare the [`Meteor.Collection`](#meteor_collection) on the client with
+the matching collection name.
 
     // okay to subscribe (and possibly receive data) before declaring
     // the client collection that will hold it.  assume "allplayers"
@@ -180,7 +184,7 @@ Example:
     // Subscribe to the chat messages in the current room. Automatically
     // update the subscription whenever the current room changes.
     Meteor.autosubscribe(function () {
-      Meteor.subscribe("chat", {room: Session.get("current-room");});
+      Meteor.subscribe("chat", {room: Session.get("current-room")});
     });
 
 <h2 id="methods_header"><span>Methods</span></h2>
@@ -229,6 +233,12 @@ intended to *simulate* the result of what the server's method will do,
 but without waiting for the round trip delay.  If a stub throws an
 exception it will be logged to the console.
 
+You use methods all the time, because the database mutators
+([`insert`](#insert), [`update`](#update), [`remove`](#remove)) are implemented
+as methods. When you call any of these functions on the client, you're invoking
+their stub version that update the local cache, and sending the same write
+request to the server. When the server responds, the client updates the local
+cache with the writes that actually occurred on the server.
 
 {{> api_box method_invocation_userId}}
 
@@ -271,8 +281,11 @@ function throws a different exception, then it will be mapped to
 
 {{> api_box meteor_call}}
 
-This is how to invoke a method.  It will run the method on the server.
-If a stub is available, it will also run the stub on the client.
+This is how to invoke a method.  It will run the method on the server.  If a
+stub is available, it will also run the stub on the client.  (See also
+[`Meteor.apply`](#meteor_apply), which is identical to `Meteor.call` except that
+you specify the parameters as an array instead of as separate arguments and you
+can specify a few options controlling how the method is executed.)
 
 If you include a callback function as the last argument (which can't be
 an argument to the method, since functions aren't serializable), the
@@ -303,19 +316,22 @@ execution of a method.
 
 Finally, if you are inside a stub on the client and call another
 method, the other method is not executed (no RPC is generated, nothing
-"real" happens.)  If that other method has a stub, that stub stands in
+"real" happens).  If that other method has a stub, that stub stands in
 for the method and is executed. The method call's return value is the
 return value of the stub function.  The client has no problem executing
 a stub synchronously, and that is why it's okay for the client to use
 the synchronous `Meteor.call` form from inside a method body, as
 described earlier.
 
-You use this functionality all the time, because the database mutators
-(`insert`, `update`, `remove`) are essentially methods. When you call
-them on the client (whether from inside a method or at top level), you're
-invoking their stub versions that update the local cache, instead of
-their "real" versions that update the database (using credentials known
-only to the server.)
+Meteor tracks the database writes performed by methods, both on the client and
+the server, and does not invoke `asyncCallback` until all of the server's writes
+replace the stub's writes in the local cache. In some cases, there can be a lag
+between the method's return value being available and the writes being visible:
+for example, if another method still outstanding wrote to the same document, the
+local cache may not be up to date until the other method finishes as well. If
+you want to process the method's result as soon as it arrives from the server,
+even if the method's writes are not available yet, you can specify an
+`onResultReceived` callback to [`Meteor.apply`](#meteor_apply).
 
 {{> api_box meteor_apply}}
 
@@ -334,32 +350,31 @@ This method returns the status of the connection between the client and
 the server. The return value is an object with the following fields:
 
 <dl class="objdesc">
-<dt><span class="name">connected</span>
-  <span class="type">Boolean</span></dt>
-<dd>True if currently connected to the server. If false, changes and
+{{#dtdd name="connected" type="Boolean"}}
+  True if currently connected to the server. If false, changes and
   method invocations will be queued up until the connection is
-  reestablished.</dd>
+  reestablished.
+{{/dtdd}}
 
-<dt><span class="name">status</span>
-  <span class="type">String</span></dt>
-<dd>Describes the current reconnection status. The possible
+{{#dtdd name="status" type="String"}}
+  Describes the current reconnection status. The possible
   values are `connected` (the connection is up and
   running), `connecting` (disconnected and trying to open a
   new connection), and `waiting` (failed to connect and
-  waiting to try to reconnect).</dd>
+  waiting to try to reconnect).
+{{/dtdd}}
 
-<dt><span class="name">retryCount</span>
-  <span class="type">Number</span></dt>
-<dd>The number of times the client has tried to reconnect since the
-  connection was lost. 0 when connected.</dd>
+{{#dtdd name="retryCount" type="Number"}}
+  The number of times the client has tried to reconnect since the
+  connection was lost. 0 when connected.
+{{/dtdd}}
 
-<dt><span class="name">retryTime</span>
-  <span class="type">Number or undefined</span></dt>
-<dd>The estimated time of the next reconnection attempt. To turn this
+{{#dtdd name="retryTime" type="Number or undefined"}}
+  The estimated time of the next reconnection attempt. To turn this
   into an interval until the next reconnection, use
   `retryTime - (new Date()).getTime()`. This key will
   be set only when `status` is `waiting`.
-</dd>
+{{/dtdd}}
 </dl>
 
 Instead of using callbacks to notify you on changes, this is
@@ -413,7 +428,7 @@ collection with `new Meteor.Collection`.
 
 {{> api_box meteor_collection}}
 
-Calling this function is analogous to declaring a model in an
+Calling this function is analogous to declaring a model in a
 traditional ORM (Object-Relation Mapper)-centric framework. It sets up a
 *collection* (a storage space for records, or "documents") that can be
 used to store a particular type of information, like users, posts,
@@ -476,7 +491,7 @@ client and the server, this scratchpad is implemented using Minimongo.)
 
 By default, Meteor automatically publishes every document in your
 collection to each connected client.  To turn this behavior off, remove
-the package:
+the `autopublish` package:
 
     $ meteor remove autopublish
 
@@ -497,7 +512,7 @@ your collection should be published to which users.
     // the server.
     assert(Posts.find().count() === 1);
 
-    // Create a temporary, local collection. It works just any other
+    // Create a temporary, local collection. It works just like any other
     // collection, but it doesn't send changes to the server, and it
     // can't receive any data from subscriptions.
     Scratchpad = new Meteor.Collection;
@@ -515,7 +530,7 @@ of selectors.
 * `$` to denote the matched array position is not
 supported in modifier.
 * Sort does not support subkeys (you can sort on `a`,
-but not `a.b`.)
+but not `a.b`).
 * `findAndModify`, upsert, aggregate functions, and
 map/reduce aren't supported.
 * The supported types are String, Number, Boolean, Array,
@@ -565,7 +580,7 @@ Equivalent to `find(selector, options).fetch()[0]`.
 
 Add a document to the collection. A document is just an object, and
 its fields can contain any combination of JSON-compatible datatypes
-(arrays, objects, numbers, strings, null, true, and false).
+(arrays, objects, numbers, strings, `null`, true, and false).
 
 `insert` will generate a unique ID for the object you pass, insert it
 in the database, and return the ID.
@@ -632,20 +647,20 @@ Find all of the documents that match `selector` and delete them from the
 collection. Or instead of a selector, you may pass a string, to delete
 the document with that `_id`.  As a safety measure, do nothing if the
 selector is undefined.  If the selector is `{}`, remove all the
-documents from the collection.)
+documents from the collection.
 
 On the server, if you don't provide a callback, then `remove` blocks
 until the database acknowledges the write, or throws an exception if
 something went wrong.  If you do provide a callback, `remove` returns
 immediately.  Once the remove completes, the callback is called with a
 single error argument in the case of failure, or no arguments if the
-update was successful.
+remove was successful.
 
 On the client, `remove` never blocks.  If you do not provide a callback
 and the remove fails on the server, then Meteor will log a warning to
 the console.  If you provide a callback, Meteor will call that function
 with an error argument if there was an error, or no arguments if the
-update was successful.
+remove was successful.
 
 Example:
 
@@ -698,7 +713,7 @@ client wishes to modify, for example `['name', 'score']`. `modifier` is
 the raw Mongo modifier that the client wants to execute, for example
 `{$set: {'name.first': "Alice"}, $inc: {score: 1}}`.
 
-Only Mongo modifiers are supported (operations like `$set` and `$push`.)
+Only Mongo modifiers are supported (operations like `$set` and `$push`).
 If the user tries to replace the entire document rather than use
 $-modifiers, the request will be denied without checking the `allow`
 functions.
@@ -780,7 +795,7 @@ rules on a collection, then all users have full write access to the
 collection. This is the only effect of insecure mode. If you call `allow` or
 `deny` at all on a collection, even `Posts.allow({})`, then access is checked
 just like normal on that collection. __New Meteor projects start in insecure
-mode by default.__ To turn it off just type `meteor remove insecure`.
+mode by default.__ To turn it off just run `$ meteor remove insecure`.
 
 {{#note}}
 For `update` and `remove`, documents will be affected only if they match
@@ -878,13 +893,13 @@ length of the list.
 
 {{#dtdd "changed(newDocument, atIndex, oldDocument)"}}
 The contents of the document at position `atIndex`
-changed to `newDocument`, was previously `oldDocument`.
+(`oldDocument`) changed to `newDocument`.
 {{/dtdd}}
 
 {{#dtdd "moved(document, oldIndex, newIndex)"}}
 A document changed its position in the result set,
 from `oldIndex` to `newIndex`. For your
-convenience, its current contents is `document`. (This will
+convenience, its current contents is `document`. This will
 only fire immediately after `changed`.
 {{/dtdd}}
 
@@ -920,6 +935,26 @@ Example:
 
     // After five seconds, stop keeping the count.
     setTimeout(function () {handle.stop();}, 5000);
+
+{{> api_box uuid}}
+
+This returns a random text string such as `b6df7139-df0b-4daa-8c9e-b432a90bc048`
+that is likely to be unique in the whole world. The format of the string
+complies with the [RFC 4122](http://tools.ietf.org/html/rfc4122) v4 format.
+
+{{#note}}
+  Currently Meteor uses this function to generate `_id` fields for new
+  Mongo documents. In the future we will likely switch to native
+  binary Mongo IDs. At that point this function will be deprecated or
+  moved into a separate package.
+{{/note}}
+
+{{#note}}
+  In the current implementation, the returned string is derived from a
+  pseudorandom number generator that is seeded with the current
+  time. The UUIDs generated definitely are not random enough to be
+  used for cryptographic or security purposes.
+{{/note}}
 
 {{#api_box_inline selectors}}
 
@@ -959,8 +994,8 @@ place by changing some of its fields. Some examples:
     // Set the 'admin' property on the document to true
     {$set: {admin: true}}
 
-    // Add 2 to the 'votes' property, and add "Traz" to the end of the
-    // 'supporters' array
+    // Add 2 to the 'votes' property, and add "Traz"
+    // to the end of the 'supporters' array
     {$inc: {votes: 2}, $push: {supporters: "Traz"}}
 
 But if a modifier doesn't contain any $-operators, then it is instead
@@ -972,8 +1007,7 @@ supported by [validated updates](#allow).)
     Users.update({_id: "123"}, {name: "Alice", friends: ["Bob"]});
 
 See the [full list of
-modifiers](http://www.mongodb.org/display/DOCS/Updating#Updating-ModifierOperations)
-full list of modifiers.
+modifiers](http://www.mongodb.org/display/DOCS/Updating#Updating-ModifierOperations).
 
 {{/api_box_inline}}
 
@@ -1129,19 +1163,14 @@ login provider packages: `accounts-password`, `accounts-facebook`,
 
 {{> api_box user}}
 
-Retreives the user record for the current user from
+Retrieves the user record for the current user from
 the [`Meteor.users`](#meteor_users) collection.
 
-On the client this will be a subset of the fields in the document, only
-those that are published from the server are available on the client. By
-default the server publishes `username`, `emails`, and
+On the client, this will be the subset of the fields in the document that
+are published from the server (other fields won't be available on the
+client). By default the server publishes `username`, `emails`, and
 `profile`. See [`Meteor.users`](#meteor_users) for more on
 the fields used in user documents.
-
-If the user is logged in but the user's database record is not fully
-loaded yet, this returns an object with only the `_id` field set. During
-this period [`userLoaded`](#meteor_userloaded) will return
-`false`.
 
 {{> api_box userId}}
 
@@ -1225,22 +1254,10 @@ their user document:
     Meteor.users.deny({update: function () { return true; }});
 
 
-{{> api_box userLoaded}}
+{{> api_box loggingIn}}
 
-There are some cases when the client knows the id of the logged in user
-but has not yet received the user data from the server. For example, if
-the user is logged in and reloads the page the user data will be
-unavailable during initial page load.
-
-During these periods, `userLoaded` will return false
-and [`user`](#meteor_user) will return an object with only
-the `_id` key.
-
-{{#note}}
-We realize this is inconvenient. It is a temporary solution. In the
-future we will either make it unnecessary or fold it into a more
-general mechanism.
-{{/note}}
+For example, [the `accounts-ui` package](#accountsui) uses this to display an
+animation while the login request is being processed.
 
 {{> api_box logout}}
 
@@ -1284,6 +1301,10 @@ to configuring each service. However, the data can be also be entered
 manually in the `Accounts.loginServiceConfiguration` collection. For
 example:
 
+    // first, remove configuration entry in case service is already configured
+    Accounts.loginServiceConfiguration.remove({
+      service: "weibo"
+    });
     Accounts.loginServiceConfiguration.insert({
       service: "weibo",
       clientId: "1292962797",
@@ -1304,7 +1325,8 @@ example, to support GitHub login, run `$ meteor add accounts-github` and use the
 
 
 
-
+{{> api_box currentUser}}
+{{> api_box loggingInTemplate}}
 {{> api_box accounts_config}}
 {{> api_box accounts_ui_config}}
 
@@ -1378,9 +1400,9 @@ Example:
 
 <h2 id="accounts_passwords"><span>Passwords</span></h2>
 
-The `accounts-password` package contains a full system for password
-based authentication. In addition to the basic username and password
-based sign-in process it also supports email based sign-in including
+The `accounts-password` package contains a full system for password-based
+authentication. In addition to the basic username and password-based
+sign-in process, it also supports email-based sign-in including
 address verification and password recovery emails.
 
 Unlike most web applications, the Meteor client does not send the user's
@@ -1393,12 +1415,12 @@ database is compromised.
 To add password support to your application, run `$ meteor add
 accounts-password`. You can construct your own user interface using the
 functions below, or use the [`accounts-ui` package](#accountsui) to
-include a turn-key user interface for password based sign-in.
+include a turn-key user interface for password-based sign-in.
 
 
 {{> api_box accounts_createUser}}
 
-On the client this function logs in as the newly created user on
+On the client, this function logs in as the newly created user on
 successful completion. On the server, it returns the newly created user
 id.
 
@@ -1431,7 +1453,7 @@ on the server. Pass the token the user receives in this email
 to [`Accounts.resetPassword`](#accounts_resetpassword) to
 complete the password reset process.
 
-If you are using the [`accounts-ui` package](#pkg_accounts_ui), this is handled
+If you are using the [`accounts-ui` package](#accountsui), this is handled
 automatically. Otherwise, it is your responsiblity to prompt the user for the
 new password and call `resetPassword`.
 
@@ -1477,15 +1499,15 @@ To customize the contents of the email, see
 {{> api_box accounts_emailTemplates}}
 
 This is an `Object` with several fields that are used to generate text
-for the emails by `sendResetPasswordEmail`, `sendEnrollmentEmail`, and
-`sendVerificationEmail`.
+for the emails sent by `sendResetPasswordEmail`, `sendEnrollmentEmail`,
+and `sendVerificationEmail`.
 
 Override fields of the object by assigning to them:
 
 - `from`: A `String` with an [RFC5322](http://tools.ietf.org/html/rfc5322) From
-   address. By default email is from `no-reply@meteor.com`. If you wish to
-   receive email from users asking for help with their account, be sure to set
-   this to an email address that you can receive email at.
+   address. By default, the email is sent from `no-reply@meteor.com`. If you
+   wish to receive email from users asking for help with their account, be sure
+   to set this to an email address that you can receive email at.
 - `siteName`: The public name of your application. Defaults to the DNS name of
    the application (eg: `awesome.meteor.com`).
 - `resetPassword`: An `Object` with two fields:
@@ -1652,7 +1674,7 @@ If you want to preserve a whole region of the DOM, an element and its
 children, or nodes not rendered by Meteor, use a [constant
 region](#constant) instead.
 
-To preserve nodes, pass a list of selectors each of which should match
+To preserve nodes, pass a list of selectors, each of which should match
 at most one element in the template.  When the template is re-rendered,
 the selector is run on the old DOM and the new DOM, and Meteor will
 reuse the old element in place while working in any HTML changes around
@@ -1753,7 +1775,7 @@ Access is read-only and non-reactive.
 
 `Meteor.render` creates a `DocumentFragment` (a sequence of DOM nodes)
 that automatically updates in realtime. Most Meteor apps don't need to
-call this directly, they use templates and Meteor handles the rendering.
+call this directly; they use templates and Meteor handles the rendering.
 
 Pass in `htmlFunc`, a function that returns an HTML
 string. `Meteor.render` calls the function and turns the output into
@@ -2063,7 +2085,13 @@ These functions work just like their native JavaScript equivalents.
 You'll get an error if you call the native function.
 
 {{> api_box setTimeout}}
+
+Returns a handle that can be used by `Meteor.clearTimeout`.
+
 {{> api_box setInterval}}
+
+Returns a handle that can be used by `Meteor.clearInterval`.
+
 {{> api_box clearTimeout}}
 {{> api_box clearInterval}}
 
@@ -2078,8 +2106,8 @@ dependencies &mdash; it "just works". The mechanism is simple and
 efficient. When you call a function that supports reactive updates
 (say, a database query), it automatically saves the current
 "invalidation context" object if any (say, the current template being
-rendered.) Later, when the data changes, it can "invalidate" this
-context (tell the template to rerender itself.) The whole
+rendered). Later, when the data changes, it can "invalidate" this
+context (tell the template to rerender itself). The whole
 implementation is about 50 lines of code.
 
 Developers, particularly package authors, can use *invalidation
@@ -2104,7 +2132,7 @@ signal that something has changed. If it does this, it should also use
 [`onInvalidate`](#oninvalidate) to set up a cleanup function so that
 it can know when to stop listening for changes.
 
-Invalidation contexts have an attribute `id` which is a unique positive
+Invalidation contexts have an `id` attribute, which is a unique positive
 integer. You're free to add any other attributes you like to the
 invalidation context for your own convenience, as long as they don't
 start with an underscore.
@@ -2167,7 +2195,7 @@ Example:
 {{> api_box invalidate }}
 
 If this function has already been called on this context, it does
-nothing (a mathematician would say that it is "idempotent.") Otherwise
+nothing (a mathematician would say that it is "idempotent"). Otherwise
 it calls each [`onInvalidate`](#oninvalidate) function registered on
 the context.
 
@@ -2178,7 +2206,7 @@ else just yet.
 
 If you don't call [`Meteor.flush`](#meteor_flush) explicitly, it will be called
 for you automatically when your code is done running (by setting a
-`setTimeout` timer with a delay of zero.)
+`setTimeout` timer with a delay of zero).
 
 Example:
 
@@ -2190,7 +2218,7 @@ Example:
     };
 
     // Function to get the temperature (and, if called in a reactive
-    // context, start listening for changes to the temperature.)
+    // context, start listening for changes to the temperature)
     Weather.prototype.getTemp = function () {
       var context = Meteor.deps.Context.current;
 
@@ -2277,7 +2305,7 @@ of the things that makes Meteor fast.
 
 `Meteor.flush` forces all of the pending reactive updates to complete
 (for example, it ensures the DOM has been updated with your recent
-database changes.)  Call `flush` to apply those pending changes
+database changes).  Call `flush` to apply those pending changes
 immediately. The main use for this is to make sure the DOM has been
 brought up to date with your latest changes, so you can manually
 manipulate it with jQuery or the like.
@@ -2285,14 +2313,14 @@ manipulate it with jQuery or the like.
 When you call `flush`, any auto-updating DOM elements that are not on
 the screen may be cleaned up (meaning that Meteor will stop tracking
 and updating the elements, so that the browser's garbage collector can
-delete them.) So, if you manually call `flush`, you need to make sure
+delete them). So, if you manually call `flush`, you need to make sure
 that any auto-updating elements that you have created by calling
 [`Meteor.render`](#meteor_render) have already been inserted in the main
 DOM tree.
 
 Technically speaking, `flush` calls the [invalidation
 callbacks](#oninvalidate) on every [reactive context](#context) that
-has been [invalidated](#invalidate), but hasn't yet has its callbacks
+has been [invalidated](#invalidate), but hasn't yet had its callbacks
 called. If the invalidation callbacks invalidate still more contexts,
 flush keeps flushing until everything is totally settled. The DOM
 elements are cleaned up by logic that is triggered by context invalidations.
@@ -2350,14 +2378,14 @@ Contents of the result object:
 
 <dt><span class="name">statusCode</span>
   <span class="type">Number</span></dt>
-<dd>Numeric HTTP result status code, or null on error.</dd>
+<dd>Numeric HTTP result status code, or <code>null</code> on error.</dd>
 
 <dt><span class="name">content</span>
   <span class="type">String</span></dt>
 <dd>The body of the HTTP response as a string.</dd>
 
 <dt><span class="name">data</span>
-  <span class="type">Object or null</span></dt>
+  <span class="type">Object or <code>null</code></span></dt>
 <dd>If the response headers indicate JSON content, this contains the body of the document parsed as a JSON object.</dd>
 
 <dt><span class="name">headers</span>
@@ -2366,7 +2394,7 @@ Contents of the result object:
 
 <dt><span class="name">error</span>
   <span class="type">Error</span></dt>
-<dd>Error object if the request failed. Matches the `error` callback parameter.</dd>
+<dd>Error object if the request failed. Matches the <code>error</code> callback parameter.</dd>
 
 
 </dl>
@@ -2468,9 +2496,9 @@ all other options are optional.
 <dt><span class="name">{{{name}}}</span>
   <span class="type">
     {{#if type_link}}
-      <a href="#{{type_link}}">{{type}}</a>
+      <a href="#{{type_link}}">{{{type}}}</a>
     {{else}}
-      {{type}}
+      {{{type}}}
     {{/if}}
   </span></dt>
 <dd>{{#better_markdown}}{{{descr}}}{{/better_markdown}}</dd>
