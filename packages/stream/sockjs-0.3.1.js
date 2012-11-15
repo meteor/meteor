@@ -1287,12 +1287,17 @@ BufferedSender.prototype.send_schedule = function() {
     var that = this;
     if (that.send_buffer.length > 0) {
         var payload = '[' + that.send_buffer.join(',') + ']';
-        that.send_stop = that.sender(that.trans_url,
-                                     payload,
-                                     function() {
-                                         that.send_stop = null;
-                                         that.send_schedule_wait();
-                                     });
+// <METEOR>
+// https://github.com/sockjs/sockjs-client/commit/9ce0d73880f53851412e4a0ed94e203f426ce713
+        that.send_stop = that.sender(that.trans_url, payload, function(success, abort_reason) {
+            that.send_stop = null;
+            if (success === false) {
+                that.ri._didClose(1006, 'Sending error ' + abort_reason);
+            } else {
+                that.send_schedule_wait();
+            }
+        });
+// </METEOR>
         that.send_buffer = [];
     }
 };
@@ -1355,7 +1360,12 @@ var jsonPGenericSender = function(url, payload, callback) {
                        iframe = null;
                    });
         area.value = '';
-        callback();
+// <METEOR>
+// https://github.com/sockjs/sockjs-client/commit/9ce0d73880f53851412e4a0ed94e203f426ce713
+        // It is not possible to detect if the iframe succeeded or
+        // failed to submit our form.
+        callback(true);
+// </METEOR>
     };
     iframe.onerror = iframe.onload = completed;
     iframe.onreadystatechange = function(e) {
@@ -1367,12 +1377,15 @@ var jsonPGenericSender = function(url, payload, callback) {
 var createAjaxSender = function(AjaxObject) {
     return function(url, payload, callback) {
         var xo = new AjaxObject('POST', url + '/xhr_send', payload);
+// <METEOR>
+// https://github.com/sockjs/sockjs-client/commit/9ce0d73880f53851412e4a0ed94e203f426ce713
         xo.onfinish = function(status, text) {
-            callback(status);
+            callback(status === 200 || status === 204, 'http status ' + status);
         };
         return function(abort_reason) {
-            callback(0, abort_reason);
+            callback(false, abort_reason);
         };
+// </METEOR>
     };
 };
 //         [*] End of lib/trans-sender.js
