@@ -13,8 +13,8 @@ if [ "$UNAME" == "Linux" ] ; then
         echo "Meteor only supports i686 and x86_64 for now."
         exit 1
     fi
-    MONGO_NAME="mongodb-linux-${ARCH}-2.2.1"
-    MONGO_URL="http://fastdl.mongodb.org/linux/${MONGO_NAME}.tgz"
+    MONGO_OS="linux"
+
 elif [ "$UNAME" == "Darwin" ] ; then
     SYSCTL_64BIT=$(sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0)
     if [ "$ARCH" == "i386" -a "1" != "$SYSCTL_64BIT" ] ; then
@@ -30,8 +30,7 @@ elif [ "$UNAME" == "Darwin" ] ; then
         exit 1
     fi
 
-    MONGO_NAME="mongodb-osx-${ARCH}-2.2.1"
-    MONGO_URL="http://fastdl.mongodb.org/osx/${MONGO_NAME}.tgz"
+    MONGO_OS="osx"
 else
     echo "This OS not yet supported"
     exit 1
@@ -121,7 +120,14 @@ mv ../$FIBERS_ARCH .
 cd ../..
 
 
+# Download and install mongodb.
+# To see the mongo changelog, go to http://www.mongodb.org/downloads,
+# click 'changelog' under the current version, then 'release notes' in
+# the upper right.
 cd "$DIR"
+MONGO_VERSION="2.2.1"
+MONGO_NAME="mongodb-${MONGO_OS}-${ARCH}-${MONGO_VERSION}"
+MONGO_URL="http://fastdl.mongodb.org/${MONGO_OS}/${MONGO_NAME}.tgz"
 curl "$MONGO_URL" | tar -xz
 mv "$MONGO_NAME" mongodb
 
