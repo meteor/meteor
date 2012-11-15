@@ -91,7 +91,7 @@
 #login-buttons {
 
   .display-inline-block();
-  margin-right: 0.01px; // Fixes display on IE8: http://www.compsoft.co.uk/Blog/2009/11/inline-block-not-quite-inline-blocking.html
+  margin-right: 0.2px; // Fixes display on IE8: http://www.compsoft.co.uk/Blog/2009/11/inline-block-not-quite-inline-blocking.html
 
   // This seems to keep the height of the line from
   // being sensitive to the presence of the unicode down arrow,
@@ -183,6 +183,11 @@
 }
 
 #login-buttons {
+  .login-buttons-padding {
+    display: inline-block;
+    width: 30px;
+  }
+
   .login-display-name { margin-right: 4px; }
   .configure-button {
 
@@ -215,9 +220,17 @@
     position: relative;
     padding-bottom: 8px;
   }
-  #login-dropdown-list .loading {
+
+  .login-text-and-button .loading, .login-link-and-dropdown-list .loading {
+    display: inline-block;
+  }
+  &.login-buttons-dropdown-align-left #login-dropdown-list .loading {
     float: right;
   }
+  &.login-buttons-dropdown-align-right #login-dropdown-list .loading {
+    float: left;
+  }
+
 
   .login-close-text-clear { clear: both; }
 
