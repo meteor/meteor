@@ -3,10 +3,9 @@
 
 ## v0.5.1
 
-* On the server, if a Mongo cursor is observed multiple times concurrently (eg,
-  by multiple users subscribing to the same subscription), Meteor shares the
-  overhead of talking to Mongo and calculating differences between all identical
-  cursors instead of redundantly performing the same work for each subscription.
+* Speed up server-side subscription handling by avoiding redundant work
+  when the same Mongo query is observed multiple times concurrently (eg,
+  by multiple users subscribing to the same subscription).
 
 * Meteor now waits to invoke method callbacks (passed to `Meteor.call` and
   `Meteor.apply`, as well as the `Meteor.Collection` `insert`/`update`/`remove`
@@ -21,7 +20,10 @@
   only buffers writes to documents written by client stubs, and applies the
   writes as soon as all methods that wrote that document have finished.
 
-* Previously, during the login process on the client, `Meteor.userId()` could be
+* `Meteor.userLoaded()` and `{{currentUserLoaded}}` are removed; the new
+  `Meteor.loggingIn()` and `{{loggingIn}}` serve a similar purpose.
+
+  Previously, during the login process on the client, `Meteor.userId()` could be
   set but the document at `Meteor.user()` could be incomplete. Meteor provided
   the function `Meteor.userLoaded()` to differentiate between these states, and
   `accounts-ui` displayed an animation when it was true. Now, this in-between
