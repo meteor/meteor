@@ -1,4 +1,4 @@
-METEOR_VERSION = "0.5.0";
+METEOR_VERSION = "0.5.1";
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
