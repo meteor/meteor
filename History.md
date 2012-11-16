@@ -3,54 +3,78 @@
 
 ## v0.5.1
 
-XXX turn these notes into sentences
+* On the server, if a Mongo cursor is observed multiple times concurrently (eg,
+  by multiple users subscribing to the same subscription), Meteor shares the
+  overhead of talking to Mongo and calculating differences between all identical
+  cursors instead of redundantly performing the same work for each subscription.
 
-* per-obj quiescence
+* Meteor now waits to invoke method callbacks (passed to `Meteor.call` and
+  `Meteor.apply`, as well as the `Meteor.Collection` `insert`/`update`/`remove`
+  methods) until all the data written by the method is available in the local
+  cache. This way, method callbacks can see the full effects of their write.  If
+  you want to process the method's result as soon as it arrives from the server,
+  even if the method's writes are not available yet, you can now specify an
+  `onResultReceived` callback to `Meteor.apply`.
 
-* callback timing change (and onResultReceived)
+* Previously, as long as any method calls were in progress, Meteor would buffer
+  all data changes sent from the server until all methods finished. Meteor now
+  only buffers writes to documents written by client stubs, and applies the
+  writes as soon as all methods that wrote that document have finished.
 
-* wait method changes (when it's called, and quiescence)
+* Previously, during the login process on the client, `Meteor.userId()` could be
+  set but the document at `Meteor.user()` could be incomplete. Meteor provided
+  the function `Meteor.userLoaded()` to differentiate between these states, and
+  `accounts-ui` displayed an animation when it was true. Now, this in-between
+  state does not occur: when a user logs in, `Meteor.userId()` only is set once
+  `Meteor.user()` is fully loaded. Because it is no longer necessary,
+  `Meteor.userLoaded()` and the `{{currentUserLoaded}}` template helper have
+  been removed. The animation is now driven by the new function
+  `Meteor.loggingIn()` (and template helper `{{loggingIn}}`) which is true
+  whenever some login method is in progress.
 
-* userLoaded -> loggingIn
+* The `sass` CSS preprocessor package has been removed. It was based on an
+  unmaintained NPM module which did not implement recent versions of the Sass
+  language and had no error handling.  Consider using the `less` or `stylus`
+  packages instead.  #143
 
-* Meteor.loginWithToken's callback is now a "call with error on error, call
-  with no args on success" callback like the other login callbacks.
+* New function `Accounts.callLoginMethod` which should be used to call custom
+  login handlers (such as those registered with
+  `Accounts.registerLoginHandler`).
 
-* cursor dedup
+* The function documented in 0.5.0 as `Accounts.setPassword` was accidentally
+  implemented as `Meteor.setPassword`; it now has its intended name.  #454
 
-* don't drop method calls on the floor shortly after connectivity loss. Fixes #339
+* Passing the `wait` option to `Meteor.apply` now waits for all in-progress
+  method calls to finish before sending the method (instead of just guaranteeing
+  that its callback occurs after the callbacks of in-progress methods).
 
-* remove sass package  #143
+* The callback for `Meteor.loginWithToken` is now a "call with error on error,
+  call with no args on success" callback like the other login callbacks.
 
-* upgrade various dependencies:
-  MongoDB 2.2.0 -> 2.2.1
-  underscore 1.3.9 -> 1.4.2
-  bootstrap 2.1.1 -> 2.2.1
-  jQuery 1.7.2 -> 1.8.2
+* Method calls during a brief disconnection from the server are no longer
+  dropped. #339
 
-* Throw error on old Node
+* The `meteor` command-line tool and server both now prevent you from trying to
+  run them on unsupported versions of Node.
 
-* Rename Meteor.setPassword to Accounts.setPassword #454
+* Upgrade many dependencies, including:
+  * MongoDB 2.2.1 (from 2.2.0)
+  * underscore 1.4.2 (from 1.3.9)
+  * bootstrap 2.2.1 (from 2.1.1)
+  * jQuery 1.8.2 (from 1.7.2)
 
-* fix #455
-+    c.insert({foo: {bar: 'baz'}});
-+    test.equal(c.find({foo: {bam: 'baz'}}).count(), 0);
+* On the server, Meteor uses a simpler "unordered" algorithm to observe changes
+  to queries.
 
+* Fix Minimongo query bug with nested objects.  #455
 
-*    accounts-ui improvements b1eb334d4185771c0aa897b993384c9657b24027
+* In `accounts-ui`, stop page layout from changing during login.
 
-    - Better behavior when in-line. Text around {{loginButtons}} does not move up and down when logging in and out
-    - In various cases, text underneath {{loginButtons}} no longer moves up and down when logging in
-    - Refactored the way we support right-aligned login dropdowns to not use a container div
-    - Use inline-block instead of float for the image inside the login buttons
-    - Generally use inline-blocks more correctly (rather than blocks inside inline-blocks)
-    - Some other small refactoring
+* Use `path.join` instead of `/` in paths (helpful for the unofficial Windows
+  port) #303
 
-* _observeUnordered
-
-* Improvements for Windows paths #303
-
-* Use spiderable to serve facebookexternalhit  #411
+* Let the `spiderable` package serve
+  [`facebookexternalhit`](https://www.facebook.com/externalhit_uatext.php) #411
 
 * Fix error on Firefox with DOM Storage disabled.
 
