@@ -19,7 +19,7 @@ _Mongo = function (url) {
 
   self._liveResultsSets = {};
 
-  MongoDB.connect(url, function(err, db) {
+  MongoDB.connect(url, {db: {safe: true}}, function(err, db) {
     if (err)
       throw err;
     self.db = db;
