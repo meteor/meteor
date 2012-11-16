@@ -1,32 +1,26 @@
-LocalCollection._containsObject = function (list, obj) {
-  for (var i = 0, len_i = list.length; i < len_i; i++) {
-    if (JSON.stringify(obj) === JSON.stringify(list[i]))
-      return true;
+LocalCollection._contains = function (list, obj) {
+  if (!(_.contains(list, obj))) {
+    for (var i = 0, len_i = list.length; i < len_i; i++) {
+      if (JSON.stringify(obj) === JSON.stringify(list[i]))
+        return true;
+    }
+    return false;
+  } else {
+    return true;
   }
-  return false;
 }
 
 LocalCollection._gt = function (otherVal, val) {
-  if ((val === "null") && (otherVal === null)) {
+  if ((val === null) || (otherVal === null)) {
     return true;
   } else if (_.isArray(otherVal)) {
+    // XXX: check if val is array, semantics?
     return _.max(otherVal) > val;
   } else if (_.isObject(otherVal) && _.isObject(val)) {
-    for (var selKey in val) {
-      if (selKey in otherVal) {
-        if (_.isArray(val[selKey])) {
-          v = _.min(val[selKey]);
-        } else {
-          v = val[selKey];
-        }
-        if (_.isArray(otherVal[selKey])) {
-          d = _.min(otherVal[selKey]);
-        } else {
-          d = otherVal[selKey];
-        }
-        return d > v
-      }
-    }
+    // XXX: find material about actual semantics
+    minOtherVal = _.min(_.flatten(_.values(otherVal)));
+    minVal = _.min(_.flatten(_.values(val)));
+    return minOtherVal > minVal;
   } else {
     return otherVal > val;
   }
@@ -34,26 +28,14 @@ LocalCollection._gt = function (otherVal, val) {
 }
 
 LocalCollection._lt = function (otherVal, val) {
-  if ((val === "null") && (otherVal === null)) {
+  if ((val === null) || (otherVal === null)) {
     return true;
   } else if (_.isArray(otherVal)) {
     return _.min(otherVal) < val;
   } else if (_.isObject(otherVal) && _.isObject(val)) {
-    for (var selKey in val) {
-      if (selKey in otherVal) {
-        if (_.isArray(val[selKey])) {
-          v = _.min(val[selKey]);
-        } else {
-          v = val[selKey];
-        }
-        if (_.isArray(otherVal[selKey])) {
-          d = _.min(otherVal[selKey]);
-        } else {
-          d = otherVal[selKey];
-        }
-        return d < v
-      }
-    }
+    minOtherVal = _.min(_.flatten(_.values(otherVal)));
+    minVal = _.min(_.flatten(_.values(val)));
+    return minOtherVal < minVal;
   } else {
     return otherVal < val;
   }
@@ -95,16 +77,15 @@ LocalCollection._checkType = function(type, value) {
 
 LocalCollection._selectorOperators = {
   "$in": function(key, selectorValue, docBranch) {
-    if (!_.isArray(docBranch)) {
-      docBranch = [docBranch];
-    }
-    if (!(LocalCollection._containsObject(selectorValue, docBranch))) {
-      for (var i = 0, len_i = docBranch.length; i < len_i; i++) {
-        if (LocalCollection._containsObject(selectorValue, docBranch[i])) {
-          return true;
+    if (!(LocalCollection._contains(selectorValue, docBranch))) {
+      if (_.isArray(docBranch)) {
+        for (var i = 0, len_i = docBranch.length; i < len_i; i++) {
+          if (LocalCollection._contains(selectorValue, docBranch[i]))
+            return true;
         }
+      } else {
+        return false;
       }
-      return false;
     } else {
       return true;
     }
@@ -115,7 +96,7 @@ LocalCollection._selectorOperators = {
       docBranch = [docBranch];
     }
     for (var i = 0, len_i = selectorValue.length; i < len_i; i++) {
-      if (!(LocalCollection._containsObject(docBranch, selectorValue[i]))) {
+      if (!(LocalCollection._contains(docBranch, selectorValue[i]))) {
         return false;
       }
     }
@@ -139,13 +120,16 @@ LocalCollection._selectorOperators = {
   },
 
   "$ne": function(key, selectorValue, docBranch) {
-    if (_.isEqual(selectorValue, docBranch)) {
-      return false;
+    if (_.contains(["number", "string", "boolean"], typeof selectorValue)) {
+      return !(selectorValue === docBranch || _.contains(docBranch, selectorValue))
     } else {
-      if (_.isArray(docBranch)) {
-        return !LocalCollection._containsObject(docBranch, selectorValue)
+      if (JSON.stringify(selectorValue) === JSON.stringify(docBranch)) {
+        return false;
+      } else {
+        if (_.isArray(docBranch))
+          return !LocalCollection._contains(docBranch, selectorValue)
+        return true;
       }
-      return true;
     }
   },
 
@@ -160,16 +144,16 @@ LocalCollection._selectorOperators = {
   "$mod": function(key, selectorValue, docBranch) {
     if (_.isArray(docBranch)) {
       for (var i = 0, len_i = docBranch.length; i < len_i; i++) {
-        if (docBranch[i] % selectorValue[0] === selectorValue[1]) {
+        if (docBranch[i] % selectorValue[0] === selectorValue[1])
           return true;
-        }
       }
+    } else {
+      return docBranch % selectorValue[0] === selectorValue[1];
     }
-    return docBranch % selectorValue[0] === selectorValue[1];
   },
 
   "$and": function(key, selectorValue, docBranch) {
-    if (selectorValue.length === 0)
+    if (selectorValue.length === 0 && _.isArray(selectorValue))
       throw Error("$and/$or/$nor must be nonempty array");
     for (var i = 0, len_i = selectorValue.length; i < len_i; i++) {
       if (!(LocalCollection._evaluateSelector(null, selectorValue[i], docBranch))) {
@@ -180,7 +164,7 @@ LocalCollection._selectorOperators = {
   },
 
   "$or": function(key, selectorValue, docBranch) {
-    if (selectorValue.length === 0)
+    if (selectorValue.length === 0 && _.isArray(selectorValue))
       throw Error("$and/$or/$nor must be nonempty array");
     for (var i = 0, len_i = selectorValue.length; i < len_i; i++) {
       if (LocalCollection._evaluateSelector(null, selectorValue[i], docBranch)) {
@@ -191,7 +175,7 @@ LocalCollection._selectorOperators = {
   },
 
   "$nor": function(key, selectorValue, docBranch) {
-    if (selectorValue.length === 0)
+    if (selectorValue.length === 0 && _.isArray(selectorValue))
       throw Error("$and/$or/$nor must be nonempty array");
     for (var i = 0, len_i = selectorValue.length; i < len_i; i++) {
       if (LocalCollection._evaluateSelector(null, selectorValue[i], docBranch)) {
@@ -208,7 +192,7 @@ LocalCollection._selectorOperators = {
       if (selectorValue instanceof RegExp) {
         return !(selectorValue.test(docBranch))
       }
-      // Don't check for stuff that should be $ne territory
+      throw Error("Invalid use of $not (you may want to use $ne or $nin)");
     }
   },
 
@@ -240,11 +224,13 @@ LocalCollection._selectorOperators = {
       if (options === undefined) {
         return selectorValue.test(docBranch);
       } else {
-        // if there are options given with $options, we use them instead
+        // If there are options given with $options, we use them instead
+        // and construct the rexeg anew from its .source.
         return new RegExp(selectorValue.source, options).test(docBranch);
       }
-    } 
-    return new RegExp(selectorValue, options).test(docBranch);
+    } else {
+      return new RegExp(selectorValue, options).test(docBranch);
+    }
   },
 
   "$options": function(key, selectorValue, docBranch) {
@@ -254,6 +240,15 @@ LocalCollection._selectorOperators = {
 
   "$where": function(key, selectorValue, docBranch) {
     return Function("return " + selectorValue).call(docBranch);
+  },
+
+  "$elemMatch": function(key, selectorValue, docBranch) {
+    console.log (selectorValue, docBranch);
+    for (var i = 0, len_i = docBranch.length; i < len_i; i++) {
+      if (LocalCollection._evaluateSelector(key, selectorValue, docBranch[i]))
+        return true;
+    }
+    return false;
   }
 
 };
@@ -529,59 +524,61 @@ LocalCollection._matches = function (selector, doc) {
 LocalCollection._evaluateSelector = function(outerKey, selectorBranch, docBranch) {
   for (var innerKey in selectorBranch) {
     var selectorValue = selectorBranch[innerKey];
-    if (innerKey[0] === "$") {
+    if (innerKey.charAt(0) === "$") {
       // It's an operator, so let's user our operator dispatch hash table to evaluate it.
+      // We have to pass selectorBranch, even though only $regex uses it for access
+      // to $options (really ugly syntax there).
       if (!LocalCollection._selectorOperators[innerKey](outerKey, selectorValue, docBranch, selectorBranch))
         return false;
     } else if (innerKey.indexOf(".") >= 0) {
       // If the innerKey uses dot-notation, we move up one layer and recurse.
       // Somehow, this magically works with reaching into arrays as well.
       var keyParts = innerKey.split(".");
-      // No need to recurse to a non-existing sub-field.
-      if (!(keyParts[0]in docBranch))
+      var firstPart = keyParts.shift();
+      if (!(firstPart in docBranch))
         return false;
       var newSelectorBranch = {};
-      newSelectorBranch[keyParts.slice(1).join(".")] = selectorValue;
-      return LocalCollection._evaluateSelector(null, newSelectorBranch, docBranch[keyParts[0]]);
+      newSelectorBranch[keyParts.join(".")] = selectorValue;
+      if(!(LocalCollection._evaluateSelector(null, newSelectorBranch, docBranch[firstPart])))
+        return false;
     } else {
       // From here on, it's not operator or dot-notation territory.
+      var docValue = docBranch[innerKey];
       // Check if there are any operators left, or if it's a normal object.
-      var isNormalObject = true;
+      var _continueIteration = false;
       if (_.isObject(selectorValue) && !(selectorValue instanceof RegExp) && !_.isArray(selectorValue)) {
         for (var selKey in selectorValue) {
-          if (selKey[0] === "$") {
-            isNormalObject = false;
+          if (selKey.charAt(0) === "$") {
+            // There are operators in the object, so let's recurse into it.
+            _continueIteration = true;
+            if (!(LocalCollection._evaluateSelector(innerKey, selectorValue, docValue)))
+              return false;
             break;
           }
         }
+        if (_continueIteration)
+          continue;
       }
 
-      var docValue = docBranch[innerKey];
-      if (!isNormalObject) {
-        // There are oberators on the next level, so we recurse into that next level.
-        if (!(LocalCollection._evaluateSelector(innerKey, selectorValue, docValue)))
-          return false;
-      } else {
-        // No recursion possible anymore, just comparison or containment.
-        if (_.contains(["number", "string", "boolean"], typeof selectorValue)) {
-          // It's a simple comparison or array-containment checking.
-          if (!(docValue === selectorValue || _.contains(docValue, selectorValue)))
-            return false
-        } else if (selectorValue instanceof RegExp) {
-          // It's a regex, so test it.
+      // No recursion possible anymore, just comparison or containment.
+      if (!(docValue === selectorValue || _.contains(docValue, selectorValue))) {
+        // if it's not a simple comparison or array-containment checking,
+        // it could be a regex ... 
+        if (selectorValue instanceof RegExp) {
           if (!(selectorValue.test(docValue)))
             return false;
+        // ... or if it's null, it's checking if a field doesn't exists,
+        // or is null, or contains null ...
         } else if (selectorValue === null) {
-          // If it's null, it's checking if a field doesn't exists,
-          // or is null, or contains null.
           if (innerKey in docBranch && !(docValue === null) && !(_.contains(docValue, null)))
             return false;
+        // or it's an object, so we use object comparison.
         } else {
-          // What's left must an object, so we use object comparison.
           if (JSON.stringify(docValue) !== JSON.stringify(selectorValue)) {
+            // Failing that, it could be an array ...
             if (_.isArray(docValue)) { 
               // It could be an array ...
-              if (!(LocalCollection._containsObject(docValue, selectorValue)))
+              if (!(LocalCollection._contains(docValue, selectorValue)))
                 return false;
             } else {
               // ... or just plain false.

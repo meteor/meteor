@@ -833,6 +833,11 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({"dogs.1.name": "Rex"}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
   nomatch({"dogs.1.name": "Fido"}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
 
+  // $elemMatch
+  match({dogs: {$elemMatch: {name: /e/}}}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
+  nomatch({dogs: {$elemMatch: {name: /a/}}}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
+  match({dogs: {$elemMatch: {age: {$gt: 0}}}}, {dogs: [{name: "Fido", age: 5}, {name: "Rex", age: 3}]});
+
   // XXX still needs tests:
   // - $elemMatch
   // - non-scalar arguments to $gt, $lt, etc
