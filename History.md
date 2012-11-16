@@ -1,6 +1,11 @@
 
 ## vNEXT
 
+## v0.5.1
+
+XXX Write me!
+
+
 ## v0.5.0
 
 * This release introduces Meteor Accounts, a full-featured auth system that supports
