@@ -579,8 +579,142 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({"a.b": {$in: [1, 2, 3]}}, {a: {b: [4, 2]}});
   nomatch({"a.b": {$in: [1, 2, 3]}}, {a: {b: [4]}});
 
+  // $or
+  match({$or: []}, {}); // should throw error!
+  match({$or: []}, {a: 1}); // should throw error!
+  match({$or: [{a: 1}]}, {a: 1});
+  nomatch({$or: [{b: 2}]}, {a: 1});
+  match({$or: [{a: 1}, {b: 2}]}, {a: 1});
+  nomatch({$or: [{c: 3}, {d: 4}]}, {a: 1});
+  match({$or: [{a: 1}, {b: 2}]}, {a: [1, 2, 3]});
+  nomatch({$or: [{a: 1}, {b: 2}]}, {c: [1, 2, 3]});
+  nomatch({$or: [{a: 1}, {b: 2}]}, {a: [2, 3, 4]});
+  match({$or: [{a: 1}, {a: 2}]}, {a: 1});
+
+  // $or and $lt, $lte, $gt, $gte
+  match({$or: [{a: {$lte: 1}}, {a: 2}]}, {a: 1});
+  nomatch({$or: [{a: {$lt: 1}}, {a: 2}]}, {a: 1});
+  match({$or: [{a: {$gte: 1}}, {a: 2}]}, {a: 1});
+  nomatch({$or: [{a: {$gt: 1}}, {a: 2}]}, {a: 1});
+  match({$or: [{b: {$gt: 1}}, {b: {$lt: 3}}]}, {b: 2});
+  nomatch({$or: [{b: {$lt: 1}}, {b: {$gt: 3}}]}, {b: 2});
+
+  // $or and $in
+  match({$or: [{a: {$in: [1, 2, 3]}}]}, {a: 1});
+  nomatch({$or: [{a: {$in: [4, 5, 6]}}]}, {a: 1});
+  match({$or: [{a: {$in: [1, 2, 3]}}, {b: 2}]}, {a: 1});
+  match({$or: [{a: {$in: [1, 2, 3]}}, {b: 2}]}, {b: 2});
+  nomatch({$or: [{a: {$in: [1, 2, 3]}}, {b: 2}]}, {c: 3});
+  match({$or: [{a: {$in: [1, 2, 3]}}, {b: {$in: [1, 2, 3]}}]}, {b: 2});
+  nomatch({$or: [{a: {$in: [1, 2, 3]}}, {b: {$in: [4, 5, 6]}}]}, {b: 2});
+
+  // $or and $nin
+  nomatch({$or: [{a: {$nin: [1, 2, 3]}}]}, {a: 1});
+  match({$or: [{a: {$nin: [4, 5, 6]}}]}, {a: 1});
+  nomatch({$or: [{a: {$nin: [1, 2, 3]}}, {b: 2}]}, {a: 1});
+  match({$or: [{a: {$nin: [1, 2, 3]}}, {b: 2}]}, {b: 2});
+  match({$or: [{a: {$nin: [1, 2, 3]}}, {b: 2}]}, {c: 3});
+  match({$or: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [1, 2, 3]}}]}, {b: 2});
+  nomatch({$or: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [1, 2, 3]}}]}, {a: 1, b: 2});
+  match({$or: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [4, 5, 6]}}]}, {b: 2});
+
+  // $or and dot-notation
+  match({$or: [{"a.b": 1}, {"a.b": 2}]}, {a: {b: 1}});
+  match({$or: [{"a.b": 1}, {"a.c": 1}]}, {a: {b: 1}});
+  nomatch({$or: [{"a.b": 2}, {"a.c": 1}]}, {a: {b: 1}});
+
+  // $or and nested objects
+  match({$or: [{a: {b: 1, c: 2}}, {a: {b: 2, c: 1}}]}, {a: {b: 1, c: 2}});
+  nomatch({$or: [{a: {b: 1, c: 3}}, {a: {b: 2, c: 1}}]}, {a: {b: 1, c: 2}});
+
+  // $or and $ne
+  match({$or: [{a: {$ne: 1}}]}, {});
+  nomatch({$or: [{a: {$ne: 1}}]}, {a: 1});
+  match({$or: [{a: {$ne: 1}}]}, {a: 2});
+  match({$or: [{a: {$ne: 1}}]}, {b: 1});
+  match({$or: [{a: {$ne: 1}}, {a: {$ne: 2}}]}, {a: 1});
+  match({$or: [{a: {$ne: 1}}, {b: {$ne: 1}}]}, {a: 1});
+  nomatch({$or: [{a: {$ne: 1}}, {b: {$ne: 2}}]}, {a: 1, b: 2});
+
+  // $or and $not
+  match({$or: [{a: {$not: {$mod: [10, 1]}}}]}, {});
+  nomatch({$or: [{a: {$not: {$mod: [10, 1]}}}]}, {a: 1});
+  match({$or: [{a: {$not: {$mod: [10, 1]}}}]}, {a: 2});
+  match({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$not: {$mod: [10, 2]}}}]}, {a: 1});
+  nomatch({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 1});
+  match({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 2});
+  match({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 3});
+  // this is possibly an open-ended task, so we stop here ...
+  
+  // $nor
+  match({$nor: []}, {}); // should throw error!
+  match({$nor: []}, {a: 1}); // should throw error!
+  nomatch({$nor: [{a: 1}]}, {a: 1});
+  match({$nor: [{b: 2}]}, {a: 1});
+  nomatch({$nor: [{a: 1}, {b: 2}]}, {a: 1});
+  match({$nor: [{c: 3}, {d: 4}]}, {a: 1});
+  nomatch({$nor: [{a: 1}, {b: 2}]}, {a: [1, 2, 3]});
+  match({$nor: [{a: 1}, {b: 2}]}, {c: [1, 2, 3]});
+  match({$nor: [{a: 1}, {b: 2}]}, {a: [2, 3, 4]});
+  nomatch({$nor: [{a: 1}, {a: 2}]}, {a: 1});
+
+  // $nor and $lt, $lte, $gt, $gte
+  nomatch({$nor: [{a: {$lte: 1}}, {a: 2}]}, {a: 1});
+  match({$nor: [{a: {$lt: 1}}, {a: 2}]}, {a: 1});
+  nomatch({$nor: [{a: {$gte: 1}}, {a: 2}]}, {a: 1});
+  match({$nor: [{a: {$gt: 1}}, {a: 2}]}, {a: 1});
+  nomatch({$nor: [{b: {$gt: 1}}, {b: {$lt: 3}}]}, {b: 2});
+  match({$nor: [{b: {$lt: 1}}, {b: {$gt: 3}}]}, {b: 2});
+
+  // $nor and $in
+  nomatch({$nor: [{a: {$in: [1, 2, 3]}}]}, {a: 1});
+  match({$nor: [{a: {$in: [4, 5, 6]}}]}, {a: 1});
+  nomatch({$nor: [{a: {$in: [1, 2, 3]}}, {b: 2}]}, {a: 1});
+  nomatch({$nor: [{a: {$in: [1, 2, 3]}}, {b: 2}]}, {b: 2});
+  match({$nor: [{a: {$in: [1, 2, 3]}}, {b: 2}]}, {c: 3});
+  nomatch({$nor: [{a: {$in: [1, 2, 3]}}, {b: {$in: [1, 2, 3]}}]}, {b: 2});
+  match({$nor: [{a: {$in: [1, 2, 3]}}, {b: {$in: [4, 5, 6]}}]}, {b: 2});
+
+  // $nor and $nin
+  match({$nor: [{a: {$nin: [1, 2, 3]}}]}, {a: 1});
+  nomatch({$nor: [{a: {$nin: [4, 5, 6]}}]}, {a: 1});
+  match({$nor: [{a: {$nin: [1, 2, 3]}}, {b: 2}]}, {a: 1});
+  nomatch({$nor: [{a: {$nin: [1, 2, 3]}}, {b: 2}]}, {b: 2});
+  nomatch({$nor: [{a: {$nin: [1, 2, 3]}}, {b: 2}]}, {c: 3});
+  nomatch({$nor: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [1, 2, 3]}}]}, {b: 2});
+  match({$nor: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [1, 2, 3]}}]}, {a: 1, b: 2});
+  nomatch({$nor: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [4, 5, 6]}}]}, {b: 2});
+
+  // $nor and dot-notation
+  nomatch({$nor: [{"a.b": 1}, {"a.b": 2}]}, {a: {b: 1}});
+  nomatch({$nor: [{"a.b": 1}, {"a.c": 1}]}, {a: {b: 1}});
+  match({$nor: [{"a.b": 2}, {"a.c": 1}]}, {a: {b: 1}});
+
+  // $nor and nested objects
+  nomatch({$nor: [{a: {b: 1, c: 2}}, {a: {b: 2, c: 1}}]}, {a: {b: 1, c: 2}});
+  match({$nor: [{a: {b: 1, c: 3}}, {a: {b: 2, c: 1}}]}, {a: {b: 1, c: 2}});
+
+  // $nor and $ne
+  nomatch({$nor: [{a: {$ne: 1}}]}, {});
+  match({$nor: [{a: {$ne: 1}}]}, {a: 1});
+  nomatch({$nor: [{a: {$ne: 1}}]}, {a: 2});
+  nomatch({$nor: [{a: {$ne: 1}}]}, {b: 1});
+  nomatch({$nor: [{a: {$ne: 1}}, {a: {$ne: 2}}]}, {a: 1});
+  nomatch({$nor: [{a: {$ne: 1}}, {b: {$ne: 1}}]}, {a: 1});
+  match({$nor: [{a: {$ne: 1}}, {b: {$ne: 2}}]}, {a: 1, b: 2});
+
+  // $nor and $not
+  nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}]}, {});
+  match({$nor: [{a: {$not: {$mod: [10, 1]}}}]}, {a: 1});
+  nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}]}, {a: 2});
+  nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$not: {$mod: [10, 2]}}}]}, {a: 1});
+  match({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 1});
+  nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 2});
+  nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 3});
+
+
   // XXX still needs tests:
-  // - $or, $and, $nor, $where
+  // - $and, $where
   // - $elemMatch
   // - people.2.name
   // - non-scalar arguments to $gt, $lt, etc
