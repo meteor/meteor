@@ -590,6 +590,9 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({$or: [{a: 1}, {b: 2}]}, {c: [1, 2, 3]});
   nomatch({$or: [{a: 1}, {b: 2}]}, {a: [2, 3, 4]});
   match({$or: [{a: 1}, {a: 2}]}, {a: 1});
+  match({$or: [{a: 1}, {a: 2}], b: 2}, {a: 1, b: 2});
+  nomatch({$or: [{a: 2}, {a: 3}], b: 2}, {a: 1, b: 2});
+  nomatch({$or: [{a: 1}, {a: 2}], b: 3}, {a: 1, b: 2});
 
   // $or and $lt, $lte, $gt, $gte
   match({$or: [{a: {$lte: 1}}, {a: 2}]}, {a: 1});
@@ -734,6 +737,8 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({$and: [{a: 1}, {b: 1}]}, {a: 1});
   match({$and: [{a: 1}, {b: 2}]}, {a: 1, b: 2});
   nomatch({$and: [{a: 1}, {b: 1}]}, {a: 1, b: 2});
+  match({$and: [{a: 1}, {b: 2}], c: 3}, {a: 1, b: 2, c: 3});
+  nomatch({$and: [{a: 1}, {b: 2}], c: 4}, {a: 1, b: 2, c: 3});
 
   // $and and regexes
   match({$and: [{a: /a/}]}, {a: "cat"});
@@ -801,8 +806,16 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({$and: [{a: {$not: {$lt: 0}}}, {a: {$not: {$gt: 2}}}]}, {a: 1});
   nomatch({$and: [{a: {$not: {$lt: 2}}}, {a: {$not: {$gt: 0}}}]}, {a: 1});
 
+  // $where
+  match({$where: "this.a === 1"}, {a: 1});
+  nomatch({$where: "this.a !== 1"}, {a: 1});
+  nomatch({$where: "this.a === 1", a: 2}, {a: 1});
+  match({$where: "this.a === 1", b: 2}, {a: 1, b: 2});
+  match({$where: "this.a === 1 && this.b === 2"}, {a: 1, b: 2});
+  match({$where: "Array.isArray(this.a)"}, {a: []});
+  nomatch({$where: "Array.isArray(this.a)"}, {a: 1});
+
   // XXX still needs tests:
-  // - $where
   // - $elemMatch
   // - people.2.name
   // - non-scalar arguments to $gt, $lt, etc
