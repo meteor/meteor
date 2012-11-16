@@ -3,7 +3,7 @@
 set -e
 set -u
 
-BUNDLE_VERSION=0.2.6
+BUNDLE_VERSION=0.2.7
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -71,6 +71,9 @@ which node
 
 which npm
 
+# When adding new node modules (or any software) to the dev bundle, remember to
+# update LICENSE.txt!
+
 cd "$DIR/lib/node_modules"
 npm install connect@1.9.2 # not 2.x yet. sockjs doesn't work w/ new connect
 npm install gzippo@0.1.7
@@ -88,21 +91,17 @@ npm install clean-css@0.8.2
 npm install progress@0.1.0
 npm install useragent@1.1.0
 npm install request@2.12.0
-npm install http-proxy@0.8.4
 npm install simplesmtp@0.1.25
 npm install stream-buffers@0.2.3
 npm install keypress@0.1.0
- # pinned at older version. 0.1.16+ uses mimelib, not mimelib-noiconv
- # which make the dev bundle much bigger. We need a better solution.
-npm install mailcomposer@0.1.15
-# When adding new node modules (or any software) to the dev bundle, remember to
-# update LICENSE.txt!
+npm install sockjs@0.3.4
 
-# Sockjs has a broken optional dependancy, and npm optional dependancies
-# don't seem to quite work. Fake it out with a checkout.
-git clone http://github.com/akdubya/rbytes.git
-npm install sockjs@0.3.3
-rm -rf rbytes
+# 0.8.4 contains a regression w/ maxSockets support. it is fixed on
+# master, and will hopefully be in 0.8.5.
+npm install http-proxy@0.8.3
+# pinned at older version. 0.1.16+ uses mimelib, not mimelib-noiconv
+# which make the dev bundle much bigger. We need a better solution.
+npm install mailcomposer@0.1.15
 
 # If you update the version of fibers in the dev bundle, also update the "npm
 # install" command in docs/client/concepts.html.
