@@ -174,10 +174,10 @@ LocalCollection._selectorOperators = {
   },
 
   "$and": function(key, selectorValue, docBranch) {
-    var selectorBranch, _i, _len;
-    for (_i = 0, _len = selectorValue.length; _i < _len; _i++) {
-      selectorBranch = selectorValue[_i];
-      if (!(LocalCollection._evaluateSelector(null, selectorBranch, docBranch))) {
+    if (selectorValue.length === 0)
+      throw Error("$and/$or/$nor must be nonempty array");
+    for (var i = 0, len_i = selectorValue.length; i < len_i; i++) {
+      if (!(LocalCollection._evaluateSelector(null, selectorValue[i], docBranch))) {
         return false;
       }
     }
@@ -185,10 +185,10 @@ LocalCollection._selectorOperators = {
   },
 
   "$or": function(key, selectorValue, docBranch) {
-    var selectorBranch, _i, _len;
-    for (_i = 0, _len = selectorValue.length; _i < _len; _i++) {
-      selectorBranch = selectorValue[_i];
-      if (!(LocalCollection._evaluateSelector(null, selectorBranch, docBranch))) {
+    if (selectorValue.length === 0)
+      throw Error("$and/$or/$nor must be nonempty array");
+    for (var i = 0, len_i = selectorValue.length; i < len_i; i++) {
+      if (LocalCollection._evaluateSelector(null, selectorValue[i], docBranch)) {
         return true;
       }
     }
@@ -196,10 +196,11 @@ LocalCollection._selectorOperators = {
   },
 
   "$nor": function(key, selectorValue, docBranch) {
+    if (selectorValue.length === 0)
+      throw Error("$and/$or/$nor must be nonempty array");
     var selectorBranch, _i, _len;
-    for (_i = 0, _len = selectorValue.length; _i < _len; _i++) {
-      selectorBranch = selectorValue[_i];
-      if (!(LocalCollection._evaluateSelector(null, selectorBranch, docBranch))) {
+    for (var i = 0, len_i = selectorValue.length; i < len_i; i++) {
+      if (LocalCollection._evaluateSelector(null, selectorValue[i], docBranch)) {
         return false;
       }
     }
@@ -258,6 +259,10 @@ LocalCollection._selectorOperators = {
     // evaluation happens at the $regex function above
     return true;
   },
+
+  "$where": function(key, selectorValue, docBranch) {
+    return Function("return " + selectorValue).call(docBranch);
+  }
 
 };
 
@@ -532,12 +537,13 @@ LocalCollection._evaluateSelector = function(outerKey, selectorBranch, docBranch
     } else if (innerKey.indexOf(".") >= 0) {
       // if the innerKey uses dot-notation, we move up one layer and recurse.
       var keyParts = innerKey.split(".");
+      firstPart = keyParts[0];
       var newValue = {};
       newValue[keyParts.slice(1).join(".")] = selectorValue;
-      if (!(keyParts[0] in docBranch)) {
+      if (!(firstPart in docBranch)) {
         return false;
       }
-      return LocalCollection._evaluateSelector(null, newValue, docBranch[keyParts[0]]);
+      return LocalCollection._evaluateSelector(null, newValue, docBranch[firstPart]);
     } else {
       // check if there are no operators, but instead a normal object.
       var isNormalObject = true;
@@ -550,20 +556,25 @@ LocalCollection._evaluateSelector = function(outerKey, selectorBranch, docBranch
         }
       }
 
+      var docValue = docBranch[innerKey];
       if (!isNormalObject) {
-        if (!(LocalCollection._evaluateSelector(innerKey, selectorValue, docBranch[innerKey]))) {
+        if (!(LocalCollection._evaluateSelector(innerKey, selectorValue, docValue))) {
           return false;
         }
       } else {
+        if (_.contains(["number", "string", "boolean"], typeof selectorValue)) {
+          if (!(docValue === selectorValue || _.contains(docValue, selectorValue)))
+            return false
+        }
         if (selectorValue instanceof RegExp) {
-          return selectorValue.test(docBranch[innerKey]);
+          return selectorValue.test(docValue);
         }
         // stringify b/c that preserves innerKey order
-        if (JSON.stringify(docBranch[innerKey]) !== JSON.stringify(selectorValue)) {
-          if (_.isArray(docBranch[innerKey])) { // maybe it's an array?
+        if (JSON.stringify(docValue) !== JSON.stringify(selectorValue)) {
+          if (_.isArray(docValue)) { // maybe it's an array?
             var inArray = false;
-            for (var i = 0, len_i = docBranch[innerKey].length; i < len_i; i++) {
-              if (JSON.stringify(docBranch[innerKey][i]) === JSON.stringify(selectorValue)) {
+            for (var i = 0, len_i = docValue.length; i < len_i; i++) {
+              if (JSON.stringify(docValue[i]) === JSON.stringify(selectorValue)) {
                 inArray = true;
                 break;
               }
