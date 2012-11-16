@@ -98,8 +98,7 @@ npm install stream-buffers@0.2.3
 npm install keypress@0.1.0
 npm install sockjs@0.3.4
 
-# 0.8.4 contains a regression w/ maxSockets support. it is fixed on
-# master, and will hopefully be in 0.8.5.
+# 0.8.4 contains a regression w/ maxSockets support. it is fixed in 0.8.5.
 npm install http-proxy@0.8.3
 # pinned at older version. 0.1.16+ uses mimelib, not mimelib-noiconv
 # which make the dev bundle much bigger. We need a better solution.
