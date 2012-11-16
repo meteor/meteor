@@ -71,8 +71,10 @@ which node
 
 which npm
 
-# When adding new node modules (or any software) to the dev bundle, remember to
-# update LICENSE.txt!
+# When adding new node modules (or any software) to the dev bundle,
+# remember to update LICENSE.txt! Also note that we include all the
+# packages that these depend on, so watch out for new dependencies when
+# you update version numbers.
 
 cd "$DIR/lib/node_modules"
 npm install connect@1.9.2 # not 2.x yet. sockjs doesn't work w/ new connect
