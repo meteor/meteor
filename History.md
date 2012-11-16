@@ -3,8 +3,63 @@
 
 ## v0.5.1
 
-XXX Write me!
+XXX turn these notes into sentences
 
+* per-obj quiescence
+
+* callback timing change (and onResultReceived)
+
+* wait method changes (when it's called, and quiescence)
+
+* userLoaded -> loggingIn
+
+* Meteor.loginWithToken's callback is now a "call with error on error, call
+  with no args on success" callback like the other login callbacks.
+
+* cursor dedup
+
+* don't drop method calls on the floor shortly after connectivity loss. Fixes #339
+
+* remove sass package  #143
+
+* upgrade various dependencies:
+  MongoDB 2.2.0 -> 2.2.1
+  underscore 1.3.9 -> 1.4.2
+  bootstrap 2.1.1 -> 2.2.1
+  jQuery 1.7.2 -> 1.8.2
+
+* Throw error on old Node
+
+* Rename Meteor.setPassword to Accounts.setPassword #454
+
+* fix #455
++    c.insert({foo: {bar: 'baz'}});
++    test.equal(c.find({foo: {bam: 'baz'}}).count(), 0);
+
+
+*    accounts-ui improvements b1eb334d4185771c0aa897b993384c9657b24027
+
+    - Better behavior when in-line. Text around {{loginButtons}} does not move up and down when logging in and out
+    - In various cases, text underneath {{loginButtons}} no longer moves up and down when logging in
+    - Refactored the way we support right-aligned login dropdowns to not use a container div
+    - Use inline-block instead of float for the image inside the login buttons
+    - Generally use inline-blocks more correctly (rather than blocks inside inline-blocks)
+    - Some other small refactoring
+
+* _observeUnordered
+
+* Improvements for Windows paths #303
+
+* Use spiderable to serve facebookexternalhit  #411
+
+* Fix error on Firefox with DOM Storage disabled.
+
+* Don't pass a result to the callback of Accounts.createUser on success.
+
+* Avoid invalidating listeners if setUserId is called with current value.
+
+Patches contributed by GitHub users ayal, dandv, possibilities, TomWij,
+tmeasday, and workmad3.
 
 ## v0.5.0
 
