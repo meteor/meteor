@@ -580,8 +580,12 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({"a.b": {$in: [1, 2, 3]}}, {a: {b: [4]}});
 
   // $or
-  match({$or: []}, {}); // should throw error!
-  match({$or: []}, {a: 1}); // should throw error!
+  test.throws(function () {
+    match({$or: []}, {});
+  });
+  test.throws(function () {
+    match({$or: []}, {a: 1});
+  });
   match({$or: [{a: 1}]}, {a: 1});
   nomatch({$or: [{b: 2}]}, {a: 1});
   match({$or: [{a: 1}, {b: 2}]}, {a: 1});
@@ -657,8 +661,12 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   // this is possibly an open-ended task, so we stop here ...
   
   // $nor
-  match({$nor: []}, {}); // should throw error!
-  match({$nor: []}, {a: 1}); // should throw error!
+  test.throws(function () {
+    match({$nor: []}, {});
+  });
+  test.throws(function () {
+    match({$nor: []}, {a: 1});
+  });
   nomatch({$nor: [{a: 1}]}, {a: 1});
   match({$nor: [{b: 2}]}, {a: 1});
   nomatch({$nor: [{a: 1}, {b: 2}]}, {a: 1});
@@ -730,8 +738,13 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 3});
 
   // $and
-  match({$and: []}, {}); // should throw error!
-  match({$and: []}, {a: 1}); // should throw error!
+
+  test.throws(function () {
+    match({$and: []}, {});
+  });
+  test.throws(function () {
+    match({$and: []}, {a: 1});
+  });
   match({$and: [{a: 1}]}, {a: 1});
   nomatch({$and: [{a: 1}, {a: 2}]}, {a: 1});
   nomatch({$and: [{a: 1}, {b: 1}]}, {a: 1});
