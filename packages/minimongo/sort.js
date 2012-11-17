@@ -44,14 +44,18 @@ LocalCollection._compileSort = function (spec) {
   var _func;
   var code = "_func = (function(c){return function(a,b){var x;";
   for (var i = 0; i < keys.length; i++) {
-    if (i !== 0)
-      code += "if(x!==0)return x;";
-    code += "x=" + (asc[i] ? "" : "-") +
-      "c(a[" + JSON.stringify(keys[i]) + "],b[" +
-      JSON.stringify(keys[i]) + "]);";
+      var splittedKeys = keys[i].split(".");
+      var keyString = "";
+      for(o = 0;o<splittedKeys.length;o++){
+        keyString  = keyString + "["+ JSON.stringify(splittedKeys[o]) +"]";
+      }
+      if (i !== 0){
+        code += "if(x!==0)return x;";
+      }
+      code += "x=" + (asc[i] ? "" : "-") +
+        "c(a" + keyString +",b"+keyString+");";
   }
   code += "return x;};})";
-
   eval(code);
   return _func(LocalCollection._f._cmp);
 };

@@ -292,7 +292,6 @@ LocalCollection.Cursor.prototype._markAsReactive = function (options) {
   var self = this;
 
   var context = Meteor.deps.Context.current;
-
   if (context) {
     var invalidate = _.bind(context.invalidate, context);
     var handle;

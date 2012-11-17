@@ -249,7 +249,103 @@ LocalCollection._f = {
     // 127: maxkey
     if (ta === 13) // javascript code
       throw Error("Sorting not supported on Javascript code"); // XXX
-  }
+  },
+  /**Compare 2 arrays of [lon,lat] to see if they have a max distance of 25 km**/
+  _near : function(x,b){
+    var unit = 6371; //km
+    var maxdistance = (this.maxDistance)? this.maxDistance : 25;
+    if(!x){
+    	return false;
+    }
+    if(!((x.lon && x.lat) || (x.x && x.y))|| b.length<2)
+        return false;
+    var lon1 = x.lon?x.lon:x.x;
+    var lat1 = x.lat?x.lat:x.y;
+    var lon2 = b[0];
+    var lat2 = b[1];
+    /** Possible for shorter runtime need to check **/
+    var i = Math.abs(parseInt(lat2-lat1));
+    if(i != 1 && i* 69.172 > maxdistance)
+        return false;
+    /** Main **/
+    var dLat = (lat2-lat1)*Math.PI/180;
+    var dLon = (lon2-lon1)*Math.PI/180;
+    lat1 = lat1*Math.PI/180;
+    lat2 = lat2*Math.PI/180;
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2); 
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+    var distance = unit * c;
+    this.maxDistance = undefined;
+    if(distance <= maxdistance)
+    	x.distance = distance;
+        return true;
+  },
+  /**Set the maximum distance for $near query**/
+  _setMaxDistance : function(a){
+    this.maxDistance = a;
+    return true;	
+  },
+  /**Copy $within from mongo**/
+  _withIn : function(point,shape){
+  	if(!point){
+    	return false;
+    }
+    if(!((point.lon && point.lat) || (point.x && point.y)))
+        return false;
+ 	var x = point.x?point.x:point.lon;
+ 	var y = point.y?point.y:point.lat;
+ 	
+ 	if(shape.$box){
+ 		var xTop  = shape.$box[0][0];
+ 		var yTop  = shape.$box[0][1];
+ 		var xBottom = shape.$box[1][0];
+ 		var yBottom = shape.$box[1][1];
+ 		if(xBottom<xTop){
+ 			var temp = xTop;
+ 			xTop = xBottom;
+ 			xBottom = temp;
+ 		}
+ 		if(yBottom<yTop){
+ 			var temp = yTop;
+ 			yTop = xBottom;
+ 			yBottom = temp;
+ 		}
+ 		return (x>xTop && x<xBottom) && (y>yTop && y<yBottom);
+ 	}else if(shape.$circle){
+ 		var xCenter = shape.$circle[0][0];
+ 		var yCenter = shape.$circle[0][1];
+ 		var radius = shape.$circle[1];
+ 		var pyth = Math.sqrt(Math.pow((x-xCenter),2) + Math.pow((y-yCenter),2));
+ 		return pyth <= radius;
+ 	}else if(shape.$polygon){
+ 		var polygons = shape.$polygon;
+ 		//polygons.push(polygons[0]);
+ 		var length = polygons.length;
+ 		var x1 = polygons[0][0];
+ 		var y1 = polygons[0][1];
+ 		var within = false;
+ 		for(var i = 0;i<length;i++){
+ 			var x2 = polygons[i%length][0];
+ 			var y2 = polygons[i%length][1];
+ 			if(y>Math.min(y1,y2)){
+ 				if(y<=Math.max(y1,y2)){
+ 					if(x<=Math.max(x1,x2)){
+ 						if(y1 != y2){
+ 							var xintersect = (y-y1)*(x2-x1)/(y2-y1)+x1;
+ 						}
+ 						if(x1== x2 || x<=xintersect){
+ 							within = !within;
+ 						}
+ 					}
+ 				}
+ 			}
+ 			x1 = x2;
+ 			y1 = y2;
+ 		}
+ 		return within;
+ 	}
+ }
 };
 
 // For unit tests. True if the given document matches the given
@@ -454,9 +550,15 @@ LocalCollection._exprForOperatorTest = function (op, literals) {
     return LocalCollection._exprForOperatorTest({$regex: op}, literals);
   } else {
     var clauses = [];
-    for (var type in op)
-      clauses.push(LocalCollection._exprForConstraint(type, op[type],
+    for (var type in op){
+    	
+      if(type=='$maxDistance'){
+        clauses.unshift('f._setMaxDistance('+ JSON.stringify(op[type]) + ')');
+      }else{
+        clauses.push(LocalCollection._exprForConstraint(type, op[type],
                                                       op, literals));
+      }
+    }
     if (clauses.length === 0)
       return 'true';
     return '(' + clauses.join('&&') + ')';
@@ -545,7 +647,11 @@ LocalCollection._exprForConstraint = function (type, arg, others,
     // we should follow mongo's behavior?
     expr = '!' + LocalCollection._exprForOperatorTest(arg, literals);
     search = null;
-  } else {
+  } else if( type === '$near'){
+    expr = 'f._near(x,' + JSON.stringify(arg) + ')';
+  } else if (type === '$within'){
+  	expr = 'f._withIn(x,' + JSON.stringify(arg) + ')';
+  }else {
     throw Error("Unrecognized key in selector: " + type);
   }
 
