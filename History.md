@@ -5,68 +5,60 @@
 
 * Speed up server-side subscription handling by avoiding redundant work
   when the same Mongo query is observed multiple times concurrently (eg,
-  by multiple users subscribing to the same subscription).
+  by multiple users subscribing to the same subscription), and by using
+  a simpler "unordered" algorithm.
 
-* Meteor now waits to invoke method callbacks (passed to `Meteor.call` and
-  `Meteor.apply`, as well as the `Meteor.Collection` `insert`/`update`/`remove`
-  methods) until all the data written by the method is available in the local
-  cache. This way, method callbacks can see the full effects of their write.  If
-  you want to process the method's result as soon as it arrives from the server,
-  even if the method's writes are not available yet, you can now specify an
-  `onResultReceived` callback to `Meteor.apply`.
+* Meteor now waits to invoke method callbacks until all the data written by the
+  method is available in the local cache. This way, method callbacks can see the
+  full effects of their writes. This includes the callbacks passed to
+  `Meteor.call` and `Meteor.apply`, as well as to the `Meteor.Collection`
+  `insert`/`update`/`remove` methods.
 
-* Previously, as long as any method calls were in progress, Meteor would buffer
-  all data changes sent from the server until all methods finished. Meteor now
-  only buffers writes to documents written by client stubs, and applies the
-  writes as soon as all methods that wrote that document have finished.
+  If you want to process the method's result as soon as it arrives from the
+  server, even if the method's writes are not available yet, you can now specify
+  an `onResultReceived` callback to `Meteor.apply`.
 
-* `Meteor.userLoaded()` and `{{currentUserLoaded}}` are removed; the new
-  `Meteor.loggingIn()` and `{{loggingIn}}` serve a similar purpose.
+* Rework latency compensation to show server data changes sooner. Previously, as
+  long as any method calls were in progress, Meteor would buffer all data
+  changes sent from the server until all methods finished. Meteor now only
+  buffers writes to documents written by client stubs, and applies the writes as
+  soon as all methods that wrote that document have finished.
 
+* `Meteor.userLoaded()` and `{{currentUserLoaded}}` have been removed.
   Previously, during the login process on the client, `Meteor.userId()` could be
   set but the document at `Meteor.user()` could be incomplete. Meteor provided
-  the function `Meteor.userLoaded()` to differentiate between these states, and
-  `accounts-ui` displayed an animation when it was true. Now, this in-between
-  state does not occur: when a user logs in, `Meteor.userId()` only is set once
-  `Meteor.user()` is fully loaded. Because it is no longer necessary,
-  `Meteor.userLoaded()` and the `{{currentUserLoaded}}` template helper have
-  been removed. The animation is now driven by the new function
-  `Meteor.loggingIn()` (and template helper `{{loggingIn}}`) which is true
-  whenever some login method is in progress.
+  the function `Meteor.userLoaded()` to differentiate between these states. Now,
+  this in-between state does not occur: when a user logs in, `Meteor.userId()`
+  only is set once `Meteor.user()` is fully loaded.
+
+* New reactive function `Meteor.loggingIn()` and template helper
+  `{{loggingIn}}`; they are true whenever some login method is in progress.
+  `accounts-ui` now uses this to show an animation during login.
 
 * The `sass` CSS preprocessor package has been removed. It was based on an
   unmaintained NPM module which did not implement recent versions of the Sass
   language and had no error handling.  Consider using the `less` or `stylus`
   packages instead.  #143
 
+* `Meteor.setPassword` is now called `Accounts.setPassword`, matching the
+  documentation and original intention.  #454
+
+* Passing the `wait` option to `Meteor.apply` now waits for all in-progress
+  method calls to finish before sending the method, instead of only guaranteeing
+  that its callback occurs after the callbacks of in-progress methods.
+
 * New function `Accounts.callLoginMethod` which should be used to call custom
   login handlers (such as those registered with
   `Accounts.registerLoginHandler`).
 
-* The function documented in 0.5.0 as `Accounts.setPassword` was accidentally
-  implemented as `Meteor.setPassword`; it now has its intended name.  #454
+* The callbacks for `Meteor.loginWithToken` and `Accounts.createUser` now match
+  the other login callbacks: they are called with error on error or with no
+  arguments on success.
 
-* Passing the `wait` option to `Meteor.apply` now waits for all in-progress
-  method calls to finish before sending the method (instead of just guaranteeing
-  that its callback occurs after the callbacks of in-progress methods).
+* Fix bug where method calls could be dropped during a brief disconnection. #339
 
-* The callback for `Meteor.loginWithToken` is now a "call with error on error,
-  call with no args on success" callback like the other login callbacks.
-
-* Method calls during a brief disconnection from the server are no longer
-  dropped. #339
-
-* The `meteor` command-line tool and server both now prevent you from trying to
-  run them on unsupported versions of Node.
-
-* Upgrade many dependencies, including:
-  * MongoDB 2.2.1 (from 2.2.0)
-  * underscore 1.4.2 (from 1.3.9)
-  * bootstrap 2.2.1 (from 2.1.1)
-  * jQuery 1.8.2 (from 1.7.2)
-
-* On the server, Meteor uses a simpler "unordered" algorithm to observe changes
-  to queries.
+* Prevent running the `meteor` command-line tool and server on unsupported Node
+  versions.
 
 * Fix Minimongo query bug with nested objects.  #455
 
@@ -75,14 +67,21 @@
 * Use `path.join` instead of `/` in paths (helpful for the unofficial Windows
   port) #303
 
-* Let the `spiderable` package serve
+* The `spiderable` package serves pages to
   [`facebookexternalhit`](https://www.facebook.com/externalhit_uatext.php) #411
 
 * Fix error on Firefox with DOM Storage disabled.
 
-* Don't pass a result to the callback of Accounts.createUser on success.
-
 * Avoid invalidating listeners if setUserId is called with current value.
+
+* Upgrade many dependencies, including:
+  * MongoDB 2.2.1 (from 2.2.0)
+  * underscore 1.4.2 (from 1.3.9)
+  * bootstrap 2.2.1 (from 2.1.1)
+  * jQuery 1.8.2 (from 1.7.2)
+  * less 1.3.1 (from 1.3.0)
+  * stylus 0.30.1 (from 0.29.0)
+  * coffee-script 1.4.0 (from 1.3.3)
 
 Patches contributed by GitHub users ayal, dandv, possibilities, TomWij,
 tmeasday, and workmad3.
