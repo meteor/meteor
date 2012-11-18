@@ -59,7 +59,6 @@ _.extend(TestCaseResults.prototype, {
       Error.captureStackTrace(err);
       var stack = err.stack;
       Error.prepareStackTrace = savedPrepareStackTrace;
-      console.log(stack);
       for (var i = stack.length - 1; i >= 0; --i) {
         var frame = stack[i];
         // Heuristic: use the OUTERMOST line which is in a _test.js or _tests.js
