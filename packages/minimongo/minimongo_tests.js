@@ -836,7 +836,11 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   // $elemMatch
   match({dogs: {$elemMatch: {name: /e/}}}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
   nomatch({dogs: {$elemMatch: {name: /a/}}}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
-  match({dogs: {$elemMatch: {age: {$gt: 0}}}}, {dogs: [{name: "Fido", age: 5}, {name: "Rex", age: 3}]});
+  match({dogs: {$elemMatch: {age: {$gt: 4}}}}, {dogs: [{name: "Fido", age: 5}, {name: "Rex", age: 3}]});
+  match({dogs: {$elemMatch: {name: "Fido", age: {$gt: 4}}}}, {dogs: [{name: "Fido", age: 5}, {name: "Rex", age: 3}]});
+  nomatch({dogs: {$elemMatch: {name: "Fido", age: {$gt: 5}}}}, {dogs: [{name: "Fido", age: 5}, {name: "Rex", age: 3}]});
+  match({dogs: {$elemMatch: {name: /i/, age: {$gt: 4}}}}, {dogs: [{name: "Fido", age: 5}, {name: "Rex", age: 3}]});
+  nomatch({dogs: {$elemMatch: {name: /e/, age: 5}}}, {dogs: [{name: "Fido", age: 5}, {name: "Rex", age: 3}]});
 
   // XXX still needs tests:
   // - $elemMatch
