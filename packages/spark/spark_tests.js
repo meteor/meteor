@@ -42,6 +42,12 @@ var eventmap = function (/*args*/) {
   return events;
 };
 
+var nodesToArray = function (array) {
+  // Starting in underscore 1.4, _.toArray does not work right on a node
+  // list in IE8. This is a workaround to support IE8.
+  return _.map(array, _.identity);
+};
+
 Tinytest.add("spark - assembly", function (test) {
 
   var furtherCanon = function(str) {
@@ -1678,14 +1684,14 @@ Tinytest.add("spark - landmark constant", function(test) {
     }, function() { return '<b/><i/><u/>'; });
   }));
 
-  var nodes = _.toArray(div.node().childNodes);
+  var nodes = nodesToArray(div.node().childNodes);
   test.equal(nodes.length, 3);
   Meteor.flush();
   test.equal(states.length, 1);
   R.set(1);
   Meteor.flush();
   test.equal(states.length, 1); // no render callback on constant
-  var nodes2 = _.toArray(div.node().childNodes);
+  var nodes2 = nodesToArray(div.node().childNodes);
   test.equal(nodes2.length, 3);
   test.isTrue(nodes[0] === nodes2[0]);
   test.isTrue(nodes[1] === nodes2[1]);
@@ -2673,7 +2679,7 @@ Tinytest.add("spark - controls", function(test) {
 
   // get the three buttons; they should be considered 'labeled'
   // by the patcher and not change identities!
-  var btns = _.toArray(div.node().getElementsByTagName("INPUT"));
+  var btns = nodesToArray(div.node().getElementsByTagName("INPUT"));
 
   test.equal(_.pluck(btns, 'checked'), [false, false, false]);
   test.equal(div.text(), "Band: ");
@@ -3671,10 +3677,10 @@ Tinytest.add("spark - legacy preserve names", function (test) {
   }));
 
 
-  var inputs1 = _.toArray(div.node().getElementsByTagName('input'));
+  var inputs1 = nodesToArray(div.node().getElementsByTagName('input'));
   R.set('bar');
   Meteor.flush();
-  var inputs2 = _.toArray(div.node().getElementsByTagName('input'));
+  var inputs2 = nodesToArray(div.node().getElementsByTagName('input'));
   test.isTrue(inputs1[0] === inputs2[0]);
   test.isTrue(inputs1[1] === inputs2[1]);
   test.isTrue(inputs1[2] === inputs2[2]);
@@ -3682,7 +3688,7 @@ Tinytest.add("spark - legacy preserve names", function (test) {
 
   R2.set('banana');
   Meteor.flush();
-  var inputs3 = _.toArray(div.node().getElementsByTagName('input'));
+  var inputs3 = nodesToArray(div.node().getElementsByTagName('input'));
   test.isTrue(inputs1[2] === inputs3[2]);
 
   div.kill();
