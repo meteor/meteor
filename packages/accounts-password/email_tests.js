@@ -80,18 +80,10 @@
     }));
   };
 
-  var waitUntilLoggedIn = function (test, expect) {
-    var unblockNextFunction = expect();
-    var quiesceCallback = function () {
-      Meteor.autorun(function (handle) {
-        if (!Meteor.userLoaded()) return;
-        handle.stop();
-        unblockNextFunction();
-      });
-    };
+  var loggedIn = function (test, expect) {
     return expect(function (error) {
       test.equal(error, undefined);
-      Meteor.default_connection.onQuiesce(quiesceCallback);
+      test.isTrue(Meteor.user());
     });
   };
 
@@ -101,7 +93,7 @@
       email3 = Meteor.uuid() + "-intercept@example.com";
       Accounts.createUser(
         {email: email2, password: 'foobar'},
-        waitUntilLoggedIn(test, expect));
+        loggedIn(test, expect));
     },
     function (test, expect) {
       test.equal(Meteor.user().emails.length, 1);
@@ -114,8 +106,7 @@
       getVerifyEmailToken(email2, test, expect);
     },
     function (test, expect) {
-      // Log out, to test that verifyEmail logs us back in. (And if we don't
-      // do that, waitUntilLoggedIn won't be able to prevent race conditions.)
+      // Log out, to test that verifyEmail logs us back in.
       Meteor.logout(expect(function (error) {
         test.equal(error, undefined);
         test.equal(Meteor.user(), null);
@@ -123,7 +114,7 @@
     },
     function (test, expect) {
       Accounts.verifyEmail(verifyEmailToken,
-                            waitUntilLoggedIn(test, expect));
+                           loggedIn(test, expect));
     },
     function (test, expect) {
       test.equal(Meteor.user().emails.length, 1);
@@ -135,14 +126,10 @@
         "addEmailForTestAndVerify", email3,
         expect(function (error, result) {
           test.isFalse(error);
+          test.equal(Meteor.user().emails.length, 2);
+          test.equal(Meteor.user().emails[1].address, email3);
+          test.isFalse(Meteor.user().emails[1].verified);
         }));
-    },
-    function (test, expect) {
-      Meteor.default_connection.onQuiesce(expect(function () {
-        test.equal(Meteor.user().emails.length, 2);
-        test.equal(Meteor.user().emails[1].address, email3);
-        test.isFalse(Meteor.user().emails[1].verified);
-      }));
     },
     function (test, expect) {
       getVerifyEmailToken(email3, test, expect);
@@ -157,7 +144,7 @@
     },
     function (test, expect) {
       Accounts.verifyEmail(verifyEmailToken,
-                            waitUntilLoggedIn(test, expect));
+                           loggedIn(test, expect));
     },
     function (test, expect) {
       test.equal(Meteor.user().emails[1].address, email3);
@@ -202,7 +189,7 @@
     },
     function (test, expect) {
       Accounts.resetPassword(enrollAccountToken, 'password',
-                             waitUntilLoggedIn(test, expect));
+                             loggedIn(test, expect));
     },
     function (test, expect) {
       test.equal(Meteor.user().emails.length, 1);
@@ -217,7 +204,7 @@
     },
     function (test, expect) {
       Meteor.loginWithPassword({email: email4}, 'password',
-                               waitUntilLoggedIn(test ,expect));
+                               loggedIn(test ,expect));
     },
     function (test, expect) {
       test.equal(Meteor.user().emails.length, 1);

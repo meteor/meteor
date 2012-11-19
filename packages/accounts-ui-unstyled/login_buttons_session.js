@@ -31,6 +31,13 @@
   Accounts._loginButtonsSession = {
     set: function(key, value) {
       validateKey(key);
+      if (_.contains(['errorMessage', 'infoMessage'], key))
+        throw new Error("Don't set errorMessage or infoMessage directly. Instead, use errorMessage() or infoMessage().");
+
+      this._set(key, value);
+    },
+
+    _set: function(key, value) {
       Session.set(KEY_PREFIX + key, value);
     },
 
@@ -48,9 +55,25 @@
       this.resetMessages();
     },
 
+    infoMessage: function(message) {
+      this._set("errorMessage", null);
+      this._set("infoMessage", message);
+      this.set("dropdownVisible", true); // See #OpenDropdownForMessage
+    },
+
+    errorMessage: function(message) {
+      this._set("errorMessage", message);
+      this._set("infoMessage", null);
+
+      // #OpenDropdownForMessage
+      // for the case that you're taking some action in the dropdown, and then you
+      // get an error or message. notably has no effect in the single button case.
+      this.set("dropdownVisible", true);
+    },
+
     resetMessages: function () {
-      this.set("errorMessage", null);
-      this.set("infoMessage", null);
+      this._set("errorMessage", null);
+      this._set("infoMessage", null);
     },
 
     configureService: function (name) {

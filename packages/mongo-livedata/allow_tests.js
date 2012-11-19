@@ -316,25 +316,15 @@
     ]);
   }
 
-  var onQuiesce = function (expect, callback) {
-    var expectedCallback = expect(callback);
-    return expect(function (/*arguments*/) {
-      var args = _.toArray(arguments);
-      Meteor.default_connection.onQuiesce(function () {
-        expectedCallback.apply(null, args);
-      });
-    });
-  };
-
   if (Meteor.isClient) {
     testAsyncMulti("collection - insecure", [
       function (test, expect) {
-        insecureCollection.callClearMethod(test.runId(), onQuiesce(expect, function () {
+        insecureCollection.callClearMethod(test.runId(), expect(function () {
           test.equal(insecureCollection.find({world: test.runId()}).count(), 0);
         }));
       },
       function (test, expect) {
-        insecureCollection.insert({world: test.runId(), foo: 'bar'}, onQuiesce(expect, function(err, res) {
+        insecureCollection.insert({world: test.runId(), foo: 'bar'}, expect(function(err, res) {
           test.equal(insecureCollection.find({world: test.runId()}).count(), 1);
           test.equal(insecureCollection.findOne({world: test.runId()}).foo, 'bar');
         }));
@@ -345,12 +335,12 @@
 
     testAsyncMulti("collection - locked down", [
       function (test, expect) {
-        lockedDownCollection.callClearMethod(test.runId(), onQuiesce(expect, function() {
+        lockedDownCollection.callClearMethod(test.runId(), expect(function() {
           test.equal(lockedDownCollection.find({world: test.runId()}).count(), 0);
         }));
       },
       function (test, expect) {
-        lockedDownCollection.insert({world: test.runId(), foo: 'bar'}, onQuiesce(expect, function (err, res) {
+        lockedDownCollection.insert({world: test.runId(), foo: 'bar'}, expect(function (err, res) {
           test.equal(err.error, 403);
           test.equal(lockedDownCollection.find({world: test.runId()}).count(), 0);
         }));
@@ -363,7 +353,7 @@
       testAsyncMulti("collection - update options", [
         // init
         function (test, expect) {
-          collection.callClearMethod(test.runId(), onQuiesce(expect, function () {
+          collection.callClearMethod(test.runId(), expect(function () {
             test.equal(collection.find({world: test.runId()}).count(), 0);
           }));
         },
@@ -373,7 +363,7 @@
           id1 = collection.insert(doc);
           collection.insert(doc);
           collection.insert(doc);
-          collection.insert(doc, onQuiesce(expect, function (err, res) {
+          collection.insert(doc, expect(function (err, res) {
             test.isFalse(err);
             test.equal(collection.find({world: test.runId()}).count(), 4);
           }));
@@ -383,7 +373,7 @@
           collection.update(
             id1,
             {$set: {updated: true}},
-            onQuiesce(expect, function (err, res) {
+            expect(function (err, res) {
               test.isFalse(err);
               test.equal(collection.find({world: test.runId(), updated: true}).count(), 1);
             }));
@@ -393,7 +383,7 @@
           collection.update(
             {updated: {$exists: false}, world: test.runId()},
             {$set: {updated: true}},
-            onQuiesce(expect, function (err, res) {
+            expect(function (err, res) {
               test.isFalse(err);
               test.equal(collection.find({world: test.runId(), updated: true}).count(), 2);
             }));
@@ -404,7 +394,7 @@
             {world: test.runId()},
             {$set: {updated: true}},
             {multi: true},
-            onQuiesce(expect, function (err, res) {
+            expect(function (err, res) {
               test.isFalse(err);
               test.equal(collection.find({world: test.runId(), updated: true}).count(), 4);
             }));
@@ -418,7 +408,7 @@
         testAsyncMulti("collection - " + collection._name, [
           // init
           function (test, expect) {
-            collection.callClearMethod(test.runId(), onQuiesce(expect, function () {
+            collection.callClearMethod(test.runId(), expect(function () {
               test.equal(collection.find({world: test.runId()}).count(), 0);
             }));
           },
@@ -427,7 +417,7 @@
           function (test, expect) {
             collection.insert(
               {world: test.runId()},
-              onQuiesce(expect, function (err, res) {
+              expect(function (err, res) {
                 test.equal(err.error, 403);
                 test.equal(collection.find({world: test.runId()}).count(), 0);
               }));
@@ -436,7 +426,7 @@
           function (test, expect) {
             collection.insert(
               {world: test.runId(), canInsert: true, cantInsert: true},
-              onQuiesce(expect, function (err, res) {
+              expect(function (err, res) {
                 test.equal(err.error, 403);
                 test.equal(collection.find({world: test.runId()}).count(), 0);
               }));
@@ -445,7 +435,7 @@
           function (test, expect) {
             collection.insert(
               {world: test.runId(), canInsert: true, cantInsert2: true},
-              onQuiesce(expect, function (err, res) {
+              expect(function (err, res) {
                 test.equal(err.error, 403);
                 test.equal(collection.find({world: test.runId()}).count(), 0);
               }));
@@ -454,7 +444,7 @@
           function (test, expect) {
             collection.insert(
               {world: test.runId(), canInsert: true},
-              onQuiesce(expect, function (err, res) {
+              expect(function (err, res) {
                 test.isFalse(err);
                 test.equal(collection.find({world: test.runId()}).count(), 1);
               }));
@@ -464,7 +454,7 @@
           function (test, expect) {
             collection.insert(
               {world: test.runId(), canInsert2: true, canUpdate: true},
-              onQuiesce(expect, function (err, res) {
+              expect(function (err, res) {
                 test.isFalse(err);
                 test.equal(collection.find({world: test.runId()}).count(), 2);
               }));
@@ -475,7 +465,7 @@
             collection.insert(
               {canInsert: true, canRemove: true, cantRemove: true,
                world: test.runId()},
-              onQuiesce(expect, function (err, res) {
+              expect(function (err, res) {
                 test.isFalse(err);
                 test.equal(collection.find({world: test.runId()}).count(), 3);
               }));
@@ -486,7 +476,7 @@
             collection.update(
               {canUpdate:true, world: test.runId()},
               {newObject: 1},
-              onQuiesce(expect, function (err, res) {
+              expect(function (err, res) {
                 test.equal(err.error, 403);
                 test.equal(collection.find({world:test.runId()}).count(), 3);
               }));
@@ -498,7 +488,7 @@
             collection.update(
               {world: test.runId(), canUpdate: true},
               {$set: {"dotted.field": 1}},
-              onQuiesce(expect, function (err, res) {
+              expect(function (err, res) {
                 test.isFalse(err);
                 test.equal(collection.find({world: test.runId(), canUpdate: true}).count(), 1);
                 test.equal(collection.findOne({world: test.runId(), canUpdate: true}).dotted.field, 1);
@@ -508,7 +498,7 @@
             collection.update(
               {world: test.runId(), canUpdate: true},
               {$set: {"verySecret.field": 1}},
-              onQuiesce(expect, function (err, res) {
+              expect(function (err, res) {
                 test.equal(err.error, 403);
                 test.equal(collection.find({verySecret: {$exists: true}}).count(), 0);
               }));
@@ -519,7 +509,7 @@
             collection.update(
               {world: test.runId(), doesntExist: true},
               {$set: {updated: true}},
-              onQuiesce(expect, function (err, res) {
+              expect(function (err, res) {
                 test.isFalse(err);
                 // nothing has changed
                 test.equal(collection.find({world: test.runId()}).count(), 3);
@@ -531,7 +521,7 @@
             collection.update(
               {world: test.runId(), canUpdate: true},
               {$set: {verySecret: true}},
-              onQuiesce(expect, function (err, res) {
+              expect(function (err, res) {
                 test.equal(err.error, 403);
                 // nothing has changed
                 test.equal(collection.find({world: test.runId()}).count(), 3);
@@ -544,7 +534,7 @@
             collection.update(
               {world: test.runId(), canUpdate: true},
               {$set: {updated: true, verySecret: true}},
-              onQuiesce(expect, function (err, res) {
+              expect(function (err, res) {
                 test.equal(err.error, 403);
                 // nothing has changed
                 test.equal(collection.find({world: test.runId()}).count(), 3);
@@ -557,7 +547,7 @@
             collection.update(
               {world: test.runId(), canRemove: true},
               {$set: {updated: true}},
-              onQuiesce(expect, function (err, res) {
+              expect(function (err, res) {
                 test.equal(err.error, 403);
                 // nothing has changed
                 test.equal(collection.find({world: test.runId()}).count(), 3);
@@ -569,7 +559,7 @@
             collection.update(
               {world: test.runId(), canUpdate: true},
               {$set: {updated: true}},
-              onQuiesce(expect, function (err, res) {
+              expect(function (err, res) {
                 test.isFalse(err);
                 test.equal(collection.find({world: test.runId(), updated: true}).count(), 1);
               }));
@@ -579,7 +569,7 @@
           // `canRemove` set
           function (test, expect) {
             collection.remove({world: test.runId(), canUpdate: true},
-                              onQuiesce(expect, function (err, res) {
+                              expect(function (err, res) {
               test.equal(err.error, 403);
               // nothing has changed
               test.equal(collection.find({world: test.runId()}).count(), 3);
@@ -589,7 +579,7 @@
           // set
           function (test, expect) {
             collection.remove({world: test.runId(), canRemove: true},
-                              onQuiesce(expect, function (err, res) {
+                              expect(function (err, res) {
               test.equal(err.error, 403);
               // nothing has changed
               test.equal(collection.find({world: test.runId()}).count(), 3);
@@ -601,7 +591,7 @@
             collection.update(
               {world: test.runId(), canRemove: true},
               {$set: {cantRemove: false, canUpdate2: true}},
-              onQuiesce(expect, function (err, res) {
+              expect(function (err, res) {
                 test.isFalse(err);
                 test.equal(collection.find({world: test.runId(), cantRemove: true}).count(), 0);
               }));
@@ -610,7 +600,7 @@
           // now remove can remove it.
           function (test, expect) {
             collection.remove({world: test.runId(), canRemove: true},
-                              onQuiesce(expect, function (err, res) {
+                              expect(function (err, res) {
               test.isFalse(err);
               // successfully removed
               test.equal(collection.find({world: test.runId()}).count(), 2);
@@ -620,7 +610,7 @@
           // methods can still bypass restrictions
           function (test, expect) {
             collection.callClearMethod(
-              test.runId(), onQuiesce(expect, function (err, res) {
+              test.runId(), expect(function (err, res) {
                 test.isFalse(err);
                 // successfully removed
                 test.equal(collection.find({world: test.runId()}).count(), 0);

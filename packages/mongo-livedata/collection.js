@@ -35,7 +35,6 @@ Meteor.Collection = function (name, options) {
   }
 
   self._collection = options._driver.open(name);
-  self._was_snapshot = false;
   self._name = name;
 
   if (name && self._manager.registerStore) {
@@ -43,30 +42,56 @@ Meteor.Collection = function (name, options) {
     // database, except possibly with some temporary divergence while
     // we have unacknowledged RPC's.
     var ok = self._manager.registerStore(name, {
-      // Called at the beginning of a batch of updates. We're supposed to start
-      // by backing out any local writes and returning to the last state
-      // delivered by the server. batchSize is the number of update calls to
-      // expect.
-      beginUpdate: function (batchSize) {
-        // pause observers so users don't see flicker, either from restoring a
-        // snapshot and then applying the (hopefully similar) change from the
-        // server, or just from running multiple queued messages affecting the
-        // same queries.
-        if (self._was_snapshot || batchSize > 1)
+      // Called at the beginning of a batch of updates. batchSize is the number
+      // of update calls to expect.
+      //
+      // XXX This interface is pretty janky. reset probably ought to go back to
+      // being its own function, and callers shouldn't have to calculate
+      // batchSize. The optimization of not calling pause/remove should be
+      // delayed until later: the first call to update() should buffer its
+      // message, and then we can either directly apply it at endUpdate time if
+      // it was the only update, or do pauseObservers/apply/apply at the next
+      // update() if there's another one.
+      beginUpdate: function (batchSize, reset) {
+        // pause observers so users don't see flicker when updating several
+        // objects at once (including the post-reconnect reset-and-reapply
+        // stage), and so that a re-sorting of a query can take advantage of the
+        // full _diffQuery moved calculation instead of applying change one at a
+        // time.
+        if (batchSize > 1 || reset)
           self._collection.pauseObservers();
 
-        // restore db snapshot
-        if (self._was_snapshot) {
-          self._collection.restore();
-          self._was_snapshot = false;
-        }
+        if (reset)
+          self._collection.remove({});
       },
 
-      // Apply an update from the server.
+      // Apply an update.
       // XXX better specify this interface (not in terms of a wire message)?
       update: function (msg) {
         var doc = self._collection.findOne(msg.id);
 
+        // Is this a "replace the whole doc" message coming from the quiescence
+        // of method writes to an object? (Note that 'undefined' is a valid
+        // value meaning "remove it".)
+        if (_.has(msg, 'replace')) {
+          var replace = msg.replace;
+          // An empty doc is equivalent to a nonexistent doc.
+          if (replace && _.isEmpty(_.without(_.keys(replace), '_id')))
+            replace = undefined;
+          if (!replace) {
+            if (doc)
+              self._collection.remove(msg.id);
+          } else if (!doc) {
+            self._collection.insert(_.extend({_id: msg.id}, replace));
+          } else {
+            // XXX check that replace has no $ ops
+            self._collection.update(msg.id, replace);
+          }
+          return;
+        }
+
+        // ... otherwise we're applying set/unset messages against specific
+        // fields.
         if (doc
             && (!msg.set)
             && _.difference(_.keys(doc), msg.unset, ['_id']).length === 0) {
@@ -91,9 +116,13 @@ Meteor.Collection = function (name, options) {
         self._collection.resumeObservers();
       },
 
-      // Reset the collection to its original, empty state.
-      reset: function () {
-        self._collection.remove({});
+      // Called around method stub invocations to capture the original versions
+      // of modified documents.
+      saveOriginals: function () {
+        self._collection.saveOriginals();
+      },
+      retrieveOriginals: function () {
+        return self._collection.retrieveOriginals();
       }
     });
 
@@ -129,14 +158,6 @@ _.extend(Meteor.Collection.prototype, {
   findOne: function (/* selector, options */) {
     var self = this;
     return self._collection.findOne.apply(self._collection, _.toArray(arguments));
-  },
-
-  _maybe_snapshot: function () {
-    var self = this;
-    if (self._manager && self._manager.registerStore && !self._was_snapshot) {
-      self._collection.snapshot();
-      self._was_snapshot = true;
-    }
   }
 
 });
@@ -353,8 +374,6 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
 
     _.each(['insert', 'update', 'remove'], function (method) {
       m[self._prefix + method] = function (/* ... */) {
-        self._maybe_snapshot();
-
         if (this.isSimulation || (!self._restricted && self._isInsecure())) {
           self._collection[method].apply(
             self._collection, _.toArray(arguments));

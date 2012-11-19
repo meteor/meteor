@@ -60,96 +60,115 @@ var log_callbacks = function (operations) {
 
 // XXX test shared structure in all MM entrypoints
 
-Tinytest.add("minimongo - basics", function (test) {
-  var c = new LocalCollection();
+_.each(['observe', '_observeUnordered'], function (observeMethod) {
+  Tinytest.add("minimongo - basics (" + observeMethod + ")", function (test) {
+    var c = new LocalCollection();
 
-  c.insert({type: "kitten", name: "fluffy"});
-  c.insert({type: "kitten", name: "snookums"});
-  c.insert({type: "cryptographer", name: "alice"});
-  c.insert({type: "cryptographer", name: "bob"});
-  c.insert({type: "cryptographer", name: "cara"});
-  test.equal(c.find().count(), 5);
-  test.equal(c.find({type: "kitten"}).count(), 2);
-  test.equal(c.find({type: "cryptographer"}).count(), 3);
-  test.length(c.find({type: "kitten"}).fetch(), 2);
-  test.length(c.find({type: "cryptographer"}).fetch(), 3);
+    c.insert({type: "kitten", name: "fluffy"});
+    c.insert({type: "kitten", name: "snookums"});
+    c.insert({type: "cryptographer", name: "alice"});
+    c.insert({type: "cryptographer", name: "bob"});
+    c.insert({type: "cryptographer", name: "cara"});
+    test.equal(c.find().count(), 5);
+    test.equal(c.find({type: "kitten"}).count(), 2);
+    test.equal(c.find({type: "cryptographer"}).count(), 3);
+    test.length(c.find({type: "kitten"}).fetch(), 2);
+    test.length(c.find({type: "cryptographer"}).fetch(), 3);
 
-  c.remove({name: "cara"});
-  test.equal(c.find().count(), 4);
-  test.equal(c.find({type: "kitten"}).count(), 2);
-  test.equal(c.find({type: "cryptographer"}).count(), 2);
-  test.length(c.find({type: "kitten"}).fetch(), 2);
-  test.length(c.find({type: "cryptographer"}).fetch(), 2);
+    c.remove({name: "cara"});
+    test.equal(c.find().count(), 4);
+    test.equal(c.find({type: "kitten"}).count(), 2);
+    test.equal(c.find({type: "cryptographer"}).count(), 2);
+    test.length(c.find({type: "kitten"}).fetch(), 2);
+    test.length(c.find({type: "cryptographer"}).fetch(), 2);
 
-  c.update({name: "snookums"}, {$set: {type: "cryptographer"}});
-  test.equal(c.find().count(), 4);
-  test.equal(c.find({type: "kitten"}).count(), 1);
-  test.equal(c.find({type: "cryptographer"}).count(), 3);
-  test.length(c.find({type: "kitten"}).fetch(), 1);
-  test.length(c.find({type: "cryptographer"}).fetch(), 3);
+    c.update({name: "snookums"}, {$set: {type: "cryptographer"}});
+    test.equal(c.find().count(), 4);
+    test.equal(c.find({type: "kitten"}).count(), 1);
+    test.equal(c.find({type: "cryptographer"}).count(), 3);
+    test.length(c.find({type: "kitten"}).fetch(), 1);
+    test.length(c.find({type: "cryptographer"}).fetch(), 3);
 
-  c.remove(null);
-  c.remove(false);
-  c.remove(undefined);
-  test.equal(c.find().count(), 4);
+    c.remove(null);
+    c.remove(false);
+    c.remove(undefined);
+    test.equal(c.find().count(), 4);
 
-  c.remove({_id: null});
-  c.remove({_id: false});
-  c.remove({_id: undefined});
-  c.remove();
-  test.equal(c.find().count(), 4);
+    c.remove({_id: null});
+    c.remove({_id: false});
+    c.remove({_id: undefined});
+    c.remove();
+    test.equal(c.find().count(), 4);
 
-  c.remove({});
-  test.equal(c.find().count(), 0);
+    c.remove({});
+    test.equal(c.find().count(), 0);
 
-  c.insert({_id: 1, name: "strawberry", tags: ["fruit", "red", "squishy"]});
-  c.insert({_id: 2, name: "apple", tags: ["fruit", "red", "hard"]});
-  c.insert({_id: 3, name: "rose", tags: ["flower", "red", "squishy"]});
+    c.insert({_id: 1, name: "strawberry", tags: ["fruit", "red", "squishy"]});
+    c.insert({_id: 2, name: "apple", tags: ["fruit", "red", "hard"]});
+    c.insert({_id: 3, name: "rose", tags: ["flower", "red", "squishy"]});
 
-  test.equal(c.find({tags: "flower"}).count(), 1);
-  test.equal(c.find({tags: "fruit"}).count(), 2);
-  test.equal(c.find({tags: "red"}).count(), 3);
-  test.length(c.find({tags: "flower"}).fetch(), 1);
-  test.length(c.find({tags: "fruit"}).fetch(), 2);
-  test.length(c.find({tags: "red"}).fetch(), 3);
+    test.equal(c.find({tags: "flower"}).count(), 1);
+    test.equal(c.find({tags: "fruit"}).count(), 2);
+    test.equal(c.find({tags: "red"}).count(), 3);
+    test.length(c.find({tags: "flower"}).fetch(), 1);
+    test.length(c.find({tags: "fruit"}).fetch(), 2);
+    test.length(c.find({tags: "red"}).fetch(), 3);
 
-  test.equal(c.findOne(1).name, "strawberry");
-  test.equal(c.findOne(2).name, "apple");
-  test.equal(c.findOne(3).name, "rose");
-  test.equal(c.findOne(4), undefined);
-  test.equal(c.findOne("abc"), undefined);
-  test.equal(c.findOne(undefined), undefined);
+    test.equal(c.findOne(1).name, "strawberry");
+    test.equal(c.findOne(2).name, "apple");
+    test.equal(c.findOne(3).name, "rose");
+    test.equal(c.findOne(4), undefined);
+    test.equal(c.findOne("abc"), undefined);
+    test.equal(c.findOne(undefined), undefined);
 
-  test.equal(c.find(1).count(), 1);
-  test.equal(c.find(4).count(), 0);
-  test.equal(c.find("abc").count(), 0);
-  test.equal(c.find(undefined).count(), 0);
-  test.equal(c.find().count(), 3);
+    test.equal(c.find(1).count(), 1);
+    test.equal(c.find(4).count(), 0);
+    test.equal(c.find("abc").count(), 0);
+    test.equal(c.find(undefined).count(), 0);
+    test.equal(c.find().count(), 3);
 
-  var ev = "";
-  var makecb = function (tag) {
-    return {
-      added: function (doc) { ev += "a" + tag + doc._id + "_"; },
-      changed: function (doc) { ev += "c" + tag + doc._id + "_"; },
-      removed: function (doc) { ev += "r" + tag + doc._id + "_"; }
+    // Regression test for #455.
+    c.insert({foo: {bar: 'baz'}});
+    test.equal(c.find({foo: {bam: 'baz'}}).count(), 0);
+    test.equal(c.find({foo: {bar: 'baz'}}).count(), 1);
+
+    // Duplicate ID.
+    test.throws(function () { c.insert({_id: 1, name: "bla"}); });
+    test.equal(c.find({_id: 1}).count(), 1);
+    test.equal(c.findOne(1).name, "strawberry");
+
+    var ev = "";
+    var makecb = function (tag) {
+      return {
+        added: function (doc) { ev += "a" + tag + doc._id + "_"; },
+        changed: function (doc) { ev += "c" + tag + doc._id + "_"; },
+        removed: function (doc) { ev += "r" + tag + doc._id + "_"; }
+      };
     };
-  };
-  var expect = function (x) {
-    test.equal(ev, x);
-    ev = "";
-  };
-  c.find({tags: "flower"}).observe(makecb('a'));
-  expect("aa3_");
-  c.update({name: "rose"}, {$set: {tags: ["bloom", "red", "squishy"]}});
-  expect("ra3_");
-  c.update({name: "rose"}, {$set: {tags: ["flower", "red", "squishy"]}});
-  expect("aa3_");
-  c.update({name: "rose"}, {$set: {food: false}});
-  expect("ca3_");
-  c.remove({});
-  expect("ra3_");
-  c.insert({_id: 4, name: "daisy", tags: ["flower"]});
-  expect("aa4_");
+    var expect = function (x) {
+      test.equal(ev, x);
+      ev = "";
+    };
+    // This should work equally well for ordered and unordered observations
+    // (because the callbacks don't look at indices and there's no 'moved'
+    // callback).
+    var handle = c.find({tags: "flower"})[observeMethod](makecb('a'));
+    expect("aa3_");
+    c.update({name: "rose"}, {$set: {tags: ["bloom", "red", "squishy"]}});
+    expect("ra3_");
+    c.update({name: "rose"}, {$set: {tags: ["flower", "red", "squishy"]}});
+    expect("aa3_");
+    c.update({name: "rose"}, {$set: {food: false}});
+    expect("ca3_");
+    c.remove({});
+    expect("ra3_");
+    c.insert({_id: 4, name: "daisy", tags: ["flower"]});
+    expect("aa4_");
+    handle.stop();
+    // After calling stop, no more callbacks are called.
+    c.insert({_id: 5, name: "iris", tags: ["flower"]});
+    expect("");
+  });
 });
 
 Tinytest.add("minimongo - cursors", function (test) {
@@ -935,19 +954,19 @@ Tinytest.add("minimongo - diff", function (test) {
 
   // test correctness
 
-  var diff_test = function(orig_len, new_old_idx) {
-    var old_results = new Array(orig_len);
-    for(var i=1; i<=orig_len; i++)
-      old_results[i-1] = {_id: i};
+  var diffTestOrdered = function(origLen, newOldIdx) {
+    var oldResults = new Array(origLen);
+    for (var i = 1; i <= origLen; i++)
+      oldResults[i-1] = {_id: i};
 
-    var new_results = _.map(new_old_idx, function(n) {
+    var newResults = _.map(newOldIdx, function(n) {
       var doc = {_id: Math.abs(n)};
       if (n < 0)
         doc.changed = true;
       return doc;
     });
 
-    var results = _.clone(old_results);
+    var results = _.clone(oldResults);
     var observer = {
       added: function(doc, before_idx) {
         test.isFalse(before_idx < 0 || before_idx > results.length);
@@ -958,8 +977,10 @@ Tinytest.add("minimongo - diff", function (test) {
         test.equal(doc, results[at_idx]);
         results.splice(at_idx, 1);
       },
-      changed: function(doc, at_idx) {
+      changed: function(doc, at_idx, oldDoc) {
         test.isFalse(at_idx < 0 || at_idx >= results.length);
+        test.equal(doc._id, oldDoc._id);
+        test.equal(results[at_idx], oldDoc);
         results[at_idx] = doc;
       },
       moved: function(doc, old_idx, new_idx) {
@@ -970,124 +991,136 @@ Tinytest.add("minimongo - diff", function (test) {
       }
     };
 
-    LocalCollection._diffQuery(old_results, new_results, observer);
-    test.equal(results, new_results);
+    LocalCollection._diffQueryOrdered(oldResults, newResults, observer);
+    test.equal(results, newResults);
+  };
+
+  var diffTestUnordered = function(origLen, newOldIdx) {
+    var oldResults = {};
+    for (var i = 1; i <= origLen; ++i)
+      oldResults[i] = {_id: i};
+
+    var newResults = {};
+    _.each(newOldIdx, function (n) {
+      var doc = {_id: Math.abs(n)};
+      if (n < 0)
+        doc.changed = true;
+      newResults[doc._id] = doc;
+    });
+
+    var results = _.clone(oldResults);
+    var observer = {
+      added: function(doc) {
+        test.isFalse(_.has(results, doc._id));
+        results[doc._id] = doc;
+      },
+      removed: function(doc) {
+        test.isTrue(_.has(results, doc._id));
+        test.equal(doc, results[doc._id]);
+        delete results[doc._id];
+      },
+      changed: function(doc, oldDoc) {
+        test.equal(doc._id, oldDoc._id);
+        test.isTrue(_.has(results, doc._id));
+        test.equal(results[doc._id], oldDoc);
+        results[doc._id] = doc;
+      },
+    };
+
+    LocalCollection._diffQueryUnordered(oldResults, newResults, observer);
+    test.equal(results, newResults);
+  };
+
+  var diffTest = function(origLen, newOldIdx) {
+    diffTestOrdered(origLen, newOldIdx);
+    diffTestUnordered(origLen, newOldIdx);
   };
 
   // edge cases and cases run into during debugging
-  diff_test(5, [5, 1, 2, 3, 4]);
-  diff_test(0, [1, 2, 3, 4]);
-  diff_test(4, []);
-  diff_test(7, [4, 5, 6, 7, 1, 2, 3]);
-  diff_test(7, [5, 6, 7, 1, 2, 3, 4]);
-  diff_test(10, [7, 4, 11, 6, 12, 1, 5]);
-  diff_test(3, [3, 2, 1]);
-  diff_test(10, [2, 7, 4, 6, 11, 3, 8, 9]);
-  diff_test(0, []);
-  diff_test(1, []);
-  diff_test(0, [1]);
-  diff_test(1, [1]);
-  diff_test(5, [1, 2, 3, 4, 5]);
+  diffTest(5, [5, 1, 2, 3, 4]);
+  diffTest(0, [1, 2, 3, 4]);
+  diffTest(4, []);
+  diffTest(7, [4, 5, 6, 7, 1, 2, 3]);
+  diffTest(7, [5, 6, 7, 1, 2, 3, 4]);
+  diffTest(10, [7, 4, 11, 6, 12, 1, 5]);
+  diffTest(3, [3, 2, 1]);
+  diffTest(10, [2, 7, 4, 6, 11, 3, 8, 9]);
+  diffTest(0, []);
+  diffTest(1, []);
+  diffTest(0, [1]);
+  diffTest(1, [1]);
+  diffTest(5, [1, 2, 3, 4, 5]);
 
   // interaction between "changed" and other ops
-  diff_test(5, [-5, -1, 2, -3, 4]);
-  diff_test(7, [-4, -5, 6, 7, -1, 2, 3]);
-  diff_test(7, [5, 6, -7, 1, 2, -3, 4]);
-  diff_test(10, [7, -4, 11, 6, 12, -1, 5]);
-  diff_test(3, [-3, -2, -1]);
-  diff_test(10, [-2, 7, 4, 6, 11, -3, -8, 9]);
-
-
+  diffTest(5, [-5, -1, 2, -3, 4]);
+  diffTest(7, [-4, -5, 6, 7, -1, 2, 3]);
+  diffTest(7, [5, 6, -7, 1, 2, -3, 4]);
+  diffTest(10, [7, -4, 11, 6, 12, -1, 5]);
+  diffTest(3, [-3, -2, -1]);
+  diffTest(10, [-2, 7, 4, 6, 11, -3, -8, 9]);
 });
 
 
-Tinytest.add("minimongo - snapshot", function (test) {
-  var operations = [];
-  var cbs = log_callbacks(operations);
-
+Tinytest.add("minimongo - saveOriginals", function (test) {
+  // set up some data
   var c = new LocalCollection();
-  var h = c.find({}).observe(cbs);
+  c.insert({_id: 'foo', x: 'untouched'});
+  c.insert({_id: 'bar', x: 'updateme'});
+  c.insert({_id: 'baz', x: 'updateme'});
+  c.insert({_id: 'quux', y: 'removeme'});
+  c.insert({_id: 'whoa', y: 'removeme'});
 
-  // snapshot empty, restore immediately.
+  // Save originals and make some changes.
+  c.saveOriginals();
+  c.insert({_id: "hooray", z: 'insertme'});
+  c.remove({y: 'removeme'});
+  c.update({x: 'updateme'}, {$set: {z: 5}}, {multi: true});
+  c.update('bar', {$set: {k: 7}});  // update same doc twice
 
-  test.equal(c.find().count(), 0);
-  test.length(operations, 0);
-  c.snapshot();
-  test.equal(c.find().count(), 0);
-  test.length(operations, 0);
-  c.restore();
-  test.equal(c.find().count(), 0);
-  test.length(operations, 0);
+  // Verify the originals.
+  var originals = c.retrieveOriginals();
+  var affected = ['bar', 'baz', 'quux', 'whoa', 'hooray'];
+  test.equal(_.size(originals), _.size(affected));
+  _.each(affected, function (id) {
+    test.isTrue(_.has(originals, id));
+  });
+  test.equal(originals.bar, {_id: 'bar', x: 'updateme'});
+  test.equal(originals.baz, {_id: 'baz', x: 'updateme'});
+  test.equal(originals.quux, {_id: 'quux', y: 'removeme'});
+  test.equal(originals.whoa, {_id: 'whoa', y: 'removeme'});
+  test.equal(originals.hooray, undefined);
 
+  // Verify that changes actually occured.
+  test.equal(c.find().count(), 4);
+  test.equal(c.findOne('foo'), {_id: 'foo', x: 'untouched'});
+  test.equal(c.findOne('bar'), {_id: 'bar', x: 'updateme', z: 5, k: 7});
+  test.equal(c.findOne('baz'), {_id: 'baz', x: 'updateme', z: 5});
+  test.equal(c.findOne('hooray'), {_id: 'hooray', z: 'insertme'});
 
-  // snapshot empty, add new docs
+  // The next call doesn't get the same originals again.
+  c.saveOriginals();
+  originals = c.retrieveOriginals();
+  test.isTrue(originals);
+  test.isTrue(_.isEmpty(originals));
 
-  test.equal(c.find().count(), 0);
-  test.length(operations, 0);
-
-  c.snapshot();
-  test.equal(c.find().count(), 0);
-
-  c.insert({_id: 1, a: 1});
-  test.equal(c.find().count(), 1);
-  test.equal(operations.shift(), ['added', {a:1}, 0]);
-  c.insert({_id: 2, b: 2});
-  test.equal(c.find().count(), 2);
-  test.equal(operations.shift(), ['added', {b:2}, 1]);
-
-  c.restore();
-
-  test.equal(c.find().count(), 0);
-  test.equal(operations.shift(), ['removed', 1, 0, {a:1}]);
-  test.equal(operations.shift(), ['removed', 2, 0, {b:2}]);
-
-
-  // snapshot with contents. see we get add, update and remove.
-  // depends on observer update order from diffQuery.
-  // reorder test statements if this changes.
-
-  c.insert({_id: 1, a: 1});
-  test.equal(c.find().count(), 1);
-  test.equal(operations.shift(), ['added', {a:1}, 0]);
-  c.insert({_id: 2, b: 2});
-  test.equal(c.find().count(), 2);
-  test.equal(operations.shift(), ['added', {b:2}, 1]);
-
-  c.snapshot();
-  test.equal(c.find().count(), 2);
-
-  c.remove({_id: 1});
-  test.equal(c.find().count(), 1);
-  test.equal(operations.shift(), ['removed', 1, 0, {a:1}]);
-  c.insert({_id: 3, c: 3});
-  test.equal(c.find().count(), 2);
-  test.equal(operations.shift(), ['added', {c:3}, 1]);
-  c.update({_id: 2}, {$set: {b: 4}});
-  test.equal(operations.shift(), ['changed', {b:4}, 0, {b:2}]);
-
-  c.restore();
-  test.equal(c.find().count(), 2);
-  test.equal(operations.shift(), ['added', {a:1}, 0]);
-  test.equal(operations.shift(), ['changed', {b:2}, 1, {b:4}]);
-  test.equal(operations.shift(), ['removed', 3, 2, {c:3}]);
-
-
-  // snapshot with stuff. restore immediately. no changes.
-
-  test.equal(c.find().count(), 2);
-  test.length(operations, 0);
-  c.snapshot();
-  test.equal(c.find().count(), 2);
-  test.length(operations, 0);
-  c.restore();
-  test.equal(c.find().count(), 2);
-  test.length(operations, 0);
-
-
-
-  h.stop();
+  // Insert and remove a document during the period.
+  c.saveOriginals();
+  c.insert({_id: 'temp', q: 8});
+  c.remove('temp');
+  originals = c.retrieveOriginals();
+  test.equal(_.size(originals), 1);
+  test.isTrue(_.has(originals, 'temp'));
+  test.equal(originals.temp, undefined);
 });
 
+Tinytest.add("minimongo - saveOriginals errors", function (test) {
+  var c = new LocalCollection();
+  // Can't call retrieve before save.
+  test.throws(function () { c.retrieveOriginals(); });
+  c.saveOriginals();
+  // Can't call save twice.
+  test.throws(function () { c.saveOriginals(); });
+});
 
 Tinytest.add("minimongo - pause", function (test) {
   var operations = [];
@@ -1120,37 +1153,6 @@ Tinytest.add("minimongo - pause", function (test) {
   c.resumeObservers();
   test.equal(operations.shift(), ['changed', {a:3}, 0, {a:1}]);
   test.length(operations, 0);
-
-
-  // snapshot/restore, same results
-  c.snapshot();
-
-  c.insert({_id: 2, b: 2});
-  test.equal(operations.shift(), ['added', {b:2}, 1]);
-
-  c.pauseObservers();
-  c.restore();
-  c.insert({_id: 2, b: 2});
-  test.length(operations, 0);
-
-  c.resumeObservers();
-  test.length(operations, 0);
-
-  // snapshot/restore, different results
-  c.snapshot();
-
-  c.insert({_id: 3, c: 3});
-  test.equal(operations.shift(), ['added', {c:3}, 2]);
-
-  c.pauseObservers();
-  c.restore();
-  c.insert({_id: 3, c: 4});
-  test.length(operations, 0);
-
-  c.resumeObservers();
-  test.equal(operations.shift(), ['changed', {c:4}, 2, {c:3}]);
-  test.length(operations, 0);
-
 
   h.stop();
 });

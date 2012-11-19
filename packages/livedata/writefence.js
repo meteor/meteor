@@ -1,3 +1,7 @@
+(function(){
+var path = __meteor_bootstrap__.require('path');
+var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
+
 // A write fence collects a group of writes, and provides a callback
 // when all of the writes are fully committed and propagated (all
 // observers have been notified of the write and acknowledged it.)
@@ -92,3 +96,4 @@ _.extend(Meteor._WriteFence.prototype, {
     self.retired = true;
   }
 });
+})();

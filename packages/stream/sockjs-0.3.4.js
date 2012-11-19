@@ -1,6 +1,6 @@
 // XXX METEOR changes in <METEOR>
 
-/* SockJS client, version 0.3.1, http://sockjs.org, MIT License
+/* SockJS client, version 0.3.4, http://sockjs.org, MIT License
 
 Copyright (c) 2011-2012 VMware, Inc.
 
@@ -136,27 +136,53 @@ SimpleEvent.prototype.toString = function() {
  */
 
 var EventEmitter = function(events) {
-    this.events = events || [];
+    var that = this;
+    that._events = events || [];
+    that._listeners = {};
 };
 EventEmitter.prototype.emit = function(type) {
     var that = this;
+    that._verifyType(type);
+    if (that._nuked) return;
+
     var args = Array.prototype.slice.call(arguments, 1);
-    if (!that.nuked && that['on'+type]) {
+    if (that['on'+type]) {
         that['on'+type].apply(that, args);
     }
-    if (utils.arrIndexOf(that.events, type) === -1) {
+    if (type in that._listeners) {
+        for(var i = 0; i < that._listeners[type].length; i++) {
+            that._listeners[type][i].apply(that, args);
+        }
+    }
+};
+
+EventEmitter.prototype.on = function(type, callback) {
+    var that = this;
+    that._verifyType(type);
+    if (that._nuked) return;
+
+    if (!(type in that._listeners)) {
+        that._listeners[type] = [];
+    }
+    that._listeners[type].push(callback);
+};
+
+EventEmitter.prototype._verifyType = function(type) {
+    var that = this;
+    if (utils.arrIndexOf(that._events, type) === -1) {
         utils.log('Event ' + JSON.stringify(type) +
-                  ' not listed ' + JSON.stringify(that.events) +
+                  ' not listed ' + JSON.stringify(that._events) +
                   ' in ' + that);
     }
 };
 
-EventEmitter.prototype.nuke = function(type) {
+EventEmitter.prototype.nuke = function() {
     var that = this;
-    that.nuked = true;
-    for(var i=0; i<that.events.length; i++) {
-        delete that[that.events[i]];
+    that._nuked = true;
+    for(var i=0; i<that._events.length; i++) {
+        delete that[that._events[i]];
     }
+    that._listeners = {};
 };
 //         [*] End of lib/eventemitter.js
 
@@ -205,6 +231,7 @@ utils.isSameOriginUrl = function(url_a, url_b) {
 };
 
 // <METEOR>
+// https://github.com/sockjs/sockjs-client/issues/79
 utils.isSameOriginScheme = function(url_a, url_b) {
     if (!url_b) url_b = _window.location.href;
 
@@ -577,9 +604,8 @@ var unload_triggered = function() {
     trigger_unload_callbacks();
 };
 
-// Onbeforeunload alone is not reliable. We could use only 'unload'
-// but it's not working in opera within an iframe. Let's use both.
-utils.attachEvent('beforeunload', unload_triggered);
+// 'unload' alone is not reliable in opera within an iframe, but we
+// can't use `beforeunload` as IE fires it on javascript: links.
 utils.attachEvent('unload', unload_triggered);
 
 utils.unload_add = function(listener) {
@@ -773,13 +799,20 @@ AbstractXHRObject.prototype._start = function(method, url, payload, opts) {
                     var status = x.status;
                     var text = x.responseText;
                 } catch (x) {};
+                // IE returns 1223 for 204: http://bugs.jquery.com/ticket/1450
+                if (status === 1223) status = 204;
+
                 // IE does return readystate == 3 for 404 answers.
                 if (text && text.length > 0) {
                     that.emit('chunk', status, text);
                 }
                 break;
             case 4:
-                that.emit('finish', x.status, x.responseText);
+                var status = x.status;
+                // IE returns 1223 for 204: http://bugs.jquery.com/ticket/1450
+                if (status === 1223) status = 204;
+
+                that.emit('finish', status, x.responseText);
                 that._cleanup(false);
                 break;
             }
@@ -915,6 +948,11 @@ utils.isXHRCorsCapable = function() {
  */
 
 var SockJS = function(url, dep_protocols_whitelist, options) {
+    if (this === _window) {
+        // makes `new` optional
+        return new SockJS(url, dep_protocols_whitelist, options);
+    }
+    
     var that = this, protocols_whitelist;
     that._options = {devel: false, debug: false, protocols_whitelist: [],
                      info: undefined, rtt: undefined};
@@ -966,7 +1004,7 @@ var SockJS = function(url, dep_protocols_whitelist, options) {
 // Inheritance
 SockJS.prototype = new REventTarget();
 
-SockJS.version = "0.3.1";
+SockJS.version = "0.3.4";
 
 SockJS.CONNECTING = 0;
 SockJS.OPEN = 1;
@@ -1162,6 +1200,7 @@ SockJS.prototype._applyInfo = function(info, rtt, protocols_whitelist) {
     var probed = utils.probeProtocols();
     that._protocols = utils.detectProtocols(probed, protocols_whitelist, info);
 // <METEOR>
+// https://github.com/sockjs/sockjs-client/issues/79
     // Hack to avoid XDR when using different protocols
     // We're on IE trying to do cross-protocol. jsonp only.
     if (!utils.isSameOriginScheme(that._base_url) &&
@@ -1199,7 +1238,7 @@ var WebSocketTransport = SockJS.websocket = function(ri, trans_url) {
         that.ri._didMessage(e.data);
     };
     // Firefox has an interesting bug. If a websocket connection is
-    // created after onbeforeunload, it stays alive even when user
+    // created after onunload, it stays alive even when user
     // navigates away from the page. In such situation let's lie -
     // let's not open the ws connection at all. See:
     // https://github.com/sockjs/sockjs-client/issues/28
@@ -1285,12 +1324,14 @@ BufferedSender.prototype.send_schedule = function() {
     var that = this;
     if (that.send_buffer.length > 0) {
         var payload = '[' + that.send_buffer.join(',') + ']';
-        that.send_stop = that.sender(that.trans_url,
-                                     payload,
-                                     function() {
-                                         that.send_stop = null;
-                                         that.send_schedule_wait();
-                                     });
+        that.send_stop = that.sender(that.trans_url, payload, function(success, abort_reason) {
+            that.send_stop = null;
+            if (success === false) {
+                that.ri._didClose(1006, 'Sending error ' + abort_reason);
+            } else {
+                that.send_schedule_wait();
+            }
+        });
         that.send_buffer = [];
     }
 };
@@ -1353,7 +1394,9 @@ var jsonPGenericSender = function(url, payload, callback) {
                        iframe = null;
                    });
         area.value = '';
-        callback();
+        // It is not possible to detect if the iframe succeeded or
+        // failed to submit our form.
+        callback(true);
     };
     iframe.onerror = iframe.onload = completed;
     iframe.onreadystatechange = function(e) {
@@ -1366,10 +1409,11 @@ var createAjaxSender = function(AjaxObject) {
     return function(url, payload, callback) {
         var xo = new AjaxObject('POST', url + '/xhr_send', payload);
         xo.onfinish = function(status, text) {
-            callback(status);
+            callback(status === 200 || status === 204,
+                     'http status ' + status);
         };
         return function(abort_reason) {
-            callback(0, abort_reason);
+            callback(false, abort_reason);
         };
     };
 };
@@ -1400,6 +1444,8 @@ var jsonPGenericReceiver = function(url, callback) {
         }
         if (script) {
             clearTimeout(tref);
+            // Unfortunately, you can't really abort script loading of
+            // the script.
             script.parentNode.removeChild(script);
             script.onreadystatechange = script.onerror =
                 script.onload = script.onclick = null;
@@ -1565,16 +1611,36 @@ JsonPTransport.prototype.doCleanup = function() {
 var jsonPReceiverWrapper = function(url, constructReceiver, user_callback) {
     var id = 'a' + utils.random_string(6);
     var url_id = url + '?c=' + escape(WPrefix + '.' + id);
+
+    // Unfortunately it is not possible to abort loading of the
+    // script. We need to keep track of frake close frames.
+    var aborting = 0;
+
     // Callback will be called exactly once.
     var callback = function(frame) {
-        delete _window[WPrefix][id];
-        user_callback(frame);
+        switch(aborting) {
+        case 0:
+            // Normal behaviour - delete hook _and_ emit message.
+            delete _window[WPrefix][id];
+            user_callback(frame);
+            break;
+        case 1:
+            // Fake close frame - emit but don't delete hook.
+            user_callback(frame);
+            aborting = 2;
+            break;
+        case 2:
+            // Got frame after connection was closed, delete hook, don't emit.
+            delete _window[WPrefix][id];
+            break;
+        }
     };
 
     var close_script = constructReceiver(url_id, callback);
     _window[WPrefix][id] = close_script;
     var stop = function() {
         if (_window[WPrefix][id]) {
+            aborting = 1;
             _window[WPrefix][id](utils.closeFrame(1000, "JSONP user aborted read"));
         }
     };
@@ -1964,9 +2030,11 @@ var createInfoReceiver = function(base_url) {
     }
     switch (utils.isXHRCorsCapable()) {
     case 1:
-        return new InfoReceiver(base_url, utils.XHRCorsObject);
+        // XHRLocalObject -> no_credentials=true
+        return new InfoReceiver(base_url, utils.XHRLocalObject);
     case 2:
 // <METEOR>
+// https://github.com/sockjs/sockjs-client/issues/79
         // XDR doesn't work across different schemes
         // http://blogs.msdn.com/b/ieinternals/archive/2010/05/13/xdomainrequest-restrictions-limitations-and-workarounds.aspx
         if (utils.isSameOriginScheme(base_url))

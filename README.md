@@ -67,11 +67,14 @@ You'll then be able to read the docs locally in your browser at ```http://localh
 
 ## Developer Resources
 
-Get in touch! We'd love to hear what you think. You can get involved
-in several ways:
+Building an application with Meteor?
 
 * Announcement list: sign up at http://www.meteor.com/
-* IRC: ```#meteor``` on ```irc.freenode.net```
 * Ask a question: http://stackoverflow.com/questions/tagged/meteor
-* Email us: ```contact@meteor.com```
-* How to contribute to Meteor: https://github.com/meteor/meteor/wiki
+* Meteor help and discussion mailing list: https://groups.google.com/group/meteor-talk
+* IRC: ```#meteor``` on ```irc.freenode.net```
+
+Interested in contributing to Meteor?
+
+* Core framework design mailing list: https://groups.google.com/group/meteor-core
+* Contribution guidelines: https://github.com/meteor/meteor/wiki

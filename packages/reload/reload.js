@@ -41,7 +41,9 @@
   var old_data = {};
   // read in old data at startup.
   var old_json;
-  if (typeof sessionStorage !== "undefined") {
+  // On Firefox with dom.storage.enabled set to false, sessionStorage is null,
+  // so we have to both check to see if it is defined and not null.
+  if (typeof sessionStorage !== "undefined" && sessionStorage) {
     old_json = sessionStorage.getItem(KEY_NAME);
     sessionStorage.removeItem(KEY_NAME);
   } else {
@@ -135,7 +137,7 @@
         throw err;
       }
 
-      if (typeof sessionStorage !== "undefined") {
+      if (typeof sessionStorage !== "undefined" && sessionStorage) {
         sessionStorage.setItem(KEY_NAME, json);
       } else {
         Meteor._debug("Browser does not support sessionStorage. Not saving migration state.");

@@ -61,7 +61,7 @@
       loginButtonsSession.get('resetPasswordToken'), newPassword,
       function (error) {
         if (error) {
-          loginButtonsSession.set('errorMessage', error.reason || "Unknown error");
+          loginButtonsSession.errorMessage(error.reason || "Unknown error");
         } else {
           loginButtonsSession.set('resetPasswordToken', null);
           Accounts._enableAutoLogin();
@@ -102,7 +102,7 @@
       loginButtonsSession.get('enrollAccountToken'), password,
       function (error) {
         if (error) {
-          loginButtonsSession.set('errorMessage', error.reason || "Unknown error");
+          loginButtonsSession.errorMessage(error.reason || "Unknown error");
         } else {
           loginButtonsSession.set('enrollAccountToken', null);
           Accounts._enableAutoLogin();

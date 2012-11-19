@@ -49,10 +49,19 @@
       return undefined; // don't handle
 
     var result = Accounts.oauth._loginResultForState[options.oauth.state];
-    if (result === undefined) // not using `!result` since can be null
-      // We weren't notified of the user authorizing the login.
-      return null;
-    else if (result instanceof Error)
+    if (!result) {
+      // OAuth state is not recognized, which could be either because the popup
+      // was closed by the user before completion, or some sort of error where
+      // the oauth provider didn't talk to our server correctly and closed the
+      // popup somehow.
+      //
+      // we assume it was user canceled, and report it as such, using a
+      // Meteor.Error which the client can recognize. this will mask failures
+      // where things are misconfigured such that the server doesn't see the
+      // request but does close the window. This seems unlikely.
+      throw new Meteor.Error(Accounts.LoginCancelledError.numericError,
+                             'No matching login attempt found');
+    } else if (result instanceof Error)
       // We tried to login, but there was a fatal error. Report it back
       // to the user.
       throw result;

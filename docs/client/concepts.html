@@ -43,12 +43,12 @@ client.  It minifies this bundle and serves it to each new client.
 You're free to use a single JavaScript file for your entire application, or
 create a nested tree of separate files, or anything in between.
 
-Files outside the `client` and `server`
-subdirectories are loaded on both the client and the server!  That's
-the place for model definitions and other functions.  Meteor provides
-the variables [`isClient` and `isServer`](#meteor_isclient) so that
-your code can alter its behavior depending on whether it's running
-on the client or the server.
+Files outside the `client`, `server` and `tests` subdirectories are loaded on
+both the client and the server!  That's the place for model definitions and
+other functions.  Meteor provides the variables [`isClient` and
+`isServer`](#meteor_isclient) so that your code can alter its behavior depending
+on whether it's running on the client or the server. (Files in directories named
+`tests` are not loaded anywhere.)
 
 Any sensitive code that you don't want served to the client, such as code
 containing passwords or authentication mechanisms, should be
@@ -76,6 +76,32 @@ See the [templates](#templates) section for more.
 Lastly, the Meteor server will serve any files under the `public`
 directory, just like in a Rails or Django project.  This is the place
 for images, `favicon.ico`, `robots.txt`, and anything else.
+
+It is best to write your application in such a way that it is
+insensitive to the order in which files are loaded, for example by
+using [Meteor.startup](#meteor_startup), or by moving load order
+sensitive code into Smart Packages, which can explicitly control both
+the load order of their contents and their load order with respect to
+other packages. However sometimes load order dependencies in your
+application are unavoidable. The JavaScript and CSS files in an
+application are loaded according to these rules:
+
+* Files in the `lib` directory at the root of your application are
+  loaded first.
+
+* Files that match `main.*` are loaded after everything else.
+
+* Files in subdirectories are loaded before files in parent
+  directories, so that files in the deepest subdirectory are loaded
+  first (after `lib`), and files in the root directory are loaded last
+  (other than `main.*`).
+
+* Within a directory, files are loaded in alphabetical order by
+  filename.
+
+These rules stack, so that within `lib`, for example, files are still
+loaded in alphabetical order; and if there are multiple files named
+`main.js`, the ones in subdirectories are loaded earlier.
 
 {{/better_markdown}}
 </template>
@@ -265,7 +291,7 @@ And the reactive data sources that can trigger changes are:
 * [`Meteor.status`](#meteor_status)
 * [`Meteor.user`](#meteor_user)
 * [`Meteor.userId`](#meteor_userid)
-* [`Meteor.userLoaded`](#meteor_userloaded)
+* [`Meteor.loggingIn`](#meteor_loggingin)
 
 Meteor's
 [implementation](https://github.com/meteor/meteor/blob/master/packages/deps/deps.js)
@@ -594,7 +620,7 @@ To get started, run
 
 This command will generate a fully-contained Node.js application in
 the form of a tarball.  To run this application, you need to provide
-Node.js 0.6 and a MongoDB server.  You can then run the application by
+Node.js 0.8 and a MongoDB server.  You can then run the application by
 invoking node, specifying the HTTP port for the application to listen
 on, and the MongoDB endpoint.  If you don't already have a MongoDB
 server, we can recommend our friends at [MongoHQ](http://mongohq.com).
@@ -612,7 +638,7 @@ have `npm` available, and run the following:
 
     $ cd bundle/server/node_modules
     $ rm -r fibers
-    $ npm install fibers@0.6.5
+    $ npm install fibers@0.6.9
 {{/warning}}
 
 {{/better_markdown}}

@@ -131,7 +131,7 @@ Tinytest.addAsync("mongo-livedata - basics", function (test, onComplete) {
     total += doc.x;
     // verify the meteor environment is set up here
     coll2.insert({total:total});
-  })
+  });
   test.equal(total, 14);
 
   cur.rewind();
@@ -238,8 +238,11 @@ Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
     var max_counters = _.clone(counters);
 
     finishObserve(function () {
+      // XXX What if there are multiple observe handles on the LiveResultsSet?
+      //     There shouldn't be because the collection has a name unique to this
+      //     run.
       if (Meteor.isServer)
-        obs._suspendPolling();
+        obs._liveResultsSet._suspendPolling();
 
       // Do a batch of 1-10 operations
       var batch_count = rnd(10) + 1;
@@ -272,7 +275,7 @@ Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
         }
       }
       if (Meteor.isServer)
-        obs._resumePolling();
+        obs._liveResultsSet._resumePolling();
 
     });
 
@@ -294,6 +297,16 @@ Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
 
 });
 
+var runInFence = function (f) {
+  if (Meteor.isClient) {
+    f();
+  } else {
+    var fence = new Meteor._WriteFence;
+    Meteor._CurrentWriteFence.withValue(fence, f);
+    fence.armAndWait();
+  }
+};
+
 Tinytest.addAsync("mongo-livedata - scribbling", function (test, onComplete) {
   var run = test.runId();
   var coll;
@@ -302,16 +315,6 @@ Tinytest.addAsync("mongo-livedata - scribbling", function (test, onComplete) {
   } else {
     coll = new Meteor.Collection("livedata_test_collection_"+run);
   }
-
-  var runInFence = function (f) {
-    if (Meteor.isClient) {
-      f();
-    } else {
-      var fence = new Meteor._WriteFence;
-      Meteor._CurrentWriteFence.withValue(fence, f);
-      fence.armAndWait();
-    }
-  };
 
   var numAddeds = 0;
   var handle = coll.find({run: run}).observe({
@@ -333,3 +336,181 @@ Tinytest.addAsync("mongo-livedata - scribbling", function (test, onComplete) {
 
   onComplete();
 });
+
+Tinytest.addAsync("mongo-livedata - stop handle in callback", function (test, onComplete) {
+  var run = test.runId();
+  var coll;
+  if (Meteor.isClient) {
+    coll = new Meteor.Collection(null); // local, unmanaged
+  } else {
+    coll = new Meteor.Collection("stopHandleInCallback-"+run);
+  }
+
+  var output = [];
+
+  var handle = coll.find()._observeUnordered({
+    added: function (doc) {
+      output.push({added: doc._id});
+    },
+    changed: function (newDoc) {
+      output.push('changed');
+      handle.stop();
+    }
+  });
+
+  test.equal(output, []);
+
+  // Insert a document. Observe that the added callback is called.
+  var docId;
+  runInFence(function () {
+    docId = coll.insert({foo: 42});
+  });
+  test.length(output, 1);
+  test.equal(output.shift(), {added: docId});
+
+  // Update it. Observe that the changed callback is called. This should also
+  // stop the observation.
+  runInFence(function() {
+    coll.update(docId, {$set: {bar: 10}});
+  });
+  test.length(output, 1);
+  test.equal(output.shift(), 'changed');
+
+  // Update again. This shouldn't call the callback because we stopped the
+  // observation.
+  runInFence(function() {
+    coll.update(docId, {$set: {baz: 40}});
+  });
+  test.length(output, 0);
+
+  test.equal(coll.find().count(), 1);
+  test.equal(coll.findOne(docId),
+             {_id: docId, foo: 42, bar: 10, baz: 40});
+
+  onComplete();
+});
+
+// This behavior isn't great, but it beats deadlock.
+if (Meteor.isServer) {
+  Tinytest.addAsync("mongo-livedata - recursive observe throws", function (test, onComplete) {
+    var run = test.runId();
+    var coll = new Meteor.Collection("observeInCallback-"+run);
+
+    var callbackCalled = false;
+    var handle = coll.find()._observeUnordered({
+      added: function (newDoc) {
+        callbackCalled = true;
+        test.throws(function () {
+          coll.find()._observeUnordered({});
+        });
+      }
+    });
+    test.isFalse(callbackCalled);
+    // Insert a document. Observe that the added callback is called.
+    runInFence(function () {
+      coll.insert({foo: 42});
+    });
+    test.isTrue(callbackCalled);
+
+    handle.stop();
+
+    onComplete();
+  });
+
+  Tinytest.addAsync("mongo-livedata - cursor dedup", function (test, onComplete) {
+    var run = test.runId();
+    var coll = new Meteor.Collection("cursorDedup-"+run);
+
+    var observer = function () {
+      var output = [];
+      var handle = coll.find({foo: 22}).observe({
+        added: function (doc) {
+          output.push({added: doc._id});
+        },
+        changed: function (newDoc) {
+          output.push({changed: newDoc._id});
+        }
+      });
+      return {output: output, handle: handle};
+    };
+
+    // Insert a doc and start observing.
+    var docId1 = coll.insert({foo: 22});
+    var o1 = observer();
+    // Initial add.
+    test.length(o1.output, 1);
+    test.equal(o1.output.shift(), {added: docId1});
+
+    // Insert another doc (blocking until observes have fired).
+    var docId2;
+    runInFence(function () {
+      docId2 = coll.insert({foo: 22, bar: 5});
+    });
+    // Observed add.
+    test.length(o1.output, 1);
+    test.equal(o1.output.shift(), {added: docId2});
+
+    // Second identical observe.
+    var o2 = observer();
+    // Initial adds.
+    test.length(o2.output, 2);
+    test.include([docId1, docId2], o2.output[0].added);
+    test.include([docId1, docId2], o2.output[1].added);
+    test.notEqual(o2.output[0].added, o2.output[1].added);
+    o2.output.length = 0;
+    // Original observe not affected.
+    test.length(o1.output, 0);
+
+    // White-box test: both observes should have the same underlying
+    // LiveResultsSet.
+    var liveResultsSet = o1.handle._liveResultsSet;
+    test.isTrue(liveResultsSet);
+    test.isTrue(liveResultsSet === o2.handle._liveResultsSet);
+
+    // Update. Both observes fire.
+    runInFence(function () {
+      coll.update(docId1, {$set: {x: 'y'}});
+    });
+    test.length(o1.output, 1);
+    test.length(o2.output, 1);
+    test.equal(o1.output.shift(), {changed: docId1});
+    test.equal(o2.output.shift(), {changed: docId1});
+
+    // Stop first handle. Second handle still around.
+    o1.handle.stop();
+    test.length(o1.output, 0);
+    test.length(o2.output, 0);
+
+    // Another update. Just the second handle should fire.
+    runInFence(function () {
+      coll.update(docId2, {$set: {z: 'y'}});
+    });
+    test.length(o1.output, 0);
+    test.length(o2.output, 1);
+    test.equal(o2.output.shift(), {changed: docId2});
+
+    // Stop second handle. Nothing should happen, but the liveResultsSet should
+    // be stopped.
+    o2.handle.stop();
+    test.length(o1.output, 0);
+    test.length(o2.output, 0);
+    // White-box: liveResultsSet has nulled its _observeHandles so you can't
+    // accidentally join to it.
+    test.isNull(liveResultsSet._observeHandles);
+
+    // Start yet another handle on the same query.
+    var o3 = observer();
+    // Initial adds.
+    test.length(o3.output, 2);
+    test.include([docId1, docId2], o3.output[0].added);
+    test.include([docId1, docId2], o3.output[1].added);
+    test.notEqual(o3.output[0].added, o3.output[1].added);
+    // Old observers not called.
+    test.length(o1.output, 0);
+    test.length(o2.output, 0);
+    // White-box: Different LiveResultsSet.
+    test.isTrue(liveResultsSet !== o3.handle._liveResultsSet);
+    o3.handle.stop();
+    onComplete();
+  });
+}

@@ -9,9 +9,9 @@
     "loginButtons",
     function (options) {
       if (options.hash.align === "right")
-        return new Handlebars.SafeString(Template._loginButtonsRight());
+        return new Handlebars.SafeString(Template._loginButtons({align: "right"}));
       else
-        return new Handlebars.SafeString(Template._loginButtonsLeft());
+        return new Handlebars.SafeString(Template._loginButtons({align: "left"}));
     });
 
   // shared between dropdown and single mode
@@ -62,7 +62,13 @@
     return Accounts._loginButtons.dropdown();
   };
 
-  Template._loginButtonsLoggedIn.displayName = function () {
+
+
+  //
+  // loginButtonsLoggedInSingleLogoutButton template
+  //
+
+  Template._loginButtonsLoggedInSingleLogoutButton.displayName = function () {
     return Accounts._loginButtons.displayName();
   };
 
@@ -78,6 +84,15 @@
 
   Template._loginButtonsMessages.infoMessage = function () {
     return loginButtonsSession.get('infoMessage');
+  };
+
+
+  //
+  // loginButtonsLoggingInPadding template
+  //
+
+  Template._loginButtonsLoggingInPadding.dropdown = function () {
+    return Accounts._loginButtons.dropdown();
   };
 
 
@@ -130,7 +145,7 @@
     if (username.length >= 3) {
       return true;
     } else {
-      loginButtonsSession.set('errorMessage', "Username must be at least 3 characters long");
+      loginButtonsSession.errorMessage("Username must be at least 3 characters long");
       return false;
     }
   };
@@ -141,7 +156,7 @@
     if (email.indexOf('@') !== -1) {
       return true;
     } else {
-      loginButtonsSession.set('errorMessage', "Invalid email");
+      loginButtonsSession.errorMessage("Invalid email");
       return false;
     }
   };
@@ -149,7 +164,7 @@
     if (password.length >= 6) {
       return true;
     } else {
-      loginButtonsSession.set('errorMessage', "Password must be at least 6 characters long");
+      loginButtonsSession.errorMessage("Password must be at least 6 characters long");
       return false;
     }
   };

@@ -4,7 +4,7 @@ Meteor.users.allow({update: function () { return true; }});
 if (Meteor.isClient) {
 
   Accounts.STASH = _.extend({}, Accounts);
-  Accounts.STASH.userLoaded = Meteor.userLoaded;
+  Accounts.STASH.loggingIn = Meteor.loggingIn;
 
   var handleSetting = function (key, value) {
     if (key === "numServices") {
@@ -31,9 +31,9 @@ if (Meteor.isClient) {
       }
     } else if (key === "signupFields") {
       Accounts.ui._options.passwordSignupFields = value;
-    } else if (key === "fakeUserNotLoaded") {
-      Meteor.userLoaded = (value ? function () { return false; } :
-                           Accounts.STASH.userLoaded);
+    } else if (key === "fakeLoggingIn") {
+      Meteor.loggingIn = (value ? function () { return true; } :
+                          Accounts.STASH.loggingIn);
     }
   };
 
@@ -44,7 +44,7 @@ if (Meteor.isClient) {
       numServices: 3,
       hasPasswords: true,
       signupFields: 'EMAIL_ONLY',
-      fakeUserNotLoaded: false,
+      fakeLoggingIn: false,
       bgcolor: 'white'
     });
   else
@@ -61,12 +61,6 @@ if (Meteor.isClient) {
     var classes = [];
     if (settings.positioning)
       classes.push('positioning-' + settings.positioning.toLowerCase());
-    return classes.join(' ');
-  };
-
-  Template.page.outerClass = function () {
-    var settings = Session.get('settings');
-    var classes = [];
     return classes.join(' ');
   };
 
@@ -120,7 +114,7 @@ if (Meteor.isClient) {
     return settings.alignRight ? 'right' : 'left';
   };
 
-  var fakeLogin = function () {
+  var fakeLogin = function (callback) {
     Accounts.createUser(
       {username: Meteor.uuid(),
        password: "password",
@@ -136,6 +130,7 @@ if (Meteor.isClient) {
         if (! Session.get('settings').hasPasswords)
           Meteor.users.update(Meteor.userId(),
                               { $unset: { username: 1 }});
+        callback();
       });
   };
 
@@ -175,17 +170,18 @@ if (Meteor.isClient) {
         Accounts.loginServiceConfiguration.remove({service: service});
       } else if (this.key === "messages") {
         if (this.value === "error") {
-          Accounts._loginButtonsSession.set('errorMessage', 'An error occurred!  Gee golly gosh.');
+          Accounts._loginButtonsSession.errorMessage('An error occurred!  Gee golly gosh.');
         } else if (this.value === "info") {
-          Accounts._loginButtonsSession.set('infoMessage', 'Here is some information that is crucial.');
+          Accounts._loginButtonsSession.infoMessage('Here is some information that is crucial.');
         } else if (this.value === "clear") {
           Accounts._loginButtonsSession.resetMessages();
         }
       } else if (this.key === "sign") {
         if (this.value === 'in') {
           // create a random new user
-          Accounts._loginButtonsSession.closeDropdown();
-          fakeLogin();
+          fakeLogin(function () {
+            Accounts._loginButtonsSession.closeDropdown();
+          });
         } else if (this.value === 'out') {
           Meteor.logout();
         }

@@ -9,8 +9,8 @@ var tty = require('tty');
 var request = require('request');
 var qs = require('querystring');
 var path = require('path');
-var files = require('../lib/files.js');
-var _ = require('../lib/third/underscore.js');
+var files = require(path.join(__dirname, '..', 'lib', 'files.js'));
+var _ = require(path.join(__dirname, '..', 'lib', 'third', 'underscore.js'));
 var keypress = require('keypress');
 var child_process = require('child_process');
 
@@ -71,13 +71,13 @@ var deploy_app = function (url, app_dir, opt_debug, opt_tests,
 
 var bundle_and_deploy = function (site, app_dir, opt_debug, opt_tests,
                                   password, set_password) {
-  var build_dir = path.join(app_dir, '.meteor/local/build_tar');
+  var build_dir = path.join(app_dir, '.meteor', 'local', 'build_tar');
   var bundle_path = path.join(build_dir, 'bundle');
   var bundle_opts = { skip_dev_bundle: true, no_minify: !!opt_debug,
                       include_tests: opt_tests };
 
   process.stdout.write('Deploying to ' + site + '.  Bundling ... ');
-  var bundler = require('../lib/bundler.js');
+  var bundler = require(path.join(__dirname, '..', 'lib', 'bundler.js'));
   var errors = bundler.bundle(app_dir, bundle_path, bundle_opts);
   if (errors) {
     process.stdout.write("\n\nErrors prevented deploying:\n");
@@ -99,7 +99,8 @@ var bundle_and_deploy = function (site, app_dir, opt_debug, opt_tests,
 
   var rpc = meteor_rpc('deploy', 'POST', site, opts, function (err, body) {
     if (err) {
-      process.stderr.write("\nError deploying application: " + body + "\n");
+      var errorMessage = (body || ("Connection error (" + err.message + ")"));
+      process.stderr.write("\nError deploying application: " + errorMessage + "\n");
       process.exit(1);
     }
 
@@ -227,7 +228,7 @@ var parse_url = function (url) {
 };
 
 var run_mongo_shell = function (url) {
-  var mongo_path = path.join(files.get_dev_bundle(), 'mongodb/bin/mongo');
+  var mongo_path = path.join(files.get_dev_bundle(), 'mongodb', 'bin', 'mongo');
   var mongo_url = require('url').parse(url);
   var auth = mongo_url.auth && mongo_url.auth.split(':');
 
