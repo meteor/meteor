@@ -76,7 +76,7 @@
 
 * Upgrade many dependencies, including:
   * MongoDB 2.2.1 (from 2.2.0)
-  * underscore 1.4.2 (from 1.3.9)
+  * underscore 1.4.2 (from 1.3.3)
   * bootstrap 2.2.1 (from 2.1.1)
   * jQuery 1.8.2 (from 1.7.2)
   * less 1.3.1 (from 1.3.0)
