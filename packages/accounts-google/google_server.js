@@ -23,9 +23,6 @@
                 },
                 options: {profile: {name: identity.name}}
            };
-
-
-    return serviceData;
   });
 
   var getAccessToken = function (query) {
