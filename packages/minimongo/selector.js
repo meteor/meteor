@@ -111,7 +111,7 @@ LocalCollection._evaluateSelectorValue = function(selectorValue, docValue) {
   if (!_.isObject(selectorValue)) {
     // Most common case: Primitive comparison or containment (e.g. `_id: <someId>`)
     return selectorValue === docValue || _.contains(docValue, selectorValue) ||
-           selectorValue === null && (docValue === null || docValue === undefined || _.contains(docValue, null))
+           selectorValue === null && docValue === undefined;
   } else {
     if (_.isArray(selectorValue)) {
       // Deep comparison or containment check.
@@ -119,7 +119,7 @@ LocalCollection._evaluateSelectorValue = function(selectorValue, docValue) {
     } else if (_.isRegExp(selectorValue)) {
       return selectorValue.test(docValue);
     } else {
-      // It's an object, but not array or regexp
+      // It's an object, but not an array or regexp.
       if (LocalCollection._hasOperators(selectorValue)) {
         // This one has operators in it, let's evaluate them.
         for (var selKey in selectorValue) {
