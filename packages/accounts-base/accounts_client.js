@@ -7,9 +7,14 @@
 
   var loggingIn = false;
   var loggingInListeners = new Meteor.deps._ContextSet;
-  var setLoggingIn = function (x) {
-    loggingIn = x;
-    loggingInListeners.invalidateAll();
+  // This is mostly just called within this file, but Meteor.loginWithPassword
+  // also uses it to make loggingIn() be true during the beginPasswordExchange
+  // method call too.
+  Accounts._setLoggingIn = function (x) {
+    if (loggingIn !== x) {
+      loggingIn = x;
+      loggingInListeners.invalidateAll();
+    }
   };
   Meteor.loggingIn = function () {
     loggingInListeners.addCurrentContext();
@@ -109,7 +114,7 @@
       if (reconnected)
         return;
 
-      setLoggingIn(false);
+      Accounts._setLoggingIn(false);
       if (error || !result) {
         error = error || new Error(
           "No result from call to " + options.methodName);
@@ -128,7 +133,7 @@
       options.userCallback();
     };
 
-    setLoggingIn(true);
+    Accounts._setLoggingIn(true);
     Meteor.apply(
       options.methodName,
       options.methodArguments,
