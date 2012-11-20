@@ -210,6 +210,13 @@ Meteor._LivedataConnection = function (url, options) {
     // (in either direction) since we were disconnected (TCP being
     // sloppy about that.)
 
+    // If the current block of methods all got their results (but didn't all get
+    // their data visible), discard the empty block now.
+    if (! _.isEmpty(self._outstandingMethodBlocks) &&
+        _.isEmpty(self._outstandingMethodBlocks[0].methods)) {
+      self._outstandingMethodBlocks.shift();
+    }
+
     // If an `onReconnect` handler is set, call it first. Go through
     // some hoops to ensure that methods that are called from within
     // `onReconnect` get executed _before_ ones that were originally
@@ -1055,15 +1062,18 @@ _.extend(Meteor._LivedataConnection.prototype, {
       return;
 
     // No methods are outstanding. This should mean that the first block of
-    // methods is empty.
-    var firstBlock = self._outstandingMethodBlocks.shift();
-    if (! _.isEmpty(firstBlock.methods))
-      throw new Error("No methods outstanding but nonempty block: " +
-                      JSON.stringify(firstBlock));
+    // methods is empty. (Or it might not exist, if this was a method that
+    // half-finished before disconnect/reconnect.)
+    if (! _.isEmpty(self._outstandingMethodBlocks)) {
+      var firstBlock = self._outstandingMethodBlocks.shift();
+      if (! _.isEmpty(firstBlock.methods))
+        throw new Error("No methods outstanding but nonempty block: " +
+                        JSON.stringify(firstBlock));
 
-    // Send the outstanding methods now in the first block.
-    if (!_.isEmpty(self._outstandingMethodBlocks))
-      self._sendOutstandingMethods();
+      // Send the outstanding methods now in the first block.
+      if (!_.isEmpty(self._outstandingMethodBlocks))
+        self._sendOutstandingMethods();
+    }
 
     // Maybe accept a hot code push.
     self._maybeMigrate();

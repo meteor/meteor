@@ -1051,6 +1051,70 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
   ]);
 });
 
+Tinytest.add("livedata stub - reconnect double wait method", function (test) {
+  var stream = new Meteor._StubStream;
+  var conn = newConnection(stream);
+  startAndConnect(test, stream);
+
+  var output = [];
+  conn.onReconnect = function () {
+    conn.apply('reconnectMethod', [], {wait: true}, function (err, result) {
+      output.push('reconnect');
+    });
+  };
+
+  conn.apply('halfwayMethod', [], {wait: true}, function (err, result) {
+    output.push('halfway');
+  });
+
+  test.equal(output, []);
+  // Method sent.
+  var halfwayId = testGotMessage(
+    test, stream, {msg: 'method', method: 'halfwayMethod',
+                   params: [], id: '*'});
+  test.equal(stream.sent.length, 0);
+
+  // Get the result. This means it will not be resent.
+  stream.receive({msg: 'result', id: halfwayId, result: 'bla'});
+  // Callback not called.
+  test.equal(output, []);
+
+  // Reset stream. halfwayMethod does NOT get resent, but reconnectMethod does!
+  // Reconnect quiescence happens when reconnectMethod is done.
+  stream.reset();
+  testGotMessage(test, stream, {msg: 'connect', session: SESSION_ID});
+  var reconnectId = testGotMessage(
+    test, stream, {msg: 'method', method: 'reconnectMethod',
+                   params: [], id: '*'});
+  test.length(stream.sent, 0);
+  // Still holding out hope for session resumption, so no callbacks yet.
+  test.equal(output, []);
+
+  // Receive 'connected', but reconnect quiescence is blocking on
+  // reconnectMethod.
+  stream.receive({msg: 'connected', session: SESSION_ID + 1});
+  test.equal(output, []);
+
+  // Data-done for reconnectMethod. This gets us to reconnect quiescence, so
+  // halfwayMethod's callback fires. reconnectMethod's is still waiting on its
+  // result.
+  stream.receive({msg: 'data', methods: [reconnectId]});
+  test.equal(output.shift(), 'halfway');
+  test.equal(output, []);
+
+  // Get result of reconnectMethod. Its callback fires.
+  stream.receive({msg: 'result', id: reconnectId, result: 'foo'});
+  test.equal(output.shift(), 'reconnect');
+  test.equal(output, []);
+
+  // Call another method. It should be delivered immediately. This is a
+  // regression test for a case where it never got delivered because there was
+  // an empty block in _outstandingMethodBlocks blocking it from being sent.
+  conn.call('lastMethod');
+  testGotMessage(test, stream,
+                 {msg: 'method', method: 'lastMethod', params: [], id: '*'});
+});
+
 // XXX also test:
 // - reconnect, with session resume.
 // - restart on update flag

@@ -3,7 +3,7 @@
 set -e
 set -u
 
-BUNDLE_VERSION=0.2.7
+BUNDLE_VERSION=0.2.8
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -90,16 +90,19 @@ npm install handlebars@1.0.7
 npm install mongodb@1.1.11
 npm install uglify-js@1.3.4
 npm install clean-css@0.8.2
-npm install progress@0.1.0
 npm install useragent@1.1.0
 npm install request@2.12.0
 npm install simplesmtp@0.1.25
 npm install stream-buffers@0.2.3
 npm install keypress@0.1.0
 npm install sockjs@0.3.4
+npm install http-proxy@0.8.5
 
-# 0.8.4 contains a regression w/ maxSockets support. it is fixed in 0.8.5.
-npm install http-proxy@0.8.3
+# progress 0.1.0 has a regression where it opens stdin and thus does not
+# allow the node process to exit cleanly. See
+# https://github.com/visionmedia/node-progress/issues/19
+npm install progress@0.0.5
+
 # pinned at older version. 0.1.16+ uses mimelib, not mimelib-noiconv
 # which make the dev bundle much bigger. We need a better solution.
 npm install mailcomposer@0.1.15

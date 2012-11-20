@@ -285,9 +285,9 @@ var eavesdropOnCollection = function(livedata_connection,
   };
 };
 
-testAsyncMulti("livedata - changing userid reruns subscriptions without flapping data on the wire", [
-  function(test, expect) {
-    if (Meteor.isClient) {
+if (Meteor.isClient) {
+  testAsyncMulti("livedata - changing userid reruns subscriptions without flapping data on the wire", [
+    function(test, expect) {
       var messages = [];
       var undoEavesdrop = eavesdropOnCollection(
         Meteor.default_connection, "objectsWithUsers", messages);
@@ -342,18 +342,18 @@ testAsyncMulti("livedata - changing userid reruns subscriptions without flapping
         test.equal(objectsWithUsers.find().count(), 4);
         undoEavesdrop();
       });
-    }
-  }, function(test, expect) {
-    if (Meteor.isClient) {
-      Meteor.subscribe("recordUserIdOnStop");
-      Meteor.apply("setUserId", [100], {wait: true}, expect(function() {}));
-      Meteor.apply("setUserId", [101], {wait: true}, expect(function() {}));
-      Meteor.call("userIdWhenStopped", expect(function(err, result) {
+    }, function(test, expect) {
+      var key = Meteor.uuid();
+      Meteor.subscribe("recordUserIdOnStop", key);
+      Meteor.apply("setUserId", [100], {wait: true}, expect(function () {}));
+      Meteor.apply("setUserId", [101], {wait: true}, expect(function () {}));
+      Meteor.call("userIdWhenStopped", key, expect(function (err, result) {
+        test.isFalse(err);
         test.equal(result, 100);
       }));
     }
-  }
-]);
+  ]);
+}
 
 Tinytest.add("livedata - setUserId error when called from server", function(test) {
   if (Meteor.isServer) {

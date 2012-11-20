@@ -33,8 +33,7 @@
         var content = result[1];
 
         var match = content.match(
-          new RegExp(window.location.protocol + "//" +
-                     window.location.host + "/#\\/reset-password/(\\S*)"));
+          new RegExp(Meteor.absoluteUrl() + "#/reset-password/(\\S*)"));
         test.isTrue(match);
         resetPasswordToken = match[1];
       }));
@@ -73,8 +72,7 @@
       var content = result[0];
 
       var match = content.match(
-        new RegExp(window.location.protocol + "//" +
-                   window.location.host + "/#\\/verify-email/(\\S*)"));
+        new RegExp(Meteor.absoluteUrl() + "#/verify-email/(\\S*)"));
       test.isTrue(match);
       verifyEmailToken = match[1];
     }));
@@ -165,8 +163,7 @@
       var content = result[0];
 
       var match = content.match(
-        new RegExp(window.location.protocol + "//" +
-                   window.location.host + "/#\\/enroll-account/(\\S*)"));
+        new RegExp(Meteor.absoluteUrl() + "#/enroll-account/(\\S*)"));
       test.isTrue(match);
       enrollAccountToken = match[1];
     }));

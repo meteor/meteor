@@ -35,8 +35,14 @@
 
     request.user = selector;
 
+    // Normally, we only set Meteor.loggingIn() to true within
+    // Accounts.callLoginMethod, but we'd also like it to be true during the
+    // password exchange. So we set it to true here, and clear it on error; in
+    // the non-error case, it gets cleared by callLoginMethod.
+    Accounts._setLoggingIn(true);
     Meteor.apply('beginPasswordExchange', [request], function (error, result) {
       if (error || !result) {
+        Accounts._setLoggingIn(false);
         error = error || new Error("No result from call to beginPasswordExchange");
         callback && callback(error);
         return;
