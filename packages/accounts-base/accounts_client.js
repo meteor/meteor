@@ -119,8 +119,10 @@
       if (reconnected)
         return;
 
-      if (!options._suppressLoggingIn)
-        Accounts._setLoggingIn(false);
+      // Note that we need to call this even if _suppressLoggingIn is true,
+      // because it could be matching a _setLoggingIn(true) from a
+      // half-completed pre-reconnect login method.
+      Accounts._setLoggingIn(false);
       if (error || !result) {
         error = error || new Error(
           "No result from call to " + options.methodName);
