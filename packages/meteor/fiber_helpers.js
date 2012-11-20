@@ -141,4 +141,15 @@ _.extend(Meteor._SynchronousQueue.prototype, {
   }
 });
 
+// Sleep. Mostly used for debugging (eg, inserting latency into server
+// methods).
+Meteor._sleepForMs = function (ms) {
+  var fiber = Fiber.current;
+  setTimeout(function() {
+    fiber.run();
+  }, ms);
+  Fiber.yield();
+};
+
+
 })();
