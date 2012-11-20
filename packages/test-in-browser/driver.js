@@ -294,6 +294,11 @@ var reportResults = function(results) {
     test.events = out;
   }
 
+  // Expand a failed test (but only set this if the user hasn't clicked on the
+  // test name yet).
+  if (_testStatus(test) === "failed" && test.expanded === undefined)
+    test.expanded = true;
+
   _.defer(_throttled_update);
 };
 
