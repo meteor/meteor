@@ -22,10 +22,8 @@
     scope = _.union(scope, requiredScope);
     var flatScope = _.map(scope, encodeURIComponent).join('+');
 
-    var accessType = config.accessType;
-    if (!accessType) {
-      accessType = 'online';
-    }
+    // https://developers.google.com/accounts/docs/OAuth2WebServer#formingtheurl
+    var accessType = options.requestOfflineToken ? 'offline' : 'online';
 
     var loginUrl =
           'https://accounts.google.com/o/oauth2/auth' +

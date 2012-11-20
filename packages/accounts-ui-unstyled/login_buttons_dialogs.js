@@ -162,6 +162,8 @@
         var configuration = {
           service: serviceName
         };
+
+        // Fetch the value of each input field
         _.each(configurationFields(), function(field) {
           configuration[field.property] = document.getElementById(
             'configure-login-service-dialog-' + field.property).value
@@ -228,7 +230,6 @@
   Template._configureLoginServiceDialog.saveDisabled = function () {
     return loginButtonsSession.get('configureLoginServiceDialogSaveDisabled');
   };
-
 
   // XXX from http://epeli.github.com/underscore.string/lib/underscore.string.js
   var capitalize = function(str){
