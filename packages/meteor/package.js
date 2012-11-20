@@ -34,6 +34,7 @@ Package.on_use(function (api, where) {
   api.add_files('server_environment.js', 'server');
   api.add_files('helpers.js', ['client', 'server']);
   api.add_files('timers.js', ['client', 'server']);
+  api.add_files('fiber_helpers.js', 'server');
 
   // dynamic variables, bindEnvironment
   // XXX move into a separate package?
@@ -55,6 +56,8 @@ Package.on_test(function (api) {
 
   api.add_files('helpers_test.js', ['client', 'server']);
   api.add_files('dynamics_test.js', ['client', 'server']);
+
+  api.add_files('fiber_helpers_test.js', ['server']);
 
   api.add_files('url_tests.js', ['client', 'server']);
 });

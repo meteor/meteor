@@ -2,13 +2,13 @@ try {
   // XXX can't get this from updater.js because in 0.3.7 and before the
   // updater didn't have the right NODE_PATH set. At some point we can
   // remove this and just use updater.CURRENT_VERSION.
-  var VERSION = "0.5.0";
+  var VERSION = "0.5.1";
 
   var fs = require('fs');
   var path = require('path');
-  var files = require("../lib/files.js");
+  var files = require(path.join(__dirname, "..", "lib", "files.js"));
 
-  var _ = require("../lib/third/underscore.js");
+  var _ = require(path.join(__dirname, "..", "lib", "third", "underscore.js"));
 
   var topDir = files.get_dev_bundle();
   var changelogPath = path.join(topDir, 'History.md');

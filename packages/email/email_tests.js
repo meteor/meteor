@@ -6,7 +6,8 @@ Tinytest.add("email - dev mode smoke test", function (test) {
 
   var old_stream = Email._output_stream;
   try {
-    Email._output_stream = new streamBuffers.WritableStreamBuffer;
+    var stream = new streamBuffers.WritableStreamBuffer;
+    Email._output_stream = stream;
     Email._next_devmode_mail_id = 0;
     Email.send({
       from: "foo@example.com",
@@ -15,8 +16,10 @@ Tinytest.add("email - dev mode smoke test", function (test) {
       subject: "This is the subject",
       text: "This is the body\nof the message\nFrom us."
     });
+    // Note that we use the local "stream" here rather than Email._output_stream
+    // in case a concurrent test run mutates Email._output_stream too.
     // XXX brittle if mailcomposer changes header order, etc
-    test.equal(Email._output_stream.getContentsAsString("utf8"),
+    test.equal(stream.getContentsAsString("utf8"),
                "====== BEGIN MAIL #0 ======\n" + 
                "MIME-Version: 1.0\r\n" +
                "From: foo@example.com\r\n" +

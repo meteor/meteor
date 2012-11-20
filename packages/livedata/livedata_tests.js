@@ -218,38 +218,34 @@ var checkBalances = function (test, a, b) {
   test.equal(bob.balance, b);
 };
 
-var onQuiesce = function (f) {
-  if (Meteor.isServer)
-    f();
-  else
-    Meteor.default_connection.onQuiesce(f);
-};
-
 // would be nice to have a database-aware test harness of some kind --
 // this is a big hack (and XXX pollutes the global test namespace)
 testAsyncMulti("livedata - compound methods", [
-  function (test) {
+  function (test, expect) {
     if (Meteor.isClient)
-      Meteor.subscribe("ledger", test.runId());
+      Meteor.subscribe("ledger", test.runId(), expect());
 
-    Ledger.insert({name: "alice", balance: 100, world: test.runId()});
-    Ledger.insert({name: "bob", balance: 50, world: test.runId()});
+    Ledger.insert({name: "alice", balance: 100, world: test.runId()},
+                  expect(function () {}));
+    Ledger.insert({name: "bob", balance: 50, world: test.runId()},
+                  expect(function () {}));
   },
   function (test, expect) {
     Meteor.call('ledger/transfer', test.runId(), "alice", "bob", 10,
-                expect(undefined, undefined));
-
+                expect(function(err, result) {
+                  test.equal(err, undefined);
+                  test.equal(result, undefined);
+                  checkBalances(test, 90, 60);
+                }));
     checkBalances(test, 90, 60);
-
-    var release = expect();
-    onQuiesce(function () {
-      checkBalances(test, 90, 60);
-      Meteor.defer(release);
-    });
   },
   function (test, expect) {
     Meteor.call('ledger/transfer', test.runId(), "alice", "bob", 100, true,
-                expect(failure(test, 409)));
+                expect(function (err, result) {
+                  failure(test, 409)(err, result);
+                  // Balances are reverted back to pre-stub values.
+                  checkBalances(test, 90, 60);
+                }));
 
     if (Meteor.isClient)
       // client can fool itself by cheating, but only until the sync
@@ -257,12 +253,6 @@ testAsyncMulti("livedata - compound methods", [
       checkBalances(test, -10, 160);
     else
       checkBalances(test, 90, 60);
-
-    var release = expect();
-    onQuiesce(function () {
-      checkBalances(test, 90, 60);
-      Meteor.defer(release);
-    });
   }
 ]);
 
@@ -274,7 +264,7 @@ testAsyncMulti("livedata - compound methods", [
 // @return {Function} A function to call to undo the eavesdropping
 var eavesdropOnCollection = function(livedata_connection,
                                      collection_name, messages) {
-  old_livedata_data = _.bind(
+  var old_livedata_data = _.bind(
     livedata_connection._livedata_data, livedata_connection);
 
   // Kind of gross since all tests past this one will run with this
@@ -295,9 +285,9 @@ var eavesdropOnCollection = function(livedata_connection,
   };
 };
 
-testAsyncMulti("livedata - changing userid reruns subscriptions without flapping data on the wire", [
-  function(test, expect) {
-    if (Meteor.isClient) {
+if (Meteor.isClient) {
+  testAsyncMulti("livedata - changing userid reruns subscriptions without flapping data on the wire", [
+    function(test, expect) {
       var messages = [];
       var undoEavesdrop = eavesdropOnCollection(
         Meteor.default_connection, "objectsWithUsers", messages);
@@ -320,16 +310,9 @@ testAsyncMulti("livedata - changing userid reruns subscriptions without flapping
       Meteor.subscribe("objectsWithUsers", expect(function() {
         testSetAndUnset([{set: "owned by none"}]);
         test.equal(objectsWithUsers.find().count(), 1);
-        Meteor.defer(sendFirstSetUserId);
+
+        Meteor.apply("setUserId", [1], {wait: true}, afterFirstSetUserId);
       }));
-
-      // Contorted since we need to call expect at the top level of a test
-      // (see comment at top of async_multi.js)
-
-      var sendFirstSetUserId = expect(function() {
-        Meteor.apply("setUserId", [1], {wait: true});
-        Meteor.default_connection.onQuiesce(afterFirstSetUserId);
-      });
 
       var afterFirstSetUserId = expect(function() {
         testSetAndUnset([
@@ -338,12 +321,8 @@ testAsyncMulti("livedata - changing userid reruns subscriptions without flapping
           {set: "owned by one/two - a"},
           {set: "owned by one/two - b"}]);
         test.equal(objectsWithUsers.find().count(), 3);
-        Meteor.defer(sendSecondSetUserId);
-      });
 
-      var sendSecondSetUserId = expect(function() {
-        Meteor.apply("setUserId", [2], {wait: true});
-        Meteor.default_connection.onQuiesce(afterSecondSetUserId);
+        Meteor.apply("setUserId", [2], {wait: true}, afterSecondSetUserId);
       });
 
       var afterSecondSetUserId = expect(function() {
@@ -352,12 +331,8 @@ testAsyncMulti("livedata - changing userid reruns subscriptions without flapping
           {set: "owned by two - a"},
           {set: "owned by two - b"}]);
         test.equal(objectsWithUsers.find().count(), 4);
-        Meteor.defer(sendThirdSetUserId);
-      });
 
-      var sendThirdSetUserId = expect(function() {
-        Meteor.apply("setUserId", [2], {wait: true});
-        Meteor.default_connection.onQuiesce(afterThirdSetUserId);
+        Meteor.apply("setUserId", [2], {wait: true}, afterThirdSetUserId);
       });
 
       var afterThirdSetUserId = expect(function() {
@@ -367,18 +342,18 @@ testAsyncMulti("livedata - changing userid reruns subscriptions without flapping
         test.equal(objectsWithUsers.find().count(), 4);
         undoEavesdrop();
       });
-    }
-  }, function(test, expect) {
-    if (Meteor.isClient) {
-      Meteor.subscribe("recordUserIdOnStop");
-      Meteor.apply("setUserId", [100], {wait: true}, expect(function() {}));
-      Meteor.apply("setUserId", [101], {wait: true}, expect(function() {}));
-      Meteor.call("userIdWhenStopped", expect(function(err, result) {
+    }, function(test, expect) {
+      var key = Meteor.uuid();
+      Meteor.subscribe("recordUserIdOnStop", key);
+      Meteor.apply("setUserId", [100], {wait: true}, expect(function () {}));
+      Meteor.apply("setUserId", [101], {wait: true}, expect(function () {}));
+      Meteor.call("userIdWhenStopped", key, expect(function (err, result) {
+        test.isFalse(err);
         test.equal(result, 100);
       }));
     }
-  }
-]);
+  ]);
+}
 
 Tinytest.add("livedata - setUserId error when called from server", function(test) {
   if (Meteor.isServer) {

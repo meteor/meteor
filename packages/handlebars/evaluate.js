@@ -343,7 +343,8 @@ Handlebars.evaluate = function (ast, data, options) {
         // {{> partial}}
         var partialName = elt[1];
         if (!(partialName in partials))
-          throw new Error("No such partial '" + partialName + "'");
+          // XXX why do we call these templates in docs and partials in code?
+          throw new Error("No such template '" + partialName + "'");
         // call the partial
         var html = branch(partialName, function () {
           return toString(partials[partialName](stack.data));

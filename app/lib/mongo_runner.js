@@ -2,9 +2,9 @@ var fs = require("fs");
 var path = require("path");
 var spawn = require('child_process').spawn;
 
-var files = require('../lib/files.js');
+var files = require(path.join(__dirname, '..', 'lib', 'files.js'));
 
-var _ = require('../lib/third/underscore.js');
+var _ = require(path.join('..', 'lib', 'third', 'underscore.js'));
 
 
 /** Internal.
@@ -27,7 +27,7 @@ var find_mongo_pids = function (app_dir, port, callback) {
 
       _.each(data.split('\n'), function (ps_line) {
         // matches mongos we start.
-        var m = ps_line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)\/\.meteor\/local\/db\s*$/);
+        var m = ps_line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db\s*$/);
         if (m && m.length === 4) {
           var found_pid =  parseInt(m[1]);
           var found_port = parseInt(m[2]);
@@ -141,10 +141,10 @@ exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callbac
     return;
   }
 
-  var mongod_path = path.join(files.get_dev_bundle(), 'mongodb/bin/mongod');
+  var mongod_path = path.join(files.get_dev_bundle(), 'mongodb', 'bin', 'mongod');
 
   // store data in app_dir
-  var data_path = path.join(app_dir, '.meteor/local/db');
+  var data_path = path.join(app_dir, '.meteor', 'local', 'db');
   files.mkdir_p(data_path, 0755);
   // add .gitignore if needed.
   files.add_to_gitignore(path.join(app_dir, '.meteor'), 'local');

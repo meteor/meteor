@@ -359,15 +359,23 @@ _.extend(Meteor._LivedataSession.prototype, {
         return;
       }
 
-      // if Meteor._RemoteCollectionDriver is available (defined in
-      // mongo-livedata), automatically wire up handlers that return a
-      // Cursor.  otherwise, the handler is completely responsible for
-      // delivering its own data messages and registering stop
-      // functions.
+      // SPECIAL CASE: Instead of writing their own callbacks that invoke
+      // this.set/unset/flush/etc, the user can just return a collection cursor
+      // from the publish function; we call its _publishCursor method which
+      // starts observing the cursor and publishes the results.
       //
-      // XXX generalize
-      if (Meteor._RemoteCollectionDriver && (res instanceof Meteor._Mongo.Cursor))
-        sub._publishCursor(res);
+      // XXX This uses an undocumented interface which only the Mongo cursor
+      // interface publishes. Should we make this interface public and encourage
+      // users to implement it themselves? Arguably, it's unnecessary; users
+      // can already write their own functions like
+      //   var publishMyReactiveThingy = function (name, handler) {
+      //     Meteor.publish(name, function () {
+      //       var reactiveThingy = handler();
+      //       reactiveThingy.publishMe();
+      //     });
+      //   };
+      if (res && res._publishCursor)
+        res._publishCursor(sub);
     };
 
     sub._runHandler();
@@ -610,6 +618,7 @@ _.extend(Meteor._LivedataSubscription.prototype, {
     // tell listeners, so they can clean up
     for (var i = 0; i < self.stop_callbacks.length; i++)
       (self.stop_callbacks[i])();
+    self.stop_callbacks = [];
 
     // remove our data from the client (possibly unshadowing data from
     // lower priority subscriptions)
@@ -623,41 +632,6 @@ _.extend(Meteor._LivedataSubscription.prototype, {
           self.pending_data[name][id][key] = undefined;
       }
     }
-  },
-
-  _publishCursor: function (cursor, name) {
-    var self = this;
-    var collection = name || cursor.collection_name;
-
-    var observe_handle = cursor.observe({
-      added: function (obj) {
-        self.set(collection, obj._id, obj);
-        self.flush();
-      },
-      changed: function (obj, old_idx, old_obj) {
-        var set = {};
-        _.each(obj, function (v, k) {
-          if (!_.isEqual(v, old_obj[k]))
-            set[k] = v;
-        });
-        self.set(collection, obj._id, set);
-        var dead_keys = _.difference(_.keys(old_obj), _.keys(obj));
-        self.unset(collection, obj._id, dead_keys);
-        self.flush();
-      },
-      removed: function (old_obj, old_idx) {
-        self.unset(collection, old_obj._id, _.keys(old_obj));
-        self.flush();
-      }
-    });
-
-    // observe only returns after the initial added callbacks have
-    // run.  mark subscription as completed.
-    self.complete();
-    self.flush();
-
-    // register stop callback (expects lambda w/ no args).
-    self.onStop(_.bind(observe_handle.stop, observe_handle));
   }
 });
 
@@ -911,7 +885,11 @@ _.extend(Meteor._LivedataServer.prototype, {
       }
     }
 
-    // Return the result in whichever way the caller asked for it
+    // Return the result in whichever way the caller asked for it. Note that we
+    // do NOT block on the write fence in an analogous way to how the client
+    // blocks on the relevant data being visible, so you are NOT guaranteed that
+    // cursor observe callbacks have fired when your callback is invoked. (We
+    // can change this if there's a real use case.)
     if (callback) {
       callback(exception, ret);
       return;

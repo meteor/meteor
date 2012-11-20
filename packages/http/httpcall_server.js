@@ -2,8 +2,10 @@ Meteor.http = Meteor.http || {};
 
 (function() {
 
+  var path = __meteor_bootstrap__.require('path');
   var request = __meteor_bootstrap__.require('request');
   var url_util = __meteor_bootstrap__.require('url');
+  var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
 
 
   Meteor.http.call = function(method, url, options, callback) {

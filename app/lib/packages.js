@@ -1,7 +1,7 @@
-var _ = require('./third/underscore.js');
-var files = require('./files.js');
-var fs = require('fs');
 var path = require('path');
+var _ = require(path.join(__dirname, 'third', 'underscore.js'));
+var files = require(path.join(__dirname, 'files.js'));
+var fs = require('fs');
 
 // Under the hood, packages in the library (/package/foo), and user
 // applications, are both Packages -- they are just represented
@@ -85,7 +85,7 @@ _.extend(Package.prototype, {
     var self = this;
     self.name = name;
     self.source_root = files.get_package_dir(name);
-    self.serve_root = path.join('/packages', name);
+    self.serve_root = path.join(path.sep, 'packages', name);
     
     if (!self.source_root)
       throw new Error("The package named " + self.name + " does not exist.");
@@ -111,15 +111,15 @@ _.extend(Package.prototype, {
     var self = this;
     self.name = null;
     self.source_root = app_dir;
-    self.serve_root = '/';
+    self.serve_root = path.sep;
 
     var sources_except = function (api, except, tests) {
       return _(self._scan_for_sources(api, ignore_files || []))
         .reject(function (source_path) {
-          return ('/' + source_path + '/').indexOf('/' + except + '/') !== -1;
+          return (path.sep + source_path + path.sep).indexOf(path.sep + except + path.sep) !== -1;
         })
         .filter(function (source_path) {
-          var is_test = (('/' + source_path + '/').indexOf('/tests/') !== -1);
+          var is_test = ((path.sep + source_path + path.sep).indexOf(path.sep + 'tests' + path.sep) !== -1);
           return is_test === (!!tests);
         });
     };
@@ -133,7 +133,7 @@ _.extend(Package.prototype, {
       // 'standard meteor stuff' like minimongo.
       api.use(['deps', 'session', 'livedata', 'mongo-livedata', 'spark',
                'templating', 'startup', 'past']);
-      api.use(require('./project.js').get_packages(app_dir));
+      api.use(require(path.join(__dirname, 'project.js')).get_packages(app_dir));
 
       // -- Source files --
       api.add_files(sources_except(api, "server"), "client");
@@ -184,11 +184,11 @@ _.extend(Package.prototype, {
 
     // now make everything relative to source_root
     var prefix = self.source_root;
-    if (prefix[prefix.length - 1] !== '/')
-      prefix += '/';
+    if (prefix[prefix.length - 1] !== path.sep)
+      prefix += path.sep;
+
     return file_list.map(function (abs) {
-      if (prefix.length >= abs.length ||
-          abs.substr(0, prefix.length) !== prefix)
+      if (path.relative(prefix, abs).match(/\.\./))
         // XXX audit to make sure it works in all possible symlink
         // scenarios
         throw new Error("internal error: source file outside of parent?");

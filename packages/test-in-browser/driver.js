@@ -155,13 +155,42 @@ Template.event.events({
 });
 
 Template.event.get_details = function() {
+
+  var prepare = function(details) {
+    return _.compact(_.map(details, function(val, key) {
+
+      // You can end up with a an undefined value, e.g. using
+      // isNull without providing a message attribute: isNull(1).
+      // No need to display those.
+      if (!_.isUndefined(val)) {
+        return {
+          key: key,
+          val: val
+        };
+      } else {
+        return undefined;
+      }
+    }));
+  };
+
   var details = this.details;
+
   if (! details) {
     return null;
   } else {
-    // XXX XXX We need something better than stringify!
-    // stringify([undefined]) === "[null]"
-    return JSON.stringify(details);
+
+    var type = details.type;
+    var stack = details.stack;
+
+    details = _.clone(details);
+    delete details.type;
+    delete details.stack;
+
+    return {
+      type: type,
+      stack: stack,
+      details: prepare(details)
+    };
   }
 };
 

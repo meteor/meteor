@@ -24,9 +24,9 @@ LocalCollection._modify = function (doc, mod) {
     // replace the whole document
     for (var k in mod) {
       if (k.substr(0, 1) === '$')
-        throw Error("Field name may not start with '$'");
+        throw Error("When replacing document, field name may not start with '$'");
       if (/\./.test(k))
-        throw Error("Field name may not contain '.'");
+        throw Error("When replacing document, field name may not contain '.'");
     }
     new_doc = mod;
   } else {

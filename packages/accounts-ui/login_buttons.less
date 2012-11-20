@@ -91,13 +91,25 @@
 #login-buttons {
 
   .display-inline-block();
+  margin-right: 0.2px; // Fixes display on IE8: http://www.compsoft.co.uk/Blog/2009/11/inline-block-not-quite-inline-blocking.html
 
   // This seems to keep the height of the line from
   // being sensitive to the presence of the unicode down arrow,
   // which otherwise bumps the baseline down by 1px.
   line-height: 1;
 
-  .login-header {
+  .login-button {
+    position: relative; // so that we can position the image absolutely within the button
+  }
+
+  .login-buttons-with-only-one-button {
+    display: inline-block;
+    .login-button { display: inline-block; }
+    .login-text-and-button {
+      display: inline-block;
+    }
+  }
+  .login-display-name {
     display: inline-block;
     padding-right: 2px;
     line-height: 1.5;
@@ -106,12 +118,10 @@
   .loading {
     line-height: 1;
     background-image: url(data:image/gif;base64,R0lGODlhEAALAPQAAP///wAAANra2tDQ0Orq6gYGBgAAAC4uLoKCgmBgYLq6uiIiIkpKSoqKimRkZL6+viYmJgQEBE5OTubm5tjY2PT09Dg4ONzc3PLy8ra2tqCgoMrKyu7u7gAAAAAAAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh/hpDcmVhdGVkIHdpdGggYWpheGxvYWQuaW5mbwAh+QQJCwAAACwAAAAAEAALAAAFLSAgjmRpnqSgCuLKAq5AEIM4zDVw03ve27ifDgfkEYe04kDIDC5zrtYKRa2WQgAh+QQJCwAAACwAAAAAEAALAAAFJGBhGAVgnqhpHIeRvsDawqns0qeN5+y967tYLyicBYE7EYkYAgAh+QQJCwAAACwAAAAAEAALAAAFNiAgjothLOOIJAkiGgxjpGKiKMkbz7SN6zIawJcDwIK9W/HISxGBzdHTuBNOmcJVCyoUlk7CEAAh+QQJCwAAACwAAAAAEAALAAAFNSAgjqQIRRFUAo3jNGIkSdHqPI8Tz3V55zuaDacDyIQ+YrBH+hWPzJFzOQQaeavWi7oqnVIhACH5BAkLAAAALAAAAAAQAAsAAAUyICCOZGme1rJY5kRRk7hI0mJSVUXJtF3iOl7tltsBZsNfUegjAY3I5sgFY55KqdX1GgIAIfkECQsAAAAsAAAAABAACwAABTcgII5kaZ4kcV2EqLJipmnZhWGXaOOitm2aXQ4g7P2Ct2ER4AMul00kj5g0Al8tADY2y6C+4FIIACH5BAkLAAAALAAAAAAQAAsAAAUvICCOZGme5ERRk6iy7qpyHCVStA3gNa/7txxwlwv2isSacYUc+l4tADQGQ1mvpBAAIfkECQsAAAAsAAAAABAACwAABS8gII5kaZ7kRFGTqLLuqnIcJVK0DeA1r/u3HHCXC/aKxJpxhRz6Xi0ANAZDWa+kEAA7AAAAAAAAAAAA);
-    width: 60px;
+    width: 16px;
     background-position: center center;
     background-repeat: no-repeat;
   }
-
-  .single-login-button { display: inline-block; }
 }
 
 #login-buttons .login-button, .accounts-dialog .login-button {
@@ -168,13 +178,17 @@
 }
 
 .accounts-dialog .login-button {
-  display: block;
   width: auto;
   margin-bottom: 4px;
 }
 
 #login-buttons {
-  .login-header { margin-right: 4px; }
+  .login-buttons-padding {
+    display: inline-block;
+    width: 30px;
+  }
+
+  .login-display-name { margin-right: 4px; }
   .configure-button {
 
     .vertical-gradient(#f53, darken(#f53, 15%));
@@ -184,10 +198,16 @@
   }
 
   .login-image {
-    float: left;
-    margin: 2px 5px 2px 0px;
+    display: inline-block;
+    position: absolute;
+    left: 6px;
+    top: 6px;
     width: 16px;
     height: 16px;
+  }
+
+  .text-besides-image {
+    margin-left: 18px;
   }
 
   .no-services { color: red; }
@@ -200,6 +220,17 @@
     position: relative;
     padding-bottom: 8px;
   }
+
+  .login-text-and-button .loading, .login-link-and-dropdown-list .loading {
+    display: inline-block;
+  }
+  &.login-buttons-dropdown-align-left #login-dropdown-list .loading {
+    float: right;
+  }
+  &.login-buttons-dropdown-align-right #login-dropdown-list .loading {
+    float: left;
+  }
+
 
   .login-close-text-clear { clear: both; }
 
@@ -217,7 +248,7 @@
     text-decoration: underline;
 }
 
-.login-buttons-dropdown-align-right #login-buttons .login-close-text {
+#login-buttons.login-buttons-dropdown-align-right .login-close-text {
     float: right;
 }
 
@@ -311,11 +342,7 @@
   left: -@meteor-accounts-dialog-border-width;
 }
 
-.login-buttons-dropdown-align-right {
-  display: inline-block;
-}
-
-.login-buttons-dropdown-align-right #login-dropdown-list {
+#login-buttons.login-buttons-dropdown-align-right #login-dropdown-list {
   left: auto;
   right: -@meteor-accounts-dialog-border-width;
 }

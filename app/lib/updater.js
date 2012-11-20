@@ -1,4 +1,4 @@
-exports.CURRENT_VERSION = "0.5.0";
+exports.CURRENT_VERSION = "0.5.1";
 
 var fs = require("fs");
 var http = require("http");
@@ -6,7 +6,7 @@ var https = require("https");
 var path = require("path");
 var semver = require("semver");
 
-var files = require("./files.js");
+var files = require(path.join(__dirname, 'files.js'));
 
 var manifest_options = {
 /* uncomment for testing

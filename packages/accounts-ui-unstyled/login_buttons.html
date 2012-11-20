@@ -4,24 +4,24 @@
     try {{loginButtons align="right"}}
   -->
 
-<template name="_loginButtonsRight">
-  {{! put loginButtons in a wrapper element which should be styled to make
-      any dropdowns open with their right edge aligned with the right edge of
-      their container, sticking out to the left. }}
-  <div class="login-buttons-dropdown-align-right">
-    {{> _loginButtons}}
-  </div>
-</template>
-
-<!-- an alias for _loginButtons -->
-<template name="_loginButtonsLeft">
-  {{> _loginButtons}}
-</template>
-
 <template name="_loginButtons">
-  <div id="login-buttons">
+  <div id="login-buttons" class="login-buttons-dropdown-align-{{align}}">
     {{#if currentUser}}
-      {{> _loginButtonsLoggedIn}}
+      {{#if loggingIn}}
+        {{! We aren't actually logged in yet; we're just setting Meteor.userId
+            optimistically during an at-startup login-with-token. We expose this
+            state so other UIs can treat it specially, but we'll just treat it
+            as logged out. }}
+        {{#if dropdown}}
+          {{> _loginButtonsLoggingIn }}
+        {{else}}
+          <div class="login-buttons-with-only-one-button">
+            {{> _loginButtonsLoggingInSingleLoginButton }}
+          </div>
+        {{/if}}
+      {{else}}
+        {{> _loginButtonsLoggedIn}}
+      {{/if}}
     {{else}}
       {{> _loginButtonsLoggedOut}}
     {{/if}}
@@ -32,14 +32,9 @@
   {{#if dropdown}}
     {{> _loginButtonsLoggedInDropdown}}
   {{else}}
-    <div class="login-header">
-      {{#if currentUserLoaded}}
-        {{displayName}}
-      {{else}}
-        <div class="loading">&nbsp;</div>
-      {{/if}}
+    <div class="login-buttons-with-only-one-button">
+      {{> _loginButtonsLoggedInSingleLogoutButton}}
     </div>
-    <div class="login-button single-login-button" id="login-buttons-logout">Sign Out</div>
   {{/if}}
 </template>
 
@@ -50,7 +45,13 @@
         {{> _loginButtonsLoggedOutDropdown}}
       {{else}}
         {{#with singleService}} {{! at this point there must be only one configured services }}
-          {{> _loginButtonsLoggedOutSingleLoginButton}}
+          <div class="login-buttons-with-only-one-button">
+            {{#if loggingIn}}
+              {{> _loginButtonsLoggingInSingleLoginButton}}
+            {{else}}
+              {{> _loginButtonsLoggedOutSingleLoginButton}}
+            {{/if}}
+          </div>
         {{/with}}
       {{/if}}
     {{/if}}
@@ -67,4 +68,24 @@
   {{#if infoMessage}}
     <div class="message info-message">{{infoMessage}}</div>
   {{/if}}
+</template>
+
+<template name="_loginButtonsLoggingIn">
+  {{> _loginButtonsLoggingInPadding}}
+  <div class="loading">&nbsp;</div>
+  {{> _loginButtonsLoggingInPadding}}
+</template>
+
+<template name="_loginButtonsLoggingInPadding">
+  {{#unless dropdown}}
+    {{! invisible div used for correct height of surrounding div. this ensures
+        that the _loginButtons template is always the same height
+        and the rest of the page doesn't move up and down }}
+    <div class="login-buttons-padding">
+      <div class="login-button single-login-button" style="visibility: hidden;" id="login-buttons-logout">&nbsp;</div>
+    </div>
+  {{else}}
+    {{! just add some padding }}
+    <div class="login-buttons-padding" />
+  {{/unless}}
 </template>
