@@ -59,7 +59,8 @@
   Accounts.callLoginMethod = function (options) {
     options = _.extend({
       methodName: 'login',
-      methodArguments: []
+      methodArguments: [],
+      _suppressLoggingIn: false
     }, options);
     // Set defaults for callback arguments to no-op functions; make sure we
     // override falsey values too.
@@ -92,6 +93,10 @@
           reconnected = true;
           Accounts.callLoginMethod({
             methodArguments: [{resume: result.token}],
+            // Reconnect quiescence ensures that the user doesn't see an
+            // intermediate state before the login method finishes. So we don't
+            // need to show a logging-in animation.
+            _suppressLoggingIn: true,
             userCallback: function (error) {
               if (error) {
                 Accounts._makeClientLoggedOut();
@@ -114,7 +119,8 @@
       if (reconnected)
         return;
 
-      Accounts._setLoggingIn(false);
+      if (!options._suppressLoggingIn)
+        Accounts._setLoggingIn(false);
       if (error || !result) {
         error = error || new Error(
           "No result from call to " + options.methodName);
@@ -133,7 +139,8 @@
       options.userCallback();
     };
 
-    Accounts._setLoggingIn(true);
+    if (!options._suppressLoggingIn)
+      Accounts._setLoggingIn(true);
     Meteor.apply(
       options.methodName,
       options.methodArguments,
