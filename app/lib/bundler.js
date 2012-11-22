@@ -33,6 +33,17 @@ var uglify = require('uglify-js');
 var cleanCSS = require('clean-css');
 var _ = require(path.join(__dirname, 'third', 'underscore.js'));
 
+// XXX this is a hack to call the jsparse package from the bundler
+// put `ParseNode`, `Parser`, and `Parsers` in the global namespace
+require(path.join(__dirname, '..', '..', 'packages',
+                  'jsparse', 'parserlib'));
+// put `JSLexer` in the global namespace
+require(path.join(__dirname, '..', '..', 'packages',
+                  'jsparse', 'lexer'));
+// put `JSParser` in the global namespace
+require(path.join(__dirname, '..', '..', 'packages',
+                  'jsparse', 'parser'));
+
 // files to ignore when bundling. node has no globs, so use regexps
 var ignore_files = [
     /~$/, /^\.#/, /^#.*#$/,
@@ -460,6 +471,18 @@ _.extend(Bundle.prototype, {
     return _.keys(exts);
   },
 
+  _scan_for_docs_in_server_file: function (relPath) {
+    var source = this.files.server[relPath].toString('utf8');
+
+    var parser = new JSParser(source, {includeComments: true});
+    try {
+      var tree = parser.getSyntaxTree();
+      console.log(relPath + ": " + tree.name);
+    } catch (parseError) {
+      console.log(relPath + ": " + 'ERROR: ' + parseError.message);
+    }
+  },
+
   // dev_bundle_mode should be "skip", "symlink", or "copy"
   write_to_directory: function (output_path, project_dir, dev_bundle_mode) {
     var self = this;
@@ -554,6 +577,7 @@ _.extend(Bundle.prototype, {
       var full_path = path.join(build_path, path_in_bundle);
       app_json.load.push(path_in_bundle);
       files.mkdir_p(path.dirname(full_path), 0755);
+      self._scan_for_docs_in_server_file(rel_path);
       fs.writeFileSync(full_path, self.files.server[rel_path]);
     }
 
