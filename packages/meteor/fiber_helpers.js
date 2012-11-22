@@ -22,7 +22,7 @@ Meteor._noYieldsAllowed = function (f) {
 };
 
 // js2-mode AST blows up when parsing 'future.return()', so alias.
-Future.prototype.ret = Future.prototype.return;
+Future.prototype.ret = Future.prototype['return'];
 
 // Meteor._SynchronousQueue is a queue which runs task functions serially.
 // Tasks are assumed to be synchronous: ie, it's assumed that they are
