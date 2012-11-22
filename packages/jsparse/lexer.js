@@ -70,10 +70,10 @@ var rPunctuator = new RegExp(
     .join('|'), 'g');
 var rDivPunctuator = /\/=?/g;
 // Section 7.8.3
-var rHexLiteral = /0x[0-9a-fA-F]+$/g;
-var rOctLiteral = /0[0-7]+/g; // deprecated
+var rHexLiteral = /0[xX][0-9a-fA-F]+(?!\w)/g;
+var rOctLiteral = /0[0-7]+(?!\w)/g; // deprecated
 var rDecLiteral =
-      /(((0|[1-9][0-9]*)(\.[0-9]*)?)|\.[0-9]+)([Ee][+-]?[0-9]+)?/g;
+      /(((0|[1-9][0-9]*)(\.[0-9]*)?)|\.[0-9]+)([Ee][+-]?[0-9]+)?(?!\w)/g;
 // Section 7.8.4
 var rStringQuote = /["']/g;
 // Match one or more characters besides quotes, backslashes, or line ends
