@@ -37,14 +37,13 @@ LocalCollection._containsAll = function (list, otherList) {
 LocalCollection._gt = function (otherVal, val) {
   if ((val === null) || (otherVal === null)) {
     return true;
-  } else if (_.isArray(otherVal)) {
-    // XXX: check if val is array, semantics?
-    return _.max(otherVal) > val;
   } else if (_.isObject(otherVal) && _.isObject(val)) {
     // XXX: find material about actual semantics
     var minOtherVal = _.min(_.flatten(_.values(otherVal)));
     var minVal = _.min(_.flatten(_.values(val)));
     return minOtherVal > minVal;
+  } else if (_.isArray(otherVal)) {
+    return _.max(otherVal) > val;
   } else {
     return otherVal > val;
   }
@@ -54,12 +53,12 @@ LocalCollection._gt = function (otherVal, val) {
 LocalCollection._lt = function (otherVal, val) {
   if ((val === null) || (otherVal === null)) {
     return true;
-  } else if (_.isArray(otherVal)) {
-    return _.min(otherVal) < val;
   } else if (_.isObject(otherVal) && _.isObject(val)) {
     var minOtherVal = _.min(_.flatten(_.values(otherVal)));
     var minVal = _.min(_.flatten(_.values(val)));
     return minOtherVal < minVal;
+  } else if (_.isArray(otherVal)) {
+    return _.min(otherVal) < val;
   } else {
     return otherVal < val;
   }
