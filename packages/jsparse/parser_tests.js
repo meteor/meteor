@@ -562,7 +562,10 @@ Tinytest.add("jsparse - syntax forms", function (test) {
     ["({null:3})",
      "program(expressionStmnt(parens(`(` object({ prop(idPropName(null) : number(3)) }) `)`) ;()))"],
     ["({if:3})",
-     "program(expressionStmnt(parens(`(` object({ prop(idPropName(if) : number(3)) }) `)`) ;()))"]
+     "program(expressionStmnt(parens(`(` object({ prop(idPropName(if) : number(3)) }) `)`) ;()))"],
+    // ES5 line continuations in string literals
+    ["var x = 'a\\\nb\\\nc';",
+     "program(varStmnt(var varDecl(x = string(`'a\\\nb\\\nc'`)) ;))"]
   ];
   _.each(trials, function (tr) {
     tester.goodParse(tr[0], tr[1]);
