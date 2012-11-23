@@ -233,8 +233,14 @@ JSParser.prototype.getSyntaxTree = function () {
                      list(token(',')))),
                  token(']')));
 
+  // "IdentifierName" in ES5 allows reserved words, like in a property access
+  // or a key of an object literal.
+  // Put IDENTIFIER last so it shows up in the error message.
+  var identifierName = or(tokenType('NULL'), tokenType('BOOLEAN'),
+                          tokenType('KEYWORD'), tokenType('IDENTIFIER'));
+
   var propertyName = expecting('propertyName', or(
-    node('idPropName', tokenType('IDENTIFIER')),
+    node('idPropName', identifierName),
     node('numPropName', tokenType('NUMBER')),
     node('strPropName', tokenType('STRING'))));
   var nameColonValue = expecting(
@@ -281,7 +287,8 @@ JSParser.prototype.getSyntaxTree = function () {
                      objectLiteral,
                      functionExpression));
 
-  var dotEnding = seq(token('.'), tokenType('IDENTIFIER'));
+
+  var dotEnding = seq(token('.'), identifierName);
   var bracketEnding = seq(token('['), expression, token(']'));
   var callArgs = seq(token('('),
                      or(lookAheadToken(')'),
