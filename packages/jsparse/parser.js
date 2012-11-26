@@ -247,13 +247,28 @@ JSParser.prototype.getSyntaxTree = function () {
     'propertyName',
     node('prop', seq(propertyName, token(':'), assignmentExpression)));
 
+  // Allow trailing comma in object literal, per ES5.  Trailing comma
+  // must follow a `name:value`, that is, `{,}` is invalid.
+  //
+  // We can't just use a normal comma list(), because it will seize
+  // on the comma as a sign that the list continues.  Instead,
+  // we specify a list of either ',' or nameColonValue, using positive
+  // and negative lookAheads to constrain the sequence.  The grammar
+  // is ordered so that error messages will always say
+  // "Expected propertyName" or "Expected ," as appropriate, not
+  // "Expected ," when the look-ahead is negative or "Expected }".
   var objectLiteral =
         node('object',
              seq(token('{'),
                  or(lookAheadToken('}'),
-                    list(nameColonValue,
-                         token(','))),
-                 token('}')));
+                    and(not(lookAheadToken(',')),
+                        list(or(seq(token(','),
+                                    expecting('propertyName',
+                                              not(lookAheadToken(',')))),
+                                seq(nameColonValue,
+                                    or(lookAheadToken('}'),
+                                       lookAheadToken(','))))))),
+                 expecting('propertyName', token('}'))));
 
   var functionMaybeNameRequired = booleanFlaggedParser(
     function (nameRequired) {

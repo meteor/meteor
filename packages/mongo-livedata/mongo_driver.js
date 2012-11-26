@@ -490,7 +490,7 @@ _Mongo.prototype._observe = function (cursorDescription, ordered, callbacks) {
       // take place.
       liveResultsSet = new LiveResultsSet(
         cursorDescription,
-        self._createSynchronousCursor(cursorDescription),
+        self,
         ordered,
         function () {
           delete self._liveResultsSets[observeKey];
@@ -516,14 +516,18 @@ _Mongo.prototype._observe = function (cursorDescription, ordered, callbacks) {
   return observeHandle;
 };
 
-var LiveResultsSet = function (cursorDescription, synchronousCursor, ordered,
+var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
                                stopCallback) {
   var self = this;
 
   self._cursorDescription = cursorDescription;
-  self._synchronousCursor = synchronousCursor;
+  self._mongoHandle = mongoHandle;
   self._ordered = ordered;
   self._stopCallbacks = [stopCallback];
+
+  // This constructor cannot yield, so we don't create the synchronousCursor yet
+  // (since that can yield).
+  self._synchronousCursor = null;
 
   // previous results snapshot.  on each poll cycle, diffs against
   // results drives the callbacks.
@@ -679,7 +683,12 @@ _.extend(LiveResultsSet.prototype, {
     self._pendingWrites = [];
 
     // Get the new query results. (These calls can yield.)
-    self._synchronousCursor.rewind();
+    if (self._synchronousCursor) {
+      self._synchronousCursor.rewind();
+    } else {
+      self._synchronousCursor = self._mongoHandle._createSynchronousCursor(
+        self._cursorDescription);
+    }
     var newResults = self._synchronousCursor.getRawObjects(self._ordered);
     var oldResults = self._results;
 
