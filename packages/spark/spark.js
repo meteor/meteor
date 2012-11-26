@@ -304,6 +304,17 @@ _.extend(Spark._Renderer.prototype, {
     });
     self.annotations = {};
 
+    // Save original versions of every 'value' property. We want elements that
+    // have a value *attribute*, as well as form elements that have a value
+    // property but no value attribute (textarea and select).
+    //
+    // We save it in a one-element array expando. We use the array because IE8
+    // gets confused by expando properties with scalar values and exposes them
+    // as HTML attributes.
+    _.each(DomUtils.findAll(ret, '[value], textarea, select'), function (node) {
+      node._sparkOriginalRenderedValue = [DomUtils.getElementValue(node)];
+    });
+
     return ret;
   }
 

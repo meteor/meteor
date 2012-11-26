@@ -2638,10 +2638,7 @@ testAsyncMulti(
   })());
 
 
-Tinytest.add("spark - controls", function(test) {
-
-  // Radio buttons
-
+Tinytest.add("spark - controls - radio", function(test) {
   var R = ReactiveVar("");
   var change_buf = [];
   var div = OnscreenDiv(renderWithPreservation(function() {
@@ -2713,48 +2710,109 @@ Tinytest.add("spark - controls", function(test) {
   test.equal(div.text(), "Band: FM");
 
   div.kill();
+});
 
-  // Textarea
+_.each(['textarea', 'text', 'password', 'submit', 'button',
+        'reset', 'select', 'hidden'], function (type) {
+  Tinytest.add("spark - controls - " + type, function(test) {
+    var R = ReactiveVar({x:"test"});
+    var R2 = ReactiveVar("");
+    var div = OnscreenDiv(renderWithPreservation(function() {
+      // Re-render when R2 is changed, even though it doesn't affect HTML.
+      R2.get();
+      if (type === 'textarea') {
+        return '<textarea id="someId">This is a ' + R.get().x + '</textarea>';
+      } else if (type === 'select') {
+        var options = ['This is a test', 'This is a fridge',
+                       'This is a frog', 'foobar', 'This is a photograph',
+                       'This is a monkey', 'This is a donkey'];
+        return '<select id="someId">' + _.map(options, function (o) {
+          var maybeSel = ('This is a ' + R.get().x) === o ? 'selected' : '';
+          return '<option ' + maybeSel + '>' + o + '</option>';
+        }).join('') + '</select>';
+      } else {
+        return '<input type="' + type + '" id="someId" value="This is a ' +
+          R.get().x + '">';
+      }
+    }));
+    div.show(true);
+    var canFocus = (type !== 'hidden');
 
-  R = ReactiveVar({x:"test"});
-  div = OnscreenDiv(renderWithPreservation(function() {
-    return '<textarea id="mytextarea">This is a '+
-      R.get().x+'</textarea>';
-  }));
-  div.show(true);
+    var input = div.node().firstChild;
+    if (type === 'textarea' || type === 'select') {
+      test.equal(input.nodeName, type.toUpperCase());
+    } else {
+      test.equal(input.nodeName, 'INPUT');
+      test.equal(input.type, type);
+    }
+    test.equal(DomUtils.getElementValue(input), "This is a test");
+    test.equal(input._sparkOriginalRenderedValue, ["This is a test"]);
 
-  var textarea = div.node().firstChild;
-  test.equal(textarea.nodeName, "TEXTAREA");
-  test.equal(textarea.value, "This is a test");
+    // value updates reactively
+    R.set({x:"fridge"});
+    Meteor.flush();
+    test.equal(DomUtils.getElementValue(input), "This is a fridge");
+    test.equal(input._sparkOriginalRenderedValue, ["This is a fridge"]);
 
-  // value updates reactively
-  R.set({x:"fridge"});
-  Meteor.flush();
-  test.equal(textarea.value, "This is a fridge");
+    if (canFocus) {
+      // ...unless focused
+      focusElement(input);
+      R.set({x:"frog"});
+      Meteor.flush();
+      test.equal(DomUtils.getElementValue(input), "This is a fridge");
+      test.equal(input._sparkOriginalRenderedValue, ["This is a fridge"]);
 
-  // ...unless focused
-  focusElement(textarea);
-  R.set({x:"frog"});
-  Meteor.flush();
-  test.equal(textarea.value, "This is a fridge");
+      // blurring and re-setting works
+      blurElement(input);
+      Meteor.flush();
+      test.equal(DomUtils.getElementValue(input), "This is a fridge");
+      test.equal(input._sparkOriginalRenderedValue, ["This is a fridge"]);
+    }
+    R.set({x:"frog"});
+    Meteor.flush();
+    test.equal(DomUtils.getElementValue(input), "This is a frog");
+    test.equal(input._sparkOriginalRenderedValue, ["This is a frog"]);
 
-  // blurring and re-setting works
-  blurElement(textarea);
-  Meteor.flush();
-  test.equal(textarea.value, "This is a fridge");
-  R.set({x:"frog"});
-  Meteor.flush();
-  test.equal(textarea.value, "This is a frog");
+    // Setting a value (similar to user typing) should prevent value from being
+    // reverted if the div is re-rendered but the rendered value (ie, R) does
+    // not change.
+    DomUtils.setElementValue(input, "foobar");
+    R2.set("change");
+    Meteor.flush();
+    test.equal(DomUtils.getElementValue(input), "foobar");
+    test.equal(input._sparkOriginalRenderedValue, ["This is a frog"]);
 
-  // Setting a value (similar to user typing) should
-  // not prevent value from being updated reactively.
-  textarea.value = "foobar";
-  R.set({x:"photograph"});
-  Meteor.flush();
-  test.equal(textarea.value, "This is a photograph");
+    // ... but if the actual rendered value changes, that should take effect.
+    R.set({x:"photograph"});
+    Meteor.flush();
+    test.equal(DomUtils.getElementValue(input), "This is a photograph");
+    test.equal(input._sparkOriginalRenderedValue, ["This is a photograph"]);
 
+    // If the rendered value and user value change in the same way (eg, the user
+    // changed it and then invoked a menthod that set the database value based
+    // on what they changed), make sure that the _sparkOriginalRenderedValue
+    // gets updated too.
+    DomUtils.setElementValue(input, "This is a monkey");
+    R.set({x:"monkey"});
+    Meteor.flush();
+    test.equal(DomUtils.getElementValue(input), "This is a monkey");
+    test.equal(input._sparkOriginalRenderedValue, ["This is a monkey"]);
 
-  div.kill();
+    if (canFocus) {
+      // The same as the previous test... except make sure that it still works
+      // if the input is focused. ie, imagine that the user edited the field and
+      // hit enter with the field still focused, updating the database to match
+      // the field and keeping the field focused.
+      DomUtils.setElementValue(input, "This is a donkey");
+      focusElement(input);
+      R.set({x:"donkey"});
+      Meteor.flush();
+      test.equal(DomUtils.getElementValue(input), "This is a donkey");
+      test.equal(input._sparkOriginalRenderedValue, ["This is a donkey"]);
+    }
+
+    div.kill();
+  });
 });
 
 Tinytest.add("spark - oldschool landmark matching", function(test) {
