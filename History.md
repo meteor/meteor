@@ -1,6 +1,10 @@
 
 ## vNEXT
 
+## v0.5.2
+
+* Fix 0.5.1 regression: Cursor `observe` works during server startup.  #507
+
 ## v0.5.1
 
 * Speed up server-side subscription handling by avoiding redundant work
