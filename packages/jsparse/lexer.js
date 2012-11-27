@@ -400,4 +400,12 @@ JSLexer.prototype.next = function () {
   return lexeme(keywordLookup[' '+word] || 'IDENTIFIER');
 };
 
+JSLexer.prettyOffset = function (code, pos) {
+  var codeUpToPos = code.substring(0, pos);
+  var startOfLine = codeUpToPos.lastIndexOf('\n') + 1;
+  var indexInLine = pos - startOfLine; // 0-based
+  var lineNum = codeUpToPos.replace(/[^\n]+/g, '').length + 1; // 1-based
+  return "line " + lineNum + ", offset " + indexInLine;
+};
+
 })();
