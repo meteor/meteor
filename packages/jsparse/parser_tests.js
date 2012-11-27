@@ -141,7 +141,8 @@ var makeTester = function (test) {
     // assert that a tokenization error occurred at '@'.
     badToken: function (code) {
       var constructMessage = function (pos, text) {
-        return "Bad token at position " + pos + ", text `" + text + "`";
+        var nicePos = JSLexer.prettyOffset(code, pos);
+        return "Bad token at " + nicePos + ", text `" + text + "`";
       };
       var pos = code.indexOf('`');
       var text = code.match(/`(.*?)`/)[1];
@@ -176,7 +177,7 @@ var makeTester = function (test) {
     badParse: function (code) {
       var constructMessage = function (whatExpected, pos, found, after) {
         return "Expected " + whatExpected + (after ? " after " + after : "") +
-          " at position " + pos + ", found " + found;
+          " at " + JSLexer.prettyOffset(code, pos) + ", found " + found;
       };
       var pos = code.indexOf('`');
 

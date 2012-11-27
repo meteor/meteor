@@ -70,7 +70,8 @@ JSParser.prototype.consumeNewToken = function () {
   do {
     lex = lexer.next();
     if (lex.isError())
-      throw new Error("Bad token at position " + lex.startPos() +
+      throw new Error("Bad token at " +
+                      JSLexer.prettyOffset(lexer.code, lex.startPos()) +
                       ", text `" + lex.text() + "`");
     else if (lex.type() === "NEWLINE")
       self.isLineTerminatorHere = true;
@@ -89,7 +90,7 @@ JSParser.prototype.getParseError = function (expecting, found) {
   if (this.oldToken)
     msg += " after " + this.oldToken;
   var pos = this.pos;
-  msg += " at position " + pos;
+  msg += " at " + JSLexer.prettyOffset(this.lexer.code, pos);
   msg += ", found " + (found || this.newToken);
   return new Error(msg);
 };
