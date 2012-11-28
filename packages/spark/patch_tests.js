@@ -138,6 +138,7 @@ Tinytest.add("spark - patch - copyAttributes", function(test) {
         var nodeHtml = buf.join('');
         var frag = DomUtils.htmlToFragment(nodeHtml);
         var n = frag.firstChild;
+        n._sparkOriginalRenderedChecked = [n.checked];
         if (! node) {
           node = n;
         } else {

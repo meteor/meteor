@@ -361,15 +361,25 @@ Spark._Patcher._copyAttributes = function(tgt, src) {
     tgt.style.cssText = '';
 
   var isRadio = false;
+  var finalChecked = null;
   if (tgt.nodeName === "INPUT") {
     // Record for later whether this is a radio button.
     isRadio = (tgt.type === 'radio');
-    // Clearing the attributes of a checkbox won't necessarily
-    // uncheck it, eg in FF12, so we uncheck explicitly
-    // (if necessary; we don't want to generate spurious
-    // propertychange events in old IE).
-    if (tgt.checked === true && src.checked === false) {
-      tgt.checked = false;
+
+    // Figure out whether this should be checked or not. If the re-rendering
+    // changed its idea of checkedness, go with that; otherwsie go with whatever
+    // the control's current setting is.
+    if (isRadio || tgt.type === 'checkbox') {
+      var tgtOriginalChecked = !!tgt._sparkOriginalRenderedChecked &&
+            tgt._sparkOriginalRenderedChecked[0];
+      var srcOriginalChecked = !!src._sparkOriginalRenderedChecked &&
+            src._sparkOriginalRenderedChecked[0];
+      if (tgtOriginalChecked === srcOriginalChecked) {
+        finalChecked = !!tgt.checked;
+      } else {
+        finalChecked = !!srcOriginalChecked;
+        tgt._sparkOriginalRenderedChecked = [finalChecked];
+      }
     }
   }
 
@@ -446,9 +456,6 @@ Spark._Patcher._copyAttributes = function(tgt, src) {
     if (srcExpando)
       src._sparkOriginalRenderedValue = srcExpando;
 
-    if (typeof tgt.checked !== "undefined" && src.checked)
-      tgt.checked = src.checked;
-
     if (src.name)
       tgt.name = src.name;
 
@@ -463,8 +470,7 @@ Spark._Patcher._copyAttributes = function(tgt, src) {
         if (name === "type") {
         // can't change type of INPUT in IE; don't support it
         } else if (name === "checked") {
-          tgt.checked = tgt.defaultChecked = (value && value !== "false");
-          tgt.setAttribute("checked", "checked");
+          // handled specially below
         } else if (name === "style") {
           tgt.style.cssText = src.style.cssText;
         } else if (name === "class") {
@@ -543,5 +549,20 @@ Spark._Patcher._copyAttributes = function(tgt, src) {
     // ... and overwrite the saved rendered value too, so that the next time
     // around we'll be comparing to this rendered value instead of the old one.
     tgt._sparkOriginalRenderedValue = [srcOriginalRenderedValue];
+  }
+
+  // Deal with checkboxes and radios.
+  if (finalChecked !== null) {
+    // Don't do a no-op write to 'checked', since in some browsers that triggers
+    // events.
+    if (tgt.checked !== finalChecked)
+      tgt.checked = finalChecked;
+
+    // Set various other fields related to checkedness.
+    tgt.defaultChecked = finalChecked;
+    if (finalChecked)
+      tgt.setAttribute("checked", "checked");
+    else
+      tgt.removeAttribute("checked");
   }
 };

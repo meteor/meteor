@@ -2712,6 +2712,74 @@ Tinytest.add("spark - controls - radio", function(test) {
   div.kill();
 });
 
+Tinytest.add("spark - controls - checkbox", function(test) {
+  var labels = ["Foo", "Bar", "Baz"];
+  var Rs = {};
+  _.each(labels, function (label) {
+    Rs[label] = ReactiveVar(false);
+  });
+  var changeBuf = [];
+  var div = OnscreenDiv(renderWithPreservation(function() {
+    var buf = [];
+    _.each(labels, function (label) {
+      var checked = Rs[label].get() ? 'checked="checked"' : '';
+      buf.push('<input type="checkbox" name="checky" '+
+               'value="'+label+'" '+checked+'/>');
+    });
+    return buf.join('');
+  }));
+
+  Meteor.flush();
+
+  // get the three boxes; they should be considered 'labeled' by the patcher and
+  // not change identities!
+  var boxes = nodesToArray(div.node().getElementsByTagName("INPUT"));
+
+  test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
+
+  // Re-render with first one checked.
+  Rs.Foo.set(true);
+  Meteor.flush();
+  test.equal(_.pluck(boxes, 'checked'), [true, false, false]);
+
+  // Re-render with first one unchecked again.
+  Rs.Foo.set(false);
+  Meteor.flush();
+  test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
+
+  // User clicks the second one.
+  clickElement(boxes[1]);
+  test.equal(_.pluck(boxes, 'checked'), [false, true, false]);
+  Meteor.flush();
+  test.equal(_.pluck(boxes, 'checked'), [false, true, false]);
+
+  // Re-render with third one checked. Second one should stay checked because
+  // it's a user update!
+  Rs.Baz.set(true);
+  Meteor.flush();
+  test.equal(_.pluck(boxes, 'checked'), [false, true, true]);
+
+  // User turns second and third off.
+  clickElement(boxes[1]);
+  clickElement(boxes[2]);
+  test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
+  Meteor.flush();
+  test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
+
+  // Re-render with first one checked. Third should stay off because it's a user
+  // update!
+  Rs.Foo.set(true);
+  Meteor.flush();
+  test.equal(_.pluck(boxes, 'checked'), [true, false, false]);
+
+  // Re-render with first one unchecked. Third should still stay off.
+  Rs.Foo.set(false);
+  Meteor.flush();
+  test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
+
+  div.kill();
+});
+
 _.each(['textarea', 'text', 'password', 'submit', 'button',
         'reset', 'select', 'hidden'], function (type) {
   Tinytest.add("spark - controls - " + type, function(test) {

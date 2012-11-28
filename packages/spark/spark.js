@@ -311,8 +311,14 @@ _.extend(Spark._Renderer.prototype, {
     // We save it in a one-element array expando. We use the array because IE8
     // gets confused by expando properties with scalar values and exposes them
     // as HTML attributes.
+    //
+    // We also save the values of CHECKED for radio and checkboxes.
     _.each(DomUtils.findAll(ret, '[value], textarea, select'), function (node) {
       node._sparkOriginalRenderedValue = [DomUtils.getElementValue(node)];
+    });
+    _.each(DomUtils.findAll(ret, 'input[type=checkbox], input[type=radio]'),
+           function (node) {
+      node._sparkOriginalRenderedChecked = [node.checked];
     });
 
     return ret;
