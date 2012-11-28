@@ -168,6 +168,13 @@ _.each(['observe', '_observeUnordered'], function (observeMethod) {
     // After calling stop, no more callbacks are called.
     c.insert({_id: 5, name: "iris", tags: ["flower"]});
     expect("");
+
+    // Test that observing a lookup by ID works.
+    handle = c.find(4)[observeMethod](makecb('b'));
+    expect('ab4_');
+    c.update(4, {$set: {eek: 5}});
+    expect('cb4_');
+    handle.stop();
   });
 });
 
