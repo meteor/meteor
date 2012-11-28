@@ -66,7 +66,11 @@ LocalCollection.Cursor = function (collection, selector, options) {
   if ((typeof selector === "string") || (typeof selector === "number")) {
     // stash for fast path
     this.selector_id = selector;
-    this.selector_f = LocalCollection._compileSelector(selector);
+    // No need to compile selector because direct look-up is performed.
+  } else if (selector instanceof Object && _.size(selector) === 1 && "_id" in selector &&
+            ((typeof selector._id === "string") || (typeof selector._id === "number"))) {
+    // ditto
+    this.selector_id = selector._id;
   } else {
     this.selector_f = LocalCollection._compileSelector(selector);
     this.sort_f = options.sort ? LocalCollection._compileSort(options.sort) : null;
