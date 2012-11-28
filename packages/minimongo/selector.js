@@ -321,6 +321,8 @@ LocalCollection._exprForSelector = function (selector, literals) {
 LocalCollection._exprForDocumentPredicate = function (op, value, literals) {
   if (op === '$or') {
     var clauses = [];
+    if (value.length === 0)
+      throw Error("$and/$or/$nor must be a nonempty array");
     _.each(value, function (c) {
       clauses.push(LocalCollection._exprForSelector(c, literals));
     });
@@ -330,6 +332,8 @@ LocalCollection._exprForDocumentPredicate = function (op, value, literals) {
 
   if (op === '$and') {
     var clauses = [];
+    if (value.length === 0)
+      throw Error("$and/$or/$nor must be a nonempty array");
     _.each(value, function (c) {
       clauses.push(LocalCollection._exprForSelector(c, literals));
     });
@@ -339,6 +343,8 @@ LocalCollection._exprForDocumentPredicate = function (op, value, literals) {
 
   if (op === '$nor') {
     var clauses = [];
+    if (value.length === 0)
+      throw Error("$and/$or/$nor must be a nonempty array");
     _.each(value, function (c) {
       clauses.push("!(" + LocalCollection._exprForSelector(c, literals) + ")");
     });
