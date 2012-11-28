@@ -43,6 +43,11 @@ DomUtils = {};
 
   var testDiv = document.createElement("div");
   testDiv.innerHTML = "   <link/><table></table><select><!----></select>";
+  // Need to wrap in a div rather than directly creating SELECT to avoid
+  // *another* IE bug.
+  var testSelectDiv = document.createElement("div");
+  testSelectDiv.innerHTML = "<select><option selected>Foo</option></select>";
+  testSelectDiv.firstChild.setAttribute("name", "myname");
 
   // Tests that, if true, indicate browser quirks present.
   var quirks = {
@@ -55,10 +60,16 @@ DomUtils = {};
     // IE loses some tags in some environments (requiring extra wrapper).
     tagsLost: testDiv.getElementsByTagName("link").length === 0,
 
-    // IE <= 8 loses HTML comments in <select> and <option> tags.
-    // Assert that we have IE's mergeAttributes to use in our work-around.
-    commentsLost: ((! testDiv.getElementsByTagName("select")[0].firstChild)
-                   && testDiv.mergeAttributes)
+    // IE <= 9 loses HTML comments in <select> and <option> tags.
+    commentsLost: (! testDiv.getElementsByTagName("select")[0].firstChild),
+
+    selectValueMustBeFromAttribute: (testSelectDiv.firstChild.value !== "Foo"),
+
+    // In IE7, setAttribute('name', foo) doesn't show up in rendered HTML.
+    // (In FF3, outerHTML is undefined, but it doesn't have this quirk.)
+    mustSetNameInCreateElement: (
+      testSelectDiv.firstChild.outerHTML &&
+        testSelectDiv.firstChild.outerHTML.indexOf("myname") === -1)
   };
 
   // Set up map of wrappers for different nodes.
@@ -157,15 +168,41 @@ DomUtils = {};
         // the DOM.
         // Here we build an array of fake tags and iterate over that.
         _.each(container.getElementsByTagName("ins"), function (ins) {
-          if (ins.getAttribute("domutilsrealtagname"))
+          if (ins.getAttribute("domutilsrealtagname")) {
             fakeTags.push(ins);
+          }
         });
+
         _.each(fakeTags, function (fakeTag) {
-          var realTag = document.createElement(
-            fakeTag.getAttribute('domutilsrealtagname'));
+          var tagName = fakeTag.getAttribute('domutilsrealtagname');
+          if (quirks.mustSetNameInCreateElement &&
+              fakeTag.getAttribute('name')) {
+            // IE7 can't set 'name' with setAttribute, but it has this
+            // crazy syntax for setting it at create time.
+            // http://webbugtrack.blogspot.com/2007/10/bug-235-createelement-is-broken-in-ie.html
+            // http://msdn.microsoft.com/en-us/library/ms536389.aspx
+            tagName = "<" + tagName + " name='" +
+              _.escape(fakeTag.getAttribute('name')) + "'/>";
+          }
+          var realTag = document.createElement(tagName);
           fakeTag.removeAttribute('domutilsrealtagname');
-          // copy all attributes
-          realTag.mergeAttributes(fakeTag, false);
+          // copy all attributes. for some reason mergeAttributes doesn't work
+          // here: eg, it doesn't copy SELECTED or VALUE. (Probably because
+          // these attributes would be expando on INS?)
+          var fakeAttrs = fakeTag.attributes;
+          for (var i = 0; i < fakeAttrs.length; ++i) {
+            var fakeAttr = fakeAttrs.item(i);
+            if (fakeAttr.specified) {
+              var name = fakeAttr.name.toLowerCase();
+              var value = String(fakeAttr.value);
+              // IE7 gets confused if you try to setAttribute('selected', ''),
+              // so be a little more explicit.
+              if (name === 'selected' && value === '')
+                value = 'selected';
+              realTag.setAttribute(name, value);
+            }
+          }
+
           // move all children
           while (fakeTag.firstChild)
             realTag.appendChild(fakeTag.firstChild);
@@ -480,5 +517,44 @@ DomUtils = {};
     return DomUtils.rangeToHtml(node, node);
   };
 
+  // Sets the value of an element, portably across browsers. There's a special
+  // case for SELECT elements in IE.
+  DomUtils.setElementValue = function (node, value) {
+    // Try to assign the value.
+    node.value = value;
+    if (node.value === value || node.nodeName !== 'SELECT')
+      return;
+
+    // IE (all versions) appears to only let you assign SELECT values which
+    // match valid OPTION values... and moreover, the OPTION value must be
+    // explicitly given as an attribute, not just as the text. So we hunt for
+    // the OPTION and select it.
+    var options = DomUtils.findAll(node, 'option');
+    for (var i = 0; i < options.length; ++i) {
+      if (DomUtils.getElementValue(options[i]) === value) {
+        options[i].selected = true;
+        return;
+      }
+    }
+  };
+
+  // Gets the value of an element, portably across browsers. There's a special
+  // case for SELECT elements in IE.
+  DomUtils.getElementValue = function (node) {
+    if (!quirks.selectValueMustBeFromAttribute)
+      return node.value;
+
+    if (node.nodeName === 'OPTION') {
+      // Inspired by jQuery.valHooks.option.get.
+      var val = node.attributes.value;
+      return !val || val.specified ? node.value : node.text;
+    } else if (node.nodeName === 'SELECT') {
+      if (node.selectedIndex < 0)
+        return null;
+      return DomUtils.getElementValue(node.options[node.selectedIndex]);
+    } else {
+      return node.value;
+    }
+  };
 
 })();
