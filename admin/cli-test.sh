@@ -1,10 +1,9 @@
 #!/bin/bash
 
 # NOTE: by default this tests the working copy, not the installed meteor.
-# It does this by assuming you're running it from its own directory.
 # To test the installed meteor, pass in --global
 
-
+cd `dirname $0`
 METEOR=`pwd`/../meteor
 
 #If this ever takes more options, use getopt
