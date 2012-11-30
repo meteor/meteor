@@ -1,6 +1,6 @@
 {
   "name": "meteor",
-  "version": "0.5.2",
+  "version": "0.5.2-1",
   "bin": {
     "meteor": "app/meteor/meteor.js"
   },

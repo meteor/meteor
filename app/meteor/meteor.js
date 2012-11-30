@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 var path = require('path');
 var files = require(path.join(__dirname, '..', 'lib', 'files.js'));
 var _ = require(path.join(__dirname, '..', 'lib', 'third', 'underscore.js'));
