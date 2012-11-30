@@ -1,6 +1,5 @@
 .DS_Store
 *~
-/dev_bundle
 /dev_bundle*.tar.gz
 /dist
 \#*\#
