@@ -14,28 +14,55 @@ var mongo_runner = require(path.join(__dirname, '..', 'lib', 'mongo_runner.js'))
 var _ = require(path.join(__dirname, '..', 'lib', 'third', 'underscore.js'));
 
 ////////// Globals //////////
+//XXX: Refactor to not have globals anymore?
 
 // list of log objects from the child process.
 var server_log = [];
 
-var RestartingStatus = {
+// port that mongo is running on
+var mongo_port;
+
+var Status = {
   running: false, // is server running now?
   crashing: false, // does server crash whenever we start it?
   listening: false, // do we expect the server to be listening now.
   counter: 0, // how many crashes in rapid succession
   code: 0,
+  shouldRestart: true,
+  shuttingDown: false,
 
+  justCrash : function () {
+    var self = this;
+    log_to_clients({'exit': "Your application is exiting."});
+    process.stdout.write("Attempting to kill mongo on " + mongo_port + "\n");
+    self.shuttingDown = true;
+    _.defer(function() {mongo_runner._find_mongo_and_kill_it_dead(mongo_port, function (err) {
+      if (err)
+        process.stdout.write(err.reason + "\n");
+      process.exit(self.code);
+    });});
+  },
   reset: function () {
     this.crashing = false;
     this.counter = 0;
   },
 
   hard_crashed: function () {
+    var self = this;
+    if (!self.shouldRestart) {
+      self.justCrash();
+      return;
+    }
     log_to_clients({'exit': "Your application is crashing. Waiting for file change."});
     this.crashing = true;
   },
 
   soft_crashed: function () {
+    var self = this;
+    if (!self.shouldRestart) {
+      self.justCrash();
+      return;
+    }
     if (this.counter === 0)
       setTimeout(function () {
         this.counter = 0;
@@ -49,28 +76,8 @@ var RestartingStatus = {
   }
 };
 
-var _justCrash = function () {
-  log_to_clients({'exit': "Your application is crashing."});
-  process.exit(this.code);
-};
 
-var OnceStatus = {
-  running: false, // is server running now?
-  crashing: false, // does server crash whenever we start it?
-  listening: false, // do we expect the server to be listening now.
-  counter: 0, // how many crashes in rapid succession
 
-  reset: function () {
-    log_to_clients({'exit': "Meteor is exiting instead of restarting."});
-    process.exit(0);
-  },
-
-  hard_crashed: _justCrash,
-
-  soft_crashed: _justCrash
-};
-
-var Status = RestartingStatus;
 
 // List of queued requests. Each item in the list is a function to run
 // when the inner app is ready to receive connections.
@@ -212,7 +219,7 @@ var start_server = function (options) {
                      },
                      options);
   if (options.runOnce) {
-    Status = OnceStatus;
+    Status.shouldRestart = false;
   }
 
   var env = {};
@@ -368,7 +375,7 @@ _.extend(DependencyWatcher.prototype, {
       return false;
 
     try {
-      var stats = fs.lstatSync(filepath)
+      var stats = fs.lstatSync(filepath);
     } catch (e) {
       // doesn't exist -- leave stats undefined
     }
@@ -516,7 +523,7 @@ exports.DebugStatus = {
 exports.run = function (app_dir, bundle_opts, port, once, settings, dbg) {
   var outer_port = port || 3000;
   var inner_port = outer_port + 1;
-  var mongo_port = outer_port + 2;
+  mongo_port = outer_port + 2;
   var test_port = outer_port + 3;
   var bundle_path = path.join(app_dir, '.meteor', 'local', 'build');
   var test_bundle_path = path.join(app_dir, '.meteor', 'local', 'build_test');
@@ -526,6 +533,7 @@ exports.run = function (app_dir, bundle_opts, port, once, settings, dbg) {
   var test_mongo_url = "mongodb://127.0.0.1:" + mongo_port + "/meteor_test";
 
   var test_bundle_opts;
+
   if (files.is_app_dir(app_dir)) {
     // If we're an app, make separate test_bundle_opts to trigger a
     // separate runner.
@@ -684,6 +692,9 @@ exports.run = function (app_dir, bundle_opts, port, once, settings, dbg) {
         restart_server();
       },
       function (code, signal) { // On Mongo dead
+        if (Status.shuttingDown) {
+          return;
+        }
         console.log("Unexpected mongo exit code " + code + ". Restarting.");
 
         // if mongo dies 3 times with less than 5 seconds between each,

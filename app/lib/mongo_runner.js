@@ -181,3 +181,4 @@ exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callbac
 
 };
 
+exports._find_mongo_and_kill_it_dead = find_mongo_and_kill_it_dead;
