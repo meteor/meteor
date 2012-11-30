@@ -1,6 +1,9 @@
 {
   "name": "meteor",
   "version": "0.5.2",
+  "bin": {
+    "meteor": "app/meteor/meteor.js"
+  },
   "dependencies": {
     "connect": "1.9.2",
     "gzippo": "0.1.7",
@@ -25,5 +28,6 @@
     "progress": "0.0.5",
     "mailcomposer": "0.1.15",
     "fibers": "0.6.9"
-  }
+  },
+  "license": "MIT"
 }
