@@ -18,11 +18,12 @@ var _ = require(path.join(__dirname, '..', 'lib', 'third', 'underscore.js'));
 // list of log objects from the child process.
 var server_log = [];
 
-var Status = {
+var RestartingStatus = {
   running: false, // is server running now?
   crashing: false, // does server crash whenever we start it?
   listening: false, // do we expect the server to be listening now.
   counter: 0, // how many crashes in rapid succession
+  code: 0,
 
   reset: function () {
     this.crashing = false;
@@ -47,6 +48,29 @@ var Status = {
     }
   }
 };
+
+var _justCrash = function () {
+  log_to_clients({'exit': "Your application is crashing."});
+  process.exit(this.code);
+};
+
+var OnceStatus = {
+  running: false, // is server running now?
+  crashing: false, // does server crash whenever we start it?
+  listening: false, // do we expect the server to be listening now.
+  counter: 0, // how many crashes in rapid succession
+
+  reset: function () {
+    log_to_clients({'exit': "Meteor is exiting instead of restarting."});
+    process.exit(0);
+  },
+
+  hard_crashed: _justCrash,
+
+  soft_crashed: _justCrash
+};
+
+var Status = RestartingStatus;
 
 // List of queued requests. Each item in the list is a function to run
 // when the inner app is ready to receive connections.
@@ -176,9 +200,21 @@ var log_to_clients = function (msg) {
 // [onListen]
 // [debugStatus]
 //
+// [runOnce]: boolean; default false; if true doesn't ever try to restart, and
+//          forwards server exit code.
+// [onListen]
+// [settings]
+//
 var start_server = function (options) {
   // environment
-  options = _.extend({debugStatus : exports.DebugStatus.OFF}, options);
+  options = _.extend({runOnce: false,
+                      debugStatus: exports.DebugStatus.OFF
+                     },
+                     options);
+  if (options.runOnce) {
+    Status = OnceStatus;
+  }
+
   var env = {};
   for (var k in process.env)
     env[k] = process.env[k];
@@ -186,6 +222,7 @@ var start_server = function (options) {
   env.PORT = options.innerPort;
   env.MONGO_URL = options.mongoURL;
   env.ROOT_URL = env.ROOT_URL || ('http://localhost:' + options.outerPort);
+
   var dbg = options.debugStatus;
   var nodeOptions = [];
   if (dbg === exports.DebugStatus.DEBUG)
@@ -194,6 +231,11 @@ var start_server = function (options) {
     console.log('Debug will break on the first line');
     nodeOptions.push('--debug-brk');
   }
+
+  if (options.settings)
+    env.METEOR_SETTINGS = options.settings;
+
+
   var proc = spawn(process.execPath,
                    nodeOptions.concat([path.join(options.bundlePath, 'main.js'), '--keepalive']),
                    {env: env});
@@ -225,7 +267,7 @@ var start_server = function (options) {
       log_to_clients({'exit': 'Exited with code: ' + code});
     }
 
-    options.onExit();
+    options.onExit(code);
   });
 
   // this happens sometimes when we write a keepalive after the app is
@@ -471,7 +513,7 @@ exports.DebugStatus = {
 // This function never returns and will call process.exit() if it
 // can't continue. If you change this, remember to call
 // watcher.destroy() as appropriate.
-exports.run = function (app_dir, bundle_opts, port, dbg) {
+exports.run = function (app_dir, bundle_opts, port, once, settings, dbg) {
   var outer_port = port || 3000;
   var inner_port = outer_port + 1;
   var mongo_port = outer_port + 2;
@@ -573,10 +615,11 @@ exports.run = function (app_dir, bundle_opts, port, dbg) {
       outerPort: outer_port,
       innerPort: inner_port,
       mongoURL: mongo_url,
-      onExit: function () {
+      onExit: function (code) {
         // on server exit
         Status.running = false;
         Status.listening = false;
+        Status.code = code;
         Status.soft_crashed();
         if (!Status.crashing)
           restart_server();
@@ -587,8 +630,10 @@ exports.run = function (app_dir, bundle_opts, port, dbg) {
         _.each(request_queue, function (f) { f(); });
         request_queue = [];
       },
-      debugStatus: dbg
-      });
+      debugStatus: dbg,
+      runOnce: once,
+      settings: settings
+    });
 
 
     // launch test bundle and server if needed.
@@ -607,7 +652,7 @@ exports.run = function (app_dir, bundle_opts, port, dbg) {
           outerPort: test_port,
           innerPort: test_port,
           mongoURL: test_mongo_url,
-          onExit: function () {
+          onExit: function (code) {
             // No restarting or crash loop prevention on the test server
             // for now. We'll see how annoying it is.
             log_to_clients({'system': "Test server crashed."});

@@ -102,6 +102,8 @@ Commands.push({
       .boolean('debug-brk')
       .describe('debug-brk', 'Run in debug mode and break on first line')
       .describe('settings', 'Make the given JSON file\'s contents available in Meteor.settings')
+      .boolean('once')
+      .describe('once',  'Only run the project once, and return whatever exit code it returned.')
       .usage(
 "Usage: meteor run [options]\n" +
 "\n" +
@@ -127,17 +129,18 @@ Commands.push({
       try {
         settings = fs.readFileSync(argv.settings);
       } catch (e) {
-        process.stdout.write("Could not file settings file {0}".format(argv.settings));
+        process.stdout.write("Could not file settings file " + argv.settings + "\n");
         process.exit(1);
       }
     }
 
     var app_dir = path.resolve(require_project("run", true)); // app or package
-    var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true};
+
+    var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true };
     var debugStatus = runner.DebugStatus.OFF;
     if (new_argv['debug']) debugStatus = runner.DebugStatus.DEBUG;
     if (new_argv['debug-brk']) debugStatus = runner.DebugStatus.BREAK;
-    runner.run(app_dir, bundle_opts, new_argv.port, debugStatus);
+    runner.run(app_dir, bundle_opts, new_argv.port, new_argv.once, settings, debugStatus);
   }
 });
 

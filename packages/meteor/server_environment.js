@@ -1,4 +1,6 @@
 Meteor = {
   isClient: false,
-  isServer: true
+  isServer: true,
+  settings: JSON.parse(process.env.METEOR_SETTINGS)
 };
+
