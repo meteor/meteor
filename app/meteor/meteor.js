@@ -83,6 +83,20 @@ var findCommand = function (name) {
   process.exit(1);
 };
 
+var getSettings = function (filename) {
+  var str;
+  try {
+    str = fs.readFileSync(filename);
+  } catch (e) {
+    throw new Error("Could not find settings file " + argv.settings);
+  }
+  if (str.length > 0x10000) {
+    throw new Error("Settings file must be less than 64 KB long");
+  }
+  JSON.parse(str);
+  return str;
+};
+
 // XXX when the pass unexpected argument or unrecognized flags, print
 // an error and fail out
 
@@ -101,9 +115,9 @@ Commands.push({
       .describe('debug', 'Run in debug mode for node-inspector')
       .boolean('debug-brk')
       .describe('debug-brk', 'Run in debug mode and break on first line')
-      .describe('settings', 'Make the given JSON file\'s contents available in Meteor.settings')
+      .describe('settings', 'Set Meteor.settings to the contents of a JSON file; takes the filename as an argument')
       .boolean('once')
-      .describe('once',  'Only run the project once, and return whatever exit code it returned.')
+      .describe('once',  'Disable automatic reloading.  Only run the server once')
       .usage(
 "Usage: meteor run [options]\n" +
 "\n" +
@@ -125,13 +139,8 @@ Commands.push({
       process.stdout.write(opt.help());
       process.exit(1);
     }
-    if (argv.settings) {
-      try {
-        settings = fs.readFileSync(argv.settings);
-      } catch (e) {
-        process.stdout.write("Could not file settings file " + argv.settings + "\n");
-        process.exit(1);
-      }
+    if (new_argv.settings) {
+      settings = getSettings(new_argv.settings);
     }
 
     var app_dir = path.resolve(require_project("run", true)); // app or package

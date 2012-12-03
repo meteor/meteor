@@ -19,18 +19,16 @@ var _ = require(path.join(__dirname, '..', 'lib', 'third', 'underscore.js'));
 // list of log objects from the child process.
 var server_log = [];
 
-// port that mongo is running on
-
 var Status = {
   running: false, // is server running now?
   crashing: false, // does server crash whenever we start it?
   listening: false, // do we expect the server to be listening now.
   counter: 0, // how many crashes in rapid succession
-  code: 0,
-  shouldRestart: true,
-  shuttingDown: false,
+  code: 0, // exit code last returned
+  shouldRestart: true, // true if we should be restarting the server
+  shuttingDown: false, // true if we're on the way to shutting down the server
 
-  justCrash : function () {
+  exitNow : function () {
     var self = this;
     log_to_clients({'exit': "Your application is exiting."});
     self.shuttingDown = true;
@@ -49,7 +47,7 @@ var Status = {
   hard_crashed: function () {
     var self = this;
     if (!self.shouldRestart) {
-      self.justCrash();
+      self.exitNow();
       return;
     }
     log_to_clients({'exit': "Your application is crashing. Waiting for file change."});
@@ -59,7 +57,7 @@ var Status = {
   soft_crashed: function () {
     var self = this;
     if (!self.shouldRestart) {
-      self.justCrash();
+      self.exitNow();
       return;
     }
     if (this.counter === 0)
@@ -554,6 +552,8 @@ exports.run = function (app_dir, bundle_opts, port, once, settings, dbg) {
   var watcher;
 
   var start_watching = function () {
+    if (!Status.shouldRestart)
+      return;
     if (deps_info) {
       if (watcher)
         watcher.destroy();
