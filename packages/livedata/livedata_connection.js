@@ -488,7 +488,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
       callback = Meteor.bindEnvironment(callback, function (e) {
         // XXX improve error message (and how we report it)
         Meteor._debug("Exception while delivering result of invoking '" +
-                      name + "'", e.stack);
+                      name + "'", e, e.stack);
       });
     }
 
