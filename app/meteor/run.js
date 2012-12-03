@@ -169,7 +169,7 @@ var log_to_clients = function (msg) {
 ////////// Launch server process //////////
 
 var start_server = function (bundle_path, outer_port, inner_port, mongo_url,
-                             on_exit_callback, on_listen_callback) {
+                             on_exit_callback, on_listen_callback, dbg) {
   // environment
   var env = {};
   for (var k in process.env)
@@ -177,9 +177,16 @@ var start_server = function (bundle_path, outer_port, inner_port, mongo_url,
   env.PORT = inner_port;
   env.MONGO_URL = mongo_url;
   env.ROOT_URL = env.ROOT_URL || ('http://localhost:' + outer_port);
-
+  var nodeOptions = [];
+  if (dbg === exports.DebugStatus.DEBUG)
+    nodeOptions.push('--debug');
+  if (dbg === exports.DebugStatus.BREAK) {
+    console.log('Debug will break on the first line');
+    nodeOptions.push('--debug-brk');
+  }
+  //spawn inner server, with debug enabled if requested
   var proc = spawn(process.execPath,
-                   [path.join(bundle_path, 'main.js'), '--keepalive'],
+                   nodeOptions.concat([path.join(bundle_path, 'main.js'), '--keepalive']),
                    {env: env});
 
   // XXX deal with test server logging differently?!
@@ -446,10 +453,18 @@ var start_update_checks = function () {
 
 // XXX leave a pidfile and check if we are already running
 
+exports.DebugStatus = {
+  OFF : "OFF",
+  DEBUG : "DEBUG",
+  BREAK : "BREAK"
+};
+
 // This function never returns and will call process.exit() if it
 // can't continue. If you change this, remember to call
 // watcher.destroy() as appropriate.
-exports.run = function (app_dir, bundle_opts, port) {
+exports.run = function (app_dir, bundle_opts, port, dbg) {
+  debug = bundle_opts.debug;
+  debug_brk = bundle_opts.debug_brk;
   var outer_port = port || 3000;
   var inner_port = outer_port + 1;
   var mongo_port = outer_port + 2;
@@ -560,7 +575,8 @@ exports.run = function (app_dir, bundle_opts, port) {
         Status.listening = true;
         _.each(request_queue, function (f) { f(); });
         request_queue = [];
-      });
+      },
+      dbg);
 
 
     // launch test bundle and server if needed.
