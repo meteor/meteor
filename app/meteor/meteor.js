@@ -3,6 +3,7 @@ var files = require(path.join(__dirname, '..', 'lib', 'files.js'));
 var _ = require(path.join(__dirname, '..', 'lib', 'third', 'underscore.js'));
 var deploy = require(path.join(__dirname, 'deploy'));
 var fs = require("fs");
+var runner = require(path.join(__dirname, 'run.js'));
 
 // This code is duplicated in app/server/server.js.
 var MIN_NODE_VERSION = 'v0.8.11';
@@ -98,8 +99,8 @@ Commands.push({
       .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
       .boolean('debug')
       .describe('debug', 'Run in debug mode for node-inspector')
-      .boolean('debug_brk')
-      .describe('debug_brk', 'Run in debug mode and break on first line')
+      .boolean('debug-brk')
+      .describe('debug-brk', 'Run in debug mode and break on first line')
       .usage(
 "Usage: meteor run [options]\n" +
 "\n" +
@@ -123,9 +124,11 @@ Commands.push({
     }
 
     var app_dir = path.resolve(require_project("run", true)); // app or package
-    var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true,
-        debug: new_argv.debug, debug_brk: new_argv.debug_brk};
-    require(path.join(__dirname, 'run.js')).run(app_dir, bundle_opts, new_argv.port);
+    var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true};
+    var debugStatus = runner.DebugStatus.OFF;
+    if (new_argv['debug']) debugStatus = runner.DebugStatus.DEBUG;
+    if (new_argv['debug-brk']) debugStatus = runner.DebugStatus.BREAK;
+    runner.run(app_dir, bundle_opts, new_argv.port, debugStatus);
   }
 });
 
