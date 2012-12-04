@@ -86,9 +86,9 @@ var findCommand = function (name) {
 var getSettings = function (filename) {
   var str;
   try {
-    str = fs.readFileSync(filename);
+    str = fs.readFileSync(filename, "utf8");
   } catch (e) {
-    throw new Error("Could not find settings file " + argv.settings);
+    throw new Error("Could not find settings file " + filename);
   }
   if (str.length > 0x10000) {
     throw new Error("Settings file must be less than 64 KB long");
@@ -539,6 +539,7 @@ Commands.push({
       .boolean('debug')
       .describe('debug', 'deploy in debug mode (don\'t minify, etc)')
       .boolean('tests')
+      .describe('settings', 'Set Meteor.settings to the contents of a JSON file; takes the filename as an argument')
 //      .describe('tests', 'deploy the tests instead of the actual application')
       .usage(
         // XXX document --tests in the future, once we publicly
@@ -571,10 +572,12 @@ Commands.push({
     if (new_argv.delete) {
       deploy.delete_app(new_argv._[1]);
     } else {
+      if (new_argv.settings)
+        var settings = getSettings(new_argv.settings);
       // accept packages iff we're deploying tests
       var project_dir = path.resolve(require_project("bundle", new_argv.tests));
       deploy.deploy_app(new_argv._[1], project_dir, new_argv.debug,
-                        new_argv.tests, new_argv.password);
+                        new_argv.tests, new_argv.password, settings);
     }
   }
 });
