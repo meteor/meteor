@@ -1279,7 +1279,7 @@ Tinytest.add("minimongo - diff", function (test) {
         test.isTrue(_.has(results, doc._id));
         test.equal(results[doc._id], oldDoc);
         results[doc._id] = doc;
-      },
+      }
     };
 
     LocalCollection._diffQueryUnordered(oldResults, newResults, observer);
