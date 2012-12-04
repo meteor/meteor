@@ -4,16 +4,22 @@
 
     var response = getTokens(query);
     var accessToken = response.access_token;
-    var refreshToken = response.refresh_token;
     var identity = getIdentity(accessToken);
 
+    var serviceData = {
+      id: identity.id,
+      accessToken: accessToken,
+      email: identity.email
+    };
+
+    // only set the token in serviceData if it's there. this ensures
+    // that we don't lose old ones (since we only get this on the first
+    // log in attempt)
+    if (response.refresh_token)
+      serviceData.refreshToken = response.refresh_token;
+
     return {
-      serviceData: {
-        id: identity.id,
-        accessToken: accessToken,
-        refreshToken: refreshToken,
-        email: identity.email
-      },
+      serviceData: serviceData,
       options: {profile: {name: identity.name}}
     };
   });
