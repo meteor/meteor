@@ -32,10 +32,12 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService', function (test)
   test.equal(users[0].profile.foo, 1);
   test.equal(users[0].profile.bar, undefined);
   test.equal(users[0].services.facebook.llama, 50);
-  test.equal(users[0].services.facebook.monkey, undefined);
+  // make sure we *don't* lose values not passed this call to
+  // updateOrCreateUserFromExternalService
+  test.equal(users[0].services.facebook.monkey, 42);
+
   // cleanup
   Meteor.users.remove(uid1);
-
 
   // users that have different service ids get different users
   uid1 = Accounts.updateOrCreateUserFromExternalService(

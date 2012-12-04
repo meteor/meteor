@@ -11,6 +11,7 @@
 var path = __meteor_bootstrap__.require('path');
 var MongoDB = __meteor_bootstrap__.require('mongodb');
 var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
+var urlModule = __meteor_bootstrap__.require('url');
 
 _Mongo = function (url) {
   var self = this;
@@ -18,6 +19,12 @@ _Mongo = function (url) {
   self.collection_queue = [];
 
   self._liveResultsSets = {};
+
+  // Set autoReconnect on Mongo URLs by default.
+  var parsedUrl = urlModule.parse(url, true);
+  if (!_.has(parsedUrl.query, 'autoReconnect'))
+    parsedUrl.query.autoReconnect = 'true';
+  url = urlModule.format(parsedUrl);
 
   MongoDB.connect(url, {db: {safe: true}}, function(err, db) {
     if (err)

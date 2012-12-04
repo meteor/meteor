@@ -1,9 +1,15 @@
 #!/bin/bash
 
-# NOTE: by default this tests the installed meteor, not the one in your
-# working copy.
+# NOTE: by default this tests the working copy, not the installed meteor.
+# To test the installed meteor, pass in --global
 
-METEOR=/usr/local/bin/meteor
+cd `dirname $0`
+METEOR=`pwd`/../meteor
+
+#If this ever takes more options, use getopt
+if [ "$1" == "--global" ]; then
+	METEOR=/usr/local/bin/meteor
+fi
 
 DIR=`mktemp -d -t meteor-cli-test-XXXXXXXX`
 trap 'echo FAILED ; rm -rf "$DIR" >/dev/null 2>&1' EXIT

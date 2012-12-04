@@ -2,20 +2,31 @@
 
   Accounts.oauth.registerService('google', 2, function(query) {
 
-    var accessToken = getAccessToken(query);
+    var response = getTokens(query);
+    var accessToken = response.access_token;
     var identity = getIdentity(accessToken);
 
+    var serviceData = {
+      id: identity.id,
+      accessToken: accessToken,
+      email: identity.email
+    };
+
+    // only set the token in serviceData if it's there. this ensures
+    // that we don't lose old ones (since we only get this on the first
+    // log in attempt)
+    if (response.refresh_token)
+      serviceData.refreshToken = response.refresh_token;
+
     return {
-      serviceData: {
-        id: identity.id,
-        accessToken: accessToken,
-        email: identity.email
-      },
+      serviceData: serviceData,
       options: {profile: {name: identity.name}}
     };
   });
 
-  var getAccessToken = function (query) {
+  // returns an object containing access_token, and if this is the first
+  // authorization request also refresh_token
+  var getTokens = function (query) {
     var config = Accounts.loginServiceConfiguration.findOne({service: 'google'});
     if (!config)
       throw new Accounts.ConfigError("Service not configured");
@@ -33,7 +44,7 @@
       throw result.error;
     if (result.data.error) // if the http response was a json object with an error attribute
       throw result.data;
-    return result.data.access_token;
+    return result.data;
   };
 
   var getIdentity = function (accessToken) {

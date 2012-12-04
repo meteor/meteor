@@ -168,6 +168,13 @@ _.each(['observe', '_observeUnordered'], function (observeMethod) {
     // After calling stop, no more callbacks are called.
     c.insert({_id: 5, name: "iris", tags: ["flower"]});
     expect("");
+
+    // Test that observing a lookup by ID works.
+    handle = c.find(4)[observeMethod](makecb('b'));
+    expect('ab4_');
+    c.update(4, {$set: {eek: 5}});
+    expect('cb4_');
+    handle.stop();
   });
 });
 
@@ -579,8 +586,256 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({"a.b": {$in: [1, 2, 3]}}, {a: {b: [4, 2]}});
   nomatch({"a.b": {$in: [1, 2, 3]}}, {a: {b: [4]}});
 
+  // $or
+  test.throws(function () {
+    match({$or: []}, {});
+  });
+  test.throws(function () {
+    match({$or: []}, {a: 1});
+  });
+  match({$or: [{a: 1}]}, {a: 1});
+  nomatch({$or: [{b: 2}]}, {a: 1});
+  match({$or: [{a: 1}, {b: 2}]}, {a: 1});
+  nomatch({$or: [{c: 3}, {d: 4}]}, {a: 1});
+  match({$or: [{a: 1}, {b: 2}]}, {a: [1, 2, 3]});
+  nomatch({$or: [{a: 1}, {b: 2}]}, {c: [1, 2, 3]});
+  nomatch({$or: [{a: 1}, {b: 2}]}, {a: [2, 3, 4]});
+  match({$or: [{a: 1}, {a: 2}]}, {a: 1});
+  match({$or: [{a: 1}, {a: 2}], b: 2}, {a: 1, b: 2});
+  nomatch({$or: [{a: 2}, {a: 3}], b: 2}, {a: 1, b: 2});
+  nomatch({$or: [{a: 1}, {a: 2}], b: 3}, {a: 1, b: 2});
+
+  // $or and $lt, $lte, $gt, $gte
+  match({$or: [{a: {$lte: 1}}, {a: 2}]}, {a: 1});
+  nomatch({$or: [{a: {$lt: 1}}, {a: 2}]}, {a: 1});
+  match({$or: [{a: {$gte: 1}}, {a: 2}]}, {a: 1});
+  nomatch({$or: [{a: {$gt: 1}}, {a: 2}]}, {a: 1});
+  match({$or: [{b: {$gt: 1}}, {b: {$lt: 3}}]}, {b: 2});
+  nomatch({$or: [{b: {$lt: 1}}, {b: {$gt: 3}}]}, {b: 2});
+
+  // $or and $in
+  match({$or: [{a: {$in: [1, 2, 3]}}]}, {a: 1});
+  nomatch({$or: [{a: {$in: [4, 5, 6]}}]}, {a: 1});
+  match({$or: [{a: {$in: [1, 2, 3]}}, {b: 2}]}, {a: 1});
+  match({$or: [{a: {$in: [1, 2, 3]}}, {b: 2}]}, {b: 2});
+  nomatch({$or: [{a: {$in: [1, 2, 3]}}, {b: 2}]}, {c: 3});
+  match({$or: [{a: {$in: [1, 2, 3]}}, {b: {$in: [1, 2, 3]}}]}, {b: 2});
+  nomatch({$or: [{a: {$in: [1, 2, 3]}}, {b: {$in: [4, 5, 6]}}]}, {b: 2});
+
+  // $or and $nin
+  nomatch({$or: [{a: {$nin: [1, 2, 3]}}]}, {a: 1});
+  match({$or: [{a: {$nin: [4, 5, 6]}}]}, {a: 1});
+  nomatch({$or: [{a: {$nin: [1, 2, 3]}}, {b: 2}]}, {a: 1});
+  match({$or: [{a: {$nin: [1, 2, 3]}}, {b: 2}]}, {b: 2});
+  match({$or: [{a: {$nin: [1, 2, 3]}}, {b: 2}]}, {c: 3});
+  match({$or: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [1, 2, 3]}}]}, {b: 2});
+  nomatch({$or: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [1, 2, 3]}}]}, {a: 1, b: 2});
+  match({$or: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [4, 5, 6]}}]}, {b: 2});
+
+  // $or and dot-notation
+  match({$or: [{"a.b": 1}, {"a.b": 2}]}, {a: {b: 1}});
+  match({$or: [{"a.b": 1}, {"a.c": 1}]}, {a: {b: 1}});
+  nomatch({$or: [{"a.b": 2}, {"a.c": 1}]}, {a: {b: 1}});
+
+  // $or and nested objects
+  match({$or: [{a: {b: 1, c: 2}}, {a: {b: 2, c: 1}}]}, {a: {b: 1, c: 2}});
+  nomatch({$or: [{a: {b: 1, c: 3}}, {a: {b: 2, c: 1}}]}, {a: {b: 1, c: 2}});
+
+  // $or and regexes
+  match({$or: [{a: /a/}]}, {a: "cat"});
+  nomatch({$or: [{a: /o/}]}, {a: "cat"});
+  match({$or: [{a: /a/}, {a: /o/}]}, {a: "cat"});
+  nomatch({$or: [{a: /i/}, {a: /o/}]}, {a: "cat"});
+  match({$or: [{a: /i/}, {b: /o/}]}, {a: "cat", b: "dog"});
+
+  // $or and $ne
+  match({$or: [{a: {$ne: 1}}]}, {});
+  nomatch({$or: [{a: {$ne: 1}}]}, {a: 1});
+  match({$or: [{a: {$ne: 1}}]}, {a: 2});
+  match({$or: [{a: {$ne: 1}}]}, {b: 1});
+  match({$or: [{a: {$ne: 1}}, {a: {$ne: 2}}]}, {a: 1});
+  match({$or: [{a: {$ne: 1}}, {b: {$ne: 1}}]}, {a: 1});
+  nomatch({$or: [{a: {$ne: 1}}, {b: {$ne: 2}}]}, {a: 1, b: 2});
+
+  // $or and $not
+  match({$or: [{a: {$not: {$mod: [10, 1]}}}]}, {});
+  nomatch({$or: [{a: {$not: {$mod: [10, 1]}}}]}, {a: 1});
+  match({$or: [{a: {$not: {$mod: [10, 1]}}}]}, {a: 2});
+  match({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$not: {$mod: [10, 2]}}}]}, {a: 1});
+  nomatch({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 1});
+  match({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 2});
+  match({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 3});
+  // this is possibly an open-ended task, so we stop here ...
+  
+  // $nor
+  test.throws(function () {
+    match({$nor: []}, {});
+  });
+  test.throws(function () {
+    match({$nor: []}, {a: 1});
+  });
+  nomatch({$nor: [{a: 1}]}, {a: 1});
+  match({$nor: [{b: 2}]}, {a: 1});
+  nomatch({$nor: [{a: 1}, {b: 2}]}, {a: 1});
+  match({$nor: [{c: 3}, {d: 4}]}, {a: 1});
+  nomatch({$nor: [{a: 1}, {b: 2}]}, {a: [1, 2, 3]});
+  match({$nor: [{a: 1}, {b: 2}]}, {c: [1, 2, 3]});
+  match({$nor: [{a: 1}, {b: 2}]}, {a: [2, 3, 4]});
+  nomatch({$nor: [{a: 1}, {a: 2}]}, {a: 1});
+
+  // $nor and $lt, $lte, $gt, $gte
+  nomatch({$nor: [{a: {$lte: 1}}, {a: 2}]}, {a: 1});
+  match({$nor: [{a: {$lt: 1}}, {a: 2}]}, {a: 1});
+  nomatch({$nor: [{a: {$gte: 1}}, {a: 2}]}, {a: 1});
+  match({$nor: [{a: {$gt: 1}}, {a: 2}]}, {a: 1});
+  nomatch({$nor: [{b: {$gt: 1}}, {b: {$lt: 3}}]}, {b: 2});
+  match({$nor: [{b: {$lt: 1}}, {b: {$gt: 3}}]}, {b: 2});
+
+  // $nor and $in
+  nomatch({$nor: [{a: {$in: [1, 2, 3]}}]}, {a: 1});
+  match({$nor: [{a: {$in: [4, 5, 6]}}]}, {a: 1});
+  nomatch({$nor: [{a: {$in: [1, 2, 3]}}, {b: 2}]}, {a: 1});
+  nomatch({$nor: [{a: {$in: [1, 2, 3]}}, {b: 2}]}, {b: 2});
+  match({$nor: [{a: {$in: [1, 2, 3]}}, {b: 2}]}, {c: 3});
+  nomatch({$nor: [{a: {$in: [1, 2, 3]}}, {b: {$in: [1, 2, 3]}}]}, {b: 2});
+  match({$nor: [{a: {$in: [1, 2, 3]}}, {b: {$in: [4, 5, 6]}}]}, {b: 2});
+
+  // $nor and $nin
+  match({$nor: [{a: {$nin: [1, 2, 3]}}]}, {a: 1});
+  nomatch({$nor: [{a: {$nin: [4, 5, 6]}}]}, {a: 1});
+  match({$nor: [{a: {$nin: [1, 2, 3]}}, {b: 2}]}, {a: 1});
+  nomatch({$nor: [{a: {$nin: [1, 2, 3]}}, {b: 2}]}, {b: 2});
+  nomatch({$nor: [{a: {$nin: [1, 2, 3]}}, {b: 2}]}, {c: 3});
+  nomatch({$nor: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [1, 2, 3]}}]}, {b: 2});
+  match({$nor: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [1, 2, 3]}}]}, {a: 1, b: 2});
+  nomatch({$nor: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [4, 5, 6]}}]}, {b: 2});
+
+  // $nor and dot-notation
+  nomatch({$nor: [{"a.b": 1}, {"a.b": 2}]}, {a: {b: 1}});
+  nomatch({$nor: [{"a.b": 1}, {"a.c": 1}]}, {a: {b: 1}});
+  match({$nor: [{"a.b": 2}, {"a.c": 1}]}, {a: {b: 1}});
+
+  // $nor and nested objects
+  nomatch({$nor: [{a: {b: 1, c: 2}}, {a: {b: 2, c: 1}}]}, {a: {b: 1, c: 2}});
+  match({$nor: [{a: {b: 1, c: 3}}, {a: {b: 2, c: 1}}]}, {a: {b: 1, c: 2}});
+
+  // $nor and regexes
+  nomatch({$nor: [{a: /a/}]}, {a: "cat"});
+  match({$nor: [{a: /o/}]}, {a: "cat"});
+  nomatch({$nor: [{a: /a/}, {a: /o/}]}, {a: "cat"});
+  match({$nor: [{a: /i/}, {a: /o/}]}, {a: "cat"});
+  nomatch({$nor: [{a: /i/}, {b: /o/}]}, {a: "cat", b: "dog"});
+
+  // $nor and $ne
+  nomatch({$nor: [{a: {$ne: 1}}]}, {});
+  match({$nor: [{a: {$ne: 1}}]}, {a: 1});
+  nomatch({$nor: [{a: {$ne: 1}}]}, {a: 2});
+  nomatch({$nor: [{a: {$ne: 1}}]}, {b: 1});
+  nomatch({$nor: [{a: {$ne: 1}}, {a: {$ne: 2}}]}, {a: 1});
+  nomatch({$nor: [{a: {$ne: 1}}, {b: {$ne: 1}}]}, {a: 1});
+  match({$nor: [{a: {$ne: 1}}, {b: {$ne: 2}}]}, {a: 1, b: 2});
+
+  // $nor and $not
+  nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}]}, {});
+  match({$nor: [{a: {$not: {$mod: [10, 1]}}}]}, {a: 1});
+  nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}]}, {a: 2});
+  nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$not: {$mod: [10, 2]}}}]}, {a: 1});
+  match({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 1});
+  nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 2});
+  nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 3});
+
+  // $and
+
+  test.throws(function () {
+    match({$and: []}, {});
+  });
+  test.throws(function () {
+    match({$and: []}, {a: 1});
+  });
+  match({$and: [{a: 1}]}, {a: 1});
+  nomatch({$and: [{a: 1}, {a: 2}]}, {a: 1});
+  nomatch({$and: [{a: 1}, {b: 1}]}, {a: 1});
+  match({$and: [{a: 1}, {b: 2}]}, {a: 1, b: 2});
+  nomatch({$and: [{a: 1}, {b: 1}]}, {a: 1, b: 2});
+  match({$and: [{a: 1}, {b: 2}], c: 3}, {a: 1, b: 2, c: 3});
+  nomatch({$and: [{a: 1}, {b: 2}], c: 4}, {a: 1, b: 2, c: 3});
+
+  // $and and regexes
+  match({$and: [{a: /a/}]}, {a: "cat"});
+  match({$and: [{a: /a/i}]}, {a: "CAT"});
+  nomatch({$and: [{a: /o/}]}, {a: "cat"});
+  nomatch({$and: [{a: /a/}, {a: /o/}]}, {a: "cat"});
+  match({$and: [{a: /a/}, {b: /o/}]}, {a: "cat", b: "dog"});
+  nomatch({$and: [{a: /a/}, {b: /a/}]}, {a: "cat", b: "dog"});
+
+  // $and, dot-notation, and nested objects
+  match({$and: [{"a.b": 1}]}, {a: {b: 1}});
+  match({$and: [{a: {b: 1}}]}, {a: {b: 1}});
+  nomatch({$and: [{"a.b": 2}]}, {a: {b: 1}});
+  nomatch({$and: [{"a.c": 1}]}, {a: {b: 1}});
+  nomatch({$and: [{"a.b": 1}, {"a.b": 2}]}, {a: {b: 1}});
+  nomatch({$and: [{"a.b": 1}, {a: {b: 2}}]}, {a: {b: 1}});
+  match({$and: [{"a.b": 1}, {"c.d": 2}]}, {a: {b: 1}, c: {d: 2}});
+  nomatch({$and: [{"a.b": 1}, {"c.d": 1}]}, {a: {b: 1}, c: {d: 2}});
+  match({$and: [{"a.b": 1}, {c: {d: 2}}]}, {a: {b: 1}, c: {d: 2}});
+  nomatch({$and: [{"a.b": 1}, {c: {d: 1}}]}, {a: {b: 1}, c: {d: 2}});
+  nomatch({$and: [{"a.b": 2}, {c: {d: 2}}]}, {a: {b: 1}, c: {d: 2}});
+  match({$and: [{a: {b: 1}}, {c: {d: 2}}]}, {a: {b: 1}, c: {d: 2}});
+  nomatch({$and: [{a: {b: 2}}, {c: {d: 2}}]}, {a: {b: 1}, c: {d: 2}});
+
+  // $and and $in
+  nomatch({$and: [{a: {$in: []}}]}, {});
+  match({$and: [{a: {$in: [1, 2, 3]}}]}, {a: 1});
+  nomatch({$and: [{a: {$in: [4, 5, 6]}}]}, {a: 1});
+  nomatch({$and: [{a: {$in: [1, 2, 3]}}, {a: {$in: [4, 5, 6]}}]}, {a: 1});
+  nomatch({$and: [{a: {$in: [1, 2, 3]}}, {b: {$in: [1, 2, 3]}}]}, {a: 1, b: 4});
+  match({$and: [{a: {$in: [1, 2, 3]}}, {b: {$in: [4, 5, 6]}}]}, {a: 1, b: 4});
+
+
+  // $and and $nin
+  match({$and: [{a: {$nin: []}}]}, {});
+  nomatch({$and: [{a: {$nin: [1, 2, 3]}}]}, {a: 1});
+  match({$and: [{a: {$nin: [4, 5, 6]}}]}, {a: 1});
+  nomatch({$and: [{a: {$nin: [1, 2, 3]}}, {a: {$nin: [4, 5, 6]}}]}, {a: 1});
+  nomatch({$and: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [1, 2, 3]}}]}, {a: 1, b: 4});
+  nomatch({$and: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [4, 5, 6]}}]}, {a: 1, b: 4});
+
+  // $and and $lt, $lte, $gt, $gte
+  match({$and: [{a: {$lt: 2}}]}, {a: 1}); 
+  nomatch({$and: [{a: {$lt: 1}}]}, {a: 1}); 
+  match({$and: [{a: {$lte: 1}}]}, {a: 1}); 
+  match({$and: [{a: {$gt: 0}}]}, {a: 1}); 
+  nomatch({$and: [{a: {$gt: 1}}]}, {a: 1}); 
+  match({$and: [{a: {$gte: 1}}]}, {a: 1}); 
+  match({$and: [{a: {$gt: 0}}, {a: {$lt: 2}}]}, {a: 1}); 
+  nomatch({$and: [{a: {$gt: 1}}, {a: {$lt: 2}}]}, {a: 1}); 
+  nomatch({$and: [{a: {$gt: 0}}, {a: {$lt: 1}}]}, {a: 1}); 
+  match({$and: [{a: {$gte: 1}}, {a: {$lte: 1}}]}, {a: 1}); 
+  nomatch({$and: [{a: {$gte: 2}}, {a: {$lte: 0}}]}, {a: 1}); 
+
+  // $and and $ne
+  match({$and: [{a: {$ne: 1}}]}, {});
+  nomatch({$and: [{a: {$ne: 1}}]}, {a: 1});
+  match({$and: [{a: {$ne: 1}}]}, {a: 2});
+  nomatch({$and: [{a: {$ne: 1}}, {a: {$ne: 2}}]}, {a: 2});
+  match({$and: [{a: {$ne: 1}}, {a: {$ne: 3}}]}, {a: 2});
+
+  // $and and $not
+  match({$and: [{a: {$not: {$gt: 2}}}]}, {a: 1});
+  nomatch({$and: [{a: {$not: {$lt: 2}}}]}, {a: 1});
+  match({$and: [{a: {$not: {$lt: 0}}}, {a: {$not: {$gt: 2}}}]}, {a: 1});
+  nomatch({$and: [{a: {$not: {$lt: 2}}}, {a: {$not: {$gt: 0}}}]}, {a: 1});
+
+  // $where
+  match({$where: "this.a === 1"}, {a: 1});
+  nomatch({$where: "this.a !== 1"}, {a: 1});
+  nomatch({$where: "this.a === 1", a: 2}, {a: 1});
+  match({$where: "this.a === 1", b: 2}, {a: 1, b: 2});
+  match({$where: "this.a === 1 && this.b === 2"}, {a: 1, b: 2});
+  match({$where: "Array.isArray(this.a)"}, {a: []});
+  nomatch({$where: "Array.isArray(this.a)"}, {a: 1});
+
   // XXX still needs tests:
-  // - $or, $and, $nor, $where
   // - $elemMatch
   // - people.2.name
   // - non-scalar arguments to $gt, $lt, etc
