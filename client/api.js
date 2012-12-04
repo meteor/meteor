@@ -795,7 +795,7 @@ Template.api.loginWithExternalService = {
     {
       name: "requestOfflineToken",
       type: "Boolean",
-      descr: "If true, asks the user for permission to act on the user's behalf when offline. Technically, this stores an additional offline token in the `services` field of the user document. Currently only supported for Google login."
+      descr: "If true, asks the user for permission to act on their behalf when offline. This stores an additional offline token in the `services` field of the user document. Currently only supported with Google."
     }
   ]
 };
@@ -835,7 +835,7 @@ Template.api.accounts_ui_config = {
     {
       name: "requestOfflineToken",
       type: "Object",
-      descr: "Map an external service to true to request an offline token. Currently only supported for Google login. See [Meteor.loginWithExternalService](#meteor_loginwithexternalservice) for more details."
+      descr: "To ask the user for permission to act on their behalf when offline, map the relevant external service to `true`. Currently only supported with Google. See [Meteor.loginWithExternalService](#meteor_loginwithexternalservice) for more details."
     },
     {
       name: "passwordSignupFields",
