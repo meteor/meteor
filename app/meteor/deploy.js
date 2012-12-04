@@ -57,7 +57,6 @@ var meteor_rpc = function (rpc_name, method, site, query_params, callback) {
 
 var deploy_app = function (url, app_dir, opt_debug, opt_tests,
                            opt_set_password, settings) {
-  console.log(settings);
   var parsed_url = parse_url(url);
 
   // a bit contorted here to make sure we ask for the password before
