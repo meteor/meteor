@@ -358,8 +358,8 @@ _.extend(Bundle.prototype, {
     // XXX detect circular dependencies and print an error. (not sure
     // what the current code will do)
 
-    if (pkg.on_use)
-      pkg.on_use(inst.api, where);
+    if (pkg.on_use_handler)
+      pkg.on_use_handler(inst.api, where);
   },
 
   include_tests: function (pkg) {
@@ -369,8 +369,8 @@ _.extend(Bundle.prototype, {
     self.tests_included[pkg.id] = true;
 
     var inst = self._get_instance(pkg);
-    if (inst.pkg.on_test)
-      inst.pkg.on_test(inst.api);
+    if (inst.pkg.on_test_handler)
+      inst.pkg.on_test_handler(inst.api);
   },
 
   // Minify the bundle
