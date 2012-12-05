@@ -370,15 +370,16 @@ _Mongo.prototype._createSynchronousCursor = function (cursorDescription) {
   if (!result[0])
     throw result[1];
 
-  return new SynchronousCursor(result[1]);
+  return new SynchronousCursor(result[1], cursorDescription.ctor);
 };
 
-var SynchronousCursor = function (dbCursor) {
+var SynchronousCursor = function (dbCursor, ctor) {
   var self = this;
   self._dbCursor = dbCursor;
   self._synchronousNextObject = Future.wrap(dbCursor.nextObject.bind(dbCursor));
   self._synchronousCount = Future.wrap(dbCursor.count.bind(dbCursor));
   self._visitedIds = {};
+  self._ctor = ctor;
 };
 
 _.extend(SynchronousCursor.prototype, {
@@ -389,7 +390,7 @@ _.extend(SynchronousCursor.prototype, {
       if (!doc || !doc._id) return null;
       if (self._visitedIds[doc._id]) continue;
       self._visitedIds[doc._id] = true;
-      return doc;
+      return self._ctor ? new self._ctor(doc) : doc;
     }
   },
 
