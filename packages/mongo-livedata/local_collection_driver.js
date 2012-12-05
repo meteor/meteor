@@ -5,12 +5,12 @@ Meteor._LocalCollectionDriver = function () {
 };
 
 _.extend(Meteor._LocalCollectionDriver.prototype, {
-  open: function (name) {
+  open: function (name, ctor) {
     var self = this;
     if (!name)
-      return new LocalCollection;
+      return new LocalCollection(ctor);
     if (!(name in self.collections))
-      self.collections[name] = new LocalCollection;
+      self.collections[name] = new LocalCollection(ctor);
     return self.collections[name];
   }
 });

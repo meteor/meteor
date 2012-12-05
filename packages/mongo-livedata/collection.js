@@ -12,6 +12,7 @@ Meteor.Collection = function (name, options) {
   options = _.extend({
     manager: undefined,
     _driver: undefined,
+    ctor: undefined,
     _preventAutopublish: false
   }, options);
 
@@ -34,7 +35,7 @@ Meteor.Collection = function (name, options) {
       options._driver = Meteor._LocalCollectionDriver;
   }
 
-  self._collection = options._driver.open(name);
+  self._collection = options._driver.open(name, options.ctor);
   self._name = name;
 
   if (name && self._manager.registerStore) {
@@ -69,6 +70,8 @@ Meteor.Collection = function (name, options) {
       // XXX better specify this interface (not in terms of a wire message)?
       update: function (msg) {
         var doc = self._collection.findOne(msg.id);
+        if (doc && '_meteorRawData' in doc)
+          doc = doc._meteorRawData();
 
         // Is this a "replace the whole doc" message coming from the quiescence
         // of method writes to an object? (Note that 'undefined' is a valid
@@ -502,6 +505,11 @@ Meteor.Collection.prototype._validatedUpdate = function(
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
+  
+  // make the docs look like what meteor expects if we are using a model
+  docs = _.map(docs, function(doc) {
+    return '_meteorRawData' in doc ? doc._meteorRawData() : doc;
+  });
 
   // Construct new $in selector to augment the original one. This means we'll
   // never update any doc we didn't validate. We keep around the original
@@ -559,6 +567,11 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
+  
+  // make the docs look like what meteor expects if we are using a model
+  docs = _.map(docs, function(doc) {
+    return '_meteorRawData' in doc ? doc._meteorRawData() : doc;
+  });
 
   // construct new $in selector to replace the original one
   var idInClause = {};

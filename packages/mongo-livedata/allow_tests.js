@@ -4,6 +4,8 @@
   // Set up a bunch of test collections
   //
 
+  // XXX: need tests for secure collections with models
+
   // helper for defining a collection, subscribing to it, and defining
   // a method to clear it
   var defineCollection = function(name, insecure) {

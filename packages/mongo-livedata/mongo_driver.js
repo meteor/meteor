@@ -13,7 +13,7 @@ var MongoDB = __meteor_bootstrap__.require('mongodb');
 var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
 var urlModule = __meteor_bootstrap__.require('url');
 
-_Mongo = function (url) {
+_Mongo = function (url, ctor) {
   var self = this;
 
   self.collection_queue = [];
@@ -101,7 +101,7 @@ _Mongo.prototype._maybeBeginWrite = function () {
 // well-defined -- a write "has been made" if it's returned, and an
 // observer "has been notified" if its callback has returned.
 
-_Mongo.prototype.insert = function (collection_name, document) {
+_Mongo.prototype.insert = function (collection_name, ctor, document) {
   var self = this;
 
   if (collection_name === "___meteor_failure_test_collection" &&
@@ -132,7 +132,7 @@ _Mongo.prototype.insert = function (collection_name, document) {
     throw err;
 };
 
-_Mongo.prototype.remove = function (collection_name, selector) {
+_Mongo.prototype.remove = function (collection_name, ctor, selector) {
   var self = this;
 
   if (collection_name === "___meteor_failure_test_collection" &&
@@ -166,7 +166,7 @@ _Mongo.prototype.remove = function (collection_name, selector) {
     throw err;
 };
 
-_Mongo.prototype.update = function (collection_name, selector, mod, options) {
+_Mongo.prototype.update = function (collection_name, ctor, selector, mod, options) {
   var self = this;
 
   if (collection_name === "___meteor_failure_test_collection" &&
@@ -205,29 +205,28 @@ _Mongo.prototype.update = function (collection_name, selector, mod, options) {
     throw err;
 };
 
-_Mongo.prototype.find = function (collectionName, selector, options) {
+_Mongo.prototype.find = function (collectionName, ctor, selector, options) {
   var self = this;
 
-  if (arguments.length === 1)
+  if (arguments.length === 2)
     selector = {};
-
   return new Cursor(
-    self, new CursorDescription(collectionName, selector, options));
+    self, new CursorDescription(collectionName, ctor, selector, options));
 };
 
-_Mongo.prototype.findOne = function (collection_name, selector, options) {
+_Mongo.prototype.findOne = function (collection_name, ctor, selector, options) {
   var self = this;
 
-  if (arguments.length === 1)
+  if (arguments.length === 2)
     selector = {};
 
   // XXX use limit=1 instead?
-  return self.find(collection_name, selector, options).fetch()[0];
+  return self.find(collection_name, ctor, selector, options).fetch()[0];
 };
 
 // We'll actually design an index API later. For now, we just pass through to
 // Mongo's, but make it synchronous.
-_Mongo.prototype._ensureIndex = function (collectionName, index, options) {
+_Mongo.prototype._ensureIndex = function (collectionName, ctor, index, options) {
   var self = this;
   options = _.extend({safe: true}, options);
 
@@ -275,11 +274,12 @@ _Mongo.prototype._ensureIndex = function (collectionName, index, options) {
 // same query.
 
 
-var CursorDescription = function (collectionName, selector, options) {
+var CursorDescription = function (collectionName, ctor, selector, options) {
   var self = this;
   self.collectionName = collectionName;
   self.selector = _Mongo._rewriteSelector(selector);
   self.options = options || {};
+  self.ctor = ctor;
 };
 
 var Cursor = function (mongo, cursorDescription) {
@@ -377,15 +377,16 @@ _Mongo.prototype._createSynchronousCursor = function (cursorDescription) {
   if (!result[0])
     throw result[1];
 
-  return new SynchronousCursor(result[1]);
+  return new SynchronousCursor(result[1], cursorDescription.ctor);
 };
 
-var SynchronousCursor = function (dbCursor) {
+var SynchronousCursor = function (dbCursor, ctor) {
   var self = this;
   self._dbCursor = dbCursor;
   self._synchronousNextObject = Future.wrap(dbCursor.nextObject.bind(dbCursor));
   self._synchronousCount = Future.wrap(dbCursor.count.bind(dbCursor));
   self._visitedIds = {};
+  self._ctor = ctor;
 };
 
 _.extend(SynchronousCursor.prototype, {
@@ -396,7 +397,7 @@ _.extend(SynchronousCursor.prototype, {
       if (!doc || !doc._id) return null;
       if (self._visitedIds[doc._id]) continue;
       self._visitedIds[doc._id] = true;
-      return doc;
+      return self._ctor ? new self._ctor(doc) : doc;
     }
   },
 

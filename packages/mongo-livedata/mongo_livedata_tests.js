@@ -297,6 +297,92 @@ Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
 
 });
 
+Tinytest.addAsync("mongo-livedata - models", function (test, onComplete) {
+  var Model = function(attrs) {
+    this.attrs = attrs;
+  };
+  Model.prototype.is_model = function() { return true; };
+  assert_record = function(record, x) {
+    test.instanceOf(record, Model);
+    test.equal(record.is_model(), true);
+    test.equal(record.attrs.x, x || 1);
+  }
+  
+  var run = test.runId();
+  var coll;
+  if (Meteor.is_client) {
+    coll = new Meteor.Collection(null, {ctor: Model}); // local, unmanaged
+  } else {
+    coll = new Meteor.Collection("livedata_test_collection_"+run, {ctor: Model});
+  }
+  
+  var log = '';
+  var obs = coll.find({run: run}, {sort: ["x"]}).observe({
+    added: function (doc, before_index) {
+      log += 'a(' + doc.attrs.x + ',' + before_index + ')';
+    },
+    changed: function (new_doc, at_index, old_doc) {
+      log += 'c(' + new_doc.attrs.x + ',' + at_index + ',' + old_doc.attrs.x + ')';
+    },
+    moved: function (doc, old_index, new_index) {
+      log += 'm(' + doc.attrs.x + ',' + old_index + ',' + new_index + ')';
+    },
+    removed: function (doc, at_index) {
+      log += 'r(' + doc.attrs.x + ',' + at_index + ')';
+    }
+  });
+
+  var captureObserve = function (f) {
+    if (Meteor.is_client) {
+      f();
+    } else {
+      var fence = new Meteor._WriteFence;
+      Meteor._CurrentWriteFence.withValue(fence, f);
+      fence.armAndWait();
+    }
+    var ret = log;
+    log = '';
+    return ret;
+  };
+
+  var expectObserve = function (expected, f) {
+    if (!(expected instanceof Array))
+      expected = [expected];
+
+    test.include(expected, captureObserve(f));
+  };
+
+  expectObserve('a(1,0)', function () {
+    var id = coll.insert({run: run, x: 1});
+    test.equal(id.length, 36);
+    test.equal(coll.find({run: run}).count(), 1);
+    assert_record(coll.findOne({run: run}));
+    // check without arguements
+    assert_record(coll.findOne());
+    
+    assert_record(coll.find({run: run}).fetch().shift());
+    
+    coll.find({run: run}).forEach(function(doc) {
+      assert_record(doc);
+    });
+    
+    // check without arguements
+    coll.find().forEach(function(doc) {
+      assert_record(doc);
+    });
+  });
+  expectObserve('c(3,0,1)', function () {
+    coll.update({run: run}, {$inc: {x: 2}}, {multi: true});
+    assert_record(coll.findOne({run: run}), 3);
+  });
+  
+  expectObserve('r(3,0)', function () {
+    coll.remove({run: run});
+  });
+  
+  onComplete();
+});
+  
 var runInFence = function (f) {
   if (Meteor.isClient) {
     f();

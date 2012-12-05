@@ -35,25 +35,27 @@ var assert_ordering = function (test, f, values) {
   }
 };
 
-var log_callbacks = function (operations) {
+var log_callbacks = function (operations, no_deepcopy) {
+  // maybe deepcopy
+  var mdc = no_deepcopy ? _.identity : LocalCollection._deepcopy;
   return {
     added: function (obj, idx) {
       delete obj._id;
-      operations.push(LocalCollection._deepcopy(['added', obj, idx]));
+      operations.push(mdc(['added', obj, idx]));
     },
     changed: function (obj, at, old_obj) {
       delete obj._id;
       delete old_obj._id;
-      operations.push(LocalCollection._deepcopy(['changed', obj, at, old_obj]));
+      operations.push(mdc(['changed', obj, at, old_obj]));
     },
     moved: function (obj, old_at, new_at) {
       delete obj._id;
-      operations.push(LocalCollection._deepcopy(['moved', obj, old_at, new_at]));
+      operations.push(mdc(['moved', obj, old_at, new_at]));
     },
     removed: function (old_obj, at) {
       var id = old_obj._id;
       delete old_obj._id;
-      operations.push(LocalCollection._deepcopy(['removed', id, at, old_obj]));
+      operations.push(mdc(['removed', id, at, old_obj]));
     }
   };
 };
@@ -1246,7 +1248,7 @@ Tinytest.add("minimongo - diff", function (test) {
       }
     };
 
-    LocalCollection._diffQueryOrdered(oldResults, newResults, observer);
+    LocalCollection._diffQueryOrdered(oldResults, newResults, observer, _.identity);
     test.equal(results, newResults);
   };
 
@@ -1282,7 +1284,7 @@ Tinytest.add("minimongo - diff", function (test) {
       }
     };
 
-    LocalCollection._diffQueryUnordered(oldResults, newResults, observer);
+    LocalCollection._diffQueryUnordered(oldResults, newResults, observer, _.identity);
     test.equal(results, newResults);
   };
 
@@ -1410,4 +1412,62 @@ Tinytest.add("minimongo - pause", function (test) {
   test.length(operations, 0);
 
   h.stop();
+});
+
+
+
+Tinytest.add("minimongo - models", function (test) {
+  var Model = function(attrs) {
+    this.attrs = attrs;
+  }
+  Model.prototype.is_model = function() { return true; }
+  assert_record = function(record) {
+    test.instanceOf(record, Model);
+    test.equal(record.is_model(), true);
+    test.equal(record.attrs._id, 1);
+    test.equal(record.attrs.a, 1);
+  }
+  
+  var c = new LocalCollection(Model);
+  
+  var operations = [];
+  var cbs = log_callbacks(operations, true);
+  var h = c.find({}).observe(cbs);
+  
+  // put something in there
+  c.insert({_id: 1, a: 1});
+  
+  // simple finds
+  assert_record(c.findOne());
+  assert_record(c.find({}).fetch().shift());
+  
+  // check that the observing is working
+  // add
+  assert_record(operations.shift()[1]);
+  
+  // update
+  c.update({_id: 1}, {$set: {b: 2}});
+  var record = operations.shift()[1];
+  assert_record(record);
+  test.equal(record.attrs.b, 2);
+  
+  // remove
+  c.remove({_id: 1})
+  assert_record(operations.shift()[3])
+  
+  // XXX: what is the equivalent of this post snapshots?
+  // check snapshotting
+  // c.snapshot();
+  // test.equal(c.find().count(), 0);
+  // 
+  // c.insert({_id: 1, a: 1});
+  // test.equal(c.find().count(), 1);
+  // var op = operations.shift();
+  // test.equal(op[0], 'added');
+  // assert_record(op[1]);
+  // 
+  // c.restore();
+  // var op = operations.shift();
+  // test.equal(op[0], 'removed');
+  // assert_record(op[3])
 });
