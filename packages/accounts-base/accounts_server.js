@@ -219,7 +219,10 @@
       //     the profile too
       var stampedToken = Accounts._generateStampedLoginToken();
       var setAttrs = {};
-      setAttrs["services." + serviceName] = serviceData;
+      _.each(serviceData, function(value, key) {
+        setAttrs["services." + serviceName + "." + key] = value;
+      });
+
       // XXX Maybe we should re-use the selector above and notice if the update
       //     touches nothing?
       Meteor.users.update(

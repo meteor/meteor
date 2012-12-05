@@ -72,6 +72,10 @@ Template.test_table.data = function() {
   resultDeps.addCurrentContext();
   return resultTree;
 };
+Template.test_table.failedTests = function() {
+  resultDeps.addCurrentContext();
+  return failedTests;
+};
 
 Template.test.test_status_display = function() {
   var status = _testStatus(this);
@@ -200,6 +204,7 @@ Template.event.is_debuggable = function() {
 
 
 var resultTree = [];
+var failedTests = [];
 var resultDeps = new Meteor.deps._ContextSet;
 
 var _resultsChanged = function() {
@@ -266,7 +271,10 @@ var _findTestForResults = function (results) {
                                   t.server === server; });
   if (! test) {
     // create test
-    test = {name: testName, parent: group, server: server};
+    var nameParts = _.clone(groupPath);
+    nameParts.push(testName);
+    var fullName = nameParts.join(' - ');
+    test = {name: testName, parent: group, server: server, fullName: fullName};
     group.tests.push(test);
   }
 
@@ -292,6 +300,15 @@ var reportResults = function(results) {
         out.push(e);
     });
     test.events = out;
+  }
+
+  if (_testStatus(test) === "failed") {
+    // Expand a failed test (but only set this if the user hasn't clicked on the
+    // test name yet).
+    if (test.expanded === undefined)
+      test.expanded = true;
+    if (!_.contains(failedTests, test.fullName))
+      failedTests.push(test.fullName);
   }
 
   _.defer(_throttled_update);

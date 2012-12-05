@@ -319,30 +319,30 @@ LocalCollection._exprForSelector = function (selector, literals) {
 // value in the selector. Return an expression that evaluates to true
 // if 'doc' matches this predicate, else false.
 LocalCollection._exprForDocumentPredicate = function (op, value, literals) {
+  if (op === '$or' || op === '$and' || op === '$nor') {
+    if (_.isEmpty(value) || !_.isArray(value))
+      throw Error("$and/$or/$nor must be a nonempty array");
+  }
+
+  var clauses;
   if (op === '$or') {
-    var clauses = [];
-    _.each(value, function (c) {
-      clauses.push(LocalCollection._exprForSelector(c, literals));
+    clauses = _.map(value, function (c) {
+      return LocalCollection._exprForSelector(c, literals);
     });
-    if (clauses.length === 0) return 'true';
     return '(' + clauses.join('||') +')';
   }
 
   if (op === '$and') {
-    var clauses = [];
-    _.each(value, function (c) {
-      clauses.push(LocalCollection._exprForSelector(c, literals));
+    clauses = _.map(value, function (c) {
+      return LocalCollection._exprForSelector(c, literals);
     });
-    if (clauses.length === 0) return 'true';
     return '(' + clauses.join('&&') +')';
   }
 
   if (op === '$nor') {
-    var clauses = [];
-    _.each(value, function (c) {
-      clauses.push("!(" + LocalCollection._exprForSelector(c, literals) + ")");
+    clauses = _.map(value, function (c) {
+      return "!(" + LocalCollection._exprForSelector(c, literals) + ")";
     });
-    if (clauses.length === 0) return 'true';
     return '(' + clauses.join('&&') +')';
   }
 

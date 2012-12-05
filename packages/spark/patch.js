@@ -477,7 +477,11 @@ Spark._Patcher._copyAttributes = function(tgt, src) {
           if (src.src !== tgt.src)
             tgt.src = src.src;
         } else {
-          tgt.setAttribute(name, value);
+          try {
+            tgt.setAttribute(name, value);
+          } catch (e) {
+            throw new Error("Error copying attribute '" + name + "': " + e);
+          }
         }
       }
     }

@@ -3,7 +3,7 @@
 set -e
 set -u
 
-BUNDLE_VERSION=0.2.8
+BUNDLE_VERSION=0.2.9
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -89,7 +89,7 @@ npm install semver@1.1.0
 npm install handlebars@1.0.7
 npm install mongodb@1.1.11
 npm install uglify-js@1.3.4
-npm install clean-css@0.8.2
+npm install clean-css@0.8.3
 npm install useragent@1.1.0
 npm install request@2.12.0
 npm install simplesmtp@0.1.25
