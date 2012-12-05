@@ -11,6 +11,7 @@
     'errorMessage',
     'infoMessage',
 
+    // dialogs with messages (info and error)
     'resetPasswordToken',
     'enrollAccountToken',
     'justVerifiedEmail',
@@ -31,6 +32,13 @@
   Accounts._loginButtonsSession = {
     set: function(key, value) {
       validateKey(key);
+      if (_.contains(['errorMessage', 'infoMessage'], key))
+        throw new Error("Don't set errorMessage or infoMessage directly. Instead, use errorMessage() or infoMessage().");
+
+      this._set(key, value);
+    },
+
+    _set: function(key, value) {
       Session.set(KEY_PREFIX + key, value);
     },
 
@@ -48,9 +56,41 @@
       this.resetMessages();
     },
 
+    infoMessage: function(message) {
+      this._set("errorMessage", null);
+      this._set("infoMessage", message);
+      this.ensureMessageVisible();
+    },
+
+    errorMessage: function(message) {
+      this._set("errorMessage", message);
+      this._set("infoMessage", null);
+      this.ensureMessageVisible();
+    },
+
+    // is there a visible dialog that shows messages (info and error)
+    isMessageDialogVisible: function () {
+      return this.get('resetPasswordToken') ||
+        this.get('enrollAccountToken') ||
+        this.get('justVerifiedEmail');
+    },
+
+    // ensure that somethings displaying a message (info or error) is
+    // visible.  if a dialog with messages is open, do nothing;
+    // otherwise open the dropdown.
+    //
+    // notably this doesn't matter when only displaying a single login
+    // button since then we have an explicit message dialog
+    // (_loginButtonsMessageDialog), and dropdownVisible is ignored in
+    // this case.
+    ensureMessageVisible: function () {
+      if (!this.isMessageDialogVisible())
+        this.set("dropdownVisible", true);
+    },
+
     resetMessages: function () {
-      this.set("errorMessage", null);
-      this.set("infoMessage", null);
+      this._set("errorMessage", null);
+      this._set("infoMessage", null);
     },
 
     configureService: function (name) {

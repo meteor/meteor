@@ -114,7 +114,7 @@ if (Meteor.isClient) {
     return settings.alignRight ? 'right' : 'left';
   };
 
-  var fakeLogin = function () {
+  var fakeLogin = function (callback) {
     Accounts.createUser(
       {username: Meteor.uuid(),
        password: "password",
@@ -130,6 +130,7 @@ if (Meteor.isClient) {
         if (! Session.get('settings').hasPasswords)
           Meteor.users.update(Meteor.userId(),
                               { $unset: { username: 1 }});
+        callback();
       });
   };
 
@@ -169,17 +170,18 @@ if (Meteor.isClient) {
         Accounts.loginServiceConfiguration.remove({service: service});
       } else if (this.key === "messages") {
         if (this.value === "error") {
-          Accounts._loginButtonsSession.set('errorMessage', 'An error occurred!  Gee golly gosh.');
+          Accounts._loginButtonsSession.errorMessage('An error occurred!  Gee golly gosh.');
         } else if (this.value === "info") {
-          Accounts._loginButtonsSession.set('infoMessage', 'Here is some information that is crucial.');
+          Accounts._loginButtonsSession.infoMessage('Here is some information that is crucial.');
         } else if (this.value === "clear") {
           Accounts._loginButtonsSession.resetMessages();
         }
       } else if (this.key === "sign") {
         if (this.value === 'in') {
           // create a random new user
-          Accounts._loginButtonsSession.closeDropdown();
-          fakeLogin();
+          fakeLogin(function () {
+            Accounts._loginButtonsSession.closeDropdown();
+          });
         } else if (this.value === 'out') {
           Meteor.logout();
         }

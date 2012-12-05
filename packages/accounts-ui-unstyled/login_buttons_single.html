@@ -12,6 +12,12 @@
   </div>
 </template>
 
+<template name="_loginButtonsLoggingInSingleLoginButton">
+  <div class="login-text-and-button">
+    {{> _loginButtonsLoggingIn}}
+  </div>
+</template>
+
 <template name="_loginButtonsLoggedInSingleLogoutButton">
   <div class="login-text-and-button">
     <div class="login-display-name">
@@ -20,3 +26,4 @@
     <div class="login-button single-login-button" id="login-buttons-logout">Sign Out</div>
   </div>
 </template>
+

@@ -379,7 +379,7 @@
 
     Meteor.loginWithPassword(loginSelector, password, function (error, result) {
       if (error) {
-        loginButtonsSession.set('errorMessage', error.reason || "Unknown error");
+        loginButtonsSession.errorMessage(error.reason || "Unknown error");
       } else {
         loginButtonsSession.closeDropdown();
       }
@@ -419,7 +419,7 @@
 
     Accounts.createUser(options, function (error) {
       if (error) {
-        loginButtonsSession.set('errorMessage', error.reason || "Unknown error");
+        loginButtonsSession.errorMessage(error.reason || "Unknown error");
       } else {
         loginButtonsSession.closeDropdown();
       }
@@ -433,12 +433,12 @@
     if (email.indexOf('@') !== -1) {
       Accounts.forgotPassword({email: email}, function (error) {
         if (error)
-          loginButtonsSession.set('errorMessage', error.reason || "Unknown error");
+          loginButtonsSession.errorMessage(error.reason || "Unknown error");
         else
-          loginButtonsSession.set('infoMessage', "Email sent");
+          loginButtonsSession.infoMessage("Email sent");
       });
     } else {
-      loginButtonsSession.set('errorMessage', "Invalid email");
+      loginButtonsSession.errorMessage("Invalid email");
     }
   };
 
@@ -458,11 +458,11 @@
 
     Accounts.changePassword(oldPassword, password, function (error) {
       if (error) {
-        loginButtonsSession.set('errorMessage', error.reason || "Unknown error");
+        loginButtonsSession.errorMessage(error.reason || "Unknown error");
       } else {
         loginButtonsSession.set('inChangePasswordFlow', false);
         loginButtonsSession.set('inMessageOnlyFlow', true);
-        loginButtonsSession.set('infoMessage', "Password changed");
+        loginButtonsSession.infoMessage("Password changed");
       }
     });
   };
@@ -474,7 +474,7 @@
       // notably not trimmed. a password could (?) start or end with a space
       var password = elementValueById('login-password');
       if (password !== passwordAgain) {
-        loginButtonsSession.set('errorMessage', "Passwords don't match");
+        loginButtonsSession.errorMessage("Passwords don't match");
         return false;
       }
     }

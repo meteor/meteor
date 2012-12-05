@@ -1,3 +1,4 @@
+(function(){
 Meteor.methods({
   nothing: function () {
   },
@@ -31,6 +32,9 @@ if (Meteor.isServer) {
   // Keys are random tokens, used to isolate multiple test invocations from each
   // other.
   var waiters = {};
+
+  var path = __meteor_bootstrap__.require('path');
+  var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
 
   var returnThroughFuture = function (token, returnValue) {
     // Make sure that when we call return, the fields are already cleared.
@@ -129,11 +133,11 @@ if (Meteor.isServer) {
   });
 
   (function () {
-    var userIdWhenStopped = null;
-    Meteor.publish("recordUserIdOnStop", function() {
-    var self = this;
+    var userIdWhenStopped = {};
+    Meteor.publish("recordUserIdOnStop", function (key) {
+      var self = this;
       self.onStop(function() {
-        userIdWhenStopped = self.userId;
+        userIdWhenStopped[key] = self.userId;
       });
     });
 
@@ -141,8 +145,8 @@ if (Meteor.isServer) {
       setUserId: function(userId) {
         this.setUserId(userId);
       },
-      userIdWhenStopped: function() {
-        return userIdWhenStopped;
+      userIdWhenStopped: function (key) {
+        return userIdWhenStopped[key];
       }
     });
   })();
@@ -162,3 +166,4 @@ if (Meteor.isServer) {
     }
   });
 }
+})();

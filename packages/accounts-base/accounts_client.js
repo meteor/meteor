@@ -7,9 +7,14 @@
 
   var loggingIn = false;
   var loggingInListeners = new Meteor.deps._ContextSet;
-  var setLoggingIn = function (x) {
-    loggingIn = x;
-    loggingInListeners.invalidateAll();
+  // This is mostly just called within this file, but Meteor.loginWithPassword
+  // also uses it to make loggingIn() be true during the beginPasswordExchange
+  // method call too.
+  Accounts._setLoggingIn = function (x) {
+    if (loggingIn !== x) {
+      loggingIn = x;
+      loggingInListeners.invalidateAll();
+    }
   };
   Meteor.loggingIn = function () {
     loggingInListeners.addCurrentContext();
@@ -54,7 +59,8 @@
   Accounts.callLoginMethod = function (options) {
     options = _.extend({
       methodName: 'login',
-      methodArguments: []
+      methodArguments: [],
+      _suppressLoggingIn: false
     }, options);
     // Set defaults for callback arguments to no-op functions; make sure we
     // override falsey values too.
@@ -87,6 +93,10 @@
           reconnected = true;
           Accounts.callLoginMethod({
             methodArguments: [{resume: result.token}],
+            // Reconnect quiescence ensures that the user doesn't see an
+            // intermediate state before the login method finishes. So we don't
+            // need to show a logging-in animation.
+            _suppressLoggingIn: true,
             userCallback: function (error) {
               if (error) {
                 Accounts._makeClientLoggedOut();
@@ -109,7 +119,10 @@
       if (reconnected)
         return;
 
-      setLoggingIn(false);
+      // Note that we need to call this even if _suppressLoggingIn is true,
+      // because it could be matching a _setLoggingIn(true) from a
+      // half-completed pre-reconnect login method.
+      Accounts._setLoggingIn(false);
       if (error || !result) {
         error = error || new Error(
           "No result from call to " + options.methodName);
@@ -128,7 +141,8 @@
       options.userCallback();
     };
 
-    setLoggingIn(true);
+    if (!options._suppressLoggingIn)
+      Accounts._setLoggingIn(true);
     Meteor.apply(
       options.methodName,
       options.methodArguments,

@@ -1,6 +1,6 @@
 /*!
-jQuery Waypoints - v1.1.2
-Copyright (c) 2011 Caleb Troughton
+jQuery Waypoints - v1.1.7
+Copyright (c) 2011-2012 Caleb Troughton
 Dual licensed under the MIT license and GPL license.
 https://github.com/imakewebthings/jquery-waypoints/blob/master/MIT-license.txt
 https://github.com/imakewebthings/jquery-waypoints/blob/master/GPL-license.txt
@@ -14,9 +14,20 @@ GitHub Repository: https://github.com/imakewebthings/jquery-waypoints
 Documentation and Examples: http://imakewebthings.github.com/jquery-waypoints
 
 Changelog:
-   v1.1.2
-      - Fixed error thrown by waypoints with triggerOnce option that were
-        triggered via resize refresh.
+	v1.1.7
+		- Actually fix the post-load bug in Issue #28 from v1.1.3.
+	v1.1.6
+		- Fix potential memory leak by unbinding events on empty context elements.
+	v1.1.5
+		- Make plugin compatible with Browserify/RequireJS. (Thanks @cjroebuck)
+	v1.1.4
+		- Add handler option to give alternate binding method. (Issue #34)
+	v1.1.3
+		- Fix cases where waypoints are added post-load and should be triggered
+		  immediately. (Issue #28)
+	v1.1.2
+		- Fixed error thrown by waypoints with triggerOnce option that were
+		  triggered via resize refresh.
 	v1.1.1
 		- Fixed bug in initialization where all offsets were being calculated
 		  as if set to 0 initially, causing unwarranted triggers during the
@@ -71,6 +82,7 @@ Support:
 	array.  Returns the index, or -1 if the element is not a waypoint.
 	*/
 	waypointIndex = function(el, context) {
+		if (!context) return -1;
 		var i = context.waypoints.length - 1;
 		while (i >= 0 && context.waypoints[i].element[0] !== el[0]) {
 			i -= 1;
@@ -92,13 +104,8 @@ Support:
 	*/
 	Context = function(context) {
 		$.extend(this, {
-			'element': $(context),
-			
-			/*
-			Starting at a ridiculous negative number allows for a 'down' trigger of 0 or
-			negative offset waypoints on load. Useful for setting initial states.
-			*/
-			'oldScroll': -99999,
+			element: $(context),
+			oldScroll: 0,
 			
 			/*
 			List of all elements that have been registered as waypoints.
@@ -155,7 +162,7 @@ Support:
 		});
 		
 		// Setup scroll and resize handlers.  Throttled at the settings-defined rate limits.
-		$(context).scroll($.proxy(function() {
+		$(context).bind('scroll.waypoints', $.proxy(function() {
 			if (!this.didScroll) {
 				this.didScroll = true;
 				window.setTimeout($.proxy(function() {
@@ -163,7 +170,7 @@ Support:
 					this.didScroll = false;
 				}, this), $[wps].settings.scrollThrottle);
 			}
-		}, this)).resize($.proxy(function() {
+		}, this)).bind('resize.waypoints', $.proxy(function() {
 			if (!this.didResize) {
 				this.didResize = true;
 				window.setTimeout($.proxy(function() {
@@ -320,6 +327,10 @@ Support:
 				if (f) {
 					$this.bind(eventName, f);
 				}
+				// Bind the function in the handler option if it exists.
+				if (options && options.handler) {
+					$this.bind(eventName, options.handler);
+				}
 			});
 			
 			// Need to re-sort+refresh the waypoints array after new elements are added.
@@ -346,6 +357,11 @@ Support:
 
 					if (ndx >= 0) {
 						c.waypoints.splice(ndx, 1);
+
+						if (!c.waypoints.length) {
+							c.element.unbind('scroll.waypoints resize.waypoints');
+							contexts.splice(i, 1);
+						}
 					}
 				});
 			});
@@ -384,10 +400,10 @@ Support:
 				contextScroll = isWin ? 0 : c.element.scrollTop();
 				
 				$.each(c.waypoints, function(j, o) {
-				   /* $.each isn't safe from element removal due to triggerOnce.
-				   Should rewrite the loop but this is way easier. */
-				   if (!o) return;
-				   
+					/* $.each isn't safe from element removal due to triggerOnce.
+					Should rewrite the loop but this is way easier. */
+					if (!o) return;
+
 					// Adjustment is just the offset if it's a px value
 					var adjustment = o.options.offset,
 					oldOffset = o.offset;
@@ -416,11 +432,16 @@ Support:
 					optional flag.
 					*/
 					if (o.options.onlyOnScroll) return;
-					
+
 					if (oldOffset !== null && c.oldScroll > oldOffset && c.oldScroll <= o.offset) {
 						triggerWaypoint(o, ['up']);
 					}
 					else if (oldOffset !== null && c.oldScroll < oldOffset && c.oldScroll >= o.offset) {
+						triggerWaypoint(o, ['down']);
+					}
+					/* For new waypoints added after load, check that down should have
+					already been triggered */
+					else if (!oldOffset && c.element.scrollTop() > o.offset) {
 						triggerWaypoint(o, ['down']);
 					}
 				});
@@ -487,7 +508,7 @@ Support:
 			return methods.init.apply(this, [null, method]);
 		}
 		else {
-			$.error( 'Method ' +  method + ' does not exist on jQuery ' + wp );
+			$.error( 'Method ' + method + ' does not exist on jQuery ' + wp );
 		}
 	};
 	
@@ -511,6 +532,12 @@ Support:
 		If true, and multiple waypoints are triggered in one scroll, this waypoint will
 		trigger even if it is not the last waypoint reached.  If false, it will only
 		trigger if it is the last waypoint.
+		
+	handler
+		function
+		default: undefined
+		An alternative way to bind functions to the waypoint, without using the function
+		as the first argument to the waypoint function.
 
 	offset
 		number | string | function
@@ -573,6 +600,22 @@ Support:
 	});
 	
 	You can see this in action on the Dial Controls example.
+	
+	The handler option gives authors an alternative way to bind functions when
+	creating a waypoint.  In place of:
+	
+	$('.item').waypoint(function(event, direction) {
+	   // make things happen
+	});
+	
+	You may instead write:
+	
+	$('.item').waypoint({
+	   handler: function(event, direction) {
+	      // make things happen
+	   }
+	});
+	
 	*/
 	$.fn[wp].defaults = {
 		continuous: true,
@@ -630,4 +673,4 @@ Support:
 		// Calculate everything once on load.
 		$[wps]('refresh');
 	});
-})(jQuery, 'waypoint', 'waypoints', this);
+})(jQuery, 'waypoint', 'waypoints', window);
