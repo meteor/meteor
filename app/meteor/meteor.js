@@ -232,7 +232,7 @@ Commands.push({
       });
     }
 
-    process.stderr.write(appname + ": created");
+    process.stderr.write("Successfully created " + appname + ".");
     if (new_argv.example &&
         new_argv.example !== appname)
       process.stderr.write(" (from '" + new_argv.example + "' template)");
