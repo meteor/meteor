@@ -832,8 +832,8 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({$where: "this.a === 1", a: 2}, {a: 1});
   match({$where: "this.a === 1", b: 2}, {a: 1, b: 2});
   match({$where: "this.a === 1 && this.b === 2"}, {a: 1, b: 2});
-  match({$where: "Array.isArray(this.a)"}, {a: []});
-  nomatch({$where: "Array.isArray(this.a)"}, {a: 1});
+  match({$where: "_.isArray(this.a)"}, {a: []});
+  nomatch({$where: "_.isArray(this.a)"}, {a: 1});
 
   // XXX still needs tests:
   // - $elemMatch
@@ -1279,7 +1279,7 @@ Tinytest.add("minimongo - diff", function (test) {
         test.isTrue(_.has(results, doc._id));
         test.equal(results[doc._id], oldDoc);
         results[doc._id] = doc;
-      },
+      }
     };
 
     LocalCollection._diffQueryUnordered(oldResults, newResults, observer);
