@@ -138,7 +138,7 @@ if (Meteor.isServer) {
 }
 EOF
 
-$METEOR -p $PORT --settings='settings.json' --once
+$METEOR -p $PORT --settings='settings.json' --once > /dev/null
 
 # XXX more tests here!
 
