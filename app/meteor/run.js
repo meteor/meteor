@@ -32,12 +32,12 @@ var Status = {
     var self = this;
     log_to_clients({'exit': "Your application is exiting."});
     self.shuttingDown = true;
-    _.defer(function() {
-      self.mongoHandle && self.mongoHandle.stop(function (err) {
+
+    self.mongoHandle && self.mongoHandle.stop(function (err) {
       if (err)
         process.stdout.write(err.reason + "\n");
       process.exit(self.code);
-    });});
+    });
   },
   reset: function () {
     this.crashing = false;
@@ -206,9 +206,8 @@ var log_to_clients = function (msg) {
 //
 // [runOnce]: boolean; default false; if true doesn't ever try to restart, and
 //          forwards server exit code.
-// [onListen]
 // [settings]
-//
+
 var start_server = function (options) {
   // environment
   options = _.extend({runOnce: false,
