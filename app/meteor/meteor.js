@@ -115,9 +115,8 @@ Commands.push({
       .describe('debug', 'Run in debug mode for node-inspector')
       .boolean('debug-brk')
       .describe('debug-brk', 'Run in debug mode and break on first line')
-      .describe('settings', 'Set Meteor.settings to the contents of a JSON file; takes the filename as an argument')
+      .describe('settings',  'Set optional data for Meteor.settings on the server')
       .boolean('once')
-      .describe('once',  'Disable automatic reloading.  Only run the server once')
       .usage(
 "Usage: meteor run [options]\n" +
 "\n" +
@@ -539,12 +538,12 @@ Commands.push({
       .boolean('debug')
       .describe('debug', 'deploy in debug mode (don\'t minify, etc)')
       .boolean('tests')
-      .describe('settings', 'Set Meteor.settings to the contents of a JSON file; takes the filename as an argument')
+      .describe('settings', 'set optional data for Meteor.settings on the server')
 //      .describe('tests', 'deploy the tests instead of the actual application')
       .usage(
         // XXX document --tests in the future, once we publicly
         // support tests
-"Usage: meteor deploy <site> [--password] [--delete] [--debug]\n" +
+"Usage: meteor deploy <site> [--password] [--settings settings.json] [--debug] [--delete]\n" +
 "\n" +
 "Deploys the project in your current directory to Meteor's servers.\n" +
 "\n" +
@@ -553,6 +552,11 @@ Commands.push({
 "'myapp.meteor.com'.  If you deploy to a custom domain, such as\n" +
 "'myapp.mydomain.com', then you'll also need to configure your domain's\n" +
 "DNS records.  See the Meteor docs for details.\n" +
+"\n" +
+"The --settings flag can be used to pass deploy-specific information to\n" +
+"the application. It will be available at runtime in Meteor.settings, but only\n" +
+"on the server. The argument is the name of a file containing the JSON data\n" +
+"to use." +
 "\n" +
 "The --delete flag permanently removes a deployed application, including\n" +
 "all of its stored data.\n" +
