@@ -93,6 +93,8 @@ var getSettings = function (filename) {
   if (str.length > 0x10000) {
     throw new Error("Settings file must be less than 64 KB long");
   }
+  // Ensure that the string is parseable in JSON, but there's
+  // no reason to use the object value of it yet.
   JSON.parse(str);
   return str;
 };
@@ -488,7 +490,7 @@ Commands.push({
       process.exit(1);
     }
 
-    new_argv = opt.argv;
+    var new_argv = opt.argv;
 
     if (new_argv._.length === 1) {
       // localhost mode
@@ -505,7 +507,7 @@ Commands.push({
         var mongo_url = "mongodb://127.0.0.1:" + mongod_port + "/meteor";
 
         if (new_argv.url)
-          console.log(mongo_url)
+          console.log(mongo_url);
         else
           deploy.run_mongo_shell(mongo_url);
       });

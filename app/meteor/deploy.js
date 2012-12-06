@@ -64,12 +64,12 @@ var deploy_app = function (url, app_dir, opt_debug, opt_tests,
 
   with_password(parsed_url.hostname, function (password) {
     var deployOptions = {
-        site: parsed_url.hostname,
-        appDir: app_dir,
-        debug: opt_debug,
-        tests: opt_tests,
-        password: password,
-        settings: settings
+      site: parsed_url.hostname,
+      appDir: app_dir,
+      debug: opt_debug,
+      tests: opt_tests,
+      password: password,
+      settings: settings
     };
     if (opt_set_password)
       get_new_password(function (set_password) {
@@ -108,16 +108,17 @@ var bundle_and_deploy = function (options) {
 
   process.stdout.write('uploading ... ');
 
-  var opts = {};
-  if (password) opts.password = password;
-  if (set_password) opts.set_password = set_password;
+  var rpcOptions = {};
+  if (password) rpcOptions.password = password;
+  if (set_password) rpcOptions.set_password = set_password;
 
-  if (settings) opts.settings = settings;
+  // When it hits the wire, all these opts will be URL-encoded.
+  if (settings) rpcOptions.settings = settings;
 
   var tar = child_process.spawn(
     'tar', ['czf', '-', 'bundle'], {cwd: build_dir});
 
-  var rpc = meteor_rpc('deploy', 'POST', site, opts, function (err, body) {
+  var rpc = meteor_rpc('deploy', 'POST', site, rpcOptions, function (err, body) {
     if (err) {
       var errorMessage = (body || ("Connection error (" + err.message + ")"));
       process.stderr.write("\nError deploying application: " + errorMessage + "\n");

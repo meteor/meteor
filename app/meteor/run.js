@@ -28,7 +28,7 @@ var Status = {
   shouldRestart: true, // true if we should be restarting the server
   shuttingDown: false, // true if we're on the way to shutting down the server
 
-  exitNow : function () {
+  exitNow: function () {
     var self = this;
     log_to_clients({'exit': "Your application is exiting."});
     self.shuttingDown = true;
