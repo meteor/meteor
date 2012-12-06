@@ -9,8 +9,8 @@ if (Meteor.isServer) {
 // we can't do recursive Meteor.autosubscribe().
 var captureSubs = null;
 
-// @param url {String|Object} URL to Meteor app or sockjs endpoint (deprecated),
-//     or an object as a test hook (see code)
+// @param url {String|Object} URL to Meteor app,
+//   or an object as a test hook (see code)
 // Options:
 //   reloadOnUpdate: should we try to reload when the server says
 //                      there's new code available?
@@ -30,9 +30,6 @@ Meteor._LivedataConnection = function (url, options) {
   // as a test hook, allow passing a stream instead of a url.
   if (typeof url === "object") {
     self._stream = url;
-    // if we have two test streams, auto reload stuff will break because
-    // the url is used as a key for the migration data.
-    url = "/debug";
   } else {
     self._stream = new Meteor._Stream(url);
   }
