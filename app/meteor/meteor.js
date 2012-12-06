@@ -95,8 +95,12 @@ var getSettings = function (filename) {
   }
   // Ensure that the string is parseable in JSON, but there's
   // no reason to use the object value of it yet.
-  JSON.parse(str);
-  return str;
+  if (str.match(/\S/)) {
+    JSON.parse(str);
+    return str;
+  } else {
+    return "";
+  }
 };
 
 // XXX when the pass unexpected argument or unrecognized flags, print
@@ -578,8 +582,9 @@ Commands.push({
     if (new_argv.delete) {
       deploy.delete_app(new_argv._[1]);
     } else {
+      var settings = undefined;
       if (new_argv.settings)
-        var settings = getSettings(new_argv.settings);
+        settings = getSettings(new_argv.settings);
       // accept packages iff we're deploying tests
       var project_dir = path.resolve(require_project("bundle", new_argv.tests));
       deploy.deploy_app(new_argv._[1], project_dir, new_argv.debug,

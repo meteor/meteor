@@ -113,7 +113,7 @@ var bundle_and_deploy = function (options) {
   if (set_password) rpcOptions.set_password = set_password;
 
   // When it hits the wire, all these opts will be URL-encoded.
-  if (settings) rpcOptions.settings = settings;
+  if (settings !== undefined) rpcOptions.settings = settings;
 
   var tar = child_process.spawn(
     'tar', ['czf', '-', 'bundle'], {cwd: build_dir});
