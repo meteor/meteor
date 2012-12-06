@@ -562,7 +562,8 @@ Commands.push({
 "The --settings flag can be used to pass deploy-specific information to\n" +
 "the application. It will be available at runtime in Meteor.settings, but only\n" +
 "on the server. The argument is the name of a file containing the JSON data\n" +
-"to use." +
+"to use.  The settings will persist across deployments until you again specify\n" +
+"a settings file.  To unset Meteor.settings, pass an empty settings file." +
 "\n" +
 "The --delete flag permanently removes a deployed application, including\n" +
 "all of its stored data.\n" +
