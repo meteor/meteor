@@ -683,6 +683,13 @@ exports.bundle = function (project_dir, output_path, options) {
     if (!options.no_minify)
       bundle.minify();
 
+    // Include docs, if requested by app
+    if (project.includeDocs) {
+      // XXX
+      //console.log(packages.list());
+      console.log("include_docs");
+    }
+
     // Write to disk
     var dev_bundle_mode =
           options.skip_dev_bundle ? "skip" : (

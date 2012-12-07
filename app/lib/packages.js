@@ -42,6 +42,10 @@ var Package = function () {
   // registered source file handlers
   self.extensions = {};
 
+  // if true, bundler will scan all packages for API docs and include them
+  // in the bundle.  this is a hack to support the "docs" app.
+  self.includeDocs = false;
+
   // functions that can be called when the package is scanned
   self.declarationFuncs = {
     // keys
@@ -138,6 +142,9 @@ _.extend(Package.prototype, {
       // -- Source files --
       api.add_files(sources_except(api, "server"), "client");
       api.add_files(sources_except(api, "client"), "server");
+
+      if (fs.existsSync(path.join(app_dir, '.meteor', 'include_docs')))
+        self.includeDocs = true;
     });
 
     self.declarationFuncs.on_test(function (api) {
