@@ -90,6 +90,18 @@ domain like myapp.com, you'll need a DNS A record, matching the IP
 address of origin.meteor.com.
 {{/warning}}
 
+
+
+To add deploy-specific information to your application, use the `--settings`
+option.  This will set the variable `Meteor.settings` in your application, but
+only on the server.  The `--settings` option takes an argument: the name of a
+file containing JSON data to put into `Meteor.settings`.
+
+The settings you pass will persist on your deployed application across
+invocations of `meteor deploy` until you again pass the `--settings` option with
+different contents in your settings file. To unset `Meteor.settings`, pass an
+empty settings file.
+
 <h3 id="meteorlogs">meteor logs <i>site</i></h3>
 
 Retrieves the server logs for the named Meteor application.

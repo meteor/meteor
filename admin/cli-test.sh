@@ -120,7 +120,25 @@ kill $METEOR_PID
 ps ax | grep -e "$MONGOMARK" | grep -v grep | awk '{print $1}' | xargs kill
 
 
+echo "... settings"
 
+cat > settings.json <<EOF
+{ "foo" : "bar",
+  "baz" : "quux"
+}
+EOF
+
+cat > settings.js <<EOF
+if (Meteor.isServer) {
+  Meteor.startup(function () {
+    if (!Meteor.settings) process.exit(1);
+    if (Meteor.settings.foo !== "bar") process.exit(1);
+    process.exit(0);
+  });
+}
+EOF
+
+$METEOR -p $PORT --settings='settings.json' --once > /dev/null
 
 # XXX more tests here!
 

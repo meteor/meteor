@@ -33,10 +33,15 @@ if (process.env.EMACS == "t") {
 // interactively prompt for here.
 
 var meteor_rpc = function (rpc_name, method, site, query_params, callback) {
-  var url = "https://" + DEPLOY_HOSTNAME + '/' + rpc_name + '/' + site;
+  var url;
+  if (DEPLOY_HOSTNAME.indexOf("http://") === 0)
+    url = DEPLOY_HOSTNAME + '/' + rpc_name + '/' + site;
+  else
+    url = "https://" + DEPLOY_HOSTNAME + '/' + rpc_name + '/' + site;
 
-  if (!_.isEmpty(query_params))
+  if (!_.isEmpty(query_params)) {
     url += '?' + qs.stringify(query_params);
+  }
 
   var r = request({method: method, url: url}, function (error, response, body) {
     if (error || ((response.statusCode !== 200)
@@ -51,26 +56,39 @@ var meteor_rpc = function (rpc_name, method, site, query_params, callback) {
 };
 
 var deploy_app = function (url, app_dir, opt_debug, opt_tests,
-                           opt_set_password) {
+                           opt_set_password, settings) {
   var parsed_url = parse_url(url);
 
   // a bit contorted here to make sure we ask for the password before
   // launching the slow bundle process.
 
   with_password(parsed_url.hostname, function (password) {
+    var deployOptions = {
+      site: parsed_url.hostname,
+      appDir: app_dir,
+      debug: opt_debug,
+      tests: opt_tests,
+      password: password,
+      settings: settings
+    };
     if (opt_set_password)
       get_new_password(function (set_password) {
-        bundle_and_deploy(parsed_url.hostname, app_dir, opt_debug, opt_tests,
-                          password, set_password);
+        deployOptions.setPassword = set_password;
+        bundle_and_deploy(deployOptions);
       });
     else
-      bundle_and_deploy(parsed_url.hostname, app_dir, opt_debug, opt_tests,
-                        password);
+      bundle_and_deploy(deployOptions);
   });
 };
 
-var bundle_and_deploy = function (site, app_dir, opt_debug, opt_tests,
-                                  password, set_password) {
+var bundle_and_deploy = function (options) {
+  var site = options.site;
+  var app_dir = options.appDir;
+  var opt_debug = options.debug;
+  var opt_tests = options.tests;
+  var password = options.password;
+  var set_password = options.setPassword;
+  var settings = options.settings;
   var build_dir = path.join(app_dir, '.meteor', 'local', 'build_tar');
   var bundle_path = path.join(build_dir, 'bundle');
   var bundle_opts = { skip_dev_bundle: true, no_minify: !!opt_debug,
@@ -90,14 +108,17 @@ var bundle_and_deploy = function (site, app_dir, opt_debug, opt_tests,
 
   process.stdout.write('uploading ... ');
 
-  var opts = {};
-  if (password) opts.password = password;
-  if (set_password) opts.set_password = set_password;
+  var rpcOptions = {};
+  if (password) rpcOptions.password = password;
+  if (set_password) rpcOptions.set_password = set_password;
+
+  // When it hits the wire, all these opts will be URL-encoded.
+  if (settings !== undefined) rpcOptions.settings = settings;
 
   var tar = child_process.spawn(
     'tar', ['czf', '-', 'bundle'], {cwd: build_dir});
 
-  var rpc = meteor_rpc('deploy', 'POST', site, opts, function (err, body) {
+  var rpc = meteor_rpc('deploy', 'POST', site, rpcOptions, function (err, body) {
     if (err) {
       var errorMessage = (body || ("Connection error (" + err.message + ")"));
       process.stderr.write("\nError deploying application: " + errorMessage + "\n");
