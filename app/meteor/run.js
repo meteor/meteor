@@ -10,6 +10,7 @@ var files = require(path.join(__dirname, '..', 'lib', 'files.js'));
 var updater = require(path.join(__dirname, '..', 'lib', 'updater.js'));
 var bundler = require(path.join(__dirname, '..', 'lib', 'bundler.js'));
 var mongo_runner = require(path.join(__dirname, '..', 'lib', 'mongo_runner.js'));
+var mongoExitCodes = require(path.join(__dirname, '..', 'lib', 'mongo_exit_codes.js'));
 
 var _ = require(path.join(__dirname, '..', 'lib', 'third', 'underscore.js'));
 
@@ -699,7 +700,13 @@ exports.run = function (app_dir, bundle_opts, port, once, settings, dbg) {
         // declare it failed and die.
         mongo_err_count += 1;
         if (mongo_err_count >= 3) {
-          console.log("Can't start mongod. Check for other processes listening on port " + mongo_port + " or other meteors running in the same project.");
+          var explanation = mongoExitCodes.Codes[code];
+          console.log("Can't start mongod\n");
+          if (explanation)
+            console.log(explanation.longText);
+          if (explanation === mongoExitCodes.EXIT_NET_ERROR)
+            console.log("\nCheck for other processes listening on port " + mongo_port +
+                        "\nor other meteors running in the same project.");
           process.exit(1);
         }
         if (mongo_err_timer)
