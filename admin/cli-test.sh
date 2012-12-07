@@ -119,8 +119,37 @@ curl -s "http://localhost:$PORT" > /dev/null
 kill $METEOR_PID
 ps ax | grep -e "$MONGOMARK" | grep -v grep | awk '{print $1}' | xargs kill
 
+echo "... mongo message"
+
+nc -l localhost $(($PORT + 2)) &
+NC_PID=$!
+
+$METEOR -p $PORT > error.txt || true
+
+grep 'port was closed' error.txt > /dev/null
+
+kill -9 $NC_PID > /dev/null
 
 
+echo "... settings"
+
+cat > settings.json <<EOF
+{ "foo" : "bar",
+  "baz" : "quux"
+}
+EOF
+
+cat > settings.js <<EOF
+if (Meteor.isServer) {
+  Meteor.startup(function () {
+    if (!Meteor.settings) process.exit(1);
+    if (Meteor.settings.foo !== "bar") process.exit(1);
+    process.exit(0);
+  });
+}
+EOF
+
+$METEOR -p $PORT --settings='settings.json' --once > /dev/null
 
 # XXX more tests here!
 

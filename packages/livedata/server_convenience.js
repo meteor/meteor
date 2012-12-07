@@ -1,5 +1,7 @@
-if (process.env.DEFAULT_DDP_ENDPOINT)
-  __meteor_runtime_config__.DEFAULT_DDP_ENDPOINT = process.env.DEFAULT_DDP_ENDPOINT;
+if (process.env.DDP_DEFAULT_CONNECTION_URL) {
+  __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL =
+    process.env.DDP_DEFAULT_CONNECTION_URL;
+}
 
 
 _.extend(Meteor, {

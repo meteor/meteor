@@ -131,17 +131,24 @@ var find_mongo_and_kill_it_dead = function (port, callback) {
 };
 
 exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callback) {
+  var handle = {stop: function (callback) { callback(); } };
   launch_callback = launch_callback || function () {};
   on_exit_callback = on_exit_callback || function () {};
 
   // If we are passed an external mongo, assume it is launched and never
   // exits. Matches code in run.js:exports.run.
+
+  // Since it is externally managed, asking it to actually stop would be
+  // impolite, so our stoppable handle is a noop
   if (process.env.MONGO_URL) {
     launch_callback();
-    return;
+    return handle;
   }
 
-  var mongod_path = path.join(files.get_dev_bundle(), 'mongodb', 'bin', 'mongod');
+  var mongod_path = path.join(files.get_dev_bundle(),
+                              'mongodb',
+                              'bin',
+                              'mongod');
 
   // store data in app_dir
   var data_path = path.join(app_dir, '.meteor', 'local', 'db');
@@ -161,15 +168,15 @@ exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callbac
       '--port', port,
       '--dbpath', data_path
     ]);
+    handle.stop = function (callback) {
+      var tries = 0;
+      var exited = false;
+      proc.removeListener('exit', on_exit_callback);
+      proc.kill('SIGINT');
+      callback && callback(err);
+    };
 
-    proc.on('exit', function (code, signal) {
-      on_exit_callback(code, signal);
-    });
-
-    // proc.stderr.setEncoding('utf8');
-    // proc.stderr.on('data', function (data) {
-    //   process.stdout.write(data);
-    // });
+    proc.on('exit', on_exit_callback);
 
     proc.stdout.setEncoding('utf8');
     proc.stdout.on('data', function (data) {
@@ -178,6 +185,5 @@ exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callbac
         launch_callback();
     });
   });
-
+  return handle;
 };
-

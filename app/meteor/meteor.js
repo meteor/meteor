@@ -83,6 +83,26 @@ var findCommand = function (name) {
   process.exit(1);
 };
 
+var getSettings = function (filename) {
+  var str;
+  try {
+    str = fs.readFileSync(filename, "utf8");
+  } catch (e) {
+    throw new Error("Could not find settings file " + filename);
+  }
+  if (str.length > 0x10000) {
+    throw new Error("Settings file must be less than 64 KB long");
+  }
+  // Ensure that the string is parseable in JSON, but there's
+  // no reason to use the object value of it yet.
+  if (str.match(/\S/)) {
+    JSON.parse(str);
+    return str;
+  } else {
+    return "";
+  }
+};
+
 // XXX when the pass unexpected argument or unrecognized flags, print
 // an error and fail out
 
@@ -101,6 +121,8 @@ Commands.push({
       .describe('debug', 'Run in debug mode for node-inspector')
       .boolean('debug-brk')
       .describe('debug-brk', 'Run in debug mode and break on first line')
+      .describe('settings',  'Set optional data for Meteor.settings on the server')
+      .boolean('once')
       .usage(
 "Usage: meteor run [options]\n" +
 "\n" +
@@ -113,22 +135,26 @@ Commands.push({
 "are automatically detected and applied to the running application.\n" +
 "\n" +
 "The application's database persists between runs. It's stored under\n" +
-"the .meteor directory in the root of the project.\n"
-);
+"the .meteor directory in the root of the project.\n");
 
     var new_argv = opt.argv;
+    var settings = "";
 
     if (argv.help) {
       process.stdout.write(opt.help());
       process.exit(1);
     }
+    if (new_argv.settings) {
+      settings = getSettings(new_argv.settings);
+    }
 
     var app_dir = path.resolve(require_project("run", true)); // app or package
-    var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true};
+
+    var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true };
     var debugStatus = runner.DebugStatus.OFF;
     if (new_argv['debug']) debugStatus = runner.DebugStatus.DEBUG;
     if (new_argv['debug-brk']) debugStatus = runner.DebugStatus.BREAK;
-    runner.run(app_dir, bundle_opts, new_argv.port, debugStatus);
+    runner.run(app_dir, bundle_opts, new_argv.port, new_argv.once, settings, debugStatus);
   }
 });
 
@@ -468,7 +494,7 @@ Commands.push({
       process.exit(1);
     }
 
-    new_argv = opt.argv;
+    var new_argv = opt.argv;
 
     if (new_argv._.length === 1) {
       // localhost mode
@@ -485,7 +511,7 @@ Commands.push({
         var mongo_url = "mongodb://127.0.0.1:" + mongod_port + "/meteor";
 
         if (new_argv.url)
-          console.log(mongo_url)
+          console.log(mongo_url);
         else
           deploy.run_mongo_shell(mongo_url);
       });
@@ -518,11 +544,12 @@ Commands.push({
       .boolean('debug')
       .describe('debug', 'deploy in debug mode (don\'t minify, etc)')
       .boolean('tests')
+      .describe('settings', 'set optional data for Meteor.settings on the server')
 //      .describe('tests', 'deploy the tests instead of the actual application')
       .usage(
         // XXX document --tests in the future, once we publicly
         // support tests
-"Usage: meteor deploy <site> [--password] [--delete] [--debug]\n" +
+"Usage: meteor deploy <site> [--password] [--settings settings.json] [--debug] [--delete]\n" +
 "\n" +
 "Deploys the project in your current directory to Meteor's servers.\n" +
 "\n" +
@@ -531,6 +558,12 @@ Commands.push({
 "'myapp.meteor.com'.  If you deploy to a custom domain, such as\n" +
 "'myapp.mydomain.com', then you'll also need to configure your domain's\n" +
 "DNS records.  See the Meteor docs for details.\n" +
+"\n" +
+"The --settings flag can be used to pass deploy-specific information to\n" +
+"the application. It will be available at runtime in Meteor.settings, but only\n" +
+"on the server. The argument is the name of a file containing the JSON data\n" +
+"to use.  The settings will persist across deployments until you again specify\n" +
+"a settings file.  To unset Meteor.settings, pass an empty settings file.\n" +
 "\n" +
 "The --delete flag permanently removes a deployed application, including\n" +
 "all of its stored data.\n" +
@@ -550,10 +583,13 @@ Commands.push({
     if (new_argv.delete) {
       deploy.delete_app(new_argv._[1]);
     } else {
+      var settings = undefined;
+      if (new_argv.settings)
+        settings = getSettings(new_argv.settings);
       // accept packages iff we're deploying tests
       var project_dir = path.resolve(require_project("bundle", new_argv.tests));
       deploy.deploy_app(new_argv._[1], project_dir, new_argv.debug,
-                        new_argv.tests, new_argv.password);
+                        new_argv.tests, new_argv.password, settings);
     }
   }
 });
