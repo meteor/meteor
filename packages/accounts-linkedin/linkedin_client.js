@@ -1,5 +1,5 @@
 (function () {
-  // XXX support options.requestPermissions as we do for Facebook, Google, Github, Twitter
+  // XXX support options.requestPermissions as we do for Facebook, Google, Github
   Meteor.loginWithLinkedin = function (options, callback) {
     // support both (options, callback) and (callback).
     if (!callback && typeof options === 'function') {
