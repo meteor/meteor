@@ -395,7 +395,8 @@ JSLexer.prototype.next = function () {
   // Use non-short-circuiting OR, '|', to allow matching
   // both regexes in sequence, returning false only if neither
   // matched.
-  while (run(rIdentifierMiddle) | run(rIdentifierPrefix)) {/*continue*/}
+  while ((!! run(rIdentifierMiddle)) |
+         (!! run(rIdentifierPrefix))) { /*continue*/ }
   var word = code.substring(origPos, pos);
   return lexeme(keywordLookup[' '+word] || 'IDENTIFIER');
 };
