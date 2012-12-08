@@ -392,7 +392,7 @@ JSLexer.prototype.next = function () {
   }
   // dot (any non-line-terminator)
   run(rIdentifierPrefix);
-  // Use non-short-circuiting OR, '|', to allow matching
+  // Use non-short-circuiting bitwise OR, '|', to always try
   // both regexes in sequence, returning false only if neither
   // matched.
   while ((!! run(rIdentifierMiddle)) |
