@@ -6,13 +6,13 @@
     return {
       serviceData: {
         id: identity.id,
-        screenName: identity.id,
+        name: identity.formatted-name,
         accessToken: oauthBinding.accessToken,
         accessTokenSecret: oauthBinding.accessTokenSecret
       },
       options: {
         profile: {
-          name: formatted-name
+          name: identity.formatted-name
         }
       }
     };
