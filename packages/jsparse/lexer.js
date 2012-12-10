@@ -86,8 +86,21 @@ var rLineContinuation =
       /\\(\r\n|[\u000A\u000D\u2028\u2029])/g;
 // Section 7.8.5
 // Match one regex literal, including slashes, not including flags.
-// XXX Add support for unescaped '/' in character class, allowed by 5th ed.
-var rRegexLiteral = /\/(?![*\/])(\\.|(?=.)[^\\])+?\//g;
+// Support unescaped '/' in character classes, per 5th ed.
+// For example: `/[/]/` will match the string `"/"`.
+//
+// Explanation of regex:
+// - Match `/` not followed by `/` or `*`
+// - Match one or more of any of these:
+//   - Backslash followed by one non-newline
+//   - One non-newline, not `[` or `\` or `/`
+//   - A character class, beginning with `[` and ending with `]`.
+//     In the middle is zero or more of any of these:
+//     - Backslash followed by one non-newline
+//     - One non-newline, not `]` or `\`
+// - Match closing `/`
+var rRegexLiteral =
+      /\/(?![*\/])(\\.|(?=.)[^\[\/\\]|\[(\\.|(?=.)[^\]\\])*\])+\//g;
 var rRegexFlags = /[a-zA-Z]*/g;
 
 var rDecider =

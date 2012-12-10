@@ -242,6 +242,10 @@ Tinytest.add("jsparse - tokenization errors", function (test) {
   var tester = makeTester(test);
   tester.badToken("123`@`");
   tester.badToken("thisIsATestOf = `'unterminated `\n strings'");
+  // make sure newlines aren't quietly included in regex literals
+  tester.badToken("var x = `/`a\nb/;");
+  tester.badToken("var x = `/`a\\\nb/;");
+  tester.badToken("var x = `/`a[\n]b/;");
 });
 
 Tinytest.add("jsparse - syntax forms", function (test) {
@@ -401,6 +405,16 @@ Tinytest.add("jsparse - syntax forms", function (test) {
      "program(expressionStmnt(unary(+ number(.5)) ;()))"],
     ["a1a1a",
      "program(expressionStmnt(identifier(a1a1a) ;()))"],
+    ["/abc/mig",
+     "program(expressionStmnt(regex(/abc/mig) ;()))"],
+    ["/[]/",
+     "program(expressionStmnt(regex(/[]/) ;()))"],
+    ["/[/]/",
+     "program(expressionStmnt(regex(/[/]/) ;()))"],
+    ["/[[/]/",
+     "program(expressionStmnt(regex(/[[/]/) ;()))"],
+    ["/.\\/[a//b]\\[\\][[\\d/]/",
+     "program(expressionStmnt(regex(/.\\/[a//b]\\[\\][[\\d/]/) ;()))"],
     ["a / /b/mgi / c",
      "program(expressionStmnt(binary(binary(identifier(a) / " +
      "regex(/b/mgi)) / identifier(c)) ;()))"],
