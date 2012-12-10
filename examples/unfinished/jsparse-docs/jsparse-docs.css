@@ -1,0 +1,42 @@
+
+p, .topnotes .nodespec { margin: 0.8em; }
+.topnotes {
+    background: #ffd;
+    margin-bottom: 2em;
+    margin-left: 1em;
+    margin-right: 1em;
+    border: 2px solid #ccc;    
+}
+
+.str { font-weight: bold; }
+.token { font-family: monospace; font-size: 110%; font-weight: bold; }
+.token, .tokentype { background: #ddd; padding: 2px 5px; }
+.tokentype { font-size: 85%; }
+.ref { font-style: italic; }
+.punc { font-size: 140%; }
+.comma { color: #fff; }
+.or { padding-left: 3px; padding-right: 3px; }
+
+.nodespec {
+  font-size: 16px;
+  margin: 1em 0;
+  line-height: 20px;
+}
+
+.indent {
+  margin-left: 2em;
+}
+
+.explan {
+  margin-left: 20em;
+  margin-right: 2em;
+  border: 1px solid #ccc;
+}
+
+#page { max-width: 50em; margin: 0 auto; }
+
+.spacer { text-align: center; font-size:50%; font-weight: bold; border-top: 1px solid #999;
+         margin-left: 6em; margin-right: 6em;
+        }
+
+code { font-weight: bold; }
