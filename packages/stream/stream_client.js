@@ -1,5 +1,6 @@
-// @param url {String} URL to Meteor app or sockjs endpoint (deprecated)
-//   "http://subdomain.meteor.com/sockjs" or "/sockjs"
+// @param url {String} URL to Meteor app
+//   "http://subdomain.meteor.com/" or "/" or
+//   "ddp+sockjs://foo-**.meteor.com/sockjs"
 Meteor._Stream = function (url) {
   var self = this;
 

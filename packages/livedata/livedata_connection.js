@@ -1152,13 +1152,12 @@ _.extend(Meteor._LivedataConnection.prototype, {
 });
 
 _.extend(Meteor, {
-  // @param url {String} URL to Meteor app, or to sockjs endpoint (deprecated),
+  // @param url {String} URL to Meteor app,
   //     e.g.:
   //     "subdomain.meteor.com",
   //     "http://subdomain.meteor.com",
   //     "/",
-  //     "http://subdomain.meteor.com/sockjs" (deprecated),
-  //     "/sockjs" (deprecated)
+  //     "ddp+sockjs://ddp--****-foo.meteor.com/sockjs"
   connect: function (url, _reloadOnUpdate) {
     var ret = new Meteor._LivedataConnection(
       url, {reloadOnUpdate: _reloadOnUpdate});

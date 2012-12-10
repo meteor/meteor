@@ -163,6 +163,29 @@ _.extend(Meteor.Collection.prototype, {
 });
 
 
+// protect against dangerous selectors.  falsey and {_id: falsey} are both
+// likely programmer error, and not what you want, particularly for destructive
+// operations.  JS regexps don't serialize over DDP but can be trivially
+// replaced by $regex.
+Meteor.Collection._rewriteSelector = function (selector) {
+  // shorthand -- scalars match _id
+  if (LocalCollection._selectorIsId(selector))
+    selector = {_id: selector};
+
+  if (!selector || (('_id' in selector) && !selector._id))
+    // can't match anything
+    return {_id: Meteor.uuid()};
+
+  var ret = {};
+  _.each(selector, function (value, key) {
+    if (value instanceof RegExp)
+      ret[key] = {$regex: value.source};
+    else
+      ret[key] = value;
+  });
+  return ret;
+};
+
 // 'insert' immediately returns the inserted document's new _id.  The
 // others return nothing.
 //
@@ -217,6 +240,8 @@ _.each(["insert", "update", "remove"], function (name) {
       if ('_id' in args[0])
         throw new Error("Do not pass an _id to insert. Meteor will generate the _id for you.");
       ret = args[0]._id = Meteor.uuid();
+    } else {
+      args[0] = Meteor.Collection._rewriteSelector(args[0]);
     }
 
     if (self._manager && self._manager !== Meteor.default_server) {
