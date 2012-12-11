@@ -14,11 +14,83 @@ require(path.join(__dirname, '..', '..', 'packages',
 require(path.join(__dirname, '..', '..', 'packages',
                   'jsparse', 'parser'));
 
+var mightHaveDocComments = function (source) {
+  return /\/\*\*(?!\*)/.test(source);
+};
+
+var scanForDocComments = function (tree) {
+  var comments = [];
+
+  var scan = function (n) {
+    if (! (n instanceof ParseNode))
+      // `n` is a token (leaf of the syntax tree)
+      return;
+
+    if (n.name === "comment") {
+      // A "comment" node represents a JS comment that appears
+      // at statement level in the source code, without code
+      // preceding it on the line where it starts.  It may be a
+      // single-line or multi-line comment.  jsparse finds these
+      // for us.
+      //
+      // We first determine if the comment is a "doc" comment.
+      // Doc comments start with `/**` (exactly two asterisks in
+      // a row), and end with `*/`.  If there are extra asterisks
+      // in the closing, they are ignored (because considering them
+      // to be content wouldn't make much sense).
+      var commentText = n.children[0].text();
+      var docCommentMatch = /^\/\*\*(?!\*)([\s\S]*?)\*+\/$/.exec(commentText);
+      if (docCommentMatch) {
+        var commentContents = docCommentMatch[1];
+        var lines = commentContents.split('\n');
+        if (lines.length > 1) {
+          // Strip indentation and optional `*` from the beginning
+          // of each line.  The first new line after the opening
+          // punctuation determines the maximum indentation.
+          // We record the number of whitespace characters at the start of
+          // this line, and then we record whether a `*` comes next.
+          // Using this information, for each subsequent
+          // line, we strip a maximum of that many whitespace characters,
+          // and if there was a star on the first line, we try to strip
+          // a star if we can.  The goal is to support indentation and leading
+          // `*` inside doc comments by stripping a fixed number of columns,
+          // but also to be lenient and not strip off text.
+          var linePrefixMatch = /^(\s*)(\*?)/.exec(lines[1]); // always matches
+          var numSpaces = linePrefixMatch[1].length;
+          var hasStar = !! linePrefixMatch[2];
+          for(var i = 1; i < lines.length; i++) {
+            var lineHere = lines[i];
+            var numSpacesHere = /^\s*/.exec(lineHere)[0].length;
+            var charsToDrop = Math.min(numSpaces, numSpacesHere);
+            if (hasStar && lineHere.charAt(charsToDrop) === '*')
+              charsToDrop++;
+            lines[i] = lineHere.slice(charsToDrop);
+          }
+        }
+        comments.push(lines.join('\n'));
+      }
+    } else {
+      // Recurse on children of this syntax node.
+      for(var i = 0; i < n.children.length; i++)
+        scan(n.children[i]);
+    }
+  };
+
+  scan(tree);
+
+  return comments;
+};
 
 exports.getAPIDocs = function () {
+  var info = { packages: [] };
+
+  console.log("Scanning for API docs...");
+
   var pkgs = packages.list();
   _.each(pkgs, function (pkg, name) {
-    console.log("### " + name);
+    var pkgInfo = { name: name, files: [] };
+    info.packages.push(pkgInfo);
+
     if (pkg.on_use_handler) {
       pkg.on_use_handler({
         use: function () {},
@@ -27,18 +99,32 @@ exports.getAPIDocs = function () {
           where = where ? (where instanceof Array ? where : [where]) : [];
           _.each(paths, function (relPath) {
             if (/\.js$/.test(relPath)) {
-              var fullPath = path.join(pkg.source_root, relPath);
-              var source = fs.readFileSync(fullPath).toString();
+              var fileInfo = { path: relPath, comments: [] };
+              pkgInfo.files.push(fileInfo);
 
-              var parser = new JSParser(source, {includeComments: true});
+              var fullPath = path.join(pkg.source_root, relPath);
+              var A1 = +new Date;
+              var source = fs.readFileSync(fullPath).toString();
+              var A2 = +new Date;
+              fileInfo.readMs = A2 - A1;
               var parseResult;
-              try {
-                var tree = parser.getSyntaxTree();
-                parseResult = "parse success";
-              } catch (parseError) {
-                parseResult = "PARSE ERROR: " + parseError.message;
+
+              var B1 = +new Date;
+              if (! mightHaveDocComments(source)) {
+                parseResult = "skipped";
+              } else {
+                var parser = new JSParser(source, {includeComments: true});
+                try {
+                  var tree = parser.getSyntaxTree();
+                  fileInfo.comments = scanForDocComments(tree);
+                  parseResult = "success";
+                } catch (parseError) {
+                  parseResult = "PARSE ERROR: " + parseError.message;
+                }
               }
-              console.log(" * " + relPath + ": " + parseResult);
+              var B2 = +new Date;
+              fileInfo.parseMs = B2 - B1;
+              fileInfo.parseResult = parseResult;
             }
           });
         },
@@ -50,6 +136,8 @@ exports.getAPIDocs = function () {
     }
   });
 
-  return "foo";
+  console.log("DONE");
+
+  return info;
 
 };

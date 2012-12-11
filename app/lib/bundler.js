@@ -663,8 +663,11 @@ exports.bundle = function (project_dir, output_path, options) {
     // Include docs, if requested by app
     if (project.includeDocs) {
       var docsInfo = docs.getAPIDocs();
-      // XXX
-      console.log(docsInfo);
+      bundle.api.add_resource({type: 'js', where: ['client', 'server'],
+                               path: '/docs/generated-docs.js',
+                               data: new Buffer('var GENERATED_DOCS = ' +
+                                                JSON.stringify(docsInfo) +
+                                                ';\n')});
     }
 
     // Write to disk
