@@ -359,7 +359,7 @@ Copyright (c) 2012 Felix Geisendörfer (felix@debuggable.com) and contributors
 docs/client/markdown.js
 ----------
 
-Copyright (c) 2012 John MacFarlane and David Greenspan
+Copyright (c) 2012 by John MacFarlane and David Greenspan.
 
 
 ==============

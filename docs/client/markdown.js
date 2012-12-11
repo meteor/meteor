@@ -1,5 +1,42 @@
-// Wrap in a closure so the module can be used either in node
-// or in a browser.
+// Copyright (c) 2012 by John MacFarlane and David Greenspan.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+// Basic usage:
+//
+//     var parsed = new markdown.Markdown(text);
+//     var parsedAst = parsed.ast;  // abstract syntax tree, can be modified
+//     var html = parsed.toHtml();
+//     var htmlalt = parsed.toHtml({ rawHtml: false, hardBreaks: true });
+//
+// The following options are supported in `toHtml`:
+//
+// - `rawHtml`: allow raw HTML (if false, all HTML is escaped) [default true]
+// - `softBreaks`: a newline inside a paragraph generates a newline
+//   in the generated HTML [default true]
+// - `hardBreaks`: a newline inside a paragraph generates a `<br />`
+//   element in the generated HTML [default false]
+//
+// An option will take its default value unless its value is explicitly
+// set in the `options` parameter.
+
+// Wrap in a closure so the module can be used either in node or browser:
 (function(exports) {
 
 ///// Utility functions
@@ -64,7 +101,6 @@ var nth = function(n) {
 // line.  The markdown parser should not require that the whole source be
 // stored in memory.
 var LineReader = function(input) {
-  this.input = input;
   // Split the input up front; doesn't seem too costly.
   this._lines = input.split('\n');
   this._curLine = 0;
@@ -705,66 +741,94 @@ var pInline = P.or(
 
 // parse a string into an array of inline objects,
 // resolving references.
-var parseInlines = function(str, references) {
-  return P.parse(P.many(pInline), str, { references: references }).result;
+var parseInlines = function(str, references, warn, startpos) {
+  var res = P.parse(P.many(pInline), str, { references: references });
+  if (res.pos < str.length) {
+    // log warning if we haven't parsed whole string
+    var lineOffset = startpos.line;
+    var colOffset = startpos.column;
+    for (var i = 0; i < res.pos; i++) {
+      if (str[i] == '\n') {
+        lineOffset += 1;
+        colOffset = 0;
+      } else {
+        colOffset += 1;
+      }
+    }
+    warn('Inline parsing failed', lineOffset, colOffset);
+  }
+  return res.result;
 };
 
 ///// Scanners
 
 // A scanner is a function that takes a string and a position
-// and returns either null (if no match) or a matched string.
+// and returns either null (if no match) or a new position.
 
 var nullScanner = function(str, pos) {
-  return '';
+  return pos;
 };
 
-// scans spaces up to a specified column.
+// scans spaces up to a specified column.  If
+// input ends before that column, succeed and return
+// the last column.
+
 var scanToCol = function(col) {
   return function(str, pos) {
-    var ind = str.substring(pos, col);
-    if (/^ *$/.test(ind)) {
-      return ind;
-    } else {
-      return null;
+    while (pos < col && pos < str.length) {
+      if (str[pos] != ' ') {
+        return null;
+      }
+      pos++;
     }
+    return pos;
   };
 };
 
 // make scanner from regex
 var reScanner = function(re) {
   return function(str, pos) {
-    return matchAt(re, str, pos);
+    var res = matchAt(re, str, pos);
+    if (res === null) {
+      return null;
+    } else {
+      return pos + res.length;
+    }
   }
 };
 
 var scanLookaheadNonblank = function(str, pos) {
-  if (str.lastIndexOf(' ') < str.length - 1) {
-    return '';
+  var last = str.length - 1;
+  if (str.lastIndexOf(' ') < last) {
+    return pos;
   } else {
     return null;
   }
 };
 
-var scanBlockquoteStart = reScanner(/^ {0,3}> ?/);
+var scanNonindentSpaces = reScanner(/^ {0,3}/);
+var scanBlockquoteStart = reScanner(/^> ?/);
 var scanBlankline = reScanner(/^ *$/);
-var scanHrule = reScanner(/^ {0,3}(?:(?:[*] *){3,}|(?:- *){3,}|(?:_ *){3,}) *$/);
+var scanHrule = reScanner(/^(?:(?:[*] *){3,}|(?:- *){3,}|(?:_ *){3,}) *$/);
 var scanIndentedCode = reScanner(/^(?: {4}| *$)/);
 var scanAtxHeaderStart = reScanner(/^#{1,6}(?: +|$)/);
 var scanSetextHeaderLine = reScanner(/^(-{1,}|={1,}) *$/);
 
 // captures: 1 = bullet, 2 = digits, 3 = number delimiter ('.' or ')')
-var reListItemStart = /^ {0,3}(?:([-+*])|([0-9]+)([.)]))( |$)/;
+var reListItemStart = /^(?:([-+*])|([0-9]+)([.)]))( |$)/;
 var scanListItemStart = reScanner(reListItemStart);
 var reCodeFence = /^(`{3,}|~{3,}) *(\w+)? *([^`]*)$/;
 var scanCodeFence = reScanner(reCodeFence);
-var scanHtmlBlockStart = reScanner(/^ {0,3}(?:<\/?(article|header|aside|hgroup|blockquote|hr|body|li|br|map|button|object|canvas|ol|caption|output|col|p|colgroup|pre|dd|progress|div|section|dl|table|dt|tbody|embed|textarea|fieldset|tfoot|figcaption|th|figure|thead|footer|footer|tr|form|ul|h1|h2|h3|h4|h5|h6|video)[ \/>]|<!--|-->)/);
+var scanHtmlBlockStart = reScanner(/^(?:<\/?(article|header|aside|hgroup|blockquote|hr|body|li|br|map|button|object|canvas|ol|caption|output|col|p|colgroup|pre|dd|progress|div|section|dl|table|dt|tbody|embed|textarea|fieldset|tfoot|figcaption|th|figure|thead|footer|footer|tr|form|ul|h1|h2|h3|h4|h5|h6|video)[ \/>]|<!--|-->)/);
 
 var scanReferenceStart = function(str, pos) {
-  return P.parse(P.raw(P.seq(
-    P.regex(/^ {0,3}/),
-    pLinkLabel,
-    P.char(':')
-  )), str.slice(pos)).result;
+  var res = P.parse(
+    P.raw(
+      P.seq(
+        pLinkLabel,
+        P.char(':')
+      )), str.slice(pos));
+  return (res.result && pos);
 };
 
 // stop parsing reference at a blankline or another reference.
@@ -884,27 +948,16 @@ ContainerStack.prototype.contents = function() {
   return this._contents;
 };
 
-// for debugging
-ContainerStack.prototype.toString = function() {
-  var stack = [];
-  for (var i = 0; i < this._contents.length; i++) {
-    stack.push(this._contents[i].container.t);
-  }
-  return stack.join(':');
-};
-
 ///// Main parser
 
 // Converts source to markdown AST.  Returns an object
-// with methods toAST() and toHtml(options).
-// So, markdown.parse("hello").toHtml() === "<p>hello</p>"
-var parse = function(source) {
+// with `ast` and `warnings` properties and a `toHtml()` method.
+var Markdown = function(source) {
   var reader = new LineReader(source);
-  var ast = parseLines(reader);
-  return { toAST: function() { return ast; },
-           toHtml: toHtml(ast)
-         };
-};
+  var res = parseLines(reader);
+  this.ast = res.ast;
+  this.warnings = res.warnings;
+}
 
 // Parameter is a 'reader' object, with method getLine(),
 // which returns a string (the next line of text) each time
@@ -913,7 +966,7 @@ var parseLines = function(reader) {
 
   var stack = new ContainerStack();
   var doc = stack.currentContainer();
-  doc.blankLines = {}; // map of numbers of blank lines
+  var blankLines = {}; // map of numbers of blank lines
   var referenceStack = [];
 
   var line = 0; // keep track of line number
@@ -930,10 +983,10 @@ var parseLines = function(reader) {
     // for each.  On failure close the block and set allMatched to
     // false.  If all succeed, allMatched will be true.
     var stackContents = stack.contents();
-    for (var i = 0; i < stackContents.length; i++) {
+    for (var i = 0, N = stackContents.length; i < N; i++) {
       var item = stackContents[i];
-      var match = item.blockIndent(text, col);
-      if (match == null) {
+      var newcol = item.blockIndent(text, col);
+      if (newcol == null) {
         // Once we fail to match a blockIndent, we have either
         // a lazy text line or a new block.  Note that in the following,
         // 'there' is not a lazy text continuation of 'hi':
@@ -945,7 +998,7 @@ var parseLines = function(reader) {
         break;
       } else {
         lastMatchedContainer = item.container;
-        col += match.length;
+        col = newcol;
       }
     }
 
@@ -1001,49 +1054,52 @@ var parseLines = function(reader) {
     var first = true;
     var listStart = false;
     while (true) {
-      var match;
+      var newcol;
+      var oldcol = col;
+      // nonindent spaces
+      col = scanNonindentSpaces(text, col);
       // blockquote start?
-      if (match = scanBlockquoteStart(text, col)) {
+      if (newcol = scanBlockquoteStart(text, col)) {
         // open new blockquote container
         if (first) {
           closeUnmatchedContainers();
         }
         stack.openContainer('Blockquote', line,
                             col, scanBlockquoteStart);
-        col = col += match.length;
-      } else if ((match = scanListItemStart(text, col)) !== null &&
+        col = newcol;
+      } else if ((newcol = scanListItemStart(text, col)) !== null &&
                  scanHrule(text, col) === null) {
         if (first) {
           closeUnmatchedContainers();
         }
         listStart = true;
         // captures: 1 = bullet, 2 = digits, 3 = number delimiter
-        var newcol = col + match.length;
         var li = stack.openContainer('ListItem', line, col,
                                      scanToCol(newcol));
-        var captures = reListItemStart.exec(match);
+        var captures = reListItemStart.exec(text.slice(col,newcol));
         li.bullet = captures[1];
         li.number = captures[2];
         li.delimiter = captures[3];
         col = newcol;
       } else {
+        col = oldcol;
         break;
       }
       first = false;
     }
 
     // blankline?
-    if ((match = scanBlankline(text, col)) !== null) {
+    if ((newcol = scanBlankline(text, col)) !== null) {
       // add to list of blank lines -- unless this is
       // an empty list item, then we don't count it as
       // blank for purposes of tight/loose
-      doc.blankLines[line] = !listStart;
+      blankLines[line] = !listStart;
       closeUnmatchedContainers();
       if (stack.currentContainer().t == 'Para') {
         stack.closeCurrentContainer();
       }
       if (stack.currentContainer().t == 'ListItem' &&
-          doc.blankLines[line - 1]) {
+          blankLines[line - 1]) {
         // if previous line also blank, close ListItem
         stack.closeCurrentContainer();
       }
@@ -1051,9 +1107,9 @@ var parseLines = function(reader) {
     }
 
     // indented code block
-    if ((match = scanIndentedCode(text, col)) !== null) {
-      col += match.length;
+    if ((newcol = scanIndentedCode(text, col)) !== null) {
       closeUnmatchedContainers();
+      col = newcol;
       var c = stack.openLineContainer('CodeBlock', line, col,
                                       scanIndentedCode);
       c.indented = true;
@@ -1061,17 +1117,20 @@ var parseLines = function(reader) {
       continue;
     }
 
-    // TODO - make the nonindent space generic so it needn't be repeated
-    // in the scanners
+    // skip nonindent spaces (we know that there are not indent spaces
+    // because we've just checked for that)
+    while (text[col] === ' ') {
+      col++;
+    }
 
     // TODO - define consume or something to abstract out the pattern
     // of applying a scanner, then incrementing col if it matches.
 
     // ATX header
-    if ((match = scanAtxHeaderStart(text, col)) !== null) {
+    if ((newcol = scanAtxHeaderStart(text, col)) !== null) {
       var hashes = matchAt(/^#*/, text, col);
       var level = hashes.length;
-      col += match.length;
+      col = newcol;
       var raw = text.slice(col).replace(/([^\\])#* *$/, '$1').trim();
       closeUnmatchedContainers();
       stack.addLeaf({t: 'Header', level: level, raw: raw}, line, col);
@@ -1087,7 +1146,7 @@ var parseLines = function(reader) {
         stack.currentContainer().t === 'Para' &&
         stack.currentContainer().lines.length > 0 &&
         !lastLineLazy &&
-        (match = scanSetextHeaderLine(text, col)) !== null) {
+        (newcol = scanSetextHeaderLine(text, col)) !== null) {
       var para = stack.currentContainer();
       var level = matchAt(/^ *=/, text, col) ? 1 : 2;
       var raw = para.lines[para.lines.length - 1];
@@ -1104,13 +1163,13 @@ var parseLines = function(reader) {
     }
 
     // hrule
-    if ((match = scanHrule(text, col)) !== null) {
+    if ((newcol = scanHrule(text, col)) !== null) {
       closeUnmatchedContainers();
       stack.addLeaf({t: 'Hrule'}, line, col);
       continue;
     }
 
-    if ((match = scanCodeFence(text, col)) !== null) {
+    if ((newcol = scanCodeFence(text, col)) !== null) {
       var captures = reCodeFence.exec(text.slice(col)); // 1 = fence, 2 = lang, 3 = rest
       closeUnmatchedContainers();
       var cont = stack.openLineContainer('CodeBlock', line, col);
@@ -1121,7 +1180,7 @@ var parseLines = function(reader) {
       continue;
     }
 
-    if ((match = scanReferenceStart(text, col)) !== null) {
+    if ((newcol = scanReferenceStart(text, col)) !== null) {
       closeUnmatchedContainers();
       var r = stack.openLineContainer('Reference', line, col,
                                       scanReferenceLine);
@@ -1135,7 +1194,7 @@ var parseLines = function(reader) {
     // with an html tag, we just scan til the next blank line.
     // we don't try to parse balanced tags.  an alternative would
     // keep a count of open tags in the container metadata.
-    if ((match = scanHtmlBlockStart(text, col)) !== null) {
+    if ((newcol = scanHtmlBlockStart(text, col)) !== null) {
       closeUnmatchedContainers();
       stack.openLineContainer('HtmlBlock', line, col, scanLookaheadNonblank);
       stack.addLine(text.slice(col));
@@ -1159,17 +1218,23 @@ var parseLines = function(reader) {
   // close all containers above Document and return Document
   stack.closeNestedContainers(doc);
 
+  var warn = function(msg, line, col) {
+    doc.warnings.push({ line: line, column: col, message: msg });
+  }
+
+  doc.warnings = [];
+  doc.blankLines = blankLines;
   // referenceStack should now contain all the references.
   // parse them and populate doc.references.
-  var references = processReferenceStack(referenceStack);
+  doc.references = processReferenceStack(referenceStack, warn);
 
-  return processBlocks(doc.children, references, doc.blankLines);
+  return processDoc(doc, warn);
 };
 
 // Parse all the references and return a reference map.
-var processReferenceStack = function(referenceStack) {
+var processReferenceStack = function(referenceStack, warn) {
   var references = {};
-  for (i = 0; i < referenceStack.length; i++) {
+  for (var i = 0, N = referenceStack.length; i < N; i++) {
     var rawref = referenceStack[i].lines.join('\n').trim();
     var res = P.parse(pReference, rawref);
     // If parse fails, or parse is not complete,
@@ -1177,9 +1242,14 @@ var processReferenceStack = function(referenceStack) {
     if (res) {
       var ref = res.result;
       var endpos = res.pos;
+      var refpos = referenceStack[i].startPos;
       if (endpos < rawref.length - 1) {
-        referenceStack[i].lines = rawref.slice(endpos).split('\n');
-        referenceStack[i].t = 'Para';
+        warn('Ignoring material after reference definition: "' +
+             rawref.slice(endpos) + '"', refpos.line, refpos.column);
+      }
+      if (references[ref.label]) {
+        warn('Duplicate reference label: ' + ref.label,
+             refpos.line, refpos.column);
       }
       references[ref.label] = ref;
     } else {
@@ -1189,17 +1259,8 @@ var processReferenceStack = function(referenceStack) {
   return references;
 };
 
-// Construct AST from the Document container built by parseLines.
-// This involves:
-// - assembling sequences of list items into lists, and determining
-//   their status as tight/loose
-// - combining lines in paragraphs and parsing them into inline elements.
-// - combining lines in code blocks.
-// - parsing 'raw' properties and replacing with inline elements.
-// - deleting properties not needed in the AST
-// - resolving link references.
 
-var processBlocks = function(blocks, references, blankLines) {
+var processBlocks = function(blocks, references, blankLines, warn) {
   var bs = [];  // the result to return
   var i = 0;
 
@@ -1215,12 +1276,13 @@ var processBlocks = function(blocks, references, blankLines) {
     var block = blocks[i];
     switch (block.t) {
     case 'Para':
-      block.v = parseInlines(block.lines.join('\n'), references);
+      block.v = parseInlines(block.lines.join('\n'), references,
+                             warn, block.startPos);
       deleteUselessProperties(block);
       bs.push(block);
       break;
     case 'Blockquote':
-      block.v = processBlocks(block.children, references, blankLines);
+      block.v = processBlocks(block.children, references, blankLines, warn);
       deleteUselessProperties(block);
       bs.push(block);
       break;
@@ -1229,10 +1291,10 @@ var processBlocks = function(blocks, references, blankLines) {
       break;
     case 'ListItem':
       var tight = true;
-      block.v = processBlocks(block.children, references, blankLines);
+      block.v = processBlocks(block.children, references, blankLines, warn);
       // check for blanklines before start of any of the
       // blocks, excepting the first
-      for (j = block.v.length - 1; j > 0; j--) {
+      for (var j = block.v.length - 1; j > 0; j--) {
         tight = tight && !blankLines[block.v[j].startPos.line - 1];
       }
       var bullet = block.bullet;
@@ -1254,9 +1316,9 @@ var processBlocks = function(blocks, references, blankLines) {
              !(blankLines[blocks[i + 1].startPos.line - 1] &&
                blankLines[blocks[i + 1].startPos.line - 2])) {
         var item = blocks[i + 1];
-        item.v = processBlocks(item.children, references, blankLines);
+        item.v = processBlocks(item.children, references, blankLines, warn);
         // check for blanklines before the start of any of the blocks:
-        for (j = item.v.length - 1; j >= 0; j--) {
+        for (var j = item.v.length - 1; j >= 0; j--) {
           tight = tight && !blankLines[item.v[j].startPos.line - 1];
         }
         deleteUselessProperties(item);
@@ -1281,7 +1343,7 @@ var processBlocks = function(blocks, references, blankLines) {
       bs.push(list);
       break;
     case 'Header':
-      block.v = parseInlines(block.raw, references);
+      block.v = parseInlines(block.raw, references, warn, block.startPos);
       bs.push(block);
       break;
     case 'CodeBlock':
@@ -1308,16 +1370,39 @@ var processBlocks = function(blocks, references, blankLines) {
   return bs;
 };
 
+// Construct AST from the Document container built by parseLines.
+// This involves:
+// - assembling sequences of list items into lists, and determining
+//   their status as tight/loose
+// - combining lines in paragraphs and parsing them into inline elements.
+// - combining lines in code blocks.
+// - parsing 'raw' properties and replacing with inline elements.
+// - deleting properties not needed in the AST
+// - resolving link references.
+//
+// Returns an object with `ast` and `warnings` properties.
+var processDoc = function(doc, warn) {
+  var bs = processBlocks(doc.children, doc.references, doc.blankLines, warn);
+  return { ast: bs,
+           warnings: doc.warnings };
+}
 ///// Writers
 
-var toHtml = function(ast) {
-  return function(options) {
-    options = options || { rawHtml: true,
-			   preserveNewlines: true,
-			   newlinesAsBreaks: false
-                         }
-    return blocksToHtml(ast, options);
+var defaults = { rawHtml: true,     // allow raw HTML (escape it if false)
+                 softBreaks: true,  // newlines cause newlines in HTML
+                 hardBreaks: false  // newlines cause line breaks in HTML
+               };
+
+Markdown.prototype.toHtml = function(options) {
+  // set defaults: any property not explicitly set in
+  // options gets the default value
+  options = options || {};
+  for (var opt in defaults) {
+    if (options[opt] === undefined) {
+      options[opt] = defaults[opt];
+    }
   }
+  return blocksToHtml(this.ast, options);
 };
 
 var escapeHtml = function(x) {
@@ -1438,10 +1523,10 @@ var inlinesToHtml = function(inlines, options) {
         xs.push('<code>' + escapeHtml(inline.v) + '</code>');
         break;
       case 'SoftBreak':
-	if (options.newlinesAsBreaks) {
+	if (options.hardBreaks) {
 	  xs.push('<br />');
 	}
-	if (options.preserveNewlines) {
+	if (options.softBreaks) {
           xs.push('\n'); // retain user's linebreaks
 	} else {
 	  xs.push(' ');
@@ -1466,6 +1551,6 @@ var inlinesToHtml = function(inlines, options) {
 };
 
 
-exports.parse = parse;
+exports.Markdown = Markdown;
 
 })(typeof exports === 'undefined' ? this['markdown'] = {} : exports);
