@@ -10,8 +10,54 @@ Meteor._SessionDocumentView = function (id) {
   var self = this;
   self.id = id;
   self.existsIn = {}; // set of subId
-  self.dataByKey = {}; // key-> [ {subId -> value} by precedence]
+  self.dataByKey = {}; // key-> [ {subscriptionId -> value} by precedence]
 };
+
+_.extend(Meteor._SessionDocumentView.prototype, {
+  clearField: function (subscriptionId, key, changeCollector, clearCollector) {
+    var self = this;
+    var precedenceList = self.dataByKey[key];
+    var old = precedenceList[0];
+    var i = 0;
+    _.each(precedenceList, function (precedence) {
+      if (precedence.subscriptionId === subscriptionId) {
+        precedenceList.splice(i, 1);
+      }
+      i++;
+    });
+    if (_.isEmpty(precedenceList)) {
+      delete self.dataByKey[key];
+      clearCollector.push(key);
+    } else if (old.value !== precedenceList[0].value) {
+      changeCollector[key] = precedenceList[0].value;
+    }
+  },
+
+  changeField: function (subscriptionId, key, value, changeCollector) {
+    var self = this;
+    var precedenceList = self.dataByKey[key];
+    if (!precedenceList) {
+      self.dataByKey[key] = [{subscriptionId: subscriptionId, value: value}];
+      changeCollector[key] = value;
+      return;
+    }
+    var elt = _.find(precedenceList, function (precedence) {
+      return precedence.subscriptionId === subscriptionId;
+    });
+
+    if (elt) {
+      if (elt === precedenceList[0] && !_.isEqual(value, elt.value)) {
+        // this subscription is changing the value of this field.
+        changeCollector[key] = value;
+      }
+      elt.value = value;
+    } else {
+      // this subscription is newly caring about this field
+      precedenceList.push({subscriptionId: subscriptionId, value: value});
+    }
+
+  }
+});
 
 Meteor._SessionCollectionView = function (collectionName, sessionCallbacks) {
   var self = this;
@@ -21,28 +67,68 @@ Meteor._SessionCollectionView = function (collectionName, sessionCallbacks) {
 };
 
 _.extend(Meteor._SessionCollectionView.prototype, {
+
   added: function (subscriptionId, doc) {
     var self = this;
     var docView = self.documents[doc._id];
     if (docView) {
+      // somebody else knew about this doc; reconicle.  The effective order of
+      // precedence here is that the first subscription to say anything about a
+      // key determines its value.
+      var newPairs = {};
       if (_.has(docView.existsIn, subscriptionId)) {
         throw new Error("Duplicate add for " + doc._id);
       }
       docView.existsIn[subscriptionId] = true;
-      //XXX: Deal with fields here.
+      _.each(doc, function (value, key) {
+        var dataAssertionList = docView.dataByKey[key];
+        if (dataAssertionList) {
+          // just assume that we're not already in the assertion list yet,
+          // but we could check this.
+        } else {
+          // nobody has taken responsibility for this key yet
+          dataAssertionList = [];
+          self.dataByKey[key] = dataAssertionList;
+          newPairs[key] = value;
+        }
+        // add our assertion
+        var assertion = {subscriptionId: subscriptionId, value: value};
+        dataAssertionList.push(assertion);
+      });
+      if (!_.isEmpty(newPairs))
+        self.callbacks.changed(self.collectionName, doc._id, newPairs, []);
     } else {
       docView = new Meteor._SessionDocumentView(doc._id);
       self.documents[doc._id] = docView;
       docView.existsIn[subscriptionId] = true;
-      //XXX: Deal with fields here
+      _.each(doc, function (value, key) {
+        docView.dataByKey[key] = [{subscriptionId: subscriptionId, value: value}];
+      });
+      // since nobody else knew about this doc, we can just call added.
       self.callbacks.added(self.collectionName, doc);
     }
   },
+
   changed: function (subscriptionId, id, changed, cleared) {
     var self = this;
+    var changedResult = {};
+    var clearedResult = [];
+    var docView = self.documents[id];
+    if (!docView)
+      throw new Error("Could not find element with id " + id + "to change");
+    _.each(changed, function (value, key) {
+      docView.changeField(subscriptionId, key, value, changedResult);
+    });
+    _.each(cleared, function (clearKey) {
+      docView.clearField(subscriptionId, clearKey, changedResult, clearedResult);
+    });
+    if (!_.isEmpty(changed) || !_.isEmpty(cleared))
+      self.callbacks.changed(self.collectionName, id, changedResult, clearedResult);
   },
+
   removed: function (subscriptionId, ids) {
     var self = this;
+    var removedIds = [];
     _.each(ids, function (id) {
       var docView = self.documents[id];
       if (!docView) {
@@ -50,12 +136,23 @@ _.extend(Meteor._SessionCollectionView.prototype, {
       }
       delete docView.existsIn[subscriptionId];
       if (_.isEmpty(docView.existsIn)) {
-        //XXX: Stop splitting it up
-        self.callbacks.removed(self.collectionName, [id]);
+        // it is gone from everyone
+        removedIds.push(id);
+        delete self.documents[id];
       } else {
-        //XXX: DO STUFF
+        var changed = {};
+        var cleared = [];
+        // remove this subscription from every precedence list
+        // and record the changes
+        _.each(docView.dataByKey, function (precedenceList, key) {
+          docView.clearField(subscriptionId, key, changed, cleared);
+        });
+        if (!_.isEmpty(changed) || !_.isEmpty(cleared))
+          self.callbacks.changed(self.collectionName, id, changed, cleared);
       }
     });
+    if (!_.isEmpty(removedIds))
+      self.callbacks.removed(self.collectionName, removedIds);
   }
 });
 /******************************************************************************/
