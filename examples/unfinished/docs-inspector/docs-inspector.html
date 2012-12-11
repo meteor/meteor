@@ -1,0 +1,32 @@
+<head>
+  <title>docs-inspector</title>
+</head>
+
+<body>
+  {{> page}}
+</body>
+
+<template name="page">
+  <h1>Docs</h1>
+  <table cellspacing="0" cellpadding="0">
+    <tr>
+      <th>Package</th>
+      <th>File</th>
+      <th>Parse Result</th>
+      <th>Doc Comments</th>
+    </tr>
+  {{#each GENERATED_DOCS.packages}}
+    {{#each files}}
+      <tr>
+        <td><strong>{{../name}}</strong></td>
+        <td>{{path}}</td>
+        <td>{{parseResult}}</td>
+        <td>
+          {{#each comments}}
+            <code class="codeblock"><pre>{{this}}</pre></code>
+          {{/each}}
+        </td>
+      </tr>
+    {{/each}}
+  {{/each}}
+</template>

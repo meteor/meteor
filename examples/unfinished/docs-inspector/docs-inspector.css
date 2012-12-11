@@ -1,0 +1,18 @@
+
+code.codeblock {
+  display: block;
+  border: 1px solid #999;
+}
+
+code.codeblock pre {
+  white-space: pre-wrap;
+}
+
+table {
+  border: 1px solid #666;
+  border-collapse: collapse;
+}
+
+td {
+  border-top: 1px solid #666;
+}
