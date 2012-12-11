@@ -1,5 +1,63 @@
 var Fiber = __meteor_bootstrap__.require('fibers');
 
+// This file contains classes:
+// * LivedataSession - The server's connection to a single DDP client
+// * LivedataSubscription - A single subscription for a single client
+// * LivedataServer - An entire server that may talk to > 1 client.  A DDP endpoint.
+
+
+Meteor._SessionDocumentView = function (id) {
+  var self = this;
+  self.id = id;
+  self.existsIn = {}; // set of subId
+  self.dataByKey = {}; // key-> [ {subId -> value} by precedence]
+};
+
+Meteor._SessionCollectionView = function (collectionName, sessionCallbacks) {
+  var self = this;
+  self.collectionName = collectionName;
+  self.documents = {};
+  self.callbacks = sessionCallbacks;
+};
+
+_.extend(Meteor._SessionCollectionView.prototype, {
+  added: function (subscriptionId, doc) {
+    var self = this;
+    var docView = self.documents[doc._id];
+    if (docView) {
+      if (_.has(docView.existsIn, subscriptionId)) {
+        throw new Error("Duplicate add for " + doc._id);
+      }
+      docView.existsIn[subscriptionId] = true;
+      //XXX: Deal with fields here.
+    } else {
+      docView = new Meteor._SessionDocumentView(doc._id);
+      self.documents[doc._id] = docView;
+      docView.existsIn[subscriptionId] = true;
+      //XXX: Deal with fields here
+      self.callbacks.added(self.collectionName, doc);
+    }
+  },
+  changed: function (subscriptionId, id, changed, cleared) {
+    var self = this;
+  },
+  removed: function (subscriptionId, ids) {
+    var self = this;
+    _.each(ids, function (id) {
+      var docView = self.documents[id];
+      if (!docView) {
+        throw new Error("Removed nonexistent document " + id);
+      }
+      delete docView.existsIn[subscriptionId];
+      if (_.isEmpty(docView.existsIn)) {
+        //XXX: Stop splitting it up
+        self.callbacks.removed(self.collectionName, [id]);
+      } else {
+        //XXX: DO STUFF
+      }
+    });
+  }
+});
 /******************************************************************************/
 /* LivedataSession                                                            */
 /******************************************************************************/
@@ -657,6 +715,7 @@ Meteor._LivedataServer = function () {
   self.stream_server = new Meteor._StreamServer;
 
   self.stream_server.register(function (socket) {
+    // socket implements the SockJSConnection interface
     socket.meteor_session = null;
 
     var sendError = function (reason, offending_message) {

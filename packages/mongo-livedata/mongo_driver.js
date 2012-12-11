@@ -286,8 +286,10 @@ _.each(['forEach', 'map', 'rewind', 'fetch', 'count'], function (method) {
   };
 });
 
-// Called by livedata_server to automatically publish cursors returned from a
-// publish handler over DDP.
+// When you call Meteor.publish() with a function that returns a Cursor, we need
+// to transmute it into the equivalent subscription.  This is the function that
+// does that.
+
 Cursor.prototype._publishCursor = function (sub) {
   var self = this;
   var collection = self._cursorDescription.collectionName;
