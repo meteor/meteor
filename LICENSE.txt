@@ -355,6 +355,12 @@ node-form-data: https://github.com/felixge/node-form-data
 
 Copyright (c) 2012 Felix Geisendörfer (felix@debuggable.com) and contributors
 
+----------
+docs/client/markdown.js
+----------
+
+Copyright (c) 2012 John MacFarlane and David Greenspan
+
 
 ==============
 Apache License
