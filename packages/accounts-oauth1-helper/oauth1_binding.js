@@ -63,7 +63,7 @@ OAuth1Binding.prototype.call = function(method, url, params) {
   }
 
   var response = self._call(method, url, headers, params);
-  return response.data;
+  return response;
 };
 
 OAuth1Binding.prototype.get = function(url, params) {
