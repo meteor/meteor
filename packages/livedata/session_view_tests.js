@@ -11,25 +11,25 @@ var newView = function(test) {
       results.push({fun: 'removed', ids: ids});
     }
   });
-  var ret = {
+  var v = {
     view: view,
     results: results
   };
   _.each(["added", "changed", "removed"], function (it) {
-    ret[it] = _.bind(view[it], view);
+    v[it] = _.bind(view[it], view);
   });
-  ret.expectResult = function (result) {
+  v.expectResult = function (result) {
     test.equal(results.shift(), result);
   };
-  ret.expectNoResult = function () {
+  v.expectNoResult = function () {
     test.equal(results, []);
   };
-  ret.drain = function() {
+  v.drain = function() {
     var ret = results;
     results = [];
     return ret;
   };
-  return ret;
+  return v;
 };
 
 Tinytest.add('livedata - sessionview - exists reveal', function (test) {
@@ -150,7 +150,7 @@ Tinytest.add('livedata - sessionview - field clear reveal', function (test) {
   v.expectNoResult();
 });
 
-Tinytest.add('livedata - sessionview - change to cannonical value produces no change', function (test) {
+Tinytest.add('livedata - sessionview - change to canonical value produces no change', function (test) {
   var v = newView(test);
 
   v.added("A", {_id: "A1", foo: "bar"});
@@ -159,13 +159,17 @@ Tinytest.add('livedata - sessionview - change to cannonical value produces no ch
 
 
   v.added("B", {_id: "A1", foo: "baz"});
-  var cannon = "bar";
-  if (!_.isEmpty(v.drain())) {
+  var canon = "bar";
+  var maybeResults = v.drain();
+  if (!_.isEmpty(maybeResults)) {
     // if something happened, it was a change message to baz.
-    // if nothing did, cannon is still bar.
-    cannon = "baz";
+    // if nothing did, canon is still bar.
+    test.length(maybeResults, 1);
+    test.equal(maybeResults[0], {fun: 'added', id: "A1", changed: {foo: "baz"},
+                                 cleared: []});
+    canon = "baz";
   }
-  v.changed("B", "A1", {foo: cannon}, []);
+  v.changed("B", "A1", {foo: canon}, []);
   v.expectNoResult();
 
   v.removed("A", ["A1"]);
@@ -175,7 +179,7 @@ Tinytest.add('livedata - sessionview - change to cannonical value produces no ch
   v.expectNoResult();
 });
 
-Tinytest.add('livedata - sessionview - new field of cannonical value produces no change', function (test) {
+Tinytest.add('livedata - sessionview - new field of canonical value produces no change', function (test) {
   var v = newView(test);
 
   v.added("A", {_id: "A1", foo: "bar"});

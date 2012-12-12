@@ -20,11 +20,14 @@ _.extend(Meteor._SessionDocumentView.prototype, {
     if (!precedenceList) {
       throw new Error("Could not find field to clear " + key);
     }
-    var old = precedenceList[0];
-    var precedence;
+    var removedValue = undefined;
     for (var i = 0; i < precedenceList.length; i++) {
-      precedence = precedenceList[i];
+      var precedence = precedenceList[i];
       if (precedence.subscriptionId === subscriptionId) {
+        // The view's value can only change if this subscription is the one that
+        // used to have precedence.
+        if (i === 0)
+          removedValue = precedence.value;
         precedenceList.splice(i, 1);
         break;
       }
@@ -32,7 +35,8 @@ _.extend(Meteor._SessionDocumentView.prototype, {
     if (_.isEmpty(precedenceList)) {
       delete self.dataByKey[key];
       clearCollector.push(key);
-    } else if (!_.isEqual(old.value, precedenceList[0].value)) {
+    } else if (removedValue !== undefined &&
+               !_.isEqual(removedValue, precedenceList[0].value)) {
       changeCollector[key] = precedenceList[0].value;
     }
   },
