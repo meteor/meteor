@@ -1203,6 +1203,25 @@ Tinytest.add("minimongo - observe", function (test) {
   c.insert({a:100});
   test.equal(operations.shift(), ['added', {a:100}, 0]);
   handle.stop();
+
+  // test skip and limit.
+  c.remove({});
+  handle = c.find({}, {sort: {a: 1}, skip: 1, limit: 2}).observe(cbs);
+  test.equal(operations.shift(), undefined);
+  c.insert({a:1});
+  test.equal(operations.shift(), undefined);
+  c.insert({a:2});
+  test.equal(operations.shift(), ['added', {a:2}, 0]);
+  c.insert({a:3});
+  test.equal(operations.shift(), ['added', {a:3}, 1]);
+  c.insert({a:4});
+  test.equal(operations.shift(), undefined);
+  id = c.findOne({a:2})._id;
+  c.update({a:1}, {a:5});
+  test.equal(operations.shift(), ['removed', id, 0, {a:2}]);
+  test.equal(operations.shift(), ['added', {a:4}, 1]);
+
+  handle.stop();
 });
 
 Tinytest.add("minimongo - diff", function (test) {

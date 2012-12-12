@@ -173,7 +173,6 @@ LocalCollection.LiveResultsSet = function () {};
 // initial results delivered through added callback
 // XXX maybe callbacks should take a list of objects, to expose transactions?
 // XXX maybe support field limiting (to limit what you're notified on)
-// XXX maybe support limit/skip
 
 _.extend(LocalCollection.Cursor.prototype, {
   observe: function (options) {
@@ -187,8 +186,8 @@ _.extend(LocalCollection.Cursor.prototype, {
   _observeInternal: function (ordered, options) {
     var self = this;
 
-    if (self.skip || self.limit)
-      throw new Error("cannot observe queries with skip or limit");
+    if (!ordered && (self.skip || self.limit))
+      throw new Error("must use ordered observe with skip or limit");
 
     var qid = self.collection.next_qid++;
 
@@ -463,8 +462,16 @@ LocalCollection._deepcopy = function (v) {
 
 // XXX the sorted-query logic below is laughably inefficient. we'll
 // need to come up with a better datastructure for this.
+//
+// XXX the logic for observing with a skip or a limit is even more
+// laughably inefficient. we recompute the whole results every time!
 
 LocalCollection._insertInResults = function (query, doc) {
+  if (query.cursor.skip || query.cursor.limit) {
+    LocalCollection._recomputeResults(query);
+    return;
+  }
+
   if (query.ordered) {
     if (!query.sort_f) {
       query.added(LocalCollection._deepcopy(doc), query.results.length);
@@ -481,6 +488,11 @@ LocalCollection._insertInResults = function (query, doc) {
 };
 
 LocalCollection._removeFromResults = function (query, doc) {
+  if (query.cursor.skip || query.cursor.limit) {
+    LocalCollection._recomputeResults(query);
+    return;
+  }
+
   if (query.ordered) {
     var i = LocalCollection._findInOrderedResults(query, doc);
     query.removed(doc, i);
@@ -493,6 +505,11 @@ LocalCollection._removeFromResults = function (query, doc) {
 };
 
 LocalCollection._updateInResults = function (query, doc, old_doc) {
+  if (query.cursor.skip || query.cursor.limit) {
+    LocalCollection._recomputeResults(query);
+    return;
+  }
+
   if (doc._id !== old_doc._id)
     throw new Error("Can't change a doc's _id while updating");
 
@@ -516,6 +533,16 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
   if (orig_idx !== new_idx)
     query.moved(LocalCollection._deepcopy(doc), orig_idx, new_idx);
 };
+
+LocalCollection._recomputeResults = function (query, doc) {
+  var old_results = query.results;
+  query.results = query.cursor._getRawObjects(query.ordered);
+
+  if (!query.paused)
+    LocalCollection._diffQuery(
+      query.ordered, old_results, query.results, query, true);
+};
+
 
 LocalCollection._findInOrderedResults = function (query, doc) {
   if (!query.ordered)
