@@ -48,17 +48,21 @@
       };
 
       var onComplete = function() {
-        _.each(handlesForRun[runId], function (handle) {
-          handle.stop();
-        });
-        delete handlesForRun[runId];
-        delete reportsForRun[runId];
         future.ret();
       };
 
       Meteor._runTests(onReport, onComplete);
 
       future.wait();
+    },
+    'tinytest/clearResults': function (runId) {
+      _.each(handlesForRun[runId], function (handle) {
+        // XXX this doesn't actually notify the client that it has been
+        // unsubscribed.
+        handle.stop();
+      });
+      delete handlesForRun[runId];
+      delete reportsForRun[runId];
     }
   });
 }());

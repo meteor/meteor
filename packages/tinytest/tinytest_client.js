@@ -35,13 +35,15 @@ Meteor._runTestsEverywhere = function (onReport, onComplete) {
     }
   });
 
-  Meteor.subscribe(Meteor._ServerTestResultsSubscription, runId);
+  var handle = Meteor.subscribe(Meteor._ServerTestResultsSubscription, runId);
 
   Meteor.call('tinytest/run', runId, function (error, result) {
     if (error)
       // XXX better report error
       throw new Error("Test server returned an error");
     remoteComplete = true;
+    handle.stop();
+    Meteor.call('tinytest/clearResults', runId);
     maybeDone();
   });
 };
