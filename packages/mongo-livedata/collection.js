@@ -158,6 +158,11 @@ _.extend(Meteor.Collection.prototype, {
   findOne: function (/* selector, options */) {
     var self = this;
     return self._collection.findOne.apply(self._collection, _.toArray(arguments));
+  },
+
+  count: function (/* selector, options */) {
+    var self = this;
+    return self._collection.count.apply(self._collection, _.toArray(arguments));
   }
 
 });
