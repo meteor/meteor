@@ -11,8 +11,6 @@
 // first object comes first in order, 1 if the second object comes
 // first, or 0 if neither object comes before the other.
 
-// XXX sort does not yet support subkeys ('a.b') .. fix that!
-
 LocalCollection._compileSort = function (spec) {
   var keys = [];
   var asc = [];
@@ -44,16 +42,22 @@ LocalCollection._compileSort = function (spec) {
   var _func;
   var code = "_func = (function(c){return function(a,b){var x;";
   for (var i = 0; i < keys.length; i++) {
-      var splittedKeys = keys[i].split(".");
-      var keyString = "";
-      for(o = 0;o<splittedKeys.length;o++){
-        keyString  = keyString + "["+ JSON.stringify(splittedKeys[o]) +"]";
-      }
-      if (i !== 0){
-        code += "if(x!==0)return x;";
-      }
-      code += "x=" + (asc[i] ? "" : "-") +
-        "c(a" + keyString +",b"+keyString+");";
+    // handle dotted subpaths. Make sure to avoid dereferencing
+    // undefined if a subkey doesn't exist.
+    var splittedKeys = keys[i].split(".");
+    var keyString = "";
+    var aCode = "a";
+    var bCode = "b";
+    for(var o = 0; o < splittedKeys.length; o++) {
+      keyString  = keyString + "[" + JSON.stringify(splittedKeys[o]) + "]";
+      aCode += '&&a' + keyString;
+      bCode += '&&b' + keyString;
+    }
+    if (i !== 0){
+      code += "if(x!==0)return x;";
+    }
+    code += "x=" + (asc[i] ? "" : "-") +
+      "c(" + aCode + "," + bCode + ");";
   }
   code += "return x;};})";
   eval(code);
