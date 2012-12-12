@@ -244,6 +244,28 @@ _Mongo.prototype._ensureIndex = function (collectionName, index, options) {
   future.wait();
 };
 
+// count documents in this collection
+_Mongo.prototype.count = function (collectionName, options) {
+  var self = this;
+
+  var future = new Future;
+  self._withCollection(collectionName, function (err, collection) {
+    if (err) {
+      future.throw(err);
+      return;
+    }
+    // XXX do we have to bindEnv or Fiber.run this callback?
+    collection.count(options, function (err, length) {
+      if (err) {
+        future.throw(err);
+        return;
+      }
+      future.ret(length);
+    });
+  });
+  return future.wait();
+};
+
 // CURSORS
 
 // There are several classes which relate to cursors:
