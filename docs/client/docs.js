@@ -94,7 +94,8 @@ var toc = [
       "Meteor.isClient",
       "Meteor.isServer",
       "Meteor.startup",
-      "Meteor.absoluteUrl"
+      "Meteor.absoluteUrl",
+      "Meteor.settings"
     ],
 
     "Publish and subscribe", [
