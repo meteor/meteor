@@ -343,3 +343,14 @@ Tinytest.add('livedata - sessionview - added becomes changed', function (test) {
   v.removed('B', ['A1']);
   v.expectResult({fun: 'removed', ids: ['A1']});
 });
+
+Tinytest.add('livedata - sessionview - weird key names', function (test) {
+  var v = newView(test);
+
+  v.added('A',  "A1", {});
+  v.expectResult({fun: 'added', id: "A1", fields: {}});
+
+  v.changed('A',  "A1", {constructor: 'bla'});
+  v.expectResult({fun: 'changed', id: 'A1', changed: {constructor: 'bla'},
+                  cleared: []});
+});
