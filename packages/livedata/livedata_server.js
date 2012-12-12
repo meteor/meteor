@@ -78,6 +78,11 @@ Meteor._SessionCollectionView = function (collectionName, sessionCallbacks) {
 
 _.extend(Meteor._SessionCollectionView.prototype, {
 
+  isEmpty: function () {
+    var self = this;
+    return _.isEmpty(self.documents);
+  },
+
   added: function (subscriptionId, id, fields) {
     var self = this;
     var docView = self.documents[id];
@@ -183,25 +188,91 @@ Meteor._LivedataSession = function (server) {
   self.named_subs = {};
   self.universal_subs = [];
 
-  self.next_sub_priority = 0;
-
-  // map from collection name -> id -> key -> subscription id -> true
-  self.provides_key = {};
-
-  // if set, ignore flush requests on any subsubcription on this
-  // session. when set this back to false, don't forget to call flush
-  // manually. this is sometimes needed because subscriptions
-  // frequently call flush
-  self.dontFlush = false;
-
   self.userId = null;
 
   // Per-connection scratch area. This is only used internally, but we
   // should have real and documented API for this sort of thing someday.
   self.sessionData = {};
+
+  self.collectionViews = {};
 };
 
 _.extend(Meteor._LivedataSession.prototype, {
+
+
+  sendComplete: function (subscriptionId) {
+    var self = this;
+    self.send({msg: "complete", subs: [subscriptionId]});
+  },
+
+  sendAdded: function (collectionName, id, fields) {
+    var self = this;
+    self.send({msg: "added", collection: collectionName, id: id, fields: fields});
+  },
+
+  sendChanged: function (collectionName, id, fields, cleared) {
+    var self = this;
+    var toSend = {msg: "changed", collection: collectionName, id: id};
+    if (!_.isEmpty(fields))
+      toSend.fields = fields;
+    if (!_.isEmpty(cleared))
+      toSend.cleared = cleared;
+    self.send(toSend);
+  },
+
+  sendRemoved: function (collectionName, ids) {
+    var self = this;
+    self.send({msg: "removed", ids: ids});
+  },
+
+  getSendCallbacks: function () {
+    var self = this;
+    return {
+      added: _.bind(self.sendAdded, self),
+      changed: _.bind(self.sendChanged, self),
+      removed: _.bind(self.sendRemoved, self)
+    };
+  },
+
+  getCollectionView: function (collectionName) {
+    var self = this;
+    if (_.has(self.collectionViews, collectionName)) {
+      return self.collectionViews[collectionName];
+    }
+    var ret = new Meteor._SessionCollectionView(collectionName,
+                                                self.getSendCallbacks());
+    self.collectionViews[collectionName] = ret;
+    return ret;
+  },
+
+  added: function (subscriptionId, collectionName, id, fields) {
+    var self = this;
+    var view = self.getCollectionView(collectionName);
+    view.added(subscriptionId, id, fields);
+  },
+
+  removed: function (subscriptionId, collectionName, ids) {
+    var self = this;
+    var view = self.getCollectionView(collectionName);
+    view.removed(subscriptionId, ids);
+    if (view.isEmpty()) {
+      delete self.collectionViews[collectionName];
+    }
+  },
+
+  changed: function (subscriptionId, collectionName, id, fields) {
+    var self = this;
+    var view = self.getCollectionView(collectionName);
+    var changedFields = {};
+    var clearedFields = [];
+    _.each(fields, function (value, key) {
+      if (value === undefined)
+        clearedFields.push(key);
+      else
+        changedFields[key] = value;
+      view.changed(subscriptionId, id, changedFields, clearedFields);
+    });
+  },
   // Connect a new socket to this session, displacing (and closing)
   // any socket that was previously connected
   connect: function (socket) {
@@ -565,6 +636,7 @@ _.extend(Meteor._LivedataSession.prototype, {
 
   // Rerun all subscriptions without sending intermediate state down
   // the wire
+  // XXX: needs to be rewritten for ddp-pre1
   _rerunAllSubscriptions: function () {
     var self = this;
 
@@ -584,26 +656,6 @@ _.extend(Meteor._LivedataSession.prototype, {
     self.dontFlush = false;
     _.each(self.named_subs, flushSub);
     _.each(self.universal_subs, flushSub);
-  },
-
-  // RETURN the current value for a particular key, as given by the
-  // current contents of each subscription's snapshot.
-  _effectiveValueForKey: function (collection_name, id, key) {
-    var self = this;
-
-    // Find all subs that publish a value for this key
-    var provided_by = Meteor._get(self.provides_key, collection_name, id, key);
-    provided_by = _.values(provided_by || {});
-
-    if (provided_by.length === 0)
-      return undefined; // no value for key
-
-    // Which one is highest priority?
-    var authority = _.max(provided_by, function (sub) {
-      return sub.priority;
-    });
-
-    return authority.snapshot[collection_name][id][key];
   }
 });
 
@@ -612,183 +664,78 @@ _.extend(Meteor._LivedataSession.prototype, {
 /******************************************************************************/
 
 // ctor for a sub handle: the input to each publish function
-Meteor._LivedataSubscription = function (session, sub_id, priority) {
+Meteor._LivedataSubscription = function (session, subscriptionId, priority) {
+  var self = this;
   // LivedataSession
-  this.session = session;
-
-  // Give access to sessionData in subscriptions as well as
-  // methods. This is not currently used, but is included for
-  // consistency. We should have real and documented API for this sort
-  // of thing someday.
-  this._sessionData = session.sessionData;
+  self._session = session;
 
   // my subscription ID (generated by client, null for universal subs).
-  this.sub_id = sub_id;
-
-  // number (possibly negative.) when two subs return conflicting
-  // values for the same key, the client will see the value from the
-  // sub with the higher priority.
-  this.priority = priority;
-
-  // data queued up to be sent by the next flush()
-  // map from collection name -> id -> key -> value
-  // to indicate unset, value === undefined
-  this.pending_data = {};
-  this.pending_complete = false;
-
-  // the current data for this subscription (as has been flush()ed to
-  // the client.)
-  // map from collection name -> id -> key -> value
-  this.snapshot = {};
-  this.sent_complete = false;
+  self._subscriptionId = subscriptionId;
 
   // has stop() been called?
-  this.stopped = false;
+  self._stopped = false;
 
   // stop callbacks to g/c this sub.  called w/ zero arguments.
-  this.stop_callbacks = [];
+  self._stopCallbacks = [];
 
-  this.userId = session.userId;
+  // the set of (collection, documentid) that this subscription has
+  // an opinion about
+  self._documents = {};
+
+  // Part of the public API: the user of this sub.
+  self.userId = session.userId;
 };
 
 _.extend(Meteor._LivedataSubscription.prototype, {
   stop: function () {
     var self = this;
 
-    if (self.stopped)
+    if (self._stopped)
       return;
 
     self._teardown();
-    self.flush();
-    self.stopped = true;
+    self._stopped = true;
   },
 
   onStop: function (callback) {
-    this.stop_callbacks.push(callback);
+    this._stopCallbacks.push(callback);
   },
 
-  set: function (collection_name, id, attributes) {
+  added: function (collectionName, document) {
     var self = this;
-    var obj = Meteor._ensure(self.pending_data, collection_name, id);
-    _.each(attributes, function (value, key) {
-      if (key !== '_id')
-        obj[key] = value;
-    });
+    Meteor._ensure(self._documents, collectionName)[document._id] = true;
+    self._session.added(self._subscriptionId, collectionName, document);
   },
 
-  unset: function (collection_name, id, keys) {
-    var self = this;
-    var obj = Meteor._ensure(self.pending_data, collection_name, id);
-    _.each(keys, function (key) {
-      if (key !== '_id')
-        obj[key] = undefined; // do not delete - need to mark as 'to be unset'
+  changed: function (collectionName, id, fields) {
+    self._session.changed(self._subscriptionId, collectionName, id, fields);
+  },
+
+  removed: function (collectionName, ids) {
+    _.each(ids, function(id) {
+      // we don't bother to delete sets of things in a collection if the
+      // collection is empty.  It could break below, where we iterate over
+      // it removing items.
+      delete self._documents[collectionName][id];
     });
+    self._session.removed(self._subscriptionId, collectionName, ids);
   },
 
   complete: function () {
     var self = this;
-
-    // universal subs (sub_id is null) can't signal completion.  it's
-    // not an error, since the same handler (eg publishQuery) might be
-    // used to implement both named and universal subs.
-
-    if (self.sub_id)
-      self.pending_complete = true;
-  },
-
-  flush: function () {
-    var self = this;
-
-    if (self.session.dontFlush)
-      return;
-
-    if (self.stopped)
-      return;
-
-    for (var name in self.pending_data)
-      for (var id in self.pending_data[name]) {
-        // construct outbound DDP data message
-        var msg = {msg: 'data', collection: name, id: id};
-
-        // snapshot holds this subscription's values for each key
-        var snapshot = Meteor._ensure(self.snapshot, name, id);
-
-        for (var key in self.pending_data[name][id]) {
-          // value: set by this run of this publish handler.
-          var value = self.pending_data[name][id][key];
-
-          // old_value: set by previous run of this publish handler.
-          var old_value = snapshot[key];
-
-          if (value !== old_value) {
-            // First, find the effective value that the client currently
-            // has, thanks to the highest priority subscription.
-            var old_effective_value = self.session._effectiveValueForKey(name, id, key);
-
-            // Update our snapshot based on the written value. Update
-            // our session's index too.
-            if (value === undefined) {
-              delete snapshot[key];
-              Meteor._delete(self.session.provides_key, name, id, key, self.sub_id);
-            } else {
-              snapshot[key] = value;
-              var provides = Meteor._ensure(self.session.provides_key,
-                                            name, id, key);
-              provides[self.sub_id] = self;
-            }
-
-            // Now compute new effective value, taking into account our new value.
-            var new_effective_value = self.session._effectiveValueForKey(name, id, key);
-
-            // If the effective values differ, this sub is responsible
-            // for sending the new data down to the client.
-            if (old_effective_value !== new_effective_value) {
-              if (new_effective_value === undefined) {
-                if (!('unset' in msg))
-                  msg.unset = [];
-                msg.unset.push(key);
-              } else {
-                if (!('set' in msg))
-                  msg.set = {};
-                msg.set[key] = new_effective_value;
-              }
-            }
-          }
-        }
-
-        // Send an update for one object.
-        if ('set' in msg || 'unset' in msg)
-          self.session.send(msg);
-      }
-
-    if (self.pending_complete && !self.sent_complete) {
-      self.session.send({msg: 'data', subs: [self.sub_id]});
-      self.sent_complete = true;
-    }
-
-    self.pending_data = {};
-    self.pending_complete = false;
+    self._session.sendComplete(self._subscriptionId);
   },
 
   _teardown: function() {
     var self = this;
     // tell listeners, so they can clean up
-    for (var i = 0; i < self.stop_callbacks.length; i++)
-      (self.stop_callbacks[i])();
-    self.stop_callbacks = [];
+    for (var i = 0; i < self._stopCallbacks.length; i++)
+      (self._stopCallbacks[i])();
+    self._stopCallbacks = [];
 
-    // remove our data from the client (possibly unshadowing data from
-    // lower priority subscriptions)
-    self.pending_data = {};
-    self.pending_complete = false;
-    for (var name in self.snapshot) {
-      self.pending_data[name] = {};
-      for (var id in self.snapshot[name]) {
-        self.pending_data[name][id] = {};
-        for (var key in self.snapshot[name][id])
-          self.pending_data[name][id][key] = undefined;
-      }
-    }
+    _.each(self._documents, function(collectionDocs, collectionName) {
+      self.removed(collectionName, _.keys(collectionDocs));
+    });
   }
 });
 
