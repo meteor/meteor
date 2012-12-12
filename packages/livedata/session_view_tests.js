@@ -326,3 +326,20 @@ Tinytest.add('livedata - sessionview - complicated sequence', function (test) {
   v.expectResult({fun: 'removed', ids: ["A1"]});
   v.expectNoResult();
 });
+
+Tinytest.add('livedata - sessionview - added becomes changed', function (test) {
+  var v = newView(test);
+
+  v.added('A', {_id: 'A1', foo: 'bar'});
+  v.expectResult({fun: 'added', doc: {_id: 'A1', foo: 'bar'}});
+
+  v.added('B', {_id: 'A1', hi: 'there'});
+  v.expectResult({fun: 'changed', id: 'A1', changed: {hi: 'there'},
+                  cleared: []});
+
+  v.removed('A', ['A1']);
+  v.expectResult({fun: 'changed', id: 'A1', changed: {}, cleared: ['foo']});
+
+  v.removed('B', ['A1']);
+  v.expectResult({fun: 'removed', ids: ['A1']});
+});

@@ -95,8 +95,8 @@ _.extend(Meteor._SessionCollectionView.prototype, {
         docView.changeField(subscriptionId, key, value, changeCollector, true);
       });
       if (!_.isEmpty(changeCollector))
-        self.callbacks.changed(self.collectionName, doc._id, newPairs, []);
-
+        self.callbacks.changed(
+          self.collectionName, doc._id, changeCollector, []);
     } else {
       docView = new Meteor._SessionDocumentView(doc._id);
       self.documents[doc._id] = docView;
