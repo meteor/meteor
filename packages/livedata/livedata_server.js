@@ -490,7 +490,7 @@ _.extend(Meteor._LivedataSession.prototype, {
         // writes will be included in the fence.
         fence.retire();
         self.send({
-          msg: 'data', methods: [msg.id]});
+          msg: 'updated', methods: [msg.id]});
       });
 
       // check for a replayed method (this is important during
