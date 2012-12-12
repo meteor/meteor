@@ -2452,6 +2452,27 @@ If `MAIL_URL` is not set (eg, when running your application locally),
 You must provide the `from` option and at least one of `to`, `cc`, and `bcc`;
 all other options are optional.
 
+Example server method for sending email:
+
+    Meteor.methods({
+      sendEmail: function (toEmail, fromEmail, subject) {
+        this.unblock();
+	      Email.send({
+          to: toEmail,
+          from: fromEmail,
+          subject: subject
+	      });
+      }
+    });
+
+Example asynchronous email method call:
+
+    Meteor.call('sendEmail',
+                'test_to@test.com',
+                'test_from@test.com',
+                'Subject line',
+                function (error, result) { return error ? error : result; });
+
 {{/better_markdown}}
 </template>
 
