@@ -82,7 +82,8 @@ Meteor.startup(function () {
 });
 
 var toc = [
-  {name: "Meteor " + METEOR_VERSION, id: "top"}, [
+  {name: "Meteor " + METEOR_VERSION, linkId: "top",
+   headingClass: "main-headline", content: "introtop"}, [
     "Quick start",
     "Seven principles",
     "Resources"
@@ -309,7 +310,7 @@ var name_to_id = function (name) {
   return x;
 };
 
-Template.nav.sections = function () {
+var getSections = function () {
   var ret = [];
   var walk = function (items, depth) {
     _.each(items, function (item) {
@@ -319,8 +320,13 @@ Template.nav.sections = function () {
         if (typeof(item) === "string")
           item = {name: item};
         ret.push(_.extend({
+          // defaults, overridden by item's properties
           type: "section",
-          id: item.name && name_to_id(item.name) || undefined,
+          // unless `.linkId` is specified, `.id` defaults
+          // to one generated from `.name`.
+          // `.linkId` overrides `.id` for the leftnav.
+          id: ((! item.linkId) &&
+               item.name && name_to_id(item.name) || undefined),
           depth: depth,
           style: ''
         }, item));
@@ -332,9 +338,17 @@ Template.nav.sections = function () {
   return ret;
 };
 
+Template.nav.sections = function () {
+  var sections = getSections();
+  _.each(sections, function (sec) {
+    sec.id = (sec.linkId || sec.id);
+  });
+  return sections;
+};
+
 Template.nav.type = function (what) {
   return this.type === what;
-}
+};
 
 Template.nav.maybe_current = function () {
   return Session.equals("section", this.id) ? "current" : "";
@@ -363,9 +377,8 @@ Handlebars.registerHelper('dtdd', function(name, options) {
                                type: options.hash.type});
 });
 
-Handlebars.registerHelper('better_markdown', function(fn) {
+var betterMarkdown = function (input) {
   var converter = new Showdown.converter();
-  var input = fn(this);
 
   ///////
   // Make Markdown *actually* skip over block-level elements when
@@ -470,6 +483,11 @@ Handlebars.registerHelper('better_markdown', function(fn) {
   output = output.replace(/<!--(\/?\$.*?)-->/g, '<$1>');
 
   return output;
+};
+
+Handlebars.registerHelper('better_markdown', function (fn) {
+  var input = fn(this);
+  return betterMarkdown(input);
 });
 
 Handlebars.registerHelper('dstache', function() {
@@ -494,6 +512,44 @@ Template.api_box.bare = function() {
           (this.args && this.args.length) ||
           (this.options && this.options.length)) ? "" : "bareapi";
 };
+
+Handlebars.registerHelper("generateDocs", function () {
+  // XXX just walk the part of the TOC we've ported
+  var sections = getSections().slice(0, 1);
+
+  var html = [];
+
+  _.each(sections, function (item) {
+    if (item.type === 'spacer')
+      return;
+
+    var hLevel =  String(item.depth);
+    var hId = item.id;
+    var hClass = item.headingClass;
+    // `.heading` overrides `.name` in the document (vs the leftnav)
+    var hContent = item.heading || item.name;
+    html.push('\n<h', hLevel);
+    if (hId)
+      html.push(' id="', Handlebars._escape(hId), '"');
+    if (hClass)
+      html.push(' class="', Handlebars._escape(hClass), '"');
+    html.push('>');
+    html.push(Handlebars._escape(hContent));
+    html.push('</h', hLevel, '>\n');
+
+    // `.content` determines the template name, defaulting to `.id`
+    var contentTemplateName = 'doc_' + (item.content || item.id);
+    var contentTemplate = Template[contentTemplateName];
+
+    if (contentTemplate)
+      html.push(betterMarkdown(contentTemplate()));
+    else
+      console.log('No template "' + contentTemplateName + '"');
+  });
+
+  return new Handlebars.SafeString(html.join(''));
+});
+
 
 var check_links = function() {
   var body = document.body.innerHTML;
