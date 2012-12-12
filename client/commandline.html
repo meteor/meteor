@@ -92,15 +92,14 @@ address of origin.meteor.com.
 
 
 
-To add deploy-specific information to your application, use the `--settings`
-option.  This will set the variable `Meteor.settings` in your application, but
-only on the server.  The `--settings` option takes an argument: the name of a
-file containing JSON data to put into `Meteor.settings`.
+You can add information specific to a particular deployment of your application
+by using the `--settings` option.  The argument to `--settings` is a file
+containing any JSON string.  The object in your settings file will appear on the
+server side of your application in [`Meteor.settings`](#meteor_settings).
 
-The settings you pass will persist on your deployed application across
-invocations of `meteor deploy` until you again pass the `--settings` option with
-different contents in your settings file. To unset `Meteor.settings`, pass an
-empty settings file.
+Settings are persistent.  When you redeploy your app, the old value will be
+preserved unless you explicitly pass new settings using the `--settings` option.
+To unset `Meteor.settings`, pass an empty settings file.
 
 <h3 id="meteorlogs">meteor logs <i>site</i></h3>
 
