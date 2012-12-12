@@ -662,7 +662,7 @@ exports.bundle = function (project_dir, output_path, options) {
 
     // Include docs, if requested by app
     if (project.includeDocs) {
-      var docsInfo = docs.getAPIDocs();
+      var docsInfo = docs.getAPIDocs(project);
       bundle.api.add_resource({type: 'js', where: ['client', 'server'],
                                path: '/docs/generated-docs.js',
                                data: new Buffer('var GENERATED_DOCS = ' +

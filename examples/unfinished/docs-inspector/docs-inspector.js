@@ -3,3 +3,7 @@ if (Meteor.isClient) {
     return GENERATED_DOCS;
   };
 }
+
+/**
+ * This doc comment should show up too.
+ */

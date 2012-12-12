@@ -81,15 +81,24 @@ var scanForDocComments = function (tree) {
   return comments;
 };
 
-exports.getAPIDocs = function () {
+exports.getAPIDocs = function (appToScanToo) {
   var info = { packages: [] };
 
   console.log("Scanning for API docs...");
 
   var pkgs = packages.list();
+
+  if (appToScanToo)
+    pkgs = _.extend({ '': appToScanToo }, pkgs);
+
   _.each(pkgs, function (pkg, name) {
     var pkgInfo = { name: name, files: [] };
     info.packages.push(pkgInfo);
+
+    // Keep a dictionary of files by relPath so that the package
+    // can add the same file on client and server in separate add_files
+    // calls, but we only scan it once.
+    var filesAdded = {}; // relPath -> [where]
 
     if (pkg.on_use_handler) {
       pkg.on_use_handler({
@@ -99,41 +108,49 @@ exports.getAPIDocs = function () {
           where = where ? (where instanceof Array ? where : [where]) : [];
           _.each(paths, function (relPath) {
             if (/\.js$/.test(relPath)) {
-              var fileInfo = { path: relPath, comments: [] };
-              pkgInfo.files.push(fileInfo);
-
-              var fullPath = path.join(pkg.source_root, relPath);
-              var A1 = +new Date;
-              var source = fs.readFileSync(fullPath).toString();
-              var A2 = +new Date;
-              fileInfo.readMs = A2 - A1;
-              var parseResult;
-
-              var B1 = +new Date;
-              if (! mightHaveDocComments(source)) {
-                parseResult = "skipped";
-              } else {
-                var parser = new JSParser(source, {includeComments: true});
-                try {
-                  var tree = parser.getSyntaxTree();
-                  fileInfo.comments = scanForDocComments(tree);
-                  parseResult = "success";
-                } catch (parseError) {
-                  parseResult = "PARSE ERROR: " + parseError.message;
-                }
-              }
-              var B2 = +new Date;
-              fileInfo.parseMs = B2 - B1;
-              fileInfo.parseResult = parseResult;
+              filesAdded[relPath] = _.union(
+                filesAdded[relPath] || [], where);
             }
           });
         },
-        ////// (other methods are not called by any packages...)
-        registered_extensions: function () { return []; },
+        // XXX the API we are implementing here is not very clean.
+        // implement registered_extensions for the benefit of
+        // packages.js / _scan_for_sources.
+        registered_extensions: function () { return ['.js']; },
         include_tests: function () {},
         error: function () {}
       });
     }
+
+    _.each(filesAdded, function (where, relPath) {
+      var fileInfo = { path: relPath, comments: [] };
+      pkgInfo.files.push(fileInfo);
+
+      var fullPath = path.join(pkg.source_root, relPath);
+      var A1 = +new Date;
+      var source = fs.readFileSync(fullPath).toString();
+      var A2 = +new Date;
+      fileInfo.readMs = A2 - A1;
+      var parseResult;
+
+      var B1 = +new Date;
+      if (! mightHaveDocComments(source)) {
+        parseResult = "skipped";
+      } else {
+        var parser = new JSParser(source, {includeComments: true});
+        try {
+          var tree = parser.getSyntaxTree();
+          fileInfo.comments = scanForDocComments(tree);
+          parseResult = "success";
+        } catch (parseError) {
+          parseResult = "PARSE ERROR: " + parseError.message;
+        }
+      }
+      var B2 = +new Date;
+      fileInfo.parseMs = B2 - B1;
+      fileInfo.parseResult = parseResult;
+    });
+
   });
 
   console.log("DONE");
