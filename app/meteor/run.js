@@ -212,7 +212,7 @@ var log_to_clients = function (msg) {
 var start_server = function (options) {
   // environment
   options = _.extend({runOnce: false,
-                      debugStatus: exports.DebugStatus.OFF
+                      debugStatus: "OFF"
                      },
                      options);
   if (options.runOnce) {
@@ -229,9 +229,9 @@ var start_server = function (options) {
 
   var dbg = options.debugStatus;
   var nodeOptions = [];
-  if (dbg === exports.DebugStatus.DEBUG)
+  if (dbg === "DEBUG")
     nodeOptions.push('--debug');
-  if (dbg === exports.DebugStatus.BREAK) {
+  if (dbg === "BREAK") {
     console.log('Debug will break on the first line');
     nodeOptions.push('--debug-brk');
   }
@@ -507,12 +507,6 @@ var start_update_checks = function () {
 ///////////////////////////////////////////////////////////////////////////////
 
 // XXX leave a pidfile and check if we are already running
-
-exports.DebugStatus = {
-  OFF : "OFF",
-  DEBUG : "DEBUG",
-  BREAK : "BREAK"
-};
 
 // This function never returns and will call process.exit() if it
 // can't continue. If you change this, remember to call

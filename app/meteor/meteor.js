@@ -118,9 +118,9 @@ Commands.push({
       .boolean('production')
       .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
       .boolean('debug')
-      .describe('debug', 'Run in debug mode for node-inspector')
+      .describe('debug', 'Pass --debug to node.js to enable node-inspector debugging.')
       .boolean('debug-brk')
-      .describe('debug-brk', 'Run in debug mode and break on first line')
+      .describe('debug-brk', 'Pass --debug-brk to node.js to enable debugging and break on the first line.')
       .describe('settings',  'Set optional data for Meteor.settings on the server')
       .boolean('once')
       .usage(
@@ -151,9 +151,9 @@ Commands.push({
     var app_dir = path.resolve(require_project("run", true)); // app or package
 
     var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true };
-    var debugStatus = runner.DebugStatus.OFF;
-    if (new_argv['debug']) debugStatus = runner.DebugStatus.DEBUG;
-    if (new_argv['debug-brk']) debugStatus = runner.DebugStatus.BREAK;
+    var debugStatus = "OFF";
+    if (new_argv['debug']) debugStatus = "DEBUG";
+    if (new_argv['debug-brk']) debugStatus = "BREAK";
     runner.run(app_dir, bundle_opts, new_argv.port, new_argv.once, settings, debugStatus);
   }
 });
