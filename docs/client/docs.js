@@ -485,6 +485,11 @@ var betterMarkdown = function (input) {
   return output;
 };
 
+var newMarkdown = function (input) {
+  var md = new markdown.Markdown(input);
+  return md.toHtml();
+};
+
 Handlebars.registerHelper('better_markdown', function (fn) {
   var input = fn(this);
   return betterMarkdown(input);
@@ -541,10 +546,14 @@ Handlebars.registerHelper("generateDocs", function () {
     var contentTemplateName = 'doc_' + (item.content || item.id);
     var contentTemplate = Template[contentTemplateName];
 
-    if (contentTemplate)
-      html.push(betterMarkdown(contentTemplate()));
-    else
+    if (contentTemplate) {
+      // XXX run template without Spark annotations
+      Spark._currentRenderer.withValue(null, function () {
+        html.push(newMarkdown(contentTemplate()));
+      });
+    } else {
       console.log('No template "' + contentTemplateName + '"');
+    }
   });
 
   return new Handlebars.SafeString(html.join(''));
