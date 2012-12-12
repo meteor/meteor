@@ -296,30 +296,28 @@ Cursor.prototype._publishCursor = function (sub) {
 
   var observeHandle = self._observeUnordered({
     added: function (obj) {
-      sub.set(collection, obj._id, obj);
-      sub.flush();
+      sub.added(collection, obj._id, obj);
     },
     changed: function (obj, oldObj) {
-      var set = {};
+      var fields = {};
       _.each(obj, function (v, k) {
         if (!_.isEqual(v, oldObj[k]))
-          set[k] = v;
+          fields[k] = v;
       });
-      sub.set(collection, obj._id, set);
       var deadKeys = _.difference(_.keys(oldObj), _.keys(obj));
-      sub.unset(collection, obj._id, deadKeys);
-      sub.flush();
+      _.each(deadKeys, function (deadKey) {
+        fields[deadKey] = undefined;
+      });
+      sub.changed(collection, obj._id, fields);
     },
     removed: function (oldObj) {
-      sub.unset(collection, oldObj._id, _.keys(oldObj));
-      sub.flush();
+      sub.removed(collection, [oldObj._id]);
     }
   });
 
   // _observeUnordered only returns after the initial added callbacks have run.
   // mark subscription as completed.
   sub.complete();
-  sub.flush();
 
   // register stop callback (expects lambda w/ no args).
   sub.onStop(function () {observeHandle.stop();});
