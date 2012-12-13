@@ -1,7 +1,7 @@
 (function () {
 
   Accounts.oauth.registerService('twitter', 1, function(oauthBinding) {
-    var identity = oauthBinding.get('https://api.twitter.com/1/account/verify_credentials.json');
+    var identity = oauthBinding.get('https://api.twitter.com/1/account/verify_credentials.json').data;
 
     return {
       serviceData: {
