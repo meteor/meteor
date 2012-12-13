@@ -13,11 +13,12 @@
       handlesForRun[runId] = _.without(handlesForRun[runId], self);
     });
     if (_.has(reportsForRun, runId)) {
-      self.set(Meteor._ServerTestResultsCollection, runId,
-               reportsForRun[runId]);
+      self.added(Meteor._ServerTestResultsCollection, runId,
+                 reportsForRun[runId]);
+    } else {
+      self.added(Meteor._ServerTestResultsCollection, runId, {});
     }
     self.complete();
-    self.flush();
   });
 
   Meteor.methods({
@@ -38,11 +39,10 @@
           console.trace();
         }
         var dummyKey = Meteor.uuid();
-        var setObject = {};
-        setObject[dummyKey] = report;
+        var fields = {};
+        fields[dummyKey] = report;
         _.each(handlesForRun[runId], function (handle) {
-          handle.set(Meteor._ServerTestResultsCollection, runId, setObject);
-          handle.flush();
+          handle.changed(Meteor._ServerTestResultsCollection, runId, fields);
         });
         // Save for future subscriptions.
         reportsForRun[runId][dummyKey] = report;

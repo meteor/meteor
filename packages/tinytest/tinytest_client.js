@@ -25,7 +25,9 @@ Meteor._runTestsEverywhere = function (onReport, onComplete) {
       // we really only should see one runId here.
       if (msg.id !== runId)
         return;
-      _.each(msg.set, function (report) {
+      // This will only work for added & changed messages.
+      // hope that is all you get.
+      _.each(msg.fields, function (report) {
         _.each(report.events, function (event) {
           delete event.cookie; // can't debug a server test on the client..
         });
