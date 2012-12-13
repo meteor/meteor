@@ -73,42 +73,44 @@ Meteor.Collection = function (name, options) {
         // Is this a "replace the whole doc" message coming from the quiescence
         // of method writes to an object? (Note that 'undefined' is a valid
         // value meaning "remove it".)
-        if (_.has(msg, 'replace')) {
+        if (msg.msg === 'replace') {
           var replace = msg.replace;
-          // An empty doc is equivalent to a nonexistent doc.
-          if (replace && _.isEmpty(_.without(_.keys(replace), '_id')))
-            replace = undefined;
           if (!replace) {
             if (doc)
               self._collection.remove(msg.id);
           } else if (!doc) {
-            self._collection.insert(_.extend({_id: msg.id}, replace));
+            self._collection.insert(replace);
           } else {
             // XXX check that replace has no $ ops
             self._collection.update(msg.id, replace);
           }
           return;
+        } else if (msg.msg === 'added') {
+          if (doc)
+            throw new Error("Expected not to find a document already present for an add");
+          self._collection.insert(_.extend({_id: msg.id}, msg.fields));
+        } else if (msg.msg === 'removed') {
+          if (!doc)
+            throw new Error("Expected to find a document to remove");
+          _.each(msg.ids, function (removedId) {
+            self._collection.remove(removedId);
+          });
+        } else if (msg.msg === 'changed') {
+          if (!doc)
+            throw new Error("Expected to find a document to change");
+          var modifier = {};
+          if (!_.isEmpty(msg.fields))
+            modifier.$set = msg.fields;
+          if (!_.isEmpty(msg.cleared)) {
+            _.each(msg.cleared, function (propname) {
+              modifier.$unset[propname] = 1;
+            });
+          }
+          self._collection.update(msg.id, modifier);
+        } else {
+          throw new Error("I don't know how to deal with this message");
         }
 
-        // ... otherwise we're applying set/unset messages against specific
-        // fields.
-        if (doc
-            && (!msg.set)
-            && _.difference(_.keys(doc), msg.unset, ['_id']).length === 0) {
-          // what's left is empty, just remove it.  cannot fail.
-          self._collection.remove(msg.id);
-        } else if (doc) {
-          var mutator = {$set: msg.set, $unset: {}};
-          _.each(msg.unset, function (propname) {
-            mutator.$unset[propname] = 1;
-          });
-          // XXX error check return value from update.
-          self._collection.update(msg.id, mutator);
-        } else {
-          // XXX error check return value from insert.
-          if (msg.set)
-            self._collection.insert(_.extend({_id: msg.id}, msg.set));
-        }
       },
 
       // Called at the end of a batch of updates.
