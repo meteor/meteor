@@ -107,6 +107,7 @@ Meteor.Collection = function (name, options) {
           if (!_.isEmpty(msg.fields))
             modifier.$set = msg.fields;
           if (!_.isEmpty(msg.cleared)) {
+            modifier.$unset = {};
             _.each(msg.cleared, function (propname) {
               modifier.$unset[propname] = 1;
             });
