@@ -704,7 +704,8 @@ _.extend(Meteor._LivedataSubscription.prototype, {
   },
 
   onStop: function (callback) {
-    this._stopCallbacks.push(callback);
+    var self = this;
+    self._stopCallbacks.push(callback);
   },
 
   added: function (collectionName, id, fields) {
@@ -714,10 +715,12 @@ _.extend(Meteor._LivedataSubscription.prototype, {
   },
 
   changed: function (collectionName, id, fields) {
+    var self = this;
     self._session.changed(self._subscriptionId, collectionName, id, fields);
   },
 
   removed: function (collectionName, ids) {
+    var self = this;
     _.each(ids, function(id) {
       // we don't bother to delete sets of things in a collection if the
       // collection is empty.  It could break below, where we iterate over
