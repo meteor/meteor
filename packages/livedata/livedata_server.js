@@ -651,7 +651,7 @@ _.extend(Meteor._LivedataSession.prototype, {
   _diffCollectionViews: function (beforeCVs) {
     var self = this;
     diffObjects(beforeCVs, self.collectionViews, {
-      both: function (collectionName, rightValue, leftValue) {
+      both: function (collectionName, leftValue, rightValue) {
         rightValue.diff(leftValue);
       },
       rightOnly: function (collectionName, rightValue) {
