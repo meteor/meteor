@@ -121,7 +121,7 @@ _.extend(Meteor._SynchronousQueue.prototype, {
         // We'll throw this exception through runTask.
         exception = err;
       } else {
-        Meteor._debug("Exception in queued task: " + err);
+        Meteor._debug("Exception in queued task: " + err.stack);
       }
     }
     self._currentTaskFiber = undefined;

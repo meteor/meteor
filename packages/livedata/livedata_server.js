@@ -361,8 +361,8 @@ _.extend(Meteor._LivedataSession.prototype, {
         clearedFields.push(key);
       else
         changedFields[key] = value;
-      view.changed(subscriptionId, id, changedFields, clearedFields);
     });
+    view.changed(subscriptionId, id, changedFields, clearedFields);
   },
   // Connect a new socket to this session, displacing (and closing)
   // any socket that was previously connected
