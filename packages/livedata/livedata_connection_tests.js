@@ -63,8 +63,8 @@ Tinytest.add("livedata stub - receive data", function (test) {
 
   // data comes in for unknown collection.
   var coll_name = Meteor.uuid();
-  stream.receive({msg: 'data', collection: coll_name, id: '1234',
-                  set: {a: 1}});
+  stream.receive({msg: 'added', collection: coll_name, id: '1234',
+                  fields: {a: 1}});
   // break throught the black box and test internal state
   test.length(conn._updatesForUnknownStores[coll_name], 1);
 
@@ -77,8 +77,8 @@ Tinytest.add("livedata stub - receive data", function (test) {
   test.equal(coll.find({}).fetch(), [{_id:'1234', a:1}]);
 
   // second message. applied directly to the db.
-  stream.receive({msg: 'data', collection: coll_name, id: '1234',
-                  set: {a:2}});
+  stream.receive({msg: 'changed', collection: coll_name, id: '1234',
+                  fields: {a:2}});
   test.equal(coll.find({}).fetch(), [{_id:'1234', a:2}]);
   test.isUndefined(conn._updatesForUnknownStores[coll_name]);
 });
@@ -103,7 +103,7 @@ Tinytest.add("livedata stub - subscribe", function (test) {
   test.equal(message, {msg: 'sub', name: 'my_data', params: []});
 
   // get the sub satisfied. callback fires.
-  stream.receive({msg: 'data', 'subs': [id]});
+  stream.receive({msg: 'complete', 'subs': [id]});
   test.isTrue(callback_fired);
 
   // Unsubscribe.
@@ -264,7 +264,7 @@ Tinytest.add("livedata stub - this", function (test) {
   test.length(stream.sent, 0);
 
   stream.receive({msg: 'result', id:message.id, result:null});
-  stream.receive({msg: 'data', 'methods': [message.id]});
+  stream.receive({msg: 'updated', 'methods': [message.id]});
 
 });
 
@@ -325,8 +325,8 @@ Tinytest.add("livedata stub - methods", function (test) {
   test.equal(counts, {added: 1, removed: 0, changed: 0, moved: 0});
 
   // data methods do not show up (not quiescent yet)
-  stream.receive({msg: 'data', collection: collName, id: docId,
-                  set: {value: 'tuesday'}});
+  stream.receive({msg: 'added', collection: collName, id: docId,
+                  fields: {value: 'tuesday'}});
   test.equal(coll.find({}).count(), 1);
   test.equal(coll.find({value: 'friday!'}).count(), 1);
   test.equal(counts, {added: 1, removed: 0, changed: 0, moved: 0});
@@ -347,7 +347,7 @@ Tinytest.add("livedata stub - methods", function (test) {
   // get the first data satisfied message. changes are applied to database even
   // though another method is outstanding, because the other method didn't have
   // a stub. and its callback is called.
-  stream.receive({msg: 'data', 'methods': [message.id]});
+  stream.receive({msg: 'updated', 'methods': [message.id]});
   test.isTrue(callback1Fired);
   test.isFalse(callback2Fired);
 
@@ -360,7 +360,7 @@ Tinytest.add("livedata stub - methods", function (test) {
   test.isFalse(callback2Fired);
 
   // get second satisfied; no new changes are applied.
-  stream.receive({msg: 'data', 'methods': [message2.id]});
+  stream.receive({msg: 'updated', 'methods': [message2.id]});
   test.isTrue(callback2Fired);
 
   test.equal(coll.find({}).count(), 1);
@@ -433,12 +433,12 @@ Tinytest.add("livedata stub - methods calling methods", function (test) {
 
   // get data from the method. data from this doc does not show up yet, but data
   // from another doc does.
-  stream.receive({msg: 'data', collection: coll_name, id: docId,
-                  set: {value: 'tuesday'}});
+  stream.receive({msg: 'added', collection: coll_name, id: docId,
+                  fields: {value: 'tuesday'}});
   o.expectCallbacks();
   test.equal(coll.findOne(docId), {_id: docId, a: 1});
-  stream.receive({msg: 'data', collection: coll_name, id: 'monkey',
-                  set: {value: 'bla'}});
+  stream.receive({msg: 'added', collection: coll_name, id: 'monkey',
+                  fields: {value: 'bla'}});
   o.expectCallbacks({added: 1});
   test.equal(coll.findOne(docId), {_id: docId, a: 1});
   var newDoc = coll.findOne({value: 'bla'});
@@ -447,7 +447,7 @@ Tinytest.add("livedata stub - methods calling methods", function (test) {
 
   // get method satisfied. all data shows up. the 'a' field is reverted and
   // 'value' field is set.
-  stream.receive({msg: 'data', 'methods': [message.id]});
+  stream.receive({msg: 'updated', 'methods': [message.id]});
   o.expectCallbacks({changed: 1});
   test.equal(coll.findOne(docId), {_id: docId, value: 'tuesday'});
   test.equal(coll.findOne(newDoc._id), {_id: newDoc._id, value: 'bla'});
@@ -500,15 +500,16 @@ Tinytest.add("livedata stub - reconnect", function (test) {
                           id: subMessage.id});
 
   // get some data. it shows up.
-  stream.receive({msg: 'data', collection: collName,
-                  id: '1234', set: {a:1}});
+  stream.receive({msg: 'added', collection: collName,
+                  id: '1234', fields: {a:1}});
 
   test.equal(coll.find({}).count(), 1);
   o.expectCallbacks({added: 1});
   test.isFalse(subCallbackFired);
 
-  stream.receive({msg: 'data', collection: collName,
-                  id: '1234', set: {b:2},
+  stream.receive({msg: 'changed', collection: collName,
+                  id: '1234', fields: {b:2}});
+  stream.receive({msg: 'complete',
                   subs: [subMessage.id] // satisfy sub
                  });
   test.isTrue(subCallbackFired);
@@ -534,8 +535,8 @@ Tinytest.add("livedata stub - reconnect", function (test) {
   test.equal(stream.sent.length, 0);
 
   // more data. shows up immediately because there was no relevant method stub.
-  stream.receive({msg: 'data', collection: collName,
-                  id: '1234', set: {c:3}});
+  stream.receive({msg: 'changed', collection: collName,
+                  id: '1234', fields: {c:3}});
   test.equal(coll.findOne('1234'), {_id: '1234', a: 1, b: 2, c: 3});
   o.expectCallbacks({changed: 1});
 
@@ -551,16 +552,16 @@ Tinytest.add("livedata stub - reconnect", function (test) {
   stream.receive({msg: 'connected', session: SESSION_ID + 1});
 
   // resend data. doesn't show up: we're in reconnect quiescence.
-  stream.receive({msg: 'data', collection: collName,
-                  id: '1234', set: {a:1, b:2, c:3, d: 4}});
-  stream.receive({msg: 'data', collection: collName,
-                  id: '2345', set: {e: 5}});
+  stream.receive({msg: 'added', collection: collName,
+                  id: '1234', fields: {a:1, b:2, c:3, d: 4}});
+  stream.receive({msg: 'added', collection: collName,
+                  id: '2345', fields: {e: 5}});
   test.equal(coll.findOne('1234'), {_id: '1234', a: 1, b: 2, c: 3});
   test.isFalse(coll.findOne('2345'));
   o.expectCallbacks();
 
   // satisfy and return the method
-  stream.receive({msg: 'data',
+  stream.receive({msg: 'updated',
                   methods: [methodMessage.id]});
   test.isFalse(methodCallbackFired);
   stream.receive({msg: 'result', id:methodMessage.id, result:"bupkis"});
@@ -575,7 +576,7 @@ Tinytest.add("livedata stub - reconnect", function (test) {
   o.expectCallbacks();
 
   // re-satisfy sub
-  stream.receive({msg: 'data', subs: [subMessage.id]});
+  stream.receive({msg: 'complete', subs: [subMessage.id]});
 
   // now the doc changes and method callback is called, and the wait method is
   // sent. the sub callback isn't re-called.
@@ -591,7 +592,7 @@ Tinytest.add("livedata stub - reconnect", function (test) {
   test.equal(stream.sent.length, 0);
   stream.receive({msg: 'result', id: waitMethodMessage.id, result: "bupkis"});
   test.equal(stream.sent.length, 0);
-  stream.receive({msg: 'data', methods: [waitMethodMessage.id]});
+  stream.receive({msg: 'updated', methods: [waitMethodMessage.id]});
 
   // wait method done means we can send the third method
   test.equal(stream.sent.length, 1);
@@ -642,8 +643,8 @@ Tinytest.add("livedata stub - reconnect method which only got result", function 
   test.equal(stream.sent.length, 0);
 
   // Get some data.
-  stream.receive({msg: 'data', collection: collName,
-                  id: stubWrittenId, set: {baz: 42}});
+  stream.receive({msg: 'added', collection: collName,
+                  id: stubWrittenId, fields: {baz: 42}});
   // It doesn't show up yet.
   test.equal(coll.find().count(), 1);
   test.equal(coll.findOne(stubWrittenId), {_id: stubWrittenId, foo: 'bar'});
@@ -677,8 +678,8 @@ Tinytest.add("livedata stub - reconnect method which only got result", function 
   o.expectCallbacks({removed: 1});
   test.equal(callbackOutput, ['bla']);
   test.equal(onResultReceivedOutput, ['bla']);
-  stream.receive({msg: 'data', collection: collName,
-                  id: stubWrittenId, set: {baz: 42}});
+  stream.receive({msg: 'added', collection: collName,
+                  id: stubWrittenId, fields: {baz: 42}});
   test.equal(coll.findOne(stubWrittenId), {_id: stubWrittenId, baz: 42});
   o.expectCallbacks({added: 1});
 
@@ -709,8 +710,8 @@ Tinytest.add("livedata stub - reconnect method which only got result", function 
   test.equal(stream.sent.length, 0);
 
   // Get some data.
-  stream.receive({msg: 'data', collection: collName,
-                  id: stubWrittenId2, set: {baz: 42}});
+  stream.receive({msg: 'added', collection: collName,
+                  id: stubWrittenId2, fields: {baz: 42}});
   // It doesn't show up yet.
   test.equal(coll.find().count(), 2);
   test.equal(coll.findOne(stubWrittenId2), {_id: stubWrittenId2, foo: 'bar'});
@@ -753,15 +754,15 @@ Tinytest.add("livedata stub - reconnect method which only got result", function 
   test.equal(callbackOutput, ['bla']);
 
   // Receive data matching our stub. It doesn't take effect yet.
-  stream.receive({msg: 'data', collection: collName,
-                  id: stubWrittenId2, set: {foo: 'bar'}});
+  stream.receive({msg: 'added', collection: collName,
+                  id: stubWrittenId2, fields: {foo: 'bar'}});
   o.expectCallbacks();
 
   // slowMethod is done writing, so we get full reconnect quiescence (but no
   // slowMethod callback)... ie, a reset followed by applying the data we just
   // got, as well as calling the callback from the method that half-finished
   // before reset. The net effect is deleting doc 'stubWrittenId'.
-  stream.receive({msg: 'data', methods: [slowMethodId]});
+  stream.receive({msg: 'updated', methods: [slowMethodId]});
   test.equal(coll.find().count(), 1);
   test.equal(coll.findOne(stubWrittenId2), {_id: stubWrittenId2, foo: 'bar'});
   o.expectCallbacks({removed: 1});
@@ -805,15 +806,15 @@ Tinytest.add("livedata stub - reconnect method which only got data", function (t
   test.equal(stream.sent.length, 0);
 
   // Get some data.
-  stream.receive({msg: 'data', collection: collName,
-                  id: 'photo', set: {baz: 42}});
+  stream.receive({msg: 'added', collection: collName,
+                  id: 'photo', fields: {baz: 42}});
   // It shows up instantly because the stub didn't write anything.
   test.equal(coll.find().count(), 1);
   test.equal(coll.findOne('photo'), {_id: 'photo', baz: 42});
   o.expectCallbacks({added: 1});
 
   // Get the data-done message.
-  stream.receive({msg: 'data', methods: [methodId]});
+  stream.receive({msg: 'updated', methods: [methodId]});
   // Data still here.
   test.equal(coll.find().count(), 1);
   test.equal(coll.findOne('photo'), {_id: 'photo', baz: 42});
@@ -852,7 +853,7 @@ Tinytest.add("livedata stub - reconnect method which only got data", function (t
   test.equal(onResultReceivedOutput, ['res']);
 
   // Now we get data-done. Collection is reset and callback is called.
-  stream.receive({msg: 'data', methods: [methodId]});
+  stream.receive({msg: 'updated', methods: [methodId]});
   test.equal(coll.find().count(), 0);
   o.expectCallbacks({removed: 1});
   test.equal(callbackOutput, ['res']);
@@ -909,8 +910,8 @@ Tinytest.add("livedata stub - multiple stubs same doc", function (test) {
   test.equal(stream.sent.length, 0);
 
   // Get some data... slightly different than what we wrote.
-  stream.receive({msg: 'data', collection: collName,
-                  id: stubWrittenId, set: {foo: 'barb', other: 'field',
+  stream.receive({msg: 'added', collection: collName,
+                  id: stubWrittenId, fields: {foo: 'barb', other: 'field',
                                            other2: 'bla'}});
   // It doesn't show up yet.
   test.equal(coll.find().count(), 1);
@@ -920,22 +921,22 @@ Tinytest.add("livedata stub - multiple stubs same doc", function (test) {
 
   // And get the first method-done. Still no updates to minimongo: we can't
   // quiesce the doc until the second method is done.
-  stream.receive({msg: 'data', methods: [insertMethodId]});
+  stream.receive({msg: 'updated', methods: [insertMethodId]});
   test.equal(coll.find().count(), 1);
   test.equal(coll.findOne(stubWrittenId),
              {_id: stubWrittenId, foo: 'bar', baz: 42});
   o.expectCallbacks();
 
   // More data. Not quite what we wrote. Also ignored for now.
-  stream.receive({msg: 'data', collection: collName,
-                  id: stubWrittenId, set: {baz: 43}, unset: ['other']});
+  stream.receive({msg: 'changed', collection: collName,
+                  id: stubWrittenId, fields: {baz: 43}, cleared: ['other']});
   test.equal(coll.find().count(), 1);
   test.equal(coll.findOne(stubWrittenId),
              {_id: stubWrittenId, foo: 'bar', baz: 42});
   o.expectCallbacks();
 
   // Second data-ready. Now everything takes effect!
-  stream.receive({msg: 'data', methods: [updateMethodId]});
+  stream.receive({msg: 'updated', methods: [updateMethodId]});
   test.equal(coll.find().count(), 1);
   test.equal(coll.findOne(stubWrittenId),
              {_id: stubWrittenId, foo: 'barb', other2: 'bla',
@@ -1315,7 +1316,7 @@ Tinytest.add("livedata stub - reconnect double wait method", function (test) {
   // Data-done for reconnectMethod. This gets us to reconnect quiescence, so
   // halfwayMethod's callback fires. reconnectMethod's is still waiting on its
   // result.
-  stream.receive({msg: 'data', methods: [reconnectId]});
+  stream.receive({msg: 'updated', methods: [reconnectId]});
   test.equal(output.shift(), 'halfway');
   test.equal(output, []);
 
