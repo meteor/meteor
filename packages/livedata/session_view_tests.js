@@ -5,6 +5,8 @@ var newView = function(test) {
       results.push({fun: 'added', id: id, fields: fields});
     },
     changed: function (collection, id, changed, cleared) {
+      if (_.isEmpty(changed) && _.isEmpty(cleared))
+        return;
       results.push({fun: 'changed', id: id, changed: changed, cleared: cleared});
     },
     removed: function (collection, ids) {

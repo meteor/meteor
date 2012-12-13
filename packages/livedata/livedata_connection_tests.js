@@ -1065,15 +1065,15 @@ Tinytest.add("livedata connection - two wait methods", function (test) {
   // Receive some data. "one" is not a wait method and there are no stubs, so it
   // gets applied immediately.
   test.equal(coll.find().count(), 0);
-  stream.receive({msg: 'data', collection: collName,
-                  id: 'foo', set: {x: 1}});
+  stream.receive({msg: 'added', collection: collName,
+                  id: 'foo', fields: {x: 1}});
   test.equal(coll.find().count(), 1);
   test.equal(coll.findOne('foo'), {_id: 'foo', x: 1});
 
   // Let "one!" finish. Both messages are required to fire the callback.
   stream.receive({msg: 'result', id: one_message.id});
   test.equal(responses, []);
-  stream.receive({msg: 'data', methods: [one_message.id]});
+  stream.receive({msg: 'updated', methods: [one_message.id]});
   test.equal(responses, ['one']);
 
   // Now we've send out "two!".
@@ -1085,13 +1085,13 @@ Tinytest.add("livedata connection - two wait methods", function (test) {
 
   // Receive more data. "two" is a wait method, so the data doesn't get applied
   // yet.
-  stream.receive({msg: 'data', collection: collName,
-                  id: 'foo', set: {y: 3}});
+  stream.receive({msg: 'changed', collection: collName,
+                  id: 'foo', fields: {y: 3}});
   test.equal(coll.find().count(), 1);
   test.equal(coll.findOne('foo'), {_id: 'foo', x: 1});
 
   // Let "two!" finish, with its end messages in the opposite order to "one!".
-  stream.receive({msg: 'data', methods: [two_message.id]});
+  stream.receive({msg: 'updated', methods: [two_message.id]});
   test.equal(responses, ['one']);
   test.equal(stream.sent.length, 0);
   // data-done message is enough to allow data to be written.
@@ -1111,12 +1111,12 @@ Tinytest.add("livedata connection - two wait methods", function (test) {
   // Out of order response is OK for non-wait methods.
   stream.receive({msg: 'result', id: three_message.id});
   stream.receive({msg: 'result', id: four_message.id});
-  stream.receive({msg: 'data', methods: [four_message.id]});
+  stream.receive({msg: 'updated', methods: [four_message.id]});
   test.equal(responses, ['one', 'two', 'four']);
   test.equal(stream.sent.length, 0);
 
   // Let three finish too.
-  stream.receive({msg: 'data', methods: [three_message.id]});
+  stream.receive({msg: 'updated', methods: [three_message.id]});
   test.equal(responses, ['one', 'two', 'four', 'three']);
 
   // Verify that we just sent "five!" (the next wait method).
@@ -1127,7 +1127,7 @@ Tinytest.add("livedata connection - two wait methods", function (test) {
 
   // Let five finish.
   stream.receive({msg: 'result', id: five_message.id});
-  stream.receive({msg: 'data', methods: [five_message.id]});
+  stream.receive({msg: 'updated', methods: [five_message.id]});
   test.equal(responses, ['one', 'two', 'four', 'three', 'five']);
 
   var six_message = JSON.parse(stream.sent.shift());

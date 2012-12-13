@@ -34,7 +34,7 @@ Meteor._runTestsEverywhere = function (onReport, onComplete) {
         report.server = true;
         onReport(report);
       });
-    }
+    }  
   });
 
   var handle = Meteor.subscribe(Meteor._ServerTestResultsSubscription, runId);

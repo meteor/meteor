@@ -5,14 +5,46 @@ var Fiber = __meteor_bootstrap__.require('fibers');
 // * LivedataSubscription - A single subscription for a single client
 // * LivedataServer - An entire server that may talk to > 1 client.  A DDP endpoint.
 
+(function () {
 
-Meteor._SessionDocumentView = function (id) {
+// General helper for diff-ing two objects.
+// callbacks is an object like so:
+// { leftOnly: function (key, leftValue) {...},
+//   rightOnly: function (key, rightValue) {...},
+//   both: function (key, leftValue, rightValue) {...},
+// }
+var diffObjects = function (left, right, callbacks) {
+  _.each(left, function (leftValue, key) {
+    if (_.has(right, key))
+      callbacks.both && callbacks.both(key, leftValue, right[key]);
+    else
+      callbacks.leftOnly && callbacks.leftOnly(key, leftValue);
+  });
+  if (callbacks.rightOnly) {
+    _.each(right, function(rightValue, key) {
+      if (!_.has(left, key))
+        callbacks.rightOnly(key, rightValue);
+    });
+  }
+};
+
+
+Meteor._SessionDocumentView = function () {
   var self = this;
   self.existsIn = {}; // set of subId
   self.dataByKey = {}; // key-> [ {subscriptionId, value} by precedence]
 };
 
 _.extend(Meteor._SessionDocumentView.prototype, {
+
+  getFields: function () {
+    var self = this;
+    var ret = {};
+    _.each(self.dataByKey, function (precedenceList, key) {
+      ret[key] = precedenceList[0].value;
+    });
+  },
+
   clearField: function (subscriptionId, key, changeCollector, clearCollector) {
     var self = this;
     // Publish API ignores _id if present in fields
@@ -88,6 +120,42 @@ _.extend(Meteor._SessionCollectionView.prototype, {
     return _.isEmpty(self.documents);
   },
 
+  diff: function (previous) {
+    var self = this;
+    var removedIds = [];
+    diffObjects(previous.documents, self.documents, {
+      both: _.bind(self.diffDocument, self),
+
+      rightOnly: function (id, nowDV) {
+        self.callbacks.added(self.collectionName, id, nowDV.getFields());
+      },
+
+      leftOnly: function (id, prevDV) {
+        removedIds.push(id);
+      }
+    });
+    if (!_.isEmpty(removedIds))
+      self.callbacks.removed(self.collectionName, removedIds);
+  },
+
+  diffDocument: function (id, prevDV, nowDV) {
+    var self = this;
+    var fields = {};
+    var cleared = [];
+    diffObjects(prevDV.getFields(), nowDV.getFields(), {
+      both: function (key, prev, now) {
+        fields[key] = now;
+      },
+      rightOnly: function (key, now) {
+        fields[key] = now;
+      },
+      leftOnly: function(key, prev) {
+        cleared.push(prev);
+      }
+    });
+    self.callbacks.changed(self.collectionName, id, fields, cleared);
+  },
+
   added: function (subscriptionId, id, fields) {
     var self = this;
     var docView = self.documents[id];
@@ -104,11 +172,10 @@ _.extend(Meteor._SessionCollectionView.prototype, {
       _.each(fields, function (value, key) {
         docView.changeField(subscriptionId, key, value, changeCollector, true);
       });
-      if (!_.isEmpty(changeCollector))
-        self.callbacks.changed(
-          self.collectionName, id, changeCollector, []);
+
+      self.callbacks.changed(self.collectionName, id, changeCollector, []);
     } else {
-      docView = new Meteor._SessionDocumentView(id);
+      docView = new Meteor._SessionDocumentView();
       self.documents[id] = docView;
       docView.existsIn[subscriptionId] = true;
       _.each(fields, function (value, key) {
@@ -133,8 +200,7 @@ _.extend(Meteor._SessionCollectionView.prototype, {
     _.each(cleared, function (clearKey) {
       docView.clearField(subscriptionId, clearKey, changedResult, clearedResult);
     });
-    if (!_.isEmpty(changedResult) || !_.isEmpty(clearedResult))
-      self.callbacks.changed(self.collectionName, id, changedResult, clearedResult);
+    self.callbacks.changed(self.collectionName, id, changedResult, clearedResult);
   },
 
   removed: function (subscriptionId, ids) {
@@ -158,8 +224,8 @@ _.extend(Meteor._SessionCollectionView.prototype, {
         _.each(docView.dataByKey, function (precedenceList, key) {
           docView.clearField(subscriptionId, key, changed, cleared);
         });
-        if (!_.isEmpty(changed) || !_.isEmpty(cleared))
-          self.callbacks.changed(self.collectionName, id, changed, cleared);
+
+        self.callbacks.changed(self.collectionName, id, changed, cleared);
       }
     });
     if (!_.isEmpty(removedIds))
@@ -201,34 +267,51 @@ Meteor._LivedataSession = function (server) {
   self.sessionData = {};
 
   self.collectionViews = {};
+
+  self._isSending = true;
+  // when we are rerunning subscriptions, any completion messages
+  // we want to buffer up for when we are done rerunning subscriptions
+  self._pendingCompletions = [];
 };
 
 _.extend(Meteor._LivedataSession.prototype, {
 
 
-  sendComplete: function (subscriptionId) {
+  sendComplete: function (subscriptionIds) {
     var self = this;
-    self.send({msg: "complete", subs: [subscriptionId]});
+    if (self._isSending)
+      self.send({msg: "complete", subs: subscriptionIds});
+    else {
+      _.each(subscriptionIds, function (subscriptionId) {
+        self._pendingCompletions.push(subscriptionId);
+      });
+    }
   },
 
   sendAdded: function (collectionName, id, fields) {
     var self = this;
-    self.send({msg: "added", collection: collectionName, id: id, fields: fields});
+    if (self._isSending)
+      self.send({msg: "added", collection: collectionName, id: id, fields: fields});
   },
 
   sendChanged: function (collectionName, id, fields, cleared) {
     var self = this;
-    var toSend = {msg: "changed", collection: collectionName, id: id};
-    if (!_.isEmpty(fields))
-      toSend.fields = fields;
-    if (!_.isEmpty(cleared))
-      toSend.cleared = cleared;
-    self.send(toSend);
+    if (_.isEmpty(fields) && _.isEmpty(cleared))
+      return;
+    if (self._isSending) {
+      var toSend = {msg: "changed", collection: collectionName, id: id};
+      if (!_.isEmpty(fields))
+        toSend.fields = fields;
+      if (!_.isEmpty(cleared))
+        toSend.cleared = cleared;
+      self.send(toSend);
+    }
   },
 
   sendRemoved: function (collectionName, ids) {
     var self = this;
-    self.send({msg: "removed", ids: ids});
+    if (self._isSending)
+      self.send({msg: "removed", ids: ids});
   },
 
   getSendCallbacks: function () {
@@ -559,12 +642,50 @@ _.extend(Meteor._LivedataSession.prototype, {
     }
   },
 
+  _eachSub: function (f) {
+    var self = this;
+    _.each(self.named_subs, f);
+    _.each(self.universal_subs, f);
+  },
+
+  _diffCollectionViews: function (beforeCVs) {
+    var self = this;
+    diffObjects(beforeCVs, self.collectionViews, {
+      both: function (collectionName, rightValue, leftValue) {
+        rightValue.diff(leftValue);
+      },
+      rightOnly: function (collectionName, rightValue) {
+        _.each(rightValue.documents, function (docView, id) {
+          self.sendAdded(collectionName, id, docView.getFields());
+        });
+      },
+      leftOnly: function (collectionName, leftValue) {
+        self.sendRemoved(collectionName, _.keys(leftValue.documents));
+      }
+    });
+  },
+
   // Sets the current user id in all appropriate contexts and reruns
   // all subscriptions
   _setUserId: function(userId) {
     var self = this;
     self.userId = userId;
-    this._rerunAllSubscriptions();
+    self._isSending = false;
+    var beforeCVs = self.collectionViews;
+    self.collectionViews = {};
+    self._eachSub(function (sub) {
+      sub._resetSubscription();
+      sub.userId = self.userId;
+      sub._runHandler();
+    });
+    self._isSending = true;
+
+    self._diffCollectionViews(beforeCVs);
+
+    if (!_.isEmpty(self._pendingCompletions)) {
+      self.sendComplete(self._pendingCompletions);
+      self._pendingCompletions = [];
+    }
 
     // XXX figure out the login token that was just used, and set up an observe
     // on the user doc so that deleting the user or the login token disconnects
@@ -638,31 +759,8 @@ _.extend(Meteor._LivedataSession.prototype, {
       sub.stop();
     });
     self.universal_subs = [];
-  },
-
-  // Rerun all subscriptions without sending intermediate state down
-  // the wire
-  // XXX: needs to be rewritten for ddp-pre1
-  _rerunAllSubscriptions: function () {
-    var self = this;
-
-    var rerunSub = function(sub) {
-      sub._teardown();
-      sub.userId = self.userId;
-      sub._runHandler();
-    };
-    var flushSub = function(sub) {
-      sub.flush();
-    };
-
-    self.dontFlush = true;
-    _.each(self.named_subs, rerunSub);
-    _.each(self.universal_subs, rerunSub);
-
-    self.dontFlush = false;
-    _.each(self.named_subs, flushSub);
-    _.each(self.universal_subs, flushSub);
   }
+
 });
 
 /******************************************************************************/
@@ -688,6 +786,10 @@ Meteor._LivedataSubscription = function (session, subscriptionId, priority) {
   // an opinion about
   self._documents = {};
 
+
+  // remember if we are complete.
+  self._complete = false;
+
   // Part of the public API: the user of this sub.
   self.userId = session.userId;
 };
@@ -699,8 +801,17 @@ _.extend(Meteor._LivedataSubscription.prototype, {
     if (self._stopped)
       return;
 
-    self._teardown();
+    self._callStopCallbacks();
+    self._removeAllDocuments();
     self._stopped = true;
+  },
+
+  // This is meant to be used for a subscription that is about to be rerun.
+  // It does NOT invoke the remove() callbacks on the session for every doc.
+  _resetSubscription: function () {
+    var self = this;
+    self._callStopCallbacks();
+    self._documents = {};
   },
 
   onStop: function (callback) {
@@ -732,20 +843,29 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
   complete: function () {
     var self = this;
-    self._session.sendComplete(self._subscriptionId);
+    if (!self._complete) {
+      self._session.sendComplete([self._subscriptionId]);
+      self._complete = true;
+    }
   },
 
-  _teardown: function() {
+  _callStopCallbacks: function () {
     var self = this;
     // tell listeners, so they can clean up
-    for (var i = 0; i < self._stopCallbacks.length; i++)
-      (self._stopCallbacks[i])();
+    var callbacks = self._stopCallbacks;
     self._stopCallbacks = [];
-
+    _.each(callbacks, function (callback) {
+      callback();
+    });
+  },
+  // Send remove messages for every document.
+  _removeAllDocuments: function () {
+    var self = this;
     _.each(self._documents, function(collectionDocs, collectionName) {
       self.removed(collectionName, _.keys(collectionDocs));
     });
   }
+
 });
 
 /******************************************************************************/
@@ -1032,3 +1152,4 @@ _.extend(Meteor._LivedataServer.prototype, {
       f();
   }
 });
+})();
