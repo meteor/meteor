@@ -43,6 +43,7 @@ _.extend(Meteor._SessionDocumentView.prototype, {
     _.each(self.dataByKey, function (precedenceList, key) {
       ret[key] = precedenceList[0].value;
     });
+    return ret;
   },
 
   clearField: function (subscriptionId, key, changeCollector, clearCollector) {
@@ -144,7 +145,8 @@ _.extend(Meteor._SessionCollectionView.prototype, {
     var cleared = [];
     diffObjects(prevDV.getFields(), nowDV.getFields(), {
       both: function (key, prev, now) {
-        fields[key] = now;
+        if (!_.isEqual(prev, now))
+          fields[key] = now;
       },
       rightOnly: function (key, now) {
         fields[key] = now;
@@ -311,7 +313,7 @@ _.extend(Meteor._LivedataSession.prototype, {
   sendRemoved: function (collectionName, ids) {
     var self = this;
     if (self._isSending)
-      self.send({msg: "removed", ids: ids});
+      self.send({msg: "removed", collection: collectionName, ids: ids});
   },
 
   getSendCallbacks: function () {

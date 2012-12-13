@@ -295,51 +295,58 @@ if (Meteor.isClient) {
       // A helper for testing incoming set and unset messages
       // XXX should this be extracted as a general helper together with
       // eavesdropOnCollection?
-      var testSetAndUnset = function(expectation) {
-        test.equal(_.map(messages, function(msg) {
-          var result = {};
-          if (msg.set)
-            result.set = msg.set.name;
-          if (msg.unset)
-            result.unset = true;
-          return result;
-        }), expectation);
+      var expectMessages = function(expectedAddedMessageCount,
+                                    expectedRemovedMessageCount,
+                                    expectedNamesInCollection) {
+        var actualAddedMessageCount = 0;
+        var actualRemovedMessageCount = 0;
+        _.each(messages, function (msg) {
+          if (msg.msg === 'added')
+            ++actualAddedMessageCount;
+          else if (msg.msg === 'removed')
+            actualRemovedMessageCount += msg.ids.length;
+          else
+            test.fail({unexpected: JSON.stringify(msg)});
+        });
+        test.equal(actualAddedMessageCount, expectedAddedMessageCount);
+        test.equal(actualRemovedMessageCount, expectedRemovedMessageCount);
+        expectedNamesInCollection.sort();
+        test.equal(_.pluck(objectsWithUsers.find({}, {sort: ['name']}).fetch(),
+                           'name'),
+                   expectedNamesInCollection);
         messages.length = 0; // clear messages without creating a new object
       };
 
       Meteor.subscribe("objectsWithUsers", expect(function() {
-        testSetAndUnset([{set: "owned by none"}]);
-        test.equal(objectsWithUsers.find().count(), 1);
-
+        expectMessages(1, 0, ["owned by none"]);
         Meteor.apply("setUserId", [1], {wait: true}, afterFirstSetUserId);
       }));
 
       var afterFirstSetUserId = expect(function() {
-        testSetAndUnset([
-          {unset: true},
-          {set: "owned by one - a"},
-          {set: "owned by one/two - a"},
-          {set: "owned by one/two - b"}]);
-        test.equal(objectsWithUsers.find().count(), 3);
-
+        expectMessages(3, 1, [
+          "owned by one - a",
+          "owned by one/two - a",
+          "owned by one/two - b"]);
         Meteor.apply("setUserId", [2], {wait: true}, afterSecondSetUserId);
       });
 
       var afterSecondSetUserId = expect(function() {
-        testSetAndUnset([
-          {unset: true},
-          {set: "owned by two - a"},
-          {set: "owned by two - b"}]);
-        test.equal(objectsWithUsers.find().count(), 4);
-
+        expectMessages(2, 1, [
+          "owned by one/two - a",
+          "owned by one/two - b",
+          "owned by two - a",
+          "owned by two - b"]);
         Meteor.apply("setUserId", [2], {wait: true}, afterThirdSetUserId);
       });
 
       var afterThirdSetUserId = expect(function() {
         // Nothing should have been sent since the results of the
         // query are the same ("don't flap data on the wire")
-        testSetAndUnset([]);
-        test.equal(objectsWithUsers.find().count(), 4);
+        expectMessages(0, 0, [
+          "owned by one/two - a",
+          "owned by one/two - b",
+          "owned by two - a",
+          "owned by two - b"]);
         undoEavesdrop();
       });
     }, function(test, expect) {
