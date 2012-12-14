@@ -574,3 +574,25 @@ testAsyncMulti('mongo-livedata - rewrite selector', [
     }));
   }
 ]);
+
+
+testAsyncMulti('mongo-livedata - empty documents', [
+  function (test, expect) {
+    var collectionName = Meteor.uuid();
+        if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', collectionName);
+      Meteor.subscribe('c-' + collectionName);
+    }
+
+    var coll = new Meteor.Collection(collectionName);
+    var docId;
+
+    coll.insert({}, expect(function (err, id) {
+      test.isFalse(err);
+      test.isTrue(id);
+      docId = id;
+      var cursor = coll.find();
+      test.equal(cursor.count(), 1);
+    }));
+  }
+]);
