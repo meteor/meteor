@@ -1,9 +1,12 @@
 
 ## vNEXT
 
-* `OAuth1Binding.get` and `OAuth1Binding.call` now return the full response
-  (including headers and statusCode), rather than just the data. Also,
-  introduce `OAuth1Binding.post`.  #534
+* `OAuth1Binding` improvements:  #539
+  * `OAuth1Binding.get` and `OAuth1Binding.call` now return the full response
+    (including headers and statusCode), rather than just the data.
+  * Introduce `OAuth1Binding.post`.
+  * `OAuth1Binding.get`, `OAuth1Binding.call` and `OAuth1Binding.post` now take
+    a `params` argument. This facilitates making calls to the Twitter API.
 
 ## v0.5.2
 
