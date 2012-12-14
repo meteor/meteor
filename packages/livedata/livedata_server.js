@@ -88,10 +88,11 @@ _.extend(Meteor._SessionDocumentView.prototype, {
     }
     var precedenceList = self.dataByKey[key];
     var elt;
-    if (!isAdd)
+    if (!isAdd) {
       elt = _.find(precedenceList, function (precedence) {
         return precedence.subscriptionId === subscriptionId;
       });
+    }
 
     if (elt) {
       if (elt === precedenceList[0] && !_.isEqual(value, elt.value)) {
@@ -161,32 +162,21 @@ _.extend(Meteor._SessionCollectionView.prototype, {
   added: function (subscriptionId, id, fields) {
     var self = this;
     var docView = self.documents[id];
-    if (docView) {
-      // somebody else knew about this doc; reconcile.  The effective order of
-      // precedence here is that the first subscription to say anything about a
-      // key determines its value.
-      if (_.has(docView.existsIn, subscriptionId)) {
-        throw new Error("Duplicate add for " + id);
-      }
-      docView.existsIn[subscriptionId] = true;
-
-      var changeCollector = {};
-      _.each(fields, function (value, key) {
-        docView.changeField(subscriptionId, key, value, changeCollector, true);
-      });
-
-      self.callbacks.changed(self.collectionName, id, changeCollector, []);
-    } else {
+    var added = false;
+    if (!docView) {
+      added = true;
       docView = new Meteor._SessionDocumentView();
       self.documents[id] = docView;
-      docView.existsIn[subscriptionId] = true;
-      _.each(fields, function (value, key) {
-        if (key !== "_id")
-          docView.dataByKey[key] = [{subscriptionId: subscriptionId, value: value}];
-      });
-      // since nobody else knew about this doc, we can just call added.
-      self.callbacks.added(self.collectionName, id, fields);
     }
+    docView.existsIn[subscriptionId] = true;
+    var changeCollector = {};
+    _.each(fields, function (value, key) {
+      docView.changeField(subscriptionId, key, value, changeCollector, true);
+    });
+    if (added)
+      self.callbacks.added(self.collectionName, id, changeCollector);
+    else
+      self.callbacks.changed(self.collectionName, id, changeCollector, []);
   },
 
   changed: function (subscriptionId, id, changed, cleared) {
