@@ -1,8 +1,9 @@
 
 ## vNEXT
 
-* `OAuth1Binding.get` and `OAuth1Binding.call` now return the full response,
-   rather than just the data. Also, introduce `OAuth1Binding.post`.  #534
+* `OAuth1Binding.get` and `OAuth1Binding.call` now return the full response
+  (including headers and statusCode), rather than just the data. Also,
+  introduce `OAuth1Binding.post`.  #534
 
 ## v0.5.2
 
