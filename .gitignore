@@ -1,4 +1,5 @@
 .DS_Store
+cache
 *~
 /dev_bundle
 /dev_bundle*.tar.gz

@@ -83,11 +83,11 @@ if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
     fi
 
     DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
-    METEOR="$SCRIPT_DIR/app/meteor/meteor.js"
+    METEOR="$SCRIPT_DIR/lib/meteor.js"
 else
     # In an install
     DEV_BUNDLE=$(dirname "$SCRIPT_DIR")
-    METEOR="$DEV_BUNDLE/app/meteor/meteor.js"
+    METEOR="$DEV_BUNDLE/lib/meteor.js"
 fi
 
 

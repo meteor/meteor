@@ -8,8 +8,7 @@ Package.describe({
   summary: "Markdown-to-HTML processor"
 });
 
-// XXX hack -- need a way to use a package at bundle time
-var _ = require(path.join('..', '..', 'packages', 'underscore', 'underscore.js'));
+var _ = require('underscore');
 
 Package.on_use(function (api, where) {
   where = where || ["client", "server"];

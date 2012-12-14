@@ -4,7 +4,8 @@
 # To test the installed meteor, pass in --global
 
 cd `dirname $0`
-METEOR=`pwd`/../meteor
+METEOR_DIR=`pwd`/..
+METEOR=$METEOR_DIR/meteor
 
 if [ -z "$NODE" ]; then
     NODE=`pwd`/node.sh
@@ -12,14 +13,15 @@ fi
 
 #If this ever takes more options, use getopt
 if [ "$1" == "--global" ]; then
-	METEOR=meteor
+    METEOR_DIR=/usr/local/meteor
+    METEOR=/usr/local/bin/meteor
 fi
 
 DIR=`mktemp -d -t meteor-cli-test-XXXXXXXX`
-trap 'echo FAILED ; rm -rf "$DIR" >/dev/null 2>&1' EXIT
+trap 'echo FAILED ; rm -rfd `find $METEOR_DIR -name __tmp`; rm -rf "$DIR" >/dev/null 2>&1' EXIT
 
 cd "$DIR"
-set -e
+set -e -x
 
 ## Begin actual tests
 
@@ -162,7 +164,46 @@ EOF
 
 $METEOR -p $PORT --settings='settings.json' --once > /dev/null
 
-# XXX more tests here!
+
+# prepare die.js so that we have a server that loads packages and dies
+cat > die.js <<EOF
+if (Meteor.isServer)
+  process.exit(1);
+EOF
+
+
+echo "... local-package-sets -- new package"
+
+mkdir -p $METEOR_DIR/local-package-sets/__tmp/a-package-named-bar/
+cat > $METEOR_DIR/local-package-sets/__tmp/a-package-named-bar/package.js <<EOF
+console.log("loaded a-package-named-bar");
+EOF
+
+$METEOR add a-package-named-bar > /dev/null
+$METEOR -p $PORT --once | grep "loaded a-package-named-bar" > /dev/null
+
+rm -rf $METEOR_DIR/local-package-sets/__tmp/
+
+
+echo "... local-package-sets -- overridden package"
+
+mkdir -p $METEOR_DIR/local-package-sets/__tmp/accounts-ui/
+cat > $METEOR_DIR/local-package-sets/__tmp/accounts-ui/package.js <<EOF
+Package.describe({
+  summary: "accounts-ui - overridden"
+});
+
+EOF
+
+$METEOR add accounts-ui 2>&1 | grep "accounts-ui - overridden" > /dev/null
+$METEOR list | grep "accounts-ui - overridden" > /dev/null
+
+rm -rf $METEOR_DIR/local-package-sets/__tmp/
+
+
+# remove die.js, we're done with package tests.
+rm die.js
+
 
 
 

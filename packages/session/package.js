@@ -5,8 +5,7 @@ Package.describe({
   internal: true
 });
 
-// XXX hack -- need a way to use a package at bundle time
-var _ = require(path.join('..', '..', 'packages', 'underscore', 'underscore.js'));
+var _ = require('underscore'); // needed at bundle time
 
 Package.on_use(function (api) {
   api.use(['underscore', 'deps'], 'client');
