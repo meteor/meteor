@@ -40,9 +40,7 @@ Package.register_extension(
     // religion on that
     var contents = fs.readFileSync(source_path);
 
-    // XXX super lame! we actually have to give paths relative to
-    // app/inner/app.js, since that's who's evaling us.
-    var html_scanner = require(path.join('..', '..', 'packages', 'templating', 'html_scanner.js'));
+    var html_scanner = Package.require('html_scanner.js');
     var results = html_scanner.scan(contents.toString('utf8'), source_path);
 
     if (results.head)
@@ -84,12 +82,12 @@ Package.on_test(function (api) {
   api.use('tinytest');
   api.use('htmljs');
   api.use(['test-helpers', 'domutils', 'session'], 'client');
+  api.use('handlebars', 'server');
   api.add_files([
     'templating_tests.js',
     'templating_tests.html'
   ], 'client');
   api.add_files([
-    path.join('..', 'handlebars', 'parse.js'), // XXX hacky
     'html_scanner.js',
     'scanner_tests.js'
   ], 'server');
