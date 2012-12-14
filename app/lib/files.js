@@ -1,6 +1,9 @@
 var fs = require("fs");
 var path = require('path');
 var _ = require('underscore');
+var zlib = require("zlib");
+var tar = require("tar");
+var Future = require('fibers/future');
 
 var files = module.exports = {
   // A sort comparator to order files into load order.
@@ -363,6 +366,40 @@ var files = module.exports = {
       }
     }
     throw new Error("failed to make tempory directory in " + tmp_dir);
+  },
+
+  // Takes a buffer containing `.tar.gz` data and extracts the archive into
+  // a destination directory.
+  extractTarGz: function (buffer, destPath) {
+    var future, error;
+
+    future = new Future;
+    zlib.gunzip(buffer, function (e, result) {
+      error = e;
+      future['return'](result);
+    });
+    var unzippedBuffer = future.wait();
+    if (error)
+      throw error;
+
+    future = new Future;
+    var extractor = new tar.Extract({ path: destPath })
+          .on('error', function (e) {
+            error = e;
+            future['return'](false);
+          })
+          .on('end', function () {
+            future['return'](true);
+          });
+    // write the unzippedBuffer to the tar extractor; these calls
+    // cause the tar to be extracted to disk.
+    extractor.write(unzippedBuffer);
+    extractor.end();
+    future.wait();
+    if (error)
+      throw error;
+
+    // succeed! no return value.
   }
 
 };
