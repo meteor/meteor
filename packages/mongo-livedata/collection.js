@@ -178,8 +178,18 @@ Meteor.Collection._rewriteSelector = function (selector) {
 
   var ret = {};
   _.each(selector, function (value, key) {
-    if (value instanceof RegExp)
+    if (value instanceof RegExp) {
       ret[key] = {$regex: value.source};
+      var regexOptions = '';
+      // JS RegExp objects support 'i', 'm', and 'g'. Mongo regex $options
+      // support 'i', 'm', 'x', and 's'. So we support 'i' and 'm' here.
+      if (value.ignoreCase)
+        regexOptions += 'i';
+      if (value.multiline)
+        regexOptions += 'm';
+      if (regexOptions)
+        ret[key].$options = regexOptions;
+    }
     else
       ret[key] = value;
   });

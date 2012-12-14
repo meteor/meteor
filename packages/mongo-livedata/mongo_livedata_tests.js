@@ -544,21 +544,23 @@ testAsyncMulti('mongo-livedata - rewrite selector', [
 
       var doc = coll.findOne(docId);
       test.isTrue(doc);
-      test.equal(doc.name, "foobar");
+      test.equal(doc.name, "f\noobar");
       test.equal(doc.value, 43);
     });
 
-    coll.insert({name: 'foobar', value: 42}, expect(function (err1, id) {
+    coll.insert({name: 'f\noobar', value: 42}, expect(function (err1, id) {
       test.isFalse(err1);
       test.isTrue(id);
       docId = id;
 
       var doc = coll.findOne(docId);
       test.isTrue(doc);
-      test.equal(doc.name, "foobar");
+      test.equal(doc.name, "f\noobar");
       test.equal(doc.value, 42);
 
-      coll.update({name: /o+b/}, {$inc: {value: 1}}, updateCallback);
+      // Ensure that "i" and "m" flags are respected by making /B/ match b and
+      // /^/ match at the newline.
+      coll.update({name: /^o+B/im}, {$inc: {value: 1}}, updateCallback);
     }));
   }
 ]);
