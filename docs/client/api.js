@@ -80,44 +80,61 @@ Template.api.publish = {
   ]
 };
 
-Template.api.subscription_set = {
-  id: "publish_set",
-  name: "<i>this</i>.set(collection, id, attributes)",
+Template.api.subscription_added = {
+  id: "publish_added",
+  name: "<i>this</i>.added(collection, id, fields)",
   locus: "Server",
-  descr: ["Call inside the publish function.  Queues a command to set attributes."],
+  descr: ["Call inside the publish function.  Informs a subscriber that a document has been added to the published set."],
   args: [
     {name: "collection",
      type: "String",
-     descr: "The name of the collection that should be affected."
+     descr: "The name of the collection that contains the new document."
     },
     {name: "id",
      type: "String",
-     descr: "The ID of the document that should be affected."
+     descr: "The new document's ID."
     },
-    {name: "attributes",
+    {name: "fields",
      type: "Object",
-     descr: "Dictionary of attribute keys and their values."
+     descr: "The fields in the new document.  `_id`, if provided, is ignored."
     }
   ]
 };
 
-Template.api.subscription_unset = {
-  id: "publish_unset",
-  name: "<i>this</i>.unset(collection, id, keys)",
+Template.api.subscription_changed = {
+  id: "publish_changed",
+  name: "<i>this</i>.changed(collection, id, fields)",
   locus: "Server",
-  descr: ["Call inside the publish function.  Queues a command to unset attributes."],
+  descr: ["Call inside the publish function.  Informs a subscriber that a document has been modified in the published set."],
   args: [
     {name: "collection",
      type: "String",
-     descr: "The name of the collection that should be affected."
+     descr: "The name of the collection that contains the changed document."
     },
     {name: "id",
      type: "String",
-     descr: "The ID of the document that should be affected."
+     descr: "The changed document's ID."
     },
-    {name: "keys",
-     type: "Array",
-     descr: "Array of attribute keys."
+    {name: "fields",
+     type: "Object",
+     descr: "The fields in the document to change, mapped to their new values.  Fields that are not present in `fields` are unchanged; fields that are present in `fields` but whose value is `undefined` are cleared.  `_id`, if provided, is ignored."
+    }
+  ]
+};
+
+Template.api.subscription_removed = {
+  id: "publish_removed",
+  name: "<i>this</i>.removed(collection, ids)",
+  locus: "Server",
+  descr: ["Call inside the publish function.  Informs a subscriber that some documents have been removed from the published set."],
+  args: [
+    {name: "collection",
+     type: "String",
+     descr: "The name of the collection that documents are being removed from."
+    },
+    {name: "ids",
+     type: "Array of Strings",
+     descr: "The IDs of the documents that are being removed."
     }
   ]
 };
@@ -126,15 +143,9 @@ Template.api.subscription_complete = {
   id: "publish_complete",
   name: "<i>this</i>.complete()",
   locus: "Server",
-  descr: ["Call inside the publish function.  Queues a command to mark this subscription as complete (initial attributes are set)."]
+  descr: ["Call inside the publish function.  Informs the subscriber that an initial set of documents has been added to the record set."]
 };
 
-Template.api.subscription_flush = {
-  id: "publish_flush",
-  name: "<i>this</i>.flush()",
-  locus: "Server",
-  descr: ["Call inside the publish function.  Sends all the pending set, unset, and complete messages to the client."]
-};
 
 Template.api.subscription_stop = {
   id: "publish_stop",
@@ -1478,4 +1489,3 @@ Template.api.email_send = {
     }
   ]
 };
-
