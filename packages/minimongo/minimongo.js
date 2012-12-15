@@ -70,9 +70,9 @@ LocalCollection.Cursor = function (collection, selector, options) {
   } else {
     this.selector_f = LocalCollection._compileSelector(selector);
     this.sort_f = options.sort ? LocalCollection._compileSort(options.sort) : null;
-    this.skip = options.skip;
-    this.limit = options.limit;
   }
+  this.skip = options.skip;
+  this.limit = options.limit;
 
   // db_objects is a list of the objects that match the cursor. (It's always a
   // list, never an object: LocalCollection.Cursor is always ordered.)
@@ -260,6 +260,12 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered) {
 
   // fast path for single ID value
   if (self.selector_id) {
+    // If you have non-zero skip and ask for a single id, you get
+    // nothing. This is so it matches the behavior of the '{_id: foo}'
+    // path.
+    if (self.skip)
+      return results;
+
     if (_.has(self.collection.docs, self.selector_id)) {
       var selectedDoc = self.collection.docs[self.selector_id];
       if (ordered)

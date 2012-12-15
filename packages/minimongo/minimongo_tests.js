@@ -124,6 +124,8 @@ Tinytest.add("minimongo - basics", function (test) {
   test.equal(c.find("abc").count(), 0);
   test.equal(c.find(undefined).count(), 0);
   test.equal(c.find().count(), 3);
+  test.equal(c.find(1, {skip: 1}).count(), 0);
+  test.equal(c.find({_id: 1}, {skip: 1}).count(), 0);
 
   // Regression test for #455.
   c.insert({foo: {bar: 'baz'}});
