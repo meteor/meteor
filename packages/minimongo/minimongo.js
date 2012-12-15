@@ -94,10 +94,17 @@ LocalCollection.prototype.findOne = function (selector, options) {
   if (arguments.length === 0)
     selector = {};
 
-  // XXX disable limit here so that we can observe findOne() cursor,
-  // as required by markAsReactive.
-  // options = options || {};
-  // options.limit = 1;
+  // NOTE: by setting limit 1 here, we end up using very inefficient
+  // code that recomputes the whole query on each update. The upside is
+  // that when you reactively depend on a findOne you only get
+  // invalidated when the found object changes, not any object in the
+  // collection. Most findOne will be by id, which has a fast path, so
+  // this might not be a big deal. In most cases, invalidation causes
+  // the called to re-query anyway, so this should be a net performance
+  // improvement.
+  options = options || {};
+  options.limit = 1;
+
   return this.find(selector, options).fetch()[0];
 };
 

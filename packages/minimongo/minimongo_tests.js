@@ -1217,7 +1217,9 @@ Tinytest.add("minimongo - observe", function (test) {
   c.insert({a:4});
   test.equal(operations.shift(), undefined);
   id = c.findOne({a:2})._id;
-  c.update({a:1}, {a:5});
+  c.update({a:1}, {a:0});
+  test.equal(operations.shift(), undefined);
+  c.update({a:0}, {a:5});
   test.equal(operations.shift(), ['removed', id, 0, {a:2}]);
   test.equal(operations.shift(), ['added', {a:4}, 1]);
 
