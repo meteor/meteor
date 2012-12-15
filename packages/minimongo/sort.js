@@ -53,7 +53,7 @@ LocalCollection._compileSort = function (spec) {
       aCode += '&&a' + keyString;
       bCode += '&&b' + keyString;
     }
-    if (i !== 0){
+    if (i !== 0) {
       code += "if(x!==0)return x;";
     }
     code += "x=" + (asc[i] ? "" : "-") +

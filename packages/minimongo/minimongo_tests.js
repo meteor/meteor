@@ -879,8 +879,8 @@ Tinytest.add("minimongo - subkey sort", function (test) {
   var c = new LocalCollection();
 
   // normal case
-  c.insert({a: {b: 1}});
   c.insert({a: {b: 2}});
+  c.insert({a: {b: 1}});
   c.insert({a: {b: 3}});
   test.equal(
     _.pluck(c.find({}, {sort: {'a.b': -1}}).fetch(), 'a'),
@@ -889,8 +889,8 @@ Tinytest.add("minimongo - subkey sort", function (test) {
   // isn't an object
   c.insert({a: 1});
   test.equal(
-    _.pluck(c.find({}, {sort: {'a.b': -1}}).fetch(), 'a'),
-    [{b: 3}, {b: 2}, {b: 1}, 1]);
+    _.pluck(c.find({}, {sort: {'a.b': 1}}).fetch(), 'a'),
+    [1, {b: 1}, {b: 2}, {b: 3}]);
 
   // complex object
   c.insert({a: {b: {c: 1}}});
@@ -905,7 +905,7 @@ Tinytest.add("minimongo - subkey sort", function (test) {
     [{b: {c: 1}}, {b: 3}, {b: 2}, {b: 1}, 1, undefined]);
 
   // no such mid level prop. just test that it doesn't throw.
-  c.find({}, {sort: {'a.nope.c': -1}}).fetch();
+  test.equal(c.find({}, {sort: {'a.nope.c': -1}}).count(), 6);
 });
 
 
