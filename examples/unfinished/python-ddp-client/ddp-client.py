@@ -113,29 +113,34 @@ class DDPClient(WebSocketClient):
                     log("* ERROR {}".format(msg['error']['reason']))
                 self.pending.update({'result_acked': True})
 
-        elif msg.get('msg') == 'data':
-            if msg.get('collection'):
-                if msg.get('set'):
-                    for key, value in msg['set'].items():
-                        log("* SET {} {} {} {}".format(
-                                msg['collection'], msg['id'], key, value))
-                if msg.get('unset'):
-                    for key in msg['unset']:
-                        log("* UNSET {} {} {}".format(
-                                msg['collection'], msg['id'], key))
-
-            if msg.get('methods'):
-                if self.pending.get('id') in msg['methods']:
-                    log("* UPDATED")
-                    self.pending.update({'data_acked': True})
-
-            if msg.get('subs'):
-                if self.pending.get('id') in msg['subs']:
-                    log("* READY")
-                    self.pending.update({'data_acked': True})
-
+        elif msg.get('msg') == 'added':
+            log("* ADDED {} {}".format(
+                    msg['collection'], msg['id']))
+            for key, value in msg['fields'].items():
+                log("  - FIELD {} {}".format(key, value))
+        elif msg.get('msg') == 'changed':
+            log("* CHANGED {} {}".format(
+                    msg['collection'], msg['id']))
+            if 'fields' in msg:
+                for key, value in msg['fields'].items():
+                    log("  - FIELD {} {}".format(key, value))
+            if 'cleared' in msg:
+                for key in msg['cleared']:
+                    log("  - CLEARED {}".format(key));
+        elif msg.get('msg') == 'removed':
+            log("* REMOVED {} {}".format(
+                    msg['collection'], ", ".join(msg['ids'])))
+        elif msg.get('msg') == 'complete':
+            assert 'subs' in msg
+            if self.pending.get('id') in msg['subs']:
+                log("* READY")
+                self.pending.update({'data_acked': True})
+        elif msg.get('msg') == 'updated':
+            if self.pending.get('id') in msg['methods']:
+                log("* UPDATED")
+                self.pending.update({'data_acked': True})
         elif msg.get('msg') == 'nosub':
-            log("* NO SUCH SUB")
+            log("* NOSUB")
             self.pending.update({'data_acked': True})
 
     def closed(self, code, reason=None):
