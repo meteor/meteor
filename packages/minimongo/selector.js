@@ -352,7 +352,7 @@ LocalCollection._exprForDocumentPredicate = function (op, value, literals) {
     return "(function(){return " + value + ";}).call(doc)";
   }
 
-  throw Error("Unrecogized key in selector: ", op);
+  throw Error("Unrecognized key in selector: ", op);
 }
 
 // Given a single 'dotted.key.path: value' constraint from a Mongo
