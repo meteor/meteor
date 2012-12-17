@@ -1,4 +1,5 @@
 // XXX namespacing
+Meteor._SUPPORTED_DDP_VERSIONS = [ 'pre1' ];
 
 Meteor._MethodInvocation = function (options) {
   var self = this;

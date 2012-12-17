@@ -14,7 +14,12 @@ Meteor._LivedataConnection = function (url, options) {
   var self = this;
   options = _.extend({
     reloadOnUpdate: false,
-    reloadWithOutstanding: false
+    reloadWithOutstanding: false,
+    supportedDDPVersions: Meteor._SUPPORTED_DDP_VERSIONS,
+    onConnectionFailure: function (reason) {
+      Meteor._debug(reason);
+    },
+    onConnected: function () {}
   }, options);
 
   // If set, called when we reconnect, queuing method calls _before_ the
@@ -30,9 +35,11 @@ Meteor._LivedataConnection = function (url, options) {
   }
 
   self._lastSessionId = null;
+  self._versionSuggestion = null;
   self._stores = {}; // name -> object with methods
   self._methodHandlers = {}; // name -> func
   self._nextMethodId = 1;
+  self._supportedDDPVersions = options.supportedDDPVersions; // just for testing.
 
   // Tracks methods which the user has tried to call but which have not yet
   // called their user callback (ie, they are waiting on their result or for all
@@ -175,8 +182,21 @@ Meteor._LivedataConnection = function (url, options) {
       return;
     }
 
-    if (msg.msg === 'connected')
+    if (msg.msg === 'connected') {
+      self._version = self._versionSuggestion;
+      options.onConnected();
       self._livedata_connected(msg);
+    }
+    else if (msg.msg == 'failed') {
+      if (_.contains(self._supportedDDPVersions, msg.version)) {
+        self._versionSuggestion = msg.version;
+        self._stream.reconnect({_force: true});
+      } else {
+        options.onConnectionFailure("Version negotiation failed; server requested version " + msg.version);
+        //XXX: Make forceDisconnect valid for something other than debugging?
+        self._stream.forceDisconnect(true);
+      }
+    }
     else if (_.include(['added', 'changed', 'removed', 'complete', 'updated'], msg.msg))
       self._livedata_data(msg);
     else if (msg.msg === 'nosub')
@@ -196,6 +216,9 @@ Meteor._LivedataConnection = function (url, options) {
     var msg = {msg: 'connect'};
     if (self._lastSessionId)
       msg.session = self._lastSessionId;
+    msg.version = self._versionSuggestion || self._supportedDDPVersions[0];
+    self._versionSuggestion = msg.version;
+    msg.support = self._supportedDDPVersions;
     self._send(msg);
 
     // Now, to minimize setup latency, go ahead and blast out all of

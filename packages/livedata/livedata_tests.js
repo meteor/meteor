@@ -27,6 +27,19 @@ Tinytest.add("livedata - Meteor.Error", function (test) {
   test.equal(error.details, "puppies");
 });
 
+if (Meteor.isServer) {
+  Tinytest.add("livedata - version negotiation", function (test) {
+    test.equal(Meteor._calculateVersion(["A", "B", "C"], ["A", "B", "C"]),
+               "A");
+    test.equal(Meteor._calculateVersion(["B", "C"], ["A", "B", "C"]),
+               "B");
+    test.equal(Meteor._calculateVersion(["A", "B", "C"], ["B", "C"]),
+               "B");
+    test.equal(Meteor._calculateVersion(["foo", "bar", "baz"], ["A", "B", "C"]),
+               "A");
+  });
+}
+
 Tinytest.add("livedata - methods with colliding names", function (test) {
   var x = LocalCollection.uuid();
   var m = {};

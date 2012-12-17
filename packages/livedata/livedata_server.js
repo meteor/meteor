@@ -228,11 +228,12 @@ _.extend(Meteor._SessionCollectionView.prototype, {
 /* LivedataSession                                                            */
 /******************************************************************************/
 
-Meteor._LivedataSession = function (server) {
+Meteor._LivedataSession = function (server, version) {
   var self = this;
   self.id = Meteor.uuid();
 
   self.server = server;
+  self.version = version;
 
   self.initialized = false;
   self.socket = null;
@@ -870,6 +871,19 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 /* LivedataServer                                                             */
 /******************************************************************************/
 
+var _calculateVersion = function (clientSupportedVersions, serverSupportedVersions) {
+  var correctVersion = _.find(clientSupportedVersions, function (version) {
+    return _.contains(serverSupportedVersions, version);
+  });
+  if (!correctVersion) {
+    correctVersion = serverSupportedVersions[0];
+  }
+  return correctVersion;
+};
+
+Meteor._calculateVersion = _calculateVersion;
+
+
 Meteor._LivedataServer = function () {
   var self = this;
 
@@ -914,27 +928,7 @@ Meteor._LivedataServer = function () {
             sendError("Already connected", msg);
             return;
           }
-
-          // XXX session resumption does not work yet!
-          // https://app.asana.com/0/159908330244/577350817064
-          // disabled here:
-          /*
-          if (msg.session)
-            var old_session = self.sessions[msg.session];
-          if (old_session) {
-            // Resuming a session
-            socket.meteor_session = old_session;
-          }
-          else */ {
-            // Creating a new session
-            socket.meteor_session = new Meteor._LivedataSession(self);
-            self.sessions[socket.meteor_session.id] = socket.meteor_session;
-          }
-
-          socket.send(JSON.stringify({msg: 'connected',
-                                      session: socket.meteor_session.id}));
-          // will kick off previous connection, if any
-          socket.meteor_session.connect(socket);
+          self._handleConnect(socket, msg);
           return;
         }
 
@@ -979,6 +973,29 @@ Meteor._LivedataServer = function () {
 };
 
 _.extend(Meteor._LivedataServer.prototype, {
+
+  _handleConnect: function (socket, msg) {
+    var self = this;
+    // In the future, handle session resumption: something like:
+    //  socket.meteor_session = self.sessions[msg.session]
+    var version = _calculateVersion(msg.support, Meteor._SUPPORTED_DDP_VERSIONS);
+
+    if (msg.version === version) {
+      // Creating a new session
+      socket.meteor_session = new Meteor._LivedataSession(self, version);
+      self.sessions[socket.meteor_session.id] = socket.meteor_session;
+
+
+      socket.send(JSON.stringify({msg: 'connected',
+                                  session: socket.meteor_session.id}));
+      // will kick off previous connection, if any
+      socket.meteor_session.connect(socket);
+    } else {
+      socket.send(JSON.stringify({msg: 'failed', version: version}));
+      socket.removeAllListeners('data');
+      //XXX: is abandoning a socket a memory leak?
+    }
+  },
   /**
    * Register a publish handler function.
    *
