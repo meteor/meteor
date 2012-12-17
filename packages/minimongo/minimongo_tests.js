@@ -875,6 +875,40 @@ Tinytest.add("minimongo - sort", function (test) {
       {a: 47, b: 1, _id: "47_1"}]);
 });
 
+Tinytest.add("minimongo - subkey sort", function (test) {
+  var c = new LocalCollection();
+
+  // normal case
+  c.insert({a: {b: 2}});
+  c.insert({a: {b: 1}});
+  c.insert({a: {b: 3}});
+  test.equal(
+    _.pluck(c.find({}, {sort: {'a.b': -1}}).fetch(), 'a'),
+    [{b: 3}, {b: 2}, {b: 1}]);
+
+  // isn't an object
+  c.insert({a: 1});
+  test.equal(
+    _.pluck(c.find({}, {sort: {'a.b': 1}}).fetch(), 'a'),
+    [1, {b: 1}, {b: 2}, {b: 3}]);
+
+  // complex object
+  c.insert({a: {b: {c: 1}}});
+  test.equal(
+    _.pluck(c.find({}, {sort: {'a.b': -1}}).fetch(), 'a'),
+    [{b: {c: 1}}, {b: 3}, {b: 2}, {b: 1}, 1]);
+
+  // no such top level prop
+  c.insert({c: 1});
+  test.equal(
+    _.pluck(c.find({}, {sort: {'a.b': -1}}).fetch(), 'a'),
+    [{b: {c: 1}}, {b: 3}, {b: 2}, {b: 1}, 1, undefined]);
+
+  // no such mid level prop. just test that it doesn't throw.
+  test.equal(c.find({}, {sort: {'a.nope.c': -1}}).count(), 6);
+});
+
+
 Tinytest.add("minimongo - modify", function (test) {
   var modify = function (doc, mod, result) {
     var copy = LocalCollection._deepcopy(doc);
