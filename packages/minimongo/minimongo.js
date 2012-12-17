@@ -286,6 +286,10 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered) {
       else
         results[id] = doc;
     }
+    // Fast path for limited unsorted queries.
+    if (self.limit && !self.skip && !self.sort_f &&
+        results.length === self.limit)
+      return results;
   }
 
   if (!ordered)
