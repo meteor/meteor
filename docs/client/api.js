@@ -84,7 +84,7 @@ Template.api.subscription_added = {
   id: "publish_added",
   name: "<i>this</i>.added(collection, id, fields)",
   locus: "Server",
-  descr: ["Call inside the publish function.  Informs a subscriber that a document has been added to the published set."],
+  descr: ["Call inside the publish function.  Informs the subscriber that a document has been added to the record set."],
   args: [
     {name: "collection",
      type: "String",
@@ -96,7 +96,7 @@ Template.api.subscription_added = {
     },
     {name: "fields",
      type: "Object",
-     descr: "The fields in the new document.  `_id`, if provided, is ignored."
+     descr: "The fields in the new document.  If `_id` is present it is ignored."
     }
   ]
 };
@@ -105,7 +105,7 @@ Template.api.subscription_changed = {
   id: "publish_changed",
   name: "<i>this</i>.changed(collection, id, fields)",
   locus: "Server",
-  descr: ["Call inside the publish function.  Informs a subscriber that a document has been modified in the published set."],
+  descr: ["Call inside the publish function.  Informs the subscriber that a document in the record set has been modified."],
   args: [
     {name: "collection",
      type: "String",
@@ -117,7 +117,7 @@ Template.api.subscription_changed = {
     },
     {name: "fields",
      type: "Object",
-     descr: "The fields in the document to change, mapped to their new values.  Fields that are not present in `fields` are unchanged; fields that are present in `fields` but whose value is `undefined` are cleared.  `_id`, if provided, is ignored."
+     descr: "The fields in the document that have changed, together with their new values.  If a field is not present in `fields` it was left unchanged; if it is present in `fields` and has a value of `undefined` it was removed from the document.  If `_id` is present it is ignored."
     }
   ]
 };
@@ -126,15 +126,15 @@ Template.api.subscription_removed = {
   id: "publish_removed",
   name: "<i>this</i>.removed(collection, ids)",
   locus: "Server",
-  descr: ["Call inside the publish function.  Informs a subscriber that some documents have been removed from the published set."],
+  descr: ["Call inside the publish function.  Informs the subscriber that some documents have been removed from the record set."],
   args: [
     {name: "collection",
      type: "String",
-     descr: "The name of the collection that documents are being removed from."
+     descr: "The name of the collection that documents have been removed from."
     },
     {name: "ids",
      type: "Array of Strings",
-     descr: "The IDs of the documents that are being removed."
+     descr: "The IDs of the documents that have been removed."
     }
   ]
 };
@@ -143,7 +143,7 @@ Template.api.subscription_complete = {
   id: "publish_complete",
   name: "<i>this</i>.complete()",
   locus: "Server",
-  descr: ["Call inside the publish function.  Informs the subscriber that an initial set of documents has been added to the record set."]
+  descr: ["Call inside the publish function.  Informs the subscriber that an initial, complete snapshot of the record set has been sent.  This will trigger a call on the client to the `onComplete` callback passed to  [`Meteor.subscribe`](#meteor_subscribe), if any."]
 };
 
 

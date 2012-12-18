@@ -161,13 +161,11 @@ collection name.
     Players = new Meteor.Collection("players");
 
 The client will see a document if the document is currently in the published
-record set for any of its subscriptions.
+record set of any of its subscriptions.
 
 If more than one subscription sends conflicting values for a field (same
 collection name, document ID, and field name), then the value on the client will
-be one of those values.  Try not to define multiple publishers that disagree on
-field values; fortunately, this never occurs if you just return cursor from a
-publish handler.
+be one of the published values, chosen arbitrarily.
 
 If you call [`Meteor.subscribe`](#meteor_subscribe) within a [reactive
 context](#reactivity) such as [`Meteor.autorun`](#meteor_autorun), the
