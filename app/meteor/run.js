@@ -74,8 +74,17 @@ var Status = {
   }
 };
 
+// Parse out s as if it were a bash command line.
+var bashParse = function (s) {
+  if (s.search("\"") !== -1 || s.search("'") !== -1) {
+    throw new Error("Meteor cannot currently handle quoted NODE_OPTIONS");
+  }
+  return _.without(s.split(/\s+/), '');
+};
 
-
+var getNodeOptionsFromEnvironment = function () {
+  return bashParse(process.env.NODE_OPTIONS || "");
+};
 
 // List of queued requests. Each item in the list is a function to run
 // when the inner app is ready to receive connections.
@@ -203,18 +212,17 @@ var log_to_clients = function (msg) {
 // mongoURL
 // onExit
 // [onListen]
-// [debugStatus]
-//
+// [nodeOptions]
 // [runOnce]: boolean; default false; if true doesn't ever try to restart, and
 //          forwards server exit code.
 // [settings]
 
 var start_server = function (options) {
   // environment
-  options = _.extend({runOnce: false,
-                      debugStatus: "OFF"
-                     },
-                     options);
+  options = _.extend({
+    runOnce: false,
+    nodeOptions: []
+  }, options);
   if (options.runOnce) {
     Status.shouldRestart = false;
   }
@@ -226,22 +234,15 @@ var start_server = function (options) {
   env.PORT = options.innerPort;
   env.MONGO_URL = options.mongoURL;
   env.ROOT_URL = env.ROOT_URL || ('http://localhost:' + options.outerPort);
-
-  var dbg = options.debugStatus;
-  var nodeOptions = [];
-  if (dbg === "DEBUG")
-    nodeOptions.push('--debug');
-  if (dbg === "BREAK") {
-    console.log('Debug will break on the first line');
-    nodeOptions.push('--debug-brk');
-  }
-
   if (options.settings)
     env.METEOR_SETTINGS = options.settings;
 
+  var nodeOptions = _.clone(options.nodeOptions);
+  nodeOptions.push(path.join(options.bundlePath, 'main.js'));
+  nodeOptions.push('--keepalive');
 
   var proc = spawn(process.execPath,
-                   nodeOptions.concat([path.join(options.bundlePath, 'main.js'), '--keepalive']),
+                   nodeOptions,
                    {env: env});
 
   // XXX deal with test server logging differently?!
@@ -511,7 +512,7 @@ var start_update_checks = function () {
 // This function never returns and will call process.exit() if it
 // can't continue. If you change this, remember to call
 // watcher.destroy() as appropriate.
-exports.run = function (app_dir, bundle_opts, port, once, settings, dbg) {
+exports.run = function (app_dir, bundle_opts, port, once, settings) {
   var outer_port = port || 3000;
   var inner_port = outer_port + 1;
   var mongo_port = outer_port + 2;
@@ -631,7 +632,7 @@ exports.run = function (app_dir, bundle_opts, port, once, settings, dbg) {
         _.each(request_queue, function (f) { f(); });
         request_queue = [];
       },
-      debugStatus: dbg,
+      nodeOptions: getNodeOptionsFromEnvironment(),
       runOnce: once,
       settings: settings
     });
