@@ -1002,26 +1002,22 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
   _process_removed: function (msg, updates) {
     var self = this;
-    var idsRemovedNow = [];
-    _.each(msg.ids, function (removedId) {
-      var serverDoc = Meteor._get(self._serverDocuments, msg.collection, removedId);
-      if (serverDoc) {
-        // Some outstanding stub wrote here.
-        if (serverDoc.document === undefined) {
-          throw new Error("It doesn't make sense to be deleting something we don't know exists: "
-                          + removedId);
-        }
-        serverDoc.document = undefined;
-      } else {
-        idsRemovedNow.push(removedId);
+    var serverDoc = Meteor._get(
+      self._serverDocuments, msg.collection, msg.id);
+    if (serverDoc) {
+      // Some outstanding stub wrote here.
+      if (serverDoc.document === undefined) {
+        throw new Error("It doesn't make sense to be deleting something we don't know exists: "
+                        + msg.id);
       }
-    });
-    if (!_.isEmpty(idsRemovedNow))
+      serverDoc.document = undefined;
+    } else {
       self._pushUpdate(updates, msg.collection, {
         msg: 'removed',
         collection: msg.collection,
-        ids: idsRemovedNow
+        id: msg.id
       });
+    }
   },
 
   _process_updated: function (msg, updates) {

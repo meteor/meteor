@@ -124,7 +124,6 @@ _.extend(Meteor._SessionCollectionView.prototype, {
 
   diff: function (previous) {
     var self = this;
-    var removedIds = [];
     diffObjects(previous.documents, self.documents, {
       both: _.bind(self.diffDocument, self),
 
@@ -133,11 +132,9 @@ _.extend(Meteor._SessionCollectionView.prototype, {
       },
 
       leftOnly: function (id, prevDV) {
-        removedIds.push(id);
+        self.callbacks.removed(self.collectionName, id);
       }
     });
-    if (!_.isEmpty(removedIds))
-      self.callbacks.removed(self.collectionName, removedIds);
   },
 
   diffDocument: function (id, prevDV, nowDV) {
@@ -195,33 +192,28 @@ _.extend(Meteor._SessionCollectionView.prototype, {
     self.callbacks.changed(self.collectionName, id, changedResult, clearedResult);
   },
 
-  removed: function (subscriptionId, ids) {
+  removed: function (subscriptionId, id) {
     var self = this;
-    var removedIds = [];
-    _.each(ids, function (id) {
-      var docView = self.documents[id];
-      if (!docView) {
-        throw new Error("Removed nonexistent document " + id);
-      }
-      delete docView.existsIn[subscriptionId];
-      if (_.isEmpty(docView.existsIn)) {
-        // it is gone from everyone
-        removedIds.push(id);
-        delete self.documents[id];
-      } else {
-        var changed = {};
-        var cleared = [];
-        // remove this subscription from every precedence list
-        // and record the changes
-        _.each(docView.dataByKey, function (precedenceList, key) {
-          docView.clearField(subscriptionId, key, changed, cleared);
-        });
+    var docView = self.documents[id];
+    if (!docView) {
+      throw new Error("Removed nonexistent document " + id);
+    }
+    delete docView.existsIn[subscriptionId];
+    if (_.isEmpty(docView.existsIn)) {
+      // it is gone from everyone
+      self.callbacks.removed(self.collectionName, id);
+      delete self.documents[id];
+    } else {
+      var changed = {};
+      var cleared = [];
+      // remove this subscription from every precedence list
+      // and record the changes
+      _.each(docView.dataByKey, function (precedenceList, key) {
+        docView.clearField(subscriptionId, key, changed, cleared);
+      });
 
-        self.callbacks.changed(self.collectionName, id, changed, cleared);
-      }
-    });
-    if (!_.isEmpty(removedIds))
-      self.callbacks.removed(self.collectionName, removedIds);
+      self.callbacks.changed(self.collectionName, id, changed, cleared);
+    }
   }
 });
 /******************************************************************************/
@@ -301,10 +293,10 @@ _.extend(Meteor._LivedataSession.prototype, {
     }
   },
 
-  sendRemoved: function (collectionName, ids) {
+  sendRemoved: function (collectionName, id) {
     var self = this;
     if (self._isSending)
-      self.send({msg: "removed", collection: collectionName, ids: ids});
+      self.send({msg: "removed", collection: collectionName, id: id});
   },
 
   getSendCallbacks: function () {
@@ -333,10 +325,10 @@ _.extend(Meteor._LivedataSession.prototype, {
     view.added(subscriptionId, id, fields);
   },
 
-  removed: function (subscriptionId, collectionName, ids) {
+  removed: function (subscriptionId, collectionName, id) {
     var self = this;
     var view = self.getCollectionView(collectionName);
-    view.removed(subscriptionId, ids);
+    view.removed(subscriptionId, id);
     if (view.isEmpty()) {
       delete self.collectionViews[collectionName];
     }
@@ -653,7 +645,9 @@ _.extend(Meteor._LivedataSession.prototype, {
         });
       },
       leftOnly: function (collectionName, leftValue) {
-        self.sendRemoved(collectionName, _.keys(leftValue.documents));
+        _.each(leftValue.documents, function (doc, id) {
+          self.sendRemoved(collectionName, id);
+        });
       }
     });
   },
@@ -829,15 +823,12 @@ _.extend(Meteor._LivedataSubscription.prototype, {
     self._session.changed(self._subscriptionId, collectionName, id, fields);
   },
 
-  removed: function (collectionName, ids) {
+  removed: function (collectionName, id) {
     var self = this;
-    _.each(ids, function(id) {
-      // we don't bother to delete sets of things in a collection if the
-      // collection is empty.  It could break below, where we iterate over
-      // it removing items.
-      delete self._documents[collectionName][id];
-    });
-    self._session.removed(self._subscriptionId, collectionName, ids);
+    // We don't bother to delete sets of things in a collection if the
+    // collection is empty.  It could break _removeAllDocuments.
+    delete self._documents[collectionName][id];
+    self._session.removed(self._subscriptionId, collectionName, id);
   },
 
   complete: function () {
@@ -861,7 +852,11 @@ _.extend(Meteor._LivedataSubscription.prototype, {
   _removeAllDocuments: function () {
     var self = this;
     _.each(self._documents, function(collectionDocs, collectionName) {
-      self.removed(collectionName, _.keys(collectionDocs));
+      // Iterate over _.keys instead of the dictionary itself, since we'll be
+      // mutating it.
+      _.each(_.keys(collectionDocs), function (id) {
+        self.removed(collectionName, id);
+      });
     });
   }
 

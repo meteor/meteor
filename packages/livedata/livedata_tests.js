@@ -317,7 +317,7 @@ if (Meteor.isClient) {
           if (msg.msg === 'added')
             ++actualAddedMessageCount;
           else if (msg.msg === 'removed')
-            actualRemovedMessageCount += msg.ids.length;
+            ++actualRemovedMessageCount;
           else
             test.fail({unexpected: JSON.stringify(msg)});
         });

@@ -311,7 +311,7 @@ Cursor.prototype._publishCursor = function (sub) {
       sub.changed(collection, obj._id, fields);
     },
     removed: function (oldObj) {
-      sub.removed(collection, [oldObj._id]);
+      sub.removed(collection, oldObj._id);
     }
   });
 

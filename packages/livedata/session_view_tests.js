@@ -9,8 +9,8 @@ var newView = function(test) {
         return;
       results.push({fun: 'changed', id: id, changed: changed, cleared: cleared});
     },
-    removed: function (collection, ids) {
-      results.push({fun: 'removed', ids: ids});
+    removed: function (collection, id) {
+      results.push({fun: 'removed', id: id});
     }
   });
   var v = {
@@ -44,11 +44,11 @@ Tinytest.add('livedata - sessionview - exists reveal', function (test) {
   v.added("B", "A1", {});
   v.expectNoResult();
 
-  v.removed("A", ["A1"]);
+  v.removed("A", "A1");
   v.expectNoResult();
 
-  v.removed("B", ["A1"]);
-  v.expectResult({fun: 'removed', ids: ["A1"]});
+  v.removed("B", "A1");
+  v.expectResult({fun: 'removed', id: "A1"});
   v.expectNoResult();
 });
 
@@ -60,14 +60,14 @@ Tinytest.add('livedata - sessionview - field reveal', function (test) {
   v.expectNoResult();
 
   v.added("B",  "A1", {foo: "baz"});
-  v.removed("A", ["A1"]);
+  v.removed("A", "A1");
   v.expectResult({fun: 'changed', id: "A1", changed: {foo: "baz"}, cleared: []});
   v.expectNoResult();
   // Somewhere in here we must have changed foo to baz. Legal either on the
   // added or on the removed, but only once.
 
-  v.removed("B", ["A1"]);
-  v.expectResult({fun: 'removed', ids: ["A1"]});
+  v.removed("B", "A1");
+  v.expectResult({fun: 'removed', id: "A1"});
   v.expectNoResult();
 });
 
@@ -82,8 +82,8 @@ Tinytest.add('livedata - sessionview - field change', function (test) {
   v.expectResult({fun: 'changed', id: "A1", changed: {foo: "baz"}, cleared: []});
   v.expectNoResult();
 
-  v.removed("A", ["A1"]);
-  v.expectResult({fun: 'removed', ids: ["A1"]});
+  v.removed("A", "A1");
+  v.expectResult({fun: 'removed', id: "A1"});
   v.expectNoResult();
 });
 
@@ -98,8 +98,8 @@ Tinytest.add('livedata - sessionview - field clear', function (test) {
   v.expectResult({fun: 'changed', id: "A1", changed: {}, cleared: ["foo"]});
   v.expectNoResult();
 
-  v.removed("A", ["A1"]);
-  v.expectResult({fun: 'removed', ids: ["A1"]});
+  v.removed("A", "A1");
+  v.expectResult({fun: 'removed', id: "A1"});
   v.expectNoResult();
 });
 
@@ -122,8 +122,8 @@ Tinytest.add('livedata - sessionview - add, remove, add', function (test) {
   v.expectResult({fun: 'added', id: "A1", fields: {foo: "bar"}});
   v.expectNoResult();
 
-  v.removed("A", ["A1"]);
-  v.expectResult({fun: 'removed', ids: ["A1"]});
+  v.removed("A", "A1");
+  v.expectResult({fun: 'removed', id: "A1"});
   v.expectNoResult();
 
   v.added("A",  "A1", {foo: "bar"});
@@ -145,10 +145,10 @@ Tinytest.add('livedata - sessionview - field clear reveal', function (test) {
   v.expectResult({fun: 'changed', id: "A1", changed: {foo: "baz"}, cleared: []});
   v.expectNoResult();
 
-  v.removed("A", ["A1"]);
+  v.removed("A", "A1");
   v.expectNoResult();
-  v.removed("B", ["A1"]);
-  v.expectResult({fun: 'removed', ids: ["A1"]});
+  v.removed("B", "A1");
+  v.expectResult({fun: 'removed', id: "A1"});
   v.expectNoResult();
 });
 
@@ -174,10 +174,10 @@ Tinytest.add('livedata - sessionview - change to canonical value produces no cha
   v.changed("B", "A1", {foo: canon}, []);
   v.expectNoResult();
 
-  v.removed("A", ["A1"]);
+  v.removed("A", "A1");
   v.expectNoResult();
-  v.removed("B", ["A1"]);
-  v.expectResult({fun: 'removed', ids: ["A1"]});
+  v.removed("B", "A1");
+  v.expectResult({fun: 'removed', id: "A1"});
   v.expectNoResult();
 });
 
@@ -194,10 +194,10 @@ Tinytest.add('livedata - sessionview - new field of canonical value produces no 
   v.changed("B", "A1", {foo: "bar"}, []);
   v.expectNoResult();
 
-  v.removed("A", ["A1"]);
+  v.removed("A", "A1");
   v.expectNoResult();
-  v.removed("B", ["A1"]);
-  v.expectResult({fun: 'removed', ids: ["A1"]});
+  v.removed("B", "A1");
+  v.expectResult({fun: 'removed', id: "A1"});
   v.expectNoResult();
 });
 
@@ -216,9 +216,9 @@ Tinytest.add('livedata - sessionview - clear all clears only once', function (te
   v.expectResult({fun: 'changed', id: "A1", changed: {}, cleared: ["foo"]});
   v.expectNoResult();
 
-  v.removed("A", ["A1"]);
+  v.removed("A", "A1");
   v.expectNoResult();
-  v.removed("B", ["A1"]);
+  v.removed("B", "A1");
   v.expectNoResult();
 });
 
@@ -237,9 +237,9 @@ Tinytest.add('livedata - sessionview - change all changes only once', function (
   v.expectResult({fun: 'changed', id: "A1", changed: {foo: "baz"}, cleared: []});
   v.expectNoResult();
 
-  v.removed("A", ["A1"]);
+  v.removed("A", "A1");
   v.expectNoResult();
-  v.removed("B", ["A1"]);
+  v.removed("B", "A1");
   v.expectNoResult();
 });
 
@@ -256,11 +256,11 @@ Tinytest.add('livedata - sessionview - multiple operations at once in a change',
   v.expectResult({fun: 'changed', id: "A1", changed: {foo: "baz", thing: "stuff"}, cleared: ["baz"]});
   v.expectNoResult();
 
-  v.removed("A", ["A1"]);
+  v.removed("A", "A1");
   v.expectResult({fun: 'changed', id: "A1", changed: {}, cleared: ["thing"]});
   v.expectNoResult();
-  v.removed("B", ["A1"]);
-  v.expectResult({fun: 'removed', ids: ["A1"]});
+  v.removed("B", "A1");
+  v.expectResult({fun: 'removed', id: "A1"});
   v.expectNoResult();
 });
 
@@ -278,16 +278,16 @@ Tinytest.add('livedata - sessionview - more than one document', function (test) 
   v.expectResult({fun: 'changed', id: "A1", changed: {thing: "stuff"}, cleared: ["foo", "baz"]});
   v.expectNoResult();
 
-  v.removed("A", ["A1"]);
-  v.expectResult({fun: 'removed', ids: ["A1"]});
+  v.removed("A", "A1");
+  v.expectResult({fun: 'removed', id: "A1"});
   v.expectNoResult();
-  v.removed("A", ["A2"]);
-  v.expectResult({fun: 'removed', ids: ["A2"]});
+  v.removed("A", "A2");
+  v.expectResult({fun: 'removed', id: "A2"});
   v.expectNoResult();
 
 });
 
-Tinytest.add('livedata - sessionview - multiple docs removed at once', function (test) {
+Tinytest.add('livedata - sessionview - multiple docs removed', function (test) {
   var v = newView(test);
 
   v.added("A",  "A1", {foo: "bar", baz: "quux"});
@@ -299,8 +299,10 @@ Tinytest.add('livedata - sessionview - multiple docs removed at once', function 
   v.expectResult({fun: 'added', id: "A2", fields: {foo: "baz"}});
   v.expectNoResult();
 
-  v.removed("A", ["A1", "A2"]);
-  v.expectResult({fun: 'removed', ids: ["A1", "A2"]});
+  v.removed("A", "A1");
+  v.expectResult({fun: 'removed', id: "A1"});
+  v.removed("A", "A2");
+  v.expectResult({fun: 'removed', id: "A2"});
   v.expectNoResult();
 });
 
@@ -320,12 +322,13 @@ Tinytest.add('livedata - sessionview - complicated sequence', function (test) {
   v.expectResult({fun: 'changed', id: "A1", changed: {foo: "baz", thing: "stuff"}, cleared: ["baz"]});
   v.expectNoResult();
 
-  v.removed("A", ["A1", "A2"]);
+  v.removed("A", "A1");
+  v.removed("A", "A2");
   v.expectResult({fun: 'changed', id: "A1", changed: {}, cleared: ["thing"]});
-  v.expectResult({fun: 'removed', ids: ["A2"]});
+  v.expectResult({fun: 'removed', id: "A2"});
   v.expectNoResult();
-  v.removed("B", ["A1"]);
-  v.expectResult({fun: 'removed', ids: ["A1"]});
+  v.removed("B", "A1");
+  v.expectResult({fun: 'removed', id: "A1"});
   v.expectNoResult();
 });
 
@@ -339,11 +342,11 @@ Tinytest.add('livedata - sessionview - added becomes changed', function (test) {
   v.expectResult({fun: 'changed', id: 'A1', changed: {hi: 'there'},
                   cleared: []});
 
-  v.removed('A', ['A1']);
+  v.removed('A', 'A1');
   v.expectResult({fun: 'changed', id: 'A1', changed: {}, cleared: ['foo']});
 
-  v.removed('B', ['A1']);
-  v.expectResult({fun: 'removed', ids: ['A1']});
+  v.removed('B', 'A1');
+  v.expectResult({fun: 'removed', id: 'A1'});
 });
 
 Tinytest.add('livedata - sessionview - weird key names', function (test) {

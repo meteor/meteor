@@ -68,17 +68,6 @@ Meteor.Collection = function (name, options) {
       // Apply an update.
       // XXX better specify this interface (not in terms of a wire message)?
       update: function (msg) {
-        // Handle removed separately, since it's the only one without an 'id'
-        // field.
-        if (msg.msg === 'removed') {
-          _.each(msg.ids, function (removedId) {
-            if (!self._collection.findOne(removedId))
-              throw new Error("Expected to find a document to remove");
-            self._collection.remove(removedId);
-          });
-          return;
-        }
-
         var doc = self._collection.findOne(msg.id);
 
         // Is this a "replace the whole doc" message coming from the quiescence
@@ -100,6 +89,10 @@ Meteor.Collection = function (name, options) {
           if (doc)
             throw new Error("Expected not to find a document already present for an add");
           self._collection.insert(_.extend({_id: msg.id}, msg.fields));
+        } else if (msg.msg === 'removed') {
+          if (!doc)
+            throw new Error("Expected to find a document already present for removed");
+          self._collection.remove(msg.id);
         } else if (msg.msg === 'changed') {
           if (!doc)
             throw new Error("Expected to find a document to change");
