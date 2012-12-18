@@ -1,272 +1,289 @@
-// does list contain obj?
-LocalCollection._contains = function (list, obj) {
-  if (!_.isArray(list))
-    return false;
-  var objStr = JSON.stringify(obj);
-  for (var i = 0, len_i = list.length; i < len_i; i++) {
-    if (objStr === JSON.stringify(list[i]))
-      return true;
-  }
-  return false;
-};
+(function(){
 
-// do list and otherList have nonempty intersection?
-LocalCollection._containsSome = function (list, otherList) {
-  if (!_.isArray(list))
-    return false;
-  if (!_.isArray(otherList))
-    return false;
-  for (var i = 0, len_i = list.length; i < len_i; i++) {
-    var listObjStr = JSON.stringify(list[i]);
-    for (var j = 0, len_j = otherList.length; j < len_j; j++) {
-      if (listObjStr === JSON.stringify(otherList[j]))
-        return true;
-     }
-  }
-  return false;
-};
-
-// does list contain all elements of otherList?
-LocalCollection._containsAll = function (list, otherList) {
-  if (!_.isArray(list))
-    return false;
-  if (!_.isArray(otherList))
-    return false;
-  for (var i = 0, len_i = otherList.length; i < len_i; i++) {
-    var otherListObjStr = JSON.stringify(otherList[i]);
-    var matches = false;
-    for (var j = 0, len_j = list.length; j < len_j; j++) {
-      if (otherListObjStr === JSON.stringify(list[j])) {
-        matches = true;
-        break;
-      }
-    }
-    if (!matches)
-      return false;
-  }
-  return true;
-};
-
-LocalCollection._anyIfArray = function (x, f) {
+var _anyIfArray = function (x, f) {
   if (_.isArray(x))
     return _.any(x, f);
   return f(x);
 };
 
-LocalCollection._gt = function (otherVal, val) {
-  if ((val === null) || (otherVal === null)) {
+var _anyIfArrayPlus = function (x, f) {
+  if (f(x))
     return true;
-  } else if (_.isObject(otherVal) && _.isObject(val)) {
-    // XXX: find material about actual semantics
-    var minOtherVal = _.min(_.flatten(_.values(otherVal)));
-    var minVal = _.min(_.flatten(_.values(val)));
-    return minOtherVal > minVal;
-  } else if (_.isArray(otherVal)) {
-    return _.max(otherVal) > val;
-  } else {
-    return otherVal > val;
-  }
+  return _.isArray(x) && _.any(x, f);
 };
 
-LocalCollection._lt = function (otherVal, val) {
-  if ((val === null) || (otherVal === null)) {
-    return true;
-  } else if (_.isObject(otherVal) && _.isObject(val)) {
-    var minOtherVal = _.min(_.flatten(_.values(otherVal)));
-    var minVal = _.min(_.flatten(_.values(val)));
-    return minOtherVal < minVal;
-  } else if (_.isArray(otherVal)) {
-    return _.min(otherVal) < val;
-  } else {
-    return otherVal < val;
+var hasOperators = function(valueSelector) {
+  var theseAreOperators = undefined;
+  for (var selKey in valueSelector) {
+    var thisIsOperator = selKey.substr(0, 1) === '$';
+    if (theseAreOperators === undefined) {
+      theseAreOperators = thisIsOperator;
+    } else if (theseAreOperators !== thisIsOperator) {
+      throw new Error("Inconsistent selector: " + valueSelector);
+    }
   }
+  return !!theseAreOperators;  // {} has no operators
 };
 
-LocalCollection._hasOperators = function(selectorValue) {
-  for (var selKey in selectorValue) {
-    if (selKey.charCodeAt(0) === 36) // $
-      return true;
-  }
-  return false;
-}
-
-LocalCollection._evaluateSelectorValue = function(selectorValue, docValue) {
-  // Normalize undefined to null in the selector.
-  if (selectorValue === undefined)
-    selectorValue = null;
-
-  if (!_.isObject(selectorValue)) {
-    // Most common case: Primitive comparison or containment (e.g. `_id:
-    // <someId>`). This includes null selectorValue, but not array
-    // selectorValue.
-    if (selectorValue === docValue)
-      return true;
-    if (selectorValue === null && docValue === undefined)
-      return true;
-    if (_.isArray(docValue) && _.contains(docValue, selectorValue))
-      return true;
-    return false;
-  }
-
-  if (_.isArray(selectorValue)) {
-    // Deep comparison or containment check.
-    return JSON.stringify(selectorValue) === JSON.stringify(docValue) ||
-      LocalCollection._contains(docValue, selectorValue);
-  } else {
-    // It's an object, but not an array or regexp.
-    if (LocalCollection._hasOperators(selectorValue)) {
-      // This one has operators in it, let's evaluate them.
-      return _.all(selectorValue, function (operand, operator) {
-        if (!_.has(LocalCollection._comparisonOperators, operator))
-          throw new Error("Unrecognized operator: " + operator);
-        return LocalCollection._comparisonOperators[operator](
-          operand, docValue, selectorValue);
+var compileValueSelector = function (valueSelector) {
+  if (valueSelector == null) {  // undefined or null
+    return function (value) {
+      return _anyIfArray(value, function (x) {
+        return x == null;  // undefined or null
       });
-    } else {
-      // There are no operators, so compare it to the document value
-      // (via JSON.stringify, b/c that preserves key order).
-      return JSON.stringify(selectorValue) === JSON.stringify(docValue) ||
-        LocalCollection._contains(docValue, selectorValue);
+    };
+  }
+
+  // Selector is a non-null primitive (and not an array or RegExp either).
+  if (!_.isObject(valueSelector)) {
+    return function (value) {
+      return _anyIfArray(value, function (x) {
+        return x === valueSelector;
+      });
+    };
+  }
+
+  if (valueSelector instanceof RegExp) {
+    return function (value) {
+      return _anyIfArray(value, function (x) {
+        return valueSelector.test(x);
+      });
+    };
+  }
+
+  // Arrays match either identical arrays or arrays that contain it as a value.
+  if (_.isArray(valueSelector)) {
+    return function (value) {
+      if (!_.isArray(value))
+        return false;
+      return _anyIfArrayPlus(value, function (x) {
+        return LocalCollection._f._equal(valueSelector, x);
+      });
+    };
+  }
+
+  // It's an object, but not an array or regexp.
+  if (hasOperators(valueSelector)) {
+    var operatorFunctions = [];
+    _.each(valueSelector, function (operand, operator) {
+      if (!_.has(VALUE_OPERATORS, operator))
+        throw new Error("Unrecognized operator: " + operator);
+      operatorFunctions.push(VALUE_OPERATORS[operator](
+        operand, valueSelector.$options));
+    });
+    return function (value) {
+      return _.all(operatorFunctions, function (f) {
+        return f(value);
+      });
+    };
+  }
+
+  // It's a literal; compare value (or element of value array) directly to the
+  // selector.
+  return function (value) {
+    return _anyIfArray(value, function (x) {
+      return LocalCollection._f._equal(valueSelector, x);
+    });
+  };
+};
+
+// XXX can factor out common logic below
+var LOGICAL_OPERATORS = {
+  "$and": function(subSelector) {
+    if (!_.isArray(subSelector) || _.isEmpty(subSelector))
+      throw Error("$and/$or/$nor must be nonempty array");
+    var subSelectorFunctions = _.map(
+      subSelector, compileDocumentSelector);
+    return function (doc) {
+      return _.all(subSelectorFunctions, function (f) {
+        return f(doc);
+      });
+    };
+  },
+
+  "$or": function(subSelector) {
+    if (!_.isArray(subSelector) || _.isEmpty(subSelector))
+      throw Error("$and/$or/$nor must be nonempty array");
+    var subSelectorFunctions = _.map(
+      subSelector, compileDocumentSelector);
+    return function (doc) {
+      return _.any(subSelectorFunctions, function (f) {
+        return f(doc);
+      });
+    };
+  },
+
+  "$nor": function(subSelector) {
+    if (!_.isArray(subSelector) || _.isEmpty(subSelector))
+      throw Error("$and/$or/$nor must be nonempty array");
+    var subSelectorFunctions = _.map(
+      subSelector, compileDocumentSelector);
+    return function (doc) {
+      return _.all(subSelectorFunctions, function (f) {
+        return !f(doc);
+      });
+    };
+  },
+
+  "$where": function(selectorValue) {
+    if (!(selectorValue instanceof Function)) {
+      selectorValue = Function("return " + selectorValue);
     }
+    return function (doc) {
+      return selectorValue.call(doc);
+    };
   }
 };
 
-LocalCollection._logicalOperators = {
-  "$and": function(selectorValue, docBranch) {
-    if (!_.isArray(selectorValue) || _.isEmpty(selectorValue))
-      throw Error("$and/$or/$nor must be nonempty array");
-    return _.all(selectorValue, function (term) {
-      return LocalCollection._evaluateSelector(term, docBranch);
-    });
-  },
-
-  "$or": function(selectorValue, docBranch) {
-    if (!_.isArray(selectorValue) || _.isEmpty(selectorValue))
-      throw Error("$and/$or/$nor must be nonempty array");
-    return _.any(selectorValue, function (term) {
-      return LocalCollection._evaluateSelector(term, docBranch);
-    });
-  },
-
-  "$nor": function(selectorValue, docBranch) {
-    if (!_.isArray(selectorValue) || _.isEmpty(selectorValue))
-      throw Error("$and/$or/$nor must be nonempty array");
-    return _.all(selectorValue, function (term) {
-      return !LocalCollection._evaluateSelector(term, docBranch);
-    });
-  },
-
-  "$where": function(selectorValue, docBranch) {
-    if (selectorValue instanceof Function) {
-      return selectorValue.call(docBranch);
-    } else {
-      return Function("return " + selectorValue).call(docBranch);
-    }
-  }
-};
-
-LocalCollection._comparisonOperators = {
-  "$in": function(selectorValue, docValue) {
-    if (!_.isArray(selectorValue))
+var VALUE_OPERATORS = {
+  "$in": function (operand) {
+    if (!_.isArray(operand))
       throw new Error("Argument to $in must be array");
-    return LocalCollection._contains(selectorValue, docValue) ||
-           LocalCollection._containsSome(selectorValue, docValue);
+    return function (value) {
+      return _anyIfArrayPlus(value, function (x) {
+        return _.any(operand, function (operandElt) {
+          return LocalCollection._f._equal(operandElt, x);
+        });
+      });
+    };
   },
 
-  "$all": function(selectorValue, docValue) {
-    if (!_.isArray(selectorValue))
+  "$all": function (operand) {
+    if (!_.isArray(operand))
       throw new Error("Argument to $all must be array");
-    return LocalCollection._containsAll(docValue, selectorValue);
+    return function (value) {
+      if (!_.isArray(value))
+        return false;
+      return _.all(operand, function (operandElt) {
+        return _.any(value, function (valueElt) {
+          return LocalCollection._f._equal(operandElt, valueElt);
+        });
+      });
+    };
   },
 
-  "$lt": function(selectorValue, docValue) {
-    return LocalCollection._lt(docValue, selectorValue);
+  "$lt": function (operand) {
+    return function (value) {
+      return _anyIfArray(value, function (x) {
+        return LocalCollection._f._cmp(x, operand) < 0;
+      });
+    };
   },
 
-  "$lte": function(selectorValue, docValue) {
-    return _.isEqual(selectorValue, docValue) || LocalCollection._lt(docValue, selectorValue);
+  "$lte": function (operand) {
+    return function (value) {
+      return _anyIfArray(value, function (x) {
+        return LocalCollection._f._cmp(x, operand) <= 0;
+      });
+    };
   },
 
-  "$gt": function(selectorValue, docValue) {
-    return LocalCollection._gt(docValue, selectorValue);
-   },
-
-  "$gte": function(selectorValue, docValue) {
-    return _.isEqual(selectorValue, docValue) || LocalCollection._gt(docValue, selectorValue);
+  "$gt": function (operand) {
+    return function (value) {
+      return _anyIfArray(value, function (x) {
+        return LocalCollection._f._cmp(x, operand) > 0;
+      });
+    };
   },
 
-  "$ne": function(selectorValue, docValue) {
-    return !(selectorValue === docValue ||
-             JSON.stringify(selectorValue) === JSON.stringify(docValue) ||
-             LocalCollection._contains(docValue, selectorValue));
+  "$gte": function (operand) {
+    return function (value) {
+      return _anyIfArray(value, function (x) {
+        return LocalCollection._f._cmp(x, operand) >= 0;
+      });
+    };
   },
 
-  "$nin": function(selectorValue, docValue) {
-    if (!_.isArray(selectorValue))
+  "$ne": function (operand) {
+    return function (value) {
+      return ! _anyIfArrayPlus(value, function (x) {
+        return LocalCollection._f._equal(x, operand);
+      });
+    };
+  },
+
+  "$nin": function (operand) {
+    if (!_.isArray(operand))
       throw new Error("Argument to $nin must be array");
-    if (docValue === undefined)
-      return true;
-    if (LocalCollection._contains(selectorValue, docValue))
-      return false;
-    if (_.isArray(docValue) &&
-        LocalCollection._containsSome(selectorValue, docValue))
-      return false;
-    return true;
+    var inFunction = VALUE_OPERATORS.$in(operand);
+    return function (value) {
+      // Field doesn't exist, so it's not-in operand
+      if (value === undefined)
+        return true;
+      return !inFunction(value);
+    };
   },
 
-  "$exists": function(selectorValue, docValue) {
-    return selectorValue === (docValue !== undefined);
+  "$exists": function (operand) {
+    return function (value) {
+      return operand === (value !== undefined);
+    };
   },
 
-  "$mod": function(selectorValue, docValue) {
-    var divisor = selectorValue[0],
-        remainder = selectorValue[1];
-    return LocalCollection._anyIfArray(docValue, function (n) {
-      return n % divisor === remainder;
-    });
+  "$mod": function (operand) {
+    var divisor = operand[0],
+        remainder = operand[1];
+    return function (value) {
+      return _anyIfArray(value, function (x) {
+        return x % divisor === remainder;
+      });
+    };
   },
 
-  "$size": function(selectorValue, docValue) {
-    return _.isArray(docValue) && selectorValue === docValue.length;
+  "$size": function (operand) {
+    return function (value) {
+      return _.isArray(value) && operand === value.length;
+    };
   },
 
-  "$type": function(selectorValue, docValue) {
-    return LocalCollection._anyIfArray(docValue, function (x) {
-      return LocalCollection._f._type(x) === selectorValue;
-    });
+  "$type": function (operand) {
+    return function (value) {
+      // Definitely not _anyIfArrayPlus: $type: 4 only matches arrays that have
+      // arrays as elements according to the Mongo docs.
+      return _anyIfArray(value, function (x) {
+        return LocalCollection._f._type(x) === operand;
+      });
+    };
   },
 
-  "$regex": function(selectorValue, docValue, selectorBranch) {
-    // If the user passed in {$regex: /foo/i}, _cloneSelector changed this to
-    // {$regex: {$regex: 'foo', $options: 'i'}}. Pull out the inner piece.
-    var regexSource = _.has(selectorValue, '$regex') ?
-          selectorValue.$regex : selectorValue;
-    // Pull out of embedded {$regex: {$regex: 'foo', $options: 'i'}}, but not if
-    // $options exists on the outside. (The logic here is different from
-    // regexSource, because the outer $regex always exists.)
-    var regexOptions = _.has(selectorBranch, '$options') ?
-      regexOptions = selectorBranch.$options : selectorValue.$options;
-    var re = new RegExp(regexSource, regexOptions);
-    return LocalCollection._anyIfArray(docValue, function (x) {
-      return re.test(x);
-    });
+  "$regex": function (operand, options) {
+    if (options !== undefined) {
+      // Options passed in $options (even the empty string) always overrides
+      // options in the RegExp object itself.
+      var regexSource = operand instanceof RegExp ? operand.source : operand;
+      operand = new RegExp(regexSource, options);
+    } else if (!(operand instanceof RegExp)) {
+      operand = new RegExp(operand);
+    }
+
+    return function (value) {
+      return _anyIfArray(value, function (x) {
+        return operand.test(x);
+      });
+    };
   },
 
-  "$options": function(selectorValue, docValue) {
+  "$options": function (operand) {
     // evaluation happens at the $regex function above
-    return true;
+    return function (value) { return true; };
   },
 
-  "$elemMatch": function(selectorValue, docValue) {
-    if (!_.isArray(docValue))
-      return false;
-    return _.any(docValue, function (x) {
-      return LocalCollection._evaluateSelector(selectorValue, x);
-    });
+  "$elemMatch": function (operand) {
+    var matcher = compileDocumentSelector(operand);
+    return function (value) {
+      if (!_.isArray(value))
+        return false;
+      return _.any(value, function (x) {
+        return matcher(x);
+      });
+    };
   },
 
-  "$not": function(selectorValue, docValue) {
-    return !(LocalCollection._evaluateSelectorValue(selectorValue, docValue));
+  "$not": function (operand) {
+    var matcher = compileValueSelector(operand);
+    return function (value) {
+      return !matcher(value);
+    };
   }
 };
 
@@ -454,71 +471,46 @@ LocalCollection._matches = function (selector, doc) {
   return (LocalCollection._compileSelector(selector))(doc);
 };
 
-// The main evaluation function for a given selector.
-LocalCollection._evaluateSelector = function(selectorBranch, docBranch) {
-  for (var innerKey in selectorBranch) {
-    var selectorValue = selectorBranch[innerKey];
-    if (innerKey.substr(0, 1) === '$') {
-      // Outer operators are either logical operators (they recurse back into
-      // this function), or $where.
-      if (!_.has(LocalCollection._logicalOperators, innerKey))
-        throw new Error("Unrecognized logical operator: " + innerKey);
-      if (!LocalCollection._logicalOperators[innerKey](selectorValue,
-                                                       docBranch))
-        return false;
-    } else {
-      if (innerKey.indexOf(".") >= 0) {
-        // If the innerKey uses dot-notation, we move up to the last layer. If
-        // we ever hit null/undefined, stop digging (but still evaluate the
-        // query against what we found). This works for arrays as well as
-        // objects.
-        var keyParts = innerKey.split(".");
-        var docValue = docBranch;
-        for (var i = 0, len_i = keyParts.length;
-             i < len_i && docValue != null;  // not null or undefined
-             i++) {
-          docValue = docValue[keyParts[i]];
-        }
-      } else {
-        docValue = docBranch[innerKey];
-      }
-      // Here could be logical operators, containment, or comparisons.
-      if (!LocalCollection._evaluateSelectorValue(selectorValue, docValue))
-        return false;
-    }
-  }
-
-  // We should have returned whenever something evaluated to false,
-  // so it must be true.
-  return true;
+var makeLookupFunction = function (key) {
+  var dotLocation = key.indexOf('.');
+  var first = dotLocation === -1 ? key : key.substr(0, dotLocation);
+  var lookupRest = dotLocation !== -1 &&
+        makeLookupFunction(key.substr(dotLocation + 1));
+  return function (doc) {
+    if (doc == null)  // null or undefined
+      return undefined;
+    var firstLevel = doc[first];
+    if (lookupRest)
+      return lookupRest(firstLevel);
+    return firstLevel;
+  };
 };
 
-// Clones a selector, and converts RegExp objects to $regex.
-LocalCollection._cloneSelector = function (v) {
-  if (typeof v !== "object")
-    return v;
-  if (v === null)
-    return null; // null has typeof "object"
-  if (v instanceof RegExp) {
-    var regexAsSelector = {$regex: v.source};
-    var regexOptions = '';
-    // JS RegExp objects support 'i', 'm', and 'g'. Mongo regex $options
-    // support 'i', 'm', 'x', and 's'. So we support 'i' and 'm' here.
-    if (v.ignoreCase)
-      regexOptions += 'i';
-    if (v.multiline)
-      regexOptions += 'm';
-    if (regexOptions)
-      regexAsSelector.$options = regexOptions;
-    return regexAsSelector;
-  }
-  if (_.isArray(v))
-    return _.map(v, LocalCollection._cloneSelector);
+// The main compilation function for a given selector.
+var compileDocumentSelector = function (docSelector) {
+  var perKeySelectors = [];
+  _.each(docSelector, function (subSelector, key) {
+    if (key.substr(0, 1) === '$') {
+      // Outer operators are either logical operators (they recurse back into
+      // this function), or $where.
+      if (!_.has(LOGICAL_OPERATORS, key))
+        throw new Error("Unrecognized logical operator: " + key);
+      perKeySelectors.push(LOGICAL_OPERATORS[key](subSelector));
+    } else {
+      var lookUpByIndex = makeLookupFunction(key);
+      var valueSelectorFunc = compileValueSelector(subSelector);
+      perKeySelectors.push(function (doc) {
+        return valueSelectorFunc(lookUpByIndex(doc));
+      });
+    }
+  });
 
-  var ret = {};
-  for (var key in v)
-    ret[key] = LocalCollection._cloneSelector(v[key]);
-  return ret;
+
+  return function (doc) {
+    return _.all(perKeySelectors, function (f) {
+      return f(doc);
+    });
+  };
 };
 
 // Given a selector, return a function that takes one argument, a
@@ -531,22 +523,24 @@ LocalCollection._compileSelector = function (selector) {
 
   // shorthand -- scalars match _id
   if (LocalCollection._selectorIsId(selector))
-    selector = {_id: selector};
+    return function (doc) { return doc._id === selector;};
 
-  // protect against dangerous selectors.  falsey and {_id: falsey}
-  // are both likely programmer error, and not what you want,
-  // particularly for destructive operations.
+  // protect against dangerous selectors.  falsey and {_id: falsey} are both
+  // likely programmer error, and not what you want, particularly for
+  // destructive operations.
   if (!selector || (('_id' in selector) && !selector._id))
     return function (doc) {return false;};
 
-  // Clone selector, since we're going to be holding a reference to it.
-  // This also gets rid of RegExp objects.
-  selector = LocalCollection._cloneSelector(selector);
+  // Top level can't be an array or true.
+  if (typeof(selector) === 'boolean' || _.isArray(selector))
+    throw new Error("Invalid selector: " + selector);
 
-  return function(doc) {return LocalCollection._evaluateSelector(selector, doc);};
+  return compileDocumentSelector(selector);
 };
 
 // Is this selector just shorthand for lookup by _id?
 LocalCollection._selectorIsId = function (selector) {
   return (typeof selector === "string") || (typeof selector === "number");
 };
+
+})();
