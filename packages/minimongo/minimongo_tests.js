@@ -1219,6 +1219,8 @@ Tinytest.add("minimongo - observe ordered", function (test) {
   c.update({a:0}, {a:5});
   test.equal(operations.shift(), ['removed', id, 0, {a:2}]);
   test.equal(operations.shift(), ['added', {a:4}, 1]);
+  c.update({a:3}, {a:3.5});
+  test.equal(operations.shift(), ['changed', {a:3.5}, 0, {a:3}]);
 
   handle.stop();
 });

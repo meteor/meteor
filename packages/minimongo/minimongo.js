@@ -204,8 +204,7 @@ _.extend(LocalCollection.Cursor.prototype, {
       sort_f: ordered && self.sort_f,
       results_snapshot: null,
       ordered: ordered,
-      cursor: this,
-      needsRecompute: false
+      cursor: this
     };
     query.results = self._getRawObjects(ordered);
     if (self.collection.paused)
@@ -351,23 +350,29 @@ LocalCollection.prototype.insert = function (doc) {
   self._saveOriginal(doc._id, undefined);
   self.docs[doc._id] = doc;
 
+  var queriesToRecompute = [];
+
   // trigger live queries that match
   for (var qid in self.queries) {
     var query = self.queries[qid];
     if (query.selector_f(doc)) {
       if (query.cursor.skip || query.cursor.limit)
-        query.needsRecompute = true;
+        queriesToRecompute.push(query);
       else
         LocalCollection._insertInResults(query, doc);
     }
   }
 
-  self._recomputeNecessaryQueries();
+  _.each(queriesToRecompute, function (query) {
+    LocalCollection._recomputeResults(query);
+  });
 };
 
 LocalCollection.prototype.remove = function (selector) {
   var self = this;
   var remove = [];
+
+  var queriesToRecompute = [];
 
   // Avoid O(n) for "remove a single doc by ID".
   if (LocalCollection._selectorIsId(selector)) {
@@ -390,7 +395,7 @@ LocalCollection.prototype.remove = function (selector) {
     _.each(self.queries, function (query) {
       if (query.selector_f(removeDoc)) {
         if (query.cursor.skip || query.cursor.limit)
-          query.needsRecompute = true;
+          queriesToRecompute.push(query);
         else
           queryRemove.push([query, removeDoc]);
       }
@@ -403,8 +408,9 @@ LocalCollection.prototype.remove = function (selector) {
   for (var i = 0; i < queryRemove.length; i++) {
     LocalCollection._removeFromResults(queryRemove[i][0], queryRemove[i][1]);
   }
-
-  self._recomputeNecessaryQueries();
+  _.each(queriesToRecompute, function (query) {
+    LocalCollection._recomputeResults(query);
+  });
 };
 
 // XXX atomicity: if multi is true, and one modification fails, do
@@ -415,33 +421,34 @@ LocalCollection.prototype.update = function (selector, mod, options) {
   var self = this;
   var any = false;
   var selector_f = LocalCollection._compileSelector(selector);
+
+  var qidToOriginalResults = {};
+  _.each(self.queries, function (query, qid) {
+    if ((query.cursor.skip || query.cursor.limit) && !query.paused)
+      qidToOriginalResults[qid] = LocalCollection._deepcopy(query.results);
+  });
+  var recomputeQids = {};
+
   for (var id in self.docs) {
     var doc = self.docs[id];
     if (selector_f(doc)) {
       // XXX Should we save the original even if mod ends up being a no-op?
       self._saveOriginal(id, doc);
-      self._modifyAndNotify(doc, mod);
+      self._modifyAndNotify(doc, mod, recomputeQids);
       if (!options.multi)
         break;
       any = true;
     }
   }
 
-  if (options.upsert) {
-    throw Error("upsert not yet implemented");
-    if (!any) {
-      // XXX is this actually right? don't we have to resolve/delete $-ops or
-      // something like that?
-      var insert = LocalCollection._deepcopy(selector);
-      LocalCollection._modify(insert, mod);
-      self.insert(insert);
-    }
-  }
-
-  self._recomputeNecessaryQueries();
+  _.each(recomputeQids, function (dummy, qid) {
+    LocalCollection._recomputeResults(self.queries[qid],
+                                      qidToOriginalResults[qid]);
+  });
 };
 
-LocalCollection.prototype._modifyAndNotify = function (doc, mod) {
+LocalCollection.prototype._modifyAndNotify = function (
+    doc, mod, recomputeQids) {
   var self = this;
 
   var matched_before = {};
@@ -450,6 +457,8 @@ LocalCollection.prototype._modifyAndNotify = function (doc, mod) {
     if (query.ordered) {
       matched_before[qid] = query.selector_f(doc);
     } else {
+      // Because we don't support skip or limit (yet) in unordered queries, we
+      // can just do a direct lookup.
       matched_before[qid] = _.has(query.results, doc._id);
     }
   }
@@ -464,15 +473,7 @@ LocalCollection.prototype._modifyAndNotify = function (doc, mod) {
     var after = query.selector_f(doc);
 
     if (query.cursor.skip || query.cursor.limit) {
-      // We need to recompute any query where the doc may have been in the
-      // cursor's window either before or after the update. (Note that if skip
-      // or limit is set, "before" and "after" being true do not necessarily
-      // mean that the document is in the cursor's output after skip/limit is
-      // applied... but if they are false, then the document definitely is NOT
-      // in the output. So it's safe to skip recompute if neither before or
-      // after are true.)
-      if (before || after)
-        query.needsRecompute = true;
+      recomputeQids[qid] = true;
     } else if (before && !after) {
       LocalCollection._removeFromResults(query, doc);
     } else if (!before && after) {
@@ -563,23 +564,22 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
     query.moved(LocalCollection._deepcopy(doc), orig_idx, new_idx);
 };
 
-LocalCollection.prototype._recomputeNecessaryQueries = function () {
-  var self = this;
-  _.each(self.queries, function (query) {
-    if (query.needsRecompute) {
-      LocalCollection._recomputeResults(query);
-      query.needsRecompute = false;
-    }
-  });
-};
-
-LocalCollection._recomputeResults = function (query) {
-  var old_results = query.results;
+// Recomputes the results of a query and runs observe callbacks for the
+// difference between the previous results and the current results (unless
+// paused). Used for skip/limit queries.
+//
+// When this is used by insert or remove, it can just use query.results for the
+// old results (and there's no need to pass in oldResults), because these
+// operations don't mutate the documents in the collection. Update needs to pass
+// in an oldResults which was deep-copied before the modifier was applied.
+LocalCollection._recomputeResults = function (query, oldResults) {
+  if (!oldResults)
+    oldResults = query.results;
   query.results = query.cursor._getRawObjects(query.ordered);
 
   if (!query.paused)
     LocalCollection._diffQuery(
-      query.ordered, old_results, query.results, query, true);
+      query.ordered, oldResults, query.results, query, true);
 };
 
 
