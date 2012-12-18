@@ -33,7 +33,7 @@ function CPR {
     tar -c --exclude .meteor/local "$1" | tar -x -C "$2"
 }
 cp meteor "$TARGET_DIR/bin"
-CPR app "$TARGET_DIR"
+CPR lib "$TARGET_DIR"
 CPR packages "$TARGET_DIR"
 CPR examples "$TARGET_DIR"
 rm -rf "$TARGET_DIR"/examples/unfinished
