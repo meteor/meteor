@@ -170,8 +170,7 @@ _.extend(Meteor._Stream.prototype, {
     self._retry_now();
   },
 
-  // Undocumented function for testing -- as long as the flag is set,
-  // the connection is forced to be disconnected
+  // Permanently disconnect a stream.
   forceDisconnect: function (flag) {
     var self = this;
     self.force_fail = flag;

@@ -29,14 +29,17 @@ Tinytest.add("livedata - Meteor.Error", function (test) {
 
 if (Meteor.isServer) {
   Tinytest.add("livedata - version negotiation", function (test) {
-    test.equal(Meteor._calculateVersion(["A", "B", "C"], ["A", "B", "C"]),
-               "A");
-    test.equal(Meteor._calculateVersion(["B", "C"], ["A", "B", "C"]),
-               "B");
-    test.equal(Meteor._calculateVersion(["A", "B", "C"], ["B", "C"]),
-               "B");
-    test.equal(Meteor._calculateVersion(["foo", "bar", "baz"], ["A", "B", "C"]),
-               "A");
+    var versionCheck = function (clientVersions, serverVersions, expected) {
+      test.equal(
+        Meteor._LivedataServer._calculateVersion(clientVersions,
+                                                 serverVersions),
+        expected);
+    };
+
+    versionCheck(["A", "B", "C"], ["A", "B", "C"], "A");
+    versionCheck(["B", "C"], ["A", "B", "C"], "B");
+    versionCheck(["A", "B", "C"], ["B", "C"], "B");
+    versionCheck(["foo", "bar", "baz"], ["A", "B", "C"], "A");
   });
 }
 

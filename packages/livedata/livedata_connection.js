@@ -14,10 +14,11 @@ Meteor._LivedataConnection = function (url, options) {
   var self = this;
   options = _.extend({
     reloadOnUpdate: false,
+    // The rest of these options are only for testing.
     reloadWithOutstanding: false,
     supportedDDPVersions: Meteor._SUPPORTED_DDP_VERSIONS,
     onConnectionFailure: function (reason) {
-      Meteor._debug(reason);
+      Meteor._debug("Failed DDP connection: " + reason);
     },
     onConnected: function () {}
   }, options);
@@ -35,11 +36,12 @@ Meteor._LivedataConnection = function (url, options) {
   }
 
   self._lastSessionId = null;
-  self._versionSuggestion = null;
+  self._versionSuggestion = null;  // The last proposed DDP version.
+  self._version = null;   // The DDP version agreed on by client and server.
   self._stores = {}; // name -> object with methods
   self._methodHandlers = {}; // name -> func
   self._nextMethodId = 1;
-  self._supportedDDPVersions = options.supportedDDPVersions; // just for testing.
+  self._supportedDDPVersions = options.supportedDDPVersions;
 
   // Tracks methods which the user has tried to call but which have not yet
   // called their user callback (ie, they are waiting on their result or for all
@@ -192,8 +194,9 @@ Meteor._LivedataConnection = function (url, options) {
         self._versionSuggestion = msg.version;
         self._stream.reconnect({_force: true});
       } else {
+        // XXX We should probably plumb this through to Meteor.connect and add
+        // an error callback there.
         options.onConnectionFailure("Version negotiation failed; server requested version " + msg.version);
-        //XXX: Make forceDisconnect valid for something other than debugging?
         self._stream.forceDisconnect(true);
       }
     }
