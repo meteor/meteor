@@ -416,12 +416,19 @@ LocalCollection.prototype.remove = function (selector) {
 // XXX atomicity: if multi is true, and one modification fails, do
 // we rollback the whole operation, or what?
 LocalCollection.prototype.update = function (selector, mod, options) {
+  var self = this;
   if (!options) options = {};
 
-  var self = this;
-  var any = false;
+  if (options.upsert)
+    throw new Error("upsert not yet implemented");
+
   var selector_f = LocalCollection._compileSelector(selector);
 
+  // Save the original results of any query that we might need to
+  // _recomputeResults on, because _modifyAndNotify will mutate the objects in
+  // it. (We don't need to save the original results of paused queries because
+  // they already have a results_snapshot and we won't be diffing in
+  // _recomputeResults.)
   var qidToOriginalResults = {};
   _.each(self.queries, function (query, qid) {
     if ((query.cursor.skip || query.cursor.limit) && !query.paused)
@@ -437,7 +444,6 @@ LocalCollection.prototype.update = function (selector, mod, options) {
       self._modifyAndNotify(doc, mod, recomputeQids);
       if (!options.multi)
         break;
-      any = true;
     }
   }
 
@@ -473,7 +479,15 @@ LocalCollection.prototype._modifyAndNotify = function (
     var after = query.selector_f(doc);
 
     if (query.cursor.skip || query.cursor.limit) {
-      recomputeQids[qid] = true;
+      // We need to recompute any query where the doc may have been in the
+      // cursor's window either before or after the update. (Note that if skip
+      // or limit is set, "before" and "after" being true do not necessarily
+      // mean that the document is in the cursor's output after skip/limit is
+      // applied... but if they are false, then the document definitely is NOT
+      // in the output. So it's safe to skip recompute if neither before or
+      // after are true.)
+      if (before || after)
+	recomputeQids[qid] = true;
     } else if (before && !after) {
       LocalCollection._removeFromResults(query, doc);
     } else if (!before && after) {
