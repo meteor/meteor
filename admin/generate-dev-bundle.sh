@@ -109,6 +109,13 @@ npm install progress@0.0.5
 # which make the dev bundle much bigger. We need a better solution.
 npm install mailcomposer@0.1.15
 
+# Use our version of fstream with a bug fixed.  Also have tar use it.
+# See https://github.com/isaacs/fstream/pull/11 .
+npm install https://github.com/meteor/fstream/tarball/91c56e7
+cd tar/node_modules
+npm install https://github.com/meteor/fstream/tarball/91c56e7
+cd ../..
+
 # If you update the version of fibers in the dev bundle, also update the "npm
 # install" command in docs/client/concepts.html.
 npm install fibers@0.6.9
