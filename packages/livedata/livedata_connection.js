@@ -214,6 +214,12 @@ Meteor._LivedataConnection = function (url, options) {
       self._outstandingMethodBlocks.shift();
     }
 
+    // Mark all messages as unsent, they have not yet been sent on this
+    // connection.
+    _.each(self._methodInvokers, function (m) {
+      m.sentMessage = false;
+    });
+
     // If an `onReconnect` handler is set, call it first. Go through
     // some hoops to ensure that methods that are called from within
     // `onReconnect` get executed _before_ ones that were originally
