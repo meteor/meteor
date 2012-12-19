@@ -319,7 +319,7 @@ LocalCollection._computeChange = function (doc, mod) {
     if (mod._id && doc._id !== mod._id)
       throw Error("Cannot change the _id of a document");
 
-    newDoc = {};
+    newDoc = {_id: doc._id};
 
     // replace the whole document
     _.each(mod, function (v, k) {
