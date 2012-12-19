@@ -617,6 +617,11 @@ Fiber(function () {
             "Reset the current project to a fresh state. Removes all local\n" +
             "data and kills any running meteor development servers.\n");
         process.exit(1);
+      } else if (!_.isEmpty(argv._)) {
+        process.stdout.write("meteor reset only affects the locally stored database.\n\n" +
+                             "To reset a deployed application use\nmeteor deploy --delete appname\n" +
+                             "followed by\nmeteor deploy appname\n");
+        process.exit(1);
       }
 
       var app_dir = path.resolve(require_project("reset"));
