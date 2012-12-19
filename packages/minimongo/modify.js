@@ -1,3 +1,4 @@
+(function(){
 // XXX need a strategy for passing the binding of $ into this
 // function, from the compiled selector
 //
@@ -293,3 +294,101 @@ LocalCollection._modifiers = {
     throw Error("$bit is not supported");
   }
 };
+
+
+// XXX need a strategy for passing the binding of $ into this
+// function, from the compiled selector
+//
+// maybe just {key.up.to.just.before.dollarsign: array_index}
+LocalCollection._computeChange = function (doc, mod) {
+  var changeFields = {};
+
+  var isModifier = false;
+  for (var k in mod) {
+    // IE7 doesn't support indexing into strings (eg, k[0]), so use substr.
+    // Too bad -- it's far slower:
+    // http://jsperf.com/testing-the-first-character-of-a-string
+    isModifier = k.substr(0, 1) === '$';
+    break; // just check the first key.
+  }
+
+
+  var newDoc;
+
+  if (!isModifier) {
+    if (mod._id && doc._id !== mod._id)
+      throw Error("Cannot change the _id of a document");
+
+    newDoc = {};
+
+    // replace the whole document
+    _.each(mod, function (v, k) {
+      if (k.substr(0, 1) === '$')
+        throw Error("When replacing document, field name may not start with '$'");
+      if (k.indexOf('.') !== -1)
+        throw Error("When replacing document, field name may not contain '.'");
+      if (k !== '_id')
+        newDoc[k] = LocalCollection._deepcopy(v);
+    });
+  } else {
+    newDoc = LocalCollection._deepcopy(doc);
+
+    _.each(mod, function (body, op) {
+      if (!_.has(LocalCollection._modifiers, op))
+        throw Error("Invalid modifier specified " + op);
+      var modFunc = LocalCollection._modifiers[op];
+
+      _.each(body, function (arg, keypath) {
+        // XXX mongo doesn't allow mod field names to end in a period,
+        // but I don't see why.. it allows '' as a key, as does JS
+        if (keypath.length && keypath[keypath.length-1] === '.')
+          throw Error("Invalid mod field name, may not end in a period");
+
+        var keyparts = keypath.split('.');
+        var noCreate = !!LocalCollection._noCreateModifiers[op];
+        var forbidArray = (op === "$rename");
+        var target = LocalCollection._findModTarget(newDoc, keyparts,
+                                                    noCreate, forbidArray);
+        var field = keyparts.pop();
+        modFunc(target, field, arg, keypath, newDoc);
+      });
+    });
+  }
+
+  diffObjects(doc, newDoc, {
+    leftOnly: function (key, leftValue) {
+      changeFields[key] = undefined;
+    },
+    rightOnly: function (key, rightValue) {
+      changeFields[key] = rightValue;
+    },
+    both: function (key, leftValue, rightValue) {
+      if (!LocalCollection._f._equal(leftValue, rightValue))
+        changeFields[key] = rightValue;
+    }
+  });
+
+  // No-op change.
+  if (_.isEmpty(changeFields))
+    return null;
+
+  return changeFields;
+};
+
+// XXX copy/paste from livedata_server.js; should go in a util place.
+var diffObjects = function (left, right, callbacks) {
+  _.each(left, function (leftValue, key) {
+    if (_.has(right, key))
+      callbacks.both && callbacks.both(key, leftValue, right[key]);
+    else
+      callbacks.leftOnly && callbacks.leftOnly(key, leftValue);
+  });
+  if (callbacks.rightOnly) {
+    _.each(right, function(rightValue, key) {
+      if (!_.has(left, key))
+        callbacks.rightOnly(key, rightValue);
+    });
+  }
+};
+
+})();

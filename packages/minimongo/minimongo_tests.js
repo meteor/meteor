@@ -934,10 +934,34 @@ Tinytest.add("minimongo - modify", function (test) {
     } else {
       test.ok();
     }
+
+    var changeFields = LocalCollection._computeChange(doc, mod);
+    var actual = LocalCollection._deepcopy(doc);
+    if (changeFields) {
+      _.each(changeFields, function (value, key) {
+        if (value === undefined)
+          delete actual[key];
+        else
+          actual[key] = value;
+      });
+    }
+
+    if (!LocalCollection._f._equal(actual, result)) {
+      // XXX super janky
+      test.fail({type: "minimongo-modifier",
+                 message: "computed modifier test failure",
+                 input_doc: JSON.stringify(doc),
+                 modifier: JSON.stringify(mod),
+                 expected: JSON.stringify(result),
+                 actual: JSON.stringify(actual)
+                });
+    } else {
+      test.ok();
+    }
   };
   var exception = function (doc, mod) {
     test.throws(function () {
-      LocalCollection._modify(LocalCollection._deepcopy(doc), mod);
+      LocalCollection._computeChange(doc, mod);
     });
   };
 
