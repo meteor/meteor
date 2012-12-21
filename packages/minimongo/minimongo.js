@@ -29,6 +29,14 @@ LocalCollection = function () {
   this.paused = false;
 };
 
+LocalCollection._applyChanges = function (doc, changeFields) {
+  _.each(changeFields, function (value, key) {
+    if (value === undefined)
+      delete doc[key];
+    else
+      doc[key] = value;
+  });
+};
 // options may include sort, skip, limit, reactive
 // sort may be any of these forms:
 //     {a: 1, b: -1}
