@@ -42,15 +42,15 @@ $METEOR reset --help | grep "Reset the current" > /dev/null
 
 echo "... not in dir"
 
-$METEOR | grep "You're not in" > /dev/null
-$METEOR run | grep "You're not in" > /dev/null
-$METEOR add foo | grep "You're not in" > /dev/null
-$METEOR remove foo | grep "You're not in" > /dev/null
-$METEOR list --using | grep "You're not in" > /dev/null
-$METEOR bundle foo.tar.gz | grep "You're not in" > /dev/null
-$METEOR mongo | grep "You're not in" > /dev/null
-$METEOR deploy automated-test | grep "You're not in" > /dev/null
-$METEOR reset | grep "You're not in" > /dev/null
+$METEOR | grep "run: You're not in" > /dev/null
+$METEOR run | grep "run: You're not in" > /dev/null
+$METEOR add foo | grep "add: You're not in" > /dev/null
+$METEOR remove foo | grep "remove: You're not in" > /dev/null
+$METEOR list --using | grep "list --using: You're not in" > /dev/null
+$METEOR bundle foo.tar.gz | grep "bundle: You're not in" > /dev/null
+$METEOR mongo | grep "mongo: You're not in" > /dev/null
+$METEOR deploy automated-test | grep "deploy: You're not in" > /dev/null
+$METEOR reset | grep "reset: You're not in" > /dev/null
 
 echo "... create"
 
