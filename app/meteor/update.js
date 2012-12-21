@@ -10,7 +10,7 @@ var ProgressBar = require('progress');
 var updater = require(path.join(__dirname, "..", "lib", "updater.js"));
 var files = require(path.join(__dirname, "..", "lib", "files.js"));
 
-var _ = require(path.join(__dirname, '..', 'lib', 'third', 'underscore.js'));
+var _ = require('underscore');
 
 // refuse to update if we're in a git checkout.
 if (files.in_checkout()) {

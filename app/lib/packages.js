@@ -1,5 +1,5 @@
 var path = require('path');
-var _ = require(path.join(__dirname, 'third', 'underscore.js'));
+var _ = require('underscore');
 var files = require(path.join(__dirname, 'files.js'));
 var fs = require('fs');
 

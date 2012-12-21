@@ -1,6 +1,6 @@
 var fs = require("fs");
 var path = require('path');
-var _ = require(path.join(__dirname, 'third', 'underscore.js'));
+var _ = require('underscore');
 
 var files = module.exports = {
   // A sort comparator to order files into load order.

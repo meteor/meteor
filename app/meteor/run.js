@@ -12,7 +12,7 @@ var bundler = require(path.join(__dirname, '..', 'lib', 'bundler.js'));
 var mongo_runner = require(path.join(__dirname, '..', 'lib', 'mongo_runner.js'));
 var mongoExitCodes = require(path.join(__dirname, '..', 'lib', 'mongo_exit_codes.js'));
 
-var _ = require(path.join(__dirname, '..', 'lib', 'third', 'underscore.js'));
+var _ = require('underscore');
 
 ////////// Globals //////////
 //XXX: Refactor to not have globals anymore?

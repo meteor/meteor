@@ -6,7 +6,7 @@
 
 
 var path = require("path");
-var _ = require(path.join(__dirname, '..', 'lib', 'third', 'underscore.js'));
+var _ = require('underscore');
 
 exports.Codes = {
   0 : { code: 0,

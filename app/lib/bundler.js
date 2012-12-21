@@ -31,7 +31,7 @@ var crypto = require('crypto');
 var fs = require('fs');
 var uglify = require('uglify-js');
 var cleanCSS = require('clean-css');
-var _ = require(path.join(__dirname, 'third', 'underscore.js'));
+var _ = require('underscore');
 
 // files to ignore when bundling. node has no globs, so use regexps
 var ignore_files = [

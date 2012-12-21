@@ -10,7 +10,7 @@ var request = require('request');
 var qs = require('querystring');
 var path = require('path');
 var files = require(path.join(__dirname, '..', 'lib', 'files.js'));
-var _ = require(path.join(__dirname, '..', 'lib', 'third', 'underscore.js'));
+var _ = require('underscore');
 var keypress = require('keypress');
 var child_process = require('child_process');
 

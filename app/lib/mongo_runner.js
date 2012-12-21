@@ -4,7 +4,7 @@ var spawn = require('child_process').spawn;
 
 var files = require(path.join(__dirname, '..', 'lib', 'files.js'));
 
-var _ = require(path.join('..', 'lib', 'third', 'underscore.js'));
+var _ = require('underscore');
 
 
 /** Internal.
