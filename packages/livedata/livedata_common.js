@@ -62,7 +62,7 @@ var builtinConverters = [
       return obj instanceof Date;
     },
     toBasic: function (obj) {
-      return {$date: obj.UTC()};
+      return {$date: obj.getTime()};
     },
     fromBasic: function (obj) {
       return new Date(obj.$date);
@@ -149,6 +149,7 @@ var adjustTypesFromBasic = function (obj) {
 };
 
 Meteor._parseDDP = function (stringMessage) {
+  //console.log("received " + stringMessage);
   var msg = JSON.parse(stringMessage);
   //massage msg to get it into "abstract ddp" rather than "wire ddp" format.
 
@@ -162,7 +163,7 @@ Meteor._parseDDP = function (stringMessage) {
     delete msg.cleared;
   }
 
-  _.each(['fields', 'params'], function (field) {
+  _.each(['fields', 'params', 'result'], function (field) {
     if (_.has(msg, field))
       adjustTypesFromBasic(msg[field]);
   });
@@ -186,11 +187,13 @@ Meteor._stringifyDDP = function (msg) {
       delete copy.fields;
   }
   // adjust types to basic
-  _.each(['fields', 'params'], function (field) {
+  _.each(['fields', 'params', 'result'], function (field) {
     if (_.has(copy, field))
       adjustTypesToBasic(copy[field]);
   });
-  return JSON.stringify(copy);
+  var ret = JSON.stringify(copy);
+  //console.log("sending " + ret);
+  return ret;
 };
 
 Meteor._CurrentInvocation = new Meteor.EnvironmentVariable;

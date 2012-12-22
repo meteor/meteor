@@ -579,7 +579,7 @@ testAsyncMulti('mongo-livedata - rewrite selector', [
 testAsyncMulti('mongo-livedata - empty documents', [
   function (test, expect) {
     var collectionName = Meteor.uuid();
-        if (Meteor.isClient) {
+    if (Meteor.isClient) {
       Meteor.call('createInsecureCollection', collectionName);
       Meteor.subscribe('c-' + collectionName);
     }
@@ -594,5 +594,29 @@ testAsyncMulti('mongo-livedata - empty documents', [
       var cursor = coll.find();
       test.equal(cursor.count(), 1);
     }));
+  }
+]);
+
+testAsyncMulti('mongo-livedata - document with a date', [
+  function (test, expect) {
+    var collectionName = Meteor.uuid();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', collectionName);
+      Meteor.subscribe('c-' + collectionName);
+    }
+
+    var coll = new Meteor.Collection(collectionName);
+    var docId;
+
+    if (Meteor.isClient) {
+      coll.insert({d: new Date(1356152390004)}, expect(function (err, id) {
+        test.isFalse(err);
+        test.isTrue(id);
+        docId = id;
+        var cursor = coll.find();
+        test.equal(cursor.count(), 1);
+        test.equal(coll.findOne().d.getFullYear(), 2012);
+      }));
+    }
   }
 ]);

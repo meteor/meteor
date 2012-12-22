@@ -103,6 +103,36 @@ testAsyncMulti("livedata - basic method invocation", [
   },
 
   function (test, expect) {
+    var d = new Date();
+    if (Meteor.isServer)
+      test.equal(Meteor.call("echo", d), [d]);
+    if (Meteor.isClient)
+      test.equal(Meteor.call("echo", d), undefined);
+
+    test.equal(Meteor.call("echo", d, expect(undefined, [d])), undefined);
+  },
+
+  function (test, expect) {
+    var l = {$date: 30};
+    if (Meteor.isServer)
+      test.equal(Meteor.call("echo", l), [l]);
+    if (Meteor.isClient)
+      test.equal(Meteor.call("echo", l), undefined);
+
+    test.equal(Meteor.call("echo", l, expect(undefined, [l])), undefined);
+  },
+
+  function (test, expect) {
+    var l = {$literal: {$date: 30}};
+    if (Meteor.isServer)
+      test.equal(Meteor.call("echo", l), [l]);
+    if (Meteor.isClient)
+      test.equal(Meteor.call("echo", l), undefined);
+
+    test.equal(Meteor.call("echo", l, expect(undefined, [l])), undefined);
+  },
+
+  function (test, expect) {
     if (Meteor.isServer)
       test.equal(Meteor.call("echo", 12), [12]);
     if (Meteor.isClient)

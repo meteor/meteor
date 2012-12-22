@@ -115,13 +115,11 @@ _.extend(TestCaseResults.prototype, {
       actual = "[Unknown]";
     } else {
       matched = _.isEqual(expected, actual);
-      expected = JSON.stringify(expected);
-      actual = JSON.stringify(actual);
     }
 
     if (matched === !!not) {
       this.fail({type: "assert_equal", message: message,
-                 expected: expected, actual: actual, not: !!not});
+                 expected: JSON.stringify(expected), actual: JSON.stringify(actual), not: !!not});
     } else
       this.ok();
   },

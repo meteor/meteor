@@ -887,7 +887,7 @@ Meteor._LivedataServer = function () {
     socket.on('data', function (raw_msg) {
       try {
         try {
-          var msg = JSON.parse(raw_msg);
+          var msg = Meteor._parseDDP(raw_msg);
         } catch (err) {
           sendError('Parse error');
           return;
