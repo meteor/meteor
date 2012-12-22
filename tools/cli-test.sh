@@ -61,14 +61,16 @@ test -f "$DIR/$DIR.js"
 
 ## Tests in a meteor project
 cd "$DIR"
+# run in a subdirectory, just to make sure this also works
+cd .meteor
 
 echo "... add/remove/list"
 
 $METEOR list | grep "backbone" > /dev/null
 ! $METEOR list --using 2>&1 | grep "backbone" > /dev/null
-$METEOR add backbone 2>&1 | grep "backbone:" > /dev/null
+$METEOR add backbone 2>&1 | grep "backbone:" | grep -v "no such package" | > /dev/null
 $METEOR list --using | grep "backbone" > /dev/null
-grep backbone .meteor/packages > /dev/null
+grep backbone packages > /dev/null # remember, we are already in .meteor
 $METEOR remove backbone 2>&1 | grep "backbone: removed" > /dev/null
 ! $METEOR list --using 2>&1 | grep "backbone" > /dev/null
 
@@ -77,7 +79,7 @@ echo "... bundle"
 $METEOR bundle foo.tar.gz
 test -f foo.tar.gz
 
-
+cd .. # we're now back to $DIR
 echo "... run"
 
 MONGOMARK='--bind_ip 127.0.0.1 --smallfiles --port 9102'
