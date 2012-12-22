@@ -1,4 +1,4 @@
-// XXX namespacing
+(function () {
 Meteor._SUPPORTED_DDP_VERSIONS = [ 'pre1' ];
 
 Meteor._MethodInvocation = function (options) {
@@ -42,6 +42,157 @@ _.extend(Meteor._MethodInvocation.prototype, {
   }
 });
 
+
+var customTypes = {};
+// Add a custom type, using a method of your choice to get to and
+// from a basic JSON-able representation.
+// XXX: doc this
+Meteor.addCustomType = function (typeName, toBasic, fromBasic, recognize) {
+  if (_.has(customTypes), typeName)
+    throw new Error("Type " + typeName + " already present");
+  customTypes[typeName] = {toBasic: toBasic, fromBasic: fromBasic, recognize: recognize};
+};
+
+var builtinConverters = [
+  { // Date
+    matchBasic: function (obj) {
+      return _.has(obj, '$date') && _.size(obj) === 1;
+    },
+    matchObject: function (obj) {
+      return obj instanceof Date;
+    },
+    toBasic: function (obj) {
+      return {$date: obj.UTC()};
+    },
+    fromBasic: function (obj) {
+      return new Date(obj.$date);
+    }
+  },
+  { // Literal
+    matchBasic: function (obj) {
+      return _.has(obj, '$literal') && _.size(obj) === 1;
+    },
+    matchObject: function (obj) {
+      if (_.isEmpty(obj) || _.size(obj) > 2) {
+        return false;
+      }
+      return _.any(builtinConverters, function (converter) {
+        return converter.matchBasic(obj);
+      });
+    },
+    toBasic: function (obj) {
+      return {$literal: obj};
+    },
+    fromBasic: function (obj) {
+      return obj.$literal;
+    }
+  },
+  { // Custom
+    matchBasic: function (obj) {
+      return _.has(obj, '$type') && _.has(obj, '$value') && _.size(obj) === 2;
+    },
+    matchObject: function (obj) {
+      return _.any(customTypes, function (type) {
+        return type.recognize(obj);
+      });
+    },
+    toBasic: function (obj) {
+      var typeName = null;
+      var converter = _.find(customTypes, function(type, name) {
+        typeName = name;
+        return type.recognize(obj);
+      });
+      return {$type: typeName, $value: converter.toBasic(obj)};
+    },
+    fromBasic: function (obj) {
+      var converter = customTypes[obj.$type];
+      return converter.fromBasic(obj.$value);
+    }
+  }
+];
+
+
+//XXX: copypasta.  use string keys to control which functions
+//  I'm calling?
+var adjustTypesToBasic = function (obj) {
+  _.each(obj, function (value, key) {
+    if (typeof value !== 'object')
+      return; // continue
+    for (var i = 0; i < builtinConverters.length; i++) {
+      var converter = builtinConverters[i];
+      if (converter.matchObject(value)) {
+        obj[key] = converter.toBasic(value);
+        return; // continue to the next field
+      }
+    }
+    // if we get here, value is an object but not adjustable
+    // at this level.  recurse.
+    adjustTypesToBasic(value);
+  });
+};
+
+var adjustTypesFromBasic = function (obj) {
+  _.each(obj, function (value, key) {
+    if (typeof value !== 'object' || _.size(value) > 2)
+      return; // continue
+    for (var i = 0; i < builtinConverters.length; i++) {
+      var converter = builtinConverters[i];
+      if (converter.matchBasic(value)) {
+        obj[key] = converter.fromBasic(value);
+        return; // continue to the next field
+      }
+    }
+    // if we get here, value is an object but not adjustable
+    // at this level.  recurse.
+    adjustTypesFromBasic(value);
+  });
+};
+
+Meteor._parseDDP = function (stringMessage) {
+  var msg = JSON.parse(stringMessage);
+  //massage msg to get it into "abstract ddp" rather than "wire ddp" format.
+
+  // switch between "cleared" rep of unsetting fields and "undefined" rep of same
+  if (_.has(msg, 'cleared')) {
+    if (!_.has(msg, 'fields'))
+      msg.fields = {};
+    _.each(msg.cleared, function (clearKey) {
+      msg.fields[clearKey] = undefined;
+    });
+    delete msg.cleared;
+  }
+
+  _.each(['fields', 'params'], function (field) {
+    if (_.has(msg, field))
+      adjustTypesFromBasic(msg[field]);
+  });
+  return msg;
+};
+
+Meteor._stringifyDDP = function (msg) {
+  var copy = LocalCollection._deepcopy(msg);
+  // swizzle 'changed' messages from 'fields undefined' rep to 'fields and cleared' rep
+  if (_.has(msg, 'fields')) {
+    var cleared = [];
+    _.each(msg.fields, function (value, key) {
+      if (key === undefined) {
+        cleared.push(key);
+        delete copy.fields[key];
+      }
+    });
+    if (!_.isEmpty(cleared))
+      copy.cleared = cleared;
+    if (_.isEmpty(copy.fields))
+      delete copy.fields;
+  }
+  // adjust types to basic
+  _.each(['fields', 'params'], function (field) {
+    if (_.has(copy, field))
+      adjustTypesToBasic(copy[field]);
+  });
+  return JSON.stringify(copy);
+};
+
 Meteor._CurrentInvocation = new Meteor.EnvironmentVariable;
 
 Meteor.Error = function (error, reason, details) {
@@ -66,3 +217,4 @@ Meteor.Error = function (error, reason, details) {
 };
 
 Meteor.Error.prototype = new Error;
+})();

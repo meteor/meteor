@@ -278,23 +278,16 @@ _.extend(Meteor._LivedataSession.prototype, {
 
   sendChanged: function (collectionName, id, fields) {
     var self = this;
-    var cleared = [];
-    var messageFields = {};
     if (_.isEmpty(fields))
       return;
-    // convert internal format (undefined is clear) to wire format (list of clear)
-    _.each(fields, function (value, key) {
-      if (value === undefined)
-        cleared.push(key);
-      else
-        messageFields[key] = value;
-    });
+
     if (self._isSending) {
-      var toSend = {msg: "changed", collection: collectionName, id: id};
-      if (!_.isEmpty(messageFields))
-        toSend.fields = messageFields;
-      if (!_.isEmpty(cleared))
-        toSend.cleared = cleared;
+      var toSend = {
+        msg: "changed",
+        collection: collectionName,
+        id: id,
+        fields: fields
+      };
       self.send(toSend);
     }
   },
@@ -357,7 +350,7 @@ _.extend(Meteor._LivedataSession.prototype, {
     self.socket = socket;
     self.last_connect_time = +(new Date);
     _.each(self.out_queue, function (msg) {
-      self.socket.send(JSON.stringify(msg));
+      self.socket.send(Metoer._stringifyDDP(msg));
     });
     self.out_queue = [];
 
@@ -428,7 +421,7 @@ _.extend(Meteor._LivedataSession.prototype, {
   send: function (msg) {
     var self = this;
     if (self.socket)
-      self.socket.send(JSON.stringify(msg));
+      self.socket.send(Meteor._stringifyDDP(msg));
     else
       self.out_queue.push(msg);
   },
@@ -888,7 +881,7 @@ Meteor._LivedataServer = function () {
       var msg = {msg: 'error', reason: reason};
       if (offending_message)
         msg.offending_message = offending_message;
-      socket.send(JSON.stringify(msg));
+      socket.send(Meteor._stringifyDDP(msg));
     };
 
     socket.on('data', function (raw_msg) {
@@ -968,12 +961,12 @@ _.extend(Meteor._LivedataServer.prototype, {
       self.sessions[socket.meteor_session.id] = socket.meteor_session;
 
 
-      socket.send(JSON.stringify({msg: 'connected',
+      socket.send(Meteor._stringifyDDP({msg: 'connected',
                                   session: socket.meteor_session.id}));
       // will kick off previous connection, if any
       socket.meteor_session.connect(socket);
     } else {
-      socket.send(JSON.stringify({msg: 'failed', version: version}));
+      socket.send(Meteor._stringifyDDP({msg: 'failed', version: version}));
       socket.close();
     }
   },
