@@ -115,12 +115,14 @@
     return '';
   };
 
+  Accounts._loginButtons.loginServices = [];
+
   Accounts._loginButtons.getLoginServices = function () {
     var ret = [];
     // make sure to put password last, since this is how it is styled
     // in the ui as well.
     _.each(
-      ['facebook', 'github', 'google', 'twitter', 'weibo', 'password'],
+      this.loginServices,
       function (service) {
         if (Accounts[service])
           ret.push({name: service});
