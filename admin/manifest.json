@@ -1,6 +1,6 @@
 {
-  "version": "0.5.2",
-  "deb_version": "0.5.2-1",
-  "rpm_version": "0.5.2-1",
+  "version": "0.5.3",
+  "deb_version": "0.5.3-1",
+  "rpm_version": "0.5.3-1",
   "urlbase": "https://d3sqy0vbqsdhku.cloudfront.net"
 }

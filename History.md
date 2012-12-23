@@ -1,6 +1,10 @@
 
 ## vNEXT
 
+## v0.5.3
+
+TODO: Finish 0.5.3 section
+
 * `OAuth1Binding` improvements:  #539
   * `OAuth1Binding.get` and `OAuth1Binding.call` now return the full response
     (including headers and statusCode), rather than just the data.
