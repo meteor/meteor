@@ -11,6 +11,9 @@ With Meteor you write apps:
 
 Documentation is available at http://docs.meteor.com/
 
+
+[![Build Status](https://buildhive.cloudbees.com/job/michaelneale/job/meteor/badge/icon)](https://buildhive.cloudbees.com/job/michaelneale/job/meteor/)
+
 ## Quick Start
 
 Install Meteor:
