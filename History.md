@@ -5,12 +5,64 @@
 
 TODO: Finish 0.5.3 section
 
+* A new `--settings` argument to `meteor deploy` and `meteor run` allows you to
+  specify a file containing a JSON object which will be made available to server
+  code in the variable `Meteor.settings`.
+
+* Deployed apps now use a randomized hostname for their long-polling
+  connections, allowing users to use apps in an arbitrary number of simultaneous
+  tabs without hitting browser per-hostname connection limits. #131
+
+* In Spark, when a template is re-rendered, elements that are preserved (using
+  `Template.foo.preserve` or the `preserve-input` package) and which have
+  user-controllable "values" (eg, form inputs) now preserve the value set by the
+  user, unless the server's newly rendered value is different from the
+  previously rendered value. That is, re-rendering a template no longer reverts
+  changes to form elements made by users. Additionally, <INPUT> elements with
+  type other than TEXT can now have reactive values (eg, the labels on submit
+  buttons can now be reactive).  #510 #514 #523 #537 #558
+
+* Improve rendering of <SELECT> elements on IE.  #496
+
+* minimongo improvements:
+  * `$and`, `$or`, and `$nor` no longer accept empty arrays (for consistency
+    with Mongo)
+
+* Always use the `autoReconnect` flag when connecting to Mongo.  #425
+
+* When logging in with Google, allow apps to request an "offline" token.  #464
+
+* When a user logs in using credentials from an external service, don't
+  overwrite `serviceData` fields that were set on a previous login and not set
+  on this login. (For example, the refresh token from Google "offline" login.)
+
 * `OAuth1Binding` improvements:  #539
   * `OAuth1Binding.get` and `OAuth1Binding.call` now return the full response
     (including headers and statusCode), rather than just the data.
   * Introduce `OAuth1Binding.post`.
   * `OAuth1Binding.get`, `OAuth1Binding.call` and `OAuth1Binding.post` now take
     a `params` argument. This facilitates making calls to the Twitter API.
+
+* A new flag `meteor run --once` does not re-run the project if it crashes or
+  monitor for file changes; intended for automated testing (eg
+  `admin/cli-test.sh`).
+
+* Improvements to `jsparse`: hex literals, keywords as property names, ES5 line
+  continuations, trailing commas in object literals, line numbers in error
+  messages
+
+* Implement the UUID v4 spec correctly (instead of losing a few bits of
+  randomness).
+
+* Update clean-css package from 0.8.2 to 0.8.3, fixing minification of `0%`
+  values in `hsl` colors.  #515
+
+* The underscore library is now in the dev bundle instead of in three different
+  places inside the source tree. (It's still in one place in the source tree, to
+  be served to clients.)
+
+Patches contributed by GitHub users Ed-von-Schleck, jwulf, meawoppl, and
+nwmartin.
 
 ## v0.5.2
 
