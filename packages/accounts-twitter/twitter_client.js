@@ -31,4 +31,5 @@
     Accounts.oauth.initiateLogin(state, url, callback);
   };
 
+  Accounts._loginButtons.loginServices.push('twitter');
 })();
