@@ -3,8 +3,6 @@
 
 ## v0.5.3
 
-TODO: Finish 0.5.3 section
-
 * A new `--settings` argument to `meteor deploy` and `meteor run` allows you to
   specify a file containing a JSON object which will be made available to server
   code in the variable `Meteor.settings`.
@@ -22,11 +20,19 @@ TODO: Finish 0.5.3 section
   type other than TEXT can now have reactive values (eg, the labels on submit
   buttons can now be reactive).  #510 #514 #523 #537 #558
 
-* Improve rendering of <SELECT> elements on IE.  #496
-
 * minimongo improvements:
+  * Allow observing cursors with `skip` or `limit`.  #528
+  * Allow sorting on `dotted.sub.keys`.  #533
+  * Allow querying specific array elements (`foo.1.bar`).
   * `$and`, `$or`, and `$nor` no longer accept empty arrays (for consistency
     with Mongo)
+
+* JavaScript RegExp objects can now be used in selectors in Collection write
+  methods on the client, eg `myCollection.remove({foo: /bar/})`.  #346
+
+* Spark IE improvements:
+  * Improve rendering of <SELECT> elements on IE.  #496
+  * Don't lose nested data contexts in IE9/10 after two seconds.  #458
 
 * Always use the `autoReconnect` flag when connecting to Mongo.  #425
 
@@ -36,6 +42,15 @@ TODO: Finish 0.5.3 section
   overwrite `serviceData` fields that were set on a previous login and not set
   on this login. (For example, the refresh token from Google "offline" login.)
 
+* `meteor` command-line improvements:
+  * Improve error message when mongod fails to start.
+  * The `NODE_OPTIONS` environment variable can be used to pass command-line
+    flags to node (eg, `--debug` or `--debug-brk` to enable the debugger).
+  * A new flag `meteor run --once` does not re-run the project if it crashes or
+    monitor for file changes; intended for automated testing (eg
+    `admin/cli-test.sh`).
+  * Die with error if an app name is mistakenly passed to `meteor reset`.
+
 * `OAuth1Binding` improvements:  #539
   * `OAuth1Binding.get` and `OAuth1Binding.call` now return the full response
     (including headers and statusCode), rather than just the data.
@@ -43,13 +58,19 @@ TODO: Finish 0.5.3 section
   * `OAuth1Binding.get`, `OAuth1Binding.call` and `OAuth1Binding.post` now take
     a `params` argument. This facilitates making calls to the Twitter API.
 
-* A new flag `meteor run --once` does not re-run the project if it crashes or
-  monitor for file changes; intended for automated testing (eg
-  `admin/cli-test.sh`).
+* Fix re-sending method calls on reconnect.  #538
+
+* `Meteor.connect` now supports URLs of the form
+  `ddp+sockjs://host-***.name/sockjs` and `ddpi+sockjs://host-***.name/sockjs`
+  to connect with DDP over HTTPS and HTTP respectively. The asterisks are
+  substituted with random digits. This syntax may change in a future version of
+  Meteor. While the trailing `/sockjs` is required in these URLs, it is no
+  longer supported in scheme-less URLs passed to `Meteor.connect`.
 
 * Improvements to `jsparse`: hex literals, keywords as property names, ES5 line
   continuations, trailing commas in object literals, line numbers in error
-  messages
+  messages, decimal literals starting with `.`, regex character classes with
+  slashes.
 
 * Implement the UUID v4 spec correctly (instead of losing a few bits of
   randomness).
@@ -57,12 +78,8 @@ TODO: Finish 0.5.3 section
 * Update clean-css package from 0.8.2 to 0.8.3, fixing minification of `0%`
   values in `hsl` colors.  #515
 
-* The underscore library is now in the dev bundle instead of in three different
-  places inside the source tree. (It's still in one place in the source tree, to
-  be served to clients.)
-
-Patches contributed by GitHub users Ed-von-Schleck, jwulf, meawoppl, and
-nwmartin.
+Patches contributed by GitHub users Ed-von-Schleck, egtann, jwulf, lvbreda,
+meawoppl, nwmartin, and timhaines.
 
 ## v0.5.2
 
