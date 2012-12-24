@@ -528,11 +528,9 @@ In this release, Minimongo has some limitations:
 * `$elemMatch` is not supported in selectors.
 * `$pull` in modifiers can only accept certain kinds
 of selectors.
-* In selectors, dot notation and ordinal indexing may not work correctly.
+* In selectors, dot notation may not work correctly.
 * `$` to denote the matched array position is not
 supported in modifier.
-* Sort does not support subkeys (you can sort on `a`,
-but not `a.b`).
 * `findAndModify`, upsert, aggregate functions, and
 map/reduce aren't supported.
 * The supported types are String, Number, Boolean, Array,
