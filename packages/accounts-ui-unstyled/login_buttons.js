@@ -118,17 +118,17 @@
   Accounts._loginButtons.loginServices = [];
 
   Accounts._loginButtons.getLoginServices = function () {
-    var ret = [];
-    // make sure to put password last, since this is how it is styled
-    // in the ui as well.
-    _.each(
-      this.loginServices,
-      function (service) {
-        if (Accounts[service])
-          ret.push({name: service});
-      });
-
-    return ret;
+    var that = this;
+    return _.map(
+      _.uniq(
+        _.map(that.loginServices, function(service) {
+          return JSON.stringify({name: service});
+        })
+      ),
+      function(service_str) {
+        return JSON.parse(service_str);
+      }
+    );
   };
 
   Accounts._loginButtons.hasPasswordService = function () {
