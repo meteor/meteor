@@ -119,7 +119,17 @@
 
   Accounts._loginButtons.getLoginServices = function () {
     var self = this, 
-        services = self.loginServices;
+        services = self.loginServices, // memoize services array
+        passwordIndex = services.indexOf("password"), // memoize password idx.
+        lastServiceAt = services.length - 1; // memoize last service idx.
+
+    // make sure to put password last, since this is how it is styled
+    // if we had found password, swap w last service
+    if (passwordIndex !== -1) { 
+      services[lastServiceAt] = services[passwordIndex];
+      services[passwordIndex] = services[lastServiceAt];
+    }
+
     return _.map(services, function(service) { 
       return {name: service};
     });
