@@ -120,7 +120,7 @@
   Accounts._loginButtons.getLoginServices = function () {
     var self = this, 
         services = self.loginServices;
-    return _.map(_.uniq(services), function(service) { 
+    return _.map(services, function(service) { 
       return {name: service};
     });
   };
