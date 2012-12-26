@@ -4,13 +4,20 @@ Meteor.http = Meteor.http || {};
 (function() {
 
   Meteor.http._encodeParams = function(params) {
+    self = this;
     var buf = [];
     _.each(params, function(value, key) {
       if (buf.length)
         buf.push('&');
-      buf.push(encodeURIComponent(key), '=', encodeURIComponent(value));
+      buf.push(self._encodeString(key), '=', self._encodeString(value));
     });
     return buf.join('').replace(/%20/g, '+');
+  };
+
+  Meteor.http._encodeString = function(str) {
+    if(str == null || str == "") return "";
+
+    return encodeURIComponent(str).replace(/[!'()]/g, escape).replace(/\*/g, "%2A");
   };
 
   Meteor.http._buildUrl = function(before_qmark, from_qmark, opt_query, opt_params) {
