@@ -95,13 +95,13 @@ OAuth1Binding.prototype._getSignature = function(method, url, rawHeaders, access
 
   var signatureBase = [
     method,
-    encodeURIComponent(url),
-    encodeURIComponent(parameters)
+    self._encodeString(url),
+    self._encodeString(parameters)
   ].join('&');
 
-  var signingKey = encodeURIComponent(self._secret) + '&';
+  var signingKey = self._encodeString(self._secret) + '&';
   if (accessTokenSecret)
-    signingKey += encodeURIComponent(accessTokenSecret);
+    signingKey += self._encodeString(accessTokenSecret);
 
   return crypto.createHmac('SHA1', signingKey).update(signatureBase).digest('base64');
 };
@@ -132,14 +132,22 @@ OAuth1Binding.prototype._call = function(method, url, headers, params) {
 };
 
 OAuth1Binding.prototype._encodeHeader = function(header) {
+  var self = this;
   return _.reduce(header, function(memo, val, key) {
-    memo[encodeURIComponent(key)] = encodeURIComponent(val);
+    memo[self._encodeString(key)] = self._encodeString(val);
     return memo;
   }, {});
 };
 
+OAuth1Binding.prototype._encodeString = function(str) {
+  if(str == null || str == "") return "";
+
+  return encodeURIComponent(str).replace(/[!'()]/g, escape).replace(/\*/g, "%2A");
+};
+
 OAuth1Binding.prototype._getAuthHeaderString = function(headers) {
+  var self = this;
   return 'OAuth ' +  _.map(headers, function(val, key) {
-    return encodeURIComponent(key) + '="' + encodeURIComponent(val) + '"';
+    return self._encodeString(key) + '="' + self._encodeString(val) + '"';
   }).sort().join(', ');
 };
