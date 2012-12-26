@@ -118,17 +118,10 @@
   Accounts._loginButtons.loginServices = [];
 
   Accounts._loginButtons.getLoginServices = function () {
-    var that = this;
-    return _.map(
-      _.uniq(
-        _.map(that.loginServices, function(service) {
-          return JSON.stringify({name: service});
-        })
-      ),
-      function(service_str) {
-        return JSON.parse(service_str);
-      }
-    );
+    var that = this, services = that.loginServices;
+    return _.map(_.uniq(services), function(service) { 
+      return {name: service};
+    });
   };
 
   Accounts._loginButtons.hasPasswordService = function () {
