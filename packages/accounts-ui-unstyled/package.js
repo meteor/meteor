@@ -8,7 +8,6 @@ Package.on_use(function (api) {
   api.add_files([
     'accounts_ui.js',
 
-    'login_buttons_images.css',
     'login_buttons.html',
     'login_buttons_single.html',
     'login_buttons_dropdown.html',
@@ -26,4 +25,5 @@ Package.on_test(function (api) {
   api.use('accounts-ui-unstyled');
   api.use('tinytest');
   api.add_files('accounts_ui_tests.js', 'client');
+  api.add_files('accounts_ui_unstyled_tests.js', 'client');
 });

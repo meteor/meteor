@@ -155,5 +155,6 @@
       methodArguments: [token],
       userCallback: callback});
   };
-})();
 
+  Accounts._loginButtons.loginServices.push('password');
+})();
