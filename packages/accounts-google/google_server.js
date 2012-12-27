@@ -10,7 +10,7 @@
       id: identity.id,
       accessToken: accessToken,
       email: identity.email,
-      expiresAt: (+new Date) + 1000 * parseInt(response.expiresIn, 10)
+      expiresAt: (+new Date) + (1000 * response.expiresIn)
     };
 
     // only set the token in serviceData if it's there. this ensures
@@ -20,6 +20,7 @@
       serviceData.refreshToken = response.refreshToken;
 
     return {
+      serviceData: serviceData,
       options: {profile: {name: identity.name}}
     };
   });
