@@ -36,7 +36,8 @@
 
 * Always use the `autoReconnect` flag when connecting to Mongo.  #425
 
-* When logging in with Google, allow apps to request an "offline" token.  #464
+* When logging in with Google, allow apps to request an "offline" token and store
+  its expiry time.  #464 #525
 
 * When a user logs in using credentials from an external service, don't
   overwrite `serviceData` fields that were set on a previous login and not set
@@ -57,6 +58,11 @@
   * Introduce `OAuth1Binding.post`.
   * `OAuth1Binding.get`, `OAuth1Binding.call` and `OAuth1Binding.post` now take
     a `params` argument. This facilitates making calls to the Twitter API.
+
+* `accounts-ui` now automatically detects new OAuth providers instead of only
+  recognizing a static list of them. This will allow `{{loginButtons}}` to
+  support new OAuth providers without needing to edit the `accounts-ui-unstyled`
+  package.  #572
 
 * Fix re-sending method calls on reconnect.  #538
 
@@ -79,7 +85,7 @@
   values in `hsl` colors.  #515
 
 Patches contributed by GitHub users Ed-von-Schleck, egtann, jwulf, lvbreda,
-meawoppl, nwmartin, and timhaines.
+martin-naumann, meawoppl, nwmartin, timhaines, and zealoushacker.
 
 ## v0.5.2
 
