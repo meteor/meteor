@@ -15,8 +15,6 @@ Meteor.http = Meteor.http || {};
   };
 
   Meteor.http._encodeString = function(str) {
-    if(str == null || str == "") return "";
-
     return encodeURIComponent(str).replace(/[!'()]/g, escape).replace(/\*/g, "%2A");
   };
 

@@ -142,8 +142,6 @@ OAuth1Binding.prototype._encodeHeader = function(header) {
 };
 
 OAuth1Binding.prototype._encodeString = function(str) {
-  if(str == null || str == "") return "";
-
   return encodeURIComponent(str).replace(/[!'()]/g, escape).replace(/\*/g, "%2A");
 };
 
