@@ -156,4 +156,3 @@
       userCallback: callback});
   };
 })();
-

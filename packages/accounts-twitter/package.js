@@ -9,7 +9,7 @@ Package.on_use(function(api) {
   api.use('templating', 'client');
 
   api.add_files(
-    ['twitter_configure.html', 'twitter_configure.js'],
+    ['twitter_login_button.css', 'twitter_configure.html', 'twitter_configure.js'],
     'client');
 
   api.add_files('twitter_common.js', ['client', 'server']);

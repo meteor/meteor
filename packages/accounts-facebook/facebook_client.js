@@ -27,7 +27,6 @@
 
     Accounts.oauth.initiateLogin(state, loginUrl, callback);
   };
-
 })();
 
 
