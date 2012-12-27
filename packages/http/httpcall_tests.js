@@ -294,7 +294,6 @@ testAsyncMulti("httpcall - headers", [
 
 testAsyncMulti("httpcall - params", [
   function(test, expect) {
-
     var do_test = function(method, url, params, opt_opts, expect_url, expect_body) {
       var opts = {};
       if (typeof opt_opts === "string") {
@@ -324,6 +323,8 @@ testAsyncMulti("httpcall - params", [
     do_test("GET", "/", {foo:"bar", fruit:"apple"}, "/?foo=bar&fruit=apple", "");
     do_test("POST", "/", {foo:"bar", fruit:"apple"}, "/", "foo=bar&fruit=apple");
     do_test("POST", "/", {foo:"bar", fruit:"apple"}, "/", "foo=bar&fruit=apple");
+    do_test("GET", "/", {'foo!':"bang!"}, {}, "/?foo%21=bang%21", "");
+    do_test("POST", "/", {'foo!':"bang!"}, {}, "/", "foo%21=bang%21");
     do_test("POST", "/", {foo:"bar", fruit:"apple"}, {
       content: "stuff!"}, "/?foo=bar&fruit=apple", "stuff!");
     do_test("POST", "/", {foo:"bar", greeting:"Hello World"}, {
