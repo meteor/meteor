@@ -25,6 +25,4 @@
 
     Accounts.oauth.initiateLogin(state, loginUrl, callback, {width: 900, height: 450});
   };
-
-  Accounts._loginButtons.loginServices.push('github');
 }) ();

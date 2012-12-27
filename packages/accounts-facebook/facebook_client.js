@@ -27,8 +27,6 @@
 
     Accounts.oauth.initiateLogin(state, loginUrl, callback);
   };
-
-  Accounts._loginButtons.loginServices.push('facebook');
 })();
 
 

@@ -115,24 +115,50 @@
     return '';
   };
 
-  Accounts._loginButtons.loginServices = [];
-
+  // returns an array of the login services used by this app. each
+  // element of the array is an object (eg {name: 'facebook'}), since
+  // that makes it useful in combination with handlebars {{#each}}.
+  //
+  // NOTE: It is very important to have this return password last
+  // because of the way we render the different providers in
+  // login_buttons_dropdown.html
   Accounts._loginButtons.getLoginServices = function () {
-    var self = this, 
-        services = self.loginServices, // memoize services array
-        passwordIndex = services.indexOf("password"), // memoize password idx.
-        lastServiceAt = services.length - 1, // memoize last service idx.
-        lastService = _.last(services); // in case we need to swap anything
+    var self = this;
+    var services = [];
 
-    // make sure to put password last, since this is how it is styled
-    // if we had found password, swap w last service
-    if (passwordIndex !== -1) { 
-      services[lastServiceAt] = services[passwordIndex];
-      services[passwordIndex] = lastService;
-    }
+    // find all methods of the form: `Meteor.loginWithFoo`, where
+    // `Foo` corresponds to a login service
+    //
+    // XXX we should consider having a client-side
+    // Accounts.oauth.registerService function which records the
+    // active services and encapsulates boilerplate code now found in
+    // files such as facebook_client.js. This would have the added
+    // benefit of allow us to unify facebook_{client,common,server}.js
+    // into one file, which would encourage people to build more login
+    // services packages.
+    _.each(_.keys(Meteor), function(methodName) {
+      var match;
+      if ((match = methodName.match(/^loginWith(.*)/))) {
+        var serviceName = match[1].toLowerCase();
 
-    return _.map(services, function(service) { 
-      return {name: service};
+        // HACKETY HACK. needed to not match
+        // Meteor.loginWithToken. See XXX above.
+        if (Accounts[serviceName])
+          services.push(match[1].toLowerCase());
+      }
+    });
+
+    // Be equally kind to all login services. This also preserves
+    // backwards-compatibility. (But maybe order should be
+    // configurable?)
+    services.sort();
+
+    // ensure password is last
+    if (_.contains(services, 'password'))
+      services = _.without(services, 'password').concat(['password']);
+
+    return _.map(services, function(name) {
+      return {name: name};
     });
   };
 
