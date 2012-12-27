@@ -9,7 +9,7 @@ Package.on_use(function(api) {
   api.use('templating', 'client');
 
   api.add_files(
-    ['github_configure.html', 'github_configure.js'],
+    ['github_login_button.css', 'github_configure.html', 'github_configure.js'],
     'client');
 
   api.add_files('github_common.js', ['client', 'server']);

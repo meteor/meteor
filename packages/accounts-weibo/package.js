@@ -9,7 +9,7 @@ Package.on_use(function(api) {
   api.use('templating', 'client');
 
   api.add_files(
-    ['weibo_configure.html', 'weibo_configure.js'],
+    ['weibo_login_button.css', 'weibo_configure.html', 'weibo_configure.js'],
     'client');
 
   api.add_files('weibo_common.js', ['client', 'server']);
