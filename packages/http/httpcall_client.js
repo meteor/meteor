@@ -20,9 +20,13 @@ Meteor.http = Meteor.http || {};
 
     method = (method || "").toUpperCase();
 
+    var headers = {};
+
     var content = options.content;
-    if (options.data)
+    if (options.data) {
       content = JSON.stringify(options.data);
+      headers['Content-Type'] = 'application/json';
+    }
 
     var params_for_url, params_for_body;
     if (content || method === "GET" || method === "HEAD")
@@ -50,6 +54,8 @@ Meteor.http = Meteor.http || {};
     if (params_for_body) {
       content = Meteor.http._encodeParams(params_for_body);
     }
+
+    _.extend(headers, options.headers || {});
 
     ////////// Callback wrapping //////////
 
@@ -84,9 +90,8 @@ Meteor.http = Meteor.http || {};
 
       xhr.open(method, url, true, username, password);
 
-      if (options.headers)
-        for (var k in options.headers)
-          xhr.setRequestHeader(k, options.headers[k]);
+      for (var k in headers)
+        xhr.setRequestHeader(k, headers[k]);
 
 
       // setup timeout
