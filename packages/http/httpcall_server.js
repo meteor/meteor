@@ -27,9 +27,13 @@ Meteor.http = Meteor.http || {};
 
     var url_parts = url_util.parse(url);
 
+    var headers = {};
+
     var content = options.content;
-    if (options.data)
+    if (options.data) {
       content = JSON.stringify(options.data);
+      headers['Content-Type'] = 'application/json';
+    }
 
 
     var params_for_url, params_for_body;
@@ -41,9 +45,6 @@ Meteor.http = Meteor.http || {};
     var new_url = Meteor.http._buildUrl(
       url_parts.protocol+"//"+url_parts.host+url_parts.pathname,
       url_parts.search, options.query, params_for_url);
-
-
-    var headers = {};
 
     if (options.auth) {
       if (options.auth.indexOf(':') < 0)

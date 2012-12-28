@@ -222,6 +222,20 @@ testAsyncMulti("httpcall - methods", [
         test.equal(result.statusCode, 200);
         var data = result.data;
         test.equal(data.body, {greeting: "Hello World!"});
+        test.equal(data.headers['content-type'], 'application/json');
+      }));
+
+    Meteor.http.call(
+      "POST", url_prefix()+"/data-test-explicit",
+      { data: {greeting: "Hello World!"},
+        headers: {'Content-Type': 'text/stupid'} },
+      expect(function(error, result) {
+        test.isFalse(error);
+        test.isTrue(result);
+        test.equal(result.statusCode, 200);
+        var data = result.data;
+        test.equal(data.body, {greeting: "Hello World!"});
+        test.equal(data.headers['content-type'], 'text/stupid');
       }));
   }
 ]);
