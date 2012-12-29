@@ -86,26 +86,6 @@ Fiber(function () {
     process.exit(1);
   };
 
-  var getSettings = function (filename) {
-    var str;
-    try {
-      str = fs.readFileSync(filename, "utf8");
-    } catch (e) {
-      throw new Error("Could not find settings file " + filename);
-    }
-    if (str.length > 0x10000) {
-      throw new Error("Settings file must be less than 64 KB long");
-    }
-    // Ensure that the string is parseable in JSON, but there's
-    // no reason to use the object value of it yet.
-    if (str.match(/\S/)) {
-      JSON.parse(str);
-      return str;
-    } else {
-      return "";
-    }
-  };
-
   // XXX when the pass unexpected argument or unrecognized flags, print
   // an error and fail out
 
@@ -143,14 +123,11 @@ Fiber(function () {
         process.stdout.write(opt.help());
         process.exit(1);
       }
-      if (new_argv.settings) {
-        settings = getSettings(new_argv.settings);
-      }
 
       var app_dir = path.resolve(require_project("run", true)); // app or package
 
       var bundle_opts = { no_minify: !new_argv.production, symlink_dev_bundle: true };
-      runner.run(app_dir, bundle_opts, new_argv.port, new_argv.once, settings);
+      runner.run(app_dir, bundle_opts, new_argv.port, new_argv.once, new_argv.settings);
     }
   });
 
@@ -581,7 +558,7 @@ Fiber(function () {
       } else {
         var settings = undefined;
         if (new_argv.settings)
-          settings = getSettings(new_argv.settings);
+          settings = runner.getSettings(new_argv.settings);
         // accept packages iff we're deploying tests
         var project_dir = path.resolve(require_project("bundle", new_argv.tests));
         deploy.deploy_app(new_argv._[1], project_dir, new_argv.debug,
