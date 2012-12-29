@@ -73,6 +73,9 @@
   Meteor. While the trailing `/sockjs` is required in these URLs, it is no
   longer supported in scheme-less URLs passed to `Meteor.connect`.
 
+* When JSON data is provided to functions like `Meteor.http.post`, the
+  `Content-Type` header now defaults to `application/json`.
+
 * Improvements to `jsparse`: hex literals, keywords as property names, ES5 line
   continuations, trailing commas in object literals, line numbers in error
   messages, decimal literals starting with `.`, regex character classes with
