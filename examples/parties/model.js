@@ -153,10 +153,19 @@ var displayName = function (user) {
   return user.emails[0].address;
 };
 
+//Return user email or null
 var contactEmail = function (user) {
   if (user.emails && user.emails.length)
     return user.emails[0].address;
-  if (user.services && user.services.facebook && user.services.facebook.email)
-    return user.services.facebook.email;
+  //Check if the user logged in via service
+  if (user.services) {
+    //Iterate through services
+    for (var serviceName in user.services) {
+      var serviceObject = user.services[serviceName];
+      //If an email or id isset then assume valid service
+      if (serviceObject.email)
+        return serviceObject.email;
+    }  //EO iteration
+  } //EO user.services
   return null;
 };
