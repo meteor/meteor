@@ -27,7 +27,9 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+(function() {
 
+var HEX_DIGITS = "0123456789abcdef";
 LocalCollection._Alea = function () {
   function Mash() {
     var n = 0xefc8249d;
@@ -101,20 +103,72 @@ LocalCollection._Alea = function () {
   } (Array.prototype.slice.call(arguments)));
 }
 
-// instantiate RNG.  use the default seed, which is current time.
-LocalCollection.random = new LocalCollection._Alea();
+// instantiate RNG.  Heuristically collect entropy from various sources
+
+// client sources
+var height = (typeof window !== 'undefined' && window.innerHeight) ||
+      (typeof document !== 'undefined' && document.documentElement && document.documentElement.clientHeight) ||
+      (typeof document !== 'undefined' && document.body && document.body.clientHeight) ||
+      1;
+
+var width = (typeof window !== 'undefined' && window.innerWidth) ||
+      (typeof document !== 'undefined' && document.documentElement && document.documentElement.clientWidth) ||
+      (typeof document !== 'undefined' && document.body && document.body.clientWidth) ||
+      1;
+
+var agent = (typeof navigator !== 'undefined' && navigator.userAgent) || "";
+
+// server sources
+var pid = (typeof process !== 'undefined' && process.pid) || 1;
+
+LocalCollection.random = new LocalCollection._Alea([new Date(), height, width, agent, pid, Math.random()]);
+
+LocalCollection._isObjectId = function (str) {
+  return str.length === 24 && str.match(/^[0-9a-f]*$/);
+};
+
+LocalCollection._ObjectId = function (hexString) {
+  //random-based impl of Mongo ObjectId
+  var self = this;
+  if (hexString) {
+    hexString = hexString.toLowerCase();
+    if (!LocalCollection._isObjectId(hexString)) {
+      throw new Error("Invalid hexidecimal string for creating an ObjectId");
+    }
+    self.str = hexString;
+  } else {
+    var digits = [];
+    for (var i = 0; i < 24; i++) {
+      digits[i] = HEX_DIGITS.substr(Math.floor(LocalCollection.random() * 0x10), 1);
+    }
+    self.str = digits.join("");
+  }
+};
+
+LocalCollection._ObjectId.prototype.toString = function () {
+  var self = this;
+  return "ObjectId(\"" + self.str + "\")";
+};
+
+LocalCollection._ObjectId.prototype.equals = function (other) {
+  var self = this;
+  return self.valueOf() === other.valueOf();
+};
+
+LocalCollection._ObjectId.prototype.valueOf = function () { return this.str; };
 
 // RFC 4122 v4 UUID.
 LocalCollection.uuid = function () {
   var s = [];
-  var hexDigits = "0123456789abcdef";
   for (var i = 0; i < 36; i++) {
-    s[i] = hexDigits.substr(Math.floor(LocalCollection.random() * 0x10), 1);
+    s[i] = HEX_DIGITS.substr(Math.floor(LocalCollection.random() * 0x10), 1);
   }
   s[14] = "4";
-  s[19] = hexDigits.substr((parseInt(s[19],16) & 0x3) | 0x8, 1);
+  s[19] = HEX_DIGITS.substr((parseInt(s[19],16) & 0x3) | 0x8, 1);
   s[8] = s[13] = s[18] = s[23] = "-";
 
   var uuid = s.join("");
   return uuid;
-}
+};
+
+})();

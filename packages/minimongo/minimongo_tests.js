@@ -1450,6 +1450,15 @@ Tinytest.add("minimongo - saveOriginals errors", function (test) {
   test.throws(function () { c.saveOriginals(); });
 });
 
+Tinytest.add("minimongo - objectid", function (test) {
+  var randomOid = new LocalCollection._ObjectId();
+  var anotherRandomOid = new LocalCollection._ObjectId();
+  test.notEqual(randomOid, anotherRandomOid);
+  test.throws(function() { new LocalCollection._ObjectId("qqqqqqqqqqqqqqqqqqqqqqqq");});
+  test.throws(function() { new LocalCollection._ObjectId("ABCDEF"); });
+  test.equal(randomOid, new LocalCollection._ObjectId(randomOid.valueOf()));
+});
+
 Tinytest.add("minimongo - pause", function (test) {
   var operations = [];
   var cbs = log_callbacks(operations);
