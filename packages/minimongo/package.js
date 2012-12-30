@@ -16,7 +16,8 @@ Package.on_use(function (api, where) {
     'sort.js',
     'uuid.js',
     'modify.js',
-    'diff.js'
+    'diff.js',
+    'objectid.js'
   ], where);
 });
 

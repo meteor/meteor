@@ -1450,6 +1450,16 @@ Tinytest.add("minimongo - saveOriginals errors", function (test) {
   test.throws(function () { c.saveOriginals(); });
 });
 
+Tinytest.add("minimongo - objectid transformation", function (test) {
+  var randomOid = new LocalCollection._ObjectId();
+  test.equal(randomOid, LocalCollection._idFromDDP(LocalCollection._idToDDP(randomOid)));
+  test.equal("FOO", LocalCollection._idFromDDP(LocalCollection._idToDDP("FOO")));
+  test.equal("ffffffffffff", LocalCollection._idFromDDP(LocalCollection._idToDDP("ffffffffffff")));
+  test.equal("ffffffffffff", LocalCollection._idToDDP(LocalCollection._idFromDDP("ffffffffffff")));
+  test.equal("--a string", LocalCollection._idFromDDP(LocalCollection._idToDDP("--a string")));
+});
+
+
 Tinytest.add("minimongo - objectid", function (test) {
   var randomOid = new LocalCollection._ObjectId();
   var anotherRandomOid = new LocalCollection._ObjectId();

@@ -172,3 +172,7 @@ LocalCollection.uuid = function () {
 };
 
 })();
+
+if (typeof Meteor === 'undefined' || Meteor.isClient) {
+  ObjectId = LocalCollection._ObjectId;
+}
