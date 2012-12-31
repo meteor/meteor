@@ -171,11 +171,13 @@ Fiber(function () {
     func: function (argv) {
       // reparse args
       var opt = require('optimist')
+            .describe('split', 'Split the client-side and server-side code.')
             .describe('example', 'Example template to use.')
             .boolean('list')
             .describe('list', 'Show list of available examples.')
             .usage(
               "Usage: meteor create <name>\n" +
+                "       meteor create --split <name>\n" +
                 "       meteor create --example <example_name> [<name>]\n" +
                 "       meteor create --list\n" +
                 "\n" +
@@ -187,6 +189,7 @@ Fiber(function () {
 
       var new_argv = opt.argv;
       var appname;
+      var skel = 'skel'
 
       var example_dir = path.join(__dirname, '..', '..', 'examples');
       var examples = _.reject(fs.readdirSync(example_dir), function (e) {
@@ -197,6 +200,9 @@ Fiber(function () {
         appname = argv._[0];
       } else if (argv._.length === 0 && new_argv.example) {
         appname = new_argv.example;
+      } else if (argv._.length === 0 && new_argv.split) {
+        appname = new_argv.split;
+        skel='skel-split'
       }
 
       if (new_argv['list']) {
@@ -240,7 +246,7 @@ Fiber(function () {
           });
         }
       } else {
-        files.cp_r(path.join(__dirname, 'skel'), appname, {
+        files.cp_r(path.join(__dirname, skel), appname, {
           transform_filename: function (f) {
             return transform(f);
           },
