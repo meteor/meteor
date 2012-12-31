@@ -8,7 +8,7 @@ METEOR=`pwd`/../meteor
 
 #If this ever takes more options, use getopt
 if [ "$1" == "--global" ]; then
-	METEOR=/usr/local/bin/meteor
+	METEOR=meteor
 fi
 
 DIR=`mktemp -d -t meteor-cli-test-XXXXXXXX`
