@@ -20,6 +20,7 @@ if [ "$EMACS" == t ]; then
 fi
 
 "$TOPDIR/dev_bundle/bin/node" "$@"
+EXITSTATUS=$?
 
 # Node sets stdin to non-blocking, which causes Emacs shell to die after it
 # exits. Work around this by setting stdin to blocking again.
@@ -27,3 +28,5 @@ if [ "$EMACS" == t ]; then
     perl -MFcntl=F_GETFL,F_SETFL,O_NONBLOCK -e \
         'fcntl(STDIN, F_SETFL, ~O_NONBLOCK & fcntl(STDIN, F_GETFL, 0))'
 fi
+
+exit $EXITSTATUS
