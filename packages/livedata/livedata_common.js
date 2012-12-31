@@ -46,6 +46,11 @@ _.extend(Meteor._MethodInvocation.prototype, {
 var customTypes = {};
 // Add a custom type, using a method of your choice to get to and
 // from a basic JSON-able representation.
+// The type you add must have:
+// - A clone() method, so that Meteor can deep-copy it when necessary.
+// - A equals() method, so that Meteor can compare it
+// - A serializeForEval() method, so that Meteor can compile it into selectors
+// It is okay if these methods are monkey-patched on.
 // XXX: doc this
 Meteor.addCustomType = function (typeName, toBasic, fromBasic, recognize) {
   if (_.has(customTypes, typeName))
