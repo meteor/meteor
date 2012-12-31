@@ -377,8 +377,9 @@ _.extend(SynchronousCursor.prototype, {
     while (true) {
       var doc = self._synchronousNextObject().wait();
       if (!doc || !doc._id) return null;
-      if (self._visitedIds[doc._id]) continue;
-      self._visitedIds[doc._id] = true;
+      var strId = LocalCollection._idToDDP(doc._id);
+      if (self._visitedIds[strId]) continue;
+      self._visitedIds[strId] = true;
       return doc;
     }
   },

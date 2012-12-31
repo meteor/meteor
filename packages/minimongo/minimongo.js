@@ -71,9 +71,9 @@ LocalCollection.Cursor = function (collection, selector, options) {
 
   this.collection = collection;
 
-  if ((typeof selector === "string") || (typeof selector === "number")) {
+  if ((typeof selector === "string") || (typeof selector === "number") || selector instanceof LocalCollection._ObjectID) {
     // stash for fast path
-    this.selector_id = selector;
+    this.selector_id = LocalCollection._idToDDP(selector);
     this.selector_f = LocalCollection._compileSelector(selector);
   } else {
     this.selector_f = LocalCollection._compileSelector(selector);
@@ -348,18 +348,19 @@ LocalCollection.Cursor.prototype._markAsReactive = function (options) {
 LocalCollection.prototype.insert = function (doc) {
   var self = this;
   doc = LocalCollection._deepcopy(doc);
-  // XXX deal with mongo's binary id type?
-  if (!('_id' in doc))
+
+  if (!_.has(doc, '_id')) {
     doc._id = LocalCollection.uuid();
+  }
+  var id = LocalCollection._idToDDP(doc._id);
 
-  if (_.has(self.docs, doc._id))
-    throw new Error("Duplicate _id '" + doc._id + "'");
+  if (_.has(self.docs, id))
+    throw new Error("Duplicate _id '" + id + "'");
 
-  self._saveOriginal(doc._id, undefined);
-  self.docs[doc._id] = doc;
+  self._saveOriginal(id, undefined);
+  self.docs[id] = doc;
 
   var queriesToRecompute = [];
-
   // trigger live queries that match
   for (var qid in self.queries) {
     var query = self.queries[qid];
@@ -473,7 +474,8 @@ LocalCollection.prototype._modifyAndNotify = function (
     } else {
       // Because we don't support skip or limit (yet) in unordered queries, we
       // can just do a direct lookup.
-      matched_before[qid] = _.has(query.results, doc._id);
+      matched_before[qid] = _.has(query.results,
+                                  LocalCollection._idToDDP(doc._id));
     }
   }
 
@@ -551,7 +553,7 @@ LocalCollection._insertInResults = function (query, doc) {
     }
   } else {
     query.added(LocalCollection._deepcopy(doc));
-    query.results[doc._id] = doc;
+    query.results[LocalCollection._idToDDP(doc._id)] = doc;
   }
 };
 
@@ -561,22 +563,23 @@ LocalCollection._removeFromResults = function (query, doc) {
     query.removed(doc, i);
     query.results.splice(i, 1);
   } else {
-    var id = doc._id;  // in case callback mutates doc
+    var id = LocalCollection._idToDDP(doc._id);  // in case callback mutates doc
     query.removed(doc);
     delete query.results[id];
   }
 };
 
 LocalCollection._updateInResults = function (query, doc, old_doc) {
-  if (doc._id !== old_doc._id)
+  if (!_.isEqual(doc._id, old_doc._id))
     throw new Error("Can't change a doc's _id while updating");
 
   if (!query.ordered) {
     query.changed(LocalCollection._deepcopy(doc), old_doc);
-    query.results[doc._id] = doc;
+    query.results[LocalCollection._idToDDP(doc._id)] = doc;
     return;
   }
 
+  //XXX
   var orig_idx = LocalCollection._findInOrderedResults(query, doc);
   query.changed(LocalCollection._deepcopy(doc), orig_idx, old_doc);
 

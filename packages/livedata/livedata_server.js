@@ -359,7 +359,7 @@ _.extend(Meteor._LivedataSession.prototype, {
       self.initialized = true;
       Fiber(function () {
         _.each(self.server.universal_publish_handlers, function (handler) {
-          self._startSubscription(handler, self.next_sub_priority--);
+          self._startSubscription(handler);
         });
       }).run();
     }
@@ -514,7 +514,7 @@ _.extend(Meteor._LivedataSession.prototype, {
         return;
 
       var handler = self.server.publish_handlers[msg.name];
-      self._startSubscription(handler, self.next_sub_priority--,
+      self._startSubscription(handler,
                               msg.id, msg.params);
     },
 
@@ -678,10 +678,10 @@ _.extend(Meteor._LivedataSession.prototype, {
     // should make it automatic.
   },
 
-  _startSubscription: function (handler, priority, sub_id, params) {
+  _startSubscription: function (handler, sub_id, params) {
     var self = this;
 
-    var sub = new Meteor._LivedataSubscription(self, sub_id, priority);
+    var sub = new Meteor._LivedataSubscription(self, sub_id);
     if (sub_id)
       self.named_subs[sub_id] = sub;
     else
@@ -752,7 +752,7 @@ _.extend(Meteor._LivedataSession.prototype, {
 /******************************************************************************/
 
 // ctor for a sub handle: the input to each publish function
-Meteor._LivedataSubscription = function (session, subscriptionId, priority) {
+Meteor._LivedataSubscription = function (session, subscriptionId) {
   var self = this;
   // LivedataSession
   self._session = session;
@@ -776,6 +776,20 @@ Meteor._LivedataSubscription = function (session, subscriptionId, priority) {
 
   // Part of the public API: the user of this sub.
   self.userId = session.userId;
+
+  // For now, the id filter is going to default to
+  // the to/from DDP methods on LocalCollection, to
+  // specifically deal with mongo/minimongo ObjectIds.
+
+  // Later, you will be able to make this be "raw"
+  // if you want to publish a collection that you know
+  // just has strings for keys and no funny business, to
+  // a ddp consumer that isn't minimongo
+
+  self._idFilter = {
+    idToDDP: LocalCollection._idToDDP,
+    idFromDDP: LocalCollection._idFromDDP
+  };
 };
 
 _.extend(Meteor._LivedataSubscription.prototype, {
@@ -805,17 +819,20 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
   added: function (collectionName, id, fields) {
     var self = this;
+    id = self._idFilter.idToDDP(id);
     Meteor._ensure(self._documents, collectionName)[id] = true;
     self._session.added(self._subscriptionId, collectionName, id, fields);
   },
 
   changed: function (collectionName, id, fields) {
     var self = this;
+    id = self._idFilter.idToDDP(id);
     self._session.changed(self._subscriptionId, collectionName, id, fields);
   },
 
   removed: function (collectionName, id) {
     var self = this;
+    id = self._idFilter.idToDDP(id);
     // We don't bother to delete sets of things in a collection if the
     // collection is empty.  It could break _removeAllDocuments.
     delete self._documents[collectionName][id];
