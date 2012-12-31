@@ -77,7 +77,8 @@ echo "... run"
 MONGOMARK='--bind_ip 127.0.0.1 --smallfiles --port 9102'
 # kill any old test meteor
 # there is probably a better way to do this, but it is at least portable across macos and linux
-ps ax | grep -e 'meteor.js -p 9100' | grep -v grep | awk '{print $1}' | xargs kill
+# (the || true is needed on linux, whose xargs will invoke kill even with no args)
+ps ax | grep -e 'meteor.js -p 9100' | grep -v grep | awk '{print $1}' | xargs kill || true
 
 ! $METEOR mongo > /dev/null 2>&1
 $METEOR reset > /dev/null 2>&1
@@ -117,7 +118,7 @@ ps ax | grep -e "$MONGOMARK" | grep -v grep > /dev/null
 curl -s "http://localhost:$PORT" > /dev/null
 
 kill $METEOR_PID
-ps ax | grep -e "$MONGOMARK" | grep -v grep | awk '{print $1}' | xargs kill
+ps ax | grep -e "$MONGOMARK" | grep -v grep | awk '{print $1}' | xargs kill || true
 
 echo "... mongo message"
 
