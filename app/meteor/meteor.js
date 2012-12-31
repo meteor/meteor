@@ -202,7 +202,7 @@ Fiber(function () {
         appname = new_argv.example;
       } else if (argv._.length === 0 && new_argv.split) {
         appname = new_argv.split;
-        skel='skel-split';
+        skel = 'skel-split';
       }
 
       if (new_argv['list']) {
