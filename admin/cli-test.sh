@@ -90,7 +90,7 @@ PORT=9100
 $METEOR -p $PORT > /dev/null 2>&1 &
 METEOR_PID=$!
 
-sleep 1 # XXX XXX lame
+sleep 2 # XXX XXX lame
 
 test -d .meteor/local/db
 ps ax | grep -e "$MONGOMARK" | grep -v grep > /dev/null
@@ -112,14 +112,14 @@ echo "... rerun"
 $METEOR -p $PORT > /dev/null 2>&1 &
 METEOR_PID=$!
 
-sleep 1 # XXX XXX lame
+sleep 2 # XXX XXX lame
 
 ps ax | grep -e "$MONGOMARK" | grep -v grep > /dev/null
 curl -s "http://localhost:$PORT" > /dev/null
 
 kill $METEOR_PID
 ps ax | grep -e "$MONGOMARK" | grep -v grep | awk '{print $1}' | xargs kill || true
-sleep 1 # need to make sure these kills take effect
+sleep 2 # need to make sure these kills take effect
 
 echo "... mongo message"
 
