@@ -1850,10 +1850,10 @@ Tinytest.add("spark - leaderboard", function(test) {
     var html = Spark.list(
       players.find({}, {sort: {score: -1}}),
       function(player) {
-        return Spark.labelBranch(player._id, function () {
+        return Spark.labelBranch(player._id.valueOf(), function () {
           return Spark.isolate(function () {
             var style;
-            if (selected_player.get() === player._id)
+            if (_.isEqual(selected_player.get(), player._id))
               style = "player selected";
             else
               style = "player";

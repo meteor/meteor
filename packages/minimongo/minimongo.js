@@ -350,7 +350,7 @@ LocalCollection.prototype.insert = function (doc) {
   doc = LocalCollection._deepcopy(doc);
 
   if (!_.has(doc, '_id')) {
-    doc._id = LocalCollection.uuid();
+    doc._id = new LocalCollection._ObjectID();
   }
   var id = LocalCollection._idToDDP(doc._id);
 
@@ -385,8 +385,9 @@ LocalCollection.prototype.remove = function (selector) {
 
   // Avoid O(n) for "remove a single doc by ID".
   if (LocalCollection._selectorIsId(selector)) {
-    if (_.has(self.docs, selector))
-      remove.push(selector);
+    var strId = LocalCollection._idToDDP(selector);
+    if (_.has(self.docs, strId))
+      remove.push(strId);
   } else {
     var selector_f = LocalCollection._compileSelector(selector);
     for (var id in self.docs) {

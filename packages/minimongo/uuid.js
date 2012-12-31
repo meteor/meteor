@@ -161,6 +161,11 @@ LocalCollection._ObjectID.prototype.clone = function () {
 
 LocalCollection._ObjectID.prototype.valueOf = function () { return this.str; };
 
+LocalCollection._ObjectID.prototype.serializeForEval = function () {
+  var self = this;
+  return "new LocalCollection._ObjectID(\"" + self.str + "\")";
+};
+
 // RFC 4122 v4 UUID.
 LocalCollection.uuid = function () {
   var s = [];

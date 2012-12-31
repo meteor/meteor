@@ -121,6 +121,9 @@ LocalCollection._f = {
       // the ecmascript spec but in practice most implementations
       // preserve it. (The exception is Chrome, which preserves it
       // usually, but not for keys that parse as ints.)
+      if (typeof a.equals === 'function' && typeof b.equals === 'function') {
+        return a.equals(b);
+      }
       var b_keys = [];
       for (var x in b)
         b_keys.push(x);
@@ -288,7 +291,7 @@ LocalCollection._compileSelector = function (selector) {
 
 // Is this selector just shorthand for lookup by _id?
 LocalCollection._selectorIsId = function (selector) {
-  return (typeof selector === "string") || (typeof selector === "number");
+  return (typeof selector === "string") || (typeof selector === "number") || selector instanceof LocalCollection._ObjectID;
 };
 
 // Given an arbitrary Mongo-style query selector, return an expression
@@ -446,6 +449,8 @@ LocalCollection._exprForValueTest = function (value, literals) {
     // note that typeof(/a/) === 'function' in javascript
     // XXX improve error
     throw Error("Bad value type in query");
+  } else if (value.serializeForEval) {
+    expr = 'f._equal(x,' + value.serializeForEval() + ')';
   } else {
     // array or literal document
     expr = 'f._equal(x,' + JSON.stringify(value) + ')';
