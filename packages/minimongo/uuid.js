@@ -123,17 +123,17 @@ var pid = (typeof process !== 'undefined' && process.pid) || 1;
 
 LocalCollection.random = new LocalCollection._Alea([new Date(), height, width, agent, pid, Math.random()]);
 
-LocalCollection._isObjectId = function (str) {
+LocalCollection._isObjectID = function (str) {
   return str.length === 24 && str.match(/^[0-9a-f]*$/);
 };
 
-LocalCollection._ObjectId = function (hexString) {
-  //random-based impl of Mongo ObjectId
+LocalCollection._ObjectID = function (hexString) {
+  //random-based impl of Mongo ObjectID
   var self = this;
   if (hexString) {
     hexString = hexString.toLowerCase();
-    if (!LocalCollection._isObjectId(hexString)) {
-      throw new Error("Invalid hexidecimal string for creating an ObjectId");
+    if (!LocalCollection._isObjectID(hexString)) {
+      throw new Error("Invalid hexidecimal string for creating an ObjectID");
     }
     self.str = hexString;
   } else {
@@ -145,17 +145,21 @@ LocalCollection._ObjectId = function (hexString) {
   }
 };
 
-LocalCollection._ObjectId.prototype.toString = function () {
+LocalCollection._ObjectID.prototype.toString = function () {
   var self = this;
-  return "ObjectId(\"" + self.str + "\")";
+  return "ObjectID(\"" + self.str + "\")";
 };
 
-LocalCollection._ObjectId.prototype.equals = function (other) {
+LocalCollection._ObjectID.prototype.equals = function (other) {
   var self = this;
   return self.valueOf() === other.valueOf();
 };
+LocalCollection._ObjectID.prototype.clone = function () {
+  var self = this;
+  return new LocalCollection._ObjectID(self.str);
+};
 
-LocalCollection._ObjectId.prototype.valueOf = function () { return this.str; };
+LocalCollection._ObjectID.prototype.valueOf = function () { return this.str; };
 
 // RFC 4122 v4 UUID.
 LocalCollection.uuid = function () {
@@ -172,7 +176,3 @@ LocalCollection.uuid = function () {
 };
 
 })();
-
-if (typeof Meteor === 'undefined' || Meteor.isClient) {
-  ObjectId = LocalCollection._ObjectId;
-}

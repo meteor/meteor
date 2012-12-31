@@ -1,5 +1,7 @@
 // manager, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
+
+
 Meteor.Collection = function (name, options) {
   var self = this;
   if (options && options.methods) {
@@ -377,6 +379,29 @@ Meteor.Collection.prototype._ensureIndex = function (index, options) {
     addValidator.call(this, 'deny', options);
   };
 })();
+
+if (Meteor.isClient) {
+  Meteor.Collection.ObjectID = LocalCollection._ObjectID;
+} else {
+  Meteor.Collection.ObjectID = (function () {
+    var ObjectID = __meteor_bootstrap__.require('mongodb').ObjectID;
+    ObjectID.prototype.clone = function () { return new ObjectID(this.toHexString());};
+    return ObjectID;
+  })();
+}
+
+Meteor.addCustomType(
+  "oid",
+  function (id) {
+    return id.valueOf();
+  }, function (str) {
+    return new Meteor.Collection.ObjectID(str);
+  }, function (thing) {
+    var ret = thing instanceof Meteor.Collection.ObjectID;
+    return ret;
+  });
+
+
 
 Meteor.Collection.prototype._defineMutationMethods = function() {
   var self = this;

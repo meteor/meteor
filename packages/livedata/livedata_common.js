@@ -48,7 +48,7 @@ var customTypes = {};
 // from a basic JSON-able representation.
 // XXX: doc this
 Meteor.addCustomType = function (typeName, toBasic, fromBasic, recognize) {
-  if (_.has(customTypes), typeName)
+  if (_.has(customTypes, typeName))
     throw new Error("Type " + typeName + " already present");
   customTypes[typeName] = {toBasic: toBasic, fromBasic: fromBasic, recognize: recognize};
 };

@@ -1451,7 +1451,7 @@ Tinytest.add("minimongo - saveOriginals errors", function (test) {
 });
 
 Tinytest.add("minimongo - objectid transformation", function (test) {
-  var randomOid = new LocalCollection._ObjectId();
+  var randomOid = new LocalCollection._ObjectID();
   test.equal(randomOid, LocalCollection._idFromDDP(LocalCollection._idToDDP(randomOid)));
   test.equal("FOO", LocalCollection._idFromDDP(LocalCollection._idToDDP("FOO")));
   test.equal("ffffffffffff", LocalCollection._idFromDDP(LocalCollection._idToDDP("ffffffffffff")));
@@ -1461,12 +1461,12 @@ Tinytest.add("minimongo - objectid transformation", function (test) {
 
 
 Tinytest.add("minimongo - objectid", function (test) {
-  var randomOid = new LocalCollection._ObjectId();
-  var anotherRandomOid = new LocalCollection._ObjectId();
+  var randomOid = new LocalCollection._ObjectID();
+  var anotherRandomOid = new LocalCollection._ObjectID();
   test.notEqual(randomOid, anotherRandomOid);
-  test.throws(function() { new LocalCollection._ObjectId("qqqqqqqqqqqqqqqqqqqqqqqq");});
-  test.throws(function() { new LocalCollection._ObjectId("ABCDEF"); });
-  test.equal(randomOid, new LocalCollection._ObjectId(randomOid.valueOf()));
+  test.throws(function() { new LocalCollection._ObjectID("qqqqqqqqqqqqqqqqqqqqqqqq");});
+  test.throws(function() { new LocalCollection._ObjectID("ABCDEF"); });
+  test.equal(randomOid, new LocalCollection._ObjectID(randomOid.valueOf()));
 });
 
 Tinytest.add("minimongo - pause", function (test) {

@@ -113,6 +113,17 @@ testAsyncMulti("livedata - basic method invocation", [
   },
 
   function (test, expect) {
+    var d = new Meteor.Collection.ObjectID();
+    //debugger;
+    if (Meteor.isServer)
+      test.equal(Meteor.call("echo", d), [d]);
+    if (Meteor.isClient)
+      test.equal(Meteor.call("echo", d), undefined);
+
+    test.equal(Meteor.call("echo", d, expect(undefined, [d])), undefined);
+  },
+
+  function (test, expect) {
     var l = {$date: 30};
     if (Meteor.isServer)
       test.equal(Meteor.call("echo", l), [l]);
