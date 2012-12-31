@@ -119,6 +119,7 @@ curl -s "http://localhost:$PORT" > /dev/null
 
 kill $METEOR_PID
 ps ax | grep -e "$MONGOMARK" | grep -v grep | awk '{print $1}' | xargs kill || true
+sleep 1 # need to make sure these kills take effect
 
 echo "... mongo message"
 
