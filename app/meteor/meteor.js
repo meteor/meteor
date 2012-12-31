@@ -189,7 +189,7 @@ Fiber(function () {
 
       var new_argv = opt.argv;
       var appname;
-      var skel = 'skel'
+      var skel = 'skel';
 
       var example_dir = path.join(__dirname, '..', '..', 'examples');
       var examples = _.reject(fs.readdirSync(example_dir), function (e) {
@@ -202,7 +202,7 @@ Fiber(function () {
         appname = new_argv.example;
       } else if (argv._.length === 0 && new_argv.split) {
         appname = new_argv.split;
-        skel='skel-split'
+        skel='skel-split';
       }
 
       if (new_argv['list']) {
