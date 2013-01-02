@@ -125,14 +125,17 @@ sleep 2 # need to make sure these kills take effect
 
 echo "... mongo message"
 
-nc -l localhost $(($PORT + 2)) &
-NC_PID=$!
+# Use perl to listen on a port, so that Mongo fails to start up. (We used to use
+# nc here, but the way you specify listener ports to nc varies between
+# platforms. Bleah.)
+perl -MIO::Socket::INET -e '$a = IO::Socket::INET->new(LocalPort=>('$PORT' + 2),LocalAddr=>"127.0.0.1",Proto=>"tcp",ReuseAddr=>1,Listen=>5); sleep' &
+PERL_PID=$!
 
 $METEOR -p $PORT > error.txt || true
 
 grep 'port was closed' error.txt > /dev/null
 
-kill -9 $NC_PID > /dev/null
+kill -9 $PERL_PID > /dev/null
 
 
 echo "... settings"
