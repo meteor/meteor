@@ -131,6 +131,8 @@ echo "... mongo message"
 perl -MIO::Socket::INET -e '$a = IO::Socket::INET->new(LocalPort=>('$PORT' + 2),LocalAddr=>"127.0.0.1",Proto=>"tcp",ReuseAddr=>1,Listen=>5) or die; sleep' &
 PERL_PID=$!
 
+sleep 1
+
 $METEOR -p $PORT > error.txt || true
 
 grep 'port was closed' error.txt > /dev/null
