@@ -128,7 +128,7 @@ echo "... mongo message"
 # Use perl to listen on a port, so that Mongo fails to start up. (We used to use
 # nc here, but the way you specify listener ports to nc varies between
 # platforms. Bleah.)
-perl -MIO::Socket::INET -e '$a = IO::Socket::INET->new(LocalPort=>('$PORT' + 2),LocalAddr=>"127.0.0.1",Proto=>"tcp",ReuseAddr=>1,Listen=>5); sleep' &
+perl -MIO::Socket::INET -e '$a = IO::Socket::INET->new(LocalPort=>('$PORT' + 2),LocalAddr=>"127.0.0.1",Proto=>"tcp",ReuseAddr=>1,Listen=>5) or die; sleep' &
 PERL_PID=$!
 
 $METEOR -p $PORT > error.txt || true
