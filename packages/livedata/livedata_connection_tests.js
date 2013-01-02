@@ -1280,7 +1280,7 @@ Tinytest.add("livedata connection - onReconnect with sent messages", function(te
   stream.sent = [];
   stream.reset();
   testGotMessage(
-    test, stream, {msg: 'connect', session: conn._lastSessionId});
+    test, stream, makeConnectMessage(conn._lastSessionId));
 
   // Test that we sent just the login message.
   var loginId = testGotMessage(
@@ -1296,7 +1296,7 @@ Tinytest.add("livedata connection - onReconnect with sent messages", function(te
   test.length(stream.sent, 0);
 
   // login got data. now we send next method.
-  stream.receive({msg: 'data', methods: [loginId]});
+  stream.receive({msg: 'updated', methods: [loginId]});
 
   testGotMessage(
     test, stream, {msg: 'method', method: 'do_something',
