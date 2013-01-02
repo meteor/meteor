@@ -390,16 +390,19 @@ if (Meteor.isClient) {
   })();
 }
 
-Meteor.addCustomType(
-  "oid",
-  function (id) {
+Meteor.addCustomType({
+  name: "oid",
+  toBasic: function (id) {
     return id.valueOf();
-  }, function (str) {
+  },
+  fromBasic: function (str) {
     return new Meteor.Collection.ObjectID(str);
-  }, function (thing) {
+  },
+  recognize: function (thing) {
     var ret = thing instanceof Meteor.Collection.ObjectID;
     return ret;
-  });
+  }
+});
 
 
 

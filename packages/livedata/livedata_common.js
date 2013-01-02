@@ -52,10 +52,14 @@ var customTypes = {};
 // - A serializeForEval() method, so that Meteor can compile it into selectors
 // It is okay if these methods are monkey-patched on.
 // XXX: doc this
-Meteor.addCustomType = function (typeName, toBasic, fromBasic, recognize) {
-  if (_.has(customTypes, typeName))
-    throw new Error("Type " + typeName + " already present");
-  customTypes[typeName] = {toBasic: toBasic, fromBasic: fromBasic, recognize: recognize};
+Meteor.addCustomType = function (options) {
+  if (_.has(customTypes, options.name))
+    throw new Error("Type " + options.name + " already present");
+  var missingMethods = _.difference(['name', 'toBasic', 'fromBasic', 'recognize'], _.keys(options));
+  if (!_.isEmpty(missingMethods))
+    throw new Error("Meteor.addCustomType argument for type " + options.name +
+                    " is missing methods: " + JSON.stringify(missingMethods));
+  customTypes[options.name] = options;
 };
 
 var builtinConverters = [
@@ -117,8 +121,6 @@ var builtinConverters = [
 ];
 
 
-//XXX: copypasta.  use string keys to control which functions
-//  I'm calling?
 var adjustTypesToBasic = function (obj) {
   _.each(obj, function (value, key) {
     if (typeof value !== 'object')
@@ -138,18 +140,21 @@ var adjustTypesToBasic = function (obj) {
 
 var adjustTypesFromBasic = function (obj) {
   _.each(obj, function (value, key) {
-    if (typeof value !== 'object' || _.size(value) > 2)
-      return; // continue
-    for (var i = 0; i < builtinConverters.length; i++) {
-      var converter = builtinConverters[i];
-      if (converter.matchBasic(value)) {
-        obj[key] = converter.fromBasic(value);
-        return; // continue to the next field
+    if (typeof value === 'object') {
+      if (_.size(value) <= 2
+          && _.all(value, function (v, k) { return k[0] === '$';})) {
+        for (var i = 0; i < builtinConverters.length; i++) {
+          var converter = builtinConverters[i];
+          if (converter.matchBasic(value)) {
+            obj[key] = converter.fromBasic(value);
+            return; // continue to the next field
+          }
+        }
       }
+      // if we get here, value is an object but not adjustable
+      // at this level.  recurse.
+      adjustTypesFromBasic(value);
     }
-    // if we get here, value is an object but not adjustable
-    // at this level.  recurse.
-    adjustTypesFromBasic(value);
   });
 };
 

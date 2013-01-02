@@ -123,47 +123,12 @@ var pid = (typeof process !== 'undefined' && process.pid) || 1;
 
 LocalCollection.random = new LocalCollection._Alea([new Date(), height, width, agent, pid, Math.random()]);
 
-LocalCollection._isObjectID = function (str) {
-  return str.length === 24 && str.match(/^[0-9a-f]*$/);
-};
-
-LocalCollection._ObjectID = function (hexString) {
-  //random-based impl of Mongo ObjectID
-  var self = this;
-  if (hexString) {
-    hexString = hexString.toLowerCase();
-    if (!LocalCollection._isObjectID(hexString)) {
-      throw new Error("Invalid hexidecimal string for creating an ObjectID");
-    }
-    self.str = hexString;
-  } else {
-    var digits = [];
-    for (var i = 0; i < 24; i++) {
-      digits[i] = HEX_DIGITS.substr(Math.floor(LocalCollection.random() * 0x10), 1);
-    }
-    self.str = digits.join("");
+LocalCollection._randomHexString = function (len) {
+  var digits = [];
+  for (var i = 0; i < len; i++) {
+    digits[i] = HEX_DIGITS.substr(Math.floor(LocalCollection.random() * 0x10), 1);
   }
-};
-
-LocalCollection._ObjectID.prototype.toString = function () {
-  var self = this;
-  return "ObjectID(\"" + self.str + "\")";
-};
-
-LocalCollection._ObjectID.prototype.equals = function (other) {
-  var self = this;
-  return self.valueOf() === other.valueOf();
-};
-LocalCollection._ObjectID.prototype.clone = function () {
-  var self = this;
-  return new LocalCollection._ObjectID(self.str);
-};
-
-LocalCollection._ObjectID.prototype.valueOf = function () { return this.str; };
-
-LocalCollection._ObjectID.prototype.serializeForEval = function () {
-  var self = this;
-  return "new LocalCollection._ObjectID(\"" + self.str + "\")";
+  return digits.join("");
 };
 
 // RFC 4122 v4 UUID.
