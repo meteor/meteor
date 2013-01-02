@@ -118,6 +118,8 @@ ps ax | grep -e "$MONGOMARK" | grep -v grep > /dev/null
 curl -s "http://localhost:$PORT" > /dev/null
 
 kill $METEOR_PID
+sleep 10 # XXX XXX lame. have to wait for inner app to die via keepalive!
+
 ps ax | grep -e "$MONGOMARK" | grep -v grep | awk '{print $1}' | xargs kill || true
 sleep 2 # need to make sure these kills take effect
 
