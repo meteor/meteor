@@ -6,6 +6,10 @@
 cd `dirname $0`
 METEOR=`pwd`/../meteor
 
+if [ -z "$NODE" ]; then
+    NODE=`pwd`/node.sh
+fi
+
 #If this ever takes more options, use getopt
 if [ "$1" == "--global" ]; then
 	METEOR=meteor
@@ -125,11 +129,9 @@ sleep 2 # need to make sure these kills take effect
 
 echo "... mongo message"
 
-# Use Python to listen on a port, so that Mongo fails to start up. (We used to
-# use nc here, but the way you specify listener ports to nc varies between
-# platforms. Bleah.)
-python -c 'from socket import *; s = socket(); s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1); s.bind(("127.0.0.1", '$PORT'+2)); s.listen(1); s.accept()' &
-PYTHON_PID=$!
+# Run a server on the same port as mongod, so that mongod fails to start up. Rig
+# it so that a single connection will cause it to exit.
+$NODE -e 'require("net").createServer(function(){process.exit(0)}).listen('$PORT'+2, "127.0.0.1")' &
 
 sleep 1
 
@@ -137,8 +139,8 @@ $METEOR -p $PORT > error.txt || true
 
 grep 'port was closed' error.txt > /dev/null
 
-kill -9 $PYTHON_PID > /dev/null
-
+# Kill the server by connecting to it.
+$NODE -e 'require("net").connect({host:"127.0.0.1",port:'$PORT'+2},function(){process.exit(0);})'
 
 echo "... settings"
 
