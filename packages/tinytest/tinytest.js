@@ -137,6 +137,14 @@ _.extend(TestCaseResults.prototype, {
       this.fail({type: "instanceOf"}); // XXX what other data?
   },
 
+  matches: function (actual, regexp, message) {
+    if (regexp.test(actual))
+      this.ok();
+    else
+      this.fail({type: "matches", message: message,
+                 actual: actual, regexp: regexp.toString()});
+  },
+
   // XXX nodejs assert.throws can take an expected error, as a class,
   // regular expression, or predicate function..
   throws: function (f) {
