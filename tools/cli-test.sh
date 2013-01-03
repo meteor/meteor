@@ -29,6 +29,7 @@ echo "... --help"
 
 $METEOR --help | grep "List available" > /dev/null
 $METEOR run --help | grep "Port to listen" > /dev/null
+$METEOR test-package --help | grep "Port to listen" > /dev/null
 $METEOR create --help | grep "Make a subdirectory" > /dev/null
 $METEOR update --help | grep "Checks to see" > /dev/null
 $METEOR add --help | grep "Adds packages" > /dev/null
