@@ -101,6 +101,10 @@ Fiber(function () {
             .boolean('production')
             .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
             .describe('settings',  'Set optional data for Meteor.settings on the server')
+            // With --once, meteor does not re-run the project if it crashes and
+            // does not monitor for file changes. Intentionally undocumented:
+            // intended for automated testing (eg, cli-test.sh), not end-user
+            // use.
             .boolean('once')
             .usage(
               "Usage: meteor run [options]\n" +
