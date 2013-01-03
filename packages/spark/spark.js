@@ -543,6 +543,19 @@ var pathForRange = function (r) {
 // `range` is a region of `document`. Modify it in-place so that it
 // matches the result of Spark.render(htmlFunc), preserving landmarks.
 Spark.renderToRange = function (range, htmlFunc) {
+  // `range` may be out-of-document and we don't check here.
+  // XXX should we?
+  //
+  // Explicit finalization of ranges (done within Spark or by a call to
+  // Spark.finalize) prevents us from being called in the first place.
+  // The newly rendered material will be checked to see if it's in the
+  // document by scheduleOnscreenSetUp's scheduled setup.
+  // However, if range is not valid, bail out now before running
+  // htmlFunc.
+  var startNode = range.firstNode();
+  if (! startNode || ! startNode.parentNode)
+    return;
+
   var renderer = new Spark._Renderer();
 
   // Call 'func' for each landmark in 'range'. Pass two arguments to
@@ -593,8 +606,18 @@ Spark.renderToRange = function (range, htmlFunc) {
   // find preservation roots that come from landmarks enclosing the
   // updated region
   var walk = range;
-  while ((walk = findParentOfType(Spark._ANNOTATION_LANDMARK, walk)))
-    pc.addRoot(walk.preserve, range, tempRange, walk.containerNode());
+  while ((walk = walk.findParent())) {
+    if (! walk.firstNode().parentNode)
+      // we're in a DOM island with a top-level range (not really
+      // allowed, but could happen if `range` is on nodes that
+      // manually removed.
+      // XXX check for this sooner; hard to reason about this function
+      // on a "malformed" liverange tree
+      break;
+
+    if (walk.type === Spark._ANNOTATION_LANDMARK, walk)
+      pc.addRoot(walk.preserve, range, tempRange, walk.containerNode());
+  }
 
   pc.addRoot(Spark._globalPreserves, range, tempRange);
 
