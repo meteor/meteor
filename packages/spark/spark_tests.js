@@ -3846,6 +3846,31 @@ Tinytest.add("spark - update defunct range", function (test) {
   Meteor.flush(); // should throw no errors
   // will be 1 if our isolate func was run.
   test.equal(R.numListeners(), 0);
+
+  /////
+
+  R = ReactiveVar("foo");
+
+  div = OnscreenDiv(Spark.render(function () {
+    return "<p>" + Spark.setDataContext(
+      {},
+      "<span>" + Spark.isolate(function() {
+        return R.get();
+      }) + "</span>") + "</p>";
+  }));
+
+  test.equal(div.html(), "<p><span>foo</span></p>");
+  R.set("bar");
+  Meteor.flush();
+  test.equal(R.numListeners(), 1);
+  test.equal(div.html(), "<p><span>bar</span></p>");
+  test.equal(div.node().firstChild.nodeName, "P");
+  div.node().firstChild.innerHTML = '';
+  R.set("baz");
+  Meteor.flush(); // should throw no errors
+  // will be 1 if our isolate func was run.
+  test.equal(R.numListeners(), 0);
+
 });
 
 })();

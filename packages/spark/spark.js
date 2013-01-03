@@ -606,8 +606,18 @@ Spark.renderToRange = function (range, htmlFunc) {
   // find preservation roots that come from landmarks enclosing the
   // updated region
   var walk = range;
-  while ((walk = findParentOfType(Spark._ANNOTATION_LANDMARK, walk)))
-    pc.addRoot(walk.preserve, range, tempRange, walk.containerNode());
+  while ((walk = walk.findParent())) {
+    if (! walk.firstNode().parentNode)
+      // we're in a DOM island with a top-level range (not really
+      // allowed, but could happen if `range` is on nodes that
+      // manually removed.
+      // XXX check for this sooner; hard to reason about this function
+      // on a "malformed" liverange tree
+      break;
+
+    if (walk.type === Spark._ANNOTATION_LANDMARK, walk)
+      pc.addRoot(walk.preserve, range, tempRange, walk.containerNode());
+  }
 
   pc.addRoot(Spark._globalPreserves, range, tempRange);
 
