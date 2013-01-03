@@ -583,6 +583,18 @@ Spark.renderToRange = function (range, htmlFunc) {
     notes.originalRange = landmarkRange;
   });
 
+  // Once we render the new fragment, as soon as it is placed into the DOM (even
+  // temporarily), if any radio buttons in the new framgent are checked, any
+  // radio buttons with the same name in the entire document will be unchecked
+  // (since only one radio button of a given name can be checked at a time). So
+  // we save the current checked value of all radio buttons in an expando.
+  var radios = DomUtils.findAllClipped(
+    range.containerNode(), 'input[type=radio]',
+    range.firstNode(), range.lastNode());
+  _.each(radios, function (node) {
+    node._currentChecked = [!!node.checked];
+  });
+
   var frag = renderer.materialize(htmlFunc);
 
   DomUtils.wrapFragmentForContainer(frag, range.containerNode());
@@ -620,18 +632,6 @@ Spark.renderToRange = function (range, htmlFunc) {
   }
 
   pc.addRoot(Spark._globalPreserves, range, tempRange);
-
-  // computePreservations is going to insert 'tempRange' into the DOM
-  // temporarily. If any radio buttons in 'tempRange' are checked, this will
-  // instantly uncheck any radio buttons with the same name in 'range' (since
-  // only one radio button of a given name can be checked at a time). So we save
-  // the current checked value of all radio buttons in an expando.
-  var radios = DomUtils.findAllClipped(
-    range.containerNode(), 'input[type=radio]',
-    range.firstNode(), range.lastNode());
-  _.each(radios, function (node) {
-    node._currentChecked = [!!node.checked];
-  });
 
   // compute preservations (must do this before destroying tempRange)
   var preservations = pc.computePreservations(range, tempRange);
