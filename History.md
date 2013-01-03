@@ -3,22 +3,13 @@
 
 ## v0.5.3
 
-* A new `--settings` argument to `meteor deploy` and `meteor run` allows you to
-  specify a file containing a JSON object which will be made available to server
-  code in the variable `Meteor.settings`.
+* Add `--settings` argument to `meteor deploy` and `meteor run`. This
+  allows you to specify deployment-specific information made available
+  to server code in the variable `Meteor.settings`.
 
-* Deployed apps now use a randomized hostname for their long-polling
-  connections, allowing users to use apps in an arbitrary number of simultaneous
-  tabs without hitting browser per-hostname connection limits. #131
-
-* In Spark, when a template is re-rendered, elements that are preserved (using
-  `Template.foo.preserve` or the `preserve-input` package) and which have
-  user-controllable "values" (eg, form inputs) now preserve the value set by the
-  user, unless the server's newly rendered value is different from the
-  previously rendered value. That is, re-rendering a template no longer reverts
-  changes to form elements made by users. Additionally, <INPUT> elements with
-  type other than TEXT can now have reactive values (eg, the labels on submit
-  buttons can now be reactive).  #510 #514 #523 #537 #558
+* Support unlimited open tabs in a single browser. Work around the
+  browser per-hostname connection limit by using randomized hostnames
+  for deployed apps. #131
 
 * minimongo improvements:
   * Allow observing cursors with `skip` or `limit`.  #528
@@ -27,8 +18,40 @@
   * `$and`, `$or`, and `$nor` no longer accept empty arrays (for consistency
     with Mongo)
 
-* JavaScript RegExp objects can now be used in selectors in Collection write
+* Re-rendering a template with Spark no longer reverts changes made by
+  users to a `preserve`d form element. Instead, the newly rendered value
+  is only applied if it is different from the previously rendered value.
+  Additionally, <INPUT> elements with type other than TEXT can now have
+  reactive values (eg, the labels on submit buttons can now be
+  reactive).  #510 #514 #523 #537 #558
+
+* Support JavaScript RegExp objects in selectors in Collection write
   methods on the client, eg `myCollection.remove({foo: /bar/})`.  #346
+
+* `meteor` command-line improvements:
+  * Improve error message when mongod fails to start.
+  * The `NODE_OPTIONS` environment variable can be used to pass command-line
+    flags to node (eg, `--debug` or `--debug-brk` to enable the debugger).
+  * Die with error if an app name is mistakenly passed to `meteor reset`.
+
+* Add support for "offline" access tokens with Google login. #464 #525
+
+* Don't remove `serviceData` fields from previous logins when logging in
+  with an external service.
+
+* Improve `OAuth1Binding` to allow making authenticated API calls to
+  OAuth1 providers (eg Twitter).  #539
+
+* New login providers automatically work with `{{loginButtons}}` without
+  needing to edit the `accounts-ui-unstyled` package.  #572
+
+* Use `Content-Type: application/json` by default when sending JSON data
+  with `Meteor.http`.
+
+* Improvements to `jsparse`: hex literals, keywords as property names, ES5 line
+  continuations, trailing commas in object literals, line numbers in error
+  messages, decimal literals starting with `.`, regex character classes with
+  slashes.
 
 * Spark IE improvements:
   * Improve rendering of <SELECT> elements on IE.  #496
@@ -36,59 +59,18 @@
 
 * Always use the `autoReconnect` flag when connecting to Mongo.  #425
 
-* When logging in with Google, allow apps to request an "offline" token and store
-  its expiry time.  #464 #525
-
-* When a user logs in using credentials from an external service, don't
-  overwrite `serviceData` fields that were set on a previous login and not set
-  on this login. (For example, the refresh token from Google "offline" login.)
-
-* `meteor` command-line improvements:
-  * Improve error message when mongod fails to start.
-  * The `NODE_OPTIONS` environment variable can be used to pass command-line
-    flags to node (eg, `--debug` or `--debug-brk` to enable the debugger).
-  * A new flag `meteor run --once` does not re-run the project if it crashes or
-    monitor for file changes; intended for automated testing (eg
-    `admin/cli-test.sh`).
-  * Die with error if an app name is mistakenly passed to `meteor reset`.
-
-* `OAuth1Binding` improvements:  #539
-  * `OAuth1Binding.get` and `OAuth1Binding.call` now return the full response
-    (including headers and statusCode), rather than just the data.
-  * Introduce `OAuth1Binding.post`.
-  * `OAuth1Binding.get`, `OAuth1Binding.call` and `OAuth1Binding.post` now take
-    a `params` argument. This facilitates making calls to the Twitter API.
-
-* `accounts-ui` now automatically detects new OAuth providers instead of only
-  recognizing a static list of them. This will allow `{{loginButtons}}` to
-  support new OAuth providers without needing to edit the `accounts-ui-unstyled`
-  package.  #572
-
 * Fix re-sending method calls on reconnect.  #538
 
-* `Meteor.connect` now supports URLs of the form
-  `ddp+sockjs://host-***.name/sockjs` and `ddpi+sockjs://host-***.name/sockjs`
-  to connect with DDP over HTTPS and HTTP respectively. The asterisks are
-  substituted with random digits. This syntax may change in a future version of
-  Meteor. While the trailing `/sockjs` is required in these URLs, it is no
-  longer supported in scheme-less URLs passed to `Meteor.connect`.
+* Remove deprecated `/sockjs` URL support from `Meteor.connect`.
 
-* When JSON data is provided to functions like `Meteor.http.post`, the
-  `Content-Type` header now defaults to `application/json`.
-
-* Improvements to `jsparse`: hex literals, keywords as property names, ES5 line
-  continuations, trailing commas in object literals, line numbers in error
-  messages, decimal literals starting with `.`, regex character classes with
-  slashes.
-
-* Implement the UUID v4 spec correctly (instead of losing a few bits of
-  randomness).
+* Avoid losing a few bits of randomness in UUID v4 creation.  #519
 
 * Update clean-css package from 0.8.2 to 0.8.3, fixing minification of `0%`
   values in `hsl` colors.  #515
 
 Patches contributed by GitHub users Ed-von-Schleck, egtann, jwulf, lvbreda,
 martin-naumann, meawoppl, nwmartin, timhaines, and zealoushacker.
+
 
 ## v0.5.2
 
