@@ -715,10 +715,12 @@ _.extend(LiveResultsSet.prototype, {
       --self._addHandleTasksScheduledButNotPerformed;
 
       // Send initial adds.
-      _.each(self._results, function (doc, i) {
-        handle._added(LocalCollection._deepcopy(doc),
-                      self._ordered ? i : undefined);
-      });
+      if (handle._added) {
+        _.each(self._results, function (doc, i) {
+          handle._added(LocalCollection._deepcopy(doc),
+                        self._ordered ? i : undefined);
+        });
+      }
     });
   },
 

@@ -59,6 +59,8 @@
 
 * Always use the `autoReconnect` flag when connecting to Mongo.  #425
 
+* Fix server-side `observe` with no `added` callback.  #589
+
 * Fix re-sending method calls on reconnect.  #538
 
 * Remove deprecated `/sockjs` URL support from `Meteor.connect`.
