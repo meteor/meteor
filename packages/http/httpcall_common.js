@@ -4,12 +4,12 @@ Meteor.http = Meteor.http || {};
 (function() {
 
   Meteor.http._encodeParams = function(params) {
-    self = this;
     var buf = [];
     _.each(params, function(value, key) {
       if (buf.length)
         buf.push('&');
-      buf.push(self._encodeString(key), '=', self._encodeString(value));
+      buf.push(Meteor.http._encodeString(key), '=',
+               Meteor.http._encodeString(value));
     });
     return buf.join('').replace(/%20/g, '+');
   };
