@@ -53,9 +53,11 @@
   messages, decimal literals starting with `.`, regex character classes with
   slashes.
 
-* Spark IE improvements:
+* Spark improvements:
   * Improve rendering of <SELECT> elements on IE.  #496
   * Don't lose nested data contexts in IE9/10 after two seconds.  #458
+  * Don't print a stack trace if DOM nodes are manually removed
+    from the document without calling `Spark.finalize`.  #392
 
 * Always use the `autoReconnect` flag when connecting to Mongo.  #425
 
