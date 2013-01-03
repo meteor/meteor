@@ -18,7 +18,8 @@ if [ "$1" == "--global" ]; then
 fi
 
 DIR=`mktemp -d -t meteor-cli-test-XXXXXXXX`
-trap 'echo FAILED ; rm -rfd `find $METEOR_DIR -name __tmp`; rm -rf "$DIR" >/dev/null 2>&1' EXIT
+OUTPUT="$DIR/output"
+trap 'echo "[...]"; tail -25 $OUTPUT; echo FAILED ; rm -rfd `find $METEOR_DIR -name __tmp`; rm -rf "$DIR" >/dev/null 2>&1' EXIT
 
 cd "$DIR"
 set -e -x
@@ -27,31 +28,31 @@ set -e -x
 
 echo "... --help"
 
-$METEOR --help | grep "List available" > /dev/null
-$METEOR run --help | grep "Port to listen" > /dev/null
-$METEOR test-package --help | grep "Port to listen" > /dev/null
-$METEOR create --help | grep "Make a subdirectory" > /dev/null
-$METEOR update --help | grep "Checks to see" > /dev/null
-$METEOR add --help | grep "Adds packages" > /dev/null
-$METEOR remove --help | grep "Removes a package" > /dev/null
-$METEOR list --help | grep "Without arguments" > /dev/null
-$METEOR bundle --help | grep "Package this project" > /dev/null
-$METEOR mongo --help | grep "Opens a Mongo" > /dev/null
-$METEOR deploy --help | grep "Deploys the project" > /dev/null
-$METEOR logs --help | grep "Retrieves the" > /dev/null
-$METEOR reset --help | grep "Reset the current" > /dev/null
+$METEOR --help | grep "List available" >> $OUTPUT
+$METEOR run --help | grep "Port to listen" >> $OUTPUT
+$METEOR test-packages --help | grep "Port to listen" >> $OUTPUT
+$METEOR create --help | grep "Make a subdirectory" >> $OUTPUT
+$METEOR update --help | grep "Checks to see" >> $OUTPUT
+$METEOR add --help | grep "Adds packages" >> $OUTPUT
+$METEOR remove --help | grep "Removes a package" >> $OUTPUT
+$METEOR list --help | grep "Without arguments" >> $OUTPUT
+$METEOR bundle --help | grep "Package this project" >> $OUTPUT
+$METEOR mongo --help | grep "Opens a Mongo" >> $OUTPUT
+$METEOR deploy --help | grep "Deploys the project" >> $OUTPUT
+$METEOR logs --help | grep "Retrieves the" >> $OUTPUT
+$METEOR reset --help | grep "Reset the current" >> $OUTPUT
 
 echo "... not in dir"
 
-$METEOR | grep "run: You're not in" > /dev/null
-$METEOR run | grep "run: You're not in" > /dev/null
-$METEOR add foo | grep "add: You're not in" > /dev/null
-$METEOR remove foo | grep "remove: You're not in" > /dev/null
-$METEOR list --using | grep "list --using: You're not in" > /dev/null
-$METEOR bundle foo.tar.gz | grep "bundle: You're not in" > /dev/null
-$METEOR mongo | grep "mongo: You're not in" > /dev/null
-$METEOR deploy automated-test | grep "deploy: You're not in" > /dev/null
-$METEOR reset | grep "reset: You're not in" > /dev/null
+$METEOR | grep "run: You're not in" >> $OUTPUT
+$METEOR run | grep "run: You're not in" >> $OUTPUT
+$METEOR add foo | grep "add: You're not in" >> $OUTPUT
+$METEOR remove foo | grep "remove: You're not in" >> $OUTPUT
+$METEOR list --using | grep "list --using: You're not in" >> $OUTPUT
+$METEOR bundle foo.tar.gz | grep "bundle: You're not in" >> $OUTPUT
+$METEOR mongo | grep "mongo: You're not in" >> $OUTPUT
+$METEOR deploy automated-test | grep "deploy: You're not in" >> $OUTPUT
+$METEOR reset | grep "reset: You're not in" >> $OUTPUT
 
 echo "... create"
 
@@ -67,13 +68,13 @@ cd .meteor
 
 echo "... add/remove/list"
 
-$METEOR list | grep "backbone" > /dev/null
-! $METEOR list --using 2>&1 | grep "backbone" > /dev/null
-$METEOR add backbone 2>&1 | grep "backbone:" | grep -v "no such package" | > /dev/null
-$METEOR list --using | grep "backbone" > /dev/null
-grep backbone packages > /dev/null # remember, we are already in .meteor
-$METEOR remove backbone 2>&1 | grep "backbone: removed" > /dev/null
-! $METEOR list --using 2>&1 | grep "backbone" > /dev/null
+$METEOR list | grep "backbone" >> $OUTPUT
+! $METEOR list --using 2>&1 | grep "backbone" >> $OUTPUT
+$METEOR add backbone 2>&1 | grep "backbone:" | grep -v "no such package" | >> $OUTPUT
+$METEOR list --using | grep "backbone" >> $OUTPUT
+grep backbone packages >> $OUTPUT # remember, we are already in .meteor
+$METEOR remove backbone 2>&1 | grep "backbone: removed" >> $OUTPUT
+! $METEOR list --using 2>&1 | grep "backbone" >> $OUTPUT
 
 echo "... bundle"
 
@@ -89,21 +90,21 @@ MONGOMARK='--bind_ip 127.0.0.1 --smallfiles --port 9102'
 # (the || true is needed on linux, whose xargs will invoke kill even with no args)
 ps ax | grep -e 'meteor.js -p 9100' | grep -v grep | awk '{print $1}' | xargs kill || true
 
-! $METEOR mongo > /dev/null 2>&1
-$METEOR reset > /dev/null 2>&1
+! $METEOR mongo >> $OUTPUT 2>&1
+$METEOR reset >> $OUTPUT 2>&1
 
 test ! -d .meteor/local
-! ps ax | grep -e "$MONGOMARK" | grep -v grep > /dev/null
+! ps ax | grep -e "$MONGOMARK" | grep -v grep >> $OUTPUT
 
 PORT=9100
-$METEOR -p $PORT > /dev/null 2>&1 &
+$METEOR -p $PORT >> $OUTPUT 2>&1 &
 METEOR_PID=$!
 
 sleep 2 # XXX XXX lame
 
 test -d .meteor/local/db
-ps ax | grep -e "$MONGOMARK" | grep -v grep > /dev/null
-curl -s "http://localhost:$PORT" > /dev/null
+ps ax | grep -e "$MONGOMARK" | grep -v grep >> $OUTPUT
+curl -s "http://localhost:$PORT" >> $OUTPUT
 
 echo "show collections" | $METEOR mongo
 
@@ -112,19 +113,35 @@ kill $METEOR_PID
 
 sleep 10 # XXX XXX lame. have to wait for inner app to die via keepalive!
 
-! ps ax | grep "$METEOR_PID" | grep -v grep > /dev/null
-ps ax | grep -e "$MONGOMARK"  | grep -v grep > /dev/null
+! ps ax | grep "$METEOR_PID" | grep -v grep >> $OUTPUT
+ps ax | grep -e "$MONGOMARK"  | grep -v grep >> $OUTPUT
 
 
 echo "... rerun"
 
-$METEOR -p $PORT > /dev/null 2>&1 &
+$METEOR -p $PORT >> $OUTPUT 2>&1 &
 METEOR_PID=$!
 
 sleep 2 # XXX XXX lame
 
-ps ax | grep -e "$MONGOMARK" | grep -v grep > /dev/null
-curl -s "http://localhost:$PORT" > /dev/null
+ps ax | grep -e "$MONGOMARK" | grep -v grep >> $OUTPUT
+curl -s "http://localhost:$PORT" >> $OUTPUT
+
+kill $METEOR_PID
+sleep 10 # XXX XXX lame. have to wait for inner app to die via keepalive!
+
+ps ax | grep -e "$MONGOMARK" | grep -v grep | awk '{print $1}' | xargs kill || true
+sleep 2 # need to make sure these kills take effect
+
+echo "... test-packages"
+
+$METEOR test-packages -p $PORT >> $OUTPUT 2>&1 &
+METEOR_PID=$!
+
+sleep 2 # XXX XXX lame
+
+ps ax | grep -e "$MONGOMARK" | grep -v grep >> $OUTPUT
+curl -s "http://localhost:$PORT" >> $OUTPUT
 
 kill $METEOR_PID
 sleep 10 # XXX XXX lame. have to wait for inner app to die via keepalive!
@@ -142,7 +159,7 @@ sleep 1
 
 $METEOR -p $PORT > error.txt || true
 
-grep 'port was closed' error.txt > /dev/null
+grep 'port was closed' error.txt >> $OUTPUT
 
 # Kill the server by connecting to it.
 $NODE -e 'require("net").connect({host:"127.0.0.1",port:'$PORT'+2},function(){process.exit(0);})'
@@ -165,7 +182,7 @@ if (Meteor.isServer) {
 }
 EOF
 
-$METEOR -p $PORT --settings='settings.json' --once > /dev/null
+$METEOR -p $PORT --settings='settings.json' --once >> $OUTPUT
 
 
 # prepare die.js so that we have a server that loads packages and dies
@@ -182,8 +199,8 @@ cat > $METEOR_DIR/local-package-sets/__tmp/a-package-named-bar/package.js <<EOF
 console.log("loaded a-package-named-bar");
 EOF
 
-$METEOR add a-package-named-bar > /dev/null
-$METEOR -p $PORT --once | grep "loaded a-package-named-bar" > /dev/null
+$METEOR add a-package-named-bar >> $OUTPUT
+$METEOR -p $PORT --once | grep "loaded a-package-named-bar" >> $OUTPUT
 
 rm -rf $METEOR_DIR/local-package-sets/__tmp/
 
@@ -198,8 +215,8 @@ Package.describe({
 
 EOF
 
-$METEOR add accounts-ui 2>&1 | grep "accounts-ui - overridden" > /dev/null
-$METEOR list | grep "accounts-ui - overridden" > /dev/null
+$METEOR add accounts-ui 2>&1 | grep "accounts-ui - overridden" >> $OUTPUT
+$METEOR list | grep "accounts-ui - overridden" >> $OUTPUT
 
 rm -rf $METEOR_DIR/local-package-sets/__tmp/
 
