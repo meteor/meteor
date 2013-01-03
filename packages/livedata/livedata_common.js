@@ -177,6 +177,8 @@ Meteor._parseDDP = function (stringMessage) {
     if (_.has(msg, field))
       adjustTypesFromBasic(msg[field]);
   });
+
+
   return msg;
 };
 
@@ -201,6 +203,9 @@ Meteor._stringifyDDP = function (msg) {
     if (_.has(copy, field))
       adjustTypesToBasic(copy[field]);
   });
+  if (msg.id && typeof msg.id !== 'string') {
+    throw new Error("Message id is not a string");
+  }
   var ret = JSON.stringify(copy);
   //console.log("sending " + ret);
   return ret;

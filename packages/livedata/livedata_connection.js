@@ -713,6 +713,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
     _.each(self._stores, function (s, collection) {
       var originals = s.retrieveOriginals();
       _.each(originals, function (doc, id) {
+        if (typeof id !== 'string')
+          throw new Error("id is not a string");
         docsWritten.push({collection: collection, id: id});
         var serverDoc = Meteor._ensure(self._serverDocuments, collection, id);
         if (serverDoc.writtenByStubs) {
@@ -978,7 +980,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
                         + msg.id);
       }
       serverDoc.document = msg.fields || {};
-      serverDoc.document._id = msg.id;
+      serverDoc.document._id = LocalCollection._idFromDDP(msg.id);
     } else {
       self._pushUpdate(updates, msg.collection, msg);
     }

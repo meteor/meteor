@@ -90,7 +90,6 @@ _Mongo.prototype._maybeBeginWrite = function () {
 
 _Mongo.prototype.insert = function (collection_name, document) {
   var self = this;
-
   if (collection_name === "___meteor_failure_test_collection" &&
       document.fail) {
     var e = new Error("Failure test");
@@ -200,7 +199,6 @@ _Mongo.prototype.find = function (collectionName, selector, options) {
 
 _Mongo.prototype.findOne = function (collection_name, selector, options) {
   var self = this;
-
   if (arguments.length === 1)
     selector = {};
 

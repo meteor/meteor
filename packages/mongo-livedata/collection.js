@@ -70,7 +70,8 @@ Meteor.Collection = function (name, options) {
       // Apply an update.
       // XXX better specify this interface (not in terms of a wire message)?
       update: function (msg) {
-        var doc = self._collection.findOne(msg.id);
+        var mongoId = msg.id && LocalCollection._idFromDDP(msg.id);
+        var doc = self._collection.findOne(mongoId);
 
         // Is this a "replace the whole doc" message coming from the quiescence
         // of method writes to an object? (Note that 'undefined' is a valid
@@ -79,22 +80,22 @@ Meteor.Collection = function (name, options) {
           var replace = msg.replace;
           if (!replace) {
             if (doc)
-              self._collection.remove(msg.id);
+              self._collection.remove(mongoId);
           } else if (!doc) {
             self._collection.insert(replace);
           } else {
             // XXX check that replace has no $ ops
-            self._collection.update(msg.id, replace);
+            self._collection.update(mongoId, replace);
           }
           return;
         } else if (msg.msg === 'added') {
           if (doc)
             throw new Error("Expected not to find a document already present for an add");
-          self._collection.insert(_.extend({_id: msg.id}, msg.fields));
+          self._collection.insert(_.extend({_id: mongoId}, msg.fields));
         } else if (msg.msg === 'removed') {
           if (!doc)
             throw new Error("Expected to find a document already present for removed");
-          self._collection.remove(msg.id);
+          self._collection.remove(mongoId);
         } else if (msg.msg === 'changed') {
           if (!doc)
             throw new Error("Expected to find a document to change");
@@ -107,7 +108,7 @@ Meteor.Collection = function (name, options) {
               modifier.$unset[propname] = 1;
             });
           }
-          self._collection.update(msg.id, modifier);
+          self._collection.update(mongoId, modifier);
         } else {
           throw new Error("I don't know how to deal with this message");
         }
@@ -177,7 +178,7 @@ Meteor.Collection._rewriteSelector = function (selector) {
 
   if (!selector || (('_id' in selector) && !selector._id))
     // can't match anything
-    return {_id: Meteor.uuid()};
+    return {_id: new Meteor.Collection.ObjectID()};
 
   var ret = {};
   _.each(selector, function (value, key) {
@@ -254,7 +255,7 @@ _.each(["insert", "update", "remove"], function (name) {
       args[0] = _.extend({}, args[0]);
       if ('_id' in args[0])
         throw new Error("Do not pass an _id to insert. Meteor will generate the _id for you.");
-      ret = args[0]._id = Meteor.uuid();
+      ret = args[0]._id = new Meteor.Collection.ObjectID();
     } else {
       args[0] = Meteor.Collection._rewriteSelector(args[0]);
     }
@@ -386,6 +387,8 @@ if (Meteor.isClient) {
   Meteor.Collection.ObjectID = (function () {
     var ObjectID = __meteor_bootstrap__.require('mongodb').ObjectID;
     ObjectID.prototype.clone = function () { return new ObjectID(this.toHexString());};
+    // fix Mongo ObjectIDs to function as the docs say they do.
+    ObjectID.prototype.valueOf = function () { return this.toHexString(); };
     return ObjectID;
   })();
 }
@@ -584,7 +587,7 @@ Meteor.Collection.prototype._validatedUpdate = function(
     // If the original selector was just a lookup by _id, no need to "and" it
     // with the idSelector (and it won't work anyway without explicitly
     // comparing with _id).
-    if (docs.length !== 1 || docs[0]._id !== selector)
+    if (docs.length !== 1 || !_.isEqual(docs[0]._id, selector))
       throw new Error("Lookup by ID " + selector + " found something else");
     fullSelector = selector;
   } else {

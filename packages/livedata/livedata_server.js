@@ -194,7 +194,9 @@ _.extend(Meteor._SessionCollectionView.prototype, {
     var self = this;
     var docView = self.documents[id];
     if (!docView) {
-      throw new Error("Removed nonexistent document " + id);
+      var err = new Error("Removed nonexistent document " + id);
+      //console.log(err.stack);
+      throw err;
     }
     delete docView.existsIn[subscriptionId];
     if (_.isEmpty(docView.existsIn)) {
@@ -862,8 +864,8 @@ _.extend(Meteor._LivedataSubscription.prototype, {
     _.each(self._documents, function(collectionDocs, collectionName) {
       // Iterate over _.keys instead of the dictionary itself, since we'll be
       // mutating it.
-      _.each(_.keys(collectionDocs), function (id) {
-        self.removed(collectionName, id);
+      _.each(_.keys(collectionDocs), function (strId) {
+        self.removed(collectionName, LocalCollection._idFromDDP(strId));
       });
     });
   }

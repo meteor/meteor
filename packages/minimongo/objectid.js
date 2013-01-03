@@ -2,7 +2,6 @@
 
 (function () {
 
-var ObjectID;
 
 LocalCollection._isObjectID = function (str) {
   return str.length === 24 && str.match(/^[0-9a-f]*$/);
@@ -43,21 +42,23 @@ LocalCollection._ObjectID.prototype.serializeForEval = function () {
   return "new LocalCollection._ObjectID(\"" + self.str + "\")";
 };
 
+var findObjectIDClass = function () {
+  if (typeof Meteor === 'undefined' || Meteor.isClient) {
+    return LocalCollection._ObjectID;
+  } else {
+    return Meteor.Collection.ObjectID;
+  }
+};
 
-if (typeof Meteor === 'undefined' || Meteor.isClient) {
-  ObjectID = LocalCollection._ObjectID;
-} else {
-  ObjectID = (function () {
-    var ObjectID = __meteor_bootstrap__.require('mongodb').ObjectID;
-    ObjectID.prototype.clone = function () { return new ObjectID(this.toHexString());};
-    return ObjectID;
-  })();
-}
+// Is this selector just shorthand for lookup by _id?
+LocalCollection._selectorIsId = function (selector) {
+  return (typeof selector === "string") || (typeof selector === "number") || selector instanceof findObjectIDClass();
+};
 
 LocalCollection._idToDDP = function (id) {
-  if (id instanceof ObjectID) {
+  if (id instanceof findObjectIDClass()) {
     return id.valueOf();
-  } else if (_.isString(id)) {
+  } else if (typeof id === 'string') {
     if (id === "") {
       return id;
     } else if (id[0] === "-" || // escape previously dashed strings
@@ -68,11 +69,12 @@ LocalCollection._idToDDP = function (id) {
     } else {
       return id; // other strings go through unchanged.
     }
-  } else if (_.isNumber(id)) {
+  } else if (typeof id === 'number') {
     return '~' + id;
   } else if (id === undefined) {
     return '-';
   } else {
+    debugger;
     throw new Error("Meteor's MongoDB does not yet handle ids other than strings and ObjectIDs " + typeof id);
   }
 };
@@ -89,7 +91,7 @@ LocalCollection._idFromDDP = function (id) {
   } else if (id[0] === '~') {
     return parseFloat(id.substr(1));
   } else if (LocalCollection._isObjectID(id)) {
-    return new ObjectID(id);
+    return new (findObjectIDClass())(id);
   } else {
     return id;
   }

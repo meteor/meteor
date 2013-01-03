@@ -289,11 +289,6 @@ LocalCollection._compileSelector = function (selector) {
   return _func(LocalCollection._f, literals);
 };
 
-// Is this selector just shorthand for lookup by _id?
-LocalCollection._selectorIsId = function (selector) {
-  return (typeof selector === "string") || (typeof selector === "number") || selector instanceof LocalCollection._ObjectID;
-};
-
 // Given an arbitrary Mongo-style query selector, return an expression
 // that evaluates to true if the document in 'doc' matches the
 // selector, else false.

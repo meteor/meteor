@@ -88,7 +88,6 @@ Tinytest.addAsync("mongo-livedata - basics", function (test, onComplete) {
 
   expectObserve('a(1,0)', function () {
     var id = coll.insert({run: run, x: 1});
-    test.equal(id.length, 36);
     test.equal(coll.find({run: run}).count(), 1);
     test.equal(coll.findOne(id).x, 1);
     test.equal(coll.findOne({run: run}).x, 1);
