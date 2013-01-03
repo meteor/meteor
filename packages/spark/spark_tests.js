@@ -3821,4 +3821,31 @@ Tinytest.add("spark - legacy preserve names", function (test) {
   Meteor.flush();
 });
 
+Tinytest.add("spark - update defunct range", function (test) {
+  // Test that Spark doesn't freak out if it tries to update
+  // a LiveRange on nodes that have been taken out of the document.
+  //
+  // See https://github.com/meteor/meteor/issues/392.
+
+  var R = ReactiveVar("foo");
+
+  var div = OnscreenDiv(Spark.render(function () {
+    return "<p>" + Spark.isolate(function() {
+      return R.get();
+    }) + "</p>";
+  }));
+
+  test.equal(div.html(), "<p>foo</p>");
+  R.set("bar");
+  Meteor.flush();
+  test.equal(R.numListeners(), 1);
+  test.equal(div.html(), "<p>bar</p>");
+  test.equal(div.node().firstChild.nodeName, "P");
+  div.node().firstChild.innerHTML = '';
+  R.set("baz");
+  Meteor.flush(); // should throw no errors
+  // will be 1 if our isolate func was run.
+  test.equal(R.numListeners(), 0);
+});
+
 })();

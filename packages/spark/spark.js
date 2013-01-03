@@ -543,6 +543,19 @@ var pathForRange = function (r) {
 // `range` is a region of `document`. Modify it in-place so that it
 // matches the result of Spark.render(htmlFunc), preserving landmarks.
 Spark.renderToRange = function (range, htmlFunc) {
+  // `range` may be out-of-document and we don't check here.
+  // XXX should we?
+  //
+  // Explicit finalization of ranges (done within Spark or by a call to
+  // Spark.finalize) prevents us from being called in the first place.
+  // The newly rendered material will be checked to see if it's in the
+  // document by scheduleOnscreenSetUp's scheduled setup.
+  // However, if range is not valid, bail out now before running
+  // htmlFunc.
+  var startNode = range.firstNode();
+  if (! startNode || ! startNode.parentNode)
+    return;
+
   var renderer = new Spark._Renderer();
 
   // Call 'func' for each landmark in 'range'. Pass two arguments to
