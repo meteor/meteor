@@ -917,7 +917,7 @@ Tinytest.add("livedata stub - multiple stubs same doc", function (test) {
   // Method sent.
   var updateMethodId = testGotMessage(
     test, stream, {msg: 'method', method: 'updateIt',
-                   params: [{$type: 'oid', $value: stubWrittenId.valueOf()}], id: '*'});
+                   params: [stubWrittenId], id: '*'});
   test.equal(stream.sent.length, 0);
 
   // Get some data... slightly different than what we wrote.
