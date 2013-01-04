@@ -30,6 +30,8 @@
 (function() {
 
 var HEX_DIGITS = "0123456789abcdef";
+var UNMISTAKEABLE_CHARS = "23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz";
+
 LocalCollection._Alea = function () {
   function Mash() {
     var n = 0xefc8249d;
@@ -143,6 +145,15 @@ LocalCollection.uuid = function () {
 
   var uuid = s.join("");
   return uuid;
+};
+
+LocalCollection.id = function() {
+  var digits = [];
+  var base = UNMISTAKEABLE_CHARS.length;
+  for (var i = 0; i < 17; i++) {
+    digits[i] = UNMISTAKEABLE_CHARS.substr(Math.floor(LocalCollection.random() * base), 1);
+  }
+  return digits.join("");
 };
 
 })();

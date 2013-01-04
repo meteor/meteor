@@ -1839,8 +1839,8 @@ Tinytest.add("spark - landmark constant", function(test) {
   Meteor.flush();
 });
 
-
-Tinytest.add("spark - leaderboard", function(test) {
+_.each(['STRING', 'MONGO'], function (idGeneration) {
+Tinytest.add("spark - leaderboard, " + idGeneration, function(test) {
   // use a simplified, local leaderboard to test some stuff
 
   var players = new LocalCollection();
@@ -1876,6 +1876,11 @@ Tinytest.add("spark - leaderboard", function(test) {
     }, html);
     return html;
   }));
+  var idGen;
+  if (idGeneration === 'STRING')
+    idGen = LocalCollection.id;
+  else
+    idGen = function () { return new LocalCollection._ObjectID(); };
 
   // back before we had scientists we had Vancian hussade players
   var names = ["Glinnes Hulden", "Shira Hulden", "Denzel Warhound",
@@ -1884,7 +1889,7 @@ Tinytest.add("spark - leaderboard", function(test) {
                "Rhyl Shermatz", "Yalden Wirp", "Tyran Lucho",
                "Bump Candolf", "Wilmer Guff", "Carbo Gilweg"];
   for (var i = 0; i < names.length; i++)
-    players.insert({name: names[i], score: i*5});
+    players.insert({_id: idGen(), name: names[i], score: i*5});
 
   var bump = function() {
     players.update(selected_player.get(), {$inc: {score: 5}});
@@ -1940,7 +1945,7 @@ Tinytest.add("spark - leaderboard", function(test) {
   Meteor.flush();
   test.equal(selected_player.numListeners(), 0);
 });
-
+});
 
 Tinytest.add("spark - list cursor stop", function(test) {
   // test Spark.list outside of render mode, on custom observable

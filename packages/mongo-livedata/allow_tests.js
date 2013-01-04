@@ -1,5 +1,7 @@
 (function () {
 
+
+_.each(['STRING', 'MONGO'], function (idGeneration) {
   //
   // Set up a bunch of test collections
   //
@@ -7,25 +9,25 @@
   // helper for defining a collection, subscribing to it, and defining
   // a method to clear it
   var defineCollection = function(name, insecure) {
-    var collection = new Meteor.Collection(name);
+    var collection = new Meteor.Collection(name + idGeneration, {idGeneration: idGeneration});
     collection._insecure = insecure;
 
     if (Meteor.isServer) {
-      Meteor.publish("collection-" + name, function() {
+      Meteor.publish("collection-" + name + idGeneration, function() {
         return collection.find();
       });
 
       var m = {};
-      m["clear-collection-" + name] = function(runId) {
+      m["clear-collection-" + name + idGeneration] = function(runId) {
         collection.remove({world: runId});
       };
       Meteor.methods(m);
     } else {
-      Meteor.subscribe("collection-" + name);
+      Meteor.subscribe("collection-" + name + idGeneration);
     }
 
     collection.callClearMethod = function (runId, callback) {
-      Meteor.call("clear-collection-" + name, runId, callback);
+      Meteor.call("clear-collection-" + name + idGeneration, runId, callback);
     };
     return collection;
   };
@@ -186,7 +188,7 @@
   //
 
   if (Meteor.isServer) {
-    Tinytest.add("collection - allow and deny validate options", function (test) {
+    Tinytest.add("collection - allow and deny validate options, " + idGeneration, function (test) {
       var collection = new Meteor.Collection(null);
 
       test.throws(function () {
@@ -223,7 +225,7 @@
       });
     });
 
-    Tinytest.add("collection - calling allow restricts", function (test) {
+    Tinytest.add("collection - calling allow restricts, " + idGeneration, function (test) {
       var collection = new Meteor.Collection(null);
       test.equal(collection._restricted, false);
       collection.allow({
@@ -232,7 +234,7 @@
       test.equal(collection._restricted, true);
     });
 
-    Tinytest.add("collection - global insecure", function (test) {
+    Tinytest.add("collection - global insecure, " + idGeneration, function (test) {
       // note: This test alters the global insecure status! This may
       // collide with itself if run multiple times (but is better than
       // the old test which had the same problem)
@@ -256,7 +258,7 @@
   if (Meteor.isClient) {
     // test that if allow is called once then the collection is
     // restricted, and that other mutations aren't allowed
-    testAsyncMulti("collection - partial allow", [
+    testAsyncMulti("collection - partial allow, " + idGeneration, [
       function (test, expect) {
         restrictedCollectionForPartialAllowTest.update(
           {world: test.runId()}, {$set: {updated: true}}, expect(function (err, res) {
@@ -278,7 +280,7 @@
 
 
     // test that we only fetch the fields specified
-    testAsyncMulti("collection - fetch", [
+    testAsyncMulti("collection - fetch, " + idGeneration, [
       function (test, expect) {
         restrictedCollectionForFetchTest.insert(
           {field1: 1, field2: 1, field3: 1, field4: 1,
@@ -317,7 +319,7 @@
   }
 
   if (Meteor.isClient) {
-    testAsyncMulti("collection - insecure", [
+    testAsyncMulti("collection - insecure, " + idGeneration, [
       function (test, expect) {
         insecureCollection.callClearMethod(test.runId(), expect(function () {
           test.equal(insecureCollection.find({world: test.runId()}).count(), 0);
@@ -333,7 +335,7 @@
       }
     ]);
 
-    testAsyncMulti("collection - locked down", [
+    testAsyncMulti("collection - locked down, " + idGeneration, [
       function (test, expect) {
         lockedDownCollection.callClearMethod(test.runId(), expect(function() {
           test.equal(lockedDownCollection.find({world: test.runId()}).count(), 0);
@@ -350,7 +352,7 @@
     (function () {
       var collection = restrictedCollectionForUpdateOptionsTest;
       var id1;
-      testAsyncMulti("collection - update options", [
+      testAsyncMulti("collection - update options, " + idGeneration, [
         // init
         function (test, expect) {
           collection.callClearMethod(test.runId(), expect(function () {
@@ -619,4 +621,6 @@
         ]);
       });
   }
+
+});
 }) ();

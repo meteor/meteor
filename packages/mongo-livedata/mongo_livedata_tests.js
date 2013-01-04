@@ -1,11 +1,29 @@
 // This is a magic collection that fails its writes on the server when
 // the selector (or inserted document) contains fail: true.
 
-// XXX namespacing
+(function () {
+if (Meteor.isServer) {
+  Meteor.methods({
+    createInsecureCollection: function (name, options) {
+      var c = new Meteor.Collection(name, options);
+      c._insecure = true;
+      Meteor.publish('c-' + name, function () {
+        return c.find();
+      });
+    }
+  });
+}
+
 Meteor._FailureTestCollection =
   new Meteor.Collection("___meteor_failure_test_collection");
 
-testAsyncMulti("mongo-livedata - database error reporting", [
+// Parameterize tests.
+_.each( ['STRING', 'MONGO'], function(idGeneration) {
+
+
+var collectionOptions = { idGeneration: idGeneration};
+
+testAsyncMulti("mongo-livedata - database error reporting. " + idGeneration, [
   function (test, expect) {
     var ftc = Meteor._FailureTestCollection;
 
@@ -34,15 +52,15 @@ testAsyncMulti("mongo-livedata - database error reporting", [
 ]);
 
 
-Tinytest.addAsync("mongo-livedata - basics", function (test, onComplete) {
+Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, onComplete) {
   var run = test.runId();
   var coll, coll2;
   if (Meteor.isClient) {
-    coll = new Meteor.Collection(null); // local, unmanaged
-    coll2 = new Meteor.Collection(null); // local, unmanaged
+    coll = new Meteor.Collection(null, collectionOptions) ; // local, unmanaged
+    coll2 = new Meteor.Collection(null, collectionOptions); // local, unmanaged
   } else {
-    coll = new Meteor.Collection("livedata_test_collection_"+run);
-    coll2 = new Meteor.Collection("livedata_test_collection_2_"+run);
+    coll = new Meteor.Collection("livedata_test_collection_"+run, collectionOptions);
+    coll2 = new Meteor.Collection("livedata_test_collection_2_"+run, collectionOptions);
   }
 
   var log = '';
@@ -169,14 +187,14 @@ Tinytest.addAsync("mongo-livedata - basics", function (test, onComplete) {
   onComplete();
 });
 
-Tinytest.addAsync("mongo-livedata - fuzz test", function(test, onComplete) {
+Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, onComplete) {
 
   var run = test.runId();
   var coll;
   if (Meteor.isClient) {
-    coll = new Meteor.Collection(null); // local, unmanaged
+    coll = new Meteor.Collection(null, collectionOptions); // local, unmanaged
   } else {
-    coll = new Meteor.Collection("livedata_test_collection_"+run);
+    coll = new Meteor.Collection("livedata_test_collection_"+run, collectionOptions);
   }
 
   // fuzz test of observe(), especially the server-side diffing
@@ -307,13 +325,13 @@ var runInFence = function (f) {
   }
 };
 
-Tinytest.addAsync("mongo-livedata - scribbling", function (test, onComplete) {
+Tinytest.addAsync("mongo-livedata - scribbling, " + idGeneration, function (test, onComplete) {
   var run = test.runId();
   var coll;
   if (Meteor.isClient) {
-    coll = new Meteor.Collection(null); // local, unmanaged
+    coll = new Meteor.Collection(null, collectionOptions); // local, unmanaged
   } else {
-    coll = new Meteor.Collection("livedata_test_collection_"+run);
+    coll = new Meteor.Collection("livedata_test_collection_"+run, collectionOptions);
   }
 
   var numAddeds = 0;
@@ -337,13 +355,13 @@ Tinytest.addAsync("mongo-livedata - scribbling", function (test, onComplete) {
   onComplete();
 });
 
-Tinytest.addAsync("mongo-livedata - stop handle in callback", function (test, onComplete) {
+Tinytest.addAsync("mongo-livedata - stop handle in callback, " + idGeneration, function (test, onComplete) {
   var run = test.runId();
   var coll;
   if (Meteor.isClient) {
-    coll = new Meteor.Collection(null); // local, unmanaged
+    coll = new Meteor.Collection(null, collectionOptions); // local, unmanaged
   } else {
-    coll = new Meteor.Collection("stopHandleInCallback-"+run);
+    coll = new Meteor.Collection("stopHandleInCallback-"+run, collectionOptions);
   }
 
   var output = [];
@@ -392,9 +410,9 @@ Tinytest.addAsync("mongo-livedata - stop handle in callback", function (test, on
 
 // This behavior isn't great, but it beats deadlock.
 if (Meteor.isServer) {
-  Tinytest.addAsync("mongo-livedata - recursive observe throws", function (test, onComplete) {
+  Tinytest.addAsync("mongo-livedata - recursive observe throws, " + idGeneration, function (test, onComplete) {
     var run = test.runId();
-    var coll = new Meteor.Collection("observeInCallback-"+run);
+    var coll = new Meteor.Collection("observeInCallback-"+run, collectionOptions);
 
     var callbackCalled = false;
     var handle = coll.find()._observeUnordered({
@@ -417,9 +435,9 @@ if (Meteor.isServer) {
     onComplete();
   });
 
-  Tinytest.addAsync("mongo-livedata - cursor dedup", function (test, onComplete) {
+  Tinytest.addAsync("mongo-livedata - cursor dedup, " + idGeneration, function (test, onComplete) {
     var run = test.runId();
-    var coll = new Meteor.Collection("cursorDedup-"+run);
+    var coll = new Meteor.Collection("cursorDedup-"+run, collectionOptions);
 
     var observer = function (noAdded) {
       var output = [];
@@ -524,27 +542,16 @@ if (Meteor.isServer) {
   });
 }
 
-if (Meteor.isServer) {
-  Meteor.methods({
-    createInsecureCollection: function (name) {
-      var c = new Meteor.Collection(name);
-      c._insecure = true;
-      Meteor.publish('c-' + name, function () {
-        return c.find();
-      });
-    }
-  });
-}
 
-testAsyncMulti('mongo-livedata - rewrite selector', [
+testAsyncMulti('mongo-livedata - rewrite selector, ' + idGeneration, [
   function (test, expect) {
     var collectionName = Meteor.uuid();
     if (Meteor.isClient) {
-      Meteor.call('createInsecureCollection', collectionName);
+      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
       Meteor.subscribe('c-' + collectionName);
     }
 
-    var coll = new Meteor.Collection(collectionName);
+    var coll = new Meteor.Collection(collectionName, collectionOptions);
 
     var docId;
 
@@ -575,7 +582,7 @@ testAsyncMulti('mongo-livedata - rewrite selector', [
 ]);
 
 
-testAsyncMulti('mongo-livedata - empty documents', [
+testAsyncMulti('mongo-livedata - empty documents, ' + idGeneration, [
   function (test, expect) {
     var collectionName = Meteor.uuid();
     if (Meteor.isClient) {
@@ -583,7 +590,7 @@ testAsyncMulti('mongo-livedata - empty documents', [
       Meteor.subscribe('c-' + collectionName);
     }
 
-    var coll = new Meteor.Collection(collectionName);
+    var coll = new Meteor.Collection(collectionName, collectionOptions);
     var docId;
 
     coll.insert({}, expect(function (err, id) {
@@ -596,15 +603,15 @@ testAsyncMulti('mongo-livedata - empty documents', [
   }
 ]);
 
-testAsyncMulti('mongo-livedata - document with a date', [
+testAsyncMulti('mongo-livedata - document with a date, ' + idGeneration, [
   function (test, expect) {
     var collectionName = Meteor.uuid();
     if (Meteor.isClient) {
-      Meteor.call('createInsecureCollection', collectionName);
+      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
       Meteor.subscribe('c-' + collectionName);
     }
 
-    var coll = new Meteor.Collection(collectionName);
+    var coll = new Meteor.Collection(collectionName, collectionOptions);
     var docId;
 
     if (Meteor.isClient) {
@@ -619,3 +626,7 @@ testAsyncMulti('mongo-livedata - document with a date', [
     }
   }
 ]);
+
+});
+
+})();

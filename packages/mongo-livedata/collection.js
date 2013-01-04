@@ -1,6 +1,17 @@
 // manager, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
 
+(function () {
+var ObjectID;
+if (Meteor.isClient) {
+  ObjectID = LocalCollection._ObjectID;
+} else {
+
+  ObjectID = __meteor_bootstrap__.require('mongodb').ObjectID;
+  ObjectID.prototype.clone = function () { return new ObjectID(this.toHexString());};
+  // fix Mongo ObjectIDs to function as the docs say they do.
+  ObjectID.prototype.valueOf = function () { return this.toHexString(); };
+}
 
 Meteor.Collection = function (name, options) {
   var self = this;
@@ -13,9 +24,24 @@ Meteor.Collection = function (name, options) {
   }
   options = _.extend({
     manager: undefined,
+    idGeneration: 'STRING',
     _driver: undefined,
     _preventAutopublish: false
   }, options);
+
+  switch (options.idGeneration) {
+  case 'MONGO':
+    self._makeNewID = function () {
+      return new ObjectID();
+    };
+    break;
+  case 'STRING':
+  default:
+    self._makeNewID = function () {
+      return LocalCollection.id();
+    };
+    break;
+  }
 
   if (!name && (name !== null)) {
     Meteor._debug("Warning: creating anonymous collection. It will not be " +
@@ -178,7 +204,7 @@ Meteor.Collection._rewriteSelector = function (selector) {
 
   if (!selector || (('_id' in selector) && !selector._id))
     // can't match anything
-    return {_id: new Meteor.Collection.ObjectID()};
+    return {_id: LocalCollection.id()};
 
   var ret = {};
   _.each(selector, function (value, key) {
@@ -255,7 +281,7 @@ _.each(["insert", "update", "remove"], function (name) {
       args[0] = _.extend({}, args[0]);
       if ('_id' in args[0])
         throw new Error("Do not pass an _id to insert. Meteor will generate the _id for you.");
-      ret = args[0]._id = new Meteor.Collection.ObjectID();
+      ret = args[0]._id = self._makeNewID();
     } else {
       args[0] = Meteor.Collection._rewriteSelector(args[0]);
     }
@@ -306,6 +332,13 @@ Meteor.Collection.prototype._ensureIndex = function (index, options) {
     throw new Error("Can only call _ensureIndex on server collections");
   self._collection._ensureIndex(index, options);
 };
+
+Meteor.Collection.prototype._makeNewId = function () {
+  var self = this;
+  return new Meteor.Collection.ObjectID();
+};
+
+Meteor.Collection.ObjectID = ObjectID;
 
 ///
 /// Remote methods and access control.
@@ -381,17 +414,7 @@ Meteor.Collection.prototype._ensureIndex = function (index, options) {
   };
 })();
 
-if (Meteor.isClient) {
-  Meteor.Collection.ObjectID = LocalCollection._ObjectID;
-} else {
-  Meteor.Collection.ObjectID = (function () {
-    var ObjectID = __meteor_bootstrap__.require('mongodb').ObjectID;
-    ObjectID.prototype.clone = function () { return new ObjectID(this.toHexString());};
-    // fix Mongo ObjectIDs to function as the docs say they do.
-    ObjectID.prototype.valueOf = function () { return this.toHexString(); };
-    return ObjectID;
-  })();
-}
+
 
 Meteor.addCustomType({
   name: "oid",
@@ -638,3 +661,4 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
 
   self._collection.remove.call(self._collection, idSelector);
 };
+})();
