@@ -1,0 +1,215 @@
+{
+    "project": {
+        "name": "The meteor-roles API",
+        "description": "The meteor-roles API: a role-based authorization package for Meteor",
+        "version": "1.0"
+    },
+    "files": {
+        "roles/roles.js": {
+            "name": "roles/roles.js",
+            "modules": {
+                "Roles": 1
+            },
+            "classes": {
+                "Roles": 1
+            },
+            "fors": {},
+            "namespaces": {}
+        }
+    },
+    "modules": {
+        "Roles": {
+            "name": "Roles",
+            "submodules": {},
+            "classes": {
+                "Roles": 1
+            },
+            "fors": {},
+            "namespaces": {},
+            "tag": "module",
+            "file": "roles/roles.js",
+            "line": 16,
+            "description": "Provides functions related to user authorization."
+        }
+    },
+    "classes": {
+        "Roles": {
+            "name": "Roles",
+            "shortname": "Roles",
+            "classitems": [],
+            "plugins": [],
+            "extensions": [],
+            "plugin_for": [],
+            "extension_for": [],
+            "module": "Roles",
+            "namespace": "",
+            "file": "roles/roles.js",
+            "line": 16,
+            "description": "Role-based authorization.  Uses 'roles' collection to store existing roles.  Adds a 'roles' field to user objects when they are added to a given role.",
+            "is_constructor": 1
+        }
+    },
+    "classitems": [
+        {
+            "file": "roles/roles.js",
+            "line": 9,
+            "description": "Roles collection documents consist only of an id and a role name.\n  ex: { _id:<uuid>, name: \"admin\" }",
+            "class": "Roles",
+            "module": "Roles"
+        },
+        {
+            "file": "roles/roles.js",
+            "line": 26,
+            "description": "Create a new role",
+            "itemtype": "method",
+            "name": "createRole",
+            "params": [
+                {
+                    "name": "role",
+                    "description": "Name of role",
+                    "type": "String"
+                }
+            ],
+            "class": "Roles",
+            "module": "Roles"
+        },
+        {
+            "file": "roles/roles.js",
+            "line": 42,
+            "description": "Delete an existing role.  Will throw \"Role in use\" error if any users \nare currently assigned to the target role.",
+            "itemtype": "method",
+            "name": "deleteRole",
+            "params": [
+                {
+                    "name": "role",
+                    "description": "Name of role",
+                    "type": "String"
+                }
+            ],
+            "class": "Roles",
+            "module": "Roles"
+        },
+        {
+            "file": "roles/roles.js",
+            "line": 66,
+            "description": "Add users to roles. Will create roles as needed.\n\nMakes 2 calls to database:\n 1. retrieve list of all existing roles\n 2. update users' roles",
+            "itemtype": "method",
+            "name": "addUsersToRoles",
+            "params": [
+                {
+                    "name": "users",
+                    "description": "id(s) of users to add to roles",
+                    "type": "Array|String"
+                },
+                {
+                    "name": "roles",
+                    "description": "name(s) of roles to add users to",
+                    "type": "Array|String"
+                }
+            ],
+            "class": "Roles",
+            "module": "Roles"
+        },
+        {
+            "file": "roles/roles.js",
+            "line": 101,
+            "description": "Remove users from roles",
+            "itemtype": "method",
+            "name": "removeUsersFromRoles",
+            "params": [
+                {
+                    "name": "users",
+                    "description": "id(s) of users to add to roles",
+                    "type": "Array|String"
+                },
+                {
+                    "name": "roles",
+                    "description": "name(s) of roles to add users to",
+                    "type": "Array|String"
+                }
+            ],
+            "class": "Roles",
+            "module": "Roles"
+        },
+        {
+            "file": "roles/roles.js",
+            "line": 124,
+            "description": "Check if user is in role",
+            "itemtype": "method",
+            "name": "userIsInRole",
+            "params": [
+                {
+                    "name": "user",
+                    "description": "Id of user",
+                    "type": "String"
+                },
+                {
+                    "name": "role",
+                    "description": "Name of role",
+                    "type": "String"
+                }
+            ],
+            "class": "Roles",
+            "module": "Roles"
+        },
+        {
+            "file": "roles/roles.js",
+            "line": 140,
+            "description": "Retrieve users roles",
+            "itemtype": "method",
+            "name": "getRolesForUser",
+            "params": [
+                {
+                    "name": "user",
+                    "description": "Id of user",
+                    "type": "String"
+                }
+            ],
+            "return": {
+                "description": "array of roles for user",
+                "type": "Array"
+            },
+            "class": "Roles",
+            "module": "Roles"
+        },
+        {
+            "file": "roles/roles.js",
+            "line": 154,
+            "description": "Retrieve all existing roles",
+            "itemtype": "method",
+            "name": "getAllRoles",
+            "return": {
+                "description": "cursor of existing roles",
+                "type": "Cursor"
+            },
+            "class": "Roles",
+            "module": "Roles"
+        },
+        {
+            "file": "roles/roles.js",
+            "line": 164,
+            "description": "Retrieve all users who are in target role",
+            "itemtype": "method",
+            "name": "getUsersInRole",
+            "params": [
+                {
+                    "name": "role",
+                    "description": "Name of role",
+                    "type": "String"
+                }
+            ],
+            "return": {
+                "description": "cursor of users in role",
+                "type": "Cursor"
+            },
+            "class": "Roles",
+            "module": "Roles"
+        }
+    ],
+    "warnings": [
+        {
+            "message": "Missing item type\nRoles collection documents consist only of an id and a role name.\n  ex: { _id:<uuid>, name: \"admin\" }",
+            "line": " roles/roles.js:9"
+        }
+    ]
+}

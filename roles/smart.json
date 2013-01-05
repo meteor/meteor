@@ -1,0 +1,9 @@
+{
+  "name": "roles",
+  "description": "Role-based authorization, compatible with Meteor's built-in Accounts package",
+  "homepage": "",
+  "author": "Adrian Lanning <alanning@gmail.com>",
+  "version": "1.0",
+  "git": "",
+  "packages": {}
+}
