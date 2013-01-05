@@ -980,7 +980,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
                         + msg.id);
       }
       serverDoc.document = msg.fields || {};
-      serverDoc.document._id = LocalCollection._idParse(msg.id);
+      serverDoc.document._id = Meteor.idParse(msg.id);
     } else {
       self._pushUpdate(updates, msg.collection, msg);
     }

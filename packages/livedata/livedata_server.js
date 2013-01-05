@@ -789,8 +789,8 @@ Meteor._LivedataSubscription = function (session, subscriptionId) {
   // a ddp consumer that isn't minimongo
 
   self._idFilter = {
-    idStringify: LocalCollection._idStringify,
-    idParse: LocalCollection._idParse
+    idStringify: Meteor.idStringify,
+    idParse: Meteor.idParse
   };
 };
 

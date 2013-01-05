@@ -719,3 +719,52 @@ LocalCollection.prototype.resumeObservers = function () {
     query.results_snapshot = null;
   }
 };
+
+
+LocalCollection._idStringify = function (id) {
+  if (id instanceof LocalCollection._findObjectIDClass()) {
+    return id.valueOf();
+  } else if (typeof id === 'string') {
+    if (id === "") {
+      return id;
+    } else if (id[0] === "-" || // escape previously dashed strings
+               id[0] === "~" || // escape escaped numbers, true, false
+               LocalCollection._looksLikeObjectID(id) || // escape object-id-form strings
+               id[0] === '{') { // escape object-form strings, for maybe implementing later
+      return "-" + id;
+    } else {
+      return id; // other strings go through unchanged.
+    }
+  } else if (id === undefined) {
+    return '-';
+  } else if (typeof id === 'object') {
+    throw new Error("Meteor does not currently support objects other than ObjectID as ids");
+  } else { // Numbers, true, false, null
+    return "~" + JSON.stringify(id);
+  }
+};
+
+
+
+LocalCollection._idParse = function (id) {
+  if (id === "") {
+    return id;
+  } else if (id === '-') {
+    return undefined;
+  } else if (id[0] === '-') {
+    return id.substr(1);
+  } else if (id[0] === '~') {
+    return JSON.parse(id.substr(1));
+  } else if (LocalCollection._looksLikeObjectID(id)) {
+    return new (LocalCollection._findObjectIDClass())(id);
+  } else {
+    return id;
+  }
+};
+
+if (typeof Meteor !== 'undefined') {
+  Meteor.idParse = LocalCollection._idParse;
+  Meteor.idStringify = LocalCollection._idStringify;
+}
+
+})();
