@@ -789,8 +789,8 @@ Meteor._LivedataSubscription = function (session, subscriptionId) {
   // a ddp consumer that isn't minimongo
 
   self._idFilter = {
-    idToDDP: LocalCollection._idToDDP,
-    idFromDDP: LocalCollection._idFromDDP
+    idStringify: LocalCollection._idStringify,
+    idParse: LocalCollection._idParse
   };
 };
 
@@ -821,20 +821,20 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
   added: function (collectionName, id, fields) {
     var self = this;
-    id = self._idFilter.idToDDP(id);
+    id = self._idFilter.idStringify(id);
     Meteor._ensure(self._documents, collectionName)[id] = true;
     self._session.added(self._subscriptionId, collectionName, id, fields);
   },
 
   changed: function (collectionName, id, fields) {
     var self = this;
-    id = self._idFilter.idToDDP(id);
+    id = self._idFilter.idStringify(id);
     self._session.changed(self._subscriptionId, collectionName, id, fields);
   },
 
   removed: function (collectionName, id) {
     var self = this;
-    id = self._idFilter.idToDDP(id);
+    id = self._idFilter.idStringify(id);
     // We don't bother to delete sets of things in a collection if the
     // collection is empty.  It could break _removeAllDocuments.
     delete self._documents[collectionName][id];
@@ -865,7 +865,7 @@ _.extend(Meteor._LivedataSubscription.prototype, {
       // Iterate over _.keys instead of the dictionary itself, since we'll be
       // mutating it.
       _.each(_.keys(collectionDocs), function (strId) {
-        self.removed(collectionName, LocalCollection._idFromDDP(strId));
+        self.removed(collectionName, self._idFilter.idParse(strId));
       });
     });
   }

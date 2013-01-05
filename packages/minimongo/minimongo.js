@@ -29,6 +29,8 @@ LocalCollection = function () {
   this.paused = false;
 };
 
+
+(function () {
 LocalCollection._applyChanges = function (doc, changeFields) {
   _.each(changeFields, function (value, key) {
     if (value === undefined)
@@ -73,7 +75,7 @@ LocalCollection.Cursor = function (collection, selector, options) {
 
   if ((typeof selector === "string") || (typeof selector === "number") || selector instanceof LocalCollection._ObjectID) {
     // stash for fast path
-    this.selector_id = LocalCollection._idToDDP(selector);
+    this.selector_id = LocalCollection._idStringify(selector);
     this.selector_f = LocalCollection._compileSelector(selector);
   } else {
     this.selector_f = LocalCollection._compileSelector(selector);
@@ -352,7 +354,7 @@ LocalCollection.prototype.insert = function (doc) {
   if (!_.has(doc, '_id')) {
     doc._id = new LocalCollection._ObjectID();
   }
-  var id = LocalCollection._idToDDP(doc._id);
+  var id = LocalCollection._idStringify(doc._id);
 
   if (_.has(self.docs, id))
     throw new Error("Duplicate _id '" + id + "'");
@@ -385,7 +387,7 @@ LocalCollection.prototype.remove = function (selector) {
 
   // Avoid O(n) for "remove a single doc by ID".
   if (LocalCollection._selectorIsId(selector)) {
-    var strId = LocalCollection._idToDDP(selector);
+    var strId = LocalCollection._idStringify(selector);
     if (_.has(self.docs, strId))
       remove.push(strId);
   } else {
@@ -476,7 +478,7 @@ LocalCollection.prototype._modifyAndNotify = function (
       // Because we don't support skip or limit (yet) in unordered queries, we
       // can just do a direct lookup.
       matched_before[qid] = _.has(query.results,
-                                  LocalCollection._idToDDP(doc._id));
+                                  LocalCollection._idStringify(doc._id));
     }
   }
 
@@ -554,7 +556,7 @@ LocalCollection._insertInResults = function (query, doc) {
     }
   } else {
     query.added(LocalCollection._deepcopy(doc));
-    query.results[LocalCollection._idToDDP(doc._id)] = doc;
+    query.results[LocalCollection._idStringify(doc._id)] = doc;
   }
 };
 
@@ -564,7 +566,7 @@ LocalCollection._removeFromResults = function (query, doc) {
     query.removed(doc, i);
     query.results.splice(i, 1);
   } else {
-    var id = LocalCollection._idToDDP(doc._id);  // in case callback mutates doc
+    var id = LocalCollection._idStringify(doc._id);  // in case callback mutates doc
     query.removed(doc);
     delete query.results[id];
   }
@@ -576,7 +578,7 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
 
   if (!query.ordered) {
     query.changed(LocalCollection._deepcopy(doc), old_doc);
-    query.results[LocalCollection._idToDDP(doc._id)] = doc;
+    query.results[LocalCollection._idStringify(doc._id)] = doc;
     return;
   }
 
@@ -717,4 +719,3 @@ LocalCollection.prototype.resumeObservers = function () {
     query.results_snapshot = null;
   }
 };
-

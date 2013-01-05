@@ -96,7 +96,7 @@ Meteor.Collection = function (name, options) {
       // Apply an update.
       // XXX better specify this interface (not in terms of a wire message)?
       update: function (msg) {
-        var mongoId = msg.id && LocalCollection._idFromDDP(msg.id);
+        var mongoId = msg.id && LocalCollection._idParse(msg.id);
         var doc = self._collection.findOne(mongoId);
 
         // Is this a "replace the whole doc" message coming from the quiescence

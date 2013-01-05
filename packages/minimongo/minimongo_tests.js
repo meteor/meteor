@@ -1452,11 +1452,11 @@ Tinytest.add("minimongo - saveOriginals errors", function (test) {
 
 Tinytest.add("minimongo - objectid transformation", function (test) {
   var randomOid = new LocalCollection._ObjectID();
-  test.equal(randomOid, LocalCollection._idFromDDP(LocalCollection._idToDDP(randomOid)));
-  test.equal("FOO", LocalCollection._idFromDDP(LocalCollection._idToDDP("FOO")));
-  test.equal("ffffffffffff", LocalCollection._idFromDDP(LocalCollection._idToDDP("ffffffffffff")));
-  test.equal("ffffffffffff", LocalCollection._idToDDP(LocalCollection._idFromDDP("ffffffffffff")));
-  test.equal("--a string", LocalCollection._idFromDDP(LocalCollection._idToDDP("--a string")));
+  test.equal(randomOid, LocalCollection._idParse(LocalCollection._idStringify(randomOid)));
+  test.equal("FOO", LocalCollection._idParse(LocalCollection._idStringify("FOO")));
+  test.equal("ffffffffffff", LocalCollection._idParse(LocalCollection._idStringify("ffffffffffff")));
+  test.equal("ffffffffffff", LocalCollection._idStringify(LocalCollection._idParse("ffffffffffff")));
+  test.equal("--a string", LocalCollection._idParse(LocalCollection._idStringify("--a string")));
 });
 
 
