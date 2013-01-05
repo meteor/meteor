@@ -17,6 +17,7 @@ _NOTE_: If you see an error message regarding **'roles package does not exist'**
 
 ### Documentation
 
+Online API docs found here: http://alanning.github.com/meteor-roles/
 
 Generated using [YUIDoc][2]
 
