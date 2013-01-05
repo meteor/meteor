@@ -1,7 +1,7 @@
 meteor-roles
 ============
 
-Roles-based authorization package for Meteor
+Roles-based authorization package for Meteor - compatible with built-in accounts package.
 
 ### Tests
 

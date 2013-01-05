@@ -1,7 +1,7 @@
 ;(function () {
 
 /**
- * Provides functions related to user authorization.
+ * Provides functions related to user authorization. Compatible with built-in Meteor accounts packages.
  *
  * @module Roles
  */
@@ -14,7 +14,10 @@ Meteor.roles = new Meteor.Collection("roles")
 
 
 /**
- * Role-based authorization.  Uses 'roles' collection to store existing roles.  Adds a 'roles' field to user objects when they are added to a given role.
+ * <p>Role-based authorization compatible with built-in Meteor accounts package.</p>
+ * <br />
+ * <p>Uses 'roles' collection to store existing roles.</p>
+ * <p>Adds a 'roles' field to user objects in 'users' collection when they are added to a given role.</p>
  *
  * @class Roles
  * @constructor
