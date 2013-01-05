@@ -29,7 +29,7 @@
             "tag": "module",
             "file": "roles/roles.js",
             "line": 16,
-            "description": "Provides functions related to user authorization."
+            "description": "Provides functions related to user authorization. Compatible with built-in Meteor accounts packages."
         }
     },
     "classes": {
@@ -45,7 +45,7 @@
             "namespace": "",
             "file": "roles/roles.js",
             "line": 16,
-            "description": "Role-based authorization.  Uses 'roles' collection to store existing roles.  Adds a 'roles' field to user objects when they are added to a given role.",
+            "description": "<p>Role-based authorization compatible with built-in Meteor accounts package.</p>\n<br />\n<p>Uses 'roles' collection to store existing roles.</p>\n<p>Adds a 'roles' field to user objects in 'users' collection when they are added to a given role.</p>",
             "is_constructor": 1
         }
     },
@@ -59,7 +59,7 @@
         },
         {
             "file": "roles/roles.js",
-            "line": 26,
+            "line": 29,
             "description": "Create a new role",
             "itemtype": "method",
             "name": "createRole",
@@ -75,7 +75,7 @@
         },
         {
             "file": "roles/roles.js",
-            "line": 42,
+            "line": 45,
             "description": "Delete an existing role.  Will throw \"Role in use\" error if any users \nare currently assigned to the target role.",
             "itemtype": "method",
             "name": "deleteRole",
@@ -91,7 +91,7 @@
         },
         {
             "file": "roles/roles.js",
-            "line": 66,
+            "line": 69,
             "description": "Add users to roles. Will create roles as needed.\n\nMakes 2 calls to database:\n 1. retrieve list of all existing roles\n 2. update users' roles",
             "itemtype": "method",
             "name": "addUsersToRoles",
@@ -112,7 +112,7 @@
         },
         {
             "file": "roles/roles.js",
-            "line": 101,
+            "line": 104,
             "description": "Remove users from roles",
             "itemtype": "method",
             "name": "removeUsersFromRoles",
@@ -133,7 +133,7 @@
         },
         {
             "file": "roles/roles.js",
-            "line": 124,
+            "line": 127,
             "description": "Check if user is in role",
             "itemtype": "method",
             "name": "userIsInRole",
@@ -154,7 +154,7 @@
         },
         {
             "file": "roles/roles.js",
-            "line": 140,
+            "line": 143,
             "description": "Retrieve users roles",
             "itemtype": "method",
             "name": "getRolesForUser",
@@ -174,7 +174,7 @@
         },
         {
             "file": "roles/roles.js",
-            "line": 154,
+            "line": 157,
             "description": "Retrieve all existing roles",
             "itemtype": "method",
             "name": "getAllRoles",
@@ -187,7 +187,7 @@
         },
         {
             "file": "roles/roles.js",
-            "line": 164,
+            "line": 167,
             "description": "Retrieve all users who are in target role",
             "itemtype": "method",
             "name": "getUsersInRole",

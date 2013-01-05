@@ -10,7 +10,7 @@ YUI.add("yuidoc-meta", function(Y) {
         {
             "displayName": "Roles",
             "name": "Roles",
-            "description": "Provides functions related to user authorization."
+            "description": "Provides functions related to user authorization. Compatible with built-in Meteor accounts packages."
         }
     ]
 } };
