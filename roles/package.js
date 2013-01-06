@@ -5,7 +5,7 @@ Package.describe({
 Package.on_use(function (api, where) {
   where = where || ['client', 'server'];
   api.use(['underscore', 'accounts-base'], where);
-  api.add_files('roles.js', where);
+  api.add_files('roles_server.js', 'server');
 });
 
 Package.on_test(function (api) {

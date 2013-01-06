@@ -5,8 +5,8 @@
         "version": "1.0"
     },
     "files": {
-        "roles/roles.js": {
-            "name": "roles/roles.js",
+        "roles/roles_server.js": {
+            "name": "roles/roles_server.js",
             "modules": {
                 "Roles": 1
             },
@@ -27,7 +27,7 @@
             "fors": {},
             "namespaces": {},
             "tag": "module",
-            "file": "roles/roles.js",
+            "file": "roles/roles_server.js",
             "line": 16,
             "description": "Provides functions related to user authorization. Compatible with built-in Meteor accounts packages."
         }
@@ -43,7 +43,7 @@
             "extension_for": [],
             "module": "Roles",
             "namespace": "",
-            "file": "roles/roles.js",
+            "file": "roles/roles_server.js",
             "line": 16,
             "description": "<p>Role-based authorization compatible with built-in Meteor accounts package.</p>\n<br />\n<p>Uses 'roles' collection to store existing roles with unique index on 'name' field.</p>\n<p>Adds a 'roles' field to user objects in 'users' collection when they are added to a given role.</p>",
             "is_constructor": 1
@@ -51,14 +51,14 @@
     },
     "classitems": [
         {
-            "file": "roles/roles.js",
+            "file": "roles/roles_server.js",
             "line": 9,
             "description": "Roles collection documents consist only of an id and a role name.\n  ex: { _id:<uuid>, name: \"admin\" }",
             "class": "Roles",
             "module": "Roles"
         },
         {
-            "file": "roles/roles.js",
+            "file": "roles/roles_server.js",
             "line": 29,
             "description": "Create a new role",
             "itemtype": "method",
@@ -74,7 +74,7 @@
             "module": "Roles"
         },
         {
-            "file": "roles/roles.js",
+            "file": "roles/roles_server.js",
             "line": 60,
             "description": "Delete an existing role.  Will throw \"Role in use\" error if any users \nare currently assigned to the target role.",
             "itemtype": "method",
@@ -90,7 +90,7 @@
             "module": "Roles"
         },
         {
-            "file": "roles/roles.js",
+            "file": "roles/roles_server.js",
             "line": 81,
             "description": "Add users to roles. Will create roles as needed.\n\nMakes 2 calls to database:\n 1. retrieve list of all existing roles\n 2. update users' roles",
             "itemtype": "method",
@@ -111,7 +111,7 @@
             "module": "Roles"
         },
         {
-            "file": "roles/roles.js",
+            "file": "roles/roles_server.js",
             "line": 118,
             "description": "Remove users from roles",
             "itemtype": "method",
@@ -132,7 +132,7 @@
             "module": "Roles"
         },
         {
-            "file": "roles/roles.js",
+            "file": "roles/roles_server.js",
             "line": 141,
             "description": "Check if user is in role",
             "itemtype": "method",
@@ -153,7 +153,7 @@
             "module": "Roles"
         },
         {
-            "file": "roles/roles.js",
+            "file": "roles/roles_server.js",
             "line": 157,
             "description": "Retrieve users roles",
             "itemtype": "method",
@@ -173,7 +173,7 @@
             "module": "Roles"
         },
         {
-            "file": "roles/roles.js",
+            "file": "roles/roles_server.js",
             "line": 173,
             "description": "Retrieve all existing roles",
             "itemtype": "method",
@@ -186,7 +186,7 @@
             "module": "Roles"
         },
         {
-            "file": "roles/roles.js",
+            "file": "roles/roles_server.js",
             "line": 183,
             "description": "Retrieve all users who are in target role",
             "itemtype": "method",
@@ -209,7 +209,7 @@
     "warnings": [
         {
             "message": "Missing item type\nRoles collection documents consist only of an id and a role name.\n  ex: { _id:<uuid>, name: \"admin\" }",
-            "line": " roles/roles.js:9"
+            "line": " roles/roles_server.js:9"
         }
     ]
 }
