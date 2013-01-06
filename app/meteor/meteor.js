@@ -160,7 +160,7 @@ Commands.push({
 
     var example_dir = path.join(__dirname, '..', '..', 'examples');
     var examples = _.reject(fs.readdirSync(example_dir), function (e) {
-      return (e === 'unfinished' || e === 'other');
+      return (e === 'unfinished' || e === 'other' || e[0] === '.');
     });
 
     if (argv._.length === 1) {
