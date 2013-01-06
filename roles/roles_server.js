@@ -145,7 +145,7 @@ Roles.removeUsersFromRoles = function (users, roles) {
  * @param {String} user Id of user
  * @param {String} role Name of role
  */
-Roles.isUserInRole = function (user, role) {
+Roles.userIsInRole = function (user, role) {
   var found = Meteor.users.findOne(
       { _id: user, roles: { $in: [role] } },
       { _id: 1 }
