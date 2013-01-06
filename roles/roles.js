@@ -16,7 +16,7 @@ Meteor.roles = new Meteor.Collection("roles")
 /**
  * <p>Role-based authorization compatible with built-in Meteor accounts package.</p>
  * <br />
- * <p>Uses 'roles' collection to store existing roles.</p>
+ * <p>Uses 'roles' collection to store existing roles with unique index on 'name' field.</p>
  * <p>Adds a 'roles' field to user objects in 'users' collection when they are added to a given role.</p>
  *
  * @class Roles

@@ -45,7 +45,7 @@
             "namespace": "",
             "file": "roles/roles.js",
             "line": 16,
-            "description": "<p>Role-based authorization compatible with built-in Meteor accounts package.</p>\n<br />\n<p>Uses 'roles' collection to store existing roles.</p>\n<p>Adds a 'roles' field to user objects in 'users' collection when they are added to a given role.</p>",
+            "description": "<p>Role-based authorization compatible with built-in Meteor accounts package.</p>\n<br />\n<p>Uses 'roles' collection to store existing roles with unique index on 'name' field.</p>\n<p>Adds a 'roles' field to user objects in 'users' collection when they are added to a given role.</p>",
             "is_constructor": 1
         }
     },
