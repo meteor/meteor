@@ -24,14 +24,14 @@
     var userId = users[user]
 
     _.each(roles, function (role) {
-      var expected = expectedRoles.indexOf(role) !== -1,
+      var expected = _.contains(expectedRoles, role),
           msg = user + ' is not in expected role ' + role,
           nmsg = user + ' is in un-expected role ' + role
 
       if (expected) {
-        test.isTrue(Roles.isUserInRole(userId, role), msg)
+        test.isTrue(Roles.userIsInRole(userId, role), msg)
       } else {
-        test.isFalse(Roles.isUserInRole(userId, role), nmsg)
+        test.isFalse(Roles.userIsInRole(userId, role), nmsg)
       }
     })
   }
@@ -78,7 +78,37 @@
       Roles.createRole(role)
     })
 
-    test.isFalse(Roles.isUserInRole('1', 'admin'))
+    test.isFalse(Roles.userIsInRole('1', 'admin'))
+  })
+
+  Tinytest.add('can check user in role via object', function (test) {
+    var user 
+
+    reset()
+
+    _.each(roles, function (role) {
+      Roles.createRole(role)
+    })
+
+    Roles.addUsersToRoles(users.eve, ['admin', 'user'])
+    user = Meteor.users.findOne({_id:users.eve})
+
+    test.isTrue(Roles.userIsInRole(user, 'admin'))
+  })
+
+  Tinytest.add('can check user against several roles at once', function (test) {
+    var user 
+
+    reset()
+
+    _.each(roles, function (role) {
+      Roles.createRole(role)
+    })
+
+    Roles.addUsersToRoles(users.eve, ['admin', 'user'])
+    user = Meteor.users.findOne({_id:users.eve})
+
+    test.isTrue(Roles.userIsInRole(user, ['editor','admin']))
   })
 
   Tinytest.add('can add individual users to roles', function (test) {
@@ -193,7 +223,7 @@
     testUser(test, 'eve', ['editor', 'user'])
     testUser(test, 'bob', ['editor', 'user'])
 
-    test.isFalse(Roles.isUserInRole(users.joe, 'admin'))
+    test.isFalse(Roles.userIsInRole(users.joe, 'admin'))
     Roles.addUsersToRoles([users.bob, users.joe], ['admin', 'user'])
     testUser(test, 'bob', ['admin', 'user', 'editor'])
     testUser(test, 'joe', ['admin', 'user'])

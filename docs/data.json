@@ -140,13 +140,13 @@
             "params": [
                 {
                     "name": "user",
-                    "description": "Id of user",
-                    "type": "String"
+                    "description": "Id of user or actual user object",
+                    "type": "String|Object"
                 },
                 {
-                    "name": "role",
-                    "description": "Name of role",
-                    "type": "String"
+                    "name": "roles",
+                    "description": "Name of role or Array of roles to check against.  If array, will return true if user is in _any_ role.",
+                    "type": "String|Array"
                 }
             ],
             "class": "Roles",
@@ -154,7 +154,7 @@
         },
         {
             "file": "roles/roles_server.js",
-            "line": 157,
+            "line": 180,
             "description": "Retrieve users roles",
             "itemtype": "method",
             "name": "getRolesForUser",
@@ -174,7 +174,7 @@
         },
         {
             "file": "roles/roles_server.js",
-            "line": 173,
+            "line": 196,
             "description": "Retrieve all existing roles",
             "itemtype": "method",
             "name": "getAllRoles",
@@ -187,7 +187,7 @@
         },
         {
             "file": "roles/roles_server.js",
-            "line": 183,
+            "line": 206,
             "description": "Retrieve all users who are in target role",
             "itemtype": "method",
             "name": "getUsersInRole",

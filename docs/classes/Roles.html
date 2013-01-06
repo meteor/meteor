@@ -593,7 +593,7 @@ are currently assigned to the target role.</p>
             
         
         
-        <a href="..&#x2F;files&#x2F;roles_roles_server.js.html#l173"><code>roles&#x2F;roles_server.js:173</code></a>
+        <a href="..&#x2F;files&#x2F;roles_roles_server.js.html#l196"><code>roles&#x2F;roles_server.js:196</code></a>
         
         </p>
 
@@ -674,7 +674,7 @@ are currently assigned to the target role.</p>
             
         
         
-        <a href="..&#x2F;files&#x2F;roles_roles_server.js.html#l157"><code>roles&#x2F;roles_server.js:157</code></a>
+        <a href="..&#x2F;files&#x2F;roles_roles_server.js.html#l180"><code>roles&#x2F;roles_server.js:180</code></a>
         
         </p>
 
@@ -778,7 +778,7 @@ are currently assigned to the target role.</p>
             
         
         
-        <a href="..&#x2F;files&#x2F;roles_roles_server.js.html#l183"><code>roles&#x2F;roles_server.js:183</code></a>
+        <a href="..&#x2F;files&#x2F;roles_roles_server.js.html#l206"><code>roles&#x2F;roles_server.js:206</code></a>
         
         </p>
 
@@ -959,7 +959,7 @@ are currently assigned to the target role.</p>
             
                 <li class="arg">
                     
-                        <code>role</code>
+                        <code>roles</code>
                     
                 </li>
             
@@ -1015,13 +1015,13 @@ are currently assigned to the target role.</p>
                 <li class="param">
                     
                         <code class="param-name">user</code>
-                        <span class="type">String</span>
+                        <span class="type">String | Object</span>
                     
 
                     
 
                     <div class="param-description">
-                        <p>Id of user</p>
+                        <p>Id of user or actual user object</p>
                     </div>
 
                     
@@ -1029,14 +1029,14 @@ are currently assigned to the target role.</p>
             
                 <li class="param">
                     
-                        <code class="param-name">role</code>
-                        <span class="type">String</span>
+                        <code class="param-name">roles</code>
+                        <span class="type">String | Array</span>
                     
 
                     
 
                     <div class="param-description">
-                        <p>Name of role</p>
+                        <p>Name of role or Array of roles to check against.  If array, will return true if user is in <em>any</em> role.</p>
                     </div>
 
                     

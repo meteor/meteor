@@ -142,16 +142,39 @@ Roles.removeUsersFromRoles = function (users, roles) {
  * Check if user is in role
  *
  * @method userIsInRole
- * @param {String} user Id of user
- * @param {String} role Name of role
+ * @param {String|Object} user Id of user or actual user object
+ * @param {String|Array} roles Name of role or Array of roles to check against.  If array, will return true if user is in _any_ role.
  */
-Roles.userIsInRole = function (user, role) {
-  var found = Meteor.users.findOne(
-      { _id: user, roles: { $in: [role] } },
-      { _id: 1 }
-    )
+Roles.userIsInRole = function (user, roles) {
+  var id,
+      userRoles
+    
+  if ('string' === typeof user) {
+    id = user
+  } 
 
-  return found
+  // ensure array to simplify code
+  if (!_.isArray(roles)) {
+    roles = [roles]
+  }
+  
+  if ('object' === typeof user) {
+    userRoles = user.roles
+    if (_.isArray(userRoles)) {
+      return _.some(roles, function (role) {
+        return _.contains(userRoles, role)
+      })
+    }
+    // missing roles, try id
+    id = user._id
+  }
+
+  if (!id) return false
+
+  return Meteor.users.findOne(
+    { _id: id, roles: { $in: roles } },
+    { _id: 1 }
+  )
 }
 
 /**
