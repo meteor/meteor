@@ -123,13 +123,28 @@ if (&#x27;undefined&#x27; === typeof Roles) {
  * @param {String} role Name of role
  *&#x2F;
 Roles.createRole = function (role) {
+  var id,
+      match
+
   if (!role 
       || &#x27;string&#x27; !== typeof role 
       || role.trim().length === 0) {
     return
   }
 
-  Meteor.roles.insert({&#x27;name&#x27;:role})
+  try {
+    id = Meteor.roles.insert({&#x27;name&#x27;:role})
+  } catch (e) {
+    &#x2F;&#x2F; (from Meteor accounts-base package, insertUserDoc func)
+    &#x2F;&#x2F; XXX string parsing sucks, maybe
+    &#x2F;&#x2F; https:&#x2F;&#x2F;jira.mongodb.org&#x2F;browse&#x2F;SERVER-3069 will get fixed one day
+    if (e.name !== &#x27;MongoError&#x27;) throw e
+    match = e.err.match(&#x2F;^E11000 duplicate key error index: ([^ ]+)&#x2F;);
+    if (!match) throw e
+    if (match[1].indexOf(&#x27;$name&#x27;) !== -1)
+      throw new Meteor.Error(403, &quot;Role already exists.&quot;)
+    throw e
+  }
 }
 
 &#x2F;** 
@@ -144,10 +159,7 @@ Roles.deleteRole = function (role) {
     return
   }
 
-  var foundExistingUser = Meteor.users.findOne(
-        { roles: { $in: [role] } },
-        {   _id: 1 }
-      )
+  var foundExistingUser = Meteor.users.findOne({roles: {$in: [role]}}, {_id: 1})
 
   if (foundExistingUser) {
     throw new Error(&#x27;Role in use&#x27;)
@@ -171,15 +183,17 @@ Roles.addUsersToRoles = function (users, roles) {
   if (!users) throw new Error (&quot;Missing &#x27;users&#x27; param&quot;)
   if (!roles) throw new Error (&quot;Missing &#x27;roles&#x27; param&quot;)
 
-  var temp
+  var existingRoles,
+      missing 
 
   &#x2F;&#x2F; ensure arrays
   if (!_.isArray(users)) users = [users]
   if (!_.isArray(roles)) roles = [roles]
 
   &#x2F;&#x2F; ensure all roles exist in &#x27;roles&#x27; collection
-  temp = _.difference(roles, Meteor.roles.find())
-  _.each(temp, function (role) {
+  existingRoles = _.pluck(Meteor.roles.find({}).fetch(), &#x27;name&#x27;)
+  missing = _.difference(roles, existingRoles)
+  _.each(missing, function (role) {
     Roles.createRole(role)
   })
 
@@ -235,13 +249,15 @@ Roles.isUserInRole = function (user, role) {
  *
  * @method getRolesForUser
  * @param {String} user Id of user
- * @return {Array} array of roles for user
+ * @return {Array} Array of user&#x27;s roles, unsorted
  *&#x2F;
 Roles.getRolesForUser = function (user) {
-  return Meteor.users.findOne(
+  var user = Meteor.users.findOne(
     { _id: user},
     { _id: 0, roles: 1}
-  ).roles
+  )
+  
+  return user ? user.roles : undefined
 }
 
 &#x2F;**
@@ -266,6 +282,9 @@ Roles.getUsersInRole = function (role) {
     { roles: { $in: [role] } }
   )
 }
+
+&#x2F;&#x2F;&#x2F; DEFAULT INDEXES ON ROLES
+Meteor.roles._ensureIndex(&#x27;name&#x27;, {unique: 1});
 
 }());
 

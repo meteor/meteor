@@ -75,7 +75,7 @@
         },
         {
             "file": "roles/roles.js",
-            "line": 45,
+            "line": 60,
             "description": "Delete an existing role.  Will throw \"Role in use\" error if any users \nare currently assigned to the target role.",
             "itemtype": "method",
             "name": "deleteRole",
@@ -91,7 +91,7 @@
         },
         {
             "file": "roles/roles.js",
-            "line": 69,
+            "line": 81,
             "description": "Add users to roles. Will create roles as needed.\n\nMakes 2 calls to database:\n 1. retrieve list of all existing roles\n 2. update users' roles",
             "itemtype": "method",
             "name": "addUsersToRoles",
@@ -112,7 +112,7 @@
         },
         {
             "file": "roles/roles.js",
-            "line": 104,
+            "line": 118,
             "description": "Remove users from roles",
             "itemtype": "method",
             "name": "removeUsersFromRoles",
@@ -133,7 +133,7 @@
         },
         {
             "file": "roles/roles.js",
-            "line": 127,
+            "line": 141,
             "description": "Check if user is in role",
             "itemtype": "method",
             "name": "userIsInRole",
@@ -154,7 +154,7 @@
         },
         {
             "file": "roles/roles.js",
-            "line": 143,
+            "line": 157,
             "description": "Retrieve users roles",
             "itemtype": "method",
             "name": "getRolesForUser",
@@ -166,7 +166,7 @@
                 }
             ],
             "return": {
-                "description": "array of roles for user",
+                "description": "Array of user's roles, unsorted",
                 "type": "Array"
             },
             "class": "Roles",
@@ -174,7 +174,7 @@
         },
         {
             "file": "roles/roles.js",
-            "line": 157,
+            "line": 173,
             "description": "Retrieve all existing roles",
             "itemtype": "method",
             "name": "getAllRoles",
@@ -187,7 +187,7 @@
         },
         {
             "file": "roles/roles.js",
-            "line": 167,
+            "line": 183,
             "description": "Retrieve all users who are in target role",
             "itemtype": "method",
             "name": "getUsersInRole",
