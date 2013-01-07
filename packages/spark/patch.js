@@ -374,10 +374,15 @@ Spark._Patcher._copyAttributes = function(tgt, src) {
             tgt._sparkOriginalRenderedChecked[0];
       var srcOriginalChecked = !!src._sparkOriginalRenderedChecked &&
             src._sparkOriginalRenderedChecked[0];
+      // For radio buttons, we previously saved the checkedness in an expando
+      // property before doing some DOM operations that could wipe it out. For
+      // checkboxes, we can just use the checked property directly.
+      var tgtCurrentChecked = tgt._currentChecked ?
+            tgt._currentChecked[0] : tgt.checked;
       if (tgtOriginalChecked === srcOriginalChecked) {
-        finalChecked = !!tgt.checked;
+        finalChecked = tgtCurrentChecked;
       } else {
-        finalChecked = !!srcOriginalChecked;
+        finalChecked = srcOriginalChecked;
         tgt._sparkOriginalRenderedChecked = [finalChecked];
       }
     }

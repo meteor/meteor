@@ -421,16 +421,19 @@ if (Meteor.isServer) {
     var run = test.runId();
     var coll = new Meteor.Collection("cursorDedup-"+run);
 
-    var observer = function () {
+    var observer = function (noAdded) {
       var output = [];
-      var handle = coll.find({foo: 22}).observe({
-        added: function (doc) {
-          output.push({added: doc._id});
-        },
+      var callbacks = {
         changed: function (newDoc) {
           output.push({changed: newDoc._id});
         }
-      });
+      };
+      if (!noAdded) {
+        callbacks.added = function (doc) {
+          output.push({added: doc._id});
+        };
+      }
+      var handle = coll.find({foo: 22}).observe(callbacks);
       return {output: output, handle: handle};
     };
 
@@ -510,7 +513,13 @@ if (Meteor.isServer) {
     test.length(o2.output, 0);
     // White-box: Different LiveResultsSet.
     test.isTrue(liveResultsSet !== o3.handle._liveResultsSet);
+
+    // Start another handle with no added callback. Regression test for #589.
+    var o4 = observer(true);
+
     o3.handle.stop();
+    o4.handle.stop();
+
     onComplete();
   });
 }

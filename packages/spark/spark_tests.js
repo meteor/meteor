@@ -2640,8 +2640,12 @@ testAsyncMulti(
 
 Tinytest.add("spark - controls - radio", function(test) {
   var R = ReactiveVar("");
+  var R2 = ReactiveVar("");
   var change_buf = [];
   var div = OnscreenDiv(renderWithPreservation(function() {
+    // Re-render when R2 is changed, even though it doesn't affect HTML.
+    R2.get();
+
     var buf = [];
     buf.push("Band: ");
     _.each(["AM", "FM", "XM"], function(band) {
@@ -2685,6 +2689,12 @@ Tinytest.add("spark - controls - radio", function(test) {
   test.equal(change_buf, ['AM']);
   change_buf.length = 0;
   Meteor.flush();
+  test.equal(_.pluck(btns, 'checked'), [true, false, false]);
+  test.equal(div.text(), "Band: AM");
+
+  R2.set("change");
+  Meteor.flush();
+  test.length(change_buf, 0);
   test.equal(_.pluck(btns, 'checked'), [true, false, false]);
   test.equal(div.text(), "Band: AM");
 

@@ -215,7 +215,7 @@ var log_to_clients = function (msg) {
 // [nodeOptions]
 // [runOnce]: boolean; default false; if true doesn't ever try to restart, and
 //          forwards server exit code.
-// [settings]
+// [settingsFile]
 
 var start_server = function (options) {
   // environment
@@ -234,8 +234,12 @@ var start_server = function (options) {
   env.PORT = options.innerPort;
   env.MONGO_URL = options.mongoURL;
   env.ROOT_URL = env.ROOT_URL || ('http://localhost:' + options.outerPort);
-  if (options.settings)
-    env.METEOR_SETTINGS = options.settings;
+  if (options.settingsFile) {
+    // Re-read the settings file each time we call start_server.
+    var settings = exports.getSettings(options.settingsFile);
+    if (settings)
+      env.METEOR_SETTINGS = settings;
+  }
 
   var nodeOptions = _.clone(options.nodeOptions);
   nodeOptions.push(path.join(options.bundlePath, 'main.js'));
@@ -308,8 +312,11 @@ var kill_server = function (handle) {
 ////////// Watching dependencies  //////////
 
 // deps is the data from dependencies.json in the bundle
+// app_dir is the root of the app
+// relativeFiles are any other files to watch, relative to the current
+//   directory (eg, the --settings file)
 // on_change is only fired once
-var DependencyWatcher = function (deps, app_dir, on_change) {
+var DependencyWatcher = function (deps, app_dir, relativeFiles, on_change) {
   var self = this;
 
   self.app_dir = app_dir;
@@ -341,6 +348,10 @@ var DependencyWatcher = function (deps, app_dir, on_change) {
         = true;
     });
   };
+
+  _.each(relativeFiles, function (file) {
+    self.specific_files[file] = true;
+  });
 
   // Things that are never interesting.
   self.exclude_patterns = _.map((deps.exclude || []), function (pattern) {
@@ -507,12 +518,34 @@ var start_update_checks = function () {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// Also used by "meteor deploy" in meteor.js.
+
+exports.getSettings = function (filename) {
+  var str;
+  try {
+    str = fs.readFileSync(filename, "utf8");
+  } catch (e) {
+    throw new Error("Could not find settings file " + filename);
+  }
+  if (str.length > 0x10000) {
+    throw new Error("Settings file must be less than 64 KB long");
+  }
+  // Ensure that the string is parseable in JSON, but there's
+  // no reason to use the object value of it yet.
+  if (str.match(/\S/)) {
+    JSON.parse(str);
+    return str;
+  } else {
+    return "";
+  }
+};
+
 // XXX leave a pidfile and check if we are already running
 
 // This function never returns and will call process.exit() if it
 // can't continue. If you change this, remember to call
 // watcher.destroy() as appropriate.
-exports.run = function (app_dir, bundle_opts, port, once, settings) {
+exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
   var outer_port = port || 3000;
   var inner_port = outer_port + 1;
   var mongo_port = outer_port + 2;
@@ -553,7 +586,13 @@ exports.run = function (app_dir, bundle_opts, port, once, settings) {
       if (watcher)
         watcher.destroy();
 
-      watcher = new DependencyWatcher(deps_info, app_dir, function () {
+      var relativeFiles;
+      if (settingsFile) {
+        relativeFiles = [settingsFile];
+      }
+
+      watcher = new DependencyWatcher(deps_info, app_dir, relativeFiles,
+                                      function () {
         if (Status.crashing)
           log_to_clients({'system': "=> Modified -- restarting."});
         Status.reset();
@@ -634,7 +673,7 @@ exports.run = function (app_dir, bundle_opts, port, once, settings) {
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
       runOnce: once,
-      settings: settings
+      settingsFile: settingsFile
     });
 
 

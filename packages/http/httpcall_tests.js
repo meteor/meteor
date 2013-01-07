@@ -222,7 +222,8 @@ testAsyncMulti("httpcall - methods", [
         test.equal(result.statusCode, 200);
         var data = result.data;
         test.equal(data.body, {greeting: "Hello World!"});
-        test.equal(data.headers['content-type'], 'application/json');
+        // nb: some browsers include a charset here too.
+        test.matches(data.headers['content-type'], /^application\/json\b/);
       }));
 
     Meteor.http.call(
@@ -235,7 +236,8 @@ testAsyncMulti("httpcall - methods", [
         test.equal(result.statusCode, 200);
         var data = result.data;
         test.equal(data.body, {greeting: "Hello World!"});
-        test.equal(data.headers['content-type'], 'text/stupid');
+        // nb: some browsers include a charset here too.
+        test.matches(data.headers['content-type'], /^text\/stupid\b/);
       }));
   }
 ]);

@@ -398,7 +398,7 @@ LocalCollection._exprForKeypathPredicate = function (keypath, value, literals) {
   while (keyparts.length) {
     var part = keyparts.pop();
     var thisPartIsNumber = false;
-    if (/^\d+/.test(part)) {
+    if (/^\d+$/.test(part)) {
       part = +part;
       thisPartIsNumber = true;
     }

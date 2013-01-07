@@ -318,7 +318,7 @@ _.extend(Spark._Renderer.prototype, {
     });
     _.each(DomUtils.findAll(ret, 'input[type=checkbox], input[type=radio]'),
            function (node) {
-      node._sparkOriginalRenderedChecked = [node.checked];
+      node._sparkOriginalRenderedChecked = [!!node.checked];
     });
 
     return ret;
@@ -581,6 +581,18 @@ Spark.renderToRange = function (range, htmlFunc) {
   // Find all of the landmarks in the old contents of the range
   visitLandmarksInRange(range, function (landmarkRange, notes) {
     notes.originalRange = landmarkRange;
+  });
+
+  // Once we render the new fragment, as soon as it is placed into the DOM (even
+  // temporarily), if any radio buttons in the new framgent are checked, any
+  // radio buttons with the same name in the entire document will be unchecked
+  // (since only one radio button of a given name can be checked at a time). So
+  // we save the current checked value of all radio buttons in an expando.
+  var radios = DomUtils.findAllClipped(
+    range.containerNode(), 'input[type=radio]',
+    range.firstNode(), range.lastNode());
+  _.each(radios, function (node) {
+    node._currentChecked = [!!node.checked];
   });
 
   var frag = renderer.materialize(htmlFunc);

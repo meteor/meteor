@@ -1,6 +1,6 @@
 var fs = require("fs");
 var path = require("path");
-var spawn = require('child_process').spawn;
+var child_process = require('child_process');
 
 var files = require(path.join(__dirname, '..', 'lib', 'files.js'));
 
@@ -15,37 +15,34 @@ var _ = require('underscore');
  */
 var find_mongo_pids = function (app_dir, port, callback) {
   // 'ps ax' should be standard across all MacOS and Linux.
-  var proc = spawn('ps', ['ax']);
-  var data = '';
-  proc.stdout.on('data', function (d) {
-    data += d;
-  });
+  child_process.exec('ps ax',
+    function (error, stdout, stderr) {
+      if (error) {
+        callback({reason: error});
+      } else if (stderr) {
+        callback({reason: 'ps produced stderr ' + stderr});
+      } else {
+        var pids = [];
 
-  proc.on('exit', function (code, signal) {
-    if (code === 0) {
-      var pids = [];
+        _.each(stdout.split('\n'), function (ps_line) {
+          // matches mongos we start.
+          var m = ps_line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db\s*$/);
+          if (m && m.length === 4) {
+            var found_pid =  parseInt(m[1]);
+            var found_port = parseInt(m[2]);
+            var found_path = m[3];
 
-      _.each(data.split('\n'), function (ps_line) {
-        // matches mongos we start.
-        var m = ps_line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db\s*$/);
-        if (m && m.length === 4) {
-          var found_pid =  parseInt(m[1]);
-          var found_port = parseInt(m[2]);
-          var found_path = m[3];
-
-          if ( (!port || port === found_port) &&
-               (!app_dir || app_dir === found_path)) {
-            pids.push({
-              pid: found_pid, port: found_port, app_dir: found_path});
+            if ( (!port || port === found_port) &&
+                 (!app_dir || app_dir === found_path)) {
+              pids.push({
+                pid: found_pid, port: found_port, app_dir: found_path});
+            }
           }
-        }
-      });
+        });
 
-      callback(null, pids);
-    } else {
-      callback({reason: 'ps exit code ' + code});
-    }
-  });
+        callback(null, pids);
+      }
+    });
 };
 
 
@@ -162,7 +159,7 @@ exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callbac
       return;
     }
 
-    var proc = spawn(mongod_path, [
+    var proc = child_process.spawn(mongod_path, [
       '--bind_ip', '127.0.0.1',
       '--smallfiles',
       '--port', port,
