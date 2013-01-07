@@ -1,0 +1,9 @@
+{
+  "params": {
+    "numCollections": 1,
+    "numBuckets": 1,
+    "initialDocuments": 1024,
+    "documentSize": 2048,
+    "documentNumFields": 64
+  }
+}

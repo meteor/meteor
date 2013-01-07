@@ -70,9 +70,9 @@ LocalCollection.Cursor = function (collection, selector, options) {
   } else {
     this.selector_f = LocalCollection._compileSelector(selector);
     this.sort_f = options.sort ? LocalCollection._compileSort(options.sort) : null;
-    this.skip = options.skip;
-    this.limit = options.limit;
   }
+  this.skip = options.skip;
+  this.limit = options.limit;
 
   // db_objects is a list of the objects that match the cursor. (It's always a
   // list, never an object: LocalCollection.Cursor is always ordered.)
@@ -94,10 +94,17 @@ LocalCollection.prototype.findOne = function (selector, options) {
   if (arguments.length === 0)
     selector = {};
 
-  // XXX disable limit here so that we can observe findOne() cursor,
-  // as required by markAsReactive.
-  // options = options || {};
-  // options.limit = 1;
+  // NOTE: by setting limit 1 here, we end up using very inefficient
+  // code that recomputes the whole query on each update. The upside is
+  // that when you reactively depend on a findOne you only get
+  // invalidated when the found object changes, not any object in the
+  // collection. Most findOne will be by id, which has a fast path, so
+  // this might not be a big deal. In most cases, invalidation causes
+  // the called to re-query anyway, so this should be a net performance
+  // improvement.
+  options = options || {};
+  options.limit = 1;
+
   return this.find(selector, options).fetch()[0];
 };
 
@@ -173,7 +180,6 @@ LocalCollection.LiveResultsSet = function () {};
 // initial results delivered through added callback
 // XXX maybe callbacks should take a list of objects, to expose transactions?
 // XXX maybe support field limiting (to limit what you're notified on)
-// XXX maybe support limit/skip
 
 _.extend(LocalCollection.Cursor.prototype, {
   observe: function (options) {
@@ -187,8 +193,8 @@ _.extend(LocalCollection.Cursor.prototype, {
   _observeInternal: function (ordered, options) {
     var self = this;
 
-    if (self.skip || self.limit)
-      throw new Error("cannot observe queries with skip or limit");
+    if (!ordered && (self.skip || self.limit))
+      throw new Error("must use ordered observe with skip or limit");
 
     var qid = self.collection.next_qid++;
 
@@ -254,6 +260,12 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered) {
 
   // fast path for single ID value
   if (self.selector_id) {
+    // If you have non-zero skip and ask for a single id, you get
+    // nothing. This is so it matches the behavior of the '{_id: foo}'
+    // path.
+    if (self.skip)
+      return results;
+
     if (_.has(self.collection.docs, self.selector_id)) {
       var selectedDoc = self.collection.docs[self.selector_id];
       if (ordered)
@@ -273,6 +285,10 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered) {
       else
         results[id] = doc;
     }
+    // Fast path for limited unsorted queries.
+    if (self.limit && !self.skip && !self.sort_f &&
+        results.length === self.limit)
+      return results;
   }
 
   if (!ordered)
@@ -334,17 +350,29 @@ LocalCollection.prototype.insert = function (doc) {
   self._saveOriginal(doc._id, undefined);
   self.docs[doc._id] = doc;
 
+  var queriesToRecompute = [];
+
   // trigger live queries that match
   for (var qid in self.queries) {
     var query = self.queries[qid];
-    if (query.selector_f(doc))
-      LocalCollection._insertInResults(query, doc);
+    if (query.selector_f(doc)) {
+      if (query.cursor.skip || query.cursor.limit)
+        queriesToRecompute.push(query);
+      else
+        LocalCollection._insertInResults(query, doc);
+    }
   }
+
+  _.each(queriesToRecompute, function (query) {
+    LocalCollection._recomputeResults(query);
+  });
 };
 
 LocalCollection.prototype.remove = function (selector) {
   var self = this;
   var remove = [];
+
+  var queriesToRecompute = [];
 
   // Avoid O(n) for "remove a single doc by ID".
   if (LocalCollection._selectorIsId(selector)) {
@@ -365,8 +393,12 @@ LocalCollection.prototype.remove = function (selector) {
     var removeId = remove[i];
     var removeDoc = self.docs[removeId];
     _.each(self.queries, function (query) {
-      if (query.selector_f(removeDoc))
-        queryRemove.push([query, removeDoc]);
+      if (query.selector_f(removeDoc)) {
+        if (query.cursor.skip || query.cursor.limit)
+          queriesToRecompute.push(query);
+        else
+          queryRemove.push([query, removeDoc]);
+      }
     });
     self._saveOriginal(removeId, removeDoc);
     delete self.docs[removeId];
@@ -376,41 +408,53 @@ LocalCollection.prototype.remove = function (selector) {
   for (var i = 0; i < queryRemove.length; i++) {
     LocalCollection._removeFromResults(queryRemove[i][0], queryRemove[i][1]);
   }
+  _.each(queriesToRecompute, function (query) {
+    LocalCollection._recomputeResults(query);
+  });
 };
 
 // XXX atomicity: if multi is true, and one modification fails, do
 // we rollback the whole operation, or what?
 LocalCollection.prototype.update = function (selector, mod, options) {
+  var self = this;
   if (!options) options = {};
 
-  var self = this;
-  var any = false;
+  if (options.upsert)
+    throw new Error("upsert not yet implemented");
+
   var selector_f = LocalCollection._compileSelector(selector);
+
+  // Save the original results of any query that we might need to
+  // _recomputeResults on, because _modifyAndNotify will mutate the objects in
+  // it. (We don't need to save the original results of paused queries because
+  // they already have a results_snapshot and we won't be diffing in
+  // _recomputeResults.)
+  var qidToOriginalResults = {};
+  _.each(self.queries, function (query, qid) {
+    if ((query.cursor.skip || query.cursor.limit) && !query.paused)
+      qidToOriginalResults[qid] = LocalCollection._deepcopy(query.results);
+  });
+  var recomputeQids = {};
+
   for (var id in self.docs) {
     var doc = self.docs[id];
     if (selector_f(doc)) {
       // XXX Should we save the original even if mod ends up being a no-op?
       self._saveOriginal(id, doc);
-      self._modifyAndNotify(doc, mod);
+      self._modifyAndNotify(doc, mod, recomputeQids);
       if (!options.multi)
-        return;
-      any = true;
+        break;
     }
   }
 
-  if (options.upsert) {
-    throw Error("upsert not yet implemented");
-    if (!any) {
-      // XXX is this actually right? don't we have to resolve/delete $-ops or
-      // something like that?
-      var insert = LocalCollection._deepcopy(selector);
-      LocalCollection._modify(insert, mod);
-      self.insert(insert);
-    }
-  }
+  _.each(recomputeQids, function (dummy, qid) {
+    LocalCollection._recomputeResults(self.queries[qid],
+                                      qidToOriginalResults[qid]);
+  });
 };
 
-LocalCollection.prototype._modifyAndNotify = function (doc, mod) {
+LocalCollection.prototype._modifyAndNotify = function (
+    doc, mod, recomputeQids) {
   var self = this;
 
   var matched_before = {};
@@ -419,6 +463,8 @@ LocalCollection.prototype._modifyAndNotify = function (doc, mod) {
     if (query.ordered) {
       matched_before[qid] = query.selector_f(doc);
     } else {
+      // Because we don't support skip or limit (yet) in unordered queries, we
+      // can just do a direct lookup.
       matched_before[qid] = _.has(query.results, doc._id);
     }
   }
@@ -431,12 +477,24 @@ LocalCollection.prototype._modifyAndNotify = function (doc, mod) {
     query = self.queries[qid];
     var before = matched_before[qid];
     var after = query.selector_f(doc);
-    if (before && !after)
+
+    if (query.cursor.skip || query.cursor.limit) {
+      // We need to recompute any query where the doc may have been in the
+      // cursor's window either before or after the update. (Note that if skip
+      // or limit is set, "before" and "after" being true do not necessarily
+      // mean that the document is in the cursor's output after skip/limit is
+      // applied... but if they are false, then the document definitely is NOT
+      // in the output. So it's safe to skip recompute if neither before or
+      // after are true.)
+      if (before || after)
+	recomputeQids[qid] = true;
+    } else if (before && !after) {
       LocalCollection._removeFromResults(query, doc);
-    else if (!before && after)
+    } else if (!before && after) {
       LocalCollection._insertInResults(query, doc);
-    else if (before && after)
+    } else if (before && after) {
       LocalCollection._updateInResults(query, doc, old_doc);
+    }
   }
 };
 
@@ -463,6 +521,9 @@ LocalCollection._deepcopy = function (v) {
 
 // XXX the sorted-query logic below is laughably inefficient. we'll
 // need to come up with a better datastructure for this.
+//
+// XXX the logic for observing with a skip or a limit is even more
+// laughably inefficient. we recompute the whole results every time!
 
 LocalCollection._insertInResults = function (query, doc) {
   if (query.ordered) {
@@ -516,6 +577,25 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
   if (orig_idx !== new_idx)
     query.moved(LocalCollection._deepcopy(doc), orig_idx, new_idx);
 };
+
+// Recomputes the results of a query and runs observe callbacks for the
+// difference between the previous results and the current results (unless
+// paused). Used for skip/limit queries.
+//
+// When this is used by insert or remove, it can just use query.results for the
+// old results (and there's no need to pass in oldResults), because these
+// operations don't mutate the documents in the collection. Update needs to pass
+// in an oldResults which was deep-copied before the modifier was applied.
+LocalCollection._recomputeResults = function (query, oldResults) {
+  if (!oldResults)
+    oldResults = query.results;
+  query.results = query.cursor._getRawObjects(query.ordered);
+
+  if (!query.paused)
+    LocalCollection._diffQuery(
+      query.ordered, oldResults, query.results, query, true);
+};
+
 
 LocalCollection._findInOrderedResults = function (query, doc) {
   if (!query.ordered)

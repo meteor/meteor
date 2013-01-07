@@ -2638,13 +2638,14 @@ testAsyncMulti(
   })());
 
 
-Tinytest.add("spark - controls", function(test) {
-
-  // Radio buttons
-
+Tinytest.add("spark - controls - radio", function(test) {
   var R = ReactiveVar("");
+  var R2 = ReactiveVar("");
   var change_buf = [];
   var div = OnscreenDiv(renderWithPreservation(function() {
+    // Re-render when R2 is changed, even though it doesn't affect HTML.
+    R2.get();
+
     var buf = [];
     buf.push("Band: ");
     _.each(["AM", "FM", "XM"], function(band) {
@@ -2691,6 +2692,12 @@ Tinytest.add("spark - controls", function(test) {
   test.equal(_.pluck(btns, 'checked'), [true, false, false]);
   test.equal(div.text(), "Band: AM");
 
+  R2.set("change");
+  Meteor.flush();
+  test.length(change_buf, 0);
+  test.equal(_.pluck(btns, 'checked'), [true, false, false]);
+  test.equal(div.text(), "Band: AM");
+
   clickElement(btns[1]);
   test.equal(change_buf, ['FM']);
   change_buf.length = 0;
@@ -2713,48 +2720,177 @@ Tinytest.add("spark - controls", function(test) {
   test.equal(div.text(), "Band: FM");
 
   div.kill();
+});
 
-  // Textarea
-
-  R = ReactiveVar({x:"test"});
-  div = OnscreenDiv(renderWithPreservation(function() {
-    return '<textarea id="mytextarea">This is a '+
-      R.get().x+'</textarea>';
+Tinytest.add("spark - controls - checkbox", function(test) {
+  var labels = ["Foo", "Bar", "Baz"];
+  var Rs = {};
+  _.each(labels, function (label) {
+    Rs[label] = ReactiveVar(false);
+  });
+  var changeBuf = [];
+  var div = OnscreenDiv(renderWithPreservation(function() {
+    var buf = [];
+    _.each(labels, function (label) {
+      var checked = Rs[label].get() ? 'checked="checked"' : '';
+      buf.push('<input type="checkbox" name="checky" '+
+               'value="'+label+'" '+checked+'/>');
+    });
+    return buf.join('');
   }));
-  div.show(true);
 
-  var textarea = div.node().firstChild;
-  test.equal(textarea.nodeName, "TEXTAREA");
-  test.equal(textarea.value, "This is a test");
-
-  // value updates reactively
-  R.set({x:"fridge"});
   Meteor.flush();
-  test.equal(textarea.value, "This is a fridge");
 
-  // ...unless focused
-  focusElement(textarea);
-  R.set({x:"frog"});
-  Meteor.flush();
-  test.equal(textarea.value, "This is a fridge");
+  // get the three boxes; they should be considered 'labeled' by the patcher and
+  // not change identities!
+  var boxes = nodesToArray(div.node().getElementsByTagName("INPUT"));
 
-  // blurring and re-setting works
-  blurElement(textarea);
-  Meteor.flush();
-  test.equal(textarea.value, "This is a fridge");
-  R.set({x:"frog"});
-  Meteor.flush();
-  test.equal(textarea.value, "This is a frog");
+  test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
 
-  // Setting a value (similar to user typing) should
-  // not prevent value from being updated reactively.
-  textarea.value = "foobar";
-  R.set({x:"photograph"});
+  // Re-render with first one checked.
+  Rs.Foo.set(true);
   Meteor.flush();
-  test.equal(textarea.value, "This is a photograph");
+  test.equal(_.pluck(boxes, 'checked'), [true, false, false]);
 
+  // Re-render with first one unchecked again.
+  Rs.Foo.set(false);
+  Meteor.flush();
+  test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
+
+  // User clicks the second one.
+  clickElement(boxes[1]);
+  test.equal(_.pluck(boxes, 'checked'), [false, true, false]);
+  Meteor.flush();
+  test.equal(_.pluck(boxes, 'checked'), [false, true, false]);
+
+  // Re-render with third one checked. Second one should stay checked because
+  // it's a user update!
+  Rs.Baz.set(true);
+  Meteor.flush();
+  test.equal(_.pluck(boxes, 'checked'), [false, true, true]);
+
+  // User turns second and third off.
+  clickElement(boxes[1]);
+  clickElement(boxes[2]);
+  test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
+  Meteor.flush();
+  test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
+
+  // Re-render with first one checked. Third should stay off because it's a user
+  // update!
+  Rs.Foo.set(true);
+  Meteor.flush();
+  test.equal(_.pluck(boxes, 'checked'), [true, false, false]);
+
+  // Re-render with first one unchecked. Third should still stay off.
+  Rs.Foo.set(false);
+  Meteor.flush();
+  test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
 
   div.kill();
+});
+
+_.each(['textarea', 'text', 'password', 'submit', 'button',
+        'reset', 'select', 'hidden'], function (type) {
+  Tinytest.add("spark - controls - " + type, function(test) {
+    var R = ReactiveVar({x:"test"});
+    var R2 = ReactiveVar("");
+    var div = OnscreenDiv(renderWithPreservation(function() {
+      // Re-render when R2 is changed, even though it doesn't affect HTML.
+      R2.get();
+      if (type === 'textarea') {
+        return '<textarea id="someId">This is a ' + R.get().x + '</textarea>';
+      } else if (type === 'select') {
+        var options = ['This is a test', 'This is a fridge',
+                       'This is a frog', 'foobar', 'This is a photograph',
+                       'This is a monkey', 'This is a donkey'];
+        return '<select id="someId">' + _.map(options, function (o) {
+          var maybeSel = ('This is a ' + R.get().x) === o ? 'selected' : '';
+          return '<option ' + maybeSel + '>' + o + '</option>';
+        }).join('') + '</select>';
+      } else {
+        return '<input type="' + type + '" id="someId" value="This is a ' +
+          R.get().x + '">';
+      }
+    }));
+    div.show(true);
+    var canFocus = (type !== 'hidden');
+
+    var input = div.node().firstChild;
+    if (type === 'textarea' || type === 'select') {
+      test.equal(input.nodeName, type.toUpperCase());
+    } else {
+      test.equal(input.nodeName, 'INPUT');
+      test.equal(input.type, type);
+    }
+    test.equal(DomUtils.getElementValue(input), "This is a test");
+    test.equal(input._sparkOriginalRenderedValue, ["This is a test"]);
+
+    // value updates reactively
+    R.set({x:"fridge"});
+    Meteor.flush();
+    test.equal(DomUtils.getElementValue(input), "This is a fridge");
+    test.equal(input._sparkOriginalRenderedValue, ["This is a fridge"]);
+
+    if (canFocus) {
+      // ...unless focused
+      focusElement(input);
+      R.set({x:"frog"});
+      Meteor.flush();
+      test.equal(DomUtils.getElementValue(input), "This is a fridge");
+      test.equal(input._sparkOriginalRenderedValue, ["This is a fridge"]);
+
+      // blurring and re-setting works
+      blurElement(input);
+      Meteor.flush();
+      test.equal(DomUtils.getElementValue(input), "This is a fridge");
+      test.equal(input._sparkOriginalRenderedValue, ["This is a fridge"]);
+    }
+    R.set({x:"frog"});
+    Meteor.flush();
+    test.equal(DomUtils.getElementValue(input), "This is a frog");
+    test.equal(input._sparkOriginalRenderedValue, ["This is a frog"]);
+
+    // Setting a value (similar to user typing) should prevent value from being
+    // reverted if the div is re-rendered but the rendered value (ie, R) does
+    // not change.
+    DomUtils.setElementValue(input, "foobar");
+    R2.set("change");
+    Meteor.flush();
+    test.equal(DomUtils.getElementValue(input), "foobar");
+    test.equal(input._sparkOriginalRenderedValue, ["This is a frog"]);
+
+    // ... but if the actual rendered value changes, that should take effect.
+    R.set({x:"photograph"});
+    Meteor.flush();
+    test.equal(DomUtils.getElementValue(input), "This is a photograph");
+    test.equal(input._sparkOriginalRenderedValue, ["This is a photograph"]);
+
+    // If the rendered value and user value change in the same way (eg, the user
+    // changed it and then invoked a menthod that set the database value based
+    // on what they changed), make sure that the _sparkOriginalRenderedValue
+    // gets updated too.
+    DomUtils.setElementValue(input, "This is a monkey");
+    R.set({x:"monkey"});
+    Meteor.flush();
+    test.equal(DomUtils.getElementValue(input), "This is a monkey");
+    test.equal(input._sparkOriginalRenderedValue, ["This is a monkey"]);
+
+    if (canFocus) {
+      // The same as the previous test... except make sure that it still works
+      // if the input is focused. ie, imagine that the user edited the field and
+      // hit enter with the field still focused, updating the database to match
+      // the field and keeping the field focused.
+      DomUtils.setElementValue(input, "This is a donkey");
+      focusElement(input);
+      R.set({x:"donkey"});
+      Meteor.flush();
+      test.equal(DomUtils.getElementValue(input), "This is a donkey");
+      test.equal(input._sparkOriginalRenderedValue, ["This is a donkey"]);
+    }
+
+    div.kill();
+  });
 });
 
 Tinytest.add("spark - oldschool landmark matching", function(test) {
@@ -3693,6 +3829,58 @@ Tinytest.add("spark - legacy preserve names", function (test) {
 
   div.kill();
   Meteor.flush();
+});
+
+Tinytest.add("spark - update defunct range", function (test) {
+  // Test that Spark doesn't freak out if it tries to update
+  // a LiveRange on nodes that have been taken out of the document.
+  //
+  // See https://github.com/meteor/meteor/issues/392.
+
+  var R = ReactiveVar("foo");
+
+  var div = OnscreenDiv(Spark.render(function () {
+    return "<p>" + Spark.isolate(function() {
+      return R.get();
+    }) + "</p>";
+  }));
+
+  test.equal(div.html(), "<p>foo</p>");
+  R.set("bar");
+  Meteor.flush();
+  test.equal(R.numListeners(), 1);
+  test.equal(div.html(), "<p>bar</p>");
+  test.equal(div.node().firstChild.nodeName, "P");
+  div.node().firstChild.innerHTML = '';
+  R.set("baz");
+  Meteor.flush(); // should throw no errors
+  // will be 1 if our isolate func was run.
+  test.equal(R.numListeners(), 0);
+
+  /////
+
+  R = ReactiveVar("foo");
+
+  div = OnscreenDiv(Spark.render(function () {
+    return "<p>" + Spark.setDataContext(
+      {},
+      "<span>" + Spark.isolate(function() {
+        return R.get();
+      }) + "</span>") + "</p>";
+  }));
+
+  test.equal(div.html(), "<p><span>foo</span></p>");
+  R.set("bar");
+  Meteor.flush();
+  test.equal(R.numListeners(), 1);
+  test.equal(div.html(), "<p><span>bar</span></p>");
+  test.equal(div.node().firstChild.nodeName, "P");
+  div.node().firstChild.innerHTML = '';
+  R.set("baz");
+  Meteor.flush(); // should throw no errors
+  // will be 1 if our isolate func was run.
+  test.equal(R.numListeners(), 0);
+
 });
 
 })();

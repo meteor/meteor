@@ -291,8 +291,6 @@ LocalCollection._selectorIsId = function (selector) {
   return (typeof selector === "string") || (typeof selector === "number");
 };
 
-// XXX implement ordinal indexing: 'people.2.name'
-
 // Given an arbitrary Mongo-style query selector, return an expression
 // that evaluates to true if the document in 'doc' matches the
 // selector, else false.
@@ -319,30 +317,30 @@ LocalCollection._exprForSelector = function (selector, literals) {
 // value in the selector. Return an expression that evaluates to true
 // if 'doc' matches this predicate, else false.
 LocalCollection._exprForDocumentPredicate = function (op, value, literals) {
+  if (op === '$or' || op === '$and' || op === '$nor') {
+    if (_.isEmpty(value) || !_.isArray(value))
+      throw Error("$and/$or/$nor must be a nonempty array");
+  }
+
+  var clauses;
   if (op === '$or') {
-    var clauses = [];
-    _.each(value, function (c) {
-      clauses.push(LocalCollection._exprForSelector(c, literals));
+    clauses = _.map(value, function (c) {
+      return LocalCollection._exprForSelector(c, literals);
     });
-    if (clauses.length === 0) return 'true';
     return '(' + clauses.join('||') +')';
   }
 
   if (op === '$and') {
-    var clauses = [];
-    _.each(value, function (c) {
-      clauses.push(LocalCollection._exprForSelector(c, literals));
+    clauses = _.map(value, function (c) {
+      return LocalCollection._exprForSelector(c, literals);
     });
-    if (clauses.length === 0) return 'true';
     return '(' + clauses.join('&&') +')';
   }
 
   if (op === '$nor') {
-    var clauses = [];
-    _.each(value, function (c) {
-      clauses.push("!(" + LocalCollection._exprForSelector(c, literals) + ")");
+    clauses = _.map(value, function (c) {
+      return "!(" + LocalCollection._exprForSelector(c, literals) + ")";
     });
-    if (clauses.length === 0) return 'true';
     return '(' + clauses.join('&&') +')';
   }
 
@@ -396,19 +394,31 @@ LocalCollection._exprForKeypathPredicate = function (keypath, value, literals) {
   // drilling down through the dotted parts
   var ret = '';
   var innermost = true;
+  var lastPartWasNumber = false;
   while (keyparts.length) {
     var part = keyparts.pop();
+    var thisPartIsNumber = false;
+    if (/^\d+$/.test(part)) {
+      part = +part;
+      thisPartIsNumber = true;
+    }
     var formal = keyparts.length ? "x" : "doc";
     if (innermost) {
       ret = '(function(x){return ' + predcode + ';})(' + formal + '&&' + formal + '[' +
         JSON.stringify(part) + '])';
       innermost = false;
+    } else if (lastPartWasNumber) {
+      // The last part was an array index, so if we find an array here we
+      // shouldn't search it!
+      ret = '(function(x){return ' + ret + ';})(' + formal + '&&' + formal + '[' +
+        JSON.stringify(part) + '])';
     } else {
-      // for all but the innermost level of a dotted expression,
-      // if the runtime type is an array, search it
+      // If the runtime type is an array, search it, unless we're already at the
+      // innermost bit, or if the next part is a number (ie, an array index).
       ret = 'f._matches(' + formal + '&&' + formal + '[' + JSON.stringify(part) +
         '], function(x){return ' + ret + ';})';
     }
+    lastPartWasNumber = thisPartIsNumber;
   }
 
   return ret;

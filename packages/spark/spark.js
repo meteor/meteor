@@ -304,6 +304,23 @@ _.extend(Spark._Renderer.prototype, {
     });
     self.annotations = {};
 
+    // Save original versions of every 'value' property. We want elements that
+    // have a value *attribute*, as well as form elements that have a value
+    // property but no value attribute (textarea and select).
+    //
+    // We save it in a one-element array expando. We use the array because IE8
+    // gets confused by expando properties with scalar values and exposes them
+    // as HTML attributes.
+    //
+    // We also save the values of CHECKED for radio and checkboxes.
+    _.each(DomUtils.findAll(ret, '[value], textarea, select'), function (node) {
+      node._sparkOriginalRenderedValue = [DomUtils.getElementValue(node)];
+    });
+    _.each(DomUtils.findAll(ret, 'input[type=checkbox], input[type=radio]'),
+           function (node) {
+      node._sparkOriginalRenderedChecked = [!!node.checked];
+    });
+
     return ret;
   }
 
@@ -526,6 +543,19 @@ var pathForRange = function (r) {
 // `range` is a region of `document`. Modify it in-place so that it
 // matches the result of Spark.render(htmlFunc), preserving landmarks.
 Spark.renderToRange = function (range, htmlFunc) {
+  // `range` may be out-of-document and we don't check here.
+  // XXX should we?
+  //
+  // Explicit finalization of ranges (done within Spark or by a call to
+  // Spark.finalize) prevents us from being called in the first place.
+  // The newly rendered material will be checked to see if it's in the
+  // document by scheduleOnscreenSetUp's scheduled setup.
+  // However, if range is not valid, bail out now before running
+  // htmlFunc.
+  var startNode = range.firstNode();
+  if (! startNode || ! startNode.parentNode)
+    return;
+
   var renderer = new Spark._Renderer();
 
   // Call 'func' for each landmark in 'range'. Pass two arguments to
@@ -553,6 +583,18 @@ Spark.renderToRange = function (range, htmlFunc) {
     notes.originalRange = landmarkRange;
   });
 
+  // Once we render the new fragment, as soon as it is placed into the DOM (even
+  // temporarily), if any radio buttons in the new framgent are checked, any
+  // radio buttons with the same name in the entire document will be unchecked
+  // (since only one radio button of a given name can be checked at a time). So
+  // we save the current checked value of all radio buttons in an expando.
+  var radios = DomUtils.findAllClipped(
+    range.containerNode(), 'input[type=radio]',
+    range.firstNode(), range.lastNode());
+  _.each(radios, function (node) {
+    node._currentChecked = [!!node.checked];
+  });
+
   var frag = renderer.materialize(htmlFunc);
 
   DomUtils.wrapFragmentForContainer(frag, range.containerNode());
@@ -576,8 +618,18 @@ Spark.renderToRange = function (range, htmlFunc) {
   // find preservation roots that come from landmarks enclosing the
   // updated region
   var walk = range;
-  while ((walk = findParentOfType(Spark._ANNOTATION_LANDMARK, walk)))
-    pc.addRoot(walk.preserve, range, tempRange, walk.containerNode());
+  while ((walk = walk.findParent())) {
+    if (! walk.firstNode().parentNode)
+      // we're in a DOM island with a top-level range (not really
+      // allowed, but could happen if `range` is on nodes that
+      // manually removed.
+      // XXX check for this sooner; hard to reason about this function
+      // on a "malformed" liverange tree
+      break;
+
+    if (walk.type === Spark._ANNOTATION_LANDMARK, walk)
+      pc.addRoot(walk.preserve, range, tempRange, walk.containerNode());
+  }
 
   pc.addRoot(Spark._globalPreserves, range, tempRange);
 

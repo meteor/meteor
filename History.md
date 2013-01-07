@@ -1,6 +1,81 @@
 
 ## vNEXT
 
+## v0.5.3
+
+* Add `--settings` argument to `meteor deploy` and `meteor run`. This
+  allows you to specify deployment-specific information made available
+  to server code in the variable `Meteor.settings`.
+
+* Support unlimited open tabs in a single browser. Work around the
+  browser per-hostname connection limit by using randomized hostnames
+  for deployed apps. #131
+
+* minimongo improvements:
+  * Allow observing cursors with `skip` or `limit`.  #528
+  * Allow sorting on `dotted.sub.keys`.  #533
+  * Allow querying specific array elements (`foo.1.bar`).
+  * `$and`, `$or`, and `$nor` no longer accept empty arrays (for consistency
+    with Mongo)
+
+* Re-rendering a template with Spark no longer reverts changes made by
+  users to a `preserve`d form element. Instead, the newly rendered value
+  is only applied if it is different from the previously rendered value.
+  Additionally, <INPUT> elements with type other than TEXT can now have
+  reactive values (eg, the labels on submit buttons can now be
+  reactive).  #510 #514 #523 #537 #558
+
+* Support JavaScript RegExp objects in selectors in Collection write
+  methods on the client, eg `myCollection.remove({foo: /bar/})`.  #346
+
+* `meteor` command-line improvements:
+  * Improve error message when mongod fails to start.
+  * The `NODE_OPTIONS` environment variable can be used to pass command-line
+    flags to node (eg, `--debug` or `--debug-brk` to enable the debugger).
+  * Die with error if an app name is mistakenly passed to `meteor reset`.
+
+* Add support for "offline" access tokens with Google login. #464 #525
+
+* Don't remove `serviceData` fields from previous logins when logging in
+  with an external service.
+
+* Improve `OAuth1Binding` to allow making authenticated API calls to
+  OAuth1 providers (eg Twitter).  #539
+
+* New login providers automatically work with `{{loginButtons}}` without
+  needing to edit the `accounts-ui-unstyled` package.  #572
+
+* Use `Content-Type: application/json` by default when sending JSON data
+  with `Meteor.http`.
+
+* Improvements to `jsparse`: hex literals, keywords as property names, ES5 line
+  continuations, trailing commas in object literals, line numbers in error
+  messages, decimal literals starting with `.`, regex character classes with
+  slashes.
+
+* Spark improvements:
+  * Improve rendering of <SELECT> elements on IE.  #496
+  * Don't lose nested data contexts in IE9/10 after two seconds.  #458
+  * Don't print a stack trace if DOM nodes are manually removed
+    from the document without calling `Spark.finalize`.  #392
+
+* Always use the `autoReconnect` flag when connecting to Mongo.  #425
+
+* Fix server-side `observe` with no `added` callback.  #589
+
+* Fix re-sending method calls on reconnect.  #538
+
+* Remove deprecated `/sockjs` URL support from `Meteor.connect`.
+
+* Avoid losing a few bits of randomness in UUID v4 creation.  #519
+
+* Update clean-css package from 0.8.2 to 0.8.3, fixing minification of `0%`
+  values in `hsl` colors.  #515
+
+Patches contributed by GitHub users Ed-von-Schleck, egtann, jwulf, lvbreda,
+martin-naumann, meawoppl, nwmartin, timhaines, and zealoushacker.
+
+
 ## v0.5.2
 
 * Fix 0.5.1 regression: Cursor `observe` works during server startup.  #507

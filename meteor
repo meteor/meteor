@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUNDLE_VERSION=0.2.8
+BUNDLE_VERSION=0.2.12
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
@@ -58,6 +58,8 @@ function install_dev_bundle {
         test -x "${TMPDIR}/bin/node" # bomb out if it didn't work, eg no net
     fi
 
+    # Delete old dev bundle and rename the new one on top of it.
+    rm -rf "$SCRIPT_DIR/dev_bundle"
     mv "$TMPDIR" "$SCRIPT_DIR/dev_bundle"
 
     echo "Installed dependency kit v${BUNDLE_VERSION} in dev_bundle."
@@ -77,7 +79,6 @@ if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
     elif [ ! -f "$SCRIPT_DIR/dev_bundle/.bundle_version.txt" ] ||
         grep -qvx "$BUNDLE_VERSION" "$SCRIPT_DIR/dev_bundle/.bundle_version.txt" ; then
         echo "Your dependency kit is out of date. I will download the new one."
-        rm -rf "$SCRIPT_DIR/dev_bundle"
         install_dev_bundle
     fi
 

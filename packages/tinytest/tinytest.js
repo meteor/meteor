@@ -50,6 +50,27 @@ _.extend(TestCaseResults.prototype, {
     if (self.stop_at_offset)
       self.stop_at_offset--;
 
+    // Get filename and line number of failure if we're using v8 (Chrome or
+    // Node).
+    if (Error.captureStackTrace) {
+      var savedPrepareStackTrace = Error.prepareStackTrace;
+      Error.prepareStackTrace = function(_, stack){ return stack; };
+      var err = new Error;
+      Error.captureStackTrace(err);
+      var stack = err.stack;
+      Error.prepareStackTrace = savedPrepareStackTrace;
+      for (var i = stack.length - 1; i >= 0; --i) {
+        var frame = stack[i];
+        // Heuristic: use the OUTERMOST line which is in a _test.js or _tests.js
+        // file (this is less likely to be a test helper function).
+        if (frame.getFileName().match(/_tests?\.js/)) {
+          doc.filename = frame.getFileName();
+          doc.line = frame.getLineNumber();
+          break;
+        }
+      }
+    }
+
     self.onEvent({
         type: (self.expecting_failure ? "expected_fail" : "fail"),
         details: doc,
@@ -114,6 +135,14 @@ _.extend(TestCaseResults.prototype, {
       this.ok();
     else
       this.fail({type: "instanceOf"}); // XXX what other data?
+  },
+
+  matches: function (actual, regexp, message) {
+    if (regexp.test(actual))
+      this.ok();
+    else
+      this.fail({type: "matches", message: message,
+                 actual: actual, regexp: regexp.toString()});
   },
 
   // XXX nodejs assert.throws can take an expected error, as a class,

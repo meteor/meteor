@@ -30,5 +30,4 @@
 
     Accounts.oauth.initiateLogin(state, url, callback);
   };
-
 })();

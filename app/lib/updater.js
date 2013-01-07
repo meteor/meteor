@@ -1,4 +1,8 @@
-exports.CURRENT_VERSION = "0.5.2";
+// During automated QA of the updater, modify this file to set testingUpdater to
+// true. This will make it act as if it is at version 0.1.0 and use test URLs
+// for update checks.
+var testingUpdater = false;
+exports.CURRENT_VERSION = testingUpdater ? "0.1.0" : "0.5.3";
 
 var fs = require("fs");
 var http = require("http");
@@ -8,11 +12,10 @@ var semver = require("semver");
 
 var files = require(path.join(__dirname, 'files.js'));
 
-var manifest_options = {
-/* uncomment for testing
+var manifest_options = testingUpdater ? {
   host: 's3.amazonaws.com',
   path: '/com.meteor.static/test/update/manifest.json'
-*/
+} : {
   host: 'update.meteor.com',
   path: '/manifest.json'
 };

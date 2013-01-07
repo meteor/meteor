@@ -30,6 +30,8 @@ put on the screen.
 
 {{> api_box absoluteUrl}}
 
+{{> api_box settings}}
+
 <h2 id="publishandsubscribe"><span>Publish and subscribe</span></h2>
 
 These functions control how Meteor servers publish sets of records and
@@ -526,11 +528,9 @@ In this release, Minimongo has some limitations:
 * `$elemMatch` is not supported in selectors.
 * `$pull` in modifiers can only accept certain kinds
 of selectors.
-* In selectors, dot notation and ordinal indexing may not work correctly.
+* In selectors, dot notation may not work correctly.
 * `$` to denote the matched array position is not
 supported in modifier.
-* Sort does not support subkeys (you can sort on `a`,
-but not `a.b`).
 * `findAndModify`, upsert, aggregate functions, and
 map/reduce aren't supported.
 * The supported types are String, Number, Boolean, Array,
@@ -1031,8 +1031,8 @@ it's up to you to be sure.
 {{#api_box_inline fieldspecifiers}}
 
 On the server, queries can specify a particular set of fields to include
-or exclude from the result object.  Minimongo ignores the field
-specifier.
+or exclude from the result object.  (The field specifier is currently
+ignored on the client.)
 
 To exclude certain fields from the result objects, the field specifier
 is a dictionary whose keys are field names and whose values are `0`.
@@ -1336,6 +1336,9 @@ Example:
       requestPermissions: {
         facebook: ['user_likes'],
         github: ['user', 'repo']
+      },
+      requestOfflineToken: {
+        google: true
       },
       passwordSignupFields: 'USERNAME_AND_OPTIONAL_EMAIL'
     });
@@ -2448,6 +2451,35 @@ If `MAIL_URL` is not set (eg, when running your application locally),
 
 You must provide the `from` option and at least one of `to`, `cc`, and `bcc`;
 all other options are optional.
+
+`Email.send` only works on the server. Here is an example of how a
+client could use a server method call to send an email. (In an actual
+application, you'd need to be careful to limit the emails that a
+client could send, to prevent your server from being used as a relay
+by spammers.)
+
+    // In your server code: define a method that the client can call
+    Meteor.methods({
+      sendEmail: function (to, from, subject, text) {
+        // Let other method calls from the same client start running,
+        // without waiting for the email sending to complete.
+        this.unblock();
+
+        Email.send({
+          to: to,
+          from: from,
+          subject: subject,
+          text: text
+        });
+      }
+    });
+
+    // In your client code: asynchronously send an email
+    Meteor.call('sendEmail',
+                'alice@example.com',
+                'bob@example.com',
+                'Hello from Meteor!',
+                'This is a test of Email.send.');
 
 {{/better_markdown}}
 </template>

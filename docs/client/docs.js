@@ -1,4 +1,4 @@
-METEOR_VERSION = "0.5.2";
+METEOR_VERSION = "0.5.3";
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
@@ -94,7 +94,8 @@ var toc = [
       "Meteor.isClient",
       "Meteor.isServer",
       "Meteor.startup",
-      "Meteor.absoluteUrl"
+      "Meteor.absoluteUrl",
+      "Meteor.settings"
     ],
 
     "Publish and subscribe", [

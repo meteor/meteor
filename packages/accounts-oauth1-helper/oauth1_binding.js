@@ -51,19 +51,27 @@ OAuth1Binding.prototype.prepareAccessToken = function(query) {
   self.accessTokenSecret = tokens.oauth_token_secret;
 };
 
-OAuth1Binding.prototype.call = function(method, url) {
+OAuth1Binding.prototype.call = function(method, url, params) {
   var self = this;
 
   var headers = self._buildHeader({
     oauth_token: self.accessToken
   });
 
-  var response = self._call(method, url, headers);
-  return response.data;
+  if(!params) {
+    params = {};
+  }
+
+  var response = self._call(method, url, headers, params);
+  return response;
 };
 
-OAuth1Binding.prototype.get = function(url) {
-  return this.call('GET', url);
+OAuth1Binding.prototype.get = function(url, params) {
+  return this.call('GET', url, params);
+};
+
+OAuth1Binding.prototype.post = function(url, params) {
+  return this.call('POST', url, params);
 };
 
 OAuth1Binding.prototype._buildHeader = function(headers) {
@@ -77,9 +85,9 @@ OAuth1Binding.prototype._buildHeader = function(headers) {
   }, headers);
 };
 
-OAuth1Binding.prototype._getSignature = function(method, url, rawHeaders, accessTokenSecret) {
+OAuth1Binding.prototype._getSignature = function(method, url, rawHeaders, accessTokenSecret, params) {
   var self = this;
-  var headers = self._encodeHeader(rawHeaders);
+  var headers = self._encodeHeader(_.extend(rawHeaders, params));
 
   var parameters = _.map(headers, function(val, key) {
     return key + '=' + val;
@@ -87,13 +95,13 @@ OAuth1Binding.prototype._getSignature = function(method, url, rawHeaders, access
 
   var signatureBase = [
     method,
-    encodeURIComponent(url),
-    encodeURIComponent(parameters)
+    self._encodeString(url),
+    self._encodeString(parameters)
   ].join('&');
 
-  var signingKey = encodeURIComponent(self._secret) + '&';
+  var signingKey = self._encodeString(self._secret) + '&';
   if (accessTokenSecret)
-    signingKey += encodeURIComponent(accessTokenSecret);
+    signingKey += self._encodeString(accessTokenSecret);
 
   return crypto.createHmac('SHA1', signingKey).update(signatureBase).digest('base64');
 };
@@ -102,7 +110,7 @@ OAuth1Binding.prototype._call = function(method, url, headers, params) {
   var self = this;
 
   // Get the signature
-  headers.oauth_signature = self._getSignature(method, url, headers, self.accessTokenSecret);
+  headers.oauth_signature = self._getSignature(method, url, headers, self.accessTokenSecret, params);
 
   // Make a authorization string according to oauth1 spec
   var authString = self._getAuthHeaderString(headers);
@@ -117,6 +125,8 @@ OAuth1Binding.prototype._call = function(method, url, headers, params) {
 
   if (response.error) {
     Meteor._debug('Error sending OAuth1 HTTP call', response.content, method, url, params, authString);
+    if (response.statusCode) response.error.statusCode = response.statusCode;
+    if (response.data) response.error.data = response.data;
     throw response.error;
   }
 
@@ -124,14 +134,20 @@ OAuth1Binding.prototype._call = function(method, url, headers, params) {
 };
 
 OAuth1Binding.prototype._encodeHeader = function(header) {
+  var self = this;
   return _.reduce(header, function(memo, val, key) {
-    memo[encodeURIComponent(key)] = encodeURIComponent(val);
+    memo[self._encodeString(key)] = self._encodeString(val);
     return memo;
   }, {});
 };
 
+OAuth1Binding.prototype._encodeString = function(str) {
+  return encodeURIComponent(str).replace(/[!'()]/g, escape).replace(/\*/g, "%2A");
+};
+
 OAuth1Binding.prototype._getAuthHeaderString = function(headers) {
+  var self = this;
   return 'OAuth ' +  _.map(headers, function(val, key) {
-    return encodeURIComponent(key) + '="' + encodeURIComponent(val) + '"';
+    return self._encodeString(key) + '="' + self._encodeString(val) + '"';
   }).sort().join(', ');
 };

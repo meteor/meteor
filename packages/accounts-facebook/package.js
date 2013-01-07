@@ -9,7 +9,7 @@ Package.on_use(function(api) {
   api.use('templating', 'client');
 
   api.add_files(
-    ['facebook_configure.html', 'facebook_configure.js'],
+    ['facebook_login_button.css', 'facebook_configure.html', 'facebook_configure.js'],
     'client');
 
   api.add_files('facebook_common.js', ['client', 'server']);

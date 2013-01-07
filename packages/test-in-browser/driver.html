@@ -21,6 +21,12 @@
     {{/if}}
   {{/if}}
 
+  <ul class="failedTests">
+    {{#each failedTests}}
+      <li>{{this}}</li>
+    {{/each}}
+  </ul>
+
   <div class="test_table">
     {{#each data}}
       {{> test_group this}}

@@ -59,116 +59,83 @@ var log_callbacks = function (operations) {
 };
 
 // XXX test shared structure in all MM entrypoints
+Tinytest.add("minimongo - basics", function (test) {
+  var c = new LocalCollection();
 
-_.each(['observe', '_observeUnordered'], function (observeMethod) {
-  Tinytest.add("minimongo - basics (" + observeMethod + ")", function (test) {
-    var c = new LocalCollection();
+  c.insert({type: "kitten", name: "fluffy"});
+  c.insert({type: "kitten", name: "snookums"});
+  c.insert({type: "cryptographer", name: "alice"});
+  c.insert({type: "cryptographer", name: "bob"});
+  c.insert({type: "cryptographer", name: "cara"});
+  test.equal(c.find().count(), 5);
+  test.equal(c.find({type: "kitten"}).count(), 2);
+  test.equal(c.find({type: "cryptographer"}).count(), 3);
+  test.length(c.find({type: "kitten"}).fetch(), 2);
+  test.length(c.find({type: "cryptographer"}).fetch(), 3);
 
-    c.insert({type: "kitten", name: "fluffy"});
-    c.insert({type: "kitten", name: "snookums"});
-    c.insert({type: "cryptographer", name: "alice"});
-    c.insert({type: "cryptographer", name: "bob"});
-    c.insert({type: "cryptographer", name: "cara"});
-    test.equal(c.find().count(), 5);
-    test.equal(c.find({type: "kitten"}).count(), 2);
-    test.equal(c.find({type: "cryptographer"}).count(), 3);
-    test.length(c.find({type: "kitten"}).fetch(), 2);
-    test.length(c.find({type: "cryptographer"}).fetch(), 3);
+  c.remove({name: "cara"});
+  test.equal(c.find().count(), 4);
+  test.equal(c.find({type: "kitten"}).count(), 2);
+  test.equal(c.find({type: "cryptographer"}).count(), 2);
+  test.length(c.find({type: "kitten"}).fetch(), 2);
+  test.length(c.find({type: "cryptographer"}).fetch(), 2);
 
-    c.remove({name: "cara"});
-    test.equal(c.find().count(), 4);
-    test.equal(c.find({type: "kitten"}).count(), 2);
-    test.equal(c.find({type: "cryptographer"}).count(), 2);
-    test.length(c.find({type: "kitten"}).fetch(), 2);
-    test.length(c.find({type: "cryptographer"}).fetch(), 2);
+  c.update({name: "snookums"}, {$set: {type: "cryptographer"}});
+  test.equal(c.find().count(), 4);
+  test.equal(c.find({type: "kitten"}).count(), 1);
+  test.equal(c.find({type: "cryptographer"}).count(), 3);
+  test.length(c.find({type: "kitten"}).fetch(), 1);
+  test.length(c.find({type: "cryptographer"}).fetch(), 3);
 
-    c.update({name: "snookums"}, {$set: {type: "cryptographer"}});
-    test.equal(c.find().count(), 4);
-    test.equal(c.find({type: "kitten"}).count(), 1);
-    test.equal(c.find({type: "cryptographer"}).count(), 3);
-    test.length(c.find({type: "kitten"}).fetch(), 1);
-    test.length(c.find({type: "cryptographer"}).fetch(), 3);
+  c.remove(null);
+  c.remove(false);
+  c.remove(undefined);
+  test.equal(c.find().count(), 4);
 
-    c.remove(null);
-    c.remove(false);
-    c.remove(undefined);
-    test.equal(c.find().count(), 4);
+  c.remove({_id: null});
+  c.remove({_id: false});
+  c.remove({_id: undefined});
+  c.remove();
+  test.equal(c.find().count(), 4);
 
-    c.remove({_id: null});
-    c.remove({_id: false});
-    c.remove({_id: undefined});
-    c.remove();
-    test.equal(c.find().count(), 4);
+  c.remove({});
+  test.equal(c.find().count(), 0);
 
-    c.remove({});
-    test.equal(c.find().count(), 0);
+  c.insert({_id: 1, name: "strawberry", tags: ["fruit", "red", "squishy"]});
+  c.insert({_id: 2, name: "apple", tags: ["fruit", "red", "hard"]});
+  c.insert({_id: 3, name: "rose", tags: ["flower", "red", "squishy"]});
 
-    c.insert({_id: 1, name: "strawberry", tags: ["fruit", "red", "squishy"]});
-    c.insert({_id: 2, name: "apple", tags: ["fruit", "red", "hard"]});
-    c.insert({_id: 3, name: "rose", tags: ["flower", "red", "squishy"]});
+  test.equal(c.find({tags: "flower"}).count(), 1);
+  test.equal(c.find({tags: "fruit"}).count(), 2);
+  test.equal(c.find({tags: "red"}).count(), 3);
+  test.length(c.find({tags: "flower"}).fetch(), 1);
+  test.length(c.find({tags: "fruit"}).fetch(), 2);
+  test.length(c.find({tags: "red"}).fetch(), 3);
 
-    test.equal(c.find({tags: "flower"}).count(), 1);
-    test.equal(c.find({tags: "fruit"}).count(), 2);
-    test.equal(c.find({tags: "red"}).count(), 3);
-    test.length(c.find({tags: "flower"}).fetch(), 1);
-    test.length(c.find({tags: "fruit"}).fetch(), 2);
-    test.length(c.find({tags: "red"}).fetch(), 3);
+  test.equal(c.findOne(1).name, "strawberry");
+  test.equal(c.findOne(2).name, "apple");
+  test.equal(c.findOne(3).name, "rose");
+  test.equal(c.findOne(4), undefined);
+  test.equal(c.findOne("abc"), undefined);
+  test.equal(c.findOne(undefined), undefined);
 
-    test.equal(c.findOne(1).name, "strawberry");
-    test.equal(c.findOne(2).name, "apple");
-    test.equal(c.findOne(3).name, "rose");
-    test.equal(c.findOne(4), undefined);
-    test.equal(c.findOne("abc"), undefined);
-    test.equal(c.findOne(undefined), undefined);
+  test.equal(c.find(1).count(), 1);
+  test.equal(c.find(4).count(), 0);
+  test.equal(c.find("abc").count(), 0);
+  test.equal(c.find(undefined).count(), 0);
+  test.equal(c.find().count(), 3);
+  test.equal(c.find(1, {skip: 1}).count(), 0);
+  test.equal(c.find({_id: 1}, {skip: 1}).count(), 0);
 
-    test.equal(c.find(1).count(), 1);
-    test.equal(c.find(4).count(), 0);
-    test.equal(c.find("abc").count(), 0);
-    test.equal(c.find(undefined).count(), 0);
-    test.equal(c.find().count(), 3);
+  // Regression test for #455.
+  c.insert({foo: {bar: 'baz'}});
+  test.equal(c.find({foo: {bam: 'baz'}}).count(), 0);
+  test.equal(c.find({foo: {bar: 'baz'}}).count(), 1);
 
-    // Regression test for #455.
-    c.insert({foo: {bar: 'baz'}});
-    test.equal(c.find({foo: {bam: 'baz'}}).count(), 0);
-    test.equal(c.find({foo: {bar: 'baz'}}).count(), 1);
-
-    // Duplicate ID.
-    test.throws(function () { c.insert({_id: 1, name: "bla"}); });
-    test.equal(c.find({_id: 1}).count(), 1);
-    test.equal(c.findOne(1).name, "strawberry");
-
-    var ev = "";
-    var makecb = function (tag) {
-      return {
-        added: function (doc) { ev += "a" + tag + doc._id + "_"; },
-        changed: function (doc) { ev += "c" + tag + doc._id + "_"; },
-        removed: function (doc) { ev += "r" + tag + doc._id + "_"; }
-      };
-    };
-    var expect = function (x) {
-      test.equal(ev, x);
-      ev = "";
-    };
-    // This should work equally well for ordered and unordered observations
-    // (because the callbacks don't look at indices and there's no 'moved'
-    // callback).
-    var handle = c.find({tags: "flower"})[observeMethod](makecb('a'));
-    expect("aa3_");
-    c.update({name: "rose"}, {$set: {tags: ["bloom", "red", "squishy"]}});
-    expect("ra3_");
-    c.update({name: "rose"}, {$set: {tags: ["flower", "red", "squishy"]}});
-    expect("aa3_");
-    c.update({name: "rose"}, {$set: {food: false}});
-    expect("ca3_");
-    c.remove({});
-    expect("ra3_");
-    c.insert({_id: 4, name: "daisy", tags: ["flower"]});
-    expect("aa4_");
-    handle.stop();
-    // After calling stop, no more callbacks are called.
-    c.insert({_id: 5, name: "iris", tags: ["flower"]});
-    expect("");
-  });
+  // Duplicate ID.
+  test.throws(function () { c.insert({_id: 1, name: "bla"}); });
+  test.equal(c.find({_id: 1}).count(), 1);
+  test.equal(c.findOne(1).name, "strawberry");
 });
 
 Tinytest.add("minimongo - cursors", function (test) {
@@ -579,10 +546,262 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({"a.b": {$in: [1, 2, 3]}}, {a: {b: [4, 2]}});
   nomatch({"a.b": {$in: [1, 2, 3]}}, {a: {b: [4]}});
 
+  // $or
+  test.throws(function () {
+    match({$or: []}, {});
+  });
+  test.throws(function () {
+    match({$or: []}, {a: 1});
+  });
+  match({$or: [{a: 1}]}, {a: 1});
+  nomatch({$or: [{b: 2}]}, {a: 1});
+  match({$or: [{a: 1}, {b: 2}]}, {a: 1});
+  nomatch({$or: [{c: 3}, {d: 4}]}, {a: 1});
+  match({$or: [{a: 1}, {b: 2}]}, {a: [1, 2, 3]});
+  nomatch({$or: [{a: 1}, {b: 2}]}, {c: [1, 2, 3]});
+  nomatch({$or: [{a: 1}, {b: 2}]}, {a: [2, 3, 4]});
+  match({$or: [{a: 1}, {a: 2}]}, {a: 1});
+  match({$or: [{a: 1}, {a: 2}], b: 2}, {a: 1, b: 2});
+  nomatch({$or: [{a: 2}, {a: 3}], b: 2}, {a: 1, b: 2});
+  nomatch({$or: [{a: 1}, {a: 2}], b: 3}, {a: 1, b: 2});
+
+  // $or and $lt, $lte, $gt, $gte
+  match({$or: [{a: {$lte: 1}}, {a: 2}]}, {a: 1});
+  nomatch({$or: [{a: {$lt: 1}}, {a: 2}]}, {a: 1});
+  match({$or: [{a: {$gte: 1}}, {a: 2}]}, {a: 1});
+  nomatch({$or: [{a: {$gt: 1}}, {a: 2}]}, {a: 1});
+  match({$or: [{b: {$gt: 1}}, {b: {$lt: 3}}]}, {b: 2});
+  nomatch({$or: [{b: {$lt: 1}}, {b: {$gt: 3}}]}, {b: 2});
+
+  // $or and $in
+  match({$or: [{a: {$in: [1, 2, 3]}}]}, {a: 1});
+  nomatch({$or: [{a: {$in: [4, 5, 6]}}]}, {a: 1});
+  match({$or: [{a: {$in: [1, 2, 3]}}, {b: 2}]}, {a: 1});
+  match({$or: [{a: {$in: [1, 2, 3]}}, {b: 2}]}, {b: 2});
+  nomatch({$or: [{a: {$in: [1, 2, 3]}}, {b: 2}]}, {c: 3});
+  match({$or: [{a: {$in: [1, 2, 3]}}, {b: {$in: [1, 2, 3]}}]}, {b: 2});
+  nomatch({$or: [{a: {$in: [1, 2, 3]}}, {b: {$in: [4, 5, 6]}}]}, {b: 2});
+
+  // $or and $nin
+  nomatch({$or: [{a: {$nin: [1, 2, 3]}}]}, {a: 1});
+  match({$or: [{a: {$nin: [4, 5, 6]}}]}, {a: 1});
+  nomatch({$or: [{a: {$nin: [1, 2, 3]}}, {b: 2}]}, {a: 1});
+  match({$or: [{a: {$nin: [1, 2, 3]}}, {b: 2}]}, {b: 2});
+  match({$or: [{a: {$nin: [1, 2, 3]}}, {b: 2}]}, {c: 3});
+  match({$or: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [1, 2, 3]}}]}, {b: 2});
+  nomatch({$or: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [1, 2, 3]}}]}, {a: 1, b: 2});
+  match({$or: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [4, 5, 6]}}]}, {b: 2});
+
+  // $or and dot-notation
+  match({$or: [{"a.b": 1}, {"a.b": 2}]}, {a: {b: 1}});
+  match({$or: [{"a.b": 1}, {"a.c": 1}]}, {a: {b: 1}});
+  nomatch({$or: [{"a.b": 2}, {"a.c": 1}]}, {a: {b: 1}});
+
+  // $or and nested objects
+  match({$or: [{a: {b: 1, c: 2}}, {a: {b: 2, c: 1}}]}, {a: {b: 1, c: 2}});
+  nomatch({$or: [{a: {b: 1, c: 3}}, {a: {b: 2, c: 1}}]}, {a: {b: 1, c: 2}});
+
+  // $or and regexes
+  match({$or: [{a: /a/}]}, {a: "cat"});
+  nomatch({$or: [{a: /o/}]}, {a: "cat"});
+  match({$or: [{a: /a/}, {a: /o/}]}, {a: "cat"});
+  nomatch({$or: [{a: /i/}, {a: /o/}]}, {a: "cat"});
+  match({$or: [{a: /i/}, {b: /o/}]}, {a: "cat", b: "dog"});
+
+  // $or and $ne
+  match({$or: [{a: {$ne: 1}}]}, {});
+  nomatch({$or: [{a: {$ne: 1}}]}, {a: 1});
+  match({$or: [{a: {$ne: 1}}]}, {a: 2});
+  match({$or: [{a: {$ne: 1}}]}, {b: 1});
+  match({$or: [{a: {$ne: 1}}, {a: {$ne: 2}}]}, {a: 1});
+  match({$or: [{a: {$ne: 1}}, {b: {$ne: 1}}]}, {a: 1});
+  nomatch({$or: [{a: {$ne: 1}}, {b: {$ne: 2}}]}, {a: 1, b: 2});
+
+  // $or and $not
+  match({$or: [{a: {$not: {$mod: [10, 1]}}}]}, {});
+  nomatch({$or: [{a: {$not: {$mod: [10, 1]}}}]}, {a: 1});
+  match({$or: [{a: {$not: {$mod: [10, 1]}}}]}, {a: 2});
+  match({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$not: {$mod: [10, 2]}}}]}, {a: 1});
+  nomatch({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 1});
+  match({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 2});
+  match({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 3});
+  // this is possibly an open-ended task, so we stop here ...
+  
+  // $nor
+  test.throws(function () {
+    match({$nor: []}, {});
+  });
+  test.throws(function () {
+    match({$nor: []}, {a: 1});
+  });
+  nomatch({$nor: [{a: 1}]}, {a: 1});
+  match({$nor: [{b: 2}]}, {a: 1});
+  nomatch({$nor: [{a: 1}, {b: 2}]}, {a: 1});
+  match({$nor: [{c: 3}, {d: 4}]}, {a: 1});
+  nomatch({$nor: [{a: 1}, {b: 2}]}, {a: [1, 2, 3]});
+  match({$nor: [{a: 1}, {b: 2}]}, {c: [1, 2, 3]});
+  match({$nor: [{a: 1}, {b: 2}]}, {a: [2, 3, 4]});
+  nomatch({$nor: [{a: 1}, {a: 2}]}, {a: 1});
+
+  // $nor and $lt, $lte, $gt, $gte
+  nomatch({$nor: [{a: {$lte: 1}}, {a: 2}]}, {a: 1});
+  match({$nor: [{a: {$lt: 1}}, {a: 2}]}, {a: 1});
+  nomatch({$nor: [{a: {$gte: 1}}, {a: 2}]}, {a: 1});
+  match({$nor: [{a: {$gt: 1}}, {a: 2}]}, {a: 1});
+  nomatch({$nor: [{b: {$gt: 1}}, {b: {$lt: 3}}]}, {b: 2});
+  match({$nor: [{b: {$lt: 1}}, {b: {$gt: 3}}]}, {b: 2});
+
+  // $nor and $in
+  nomatch({$nor: [{a: {$in: [1, 2, 3]}}]}, {a: 1});
+  match({$nor: [{a: {$in: [4, 5, 6]}}]}, {a: 1});
+  nomatch({$nor: [{a: {$in: [1, 2, 3]}}, {b: 2}]}, {a: 1});
+  nomatch({$nor: [{a: {$in: [1, 2, 3]}}, {b: 2}]}, {b: 2});
+  match({$nor: [{a: {$in: [1, 2, 3]}}, {b: 2}]}, {c: 3});
+  nomatch({$nor: [{a: {$in: [1, 2, 3]}}, {b: {$in: [1, 2, 3]}}]}, {b: 2});
+  match({$nor: [{a: {$in: [1, 2, 3]}}, {b: {$in: [4, 5, 6]}}]}, {b: 2});
+
+  // $nor and $nin
+  match({$nor: [{a: {$nin: [1, 2, 3]}}]}, {a: 1});
+  nomatch({$nor: [{a: {$nin: [4, 5, 6]}}]}, {a: 1});
+  match({$nor: [{a: {$nin: [1, 2, 3]}}, {b: 2}]}, {a: 1});
+  nomatch({$nor: [{a: {$nin: [1, 2, 3]}}, {b: 2}]}, {b: 2});
+  nomatch({$nor: [{a: {$nin: [1, 2, 3]}}, {b: 2}]}, {c: 3});
+  nomatch({$nor: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [1, 2, 3]}}]}, {b: 2});
+  match({$nor: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [1, 2, 3]}}]}, {a: 1, b: 2});
+  nomatch({$nor: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [4, 5, 6]}}]}, {b: 2});
+
+  // $nor and dot-notation
+  nomatch({$nor: [{"a.b": 1}, {"a.b": 2}]}, {a: {b: 1}});
+  nomatch({$nor: [{"a.b": 1}, {"a.c": 1}]}, {a: {b: 1}});
+  match({$nor: [{"a.b": 2}, {"a.c": 1}]}, {a: {b: 1}});
+
+  // $nor and nested objects
+  nomatch({$nor: [{a: {b: 1, c: 2}}, {a: {b: 2, c: 1}}]}, {a: {b: 1, c: 2}});
+  match({$nor: [{a: {b: 1, c: 3}}, {a: {b: 2, c: 1}}]}, {a: {b: 1, c: 2}});
+
+  // $nor and regexes
+  nomatch({$nor: [{a: /a/}]}, {a: "cat"});
+  match({$nor: [{a: /o/}]}, {a: "cat"});
+  nomatch({$nor: [{a: /a/}, {a: /o/}]}, {a: "cat"});
+  match({$nor: [{a: /i/}, {a: /o/}]}, {a: "cat"});
+  nomatch({$nor: [{a: /i/}, {b: /o/}]}, {a: "cat", b: "dog"});
+
+  // $nor and $ne
+  nomatch({$nor: [{a: {$ne: 1}}]}, {});
+  match({$nor: [{a: {$ne: 1}}]}, {a: 1});
+  nomatch({$nor: [{a: {$ne: 1}}]}, {a: 2});
+  nomatch({$nor: [{a: {$ne: 1}}]}, {b: 1});
+  nomatch({$nor: [{a: {$ne: 1}}, {a: {$ne: 2}}]}, {a: 1});
+  nomatch({$nor: [{a: {$ne: 1}}, {b: {$ne: 1}}]}, {a: 1});
+  match({$nor: [{a: {$ne: 1}}, {b: {$ne: 2}}]}, {a: 1, b: 2});
+
+  // $nor and $not
+  nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}]}, {});
+  match({$nor: [{a: {$not: {$mod: [10, 1]}}}]}, {a: 1});
+  nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}]}, {a: 2});
+  nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$not: {$mod: [10, 2]}}}]}, {a: 1});
+  match({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 1});
+  nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 2});
+  nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 3});
+
+  // $and
+
+  test.throws(function () {
+    match({$and: []}, {});
+  });
+  test.throws(function () {
+    match({$and: []}, {a: 1});
+  });
+  match({$and: [{a: 1}]}, {a: 1});
+  nomatch({$and: [{a: 1}, {a: 2}]}, {a: 1});
+  nomatch({$and: [{a: 1}, {b: 1}]}, {a: 1});
+  match({$and: [{a: 1}, {b: 2}]}, {a: 1, b: 2});
+  nomatch({$and: [{a: 1}, {b: 1}]}, {a: 1, b: 2});
+  match({$and: [{a: 1}, {b: 2}], c: 3}, {a: 1, b: 2, c: 3});
+  nomatch({$and: [{a: 1}, {b: 2}], c: 4}, {a: 1, b: 2, c: 3});
+
+  // $and and regexes
+  match({$and: [{a: /a/}]}, {a: "cat"});
+  match({$and: [{a: /a/i}]}, {a: "CAT"});
+  nomatch({$and: [{a: /o/}]}, {a: "cat"});
+  nomatch({$and: [{a: /a/}, {a: /o/}]}, {a: "cat"});
+  match({$and: [{a: /a/}, {b: /o/}]}, {a: "cat", b: "dog"});
+  nomatch({$and: [{a: /a/}, {b: /a/}]}, {a: "cat", b: "dog"});
+
+  // $and, dot-notation, and nested objects
+  match({$and: [{"a.b": 1}]}, {a: {b: 1}});
+  match({$and: [{a: {b: 1}}]}, {a: {b: 1}});
+  nomatch({$and: [{"a.b": 2}]}, {a: {b: 1}});
+  nomatch({$and: [{"a.c": 1}]}, {a: {b: 1}});
+  nomatch({$and: [{"a.b": 1}, {"a.b": 2}]}, {a: {b: 1}});
+  nomatch({$and: [{"a.b": 1}, {a: {b: 2}}]}, {a: {b: 1}});
+  match({$and: [{"a.b": 1}, {"c.d": 2}]}, {a: {b: 1}, c: {d: 2}});
+  nomatch({$and: [{"a.b": 1}, {"c.d": 1}]}, {a: {b: 1}, c: {d: 2}});
+  match({$and: [{"a.b": 1}, {c: {d: 2}}]}, {a: {b: 1}, c: {d: 2}});
+  nomatch({$and: [{"a.b": 1}, {c: {d: 1}}]}, {a: {b: 1}, c: {d: 2}});
+  nomatch({$and: [{"a.b": 2}, {c: {d: 2}}]}, {a: {b: 1}, c: {d: 2}});
+  match({$and: [{a: {b: 1}}, {c: {d: 2}}]}, {a: {b: 1}, c: {d: 2}});
+  nomatch({$and: [{a: {b: 2}}, {c: {d: 2}}]}, {a: {b: 1}, c: {d: 2}});
+
+  // $and and $in
+  nomatch({$and: [{a: {$in: []}}]}, {});
+  match({$and: [{a: {$in: [1, 2, 3]}}]}, {a: 1});
+  nomatch({$and: [{a: {$in: [4, 5, 6]}}]}, {a: 1});
+  nomatch({$and: [{a: {$in: [1, 2, 3]}}, {a: {$in: [4, 5, 6]}}]}, {a: 1});
+  nomatch({$and: [{a: {$in: [1, 2, 3]}}, {b: {$in: [1, 2, 3]}}]}, {a: 1, b: 4});
+  match({$and: [{a: {$in: [1, 2, 3]}}, {b: {$in: [4, 5, 6]}}]}, {a: 1, b: 4});
+
+
+  // $and and $nin
+  match({$and: [{a: {$nin: []}}]}, {});
+  nomatch({$and: [{a: {$nin: [1, 2, 3]}}]}, {a: 1});
+  match({$and: [{a: {$nin: [4, 5, 6]}}]}, {a: 1});
+  nomatch({$and: [{a: {$nin: [1, 2, 3]}}, {a: {$nin: [4, 5, 6]}}]}, {a: 1});
+  nomatch({$and: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [1, 2, 3]}}]}, {a: 1, b: 4});
+  nomatch({$and: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [4, 5, 6]}}]}, {a: 1, b: 4});
+
+  // $and and $lt, $lte, $gt, $gte
+  match({$and: [{a: {$lt: 2}}]}, {a: 1}); 
+  nomatch({$and: [{a: {$lt: 1}}]}, {a: 1}); 
+  match({$and: [{a: {$lte: 1}}]}, {a: 1}); 
+  match({$and: [{a: {$gt: 0}}]}, {a: 1}); 
+  nomatch({$and: [{a: {$gt: 1}}]}, {a: 1}); 
+  match({$and: [{a: {$gte: 1}}]}, {a: 1}); 
+  match({$and: [{a: {$gt: 0}}, {a: {$lt: 2}}]}, {a: 1}); 
+  nomatch({$and: [{a: {$gt: 1}}, {a: {$lt: 2}}]}, {a: 1}); 
+  nomatch({$and: [{a: {$gt: 0}}, {a: {$lt: 1}}]}, {a: 1}); 
+  match({$and: [{a: {$gte: 1}}, {a: {$lte: 1}}]}, {a: 1}); 
+  nomatch({$and: [{a: {$gte: 2}}, {a: {$lte: 0}}]}, {a: 1}); 
+
+  // $and and $ne
+  match({$and: [{a: {$ne: 1}}]}, {});
+  nomatch({$and: [{a: {$ne: 1}}]}, {a: 1});
+  match({$and: [{a: {$ne: 1}}]}, {a: 2});
+  nomatch({$and: [{a: {$ne: 1}}, {a: {$ne: 2}}]}, {a: 2});
+  match({$and: [{a: {$ne: 1}}, {a: {$ne: 3}}]}, {a: 2});
+
+  // $and and $not
+  match({$and: [{a: {$not: {$gt: 2}}}]}, {a: 1});
+  nomatch({$and: [{a: {$not: {$lt: 2}}}]}, {a: 1});
+  match({$and: [{a: {$not: {$lt: 0}}}, {a: {$not: {$gt: 2}}}]}, {a: 1});
+  nomatch({$and: [{a: {$not: {$lt: 2}}}, {a: {$not: {$gt: 0}}}]}, {a: 1});
+
+  // $where
+  match({$where: "this.a === 1"}, {a: 1});
+  nomatch({$where: "this.a !== 1"}, {a: 1});
+  nomatch({$where: "this.a === 1", a: 2}, {a: 1});
+  match({$where: "this.a === 1", b: 2}, {a: 1, b: 2});
+  match({$where: "this.a === 1 && this.b === 2"}, {a: 1, b: 2});
+  match({$where: "_.isArray(this.a)"}, {a: []});
+  nomatch({$where: "_.isArray(this.a)"}, {a: 1});
+
+  match({"dogs.0.name": "Fido"}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
+  match({"dogs.1.name": "Rex"}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
+  nomatch({"dogs.1.name": "Fido"}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
+  match({"room.1b": "bla"}, {room: {"1b": "bla"}});
+
   // XXX still needs tests:
-  // - $or, $and, $nor, $where
   // - $elemMatch
-  // - people.2.name
   // - non-scalar arguments to $gt, $lt, etc
 });
 
@@ -659,6 +878,40 @@ Tinytest.add("minimongo - sort", function (test) {
       {a: 46, b: 0, _id: "46_0"},
       {a: 47, b: 1, _id: "47_1"}]);
 });
+
+Tinytest.add("minimongo - subkey sort", function (test) {
+  var c = new LocalCollection();
+
+  // normal case
+  c.insert({a: {b: 2}});
+  c.insert({a: {b: 1}});
+  c.insert({a: {b: 3}});
+  test.equal(
+    _.pluck(c.find({}, {sort: {'a.b': -1}}).fetch(), 'a'),
+    [{b: 3}, {b: 2}, {b: 1}]);
+
+  // isn't an object
+  c.insert({a: 1});
+  test.equal(
+    _.pluck(c.find({}, {sort: {'a.b': 1}}).fetch(), 'a'),
+    [1, {b: 1}, {b: 2}, {b: 3}]);
+
+  // complex object
+  c.insert({a: {b: {c: 1}}});
+  test.equal(
+    _.pluck(c.find({}, {sort: {'a.b': -1}}).fetch(), 'a'),
+    [{b: {c: 1}}, {b: 3}, {b: 2}, {b: 1}, 1]);
+
+  // no such top level prop
+  c.insert({c: 1});
+  test.equal(
+    _.pluck(c.find({}, {sort: {'a.b': -1}}).fetch(), 'a'),
+    [{b: {c: 1}}, {b: 3}, {b: 2}, {b: 1}, 1, undefined]);
+
+  // no such mid level prop. just test that it doesn't throw.
+  test.equal(c.find({}, {sort: {'a.nope.c': -1}}).count(), 6);
+});
+
 
 Tinytest.add("minimongo - modify", function (test) {
   var modify = function (doc, mod, result) {
@@ -904,7 +1157,7 @@ Tinytest.add("minimongo - modify", function (test) {
 
 // XXX test update() (selecting docs, multi, upsert..)
 
-Tinytest.add("minimongo - observe", function (test) {
+Tinytest.add("minimongo - observe ordered", function (test) {
   var operations = [];
   var cbs = log_callbacks(operations);
   var handle;
@@ -948,7 +1201,82 @@ Tinytest.add("minimongo - observe", function (test) {
   c.insert({a:100});
   test.equal(operations.shift(), ['added', {a:100}, 0]);
   handle.stop();
+
+  // test skip and limit.
+  c.remove({});
+  handle = c.find({}, {sort: {a: 1}, skip: 1, limit: 2}).observe(cbs);
+  test.equal(operations.shift(), undefined);
+  c.insert({a:1});
+  test.equal(operations.shift(), undefined);
+  c.insert({a:2});
+  test.equal(operations.shift(), ['added', {a:2}, 0]);
+  c.insert({a:3});
+  test.equal(operations.shift(), ['added', {a:3}, 1]);
+  c.insert({a:4});
+  test.equal(operations.shift(), undefined);
+  id = c.findOne({a:2})._id;
+  c.update({a:1}, {a:0});
+  test.equal(operations.shift(), undefined);
+  c.update({a:0}, {a:5});
+  test.equal(operations.shift(), ['removed', id, 0, {a:2}]);
+  test.equal(operations.shift(), ['added', {a:4}, 1]);
+  c.update({a:3}, {a:3.5});
+  test.equal(operations.shift(), ['changed', {a:3.5}, 0, {a:3}]);
+
+  handle.stop();
 });
+
+_.each(['observe', '_observeUnordered'], function (observeMethod) {
+  Tinytest.add("minimongo - observe (" + observeMethod + ")", function (test) {
+    var c = new LocalCollection();
+
+    var ev = "";
+    var makecb = function (tag) {
+      return {
+        added: function (doc) { ev += "a" + tag + doc._id + "_"; },
+        changed: function (doc) { ev += "c" + tag + doc._id + "_"; },
+        removed: function (doc) { ev += "r" + tag + doc._id + "_"; }
+      };
+    };
+    var expect = function (x) {
+      test.equal(ev, x);
+      ev = "";
+    };
+
+    c.insert({_id: 1, name: "strawberry", tags: ["fruit", "red", "squishy"]});
+    c.insert({_id: 2, name: "apple", tags: ["fruit", "red", "hard"]});
+    c.insert({_id: 3, name: "rose", tags: ["flower", "red", "squishy"]});
+
+    // This should work equally well for ordered and unordered observations
+    // (because the callbacks don't look at indices and there's no 'moved'
+    // callback).
+    var handle = c.find({tags: "flower"})[observeMethod](makecb('a'));
+    expect("aa3_");
+    c.update({name: "rose"}, {$set: {tags: ["bloom", "red", "squishy"]}});
+    expect("ra3_");
+    c.update({name: "rose"}, {$set: {tags: ["flower", "red", "squishy"]}});
+    expect("aa3_");
+    c.update({name: "rose"}, {$set: {food: false}});
+    expect("ca3_");
+    c.remove({});
+    expect("ra3_");
+    c.insert({_id: 4, name: "daisy", tags: ["flower"]});
+    expect("aa4_");
+    handle.stop();
+    // After calling stop, no more callbacks are called.
+    c.insert({_id: 5, name: "iris", tags: ["flower"]});
+    expect("");
+
+    // Test that observing a lookup by ID works.
+    handle = c.find(4)[observeMethod](makecb('b'));
+    expect('ab4_');
+    c.update(4, {$set: {eek: 5}});
+    expect('cb4_');
+    handle.stop();
+  });
+});
+
+
 
 Tinytest.add("minimongo - diff", function (test) {
 
@@ -1024,7 +1352,7 @@ Tinytest.add("minimongo - diff", function (test) {
         test.isTrue(_.has(results, doc._id));
         test.equal(results[doc._id], oldDoc);
         results[doc._id] = doc;
-      },
+      }
     };
 
     LocalCollection._diffQueryUnordered(oldResults, newResults, observer);

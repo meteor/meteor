@@ -1,0 +1,10 @@
+{
+  "params": {
+    "numCollections": 1,
+    "numBuckets": 1,
+    "initialDocuments": 1024,
+    "updatesPerSecond": 0.2,
+    "documentSize": 1024,
+    "documentNumFields": 32
+  }
+}

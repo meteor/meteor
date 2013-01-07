@@ -19,6 +19,14 @@ _Mongo = function (url) {
 
   self._liveResultsSets = {};
 
+  // Set autoReconnect on Mongo URLs by default.
+  if (!(/[\?&]autoReconnect/.test(url))) {
+    if (/\?/.test(url))
+      url += '&autoReconnect=true';
+    else
+      url += '?autoReconnect=true';
+  }
+
   MongoDB.connect(url, {db: {safe: true}}, function(err, db) {
     if (err)
       throw err;
@@ -32,21 +40,6 @@ _Mongo = function (url) {
       }).run();
     }
   });
-};
-
-// protect against dangerous selectors.  falsey and {_id: falsey}
-// are both likely programmer error, and not what you want,
-// particularly for destructive operations.
-_Mongo._rewriteSelector = function (selector) {
-  // shorthand -- scalars match _id
-  if ((typeof selector === 'string') || (typeof selector === 'number'))
-    selector = {_id: selector};
-
-  if (!selector || (('_id' in selector) && !selector._id))
-    // can't match anything
-    return {_id: Meteor.uuid()};
-  else
-    return selector;
 };
 
 // callback: lambda (err, collection) called when
@@ -137,9 +130,6 @@ _Mongo.prototype.remove = function (collection_name, selector) {
 
   var write = self._maybeBeginWrite();
 
-  // XXX does not allow options. matches the client.
-  selector = _Mongo._rewriteSelector(selector);
-
   var future = new Future;
   self._withCollection(collection_name, function (err, collection) {
     if (err) {
@@ -171,7 +161,6 @@ _Mongo.prototype.update = function (collection_name, selector, mod, options) {
 
   var write = self._maybeBeginWrite();
 
-  selector = _Mongo._rewriteSelector(selector);
   if (!options) options = {};
 
   var future = new Future;
@@ -271,7 +260,7 @@ _Mongo.prototype._ensureIndex = function (collectionName, index, options) {
 var CursorDescription = function (collectionName, selector, options) {
   var self = this;
   self.collectionName = collectionName;
-  self.selector = _Mongo._rewriteSelector(selector);
+  self.selector = Meteor.Collection._rewriteSelector(selector);
   self.options = options || {};
 };
 
@@ -726,10 +715,12 @@ _.extend(LiveResultsSet.prototype, {
       --self._addHandleTasksScheduledButNotPerformed;
 
       // Send initial adds.
-      _.each(self._results, function (doc, i) {
-        handle._added(LocalCollection._deepcopy(doc),
-                      self._ordered ? i : undefined);
-      });
+      if (handle._added) {
+        _.each(self._results, function (doc, i) {
+          handle._added(LocalCollection._deepcopy(doc),
+                        self._ordered ? i : undefined);
+        });
+      }
     });
   },
 

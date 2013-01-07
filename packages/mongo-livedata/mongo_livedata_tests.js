@@ -421,16 +421,19 @@ if (Meteor.isServer) {
     var run = test.runId();
     var coll = new Meteor.Collection("cursorDedup-"+run);
 
-    var observer = function () {
+    var observer = function (noAdded) {
       var output = [];
-      var handle = coll.find({foo: 22}).observe({
-        added: function (doc) {
-          output.push({added: doc._id});
-        },
+      var callbacks = {
         changed: function (newDoc) {
           output.push({changed: newDoc._id});
         }
-      });
+      };
+      if (!noAdded) {
+        callbacks.added = function (doc) {
+          output.push({added: doc._id});
+        };
+      }
+      var handle = coll.find({foo: 22}).observe(callbacks);
       return {output: output, handle: handle};
     };
 
@@ -510,7 +513,63 @@ if (Meteor.isServer) {
     test.length(o2.output, 0);
     // White-box: Different LiveResultsSet.
     test.isTrue(liveResultsSet !== o3.handle._liveResultsSet);
+
+    // Start another handle with no added callback. Regression test for #589.
+    var o4 = observer(true);
+
     o3.handle.stop();
+    o4.handle.stop();
+
     onComplete();
   });
 }
+
+if (Meteor.isServer) {
+  Meteor.methods({
+    createInsecureCollection: function (name) {
+      var c = new Meteor.Collection(name);
+      c._insecure = true;
+      Meteor.publish('c-' + name, function () {
+        return c.find();
+      });
+    }
+  });
+}
+
+testAsyncMulti('mongo-livedata - rewrite selector', [
+  function (test, expect) {
+    var collectionName = Meteor.uuid();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', collectionName);
+      Meteor.subscribe('c-' + collectionName);
+    }
+
+    var coll = new Meteor.Collection(collectionName);
+
+    var docId;
+
+    var updateCallback = expect(function (err2) {
+      test.isFalse(err2);
+
+      var doc = coll.findOne(docId);
+      test.isTrue(doc);
+      test.equal(doc.name, "f\noobar");
+      test.equal(doc.value, 43);
+    });
+
+    coll.insert({name: 'f\noobar', value: 42}, expect(function (err1, id) {
+      test.isFalse(err1);
+      test.isTrue(id);
+      docId = id;
+
+      var doc = coll.findOne(docId);
+      test.isTrue(doc);
+      test.equal(doc.name, "f\noobar");
+      test.equal(doc.value, 42);
+
+      // Ensure that "i" and "m" flags are respected by making /B/ match b and
+      // /^/ match at the newline.
+      coll.update({name: /^o+B/im}, {$inc: {value: 1}}, updateCallback);
+    }));
+  }
+]);

@@ -2,14 +2,14 @@
 // to change this. See 'benchmark-scenarios.js' for the list of
 // scenarios.
 
+var PARAMS = {};
 if (Meteor.isServer) {
-  if (process.env.SCENARIO)
-    __meteor_runtime_config__.SCENARIO = process.env.SCENARIO;
-  else
-    __meteor_runtime_config__.SCENARIO = 'default';
+  if (!Meteor.settings.params)
+    throw new Error("Must set scenario with Meteor.settings");
+  __meteor_runtime_config__.PARAMS = PARAMS = Meteor.settings.params;
+} else {
+  PARAMS = __meteor_runtime_config__.PARAMS;
 }
-var PARAMS = SCENARIOS[__meteor_runtime_config__.SCENARIO];
-
 
 //////////////////////////////
 // Helper Functions

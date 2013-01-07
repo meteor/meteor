@@ -1,10 +1,10 @@
 var fs = require("fs");
 var path = require("path");
-var spawn = require('child_process').spawn;
+var child_process = require('child_process');
 
 var files = require(path.join(__dirname, '..', 'lib', 'files.js'));
 
-var _ = require(path.join('..', 'lib', 'third', 'underscore.js'));
+var _ = require('underscore');
 
 
 /** Internal.
@@ -15,37 +15,34 @@ var _ = require(path.join('..', 'lib', 'third', 'underscore.js'));
  */
 var find_mongo_pids = function (app_dir, port, callback) {
   // 'ps ax' should be standard across all MacOS and Linux.
-  var proc = spawn('ps', ['ax']);
-  var data = '';
-  proc.stdout.on('data', function (d) {
-    data += d;
-  });
+  child_process.exec('ps ax',
+    function (error, stdout, stderr) {
+      if (error) {
+        callback({reason: error});
+      } else if (stderr) {
+        callback({reason: 'ps produced stderr ' + stderr});
+      } else {
+        var pids = [];
 
-  proc.on('exit', function (code, signal) {
-    if (code === 0) {
-      var pids = [];
+        _.each(stdout.split('\n'), function (ps_line) {
+          // matches mongos we start.
+          var m = ps_line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db\s*$/);
+          if (m && m.length === 4) {
+            var found_pid =  parseInt(m[1]);
+            var found_port = parseInt(m[2]);
+            var found_path = m[3];
 
-      _.each(data.split('\n'), function (ps_line) {
-        // matches mongos we start.
-        var m = ps_line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db\s*$/);
-        if (m && m.length === 4) {
-          var found_pid =  parseInt(m[1]);
-          var found_port = parseInt(m[2]);
-          var found_path = m[3];
-
-          if ( (!port || port === found_port) &&
-               (!app_dir || app_dir === found_path)) {
-            pids.push({
-              pid: found_pid, port: found_port, app_dir: found_path});
+            if ( (!port || port === found_port) &&
+                 (!app_dir || app_dir === found_path)) {
+              pids.push({
+                pid: found_pid, port: found_port, app_dir: found_path});
+            }
           }
-        }
-      });
+        });
 
-      callback(null, pids);
-    } else {
-      callback({reason: 'ps exit code ' + code});
-    }
-  });
+        callback(null, pids);
+      }
+    });
 };
 
 
@@ -131,17 +128,24 @@ var find_mongo_and_kill_it_dead = function (port, callback) {
 };
 
 exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callback) {
+  var handle = {stop: function (callback) { callback(); } };
   launch_callback = launch_callback || function () {};
   on_exit_callback = on_exit_callback || function () {};
 
   // If we are passed an external mongo, assume it is launched and never
   // exits. Matches code in run.js:exports.run.
+
+  // Since it is externally managed, asking it to actually stop would be
+  // impolite, so our stoppable handle is a noop
   if (process.env.MONGO_URL) {
     launch_callback();
-    return;
+    return handle;
   }
 
-  var mongod_path = path.join(files.get_dev_bundle(), 'mongodb', 'bin', 'mongod');
+  var mongod_path = path.join(files.get_dev_bundle(),
+                              'mongodb',
+                              'bin',
+                              'mongod');
 
   // store data in app_dir
   var data_path = path.join(app_dir, '.meteor', 'local', 'db');
@@ -155,21 +159,21 @@ exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callbac
       return;
     }
 
-    var proc = spawn(mongod_path, [
+    var proc = child_process.spawn(mongod_path, [
       '--bind_ip', '127.0.0.1',
       '--smallfiles',
       '--port', port,
       '--dbpath', data_path
     ]);
+    handle.stop = function (callback) {
+      var tries = 0;
+      var exited = false;
+      proc.removeListener('exit', on_exit_callback);
+      proc.kill('SIGINT');
+      callback && callback(err);
+    };
 
-    proc.on('exit', function (code, signal) {
-      on_exit_callback(code, signal);
-    });
-
-    // proc.stderr.setEncoding('utf8');
-    // proc.stderr.on('data', function (data) {
-    //   process.stdout.write(data);
-    // });
+    proc.on('exit', on_exit_callback);
 
     proc.stdout.setEncoding('utf8');
     proc.stdout.on('data', function (data) {
@@ -178,6 +182,5 @@ exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callbac
         launch_callback();
     });
   });
-
+  return handle;
 };
-

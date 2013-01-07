@@ -35,36 +35,36 @@ testAsyncMulti("stream - reconnect", [
 
 Tinytest.add("stream - sockjs urls are computed correctly", function(test) {
   var testHasSockjsUrl = function(raw, expectedSockjsUrl) {
-    test.equal(Meteor._Stream._toSockjsUrl(raw), expectedSockjsUrl);
+    var actual = Meteor._Stream._toSockjsUrl(raw);
+    if (expectedSockjsUrl instanceof RegExp)
+      test.isTrue(actual.match(expectedSockjsUrl));
+    else
+      test.equal(actual, expectedSockjsUrl);
   };
 
-  testHasSockjsUrl("http://subdomain.meteor.com/sockjs",
-                   "http://subdomain.meteor.com/sockjs");
   testHasSockjsUrl("http://subdomain.meteor.com/",
                    "http://subdomain.meteor.com/sockjs");
   testHasSockjsUrl("http://subdomain.meteor.com",
-                   "http://subdomain.meteor.com/sockjs");
-  testHasSockjsUrl("subdomain.meteor.com/sockjs",
                    "http://subdomain.meteor.com/sockjs");
   testHasSockjsUrl("subdomain.meteor.com/",
                    "http://subdomain.meteor.com/sockjs");
   testHasSockjsUrl("subdomain.meteor.com",
                    "http://subdomain.meteor.com/sockjs");
-  testHasSockjsUrl("/sockjs", "/sockjs");
   testHasSockjsUrl("/", "/sockjs");
 
-  testHasSockjsUrl("http://localhost:3000/sockjs",
-                   "http://localhost:3000/sockjs");
   testHasSockjsUrl("http://localhost:3000/", "http://localhost:3000/sockjs");
   testHasSockjsUrl("http://localhost:3000", "http://localhost:3000/sockjs");
   testHasSockjsUrl("localhost:3000", "http://localhost:3000/sockjs");
 
-  testHasSockjsUrl("https://subdomain.meteor.com/sockjs",
-                   "https://subdomain.meteor.com/sockjs");
   testHasSockjsUrl("https://subdomain.meteor.com/",
                    "https://subdomain.meteor.com/sockjs");
   testHasSockjsUrl("https://subdomain.meteor.com",
                    "https://subdomain.meteor.com/sockjs");
+
+  testHasSockjsUrl("ddp+sockjs://ddp--****-foo.meteor.com/sockjs",
+                   /^https:\/\/ddp--\d\d\d\d-foo\.meteor\.com\/sockjs$/);
+  testHasSockjsUrl("ddpi+sockjs://ddp--****-foo.meteor.com/sockjs",
+                   /^http:\/\/ddp--\d\d\d\d-foo\.meteor\.com\/sockjs$/);
 });
 
 testAsyncMulti("stream - /websocket is a websocket endpoint", [

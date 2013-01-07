@@ -12,9 +12,7 @@ var mime = require('mime');
 var handlebars = require('handlebars');
 var useragent = require('useragent');
 
-// this is a copy of underscore that will be shipped just for use by
-// this file, server.js.
-var _ = require(path.join(__dirname, 'underscore.js'));
+var _ = require('underscore');
 
 // This code is duplicated in app/server/server.js.
 var MIN_NODE_VERSION = 'v0.8.11';

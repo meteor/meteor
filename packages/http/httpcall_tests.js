@@ -222,6 +222,22 @@ testAsyncMulti("httpcall - methods", [
         test.equal(result.statusCode, 200);
         var data = result.data;
         test.equal(data.body, {greeting: "Hello World!"});
+        // nb: some browsers include a charset here too.
+        test.matches(data.headers['content-type'], /^application\/json\b/);
+      }));
+
+    Meteor.http.call(
+      "POST", url_prefix()+"/data-test-explicit",
+      { data: {greeting: "Hello World!"},
+        headers: {'Content-Type': 'text/stupid'} },
+      expect(function(error, result) {
+        test.isFalse(error);
+        test.isTrue(result);
+        test.equal(result.statusCode, 200);
+        var data = result.data;
+        test.equal(data.body, {greeting: "Hello World!"});
+        // nb: some browsers include a charset here too.
+        test.matches(data.headers['content-type'], /^text\/stupid\b/);
       }));
   }
 ]);
@@ -294,7 +310,6 @@ testAsyncMulti("httpcall - headers", [
 
 testAsyncMulti("httpcall - params", [
   function(test, expect) {
-
     var do_test = function(method, url, params, opt_opts, expect_url, expect_body) {
       var opts = {};
       if (typeof opt_opts === "string") {
@@ -324,6 +339,8 @@ testAsyncMulti("httpcall - params", [
     do_test("GET", "/", {foo:"bar", fruit:"apple"}, "/?foo=bar&fruit=apple", "");
     do_test("POST", "/", {foo:"bar", fruit:"apple"}, "/", "foo=bar&fruit=apple");
     do_test("POST", "/", {foo:"bar", fruit:"apple"}, "/", "foo=bar&fruit=apple");
+    do_test("GET", "/", {'foo!':"bang!"}, {}, "/?foo%21=bang%21", "");
+    do_test("POST", "/", {'foo!':"bang!"}, {}, "/", "foo%21=bang%21");
     do_test("POST", "/", {foo:"bar", fruit:"apple"}, {
       content: "stuff!"}, "/?foo=bar&fruit=apple", "stuff!");
     do_test("POST", "/", {foo:"bar", greeting:"Hello World"}, {

@@ -163,6 +163,41 @@ _.extend(Meteor.Collection.prototype, {
 });
 
 
+// protect against dangerous selectors.  falsey and {_id: falsey} are both
+// likely programmer error, and not what you want, particularly for destructive
+// operations.  JS regexps don't serialize over DDP but can be trivially
+// replaced by $regex.
+Meteor.Collection._rewriteSelector = function (selector) {
+  // shorthand -- scalars match _id
+  if (LocalCollection._selectorIsId(selector))
+    selector = {_id: selector};
+
+  if (!selector || (('_id' in selector) && !selector._id))
+    // can't match anything
+    return {_id: Meteor.uuid()};
+
+  var ret = {};
+  _.each(selector, function (value, key) {
+    if (value instanceof RegExp) {
+      // XXX should also do this translation at lower levels (eg if the outer
+      // level is $and/$or/$nor, or if there's an $elemMatch)
+      ret[key] = {$regex: value.source};
+      var regexOptions = '';
+      // JS RegExp objects support 'i', 'm', and 'g'. Mongo regex $options
+      // support 'i', 'm', 'x', and 's'. So we support 'i' and 'm' here.
+      if (value.ignoreCase)
+        regexOptions += 'i';
+      if (value.multiline)
+        regexOptions += 'm';
+      if (regexOptions)
+        ret[key].$options = regexOptions;
+    }
+    else
+      ret[key] = value;
+  });
+  return ret;
+};
+
 // 'insert' immediately returns the inserted document's new _id.  The
 // others return nothing.
 //
@@ -217,6 +252,8 @@ _.each(["insert", "update", "remove"], function (name) {
       if ('_id' in args[0])
         throw new Error("Do not pass an _id to insert. Meteor will generate the _id for you.");
       ret = args[0]._id = Meteor.uuid();
+    } else {
+      args[0] = Meteor.Collection._rewriteSelector(args[0]);
     }
 
     if (self._manager && self._manager !== Meteor.default_server) {

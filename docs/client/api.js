@@ -54,6 +54,17 @@ Template.api.absoluteUrl = {
   ]
 };
 
+Template.api.settings = {
+  id: "meteor_settings",
+  name: "Meteor.settings",
+  locus: "Server",
+  descr: ["`Meteor.settings` contains any deployment-specific options that were " +
+          "provided using the `--settings` option for `meteor run` or `meteor deploy`. " +
+          "If you provide the `--settings` option, `Meteor.settings` will be the " +
+          "JSON object in the file you specify.  Otherwise, `Meteor.settings` will " +
+          "be an empty object."]
+};
+
 Template.api.publish = {
   id: "meteor_publish",
   name: "Meteor.publish(name, func)",
@@ -363,10 +374,10 @@ Template.api.find = {
     {name: "fields",
      type: "Object: field specifier",
      type_link: "fieldspecifiers",
-     descr: "Dictionary of fields to return or exclude."},
+     descr: "(Server only) Dictionary of fields to return or exclude."},
     {name: "reactive",
      type: "Boolean",
-     descr: "Default `true`; pass `false` to disable reactivity"}
+     descr: "(Client only) Default `true`; pass `false` to disable reactivity"}
   ]
 };
 
@@ -392,10 +403,10 @@ Template.api.findone = {
     {name: "fields",
      type: "Object: field specifier",
      type_link: "fieldspecifiers",
-     descr: "Dictionary of fields to return or exclude."},
+     descr: "(Server only) Dictionary of fields to return or exclude."},
     {name: "reactive",
      type: "Boolean",
-     descr: "Default true; pass false to disable reactivity"}
+     descr: "(Client only) Default true; pass false to disable reactivity"}
   ]
 };
 
@@ -791,6 +802,11 @@ Template.api.loginWithExternalService = {
       name: "requestPermissions",
       type: "Array of Strings",
       descr: "A list of permissions to request from the user."
+    },
+    {
+      name: "requestOfflineToken",
+      type: "Boolean",
+      descr: "If true, asks the user for permission to act on their behalf when offline. This stores an additional offline token in the `services` field of the user document. Currently only supported with Google."
     }
   ]
 };
@@ -826,6 +842,11 @@ Template.api.accounts_ui_config = {
       name: "requestPermissions",
       type: "Object",
       descr: "Which [permissions](#requestpermissions) to request from the user for each external service."
+    },
+    {
+      name: "requestOfflineToken",
+      type: "Object",
+      descr: "To ask the user for permission to act on their behalf when offline, map the relevant external service to `true`. Currently only supported with Google. See [Meteor.loginWithExternalService](#meteor_loginwithexternalservice) for more details."
     },
     {
       name: "passwordSignupFields",

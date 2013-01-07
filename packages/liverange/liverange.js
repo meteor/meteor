@@ -15,8 +15,18 @@
     try {
       testElem.test = 123;
     } catch (exception) { }
+    if (testElem.test !== 123)
+      return false;
 
-    return (testElem.test === 123);
+    // IE9 and 10 have a weird issue with multiple text nodes next to
+    // each other losing their expando attributes. Use the same
+    // workaround as IE8. Not sure how to test this as a feature, so use
+    // browser detection instead.
+    // See https://github.com/meteor/meteor/issues/458
+    if (document.documentMode)
+      return false;
+
+    return true;
   })();
 
   var wrapEndpoints = function (start, end) {

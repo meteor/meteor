@@ -1,9 +1,10 @@
-// @param url {String} URL to Meteor app or sockjs endpoint (deprecated)
-//   "http://subdomain.meteor.com/sockjs" or "/sockjs"
+// @param url {String} URL to Meteor app
+//   "http://subdomain.meteor.com/" or "/" or
+//   "ddp+sockjs://foo-**.meteor.com/sockjs"
 Meteor._Stream = function (url) {
   var self = this;
 
-  self.url = Meteor._Stream._toSockjsUrl(url);
+  self.rawUrl = url;
   self.socket = null;
   self.event_callbacks = {}; // name -> [callback]
   self.server_id = null;
@@ -63,9 +64,12 @@ Meteor._Stream = function (url) {
 };
 
 _.extend(Meteor._Stream, {
-  // @param url {String} URL to Meteor app, or to sockjs endpoint (deprecated)
+  // @param url {String} URL to Meteor app, eg:
+  //   "/" or "madewith.meteor.com" or "https://foo.meteor.com"
+  //   or "ddp+sockjs://ddp--****-foo.meteor.com/sockjs"
   // @returns {String} URL to the sockjs endpoint, e.g.
   //   "http://subdomain.meteor.com/sockjs" or "/sockjs"
+  //   or "https://ddp--1234-foo.meteor.com/sockjs"
   _toSockjsUrl: function(url) {
     // XXX from Underscore.String (http://epeli.github.com/underscore.string/)
     var startsWith = function(str, starts) {
@@ -77,14 +81,32 @@ _.extend(Meteor._Stream, {
         str.substring(str.length - ends.length) === ends;
     };
 
+    var ddpUrlMatch = url.match(/^ddp(i?)\+sockjs:\/\//);
+    if (ddpUrlMatch) {
+      // Remove scheme and split off the host.
+      var urlAfterDDP = url.substr(ddpUrlMatch[0].length);
+      var newScheme = ddpUrlMatch[1] === 'i' ? 'http' : 'https';
+      var slashPos = urlAfterDDP.indexOf('/');
+      var host =
+            slashPos === -1 ? urlAfterDDP : urlAfterDDP.substr(0, slashPos);
+      var rest = slashPos === -1 ? '' : urlAfterDDP.substr(slashPos);
+
+      // In the host (ONLY!), change '*' characters into random digits. This
+      // allows different stream connections to connect to different hostnames
+      // and avoid browser per-hostname connection limits.
+      host = host.replace(/\*/g, function () {
+        return Math.floor(Math.random()*10);
+      });
+
+      return newScheme + '://' + host + rest;
+    }
+
     // Prefix FQDNs but not relative URLs
     if (url.indexOf("://") === -1 && !startsWith(url, "/")) {
       url = "http://" + url;
     }
 
-    if (endsWith(url, "/sockjs"))
-      return url;
-    else if (endsWith(url, "/"))
+    if (endsWith(url, "/"))
       return url + "sockjs";
     else
       return url + "/sockjs";
@@ -311,12 +333,17 @@ _.extend(Meteor._Stream.prototype, {
     var self = this;
     self._cleanup_socket(); // cleanup the old socket, if there was one.
 
-    self.socket = new SockJS(self.url, undefined, {
-      debug: false, protocols_whitelist: [
-        // only allow polling protocols. no websockets or streaming.
-        // streaming makes safari spin, and websockets hurt chrome.
-        'xdr-polling', 'xhr-polling', 'iframe-xhr-polling', 'jsonp-polling'
-      ]});
+    // Convert raw URL to SockJS URL each time we open a connection, so that we
+    // can connect to random hostnames and get around browser per-host
+    // connection limits.
+    self.socket = new SockJS(
+      Meteor._Stream._toSockjsUrl(self.rawUrl),
+      undefined, {
+        debug: false, protocols_whitelist: [
+          // only allow polling protocols. no websockets or streaming.
+          // streaming makes safari spin, and websockets hurt chrome.
+          'xdr-polling', 'xhr-polling', 'iframe-xhr-polling', 'jsonp-polling'
+        ]});
     self.socket.onmessage = function (data) {
       // first message we get when we're connecting goes to _connected,
       // which connects us. All subsequent messages (while connected) go to

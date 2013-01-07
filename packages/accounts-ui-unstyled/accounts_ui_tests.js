@@ -1,3 +1,9 @@
+// XXX Most of the testing of accounts-ui is done manually, across
+// multiple browsers using examples/unfinished/accounts-ui-helper. We
+// should *definitely* automate this, but Tinytest is generally not
+// the right abstraction to use for this.
+
+
 // XXX it'd be cool to also test that the right thing happens if options
 // *are* validated, but Accouns.ui._options is global state which makes this hard
 // (impossible?)
@@ -14,4 +20,3 @@ Tinytest.add('accounts-ui - config validates keys', function (test) {
     Accounts.ui.config({requestPermissions: {facebook: "not an array"}});
   });
 });
-

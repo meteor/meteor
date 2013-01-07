@@ -1051,6 +1051,49 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
   ]);
 });
 
+Tinytest.add("livedata connection - onReconnect with sent messages", function(test) {
+  var stream = new Meteor._StubStream();
+  var conn = newConnection(stream);
+  startAndConnect(test, stream);
+
+  // setup method
+  conn.methods({do_something: function (x) {}});
+
+  conn.onReconnect = function() {
+    conn.apply('do_something', ['login'], {wait: true});
+  };
+
+  conn.apply('do_something', ['one']);
+
+  // initial connect
+  stream.sent = [];
+  stream.reset();
+  testGotMessage(
+    test, stream, {msg: 'connect', session: conn._lastSessionId});
+
+  // Test that we sent just the login message.
+  var loginId = testGotMessage(
+    test, stream, {msg: 'method', method: 'do_something',
+                   params: ['login'], id: '*'});
+
+  // we connect.
+  stream.receive({msg: 'connected', session: Meteor.uuid()});
+  test.length(stream.sent, 0);
+
+  // login got result (but not yet data)
+  stream.receive({msg: 'result', id: loginId, result: 'foo'});
+  test.length(stream.sent, 0);
+
+  // login got data. now we send next method.
+  stream.receive({msg: 'data', methods: [loginId]});
+
+  testGotMessage(
+    test, stream, {msg: 'method', method: 'do_something',
+                   params: ['one'], id: '*'});
+});
+
+
+
 Tinytest.add("livedata stub - reconnect double wait method", function (test) {
   var stream = new Meteor._StubStream;
   var conn = newConnection(stream);
