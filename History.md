@@ -1,6 +1,11 @@
 
 ## vNEXT
 
+## v0.5.4
+
+* Fix 0.5.3 regression: `meteor run` could fail on OSX 10.8 if environment
+  variables such as `DYLD_LIBRARY_PATH` are set.
+
 ## v0.5.3
 
 * Add `--settings` argument to `meteor deploy` and `meteor run`. This
