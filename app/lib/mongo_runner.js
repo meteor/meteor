@@ -19,8 +19,6 @@ var find_mongo_pids = function (app_dir, port, callback) {
     function (error, stdout, stderr) {
       if (error) {
         callback({reason: error});
-      } else if (stderr) {
-        callback({reason: 'ps produced stderr ' + stderr});
       } else {
         var pids = [];
 
