@@ -5,12 +5,12 @@
   var stringify = function (value) {
     if (value === undefined)
       return 'undefined';
-    return JSON.stringify(value);
+    return JSON.stringify(Meteor._toJSONCompatible(value));
   };
   var parse = function (serialized) {
     if (serialized === undefined || serialized === 'undefined')
       return undefined;
-    return JSON.parse(serialized);
+    return Meteor._fromJSONCompatible(JSON.parse(serialized));
   };
 
   Session = _.extend({}, {
@@ -64,6 +64,7 @@
           typeof value !== 'number' &&
           typeof value !== 'boolean' &&
           typeof value !== 'undefined' &&
+          !(value instanceof Date) &&
           value !== null)
         throw new Error("Session.equals: value must be scalar");
       var serializedValue = stringify(value);
@@ -87,7 +88,7 @@
 
       var oldValue = undefined;
       if (_.has(self.keys, key)) oldValue = parse(self.keys[key]);
-      return oldValue === value;
+      return _.isEqual(oldValue, value);
     },
 
     _ensureKey: function (key) {

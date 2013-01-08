@@ -63,6 +63,20 @@ Meteor.addCustomType = function (options) {
 };
 
 var builtinConverters = [
+  { // undefined
+    matchBasic: function (obj) {
+      return _.has(obj, '$undefined') && _.size(obj) === 1;
+    },
+    matchObject: function (obj) {
+      return obj === undefined;
+    },
+    toBasic: function (obj) {
+      return {$undefined: null};
+    },
+    fromBasic: function (obj) {
+      return undefined;
+    }
+  },
   { // Date
     matchBasic: function (obj) {
       return _.has(obj, '$date') && _.size(obj) === 1;
@@ -123,14 +137,12 @@ var builtinConverters = [
 
 var adjustTypesToBasic = function (obj) {
   _.each(obj, function (value, key) {
-    if (typeof value !== 'object')
+    if (typeof value !== 'object' && value !== undefined)
       return; // continue
-    for (var i = 0; i < builtinConverters.length; i++) {
-      var converter = builtinConverters[i];
-      if (converter.matchObject(value)) {
-        obj[key] = converter.toBasic(value);
-        return; // continue to the next field
-      }
+    var changed = toJSONCompatibleHelper(value);
+    if (changed) {
+      obj[key] = changed;
+      return; // on to the next key
     }
     // if we get here, value is an object but not adjustable
     // at this level.  recurse.
@@ -138,24 +150,67 @@ var adjustTypesToBasic = function (obj) {
   });
 };
 
+var toJSONCompatibleHelper = function (item) {
+  for (var i = 0; i < builtinConverters.length; i++) {
+    var converter = builtinConverters[i];
+    if (converter.matchObject(item)) {
+      return converter.toBasic(item);
+    }
+  }
+  return undefined;
+};
+
+Meteor._toJSONCompatible = function (item) {
+  var changed = toJSONCompatibleHelper(item);
+  if (changed !== undefined)
+    return changed;
+  if (typeof item === 'object') {
+    item = LocalCollection._deepcopy(item);
+    adjustTypesToBasic(item);
+  }
+  return item;
+};
+
+
 var adjustTypesFromBasic = function (obj) {
   _.each(obj, function (value, key) {
     if (typeof value === 'object') {
-      if (_.size(value) <= 2
-          && _.all(value, function (v, k) { return k[0] === '$';})) {
-        for (var i = 0; i < builtinConverters.length; i++) {
-          var converter = builtinConverters[i];
-          if (converter.matchBasic(value)) {
-            obj[key] = converter.fromBasic(value);
-            return; // continue to the next field
-          }
-        }
+      var changed = fromJSONCompatibleHelper(value);
+      if (value !== changed) {
+        obj[key] = changed;
+        return;
       }
       // if we get here, value is an object but not adjustable
       // at this level.  recurse.
       adjustTypesFromBasic(value);
     }
   });
+};
+
+var fromJSONCompatibleHelper = function (value) {
+  if (typeof value === 'object' && value !== null) {
+    if (_.size(value) <= 2
+        && _.all(value, function (v, k) { return k[0] === '$';})) {
+      for (var i = 0; i < builtinConverters.length; i++) {
+        var converter = builtinConverters[i];
+        if (converter.matchBasic(value)) {
+          return converter.fromBasic(value);
+        }
+      }
+    }
+  }
+  return value;
+};
+
+Meteor._fromJSONCompatible = function (item) {
+  var changed = fromJSONCompatibleHelper(item);
+  if (changed === item && typeof item === 'object') {
+    item = LocalCollection._deepcopy(item);
+    adjustTypesFromBasic(item);
+    return item;
+  } else {
+    return changed;
+  }
 };
 
 Meteor._parseDDP = function (stringMessage) {
