@@ -173,12 +173,11 @@ Meteor._LivedataConnection = function (url, options) {
   }
 
   self._stream.on('message', function (raw_msg) {
-    try {
-      var msg = Meteor._parseDDP(raw_msg);
-    } catch (err) {
-      Meteor._debug("discarding message with invalid JSON", raw_msg);
+
+    var msg = Meteor._parseDDP(raw_msg);
+    if (msg === null)
       return;
-    }
+
     if (typeof msg !== 'object' || !msg.msg) {
       Meteor._debug("discarding invalid livedata message", msg);
       return;

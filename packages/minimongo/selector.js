@@ -105,23 +105,15 @@ LocalCollection._f = {
       }
 
       // objects
-/*
-      var unmatched_b_keys = 0;
-      for (var x in b)
-        unmatched_b_keys++;
-      for (var x in a) {
-        if (!(x in b) || !match(a[x], b[x]))
-          return false;
-        unmatched_b_keys--;
-      }
-      return unmatched_b_keys === 0;
-*/
+
       // Follow Mongo in considering key order to be part of
       // equality. Key enumeration order is actually not defined in
       // the ecmascript spec but in practice most implementations
       // preserve it. (The exception is Chrome, which preserves it
       // usually, but not for keys that parse as ints.)
-      if (typeof a.equals === 'function' && typeof b.equals === 'function') {
+
+      // use the equality method if it exists
+      if (typeof (a.equals) === 'function' && typeof (b.equals) === 'function') {
         return a.equals(b);
       }
       var b_keys = [];

@@ -10,7 +10,9 @@ if (Meteor.isClient) {
   ObjectID = __meteor_bootstrap__.require('mongodb').ObjectID;
   ObjectID.prototype.clone = function () { return new ObjectID(this.toHexString());};
   // fix Mongo ObjectIDs to function as the docs say they do.
-  ObjectID.prototype.valueOf = function () { return this.toHexString(); };
+  ObjectID.prototype.valueOf = ObjectID.prototype.toJSONValue =
+    function () { return this.toHexString(); };
+  ObjectID.prototype.typeName = function () { return "oid"; };
 }
 
 Meteor.Collection = function (name, options) {
@@ -96,7 +98,7 @@ Meteor.Collection = function (name, options) {
       // Apply an update.
       // XXX better specify this interface (not in terms of a wire message)?
       update: function (msg) {
-        var mongoId = msg.id && Meteor.idParse(msg.id);
+        var mongoId = Meteor.idParse(msg.id);
         var doc = self._collection.findOne(mongoId);
 
         // Is this a "replace the whole doc" message coming from the quiescence
@@ -416,20 +418,9 @@ Meteor.Collection.ObjectID = ObjectID;
 
 
 
-Meteor.addCustomType({
-  name: "oid",
-  toBasic: function (id) {
-    return id.valueOf();
-  },
-  fromBasic: function (str) {
-    return new Meteor.Collection.ObjectID(str);
-  },
-  recognize: function (thing) {
-    var ret = thing instanceof Meteor.Collection.ObjectID;
-    return ret;
-  }
+Meteor.addCustomType("oid",  function (str) {
+  return new Meteor.Collection.ObjectID(str);
 });
-
 
 
 Meteor.Collection.prototype._defineMutationMethods = function() {

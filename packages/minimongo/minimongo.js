@@ -69,29 +69,32 @@ LocalCollection.prototype.find = function (selector, options) {
 
 // don't call this ctor directly.  use LocalCollection.find().
 LocalCollection.Cursor = function (collection, selector, options) {
+  var self = this;
   if (!options) options = {};
 
   this.collection = collection;
 
-  if ((typeof selector === "string") || (typeof selector === "number") || selector instanceof LocalCollection._ObjectID) {
+  if (LocalCollection._selectorIsId(selector)) {
     // stash for fast path
-    this.selector_id = LocalCollection._idStringify(selector);
-    this.selector_f = LocalCollection._compileSelector(selector);
+    self.selector_id = LocalCollection._idStringify(selector);
+    self.selector_f = LocalCollection._compileSelector(selector);
+    self.sort_f = undefined;
   } else {
-    this.selector_f = LocalCollection._compileSelector(selector);
-    this.sort_f = options.sort ? LocalCollection._compileSort(options.sort) : null;
+    self.selector_id = undefined;
+    self.selector_f = LocalCollection._compileSelector(selector);
+    self.sort_f = options.sort ? LocalCollection._compileSort(options.sort) : null;
   }
-  this.skip = options.skip;
-  this.limit = options.limit;
+  self.skip = options.skip;
+  self.limit = options.limit;
 
   // db_objects is a list of the objects that match the cursor. (It's always a
   // list, never an object: LocalCollection.Cursor is always ordered.)
-  this.db_objects = null;
-  this.cursor_pos = 0;
+  self.db_objects = null;
+  self.cursor_pos = 0;
 
   // by default, queries register w/ Meteor.deps when it is available.
   if (typeof Meteor === "object" && Meteor.deps)
-    this.reactive = (options.reactive === undefined) ? true : options.reactive;
+    self.reactive = (options.reactive === undefined) ? true : options.reactive;
 };
 
 LocalCollection.Cursor.prototype.rewind = function () {
@@ -357,7 +360,7 @@ LocalCollection.prototype.insert = function (doc) {
   var id = LocalCollection._idStringify(doc._id);
 
   if (_.has(self.docs, id))
-    throw new Error("Duplicate _id '" + id + "'");
+    throw new Error("Duplicate id '" + id + "'");
 
   self._saveOriginal(id, undefined);
   self.docs[id] = doc;
@@ -582,7 +585,6 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
     return;
   }
 
-  //XXX
   var orig_idx = LocalCollection._findInOrderedResults(query, doc);
   query.changed(LocalCollection._deepcopy(doc), orig_idx, old_doc);
 
@@ -727,10 +729,10 @@ LocalCollection._idStringify = function (id) {
   } else if (typeof id === 'string') {
     if (id === "") {
       return id;
-    } else if (id[0] === "-" || // escape previously dashed strings
-               id[0] === "~" || // escape escaped numbers, true, false
+    } else if (id.substr(0, 1) === "-" || // escape previously dashed strings
+               id.substr(0, 1) === "~" || // escape escaped numbers, true, false
                LocalCollection._looksLikeObjectID(id) || // escape object-id-form strings
-               id[0] === '{') { // escape object-form strings, for maybe implementing later
+               id.substr(0, 1) === '{') { // escape object-form strings, for maybe implementing later
       return "-" + id;
     } else {
       return id; // other strings go through unchanged.
@@ -751,9 +753,9 @@ LocalCollection._idParse = function (id) {
     return id;
   } else if (id === '-') {
     return undefined;
-  } else if (id[0] === '-') {
+  } else if (id.substr(0, 1) === '-') {
     return id.substr(1);
-  } else if (id[0] === '~') {
+  } else if (id.substr(0, 1) === '~') {
     return JSON.parse(id.substr(1));
   } else if (LocalCollection._looksLikeObjectID(id)) {
     return new (LocalCollection._findObjectIDClass())(id);

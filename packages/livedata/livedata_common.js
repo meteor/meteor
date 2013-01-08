@@ -52,47 +52,43 @@ var customTypes = {};
 // - A serializeForEval() method, so that Meteor can compile it into selectors
 // It is okay if these methods are monkey-patched on.
 // XXX: doc this
-Meteor.addCustomType = function (options) {
-  if (_.has(customTypes, options.name))
-    throw new Error("Type " + options.name + " already present");
-  var missingMethods = _.difference(['name', 'toBasic', 'fromBasic', 'recognize'], _.keys(options));
-  if (!_.isEmpty(missingMethods))
-    throw new Error("Meteor.addCustomType argument for type " + options.name +
-                    " is missing methods: " + JSON.stringify(missingMethods));
-  customTypes[options.name] = options;
+Meteor.addCustomType = function (name, factory) {
+  if (_.has(customTypes, name))
+    throw new Error("Type " + name + " already present");
+  customTypes[name] = factory;
 };
 
 var builtinConverters = [
   { // undefined
-    matchBasic: function (obj) {
+    matchJSONValue: function (obj) {
       return _.has(obj, '$undefined') && _.size(obj) === 1;
     },
     matchObject: function (obj) {
       return obj === undefined;
     },
-    toBasic: function (obj) {
+    toJSONValue: function (obj) {
       return {$undefined: null};
     },
-    fromBasic: function (obj) {
+    fromJSONValue: function (obj) {
       return undefined;
     }
   },
   { // Date
-    matchBasic: function (obj) {
+    matchJSONValue: function (obj) {
       return _.has(obj, '$date') && _.size(obj) === 1;
     },
     matchObject: function (obj) {
       return obj instanceof Date;
     },
-    toBasic: function (obj) {
+    toJSONValue: function (obj) {
       return {$date: obj.getTime()};
     },
-    fromBasic: function (obj) {
+    fromJSONValue: function (obj) {
       return new Date(obj.$date);
     }
   },
   { // Literal
-    matchBasic: function (obj) {
+    matchJSONValue: function (obj) {
       return _.has(obj, '$literal') && _.size(obj) === 1;
     },
     matchObject: function (obj) {
@@ -100,91 +96,88 @@ var builtinConverters = [
         return false;
       }
       return _.any(builtinConverters, function (converter) {
-        return converter.matchBasic(obj);
+        return converter.matchJSONValue(obj);
       });
     },
-    toBasic: function (obj) {
+    toJSONValue: function (obj) {
       return {$literal: obj};
     },
-    fromBasic: function (obj) {
+    fromJSONValue: function (obj) {
       return obj.$literal;
     }
   },
   { // Custom
-    matchBasic: function (obj) {
+    matchJSONValue: function (obj) {
       return _.has(obj, '$type') && _.has(obj, '$value') && _.size(obj) === 2;
     },
     matchObject: function (obj) {
-      return _.any(customTypes, function (type) {
-        return type.recognize(obj);
-      });
+      return obj &&
+        typeof obj.toJSONValue === 'function' &&
+        typeof obj.typeName === 'function' &&
+        _.has(customTypes, obj.typeName());
     },
-    toBasic: function (obj) {
-      var typeName = null;
-      var converter = _.find(customTypes, function(type, name) {
-        typeName = name;
-        return type.recognize(obj);
-      });
-      return {$type: typeName, $value: converter.toBasic(obj)};
+    toJSONValue: function (obj) {
+      return {$type: obj.typeName(), $value: obj.toJSONValue()};
     },
-    fromBasic: function (obj) {
-      var converter = customTypes[obj.$type];
-      return converter.fromBasic(obj.$value);
+    fromJSONValue: function (obj) {
+      var typeName = obj.$type;
+      var converter = customTypes[typeName];
+      return converter(obj.$value);
     }
   }
 ];
 
 
-var adjustTypesToBasic = function (obj) {
+var adjustTypesToJSONValue = function (obj) {
   _.each(obj, function (value, key) {
     if (typeof value !== 'object' && value !== undefined)
       return; // continue
-    var changed = toJSONCompatibleHelper(value);
+    var changed = toJSONValueHelper(value);
     if (changed) {
       obj[key] = changed;
       return; // on to the next key
     }
     // if we get here, value is an object but not adjustable
     // at this level.  recurse.
-    adjustTypesToBasic(value);
+    adjustTypesToJSONValue(value);
   });
 };
 
 // Either return the JSON-compatible version of the argument, or undefined (if
 // the item isn't itself replaceable, but maybe some fields in it are)
-var toJSONCompatibleHelper = function (item) {
+var toJSONValueHelper = function (item) {
   for (var i = 0; i < builtinConverters.length; i++) {
     var converter = builtinConverters[i];
     if (converter.matchObject(item)) {
-      return converter.toBasic(item);
+      return converter.toJSONValue(item);
     }
   }
   return undefined;
 };
 
-Meteor._toJSONCompatible = function (item) {
-  var changed = toJSONCompatibleHelper(item);
+Meteor._toJSONValue = function (item) {
+  var changed = toJSONValueHelper(item);
   if (changed !== undefined)
     return changed;
   if (typeof item === 'object') {
     item = LocalCollection._deepcopy(item);
-    adjustTypesToBasic(item);
+    adjustTypesToJSONValue(item);
   }
   return item;
 };
 
 
-var adjustTypesFromBasic = function (obj) {
+var adjustTypesFromJSONValue = function (obj) {
   _.each(obj, function (value, key) {
     if (typeof value === 'object') {
-      var changed = fromJSONCompatibleHelper(value);
+      var changed = fromJSONValueHelper(value);
       if (value !== changed) {
         obj[key] = changed;
         return;
       }
       // if we get here, value is an object but not adjustable
       // at this level.  recurse.
-      adjustTypesFromBasic(value);
+      adjustTypesFromJSONValue(value);
     }
   });
 };
@@ -193,15 +186,17 @@ var adjustTypesFromBasic = function (obj) {
 // rep of itself (the Object version) or the argument itself.
 
 // DOES NOT RECURSE.  For actually getting the fully-changed value, use
-// Meteor._fromJSONCompatible
-var fromJSONCompatibleHelper = function (value) {
+// Meteor._fromJSONValue
+var fromJSONValueHelper = function (value) {
   if (typeof value === 'object' && value !== null) {
     if (_.size(value) <= 2
-        && _.all(value, function (v, k) { return k[0] === '$';})) {
+        && _.all(value, function (v, k) {
+          return typeof k === 'string' && k.substr(0, 1) === '$';
+        })) {
       for (var i = 0; i < builtinConverters.length; i++) {
         var converter = builtinConverters[i];
-        if (converter.matchBasic(value)) {
-          return converter.fromBasic(value);
+        if (converter.matchJSONValue(value)) {
+          return converter.fromJSONValue(value);
         }
       }
     }
@@ -209,11 +204,11 @@ var fromJSONCompatibleHelper = function (value) {
   return value;
 };
 
-Meteor._fromJSONCompatible = function (item) {
-  var changed = fromJSONCompatibleHelper(item);
+Meteor._fromJSONValue = function (item) {
+  var changed = fromJSONValueHelper(item);
   if (changed === item && typeof item === 'object') {
     item = LocalCollection._deepcopy(item);
-    adjustTypesFromBasic(item);
+    adjustTypesFromJSONValue(item);
     return item;
   } else {
     return changed;
@@ -222,10 +217,16 @@ Meteor._fromJSONCompatible = function (item) {
 
 Meteor._parseDDP = function (stringMessage) {
   //console.log("received " + stringMessage);
-  var msg = JSON.parse(stringMessage);
-  //massage msg to get it into "abstract ddp" rather than "wire ddp" format.
+  try {
+    var msg = JSON.parse(stringMessage);
+  } catch (e) {
+    Meteor._debug("Discarding message with invalid JSON", stringMessage);
+    return null;
+  }
+  // massage msg to get it into "abstract ddp" rather than "wire ddp" format.
 
-  // switch between "cleared" rep of unsetting fields and "undefined" rep of same
+  // switch between "cleared" rep of unsetting fields and "undefined"
+  // rep of same
   if (_.has(msg, 'cleared')) {
     if (!_.has(msg, 'fields'))
       msg.fields = {};
@@ -237,7 +238,7 @@ Meteor._parseDDP = function (stringMessage) {
 
   _.each(['fields', 'params', 'result'], function (field) {
     if (_.has(msg, field))
-      adjustTypesFromBasic(msg[field]);
+      adjustTypesFromJSONValue(msg[field]);
   });
 
 
@@ -246,7 +247,8 @@ Meteor._parseDDP = function (stringMessage) {
 
 Meteor._stringifyDDP = function (msg) {
   var copy = LocalCollection._deepcopy(msg);
-  // swizzle 'changed' messages from 'fields undefined' rep to 'fields and cleared' rep
+  // swizzle 'changed' messages from 'fields undefined' rep to 'fields
+  // and cleared' rep
   if (_.has(msg, 'fields')) {
     var cleared = [];
     _.each(msg.fields, function (value, key) {
@@ -263,7 +265,7 @@ Meteor._stringifyDDP = function (msg) {
   // adjust types to basic
   _.each(['fields', 'params', 'result'], function (field) {
     if (_.has(copy, field))
-      adjustTypesToBasic(copy[field]);
+      adjustTypesToJSONValue(copy[field]);
   });
   if (msg.id && typeof msg.id !== 'string') {
     throw new Error("Message id is not a string");

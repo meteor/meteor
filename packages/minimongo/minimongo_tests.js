@@ -1451,12 +1451,18 @@ Tinytest.add("minimongo - saveOriginals errors", function (test) {
 });
 
 Tinytest.add("minimongo - objectid transformation", function (test) {
+  var testId = function (item) {
+    test.equal(item, LocalCollection._idParse(LocalCollection._idStringify(item)));
+  };
   var randomOid = new LocalCollection._ObjectID();
-  test.equal(randomOid, LocalCollection._idParse(LocalCollection._idStringify(randomOid)));
-  test.equal("FOO", LocalCollection._idParse(LocalCollection._idStringify("FOO")));
+  testId(randomOid);
+  testId("FOO");
+  testId("ffffffffffff");
+  testId("0987654321abcdef09876543");
+  testId(new LocalCollection._ObjectID());
+  testId("--a string");
+
   test.equal("ffffffffffff", LocalCollection._idParse(LocalCollection._idStringify("ffffffffffff")));
-  test.equal("ffffffffffff", LocalCollection._idStringify(LocalCollection._idParse("ffffffffffff")));
-  test.equal("--a string", LocalCollection._idParse(LocalCollection._idStringify("--a string")));
 });
 
 

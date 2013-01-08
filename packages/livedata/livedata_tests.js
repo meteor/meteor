@@ -1,4 +1,5 @@
 // XXX should check error codes
+(function () {
 var failure = function (test, code, reason) {
   return function (error, result) {
     test.equal(result, undefined);
@@ -54,6 +55,17 @@ Tinytest.add("livedata - methods with colliding names", function (test) {
   });
 });
 
+var echoTest = function (item) {
+  return function (test, expect) {
+    if (Meteor.isServer)
+      test.equal(Meteor.call("echo", item), [item]);
+    if (Meteor.isClient)
+      test.equal(Meteor.call("echo", item), undefined);
+
+    test.equal(Meteor.call("echo", item, expect(undefined, [item])), undefined);
+  };
+};
+
 testAsyncMulti("livedata - basic method invocation", [
   // Unknown methods
   function (test, expect) {
@@ -102,55 +114,13 @@ testAsyncMulti("livedata - basic method invocation", [
     test.equal(Meteor.call("echo", expect(undefined, [])), undefined);
   },
 
-  function (test, expect) {
-    var d = new Date();
-    if (Meteor.isServer)
-      test.equal(Meteor.call("echo", d), [d]);
-    if (Meteor.isClient)
-      test.equal(Meteor.call("echo", d), undefined);
-
-    test.equal(Meteor.call("echo", d, expect(undefined, [d])), undefined);
-  },
-
-  function (test, expect) {
-    var d = new Meteor.Collection.ObjectID();
-    //debugger;
-    if (Meteor.isServer)
-      test.equal(Meteor.call("echo", d), [d]);
-    if (Meteor.isClient)
-      test.equal(Meteor.call("echo", d), undefined);
-
-    test.equal(Meteor.call("echo", d, expect(undefined, [d])), undefined);
-  },
-
-  function (test, expect) {
-    var l = {$date: 30};
-    if (Meteor.isServer)
-      test.equal(Meteor.call("echo", l), [l]);
-    if (Meteor.isClient)
-      test.equal(Meteor.call("echo", l), undefined);
-
-    test.equal(Meteor.call("echo", l, expect(undefined, [l])), undefined);
-  },
-
-  function (test, expect) {
-    var l = {$literal: {$date: 30}};
-    if (Meteor.isServer)
-      test.equal(Meteor.call("echo", l), [l]);
-    if (Meteor.isClient)
-      test.equal(Meteor.call("echo", l), undefined);
-
-    test.equal(Meteor.call("echo", l, expect(undefined, [l])), undefined);
-  },
-
-  function (test, expect) {
-    if (Meteor.isServer)
-      test.equal(Meteor.call("echo", 12), [12]);
-    if (Meteor.isClient)
-      test.equal(Meteor.call("echo", 12), undefined);
-
-    test.equal(Meteor.call("echo", 12, expect(undefined, [12])), undefined);
-  },
+  echoTest(new Date()),
+  echoTest({d: new Date(), s: "foobarbaz"}),
+  echoTest(new Meteor.Collection.ObjectID()),
+  echoTest({o: new Meteor.Collection.ObjectID()}),
+  echoTest({$date: 30}), // literal
+  echoTest({$literal: {$date: 30}}),
+  echoTest(12),
 
   function (test, expect) {
     if (Meteor.isServer)
@@ -441,3 +411,4 @@ Tinytest.add("livedata - setUserId error when called from server", function(test
 // reconnection not resulting in method re-execution
 // reconnection tolerating all kinds of lost messages (including data)
 // [probably lots more]
+})();

@@ -30,7 +30,7 @@
 (function() {
 
 var HEX_DIGITS = "0123456789abcdef";
-var UNMISTAKEABLE_CHARS = "23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz";
+var UNMISTAKABLE_CHARS = "23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz";
 
 LocalCollection._Alea = function () {
   function Mash() {
@@ -109,13 +109,21 @@ LocalCollection._Alea = function () {
 
 // client sources
 var height = (typeof window !== 'undefined' && window.innerHeight) ||
-      (typeof document !== 'undefined' && document.documentElement && document.documentElement.clientHeight) ||
-      (typeof document !== 'undefined' && document.body && document.body.clientHeight) ||
+      (typeof document !== 'undefined'
+       && document.documentElement
+       && document.documentElement.clientHeight) ||
+      (typeof document !== 'undefined'
+       && document.body
+       && document.body.clientHeight) ||
       1;
 
 var width = (typeof window !== 'undefined' && window.innerWidth) ||
-      (typeof document !== 'undefined' && document.documentElement && document.documentElement.clientWidth) ||
-      (typeof document !== 'undefined' && document.body && document.body.clientWidth) ||
+      (typeof document !== 'undefined'
+       && document.documentElement
+       && document.documentElement.clientWidth) ||
+      (typeof document !== 'undefined'
+       && document.body
+       && document.body.clientWidth) ||
       1;
 
 var agent = (typeof navigator !== 'undefined' && navigator.userAgent) || "";
@@ -123,12 +131,14 @@ var agent = (typeof navigator !== 'undefined' && navigator.userAgent) || "";
 // server sources
 var pid = (typeof process !== 'undefined' && process.pid) || 1;
 
-LocalCollection.random = new LocalCollection._Alea([new Date(), height, width, agent, pid, Math.random()]);
+LocalCollection.random = new LocalCollection._Alea([
+  new Date(), height, width, agent, pid, Math.random()]);
 
 LocalCollection._randomHexString = function (len) {
   var digits = [];
   for (var i = 0; i < len; i++) {
-    digits[i] = HEX_DIGITS.substr(Math.floor(LocalCollection.random() * 0x10), 1);
+    digits[i] = HEX_DIGITS.substr(Math.floor(LocalCollection.random() * 0x10),
+                                  1);
   }
   return digits.join("");
 };
@@ -149,9 +159,11 @@ LocalCollection.uuid = function () {
 
 LocalCollection.id = function() {
   var digits = [];
-  var base = UNMISTAKEABLE_CHARS.length;
+  var base = UNMISTAKABLE_CHARS.length;
+  // Length of 17 preserves around 96 bits of entropy, which is the
+  // amount of state in our PRNG
   for (var i = 0; i < 17; i++) {
-    digits[i] = UNMISTAKEABLE_CHARS.substr(Math.floor(LocalCollection.random() * base), 1);
+    digits[i] = UNMISTAKABLE_CHARS.substr(Math.floor(LocalCollection.random() * base), 1);
   }
   return digits.join("");
 };

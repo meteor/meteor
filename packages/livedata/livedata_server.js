@@ -195,7 +195,6 @@ _.extend(Meteor._SessionCollectionView.prototype, {
     var docView = self.documents[id];
     if (!docView) {
       var err = new Error("Removed nonexistent document " + id);
-      //console.log(err.stack);
       throw err;
     }
     delete docView.existsIn[subscriptionId];
@@ -284,13 +283,12 @@ _.extend(Meteor._LivedataSession.prototype, {
       return;
 
     if (self._isSending) {
-      var toSend = {
+      self.send({
         msg: "changed",
         collection: collectionName,
         id: id,
         fields: fields
-      };
-      self.send(toSend);
+      });
     }
   },
 
@@ -352,7 +350,7 @@ _.extend(Meteor._LivedataSession.prototype, {
     self.socket = socket;
     self.last_connect_time = +(new Date);
     _.each(self.out_queue, function (msg) {
-      self.socket.send(Metoer._stringifyDDP(msg));
+      self.socket.send(Meteor._stringifyDDP(msg));
     });
     self.out_queue = [];
 

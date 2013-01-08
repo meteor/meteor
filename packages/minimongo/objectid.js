@@ -35,7 +35,13 @@ LocalCollection._ObjectID.prototype.clone = function () {
   return new LocalCollection._ObjectID(self.str);
 };
 
-LocalCollection._ObjectID.prototype.valueOf = function () { return this.str; };
+LocalCollection._ObjectID.prototype.typeName = function() {
+  return "oid";
+};
+
+LocalCollection._ObjectID.prototype.valueOf =
+    LocalCollection._ObjectID.prototype.toJSONValue =
+    function () { return this.str; };
 
 LocalCollection._ObjectID.prototype.serializeForEval = function () {
   var self = this;
@@ -44,7 +50,9 @@ LocalCollection._ObjectID.prototype.serializeForEval = function () {
 
 // Is this selector just shorthand for lookup by _id?
 LocalCollection._selectorIsId = function (selector) {
-  return (typeof selector === "string") || (typeof selector === "number") || selector instanceof LocalCollection._findObjectIDClass();
+  return (typeof selector === "string") ||
+    (typeof selector === "number") ||
+    selector instanceof LocalCollection._findObjectIDClass();
 };
 
 
