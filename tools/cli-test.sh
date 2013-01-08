@@ -17,11 +17,11 @@ if [ "$1" == "--global" ]; then
     METEOR=/usr/local/bin/meteor
 fi
 
-DIR=`mktemp -d -t meteor-cli-test-XXXXXXXX`
-OUTPUT="$DIR/output"
-trap 'echo "[...]"; tail -25 $OUTPUT; echo FAILED ; rm -rfd `find $METEOR_DIR -name __tmp`; rm -rf "$DIR" >/dev/null 2>&1' EXIT
+TMPDIR=`mktemp -d -t meteor-cli-test-XXXXXXXX`
+OUTPUT="$TMPDIR/output"
+trap 'echo "[...]"; tail -25 $OUTPUT; echo FAILED ; rm -rfd `find $METEOR_DIR -name __tmp`; rm -rf "$TMPDIR" >/dev/null 2>&1' EXIT
 
-cd "$DIR"
+cd "$TMPDIR"
 set -e -x
 
 ## Begin actual tests
@@ -194,31 +194,32 @@ EOF
 
 echo "... local-package-sets -- new package"
 
-mkdir -p $METEOR_DIR/local-package-sets/__tmp/a-package-named-bar/
-cat > $METEOR_DIR/local-package-sets/__tmp/a-package-named-bar/package.js <<EOF
+mkdir -p "$TMPDIR/local-packages/a-package-named-bar/"
+cat > "$TMPDIR/local-packages/a-package-named-bar/package.js" <<EOF
 console.log("loaded a-package-named-bar");
 EOF
 
-$METEOR add a-package-named-bar >> $OUTPUT
-$METEOR -p $PORT --once | grep "loaded a-package-named-bar" >> $OUTPUT
-
-rm -rf $METEOR_DIR/local-package-sets/__tmp/
+! $METEOR add a-package-named-bar >> $OUTPUT
+PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR add a-package-named-bar >> $OUTPUT
+! $METEOR -p $PORT --once | grep "loaded a-package-named-bar" >> $OUTPUT
+PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR -p $PORT --once | grep "loaded a-package-named-bar" >> $OUTPUT
 
 
 echo "... local-package-sets -- overridden package"
 
-mkdir -p $METEOR_DIR/local-package-sets/__tmp/accounts-ui/
-cat > $METEOR_DIR/local-package-sets/__tmp/accounts-ui/package.js <<EOF
+mkdir -p "$TMPDIR/local-packages/accounts-ui/"
+cat > "$TMPDIR/local-packages/accounts-ui/package.js" <<EOF
 Package.describe({
   summary: "accounts-ui - overridden"
 });
 
 EOF
 
-$METEOR add accounts-ui 2>&1 | grep "accounts-ui - overridden" >> $OUTPUT
-$METEOR list | grep "accounts-ui - overridden" >> $OUTPUT
-
-rm -rf $METEOR_DIR/local-package-sets/__tmp/
+! $METEOR add accounts-ui 2>&1 | grep "accounts-ui - overridden" >> $OUTPUT
+$METEOR remove accounts-ui 2>&1 >> $OUTPUT
+PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR add accounts-ui 2>&1 | grep "accounts-ui - overridden" >> $OUTPUT
+! $METEOR list | grep "accounts-ui - overridden" >> $OUTPUT
+PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR list | grep "accounts-ui - overridden" >> $OUTPUT
 
 
 # remove die.js, we're done with package tests.
