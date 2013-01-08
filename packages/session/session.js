@@ -65,6 +65,7 @@
           typeof value !== 'boolean' &&
           typeof value !== 'undefined' &&
           !(value instanceof Date) &&
+          !(typeof Meteor.Collection !== 'undefined' && value instanceof Meteor.Collection.ObjectID) &&
           value !== null)
         throw new Error("Session.equals: value must be scalar");
       var serializedValue = stringify(value);

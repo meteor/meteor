@@ -269,7 +269,7 @@ _.each(['STRING', 'MONGO'], function (idGeneration) {
 
     // test that if deny is called once then the collection is
     // restricted, and that other mutations aren't allowed
-    testAsyncMulti("collection - partial deny", [
+    testAsyncMulti("collection - partial deny, " + idGeneration, [
       function (test, expect) {
         restrictedCollectionForPartialDenyTest.update(
           {world: test.runId()}, {$set: {updated: true}}, expect(function (err, res) {

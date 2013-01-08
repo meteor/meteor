@@ -150,6 +150,8 @@ var adjustTypesToBasic = function (obj) {
   });
 };
 
+// Either return the JSON-compatible version of the argument, or undefined (if
+// the item isn't itself replaceable, but maybe some fields in it are)
 var toJSONCompatibleHelper = function (item) {
   for (var i = 0; i < builtinConverters.length; i++) {
     var converter = builtinConverters[i];
@@ -187,6 +189,11 @@ var adjustTypesFromBasic = function (obj) {
   });
 };
 
+// Either return the argument changed to have the non-json
+// rep of itself (the Object version) or the argument itself.
+
+// DOES NOT RECURSE.  For actually getting the fully-changed value, use
+// Meteor._fromJSONCompatible
 var fromJSONCompatibleHelper = function (value) {
   if (typeof value === 'object' && value !== null) {
     if (_.size(value) <= 2
