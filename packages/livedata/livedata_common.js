@@ -45,7 +45,8 @@ _.extend(Meteor._MethodInvocation.prototype, {
 
 var customTypes = {};
 // Add a custom type, using a method of your choice to get to and
-// from a basic JSON-able representation.
+// from a basic JSON-able representation.  The factory argument
+// is a function of JSON-able --> your object
 // The type you add must have:
 // - A clone() method, so that Meteor can deep-copy it when necessary.
 // - A equals() method, so that Meteor can compare it
@@ -276,9 +277,7 @@ Meteor._stringifyDDP = function (msg) {
   if (msg.id && typeof msg.id !== 'string') {
     throw new Error("Message id is not a string");
   }
-  var ret = JSON.stringify(copy);
-  //console.log("sending " + ret);
-  return ret;
+  return JSON.stringify(copy);
 };
 
 Meteor._CurrentInvocation = new Meteor.EnvironmentVariable;

@@ -129,6 +129,16 @@ var toc = [
       "Meteor.connect"
     ],
 
+    {name: "Datatypes", id: "meteor_types"}, [
+      {name: "Custom Datatypes", id: "meteor_custom_type"},
+      [
+        {instance: "custom", id: "type_clone", name: "clone"},
+        {instance: "custom", id: "type_equals", name: "equals"},
+        {instance: "custom", id: "type_typeName", name: "typeName"},
+        {instance: "custom", id: "type_toJSONValue", name: "toJSONValue"}
+      ]
+    ],
+
     {name: "Collections", id: "collections"}, [
       "Meteor.Collection", [
         {instance: "collection", name: "find"},
@@ -149,7 +159,8 @@ var toc = [
         {instance: "cursor", name: "observe"}
       ],
       {type: "spacer"},
-      "Meteor.uuid",
+      "Meteor.id",
+      {name: "Meteor.Collection.ObjectID", id: "collection_object_id"},
       {type: "spacer"},
       {name: "Selectors", style: "noncode"},
       {name: "Modifiers", style: "noncode"},

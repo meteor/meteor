@@ -116,6 +116,7 @@ testAsyncMulti("livedata - basic method invocation", [
 
   echoTest(new Date()),
   echoTest({d: new Date(), s: "foobarbaz"}),
+  echoTest([new Date(), "foobarbaz"]),
   echoTest(new Meteor.Collection.ObjectID()),
   echoTest({o: new Meteor.Collection.ObjectID()}),
   echoTest({$date: 30}), // literal

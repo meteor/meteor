@@ -173,8 +173,12 @@ Meteor._LivedataConnection = function (url, options) {
   }
 
   self._stream.on('message', function (raw_msg) {
-
-    var msg = Meteor._parseDDP(raw_msg);
+    try {
+      var msg = Meteor._parseDDP(raw_msg);
+    } catch (e) {
+      Meteor._debug("Exception while parsing DDP", e);
+      return;
+    }
     if (msg === null)
       return;
 

@@ -16,37 +16,45 @@ LocalCollection._ObjectID = function (hexString) {
       throw new Error("Invalid hexidecimal string for creating an ObjectID");
     }
     // meant to work with _.isEqual(), which relies on structural equality
-    self.str = hexString;
+    self._str = hexString;
   } else {
-    self.str = LocalCollection._randomHexString(24);
+    self._str = LocalCollection._randomHexString(24);
   }
 };
 
 LocalCollection._ObjectID.prototype.toString = function () {
   var self = this;
-  return "ObjectID(\"" + self.str + "\")";
+  return "ObjectID(\"" + self._str + "\")";
 };
 
 LocalCollection._ObjectID.prototype.equals = function (other) {
   var self = this;
-  return self.valueOf() === other.valueOf();
+  return other instanceof LocalCollection._ObjectID &&
+    self.valueOf() === other.valueOf();
 };
+
 LocalCollection._ObjectID.prototype.clone = function () {
   var self = this;
-  return new LocalCollection._ObjectID(self.str);
+  return new LocalCollection._ObjectID(self._str);
 };
 
 LocalCollection._ObjectID.prototype.typeName = function() {
   return "oid";
 };
 
+LocalCollection._ObjectID.prototype.getTimestamp = function() {
+  var self = this;
+  return parseInt(self._str.substr(0, 8), 16);
+};
+
 LocalCollection._ObjectID.prototype.valueOf =
     LocalCollection._ObjectID.prototype.toJSONValue =
-    function () { return this.str; };
+    LocalCollection._ObjectID.prototype.toHexString =
+    function () { return this._str; };
 
 LocalCollection._ObjectID.prototype.serializeForEval = function () {
   var self = this;
-  return "new LocalCollection._ObjectID(\"" + self.str + "\")";
+  return "new LocalCollection._ObjectID(\"" + self._str + "\")";
 };
 
 // Is this selector just shorthand for lookup by _id?

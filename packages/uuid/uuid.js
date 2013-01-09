@@ -27,8 +27,12 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+(function() {
 
-Meteor._Alea = function () {
+var HEX_DIGITS = "0123456789abcdef";
+var UNMISTAKABLE_CHARS = "23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz";
+
+var Alea = Meteor._Alea = function () {
   function Mash() {
     var n = 0xefc8249d;
 
@@ -99,22 +103,60 @@ Meteor._Alea = function () {
     return random;
 
   } (Array.prototype.slice.call(arguments)));
-};
+}
 
-// instantiate RNG.  use the default seed, which is current time.
-Meteor.random = new Meteor._Alea();
+// instantiate RNG.  Heuristically collect entropy from various sources
+
+// client sources
+var height = (typeof window !== 'undefined' && window.innerHeight) ||
+      (typeof document !== 'undefined'
+       && document.documentElement
+       && document.documentElement.clientHeight) ||
+      (typeof document !== 'undefined'
+       && document.body
+       && document.body.clientHeight) ||
+      1;
+
+var width = (typeof window !== 'undefined' && window.innerWidth) ||
+      (typeof document !== 'undefined'
+       && document.documentElement
+       && document.documentElement.clientWidth) ||
+      (typeof document !== 'undefined'
+       && document.body
+       && document.body.clientWidth) ||
+      1;
+
+var agent = (typeof navigator !== 'undefined' && navigator.userAgent) || "";
+
+// server sources
+var pid = (typeof process !== 'undefined' && process.pid) || 1;
+
+Meteor.random = new Alea([
+  new Date(), height, width, agent, pid, Math.random()]);
 
 // RFC 4122 v4 UUID.
 Meteor.uuid = function () {
   var s = [];
-  var hexDigits = "0123456789abcdef";
   for (var i = 0; i < 36; i++) {
-    s[i] = hexDigits.substr(Math.floor(Meteor.random() * 0x10), 1);
+    s[i] = HEX_DIGITS.substr(Math.floor(Meteor.random() * 0x10), 1);
   }
   s[14] = "4";
-  s[19] = hexDigits.substr((parseInt(s[19],16) & 0x3) | 0x8, 1);
+  s[19] = HEX_DIGITS.substr((parseInt(s[19],16) & 0x3) | 0x8, 1);
   s[8] = s[13] = s[18] = s[23] = "-";
 
   var uuid = s.join("");
   return uuid;
 };
+
+Meteor.id = function() {
+  var digits = [];
+  var base = UNMISTAKABLE_CHARS.length;
+  // Length of 17 preserves around 96 bits of entropy, which is the
+  // amount of state in our PRNG
+  for (var i = 0; i < 17; i++) {
+    digits[i] = UNMISTAKABLE_CHARS.substr(Math.floor(Meteor.random() * base), 1);
+  }
+  return digits.join("");
+};
+
+})();

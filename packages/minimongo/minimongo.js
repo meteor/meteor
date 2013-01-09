@@ -1,3 +1,5 @@
+(function () {
+
 // XXX type checking on selectors (graceful error if malformed)
 
 // LocalCollection: a set of documents that supports queries and modifiers.
@@ -29,8 +31,6 @@ LocalCollection = function () {
   this.paused = false;
 };
 
-
-(function () {
 LocalCollection._applyChanges = function (doc, changeFields) {
   _.each(changeFields, function (value, key) {
     if (value === undefined)
@@ -355,7 +355,10 @@ LocalCollection.prototype.insert = function (doc) {
   doc = LocalCollection._deepcopy(doc);
 
   if (!_.has(doc, '_id')) {
-    doc._id = new LocalCollection._ObjectID();
+    // if you really want to use ObjectIDs, set this global.
+    // Meteor.Collection specifies its own ids and does not use this code.
+    doc._id = LocalCollection._useOID ? new LocalCollection._ObjectID()
+                                      : LocalCollection.id();
   }
   var id = LocalCollection._idStringify(doc._id);
 

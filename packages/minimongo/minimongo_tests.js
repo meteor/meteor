@@ -1,5 +1,10 @@
+
+// Hack to make LocalCollection generate ObjectIDs by default.
+LocalCollection._useOID = true;
+
 // assert that f is a strcmp-style comparison function that puts
 // 'values' in the provided order
+
 var assert_ordering = function (test, f, values) {
   for (var i = 0; i < values.length; i++) {
     var x = f(values[i], values[i]);
