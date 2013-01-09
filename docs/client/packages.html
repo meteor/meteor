@@ -16,6 +16,25 @@ and removed with:
 
     $ meteor remove <package_name>
 
+<h2 id="packages_tests">Package Tests</h2>
+
+Package tests may be executed by running meteor from the 
+packages directory:
+
+    $ cd {meteor-dir}/packages
+    $ ../meteor
+
+You may view the test suite results in your browser.
+
+Running individual package tests may be accomplished from the 
+individual package directory:
+
+    $ cd {meteor-dir}/packages/{package-dir}
+    $ ../../meteor
+
+Note: You should run meteor from your meteor cloned working directory
+to ensure proper version parity between packages and the meteor version.
+
 {{> pkg_accounts_ui}}
 {{> pkg_amplify}}
 {{> pkg_backbone}}
