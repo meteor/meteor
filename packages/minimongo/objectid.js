@@ -66,10 +66,10 @@ LocalCollection._selectorIsId = function (selector) {
 
 
 LocalCollection._findObjectIDClass = function () {
-  if (typeof Meteor === 'undefined' || Meteor.isClient) {
-    return LocalCollection._ObjectID;
-  } else {
+  if (typeof Meteor !== 'undefined' && Meteor.Collection) {
     return Meteor.Collection.ObjectID;
+  } else {
+    return LocalCollection._ObjectID;
   }
 };
 
