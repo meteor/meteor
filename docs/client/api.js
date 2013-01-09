@@ -65,6 +65,49 @@ Template.api.settings = {
           "be an empty object."]
 };
 
+Template.api.addCustomType = {
+  id: "meteor_add_custom_type",
+  name: "Meteor.addCustomType(name, factory)",
+  locus: "Anywhere",
+  args: [
+    {name: "name",
+     type: "String",
+     descr: "A name to tag instances of your custom type in our data protocol; must be unique among custom data types defined in your project, and must match the result of your type's `typeName` method"
+    },
+    {name: "factory",
+     type: "Function",
+     descr: "A function that takes in a JSON-compatible value such as produced by your type's " +
+     "[`toJSONValue`](#type_toJSONValue) method and produces an object of your custom type"
+    }
+  ],
+  descr: ["Adds a custom datatype to Meteor's communication protocol.  The type must obey the following interface: "]
+};
+
+Template.api.type_clone = {
+  id: "type_clone",
+  name: "<i>custom</i>.clone()",
+  descr: ["Produces a new instance of this object, equal to this one"]
+};
+
+Template.api.type_equals = {
+  id: "type_equals",
+  name: "<i>custom</i>.equals(other)",
+  args: [ {name: "other", type: "object", descr: "Another object to compare this to"}],
+  descr: ["Returns `true` if `other` has a value equal to `this`; `false` otherwise"]
+};
+
+Template.api.type_typeName = {
+  id: "type_typeName",
+  name: "<i>custom</i>.typeName()",
+  descr: ["Returns the type name you used to register this type with [`Meteor.addCustomType`](#meteor_add_custom_type)"]
+};
+
+Template.api.type_toJSONValue = {
+  id: "type_toJSONValue",
+  name: "<i>custom</i>.toJSONValue()",
+  descr: ["Returns a JSON-compatable value that can act as the serialization of this type"]
+};
+
 Template.api.publish = {
   id: "meteor_publish",
   name: "Meteor.publish(name, func)",
@@ -344,6 +387,13 @@ Template.api.meteor_collection = {
     {name: "manager",
      type: "Object",
      descr: "The Meteor connection that will manage this collection, defaults to `Meteor` if null.  Unmanaged (`name` is null) collections cannot specify a manager."
+    },
+    {name: "idGeneration",
+     type: "String",
+     descr: "The method of generating the `_id` fields of new documents in this collection.  Possible values:\n\n" +
+     " - **`'STRING'`** random strings\n" +
+     " - **`'MONGO'`**  Mongo ObjectID values\n\n" +
+     "The default id generation technique is `'STRING'`."
     }
   ]
 };

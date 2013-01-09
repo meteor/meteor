@@ -15,6 +15,7 @@ LocalCollection._ObjectID = function (hexString) {
     if (!LocalCollection._looksLikeObjectID(hexString)) {
       throw new Error("Invalid hexidecimal string for creating an ObjectID");
     }
+    // meant to work with _.isEqual(), which relies on structural equality
     self.str = hexString;
   } else {
     self.str = LocalCollection._randomHexString(24);

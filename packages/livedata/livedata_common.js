@@ -49,9 +49,11 @@ var customTypes = {};
 // The type you add must have:
 // - A clone() method, so that Meteor can deep-copy it when necessary.
 // - A equals() method, so that Meteor can compare it
-// - A serializeForEval() method, so that Meteor can compile it into selectors
+// - A toJSONValue() method, so that Meteor can serialize it
+// - a typeName() method, to show how to look it up in our type table.
+//   XXX GOING AWAY
+// - A serializeForEval() method, so that Meteor can compile it into selectors.
 // It is okay if these methods are monkey-patched on.
-// XXX: doc this
 Meteor.addCustomType = function (name, factory) {
   if (_.has(customTypes, name))
     throw new Error("Type " + name + " already present");
@@ -128,7 +130,10 @@ var builtinConverters = [
 ];
 
 
+//for both arrays and objects
 var adjustTypesToJSONValue = function (obj) {
+  if (obj === null)
+    return;
   _.each(obj, function (value, key) {
     if (typeof value !== 'object' && value !== undefined)
       return; // continue
@@ -166,8 +171,10 @@ Meteor._toJSONValue = function (item) {
   return item;
 };
 
-
+//for both arrays and objects
 var adjustTypesFromJSONValue = function (obj) {
+  if (obj === null)
+    return;
   _.each(obj, function (value, key) {
     if (typeof value === 'object') {
       var changed = fromJSONValueHelper(value);
@@ -216,7 +223,6 @@ Meteor._fromJSONValue = function (item) {
 };
 
 Meteor._parseDDP = function (stringMessage) {
-  //console.log("received " + stringMessage);
   try {
     var msg = JSON.parse(stringMessage);
   } catch (e) {

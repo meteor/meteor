@@ -32,6 +32,28 @@ put on the screen.
 
 {{> api_box settings}}
 
+<h3 id="meteor_custom_type"><span>Custom Datatypes</span></h3>
+
+Meteor allows you to add your own datatypes to the communication protocol
+between the server and the client.  As long as you add the type in the same
+way on both the server and the client, Meteor will handle
+
+ - publishing objects of your type if you pass them to publish handlers
+ - allowing your type in the return values or arguments to
+   [methods](#methods_header)
+ - storing your type client-side in minimongo (but not MongoDB on the server)
+ - allowing your type in [`Session`](#session) variables
+
+{{> api_box addCustomType}}
+
+Instances of your custom type should implement the following interface:
+
+{{> api_box type_clone}}
+{{> api_box type_equals}}
+{{> api_box type_typeName}}
+{{> api_box type_toJSONValue}}
+
+
 <h2 id="publishandsubscribe"><span>Publish and subscribe</span></h2>
 
 These functions control how Meteor servers publish sets of records and
