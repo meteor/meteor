@@ -604,12 +604,24 @@ Template.api.cursor_observe = {
   ]
 };
 
-Template.api.uuid = {
-  id: "meteor_uuid",
-  name: "Meteor.uuid()",
+Template.api.id = {
+  id: "meteor_id",
+  name: "Meteor.id()",
   locus: "Anywhere",
-  descr: ["Returns a Universally Unique Identifier."],
+  descr: ["Returns a unique identifier."],
   args: [ ]
+};
+
+Template.api.collection_object_id = {
+  id: "collection_object_id",
+  name: "new Meteor.Collection.ObjectID(hexString)",
+  locus: "Anywhere",
+  descr: ["Creates a random or specified Mongo `ObjectID`.  If you don't specify a `hexString`, the `ObjectID` will be random (on the client) or semi-random according to MongoDB's ID construction rules (on the server)."],
+  args: [ {
+    name: "hexString",
+    type: "String",
+    descr: ["Optional.  The hexadecimal contents of the ObjectID to create"]
+  }]
 };
 
 Template.api.selectors = {
