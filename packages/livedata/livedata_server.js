@@ -650,29 +650,38 @@ _.extend(Meteor._LivedataSession.prototype, {
   // all subscriptions
   _setUserId: function(userId) {
     var self = this;
-    self._isSending = false;
 
+    // Call stop callbacks for each sub, and reset their internal states to
+    // empty. This may yield.
     self._eachSub(function (sub) {
       sub._resetSubscription();
     });
 
+    // All subs should now be inactive. Stop sending messages to the client,
+    // save the state of the published collections, reset to an empty view, and
+    // update the userId.
+    self._isSending = false;
     var beforeCVs = self.collectionViews;
     self.collectionViews = {};
     self.userId = userId;
 
+    // Restart each sub, now with the new userId.
     self._eachSub(function (sub) {
       sub.userId = self.userId;
       sub._runHandler();
     });
 
-    self._isSending = true;
-
-    self._diffCollectionViews(beforeCVs);
-
-    if (!_.isEmpty(self._pendingCompletions)) {
-      self.sendComplete(self._pendingCompletions);
-      self._pendingCompletions = [];
-    }
+    // Start sending messages again, beginning with the diff from the previous
+    // state of the world to the current state. No yields are allowed during
+    // this diff, so that other changes cannot interleave.
+    Meteor._noYieldsAllowed(function () {
+      self._isSending = true;
+      self._diffCollectionViews(beforeCVs);
+      if (!_.isEmpty(self._pendingCompletions)) {
+        self.sendComplete(self._pendingCompletions);
+        self._pendingCompletions = [];
+      }
+    });
 
     // XXX figure out the login token that was just used, and set up an observe
     // on the user doc so that deleting the user or the login token disconnects
@@ -810,10 +819,10 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
     if (self._stopped)
       return;
+    self._stopped = true;
 
     self._callStopCallbacks();
     self._removeAllDocuments();
-    self._stopped = true;
   },
 
   // This is meant to be used for a subscription that is about to be rerun.
@@ -826,7 +835,10 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
   onStop: function (callback) {
     var self = this;
-    self._stopCallbacks.push(callback);
+    if (self._stopped)
+      callback();
+    else
+      self._stopCallbacks.push(callback);
   },
 
   added: function (collectionName, id, fields) {
