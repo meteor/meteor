@@ -1004,8 +1004,15 @@ _.extend(Meteor._LivedataConnection.prototype, {
     };
     _.each(self._serverDocuments, function (collectionDocs) {
       _.each(collectionDocs, function (serverDoc) {
-        ++unflushedServerDocCount;
-        serverDoc.flushCallbacks.push(onServerDocFlush);
+        var writtenByStubForAMethodWithSentMessage = _.any(
+          serverDoc.writtenByStubs, function (dummy, methodId) {
+            var invoker = self._methodInvokers[methodId];
+            return invoker && invoker.sentMessage;
+          });
+        if (writtenByStubForAMethodWithSentMessage) {
+          ++unflushedServerDocCount;
+          serverDoc.flushCallbacks.push(onServerDocFlush);
+        }
       });
     });
     if (unflushedServerDocCount === 0) {
