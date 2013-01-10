@@ -6,9 +6,13 @@
 cd `dirname $0`
 METEOR=`pwd`/../meteor
 
+if [ -z "$NODE" ]; then
+    NODE=`pwd`/node.sh
+fi
+
 #If this ever takes more options, use getopt
 if [ "$1" == "--global" ]; then
-	METEOR=/usr/local/bin/meteor
+	METEOR=meteor
 fi
 
 DIR=`mktemp -d -t meteor-cli-test-XXXXXXXX`
@@ -77,7 +81,8 @@ echo "... run"
 MONGOMARK='--bind_ip 127.0.0.1 --smallfiles --port 9102'
 # kill any old test meteor
 # there is probably a better way to do this, but it is at least portable across macos and linux
-ps ax | grep -e 'meteor.js -p 9100' | grep -v grep | awk '{print $1}' | xargs kill
+# (the || true is needed on linux, whose xargs will invoke kill even with no args)
+ps ax | grep -e 'meteor.js -p 9100' | grep -v grep | awk '{print $1}' | xargs kill || true
 
 ! $METEOR mongo > /dev/null 2>&1
 $METEOR reset > /dev/null 2>&1
@@ -89,7 +94,7 @@ PORT=9100
 $METEOR -p $PORT > /dev/null 2>&1 &
 METEOR_PID=$!
 
-sleep 1 # XXX XXX lame
+sleep 2 # XXX XXX lame
 
 test -d .meteor/local/db
 ps ax | grep -e "$MONGOMARK" | grep -v grep > /dev/null
@@ -111,25 +116,31 @@ echo "... rerun"
 $METEOR -p $PORT > /dev/null 2>&1 &
 METEOR_PID=$!
 
-sleep 1 # XXX XXX lame
+sleep 2 # XXX XXX lame
 
 ps ax | grep -e "$MONGOMARK" | grep -v grep > /dev/null
 curl -s "http://localhost:$PORT" > /dev/null
 
 kill $METEOR_PID
-ps ax | grep -e "$MONGOMARK" | grep -v grep | awk '{print $1}' | xargs kill
+sleep 10 # XXX XXX lame. have to wait for inner app to die via keepalive!
+
+ps ax | grep -e "$MONGOMARK" | grep -v grep | awk '{print $1}' | xargs kill || true
+sleep 2 # need to make sure these kills take effect
 
 echo "... mongo message"
 
-nc -l localhost $(($PORT + 2)) &
-NC_PID=$!
+# Run a server on the same port as mongod, so that mongod fails to start up. Rig
+# it so that a single connection will cause it to exit.
+$NODE -e 'require("net").createServer(function(){process.exit(0)}).listen('$PORT'+2, "127.0.0.1")' &
+
+sleep 1
 
 $METEOR -p $PORT > error.txt || true
 
 grep 'port was closed' error.txt > /dev/null
 
-kill -9 $NC_PID > /dev/null
-
+# Kill the server by connecting to it.
+$NODE -e 'require("net").connect({host:"127.0.0.1",port:'$PORT'+2},function(){process.exit(0);})'
 
 echo "... settings"
 

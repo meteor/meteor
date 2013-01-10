@@ -5,7 +5,7 @@
 ## example.
 
 URLBASE="https://d3sqy0vbqsdhku.cloudfront.net"
-VERSION="0.5.2"
+VERSION="0.5.4"
 PKGVERSION="${VERSION}-1"
 
 UNAME=`uname`

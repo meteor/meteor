@@ -798,6 +798,7 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({"dogs.0.name": "Fido"}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
   match({"dogs.1.name": "Rex"}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
   nomatch({"dogs.1.name": "Fido"}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
+  match({"room.1b": "bla"}, {room: {"1b": "bla"}});
 
   // XXX still needs tests:
   // - $elemMatch

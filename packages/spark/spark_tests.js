@@ -2640,8 +2640,12 @@ testAsyncMulti(
 
 Tinytest.add("spark - controls - radio", function(test) {
   var R = ReactiveVar("");
+  var R2 = ReactiveVar("");
   var change_buf = [];
   var div = OnscreenDiv(renderWithPreservation(function() {
+    // Re-render when R2 is changed, even though it doesn't affect HTML.
+    R2.get();
+
     var buf = [];
     buf.push("Band: ");
     _.each(["AM", "FM", "XM"], function(band) {
@@ -2685,6 +2689,12 @@ Tinytest.add("spark - controls - radio", function(test) {
   test.equal(change_buf, ['AM']);
   change_buf.length = 0;
   Meteor.flush();
+  test.equal(_.pluck(btns, 'checked'), [true, false, false]);
+  test.equal(div.text(), "Band: AM");
+
+  R2.set("change");
+  Meteor.flush();
+  test.length(change_buf, 0);
   test.equal(_.pluck(btns, 'checked'), [true, false, false]);
   test.equal(div.text(), "Band: AM");
 
@@ -3819,6 +3829,58 @@ Tinytest.add("spark - legacy preserve names", function (test) {
 
   div.kill();
   Meteor.flush();
+});
+
+Tinytest.add("spark - update defunct range", function (test) {
+  // Test that Spark doesn't freak out if it tries to update
+  // a LiveRange on nodes that have been taken out of the document.
+  //
+  // See https://github.com/meteor/meteor/issues/392.
+
+  var R = ReactiveVar("foo");
+
+  var div = OnscreenDiv(Spark.render(function () {
+    return "<p>" + Spark.isolate(function() {
+      return R.get();
+    }) + "</p>";
+  }));
+
+  test.equal(div.html(), "<p>foo</p>");
+  R.set("bar");
+  Meteor.flush();
+  test.equal(R.numListeners(), 1);
+  test.equal(div.html(), "<p>bar</p>");
+  test.equal(div.node().firstChild.nodeName, "P");
+  div.node().firstChild.innerHTML = '';
+  R.set("baz");
+  Meteor.flush(); // should throw no errors
+  // will be 1 if our isolate func was run.
+  test.equal(R.numListeners(), 0);
+
+  /////
+
+  R = ReactiveVar("foo");
+
+  div = OnscreenDiv(Spark.render(function () {
+    return "<p>" + Spark.setDataContext(
+      {},
+      "<span>" + Spark.isolate(function() {
+        return R.get();
+      }) + "</span>") + "</p>";
+  }));
+
+  test.equal(div.html(), "<p><span>foo</span></p>");
+  R.set("bar");
+  Meteor.flush();
+  test.equal(R.numListeners(), 1);
+  test.equal(div.html(), "<p><span>bar</span></p>");
+  test.equal(div.node().firstChild.nodeName, "P");
+  div.node().firstChild.innerHTML = '';
+  R.set("baz");
+  Meteor.flush(); // should throw no errors
+  // will be 1 if our isolate func was run.
+  test.equal(R.numListeners(), 0);
+
 });
 
 })();

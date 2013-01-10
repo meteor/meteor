@@ -1,7 +1,7 @@
 var path = require('path');
 
 Package.describe({
-  summary: "UX/UI framework from Twitter"
+  summary: "Front-end framework from Twitter"
 });
 
 Package.on_use(function (api) {
