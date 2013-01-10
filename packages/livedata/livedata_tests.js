@@ -397,6 +397,20 @@ Tinytest.add("livedata - setUserId error when called from server", function(test
   }
 });
 
+if (Meteor.isClient) {
+  testAsyncMulti("livedata - overlapping universal subs", [
+    function (test, expect) {
+      var coll = new Meteor.Collection("overlappingUniversalSubs");
+      var token = Meteor.uuid();
+      test.isFalse(coll.findOne(token));
+      Meteor.call("testOverlappingSubs", token, expect(function (err) {
+        test.isFalse(err);
+        test.isTrue(coll.findOne(token));
+      }));
+    }
+  ]);
+}
+
 // XXX some things to test in greater detail:
 // staying in simulation mode
 // time warp

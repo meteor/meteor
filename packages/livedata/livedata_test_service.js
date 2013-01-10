@@ -166,4 +166,42 @@ if (Meteor.isServer) {
     }
   });
 }
+
+/*****/
+
+/// Helper for "livedata - overlapping universal subs"
+
+if (Meteor.isServer) {
+  (function(){
+    var collName = "overlappingUniversalSubs";
+    var universalSubscribers = [[], []];
+
+    _.each([0, 1], function (index) {
+      Meteor.publish(null, function () {
+        var sub = this;
+        universalSubscribers[index].push(sub);
+        sub.onStop(function () {
+          universalSubscribers[index] = _.without(
+            universalSubscribers[index], sub);
+        });
+      });
+    });
+
+    Meteor.methods({
+      testOverlappingSubs: function (token) {
+        _.each(universalSubscribers[0], function (sub) {
+          sub.added(collName, token, {});
+        });
+        _.each(universalSubscribers[1], function (sub) {
+          sub.added(collName, token, {});
+        });
+        _.each(universalSubscribers[0], function (sub) {
+          sub.removed(collName, token);
+        });
+      }
+    });
+  })();
+}
+
+
 })();
