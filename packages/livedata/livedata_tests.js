@@ -409,6 +409,18 @@ if (Meteor.isClient) {
       }));
     }
   ]);
+
+  testAsyncMulti("livedata - runtime universal sub creation", [
+    function (test, expect) {
+      var coll = new Meteor.Collection("runtimeSubCreation");
+      var token = Meteor.uuid();
+      test.isFalse(coll.findOne(token));
+      Meteor.call("runtimeUniversalSubCreation", token, expect(function (err) {
+        test.isFalse(err);
+        test.isTrue(coll.findOne(token));
+      }));
+    }
+  ]);
 }
 
 // XXX some things to test in greater detail:

@@ -203,5 +203,17 @@ if (Meteor.isServer) {
   })();
 }
 
+/// Helper for "livedata - runtime universal sub creation"
+
+if (Meteor.isServer) {
+  Meteor.methods({
+    runtimeUniversalSubCreation: function (token) {
+      Meteor.publish(null, function () {
+        this.added("runtimeSubCreation", token, {});
+      });
+    }
+  });
+}
+
 
 })();
