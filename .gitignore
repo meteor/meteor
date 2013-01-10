@@ -9,3 +9,5 @@
 *.iml
 *.sublime-project
 *.sublime-workspace
+
+packages/collectionFS/
