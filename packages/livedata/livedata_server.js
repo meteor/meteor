@@ -854,7 +854,7 @@ _.extend(Meteor._LivedataSubscription.prototype, {
   complete: function () {
     var self = this;
     if (!self._subscriptionId)
-      throw new Error("Can't complete a universal subscription");
+      return;  // unnecessary but ignored for universal sub
     if (!self._complete) {
       self._session.sendComplete([self._subscriptionId]);
       self._complete = true;

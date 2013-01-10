@@ -252,7 +252,6 @@
         {_id: this.userId},
         {fields: {profile: 1, username: 1, emails: 1}});
     else {
-      this.complete();
       return null;
     }
   }, {is_auto: true});
