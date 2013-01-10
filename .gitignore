@@ -10,6 +10,4 @@
 *.sublime-project
 *.sublime-workspace
 
-packages/collectionFS/
-
 packages/collectionFS
