@@ -513,19 +513,18 @@ _.extend(Meteor._LivedataSubscription.prototype, {
   set: function (collection_name, id, attributes) {
     var self = this;
     var obj = Meteor._ensure(self.pending_data, collection_name, id);
-    _.each(attributes, function (value, key) {
+    for (var key in attributes) {
       if (key !== '_id')
-        obj[key] = value;
-    });
+        obj[key] = attributes[key];
+    }
   },
 
   unset: function (collection_name, id, keys) {
     var self = this;
     var obj = Meteor._ensure(self.pending_data, collection_name, id);
-    _.each(keys, function (key) {
+    for (var key in keys)
       if (key !== '_id')
         obj[key] = undefined; // do not delete - need to mark as 'to be unset'
-    });
   },
 
   complete: function () {
@@ -733,16 +732,19 @@ Meteor._LivedataServer = function () {
   Meteor.setInterval(function () {
     var now = +(new Date);
     var destroyedIds = [];
-    _.each(self.sessions, function (s, id) {
+
+    for (var id in self.sessions) {
+      var s = self.sessions[id];
+
       s.cleanup();
       if (!s.socket && (now - s.last_detach_time) > 60 * 1000) {
         s.destroy();
         destroyedIds.push(id);
       }
-    });
-    _.each(destroyedIds, function (id) {
+    }
+
+    for (var id in destroyedIds) 
       delete self.sessions[id];
-    });
   }, 1 * 60 * 1000);
 };
 
@@ -812,11 +814,12 @@ _.extend(Meteor._LivedataServer.prototype, {
 
   methods: function (methods) {
     var self = this;
-    _.each(methods, function (func, name) {
+
+    for (name in methods) {
       if (self.method_handlers[name])
         throw new Error("A method named '" + name + "' is already defined");
-      self.method_handlers[name] = func;
-    });
+      self.method_handlers[name] = methods[name];
+    }
   },
 
   call: function (name /*, arguments */) {
