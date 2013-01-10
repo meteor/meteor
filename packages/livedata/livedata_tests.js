@@ -421,6 +421,15 @@ if (Meteor.isClient) {
       }));
     }
   ]);
+
+  testAsyncMulti("livedata - no setUserId after unblock", [
+    function (test, expect) {
+      Meteor.call("setUserIdAfterUnblock", expect(function (err, result) {
+        test.isFalse(err);
+        test.isTrue(result);
+      }));
+    }
+  ]);
 }
 
 // XXX some things to test in greater detail:

@@ -167,6 +167,26 @@ if (Meteor.isServer) {
   });
 }
 
+/// Helper for "livedata - no setUserId after unblock"
+
+if (Meteor.isServer) {
+  Meteor.methods({
+    setUserIdAfterUnblock: function () {
+      this.unblock();
+      var threw = false;
+      var originalUserId = this.userId;
+      try {
+        // Calling setUserId after unblock should throw an error (and not mutate
+        // userId).
+        this.setUserId(originalUserId + "bla");
+      } catch (e) {
+        threw = true;
+      }
+      return threw && this.userId === originalUserId;
+    }
+  });
+}
+
 /*****/
 
 /// Helper for "livedata - overlapping universal subs"

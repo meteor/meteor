@@ -19,7 +19,8 @@ Meteor._MethodInvocation = function (options) {
   // call this function to allow other method invocations (from the
   // same client) to continue running without waiting for this one to
   // complete.
-  this.unblock = options.unblock || function () {};
+  this._unblock = options.unblock || function () {};
+  this._calledUnblock = false;
 
   // current user id
   this.userId = options.userId;
@@ -36,9 +37,17 @@ Meteor._MethodInvocation = function (options) {
 };
 
 _.extend(Meteor._MethodInvocation.prototype, {
+  unblock: function () {
+    var self = this;
+    self._calledUnblock = true;
+    self._unblock();
+  },
   setUserId: function(userId) {
-    this.userId = userId;
-    this._setUserId(userId);
+    var self = this;
+    if (self._calledUnblock)
+      throw new Error("Can't call setUserId in a method after calling unblock");
+    self.userId = userId;
+    self._setUserId(userId);
   }
 });
 

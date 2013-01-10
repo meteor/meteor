@@ -668,6 +668,14 @@ _.extend(Meteor._LivedataSession.prototype, {
   _setUserId: function(userId) {
     var self = this;
 
+    // Prevent newly-created universal subscriptions from being added to our
+    // session; they will be found below when we call startUniversalSubs.
+    //
+    // (We don't have to worry about named subscriptions, because we only add
+    // them when we process a 'sub' message. We are currently processing a
+    // 'method' message, and the method did not unblock, because it is illegal
+    // to call setUserId after unblock. Thus we cannot be concurrently adding a
+    // new named subscription.)
     self._dontStartNewUniversalSubs = true;
 
     // Prevent current subs from updating our collectionViews and call their
