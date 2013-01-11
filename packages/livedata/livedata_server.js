@@ -56,18 +56,15 @@ _.extend(Meteor._LivedataSession.prototype, {
 
     self.socket = socket;
     self.last_connect_time = +(new Date);
-    _.each(self.out_queue, function (msg) {
-      self.socket.send(JSON.stringify(msg));
-    });
-    self.out_queue = [];
+    while (self.out_queue.length)
+      self.socket.send(JSON.stringify(self.out_queue.pop()));
 
     // On initial connect, spin up all the universal publishers.
     if (!self.initialized) {
       self.initialized = true;
       Fiber(function () {
-        _.each(self.server.universal_publish_handlers, function (handler) {
-          self._startSubscription(handler, self.next_sub_priority--);
-        });
+        for (var id in self.server.universal_publish_handlers)
+          self._startSubscription(self.server.universal_publish_handlers[id], self.next_sub_priority--);
       }).run();
     }
   },
@@ -102,13 +99,12 @@ _.extend(Meteor._LivedataSession.prototype, {
       return; // not connected, or not connected long enough
 
     var kill = [];
-    _.each(self.result_cache, function (info, id) {
-      if (now - info.when > 5 * 60 * 1000)
+    for (var id in self.result_cache)
+      if (now - self.result_cache[id].when > 5 * 60 * 1000)
         kill.push(id);
-    });
-    _.each(kill, function (id) {
-      delete self.result_cache[id];
-    });
+
+    for (var id in kill)
+      delete self.result_cache[kill[id]];
   },
 
   // Destroy this session. Stop all processing and tear everything
@@ -395,14 +391,12 @@ _.extend(Meteor._LivedataSession.prototype, {
   _stopAllSubscriptions: function () {
     var self = this;
 
-    _.each(self.named_subs, function (sub, id) {
-      sub.stop();
-    });
+    for (var id in self.named_subs)  
+      self.named_subs[id].stop();
     self.named_subs = {};
 
-    _.each(self.universal_subs, function (sub) {
-      sub.stop();
-    });
+    for (var id in self.universal_subs)
+      self.universal_subs[id].stop();
     self.universal_subs = [];
   },
 
@@ -421,12 +415,18 @@ _.extend(Meteor._LivedataSession.prototype, {
     };
 
     self.dontFlush = true;
-    _.each(self.named_subs, rerunSub);
-    _.each(self.universal_subs, rerunSub);
+    for (var id in self.named_subs)
+      rerunSub(self.named_subs[id]);
+
+    for (var id in self.universal_subs)
+      rerunSub(self.universal_subs[id]);
 
     self.dontFlush = false;
-    _.each(self.named_subs, flushSub);
-    _.each(self.universal_subs, flushSub);
+    for (var id in self.named_subs)
+      flushSub(self.named_subs[id]);
+
+    for (var id in self.universal_subs)
+      flushSub(self.universal_subs[id]);
   },
 
   // RETURN the current value for a particular key, as given by the
@@ -513,19 +513,18 @@ _.extend(Meteor._LivedataSubscription.prototype, {
   set: function (collection_name, id, attributes) {
     var self = this;
     var obj = Meteor._ensure(self.pending_data, collection_name, id);
-    _.each(attributes, function (value, key) {
+    for (var key in attributes) {
       if (key !== '_id')
-        obj[key] = value;
-    });
+        obj[key] = attributes[key];
+    }
   },
 
   unset: function (collection_name, id, keys) {
     var self = this;
     var obj = Meteor._ensure(self.pending_data, collection_name, id);
-    _.each(keys, function (key) {
+    for (var key in keys)
       if (key !== '_id')
         obj[key] = undefined; // do not delete - need to mark as 'to be unset'
-    });
   },
 
   complete: function () {
@@ -733,16 +732,19 @@ Meteor._LivedataServer = function () {
   Meteor.setInterval(function () {
     var now = +(new Date);
     var destroyedIds = [];
-    _.each(self.sessions, function (s, id) {
+
+    for (var id in self.sessions) {
+      var s = self.sessions[id];
+
       s.cleanup();
       if (!s.socket && (now - s.last_detach_time) > 60 * 1000) {
         s.destroy();
         destroyedIds.push(id);
       }
-    });
-    _.each(destroyedIds, function (id) {
+    }
+
+    for (var id in destroyedIds) 
       delete self.sessions[id];
-    });
   }, 1 * 60 * 1000);
 };
 
@@ -812,11 +814,12 @@ _.extend(Meteor._LivedataServer.prototype, {
 
   methods: function (methods) {
     var self = this;
-    _.each(methods, function (func, name) {
+
+    for (name in methods) {
       if (self.method_handlers[name])
         throw new Error("A method named '" + name + "' is already defined");
-      self.method_handlers[name] = func;
-    });
+      self.method_handlers[name] = methods[name];
+    }
   },
 
   call: function (name /*, arguments */) {
@@ -906,8 +909,14 @@ _.extend(Meteor._LivedataServer.prototype, {
   // if necessary.
   autopublish: function () {
     var self = this;
-    _.each(self.on_autopublish || [], function (f) { f(); });
-    self.on_autopublish = null;
+    while (self.on_autopublish.length) {
+      try {
+        self.on_autopublish.pop()();
+      }
+      catch(e) {
+        setTimeout(function() { throw(e); }, 0); //Don't stop the que
+      }
+    } //EO while
   },
 
   onAutopublish: function (f) {

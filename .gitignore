@@ -9,4 +9,7 @@
 *.iml
 *.sublime-project
 *.sublime-workspace
-TAGS
+
+packages/collectionFS
+
+packages/collectionFS
