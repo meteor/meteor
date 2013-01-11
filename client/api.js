@@ -182,18 +182,6 @@ Template.api.subscribe = {
   ]
 };
 
-Template.api.autosubscribe = {
-  id: "meteor_autosubscribe",
-  name: "Meteor.autosubscribe(func)",
-  locus: "Client",
-  descr: ["Automatically set up and tear down subscriptions."],
-  args: [
-    {name: "func",
-     type: "Function",
-     descr: "A [`reactive`](#reactivity) function that sets up some subscriptions by calling [`Meteor.subscribe`](#meteor_subscribe). It will automatically be re-run when its dependencies change."}
-    ]
-};
-
 Template.api.methods = {
   id: "meteor_methods",
   name: "Meteor.methods(methods)",
@@ -1215,7 +1203,7 @@ Template.api.set = {
   id: "session_set",
   name: "Session.set(key, value)",
   locus: "Client",
-  descr: ["Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Meteor.autosubscribe`](#meteor_autosubscribe) blocks, that called [`Session.get`](#session_get) on this `key`.)"],
+  descr: ["Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Meteor.autorun`](#meteor_autorun) blocks, that called [`Session.get`](#session_get) on this `key`.)"],
   args: [
     {name: "key",
      type: "String",

@@ -108,8 +108,7 @@ var toc = [
         {instance: "this", name: "onStop", id: "publish_onstop"},
         {instance: "this", name: "stop", id: "publish_stop"}
       ],
-      "Meteor.subscribe",
-      "Meteor.autosubscribe"
+      "Meteor.subscribe"
     ],
 
     {name: "Methods", id: "methods_header"}, [
