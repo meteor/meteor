@@ -251,7 +251,7 @@ programming](http://en.wikipedia.org/wiki/Reactive_programming). This means that
 you can write your code in a simple imperative style, and the result will be
 automatically recalculated whenever data changes that your code depends on.
 
-    Meteor.autosubscribe(function () {
+    Meteor.autorun(function () {
       Meteor.subscribe("messages", Session.get("currentRoomId"));
     });
 
@@ -262,8 +262,8 @@ function will be automatically re-run, setting up a new subscription that
 replaces the old one.
 
 This automatic recomputation is achieved by a cooperation
-between `Session` and `Meteor.autosubscribe`.
-Methods like `Meteor.autosubscribe` establish a "reactive
+between `Session` and `Meteor.autorun`.
+Methods like `Meteor.autorun` establish a "reactive
 context" inside of which data dependencies are tracked, and they are
 prepared to re-run their function argument as necessary.  Data
 providers like `Session`, on the other hand, make note of
@@ -281,7 +281,6 @@ These Meteor functions run your code in a reactive context:
 
 * [Templates](#templates)
 * [`Meteor.render`](#meteor_render) and [`Meteor.renderList`](#meteor_renderlist)
-* [`Meteor.autosubscribe`](#meteor_autosubscribe)
 * [`Meteor.autorun`](#meteor_autorun)
 
 And the reactive data sources that can trigger changes are:
@@ -292,6 +291,10 @@ And the reactive data sources that can trigger changes are:
 * [`Meteor.user`](#meteor_user)
 * [`Meteor.userId`](#meteor_userid)
 * [`Meteor.loggingIn`](#meteor_loggingin)
+
+In addition, calling [`Meteor.subscribe`](#meteor_subscribe) in a reactive
+context sets up a subscription which is automatically stopped when the context
+is invalidated, as shown above.
 
 Meteor's
 [implementation](https://github.com/meteor/meteor/blob/master/packages/deps/deps.js)

@@ -30,7 +30,7 @@ Meteor.subscribe('lists', function () {
 });
 
 // Always be subscribed to the todos for the selected list.
-Meteor.autosubscribe(function () {
+Meteor.autorun(function () {
   var list_id = Session.get('list_id');
   if (list_id)
     Meteor.subscribe('todos', list_id);
