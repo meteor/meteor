@@ -99,6 +99,21 @@ var builtinConverters = [
       return new Date(obj.$date);
     }
   },
+  { // Binary
+    matchJSONValue: function (obj) {
+      return _.has(obj, '$binary') && _.size(obj) === 1;
+    },
+    matchObject: function (obj) {
+      return typeof Uint8Array !== 'undefined' && obj instanceof Uint8Array
+        || (obj && _.has(obj, '$Uint8ArrayPolyfill'));
+    },
+    toJSONValue: function (obj) {
+      return {$binary: Meteor._base64Encode(obj)};
+    },
+    fromJSONValue: function (obj) {
+      return Meteor._base64Decode(obj.$binary);
+    }
+  },
   { // Literal
     matchJSONValue: function (obj) {
       return _.has(obj, '$literal') && _.size(obj) === 1;

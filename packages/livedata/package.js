@@ -13,6 +13,7 @@ Package.on_use(function (api) {
 
   api.add_files('writefence.js', 'server');
   api.add_files('crossbar.js', 'server');
+  api.add_files('base64.js', ['client', 'server']);
 
   api.add_files('livedata_common.js', ['client', 'server']);
 
@@ -35,4 +36,5 @@ Package.on_test(function (api) {
   api.add_files('livedata_tests.js', ['client', 'server']);
   api.add_files('livedata_test_service.js', ['client', 'server']);
   api.add_files('session_view_tests.js', ['server']);
+  api.add_files('test_base64.js', ['client', 'server']);
 });
