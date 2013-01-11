@@ -992,10 +992,10 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
     return JSON.parse(msg).params[0];
   }), ['reconnect zero', 'reconnect one']);
 
-  // black-box test:
+  // white-box test:
   test.equal(_.map(conn._outstandingMethodBlocks, function (block) {
     return [block.wait, _.map(block.methods, function (method) {
-      return JSON.parse(method._message).params[0];
+      return method._message.params[0];
     })];
   }), [
     [false, ['reconnect zero', 'reconnect one']],
@@ -1041,7 +1041,7 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
   // white-box test:
   test.equal(_.map(conn._outstandingMethodBlocks, function (block) {
     return [block.wait, _.map(block.methods, function (method) {
-      return JSON.parse(method._message).params[0];
+      return method._message.params[0];
     })];
   }), [
     [false, ['reconnect one', 'reconnect two', 'reconnect three', 'one']],
