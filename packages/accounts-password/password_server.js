@@ -19,6 +19,21 @@
   };
 
   Meteor.methods({
+    isSRP: function (request) {
+      var selector = selectorFromUserQuery(request.user);
+
+      var user = Meteor.users.findOne(selector);
+      if (!user)
+        throw new Meteor.Error(403, "User not found");
+
+      if (user.services && user.services.password && user.services.password.srp) {
+        return 'SRP';
+      } else if (user.services && user.services.tmPassword && user.services.tmPassword.password && user.services.tmPassword.salt) {
+        return 'TM';
+      } else {
+        return false;
+      }
+    },    
     // @param request {Object} with fields:
     //   user: either {username: (username)}, {email: (email)}, or {id: (userId)}
     //   A: hex encoded int. the client's public key for this exchange
@@ -333,10 +348,11 @@
     if (!user)
       throw new Meteor.Error(403, "User not found");
 
-    if (!user.services || !user.services.password ||
-        !user.services.password.srp)
-      throw new Meteor.Error(403, "User has no password set");
+    if (!user.services || !user.services.tmPassword ||
+        !user.services.tmPassword.password || !user.services.tmPassword.salt)
+      throw new Meteor.Error(403, "User has no tmPassword set");
 
+      /*
     // Just check the verifier output when the same identity and salt
     // are passed. Don't bother with a full exchange.
     var verifier = user.services.password.srp;
@@ -344,6 +360,10 @@
       identity: verifier.identity, salt: verifier.salt});
 
     if (verifier.verifier !== newVerifier.verifier)
+      throw new Meteor.Error(403, "Incorrect password");
+      */
+
+    if (crypto.createHmac("sha1", user.services.tmPassword.salt).update(options.password).digest("hex") != user.services.tmPassword.password)
       throw new Meteor.Error(403, "Incorrect password");
 
     var stampedLoginToken = Accounts._generateStampedLoginToken();
