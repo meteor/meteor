@@ -298,10 +298,10 @@ Cursor.prototype._publishCursor = function (sub) {
     },
     changed: function (obj, oldObj) {
       var set = {};
-      _.each(obj, function (v, k) {
-        if (!_.isEqual(v, oldObj[k]))
-          set[k] = v;
-      });
+      for (var k in obj) {
+        if (!_.isEqual(obj[k], oldObj[k])) //Confirmed part of Issue #594 RaiX
+          set[k] = obj[k];
+      }
       sub.set(collection, obj._id, set);
       var deadKeys = _.difference(_.keys(oldObj), _.keys(obj));
       sub.unset(collection, obj._id, deadKeys);
