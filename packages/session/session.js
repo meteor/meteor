@@ -5,12 +5,12 @@
   var stringify = function (value) {
     if (value === undefined)
       return 'undefined';
-    return JSON.stringify(Meteor._toJSONValue(value));
+    return EJSON.stringify(value);
   };
   var parse = function (serialized) {
     if (serialized === undefined || serialized === 'undefined')
       return undefined;
-    return Meteor._fromJSONValue(JSON.parse(serialized));
+    return EJSON.parse(serialized);
   };
 
   Session = _.extend({}, {

@@ -13,7 +13,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['uuid', 'json', 'underscore', 'minimongo', 'logging', 'livedata'],
+  api.use(['uuid', 'ejson', 'json', 'underscore', 'minimongo', 'logging', 'livedata'],
           ['client', 'server']);
 
   api.add_files('mongo_driver.js', 'server');

@@ -418,7 +418,7 @@ Meteor.Collection.ObjectID = ObjectID;
 
 
 
-Meteor.addCustomType("oid",  function (str) {
+EJSON.addType("oid",  function (str) {
   return new Meteor.Collection.ObjectID(str);
 });
 
