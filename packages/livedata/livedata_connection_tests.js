@@ -840,6 +840,75 @@ Tinytest.add("livedata stub - multiple stubs same doc", function (test) {
   o.stop();
 });
 
+Tinytest.add("livedata stub - unsent methods don't block quiescence", function (test) {
+  // This test is for https://github.com/meteor/meteor/issues/555
+
+  var stream = new Meteor._StubStream;
+  var conn = newConnection(stream);
+  startAndConnect(test, stream);
+
+  var collName = Meteor.uuid();
+  var coll = new Meteor.Collection(collName, {manager: conn});
+
+  conn.methods({
+    insertSomething: function () {
+      // stub write
+      coll.insert({foo: 'bar'});
+    }
+  });
+
+  test.equal(coll.find().count(), 0);
+
+  // Call a random method (no-op)
+  conn.call('no-op');
+  // Call a wait method
+  conn.apply('no-op', [], {wait: true});
+  // Call a method with a stub that writes.
+  conn.call('insertSomething');
+
+
+  // Stub write is visible.
+  test.equal(coll.find({foo: 'bar'}).count(), 1);
+  var stubWrittenId = coll.findOne({foo: 'bar'})._id;
+
+  // first method sent
+  var firstMethodId = testGotMessage(
+    test, stream, {msg: 'method', method: 'no-op',
+                   params: [], id: '*'});
+  test.equal(stream.sent.length, 0);
+
+  // ack the first method
+  stream.receive({msg: 'data', methods: [firstMethodId]});
+  stream.receive({msg: 'result', id: firstMethodId});
+
+  // Wait method sent.
+  var waitMethodId = testGotMessage(
+    test, stream, {msg: 'method', method: 'no-op',
+                   params: [], id: '*'});
+  test.equal(stream.sent.length, 0);
+
+  // ack the wait method
+  stream.receive({msg: 'data', methods: [waitMethodId]});
+  stream.receive({msg: 'result', id: waitMethodId});
+
+  // insert method sent.
+  var insertMethodId = testGotMessage(
+    test, stream, {msg: 'method', method: 'insertSomething',
+                   params: [], id: '*'});
+  test.equal(stream.sent.length, 0);
+
+  // ack the insert method
+  stream.receive({msg: 'data', methods: [insertMethodId]});
+  stream.receive({msg: 'result', id: insertMethodId});
+
+  // simulation reverted.
+  test.equal(coll.find({foo: 'bar'}).count(), 0);
+
+});
+
+
+
+
 Tinytest.add("livedata connection - reactive userId", function (test) {
   var stream = new Meteor._StubStream();
   var conn = newConnection(stream);
