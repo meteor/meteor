@@ -10,7 +10,7 @@ for (var i = 0; i < BASE_64_CHARS.length; i++) {
   BASE_64_VALS[BASE_64_CHARS.substr(i, 1)] = i;
 };
 
-Meteor._base64Encode = function (array) {
+EJSON._base64Encode = function (array) {
   var answer = [];
   var a = null;
   var b = null;
@@ -64,7 +64,7 @@ var getVal = function (ch) {
   return BASE_64_VALS[ch];
 };
 
-var newBuffer = function (len) {
+EJSON.newBinary = function (len) {
   if (typeof Uint8Array === 'undefined' || typeof ArrayBuffer === 'undefined') {
     var ret = [];
     for (var i = 0; i < len; i++) {
@@ -76,14 +76,14 @@ var newBuffer = function (len) {
   return new Uint8Array(new ArrayBuffer(len));
 };
 
-Meteor._base64Decode = function (str) {
+EJSON._base64Decode = function (str) {
   var len = Math.floor((str.length*3)/4);
   if (str.substr(str.length - 1) == '=') {
     len--;
     if (str.substr(str.length - 2, 1) == '=')
       len--;
   }
-  var arr = newBuffer(len);
+  var arr = EJSON.newBinary(len);
 
   var one = null;
   var two = null;

@@ -26,8 +26,8 @@
   });
 
   Tinytest.add("base64 - empty", function (test) {
-    test.equal(Meteor._base64Encode(new Uint8Array(new ArrayBuffer(0))), "");
-    test.equal(Meteor._base64Decode(""), new Uint8Array(new ArrayBuffer(0)));
+    test.equal(EJSON._base64Encode(new Uint8Array(new ArrayBuffer(0))), "");
+    test.equal(EJSON._base64Decode(""), new Uint8Array(new ArrayBuffer(0)));
   });
 
 
@@ -40,8 +40,8 @@
       {txt: "sure.", res: "c3VyZS4="}
     ];
     _.each(tests, function(t) {
-      test.equal(Meteor._base64Encode(asciiToArray(t.txt)), t.res);
-      test.equal(arrayToAscii(Meteor._base64Decode(t.res)), t.txt);
+      test.equal(EJSON._base64Encode(asciiToArray(t.txt)), t.res);
+      test.equal(arrayToAscii(EJSON._base64Decode(t.res)), t.txt);
     });
   });
 })();

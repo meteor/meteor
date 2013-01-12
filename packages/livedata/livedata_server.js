@@ -829,7 +829,7 @@ _.extend(Meteor._LivedataSubscription.prototype, {
     var self = this;
     try {
       var res = self._handler.apply(
-        self, LocalCollection._deepcopy(self._params));
+        self, EJSON.clone(self._params));
     } catch (e) {
       Meteor._debug("Internal exception while starting subscription",
                     self._subscriptionHandle, e.stack);

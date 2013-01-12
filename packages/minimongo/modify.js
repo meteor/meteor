@@ -137,7 +137,7 @@ LocalCollection._modifiers = {
     }
   },
   $set: function (target, field, arg) {
-    target[field] = LocalCollection._deepcopy(arg);
+    target[field] = EJSON.clone(arg);
   },
   $unset: function (target, field, arg) {
     if (target !== undefined) {
@@ -155,7 +155,7 @@ LocalCollection._modifiers = {
     else if (!(x instanceof Array))
       throw Error("Cannot apply $push modifier to non-array");
     else
-      x.push(LocalCollection._deepcopy(arg));
+      x.push(EJSON.clone(arg));
   },
   $pushAll: function (target, field, arg) {
     if (!(typeof arg === "object" && arg instanceof Array))

@@ -717,7 +717,7 @@ _.extend(LiveResultsSet.prototype, {
       // Send initial adds.
       if (handle._added) {
         _.each(self._results, function (doc, i) {
-          handle._added(LocalCollection._deepcopy(doc),
+          handle._added(EJSON.clone(doc),
                         self._ordered ? i : undefined);
         });
       }

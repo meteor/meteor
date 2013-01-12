@@ -81,7 +81,7 @@ Meteor._parseDDP = function (stringMessage) {
 };
 
 Meteor._stringifyDDP = function (msg) {
-  var copy = LocalCollection._deepcopy(msg);
+  var copy = EJSON.clone(msg);
   // swizzle 'changed' messages from 'fields undefined' rep to 'fields
   // and cleared' rep
   if (_.has(msg, 'fields')) {

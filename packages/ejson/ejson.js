@@ -57,10 +57,10 @@ var builtinConverters = [
         || (obj && _.has(obj, '$Uint8ArrayPolyfill'));
     },
     toJSONValue: function (obj) {
-      return {$binary: Meteor._base64Encode(obj)};
+      return {$binary: EJSON._base64Encode(obj)};
     },
     fromJSONValue: function (obj) {
-      return Meteor._base64Decode(obj.$binary);
+      return EJSON._base64Decode(obj.$binary);
     }
   },
   { // Literal
@@ -140,7 +140,7 @@ EJSON.toJSONValue = function (item) {
   if (changed !== undefined)
     return changed;
   if (typeof item === 'object') {
-    item = LocalCollection._deepcopy(item);
+    item = EJSON.clone(item);
     adjustTypesToJSONValue(item);
   }
   return item;
@@ -190,7 +190,7 @@ var fromJSONValueHelper = function (value) {
 EJSON.fromJSONValue = function (item) {
   var changed = fromJSONValueHelper(item);
   if (changed === item && typeof item === 'object') {
-    item = LocalCollection._deepcopy(item);
+    item = EJSON.clone(item);
     adjustTypesFromJSONValue(item);
     return item;
   } else {
@@ -205,5 +205,42 @@ EJSON.stringify = function (item) {
 EJSON.parse = function (item) {
   return EJSON.fromJSONValue(JSON.parse(item));
 };
+
+EJSON.isBinary = function (obj) {
+  return obj instanceof Uint8Array || obj.$Uint8ArrayPolyfill;
+};
+
+EJSON.clone = function (v) {
+  var ret;
+  if (typeof v !== "object")
+    return v;
+  if (v === null)
+    return null; // null has typeof "object"
+  if (v instanceof Date)
+    return new Date(v.getTime());
+  if (EJSON.isBinary(v)) {
+    ret = EJSON.newBinary(v.length);
+    for (i = 0; i < v.length; i++) {
+      ret[i] = v[i];
+    }
+    return ret;
+  }
+  if (_.isArray(v)) {
+    ret = v.slice(0);
+    for (var i = 0; i < v.length; i++)
+      ret[i] = EJSON.clone(ret[i]);
+    return ret;
+  }
+  // handle general user-defined typed Objects if they have a clone method
+  if (typeof v.clone === 'function') {
+    return v.clone();
+  }
+  // handle other objects
+  ret = {};
+  for (var key in v)
+    ret[key] = EJSON.clone(v[key]);
+  return ret;
+};
+
 
 })();

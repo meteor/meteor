@@ -8,7 +8,7 @@ Package.on_use(function (api, where) {
 
   // It would be sort of nice if minimongo didn't depend on
   // underscore, so we could ship it separately.
-  api.use(['underscore', 'json'], where);
+  api.use(['underscore', 'json', 'ejson'], where);
 
   api.add_files([
     'minimongo.js',

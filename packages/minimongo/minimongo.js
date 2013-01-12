@@ -136,7 +136,7 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
                           moved: true});
 
   while (self.cursor_pos < self.db_objects.length)
-    callback(LocalCollection._deepcopy(self.db_objects[self.cursor_pos++]));
+    callback(EJSON.clone(self.db_objects[self.cursor_pos++]));
 };
 
 LocalCollection.Cursor.prototype.map = function (callback) {
@@ -242,7 +242,7 @@ _.extend(LocalCollection.Cursor.prototype, {
 
     if (!options._suppress_initial && !self.collection.paused) {
       _.each(query.results, function (doc, i) {
-        query.added(LocalCollection._deepcopy(doc),
+        query.added(EJSON.clone(doc),
                     ordered ? i : undefined);
       });
     }
@@ -352,7 +352,7 @@ LocalCollection.Cursor.prototype._markAsReactive = function (options) {
 // this in our handling of null and $exists)
 LocalCollection.prototype.insert = function (doc) {
   var self = this;
-  doc = LocalCollection._deepcopy(doc);
+  doc = EJSON.clone(doc);
 
   if (!_.has(doc, '_id')) {
     // if you really want to use ObjectIDs, set this global.
@@ -450,7 +450,7 @@ LocalCollection.prototype.update = function (selector, mod, options) {
   var qidToOriginalResults = {};
   _.each(self.queries, function (query, qid) {
     if ((query.cursor.skip || query.cursor.limit) && !query.paused)
-      qidToOriginalResults[qid] = LocalCollection._deepcopy(query.results);
+      qidToOriginalResults[qid] = EJSON.clone(query.results);
   });
   var recomputeQids = {};
 
@@ -488,7 +488,7 @@ LocalCollection.prototype._modifyAndNotify = function (
     }
   }
 
-  var old_doc = LocalCollection._deepcopy(doc);
+  var old_doc = EJSON.clone(doc);
 
   LocalCollection._modify(doc, mod);
 
@@ -517,33 +517,6 @@ LocalCollection.prototype._modifyAndNotify = function (
   }
 };
 
-// XXX findandmodify
-
-LocalCollection._deepcopy = function (v) {
-  var ret;
-  if (typeof v !== "object")
-    return v;
-  if (v === null)
-    return null; // null has typeof "object"
-  if (v instanceof Date)
-    return new Date(v.getTime());
-  if (_.isArray(v)) {
-    ret = v.slice(0);
-    for (var i = 0; i < v.length; i++)
-      ret[i] = LocalCollection._deepcopy(ret[i]);
-    return ret;
-  }
-  // handle general user-defined typed Objects if they have a clone method
-  if (typeof v.clone === 'function') {
-    return v.clone();
-  }
-  // handle other objects
-  ret = {};
-  for (var key in v)
-    ret[key] = LocalCollection._deepcopy(v[key]);
-  return ret;
-};
-
 // XXX the sorted-query logic below is laughably inefficient. we'll
 // need to come up with a better datastructure for this.
 //
@@ -553,15 +526,15 @@ LocalCollection._deepcopy = function (v) {
 LocalCollection._insertInResults = function (query, doc) {
   if (query.ordered) {
     if (!query.sort_f) {
-      query.added(LocalCollection._deepcopy(doc), query.results.length);
+      query.added(EJSON.clone(doc), query.results.length);
       query.results.push(doc);
     } else {
       var i = LocalCollection._insertInSortedList(
         query.sort_f, query.results, doc);
-      query.added(LocalCollection._deepcopy(doc), i);
+      query.added(EJSON.clone(doc), i);
     }
   } else {
-    query.added(LocalCollection._deepcopy(doc));
+    query.added(EJSON.clone(doc));
     query.results[LocalCollection._idStringify(doc._id)] = doc;
   }
 };
@@ -583,13 +556,13 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
     throw new Error("Can't change a doc's _id while updating");
 
   if (!query.ordered) {
-    query.changed(LocalCollection._deepcopy(doc), old_doc);
+    query.changed(EJSON.clone(doc), old_doc);
     query.results[LocalCollection._idStringify(doc._id)] = doc;
     return;
   }
 
   var orig_idx = LocalCollection._findInOrderedResults(query, doc);
-  query.changed(LocalCollection._deepcopy(doc), orig_idx, old_doc);
+  query.changed(EJSON.clone(doc), orig_idx, old_doc);
 
   if (!query.sort_f)
     return;
@@ -600,7 +573,7 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
   var new_idx = LocalCollection._insertInSortedList(
     query.sort_f, query.results, doc);
   if (orig_idx !== new_idx)
-    query.moved(LocalCollection._deepcopy(doc), orig_idx, new_idx);
+    query.moved(EJSON.clone(doc), orig_idx, new_idx);
 };
 
 // Recomputes the results of a query and runs observe callbacks for the
@@ -681,7 +654,7 @@ LocalCollection.prototype._saveOriginal = function (id, doc) {
   // here for inserted docs!)
   if (_.has(self._savedOriginals, id))
     return;
-  self._savedOriginals[id] = LocalCollection._deepcopy(doc);
+  self._savedOriginals[id] = EJSON.clone(doc);
 };
 
 // Pause the observers. No callbacks from observers will fire until
@@ -698,7 +671,7 @@ LocalCollection.prototype.pauseObservers = function () {
   for (var qid in this.queries) {
     var query = this.queries[qid];
 
-    query.results_snapshot = LocalCollection._deepcopy(query.results);
+    query.results_snapshot = EJSON.clone(query.results);
   }
 };
 

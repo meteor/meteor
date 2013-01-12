@@ -34,7 +34,7 @@ LocalCollection._diffQueryOrdered =
   });
 
   // "maybe deepcopy"
-  var mdc = (deepcopy ? LocalCollection._deepcopy : _.identity);
+  var mdc = (deepcopy ? EJSON.clone : _.identity);
 
   // ALGORITHM:
   //
@@ -260,7 +260,7 @@ LocalCollection._diffQueryUnordered = function (oldResults, newResults,
   }
 
   // "maybe deepcopy"
-  var mdc = (deepcopy ? LocalCollection._deepcopy : _.identity);
+  var mdc = (deepcopy ? EJSON.clone : _.identity);
 
   _.each(newResults, function (newDoc) {
     if (_.has(oldResults, newDoc._id)) {
