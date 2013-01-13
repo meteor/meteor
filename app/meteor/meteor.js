@@ -147,6 +147,27 @@ Fiber(function () {
   });
 
   Commands.push({
+    name: "package",
+    help: "Create a new smart package",
+    func: function (argv) {
+      var opt = require("optimist")
+            .usage(
+              "Usage: meteor package <name>\n\n" +
+                "Make a subdirectory named <name> and create a new Meteor smart package\n" +
+                "there. You can also pass an absolute or relative path.");
+      
+      var packagename;
+      if (argv._.length === 1)
+        packagename = argv._[0];
+      else if (argv.help || !packagename)
+        process.stdout.write(opt.help()); process.exit(1);
+      
+      if (packagename !== null && packagename !== "")
+        files.cp_r(path.join(__dirname, 'package-skel'), packagename);
+    }
+  });
+
+  Commands.push({
     name: "create",
     help: "Create a new project",
     func: function (argv) {
