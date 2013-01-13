@@ -159,11 +159,13 @@ Fiber(function () {
       var packagename;
       if (argv._.length === 1)
         packagename = argv._[0];
-      else if (argv.help || !packagename)
-        process.stdout.write(opt.help()); process.exit(1);
+      else if (argv.help || !packagename) {
+        process.stdout.write(opt.help());
+        process.exit(1);
+      }
       
-      if (packagename !== null && packagename !== "")
-        files.cp_r(path.join(__dirname, 'package-skel'), packagename);
+      files.cp_r(path.join(__dirname, 'package-skel'), packagename);
+      process.stderr.write(packagename + ": created");
     }
   });
 
