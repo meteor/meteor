@@ -352,24 +352,19 @@
         !user.services.tmPassword.password || !user.services.tmPassword.salt)
       throw new Meteor.Error(403, "User has no tmPassword set");
 
-      /*
-    // Just check the verifier output when the same identity and salt
-    // are passed. Don't bother with a full exchange.
-    var verifier = user.services.password.srp;
-    var newVerifier = Meteor._srp.generateVerifier(options.password, {
-      identity: verifier.identity, salt: verifier.salt});
-
-    if (verifier.verifier !== newVerifier.verifier)
-      throw new Meteor.Error(403, "Incorrect password");
-      */
-
     if (crypto.createHmac("sha1", user.services.tmPassword.salt).update(options.password).digest("hex") != user.services.tmPassword.password)
       throw new Meteor.Error(403, "Incorrect password");
 
-    var stampedLoginToken = Accounts._generateStampedLoginToken();
-    Meteor.users.update(
-      user._id, {$push: {'services.resume.loginTokens': stampedLoginToken}});
+    // upgrade to SRP
+    var srp = Meteor._srp.generateVerifier(options.password);
 
+    var stampedLoginToken = Accounts._generateStampedLoginToken();
+
+    Meteor.users.update(
+      user._id, {
+        $set: {'services.password.srp': srp}, 
+        $push: {'services.resume.loginTokens': stampedLoginToken}
+    });
     return {token: stampedLoginToken.token, id: user._id};
   });
 
