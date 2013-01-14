@@ -46,7 +46,7 @@
               // password exchange. So we set it to true here, and clear it on error; in
               // the non-error case, it gets cleared by callLoginMethod.
               var srp = new Meteor._srp.Client(password);
-              var request = srp.startExchange();
+              request = _.extend(request, srp.startExchange());
               
               Accounts._setLoggingIn(true);
               Meteor.apply('beginPasswordExchange', [request], function (error, result) {
