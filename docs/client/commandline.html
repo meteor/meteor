@@ -123,6 +123,12 @@ version of Meteor is available, and if so, downloads and installs
 it. You must be connected to the internet.
 
 
+<h3 id="meteorpackage">meteor package <i>name</i></h3>
+Create a smart package named <i>name</i> from a template.
+In order to use the smart package, you will need to register
+it (see <a href="#meteorregister">meteor register</a>). You
+can pass an absolute or relative path.
+
 <h3 id="meteoradd">meteor add <i>package</i></h3>
 
 Add packages to your Meteor project. You can add multiple packages
@@ -135,6 +141,13 @@ list`.
 Removes a package previously added to your Meteor project. For a
 list of the packages that your application is currently using, run
 `meteor list --using`.
+
+
+<h3 id="meteorregister">meteor register <i>package</i></h3>
+Register a custom smart package so that you can use it in your projects.
+You can pass an absolute or relative path.
+
+With `--undo`, un-register a registered custom package.
 
 
 <h3 id="meteorlist">meteor list</h3>
