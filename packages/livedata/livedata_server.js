@@ -71,7 +71,7 @@ _.extend(Meteor._SessionDocumentView.prototype, {
       delete self.dataByKey[key];
       changeCollector[key] = undefined;
     } else if (removedValue !== undefined &&
-               !_.isEqual(removedValue, precedenceList[0].value)) {
+               !EJSON.equals(removedValue, precedenceList[0].value)) {
       changeCollector[key] = precedenceList[0].value;
     }
   },
@@ -97,7 +97,7 @@ _.extend(Meteor._SessionDocumentView.prototype, {
     }
 
     if (elt) {
-      if (elt === precedenceList[0] && !_.isEqual(value, elt.value)) {
+      if (elt === precedenceList[0] && !EJSON.equals(value, elt.value)) {
         // this subscription is changing the value of this field.
         changeCollector[key] = value;
       }
@@ -144,7 +144,7 @@ _.extend(Meteor._SessionCollectionView.prototype, {
     var fields = {};
     diffObjects(prevDV.getFields(), nowDV.getFields(), {
       both: function (key, prev, now) {
-        if (!_.isEqual(prev, now))
+        if (!EJSON.equals(prev, now))
           fields[key] = now;
       },
       rightOnly: function (key, now) {

@@ -54,9 +54,9 @@
       // We don't allow objects (or arrays that might include objects) for
       // .equals, because JSON.stringify doesn't canonicalize object key
       // order. (We can make equals have the right return value by parsing the
-      // current value and using _.isEqual, but we won't have a canonical
+      // current value and using EJSON.equals, but we won't have a canonical
       // element of keyValueDeps[key] to store the context.) You can still use
-      // "_.isEqual(Session.get(key), value)".
+      // "EJSON.equals(Session.get(key), value)".
       //
       // XXX we could allow arrays as long as we recursively check that there
       // are no objects
@@ -89,7 +89,7 @@
 
       var oldValue = undefined;
       if (_.has(self.keys, key)) oldValue = parse(self.keys[key]);
-      return _.isEqual(oldValue, value);
+      return EJSON.equals(oldValue, value);
     },
 
     _ensureKey: function (key) {

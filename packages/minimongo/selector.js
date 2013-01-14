@@ -79,61 +79,8 @@ LocalCollection._f = {
   },
 
   // deep equality test: use for literal document and array matches
-  _equal: function (x, qval) {
-    var match = function (a, b) {
-      // scalars
-      if (typeof a === 'number' || typeof a === 'string' ||
-          typeof a === 'boolean' || a === undefined || a === null)
-        return a === b;
-      if (typeof a === 'function')
-        return false;
-
-      // OK, typeof a === 'object'
-      if (typeof b !== 'object')
-        return false;
-
-      // arrays
-      if (a instanceof Array) {
-        if (!(b instanceof Array))
-          return false;
-        if (a.length !== b.length)
-          return false;
-        for (var i = 0; i < a.length; i++)
-          if (!match(a[i],b[i]))
-            return false;
-        return true;
-      }
-
-      // objects
-
-      // Follow Mongo in considering key order to be part of
-      // equality. Key enumeration order is actually not defined in
-      // the ecmascript spec but in practice most implementations
-      // preserve it. (The exception is Chrome, which preserves it
-      // usually, but not for keys that parse as ints.)
-
-      // use the equality method if it exists
-      if (typeof (a.equals) === 'function' && typeof (b.equals) === 'function') {
-        return a.equals(b);
-      }
-      var b_keys = [];
-      for (var x in b)
-        b_keys.push(x);
-      var i = 0;
-      for (var x in a) {
-        if (i >= b_keys.length)
-          return false;
-        if (x !== b_keys[i])
-          return false;
-        if (!match(a[x], b[b_keys[i]]))
-          return false;
-        i++;
-      }
-      if (i !== b_keys.length)
-        return false;
-      return true;
-    };
-    return match(x, qval);
+  _equal: function (a, b) {
+    return EJSON.equals(a, b, {keyOrderSensitive: true});
   },
 
   // if x is not an array, true iff f(x) is true. if x is an array,

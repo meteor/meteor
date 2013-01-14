@@ -169,7 +169,7 @@ EJSON._adjustTypesFromJSONValue = function (obj) {
 // rep of itself (the Object version) or the argument itself.
 
 // DOES NOT RECURSE.  For actually getting the fully-changed value, use
-// Meteor._fromJSONValue
+// EJSON.fromJSONValue
 var fromJSONValueHelper = function (value) {
   if (typeof value === 'object' && value !== null) {
     if (_.size(value) <= 2
@@ -208,6 +208,60 @@ EJSON.parse = function (item) {
 
 EJSON.isBinary = function (obj) {
   return obj instanceof Uint8Array || obj.$Uint8ArrayPolyfill;
+};
+
+EJSON.equals = function (a, b, options) {
+  var i;
+  var keyOrderSensitive = !!(options && options.keyOrderSensitive);
+  if (a === b)
+    return true;
+  if (!(typeof a === 'object' && typeof b === 'object'))
+    return false;
+  if (a instanceof Date && b instanceof Date)
+    return a.valueOf() === b.valueOf();
+  if (EJSON.isBinary(a) && EJSON.isBinary(b)) {
+    if (a.length !== b.length)
+      return false;
+    for (i = 0; i < a.length; i++) {
+      if (a[i] !== b[i])
+        return false;
+    }
+    return true;
+  }
+  if (typeof (a.equals) === 'function')
+    return a.equals(b, options);
+  // fall back to structural equality.
+  if (a instanceof Array) {
+    if (!(b instanceof Array))
+      return false;
+    if (a.length !== b.length)
+      return false;
+    for (i = 0; i < a.length; i++) {
+      if (!EJSON.equals(a[i], b[i], options))
+        return false;
+    }
+    return true;
+  }
+  if (keyOrderSensitive) {
+      var b_keys = [];
+      for (var x in b)
+        b_keys.push(x);
+      i = 0;
+      for (var x in a) {
+        if (i >= b_keys.length)
+          return false;
+        if (x !== b_keys[i])
+          return false;
+        if (!EJSON.equals(a[x], b[b_keys[i]]))
+          return false;
+        i++;
+      }
+      if (i !== b_keys.length)
+        return false;
+      return true;
+  } else {
+    return _.isEqual(a, b);
+  }
 };
 
 EJSON.clone = function (v) {

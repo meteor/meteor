@@ -552,7 +552,7 @@ LocalCollection._removeFromResults = function (query, doc) {
 };
 
 LocalCollection._updateInResults = function (query, doc, old_doc) {
-  if (!_.isEqual(doc._id, old_doc._id))
+  if (!EJSON.equals(doc._id, old_doc._id))
     throw new Error("Can't change a doc's _id while updating");
 
   if (!query.ordered) {
