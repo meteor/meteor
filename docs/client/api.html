@@ -420,38 +420,6 @@ In this release, `Meteor.connect` can only be called on the client.
 Servers can not yet connect to other servers.
 {{/warning}}
 
-<h2 id="meteor_types"><span>Supported Datatypes</span></h2>
-
-In publishers, method arguments and results, Mongo databases, and
-[`Session`](#session) variables meteor support all JSON-able datatypes, as well
-as:
-
- - `Date`
- - [`Meteor.Collection.ObjectID`](#collection_object_id)
-
-<h3 id="meteor_custom_type"><span>Custom Datatypes</span></h3>
-
-Meteor allows you to add your own datatypes to the communication protocol
-between the server and the client.  As long as you add the type in the same
-way on both the server and the client, Meteor will handle
-
- - publishing objects of your type if you pass them to publish handlers
- - allowing your type in the return values or arguments to
-   [methods](#methods_header)
- - storing your type client-side in minimongo (but not MongoDB on the server)
- - allowing your type in [`Session`](#session) variables
-
-{{> api_box addCustomType}}
-
-Instances of your custom type should implement the following interface:
-
-{{> api_box type_clone}}
-{{> api_box type_equals}}
-{{> api_box type_typeName}}
-{{> api_box type_toJSONValue}}
-
-
-
 <h2 id="collections"><span>Collections</span></h2>
 
 Meteor stores data in *collections*.  To get started, declare a
@@ -2371,6 +2339,79 @@ called until after the currently-flushing context's callbacks have all been
 run.
 
 
+<h2 id="ejson"><span>EJSON</span></h2>
+
+EJSON is an extension of JSON to support more types. It supports all JSON-safe
+types, as well as:
+
+ - **Date** (JavaScript `Date`)
+ - **Binary** (JavaScript `Uint8Array` or the
+   result of [`EJSON.newBinary(size)`](#ejson_new_binary))
+ - **User-defined types** (see [`EJSON.addType(name, factory)`](#ejson_add_type))
+
+Along with serialization and deserialization, EJSON also defines equality and
+deep-cloning operations on its supported types.
+
+All EJSON serializations are also valid JSON.  For example an object with a date
+and a binary buffer would be serialized in EJSON like so:
+
+    {
+      "d": {"$date": 1358205756553},
+      "b": {"$binary": "c3VyZS4="}
+    }
+
+In publishers, method arguments and results, Mongo databases, and
+[`Session`](#session) variables, Meteor supports all built-in EJSON datatypes,
+and also provides support for the Mongo `Meteor.Collection.ObjectID` type in
+EJSON.
+
+{{> api_box ejsonParse}}
+
+{{> api_box ejsonStringify}}
+
+{{> api_box ejsonFromJSONValue}}
+
+{{> api_box ejsonToJSONValue}}
+
+{{> api_box ejsonEquals}}
+
+{{> api_box ejsonClone}}
+
+{{> api_box ejsonNewBinary}}
+
+On implementations of JavaScript that support `Uint8Array`, buffers of binary
+data are represented by `Uint8Array` instances.  On implementations of
+JavaScript that do not support `Uint8Array`, buffers of binary data are
+represented by standard arrays with numbers in them ranging from 0 to 255, and
+the `$Uint8ArrayPolyfill` key set to `true`.
+
+{{> api_box ejsonAddType}}
+
+When you add a type to EJSON, Meteor will be able to use that type in:
+
+ - publishing objects of your type if you pass them to publish handlers
+ - allowing your type in the return values or arguments to
+   [methods](#methods_header)
+ - storing your type client-side in minimongo (but not MongoDB on the server)
+ - allowing your type in [`Session`](#session) variables
+
+Instances of your type should implement the following interface:
+
+{{> api_box ejsonTypeClone}}
+
+If `a = b.clone()`, modifications to `a` should never affect the value of `b`,
+and modifications to `b` should never affect the value of a.
+
+{{> api_box ejsonTypeEquals}}
+
+The `equals` method should define an [equivalence relation](http://en.wikipedia.org/wiki/Equivalence_relation).  It should have the following properties:
+
+ - *Reflexivity* - for any instance `a`: `a.equals(a)` must be true.
+ - *Symmetry* - for any two instances `a` and `b`: `a.equals(b)` if and only if `b.equals(a)`.
+ - *Transitivity* - for any three instances `a`, `b`, and `c`: `a.equals(b)` and `b.equals(c)` implies `a.equals(c)`.
+
+{{> api_box ejsonTypeName}}
+{{> api_box ejsonTypeToJSONValue}}
 
 <h2 id="meteor_http"><span>Meteor.http</span></h2>
 
