@@ -9,7 +9,11 @@ Package.on_use(function (api) {
   // This code will run when your package is used,
   // which is at runtime.
   
-  // This line adds the file "hello.html" to the client
+  // This line specifies other packages that your package
+  // will depend on.
+  api.use(["templating"], "client");
+  
+  // This line adds the file "hello.html" and "hello.js" to the client
   // at runtime.
-  api.add_files(["hello.html"], "client");
+  api.add_files(["hello.html", "hello.js"], "client");
 });
