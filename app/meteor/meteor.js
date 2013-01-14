@@ -165,7 +165,10 @@ Fiber(function () {
       }
       
       files.cp_r(path.join(__dirname, 'package-skel'), packagename);
-      process.stderr.write(packagename + ": created");
+      var message = packagename + ": created\n" +
+                    "To register your new smart package: \n" +
+                    "    meteor register " + packagename + "\n";
+      process.stdout.write(message);
     }
   });
 
@@ -289,6 +292,52 @@ Fiber(function () {
   });
 
   Commands.push({
+    name: "register",
+    help: "Register a custom smart package for use with Meteor",
+    func: function (argv) {
+      var opt = require("optimist")
+            .describe("undo", "Un-register a registered smart package.")
+            .usage(
+              "Usage: meteor register <name>\n" +
+                "       meteor register --undo <name>\n" +
+                "\n" +
+                "Registers a custom smart package, created with 'meteor package', \n" +
+                "for use with meteor. You can also pass an absolute or realtive path."
+            );
+      var new_argv = opt.argv;
+      var packagename;
+      var packages = require(path.join(__dirname, '..', 'lib', 'packages.js'));  
+      
+      if (argv._.length === 1)
+        packagename = argv._[0];
+      else if (argv._.length === 0 && new_argv.undo)
+        packagename = new_argv.undo;
+      
+      if (argv.help || !packagename) {
+        process.stdout.write(opt.help()); process.exit(1);
+      }
+      
+      if ((! files.is_package_dir(packagename)) && (! new_argv.undo)) {
+        process.stdout.write("Not a package directory.\n");
+        process.exit(1);
+      }
+      
+      if (! new_argv.undo)
+        packages.register(packagename);
+      else
+        packages.unregister(packagename);
+      
+      if (! new_argv.undo) {
+        var dirs = packagename.split("/");
+        packagename = dirs[dirs.length - 1];
+        var message = "To use your new smart package: \n" +
+                      "    meteor add " + packagename + "\n";
+        process.stdout.write(message);
+      }
+    }
+  });
+
+  Commands.push({
     name: "add",
     help: "Add a package to this project",
     func: function (argv) {
@@ -362,18 +411,43 @@ Fiber(function () {
     name: "list",
     help: "List available packages",
     func: function (argv) {
+      var opt = require("optimist")
+            .boolean("custom")
+            .describe("custom", "List custom packages that have been registered with 'meteor register'.")
+            .boolean("using")
+            .describe("using", "List packages that you have added to your project.")
+            .usage(
+              "Usage: meteor list [--using]\n" +
+                "       meteor list [--custom]\n" +
+                "\n" +
+                "Without arguments, lists all available Meteor packages. To add one\n" +
+                "of these packages to your project, see 'meteor add'."
+            );
+      
+      var new_argv = opt.argv;
+      
       if (argv.help) {
-        process.stdout.write(
-          "Usage: meteor list [--using]\n" +
-            "\n" +
-            "Without arguments, lists all available Meteor packages. To add one\n" +
-            "of these packages to your project, see 'meteor add'.\n" +
-            "\n" +
-            "With --using, list the packages that you have added to your project.\n");
+        process.stdout.write(opt.help());
         process.exit(1);
       }
-
-      if (argv.using) {
+      
+      if (new_argv.custom) {
+        var packagelist = fs.readdirSync(files.get_package_dirs()[1]);
+        if (packagelist.length > 0) {
+          _.each(packagelist, function (name) {
+            process.stdout.write(name + "\n");
+          });
+        } else {
+          var message = "No custom packages registered yet.\n" +
+                        "To create and register a package: \n" +
+                        "    meteor package <name>\n" +
+                        "    meteor register <name>\n";
+          process.stdout.write(message);
+        }
+        return;
+      }
+      
+      if (new_argv.using) {
         var app_dir = require_project('list --using');
         var using = require(path.join(__dirname, '..', 'lib', 'project.js')).get_packages(app_dir);
 
