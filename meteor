@@ -54,7 +54,7 @@ function install_dev_bundle {
         echo "Skipping download and installing kit from $SCRIPT_DIR/$TARBALL"
         tar -xzf "$SCRIPT_DIR/$TARBALL" -C "$TMPDIR"
     else
-        sh ./admin/generate-dev-bundle.sh
+        bash ./admin/generate-dev-bundle.sh
         tar -xzf "$SCRIPT_DIR/$TARBALL" -C "$TMPDIR"
         # don't curl run the gen dev bundle script
         #curl -# https://d3sqy0vbqsdhku.cloudfront.net/$TARBALL | tar -xzf - -C "$TMPDIR"
