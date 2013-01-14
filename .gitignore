@@ -1,6 +1,7 @@
 .DS_Store
 *~
 /dev_bundle
+dev_bundle_Darwin_x86_64_0.2.12.tar.gz
 /dist
 \#*\#
 .\#*
