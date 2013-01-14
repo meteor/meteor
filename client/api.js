@@ -65,47 +65,105 @@ Template.api.settings = {
           "be an empty object."]
 };
 
-Template.api.addCustomType = {
-  id: "meteor_add_custom_type",
-  name: "Meteor.addCustomType(name, factory)",
+Template.api.ejsonParse = {
+  id: "ejson_parse",
+  name: "EJSON.parse(str)",
+  locus: "Anywhere",
+  args: [ {name: "str", type: "String", descr: "A string to parse into an EJSON value."} ],
+  descr: ["Parses a string into an EJSON value.  Compare `JSON.parse`."]
+},
+
+Template.api.ejsonStringify = {
+  id: "ejson_stringify",
+  name: "EJSON.stringify(val)",
+  locus: "Anywhere",
+  args: [ {name: "val", type: "EJSON-compatible value", descr: "A value to stringify."} ],
+  descr: ["Serializes an object to a string.  Compare `JSON.stringify`."]
+},
+
+
+Template.api.ejsonFromJSONValue = {
+  id: "ejson_from_json_value",
+  name: "EJSON.fromJSONValue(val)",
+  locus: "Anywhere",
+  args: [ {name: "val", type: "JSON-compatible value", descr: "A value to turn into an EJSON object"} ],
+  descr: ["Turns a plain JSON-able object into its EJSON form."]
+},
+
+Template.api.ejsonToJSONValue = {
+  id: "ejson_to_json_value",
+  name: "EJSON.toJSONValue(val)",
+  locus: "Anywhere",
+  args: [ {name: "val", type: "EJSON-compatible value", descr: "A value to convert to its plain JSON form."} ],
+  descr: ["Turns an EJSON-compatible object into its plain JSON equivalent."]
+},
+
+Template.api.ejsonEquals = {
+  id: "ejson_equals",
+  name: "EJSON.equals(a, b)", //doc options?
+  locus: "Anywhere",
+  args: [ {name: "a", type: "EJSON-compatible object"},
+          {name: "b", type: "EJSON-compatible object"} ],
+  descr: ["Returns true if `a` and `b` are equal to each other.  Uses the `equals` method on `a` if present, otherwise uses structural equality."]
+},
+
+Template.api.ejsonClone = {
+  id: "ejson_clone",
+  name: "EJSON.clone(val)",
+  locus: "Anywhere",
+  args: [ {name: "val", type: "EJSON-compatible value", descr: "A value to copy."} ],
+  descr: ["Returns a version of the given value such that any modification to one does not affect the other."]
+},
+
+Template.api.ejsonNewBinary = {
+  id: "ejson_new_binary",
+  name: "EJSON.newBinary(size)",
+  locus: "Anywhere",
+  args: [ {name: "size", type: "Number", descr: "The number of bytes of binary data to allocate"} ],
+  descr: ["Allocates a new buffer of binary data that EJSON can serialize"]
+},
+
+Template.api.ejsonAddType = {
+  id: "ejson_add_type",
+  name: "EJSON.addType(name, factory)",
   locus: "Anywhere",
   args: [
     {name: "name",
      type: "String",
-     descr: "A name to tag instances of your custom type in our data protocol; must be unique among custom data types defined in your project, and must match the result of your type's `typeName` method"
+     descr: "A name to tag instances of your custom type in EJSON; must be unique among custom data types defined in your project, and must match the result of your type's `typeName` method."
     },
     {name: "factory",
      type: "Function",
      descr: "A function that takes in a JSON-compatible value such as produced by your type's " +
-     "[`toJSONValue`](#type_toJSONValue) method and produces an object of your custom type"
+     "[`toJSONValue`](#type_toJSONValue) method and produces an object of your custom type."
     }
   ],
-  descr: ["Adds a custom datatype to Meteor's communication protocol.  The type must obey the following interface: "]
+  descr: ["Adds a custom datatype to EJSON."]
 };
 
-Template.api.type_clone = {
-  id: "type_clone",
-  name: "<i>custom</i>.clone()",
-  descr: ["Produces a new instance of this object, equal to this one"]
+Template.api.ejsonTypeClone = {
+  id: "ejson_type_clone",
+  name: "<i>instance</i>.clone()",
+  descr: ["Produces a new instance of this object, equal to this one."]
 };
 
-Template.api.type_equals = {
-  id: "type_equals",
-  name: "<i>custom</i>.equals(other)",
-  args: [ {name: "other", type: "object", descr: "Another object to compare this to"}],
-  descr: ["Returns `true` if `other` has a value equal to `this`; `false` otherwise"]
+Template.api.ejsonTypeEquals = {
+  id: "ejson_type_equals",
+  name: "<i>instance</i>.equals(other)",
+  args: [ {name: "other", type: "object", descr: "Another object to compare this to."}],
+  descr: ["Returns `true` if `other` has a value equal to `this`; `false` otherwise."]
 };
 
-Template.api.type_typeName = {
-  id: "type_typeName",
-  name: "<i>custom</i>.typeName()",
-  descr: ["Returns the type name you used to register this type with [`Meteor.addCustomType`](#meteor_add_custom_type)"]
+Template.api.ejsonTypeName = {
+  id: "ejson_type_typeName",
+  name: "<i>instance</i>.typeName()",
+  descr: ["Returns the type name you used to register this type with [`EJSON.addType`](#ejson_add_type)."]
 };
 
-Template.api.type_toJSONValue = {
-  id: "type_toJSONValue",
-  name: "<i>custom</i>.toJSONValue()",
-  descr: ["Returns a JSON-compatable value that can act as the serialization of this type"]
+Template.api.ejsonTypeToJSONValue = {
+  id: "ejson_type_toJSONValue",
+  name: "<i>instance</i>.toJSONValue()",
+  descr: ["Returns a JSON-compatable value that can act as the serialization of this type."]
 };
 
 Template.api.publish = {

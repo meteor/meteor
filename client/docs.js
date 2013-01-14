@@ -129,16 +129,6 @@ var toc = [
       "Meteor.connect"
     ],
 
-    {name: "Datatypes", id: "meteor_types"}, [
-      {name: "Custom Datatypes", id: "meteor_custom_type"},
-      [
-        {instance: "custom", id: "type_clone", name: "clone"},
-        {instance: "custom", id: "type_equals", name: "equals"},
-        {instance: "custom", id: "type_typeName", name: "typeName"},
-        {instance: "custom", id: "type_toJSONValue", name: "toJSONValue"}
-      ]
-    ],
-
     {name: "Collections", id: "collections"}, [
       "Meteor.Collection", [
         {instance: "collection", name: "find"},
@@ -262,6 +252,24 @@ var toc = [
     //     {instance: "env_var", name: "bindEnvironment", id: "env_var_bindenvironment"}
     //   ]
     ],
+
+    {name: "EJSON", id: "ejson"}, [
+      {name: "EJSON.parse", id: "ejson_parse"},
+      {name: "EJSON.stringify", id: "ejson_stringify"},
+      {name: "EJSON.fromJSONValue", id: "ejson_from_json_value"},
+      {name: "EJSON.toJSONValue", id: "ejson_to_json_value"},
+      {name: "EJSON.equals", id: "ejson_equals"},
+      {name: "EJSON.clone", id: "ejson_clone"},
+      {name: "EJSON.newBinary", id: "ejson_new_binary"},
+      {name: "EJSON.addType", id: "ejson_add_type"},
+      [
+        {instance: "custom", id: "ejson_type_clone", name: "clone"},
+        {instance: "custom", id: "ejson_type_equals", name: "equals"},
+        {instance: "custom", id: "ejson_type_typeName", name: "typeName"},
+        {instance: "custom", id: "ejson_type_toJSONValue", name: "toJSONValue"}
+      ]
+    ],
+
 
     "Meteor.http", [
       "Meteor.http.call",
