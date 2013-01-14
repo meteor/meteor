@@ -275,7 +275,7 @@ var packages = module.exports = {
     }
     
     files.cp_r(pkge, path.join(files.get_package_dirs()[1], pkgedirname));
-    process.stdout.write("ajaymt: registered\n");
+    process.stdout.write(pkgedirname + ": registered\n");
   },
 
   // un-register a package
@@ -291,7 +291,7 @@ var packages = module.exports = {
     }
     
     files.rm_recursive(path.join(files.get_package_dirs()[1], pkge));
-    process.stdout.write("ajaymt: unregistered\n");
+    process.stdout.write(pkgedirname + ": unregistered\n");
   },
 
   // get all packages in the directory, in a map from package name to
