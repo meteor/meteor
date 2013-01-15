@@ -13,6 +13,8 @@
 * Increase the maximum size spiderable will return for a page from 200kB
   to 5MB.
 
+* New 'facts' package publishes internal statistics about Meteor.
+
 * Upgraded dependencies:
   * SockJS server from 0.3.7 to 0.3.8
 

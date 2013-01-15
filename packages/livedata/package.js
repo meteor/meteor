@@ -22,6 +22,9 @@ Package.on_use(function (api) {
   // runs Meteor.publish while it's loaded.
   api.use('autopublish', 'server', {weak: true});
 
+  // If the facts package is loaded, publish some statistics.
+  api.use('facts', 'server', {weak: true});
+
   api.export('DDP');
   api.export('DDPServer', 'server');
 
