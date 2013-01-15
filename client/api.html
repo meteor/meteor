@@ -939,17 +939,17 @@ This returns a random text string such as ``"Jjwjg6gouWLXhMGKW"``
 that is likely to be unique in the whole world.
 
 Currently Meteor uses this function to generate `_id` fields for new Mongo
-documents by default. If you want native binary Mongo IDs instead, pass
-`"MONGO"` as the `idGeneration` option to
+documents by default. If your database requires native binary Mongo IDs instead,
+pass `"MONGO"` as the `idGeneration` option to
 [`Meteor.Collection`](#meteor_collection).
 
 
 {{#note}}
-  In the current implementation, the returned string is derived from a
-  pseudorandom number generator that is seeded with the current time, the native
-  JavaScript random number generator, and a few other pieces of information. The
-  IDs generated definitely are not random enough to be used for cryptographic
-  or security purposes.
+
+In the current implementation, the returned string is derived from a
+pseudorandom number generator. The IDs generated definitely are not random
+enough to be used for cryptographic or security purposes.
+
 {{/note}}
 
 {{> api_box collection_object_id}}
@@ -2346,24 +2346,20 @@ types, as well as:
 
  - **Date** (JavaScript `Date`)
  - **Binary** (JavaScript `Uint8Array` or the
-   result of [`EJSON.newBinary(size)`](#ejson_new_binary))
- - **User-defined types** (see [`EJSON.addType(name, factory)`](#ejson_add_type))
-
-Along with serialization and deserialization, EJSON also defines equality and
-deep-cloning operations on its supported types.
+   result of [`EJSON.newBinary`](#ejson_new_binary))
+ - **User-defined types** (see [`EJSON.addType`](#ejson_add_type).  For example,
+ [`Meteor.Collection.ObjectID`](#collection_object_id) is implemented this way.)
 
 All EJSON serializations are also valid JSON.  For example an object with a date
-and a binary buffer would be serialized in EJSON like so:
+and a binary buffer would be serialized in EJSON as:
 
     {
       "d": {"$date": 1358205756553},
       "b": {"$binary": "c3VyZS4="}
     }
 
-In publishers, method arguments and results, Mongo databases, and
-[`Session`](#session) variables, Meteor supports all built-in EJSON datatypes,
-and also provides support for the Mongo `Meteor.Collection.ObjectID` type in
-EJSON.
+Meteor supports all built-in EJSON data types in publishers, method arguments
+and results, Mongo databases, and [`Session`](#session) variables.
 
 {{> api_box ejsonParse}}
 
@@ -2379,32 +2375,39 @@ EJSON.
 
 {{> api_box ejsonNewBinary}}
 
-On implementations of JavaScript that support `Uint8Array`, buffers of binary
-data are represented by `Uint8Array` instances.  On implementations of
-JavaScript that do not support `Uint8Array`, buffers of binary data are
-represented by standard arrays with numbers in them ranging from 0 to 255, and
-the `$Uint8ArrayPolyfill` key set to `true`.
+Buffers of binary data are represented by `Uint8Array` instances on JavaScript
+platforms that support them.  On implementations of JavaScript that do not
+support `Uint8Array`, binary data buffers are represented by standard arrays
+containing numbers ranging from 0 to 255, and the `$Uint8ArrayPolyfill` key
+set to `true`.
 
 {{> api_box ejsonAddType}}
 
 When you add a type to EJSON, Meteor will be able to use that type in:
 
- - publishing objects of your type if you pass them to publish handlers
+ - publishing objects of your type if you pass them to publish handlers.
  - allowing your type in the return values or arguments to
-   [methods](#methods_header)
- - storing your type client-side in minimongo (but not MongoDB on the server)
- - allowing your type in [`Session`](#session) variables
+   [methods](#methods_header).
+ - storing your type client-side in Minimongo.
+ - allowing your type in [`Session`](#session) variables.
+
+{{#note}}
+
+  MongoDB cannot store most user-defined types natively on the server.  Your
+  type will work in Minimongo, and you can send it to the client using a custom
+  publisher, but MongoDB only knows about the types defined in [BSON](http://bsonspec.org/).
+
+{{/note}}
 
 Instances of your type should implement the following interface:
 
 {{> api_box ejsonTypeClone}}
 
-If `a = b.clone()`, modifications to `a` should never affect the value of `b`,
-and modifications to `b` should never affect the value of a.
-
 {{> api_box ejsonTypeEquals}}
 
-The `equals` method should define an [equivalence relation](http://en.wikipedia.org/wiki/Equivalence_relation).  It should have the following properties:
+The `equals` method should define an [equivalence
+relation](http://en.wikipedia.org/wiki/Equivalence_relation).  It should have
+the following properties:
 
  - *Reflexivity* - for any instance `a`: `a.equals(a)` must be true.
  - *Symmetry* - for any two instances `a` and `b`: `a.equals(b)` if and only if `b.equals(a)`.
@@ -2412,6 +2415,13 @@ The `equals` method should define an [equivalence relation](http://en.wikipedia.
 
 {{> api_box ejsonTypeName}}
 {{> api_box ejsonTypeToJSONValue}}
+
+For example, the `toJSONValue` method for
+[`Meteor.Collection.ObjectID`](#collection_object_id) could be:
+
+    function () {
+      return this.toHexString();
+    };
 
 <h2 id="meteor_http"><span>Meteor.http</span></h2>
 
