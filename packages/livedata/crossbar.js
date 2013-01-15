@@ -27,8 +27,12 @@ _.extend(DDPServer._InvalidationCrossbar.prototype, {
     var self = this;
     var id = self.next_id++;
     self.listeners[id] = {trigger: EJSON.clone(trigger), callback: callback};
+    Package.facts && Package.facts.Facts.incrementServerFact(
+      "livedata", "crossbar-listeners", 1);
     return {
       stop: function () {
+        Package.facts && Package.facts.Facts.incrementServerFact(
+          "livedata", "crossbar-listeners", -1);
         delete self.listeners[id];
       }
     };

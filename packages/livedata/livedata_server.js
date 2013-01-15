@@ -257,6 +257,9 @@ var Session = function (server, version, socket) {
   Fiber(function () {
     self.startUniversalSubs();
   }).run();
+
+  Package.facts && Package.facts.Facts.incrementServerFact(
+    "livedata", "sessions", 1);
 };
 
 _.extend(Session.prototype, {
@@ -341,7 +344,6 @@ _.extend(Session.prototype, {
     view.changed(subscriptionHandle, id, fields);
   },
 
-
   startUniversalSubs: function () {
     var self = this;
     // Make a shallow copy of the set of universal handlers and start them. If
@@ -371,6 +373,8 @@ _.extend(Session.prototype, {
     // Drop the merge box data immediately.
     self.collectionViews = {};
     self.inQueue = null;
+    Package.facts && Package.facts.Facts.incrementServerFact(
+      "livedata", "sessions", -1);
   },
 
   // Send a message (doing nothing if no socket is connected right now.)
@@ -768,6 +772,9 @@ var Subscription = function (
     idStringify: LocalCollection._idStringify,
     idParse: LocalCollection._idParse
   };
+
+  Package.facts && Package.facts.Facts.incrementServerFact(
+    "livedata", "subscriptions", 1);
 };
 
 _.extend(Subscription.prototype, {
@@ -855,6 +862,8 @@ _.extend(Subscription.prototype, {
       return;
     self._deactivated = true;
     self._callStopCallbacks();
+    Package.facts && Package.facts.Facts.incrementServerFact(
+      "livedata", "subscriptions", -1);
   },
 
   _callStopCallbacks: function () {

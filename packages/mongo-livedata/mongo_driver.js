@@ -989,6 +989,9 @@ var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
       Meteor.clearInterval(intervalHandle);
     });
   }
+
+  Package.facts && Package.facts.Facts.incrementServerFact(
+    "mongo-livedata", "live-results-sets", 1);
 };
 
 _.extend(LiveResultsSet.prototype, {
@@ -1000,6 +1003,8 @@ _.extend(LiveResultsSet.prototype, {
       throw new Error("Call _addFirstObserveHandle before polling!");
 
     self._observeHandles[handle._observeHandleId] = handle;
+    Package.facts && Package.facts.Facts.incrementServerFact(
+      "mongo-livedata", "observe-handles", 1);
 
     // Run the first _poll() cycle synchronously (delivering results to the
     // first ObserveHandle).
@@ -1115,6 +1120,8 @@ _.extend(LiveResultsSet.prototype, {
         throw new Error("Duplicate observe handle ID");
       self._observeHandles[handle._observeHandleId] = handle;
       --self._addHandleTasksScheduledButNotPerformed;
+      Package.facts && Package.facts.Facts.incrementServerFact(
+        "mongo-livedata", "observe-handles", 1);
 
       // Send initial adds.
       if (handle._added || handle._addedBefore) {
@@ -1143,6 +1150,8 @@ _.extend(LiveResultsSet.prototype, {
     if (!_.has(self._observeHandles, handle._observeHandleId))
       throw new Error("Unknown observe handle ID " + handle._observeHandleId);
     delete self._observeHandles[handle._observeHandleId];
+    Package.facts && Package.facts.Facts.incrementServerFact(
+      "mongo-livedata", "observe-handles", -1);
 
     if (_.isEmpty(self._observeHandles) &&
         self._addHandleTasksScheduledButNotPerformed === 0) {
@@ -1151,6 +1160,8 @@ _.extend(LiveResultsSet.prototype, {
       //  - stops the poll timer
       //  - removes us from the invalidation crossbar
       _.each(self._stopCallbacks, function (c) { c(); });
+      Package.facts && Package.facts.Facts.incrementServerFact(
+        "mongo-livedata", "live-results-sets", -1);
       // This will cause future _addObserveHandleAndSendInitialAdds calls to
       // throw.
       self._observeHandles = null;
