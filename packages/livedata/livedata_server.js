@@ -247,6 +247,11 @@ Meteor._LivedataSession = function (server, version) {
   // when we are rerunning subscriptions, any ready messages
   // we want to buffer up for when we are done rerunning subscriptions
   self._pendingReady = [];
+
+  Meteor.Facts && Meteor.Facts.incrementServerFact(
+    "livedata", "sessions-detached", 1);
+  Meteor.Facts && Meteor.Facts.incrementServerFact(
+    "livedata", "sessions", 1);
 };
 
 _.extend(Meteor._LivedataSession.prototype, {
@@ -340,6 +345,10 @@ _.extend(Meteor._LivedataSession.prototype, {
     }
 
     self.socket = socket;
+    Meteor.Facts && Meteor.Facts.incrementServerFact(
+      "livedata", "sessions-detached", -1);
+    Meteor.Facts && Meteor.Facts.incrementServerFact(
+      "livedata", "sessions-attached", 1);
     self.last_connect_time = +(new Date);
     _.each(self.out_queue, function (msg) {
       self.socket.send(Meteor._stringifyDDP(msg));
@@ -376,6 +385,10 @@ _.extend(Meteor._LivedataSession.prototype, {
     if (socket === self.socket) {
       self.socket = null;
       self.last_detach_time = +(new Date);
+      Meteor.Facts && Meteor.Facts.incrementServerFact(
+        "livedata", "sessions-attached", -1);
+      Meteor.Facts && Meteor.Facts.incrementServerFact(
+        "livedata", "sessions-detached", 1);
     }
     if (socket.meteor_session === self)
       socket.meteor_session = null;
@@ -417,6 +430,10 @@ _.extend(Meteor._LivedataSession.prototype, {
     // Drop the merge box data immediately.
     self.collectionViews = {};
     self.in_queue = self.out_queue = [];
+    Meteor.Facts && Meteor.Facts.incrementServerFact(
+      "livedata", "sessions-detached", -1);
+    Meteor.Facts && Meteor.Facts.incrementServerFact(
+      "livedata", "sessions", -1);
   },
 
   // Send a message (queueing it if no socket is connected right now.)
@@ -806,6 +823,9 @@ Meteor._LivedataSubscription = function (
     idStringify: Meteor.idStringify,
     idParse: Meteor.idParse
   };
+
+  Meteor.Facts && Meteor.Facts.incrementServerFact(
+    "livedata", "subscriptions", 1);
 };
 
 _.extend(Meteor._LivedataSubscription.prototype, {
@@ -881,6 +901,8 @@ _.extend(Meteor._LivedataSubscription.prototype, {
       return;
     self._deactivated = true;
     self._callStopCallbacks();
+    Meteor.Facts && Meteor.Facts.incrementServerFact(
+      "livedata", "subscriptions", -1);
   },
 
   _callStopCallbacks: function () {

@@ -566,11 +566,15 @@ var ObserveHandle = function (liveResultsSet, callbacks) {
   self._moved = callbacks.moved;
   self._movedBefore = callbacks.movedBefore;
   self._observeHandleId = nextObserveHandleId++;
+  Meteor.Facts && Meteor.Facts.incrementServerFact(
+    "mongo-livedata", "observe-handles", 1);
 };
 ObserveHandle.prototype.stop = function () {
   var self = this;
   self._liveResultsSet._removeObserveHandle(self);
   self._liveResultsSet = null;
+  Meteor.Facts && Meteor.Facts.incrementServerFact(
+    "mongo-livedata", "observe-handles", -1);
 };
 
 _Mongo.prototype._observeChanges = function (
@@ -735,6 +739,9 @@ var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
       Meteor.clearInterval(intervalHandle);
     });
   }
+
+  Meteor.Facts && Meteor.Facts.incrementServerFact(
+    "mongo-livedata", "live-results-sets", 1);
 };
 
 _.extend(LiveResultsSet.prototype, {
@@ -897,6 +904,8 @@ _.extend(LiveResultsSet.prototype, {
       //  - stops the poll timer
       //  - removes us from the invalidation crossbar
       _.each(self._stopCallbacks, function (c) { c(); });
+      Meteor.Facts && Meteor.Facts.incrementServerFact(
+        "mongo-livedata", "live-results-sets", -1);
       // This will cause future _addObserveHandleAndSendInitialAdds calls to
       // throw.
       self._observeHandles = null;
