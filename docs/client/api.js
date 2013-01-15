@@ -70,7 +70,7 @@ Template.api.ejsonParse = {
   name: "EJSON.parse(str)",
   locus: "Anywhere",
   args: [ {name: "str", type: "String", descr: "A string to parse into an EJSON value."} ],
-  descr: ["Parses a string into an EJSON value.  Compare `JSON.parse`."]
+  descr: ["Parse a string into an EJSON value."]
 },
 
 Template.api.ejsonStringify = {
@@ -78,7 +78,7 @@ Template.api.ejsonStringify = {
   name: "EJSON.stringify(val)",
   locus: "Anywhere",
   args: [ {name: "val", type: "EJSON-compatible value", descr: "A value to stringify."} ],
-  descr: ["Serializes an object to a string.  Compare `JSON.stringify`."]
+  descr: ["Serialize an object to a string."]
 },
 
 
@@ -86,16 +86,16 @@ Template.api.ejsonFromJSONValue = {
   id: "ejson_from_json_value",
   name: "EJSON.fromJSONValue(val)",
   locus: "Anywhere",
-  args: [ {name: "val", type: "JSON-compatible value", descr: "A value to turn into an EJSON object"} ],
-  descr: ["Turns a plain JSON-able object into its EJSON form."]
+  args: [ {name: "val", type: "JSON-compatible value", descr: "A value to deserialize into EJSON."} ],
+  descr: ["Deserialize an EJSON value from its  plain JSON representation."]
 },
 
 Template.api.ejsonToJSONValue = {
   id: "ejson_to_json_value",
   name: "EJSON.toJSONValue(val)",
   locus: "Anywhere",
-  args: [ {name: "val", type: "EJSON-compatible value", descr: "A value to convert to its plain JSON form."} ],
-  descr: ["Turns an EJSON-compatible object into its plain JSON equivalent."]
+  args: [ {name: "val", type: "EJSON-compatible value", descr: "A value to serialize to plain JSON."} ],
+  descr: ["Serialize an EJSON-compatible value into its plain JSON representation."]
 },
 
 Template.api.ejsonEquals = {
@@ -104,7 +104,8 @@ Template.api.ejsonEquals = {
   locus: "Anywhere",
   args: [ {name: "a", type: "EJSON-compatible object"},
           {name: "b", type: "EJSON-compatible object"} ],
-  descr: ["Returns true if `a` and `b` are equal to each other.  Uses the `equals` method on `a` if present, otherwise uses structural equality."]
+  descr: ["Return true if `a` and `b` are equal to each other.  Return false otherwise." +
+          "  Uses the `equals` method on `a` if present, otherwise performs a deep comparison."]
 },
 
 Template.api.ejsonClone = {
@@ -112,15 +113,15 @@ Template.api.ejsonClone = {
   name: "EJSON.clone(val)",
   locus: "Anywhere",
   args: [ {name: "val", type: "EJSON-compatible value", descr: "A value to copy."} ],
-  descr: ["Returns a version of the given value such that any modification to one does not affect the other."]
+  descr: ["Return a deep copy of `val`."]
 },
 
 Template.api.ejsonNewBinary = {
   id: "ejson_new_binary",
   name: "EJSON.newBinary(size)",
   locus: "Anywhere",
-  args: [ {name: "size", type: "Number", descr: "The number of bytes of binary data to allocate"} ],
-  descr: ["Allocates a new buffer of binary data that EJSON can serialize"]
+  args: [ {name: "size", type: "Number", descr: "The number of bytes of binary data to allocate."} ],
+  descr: ["Allocate a new buffer of binary data that EJSON can serialize."]
 },
 
 Template.api.ejsonAddType = {
@@ -130,40 +131,39 @@ Template.api.ejsonAddType = {
   args: [
     {name: "name",
      type: "String",
-     descr: "A name to tag instances of your custom type in EJSON; must be unique among custom data types defined in your project, and must match the result of your type's `typeName` method."
+     descr: "A tag for your custom type; must be unique among custom data types defined in your project, and must match the result of your type's `typeName` method."
     },
     {name: "factory",
      type: "Function",
-     descr: "A function that takes in a JSON-compatible value such as produced by your type's " +
-     "[`toJSONValue`](#type_toJSONValue) method and produces an object of your custom type."
+     descr: "A function that deserializes a JSON-compatible value into an instance of your type.  This should match the serialization performed by your type's `toJSONValue` method."
     }
   ],
-  descr: ["Adds a custom datatype to EJSON."]
+  descr: ["Add a custom datatype to EJSON."]
 };
 
 Template.api.ejsonTypeClone = {
   id: "ejson_type_clone",
   name: "<i>instance</i>.clone()",
-  descr: ["Produces a new instance of this object, equal to this one."]
+  descr: ["Return a value `r` such that `this.equals(r)` is true, and modifications to `r` do not affect `this` and vice versa."]
 };
 
 Template.api.ejsonTypeEquals = {
   id: "ejson_type_equals",
   name: "<i>instance</i>.equals(other)",
   args: [ {name: "other", type: "object", descr: "Another object to compare this to."}],
-  descr: ["Returns `true` if `other` has a value equal to `this`; `false` otherwise."]
+  descr: ["Return `true` if `other` has a value equal to `this`; `false` otherwise."]
 };
 
 Template.api.ejsonTypeName = {
   id: "ejson_type_typeName",
   name: "<i>instance</i>.typeName()",
-  descr: ["Returns the type name you used to register this type with [`EJSON.addType`](#ejson_add_type)."]
+  descr: ["Return the tag used to identify this type.  This must match the tag used to register this type with [`EJSON.addType`](#ejson_add_type)."]
 };
 
 Template.api.ejsonTypeToJSONValue = {
   id: "ejson_type_toJSONValue",
   name: "<i>instance</i>.toJSONValue()",
-  descr: ["Returns a JSON-compatable value that can act as the serialization of this type."]
+  descr: ["Serialize this instance into a JSON-compatible value."]
 };
 
 Template.api.publish = {
@@ -666,7 +666,7 @@ Template.api.id = {
   id: "meteor_id",
   name: "Meteor.id()",
   locus: "Anywhere",
-  descr: ["Returns a unique identifier."],
+  descr: ["Return a unique identifier."],
   args: [ ]
 };
 
@@ -674,11 +674,11 @@ Template.api.collection_object_id = {
   id: "collection_object_id",
   name: "new Meteor.Collection.ObjectID(hexString)",
   locus: "Anywhere",
-  descr: ["Creates a random or specified Mongo `ObjectID`.  If you don't specify a `hexString`, the `ObjectID` will be random (on the client) or semi-random according to MongoDB's ID construction rules (on the server)."],
+  descr: ["Create a Mongo `ObjectID`.  If you don't specify a `hexString`, the `ObjectID` will be random on the client or semi-random according to MongoDB's ID construction rules on the server."],
   args: [ {
     name: "hexString",
     type: "String",
-    descr: ["Optional.  The hexadecimal contents of the ObjectID to create"]
+    descr: ["Optional.  The 24-character hexadecimal contents of the ObjectID to create"]
   }]
 };
 
