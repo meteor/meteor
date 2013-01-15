@@ -252,7 +252,7 @@
        }}
     ];
 
-    signupFields = Accounts.ui._options.extraFields.concat(signupFields);
+    signupFields = Accounts.ui._options.extraSignupFields.concat(signupFields);
 
     return loginButtonsSession.get('inSignupFlow') ? signupFields : loginFields;
   };
@@ -423,28 +423,28 @@
     // prepare the profile object
     options.profile = {};
 
-    // define a proxy function to allow extraFields set error messages
+    // define a proxy function to allow extraSignupFields set error messages
     var errorFn = function(errorMessage) {
       Accounts._loginButtonsSession.errorMessage(errorMessage);
     };
 
-    var invalidExtraFields = false;
+    var invalidExtraSignupFields = false;
 
-    // parse extraFields to populate account's profile data
-    _.each(Accounts.ui._options.extraFields, function (field, index) {
+    // parse extraSignupFields to populate account's profile data
+    _.each(Accounts.ui._options.extraSignupFields, function (field, index) {
       var value = elementValueById('login-' + field.fieldName);
       if (typeof field.validate === 'function') {
         if (field.validate(value, errorFn)) {
           options.profile[field.fieldName] = elementValueById('login-' + field.fieldName);
         } else {
-          invalidExtraFields = true;
+          invalidExtraSignupFields = true;
         }
       } else {
         options.profile[field.fieldName] = elementValueById('login-' + field.fieldName);
       }
     });
 
-    if (invalidExtraFields)
+    if (invalidExtraSignupFields)
       return;
 
     Accounts.createUser(options, function (error) {
