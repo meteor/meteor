@@ -100,7 +100,6 @@ npm install fstream@0.1.21
 npm install tar@0.1.14
 npm install websocket@1.0.8
 npm install jade@0.27.7
-npm install phantomjs@1.8.0-1
 
 # allow clientMaxAge to be set to 0:
 # https://github.com/tomgco/gzippo/pull/49
