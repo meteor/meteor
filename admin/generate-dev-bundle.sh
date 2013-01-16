@@ -97,6 +97,7 @@ npm install keypress@0.1.0
 npm install sockjs@0.3.4
 npm install http-proxy@0.8.5
 npm install underscore@1.4.2
+npm install fstream@0.1.21
 npm install tar@0.1.14
 npm install websocket@1.0.8
 
@@ -112,13 +113,6 @@ npm install progress@0.0.5
 # pinned at older version. 0.1.16+ uses mimelib, not mimelib-noiconv
 # which make the dev bundle much bigger. We need a better solution.
 npm install mailcomposer@0.1.15
-
-# Use our version of fstream with a bug fixed.  Also have tar use it.
-# See https://github.com/isaacs/fstream/pull/11 .
-npm install https://github.com/meteor/fstream/tarball/91c56e7
-cd tar/node_modules
-npm install https://github.com/meteor/fstream/tarball/91c56e7
-cd ../..
 
 # If you update the version of fibers in the dev bundle, also update the "npm
 # install" command in docs/client/concepts.html and in the README in
