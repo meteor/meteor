@@ -177,8 +177,14 @@
           var html = Spark.isolate(function () {
             // XXX Forms needs to run a hook before and after raw_func
             // (and receive 'landmark')
+            
+            var helpers = _.extend({}, partial, tmplData.helpers || {});
+            _.each(tmplData.plugins, function (plugin) {
+              if (plugin.helpers) _.extend(helpers, plugin.helpers);
+            });
+
             return raw_func(data, {
-              helpers: _.extend({}, partial, tmplData.helpers || {}),
+              helpers: helpers,
               partials: Meteor._partials,
               name: name
             });
