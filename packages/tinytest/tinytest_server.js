@@ -1,4 +1,5 @@
 (function () {
+  var Fiber = __meteor_bootstrap__.require('fibers');
   var handlesForRun = {};
   var reportsForRun = {};
 
