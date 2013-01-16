@@ -1,6 +1,6 @@
 ////////// Requires //////////
 
-require("fibers");
+var Fiber = require("fibers");
 
 var fs = require("fs");
 var path = require("path");

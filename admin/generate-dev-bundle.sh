@@ -3,7 +3,7 @@
 set -e
 set -u
 
-BUNDLE_VERSION=0.2.12
+BUNDLE_VERSION=0.2.14
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -88,7 +88,6 @@ npm install mime@1.2.7
 npm install semver@1.1.0
 npm install handlebars@1.0.7
 npm install mongodb@1.1.11
-npm install uglify-js@1.3.4
 npm install clean-css@0.8.3
 npm install useragent@1.1.0
 npm install request@2.12.0
@@ -98,7 +97,13 @@ npm install keypress@0.1.0
 npm install sockjs@0.3.4
 npm install http-proxy@0.8.5
 npm install underscore@1.4.2
+npm install fstream@0.1.21
 npm install tar@0.1.14
+npm install websocket@1.0.8
+
+# uglify-js has a bug which drops 'undefined' in arrays:
+# https://github.com/mishoo/UglifyJS2/pull/97
+npm install https://github.com/meteor/UglifyJS2/tarball/9a4d0d86ed
 
 # progress 0.1.0 has a regression where it opens stdin and thus does not
 # allow the node process to exit cleanly. See
@@ -109,16 +114,10 @@ npm install progress@0.0.5
 # which make the dev bundle much bigger. We need a better solution.
 npm install mailcomposer@0.1.15
 
-# Use our version of fstream with a bug fixed.  Also have tar use it.
-# See https://github.com/isaacs/fstream/pull/11 .
-npm install https://github.com/meteor/fstream/tarball/91c56e7
-cd tar/node_modules
-npm install https://github.com/meteor/fstream/tarball/91c56e7
-cd ../..
-
 # If you update the version of fibers in the dev bundle, also update the "npm
-# install" command in docs/client/concepts.html.
-npm install fibers@0.6.9
+# install" command in docs/client/concepts.html and in the README in
+# app/lib/bundler.js.
+npm install fibers@1.0.0
 # Fibers ships with compiled versions of its C code for a dozen platforms. This
 # bloats our dev bundle, and confuses dpkg-buildpackage and rpmbuild into
 # thinking that the packages need to depend on both 32- and 64-bit versions of
