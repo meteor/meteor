@@ -97,6 +97,30 @@
             (this._tmpl_data.helpers = (this._tmpl_data.helpers || {}));
       for(var h in helperMap)
         helpers[h] = helperMap[h];
+    },
+
+    plugins: function (pluginMap) {
+      var plugins = 
+        (this._tmpl_data.plugins = (this._tmpl_data.plugins || {}));
+
+      // CM: Store callback array for landmark lifecycle methods.
+      var callbackMap =
+        (this._tmpl_data.callbackMap = (this._tmpl_data.callbackMap || {}));
+
+      var plugin;
+      var callbacks;
+
+      for(var p in pluginMap) {
+        plugin = plugins[p] = pluginMap[p];
+        _.each(['created', 'rendered', 'destroyed'], function (cb) {
+          if (plugin[cb]) {
+            callbacks = 
+              (callbackMap[cb] = (callbackMap[cb] || []));
+            //CM: keep plugins 'this' pointing to the plugin itself
+            callbacks.push(_.bind(plugin[cb], plugin));
+          }
+        });
+      }
     }
   };
 
@@ -110,6 +134,20 @@
     var partial = function (data) {
       var tmpl = name && Template[name] || {};
       var tmplData = tmpl._tmpl_data || {};
+      var tmplPlugins = tmplData.plugins || {};
+      var tmplCallbacks = tmplData.callbackMap || {};
+
+      var runCallbacks = function (cbName) {
+        var self = this;
+        var callbacks;
+        var args = _.toArray(arguments).slice(1);
+
+        if (callbacks = tmplCallbacks[cbName]) {
+          _.each(callbacks, function (callback) {
+            callback.apply(self, args);
+          });
+        }
+      };
 
       var html = Spark.labelBranch("Template."+name, function () {
         var html = Spark.createLandmark({
@@ -117,17 +155,22 @@
           created: function () {
             var template = templateObjFromLandmark(this);
             template.data = data;
+            template.plugins = tmplData.plugins;
+            runCallbacks.call(template, 'created', template);
             tmpl.created && tmpl.created.call(template);
           },
           rendered: function () {
             var template = templateObjFromLandmark(this);
             template.data = data;
+            template.plugins = tmplData.plugins;
+            runCallbacks.call(template, 'rendered', template);
             tmpl.rendered && tmpl.rendered.call(template);
           },
           destroyed: function () {
+            var template = templateObjFromLandmark(this);
             // template.data is already set from previous callbacks
-            tmpl.destroyed &&
-              tmpl.destroyed.call(templateObjFromLandmark(this));
+            runCallbacks.call(template, 'destroyed', template);
+            tmpl.destroyed && tmpl.destroyed.call(template);
             delete templateInstanceData[this.id];
           }
         }, function (landmark) {
@@ -164,6 +207,23 @@
           // landmark to get the template data
           if (tmpl.events)
             html = Spark.attachEvents(wrapEventMap(events), html);
+
+          var attachPluginEvents = function (plugin) {
+            if (plugin.events) {
+              // CM: first bind the handlers to the plugin
+              for (var key in plugin.events) {
+                plugin.events[key] = _.bind(plugin.events[key], plugin);
+              }
+
+              html = Spark.attachEvents(wrapEventMap(plugin.events), html);
+            }
+          };
+
+          //CM: Not sure if this is the right approach. Goal is to allow
+          //template plugins to add their own event handlers without clobbering
+          //other handler maps.
+          _.each(tmplData.plugins, attachPluginEvents);
+
           return html;
         });
         html = Spark.setDataContext(data, html);
