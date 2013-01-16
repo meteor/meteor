@@ -432,10 +432,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
     // being invalidated, we will require N matching subscribe calls to keep
     // them all active.
     var existing = _.find(self._subscriptions, function (sub) {
-      // XXX When this lands on the ddp-pre1 branch, use EJSON equality
-      // (non-key-order preserving) instead.
       return sub.context && sub.context.invalidated && sub.name === name &&
-        _.isEqual(sub.params, params);
+        EJSON.equals(sub.params, params);
     });
 
     var currentContext = Meteor.deps && Meteor.deps.Context.current;

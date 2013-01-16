@@ -189,9 +189,7 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   test.equal(onCompleteCount, {});
 
   // "completer" gets completed now. its callback should fire.
-  // XXX When this lands on ddp-pre1, this will have to be changed to the new
-  // message name.
-  stream.receive({msg: 'data', 'subs': [idCompleter]});
+  stream.receive({msg: 'complete', 'subs': [idCompleter]});
   test.equal(onCompleteCount, {completer: 1});
   test.length(stream.sent, 0);
 
@@ -230,9 +228,7 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   // onComplete from the new subscription because they were separate
   // subscriptions started at different times and the first one was explicitly
   // torn down by the client; completing bar should call both onCompletes.
-  // XXX When this lands on ddp-pre1, this will have to be changed to the new
-  // message name.
-  stream.receive({msg: 'data', 'subs': [idStopperAgain, idBar1]});
+  stream.receive({msg: 'complete', 'subs': [idStopperAgain, idBar1]});
   test.equal(onCompleteCount, {completer: 2, bar1: 2, stopper: 1});
 
   // Shut down the autorun. This should unsub us from all current subs at flush
@@ -995,7 +991,7 @@ Tinytest.add("livedata stub - unsent methods don't block quiescence", function (
   test.equal(stream.sent.length, 0);
 
   // ack the first method
-  stream.receive({msg: 'data', methods: [firstMethodId]});
+  stream.receive({msg: 'updated', methods: [firstMethodId]});
   stream.receive({msg: 'result', id: firstMethodId});
 
   // Wait method sent.
@@ -1005,7 +1001,7 @@ Tinytest.add("livedata stub - unsent methods don't block quiescence", function (
   test.equal(stream.sent.length, 0);
 
   // ack the wait method
-  stream.receive({msg: 'data', methods: [waitMethodId]});
+  stream.receive({msg: 'updated', methods: [waitMethodId]});
   stream.receive({msg: 'result', id: waitMethodId});
 
   // insert method sent.
@@ -1015,7 +1011,7 @@ Tinytest.add("livedata stub - unsent methods don't block quiescence", function (
   test.equal(stream.sent.length, 0);
 
   // ack the insert method
-  stream.receive({msg: 'data', methods: [insertMethodId]});
+  stream.receive({msg: 'updated', methods: [insertMethodId]});
   stream.receive({msg: 'result', id: insertMethodId});
 
   // simulation reverted.
