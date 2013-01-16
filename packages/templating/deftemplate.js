@@ -179,9 +179,19 @@
             // (and receive 'landmark')
             
             var helpers = _.extend({}, partial, tmplData.helpers || {});
-            _.each(tmplData.plugins, function (plugin) {
-              if (plugin.helpers) _.extend(helpers, plugin.helpers);
-            });
+            var addPluginHelpers = function (plugin) {
+              if (plugin.helpers) {
+                _.each(plugin.helpers, function (fn, key) {
+                  // make sure the plugin is always the first parameter
+                  helpers[key] = function () {
+                    var args = [plugin].concat(_.toArray(arguments));
+                    return fn.apply(this, args);
+                  }
+                });
+              }
+            }
+
+            _.each(tmplData.plugins, addPluginHelpers);
 
             return raw_func(data, {
               helpers: helpers,
