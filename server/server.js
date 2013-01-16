@@ -230,6 +230,25 @@ var run = function () {
     // load app code
     _.each(info.load, function (filename) {
       var code = fs.readFileSync(path.join(bundle_dir, filename));
+
+      // XXX ahh, what a mess. even though the npm packages are
+      // correctly placed in node_modules/ relative to the package
+      // source, we can't just use standard `require` because packages
+      // are loaded using runInThisContext (See #runInThisContext)
+      //
+      // (THOUGHT) What are the benefits of using runInThisContext
+      // rather than plain node require?
+      //
+      // (ANSWER?) Perhaps because it allows modifying globals...  Is
+      // that even desirable?
+      var requireNpm = function(pkg) {
+        var filepath = _.initial(filename.split(path.sep)).join(path.sep);
+        return __meteor_bootstrap__.require(path.join('..', filepath, 'node_modules', pkg));
+      };
+      // \n is necessary in case final line is a //-comment
+      var wrapped = "(function(requireNpm){" + code + "\n})";
+      // See #runInThisContext
+      //
       // it's tempting to run the code in a new context so we can
       // precisely control the enviroment the user code sees. but,
       // this is harder than it looks. you get a situation where []
@@ -242,7 +261,8 @@ var run = function () {
       // runIn[Foo]Context that causes it to print out a descriptive
       // error message on parse error. it's what require() uses to
       // generate its errors.
-      require('vm').runInThisContext(code, filename, true);
+      var func = require('vm').runInThisContext(wrapped, filename, true);
+      func(requireNpm);
     });
 
 

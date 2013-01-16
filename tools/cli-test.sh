@@ -197,12 +197,23 @@ echo "... local-package-sets -- new package"
 mkdir -p "$TMPDIR/local-packages/a-package-named-bar/"
 cat > "$TMPDIR/local-packages/a-package-named-bar/package.js" <<EOF
 console.log("loaded a-package-named-bar");
+
+Package.on_use(function(api) {
+  api.useNpm({gcd: '0.0.0'});
+  api.add_files(['call_gcd.js'], 'server');
+});
+EOF
+
+cat > "$TMPDIR/local-packages/a-package-named-bar/call_gcd.js" <<EOF
+var gcd = requireNpm('gcd');
+console.log("gcd(4,6)=" + gcd(4,6));
 EOF
 
 ! $METEOR add a-package-named-bar >> $OUTPUT
 PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR add a-package-named-bar >> $OUTPUT
 ! $METEOR -p $PORT --once | grep "loaded a-package-named-bar" >> $OUTPUT
 PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR -p $PORT --once | grep "loaded a-package-named-bar" >> $OUTPUT
+PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR -p $PORT --once | grep "gcd(4,6)=2" >> $OUTPUT
 
 
 echo "... local-package-sets -- overridden package"

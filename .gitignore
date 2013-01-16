@@ -13,3 +13,4 @@ cache
 TAGS
 *.log
 *.out
+npm-debug.log
