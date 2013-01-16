@@ -88,7 +88,6 @@ npm install mime@1.2.7
 npm install semver@1.1.0
 npm install handlebars@1.0.7
 npm install mongodb@1.1.11
-npm install uglify-js@2.2.3
 npm install clean-css@0.8.3
 npm install useragent@1.1.0
 npm install request@2.12.0
@@ -100,6 +99,10 @@ npm install http-proxy@0.8.5
 npm install underscore@1.4.2
 npm install tar@0.1.14
 npm install websocket@1.0.8
+
+# uglify-js has a bug which drops 'undefined' in arrays:
+# https://github.com/mishoo/UglifyJS2/pull/97
+npm install https://github.com/meteor/UglifyJS2/tarball/9a4d0d86ed
 
 # progress 0.1.0 has a regression where it opens stdin and thus does not
 # allow the node process to exit cleanly. See
