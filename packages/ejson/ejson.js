@@ -252,7 +252,7 @@ EJSON.equals = function (a, b, options) {
           return false;
         if (x !== b_keys[i])
           return false;
-        if (!EJSON.equals(a[x], b[b_keys[i]]))
+        if (!EJSON.equals(a[x], b[b_keys[i]], options))
           return false;
         i++;
       }

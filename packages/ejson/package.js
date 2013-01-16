@@ -13,4 +13,5 @@ Package.on_test(function (api) {
   api.use('ejson', ['client', 'server']);
 
   api.add_files('base64_test.js', ['client', 'server']);
+  api.add_files('ejson_test.js', ['client', 'server']);
 });
