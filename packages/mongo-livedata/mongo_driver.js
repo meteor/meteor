@@ -9,7 +9,7 @@
  */
 
 var path = __meteor_bootstrap__.require('path');
-var MongoDB = __meteor_bootstrap__.require('mongodb');
+var MongoDB = requireNpm('mongodb');
 var Fiber = __meteor_bootstrap__.require('fibers');
 var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
 

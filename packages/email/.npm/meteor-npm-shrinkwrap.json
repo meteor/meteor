@@ -1,0 +1,54 @@
+{
+  "name": "packages",
+  "version": "0.0.0",
+  "dependencies": {
+    "mailcomposer": {
+      "version": "0.1.15",
+      "dependencies": {
+        "mimelib-noiconv": {
+          "version": "0.1.9"
+        }
+      }
+    },
+    "simplesmtp": {
+      "version": "0.1.25",
+      "dependencies": {
+        "rai": {
+          "version": "0.1.7"
+        },
+        "xoauth2": {
+          "version": "0.1.4",
+          "dependencies": {
+            "request": {
+              "version": "2.12.0",
+              "dependencies": {
+                "form-data": {
+                  "version": "0.0.3",
+                  "dependencies": {
+                    "combined-stream": {
+                      "version": "0.0.3",
+                      "dependencies": {
+                        "delayed-stream": {
+                          "version": "0.0.5"
+                        }
+                      }
+                    },
+                    "async": {
+                      "version": "0.1.9"
+                    }
+                  }
+                },
+                "mime": {
+                  "version": "1.2.7"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "stream-buffers": {
+      "version": "0.2.3"
+    }
+  }
+}

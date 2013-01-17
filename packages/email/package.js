@@ -4,6 +4,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.add_files('email.js', 'server');
+  api.useNpm({mailcomposer: "0.1.15", simplesmtp: "0.1.25", "stream-buffers": "0.2.3"});
 });
 
 Package.on_test(function (api) {

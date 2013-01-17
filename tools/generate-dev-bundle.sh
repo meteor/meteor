@@ -85,14 +85,10 @@ npm install stylus@0.30.1
 npm install nib@0.8.2
 npm install semver@1.1.0
 npm install handlebars@1.0.7
-npm install mongodb@1.2.13
 npm install clean-css@0.8.3
 npm install useragent@2.0.1
 npm install request@2.12.0
-npm install simplesmtp@0.1.25
-npm install stream-buffers@0.2.3
 npm install keypress@0.1.0
-npm install sockjs@0.3.4
 npm install http-proxy@0.8.5
 npm install underscore@1.4.2 # 1.4.4 is a performance regression
 npm install fstream@0.1.21
@@ -113,10 +109,6 @@ npm install https://github.com/meteor/UglifyJS2/tarball/aa5abd14d3
 # allow the node process to exit cleanly. See
 # https://github.com/visionmedia/node-progress/issues/19
 npm install progress@0.0.5
-
-# pinned at older version. 0.1.16+ uses mimelib, not mimelib-noiconv
-# which make the dev bundle much bigger. We need a better solution.
-npm install mailcomposer@0.1.15
 
 # If you update the version of fibers in the dev bundle, also update the "npm
 # install" command in docs/client/concepts.html and in the README in
