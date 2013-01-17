@@ -76,7 +76,6 @@ Meteor._parseDDP = function (stringMessage) {
       EJSON._adjustTypesFromJSONValue(msg[field]);
   });
 
-
   return msg;
 };
 
@@ -87,7 +86,7 @@ Meteor._stringifyDDP = function (msg) {
   if (_.has(msg, 'fields')) {
     var cleared = [];
     _.each(msg.fields, function (value, key) {
-      if (key === undefined) {
+      if (value === undefined) {
         cleared.push(key);
         delete copy.fields[key];
       }

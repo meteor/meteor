@@ -127,16 +127,21 @@ Meteor.Collection = function (name, options) {
         } else if (msg.msg === 'changed') {
           if (!doc)
             throw new Error("Expected to find a document to change");
-          var modifier = {};
-          if (!_.isEmpty(msg.fields))
-            modifier.$set = msg.fields;
-          if (!_.isEmpty(msg.cleared)) {
-            modifier.$unset = {};
-            _.each(msg.cleared, function (propname) {
-              modifier.$unset[propname] = 1;
+          if (!_.isEmpty(msg.fields)) {
+            var modifier = {};
+            _.each(msg.fields, function (value, key) {
+              if (value === undefined) {
+                if (!modifier.$unset)
+                  modifier.$unset = {};
+                modifier.$unset[key] = 1;
+              } else {
+                if (!modifier.$set)
+                  modifier.$set = {};
+                modifier.$set[key] = value;
+              }
             });
+            self._collection.update(mongoId, modifier);
           }
-          self._collection.update(mongoId, modifier);
         } else {
           throw new Error("I don't know how to deal with this message");
         }

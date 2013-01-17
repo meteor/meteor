@@ -1284,7 +1284,7 @@ Tinytest.add("livedata connection - onReconnect with sent messages", function(te
                    params: ['login'], id: '*'});
 
   // we connect.
-  stream.receive(makeConnectMessage(Meteor.uuid()));
+  stream.receive({msg: 'connected', session: Meteor.uuid()});
   test.length(stream.sent, 0);
 
   // login got result (but not yet data)

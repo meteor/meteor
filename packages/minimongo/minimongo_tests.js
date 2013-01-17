@@ -937,7 +937,7 @@ Tinytest.add("minimongo - modify", function (test) {
   };
   var exception = function (doc, mod) {
     test.throws(function () {
-      LocalCollection._modify(LocalCollection._deepcopy(doc), mod);
+      LocalCollection._modify(EJSON.clone(doc), mod);
     });
   };
 
