@@ -203,6 +203,10 @@ _.extend(LocalCollection.Cursor.prototype, {
     var self = this;
     return self._observeInternal(false, options);
   },
+  observeChanges: function (callbacks) {
+    LocalCollection._observeChanges(this, callbacks);
+  },
+
   _observeInternal: function (ordered, options) {
     var self = this;
 
@@ -724,7 +728,7 @@ LocalCollection._idStringify = function (id) {
 
 
 
-LocalCollection._idParse = function (id) {
+ LocalCollection._idParse = function (id) {
   if (id === "") {
     return id;
   } else if (id === '-') {
@@ -744,5 +748,58 @@ if (typeof Meteor !== 'undefined') {
   Meteor.idParse = LocalCollection._idParse;
   Meteor.idStringify = LocalCollection._idStringify;
 }
+
+LocalCollection._observeChanges = function (cursor, callbacks) {
+  var ordered = (typeof callbacks.addedBefore === 'function'
+                 || typeof callbacks.movedBefore === 'function');
+  var positions = ordered ? [] : null;
+  cursor._observeInternal(ordered, {
+    added: function (doc, ind) {
+      var fields = _.omit(doc, '_id');
+      if (ordered) {
+        var before = positions[ind];
+        if (before === undefined)
+          before = null;
+        positions.splice(ind, 0, doc._id);
+        callbacks.addedBefore &&
+          callbacks.addedBefore(doc._id, fields, before);
+      } else {
+        callbacks.added &&
+          callbacks.added(doc._id, fields);
+      }
+    },
+    changed: function (newDoc, indOrOldDoc, oldDoc) {
+      var id = newDoc._id;
+      var fields = {};
+      if (typeof indOrOldDoc === 'object')
+        oldDoc = indOrOldDoc;
+      LocalCollection._diffObjects(oldDoc, newDoc, {
+        leftOnly: function (key, value) {
+          fields[key] = undefined;
+        },
+        rightOnly: function (key, value) {
+          fields[key] = value;
+        },
+        both: function (key, leftValue, rightValue) {
+          if (!EJSON.equals(leftValue, rightValue))
+            fields[key] = rightValue;
+        }
+      });
+      if (!_.isEmpty(fields)) {
+        callbacks.changed && callbacks.changed(id, fields);
+      }
+    },
+    moved: function (doc, oldInd, newInd) {
+      positions.splice(oldInd, 1);
+      positions.splice(newInd, 0, doc._id);
+      callbacks.movedBefore && callbacks.movedBefore(doc._id, positions[newInd + 1]);
+    },
+
+    removed: function (doc) {
+      callbacks.removed && callbacks.removed(doc._id);
+      positions = _.without(positions, doc._id);
+    }
+  });
+};
 
 })();

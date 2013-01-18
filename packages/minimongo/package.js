@@ -23,6 +23,8 @@ Package.on_use(function (api, where) {
 
 Package.on_test(function (api) {
   api.use('minimongo', 'client');
+  api.use('test-helpers', 'client');
   api.use('tinytest');
   api.add_files('minimongo_tests.js', 'client');
+  api.add_files('observe_changes_tests.js', 'client');
 });
