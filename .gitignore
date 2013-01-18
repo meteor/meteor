@@ -10,3 +10,6 @@
 *.sublime-project
 *.sublime-workspace
 TAGS
+packages/collectionFS/
+
+packages/handlebar-helpers/
