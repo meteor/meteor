@@ -244,6 +244,11 @@ _.each(["insert", "update", "remove"], function (name) {
       };
     }
 
+    //Allow no arguments for remove, find, findOne #Issue 620
+    if (name === "remove") {  //
+      args[0] = (!args.length)?{}:args[0];
+    }
+
     if (name === "insert") {
       if (!args.length)
         throw new Error("insert requires an argument");
