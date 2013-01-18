@@ -295,7 +295,10 @@ var read_password = function (callback) {
   // https://github.com/visionmedia/commander.js/blob/master/lib/commander.js
 
   var buf = '';
-  process.stdin.setRawMode(true);
+  if (process.stdin.setRawMode) {
+    // when piping password from bash to meteor we have no setRawMode() available
+    process.stdin.setRawMode(true);
+  }
 
   // keypress
   keypress(process.stdin);
@@ -304,7 +307,10 @@ var read_password = function (callback) {
       console.log();
       process.stdin.pause();
       process.stdin.removeAllListeners('keypress');
-      process.stdin.setRawMode(false);
+      if (process.stdin.setRawMode) {
+        // when piping password from bash to meteor we have no setRawMode() available
+        process.stdin.setRawMode(false);
+      }
 
       // if they just hit enter, prompt again. let's not do this.
       // This means empty password is a valid password.
