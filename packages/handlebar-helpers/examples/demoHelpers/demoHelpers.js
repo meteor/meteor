@@ -16,7 +16,7 @@ if (Meteor.isClient) {
     'click .clickReset' : function () {
       // template data, if any, is available in 'this'
         Session.set('appTitle', 'You pressed the reset button!!');
-        testCollection.remove();
+        testCollection.remove({});
     }
   });
 }

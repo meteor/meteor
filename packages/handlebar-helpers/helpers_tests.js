@@ -1,8 +1,4 @@
-var testCollection = new Meteor.Collection('test');
-
-testCollection.insert({ a: 1, b:2 });
-
-
+var	testCollection = new Meteor.Collection(null);
 
 (function () {
   Tinytest.add('Handlebar helpers - init session templates', function (test) {
@@ -122,7 +118,9 @@ testCollection.insert({ a: 1, b:2 });
 		onscreen3.kill();
 	});
 
-	Tinytest.add('Handlebar helpers - test {{findOne}} and {{find}}', function (test) {
+	Tinytest.addAsync("Handlebar helpers - test {{findOne}} and {{find}}", function (test, onComplete) {
+		testCollection.insert({ a: 1, b:2 });
+
 		var onscreen1 = OnscreenDiv(Meteor.render(Template.test_helpers_30)); //findOne
 		var onscreen2 = OnscreenDiv(Meteor.render(Template.test_helpers_31)); //find
 		var onscreen3 = OnscreenDiv(Meteor.render(Template.test_helpers_32)); //with find
@@ -142,7 +140,7 @@ testCollection.insert({ a: 1, b:2 });
 		test.equal(onscreen5.rawHtml(), '1', 'each {{find}}');
 		//console.log(onscreen5.rawHtml());
 
-		testCollection.remove(); //Remove all
+		testCollection.remove({}); //Remove all
 		Meteor.flush();
 		test.equal(onscreen1.rawHtml(), '<!--empty-->', '{{findOne}}');
 		test.equal(onscreen2.rawHtml(), '[object Object]', '{{find}}'); //Guess this allways returns an object
@@ -155,6 +153,7 @@ testCollection.insert({ a: 1, b:2 });
 		onscreen3.kill();
 		onscreen4.kill();
 		onscreen5.kill();
+		onComplete();
 	});
 
 }());
