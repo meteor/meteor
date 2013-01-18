@@ -573,3 +573,23 @@ testAsyncMulti('mongo-livedata - rewrite selector', [
     }));
   }
 ]);
+
+Tinytest.addAsync("mongo-livedata - remove() (#620)", function (test, onComplete) {
+  var collectionName = Meteor.uuid();
+  if (Meteor.isClient) {
+    Meteor.call('createInsecureCollection', collectionName);
+    Meteor.subscribe('c-' + collectionName);
+  }
+
+  var coll = new Meteor.Collection(collectionName);
+
+  coll.insert({foo:'bar'});
+  var doc = coll.findOne();
+  test.isTrue(doc);
+  test.equal(doc.foo, 'bar');
+  coll.remove();
+  var doc = coll.findOne();
+  test.isFalse(doc, 'Issue #620 not resolved: coll.remove() should remove all');
+  onComplete();
+});
+
