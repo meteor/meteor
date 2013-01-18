@@ -1,0 +1,25 @@
+<head>
+  <title>demoHelpers</title>
+</head>
+
+<body>
+  {{> hello}}
+</body>
+
+<template name="hello">
+  <h1>{{getSession 'appTitle'}}</h1>
+  {{#if sessionEquals 'appTitle' 'You pressed the button'}}
+  	sessionEquals says you've pressed the button..
+  {{else}}
+  	{{greeting}}
+  {{/if}}
+  <br/>
+  <input type="button" value="Click" class="clickTheButton"/><br/>
+  <input type="button" value="Reset" class="clickReset"/><br/>
+  <br/>
+  {{#each find 'testCollection' '{}' '{ "sort": { "createdAt":1 } }'}}
+  	{{name}} - timeStamp: {{createdAt}}</br>
+  {{else}}
+  	You never clicked the button
+  {{/each}}
+</template>

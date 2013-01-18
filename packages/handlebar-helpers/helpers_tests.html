@@ -1,0 +1,66 @@
+<template name="test_helpers_00">
+  Hi
+</template>
+
+<!-- Test getSession -->
+
+<template name="test_helpers_10">
+  {{getSession 'test'}}
+</template>
+
+<!-- Test sessionEquals -->
+
+<template name="test_helpers_20">
+  {{sessionEquals 'test' 'sdfsdfdsf'}}
+</template>
+
+<template name="test_helpers_21">
+  {{sessionEquals 'test' 1}}
+</template>
+
+<template name="test_helpers_22">
+  {{sessionEquals 'test' '1'}}
+</template>
+
+<template name="test_helpers_23">
+  {{sessionEquals 'test' ['a', 'b', 'c']}}
+</template>
+
+<!--
+<template name="test_helpers_24">
+  {{sessionEquals 'test' {foo: 'bar'} }}
+</template> -->
+
+<template name="test_helpers_25">
+  {{sessionEquals 'test' true}}
+</template>
+
+<template name="test_helpers_26">
+  {{sessionEquals 'test' false}}
+</template>
+
+<template name="test_helpers_27">
+  {{#if sessionEquals 'test' false}}Test is false{{else}}Test is true{{/if}}
+</template>
+
+<!-- Test find -->
+
+<template name="test_helpers_30">
+  {{findOne 'testCollection' '{}'}}
+</template>
+
+<template name="test_helpers_31">
+  {{find 'testCollection' '{}'}}
+</template>
+
+<template name="test_helpers_32">
+  {{#with findOne 'testCollection' '{}'}}ok{{/with}}
+</template>
+
+<template name="test_helpers_33">
+  {{#with findOne 'testCollection' '{}'}}{{a}}{{/with}}
+</template>
+
+<template name="test_helpers_34">
+  {{#each find 'testCollection' '{}'}}{{a}}{{else}}none{{/each}}
+</template>
