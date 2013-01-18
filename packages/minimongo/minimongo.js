@@ -363,8 +363,9 @@ LocalCollection.prototype.insert = function (doc) {
     }
   }
 
-  while (queriesToRecompute.length)
-    LocalCollection._recomputeResults(queriesToRecompute.pop());
+  _.each(queriesToRecompute, function (query) {
+    LocalCollection._recomputeResults(query);
+  });
 };
 
 LocalCollection.prototype.remove = function (selector) {
@@ -391,15 +392,14 @@ LocalCollection.prototype.remove = function (selector) {
   for (var i = 0; i < remove.length; i++) {
     var removeId = remove[i];
     var removeDoc = self.docs[removeId];
-    for (var id in self.queries) {
-      var query = self.queries[id];
+    _.each(self.queries, function (query) {
       if (query.selector_f(removeDoc)) {
         if (query.cursor.skip || query.cursor.limit)
           queriesToRecompute.push(query);
         else
           queryRemove.push([query, removeDoc]);
       }
-    }
+    });
     self._saveOriginal(removeId, removeDoc);
     delete self.docs[removeId];
   }
@@ -408,8 +408,9 @@ LocalCollection.prototype.remove = function (selector) {
   for (var i = 0; i < queryRemove.length; i++) {
     LocalCollection._removeFromResults(queryRemove[i][0], queryRemove[i][1]);
   }
-  while (queriesToRecompute.length)
-    LocalCollection._recomputeResults(queriesToRecompute.pop());
+  _.each(queriesToRecompute, function (query) {
+    LocalCollection._recomputeResults(query);
+  });
 };
 
 // XXX atomicity: if multi is true, and one modification fails, do
@@ -429,11 +430,10 @@ LocalCollection.prototype.update = function (selector, mod, options) {
   // they already have a results_snapshot and we won't be diffing in
   // _recomputeResults.)
   var qidToOriginalResults = {};
-  for (var qid in self.queries) {
-    var query = self.queries[qid];
+  _.each(self.queries, function (query, qid) {
     if ((query.cursor.skip || query.cursor.limit) && !query.paused)
       qidToOriginalResults[qid] = LocalCollection._deepcopy(query.results);
-  }
+  });
   var recomputeQids = {};
 
   for (var id in self.docs) {
@@ -447,9 +447,10 @@ LocalCollection.prototype.update = function (selector, mod, options) {
     }
   }
 
-  for (var qid in recomputeQids)
+  _.each(recomputeQids, function (dummy, qid) {
     LocalCollection._recomputeResults(self.queries[qid],
                                       qidToOriginalResults[qid]);
+  });
 };
 
 LocalCollection.prototype._modifyAndNotify = function (

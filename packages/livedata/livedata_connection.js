@@ -216,9 +216,9 @@ Meteor._LivedataConnection = function (url, options) {
 
     // Mark all messages as unsent, they have not yet been sent on this
     // connection.
-    for (var id in self._methodInvokers)
-      self._methodInvokers[id].sentMessage = false;
-
+    _.each(self._methodInvokers, function (m) {
+      m.sentMessage = false;
+    });
 
     // If an `onReconnect` handler is set, call it first. Go through
     // some hoops to ensure that methods that are called from within
@@ -381,13 +381,15 @@ _.extend(Meteor._LivedataConnection.prototype, {
                         : undefined);
               };
             });
+
     self._stores[name] = store;
 
     var queued = self._updatesForUnknownStores[name];
     if (queued) {
       store.beginUpdate(queued.length, false);
-      for (var id in queued)  
-        store.update(queued[id]);
+      _.each(queued, function (msg) {
+        store.update(msg);
+      });
       store.endUpdate();
       delete self._updatesForUnknownStores[name];
     }
@@ -447,11 +449,11 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
   methods: function (methods) {
     var self = this;
-    for (var name in methods) {
+    _.each(methods, function (func, name) {
       if (self._methodHandlers[name])
         throw new Error("A method named '" + name + "' is already defined");
-      self._methodHandlers[name] = methods[name];
-    }
+      self._methodHandlers[name] = func;
+    });
   },
 
   call: function (name /* .. [arguments] .. callback */) {
@@ -639,8 +641,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
   // documents.
   _saveOriginals: function () {
     var self = this;
-    for (var id in self._stores)  
-      self._stores[id].saveOriginals();
+    _.each(self._stores, function (s) {
+      s.saveOriginals();
+    });
   },
   // Retrieves the original versions of all documents modified by the stub for
   // method 'methodId' from all stores and saves them to _serverDocuments (keyed
@@ -651,10 +654,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
       throw new Error("Duplicate methodId in _retrieveAndStoreOriginals");
 
     var docsWritten = [];
-    for (var collection in self._stores) {
-      var originals = self._stores[collection].retrieveOriginals();
-      for (var id in originals) { 
-        var doc = originals[id];
+    _.each(self._stores, function (s, collection) {
+      var originals = s.retrieveOriginals();
+      _.each(originals, function (doc, id) {
         docsWritten.push({collection: collection, id: id});
         var serverDoc = Meteor._ensure(self._serverDocuments, collection, id);
         if (serverDoc.writtenByStubs) {
@@ -668,8 +670,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
           serverDoc.writtenByStubs = {};
           serverDoc.writtenByStubs[methodId] = true;
         }
-      } //EO for oId
-    } //EO for sId
+      });
+    });
     if (!_.isEmpty(docsWritten)) {
       self._documentsWrittenByStub[methodId] = docsWritten;
     }
@@ -775,8 +777,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
     // that we drop here will be restored by the loop below.
     self._methodsBlockingQuiescence = {};
     if (self._resetStores) {
-      for (var id in self._methodInvokers) {
-        var invoker = self._methodInvokers[id];
+      _.each(self._methodInvokers, function (invoker) {
         if (invoker.gotResult()) {
           // This method already got its result, but it didn't call its callback
           // because its data didn't become visible. We did not resend the
@@ -795,7 +796,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
           // logged-out state.)
           self._methodsBlockingQuiescence[invoker.methodId] = true;
         }
-      } //EO for
+      });
     }
 
     self._messagesBufferedUntilQuiescence = [];
@@ -804,11 +805,10 @@ _.extend(Meteor._LivedataConnection.prototype, {
     // call the callbacks immediately.
     if (!self._waitingForQuiescence()) {
       if (self._resetStores) {
-        for (var sId in self._stores) { 
-          var s = self._stores[sId]; 
+        _.each(self._stores, function (s) {
           s.beginUpdate(0, true);
           s.endUpdate();
-        }
+        });
         self._resetStores = false;
       }
       self._runAfterUpdateCallbacks();
@@ -823,11 +823,12 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
     if (self._waitingForQuiescence()) {
       self._messagesBufferedUntilQuiescence.push(msg);
-      for (var id in (msg.subs||[]))
-        delete self._subsBeingRevived[msg.subs[id]];
-
-      for (var id in (msg.methods||[]))
-        delete self._methodsBlockingQuiescence[msg.methods[id]];
+      _.each(msg.subs || [], function (subId) {
+        delete self._subsBeingRevived[subId];
+      });
+      _.each(msg.methods || [], function (methodId) {
+        delete self._methodsBlockingQuiescence[methodId];
+      });
 
       if (self._waitingForQuiescence())
         return;
@@ -835,9 +836,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
       // No methods or subs are blocking quiescence!
       // We'll now process and all of our buffered messages, reset all stores,
       // and apply them all at once.
-      for (var id in self._messagesBufferedUntilQuiescence)  
-        self._processOneDataMessage(self._messagesBufferedUntilQuiescence[id], updates);
-      
+      _.each(self._messagesBufferedUntilQuiescence, function (bufferedMsg) {
+        self._processOneDataMessage(bufferedMsg, updates);
+      });
       self._messagesBufferedUntilQuiescence = [];
     } else {
       self._processOneDataMessage(msg, updates);
@@ -845,18 +846,18 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
     if (self._resetStores || !_.isEmpty(updates)) {
       // Begin a transactional update of each store.
-      for (var storeName in self._stores)  
-        self._stores[storeName].beginUpdate(_.has(updates, storeName) ? updates[storeName].length : 0, self._resetStores);
-      
+      _.each(self._stores, function (s, storeName) {
+        s.beginUpdate(_.has(updates, storeName) ? updates[storeName].length : 0,
+                      self._resetStores);
+      });
       self._resetStores = false;
 
-      for (var storeName in updates) {
-        var updateMessages = updates[storeName];
+      _.each(updates, function (updateMessages, storeName) {
         var store = self._stores[storeName];
         if (store) {
-          for (var id in updateMessages) {
-            store.update(updateMessages[id]);
-          }
+          _.each(updateMessages, function (updateMessage) {
+            store.update(updateMessage);
+          });
         } else {
           // Nobody's listening for this data. Queue it up until
           // someone wants it.
@@ -868,11 +869,10 @@ _.extend(Meteor._LivedataConnection.prototype, {
           Array.prototype.push.apply(self._updatesForUnknownStores[storeName],
                                      updateMessages);
         }
-      }//EO for
+      });
 
       // End update transaction.
-      for (var id in self._stores)
-        self._stores[id].endUpdate();
+      _.each(self._stores, function (s) { s.endUpdate(); });
     }
 
     self._runAfterUpdateCallbacks();
@@ -883,14 +883,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
   // reconnect-quiescence time.
   _runAfterUpdateCallbacks: function () {
     var self = this;
-    for (var id in self._afterUpdateCallbacks) {
-      try {
-        self._afterUpdateCallbacks[id]();
-      }
-      catch(e) {
-        setTimeout(function() { throw(e); }, 0);
-      }
-    }
+    _.each(self._afterUpdateCallbacks, function (c) {
+      c();
+    });
     self._afterUpdateCallbacks = [];
   },
 
@@ -910,16 +905,16 @@ _.extend(Meteor._LivedataConnection.prototype, {
         // the snapshot in serverDoc rather than directly to the database.
         // First apply unset (assuming that there are any fields at all.
         if (serverDoc.document) {
-          for (var id in msg.unset)  
-            delete serverDoc.document[msg.unset[id]];
+          _.each(msg.unset, function (propname) {
+            delete serverDoc.document[propname];
+          });
         }
         // Now apply set.
-        for (var propname in msg.set) {
-          var value = msg.set[propname];
+        _.each(msg.set, function (value, propname) {
           if (!serverDoc.document)
             serverDoc.document = {};
           serverDoc.document[propname] = value;
-        }
+        });
         // Now erase the document if it has become empty.
         if (serverDoc.document &&
             _.isEmpty(_.without(_.keys(serverDoc.document), '_id')))
@@ -934,10 +929,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
     }
 
     // Process "method done" messages.
-    for (var mId in msg.methods) {
-      var methodId = msg.methods[mId];
-      for (var dId in self._documentsWrittenByStub[methodId]) {
-        var written = self._documentsWrittenByStub[methodId][dId];
+    _.each(msg.methods, function (methodId) {
+      _.each(self._documentsWrittenByStub[methodId], function (written) {
         var serverDoc = Meteor._get(self._serverDocuments,
                                     written.collection, written.id);
         if (!serverDoc)
@@ -956,21 +949,16 @@ _.extend(Meteor._LivedataConnection.prototype, {
           updates[written.collection].push({id: written.id,
                                             replace: serverDoc.document});
           // Call all flush callbacks.
-          for (var id in serverDoc.flushCallbacks) {
-            try {
-              serverDoc.flushCallbacks[id]();
-            }
-            catch(e) {
-              setTimeout(function() { throw(e); }, 0);
-            }
-          }
+          _.each(serverDoc.flushCallbacks, function (c) {
+            c();
+          });
 
           // Delete this completed serverDocument. Don't bother to GC empty
           // objects inside self._serverDocuments, since there probably aren't
           // many collections and they'll be written repeatedly.
           delete self._serverDocuments[written.collection][written.id];
         }
-      } //EO for
+      });
       delete self._documentsWrittenByStub[methodId];
 
       // We want to call the data-written callback, but we can't do so until all
@@ -980,25 +968,17 @@ _.extend(Meteor._LivedataConnection.prototype, {
         throw new Error("No callback invoker for method " + methodId);
       self._runWhenAllServerDocsAreFlushed(
         _.bind(callbackInvoker.dataVisible, callbackInvoker));
-    } //EO for
+    });
 
     // Process "sub ready" messages. "sub ready" messages don't take effect
     // until all current server documents have been flushed to the local
     // database. We can use a write fence to implement this.
-    for (var id in msg.subs) {
-      var subId = msg.subs[id];  
+    _.each(msg.subs, function (subId) {
       self._runWhenAllServerDocsAreFlushed(function () {
-        for (var callId in self._subReadyCallbacks[subId]) {
-          try {
-           self._subReadyCallbacks[subId][callId]();
-          }
-          catch(e) {
-            setTimeout(function() { throw(e); }, 0);
-          } 
-        }
+        _.each(self._subReadyCallbacks[subId], function (c) { c(); });
         delete self._subReadyCallbacks[subId];
       });
-    }
+    });
   },
 
   // Ensures that "f" will be called after all documents currently in
@@ -1018,14 +998,12 @@ _.extend(Meteor._LivedataConnection.prototype, {
         runFAfterUpdates();
       }
     };
-    for (var sdId in self._serverDocuments) {
-      var collectionDocs = self._serverDocuments[sdId];
-      for (var cdId in collectionDocs) {
-        var serverDoc = collectionDocs[cdId];
+    _.each(self._serverDocuments, function (collectionDocs) {
+      _.each(collectionDocs, function (serverDoc) {
         ++unflushedServerDocCount;
         serverDoc.flushCallbacks.push(onServerDocFlush);
-      }
-    }
+      });
+    });
     if (unflushedServerDocCount === 0) {
       // There aren't any buffered docs --- we can call f as soon as the current
       // round of updates is applied!
@@ -1110,8 +1088,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
     var self = this;
     if (_.isEmpty(self._outstandingMethodBlocks))
       return;
-    for (var id in self._outstandingMethodBlocks[0].methods)
-      self._outstandingMethodBlocks[0].methods[id].sendMessage();
+    _.each(self._outstandingMethodBlocks[0].methods, function (m) {
+      m.sendMessage();
+    });
   },
 
   _livedata_error: function (msg) {
@@ -1144,21 +1123,21 @@ _.extend(Meteor._LivedataConnection.prototype, {
     // neither of them are "wait" blocks.
     if (!_.last(self._outstandingMethodBlocks).wait &&
         !oldOutstandingMethodBlocks[0].wait) {
-      for (var oldId in oldOutstandingMethodBlocks[0].methods) {
-        var m = oldOutstandingMethodBlocks[0].methods[oldId]; 
+      _.each(oldOutstandingMethodBlocks[0].methods, function (m) {
         _.last(self._outstandingMethodBlocks).methods.push(m);
 
         // If this "last block" is also the first block, send the message.
         if (self._outstandingMethodBlocks.length === 1)
           m.sendMessage();
-      }
+      });
 
       oldOutstandingMethodBlocks.shift();
     }
 
     // Now add the rest of the original blocks on.
-    for (var oldId in oldOutstandingMethodBlocks)  
-      self._outstandingMethodBlocks.push(oldOutstandingMethodBlocks[oldId]);
+    _.each(oldOutstandingMethodBlocks, function (block) {
+      self._outstandingMethodBlocks.push(block);
+    });
   },
 
   // We can accept a hot code push if there are no methods in flight.
@@ -1200,9 +1179,9 @@ _.extend(Meteor, {
       // recurse.
       Meteor.autosubscribe(sub_func);
       // unsub after re-subbing, to avoid bouncing.
-      for (var id in local_subs)
-        local_subs[id].stop();
+      _.each(local_subs, function (x) { x.stop(); });
     });
+
     context.run(function () {
       if (captureSubs)
         throw new Error("Meteor.autosubscribe may not be called recursively");

@@ -10,6 +10,10 @@
 *.sublime-project
 *.sublime-workspace
 
+packages/collectionFS/
+
 packages/collectionFS
+
+packages/handlebar-helpers/
 
 packages/collectionFS
