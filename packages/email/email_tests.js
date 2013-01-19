@@ -1,4 +1,4 @@
-streamBuffers = requireNpm('stream-buffers');
+streamBuffers = Npm.require('stream-buffers');
 
 Tinytest.add("email - dev mode smoke test", function (test) {
   // This only tests dev mode, so don't run the test if this is deployed.

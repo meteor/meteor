@@ -1,5 +1,5 @@
 (function () {
-  var connect = __meteor_bootstrap__.require("connect");
+  var connect = Npm.require("connect");
 
   Meteor._routePolicy.declare('/_oauth/', 'network');
 
@@ -71,7 +71,7 @@
       return result;
   });
 
-  var Fiber = __meteor_bootstrap__.require('fibers');
+  var Fiber = Npm.require('fibers');
   // Listen to incoming OAuth http requests
   __meteor_bootstrap__.app
     .use(connect.query())

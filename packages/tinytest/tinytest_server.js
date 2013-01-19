@@ -1,5 +1,5 @@
 (function () {
-  var Fiber = __meteor_bootstrap__.require('fibers');
+  var Fiber = Npm.require('fibers');
   var handlesForRun = {};
   var reportsForRun = {};
 
@@ -26,8 +26,8 @@
       this.unblock();
 
       // XXX using private API === lame
-      var path = __meteor_bootstrap__.require('path');
-      var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
+      var path = Npm.require('path');
+      var Future = Npm.require(path.join('fibers', 'future'));
       var future = new Future;
 
       reportsForRun[runId] = {};

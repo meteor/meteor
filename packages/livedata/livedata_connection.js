@@ -1,7 +1,7 @@
 (function () {
 if (Meteor.isServer) {
   // XXX namespacing
-  var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
+  var Future = Npm.require(path.join('fibers', 'future'));
 }
 
 // @param url {String|Object} URL to Meteor app,

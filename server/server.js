@@ -201,9 +201,8 @@ var run = function () {
   var bundle = {manifest: info.manifest, root: bundle_dir};
 
   // start up app
-
   __meteor_bootstrap__ = {
-    // connect middleware
+    startup_hooks: [],
     app: app,
     // metadata about this bundle
     bundle: bundle,
@@ -235,18 +234,33 @@ var run = function () {
       // correctly placed in node_modules/ relative to the package
       // source, we can't just use standard `require` because packages
       // are loaded using runInThisContext (See #runInThisContext)
-      //
-      // (THOUGHT) What are the benefits of using runInThisContext
-      // rather than plain node require?
-      //
-      // (ANSWER?) Perhaps because it allows modifying globals...  Is
-      // that even desirable?
-      var requireNpm = function(pkg) {
-        var filepath = _.initial(filename.split(path.sep)).join(path.sep);
-        return __meteor_bootstrap__.require(path.join('..', filepath, 'node_modules', pkg));
+      var Npm = {
+        // require an npm module used by your package, or one from the
+        // dev bundle if you are in an app or your package isn't using
+        // said npm module
+        require: function(nodeModule) {
+          var filePathParts = filename.split(path.sep);
+          if (filePathParts[0] !== 'app' || filePathParts[1] !== 'packages') { // XXX it's weird that we're dependent on the dir structure
+            return require(nodeModule); // current no support for npm outside packages. load from dev bundle only
+          } else {
+            var nodeModuleDir = path.join(
+              __dirname,
+              '..'/*to get out of server/*/,
+              'app' /*===filePathParts[0]*/,
+              'packages' /*===filePathParts[1]*/,
+              filePathParts[2] /* package name */,
+              'node_modules',
+              nodeModule);
+
+            if (fs.existsSync(nodeModuleDir))
+              return require(nodeModuleDir);
+            else
+              return require(nodeModule);
+          }
+        }
       };
       // \n is necessary in case final line is a //-comment
-      var wrapped = "(function(requireNpm){" + code + "\n})";
+      var wrapped = "(function(Npm){" + code + "\n})";
       // See #runInThisContext
       //
       // it's tempting to run the code in a new context so we can
@@ -262,7 +276,7 @@ var run = function () {
       // error message on parse error. it's what require() uses to
       // generate its errors.
       var func = require('vm').runInThisContext(wrapped, filename, true);
-      func(requireNpm);
+      func(Npm);
     });
 
 

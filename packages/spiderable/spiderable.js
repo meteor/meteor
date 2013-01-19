@@ -1,8 +1,8 @@
 (function () {
-  var fs = __meteor_bootstrap__.require('fs');
-  var child_process = __meteor_bootstrap__.require('child_process');
-  var querystring = __meteor_bootstrap__.require('querystring');
-  var urlParser = __meteor_bootstrap__.require('url');
+  var fs = Npm.require('fs');
+  var child_process = Npm.require('child_process');
+  var querystring = Npm.require('querystring');
+  var urlParser = Npm.require('url');
   var app = __meteor_bootstrap__.app;
 
   // list of bot user agents that we want to serve statically, but do

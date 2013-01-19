@@ -1,4 +1,4 @@
-var Fiber = __meteor_bootstrap__.require('fibers');
+var Fiber = Npm.require('fibers');
 
 // This file contains classes:
 // * LivedataSession - The server's connection to a single DDP client

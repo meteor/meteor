@@ -1,9 +1,9 @@
 Email = {};
 
 (function () {
-  var Future = __meteor_bootstrap__.require('fibers/future');
-  var urlModule = __meteor_bootstrap__.require('url');
-  var MailComposer = requireNpm('mailcomposer').MailComposer;
+  var Future = Npm.require('fibers/future');
+  var urlModule = Npm.require('url');
+  var MailComposer = Npm.require('mailcomposer').MailComposer;
 
   var makePool = function (mailUrlString) {
     var mailUrl = urlModule.parse(mailUrlString);
@@ -19,7 +19,7 @@ Email = {};
               pass: parts[1] && decodeURIComponent(parts[1])};
     }
 
-    var simplesmtp = requireNpm('simplesmtp');
+    var simplesmtp = Npm.require('simplesmtp');
     var pool = simplesmtp.createClientPool(
       port,  // Defaults to 25
       mailUrl.hostname,  // Defaults to "localhost"

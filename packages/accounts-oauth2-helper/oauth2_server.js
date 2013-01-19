@@ -1,5 +1,5 @@
 (function () {
-  var connect = __meteor_bootstrap__.require("connect");
+  var connect = Npm.require("connect");
 
   // connect middleware
   Accounts.oauth2._handleRequest = function (service, query, res) {

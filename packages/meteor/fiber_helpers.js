@@ -1,8 +1,8 @@
 (function () {
 
-var path = __meteor_bootstrap__.require('path');
-var Fiber = __meteor_bootstrap__.require('fibers');
-var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
+var path = Npm.require('path');
+var Fiber = Npm.require('fibers');
+var Future = Npm.require(path.join('fibers', 'future'));
 
 Meteor._noYieldsAllowed = function (f) {
   // "Fiber" and "yield" are both in the global namespace. The yield function is

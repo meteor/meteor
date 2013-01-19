@@ -8,10 +8,10 @@
  * these outside of a fiber they will explode!
  */
 
-var path = __meteor_bootstrap__.require('path');
-var MongoDB = requireNpm('mongodb');
-var Fiber = __meteor_bootstrap__.require('fibers');
-var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
+var path = Npm.require('path');
+var MongoDB = Npm.require('mongodb');
+var Fiber = Npm.require('fibers');
+var Future = Npm.require(path.join('fibers', 'future'));
 
 var replaceNames = function (filter, thing) {
   if (typeof thing === "object") {

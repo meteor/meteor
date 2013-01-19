@@ -205,7 +205,7 @@ Package.on_use(function(api) {
 EOF
 
 cat > "$TMPDIR/local-packages/a-package-named-bar/call_gcd.js" <<EOF
-var gcd = requireNpm('gcd');
+var gcd = Npm.require('gcd');
 console.log("gcd(4,6)=" + gcd(4,6));
 EOF
 

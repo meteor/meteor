@@ -39,8 +39,8 @@ if (Meteor.isServer) {
   // other.
   var waiters = {};
 
-  var path = __meteor_bootstrap__.require('path');
-  var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
+  var path = Npm.require('path');
+  var Future = Npm.require(path.join('fibers', 'future'));
 
   var returnThroughFuture = function (token, returnValue) {
     // Make sure that when we call return, the fields are already cleared.
