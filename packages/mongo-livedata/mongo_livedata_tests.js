@@ -574,3 +574,88 @@ testAsyncMulti('mongo-livedata - rewrite selector', [
     }));
   }
 ]);
+
+
+//mongo-livedata - Issue #594 (.length)
+var c_mongo_livedata594 = new Meteor.Collection('c_mongo_livedata594');
+var sc_name = (Meteor.isServer)?'server':'client';
+
+if (Meteor.isServer) {
+  c_mongo_livedata594._insecure = true;
+
+  Meteor.publish('c_mongo_livedata594', function () {
+    return c_mongo_livedata594.find();
+  });
+}
+
+//#594 Test insert
+
+Tinytest.addAsync("mongo-livedata - Issue #594 (insert) "+sc_name, function (test, onComplete) {
+
+  if (Meteor.isClient) {
+    Meteor.subscribe('c_mongo_livedata594');
+  }
+
+  c_mongo_livedata594.remove({});
+  c_mongo_livedata594.insert({name:'#594', length: 5}, function(err1, id) {
+    test.isFalse(err1);
+    test.isTrue(id, 'Could not insert');
+
+    var result = c_mongo_livedata594.findOne({});
+
+    test.isTrue(result, 'No result of findOne({}) though callback returned id '+id);
+    if (result) {
+      var testSumKeys = '';
+      for (var key in result)
+        testSumKeys += key;
+
+      //console.log('Issue #594 .insert({length: 5}):'+(Meteor.isServer?'Server:':'Client:')+testSumKeys);
+      test.notEqual(testSumKeys, 'name_id', 'findOne returned failed insert, no .length attribute');
+      test.notEqual(testSumKeys, '01234_id', 'findOne returned array like object and no .length attribute');
+      test.equal(result.length, 5, 'result.length not 5 as expected');
+    }
+    else
+      test.fail({'findOne':['No result returned, error in insert?']});
+    c_mongo_livedata594.remove({});
+    onComplete();
+  });    
+});
+
+//#594 Test update
+
+Tinytest.addAsync("mongo-livedata - Issue #594 (update) "+sc_name, function (test, onComplete) {
+
+  if (Meteor.isClient) {
+    Meteor.subscribe('c_mongo_livedata594');
+  }
+
+  c_mongo_livedata594.remove({});
+  var id = c_mongo_livedata594.insert({name:'#594'}, function(err1, id) {
+    test.isFalse(err1);
+    test.isTrue(id, 'Error when doing a simple insert');
+
+    c_mongo_livedata594.update({ _id: id}, {$set: {length: 5}}, function(err2) {
+      test.isFalse(err2);
+
+      var result = c_mongo_livedata594.findOne({_id: id});
+
+      test.isTrue(result, 'No result of findOne({})');
+      if (result) {
+        var testSumKeys = '';
+        for (var key in result)
+          testSumKeys += key;
+
+        //console.log('Issue #594 .update({length: 5}):'+(Meteor.isServer?'Server:':'Client:')+testSumKeys);
+        test.notEqual(testSumKeys, '_idname', 'findOne returned failed update, no .length attribute');
+        test.notEqual(testSumKeys, '_id01234', 'findOne returned array like object and no .length attribute');
+        test.equal(result.length, 5, 'result.length not 5 as expected');
+      }
+      else
+        test.fail({'findOne':['No result returned, error in insert?']});
+      c_mongo_livedata594.remove({});
+      onComplete();
+    }); //EO update   
+  }); //EO insert
+});
+
+//XXX: #594 Test allow and deny
