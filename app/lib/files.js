@@ -197,7 +197,8 @@ var files = module.exports = {
   // 2. default is packages/ in the meteor directory
   // XXX: 3. a per project directory? (vendor/packages in rails parlance?)
   get_package_dirs: function() {
-    var package_dirs = [path.join(__dirname, '..', '..', 'packages')];
+    var package_dirs = [path.join(__dirname, '..', '..', 'packages'),
+                        path.join(__dirname, '..', '..', 'packages', 'custom')];
     if (process.env.PACKAGE_DIRS)
       package_dirs = process.env.PACKAGE_DIRS.split(':').concat(package_dirs);
     

@@ -265,6 +265,35 @@ var packages = module.exports = {
     package_cache = {};
   },
 
+  // register a package
+  register: function (pkge) {
+    var dirs = pkge.split("/");
+    var pkgedirname = dirs[dirs.length - 1];
+    
+    if (files.get_package_dir(pkgedirname) !== undefined) {
+      process.stdout.write("Package already registered.\n"); return;
+    }
+    
+    files.cp_r(pkge, path.join(files.get_package_dirs()[1], pkgedirname));
+    process.stdout.write(pkgedirname + ": registered\n");
+  },
+
+  // un-register a package
+  unregister: function (pkge) {
+    if (files.get_package_dir(pkge) === undefined) {
+      process.stdout.write("Package isn't registered.\n"); return;
+    }
+    
+    var custom = fs.readdirSync(files.get_package_dirs()[1]);
+    if (! _.contains(custom, pkge)) {
+      process.stdout.write("Not a custom package; can't un-register.\n");
+      return;
+    }
+    
+    files.rm_recursive(path.join(files.get_package_dirs()[1], pkge));
+    process.stdout.write(pkgedirname + ": unregistered\n");
+  },
+
   // get all packages in the directory, in a map from package name to
   // a package object.
   list: function () {
