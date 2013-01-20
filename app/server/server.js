@@ -123,8 +123,8 @@ var run = function () {
     app_html = runtime_config(app_html);
 
     app.use(function (req, res) {
-      // prevent favicon.ico and robots.txt from returning app_html
-      if (_.indexOf(['/favicon.ico', '/robots.txt'], req.url) !== -1) {
+      // prevent these URLs from returning app_html
+      if (_.indexOf(['/app.manifest', '/favicon.ico', '/robots.txt'], req.url) !== -1) {
         res.writeHead(404);
         res.end();
         return;
