@@ -23,7 +23,7 @@
 
 		Handlebars.registerHelper('findOne', function (collection, query, options) {
 		//console.log('findOne: '+collection + '  '+query);
-			var myCollection = eval(collection);
+			var myCollection = window[collection];
 			if (myCollection instanceof Meteor.Collection){
 				var myQuery = JSON.parse(query);
 				var myOptions = (options instanceof Object)?undefined: JSON.parse(options);
@@ -41,7 +41,7 @@
 
 		Handlebars.registerHelper('find', function (collection, query, options) {
 		//console.log('find: '+collection + '  '+query+'  '+(options instanceof Object));
-			var myCollection = eval(collection);
+			var myCollection = window[collection];
 			if (myCollection instanceof Meteor.Collection){
 				var myQuery = JSON.parse(query);
 				var myOptions = (options instanceof Object)?undefined: JSON.parse(options);
