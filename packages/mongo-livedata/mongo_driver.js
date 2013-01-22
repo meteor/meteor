@@ -333,6 +333,10 @@ Cursor.prototype._observeUnordered = function (callbacks) {
     self._cursorDescription, false, callbacks);
 };
 
+Cursor.prototype.observeChanges = function (callbacks) {
+  return LocalCollection._observeChanges(this, callbacks);
+};
+
 _Mongo.prototype._createSynchronousCursor = function (cursorDescription) {
   var self = this;
 

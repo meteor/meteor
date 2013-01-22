@@ -204,7 +204,7 @@ _.extend(LocalCollection.Cursor.prototype, {
     return self._observeInternal(false, options);
   },
   observeChanges: function (callbacks) {
-    LocalCollection._observeChanges(this, callbacks);
+    return LocalCollection._observeChanges(this, callbacks);
   },
 
   _observeInternal: function (ordered, options) {
@@ -753,7 +753,9 @@ LocalCollection._observeChanges = function (cursor, callbacks) {
   var ordered = (typeof callbacks.addedBefore === 'function'
                  || typeof callbacks.movedBefore === 'function');
   var positions = ordered ? [] : null;
-  cursor._observeInternal(ordered, {
+  var observeMethod = _.bind(ordered ? cursor.observe : cursor._observeUnordered,
+                             cursor);
+  return observeMethod ({
     added: function (doc, ind) {
       var fields = _.omit(doc, '_id');
       if (ordered) {
