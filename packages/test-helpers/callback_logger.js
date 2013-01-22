@@ -34,6 +34,7 @@ CallbackLogger = function (test, callbackNames) {
 };
 
 CallbackLogger.prototype._yield = function (arg) {
+  var self = this;
   self._yielded = true;
   var y = Fiber.yield(arg);
   self._yielded = false;
@@ -65,7 +66,7 @@ CallbackLogger.prototype._waitForLengthOrTimeout = function (len) {
     var startTime = new Date();
     while (self._log.length < len && timeLeft > 0) {
       var handle = Meteor._wakeWithCancel(timeLeft);
-      if (Fiber.yield() === handle) {
+      if (self._yield() === handle) {
         break;
       } else {
         timeLeft -= ((new Date()).valueOf() - startTime.valueOf());
@@ -107,9 +108,9 @@ CallbackLogger.prototype.expectNoResult = function () {
   var self = this;
   if (self.fiber) {
     var handle = Meteor._wakeWithCancel(TIMEOUT);
-    var foo = Fiber.yield();
+    var foo = self._yield();
     while (_.isEmpty(self._log) && foo !== handle) {
-      foo = Fiber.yield();
+      foo = self._yield();
     }
     handle.cancel();
   }
