@@ -1,12 +1,12 @@
 {
-  "name": "packages",
+  "name": "packages-for-meteor-smartpackage-mongo-livedata",
   "version": "0.0.0",
   "dependencies": {
     "mongodb": {
-      "version": "1.1.11",
+      "version": "1.2.13",
       "dependencies": {
         "bson": {
-          "version": "0.1.5"
+          "version": "0.1.8"
         }
       }
     }

@@ -213,6 +213,7 @@ EOF
 PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR add a-package-named-bar >> $OUTPUT
 ! $METEOR -p $PORT --once | grep "loaded a-package-named-bar" >> $OUTPUT
 PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR -p $PORT --once | grep "loaded a-package-named-bar" >> $OUTPUT
+PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR bundle $TMPDIR/bundle.tar.gz >> $OUTPUT
 PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR -p $PORT --once | grep "gcd(4,6)=2" >> $OUTPUT
 
 
