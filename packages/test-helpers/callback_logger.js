@@ -1,6 +1,19 @@
 (function () {
 
+// This file allows you to write tests that expect certain callbacks to be
+// called in certain orders, or optionally in groups where the order does not
+// matter.  It can be set up in either a synchronous manner, so that each
+// callback must have already occured before you call expectResult & its ilk, or
+// in an asynchronous manner, so that the logger yields and waits a reasonable
+// timeout for the callback.  Because we're using Node Fibers to yield & start
+// ourselves, the asynchronous version is only available on the server.
+
+
 var TIMEOUT = 1000;
+
+// Run the given function, passing it a correctly-set-up callback logger as an
+// argument.  If we're meant to be running asynchronously, the function gets its
+// own Fiber.
 
 withCallbackLogger = function (test, callbackNames, async, fun) {
   var logger = new CallbackLogger(test, callbackNames);
@@ -64,15 +77,15 @@ CallbackLogger.prototype._waitForLengthOrTimeout = function (len) {
   if (self.fiber) {
     var timeLeft = TIMEOUT;
     var startTime = new Date();
-    while (self._log.length < len && timeLeft > 0) {
-      var handle = Meteor._wakeWithCancel(timeLeft);
+    var handle = setTimeout(function () {
+      self.fiber.run(handle);
+    }, TIMEOUT);
+    while (self._log.length < len) {
       if (self._yield() === handle) {
         break;
-      } else {
-        timeLeft -= ((new Date()).valueOf() - startTime.valueOf());
-        handle.cancel();
       }
     }
+    clearTimeout(handle);
   }
 };
 
@@ -107,12 +120,14 @@ CallbackLogger.prototype._expectNoResultImpl = function () {
 CallbackLogger.prototype.expectNoResult = function () {
   var self = this;
   if (self.fiber) {
-    var handle = Meteor._wakeWithCancel(TIMEOUT);
+    var handle = setTimeout(function () {
+      self.fiber.run(handle);
+    }, TIMEOUT);
     var foo = self._yield();
     while (_.isEmpty(self._log) && foo !== handle) {
       foo = self._yield();
     }
-    handle.cancel();
+    clearTimeout(handle);
   }
   self._expectNoResultImpl();
 };

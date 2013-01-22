@@ -151,30 +151,4 @@ Meteor._sleepForMs = function (ms) {
   Fiber.yield();
 };
 
-var wakeIds = {};
-
-Meteor._wakeWithCancel = function (ms) {
-  var fiber = Fiber.current;
-  var id = Meteor.id();
-  wakeIds[id] = true;
-  var handle = {
-    cancel: function () {
-      if (wakeIds[id]) {
-        delete wakeIds[id];
-      }
-    },
-    isCancelled: function() {
-      return !!wakeIds[id];
-    }
-  };
-  setTimeout(function () {
-    if (wakeIds[id]) {
-      delete wakeIds[id];
-      fiber.run(handle);
-    }
-  }, ms);
-  return handle;
-};
-
-
 })();
