@@ -1,6 +1,4 @@
 {
-  "name": "packages-for-meteor-smartpackage-stream",
-  "version": "0.0.0",
   "dependencies": {
     "sockjs": {
       "version": "0.3.4",

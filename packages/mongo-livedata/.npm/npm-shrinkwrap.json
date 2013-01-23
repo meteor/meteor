@@ -1,6 +1,4 @@
 {
-  "name": "packages-for-meteor-smartpackage-mongo-livedata",
-  "version": "0.0.0",
   "dependencies": {
     "mongodb": {
       "version": "1.2.13",

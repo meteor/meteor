@@ -1,6 +1,4 @@
 {
-  "name": "packages-for-meteor-smartpackage-email",
-  "version": "0.0.0",
   "dependencies": {
     "mailcomposer": {
       "version": "0.1.15",
