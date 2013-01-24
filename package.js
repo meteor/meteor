@@ -3,8 +3,8 @@ Package.describe({
   internal: true
 });
 
-var fs = require('fs');
-var path = require('path');
+var fs = Npm.require('fs');
+var path = Npm.require('path');
 
 Package.on_use(function (api) {
   // XXX would like to do the following only when the first html file
@@ -40,7 +40,7 @@ Package.register_extension(
     // religion on that
     var contents = fs.readFileSync(source_path);
 
-    var html_scanner = Package.require('html_scanner.js');
+    var html_scanner = Package._require('html_scanner.js');
     var results = html_scanner.scan(contents.toString('utf8'), source_path);
 
     if (results.head)
