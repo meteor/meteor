@@ -79,7 +79,7 @@ $METEOR remove backbone 2>&1 | grep "backbone: removed" >> $OUTPUT
 echo "... bundle"
 
 $METEOR bundle foo.tar.gz
-test -f foo.tar.gz
+tar tvzf foo.tar.gz >>$OUTPUT
 
 cd .. # we're now back to $DIR
 echo "... run"
@@ -215,6 +215,7 @@ PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR add a-package-named-bar >> $OUTPUT
 ! $METEOR -p $PORT --once | grep "loaded a-package-named-bar" >> $OUTPUT
 PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR -p $PORT --once | grep "loaded a-package-named-bar" >> $OUTPUT
 PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR bundle $TMPDIR/bundle.tar.gz >> $OUTPUT
+tar tvzf $TMPDIR/bundle.tar.gz >>$OUTPUT
 PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR -p $PORT --once | grep "gcd(4,6)=2" >> $OUTPUT
 
 
