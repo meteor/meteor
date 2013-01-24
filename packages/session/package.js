@@ -1,11 +1,7 @@
-var path = require('path');
-
 Package.describe({
   summary: "Session variable",
   internal: true
 });
-
-var _ = require('underscore'); // needed at bundle time
 
 Package.on_use(function (api) {
   api.use(['underscore', 'deps'], 'client');

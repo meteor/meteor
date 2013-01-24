@@ -1,0 +1,21 @@
+{
+  "dependencies": {
+    "nib": {
+      "version": "0.8.2"
+    },
+    "stylus": {
+      "version": "0.30.1",
+      "dependencies": {
+        "cssom": {
+          "version": "0.2.5"
+        },
+        "mkdirp": {
+          "version": "0.3.4"
+        },
+        "debug": {
+          "version": "0.7.0"
+        }
+      }
+    }
+  }
+}

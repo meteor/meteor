@@ -2,13 +2,11 @@
 
 // XXX rename to 'markdown' and credit showdown some other way?
 
-var path = require('path');
-
 Package.describe({
   summary: "Markdown-to-HTML processor"
 });
 
-var _ = require('underscore');
+var _ = Npm.require('underscore');
 
 Package.on_use(function (api, where) {
   where = where || ["client", "server"];

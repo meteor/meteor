@@ -3,11 +3,13 @@ Package.describe({
   internal: true
 });
 
+Npm.depends({sockjs: "0.3.4"});
+
 Package.on_use(function (api) {
   api.use(['underscore', 'logging', 'random', 'json'], ['client', 'server']);
   api.use('reload', 'client');
   api.use('routepolicy', 'server');
-  api.useNpm({sockjs: "0.3.4"});
+  Npm.depends({sockjs: "0.3.4"});
 
   api.add_files('sockjs-0.3.4.js', 'client');
 

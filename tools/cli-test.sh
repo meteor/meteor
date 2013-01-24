@@ -198,8 +198,9 @@ mkdir -p "$TMPDIR/local-packages/a-package-named-bar/"
 cat > "$TMPDIR/local-packages/a-package-named-bar/package.js" <<EOF
 console.log("loaded a-package-named-bar");
 
+Npm.depends({gcd: '0.0.0'});
+
 Package.on_use(function(api) {
-  api.useNpm({gcd: '0.0.0'});
   api.add_files(['call_gcd.js'], 'server');
 });
 EOF
