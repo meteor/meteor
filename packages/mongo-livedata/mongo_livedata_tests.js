@@ -621,7 +621,37 @@ testAsyncMulti('mongo-livedata - document with a date, ' + idGeneration, [
       test.equal(cursor.count(), 1);
       test.equal(coll.findOne().d.getFullYear(), 2012);
     }));
+  }
+]);
 
+testAsyncMulti('mongo-livedata - document with binary data, ' + idGeneration, [
+  function (test, expect) {
+    var bin = EJSON._base64Decode(
+      "TWFuIGlzIGRpc3Rpbmd1aXNoZWQsIG5vdCBvbmx5IGJ5IGhpcyBy" +
+        "ZWFzb24sIGJ1dCBieSB0aGlzIHNpbmd1bGFyIHBhc3Npb24gZnJv" +
+        "bSBvdGhlciBhbmltYWxzLCB3aGljaCBpcyBhIGx1c3Qgb2YgdGhl" +
+        "IG1pbmQsIHRoYXQgYnkgYSBwZXJzZXZlcmFuY2Ugb2YgZGVsaWdo" +
+        "dCBpbiB0aGUgY29udGludWVkIGFuZCBpbmRlZmF0aWdhYmxlIGdl" +
+        "bmVyYXRpb24gb2Yga25vd2xlZGdlLCBleGNlZWRzIHRoZSBzaG9y" +
+        "dCB2ZWhlbWVuY2Ugb2YgYW55IGNhcm5hbCBwbGVhc3VyZS4=");
+    var collectionName = Meteor.uuid();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
+      Meteor.subscribe('c-' + collectionName);
+    }
+
+    var coll = new Meteor.Collection(collectionName, collectionOptions);
+    var docId;
+    coll.insert({b: bin}, expect(function (err, id) {
+      test.isFalse(err);
+      test.isTrue(id);
+      docId = id;
+      var cursor = coll.find();
+      test.equal(cursor.count(), 1);
+      var inColl = coll.findOne();
+      test.isTrue(EJSON.isBinary(inColl.b));
+      test.equal(inColl.b, bin);
+    }));
   }
 ]);
 

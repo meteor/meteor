@@ -297,4 +297,34 @@ EJSON.clone = function (v) {
 };
 
 
+
+EJSON._recognizeAndReplace = function (document, recognize, transformer) {
+  if (typeof document == 'object') {
+    if (recognize(document))
+      return transformer(document);
+    if (document === null
+        || document instanceof Date
+        || typeof document.typeName === 'function')
+      return document;
+    if (document instanceof Array) {
+      var newArr = [];
+      _.each(document, function (val) {
+        newArr.push(EJSON._recognizeAndReplace(val, recognize, transformer));
+      });
+      return newArr;
+    } else {
+      // plain object
+      var newObj = {};
+      _.each(document, function (val, key) {
+        newObj[key] = EJSON._recognizeAndReplace(val, recognize, transformer);
+      });
+      return newObj;
+    }
+  } else {
+    return document;
+  }
+};
+
+
+
 })();

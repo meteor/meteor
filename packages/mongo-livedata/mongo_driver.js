@@ -13,6 +13,13 @@ var MongoDB = __meteor_bootstrap__.require('mongodb');
 var Fiber = __meteor_bootstrap__.require('fibers');
 var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
 
+MongoDB.BSON.installUserDefinedBinaryHandler({
+  toBuffer: function (arr) { return new Buffer(arr); },
+  fromBuffer: function (buf) { return new Uint8Array(buf); },
+  isBinary: function (obj) { return obj instanceof Uint8Array; },
+  length: function (buf) { return buf.length; }
+});
+
 _Mongo = function (url) {
   var self = this;
 
@@ -67,6 +74,33 @@ _Mongo.prototype._maybeBeginWrite = function () {
     return fence.beginWrite();
   else
     return {committed: function () {}};
+};
+
+var replaceUint8WithBinary = function (document) {
+  if (typeof document == 'object') {
+    if (EJSON.isBinary(document))
+      return new MongoDB.Binary(document);
+    if (document === null
+        || document instanceof Date
+        || typeof document.typeName === 'function')
+      return document;
+    if (document instanceof Array) {
+      var newArr = [];
+      _.each(document, function (val) {
+        newArr.push(replaceUint8WithBinary(val));
+      });
+      return newArr;
+    } else {
+      // plain object
+      var newObj = {};
+      _.each(docment, function (val, key) {
+        newObj[key] = replaceUint8WithBinary(val);
+      });
+      return newObj;
+    }
+  } else {
+    return document;
+  }
 };
 
 //////////// Public API //////////

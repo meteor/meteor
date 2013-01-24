@@ -3,7 +3,7 @@
 set -e
 set -u
 
-BUNDLE_VERSION=0.2.14
+BUNDLE_VERSION=0.2.15
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -130,6 +130,13 @@ rm -rf *
 mv ../$FIBERS_ARCH .
 cd ../..
 
+
+# We want to ship a custom BSON module to replace one of the Node Mongo driver's
+# dependencies.  This allows us to return a Uint8Array as a form of binary data
+# instead of the Mongo driver's proprietary Binary object on the server.
+
+cd $DIR/lib/node_modules/mongodb
+npm install https://github.com/meteor/js-bson/tarball/9b8958a039
 
 # Download and install mongodb.
 # To see the mongo changelog, go to http://www.mongodb.org/downloads,
