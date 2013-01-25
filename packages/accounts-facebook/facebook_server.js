@@ -5,12 +5,15 @@
     var accessToken = getAccessToken(query);
     var identity = getIdentity(accessToken);
 
+    var serviceData = {
+        accessToken: accessToken
+    };
+
+    //include all returned fields from facebook (includes id / email)
+    _.extend(serviceData, identity);
+
     return {
-      serviceData: {
-        id: identity.id,
-        accessToken: accessToken,
-        email: identity.email
-      },
+      serviceData: serviceData,
       options: {profile: {name: identity.name}}
     };
   });
