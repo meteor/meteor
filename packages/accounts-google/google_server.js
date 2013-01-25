@@ -7,11 +7,12 @@
     var identity = getIdentity(accessToken);
 
     var serviceData = {
-      id: identity.id,
       accessToken: accessToken,
-      email: identity.email,
       expiresAt: (+new Date) + (1000 * response.expiresIn)
     };
+
+    //include all returned fields from google (includes id / email)
+    _.extend(serviceData, identity);
 
     // only set the token in serviceData if it's there. this ensures
     // that we don't lose old ones (since we only get this on the first
