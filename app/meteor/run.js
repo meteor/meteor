@@ -11,6 +11,7 @@ var updater = require(path.join(__dirname, '..', 'lib', 'updater.js'));
 var bundler = require(path.join(__dirname, '..', 'lib', 'bundler.js'));
 var mongo_runner = require(path.join(__dirname, '..', 'lib', 'mongo_runner.js'));
 var mongoExitCodes = require(path.join(__dirname, '..', 'lib', 'mongo_exit_codes.js'));
+var inFiber = require(path.join(__dirname, '..', 'lib', 'fiber-helpers.js')).inFiber;
 
 var _ = require('underscore');
 
@@ -601,7 +602,7 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
     }
   };
 
-  var restart_server = function () {
+  var restart_server = inFiber(function () {
     Status.running = false;
     Status.listening = false;
     if (server_handle)
@@ -700,7 +701,7 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
           }});
       }
     };
-  };
+  });
 
 
   var mongo_err_count = 0;

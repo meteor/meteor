@@ -13,6 +13,7 @@ var files = require(path.join(__dirname, '..', 'lib', 'files.js'));
 var _ = require('underscore');
 var keypress = require('keypress');
 var child_process = require('child_process');
+var inFiber = require(path.join(__dirname, '..', 'lib', 'fiber-helpers.js')).inFiber;
 
 //
 // configuration
@@ -351,6 +352,8 @@ var read_password = function (callback) {
 // undefined if no password is required.
 var with_password = function (site, callback) {
   var check_url = "https://" + DEPLOY_HOSTNAME + "/has_password/" + site;
+
+  callback = inFiber(callback);
 
   request(check_url, function (error, response, body) {
     if (error || response.statusCode !== 200) {
