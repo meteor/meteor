@@ -810,6 +810,15 @@ _.extend(Meteor._LivedataServer.prototype, {
       self.universal_publish_handlers.push(handler);
   },
 
+  securePublish: function (name, handler, options) {
+    authHandler = function () {
+      if (this.userId) {
+        handler();
+      }
+    };
+    this.publish(name, authHandler, options);
+  },
+
   methods: function (methods) {
     var self = this;
     _.each(methods, function (func, name) {
