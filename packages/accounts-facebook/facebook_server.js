@@ -4,7 +4,7 @@
 
   Accounts.oauth.registerService('facebook', 2, function(query) {
 
-    var response = getTokens(query);
+    var response = getTokenResponse(query);
     var accessToken = response.accessToken;
     var identity = getIdentity(accessToken);
 
@@ -24,7 +24,7 @@
   // returns an object containing:
   // - accessToken
   // - expiresIn: lifetime of token in seconds
-  var getTokens = function (query) {
+  var getTokenResponse = function (query) {
     var config = Accounts.loginServiceConfiguration.findOne({service: 'facebook'});
     if (!config)
       throw new Accounts.ConfigError("Service not configured");
