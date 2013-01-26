@@ -96,6 +96,20 @@
     test.isTrue(Roles.userIsInRole(user, 'admin'))
   })
 
+  Tinytest.add('userIsInRole returns false when user is null', function (test) {
+    var user 
+
+    reset()
+
+    _.each(roles, function (role) {
+      Roles.createRole(role)
+    })
+
+    user = null
+
+    test.isFalse(Roles.userIsInRole(user, 'admin'))
+  })
+
   Tinytest.add('can check user against several roles at once', function (test) {
     var user 
 

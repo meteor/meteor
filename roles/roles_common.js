@@ -156,14 +156,16 @@ Roles.userIsInRole = function (user, roles) {
     roles = [roles]
   }
   
-  if ('object' === typeof user) {
+  if (!user) {
+    return false
+  } else if ('object' === typeof user) {
     userRoles = user.roles
     if (_.isArray(userRoles)) {
       return _.some(roles, function (role) {
         return _.contains(userRoles, role)
       })
     }
-    // missing roles, try id
+    // missing roles field, try going direct via id
     id = user._id
   } else if ('string' === typeof user) {
     id = user
