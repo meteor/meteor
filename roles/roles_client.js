@@ -52,10 +52,12 @@ Roles._handlebarsHelpers = {
 }
 
 
-if ('undefined' !== typeof Handlebars) {
-  _.each(Roles._handlebarsHelpers, function (name, func) {
+if (Handlebars) {
+  _.each(Roles._handlebarsHelpers, function (func, name) {
     Handlebars.registerHelper(name, func)
   })
+} else {
+  console.log('WARNING: Roles Handlebars helpers not registered. Handlebars not defined')
 }
 
 }());
