@@ -892,18 +892,15 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   });
 
   // Get the current contents of the cursor.
-
-  // TODO: unify initialContents and itemRanges into one
-  // OrderedDict from id -> (doc, LiveRange), called
-  // `itemDict`.
+  // XXX currently we count on observe() using only added() to deliver
+  // the initial contents. are we allow to do that, or do we need to
+  // implement removed/moved/changed here as well?
   var initialContents = [];
   _.extend(callbacks, {
     added: function (item, beforeIndex) {
-      // TODO: itemDict.addBefore ...
       initialContents.splice(beforeIndex, 0, item);
     }
   });
-  // TODO: observeChanges
   var handle = cursor.observe(observerCallbacks);
 
   // Get the renderer, if any
@@ -917,18 +914,15 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   // off for later.
   var html = '';
   var outerRange;
-  // TODO: itemRanges is a map from id to LiveRange
   var itemRanges = [];
   if (! initialContents.length)
     html = elseFunc();
   else {
-    // TODO: iterate over itemDict
     for (var i = 0; i < initialContents.length; i++) {
       (function (i) {
         html += maybeAnnotate(itemFunc(initialContents[i]),
                               Spark._ANNOTATION_LIST_ITEM,
                               function (range) {
-                                // TOOD: mutate value in itemDict
                                 itemRanges[i] = range;
                               });
       })(i); // scope i to closure
