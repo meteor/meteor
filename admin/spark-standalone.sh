@@ -7,6 +7,7 @@ set -e
 PACKAGES_DIR=`dirname $0`/../packages
 
 echo 'Meteor = {};'
+cat $PACKAGES_DIR/logging/logging.js
 cat $PACKAGES_DIR/uuid/uuid.js
 cat $PACKAGES_DIR/deps/deps.js
 cat $PACKAGES_DIR/deps/deps-utils.js
