@@ -3,13 +3,25 @@ meteor-roles
 
 Roles-based authorization package for Meteor - compatible with built-in accounts package.
 
+### Example App
+
+The ```example-app``` directory contains a Meteor app which shows off the following features:
+* Server-side publishing with authorization to secure sensitive data
+* Client-side navigation with link visibility based on user permissions
+* Page-based app with initial sign-in page using ```accounts-ui```
+* Client-side routing via ```meteor-router``` smart package
+
+See this app in action by:
+  1. ```git clone https://github.com/alanning/meteor-roles.git```
+  2. ```cd meteor-roles/example-app```
+  3. ```mrt```
+  4. point browser to ```http://localhost:3000```
+
 ### Usage
 
-User objects now have an extra 'roles' field which contains the user's roles.
+User entries in the ```Meteor.users``` collection gain a new field named ```roles``` which is an array of strings corresponding to the user's roles.
 
 -- **Server** --
-
-NOTE: Add checks to publish methods and other sensitive functions to restrict data available to client.
 
 Check user roles before publishing sensitive data:
 ```js
@@ -47,25 +59,18 @@ Meteor.publish('ownUserData', function () {
 
 -- **Client** --
 
-NOTE: Like all Meteor applications, client-side checks are a convenience, rather than a true security implementation 
-since Meteor bundles the same client-side code to all users.  Any sensitive data needs to be controlled server-side to prevent unwanted disclosure.
+Client javascript has access to all the same Roles functions as the server with the addition of a ```isInRole``` handlebars helper which is automatically registered by the Roles package.  But you will only be able to take advantage of these if you publish user's 'roles' field.  It is _not_ published by default.
 
-To be clear, Meteor sends all templates, client-side javascript, and published data to the client's browser.  This is by design and is a good thing.  The following example is just sugar to help improve the user experience for normal users.  Those interested in seeing the the 'admin' template in the example below will still be able to with a little work but this is not a problem as long as the actual data is restricted server-side.
+Like all Meteor applications, client-side checks are a convenience, rather than a true security implementation 
+since Meteor bundles the same client-side code to all users.  Providing the Roles functions client-side also allows for latency compensation during Meteor method calls.
+
+NOTE: Any sensitive data needs to be controlled server-side to prevent unwanted disclosure. To be clear, Meteor sends all templates, client-side javascript, and published data to the client's browser.  This is by design and is a good thing.  The following example is just sugar to help improve the user experience for normal users.  Those interested in seeing the the 'admin' template in the example below will still be able to do so by manually reviewing the bundled client.js file but this is not a problem as long as the actual data is restricted server-side.
 
 ```js
 // client/myApp.js
 
 Meteor.subscribe('ownUserData');
 
-Template.header.isInRole = function (role) {
-  var user = Meteor.user();
-
-  if (!user) {
-    return false;
-  }
-
-  return _.contains(user.roles, role);
-}
 ```
 ```handlebars
 <!-- client/myApp.html -->
