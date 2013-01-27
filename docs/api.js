@@ -4,9 +4,15 @@ YUI.add("yuidoc-meta", function(Y) {
         "Roles"
     ],
     "modules": [
+        "Helpers",
         "Roles"
     ],
     "allModules": [
+        {
+            "displayName": "Helpers",
+            "name": "Helpers",
+            "description": "Convenience functions for use on client.\n\nNOTE: You must restrict user actions on the server-side; any\nclient-side checks are strictly for convenience and must not be\ntrusted."
+        },
         {
             "displayName": "Roles",
             "name": "Roles",

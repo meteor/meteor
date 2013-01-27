@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Roles - The meteor-roles API</title>
+    <title>roles&#x2F;roles_client.js - The meteor-roles API</title>
     <link rel="stylesheet" href="http:&#x2F;&#x2F;yui.yahooapis.com&#x2F;3.7.0&#x2F;build&#x2F;cssgrids&#x2F;cssgrids-min.css">
     <link rel="stylesheet" href="..&#x2F;assets/vendor/prettify/prettify-min.css">
     <link rel="stylesheet" href="..&#x2F;assets/css/main.css" id="site_styles">
@@ -86,49 +86,77 @@
             <div class="apidocs">
                 <div id="docs-main">
                     <div class="content">
-                        <h1>Roles Module</h1>
-<div class="box clearfix meta">
-    
+                        <h1 class="file-heading">File: roles&#x2F;roles_client.js</h1>
 
-    
+<div class="file">
+    <pre class="code prettyprint linenums">
+;(function () {
 
-    
-        <div class="foundat">
-            Defined in: <a href="..&#x2F;files&#x2F;roles_roles_common.js.html#l18"><code>roles&#x2F;roles_common.js:18</code></a>
-        </div>
-    
+Meteor.subscribe(&#x27;_roles_own_user_roles&#x27;)
 
-    
-</div>
+&#x2F;**
+ * Convenience functions for use on client.
+ *
+ * NOTE: You must restrict user actions on the server-side; any
+ * client-side checks are strictly for convenience and must not be
+ * trusted.
+ *
+ * @module Helpers
+ *&#x2F;
+
+&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;&#x2F;
+&#x2F;&#x2F; Handlebars helpers
+&#x2F;&#x2F;
+&#x2F;&#x2F; Use a semi-private variable rather than declaring Handlebars
+&#x2F;&#x2F; helpers directly so that we can unit test the helpers.
+&#x2F;&#x2F; XXX For some reason, the Handlebars helpers are not registered 
+&#x2F;&#x2F; before the tests run.
+&#x2F;&#x2F;
+Roles._handlebarsHelpers = {
+
+  &#x2F;**
+   * Handlebars helper to check if current user is in at least one
+   * of the target roles.  For use in client-side templates.
+   *
+   * @method isInRole
+   * @param {String} role name of role or comma-seperated list of roles
+   * @return {Boolean} true if current user is in at least one of the target roles
+   *&#x2F;
+  isInRole: function (role) {
+    var user = Meteor.user(),
+      comma = role &amp;&amp; role.indexOf(&#x27;,&#x27;),
+      roles
+
+    if (!user) return false
+
+    if (comma !== -1) {
+      roles = _.reduce(role.split(&#x27;,&#x27;), function (memo, r) {
+        if (!r || !r.trim()) {
+          return memo
+        }
+        memo.push(r.trim())
+        return memo
+      }, [])
+    } else {
+      roles = [role]
+    }
+
+    return Roles.userIsInRole(user, roles)
+  }
+}
 
 
+if (&#x27;undefined&#x27; !== typeof Handlebars) {
+  _.each(Roles._handlebarsHelpers, function (func, name) {
+    Handlebars.registerHelper(name, func)
+  })
+} else {
+  console.log(&#x27;WARNING: Roles Handlebars helpers not registered. Handlebars not defined&#x27;)
+}
 
-<div class="box intro">
-    <p>Provides functions related to user authorization. Compatible with built-in Meteor accounts packages.</p>
-</div>
+}());
 
-
-
-<div class="yui3-g">
-    <div class="yui3-u-1-2">
-        
-            <p>This module provides the following classes:</p>
-
-            <ul class="module-classes">
-            
-                <li class="module-class">
-                    <a href="..&#x2F;classes/Roles.html">
-                        Roles
-                    </a>
-                </li>
-            
-            </ul>
-        
-    </div>
-
-    <div class="yui3-u-1-2">
-        
-    </div>
+    </pre>
 </div>
 
                     </div>

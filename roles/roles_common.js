@@ -33,7 +33,7 @@ if ('undefined' === typeof Roles) {
  *
  * @method createRole
  * @param {String} role Name of role
- * @param {String} id of new role
+ * @return {String} id of new role
  */
 Roles.createRole = function (role) {
   var id,
@@ -165,6 +165,7 @@ Roles.removeUsersFromRoles = function (users, roles) {
  * @method userIsInRole
  * @param {String|Object} user Id of user or actual user object
  * @param {String|Array} roles Name of role or Array of roles to check against.  If array, will return true if user is in _any_ role.
+ * @return {Boolean} true if user is in _any_ of the target roles
  */
 Roles.userIsInRole = function (user, roles) {
   var id,

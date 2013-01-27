@@ -47,6 +47,8 @@
 
             <ul id="api-modules" class="apis modules">
             
+                <li><a href="..&#x2F;modules/Helpers.html">Helpers</a></li>
+            
                 <li><a href="..&#x2F;modules/Roles.html">Roles</a></li>
             
             </ul>
@@ -92,7 +94,7 @@
 
     
         <div class="foundat">
-            Defined in: <a href="..&#x2F;files&#x2F;roles_roles_server.js.html#l16"><code>roles&#x2F;roles_server.js:16</code></a>
+            Defined in: <a href="..&#x2F;files&#x2F;roles_roles_common.js.html#l18"><code>roles&#x2F;roles_common.js:18</code></a>
         </div>
     
 
@@ -152,7 +154,7 @@
             
         
         
-        <a href="..&#x2F;files&#x2F;roles_roles_server.js.html#l16"><code>roles&#x2F;roles_server.js:16</code></a>
+        <a href="..&#x2F;files&#x2F;roles_roles_common.js.html#l18"><code>roles&#x2F;roles_common.js:18</code></a>
         
         </p>
 
@@ -241,6 +243,13 @@
                             </li>
                         
                             <li class="index-item method">
+                                <a href="#method_isInRole">isInRole</a>
+
+                                
+                                
+                            </li>
+                        
+                            <li class="index-item method">
                                 <a href="#method_removeUsersFromRoles">removeUsersFromRoles</a>
 
                                 
@@ -318,7 +327,7 @@
             
         
         
-        <a href="..&#x2F;files&#x2F;roles_roles_server.js.html#l81"><code>roles&#x2F;roles_server.js:81</code></a>
+        <a href="..&#x2F;files&#x2F;roles_roles_common.js.html#l85"><code>roles&#x2F;roles_common.js:85</code></a>
         
         </p>
 
@@ -400,6 +409,10 @@
     
 
     
+        <span class="returns-inline">
+            <span class="type">String</span>
+        </span>
+    
 
     
 
@@ -424,7 +437,7 @@
             
         
         
-        <a href="..&#x2F;files&#x2F;roles_roles_server.js.html#l29"><code>roles&#x2F;roles_server.js:29</code></a>
+        <a href="..&#x2F;files&#x2F;roles_roles_common.js.html#l31"><code>roles&#x2F;roles_common.js:31</code></a>
         
         </p>
 
@@ -435,7 +448,7 @@
     </div>
 
     <div class="description">
-        <p>Create a new role</p>
+        <p>Create a new role. Whitespace will be trimmed.</p>
     </div>
 
     
@@ -463,6 +476,19 @@
         </div>
     
 
+    
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                
+                    
+                        <span class="type">String</span>:
+                    
+                    id of new role
+                
+            </div>
+        </div>
     
 
     
@@ -511,7 +537,7 @@
             
         
         
-        <a href="..&#x2F;files&#x2F;roles_roles_server.js.html#l60"><code>roles&#x2F;roles_server.js:60</code></a>
+        <a href="..&#x2F;files&#x2F;roles_roles_common.js.html#l64"><code>roles&#x2F;roles_common.js:64</code></a>
         
         </p>
 
@@ -593,7 +619,7 @@ are currently assigned to the target role.</p>
             
         
         
-        <a href="..&#x2F;files&#x2F;roles_roles_server.js.html#l196"><code>roles&#x2F;roles_server.js:196</code></a>
+        <a href="..&#x2F;files&#x2F;roles_roles_common.js.html#l218"><code>roles&#x2F;roles_common.js:218</code></a>
         
         </p>
 
@@ -674,7 +700,7 @@ are currently assigned to the target role.</p>
             
         
         
-        <a href="..&#x2F;files&#x2F;roles_roles_server.js.html#l180"><code>roles&#x2F;roles_server.js:180</code></a>
+        <a href="..&#x2F;files&#x2F;roles_roles_common.js.html#l202"><code>roles&#x2F;roles_common.js:202</code></a>
         
         </p>
 
@@ -778,7 +804,7 @@ are currently assigned to the target role.</p>
             
         
         
-        <a href="..&#x2F;files&#x2F;roles_roles_server.js.html#l206"><code>roles&#x2F;roles_server.js:206</code></a>
+        <a href="..&#x2F;files&#x2F;roles_roles_common.js.html#l228"><code>roles&#x2F;roles_common.js:228</code></a>
         
         </p>
 
@@ -836,6 +862,113 @@ are currently assigned to the target role.</p>
 </div>
 
                 
+                    <div id="method_isInRole" class="method item">
+    <h3 class="name"><code>isInRole</code></h3>
+
+    
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+            
+                <li class="arg">
+                    
+                        <code>role</code>
+                    
+                </li>
+            
+            </ul><span class="paren">)</span>
+        </div>
+    
+
+    
+        <span class="returns-inline">
+            <span class="type">Boolean</span>
+        </span>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    <div class="meta">
+        
+            
+                
+                    <p>Provided by the <a href="../modules/Helpers.html">Helpers</a> module.</p>
+                
+                <p>
+                
+                Defined in
+                
+            
+        
+        
+        <a href="..&#x2F;files&#x2F;roles_roles_client.js.html#l25"><code>roles&#x2F;roles_client.js:25</code></a>
+        
+        </p>
+
+
+        
+
+        
+    </div>
+
+    <div class="description">
+        <p>Handlebars helper to check if current user is in at least one
+of the target roles.  For use in client-side templates.</p>
+    </div>
+
+    
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+            
+                <li class="param">
+                    
+                        <code class="param-name">role</code>
+                        <span class="type">String</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                        <p>name of role or comma-seperated list of roles</p>
+                    </div>
+
+                    
+                </li>
+            
+            </ul>
+        </div>
+    
+
+    
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                
+                    
+                        <span class="type">Boolean</span>:
+                    
+                    true if current user is in at least one of the target roles
+                
+            </div>
+        </div>
+    
+
+    
+</div>
+
+                
                     <div id="method_removeUsersFromRoles" class="method item">
     <h3 class="name"><code>removeUsersFromRoles</code></h3>
 
@@ -884,7 +1017,7 @@ are currently assigned to the target role.</p>
             
         
         
-        <a href="..&#x2F;files&#x2F;roles_roles_server.js.html#l118"><code>roles&#x2F;roles_server.js:118</code></a>
+        <a href="..&#x2F;files&#x2F;roles_roles_common.js.html#l139"><code>roles&#x2F;roles_common.js:139</code></a>
         
         </p>
 
@@ -968,6 +1101,10 @@ are currently assigned to the target role.</p>
     
 
     
+        <span class="returns-inline">
+            <span class="type">Boolean</span>
+        </span>
+    
 
     
 
@@ -992,7 +1129,7 @@ are currently assigned to the target role.</p>
             
         
         
-        <a href="..&#x2F;files&#x2F;roles_roles_server.js.html#l141"><code>roles&#x2F;roles_server.js:141</code></a>
+        <a href="..&#x2F;files&#x2F;roles_roles_common.js.html#l162"><code>roles&#x2F;roles_common.js:162</code></a>
         
         </p>
 
@@ -1046,6 +1183,19 @@ are currently assigned to the target role.</p>
         </div>
     
 
+    
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                
+                    
+                        <span class="type">Boolean</span>:
+                    
+                    true if user is in <em>any</em> of the target roles
+                
+            </div>
+        </div>
     
 
     
