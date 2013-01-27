@@ -78,9 +78,6 @@ Meteor.startup(function () {
   Accounts.validateNewUser(function (user) {
     var loggedInUser = Meteor.user();
 
-    console.log('validateNewUser');
-    console.log(loggedInUser);
-
     if (Roles.userIsInRole(loggedInUser, ['admin','manage-users'])) {
       return true;
     }
@@ -88,7 +85,7 @@ Meteor.startup(function () {
     throw new Meteor.Error(403, "Not authorized to create new users");
   });
 
-})
+});
 
 
 ////////////////////////////////////////////////////////////////////
@@ -96,12 +93,16 @@ Meteor.startup(function () {
 //
 
 
-// Users can access their own roles fields
-Meteor.publish('ownUserData', function () {
-  var user = Meteor.users.findOne(this.userId),
-      fields = {roles:1};
+// Authorized users can view secrets
+Meteor.publish("secrets", function () {
+  var user = Meteor.users.findOne({_id:this.userId});
 
-  return Meteor.users.find({_id:this.userId}, {fields: fields});
+  if (Roles.userIsInRole(user, ["admin","view-secrets"])) {
+    return Meteor.secrets.find();
+  } else {
+    this.complete();
+    return;
+  }
 });
 
 // Authorized users can manage user accounts
@@ -110,18 +111,6 @@ Meteor.publish("users", function () {
 
   if (Roles.userIsInRole(user, ["admin","manage-users"])) {
     return Meteor.users.find({}, {fields: {emails: 1, profile: 1, roles: 1}});
-  } else {
-    this.complete();
-    return;
-  }
-});
-
-// Authorized users can view secrets
-Meteor.publish("secrets", function () {
-  var user = Meteor.users.findOne({_id:this.userId});
-
-  if (Roles.userIsInRole(user, ["admin","view-secrets"])) {
-    return Meteor.secrets.find();
   } else {
     this.complete();
     return;

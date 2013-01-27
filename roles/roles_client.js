@@ -1,10 +1,12 @@
 ;(function () {
-  
+
+Meteor.subscribe('_roles_own_user_roles')
+
 /**
  * Convenience functions for use on client.
  *
- * NOTE: You must restrict user actions on the server-side; anything
- * done client-side is strictly for convenience and must not be
+ * NOTE: You must restrict user actions on the server-side; any
+ * client-side checks are strictly for convenience and must not be
  * trusted.
  *
  * @module Helpers
@@ -15,7 +17,7 @@
 //
 // Use a semi-private variable rather than declaring Handlebars
 // helpers directly so that we can unit test the helpers.
-// For some reason, the Handlebars helpers are not registered 
+// XXX For some reason, the Handlebars helpers are not registered 
 // before the tests run.
 //
 Roles._handlebarsHelpers = {

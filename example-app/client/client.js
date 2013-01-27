@@ -17,16 +17,13 @@ if (!console || !console.log) {
 // https://github.com/twitter/bootstrap/issues/4550
 $(document).on('touchstart.dropdown.data-api', '.dropdown-menu', function (e) {
     e.stopPropagation();
-})
+});
 
 
 
 ////////////////////////////////////////////////////////////////////
 // Subscriptions
 //
-
-// user's 'roles' field
-Meteor.subscribe('ownUserData');
 
 // secrets
 Meteor.subscribe('secrets');
@@ -61,15 +58,15 @@ Meteor.Router.add({
     console.log(user.roles);
 
     // start on 'start' page
-    console.log('home: start')
-    return 'start'
+    console.log('home: start');
+    return 'start';
   },
   '/signin': 'signin',
   '/start': 'start',
   '/secrets': 'secrets',
   '/manage': 'manage',
   '*': 'not_found'
-})
+});
 
 Meteor.Router.filters({
   checkLoggedIn: function (page) {
@@ -102,7 +99,7 @@ Meteor.Router.filters({
 // make sure user has logged in for all appropriate routes
 Meteor.Router.filter('checkLoggedIn', {
   except:['signin','loading','not-found']
-})
+});
 
 
 
@@ -115,25 +112,21 @@ Meteor.Router.filter('checkLoggedIn', {
 Template.signin.rendered = function () {
   // auto-trigger accounts-ui login form dropdown
   Accounts._loginButtonsSession.set('dropdownVisible', true);
-}
+};
 
 Template.header.events({
   // template data, if any, is available in 'this'
   'click a.nav-start' : handleNavClick,
   'click a.nav-secrets' : handleNavClick,
   'click a.nav-manage' : handleNavClick,
-  'click #err .close' : clearError,
   'click .btn-navbar' : openCloseNav,
   'click .signout': signout
-})
+});
 Template.header.helpers({
   displayName: function () {
     return displayName();
-  },
-  errorMsg: function () {
-    return Session.get('error');
   }
-})
+});
 
 Template.secrets.helpers({
   secrets: function () {
@@ -208,14 +201,9 @@ function handleNavClick (e) {
   }
 }
 
-function clearError () {
-  Session.set('error', '');
-}
-
 function signout (e) {
   e.preventDefault();
   console.log('logging out...');
-  clearError();
   Meteor.logout();
   Meteor.Router.to('/');
 }
