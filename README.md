@@ -3,6 +3,8 @@ meteor-roles
 
 Roles-based authorization package for Meteor - compatible with built-in accounts package.
 
+<br />
+
 ### Example App
 
 The ```example-app``` directory contains a Meteor app which shows off the following features:
@@ -17,6 +19,7 @@ See this app in action by:
   3. ```mrt```
   4. point browser to ```http://localhost:3000```
 
+<br />
 
 ### Changes to default Meteor behavior
 
@@ -25,11 +28,23 @@ See this app in action by:
   3. The currently logged-in user's ```roles``` field is automatically published under ```_roles_own_user_roles```.
   4. Client javascript automatically subscribes to ```_roles_own_user_roles```.
 
+<br />
 
 ### Usage
 
+Add this smart package to your project:
+```
+mrt add roles
+```
+
+<br />
+
+Here are some potential use cases:
+
+<br />
 
 -- **Server** --
+
 
 Add users to roles:
 ```js
@@ -56,6 +71,8 @@ Add users to roles:
   });
 ```
 
+<br />
+
 Check user roles before publishing sensitive data:
 ```js
 // server/publish.js
@@ -75,6 +92,8 @@ Meteor.publish('secrets', function () {
   }
 });
 ```
+
+<br />
 
 Prevent non-authorized users from creating new users:
 ```js
@@ -111,6 +130,8 @@ NOTE: Any sensitive data needs to be controlled server-side to prevent unwanted 
 </template>
 ```
 
+<br />
+
 ### Documentation
 
 Online API docs found here: http://alanning.github.com/meteor-roles/
@@ -128,6 +149,8 @@ To serve documentation locally:
   3. yuidoc --server
   4. point browser at http://localhost:3000/
 
+
+<br />
 
 ### Tests
 
