@@ -45,16 +45,9 @@ Meteor.startup(function () {
       ];
 
     _.each(users, function (user) {
-      var userConfig,
-          id;
+      var id;
       
       console.log(user);
-
-      userConfig = {
-        email: user.email,
-        password: "apple1",
-        profile: { name: user.name }
-      };
 
       id = Accounts.createUser({
         email: user.email,
@@ -62,9 +55,7 @@ Meteor.startup(function () {
         profile: { name: user.name }
       });
 
-      if (user.roles.length > 0) {
-        Roles.addUsersToRoles(id, user.roles);
-      }
+      Roles.addUsersToRoles(id, user.roles);
     
     });
   }

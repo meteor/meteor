@@ -29,10 +29,11 @@ if ('undefined' === typeof Roles) {
 }
 
 /**
- * Create a new role
+ * Create a new role. Whitespace will be trimmed.
  *
  * @method createRole
  * @param {String} role Name of role
+ * @param {String} id of new role
  */
 Roles.createRole = function (role) {
   var id,
@@ -45,7 +46,8 @@ Roles.createRole = function (role) {
   }
 
   try {
-    id = Meteor.roles.insert({'name':role})
+    id = Meteor.roles.insert({'name':role.trim()})
+    return id
   } catch (e) {
     // (from Meteor accounts-base package, insertUserDoc func)
     // XXX string parsing sucks, maybe
@@ -95,18 +97,35 @@ Roles.addUsersToRoles = function (users, roles) {
   if (!users) throw new Error ("Missing 'users' param")
   if (!roles) throw new Error ("Missing 'roles' param")
 
-  var existingRoles,
-      missing 
+  var existingRoles
 
   // ensure arrays
   if (!_.isArray(users)) users = [users]
   if (!_.isArray(roles)) roles = [roles]
 
+  // remove invalid roles
+  roles = _.reduce(roles, function (memo, role) {
+    if (role &&
+        'string' === typeof role &&
+        role.trim().length > 0) {
+      memo.push(role.trim())
+    }
+    return memo
+  }, [])
+
+  if (roles.length === 0) {
+    return
+  }
+
   // ensure all roles exist in 'roles' collection
-  existingRoles = _.pluck(Meteor.roles.find({}).fetch(), 'name')
-  missing = _.difference(roles, existingRoles)
-  _.each(missing, function (role) {
-    Roles.createRole(role)
+  existingRoles = _.reduce(Meteor.roles.find({}).fetch(), function (memo, role) {
+    memo[role.name] = true
+    return memo
+  }, {})
+  _.each(roles, function (role) {
+    if (!existingRoles[role]) {
+      Roles.createRole(role)
+    }
   })
 
   // update all users, adding to roles set

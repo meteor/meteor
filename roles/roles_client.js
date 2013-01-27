@@ -54,7 +54,7 @@ Roles._handlebarsHelpers = {
 }
 
 
-if (Handlebars) {
+if ('undefined' !== typeof Handlebars) {
   _.each(Roles._handlebarsHelpers, function (func, name) {
     Handlebars.registerHelper(name, func)
   })
