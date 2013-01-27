@@ -74,7 +74,7 @@ Roles.deleteRole = function (role) {
   var foundExistingUser = Meteor.users.findOne({roles: {$in: [role]}}, {_id: 1})
 
   if (foundExistingUser) {
-    throw new Error('Role in use')
+    throw new Meteor.Error(403, 'Role in use')
   }
 
   Meteor.roles.remove({ name: role })
