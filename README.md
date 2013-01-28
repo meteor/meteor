@@ -16,10 +16,11 @@ The ```example-app``` directory contains a Meteor app which shows off the follow
 View online @  <a href="http://roles-example.meteor.com/" target="_blank">http://roles-example.meteor.com/</a>
   
 Run locally:
-  1. ```git clone https://github.com/alanning/meteor-roles.git```
-  2. ```cd meteor-roles/example-app```
-  3. ```mrt```
-  4. point browser to ```http://localhost:3000```
+  1. install [Meteorite][1]
+  2. ```git clone https://github.com/alanning/meteor-roles.git```
+  3. ```cd meteor-roles/example-app```
+  4. ```mrt```
+  5. point browser to ```http://localhost:3000```
 
 <br />
 
@@ -35,9 +36,10 @@ Run locally:
 ### Usage
 
 Add this smart package to your project:
-```
-mrt add roles
-```
+
+  1. install [Meteorite][1]
+  2. ```mrt add roles```
+
 
 <br />
 
@@ -142,13 +144,13 @@ API docs generated using [YUIDoc][2]
 
 To re-generate documentation:
   1. install YUIDoc
-  2. cd 'meteor-roles' directory (root)
-  3. yuidoc
+  2. ```cd meteor-roles```
+  3. ```yuidoc```
 
 To serve documentation locally:
   1. install YUIDoc
-  2. cd 'meteor-roles' directory (root)
-  3. yuidoc --server
+  2. ```cd meteor-roles```
+  3. ```yuidoc --server```
   4. point browser at http://localhost:3000/
 
 
@@ -159,8 +161,8 @@ To serve documentation locally:
 
 To run tests: 
   1. install [Meteorite][1]
-  2. cd 'roles' directory
-  3. mrt
+  2. ```cd meteor-roles/roles```
+  3. ```mrt```
   4. point browser at http://localhost:3000/
 
 _NOTE_: If you see an error message regarding **'roles package does not exist'** that means you are trying to run 'mrt' in the wrong directory.  See step 2.
