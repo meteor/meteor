@@ -326,5 +326,16 @@ EJSON._recognizeAndReplace = function (document, recognize, transformer) {
 };
 
 
+EJSON._each2 = function (iterable, iterator) {
+  var lastVal = null;
+  var lastKey = null;
+  _.each(iterable, function (nextVal, nextKey) {
+    iterator(lastVal, lastKey, nextVal, nextKey);
+    lastVal = nextVal;
+    lastKey = nextKey;
+  });
+  iterator(lastVal, lastKey, null, null);
+};
+
 
 })();
