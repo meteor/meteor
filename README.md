@@ -13,7 +13,9 @@ The ```example-app``` directory contains a Meteor app which shows off the follow
 * 'Sign-in required' app with up-front login page using ```accounts-ui```
 * Client-side routing via ```meteor-router``` smart package
 
-See this app in action by:
+View online @  <a href="http://roles-example.meteor.com/" target="_blank">http://roles-example.meteor.com/</a>
+  
+Run locally:
   1. ```git clone https://github.com/alanning/meteor-roles.git```
   2. ```cd meteor-roles/example-app```
   3. ```mrt```
