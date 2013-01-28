@@ -207,6 +207,16 @@ _Mongo.prototype.findOne = function (collection_name, selector, options) {
   return self.find(collection_name, selector, options).fetch()[0];
 };
 
+_Mongo.prototype.aggregate = function(collectionName, pipeline) {
+  var self = this;
+
+  if (arguments.length === 1)
+    pipeline = {};
+
+  return new Cursor(
+    self, new CursorDescription(collectionName, pipeline, 'aggregate'));
+};
+
 // We'll actually design an index API later. For now, we just pass through to
 // Mongo's, but make it synchronous.
 _Mongo.prototype._ensureIndex = function (collectionName, index, options) {
@@ -260,8 +270,13 @@ _Mongo.prototype._ensureIndex = function (collectionName, index, options) {
 var CursorDescription = function (collectionName, selector, options) {
   var self = this;
   self.collectionName = collectionName;
-  self.selector = Meteor.Collection._rewriteSelector(selector);
-  self.options = options || {};
+  if (options !== 'aggregate') {
+    self.selector = Meteor.Collection._rewriteSelector(selector);
+    self.options = options || {};
+  } else {
+    self.selector = selector;
+    self.options = {};
+  }
 };
 
 var Cursor = function (mongo, cursorDescription) {
@@ -345,13 +360,17 @@ _Mongo.prototype._createSynchronousCursor = function (cursorDescription) {
         return;
       }
       var options = cursorDescription.options;
-      var dbCursor = collection.find(
-        cursorDescription.selector,
-        options.fields, {
-          sort: options.sort,
-          limit: options.limit,
-          skip: options.skip
-        });
+      if (options === 'aggregate') {
+        var dbCursor = collection.aggregate(cursorDescription.selector);
+      } else {
+        var dbCursor = collection.find(
+          cursorDescription.selector,
+          options.fields, {
+            sort: options.sort,
+            limit: options.limit,
+            skip: options.skip
+          });
+      }
       future.ret([true, dbCursor]);
     });
 
