@@ -158,6 +158,13 @@ _.extend(Meteor.Collection.prototype, {
   findOne: function (/* selector, options */) {
     var self = this;
     return self._collection.findOne.apply(self._collection, _.toArray(arguments));
+  },
+
+  aggregate: function (/* pipeline */) {
+    var self = this;
+    if (!self._collection.aggregate)
+      throw new Error("Can only call aggregate on server collections");
+    return self._collection.aggregate.apply(self._collection, _.toArray(arguments));
   }
 
 });
