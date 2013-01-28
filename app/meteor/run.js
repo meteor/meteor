@@ -214,19 +214,13 @@ var log_to_clients = function (msg) {
 // onExit
 // [onListen]
 // [nodeOptions]
-// [runOnce]: boolean; default false; if true doesn't ever try to restart, and
-//          forwards server exit code.
 // [settingsFile]
 
 var start_server = function (options) {
   // environment
   options = _.extend({
-    runOnce: false,
     nodeOptions: []
   }, options);
-  if (options.runOnce) {
-    Status.shouldRestart = false;
-  }
 
   var env = {};
   for (var k in process.env)
@@ -580,6 +574,10 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
   var test_server_handle;
   var watcher;
 
+  if (once) {
+    Status.shouldRestart = false;
+  }
+
   var start_watching = function () {
     if (!Status.shouldRestart)
       return;
@@ -673,7 +671,6 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
         request_queue = [];
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
-      runOnce: once,
       settingsFile: settingsFile
     });
 
