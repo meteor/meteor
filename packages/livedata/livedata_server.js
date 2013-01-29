@@ -854,6 +854,28 @@ _.extend(Meteor._LivedataSubscription.prototype, {
     self._callStopCallbacks();
   },
 
+  _callStopCallbacks: function () {
+    var self = this;
+    // tell listeners, so they can clean up
+    var callbacks = self._stopCallbacks;
+    self._stopCallbacks = [];
+    _.each(callbacks, function (callback) {
+      callback();
+    });
+  },
+
+  // Send remove messages for every document.
+  _removeAllDocuments: function () {
+    var self = this;
+    _.each(self._documents, function(collectionDocs, collectionName) {
+      // Iterate over _.keys instead of the dictionary itself, since we'll be
+      // mutating it.
+      _.each(_.keys(collectionDocs), function (strId) {
+        self.removed(collectionName, self._idFilter.idParse(strId));
+      });
+    });
+  },
+
   // Returns a new _LivedataSubscription for the same session with the same
   // initial creation parameters. This isn't a clone: it doesn't have the same
   // _documents cache, stopped state or callbacks; may have a different
@@ -863,14 +885,6 @@ _.extend(Meteor._LivedataSubscription.prototype, {
     var self = this;
     return new Meteor._LivedataSubscription(
       self._session, self._handler, self._subscriptionId, self._params);
-  },
-
-  // This is meant to be used for a subscription that is about to be rerun.
-  // It does NOT invoke the remove() callbacks on the session for every doc.
-  _resetSubscription: function () {
-    var self = this;
-    self._callStopCallbacks();
-    self._documents = {};
   },
 
   onStop: function (callback) {
@@ -919,29 +933,7 @@ _.extend(Meteor._LivedataSubscription.prototype, {
       self._session.sendComplete([self._subscriptionId]);
       self._complete = true;
     }
-  },
-
-  _callStopCallbacks: function () {
-    var self = this;
-    // tell listeners, so they can clean up
-    var callbacks = self._stopCallbacks;
-    self._stopCallbacks = [];
-    _.each(callbacks, function (callback) {
-      callback();
-    });
-  },
-  // Send remove messages for every document.
-  _removeAllDocuments: function () {
-    var self = this;
-    _.each(self._documents, function(collectionDocs, collectionName) {
-      // Iterate over _.keys instead of the dictionary itself, since we'll be
-      // mutating it.
-      _.each(_.keys(collectionDocs), function (strId) {
-        self.removed(collectionName, self._idFilter.idParse(strId));
-      });
-    });
   }
-
 });
 
 /******************************************************************************/
