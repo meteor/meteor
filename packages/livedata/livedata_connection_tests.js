@@ -1214,7 +1214,7 @@ Tinytest.addAsync("livedata connection - version negotiation requires renegotiat
     onConnectionFailure: function () { test.fail(); onComplete(); },
     onConnected: function () {
       test.equal(connection._version, Meteor._SUPPORTED_DDP_VERSIONS[0]);
-      connection._stream.forceDisconnect(true);
+      connection._stream.forceDisconnect();
       onComplete();
     }
   });
@@ -1225,7 +1225,12 @@ Tinytest.addAsync("livedata connection - version negotiation fails",
   var connection = new Meteor._LivedataConnection("/", {
     reloadWithOutstanding: true,
     supportedDDPVersions: ["garbled", "more garbled"],
-    onConnectionFailure: function () { onComplete(); },
+    onConnectionFailure: function () {
+      test.equal(connection.status().status, "failed");
+      test.matches(connection.status().reason, /Version negotiation failed/);
+      test.isFalse(connection.status().connected);
+      onComplete();
+    },
     onConnected: function () {
       test.fail();
       onComplete();

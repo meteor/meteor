@@ -197,10 +197,10 @@ Meteor._LivedataConnection = function (url, options) {
         self._versionSuggestion = msg.version;
         self._stream.reconnect({_force: true});
       } else {
-        // XXX We should probably plumb this through to Meteor.connect and add
-        // an error callback there.
-        options.onConnectionFailure("Version negotiation failed; server requested version " + msg.version);
-        self._stream.forceDisconnect(true);
+        var error =
+              "Version negotiation failed; server requested version " + msg.version;
+        self._stream.forceDisconnect(error);
+        options.onConnectionFailure(error);
       }
     }
     else if (_.include(['added', 'changed', 'removed', 'complete', 'updated'], msg.msg))

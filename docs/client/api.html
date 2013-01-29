@@ -359,8 +359,9 @@ the server. The return value is an object with the following fields:
   Describes the current reconnection status. The possible
   values are `connected` (the connection is up and
   running), `connecting` (disconnected and trying to open a
-  new connection), and `waiting` (failed to connect and
-  waiting to try to reconnect).
+  new connection), `failed` (permanently failed to connect; e.g., the client
+  and server support different versions of DDP) and `waiting` (failed
+  to connect and waiting to try to reconnect).
 {{/dtdd}}
 
 {{#dtdd name="retryCount" type="Number"}}
@@ -373,6 +374,10 @@ the server. The return value is an object with the following fields:
   into an interval until the next reconnection, use
   `retryTime - (new Date()).getTime()`. This key will
   be set only when `status` is `waiting`.
+{{/dtdd}}
+
+{{#dtdd name="reason" type="String or undefined"}}
+  If `status` is `failed`, a description of why the connection failed.
 {{/dtdd}}
 </dl>
 
