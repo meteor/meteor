@@ -131,9 +131,11 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
   if (self.reactive)
     self._markAsReactive({ordered: true,
                           added: true,
+                          addedBefore: true,
                           removed: true,
                           changed: true,
-                          moved: true});
+                          moved: true,
+                          movedBefore: true});
 
   while (self.cursor_pos < self.db_objects.length)
     callback(EJSON.clone(self.db_objects[self.cursor_pos++]));
@@ -204,7 +206,9 @@ _.extend(LocalCollection.Cursor.prototype, {
     return self._observeInternal(false, options);
   },
   observeChanges: function (callbacks) {
-    return LocalCollection._observeChanges(this, callbacks);
+    var self = this;
+    return self._observeInternal(typeof callbacks.addedBefore == 'function' || typeof callbacks.movedBefore === 'function',
+                                 _.extend({observeChanges: true}, callbacks));
   },
 
   _observeInternal: function (ordered, options) {
@@ -221,7 +225,8 @@ _.extend(LocalCollection.Cursor.prototype, {
       sort_f: ordered && self.sort_f,
       results_snapshot: null,
       ordered: ordered,
-      cursor: this
+      cursor: this,
+      observeChanges: options.observeChanges
     };
     query.results = self._getRawObjects(ordered);
     if (self.collection.paused)
@@ -241,13 +246,25 @@ _.extend(LocalCollection.Cursor.prototype, {
     query.added = if_not_paused(options.added);
     query.changed = if_not_paused(options.changed);
     query.removed = if_not_paused(options.removed);
-    if (ordered)
+    if (ordered) {
       query.moved = if_not_paused(options.moved);
+      query.addedBefore = if_not_paused(options.addedBefore);
+      query.movedBefore = if_not_paused(options.movedBefore);
+    }
 
     if (!options._suppress_initial && !self.collection.paused) {
       _.each(query.results, function (doc, i) {
-        query.added(EJSON.clone(doc),
-                    ordered ? i : undefined);
+        if (query.observeChanges) {
+          var fields = EJSON.clone(doc);
+          delete fields._id;
+          if (ordered)
+            query.addedBefore(doc._id, fields, null);
+          else
+            query.added(doc._id, fields);
+        } else {
+          query.added(EJSON.clone(doc),
+                      ordered ? i : undefined);
+        }
       });
     }
 
@@ -331,9 +348,11 @@ LocalCollection.Cursor.prototype._markAsReactive = function (options) {
     var handle;
     if (options.ordered) {
       handle = self.observe({added: options.added && invalidate,
+                             addedBefore: options.addedBefore && invalidate,
                              removed: options.removed && invalidate,
                              changed: options.changed && invalidate,
                              moved: options.moved && invalidate,
+                             movedBefore: options.movedBefore && invalidate,
                              _suppress_initial: true});
     } else {
       handle = self._observeUnordered({added: options.added && invalidate,
@@ -528,17 +547,37 @@ LocalCollection.prototype._modifyAndNotify = function (
 // laughably inefficient. we recompute the whole results every time!
 
 LocalCollection._insertInResults = function (query, doc) {
+  var fields = EJSON.clone(doc);
   if (query.ordered) {
     if (!query.sort_f) {
-      query.added(EJSON.clone(doc), query.results.length);
+      if (query.observeChanges) {
+        delete fields._id;
+        query.addedBefore(doc._id, fields, null);
+      } else {
+        query.added(fields, query.results.length);
+      }
       query.results.push(doc);
     } else {
       var i = LocalCollection._insertInSortedList(
         query.sort_f, query.results, doc);
-      query.added(EJSON.clone(doc), i);
+      if (query.observeChanges) {
+        delete fields._id;
+        var next = query.results[i+1];
+        if (next)
+          next = next._id;
+        else
+          next = null;
+        query.addedBefore(doc._id, fields, next);
+      } else {
+        query.added(fields, i);
+      }
     }
   } else {
-    query.added(EJSON.clone(doc));
+    if (query.observeChanges) {
+      delete fields._id;
+      query.added(doc._id, fields);
+    } else
+      query.added(fields);
     query.results[LocalCollection._idStringify(doc._id)] = doc;
   }
 };
@@ -546,11 +585,17 @@ LocalCollection._insertInResults = function (query, doc) {
 LocalCollection._removeFromResults = function (query, doc) {
   if (query.ordered) {
     var i = LocalCollection._findInOrderedResults(query, doc);
-    query.removed(doc, i);
+    if (query.observeChanges)
+      query.removed(doc._id);
+    else
+      query.removed(doc, i);
     query.results.splice(i, 1);
   } else {
     var id = LocalCollection._idStringify(doc._id);  // in case callback mutates doc
-    query.removed(doc);
+    if (query.observeChanges)
+      query.removed(doc._id);
+    else
+      query.removed(doc);
     delete query.results[id];
   }
 };
@@ -560,13 +605,22 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
     throw new Error("Can't change a doc's _id while updating");
 
   if (!query.ordered) {
-    query.changed(EJSON.clone(doc), old_doc);
+    if (query.observeChanges) {
+      query.changed(doc._id, LocalCollection._makeChangedFields(doc, old_doc));
+    } else {
+      query.changed(EJSON.clone(doc), old_doc);
+    }
     query.results[LocalCollection._idStringify(doc._id)] = doc;
     return;
   }
 
   var orig_idx = LocalCollection._findInOrderedResults(query, doc);
-  query.changed(EJSON.clone(doc), orig_idx, old_doc);
+
+  if (query.observeChanges) {
+    query.changed(doc._id, LocalCollection._makeChangedFields(doc, old_doc));
+  } else {
+    query.changed(EJSON.clone(doc), orig_idx, old_doc);
+  }
 
   if (!query.sort_f)
     return;
@@ -577,7 +631,16 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
   var new_idx = LocalCollection._insertInSortedList(
     query.sort_f, query.results, doc);
   if (orig_idx !== new_idx)
-    query.moved(EJSON.clone(doc), orig_idx, new_idx);
+    if (query.observeChanges) {
+      var next = query.results[new_idx+1];
+      if (next)
+        next = next._id;
+      else
+        next = null;
+      query.movedBefore(doc._id, next);
+    } else {
+      query.moved(EJSON.clone(doc), orig_idx, new_idx);
+    }
 };
 
 // Recomputes the results of a query and runs observe callbacks for the
