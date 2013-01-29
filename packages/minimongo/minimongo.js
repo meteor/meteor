@@ -772,21 +772,9 @@ LocalCollection._observeChanges = function (cursor, callbacks) {
     },
     changed: function (newDoc, indOrOldDoc, oldDoc) {
       var id = newDoc._id;
-      var fields = {};
       if (typeof indOrOldDoc === 'object')
         oldDoc = indOrOldDoc;
-      LocalCollection._diffObjects(oldDoc, newDoc, {
-        leftOnly: function (key, value) {
-          fields[key] = undefined;
-        },
-        rightOnly: function (key, value) {
-          fields[key] = value;
-        },
-        both: function (key, leftValue, rightValue) {
-          if (!EJSON.equals(leftValue, rightValue))
-            fields[key] = rightValue;
-        }
-      });
+      var fields = LocalCollection._makeChangedFields(newDoc, oldDoc);
       if (!_.isEmpty(fields)) {
         callbacks.changed && callbacks.changed(id, fields);
       }
@@ -802,6 +790,23 @@ LocalCollection._observeChanges = function (cursor, callbacks) {
       positions = _.without(positions, doc._id);
     }
   });
+};
+
+LocalCollection._makeChangedFields = function (newDoc, oldDoc) {
+  var fields = {};
+  LocalCollection._diffObjects(oldDoc, newDoc, {
+    leftOnly: function (key, value) {
+      fields[key] = undefined;
+    },
+    rightOnly: function (key, value) {
+      fields[key] = value;
+    },
+    both: function (key, leftValue, rightValue) {
+      if (!EJSON.equals(leftValue, rightValue))
+        fields[key] = rightValue;
+    }
+  });
+  return fields;
 };
 
 })();

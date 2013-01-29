@@ -47,8 +47,7 @@ LocalCollection._diffQueryUnorderedChanges = function (oldResults, newResults,
 };
 
 
-LocalCollection._diffQueryOrderedChanges =
-  function (old_results, new_results, observer, deepcopy) {
+LocalCollection._diffQueryOrderedChanges = function (old_results, new_results, observer) {
 
   var new_presence_of_id = {};
   _.each(new_results, function (doc) {
@@ -63,9 +62,6 @@ LocalCollection._diffQueryOrderedChanges =
       Meteor._debug("Duplicate _id in old_results");
     old_index_of_id[doc._id] = i;
   });
-
-  // "maybe deepcopy"
-  var mdc = (deepcopy ? EJSON.clone : _.identity);
 
   // ALGORITHM:
   //
@@ -190,99 +186,50 @@ LocalCollection._diffQueryOrderedChanges =
     idx = ptrs[idx];
   }
 
-  //////// Main Diff Algorithm
+  unmoved_set[new_results.length] = true;
 
-  var old_idx = 0;
-  var new_idx = 0;
-  var bump_list = [];
-  var bump_list_old_idx = [];
-  var taken_list = [];
-
-  var scan_to = function(old_j) {
-    // old_j <= old_results.length (may scan to end)
-    while (old_idx < old_j) {
-      var old_doc = old_results[old_idx];
-      var is_in_new = new_presence_of_id[old_doc._id];
-      if (! is_in_new) {
-        observer.removed && observer.removed(old_doc._id);
-      } else {
-        if (taken_list.length >= 1 && taken_list[0] === old_idx) {
-          // already moved
-          taken_list.shift();
-        } else {
-          // bump!
-          bump_list.push(new_idx);
-          bump_list_old_idx.push(old_idx);
-        }
+  _.each(old_results, function (doc) {
+    if (!new_presence_of_id[doc._id])
+      observer.removed(doc._id);
+  });
+  // for each group of things in the new_results that is anchored by an unmoved element,
+  // iterate through the things before it.
+  _.each(unmoved_set, function (t, endOfGroup) {
+    var startOfGroup = endOfGroup-1;
+    var groupId = new_results[endOfGroup] ? new_results[endOfGroup]._id : null;
+    var oldDoc;
+    var newDoc;
+    var fields;
+    if (groupId) {
+      newDoc = new_results[endOfGroup];
+      oldDoc = old_results[old_index_of_id[newDoc._id]];
+      fields = LocalCollection._makeChangedFields(newDoc, oldDoc);
+      if (!_.isEmpty(fields)) {
+        observer.changed(newDoc._id, fields);
       }
-      old_idx++;
     }
-  };
-
-
-  while (new_idx <= new_results.length) {
-    if (new_idx < new_results.length) {
-      var new_doc = new_results[new_idx];
-      var newFields = EJSON.clone(new_doc);
-      delete newFields._id;
-      var old_doc_idx = old_index_of_id[new_doc._id];
-      if (old_doc_idx === undefined) {
-        // insert
-        observer.addedBefore && observer.addedBefore(new_doc._id, newFields, old_results[old_idx]._id);
+    while (!_.has(unmoved_set, startOfGroup) && startOfGroup >= 0) {
+      startOfGroup--;
+    }
+    startOfGroup++;
+    for (var i = startOfGroup; i < endOfGroup; i++) {
+      newDoc = new_results[i];
+      if (!_.has(old_index_of_id, newDoc._id)) {
+        fields = EJSON.clone(newDoc);
+        delete fields._id;
+        observer.addedBefore(newDoc._id, fields, groupId);
       } else {
-        var old_doc = old_results[old_doc_idx];
-        //var is_unmoved = (old_doc_idx > old_idx); // greedy; not minimal
-        var is_unmoved = unmoved_set[new_idx];
-        if (is_unmoved) {
-          if (old_doc_idx < old_idx)
-            Meteor._debug("Assertion failed while diffing: nonmonotonic lcs data");
-          // no move
-          scan_to(old_doc_idx);
-          if (observer.changed && ! EJSON.equals(old_doc, new_doc)) {
-            observer.changed(new_doc._id, LocalCollection._makeChangedFields(new_doc, old_doc));
-          }
-          old_idx++;
-        } else {
-          // move into place
-          var to_idx = new_idx + bump_list.length;
-          var from_idx;
-          if (old_doc_idx >= old_idx) {
-            // move backwards
-            from_idx = to_idx + old_doc_idx - old_idx;
-            // must take number of "taken" items into account; also use
-            // results of this binary search to insert new taken_list entry
-            var num_taken_before = _.sortedIndex(taken_list, old_doc_idx);
-            from_idx -= num_taken_before;
-            taken_list.splice(num_taken_before, 0, old_doc_idx);
-          } else {
-            // move forwards, from bump list
-            // (binary search applies)
-            var b = _.indexOf(bump_list_old_idx, old_doc_idx, true);
-            if (b < 0)
-              Meteor._debug("Assertion failed while diffing: no bumped item");
-            from_idx = bump_list[b] + b;
-            to_idx--;
-            bump_list.splice(b, 1);
-            bump_list_old_idx.splice(b, 1);
-          }
-          if (from_idx != to_idx)
-            observer.movedBefore && observer.movedBefore(old_doc._id, old_results[old_idx]._id);
-          if (observer.changed && ! EJSON.equals(old_doc, new_doc)) {
-            observer.changed(new_doc._id, LocalCollection._makeChangedFields(new_doc, old_doc));
-          }
+        // moved
+        oldDoc = old_results[old_index_of_id[newDoc._id]];
+        fields = LocalCollection._makeChangedFields(newDoc, oldDoc);
+        if (!_.isEmpty(fields)) {
+          observer.changed(newDoc._id, fields);
         }
+        observer.movedBefore(newDoc._id, groupId);
       }
-    } else {
-      scan_to(old_results.length);
     }
-    new_idx++;
-  }
-  if (bump_list.length > 0) {
-    Meteor._debug(old_results);
-    Meteor._debug(new_results);
-    Meteor._debug("Assertion failed while diffing: leftover bump_list "+
-                  bump_list);
-  }
+  });
+
 
 };
 

@@ -631,7 +631,7 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 2});
   match({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 3});
   // this is possibly an open-ended task, so we stop here ...
-  
+
   // $nor
   test.throws(function () {
     match({$nor: []}, {});
@@ -766,17 +766,17 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({$and: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [4, 5, 6]}}]}, {a: 1, b: 4});
 
   // $and and $lt, $lte, $gt, $gte
-  match({$and: [{a: {$lt: 2}}]}, {a: 1}); 
-  nomatch({$and: [{a: {$lt: 1}}]}, {a: 1}); 
-  match({$and: [{a: {$lte: 1}}]}, {a: 1}); 
-  match({$and: [{a: {$gt: 0}}]}, {a: 1}); 
-  nomatch({$and: [{a: {$gt: 1}}]}, {a: 1}); 
-  match({$and: [{a: {$gte: 1}}]}, {a: 1}); 
-  match({$and: [{a: {$gt: 0}}, {a: {$lt: 2}}]}, {a: 1}); 
-  nomatch({$and: [{a: {$gt: 1}}, {a: {$lt: 2}}]}, {a: 1}); 
-  nomatch({$and: [{a: {$gt: 0}}, {a: {$lt: 1}}]}, {a: 1}); 
-  match({$and: [{a: {$gte: 1}}, {a: {$lte: 1}}]}, {a: 1}); 
-  nomatch({$and: [{a: {$gte: 2}}, {a: {$lte: 0}}]}, {a: 1}); 
+  match({$and: [{a: {$lt: 2}}]}, {a: 1});
+  nomatch({$and: [{a: {$lt: 1}}]}, {a: 1});
+  match({$and: [{a: {$lte: 1}}]}, {a: 1});
+  match({$and: [{a: {$gt: 0}}]}, {a: 1});
+  nomatch({$and: [{a: {$gt: 1}}]}, {a: 1});
+  match({$and: [{a: {$gte: 1}}]}, {a: 1});
+  match({$and: [{a: {$gt: 0}}, {a: {$lt: 2}}]}, {a: 1});
+  nomatch({$and: [{a: {$gt: 1}}, {a: {$lt: 2}}]}, {a: 1});
+  nomatch({$and: [{a: {$gt: 0}}, {a: {$lt: 1}}]}, {a: 1});
+  match({$and: [{a: {$gte: 1}}, {a: {$lte: 1}}]}, {a: 1});
+  nomatch({$and: [{a: {$gte: 2}}, {a: {$lte: 0}}]}, {a: 1});
 
   // $and and $ne
   match({$and: [{a: {$ne: 1}}]}, {});
@@ -1282,6 +1282,108 @@ _.each(['observe', '_observeUnordered'], function (observeMethod) {
 });
 
 
+Tinytest.add("minimongo - diff changes ordering", function (test) {
+  var makeDocs = function (ids) {
+    return _.map(ids, function (id) { return {_id: id};});
+  };
+  var testMutation = function (a, b) {
+    var aa = makeDocs(a);
+    var bb = makeDocs(b);
+    var aaCopy = EJSON.clone(aa);
+    LocalCollection._diffQueryOrderedChanges(aa, bb, {
+
+      addedBefore: function (id, doc, before) {
+        if (before === null) {
+          aaCopy.push( _.extend({_id: id}, doc));
+          return;
+        }
+        for (var i = 0; i < aaCopy.length; i++) {
+          if (aaCopy[i]._id === before) {
+            aaCopy.splice(i, 0, _.extend({_id: id}, doc));
+            return;
+          }
+        }
+      },
+      movedBefore: function (id, before) {
+        var found;
+        for (var i = 0; i < aaCopy.length; i++) {
+          if (aaCopy[i]._id === id) {
+            found = aaCopy[i];
+            aaCopy.splice(i, 1);
+          }
+        }
+        if (before === null) {
+          aaCopy.push( _.extend({_id: id}, found));
+          return;
+        }
+        for (i = 0; i < aaCopy.length; i++) {
+          if (aaCopy[i]._id === before) {
+            aaCopy.splice(i, 0, _.extend({_id: id}, found));
+            return;
+          }
+        }
+      },
+      removed: function (id) {
+        var found;
+        for (var i = 0; i < aaCopy.length; i++) {
+          if (aaCopy[i]._id === id) {
+            found = aaCopy[i];
+            aaCopy.splice(i, 1);
+          }
+        }
+      }
+    });
+    test.equal(aaCopy, bb);
+  };
+
+  var testBothWays = function (a, b) {
+    testMutation(a, b);
+    testMutation(b, a);
+  };
+
+  testBothWays(["a", "b", "c"], ["c", "b", "a"]);
+  testBothWays(["a", "b", "c"], []);
+  testBothWays(["a", "b", "c"], ["e","f"]);
+  testBothWays(["a", "b", "c", "d"], ["c", "b", "a"]);
+  testBothWays(['A','B','C','D','E','F','G','H','I'],
+               ['A','B','F','G','C','D','I','L','M','N','H']);
+  testBothWays(['A','B','C','D','E','F','G','H','I'],['A','B','C','D','F','G','H','E','I']);
+});
+
+
+Tinytest.add("minimongo - diff ordering", function (test) {
+  var makeDocs = function (ids) {
+    return _.map(ids, function (id) { return {_id: id};});
+  };
+  var testMutation = function (a, b) {
+    var aa = makeDocs(a);
+    var bb = makeDocs(b);
+    var aaCopy = EJSON.clone(aa);
+    LocalCollection._diffQueryOrdered(aa, bb, {
+      added: function (doc, idx) {
+        aaCopy.splice(idx, 0, doc);
+      },
+      moved: function (doc, from, to) {
+        aaCopy.splice(from, 1);
+        aaCopy.splice(to, 0, doc);
+      },
+      removed: function (doc, from) {
+        aaCopy.splice(from, 1);
+      }
+    });
+    test.equal(aaCopy, bb);
+  };
+
+  var testBothWays = function (a, b) {
+    testMutation(a, b);
+    testMutation(b, a);
+  };
+
+  testBothWays(["a", "b", "c"], ["c", "b", "a"]);
+  testBothWays(["a", "b", "c", "d"], ["c", "b", "a"]);
+  testBothWays(['A','B','C','D','E','F','G','H','I'],
+               ['A','B','F','G','C','D','I','L','M','N','H']);
+});
 
 Tinytest.add("minimongo - diff", function (test) {
 
