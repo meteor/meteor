@@ -1,6 +1,6 @@
 (function () {
 
-  var querystring = __meteor_bootstrap__.require('querystring');
+  var querystring = Npm.require('querystring');
 
   Accounts.oauth.registerService('facebook', 2, function(query) {
 
