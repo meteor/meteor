@@ -195,10 +195,13 @@ _.extend(Meteor._Stream.prototype, {
     }
 
     // inspect the welcome data and decide if we have to reload
-    try {
-      var welcome_data = JSON.parse(welcome_message);
-    } catch (err) {
-      Meteor._debug("DEBUG: malformed welcome packet", welcome_message);
+    var welcome_data = welcome_message;
+    if (typeof welcome_data !== 'object') {
+      try {
+        welcome_data = JSON.parse(welcome_message);
+      } catch (err) {
+        Meteor._debug("DEBUG: malformed welcome packet", welcome_message);
+      }
     }
 
     if (welcome_data && welcome_data.server_id) {
