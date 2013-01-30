@@ -15,12 +15,8 @@ var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
 
 var replaceMongoAtomWithMeteor = function (document) {
   if (document instanceof MongoDB.Binary) {
-    var meteorBinary = EJSON.newBinary(document.length());
     var buffer = document.value(true);
-    for (var i = 0; i < meteorBinary.length; ++i) {
-      meteorBinary[i] = buffer[i];
-    }
-    return meteorBinary;
+    return new Uint8Array(buffer);
   }
   if (document instanceof MongoDB.ObjectID) {
     return new Meteor.Collection.ObjectID(document.toHexString());
