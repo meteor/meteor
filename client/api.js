@@ -240,11 +240,11 @@ Template.api.subscription_removed = {
   ]
 };
 
-Template.api.subscription_complete = {
-  id: "publish_complete",
-  name: "<i>this</i>.complete()",
+Template.api.subscription_ready = {
+  id: "publish_ready",
+  name: "<i>this</i>.ready()",
   locus: "Server",
-  descr: ["Call inside the publish function.  Informs the subscriber that an initial, complete snapshot of the record set has been sent.  This will trigger a call on the client to the `onComplete` callback passed to  [`Meteor.subscribe`](#meteor_subscribe), if any."]
+  descr: ["Call inside the publish function.  Informs the subscriber that an initial, complete snapshot of the record set has been sent.  This will trigger a call on the client to the `onReady` callback passed to  [`Meteor.subscribe`](#meteor_subscribe), if any."]
 };
 
 
@@ -278,7 +278,7 @@ Template.api.subscription_userId = {
 
 Template.api.subscribe = {
   id: "meteor_subscribe",
-  name: "Meteor.subscribe(name [, arg1, arg2, ... ] [, onComplete])",
+  name: "Meteor.subscribe(name [, arg1, arg2, ... ] [, onReady])",
   locus: "Client",
   descr: ["Subscribe to a record set.  Returns a handle that provides a stop() method, which will stop the subscription."],
   args: [
@@ -288,9 +288,9 @@ Template.api.subscribe = {
     {name: "arg1, arg2, ...",
      type: "Any",
      descr: "Optional arguments passed to publisher function on server."},
-    {name: "onComplete",
+    {name: "onReady",
      type: "Function",
-     descr: "If the last argument is a Function, it is called without arguments when the server marks the subscription as complete."}
+     descr: "If the last argument is a Function, it is called without arguments when the server marks the subscription as ready."}
   ]
 };
 

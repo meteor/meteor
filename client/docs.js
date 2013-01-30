@@ -104,7 +104,7 @@ var toc = [
         {instance: "this", name: "added", id: "publish_added"},
         {instance: "this", name: "changed", id: "publish_changed"},
         {instance: "this", name: "removed", id: "publish_removed"},
-        {instance: "this", name: "complete", id: "publish_complete"},
+        {instance: "this", name: "ready", id: "publish_ready"},
         {instance: "this", name: "onStop", id: "publish_onstop"},
         {instance: "this", name: "stop", id: "publish_stop"}
       ],
