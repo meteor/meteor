@@ -156,7 +156,7 @@ var	testCollection = new Meteor.Collection(null);
 		onComplete();
 	});
 
-}());
+})();
 
 //Test API:
 //test.isFalse(v, msg)
