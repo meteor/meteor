@@ -1,5 +1,8 @@
 #!/bin/bash
 
+### XXX This is being replaced by build-engine-tree.sh, but it is referenced in
+### README.md! Decide what to do.
+
 cd `dirname $0`
 
 if [ "$PREFIX" != "" ] ; then
