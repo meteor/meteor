@@ -9,5 +9,9 @@ Tinytest.add("less - presence", function(test) {
   var leftBorder = getStyleProperty(p, 'border-left-style');
   test.equal(leftBorder, "dashed");
 
+  // test @import
+  var leftBorderWidth = getStyleProperty(p, 'border-left-width');
+  test.equal(leftBorderWidth, "1px");
+
   d.kill();
 });

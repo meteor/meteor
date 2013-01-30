@@ -3,7 +3,7 @@
 set -e
 set -u
 
-BUNDLE_VERSION=0.2.14
+BUNDLE_VERSION=0.2.15
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -56,7 +56,7 @@ git clone git://github.com/joyent/node.git
 cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
 # the top of app/meteor/meteor.js and app/server/server.js.
-git checkout v0.8.11
+git checkout v0.8.18
 
 ./configure --prefix="$DIR"
 make -j4
