@@ -36,6 +36,7 @@
       }
       if (self._first === null || self._first === elt.next)
         self._first = elt;
+      self._dict[key] = item;
     },
     remove: function (key) {
       var self = this;

@@ -203,7 +203,7 @@ _.extend(LocalCollection.Cursor.prototype, {
   },
   _observeUnordered: function (options) {
     var self = this;
-    return self._observeInternal(false, options);
+    return LocalCollection._observeUnordered(self, options);
   },
   observeChanges: function (callbacks) {
     var self = this;
@@ -872,4 +872,30 @@ LocalCollection._makeChangedFields = function (newDoc, oldDoc) {
   return fields;
 };
 
+LocalCollection._observeUnordered = function (cursor, callbacks) {
+  var docs = {};
+  return cursor.observeChanges({
+    added: function (id, fields) {
+      var strId = LocalCollection._idStringify(id);
+      var doc = EJSON.clone(fields);
+      doc._id = id;
+      docs[strId] = doc;
+      callbacks.added(doc);
+    },
+    changed: function (id, fields) {
+      var strId = LocalCollection._idStringify(id);
+      var doc = docs[strId];
+      var oldDoc = EJSON.clone(docs[strId]);
+      // writes through to the doc set
+      LocalCollection._applyChanges(doc, fields);
+      callbacks.changed(doc, oldDoc);
+    },
+    removed: function (id) {
+      var strId = LocalCollection._idStringify(id);
+      var doc = docs[strId];
+      delete docs[strId];
+      callbacks.removed(doc);
+    }
+  });
+};
 })();

@@ -354,8 +354,7 @@ Cursor.prototype.observe = function (callbacks) {
 
 Cursor.prototype._observeUnordered = function (callbacks) {
   var self = this;
-  return self._mongo._observe(
-    self._cursorDescription, false, callbacks);
+  return LocalCollection._observeUnordered(self, callbacks);
 };
 
 Cursor.prototype.observeChanges = function (callbacks) {
