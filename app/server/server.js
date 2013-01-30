@@ -89,9 +89,17 @@ var run = function () {
     fs.readFileSync(path.join(bundle_dir, 'app.json'), 'utf8');
   var info = JSON.parse(info_raw);
 
+  // unique id for this instantiation of the server. If this changes
+  // between client reconnects, the client will reload. You can set the
+  // environment variable "SERVER_ID" to control this. For example, if
+  // you want to only force a reload on major changes, you can use a
+  // custom server_id which you only change when something worth pushing
+  // to clients immediately happens.
+  var server_id = process.env.SERVER_ID || info.bundle_id;
+
   // start up app
   __meteor_bootstrap__ = {require: require, startup_hooks: [], app: app};
-  __meteor_runtime_config__ = {};
+  __meteor_runtime_config__ = {server_id: server_id};
   Fiber(function () {
     // (put in a fiber to let Meteor.db operations happen during loading)
 

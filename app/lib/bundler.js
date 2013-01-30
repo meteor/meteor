@@ -208,6 +208,10 @@ _.extend(PackageInstance.prototype, {
 var Bundle = function () {
   var self = this;
 
+  // Uniquely identify this bundle.
+  // self.bundle_id = Meteor.uuid();
+  self.bundle_id = ('' + Math.random()).substr(2);
+
   // Packages being used. Map from a package id to a PackageInstance.
   self.packages = {};
 
@@ -450,7 +454,7 @@ _.extend(Bundle.prototype, {
   // dev_bundle_mode should be "skip", "symlink", or "copy"
   write_to_directory: function (output_path, project_dir, dev_bundle_mode) {
     var self = this;
-    var app_json = {};
+    var app_json = {bundle_id: self.bundle_id};
     var dependencies_json = {core: [], app: [], packages: {}};
     var is_app = files.is_app_dir(project_dir);
 
