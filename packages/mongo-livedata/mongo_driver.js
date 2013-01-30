@@ -359,7 +359,10 @@ Cursor.prototype._observeUnordered = function (callbacks) {
 };
 
 Cursor.prototype.observeChanges = function (callbacks) {
-  return LocalCollection._observeChanges(this, callbacks);
+  var self = this;
+  var ordered = typeof callbacks.addedBefore === 'function'
+        || typeof callbacks.movedBefore === 'function';
+  return self._mongo._observe(self._cursorDescription, ordered, callbacks, true);
 };
 
 _Mongo.prototype._createSynchronousCursor = function (cursorDescription) {
@@ -477,9 +480,11 @@ var ObserveHandle = function (liveResultsSet, callbacks) {
   var self = this;
   self._liveResultsSet = liveResultsSet;
   self._added = callbacks.added;
+  self._addedBefore = callbacks.addedBefore;
   self._changed = callbacks.changed;
   self._removed = callbacks.removed;
   self._moved = callbacks.moved;
+  self._movedBefore = callbacks.movedBefore;
   self._observeHandleId = nextObserveHandleId++;
 };
 ObserveHandle.prototype.stop = function () {
@@ -488,7 +493,7 @@ ObserveHandle.prototype.stop = function () {
   self._liveResultsSet = null;
 };
 
-_Mongo.prototype._observe = function (cursorDescription, ordered, callbacks) {
+_Mongo.prototype._observe = function (cursorDescription, ordered, callbacks, observeChanges) {
   var self = this;
   var observeKey = JSON.stringify(
     _.extend({ordered: ordered}, cursorDescription));
@@ -512,7 +517,8 @@ _Mongo.prototype._observe = function (cursorDescription, ordered, callbacks) {
         ordered,
         function () {
           delete self._liveResultsSets[observeKey];
-        });
+        },
+        observeChanges);
       self._liveResultsSets[observeKey] = liveResultsSet;
       newlyCreated = true;
     }
@@ -535,13 +541,14 @@ _Mongo.prototype._observe = function (cursorDescription, ordered, callbacks) {
 };
 
 var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
-                               stopCallback) {
+                               stopCallback, observeChanges) {
   var self = this;
 
   self._cursorDescription = cursorDescription;
   self._mongoHandle = mongoHandle;
   self._ordered = ordered;
   self._stopCallbacks = [stopCallback];
+  self._observeChanges = observeChanges;
 
   // This constructor cannot yield, so we don't create the synchronousCursor yet
   // (since that can yield).
@@ -598,8 +605,11 @@ var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
 
   self._callbackMultiplexer = {};
   var callbackNames = ['added', 'changed', 'removed'];
-  if (self._ordered)
+  if (self._ordered) {
     callbackNames.push('moved');
+    callbackNames.push('addedBefore');
+    callbackNames.push('movedBefore');
+  }
   _.each(callbackNames, function (callback) {
     var handleCallback = '_' + callback;
     self._callbackMultiplexer[callback] = function () {
@@ -711,9 +721,15 @@ _.extend(LiveResultsSet.prototype, {
     var oldResults = self._results;
 
     // Run diffs. (This can yield too.)
-    if (!_.isEmpty(self._observeHandles))
-      LocalCollection._diffQuery(
-        self._ordered, oldResults, newResults, self._callbackMultiplexer, true);
+    if (!_.isEmpty(self._observeHandles)) {
+      if (self._observeChanges) {
+        LocalCollection._diffQueryChanges(
+          self._ordered, oldResults, newResults, self._callbackMultiplexer);
+      } else {
+        LocalCollection._diffQuery(
+          self._ordered, oldResults, newResults, self._callbackMultiplexer, true);
+      }
+    }
 
     // Replace self._results atomically.
     self._results = newResults;
@@ -746,8 +762,18 @@ _.extend(LiveResultsSet.prototype, {
       // Send initial adds.
       if (handle._added) {
         _.each(self._results, function (doc, i) {
-          handle._added(EJSON.clone(doc),
-                        self._ordered ? i : undefined);
+          var fields = EJSON.clone(doc);
+          if (self._observeChanges) {
+            delete fields._id;
+            if (self._ordered)
+              handle._addedBefore(doc._id, fields, null);
+            else
+              handle._added(doc._id, fields);
+          } else {
+            handle._added(fields,
+                          self._ordered ? i : undefined);
+          }
+
         });
       }
     });
