@@ -594,7 +594,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
         try {
           var ret = Meteor._CurrentInvocation.withValue(invocation,function () {
-            return stub.apply(invocation, args);
+            return stub.apply(invocation, EJSON.clone(args));
           });
         }
         catch (e) {

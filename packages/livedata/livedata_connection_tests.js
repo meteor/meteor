@@ -377,6 +377,25 @@ Tinytest.add("livedata stub - methods", function (test) {
   handle.stop();
 });
 
+Tinytest.add("livedata stub - mutating method args", function (test) {
+  var stream = new Meteor._StubStream();
+  var conn = newConnection(stream);
+
+  startAndConnect(test, stream);
+
+  conn.methods({mutateArgs: function (arg) {
+    arg.foo = 42;
+  }});
+
+  conn.call('mutateArgs', {foo: 50});
+
+  // Method should be called with original arg, not mutated arg.
+  var message = JSON.parse(stream.sent.shift());
+  test.equal(message, {msg: 'method', method: 'mutateArgs',
+                       params: [{foo: 50}], id: message.id});
+  test.length(stream.sent, 0);
+});
+
 var observeCursor = function (test, cursor) {
   var counts = {added: 0, removed: 0, changed: 0, moved: 0};
   var expectedCounts = _.clone(counts);
