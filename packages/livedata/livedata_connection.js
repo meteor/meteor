@@ -146,8 +146,8 @@ Meteor._LivedataConnection = function (url, options) {
   //   - name
   //   - params
   //   - context (the Context in which Meteor.subscribe was called, if any)
-  //   - completeCallbacks (list of onComplete callbacks to call when ready,
-  //                        or null if completion has already happened)
+  //   - readyCallbacks (list of onReady callbacks to call when ready,
+  //                     or null if the subscription is already ready)
   self._subscriptions = {};
 
   // Per-connection scratch area. This is only used internally, but we
@@ -203,7 +203,7 @@ Meteor._LivedataConnection = function (url, options) {
         options.onConnectionFailure(error);
       }
     }
-    else if (_.include(['added', 'changed', 'removed', 'complete', 'updated'], msg.msg))
+    else if (_.include(['added', 'changed', 'removed', 'ready', 'updated'], msg.msg))
       self._livedata_data(msg);
     else if (msg.msg === 'nosub')
       self._livedata_nosub(msg);
@@ -415,7 +415,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
     var params = Array.prototype.slice.call(arguments, 1);
     if (params.length && typeof params[params.length - 1] === "function")
-      var onComplete = params.pop();
+      var onReady = params.pop();
 
     // Is there an existing sub with the same name and param, run in an
     // invalidated Context? This can only happen if the context just got
@@ -443,11 +443,11 @@ _.extend(Meteor._LivedataConnection.prototype, {
       // Substitute our current context (if any) for the one on the sub.
       existing.context = currentContext;
 
-      if (onComplete) {
-        if (existing.completeCallbacks)
-          existing.completeCallbacks.push(onComplete);
+      if (onReady) {
+        if (existing.readyCallbacks)
+          existing.readyCallbacks.push(onReady);
         else
-          onComplete(); // XXX maybe _.defer?
+          onReady(); // XXX maybe _.defer?
       }
     } else {
       // New sub! Generate an id, save it locally, and send message.
@@ -457,7 +457,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
         name: name,
         params: params,
         context: currentContext,
-        completeCallbacks: onComplete ? [onComplete] : []
+        readyCallbacks: onReady ? [onReady] : []
       };
       self._send({msg: 'sub', id: id, name: name, params: params});
     }
@@ -829,7 +829,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
     //     re-publishing to avoid flicker!
     self._subsBeingRevived = {};
     _.each(self._subscriptions, function (sub, id) {
-      if (!sub.completeCallbacks)
+      if (!sub.readyCallbacks)
         self._subsBeingRevived[id] = true;
     });
 
@@ -1070,7 +1070,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
     });
   },
 
-  _process_complete: function (msg, updates) {
+  _process_ready: function (msg, updates) {
     var self = this;
     // Process "sub ready" messages. "sub ready" messages don't take effect
     // until all current server documents have been flushed to the local
@@ -1081,11 +1081,11 @@ _.extend(Meteor._LivedataConnection.prototype, {
         // Did we already unsubscribe?
         if (!subRecord)
           return;
-        // Did we already receive a complete message? (Oops!)
-        if (!subRecord.completeCallbacks)
+        // Did we already receive a ready message? (Oops!)
+        if (!subRecord.readyCallbacks)
           return;
-        _.each(subRecord.completeCallbacks, function (c) { c(); });
-        subRecord.completeCallbacks = null;
+        _.each(subRecord.readyCallbacks, function (c) { c(); });
+        subRecord.readyCallbacks = null;
       });
     });
   },
@@ -1294,7 +1294,7 @@ Meteor._LivedataConnection._allConnections = [];
 Meteor._LivedataConnection._allSubscriptionsReady = function () {
   return _.all(Meteor._LivedataConnection._allConnections, function (conn) {
     return _.all(conn._subscriptions, function (sub) {
-      return !sub.completeCallbacks;
+      return !sub.readyCallbacks;
     });
   });
 };

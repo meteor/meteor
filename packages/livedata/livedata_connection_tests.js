@@ -115,7 +115,7 @@ Tinytest.add("livedata stub - subscribe", function (test) {
   test.equal(message, {msg: 'sub', name: 'my_data', params: []});
 
   // get the sub satisfied. callback fires.
-  stream.receive({msg: 'complete', 'subs': [id]});
+  stream.receive({msg: 'ready', 'subs': [id]});
   test.isTrue(callback_fired);
 
   // Unsubscribe.
@@ -144,23 +144,23 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   var rFoo = new ReactiveVar('foo1');
   var rBar = new ReactiveVar('bar1');
 
-  var onCompleteCount = {};
-  var onComplete = function (tag) {
+  var onReadyCount = {};
+  var onReady = function (tag) {
     return function () {
-      if (_.has(onCompleteCount, tag))
-        ++onCompleteCount[tag];
+      if (_.has(onReadyCount, tag))
+        ++onReadyCount[tag];
       else
-        onCompleteCount[tag] = 1;
+        onReadyCount[tag] = 1;
     };
   };
 
   // Subscribe to some subs.
   var stopperHandle;
   var autorunHandle = Meteor.autorun(function () {
-    conn.subscribe("foo", rFoo.get(), onComplete(rFoo.get()));
-    conn.subscribe("bar", rBar.get(), onComplete(rBar.get()));
-    conn.subscribe("completer", onComplete("completer"));
-    stopperHandle = conn.subscribe("stopper", onComplete("stopper"));
+    conn.subscribe("foo", rFoo.get(), onReady(rFoo.get()));
+    conn.subscribe("bar", rBar.get(), onReady(rBar.get()));
+    conn.subscribe("completer", onReady("completer"));
+    stopperHandle = conn.subscribe("stopper", onReady("stopper"));
   });
 
   // Check sub messages. (Assume they are sent in the order executed.)
@@ -185,12 +185,12 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   delete message.id;
   test.equal(message, {msg: 'sub', name: 'stopper', params: []});
 
-  // Haven't hit onComplete yet.
-  test.equal(onCompleteCount, {});
+  // Haven't hit onReady yet.
+  test.equal(onReadyCount, {});
 
-  // "completer" gets completed now. its callback should fire.
-  stream.receive({msg: 'complete', 'subs': [idCompleter]});
-  test.equal(onCompleteCount, {completer: 1});
+  // "completer" gets ready now. its callback should fire.
+  stream.receive({msg: 'ready', 'subs': [idCompleter]});
+  test.equal(onReadyCount, {completer: 1});
   test.length(stream.sent, 0);
 
   // Stop 'stopper'.
@@ -199,12 +199,12 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   message = JSON.parse(stream.sent.shift());
   test.equal(message, {msg: 'unsub', id: idStopper});
 
-  test.equal(onCompleteCount, {completer: 1});
+  test.equal(onReadyCount, {completer: 1});
 
   // Change the foo subscription and flush. We should sub to the new foo
   // subscription, re-sub to the stopper subscription, and then unsub from the old
   // foo subscription.  The bar subscription should be unaffected. The completer
-  // subscription should call its new onComplete callback now.
+  // subscription should call its new onReady callback now.
   rFoo.set("foo2");
   Meteor.flush();
   test.length(stream.sent, 3);
@@ -222,14 +222,14 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   message = JSON.parse(stream.sent.shift());
   test.equal(message, {msg: 'unsub', id: idFoo1});
 
-  test.equal(onCompleteCount, {completer: 2});
+  test.equal(onReadyCount, {completer: 2});
 
-  // Complete the stopper and bar subs. Completing stopper should call only the
-  // onComplete from the new subscription because they were separate
+  // Ready the stopper and bar subs. Completing stopper should call only the
+  // onReady from the new subscription because they were separate
   // subscriptions started at different times and the first one was explicitly
-  // torn down by the client; completing bar should call both onCompletes.
-  stream.receive({msg: 'complete', 'subs': [idStopperAgain, idBar1]});
-  test.equal(onCompleteCount, {completer: 2, bar1: 2, stopper: 1});
+  // torn down by the client; completing bar should call both onReadys.
+  stream.receive({msg: 'ready', 'subs': [idStopperAgain, idBar1]});
+  test.equal(onReadyCount, {completer: 2, bar1: 2, stopper: 1});
 
   // Shut down the autorun. This should unsub us from all current subs at flush
   // time.
@@ -535,7 +535,7 @@ Tinytest.add("livedata stub - reconnect", function (test) {
 
   stream.receive({msg: 'changed', collection: collName,
                   id: '1234', fields: {b:2}});
-  stream.receive({msg: 'complete',
+  stream.receive({msg: 'ready',
                   subs: [subMessage.id] // satisfy sub
                  });
   test.isTrue(subCallbackFired);
@@ -602,7 +602,7 @@ Tinytest.add("livedata stub - reconnect", function (test) {
   o.expectCallbacks();
 
   // re-satisfy sub
-  stream.receive({msg: 'complete', subs: [subMessage.id]});
+  stream.receive({msg: 'ready', subs: [subMessage.id]});
 
   // now the doc changes and method callback is called, and the wait method is
   // sent. the sub callback isn't re-called.

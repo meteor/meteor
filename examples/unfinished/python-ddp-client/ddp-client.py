@@ -130,7 +130,7 @@ class DDPClient(WebSocketClient):
         elif msg.get('msg') == 'removed':
             log("* REMOVED {} {}".format(
                     msg['collection'], ", ".join(msg['ids'])))
-        elif msg.get('msg') == 'complete':
+        elif msg.get('msg') == 'ready':
             assert 'subs' in msg
             if self.pending.get('id') in msg['subs']:
                 log("* READY")

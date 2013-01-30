@@ -355,8 +355,8 @@ Cursor.prototype._publishCursor = function (sub) {
   });
 
   // observeChanges only returns after the initial added callbacks have run.
-  // mark subscription as completed.
-  sub.complete();
+  // mark subscription as ready.
+  sub.ready();
 
   // register stop callback (expects lambda w/ no args).
   sub.onStop(function () {observeHandle.stop();});

@@ -241,21 +241,21 @@ Meteor._LivedataSession = function (server, version) {
   // session. The session will take care of starting it when appropriate.
   self._dontStartNewUniversalSubs = false;
 
-  // when we are rerunning subscriptions, any completion messages
+  // when we are rerunning subscriptions, any ready messages
   // we want to buffer up for when we are done rerunning subscriptions
-  self._pendingCompletions = [];
+  self._pendingReady = [];
 };
 
 _.extend(Meteor._LivedataSession.prototype, {
 
 
-  sendComplete: function (subscriptionIds) {
+  sendReady: function (subscriptionIds) {
     var self = this;
     if (self._isSending)
-      self.send({msg: "complete", subs: subscriptionIds});
+      self.send({msg: "ready", subs: subscriptionIds});
     else {
       _.each(subscriptionIds, function (subscriptionId) {
-        self._pendingCompletions.push(subscriptionId);
+        self._pendingReady.push(subscriptionId);
       });
     }
   },
@@ -692,9 +692,9 @@ _.extend(Meteor._LivedataSession.prototype, {
     Meteor._noYieldsAllowed(function () {
       self._isSending = true;
       self._diffCollectionViews(beforeCVs);
-      if (!_.isEmpty(self._pendingCompletions)) {
-        self.sendComplete(self._pendingCompletions);
-        self._pendingCompletions = [];
+      if (!_.isEmpty(self._pendingReady)) {
+        self.sendReady(self._pendingReady);
+        self._pendingReady = [];
       }
     });
 
@@ -781,8 +781,8 @@ Meteor._LivedataSubscription = function (
   // an opinion about
   self._documents = {};
 
-  // remember if we are complete.
-  self._complete = false;
+  // remember if we are ready.
+  self._ready = false;
 
   // Part of the public API: the user of this sub.
   self.userId = session.userId;
@@ -923,15 +923,15 @@ _.extend(Meteor._LivedataSubscription.prototype, {
     self._session.removed(self._subscriptionHandle, collectionName, id);
   },
 
-  complete: function () {
+  ready: function () {
     var self = this;
     if (self._stopped)
       return;
     if (!self._subscriptionId)
       return;  // unnecessary but ignored for universal sub
-    if (!self._complete) {
-      self._session.sendComplete([self._subscriptionId]);
-      self._complete = true;
+    if (!self._ready) {
+      self._session.sendReady([self._subscriptionId]);
+      self._ready = true;
     }
   }
 });

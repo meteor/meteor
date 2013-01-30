@@ -18,7 +18,7 @@
     } else {
       self.added(Meteor._ServerTestResultsCollection, runId, {});
     }
-    self.complete();
+    self.ready();
   });
 
   Meteor.methods({

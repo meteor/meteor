@@ -68,7 +68,7 @@ documents.  These methods are provided by `this` in your publish function.
 
 
 
-<!-- TODO discuss complete -->
+<!-- TODO discuss ready -->
 
 Example:
 
@@ -95,7 +95,7 @@ Example:
       // as ready.
       initializing = false;
       self.added("counts", roomId, {count: count});
-      self.complete();
+      self.ready();
 
       // Stop observing the cursor when client unsubs.
       // Stopping a subscription automatically takes
@@ -132,7 +132,7 @@ function is rerun with the new value.
 {{> api_box subscription_added}}
 {{> api_box subscription_changed}}
 {{> api_box subscription_removed}}
-{{> api_box subscription_complete}}
+{{> api_box subscription_ready}}
 
 {{> api_box subscription_onStop}}
 
