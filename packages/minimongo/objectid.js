@@ -61,18 +61,8 @@ LocalCollection._ObjectID.prototype.serializeForEval = function () {
 LocalCollection._selectorIsId = function (selector) {
   return (typeof selector === "string") ||
     (typeof selector === "number") ||
-    selector instanceof LocalCollection._findObjectIDClass();
+    selector instanceof LocalCollection._ObjectID;
 };
-
-
-LocalCollection._findObjectIDClass = function () {
-  if (typeof Meteor !== 'undefined' && Meteor.Collection) {
-    return Meteor.Collection.ObjectID;
-  } else {
-    return LocalCollection._ObjectID;
-  }
-};
-
 
 
 })();

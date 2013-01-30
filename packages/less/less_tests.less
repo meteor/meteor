@@ -1,8 +1,9 @@
+@import "less_tests_constants.less";
 
 #less-tests { zoom: 1; /* prop this rule open */ }
 
 @dashy: dashed;
 
 .less-dashy-left-border {
-  border-left: 1px @dashy black;
+  border-left: @border-width @dashy black;
 }

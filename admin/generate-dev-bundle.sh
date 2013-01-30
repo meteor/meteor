@@ -56,7 +56,7 @@ git clone git://github.com/joyent/node.git
 cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
 # the top of app/meteor/meteor.js and app/server/server.js.
-git checkout v0.8.11
+git checkout v0.8.18
 
 ./configure --prefix="$DIR"
 make -j4
@@ -130,13 +130,6 @@ rm -rf *
 mv ../$FIBERS_ARCH .
 cd ../..
 
-
-# We want to ship a custom BSON module to replace one of the Node Mongo driver's
-# dependencies.  This allows us to return a Uint8Array as a form of binary data
-# instead of the Mongo driver's proprietary Binary object on the server.
-
-cd $DIR/lib/node_modules/mongodb
-npm install https://github.com/meteor/js-bson/tarball/9b8958a039
 
 # Download and install mongodb.
 # To see the mongo changelog, go to http://www.mongodb.org/downloads,

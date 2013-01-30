@@ -120,7 +120,7 @@ _.extend(TestCaseResults.prototype, {
       // but we fall back to a manual comparison
       if (!(actual instanceof Uint8Array))
         this.fail({type: "assert_equal", message: "found object is not a typed array",
-                   expected: "A typed array", actual: expected.constructor.toString()});
+                   expected: "A typed array", actual: actual.constructor.toString()});
       if (expected.length !== actual.length)
         this.fail({type: "assert_equal", message: "lengths of typed arrays do not match",
                    expected: expected.length, actual: actual.length});
