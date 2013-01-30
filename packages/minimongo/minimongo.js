@@ -767,7 +767,7 @@ LocalCollection.prototype.resumeObservers = function () {
 
 
 LocalCollection._idStringify = function (id) {
-  if (id instanceof LocalCollection._findObjectIDClass()) {
+  if (id instanceof LocalCollection._ObjectID) {
     return id.valueOf();
   } else if (typeof id === 'string') {
     if (id === "") {
@@ -801,7 +801,7 @@ LocalCollection._idStringify = function (id) {
   } else if (id.substr(0, 1) === '~') {
     return JSON.parse(id.substr(1));
   } else if (LocalCollection._looksLikeObjectID(id)) {
-    return new (LocalCollection._findObjectIDClass())(id);
+    return new LocalCollection._ObjectID(id);
   } else {
     return id;
   }

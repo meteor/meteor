@@ -2,18 +2,6 @@
 // XXX presently there is no way to destroy/clean up a Collection
 
 (function () {
-var ObjectID;
-if (Meteor.isClient) {
-  ObjectID = LocalCollection._ObjectID;
-} else {
-
-  ObjectID = __meteor_bootstrap__.require('mongodb').ObjectID;
-  ObjectID.prototype.clone = function () { return new ObjectID(this.toHexString());};
-  // fix Mongo ObjectIDs to function as the docs say they do.
-  ObjectID.prototype.valueOf = ObjectID.prototype.toJSONValue =
-    function () { return this.toHexString(); };
-  ObjectID.prototype.typeName = function () { return "oid"; };
-}
 
 Meteor.Collection = function (name, options) {
   var self = this;
@@ -34,7 +22,7 @@ Meteor.Collection = function (name, options) {
   switch (options.idGeneration) {
   case 'MONGO':
     self._makeNewID = function () {
-      return new ObjectID();
+      return new Meteor.Collection.ObjectID();
     };
     break;
   case 'STRING':
@@ -340,12 +328,7 @@ Meteor.Collection.prototype._ensureIndex = function (index, options) {
   self._collection._ensureIndex(index, options);
 };
 
-Meteor.Collection.prototype._makeNewId = function () {
-  var self = this;
-  return new Meteor.Collection.ObjectID();
-};
-
-Meteor.Collection.ObjectID = ObjectID;
+Meteor.Collection.ObjectID = LocalCollection._ObjectID;
 
 ///
 /// Remote methods and access control.

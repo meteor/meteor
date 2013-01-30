@@ -22,6 +22,9 @@ var replaceMongoAtomWithMeteor = function (document) {
     }
     return meteorBinary;
   }
+  if (document instanceof MongoDB.ObjectID) {
+    return new Meteor.Collection.ObjectID(document.toHexString());
+  }
   return undefined;
 };
 
@@ -32,11 +35,14 @@ var replaceMeteorAtomWithMongo = function (document) {
     // serialize it correctly).
     return new MongoDB.Binary(new Buffer(document));
   }
+  if (document instanceof Meteor.Collection.ObjectID) {
+    return new MongoDB.ObjectID(document.toHexString());
+  }
   return undefined;
 };
 
 var replaceTypes = function (document, atomTransformer) {
-  if (typeof document !== 'object')
+  if (typeof document !== 'object' || document === null)
     return document;
 
   var replacedTopLevelAtom = atomTransformer(document);
@@ -47,6 +53,7 @@ var replaceTypes = function (document, atomTransformer) {
   _.each(document, function (val, key) {
     var valReplaced = replaceTypes(val, atomTransformer);
     if (val !== valReplaced) {
+      // Lazy clone.
       if (ret === document)
         ret = EJSON.clone(document);
       ret[key] = valReplaced;
@@ -181,7 +188,8 @@ _Mongo.prototype.remove = function (collection_name, selector) {
       return;
     }
 
-    collection.remove(selector, {safe: true}, function (err) {
+    collection.remove(replaceTypes(selector, replaceMeteorAtomWithMongo),
+                      {safe: true}, function (err) {
       future.ret(err);
     });
   });
@@ -389,7 +397,7 @@ _Mongo.prototype._createSynchronousCursor = function (cursorDescription) {
       }
       var options = cursorDescription.options;
       var dbCursor = collection.find(
-        cursorDescription.selector,
+        replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
         options.fields, {
           sort: options.sort,
           limit: options.limit,
