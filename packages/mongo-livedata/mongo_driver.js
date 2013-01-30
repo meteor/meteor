@@ -13,6 +13,49 @@ var MongoDB = __meteor_bootstrap__.require('mongodb');
 var Fiber = __meteor_bootstrap__.require('fibers');
 var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
 
+var replaceMongoAtomWithMeteor = function (document) {
+  if (document instanceof MongoDB.Binary) {
+    var meteorBinary = EJSON.newBinary(document.length());
+    var buffer = document.value(true);
+    for (var i = 0; i < meteorBinary.length; ++i) {
+      meteorBinary[i] = buffer[i];
+    }
+    return meteorBinary;
+  }
+  return undefined;
+};
+
+var replaceMeteorAtomWithMongo = function (document) {
+  if (EJSON.isBinary(document)) {
+    // This does more copies than we'd like, but is necessary because
+    // MongoDB.BSON only looks like it takes a Uint8Array (and doesn't actually
+    // serialize it correctly).
+    return new MongoDB.Binary(new Buffer(document));
+  }
+  return undefined;
+};
+
+var replaceTypes = function (document, atomTransformer) {
+  if (typeof document !== 'object')
+    return document;
+
+  var replacedTopLevelAtom = atomTransformer(document);
+  if (replacedTopLevelAtom !== undefined)
+    return replacedTopLevelAtom;
+
+  var ret = document;
+  _.each(document, function (val, key) {
+    var valReplaced = replaceTypes(val, atomTransformer);
+    if (val !== valReplaced) {
+      if (ret === document)
+        ret = EJSON.clone(document);
+      ret[key] = valReplaced;
+    }
+  });
+  return ret;
+};
+
+
 _Mongo = function (url) {
   var self = this;
 
@@ -106,7 +149,8 @@ _Mongo.prototype.insert = function (collection_name, document) {
       return;
     }
 
-    collection.insert(document, {safe: true}, function (err) {
+    collection.insert(replaceTypes(document, replaceMeteorAtomWithMongo),
+                      {safe: true}, function (err) {
       future.ret(err);
     });
   });
@@ -175,7 +219,9 @@ _Mongo.prototype.update = function (collection_name, selector, mod, options) {
     if (options.upsert) opts.upsert = true;
     if (options.multi) opts.multi = true;
 
-    collection.update(selector, mod, opts, function (err) {
+    collection.update(replaceTypes(selector, replaceMeteorAtomWithMongo),
+                      replaceTypes(mod, replaceMeteorAtomWithMongo),
+                      opts, function (err) {
       future.ret(err);
     });
   });
@@ -373,6 +419,7 @@ _.extend(SynchronousCursor.prototype, {
     while (true) {
       var doc = self._synchronousNextObject().wait();
       if (!doc || !doc._id) return null;
+      doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
       var strId = Meteor.idStringify(doc._id);
       if (self._visitedIds[strId]) continue;
       self._visitedIds[strId] = true;
