@@ -1,3 +1,5 @@
+var k = function (key) { return " " + key; };
+
 (function () {
   var element = function (key, value, next, prev) {
     return {
@@ -21,7 +23,7 @@
     putBefore: function (key, item, before) {
       var self = this;
       var elt = before ?
-            element(key, item, self._dict[before]) :
+            element(key, item, self._dict[k(before)]) :
             element(key, item, null);
       if (elt.next === undefined)
         throw new Error("could not find item to put this one before");
@@ -38,11 +40,11 @@
       }
       if (self._first === null || self._first === elt.next)
         self._first = elt;
-      self._dict[key] = elt;
+      self._dict[k(key)] = elt;
     },
     remove: function (key) {
       var self = this;
-      var elt = self._dict[key];
+      var elt = self._dict[k(key)];
       if (elt !== undefined) {
         if (elt.next)
           elt.next.prev = elt.prev;
@@ -52,7 +54,7 @@
           self._last = elt.prev;
         if (elt === self._first)
           self._first = elt.next;
-        delete self._dict[key];
+        delete self._dict[k(key)];
         return elt.value;
       } else {
         return undefined;
@@ -60,13 +62,13 @@
     },
     get: function (key) {
       var self = this;
-      if (_.has(self._dict, key))
-          return self._dict[key].value;
+      if (self.has(key))
+          return self._dict[k(key)].value;
       return undefined;
     },
     has: function (key) {
       var self = this;
-      return _.has(self._dict[key]);
+      return _.has(self._dict, k(key));
     },
     forEach: function (iter) {
       var self = this;
@@ -98,8 +100,8 @@
     },
     prev: function (key) {
       var self = this;
-      if (_.has(self._dict, key)) {
-        var elt = self._dict[key];
+      if (self.has(key)) {
+        var elt = self.get(key);
         if (elt.prev)
           return elt.prev.key;
       }
@@ -107,8 +109,8 @@
     },
     next: function (key) {
       var self = this;
-      if (_.has(self._dict, key)) {
-        var elt = self._dict[key];
+      if (self.has(key)) {
+        var elt = self.get(key);
         if (elt.next)
           return elt.next.key;
       }
@@ -116,8 +118,8 @@
     },
     moveBefore: function (key, before) {
       var self = this;
-      var elt = self._dict[key];
-      var eltBefore = before ? self._dict[before] : null;
+      var elt = self._dict[k(key)];
+      var eltBefore = before ? self._dict[k(before)] : null;
       if (elt === undefined)
         throw new Error("Item to move is not present");
       if (eltBefore === undefined) {
