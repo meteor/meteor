@@ -364,8 +364,7 @@ Cursor.prototype._publishCursor = function (sub) {
 
 Cursor.prototype.observe = function (callbacks) {
   var self = this;
-  return self._mongo._observe(
-    self._cursorDescription, true, callbacks);
+  return LocalCollection._observeOrdered(self, callbacks);
 };
 
 Cursor.prototype._observeUnordered = function (callbacks) {
@@ -512,7 +511,7 @@ ObserveHandle.prototype.stop = function () {
 _Mongo.prototype._observe = function (cursorDescription, ordered, callbacks, observeChanges) {
   var self = this;
   var observeKey = JSON.stringify(
-    _.extend({ordered: ordered}, cursorDescription));
+    _.extend({ordered: ordered, observeChanges: observeChanges}, cursorDescription));
 
   var liveResultsSet;
   var observeHandle;
@@ -761,7 +760,6 @@ _.extend(LiveResultsSet.prototype, {
   // with a call to _pollMongo or another call to this function.
   _addObserveHandleAndSendInitialAdds: function (handle) {
     var self = this;
-
     // Keep track of how many of these tasks are on the queue, so that
     // _removeObserveHandle knows if it's safe to GC.
     ++self._addHandleTasksScheduledButNotPerformed;
@@ -776,7 +774,7 @@ _.extend(LiveResultsSet.prototype, {
       --self._addHandleTasksScheduledButNotPerformed;
 
       // Send initial adds.
-      if (handle._added) {
+      if (handle._added || handle._addedBefore) {
         _.each(self._results, function (doc, i) {
           var fields = EJSON.clone(doc);
           if (self._observeChanges) {
