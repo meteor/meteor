@@ -5,5 +5,5 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use('underscore');
-  api.add_files('ordereddict.js', ['client', 'server']);
+  api.add_files('ordered_dict.js', ['client', 'server']);
 });
