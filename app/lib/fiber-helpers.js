@@ -8,14 +8,19 @@ Error.stackTraceLimit = Infinity; // http://code.google.com/p/v8/wiki/JavaScript
 
 var Fiber = require("fibers");
 
-// runs a function within a fiber. we wrap the entry point into meteor.js into a fiber
-// but if you use callbacks that call synchronous code you need to wrap those as well.
+// runs a function within a fiber. we wrap the entry point into
+// meteor.js into a fiber but if you use callbacks that call synchronous
+// code you need to wrap those as well.
 //
 // NOTE: It's probably better to not use callbacks. Instead you can
 // use Futures to generate synchronous equivalents.
 exports.inFiber = function(func) {
-  return function() {
-    new Fiber(func).run();
+  return function(/*arguments*/) {
+    var self = this;
+    var args = arguments;
+    new Fiber(function () {
+      func.apply(self, args);
+    }).run();
   };
 };
 
