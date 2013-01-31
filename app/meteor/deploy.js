@@ -207,6 +207,14 @@ var mongo = function (url, just_credential) {
         // just print the URL
         process.stdout.write(body + "\n");
 
+        var uri_match = body.match(/^mongodb:\/\/([^:]+):([^@]+)@(.*)$/);
+        if (uri_match) {
+          process.stdout.write("\nUsing the console:\n"
+                               + "mongo -u " + uri_match[1]
+                               + " -p " + uri_match[2]
+                               + " " + uri_match[3] + "\n");
+        }
+
       } else {
         // pause stdin so we don't try to read it while mongo is
         // running.
