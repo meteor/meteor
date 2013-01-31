@@ -1350,46 +1350,11 @@ Tinytest.add("minimongo - diff changes ordering", function (test) {
   testBothWays(['A','B','C','D','E','F','G','H','I'],['A','B','C','D','F','G','H','E','I']);
 });
 
-
-Tinytest.add("minimongo - diff ordering", function (test) {
-  var makeDocs = function (ids) {
-    return _.map(ids, function (id) { return {_id: id};});
-  };
-  var testMutation = function (a, b) {
-    var aa = makeDocs(a);
-    var bb = makeDocs(b);
-    var aaCopy = EJSON.clone(aa);
-    LocalCollection._diffQueryOrdered(aa, bb, {
-      added: function (doc, idx) {
-        aaCopy.splice(idx, 0, doc);
-      },
-      moved: function (doc, from, to) {
-        aaCopy.splice(from, 1);
-        aaCopy.splice(to, 0, doc);
-      },
-      removed: function (doc, from) {
-        aaCopy.splice(from, 1);
-      }
-    });
-    test.equal(aaCopy, bb);
-  };
-
-  var testBothWays = function (a, b) {
-    testMutation(a, b);
-    testMutation(b, a);
-  };
-
-  testBothWays(["a", "b", "c"], ["c", "b", "a"]);
-  testBothWays(["a", "b", "c", "d"], ["c", "b", "a"]);
-  testBothWays(['A','B','C','D','E','F','G','H','I'],
-               ['A','B','F','G','C','D','I','L','M','N','H']);
-});
-
 Tinytest.add("minimongo - diff", function (test) {
 
   // test correctness
 
-  var diffTestOrdered = function(origLen, newOldIdx) {
+  var diffTest = function(origLen, newOldIdx) {
     var oldResults = new Array(origLen);
     for (var i = 1; i <= origLen; i++)
       oldResults[i-1] = {_id: i};
@@ -1400,75 +1365,57 @@ Tinytest.add("minimongo - diff", function (test) {
         doc.changed = true;
       return doc;
     });
+    var find = function (arr, id) {
+      for (var i = 0; i < arr.length; i++) {
+        if (EJSON.equals(arr[i]._id, id))
+          return i;
+      }
+      return -1;
+    };
 
     var results = _.clone(oldResults);
     var observer = {
-      added: function(doc, before_idx) {
+      addedBefore: function(id, fields, before) {
+        var before_idx;
+        if (before === null)
+          before_idx = results.length;
+        else
+          before_idx = find (results, before);
+        var doc = _.extend({_id: id}, fields);
         test.isFalse(before_idx < 0 || before_idx > results.length);
         results.splice(before_idx, 0, doc);
       },
-      removed: function(doc, at_idx) {
+      removed: function(id) {
+        var at_idx = find (results, id);
         test.isFalse(at_idx < 0 || at_idx >= results.length);
-        test.equal(doc, results[at_idx]);
         results.splice(at_idx, 1);
       },
-      changed: function(doc, at_idx, oldDoc) {
+      changed: function(id, fields) {
+        var at_idx = find (results, id);
+        var oldDoc = results[at_idx];
+        var doc = EJSON.clone(oldDoc);
+        LocalCollection._applyChanges(doc, fields);
         test.isFalse(at_idx < 0 || at_idx >= results.length);
         test.equal(doc._id, oldDoc._id);
-        test.equal(results[at_idx], oldDoc);
         results[at_idx] = doc;
       },
-      moved: function(doc, old_idx, new_idx) {
+      movedBefore: function(id, before) {
+        var old_idx = find(results, id);
+        var new_idx;
+        if (before === null)
+          new_idx = results.length;
+        else
+          new_idx = find (results, before);
+        if (new_idx > old_idx)
+          new_idx--;
         test.isFalse(old_idx < 0 || old_idx >= results.length);
         test.isFalse(new_idx < 0 || new_idx >= results.length);
-        test.equal(doc, results[old_idx]);
         results.splice(new_idx, 0, results.splice(old_idx, 1)[0]);
       }
     };
 
-    LocalCollection._diffQueryOrdered(oldResults, newResults, observer);
+    LocalCollection._diffQueryOrderedChanges(oldResults, newResults, observer);
     test.equal(results, newResults);
-  };
-
-  var diffTestUnordered = function(origLen, newOldIdx) {
-    var oldResults = {};
-    for (var i = 1; i <= origLen; ++i)
-      oldResults[i] = {_id: i};
-
-    var newResults = {};
-    _.each(newOldIdx, function (n) {
-      var doc = {_id: Math.abs(n)};
-      if (n < 0)
-        doc.changed = true;
-      newResults[doc._id] = doc;
-    });
-
-    var results = _.clone(oldResults);
-    var observer = {
-      added: function(doc) {
-        test.isFalse(_.has(results, doc._id));
-        results[doc._id] = doc;
-      },
-      removed: function(doc) {
-        test.isTrue(_.has(results, doc._id));
-        test.equal(doc, results[doc._id]);
-        delete results[doc._id];
-      },
-      changed: function(doc, oldDoc) {
-        test.equal(doc._id, oldDoc._id);
-        test.isTrue(_.has(results, doc._id));
-        test.equal(results[doc._id], oldDoc);
-        results[doc._id] = doc;
-      }
-    };
-
-    LocalCollection._diffQueryUnordered(oldResults, newResults, observer);
-    test.equal(results, newResults);
-  };
-
-  var diffTest = function(origLen, newOldIdx) {
-    diffTestOrdered(origLen, newOldIdx);
-    diffTestUnordered(origLen, newOldIdx);
   };
 
   // edge cases and cases run into during debugging

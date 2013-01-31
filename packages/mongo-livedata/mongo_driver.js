@@ -376,7 +376,7 @@ Cursor.prototype.observeChanges = function (callbacks) {
   var self = this;
   var ordered = typeof callbacks.addedBefore === 'function'
         || typeof callbacks.movedBefore === 'function';
-  return self._mongo._observe(self._cursorDescription, ordered, callbacks, true);
+  return self._mongo._observe(self._cursorDescription, ordered, callbacks);
 };
 
 _Mongo.prototype._createSynchronousCursor = function (cursorDescription) {
@@ -508,10 +508,10 @@ ObserveHandle.prototype.stop = function () {
   self._liveResultsSet = null;
 };
 
-_Mongo.prototype._observe = function (cursorDescription, ordered, callbacks, observeChanges) {
+_Mongo.prototype._observe = function (cursorDescription, ordered, callbacks) {
   var self = this;
   var observeKey = JSON.stringify(
-    _.extend({ordered: ordered, observeChanges: observeChanges}, cursorDescription));
+    _.extend({ordered: ordered}, cursorDescription));
 
   var liveResultsSet;
   var observeHandle;
@@ -532,8 +532,7 @@ _Mongo.prototype._observe = function (cursorDescription, ordered, callbacks, obs
         ordered,
         function () {
           delete self._liveResultsSets[observeKey];
-        },
-        observeChanges);
+        });
       self._liveResultsSets[observeKey] = liveResultsSet;
       newlyCreated = true;
     }
@@ -556,14 +555,13 @@ _Mongo.prototype._observe = function (cursorDescription, ordered, callbacks, obs
 };
 
 var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
-                               stopCallback, observeChanges) {
+                               stopCallback) {
   var self = this;
 
   self._cursorDescription = cursorDescription;
   self._mongoHandle = mongoHandle;
   self._ordered = ordered;
   self._stopCallbacks = [stopCallback];
-  self._observeChanges = observeChanges;
 
   // This constructor cannot yield, so we don't create the synchronousCursor yet
   // (since that can yield).
@@ -737,13 +735,8 @@ _.extend(LiveResultsSet.prototype, {
 
     // Run diffs. (This can yield too.)
     if (!_.isEmpty(self._observeHandles)) {
-      if (self._observeChanges) {
-        LocalCollection._diffQueryChanges(
-          self._ordered, oldResults, newResults, self._callbackMultiplexer);
-      } else {
-        LocalCollection._diffQuery(
-          self._ordered, oldResults, newResults, self._callbackMultiplexer, true);
-      }
+      LocalCollection._diffQueryChanges(
+        self._ordered, oldResults, newResults, self._callbackMultiplexer);
     }
 
     // Replace self._results atomically.
@@ -777,17 +770,11 @@ _.extend(LiveResultsSet.prototype, {
       if (handle._added || handle._addedBefore) {
         _.each(self._results, function (doc, i) {
           var fields = EJSON.clone(doc);
-          if (self._observeChanges) {
-            delete fields._id;
-            if (self._ordered)
-              handle._addedBefore(doc._id, fields, null);
-            else
-              handle._added(doc._id, fields);
-          } else {
-            handle._added(fields,
-                          self._ordered ? i : undefined);
-          }
-
+          delete fields._id;
+          if (self._ordered)
+            handle._addedBefore(doc._id, fields, null);
+          else
+            handle._added(doc._id, fields);
         });
       }
     });
