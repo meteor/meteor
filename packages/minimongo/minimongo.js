@@ -199,7 +199,7 @@ LocalCollection.LiveResultsSet = function () {};
 _.extend(LocalCollection.Cursor.prototype, {
   observe: function (options) {
     var self = this;
-    return self._observeInternal(true, options);
+    return  LocalCollection._observeOrdered(self, options);
   },
   _observeUnordered: function (options) {
     var self = this;
@@ -656,9 +656,14 @@ LocalCollection._recomputeResults = function (query, oldResults) {
     oldResults = query.results;
   query.results = query.cursor._getRawObjects(query.ordered);
 
-  if (!query.paused)
-    LocalCollection._diffQuery(
-      query.ordered, oldResults, query.results, query, true);
+  if (!query.paused) {
+    if (query.observeChanges)
+      LocalCollection._diffQueryChanges(
+        query.ordered, oldResults, query.results, query);
+    else
+      LocalCollection._diffQuery(
+        query.ordered, oldResults, query.results, query, true);
+  }
 };
 
 
@@ -759,8 +764,12 @@ LocalCollection.prototype.resumeObservers = function () {
     var query = this.queries[qid];
     // Diff the current results against the snapshot and send to observers.
     // pass the query object for its observer callbacks.
-    LocalCollection._diffQuery(
-      query.ordered, query.results_snapshot, query.results, query, true);
+    if (query.observeChanges)
+      LocalCollection._diffQueryChanges(
+        query.ordered, query.results_snapshot, query.results, query);
+    else
+      LocalCollection._diffQuery(
+        query.ordered, query.results_snapshot, query.results, query, true);
     query.results_snapshot = null;
   }
 };
@@ -874,28 +883,72 @@ LocalCollection._makeChangedFields = function (newDoc, oldDoc) {
 
 LocalCollection._observeUnordered = function (cursor, callbacks) {
   var docs = {};
-  return cursor.observeChanges({
+  var suppressed = !!callbacks._suppress_initial;
+  var handle = cursor.observeChanges({
     added: function (id, fields) {
       var strId = LocalCollection._idStringify(id);
       var doc = EJSON.clone(fields);
       doc._id = id;
       docs[strId] = doc;
-      callbacks.added(doc);
+      suppressed || callbacks.added(doc);
     },
     changed: function (id, fields) {
       var strId = LocalCollection._idStringify(id);
       var doc = docs[strId];
-      var oldDoc = EJSON.clone(docs[strId]);
+      var oldDoc = EJSON.clone(doc);
       // writes through to the doc set
       LocalCollection._applyChanges(doc, fields);
-      callbacks.changed(doc, oldDoc);
+      suppressed || callbacks.changed(doc, oldDoc);
     },
     removed: function (id) {
       var strId = LocalCollection._idStringify(id);
       var doc = docs[strId];
       delete docs[strId];
-      callbacks.removed(doc);
+      suppressed || callbacks.removed(doc);
     }
   });
+  suppressed = false;
+  return handle;
+};
+
+LocalCollection._observeOrdered = function (cursor, callbacks) {
+  var docs = new OrderedDict();
+  var suppressed = !!callbacks._suppress_initial;
+  var handle = cursor.observeChanges({
+    addedBefore: function (id, fields, before) {
+      var strId = LocalCollection._idStringify(id);
+      var doc = EJSON.clone(fields);
+      doc._id = id;
+      docs.putBefore(strId, doc, before ? LocalCollection._idStringify(before) : null);
+      var index = docs.indexOf(strId);
+      suppressed || callbacks.added(EJSON.clone(doc), index);
+    },
+    changed: function (id, fields) {
+      var strId = LocalCollection._idStringify(id);
+      var doc = docs.get(strId);
+      var oldDoc = EJSON.clone(doc);
+      var index = docs.indexOf(strId);
+      // writes through to the doc set
+      LocalCollection._applyChanges(doc, fields);
+      suppressed || callbacks.changed(EJSON.clone(doc), index, oldDoc);
+    },
+    movedBefore: function (id, before) {
+      var strId = LocalCollection._idStringify(id);
+      var doc = docs.get(strId);
+      var from = docs.indexOf(strId);
+      docs.moveBefore(strId, before ? LocalCollection._idStringify(before) : null);
+      var to = docs.indexOf(strId);
+      suppressed || callbacks.moved(EJSON.clone(doc), from, to);
+    },
+    removed: function (id) {
+      var strId = LocalCollection._idStringify(id);
+      var doc = docs.get(strId);
+      var index = docs.indexOf(strId);
+      docs.remove(strId);
+      suppressed || callbacks.removed(doc, index);
+    }
+  });
+  suppressed = false;
+  return handle;
 };
 })();

@@ -27,23 +27,27 @@
         throw new Error("could not find item to put this one before");
       if (!elt.next) {
         elt.prev = self._last;
-        self._last.next = elt;
+        if (self._last)
+          self._last.next = elt;
         self._last = elt;
       } else {
         elt.prev = elt.next.prev;
         elt.next.prev = elt;
-        elt.prev.next = elt;
+        if (elt.prev)
+          elt.prev.next = elt;
       }
       if (self._first === null || self._first === elt.next)
         self._first = elt;
-      self._dict[key] = item;
+      self._dict[key] = elt;
     },
     remove: function (key) {
       var self = this;
       var elt = self._dict[key];
       if (elt !== undefined) {
-        elt.next.prev = elt.prev;
-        elt.prev.next = elt.next;
+        if (elt.next)
+          elt.next.prev = elt.prev;
+        if (elt.prev)
+          elt.prev.next = elt.next;
         if (elt === self._last)
           self._last = elt.prev;
         if (elt === self._first)
@@ -64,7 +68,7 @@
       var self = this;
       return _.has(self._dict[key]);
     },
-    each: function (iter) {
+    forEach: function (iter) {
       var self = this;
       var i = 0;
       var elt = self._first;
@@ -73,6 +77,7 @@
         if (b === OrderedDict.BREAK)
           return;
         elt = elt.next;
+        i++;
       }
     },
     first: function () {
@@ -115,13 +120,16 @@
       var eltBefore = before ? self._dict[before] : null;
       if (elt === undefined)
         throw new Error("Item to move is not present");
-      if (eltBefore === undefined)
+      if (eltBefore === undefined) {
         throw new Error("Could not find element to move this one before");
-      if (eltBefore === elt.next) // no moving necessary.
+      }
+      if (eltBefore === elt.next) // no moving necessary
         return;
       // remove from its old place
-      elt.next.prev = elt.prev;
-      elt.prev.next = elt.next;
+      if (elt.next)
+        elt.next.prev = elt.prev;
+      if (elt.prev)
+        elt.prev.next = elt.next;
       if (elt === self._last)
         self._last = elt.prev;
       if (elt === self._first)
@@ -130,21 +138,24 @@
       // now patch it in to its new place
       if (eltBefore === null) {
         elt.next = null;
+        if (self._last)
+          self._last.next = elt;
         elt.prev = self._last;
-        self._last.next = elt.prev;
         self._last = elt;
       } else {
         elt.next = eltBefore;
         elt.prev = eltBefore.prev;
         eltBefore.prev = elt;
-        elt.prev.next = elt;
+        if (elt.prev)
+          elt.prev.next = elt;
       }
-
+      if (!elt.prev)
+        self._first = elt;
     },
-    getIndex: function (key) {
+    indexOf: function (key) {
       var self = this;
       var ret = null;
-      self.each(function (v, k, i) {
+      self.forEach(function (v, k, i) {
         if (k === key) {
           ret = i;
           return OrderedDict.BREAK;
@@ -152,7 +163,17 @@
         return undefined;
       });
       return ret;
+    },
+    _checkRep: function () {
+      var self = this;
+      _.each(self._dict, function (k, v) {
+        if (v.next === v)
+          throw new Error("Next is a loop");
+        if (v.prev === v)
+          throw new Error("Prev is a loop");
+      });
     }
+
   });
 
 OrderedDict.BREAK = {break: true};
