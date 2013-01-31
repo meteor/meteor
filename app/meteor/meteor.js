@@ -521,7 +521,7 @@ Fiber(function () {
             .boolean('debug')
             .describe('debug', 'deploy in debug mode (don\'t minify, etc)')
             .boolean('tests')
-            .describe('settings', 'set optional data for Meteor.settings on the server')
+            .describe('settings', 'set optional data for Meteor.settings')
       //      .describe('tests', 'deploy the tests instead of the actual application')
             .usage(
               // XXX document --tests in the future, once we publicly
@@ -532,22 +532,24 @@ Fiber(function () {
                 "\n" +
                 "You can deploy to any available name under 'meteor.com'\n" +
                 "without any additional configuration, for example,\n" +
-                "'myapp.meteor.com'.  If you deploy to a custom domain, such as\n" +
+                "'myapp.meteor.com'. If you deploy to a custom domain, such as\n" +
                 "'myapp.mydomain.com', then you'll also need to configure your domain's\n" +
-                "DNS records.  See the Meteor docs for details.\n" +
+                "DNS records. See the Meteor docs for details.\n" +
                 "\n" +
                 "The --settings flag can be used to pass deploy-specific information to\n" +
                 "the application. It will be available at runtime in Meteor.settings, but only\n" +
-                "on the server. The argument is the name of a file containing the JSON data\n" +
-                "to use.  The settings will persist across deployments until you again specify\n" +
-                "a settings file.  To unset Meteor.settings, pass an empty settings file.\n" +
+                "on the server. If the object contains a key named 'public', then\n" +
+                "Meteor.settings.public will also be available on the client. The argument\n" +
+                "is the name of a file containing the JSON data to use. The settings will\n" +
+                "persist across deployments until you again specify a settings file. To\n" +
+                "unset Meteor.settings, pass an empty settings file.\n" +
                 "\n" +
                 "The --delete flag permanently removes a deployed application, including\n" +
                 "all of its stored data.\n" +
                 "\n" +
-                "The --password flag sets an administrative password for the domain.  Once\n" +
+                "The --password flag sets an administrative password for the domain. Once\n" +
                 "set, any subsequent 'deploy', 'logs', or 'mongo' command will prompt for\n" +
-                "the password.  You can change the password with a second 'deploy' command."
+                "the password. You can change the password with a second 'deploy' command."
             );
 
       var new_argv = opt.argv;
