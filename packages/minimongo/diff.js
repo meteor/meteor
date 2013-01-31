@@ -69,9 +69,14 @@ LocalCollection._diffQueryOrderedChanges = function (old_results, new_results, o
   // a "longest common subsequence" (LCS) algorithm.  The LCS of the
   // old doc IDs and the new doc IDs gives the docs that should NOT be
   // considered moved.
-  //
 
-  // Once we have the items that should not move, we walk through the new
+  // To actually call the appropriate callbacks to get from the old state to the
+  // new state:
+
+  // First, we call removed() on all the items that only appear in the old
+  // state.
+
+  // Then, once we have the items that should not move, we walk through the new
   // results array group-by-group, where a "group" is a set of items that have
   // moved, anchored on the end by an item that should not move.  One by one, we
   // move each of those elements into place "before" the anchoring end-of-group
