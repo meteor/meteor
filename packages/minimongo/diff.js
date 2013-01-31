@@ -138,9 +138,9 @@ LocalCollection._diffQueryOrderedChanges = function (old_results, new_results, o
   // where the LIS is taken of the sequence of old indices of the
   // docs in new_results)
   //
-  // unmoved_set: the output of the algorithm; members of the LCS,
+  // unmoved: the output of the algorithm; members of the LCS,
   // in the form of indices into new_results
-  var unmoved_set = {};
+  var unmoved = [];
   // max_seq_len: length of LCS found so far
   var max_seq_len = 0;
   // seq_ends[i]: the index into new_results of the last doc in a
@@ -178,39 +178,31 @@ LocalCollection._diffQueryOrderedChanges = function (old_results, new_results, o
     }
   }
 
-  // pull out the LCS/LIS into unmoved_set
+  // pull out the LCS/LIS into unmoved
   var idx = (max_seq_len === 0 ? -1 : seq_ends[max_seq_len-1]);
   while (idx >= 0) {
-    unmoved_set[idx] = true;
+    unmoved.push(idx);
     idx = ptrs[idx];
   }
+  // the unmoved item list is built backwards, so fix that
+  unmoved.reverse();
 
-  unmoved_set[new_results.length] = true;
+  // the last group is always anchored by the end of the result list, which is
+  // an id of "null"
+  unmoved.push(new_results.length);
 
   _.each(old_results, function (doc) {
     if (!new_presence_of_id[doc._id])
       observer.removed(doc._id);
   });
-  // for each group of things in the new_results that is anchored by an unmoved element,
-  // iterate through the things before it.
-  _.each(unmoved_set, function (t, endOfGroup) {
-    var startOfGroup = endOfGroup-1;
+  // for each group of things in the new_results that is anchored by an unmoved
+  // element, iterate through the things before it.
+  var startOfGroup = 0;
+  _.each(unmoved, function (endOfGroup) {
     var groupId = new_results[endOfGroup] ? new_results[endOfGroup]._id : null;
     var oldDoc;
     var newDoc;
     var fields;
-    if (groupId) {
-      newDoc = new_results[endOfGroup];
-      oldDoc = old_results[old_index_of_id[newDoc._id]];
-      fields = LocalCollection._makeChangedFields(newDoc, oldDoc);
-      if (!_.isEmpty(fields)) {
-        observer.changed(newDoc._id, fields);
-      }
-    }
-    while (!_.has(unmoved_set, startOfGroup) && startOfGroup >= 0) {
-      startOfGroup--;
-    }
-    startOfGroup++;
     for (var i = startOfGroup; i < endOfGroup; i++) {
       newDoc = new_results[i];
       if (!_.has(old_index_of_id, newDoc._id)) {
@@ -227,6 +219,15 @@ LocalCollection._diffQueryOrderedChanges = function (old_results, new_results, o
         observer.movedBefore(newDoc._id, groupId);
       }
     }
+    if (groupId) {
+      newDoc = new_results[endOfGroup];
+      oldDoc = old_results[old_index_of_id[newDoc._id]];
+      fields = LocalCollection._makeChangedFields(newDoc, oldDoc);
+      if (!_.isEmpty(fields)) {
+        observer.changed(newDoc._id, fields);
+      }
+    }
+    startOfGroup = endOfGroup+1;
   });
 
 
