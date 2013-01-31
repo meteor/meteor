@@ -1,6 +1,12 @@
-var k = function (key) { return " " + key; };
-
 (function () {
+
+  // This file defines an ordered dictionary abstraction that is useful for
+  // maintaining a dataset backed by observeChanges.  It supports ordering items
+  // by specifying the item they now come before.
+
+  // The implementation is a dictionary that contains nodes of a doubly-linked
+  // list as its values.
+  var k = function (key) { return " " + key; };
   var element = function (key, value, next, prev) {
     return {
       key: key,
