@@ -64,70 +64,21 @@ LocalCollection._diffQueryOrderedChanges = function (old_results, new_results, o
 
   // ALGORITHM:
   //
-  // We walk old_idx through the old_results array and
-  // new_idx through the new_results array at the same time.
-  // These pointers establish a sort of correspondence between
-  // old docs and new docs (identified by their _ids).
-  // If they point to the same doc (i.e. old and new docs
-  // with the same _id), we can increment both pointers
-  // and fire no 'moved' callbacks.  Otherwise, we must
-  // increment one or the other and fire approprate 'added',
-  // 'removed', and 'moved' callbacks.
-  //
-  // The process is driven by new_results, in that we try
-  // make the observer's array look like new_results by
-  // establishing each new doc in order.  The doc pointed
-  // to by new_idx is the one we are trying to establish
-  // at any given time.  If it doesn't exist in old_results,
-  // we fire an 'added' callback.  If it does, we have a
-  // choice of two ways to handle the situation.  We can
-  // advance old_idx forward to the corresponding old doc,
-  // treating all intervening old docs as moved or removed,
-  // and the current doc as unmoved.  Or, we can simply
-  // establish the new doc as next by moving it into place,
-  // i.e. firing a single 'moved' callback to move the
-  // doc from wherever it was before.  Generating a sequence
-  // of 'moved' callbacks that is not just correct but small
-  // (or minimal) is a matter of choosing which elements
-  // to consider moved and which ones merely change position
-  // by virtue of the movement of other docs.
-  //
-  // Calling callbacks with correct indices requires understanding
-  // what the observer's array looks like at each iteration.
-  // The observer's array is a concatenation of:
-  // - new_results up to (but not including) new_idx, with the
-  //   addition of some "bumped" docs that we are later going
-  //   to move into place
-  // - old_results starting at old_idx, minus any docs that we
-  //   have already moved ("taken" docs)
-  //
-  // To keep track of "bumped" items -- docs in the observer's
-  // array that we have skipped over, but will be moved forward
-  // later when we get to their new position -- we keep a
-  // "bump list" of indices into new_results where bumped items
-  // occur.  [The idea is that by adding an item to the list (bumping
-  // it), we can consider it dealt with, even though it is still there.]
-  // The corresponding position of new_idx in the observer's array,
-  // then, is new_idx + bump_list.length, and the position of
-  // the nth bumped item in the observer's array is
-  // bump_list[n] + n (to account for the previous bumped items
-  // that are still there).
-  //
-  // A "taken" list is used in a sort of analogous way to track
-  // the indices of the documents after old_idx in old_results
-  // that we have moved, so that, conversely, even though we will
-  // come across them in old_results, they are actually no longer
-  // in the observer's array.
-  //
   // To determine which docs should be considered "moved" (and which
   // merely change position because of other docs moving) we run
   // a "longest common subsequence" (LCS) algorithm.  The LCS of the
   // old doc IDs and the new doc IDs gives the docs that should NOT be
   // considered moved.
   //
-  // Overall, this diff implementation is asymptotically good, but could
-  // be optimized to streamline execution and use less memory (e.g. not
-  // have to build data structures with an entry for every doc).
+
+  // Once we have the items that should not move, we walk through the new
+  // results array group-by-group, where a "group" is a set of items that have
+  // moved, anchored on the end by an item that should not move.  One by one, we
+  // move each of those elements into place "before" the anchoring end-of-group
+  // item, and fire changed events on them if necessary.  Then we fire a changed
+  // event on the anchor, and move on to the next group.  There is always at
+  // least one group; the last group is anchored by a virtual "null" id at the
+  // end.
 
   // Asymptotically: O(N k) where k is number of ops, or potentially
   // O(N log N) if inner loop of LCS were made to be binary search.
