@@ -1389,6 +1389,38 @@ Tinytest.add("livedata stub - reconnect double wait method", function (test) {
                  {msg: 'method', method: 'lastMethod', params: [], id: '*'});
 });
 
+Tinytest.add("livedata stub - subscribe failure", function (test) {
+  var stream = new Meteor._StubStream();
+  var conn = newConnection(stream);
+
+  startAndConnect(test, stream);
+
+  // subscribe
+  var onReadyFired = false;
+  var sub = conn.subscribe('unknownSub', function () {
+    onReadyFired = true;
+  });
+  test.isFalse(onReadyFired);
+
+  var subMessage = JSON.parse(stream.sent.shift());
+  test.equal(subMessage, {msg: 'sub', name: 'unknownSub', params: [],
+                          id: subMessage.id});
+
+  // Reject the sub.
+  stream.receive({msg: 'nosub', id: subMessage.id,
+                  error: {error: 404, reason: "Subscription not found"}});
+  test.isFalse(onReadyFired);
+
+  // stream reset: reconnect!
+  stream.reset();
+  // We send a connect.
+  testGotMessage(test, stream, makeConnectMessage(SESSION_ID));
+  // We should NOT re-sub to the sub, because we processed the error.
+  test.length(stream.sent, 0);
+  test.isFalse(onReadyFired);
+});
+
+
 // XXX also test:
 // - reconnect, with session resume.
 // - restart on update flag

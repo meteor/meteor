@@ -467,7 +467,6 @@ _.extend(Meteor._LivedataConnection.prototype, {
       if (!_.has(self._subscriptions, id))
         return;
       self._send({msg: 'unsub', id: id});
-      // We assume that all unsubs are successful.
       delete self._subscriptions[id];
     }};
 
@@ -1129,7 +1128,11 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
   _livedata_nosub: function (msg) {
     var self = this;
-    // Meteor._debug("NOSUB", msg);
+    // we weren't subbed anyway, or we initiated the unsub.
+    if (!_.has(self._subscriptions, msg.id))
+      return;
+    delete self._subscriptions[msg.id];
+    // XXX call on-error callback
   },
 
   _livedata_result: function (msg) {
