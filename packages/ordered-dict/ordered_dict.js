@@ -7,6 +7,9 @@
   // The implementation is a dictionary that contains nodes of a doubly-linked
   // list as its values.
   var k = function (key) { return " " + key; };
+
+  // constructs a new element struct
+  // next and prev are whole elements, not keys.
   var element = function (key, value, next, prev) {
     return {
       key: key,
@@ -26,6 +29,11 @@
   };
 
   _.extend(OrderedDict.prototype, {
+
+    empty: function () {
+      var self = this;
+      return self._first !== null;
+    },
     putBefore: function (key, item, before) {
       var self = this;
       var elt = before ?
@@ -76,6 +84,10 @@
       var self = this;
       return _.has(self._dict, k(key));
     },
+    // Iterate through the items in this dictionary in order, calling
+    // iter(value, key, index) on each one.
+
+    // Stops whenever iter returns OrderedDict.BREAK, or after the last element.
     forEach: function (iter) {
       var self = this;
       var i = 0;
@@ -90,18 +102,26 @@
     },
     first: function () {
       var self = this;
+      if (self.empty())
+        return undefined;
       return self._first.key;
     },
     firstValue: function () {
       var self = this;
+      if (self.empty())
+        return undefined;
       return self._first.value;
     },
     last: function () {
       var self = this;
+      if (self.empty())
+        return undefined;
       return self._last.key;
     },
     lastValue: function () {
       var self = this;
+      if (self.empty())
+        return undefined;
       return self._last.value;
     },
     prev: function (key) {
@@ -160,6 +180,7 @@
       if (!elt.prev)
         self._first = elt;
     },
+    // Linear, sadly.
     indexOf: function (key) {
       var self = this;
       var ret = null;
@@ -183,6 +204,5 @@
     }
 
   });
-
 OrderedDict.BREAK = {break: true};
 })();
