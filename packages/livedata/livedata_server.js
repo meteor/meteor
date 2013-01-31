@@ -410,7 +410,9 @@ _.extend(Meteor._LivedataSession.prototype, {
       self.socket.close();
       self.detach(self.socket);
     }
-    self._stopAllSubscriptions();
+    self._deactivateAllSubscriptions();
+    // Drop the merge box data immediately.
+    self.collectionViews = {};
     self.in_queue = self.out_queue = [];
   },
 
@@ -722,22 +724,24 @@ _.extend(Meteor._LivedataSession.prototype, {
     var self = this;
 
     if (subId && self._namedSubs[subId]) {
-      self._namedSubs[subId].stop();
+      self._namedSubs[subId]._removeAllDocuments();
+      self._namedSubs[subId]._deactivate();
       delete self._namedSubs[subId];
     }
   },
 
-  // tear down all subscriptions
-  _stopAllSubscriptions: function () {
+  // tear down all subscriptions. Note that this does NOT send removed messages,
+  // since we assume the client is gone.
+  _deactivateAllSubscriptions: function () {
     var self = this;
 
     _.each(self._namedSubs, function (sub, id) {
-      sub.stop();
+      sub._deactivate();
     });
     self._namedSubs = {};
 
     _.each(self._universalSubs, function (sub) {
-      sub.stop();
+      sub._deactivate();
     });
     self._universalSubs = [];
   }
@@ -771,8 +775,8 @@ Meteor._LivedataSubscription = function (
     self._subscriptionHandle = 'U' + Meteor.id();
   }
 
-  // has stop() been called?
-  self._stopped = false;
+  // has _deactivate been called?
+  self._deactivated = false;
 
   // stop callbacks to g/c this sub.  called w/ zero arguments.
   self._stopCallbacks = [];
@@ -815,9 +819,9 @@ _.extend(Meteor._LivedataSubscription.prototype, {
     }
 
     // SPECIAL CASE: Instead of writing their own callbacks that invoke
-    // this.set/unset/flush/etc, the user can just return a collection cursor
-    // from the publish function; we call its _publishCursor method which starts
-    // observing the cursor and publishes the results.
+    // this.added/changed/ready/etc, the user can just return a collection
+    // cursor from the publish function; we call its _publishCursor method which
+    // starts observing the cursor and publishes the results.
     //
     // XXX This uses an undocumented interface which only the Mongo cursor
     // interface publishes. Should we make this interface public and encourage
@@ -833,24 +837,16 @@ _.extend(Meteor._LivedataSubscription.prototype, {
       res._publishCursor(self);
   },
 
-  stop: function () {
-    var self = this;
-    Meteor._noYieldsAllowed(function () {
-      self._removeAllDocuments();
-    });
-    self._deactivate();
-  },
-
-  // This is called by setUserId to deactivate the sub (prevent its handler from
-  // updating the SessionCollectionViews and call its stop callbacks) without
-  // producing "removed" messages for every document. The expectation is that
-  // you will start another _LivedataSubscription with the same handler,
-  // subscriptionId, and params, and diff collection views afterwards.
+  // This calls all stop callbacks and prevents the handler from updating any
+  // SessionCollectionViews further. It's used when the user unsubscribes or
+  // disconnects, as well as during setUserId re-runs. It does *NOT* send
+  // removed messages for the published objects; if that is necessary, call
+  // _removeAllDocuments first.
   _deactivate: function() {
     var self = this;
-    if (self._stopped)
+    if (self._deactivated)
       return;
-    self._stopped = true;
+    self._deactivated = true;
     self._callStopCallbacks();
   },
 
@@ -867,11 +863,13 @@ _.extend(Meteor._LivedataSubscription.prototype, {
   // Send remove messages for every document.
   _removeAllDocuments: function () {
     var self = this;
-    _.each(self._documents, function(collectionDocs, collectionName) {
-      // Iterate over _.keys instead of the dictionary itself, since we'll be
-      // mutating it.
-      _.each(_.keys(collectionDocs), function (strId) {
-        self.removed(collectionName, self._idFilter.idParse(strId));
+    Meteor._noYieldsAllowed(function () {
+      _.each(self._documents, function(collectionDocs, collectionName) {
+        // Iterate over _.keys instead of the dictionary itself, since we'll be
+        // mutating it.
+        _.each(_.keys(collectionDocs), function (strId) {
+          self.removed(collectionName, self._idFilter.idParse(strId));
+        });
       });
     });
   },
@@ -889,7 +887,7 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
   onStop: function (callback) {
     var self = this;
-    if (self._stopped)
+    if (self._deactivated)
       callback();
     else
       self._stopCallbacks.push(callback);
@@ -897,7 +895,7 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
   added: function (collectionName, id, fields) {
     var self = this;
-    if (self._stopped)
+    if (self._deactivated)
       return;
     id = self._idFilter.idStringify(id);
     Meteor._ensure(self._documents, collectionName)[id] = true;
@@ -906,7 +904,7 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
   changed: function (collectionName, id, fields) {
     var self = this;
-    if (self._stopped)
+    if (self._deactivated)
       return;
     id = self._idFilter.idStringify(id);
     self._session.changed(self._subscriptionHandle, collectionName, id, fields);
@@ -914,7 +912,7 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
   removed: function (collectionName, id) {
     var self = this;
-    if (self._stopped)
+    if (self._deactivated)
       return;
     id = self._idFilter.idStringify(id);
     // We don't bother to delete sets of things in a collection if the
@@ -925,7 +923,7 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
   ready: function () {
     var self = this;
-    if (self._stopped)
+    if (self._deactivated)
       return;
     if (!self._subscriptionId)
       return;  // unnecessary but ignored for universal sub
