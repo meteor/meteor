@@ -420,7 +420,7 @@
 
     Accounts.createUser(options, function (error) {
       if (error) {
-        loginButtonsSession.errorMessage(error.reason || "Unknown error");
+        loginButtonsSession.errorMessage(error.reason || "Onbekende fout");
       } else {
         loginButtonsSession.closeDropdown();
       }
@@ -434,12 +434,12 @@
     if (email.indexOf('@') !== -1) {
       Accounts.forgotPassword({email: email}, function (error) {
         if (error)
-          loginButtonsSession.errorMessage(error.reason || "Unknown error");
+          loginButtonsSession.errorMessage(error.reason || "Onbekende fout");
         else
-          loginButtonsSession.infoMessage("Email sent");
+          loginButtonsSession.infoMessage("Email verstuurd");
       });
     } else {
-      loginButtonsSession.errorMessage("Invalid email");
+      loginButtonsSession.errorMessage("Onjuiste email");
     }
   };
 

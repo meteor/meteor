@@ -2,7 +2,6 @@
   {{> _resetPasswordDialog}}
   {{> _enrollAccountDialog}}
   {{> _justVerifiedEmailDialog}}
-  {{> _configureLoginServiceDialog}}
 
   <!-- if we're not showing a dropdown, we need some other place to show messages -->
   {{> _loginButtonsMessagesDialog}}
@@ -14,7 +13,7 @@
 
     <div class="accounts-dialog accounts-centered-dialog">
       <label id="reset-password-new-password-label" for="reset-password-new-password">
-        New password
+        Nieuw wachtwoord
       </label>
 
       <div>
@@ -24,7 +23,7 @@
       {{> _loginButtonsMessages}}
 
       <div class="login-button login-button-form-submit" id="login-buttons-reset-password-button">
-        Set password
+        Zet wachtwoord
       </div>
 
       <a class="accounts-close" id="login-buttons-cancel-reset-password">&times;</a>
@@ -38,7 +37,7 @@
 
     <div class="accounts-dialog accounts-centered-dialog">
       <label id="enroll-account-password-label" for="enroll-account-password">
-        Choose a password
+        Kies een wachtwoord
       </label>
 
       <div>
@@ -48,7 +47,7 @@
       {{> _loginButtonsMessages}}
 
       <div class="login-button login-button-form-submit" id="login-buttons-enroll-account-button">
-        Create account
+        Maak een account
       </div>
 
       <a class="accounts-close" id="login-buttons-cancel-enroll-account">&times;</a>
@@ -59,8 +58,8 @@
 <template name="_justVerifiedEmailDialog">
   {{#if visible}}
     <div class="accounts-dialog accounts-centered-dialog">
-      Email verified
-      <div class="login-button" id="just-verified-dismiss-button">Dismiss</div>
+      Email gecontroleerd
+      <div class="login-button" id="just-verified-dismiss-button">Afbreken</div>
     </div>
   {{/if}}
 </template>
@@ -112,7 +111,7 @@
   {{#if visible}}
     <div class="accounts-dialog accounts-centered-dialog" id="login-buttons-message-dialog">
       {{> _loginButtonsMessages}}
-      <div class="login-button" id="messages-dialog-dismiss-button">Dismiss</div>
+      <div class="login-button" id="messages-dialog-dismiss-button">Afbreken</div>
     </div>
   {{/if}}
 </template>

@@ -31,11 +31,11 @@
 
       var user = Meteor.users.findOne(selector);
       if (!user)
-        throw new Meteor.Error(403, "User not found");
+        throw new Meteor.Error(403, "Gebruiker niet gevonden");
 
       if (!user.services || !user.services.password ||
           !user.services.password.srp)
-        throw new Meteor.Error(403, "User has no password set");
+        throw new Meteor.Error(403, "Gebruiker heeft geen wachtwoord");
 
       var verifier = user.services.password.srp;
       var srp = new Meteor._srp.Server(verifier);
@@ -51,22 +51,22 @@
 
     changePassword: function (options) {
       if (!this.userId)
-        throw new Meteor.Error(401, "Must be logged in");
+        throw new Meteor.Error(401, "Moet ingelogd zijn");
 
       // If options.M is set, it means we went through a challenge with
       // the old password.
 
       if (!options.M /* could allow unsafe password changes here */) {
-        throw new Meteor.Error(403, "Old password required.");
+        throw new Meteor.Error(403, "Oud wachtwoord vereist");
       }
 
       if (options.M) {
         var serialized = this._sessionData.srpChallenge;
         if (!serialized || serialized.M !== options.M)
-          throw new Meteor.Error(403, "Incorrect password");
+          throw new Meteor.Error(403, "Wachtwoord is niet juist");
         if (serialized.userId !== this.userId)
           // No monkey business!
-          throw new Meteor.Error(403, "Incorrect password");
+          throw new Meteor.Error(403, "Wachtwoord is niet juist");
         // Only can use challenges once.
         delete this._sessionData.srpChallenge;
       }
@@ -77,7 +77,7 @@
       }
       if (!verifier || !verifier.identity || !verifier.salt ||
           !verifier.verifier)
-        throw new Meteor.Error(400, "Invalid verifier");
+        throw new Meteor.Error(400, "Onjuist controle teken");
 
       // XXX this should invalidate all login tokens other than the current one
       // (or it should assign a new login token, replacing existing ones)
@@ -93,27 +93,27 @@
     forgotPassword: function (options) {
       var email = options.email;
        if (!email)
-        throw new Meteor.Error(400, "Need to set options.email");
+        throw new Meteor.Error(400, "options.email moet gezet worden");
 
       var user = Meteor.users.findOne({"emails.address": email});
       if (!user)
-        throw new Meteor.Error(403, "User not found");
+        throw new Meteor.Error(403, "Gebruiker niet gevonden");
 
       Accounts.sendResetPasswordEmail(user._id, email);
     },
 
     resetPassword: function (token, newVerifier) {
       if (!token)
-        throw new Meteor.Error(400, "Need to pass token");
+        throw new Meteor.Error(400, "Er moet een token meegegeven worden");
       if (!newVerifier)
-        throw new Meteor.Error(400, "Need to pass newVerifier");
+        throw new Meteor.Error(400, "Er moet een nieuw controle teken meegegeven worden");
 
       var user = Meteor.users.findOne({"services.password.reset.token": token});
       if (!user)
-        throw new Meteor.Error(403, "Token expired");
+        throw new Meteor.Error(403, "Token is verlopen");
       var email = user.services.password.reset.email;
       if (!_.include(_.pluck(user.emails || [], 'address'), email))
-        throw new Meteor.Error(403, "Token has invalid email address");
+        throw new Meteor.Error(403, "Token heeft onjuist email adres");
 
       var stampedLoginToken = Accounts._generateStampedLoginToken();
 
@@ -136,25 +136,25 @@
 
     verifyEmail: function (token) {
       if (!token)
-        throw new Meteor.Error(400, "Need to pass token");
+        throw new Meteor.Error(400, "Er moet een token meegegeven worden");
 
       var user = Meteor.users.findOne(
         {'services.email.verificationTokens.token': token});
       if (!user)
-        throw new Meteor.Error(403, "Verify email link expired");
+        throw new Meteor.Error(403, "Controle email link verlopen");
 
       var tokenRecord = _.find(user.services.email.verificationTokens,
                                function (t) {
                                  return t.token == token;
                                });
       if (!tokenRecord)
-        throw new Meteor.Error(403, "Verify email link expired");
+        throw new Meteor.Error(403, "Controle email link verlopen");
 
       var emailsRecord = _.find(user.emails, function (e) {
         return e.address == tokenRecord.address;
       });
       if (!emailsRecord)
-        throw new Meteor.Error(403, "Verify email link is for unknown address");
+        throw new Meteor.Error(403, "Controle email link is voor onbekend adres");
 
       // Log the user in with a new login token.
       var stampedLoginToken = Accounts._generateStampedLoginToken();
@@ -183,13 +183,13 @@
     // Make sure the user exists, and email is one of their addresses.
     var user = Meteor.users.findOne(userId);
     if (!user)
-      throw new Error("Can't find user");
+      throw new Error("Kan de gebruiker niet vinden");
     // pick the first email if we weren't passed an email.
     if (!email && user.emails && user.emails[0])
       email = user.emails[0].address;
     // make sure we have a valid email
     if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
-      throw new Error("No such email for user.");
+      throw new Error("Email adres van gebruiker is onbekend");
 
     var token = Meteor.uuid();
     var when = +(new Date);
@@ -220,7 +220,7 @@
     // Make sure the user exists, and address is one of their addresses.
     var user = Meteor.users.findOne(userId);
     if (!user)
-      throw new Error("Can't find user");
+      throw new Error("Kan de gebruiker niet vinden");
     // pick the first unverified address if we weren't passed an address.
     if (!address) {
       var email = _.find(user.emails || [],
@@ -229,7 +229,7 @@
     }
     // make sure we have a valid address
     if (!address || !_.contains(_.pluck(user.emails || [], 'address'), address))
-      throw new Error("No such email address for user.");
+      throw new Error("Email adres van de gebruiker is onbekend");
 
 
     var tokenRecord = {
@@ -265,7 +265,7 @@
       email = user.emails[0].address;
     // make sure we have a valid email
     if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
-      throw new Error("No such email for user.");
+      throw new Error("Email adres van de gebruiker is onbekend");
 
 
     var token = Meteor.uuid();
@@ -293,14 +293,14 @@
     if (!options.srp)
       return undefined; // don't handle
     if (!options.srp.M)
-      throw new Meteor.Error(400, "Must pass M in options.srp");
+      throw new Meteor.Error(400, "Er moet een M meegegeven worden in options.srp");
 
     // we're always called from within a 'login' method, so this should
     // be safe.
     var currentInvocation = Meteor._CurrentInvocation.get();
     var serialized = currentInvocation._sessionData.srpChallenge;
     if (!serialized || serialized.M !== options.srp.M)
-      throw new Meteor.Error(403, "Incorrect password");
+      throw new Meteor.Error(403, "Onjuist wachtwoord");
     // Only can use challenges once.
     delete currentInvocation._sessionData.srpChallenge;
 
@@ -308,7 +308,7 @@
     var user = Meteor.users.findOne(userId);
     // Was the user deleted since the start of this challenge?
     if (!user)
-      throw new Meteor.Error(403, "User not found");
+      throw new Meteor.Error(403, "Gebruiker niet gevonden");
     var stampedLoginToken = Accounts._generateStampedLoginToken();
     Meteor.users.update(
       userId, {$push: {'services.resume.loginTokens': stampedLoginToken}});
@@ -331,11 +331,11 @@
     var selector = selectorFromUserQuery(options.user);
     var user = Meteor.users.findOne(selector);
     if (!user)
-      throw new Meteor.Error(403, "User not found");
+      throw new Meteor.Error(403, "Gebruiker niet gevonden");
 
     if (!user.services || !user.services.password ||
         !user.services.password.srp)
-      throw new Meteor.Error(403, "User has no password set");
+      throw new Meteor.Error(403, "De gebruiker heeft geen wachtwoord");
 
     // Just check the verifier output when the same identity and salt
     // are passed. Don't bother with a full exchange.
@@ -344,7 +344,7 @@
       identity: verifier.identity, salt: verifier.salt});
 
     if (verifier.verifier !== newVerifier.verifier)
-      throw new Meteor.Error(403, "Incorrect password");
+      throw new Meteor.Error(403, "Onjuist wachtwoord");
 
     var stampedLoginToken = Accounts._generateStampedLoginToken();
     Meteor.users.update(
@@ -357,7 +357,7 @@
   Accounts.setPassword = function (userId, newPassword) {
     var user = Meteor.users.findOne(userId);
     if (!user)
-      throw new Meteor.Error(403, "User not found");
+      throw new Meteor.Error(403, "Gebruiker niet gevonden");
     var newVerifier = Meteor._srp.generateVerifier(newPassword);
 
     Meteor.users.update({_id: user._id}, {
@@ -379,14 +379,14 @@
     var username = options.username;
     var email = options.email;
     if (!username && !email)
-      throw new Meteor.Error(400, "Need to set a username or email");
+      throw new Meteor.Error(400, "Gebruikersnaam of email moet gezet worden");
 
     // Raw password. The meteor client doesn't send this, but a DDP
     // client that didn't implement SRP could send this. This should
     // only be done over SSL.
     if (options.password) {
       if (options.srp)
-        throw new Meteor.Error(400, "Don't pass both password and srp in options");
+        throw new Meteor.Error(400, "Zet niet zowel een wachtwoord als een srp in options");
       options.srp = Meteor._srp.generateVerifier(options.password);
     }
 
@@ -407,14 +407,14 @@
       options = _.clone(options);
       options.generateLoginToken = true;
       if (Accounts._options.forbidClientAccountCreation)
-        throw new Meteor.Error(403, "Signups forbidden");
+        throw new Meteor.Error(403, "Aanmaken nieuwe gebruiker verboden");
 
       // Create user. result contains id and token.
       var result = createUser(options);
       // safety belt. createUser is supposed to throw on error. send 500 error
       // instead of sending a verification email with empty userid.
       if (!result.id)
-        throw new Error("createUser failed to insert new user");
+        throw new Error("createUser faalt bij het inserten van een nieuwe gebruiker");
 
       // If `Accounts._options.sendVerificationEmail` is set, register
       // a token to verify the user's primary email, and send it to
@@ -445,7 +445,7 @@
 
     // XXX allow an optional callback?
     if (callback) {
-      throw new Error("Accounts.createUser with callback not supported on the server yet.");
+      throw new Error("Accounts.createUser met callback wordt nog niet ondersteund op de server.");
     }
 
     var userId = createUser(options).id;

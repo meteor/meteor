@@ -178,7 +178,7 @@
     if (username.length >= 3) {
       return true;
     } else {
-      loginButtonsSession.errorMessage("Username must be at least 3 characters long");
+      loginButtonsSession.errorMessage("Gebruikersnaam moet minimaal 3 karakters lang zijn");
       return false;
     }
   };
@@ -189,7 +189,7 @@
     if (email.indexOf('@') !== -1) {
       return true;
     } else {
-      loginButtonsSession.errorMessage("Invalid email");
+      loginButtonsSession.errorMessage("Onjuist email adres");
       return false;
     }
   };
@@ -197,7 +197,7 @@
     if (password.length >= 6) {
       return true;
     } else {
-      loginButtonsSession.errorMessage("Password must be at least 6 characters long");
+      loginButtonsSession.errorMessage("Wachtwoord moet minimaal 6 karakters lang zijn");
       return false;
     }
   };

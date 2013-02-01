@@ -3,7 +3,7 @@
     options = _.clone(options); // we'll be modifying options
 
     if (!options.password)
-      throw new Error("Must set options.password");
+      throw new Error("options.password moet gezet worden");
     var verifier = Meteor._srp.generateVerifier(options.password);
     // strip old password, replacing with the verifier object
     delete options.password;
@@ -43,7 +43,7 @@
     Meteor.apply('beginPasswordExchange', [request], function (error, result) {
       if (error || !result) {
         Accounts._setLoggingIn(false);
-        error = error || new Error("No result from call to beginPasswordExchange");
+        error = error || new Error("Geen resultaat na aanroep beginPasswordExchange");
         callback && callback(error);
         return;
       }
@@ -53,7 +53,7 @@
         methodArguments: [{srp: response}],
         validateResult: function (result) {
           if (!srp.verifyConfirmation({HAMK: result.HAMK}))
-            throw new Error("Server is cheating!");
+            throw new Error("Server bedonderd de boel!");
         },
         userCallback: callback});
     });
@@ -65,7 +65,7 @@
   // @param callback {Function(error|undefined)}
   Accounts.changePassword = function (oldPassword, newPassword, callback) {
     if (!Meteor.user()) {
-      callback && callback(new Error("Must be logged in to change password."));
+      callback && callback(new Error("Moet ingelogd zijn voor het wijzigen van het wachtwoord."));
       return;
     }
 
@@ -75,7 +75,7 @@
       Meteor.apply('changePassword', [{srp: verifier}], function (error, result) {
         if (error || !result) {
           callback && callback(
-            error || new Error("No result from changePassword."));
+            error || new Error("Geen resultaat bij changePassword."));
         } else {
           callback && callback();
         }
@@ -87,7 +87,7 @@
       Meteor.apply('beginPasswordExchange', [request], function (error, result) {
         if (error || !result) {
           callback && callback(
-            error || new Error("No result from call to beginPasswordExchange"));
+            error || new Error("Geen resultaat na aanroep beginPasswordExchange"));
           return;
         }
 
@@ -96,11 +96,11 @@
         Meteor.apply('changePassword', [response], function (error, result) {
           if (error || !result) {
             callback && callback(
-              error || new Error("No result from changePassword."));
+              error || new Error("Geen resultaat bij changePassword."));
           } else {
             if (!srp.verifyConfirmation(result)) {
               // Monkey business!
-              callback && callback(new Error("Old password verification failed."));
+              callback && callback(new Error("Oude wachtwoord controle faalt"));
             } else {
               callback && callback();
             }
@@ -118,7 +118,7 @@
   // @param callback (optional) {Function(error|undefined)}
   Accounts.forgotPassword = function(options, callback) {
     if (!options.email)
-      throw new Error("Must pass options.email");
+      throw new Error("options.email moet meegegeven worden");
     Meteor.call("forgotPassword", options, callback);
   };
 
@@ -130,9 +130,9 @@
   // @param callback (optional) {Function(error|undefined)}
   Accounts.resetPassword = function(token, newPassword, callback) {
     if (!token)
-      throw new Error("Need to pass token");
+      throw new Error("Token moet meegegeven worden");
     if (!newPassword)
-      throw new Error("Need to pass newPassword");
+      throw new Error("newPassword moet meegegeven worden");
 
     var verifier = Meteor._srp.generateVerifier(newPassword);
     Accounts.callLoginMethod({
@@ -148,7 +148,7 @@
   // @param callback (optional) {Function(error|undefined)}
   Accounts.verifyEmail = function(token, callback) {
     if (!token)
-      throw new Error("Need to pass token");
+      throw new Error("token moet meegegeven worden");
 
     Accounts.callLoginMethod({
       methodName: 'verifyEmail',
