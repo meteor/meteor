@@ -150,4 +150,9 @@
     tryReload();
   };
 
+  // Used to see if Meteor is reloading. Useful for 'window.onbeforeunload'
+  Meteor._reload.isReloading = function() {
+    return reloading;
+  }
+
 })();
