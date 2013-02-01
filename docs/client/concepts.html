@@ -136,23 +136,25 @@ client cache, the server *publishes* sets of JSON documents, and the
 client *subscribes* to those sets.  As documents in a set change, the
 server patches each client's cache.
 
-Documents are created, and the data inside them managed by, the
-[`Meteor.Collection`](http://docs.meteor.com/#meteor_collection) class.
-Meteor uses a subset of MongoDB, called
-[minimongo](https://github.com/slacy/minimongo), so the syntax is very
-similar.
+Today most Meteor apps use MongoDB as their database because it is the
+best supported, though support for other databases is coming in the
+future. The
+[`Meteor.Collection`](http://docs.meteor.com/#meteor_collection) class
+is used to declare Mongo collections and to manipulate them. Thanks to
+`minimongo`, Meteor's client-side Mongo emulator, `Meteor.Collection`
+can be used from both client and server code.
 
-    // common code on client and server declares mongo collection
-    // (aka document)
+    // declare collections
+    // this code should be included in both the client and the server
     Rooms = new Meteor.Collection("rooms");
+    Messages = new Meteor.Collection("messages");
+    Parties = new Meteor.Collection("parties");
+
+    // server: populate collections with some initial documents
     Rooms.insert({name: "Conference Room A"});
     var myRooms = Rooms.find({}).fetch();
-
-    Messages = new Meteor.Collection("messages");
     Messages.insert({text: "Hello world", room: myRooms[0].id});
-
-    Parties = new Meteor.Collection("parties");
-    Parties.insert({name: "Super Bowl Party"}); 
+    Parties.insert({name: "Super Bowl Party"});
 
 Each document set is defined by a publish function on the server.  The
 publish function runs each time a new client subscribes to a document
