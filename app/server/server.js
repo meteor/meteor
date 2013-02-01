@@ -123,8 +123,16 @@ var run = function () {
     app_html = runtime_config(app_html);
 
     app.use(function (req, res) {
-      // prevent favicon.ico and robots.txt from returning app_html
-      if (_.indexOf(['/favicon.ico', '/robots.txt'], req.url) !== -1) {
+      // prevent these URLs from returning app_html
+      //
+      // NOTE: app.manifest is not a web standard like favicon.ico and
+      // robots.txt. It is a file name we have chosen to use for HTML5
+      // appcache URLs. It is included here to prevent using an appcache
+      // then removing it from poisoning an app permanently. Eventually,
+      // once we have server side routing, this won't be needed as
+      // unknown URLs with return a 404 automatically.
+      if (_.indexOf(['/app.manifest', '/favicon.ico', '/robots.txt'], req.url)
+          !== -1) {
         res.writeHead(404);
         res.end();
         return;
