@@ -7,7 +7,6 @@ Meteor._Stream = function (url) {
   self.rawUrl = url;
   self.socket = null;
   self.event_callbacks = {}; // name -> [callback]
-  self.server_id = null;
   self.sent_update_available = false;
   self.force_fail = false; // for debugging.
 
@@ -202,10 +201,8 @@ _.extend(Meteor._Stream.prototype, {
     }
 
     if (welcome_data && welcome_data.server_id) {
-      if (!self.server_id)
-        self.server_id = welcome_data.server_id;
-
-      if (self.server_id && self.server_id !== welcome_data.server_id &&
+      if (__meteor_runtime_config__.server_id &&
+          __meteor_runtime_config__.server_id !== welcome_data.server_id &&
           !self.sent_update_available) {
         self.update_available = true;
         _.each(self.event_callbacks.update_available,
