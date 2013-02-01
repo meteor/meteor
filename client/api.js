@@ -406,7 +406,7 @@ Template.api.insert = {
   args: [
     {name: "doc",
      type: "Object",
-     descr: "The document to insert. Should not yet have an _id attribute."},
+     descr: "The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you."},
     {name: "callback",
      type: "Function",
      descr: "Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second."}
@@ -1478,4 +1478,3 @@ Template.api.email_send = {
     }
   ]
 };
-
