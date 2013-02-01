@@ -129,12 +129,10 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
     self.db_objects = self._getRawObjects(true);
 
   if (self.reactive)
-    self._markAsReactive({ordered: true,
-                          added: true,
+    self._markAsReactive({
                           addedBefore: true,
                           removed: true,
                           changed: true,
-                          moved: true,
                           movedBefore: true});
 
   while (self.cursor_pos < self.db_objects.length)
@@ -163,7 +161,7 @@ LocalCollection.Cursor.prototype.count = function () {
   var self = this;
 
   if (self.reactive)
-    self._markAsReactive({ordered: false, added: true, removed: true});
+    self._markAsReactive({added: true, removed: true});
 
   if (self.db_objects === null)
     self.db_objects = self._getRawObjects(true);
@@ -341,20 +339,13 @@ LocalCollection.Cursor.prototype._markAsReactive = function (options) {
   if (context) {
     var invalidate = _.bind(context.invalidate, context);
     var handle;
-    if (options.ordered) {
-      handle = self.observe({added: options.added && invalidate,
-                             addedBefore: options.addedBefore && invalidate,
-                             removed: options.removed && invalidate,
-                             changed: options.changed && invalidate,
-                             moved: options.moved && invalidate,
-                             movedBefore: options.movedBefore && invalidate,
-                             _suppress_initial: true});
-    } else {
-      handle = self._observeUnordered({added: options.added && invalidate,
-                                       removed: options.removed && invalidate,
-                                       changed: options.changed && invalidate,
-                                       _suppress_initial: true});
-    }
+    var newOptions = _.clone(options); // shallow clone
+    _.each(['added', 'changed', 'removed', 'addedBefore', 'movedBefore'],
+           function (fnName) {
+      if (options[fnName])
+        newOptions[fnName] = invalidate;
+    });
+    handle = self.observeChanges(newOptions);
 
     // XXX in many cases, the query will be immediately
     // recreated. so we might want to let it linger for a little
