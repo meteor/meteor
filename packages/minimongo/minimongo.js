@@ -350,7 +350,7 @@ LocalCollection.Cursor.prototype._markAsReactive = function (options) {
   if (context) {
     var invalidate = _.bind(context.invalidate, context);
     var handle;
-    var newOptions = _.clone(options); // shallow clone
+    var newOptions = {_suppress_initial: true};
     _.each(['added', 'changed', 'removed', 'addedBefore', 'movedBefore'],
            function (fnName) {
       if (options[fnName])
