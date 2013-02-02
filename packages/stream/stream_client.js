@@ -176,8 +176,6 @@ _.extend(Meteor._Stream.prototype, {
       clearTimeout(self.connection_timer);
       self.connection_timer = null;
     }
-    self._heartbeat_received();
-
 
     if (self.current_status.connected) {
       // already connected. do nothing. this probably shouldn't happen.
@@ -276,6 +274,10 @@ _.extend(Meteor._Stream.prototype, {
 
   _heartbeat_received: function () {
     var self = this;
+    // If we've already permanently shut down this stream, the timeout is
+    // already cleared, and we don't need to set it again.
+    if (self._forcedToDisconnect)
+      return;
     if (self.heartbeat_timer)
       clearTimeout(self.heartbeat_timer);
     self.heartbeat_timer = setTimeout(
@@ -350,6 +352,8 @@ _.extend(Meteor._Stream.prototype, {
           'xdr-polling', 'xhr-polling', 'iframe-xhr-polling', 'jsonp-polling'
         ]});
     self.socket.onmessage = function (data) {
+      self._heartbeat_received();
+
       // first message we get when we're connecting goes to _connected,
       // which connects us. All subsequent messages (while connected) go to
       // the callback.
@@ -359,8 +363,6 @@ _.extend(Meteor._Stream.prototype, {
         _.each(self.event_callbacks.message, function (callback) {
           callback(data.data);
         });
-
-      self._heartbeat_received();
     };
     self.socket.onclose = function () {
       // Meteor._debug("stream disconnect", _.toArray(arguments), (new Date()).toDateString());
