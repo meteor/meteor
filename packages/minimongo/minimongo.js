@@ -31,6 +31,7 @@ LocalCollection = function () {
   this.paused = false;
 };
 
+
 LocalCollection._applyChanges = function (doc, changeFields) {
   _.each(changeFields, function (value, key) {
     if (value === undefined)
@@ -39,6 +40,16 @@ LocalCollection._applyChanges = function (doc, changeFields) {
       doc[key] = value;
   });
 };
+
+LocalCollection.MinimongoError = function (message) {
+  var self = this;
+  self.name = "MinimongoError";
+  self.details = message;
+};
+
+LocalCollection.MinimongoError.prototype = new Error;
+
+
 // options may include sort, skip, limit, reactive
 // sort may be any of these forms:
 //     {a: 1, b: -1}
@@ -371,8 +382,8 @@ LocalCollection.prototype.insert = function (doc) {
   }
   var id = LocalCollection._idStringify(doc._id);
 
-  if (_.has(self.docs, id))
-    throw new Error("Duplicate id '" + id + "'");
+  if (_.has(self.docs, doc._id))
+    throw new LocalCollection.MinimongoError("Duplicate _id '" + doc._id + "'");
 
   self._saveOriginal(id, undefined);
   self.docs[id] = doc;

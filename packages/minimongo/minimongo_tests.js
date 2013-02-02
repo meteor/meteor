@@ -137,10 +137,6 @@ Tinytest.add("minimongo - basics", function (test) {
   test.equal(c.find({foo: {bam: 'baz'}}).count(), 0);
   test.equal(c.find({foo: {bar: 'baz'}}).count(), 1);
 
-  // Duplicate ID.
-  test.throws(function () { c.insert({_id: 1, name: "bla"}); });
-  test.equal(c.find({_id: 1}).count(), 1);
-  test.equal(c.findOne(1).name, "strawberry");
 });
 
 Tinytest.add("minimongo - cursors", function (test) {

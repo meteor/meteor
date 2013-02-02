@@ -581,7 +581,6 @@ testAsyncMulti('mongo-livedata - rewrite selector, ' + idGeneration, [
   }
 ]);
 
-
 testAsyncMulti('mongo-livedata - empty documents, ' + idGeneration, [
   function (test, expect) {
     var collectionName = Meteor.uuid();
@@ -656,5 +655,29 @@ testAsyncMulti('mongo-livedata - document with binary data, ' + idGeneration, [
 ]);
 
 });
+
+testAsyncMulti('mongo-livedata - specified _id', [
+  function (test, expect) {
+    var collectionName = Meteor.uuid();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', collectionName);
+      Meteor.subscribe('c-' + collectionName);
+    }
+    var expectError = expect(function (err) {
+      test.isTrue(err);
+      var doc = coll.findOne();
+      test.equal(doc.name, "foo");
+    });
+    var coll = new Meteor.Collection(collectionName);
+    coll.insert({_id: "foo", name: "foo"}, expect(function (err1, id) {
+      test.equal(id, "foo");
+      var doc = coll.findOne();
+      test.equal(doc._id, "foo");
+      Meteor._suppress_log(1);
+      coll.insert({_id: "foo", name: "bar"}, expectError);
+    }));
+  }
+]);
+
 
 })();
