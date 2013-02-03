@@ -7,11 +7,8 @@ Tinytest.add('accounts - config validates keys', function (test) {
   });
 });
 
-Tinytest.add('accounts - updateOrCreateUserFromExternalService', function (test) {
+Tinytest.add('accounts - updateOrCreateUserFromExternalService - Facebook', function (test) {
   var facebookId = Meteor.uuid();
-  var weiboId1 = Meteor.uuid();
-  var weiboId2 = Meteor.uuid();
-
 
   // create an account with facebook
   var uid1 = Accounts.updateOrCreateUserFromExternalService(
@@ -38,6 +35,11 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService', function (test)
 
   // cleanup
   Meteor.users.remove(uid1);
+});
+
+Tinytest.add('accounts - updateOrCreateUserFromExternalService - Weibo', function (test) {
+  var weiboId1 = Meteor.uuid();
+  var weiboId2 = Meteor.uuid();
 
   // users that have different service ids get different users
   uid1 = Accounts.updateOrCreateUserFromExternalService(
@@ -53,8 +55,33 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService', function (test)
   // cleanup
   Meteor.users.remove(uid1);
   Meteor.users.remove(uid2);
-
 });
+
+Tinytest.add('accounts - updateOrCreateUserFromExternalService - Twitter', function (test) {
+  var twitterIdOld = 123;
+  var twitterIdNew = '123';
+
+  // create an account with twitter using the old ID format of integer
+  var uid1 = Accounts.updateOrCreateUserFromExternalService(
+    'twitter', {id: twitterIdOld, monkey: 42}, {profile: {foo: 1}}).id;
+  var users = Meteor.users.find({"services.twitter.id": twitterIdOld}).fetch();
+  test.length(users, 1);
+  test.equal(users[0].profile.foo, 1);
+  test.equal(users[0].services.twitter.monkey, 42);
+
+  // Update the account with the new ID format of string
+  // test that the existing user is found, and that the ID
+  // gets updated to a string value
+  var uid2 = Accounts.updateOrCreateUserFromExternalService(
+    'twitter', {id: twitterIdNew, monkey: 42}, {profile: {foo: 1}}).id;
+  test.equal(uid1, uid2);
+  users = Meteor.users.find({"services.twitter.id": twitterIdNew}).fetch();
+  test.length(users, 1);
+
+  // cleanup
+  Meteor.users.remove(uid1);
+});
+
 
 Tinytest.add('accounts - insertUserDoc username', function (test) {
   var userIn = {

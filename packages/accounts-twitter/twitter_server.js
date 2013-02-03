@@ -5,7 +5,7 @@
 
     return {
       serviceData: {
-        id: identity.id,
+        id: identity.id_str,
         screenName: identity.screen_name,
         accessToken: oauthBinding.accessToken,
         accessTokenSecret: oauthBinding.accessTokenSecret
