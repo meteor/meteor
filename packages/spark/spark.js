@@ -878,6 +878,22 @@ Spark.isolate = function (htmlFunc) {
 /* Lists                                                                      */
 /******************************************************************************/
 
+var idStringify;
+var idParse;
+
+if (typeof LocalCollection !== 'undefined') {
+  idStringify = function (id) {
+    if (id === null)
+      return id;
+    else
+      return LocalCollection._idStringify(id);
+  };
+  idParse = LocalCollection._idParse;
+} else {
+  idStringify = function (id) { return id; };
+  idParse = function (id) { return id; };
+}
+
 Spark.list = function (cursor, itemFunc, elseFunc) {
   elseFunc = elseFunc || function () { return ''; };
 
@@ -885,7 +901,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   // can change them later
   var callbacks = {};
   var observerCallbacks = {};
-  _.each(["added", "removed", "moved", "changed"], function (name) {
+  _.each(["addedBefore", "removed", "movedBefore", "changed"], function (name) {
     observerCallbacks[name] = function () {
       return callbacks[name].apply(null, arguments);
     };
@@ -895,13 +911,19 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   // XXX currently we count on observe() using only added() to deliver
   // the initial contents. are we allow to do that, or do we need to
   // implement removed/moved/changed here as well?
-  var initialContents = [];
+
+  var itemDict = new OrderedDict();
   _.extend(callbacks, {
-    added: function (item, beforeIndex) {
-      initialContents.splice(beforeIndex, 0, item);
+    addedBefore: function (id, item, before) {
+      var doc = EJSON.clone(item);
+      doc._id = id;
+      var elt = {doc: doc, liveRange: null};
+      itemDict.putBefore(idStringify(id),
+                         elt,
+                         idStringify(before));
     }
   });
-  var handle = cursor.observe(observerCallbacks);
+  var handle = cursor.observeChanges(observerCallbacks);
 
   // Get the renderer, if any
   var renderer = Spark._currentRenderer.get();
@@ -914,21 +936,18 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   // off for later.
   var html = '';
   var outerRange;
-  var itemRanges = [];
-  if (! initialContents.length)
+  if (itemDict.empty())
     html = elseFunc();
   else {
-    for (var i = 0; i < initialContents.length; i++) {
-      (function (i) {
-        html += maybeAnnotate(itemFunc(initialContents[i]),
-                              Spark._ANNOTATION_LIST_ITEM,
-                              function (range) {
-                                itemRanges[i] = range;
-                              });
-      })(i); // scope i to closure
-    }
+    itemDict.forEach(function (elt) {
+        html += maybeAnnotate(
+          itemFunc(elt.doc),
+          Spark._ANNOTATION_LIST_ITEM,
+          function (range) {
+            elt.liveRange = range;
+          });
+    });
   }
-  initialContents = null; // save memory
   var stopped = false;
   var cleanup = function () {
     handle.stop();
@@ -971,60 +990,65 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
 
   // The DOM update callbacks.
   _.extend(callbacks, {
-    added: function (item, beforeIndex) {
+    addedBefore: function (id, fields, before) {
       later(function () {
-        var frag = Spark.render(_.bind(itemFunc, null, item));
+        var idStr = idStringify(id);
+        var befStr = idStringify(before);
+        var doc = EJSON.clone(fields);
+        doc._id = id;
+        var frag = Spark.render(_.bind(itemFunc, null, doc));
         DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
         var range = makeRange(Spark._ANNOTATION_LIST_ITEM, frag);
 
-        if (! itemRanges.length) {
+        if (itemDict.empty()) {
           Spark.finalize(outerRange.replaceContents(frag));
-        } else if (beforeIndex === itemRanges.length) {
-          itemRanges[itemRanges.length - 1].insertAfter(frag);
+        } else if (before === null) {
+          itemDict.lastValue().liveRange.insertAfter(frag);
         } else {
-          itemRanges[beforeIndex].insertBefore(frag);
+          itemDict.get(befStr).liveRange.insertBefore(frag);
         }
-
-        itemRanges.splice(beforeIndex, 0, range);
+        itemDict.putBefore(idStr, {doc: doc, liveRange: range}, befStr);
       });
     },
 
-    removed: function (item, atIndex) {
+    removed: function (id) {
       later(function () {
-        if (itemRanges.length === 1) {
+        var idStr = idStringify(id);
+        if (itemDict.first() === itemDict.last()) {
           var frag = Spark.render(elseFunc);
           DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
           Spark.finalize(outerRange.replaceContents(frag));
         } else
-          Spark.finalize(itemRanges[atIndex].extract());
+          Spark.finalize(itemDict.get(idStr).liveRange.extract());
 
-        itemRanges.splice(atIndex, 1);
-
-        notifyParentsRendered();
-      });
-    },
-
-    moved: function (item, oldIndex, newIndex) {
-      later(function () {
-        if (oldIndex === newIndex)
-          return;
-
-        var frag = itemRanges[oldIndex].extract();
-        var range = itemRanges.splice(oldIndex, 1)[0];
-        if (newIndex === itemRanges.length)
-          itemRanges[itemRanges.length - 1].insertAfter(frag);
-        else
-          itemRanges[newIndex].insertBefore(frag);
-
-        itemRanges.splice(newIndex, 0, range);
+        itemDict.remove(idStr);
 
         notifyParentsRendered();
       });
     },
 
-    changed: function (item, atIndex) {
+    movedBefore: function (id, before) {
       later(function () {
-        Spark.renderToRange(itemRanges[atIndex], _.bind(itemFunc, null, item));
+        var idStr = idStringify(id);
+        var befStr = idStringify(before);
+        var frag = itemDict.get(idStr).liveRange.extract();
+        if (before === null) {
+          itemDict.lastValue().liveRange.insertAfter(frag);
+        }
+        else {
+          itemDict.get(befStr).liveRange.insertBefore(frag);
+        }
+        itemDict.moveBefore(idStr, befStr);
+        notifyParentsRendered();
+      });
+    },
+
+    changed: function (id, fields) {
+      later(function () {
+        var idStr = idStringify(id);
+        var elt = itemDict.get(idStr);
+        LocalCollection._applyChanges(elt.doc, fields);
+        Spark.renderToRange(elt.liveRange, _.bind(itemFunc, null, elt.doc));
       });
     }
   });

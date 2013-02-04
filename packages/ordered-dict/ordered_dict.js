@@ -32,7 +32,7 @@
 
     empty: function () {
       var self = this;
-      return self._first !== null;
+      return !self._first;
     },
     putBefore: function (key, item, before) {
       var self = this;

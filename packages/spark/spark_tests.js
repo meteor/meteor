@@ -1093,7 +1093,7 @@ Tinytest.add("spark - list event handling", function(test) {
   // same thing, but with events wired by listChunk "added" and "removed"
   event_buf.length = 0;
   var lst = [];
-  lst.observe = function(callbacks) {
+  lst.observeChanges = function(callbacks) {
     lst.callbacks = callbacks;
     return {
       stop: function() {
@@ -1127,12 +1127,12 @@ Tinytest.add("spark - list event handling", function(test) {
   doClick();
   // add item
   lst.push({_id:'foo'});
-  lst.callbacks.added(lst[0], 0);
+  lst.callbacks.addedBefore(lst[0]._id, lst[0], null);
   Meteor.flush();
   test.equal(div.text().match(/\S+/)[0], 'foo');
   doClick();
   // remove item, back to "else" case
-  lst.callbacks.removed(lst[0], 0);
+  lst.callbacks.removed(lst[0]._id);
   lst.pop();
   Meteor.flush();
   test.equal(div.text().match(/\S+/)[0], 'else');
@@ -1952,9 +1952,9 @@ Tinytest.add("spark - list cursor stop", function(test) {
 
   var numHandles = 0;
   var observable = {
-    observe: function(x) {
-      x.added({_id:"123"}, 0);
-      x.added({_id:"456"}, 1);
+    observeChanges: function(x) {
+      x.addedBefore("123", {}, null);
+      x.addedBefore("456", {}, null);
       var handle;
       numHandles++;
       return handle = {
@@ -2162,13 +2162,13 @@ Tinytest.add("spark - list event data", function(test) {
   var div = OnscreenDiv(Meteor.render(function() {
     var html = Spark.list(
       {
-        observe: function(observer) {
-          observer.added({_id: '1', name: 'Foo'}, 0);
-          observer.added({_id: '2', name: 'Bar'}, 1);
+        observeChanges: function(observer) {
+          observer.addedBefore("1", {name: 'Foo'}, null);
+          observer.addedBefore("2", {name: 'Bar'}, null);
           // exercise callback path
           later = function() {
-            observer.added({_id: '3', name: 'Baz'}, 2);
-            observer.added({_id: '4', name: 'Qux'}, 3);
+            observer.addedBefore("3", {name: 'Baz'}, null);
+            observer.addedBefore("4", {name: 'Qux'}, null);
           };
           return { stop: function() {} };
         }
@@ -2327,7 +2327,7 @@ Tinytest.add("spark - cleanup", function(test) {
   var observeCount = 0;
   var stopCount = 0;
   var cursor = {
-    observe: function (callbacks) {
+    observeChanges: function (callbacks) {
       observeCount++;
       return {
         stop: function () {
@@ -3194,7 +3194,7 @@ Tinytest.add("spark - isolate inside landmark", function (test) {
 
 Tinytest.add("spark - nested onscreen processing", function (test) {
   var cursor = {
-    observe: function () { return { stop: function () {} }; }
+    observeChanges: function () { return { stop: function () {} }; }
   };
 
   var x = [];
@@ -3713,10 +3713,10 @@ Tinytest.add("spark - list update", function (test) {
 
   var lst = [];
   lst.callbacks = [];
-  lst.observe = function(callbacks) {
+  lst.observeChanges = function(callbacks) {
     lst.callbacks.push(callbacks);
-    _.each(lst, function(x, i) {
-      callbacks.added(x, i);
+    _.each(lst, function(x) {
+      callbacks.addedBefore(x._id, x, null);
     });
     return {
       stop: function() {
@@ -3728,7 +3728,7 @@ Tinytest.add("spark - list update", function (test) {
     var i = lst.length;
     lst.push({_id:'item'+i});
     _.each(lst.callbacks, function (callbacks) {
-      callbacks.added(lst[i], i);
+      callbacks.addedBefore(lst[i]._id, lst[i], null);
     });
   };
   var div = OnscreenDiv(Meteor.render(function() {
