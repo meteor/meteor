@@ -27,8 +27,6 @@
 
 (function() {
 
-Spark = {};
-
 Spark._currentRenderer = (function () {
   var current = null;
   return {

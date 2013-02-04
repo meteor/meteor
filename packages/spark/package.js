@@ -8,7 +8,8 @@ Package.on_use(function (api) {
            'ordered-dict'],
           'client');
 
-  api.add_files(['spark.js', 'patch.js', 'convenience.js',
+  api.add_files(['controller.js',
+                 'spark.js', 'patch.js', 'convenience.js',
                  'utils.js'], 'client');
 });
 
@@ -19,6 +20,7 @@ Package.on_test(function (api) {
   api.add_files('test_form_responder.js', 'server');
 
   api.add_files([
+    'controller_tests.js',
     'spark_tests.js',
     'patch_tests.js'
   ], 'client');
