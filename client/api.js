@@ -278,7 +278,7 @@ Template.api.subscription_userId = {
 
 Template.api.subscribe = {
   id: "meteor_subscribe",
-  name: "Meteor.subscribe(name [, arg1, arg2, ... ] [, onReady])",
+  name: "Meteor.subscribe(name [, arg1, arg2, ... ] [, callbacks])",
   locus: "Client",
   descr: ["Subscribe to a record set.  Returns a handle that provides a stop() method, which will stop the subscription."],
   args: [
@@ -288,9 +288,9 @@ Template.api.subscribe = {
     {name: "arg1, arg2, ...",
      type: "Any",
      descr: "Optional arguments passed to publisher function on server."},
-    {name: "onReady",
-     type: "Function",
-     descr: "If the last argument is a Function, it is called without arguments when the server marks the subscription as ready."}
+    {name: "callbacks",
+     type: "Function or Object",
+     descr: "The last argument may optionally specify `onReady` and `onError` callbacks.  The last argument can be an Object with `onReady` and/or `onError` as keys, or it can itself be a Function, in which case case it is used as an `onReady` callback. The `onReady` callback is called with no arguments when the server [marks the subscription as ready](#publish_ready). The `onError` callback is called with a [`Meteor.Error`](#meteor_error) if the subscription fails or is terminated by the server."}
   ]
 };
 
