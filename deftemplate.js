@@ -11,7 +11,7 @@
     Handlebars._default_helpers.each = function (arg, options) {
       // if arg isn't an observable (like LocalCollection.Cursor),
       // don't use this reactive implementation of #each.
-      if (!(arg && 'observe' in arg))
+      if (!(arg && 'observeChanges' in arg))
         return orig.call(this, arg, options);
 
       return Spark.list(
