@@ -503,7 +503,7 @@ _.extend(Meteor._LivedataSession.prototype, {
       if (!self.server.publish_handlers[msg.name]) {
         self.send({
           msg: 'nosub', id: msg.id,
-          error: {error: 404, reason: "Subscription not found"}});
+          error: new Meteor.Error(404, "Subscription not found")});
         return;
       }
 

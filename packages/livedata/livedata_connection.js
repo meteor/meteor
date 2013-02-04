@@ -146,8 +146,10 @@ Meteor._LivedataConnection = function (url, options) {
   //   - name
   //   - params
   //   - context (the Context in which Meteor.subscribe was called, if any)
-  //   - readyCallbacks (list of onReady callbacks to call when ready,
-  //                     or null if the subscription is already ready)
+  //   - ready (has the 'ready' message been received?)
+  //   - readyCallback (an optional callback to call when ready)
+  //   - errorCallback (an optional callback to call if the sub terminates with
+  //                    an error)
   self._subscriptions = {};
 
   // Per-connection scratch area. This is only used internally, but we
@@ -410,12 +412,20 @@ _.extend(Meteor._LivedataConnection.prototype, {
     return true;
   },
 
-  subscribe: function (name /* .. [arguments] .. callback */) {
+  subscribe: function (name /* .. [arguments] .. (callback|callbacks) */) {
     var self = this;
 
     var params = Array.prototype.slice.call(arguments, 1);
-    if (params.length && typeof params[params.length - 1] === "function")
-      var onReady = params.pop();
+    var callbacks = {};
+    if (params.length) {
+      var lastParam = params[params.length - 1];
+      if (typeof lastParam === "function") {
+        callbacks.onReady = params.pop();
+      } else if (lastParam && (typeof lastParam.onReady === "function" ||
+                               typeof lastParam.onError === "function")) {
+        callbacks = params.pop();
+      }
+    }
 
     // Is there an existing sub with the same name and param, run in an
     // invalidated Context? This can only happen if the context just got
@@ -443,11 +453,19 @@ _.extend(Meteor._LivedataConnection.prototype, {
       // Substitute our current context (if any) for the one on the sub.
       existing.context = currentContext;
 
-      if (onReady) {
-        if (existing.readyCallbacks)
-          existing.readyCallbacks.push(onReady);
-        else
-          onReady(); // XXX maybe _.defer?
+      if (callbacks.onReady) {
+        // If the sub is not already ready, replace any ready callback with the
+        // one provided now. (It's not really clear what users would expect for
+        // an onReady callback inside an autorun; the semantics we provide is
+        // that at the time the sub first becomes ready, we call the last
+        // onReady callback provided, if any.)
+        if (!existing.ready)
+          existing.readyCallback = callbacks.onReady;
+      }
+      if (callbacks.onError) {
+        // Replace existing callback if any, so that errors aren't
+        // double-reported.
+        existing.errorCallback = callbacks.onError;
       }
     } else {
       // New sub! Generate an id, save it locally, and send message.
@@ -457,7 +475,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
         name: name,
         params: params,
         context: currentContext,
-        readyCallbacks: onReady ? [onReady] : []
+        ready: false,
+        readyCallback: callbacks.onReady,
+        errorCallback: callbacks.onError
       };
       self._send({msg: 'sub', id: id, name: name, params: params});
     }
@@ -828,7 +848,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
     //     re-publishing to avoid flicker!
     self._subsBeingRevived = {};
     _.each(self._subscriptions, function (sub, id) {
-      if (!sub.readyCallbacks)
+      if (sub.ready)
         self._subsBeingRevived[id] = true;
     });
 
@@ -1081,10 +1101,10 @@ _.extend(Meteor._LivedataConnection.prototype, {
         if (!subRecord)
           return;
         // Did we already receive a ready message? (Oops!)
-        if (!subRecord.readyCallbacks)
+        if (subRecord.ready)
           return;
-        _.each(subRecord.readyCallbacks, function (c) { c(); });
-        subRecord.readyCallbacks = null;
+        subRecord.readyCallback && subRecord.readyCallback();
+        subRecord.ready = true;
       });
     });
   },
@@ -1131,8 +1151,12 @@ _.extend(Meteor._LivedataConnection.prototype, {
     // we weren't subbed anyway, or we initiated the unsub.
     if (!_.has(self._subscriptions, msg.id))
       return;
+    var errorCallback = self._subscriptions[msg.id].errorCallback;
     delete self._subscriptions[msg.id];
-    // XXX call on-error callback
+    if (errorCallback && msg.error) {
+      errorCallback(new Meteor.Error(
+        msg.error.error, msg.error.reason, msg.error.details));
+    }
   },
 
   _livedata_result: function (msg) {
@@ -1165,6 +1189,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
     currentMethodBlock.splice(i, 1);
 
     if (_.has(msg, 'error')) {
+      // XXX should we hook Meteor.Error in to EJSON?
       m.receiveResult(new Meteor.Error(
         msg.error.error, msg.error.reason,
         msg.error.details));
@@ -1297,7 +1322,7 @@ Meteor._LivedataConnection._allConnections = [];
 Meteor._LivedataConnection._allSubscriptionsReady = function () {
   return _.all(Meteor._LivedataConnection._allConnections, function (conn) {
     return _.all(conn._subscriptions, function (sub) {
-      return !sub.readyCallbacks;
+      return sub.ready;
     });
   });
 };

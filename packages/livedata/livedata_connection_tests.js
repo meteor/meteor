@@ -204,7 +204,8 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   // Change the foo subscription and flush. We should sub to the new foo
   // subscription, re-sub to the stopper subscription, and then unsub from the old
   // foo subscription.  The bar subscription should be unaffected. The completer
-  // subscription should call its new onReady callback now.
+  // subscription should *NOT* call its new onReady callback, because we only
+  // call at most one onReady for a given reactively-saved subscription.
   rFoo.set("foo2");
   Meteor.flush();
   test.length(stream.sent, 3);
@@ -222,14 +223,16 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   message = JSON.parse(stream.sent.shift());
   test.equal(message, {msg: 'unsub', id: idFoo1});
 
-  test.equal(onReadyCount, {completer: 2});
+  test.equal(onReadyCount, {completer: 1});
 
   // Ready the stopper and bar subs. Completing stopper should call only the
-  // onReady from the new subscription because they were separate
-  // subscriptions started at different times and the first one was explicitly
-  // torn down by the client; completing bar should call both onReadys.
+  // onReady from the new subscription because they were separate subscriptions
+  // started at different times and the first one was explicitly torn down by
+  // the client; completing bar should call only the onReady from the new
+  // subscription because we only call at most one onReady per reactively-saved
+  // subscription.
   stream.receive({msg: 'ready', 'subs': [idStopperAgain, idBar1]});
-  test.equal(onReadyCount, {completer: 2, bar1: 2, stopper: 1});
+  test.equal(onReadyCount, {completer: 1, bar1: 1, stopper: 1});
 
   // Shut down the autorun. This should unsub us from all current subs at flush
   // time.
@@ -1397,10 +1400,17 @@ Tinytest.add("livedata stub - subscribe failure", function (test) {
 
   // subscribe
   var onReadyFired = false;
-  var sub = conn.subscribe('unknownSub', function () {
-    onReadyFired = true;
+  var subError = null;
+  var sub = conn.subscribe('unknownSub', {
+    onReady: function () {
+      onReadyFired = true;
+    },
+    onError: function (error) {
+      subError = error;
+    }
   });
   test.isFalse(onReadyFired);
+  test.equal(subError, null);
 
   var subMessage = JSON.parse(stream.sent.shift());
   test.equal(subMessage, {msg: 'sub', name: 'unknownSub', params: [],
@@ -1410,6 +1420,9 @@ Tinytest.add("livedata stub - subscribe failure", function (test) {
   stream.receive({msg: 'nosub', id: subMessage.id,
                   error: {error: 404, reason: "Subscription not found"}});
   test.isFalse(onReadyFired);
+  test.instanceOf(subError, Meteor.Error);
+  test.equal(subError.error, 404);
+  test.equal(subError.reason, "Subscription not found");
 
   // stream reset: reconnect!
   stream.reset();
