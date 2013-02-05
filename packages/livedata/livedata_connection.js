@@ -834,10 +834,12 @@ _.extend(Meteor._LivedataConnection.prototype, {
     // be resent if still relevant.
     self._updatesForUnknownStores = {};
 
-    // Forget about the effects of stubs. We'll be resetting all collections
-    // anyway.
-    self._documentsWrittenByStub = {};
-    self._serverDocuments = {};
+    if (self._resetStores) {
+      // Forget about the effects of stubs. We'll be resetting all collections
+      // anyway.
+      self._documentsWrittenByStub = {};
+      self._serverDocuments = {};
+    }
 
     // Clear _afterUpdateCallbacks.
     self._afterUpdateCallbacks = [];
