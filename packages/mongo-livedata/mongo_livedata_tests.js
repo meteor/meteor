@@ -65,16 +65,16 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
 
   var log = '';
   var obs = coll.find({run: run}, {sort: ["x"]}).observe({
-    added: function (doc, before_index) {
+    addedAt: function (doc, before_index) {
       log += 'a(' + doc.x + ',' + before_index + ')';
     },
-    changed: function (new_doc, at_index, old_doc) {
+    changedAt: function (new_doc, old_doc, at_index) {
       log += 'c(' + new_doc.x + ',' + at_index + ',' + old_doc.x + ')';
     },
-    moved: function (doc, old_index, new_index) {
+    movedTo: function (doc, old_index, new_index) {
       log += 'm(' + doc.x + ',' + old_index + ',' + new_index + ')';
     },
-    removed: function (doc, at_index) {
+    removedAt: function (doc, at_index) {
       log += 'r(' + doc.x + ',' + at_index + ')';
     }
   });
@@ -203,22 +203,22 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
   var counters = {add: 0, change: 0, move: 0, remove: 0};
 
   var obs = coll.find({run: run}, {sort: ["x"]}).observe({
-    added: function (doc, before_index) {
+    addedAt: function (doc, before_index) {
       counters.add++;
       actual.splice(before_index, 0, doc.x);
     },
-    changed: function (new_doc, at_index, old_doc) {
+    changedAt: function (new_doc, old_doc, at_index) {
       counters.change++;
       test.equal(actual[at_index], old_doc.x);
       actual[at_index] = new_doc.x;
     },
-    moved: function (doc, old_index, new_index) {
+    movedTo: function (doc, old_index, new_index) {
       counters.move++;
       test.equal(actual[old_index], doc.x);
       actual.splice(old_index, 1);
       actual.splice(new_index, 0, doc.x);
     },
-    removed: function (doc, at_index) {
+    removedAt: function (doc, at_index) {
       counters.remove++;
       test.equal(actual[at_index], doc.x);
       actual.splice(at_index, 1);
@@ -336,7 +336,7 @@ Tinytest.addAsync("mongo-livedata - scribbling, " + idGeneration, function (test
 
   var numAddeds = 0;
   var handle = coll.find({run: run}).observe({
-    added: function (o) {
+    addedAt: function (o) {
       // test that we can scribble on the object we get back from Mongo without
       // breaking anything.  The worst possible scribble is messing with _id.
       delete o._id;
@@ -442,12 +442,12 @@ if (Meteor.isServer) {
     var observer = function (noAdded) {
       var output = [];
       var callbacks = {
-        changed: function (newDoc) {
+        changedAt: function (newDoc) {
           output.push({changed: newDoc._id});
         }
       };
       if (!noAdded) {
-        callbacks.added = function (doc) {
+        callbacks.addedAt = function (doc) {
           output.push({added: doc._id});
         };
       }

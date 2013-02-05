@@ -296,10 +296,10 @@ Tinytest.add("livedata stub - methods", function (test) {
   // setup observers
   var counts = {added: 0, removed: 0, changed: 0, moved: 0};
   var handle = coll.find({}).observe(
-    { added: function () { counts.added += 1; },
-      removed: function () { counts.removed += 1; },
-      changed: function () { counts.changed += 1; },
-      moved: function () { counts.moved += 1; }
+    { addedAt: function () { counts.added += 1; },
+      removedAt: function () { counts.removed += 1; },
+      changedAt: function () { counts.changed += 1; },
+      movedTo: function () { counts.moved += 1; }
     });
 
 
@@ -403,10 +403,10 @@ var observeCursor = function (test, cursor) {
   var counts = {added: 0, removed: 0, changed: 0, moved: 0};
   var expectedCounts = _.clone(counts);
   var handle = cursor.observe(
-    { added: function () { counts.added += 1; },
-      removed: function () { counts.removed += 1; },
-      changed: function () { counts.changed += 1; },
-      moved: function () { counts.moved += 1; }
+    { addedAt: function () { counts.added += 1; },
+      removedAt: function () { counts.removed += 1; },
+      changedAt: function () { counts.changed += 1; },
+      movedTo: function () { counts.moved += 1; }
     });
   return {
     stop: _.bind(handle.stop, handle),

@@ -42,20 +42,20 @@ var assert_ordering = function (test, f, values) {
 
 var log_callbacks = function (operations) {
   return {
-    added: function (obj, idx) {
+    addedAt: function (obj, idx) {
       delete obj._id;
       operations.push(EJSON.clone(['added', obj, idx]));
     },
-    changed: function (obj, at, old_obj) {
+    changedAt: function (obj, old_obj, at) {
       delete obj._id;
       delete old_obj._id;
       operations.push(EJSON.clone(['changed', obj, at, old_obj]));
     },
-    moved: function (obj, old_at, new_at) {
+    movedTo: function (obj, old_at, new_at) {
       delete obj._id;
       operations.push(EJSON.clone(['moved', obj, old_at, new_at]));
     },
-    removed: function (old_obj, at) {
+    removedAt: function (old_obj, at) {
       var id = old_obj._id;
       delete old_obj._id;
       operations.push(EJSON.clone(['removed', id, at, old_obj]));
@@ -1233,11 +1233,14 @@ _.each(['observe', '_observeUnordered'], function (observeMethod) {
 
     var ev = "";
     var makecb = function (tag) {
-      return {
-        added: function (doc) { ev += "a" + tag + doc._id + "_"; },
-        changed: function (doc) { ev += "c" + tag + doc._id + "_"; },
-        removed: function (doc) { ev += "r" + tag + doc._id + "_"; }
-      };
+      var ret = {};
+      _.each(["added", "changed", "removed"], function (fn) {
+        var fnName = observeMethod == "observe" ? fn + "At" : fn;
+        ret[fnName] = function (doc) {
+          ev = (ev + fn.substr(0, 1) + tag + doc._id + "_");
+        };
+      });
+      return ret;
     };
     var expect = function (x) {
       test.equal(ev, x);
