@@ -10,8 +10,6 @@ var customTypes = {};
 // - A equals() method, so that Meteor can compare it
 // - A toJSONValue() method, so that Meteor can serialize it
 // - a typeName() method, to show how to look it up in our type table.
-//   XXX GOING AWAY
-// - A serializeForEval() method, so that Meteor can compile it into selectors.
 // It is okay if these methods are monkey-patched on.
 EJSON.addType = function (name, factory) {
   if (_.has(customTypes, name))

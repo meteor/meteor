@@ -52,11 +52,6 @@ LocalCollection._ObjectID.prototype.valueOf =
     LocalCollection._ObjectID.prototype.toHexString =
     function () { return this._str; };
 
-LocalCollection._ObjectID.prototype.serializeForEval = function () {
-  var self = this;
-  return "new LocalCollection._ObjectID(\"" + self._str + "\")";
-};
-
 // Is this selector just shorthand for lookup by _id?
 LocalCollection._selectorIsId = function (selector) {
   return (typeof selector === "string") ||
