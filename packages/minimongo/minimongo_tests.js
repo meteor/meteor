@@ -188,10 +188,8 @@ Tinytest.add("minimongo - misc", function (test) {
   var a = {a: [1, 2, 3], b: "x", c: true, d: {x: 12, y: [12]},
            f: null, g: new Date()};
   var b = EJSON.clone(a);
-  // minimongo doesn't support Dates, so we *can't* test
-  // LocalCollection._f._equal here! (Currently _equal considers all dates equal
-  // on most browsers except IE7 where it considers all dates unequal.)
   test.equal(a, b);
+  test.isTrue(LocalCollection._f._equal(a, b));
   a.a.push(4);
   test.length(b.a, 3);
   a.c = false;
