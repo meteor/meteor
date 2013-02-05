@@ -157,7 +157,9 @@ LocalCollection.Cursor.prototype.count = function () {
   var self = this;
 
   if (self.reactive)
-    self._markAsReactive({ordered: false, added: true, removed: true});
+    var ordered = !! self.skip || !! self.limit || !! self.sort_f;
+    console.log('ordered: '+ordered);
+    self._markAsReactive({ordered: ordered, added: true, removed: true});
 
   if (self.db_objects === null)
     self.db_objects = self._getRawObjects(true);
