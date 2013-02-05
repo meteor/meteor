@@ -23,3 +23,11 @@ Tinytest.add("ejson - keyOrderSensitive", function (test) {
     d: {f: 4, e: 3}
   }, {keyOrderSensitive: true}));
 });
+
+Tinytest.add("ejson - nesting and literal", function (test) {
+  var d = new Date;
+  var obj = {$date: d};
+  var eObj = EJSON.toJSONValue(obj);
+  var roundTrip = EJSON.fromJSONValue(eObj);
+  test.equal(obj, roundTrip);
+});

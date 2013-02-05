@@ -63,9 +63,9 @@ var builtinConverters = [
       return EJSON._base64Decode(obj.$binary);
     }
   },
-  { // Literal
+  { // Escaping one level
     matchJSONValue: function (obj) {
-      return _.has(obj, '$literal') && _.size(obj) === 1;
+      return _.has(obj, '$escape') && _.size(obj) === 1;
     },
     matchObject: function (obj) {
       if (_.isEmpty(obj) || _.size(obj) > 2) {
@@ -76,10 +76,18 @@ var builtinConverters = [
       });
     },
     toJSONValue: function (obj) {
-      return {$literal: obj};
+      var newObj = {};
+      _.each(obj, function (value, key) {
+        newObj[key] = EJSON.toJSONValue(value);
+      });
+      return {$escape: newObj};
     },
     fromJSONValue: function (obj) {
-      return obj.$literal;
+      var newObj = {};
+      _.each(obj.$escape, function (value, key) {
+        newObj[key] = EJSON.fromJSONValue(value);
+      });
+      return newObj;
     }
   },
   { // Custom
