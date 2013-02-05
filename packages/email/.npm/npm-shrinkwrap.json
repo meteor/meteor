@@ -2,42 +2,53 @@
   "dependencies": {
     "mailcomposer": {
       "version": "0.1.15",
+      "from": "mailcomposer@0.1.15",
       "dependencies": {
         "mimelib-noiconv": {
-          "version": "0.1.9"
+          "version": "0.1.9",
+          "from": "mimelib-noiconv@*"
         }
       }
     },
     "simplesmtp": {
       "version": "0.1.25",
+      "from": "simplesmtp@0.1.25",
       "dependencies": {
         "rai": {
-          "version": "0.1.7"
+          "version": "0.1.7",
+          "from": "rai@*"
         },
         "xoauth2": {
-          "version": "0.1.4",
+          "version": "0.1.5",
+          "from": "xoauth2@>= 0.1.1",
           "dependencies": {
             "request": {
               "version": "2.12.0",
+              "from": "request@*",
               "dependencies": {
                 "form-data": {
                   "version": "0.0.3",
+                  "from": "form-data",
                   "dependencies": {
                     "combined-stream": {
                       "version": "0.0.3",
+                      "from": "combined-stream@0.0.3",
                       "dependencies": {
                         "delayed-stream": {
-                          "version": "0.0.5"
+                          "version": "0.0.5",
+                          "from": "delayed-stream@0.0.5"
                         }
                       }
                     },
                     "async": {
-                      "version": "0.1.9"
+                      "version": "0.1.9",
+                      "from": "async@0.1.9"
                     }
                   }
                 },
                 "mime": {
-                  "version": "1.2.7"
+                  "version": "1.2.7",
+                  "from": "mime"
                 }
               }
             }
@@ -46,7 +57,8 @@
       }
     },
     "stream-buffers": {
-      "version": "0.2.3"
+      "version": "0.2.3",
+      "from": "stream-buffers@0.2.3"
     }
   }
 }
