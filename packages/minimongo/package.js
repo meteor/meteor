@@ -13,7 +13,6 @@ Package.on_use(function (api, where) {
   api.add_files([
     'minimongo.js',
     'selector.js',
-    'sort.js',
     'uuid.js',
     'modify.js',
     'diff.js'
