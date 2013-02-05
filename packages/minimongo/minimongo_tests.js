@@ -1249,15 +1249,15 @@ Tinytest.add("minimongo - observe ordered", function (test) {
   handle.stop();
 });
 
-_.each(['observe', '_observeUnordered'], function (observeMethod) {
-  Tinytest.add("minimongo - observe (" + observeMethod + ")", function (test) {
+_.each([true, false], function (ordered) {
+  Tinytest.add("minimongo - observe ordered: " + ordered, function (test) {
     var c = new LocalCollection();
 
     var ev = "";
     var makecb = function (tag) {
       var ret = {};
       _.each(["added", "changed", "removed"], function (fn) {
-        var fnName = observeMethod == "observe" ? fn + "At" : fn;
+        var fnName = ordered ? fn + "At" : fn;
         ret[fnName] = function (doc) {
           ev = (ev + fn.substr(0, 1) + tag + doc._id + "_");
         };
@@ -1276,7 +1276,7 @@ _.each(['observe', '_observeUnordered'], function (observeMethod) {
     // This should work equally well for ordered and unordered observations
     // (because the callbacks don't look at indices and there's no 'moved'
     // callback).
-    var handle = c.find({tags: "flower"})[observeMethod](makecb('a'));
+    var handle = c.find({tags: "flower"}).observe(makecb('a'));
     expect("aa3_");
     c.update({name: "rose"}, {$set: {tags: ["bloom", "red", "squishy"]}});
     expect("ra3_");
@@ -1294,7 +1294,7 @@ _.each(['observe', '_observeUnordered'], function (observeMethod) {
     expect("");
 
     // Test that observing a lookup by ID works.
-    handle = c.find(4)[observeMethod](makecb('b'));
+    handle = c.find(4).observe(makecb('b'));
     expect('ab4_');
     c.update(4, {$set: {eek: 5}});
     expect('cb4_');

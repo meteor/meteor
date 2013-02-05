@@ -366,7 +366,7 @@ Tinytest.addAsync("mongo-livedata - stop handle in callback, " + idGeneration, f
 
   var output = [];
 
-  var handle = coll.find()._observeUnordered({
+  var handle = coll.find().observe({
     added: function (doc) {
       output.push({added: doc._id});
     },
@@ -415,11 +415,11 @@ if (Meteor.isServer) {
     var coll = new Meteor.Collection("observeInCallback-"+run, collectionOptions);
 
     var callbackCalled = false;
-    var handle = coll.find()._observeUnordered({
+    var handle = coll.find().observe({
       added: function (newDoc) {
         callbackCalled = true;
         test.throws(function () {
-          coll.find()._observeUnordered({});
+          coll.find().observe({});
         });
       }
     });

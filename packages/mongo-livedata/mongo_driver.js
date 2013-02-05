@@ -297,8 +297,8 @@ _Mongo.prototype._ensureIndex = function (collectionName, index, options) {
 // SynchronousCursor (lazily: it doesn't contact Mongo until you call a method
 // like fetch or forEach on it).
 //
-// ObserveHandle is the "observe handle" returned from observe and
-// _observeUnordered. It has a reference to a LiveResultsSet.
+// ObserveHandle is the "observe handle" returned from observe. It has a
+// reference to a LiveResultsSet.
 //
 // LiveResultsSet caches the results of a query and reruns it when necessary.
 // It is hooked up to one or more ObserveHandles; a single LiveResultsSet
@@ -364,12 +364,7 @@ Cursor.prototype._publishCursor = function (sub) {
 
 Cursor.prototype.observe = function (callbacks) {
   var self = this;
-  return LocalCollection._observeOrdered(self, callbacks);
-};
-
-Cursor.prototype._observeUnordered = function (callbacks) {
-  var self = this;
-  return LocalCollection._observeUnordered(self, callbacks);
+  return LocalCollection._observe(self, callbacks);
 };
 
 Cursor.prototype.observeChanges = function (callbacks) {
