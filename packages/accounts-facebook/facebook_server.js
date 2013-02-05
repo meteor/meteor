@@ -9,11 +9,17 @@
     var identity = getIdentity(accessToken);
 
     var serviceData = {
-      id: identity.id,
       accessToken: accessToken,
-      email: identity.email,
       expiresAt: (+new Date) + (1000 * response.expiresIn)
     };
+
+    // include all fields from facebook
+    // http://developers.facebook.com/docs/reference/login/public-profile-and-friend-list/
+    var whitelisted = ['id', 'email', 'name', 'first_name',
+        'last_name', 'link', 'username', 'gender', 'locale', 'age_range'];
+
+    var fields = _.pick(identity, whitelisted);
+    _.extend(serviceData, fields);
 
     return {
       serviceData: serviceData,
