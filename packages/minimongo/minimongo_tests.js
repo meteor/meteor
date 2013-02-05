@@ -825,7 +825,6 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
           {dogs: [{name: "Fido", age: 5}, {name: "Rex", age: 3}]});
 
   // XXX still needs tests:
-  // - $elemMatch
   // - non-scalar arguments to $gt, $lt, etc
 });
 
