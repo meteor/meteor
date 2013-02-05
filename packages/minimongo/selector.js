@@ -464,8 +464,11 @@ LocalCollection._compileSelector = function (selector) {
     return function (doc) {return selector.call(doc);};
 
   // shorthand -- scalars match _id
-  if (LocalCollection._selectorIsId(selector))
-    return function (doc) { return doc._id === selector;};
+  if (LocalCollection._selectorIsId(selector)) {
+    return function (doc) {
+      return EJSON.equals(doc._id, selector);
+    };
+  }
 
   // protect against dangerous selectors.  falsey and {_id: falsey} are both
   // likely programmer error, and not what you want, particularly for
