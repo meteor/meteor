@@ -22,6 +22,7 @@
     self._dict = {};
     self._first = null;
     self._last = null;
+    self._size = 0;
     var args = _.toArray(arguments);
     self._stringify = function (x) { return x; };
     if (typeof args[0] === 'function')
@@ -32,14 +33,18 @@
   };
 
   _.extend(OrderedDict.prototype, {
+    // the "prefix keys with a space" thing comes from here
+    // https://github.com/documentcloud/underscore/issues/376#issuecomment-2815649
+    _k: function (key) { return " " + this._stringify(key); },
 
     empty: function () {
       var self = this;
       return !self._first;
     },
-
-    _k: function (key) { return " " + this._stringify(key); },
-
+    size: function () {
+      var self = this;
+      return self._size;
+    },
     _linkEltIn: function (elt) {
       var self = this;
       if (!elt.next) {
@@ -76,12 +81,22 @@
         throw new Error("could not find item to put this one before");
       self._linkEltIn(elt);
       self._dict[self._k(key)] = elt;
+      self._size++;
+    },
+    push: function (key, item) {
+      var self = this;
+      self.putBefore(key, item, null);
+    },
+    pop: function () {
+      var self = this;
+      return self.remove(self.last());
     },
     remove: function (key) {
       var self = this;
       var elt = self._dict[self._k(key)];
       if (elt !== undefined) {
         self._linkEltOut(elt);
+        self._size--;
         delete self._dict[self._k(key)];
         return elt.value;
       } else {
@@ -197,5 +212,6 @@
     }
 
   });
+OrderedDict.append = OrderedDict.push;
 OrderedDict.BREAK = {break: true};
 })();
