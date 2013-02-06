@@ -13,19 +13,6 @@ var game = function () {
   return me && me.game_id && Games.findOne(me.game_id);
 };
 
-var create_my_player = function (name) {
-  // kill my bad words after 5 seconds.
-  Words.find({player_id: Session.get('player_id'), state: 'bad'})
-    .observe({
-      added: function (word) {
-        setTimeout(function () {
-          $('#word_' + word._id).fadeOut(1000, function () {
-            Words.remove(word._id);
-          });
-        }, 5000);
-      }});
-};
-
 var set_selected_positions = function (word) {
   var paths = paths_for_word(game().board, word.toUpperCase());
   var in_a_path = [];
