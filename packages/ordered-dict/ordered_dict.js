@@ -34,13 +34,9 @@
       var self = this;
       return !self._first;
     },
-    putBefore: function (key, item, before) {
+
+    _linkEltIn: function (elt) {
       var self = this;
-      var elt = before ?
-            element(key, item, self._dict[k(before)]) :
-            element(key, item, null);
-      if (elt.next === undefined)
-        throw new Error("could not find item to put this one before");
       if (!elt.next) {
         elt.prev = self._last;
         if (self._last)
@@ -54,20 +50,33 @@
       }
       if (self._first === null || self._first === elt.next)
         self._first = elt;
+    },
+    _linkEltOut: function (elt) {
+      var self = this;
+      if (elt.next)
+        elt.next.prev = elt.prev;
+      if (elt.prev)
+        elt.prev.next = elt.next;
+      if (elt === self._last)
+        self._last = elt.prev;
+      if (elt === self._first)
+        self._first = elt.next;
+    },
+    putBefore: function (key, item, before) {
+      var self = this;
+      var elt = before ?
+            element(key, item, self._dict[k(before)]) :
+            element(key, item, null);
+      if (elt.next === undefined)
+        throw new Error("could not find item to put this one before");
+      self._linkEltIn(elt);
       self._dict[k(key)] = elt;
     },
     remove: function (key) {
       var self = this;
       var elt = self._dict[k(key)];
       if (elt !== undefined) {
-        if (elt.next)
-          elt.next.prev = elt.prev;
-        if (elt.prev)
-          elt.prev.next = elt.next;
-        if (elt === self._last)
-          self._last = elt.prev;
-        if (elt === self._first)
-          self._first = elt.next;
+        self._linkEltOut(elt);
         delete self._dict[k(key)];
         return elt.value;
       } else {
@@ -154,31 +163,10 @@
       if (eltBefore === elt.next) // no moving necessary
         return;
       // remove from its old place
-      if (elt.next)
-        elt.next.prev = elt.prev;
-      if (elt.prev)
-        elt.prev.next = elt.next;
-      if (elt === self._last)
-        self._last = elt.prev;
-      if (elt === self._first)
-        self._first = elt.next;
-
-      // now patch it in to its new place
-      if (eltBefore === null) {
-        elt.next = null;
-        if (self._last)
-          self._last.next = elt;
-        elt.prev = self._last;
-        self._last = elt;
-      } else {
-        elt.next = eltBefore;
-        elt.prev = eltBefore.prev;
-        eltBefore.prev = elt;
-        if (elt.prev)
-          elt.prev.next = elt;
-      }
-      if (!elt.prev)
-        self._first = elt;
+      self._linkEltOut(elt);
+      // patch into its new place
+      elt.next = eltBefore;
+      self._linkEltIn(elt);
     },
     // Linear, sadly.
     indexOf: function (key) {
