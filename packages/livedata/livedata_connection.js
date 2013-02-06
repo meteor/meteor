@@ -1191,7 +1191,6 @@ _.extend(Meteor._LivedataConnection.prototype, {
     currentMethodBlock.splice(i, 1);
 
     if (_.has(msg, 'error')) {
-      // XXX should we hook Meteor.Error in to EJSON?
       m.receiveResult(new Meteor.Error(
         msg.error.error, msg.error.reason,
         msg.error.details));

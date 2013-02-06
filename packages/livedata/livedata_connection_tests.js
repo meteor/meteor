@@ -1418,7 +1418,7 @@ Tinytest.add("livedata stub - subscribe failure", function (test) {
 
   // Reject the sub.
   stream.receive({msg: 'nosub', id: subMessage.id,
-                  error: {error: 404, reason: "Subscription not found"}});
+                  error: new Meteor.Error(404, "Subscription not found")});
   test.isFalse(onReadyFired);
   test.instanceOf(subError, Meteor.Error);
   test.equal(subError.error, 404);

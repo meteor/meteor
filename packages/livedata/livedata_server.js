@@ -569,7 +569,7 @@ _.extend(Meteor._LivedataSession.prototype, {
       if (!handler) {
         self.send({
           msg: 'result', id: msg.id,
-          error: {error: 404, reason: "Method not found"}});
+          error: new Meteor.Error(404, "Method not found")});
         fence.arm();
         return;
       }

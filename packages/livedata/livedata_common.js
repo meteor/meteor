@@ -109,6 +109,11 @@ Meteor._stringifyDDP = function (msg) {
 
 Meteor._CurrentInvocation = new Meteor.EnvironmentVariable;
 
+// Note: The DDP server assumes that Meteor.Error EJSON-serializes as an object
+// containing 'error' and optionally 'reason' and 'details'.
+// The DDP client manually puts these into Meteor.Error objects. (We don't use
+// EJSON.addType here because the type is determined by location in the
+// protocol, not text on the wire.)
 Meteor.Error = function (error, reason, details) {
   var self = this;
 
