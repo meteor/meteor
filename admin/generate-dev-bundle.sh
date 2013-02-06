@@ -3,7 +3,7 @@
 set -e
 set -u
 
-BUNDLE_VERSION=0.2.15
+BUNDLE_VERSION=0.2.16
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -81,7 +81,7 @@ npm install connect@1.9.2 # not 2.x yet. sockjs doesn't work w/ new connect
 npm install gzippo@0.1.7
 npm install optimist@0.3.5
 npm install coffee-script@1.4.0
-npm install less@1.3.1
+npm install less@1.3.3
 npm install stylus@0.30.1
 npm install nib@0.8.2
 npm install mime@1.2.7
