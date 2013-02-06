@@ -18,20 +18,6 @@ EJSON.addType = function (name, factory) {
 };
 
 var builtinConverters = [
-  { // undefined
-    matchJSONValue: function (obj) {
-      return _.has(obj, '$undefined') && _.size(obj) === 1;
-    },
-    matchObject: function (obj) {
-      return obj === undefined;
-    },
-    toJSONValue: function (obj) {
-      return {$undefined: null};
-    },
-    fromJSONValue: function (obj) {
-      return undefined;
-    }
-  },
   { // Date
     matchJSONValue: function (obj) {
       return _.has(obj, '$date') && _.size(obj) === 1;
