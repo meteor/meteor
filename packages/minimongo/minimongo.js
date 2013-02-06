@@ -828,17 +828,16 @@ LocalCollection._observeUnorderedFromObserveChanges =
 
 LocalCollection._observeOrderedFromObserveChanges =
     function (cursor, callbacks) {
-  var docs = new OrderedDict();
+  var docs = new OrderedDict(LocalCollection._idStringify);
   var suppressed = !!callbacks._suppress_initial;
   var handle = cursor.observeChanges({
     addedBefore: function (id, fields, before) {
-      var strId = LocalCollection._idStringify(id);
       var doc = EJSON.clone(fields);
       doc._id = id;
-      docs.putBefore(strId, doc, before ? LocalCollection._idStringify(before) : null);
+      docs.putBefore(id, doc, before ? before : null);
       if (!suppressed) {
         if (callbacks.addedAt) {
-          var index = docs.indexOf(strId);
+          var index = docs.indexOf(id);
           callbacks.addedAt(EJSON.clone(doc), index);
         } else if (callbacks.added) {
           callbacks.added(EJSON.clone(doc));
@@ -846,28 +845,26 @@ LocalCollection._observeOrderedFromObserveChanges =
       }
     },
     changed: function (id, fields) {
-      var strId = LocalCollection._idStringify(id);
-      var doc = docs.get(strId);
+      var doc = docs.get(id);
       var oldDoc = EJSON.clone(doc);
       // writes through to the doc set
       LocalCollection._applyChanges(doc, fields);
       if (callbacks.changedAt) {
-        var index = docs.indexOf(strId);
+        var index = docs.indexOf(id);
         callbacks.changedAt(EJSON.clone(doc), oldDoc, index);
       } else if (callbacks.changed) {
         callbacks.changed(EJSON.clone(doc), oldDoc);
       }
     },
     movedBefore: function (id, before) {
-      var strId = LocalCollection._idStringify(id);
-      var doc = docs.get(strId);
+      var doc = docs.get(id);
       var from;
       // only capture indexes if we're going to call the callback that needs them.
       if (callbacks.movedTo)
-        from = docs.indexOf(strId);
-      docs.moveBefore(strId, before ? LocalCollection._idStringify(before) : null);
+        from = docs.indexOf(id);
+      docs.moveBefore(id, before ? before : null);
       if (callbacks.movedTo) {
-        var to = docs.indexOf(strId);
+        var to = docs.indexOf(id);
         callbacks.movedTo(EJSON.clone(doc), from, to);
       } else if (callbacks.moved) {
         callbacks.moved(EJSON.clone(doc));
@@ -875,12 +872,11 @@ LocalCollection._observeOrderedFromObserveChanges =
 
     },
     removed: function (id) {
-      var strId = LocalCollection._idStringify(id);
-      var doc = docs.get(strId);
+      var doc = docs.get(id);
       var index;
       if (callbacks.removedAt)
-        index = docs.indexOf(strId);
-      docs.remove(strId);
+        index = docs.indexOf(id);
+      docs.remove(id);
       callbacks.removedAt && callbacks.removedAt(doc, index);
       callbacks.removed && callbacks.removed(doc);
     }

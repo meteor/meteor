@@ -878,6 +878,17 @@ Spark.isolate = function (htmlFunc) {
 /* Lists                                                                      */
 /******************************************************************************/
 
+// XXX duplicated code from minimongo.js.  It's small though.
+var applyChanges = function (doc, changeFields) {
+  _.each(changeFields, function (value, key) {
+    if (value === undefined)
+      delete doc[key];
+    else
+      doc[key] = value;
+  });
+};
+
+
 var idStringify;
 var idParse;
 
@@ -888,10 +899,8 @@ if (typeof LocalCollection !== 'undefined') {
     else
       return LocalCollection._idStringify(id);
   };
-  idParse = LocalCollection._idParse;
 } else {
   idStringify = function (id) { return id; };
-  idParse = function (id) { return id; };
 }
 
 Spark.list = function (cursor, itemFunc, elseFunc) {
@@ -908,19 +917,14 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   });
 
   // Get the current contents of the cursor.
-  // XXX currently we count on observe() using only added() to deliver
-  // the initial contents. are we allow to do that, or do we need to
-  // implement removed/moved/changed here as well?
 
-  var itemDict = new OrderedDict();
+  var itemDict = new OrderedDict(idStringify);
   _.extend(callbacks, {
     addedBefore: function (id, item, before) {
       var doc = EJSON.clone(item);
       doc._id = id;
       var elt = {doc: doc, liveRange: null};
-      itemDict.putBefore(idStringify(id),
-                         elt,
-                         idStringify(before));
+      itemDict.putBefore(id, elt, before);
     }
   });
   var handle = cursor.observeChanges(observerCallbacks);
@@ -992,8 +996,6 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   _.extend(callbacks, {
     addedBefore: function (id, fields, before) {
       later(function () {
-        var idStr = idStringify(id);
-        var befStr = idStringify(before);
         var doc = EJSON.clone(fields);
         doc._id = id;
         var frag = Spark.render(_.bind(itemFunc, null, doc));
@@ -1005,23 +1007,22 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
         } else if (before === null) {
           itemDict.lastValue().liveRange.insertAfter(frag);
         } else {
-          itemDict.get(befStr).liveRange.insertBefore(frag);
+          itemDict.get(before).liveRange.insertBefore(frag);
         }
-        itemDict.putBefore(idStr, {doc: doc, liveRange: range}, befStr);
+        itemDict.putBefore(id, {doc: doc, liveRange: range}, before);
       });
     },
 
     removed: function (id) {
       later(function () {
-        var idStr = idStringify(id);
         if (itemDict.first() === itemDict.last()) {
           var frag = Spark.render(elseFunc);
           DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
           Spark.finalize(outerRange.replaceContents(frag));
         } else
-          Spark.finalize(itemDict.get(idStr).liveRange.extract());
+          Spark.finalize(itemDict.get(id).liveRange.extract());
 
-        itemDict.remove(idStr);
+        itemDict.remove(id);
 
         notifyParentsRendered();
       });
@@ -1029,25 +1030,22 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
 
     movedBefore: function (id, before) {
       later(function () {
-        var idStr = idStringify(id);
-        var befStr = idStringify(before);
-        var frag = itemDict.get(idStr).liveRange.extract();
+        var frag = itemDict.get(id).liveRange.extract();
         if (before === null) {
           itemDict.lastValue().liveRange.insertAfter(frag);
         }
         else {
-          itemDict.get(befStr).liveRange.insertBefore(frag);
+          itemDict.get(before).liveRange.insertBefore(frag);
         }
-        itemDict.moveBefore(idStr, befStr);
+        itemDict.moveBefore(id, before);
         notifyParentsRendered();
       });
     },
 
     changed: function (id, fields) {
       later(function () {
-        var idStr = idStringify(id);
-        var elt = itemDict.get(idStr);
-        LocalCollection._applyChanges(elt.doc, fields);
+        var elt = itemDict.get(id);
+        applyChanges(elt.doc, fields);
         Spark.renderToRange(elt.liveRange, _.bind(itemFunc, null, elt.doc));
       });
     }
