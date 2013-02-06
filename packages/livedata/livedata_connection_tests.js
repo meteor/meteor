@@ -1433,6 +1433,42 @@ Tinytest.add("livedata stub - subscribe failure", function (test) {
   test.isFalse(onReadyFired);
 });
 
+Tinytest.add("livedata stub - stubs before connected", function (test) {
+  var stream = new Meteor._StubStream();
+  var conn = newConnection(stream);
+
+  var collName = Meteor.uuid();
+  var coll = new Meteor.Collection(collName, {manager: conn});
+
+  // Start and send "connect", but DON'T get 'connected' quite yet.
+  stream.reset(); // initial connection start.
+
+  testGotMessage(test, stream, makeConnectMessage());
+  test.length(stream.sent, 0);
+
+  // Insert a document. The stub updates "conn" directly.
+  coll.insert({_id: "foo", bar: 42});
+  test.equal(coll.find().count(), 1);
+  test.equal(coll.findOne(), {_id: "foo", bar: 42});
+  // It also sends the method message.
+  var methodMessage = JSON.parse(stream.sent.shift());
+  test.equal(methodMessage, {msg: 'method', method: '/' + collName + '/insert',
+                             params: [{_id: "foo", bar: 42}],
+                             id: methodMessage.id});
+  test.length(stream.sent, 0);
+
+  // Now receive a connected message. This should not clear the
+  // _documentsWrittenByStub state!
+  stream.receive({msg: 'connected', session: SESSION_ID});
+  test.length(stream.sent, 0);
+  test.equal(coll.find().count(), 1);
+
+  // Now receive the "updated" message for the method. This should revert the
+  // insert.
+  stream.receive({msg: 'updated', methods: [methodMessage.id]});
+  test.length(stream.sent, 0);
+  test.equal(coll.find().count(), 0);
+});
 
 // XXX also test:
 // - reconnect, with session resume.
