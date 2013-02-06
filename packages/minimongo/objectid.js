@@ -59,5 +59,8 @@ LocalCollection._selectorIsId = function (selector) {
     selector instanceof LocalCollection._ObjectID;
 };
 
+EJSON.addType("oid",  function (str) {
+  return new LocalCollection._ObjectID(str);
+});
 
 })();

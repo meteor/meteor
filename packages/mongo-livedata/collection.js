@@ -412,12 +412,6 @@ Meteor.Collection.ObjectID = LocalCollection._ObjectID;
 })();
 
 
-
-EJSON.addType("oid",  function (str) {
-  return new Meteor.Collection.ObjectID(str);
-});
-
-
 Meteor.Collection.prototype._defineMutationMethods = function() {
   var self = this;
 
