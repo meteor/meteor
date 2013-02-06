@@ -364,7 +364,7 @@ Cursor.prototype._publishCursor = function (sub) {
 
 Cursor.prototype.observe = function (callbacks) {
   var self = this;
-  return LocalCollection._observe(self, callbacks);
+  return LocalCollection._observeFromObserveChanges(self, callbacks);
 };
 
 Cursor.prototype.observeChanges = function (callbacks) {
