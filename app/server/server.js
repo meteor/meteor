@@ -88,7 +88,7 @@ var run = function () {
   var info_raw =
     fs.readFileSync(path.join(bundle_dir, 'app.json'), 'utf8');
   var info = JSON.parse(info_raw);
-  var bundler = {app_info: info, bundle_dir: bundle_dir};
+  var bundle = {manifest: info.manifest, root: bundle_dir};
 
   // start up app
 
@@ -96,7 +96,7 @@ var run = function () {
     require: require,
     startup_hooks: [],
     app: app,
-    bundler: bundler
+    bundle: bundle
   };
 
   __meteor_runtime_config__ = {};

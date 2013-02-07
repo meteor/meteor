@@ -295,11 +295,9 @@ var files = module.exports = {
   // file whose basename matches one of the regexps, before
   // transformation, will be skipped.
   //
-  // Returns the list of file paths copied to the destination, as
-  // filtered by ignore and transformed by transformer_filename.  For
-  // the convenience of the caller (so as not to need to split
-  // os-specific paths), file paths are represented as an array:
-  // "foo/bar/baz.js" as ["foo", "bar", "baz.js"].
+  // Returns the list of relative file paths copied to the
+  // destination, as filtered by ignore and transformed by
+  // transformer_filename.
   cp_r: function (from, to, options) {
     options = options || {};
     files.mkdir_p(to, 0755);
@@ -315,14 +313,8 @@ var files = module.exports = {
       var full_to = path.join(to, f);
       if (fs.statSync(full_from).isDirectory()) {
         var subdir_paths = files.cp_r(full_from, full_to, options);
-        copied = copied.concat(_.map(subdir_paths, function (path) {
-          // At this point f is the name of the subdirectory that just
-          // got copied, and path is the relative path of a file inside
-          // the subdirectory.  Prepend the subdirectory name to the
-          // path: ["bar", "baz.js"] => ["foo", "bar", "baz.js"]
-          path = path.slice(0);
-          path.unshift(f);
-          return path;
+        copied = copied.concat(_.map(subdir_paths, function (subpath) {
+          return path.join(f, subpath);
         }));
       }
       else {
@@ -334,7 +326,7 @@ var files = module.exports = {
           contents = options.transform_contents(contents, f);
           fs.writeFileSync(full_to, contents);
         }
-        copied.push([f]);
+        copied.push(f);
       }
     });
     return copied;
