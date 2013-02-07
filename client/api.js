@@ -654,10 +654,22 @@ Template.api.cursor_observe = {
   id: "observe",
   name: "<em>cursor</em>.observe(callbacks)",
   locus: "Anywhere",
-  descr: ["Watch a query.  Receive callbacks as the result set changes."],
+  descr: ["Watch a query.  Receive callbacks with full documents as the result set changes."],
   args: [
     {name: "callbacks",
-     type: "Object (may include <code>added</code>, <code>changed</code>, <code>moved</code>, and <code>removed</code> callbacks)",
+     type: "Object (may include {<code>added</code>, <code>addedAt</code>, <code>changed</code>, <code>changedAt</code>, <code>movedTo</code>, <code>removed</code>, <code>removedAt</code>} callbacks)",
+     descr: "Functions to call to deliver the result set as it changes"}
+  ]
+};
+
+Template.api.cursor_observe_changes = {
+  id: "observe_changes",
+  name: "<em>cursor</em>.observeChanges(callbacks)",
+  locus: "Anywhere",
+  descr: ["Watch a query.  Receive callbacks with only changed fields as the result set changes."],
+  args: [
+    {name: "callbacks",
+     type: "Object (may include {<code>added</code>, <code>addedBefore</code>, <code>changed</code>, <code>movedBefore</code>, <code>removed</code>} callbacks)",
      descr: "Functions to call to deliver the result set as it changes"}
   ]
 };
