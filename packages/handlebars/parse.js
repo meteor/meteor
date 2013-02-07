@@ -76,7 +76,7 @@ Handlebars.to_json_ast = function (code) {
 
     var choices = {
       ID: function (node) {return identifier(node);},
-      STRING: function (node) {return ''+node.string;},
+      STRING: function (node) {return node.string;},
       INTEGER: function (node) {return +node.integer;},
       BOOLEAN: function (node) {return (node.bool === 'true');}
     };
