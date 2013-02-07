@@ -7,10 +7,20 @@ var makeCollection = function () {
     return new Meteor.Collection(null);
 };
 
-_.each (['added', 'addedBefore'], function (added) {
-  Tinytest.addAsync("observeChanges - single id - basics " + added, function (test, onComplete) {
+_.each ([{added:'added', forceOrdered: true},
+         {added:'added', forceOrdered: false},
+         {added: 'addedBefore', forceOrdered: false}], function (options) {
+           var added = options.added;
+           var forceOrdered = options.forceOrdered;
+  Tinytest.addAsync("observeChanges - single id - basics "
+                    + added
+                    + (forceOrdered ? " force ordered" : ""),
+                    function (test, onComplete) {
     var c = makeCollection();
     var counter = 0;
+    var callbacks = [added, "changed", "removed"];
+    if (forceOrdered)
+      callbacks.push("movedBefore");
     withCallbackLogger(test,
                        [added, "changed", "removed"],
                        Meteor.isServer,

@@ -149,7 +149,7 @@ LocalCollection._diffQueryOrderedChanges = function (old_results, new_results, o
 
   _.each(old_results, function (doc) {
     if (!new_presence_of_id[doc._id])
-      observer.removed(doc._id);
+      observer.removed && observer.removed(doc._id);
   });
   // for each group of things in the new_results that is anchored by an unmoved
   // element, iterate through the things before it.
@@ -164,15 +164,16 @@ LocalCollection._diffQueryOrderedChanges = function (old_results, new_results, o
       if (!_.has(old_index_of_id, newDoc._id)) {
         fields = EJSON.clone(newDoc);
         delete fields._id;
-        observer.addedBefore(newDoc._id, fields, groupId);
+        observer.addedBefore && observer.addedBefore(newDoc._id, fields, groupId);
+        observer.added && observer.added(newDoc._id, fields);
       } else {
         // moved
         oldDoc = old_results[old_index_of_id[newDoc._id]];
         fields = LocalCollection._makeChangedFields(newDoc, oldDoc);
         if (!_.isEmpty(fields)) {
-          observer.changed(newDoc._id, fields);
+          observer.changed && observer.changed(newDoc._id, fields);
         }
-        observer.movedBefore(newDoc._id, groupId);
+        observer.movedBefore && observer.movedBefore(newDoc._id, groupId);
       }
     }
     if (groupId) {
@@ -180,7 +181,7 @@ LocalCollection._diffQueryOrderedChanges = function (old_results, new_results, o
       oldDoc = old_results[old_index_of_id[newDoc._id]];
       fields = LocalCollection._makeChangedFields(newDoc, oldDoc);
       if (!_.isEmpty(fields)) {
-        observer.changed(newDoc._id, fields);
+        observer.changed && observer.changed(newDoc._id, fields);
       }
     }
     startOfGroup = endOfGroup+1;

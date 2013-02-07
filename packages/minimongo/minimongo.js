@@ -180,6 +180,13 @@ LocalCollection.Cursor.prototype.count = function () {
   return self.db_objects.length;
 };
 
+LocalCollection._isOrderedChanges = function (callbacks) {
+  if (callbacks.added && callbacks.addedBefore)
+    throw new Error("Please specify only one of added() and addedBefore()");
+  return typeof callbacks.addedBefore == 'function' ||
+    typeof callbacks.movedBefore === 'function';
+};
+
 // the handle that comes back from observe.
 LocalCollection.LiveResultsSet = function () {};
 
@@ -212,7 +219,7 @@ _.extend(LocalCollection.Cursor.prototype, {
   observeChanges: function (options) {
     var self = this;
 
-    var ordered = typeof options.addedBefore == 'function' || typeof options.movedBefore === 'function';
+    var ordered = LocalCollection._isOrderedChanges(options);
 
     if (!ordered && (self.skip || self.limit))
       throw new Error("must use ordered observe with skip or limit");
@@ -258,8 +265,7 @@ _.extend(LocalCollection.Cursor.prototype, {
         delete fields._id;
         if (ordered)
           query.addedBefore(doc._id, fields, null);
-        else
-          query.added(doc._id, fields);
+        query.added(doc._id, fields);
       });
     }
 
@@ -551,6 +557,7 @@ LocalCollection._insertInResults = function (query, doc) {
         next = null;
       query.addedBefore(doc._id, fields, next);
     }
+    query.added(doc._id, fields);
   } else {
     query.added(doc._id, fields);
     query.results[LocalCollection._idStringify(doc._id)] = doc;
@@ -788,6 +795,12 @@ LocalCollection._makeChangedFields = function (newDoc, oldDoc) {
 };
 
 LocalCollection._observeFromObserveChanges = function (cursor, callbacks) {
+  if (callbacks.addedAt && callbacks.added)
+    throw new Error("Please sepecify only one of added() and addedAt()");
+  if (callbacks.changedAt && callbacks.changed)
+    throw new Error("Please specify only one of changed() and changedAt()");
+  if (callbacks.removed && callbacks.removedAt)
+    throw new Error("Please specify only one of removed() and removedAt()");
   if (callbacks.addedAt || callbacks.movedTo ||
       callbacks.changedAt || callbacks.removedAt)
     return LocalCollection._observeOrderedFromObserveChanges(cursor, callbacks);

@@ -369,8 +369,7 @@ Cursor.prototype.observe = function (callbacks) {
 
 Cursor.prototype.observeChanges = function (callbacks) {
   var self = this;
-  var ordered = typeof callbacks.addedBefore === 'function'
-        || typeof callbacks.movedBefore === 'function';
+  var ordered = LocalCollection._isOrderedChanges(callbacks);
   return self._mongo._observeChanges(
     self._cursorDescription, ordered, callbacks);
 };
@@ -768,10 +767,12 @@ _.extend(LiveResultsSet.prototype, {
         _.each(self._results, function (doc, i) {
           var fields = EJSON.clone(doc);
           delete fields._id;
-          if (self._ordered)
-            handle._addedBefore(doc._id, fields, null);
-          else
+          if (self._ordered) {
+            handle._added && handle._added(doc._id, fields);
+            handle._addedBefore && handle._addedBefore(doc._id, fields, null);
+          } else {
             handle._added(doc._id, fields);
+          }
         });
       }
     });

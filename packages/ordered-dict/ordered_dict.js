@@ -74,6 +74,8 @@
     },
     putBefore: function (key, item, before) {
       var self = this;
+      if (self._dict[self._k(key)])
+        throw new Error("Item " + key + " already present in OrderedDict");
       var elt = before ?
             element(key, item, self._dict[self._k(before)]) :
             element(key, item, null);
