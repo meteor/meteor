@@ -250,6 +250,13 @@ var VALUE_OPERATORS = {
     if (options !== undefined) {
       // Options passed in $options (even the empty string) always overrides
       // options in the RegExp object itself.
+
+      // Be clear that we only support the JS-supported options, not extended
+      // ones (eg, Mongo supports x and s). Ideally we would implement x and s
+      // by transforming the regexp, but not today...
+      if (/[^gim]/.test(options))
+        throw new Error("Only the i, m, and g regexp options are supported");
+
       var regexSource = operand instanceof RegExp ? operand.source : operand;
       operand = new RegExp(regexSource, options);
     } else if (!(operand instanceof RegExp)) {

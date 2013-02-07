@@ -320,3 +320,9 @@
 <template name="test_constant_text_a0">
   <div><p>preserved P:{{v}}</p>{{#constant}}text{{/constant}}</div>
 </template>
+
+
+<!-- Test for Issue 617 - Type casting for helpers -->
+<template name="test_type_casting">
+{{testTypeCasting 'true' 'false' true false 0 1 -1 10 -10 1asdf -1asdf}}
+</template>
