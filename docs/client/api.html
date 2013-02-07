@@ -136,8 +136,8 @@ function is rerun with the new value.
 
 {{> api_box subscription_onStop}}
 
-If you call [`observe`](#observe) in your publish handler, this
-is the place to stop the observes.
+If you call [`observe`](#observe) or [`observeChanges`](#observeChanges) in your
+publish handler, this is the place to stop the observes.
 
 {{> api_box subscription_stop}}
 
@@ -552,11 +552,11 @@ indexes in their client-side models anyway.
 
 {{> api_box find}}
 
-`find` returns a cursor.  It does not immediately access the database or
-return documents.  Cursors provide `fetch` to return all matching
-documents, `map` and `forEach` to iterate over all matching
-documents, and `observe` to register callbacks when the set of
-matching documents changes.
+`find` returns a cursor.  It does not immediately access the database or return
+documents.  Cursors provide `fetch` to return all matching documents, `map` and
+`forEach` to iterate over all matching documents, and `observe` and
+`observeChanges` to register callbacks when the set of matching documents
+changes.
 
 {{#warning}}
 Collection cursors are not query snapshots.  If the database changes
@@ -877,44 +877,101 @@ The `forEach`, `map`, or `fetch` methods can only be called once on a
 cursor.  To access the data in a cursor more than once, use `rewind` to
 reset the cursor.
 
-{{> api_box cursor_observe}}
+{{> api_box cursor_observe_changes}}
 
-Establishes a *live query* that notifies callbacks on any change to the
-query result.
+Establishes a *live query* that notifies callbacks on any change to the query
+result. `Cursor.observeChanges` gives you only the difference between the
+previous state of each document and the current state, and so is designed to
+work cleanly with the [`publish`](#meteor_publish) API.  It is more efficiently
+implemented than [`observe`](#cursor_observe).
 
 `callbacks` may have the following functions as properties:
 
 <dl class="callbacks">
-{{#dtdd "added(document, beforeIndex)"}}
-A new document entered the result set. It was inserted
-immediately before the document currently at the
-position `beforeIndex`. Or if it was inserted at the end
-of the list, `beforeIndex` will be equal to the (prior)
-length of the list.
+{{#dtdd "added(id, fields)"}}
+A new document entered the result set. It has the `id` and `fields`
+specified. `fields` contains all fields of the document excluding the `_id`
+field.
 {{/dtdd}}
 
-{{#dtdd "changed(newDocument, atIndex, oldDocument)"}}
-The contents of the document at position `atIndex`
-(`oldDocument`) changed to `newDocument`.
+{{#dtdd "addedBefore(id, fields, before)"}}
+A new document entered the ordered result set before the document with the id
+given by `before`. The `id` and `fields` arguments are the same as in `added`,
+above.
 {{/dtdd}}
 
-{{#dtdd "moved(document, oldIndex, newIndex)"}}
-A document changed its position in the result set,
-from `oldIndex` to `newIndex`. For your
-convenience, its current contents is `document`. This will
-only fire immediately after `changed`.
+{{#dtdd "changed(id, fields)"}}
+The contents of the document identified by `id` have changed.  For every changed
+field, `fields` contains its new value.  For every removed field, `fields`
+contains its key bound to `undefined`.  Unchanged fields are not mentioned.
 {{/dtdd}}
 
-{{#dtdd "removed(oldDocument, atIndex)"}}
-The document at position `atIndex`, which was previously
-`oldDocument`, is no longer in the result set.
+{{#dtdd "movedBefore(id, before)"}}
+A document identified by `id` changed its position in the ordered result set,
+and now appears before the document identified by `before`.
+{{/dtdd}}
+
+{{#dtdd "removed(id)"}}
+The document identified by `id` is no longer in the result set.
 {{/dtdd}}
 </dl>
 
-`added` will immediately be called as necessary to
-deliver the initial results of the query, if any.
+If you only provide callbacks where ordering does not matter, Meteor will
+process your `observeChanges` more efficiently.
 
-`observe` returns a live query handle, which is an object with a
+{{> api_box cursor_observe}}
+
+Establishes a *live query* that notifies callbacks on any change to the query
+result.  Provides the full document to the callbacks, and optionally index-based
+ordering information.  It is somewhat less efficient than
+[`observeChanges`](#cursor_observe_changes).
+
+`callbacks` may have the following functions as properties:
+
+<dl class="callbacks">
+
+{{#dtdd "added(document)"}}
+A new document entered the result set.
+{{/dtdd}}
+{{#dtdd "addedAt(document, atIndex, before)"}}
+A new document entered the result set. It was inserted immediately before the
+document with id `before` currently in the position `atIndex`. If it was inserted at
+the end of the results, `before` will be `null` and `atIndex` will be equal to the
+(prior) length of the result set.
+{{/dtdd}}
+
+{{#dtdd "changed(newDocument, oldDocument)"}}
+The contents of a document were previously `oldDocument` and are now
+`newDocument`.
+{{/dtdd}}
+{{#dtdd "changedAt(newDocument, oldDocument, atIndex)"}}
+The contents of a document in position `atIndex` were previously `oldDocument`
+and are now `newDocument`.
+{{/dtdd}}
+
+{{#dtdd "removed(oldDocument)"}}
+The document `oldDocument` is no longer in the result set.
+{{/dtdd}}
+{{#dtdd "removedAt(oldDocument, atIndex)"}}
+The document at position `atIndex`, which was previously
+`oldDocument`, is no longer in the result set.
+{{/dtdd}}
+
+{{#dtdd "movedTo(document, fromIndex, toIndex, before)"}}
+A document changed its position in the result set, from `fromIndex` to `toIndex`
+(which is before the document with id `before`). Its current contents is
+`document`.
+{{/dtdd}}
+</dl>
+
+If you only provide callbacks where ordering does not matter, Meteor will
+process your `observe` more efficiently.
+
+For both `observeChanges` and `observe`, `added`, `addedBefore`, or `addedAt`
+will immediately be called as necessary to deliver the initial results of the
+query, if any.
+
+`observe` and `observeChanges` return a live query handle, which is an object with a
 `stop` method.  Call this function with no arguments to stop calling
 the callback functions and tear down the query. **The query will run
 forever until you call this.**
@@ -924,8 +981,8 @@ Example:
     // Keep track of how many administrators are online.
     var count = 0;
     var query = Users.find({admin: true, onlineNow: true});
-    var handle = query.observe({
-      added: function (user) {
+    var handle = query.observeChanges({
+      added: function (id, user) {
         count++;
         console.log(user.name + " brings the total to " + count + " admins.");
       },
