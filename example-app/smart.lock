@@ -9,7 +9,10 @@
       "roles": {
         "path": "../roles"
       },
-      "router": {}
+      "router": {
+        "git": "https://github.com/tmeasday/meteor-router.git",
+        "branch": "ie-support"
+      }
     },
     "packages": {
       "roles": {
@@ -17,13 +20,18 @@
       },
       "router": {
         "git": "https://github.com/tmeasday/meteor-router.git",
-        "tag": "v0.3.4",
-        "commit": "8f0d5303de5b93771e91f21f818be27358c2fb30"
+        "branch": "ie-support",
+        "commit": "aeadbafea4746c53cd2e9a8ab242f528e6ad0d0d"
       },
       "page-js": {
-        "git": "https://github.com/tmeasday/meteor-page-js.git",
-        "tag": "v1.3.3",
-        "commit": "c1e9832af3fc2b2f5139a16d93a82ca6fa0655da"
+        "git": "https://github.com/tmeasday/meteor-page-js-ie-support.git",
+        "branch": "master",
+        "commit": "10946edeefb8b40c351bd5ce6c3a18665a05c623"
+      },
+      "HTML5-History-API": {
+        "git": "https://github.com/tmeasday/meteor-HTML5-History-API.git",
+        "branch": "master",
+        "commit": "0d250d8f8852ba2042f1b8ed39693e9cc89b8f58"
       }
     }
   }

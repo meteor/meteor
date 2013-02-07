@@ -7,6 +7,9 @@
     "roles": {
       "path": "../roles"
     },
-    "router": {}
+    "router": {
+      "git": "https://github.com/tmeasday/meteor-router.git",
+      "branch": "ie-support"
+    }
   }
 }
