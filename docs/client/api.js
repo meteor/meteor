@@ -654,7 +654,7 @@ Template.api.cursor_observe = {
   id: "observe",
   name: "<em>cursor</em>.observe(callbacks)",
   locus: "Anywhere",
-  descr: ["Watch a query.  Receive callbacks with full documents as the result set changes."],
+  descr: ["Watch a query.  Receive callbacks as the result set changes.  The full document is passed to the callbacks."],
   args: [
     {name: "callbacks",
      type: "Object (may include {<code>added</code>, <code>addedAt</code>, <code>changed</code>, <code>changedAt</code>, <code>movedTo</code>, <code>removed</code>, <code>removedAt</code>} callbacks)",
@@ -666,6 +666,10 @@ Template.api.cursor_observe_changes = {
   id: "observe_changes",
   name: "<em>cursor</em>.observeChanges(callbacks)",
   locus: "Anywhere",
+  descr: ["Watch a query.  Receive callbacks as the result set changes.  Only the differences between the old and new documents are passed to the callbacks."],
+
+The full document is passed to the callbacks."],
+
   descr: ["Watch a query.  Receive callbacks with only changed fields as the result set changes."],
   args: [
     {name: "callbacks",
