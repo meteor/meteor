@@ -77,13 +77,13 @@ Example:
       var self = this;
       var count = 0;
       var initializing = true;
-      var handle = Messages.find({roomId: roomId}).observe({
-        added: function (doc) {
+      var handle = Messages.find({roomId: roomId}).observeChanges({
+        added: function (id) {
           count++;
           if (!initializing)
             self.changed("counts", roomId, {count: count});
         },
-        removed: function (doc) {
+        removed: function (id) {
           count--;
           self.changed("counts", roomId, {count: count});
         }
