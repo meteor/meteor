@@ -403,7 +403,7 @@ _.extend(Bundle.prototype, {
       var name = '/' + hash + '.' + type;
       self.files.client_cacheable[name] = contents;
       self.manifest.push({
-        path: '/static_cacheable' + name,
+        path: 'static_cacheable' + name,
         where: 'client',
         type: type,
         cacheable: true,
@@ -535,16 +535,17 @@ _.extend(Bundle.prototype, {
           files.cp_r(path.join(project_dir, 'public'),
                      path.join(build_path, 'static'), {ignore: ignore_files});
 
-        _.each(copied, function (array_path) {
-          filepath = path.join.apply(null, [].concat(build_path, 'static', array_path));
+        _.each(copied, function (fs_relative_path) {
+          var filepath = path.join(build_path, 'static', fs_relative_path);
+          var normalized = fs_relative_path.split(path.sep).join('/');
           self.manifest.push({
             // path is normalized to use forward slashes, so deliberately
             // not using path.sep here
-            path: '/static/' + array_path.join('/'),
+            path: 'static/' + normalized,
             type: 'static',
             where: 'client',
             cacheable: false,
-            url: '/' + array_path.join('/'),
+            url: '/' + normalized,
             size: fs.statSync(filepath).size,
             hash: self._hash(fs.readFileSync(filepath))
           });
@@ -574,7 +575,7 @@ _.extend(Bundle.prototype, {
 
       self.manifest.push({
         // path is normalized to use forward slashes
-        path: '/static_cacheable' + file.split(path.sep).join('/'),
+        path: 'static_cacheable' + file.split(path.sep).join('/'),
         where: 'client',
         type: type,
         cacheable: true,
