@@ -654,7 +654,7 @@ Template.api.cursor_observe = {
   id: "observe",
   name: "<em>cursor</em>.observe(callbacks)",
   locus: "Anywhere",
-  descr: ["Watch a query.  Receive callbacks as the result set changes.  The full document is passed to the callbacks."],
+  descr: ["Watch a query.  Receive callbacks as the result set changes."],
   args: [
     {name: "callbacks",
      type: "Object",

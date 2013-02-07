@@ -882,13 +882,13 @@ reset the cursor.
 Establishes a *live query* that invokes callbacks when the result of
 the query changes. The callbacks receive the entire contents of the
 document that was affected, as well as its old contents, if
-applicable. If you only want to receive the fields that changed, see
+applicable. If you only need to receive the fields that changed, see
 [`observeChanges`](#cursor_observe_changes).
 
 `callbacks` may have the following functions as properties:
 
 <dl class="callbacks">
-<dt><span class="name">added(document)</span></dt>
+<dt><span class="name">added(document)</span> <span class="or">or</span></dt>
 <dt><span class="name">addedAt(document, atIndex, before)</span></dt>
 <dd>
 {{#better_markdown}}
@@ -899,7 +899,8 @@ is at the end of the results.
 {{/better_markdown}}
 </dd>
 
-<dt><span class="name">changed(newDocument, oldDocument)</span></dt>
+<dt><span class="name">changed(newDocument, oldDocument)
+    <span class="or">or</span></span></dt>
 <dt><span class="name">changedAt(newDocument, oldDocument, atIndex)</span></dt>
 <dd>
 {{#better_markdown}}
@@ -908,7 +909,8 @@ The contents of a document were previously `oldDocument` and are now
 {{/better_markdown}}
 </dd>
 
-<dt><span class="name">removed(oldDocument)</span></dt>
+<dt><span class="name">removed(oldDocument)</span>
+  <span class="or">or</span></dt>
 <dt><span class="name">removedAt(oldDocument, atIndex)</span></dt>
 <dd>
 {{#better_markdown}}
@@ -935,46 +937,62 @@ or more times to deliver the initial results of the query.
 the callback functions and tear down the query. **The query will run
 forever until you call this.**
 
+
 {{> api_box cursor_observe_changes}}
 
-Establishes a *live query* that notifies callbacks on any change to the query
-result. `Cursor.observeChanges` gives you only the difference between the
-previous state of each document and the current state, and so is designed to
-work cleanly with the [`publish`](#meteor_publish) API.  It is more efficiently
-implemented than [`observe`](#cursor_observe).
+Establishes a *live query* that invokes callbacks when the result of
+the query changes. In contrast to [`observe`](#cursor_observe),
+`observeChanges` provides only the difference between the old and new
+result set, not the entire contents of the document that changed.
 
 `callbacks` may have the following functions as properties:
 
-{{#dtdd "added(id, fields)"}}
+<dl class="callbacks">
+<dt><span class="name">added(id, fields)</span>
+  <span class="or">or</span></dt>
+<dt><span class="name">addedBefore(id, fields, before)</span></dt>
+<dd>
+{{#better_markdown}}
 A new document entered the result set. It has the `id` and `fields`
-specified. `fields` contains all fields of the document excluding the `_id`
-field.
-{{/dtdd}}
-
-{{#dtdd "addedBefore(id, fields, before)"}}
-A new document entered the ordered result set before the document with the id
-given by `before`. The `id` and `fields` arguments are the same as in `added`,
-above.
-{{/dtdd}}
+specified. `fields` contains all fields of the document excluding the
+`_id` field. The new document is before the document identified by
+`before`, or at the end if `before` is `null`.
+{{/better_markdown}}
+</dd>
 
 {{#dtdd "changed(id, fields)"}}
-The contents of the document identified by `id` have changed.  For every changed
-field, `fields` contains its new value.  For every removed field, `fields`
-contains its key bound to `undefined`.  Unchanged fields are not mentioned.
+The document identified by `id` has changed. `fields` contains the
+changed fields with their new values. If a field was removed from the
+document then it will be present in `fields` with a value of
+`undefined`.
 {{/dtdd}}
 
 {{#dtdd "movedBefore(id, before)"}}
-A document identified by `id` changed its position in the ordered result set,
+The document identified by `id` changed its position in the ordered result set,
 and now appears before the document identified by `before`.
 {{/dtdd}}
 
 {{#dtdd "removed(id)"}}
-The document identified by `id` is no longer in the result set.
+The document identified by `id` was removed from the result set.
 {{/dtdd}}
 </dl>
 
-If you only provide callbacks where ordering does not matter, Meteor will
-process your `observeChanges` more efficiently.
+`observeChanges` is significantly more efficient if you do not use
+`addedBefore` or `movedBefore`.
+
+Before `observeChanges` returns, `added` (or `addedAt`) will be called
+zero or more times to deliver the initial results of the query.
+
+`observeChanges` returns a live query handle, which is an object with
+a `stop` method.  Call this function with no arguments to stop calling
+the callback functions and tear down the query. **The query will run
+forever until you call this.**
+
+{{#note}}
+Unlike `observe`, `observeChanges` does not provide absolute position
+information (that is, `atIndex` positions rather than `before`
+positions.) This is for efficiency.
+{{/note}}
 
 Example:
 
