@@ -248,11 +248,18 @@ Template.api.subscription_ready = {
 };
 
 
+Template.api.subscription_error = {
+  id: "publish_error",
+  name: "<i>this</i>.error(error)",
+  locus: "Server",
+  descr: ["Call inside the publish function.  Stops this client's subscription, triggering a call on the client to the `onError` callback passed to [`Meteor.subscribe`](#meteor_subscribe), if any. If `error` is not a [`Meteor.Error`](#meteor_error), it will be mapped to `Meteor.Error(500, \"Internal server error\")`."]
+};
+
 Template.api.subscription_stop = {
   id: "publish_stop",
   name: "<i>this</i>.stop()",
   locus: "Server",
-  descr: ["Call inside the publish function.  Stops this client's subscription."]
+  descr: ["Call inside the publish function.  Stops this client's subscription; the `onError` callback is *not* invoked on the client."]
 };
 
 Template.api.subscription_onStop = {

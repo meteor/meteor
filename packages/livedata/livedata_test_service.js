@@ -20,6 +20,9 @@ Meteor.methods({
       e.expected = true;
       throw e;
     }
+  },
+  setUserId: function(userId) {
+    this.setUserId(userId);
   }
 });
 
@@ -142,9 +145,6 @@ if (Meteor.isServer) {
     });
 
     Meteor.methods({
-      setUserId: function(userId) {
-        this.setUserId(userId);
-      },
       userIdWhenStopped: function (key) {
         return userIdWhenStopped[key];
       }
@@ -230,6 +230,45 @@ if (Meteor.isServer) {
     runtimeUniversalSubCreation: function (token) {
       Meteor.publish(null, function () {
         this.added("runtimeSubCreation", token, {});
+      });
+    }
+  });
+}
+
+/// Helper for "livedata - publisher errors"
+
+if (Meteor.isServer) {
+  Meteor.publish("publisherErrors", function (collName, options) {
+    var sub = this;
+
+    // First add a random item, which should be cleaned up. We use ready/onReady
+    // to make sure that the second test block is only called after the added is
+    // processed, so that there's any chance of the coll.find().count() failing.
+    sub.added(collName, Meteor.id(), {foo: 42});
+    sub.ready();
+
+    if (options.stopInHandler) {
+      sub.stop();
+      return;
+    }
+
+    var error;
+    if (options.internalError) {
+      error = new Error("Egads!");
+      error.expected = true;  // don't log
+    } else {
+      error = new Meteor.Error(412, "Explicit error");
+    }
+    if (options.throwInHandler) {
+      throw error;
+    } else if (options.errorInHandler) {
+      sub.error(error);
+    } else if (options.throwWhenUserIdSet) {
+      if (sub.userId)
+        throw error;
+    } else if (options.errorLater) {
+      Meteor.defer(function () {
+        sub.error(error);
       });
     }
   });

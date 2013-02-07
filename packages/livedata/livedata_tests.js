@@ -430,6 +430,80 @@ if (Meteor.isClient) {
       }));
     }
   ]);
+
+  testAsyncMulti("livedata - publisher errors", (function () {
+    // Use a separate connection so that we can safely check to see if
+    // conn._subscriptions is empty.
+    var conn = new Meteor._LivedataConnection('/',
+                                              {reloadWithOutstanding: true});
+    var collName = Meteor.id();
+    var coll = new Meteor.Collection(collName, {manager: conn});
+    var errorFromRerun;
+    var gotErrorFromStopper = false;
+    return [
+      function (test, expect) {
+        var testSubError = function (options) {
+          conn.subscribe("publisherErrors", collName, options, {
+            onReady: expect(),
+            onError: expect(
+              failure(test,
+                      options.internalError ? 500 : 412,
+                      options.internalError ? "Internal server error"
+                                            : "Explicit error"))
+          });
+        };
+        testSubError({throwInHandler: true});
+        testSubError({throwInHandler: true, internalError: true});
+        testSubError({errorInHandler: true});
+        testSubError({errorInHandler: true, internalError: true});
+        testSubError({errorLater: true});
+        testSubError({errorLater: true, internalError: true});
+      },
+      function (test, expect) {
+        test.equal(coll.find().count(), 0);
+        test.equal(_.size(conn._subscriptions), 0);  // white-box test
+
+        conn.subscribe("publisherErrors",
+                       collName, {throwWhenUserIdSet: true}, {
+          onReady: expect(),
+          onError: function (error) {
+            errorFromRerun = error;
+          }
+        });
+      },
+      function (test, expect) {
+        // Because the last subscription is ready, we should have a document.
+        test.equal(coll.find().count(), 1);
+        test.isFalse(errorFromRerun);
+        test.equal(_.size(conn._subscriptions), 1);  // white-box test
+        conn.call('setUserId', 'bla', expect(function(){}));
+      },
+      function (test, expect) {
+        // Now that we've re-run, we should have stopped the subscription,
+        // gotten a error, and lost the document.
+        test.equal(coll.find().count(), 0);
+        test.isTrue(errorFromRerun);
+        test.instanceOf(errorFromRerun, Meteor.Error);
+        test.equal(errorFromRerun.error, 412);
+        test.equal(errorFromRerun.reason, "Explicit error");
+        test.equal(_.size(conn._subscriptions), 0);  // white-box test
+
+        conn.subscribe("publisherErrors", collName, {stopInHandler: true}, {
+          onError: function() { gotErrorFromStopper = true; }
+        });
+        // Call a method. This method won't be processed until the publisher's
+        // function returns, so blocking on it being done ensures that we've
+        // gotten the removed/nosub/etc.
+        conn.call('nothing', expect(function(){}));
+      },
+      function (test, expect) {
+        test.equal(coll.find().count(), 0);
+        // sub.stop does NOT call onError.
+        test.isFalse(gotErrorFromStopper);
+        test.equal(_.size(conn._subscriptions), 0);  // white-box test
+        conn._stream.forceDisconnect();
+      }
+    ];})());
 }
 
 // XXX some things to test in greater detail:

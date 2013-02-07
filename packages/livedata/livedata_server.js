@@ -522,7 +522,6 @@ _.extend(Meteor._LivedataSession.prototype, {
       var self = this;
 
       self._stopSubscription(msg.id);
-      self.send({msg: 'nosub', id: msg.id});
     },
 
     method: function (msg, unblock) {
@@ -598,16 +597,8 @@ _.extend(Meteor._LivedataSession.prototype, {
       fence.arm(); // we're done adding writes to the fence
       unblock(); // unblock, if the method hasn't done it already
 
-      // "blind" exceptions other than those that were deliberately
-      // thrown to signal errors to the client
-      if (exception && !(exception instanceof Meteor.Error)) {
-        // tests can set the 'expected' flag on an exception so it
-        // won't go to the server log
-        if (!exception.expected)
-          Meteor._debug("Exception while invoking method '" +
-                        msg.method + "'", exception.stack);
-        exception = new Meteor.Error(500, "Internal server error");
-      }
+      exception = wrapInternalException(
+        exception, "while invoking method '" + msg.method + "'");
 
       // send response and add to cache
       var payload =
@@ -679,6 +670,8 @@ _.extend(Meteor._LivedataSession.prototype, {
 
     _.each(oldNamedSubs, function (sub, subscriptionId) {
       self._namedSubs[subscriptionId] = sub._recreate();
+      // nb: if the handler throws or calls this.error(), it will in fact
+      // immediately send its 'nosub'. This is OK, though.
       self._namedSubs[subscriptionId]._runHandler();
     });
 
@@ -720,7 +713,7 @@ _.extend(Meteor._LivedataSession.prototype, {
   },
 
   // tear down specified subscription
-  _stopSubscription: function (subId) {
+  _stopSubscription: function (subId, error) {
     var self = this;
 
     if (subId && self._namedSubs[subId]) {
@@ -728,10 +721,17 @@ _.extend(Meteor._LivedataSession.prototype, {
       self._namedSubs[subId]._deactivate();
       delete self._namedSubs[subId];
     }
+
+    var response = {msg: 'nosub', id: subId};
+
+    if (error)
+      response.error = wrapInternalException(error, "from sub " + subId);
+
+    self.send(response);
   },
 
-  // tear down all subscriptions. Note that this does NOT send removed messages,
-  // since we assume the client is gone.
+  // tear down all subscriptions. Note that this does NOT send removed or nosub
+  // messages, since we assume the client is gone.
   _deactivateAllSubscriptions: function () {
     var self = this;
 
@@ -810,11 +810,9 @@ _.extend(Meteor._LivedataSubscription.prototype, {
   _runHandler: function () {
     var self = this;
     try {
-      var res = self._handler.apply(
-        self, EJSON.clone(self._params));
+      var res = self._handler.apply(self, EJSON.clone(self._params));
     } catch (e) {
-      Meteor._debug("Internal exception while starting subscription",
-                    self._subscriptionHandle, e.stack);
+      self.error(e);
       return;
     }
 
@@ -883,6 +881,20 @@ _.extend(Meteor._LivedataSubscription.prototype, {
     var self = this;
     return new Meteor._LivedataSubscription(
       self._session, self._handler, self._subscriptionId, self._params);
+  },
+
+  error: function (error) {
+    var self = this;
+    self._session._stopSubscription(self._subscriptionId, error);
+  },
+
+  // Note that while our DDP client will notice that you've called stop() on the
+  // server (and clean up its _subscriptions table) we don't actually provide a
+  // mechanism for an app to notice this (the subscribe onError callback only
+  // triggers if there is an error).
+  stop: function () {
+    var self = this;
+    self._session._stopSubscription(self._subscriptionId);
   },
 
   onStop: function (callback) {
@@ -1244,5 +1256,19 @@ Meteor._LivedataServer._calculateVersion = function (clientSupportedVersions,
   }
   return correctVersion;
 };
+
+// "blind" exceptions other than those that were deliberately thrown to signal
+// errors to the client
+var wrapInternalException = function (exception, context) {
+  if (!exception || exception instanceof Meteor.Error)
+    return exception;
+
+  // tests can set the 'expected' flag on an exception so it won't go to the
+  // server log
+  if (!exception.expected)
+    Meteor._debug("Exception " + context, exception.stack);
+  return new Meteor.Error(500, "Internal server error");
+};
+
 
 })();

@@ -106,6 +106,7 @@ var toc = [
         {instance: "this", name: "removed", id: "publish_removed"},
         {instance: "this", name: "ready", id: "publish_ready"},
         {instance: "this", name: "onStop", id: "publish_onstop"},
+        {instance: "this", name: "error", id: "publish_error"},
         {instance: "this", name: "stop", id: "publish_stop"}
       ],
       "Meteor.subscribe"
