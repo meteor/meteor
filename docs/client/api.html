@@ -877,6 +877,64 @@ The `forEach`, `map`, or `fetch` methods can only be called once on a
 cursor.  To access the data in a cursor more than once, use `rewind` to
 reset the cursor.
 
+{{> api_box cursor_observe}}
+
+Establishes a *live query* that invokes callbacks when the result of
+the query changes. The callbacks receive the entire contents of the
+document that was affected, as well as its old contents, if
+applicable. If you only want to receive the fields that changed, see
+[`observeChanges`](#cursor_observe_changes).
+
+`callbacks` may have the following functions as properties:
+
+<dl class="callbacks">
+<dt><span class="name">added(document)</span></dt>
+<dt><span class="name">addedAt(document, atIndex, before)</span></dt>
+<dd>
+{{#better_markdown}}
+A new document `document` entered the result set. The new document
+appears at position `atIndex`. It is immediately before the document
+whose `_id` is `before`. `before` will be `null` if the new document
+is at the end of the results.
+{{/better_markdown}}
+</dd>
+
+<dt><span class="name">changed(newDocument, oldDocument)</span></dt>
+<dt><span class="name">changedAt(newDocument, oldDocument, atIndex)</span></dt>
+<dd>
+{{#better_markdown}}
+The contents of a document were previously `oldDocument` and are now
+`newDocument`. The position of the changed document is `atIndex`.
+{{/better_markdown}}
+</dd>
+
+<dt><span class="name">removed(oldDocument)</span></dt>
+<dt><span class="name">removedAt(oldDocument, atIndex)</span></dt>
+<dd>
+{{#better_markdown}}
+The document `oldDocument` is no longer in the result set. It used to be at position `atIndex`.
+{{/better_markdown}}
+</dd>
+
+{{#dtdd "movedTo(document, fromIndex, toIndex, before)"}}
+A document changed its position in the result set, from `fromIndex` to `toIndex`
+(which is before the document with id `before`). Its current contents is
+`document`.
+{{/dtdd}}
+</dl>
+
+Use `added`, `changed`, and `removed` when you don't care about the
+order of the documents in the result set. They are more efficient than
+`addedAt`, `changedAt`, and `removedAt`.
+
+Before `observe` returns, `added` (or `addedAt`) will be called zero
+or more times to deliver the initial results of the query.
+
+`observe` returns a live query handle, which is an object with a
+`stop` method.  Call this function with no arguments to stop calling
+the callback functions and tear down the query. **The query will run
+forever until you call this.**
+
 {{> api_box cursor_observe_changes}}
 
 Establishes a *live query* that notifies callbacks on any change to the query
@@ -887,7 +945,6 @@ implemented than [`observe`](#cursor_observe).
 
 `callbacks` may have the following functions as properties:
 
-<dl class="callbacks">
 {{#dtdd "added(id, fields)"}}
 A new document entered the result set. It has the `id` and `fields`
 specified. `fields` contains all fields of the document excluding the `_id`
@@ -918,63 +975,6 @@ The document identified by `id` is no longer in the result set.
 
 If you only provide callbacks where ordering does not matter, Meteor will
 process your `observeChanges` more efficiently.
-
-{{> api_box cursor_observe}}
-
-Establishes a *live query* that notifies callbacks on any change to the query
-result.  Provides the full document to the callbacks, and optionally index-based
-ordering information.  It is somewhat less efficient than
-[`observeChanges`](#cursor_observe_changes).
-
-`callbacks` may have the following functions as properties:
-
-<dl class="callbacks">
-
-{{#dtdd "added(document)"}}
-A new document entered the result set.
-{{/dtdd}}
-{{#dtdd "addedAt(document, atIndex, before)"}}
-A new document entered the result set. It was inserted immediately before the
-document with id `before` currently in the position `atIndex`. If it was inserted at
-the end of the results, `before` will be `null` and `atIndex` will be equal to the
-(prior) length of the result set.
-{{/dtdd}}
-
-{{#dtdd "changed(newDocument, oldDocument)"}}
-The contents of a document were previously `oldDocument` and are now
-`newDocument`.
-{{/dtdd}}
-{{#dtdd "changedAt(newDocument, oldDocument, atIndex)"}}
-The contents of a document in position `atIndex` were previously `oldDocument`
-and are now `newDocument`.
-{{/dtdd}}
-
-{{#dtdd "removed(oldDocument)"}}
-The document `oldDocument` is no longer in the result set.
-{{/dtdd}}
-{{#dtdd "removedAt(oldDocument, atIndex)"}}
-The document at position `atIndex`, which was previously
-`oldDocument`, is no longer in the result set.
-{{/dtdd}}
-
-{{#dtdd "movedTo(document, fromIndex, toIndex, before)"}}
-A document changed its position in the result set, from `fromIndex` to `toIndex`
-(which is before the document with id `before`). Its current contents is
-`document`.
-{{/dtdd}}
-</dl>
-
-If you only provide callbacks where ordering does not matter, Meteor will
-process your `observe` more efficiently.
-
-For both `observeChanges` and `observe`, `added`, `addedBefore`, or `addedAt`
-will immediately be called as necessary to deliver the initial results of the
-query, if any.
-
-`observe` and `observeChanges` return a live query handle, which is an object with a
-`stop` method.  Call this function with no arguments to stop calling
-the callback functions and tear down the query. **The query will run
-forever until you call this.**
 
 Example:
 

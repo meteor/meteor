@@ -657,7 +657,7 @@ Template.api.cursor_observe = {
   descr: ["Watch a query.  Receive callbacks as the result set changes.  The full document is passed to the callbacks."],
   args: [
     {name: "callbacks",
-     type: "Object (may include {<code>added</code>, <code>addedAt</code>, <code>changed</code>, <code>changedAt</code>, <code>movedTo</code>, <code>removed</code>, <code>removedAt</code>} callbacks)",
+     type: "Object",
      descr: "Functions to call to deliver the result set as it changes"}
   ]
 };
@@ -669,7 +669,7 @@ Template.api.cursor_observe_changes = {
   descr: ["Watch a query.  Receive callbacks as the result set changes.  Only the differences between the old and new documents are passed to the callbacks."],
   args: [
     {name: "callbacks",
-     type: "Object (may include {<code>added</code>, <code>addedBefore</code>, <code>changed</code>, <code>movedBefore</code>, <code>removed</code>} callbacks)",
+     type: "Object",
      descr: "Functions to call to deliver the result set as it changes"}
   ]
 };
