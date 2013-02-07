@@ -1028,8 +1028,7 @@ Tinytest.add('templating - helper typecast Issue #617', function (test) {
       "[number,0][number,1][number,-1][number,10][number,-10]" +
       // errors
       "[undefined,undefined][undefined,undefined]" +
-      // for some reason handlebars has an extra argument. this is an
-      // internal detail. if it changes, just change this test.
+      // handlebars 'options' argument. appended to args of all helpers.
       "[object]");
 });
 
