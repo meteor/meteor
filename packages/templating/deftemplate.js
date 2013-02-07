@@ -181,13 +181,17 @@
 
 
     if (name) {
+      var original;
+
       if (Template[name])
-        throw new Error("There are multiple templates named '" + name +
-                        "'. Each template needs a unique name.");
+        original = Template[name];
 
       Template[name] = partial;
       _.extend(partial, Meteor._template_decl_methods);
       partial._tmpl_data = {};
+
+      if (original)
+        _.extend(Template[name], original);
 
       Meteor._partials[name] = partial;
     }
