@@ -21,3 +21,15 @@ Package.on_use(function (api) {
 // making it the default default, providing the compiler code,
 // depending on the node package (or packaging the compiler
 // ourselves..)
+Package.on_test(function (api) {
+  api.use(['tinytest', 
+           'test-helpers', 
+           'session', 
+           'templating',
+           'mongo-livedata']);
+  
+  api.add_files(['handlebars-client_tests.html',
+                 'handlebars-client_tests.js',
+                 ], 'client');
+
+});

@@ -65,11 +65,18 @@ Handlebars.to_json_ast = function (code) {
   };
 
   var value = function (node) {
+    //Work around handlebars.js Issue #422 - Negative integers for helpers get trapped as ID
+    if (node.type == 'ID' && node.string.slice(0,1) == '-' && !isNaN(node.string)) { //node.string eg. '-10'
+      //Reconstruct node
+      node.type = 'INTEGER';
+      node.integer = node.string;
+    } //EO Workaround handlebars.js Issue #422
+
     var choices = {
       ID: function (node) {return identifier(node);},
-      STRING: function (node) {return node.string;},
-      INTEGER: function (node) {return node.integer;},
-      BOOLEAN: function (node) {return node.bool;},
+      STRING: function (node) {return ''+node.string;},
+      INTEGER: function (node) {return +node.integer;},
+      BOOLEAN: function (node) {return (node.bool === 'true');},
     };
     if (!(node.type in choices))
       throw new Error("got ast node " + node.type + " for value");
