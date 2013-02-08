@@ -17,8 +17,9 @@
           "from": "mkdirp@0.3.x"
         },
         "debug": {
-          "version": "0.7.0",
-          "from": "debug@*"
+          "version": "0.7.2",
+          "from": "debug@*",
+          "resolved": "https://registry.npmjs.org/debug/-/debug-0.7.2.tgz"
         }
       }
     }
