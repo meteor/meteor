@@ -37,20 +37,20 @@ if (argv.help) {
   process.exit(1);
 }
 
-var CURRENT_VERSION = updater.CURRENT_VERSION;
+var ENGINE_VERSION = updater.ENGINE_VERSION;
 var files = UPDATE_FILES;
 
 if (argv.dev_bundle) {
   var version_path = path.join(__dirname, '..', 'meteor');
   var version_data = fs.readFileSync(version_path, 'utf8');
   var version_match = /BUNDLE_VERSION=([\d\.]+)/.exec(version_data);
-  CURRENT_VERSION = version_match[1];
+  ENGINE_VERSION = version_match[1];
   files = BUNDLE_FILES;
 }
 
-var NEW_VERSION = argv.new_version || semver.inc(CURRENT_VERSION, 'patch');
+var NEW_VERSION = argv.new_version || semver.inc(ENGINE_VERSION, 'patch');
 
-console.log("Updating from " + CURRENT_VERSION + " to " + NEW_VERSION);
+console.log("Updating from " + ENGINE_VERSION + " to " + NEW_VERSION);
 
 _.each(files, function (file) {
   var flags = '';
@@ -60,7 +60,7 @@ _.each(files, function (file) {
   }
   var fp = path.join(__dirname, '..', file);
   var text = fs.readFileSync(fp, 'utf8');
-  var new_text = text.replace(new RegExp(CURRENT_VERSION, flags), NEW_VERSION);
+  var new_text = text.replace(new RegExp(ENGINE_VERSION, flags), NEW_VERSION);
   fs.writeFileSync(fp, new_text, 'utf8');
 
   console.log("updated file: " + fp);
