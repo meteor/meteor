@@ -12,6 +12,8 @@ if [ "$TARGET_DIR" == "" ] ; then
     exit 1
 fi
 
+# Make sure that the entire contents $TARGET_DIR is what we placed
+# there
 if [ -e "$TARGET_DIR" ] ; then
     echo "$TARGET_DIR already exists"
     exit 1
