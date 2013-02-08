@@ -4,7 +4,7 @@
 ## know what shell the user has. Debian uses 'dash' for 'sh', for
 ## example.
 
-PREFIX="/usr"
+PREFIX="/usr/local"
 
 UNAME=`uname`
 if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
@@ -24,6 +24,29 @@ if [ "$UNAME" = "Darwin" ] ; then
     exit 1
   fi
   ARCH="x86_64"
+
+  # if /usr/local doesn't exist or isn't writable, fix it with sudo.
+  if [ ! -d "$PREFIX" ] ; then
+      echo
+      echo "$PREFIX does not exist. Creating it with 'sudo mkdir'."
+      echo "This may prompt for your password."
+      echo
+      sudo /bin/mkdir "$PREFIX"
+      sudo /usr/bin/chgrp admin "$PREFIX"
+      sudo /bin/chmod 775 "$PREFIX"
+  elif [ ! -w "$PREFIX" -o ! -w "$PREFIX/bin" ] ; then
+      echo
+      echo "The install script needs to change the permissions on $PREFIX so that"
+      echo "administrators can write to it. This may prompt for your password."
+      echo
+      sudo /usr/bin/chgrp admin "$PREFIX"
+      sudo /bin/chmod g+rwx "$PREFIX"
+      if [ -d "$PREFIX/bin" ] ; then
+          sudo /usr/bin/chgrp admin "$PREFIX/bin"
+          sudo /bin/chmod g+rwx "$PREFIX/bin"
+      fi
+  fi
+
 elif [ "$UNAME" = "Linux" ] ; then
   ### Linux ###
   ARCH=`uname -m`
@@ -58,7 +81,7 @@ sed 's/^X//' >meteor << 'END-of-meteor-bootstrap'
 SHARHERE
 END-of-meteor-bootstrap
 
-chmod 775 meteor
+chmod 755 meteor
 
 
 echo "Installing Meteor to $PREFIX/bin/meteor"
