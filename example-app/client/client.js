@@ -3,15 +3,22 @@
   "use strict";
 
 
-
 ////////////////////////////////////////////////////////////////////
 // Patches
 //
 
-if (!console || !console.log) {
-  // stub for IE
-  console = { log: function () {} };
+// stubs for IE
+if (!window.console) {
+  window.console = {}
 }
+if (!window.console.log) {
+  window.console.log = function (msg) {
+    $('#log').append('<br /><p>' + msg + '</p>')
+  };
+}
+
+
+
 
 // fix bootstrap dropdown unclickable issue on iOS
 // https://github.com/twitter/bootstrap/issues/4550
@@ -30,7 +37,6 @@ Meteor.subscribe('secrets');
 
 // users, for manage-users page
 Meteor.subscribe('users');
-
 
 
 
@@ -65,6 +71,7 @@ Meteor.Router.add({
   '/start': 'start',
   '/secrets': 'secrets',
   '/manage': 'manage',
+  '/signout': signout,
   '*': 'not_found'
 });
 
@@ -116,11 +123,7 @@ Template.signin.rendered = function () {
 
 Template.header.events({
   // template data, if any, is available in 'this'
-  'click a.nav-start' : handleNavClick,
-  'click a.nav-secrets' : handleNavClick,
-  'click a.nav-manage' : handleNavClick,
-  'click .btn-navbar' : openCloseNav,
-  'click .signout': signout
+  'click .btn-navbar' : openCloseNav
 });
 Template.header.helpers({
   displayName: function () {
@@ -162,17 +165,23 @@ Template.manage.helpers({
 //
 
 function displayName (user) {
+  var name;
+
   if (!user) {
     user = Meteor.user();
   }
-  
+
   if (!user) return "<missing user>";
 
   if (user.profile) {
     name = user.profile.name;
   }
 
-  name = name.trim();
+  if ('string' === typeof name) {
+    name = name.trim();
+  } else {
+    name = null;
+  }
 
   if (!name && user.emails && user.emails.length > 0) {
     name = user.emails[0].address;
@@ -182,30 +191,13 @@ function displayName (user) {
 }
 
 
-function handleNavClick (e) {
-  var user = Meteor.user(),
-      template;
-
-  e.preventDefault();
-
-  if (!user) return;
-
-  try {
-    // ex. ...class="nav-secrets"
-    template = e.target.className.substring(4);
-    console.log("You pressed the " + template + " button");
-    Meteor.Router.to('/' + template);
-  } 
-  catch (err) {
-    console.log(err);
-  }
-}
-
-function signout (e) {
-  e.preventDefault();
+function signout () {
   console.log('logging out...');
-  Meteor.logout();
-  Meteor.Router.to('/');
+  Meteor.logout(function () {
+    console.log('...done');
+    Meteor.Router.to('/');
+  });
+  
 }
 
 // insta-open/close nav rather than animate collapse.

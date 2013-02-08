@@ -9,7 +9,11 @@
 
 if (!console || !console.log) {
   // stub for IE
-  console = { log: function () {} };
+  console = { 
+    log: function (msg) {
+      $('#log').append(msg)
+    } 
+  };
 }
 
 

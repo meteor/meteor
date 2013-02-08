@@ -4,6 +4,8 @@
 
 <body>
   {{renderPage}}
+
+  <div id="log"></div>
 </body>
 
 <template name="signin">
@@ -54,19 +56,19 @@
         <div class="nav-collapse collapse">
           <ul class="nav">
 
-            <li><a class='nav-start' href="/start">Start Page</a></li>
+            <li><a href="/start">Start Page</a></li>
 
             {{#if isInRole 'admin,view-secrets'}}
-            <li><a class='nav-secrets' href="/secrets">Secrets</a></li>
+            <li><a href="/secrets">Secrets</a></li>
             {{/if}}
 
             <li class="dropdown pull-right">
-              <a href="#account" class="dropdown-toggle" data-toggle="dropdown">{{displayName}}<b class="caret"></b></a>
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown">{{displayName}}<b class="caret"></b></a>
               <ul class="dropdown-menu">
                 {{#if isInRole 'admin,manage-users'}}
-                <li><a class='nav-manage' href="/manage">Manage Users</a></li>
+                <li><a href="/manage">Manage Users</a></li>
                 {{/if}}
-                <li><a class="signout" href="#signout">Sign out</a></li>
+                <li><a class="signout" href="/signout">Sign out</a></li>
               </ul>
             </li>
 
@@ -90,7 +92,7 @@
       <p class="note">All logged-in users will see this page in their header nav.</p>
 
       <h2>Start Page</h2>
-      
+
       {{> noteOfTheDay}}
 
       <div>
