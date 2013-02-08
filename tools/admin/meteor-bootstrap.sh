@@ -18,7 +18,7 @@ if [ ! -x "$HOME/.meteor/meteor" ]; then
 
   UNAME=$(uname)
   if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
-      echo "Sorry, this OS is not supported."
+      echo "Sorry, this OS is not supported yet."
       exit 1
   fi
 
