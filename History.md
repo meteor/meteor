@@ -1,6 +1,11 @@
 
 ## vNEXT
 
+## v0.5.5
+
+* Some release notes go here.
+
+
 ## v0.5.4
 
 * Fix 0.5.3 regression: `meteor run` could fail on OSX 10.8 if environment
