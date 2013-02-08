@@ -16,39 +16,39 @@ set -e
 trap "echo Installation failed." EXIT
 
 if [ "$UNAME" = "Darwin" ] ; then
-    ### OSX ###
-    if [ "i386" != `uname -p` -o "1" != `sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0` ] ; then
-        # Can't just test uname -m = x86_64, because Snow Leopard can
-        # return other values.
-        echo "Only 64-bit Intel processors are supported at this time."
-        exit 1
-    fi
-    ARCH="x86_64"
+  ### OSX ###
+  if [ "i386" != `uname -p` -o "1" != `sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0` ] ; then
+    # Can't just test uname -m = x86_64, because Snow Leopard can
+    # return other values.
+    echo "Only 64-bit Intel processors are supported at this time."
+    exit 1
+  fi
+  ARCH="x86_64"
 elif [ "$UNAME" = "Linux" ] ; then
-    ### Linux ###
-    ARCH=`uname -m`
-    if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
-        echo "Unable to install Meteor on unsupported architecture: $ARCH"
-        exit 1
-    fi
+  ### Linux ###
+  ARCH=`uname -m`
+  if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
+    echo "Unable to install Meteor on unsupported architecture: $ARCH"
+    exit 1
+  fi
 fi
 
 do_with_root() {
-    # already have root. just do it.
-    if [ `whoami` = 'root' ] ; then
-        "$@"
-    elif [ -x /bin/sudo -o -x /usr/bin/sudo ] ; then
-        echo
-        echo "Since this system includes sudo, Meteor will request root privileges to"
-        echo "install. You may be prompted for a password. If you prefer to not use"
-        echo "sudo, please re-run this script as root."
-        echo "  sudo $*"
-        sudo "$@"
-    else
-        echo "Meteor requires root privileges to install. Please re-run this script as"
-        echo "root."
-        exit 1
-    fi
+  # already have root. just do it.
+  if [ `whoami` = 'root' ] ; then
+    "$@"
+  elif [ -x /bin/sudo -o -x /usr/bin/sudo ] ; then
+    echo
+    echo "Since this system includes sudo, Meteor will request root privileges to"
+    echo "install. You may be prompted for a password. If you prefer to not use"
+    echo "sudo, please re-run this script as root."
+    echo "  sudo $*"
+    sudo "$@"
+  else
+    echo "Meteor requires root privileges to install. Please re-run this script as"
+    echo "root."
+    exit 1
+  fi
 }
 
 TMPDIR=`mktemp -d -t meteor-install-XXXXXXX`
