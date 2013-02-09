@@ -711,7 +711,14 @@ Template.api.currentUser = {
   id: "template_currentuser",
   name: "{{currentUser}}",
   locus: "Handlebars templates",
-  descr: ["Calls [Meteor.user()](#meteor_user). Use `{{#if currentUser}}` to check whether the user is logged in."]
+  descr: ["Calls [Meteor.user()](#meteor_user). Use {{currentUser.username}} to display the logged in user's username."]
+};
+
+Template.api.isLoggedIn = {
+  id: "template_loggedinuser",
+  name: "{{isLoggedIn}}",
+  locus: "Handlebars templates",
+  descr: ["Returns true or false depending on whether the user is logged in. Use {{#if isLoggedIn}} to check if user is logged in. A reactive data source."]
 };
 
 Template.api.userId = {

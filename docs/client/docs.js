@@ -180,6 +180,7 @@ var toc = [
 
       {name: "{{currentUser}}", id: "template_currentuser"},
       {name: "{{loggingIn}}", id: "template_loggingin"},
+      {name: "{{isLoggedIn}}", id: "template_isloggedin"}
       {type: "spacer"},
 
       "Accounts.config",
