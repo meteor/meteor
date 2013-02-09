@@ -57,12 +57,13 @@ Template.api.absoluteUrl = {
 Template.api.settings = {
   id: "meteor_settings",
   name: "Meteor.settings",
-  locus: "Server",
+  locus: "Server and client",
   descr: ["`Meteor.settings` contains any deployment-specific options that were " +
           "provided using the `--settings` option for `meteor run` or `meteor deploy`. " +
           "If you provide the `--settings` option, `Meteor.settings` will be the " +
           "JSON object in the file you specify.  Otherwise, `Meteor.settings` will " +
-          "be an empty object."]
+          "be an empty object. If the object contains a key named `public`, then " +
+          "`Meteor.settings.public` will also be available on the client."]
 };
 
 Template.api.publish = {
