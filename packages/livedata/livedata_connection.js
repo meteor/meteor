@@ -476,19 +476,30 @@ _.extend(Meteor._LivedataConnection.prototype, {
         params: params,
         context: currentContext,
         ready: false,
+        readyListeners: Meteor.deps && new Meteor.deps._ContextSet,
         readyCallback: callbacks.onReady,
         errorCallback: callbacks.onError
       };
       self._send({msg: 'sub', id: id, name: name, params: params});
     }
 
-    // return an object with a stop method.
-    var handle = {stop: function () {
-      if (!_.has(self._subscriptions, id))
-        return;
-      self._send({msg: 'unsub', id: id});
-      delete self._subscriptions[id];
-    }};
+    // return a handle to the application.
+    var handle = {
+      stop: function () {
+        if (!_.has(self._subscriptions, id))
+          return;
+        self._send({msg: 'unsub', id: id});
+        delete self._subscriptions[id];
+      },
+      ready: function () {
+        // return false if we've unsubscribed.
+        if (!_.has(self._subscriptions, id))
+          return false;
+        var record = self._subscriptions[id];
+        record.readyListeners && record.readyListeners.addCurrentContext();
+        return record.ready;
+      }
+    };
 
     if (currentContext) {
       // We're in a reactive context, so we'd like to unsubscribe when the
@@ -1107,6 +1118,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
           return;
         subRecord.readyCallback && subRecord.readyCallback();
         subRecord.ready = true;
+        subRecord.readyListeners && subRecord.readyListeners.invalidateAll();
       });
     });
   },

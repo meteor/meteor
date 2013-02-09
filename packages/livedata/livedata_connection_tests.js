@@ -114,9 +114,18 @@ Tinytest.add("livedata stub - subscribe", function (test) {
   delete message.id;
   test.equal(message, {msg: 'sub', name: 'my_data', params: []});
 
+  var reactivelyReady = false;
+  var autorunHandle = Meteor.autorun(function () {
+    reactivelyReady = sub.ready();
+  });
+  test.isFalse(reactivelyReady);
+
   // get the sub satisfied. callback fires.
   stream.receive({msg: 'ready', 'subs': [id]});
   test.isTrue(callback_fired);
+  Meteor.flush();
+  test.isTrue(reactivelyReady);
+  autorunHandle.stop();
 
   // Unsubscribe.
   sub.stop();

@@ -21,7 +21,7 @@ Session.set('editing_itemname', null);
 
 // Subscribe to 'lists' collection on startup.
 // Select a list once data has arrived.
-Meteor.subscribe('lists', function () {
+var listsHandle = Meteor.subscribe('lists', function () {
   if (!Session.get('list_id')) {
     var list = Lists.findOne({}, {sort: {name: 1}});
     if (list)
@@ -29,11 +29,14 @@ Meteor.subscribe('lists', function () {
   }
 });
 
+var todosHandle = null;
 // Always be subscribed to the todos for the selected list.
 Meteor.autorun(function () {
   var list_id = Session.get('list_id');
   if (list_id)
-    Meteor.subscribe('todos', list_id);
+    todosHandle = Meteor.subscribe('todos', list_id);
+  else
+    todosHandle = null;
 });
 
 
@@ -72,6 +75,10 @@ var activateInput = function (input) {
 };
 
 ////////// Lists //////////
+
+Template.lists.loading = function () {
+  return !listsHandle.ready();
+};
 
 Template.lists.lists = function () {
   return Lists.find({}, {sort: {name: 1}});
@@ -128,6 +135,10 @@ Template.lists.editing = function () {
 };
 
 ////////// Todos //////////
+
+Template.todos.loading = function () {
+  return todosHandle && !todosHandle.ready();
+};
 
 Template.todos.any_list_selected = function () {
   return !Session.equals('list_id', null);
