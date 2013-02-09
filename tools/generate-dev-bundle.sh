@@ -35,8 +35,10 @@ elif [ "$UNAME" == "Darwin" ] ; then
 
     MONGO_OS="osx"
 
+    # We don't strip on Mac because we don't know a safe command. (Can't strip
+    # too much because we do need node to be able to load objects like
+    # fibers.node.)
     stripBinary() {
-        strip -u -r $1
     }
 else
     echo "This OS not yet supported"
