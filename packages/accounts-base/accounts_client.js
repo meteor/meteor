@@ -172,7 +172,7 @@
     });
   };
 
-  // If we're using Handlebars, register the {{currentUser}} and
+  // If we're using Handlebars, register the {{currentUser}}, {{isLoggedIn}} and
   // {{loggingIn}} global helpers.
   if (typeof Handlebars !== 'undefined') {
     Handlebars.registerHelper('currentUser', function () {
@@ -180,6 +180,9 @@
     });
     Handlebars.registerHelper('loggingIn', function () {
       return Meteor.loggingIn();
+    });
+    Handlebars.registerHelper('isLoggedIn', function () {
+      return !!Meteor.userId();
     });
   }
 
