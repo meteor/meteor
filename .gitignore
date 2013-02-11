@@ -1,5 +1,5 @@
 .DS_Store
-cache
+/.meteor
 *~
 /dev_bundle
 /dev_bundle*.tar.gz
