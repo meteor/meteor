@@ -249,9 +249,8 @@ _.each(["insert", "update", "remove"], function (name) {
         throw new Error("insert requires an argument");
       // shallow-copy the document and generate an ID
       args[0] = _.extend({}, args[0]);
-      if ('_id' in args[0])
-        throw new Error("Do not pass an _id to insert. Meteor will generate the _id for you.");
-      ret = args[0]._id = Meteor.uuid();
+      if (!('_id' in args[0])) args[0]._id = Meteor.uuid();
+      ret = args[0]._id;
     } else {
       args[0] = Meteor.Collection._rewriteSelector(args[0]);
     }
