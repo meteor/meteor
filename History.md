@@ -3,38 +3,65 @@
 
 ## v0.5.5
 
+* Deprecate `Meteor.autosubscribe`. Now `Meteor.autorun` works with
+  subscriptions. XXX text on no longer deduping?
+
 * If the JSON file you gave to `meteor --settings` includes a field called
   `public`, that field will be available on the client as well as the server.
 
-* @import in less now works properly.
+* @import in less now works properly. #203 XXX text on .lessimport
 
-* Use strings for Twitter IDs instead of numbers
+* Twitter API to 1.1. #527 XXX note upgrade by march 5. 
 
-* Minimongo selectors no longer rely on `eval`
+* Use strings for Twitter IDs instead of numbers. #629
+
+* Minimongo no longer relies on `eval` for selectors and sorting. #480
 
 * You can now specify the `_id` field of a document on insert.  Meteor will
   still fill it in if you don't.
 
-* Correctly terminate phantomjs on error when using the spiderable package.
+* Correctly terminate phantomjs on error when using the spiderable package. #571
+
+* Quiescence fixes. XXX better text. issue numbers? 5177e0ba1 #555
+
+* Set headers to not cache static assets. XXX more. #631
+
+* Pass correct types to handlebars helpers. #617
+
+* Fix race condition if server restarted between page load and ddp connection. #653.
+
+* add `expiresAt` to `services.facebook`. #576
+
+* Expose an `invalidated` flag on `Meteor.deps.Context`.
+
+* Fix automatic json parsing in `Meteor.http` on Firefox. #553
+
+* Update spark-standalone.sh. #587
+
+* Allow piping a password to deploy. #623
+
+* Serve 404 for `/app.manifest`. #628
 
 * Upgraded many dependencies, including:
   * node.js to version 0.8.18
-  * Fiber to version 1.0.0. XXX TEXT HERE ABOUT IT
-  * Twitter API to 1.1
+  * Fiber to version 1.0.0. XXX TEXT HERE ABOUT IT. breaking change.
   * useragent to version 2.0.1
-  * jquery-layout to version 1.3.0RC
+  * jquery-layout to version 1.3.0RC XXX breaking change for users?
   * Less to 1.3.3
   * Uglify to 2.2.3
   * to version 2.2.2 of Twitter Bootstrap.
 
-Patches contributed by github users Ed-von-Schleck, awwx, raix, timhaines,
-kevee, xenolf, crunchie84, bminer, Primigenus, danawoodman
+
+Patches contributed by github users: awwx, bminer, bramp, crunchie84,
+danawoodman, Ed-von-Schleck, kevee, milesmatthias, Primigenus, raix,
+timhaines, xenolf
 
 
 ## v0.5.4
 
 * Fix 0.5.3 regression: `meteor run` could fail on OSX 10.8 if environment
   variables such as `DYLD_LIBRARY_PATH` are set.
+
 
 ## v0.5.3
 
