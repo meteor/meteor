@@ -42,6 +42,8 @@
 
 * Serve 404 for `/app.manifest`. #628
 
+* Fix leaked global `userId`.
+
 * Upgraded many dependencies, including:
   * node.js to version 0.8.18
   * Fiber to version 1.0.0. XXX TEXT HERE ABOUT IT. breaking change.
