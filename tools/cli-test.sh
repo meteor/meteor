@@ -1,10 +1,15 @@
 #!/bin/bash
 
-# NOTE: by default this tests the working copy, not the installed meteor.
-# To test the installed meteor, pass in --global
+# NOTE: by default this tests the working copy, not the installed
+# meteor.  To test the installed meteor, pass in --global. To test a
+# version of meteor installed in a specific directory, set the
+# METEOR_DIR environment variable.
 
 cd `dirname $0`
-METEOR_DIR=`pwd`/..
+
+if [ -z "$METEOR_DIR" ]; then
+    METEOR_DIR=`pwd`/..
+fi
 METEOR=$METEOR_DIR/meteor
 
 if [ -z "$NODE" ]; then
@@ -135,7 +140,12 @@ sleep 2 # need to make sure these kills take effect
 
 echo "... test-packages"
 
-$METEOR test-packages -p $PORT >> $OUTPUT 2>&1 &
+if [ ! $TEST_INSTALLED_METEOR ]; then
+  $METEOR test-packages -p $PORT >> $OUTPUT 2>&1 &
+else
+  $METEOR test-packages --release=0.0.1 -p $PORT >> $OUTPUT 2>&1 &
+fi
+
 METEOR_PID=$!
 
 sleep 2 # XXX XXX lame
