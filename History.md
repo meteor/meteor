@@ -3,7 +3,32 @@
 
 ## v0.5.5
 
-* Some release notes go here.
+* If the JSON file you gave to `meteor --settings` includes a field called
+  `public`, that field will be available on the client as well as the server.
+
+* @import in less now works properly.
+
+* Use strings for Twitter IDs instead of numbers
+
+* Minimongo selectors no longer rely on `eval`
+
+* You can now specify the `_id` field of a document on insert.  Meteor will
+  still fill it in if you don't.
+
+* Correctly terminate phantomjs on error when using the spiderable package.
+
+* Upgraded many dependencies, including:
+  * node.js to version 0.8.18
+  * Fiber to version 1.0.0. XXX TEXT HERE ABOUT IT
+  * Twitter API to 1.1
+  * useragent to version 2.0.1
+  * jquery-layout to version 1.3.0RC
+  * Less to 1.3.3
+  * Uglify to 2.2.3
+  * to version 2.2.2 of Twitter Bootstrap.
+
+Patches contributed by github users Ed-von-Schleck, awwx, raix, timhaines,
+kevee, xenolf, crunchie84, bminer, Primigenus, danawoodman
 
 
 ## v0.5.4
@@ -512,4 +537,3 @@ Patches contributed by GitHub users fivethirty, tmeasday, and xenolf.
 ## v0.3.2
 
 * Initial public launch
-
