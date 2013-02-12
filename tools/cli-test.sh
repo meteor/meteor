@@ -33,6 +33,7 @@ set -e -x
 
 echo "... --help"
 
+$METEOR --version | grep "Engine version" >> $OUTPUT
 $METEOR --help | grep "List available" >> $OUTPUT
 $METEOR run --help | grep "Port to listen" >> $OUTPUT
 $METEOR test-packages --help | grep "Port to listen" >> $OUTPUT
@@ -73,6 +74,7 @@ cd .meteor
 
 echo "... add/remove/list"
 
+$METEOR --version | grep "Meteor release" >> $OUTPUT
 $METEOR list | grep "backbone" >> $OUTPUT
 ! $METEOR list --using 2>&1 | grep "backbone" >> $OUTPUT
 $METEOR add backbone 2>&1 | grep "backbone:" | grep -v "no such package" | >> $OUTPUT
