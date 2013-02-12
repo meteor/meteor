@@ -4,8 +4,10 @@
 set -e
 trap 'echo FAILED' EXIT
 
+METEOR_DIR=$(pwd)/..
+
 # run tests
-../../tools/node.sh test_bundler.js
+./node.sh $METEOR_DIR/lib/tests/test_bundler.js
 
 # cleanup trap, and print "SUCCESS"
 trap - EXIT
