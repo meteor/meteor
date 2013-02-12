@@ -164,17 +164,33 @@ collection name.
 The client will see a document if the document is currently in the published
 record set of any of its subscriptions.
 
-If more than one subscription sends conflicting values for a field (same
-collection name, document ID, and field name), then the value on the client will
-be one of the published values, chosen arbitrarily.
+The `onReady` callback is called with no arguments when the server
+[marks the subscription as ready](#publish_ready). The `onError` callback is
+called with a [`Meteor.Error`](#meteor_error) if the subscription fails or is
+terminated by the server.
 
-If you call [`Meteor.subscribe`](#meteor_subscribe) within a [reactive
-context](#reactivity) such as [`Meteor.autorun`](#meteor_autorun), the
-subscription will automatically be cancelled when the context is invalidated;
-it's not necessary to call `stop` on subscriptions made from inside
-`Meteor.autorun`. However, if the next iteration of your autorun function
-subscribes to the same record set (same name and parameters), Meteor is smart
-enough to skip a wasteful unsubscribe/resubscribe. For example:
+`Meteor.subscribe` returns a subscription handle, which is an object with the
+following methods:
+
+<dl class="callbacks">
+{{#dtdd "stop()"}}
+Cancel the subscription. This will typically result in the server directing the
+client to remove the subscription's data from the client's cache.
+{{/dtdd}}
+
+{{#dtdd "ready()"}}
+True if the server has [marked the subscription as ready](#publish_ready). A
+reactive data source.
+{{/dtdd}}
+</dl>
+
+If you call `Meteor.subscribe` within a [reactive context](#reactivity) such as
+[`Meteor.autorun`](#meteor_autorun), the subscription will automatically be
+cancelled when the context is invalidated; it's not necessary to call `stop` on
+subscriptions made from inside `Meteor.autorun`. However, if the next iteration
+of your autorun function subscribes to the same record set (same name and
+parameters), Meteor is smart enough to skip a wasteful
+unsubscribe/resubscribe. For example:
 
     Meteor.autorun(function () {
       Meteor.subscribe("chat", {room: Session.get("current-room")});
@@ -186,6 +202,10 @@ messages. When you change rooms by calling `Session.set("current-room",
 "new-room")`, Meteor will subscribe to the new room's chat messages,
 unsubscribe from the original room's chat messages, and continue to
 stay subscribed to your private messages.
+
+If more than one subscription sends conflicting values for a field (same
+collection name, document ID, and field name), then the value on the client will
+be one of the published values, chosen arbitrarily.
 
 <h2 id="methods_header"><span>Methods</span></h2>
 
