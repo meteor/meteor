@@ -2,6 +2,7 @@
 
 set -e
 set -u
+set -o pipefail  # so curl failure triggers the "set -e"
 
 # XXX this should be cloudfront, not test
 URLBASE='https://s3.amazonaws.com/com.meteor.static/test'
@@ -43,7 +44,7 @@ if [ ! -x "$HOME/.meteor/meteor" ]; then
   rm -rf "$TMPDIR"
   mkdir "$TMPDIR"
   echo 'This is your first time using Meteor! Downloading the engine now.'
-  curl --progress-bar \
+  curl --progress-bar --fail \
       "$URLBASE/meteor-engine-bootstrap-${UNAME}-${ARCH}.tar.gz" | \
     tar -xzf - -C "$TMPDIR"
   # bomb out if it didn't work, eg no net
