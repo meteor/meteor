@@ -64,9 +64,9 @@
   * Uglify to version 2.2.3
   * useragent to version 2.0.1
 
-Patches contributed by github users: awwx, bminer, bramp, crunchie84,
+Patches contributed by GitHub users awwx, bminer, bramp, crunchie84,
 danawoodman, dbimmler, Ed-von-Schleck, geoffd123, kevee, milesmatthias,
-Primigenus, raix, timhaines, xenolf
+Primigenus, raix, timhaines, and xenolf.
 
 
 ## v0.5.4
