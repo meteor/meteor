@@ -457,8 +457,8 @@ Template.api.meteor_collection = {
     {name: "idGeneration",
      type: "String",
      descr: "The method of generating the `_id` fields of new documents in this collection.  Possible values:\n\n" +
-     " - **`'STRING'`** random strings\n" +
-     " - **`'MONGO'`**  Mongo ObjectID values\n\n" +
+     " - **`'STRING'`**: random strings\n" +
+     " - **`'MONGO'`**:  random [`Meteor.Collection.ObjectID`](#collection_object_id) values\n\n" +
      "The default id generation technique is `'STRING'`."
     }
   ]
@@ -694,7 +694,7 @@ Template.api.collection_object_id = {
   id: "collection_object_id",
   name: "new Meteor.Collection.ObjectID(hexString)",
   locus: "Anywhere",
-  descr: ["Create a Mongo `ObjectID`.  If you don't specify a `hexString`, the `ObjectID` will be random on the client or semi-random according to MongoDB's ID construction rules on the server."],
+  descr: ["Create a Mongo-style `ObjectID`.  If you don't specify a `hexString`, the `ObjectID` will generated randomly (not using MongoDB's ID construction rules)."],
   args: [ {
     name: "hexString",
     type: "String",
