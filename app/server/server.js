@@ -4,6 +4,7 @@ var Fiber = require("fibers");
 
 var fs = require("fs");
 var path = require("path");
+var url = require("url");
 
 var connect = require('connect');
 var gzippo = require('gzippo');
@@ -43,14 +44,40 @@ var init_keepalive = function () {
   }, 3000);
 };
 
-var supported_browser = function (user_agent) {
+// e.g. "Mobile Safari" => "mobileSafari"
+var camelCase = function (name) {
+  var parts = name.split(' ');
+  parts[0] = parts[0].toLowerCase();
+  for (var i = 1;  i < parts.length;  ++i) {
+    parts[i] = parts[i].charAt(0).toUpperCase() + parts[i].substr(1);
+  }
+  return parts.join('');
+};
+
+var identifyBrowser = function (req) {
+  var userAgent = useragent.lookup(req.headers['user-agent']);
+  return {
+    name: camelCase(userAgent.family),
+    major: +userAgent.major,
+    minor: +userAgent.minor,
+    patch: +userAgent.patch
+  };
+};
+
+var categorizeRequest = function (req) {
+  return {
+    browser: identifyBrowser(req),
+    url: url.parse(req.url, true)
+  };
+};
+
+var supported_browser = function (browser) {
   return true;
 
   // For now, we don't actually deny anyone. The unsupported browser
   // page isn't very good.
   //
-  // var agent = useragent.lookup(user_agent);
-  // return !(agent.family === 'IE' && +agent.major <= 5);
+  // return !(browser.family === 'IE' && browser.major <= 5);
 };
 
 // add any runtime configuration options needed to app_html
@@ -65,6 +92,16 @@ var runtime_config = function (app_html) {
       JSON.stringify(__meteor_runtime_config__) + ";");
 
   return app_html;
+};
+
+var htmlAttributes = function (app_html, request) {
+  var attributes = '';
+  _.each(__meteor_bootstrap__.htmlAttributeHooks || [], function (hook) {
+    var attribute = hook(request);
+    if (attribute !== null && attribute !== undefined && attribute !== '')
+      attributes += ' ' + attribute;
+  });
+  return app_html.replace('##HTML_ATTRIBUTES##', attributes);
 };
 
 // Serve app HTML for this URL?
@@ -116,10 +153,12 @@ var run = function () {
   // start up app
 
   __meteor_bootstrap__ = {
-    require: require,
-    startup_hooks: [],
     app: app,
-    bundle: bundle
+    bundle: bundle,
+    categorizeRequest: categorizeRequest,
+    htmlAttributeHooks: [],
+    require: require,
+    startup_hooks: []
   };
 
   __meteor_runtime_config__ = {};
@@ -158,11 +197,18 @@ var run = function () {
       if (! appUrl(req.url))
         return next();
 
+      var request = categorizeRequest(req);
+
       res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
-      if (supported_browser(req.headers['user-agent']))
-        res.write(app_html);
-      else
+
+      if (! supported_browser(request.browser)) {
         res.write(unsupported_html);
+        res.end();
+        return;
+      }
+
+      var requestSpecificHtml = htmlAttributes(app_html, request);
+      res.write(requestSpecificHtml);
       res.end();
     });
 
