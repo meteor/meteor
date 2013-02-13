@@ -1034,25 +1034,6 @@ Example:
     // After five seconds, stop keeping the count.
     setTimeout(function () {handle.stop();}, 5000);
 
-{{> api_box id}}
-
-This returns a random text string such as ``"Jjwjg6gouWLXhMGKW"``
-that is likely to be unique in the whole world.
-
-Currently Meteor uses this function to generate `_id` fields for new Mongo
-documents by default. If your database requires native binary Mongo IDs instead,
-pass `"MONGO"` as the `idGeneration` option to
-[`Meteor.Collection`](#meteor_collection).
-
-
-{{#note}}
-
-In the current implementation, the returned string is derived from a
-pseudorandom number generator. The IDs generated definitely are not random
-enough to be used for cryptographic or security purposes.
-
-{{/note}}
-
 {{> api_box collection_object_id}}
 
 `Meteor.Collection.ObjectID` follows the same API as the [Node MongoDB driver
@@ -1500,7 +1481,7 @@ Example:
 
     // Support for playing D&D: Roll 3d6 for dexterity
     Accounts.onCreateUser(function(options, user) {
-      var d6 = function () { return Math.floor(Math.random() * 6) + 1; };
+      var d6 = function () { return Math.floor(Random.fraction() * 6) + 1; };
       user.dexterity = d6() + d6() + d6();
       // We still want the default hook's 'profile' behavior.
       if (options.profile)
