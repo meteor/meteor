@@ -19,8 +19,8 @@
   Meteor._srp.generateVerifier = function (password, options) {
     var params = paramsFromOptions(options);
 
-    var identity = (options && options.identity) || Meteor.uuid();
-    var salt = (options && options.salt) || Meteor.uuid();
+    var identity = (options && options.identity) || Random.id();
+    var salt = (options && options.salt) || Random.id();
 
     var x = params.hash(salt + params.hash(identity + ":" + password));
     var xi = new Meteor._srp.BigInteger(x, 16);

@@ -74,7 +74,7 @@ Tinytest.add("livedata stub - receive data", function (test) {
   startAndConnect(test, stream);
 
   // data comes in for unknown collection.
-  var coll_name = Meteor.uuid();
+  var coll_name = Random.id();
   stream.receive({msg: 'added', collection: coll_name, id: '1234',
                   fields: {a: 1}});
   // break throught the black box and test internal state
@@ -294,7 +294,7 @@ Tinytest.add("livedata stub - methods", function (test) {
 
   startAndConnect(test, stream);
 
-  var collName = Meteor.uuid();
+  var collName = Random.id();
   var coll = new Meteor.Collection(collName, {manager: conn});
 
   // setup method
@@ -436,7 +436,7 @@ Tinytest.add("livedata stub - methods calling methods", function (test) {
 
   startAndConnect(test, stream);
 
-  var coll_name = Meteor.uuid();
+  var coll_name = Random.id();
   var coll = new Meteor.Collection(coll_name, {manager: conn});
 
   // setup methods
@@ -521,7 +521,7 @@ Tinytest.add("livedata stub - reconnect", function (test) {
 
   startAndConnect(test, stream);
 
-  var collName = Meteor.uuid();
+  var collName = Random.id();
   var coll = new Meteor.Collection(collName, {manager: conn});
 
   var o = observeCursor(test, coll.find());
@@ -646,7 +646,7 @@ Tinytest.add("livedata stub - reconnect method which only got result", function 
   var conn = newConnection(stream);
   startAndConnect(test, stream);
 
-  var collName = Meteor.uuid();
+  var collName = Random.id();
   var coll = new Meteor.Collection(collName, {manager: conn});
   var o = observeCursor(test, coll.find());
 
@@ -819,7 +819,7 @@ Tinytest.add("livedata stub - reconnect method which only got data", function (t
   var conn = newConnection(stream);
   startAndConnect(test, stream);
 
-  var collName = Meteor.uuid();
+  var collName = Random.id();
   var coll = new Meteor.Collection(collName, {manager: conn});
   var o = observeCursor(test, coll.find());
 
@@ -906,7 +906,7 @@ Tinytest.add("livedata stub - multiple stubs same doc", function (test) {
   var conn = newConnection(stream);
   startAndConnect(test, stream);
 
-  var collName = Meteor.uuid();
+  var collName = Random.id();
   var coll = new Meteor.Collection(collName, {manager: conn});
   var o = observeCursor(test, coll.find());
 
@@ -991,7 +991,7 @@ Tinytest.add("livedata stub - unsent methods don't block quiescence", function (
   var conn = newConnection(stream);
   startAndConnect(test, stream);
 
-  var collName = Meteor.uuid();
+  var collName = Random.id();
   var coll = new Meteor.Collection(collName, {manager: conn});
 
   conn.methods({
@@ -1067,7 +1067,7 @@ Tinytest.add("livedata connection - two wait methods", function (test) {
   var conn = newConnection(stream);
   startAndConnect(test, stream);
 
-  var collName = Meteor.uuid();
+  var collName = Random.id();
   var coll = new Meteor.Collection(collName, {manager: conn});
 
   // setup method
@@ -1320,7 +1320,7 @@ Tinytest.add("livedata connection - onReconnect with sent messages", function(te
                    params: ['login'], id: '*'});
 
   // we connect.
-  stream.receive({msg: 'connected', session: Meteor.uuid()});
+  stream.receive({msg: 'connected', session: Random.id()});
   test.length(stream.sent, 0);
 
   // login got result (but not yet data)
@@ -1446,7 +1446,7 @@ Tinytest.add("livedata stub - stubs before connected", function (test) {
   var stream = new Meteor._StubStream();
   var conn = newConnection(stream);
 
-  var collName = Meteor.uuid();
+  var collName = Random.id();
   var coll = new Meteor.Collection(collName, {manager: conn});
 
   // Start and send "connect", but DON'T get 'connected' quite yet.

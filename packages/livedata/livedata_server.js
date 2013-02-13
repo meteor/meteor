@@ -201,7 +201,7 @@ _.extend(Meteor._SessionCollectionView.prototype, {
 
 Meteor._LivedataSession = function (server, version) {
   var self = this;
-  self.id = Meteor.uuid();
+  self.id = Random.id();
 
   self.server = server;
   self.version = version;

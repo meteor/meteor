@@ -545,7 +545,7 @@ if (Meteor.isServer) {
 
 testAsyncMulti('mongo-livedata - rewrite selector, ' + idGeneration, [
   function (test, expect) {
-    var collectionName = Meteor.uuid();
+    var collectionName = Random.id();
     if (Meteor.isClient) {
       Meteor.call('createInsecureCollection', collectionName, collectionOptions);
       Meteor.subscribe('c-' + collectionName);
@@ -583,7 +583,7 @@ testAsyncMulti('mongo-livedata - rewrite selector, ' + idGeneration, [
 
 testAsyncMulti('mongo-livedata - empty documents, ' + idGeneration, [
   function (test, expect) {
-    var collectionName = Meteor.uuid();
+    var collectionName = Random.id();
     if (Meteor.isClient) {
       Meteor.call('createInsecureCollection', collectionName);
       Meteor.subscribe('c-' + collectionName);
@@ -604,7 +604,7 @@ testAsyncMulti('mongo-livedata - empty documents, ' + idGeneration, [
 
 testAsyncMulti('mongo-livedata - document with a date, ' + idGeneration, [
   function (test, expect) {
-    var collectionName = Meteor.uuid();
+    var collectionName = Random.id();
     if (Meteor.isClient) {
       Meteor.call('createInsecureCollection', collectionName, collectionOptions);
       Meteor.subscribe('c-' + collectionName);
@@ -633,7 +633,7 @@ testAsyncMulti('mongo-livedata - document with binary data, ' + idGeneration, [
         "dCBpbiB0aGUgY29udGludWVkIGFuZCBpbmRlZmF0aWdhYmxlIGdl" +
         "bmVyYXRpb24gb2Yga25vd2xlZGdlLCBleGNlZWRzIHRoZSBzaG9y" +
         "dCB2ZWhlbWVuY2Ugb2YgYW55IGNhcm5hbCBwbGVhc3VyZS4=");
-    var collectionName = Meteor.uuid();
+    var collectionName = Random.id();
     if (Meteor.isClient) {
       Meteor.call('createInsecureCollection', collectionName, collectionOptions);
       Meteor.subscribe('c-' + collectionName);
@@ -658,7 +658,7 @@ testAsyncMulti('mongo-livedata - document with binary data, ' + idGeneration, [
 
 testAsyncMulti('mongo-livedata - specified _id', [
   function (test, expect) {
-    var collectionName = Meteor.uuid();
+    var collectionName = Random.id();
     if (Meteor.isClient) {
       Meteor.call('createInsecureCollection', collectionName);
       Meteor.subscribe('c-' + collectionName);

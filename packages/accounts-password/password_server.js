@@ -191,7 +191,7 @@
     if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
       throw new Error("No such email for user.");
 
-    var token = Meteor.uuid();
+    var token = Random.id();
     var when = +(new Date);
     Meteor.users.update(userId, {$set: {
       "services.password.reset": {
@@ -233,7 +233,7 @@
 
 
     var tokenRecord = {
-      token: Meteor.uuid(),
+      token: Random.id(),
       address: address,
       when: +(new Date)};
     Meteor.users.update(
@@ -268,7 +268,7 @@
       throw new Error("No such email for user.");
 
 
-    var token = Meteor.uuid();
+    var token = Random.id();
     var when = +(new Date);
     Meteor.users.update(userId, {$set: {
       "services.password.reset": {

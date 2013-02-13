@@ -45,7 +45,7 @@ if (Meteor.isServer) {
 }
 
 Tinytest.add("livedata - methods with colliding names", function (test) {
-  var x = Meteor.uuid();
+  var x = Random.id();
   var m = {};
   m[x] = function () {};
   Meteor.methods(m);
@@ -137,7 +137,7 @@ testAsyncMulti("livedata - basic method invocation", [
   function (test, expect) {
     if (Meteor.isClient) {
       // For test isolation
-      var token = Meteor.uuid();
+      var token = Random.id();
       Meteor.apply(
         "delayedTrue", [token], {wait: false}, expect(function(err, res) {
           test.equal(res, false);
@@ -149,7 +149,7 @@ testAsyncMulti("livedata - basic method invocation", [
   // test that `wait: true` is respected
   function(test, expect) {
     if (Meteor.isClient) {
-      var token = Meteor.uuid();
+      var token = Random.id();
       Meteor.apply(
         "delayedTrue", [token], {wait: true}, expect(function(err, res) {
           test.equal(res, true);
@@ -378,7 +378,7 @@ if (Meteor.isClient) {
         undoEavesdrop();
       });
     }, function(test, expect) {
-      var key = Meteor.uuid();
+      var key = Random.id();
       Meteor.subscribe("recordUserIdOnStop", key);
       Meteor.apply("setUserId", [100], {wait: true}, expect(function () {}));
       Meteor.apply("setUserId", [101], {wait: true}, expect(function () {}));
@@ -401,7 +401,7 @@ if (Meteor.isClient) {
   testAsyncMulti("livedata - overlapping universal subs", [
     function (test, expect) {
       var coll = new Meteor.Collection("overlappingUniversalSubs");
-      var token = Meteor.uuid();
+      var token = Random.id();
       test.isFalse(coll.findOne(token));
       Meteor.call("testOverlappingSubs", token, expect(function (err) {
         test.isFalse(err);
@@ -413,7 +413,7 @@ if (Meteor.isClient) {
   testAsyncMulti("livedata - runtime universal sub creation", [
     function (test, expect) {
       var coll = new Meteor.Collection("runtimeSubCreation");
-      var token = Meteor.uuid();
+      var token = Random.id();
       test.isFalse(coll.findOne(token));
       Meteor.call("runtimeUniversalSubCreation", token, expect(function (err) {
         test.isFalse(err);

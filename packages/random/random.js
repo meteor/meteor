@@ -1,7 +1,7 @@
 // XXX update these comments
 
 // Meteor.random() -- known good PRNG, replaces Math.random()
-// Meteor.uuid() -- returns RFC 4122 v4 UUID.
+// Random.id() -- returns RFC 4122 v4 UUID.
 
 // see http://baagoe.org/en/wiki/Better_random_numbers_for_javascript
 // for a full discussion and Alea implementation.

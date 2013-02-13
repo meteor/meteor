@@ -7,8 +7,8 @@
   // logging in and out, to protect multiple tabs running the same tests
   // simultaneously from interfering with each others' localStorage.
   Accounts._isolateLoginTokenForTest = function () {
-    loginTokenKey = loginTokenKey + Meteor.uuid();
-    userIdKey = userIdKey + Meteor.uuid();
+    loginTokenKey = loginTokenKey + Random.id();
+    userIdKey = userIdKey + Random.id();
   };
 
   Accounts._storeLoginToken = function(userId, token) {

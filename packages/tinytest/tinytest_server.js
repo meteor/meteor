@@ -38,7 +38,7 @@
                         "You probably forgot to wrap a callback in bindEnvironment.");
           console.trace();
         }
-        var dummyKey = Meteor.uuid();
+        var dummyKey = Random.id();
         var fields = {};
         fields[dummyKey] = report;
         _.each(handlesForRun[runId], function (handle) {

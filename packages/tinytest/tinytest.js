@@ -12,7 +12,7 @@ TestCaseResults = function (test_case, onEvent, onException, stop_at_offset) {
   self.current_fail_count = 0;
   self.stop_at_offset = stop_at_offset;
   self.onException = onException;
-  self.id = Meteor.uuid();
+  self.id = Random.id();
 };
 
 _.extend(TestCaseResults.prototype, {

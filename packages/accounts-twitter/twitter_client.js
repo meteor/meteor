@@ -13,7 +13,7 @@
       return;
     }
 
-    var state = Meteor.uuid();
+    var state = Random.id();
     // We need to keep state across the next two 'steps' so we're adding
     // a state parameter to the url and the callback url that we'll be returned
     // to by oauth provider
