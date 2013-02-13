@@ -145,15 +145,6 @@ Random.choice = function (arrayOrString) {
     return arrayOrString[index];
 };
 
-// XXX remove this soon
-Random._randomHexString = function (len) {
-  var digits = [];
-  for (var i = 0; i < len; i++) {
-    digits[i] = Random.choice(HEX_DIGITS);
-  }
-  return digits.join("");
-};
-
 // RFC 4122 v4 UUID.
 Meteor.uuid = function () {
   var s = [];
