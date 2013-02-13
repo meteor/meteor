@@ -985,7 +985,7 @@ Meteor._LivedataServer = function () {
           sendError('Parse error');
           return;
         }
-        if (typeof msg !== 'object' || !msg.msg) {
+        if (msg === null || !msg.msg) {
           sendError('Bad request', msg);
           return;
         }

@@ -181,10 +181,8 @@ Meteor._LivedataConnection = function (url, options) {
       Meteor._debug("Exception while parsing DDP", e);
       return;
     }
-    if (msg === null)
-      return;
 
-    if (typeof msg !== 'object' || !msg.msg) {
+    if (msg === null || !msg.msg) {
       Meteor._debug("discarding invalid livedata message", msg);
       return;
     }

@@ -58,6 +58,12 @@ Meteor._parseDDP = function (stringMessage) {
     Meteor._debug("Discarding message with invalid JSON", stringMessage);
     return null;
   }
+  // DDP messages must be objects.
+  if (msg === null || typeof msg !== 'object') {
+    Meteor._debug("Discarding non-object DDP message", stringMessage);
+    return null;
+  }
+
   // massage msg to get it into "abstract ddp" rather than "wire ddp" format.
 
   // switch between "cleared" rep of unsetting fields and "undefined"
