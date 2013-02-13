@@ -3,56 +3,66 @@
 
 ## v0.5.5
 
-* Deprecate `Meteor.autosubscribe`. Now `Meteor.autorun` works with
-  subscriptions. XXX text on no longer deduping?
+* Deprecate `Meteor.autosubscribe`. `Meteor.subscribe` now works within
+  `Meteor.autorun`.
 
-* If the JSON file you gave to `meteor --settings` includes a field called
-  `public`, that field will be available on the client as well as the server.
+* Allow access to `Meteor.settings.public` on the client. If the JSON
+  file you gave to `meteor --settings` includes a field called `public`,
+  that field will be available on the client as well as the server.
 
-* @import in less now works properly. #203 XXX text on .lessimport
+* `@import` works in `less`. Use the `.lessimport` file extension to
+  make a less file that is ignored by preprocessor so as to avoid double
+  processing. #203
 
-* Twitter API to 1.1. #527 XXX note upgrade by march 5. 
+* Upgrade Fibers to version 1.0.0. The `Fiber` and `Future` symbols are
+  no longer exposed globally. To use fibers directly you must use:
+   `var Fiber = __meteor_bootstrap__.require('fibers');` and
+   `var Future = __meteor_bootstrap__.require('fibers/future');`
 
-* Use strings for Twitter IDs instead of numbers. #629
+* Call version 1.1 of the Twitter API when authenticating with
+  OAuth. `accounts-twitter` users have until March 5th, 2013 to
+  upgrade before Twitter disables the old API. #527
 
-* Minimongo no longer relies on `eval` for selectors and sorting. #480
+* Treat Twitter ids as strings, not numbers, as recommended by
+  Twitter. #629
 
-* You can now specify the `_id` field of a document on insert.  Meteor will
-  still fill it in if you don't.
-
-* Correctly terminate phantomjs on error when using the spiderable package. #571
-
-* Quiescence fixes. XXX better text. issue numbers? 5177e0ba1 #555
-
-* Fix bug where non-cacheable files were being served with caching headers set to enable caching by the browser. #631
-
-* Pass correct types to handlebars helpers. #617
-
-* Fix race condition if server restarted between page load and ddp connection. #653.
-
-* add `expiresAt` to `services.facebook`. #576
+* You can now specify the `_id` field of a document passed to `insert`.
+  Meteor will still auto-generate `_id` if it is not present.
 
 * Expose an `invalidated` flag on `Meteor.deps.Context`.
 
-* Fix automatic json parsing in `Meteor.http` on Firefox. #553
+* Add Facebook token expiration time to `services.facebook.expiresAt`. #576
 
-* Update spark-standalone.sh. #587
+* Allow piping a password to `meteor deploy` on `stdin`. #623
 
-* Allow piping a password to deploy. #623
+* Correctly type cast arguments to handlebars helper. #617
+
+* Fix leaked global `userId` symbol.
+
+* Terminate `phantomjs` properly on error when using the `spiderable`
+  package. #571
+
+* Fix bug where non-cacheable files were being served with caching
+  headers set to enable caching by the browser. #631
+
+* Fix race condition if server restarted between page load and initial
+  DDP connection. #653
+
+* Resolve issue where login methods could block future methods. #555
+
+* Fix `Meteor.http` parsing of JSON responses on Firefox. #553
+
+* Minimongo no longer uses `eval`. #480
 
 * Serve 404 for `/app.manifest`. #628
 
-* Fix leaked global `userId`.
-
 * Upgraded many dependencies, including:
   * node.js to version 0.8.18
-  * Fiber to version 1.0.0. XXX TEXT HERE ABOUT IT. breaking change.
+  * jquery-layout to version 1.3.0RC
+  * Twitter Bootstrap to version 2.3.0
+  * Less to version 1.3.3
+  * Uglify to version 2.2.3
   * useragent to version 2.0.1
-  * jquery-layout to version 1.3.0RC XXX breaking change for users?
-  * Less to 1.3.3
-  * Uglify to 2.2.3
-  * to version 2.2.2 of Twitter Bootstrap.
-
 
 Patches contributed by github users: awwx, bminer, bramp, crunchie84,
 danawoodman, dbimmler, Ed-von-Schleck, geoffd123, kevee, milesmatthias,
