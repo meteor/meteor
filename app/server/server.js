@@ -88,10 +88,19 @@ var run = function () {
   var info_raw =
     fs.readFileSync(path.join(bundle_dir, 'app.json'), 'utf8');
   var info = JSON.parse(info_raw);
+  var bundle = {manifest: info.manifest, root: bundle_dir};
 
   // start up app
-  __meteor_bootstrap__ = {require: require, startup_hooks: [], app: app};
+
+  __meteor_bootstrap__ = {
+    require: require,
+    startup_hooks: [],
+    app: app,
+    bundle: bundle
+  };
+
   __meteor_runtime_config__ = {};
+
   Fiber(function () {
     // (put in a fiber to let Meteor.db operations happen during loading)
 
