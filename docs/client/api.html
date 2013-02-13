@@ -1038,11 +1038,14 @@ Example:
 
 `Meteor.Collection.ObjectID` follows the same API as the [Node MongoDB driver
 `ObjectID`](http://mongodb.github.com/node-mongodb-native/api-bson-generated/objectid.html)
-class.
+class. Note that you must use the `equals` method (or [`EJSON.equals`](#ejson_equals)) to
+compare them; the `===` operator will not work. If you are writing generic code
+that needs to deal with `_id` fields that may be either strings or `ObjectID`s, use
+[`EJSON.equals`](#ejson_equals) instead of `===` to compare them.
 
 {{#note}}
-  `ObjectID` instances created on the client side will not have meaningful answers to their
-  `getTimestamp` method, since Meteor currently constructs them fully randomly.
+  `ObjectID` values created by Meteor will not have meaningful answers to their `getTimestamp`
+  method, since Meteor currently constructs them fully randomly.
 {{/note}}
 
 {{#api_box_inline selectors}}
