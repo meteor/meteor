@@ -314,11 +314,6 @@ Cursor.prototype._publishCursor = function (sub) {
     }
   });
 
-  // _observeUnordered only returns after the initial added callbacks have run.
-  // mark subscription as completed.
-  sub.complete();
-  sub.flush();
-
   // register stop callback (expects lambda w/ no args).
   sub.onStop(function () {observeHandle.stop();});
 };

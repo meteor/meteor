@@ -376,8 +376,20 @@ _.extend(Meteor._LivedataSession.prototype, {
       //       reactiveThingy.publishMe();
       //     });
       //   };
-      if (res && res._publishCursor)
-        res._publishCursor(sub);
+      if (res) {
+        if (res._publishCursor) {
+          res._publishCursor(sub);
+        } else {
+          _.each(res, function(res) {
+            if (res && res._publishCursor)
+              res._publishCursor(sub);
+          });
+        }
+        // _publishCursor only returns after the initial added callbacks have run.
+        // mark subscription as completed.
+        sub.complete();
+        sub.flush();
+      }
     };
 
     sub._runHandler();
