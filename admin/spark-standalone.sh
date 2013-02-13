@@ -17,5 +17,6 @@ cat $PACKAGES_DIR/universal-events/listener.js
 cat $PACKAGES_DIR/universal-events/events-ie.js
 cat $PACKAGES_DIR/universal-events/events-w3c.js
 cat $PACKAGES_DIR/domutils/domutils.js
+cat $PACKAGES_DIR/ordered-dict/ordered_dict.js
 cat $PACKAGES_DIR/spark/spark.js
 cat $PACKAGES_DIR/spark/patch.js
