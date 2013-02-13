@@ -85,25 +85,19 @@
       self._dict[self._k(key)] = elt;
       self._size++;
     },
-    push: function (key, item) {
+    append: function (key, item) {
       var self = this;
       self.putBefore(key, item, null);
-    },
-    pop: function () {
-      var self = this;
-      return self.remove(self.last());
     },
     remove: function (key) {
       var self = this;
       var elt = self._dict[self._k(key)];
-      if (elt !== undefined) {
-        self._linkEltOut(elt);
-        self._size--;
-        delete self._dict[self._k(key)];
-        return elt.value;
-      } else {
-        return undefined;
-      }
+      if (elt === undefined)
+        throw new Error("Item " + key + " not present in OrderedDict");
+      self._linkEltOut(elt);
+      self._size--;
+      delete self._dict[self._k(key)];
+      return elt.value;
     },
     get: function (key) {
       var self = this;
@@ -214,6 +208,5 @@
     }
 
   });
-OrderedDict.append = OrderedDict.push;
 OrderedDict.BREAK = {break: true};
 })();

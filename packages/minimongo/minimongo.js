@@ -756,7 +756,7 @@ LocalCollection._idStringify = function (id) {
 
 
 
- LocalCollection._idParse = function (id) {
+LocalCollection._idParse = function (id) {
   if (id === "") {
     return id;
   } else if (id === '-') {
@@ -859,6 +859,8 @@ LocalCollection._observeOrderedFromObserveChanges =
     },
     changed: function (id, fields) {
       var doc = docs.get(id);
+      if (!doc)
+        throw new Error("Unknown id for changed: " + id);
       var oldDoc = EJSON.clone(doc);
       // writes through to the doc set
       LocalCollection._applyChanges(doc, fields);

@@ -1045,6 +1045,8 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
     changed: function (id, fields) {
       later(function () {
         var elt = itemDict.get(id);
+        if (!elt)
+          throw new Error("Unknown id for changed: " + id);
         applyChanges(elt.doc, fields);
         Spark.renderToRange(elt.liveRange, _.bind(itemFunc, null, elt.doc));
       });
