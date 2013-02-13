@@ -1,6 +1,6 @@
 // XXX update these comments
 
-// Meteor.random() -- known good PRNG, replaces Math.random()
+// Random.fraction() -- known good PRNG, replaces Math.random()
 // Random.id() -- returns RFC 4122 v4 UUID.
 
 // see http://baagoe.org/en/wiki/Better_random_numbers_for_javascript
@@ -34,7 +34,7 @@ Random = {};
 var HEX_DIGITS = "0123456789abcdef";
 var UNMISTAKABLE_CHARS = "23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz";
 
-var Alea = Meteor._Alea = function () {
+Random._Alea = function () {
   function Mash() {
     var n = 0xefc8249d;
 
@@ -105,7 +105,7 @@ var Alea = Meteor._Alea = function () {
     return random;
 
   } (Array.prototype.slice.call(arguments)));
-}
+};
 
 // instantiate RNG.  Heuristically collect entropy from various sources
 
@@ -133,15 +133,23 @@ var agent = (typeof navigator !== 'undefined' && navigator.userAgent) || "";
 // server sources
 var pid = (typeof process !== 'undefined' && process.pid) || 1;
 
-Meteor.random = new Alea([
+// XXX On the server, use the crypto module (OpenSSL) instead of this PRNG.
+Random.fraction = new Random._Alea([
   new Date(), height, width, agent, pid, Math.random()]);
+
+Random.choice = function (arrayOrString) {
+  var index = Math.floor(Random.fraction() * arrayOrString.length);
+  if (typeof arrayOrString === "string")
+    return arrayOrString.substr(index, 1);
+  else
+    return arrayOrString[index];
+};
 
 // XXX remove this soon
 Random._randomHexString = function (len) {
   var digits = [];
   for (var i = 0; i < len; i++) {
-    digits[i] = HEX_DIGITS.substr(Math.floor(Meteor.random() * 0x10),
-                                  1);
+    digits[i] = Random.choice(HEX_DIGITS);
   }
   return digits.join("");
 };
@@ -150,7 +158,7 @@ Random._randomHexString = function (len) {
 Meteor.uuid = function () {
   var s = [];
   for (var i = 0; i < 36; i++) {
-    s[i] = HEX_DIGITS.substr(Math.floor(Meteor.random() * 0x10), 1);
+    s[i] = Random.choice(HEX_DIGITS);
   }
   s[14] = "4";
   s[19] = HEX_DIGITS.substr((parseInt(s[19],16) & 0x3) | 0x8, 1);
@@ -162,11 +170,10 @@ Meteor.uuid = function () {
 
 Random.id = function() {
   var digits = [];
-  var base = UNMISTAKABLE_CHARS.length;
   // Length of 17 preserves around 96 bits of entropy, which is the
   // amount of state in our PRNG
   for (var i = 0; i < 17; i++) {
-    digits[i] = UNMISTAKABLE_CHARS.substr(Math.floor(Meteor.random() * base), 1);
+    digits[i] = Random.choice(UNMISTAKABLE_CHARS);
   }
   return digits.join("");
 };

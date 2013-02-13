@@ -229,8 +229,8 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
 
   // Use non-deterministic randomness so we can have a shorter fuzz
   // test (fewer iterations).  For deterministic (fully seeded)
-  // randomness, remove the call to Math.random().
-  var seededRandom = new SeededRandom("foobard" + Math.random());
+  // randomness, remove the call to Random.fraction().
+  var seededRandom = new SeededRandom("foobard" + Random.fraction());
   // Random integer in [0,n)
   var rnd = function (n) {
     return seededRandom.nextIntBetween(0, n-1);

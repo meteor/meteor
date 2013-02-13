@@ -1639,8 +1639,8 @@ Tinytest.add("spark - landmark patching", function(test) {
   for(var i=0; i<5; i++) {
     // Use non-deterministic randomness so we can have a shorter fuzz
     // test (fewer iterations).  For deterministic (fully seeded)
-    // randomness, remove the call to Math.random().
-    rand = new SeededRandom("preserved nodes "+i+" "+Math.random());
+    // randomness, remove the call to Random.fraction().
+    rand = new SeededRandom("preserved nodes "+i+" "+Random.fraction());
 
     var R = ReactiveVar(false);
     var structure = randomNodeList(null, 6);
@@ -2550,7 +2550,7 @@ testAsyncMulti(
         // This is quite a tricky implementation.
 
         var withIframe = function(onReady1, onReady2) {
-          var frameName = "submitframe"+String(Math.random()).slice(2);
+          var frameName = "submitframe"+String(Random.fraction()).slice(2);
           var iframeDiv = OnscreenDiv(
             Meteor.render(function() {
               return '<iframe name="'+frameName+'" '+
