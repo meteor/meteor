@@ -1,3 +1,5 @@
+// XXX update these comments
+
 // XXX dups packages/minimongo/uuid.js
 
 // Meteor.random() -- known good PRNG, replaces Math.random()
@@ -28,6 +30,8 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 (function() {
+
+Random = {};
 
 var HEX_DIGITS = "0123456789abcdef";
 var UNMISTAKABLE_CHARS = "23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz";
@@ -148,7 +152,7 @@ Meteor.uuid = function () {
   return uuid;
 };
 
-Meteor.id = function() {
+Random.id = function() {
   var digits = [];
   var base = UNMISTAKABLE_CHARS.length;
   // Length of 17 preserves around 96 bits of entropy, which is the

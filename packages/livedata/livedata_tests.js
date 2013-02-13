@@ -436,7 +436,7 @@ if (Meteor.isClient) {
     // conn._subscriptions is empty.
     var conn = new Meteor._LivedataConnection('/',
                                               {reloadWithOutstanding: true});
-    var collName = Meteor.id();
+    var collName = Random.id();
     var coll = new Meteor.Collection(collName, {manager: conn});
     var errorFromRerun;
     var gotErrorFromStopper = false;

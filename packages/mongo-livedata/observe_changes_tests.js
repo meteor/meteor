@@ -2,7 +2,7 @@
 
 var makeCollection = function () {
   if (Meteor.isServer)
-    return new Meteor.Collection(Meteor.id());
+    return new Meteor.Collection(Random.id());
   else
     return new Meteor.Collection(null);
 };

@@ -772,7 +772,7 @@ Meteor._LivedataSubscription = function (
   if (self._subscriptionId) {
     self._subscriptionHandle = 'N' + self._subscriptionId;
   } else {
-    self._subscriptionHandle = 'U' + Meteor.id();
+    self._subscriptionHandle = 'U' + Random.id();
   }
 
   // has _deactivate been called?

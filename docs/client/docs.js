@@ -151,7 +151,7 @@ var toc = [
         {instance: "cursor", name: "observeChanges", id: "observe_changes"}
       ],
       {type: "spacer"},
-      "Meteor.id",
+      "Random.id",  // XXX move this to the packages section
       {name: "Meteor.Collection.ObjectID", id: "collection_object_id"},
       {type: "spacer"},
       {name: "Selectors", style: "noncode"},
