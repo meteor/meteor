@@ -65,8 +65,8 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
 
   var log = '';
   var obs = coll.find({run: run}, {sort: ["x"]}).observe({
-    addedAt: function (doc, before_index) {
-      log += 'a(' + doc.x + ',' + before_index + ')';
+    addedAt: function (doc, before_index, before) {
+      log += 'a(' + doc.x + ',' + before_index + ',' + before + ')';
     },
     changedAt: function (new_doc, old_doc, at_index) {
       log += 'c(' + new_doc.x + ',' + at_index + ',' + old_doc.x + ')';
@@ -104,14 +104,14 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
   test.equal(coll.findOne("abc"), undefined);
   test.equal(coll.findOne({run: run}), undefined);
 
-  expectObserve('a(1,0)', function () {
+  expectObserve('a(1,0,null)', function () {
     var id = coll.insert({run: run, x: 1});
     test.equal(coll.find({run: run}).count(), 1);
     test.equal(coll.findOne(id).x, 1);
     test.equal(coll.findOne({run: run}).x, 1);
   });
 
-  expectObserve('a(4,1)', function () {
+  expectObserve('a(4,1,null)', function () {
     var id2 = coll.insert({run: run, x: 4});
     test.equal(coll.find({run: run}).count(), 2);
     test.equal(coll.find({_id: id2}).count(), 1);

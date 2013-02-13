@@ -796,7 +796,7 @@ LocalCollection._makeChangedFields = function (newDoc, oldDoc) {
 
 LocalCollection._observeFromObserveChanges = function (cursor, callbacks) {
   if (callbacks.addedAt && callbacks.added)
-    throw new Error("Please sepecify only one of added() and addedAt()");
+    throw new Error("Please specify only one of added() and addedAt()");
   if (callbacks.changedAt && callbacks.changed)
     throw new Error("Please specify only one of changed() and changedAt()");
   if (callbacks.removed && callbacks.removedAt)
@@ -851,7 +851,7 @@ LocalCollection._observeOrderedFromObserveChanges =
       if (!suppressed) {
         if (callbacks.addedAt) {
           var index = docs.indexOf(id);
-          callbacks.addedAt(EJSON.clone(doc), index);
+          callbacks.addedAt(EJSON.clone(doc), index, before);
         } else if (callbacks.added) {
           callbacks.added(EJSON.clone(doc));
         }

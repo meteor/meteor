@@ -42,9 +42,9 @@ var assert_ordering = function (test, f, values) {
 
 var log_callbacks = function (operations) {
   return {
-    addedAt: function (obj, idx) {
+    addedAt: function (obj, idx, before) {
       delete obj._id;
-      operations.push(EJSON.clone(['added', obj, idx]));
+      operations.push(EJSON.clone(['added', obj, idx, before]));
     },
     changedAt: function (obj, old_obj, at) {
       delete obj._id;
@@ -1189,11 +1189,11 @@ Tinytest.add("minimongo - observe ordered", function (test) {
   test.isTrue(handle.collection === c);
 
   c.insert({a:1});
-  test.equal(operations.shift(), ['added', {a:1}, 0]);
+  test.equal(operations.shift(), ['added', {a:1}, 0, null]);
   c.update({a:1}, {$set: {a: 2}});
   test.equal(operations.shift(), ['changed', {a:2}, 0, {a:1}]);
   c.insert({a:10});
-  test.equal(operations.shift(), ['added', {a:10}, 1]);
+  test.equal(operations.shift(), ['added', {a:10}, 1, null]);
   c.update({}, {$inc: {a: 1}}, {multi: true});
   test.equal(operations.shift(), ['changed', {a:3}, 0, {a:2}]);
   test.equal(operations.shift(), ['changed', {a:11}, 1, {a:10}]);
@@ -1208,20 +1208,21 @@ Tinytest.add("minimongo - observe ordered", function (test) {
 
   // test stop
   handle.stop();
-  c.insert({a:2});
+  var idA2 = LocalCollection.id();
+  c.insert({_id: idA2, a:2});
   test.equal(operations.shift(), undefined);
 
   // test initial inserts (and backwards sort)
   handle = c.find({}, {sort: {a: -1}}).observe(cbs);
-  test.equal(operations.shift(), ['added', {a:2}, 0]);
-  test.equal(operations.shift(), ['added', {a:1}, 1]);
+  test.equal(operations.shift(), ['added', {a:2}, 0, null]);
+  test.equal(operations.shift(), ['added', {a:1}, 1, null]);
   handle.stop();
 
   // test _suppress_initial
   handle = c.find({}, {sort: {a: -1}}).observe(_.extend(cbs, {_suppress_initial: true}));
   test.equal(operations.shift(), undefined);
   c.insert({a:100});
-  test.equal(operations.shift(), ['added', {a:100}, 0]);
+  test.equal(operations.shift(), ['added', {a:100}, 0, idA2]);
   handle.stop();
 
   // test skip and limit.
@@ -1231,9 +1232,9 @@ Tinytest.add("minimongo - observe ordered", function (test) {
   c.insert({a:1});
   test.equal(operations.shift(), undefined);
   c.insert({a:2});
-  test.equal(operations.shift(), ['added', {a:2}, 0]);
+  test.equal(operations.shift(), ['added', {a:2}, 0, null]);
   c.insert({a:3});
-  test.equal(operations.shift(), ['added', {a:3}, 1]);
+  test.equal(operations.shift(), ['added', {a:3}, 1, null]);
   c.insert({a:4});
   test.equal(operations.shift(), undefined);
   id = c.findOne({a:2})._id;
@@ -1241,7 +1242,7 @@ Tinytest.add("minimongo - observe ordered", function (test) {
   test.equal(operations.shift(), undefined);
   c.update({a:0}, {a:5});
   test.equal(operations.shift(), ['removed', id, 0, {a:2}]);
-  test.equal(operations.shift(), ['added', {a:4}, 1]);
+  test.equal(operations.shift(), ['added', {a:4}, 1, null]);
   c.update({a:3}, {a:3.5});
   test.equal(operations.shift(), ['changed', {a:3.5}, 0, {a:3}]);
 
@@ -1558,7 +1559,7 @@ Tinytest.add("minimongo - pause", function (test) {
 
   // remove and add cancel out.
   c.insert({_id: 1, a: 1});
-  test.equal(operations.shift(), ['added', {a:1}, 0]);
+  test.equal(operations.shift(), ['added', {a:1}, 0, null]);
 
   c.pauseObservers();
 
