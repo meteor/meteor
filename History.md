@@ -15,7 +15,7 @@
   processing. #203
 
 * Upgrade Fibers to version 1.0.0. The `Fiber` and `Future` symbols are
-  no longer exposed globally. To use fibers directly you must use:
+  no longer exposed globally. To use fibers directly you can use:
    `var Fiber = __meteor_bootstrap__.require('fibers');` and
    `var Future = __meteor_bootstrap__.require('fibers/future');`
 
@@ -27,7 +27,7 @@
   Twitter. #629
 
 * You can now specify the `_id` field of a document passed to `insert`.
-  Meteor will still auto-generate `_id` if it is not present.
+  Meteor still auto-generates `_id` if it is not present.
 
 * Expose an `invalidated` flag on `Meteor.deps.Context`.
 
@@ -42,19 +42,19 @@
 * Terminate `phantomjs` properly on error when using the `spiderable`
   package. #571
 
-* Fix bug where non-cacheable files were being served with caching
-  headers set to enable caching by the browser. #631
+* Stop serving non-cachable files with caching headers. #631
 
 * Fix race condition if server restarted between page load and initial
   DDP connection. #653
 
-* Resolve issue where login methods could block future methods. #555
+* Resolve issue where login methods sometimes blocked future methods. #555
 
 * Fix `Meteor.http` parsing of JSON responses on Firefox. #553
 
 * Minimongo no longer uses `eval`. #480
 
-* Serve 404 for `/app.manifest`. #628
+* Serve 404 for `/app.manifest`. This allows experimenting with the
+  upcoming `appcache` smart package. #628
 
 * Upgraded many dependencies, including:
   * node.js to version 0.8.18
