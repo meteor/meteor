@@ -7,10 +7,6 @@ trap 'echo FAILED' EXIT
 set -e -x
 
 
-## Test the Meteor CLI from a checkout
-./cli-test.sh
-
-
 ## Test the Meteor CLI from an installed engine (tests loading packages
 ## into the warehouse)
 TMPDIR=$(mktemp -d -t meteor-installed-cli-tests)
@@ -37,6 +33,10 @@ export TEST_WAREHOUSE_DIR=$(mktemp -d -t meteor-installed-cli-tests-warehouse) #
 (sleep 30; open http://localhost:3000) &
 
 PACKAGE_DIRS=$METEOR_DIR/tools/cli-test-packages/ $METEOR_DIR/meteor test-packages --once --release=0.0.1
+
+
+## Test the Meteor CLI from a checkout. We do this last because it is least likely to fail.
+./cli-test.sh
 
 
 ## Done
