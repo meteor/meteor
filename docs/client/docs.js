@@ -151,7 +151,6 @@ var toc = [
         {instance: "cursor", name: "observeChanges", id: "observe_changes"}
       ],
       {type: "spacer"},
-      "Random.id",  // XXX move this to the packages section
       {name: "Meteor.Collection.ObjectID", id: "collection_object_id"},
       {type: "spacer"},
       {name: "Selectors", style: "noncode"},
@@ -295,6 +294,7 @@ var toc = [
     "force-ssl",
     "jquery",
     "less",
+    "random",
     "spiderable",
     "stylus",
     "showdown",
