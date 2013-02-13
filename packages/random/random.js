@@ -138,6 +138,16 @@ var pid = (typeof process !== 'undefined' && process.pid) || 1;
 Meteor.random = new Alea([
   new Date(), height, width, agent, pid, Math.random()]);
 
+// XXX remove this soon
+Random._randomHexString = function (len) {
+  var digits = [];
+  for (var i = 0; i < len; i++) {
+    digits[i] = HEX_DIGITS.substr(Math.floor(Meteor.random() * 0x10),
+                                  1);
+  }
+  return digits.join("");
+};
+
 // RFC 4122 v4 UUID.
 Meteor.uuid = function () {
   var s = [];

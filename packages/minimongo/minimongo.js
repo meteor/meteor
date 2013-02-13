@@ -375,7 +375,7 @@ LocalCollection.prototype.insert = function (doc) {
     // if you really want to use ObjectIDs, set this global.
     // Meteor.Collection specifies its own ids and does not use this code.
     doc._id = LocalCollection._useOID ? new LocalCollection._ObjectID()
-                                      : LocalCollection.id();
+                                      : Random.id();
   }
   var id = LocalCollection._idStringify(doc._id);
 

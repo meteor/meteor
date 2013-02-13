@@ -45,7 +45,7 @@ if (Meteor.isServer) {
 }
 
 Tinytest.add("livedata - methods with colliding names", function (test) {
-  var x = LocalCollection.uuid();
+  var x = Meteor.uuid();
   var m = {};
   m[x] = function () {};
   Meteor.methods(m);
