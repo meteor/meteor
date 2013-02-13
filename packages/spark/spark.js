@@ -44,7 +44,7 @@ Spark._currentRenderer = (function () {
   };
 })();
 
-Spark._TAG = "_spark_" + Meteor.uuid();
+Spark._TAG = "_spark_" + Random.id();
 // XXX document contract for each type of annotation?
 Spark._ANNOTATION_NOTIFY = "notify";
 Spark._ANNOTATION_DATA = "data";
@@ -106,16 +106,6 @@ var withEventGuard = function (func) {
   finally { eventGuardActive = previous; }
 };
 
-Spark._createId = function () {
-  // Chars can't include '-' to be safe inside HTML comments.
-  var chars =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+_";
-  var id = "";
-  for (var i = 0; i < 8; i++)
-    id += chars.substr(Math.floor(Meteor.random() * 64), 1);
-  return id;
-};
-
 Spark._Renderer = function () {
   // Map from annotation ID to an annotation function, which is called
   // at render time and receives (startNode, endNode).
@@ -164,7 +154,7 @@ _.extend(Spark._Renderer.prototype, {
     // unescaped < and > in HTML attribute values, where they are normally
     // safe.  We can't assume that a string like '<1>' came from us
     // and not arbitrary user-entered data.
-    var id = (type || '') + ":" + Spark._createId();
+    var id = (type || '') + ":" + Random.id();
     this.annotations[id] = function (start, end) {
       if ((! start) || (! type)) {
         // ! start: materialize called us with no args because this
@@ -1100,7 +1090,7 @@ Spark.labelBranch = function (label, htmlFunc) {
     return htmlFunc();
 
   if (label === Spark.UNIQUE_LABEL)
-    label = Spark._createId();
+    label = Random.id();
 
   renderer.currentBranch.pushLabel(label);
   var html = htmlFunc();

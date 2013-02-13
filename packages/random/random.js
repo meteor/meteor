@@ -1,7 +1,5 @@
 // XXX update these comments
 
-// XXX dups packages/minimongo/uuid.js
-
 // Meteor.random() -- known good PRNG, replaces Math.random()
 // Meteor.uuid() -- returns RFC 4122 v4 UUID.
 
