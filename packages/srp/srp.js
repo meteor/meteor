@@ -332,8 +332,7 @@
 
 
   var randInt = function () {
-    // XXX XXX need a better implementation!
-    return new Meteor._srp.BigInteger(Meteor.uuid().replace(/-/g, ''), 16);
+    return new Meteor._srp.BigInteger(Random.hexString(36), 16);
   };
 
 

@@ -23,8 +23,8 @@
     //   user: either {username: (username)}, {email: (email)}, or {id: (userId)}
     //   A: hex encoded int. the client's public key for this exchange
     // @returns {Object} with fields:
-    //   identiy: string uuid
-    //   salt: string uuid
+    //   identity: random string ID
+    //   salt: random string ID
     //   B: hex encoded int. server's public key for this exchange
     beginPasswordExchange: function (request) {
       var selector = selectorFromUserQuery(request.user);
