@@ -24,7 +24,7 @@
 
 * Quiescence fixes. XXX better text. issue numbers? 5177e0ba1 #555
 
-* Set headers to not cache static assets. XXX more. #631
+* Fix bug where non-cacheable files were being served with caching headers set to enable caching by the browser. #631
 
 * Pass correct types to handlebars helpers. #617
 
@@ -55,8 +55,8 @@
 
 
 Patches contributed by github users: awwx, bminer, bramp, crunchie84,
-danawoodman, Ed-von-Schleck, kevee, milesmatthias, Primigenus, raix,
-timhaines, xenolf
+danawoodman, dbimmler, Ed-von-Schleck, geoffd123, kevee, milesmatthias,
+Primigenus, raix, timhaines, xenolf
 
 
 ## v0.5.4
