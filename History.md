@@ -31,6 +31,8 @@
 
 * Expose an `invalidated` flag on `Meteor.deps.Context`.
 
+* Populate user record with additional data from Facebook and Google. #664
+
 * Add Facebook token expiration time to `services.facebook.expiresAt`. #576
 
 * Allow piping a password to `meteor deploy` on `stdin`. #623
@@ -65,8 +67,8 @@
   * useragent to version 2.0.1
 
 Patches contributed by GitHub users awwx, bminer, bramp, crunchie84,
-danawoodman, dbimmler, Ed-von-Schleck, geoffd123, kevee, milesmatthias,
-Primigenus, raix, timhaines, and xenolf.
+danawoodman, dbimmler, Ed-von-Schleck, geoffd123, jperl, kevee,
+milesmatthias, Primigenus, raix, timhaines, and xenolf.
 
 
 ## v0.5.4
