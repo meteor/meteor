@@ -57,7 +57,7 @@
 
   // support reconnecting using a meteor login token
   Accounts._generateStampedLoginToken = function () {
-    return {token: Meteor.uuid(), when: +(new Date)};
+    return {token: Random.id(), when: +(new Date)};
   };
 
   Accounts.registerLoginHandler(function(options) {

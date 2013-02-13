@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['stream', 'uuid']);
+  api.use(['stream', 'random']);
   api.use(['ejson', 'json', 'underscore', 'deps', 'logging'], ['client', 'server']);
 
   // livedata_connection.js uses a Minimongo collection internally to

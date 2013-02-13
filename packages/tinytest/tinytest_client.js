@@ -2,7 +2,7 @@
 // the server. Sets a 'server' flag on test results that came from the
 // server.
 Meteor._runTestsEverywhere = function (onReport, onComplete) {
-  var runId = LocalCollection.uuid();
+  var runId = Random.id();
   var localComplete = false;
   var remoteComplete = false;
   var done = false;

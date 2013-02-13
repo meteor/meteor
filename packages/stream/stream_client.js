@@ -94,7 +94,7 @@ _.extend(Meteor._Stream, {
       // allows different stream connections to connect to different hostnames
       // and avoid browser per-hostname connection limits.
       host = host.replace(/\*/g, function () {
-        return Math.floor(Math.random()*10);
+        return Math.floor(Random.fraction()*10);
       });
 
       return newScheme + '://' + host + rest;
@@ -296,7 +296,7 @@ _.extend(Meteor._Stream.prototype, {
       self.RETRY_BASE_TIMEOUT * Math.pow(self.RETRY_EXPONENT, count));
     // fuzz the timeout randomly, to avoid reconnect storms when a
     // server goes down.
-    timeout = timeout * ((Math.random() * self.RETRY_FUZZ) +
+    timeout = timeout * ((Random.fraction() * self.RETRY_FUZZ) +
                          (1 - self.RETRY_FUZZ/2));
     return timeout;
   },

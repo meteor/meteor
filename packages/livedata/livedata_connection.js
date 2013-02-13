@@ -469,7 +469,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
       }
     } else {
       // New sub! Generate an id, save it locally, and send message.
-      id = Meteor.uuid();
+      id = Random.id();
       self._subscriptions[id] = {
         id: id,
         name: name,

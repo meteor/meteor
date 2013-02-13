@@ -28,11 +28,11 @@ if (Meteor.isClient) (function () {
 
   testAsyncMulti("passwords - long series", [
     function (test, expect) {
-      username = Meteor.uuid();
-      username2 = Meteor.uuid();
-      username3 = Meteor.uuid();
+      username = Random.id();
+      username2 = Random.id();
+      username3 = Random.id();
       // use -intercept so that we don't print to the console
-      email = Meteor.uuid() + '-intercept@example.com';
+      email = Random.id() + '-intercept@example.com';
       password = 'password';
       password2 = 'password2';
       password3 = 'password3';
@@ -227,7 +227,7 @@ if (Meteor.isServer) (function () {
   Tinytest.add(
     'passwords - createUser hooks',
     function (test) {
-      var email = Meteor.uuid() + '@example.com';
+      var email = Random.id() + '@example.com';
       test.throws(function () {
         // should fail the new user validators
         Accounts.createUser({email: email, profile: {invalid: true}});
@@ -249,7 +249,7 @@ if (Meteor.isServer) (function () {
   Tinytest.add(
     'passwords - setPassword',
     function (test) {
-      var username = Meteor.uuid();
+      var username = Random.id();
 
       var userId = Accounts.createUser({username: username});
 

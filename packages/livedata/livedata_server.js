@@ -201,7 +201,7 @@ _.extend(Meteor._SessionCollectionView.prototype, {
 
 Meteor._LivedataSession = function (server, version) {
   var self = this;
-  self.id = Meteor.uuid();
+  self.id = Random.id();
 
   self.server = server;
   self.version = version;
@@ -772,7 +772,7 @@ Meteor._LivedataSubscription = function (
   if (self._subscriptionId) {
     self._subscriptionHandle = 'N' + self._subscriptionId;
   } else {
-    self._subscriptionHandle = 'U' + Meteor.id();
+    self._subscriptionHandle = 'U' + Random.id();
   }
 
   // has _deactivate been called?

@@ -244,7 +244,7 @@ if (Meteor.isServer) {
     // First add a random item, which should be cleaned up. We use ready/onReady
     // to make sure that the second test block is only called after the added is
     // processed, so that there's any chance of the coll.find().count() failing.
-    sub.added(collName, Meteor.id(), {foo: 42});
+    sub.added(collName, Random.id(), {foo: 42});
     sub.ready();
 
     if (options.stopInHandler) {

@@ -18,7 +18,7 @@ LocalCollection._ObjectID = function (hexString) {
     // meant to work with _.isEqual(), which relies on structural equality
     self._str = hexString;
   } else {
-    self._str = LocalCollection._randomHexString(24);
+    self._str = Random.hexString(24);
   }
 };
 

@@ -1,38 +1,10 @@
-// XXX dups packages/minimongo/uuid.js
+(function() {
 
-// Meteor.random() -- known good PRNG, replaces Math.random()
-// Meteor.uuid() -- returns RFC 4122 v4 UUID.
+Random = {};
 
 // see http://baagoe.org/en/wiki/Better_random_numbers_for_javascript
 // for a full discussion and Alea implementation.
-
-// Copyright (C) 2010 by Johannes Baagøe <baagoe@baagoe.org>
-//
-// Permission is hereby granted, free of charge, to any person
-// obtaining a copy of this software and associated documentation
-// files (the "Software"), to deal in the Software without
-// restriction, including without limitation the rights to use, copy,
-// modify, merge, publish, distribute, sublicense, and/or sell copies
-// of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be
-// included in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
-// BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-// CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
-(function() {
-
-var HEX_DIGITS = "0123456789abcdef";
-var UNMISTAKABLE_CHARS = "23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz";
-
-var Alea = Meteor._Alea = function () {
+Random._Alea = function () {
   function Mash() {
     var n = 0xefc8249d;
 
@@ -103,7 +75,7 @@ var Alea = Meteor._Alea = function () {
     return random;
 
   } (Array.prototype.slice.call(arguments)));
-}
+};
 
 // instantiate RNG.  Heuristically collect entropy from various sources
 
@@ -131,32 +103,38 @@ var agent = (typeof navigator !== 'undefined' && navigator.userAgent) || "";
 // server sources
 var pid = (typeof process !== 'undefined' && process.pid) || 1;
 
-Meteor.random = new Alea([
+// XXX On the server, use the crypto module (OpenSSL) instead of this PRNG.
+//     (Make Random.fraction be generated from Random.hexString instead of the
+//     other way around, and generate Random.hexString from crypto.randomBytes.)
+Random.fraction = new Random._Alea([
   new Date(), height, width, agent, pid, Math.random()]);
 
-// RFC 4122 v4 UUID.
-Meteor.uuid = function () {
-  var s = [];
-  for (var i = 0; i < 36; i++) {
-    s[i] = HEX_DIGITS.substr(Math.floor(Meteor.random() * 0x10), 1);
-  }
-  s[14] = "4";
-  s[19] = HEX_DIGITS.substr((parseInt(s[19],16) & 0x3) | 0x8, 1);
-  s[8] = s[13] = s[18] = s[23] = "-";
-
-  var uuid = s.join("");
-  return uuid;
+Random.choice = function (arrayOrString) {
+  var index = Math.floor(Random.fraction() * arrayOrString.length);
+  if (typeof arrayOrString === "string")
+    return arrayOrString.substr(index, 1);
+  else
+    return arrayOrString[index];
 };
 
-Meteor.id = function() {
+var UNMISTAKABLE_CHARS = "23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz";
+Random.id = function() {
   var digits = [];
-  var base = UNMISTAKABLE_CHARS.length;
   // Length of 17 preserves around 96 bits of entropy, which is the
   // amount of state in our PRNG
   for (var i = 0; i < 17; i++) {
-    digits[i] = UNMISTAKABLE_CHARS.substr(Math.floor(Meteor.random() * base), 1);
+    digits[i] = Random.choice(UNMISTAKABLE_CHARS);
   }
   return digits.join("");
+};
+
+var HEX_DIGITS = "0123456789abcdef";
+Random.hexString = function (digits) {
+  var hexDigits = [];
+  for (var i = 0; i < digits; ++i) {
+    hexDigits.push(Random.choice("0123456789abcdef"));
+  }
+  return hexDigits.join('');
 };
 
 })();

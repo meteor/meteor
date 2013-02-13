@@ -1208,7 +1208,7 @@ Tinytest.add("minimongo - observe ordered", function (test) {
 
   // test stop
   handle.stop();
-  var idA2 = LocalCollection.id();
+  var idA2 = Random.id();
   c.insert({_id: idA2, a:2});
   test.equal(operations.shift(), undefined);
 

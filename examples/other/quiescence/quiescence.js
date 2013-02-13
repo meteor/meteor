@@ -69,7 +69,7 @@ if (Meteor.isServer) {
   };
   Template.updated.events({
     'click #update-button': function () {
-      var num = Math.round(Math.random()*100);
+      var num = Math.round(Random.fraction()*100);
       Meteor.call('setMagic', num);
     }
   });

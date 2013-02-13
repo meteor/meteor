@@ -28,7 +28,7 @@ Meteor.Collection = function (name, options) {
   case 'STRING':
   default:
     self._makeNewID = function () {
-      return LocalCollection.id();
+      return Random.id();
     };
     break;
   }
@@ -201,7 +201,7 @@ Meteor.Collection._rewriteSelector = function (selector) {
 
   if (!selector || (('_id' in selector) && !selector._id))
     // can't match anything
-    return {_id: LocalCollection.id()};
+    return {_id: Random.id()};
 
   var ret = {};
   _.each(selector, function (value, key) {

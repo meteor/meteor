@@ -8,11 +8,10 @@ Package.on_use(function (api, where) {
 
   // It would be sort of nice if minimongo didn't depend on
   // underscore, so we could ship it separately.
-  api.use(['underscore', 'json', 'ejson', 'ordered-dict'], where);
+  api.use(['underscore', 'json', 'ejson', 'ordered-dict', 'random'], where);
   api.add_files([
     'minimongo.js',
     'selector.js',
-    'uuid.js',
     'modify.js',
     'diff.js',
     'objectid.js'
