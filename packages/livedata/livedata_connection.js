@@ -1252,8 +1252,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
   _livedata_error: function (msg) {
     Meteor._debug("Received error from server: ", msg.reason);
-    if (msg.offending_message)
-      Meteor._debug("For: ", msg.offending_message);
+    if (msg.offendingMessage)
+      Meteor._debug("For: ", msg.offendingMessage);
   },
 
   _callOnReconnectAndSendAppropriateOutstandingMethods: function() {

@@ -427,11 +427,11 @@ _.extend(Meteor._LivedataSession.prototype, {
   },
 
   // Send a connection error.
-  sendError: function (reason, offending_message) {
+  sendError: function (reason, offendingMessage) {
     var self = this;
     var msg = {msg: 'error', reason: reason};
-    if (offending_message)
-      msg.offending_message = offending_message;
+    if (offendingMessage)
+      msg.offendingMessage = offendingMessage;
     self.send(msg);
   },
 
@@ -970,10 +970,10 @@ Meteor._LivedataServer = function () {
     // socket implements the SockJSConnection interface
     socket.meteor_session = null;
 
-    var sendError = function (reason, offending_message) {
+    var sendError = function (reason, offendingMessage) {
       var msg = {msg: 'error', reason: reason};
-      if (offending_message)
-        msg.offending_message = offending_message;
+      if (offendingMessage)
+        msg.offendingMessage = offendingMessage;
       socket.send(Meteor._stringifyDDP(msg));
     };
 
