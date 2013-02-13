@@ -126,6 +126,24 @@ Tinytest.add("minimongo - basics", function (test) {
   test.equal(c.find().count(), 3);
   test.equal(c.find(1, {skip: 1}).count(), 0);
   test.equal(c.find({_id: 1}, {skip: 1}).count(), 0);
+  test.equal(c.find({}, {skip: 1}).count(), 2);
+  test.equal(c.find({}, {skip: 2}).count(), 1);
+  test.equal(c.find({}, {limit: 2}).count(), 2);
+  test.equal(c.find({}, {limit: 1}).count(), 1);
+  test.equal(c.find({}, {skip: 1, limit: 1}).count(), 1);
+  test.equal(c.find({tags: "fruit"}, {skip: 1}).count(), 1);
+  test.equal(c.find({tags: "fruit"}, {limit: 1}).count(), 1);
+  test.equal(c.find({tags: "fruit"}, {skip: 1, limit: 1}).count(), 1);
+  test.equal(c.find(1, {sort: ['_id','desc'], skip: 1}).count(), 0);
+  test.equal(c.find({_id: 1}, {sort: ['_id','desc'], skip: 1}).count(), 0);
+  test.equal(c.find({}, {sort: ['_id','desc'], skip: 1}).count(), 2);
+  test.equal(c.find({}, {sort: ['_id','desc'], skip: 2}).count(), 1);
+  test.equal(c.find({}, {sort: ['_id','desc'], limit: 2}).count(), 2);
+  test.equal(c.find({}, {sort: ['_id','desc'], limit: 1}).count(), 1);
+  test.equal(c.find({}, {sort: ['_id','desc'], skip: 1, limit: 1}).count(), 1);
+  test.equal(c.find({tags: "fruit"}, {sort: ['_id','desc'], skip: 1}).count(), 1);
+  test.equal(c.find({tags: "fruit"}, {sort: ['_id','desc'], limit: 1}).count(), 1);
+  test.equal(c.find({tags: "fruit"}, {sort: ['_id','desc'], skip: 1, limit: 1}).count(), 1);
 
   // Regression test for #455.
   c.insert({foo: {bar: 'baz'}});

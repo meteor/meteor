@@ -156,8 +156,10 @@ LocalCollection.Cursor.prototype.fetch = function () {
 LocalCollection.Cursor.prototype.count = function () {
   var self = this;
 
-  if (self.reactive)
-    self._markAsReactive({ordered: false, added: true, removed: true});
+  if (self.reactive) {
+    var ordered = !! self.skip || !! self.limit || !! self.sort_f;
+    self._markAsReactive({ordered: ordered, added: true, removed: true});
+  }
 
   if (self.db_objects === null)
     self.db_objects = self._getRawObjects(true);
