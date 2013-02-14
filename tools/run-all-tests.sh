@@ -21,7 +21,8 @@ TARGET_DIR=$ENGINE_DIR admin/build-engine-tree.sh
 export TEST_INSTALLED_METEOR=1 # to use the --release option on `meteor test-packages`
 export TEST_WAREHOUSE_DIR=$(make_temp_dir meteor-installed-cli-tests-warehouse) # run with empty warehouse
 METEOR_DIR=$ENGINE_DIR/bin ./cli-test.sh
-
+unset TEST_INSTALLED_METEOR
+unset TEST_WAREHOUSE_DIR
 
 ## Run bundler unit tests
 ./bundler-test.sh

@@ -142,10 +142,30 @@ sleep 2 # need to make sure these kills take effect
 
 echo "... test-packages"
 
-if [ ! "$TEST_INSTALLED_METEOR" ]; then
-  $METEOR test-packages -p $PORT >> $OUTPUT 2>&1 &
+mkdir -p "$TMPDIR/local-packages/die-now/"
+cat > "$TMPDIR/local-packages/die-now/package.js" <<EOF
+Package.on_test(function (api) {
+  api.use('deps'); // try to use a core package
+  console.log("Dying");
+  process.exit(0);
+});
+EOF
+
+if [ "$TEST_INSTALLED_METEOR" ]; then
+  $METEOR test-packages --release=0.0.1 -p $PORT --package-dir="$TMPDIR/local-packages/die-now/" | grep Dying >> $OUTPUT 2>&1
 else
+  $METEOR test-packages -p $PORT --package-dir="$TMPDIR/local-packages/die-now/" | grep Dying >> $OUTPUT 2>&1
+fi
+# since the server process was killed via 'process.exit', mongo is still running.
+ps ax | grep -e "$MONGOMARK" | grep -v grep | awk '{print $1}' | xargs kill || true
+sleep 2 # make sure mongo is dead
+
+
+if [ "$TEST_INSTALLED_METEOR" ]; then
+  ( ! $METEOR test-packages -p $PORT ) | grep "Please specify a release version" >> $OUTPUT 2>&1
   $METEOR test-packages --release=0.0.1 -p $PORT >> $OUTPUT 2>&1 &
+else
+  $METEOR test-packages -p $PORT >> $OUTPUT 2>&1 &
 fi
 
 METEOR_PID=$!
