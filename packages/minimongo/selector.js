@@ -45,6 +45,8 @@ var compileValueSelector = function (valueSelector) {
 
   if (valueSelector instanceof RegExp) {
     return function (value) {
+      if (value === undefined)
+        return false;
       return _anyIfArray(value, function (x) {
         return valueSelector.test(x);
       });
@@ -264,6 +266,8 @@ var VALUE_OPERATORS = {
     }
 
     return function (value) {
+      if (value === undefined)
+        return false;
       return _anyIfArray(value, function (x) {
         return operand.test(x);
       });
