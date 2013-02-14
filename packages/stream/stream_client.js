@@ -193,7 +193,7 @@ _.extend(Meteor._Stream.prototype, {
       if (__meteor_runtime_config__.serverId &&
           __meteor_runtime_config__.serverId !== welcome_data.server_id &&
           !self.sent_update_available) {
-        self.update_available = true;
+        self.sent_update_available = true;
         _.each(self.event_callbacks.update_available,
                function (callback) { callback(); });
       }
