@@ -11,13 +11,9 @@
 			return Session.get(key);
 		});
 
-
+		//{{sessionEquals 'key' 'value'}}
 		Handlebars.registerHelper('sessionEquals', function (key, value) {
-			var myValue = Session.get(key); //Workaround Issue #617
-			if (typeof(myValue) === 'boolean') //Workaround Issue #617
-				return Session.equals(key, (value == 'true')); //Workaround Issue #617
-			return Session.equals(key, (myValue === +myValue)?+value:value); //Workaround Issue #617
-			//return Session.equals(key, value); //When Issue #617 is resolved
+			return Session.equals(key, value);
 		});
 
 
