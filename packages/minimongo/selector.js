@@ -238,6 +238,9 @@ var VALUE_OPERATORS = {
 
   "$type": function (operand) {
     return function (value) {
+      // A nonexistent field is of no type.
+      if (value === undefined)
+        return false;
       // Definitely not _anyIfArrayPlus: $type: 4 only matches arrays that have
       // arrays as elements according to the Mongo docs.
       return _anyIfArray(value, function (x) {
@@ -314,12 +317,15 @@ LocalCollection._f = {
     if (typeof v === "function")
       // note that typeof(/x/) === "function"
       return 13;
+    if (v instanceof Date)
+      return 9;
+    if (EJSON.isBinary(v))
+      return 5;
+    if (v instanceof Meteor.Collection.ObjectID)
+      return 7;
     return 3; // object
 
     // XXX support some/all of these:
-    // 5, binary data
-    // 7, object id
-    // 9, date
     // 14, symbol
     // 15, javascript code with scope
     // 16, 18: 32-bit/64-bit integer
@@ -340,8 +346,26 @@ LocalCollection._f = {
     // XXX what is the correct sort position for Javascript code?
     // ('100' in the matrix below)
     // XXX minkey/maxkey
-    return [-1, 1, 2, 3, 4, 5, -1, 6, 7, 8, 0, 9, -1, 100, 2, 100, 1,
-            8, 1][t];
+    return [-1,  // (not a type)
+            1,   // number
+            2,   // string
+            3,   // object
+            4,   // array
+            5,   // binary
+            -1,  // deprecated
+            6,   // ObjectID
+            7,   // bool
+            8,   // Date
+            0,   // null
+            9,   // RegExp
+            -1,  // deprecated
+            100, // JS code
+            2,   // deprecated (symbol)
+            100, // JS code
+            1,   // 32-bit int
+            8,   // Mongo timestamp
+            1    // 64-bit int
+           ][t];
   },
 
   // compare two values of unknown type according to BSON ordering
@@ -360,9 +384,22 @@ LocalCollection._f = {
     if (oa !== ob)
       return oa < ob ? -1 : 1;
     if (ta !== tb)
-      // XXX need to implement this once we implement Symbol or
-      // integers, or once we implement both Date and Timestamp
+      // XXX need to implement this if we implement Symbol or integers, or
+      // Timestamp
       throw Error("Missing type coercion logic in _cmp");
+    if (ta === 7) { // ObjectID
+      // Convert to string.
+      ta = tb = 2;
+      a = a.toHexString();
+      b = b.toHexString();
+    }
+    if (ta === 9) { // Date
+      // Convert to millis.
+      ta = tb = 1;
+      a = a.getTime();
+      b = b.getTime();
+    }
+
     if (ta === 1) // double
       return a - b;
     if (tb === 2) // string
@@ -376,7 +413,7 @@ LocalCollection._f = {
           ret.push(obj[key]);
         }
         return ret;
-      }
+      };
       return LocalCollection._f._cmp(to_array(a), to_array(b));
     }
     if (ta === 4) { // Array
@@ -390,13 +427,23 @@ LocalCollection._f = {
           return s;
       }
     }
-    // 5: binary data
-    // 7: object id
+    if (ta === 5) { // binary
+      // Surprisingly, a small binary blob is always less than a large one in
+      // Mongo.
+      if (a.length !== b.length)
+        return a.length - b.length;
+      for (i = 0; i < a.length; i++) {
+        if (a[i] < b[i])
+          return -1;
+        if (a[i] > b[i])
+          return 1;
+      }
+      return 0;
+    }
     if (ta === 8) { // boolean
       if (a) return b ? 0 : 1;
       return b ? -1 : 0;
     }
-    // 9: date
     if (ta === 10) // null
       return 0;
     if (ta === 11) // regexp
@@ -411,6 +458,7 @@ LocalCollection._f = {
     // 127: maxkey
     if (ta === 13) // javascript code
       throw Error("Sorting not supported on Javascript code"); // XXX
+    throw Error("Unknown type to sort");
   }
 };
 

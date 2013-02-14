@@ -13,7 +13,7 @@ LocalCollection._ObjectID = function (hexString) {
   if (hexString) {
     hexString = hexString.toLowerCase();
     if (!LocalCollection._looksLikeObjectID(hexString)) {
-      throw new Error("Invalid hexidecimal string for creating an ObjectID");
+      throw new Error("Invalid hexadecimal string for creating an ObjectID");
     }
     // meant to work with _.isEqual(), which relies on structural equality
     self._str = hexString;

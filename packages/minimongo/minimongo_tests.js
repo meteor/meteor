@@ -460,6 +460,12 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$type: 3}}, {a: []});
   nomatch({a: {$type: 3}}, {a: [1]});
   nomatch({a: {$type: 3}}, {a: null});
+  match({a: {$type: 5}}, {a: EJSON.newBinary(0)});
+  match({a: {$type: 5}}, {a: EJSON.newBinary(4)});
+  nomatch({a: {$type: 5}}, {a: []});
+  nomatch({a: {$type: 5}}, {a: [42]});
+  match({a: {$type: 7}}, {a: new LocalCollection._ObjectID()});
+  nomatch({a: {$type: 7}}, {a: "1234567890abcd1234567890"});
   match({a: {$type: 8}}, {a: true});
   match({a: {$type: 8}}, {a: false});
   nomatch({a: {$type: 8}}, {a: "true"});
@@ -467,6 +473,8 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$type: 8}}, {a: null});
   nomatch({a: {$type: 8}}, {a: ''});
   nomatch({a: {$type: 8}}, {});
+  match({a: {$type: 9}}, {a: (new Date)});
+  nomatch({a: {$type: 9}}, {a: +(new Date)});
   match({a: {$type: 10}}, {a: null});
   nomatch({a: {$type: 10}}, {a: false});
   nomatch({a: {$type: 10}}, {a: ''});
@@ -846,6 +854,16 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
 });
 
 Tinytest.add("minimongo - ordering", function (test) {
+  var shortBinary = EJSON.newBinary(1);
+  shortBinary[0] = 128;
+  var longBinary1 = EJSON.newBinary(2);
+  longBinary1[1] = 42;
+  var longBinary2 = EJSON.newBinary(2);
+  longBinary2[1] = 50;
+
+  var date1 = new Date;
+  var date2 = new Date(date1.getTime() + 1000);
+
   // value ordering
   assert_ordering(test, LocalCollection._f._cmp, [
     null,
@@ -854,7 +872,11 @@ Tinytest.add("minimongo - ordering", function (test) {
     {}, {a: 2}, {a: 3}, {a: 3, b: 4}, {b: 4}, {b: 4, a: 3},
     {b: {}}, {b: [1, 2, 3]}, {b: [1, 2, 4]},
     [], [1, 2], [1, 2, 3], [1, 2, 4], [1, 2, "4"], [1, 2, [4]],
-    false, true
+    shortBinary, longBinary1, longBinary2,
+    new LocalCollection._ObjectID("1234567890abcd1234567890"),
+    new LocalCollection._ObjectID("abcd1234567890abcd123456"),
+    false, true,
+    date1, date2
   ]);
 
   // document ordering under a sort specification
