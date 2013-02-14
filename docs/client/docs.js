@@ -286,6 +286,7 @@ var toc = [
 
   "Packages", [ [
     "accounts-ui",
+    "appcache",
     "amplify",
     "backbone",
     "bootstrap",
