@@ -121,6 +121,9 @@ should not be.)
    messages or `addedBefore` messages, not a mixture of both, and should only
    send `movedBefore` messages for a collection with `addedBefore` messages.
 
+   NOTE: The ordered collection DDP messages are not currently used by Meteor.
+   They will likely be used by Meteor in the future.
+
  * The client maintains one set of data per collection.  Each subscription does
    not get its own datastore, but rather overlapping subscriptions cause the
    server to send the union of facts about the one collection's data.  For
