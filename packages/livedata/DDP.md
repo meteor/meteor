@@ -2,9 +2,10 @@
 
 DDP is a protocol between a client and a server that supports two operations:
 
- * Remote procedure calls by the client to the server
- * Transferring documents and keeping them updated, from the server to the
-   client, based on a set of subscriptions specified by the client.
+ * Remote procedure calls by the client to the server.
+ * The client subscribing to a set of documents, and the server keeping the
+   client informed about the contents of those documents as they change over
+   time.
 
 This document specifies the version "pre1" of DDP. It's a rough description of
 the protocol and not intended to be entirely definitive.
@@ -147,7 +148,22 @@ should not be.)
    - `methods`: array of strings (ids passed to 'method', all of whose writes
      have been reflected in data messages)
 
-### Errors:
+### Procedure:
+
+ * The client sends a `method` message to the server
+
+ * The server responds with a `result` message to the client, carrying either
+   the result of the method call, or an appropriate error.
+
+ * Method calls can affect data that the client is subscribed to.  Once the
+   server has finished sending the client all the relevant data messages based
+   on this procedure call, the server should send an `updated` message to the
+   client with this method's ID.
+
+ * There is no particular required ordering between `result` and `updated`
+   messages for a method call.
+
+## Errors:
 
 Errors appear in `result` and `nosub` messages in an optional error field. An
 error is an Object with the following fields:
@@ -198,7 +214,10 @@ For example, here is the JSON string `{$date: 10000}` stored in EJSON:
     {"$escape": {"$date": 10000}}
 
 Note that escaping only causes keys to be literal for one level down; you can
-have further EJSON inside.
+have further EJSON inside.  For example, the following is the key `$date` mapped
+to a Date object:
+
+    {"$escape": {"$date": {"$date": 32491}}}
 
 **User-specified types:**
 
