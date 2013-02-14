@@ -142,7 +142,7 @@ sleep 2 # need to make sure these kills take effect
 
 echo "... test-packages"
 
-if [ ! $TEST_INSTALLED_METEOR ]; then
+if [ ! "$TEST_INSTALLED_METEOR" ]; then
   $METEOR test-packages -p $PORT >> $OUTPUT 2>&1 &
 else
   $METEOR test-packages --release=0.0.1 -p $PORT >> $OUTPUT 2>&1 &
