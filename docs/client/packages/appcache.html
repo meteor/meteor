@@ -1,0 +1,31 @@
+<template name="pkg_appcache">
+{{#better_markdown}}
+
+## `appcache`
+
+The `appcache` package is an experimental package to enable the
+browser's application cache, which allows the static portion of a
+Meteor application (the client side Javascript, HTML, CSS, and images)
+to run offline.
+
+The `appcache` package by itself however does not provide a mechanism
+for offline *data*: if an application starts up offline, a
+`Meteor.Collection` on the client will be empty... until such time the
+browser connects to the Internet and Meteor is able to establish its
+online livedata connection.
+
+This package should not be used on a domain if there's a chance you
+might want to revert to using Meteor 0.5.4 or older on that domain.
+(Older versions of Meteor do not tell the browser to turn off the app
+cache, which means that users who have your application cached would
+be stuck running your old code even if you aren't using the `appcache`
+package any more).  Meteor >= 0.5.5 does not have this problem: the
+browser will revert to not using the app cache if you remove the
+`appcache` package.
+
+For more information about the `AppCache` package see the
+[AppCache](https://github.com/meteor/meteor/wiki/AppCache)
+page in the Meteor wiki.
+
+{{/better_markdown}}
+</template>
