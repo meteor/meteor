@@ -3,7 +3,7 @@ Meteor.subscribe('rooms');
 Session.set('current_room', null);
 Session.set('editing_room_name', false);
 
-Meteor.autosubscribe(function () {
+Meteor.autorun(function () {
   var room_id = Session.get('current_room');
   if (room_id) Meteor.subscribe('room-detail', room_id);
 });

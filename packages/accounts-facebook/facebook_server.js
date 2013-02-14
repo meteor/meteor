@@ -1,21 +1,36 @@
 (function () {
 
+  var querystring = __meteor_bootstrap__.require('querystring');
+
   Accounts.oauth.registerService('facebook', 2, function(query) {
 
-    var accessToken = getAccessToken(query);
+    var response = getTokenResponse(query);
+    var accessToken = response.accessToken;
     var identity = getIdentity(accessToken);
 
+    var serviceData = {
+      accessToken: accessToken,
+      expiresAt: (+new Date) + (1000 * response.expiresIn)
+    };
+
+    // include all fields from facebook
+    // http://developers.facebook.com/docs/reference/login/public-profile-and-friend-list/
+    var whitelisted = ['id', 'email', 'name', 'first_name',
+        'last_name', 'link', 'username', 'gender', 'locale', 'age_range'];
+
+    var fields = _.pick(identity, whitelisted);
+    _.extend(serviceData, fields);
+
     return {
-      serviceData: {
-        id: identity.id,
-        accessToken: accessToken,
-        email: identity.email
-      },
+      serviceData: serviceData,
       options: {profile: {name: identity.name}}
     };
   });
 
-  var getAccessToken = function (query) {
+  // returns an object containing:
+  // - accessToken
+  // - expiresIn: lifetime of token in seconds
+  var getTokenResponse = function (query) {
     var config = Accounts.loginServiceConfiguration.findOne({service: 'facebook'});
     if (!config)
       throw new Accounts.ConfigError("Service not configured");
@@ -49,19 +64,18 @@
     if (error_response) {
       throw new Meteor.Error(500, "Error trying to get access token from Facebook", error_response);
     } else {
-      // Success!  Extract the facebook access token from the
-      // response
-      var fbAccessToken;
-      _.each(response.split('&'), function(kvString) {
-        var kvArray = kvString.split('=');
-        if (kvArray[0] === 'access_token')
-          fbAccessToken = kvArray[1];
-        // XXX also parse the "expires" argument?
-      });
+      // Success!  Extract the facebook access token and expiration
+      // time from the response
+      var parsedResponse = querystring.parse(response);
+      var fbAccessToken = parsedResponse.access_token;
+      var fbExpires = parsedResponse.expires;
 
       if (!fbAccessToken)
         throw new Meteor.Error(500, "Couldn't find access token in HTTP response.");
-      return fbAccessToken;
+      return {
+        accessToken: fbAccessToken,
+        expiresIn: fbExpires
+      };
     }
   };
 

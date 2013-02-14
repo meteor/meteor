@@ -123,6 +123,24 @@ Meteor.http = Meteor.http || {};
 
             response.headers = {};
             var header_str = xhr.getAllResponseHeaders();
+
+            // https://github.com/meteor/meteor/issues/553
+            //
+            // In Firefox there is a weird issue, sometimes
+            // getAllResponseHeaders returns the empty string, but
+            // getResponseHeader returns correct results. Possibly this
+            // issue:
+            // https://bugzilla.mozilla.org/show_bug.cgi?id=608735
+            //
+            // If this happens we can't get a full list of headers, but
+            // at least get content-type so our JSON decoding happens
+            // correctly. In theory, we could try and rescue more header
+            // values with a list of common headers, but content-type is
+            // the only vital one for now.
+            if ("" === header_str && xhr.getResponseHeader("content-type"))
+              header_str =
+              "content-type: " + xhr.getResponseHeader("content-type");
+
             var headers_raw = header_str.split(/\r?\n/);
             _.each(headers_raw, function (h) {
               var m = /^(.*?):(?:\s+)(.*)$/.exec(h);

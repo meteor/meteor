@@ -1,52 +1,302 @@
+(function(){
+
+var _anyIfArray = function (x, f) {
+  if (_.isArray(x))
+    return _.any(x, f);
+  return f(x);
+};
+
+var _anyIfArrayPlus = function (x, f) {
+  if (f(x))
+    return true;
+  return _.isArray(x) && _.any(x, f);
+};
+
+var hasOperators = function(valueSelector) {
+  var theseAreOperators = undefined;
+  for (var selKey in valueSelector) {
+    var thisIsOperator = selKey.substr(0, 1) === '$';
+    if (theseAreOperators === undefined) {
+      theseAreOperators = thisIsOperator;
+    } else if (theseAreOperators !== thisIsOperator) {
+      throw new Error("Inconsistent selector: " + valueSelector);
+    }
+  }
+  return !!theseAreOperators;  // {} has no operators
+};
+
+var compileValueSelector = function (valueSelector) {
+  if (valueSelector == null) {  // undefined or null
+    return function (value) {
+      return _anyIfArray(value, function (x) {
+        return x == null;  // undefined or null
+      });
+    };
+  }
+
+  // Selector is a non-null primitive (and not an array or RegExp either).
+  if (!_.isObject(valueSelector)) {
+    return function (value) {
+      return _anyIfArray(value, function (x) {
+        return x === valueSelector;
+      });
+    };
+  }
+
+  if (valueSelector instanceof RegExp) {
+    return function (value) {
+      return _anyIfArray(value, function (x) {
+        return valueSelector.test(x);
+      });
+    };
+  }
+
+  // Arrays match either identical arrays or arrays that contain it as a value.
+  if (_.isArray(valueSelector)) {
+    return function (value) {
+      if (!_.isArray(value))
+        return false;
+      return _anyIfArrayPlus(value, function (x) {
+        return LocalCollection._f._equal(valueSelector, x);
+      });
+    };
+  }
+
+  // It's an object, but not an array or regexp.
+  if (hasOperators(valueSelector)) {
+    var operatorFunctions = [];
+    _.each(valueSelector, function (operand, operator) {
+      if (!_.has(VALUE_OPERATORS, operator))
+        throw new Error("Unrecognized operator: " + operator);
+      operatorFunctions.push(VALUE_OPERATORS[operator](
+        operand, valueSelector.$options));
+    });
+    return function (value) {
+      return _.all(operatorFunctions, function (f) {
+        return f(value);
+      });
+    };
+  }
+
+  // It's a literal; compare value (or element of value array) directly to the
+  // selector.
+  return function (value) {
+    return _anyIfArray(value, function (x) {
+      return LocalCollection._f._equal(valueSelector, x);
+    });
+  };
+};
+
+// XXX can factor out common logic below
+var LOGICAL_OPERATORS = {
+  "$and": function(subSelector) {
+    if (!_.isArray(subSelector) || _.isEmpty(subSelector))
+      throw Error("$and/$or/$nor must be nonempty array");
+    var subSelectorFunctions = _.map(
+      subSelector, compileDocumentSelector);
+    return function (doc) {
+      return _.all(subSelectorFunctions, function (f) {
+        return f(doc);
+      });
+    };
+  },
+
+  "$or": function(subSelector) {
+    if (!_.isArray(subSelector) || _.isEmpty(subSelector))
+      throw Error("$and/$or/$nor must be nonempty array");
+    var subSelectorFunctions = _.map(
+      subSelector, compileDocumentSelector);
+    return function (doc) {
+      return _.any(subSelectorFunctions, function (f) {
+        return f(doc);
+      });
+    };
+  },
+
+  "$nor": function(subSelector) {
+    if (!_.isArray(subSelector) || _.isEmpty(subSelector))
+      throw Error("$and/$or/$nor must be nonempty array");
+    var subSelectorFunctions = _.map(
+      subSelector, compileDocumentSelector);
+    return function (doc) {
+      return _.all(subSelectorFunctions, function (f) {
+        return !f(doc);
+      });
+    };
+  },
+
+  "$where": function(selectorValue) {
+    if (!(selectorValue instanceof Function)) {
+      selectorValue = Function("return " + selectorValue);
+    }
+    return function (doc) {
+      return selectorValue.call(doc);
+    };
+  }
+};
+
+var VALUE_OPERATORS = {
+  "$in": function (operand) {
+    if (!_.isArray(operand))
+      throw new Error("Argument to $in must be array");
+    return function (value) {
+      return _anyIfArrayPlus(value, function (x) {
+        return _.any(operand, function (operandElt) {
+          return LocalCollection._f._equal(operandElt, x);
+        });
+      });
+    };
+  },
+
+  "$all": function (operand) {
+    if (!_.isArray(operand))
+      throw new Error("Argument to $all must be array");
+    return function (value) {
+      if (!_.isArray(value))
+        return false;
+      return _.all(operand, function (operandElt) {
+        return _.any(value, function (valueElt) {
+          return LocalCollection._f._equal(operandElt, valueElt);
+        });
+      });
+    };
+  },
+
+  "$lt": function (operand) {
+    return function (value) {
+      return _anyIfArray(value, function (x) {
+        return LocalCollection._f._cmp(x, operand) < 0;
+      });
+    };
+  },
+
+  "$lte": function (operand) {
+    return function (value) {
+      return _anyIfArray(value, function (x) {
+        return LocalCollection._f._cmp(x, operand) <= 0;
+      });
+    };
+  },
+
+  "$gt": function (operand) {
+    return function (value) {
+      return _anyIfArray(value, function (x) {
+        return LocalCollection._f._cmp(x, operand) > 0;
+      });
+    };
+  },
+
+  "$gte": function (operand) {
+    return function (value) {
+      return _anyIfArray(value, function (x) {
+        return LocalCollection._f._cmp(x, operand) >= 0;
+      });
+    };
+  },
+
+  "$ne": function (operand) {
+    return function (value) {
+      return ! _anyIfArrayPlus(value, function (x) {
+        return LocalCollection._f._equal(x, operand);
+      });
+    };
+  },
+
+  "$nin": function (operand) {
+    if (!_.isArray(operand))
+      throw new Error("Argument to $nin must be array");
+    var inFunction = VALUE_OPERATORS.$in(operand);
+    return function (value) {
+      // Field doesn't exist, so it's not-in operand
+      if (value === undefined)
+        return true;
+      return !inFunction(value);
+    };
+  },
+
+  "$exists": function (operand) {
+    return function (value) {
+      return operand === (value !== undefined);
+    };
+  },
+
+  "$mod": function (operand) {
+    var divisor = operand[0],
+        remainder = operand[1];
+    return function (value) {
+      return _anyIfArray(value, function (x) {
+        return x % divisor === remainder;
+      });
+    };
+  },
+
+  "$size": function (operand) {
+    return function (value) {
+      return _.isArray(value) && operand === value.length;
+    };
+  },
+
+  "$type": function (operand) {
+    return function (value) {
+      // Definitely not _anyIfArrayPlus: $type: 4 only matches arrays that have
+      // arrays as elements according to the Mongo docs.
+      return _anyIfArray(value, function (x) {
+        return LocalCollection._f._type(x) === operand;
+      });
+    };
+  },
+
+  "$regex": function (operand, options) {
+    if (options !== undefined) {
+      // Options passed in $options (even the empty string) always overrides
+      // options in the RegExp object itself.
+
+      // Be clear that we only support the JS-supported options, not extended
+      // ones (eg, Mongo supports x and s). Ideally we would implement x and s
+      // by transforming the regexp, but not today...
+      if (/[^gim]/.test(options))
+        throw new Error("Only the i, m, and g regexp options are supported");
+
+      var regexSource = operand instanceof RegExp ? operand.source : operand;
+      operand = new RegExp(regexSource, options);
+    } else if (!(operand instanceof RegExp)) {
+      operand = new RegExp(operand);
+    }
+
+    return function (value) {
+      return _anyIfArray(value, function (x) {
+        return operand.test(x);
+      });
+    };
+  },
+
+  "$options": function (operand) {
+    // evaluation happens at the $regex function above
+    return function (value) { return true; };
+  },
+
+  "$elemMatch": function (operand) {
+    var matcher = compileDocumentSelector(operand);
+    return function (value) {
+      if (!_.isArray(value))
+        return false;
+      return _.any(value, function (x) {
+        return matcher(x);
+      });
+    };
+  },
+
+  "$not": function (operand) {
+    var matcher = compileValueSelector(operand);
+    return function (value) {
+      return !matcher(value);
+    };
+  }
+};
+
 // helpers used by compiled selector code
 LocalCollection._f = {
   // XXX for _all and _in, consider building 'inquery' at compile time..
-
-  _all: function (x, qval) {
-    // $all is only meaningful on arrays
-    if (!(x instanceof Array)) {
-      return false;
-    }
-    // XXX should use a canonicalizing representation, so that we
-    // don't get screwed by key order
-    var parts = {};
-    var remaining = 0;
-    _.each(qval, function (q) {
-      var hash = JSON.stringify(q);
-      if (!(hash in parts)) {
-        parts[hash] = true;
-        remaining++;
-      }
-    });
-
-    for (var i = 0; i < x.length; i++) {
-      var hash = JSON.stringify(x[i]);
-      if (parts[hash]) {
-        delete parts[hash];
-        remaining--;
-        if (0 === remaining)
-          return true;
-      }
-    }
-
-    return false;
-  },
-
-  _in: function (x, qval) {
-    if (typeof x !== "object") {
-      // optimization: use scalar equality (fast)
-      for (var i = 0; i < qval.length; i++)
-        if (x === qval[i])
-          return true;
-      return false;
-    } else {
-      // nope, have to use deep equality
-      for (var i = 0; i < qval.length; i++)
-        if (LocalCollection._f._equal(x, qval[i]))
-          return true;
-      return false;
-    }
-  },
 
   _type: function (v) {
     if (typeof v === "number")
@@ -141,36 +391,6 @@ LocalCollection._f = {
     return match(x, qval);
   },
 
-  // if x is not an array, true iff f(x) is true. if x is an array,
-  // true iff f(y) is true for any y in x.
-  //
-  // this is the way most mongo operators (like $gt, $mod, $type..)
-  // treat their arguments.
-  _matches: function (x, f) {
-    if (x instanceof Array) {
-      for (var i = 0; i < x.length; i++)
-        if (f(x[i]))
-          return true;
-      return false;
-    }
-    return f(x);
-  },
-
-  // like _matches, but if x is an array, it's true not only if f(y)
-  // is true for some y in x, but also if f(x) is true.
-  //
-  // this is the way mongo value comparisons usually work, like {x:
-  // 4}, {x: [4]}, or {x: {$in: [1,2,3]}}.
-  _matches_plus: function (x, f) {
-    if (x instanceof Array) {
-      for (var i = 0; i < x.length; i++)
-        if (f(x[i]))
-          return true;
-      // fall through!
-    }
-    return f(x);
-  },
-
   // maps a type code to a value that can be used to sort values of
   // different types
   _typeorder: function (t) {
@@ -258,32 +478,71 @@ LocalCollection._matches = function (selector, doc) {
   return (LocalCollection._compileSelector(selector))(doc);
 };
 
+var makeLookupFunction = function (key) {
+  var dotLocation = key.indexOf('.');
+  var first = dotLocation === -1 ? key : key.substr(0, dotLocation);
+  var lookupRest = dotLocation !== -1 &&
+        makeLookupFunction(key.substr(dotLocation + 1));
+  return function (doc) {
+    if (doc == null)  // null or undefined
+      return undefined;
+    var firstLevel = doc[first];
+    if (lookupRest)
+      return lookupRest(firstLevel);
+    return firstLevel;
+  };
+};
+
+// The main compilation function for a given selector.
+var compileDocumentSelector = function (docSelector) {
+  var perKeySelectors = [];
+  _.each(docSelector, function (subSelector, key) {
+    if (key.substr(0, 1) === '$') {
+      // Outer operators are either logical operators (they recurse back into
+      // this function), or $where.
+      if (!_.has(LOGICAL_OPERATORS, key))
+        throw new Error("Unrecognized logical operator: " + key);
+      perKeySelectors.push(LOGICAL_OPERATORS[key](subSelector));
+    } else {
+      var lookUpByIndex = makeLookupFunction(key);
+      var valueSelectorFunc = compileValueSelector(subSelector);
+      perKeySelectors.push(function (doc) {
+        return valueSelectorFunc(lookUpByIndex(doc));
+      });
+    }
+  });
+
+
+  return function (doc) {
+    return _.all(perKeySelectors, function (f) {
+      return f(doc);
+    });
+  };
+};
+
 // Given a selector, return a function that takes one argument, a
 // document, and returns true if the document matches the selector,
 // else false.
 LocalCollection._compileSelector = function (selector) {
-  var literals = [];
   // you can pass a literal function instead of a selector
   if (selector instanceof Function)
     return function (doc) {return selector.call(doc);};
 
   // shorthand -- scalars match _id
   if (LocalCollection._selectorIsId(selector))
-    selector = {_id: selector};
+    return function (doc) { return doc._id === selector;};
 
-  // protect against dangerous selectors.  falsey and {_id: falsey}
-  // are both likely programmer error, and not what you want,
-  // particularly for destructive operations.
+  // protect against dangerous selectors.  falsey and {_id: falsey} are both
+  // likely programmer error, and not what you want, particularly for
+  // destructive operations.
   if (!selector || (('_id' in selector) && !selector._id))
     return function (doc) {return false;};
 
-  // eval() does not return a value in IE8, nor does the spec say it
-  // should. Assign to a local to get the value, instead.
-  var _func;
-  eval("_func = (function(f,literals){return function(doc){return " +
-       LocalCollection._exprForSelector(selector, literals) +
-       ";};})");
-  return _func(LocalCollection._f, literals);
+  // Top level can't be an array or true.
+  if (typeof(selector) === 'boolean' || _.isArray(selector))
+    throw new Error("Invalid selector: " + selector);
+
+  return compileDocumentSelector(selector);
 };
 
 // Is this selector just shorthand for lookup by _id?
@@ -291,281 +550,62 @@ LocalCollection._selectorIsId = function (selector) {
   return (typeof selector === "string") || (typeof selector === "number");
 };
 
-// Given an arbitrary Mongo-style query selector, return an expression
-// that evaluates to true if the document in 'doc' matches the
-// selector, else false.
-LocalCollection._exprForSelector = function (selector, literals) {
-  var clauses = [];
-  for (var key in selector) {
-    var value = selector[key];
+// Give a sort spec, which can be in any of these forms:
+//   {"key1": 1, "key2": -1}
+//   [["key1", "asc"], ["key2", "desc"]]
+//   ["key1", ["key2", "desc"]]
+//
+// (.. with the first form being dependent on the key enumeration
+// behavior of your javascript VM, which usually does what you mean in
+// this case if the key names don't look like integers ..)
+//
+// return a function that takes two objects, and returns -1 if the
+// first object comes first in order, 1 if the second object comes
+// first, or 0 if neither object comes before the other.
 
-    if (key.substr(0, 1) === '$') { // no indexing into strings on IE7
-      // whole-document predicate like {$or: [{x: 12}, {y: 12}]}
-      clauses.push(LocalCollection._exprForDocumentPredicate(key, value, literals));
-    } else {
-      // else, it's a constraint on a particular key (or dotted keypath)
-      clauses.push(LocalCollection._exprForKeypathPredicate(key, value, literals));
-    }
-  };
+LocalCollection._compileSort = function (spec) {
+  var sortSpecParts = [];
 
-  if (clauses.length === 0) return 'true'; // selector === {}
-  return '(' + clauses.join('&&') +')';
-};
-
-// 'op' is a top-level, whole-document predicate from a mongo
-// selector, like '$or' in {$or: [{x: 12}, {y: 12}]}. 'value' is its
-// value in the selector. Return an expression that evaluates to true
-// if 'doc' matches this predicate, else false.
-LocalCollection._exprForDocumentPredicate = function (op, value, literals) {
-  if (op === '$or' || op === '$and' || op === '$nor') {
-    if (_.isEmpty(value) || !_.isArray(value))
-      throw Error("$and/$or/$nor must be a nonempty array");
-  }
-
-  var clauses;
-  if (op === '$or') {
-    clauses = _.map(value, function (c) {
-      return LocalCollection._exprForSelector(c, literals);
-    });
-    return '(' + clauses.join('||') +')';
-  }
-
-  if (op === '$and') {
-    clauses = _.map(value, function (c) {
-      return LocalCollection._exprForSelector(c, literals);
-    });
-    return '(' + clauses.join('&&') +')';
-  }
-
-  if (op === '$nor') {
-    clauses = _.map(value, function (c) {
-      return "!(" + LocalCollection._exprForSelector(c, literals) + ")";
-    });
-    return '(' + clauses.join('&&') +')';
-  }
-
-  if (op === '$where') {
-    if (value instanceof Function) {
-      literals.push(value);
-      return 'literals[' + (literals.length - 1) + '].call(doc)';
-    }
-    return "(function(){return " + value + ";}).call(doc)";
-  }
-
-  throw Error("Unrecogized key in selector: ", op);
-}
-
-// Given a single 'dotted.key.path: value' constraint from a Mongo
-// query selector, return an expression that evaluates to true if the
-// document in 'doc' matches the constraint, else false.
-LocalCollection._exprForKeypathPredicate = function (keypath, value, literals) {
-  var keyparts = keypath.split('.');
-
-  // get the inner predicate expression
-  var predcode = '';
-  if (value instanceof RegExp) {
-    predcode = LocalCollection._exprForOperatorTest(value, literals);
-  } else if ( !(typeof value === 'object')
-              || value === null
-              || value instanceof Array) {
-    // it's something like {x.y: 12} or {x.y: [12]}
-    predcode = LocalCollection._exprForValueTest(value, literals);
-  } else {
-    // is it a literal document or a bunch of $-expressions?
-    var is_literal = true;
-    for (var k in value) {
-      if (k.substr(0, 1) === '$') { // no indexing into strings on IE7
-        is_literal = false;
-        break;
-      }
-    }
-
-    if (is_literal) {
-      // it's a literal document, like {x.y: {a: 12}}
-      predcode = LocalCollection._exprForValueTest(value, literals);
-    } else {
-      predcode = LocalCollection._exprForOperatorTest(value, literals);
-    }
-  }
-
-  // now, deal with the orthogonal concern of dotted.key.paths and the
-  // (potentially multi-level) array searching they require.
-  // while at it, make sure to not throw an exception if we hit undefined while
-  // drilling down through the dotted parts
-  var ret = '';
-  var innermost = true;
-  var lastPartWasNumber = false;
-  while (keyparts.length) {
-    var part = keyparts.pop();
-    var thisPartIsNumber = false;
-    if (/^\d+$/.test(part)) {
-      part = +part;
-      thisPartIsNumber = true;
-    }
-    var formal = keyparts.length ? "x" : "doc";
-    if (innermost) {
-      ret = '(function(x){return ' + predcode + ';})(' + formal + '&&' + formal + '[' +
-        JSON.stringify(part) + '])';
-      innermost = false;
-    } else if (lastPartWasNumber) {
-      // The last part was an array index, so if we find an array here we
-      // shouldn't search it!
-      ret = '(function(x){return ' + ret + ';})(' + formal + '&&' + formal + '[' +
-        JSON.stringify(part) + '])';
-    } else {
-      // If the runtime type is an array, search it, unless we're already at the
-      // innermost bit, or if the next part is a number (ie, an array index).
-      ret = 'f._matches(' + formal + '&&' + formal + '[' + JSON.stringify(part) +
-        '], function(x){return ' + ret + ';})';
-    }
-    lastPartWasNumber = thisPartIsNumber;
-  }
-
-  return ret;
-};
-
-// Given a value, return an expression that evaluates to true if the
-// value in 'x' matches the value, or else false. This includes
-// searching 'x' if it is an array. This doesn't include regular
-// expressions (that's because mongo's $not operator works with
-// regular expressions but not other kinds of scalar tests.)
-LocalCollection._exprForValueTest = function (value, literals) {
-  var expr;
-
-  if (value === null) {
-    // null has special semantics
-    // http://www.mongodb.org/display/DOCS/Querying+and+nulls
-    expr = 'x===null||x===undefined';
-  } else if (typeof value === 'string' ||
-             typeof value === 'number' ||
-             typeof value === 'boolean') {
-    // literal scalar value
-    // XXX object ids, dates, timestamps?
-    expr = 'x===' + JSON.stringify(value);
-  } else if (typeof value === 'function') {
-    // note that typeof(/a/) === 'function' in javascript
-    // XXX improve error
-    throw Error("Bad value type in query");
-  } else {
-    // array or literal document
-    expr = 'f._equal(x,' + JSON.stringify(value) + ')';
-  }
-
-  return 'f._matches_plus(x,function(x){return ' + expr + ';})';
-};
-
-// In a selector like {x: {$gt: 4, $lt: 8}}, we're calling the {$gt:
-// 4, $lt: 8} part an "operator." Given an operator, return an
-// expression that evaluates to true if the value in 'x' matches the
-// operator, or else false. This includes searching 'x' if necessary
-// if it's an array. In {x: /a/}, we consider /a/ to be an operator.
-LocalCollection._exprForOperatorTest = function (op, literals) {
-  if (op instanceof RegExp) {
-    return LocalCollection._exprForOperatorTest({$regex: op}, literals);
-  } else {
-    var clauses = [];
-    for (var type in op)
-      clauses.push(LocalCollection._exprForConstraint(type, op[type],
-                                                      op, literals));
-    if (clauses.length === 0)
-      return 'true';
-    return '(' + clauses.join('&&') + ')';
-  }
-};
-
-// In an operator like {$gt: 4, $lt: 8}, we call each key/value pair,
-// such as $gt: 4, a constraint. Given a constraint and its arguments,
-// return an expression that evaluates to true if the value in 'x'
-// matches the constraint, or else false. This includes searching 'x'
-// if it's an array (and it's appropriate to the constraint.)
-LocalCollection._exprForConstraint = function (type, arg, others,
-                                               literals) {
-  var expr;
-  var search = '_matches';
-  var negate = false;
-
-  if (type === '$gt') {
-    expr = 'f._cmp(x,' + JSON.stringify(arg) + ')>0';
-  } else if (type === '$lt') {
-    expr = 'f._cmp(x,' + JSON.stringify(arg) + ')<0';
-  } else if (type === '$gte') {
-    expr = 'f._cmp(x,' + JSON.stringify(arg) + ')>=0';
-  } else if (type === '$lte') {
-    expr = 'f._cmp(x,' + JSON.stringify(arg) + ')<=0';
-  } else if (type === '$all') {
-    expr = 'f._all(x,' + JSON.stringify(arg) + ')';
-    search = null;
-  } else if (type === '$exists') {
-    if (arg)
-      expr = 'x!==undefined';
-    else
-      expr = 'x===undefined';
-    search = null;
-  } else if (type === '$mod') {
-    expr = 'x%' + JSON.stringify(arg[0]) + '===' +
-      JSON.stringify(arg[1]);
-  } else if (type === '$ne') {
-    if (typeof arg !== "object")
-      expr = 'x===' + JSON.stringify(arg);
-    else
-      expr = 'f._equal(x,' + JSON.stringify(arg) + ')';
-    search = '_matches_plus';
-    negate = true; // tricky
-  } else if (type === '$in') {
-    expr = 'f._in(x,' + JSON.stringify(arg) + ')';
-    search = '_matches_plus';
-  } else if (type === '$nin') {
-    expr = 'f._in(x,' + JSON.stringify(arg) + ')';
-    search = '_matches_plus';
-    negate = true;
-  } else if (type === '$size') {
-    expr = '(x instanceof Array)&&x.length===' + arg;
-    search = null;
-  } else if (type === '$type') {
-    // $type: 1 is true for an array if any element in the array is of
-    // type 1. but an array doesn't have type array unless it contains
-    // an array..
-    expr = 'f._type(x)===' + JSON.stringify(arg);
-  } else if (type === '$regex') {
-    // XXX mongo uses PCRE and supports some additional flags: 'x' and
-    // 's'. javascript doesn't support them. so this is a divergence
-    // between our behavior and mongo's behavior. ideally we would
-    // implement x and s by transforming the regexp, but not today..
-    if ('$options' in others && /[^gim]/.test(others['$options']))
-      throw Error("Only the i, m, and g regexp options are supported");
-    expr = 'literals[' + literals.length + '].test(x)';
-    if (arg instanceof RegExp) {
-      if ('$options' in others) {
-        literals.push(new RegExp(arg.source, others['$options']));
+  if (spec instanceof Array) {
+    for (var i = 0; i < spec.length; i++) {
+      if (typeof spec[i] === "string") {
+        sortSpecParts.push({
+          lookup: makeLookupFunction(spec[i]),
+          ascending: true
+        });
       } else {
-        literals.push(arg);
+        sortSpecParts.push({
+          lookup: makeLookupFunction(spec[i][0]),
+          ascending: spec[i][1] !== "desc"
+        });
       }
-    } else {
-      literals.push(new RegExp(arg, others['$options']));
     }
-  } else if (type === '$options') {
-    expr = 'true';
-    search = null;
-  } else if (type === '$elemMatch') {
-    // XXX implement
-    throw Error("$elemMatch unimplemented");
-  } else if (type === '$not') {
-    // mongo doesn't support $regex inside a $not for some reason. we
-    // do, because there's no reason not to that I can see.. but maybe
-    // we should follow mongo's behavior?
-    expr = '!' + LocalCollection._exprForOperatorTest(arg, literals);
-    search = null;
+  } else if (typeof spec === "object") {
+    for (var key in spec) {
+      sortSpecParts.push({
+        lookup: makeLookupFunction(key),
+        ascending: spec[key] >= 0
+      });
+    }
   } else {
-    throw Error("Unrecognized key in selector: " + type);
+    throw Error("Bad sort specification: ", JSON.stringify(spec));
   }
 
-  if (search) {
-    expr = 'f.' + search + '(x,function(x){return ' +
-      expr + ';})';
-  }
+  if (sortSpecParts.length === 0)
+    return function () {return 0;};
 
-  if (negate)
-    expr = '!' + expr;
-
-  return expr;
+  return function (a, b) {
+    for (var i = 0; i < sortSpecParts.length; ++i) {
+      var specPart = sortSpecParts[i];
+      var aValue = specPart.lookup(a);
+      var bValue = specPart.lookup(b);
+      var compare = LocalCollection._f._cmp(aValue, bValue);
+      if (compare !== 0)
+        return specPart.ascending ? compare : -compare;
+    };
+    return 0;
+  };
 };
+
+
+})();

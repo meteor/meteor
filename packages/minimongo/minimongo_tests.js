@@ -476,6 +476,10 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: /a/}, {a: 'cut'});
   nomatch({a: /a/}, {a: 'CAT'});
   match({a: /a/i}, {a: 'CAT'});
+  match({a: /a/}, {a: ['foo', 'bar']});  // search within array...
+  nomatch({a: /,/}, {a: ['foo', 'bar']});  // but not by stringifying
+  match({a: {$regex: 'a'}}, {a: ['foo', 'bar']});
+  nomatch({a: {$regex: ','}}, {a: ['foo', 'bar']});
   match({a: {$regex: /a/}}, {a: 'cat'});
   nomatch({a: {$regex: /a/}}, {a: 'cut'});
   nomatch({a: {$regex: /a/}}, {a: 'CAT'});
@@ -523,6 +527,9 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({"a.b": [1,2,3]}, {a: {b: [4]}});
   match({"a.b": /a/}, {a: {b: "cat"}});
   nomatch({"a.b": /a/}, {a: {b: "dog"}});
+  match({"a.b.c": null}, {});
+  match({"a.b.c": null}, {a: 1});
+  match({"a.b.c": null}, {a: {b: 4}});
 
   // trying to access a dotted field that is undefined at some point
   // down the chain
@@ -795,13 +802,29 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({$where: "_.isArray(this.a)"}, {a: []});
   nomatch({$where: "_.isArray(this.a)"}, {a: 1});
 
+  // reaching into array
   match({"dogs.0.name": "Fido"}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
   match({"dogs.1.name": "Rex"}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
   nomatch({"dogs.1.name": "Fido"}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
   match({"room.1b": "bla"}, {room: {"1b": "bla"}});
 
+  // $elemMatch
+  match({dogs: {$elemMatch: {name: /e/}}},
+        {dogs: [{name: "Fido"}, {name: "Rex"}]});
+  nomatch({dogs: {$elemMatch: {name: /a/}}},
+          {dogs: [{name: "Fido"}, {name: "Rex"}]});
+  match({dogs: {$elemMatch: {age: {$gt: 4}}}},
+        {dogs: [{name: "Fido", age: 5}, {name: "Rex", age: 3}]});
+  match({dogs: {$elemMatch: {name: "Fido", age: {$gt: 4}}}},
+        {dogs: [{name: "Fido", age: 5}, {name: "Rex", age: 3}]});
+  nomatch({dogs: {$elemMatch: {name: "Fido", age: {$gt: 5}}}},
+          {dogs: [{name: "Fido", age: 5}, {name: "Rex", age: 3}]});
+  match({dogs: {$elemMatch: {name: /i/, age: {$gt: 4}}}},
+        {dogs: [{name: "Fido", age: 5}, {name: "Rex", age: 3}]});
+  nomatch({dogs: {$elemMatch: {name: /e/, age: 5}}},
+          {dogs: [{name: "Fido", age: 5}, {name: "Rex", age: 3}]});
+
   // XXX still needs tests:
-  // - $elemMatch
   // - non-scalar arguments to $gt, $lt, etc
 });
 

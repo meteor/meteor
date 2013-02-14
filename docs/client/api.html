@@ -106,8 +106,8 @@ Example:
     // client: declare collection to hold count object
     Counts = new Meteor.Collection("counts");
 
-    // client: autosubscribe to the count for the current room
-    Meteor.autosubscribe(function () {
+    // client: subscribe to the count for the current room
+    Meteor.autorun(function () {
       Meteor.subscribe("counts-by-room", Session.get("roomId"));
     });
 
@@ -161,33 +161,30 @@ on the client will be that from the *first* subscription the client
 activated.  (Even if it is not the first to send the duplicated
 attribute.)
 
+If you call [`Meteor.subscribe`](#meteor_subscribe) within a [reactive
+context](#reactivity) such as [`Meteor.autorun`](#meteor_autorun), the
+subscription will automatically be cancelled when the context is invalidated;
+it's not necessary to call `stop` on subscriptions made from inside
+`Meteor.autorun`. However, if the next iteration of your autorun function
+subscribes to the same record set (same name and parameters), Meteor is smart
+enough to skip a wasteful unsubscribe/resubscribe. For example:
+
+    Meteor.autorun(function () {
+      Meteor.subscribe("chat", {room: Session.get("current-room")});
+      Meteor.subscribe("privateMessages");
+    });
+
+This subscribes you to the chat messages in the current room and to your private
+messages. When you change rooms by calling `Session.set("current-room",
+"new-room")`, Meteor will subscribe to the new room's chat messages,
+unsubscribe from the original room's chat messages, and continue to
+stay subscribed to your private messages.
+
 If all of the attributes in a document are removed, Meteor
 will remove the (now empty) document.  If you want to publish empty
 documents, just use a placeholder attribute:
 
     Clicks.insert({exists: true});
-
-{{> api_box autosubscribe}}
-
-`func` will be run immediately, and while it runs,
-records will be kept of the subscriptions it makes
-(via [`Meteor.subscribe`](#meteor_subscribe)) and the data it uses
-(including calls to [`Session.get`](#session_get)
-and [`collection.find`](#find)).
-
-Whenever the used data changes, the subscriptions will be cancelled and
-`func` will be re-run to make replacement subscriptions.
-`Meteor.autosubscribe` will automatically stop the old subscription.
-It's not necessary to call `stop` on subscriptions made from inside
-`Meteor.autosubscribe`.
-
-Example:
-
-    // Subscribe to the chat messages in the current room. Automatically
-    // update the subscription whenever the current room changes.
-    Meteor.autosubscribe(function () {
-      Meteor.subscribe("chat", {room: Session.get("current-room")});
-    });
 
 <h2 id="methods_header"><span>Methods</span></h2>
 
@@ -566,7 +563,7 @@ those changes may or may not appear in the result set.
 Cursors are a reactive data source.  The first time you retrieve a
 cursor's documents with `fetch`, `map`, or `forEach` inside a
 reactive context (eg, [`Meteor.render`](#meteor_render) or
-[`Meteor.autosubscribe`](#meteor_autosubscribe)), Meteor will register a
+[`Meteor.autorun`](#meteor_autorun)), Meteor will register a
 dependency on the underlying data.  Any change to the collection that
 changes the documents in a cursor will trigger a recomputation.  To
 disable this behavior, pass `{reactive: false}` as an option to
@@ -1063,11 +1060,11 @@ whenever [`Session.set`](#session_set)`("currentList", x)` is called.
 
 Example:
 
-    Meteor.autosubcribe(function () {
+    Meteor.autorun(function () {
       Meteor.subscribe("chat-history", {room: Session.get("currentRoomId")});
     });
 
-    // Causes the function passed to Meteor.autosubscribe to be re-run, so
+    // Causes the function passed to Meteor.autorun to be re-run, so
     // that the chat-history subscription is moved to the room "home".
     Session.set("currentRoomId", "home");
 
@@ -1440,7 +1437,7 @@ call [`Accounts.sendEnrollmentEmail`](#accounts_sendenrollmentemail). This
 will send the user an email with a link to set their initial password.
 
 By default the `profile` option is added directly to the new user document. To
-override this behavior, use [`Accounts.onCreateUser`](#accounts_createuser).
+override this behavior, use [`Accounts.onCreateUser`](#accounts_oncreateuser).
 
 This function is only used for creating users with passwords. The external
 service login flows do not use this function.
@@ -2136,9 +2133,11 @@ signal that something has changed. If it does this, it should also use
 it can know when to stop listening for changes.
 
 Invalidation contexts have an `id` attribute, which is a unique positive
-integer. You're free to add any other attributes you like to the
-invalidation context for your own convenience, as long as they don't
-start with an underscore.
+integer, and a boolean attribute `invalidated`. `invalidated` starts out false,
+and is set to true when `invalidate` is called, before calling any of the
+invalidation callbacks. You're free to add any other attributes you like to the
+invalidation context for your own convenience, as long as they don't start with
+an underscore.
 
 {{> api_box run }}
 
@@ -2321,12 +2320,13 @@ that any auto-updating elements that you have created by calling
 [`Meteor.render`](#meteor_render) have already been inserted in the main
 DOM tree.
 
-Technically speaking, `flush` calls the [invalidation
-callbacks](#oninvalidate) on every [reactive context](#context) that
-has been [invalidated](#invalidate), but hasn't yet had its callbacks
-called. If the invalidation callbacks invalidate still more contexts,
-flush keeps flushing until everything is totally settled. The DOM
-elements are cleaned up by logic that is triggered by context invalidations.
+Technically speaking, `flush` calls the [invalidation callbacks](#oninvalidate)
+on every [reactive context](#context) that has been [invalidated](#invalidate),
+but hasn't yet had its callbacks called. If the invalidation callbacks
+invalidate still more contexts, flush keeps flushing until everything is totally
+settled. In this case, the callbacks on the newly-invalidated context won't be
+called until after the currently-flushing context's callbacks have all been
+run.
 
 
 

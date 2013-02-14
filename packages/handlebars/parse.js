@@ -65,11 +65,20 @@ Handlebars.to_json_ast = function (code) {
   };
 
   var value = function (node) {
+    // Work around handlebars.js Issue #422 - Negative integers for
+    // helpers get trapped as ID. handlebars doesn't support floating
+    // point, just integers.
+    if (node.type === 'ID' && /^-\d+$/.test(node.string)) {
+      // Reconstruct node
+      node.type = 'INTEGER';
+      node.integer = node.string;
+    }
+
     var choices = {
       ID: function (node) {return identifier(node);},
       STRING: function (node) {return node.string;},
-      INTEGER: function (node) {return node.integer;},
-      BOOLEAN: function (node) {return node.bool;},
+      INTEGER: function (node) {return +node.integer;},
+      BOOLEAN: function (node) {return (node.bool === 'true');}
     };
     if (!(node.type in choices))
       throw new Error("got ast node " + node.type + " for value");

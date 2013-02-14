@@ -69,6 +69,7 @@
       return result;
   });
 
+  var Fiber = __meteor_bootstrap__.require('fibers');
   // Listen to incoming OAuth http requests
   __meteor_bootstrap__.app
     .use(connect.query())

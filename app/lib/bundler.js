@@ -378,36 +378,23 @@ _.extend(Bundle.prototype, {
     var self = this;
 
     /// Javascript
-    var code_parts = [];
+    var codeParts = [];
 
     _.each(self.js.client, function (js_path) {
-      var code = self.files.client[js_path].toString('utf8');
+      codeParts.push(self.files.client[js_path].toString('utf8'));
 
-      // Uglify has a bug -- it will incorrectly minifiy files that
-      // contain the 'debugger' statement.
-      // https://github.com/mishoo/UglifyJS/issues/243
-      // For now, just skip minification of such files.
-      // XXX fix uglify, and once that happens, go back to
-      // concatenating before minifying, rather than vice versa
-      // https://app.asana.com/0/159908330244/522242142181
-      if (!(code.match(/debugger/))) {
-        var ast = uglify.parser.parse(code);
-        ast = uglify.uglify.ast_mangle(ast);
-        ast = uglify.uglify.ast_squeeze(ast);
-        code = uglify.uglify.gen_code(ast);
-      }
-
-      code_parts.push(code);
       delete self.files.client[js_path];
     });
-    var final_code = code_parts.join('\n;\n');
+    var combinedCode = codeParts.join('\n;\n');
+    var finalCode = uglify.minify(
+      combinedCode, {fromString: true, compress: {drop_debugger: false}}).code;
 
     var hash = crypto.createHash('sha1');
-    hash.update(final_code);
+    hash.update(finalCode);
     var digest = hash.digest('hex');
     var name = path.sep + digest + ".js";
 
-    self.files.client_cacheable[name] = new Buffer(final_code);
+    self.files.client_cacheable[name] = new Buffer(finalCode);
     self.js.client = [name];
 
     /// CSS
@@ -574,7 +561,7 @@ _.extend(Bundle.prototype, {
 "This is a Meteor application bundle. It has only one dependency,\n" +
 "node.js (with the 'fibers' package). To run the application:\n" +
 "\n" +
-"  $ npm install fibers\n" +
+"  $ npm install fibers@1.0.0\n" +
 "  $ export MONGO_URL='mongodb://user:password@host:port/databasename'\n" +
 "  $ export ROOT_URL='http://example.com'\n" +
 "  $ export MAIL_URL='smtp://user:password@mailhost:port/'\n" +

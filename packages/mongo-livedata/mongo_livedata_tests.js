@@ -108,6 +108,7 @@ Tinytest.addAsync("mongo-livedata - basics", function (test, onComplete) {
 
   // sleep function from fibers docs.
   var sleep = function(ms) {
+    var Fiber = __meteor_bootstrap__.require('fibers');
     var fiber = Fiber.current;
     setTimeout(function() {
       fiber.run();
@@ -570,6 +571,29 @@ testAsyncMulti('mongo-livedata - rewrite selector', [
       // Ensure that "i" and "m" flags are respected by making /B/ match b and
       // /^/ match at the newline.
       coll.update({name: /^o+B/im}, {$inc: {value: 1}}, updateCallback);
+    }));
+  }
+]);
+
+testAsyncMulti('mongo-livedata - specified _id', [
+  function (test, expect) {
+    var collectionName = Meteor.uuid();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', collectionName);
+      Meteor.subscribe('c-' + collectionName);
+    }
+    var expectError = expect(function (err) {
+      test.isTrue(err);
+      var doc = coll.findOne();
+      test.equal(doc.name, "foo");
+    });
+    var coll = new Meteor.Collection(collectionName);
+    coll.insert({_id: "foo", name: "foo"}, expect(function (err1, id) {
+      test.equal(id, "foo");
+      var doc = coll.findOne();
+      test.equal(doc._id, "foo");
+      Meteor._suppress_log(1);
+      coll.insert({_id: "foo", name: "bar"}, expectError);
     }));
   }
 ]);

@@ -8,7 +8,7 @@
     // invalidation list. The id is an integer >= 1.
     this.id = next_id++;
     this._callbacks = [];
-    this._invalidated = false;
+    this.invalidated = false;
   };
   Context.current = null;
 
@@ -24,8 +24,8 @@
     // invalidation functions (before returning) -- it just marks the
     // context as invalidated.
     invalidate: function () {
-      if (!this._invalidated) {
-        this._invalidated = true;
+      if (!this.invalidated) {
+        this.invalidated = true;
         // If this is first invalidation, schedule a flush.
         // We may be inside a flush already, in which case this
         // is unnecessary but harmless.
@@ -38,7 +38,7 @@
     // calls f immediately if this context was already
     // invalidated. receives one argument, the context.
     onInvalidate: function (f) {
-      if (this._invalidated)
+      if (this.invalidated)
         f(this);
       else
         this._callbacks.push(f);
@@ -58,6 +58,14 @@
         pending_invalidate = [];
 
         _.each(pending, function (ctx) {
+          // flush guarantees that all the callbacks for a given context are
+          // called before moving on to the next context (not counting callbacks
+          // that are called immediately because the context is already
+          // invalidated when you call onInvalidate).
+          //
+          // This is important for, eg, subscribe, which wants the callbacks on
+          // its unsubscribeCallback to be called after an autorun function is
+          // re-run.
           _.each(ctx._callbacks, function (f) {
             try {
               f(ctx);

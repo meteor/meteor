@@ -136,6 +136,26 @@ client cache, the server *publishes* sets of JSON documents, and the
 client *subscribes* to those sets.  As documents in a set change, the
 server patches each client's cache.
 
+Today most Meteor apps use MongoDB as their database because it is the
+best supported, though support for other databases is coming in the
+future. The
+[`Meteor.Collection`](http://docs.meteor.com/#meteor_collection) class
+is used to declare Mongo collections and to manipulate them. Thanks to
+`minimongo`, Meteor's client-side Mongo emulator, `Meteor.Collection`
+can be used from both client and server code.
+
+    // declare collections
+    // this code should be included in both the client and the server
+    Rooms = new Meteor.Collection("rooms");
+    Messages = new Meteor.Collection("messages");
+    Parties = new Meteor.Collection("parties");
+
+    // server: populate collections with some initial documents
+    Rooms.insert({name: "Conference Room A"});
+    var myRooms = Rooms.find({}).fetch();
+    Messages.insert({text: "Hello world", room: myRooms[0].id});
+    Parties.insert({name: "Super Bowl Party"});
+
 Each document set is defined by a publish function on the server.  The
 publish function runs each time a new client subscribes to a document
 set.  The data in a document set can come from anywhere, but the common
@@ -251,7 +271,7 @@ programming](http://en.wikipedia.org/wiki/Reactive_programming). This means that
 you can write your code in a simple imperative style, and the result will be
 automatically recalculated whenever data changes that your code depends on.
 
-    Meteor.autosubscribe(function () {
+    Meteor.autorun(function () {
       Meteor.subscribe("messages", Session.get("currentRoomId"));
     });
 
@@ -262,8 +282,8 @@ function will be automatically re-run, setting up a new subscription that
 replaces the old one.
 
 This automatic recomputation is achieved by a cooperation
-between `Session` and `Meteor.autosubscribe`.
-Methods like `Meteor.autosubscribe` establish a "reactive
+between `Session` and `Meteor.autorun`.
+Methods like `Meteor.autorun` establish a "reactive
 context" inside of which data dependencies are tracked, and they are
 prepared to re-run their function argument as necessary.  Data
 providers like `Session`, on the other hand, make note of
@@ -281,7 +301,6 @@ These Meteor functions run your code in a reactive context:
 
 * [Templates](#templates)
 * [`Meteor.render`](#meteor_render) and [`Meteor.renderList`](#meteor_renderlist)
-* [`Meteor.autosubscribe`](#meteor_autosubscribe)
 * [`Meteor.autorun`](#meteor_autorun)
 
 And the reactive data sources that can trigger changes are:
@@ -292,6 +311,10 @@ And the reactive data sources that can trigger changes are:
 * [`Meteor.user`](#meteor_user)
 * [`Meteor.userId`](#meteor_userid)
 * [`Meteor.loggingIn`](#meteor_loggingin)
+
+In addition, calling [`Meteor.subscribe`](#meteor_subscribe) in a reactive
+context sets up a subscription which is automatically stopped when the context
+is invalidated, as shown above.
 
 Meteor's
 [implementation](https://github.com/meteor/meteor/blob/master/packages/deps/deps.js)
@@ -638,7 +661,7 @@ have `npm` available, and run the following:
 
     $ cd bundle/server/node_modules
     $ rm -r fibers
-    $ npm install fibers@0.6.9
+    $ npm install fibers@1.0.0
 {{/warning}}
 
 {{/better_markdown}}

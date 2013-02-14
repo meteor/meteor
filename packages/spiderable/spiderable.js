@@ -1,6 +1,6 @@
 (function () {
   var fs = __meteor_bootstrap__.require('fs');
-  var spawn = __meteor_bootstrap__.require('child_process').spawn;
+  var child_process = __meteor_bootstrap__.require('child_process');
   var querystring = __meteor_bootstrap__.require('querystring');
   var urlParser = __meteor_bootstrap__.require('url');
   var app = __meteor_bootstrap__.app;
@@ -25,79 +25,69 @@
       delete parsedQuery['_escaped_fragment_'];
       var newQuery = querystring.stringify(parsedQuery);
       var newPath = parsedUrl.pathname + (newQuery ? ('?' + newQuery) : '');
-      var  url = "http://" + req.headers.host + newPath;
+      var url = "http://" + req.headers.host + newPath;
 
-      // run phantomjs
+      // This string is going to be put into a bash script, so it's important
+      // that 'url' (which comes from the network) can neither exploit phantomjs
+      // or the bash script. JSON stringification should prevent it from
+      // exploiting phantomjs, and since the output of JSON.stringify shouldn't
+      // be able to contain newlines, it should be unable to exploit bash as
+      // well.
+      var phantomScript = "var url = " + JSON.stringify(url) + ";" +
+            "var page = require('webpage').create();" +
+            "page.open(url);" +
+            "setInterval(function() {" +
+            "  var ready = page.evaluate(function () {" +
+            "    if (typeof Meteor !== 'undefined' " +
+            "        && typeof(Meteor.status) !== 'undefined' " +
+            "        && Meteor.status().connected) {" +
+            "      Meteor.flush();" +
+            "      return Meteor._LivedataConnection._allSubscriptionsReady();" +
+            "    }" +
+            "    return false;" +
+            "  });" +
+            "  if (ready) {" +
+            "    var out = page.content;" +
+            "    out = out.replace(/<script[^>]+>(.|\\n|\\r)*?<\\/script\\s*>/ig, '');" +
+            "    out = out.replace('<meta name=\"fragment\" content=\"!\">', '');" +
+            "    console.log(out);" +
+            "    phantom.exit();" +
+            "  }" +
+            "}, 100);\n";
+
+      // Run phantomjs.
       //
-      // Use '/dev/stdin' to avoid writing to a temporary file. Can't
+      // Use '/dev/stdin' to avoid writing to a temporary file. We can't
       // just omit the file, as PhantomJS takes that to mean 'use a
       // REPL' and exits as soon as stdin closes.
       //
       // However, Node 0.8 broke the ability to open /dev/stdin in the
-      // subprocess; see https://gist.github.com/3751746 for the gory
-      // details. Work around this with a not-so-useless use of cat.
-      var cp = spawn('bash',
-                     ['-c', 'cat | phantomjs --load-images=no /dev/stdin']);
+      // subprocess, so we can't just write our string to the process's stdin
+      // directly; see https://gist.github.com/3751746 for the gory details. We
+      // work around this with a bash heredoc. (We previous used a "cat |"
+      // instead, but that meant we couldn't use exec and had to manage several
+      // processes.)
+      child_process.execFile(
+        '/bin/bash',
+        ['-c',
+         ("exec phantomjs --load-images=no /dev/stdin <<'END'\n" +
+          phantomScript + "END\n")],
+        {timeout: REQUEST_TIMEOUT},
+        function (error, stdout, stderr) {
+          if (!error && /<html/i.test(stdout)) {
+            res.writeHead(200, {'Content-Type': 'text/html; charset=UTF-8'});
+            res.end(stdout);
+          } else {
+            // phantomjs failed. Don't send the error, instead send the
+            // normal page.
+            if (error.code === 127)
+              Meteor._debug("spiderable: phantomjs not installed. Download and install from http://phantomjs.org/");
+            else
+              Meteor._debug("spiderable: phantomjs failed:", error, "\nstderr:", stderr);
 
-      var data = '';
-      cp.stdout.setEncoding('utf8');
-      cp.stdout.on('data', function (chunk) {
-        data += chunk;
-      });
-
-      cp.on('exit', function (code) {
-        if (0 === code && /<html/i.test(data)) {
-          res.writeHead(200, {'Content-Type': 'text/html; charset=UTF-8'});
-          res.end(data);
-        } else {
-          // phantomjs failed. Don't send the error, instead send the
-          // normal page.
-          if (code === 127)
-            Meteor._debug("spiderable: phantomjs not installed. Download and install from http://phantomjs.org/");
-          else
-            Meteor._debug("spiderable: phantomjs failed:", code, data);
-
-          next();
-        }
-      });
-
-      // don't crash w/ EPIPE if phantomjs isn't installed.
-      cp.stdin.on('error', function () {});
-
-      cp.stdin.write(
-        "var url = '" + url + "';" +
-"var page = require('webpage').create();" +
-"page.open(url);" +
-
-"setInterval(function() {" +
-"  var ready = page.evaluate(function () {" +
-"    if (typeof Meteor !== 'undefined' " +
-"        && typeof(Meteor.status) !== 'undefined' " +
-"        && Meteor.status().connected) {" +
-"      Meteor.flush();" +
-"      return Meteor._LivedataConnection._allSubscriptionsReady();" +
-"    }" +
-"    return false;" +
-"  });" +
-
-"  if (ready) {" +
-"    var out = page.content;" +
-"    out = out.replace(/<script[^>]+>(.|\\n|\\r)*?<\\/script\\s*>/ig, '');" +
-"    out = out.replace('<meta name=\"fragment\" content=\"!\">', '');" +
-
-"    console.log(out);" +
-"    phantom.exit();" +
-"  }" +
-"}, 100);");
-      cp.stdin.end();
-
-      // Just kill it if it takes too long.
-      setTimeout(function () {
-        if (cp && cp.pid) {
-          cp.kill();
-        }
-      }, REQUEST_TIMEOUT);
-
+            next();
+          }
+        });
     } else {
       next();
     }

@@ -26,7 +26,7 @@ testAsyncMulti("stream - reconnect", [
     }));
 
     if (Meteor.status().status !== "connected")
-      Meteor.default_connection.stream.on('reset', callback);
+      Meteor.default_connection._stream.on('reset', callback);
     else
       callback();
   }

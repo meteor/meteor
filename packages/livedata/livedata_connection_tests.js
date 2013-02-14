@@ -83,7 +83,7 @@ Tinytest.add("livedata stub - receive data", function (test) {
   test.isUndefined(conn._updatesForUnknownStores[coll_name]);
 });
 
-Tinytest.addAsync("livedata stub - subscribe", function (test, onComplete) {
+Tinytest.add("livedata stub - subscribe", function (test) {
   var stream = new Meteor._StubStream();
   var conn = newConnection(stream);
 
@@ -106,33 +106,138 @@ Tinytest.addAsync("livedata stub - subscribe", function (test, onComplete) {
   stream.receive({msg: 'data', 'subs': [id]});
   test.isTrue(callback_fired);
 
-  // This defers the actual unsub message, so we need to set a timeout
-  // to observe the message. We also test that we can resubscribe even
-  // before the unsub has been sent.
-  //
-  // Note: it would be perfectly fine for livedata_connection to send the unsub
-  // synchronously, so if this test fails just because we've made that change,
-  // that's OK! This is a regression test for a failure case where it *never*
-  // sent the unsub if there was a quick resub afterwards.
-  //
-  // XXX rewrite Meteor.defer to guarantee ordered execution so we don't have to
-  // use setTimeout
+  // Unsubscribe.
   sub.stop();
-  conn.subscribe('my_data');
+  test.length(stream.sent, 1);
+  message = JSON.parse(stream.sent.shift());
+  test.equal(message, {msg: 'unsub', id: id});
 
+  // Resubscribe.
+  conn.subscribe('my_data');
   test.length(stream.sent, 1);
   message = JSON.parse(stream.sent.shift());
   var id2 = message.id;
   test.notEqual(id, id2);
   delete message.id;
   test.equal(message, {msg: 'sub', name: 'my_data', params: []});
+});
 
-  setTimeout(function() {
-    test.length(stream.sent, 1);
-    var message = JSON.parse(stream.sent.shift());
-    test.equal(message, {msg: 'unsub', id: id});
-    onComplete();
-  }, 10);
+
+Tinytest.add("livedata stub - reactive subscribe", function (test) {
+  var stream = new Meteor._StubStream();
+  var conn = newConnection(stream);
+
+  startAndConnect(test, stream);
+
+  var rFoo = new ReactiveVar('foo1');
+  var rBar = new ReactiveVar('bar1');
+
+  var onCompleteCount = {};
+  var onComplete = function (tag) {
+    return function () {
+      if (_.has(onCompleteCount, tag))
+        ++onCompleteCount[tag];
+      else
+        onCompleteCount[tag] = 1;
+    };
+  };
+
+  // Subscribe to some subs.
+  var stopperHandle;
+  var autorunHandle = Meteor.autorun(function () {
+    conn.subscribe("foo", rFoo.get(), onComplete(rFoo.get()));
+    conn.subscribe("bar", rBar.get(), onComplete(rBar.get()));
+    conn.subscribe("completer", onComplete("completer"));
+    stopperHandle = conn.subscribe("stopper", onComplete("stopper"));
+  });
+
+  // Check sub messages. (Assume they are sent in the order executed.)
+  test.length(stream.sent, 4);
+  var message = JSON.parse(stream.sent.shift());
+  var idFoo1 = message.id;
+  delete message.id;
+  test.equal(message, {msg: 'sub', name: 'foo', params: ['foo1']});
+
+  message = JSON.parse(stream.sent.shift());
+  var idBar1 = message.id;
+  delete message.id;
+  test.equal(message, {msg: 'sub', name: 'bar', params: ['bar1']});
+
+  message = JSON.parse(stream.sent.shift());
+  var idCompleter = message.id;
+  delete message.id;
+  test.equal(message, {msg: 'sub', name: 'completer', params: []});
+
+  message = JSON.parse(stream.sent.shift());
+  var idStopper = message.id;
+  delete message.id;
+  test.equal(message, {msg: 'sub', name: 'stopper', params: []});
+
+  // Haven't hit onComplete yet.
+  test.equal(onCompleteCount, {});
+
+  // "completer" gets completed now. its callback should fire.
+  // XXX When this lands on ddp-pre1, this will have to be changed to the new
+  // message name.
+  stream.receive({msg: 'data', 'subs': [idCompleter]});
+  test.equal(onCompleteCount, {completer: 1});
+  test.length(stream.sent, 0);
+
+  // Stop 'stopper'.
+  stopperHandle.stop();
+  test.length(stream.sent, 1);
+  message = JSON.parse(stream.sent.shift());
+  test.equal(message, {msg: 'unsub', id: idStopper});
+
+  test.equal(onCompleteCount, {completer: 1});
+
+  // Change the foo subscription and flush. We should sub to the new foo
+  // subscription, re-sub to the stopper subscription, and then unsub from the old
+  // foo subscription.  The bar subscription should be unaffected. The completer
+  // subscription should call its new onComplete callback now.
+  rFoo.set("foo2");
+  Meteor.flush();
+  test.length(stream.sent, 3);
+
+  message = JSON.parse(stream.sent.shift());
+  var idFoo2 = message.id;
+  delete message.id;
+  test.equal(message, {msg: 'sub', name: 'foo', params: ['foo2']});
+
+  message = JSON.parse(stream.sent.shift());
+  var idStopperAgain = message.id;
+  delete message.id;
+  test.equal(message, {msg: 'sub', name: 'stopper', params: []});
+
+  message = JSON.parse(stream.sent.shift());
+  test.equal(message, {msg: 'unsub', id: idFoo1});
+
+  test.equal(onCompleteCount, {completer: 2});
+
+  // Complete the stopper and bar subs. Completing stopper should call only the
+  // onComplete from the new subscription because they were separate
+  // subscriptions started at different times and the first one was explicitly
+  // torn down by the client; completing bar should call both onCompletes.
+  // XXX When this lands on ddp-pre1, this will have to be changed to the new
+  // message name.
+  stream.receive({msg: 'data', 'subs': [idStopperAgain, idBar1]});
+  test.equal(onCompleteCount, {completer: 2, bar1: 2, stopper: 1});
+
+  // Shut down the autorun. This should unsub us from all current subs at flush
+  // time.
+  autorunHandle.stop();
+  Meteor.flush();
+
+  test.length(stream.sent, 4);
+  // The order of unsubs here is not important.
+  var unsubMessages = _.map(stream.sent, JSON.parse);
+  stream.sent.length = 0;
+  test.equal(_.unique(_.pluck(unsubMessages, 'msg')), ['unsub']);
+  var actualIds = _.pluck(unsubMessages, 'id');
+  var expectedIds = [idFoo2, idBar1, idCompleter, idStopperAgain];
+  actualIds.sort();
+  expectedIds.sort();
+  test.equal(actualIds, expectedIds);
 });
 
 
@@ -840,6 +945,75 @@ Tinytest.add("livedata stub - multiple stubs same doc", function (test) {
   o.stop();
 });
 
+Tinytest.add("livedata stub - unsent methods don't block quiescence", function (test) {
+  // This test is for https://github.com/meteor/meteor/issues/555
+
+  var stream = new Meteor._StubStream;
+  var conn = newConnection(stream);
+  startAndConnect(test, stream);
+
+  var collName = Meteor.uuid();
+  var coll = new Meteor.Collection(collName, {manager: conn});
+
+  conn.methods({
+    insertSomething: function () {
+      // stub write
+      coll.insert({foo: 'bar'});
+    }
+  });
+
+  test.equal(coll.find().count(), 0);
+
+  // Call a random method (no-op)
+  conn.call('no-op');
+  // Call a wait method
+  conn.apply('no-op', [], {wait: true});
+  // Call a method with a stub that writes.
+  conn.call('insertSomething');
+
+
+  // Stub write is visible.
+  test.equal(coll.find({foo: 'bar'}).count(), 1);
+  var stubWrittenId = coll.findOne({foo: 'bar'})._id;
+
+  // first method sent
+  var firstMethodId = testGotMessage(
+    test, stream, {msg: 'method', method: 'no-op',
+                   params: [], id: '*'});
+  test.equal(stream.sent.length, 0);
+
+  // ack the first method
+  stream.receive({msg: 'data', methods: [firstMethodId]});
+  stream.receive({msg: 'result', id: firstMethodId});
+
+  // Wait method sent.
+  var waitMethodId = testGotMessage(
+    test, stream, {msg: 'method', method: 'no-op',
+                   params: [], id: '*'});
+  test.equal(stream.sent.length, 0);
+
+  // ack the wait method
+  stream.receive({msg: 'data', methods: [waitMethodId]});
+  stream.receive({msg: 'result', id: waitMethodId});
+
+  // insert method sent.
+  var insertMethodId = testGotMessage(
+    test, stream, {msg: 'method', method: 'insertSomething',
+                   params: [], id: '*'});
+  test.equal(stream.sent.length, 0);
+
+  // ack the insert method
+  stream.receive({msg: 'data', methods: [insertMethodId]});
+  stream.receive({msg: 'result', id: insertMethodId});
+
+  // simulation reverted.
+  test.equal(coll.find({foo: 'bar'}).count(), 0);
+
+});
+
+
+
+
 Tinytest.add("livedata connection - reactive userId", function (test) {
   var stream = new Meteor._StubStream();
   var conn = newConnection(stream);
@@ -992,10 +1166,10 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
     return JSON.parse(msg).params[0];
   }), ['reconnect zero', 'reconnect one']);
 
-  // black-box test:
+  // white-box test:
   test.equal(_.map(conn._outstandingMethodBlocks, function (block) {
     return [block.wait, _.map(block.methods, function (method) {
-      return JSON.parse(method._message).params[0];
+      return method._message.params[0];
     })];
   }), [
     [false, ['reconnect zero', 'reconnect one']],
@@ -1041,7 +1215,7 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
   // white-box test:
   test.equal(_.map(conn._outstandingMethodBlocks, function (block) {
     return [block.wait, _.map(block.methods, function (method) {
-      return JSON.parse(method._message).params[0];
+      return method._message.params[0];
     })];
   }), [
     [false, ['reconnect one', 'reconnect two', 'reconnect three', 'one']],
@@ -1157,6 +1331,45 @@ Tinytest.add("livedata stub - reconnect double wait method", function (test) {
   testGotMessage(test, stream,
                  {msg: 'method', method: 'lastMethod', params: [], id: '*'});
 });
+
+
+Tinytest.add("livedata stub - stubs before connected", function (test) {
+  var stream = new Meteor._StubStream();
+  var conn = newConnection(stream);
+
+  var collName = Meteor.uuid();
+  var coll = new Meteor.Collection(collName, {manager: conn});
+
+  // Start and send "connect", but DON'T get 'connected' quite yet.
+  stream.reset(); // initial connection start.
+
+  testGotMessage(test, stream, {msg: 'connect'});
+  test.length(stream.sent, 0);
+
+  // Insert a document. The stub updates "conn" directly.
+  coll.insert({_id: "foo", bar: 42});
+  test.equal(coll.find().count(), 1);
+  test.equal(coll.findOne(), {_id: "foo", bar: 42});
+  // It also sends the method message.
+  var methodMessage = JSON.parse(stream.sent.shift());
+  test.equal(methodMessage, {msg: 'method', method: '/' + collName + '/insert',
+                             params: [{_id: "foo", bar: 42}],
+                             id: methodMessage.id});
+  test.length(stream.sent, 0);
+
+  // Now receive a connected message. This should not clear the
+  // _documentsWrittenByStub state!
+  stream.receive({msg: 'connected', session: SESSION_ID});
+  test.length(stream.sent, 0);
+  test.equal(coll.find().count(), 1);
+
+  // Now receive the "updated" message for the method. This should revert the
+  // insert.
+  stream.receive({msg: 'data', methods: [methodMessage.id]});
+  test.length(stream.sent, 0);
+  test.equal(coll.find().count(), 0);
+});
+
 
 // XXX also test:
 // - reconnect, with session resume.

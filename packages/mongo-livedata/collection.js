@@ -249,9 +249,13 @@ _.each(["insert", "update", "remove"], function (name) {
         throw new Error("insert requires an argument");
       // shallow-copy the document and generate an ID
       args[0] = _.extend({}, args[0]);
-      if ('_id' in args[0])
-        throw new Error("Do not pass an _id to insert. Meteor will generate the _id for you.");
-      ret = args[0]._id = Meteor.uuid();
+      if ('_id' in args[0]) {
+        ret = args[0]._id;
+        if (typeof ret !== 'string')
+          throw new Error("Meteor requires document _id fields to be strings");
+      } else {
+        ret = args[0]._id = Meteor.uuid();
+      }
     } else {
       args[0] = Meteor.Collection._rewriteSelector(args[0]);
     }
@@ -411,27 +415,34 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
 
     _.each(['insert', 'update', 'remove'], function (method) {
       m[self._prefix + method] = function (/* ... */) {
-        if (this.isSimulation || (!self._restricted && self._isInsecure())) {
-          self._collection[method].apply(
+        try {
+          if (this.isSimulation || (!self._restricted && self._isInsecure())) {
+            self._collection[method].apply(
             self._collection, _.toArray(arguments));
-        } else if (self._restricted) {
-          // short circuit if there is no way it will pass.
-          if (self._validators[method].allow.length === 0) {
-            throw new Meteor.Error(
-              403, "Access denied. No allow validators set on restricted " +
-                "collection.");
-          }
+          } else if (self._restricted) {
+            // short circuit if there is no way it will pass.
+            if (self._validators[method].allow.length === 0) {
+              throw new Meteor.Error(
+                403, "Access denied. No allow validators set on restricted " +
+                  "collection.");
+            }
 
-          var validatedMethodName =
-                '_validated' + method.charAt(0).toUpperCase() + method.slice(1);
-          var argsWithUserId = [this.userId].concat(_.toArray(arguments));
-          self[validatedMethodName].apply(self, argsWithUserId);
-        } else {
-          throw new Meteor.Error(403, "Access denied");
+            var validatedMethodName =
+                  '_validated' + method.charAt(0).toUpperCase() + method.slice(1);
+            var argsWithUserId = [this.userId].concat(_.toArray(arguments));
+            self[validatedMethodName].apply(self, argsWithUserId);
+          } else {
+            throw new Meteor.Error(403, "Access denied");
+          }
+        } catch (e) {
+          if (e.name === 'MongoError' || e.name === 'MinimongoError') {
+            throw new Meteor.Error(409, e.toString());
+          } else {
+            throw e;
+          }
         }
       };
     });
-
     self._manager.methods(m);
   }
 };

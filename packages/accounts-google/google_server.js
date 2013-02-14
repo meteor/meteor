@@ -7,11 +7,17 @@
     var identity = getIdentity(accessToken);
 
     var serviceData = {
-      id: identity.id,
       accessToken: accessToken,
-      email: identity.email,
       expiresAt: (+new Date) + (1000 * response.expiresIn)
     };
+
+    // include all fields from google
+    // https://developers.google.com/accounts/docs/OAuth2Login#userinfocall
+    var whitelisted = ['id', 'email', 'verified_email', 'name', 'given_name',
+        'family_name', 'picture', 'locale', 'timezone', 'gender'];
+
+    var fields = _.pick(identity, whitelisted);
+    _.extend(serviceData, fields);
 
     // only set the token in serviceData if it's there. this ensures
     // that we don't lose old ones (since we only get this on the first

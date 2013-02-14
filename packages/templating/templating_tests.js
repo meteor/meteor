@@ -1001,3 +1001,34 @@ Tinytest.add("templating - constant text patching", function (test) {
   div.kill();
   Meteor.flush();
 });
+
+
+Tinytest.add('templating - helper typecast Issue #617', function (test) {
+
+  Handlebars.registerHelper('testTypeCasting', function (/*arguments*/) {
+    // Return a string representing the arguments passed to this
+    // function, including types. eg:
+    // (1, true) -> "[number,1][boolean,true]"
+    return _.reduce(_.toArray(arguments), function (memo, arg) {
+      if (typeof arg === 'object')
+        return memo + "[object]";
+      return memo + "[" + typeof arg + "," + arg + "]";
+    }, "");
+    return x;
+  });
+
+  var frag = Meteor.render(Template.test_type_casting);
+  var result = canonicalizeHtml(DomUtils.fragmentToHtml(frag));
+  test.equal(
+    result,
+    // This corresponds to entries in templating_tests.html.
+    // true/faslse
+    "[string,true][string,false][boolean,true][boolean,false]" +
+      // numbers
+      "[number,0][number,1][number,-1][number,10][number,-10]" +
+      // errors
+      "[undefined,undefined][undefined,undefined]" +
+      // handlebars 'options' argument. appended to args of all helpers.
+      "[object]");
+});
+

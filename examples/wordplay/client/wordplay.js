@@ -225,7 +225,7 @@ Meteor.startup(function () {
 
   // subscribe to all the players, the game i'm in, and all
   // the words in that game.
-  Meteor.autosubscribe(function () {
+  Meteor.autorun(function () {
     Meteor.subscribe('players');
 
     if (Session.get('player_id')) {

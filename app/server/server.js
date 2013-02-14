@@ -1,6 +1,6 @@
 ////////// Requires //////////
 
-require("fibers");
+var Fiber = require("fibers");
 
 var fs = require("fs");
 var path = require("path");
@@ -15,7 +15,7 @@ var useragent = require('useragent');
 var _ = require('underscore');
 
 // This code is duplicated in app/server/server.js.
-var MIN_NODE_VERSION = 'v0.8.11';
+var MIN_NODE_VERSION = 'v0.8.18';
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
     'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
@@ -82,7 +82,7 @@ var run = function () {
   var static_cacheable_path = path.join(bundle_dir, 'static_cacheable');
   if (fs.existsSync(static_cacheable_path))
     app.use(gzippo.staticGzip(static_cacheable_path, {clientMaxAge: 1000 * 60 * 60 * 24 * 365}));
-  app.use(gzippo.staticGzip(path.join(bundle_dir, 'static')));
+  app.use(gzippo.staticGzip(path.join(bundle_dir, 'static'), {clientMaxAge: 0}));
 
   // read bundle config file
   var info_raw =
@@ -123,8 +123,16 @@ var run = function () {
     app_html = runtime_config(app_html);
 
     app.use(function (req, res) {
-      // prevent favicon.ico and robots.txt from returning app_html
-      if (_.indexOf([path.sep + 'favicon.ico', path.sep + 'robots.txt'], req.url) !== -1) {
+      // prevent these URLs from returning app_html
+      //
+      // NOTE: app.manifest is not a web standard like favicon.ico and
+      // robots.txt. It is a file name we have chosen to use for HTML5
+      // appcache URLs. It is included here to prevent using an appcache
+      // then removing it from poisoning an app permanently. Eventually,
+      // once we have server side routing, this won't be needed as
+      // unknown URLs with return a 404 automatically.
+      if (_.indexOf(['/app.manifest', '/favicon.ico', '/robots.txt'], req.url)
+          !== -1) {
         res.writeHead(404);
         res.end();
         return;

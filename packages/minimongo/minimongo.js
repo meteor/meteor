@@ -29,6 +29,15 @@ LocalCollection = function () {
   this.paused = false;
 };
 
+LocalCollection.MinimongoError = function (message) {
+  var self = this;
+  self.name = "MinimongoError";
+  self.details = message;
+};
+
+LocalCollection.MinimongoError.prototype = new Error;
+
+
 // options may include sort, skip, limit, reactive
 // sort may be any of these forms:
 //     {a: 1, b: -1}
@@ -345,7 +354,7 @@ LocalCollection.prototype.insert = function (doc) {
     doc._id = LocalCollection.uuid();
 
   if (_.has(self.docs, doc._id))
-    throw new Error("Duplicate _id '" + doc._id + "'");
+    throw new LocalCollection.MinimongoError("Duplicate _id '" + doc._id + "'");
 
   self._saveOriginal(doc._id, undefined);
   self.docs[doc._id] = doc;
@@ -699,4 +708,3 @@ LocalCollection.prototype.resumeObservers = function () {
     query.results_snapshot = null;
   }
 };
-

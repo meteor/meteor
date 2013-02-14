@@ -57,12 +57,13 @@ Template.api.absoluteUrl = {
 Template.api.settings = {
   id: "meteor_settings",
   name: "Meteor.settings",
-  locus: "Server",
+  locus: "Server and client",
   descr: ["`Meteor.settings` contains any deployment-specific options that were " +
           "provided using the `--settings` option for `meteor run` or `meteor deploy`. " +
           "If you provide the `--settings` option, `Meteor.settings` will be the " +
           "JSON object in the file you specify.  Otherwise, `Meteor.settings` will " +
-          "be an empty object."]
+          "be an empty object. If the object contains a key named `public`, then " +
+          "`Meteor.settings.public` will also be available on the client."]
 };
 
 Template.api.publish = {
@@ -180,18 +181,6 @@ Template.api.subscribe = {
      type: "Function",
      descr: "If the last argument is a Function, it is called without arguments when the server marks the subscription as complete."}
   ]
-};
-
-Template.api.autosubscribe = {
-  id: "meteor_autosubscribe",
-  name: "Meteor.autosubscribe(func)",
-  locus: "Client",
-  descr: ["Automatically set up and tear down subscriptions."],
-  args: [
-    {name: "func",
-     type: "Function",
-     descr: "A [`reactive`](#reactivity) function that sets up some subscriptions by calling [`Meteor.subscribe`](#meteor_subscribe). It will automatically be re-run when its dependencies change."}
-    ]
 };
 
 Template.api.methods = {
@@ -418,7 +407,7 @@ Template.api.insert = {
   args: [
     {name: "doc",
      type: "Object",
-     descr: "The document to insert. Should not yet have an _id attribute."},
+     descr: "The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you."},
     {name: "callback",
      type: "Function",
      descr: "Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second."}
@@ -1215,7 +1204,7 @@ Template.api.set = {
   id: "session_set",
   name: "Session.set(key, value)",
   locus: "Client",
-  descr: ["Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Meteor.autosubscribe`](#meteor_autosubscribe) blocks, that called [`Session.get`](#session_get) on this `key`.)"],
+  descr: ["Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Meteor.autorun`](#meteor_autorun) blocks, that called [`Session.get`](#session_get) on this `key`.)"],
   args: [
     {name: "key",
      type: "String",
@@ -1490,4 +1479,3 @@ Template.api.email_send = {
     }
   ]
 };
-
