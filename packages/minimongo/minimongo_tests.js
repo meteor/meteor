@@ -491,6 +491,10 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$regex: 'a'}}, {a: 'cut'});
   nomatch({a: {$regex: 'a'}}, {a: 'CAT'});
   match({a: {$regex: 'a', $options: 'i'}}, {a: 'CAT'});
+  nomatch({a: /undefined/}, {});
+  nomatch({a: {$regex: 'undefined'}}, {});
+  nomatch({a: /xxx/}, {});
+  nomatch({a: {$regex: 'xxx'}}, {});
 
   match({a: {$options: 'i'}}, {a: 12});
   match({b: {$options: 'i'}}, {a: 12});
