@@ -6,6 +6,7 @@ Package.describe({
 Package.on_use(function (api) {
   api.use(['underscore', 'logging', 'uuid', 'json'], ['client', 'server']);
   api.use('reload', 'client');
+  api.use('routepolicy', 'server');
 
   api.add_files('sockjs-0.3.4.js', 'client');
 
