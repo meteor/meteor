@@ -2,6 +2,11 @@
 
   var querystring = __meteor_bootstrap__.require('querystring');
 
+  // include all fields from facebook
+  // http://developers.facebook.com/docs/reference/login/public-profile-and-friend-list/
+  var whitelisted = ['id', 'email', 'name', 'first_name',
+      'last_name', 'link', 'username', 'gender', 'locale', 'age_range', 'picture'];
+
   Accounts.oauth.registerService('facebook', 2, function(query) {
 
     var response = getTokenResponse(query);
@@ -12,11 +17,6 @@
       accessToken: accessToken,
       expiresAt: (+new Date) + (1000 * response.expiresIn)
     };
-
-    // include all fields from facebook
-    // http://developers.facebook.com/docs/reference/login/public-profile-and-friend-list/
-    var whitelisted = ['id', 'email', 'name', 'first_name',
-        'last_name', 'link', 'username', 'gender', 'locale', 'age_range'];
 
     var fields = _.pick(identity, whitelisted);
     _.extend(serviceData, fields);
@@ -81,7 +81,11 @@
 
   var getIdentity = function (accessToken) {
     var result = Meteor.http.get("https://graph.facebook.com/me", {
-      params: {access_token: accessToken}});
+      params: {
+        access_token: accessToken,
+        fields: whitelisted.join(",")
+      }
+    });
 
     if (result.error)
       throw result.error;
