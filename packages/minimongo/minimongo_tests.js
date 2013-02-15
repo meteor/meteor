@@ -210,6 +210,26 @@ Tinytest.add("minimongo - misc", function (test) {
   test.equal(b.x.a, 14); // just to document current behavior
 });
 
+Tinytest.add("minimongo - lookup", function (test) {
+  var lookupA = LocalCollection._makeLookupFunction('a');
+  test.equal(lookupA({}), [undefined]);
+  test.equal(lookupA({a: 1}), [1]);
+  test.equal(lookupA({a: [1]}), [[1]]);
+
+  var lookupAX = LocalCollection._makeLookupFunction('a.x');
+  test.equal(lookupAX({a: {x: 1}}), [1]);
+  test.equal(lookupAX({a: {x: [1]}}), [[1]]);
+  test.equal(lookupAX({a: 5}), [undefined]);
+  test.equal(lookupAX({a: [{x: 1}, {x: [2]}, {y: 3}]}),
+             [1, [2], undefined]);
+
+  var lookupA0X = LocalCollection._makeLookupFunction('a.0.x');
+  test.equal(lookupA0X({a: [{x: 1}]}), [1]);
+  test.equal(lookupA0X({a: [{x: [1]}]}), [[1]]);
+  test.equal(lookupA0X({a: 5}), [undefined]);
+  test.equal(lookupA0X({a: [{x: 1}, {x: [2]}, {y: 3}]}), [1]);
+});
+
 Tinytest.add("minimongo - selector_compiler", function (test) {
   var matches = function (should_match, selector, doc) {
     var does_match = LocalCollection._matches(selector, doc);
@@ -808,6 +828,21 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({"dogs.1.name": "Fido"}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
   match({"room.1b": "bla"}, {room: {"1b": "bla"}});
 
+  match({"dogs.name": "Fido"}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
+  match({"dogs.name": "Rex"}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
+  match({"animals.dogs.name": "Fido"},
+        {animals: [{dogs: [{name: "Rover"}]},
+                   {},
+                   {dogs: [{name: "Fido"}, {name: "Rex"}]}]});
+  match({"animals.dogs.name": "Fido"},
+        {animals: [{dogs: {name: "Rex"}},
+                   {dogs: {name: "Fido"}}]});
+  match({"animals.dogs.name": "Fido"},
+        {animals: [{dogs: [{name: "Rover"}]},
+                   {},
+                   {dogs: [{name: ["Fido"]}, {name: "Rex"}]}]});
+  nomatch({"dogs.name": "Fido"}, {dogs: []});
+
   // $elemMatch
   match({dogs: {$elemMatch: {name: /e/}}},
         {dogs: [{name: "Fido"}, {name: "Rex"}]});
@@ -847,10 +882,19 @@ Tinytest.add("minimongo - ordering", function (test) {
     });
   };
 
+  // note: [] doesn't sort with "arrays", it sorts as "undefined". the position
+  // of arrays in _typeorder only matters for things like $lt. (This behavior
+  // verified with MongoDB 2.2.1.) We don't define the relative order of {a: []}
+  // and {c: 1} is undefined (MongoDB does seem to care but it's not clear how
+  // or why).
   verify([{"a" : 1}, ["a"], [["a", "asc"]]],
-         [{c: 1}, {a: 1}, {a: {}}, {a: []}, {a: true}]);
+         [{a: []}, {a: 1}, {a: {}}, {a: true}]);
+  verify([{"a" : 1}, ["a"], [["a", "asc"]]],
+         [{c: 1}, {a: 1}, {a: {}}, {a: true}]);
   verify([{"a" : -1}, [["a", "desc"]]],
-         [{a: true}, {a: []}, {a: {}}, {a: 1}, {c: 1}]);
+         [{a: true}, {a: {}}, {a: 1}, {c: 1}]);
+  verify([{"a" : -1}, [["a", "desc"]]],
+         [{a: true}, {a: {}}, {a: 1}, {a: []}]);
 
   verify([{"a" : 1, "b": -1}, ["a", ["b", "desc"]],
           [["a", "asc"], ["b", "desc"]]],
@@ -933,6 +977,30 @@ Tinytest.add("minimongo - subkey sort", function (test) {
 
   // no such mid level prop. just test that it doesn't throw.
   test.equal(c.find({}, {sort: {'a.nope.c': -1}}).count(), 6);
+});
+
+Tinytest.add("minimongo - array sort", function (test) {
+  var c = new LocalCollection();
+
+  // "up" and "down" are the indices that the docs should have when sorted
+  // ascending and descending by "a.x" respectively. They are not reverses of
+  // each other: when sorting ascending, you use the minimum value you can find
+  // in the document, and when sorting descending, you use the maximum value you
+  // can find. So [1, 4] shows up in the 1 slot when sorting ascending and the 4
+  // slot when sorting descending.
+  c.insert({up: 1, down: 1, a: {x: [1, 4]}});
+  c.insert({up: 2, down: 2, a: [{x: [2]}, {x: 3}]});
+  c.insert({up: 0, down: 4, a: {x: 0}});
+  c.insert({up: 3, down: 3, a: {x: 2.5}});
+  c.insert({up: 4, down: 0, a: {x: 5}});
+
+  test.equal(
+    _.pluck(c.find({}, {sort: {'a.x': 1}}).fetch(), 'up'),
+    _.range(c.find().count()));
+
+  test.equal(
+    _.pluck(c.find({}, {sort: {'a.x': -1}}).fetch(), 'down'),
+    _.range(c.find().count()));
 });
 
 

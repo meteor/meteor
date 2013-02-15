@@ -1,6 +1,15 @@
 
 ## vNEXT
 
+## v0.5.6
+
+* Fix 0.5.5 regression: Minimongo selectors matching subdocuments under arrays
+  did not work correctly.
+
+* Some Bootstrap icons should have appeared white.
+
+Patches contributed by GitHub user benjaminchelli.
+
 ## v0.5.5
 
 * Deprecate `Meteor.autosubscribe`. `Meteor.subscribe` now works within
