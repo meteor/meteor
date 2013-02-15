@@ -40,16 +40,34 @@ SockJS transport. It is currently sent over websockets as well, but probably
 should not be.)
 
  * The client sends a `connect` message.
- * If the server can speak the `version` of the protocol specified in the
-   `connect` message, it sends back a `connected` message.
+ * If the server is willing to speak the `version` of the protocol
+   specified in the `connect` message, it sends back a `connected`
+   message.
  * Otherwise the server sends back a `failed` message with a version of DDP it
    would rather speak, informed by the `connect` message's `support` field, and
    closes the underlying socket.
- * The client is then free to attempt to connect again speaking a different
-   version of DDP.  The client may optimistically send more messages after the
-   `connect` message, assuming that the server will support the proposed
-   protocol version. If the server does not support that version, it must ignore
-   those additional messages.
+ * The client is then free to attempt to connect again speaking a
+   different version of DDP. It can do that by sending another
+   `connect` message on the same connection. The client may
+   optimistically send more messages after the `connect` message,
+   assuming that the server will support the proposed protocol
+   version. If the server does not support that version, it must
+   ignore those additional messages.
+
+The versions in the `support` field of the client's `connect` message
+are ordered according to the client's preference, most preferred
+first. If, according to this ordering, the `version` proposed by the
+client is not the best version that the server supports, the server
+must force the client to switch to the better version by sending a
+`failed` message.
+
+When a client is connecting to a server for the first time it will
+typically set `version` equal to its most preferred version. If
+desired, the client can then remember the version that is ultimately
+negotiated with the server and begin with that version in future
+connections. The client can rely on the server sending a `failed`
+message if a better version is possible as a result of the client or
+the server having been upgraded.
 
 ## Managing Data:
 
@@ -110,16 +128,17 @@ should not be.)
      `cleared` field contains an array of fields that are no longer in the
      document.
 
-
    - A `removed` message indicates a document was removed from the local
      set. The `id` field is the ID of the document.
 
- * If a collection is ordered, the `added` message is replaced by `addedBefore`,
-   which additionally contains the ID of the document after the one being added
-   in the `before` field.  If the document is being added at the end, `before`
-   is set to null. For a given collection, the server should only send `added`
-   messages or `addedBefore` messages, not a mixture of both, and should only
-   send `movedBefore` messages for a collection with `addedBefore` messages.
+ * A collection is either ordered, or not. If a collection is ordered,
+   the `added` message is replaced by `addedBefore`, which
+   additionally contains the ID of the document after the one being
+   added in the `before` field.  If the document is being added at the
+   end, `before` is set to null. For a given collection, the server
+   should only send `added` messages or `addedBefore` messages, not a
+   mixture of both, and should only send `movedBefore` messages for a
+   collection with `addedBefore` messages.
 
    NOTE: The ordered collection DDP messages are not currently used by Meteor.
    They will likely be used by Meteor in the future.
@@ -212,7 +231,7 @@ Escaped things that might otherwise look like EJSON types:
 
     {"$escape": THING}
 
-For example, here is the JSON string `{$date: 10000}` stored in EJSON:
+For example, here is the JSON value `{$date: 10000}` stored in EJSON:
 
     {"$escape": {"$date": 10000}}
 
