@@ -44,6 +44,42 @@ var init_keepalive = function () {
   }, 3000);
 };
 
+
+// #BrowserIdentification
+//
+// We have multiple places that want to identify the browser: the
+// unsupported browser page, the appcache package, and, eventually
+// delivering browser polyfills only as needed.
+//
+// To avoid detecting the browser in multiple places ad-hoc, we create a
+// Meteor "browser" object. It uses but does not expose the npm
+// useragent module (we could choose a different mechanism to identify
+// the browser in the future if we wanted to).  The browser object
+// contains
+//
+// * `name`: the name of the browser in camel case
+// * `major`, `minor`, `patch`: integers describing the browser version
+//
+// Also here is an early version of a Meteor `request` object, intended
+// to be a high-level description of the request without exposing
+// details of connect's low-level `req`.  Currently it contains:
+//
+// * `browser`: browser identification object described above
+// * `url`: parsed url, including parsed query params
+//
+// As a temporary hack there is a `categorizeRequest` function on
+// __meteor_bootstrap__ which converts a connect `req` to a Meteor
+// `request`. This can go away once smart packages such as appcache are
+// being passed a `request` object directly when they serve content.
+//
+// This allows `request` to be used uniformly: it is passed to the html
+// attributes hook, and the appcache package can use it when deciding
+// whether to generate a 404 for the manifest.
+//
+// Real routing / server side rendering will probably refactor this
+// heavily.
+
+
 // e.g. "Mobile Safari" => "mobileSafari"
 var camelCase = function (name) {
   var parts = name.split(' ');
@@ -79,6 +115,9 @@ var supported_browser = function (browser) {
   //
   // return !(browser.family === 'IE' && browser.major <= 5);
 };
+
+
+
 
 // add any runtime configuration options needed to app_html
 var runtime_config = function (app_html) {
@@ -153,11 +192,22 @@ var run = function () {
   // start up app
 
   __meteor_bootstrap__ = {
+    // connect middleware
     app: app,
+    // metadata about this bundle
     bundle: bundle,
+    // function that takes a connect `req` object and returns a summary
+    // object with information about the request. See
+    // #BrowserIdentifcation
     categorizeRequest: categorizeRequest,
+    // list of functions to be called to determine any attributes to be
+    // added to the '<html>' tag. Each function is passed a 'request'
+    // object (see #BrowserIdentifcation) and should return a string,
     htmlAttributeHooks: [],
+    // Node.js 'require' object.
     require: require,
+    // functions to be called after all packages are loaded and we are
+    // ready to serve HTTP.
     startup_hooks: []
   };
 
@@ -216,7 +266,6 @@ var run = function () {
     app.use(function (req, res) {
       res.writeHead(404);
       res.end();
-      return;
     });
 
     // run the user startup hooks.
