@@ -1,25 +1,36 @@
 
 ## vNEXT
 
-* Changed the api for custom publishers. Specifically, use `added`, `changed`,
-  and `removed`, instead of `set`, `unset`, and `flush`.  See the [`publish`
-  docs](http://docs.meteor.com/#meteor_publish) for details.
+* Changed the api for publish functions that do not return a
+  cursor. Specifically, use `added`, `changed`, `removed`, and `ready`, instead
+  of `set`, `unset`, `flush`, and `complete`.  See the [`publish`
+  docs](http://docs.meteor.com/#meteor_publish) for details. Additionally,
+  `stop` has been improved, and `error` is now available for indicating that
+  there is an error to the subscriber.
 
-* Changed the api for `observe`.  Observing with `added`, `changed` and `removed`
-  callbacks is now unordered; for ordering information use `addedAt`,
+* Changed the api for `observe`.  Observing with `added`, `changed` and
+  `removed` callbacks is now unordered; for ordering information use `addedAt`,
   `changedAt`, `removedAt`, and `movedTo`. Full documentation is in the
-  [`observe` docs](http://docs.meteor.com/#observe).
+  [`observe` docs](http://docs.meteor.com/#observe).  All callers of `observe`
+  need to be updated.
 
 * Added new [`observeChanges`](http://docs.meteor.com/#observe_changes) api for
   keeping track of the contents of a cursor more efficiently.
 
 * New [EJSON](http://docs.meteor.com/#ejson) package allows you to use Dates,
-  binary data (as `Uint8Array` or a normal array with `$Uint8ArrayPolyfill` set
-  to true), and Mongo ObjectIds in your collections and Session variables.  You
-  can also add your own custom datatypes.
+  Mongo ObjectIDs, and binary data (as `Uint8Array` or a normal array with
+  `$Uint8ArrayPolyfill` set to true) in your collections and Session variables.
+  You can also add your own custom datatypes.
 
-* DDP wire protocol has been redesigned.  It is now versioned, and at version
-  "pre1".  There is an informal specification in `packages/livedata/DDP.md`.
+* You can specify that a collection should use MongoDB ObjectIDs as its `_id`
+  fields for inserts instead of strings. If you do this, use `EJSON.equals()`
+  for comparing equality instead of `===`.
+
+* The DDP wire protocol has been redesigned.  It is now versioned, and at
+  version "pre1".  There is an informal specification in
+  `packages/livedata/DDP.md`.
+
+* Meteor now uses a shorter string ID for MongoDB documents by default.
 
 ## v0.5.5
 
