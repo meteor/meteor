@@ -1,3 +1,5 @@
+Meteor._routePolicy.declare('/sockjs/', 'network');
+
 // unique id for this instantiation of the server. If this changes
 // between client reconnects, the client will reload. You can set the
 // environment variable "SERVER_ID" to control this. For example, if

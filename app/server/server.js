@@ -67,6 +67,29 @@ var runtime_config = function (app_html) {
   return app_html;
 };
 
+// Serve app HTML for this URL?
+var appUrl = function (url) {
+  if (url === '/favicon.ico' || url === '/robots.txt')
+    return false;
+
+  // NOTE: app.manifest is not a web standard like favicon.ico and
+  // robots.txt. It is a file name we have chosen to use for HTML5
+  // appcache URLs. It is included here to prevent using an appcache
+  // then removing it from poisoning an app permanently. Eventually,
+  // once we have server side routing, this won't be needed as
+  // unknown URLs with return a 404 automatically.
+  if (url === '/app.manifest')
+    return false;
+
+  // Avoid serving app HTML for declared network routes such as /sockjs/.
+  if (__meteor_bootstrap__._routePolicy &&
+      __meteor_bootstrap__._routePolicy.classify(url) === 'network')
+    return false;
+
+  // we currently return app HTML on all URLs by default
+  return true;
+}
+
 var run = function () {
   var bundle_dir = path.join(__dirname, '..');
 
@@ -131,21 +154,9 @@ var run = function () {
 
     app_html = runtime_config(app_html);
 
-    app.use(function (req, res) {
-      // prevent these URLs from returning app_html
-      //
-      // NOTE: app.manifest is not a web standard like favicon.ico and
-      // robots.txt. It is a file name we have chosen to use for HTML5
-      // appcache URLs. It is included here to prevent using an appcache
-      // then removing it from poisoning an app permanently. Eventually,
-      // once we have server side routing, this won't be needed as
-      // unknown URLs with return a 404 automatically.
-      if (_.indexOf(['/app.manifest', '/favicon.ico', '/robots.txt'], req.url)
-          !== -1) {
-        res.writeHead(404);
-        res.end();
-        return;
-      }
+    app.use(function (req, res, next) {
+      if (! appUrl(req.url))
+        return next();
 
       res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
       if (supported_browser(req.headers['user-agent']))
@@ -153,6 +164,13 @@ var run = function () {
       else
         res.write(unsupported_html);
       res.end();
+    });
+
+    // Return 404 by default, if no other handlers serve this URL.
+    app.use(function (req, res) {
+      res.writeHead(404);
+      res.end();
+      return;
     });
 
     // run the user startup hooks.

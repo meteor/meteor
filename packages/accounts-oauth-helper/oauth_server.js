@@ -1,6 +1,8 @@
 (function () {
   var connect = __meteor_bootstrap__.require("connect");
 
+  Meteor._routePolicy.declare('/_oauth/', 'network');
+
   Accounts.oauth._services = {};
 
   // Register a handler for an OAuth service. The handler will be called
