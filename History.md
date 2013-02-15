@@ -1,6 +1,26 @@
 
 ## vNEXT
 
+* Changed the api for custom publishers. Specifically, use `added`, `changed`,
+  and `removed`, instead of `set`, `unset`, and `flush`.  See the [`publish`
+  docs](http://docs.meteor.com/#meteor_publish) for details.
+
+* Changed the api for `observe`.  Observing with `added`, `changed` and `removed`
+  callbacks is now unordered; for ordering information use `addedAt`,
+  `changedAt`, `removedAt`, and `movedTo`. Full documentation is in the
+  [`observe` docs](http://docs.meteor.com/#observe).
+
+* Added new [`observeChanges`](http://docs.meteor.com/#observe_changes) api for
+  keeping track of the contents of a cursor more efficiently.
+
+* New [EJSON](http://docs.meteor.com/#ejson) package allows you to use Dates,
+  binary data (as `Uint8Array` or a normal array with `$Uint8ArrayPolyfill` set
+  to true), and Mongo ObjectIds in your collections and Session variables.  You
+  can also add your own custom datatypes.
+
+* DDP wire protocol has been redesigned.  It is now versioned, and at version
+  "pre1".  There is an informal specification in `packages/livedata/DDP.md`.
+
 ## v0.5.5
 
 * Deprecate `Meteor.autosubscribe`. `Meteor.subscribe` now works within
