@@ -12,7 +12,10 @@ the protocol and not intended to be entirely definitive.
 
 ## General Message Structure:
 
-DDP may use either SockJS or Websockets as a lower-level message transport.
+DDP may use either SockJS or WebSockets as a lower-level message transport. (For
+now, you connect via SockJS at the URL `/sockjs` and via WebSockets at the URL
+`/websocket`. The latter is likely to change to be the main app URL specifying a
+WebSocket subprotocol.)
 
 DDP messages are JSON objects, with some fields specified to be EJSON.  Each one
 has a `msg` field that specifies the message type, as well as other fields
@@ -25,7 +28,8 @@ depending on message type.
  * `connect` (client -> server)
    - `session`: string (if trying to reconnect to an existing DDP session)
    - `version`: string (the proposed protocol version)
-   - `support`: array of strings (protocol versions supported by the client, in order of preference)
+   - `support`: array of strings (protocol versions supported by the client,
+      in order of preference)
  * `connected` (server->client)
    - `session`: string (an identifier for the DDP session)
  * `failed` (server->client)
@@ -40,19 +44,17 @@ SockJS transport. It is currently sent over websockets as well, but probably
 should not be.)
 
  * The client sends a `connect` message.
- * If the server is willing to speak the `version` of the protocol
-   specified in the `connect` message, it sends back a `connected`
-   message.
+ * If the server is willing to speak the `version` of the protocol specified in
+   the `connect` message, it sends back a `connected` message.
  * Otherwise the server sends back a `failed` message with a version of DDP it
    would rather speak, informed by the `connect` message's `support` field, and
-   closes the underlying socket.
- * The client is then free to attempt to connect again speaking a
-   different version of DDP. It can do that by sending another
-   `connect` message on the same connection. The client may
-   optimistically send more messages after the `connect` message,
-   assuming that the server will support the proposed protocol
-   version. If the server does not support that version, it must
-   ignore those additional messages.
+   closes the underlying transport.
+ * The client is then free to attempt to connect again speaking a different
+   version of DDP. It can do that by sending another `connect` message on a new
+   connection. The client may optimistically send more messages after the
+   `connect` message, assuming that the server will support the proposed
+   protocol version. If the server does not support that version, it must ignore
+   those additional messages.
 
 The versions in the `support` field of the client's `connect` message
 are ordered according to the client's preference, most preferred
@@ -81,7 +83,8 @@ the server having been upgraded.
    - `id`: string (the id passed to 'sub')
  * `nosub` (server -> client):
    - `id`: string (the id passed to 'sub')
- * `error`: optional Error (an error raised by the subscription as it concludes, or sub-not-found)
+ * `error`: optional Error (an error raised by the subscription as it
+    concludes, or sub-not-found)
  * `added` (server -> client):
    - `collection`: string (collection name)
    - `id`: string (document ID)
@@ -95,20 +98,24 @@ the server having been upgraded.
    - `collection`: string (collection name)
    - `id`: string (document ID)
  * `ready` (server -> client):
-   - `subs`: array of strings (ids passed to 'sub' which have sent their initial batch of data)
+   - `subs`: array of strings (ids passed to 'sub' which have sent their
+     initial batch of data)
  * `addedBefore` (server -> client):
    - `collection`: string (collection name)
    - `id`: string (document ID)
    - `fields`: optional object with EJSON values
-   - `before`: string or null (the document ID to add the document before, or null to add at the end)
+   - `before`: string or null (the document ID to add the document before,
+     or null to add at the end)
  * `movedBefore` (server -> client):
    - `collection`: string
    - `id`: string (the document ID)
-   - `before`: string or null (the document ID to move the document before, or null to move to the end)
+   - `before`: string or null (the document ID to move the document before, or
+     null to move to the end)
 
 ### Procedure:
 
- * The client specifies sets of information it is interested in by sending `sub` messages to the server.
+ * The client specifies sets of information it is interested in by sending
+   `sub` messages to the server.
 
  * At any time, but generally informed by the `sub` messages, the server can
    send data messages to the client.  Data consist of `added`, `changed`, and
