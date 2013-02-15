@@ -109,9 +109,8 @@ Meteor.methods({
     if (from.balance < amount && !cheat)
       throw new Meteor.Error(409, "Insufficient funds");
 
-    Ledger.update({_id: from._id}, {$inc: {balance: -amount}});
-    Ledger.update({_id: to._id}, {$inc: {balance: amount}});
-    Meteor.refresh({collection: 'ledger', world: world});
+    Ledger.update(from._id, {$inc: {balance: -amount}});
+    Ledger.update(to._id, {$inc: {balance: amount}});
   }
 });
 

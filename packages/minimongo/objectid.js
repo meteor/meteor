@@ -59,6 +59,45 @@ LocalCollection._selectorIsId = function (selector) {
     selector instanceof LocalCollection._ObjectID;
 };
 
+// If this is a selector that matches at most one document, return that
+// id. Otherwise returns undefined. Note that the selector may have other
+// restrictions so it may not even match that document!
+// We care about $in and $and since those are generated access-controlled
+// update and remove.
+LocalCollection._idMatchedBySelector = function (selector) {
+  // Is the selector just an ID?
+  if (LocalCollection._selectorIsId(selector))
+    return selector;
+  if (!selector)
+    return undefined;
+
+  // Do we have an _id clause?
+  if (_.has(selector, '_id')) {
+    // Is the _id clause just an ID?
+    if (LocalCollection._selectorIsId(selector._id))
+      return selector._id;
+    // Is the _id clause {_id: {$in: [oneId]}}?
+    if (selector._id && selector._id.$in
+        && _.isArray(selector._id.$in) && selector._id.$in.length === 1
+        && LocalCollection._selectorIsId(selector._id.$in[0])) {
+      return selector._id.$in[0];
+    }
+    return undefined;
+  }
+
+  // If this is a top-level $and, and any of the clauses can match at most one
+  // document, then the whole selector can match at most that document.
+  if (selector.$and && _.isArray(selector.$and)) {
+    for (var i = 0; i < selector.$and.length; ++i) {
+      var subId = LocalCollection._idMatchedBySelector(selector.$and[i]);
+      if (subId !== undefined)
+        return subId;
+    }
+  }
+
+  return undefined;
+};
+
 EJSON.addType("oid",  function (str) {
   return new LocalCollection._ObjectID(str);
 });

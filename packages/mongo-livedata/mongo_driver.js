@@ -159,7 +159,8 @@ _Mongo.prototype.insert = function (collection_name, document) {
   });
 
   var err = future.wait();
-  Meteor.refresh({collection: collection_name});
+  // XXX do we need this to run this at all on error?
+  Meteor.refresh({collection: collection_name, id: document._id});
   write.committed();
   if (err)
     throw err;
@@ -191,7 +192,13 @@ _Mongo.prototype.remove = function (collection_name, selector) {
   });
 
   var err = future.wait();
-  Meteor.refresh({collection: collection_name});
+  var refreshKey = {collection: collection_name};
+  // If we know which document we're removing, don't poll queries that are
+  // specific to other documents.
+  var onlyMatchingId = LocalCollection._idMatchedBySelector(selector);
+  if (onlyMatchingId !== undefined)
+    refreshKey.id = onlyMatchingId;
+  Meteor.refresh(refreshKey);
   write.committed();
   if (err)
     throw err;
@@ -231,7 +238,13 @@ _Mongo.prototype.update = function (collection_name, selector, mod, options) {
   });
 
   var err = future.wait();
-  Meteor.refresh({collection: collection_name});
+  var refreshKey = {collection: collection_name};
+  // If we know which document we're removing, don't poll queries that are
+  // specific to other documents.
+  var onlyMatchingId = LocalCollection._idMatchedBySelector(selector);
+  if (onlyMatchingId !== undefined)
+    refreshKey.id = onlyMatchingId;
+  Meteor.refresh(refreshKey);
   write.committed();
   if (err)
     throw err;
@@ -528,7 +541,8 @@ _Mongo.prototype._observeChanges = function (
         ordered,
         function () {
           delete self._liveResultsSets[observeKey];
-        });
+        },
+        callbacks._pollIntervalMs);
       self._liveResultsSets[observeKey] = liveResultsSet;
       newlyCreated = true;
     }
@@ -551,7 +565,7 @@ _Mongo.prototype._observeChanges = function (
 };
 
 var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
-                               stopCallback) {
+                               stopCallback, pollIntervalMs) {
   var self = this;
 
   self._cursorDescription = cursorDescription;
@@ -588,26 +602,26 @@ var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
 
   self._taskQueue = new Meteor._SynchronousQueue();
 
-  // listen for the invalidation messages that will trigger us to poll the
-  // database for changes
-  var keys = (cursorDescription.options.key ||
-              {collection: cursorDescription.collectionName});
-  if (!(keys instanceof Array))
-    keys = [keys];
-  _.each(keys, function (key) {
-    var listener = Meteor._InvalidationCrossbar.listen(
-      key, function (notification, complete) {
-        // When someone does a transaction that might affect us, schedule a poll
-        // of the database. If that transaction happens inside of a write fence,
-        // block the fence until we've polled and notified observers.
-        var fence = Meteor._CurrentWriteFence.get();
-        if (fence)
-          self._pendingWrites.push(fence.beginWrite());
-        self._ensurePollIsScheduled();
-        complete();
-      });
-    self._stopCallbacks.push(function () { listener.stop(); });
-  });
+  // Listen for the invalidation messages that will trigger us to poll the
+  // database for changes. If this selector is just a single ID, specify it
+  // here, so that updates that are also a single ID don't require a poll.
+  var key = {collection: cursorDescription.collectionName};
+  var onlyMatchingId = LocalCollection._idMatchedBySelector(
+    cursorDescription.selector);
+  if (onlyMatchingId !== undefined)
+    key.id = onlyMatchingId;
+  var listener = Meteor._InvalidationCrossbar.listen(
+    key, function (notification, complete) {
+      // When someone does a transaction that might affect us, schedule a poll
+      // of the database. If that transaction happens inside of a write fence,
+      // block the fence until we've polled and notified observers.
+      var fence = Meteor._CurrentWriteFence.get();
+      if (fence)
+        self._pendingWrites.push(fence.beginWrite());
+      self._ensurePollIsScheduled();
+      complete();
+    });
+  self._stopCallbacks.push(function () { listener.stop(); });
 
   // Map from handle ID to ObserveHandle.
   self._observeHandles = {};
@@ -637,14 +651,19 @@ var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
     };
   });
 
-  // every once and a while, poll even if we don't think we're dirty,
-  // for eventual consistency with database writes from outside the
-  // Meteor universe
-  var intervalHandle = Meteor.setInterval(
-    _.bind(self._ensurePollIsScheduled, self), 10 * 1000 /* 10 seconds */);
-  self._stopCallbacks.push(function () {
-    Meteor.clearInterval(intervalHandle);
-  });
+  // every once and a while, poll even if we don't think we're dirty, for
+  // eventual consistency with database writes from outside the Meteor
+  // universe. There's an undocumented test-only argument to observeChanges
+  // which allows this to be changed or (by setting to 0) turned off for tests.
+  if (pollIntervalMs === undefined)
+    pollIntervalMs = 10 * 1000;
+  if (pollIntervalMs != 0) {
+    var intervalHandle = Meteor.setInterval(
+      _.bind(self._ensurePollIsScheduled, self), pollIntervalMs);
+    self._stopCallbacks.push(function () {
+      Meteor.clearInterval(intervalHandle);
+    });
+  }
 };
 
 _.extend(LiveResultsSet.prototype, {

@@ -26,7 +26,7 @@ _.extend(Meteor._InvalidationCrossbar.prototype, {
   listen: function (trigger, callback) {
     var self = this;
     var id = self.next_id++;
-    self.listeners[id] = {trigger: trigger, callback: callback};
+    self.listeners[id] = {trigger: EJSON.clone(trigger), callback: callback};
     return {
       stop: function () {
         delete self.listeners[id];
@@ -70,11 +70,28 @@ _.extend(Meteor._InvalidationCrossbar.prototype, {
     }
   },
 
+  // A notification matches a trigger if all keys that exist in both are equal.
+  //
+  // Examples:
+  //  N:{collection: "C"} matches T:{collection: "C"}
+  //    (a non-targeted write to a collection matches a
+  //     non-targeted query)
+  //  N:{collection: "C", id: "X"} matches T:{collection: "C"}
+  //    (a targeted write to a collection matches a non-targeted query)
+  //  N:{collection: "C"} matches T:{collection: "C", id: "X"}
+  //    (a non-targeted write to a collection matches a
+  //     targeted query)
+  //  N:{collection: "C", id: "X"} matches T:{collection: "C", id: "X"}
+  //    (a targeted write to a collection matches a targeted query targeted
+  //     at the same document)
+  //  N:{collection: "C", id: "X"} does not match T:{collection: "C", id: "Y"}
+  //    (a targeted write to a collection does not match a targeted query
+  //     targeted at a different document)
   _matches: function (notification, trigger) {
-    for (var key in trigger)
-      if (!_.isEqual(trigger[key], notification[key]))
-        return false;
-    return true;
+    return _.all(trigger, function (triggerValue, key) {
+      return !_.has(notification, key) ||
+        EJSON.equals(triggerValue, notification[key]);
+    });
   }
 });
 

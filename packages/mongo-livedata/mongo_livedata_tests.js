@@ -2,6 +2,8 @@
 // the selector (or inserted document) contains fail: true.
 
 (function () {
+var Future = __meteor_bootstrap__.require('fibers/future');
+
 if (Meteor.isServer) {
   Meteor.methods({
     createInsecureCollection: function (name, options) {
@@ -654,7 +656,110 @@ testAsyncMulti('mongo-livedata - document with binary data, ' + idGeneration, [
   }
 ]);
 
-});
+if (Meteor.isServer) {
+  Tinytest.addAsync("mongo-livedata - id-based invalidation, " + idGeneration, function (test, onComplete) {
+    var run = test.runId();
+    var coll = new Meteor.Collection("livedata_invalidation_collection_"+run, collectionOptions);
+
+    coll.allow({
+      update: function () {return true;},
+      remove: function () {return true;}
+    });
+
+    var id1 = coll.insert({x: 42, is1: true});
+    var id2 = coll.insert({x: 50, is2: true});
+
+    var touchedCalls = {};
+    var handlesToStop = [];
+    var observe = function (name, query) {
+      touchedCalls[name] = 0;
+      var handle = coll.find(query).observeChanges({
+        // Make sure that we only poll on invalidation, not due to time.
+        _pollIntervalMs: 0,
+        changed: function () {
+          ++touchedCalls[name];
+        },
+        removed: function () {
+          ++touchedCalls[name];
+        }
+      });
+      handlesToStop.push(handle);
+    };
+
+    observe("all", {});
+    observe("id1Direct", id1);
+    observe("id1InQuery", {_id: id1, z: null});
+    observe("id2Direct", id2);
+    observe("id2InQuery", {_id: id2, z: null});
+    test.equal(
+      touchedCalls,
+      {all: 0, id1Direct: 0, id1InQuery: 0, id2Direct: 0, id2InQuery: 0});
+
+    var secretlyMutateEverything = function () {
+      var fut = new Future;
+      Meteor._RemoteCollectionDriver.mongo._withCollection(
+        coll._name, function (err, c) {
+          if (err)
+            fut.throw(err);
+          c.update({}, {$inc: {x: 1}}, {safe: true, multi: true}, function (err) {
+            if (err)
+              fut.throw(err);
+            fut.return();
+          });
+        });
+      fut.wait();
+    };
+
+    // Update id1 directly. This should poll the "all" and "id1" queries but not
+    // the "id2" queries.
+    secretlyMutateEverything();
+    runInFence(function () {
+      coll.update(id1, {$inc: {x: 1}});
+    });
+    test.equal(
+      touchedCalls,
+      {all: 2, id1Direct: 1, id1InQuery: 1, id2Direct: 0, id2InQuery: 0});
+
+    // Update id2 using a funny query. This should poll the "all" and "id2"
+    // queries but not the "id1" queries. (The "all" query increments by 2
+    // because it sees both changes.)
+    secretlyMutateEverything();
+    runInFence(function () {
+      coll.update({_id: id2, q: null}, {$inc: {x: 1}});
+    });
+    test.equal(
+      touchedCalls,
+      {all: 4, id1Direct: 1, id1InQuery: 1, id2Direct: 1, id2InQuery: 1});
+
+    // Update id1 using "validated update" and with a query that doesn't appear
+    // to match on ID. The validation should change this to an ID-specific
+    // query, so we should not poll the id2 queries.
+    secretlyMutateEverything();
+    runInFence(function () {
+      coll._validatedUpdate("user", {is1: true}, {$inc: {x: 1}});
+    });
+    test.equal(
+      touchedCalls,
+      {all: 6, id1Direct: 2, id1InQuery: 2, id2Direct: 1, id2InQuery: 1});
+
+    // Remove id2 using "validated remove" and with a query that doesn't appear
+    // to match on ID. The validation should change this to an ID-specific
+    // query, so we should not poll the id1 queries.
+    secretlyMutateEverything();
+    runInFence(function () {
+      coll._validatedRemove("user", {is2: true});
+    });
+    test.equal(
+      touchedCalls,
+      {all: 8, id1Direct: 2, id1InQuery: 2, id2Direct: 2, id2InQuery: 2});
+
+    _.each(handlesToStop, function (h) {h.stop();});
+    onComplete();
+  });
+}
+
+
+});  // end idGeneration parametrization
 
 testAsyncMulti('mongo-livedata - specified _id', [
   function (test, expect) {
