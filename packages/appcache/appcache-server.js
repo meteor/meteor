@@ -80,9 +80,8 @@
 
     var hash = crypto.createHash('sha1');
     hash.update(JSON.stringify(__meteor_runtime_config__), 'utf8');
-    hash.update(fs.readFileSync(path.join(bundle.root, 'app.html')));
     _.each(bundle.manifest, function (resource) {
-      if (resource.where === 'client') {
+      if (resource.where === 'client' || resource.where === 'internal') {
         hash.update(resource.hash);
       }
     });
@@ -105,6 +104,8 @@
     manifest += "\n";
 
     manifest += "NETWORK:\n";
+    // TODO adding the manifest file to NETWORK should be unnecessary?
+    // Want more testing to be sure.
     manifest += "/app.manifest" + "\n";
     _.each(Meteor._routePolicy.urlPrefixesFor('network'), function (urlPrefix) {
       manifest += urlPrefix + "\n";
