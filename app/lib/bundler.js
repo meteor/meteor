@@ -12,7 +12,7 @@
 //  - manifest [list of resources in load order, each consists of an object]:
 //     {
 //       "path": relative path of file in the bundle, normalized to use forward slashes
-//       "where": "client"  [could also be "server" in future]
+//       "where": "client", "internal"  [could also be "server" in future]
 //       "type": "js", "css", or "static"
 //       "cacheable": (client) boolean, is it safe to ask the browser to cache this file
 //       "url": (client) relative url to download the resource, includes cache
@@ -613,8 +613,13 @@ _.extend(Bundle.prototype, {
       fs.writeFileSync(full_path, self.files.server[rel_path]);
     }
 
-    fs.writeFileSync(path.join(build_path, 'app.html'),
-                     self._generate_app_html());
+    var app_html = self._generate_app_html();
+    fs.writeFileSync(path.join(build_path, 'app.html'), app_html);
+    self.manifest.push({
+      path: 'app.html',
+      where: 'internal',
+      hash: self._hash(app_html)
+    });
     dependencies_json.core.push(path.join('lib', 'app.html.in'));
 
     fs.writeFileSync(path.join(build_path, 'unsupported.html'),
