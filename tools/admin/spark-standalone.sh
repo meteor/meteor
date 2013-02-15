@@ -4,7 +4,7 @@
 
 set -e
 
-PACKAGES_DIR=`dirname $0`/../packages
+PACKAGES_DIR=`dirname $0`/../../packages
 
 echo 'Meteor = {};'
 cat $PACKAGES_DIR/underscore/underscore.js
