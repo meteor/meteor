@@ -1,4 +1,5 @@
-// XXX namespacing
+(function () {
+Meteor._SUPPORTED_DDP_VERSIONS = [ 'pre1' ];
 
 Meteor._MethodInvocation = function (options) {
   var self = this;
@@ -18,7 +19,8 @@ Meteor._MethodInvocation = function (options) {
   // call this function to allow other method invocations (from the
   // same client) to continue running without waiting for this one to
   // complete.
-  this.unblock = options.unblock || function () {};
+  this._unblock = options.unblock || function () {};
+  this._calledUnblock = false;
 
   // current user id
   this.userId = options.userId;
@@ -35,14 +37,89 @@ Meteor._MethodInvocation = function (options) {
 };
 
 _.extend(Meteor._MethodInvocation.prototype, {
+  unblock: function () {
+    var self = this;
+    self._calledUnblock = true;
+    self._unblock();
+  },
   setUserId: function(userId) {
-    this.userId = userId;
-    this._setUserId(userId);
+    var self = this;
+    if (self._calledUnblock)
+      throw new Error("Can't call setUserId in a method after calling unblock");
+    self.userId = userId;
+    self._setUserId(userId);
   }
 });
 
+Meteor._parseDDP = function (stringMessage) {
+  try {
+    var msg = JSON.parse(stringMessage);
+  } catch (e) {
+    Meteor._debug("Discarding message with invalid JSON", stringMessage);
+    return null;
+  }
+  // DDP messages must be objects.
+  if (msg === null || typeof msg !== 'object') {
+    Meteor._debug("Discarding non-object DDP message", stringMessage);
+    return null;
+  }
+
+  // massage msg to get it into "abstract ddp" rather than "wire ddp" format.
+
+  // switch between "cleared" rep of unsetting fields and "undefined"
+  // rep of same
+  if (_.has(msg, 'cleared')) {
+    if (!_.has(msg, 'fields'))
+      msg.fields = {};
+    _.each(msg.cleared, function (clearKey) {
+      msg.fields[clearKey] = undefined;
+    });
+    delete msg.cleared;
+  }
+
+  _.each(['fields', 'params', 'result'], function (field) {
+    if (_.has(msg, field))
+      EJSON._adjustTypesFromJSONValue(msg[field]);
+  });
+
+  return msg;
+};
+
+Meteor._stringifyDDP = function (msg) {
+  var copy = EJSON.clone(msg);
+  // swizzle 'changed' messages from 'fields undefined' rep to 'fields
+  // and cleared' rep
+  if (_.has(msg, 'fields')) {
+    var cleared = [];
+    _.each(msg.fields, function (value, key) {
+      if (value === undefined) {
+        cleared.push(key);
+        delete copy.fields[key];
+      }
+    });
+    if (!_.isEmpty(cleared))
+      copy.cleared = cleared;
+    if (_.isEmpty(copy.fields))
+      delete copy.fields;
+  }
+  // adjust types to basic
+  _.each(['fields', 'params', 'result'], function (field) {
+    if (_.has(copy, field))
+      EJSON._adjustTypesToJSONValue(copy[field]);
+  });
+  if (msg.id && typeof msg.id !== 'string') {
+    throw new Error("Message id is not a string");
+  }
+  return JSON.stringify(copy);
+};
+
 Meteor._CurrentInvocation = new Meteor.EnvironmentVariable;
 
+// Note: The DDP server assumes that Meteor.Error EJSON-serializes as an object
+// containing 'error' and optionally 'reason' and 'details'.
+// The DDP client manually puts these into Meteor.Error objects. (We don't use
+// EJSON.addType here because the type is determined by location in the
+// protocol, not text on the wire.)
 Meteor.Error = function (error, reason, details) {
   var self = this;
 
@@ -65,3 +142,4 @@ Meteor.Error = function (error, reason, details) {
 };
 
 Meteor.Error.prototype = new Error;
+})();

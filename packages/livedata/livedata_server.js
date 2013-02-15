@@ -1,14 +1,210 @@
 var Fiber = __meteor_bootstrap__.require('fibers');
 
+// This file contains classes:
+// * LivedataSession - The server's connection to a single DDP client
+// * LivedataSubscription - A single subscription for a single client
+// * LivedataServer - An entire server that may talk to > 1 client.  A DDP endpoint.
+
+(function () {
+
+Meteor._SessionDocumentView = function () {
+  var self = this;
+  self.existsIn = {}; // set of subscriptionHandle
+  self.dataByKey = {}; // key-> [ {subscriptionHandle, value} by precedence]
+};
+
+_.extend(Meteor._SessionDocumentView.prototype, {
+
+  getFields: function () {
+    var self = this;
+    var ret = {};
+    _.each(self.dataByKey, function (precedenceList, key) {
+      ret[key] = precedenceList[0].value;
+    });
+    return ret;
+  },
+
+  clearField: function (subscriptionHandle, key, changeCollector) {
+    var self = this;
+    // Publish API ignores _id if present in fields
+    if (key === "_id")
+      return;
+    var precedenceList = self.dataByKey[key];
+    if (!precedenceList) {
+      throw new Error("Could not find field to clear " + key);
+    }
+    var removedValue = undefined;
+    for (var i = 0; i < precedenceList.length; i++) {
+      var precedence = precedenceList[i];
+      if (precedence.subscriptionHandle === subscriptionHandle) {
+        // The view's value can only change if this subscription is the one that
+        // used to have precedence.
+        if (i === 0)
+          removedValue = precedence.value;
+        precedenceList.splice(i, 1);
+        break;
+      }
+    }
+    if (_.isEmpty(precedenceList)) {
+      delete self.dataByKey[key];
+      changeCollector[key] = undefined;
+    } else if (removedValue !== undefined &&
+               !EJSON.equals(removedValue, precedenceList[0].value)) {
+      changeCollector[key] = precedenceList[0].value;
+    }
+  },
+
+  changeField: function (subscriptionHandle, key, value,
+                         changeCollector, isAdd) {
+    var self = this;
+    // Publish API ignores _id if present in fields
+    if (key === "_id")
+      return;
+    if (!_.has(self.dataByKey, key)) {
+      self.dataByKey[key] = [{subscriptionHandle: subscriptionHandle,
+                              value: value}];
+      changeCollector[key] = value;
+      return;
+    }
+    var precedenceList = self.dataByKey[key];
+    var elt;
+    if (!isAdd) {
+      elt = _.find(precedenceList, function (precedence) {
+        return precedence.subscriptionHandle === subscriptionHandle;
+      });
+    }
+
+    if (elt) {
+      if (elt === precedenceList[0] && !EJSON.equals(value, elt.value)) {
+        // this subscription is changing the value of this field.
+        changeCollector[key] = value;
+      }
+      elt.value = value;
+    } else {
+      // this subscription is newly caring about this field
+      precedenceList.push({subscriptionHandle: subscriptionHandle, value: value});
+    }
+
+  }
+});
+
+Meteor._SessionCollectionView = function (collectionName, sessionCallbacks) {
+  var self = this;
+  self.collectionName = collectionName;
+  self.documents = {};
+  self.callbacks = sessionCallbacks;
+};
+
+_.extend(Meteor._SessionCollectionView.prototype, {
+
+  isEmpty: function () {
+    var self = this;
+    return _.isEmpty(self.documents);
+  },
+
+  diff: function (previous) {
+    var self = this;
+    LocalCollection._diffObjects(previous.documents, self.documents, {
+      both: _.bind(self.diffDocument, self),
+
+      rightOnly: function (id, nowDV) {
+        self.callbacks.added(self.collectionName, id, nowDV.getFields());
+      },
+
+      leftOnly: function (id, prevDV) {
+        self.callbacks.removed(self.collectionName, id);
+      }
+    });
+  },
+
+  diffDocument: function (id, prevDV, nowDV) {
+    var self = this;
+    var fields = {};
+    LocalCollection._diffObjects(prevDV.getFields(), nowDV.getFields(), {
+      both: function (key, prev, now) {
+        if (!EJSON.equals(prev, now))
+          fields[key] = now;
+      },
+      rightOnly: function (key, now) {
+        fields[key] = now;
+      },
+      leftOnly: function(key, prev) {
+        fields[key] = undefined;
+      }
+    });
+    self.callbacks.changed(self.collectionName, id, fields);
+  },
+
+  added: function (subscriptionHandle, id, fields) {
+    var self = this;
+    var docView = self.documents[id];
+    var added = false;
+    if (!docView) {
+      added = true;
+      docView = new Meteor._SessionDocumentView();
+      self.documents[id] = docView;
+    }
+    docView.existsIn[subscriptionHandle] = true;
+    var changeCollector = {};
+    _.each(fields, function (value, key) {
+      docView.changeField(
+        subscriptionHandle, key, value, changeCollector, true);
+    });
+    if (added)
+      self.callbacks.added(self.collectionName, id, changeCollector);
+    else
+      self.callbacks.changed(self.collectionName, id, changeCollector);
+  },
+
+  changed: function (subscriptionHandle, id, changed) {
+    var self = this;
+    var changedResult = {};
+    var docView = self.documents[id];
+    if (!docView)
+      throw new Error("Could not find element with id " + id + " to change");
+    _.each(changed, function (value, key) {
+      if (value === undefined)
+        docView.clearField(subscriptionHandle, key, changedResult);
+      else
+        docView.changeField(subscriptionHandle, key, value, changedResult);
+    });
+    self.callbacks.changed(self.collectionName, id, changedResult);
+  },
+
+  removed: function (subscriptionHandle, id) {
+    var self = this;
+    var docView = self.documents[id];
+    if (!docView) {
+      var err = new Error("Removed nonexistent document " + id);
+      throw err;
+    }
+    delete docView.existsIn[subscriptionHandle];
+    if (_.isEmpty(docView.existsIn)) {
+      // it is gone from everyone
+      self.callbacks.removed(self.collectionName, id);
+      delete self.documents[id];
+    } else {
+      var changed = {};
+      // remove this subscription from every precedence list
+      // and record the changes
+      _.each(docView.dataByKey, function (precedenceList, key) {
+        docView.clearField(subscriptionHandle, key, changed);
+      });
+
+      self.callbacks.changed(self.collectionName, id, changed);
+    }
+  }
+});
 /******************************************************************************/
 /* LivedataSession                                                            */
 /******************************************************************************/
 
-Meteor._LivedataSession = function (server) {
+Meteor._LivedataSession = function (server, version) {
   var self = this;
-  self.id = Meteor.uuid();
+  self.id = Random.id();
 
   self.server = server;
+  self.version = version;
 
   self.initialized = false;
   self.socket = null;
@@ -25,28 +221,112 @@ Meteor._LivedataSession = function (server) {
   self.result_cache = {};
 
   // Sub objects for active subscriptions
-  self.named_subs = {};
-  self.universal_subs = [];
-
-  self.next_sub_priority = 0;
-
-  // map from collection name -> id -> key -> subscription id -> true
-  self.provides_key = {};
-
-  // if set, ignore flush requests on any subsubcription on this
-  // session. when set this back to false, don't forget to call flush
-  // manually. this is sometimes needed because subscriptions
-  // frequently call flush
-  self.dontFlush = false;
+  self._namedSubs = {};
+  self._universalSubs = [];
 
   self.userId = null;
 
   // Per-connection scratch area. This is only used internally, but we
   // should have real and documented API for this sort of thing someday.
   self.sessionData = {};
+
+  self.collectionViews = {};
+
+  // Set this to false to not send messages when collectionViews are
+  // modified. This is done when rerunning subs in _setUserId and those messages
+  // are calculated via a diff instead.
+  self._isSending = true;
+
+  // If this is true, don't start a newly-created universal publisher on this
+  // session. The session will take care of starting it when appropriate.
+  self._dontStartNewUniversalSubs = false;
+
+  // when we are rerunning subscriptions, any ready messages
+  // we want to buffer up for when we are done rerunning subscriptions
+  self._pendingReady = [];
 };
 
 _.extend(Meteor._LivedataSession.prototype, {
+
+
+  sendReady: function (subscriptionIds) {
+    var self = this;
+    if (self._isSending)
+      self.send({msg: "ready", subs: subscriptionIds});
+    else {
+      _.each(subscriptionIds, function (subscriptionId) {
+        self._pendingReady.push(subscriptionId);
+      });
+    }
+  },
+
+  sendAdded: function (collectionName, id, fields) {
+    var self = this;
+    if (self._isSending)
+      self.send({msg: "added", collection: collectionName, id: id, fields: fields});
+  },
+
+  sendChanged: function (collectionName, id, fields) {
+    var self = this;
+    if (_.isEmpty(fields))
+      return;
+
+    if (self._isSending) {
+      self.send({
+        msg: "changed",
+        collection: collectionName,
+        id: id,
+        fields: fields
+      });
+    }
+  },
+
+  sendRemoved: function (collectionName, id) {
+    var self = this;
+    if (self._isSending)
+      self.send({msg: "removed", collection: collectionName, id: id});
+  },
+
+  getSendCallbacks: function () {
+    var self = this;
+    return {
+      added: _.bind(self.sendAdded, self),
+      changed: _.bind(self.sendChanged, self),
+      removed: _.bind(self.sendRemoved, self)
+    };
+  },
+
+  getCollectionView: function (collectionName) {
+    var self = this;
+    if (_.has(self.collectionViews, collectionName)) {
+      return self.collectionViews[collectionName];
+    }
+    var ret = new Meteor._SessionCollectionView(collectionName,
+                                                self.getSendCallbacks());
+    self.collectionViews[collectionName] = ret;
+    return ret;
+  },
+
+  added: function (subscriptionHandle, collectionName, id, fields) {
+    var self = this;
+    var view = self.getCollectionView(collectionName);
+    view.added(subscriptionHandle, id, fields);
+  },
+
+  removed: function (subscriptionHandle, collectionName, id) {
+    var self = this;
+    var view = self.getCollectionView(collectionName);
+    view.removed(subscriptionHandle, id);
+    if (view.isEmpty()) {
+      delete self.collectionViews[collectionName];
+    }
+  },
+
+  changed: function (subscriptionHandle, collectionName, id, fields) {
+    var self = this;
+    var view = self.getCollectionView(collectionName);
+    view.changed(subscriptionHandle, id, fields);
+  },
   // Connect a new socket to this session, displacing (and closing)
   // any socket that was previously connected
   connect: function (socket) {
@@ -59,7 +339,7 @@ _.extend(Meteor._LivedataSession.prototype, {
     self.socket = socket;
     self.last_connect_time = +(new Date);
     _.each(self.out_queue, function (msg) {
-      self.socket.send(JSON.stringify(msg));
+      self.socket.send(Meteor._stringifyDDP(msg));
     });
     self.out_queue = [];
 
@@ -67,11 +347,20 @@ _.extend(Meteor._LivedataSession.prototype, {
     if (!self.initialized) {
       self.initialized = true;
       Fiber(function () {
-        _.each(self.server.universal_publish_handlers, function (handler) {
-          self._startSubscription(handler, self.next_sub_priority--);
-        });
+        self.startUniversalSubs();
       }).run();
     }
+  },
+
+  startUniversalSubs: function () {
+    var self = this;
+    // Make a shallow copy of the set of universal handlers and start them. If
+    // additional universal publishers start while we're running them (due to
+    // yielding), they will run separately as part of _LivedataServer.publish.
+    var handlers = _.clone(self.server.universal_publish_handlers);
+    _.each(handlers, function (handler) {
+      self._startSubscription(handler);
+    });
   },
 
   // If 'socket' is the socket currently connected to this session,
@@ -121,7 +410,9 @@ _.extend(Meteor._LivedataSession.prototype, {
       self.socket.close();
       self.detach(self.socket);
     }
-    self._stopAllSubscriptions();
+    self._deactivateAllSubscriptions();
+    // Drop the merge box data immediately.
+    self.collectionViews = {};
     self.in_queue = self.out_queue = [];
   },
 
@@ -130,17 +421,17 @@ _.extend(Meteor._LivedataSession.prototype, {
   send: function (msg) {
     var self = this;
     if (self.socket)
-      self.socket.send(JSON.stringify(msg));
+      self.socket.send(Meteor._stringifyDDP(msg));
     else
       self.out_queue.push(msg);
   },
 
   // Send a connection error.
-  sendError: function (reason, offending_message) {
+  sendError: function (reason, offendingMessage) {
     var self = this;
     var msg = {msg: 'error', reason: reason};
-    if (offending_message)
-      msg.offending_message = offending_message;
+    if (offendingMessage)
+      msg.offendingMessage = offendingMessage;
     self.send(msg);
   },
 
@@ -186,7 +477,7 @@ _.extend(Meteor._LivedataSession.prototype, {
           processNext();
         };
 
-        if (msg.msg in self.protocol_handlers)
+        if (_.has(self.protocol_handlers, msg.msg))
           self.protocol_handlers[msg.msg].call(self, msg, unblock);
         else
           self.sendError('Bad request', msg);
@@ -212,18 +503,18 @@ _.extend(Meteor._LivedataSession.prototype, {
       if (!self.server.publish_handlers[msg.name]) {
         self.send({
           msg: 'nosub', id: msg.id,
-          error: {error: 404, reason: "Subscription not found"}});
+          error: new Meteor.Error(404, "Subscription not found")});
         return;
       }
 
-      if (msg.id in self.named_subs)
+      if (_.has(self._namedSubs, msg.id))
         // subs are idempotent, or rather, they are ignored if a sub
         // with that id already exists. this is important during
         // reconnect.
         return;
 
       var handler = self.server.publish_handlers[msg.name];
-      self._startSubscription(handler, self.next_sub_priority--,
+      self._startSubscription(handler,
                               msg.id, msg.params);
     },
 
@@ -231,7 +522,6 @@ _.extend(Meteor._LivedataSession.prototype, {
       var self = this;
 
       self._stopSubscription(msg.id);
-      self.send({msg: 'nosub', id: msg.id});
     },
 
     method: function (msg, unblock) {
@@ -258,12 +548,12 @@ _.extend(Meteor._LivedataSession.prototype, {
         // writes will be included in the fence.
         fence.retire();
         self.send({
-          msg: 'data', methods: [msg.id]});
+          msg: 'updated', methods: [msg.id]});
       });
 
       // check for a replayed method (this is important during
       // reconnect)
-      if (msg.id in self.result_cache) {
+      if (_.has(self.result_cache, msg.id)) {
         // found -- just resend whatever we sent last time
         var payload = _.clone(self.result_cache[msg.id]);
         delete payload.when;
@@ -278,7 +568,7 @@ _.extend(Meteor._LivedataSession.prototype, {
       if (!handler) {
         self.send({
           msg: 'result', id: msg.id,
-          error: {error: 404, reason: "Method not found"}});
+          error: new Meteor.Error(404, "Method not found")});
         fence.arm();
         return;
       }
@@ -307,16 +597,8 @@ _.extend(Meteor._LivedataSession.prototype, {
       fence.arm(); // we're done adding writes to the fence
       unblock(); // unblock, if the method hasn't done it already
 
-      // "blind" exceptions other than those that were deliberately
-      // thrown to signal errors to the client
-      if (exception && !(exception instanceof Meteor.Error)) {
-        // tests can set the 'expected' flag on an exception so it
-        // won't go to the server log
-        if (!exception.expected)
-          Meteor._debug("Exception while invoking method '" +
-                        msg.method + "'", exception.stack);
-        exception = new Meteor.Error(500, "Internal server error");
-      }
+      exception = wrapInternalException(
+        exception, "while invoking method '" + msg.method + "'");
 
       // send response and add to cache
       var payload =
@@ -327,12 +609,89 @@ _.extend(Meteor._LivedataSession.prototype, {
     }
   },
 
+  _eachSub: function (f) {
+    var self = this;
+    _.each(self._namedSubs, f);
+    _.each(self._universalSubs, f);
+  },
+
+  _diffCollectionViews: function (beforeCVs) {
+    var self = this;
+    LocalCollection._diffObjects(beforeCVs, self.collectionViews, {
+      both: function (collectionName, leftValue, rightValue) {
+        rightValue.diff(leftValue);
+      },
+      rightOnly: function (collectionName, rightValue) {
+        _.each(rightValue.documents, function (docView, id) {
+          self.sendAdded(collectionName, id, docView.getFields());
+        });
+      },
+      leftOnly: function (collectionName, leftValue) {
+        _.each(leftValue.documents, function (doc, id) {
+          self.sendRemoved(collectionName, id);
+        });
+      }
+    });
+  },
+
   // Sets the current user id in all appropriate contexts and reruns
   // all subscriptions
   _setUserId: function(userId) {
     var self = this;
+
+    // Prevent newly-created universal subscriptions from being added to our
+    // session; they will be found below when we call startUniversalSubs.
+    //
+    // (We don't have to worry about named subscriptions, because we only add
+    // them when we process a 'sub' message. We are currently processing a
+    // 'method' message, and the method did not unblock, because it is illegal
+    // to call setUserId after unblock. Thus we cannot be concurrently adding a
+    // new named subscription.)
+    self._dontStartNewUniversalSubs = true;
+
+    // Prevent current subs from updating our collectionViews and call their
+    // stop callbacks. This may yield.
+    self._eachSub(function (sub) {
+      sub._deactivate();
+    });
+
+    // All subs should now be deactivated. Stop sending messages to the client,
+    // save the state of the published collections, reset to an empty view, and
+    // update the userId.
+    self._isSending = false;
+    var beforeCVs = self.collectionViews;
+    self.collectionViews = {};
     self.userId = userId;
-    this._rerunAllSubscriptions();
+
+    // Save the old named subs, and reset to having no subscriptions.
+    var oldNamedSubs = self._namedSubs;
+    self._namedSubs = {};
+    self._universalSubs = [];
+
+    _.each(oldNamedSubs, function (sub, subscriptionId) {
+      self._namedSubs[subscriptionId] = sub._recreate();
+      // nb: if the handler throws or calls this.error(), it will in fact
+      // immediately send its 'nosub'. This is OK, though.
+      self._namedSubs[subscriptionId]._runHandler();
+    });
+
+    // Allow newly-created universal subs to be started on our connection in
+    // parallel with the ones we're spinning up here, and spin up universal
+    // subs.
+    self._dontStartNewUniversalSubs = false;
+    self.startUniversalSubs();
+
+    // Start sending messages again, beginning with the diff from the previous
+    // state of the world to the current state. No yields are allowed during
+    // this diff, so that other changes cannot interleave.
+    Meteor._noYieldsAllowed(function () {
+      self._isSending = true;
+      self._diffCollectionViews(beforeCVs);
+      if (!_.isEmpty(self._pendingReady)) {
+        self.sendReady(self._pendingReady);
+        self._pendingReady = [];
+      }
+    });
 
     // XXX figure out the login token that was just used, and set up an observe
     // on the user doc so that deleting the user or the login token disconnects
@@ -341,115 +700,52 @@ _.extend(Meteor._LivedataSession.prototype, {
     // should make it automatic.
   },
 
-  _startSubscription: function (handler, priority, sub_id, params) {
+  _startSubscription: function (handler, subId, params) {
     var self = this;
 
-    var sub = new Meteor._LivedataSubscription(self, sub_id, priority);
-    if (sub_id)
-      self.named_subs[sub_id] = sub;
+    var sub = new Meteor._LivedataSubscription(self, handler, subId, params);
+    if (subId)
+      self._namedSubs[subId] = sub;
     else
-      self.universal_subs.push(sub);
-
-    // Store a function to re-run the handler in case we want to rerun
-    // subscriptions, for example when the current user id changes
-    sub._runHandler = function() {
-      try {
-        var res = handler.apply(sub, params || []);
-      } catch (e) {
-        Meteor._debug("Internal exception while starting subscription", sub_id,
-                      e.stack);
-        return;
-      }
-
-      // SPECIAL CASE: Instead of writing their own callbacks that invoke
-      // this.set/unset/flush/etc, the user can just return a collection cursor
-      // from the publish function; we call its _publishCursor method which
-      // starts observing the cursor and publishes the results.
-      //
-      // XXX This uses an undocumented interface which only the Mongo cursor
-      // interface publishes. Should we make this interface public and encourage
-      // users to implement it themselves? Arguably, it's unnecessary; users
-      // can already write their own functions like
-      //   var publishMyReactiveThingy = function (name, handler) {
-      //     Meteor.publish(name, function () {
-      //       var reactiveThingy = handler();
-      //       reactiveThingy.publishMe();
-      //     });
-      //   };
-      if (res && res._publishCursor)
-        res._publishCursor(sub);
-    };
+      self._universalSubs.push(sub);
 
     sub._runHandler();
   },
 
   // tear down specified subscription
-  _stopSubscription: function (sub_id) {
+  _stopSubscription: function (subId, error) {
     var self = this;
 
-    if (sub_id && self.named_subs[sub_id]) {
-      self.named_subs[sub_id].stop();
-      delete self.named_subs[sub_id];
+    if (subId && self._namedSubs[subId]) {
+      self._namedSubs[subId]._removeAllDocuments();
+      self._namedSubs[subId]._deactivate();
+      delete self._namedSubs[subId];
     }
+
+    var response = {msg: 'nosub', id: subId};
+
+    if (error)
+      response.error = wrapInternalException(error, "from sub " + subId);
+
+    self.send(response);
   },
 
-  // tear down all subscriptions
-  _stopAllSubscriptions: function () {
+  // tear down all subscriptions. Note that this does NOT send removed or nosub
+  // messages, since we assume the client is gone.
+  _deactivateAllSubscriptions: function () {
     var self = this;
 
-    _.each(self.named_subs, function (sub, id) {
-      sub.stop();
+    _.each(self._namedSubs, function (sub, id) {
+      sub._deactivate();
     });
-    self.named_subs = {};
+    self._namedSubs = {};
 
-    _.each(self.universal_subs, function (sub) {
-      sub.stop();
+    _.each(self._universalSubs, function (sub) {
+      sub._deactivate();
     });
-    self.universal_subs = [];
-  },
-
-  // Rerun all subscriptions without sending intermediate state down
-  // the wire
-  _rerunAllSubscriptions: function () {
-    var self = this;
-
-    var rerunSub = function(sub) {
-      sub._teardown();
-      sub.userId = self.userId;
-      sub._runHandler();
-    };
-    var flushSub = function(sub) {
-      sub.flush();
-    };
-
-    self.dontFlush = true;
-    _.each(self.named_subs, rerunSub);
-    _.each(self.universal_subs, rerunSub);
-
-    self.dontFlush = false;
-    _.each(self.named_subs, flushSub);
-    _.each(self.universal_subs, flushSub);
-  },
-
-  // RETURN the current value for a particular key, as given by the
-  // current contents of each subscription's snapshot.
-  _effectiveValueForKey: function (collection_name, id, key) {
-    var self = this;
-
-    // Find all subs that publish a value for this key
-    var provided_by = Meteor._get(self.provides_key, collection_name, id, key);
-    provided_by = _.values(provided_by || {});
-
-    if (provided_by.length === 0)
-      return undefined; // no value for key
-
-    // Which one is highest priority?
-    var authority = _.max(provided_by, function (sub) {
-      return sub.priority;
-    });
-
-    return authority.snapshot[collection_name][id][key];
+    self._universalSubs = [];
   }
+
 });
 
 /******************************************************************************/
@@ -457,182 +753,195 @@ _.extend(Meteor._LivedataSession.prototype, {
 /******************************************************************************/
 
 // ctor for a sub handle: the input to each publish function
-Meteor._LivedataSubscription = function (session, sub_id, priority) {
+Meteor._LivedataSubscription = function (
+    session, handler, subscriptionId, params) {
+  var self = this;
   // LivedataSession
-  this.session = session;
+  self._session = session;
 
-  // Give access to sessionData in subscriptions as well as
-  // methods. This is not currently used, but is included for
-  // consistency. We should have real and documented API for this sort
-  // of thing someday.
-  this._sessionData = session.sessionData;
+  self._handler = handler;
 
-  // my subscription ID (generated by client, null for universal subs).
-  this.sub_id = sub_id;
+  // my subscription ID (generated by client, undefined for universal subs).
+  self._subscriptionId = subscriptionId;
 
-  // number (possibly negative.) when two subs return conflicting
-  // values for the same key, the client will see the value from the
-  // sub with the higher priority.
-  this.priority = priority;
+  self._params = params || [];
 
-  // data queued up to be sent by the next flush()
-  // map from collection name -> id -> key -> value
-  // to indicate unset, value === undefined
-  this.pending_data = {};
-  this.pending_complete = false;
+  // Only named subscriptions have IDs, but we need some sort of string
+  // internally to keep track of all subscriptions inside
+  // SessionDocumentViews. We use this subscriptionHandle for that.
+  if (self._subscriptionId) {
+    self._subscriptionHandle = 'N' + self._subscriptionId;
+  } else {
+    self._subscriptionHandle = 'U' + Random.id();
+  }
 
-  // the current data for this subscription (as has been flush()ed to
-  // the client.)
-  // map from collection name -> id -> key -> value
-  this.snapshot = {};
-  this.sent_complete = false;
-
-  // has stop() been called?
-  this.stopped = false;
+  // has _deactivate been called?
+  self._deactivated = false;
 
   // stop callbacks to g/c this sub.  called w/ zero arguments.
-  this.stop_callbacks = [];
+  self._stopCallbacks = [];
 
-  this.userId = session.userId;
+  // the set of (collection, documentid) that this subscription has
+  // an opinion about
+  self._documents = {};
+
+  // remember if we are ready.
+  self._ready = false;
+
+  // Part of the public API: the user of this sub.
+  self.userId = session.userId;
+
+  // For now, the id filter is going to default to
+  // the to/from DDP methods on LocalCollection, to
+  // specifically deal with mongo/minimongo ObjectIds.
+
+  // Later, you will be able to make this be "raw"
+  // if you want to publish a collection that you know
+  // just has strings for keys and no funny business, to
+  // a ddp consumer that isn't minimongo
+
+  self._idFilter = {
+    idStringify: Meteor.idStringify,
+    idParse: Meteor.idParse
+  };
 };
 
 _.extend(Meteor._LivedataSubscription.prototype, {
+  _runHandler: function () {
+    var self = this;
+    try {
+      var res = self._handler.apply(self, EJSON.clone(self._params));
+    } catch (e) {
+      self.error(e);
+      return;
+    }
+
+    // SPECIAL CASE: Instead of writing their own callbacks that invoke
+    // this.added/changed/ready/etc, the user can just return a collection
+    // cursor from the publish function; we call its _publishCursor method which
+    // starts observing the cursor and publishes the results.
+    //
+    // XXX This uses an undocumented interface which only the Mongo cursor
+    // interface publishes. Should we make this interface public and encourage
+    // users to implement it themselves? Arguably, it's unnecessary; users can
+    // already write their own functions like
+    //   var publishMyReactiveThingy = function (name, handler) {
+    //     Meteor.publish(name, function () {
+    //       var reactiveThingy = handler();
+    //       reactiveThingy.publishMe();
+    //     });
+    //   };
+    if (res && res._publishCursor)
+      res._publishCursor(self);
+  },
+
+  // This calls all stop callbacks and prevents the handler from updating any
+  // SessionCollectionViews further. It's used when the user unsubscribes or
+  // disconnects, as well as during setUserId re-runs. It does *NOT* send
+  // removed messages for the published objects; if that is necessary, call
+  // _removeAllDocuments first.
+  _deactivate: function() {
+    var self = this;
+    if (self._deactivated)
+      return;
+    self._deactivated = true;
+    self._callStopCallbacks();
+  },
+
+  _callStopCallbacks: function () {
+    var self = this;
+    // tell listeners, so they can clean up
+    var callbacks = self._stopCallbacks;
+    self._stopCallbacks = [];
+    _.each(callbacks, function (callback) {
+      callback();
+    });
+  },
+
+  // Send remove messages for every document.
+  _removeAllDocuments: function () {
+    var self = this;
+    Meteor._noYieldsAllowed(function () {
+      _.each(self._documents, function(collectionDocs, collectionName) {
+        // Iterate over _.keys instead of the dictionary itself, since we'll be
+        // mutating it.
+        _.each(_.keys(collectionDocs), function (strId) {
+          self.removed(collectionName, self._idFilter.idParse(strId));
+        });
+      });
+    });
+  },
+
+  // Returns a new _LivedataSubscription for the same session with the same
+  // initial creation parameters. This isn't a clone: it doesn't have the same
+  // _documents cache, stopped state or callbacks; may have a different
+  // _subscriptionHandle, and gets its userId from the session, not from this
+  // object.
+  _recreate: function () {
+    var self = this;
+    return new Meteor._LivedataSubscription(
+      self._session, self._handler, self._subscriptionId, self._params);
+  },
+
+  error: function (error) {
+    var self = this;
+    self._session._stopSubscription(self._subscriptionId, error);
+  },
+
+  // Note that while our DDP client will notice that you've called stop() on the
+  // server (and clean up its _subscriptions table) we don't actually provide a
+  // mechanism for an app to notice this (the subscribe onError callback only
+  // triggers if there is an error).
   stop: function () {
     var self = this;
-
-    if (self.stopped)
-      return;
-
-    self._teardown();
-    self.flush();
-    self.stopped = true;
+    self._session._stopSubscription(self._subscriptionId);
   },
 
   onStop: function (callback) {
-    this.stop_callbacks.push(callback);
+    var self = this;
+    if (self._deactivated)
+      callback();
+    else
+      self._stopCallbacks.push(callback);
   },
 
-  set: function (collection_name, id, attributes) {
+  added: function (collectionName, id, fields) {
     var self = this;
-    var obj = Meteor._ensure(self.pending_data, collection_name, id);
-    _.each(attributes, function (value, key) {
-      if (key !== '_id')
-        obj[key] = value;
-    });
-  },
-
-  unset: function (collection_name, id, keys) {
-    var self = this;
-    var obj = Meteor._ensure(self.pending_data, collection_name, id);
-    _.each(keys, function (key) {
-      if (key !== '_id')
-        obj[key] = undefined; // do not delete - need to mark as 'to be unset'
-    });
-  },
-
-  complete: function () {
-    var self = this;
-
-    // universal subs (sub_id is null) can't signal completion.  it's
-    // not an error, since the same handler (eg publishQuery) might be
-    // used to implement both named and universal subs.
-
-    if (self.sub_id)
-      self.pending_complete = true;
-  },
-
-  flush: function () {
-    var self = this;
-
-    if (self.session.dontFlush)
+    if (self._deactivated)
       return;
-
-    if (self.stopped)
-      return;
-
-    for (var name in self.pending_data)
-      for (var id in self.pending_data[name]) {
-        // construct outbound DDP data message
-        var msg = {msg: 'data', collection: name, id: id};
-
-        // snapshot holds this subscription's values for each key
-        var snapshot = Meteor._ensure(self.snapshot, name, id);
-
-        for (var key in self.pending_data[name][id]) {
-          // value: set by this run of this publish handler.
-          var value = self.pending_data[name][id][key];
-
-          // old_value: set by previous run of this publish handler.
-          var old_value = snapshot[key];
-
-          if (value !== old_value) {
-            // First, find the effective value that the client currently
-            // has, thanks to the highest priority subscription.
-            var old_effective_value = self.session._effectiveValueForKey(name, id, key);
-
-            // Update our snapshot based on the written value. Update
-            // our session's index too.
-            if (value === undefined) {
-              delete snapshot[key];
-              Meteor._delete(self.session.provides_key, name, id, key, self.sub_id);
-            } else {
-              snapshot[key] = value;
-              var provides = Meteor._ensure(self.session.provides_key,
-                                            name, id, key);
-              provides[self.sub_id] = self;
-            }
-
-            // Now compute new effective value, taking into account our new value.
-            var new_effective_value = self.session._effectiveValueForKey(name, id, key);
-
-            // If the effective values differ, this sub is responsible
-            // for sending the new data down to the client.
-            if (old_effective_value !== new_effective_value) {
-              if (new_effective_value === undefined) {
-                if (!('unset' in msg))
-                  msg.unset = [];
-                msg.unset.push(key);
-              } else {
-                if (!('set' in msg))
-                  msg.set = {};
-                msg.set[key] = new_effective_value;
-              }
-            }
-          }
-        }
-
-        // Send an update for one object.
-        if ('set' in msg || 'unset' in msg)
-          self.session.send(msg);
-      }
-
-    if (self.pending_complete && !self.sent_complete) {
-      self.session.send({msg: 'data', subs: [self.sub_id]});
-      self.sent_complete = true;
-    }
-
-    self.pending_data = {};
-    self.pending_complete = false;
+    id = self._idFilter.idStringify(id);
+    Meteor._ensure(self._documents, collectionName)[id] = true;
+    self._session.added(self._subscriptionHandle, collectionName, id, fields);
   },
 
-  _teardown: function() {
+  changed: function (collectionName, id, fields) {
     var self = this;
-    // tell listeners, so they can clean up
-    for (var i = 0; i < self.stop_callbacks.length; i++)
-      (self.stop_callbacks[i])();
-    self.stop_callbacks = [];
+    if (self._deactivated)
+      return;
+    id = self._idFilter.idStringify(id);
+    self._session.changed(self._subscriptionHandle, collectionName, id, fields);
+  },
 
-    // remove our data from the client (possibly unshadowing data from
-    // lower priority subscriptions)
-    self.pending_data = {};
-    self.pending_complete = false;
-    for (var name in self.snapshot) {
-      self.pending_data[name] = {};
-      for (var id in self.snapshot[name]) {
-        self.pending_data[name][id] = {};
-        for (var key in self.snapshot[name][id])
-          self.pending_data[name][id][key] = undefined;
-      }
+  removed: function (collectionName, id) {
+    var self = this;
+    if (self._deactivated)
+      return;
+    id = self._idFilter.idStringify(id);
+    // We don't bother to delete sets of things in a collection if the
+    // collection is empty.  It could break _removeAllDocuments.
+    delete self._documents[collectionName][id];
+    self._session.removed(self._subscriptionHandle, collectionName, id);
+  },
+
+  ready: function () {
+    var self = this;
+    if (self._deactivated)
+      return;
+    if (!self._subscriptionId)
+      return;  // unnecessary but ignored for universal sub
+    if (!self._ready) {
+      self._session.sendReady([self._subscriptionId]);
+      self._ready = true;
     }
   }
 });
@@ -640,6 +949,7 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 /******************************************************************************/
 /* LivedataServer                                                             */
 /******************************************************************************/
+
 
 Meteor._LivedataServer = function () {
   var self = this;
@@ -657,24 +967,25 @@ Meteor._LivedataServer = function () {
   self.stream_server = new Meteor._StreamServer;
 
   self.stream_server.register(function (socket) {
+    // socket implements the SockJSConnection interface
     socket.meteor_session = null;
 
-    var sendError = function (reason, offending_message) {
+    var sendError = function (reason, offendingMessage) {
       var msg = {msg: 'error', reason: reason};
-      if (offending_message)
-        msg.offending_message = offending_message;
-      socket.send(JSON.stringify(msg));
+      if (offendingMessage)
+        msg.offendingMessage = offendingMessage;
+      socket.send(Meteor._stringifyDDP(msg));
     };
 
     socket.on('data', function (raw_msg) {
       try {
         try {
-          var msg = JSON.parse(raw_msg);
+          var msg = Meteor._parseDDP(raw_msg);
         } catch (err) {
           sendError('Parse error');
           return;
         }
-        if (typeof msg !== 'object' || !msg.msg) {
+        if (msg === null || !msg.msg) {
           sendError('Bad request', msg);
           return;
         }
@@ -684,27 +995,7 @@ Meteor._LivedataServer = function () {
             sendError("Already connected", msg);
             return;
           }
-
-          // XXX session resumption does not work yet!
-          // https://app.asana.com/0/159908330244/577350817064
-          // disabled here:
-          /*
-          if (msg.session)
-            var old_session = self.sessions[msg.session];
-          if (old_session) {
-            // Resuming a session
-            socket.meteor_session = old_session;
-          }
-          else */ {
-            // Creating a new session
-            socket.meteor_session = new Meteor._LivedataSession(self);
-            self.sessions[socket.meteor_session.id] = socket.meteor_session;
-          }
-
-          socket.send(JSON.stringify({msg: 'connected',
-                                      session: socket.meteor_session.id}));
-          // will kick off previous connection, if any
-          socket.meteor_session.connect(socket);
+          self._handleConnect(socket, msg);
           return;
         }
 
@@ -749,6 +1040,29 @@ Meteor._LivedataServer = function () {
 };
 
 _.extend(Meteor._LivedataServer.prototype, {
+
+  _handleConnect: function (socket, msg) {
+    var self = this;
+    // In the future, handle session resumption: something like:
+    //  socket.meteor_session = self.sessions[msg.session]
+    var version = Meteor._LivedataServer._calculateVersion(
+      msg.support, Meteor._SUPPORTED_DDP_VERSIONS);
+
+    if (msg.version === version) {
+      // Creating a new session
+      socket.meteor_session = new Meteor._LivedataSession(self, version);
+      self.sessions[socket.meteor_session.id] = socket.meteor_session;
+
+
+      socket.send(Meteor._stringifyDDP({msg: 'connected',
+                                  session: socket.meteor_session.id}));
+      // will kick off previous connection, if any
+      socket.meteor_session.connect(socket);
+    } else {
+      socket.send(Meteor._stringifyDDP({msg: 'failed', version: version}));
+      socket.close();
+    }
+  },
   /**
    * Register a publish handler function.
    *
@@ -808,8 +1122,19 @@ _.extend(Meteor._LivedataServer.prototype, {
 
     if (name)
       self.publish_handlers[name] = handler;
-    else
+    else {
       self.universal_publish_handlers.push(handler);
+      // Spin up the new publisher on any existing session too. Run each
+      // session's subscription in a new Fiber, so that there's no change for
+      // self.sessions to change while we're running this loop.
+      _.each(self.sessions, function (session) {
+        if (!session._dontStartNewUniversalSubs) {
+          Fiber(function() {
+            session._startSubscription(handler);
+          }).run();
+        }
+      });
+    }
   },
 
   methods: function (methods) {
@@ -920,3 +1245,30 @@ _.extend(Meteor._LivedataServer.prototype, {
       f();
   }
 });
+
+Meteor._LivedataServer._calculateVersion = function (clientSupportedVersions,
+                                                     serverSupportedVersions) {
+  var correctVersion = _.find(clientSupportedVersions, function (version) {
+    return _.contains(serverSupportedVersions, version);
+  });
+  if (!correctVersion) {
+    correctVersion = serverSupportedVersions[0];
+  }
+  return correctVersion;
+};
+
+// "blind" exceptions other than those that were deliberately thrown to signal
+// errors to the client
+var wrapInternalException = function (exception, context) {
+  if (!exception || exception instanceof Meteor.Error)
+    return exception;
+
+  // tests can set the 'expected' flag on an exception so it won't go to the
+  // server log
+  if (!exception.expected)
+    Meteor._debug("Exception " + context, exception.stack);
+  return new Meteor.Error(500, "Internal server error");
+};
+
+
+})();

@@ -26,7 +26,7 @@ if (Meteor.isClient) {
         } else {
           // make sure we have a username
           Meteor.users.update(Meteor.userId(),
-                              { $set: { username: Meteor.uuid() }});
+                              { $set: { username: Random.id() }});
         }
       }
     } else if (key === "signupFields") {
@@ -116,7 +116,7 @@ if (Meteor.isClient) {
 
   var fakeLogin = function (callback) {
     Accounts.createUser(
-      {username: Meteor.uuid(),
+      {username: Random.id(),
        password: "password",
        profile: { name: "Joe Schmoe" }},
       function () {

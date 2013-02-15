@@ -64,6 +64,17 @@
     test.isFalse(Session.equals('obj', 1));
     test.isFalse(Session.equals('obj', '{"a":1,"b":[5,6]}'));
     test.throws(function() { Session.equals('obj', {a: 1, b: [5, 6]}); });
+
+
+    Session.set('date', new Date(1234));
+    test.equal(Session.get('date'), new Date(1234));
+    test.isFalse(Session.equals('date', new Date(3455)));
+    test.isTrue(Session.equals('date', new Date(1234)));
+
+    Session.set('oid', new Meteor.Collection.ObjectID('ffffffffffffffffffffffff'));
+    test.equal(Session.get('oid'),  new Meteor.Collection.ObjectID('ffffffffffffffffffffffff'));
+    test.isFalse(Session.equals('oid',  new Meteor.Collection.ObjectID('fffffffffffffffffffffffa')));
+    test.isTrue(Session.equals('oid', new Meteor.Collection.ObjectID('ffffffffffffffffffffffff')));
   });
 
   Tinytest.add('session - objects are cloned', function (test) {
