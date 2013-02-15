@@ -1,7 +1,7 @@
 (function () {
 
   var asciiToArray = function (str) {
-    var arr = new Uint8Array(new ArrayBuffer(str.length));
+    var arr = EJSON.newBinary(str.length);
     for (var i = 0; i < str.length; i++) {
       var c = str.charCodeAt(i);
       if (c > 0xFF) {
@@ -26,8 +26,8 @@
   });
 
   Tinytest.add("base64 - empty", function (test) {
-    test.equal(EJSON._base64Encode(new Uint8Array(new ArrayBuffer(0))), "");
-    test.equal(EJSON._base64Decode(""), new Uint8Array(new ArrayBuffer(0)));
+    test.equal(EJSON._base64Encode(EJSON.newBinary(0)), "");
+    test.equal(EJSON._base64Decode(""), EJSON.newBinary(0));
   });
 
 

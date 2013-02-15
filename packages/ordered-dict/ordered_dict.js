@@ -208,5 +208,5 @@
     }
 
   });
-OrderedDict.BREAK = {break: true};
+OrderedDict.BREAK = {"break": true};
 })();
