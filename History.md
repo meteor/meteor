@@ -30,7 +30,13 @@
   version "pre1".  There is an informal specification in
   `packages/livedata/DDP.md`.
 
-* Meteor now uses a shorter string ID for MongoDB documents by default.
+* Meteor now uses a shorter string ID for MongoDB documents by default. You can
+  generate this kind of ID with `Random.id()`.  `Meteor.uuid()` is deprecated.
+
+* There is a new reactive function on susbcription handles: `ready()` returns
+  true when the subscription has received all of its initial documents.
+
+* Meteor now correctly represents empty documents in Collections.
 
 ## v0.5.5
 
