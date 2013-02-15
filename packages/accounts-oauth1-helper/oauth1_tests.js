@@ -1,11 +1,11 @@
 
 Tinytest.add("oauth1 - loginResultForState is stored", function (test) {
   var http = __meteor_bootstrap__.require('http');
-  var twitterfooId = Meteor.uuid();
-  var twitterfooName = 'nickname' + Meteor.uuid();
-  var twitterfooAccessToken = Meteor.uuid();
-  var twitterfooAccessTokenSecret = Meteor.uuid();
-  var state = Meteor.uuid();
+  var twitterfooId = Random.id();
+  var twitterfooName = 'nickname' + Random.id();
+  var twitterfooAccessToken = Random.id();
+  var twitterfooAccessTokenSecret = Random.id();
+  var state = Random.id();
 
   OAuth1Binding.prototype.prepareRequestToken = function() {};
   OAuth1Binding.prototype.prepareAccessToken = function() {
@@ -70,11 +70,11 @@ Tinytest.add("oauth1 - loginResultForState is stored", function (test) {
 
 Tinytest.add("oauth1 - error in user creation", function (test) {
   var http = __meteor_bootstrap__.require('http');
-  var state = Meteor.uuid();
-  var twitterfailId = Meteor.uuid();
-  var twitterfailName = 'nickname' + Meteor.uuid();
-  var twitterfailAccessToken = Meteor.uuid();
-  var twitterfailAccessTokenSecret = Meteor.uuid();
+  var state = Random.id();
+  var twitterfailId = Random.id();
+  var twitterfailName = 'nickname' + Random.id();
+  var twitterfailAccessToken = Random.id();
+  var twitterfailAccessTokenSecret = Random.id();
 
   if (!Accounts.loginServiceConfiguration.findOne({service: 'twitterfail'}))
     Accounts.loginServiceConfiguration.insert({service: 'twitterfail'});

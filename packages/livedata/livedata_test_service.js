@@ -20,6 +20,9 @@ Meteor.methods({
       e.expected = true;
       throw e;
     }
+  },
+  setUserId: function(userId) {
+    this.setUserId(userId);
   }
 });
 
@@ -142,9 +145,6 @@ if (Meteor.isServer) {
     });
 
     Meteor.methods({
-      setUserId: function(userId) {
-        this.setUserId(userId);
-      },
       userIdWhenStopped: function (key) {
         return userIdWhenStopped[key];
       }
@@ -166,4 +166,113 @@ if (Meteor.isServer) {
     }
   });
 }
+
+/// Helper for "livedata - no setUserId after unblock"
+
+if (Meteor.isServer) {
+  Meteor.methods({
+    setUserIdAfterUnblock: function () {
+      this.unblock();
+      var threw = false;
+      var originalUserId = this.userId;
+      try {
+        // Calling setUserId after unblock should throw an error (and not mutate
+        // userId).
+        this.setUserId(originalUserId + "bla");
+      } catch (e) {
+        threw = true;
+      }
+      return threw && this.userId === originalUserId;
+    }
+  });
+}
+
+/*****/
+
+/// Helper for "livedata - overlapping universal subs"
+
+if (Meteor.isServer) {
+  (function(){
+    var collName = "overlappingUniversalSubs";
+    var universalSubscribers = [[], []];
+
+    _.each([0, 1], function (index) {
+      Meteor.publish(null, function () {
+        var sub = this;
+        universalSubscribers[index].push(sub);
+        sub.onStop(function () {
+          universalSubscribers[index] = _.without(
+            universalSubscribers[index], sub);
+        });
+      });
+    });
+
+    Meteor.methods({
+      testOverlappingSubs: function (token) {
+        _.each(universalSubscribers[0], function (sub) {
+          sub.added(collName, token, {});
+        });
+        _.each(universalSubscribers[1], function (sub) {
+          sub.added(collName, token, {});
+        });
+        _.each(universalSubscribers[0], function (sub) {
+          sub.removed(collName, token);
+        });
+      }
+    });
+  })();
+}
+
+/// Helper for "livedata - runtime universal sub creation"
+
+if (Meteor.isServer) {
+  Meteor.methods({
+    runtimeUniversalSubCreation: function (token) {
+      Meteor.publish(null, function () {
+        this.added("runtimeSubCreation", token, {});
+      });
+    }
+  });
+}
+
+/// Helper for "livedata - publisher errors"
+
+if (Meteor.isServer) {
+  Meteor.publish("publisherErrors", function (collName, options) {
+    var sub = this;
+
+    // First add a random item, which should be cleaned up. We use ready/onReady
+    // to make sure that the second test block is only called after the added is
+    // processed, so that there's any chance of the coll.find().count() failing.
+    sub.added(collName, Random.id(), {foo: 42});
+    sub.ready();
+
+    if (options.stopInHandler) {
+      sub.stop();
+      return;
+    }
+
+    var error;
+    if (options.internalError) {
+      error = new Error("Egads!");
+      error.expected = true;  // don't log
+    } else {
+      error = new Meteor.Error(412, "Explicit error");
+    }
+    if (options.throwInHandler) {
+      throw error;
+    } else if (options.errorInHandler) {
+      sub.error(error);
+    } else if (options.throwWhenUserIdSet) {
+      if (sub.userId)
+        throw error;
+    } else if (options.errorLater) {
+      Meteor.defer(function () {
+        sub.error(error);
+      });
+    }
+  });
+}
+
+
 })();

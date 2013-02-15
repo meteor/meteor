@@ -98,7 +98,7 @@ testAsyncMulti("httpcall - timeout", [
 
     // Should time out
     Meteor.http.call(
-      "GET", url_prefix()+"/slow-"+Meteor.uuid(),
+      "GET", url_prefix()+"/slow-"+Random.id(),
       { timeout: 500 },
       expect(function(error, result) {
         test.isTrue(error);
@@ -107,7 +107,7 @@ testAsyncMulti("httpcall - timeout", [
 
     // Should not time out
     Meteor.http.call(
-      "GET", url_prefix()+"/foo-"+Meteor.uuid(),
+      "GET", url_prefix()+"/foo-"+Random.id(),
       { timeout: 2000 },
       expect(function(error, result) {
         test.isFalse(error);
@@ -254,7 +254,7 @@ testAsyncMulti("httpcall - http auth", [
     // uses cached credentials even if we supply different ones:
     // https://bugzilla.mozilla.org/show_bug.cgi?id=654348
     var password = 'rocks';
-    //var password = Meteor.uuid().replace(/[^0-9a-zA-Z]/g, '');
+    //var password = Random.id().replace(/[^0-9a-zA-Z]/g, '');
     Meteor.http.call(
       "GET", url_prefix()+"/login?"+password,
       { auth: "meteor:"+password },

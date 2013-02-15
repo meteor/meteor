@@ -372,6 +372,12 @@ dl.callbacks {
     padding-right: 5px;
 }
 
+.or {
+    font-size: .9em;
+    text-decoration: underline;
+    font-style: italic;
+}
+
 #main pre {
     -moz-border-radius: 10px;
     -webkit-border-radius: 10px;

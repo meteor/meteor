@@ -18,7 +18,7 @@ LocalCollection._modify = function (doc, mod) {
   var new_doc;
 
   if (!is_modifier) {
-    if (mod._id && doc._id !== mod._id)
+    if (mod._id && !EJSON.equals(doc._id, mod._id))
       throw Error("Cannot change the _id of a document");
 
     // replace the whole document
@@ -31,7 +31,7 @@ LocalCollection._modify = function (doc, mod) {
     new_doc = mod;
   } else {
     // apply modifiers
-    var new_doc = LocalCollection._deepcopy(doc);
+    var new_doc = EJSON.clone(doc);
 
     for (var op in mod) {
       var mod_func = LocalCollection._modifiers[op];
@@ -137,7 +137,10 @@ LocalCollection._modifiers = {
     }
   },
   $set: function (target, field, arg) {
-    target[field] = LocalCollection._deepcopy(arg);
+    if (field === '_id' && !EJSON.equals(arg, target._id))
+      throw Error("Cannot change the _id of a document");
+
+    target[field] = EJSON.clone(arg);
   },
   $unset: function (target, field, arg) {
     if (target !== undefined) {
@@ -155,7 +158,7 @@ LocalCollection._modifiers = {
     else if (!(x instanceof Array))
       throw Error("Cannot apply $push modifier to non-array");
     else
-      x.push(LocalCollection._deepcopy(arg));
+      x.push(EJSON.clone(arg));
   },
   $pushAll: function (target, field, arg) {
     if (!(typeof arg === "object" && arg instanceof Array))

@@ -66,6 +66,107 @@ Template.api.settings = {
           "`Meteor.settings.public` will also be available on the client."]
 };
 
+Template.api.ejsonParse = {
+  id: "ejson_parse",
+  name: "EJSON.parse(str)",
+  locus: "Anywhere",
+  args: [ {name: "str", type: "String", descr: "A string to parse into an EJSON value."} ],
+  descr: ["Parse a string into an EJSON value."]
+},
+
+Template.api.ejsonStringify = {
+  id: "ejson_stringify",
+  name: "EJSON.stringify(val)",
+  locus: "Anywhere",
+  args: [ {name: "val", type: "EJSON-compatible value", descr: "A value to stringify."} ],
+  descr: ["Serialize an object to a string."]
+},
+
+
+Template.api.ejsonFromJSONValue = {
+  id: "ejson_from_json_value",
+  name: "EJSON.fromJSONValue(val)",
+  locus: "Anywhere",
+  args: [ {name: "val", type: "JSON-compatible value", descr: "A value to deserialize into EJSON."} ],
+  descr: ["Deserialize an EJSON value from its  plain JSON representation."]
+},
+
+Template.api.ejsonToJSONValue = {
+  id: "ejson_to_json_value",
+  name: "EJSON.toJSONValue(val)",
+  locus: "Anywhere",
+  args: [ {name: "val", type: "EJSON-compatible value", descr: "A value to serialize to plain JSON."} ],
+  descr: ["Serialize an EJSON-compatible value into its plain JSON representation."]
+},
+
+Template.api.ejsonEquals = {
+  id: "ejson_equals",
+  name: "EJSON.equals(a, b)", //doc options?
+  locus: "Anywhere",
+  args: [ {name: "a", type: "EJSON-compatible object"},
+          {name: "b", type: "EJSON-compatible object"} ],
+  descr: ["Return true if `a` and `b` are equal to each other.  Return false otherwise." +
+          "  Uses the `equals` method on `a` if present, otherwise performs a deep comparison."]
+},
+
+Template.api.ejsonClone = {
+  id: "ejson_clone",
+  name: "EJSON.clone(val)",
+  locus: "Anywhere",
+  args: [ {name: "val", type: "EJSON-compatible value", descr: "A value to copy."} ],
+  descr: ["Return a deep copy of `val`."]
+},
+
+Template.api.ejsonNewBinary = {
+  id: "ejson_new_binary",
+  name: "EJSON.newBinary(size)",
+  locus: "Anywhere",
+  args: [ {name: "size", type: "Number", descr: "The number of bytes of binary data to allocate."} ],
+  descr: ["Allocate a new buffer of binary data that EJSON can serialize."]
+},
+
+Template.api.ejsonAddType = {
+  id: "ejson_add_type",
+  name: "EJSON.addType(name, factory)",
+  locus: "Anywhere",
+  args: [
+    {name: "name",
+     type: "String",
+     descr: "A tag for your custom type; must be unique among custom data types defined in your project, and must match the result of your type's `typeName` method."
+    },
+    {name: "factory",
+     type: "Function",
+     descr: "A function that deserializes a JSON-compatible value into an instance of your type.  This should match the serialization performed by your type's `toJSONValue` method."
+    }
+  ],
+  descr: ["Add a custom datatype to EJSON."]
+};
+
+Template.api.ejsonTypeClone = {
+  id: "ejson_type_clone",
+  name: "<i>instance</i>.clone()",
+  descr: ["Return a value `r` such that `this.equals(r)` is true, and modifications to `r` do not affect `this` and vice versa."]
+};
+
+Template.api.ejsonTypeEquals = {
+  id: "ejson_type_equals",
+  name: "<i>instance</i>.equals(other)",
+  args: [ {name: "other", type: "object", descr: "Another object to compare this to."}],
+  descr: ["Return `true` if `other` has a value equal to `this`; `false` otherwise."]
+};
+
+Template.api.ejsonTypeName = {
+  id: "ejson_type_typeName",
+  name: "<i>instance</i>.typeName()",
+  descr: ["Return the tag used to identify this type.  This must match the tag used to register this type with [`EJSON.addType`](#ejson_add_type)."]
+};
+
+Template.api.ejsonTypeToJSONValue = {
+  id: "ejson_type_toJSONValue",
+  name: "<i>instance</i>.toJSONValue()",
+  descr: ["Serialize this instance into a JSON-compatible value."]
+};
+
 Template.api.publish = {
   id: "meteor_publish",
   name: "Meteor.publish(name, func)",
@@ -81,67 +182,85 @@ Template.api.publish = {
   ]
 };
 
-Template.api.subscription_set = {
-  id: "publish_set",
-  name: "<i>this</i>.set(collection, id, attributes)",
+Template.api.subscription_added = {
+  id: "publish_added",
+  name: "<i>this</i>.added(collection, id, fields)",
   locus: "Server",
-  descr: ["Call inside the publish function.  Queues a command to set attributes."],
+  descr: ["Call inside the publish function.  Informs the subscriber that a document has been added to the record set."],
   args: [
     {name: "collection",
      type: "String",
-     descr: "The name of the collection that should be affected."
+     descr: "The name of the collection that contains the new document."
     },
     {name: "id",
      type: "String",
-     descr: "The ID of the document that should be affected."
+     descr: "The new document's ID."
     },
-    {name: "attributes",
+    {name: "fields",
      type: "Object",
-     descr: "Dictionary of attribute keys and their values."
+     descr: "The fields in the new document.  If `_id` is present it is ignored."
     }
   ]
 };
 
-Template.api.subscription_unset = {
-  id: "publish_unset",
-  name: "<i>this</i>.unset(collection, id, keys)",
+Template.api.subscription_changed = {
+  id: "publish_changed",
+  name: "<i>this</i>.changed(collection, id, fields)",
   locus: "Server",
-  descr: ["Call inside the publish function.  Queues a command to unset attributes."],
+  descr: ["Call inside the publish function.  Informs the subscriber that a document in the record set has been modified."],
   args: [
     {name: "collection",
      type: "String",
-     descr: "The name of the collection that should be affected."
+     descr: "The name of the collection that contains the changed document."
     },
     {name: "id",
      type: "String",
-     descr: "The ID of the document that should be affected."
+     descr: "The changed document's ID."
     },
-    {name: "keys",
-     type: "Array",
-     descr: "Array of attribute keys."
+    {name: "fields",
+     type: "Object",
+     descr: "The fields in the document that have changed, together with their new values.  If a field is not present in `fields` it was left unchanged; if it is present in `fields` and has a value of `undefined` it was removed from the document.  If `_id` is present it is ignored."
     }
   ]
 };
 
-Template.api.subscription_complete = {
-  id: "publish_complete",
-  name: "<i>this</i>.complete()",
+Template.api.subscription_removed = {
+  id: "publish_removed",
+  name: "<i>this</i>.removed(collection, ids)",
   locus: "Server",
-  descr: ["Call inside the publish function.  Queues a command to mark this subscription as complete (initial attributes are set)."]
+  descr: ["Call inside the publish function.  Informs the subscriber that some documents have been removed from the record set."],
+  args: [
+    {name: "collection",
+     type: "String",
+     descr: "The name of the collection that documents have been removed from."
+    },
+    {name: "ids",
+     type: "Array of Strings",
+     descr: "The IDs of the documents that have been removed."
+    }
+  ]
 };
 
-Template.api.subscription_flush = {
-  id: "publish_flush",
-  name: "<i>this</i>.flush()",
+Template.api.subscription_ready = {
+  id: "publish_ready",
+  name: "<i>this</i>.ready()",
   locus: "Server",
-  descr: ["Call inside the publish function.  Sends all the pending set, unset, and complete messages to the client."]
+  descr: ["Call inside the publish function.  Informs the subscriber that an initial, complete snapshot of the record set has been sent.  This will trigger a call on the client to the `onReady` callback passed to  [`Meteor.subscribe`](#meteor_subscribe), if any."]
+};
+
+
+Template.api.subscription_error = {
+  id: "publish_error",
+  name: "<i>this</i>.error(error)",
+  locus: "Server",
+  descr: ["Call inside the publish function.  Stops this client's subscription, triggering a call on the client to the `onError` callback passed to [`Meteor.subscribe`](#meteor_subscribe), if any. If `error` is not a [`Meteor.Error`](#meteor_error), it will be mapped to `Meteor.Error(500, \"Internal server error\")`."]
 };
 
 Template.api.subscription_stop = {
   id: "publish_stop",
   name: "<i>this</i>.stop()",
   locus: "Server",
-  descr: ["Call inside the publish function.  Stops this client's subscription."]
+  descr: ["Call inside the publish function.  Stops this client's subscription; the `onError` callback is *not* invoked on the client."]
 };
 
 Template.api.subscription_onStop = {
@@ -167,9 +286,9 @@ Template.api.subscription_userId = {
 
 Template.api.subscribe = {
   id: "meteor_subscribe",
-  name: "Meteor.subscribe(name [, arg1, arg2, ... ] [, onComplete])",
+  name: "Meteor.subscribe(name [, arg1, arg2, ... ] [, callbacks])",
   locus: "Client",
-  descr: ["Subscribe to a record set.  Returns a handle that provides a stop() method, which will stop the subscription."],
+  descr: ["Subscribe to a record set.  Returns a handle that provides `stop()` and `ready()` methods."],
   args: [
     {name: "name",
      type: "String",
@@ -177,9 +296,9 @@ Template.api.subscribe = {
     {name: "arg1, arg2, ...",
      type: "Any",
      descr: "Optional arguments passed to publisher function on server."},
-    {name: "onComplete",
-     type: "Function",
-     descr: "If the last argument is a Function, it is called without arguments when the server marks the subscription as complete."}
+    {name: "callbacks",
+     type: "Function or Object",
+     descr: "Optional. May include `onError` and `onReady` callbacks. If a function is passed instead of an object, it is interpreted as an `onReady` callback."}
   ]
 };
 
@@ -334,6 +453,13 @@ Template.api.meteor_collection = {
     {name: "manager",
      type: "Object",
      descr: "The Meteor connection that will manage this collection, defaults to `Meteor` if null.  Unmanaged (`name` is null) collections cannot specify a manager."
+    },
+    {name: "idGeneration",
+     type: "String",
+     descr: "The method of generating the `_id` fields of new documents in this collection.  Possible values:\n\n" +
+     " - **`'STRING'`**: random strings\n" +
+     " - **`'MONGO'`**:  random [`Meteor.Collection.ObjectID`](#collection_object_id) values\n\n" +
+     "The default id generation technique is `'STRING'`."
     }
   ]
 };
@@ -539,17 +665,41 @@ Template.api.cursor_observe = {
   descr: ["Watch a query.  Receive callbacks as the result set changes."],
   args: [
     {name: "callbacks",
-     type: "Object (may include <code>added</code>, <code>changed</code>, <code>moved</code>, and <code>removed</code> callbacks)",
+     type: "Object",
      descr: "Functions to call to deliver the result set as it changes"}
   ]
 };
 
-Template.api.uuid = {
-  id: "meteor_uuid",
-  name: "Meteor.uuid()",
+Template.api.cursor_observe_changes = {
+  id: "observe_changes",
+  name: "<em>cursor</em>.observeChanges(callbacks)",
   locus: "Anywhere",
-  descr: ["Returns a Universally Unique Identifier."],
+  descr: ["Watch a query.  Receive callbacks as the result set changes.  Only the differences between the old and new documents are passed to the callbacks."],
+  args: [
+    {name: "callbacks",
+     type: "Object",
+     descr: "Functions to call to deliver the result set as it changes"}
+  ]
+};
+
+Template.api.id = {
+  id: "meteor_id",
+  name: "Random.id()",
+  locus: "Anywhere",
+  descr: ["Return a unique identifier."],
   args: [ ]
+};
+
+Template.api.collection_object_id = {
+  id: "collection_object_id",
+  name: "new Meteor.Collection.ObjectID(hexString)",
+  locus: "Anywhere",
+  descr: ["Create a Mongo-style `ObjectID`.  If you don't specify a `hexString`, the `ObjectID` will generated randomly (not using MongoDB's ID construction rules)."],
+  args: [ {
+    name: "hexString",
+    type: "String",
+    descr: ["Optional.  The 24-character hexadecimal contents of the ObjectID to create"]
+  }]
 };
 
 Template.api.selectors = {

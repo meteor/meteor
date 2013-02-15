@@ -15,7 +15,7 @@
 
   testAsyncMulti("accounts emails - reset password flow", [
     function (test, expect) {
-      email1 = Meteor.uuid() + "-intercept@example.com";
+      email1 = Random.id() + "-intercept@example.com";
       Accounts.createUser({email: email1, password: 'foobar'},
                           expect(function (error) {
                             test.equal(error, undefined);
@@ -87,8 +87,8 @@
 
   testAsyncMulti("accounts emails - verify email flow", [
     function (test, expect) {
-      email2 = Meteor.uuid() + "-intercept@example.com";
-      email3 = Meteor.uuid() + "-intercept@example.com";
+      email2 = Random.id() + "-intercept@example.com";
+      email3 = Random.id() + "-intercept@example.com";
       Accounts.createUser(
         {email: email2, password: 'foobar'},
         loggedIn(test, expect));
@@ -171,7 +171,7 @@
 
   testAsyncMulti("accounts emails - enroll account flow", [
     function (test, expect) {
-      email4 = Meteor.uuid() + "-intercept@example.com";
+      email4 = Random.id() + "-intercept@example.com";
       Meteor.call("createUserOnServer", email4,
         expect(function (error, result) {
           test.isFalse(error);

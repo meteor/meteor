@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['underscore', 'logging', 'uuid', 'json'], ['client', 'server']);
+  api.use(['underscore', 'logging', 'random', 'json'], ['client', 'server']);
   api.use('reload', 'client');
   api.use('routepolicy', 'server');
 
