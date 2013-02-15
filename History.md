@@ -1,6 +1,7 @@
 
 ## vNEXT
 
+
 * Changed the api for publish functions that do not return a
   cursor. Specifically, use `added`, `changed`, `removed`, and `ready`, instead
   of `set`, `unset`, `flush`, and `complete`.  See the [`publish`
@@ -37,6 +38,15 @@
   true when the subscription has received all of its initial documents.
 
 * Meteor now correctly represents empty documents in Collections.
+
+## v0.5.6
+
+* Fix 0.5.5 regression: Minimongo selectors matching subdocuments under arrays
+  did not work correctly.
+
+* Some Bootstrap icons should have appeared white.
+
+Patches contributed by GitHub user benjaminchelli.
 
 ## v0.5.5
 
