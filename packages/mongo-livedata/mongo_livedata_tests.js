@@ -669,18 +669,14 @@ if (Meteor.isServer) {
     var id1 = coll.insert({x: 42, is1: true});
     var id2 = coll.insert({x: 50, is2: true});
 
-    var touchedCalls = {};
+    var polls = {};
     var handlesToStop = [];
     var observe = function (name, query) {
-      touchedCalls[name] = 0;
       var handle = coll.find(query).observeChanges({
-        // Make sure that we only poll on invalidation, not due to time.
-        _pollIntervalMs: 0,
-        changed: function () {
-          ++touchedCalls[name];
-        },
-        removed: function () {
-          ++touchedCalls[name];
+        // Make sure that we only poll on invalidation, not due to time,
+        // and keep track of when we do.
+        _testOnlyPollCallback: function () {
+          polls[name] = (name in polls ? polls[name] + 1 : 1);
         }
       });
       handlesToStop.push(handle);
@@ -691,67 +687,59 @@ if (Meteor.isServer) {
     observe("id1InQuery", {_id: id1, z: null});
     observe("id2Direct", id2);
     observe("id2InQuery", {_id: id2, z: null});
-    test.equal(
-      touchedCalls,
-      {all: 0, id1Direct: 0, id1InQuery: 0, id2Direct: 0, id2InQuery: 0});
+    observe("bothIds", {_id: {$in: [id1, id2]}});
 
-    var secretlyMutateEverything = function () {
-      var fut = new Future;
-      Meteor._RemoteCollectionDriver.mongo._withCollection(
-        coll._name, function (err, c) {
-          if (err)
-            fut.throw(err);
-          c.update({}, {$inc: {x: 1}}, {safe: true, multi: true}, function (err) {
-            if (err)
-              fut.throw(err);
-            fut.return();
-          });
-        });
-      fut.wait();
+    var resetPollsAndRunInFence = function (f) {
+      polls = {};
+      runInFence(f);
     };
 
-    // Update id1 directly. This should poll the "all" and "id1" queries but not
-    // the "id2" queries.
-    secretlyMutateEverything();
-    runInFence(function () {
+    // Update id1 directly. This should poll all but the "id2" queries. "all"
+    // and "bothIds" increment by 2 because they are looking at both.
+    resetPollsAndRunInFence(function () {
       coll.update(id1, {$inc: {x: 1}});
     });
     test.equal(
-      touchedCalls,
-      {all: 2, id1Direct: 1, id1InQuery: 1, id2Direct: 0, id2InQuery: 0});
+      polls,
+      {all: 1, id1Direct: 1, id1InQuery: 1, bothIds: 1});
 
-    // Update id2 using a funny query. This should poll the "all" and "id2"
-    // queries but not the "id1" queries. (The "all" query increments by 2
-    // because it sees both changes.)
-    secretlyMutateEverything();
-    runInFence(function () {
+    // Update id2 using a funny query. This should poll all but the "id1"
+    // queries.
+    resetPollsAndRunInFence(function () {
       coll.update({_id: id2, q: null}, {$inc: {x: 1}});
     });
     test.equal(
-      touchedCalls,
-      {all: 4, id1Direct: 1, id1InQuery: 1, id2Direct: 1, id2InQuery: 1});
+      polls,
+      {all: 1, id2Direct: 1, id2InQuery: 1, bothIds: 1});
+
+    // Update both using a $in query. Should poll each of them exactly once.
+    resetPollsAndRunInFence(function () {
+      coll.update({_id: {$in: [id1, id2]}, q: null}, {$inc: {x: 1}});
+    });
+    test.equal(
+      polls,
+      {all: 1, id1Direct: 1, id1InQuery: 1, id2Direct: 1, id2InQuery: 1,
+       bothIds: 1});
 
     // Update id1 using "validated update" and with a query that doesn't appear
     // to match on ID. The validation should change this to an ID-specific
     // query, so we should not poll the id2 queries.
-    secretlyMutateEverything();
-    runInFence(function () {
+    resetPollsAndRunInFence(function () {
       coll._validatedUpdate("user", {is1: true}, {$inc: {x: 1}});
     });
     test.equal(
-      touchedCalls,
-      {all: 6, id1Direct: 2, id1InQuery: 2, id2Direct: 1, id2InQuery: 1});
+      polls,
+      {all: 1, id1Direct: 1, id1InQuery: 1, bothIds: 1});
 
     // Remove id2 using "validated remove" and with a query that doesn't appear
     // to match on ID. The validation should change this to an ID-specific
     // query, so we should not poll the id1 queries.
-    secretlyMutateEverything();
-    runInFence(function () {
+    resetPollsAndRunInFence(function () {
       coll._validatedRemove("user", {is2: true});
     });
     test.equal(
-      touchedCalls,
-      {all: 8, id1Direct: 2, id1InQuery: 2, id2Direct: 2, id2InQuery: 2});
+      polls,
+      {all: 1, id2Direct: 1, id2InQuery: 1, bothIds: 1});
 
     _.each(handlesToStop, function (h) {h.stop();});
     onComplete();

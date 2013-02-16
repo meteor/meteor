@@ -549,7 +549,7 @@ _Mongo.prototype._observeChanges = function (
         function () {
           delete self._liveResultsSets[observeKey];
         },
-        callbacks._pollIntervalMs);
+        callbacks._testOnlyPollCallback);
       self._liveResultsSets[observeKey] = liveResultsSet;
       newlyCreated = true;
     }
@@ -572,7 +572,7 @@ _Mongo.prototype._observeChanges = function (
 };
 
 var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
-                               stopCallback, pollIntervalMs) {
+                               stopCallback, testOnlyPollCallback) {
   var self = this;
 
   self._cursorDescription = cursorDescription;
@@ -671,13 +671,16 @@ var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
 
   // every once and a while, poll even if we don't think we're dirty, for
   // eventual consistency with database writes from outside the Meteor
-  // universe. There's an undocumented test-only argument to observeChanges
-  // which allows this to be changed or (by setting to 0) turned off for tests.
-  if (pollIntervalMs === undefined)
-    pollIntervalMs = 10 * 1000;
-  if (pollIntervalMs != 0) {
+  // universe.
+  //
+  // For testing, there's an undocumented callback argument to observeChanges
+  // which disables time-based polling and gets called at the beginning of each
+  // poll.
+  if (testOnlyPollCallback) {
+    self._testOnlyPollCallback = testOnlyPollCallback;
+  } else {
     var intervalHandle = Meteor.setInterval(
-      _.bind(self._ensurePollIsScheduled, self), pollIntervalMs);
+      _.bind(self._ensurePollIsScheduled, self), 10 * 1000);
     self._stopCallbacks.push(function () {
       Meteor.clearInterval(intervalHandle);
     });
@@ -751,6 +754,8 @@ _.extend(LiveResultsSet.prototype, {
   _pollMongo: function () {
     var self = this;
     --self._pollsScheduledButNotStarted;
+
+    self._testOnlyPollCallback && self._testOnlyPollCallback();
 
     // Save the list of pending writes which this round will commit.
     var writesForCycle = self._pendingWrites;
