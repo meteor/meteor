@@ -60,7 +60,7 @@
 
   window.applicationCache.addEventListener('obsolete', (function() {
     if (reloadRetry) {
-      cacheIsNowUpToDate()
+      cacheIsNowUpToDate();
     }
     else {
       appcacheUpdated = true;
