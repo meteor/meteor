@@ -379,12 +379,12 @@ DomUtils = {};
   // Calls func with a selector of the form "[id='...']" as an argument.
   var withElementId = function (element, magicId, func) {
     var didSetId = false;
-    if (! element.id) {
+    if (! element.getAttribute('id')) {
       element.setAttribute('id', magicId);
       didSetId = true;
     }
     try {
-      var escapedNodeId = element.id.replace(/'/g, "\\$&");
+      var escapedNodeId = element.getAttribute('id').replace(/'/g, "\\$&");
       return func("[id='" + escapedNodeId + "']");
     } finally {
       if (didSetId)

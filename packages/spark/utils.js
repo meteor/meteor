@@ -4,8 +4,8 @@
     var label = null;
 
     if (n.nodeType === 1 /*ELEMENT_NODE*/) {
-      if (n.id) {
-        label = '#' + n.id;
+      if (n.getAttribute('id')) {
+        label = '#' + n.getAttribute('id');
       } else if (n.getAttribute("name")) {
         label = n.getAttribute("name");
         // Radio button special case:  radio buttons
