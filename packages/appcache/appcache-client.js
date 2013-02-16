@@ -1,6 +1,6 @@
 (function() {
 
-  if (window.applicationCache == null)
+  if (! window.applicationCache)
     return;
 
   var appCacheStatuses = [
@@ -12,12 +12,12 @@
     'obsolete'
   ];
 
-  var updating_appcache = false;
-  var reload_retry = null;
-  var appcache_updated = false;
+  var updatingAppcache = false;
+  var reloadRetry = null;
+  var appcacheUpdated = false;
 
   Meteor._reload.onMigrate('appcache', function(retry) {
-    if (appcache_updated)
+    if (appcacheUpdated)
       return [true];
 
     // An uncached application (one that does not have a manifest) cannot
@@ -25,7 +25,7 @@
     if (window.applicationCache.status === window.applicationCache.UNCACHED)
       return [true];
 
-    if (!updating_appcache) {
+    if (!updatingAppcache) {
       try {
         window.applicationCache.update();
       } catch (e) {
@@ -33,21 +33,21 @@
         // There's no point in delaying the reload if we can't update the cache.
         return [true];
       }
-      updating_appcache = true;
+      updatingAppcache = true;
     }
 
     // Delay migration until the app cache has been updated.
-    reload_retry = retry;
+    reloadRetry = retry;
     return false;
   });
 
   // If we're migrating and the app cache is now up to date, signal that
   // we're now ready to migrate.
   var cacheIsNowUpToDate = function() {
-    if (!updating_appcache)
+    if (!updatingAppcache)
       return;
-    appcache_updated = true;
-    return reload_retry();
+    appcacheUpdated = true;
+    reloadRetry();
   };
 
   window.applicationCache.addEventListener('updateready', cacheIsNowUpToDate, false);
@@ -56,10 +56,16 @@
   // We'll get the obsolete event on a 404 fetching the app.manifest:
   // we had previously been running with an app cache, but the app
   // cache has now been disabled or the appcache package removed.
-  // Reload immediately to get the new non-cached code.
+  // Reload to get the new non-cached code.
 
   window.applicationCache.addEventListener('obsolete', (function() {
-    return window.location.reload();
+    if (reloadRetry) {
+      cacheIsNowUpToDate()
+    }
+    else {
+      appcacheUpdated = true;
+      Meteor._reload.reload();
+    }
   }), false);
 
 })();

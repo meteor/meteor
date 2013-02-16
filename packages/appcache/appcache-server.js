@@ -1,10 +1,10 @@
 (function() {
 
-  var app       = __meteor_bootstrap__.app;
-  var bundle    = __meteor_bootstrap__.bundle;
-  var crypto    = __meteor_bootstrap__.require('crypto');
-  var fs        = __meteor_bootstrap__.require('fs');
-  var path      = __meteor_bootstrap__.require('path');
+  var app = __meteor_bootstrap__.app;
+  var bundle = __meteor_bootstrap__.bundle;
+  var crypto = __meteor_bootstrap__.require('crypto');
+  var fs = __meteor_bootstrap__.require('fs');
+  var path = __meteor_bootstrap__.require('path');
 
   var knownBrowsers = ['android', 'chrome', 'firefox', 'ie', 'mobileSafari', 'safari'];
 
@@ -128,7 +128,7 @@
       }
     });
     if (totalSize > 5 * 1024 * 1024) {
-      return Meteor._debug(
+      Meteor._debug(
         "** You are publishing " + totalSize + " bytes of assets (including\n" +
         "** the contents of the public/ directory) to be stored in the\n" +
         "** browser's application cache.\n" +
