@@ -166,6 +166,25 @@ _Mongo.prototype.insert = function (collection_name, document) {
     throw err;
 };
 
+// Cause queries that may be affected by the selector to poll in this write
+// fence.
+_Mongo.prototype._refresh = function (collectionName, selector) {
+  var self = this;
+  var refreshKey = {collection: collectionName};
+  // If we know which documents we're removing, don't poll queries that are
+  // specific to other documents. (Note that multiple notifications here should
+  // not cause multiple polls, since all our listener is doing is enqueueing a
+  // poll.)
+  var specificIds = LocalCollection._idsMatchedBySelector(selector);
+  if (specificIds) {
+    _.each(specificIds, function (id) {
+      Meteor.refresh(_.extend({id: id}, refreshKey));
+    });
+  } else {
+    Meteor.refresh(refreshKey);
+  }
+};
+
 _Mongo.prototype.remove = function (collection_name, selector) {
   var self = this;
 
@@ -192,13 +211,7 @@ _Mongo.prototype.remove = function (collection_name, selector) {
   });
 
   var err = future.wait();
-  var refreshKey = {collection: collection_name};
-  // If we know which document we're removing, don't poll queries that are
-  // specific to other documents.
-  var onlyMatchingId = LocalCollection._idMatchedBySelector(selector);
-  if (onlyMatchingId !== undefined)
-    refreshKey.id = onlyMatchingId;
-  Meteor.refresh(refreshKey);
+  self._refresh(collection_name, selector);
   write.committed();
   if (err)
     throw err;
@@ -238,13 +251,7 @@ _Mongo.prototype.update = function (collection_name, selector, mod, options) {
   });
 
   var err = future.wait();
-  var refreshKey = {collection: collection_name};
-  // If we know which document we're removing, don't poll queries that are
-  // specific to other documents.
-  var onlyMatchingId = LocalCollection._idMatchedBySelector(selector);
-  if (onlyMatchingId !== undefined)
-    refreshKey.id = onlyMatchingId;
-  Meteor.refresh(refreshKey);
+  self._refresh(collection_name, selector);
   write.committed();
   if (err)
     throw err;
@@ -603,25 +610,36 @@ var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
   self._taskQueue = new Meteor._SynchronousQueue();
 
   // Listen for the invalidation messages that will trigger us to poll the
-  // database for changes. If this selector is just a single ID, specify it
-  // here, so that updates that are also a single ID don't require a poll.
+  // database for changes. If this selector specifies specific IDs, specify them
+  // here, so that updates to different specific IDs don't cause us to poll.
+  var listenOnTrigger = function (trigger) {
+    var listener = Meteor._InvalidationCrossbar.listen(
+      trigger, function (notification, complete) {
+        // When someone does a transaction that might affect us, schedule a poll
+        // of the database. If that transaction happens inside of a write fence,
+        // block the fence until we've polled and notified observers.
+        var fence = Meteor._CurrentWriteFence.get();
+        if (fence)
+          self._pendingWrites.push(fence.beginWrite());
+        // Ensure a poll is scheduled... but if we already know that one is,
+        // don't hit the throttled _ensurePollIsScheduled function (which might
+        // lead to us calling it unnecessarily in 50ms).
+        if (self._pollsScheduledButNotStarted === 0)
+          self._ensurePollIsScheduled();
+        complete();
+      });
+    self._stopCallbacks.push(function () { listener.stop(); });
+  };
   var key = {collection: cursorDescription.collectionName};
-  var onlyMatchingId = LocalCollection._idMatchedBySelector(
+  var specificIds = LocalCollection._idsMatchedBySelector(
     cursorDescription.selector);
-  if (onlyMatchingId !== undefined)
-    key.id = onlyMatchingId;
-  var listener = Meteor._InvalidationCrossbar.listen(
-    key, function (notification, complete) {
-      // When someone does a transaction that might affect us, schedule a poll
-      // of the database. If that transaction happens inside of a write fence,
-      // block the fence until we've polled and notified observers.
-      var fence = Meteor._CurrentWriteFence.get();
-      if (fence)
-        self._pendingWrites.push(fence.beginWrite());
-      self._ensurePollIsScheduled();
-      complete();
+  if (specificIds) {
+    _.each(specificIds, function (id) {
+      listenOnTrigger(_.extend({id: id}, key));
     });
-  self._stopCallbacks.push(function () { listener.stop(); });
+  } else {
+    listenOnTrigger(key);
+  }
 
   // Map from handle ID to ObserveHandle.
   self._observeHandles = {};

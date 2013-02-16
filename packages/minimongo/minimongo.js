@@ -410,13 +410,15 @@ LocalCollection.prototype.remove = function (selector) {
   var selector_f = LocalCollection._compileSelector(selector);
 
   // Avoid O(n) for "remove a single doc by ID".
-  var onlyMatchingId = LocalCollection._idMatchedBySelector(selector);
-  if (onlyMatchingId !== undefined) {
-    var strId = LocalCollection._idStringify(onlyMatchingId);
-    // We still have to run selector_f, in case it's something like
-    //   {_id: "X", a: 42}
-    if (_.has(self.docs, strId) && selector_f(self.docs[strId]))
-      remove.push(strId);
+  var specificIds = LocalCollection._idsMatchedBySelector(selector);
+  if (specificIds) {
+    _.each(specificIds, function (id) {
+      var strId = LocalCollection._idStringify(id);
+      // We still have to run selector_f, in case it's something like
+      //   {_id: "X", a: 42}
+      if (_.has(self.docs, strId) && selector_f(self.docs[strId]))
+        remove.push(strId);
+    });
   } else {
     for (var id in self.docs) {
       var doc = self.docs[id];

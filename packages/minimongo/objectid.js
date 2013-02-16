@@ -59,43 +59,45 @@ LocalCollection._selectorIsId = function (selector) {
     selector instanceof LocalCollection._ObjectID;
 };
 
-// If this is a selector that matches at most one document, return that
-// id. Otherwise returns undefined. Note that the selector may have other
-// restrictions so it may not even match that document!
-// We care about $in and $and since those are generated access-controlled
-// update and remove.
-LocalCollection._idMatchedBySelector = function (selector) {
+// If this is a selector which explicitly constrains the match by ID to a finite
+// number of documents, returns a list of their IDs.  Otherwise returns
+// null. Note that the selector may have other restrictions so it may not even
+// match those document!  We care about $in and $and since those are generated
+// access-controlled update and remove.
+LocalCollection._idsMatchedBySelector = function (selector) {
   // Is the selector just an ID?
   if (LocalCollection._selectorIsId(selector))
-    return selector;
+    return [selector];
   if (!selector)
-    return undefined;
+    return null;
 
   // Do we have an _id clause?
   if (_.has(selector, '_id')) {
     // Is the _id clause just an ID?
     if (LocalCollection._selectorIsId(selector._id))
-      return selector._id;
-    // Is the _id clause {_id: {$in: [oneId]}}?
+      return [selector._id];
+    // Is the _id clause {_id: {$in: ["x", "y", "z"]}}?
     if (selector._id && selector._id.$in
-        && _.isArray(selector._id.$in) && selector._id.$in.length === 1
-        && LocalCollection._selectorIsId(selector._id.$in[0])) {
-      return selector._id.$in[0];
+        && _.isArray(selector._id.$in)
+        && !_.isEmpty(selector._id.$in)
+        && _.all(selector._id.$in, LocalCollection._selectorIsId)) {
+      return selector._id.$in;
     }
-    return undefined;
+    return null;
   }
 
-  // If this is a top-level $and, and any of the clauses can match at most one
-  // document, then the whole selector can match at most that document.
+  // If this is a top-level $and, and any of the clauses constrain their
+  // documents, then the whole selector is constrained by any one clause's
+  // constraint. (Well, by their intersection, but that seems unlikely.)
   if (selector.$and && _.isArray(selector.$and)) {
     for (var i = 0; i < selector.$and.length; ++i) {
-      var subId = LocalCollection._idMatchedBySelector(selector.$and[i]);
-      if (subId !== undefined)
-        return subId;
+      var subIds = LocalCollection._idsMatchedBySelector(selector.$and[i]);
+      if (subIds)
+        return subIds;
     }
   }
 
-  return undefined;
+  return null;
 };
 
 EJSON.addType("oid",  function (str) {
