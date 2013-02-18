@@ -35,6 +35,7 @@
       </div>
     </div>
   </div>
+  {{> groupNav}}
   <div class="row-fluid"><div class="span11 offset1">
   <ul class="failedTests">
     {{#each failedTests}}
@@ -51,15 +52,27 @@
 </template>
 
 <template name="progressBar">
-  <div id="testProgressBar" class="progress {{#if running}}progress-striped active{{/if}}">
+  <div id="testProgressBar" class="progress {{#if running}}progress-striped{{/if}}">
     <div class="bar bar-danger" style="width: {{percentFail}}%;"></div>
     <div class="bar {{#if anyFail}}bar-warning{{else}}bar-success{{/if}}" style="width: {{percentPass}}%;"></div>
   </div>
 </template>
 
+<template name="groupNav">
+  <div class="navbar navbar-fixed-bottom navbar-inverse">
+    <div class="navbar-inner">
+      <ul class="nav">
+      {{#each groupPaths}}
+        <li><a class="group" href="#">{{name}}</a></li>
+      {{/each}}
+      </ul>
+    </div>
+  </div>
+</template>
+
 <template name="test_group">
   <div class="group">
-    <div class="groupname">{{name}}</div>
+    <div class="groupname"><a>{{name}}</a></div>
     {{#each tests}}
       {{> test}}
     {{/each}}

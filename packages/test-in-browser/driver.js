@@ -1,15 +1,42 @@
-var running = true;
+var running;
 
+var groupPathDeps;
+var groupPath;
+var resultTree;
+var failedTests;
+var resultDeps;
+var countDeps;
+var totalCount;
+var passedCount;
+var failedCount;
+var resetTests = function () {
+  if (!Session.get("groupPath"))
+    Session.set("groupPath", []);
+  resultTree =  [];
+  failedTests = [];
+  resultDeps = new Meteor.deps._ContextSet;
+  countDeps = new Meteor.deps._ContextSet;
+  totalCount = 0;
+  passedCount = 0;
+  failedCount = 0;
+
+  running = true;
+};
+resetTests();
 Meteor.startup(function () {
+  rerunTests();
+});
+
+var rerunTests = function () {
+  countDeps.invalidateAll();
+  _resultsChanged();
   Meteor._runTestsEverywhere(reportResults, function () {
     running = false;
     Meteor.onTestsComplete && Meteor.onTestsComplete();
     _resultsChanged();
     Meteor.flush();
-    // scroll to top so we can see global pass/fail
-    $("html, body").scrollTop(0);
-  });
-});
+  }, Session.get("groupPath"));
+};
 
 Template.progressBar.running = function () {
   countDeps.addCurrentContext();
@@ -20,20 +47,42 @@ Template.progressBar.percentPass = function () {
   countDeps.addCurrentContext();
   if (totalCount === 0)
     return 0;
-  return Math.floor(100*passedCount/totalCount);
+  return 100*passedCount/totalCount;
 };
 
 Template.progressBar.percentFail = function () {
   countDeps.addCurrentContext();
   if (totalCount === 0)
     return 0;
-  return Math.ceil(100*failedCount/totalCount);
+  return 100*failedCount/totalCount;
 };
 
 Template.progressBar.anyFail = function () {
   countDeps.addCurrentContext();
   return failedCount > 0;
 };
+
+Template.groupNav.groupPaths = function () {
+  var groupPath = Session.get("groupPath");
+  var ret = [];
+  for (var i = 1; i <= groupPath.length; i++) {
+    ret.push({path: groupPath.slice(0,i), name: groupPath[i-1]});
+  }
+  return ret;
+};
+
+Template.groupNav.events({
+  "click .group": function () {
+    console.log("clicked", this);
+    Session.set("groupPath", this.path);
+  }
+});
+
+Template.test_group.events({
+  "click .groupname": function () {
+    Session.set("groupPath", this.path);
+  }
+});
 
 Template.test_table.running = function() {
   resultDeps.addCurrentContext();
@@ -227,14 +276,6 @@ Template.event.is_debuggable = function() {
 };
 
 
-var resultTree = [];
-var failedTests = [];
-var resultDeps = new Meteor.deps._ContextSet;
-var countDeps = new Meteor.deps._ContextSet;
-var totalCount = 0;
-var passedCount = 0;
-var failedCount = 0;
-
 var _resultsChanged = function() {
   resultDeps.invalidateAll();
 };
@@ -275,7 +316,6 @@ var _testStatus = function(t) {
 // possibly 'events'.
 var _findTestForResults = function (results) {
   var groupPath = results.groupPath; // array
-
   if ((! _.isArray(groupPath)) || (groupPath.length < 1)) {
     throw new Error("Test must be part of a group");
   }
@@ -286,7 +326,7 @@ var _findTestForResults = function (results) {
                  : resultTree);
     var newGroup = _.find(array, function(g) { return g.name === gname; });
     if (! newGroup) {
-      newGroup = {name: gname, parent: (group || null)}; // create group
+      newGroup = {name: gname, parent: (group || null), path: groupPath}; // create group
       array.push(newGroup);
     }
     group = newGroup;
