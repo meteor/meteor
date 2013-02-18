@@ -1,42 +1,26 @@
-var running;
+var running = true;
 
-var groupPathDeps;
-var groupPath;
-var resultTree;
-var failedTests;
-var resultDeps;
-var countDeps;
-var totalCount;
-var passedCount;
-var failedCount;
-var resetTests = function () {
-  if (!Session.get("groupPath"))
-    Session.set("groupPath", []);
-  resultTree =  [];
-  failedTests = [];
-  resultDeps = new Meteor.deps._ContextSet;
-  countDeps = new Meteor.deps._ContextSet;
-  totalCount = 0;
-  passedCount = 0;
-  failedCount = 0;
+var resultTree = [];
+var failedTests = [];
+var resultDeps = new Meteor.deps._ContextSet;
+var countDeps = new Meteor.deps._ContextSet;
+var totalCount = 0;
+var passedCount = 0;
+var failedCount = 0;
 
-  running = true;
-};
-resetTests();
+if (!Session.get("groupPath"))
+  Session.set("groupPath", ["tinytest"]);
+
 Meteor.startup(function () {
-  rerunTests();
-});
-
-var rerunTests = function () {
-  countDeps.invalidateAll();
-  _resultsChanged();
+  Meteor.flush();
   Meteor._runTestsEverywhere(reportResults, function () {
     running = false;
     Meteor.onTestsComplete && Meteor.onTestsComplete();
     _resultsChanged();
     Meteor.flush();
   }, Session.get("groupPath"));
-};
+
+});
 
 Template.progressBar.running = function () {
   countDeps.addCurrentContext();
@@ -71,16 +55,22 @@ Template.groupNav.groupPaths = function () {
   return ret;
 };
 
+var changeToPath = function (path) {
+  Session.set("groupPath", path);
+  // pretend there's just been a hot code push
+  // so we run the tests completely fresh.
+  Meteor._reload.reload();
+};
+
 Template.groupNav.events({
   "click .group": function () {
-    console.log("clicked", this);
-    Session.set("groupPath", this.path);
+    changeToPath(this.path);
   }
 });
 
 Template.test_group.events({
   "click .groupname": function () {
-    Session.set("groupPath", this.path);
+    changeToPath(this.path);
   }
 });
 
@@ -321,15 +311,21 @@ var _findTestForResults = function (results) {
   }
 
   var group;
+  var i = 0;
   _.each(groupPath, function(gname) {
     var array = (group ? (group.groups || (group.groups = []))
                  : resultTree);
     var newGroup = _.find(array, function(g) { return g.name === gname; });
     if (! newGroup) {
-      newGroup = {name: gname, parent: (group || null), path: groupPath}; // create group
+      newGroup = {
+        name: gname,
+        parent: (group || null),
+        path: groupPath.slice(0, i+1)
+      }; // create group
       array.push(newGroup);
     }
     group = newGroup;
+    i++;
   });
 
   var testName = results.test;

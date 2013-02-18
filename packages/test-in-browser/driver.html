@@ -12,7 +12,8 @@
   <div class="navbar navbar-fixed-top navbar-inverse">
     <div class="navbar-inner">
       <div class="row-fluid">
-        <div class="span2 offset1"><a class="brand" href="#">
+        <div class="span3"><a class="brand" href="#">
+          &nbsp;
           {{#if running}}
             Testing in progress...
           {{else}}
@@ -36,7 +37,7 @@
     </div>
   </div>
   {{> groupNav}}
-  <div class="row-fluid"><div class="span11 offset1">
+  <div class="row-fluid"><div class="span12">
   <ul class="failedTests">
     {{#each failedTests}}
       <li>{{this}}</li>
@@ -63,6 +64,7 @@
     <div class="navbar-inner">
       <ul class="nav">
       {{#each groupPaths}}
+        <li class="navbar-text">&nbsp;-&nbsp;</li>
         <li><a class="group" href="#">{{name}}</a></li>
       {{/each}}
       </ul>
