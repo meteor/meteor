@@ -9,23 +9,32 @@
   // @param dimensions {optional Object(width, height)} The dimensions of
   //   the popup. If not passed defaults to something sane
   Accounts.oauth.initiateLogin = function(state, url, callback, dimensions) {
-    // XXX these dimensions worked well for facebook and google, but
-    // it's sort of weird to have these here. Maybe an optional
-    // argument instead?
-    var popup = openCenteredPopup(
-      url,
-      (dimensions && dimensions.width) || 650,
-      (dimensions && dimensions.height) || 331);
+    // Check whether we are on mobile devices
+    var mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent);
 
-    var checkPopupOpen = setInterval(function() {
-      // Fix for #328 - added a second test criteria (popup.closed === undefined)
-      // to humour this Android quirk:
-      // http://code.google.com/p/android/issues/detail?id=21061
-      if (popup.closed || popup.closed === undefined) {
-        clearInterval(checkPopupOpen);
-        tryLoginAfterPopupClosed(state, callback);
-      }
-    }, 100);
+    if (!mobile) {
+      // XXX these dimensions worked well for facebook and google, but
+      // it's sort of weird to have these here. Maybe an optional
+      // argument instead?
+      var popup = openCenteredPopup(
+        url,
+        (dimensions && dimensions.width) || 650,
+        (dimensions && dimensions.height) || 331);
+
+      var checkPopupOpen = setInterval(function() {
+        // Fix for #328 - added a second test criteria (popup.closed === undefined)
+        // to humour this Android quirk:
+        // http://code.google.com/p/android/issues/detail?id=21061
+        if (popup.closed || popup.closed === undefined) {
+          clearInterval(checkPopupOpen);
+          tryLoginAfterPopupClosed(state, callback);
+        }
+      }, 100);
+    } else {
+      // If we are on mobile, using the method found by boundsj.
+      // https://github.com/meteor/meteor/issues/438
+      var popup = window.open(url, '_self');
+    }
   };
 
   // Send an OAuth login method to the server. If the user authorized
