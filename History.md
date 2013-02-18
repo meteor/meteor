@@ -1,6 +1,7 @@
 
 ## vNEXT
 
+## v0.5.7
 
 * Changed the api for publish functions that do not return a
   cursor. Specifically, use `added`, `changed`, `removed`, and `ready`, instead
@@ -38,6 +39,10 @@
   true when the subscription has received all of its initial documents.
 
 * Meteor now correctly represents empty documents in Collections.
+
+* Reduced unecessary MongoDB re-polling of live queries.
+
+* Improved UI for running tinytest package tests in-browser.
 
 ## v0.5.6
 
