@@ -26,7 +26,8 @@
 
 * You can specify that a collection should use MongoDB ObjectIDs as its `_id`
   fields for inserts instead of strings. If you do this, use `EJSON.equals()`
-  for comparing equality instead of `===`.
+  for comparing equality instead of `===`.  This also allows you to use Meteor
+  with existing MongoDB databases that have ObjectID `_id`s.
 
 * The DDP wire protocol has been redesigned.  It is now versioned, and at
   version "pre1".  There is an informal specification in
@@ -35,7 +36,7 @@
 * Meteor now uses a shorter string ID for MongoDB documents by default. You can
   generate this kind of ID with `Random.id()`.  `Meteor.uuid()` is deprecated.
 
-* There is a new reactive function on susbcription handles: `ready()` returns
+* There is a new reactive function on subscription handles: `ready()` returns
   true when the subscription has received all of its initial documents.
 
 * Meteor now correctly represents empty documents in Collections.
