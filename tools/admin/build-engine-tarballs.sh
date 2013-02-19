@@ -16,21 +16,8 @@ trap 'rm -rf "$TMPDIR" >/dev/null 2>&1' 0
 # generate engine version: directory hash that depends only on file
 # contents but nothing else, eg modification time
 echo -n "Computing engine version... "
-OIFS="$IFS"
-IFS=$'\n' # so that `find ...` below works with filenames that have spaces
-ENGINE_VERSION=$(
-  (
-    for f in `git ls-files | grep -v packages/`; do
-      echo "$f" `cat "$f" | shasum -a 256`
-      echo "$f" `cat "$f" | shasum -a 256`
-    done
-  ) \
-    | LC_ALL=C sort \
-    | shasum -a 256 | cut -f 1 -d " " # shasum's output looks like: 'SHA -'
-)
-
+ENGINE_VERSION=$($TOPDIR/tools/admin/hash-dir.sh)
 echo $ENGINE_VERSION
-IFS="$OIFS"
 
 mkdir -p "$TMPDIR/.meteor/engines"
 export TARGET_DIR="$TMPDIR/.meteor/engines/$ENGINE_VERSION"
