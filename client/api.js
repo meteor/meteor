@@ -226,17 +226,17 @@ Template.api.subscription_changed = {
 
 Template.api.subscription_removed = {
   id: "publish_removed",
-  name: "<i>this</i>.removed(collection, ids)",
+  name: "<i>this</i>.removed(collection, id)",
   locus: "Server",
-  descr: ["Call inside the publish function.  Informs the subscriber that some documents have been removed from the record set."],
+  descr: ["Call inside the publish function.  Informs the subscriber that a document has been removed from the record set."],
   args: [
     {name: "collection",
      type: "String",
-     descr: "The name of the collection that documents have been removed from."
+     descr: "The name of the collection that the document has been removed from."
     },
-    {name: "ids",
-     type: "Array of Strings",
-     descr: "The IDs of the documents that have been removed."
+    {name: "id",
+     type: "String",
+     descr: "The ID of the document that has been removed."
     }
   ]
 };
