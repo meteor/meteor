@@ -2,9 +2,8 @@ Tinytest.add("routepolicy", function (test) {
   var policy = new Meteor.__RoutePolicyConstructor();
 
   policy.declare('/sockjs/', 'network');
-  // App routes might look like this...
-  // policy.declare('/posts/', 'app');
-  // policy.declare('/about', 'app');
+  policy.declare('/bigphoto.jpg', 'static-online');
+  policy.declare('/anotherphoto.png', 'static-online');
 
   test.equal(policy.classify('/'), null);
   test.equal(policy.classify('/foo'), null);
@@ -13,11 +12,14 @@ Tinytest.add("routepolicy", function (test) {
   test.equal(policy.classify('/sockjs/'), 'network');
   test.equal(policy.classify('/sockjs/foo'), 'network');
 
-  // test.equal(policy.classify('/posts/'), 'app');
-  // test.equal(policy.classify('/posts/1234'), 'app');
+  test.equal(policy.classify('/bigphoto.jpg'), 'static-online');
+  test.equal(policy.classify('/bigphoto.jpg.orig'), 'static-online');
 
   test.equal(policy.urlPrefixesFor('network'), ['/sockjs/']);
-  // test.equal(policy.urlPrefixesFor('app'), ['/about', '/posts/']);
+  test.equal(
+    policy.urlPrefixesFor('static-online'),
+    ['/anotherphoto.png', '/bigphoto.jpg']
+  );
 });
 
 Tinytest.add("routepolicy - static conflicts", function (test) {
@@ -26,14 +28,24 @@ Tinytest.add("routepolicy - static conflicts", function (test) {
       "path": "static/sockjs/socks-are-comfy.jpg",
       "type": "static",
       "where": "client",
-      "cacheable": false,
       "url": "/sockjs/socks-are-comfy.jpg"
     },
+    {
+      "path": "static/bigphoto.jpg",
+      "type": "static",
+      "where": "client",
+      "url": "/bigphoto.jpg"
+    }
   ];
   var policy = new Meteor.__RoutePolicyConstructor();
 
   test.equal(
     policy.checkForConflictWithStatic('/sockjs/', 'network', manifest),
     "static resource /sockjs/socks-are-comfy.jpg conflicts with network route /sockjs/"
+  );
+
+  test.equal(
+    policy.checkForConflictWithStatic('/bigphoto.jpg', 'static-online', manifest),
+    null
   );
 });

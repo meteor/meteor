@@ -157,9 +157,9 @@ var appUrl = function (url) {
   if (url === '/app.manifest')
     return false;
 
-  // Avoid serving app HTML for declared network routes such as /sockjs/.
+  // Avoid serving app HTML for declared routes such as /sockjs/.
   if (__meteor_bootstrap__._routePolicy &&
-      __meteor_bootstrap__._routePolicy.classify(url) === 'network')
+      __meteor_bootstrap__._routePolicy.classify(url))
     return false;
 
   // we currently return app HTML on all URLs by default
