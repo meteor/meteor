@@ -255,11 +255,15 @@
 </template>
 
 <template name="test_template_helpers_b">
-  {{name}}{{arity}}{{toString}}{{length}}{{var}}
+  {{name}}{{arity}}{{toString}}{{length}}{{var}}{{chickensArePink}}
 </template>
 
 <template name="test_template_helpers_c">
-  {{name}}{{arity}}{{toString}}{{length}}{{var}}x
+  {{var}}{{chickensArePink}}x
+</template>
+
+<template name="test_template_helpers_d">
+  {{TemplateTestA}}{{TemplateTestB}}{{TemplateTestC.dog.puppy}}{{TemplateTestD.ooze.slime}}
 </template>
 
 <template name="test_template_events_a">
@@ -354,4 +358,8 @@
 <!-- Test for issue #801 - Each handling of falsy values eg. [1, 2, null, undefined] -->
 <template name="test_template_issue801">
 {{#each values}}{{this}}{{/each}}
+</template>
+
+<template name="test_controller_block">
+  {{#controller MindController}}asdf{{/controller}}
 </template>

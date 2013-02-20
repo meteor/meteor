@@ -96,6 +96,18 @@ Handlebars.evaluate = function (ast, data, options) {
   _.extend(helpers, options.helpers || {});
   var partials = options.partials || {};
 
+  var isFunction = function (f) {
+    if (typeof f !== 'function')
+      return false;
+
+    // Reject functions that look like constructors (because they
+    // have keys, e.g. methods, in their prototype chain).
+    for (var key in f.prototype)
+      return false;
+
+    return true;
+  };
+
   // re 'stack' arguments: top of stack is the current data to use for
   // the template. higher levels are the data referenced by
   // identifiers with one or more '..' segments. we have to keep the
@@ -156,6 +168,13 @@ Handlebars.evaluate = function (ast, data, options) {
       }
       // first path segment is property of data context
       data = (stack.data && stack.data[id[1]]);
+
+      if (! data && ((! stack.data) || (! (id[1] in stack.data))) &&
+          id[0] === 0 && ! scopedToContext && id[1] in Handlebars._defaultThis) {
+        // not found as helper or in template data, but found in global
+        // JavaScript environment, so use that
+        data = Handlebars._defaultThis[id[1]];
+      }
     }
 
     // handle dots, as in {{foo.bar}}
@@ -174,7 +193,7 @@ Handlebars.evaluate = function (ast, data, options) {
       // the current data context in `this`.  Therefore,
       // we use the current data context (`helperThis`)
       // for all function calls.
-      if (typeof data === 'function') {
+      if (isFunction(data)) {
         data = data.call(dataThis);
         dataThis = data;
       }
@@ -192,7 +211,7 @@ Handlebars.evaluate = function (ast, data, options) {
     // invokes `data` with any arguments.  For example,
     // in {{foo.bar baz}}, the caller must supply `baz`,
     // but we alone have `foo` (in `dataThis`).
-    if (typeof data === 'function')
+    if (isFunction(data))
       return _.bind(data, dataThis);
 
     return data;
@@ -215,14 +234,14 @@ Handlebars.evaluate = function (ast, data, options) {
       // like [0, "foo"]
       _.each(params.pop(), function(v,k) {
         var result = eval_value(stack, v);
-        hash[k] = (typeof result === "function" ? result() : result);
+        hash[k] = (isFunction(result) ? result() : result);
       });
     }
 
     var apply = function (values, extra) {
       var args = values.slice(1);
       for(var i=0; i<args.length; i++)
-        if (typeof args[i] === "function")
+        if (isFunction(args[i]))
           args[i] = args[i](); // `this` already bound by eval_value
       if (extra)
         args.push(extra);
@@ -233,14 +252,14 @@ Handlebars.evaluate = function (ast, data, options) {
     for(var i=0; i<params.length; i++)
       values[i] = eval_value(stack, params[i]);
 
-    if (typeof(values[0]) !== "function")
+    if (! isFunction(values[0]))
       return values[0];
 
     if (isNested && values.length > 1) {
       // at least one positional argument; not no args
       // or only hash args.
       var oneArg = values[1];
-      if (typeof oneArg === "function")
+      if (isFunction(oneArg))
         // invoke the positional arguments
         // (and hash arguments) as a nested helper invocation.
         oneArg = apply(values.slice(1), {hash:hash});

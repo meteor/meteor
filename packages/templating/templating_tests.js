@@ -691,12 +691,13 @@ Tinytest.add("templating - helpers", function (test) {
     'arity': 'B',
     'toString': 'C',
     'length': 4,
-    'var': 'D'
+    'var': 'D',
+    'chickensArePink': true
   });
 
   div = OnscreenDiv(Meteor.render(tmpl));
   var txt = div.text().match(/\S+/)[0];
-  test.isTrue(txt.match(/^ABC?4D$/));
+  test.isTrue(txt.match(/^ABC?4Dtrue$/));
   // We don't get 'C' (the ability to name a helper {{toString}})
   // in IE < 9 because of the famed DontEnum bug.  This could be
   // fixed but it would require making all the code that handles
@@ -705,7 +706,7 @@ Tinytest.add("templating - helpers", function (test) {
   // isPropertyOf, ...) make poor helper names and are unlikely
   // to be used in apps.
   test.expect_fail();
-  test.equal(txt, 'ABC4D');
+  test.equal(txt, 'ABC4Dtrue');
   div.kill();
   Deps.flush();
 
@@ -715,6 +716,24 @@ Tinytest.add("templating - helpers", function (test) {
   test.equal(div.text(), 'x');
   div.kill();
   Deps.flush();
+
+  // test that we can access globals in a template
+  var noise = {
+    TemplateTestA: "kitten",
+    TemplateTestB: function () { return 1234; },
+    TemplateTestC: {cat: 123, dog: {puppy: 456}},
+    TemplateTestD: function () { return { ooze: {slime: 'green' }}; }
+  };
+  var globals = (function () { return this; })();
+  _.extend(globals, noise);
+  tmpl = Template.test_template_helpers_d;
+  div = OnscreenDiv(Meteor.render(tmpl));
+  test.equal(div.text(), 'kitten1234456green');
+  div.kill();
+  Meteor.flush();
+  _.each(_.keys(noise), function (k) {
+    delete globals[k];
+  });
 });
 
 Tinytest.add("templating - events", function (test) {
@@ -1091,4 +1110,26 @@ Tinytest.add('templating - each falsy Issue #801', function (test) {
   Template.test_template_issue801.values = function() { return [1,2,null,undefined]; };
   var frag = Meteor.render(Template.test_template_issue801);
   test.equal(canonicalizeHtml(DomUtils.fragmentToHtml(frag)), "12null");
+});
+
+Tinytest.add('templating - {{#controller}}', function (test) {
+  var rendered = false;
+
+  var tmpl = Template.test_controller_block;
+  tmpl.helpers({
+    MindController: Spark.Landmark.extend({
+      rendered: function () {
+        rendered = true;
+      }
+    })
+  });
+
+  var div = OnscreenDiv(Meteor.render(tmpl));
+  Deps.flush();
+
+  test.equal(rendered, true);
+  test.equal(div.text(), 'asdf');
+
+  div.kill();
+  Deps.flush();
 });

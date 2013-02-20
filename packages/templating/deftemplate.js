@@ -42,6 +42,12 @@
         return Spark.createLandmark({ constant: true }, function () {
           return options.fn(data);
         });
+      },
+      controller: function (controllerClass, options) {
+        var data = this;
+        return Spark.attachController(controllerClass, function () {
+          return options.fn(data);
+        });
       }
     });
   };
