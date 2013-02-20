@@ -27,6 +27,11 @@
         else if (_.contains(knownBrowsers, option)) {
           enabledBrowsers[option] = value;
         }
+        else if (option === 'onlineOnly') {
+          _.each(value, function (urlPrefix) {
+            Meteor._routePolicy.declare(urlPrefix, 'static-online');
+          });
+        }
         else {
           throw new Error('Invalid AppCache config option: ' + option)
         }
@@ -93,7 +98,8 @@
     manifest += "CACHE:" + "\n";
     manifest += "/" + "\n";
     _.each(bundle.manifest, function (resource) {
-      if (resource.where === 'client') {
+      if (resource.where === 'client' &&
+          ! Meteor._routePolicy.classify(resource.url)) {
         manifest += resource.url + "\n";
       }
     });
@@ -107,9 +113,15 @@
     // TODO adding the manifest file to NETWORK should be unnecessary?
     // Want more testing to be sure.
     manifest += "/app.manifest" + "\n";
-    _.each(Meteor._routePolicy.urlPrefixesFor('network'), function (urlPrefix) {
-      manifest += urlPrefix + "\n";
-    });
+    _.each(
+      [].concat(
+        Meteor._routePolicy.urlPrefixesFor('network'),
+        Meteor._routePolicy.urlPrefixesFor('static-online')
+      ),
+      function (urlPrefix) {
+        manifest += urlPrefix + "\n";
+      }
+    );
     manifest += "*" + "\n";
 
     // content length needs to be based on bytes
@@ -139,7 +151,10 @@
         "** online as well as making it not cacheable for offline use).\n" +
         "**\n" +
         "** To avoid this problem we recommend keeping the size of your static\n" +
-        "** application assets under 5MB."
+        "** application assets under 5MB.\n" +
+        "**\n" +
+        "** If you have some larger assets that you'd like to make online only,\n" +
+        "** you can do that with the AppCache "onlineOnly" config option."
       );
     }
   };

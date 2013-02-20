@@ -1,3 +1,25 @@
+// In addition to listing specific files to be cached, the browser
+// application cache manifest allows URLs to be designated as NETWORK
+// (always fetched from the Internet) and FALLBACK (which we use to
+// serve app HTML on arbitrary URLs).
+//
+// The limitation of the manifest file format is that the designations
+// are by prefix only: if "/foo" is declared NETWORK then "/foobar"
+// will also be treated as a network route.
+//
+// Meteor._routePolicy is a low-level API for declaring the route type
+// of URL prefixes:
+//
+// "network": for network routes that should not conflict with static
+// resources.  (For example, if "/sockjs/" is a network route, we
+// shouldn't have "/sockjs/red-sock.jpg" as a static resource).
+//
+// "static-online": for static resources which should not be cached in
+// the app cache.  This is implemented by also adding them to the
+// NETWORK section (as otherwise the browser would receive app HTML
+// for them because of the FALLBACK section), but static-online routes
+// don't need to be checked for conflict with static resources.
+
 (function () {
 
   // The route policy is a singleton in a running application, but we
@@ -17,8 +39,8 @@
     },
 
     checkType: function (type) {
-      if (! _.contains(['network'], type))
-        return 'the route type must be "network"';
+      if (! _.contains(['network', 'static-online'], type))
+        return 'the route type must be "network" or "static-online"';
       return null;
     },
 
@@ -35,6 +57,8 @@
 
     checkForConflictWithStatic: function (urlPrefix, type, _testManifest) {
       var self = this;
+      if (type === 'static-online')
+        return null;
       var manifest = _testManifest || __meteor_bootstrap__.bundle.manifest;
       var conflict = _.find(manifest, function (resource) {
         return (resource.type === 'static' &&
