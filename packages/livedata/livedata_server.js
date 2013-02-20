@@ -7,6 +7,8 @@ var Fiber = __meteor_bootstrap__.require('fibers');
 
 (function () {
 
+
+// Represents a single document in a SessionCollectionView
 Meteor._SessionDocumentView = function () {
   var self = this;
   self.existsIn = {}; // set of subscriptionHandle
@@ -88,6 +90,7 @@ _.extend(Meteor._SessionDocumentView.prototype, {
   }
 });
 
+// Represents a client's view of a single collection
 Meteor._SessionCollectionView = function (collectionName, sessionCallbacks) {
   var self = this;
   self.collectionName = collectionName;

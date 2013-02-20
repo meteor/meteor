@@ -7,7 +7,7 @@ var BASE_64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456
 var BASE_64_VALS = {};
 
 for (var i = 0; i < BASE_64_CHARS.length; i++) {
-  BASE_64_VALS[BASE_64_CHARS.substr(i, 1)] = i;
+  BASE_64_VALS[BASE_64_CHARS.charAt(i)] = i;
 };
 
 EJSON._base64Encode = function (array) {
@@ -54,7 +54,7 @@ EJSON._base64Encode = function (array) {
 };
 
 var getChar = function (val) {
-  return BASE_64_CHARS.substr(val, 1);
+  return BASE_64_CHARS.charAt(val);
 };
 
 var getVal = function (ch) {
@@ -78,9 +78,9 @@ EJSON.newBinary = function (len) {
 
 EJSON._base64Decode = function (str) {
   var len = Math.floor((str.length*3)/4);
-  if (str.substr(str.length - 1) == '=') {
+  if (str.charAt(str.length - 1) == '=') {
     len--;
-    if (str.substr(str.length - 2, 1) == '=')
+    if (str.charAt(str.length - 2) == '=')
       len--;
   }
   var arr = EJSON.newBinary(len);
@@ -92,7 +92,7 @@ EJSON._base64Decode = function (str) {
   var j = 0;
 
   for (var i = 0; i < str.length; i++) {
-    var c = str.substr(i, 1);
+    var c = str.charAt(i);
     var v = getVal(c);
     switch (i % 4) {
     case 0:

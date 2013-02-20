@@ -71,7 +71,7 @@ Template.api.ejsonParse = {
   name: "EJSON.parse(str)",
   locus: "Anywhere",
   args: [ {name: "str", type: "String", descr: "A string to parse into an EJSON value."} ],
-  descr: ["Parse a string into an EJSON value."]
+  descr: ["Parse a string into an EJSON value. Throws an error if the string is not valid EJSON."]
 },
 
 Template.api.ejsonStringify = {
@@ -79,7 +79,9 @@ Template.api.ejsonStringify = {
   name: "EJSON.stringify(val)",
   locus: "Anywhere",
   args: [ {name: "val", type: "EJSON-compatible value", descr: "A value to stringify."} ],
-  descr: ["Serialize an object to a string."]
+  descr: ["Serialize a value to a string.\n\nFor EJSON values, the serialization " +
+          "fully represents the value. For non-EJSON values, serializes the " +
+          "same way as `JSON.stringify`."]
 },
 
 

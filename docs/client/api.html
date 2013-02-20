@@ -953,10 +953,9 @@ order of the documents in the result set. They are more efficient than
 Before `observe` returns, `added` (or `addedAt`) will be called zero
 or more times to deliver the initial results of the query.
 
-`observe` returns a live query handle, which is an object with a
-`stop` method.  Call this function with no arguments to stop calling
-the callback functions and tear down the query. **The query will run
-forever until you call this.**
+`observe` returns a live query handle, which is an object with a `stop` method.
+Call `stop` with no arguments to stop calling the callback functions and tear
+down the query. **The query will run forever until you call this.**
 
 
 {{> api_box cursor_observe_changes}}
@@ -1004,10 +1003,9 @@ The document identified by `id` was removed from the result set.
 Before `observeChanges` returns, `added` (or `addedBefore`) will be called
 zero or more times to deliver the initial results of the query.
 
-`observeChanges` returns a live query handle, which is an object with
-a `stop` method.  Call this function with no arguments to stop calling
-the callback functions and tear down the query. **The query will run
-forever until you call this.**
+`observeChanges` returns a live query handle, which is an object with a `stop`
+method.  Call `stop` with no arguments to stop calling the callback functions
+and tear down the query. **The query will run forever until you call this.**
 
 {{#note}}
 Unlike `observe`, `observeChanges` does not provide absolute position
@@ -2480,7 +2478,8 @@ When you add a type to EJSON, Meteor will be able to use that type in:
 
   MongoDB cannot store most user-defined types natively on the server.  Your
   type will work in Minimongo, and you can send it to the client using a custom
-  publisher, but MongoDB only knows about the types defined in [BSON](http://bsonspec.org/).
+  publisher, but MongoDB can only store the types defined in
+  [BSON](http://bsonspec.org/).
 
 {{/note}}
 
