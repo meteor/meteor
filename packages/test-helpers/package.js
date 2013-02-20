@@ -6,6 +6,8 @@ Package.describe({
 Package.on_use(function (api, where) {
   where = where || ["client", "server"];
 
+  api.use('ejson');
+
   // XXX These files have various dependencies on other packages
   // that aren't specified here. :(
   // This package should probably get split into several packages,
@@ -21,6 +23,7 @@ Package.on_use(function (api, where) {
   api.add_files('wrappedfrag.js', where);
   api.add_files('current_style.js', where);
   api.add_files('reactivevar.js', where);
+  api.add_files('callback_logger.js', where);
 });
 
 Package.on_test(function (api) {

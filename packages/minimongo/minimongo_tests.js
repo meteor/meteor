@@ -1,5 +1,10 @@
+
+// Hack to make LocalCollection generate ObjectIDs by default.
+LocalCollection._useOID = true;
+
 // assert that f is a strcmp-style comparison function that puts
 // 'values' in the provided order
+
 var assert_ordering = function (test, f, values) {
   for (var i = 0; i < values.length; i++) {
     var x = f(values[i], values[i]);
@@ -37,23 +42,23 @@ var assert_ordering = function (test, f, values) {
 
 var log_callbacks = function (operations) {
   return {
-    added: function (obj, idx) {
+    addedAt: function (obj, idx, before) {
       delete obj._id;
-      operations.push(LocalCollection._deepcopy(['added', obj, idx]));
+      operations.push(EJSON.clone(['added', obj, idx, before]));
     },
-    changed: function (obj, at, old_obj) {
+    changedAt: function (obj, old_obj, at) {
       delete obj._id;
       delete old_obj._id;
-      operations.push(LocalCollection._deepcopy(['changed', obj, at, old_obj]));
+      operations.push(EJSON.clone(['changed', obj, at, old_obj]));
     },
-    moved: function (obj, old_at, new_at) {
+    movedTo: function (obj, old_at, new_at) {
       delete obj._id;
-      operations.push(LocalCollection._deepcopy(['moved', obj, old_at, new_at]));
+      operations.push(EJSON.clone(['moved', obj, old_at, new_at]));
     },
-    removed: function (old_obj, at) {
+    removedAt: function (old_obj, at) {
       var id = old_obj._id;
       delete old_obj._id;
-      operations.push(LocalCollection._deepcopy(['removed', id, at, old_obj]));
+      operations.push(EJSON.clone(['removed', id, at, old_obj]));
     }
   };
 };
@@ -126,16 +131,30 @@ Tinytest.add("minimongo - basics", function (test) {
   test.equal(c.find().count(), 3);
   test.equal(c.find(1, {skip: 1}).count(), 0);
   test.equal(c.find({_id: 1}, {skip: 1}).count(), 0);
+  test.equal(c.find({}, {skip: 1}).count(), 2);
+  test.equal(c.find({}, {skip: 2}).count(), 1);
+  test.equal(c.find({}, {limit: 2}).count(), 2);
+  test.equal(c.find({}, {limit: 1}).count(), 1);
+  test.equal(c.find({}, {skip: 1, limit: 1}).count(), 1);
+  test.equal(c.find({tags: "fruit"}, {skip: 1}).count(), 1);
+  test.equal(c.find({tags: "fruit"}, {limit: 1}).count(), 1);
+  test.equal(c.find({tags: "fruit"}, {skip: 1, limit: 1}).count(), 1);
+  test.equal(c.find(1, {sort: ['_id','desc'], skip: 1}).count(), 0);
+  test.equal(c.find({_id: 1}, {sort: ['_id','desc'], skip: 1}).count(), 0);
+  test.equal(c.find({}, {sort: ['_id','desc'], skip: 1}).count(), 2);
+  test.equal(c.find({}, {sort: ['_id','desc'], skip: 2}).count(), 1);
+  test.equal(c.find({}, {sort: ['_id','desc'], limit: 2}).count(), 2);
+  test.equal(c.find({}, {sort: ['_id','desc'], limit: 1}).count(), 1);
+  test.equal(c.find({}, {sort: ['_id','desc'], skip: 1, limit: 1}).count(), 1);
+  test.equal(c.find({tags: "fruit"}, {sort: ['_id','desc'], skip: 1}).count(), 1);
+  test.equal(c.find({tags: "fruit"}, {sort: ['_id','desc'], limit: 1}).count(), 1);
+  test.equal(c.find({tags: "fruit"}, {sort: ['_id','desc'], skip: 1, limit: 1}).count(), 1);
 
   // Regression test for #455.
   c.insert({foo: {bar: 'baz'}});
   test.equal(c.find({foo: {bam: 'baz'}}).count(), 0);
   test.equal(c.find({foo: {bar: 'baz'}}).count(), 1);
 
-  // Duplicate ID.
-  test.throws(function () { c.insert({_id: 1, name: "bla"}); });
-  test.equal(c.find({_id: 1}).count(), 1);
-  test.equal(c.findOne(1).name, "strawberry");
 });
 
 Tinytest.add("minimongo - cursors", function (test) {
@@ -186,11 +205,9 @@ Tinytest.add("minimongo - misc", function (test) {
   // deepcopy
   var a = {a: [1, 2, 3], b: "x", c: true, d: {x: 12, y: [12]},
            f: null, g: new Date()};
-  var b = LocalCollection._deepcopy(a);
-  // minimongo doesn't support Dates, so we *can't* test
-  // LocalCollection._f._equal here! (Currently _equal considers all dates equal
-  // on most browsers except IE7 where it considers all dates unequal.)
+  var b = EJSON.clone(a);
   test.equal(a, b);
+  test.isTrue(LocalCollection._f._equal(a, b));
   a.a.push(4);
   test.length(b.a, 3);
   a.c = false;
@@ -205,9 +222,29 @@ Tinytest.add("minimongo - misc", function (test) {
   test.notEqual(a.g, b.g);
 
   a = {x: function () {}};
-  b = LocalCollection._deepcopy(a);
+  b = EJSON.clone(a);
   a.x.a = 14;
   test.equal(b.x.a, 14); // just to document current behavior
+});
+
+Tinytest.add("minimongo - lookup", function (test) {
+  var lookupA = LocalCollection._makeLookupFunction('a');
+  test.equal(lookupA({}), [undefined]);
+  test.equal(lookupA({a: 1}), [1]);
+  test.equal(lookupA({a: [1]}), [[1]]);
+
+  var lookupAX = LocalCollection._makeLookupFunction('a.x');
+  test.equal(lookupAX({a: {x: 1}}), [1]);
+  test.equal(lookupAX({a: {x: [1]}}), [[1]]);
+  test.equal(lookupAX({a: 5}), [undefined]);
+  test.equal(lookupAX({a: [{x: 1}, {x: [2]}, {y: 3}]}),
+             [1, [2], undefined]);
+
+  var lookupA0X = LocalCollection._makeLookupFunction('a.0.x');
+  test.equal(lookupA0X({a: [{x: 1}]}), [1]);
+  test.equal(lookupA0X({a: [{x: [1]}]}), [[1]]);
+  test.equal(lookupA0X({a: 5}), [undefined]);
+  test.equal(lookupA0X({a: [{x: 1}, {x: [2]}, {y: 3}]}), [1]);
 });
 
 Tinytest.add("minimongo - selector_compiler", function (test) {
@@ -443,6 +480,12 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$type: 3}}, {a: []});
   nomatch({a: {$type: 3}}, {a: [1]});
   nomatch({a: {$type: 3}}, {a: null});
+  match({a: {$type: 5}}, {a: EJSON.newBinary(0)});
+  match({a: {$type: 5}}, {a: EJSON.newBinary(4)});
+  nomatch({a: {$type: 5}}, {a: []});
+  nomatch({a: {$type: 5}}, {a: [42]});
+  match({a: {$type: 7}}, {a: new LocalCollection._ObjectID()});
+  nomatch({a: {$type: 7}}, {a: "1234567890abcd1234567890"});
   match({a: {$type: 8}}, {a: true});
   match({a: {$type: 8}}, {a: false});
   nomatch({a: {$type: 8}}, {a: "true"});
@@ -450,6 +493,8 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$type: 8}}, {a: null});
   nomatch({a: {$type: 8}}, {a: ''});
   nomatch({a: {$type: 8}}, {});
+  match({a: {$type: 9}}, {a: (new Date)});
+  nomatch({a: {$type: 9}}, {a: +(new Date)});
   match({a: {$type: 10}}, {a: null});
   nomatch({a: {$type: 10}}, {a: false});
   nomatch({a: {$type: 10}}, {a: ''});
@@ -491,6 +536,10 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$regex: 'a'}}, {a: 'cut'});
   nomatch({a: {$regex: 'a'}}, {a: 'CAT'});
   match({a: {$regex: 'a', $options: 'i'}}, {a: 'CAT'});
+  nomatch({a: /undefined/}, {});
+  nomatch({a: {$regex: 'undefined'}}, {});
+  nomatch({a: /xxx/}, {});
+  nomatch({a: {$regex: 'xxx'}}, {});
 
   match({a: {$options: 'i'}}, {a: 12});
   match({b: {$options: 'i'}}, {a: 12});
@@ -633,7 +682,7 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 2});
   match({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 3});
   // this is possibly an open-ended task, so we stop here ...
-  
+
   // $nor
   test.throws(function () {
     match({$nor: []}, {});
@@ -768,17 +817,17 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({$and: [{a: {$nin: [1, 2, 3]}}, {b: {$nin: [4, 5, 6]}}]}, {a: 1, b: 4});
 
   // $and and $lt, $lte, $gt, $gte
-  match({$and: [{a: {$lt: 2}}]}, {a: 1}); 
-  nomatch({$and: [{a: {$lt: 1}}]}, {a: 1}); 
-  match({$and: [{a: {$lte: 1}}]}, {a: 1}); 
-  match({$and: [{a: {$gt: 0}}]}, {a: 1}); 
-  nomatch({$and: [{a: {$gt: 1}}]}, {a: 1}); 
-  match({$and: [{a: {$gte: 1}}]}, {a: 1}); 
-  match({$and: [{a: {$gt: 0}}, {a: {$lt: 2}}]}, {a: 1}); 
-  nomatch({$and: [{a: {$gt: 1}}, {a: {$lt: 2}}]}, {a: 1}); 
-  nomatch({$and: [{a: {$gt: 0}}, {a: {$lt: 1}}]}, {a: 1}); 
-  match({$and: [{a: {$gte: 1}}, {a: {$lte: 1}}]}, {a: 1}); 
-  nomatch({$and: [{a: {$gte: 2}}, {a: {$lte: 0}}]}, {a: 1}); 
+  match({$and: [{a: {$lt: 2}}]}, {a: 1});
+  nomatch({$and: [{a: {$lt: 1}}]}, {a: 1});
+  match({$and: [{a: {$lte: 1}}]}, {a: 1});
+  match({$and: [{a: {$gt: 0}}]}, {a: 1});
+  nomatch({$and: [{a: {$gt: 1}}]}, {a: 1});
+  match({$and: [{a: {$gte: 1}}]}, {a: 1});
+  match({$and: [{a: {$gt: 0}}, {a: {$lt: 2}}]}, {a: 1});
+  nomatch({$and: [{a: {$gt: 1}}, {a: {$lt: 2}}]}, {a: 1});
+  nomatch({$and: [{a: {$gt: 0}}, {a: {$lt: 1}}]}, {a: 1});
+  match({$and: [{a: {$gte: 1}}, {a: {$lte: 1}}]}, {a: 1});
+  nomatch({$and: [{a: {$gte: 2}}, {a: {$lte: 0}}]}, {a: 1});
 
   // $and and $ne
   match({$and: [{a: {$ne: 1}}]}, {});
@@ -808,6 +857,21 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({"dogs.1.name": "Fido"}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
   match({"room.1b": "bla"}, {room: {"1b": "bla"}});
 
+  match({"dogs.name": "Fido"}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
+  match({"dogs.name": "Rex"}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
+  match({"animals.dogs.name": "Fido"},
+        {animals: [{dogs: [{name: "Rover"}]},
+                   {},
+                   {dogs: [{name: "Fido"}, {name: "Rex"}]}]});
+  match({"animals.dogs.name": "Fido"},
+        {animals: [{dogs: {name: "Rex"}},
+                   {dogs: {name: "Fido"}}]});
+  match({"animals.dogs.name": "Fido"},
+        {animals: [{dogs: [{name: "Rover"}]},
+                   {},
+                   {dogs: [{name: ["Fido"]}, {name: "Rex"}]}]});
+  nomatch({"dogs.name": "Fido"}, {dogs: []});
+
   // $elemMatch
   match({dogs: {$elemMatch: {name: /e/}}},
         {dogs: [{name: "Fido"}, {name: "Rex"}]});
@@ -829,6 +893,16 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
 });
 
 Tinytest.add("minimongo - ordering", function (test) {
+  var shortBinary = EJSON.newBinary(1);
+  shortBinary[0] = 128;
+  var longBinary1 = EJSON.newBinary(2);
+  longBinary1[1] = 42;
+  var longBinary2 = EJSON.newBinary(2);
+  longBinary2[1] = 50;
+
+  var date1 = new Date;
+  var date2 = new Date(date1.getTime() + 1000);
+
   // value ordering
   assert_ordering(test, LocalCollection._f._cmp, [
     null,
@@ -837,7 +911,11 @@ Tinytest.add("minimongo - ordering", function (test) {
     {}, {a: 2}, {a: 3}, {a: 3, b: 4}, {b: 4}, {b: 4, a: 3},
     {b: {}}, {b: [1, 2, 3]}, {b: [1, 2, 4]},
     [], [1, 2], [1, 2, 3], [1, 2, 4], [1, 2, "4"], [1, 2, [4]],
-    false, true
+    shortBinary, longBinary1, longBinary2,
+    new LocalCollection._ObjectID("1234567890abcd1234567890"),
+    new LocalCollection._ObjectID("abcd1234567890abcd123456"),
+    false, true,
+    date1, date2
   ]);
 
   // document ordering under a sort specification
@@ -847,10 +925,19 @@ Tinytest.add("minimongo - ordering", function (test) {
     });
   };
 
+  // note: [] doesn't sort with "arrays", it sorts as "undefined". the position
+  // of arrays in _typeorder only matters for things like $lt. (This behavior
+  // verified with MongoDB 2.2.1.) We don't define the relative order of {a: []}
+  // and {c: 1} is undefined (MongoDB does seem to care but it's not clear how
+  // or why).
   verify([{"a" : 1}, ["a"], [["a", "asc"]]],
-         [{c: 1}, {a: 1}, {a: {}}, {a: []}, {a: true}]);
+         [{a: []}, {a: 1}, {a: {}}, {a: true}]);
+  verify([{"a" : 1}, ["a"], [["a", "asc"]]],
+         [{c: 1}, {a: 1}, {a: {}}, {a: true}]);
   verify([{"a" : -1}, [["a", "desc"]]],
-         [{a: true}, {a: []}, {a: {}}, {a: 1}, {c: 1}]);
+         [{a: true}, {a: {}}, {a: 1}, {c: 1}]);
+  verify([{"a" : -1}, [["a", "desc"]]],
+         [{a: true}, {a: {}}, {a: 1}, {a: []}]);
 
   verify([{"a" : 1, "b": -1}, ["a", ["b", "desc"]],
           [["a", "asc"], ["b", "desc"]]],
@@ -935,10 +1022,34 @@ Tinytest.add("minimongo - subkey sort", function (test) {
   test.equal(c.find({}, {sort: {'a.nope.c': -1}}).count(), 6);
 });
 
+Tinytest.add("minimongo - array sort", function (test) {
+  var c = new LocalCollection();
+
+  // "up" and "down" are the indices that the docs should have when sorted
+  // ascending and descending by "a.x" respectively. They are not reverses of
+  // each other: when sorting ascending, you use the minimum value you can find
+  // in the document, and when sorting descending, you use the maximum value you
+  // can find. So [1, 4] shows up in the 1 slot when sorting ascending and the 4
+  // slot when sorting descending.
+  c.insert({up: 1, down: 1, a: {x: [1, 4]}});
+  c.insert({up: 2, down: 2, a: [{x: [2]}, {x: 3}]});
+  c.insert({up: 0, down: 4, a: {x: 0}});
+  c.insert({up: 3, down: 3, a: {x: 2.5}});
+  c.insert({up: 4, down: 0, a: {x: 5}});
+
+  test.equal(
+    _.pluck(c.find({}, {sort: {'a.x': 1}}).fetch(), 'up'),
+    _.range(c.find().count()));
+
+  test.equal(
+    _.pluck(c.find({}, {sort: {'a.x': -1}}).fetch(), 'down'),
+    _.range(c.find().count()));
+});
+
 
 Tinytest.add("minimongo - modify", function (test) {
   var modify = function (doc, mod, result) {
-    var copy = LocalCollection._deepcopy(doc);
+    var copy = EJSON.clone(doc);
     LocalCollection._modify(copy, mod);
     if (!LocalCollection._f._equal(copy, result)) {
       // XXX super janky
@@ -955,7 +1066,7 @@ Tinytest.add("minimongo - modify", function (test) {
   };
   var exception = function (doc, mod) {
     test.throws(function () {
-      LocalCollection._modify(LocalCollection._deepcopy(doc), mod);
+      LocalCollection._modify(EJSON.clone(doc), mod);
     });
   };
 
@@ -1190,11 +1301,11 @@ Tinytest.add("minimongo - observe ordered", function (test) {
   test.isTrue(handle.collection === c);
 
   c.insert({a:1});
-  test.equal(operations.shift(), ['added', {a:1}, 0]);
+  test.equal(operations.shift(), ['added', {a:1}, 0, null]);
   c.update({a:1}, {$set: {a: 2}});
   test.equal(operations.shift(), ['changed', {a:2}, 0, {a:1}]);
   c.insert({a:10});
-  test.equal(operations.shift(), ['added', {a:10}, 1]);
+  test.equal(operations.shift(), ['added', {a:10}, 1, null]);
   c.update({}, {$inc: {a: 1}}, {multi: true});
   test.equal(operations.shift(), ['changed', {a:3}, 0, {a:2}]);
   test.equal(operations.shift(), ['changed', {a:11}, 1, {a:10}]);
@@ -1209,20 +1320,21 @@ Tinytest.add("minimongo - observe ordered", function (test) {
 
   // test stop
   handle.stop();
-  c.insert({a:2});
+  var idA2 = Random.id();
+  c.insert({_id: idA2, a:2});
   test.equal(operations.shift(), undefined);
 
   // test initial inserts (and backwards sort)
   handle = c.find({}, {sort: {a: -1}}).observe(cbs);
-  test.equal(operations.shift(), ['added', {a:2}, 0]);
-  test.equal(operations.shift(), ['added', {a:1}, 1]);
+  test.equal(operations.shift(), ['added', {a:2}, 0, null]);
+  test.equal(operations.shift(), ['added', {a:1}, 1, null]);
   handle.stop();
 
   // test _suppress_initial
   handle = c.find({}, {sort: {a: -1}}).observe(_.extend(cbs, {_suppress_initial: true}));
   test.equal(operations.shift(), undefined);
   c.insert({a:100});
-  test.equal(operations.shift(), ['added', {a:100}, 0]);
+  test.equal(operations.shift(), ['added', {a:100}, 0, idA2]);
   handle.stop();
 
   // test skip and limit.
@@ -1232,9 +1344,9 @@ Tinytest.add("minimongo - observe ordered", function (test) {
   c.insert({a:1});
   test.equal(operations.shift(), undefined);
   c.insert({a:2});
-  test.equal(operations.shift(), ['added', {a:2}, 0]);
+  test.equal(operations.shift(), ['added', {a:2}, 0, null]);
   c.insert({a:3});
-  test.equal(operations.shift(), ['added', {a:3}, 1]);
+  test.equal(operations.shift(), ['added', {a:3}, 1, null]);
   c.insert({a:4});
   test.equal(operations.shift(), undefined);
   id = c.findOne({a:2})._id;
@@ -1242,24 +1354,27 @@ Tinytest.add("minimongo - observe ordered", function (test) {
   test.equal(operations.shift(), undefined);
   c.update({a:0}, {a:5});
   test.equal(operations.shift(), ['removed', id, 0, {a:2}]);
-  test.equal(operations.shift(), ['added', {a:4}, 1]);
+  test.equal(operations.shift(), ['added', {a:4}, 1, null]);
   c.update({a:3}, {a:3.5});
   test.equal(operations.shift(), ['changed', {a:3.5}, 0, {a:3}]);
 
   handle.stop();
 });
 
-_.each(['observe', '_observeUnordered'], function (observeMethod) {
-  Tinytest.add("minimongo - observe (" + observeMethod + ")", function (test) {
+_.each([true, false], function (ordered) {
+  Tinytest.add("minimongo - observe ordered: " + ordered, function (test) {
     var c = new LocalCollection();
 
     var ev = "";
     var makecb = function (tag) {
-      return {
-        added: function (doc) { ev += "a" + tag + doc._id + "_"; },
-        changed: function (doc) { ev += "c" + tag + doc._id + "_"; },
-        removed: function (doc) { ev += "r" + tag + doc._id + "_"; }
-      };
+      var ret = {};
+      _.each(["added", "changed", "removed"], function (fn) {
+        var fnName = ordered ? fn + "At" : fn;
+        ret[fnName] = function (doc) {
+          ev = (ev + fn.substr(0, 1) + tag + doc._id + "_");
+        };
+      });
+      return ret;
     };
     var expect = function (x) {
       test.equal(ev, x);
@@ -1273,7 +1388,7 @@ _.each(['observe', '_observeUnordered'], function (observeMethod) {
     // This should work equally well for ordered and unordered observations
     // (because the callbacks don't look at indices and there's no 'moved'
     // callback).
-    var handle = c.find({tags: "flower"})[observeMethod](makecb('a'));
+    var handle = c.find({tags: "flower"}).observe(makecb('a'));
     expect("aa3_");
     c.update({name: "rose"}, {$set: {tags: ["bloom", "red", "squishy"]}});
     expect("ra3_");
@@ -1291,7 +1406,7 @@ _.each(['observe', '_observeUnordered'], function (observeMethod) {
     expect("");
 
     // Test that observing a lookup by ID works.
-    handle = c.find(4)[observeMethod](makecb('b'));
+    handle = c.find(4).observe(makecb('b'));
     expect('ab4_');
     c.update(4, {$set: {eek: 5}});
     expect('cb4_');
@@ -1300,12 +1415,79 @@ _.each(['observe', '_observeUnordered'], function (observeMethod) {
 });
 
 
+Tinytest.add("minimongo - diff changes ordering", function (test) {
+  var makeDocs = function (ids) {
+    return _.map(ids, function (id) { return {_id: id};});
+  };
+  var testMutation = function (a, b) {
+    var aa = makeDocs(a);
+    var bb = makeDocs(b);
+    var aaCopy = EJSON.clone(aa);
+    LocalCollection._diffQueryOrderedChanges(aa, bb, {
+
+      addedBefore: function (id, doc, before) {
+        if (before === null) {
+          aaCopy.push( _.extend({_id: id}, doc));
+          return;
+        }
+        for (var i = 0; i < aaCopy.length; i++) {
+          if (aaCopy[i]._id === before) {
+            aaCopy.splice(i, 0, _.extend({_id: id}, doc));
+            return;
+          }
+        }
+      },
+      movedBefore: function (id, before) {
+        var found;
+        for (var i = 0; i < aaCopy.length; i++) {
+          if (aaCopy[i]._id === id) {
+            found = aaCopy[i];
+            aaCopy.splice(i, 1);
+          }
+        }
+        if (before === null) {
+          aaCopy.push( _.extend({_id: id}, found));
+          return;
+        }
+        for (i = 0; i < aaCopy.length; i++) {
+          if (aaCopy[i]._id === before) {
+            aaCopy.splice(i, 0, _.extend({_id: id}, found));
+            return;
+          }
+        }
+      },
+      removed: function (id) {
+        var found;
+        for (var i = 0; i < aaCopy.length; i++) {
+          if (aaCopy[i]._id === id) {
+            found = aaCopy[i];
+            aaCopy.splice(i, 1);
+          }
+        }
+      }
+    });
+    test.equal(aaCopy, bb);
+  };
+
+  var testBothWays = function (a, b) {
+    testMutation(a, b);
+    testMutation(b, a);
+  };
+
+  testBothWays(["a", "b", "c"], ["c", "b", "a"]);
+  testBothWays(["a", "b", "c"], []);
+  testBothWays(["a", "b", "c"], ["e","f"]);
+  testBothWays(["a", "b", "c", "d"], ["c", "b", "a"]);
+  testBothWays(['A','B','C','D','E','F','G','H','I'],
+               ['A','B','F','G','C','D','I','L','M','N','H']);
+  testBothWays(['A','B','C','D','E','F','G','H','I'],['A','B','C','D','F','G','H','E','I']);
+});
 
 Tinytest.add("minimongo - diff", function (test) {
 
   // test correctness
 
-  var diffTestOrdered = function(origLen, newOldIdx) {
+  var diffTest = function(origLen, newOldIdx) {
     var oldResults = new Array(origLen);
     for (var i = 1; i <= origLen; i++)
       oldResults[i-1] = {_id: i};
@@ -1316,75 +1498,57 @@ Tinytest.add("minimongo - diff", function (test) {
         doc.changed = true;
       return doc;
     });
+    var find = function (arr, id) {
+      for (var i = 0; i < arr.length; i++) {
+        if (EJSON.equals(arr[i]._id, id))
+          return i;
+      }
+      return -1;
+    };
 
     var results = _.clone(oldResults);
     var observer = {
-      added: function(doc, before_idx) {
+      addedBefore: function(id, fields, before) {
+        var before_idx;
+        if (before === null)
+          before_idx = results.length;
+        else
+          before_idx = find (results, before);
+        var doc = _.extend({_id: id}, fields);
         test.isFalse(before_idx < 0 || before_idx > results.length);
         results.splice(before_idx, 0, doc);
       },
-      removed: function(doc, at_idx) {
+      removed: function(id) {
+        var at_idx = find (results, id);
         test.isFalse(at_idx < 0 || at_idx >= results.length);
-        test.equal(doc, results[at_idx]);
         results.splice(at_idx, 1);
       },
-      changed: function(doc, at_idx, oldDoc) {
+      changed: function(id, fields) {
+        var at_idx = find (results, id);
+        var oldDoc = results[at_idx];
+        var doc = EJSON.clone(oldDoc);
+        LocalCollection._applyChanges(doc, fields);
         test.isFalse(at_idx < 0 || at_idx >= results.length);
         test.equal(doc._id, oldDoc._id);
-        test.equal(results[at_idx], oldDoc);
         results[at_idx] = doc;
       },
-      moved: function(doc, old_idx, new_idx) {
+      movedBefore: function(id, before) {
+        var old_idx = find(results, id);
+        var new_idx;
+        if (before === null)
+          new_idx = results.length;
+        else
+          new_idx = find (results, before);
+        if (new_idx > old_idx)
+          new_idx--;
         test.isFalse(old_idx < 0 || old_idx >= results.length);
         test.isFalse(new_idx < 0 || new_idx >= results.length);
-        test.equal(doc, results[old_idx]);
         results.splice(new_idx, 0, results.splice(old_idx, 1)[0]);
       }
     };
 
-    LocalCollection._diffQueryOrdered(oldResults, newResults, observer);
+    LocalCollection._diffQueryOrderedChanges(oldResults, newResults, observer);
     test.equal(results, newResults);
-  };
-
-  var diffTestUnordered = function(origLen, newOldIdx) {
-    var oldResults = {};
-    for (var i = 1; i <= origLen; ++i)
-      oldResults[i] = {_id: i};
-
-    var newResults = {};
-    _.each(newOldIdx, function (n) {
-      var doc = {_id: Math.abs(n)};
-      if (n < 0)
-        doc.changed = true;
-      newResults[doc._id] = doc;
-    });
-
-    var results = _.clone(oldResults);
-    var observer = {
-      added: function(doc) {
-        test.isFalse(_.has(results, doc._id));
-        results[doc._id] = doc;
-      },
-      removed: function(doc) {
-        test.isTrue(_.has(results, doc._id));
-        test.equal(doc, results[doc._id]);
-        delete results[doc._id];
-      },
-      changed: function(doc, oldDoc) {
-        test.equal(doc._id, oldDoc._id);
-        test.isTrue(_.has(results, doc._id));
-        test.equal(results[doc._id], oldDoc);
-        results[doc._id] = doc;
-      }
-    };
-
-    LocalCollection._diffQueryUnordered(oldResults, newResults, observer);
-    test.equal(results, newResults);
-  };
-
-  var diffTest = function(origLen, newOldIdx) {
-    diffTestOrdered(origLen, newOldIdx);
-    diffTestUnordered(origLen, newOldIdx);
   };
 
   // edge cases and cases run into during debugging
@@ -1473,6 +1637,31 @@ Tinytest.add("minimongo - saveOriginals errors", function (test) {
   test.throws(function () { c.saveOriginals(); });
 });
 
+Tinytest.add("minimongo - objectid transformation", function (test) {
+  var testId = function (item) {
+    test.equal(item, LocalCollection._idParse(LocalCollection._idStringify(item)));
+  };
+  var randomOid = new LocalCollection._ObjectID();
+  testId(randomOid);
+  testId("FOO");
+  testId("ffffffffffff");
+  testId("0987654321abcdef09876543");
+  testId(new LocalCollection._ObjectID());
+  testId("--a string");
+
+  test.equal("ffffffffffff", LocalCollection._idParse(LocalCollection._idStringify("ffffffffffff")));
+});
+
+
+Tinytest.add("minimongo - objectid", function (test) {
+  var randomOid = new LocalCollection._ObjectID();
+  var anotherRandomOid = new LocalCollection._ObjectID();
+  test.notEqual(randomOid, anotherRandomOid);
+  test.throws(function() { new LocalCollection._ObjectID("qqqqqqqqqqqqqqqqqqqqqqqq");});
+  test.throws(function() { new LocalCollection._ObjectID("ABCDEF"); });
+  test.equal(randomOid, new LocalCollection._ObjectID(randomOid.valueOf()));
+});
+
 Tinytest.add("minimongo - pause", function (test) {
   var operations = [];
   var cbs = log_callbacks(operations);
@@ -1482,7 +1671,7 @@ Tinytest.add("minimongo - pause", function (test) {
 
   // remove and add cancel out.
   c.insert({_id: 1, a: 1});
-  test.equal(operations.shift(), ['added', {a:1}, 0]);
+  test.equal(operations.shift(), ['added', {a:1}, 0, null]);
 
   c.pauseObservers();
 
@@ -1506,4 +1695,25 @@ Tinytest.add("minimongo - pause", function (test) {
   test.length(operations, 0);
 
   h.stop();
+});
+
+Tinytest.add("minimongo - ids matched by selector", function (test) {
+  var check = function (selector, ids) {
+    var idsFromSelector = LocalCollection._idsMatchedBySelector(selector);
+    // XXX normalize order, in a way that also works for ObjectIDs?
+    test.equal(idsFromSelector, ids);
+  };
+  check("foo", ["foo"]);
+  check({_id: "foo"}, ["foo"]);
+  var oid1 = new LocalCollection._ObjectID();
+  check(oid1, [oid1]);
+  check({_id: oid1}, [oid1]);
+  check({_id: "foo", x: 42}, ["foo"]);
+  check({}, null);
+  check({_id: {$in: ["foo", oid1]}}, ["foo", oid1]);
+  check({_id: {$ne: "foo"}}, null);
+  // not actually valid, but works for now...
+  check({$and: ["foo"]}, ["foo"]);
+  check({$and: [{x: 42}, {_id: oid1}]}, [oid1]);
+  check({$and: [{x: 42}, {_id: {$in: [oid1]}}]}, [oid1]);
 });

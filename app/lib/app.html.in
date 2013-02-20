@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html##HTML_ATTRIBUTES##>
 <head>
 {{#each stylesheets}}  <link rel="stylesheet" href="{{this}}">
 {{/each}}

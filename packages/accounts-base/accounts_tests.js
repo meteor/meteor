@@ -8,7 +8,7 @@ Tinytest.add('accounts - config validates keys', function (test) {
 });
 
 Tinytest.add('accounts - updateOrCreateUserFromExternalService - Facebook', function (test) {
-  var facebookId = Meteor.uuid();
+  var facebookId = Random.id();
 
   // create an account with facebook
   var uid1 = Accounts.updateOrCreateUserFromExternalService(
@@ -38,8 +38,8 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService - Facebook', func
 });
 
 Tinytest.add('accounts - updateOrCreateUserFromExternalService - Weibo', function (test) {
-  var weiboId1 = Meteor.uuid();
-  var weiboId2 = Meteor.uuid();
+  var weiboId1 = Random.id();
+  var weiboId2 = Random.id();
 
   // users that have different service ids get different users
   uid1 = Accounts.updateOrCreateUserFromExternalService(
@@ -85,7 +85,7 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService - Twitter', funct
 
 Tinytest.add('accounts - insertUserDoc username', function (test) {
   var userIn = {
-    username: Meteor.uuid()
+    username: Random.id()
   };
 
   // user does not already exist. create a user object with fields set.
@@ -113,9 +113,9 @@ Tinytest.add('accounts - insertUserDoc username', function (test) {
 });
 
 Tinytest.add('accounts - insertUserDoc email', function (test) {
-  var email1 = Meteor.uuid();
-  var email2 = Meteor.uuid();
-  var email3 = Meteor.uuid();
+  var email1 = Random.id();
+  var email2 = Random.id();
+  var email3 = Random.id();
   var userIn = {
     emails: [{address: email1, verified: false},
              {address: email2, verified: true}]

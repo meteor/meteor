@@ -1,3 +1,11 @@
+body {
+    padding-top: 40px;
+}
+
+#testProgressBar {
+    margin-top: 10px;
+}
+
 .header {
   font-family: Arial, sans-serif;
   font-size: 24px;
@@ -117,4 +125,3 @@
     text-decoration: underline;
     cursor: pointer;
 }
-

@@ -44,7 +44,7 @@ var new_board = function () {
 
   // pick random letter from each die
   for (i = 0; i < 16; i += 1) {
-    board[i] = DICE[i].split('')[Math.floor(Math.random() * 6)];
+    board[i] = Random.choice(DICE[i]);
   }
 
   // knuth shuffle

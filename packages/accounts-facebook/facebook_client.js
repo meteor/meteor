@@ -12,7 +12,7 @@
       return;
     }
 
-    var state = Meteor.uuid();
+    var state = Random.id();
     var mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent);
     var display = mobile ? 'touch' : 'popup';
 

@@ -1,10 +1,134 @@
 
 ## vNEXT
 
+## v0.5.7
+
+* Changed the api for publish functions that do not return a
+  cursor. Specifically, use `added`, `changed`, `removed`, and `ready`, instead
+  of `set`, `unset`, `flush`, and `complete`.  See the [`publish`
+  docs](http://docs.meteor.com/#meteor_publish) for details. Additionally,
+  `stop` has been improved, and `error` is now available for indicating that
+  there is an error to the subscriber.
+
+* Changed the api for `observe`.  Observing with `added`, `changed` and
+  `removed` callbacks is now unordered; for ordering information use `addedAt`,
+  `changedAt`, `removedAt`, and `movedTo`. Full documentation is in the
+  [`observe` docs](http://docs.meteor.com/#observe).  All callers of `observe`
+  need to be updated.
+
+* Added new [`observeChanges`](http://docs.meteor.com/#observe_changes) api for
+  keeping track of the contents of a cursor more efficiently.
+
+* New [EJSON](http://docs.meteor.com/#ejson) package allows you to use Dates,
+  Mongo ObjectIDs, and binary data (as `Uint8Array` or a normal array with
+  `$Uint8ArrayPolyfill` set to true) in your collections and Session variables.
+  You can also add your own custom datatypes.
+
+* You can specify that a collection should use MongoDB ObjectIDs as its `_id`
+  fields for inserts instead of strings. If you do this, use `EJSON.equals()`
+  for comparing equality instead of `===`.  This also allows you to use Meteor
+  with existing MongoDB databases that have ObjectID `_id`s.
+
+* The DDP wire protocol has been redesigned.  It is now versioned, and at
+  version "pre1".  There is an informal specification in
+  `packages/livedata/DDP.md`.
+
+* Meteor now uses a shorter string ID for MongoDB documents by default. You can
+  generate this kind of ID with `Random.id()`.  `Meteor.uuid()` is deprecated.
+
+* There is a new reactive function on subscription handles: `ready()` returns
+  true when the subscription has received all of its initial documents.
+
+* Meteor now correctly represents empty documents in Collections.
+
+* Reduced unecessary MongoDB re-polling of live queries.
+
+* Improved UI for running tinytest package tests in-browser.
+
+## v0.5.6
+
+* Fix 0.5.5 regression: Minimongo selectors matching subdocuments under arrays
+  did not work correctly.
+
+* Some Bootstrap icons should have appeared white.
+
+Patches contributed by GitHub user benjaminchelli.
+
+## v0.5.5
+
+* Deprecate `Meteor.autosubscribe`. `Meteor.subscribe` now works within
+  `Meteor.autorun`.
+
+* Allow access to `Meteor.settings.public` on the client. If the JSON
+  file you gave to `meteor --settings` includes a field called `public`,
+  that field will be available on the client as well as the server.
+
+* `@import` works in `less`. Use the `.lessimport` file extension to
+  make a less file that is ignored by preprocessor so as to avoid double
+  processing. #203
+
+* Upgrade Fibers to version 1.0.0. The `Fiber` and `Future` symbols are
+  no longer exposed globally. To use fibers directly you can use:
+   `var Fiber = __meteor_bootstrap__.require('fibers');` and
+   `var Future = __meteor_bootstrap__.require('fibers/future');`
+
+* Call version 1.1 of the Twitter API when authenticating with
+  OAuth. `accounts-twitter` users have until March 5th, 2013 to
+  upgrade before Twitter disables the old API. #527
+
+* Treat Twitter ids as strings, not numbers, as recommended by
+  Twitter. #629
+
+* You can now specify the `_id` field of a document passed to `insert`.
+  Meteor still auto-generates `_id` if it is not present.
+
+* Expose an `invalidated` flag on `Meteor.deps.Context`.
+
+* Populate user record with additional data from Facebook and Google. #664
+
+* Add Facebook token expiration time to `services.facebook.expiresAt`. #576
+
+* Allow piping a password to `meteor deploy` on `stdin`. #623
+
+* Correctly type cast arguments to handlebars helper. #617
+
+* Fix leaked global `userId` symbol.
+
+* Terminate `phantomjs` properly on error when using the `spiderable`
+  package. #571
+
+* Stop serving non-cachable files with caching headers. #631
+
+* Fix race condition if server restarted between page load and initial
+  DDP connection. #653
+
+* Resolve issue where login methods sometimes blocked future methods. #555
+
+* Fix `Meteor.http` parsing of JSON responses on Firefox. #553
+
+* Minimongo no longer uses `eval`. #480
+
+* Serve 404 for `/app.manifest`. This allows experimenting with the
+  upcoming `appcache` smart package. #628
+
+* Upgraded many dependencies, including:
+  * node.js to version 0.8.18
+  * jquery-layout to version 1.3.0RC
+  * Twitter Bootstrap to version 2.3.0
+  * Less to version 1.3.3
+  * Uglify to version 2.2.3
+  * useragent to version 2.0.1
+
+Patches contributed by GitHub users awwx, bminer, bramp, crunchie84,
+danawoodman, dbimmler, Ed-von-Schleck, geoffd123, jperl, kevee,
+milesmatthias, Primigenus, raix, timhaines, and xenolf.
+
+
 ## v0.5.4
 
 * Fix 0.5.3 regression: `meteor run` could fail on OSX 10.8 if environment
   variables such as `DYLD_LIBRARY_PATH` are set.
+
 
 ## v0.5.3
 
@@ -507,4 +631,3 @@ Patches contributed by GitHub users fivethirty, tmeasday, and xenolf.
 ## v0.3.2
 
 * Initial public launch
-

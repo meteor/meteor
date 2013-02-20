@@ -150,12 +150,12 @@ Template.circles.events({
     Session.set("selectedCircle:" + this.group, evt.currentTarget.id);
   },
   'click .add': function () {
-    Circles.insert({x: Meteor.random(), y: Meteor.random(),
-                    r: Meteor.random() * .1 + .02,
+    Circles.insert({x: Random.fraction(), y: Random.fraction(),
+                    r: Random.fraction() * .1 + .02,
                     color: {
-                      r: Meteor.random(),
-                      g: Meteor.random(),
-                      b: Meteor.random()
+                      r: Random.fraction(),
+                      g: Random.fraction(),
+                      b: Random.fraction()
                     },
                     group: this.group
                    });
@@ -171,7 +171,7 @@ Template.circles.events({
     Circles.find({group: this.group}).forEach(function (r) {
       Circles.update(r._id, {
         $set: {
-          x: Meteor.random(), y: Meteor.random(), r: Meteor.random() * .1 + .02
+          x: Random.fraction(), y: Random.fraction(), r: Random.fraction() * .1 + .02
         }
       });
     });

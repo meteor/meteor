@@ -45,6 +45,8 @@ var compileValueSelector = function (valueSelector) {
 
   if (valueSelector instanceof RegExp) {
     return function (value) {
+      if (value === undefined)
+        return false;
       return _anyIfArray(value, function (x) {
         return valueSelector.test(x);
       });
@@ -238,6 +240,9 @@ var VALUE_OPERATORS = {
 
   "$type": function (operand) {
     return function (value) {
+      // A nonexistent field is of no type.
+      if (value === undefined)
+        return false;
       // Definitely not _anyIfArrayPlus: $type: 4 only matches arrays that have
       // arrays as elements according to the Mongo docs.
       return _anyIfArray(value, function (x) {
@@ -264,6 +269,8 @@ var VALUE_OPERATORS = {
     }
 
     return function (value) {
+      if (value === undefined)
+        return false;
       return _anyIfArray(value, function (x) {
         return operand.test(x);
       });
@@ -314,12 +321,15 @@ LocalCollection._f = {
     if (typeof v === "function")
       // note that typeof(/x/) === "function"
       return 13;
+    if (v instanceof Date)
+      return 9;
+    if (EJSON.isBinary(v))
+      return 5;
+    if (v instanceof Meteor.Collection.ObjectID)
+      return 7;
     return 3; // object
 
     // XXX support some/all of these:
-    // 5, binary data
-    // 7, object id
-    // 9, date
     // 14, symbol
     // 15, javascript code with scope
     // 16, 18: 32-bit/64-bit integer
@@ -329,66 +339,8 @@ LocalCollection._f = {
   },
 
   // deep equality test: use for literal document and array matches
-  _equal: function (x, qval) {
-    var match = function (a, b) {
-      // scalars
-      if (typeof a === 'number' || typeof a === 'string' ||
-          typeof a === 'boolean' || a === undefined || a === null)
-        return a === b;
-      if (typeof a === 'function')
-        return false;
-
-      // OK, typeof a === 'object'
-      if (typeof b !== 'object')
-        return false;
-
-      // arrays
-      if (a instanceof Array) {
-        if (!(b instanceof Array))
-          return false;
-        if (a.length !== b.length)
-          return false;
-        for (var i = 0; i < a.length; i++)
-          if (!match(a[i],b[i]))
-            return false;
-        return true;
-      }
-
-      // objects
-/*
-      var unmatched_b_keys = 0;
-      for (var x in b)
-        unmatched_b_keys++;
-      for (var x in a) {
-        if (!(x in b) || !match(a[x], b[x]))
-          return false;
-        unmatched_b_keys--;
-      }
-      return unmatched_b_keys === 0;
-*/
-      // Follow Mongo in considering key order to be part of
-      // equality. Key enumeration order is actually not defined in
-      // the ecmascript spec but in practice most implementations
-      // preserve it. (The exception is Chrome, which preserves it
-      // usually, but not for keys that parse as ints.)
-      var b_keys = [];
-      for (var x in b)
-        b_keys.push(x);
-      var i = 0;
-      for (var x in a) {
-        if (i >= b_keys.length)
-          return false;
-        if (x !== b_keys[i])
-          return false;
-        if (!match(a[x], b[b_keys[i]]))
-          return false;
-        i++;
-      }
-      if (i !== b_keys.length)
-        return false;
-      return true;
-    };
-    return match(x, qval);
+  _equal: function (a, b) {
+    return EJSON.equals(a, b, {keyOrderSensitive: true});
   },
 
   // maps a type code to a value that can be used to sort values of
@@ -398,8 +350,26 @@ LocalCollection._f = {
     // XXX what is the correct sort position for Javascript code?
     // ('100' in the matrix below)
     // XXX minkey/maxkey
-    return [-1, 1, 2, 3, 4, 5, -1, 6, 7, 8, 0, 9, -1, 100, 2, 100, 1,
-            8, 1][t];
+    return [-1,  // (not a type)
+            1,   // number
+            2,   // string
+            3,   // object
+            4,   // array
+            5,   // binary
+            -1,  // deprecated
+            6,   // ObjectID
+            7,   // bool
+            8,   // Date
+            0,   // null
+            9,   // RegExp
+            -1,  // deprecated
+            100, // JS code
+            2,   // deprecated (symbol)
+            100, // JS code
+            1,   // 32-bit int
+            8,   // Mongo timestamp
+            1    // 64-bit int
+           ][t];
   },
 
   // compare two values of unknown type according to BSON ordering
@@ -418,9 +388,22 @@ LocalCollection._f = {
     if (oa !== ob)
       return oa < ob ? -1 : 1;
     if (ta !== tb)
-      // XXX need to implement this once we implement Symbol or
-      // integers, or once we implement both Date and Timestamp
+      // XXX need to implement this if we implement Symbol or integers, or
+      // Timestamp
       throw Error("Missing type coercion logic in _cmp");
+    if (ta === 7) { // ObjectID
+      // Convert to string.
+      ta = tb = 2;
+      a = a.toHexString();
+      b = b.toHexString();
+    }
+    if (ta === 9) { // Date
+      // Convert to millis.
+      ta = tb = 1;
+      a = a.getTime();
+      b = b.getTime();
+    }
+
     if (ta === 1) // double
       return a - b;
     if (tb === 2) // string
@@ -434,7 +417,7 @@ LocalCollection._f = {
           ret.push(obj[key]);
         }
         return ret;
-      }
+      };
       return LocalCollection._f._cmp(to_array(a), to_array(b));
     }
     if (ta === 4) { // Array
@@ -448,13 +431,23 @@ LocalCollection._f = {
           return s;
       }
     }
-    // 5: binary data
-    // 7: object id
+    if (ta === 5) { // binary
+      // Surprisingly, a small binary blob is always less than a large one in
+      // Mongo.
+      if (a.length !== b.length)
+        return a.length - b.length;
+      for (i = 0; i < a.length; i++) {
+        if (a[i] < b[i])
+          return -1;
+        if (a[i] > b[i])
+          return 1;
+      }
+      return 0;
+    }
     if (ta === 8) { // boolean
       if (a) return b ? 0 : 1;
       return b ? -1 : 0;
     }
-    // 9: date
     if (ta === 10) // null
       return 0;
     if (ta === 11) // regexp
@@ -469,6 +462,7 @@ LocalCollection._f = {
     // 127: maxkey
     if (ta === 13) // javascript code
       throw Error("Sorting not supported on Javascript code"); // XXX
+    throw Error("Unknown type to sort");
   }
 };
 
@@ -478,18 +472,61 @@ LocalCollection._matches = function (selector, doc) {
   return (LocalCollection._compileSelector(selector))(doc);
 };
 
-var makeLookupFunction = function (key) {
+// _makeLookupFunction(key) returns a lookup function.
+//
+// A lookup function takes in a document and returns an array of matching
+// values.  This array has more than one element if any segment of the key other
+// than the last one is an array.  ie, any arrays found when doing non-final
+// lookups result in this function "branching"; each element in the returned
+// array represents the value found at this branch. If any branch doesn't have a
+// final value for the full key, its element in the returned list will be
+// undefined. It always returns a non-empty array.
+//
+// _makeLookupFunction('a.x')({a: {x: 1}}) returns [1]
+// _makeLookupFunction('a.x')({a: {x: [1]}}) returns [[1]]
+// _makeLookupFunction('a.x')({a: 5})  returns [undefined]
+// _makeLookupFunction('a.x')({a: [{x: 1},
+//                                 {x: [2]},
+//                                 {y: 3}]})
+//   returns [1, [2], undefined]
+LocalCollection._makeLookupFunction = function (key) {
   var dotLocation = key.indexOf('.');
-  var first = dotLocation === -1 ? key : key.substr(0, dotLocation);
-  var lookupRest = dotLocation !== -1 &&
-        makeLookupFunction(key.substr(dotLocation + 1));
+  var first, lookupRest, nextIsNumeric;
+  if (dotLocation === -1) {
+    first = key;
+  } else {
+    first = key.substr(0, dotLocation);
+    var rest = key.substr(dotLocation + 1);
+    lookupRest = LocalCollection._makeLookupFunction(rest);
+    // Is the next (perhaps final) piece numeric (ie, an array lookup?)
+    nextIsNumeric = /^\d+(\.|$)/.test(rest);
+  }
+
   return function (doc) {
     if (doc == null)  // null or undefined
-      return undefined;
+      return [undefined];
     var firstLevel = doc[first];
-    if (lookupRest)
-      return lookupRest(firstLevel);
-    return firstLevel;
+
+    // We don't "branch" at the final level.
+    if (!lookupRest)
+      return [firstLevel];
+
+    // It's an empty array, and we're not done: we won't find anything.
+    if (_.isArray(firstLevel) && firstLevel.length === 0)
+      return [undefined];
+
+    // For each result at this level, finish the lookup on the rest of the key,
+    // and return everything we find. Also, if the next result is a number,
+    // don't branch here.
+    //
+    // Technically, in MongoDB, we should be able to handle the case where
+    // objects have numeric keys, but Mongo doesn't actually handle this
+    // consistently yet itself, see eg
+    // https://jira.mongodb.org/browse/SERVER-2898
+    // https://github.com/mongodb/mongo/blob/master/jstests/array_match2.js
+    if (!_.isArray(firstLevel) || nextIsNumeric)
+      firstLevel = [firstLevel];
+    return Array.prototype.concat.apply([], _.map(firstLevel, lookupRest));
   };
 };
 
@@ -504,10 +541,14 @@ var compileDocumentSelector = function (docSelector) {
         throw new Error("Unrecognized logical operator: " + key);
       perKeySelectors.push(LOGICAL_OPERATORS[key](subSelector));
     } else {
-      var lookUpByIndex = makeLookupFunction(key);
+      var lookUpByIndex = LocalCollection._makeLookupFunction(key);
       var valueSelectorFunc = compileValueSelector(subSelector);
       perKeySelectors.push(function (doc) {
-        return valueSelectorFunc(lookUpByIndex(doc));
+        var branchValues = lookUpByIndex(doc);
+        // We apply the selector to each "branched" value and return true if any
+        // match. This isn't 100% consistent with MongoDB; eg, see:
+        // https://jira.mongodb.org/browse/SERVER-8585
+        return _.any(branchValues, valueSelectorFunc);
       });
     }
   });
@@ -529,8 +570,11 @@ LocalCollection._compileSelector = function (selector) {
     return function (doc) {return selector.call(doc);};
 
   // shorthand -- scalars match _id
-  if (LocalCollection._selectorIsId(selector))
-    return function (doc) { return doc._id === selector;};
+  if (LocalCollection._selectorIsId(selector)) {
+    return function (doc) {
+      return EJSON.equals(doc._id, selector);
+    };
+  }
 
   // protect against dangerous selectors.  falsey and {_id: falsey} are both
   // likely programmer error, and not what you want, particularly for
@@ -543,11 +587,6 @@ LocalCollection._compileSelector = function (selector) {
     throw new Error("Invalid selector: " + selector);
 
   return compileDocumentSelector(selector);
-};
-
-// Is this selector just shorthand for lookup by _id?
-LocalCollection._selectorIsId = function (selector) {
-  return (typeof selector === "string") || (typeof selector === "number");
 };
 
 // Give a sort spec, which can be in any of these forms:
@@ -570,12 +609,12 @@ LocalCollection._compileSort = function (spec) {
     for (var i = 0; i < spec.length; i++) {
       if (typeof spec[i] === "string") {
         sortSpecParts.push({
-          lookup: makeLookupFunction(spec[i]),
+          lookup: LocalCollection._makeLookupFunction(spec[i]),
           ascending: true
         });
       } else {
         sortSpecParts.push({
-          lookup: makeLookupFunction(spec[i][0]),
+          lookup: LocalCollection._makeLookupFunction(spec[i][0]),
           ascending: spec[i][1] !== "desc"
         });
       }
@@ -583,7 +622,7 @@ LocalCollection._compileSort = function (spec) {
   } else if (typeof spec === "object") {
     for (var key in spec) {
       sortSpecParts.push({
-        lookup: makeLookupFunction(key),
+        lookup: LocalCollection._makeLookupFunction(key),
         ascending: spec[key] >= 0
       });
     }
@@ -594,11 +633,49 @@ LocalCollection._compileSort = function (spec) {
   if (sortSpecParts.length === 0)
     return function () {return 0;};
 
+  // reduceValue takes in all the possible values for the sort key along various
+  // branches, and returns the min or max value (according to the bool
+  // findMin). Each value can itself be an array, and we look at its values
+  // too. (ie, we do a single level of flattening on branchValues, then find the
+  // min/max.)
+  var reduceValue = function (branchValues, findMin) {
+    var reduced;
+    var first = true;
+    // Iterate over all the values found in all the branches, and if a value is
+    // an array itself, iterate over the values in the array separately.
+    _.each(branchValues, function (branchValue) {
+      // Value not an array? Pretend it is.
+      if (!_.isArray(branchValue))
+        branchValue = [branchValue];
+      // Value is an empty array? Pretend it was missing, since that's where it
+      // should be sorted.
+      if (_.isArray(branchValue) && branchValue.length === 0)
+        branchValue = [undefined];
+      _.each(branchValue, function (value) {
+        // We should get here at least once: lookup functions return non-empty
+        // arrays, so the outer loop runs at least once, and we prevented
+        // branchValue from being an empty array.
+        if (first) {
+          reduced = value;
+          first = false;
+        } else {
+          // Compare the value we found to the value we found so far, saving it
+          // if it's less (for an ascending sort) or more (for a descending
+          // sort).
+          var cmp = LocalCollection._f._cmp(reduced, value);
+          if ((findMin && cmp > 0) || (!findMin && cmp < 0))
+            reduced = value;
+        }
+      });
+    });
+    return reduced;
+  };
+
   return function (a, b) {
     for (var i = 0; i < sortSpecParts.length; ++i) {
       var specPart = sortSpecParts[i];
-      var aValue = specPart.lookup(a);
-      var bValue = specPart.lookup(b);
+      var aValue = reduceValue(specPart.lookup(a), specPart.ascending);
+      var bValue = reduceValue(specPart.lookup(b), specPart.ascending);
       var compare = LocalCollection._f._cmp(aValue, bValue);
       if (compare !== 0)
         return specPart.ascending ? compare : -compare;

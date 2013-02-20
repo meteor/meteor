@@ -10,4 +10,22 @@ Tinytest.add("domutils - setElementValue", function (test) {
     DomUtils.setElementValue(select, value);
     test.equal(DomUtils.getElementValue(select), value);
   });
+
+  div.kill();
+});
+
+Tinytest.add("domutils - form id expando", function (test) {
+  // See https://github.com/meteor/meteor/issues/604
+
+  var div = OnscreenDiv();
+  div.node().appendChild(DomUtils.htmlToFragment(
+    ('<form><input name="id"></form>')));
+  var theInput = DomUtils.find(div.node(), 'input');
+  var theForm = theInput.parentNode;
+  var theDiv = theForm.parentNode;
+
+  // test that this call doesn't throw an exception
+  test.equal(DomUtils.matchesSelector(theForm, theDiv, 'form'), true);
+
+  div.kill();
 });

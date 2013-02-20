@@ -59,45 +59,47 @@ will publish that cursor's documents.
       return Rooms.find({admin: this.userId}, {fields: {secretInfo: 1}});
     });
 
-Otherwise, the publish function can [`set`](#publish_set) and
-[`unset`](#publish_unset) individual record attributes on a client. These
-methods are provided by `this` in your publish function.
+Otherwise, the publish function should call the functions
+[`added`](#publish_added) (when a new document is added to the published record
+set), [`changed`](#publish_changed) (when some fields on a document in the
+record set are changed or cleared), and [`removed`](#publish_removed) (when
+documents are removed from the published record set) to inform subscribers about
+documents.  These methods are provided by `this` in your publish function.
 
-<!-- TODO discuss complete -->
 
-In particular, if you use [`observe`](#observe) to watch changes to the
-database, be sure to call `this.flush` from inside your observe callbacks.
-Methods that update the database are considered finished when the `observe`
-callbacks return.
+
+<!-- TODO discuss ready -->
 
 Example:
 
     // server: publish the current size of a collection
     Meteor.publish("counts-by-room", function (roomId) {
       var self = this;
-      var uuid = Meteor.uuid();
       var count = 0;
-
-      var handle = Messages.find({roomId: roomId}).observe({
-        added: function (doc, idx) {
+      var initializing = true;
+      var handle = Messages.find({roomId: roomId}).observeChanges({
+        added: function (id) {
           count++;
-          self.set("counts", uuid, {roomId: roomId, count: count});
-          self.flush();
+          if (!initializing)
+            self.changed("counts", roomId, {count: count});
         },
-        removed: function (doc, idx) {
+        removed: function (id) {
           count--;
-          self.set("counts", uuid, {roomId: roomId, count: count});
-          self.flush();
+          self.changed("counts", roomId, {count: count});
         }
         // don't care about moved or changed
       });
 
       // Observe only returns after the initial added callbacks have
-      // run.  Now mark the subscription as ready.
-      self.complete();
-      self.flush();
+      // run.  Now return an initial value and mark the subscription
+      // as ready.
+      initializing = false;
+      self.added("counts", roomId, {count: count});
+      self.ready();
 
-      // stop observing the cursor when client unsubs
+      // Stop observing the cursor when client unsubs.
+      // Stopping a subscription automatically takes
+      // care of sending the client any removed messages.
       self.onStop(function () {
         handle.stop();
       });
@@ -112,7 +114,9 @@ Example:
     });
 
     // client: use the new collection
-    console.log("Current room has " + Counts.findOne().count + " messages.");
+    console.log("Current room has " +
+                Counts.findOne(Session.get("roomId")).count +
+                " messages.");
 
 {{#warning}}
 Meteor will emit a warning message if you call `Meteor.publish` in a
@@ -125,26 +129,28 @@ will still work.
 This is constant. However, if the logged-in user changes, the publish
 function is rerun with the new value.
 
-{{> api_box subscription_set}}
-{{> api_box subscription_unset}}
-{{> api_box subscription_complete}}
-{{> api_box subscription_flush}}
+{{> api_box subscription_added}}
+{{> api_box subscription_changed}}
+{{> api_box subscription_removed}}
+{{> api_box subscription_ready}}
 
 {{> api_box subscription_onStop}}
 
-If you call [`observe`](#observe) in your publish handler, this
-is the place to stop the observes.
+If you call [`observe`](#observe) or [`observeChanges`](#observeChanges) in your
+publish handler, this is the place to stop the observes.
 
+{{> api_box subscription_error}}
 {{> api_box subscription_stop}}
 
 {{> api_box subscribe}}
 
-When you subscribe to a record set, it tells the server to send records
-to the client.  The client stores these records in local [Minimongo
+When you subscribe to a record set, it tells the server to send records to the
+client.  The client stores these records in local [Minimongo
 collections](#meteor_collection), with the same name as the `collection`
-argument to `set`.  Meteor will queue incoming attributes until you
-declare the [`Meteor.Collection`](#meteor_collection) on the client with
-the matching collection name.
+argument used in the publish handler's `added`, `changed`, and `removed`
+callbacks.  Meteor will queue incoming attributes until you declare the
+[`Meteor.Collection`](#meteor_collection) on the client with the matching
+collection name.
 
     // okay to subscribe (and possibly receive data) before declaring
     // the client collection that will hold it.  assume "allplayers"
@@ -155,19 +161,36 @@ the matching collection name.
     ...
     Players = new Meteor.Collection("players");
 
-If more than one subscription sends conflicting values for an attribute
-(same collection name, document ID, and attribute name), then the value
-on the client will be that from the *first* subscription the client
-activated.  (Even if it is not the first to send the duplicated
-attribute.)
+The client will see a document if the document is currently in the published
+record set of any of its subscriptions.
 
-If you call [`Meteor.subscribe`](#meteor_subscribe) within a [reactive
-context](#reactivity) such as [`Meteor.autorun`](#meteor_autorun), the
-subscription will automatically be cancelled when the context is invalidated;
-it's not necessary to call `stop` on subscriptions made from inside
-`Meteor.autorun`. However, if the next iteration of your autorun function
-subscribes to the same record set (same name and parameters), Meteor is smart
-enough to skip a wasteful unsubscribe/resubscribe. For example:
+The `onReady` callback is called with no arguments when the server
+[marks the subscription as ready](#publish_ready). The `onError` callback is
+called with a [`Meteor.Error`](#meteor_error) if the subscription fails or is
+terminated by the server.
+
+`Meteor.subscribe` returns a subscription handle, which is an object with the
+following methods:
+
+<dl class="callbacks">
+{{#dtdd "stop()"}}
+Cancel the subscription. This will typically result in the server directing the
+client to remove the subscription's data from the client's cache.
+{{/dtdd}}
+
+{{#dtdd "ready()"}}
+True if the server has [marked the subscription as ready](#publish_ready). A
+reactive data source.
+{{/dtdd}}
+</dl>
+
+If you call `Meteor.subscribe` within a [reactive context](#reactivity) such as
+[`Meteor.autorun`](#meteor_autorun), the subscription will automatically be
+cancelled when the context is invalidated; it's not necessary to call `stop` on
+subscriptions made from inside `Meteor.autorun`. However, if the next iteration
+of your autorun function subscribes to the same record set (same name and
+parameters), Meteor is smart enough to skip a wasteful
+unsubscribe/resubscribe. For example:
 
     Meteor.autorun(function () {
       Meteor.subscribe("chat", {room: Session.get("current-room")});
@@ -180,11 +203,9 @@ messages. When you change rooms by calling `Session.set("current-room",
 unsubscribe from the original room's chat messages, and continue to
 stay subscribed to your private messages.
 
-If all of the attributes in a document are removed, Meteor
-will remove the (now empty) document.  If you want to publish empty
-documents, just use a placeholder attribute:
-
-    Clicks.insert({exists: true});
+If more than one subscription sends conflicting values for a field (same
+collection name, document ID, and field name), then the value on the client will
+be one of the published values, chosen arbitrarily.
 
 <h2 id="methods_header"><span>Methods</span></h2>
 
@@ -359,8 +380,9 @@ the server. The return value is an object with the following fields:
   Describes the current reconnection status. The possible
   values are `connected` (the connection is up and
   running), `connecting` (disconnected and trying to open a
-  new connection), and `waiting` (failed to connect and
-  waiting to try to reconnect).
+  new connection), `failed` (permanently failed to connect; e.g., the client
+  and server support different versions of DDP) and `waiting` (failed
+  to connect and waiting to try to reconnect).
 {{/dtdd}}
 
 {{#dtdd name="retryCount" type="Number"}}
@@ -373,6 +395,10 @@ the server. The return value is an object with the following fields:
   into an interval until the next reconnection, use
   `retryTime - (new Date()).getTime()`. This key will
   be set only when `status` is `waiting`.
+{{/dtdd}}
+
+{{#dtdd name="reason" type="String or undefined"}}
+  If `status` is `failed`, a description of why the connection failed.
 {{/dtdd}}
 </dl>
 
@@ -547,11 +573,11 @@ indexes in their client-side models anyway.
 
 {{> api_box find}}
 
-`find` returns a cursor.  It does not immediately access the database or
-return documents.  Cursors provide `fetch` to return all matching
-documents, `map` and `forEach` to iterate over all matching
-documents, and `observe` to register callbacks when the set of
-matching documents changes.
+`find` returns a cursor.  It does not immediately access the database or return
+documents.  Cursors provide `fetch` to return all matching documents, `map` and
+`forEach` to iterate over all matching documents, and `observe` and
+`observeChanges` to register callbacks when the set of matching documents
+changes.
 
 {{#warning}}
 Collection cursors are not query snapshots.  If the database changes
@@ -874,53 +900,128 @@ reset the cursor.
 
 {{> api_box cursor_observe}}
 
-Establishes a *live query* that notifies callbacks on any change to the
-query result.
+Establishes a *live query* that invokes callbacks when the result of
+the query changes. The callbacks receive the entire contents of the
+document that was affected, as well as its old contents, if
+applicable. If you only need to receive the fields that changed, see
+[`observeChanges`](#cursor_observe_changes).
 
 `callbacks` may have the following functions as properties:
 
 <dl class="callbacks">
-{{#dtdd "added(document, beforeIndex)"}}
-A new document entered the result set. It was inserted
-immediately before the document currently at the
-position `beforeIndex`. Or if it was inserted at the end
-of the list, `beforeIndex` will be equal to the (prior)
-length of the list.
-{{/dtdd}}
+<dt><span class="name">added(document)</span> <span class="or">or</span></dt>
+<dt><span class="name">addedAt(document, atIndex, before)</span></dt>
+<dd>
+{{#better_markdown}}
+A new document `document` entered the result set. The new document
+appears at position `atIndex`. It is immediately before the document
+whose `_id` is `before`. `before` will be `null` if the new document
+is at the end of the results.
+{{/better_markdown}}
+</dd>
 
-{{#dtdd "changed(newDocument, atIndex, oldDocument)"}}
-The contents of the document at position `atIndex`
-(`oldDocument`) changed to `newDocument`.
-{{/dtdd}}
+<dt><span class="name">changed(newDocument, oldDocument)
+    <span class="or">or</span></span></dt>
+<dt><span class="name">changedAt(newDocument, oldDocument, atIndex)</span></dt>
+<dd>
+{{#better_markdown}}
+The contents of a document were previously `oldDocument` and are now
+`newDocument`. The position of the changed document is `atIndex`.
+{{/better_markdown}}
+</dd>
 
-{{#dtdd "moved(document, oldIndex, newIndex)"}}
-A document changed its position in the result set,
-from `oldIndex` to `newIndex`. For your
-convenience, its current contents is `document`. This will
-only fire immediately after `changed`.
-{{/dtdd}}
+<dt><span class="name">removed(oldDocument)</span>
+  <span class="or">or</span></dt>
+<dt><span class="name">removedAt(oldDocument, atIndex)</span></dt>
+<dd>
+{{#better_markdown}}
+The document `oldDocument` is no longer in the result set. It used to be at position `atIndex`.
+{{/better_markdown}}
+</dd>
 
-{{#dtdd "removed(oldDocument, atIndex)"}}
-The document at position `atIndex`, which was previously
-`oldDocument`, is no longer in the result set.
+{{#dtdd "movedTo(document, fromIndex, toIndex, before)"}}
+A document changed its position in the result set, from `fromIndex` to `toIndex`
+(which is before the document with id `before`). Its current contents is
+`document`.
 {{/dtdd}}
 </dl>
 
-`added` will immediately be called as necessary to
-deliver the initial results of the query, if any.
+Use `added`, `changed`, and `removed` when you don't care about the
+order of the documents in the result set. They are more efficient than
+`addedAt`, `changedAt`, and `removedAt`.
+
+Before `observe` returns, `added` (or `addedAt`) will be called zero
+or more times to deliver the initial results of the query.
 
 `observe` returns a live query handle, which is an object with a
 `stop` method.  Call this function with no arguments to stop calling
 the callback functions and tear down the query. **The query will run
 forever until you call this.**
 
+
+{{> api_box cursor_observe_changes}}
+
+Establishes a *live query* that invokes callbacks when the result of
+the query changes. In contrast to [`observe`](#cursor_observe),
+`observeChanges` provides only the difference between the old and new
+result set, not the entire contents of the document that changed.
+
+`callbacks` may have the following functions as properties:
+
+<dl class="callbacks">
+<dt><span class="name">added(id, fields)</span>
+  <span class="or">or</span></dt>
+<dt><span class="name">addedBefore(id, fields, before)</span></dt>
+<dd>
+{{#better_markdown}}
+A new document entered the result set. It has the `id` and `fields`
+specified. `fields` contains all fields of the document excluding the
+`_id` field. The new document is before the document identified by
+`before`, or at the end if `before` is `null`.
+{{/better_markdown}}
+</dd>
+
+{{#dtdd "changed(id, fields)"}}
+The document identified by `id` has changed. `fields` contains the
+changed fields with their new values. If a field was removed from the
+document then it will be present in `fields` with a value of
+`undefined`.
+{{/dtdd}}
+
+{{#dtdd "movedBefore(id, before)"}}
+The document identified by `id` changed its position in the ordered result set,
+and now appears before the document identified by `before`.
+{{/dtdd}}
+
+{{#dtdd "removed(id)"}}
+The document identified by `id` was removed from the result set.
+{{/dtdd}}
+</dl>
+
+`observeChanges` is significantly more efficient if you do not use
+`addedBefore` or `movedBefore`.
+
+Before `observeChanges` returns, `added` (or `addedAt`) will be called
+zero or more times to deliver the initial results of the query.
+
+`observeChanges` returns a live query handle, which is an object with
+a `stop` method.  Call this function with no arguments to stop calling
+the callback functions and tear down the query. **The query will run
+forever until you call this.**
+
+{{#note}}
+Unlike `observe`, `observeChanges` does not provide absolute position
+information (that is, `atIndex` positions rather than `before`
+positions.) This is for efficiency.
+{{/note}}
+
 Example:
 
     // Keep track of how many administrators are online.
     var count = 0;
     var query = Users.find({admin: true, onlineNow: true});
-    var handle = query.observe({
-      added: function (user) {
+    var handle = query.observeChanges({
+      added: function (id, user) {
         count++;
         console.log(user.name + " brings the total to " + count + " admins.");
       },
@@ -933,24 +1034,18 @@ Example:
     // After five seconds, stop keeping the count.
     setTimeout(function () {handle.stop();}, 5000);
 
-{{> api_box uuid}}
+{{> api_box collection_object_id}}
 
-This returns a random text string such as `b6df7139-df0b-4daa-8c9e-b432a90bc048`
-that is likely to be unique in the whole world. The format of the string
-complies with the [RFC 4122](http://tools.ietf.org/html/rfc4122) v4 format.
-
-{{#note}}
-  Currently Meteor uses this function to generate `_id` fields for new
-  Mongo documents. In the future we will likely switch to native
-  binary Mongo IDs. At that point this function will be deprecated or
-  moved into a separate package.
-{{/note}}
+`Meteor.Collection.ObjectID` follows the same API as the [Node MongoDB driver
+`ObjectID`](http://mongodb.github.com/node-mongodb-native/api-bson-generated/objectid.html)
+class. Note that you must use the `equals` method (or [`EJSON.equals`](#ejson_equals)) to
+compare them; the `===` operator will not work. If you are writing generic code
+that needs to deal with `_id` fields that may be either strings or `ObjectID`s, use
+[`EJSON.equals`](#ejson_equals) instead of `===` to compare them.
 
 {{#note}}
-  In the current implementation, the returned string is derived from a
-  pseudorandom number generator that is seeded with the current
-  time. The UUIDs generated definitely are not random enough to be
-  used for cryptographic or security purposes.
+  `ObjectID` values created by Meteor will not have meaningful answers to their `getTimestamp`
+  method, since Meteor currently constructs them fully randomly.
 {{/note}}
 
 {{#api_box_inline selectors}}
@@ -1389,7 +1484,7 @@ Example:
 
     // Support for playing D&D: Roll 3d6 for dexterity
     Accounts.onCreateUser(function(options, user) {
-      var d6 = function () { return Math.floor(Math.random() * 6) + 1; };
+      var d6 = function () { return Math.floor(Random.fraction() * 6) + 1; };
       user.dexterity = d6() + d6() + d6();
       // We still want the default hook's 'profile' behavior.
       if (options.profile)
@@ -2329,6 +2424,89 @@ called until after the currently-flushing context's callbacks have all been
 run.
 
 
+<h2 id="ejson"><span>EJSON</span></h2>
+
+EJSON is an extension of JSON to support more types. It supports all JSON-safe
+types, as well as:
+
+ - **Date** (JavaScript `Date`)
+ - **Binary** (JavaScript `Uint8Array` or the
+   result of [`EJSON.newBinary`](#ejson_new_binary))
+ - **User-defined types** (see [`EJSON.addType`](#ejson_add_type).  For example,
+ [`Meteor.Collection.ObjectID`](#collection_object_id) is implemented this way.)
+
+All EJSON serializations are also valid JSON.  For example an object with a date
+and a binary buffer would be serialized in EJSON as:
+
+    {
+      "d": {"$date": 1358205756553},
+      "b": {"$binary": "c3VyZS4="}
+    }
+
+Meteor supports all built-in EJSON data types in publishers, method arguments
+and results, Mongo databases, and [`Session`](#session) variables.
+
+{{> api_box ejsonParse}}
+
+{{> api_box ejsonStringify}}
+
+{{> api_box ejsonFromJSONValue}}
+
+{{> api_box ejsonToJSONValue}}
+
+{{> api_box ejsonEquals}}
+
+{{> api_box ejsonClone}}
+
+{{> api_box ejsonNewBinary}}
+
+Buffers of binary data are represented by `Uint8Array` instances on JavaScript
+platforms that support them.  On implementations of JavaScript that do not
+support `Uint8Array`, binary data buffers are represented by standard arrays
+containing numbers ranging from 0 to 255, and the `$Uint8ArrayPolyfill` key
+set to `true`.
+
+{{> api_box ejsonAddType}}
+
+When you add a type to EJSON, Meteor will be able to use that type in:
+
+ - publishing objects of your type if you pass them to publish handlers.
+ - allowing your type in the return values or arguments to
+   [methods](#methods_header).
+ - storing your type client-side in Minimongo.
+ - allowing your type in [`Session`](#session) variables.
+
+{{#note}}
+
+  MongoDB cannot store most user-defined types natively on the server.  Your
+  type will work in Minimongo, and you can send it to the client using a custom
+  publisher, but MongoDB only knows about the types defined in [BSON](http://bsonspec.org/).
+
+{{/note}}
+
+Instances of your type should implement the following interface:
+
+{{> api_box ejsonTypeClone}}
+
+{{> api_box ejsonTypeEquals}}
+
+The `equals` method should define an [equivalence
+relation](http://en.wikipedia.org/wiki/Equivalence_relation).  It should have
+the following properties:
+
+ - *Reflexivity* - for any instance `a`: `a.equals(a)` must be true.
+ - *Symmetry* - for any two instances `a` and `b`: `a.equals(b)` if and only if `b.equals(a)`.
+ - *Transitivity* - for any three instances `a`, `b`, and `c`: `a.equals(b)` and `b.equals(c)` implies `a.equals(c)`.
+
+{{> api_box ejsonTypeName}}
+{{> api_box ejsonTypeToJSONValue}}
+
+For example, the `toJSONValue` method for
+[`Meteor.Collection.ObjectID`](#collection_object_id) could be:
+
+    function () {
+      return this.toHexString();
+    };
 
 <h2 id="meteor_http"><span>Meteor.http</span></h2>
 
@@ -2542,5 +2720,3 @@ by spammers.)
 <template name="api_section_helper">
 <h2 id="{{id}}"><a href="#{{id}}" class="selflink"><span>{{name}}</span></a></h2>
 </template>
-
-
