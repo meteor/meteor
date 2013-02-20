@@ -45,6 +45,8 @@
 
 * Improved UI for running tinytest package tests in-browser.
 
+* Upgraded UglifyJS2 to version 2.2.5
+
 ## v0.5.6
 
 * Fix 0.5.5 regression: Minimongo selectors matching subdocuments under arrays
