@@ -381,7 +381,7 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
     // onscreen (possibly not for the first time.)
     _.each(landmarkRanges, function (landmarkRange) {
       if (! landmarkRange.isPreservedConstant)
-        landmarkRange.rendered.call(landmarkRange.landmark);
+        landmarkRange.landmark.rendered();
     });
 
     // Deliver render callbacks to all landmarks that enclose the
@@ -395,7 +395,7 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
     // case from the previous
     var walk = renderedRange;
     while ((walk = findParentOfType(Spark._ANNOTATION_LANDMARK, walk)))
-      walk.rendered.call(walk.landmark);
+      walk.landmark.rendered();
 
     // This code can run several times on the same nodes (if the
     // output of a render is included in a render), so it must be
@@ -595,10 +595,10 @@ Spark.renderToRange = function (range, htmlFunc) {
   visitLandmarksInRange(
     tempRange, function (landmarkRange, notes) {
       if (notes.originalRange) {
-        if (landmarkRange.constant)
+        if (landmarkRange.landmark.constant)
           pc.addConstantRegion(notes.originalRange, landmarkRange);
 
-        pc.addRoot(landmarkRange.preserve,
+        pc.addRoot(landmarkRange.landmark._preservations,
                    notes.originalRange, landmarkRange);
       }
     });
@@ -615,8 +615,9 @@ Spark.renderToRange = function (range, htmlFunc) {
       // on a "malformed" liverange tree
       break;
 
-    if (walk.type === Spark._ANNOTATION_LANDMARK, walk)
-      pc.addRoot(walk.preserve, range, tempRange, walk.containerNode());
+    if (walk.type === Spark._ANNOTATION_LANDMARK)
+      pc.addRoot(walk.landmark._preservations, range, tempRange,
+                 walk.containerNode());
   }
 
   pc.addRoot(Spark._globalPreserves, range, tempRange);
@@ -984,7 +985,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   var notifyParentsRendered = function () {
     var walk = outerRange;
     while ((walk = findParentOfType(Spark._ANNOTATION_LANDMARK, walk)))
-      walk.rendered.call(walk.landmark);
+      walk.landmark.rendered();
   };
 
   var later = function (f) {
@@ -1063,35 +1064,6 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
 /* Labels and landmarks                                                       */
 /******************************************************************************/
 
-var nextLandmarkId = 1;
-
-Spark.Landmark = function () {
-  this.id = nextLandmarkId++;
-  this._range = null; // will be set when put onscreen
-};
-
-_.extend(Spark.Landmark.prototype, {
-  firstNode: function () {
-    return this._range.firstNode();
-  },
-  lastNode: function () {
-    return this._range.lastNode();
-  },
-  find: function (selector) {
-    var r = this._range;
-    return DomUtils.findClipped(r.containerNode(), selector,
-                                r.firstNode(), r.lastNode());
-  },
-  findAll: function (selector) {
-    var r = this._range;
-    return DomUtils.findAllClipped(r.containerNode(), selector,
-                                   r.firstNode(), r.lastNode());
-  },
-  hasDom: function () {
-    return !! this._range;
-  }
-});
-
 Spark.UNIQUE_LABEL = ['UNIQUE_LABEL'];
 
 // label must be a string.
@@ -1134,27 +1106,45 @@ Spark.labelBranch = function (label, htmlFunc) {
 };
 
 Spark.createLandmark = function (options, htmlFunc) {
+  var controller = Spark.Landmark.extend({
+    constructor: function () {
+      Spark.Landmark.call(this);
+      if (options.created)
+        options.created.call(this);
+    },
+    finalize: function () {
+      if (this._destroyed)
+        this._destroyed.call(this);
+    },
+    rendered: function () {
+      if (this._rendered)
+        this._rendered.call(this);
+    }
+  });
+
+  return Spark.attachController(controller, function (instance) {
+    // Copy options over in case the controller was preserved but
+    // closed over a different environment this time
+    instance._rendered = options.rendered;
+    instance._destroyed = options.destroyed;
+    instance.constant = options.constant;
+    instance.setPreserve(options.preserve);
+    return htmlFunc(instance);
+  });
+};
+
+Spark.attachController = function (controller, htmlFunc) {
+  if (! (controller.prototype instanceof Spark.Landmark))
+    throw new Error("Controller must be a subclass of Spark.Landmark");
+
   var renderer = Spark._currentRenderer.get();
   if (! renderer) {
     // no renderer -- create and destroy Landmark inline
-    var landmark = new Spark.Landmark;
-    options.created && options.created.call(landmark);
+    var landmark = new controller;
     var html = htmlFunc(landmark);
-    options.destroyed && options.destroyed.call(landmark);
+    landmark.finalize();
     return html;
   }
-
-  // Normalize preserve map
-  var preserve = {};
-  if (_.isArray(options.preserve))
-    _.each(options.preserve, function (selector) {
-      preserve[selector] = true;
-    });
-  else
-    preserve = options.preserve || {};
-  for (var selector in preserve)
-    if (typeof preserve[selector] !== 'function')
-      preserve[selector] = function () { return true; };
 
   renderer.currentBranch.mark('occupied');
   var notes = renderer.currentBranch.getNotes();
@@ -1165,13 +1155,10 @@ Spark.createLandmark = function (options, htmlFunc) {
     notes.originalRange.superceded = true; // prevent destroyed(), second match
     landmark = notes.originalRange.landmark; // the old Landmark
   } else {
-    landmark = new Spark.Landmark;
-    if (options.created) {
-      // Run callback outside the current Spark.isolate's deps context.
-      Deps.nonreactive(function () {
-        options.created.call(landmark);
-      });
-    }
+    // Create Landmark outside the current Spark.isolate's deps context.
+    Deps.nonreactive(function () {
+      landmark = new controller;
+    });
   }
   notes.landmark = landmark;
 
@@ -1180,25 +1167,19 @@ Spark.createLandmark = function (options, htmlFunc) {
     html, Spark._ANNOTATION_LANDMARK, function (range) {
       if (! range) {
         // annotation not used
-        options.destroyed && options.destroyed.call(landmark);
+        landmark.finalize();
         return;
       }
 
       _.extend(range, {
-        preserve: preserve,
-        constant: !! options.constant,
-        rendered: options.rendered || function () {},
-        destroyed: options.destroyed || function () {},
         landmark: landmark,
         finalize: function () {
-          if (! this.superceded) {
-            this.landmark._range = null;
-            this.destroyed.call(this.landmark);
-          }
+          if (! this.superceded)
+            this.landmark._tearDown();
         }
       });
 
-      landmark._range = range;
+      landmark._setRange(range);
       renderer.landmarkRanges.push(range);
     });
 };

@@ -71,7 +71,68 @@
     return subclass;
   }
 
-  Spark.ControllerBase = function () {};
-  Spark.ControllerBase.extend = extendThis;
+  var nextLandmarkId = 1;
+
+  Spark.Landmark = function () {
+    this.id = nextLandmarkId++;
+    this._range = null;
+    this.setPreserve(this.preserve);
+  };
+  Spark.Landmark.extend = extendThis;
+
+  _.extend(Spark.Landmark.prototype, {
+    setPreserve: function (preserve) {
+      // Normalize preserve map from preserve into this._preservations.
+      var preservations = {};
+      if (_.isArray(preserve))
+        _.each(preserve, function (selector) {
+          preservations[selector] = true;
+        });
+      else
+        preservations = preserve || {};
+      for (var selector in preservations)
+        if (typeof preservations[selector] !== 'function')
+          preservations[selector] = function () { return true; };
+      this.preserve = preserve;
+      this._preservations = preservations;
+    },
+    firstNode: function () {
+      return this._range.firstNode();
+    },
+    lastNode: function () {
+      return this._range.lastNode();
+    },
+    find: function (selector) {
+      var r = this._range;
+      return DomUtils.findClipped(r.containerNode(), selector,
+                                  r.firstNode(), r.lastNode());
+    },
+    findAll: function (selector) {
+      var r = this._range;
+      return DomUtils.findAllClipped(r.containerNode(), selector,
+                                     r.firstNode(), r.lastNode());
+    },
+    hasDom: function () {
+      return !! this._range;
+    },
+    _setRange: function (range) {
+      this._range = range;
+    },
+    _tearDown: function () {
+      this._range = null;
+      // XXX walk the subclasses here so finalize() impls don't have to call super
+      this.finalize();
+    },
+    finalize: function () {
+      // do nothing.  subclasses may override.
+    },
+    rendered: function () {
+      // do nothing.  subclasses may override.
+    },
+    constant: false,
+    // this property is only read once, in the constructor
+    preserve: {}
+  });
+
 
 })();

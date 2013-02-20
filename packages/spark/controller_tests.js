@@ -2,15 +2,15 @@ Tinytest.add("spark - controller OO", function (test) {
 
   var array = [];
 
-  var FooController = Spark.ControllerBase.extend({
+  var FooController = Spark.Landmark.extend({
     constructor: function () {
       array.push('a');
-      Spark.ControllerBase.apply(this, arguments);
+      Spark.Landmark.apply(this, arguments);
       array.push('b');
     }
   });
 
-  var BarController = Spark.ControllerBase.extend({
+  var BarController = Spark.Landmark.extend({
     constructor: function () {
       array.push('c');
       FooController.apply(this, arguments);
