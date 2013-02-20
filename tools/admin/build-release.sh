@@ -4,53 +4,29 @@ set -e
 
 # cd to top level dir
 cd `dirname $0`
-cd ..
+cd ../..
 TOPDIR=$(pwd)
 
-UNAME=$(uname)
-ARCH=$(uname -m)
-
-TMPDIR=$(mktemp -d -t meteor-build-release-XXXXXXXX)
-trap 'rm -rf "$TMPDIR" >/dev/null 2>&1' 0
-
-# install it.
-echo "Installing."
-
-export PREFIX="$TMPDIR/install"
-mkdir -p "$PREFIX"
-./install.sh
-
-# get the version number.
-VERSION="$($PREFIX/bin/meteor --version | perl -pe 's/.+ ([^ \(]+)( \(.+\))*/$1/')"
-
-# tar it up
 OUTDIR="$TOPDIR/dist"
 rm -rf "$OUTDIR"
 mkdir -p "$OUTDIR"
-TARBALL="$OUTDIR/meteor-package-${UNAME}-${ARCH}-${VERSION}.tar.gz"
-echo "Tarring to: $TARBALL"
 
-tar -C "$PREFIX" --exclude .meteor/local -czf "$TARBALL" meteor
+tools/admin/build-engine-tarballs.sh
+ENGINE_VERSION=$(cat "$TOPDIR/.engine_version")
+tools/admin/build-package-tarballs.sh
+MANIFEST_PACKAGE_CHUNK=$(cat "$TOPDIR/.package_manifest_chunk")
 
+# don't keep these around since they get outdated
+rm "$TOPDIR/.engine_version"
+rm "$TOPDIR/.package_manifest_chunk"
 
-if [ "$UNAME" == "Linux" ] ; then
-    echo "Building debian package"
-    DEBDIR="$TMPDIR/debian"
-    mkdir "$DEBDIR"
-    cd "$DEBDIR"
-    cp "$TARBALL" "meteor_${VERSION}.orig.tar.gz"
-    mkdir "meteor-${VERSION}"
-    cd "meteor-${VERSION}"
-    cp -r "$TOPDIR/admin/debian" .
-    export TARBALL
-    dpkg-buildpackage
-    cp ../*.deb "$OUTDIR"
+cat > "$OUTDIR/manifest.json" <<ENDOFMANIFEST
+{
+  "engine": "$ENGINE_VERSION",
+  "packages": {
+$MANIFEST_PACKAGE_CHUNK
+  }
+}
+ENDOFMANIFEST
 
-
-    echo "Building RPM"
-    RPMDIR="$TMPDIR/rpm"
-    mkdir $RPMDIR
-    rpmbuild -bb --define="TARBALL $TARBALL" \
-        --define="_topdir $RPMDIR" "$TOPDIR/admin/meteor.spec"
-    cp $RPMDIR/RPMS/*/*.rpm "$OUTDIR"
-fi
+cat "$OUTDIR/manifest.json"

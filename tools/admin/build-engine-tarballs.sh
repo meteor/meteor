@@ -26,8 +26,7 @@ ln -s "$ENGINE_VERSION" "$TMPDIR/.meteor/engines/latest"
 ln -s engines/latest/bin/meteor "$TMPDIR/.meteor/meteor"
 
 # tar it up
-OUTDIR="$TOPDIR/dist"
-rm -rf "$OUTDIR"
+OUTDIR="$TOPDIR/dist/engine"
 mkdir -p "$OUTDIR"
 
 ENGINE_TARBALL="$OUTDIR/meteor-engine-${ENGINE_VERSION}-${UNAME}-${ARCH}.tar.gz"
@@ -37,3 +36,6 @@ tar -C "$TMPDIR/.meteor/engines" --exclude .meteor/local -czf "$ENGINE_TARBALL" 
 ENGINE_BOOTSTRAP_TARBALL="$OUTDIR/meteor-engine-bootstrap-${UNAME}-${ARCH}.tar.gz"
 echo "Tarring engine bootstrap to: $ENGINE_BOOTSTRAP_TARBALL"
 tar -C "$TMPDIR" --exclude .meteor/local -czf "$ENGINE_BOOTSTRAP_TARBALL" .meteor
+
+# A hacky (?) way to pass $ENGINE_VERSION back into build-release.sh
+echo $ENGINE_VERSION > $TOPDIR/.engine_version
