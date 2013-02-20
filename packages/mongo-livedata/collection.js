@@ -533,7 +533,7 @@ Meteor.Collection.prototype._validatedUpdate = function(
   _.each(mutator, function (params, op) {
     if (op[0] !== '$') {
       throw new Meteor.Error(
-        403, "Access denied. Can't replace document in restricted collection.");
+        403, "Access denied. In a resticted collection you can only update documents, not replace them. Use a Mongo update operator, such as '$set'.");
     } else {
       _.each(_.keys(params), function (field) {
         // treat dotted fields as if they are replacing their
