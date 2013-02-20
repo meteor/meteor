@@ -724,17 +724,17 @@ The user `userId` wants to insert the document `doc` into the
 collection. Return `true` if this should be allowed.
 {{/dtdd}}
 
-{{#dtdd "update(userId, docs, fields, modifier)"}}
+{{#dtdd "update(userId, docs, fieldNames, modifier)"}}
 The user `userId` wants to update some documents. Meteor has fetched the
 documents from the database and they are available in `docs` as an
 array. Return `true` if the user should be allowed to change these
 documents.
 
-Additional details about the proposed modification are in `fields` and
-`modifier`. `fields` is the top-level fields in the document that the
-client wishes to modify, for example `['name', 'score']`. `modifier` is
-the raw Mongo modifier that the client wants to execute, for example
-`{$set: {'name.first': "Alice"}, $inc: {score: 1}}`.
+Additional details about the proposed modification are in `fieldNames` and
+`modifier`. &emsp; `fieldNames` is the top-level fields in the document that the
+client wishes to modify, for example `['name',`&nbsp;`'score']`. &emsp; `modifier`
+is the raw Mongo modifier that the client wants to execute, for example `{$set:
+{'name.first': "Alice"}, $inc: {score: 1}}`.
 
 Only Mongo modifiers are supported (operations like `$set` and `$push`).
 If the user tries to replace the entire document rather than use
