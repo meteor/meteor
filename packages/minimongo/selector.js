@@ -45,6 +45,8 @@ var compileValueSelector = function (valueSelector) {
 
   if (valueSelector instanceof RegExp) {
     return function (value) {
+      if (value === undefined)
+        return false;
       return _anyIfArray(value, function (x) {
         return valueSelector.test(x);
       });
@@ -238,6 +240,9 @@ var VALUE_OPERATORS = {
 
   "$type": function (operand) {
     return function (value) {
+      // A nonexistent field is of no type.
+      if (value === undefined)
+        return false;
       // Definitely not _anyIfArrayPlus: $type: 4 only matches arrays that have
       // arrays as elements according to the Mongo docs.
       return _anyIfArray(value, function (x) {
@@ -264,6 +269,8 @@ var VALUE_OPERATORS = {
     }
 
     return function (value) {
+      if (value === undefined)
+        return false;
       return _anyIfArray(value, function (x) {
         return operand.test(x);
       });
@@ -314,12 +321,15 @@ LocalCollection._f = {
     if (typeof v === "function")
       // note that typeof(/x/) === "function"
       return 13;
+    if (v instanceof Date)
+      return 9;
+    if (EJSON.isBinary(v))
+      return 5;
+    if (v instanceof Meteor.Collection.ObjectID)
+      return 7;
     return 3; // object
 
     // XXX support some/all of these:
-    // 5, binary data
-    // 7, object id
-    // 9, date
     // 14, symbol
     // 15, javascript code with scope
     // 16, 18: 32-bit/64-bit integer
@@ -329,66 +339,8 @@ LocalCollection._f = {
   },
 
   // deep equality test: use for literal document and array matches
-  _equal: function (x, qval) {
-    var match = function (a, b) {
-      // scalars
-      if (typeof a === 'number' || typeof a === 'string' ||
-          typeof a === 'boolean' || a === undefined || a === null)
-        return a === b;
-      if (typeof a === 'function')
-        return false;
-
-      // OK, typeof a === 'object'
-      if (typeof b !== 'object')
-        return false;
-
-      // arrays
-      if (a instanceof Array) {
-        if (!(b instanceof Array))
-          return false;
-        if (a.length !== b.length)
-          return false;
-        for (var i = 0; i < a.length; i++)
-          if (!match(a[i],b[i]))
-            return false;
-        return true;
-      }
-
-      // objects
-/*
-      var unmatched_b_keys = 0;
-      for (var x in b)
-        unmatched_b_keys++;
-      for (var x in a) {
-        if (!(x in b) || !match(a[x], b[x]))
-          return false;
-        unmatched_b_keys--;
-      }
-      return unmatched_b_keys === 0;
-*/
-      // Follow Mongo in considering key order to be part of
-      // equality. Key enumeration order is actually not defined in
-      // the ecmascript spec but in practice most implementations
-      // preserve it. (The exception is Chrome, which preserves it
-      // usually, but not for keys that parse as ints.)
-      var b_keys = [];
-      for (var x in b)
-        b_keys.push(x);
-      var i = 0;
-      for (var x in a) {
-        if (i >= b_keys.length)
-          return false;
-        if (x !== b_keys[i])
-          return false;
-        if (!match(a[x], b[b_keys[i]]))
-          return false;
-        i++;
-      }
-      if (i !== b_keys.length)
-        return false;
-      return true;
-    };
-    return match(x, qval);
+  _equal: function (a, b) {
+    return EJSON.equals(a, b, {keyOrderSensitive: true});
   },
 
   // maps a type code to a value that can be used to sort values of
@@ -398,8 +350,26 @@ LocalCollection._f = {
     // XXX what is the correct sort position for Javascript code?
     // ('100' in the matrix below)
     // XXX minkey/maxkey
-    return [-1, 1, 2, 3, 4, 5, -1, 6, 7, 8, 0, 9, -1, 100, 2, 100, 1,
-            8, 1][t];
+    return [-1,  // (not a type)
+            1,   // number
+            2,   // string
+            3,   // object
+            4,   // array
+            5,   // binary
+            -1,  // deprecated
+            6,   // ObjectID
+            7,   // bool
+            8,   // Date
+            0,   // null
+            9,   // RegExp
+            -1,  // deprecated
+            100, // JS code
+            2,   // deprecated (symbol)
+            100, // JS code
+            1,   // 32-bit int
+            8,   // Mongo timestamp
+            1    // 64-bit int
+           ][t];
   },
 
   // compare two values of unknown type according to BSON ordering
@@ -418,9 +388,22 @@ LocalCollection._f = {
     if (oa !== ob)
       return oa < ob ? -1 : 1;
     if (ta !== tb)
-      // XXX need to implement this once we implement Symbol or
-      // integers, or once we implement both Date and Timestamp
+      // XXX need to implement this if we implement Symbol or integers, or
+      // Timestamp
       throw Error("Missing type coercion logic in _cmp");
+    if (ta === 7) { // ObjectID
+      // Convert to string.
+      ta = tb = 2;
+      a = a.toHexString();
+      b = b.toHexString();
+    }
+    if (ta === 9) { // Date
+      // Convert to millis.
+      ta = tb = 1;
+      a = a.getTime();
+      b = b.getTime();
+    }
+
     if (ta === 1) // double
       return a - b;
     if (tb === 2) // string
@@ -434,7 +417,7 @@ LocalCollection._f = {
           ret.push(obj[key]);
         }
         return ret;
-      }
+      };
       return LocalCollection._f._cmp(to_array(a), to_array(b));
     }
     if (ta === 4) { // Array
@@ -448,13 +431,23 @@ LocalCollection._f = {
           return s;
       }
     }
-    // 5: binary data
-    // 7: object id
+    if (ta === 5) { // binary
+      // Surprisingly, a small binary blob is always less than a large one in
+      // Mongo.
+      if (a.length !== b.length)
+        return a.length - b.length;
+      for (i = 0; i < a.length; i++) {
+        if (a[i] < b[i])
+          return -1;
+        if (a[i] > b[i])
+          return 1;
+      }
+      return 0;
+    }
     if (ta === 8) { // boolean
       if (a) return b ? 0 : 1;
       return b ? -1 : 0;
     }
-    // 9: date
     if (ta === 10) // null
       return 0;
     if (ta === 11) // regexp
@@ -469,6 +462,7 @@ LocalCollection._f = {
     // 127: maxkey
     if (ta === 13) // javascript code
       throw Error("Sorting not supported on Javascript code"); // XXX
+    throw Error("Unknown type to sort");
   }
 };
 
@@ -576,8 +570,11 @@ LocalCollection._compileSelector = function (selector) {
     return function (doc) {return selector.call(doc);};
 
   // shorthand -- scalars match _id
-  if (LocalCollection._selectorIsId(selector))
-    return function (doc) { return doc._id === selector;};
+  if (LocalCollection._selectorIsId(selector)) {
+    return function (doc) {
+      return EJSON.equals(doc._id, selector);
+    };
+  }
 
   // protect against dangerous selectors.  falsey and {_id: falsey} are both
   // likely programmer error, and not what you want, particularly for
@@ -590,11 +587,6 @@ LocalCollection._compileSelector = function (selector) {
     throw new Error("Invalid selector: " + selector);
 
   return compileDocumentSelector(selector);
-};
-
-// Is this selector just shorthand for lookup by _id?
-LocalCollection._selectorIsId = function (selector) {
-  return (typeof selector === "string") || (typeof selector === "number");
 };
 
 // Give a sort spec, which can be in any of these forms:

@@ -1,3 +1,5 @@
+Meteor._routePolicy.declare('/sockjs/', 'network');
+
 // unique id for this instantiation of the server. If this changes
 // between client reconnects, the client will reload. You can set the
 // environment variable "SERVER_ID" to control this. For example, if
@@ -5,7 +7,7 @@
 // custom serverId which you only change when something worth pushing
 // to clients immediately happens.
 __meteor_runtime_config__.serverId =
-  process.env.SERVER_ID ? process.env.SERVER_ID : Meteor.uuid();
+  process.env.SERVER_ID ? process.env.SERVER_ID : Random.id();
 
 Meteor._StreamServer = function () {
   var self = this;

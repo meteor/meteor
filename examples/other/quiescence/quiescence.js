@@ -7,12 +7,11 @@ if (Meteor.isServer) {
     var self = this;
     var publishTime = function () {
       var when = + new Date;
-      self.set("time", "now", {timestamp: when});
-      self.flush();
+      self.changed("time", "now", {timestamp: when});
     };
+    self.added("time", "now", {});
     publishTime();
-    self.complete();
-    self.flush();
+    self.ready();
     var interval = Meteor.setInterval(publishTime, 1000);
     self.onStop(function () {
       Meteor.clearInterval(interval);
@@ -70,7 +69,7 @@ if (Meteor.isServer) {
   };
   Template.updated.events({
     'click #update-button': function () {
-      var num = Math.round(Math.random()*100);
+      var num = Math.round(Random.fraction()*100);
       Meteor.call('setMagic', num);
     }
   });

@@ -1,7 +1,7 @@
 Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
   var http = __meteor_bootstrap__.require('http');
-  var foobookId = Meteor.uuid();
-  var state = Meteor.uuid();
+  var foobookId = Random.id();
+  var state = Random.id();
 
   if (!Accounts.loginServiceConfiguration.findOne({service: 'foobook'}))
     Accounts.loginServiceConfiguration.insert({service: 'foobook'});
@@ -42,8 +42,8 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
 
 Tinytest.add("oauth2 - error in user creation", function (test) {
   var http = __meteor_bootstrap__.require('http');
-  var state = Meteor.uuid();
-  var failbookId = Meteor.uuid();
+  var state = Random.id();
+  var failbookId = Random.id();
 
   if (!Accounts.loginServiceConfiguration.findOne({service: 'failbook'}))
     Accounts.loginServiceConfiguration.insert({service: 'failbook'});

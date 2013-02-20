@@ -11,7 +11,7 @@
       callback && callback(new Accounts.ConfigError("Service not configured"));
       return;
     }
-    var state = Meteor.uuid();
+    var state = Random.id();
 
     var scope = (options && options.requestPermissions) || [];
     var flatScope = _.map(scope, encodeURIComponent).join('+');

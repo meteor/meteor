@@ -36,7 +36,7 @@ _.extend(Meteor._StubStream.prototype, {
     var self = this;
 
     if (typeof data === 'object') {
-      data = JSON.stringify(data);
+      data = EJSON.stringify(data);
     }
 
     _.each(self.callbacks['message'], function (cb) {

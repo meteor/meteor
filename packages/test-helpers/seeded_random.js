@@ -5,7 +5,7 @@ var SeededRandom = function(seed) { // seed may be a string or any type
     return new SeededRandom(seed);
 
   seed = seed || "seed";
-  this.gen = new Meteor._Alea(seed); // from uuid.js
+  this.gen = new Random._Alea(seed); // from random.js
 };
 SeededRandom.prototype.next = function() {
   return this.gen();
