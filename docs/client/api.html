@@ -45,7 +45,8 @@ that Meteor will call each time a client subscribes to the name.
 
 Publish functions can return an instance or array of
 [`Collection.Cursor`](#meteor_collection_cursor), in which case Meteor
-will publish that cursor's documents.
+will publish that cursor's documents. You can return only one cursor
+for each collection when returning an array of cursors.
 
     // server: publish the rooms collection, minus secret info.
     Meteor.publish("rooms", function () {
