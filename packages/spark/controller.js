@@ -81,6 +81,9 @@
   Spark.Landmark.extend = extendThis;
 
   _.extend(Spark.Landmark.prototype, {
+    init: function () {
+      // override this
+    },
     setPreserve: function (preserve) {
       // Normalize preserve map from preserve into this._preservations.
       var preservations = {};

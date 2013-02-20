@@ -1,7 +1,7 @@
 (function () {
 
 FieldSet = Spark.Landmark.extend({
-  constructor: function () {
+  init: function () {
     this._fieldValues = new ReactiveDict; // XXX get migration data
   },
   get: function (key) {
