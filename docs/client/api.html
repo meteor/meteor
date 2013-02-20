@@ -1001,7 +1001,7 @@ The document identified by `id` was removed from the result set.
 `observeChanges` is significantly more efficient if you do not use
 `addedBefore` or `movedBefore`.
 
-Before `observeChanges` returns, `added` (or `addedAt`) will be called
+Before `observeChanges` returns, `added` (or `addedBefore`) will be called
 zero or more times to deliver the initial results of the query.
 
 `observeChanges` returns a live query handle, which is an object with
