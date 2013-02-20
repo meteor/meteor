@@ -816,9 +816,9 @@ _.extend(Meteor._LivedataSubscription.prototype, {
       return;
     }
 
-    // SPECIAL CASE: Instead of writing their own callbacks that invoke
+   // SPECIAL CASE: Instead of writing their own callbacks that invoke
     // this.added/changed/ready/etc, the user can just return a collection
-    // cursor from the publish function; we call its _publishCursor method which
+    // cursor or array of cursors from the publish function; we call its _publishCursor method which
     // starts observing the cursor and publishes the results.
     //
     // XXX This uses an undocumented interface which only the Mongo cursor
@@ -831,8 +831,34 @@ _.extend(Meteor._LivedataSubscription.prototype, {
     //       reactiveThingy.publishMe();
     //     });
     //   };
-    if (res && res._publishCursor)
-      res._publishCursor(self);
+    if (res) {
+      if (res._publishCursor) {
+        res._publishCursor(self);
+        // _publishCursor only returns after the initial added callbacks have run.
+        // mark subscription as ready.
+        self.ready();
+      } else if (_.isArray(res)) {
+        // check all the elements are cursors
+        if (!_.every(res, function (cur) { return cur && cur._publishCursor; })) {
+          self.error(new Meteor.Error(500, "Pulish function returned an array of non-Cursors"));
+          return;
+        }
+        // find duplicate collection names
+        var dups = [];
+        _.each(_.countBy(res, function (cur) { return cur._getCollectionName(); }),
+          function (count, col) {
+            if (count > 1) dups.push(col);
+          });
+
+        if (dups.length == 0) { // no duplicates
+          _.each(res, function (cur) {
+            cur._publishCursor(self);
+          });
+          self.ready();
+        } else
+          self.error(new Meteor.Error(500, "Publish function returned multiple cursors for one collection", dups));
+      }
+    }
   },
 
   // This calls all stop callbacks and prevents the handler from updating any
