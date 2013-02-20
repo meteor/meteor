@@ -398,13 +398,17 @@ Cursor.prototype._publishCursor = function (sub) {
     }
   });
 
-  // observeChanges only returns after the initial added callbacks have run.
-  // mark subscription as ready.
-  sub.ready();
-
   // register stop callback (expects lambda w/ no args).
   sub.onStop(function () {observeHandle.stop();});
 };
+
+// When you call Meteor.publish() with a function that returns an array of Cursor, we need
+// to check uniqueness of Cursor for each collection in that array. We can accomplish it through
+// Cursor collection name comparison.
+Cursor.prototype._getCollectionName = function () {
+  var self = this;
+  return self._cursorDescription.collectionName;
+}
 
 Cursor.prototype.observe = function (callbacks) {
   var self = this;
