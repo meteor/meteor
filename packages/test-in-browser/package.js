@@ -8,6 +8,7 @@ Package.on_use(function (api) {
   // XXX this should go away, and there should be a clean interface
   // that tinytest and the driver both implement?
   api.use('tinytest');
+  api.use('bootstrap');
 
   api.use(['spark', 'livedata', 'templating'], 'client');
 

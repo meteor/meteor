@@ -12,7 +12,7 @@
       return;
     }
 
-    var state = Meteor.uuid();
+    var state = Random.id();
 
     // always need this to get user id from google.
     var requiredScope = ['https://www.googleapis.com/auth/userinfo.profile'];

@@ -11,6 +11,30 @@ Meteor.startup(function () {
   });
 });
 
+Template.progressBar.running = function () {
+  countDeps.addCurrentContext();
+  return passedCount + failedCount < totalCount;
+};
+
+Template.progressBar.percentPass = function () {
+  countDeps.addCurrentContext();
+  if (totalCount === 0)
+    return 0;
+  return Math.floor(100*passedCount/totalCount);
+};
+
+Template.progressBar.percentFail = function () {
+  countDeps.addCurrentContext();
+  if (totalCount === 0)
+    return 0;
+  return Math.ceil(100*failedCount/totalCount);
+};
+
+Template.progressBar.anyFail = function () {
+  countDeps.addCurrentContext();
+  return failedCount > 0;
+};
+
 Template.test_table.running = function() {
   resultDeps.addCurrentContext();
   return running;
@@ -206,6 +230,10 @@ Template.event.is_debuggable = function() {
 var resultTree = [];
 var failedTests = [];
 var resultDeps = new Meteor.deps._ContextSet;
+var countDeps = new Meteor.deps._ContextSet;
+var totalCount = 0;
+var passedCount = 0;
+var failedCount = 0;
 
 var _resultsChanged = function() {
   resultDeps.invalidateAll();
@@ -276,6 +304,8 @@ var _findTestForResults = function (results) {
     var fullName = nameParts.join(' - ');
     test = {name: testName, parent: group, server: server, fullName: fullName};
     group.tests.push(test);
+    totalCount++;
+    countDeps.invalidateAll();
   }
 
   return test;
@@ -301,23 +331,35 @@ var reportResults = function(results) {
     });
     test.events = out;
   }
-
-  if (_testStatus(test) === "failed") {
+  var status = _testStatus(test);
+  if (status === "failed") {
+    failedCount++;
+    countDeps.invalidateAll();
     // Expand a failed test (but only set this if the user hasn't clicked on the
     // test name yet).
     if (test.expanded === undefined)
       test.expanded = true;
     if (!_.contains(failedTests, test.fullName))
       failedTests.push(test.fullName);
+  } else if (status === "succeeded") {
+    passedCount++;
+    countDeps.invalidateAll();
   }
 
   _.defer(_throttled_update);
 };
 
 // forget all of the events for a particular test
-var forgetEvents = function (test) {
-  var test = _findTestForResults(test);
-
+var forgetEvents = function (results) {
+  var test = _findTestForResults(results);
+  var status = _testStatus(test);
+  if (status === "failed") {
+    failedCount--;
+    countDeps.invalidateAll();
+  } else if (status === "succeeded") {
+    passedCount--;
+    countDeps.invalidateAll();
+  }
   delete test.events;
   _resultsChanged();
 };

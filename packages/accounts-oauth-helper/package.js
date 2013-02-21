@@ -5,6 +5,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use('accounts-base', ['client', 'server']);
+  api.use('routepolicy', 'server');
 
   api.add_files('oauth_common.js', ['client', 'server']);
   api.add_files('oauth_client.js', 'client');

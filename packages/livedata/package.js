@@ -4,8 +4,8 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['stream', 'uuid']);
-  api.use(['json', 'underscore', 'deps', 'logging'], ['client', 'server']);
+  api.use(['stream', 'random']);
+  api.use(['ejson', 'json', 'underscore', 'deps', 'logging'], ['client', 'server']);
 
   // livedata_connection.js uses a Minimongo collection internally to
   // manage the current set of subscriptions.
@@ -34,4 +34,6 @@ Package.on_test(function (api) {
   api.add_files('livedata_connection_tests.js', ['client']);
   api.add_files('livedata_tests.js', ['client', 'server']);
   api.add_files('livedata_test_service.js', ['client', 'server']);
+  api.add_files('session_view_tests.js', ['server']);
+  api.add_files('crossbar_tests.js', ['server']);
 });

@@ -8,7 +8,7 @@ Meteor._Stream = function (url) {
   self.socket = null;
   self.event_callbacks = {}; // name -> [callback]
   self.sent_update_available = false;
-  self.force_fail = false; // for debugging.
+  self._forcedToDisconnect = false;
 
   //// Constants
 
@@ -94,7 +94,7 @@ _.extend(Meteor._Stream, {
       // allows different stream connections to connect to different hostnames
       // and avoid browser per-hostname connection limits.
       host = host.replace(/\*/g, function () {
-        return Math.floor(Math.random()*10);
+        return Math.floor(Random.fraction()*10);
       });
 
       return newScheme + '://' + host + rest;
@@ -150,14 +150,14 @@ _.extend(Meteor._Stream.prototype, {
     if (self.current_status.connected) {
       if (options && options._force) {
         // force reconnect.
-        self._disconnected();
+        self._lostConnection();
       } // else, noop.
       return;
     }
 
     // if we're mid-connection, stop it.
     if (self.current_status.status === "connecting") {
-      self._fake_connect_failed();
+      self._lostConnection();
     }
 
     if (self.retry_timer)
@@ -169,15 +169,6 @@ _.extend(Meteor._Stream.prototype, {
     self._retry_now();
   },
 
-  // Undocumented function for testing -- as long as the flag is set,
-  // the connection is forced to be disconnected
-  forceDisconnect: function (flag) {
-    var self = this;
-    self.force_fail = flag;
-    if (flag && self.socket)
-      self.socket.close();
-  },
-
   _connected: function (welcome_message) {
     var self = this;
 
@@ -185,8 +176,6 @@ _.extend(Meteor._Stream.prototype, {
       clearTimeout(self.connection_timer);
       self.connection_timer = null;
     }
-    self._heartbeat_received();
-
 
     if (self.current_status.connected) {
       // already connected. do nothing. this probably shouldn't happen.
@@ -225,23 +214,20 @@ _.extend(Meteor._Stream.prototype, {
 
   },
 
-  _cleanup_socket: function () {
+  _cleanupSocket: function () {
     var self = this;
 
+    self._clearConnectionAndHeartbeatTimers();
     if (self.socket) {
       self.socket.onmessage = self.socket.onclose
         = self.socket.onerror = function () {};
       self.socket.close();
-
-      var old_socket = self.socket;
       self.socket = null;
-
     }
   },
 
-  _disconnected: function () {
+  _clearConnectionAndHeartbeatTimers: function () {
     var self = this;
-
     if (self.connection_timer) {
       clearTimeout(self.connection_timer);
       self.connection_timer = null;
@@ -250,24 +236,48 @@ _.extend(Meteor._Stream.prototype, {
       clearTimeout(self.heartbeat_timer);
       self.heartbeat_timer = null;
     }
-    self._cleanup_socket();
-    self._retry_later(); // sets status. no need to do it here.
   },
 
-  _fake_connect_failed: function () {
+  // Permanently disconnect a stream.
+  forceDisconnect: function (optionalErrorMessage) {
     var self = this;
-    self._cleanup_socket();
-    self._disconnected();
+    self._forcedToDisconnect = true;
+    self._cleanupSocket();
+    if (self.retry_timer) {
+      clearTimeout(self.retry_timer);
+      self.retry_timer = null;
+    }
+    self.current_status = {
+      status: "failed",
+      connected: false,
+      retryCount: 0,
+      // XXX Backwards compatibility only. Remove this before 1.0.
+      retry_count: 0
+    };
+    if (optionalErrorMessage)
+      self.current_status.reason = optionalErrorMessage;
+    self.status_changed();
+  },
+
+  _lostConnection: function () {
+    var self = this;
+
+    self._cleanupSocket();
+    self._retry_later(); // sets status. no need to do it here.
   },
 
   _heartbeat_timeout: function () {
     var self = this;
     Meteor._debug("Connection timeout. No heartbeat received.");
-    self._fake_connect_failed();
+    self._lostConnection();
   },
 
   _heartbeat_received: function () {
     var self = this;
+    // If we've already permanently shut down this stream, the timeout is
+    // already cleared, and we don't need to set it again.
+    if (self._forcedToDisconnect)
+      return;
     if (self.heartbeat_timer)
       clearTimeout(self.heartbeat_timer);
     self.heartbeat_timer = setTimeout(
@@ -286,7 +296,7 @@ _.extend(Meteor._Stream.prototype, {
       self.RETRY_BASE_TIMEOUT * Math.pow(self.RETRY_EXPONENT, count));
     // fuzz the timeout randomly, to avoid reconnect storms when a
     // server goes down.
-    timeout = timeout * ((Math.random() * self.RETRY_FUZZ) +
+    timeout = timeout * ((Random.fraction() * self.RETRY_FUZZ) +
                          (1 - self.RETRY_FUZZ/2));
     return timeout;
   },
@@ -310,7 +320,7 @@ _.extend(Meteor._Stream.prototype, {
   _retry_now: function () {
     var self = this;
 
-    if (self.force_fail)
+    if (self._forcedToDisconnect)
       return;
 
     self.current_status.retryCount += 1;
@@ -328,7 +338,7 @@ _.extend(Meteor._Stream.prototype, {
 
   _launch_connection: function () {
     var self = this;
-    self._cleanup_socket(); // cleanup the old socket, if there was one.
+    self._cleanupSocket(); // cleanup the old socket, if there was one.
 
     // Convert raw URL to SockJS URL each time we open a connection, so that we
     // can connect to random hostnames and get around browser per-host
@@ -342,6 +352,8 @@ _.extend(Meteor._Stream.prototype, {
           'xdr-polling', 'xhr-polling', 'iframe-xhr-polling', 'jsonp-polling'
         ]});
     self.socket.onmessage = function (data) {
+      self._heartbeat_received();
+
       // first message we get when we're connecting goes to _connected,
       // which connects us. All subsequent messages (while connected) go to
       // the callback.
@@ -351,12 +363,10 @@ _.extend(Meteor._Stream.prototype, {
         _.each(self.event_callbacks.message, function (callback) {
           callback(data.data);
         });
-
-      self._heartbeat_received();
     };
     self.socket.onclose = function () {
       // Meteor._debug("stream disconnect", _.toArray(arguments), (new Date()).toDateString());
-      self._disconnected();
+      self._lostConnection();
     };
     self.socket.onerror = function () {
       // XXX is this ever called?
@@ -370,7 +380,7 @@ _.extend(Meteor._Stream.prototype, {
     if (self.connection_timer)
       clearTimeout(self.connection_timer);
     self.connection_timer = setTimeout(
-      _.bind(self._fake_connect_failed, self),
+      _.bind(self._lostConnection, self),
       self.CONNECT_TIMEOUT);
   }
 });

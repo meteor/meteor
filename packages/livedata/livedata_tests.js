@@ -1,4 +1,5 @@
 // XXX should check error codes
+(function () {
 var failure = function (test, code, reason) {
   return function (error, result) {
     test.equal(result, undefined);
@@ -27,8 +28,24 @@ Tinytest.add("livedata - Meteor.Error", function (test) {
   test.equal(error.details, "puppies");
 });
 
+if (Meteor.isServer) {
+  Tinytest.add("livedata - version negotiation", function (test) {
+    var versionCheck = function (clientVersions, serverVersions, expected) {
+      test.equal(
+        Meteor._LivedataServer._calculateVersion(clientVersions,
+                                                 serverVersions),
+        expected);
+    };
+
+    versionCheck(["A", "B", "C"], ["A", "B", "C"], "A");
+    versionCheck(["B", "C"], ["A", "B", "C"], "B");
+    versionCheck(["A", "B", "C"], ["B", "C"], "B");
+    versionCheck(["foo", "bar", "baz"], ["A", "B", "C"], "A");
+  });
+}
+
 Tinytest.add("livedata - methods with colliding names", function (test) {
-  var x = LocalCollection.uuid();
+  var x = Random.id();
   var m = {};
   m[x] = function () {};
   Meteor.methods(m);
@@ -37,6 +54,17 @@ Tinytest.add("livedata - methods with colliding names", function (test) {
     Meteor.methods(m);
   });
 });
+
+var echoTest = function (item) {
+  return function (test, expect) {
+    if (Meteor.isServer)
+      test.equal(Meteor.call("echo", item), [item]);
+    if (Meteor.isClient)
+      test.equal(Meteor.call("echo", item), undefined);
+
+    test.equal(Meteor.call("echo", item, expect(undefined, [item])), undefined);
+  };
+};
 
 testAsyncMulti("livedata - basic method invocation", [
   // Unknown methods
@@ -86,14 +114,14 @@ testAsyncMulti("livedata - basic method invocation", [
     test.equal(Meteor.call("echo", expect(undefined, [])), undefined);
   },
 
-  function (test, expect) {
-    if (Meteor.isServer)
-      test.equal(Meteor.call("echo", 12), [12]);
-    if (Meteor.isClient)
-      test.equal(Meteor.call("echo", 12), undefined);
-
-    test.equal(Meteor.call("echo", 12, expect(undefined, [12])), undefined);
-  },
+  echoTest(new Date()),
+  echoTest({d: new Date(), s: "foobarbaz"}),
+  echoTest([new Date(), "foobarbaz"]),
+  echoTest(new Meteor.Collection.ObjectID()),
+  echoTest({o: new Meteor.Collection.ObjectID()}),
+  echoTest({$date: 30}), // literal
+  echoTest({$literal: {$date: 30}}),
+  echoTest(12),
 
   function (test, expect) {
     if (Meteor.isServer)
@@ -109,7 +137,7 @@ testAsyncMulti("livedata - basic method invocation", [
   function (test, expect) {
     if (Meteor.isClient) {
       // For test isolation
-      var token = Meteor.uuid();
+      var token = Random.id();
       Meteor.apply(
         "delayedTrue", [token], {wait: false}, expect(function(err, res) {
           test.equal(res, false);
@@ -121,7 +149,7 @@ testAsyncMulti("livedata - basic method invocation", [
   // test that `wait: true` is respected
   function(test, expect) {
     if (Meteor.isClient) {
-      var token = Meteor.uuid();
+      var token = Random.id();
       Meteor.apply(
         "delayedTrue", [token], {wait: true}, expect(function(err, res) {
           test.equal(res, true);
@@ -295,55 +323,62 @@ if (Meteor.isClient) {
       // A helper for testing incoming set and unset messages
       // XXX should this be extracted as a general helper together with
       // eavesdropOnCollection?
-      var testSetAndUnset = function(expectation) {
-        test.equal(_.map(messages, function(msg) {
-          var result = {};
-          if (msg.set)
-            result.set = msg.set.name;
-          if (msg.unset)
-            result.unset = true;
-          return result;
-        }), expectation);
+      var expectMessages = function(expectedAddedMessageCount,
+                                    expectedRemovedMessageCount,
+                                    expectedNamesInCollection) {
+        var actualAddedMessageCount = 0;
+        var actualRemovedMessageCount = 0;
+        _.each(messages, function (msg) {
+          if (msg.msg === 'added')
+            ++actualAddedMessageCount;
+          else if (msg.msg === 'removed')
+            ++actualRemovedMessageCount;
+          else
+            test.fail({unexpected: JSON.stringify(msg)});
+        });
+        test.equal(actualAddedMessageCount, expectedAddedMessageCount);
+        test.equal(actualRemovedMessageCount, expectedRemovedMessageCount);
+        expectedNamesInCollection.sort();
+        test.equal(_.pluck(objectsWithUsers.find({}, {sort: ['name']}).fetch(),
+                           'name'),
+                   expectedNamesInCollection);
         messages.length = 0; // clear messages without creating a new object
       };
 
       Meteor.subscribe("objectsWithUsers", expect(function() {
-        testSetAndUnset([{set: "owned by none"}]);
-        test.equal(objectsWithUsers.find().count(), 1);
-
+        expectMessages(1, 0, ["owned by none"]);
         Meteor.apply("setUserId", [1], {wait: true}, afterFirstSetUserId);
       }));
 
       var afterFirstSetUserId = expect(function() {
-        testSetAndUnset([
-          {unset: true},
-          {set: "owned by one - a"},
-          {set: "owned by one/two - a"},
-          {set: "owned by one/two - b"}]);
-        test.equal(objectsWithUsers.find().count(), 3);
-
+        expectMessages(3, 1, [
+          "owned by one - a",
+          "owned by one/two - a",
+          "owned by one/two - b"]);
         Meteor.apply("setUserId", [2], {wait: true}, afterSecondSetUserId);
       });
 
       var afterSecondSetUserId = expect(function() {
-        testSetAndUnset([
-          {unset: true},
-          {set: "owned by two - a"},
-          {set: "owned by two - b"}]);
-        test.equal(objectsWithUsers.find().count(), 4);
-
+        expectMessages(2, 1, [
+          "owned by one/two - a",
+          "owned by one/two - b",
+          "owned by two - a",
+          "owned by two - b"]);
         Meteor.apply("setUserId", [2], {wait: true}, afterThirdSetUserId);
       });
 
       var afterThirdSetUserId = expect(function() {
         // Nothing should have been sent since the results of the
         // query are the same ("don't flap data on the wire")
-        testSetAndUnset([]);
-        test.equal(objectsWithUsers.find().count(), 4);
+        expectMessages(0, 0, [
+          "owned by one/two - a",
+          "owned by one/two - b",
+          "owned by two - a",
+          "owned by two - b"]);
         undoEavesdrop();
       });
     }, function(test, expect) {
-      var key = Meteor.uuid();
+      var key = Random.id();
       Meteor.subscribe("recordUserIdOnStop", key);
       Meteor.apply("setUserId", [100], {wait: true}, expect(function () {}));
       Meteor.apply("setUserId", [101], {wait: true}, expect(function () {}));
@@ -362,6 +397,115 @@ Tinytest.add("livedata - setUserId error when called from server", function(test
   }
 });
 
+if (Meteor.isClient) {
+  testAsyncMulti("livedata - overlapping universal subs", [
+    function (test, expect) {
+      var coll = new Meteor.Collection("overlappingUniversalSubs");
+      var token = Random.id();
+      test.isFalse(coll.findOne(token));
+      Meteor.call("testOverlappingSubs", token, expect(function (err) {
+        test.isFalse(err);
+        test.isTrue(coll.findOne(token));
+      }));
+    }
+  ]);
+
+  testAsyncMulti("livedata - runtime universal sub creation", [
+    function (test, expect) {
+      var coll = new Meteor.Collection("runtimeSubCreation");
+      var token = Random.id();
+      test.isFalse(coll.findOne(token));
+      Meteor.call("runtimeUniversalSubCreation", token, expect(function (err) {
+        test.isFalse(err);
+        test.isTrue(coll.findOne(token));
+      }));
+    }
+  ]);
+
+  testAsyncMulti("livedata - no setUserId after unblock", [
+    function (test, expect) {
+      Meteor.call("setUserIdAfterUnblock", expect(function (err, result) {
+        test.isFalse(err);
+        test.isTrue(result);
+      }));
+    }
+  ]);
+
+  testAsyncMulti("livedata - publisher errors", (function () {
+    // Use a separate connection so that we can safely check to see if
+    // conn._subscriptions is empty.
+    var conn = new Meteor._LivedataConnection('/',
+                                              {reloadWithOutstanding: true});
+    var collName = Random.id();
+    var coll = new Meteor.Collection(collName, {manager: conn});
+    var errorFromRerun;
+    var gotErrorFromStopper = false;
+    return [
+      function (test, expect) {
+        var testSubError = function (options) {
+          conn.subscribe("publisherErrors", collName, options, {
+            onReady: expect(),
+            onError: expect(
+              failure(test,
+                      options.internalError ? 500 : 412,
+                      options.internalError ? "Internal server error"
+                                            : "Explicit error"))
+          });
+        };
+        testSubError({throwInHandler: true});
+        testSubError({throwInHandler: true, internalError: true});
+        testSubError({errorInHandler: true});
+        testSubError({errorInHandler: true, internalError: true});
+        testSubError({errorLater: true});
+        testSubError({errorLater: true, internalError: true});
+      },
+      function (test, expect) {
+        test.equal(coll.find().count(), 0);
+        test.equal(_.size(conn._subscriptions), 0);  // white-box test
+
+        conn.subscribe("publisherErrors",
+                       collName, {throwWhenUserIdSet: true}, {
+          onReady: expect(),
+          onError: function (error) {
+            errorFromRerun = error;
+          }
+        });
+      },
+      function (test, expect) {
+        // Because the last subscription is ready, we should have a document.
+        test.equal(coll.find().count(), 1);
+        test.isFalse(errorFromRerun);
+        test.equal(_.size(conn._subscriptions), 1);  // white-box test
+        conn.call('setUserId', 'bla', expect(function(){}));
+      },
+      function (test, expect) {
+        // Now that we've re-run, we should have stopped the subscription,
+        // gotten a error, and lost the document.
+        test.equal(coll.find().count(), 0);
+        test.isTrue(errorFromRerun);
+        test.instanceOf(errorFromRerun, Meteor.Error);
+        test.equal(errorFromRerun.error, 412);
+        test.equal(errorFromRerun.reason, "Explicit error");
+        test.equal(_.size(conn._subscriptions), 0);  // white-box test
+
+        conn.subscribe("publisherErrors", collName, {stopInHandler: true}, {
+          onError: function() { gotErrorFromStopper = true; }
+        });
+        // Call a method. This method won't be processed until the publisher's
+        // function returns, so blocking on it being done ensures that we've
+        // gotten the removed/nosub/etc.
+        conn.call('nothing', expect(function(){}));
+      },
+      function (test, expect) {
+        test.equal(coll.find().count(), 0);
+        // sub.stop does NOT call onError.
+        test.isFalse(gotErrorFromStopper);
+        test.equal(_.size(conn._subscriptions), 0);  // white-box test
+        conn._stream.forceDisconnect();
+      }
+    ];})());
+}
+
 // XXX some things to test in greater detail:
 // staying in simulation mode
 // time warp
@@ -377,3 +521,4 @@ Tinytest.add("livedata - setUserId error when called from server", function(test
 // reconnection not resulting in method re-execution
 // reconnection tolerating all kinds of lost messages (including data)
 // [probably lots more]
+})();
