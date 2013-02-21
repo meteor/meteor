@@ -1486,6 +1486,103 @@ Tinytest.add("spark - landmark parents", function (test) {
 });
 
 
+Tinytest.add("spark - events on landmarks", function (test) {
+  var x = [];
+  var expect = function (what) {
+    test.equal(x.sort(), what.sort());
+    x = [];
+  };
+
+  var contexts = {
+    kitten: {kitten: true},
+    puppy: {puppy: true},
+    dolphin: {dolphin: true}
+  };
+
+  var handler = function (type, clsname, testname, data) {
+    return function (evt, d) {
+      x.push(testname + "@" + this.serial);
+      test.instanceOf(this, controllers[clsname]);
+      test.equal(evt.type, type);
+      test.equal(d, data);
+    };
+  };
+
+  var nextSerial = 0;
+  var CA = Spark.Landmark.extend({
+    init: function () {
+      this.serial = nextSerial++;
+    },
+    events: {
+      'click .x': handler("click", "CA", "cax", contexts.dolphin),
+      'click .y': 'dostuff',
+      'click .x ': handler("click", "CA", "cax2", contexts.dolphin)
+    },
+    dostuff: handler("click", "CA", "cay", contexts.puppy),
+    dostuff2: handler("click", "CC", "ccw", contexts.puppy)
+  });
+
+  var CB = CA.extend({
+    /* Nothing (test that CA events aren't installed twice) */
+  });
+
+  var CC = CB.extend({
+    events: {
+      'click .x': handler("click", "CA", "ccx", contexts.dolphin),
+      'click .z': 'zzz',
+      'click .w': 'dostuff2'
+    },
+    zzz: handler("click", "CC", "ccz", contexts.puppy)
+  });
+
+  var controllers = {
+    CA: CA,
+    CB: CB,
+    CC: CC
+  };
+
+  var div = OnscreenDiv(Spark.render(function () {
+    var html = Spark.attachController(CA, function () {
+      return Spark.labelBranch("bbranch", function () {
+        return Spark.attachController(CB, function () {
+          return Spark.labelBranch("cbranch", function () {
+            return Spark.attachController(CC, function () {
+              var html = "<div class='x' id='idx'></div>";
+              html = Spark.setDataContext(contexts.dolphin, html);
+              html +=
+                "<div class='y' id='idy'></div>" +
+                "<div class='z' id='idz'></div>" +
+                "<div class='w' id='idw'></div>";
+              html = Spark.setDataContext(contexts.puppy, html);
+              return html;
+            });
+          });
+        });
+      });
+    });
+    return Spark.setDataContext(contexts.kitten, html);
+  }));
+
+  var eltx = document.getElementById('idx');
+  var elty = document.getElementById('idy');
+  var eltz = document.getElementById('idz');
+  var eltw = document.getElementById('idw');
+
+  clickElement(eltx);
+  expect(["cax@0", "cax@1", "cax@2",
+          "cax2@0", "cax2@1", "cax2@2",
+          "ccx@2"]);
+  clickElement(elty);
+  expect(["cay@0", "cay@1", "cay@2"]);
+  clickElement(eltz);
+  expect(["ccz@2"]);
+  clickElement(eltw);
+  expect(["ccw@2"]);
+
+  div.kill();
+  Meteor.flush();
+});
+
 Tinytest.add("spark - preserve copies attributes", function(test) {
   // make sure attributes are correctly changed (i.e. copied)
   // when preserving old nodes, either because they are labeled
