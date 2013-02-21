@@ -71,7 +71,7 @@ Template.api.ejsonParse = {
   name: "EJSON.parse(str)",
   locus: "Anywhere",
   args: [ {name: "str", type: "String", descr: "A string to parse into an EJSON value."} ],
-  descr: ["Parse a string into an EJSON value."]
+  descr: ["Parse a string into an EJSON value. Throws an error if the string is not valid EJSON."]
 },
 
 Template.api.ejsonStringify = {
@@ -79,7 +79,9 @@ Template.api.ejsonStringify = {
   name: "EJSON.stringify(val)",
   locus: "Anywhere",
   args: [ {name: "val", type: "EJSON-compatible value", descr: "A value to stringify."} ],
-  descr: ["Serialize an object to a string."]
+  descr: ["Serialize a value to a string.\n\nFor EJSON values, the serialization " +
+          "fully represents the value. For non-EJSON values, serializes the " +
+          "same way as `JSON.stringify`."]
 },
 
 
@@ -375,7 +377,7 @@ Template.api.meteor_call = {
      type: "String",
      descr: "Name of method to invoke"},
     {name: "param1, param2, ...",
-     type: "JSON",
+     type: "EJSON",
      descr: "Optional method arguments"},
     {name: "asyncCallback",
      type: "Function",
@@ -1360,7 +1362,22 @@ Template.api.set = {
      type: "String",
      descr: "The key to set, eg, `selectedItem`"},
     {name: "value",
-     type: "JSON-able object or undefined",
+     type: "EJSON-able object or undefined",
+     descr: "The new value for `key`"}
+  ]
+};
+
+Template.api.setDefault = {
+  id: "session_set_default",
+  name: "Session.setDefault(key, value)",
+  locus: "Client",
+  descr: ["Set a variable in the session if it is undefined. Otherwise works exactly the same as [`Session.set`](#session_set)."],
+  args: [
+    {name: "key",
+     type: "String",
+     descr: "The key to set, eg, `selectedItem`"},
+    {name: "value",
+     type: "EJSON-able object or undefined",
      descr: "The new value for `key`"}
   ]
 };
