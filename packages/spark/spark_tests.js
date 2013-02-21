@@ -1396,7 +1396,7 @@ Tinytest.add("spark - landmark parents", function (test) {
 
   var tests = [undefined, controllers.a, controllers.b, controllers.c];
 
-  var div = OnscreenDiv(Spark.render(function () {
+  var htmlFunc = function () {
     return Spark.isolate(function () {
       return Spark.attachController(controllers.a, function () {
         var wantB = R.get() > 5;
@@ -1426,7 +1426,8 @@ Tinytest.add("spark - landmark parents", function (test) {
         });
       });
     });
-  }));
+  };
+  var div = OnscreenDiv(Spark.render(htmlFunc));
 
   expect([["init", "a", [null, null, null, null]],
           ["init", "b", ["a", "a", null, null]],
@@ -1473,6 +1474,15 @@ Tinytest.add("spark - landmark parents", function (test) {
           ["finalize", "c", [null, null, null, null]],
           ["finalize", "d", [null, null, null, null]]]);
 
+  test.equal(htmlFunc(), "kittenmagic and puppies too");
+  expect([["init", "a", [null, null, null, null]],
+          ["init", "b", ["a", "a", null, null]],
+          ["init", "c", ["b", "a", "b", null]],
+          ["init", "d", ["c", "a", "b", "c"]],
+          ["finalize", "d", [null, null, null, null]],
+          ["finalize", "c", [null, null, null, null]],
+          ["finalize", "b", [null, null, null, null]],
+          ["finalize", "a", [null, null, null, null]]]);
 });
 
 

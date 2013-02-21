@@ -42,6 +42,8 @@ Spark._currentRenderer = (function () {
   };
 })();
 
+Spark._currentLandmark = new Meteor.EnvironmentVariable;
+
 Spark._TAG = "_spark_" + Random.id();
 // XXX document contract for each type of annotation?
 Spark._ANNOTATION_NOTIFY = "notify";
@@ -199,16 +201,6 @@ _.extend(Spark._Renderer.prototype, {
              i >= 0 && ! stack[i][prop];
              i--)
           stack[i][prop] = true;
-      },
-      // finds the innermost "notes" object with a value
-      // for `key` and returns that value, or null if
-      // no value is found
-      findEnclosing: function (key) {
-        for (var i = stack.length - 1; i >= 0; i--) {
-          if (key in stack[i])
-            return stack[i][key];
-        }
-        return null;
       }
     };
   },
@@ -593,7 +585,25 @@ Spark.renderToRange = function (range, htmlFunc) {
     node._currentChecked = [!!node.checked];
   });
 
-  var frag = renderer.materialize(htmlFunc);
+  // Render the new fragment, setting Spark._currentLandmark to the
+  // nearest enclosing landmark in the place where the fragment will
+  // be placed
+  var enclosingLandmarkRange = range;
+  do {
+    if (! enclosingLandmarkRange.firstNode().parentNode) {
+      // detect malformed LiveRange, in case where we are rendering to a DOM island
+      enclosingLandmarkRange = null;
+      break;
+    }
+    enclosingLandmarkRange = enclosingLandmarkRange.findParent();
+  } while (enclosingLandmarkRange &&
+           enclosingLandmarkRange.type !== Spark._ANNOTATION_LANDMARK);
+  var enclosingLandmark = enclosingLandmarkRange &&
+        enclosingLandmarkRange.landmark;
+
+  var frag = renderer.materialize(function () {
+    return Spark._currentLandmark.withValue(enclosingLandmark, htmlFunc);
+  });
 
   DomUtils.wrapFragmentForContainer(frag, range.containerNode());
 
@@ -1146,14 +1156,17 @@ Spark.attachController = function (controller, htmlFunc) {
   if (! (controller.prototype instanceof Spark.Landmark))
     throw new Error("Controller must be a subclass of Spark.Landmark");
 
+  var parentLandmark = Spark._currentLandmark.get() || null;
   var renderer = Spark._currentRenderer.get();
   if (! renderer) {
     // no renderer -- create and destroy Landmark inline
     var landmark = new controller;
+    landmark._setInitialParent(parentLandmark);
     landmark.init();
-    // XXX can't setInitialParent because we don't know what landmark
-    // we're in
-    var html = htmlFunc(landmark);
+    var html = Spark._currentLandmark.withValue(landmark, function () {
+      return htmlFunc(landmark);
+    });
+    landmark._setInitialParent(null);
     landmark.finalize();
     return html;
   }
@@ -1167,7 +1180,6 @@ Spark.attachController = function (controller, htmlFunc) {
     notes.originalRange.superceded = true; // prevent destroyed(), second match
     landmark = notes.originalRange.landmark; // the old Landmark
   } else {
-    var parentLandmark = renderer.currentBranch.findEnclosing('landmark');
     // Create Landmark outside the current Spark.isolate's deps context.
     Deps.nonreactive(function () {
       landmark = new controller;
@@ -1177,7 +1189,9 @@ Spark.attachController = function (controller, htmlFunc) {
   }
   notes.landmark = landmark;
 
-  var html = htmlFunc(landmark);
+  var html = Spark._currentLandmark.withValue(landmark, function () {
+    return htmlFunc(landmark);
+  });
   return renderer.annotate(
     html, Spark._ANNOTATION_LANDMARK, function (range) {
       if (! range) {
