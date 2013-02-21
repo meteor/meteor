@@ -43,6 +43,9 @@
 
 * Reduced unecessary MongoDB re-polling of live queries.
 
+* Added `Session.setDefault(key, value)` so you can easily provide initial
+  values for session variables that will not be clobbered on hot code push.
+
 * Improved UI for running tinytest package tests in-browser.
 
 * Upgraded UglifyJS2 to version 2.2.5

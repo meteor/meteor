@@ -1367,6 +1367,21 @@ Template.api.set = {
   ]
 };
 
+Template.api.setDefault = {
+  id: "session_set_default",
+  name: "Session.setDefault(key, value)",
+  locus: "Client",
+  descr: ["Set a variable in the session if it is undefined. Otherwise works exactly the same as [`Session.set`](#session_set)."],
+  args: [
+    {name: "key",
+     type: "String",
+     descr: "The key to set, eg, `selectedItem`"},
+    {name: "value",
+     type: "EJSON-able object or undefined",
+     descr: "The new value for `key`"}
+  ]
+};
+
 Template.api.get = {
   id: "session_get",
   name: "Session.get(key)",

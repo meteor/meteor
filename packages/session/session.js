@@ -40,6 +40,16 @@
       }
     },
 
+    setDefault: function (key, value) {
+      var self = this;
+      // for now, explicitly check for undefined, since there is no
+      // Session.clear().  Later we might have a Session.clear(), in which case
+      // we should check if it has the key.
+      if (self.keys[key] === undefined) {
+        self.set(key, value);
+      }
+    },
+
     get: function (key) {
       var self = this;
       self._ensureKey(key);
