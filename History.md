@@ -7,7 +7,8 @@
 
   * The handshake message is now versioned. This breaks backwards
     compatibility between sites with `Meteor.connect()`. Older meteor
-    apps can not talk to new apps and vice versa.
+    apps can not talk to new apps and vice versa. This includes the
+    `madewith` package, apps using `madewith` must upgrade.
 
   * New [EJSON](http://docs.meteor.com/#ejson) package allows you to use
     Dates, Mongo ObjectIDs, and binary data in your collections and
