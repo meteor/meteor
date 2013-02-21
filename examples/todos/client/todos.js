@@ -4,11 +4,9 @@
 Lists = new Meteor.Collection("lists");
 Todos = new Meteor.Collection("todos");
 
-// ID of currently selected list
-Session.set('list_id', null);
+// ID of currently selected list: list_id in Session
 
-// Name of currently selected tag for filtering
-Session.set('tag_filter', null);
+// Name of currently selected tag for filtering: tag_filter in Session
 
 // When adding tag to a todo, ID of the todo
 Session.set('editing_addtag', null);
@@ -303,9 +301,12 @@ var TodosRouter = Backbone.Router.extend({
   routes: {
     ":list_id": "main"
   },
-  main: function (list_id) {
-    Session.set("list_id", list_id);
-    Session.set("tag_filter", null);
+  main: function (newListId) {
+    var oldListId = Session.get('list_id');
+    if (oldListId !== newListId) {
+      Session.set("list_id", newListId);
+      Session.set("tag_filter", null);
+    }
   },
   setList: function (list_id) {
     this.navigate(list_id, true);
