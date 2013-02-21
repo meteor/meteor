@@ -87,6 +87,12 @@
   _.extend(Spark.Landmark.prototype, {
     init: function () {
       // override this
+      // called when first created with initial arguments
+    },
+    recycle: function () {
+      // override this
+      // called when rerendering and trying to reuse controller with
+      // updated arguments
     },
     setPreserve: function (preserve) {
       // Normalize preserve map from preserve into this._preservations.
