@@ -1061,6 +1061,20 @@ _.extend(Meteor._LivedataServer.prototype, {
                                   session: socket.meteor_session.id}));
       // will kick off previous connection, if any
       socket.meteor_session.connect(socket);
+    } else if (!msg.version) {
+      // connect message without a version. This means an old (pre-pre1)
+      // client is trying to connect. If we just disconnect the
+      // connection, they'll retry right away. Instead, just pause for a
+      // bit (randomly distributed so as to avoid synchronized swarms)
+      // and hold the connection open.
+      var timeout = 1000 * (30 + Random.fraction() * 60);
+      // drop all future data coming over this connection on the
+      // floor. We don't want to confuse things.
+      socket.removeAllListeners('data');
+      setTimeout(function () {
+        socket.send(Meteor._stringifyDDP({msg: 'failed', version: version}));
+        socket.close();
+      }, timeout);
     } else {
       socket.send(Meteor._stringifyDDP({msg: 'failed', version: version}));
       socket.close();
