@@ -1,0 +1,21 @@
+<head>
+  <title>controllers-demo</title>
+</head>
+
+<body>
+  {{> body}}
+</body>
+
+<template name="body">
+  <h2>Most recent five entries</h2>
+  <ul>
+    {{#each entries}}
+    <li>{{message}}</li>
+    {{/each}}
+  </ul>
+
+  <h2>Add your own</h2>
+  {{#controller MyForm}}
+    Your message: {{{TextInput "bob"}}} {{{SaveButton}}}
+  {{/controller}}
+</template>

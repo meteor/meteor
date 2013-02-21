@@ -4,9 +4,12 @@ Package.describe({
 
 Package.on_use(function (api) {
   // XXX could avoid hard dependency on 'reload' like 'session' does
-  api.use(['spark', 'reactive-dict', 'reload'], 'client');
+  api.use(['spark', 'reactive-dict', 'reload', 'templating'], 'client');
 
-  api.add_files('controllers.js', 'client');
+  api.add_files([
+    'widgets.html',
+    'controllers.js'
+  ], 'client');
 });
 
 Package.on_test(function (api) {
