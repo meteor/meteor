@@ -199,6 +199,16 @@ _.extend(Spark._Renderer.prototype, {
              i >= 0 && ! stack[i][prop];
              i--)
           stack[i][prop] = true;
+      },
+      // finds the innermost "notes" object with a value
+      // for `key` and returns that value, or null if
+      // no value is found
+      findEnclosing: function (key) {
+        for (var i = stack.length - 1; i >= 0; i--) {
+          if (key in stack[i])
+            return stack[i][key];
+        }
+        return null;
       }
     };
   },
@@ -1141,6 +1151,8 @@ Spark.attachController = function (controller, htmlFunc) {
     // no renderer -- create and destroy Landmark inline
     var landmark = new controller;
     landmark.init();
+    // XXX can't setInitialParent because we don't know what landmark
+    // we're in
     var html = htmlFunc(landmark);
     landmark.finalize();
     return html;
@@ -1155,9 +1167,11 @@ Spark.attachController = function (controller, htmlFunc) {
     notes.originalRange.superceded = true; // prevent destroyed(), second match
     landmark = notes.originalRange.landmark; // the old Landmark
   } else {
+    var parentLandmark = renderer.currentBranch.findEnclosing('landmark');
     // Create Landmark outside the current Spark.isolate's deps context.
     Deps.nonreactive(function () {
       landmark = new controller;
+      landmark._setInitialParent(parentLandmark);
       landmark.init();
     });
   }

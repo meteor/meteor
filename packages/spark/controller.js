@@ -77,6 +77,7 @@
     this.id = nextLandmarkId++;
     this._range = null;
     this.setPreserve(this.preserve);
+    this._initialParent = null;
   };
   Spark.Landmark.extend = extendThis;
 
@@ -120,6 +121,10 @@
     },
     _setRange: function (range) {
       this._range = range;
+      this._initialParent = null;
+    },
+    _setInitialParent: function (initialParent) {
+      this._initialParent = initialParent;
     },
     _tearDown: function () {
       this._range = null;
@@ -134,7 +139,30 @@
     },
     constant: false,
     // this property is only read once, in the constructor
-    preserve: {}
+    preserve: {},
+    parent: function (cls) {
+      // find nearest enclosing parent Controller of class `cls`, if any
+      if (cls) {
+        var walk = this;
+        do {
+          walk = walk.parent();
+        } while (walk && ! (walk instanceof cls));
+        return walk;
+      }
+
+      // find nearest enclosing parent Controller
+      if (this._range) {
+        var range = this._range;
+        do {
+          range = range.findParent();
+        } while (range && range.type !== Spark._ANNOTATION_LANDMARK);
+
+        return (range && range.landmark);
+      } else {
+        // no LiveRange; get it from creation time
+        return this._initialParent;
+      }
+    }
   });
 
 
