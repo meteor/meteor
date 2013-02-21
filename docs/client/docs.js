@@ -161,6 +161,7 @@ var toc = [
 
     "Session", [
       "Session.set",
+      {name: "Session.setDefault", id: "session_set_default"},
       "Session.get",
       "Session.equals"
     ],

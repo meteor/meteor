@@ -2,7 +2,7 @@
 // the selector (or inserted document) contains fail: true.
 
 (function () {
-var Future = __meteor_bootstrap__.require('fibers/future');
+//var Future = __meteor_bootstrap__.require('fibers/future');
 
 if (Meteor.isServer) {
   Meteor.methods({

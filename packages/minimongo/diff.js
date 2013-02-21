@@ -23,7 +23,6 @@ LocalCollection._diffQueryUnorderedChanges = function (oldResults, newResults,
     throw new Error("_diffQueryUnordered called with a moved observer!");
   }
 
-  // "maybe deepcopy"
   _.each(newResults, function (newDoc) {
     if (_.has(oldResults, newDoc._id)) {
       var oldDoc = oldResults[newDoc._id];
