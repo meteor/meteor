@@ -377,7 +377,7 @@ Template.api.meteor_call = {
      type: "String",
      descr: "Name of method to invoke"},
     {name: "param1, param2, ...",
-     type: "JSON",
+     type: "EJSON",
      descr: "Optional method arguments"},
     {name: "asyncCallback",
      type: "Function",
@@ -1362,7 +1362,7 @@ Template.api.set = {
      type: "String",
      descr: "The key to set, eg, `selectedItem`"},
     {name: "value",
-     type: "JSON-able object or undefined",
+     type: "EJSON-able object or undefined",
      descr: "The new value for `key`"}
   ]
 };
