@@ -839,7 +839,7 @@ _.extend(Meteor._LivedataSubscription.prototype, {
         self.ready();
       } else if (_.isArray(res)) {
         // check all the elements are cursors
-        if (!_.every(res, function (cur) { return cur && cur._publishCursor; })) {
+        if (! _.every(res, function (cur) { return cur && cur._publishCursor; })) {
           self.error(new Meteor.Error(500, "Pulish function returned an array of non-Cursors"));
           return;
         }
@@ -847,10 +847,10 @@ _.extend(Meteor._LivedataSubscription.prototype, {
         var dups = [];
         _.each(_.countBy(res, function (cur) { return cur._getCollectionName(); }),
           function (count, col) {
-            if (count > 1) dups.push(col);
+            count > 1 && dups.push(col);
           });
 
-        if (dups.length == 0) { // no duplicates
+        if (dups.length === 0) { // no duplicates
           _.each(res, function (cur) {
             cur._publishCursor(self);
           });
