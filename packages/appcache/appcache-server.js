@@ -154,7 +154,7 @@
         "** application assets under 5MB.\n" +
         "**\n" +
         "** If you have some larger assets that you'd like to make online only,\n" +
-        "** you can do that with the AppCache "onlineOnly" config option."
+        "** you can do that with the AppCache \"onlineOnly\" config option."
       );
     }
   };
