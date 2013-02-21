@@ -83,12 +83,9 @@
     _tmpl_data: null,
     // these functions must be generic (i.e. use `this`)
     events: function (eventMap) {
-      var events =
-            (this._tmpl_data.events = (this._tmpl_data.events || {}));
-      _.each(eventMap, function(callback, spec) {
-        events[spec] = (events[spec] || []);
-        events[spec].push(callback);
-      });
+      var eventMaps =
+            (this._tmpl_data.eventMaps = (this._tmpl_data.eventMaps || []));
+      eventMaps.push(eventMap);
     },
     preserve: function (preserveMap) {
       var preserve =
@@ -155,30 +152,24 @@
           // for Spark, by inserting logic to create the template object.
           var wrapEventMap = function (oldEventMap) {
             var newEventMap = {};
-            _.each(oldEventMap, function (handlers, key) {
-              if ('function' === typeof handlers) {
-                //Template.foo.events = ... way will give a fn, not an array
-                handlers = [ handlers ];
-              }
-              newEventMap[key] = _.map(handlers, function (handler) {
-                return function (event, landmark) {
-                  return handler.call(this, event,
-                                      templateObjFromLandmark(landmark));
-                };
-              });
+            _.each(oldEventMap, function (handler, key) {
+              newEventMap[key] = function (event, landmark) {
+                return handler.call(this, event,
+                                    templateObjFromLandmark(landmark));
+              };
             });
             return newEventMap;
           };
 
           // support old Template.foo.events = {...} format
-          var events =
+          var eventMaps =
                 (tmpl.events !== Meteor._template_decl_methods.events ?
-                 tmpl.events : tmplData.events);
+                 [tmpl.events] : tmplData.eventMaps);
           // events need to be inside the landmark, not outside, so
           // that when an event fires, you can retrieve the enclosing
           // landmark to get the template data
-          if (tmpl.events)
-            html = Spark.attachEvents(wrapEventMap(events), html);
+          if (eventMaps)
+            html = Spark.attachEvents(_.map(eventMaps, wrapEventMap), html);
           return html;
         });
         html = Spark.setDataContext(data, html);

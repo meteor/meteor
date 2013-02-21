@@ -739,29 +739,29 @@ var getListener = function () {
   return universalListener;
 };
 
-Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
+// eventMaps may be either a single event maps, or a list of event maps.
+Spark.attachEvents = withRenderer(function (eventMaps, html, _renderer) {
   var listener = getListener();
+
+  if (! (eventMaps instanceof Array))
+    eventMaps = [eventMaps];
 
   var handlerMap = {}; // type -> [{selector, callback}, ...]
   // iterate over eventMap, which has form {"type selector, ...": callbacks},
-  // callbacks can either be a fn, or an array of fns
   // and populate handlerMap
-  _.each(eventMap, function(callbacks, spec) {
-    if ('function' === typeof callbacks) {
-      callbacks = [ callbacks ];
-    }
-    var clauses = spec.split(/,\s+/);
-    // iterate over clauses of spec, e.g. ['click .foo', 'click .bar']
-    _.each(clauses, function (clause) {
-      var parts = clause.split(/\s+/);
-      if (parts.length === 0)
-        return;
+  _.each(eventMaps, function (eventMap) {
+    _.each(eventMap, function(callback, spec) {
+      var clauses = spec.split(/,\s+/);
+      // iterate over clauses of spec, e.g. ['click .foo', 'click .bar']
+      _.each(clauses, function (clause) {
+        var parts = clause.split(/\s+/);
+        if (parts.length === 0)
+          return;
 
-      var type = parts.shift();
-      var selector = parts.join(' ');
+        var type = parts.shift();
+        var selector = parts.join(' ');
 
-      handlerMap[type] = handlerMap[type] || [];
-      _.each(callbacks, function(callback) {
+        handlerMap[type] = handlerMap[type] || [];
         handlerMap[type].push({selector: selector, callback: callback});
       });
     });
@@ -1189,8 +1189,52 @@ Spark.attachController = function (controller, htmlFunc) {
   }
   notes.landmark = landmark;
 
+  // Gather event maps from controller class and its superclasses
+  var eventMaps = [];
+  var walk = controller;
+  var last;
+  do {
+    var theseEvents = walk.prototype.events;
+    if (theseEvents && theseEvents !== last) {
+      // If there is a chain of several superclasses, and not all of
+      // them define events, avoid including the same event map
+      // several times (because it's visible at each stage in the
+      // chain due to inheritance)
+      last = theseEvents;
+
+      // attachEvents invokes events as (event, enclosing landmark),
+      // with the template data at the event in 'this'.
+      //
+      // (1) rearrange that to (event, template data) with the
+      // controller in 'this'
+      //
+      // (2) allow a string instead of a function, which means to use
+      // the function on this controller by that name.
+      var wrappedEventMap = {};
+      _.each(theseEvents, function (handler, key) {
+        wrappedEventMap[key] = function (event, landmark) {
+          var data = this;
+          var f = handler;
+          if (typeof f === "string") {
+            if (! (f in landmark))
+              throw new Error("No function '" + f  + "' for event handler " +
+                              "on controller");
+            f = landmark[f];
+          }
+          return f.call(landmark, event, data);
+        };
+      });
+      eventMaps.push(wrappedEventMap);
+    }
+    walk = walk.superclass;
+  } while (walk);
+
+  // Assemble (possibly) annotated HTML
   var html = Spark._currentLandmark.withValue(landmark, function () {
-    return htmlFunc(landmark);
+    var innerHtml = htmlFunc(landmark);
+    if (eventMaps.length)
+      innerHtml = Spark.attachEvents(eventMaps, innerHtml);
+    return innerHtml
   });
   return renderer.annotate(
     html, Spark._ANNOTATION_LANDMARK, function (range) {

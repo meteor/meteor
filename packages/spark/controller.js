@@ -47,6 +47,9 @@
     // the constructor.
     newClass.prototype = object(parentClass.prototype);
 
+    // Also record the parent class for our future use.
+    newClass.superclass = parentClass;
+
     // Add prototype properties (instance properties) to the new class,
     // if supplied.
     if (protoProps)
