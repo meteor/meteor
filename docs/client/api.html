@@ -229,10 +229,10 @@ Example:
       }
     });
 
-Calling `methods` on the server defines functions that can be called
-remotely by clients.  They should return a value or throw an exception.
-Inside your method invocation, `this` is bound to a method invocation
-object, which provides the following:
+Calling `methods` on the server defines functions that can be called remotely by
+clients.  They should return an [EJSON](#ejson)-able value or throw an
+exception.  Inside your method invocation, `this` is bound to a method
+invocation object, which provides the following:
 
 * `isSimulation`: a boolean value, true if this invocation is a stub.
 * `unblock`: when called, allows the next method from this client to
@@ -458,7 +458,7 @@ traditional ORM (Object-Relation Mapper)-centric framework. It sets up a
 *collection* (a storage space for records, or "documents") that can be
 used to store a particular type of information, like users, posts,
 scores, todo items, or whatever matters to your application.  Each
-document is a JSON object.  It includes an `_id` property whose value is
+document is a EJSON object.  It includes an `_id` property whose value is
 unique in the collection, which Meteor will set when you first create
 the document.
 
@@ -602,7 +602,7 @@ Equivalent to `find(selector, options).fetch()[0]`.
 {{> api_box insert}}
 
 Add a document to the collection. A document is just an object, and
-its fields can contain any combination of JSON-compatible datatypes
+its fields can contain any combination of EJSON-compatible datatypes
 (arrays, objects, numbers, strings, `null`, true, and false).
 
 `insert` will generate a unique ID for the object you pass, insert it
