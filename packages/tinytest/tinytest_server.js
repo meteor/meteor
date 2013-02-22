@@ -22,7 +22,7 @@
   });
 
   Meteor.methods({
-    'tinytest/run': function (runId) {
+    'tinytest/run': function (runId, pathPrefix) {
       this.unblock();
 
       // XXX using private API === lame
@@ -52,7 +52,7 @@
         future.ret();
       };
 
-      Meteor._runTests(onReport, onComplete);
+      Meteor._runTests(onReport, onComplete, pathPrefix);
 
       future.wait();
     },

@@ -83,7 +83,6 @@
 Patches contributed by GitHub users awwx and michaelglenadams.
 
 
-
 ## v0.5.6
 
 * Fix 0.5.5 regression: Minimongo selectors matching subdocuments under arrays
