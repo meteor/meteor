@@ -1,3 +1,5 @@
+var Fiber = __meteor_bootstrap__.require('fibers');
+
 Tinytest.add("fibers - synchronous queue", function (test) {
   var q = new Meteor._SynchronousQueue;
   var output = [];

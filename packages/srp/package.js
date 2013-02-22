@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use('uuid', ['client', 'server']);
+  api.use('random', ['client', 'server']);
   api.add_files(['biginteger.js', 'sha256.js', 'srp.js'],
                 ['client', 'server']);
 });

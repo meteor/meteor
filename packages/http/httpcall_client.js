@@ -20,9 +20,13 @@ Meteor.http = Meteor.http || {};
 
     method = (method || "").toUpperCase();
 
+    var headers = {};
+
     var content = options.content;
-    if (options.data)
+    if (options.data) {
       content = JSON.stringify(options.data);
+      headers['Content-Type'] = 'application/json';
+    }
 
     var params_for_url, params_for_body;
     if (content || method === "GET" || method === "HEAD")
@@ -50,6 +54,8 @@ Meteor.http = Meteor.http || {};
     if (params_for_body) {
       content = Meteor.http._encodeParams(params_for_body);
     }
+
+    _.extend(headers, options.headers || {});
 
     ////////// Callback wrapping //////////
 
@@ -84,9 +90,8 @@ Meteor.http = Meteor.http || {};
 
       xhr.open(method, url, true, username, password);
 
-      if (options.headers)
-        for (var k in options.headers)
-          xhr.setRequestHeader(k, options.headers[k]);
+      for (var k in headers)
+        xhr.setRequestHeader(k, headers[k]);
 
 
       // setup timeout
@@ -118,6 +123,24 @@ Meteor.http = Meteor.http || {};
 
             response.headers = {};
             var header_str = xhr.getAllResponseHeaders();
+
+            // https://github.com/meteor/meteor/issues/553
+            //
+            // In Firefox there is a weird issue, sometimes
+            // getAllResponseHeaders returns the empty string, but
+            // getResponseHeader returns correct results. Possibly this
+            // issue:
+            // https://bugzilla.mozilla.org/show_bug.cgi?id=608735
+            //
+            // If this happens we can't get a full list of headers, but
+            // at least get content-type so our JSON decoding happens
+            // correctly. In theory, we could try and rescue more header
+            // values with a list of common headers, but content-type is
+            // the only vital one for now.
+            if ("" === header_str && xhr.getResponseHeader("content-type"))
+              header_str =
+              "content-type: " + xhr.getResponseHeader("content-type");
+
             var headers_raw = header_str.split(/\r?\n/);
             _.each(headers_raw, function (h) {
               var m = /^(.*?):(?:\s+)(.*)$/.exec(h);

@@ -7,7 +7,7 @@ var semver = require('semver');
 var optimist = require('optimist');
 
 var updater = require(path.join(__dirname, '..', 'app', 'lib', 'updater.js'));
-var _ = require(path.join(__dirname, '..', 'app', 'lib', 'third', 'underscore.js'));
+var _ = require('underscore');
 
 // What files to update. Relative to project root.
 var UPDATE_FILES = [path.join('app', 'lib', 'updater.js'),

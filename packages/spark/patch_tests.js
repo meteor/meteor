@@ -132,12 +132,15 @@ Tinytest.add("spark - patch - copyAttributes", function(test) {
         buf.push('<', tagName);
         _.each(kv, function(v,k) {
           allAttrNames[k] = true;
-          buf.push(' ', k, '="', v, '"');
+          buf.push(' ', k);
+          if (v !== 'NO_VALUE')
+            buf.push('="', v, '"');
         });
         buf.push('></', tagName, '>');
         var nodeHtml = buf.join('');
         var frag = DomUtils.htmlToFragment(nodeHtml);
         var n = frag.firstChild;
+        n._sparkOriginalRenderedChecked = [n.checked];
         if (! node) {
           node = n;
         } else {
@@ -159,18 +162,20 @@ Tinytest.add("spark - patch - copyAttributes", function(test) {
       check: function() {
         _.each(lastAttrs, function(v,k) {
           var actualAttr;
+          var expectedAttr = v || "";
           if (k === "style") {
             actualAttr = node.style.cssText;
           } else if (k === "class") {
             actualAttr = node.className;
           } else if (k === "checked") {
             actualAttr = String(node.getAttribute(k) || "");
+            if (expectedAttr === "NO_VALUE")
+              expectedAttr = "checked";
             if (actualAttr === "true")
               actualAttr = "checked"; // save IE's butt
           } else {
             actualAttr = String(node.getAttribute(k) || "");
           }
-          var expectedAttr = v || "";
           test.equal(actualAttr, expectedAttr, k);
         });
       },
@@ -225,6 +230,12 @@ Tinytest.add("spark - patch - copyAttributes", function(test) {
   c.check();
   test.equal(c.node().checked, false);
   c.copy({type:'checkbox', name:'foo', checked:'checked'});
+  c.check();
+  test.equal(c.node().checked, true);
+  c.copy({type:'checkbox', name:'foo'});
+  c.check();
+  test.equal(c.node().checked, false);
+  c.copy({type:'checkbox', name:'foo', checked:'NO_VALUE'});
   c.check();
   test.equal(c.node().checked, true);
 

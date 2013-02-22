@@ -60,7 +60,7 @@ Meteor.setInterval(function () {
   var idle_threshold = now - 70*1000; // 70 sec
   var remove_threshold = now - 60*60*1000; // 1hr
 
-  Players.update({$lt: {last_keepalive: idle_threshold}},
+  Players.update({last_keepalive: {$lt: idle_threshold}},
                  {$set: {idle: true}});
 
   // XXX need to deal with people coming back!

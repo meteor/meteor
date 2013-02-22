@@ -1,6 +1,8 @@
 (function () {
   var connect = __meteor_bootstrap__.require("connect");
 
+  Meteor._routePolicy.declare('/_oauth/', 'network');
+
   Accounts.oauth._services = {};
 
   // Register a handler for an OAuth service. The handler will be called
@@ -69,6 +71,7 @@
       return result;
   });
 
+  var Fiber = __meteor_bootstrap__.require('fibers');
   // Listen to incoming OAuth http requests
   __meteor_bootstrap__.app
     .use(connect.query())

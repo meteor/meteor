@@ -70,10 +70,10 @@ var rPunctuator = new RegExp(
     .join('|'), 'g');
 var rDivPunctuator = /\/=?/g;
 // Section 7.8.3
-var rHexLiteral = /0x[0-9a-fA-F]+$/g;
-var rOctLiteral = /0[0-7]+/g; // deprecated
+var rHexLiteral = /0[xX][0-9a-fA-F]+(?!\w)/g;
+var rOctLiteral = /0[0-7]+(?!\w)/g; // deprecated
 var rDecLiteral =
-      /(((0|[1-9][0-9]*)(\.[0-9]*)?)|\.[0-9]+)([Ee][+-]?[0-9]+)?/g;
+      /(((0|[1-9][0-9]*)(\.[0-9]*)?)|\.[0-9]+)([Ee][+-]?[0-9]+)?(?!\w)/g;
 // Section 7.8.4
 var rStringQuote = /["']/g;
 // Match one or more characters besides quotes, backslashes, or line ends
@@ -81,14 +81,30 @@ var rStringMiddle = /(?=.)[^"'\\]+?((?!.)|(?=["'\\]))/g;
 // Match one escape sequence, including the backslash.
 var rEscapeSequence =
       /\\(['"\\bfnrtv]|0(?![0-9])|x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|(?=.)[^ux0-9])/g;
+// Match one ES5 line continuation
+var rLineContinuation =
+      /\\(\r\n|[\u000A\u000D\u2028\u2029])/g;
 // Section 7.8.5
 // Match one regex literal, including slashes, not including flags.
-// XXX Add support for unescaped '/' in character class, allowed by 5th ed.
-var rRegexLiteral = /\/(?![*\/])(\\.|(?=.)[^\\])+?\//g;
+// Support unescaped '/' in character classes, per 5th ed.
+// For example: `/[/]/` will match the string `"/"`.
+//
+// Explanation of regex:
+// - Match `/` not followed by `/` or `*`
+// - Match one or more of any of these:
+//   - Backslash followed by one non-newline
+//   - One non-newline, not `[` or `\` or `/`
+//   - A character class, beginning with `[` and ending with `]`.
+//     In the middle is zero or more of any of these:
+//     - Backslash followed by one non-newline
+//     - One non-newline, not `]` or `\`
+// - Match closing `/`
+var rRegexLiteral =
+      /\/(?![*\/])(\\.|(?=.)[^\[\/\\]|\[(\\.|(?=.)[^\]\\])*\])+\//g;
 var rRegexFlags = /[a-zA-Z]*/g;
 
 var rDecider =
-      /((?=.)\s)|(\/[\/\*]?)|([\][{}().;,<>=!+*%&|^~?:-])|(\d)|(["'])|(.)|([\S\s])/g;
+      /((?=.)\s)|(\/[\/\*]?)|([\][{}();,<>=!+*%&|^~?:-]|\.(?![0-9]))|([\d.])|(["'])|(.)|([\S\s])/g;
 
 var keywordLookup = {
   ' break': 'KEYWORD',
@@ -376,7 +392,8 @@ JSLexer.prototype.next = function () {
     run(rStringQuote);
     var quote = match[0];
     do {
-      run(rStringMiddle) || run(rEscapeSequence) || run(rStringQuote);
+      run(rStringMiddle) || run(rEscapeSequence) ||
+        run(rLineContinuation) || run(rStringQuote);
     } while (match && match[0] !== quote);
     if (! (match && match[0] === quote))
       return lexeme('ERROR');
@@ -388,12 +405,21 @@ JSLexer.prototype.next = function () {
   }
   // dot (any non-line-terminator)
   run(rIdentifierPrefix);
-  // Use non-short-circuiting OR, '|', to allow matching
+  // Use non-short-circuiting bitwise OR, '|', to always try
   // both regexes in sequence, returning false only if neither
   // matched.
-  while (run(rIdentifierMiddle) | run(rIdentifierPrefix)) {/*continue*/}
+  while ((!! run(rIdentifierMiddle)) |
+         (!! run(rIdentifierPrefix))) { /*continue*/ }
   var word = code.substring(origPos, pos);
   return lexeme(keywordLookup[' '+word] || 'IDENTIFIER');
+};
+
+JSLexer.prettyOffset = function (code, pos) {
+  var codeUpToPos = code.substring(0, pos);
+  var startOfLine = codeUpToPos.lastIndexOf('\n') + 1;
+  var indexInLine = pos - startOfLine; // 0-based
+  var lineNum = codeUpToPos.replace(/[^\n]+/g, '').length + 1; // 1-based
+  return "line " + lineNum + ", offset " + indexInLine;
 };
 
 })();

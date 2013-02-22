@@ -12,13 +12,15 @@ PROJDIR=`dirname $0`
 cd "$PROJDIR"
 PROJDIR=`pwd`
 
+SCENARIO="${1:-default}"
+
 # clean up from previous runs
 # XXX this is gross!
 pkill -f "$PROJDIR/.meteor/local/db" || true
 ../../../meteor reset || true
 
 # start the benchmark app
-../../../meteor --production --port 9000 &
+../../../meteor --production --settings "scenarios/${SCENARIO}.json" --port 9000 &
 OUTER_PID=$!
 
 

@@ -141,7 +141,8 @@ var makeTester = function (test) {
     // assert that a tokenization error occurred at '@'.
     badToken: function (code) {
       var constructMessage = function (pos, text) {
-        return "Bad token at position " + pos + ", text `" + text + "`";
+        var nicePos = JSLexer.prettyOffset(code, pos);
+        return "Bad token at " + nicePos + ", text `" + text + "`";
       };
       var pos = code.indexOf('`');
       var text = code.match(/`(.*?)`/)[1];
@@ -176,7 +177,7 @@ var makeTester = function (test) {
     badParse: function (code) {
       var constructMessage = function (whatExpected, pos, found, after) {
         return "Expected " + whatExpected + (after ? " after " + after : "") +
-          " at position " + pos + ", found " + found;
+          " at " + JSLexer.prettyOffset(code, pos) + ", found " + found;
       };
       var pos = code.indexOf('`');
 
@@ -200,7 +201,8 @@ var makeTester = function (test) {
         var after = parser.oldToken;
         found = (found || parser.newToken);
         test.equal(error.message,
-                   constructMessage(whatExpected, pos, found, after));
+                   constructMessage(whatExpected, pos, found, after),
+                   code);
       }
     }
   };
@@ -240,6 +242,10 @@ Tinytest.add("jsparse - tokenization errors", function (test) {
   var tester = makeTester(test);
   tester.badToken("123`@`");
   tester.badToken("thisIsATestOf = `'unterminated `\n strings'");
+  // make sure newlines aren't quietly included in regex literals
+  tester.badToken("var x = `/`a\nb/;");
+  tester.badToken("var x = `/`a\\\nb/;");
+  tester.badToken("var x = `/`a[\n]b/;");
 });
 
 Tinytest.add("jsparse - syntax forms", function (test) {
@@ -395,6 +401,20 @@ Tinytest.add("jsparse - syntax forms", function (test) {
     ["null + this - 3 + true",
      "program(expressionStmnt(binary(binary(binary(null(null) + this(this)) - " +
      "number(3)) + boolean(true)) ;()))"],
+    ["+.5",
+     "program(expressionStmnt(unary(+ number(.5)) ;()))"],
+    ["a1a1a",
+     "program(expressionStmnt(identifier(a1a1a) ;()))"],
+    ["/abc/mig",
+     "program(expressionStmnt(regex(/abc/mig) ;()))"],
+    ["/[]/",
+     "program(expressionStmnt(regex(/[]/) ;()))"],
+    ["/[/]/",
+     "program(expressionStmnt(regex(/[/]/) ;()))"],
+    ["/[[/]/",
+     "program(expressionStmnt(regex(/[[/]/) ;()))"],
+    ["/.\\/[a//b]\\[\\][[\\d/]/",
+     "program(expressionStmnt(regex(/.\\/[a//b]\\[\\][[\\d/]/) ;()))"],
     ["a / /b/mgi / c",
      "program(expressionStmnt(binary(binary(identifier(a) / " +
      "regex(/b/mgi)) / identifier(c)) ;()))"],
@@ -549,7 +569,36 @@ Tinytest.add("jsparse - syntax forms", function (test) {
     // comments don't interfere with parse
     ["if (true)\n//comment\nfoo();",
      "program(ifStmnt(if `(` boolean(true) `)` " +
-     "expressionStmnt(call(identifier(foo) `(` `)`) ;)))"]
+     "expressionStmnt(call(identifier(foo) `(` `)`) ;)))"],
+    // bare keywords allowed in property access and object literal
+    ["foo.return();",
+     "program(expressionStmnt(call(dot(identifier(foo) . return) `(` `)`) ;))"],
+    ["foo.true();",
+     "program(expressionStmnt(call(dot(identifier(foo) . true) `(` `)`) ;))"],
+    ["foo.null();",
+     "program(expressionStmnt(call(dot(identifier(foo) . null) `(` `)`) ;))"],
+    ["({true:3})",
+     "program(expressionStmnt(parens(`(` object({ prop(idPropName(true) : number(3)) }) `)`) ;()))"],
+    ["({null:3})",
+     "program(expressionStmnt(parens(`(` object({ prop(idPropName(null) : number(3)) }) `)`) ;()))"],
+    ["({if:3})",
+     "program(expressionStmnt(parens(`(` object({ prop(idPropName(if) : number(3)) }) `)`) ;()))"],
+    // ES5 line continuations in string literals
+    ["var x = 'a\\\nb\\\nc';",
+     "program(varStmnt(var varDecl(x = string(`'a\\\nb\\\nc'`)) ;))"],
+    // ES5 trailing comma in object literal
+    ["({});",
+     "program(expressionStmnt(parens(`(` object({ }) `)`) ;))"],
+    ["({x:1});",
+     "program(expressionStmnt(parens(`(` object({ prop(idPropName(x) : number(1)) }) `)`) ;))"],
+    ["({x:1,});",
+     "program(expressionStmnt(parens(`(` object({ prop(idPropName(x) : number(1)) , }) `)`) ;))"],
+    ["({x:1,y:2});",
+     "program(expressionStmnt(parens(`(` object({ prop(idPropName(x) : number(1)) , " +
+     "prop(idPropName(y) : number(2)) }) `)`) ;))"],
+    ["({x:1,y:2,});",
+     "program(expressionStmnt(parens(`(` object({ prop(idPropName(x) : number(1)) , " +
+     "prop(idPropName(y) : number(2)) , }) `)`) ;))"]
   ];
   _.each(trials, function (tr) {
     tester.goodParse(tr[0], tr[1]);
@@ -558,6 +607,8 @@ Tinytest.add("jsparse - syntax forms", function (test) {
 
 Tinytest.add("jsparse - bad parses", function (test) {
   var tester = makeTester(test);
+  // string between backticks is pulled out and becomes what's "expected"
+  // at that location, according to the correct error message
   var trials = [
     '{`statement`',
     'if (`expression`)',
@@ -590,16 +641,29 @@ Tinytest.add("jsparse - bad parses", function (test) {
     'foo: `statement`function foo() {}',
     '[`expression`=',
     '[,,`expression`=',
-    '({`propertyName`true:3})',
+    '({`propertyName`|:3})',
     '({1:2,3`:`})',
     '({1:2,`propertyName`',
-    'x.`IDENTIFIER`true',
+    'x.`IDENTIFIER`,',
     'foo;`semicolon`:;',
     '1;`statement`=',
     'a+b`semicolon`=c;',
     'for(1+1 `semicolon`in {});',
     '`statement`=',
-    'for(;`expression`var;) {}'
+    'for(;`expression`var;) {}',
+    '({`propertyName`',
+    '({`propertyName`,})',
+    '({`propertyName`:})',
+    '({x`:`})',
+    '({x:1,`propertyName`',
+    '({x:1,`propertyName`,})',
+    '({x:1`,`',
+    '({x:1,`propertyName`,y:2})',
+    '({x:1,`propertyName`,})',
+    '({x:1,y:2`,`:',
+    '({x:1,y:2,`propertyName`',
+    '({x:1,y:2,`propertyName`:',
+    '({x:1,y:2,`propertyName`,})'
   ];
   _.each(trials, function (tr) {
     tester.badParse(tr);

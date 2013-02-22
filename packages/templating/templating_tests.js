@@ -808,10 +808,10 @@ Tinytest.add("templating - #each rendered callback", function (test) {
   var cbks = [];
   var xs = ['a','b','c'];
   tmpl.helpers({entries: function() {
-    return { observe: function (callbacks) {
+    return { observeChanges: function (callbacks) {
       cbks.push(callbacks);
-      _.each(xs, function(x, i) {
-        callbacks.added({x:x}, i);
+      _.each(xs, function(x) {
+        callbacks.addedBefore(x, {x:x}, null);
       });
       return {
         stop: function () {
@@ -832,7 +832,7 @@ Tinytest.add("templating - #each rendered callback", function (test) {
   buf.length = 0;
 
   _.each(cbks, function (callbacks) {
-    callbacks.moved({x:'a'}, 0, 2);
+    callbacks.movedBefore('a', null);
   });
   test.equal(buf, []);
   Meteor.flush();
@@ -958,10 +958,10 @@ Tinytest.add("templating - unlabeled cursor", function (test) {
   var div = OnscreenDiv(Meteor.render(function () {
     R.get(); // create dependency
     return Template.test_unlabeled_cursor_a0(
-      {observe: function (callbacks) {
-        callbacks.added({}, 0);
-        callbacks.added({}, 1);
-        callbacks.added({}, 2);
+      {observeChanges: function (callbacks) {
+        callbacks.addedBefore('0', {}, null);
+        callbacks.addedBefore('1', {}, null);
+        callbacks.addedBefore('2', {}, null);
         return { stop: function () {} };
       }}
     );
@@ -1001,3 +1001,34 @@ Tinytest.add("templating - constant text patching", function (test) {
   div.kill();
   Meteor.flush();
 });
+
+
+Tinytest.add('templating - helper typecast Issue #617', function (test) {
+
+  Handlebars.registerHelper('testTypeCasting', function (/*arguments*/) {
+    // Return a string representing the arguments passed to this
+    // function, including types. eg:
+    // (1, true) -> "[number,1][boolean,true]"
+    return _.reduce(_.toArray(arguments), function (memo, arg) {
+      if (typeof arg === 'object')
+        return memo + "[object]";
+      return memo + "[" + typeof arg + "," + arg + "]";
+    }, "");
+    return x;
+  });
+
+  var frag = Meteor.render(Template.test_type_casting);
+  var result = canonicalizeHtml(DomUtils.fragmentToHtml(frag));
+  test.equal(
+    result,
+    // This corresponds to entries in templating_tests.html.
+    // true/faslse
+    "[string,true][string,false][boolean,true][boolean,false]" +
+      // numbers
+      "[number,0][number,1][number,-1][number,10][number,-10]" +
+      // errors
+      "[undefined,undefined][undefined,undefined]" +
+      // handlebars 'options' argument. appended to args of all helpers.
+      "[object]");
+});
+

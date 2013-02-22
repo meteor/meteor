@@ -3,7 +3,7 @@
 set -e
 set -u
 
-BUNDLE_VERSION=0.2.8
+BUNDLE_VERSION=0.2.19
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -56,7 +56,7 @@ git clone git://github.com/joyent/node.git
 cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
 # the top of app/meteor/meteor.js and app/server/server.js.
-git checkout v0.8.11
+git checkout v0.8.18
 
 ./configure --prefix="$DIR"
 make -j4
@@ -78,25 +78,35 @@ which npm
 
 cd "$DIR/lib/node_modules"
 npm install connect@1.9.2 # not 2.x yet. sockjs doesn't work w/ new connect
-npm install gzippo@0.1.7
 npm install optimist@0.3.5
 npm install coffee-script@1.4.0
-npm install less@1.3.1
+npm install less@1.3.3
 npm install stylus@0.30.1
 npm install nib@0.8.2
 npm install mime@1.2.7
 npm install semver@1.1.0
 npm install handlebars@1.0.7
 npm install mongodb@1.1.11
-npm install uglify-js@1.3.4
-npm install clean-css@0.8.2
-npm install useragent@1.1.0
+npm install clean-css@0.8.3
+npm install useragent@2.0.1
 npm install request@2.12.0
 npm install simplesmtp@0.1.25
 npm install stream-buffers@0.2.3
 npm install keypress@0.1.0
 npm install sockjs@0.3.4
 npm install http-proxy@0.8.5
+npm install underscore@1.4.2
+npm install fstream@0.1.21
+npm install tar@0.1.14
+npm install websocket@1.0.8
+
+# allow clientMaxAge to be set to 0:
+# https://github.com/tomgco/gzippo/pull/49
+npm install https://github.com/meteor/gzippo/tarball/1e4b955439
+
+# uglify-js has a bug which drops 'undefined' in arrays:
+# https://github.com/mishoo/UglifyJS2/pull/97
+npm install https://github.com/meteor/UglifyJS2/tarball/aa5abd14d3
 
 # progress 0.1.0 has a regression where it opens stdin and thus does not
 # allow the node process to exit cleanly. See
@@ -108,8 +118,9 @@ npm install progress@0.0.5
 npm install mailcomposer@0.1.15
 
 # If you update the version of fibers in the dev bundle, also update the "npm
-# install" command in docs/client/concepts.html.
-npm install fibers@0.6.9
+# install" command in docs/client/concepts.html and in the README in
+# app/lib/bundler.js.
+npm install fibers@1.0.0
 # Fibers ships with compiled versions of its C code for a dozen platforms. This
 # bloats our dev bundle, and confuses dpkg-buildpackage and rpmbuild into
 # thinking that the packages need to depend on both 32- and 64-bit versions of

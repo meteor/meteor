@@ -1093,7 +1093,7 @@ Tinytest.add("spark - list event handling", function(test) {
   // same thing, but with events wired by listChunk "added" and "removed"
   event_buf.length = 0;
   var lst = [];
-  lst.observe = function(callbacks) {
+  lst.observeChanges = function(callbacks) {
     lst.callbacks = callbacks;
     return {
       stop: function() {
@@ -1127,12 +1127,12 @@ Tinytest.add("spark - list event handling", function(test) {
   doClick();
   // add item
   lst.push({_id:'foo'});
-  lst.callbacks.added(lst[0], 0);
+  lst.callbacks.addedBefore(lst[0]._id, lst[0], null);
   Meteor.flush();
   test.equal(div.text().match(/\S+/)[0], 'foo');
   doClick();
   // remove item, back to "else" case
-  lst.callbacks.removed(lst[0], 0);
+  lst.callbacks.removed(lst[0]._id);
   lst.pop();
   Meteor.flush();
   test.equal(div.text().match(/\S+/)[0], 'else');
@@ -1639,8 +1639,8 @@ Tinytest.add("spark - landmark patching", function(test) {
   for(var i=0; i<5; i++) {
     // Use non-deterministic randomness so we can have a shorter fuzz
     // test (fewer iterations).  For deterministic (fully seeded)
-    // randomness, remove the call to Math.random().
-    rand = new SeededRandom("preserved nodes "+i+" "+Math.random());
+    // randomness, remove the call to Random.fraction().
+    rand = new SeededRandom("preserved nodes "+i+" "+Random.fraction());
 
     var R = ReactiveVar(false);
     var structure = randomNodeList(null, 6);
@@ -1839,8 +1839,8 @@ Tinytest.add("spark - landmark constant", function(test) {
   Meteor.flush();
 });
 
-
-Tinytest.add("spark - leaderboard", function(test) {
+_.each(['STRING', 'MONGO'], function (idGeneration) {
+Tinytest.add("spark - leaderboard, " + idGeneration, function(test) {
   // use a simplified, local leaderboard to test some stuff
 
   var players = new LocalCollection();
@@ -1850,10 +1850,10 @@ Tinytest.add("spark - leaderboard", function(test) {
     var html = Spark.list(
       players.find({}, {sort: {score: -1}}),
       function(player) {
-        return Spark.labelBranch(player._id, function () {
+        return Spark.labelBranch(player._id.valueOf(), function () {
           return Spark.isolate(function () {
             var style;
-            if (selected_player.get() === player._id)
+            if (_.isEqual(selected_player.get(), player._id))
               style = "player selected";
             else
               style = "player";
@@ -1876,6 +1876,11 @@ Tinytest.add("spark - leaderboard", function(test) {
     }, html);
     return html;
   }));
+  var idGen;
+  if (idGeneration === 'STRING')
+    idGen = Random.id;
+  else
+    idGen = function () { return new LocalCollection._ObjectID(); };
 
   // back before we had scientists we had Vancian hussade players
   var names = ["Glinnes Hulden", "Shira Hulden", "Denzel Warhound",
@@ -1884,7 +1889,7 @@ Tinytest.add("spark - leaderboard", function(test) {
                "Rhyl Shermatz", "Yalden Wirp", "Tyran Lucho",
                "Bump Candolf", "Wilmer Guff", "Carbo Gilweg"];
   for (var i = 0; i < names.length; i++)
-    players.insert({name: names[i], score: i*5});
+    players.insert({_id: idGen(), name: names[i], score: i*5});
 
   var bump = function() {
     players.update(selected_player.get(), {$inc: {score: 5}});
@@ -1940,16 +1945,16 @@ Tinytest.add("spark - leaderboard", function(test) {
   Meteor.flush();
   test.equal(selected_player.numListeners(), 0);
 });
-
+});
 
 Tinytest.add("spark - list cursor stop", function(test) {
   // test Spark.list outside of render mode, on custom observable
 
   var numHandles = 0;
   var observable = {
-    observe: function(x) {
-      x.added({_id:"123"}, 0);
-      x.added({_id:"456"}, 1);
+    observeChanges: function(x) {
+      x.addedBefore("123", {}, null);
+      x.addedBefore("456", {}, null);
       var handle;
       numHandles++;
       return handle = {
@@ -2157,13 +2162,13 @@ Tinytest.add("spark - list event data", function(test) {
   var div = OnscreenDiv(Meteor.render(function() {
     var html = Spark.list(
       {
-        observe: function(observer) {
-          observer.added({_id: '1', name: 'Foo'}, 0);
-          observer.added({_id: '2', name: 'Bar'}, 1);
+        observeChanges: function(observer) {
+          observer.addedBefore("1", {name: 'Foo'}, null);
+          observer.addedBefore("2", {name: 'Bar'}, null);
           // exercise callback path
           later = function() {
-            observer.added({_id: '3', name: 'Baz'}, 2);
-            observer.added({_id: '4', name: 'Qux'}, 3);
+            observer.addedBefore("3", {name: 'Baz'}, null);
+            observer.addedBefore("4", {name: 'Qux'}, null);
           };
           return { stop: function() {} };
         }
@@ -2322,7 +2327,7 @@ Tinytest.add("spark - cleanup", function(test) {
   var observeCount = 0;
   var stopCount = 0;
   var cursor = {
-    observe: function (callbacks) {
+    observeChanges: function (callbacks) {
       observeCount++;
       return {
         stop: function () {
@@ -2545,7 +2550,7 @@ testAsyncMulti(
         // This is quite a tricky implementation.
 
         var withIframe = function(onReady1, onReady2) {
-          var frameName = "submitframe"+String(Math.random()).slice(2);
+          var frameName = "submitframe"+String(Random.fraction()).slice(2);
           var iframeDiv = OnscreenDiv(
             Meteor.render(function() {
               return '<iframe name="'+frameName+'" '+
@@ -2638,13 +2643,14 @@ testAsyncMulti(
   })());
 
 
-Tinytest.add("spark - controls", function(test) {
-
-  // Radio buttons
-
+Tinytest.add("spark - controls - radio", function(test) {
   var R = ReactiveVar("");
+  var R2 = ReactiveVar("");
   var change_buf = [];
   var div = OnscreenDiv(renderWithPreservation(function() {
+    // Re-render when R2 is changed, even though it doesn't affect HTML.
+    R2.get();
+
     var buf = [];
     buf.push("Band: ");
     _.each(["AM", "FM", "XM"], function(band) {
@@ -2691,6 +2697,12 @@ Tinytest.add("spark - controls", function(test) {
   test.equal(_.pluck(btns, 'checked'), [true, false, false]);
   test.equal(div.text(), "Band: AM");
 
+  R2.set("change");
+  Meteor.flush();
+  test.length(change_buf, 0);
+  test.equal(_.pluck(btns, 'checked'), [true, false, false]);
+  test.equal(div.text(), "Band: AM");
+
   clickElement(btns[1]);
   test.equal(change_buf, ['FM']);
   change_buf.length = 0;
@@ -2713,48 +2725,177 @@ Tinytest.add("spark - controls", function(test) {
   test.equal(div.text(), "Band: FM");
 
   div.kill();
+});
 
-  // Textarea
-
-  R = ReactiveVar({x:"test"});
-  div = OnscreenDiv(renderWithPreservation(function() {
-    return '<textarea id="mytextarea">This is a '+
-      R.get().x+'</textarea>';
+Tinytest.add("spark - controls - checkbox", function(test) {
+  var labels = ["Foo", "Bar", "Baz"];
+  var Rs = {};
+  _.each(labels, function (label) {
+    Rs[label] = ReactiveVar(false);
+  });
+  var changeBuf = [];
+  var div = OnscreenDiv(renderWithPreservation(function() {
+    var buf = [];
+    _.each(labels, function (label) {
+      var checked = Rs[label].get() ? 'checked="checked"' : '';
+      buf.push('<input type="checkbox" name="checky" '+
+               'value="'+label+'" '+checked+'/>');
+    });
+    return buf.join('');
   }));
-  div.show(true);
 
-  var textarea = div.node().firstChild;
-  test.equal(textarea.nodeName, "TEXTAREA");
-  test.equal(textarea.value, "This is a test");
-
-  // value updates reactively
-  R.set({x:"fridge"});
   Meteor.flush();
-  test.equal(textarea.value, "This is a fridge");
 
-  // ...unless focused
-  focusElement(textarea);
-  R.set({x:"frog"});
-  Meteor.flush();
-  test.equal(textarea.value, "This is a fridge");
+  // get the three boxes; they should be considered 'labeled' by the patcher and
+  // not change identities!
+  var boxes = nodesToArray(div.node().getElementsByTagName("INPUT"));
 
-  // blurring and re-setting works
-  blurElement(textarea);
-  Meteor.flush();
-  test.equal(textarea.value, "This is a fridge");
-  R.set({x:"frog"});
-  Meteor.flush();
-  test.equal(textarea.value, "This is a frog");
+  test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
 
-  // Setting a value (similar to user typing) should
-  // not prevent value from being updated reactively.
-  textarea.value = "foobar";
-  R.set({x:"photograph"});
+  // Re-render with first one checked.
+  Rs.Foo.set(true);
   Meteor.flush();
-  test.equal(textarea.value, "This is a photograph");
+  test.equal(_.pluck(boxes, 'checked'), [true, false, false]);
 
+  // Re-render with first one unchecked again.
+  Rs.Foo.set(false);
+  Meteor.flush();
+  test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
+
+  // User clicks the second one.
+  clickElement(boxes[1]);
+  test.equal(_.pluck(boxes, 'checked'), [false, true, false]);
+  Meteor.flush();
+  test.equal(_.pluck(boxes, 'checked'), [false, true, false]);
+
+  // Re-render with third one checked. Second one should stay checked because
+  // it's a user update!
+  Rs.Baz.set(true);
+  Meteor.flush();
+  test.equal(_.pluck(boxes, 'checked'), [false, true, true]);
+
+  // User turns second and third off.
+  clickElement(boxes[1]);
+  clickElement(boxes[2]);
+  test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
+  Meteor.flush();
+  test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
+
+  // Re-render with first one checked. Third should stay off because it's a user
+  // update!
+  Rs.Foo.set(true);
+  Meteor.flush();
+  test.equal(_.pluck(boxes, 'checked'), [true, false, false]);
+
+  // Re-render with first one unchecked. Third should still stay off.
+  Rs.Foo.set(false);
+  Meteor.flush();
+  test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
 
   div.kill();
+});
+
+_.each(['textarea', 'text', 'password', 'submit', 'button',
+        'reset', 'select', 'hidden'], function (type) {
+  Tinytest.add("spark - controls - " + type, function(test) {
+    var R = ReactiveVar({x:"test"});
+    var R2 = ReactiveVar("");
+    var div = OnscreenDiv(renderWithPreservation(function() {
+      // Re-render when R2 is changed, even though it doesn't affect HTML.
+      R2.get();
+      if (type === 'textarea') {
+        return '<textarea id="someId">This is a ' + R.get().x + '</textarea>';
+      } else if (type === 'select') {
+        var options = ['This is a test', 'This is a fridge',
+                       'This is a frog', 'foobar', 'This is a photograph',
+                       'This is a monkey', 'This is a donkey'];
+        return '<select id="someId">' + _.map(options, function (o) {
+          var maybeSel = ('This is a ' + R.get().x) === o ? 'selected' : '';
+          return '<option ' + maybeSel + '>' + o + '</option>';
+        }).join('') + '</select>';
+      } else {
+        return '<input type="' + type + '" id="someId" value="This is a ' +
+          R.get().x + '">';
+      }
+    }));
+    div.show(true);
+    var canFocus = (type !== 'hidden');
+
+    var input = div.node().firstChild;
+    if (type === 'textarea' || type === 'select') {
+      test.equal(input.nodeName, type.toUpperCase());
+    } else {
+      test.equal(input.nodeName, 'INPUT');
+      test.equal(input.type, type);
+    }
+    test.equal(DomUtils.getElementValue(input), "This is a test");
+    test.equal(input._sparkOriginalRenderedValue, ["This is a test"]);
+
+    // value updates reactively
+    R.set({x:"fridge"});
+    Meteor.flush();
+    test.equal(DomUtils.getElementValue(input), "This is a fridge");
+    test.equal(input._sparkOriginalRenderedValue, ["This is a fridge"]);
+
+    if (canFocus) {
+      // ...unless focused
+      focusElement(input);
+      R.set({x:"frog"});
+      Meteor.flush();
+      test.equal(DomUtils.getElementValue(input), "This is a fridge");
+      test.equal(input._sparkOriginalRenderedValue, ["This is a fridge"]);
+
+      // blurring and re-setting works
+      blurElement(input);
+      Meteor.flush();
+      test.equal(DomUtils.getElementValue(input), "This is a fridge");
+      test.equal(input._sparkOriginalRenderedValue, ["This is a fridge"]);
+    }
+    R.set({x:"frog"});
+    Meteor.flush();
+    test.equal(DomUtils.getElementValue(input), "This is a frog");
+    test.equal(input._sparkOriginalRenderedValue, ["This is a frog"]);
+
+    // Setting a value (similar to user typing) should prevent value from being
+    // reverted if the div is re-rendered but the rendered value (ie, R) does
+    // not change.
+    DomUtils.setElementValue(input, "foobar");
+    R2.set("change");
+    Meteor.flush();
+    test.equal(DomUtils.getElementValue(input), "foobar");
+    test.equal(input._sparkOriginalRenderedValue, ["This is a frog"]);
+
+    // ... but if the actual rendered value changes, that should take effect.
+    R.set({x:"photograph"});
+    Meteor.flush();
+    test.equal(DomUtils.getElementValue(input), "This is a photograph");
+    test.equal(input._sparkOriginalRenderedValue, ["This is a photograph"]);
+
+    // If the rendered value and user value change in the same way (eg, the user
+    // changed it and then invoked a menthod that set the database value based
+    // on what they changed), make sure that the _sparkOriginalRenderedValue
+    // gets updated too.
+    DomUtils.setElementValue(input, "This is a monkey");
+    R.set({x:"monkey"});
+    Meteor.flush();
+    test.equal(DomUtils.getElementValue(input), "This is a monkey");
+    test.equal(input._sparkOriginalRenderedValue, ["This is a monkey"]);
+
+    if (canFocus) {
+      // The same as the previous test... except make sure that it still works
+      // if the input is focused. ie, imagine that the user edited the field and
+      // hit enter with the field still focused, updating the database to match
+      // the field and keeping the field focused.
+      DomUtils.setElementValue(input, "This is a donkey");
+      focusElement(input);
+      R.set({x:"donkey"});
+      Meteor.flush();
+      test.equal(DomUtils.getElementValue(input), "This is a donkey");
+      test.equal(input._sparkOriginalRenderedValue, ["This is a donkey"]);
+    }
+
+    div.kill();
+  });
 });
 
 Tinytest.add("spark - oldschool landmark matching", function(test) {
@@ -3053,7 +3194,7 @@ Tinytest.add("spark - isolate inside landmark", function (test) {
 
 Tinytest.add("spark - nested onscreen processing", function (test) {
   var cursor = {
-    observe: function () { return { stop: function () {} }; }
+    observeChanges: function () { return { stop: function () {} }; }
   };
 
   var x = [];
@@ -3572,10 +3713,10 @@ Tinytest.add("spark - list update", function (test) {
 
   var lst = [];
   lst.callbacks = [];
-  lst.observe = function(callbacks) {
+  lst.observeChanges = function(callbacks) {
     lst.callbacks.push(callbacks);
-    _.each(lst, function(x, i) {
-      callbacks.added(x, i);
+    _.each(lst, function(x) {
+      callbacks.addedBefore(x._id, x, null);
     });
     return {
       stop: function() {
@@ -3587,7 +3728,7 @@ Tinytest.add("spark - list update", function (test) {
     var i = lst.length;
     lst.push({_id:'item'+i});
     _.each(lst.callbacks, function (callbacks) {
-      callbacks.added(lst[i], i);
+      callbacks.addedBefore(lst[i]._id, lst[i], null);
     });
   };
   var div = OnscreenDiv(Meteor.render(function() {
@@ -3693,6 +3834,58 @@ Tinytest.add("spark - legacy preserve names", function (test) {
 
   div.kill();
   Meteor.flush();
+});
+
+Tinytest.add("spark - update defunct range", function (test) {
+  // Test that Spark doesn't freak out if it tries to update
+  // a LiveRange on nodes that have been taken out of the document.
+  //
+  // See https://github.com/meteor/meteor/issues/392.
+
+  var R = ReactiveVar("foo");
+
+  var div = OnscreenDiv(Spark.render(function () {
+    return "<p>" + Spark.isolate(function() {
+      return R.get();
+    }) + "</p>";
+  }));
+
+  test.equal(div.html(), "<p>foo</p>");
+  R.set("bar");
+  Meteor.flush();
+  test.equal(R.numListeners(), 1);
+  test.equal(div.html(), "<p>bar</p>");
+  test.equal(div.node().firstChild.nodeName, "P");
+  div.node().firstChild.innerHTML = '';
+  R.set("baz");
+  Meteor.flush(); // should throw no errors
+  // will be 1 if our isolate func was run.
+  test.equal(R.numListeners(), 0);
+
+  /////
+
+  R = ReactiveVar("foo");
+
+  div = OnscreenDiv(Spark.render(function () {
+    return "<p>" + Spark.setDataContext(
+      {},
+      "<span>" + Spark.isolate(function() {
+        return R.get();
+      }) + "</span>") + "</p>";
+  }));
+
+  test.equal(div.html(), "<p><span>foo</span></p>");
+  R.set("bar");
+  Meteor.flush();
+  test.equal(R.numListeners(), 1);
+  test.equal(div.html(), "<p><span>bar</span></p>");
+  test.equal(div.node().firstChild.nodeName, "P");
+  div.node().firstChild.innerHTML = '';
+  R.set("baz");
+  Meteor.flush(); // should throw no errors
+  // will be 1 if our isolate func was run.
+  test.equal(R.numListeners(), 0);
+
 });
 
 })();

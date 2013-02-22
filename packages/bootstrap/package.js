@@ -1,10 +1,11 @@
 var path = require('path');
 
 Package.describe({
-  summary: "UX/UI framework from Twitter"
+  summary: "Front-end framework from Twitter"
 });
 
 Package.on_use(function (api) {
+  api.use('jquery');
   api.add_files(path.join('css', 'bootstrap.css'), 'client');
   api.add_files(path.join('css', 'bootstrap-responsive.css'), 'client');
   api.add_files(path.join('js', 'bootstrap.js'), 'client');

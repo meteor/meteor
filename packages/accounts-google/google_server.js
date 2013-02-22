@@ -2,20 +2,40 @@
 
   Accounts.oauth.registerService('google', 2, function(query) {
 
-    var accessToken = getAccessToken(query);
+    var response = getTokens(query);
+    var accessToken = response.accessToken;
     var identity = getIdentity(accessToken);
 
+    var serviceData = {
+      accessToken: accessToken,
+      expiresAt: (+new Date) + (1000 * response.expiresIn)
+    };
+
+    // include all fields from google
+    // https://developers.google.com/accounts/docs/OAuth2Login#userinfocall
+    var whitelisted = ['id', 'email', 'verified_email', 'name', 'given_name',
+        'family_name', 'picture', 'locale', 'timezone', 'gender'];
+
+    var fields = _.pick(identity, whitelisted);
+    _.extend(serviceData, fields);
+
+    // only set the token in serviceData if it's there. this ensures
+    // that we don't lose old ones (since we only get this on the first
+    // log in attempt)
+    if (response.refreshToken)
+      serviceData.refreshToken = response.refreshToken;
+
     return {
-      serviceData: {
-        id: identity.id,
-        accessToken: accessToken,
-        email: identity.email
-      },
+      serviceData: serviceData,
       options: {profile: {name: identity.name}}
     };
   });
 
-  var getAccessToken = function (query) {
+  // returns an object containing:
+  // - accessToken
+  // - expiresIn: lifetime of token in seconds
+  // - refreshToken, if this is the first authorization request
+  var getTokens = function (query) {
     var config = Accounts.loginServiceConfiguration.findOne({service: 'google'});
     if (!config)
       throw new Accounts.ConfigError("Service not configured");
@@ -33,7 +53,12 @@
       throw result.error;
     if (result.data.error) // if the http response was a json object with an error attribute
       throw result.data;
-    return result.data.access_token;
+
+    return {
+      accessToken: result.data.access_token,
+      refreshToken: result.data.refresh_token,
+      expiresIn: result.data.expires_in
+    };
   };
 
   var getIdentity = function (accessToken) {

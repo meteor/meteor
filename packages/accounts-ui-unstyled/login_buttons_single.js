@@ -23,6 +23,8 @@
       var options = {}; // use default scope unless specified
       if (Accounts.ui._options.requestPermissions[serviceName])
         options.requestPermissions = Accounts.ui._options.requestPermissions[serviceName];
+      if (Accounts.ui._options.requestOfflineToken[serviceName])
+        options.requestOfflineToken = Accounts.ui._options.requestOfflineToken[serviceName];
 
       loginWithService(options, callback);
     }

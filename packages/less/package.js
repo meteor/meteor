@@ -4,16 +4,23 @@ Package.describe({
 
 var less = require('less');
 var fs = require('fs');
+var path = require('path');
 
 Package.register_extension(
   "less", function (bundle, source_path, serve_path, where) {
     serve_path = serve_path + '.css';
 
-    var contents = fs.readFileSync(source_path);
+    var contents = fs.readFileSync(source_path, 'utf8');
 
     try {
-      less.render(contents.toString('utf8'), function (err, css) {
-        // XXX why is this a callback? it's not async.
+      less.render(contents.toString('utf8'), {
+        // Use fs.readFileSync to process @imports. This is the bundler, so
+        // that's not going to cause concurrency issues, and it means that (a)
+        // we don't have to use Futures and (b) errors thrown by bugs in less
+        // actually get caught.
+        syncImport: true,
+        paths: [path.resolve(source_path, '..')] // for @import
+      }, function (err, css) {
         if (err) {
           bundle.error(source_path + ": Less compiler error: " + err.message);
           return;
@@ -35,6 +42,11 @@ Package.register_extension(
   }
 );
 
+// Register lessimport files with the dependency watcher, without actually
+// processing them.
+Package.register_extension("lessimport", function () {});
+
 Package.on_test(function (api) {
+  api.use('test-helpers');
   api.add_files(['less_tests.less', 'less_tests.js'], 'client');
 });

@@ -2,21 +2,21 @@
 // to change this. See 'benchmark-scenarios.js' for the list of
 // scenarios.
 
+var PARAMS = {};
 if (Meteor.isServer) {
-  if (process.env.SCENARIO)
-    __meteor_runtime_config__.SCENARIO = process.env.SCENARIO;
-  else
-    __meteor_runtime_config__.SCENARIO = 'default';
+  if (!Meteor.settings.params)
+    throw new Error("Must set scenario with Meteor.settings");
+  __meteor_runtime_config__.PARAMS = PARAMS = Meteor.settings.params;
+} else {
+  PARAMS = __meteor_runtime_config__.PARAMS;
 }
-var PARAMS = SCENARIOS[__meteor_runtime_config__.SCENARIO];
-
 
 //////////////////////////////
 // Helper Functions
 //////////////////////////////
 
 var random = function (n) {
-  return Math.floor(Math.random() * n);
+  return Math.floor(Random.fraction() * n);
 };
 
 var randomChars =
@@ -25,13 +25,13 @@ var randomString = function (length) {
   // XXX make more efficient
   var ret = '';
   _.times(length, function () {
-    ret += randomChars[random(randomChars.length)];
+    ret += Random.choice(randomChars);
   });
   return ret;
 };
 
 var pickCollection = function () {
-  return Collections[random(Collections.length)];
+  return Random.choice(Collections);
 };
 
 var generateDoc = function () {
@@ -123,7 +123,7 @@ if (Meteor.isClient) {
     Meteor.setInterval(function () {
       var C = pickCollection();
       var docs = C.find({}).fetch();
-      var doc = docs[random(docs.length)];
+      var doc = Random.choice(docs);
       if (doc)
         C.remove(doc._id);
     }, 1000 / PARAMS.removesPerSecond);
@@ -133,7 +133,7 @@ if (Meteor.isClient) {
     Meteor.setInterval(function () {
       var C = pickCollection();
       var docs = C.find({}).fetch();
-      var doc = docs[random(docs.length)];
+      var doc = Random.choice(docs);
       if (doc) {
         var field = 'Field' + random(PARAMS.documentNumFields);
         var modifer = {};

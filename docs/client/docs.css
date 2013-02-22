@@ -43,6 +43,7 @@ pre {
 code {
     font-family: monospace;
     font-size: 1.1em;
+    white-space: pre;
 }
 
 ul {
@@ -369,6 +370,12 @@ dl.callbacks {
     float: right;
     font-weight: normal;
     padding-right: 5px;
+}
+
+.or {
+    font-size: .9em;
+    text-decoration: underline;
+    font-style: italic;
 }
 
 #main pre {

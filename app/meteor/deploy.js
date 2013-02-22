@@ -10,9 +10,10 @@ var request = require('request');
 var qs = require('querystring');
 var path = require('path');
 var files = require(path.join(__dirname, '..', 'lib', 'files.js'));
-var _ = require(path.join(__dirname, '..', 'lib', 'third', 'underscore.js'));
+var _ = require('underscore');
 var keypress = require('keypress');
 var child_process = require('child_process');
+var inFiber = require(path.join(__dirname, '..', 'lib', 'fiber-helpers.js')).inFiber;
 
 //
 // configuration
@@ -33,10 +34,15 @@ if (process.env.EMACS == "t") {
 // interactively prompt for here.
 
 var meteor_rpc = function (rpc_name, method, site, query_params, callback) {
-  var url = "https://" + DEPLOY_HOSTNAME + '/' + rpc_name + '/' + site;
+  var url;
+  if (DEPLOY_HOSTNAME.indexOf("http://") === 0)
+    url = DEPLOY_HOSTNAME + '/' + rpc_name + '/' + site;
+  else
+    url = "https://" + DEPLOY_HOSTNAME + '/' + rpc_name + '/' + site;
 
-  if (!_.isEmpty(query_params))
+  if (!_.isEmpty(query_params)) {
     url += '?' + qs.stringify(query_params);
+  }
 
   var r = request({method: method, url: url}, function (error, response, body) {
     if (error || ((response.statusCode !== 200)
@@ -51,26 +57,39 @@ var meteor_rpc = function (rpc_name, method, site, query_params, callback) {
 };
 
 var deploy_app = function (url, app_dir, opt_debug, opt_tests,
-                           opt_set_password) {
+                           opt_set_password, settings) {
   var parsed_url = parse_url(url);
 
   // a bit contorted here to make sure we ask for the password before
   // launching the slow bundle process.
 
   with_password(parsed_url.hostname, function (password) {
+    var deployOptions = {
+      site: parsed_url.hostname,
+      appDir: app_dir,
+      debug: opt_debug,
+      tests: opt_tests,
+      password: password,
+      settings: settings
+    };
     if (opt_set_password)
       get_new_password(function (set_password) {
-        bundle_and_deploy(parsed_url.hostname, app_dir, opt_debug, opt_tests,
-                          password, set_password);
+        deployOptions.setPassword = set_password;
+        bundle_and_deploy(deployOptions);
       });
     else
-      bundle_and_deploy(parsed_url.hostname, app_dir, opt_debug, opt_tests,
-                        password);
+      bundle_and_deploy(deployOptions);
   });
 };
 
-var bundle_and_deploy = function (site, app_dir, opt_debug, opt_tests,
-                                  password, set_password) {
+var bundle_and_deploy = function (options) {
+  var site = options.site;
+  var app_dir = options.appDir;
+  var opt_debug = options.debug;
+  var opt_tests = options.tests;
+  var password = options.password;
+  var set_password = options.setPassword;
+  var settings = options.settings;
   var build_dir = path.join(app_dir, '.meteor', 'local', 'build_tar');
   var bundle_path = path.join(build_dir, 'bundle');
   var bundle_opts = { skip_dev_bundle: true, no_minify: !!opt_debug,
@@ -90,14 +109,17 @@ var bundle_and_deploy = function (site, app_dir, opt_debug, opt_tests,
 
   process.stdout.write('uploading ... ');
 
-  var opts = {};
-  if (password) opts.password = password;
-  if (set_password) opts.set_password = set_password;
+  var rpcOptions = {};
+  if (password) rpcOptions.password = password;
+  if (set_password) rpcOptions.set_password = set_password;
+
+  // When it hits the wire, all these opts will be URL-encoded.
+  if (settings !== undefined) rpcOptions.settings = settings;
 
   var tar = child_process.spawn(
     'tar', ['czf', '-', 'bundle'], {cwd: build_dir});
 
-  var rpc = meteor_rpc('deploy', 'POST', site, opts, function (err, body) {
+  var rpc = meteor_rpc('deploy', 'POST', site, rpcOptions, function (err, body) {
     if (err) {
       var errorMessage = (body || ("Connection error (" + err.message + ")"));
       process.stderr.write("\nError deploying application: " + errorMessage + "\n");
@@ -105,15 +127,34 @@ var bundle_and_deploy = function (site, app_dir, opt_debug, opt_tests,
     }
 
     process.stdout.write('done.\n');
-    process.stdout.write('Now serving at ' + site + '\n');
 
+    var hostname = null;
+    var response = null;
+    try {
+      response = JSON.parse(body);
+    } catch (e) {
+      // ... leave null
+    }
+    if (response && response.url) {
+      var url = require('url').parse(response.url);
+      if (url && url.hostname)
+        hostname = url.hostname;
+    }
+
+    if (!hostname) {
+      process.stdout.write('Error receiving hostname from deploy server.\n');
+      process.exit(1);
+    }
+
+    process.stdout.write('Now serving at ' + hostname + '\n');
     files.rm_recursive(build_dir);
 
-    if (!site.match('meteor.com')) {
+
+    if (hostname && !hostname.match(/meteor\.com$/)) {
       var dns = require('dns');
-      dns.resolve(site, 'CNAME', function (err, cnames) {
+      dns.resolve(hostname, 'CNAME', function (err, cnames) {
         if (err || cnames[0] !== 'origin.meteor.com') {
-          dns.resolve(site, 'A', function (err, addresses) {
+          dns.resolve(hostname, 'A', function (err, addresses) {
             if (err || addresses[0] !== '107.22.210.133') {
               process.stdout.write('-------------\n');
               process.stdout.write("You've deployed to a custom domain.\n");
@@ -207,9 +248,6 @@ var parse_url = function (url) {
 
   delete parsed.host; // we use hostname
 
-  if (parsed.hostname && !parsed.hostname.match(/\./))
-    parsed.hostname += '.meteor.com';
-
   if (!parsed.hostname) {
     process.stdout.write(
 "Please specify a domain to connect to, such as www.example.com or\n" +
@@ -258,7 +296,10 @@ var read_password = function (callback) {
   // https://github.com/visionmedia/commander.js/blob/master/lib/commander.js
 
   var buf = '';
-  process.stdin.setRawMode(true);
+  if (process.stdin.setRawMode) {
+    // when piping password from bash to meteor we have no setRawMode() available
+    process.stdin.setRawMode(true);
+  }
 
   // keypress
   keypress(process.stdin);
@@ -267,7 +308,10 @@ var read_password = function (callback) {
       console.log();
       process.stdin.pause();
       process.stdin.removeAllListeners('keypress');
-      process.stdin.setRawMode(false);
+      if (process.stdin.setRawMode) {
+        // when piping password from bash to meteor we have no setRawMode() available
+        process.stdin.setRawMode(false);
+      }
 
       // if they just hit enter, prompt again. let's not do this.
       // This means empty password is a valid password.
@@ -308,6 +352,8 @@ var read_password = function (callback) {
 // undefined if no password is required.
 var with_password = function (site, callback) {
   var check_url = "https://" + DEPLOY_HOSTNAME + "/has_password/" + site;
+
+  callback = inFiber(callback);
 
   request(check_url, function (error, response, body) {
     if (error || response.statusCode !== 200) {

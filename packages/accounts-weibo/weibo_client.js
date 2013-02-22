@@ -13,7 +13,7 @@
       return;
     }
 
-    var state = Meteor.uuid();
+    var state = Random.id();
     // XXX need to support configuring access_type and scope
     var loginUrl =
           'https://api.weibo.com/oauth2/authorize' +
@@ -24,5 +24,4 @@
 
     Accounts.oauth.initiateLogin(state, loginUrl, callback);
   };
-
 }) ();
