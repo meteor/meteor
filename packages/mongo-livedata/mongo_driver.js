@@ -49,9 +49,9 @@ var replaceTypes = function (document, atomTransformer) {
   _.each(document, function (val, key) {
     var valReplaced = replaceTypes(val, atomTransformer);
     if (val !== valReplaced) {
-      // Lazy clone.
+      // Lazy clone. Shallow copy.
       if (ret === document)
-        ret = EJSON.clone(document);
+        ret = _.clone(document);
       ret[key] = valReplaced;
     }
   });

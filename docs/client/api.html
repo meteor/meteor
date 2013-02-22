@@ -229,10 +229,10 @@ Example:
       }
     });
 
-Calling `methods` on the server defines functions that can be called
-remotely by clients.  They should return a value or throw an exception.
-Inside your method invocation, `this` is bound to a method invocation
-object, which provides the following:
+Calling `methods` on the server defines functions that can be called remotely by
+clients.  They should return an [EJSON](#ejson)-able value or throw an
+exception.  Inside your method invocation, `this` is bound to a method
+invocation object, which provides the following:
 
 * `isSimulation`: a boolean value, true if this invocation is a stub.
 * `unblock`: when called, allows the next method from this client to
@@ -458,7 +458,7 @@ traditional ORM (Object-Relation Mapper)-centric framework. It sets up a
 *collection* (a storage space for records, or "documents") that can be
 used to store a particular type of information, like users, posts,
 scores, todo items, or whatever matters to your application.  Each
-document is a JSON object.  It includes an `_id` property whose value is
+document is a EJSON object.  It includes an `_id` property whose value is
 unique in the collection, which Meteor will set when you first create
 the document.
 
@@ -602,7 +602,7 @@ Equivalent to `find(selector, options).fetch()[0]`.
 {{> api_box insert}}
 
 Add a document to the collection. A document is just an object, and
-its fields can contain any combination of JSON-compatible datatypes
+its fields can contain any combination of EJSON-compatible datatypes
 (arrays, objects, numbers, strings, `null`, true, and false).
 
 `insert` will generate a unique ID for the object you pass, insert it
@@ -724,17 +724,17 @@ The user `userId` wants to insert the document `doc` into the
 collection. Return `true` if this should be allowed.
 {{/dtdd}}
 
-{{#dtdd "update(userId, docs, fields, modifier)"}}
+{{#dtdd "update(userId, docs, fieldNames, modifier)"}}
 The user `userId` wants to update some documents. Meteor has fetched the
 documents from the database and they are available in `docs` as an
 array. Return `true` if the user should be allowed to change these
 documents.
 
-Additional details about the proposed modification are in `fields` and
-`modifier`. `fields` is the top-level fields in the document that the
-client wishes to modify, for example `['name', 'score']`. `modifier` is
-the raw Mongo modifier that the client wants to execute, for example
-`{$set: {'name.first': "Alice"}, $inc: {score: 1}}`.
+Additional details about the proposed modification are in `fieldNames` and
+`modifier`. &emsp; `fieldNames` is the top-level fields in the document that the
+client wishes to modify, for example `['name',`&nbsp;`'score']`. &emsp; `modifier`
+is the raw Mongo modifier that the client wants to execute, for example `{$set:
+{'name.first': "Alice"}, $inc: {score: 1}}`.
 
 Only Mongo modifiers are supported (operations like `$set` and `$push`).
 If the user tries to replace the entire document rather than use
@@ -953,10 +953,9 @@ order of the documents in the result set. They are more efficient than
 Before `observe` returns, `added` (or `addedAt`) will be called zero
 or more times to deliver the initial results of the query.
 
-`observe` returns a live query handle, which is an object with a
-`stop` method.  Call this function with no arguments to stop calling
-the callback functions and tear down the query. **The query will run
-forever until you call this.**
+`observe` returns a live query handle, which is an object with a `stop` method.
+Call `stop` with no arguments to stop calling the callback functions and tear
+down the query. **The query will run forever until you call this.**
 
 
 {{> api_box cursor_observe_changes}}
@@ -1001,13 +1000,12 @@ The document identified by `id` was removed from the result set.
 `observeChanges` is significantly more efficient if you do not use
 `addedBefore` or `movedBefore`.
 
-Before `observeChanges` returns, `added` (or `addedAt`) will be called
+Before `observeChanges` returns, `added` (or `addedBefore`) will be called
 zero or more times to deliver the initial results of the query.
 
-`observeChanges` returns a live query handle, which is an object with
-a `stop` method.  Call this function with no arguments to stop calling
-the callback functions and tear down the query. **The query will run
-forever until you call this.**
+`observeChanges` returns a live query handle, which is an object with a `stop`
+method.  Call `stop` with no arguments to stop calling the callback functions
+and tear down the query. **The query will run forever until you call this.**
 
 {{#note}}
 Unlike `observe`, `observeChanges` does not provide absolute position
@@ -1164,6 +1162,11 @@ Example:
     Session.set("currentRoomId", "home");
 
 See [`Meteor.deps`](#meteor_deps) for another example.
+
+{{> api_box setDefault}}
+
+This is useful in initialization code, to avoid re-initializing a session
+variable every time a new version of your app is loaded.
 
 {{> api_box get}}
 
@@ -2480,7 +2483,8 @@ When you add a type to EJSON, Meteor will be able to use that type in:
 
   MongoDB cannot store most user-defined types natively on the server.  Your
   type will work in Minimongo, and you can send it to the client using a custom
-  publisher, but MongoDB only knows about the types defined in [BSON](http://bsonspec.org/).
+  publisher, but MongoDB can only store the types defined in
+  [BSON](http://bsonspec.org/).
 
 {{/note}}
 

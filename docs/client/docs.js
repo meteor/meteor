@@ -1,4 +1,4 @@
-METEOR_VERSION = "0.5.6";
+METEOR_VERSION = "0.5.7";
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
@@ -161,6 +161,7 @@ var toc = [
 
     "Session", [
       "Session.set",
+      {name: "Session.setDefault", id: "session_set_default"},
       "Session.get",
       "Session.equals"
     ],

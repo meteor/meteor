@@ -156,7 +156,8 @@ the server having been upgraded.
    example, if subscription A says document `x` has fields `{foo: 1, bar: 2}`
    and subscription B says document `x` has fields `{foo: 1, baz:3}`, then the
    client will be informed that document `x` has fields `{foo: 1, bar: 2, baz:
-   3}`
+   3}`.  If field values from different subscriptions conflict with each other,
+   the server should send one of the possible field values.
 
  * When one or more subscriptions have finished sending their initial batch of
    data, the server will send a `ready` message with their IDs.
@@ -234,7 +235,9 @@ supports all types built into JSON as plain JSON, plus the following:
 
     {"$binary": BASE_64_STRING}
 
-Escaped things that might otherwise look like EJSON types:
+(The base 64 string has `+` and `/` as characters 62 and 63, and has no maximum line length)
+
+**Escaped things** that might otherwise look like EJSON types:
 
     {"$escape": THING}
 
@@ -252,4 +255,8 @@ to a Date object:
 
     {"$type": TYPENAME, "$value": VALUE}
 
-Implementations of EJSON should try to preserve key order where they can.
+Implementations of EJSON should try to preserve key order where they can.  Users
+of EJSON should not rely on key order, if possible.
+
+> MongoDB relies on key order.  When using EJSON with MongoDB, the
+> implementation of EJSON must preserve key order.
