@@ -17,7 +17,6 @@ Meteor.publish('_roles_own_user_roles', function () {
       fields = {roles:1}
 
   if (!userId) {
-    this.complete()
     return
   }
 
