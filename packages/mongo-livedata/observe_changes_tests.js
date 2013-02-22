@@ -92,6 +92,7 @@ Tinytest.addAsync("observeChanges - unordered - basics", function (test, onCompl
   logger.expectResultOnly("added", [fooid, {noodles: "good", bacon: "bad", apples: "ok"}]);
 
   c.update(fooid, {noodles: "alright", potatoes: "tasty", apples: "ok"});
+  c.update(fooid, {noodles: "alright", potatoes: "tasty", apples: "ok"});
   logger.expectResultOnly("changed",
                       [fooid, {noodles: "alright", potatoes: "tasty", bacon: undefined}]);
   c.remove(fooid);
@@ -107,6 +108,35 @@ Tinytest.addAsync("observeChanges - unordered - basics", function (test, onCompl
   });
 });
 
+if (Meteor.isServer) {
+  Tinytest.addAsync("observeChanges - unordered - specific fields", function (test, onComplete) {
+    var c = makeCollection();
+    withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, function (logger) {
+      c.find({}, {fields:{noodles: 1, bacon: 1}}).observeChanges(logger);
+      var barid = c.insert({thing: "stuff"});
+      logger.expectResultOnly("added", [barid, {}]);
+
+      var fooid = c.insert({noodles: "good", bacon: "bad", apples: "ok"});
+
+      logger.expectResultOnly("added", [fooid, {noodles: "good", bacon: "bad"}]);
+
+      c.update(fooid, {noodles: "alright", potatoes: "tasty", apples: "ok"});
+      logger.expectResultOnly("changed",
+                              [fooid, {noodles: "alright", bacon: undefined}]);
+      c.update(fooid, {noodles: "alright", potatoes: "meh", apples: "ok"});
+      c.remove(fooid);
+      logger.expectResultOnly("removed", [fooid]);
+      c.remove(barid);
+      logger.expectResultOnly("removed", [barid]);
+
+      fooid = c.insert({noodles: "good", bacon: "bad"});
+
+      logger.expectResult("added", [fooid, {noodles: "good", bacon: "bad"}]);
+      logger.expectNoResult();
+      onComplete();
+    });
+  });
+}
 
 
 Tinytest.addAsync("observeChanges - unordered - enters and exits result set through change", function (test, onComplete) {

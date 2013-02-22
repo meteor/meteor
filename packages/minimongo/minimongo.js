@@ -585,8 +585,11 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
   if (!EJSON.equals(doc._id, old_doc._id))
     throw new Error("Can't change a doc's _id while updating");
   if (!query.ordered) {
-    query.changed(doc._id, LocalCollection._makeChangedFields(doc, old_doc));
-    query.results[LocalCollection._idStringify(doc._id)] = doc;
+    var changedFields = LocalCollection._makeChangedFields(doc, old_doc);
+    if (!_.isEmpty(changedFields)) {
+      query.changed(doc._id, changedFields);
+      query.results[LocalCollection._idStringify(doc._id)] = doc;
+    }
     return;
   }
 
