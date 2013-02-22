@@ -324,16 +324,15 @@ Handlebars.evaluate = function (ast, data, options) {
         }));
       else if (elt[0] === '#') {
         // {{#block helper}}
+        var pcKey = getPCKey();
         var block = decorateBlockFn(
           function (data) {
-            return template({parent: stack, data: data}, elt[2],
-                            getPCKey());
+            return template({parent: stack, data: data}, elt[2], pcKey);
           }, stack.data);
         block.fn = block;
         block.inverse = decorateBlockFn(
           function (data) {
-            return template({parent: stack, data: data}, elt[3] || [],
-                            getPCKey());
+            return template({parent: stack, data: data}, elt[3] || [], pcKey);
           }, stack.data);
         var html = branch(elt[1], function () {
           return toString(invoke(stack, elt[1], block, true));
