@@ -1032,3 +1032,39 @@ Tinytest.add('templating - helper typecast Issue #617', function (test) {
       "[object]");
 });
 
+Tinytest.add("templating - tricky branch labels", function (test) {
+  // regression test for issue #724
+
+  var loading = ReactiveVar(true);
+  var v = ReactiveVar(1);
+
+  var x = [];
+
+  Template.test_template_trickylabels_a0.loading = function () {
+    return loading.get();
+  };
+
+  Template.test_template_trickylabels_a1.v = function () {
+    return v.get();
+  };
+
+  _.extend(Template.test_template_trickylabels_a2, {
+    created: function () { x.push('c'); },
+    rendered: function () { x.push('r'); },
+    destroyed: function () { x.push('d'); }
+  });
+
+  var div = OnscreenDiv(Meteor.render(Template.test_template_trickylabels_a0));
+  Meteor.flush();
+  loading.set(false);
+  Meteor.flush();
+  x.length = 0;
+
+  v.set(2);
+  Meteor.flush();
+  test.equal(x.join(''), 'r'); // no 'c' or 'd'
+  test.equal(div.html().replace(/\s+/g, ''), '<div>foo</div>2<div>bar</div>');
+
+  div.kill();
+  Meteor.flush();
+});
