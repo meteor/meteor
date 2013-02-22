@@ -27,7 +27,12 @@
         // http://patik.com/blog/complete-cross-browser-console-log/
         if (typeof console.log.apply === "function") {
           // Most browsers
-          console.log.apply(console, arguments);
+          // Chrome + Safari only make hyperlinks from arguments[0], so log each element individually rather
+          // https://github.com/meteor/meteor/issues/725
+          //console.log.apply(console, arguments);
+          _.each(arguments,function(arg) { 
+            console.log.apply(console,[arg])
+          });
         } else if (typeof Function.prototype.bind === "function") {
           // IE9
           var log = Function.prototype.bind.call(console.log, console);
