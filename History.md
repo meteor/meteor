@@ -1,6 +1,9 @@
 
 ## vNEXT
 
+* Fixed bug where an empty `fields` object was sometimes passed to a `changed`
+  callback of `Cursor.observeChanges`.
+
 ## v0.5.7
 
 * The DDP wire protocol has been redesigned.

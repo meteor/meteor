@@ -584,8 +584,8 @@ LocalCollection._removeFromResults = function (query, doc) {
 LocalCollection._updateInResults = function (query, doc, old_doc) {
   if (!EJSON.equals(doc._id, old_doc._id))
     throw new Error("Can't change a doc's _id while updating");
+  var changedFields = LocalCollection._makeChangedFields(doc, old_doc);
   if (!query.ordered) {
-    var changedFields = LocalCollection._makeChangedFields(doc, old_doc);
     if (!_.isEmpty(changedFields)) {
       query.changed(doc._id, changedFields);
       query.results[LocalCollection._idStringify(doc._id)] = doc;
@@ -595,8 +595,8 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
 
   var orig_idx = LocalCollection._findInOrderedResults(query, doc);
 
-
-  query.changed(doc._id, LocalCollection._makeChangedFields(doc, old_doc));
+  if (!_.isEmpty(changedFields))
+    query.changed(doc._id, changedFields);
   if (!query.sort_f)
     return;
 
