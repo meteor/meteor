@@ -68,6 +68,17 @@
         <li><a class="group" href="#">{{name}}</a></li>
       {{/each}}
       </ul>
+      <form class="navbar-form pull-right">
+        <a class="btn rerun">
+          {{#if rerunScheduled}}
+          Rerun scheduled... <i class="icon-time"></i>
+          {{else}}
+          <i class="icon-repeat"></i>
+          Rerun
+          {{/if}}
+        </a>
+      </form>
+      &nbsp;
     </div>
   </div>
 </template>

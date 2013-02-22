@@ -8,8 +8,9 @@ var totalCount = 0;
 var passedCount = 0;
 var failedCount = 0;
 
-if (!Session.get("groupPath"))
-  Session.set("groupPath", ["tinytest"]);
+
+Session.setDefault("groupPath", ["tinytest"]);
+Session.set("rerunScheduled", false);
 
 Meteor.startup(function () {
   Meteor.flush();
@@ -55,8 +56,13 @@ Template.groupNav.groupPaths = function () {
   return ret;
 };
 
+Template.groupNav.rerunScheduled = function () {
+  return Session.get("rerunScheduled");
+};
+
 var changeToPath = function (path) {
   Session.set("groupPath", path);
+  Session.set("rerunScheduled", true);
   // pretend there's just been a hot code push
   // so we run the tests completely fresh.
   Meteor._reload.reload();
@@ -65,6 +71,10 @@ var changeToPath = function (path) {
 Template.groupNav.events({
   "click .group": function () {
     changeToPath(this.path);
+  },
+  "click .rerun": function () {
+    Session.set("rerunScheduled", true);
+    Meteor._reload.reload();
   }
 });
 
