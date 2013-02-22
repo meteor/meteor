@@ -2,27 +2,20 @@
 
   Accounts.oauth.registerService('facebook', 2, function(query) {
 
-    var response = getTokens(query);
-    var accessToken = response.accessToken;
+    var accessToken = getAccessToken(query);
     var identity = getIdentity(accessToken);
 
-    var serviceData = {
+    return {
+      serviceData: {
         id: identity.id,
         accessToken: accessToken,
-        email: identity.email,
-        expiresAt: (+new Date) + (1000 * response.expiresIn)
-      }
-      
-    if (response.refreshToken) //Not implemented
-      serviceData.refreshToken = response.refreshToken;  
-      
-    return {
-      serviceData,
+        email: identity.email
+      },
       options: {profile: {name: identity.name}}
     };
   });
 
-  var getTokens = function (query) {
+  var getAccessToken = function (query) {
     var config = Accounts.loginServiceConfiguration.findOne({service: 'facebook'});
     if (!config)
       throw new Accounts.ConfigError("Service not configured");
@@ -59,23 +52,16 @@
       // Success!  Extract the facebook access token from the
       // response
       var fbAccessToken;
-      var fbExpires;
-      //response expected format: access_token=USER_ACCESS_TOKEN&expires=NUMBER_OF_SECONDS_UNTIL_TOKEN_EXPIRES
       _.each(response.split('&'), function(kvString) {
         var kvArray = kvString.split('=');
         if (kvArray[0] === 'access_token')
           fbAccessToken = kvArray[1];
-        if (kvArray[0] === 'expires')
-          fbExpires = kvArray[1];
+        // XXX also parse the "expires" argument?
       });
 
       if (!fbAccessToken)
         throw new Meteor.Error(500, "Couldn't find access token in HTTP response.");
-      return {
-        accessToken: fbAccessToken,
-        //refreshToken: fbRefreshToken, //Not implemented
-        expiresIn: fbExpires
-      }
+      return fbAccessToken;
     }
   };
 
