@@ -48,6 +48,6 @@ git rev-parse HEAD > "$TARGET_DIR/.git_version.txt"
 # generate engine version: directory hash that depends only on file
 # contents but nothing else, eg modification time
 echo -n "Computing engine version... "
-ENGINE_VERSION=$("$TARGET_DIR"/tools/admin/hash-dir.sh)
+ENGINE_VERSION=$(tools/admin/hash-dir.sh)
 echo $ENGINE_VERSION
-echo "$ENGINE_VERSION" > "$TARGET_DIR/.engine_version.txt"
+echo -n "$ENGINE_VERSION" > "$TARGET_DIR/.engine_version.txt"
