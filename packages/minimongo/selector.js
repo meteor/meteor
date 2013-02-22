@@ -1,7 +1,7 @@
 (function(){
 
 var _anyIfArray = function (x, f) {
-  if (_.isArray(x))
+  if (_.isArray(x) && !x.$Uint8ArrayPolyfill)
     return _.any(x, f);
   return f(x);
 };
@@ -246,6 +246,8 @@ var VALUE_OPERATORS = {
       // Definitely not _anyIfArrayPlus: $type: 4 only matches arrays that have
       // arrays as elements according to the Mongo docs.
       return _anyIfArray(value, function (x) {
+        if (operand === 5)
+          debugger;
         return LocalCollection._f._type(x) === operand;
       });
     };
@@ -312,7 +314,7 @@ LocalCollection._f = {
       return 2;
     if (typeof v === "boolean")
       return 8;
-    if (v instanceof Array)
+    if (v instanceof Array && !v.$Uint8ArrayPolyfill)
       return 4;
     if (v === null)
       return 10;
