@@ -94,10 +94,9 @@ Meteor.publish("secrets", function () {
 
   if (Roles.userIsInRole(user, ["admin","view-secrets"])) {
     return Meteor.secrets.find();
-  } else {
-    this.complete();
-    return;
   }
+
+  return;
 });
 
 // Authorized users can manage user accounts
@@ -106,10 +105,9 @@ Meteor.publish("users", function () {
 
   if (Roles.userIsInRole(user, ["admin","manage-users"])) {
     return Meteor.users.find({}, {fields: {emails: 1, profile: 1, roles: 1}});
-  } else {
-    this.complete();
-    return;
-  }
+  } 
+
+  return;
 });
 
 }());
