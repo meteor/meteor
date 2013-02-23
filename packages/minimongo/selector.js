@@ -246,8 +246,6 @@ var VALUE_OPERATORS = {
       // Definitely not _anyIfArrayPlus: $type: 4 only matches arrays that have
       // arrays as elements according to the Mongo docs.
       return _anyIfArray(value, function (x) {
-        if (operand === 5)
-          debugger;
         return LocalCollection._f._type(x) === operand;
       });
     };
