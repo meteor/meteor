@@ -3,28 +3,89 @@
 
 ## `appcache`
 
-The `appcache` package enables the browser's application cache, which
-allows the static portion of a Meteor application (the client side
-Javascript, HTML, CSS, and images) to run offline.
+The `appcache` package stores the static parts of a Meteor application
+(the client side Javascript, HTML, CSS, and images) in the browser's
+[application cache](https://en.wikipedia.org/wiki/AppCache).
 
-The `appcache` package by itself however does not provide a mechanism
-for offline *data*: if an application starts up offline, a
-`Meteor.Collection` on the client will be empty... until such time the
-browser connects to the Internet and Meteor is able to establish its
-online livedata connection.
+* Once a user has visited a Meteor application for the first time and
+  the application has been cached, on subsequent visits the web page
+  loads faster because the browser can load the application out of the
+  cache without contacting the server first.
 
-This package should not be used on a domain if there's a chance you
-might want to revert to using Meteor 0.5.4 or older on that domain.
-(Older versions of Meteor do not tell the browser to turn off the app
-cache, which means that users who have your application cached would
-be stuck running your old code even if you aren't using the `appcache`
-package any more).  Meteor >= 0.5.5 does not have this problem: the
-browser will revert to not using the app cache if you remove the
-`appcache` package.
+* Hot code pushes are loaded by the browser in the background while the
+  app continues to run.  Once the new code has been fully loaded the
+  browser is able to switch over to the new code quickly.
 
-For more information about the `AppCache` package see the
-[AppCache](https://github.com/meteor/meteor/wiki/AppCache)
-page in the Meteor wiki.
+* The application cache allows the application to be loaded even when
+  the browser doesn't have an Internet connection, and so enables using
+  the app offline.
+
+(Note however that the `appcache` package by itself doesn't make
+*data* available offline: in an application loaded offline, a Meteor
+Collection will appear to be empty in the client until the Internet
+becomes available and the browser is able to establish a livedata
+connection).
+
+The application cache works transparently in all supported browsers
+except for Firefox, which pops up a message saying "This website is
+asking to store data on your computer for offline use" and asks the
+user whether to allow or deny the request.  The application cache is
+disabled on Firefox by default; to turn it on use:
+
+    Meteor.AppCache.config({firefox: true});
+
+You can also disable the application cache for specific browsers:
+
+    Meteor.AppCache.config({
+      chrome: false,
+      firefox: true,
+      ie: false
+    });
+
+The supported browsers that can be enabled or disabled are `android`,
+`chrome`, `firefox`, `ie`, `mobileSafari` and `safari`.
+
+Browsers limit the amount of data they will put in the application
+cache, which can vary due to factors such as how much disk space is
+free.  Unfortunately if your application goes over the limit rather
+than disabling the application cache altogether and running the
+application online, the browser will instead fail that particular
+*update* of the cache, leaving your users running old code.
+
+Thus it's best to keep the size of the cache below 5MB.  The
+`appcache` package will print a warning on the Meteor server console
+if the total size of the resources being cached is over 5MB.
+
+If you have files too large to fit in the cache you can disable
+caching by URL prefix.  For example,
+
+    Meteor.AppCache.config({onlineOnly: ['/online/']});
+
+causes files in your `public/online` directory to not be cached, and
+so they will only be available online.  You can then move your large
+files into that directory and refer to them at the new URL:
+
+    <img src="/online/bigimage.jpg">
+
+If you'd prefer not to move your files, you can use the file names
+themselves as the URL prefix:
+
+    Meteor.AppCache.config({
+      onlineOnly: [
+        '/bigimage.jpg',
+        '/largedata.json'
+      ]
+    });
+
+though keep in mind that since the exclusion is by prefix (this is a
+limitation of the application cache manifest), excluding
+`/largedata.json` will also exclude such URLs as
+`/largedata.json.orig` and `/largedata.json/file1`.
+
+For more information about how Meteor interacts with the application
+cache, see the
+[AppCache page](https://github.com/meteor/meteor/wiki/AppCache)
+in the Meteor wiki.
 
 {{/better_markdown}}
 </template>

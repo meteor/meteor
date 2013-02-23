@@ -141,20 +141,13 @@
     });
     if (totalSize > 5 * 1024 * 1024) {
       Meteor._debug(
-        "** You are publishing " + totalSize + " bytes of assets (including\n" +
-        "** the contents of the public/ directory) to be stored in the\n" +
-        "** browser's application cache.\n" +
+        "** You are using the appcache package but the total size of the\n" +
+        "** cached resources is " +
+        (totalSize / 1024 / 1024).toFixed(1) + "MB.\n" +
         "**\n" +
-        "** Browsers differ in the amount of data they will store in the app\n" +
-        "** cache, and if you go over their limit they don't gracefully fallback to\n" +
-        "** just running the app online (going over their limit breaks the app\n" +
-        "** online as well as making it not cacheable for offline use).\n" +
-        "**\n" +
-        "** To avoid this problem we recommend keeping the size of your static\n" +
-        "** application assets under 5MB.\n" +
-        "**\n" +
-        "** If you have some larger assets that you'd like to make online only,\n" +
-        "** you can do that with the AppCache \"onlineOnly\" config option."
+        "** This is over the recommended maximum of 5 MB and may break your\n" +
+        "** app in some browsers! See http://docs.meteor.com/#appcache\n" +
+        "** for more information and fixes.\n"
       );
     }
   };
