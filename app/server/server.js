@@ -1,9 +1,10 @@
 ////////// Requires //////////
 
-require("fibers");
+var Fiber = require("fibers");
 
 var fs = require("fs");
 var path = require("path");
+var url = require("url");
 
 var connect = require('connect');
 var gzippo = require('gzippo');
@@ -15,7 +16,7 @@ var useragent = require('useragent');
 var _ = require('underscore');
 
 // This code is duplicated in app/server/server.js.
-var MIN_NODE_VERSION = 'v0.8.11';
+var MIN_NODE_VERSION = 'v0.8.18';
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
     'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
@@ -43,15 +44,80 @@ var init_keepalive = function () {
   }, 3000);
 };
 
-var supported_browser = function (user_agent) {
+
+// #BrowserIdentification
+//
+// We have multiple places that want to identify the browser: the
+// unsupported browser page, the appcache package, and, eventually
+// delivering browser polyfills only as needed.
+//
+// To avoid detecting the browser in multiple places ad-hoc, we create a
+// Meteor "browser" object. It uses but does not expose the npm
+// useragent module (we could choose a different mechanism to identify
+// the browser in the future if we wanted to).  The browser object
+// contains
+//
+// * `name`: the name of the browser in camel case
+// * `major`, `minor`, `patch`: integers describing the browser version
+//
+// Also here is an early version of a Meteor `request` object, intended
+// to be a high-level description of the request without exposing
+// details of connect's low-level `req`.  Currently it contains:
+//
+// * `browser`: browser identification object described above
+// * `url`: parsed url, including parsed query params
+//
+// As a temporary hack there is a `categorizeRequest` function on
+// __meteor_bootstrap__ which converts a connect `req` to a Meteor
+// `request`. This can go away once smart packages such as appcache are
+// being passed a `request` object directly when they serve content.
+//
+// This allows `request` to be used uniformly: it is passed to the html
+// attributes hook, and the appcache package can use it when deciding
+// whether to generate a 404 for the manifest.
+//
+// Real routing / server side rendering will probably refactor this
+// heavily.
+
+
+// e.g. "Mobile Safari" => "mobileSafari"
+var camelCase = function (name) {
+  var parts = name.split(' ');
+  parts[0] = parts[0].toLowerCase();
+  for (var i = 1;  i < parts.length;  ++i) {
+    parts[i] = parts[i].charAt(0).toUpperCase() + parts[i].substr(1);
+  }
+  return parts.join('');
+};
+
+var identifyBrowser = function (req) {
+  var userAgent = useragent.lookup(req.headers['user-agent']);
+  return {
+    name: camelCase(userAgent.family),
+    major: +userAgent.major,
+    minor: +userAgent.minor,
+    patch: +userAgent.patch
+  };
+};
+
+var categorizeRequest = function (req) {
+  return {
+    browser: identifyBrowser(req),
+    url: url.parse(req.url, true)
+  };
+};
+
+var supported_browser = function (browser) {
   return true;
 
   // For now, we don't actually deny anyone. The unsupported browser
   // page isn't very good.
   //
-  // var agent = useragent.lookup(user_agent);
-  // return !(agent.family === 'IE' && +agent.major <= 5);
+  // return !(browser.family === 'IE' && browser.major <= 5);
 };
+
+
+
 
 // add any runtime configuration options needed to app_html
 var runtime_config = function (app_html) {
@@ -66,6 +132,39 @@ var runtime_config = function (app_html) {
 
   return app_html;
 };
+
+var htmlAttributes = function (app_html, request) {
+  var attributes = '';
+  _.each(__meteor_bootstrap__.htmlAttributeHooks || [], function (hook) {
+    var attribute = hook(request);
+    if (attribute !== null && attribute !== undefined && attribute !== '')
+      attributes += ' ' + attribute;
+  });
+  return app_html.replace('##HTML_ATTRIBUTES##', attributes);
+};
+
+// Serve app HTML for this URL?
+var appUrl = function (url) {
+  if (url === '/favicon.ico' || url === '/robots.txt')
+    return false;
+
+  // NOTE: app.manifest is not a web standard like favicon.ico and
+  // robots.txt. It is a file name we have chosen to use for HTML5
+  // appcache URLs. It is included here to prevent using an appcache
+  // then removing it from poisoning an app permanently. Eventually,
+  // once we have server side routing, this won't be needed as
+  // unknown URLs with return a 404 automatically.
+  if (url === '/app.manifest')
+    return false;
+
+  // Avoid serving app HTML for declared network routes such as /sockjs/.
+  if (__meteor_bootstrap__._routePolicy &&
+      __meteor_bootstrap__._routePolicy.classify(url) === 'network')
+    return false;
+
+  // we currently return app HTML on all URLs by default
+  return true;
+}
 
 var run = function () {
   var bundle_dir = path.join(__dirname, '..');
@@ -82,16 +181,38 @@ var run = function () {
   var static_cacheable_path = path.join(bundle_dir, 'static_cacheable');
   if (fs.existsSync(static_cacheable_path))
     app.use(gzippo.staticGzip(static_cacheable_path, {clientMaxAge: 1000 * 60 * 60 * 24 * 365}));
-  app.use(gzippo.staticGzip(path.join(bundle_dir, 'static')));
+  app.use(gzippo.staticGzip(path.join(bundle_dir, 'static'), {clientMaxAge: 0}));
 
   // read bundle config file
   var info_raw =
     fs.readFileSync(path.join(bundle_dir, 'app.json'), 'utf8');
   var info = JSON.parse(info_raw);
+  var bundle = {manifest: info.manifest, root: bundle_dir};
 
   // start up app
-  __meteor_bootstrap__ = {require: require, startup_hooks: [], app: app};
+
+  __meteor_bootstrap__ = {
+    // connect middleware
+    app: app,
+    // metadata about this bundle
+    bundle: bundle,
+    // function that takes a connect `req` object and returns a summary
+    // object with information about the request. See
+    // #BrowserIdentifcation
+    categorizeRequest: categorizeRequest,
+    // list of functions to be called to determine any attributes to be
+    // added to the '<html>' tag. Each function is passed a 'request'
+    // object (see #BrowserIdentifcation) and should return a string,
+    htmlAttributeHooks: [],
+    // Node.js 'require' object.
+    require: require,
+    // functions to be called after all packages are loaded and we are
+    // ready to serve HTTP.
+    startup_hooks: []
+  };
+
   __meteor_runtime_config__ = {};
+
   Fiber(function () {
     // (put in a fiber to let Meteor.db operations happen during loading)
 
@@ -122,19 +243,28 @@ var run = function () {
 
     app_html = runtime_config(app_html);
 
-    app.use(function (req, res) {
-      // prevent favicon.ico and robots.txt from returning app_html
-      if (_.indexOf([path.sep + 'favicon.ico', path.sep + 'robots.txt'], req.url) !== -1) {
-        res.writeHead(404);
+    app.use(function (req, res, next) {
+      if (! appUrl(req.url))
+        return next();
+
+      var request = categorizeRequest(req);
+
+      res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+
+      if (! supported_browser(request.browser)) {
+        res.write(unsupported_html);
         res.end();
         return;
       }
 
-      res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
-      if (supported_browser(req.headers['user-agent']))
-        res.write(app_html);
-      else
-        res.write(unsupported_html);
+      var requestSpecificHtml = htmlAttributes(app_html, request);
+      res.write(requestSpecificHtml);
+      res.end();
+    });
+
+    // Return 404 by default, if no other handlers serve this URL.
+    app.use(function (req, res) {
+      res.writeHead(404);
       res.end();
     });
 

@@ -5,12 +5,12 @@
   var stringify = function (value) {
     if (value === undefined)
       return 'undefined';
-    return JSON.stringify(value);
+    return EJSON.stringify(value);
   };
   var parse = function (serialized) {
     if (serialized === undefined || serialized === 'undefined')
       return undefined;
-    return JSON.parse(serialized);
+    return EJSON.parse(serialized);
   };
 
   Session = _.extend({}, {
@@ -40,6 +40,16 @@
       }
     },
 
+    setDefault: function (key, value) {
+      var self = this;
+      // for now, explicitly check for undefined, since there is no
+      // Session.clear().  Later we might have a Session.clear(), in which case
+      // we should check if it has the key.
+      if (self.keys[key] === undefined) {
+        self.set(key, value);
+      }
+    },
+
     get: function (key) {
       var self = this;
       self._ensureKey(key);
@@ -54,9 +64,9 @@
       // We don't allow objects (or arrays that might include objects) for
       // .equals, because JSON.stringify doesn't canonicalize object key
       // order. (We can make equals have the right return value by parsing the
-      // current value and using _.isEqual, but we won't have a canonical
+      // current value and using EJSON.equals, but we won't have a canonical
       // element of keyValueDeps[key] to store the context.) You can still use
-      // "_.isEqual(Session.get(key), value)".
+      // "EJSON.equals(Session.get(key), value)".
       //
       // XXX we could allow arrays as long as we recursively check that there
       // are no objects
@@ -64,6 +74,8 @@
           typeof value !== 'number' &&
           typeof value !== 'boolean' &&
           typeof value !== 'undefined' &&
+          !(value instanceof Date) &&
+          !(typeof Meteor.Collection !== 'undefined' && value instanceof Meteor.Collection.ObjectID) &&
           value !== null)
         throw new Error("Session.equals: value must be scalar");
       var serializedValue = stringify(value);
@@ -87,7 +99,7 @@
 
       var oldValue = undefined;
       if (_.has(self.keys, key)) oldValue = parse(self.keys[key]);
-      return oldValue === value;
+      return EJSON.equals(oldValue, value);
     },
 
     _ensureKey: function (key) {

@@ -1,4 +1,4 @@
-METEOR_VERSION = "0.5.4";
+METEOR_VERSION = "0.5.7";
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
@@ -101,15 +101,15 @@ var toc = [
     "Publish and subscribe", [
       "Meteor.publish", [
         {instance: "this", name: "userId", id: "publish_userId"},
-        {instance: "this", name: "set", id: "publish_set"},
-        {instance: "this", name: "unset", id: "publish_unset"},
-        {instance: "this", name: "complete", id: "publish_complete"},
-        {instance: "this", name: "flush", id: "publish_flush"},
+        {instance: "this", name: "added", id: "publish_added"},
+        {instance: "this", name: "changed", id: "publish_changed"},
+        {instance: "this", name: "removed", id: "publish_removed"},
+        {instance: "this", name: "ready", id: "publish_ready"},
         {instance: "this", name: "onStop", id: "publish_onstop"},
+        {instance: "this", name: "error", id: "publish_error"},
         {instance: "this", name: "stop", id: "publish_stop"}
       ],
-      "Meteor.subscribe",
-      "Meteor.autosubscribe"
+      "Meteor.subscribe"
     ],
 
     {name: "Methods", id: "methods_header"}, [
@@ -147,10 +147,11 @@ var toc = [
         {instance: "cursor", name: "fetch"},
         {instance: "cursor", name: "count"},
         {instance: "cursor", name: "rewind"},
-        {instance: "cursor", name: "observe"}
+        {instance: "cursor", name: "observe"},
+        {instance: "cursor", name: "observeChanges", id: "observe_changes"}
       ],
       {type: "spacer"},
-      "Meteor.uuid",
+      {name: "Meteor.Collection.ObjectID", id: "collection_object_id"},
       {type: "spacer"},
       {name: "Selectors", style: "noncode"},
       {name: "Modifiers", style: "noncode"},
@@ -160,6 +161,7 @@ var toc = [
 
     "Session", [
       "Session.set",
+      {name: "Session.setDefault", id: "session_set_default"},
       "Session.get",
       "Session.equals"
     ],
@@ -253,6 +255,24 @@ var toc = [
     //   ]
     ],
 
+    {name: "EJSON", id: "ejson"}, [
+      {name: "EJSON.parse", id: "ejson_parse"},
+      {name: "EJSON.stringify", id: "ejson_stringify"},
+      {name: "EJSON.fromJSONValue", id: "ejson_from_json_value"},
+      {name: "EJSON.toJSONValue", id: "ejson_to_json_value"},
+      {name: "EJSON.equals", id: "ejson_equals"},
+      {name: "EJSON.clone", id: "ejson_clone"},
+      {name: "EJSON.newBinary", id: "ejson_new_binary"},
+      {name: "EJSON.addType", id: "ejson_add_type"},
+      [
+        {instance: "instance", id: "ejson_type_clone", name: "clone"},
+        {instance: "instance", id: "ejson_type_equals", name: "equals"},
+        {instance: "instance", id: "ejson_type_typeName", name: "typeName"},
+        {instance: "instance", id: "ejson_type_toJSONValue", name: "toJSONValue"}
+      ]
+    ],
+
+
     "Meteor.http", [
       "Meteor.http.call",
       {name: "Meteor.http.get", id: "meteor_http_get"},
@@ -275,6 +295,7 @@ var toc = [
     "force-ssl",
     "jquery",
     "less",
+    "random",
     "spiderable",
     "stylus",
     "showdown",

@@ -4,11 +4,6 @@ if (Meteor.isServer) {
   var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
 }
 
-// list of subscription tokens outstanding during a captureDependencies
-// run. only set when we're doing a run. The fact that this is a singleton means
-// we can't do recursive Meteor.autosubscribe().
-var captureSubs = null;
-
 // @param url {String|Object} URL to Meteor app,
 //   or an object as a test hook (see code)
 // Options:
@@ -19,7 +14,13 @@ Meteor._LivedataConnection = function (url, options) {
   var self = this;
   options = _.extend({
     reloadOnUpdate: false,
-    reloadWithOutstanding: false
+    // The rest of these options are only for testing.
+    reloadWithOutstanding: false,
+    supportedDDPVersions: Meteor._SUPPORTED_DDP_VERSIONS,
+    onConnectionFailure: function (reason) {
+      Meteor._debug("Failed DDP connection: " + reason);
+    },
+    onConnected: function () {}
   }, options);
 
   // If set, called when we reconnect, queuing method calls _before_ the
@@ -35,9 +36,12 @@ Meteor._LivedataConnection = function (url, options) {
   }
 
   self._lastSessionId = null;
+  self._versionSuggestion = null;  // The last proposed DDP version.
+  self._version = null;   // The DDP version agreed on by client and server.
   self._stores = {}; // name -> object with methods
   self._methodHandlers = {}; // name -> func
   self._nextMethodId = 1;
+  self._supportedDDPVersions = options.supportedDDPVersions;
 
   // Tracks methods which the user has tried to call but which have not yet
   // called their user callback (ie, they are waiting on their result or for all
@@ -92,6 +96,7 @@ Meteor._LivedataConnection = function (url, options) {
   // - "document": the version of the document according the
   //   server (ie, the snapshot before a stub wrote it, amended by any changes
   //   received from the server)
+  //   It is undefined if we think the document does not exist
   // - "writtenByStubs": a set of method IDs whose stubs wrote to the document
   //   whose "data done" messages have not yet been processed
   self._serverDocuments = {};
@@ -136,11 +141,16 @@ Meteor._LivedataConnection = function (url, options) {
   // if we're blocking a migration, the retry func
   self._retryMigrate = null;
 
-  // metadata for subscriptions
-  self._subCollection = new LocalCollection;
-  // keyed by sub._id. value is unset or an array. if set, sub is not
-  // yet ready.
-  self._subReadyCallbacks = {};
+  // metadata for subscriptions.  Map from sub ID to object with keys:
+  //   - id
+  //   - name
+  //   - params
+  //   - context (the Context in which Meteor.subscribe was called, if any)
+  //   - ready (has the 'ready' message been received?)
+  //   - readyCallback (an optional callback to call when ready)
+  //   - errorCallback (an optional callback to call if the sub terminates with
+  //                    an error)
+  self._subscriptions = {};
 
   // Per-connection scratch area. This is only used internally, but we
   // should have real and documented API for this sort of thing someday.
@@ -166,19 +176,34 @@ Meteor._LivedataConnection = function (url, options) {
 
   self._stream.on('message', function (raw_msg) {
     try {
-      var msg = JSON.parse(raw_msg);
-    } catch (err) {
-      Meteor._debug("discarding message with invalid JSON", raw_msg);
+      var msg = Meteor._parseDDP(raw_msg);
+    } catch (e) {
+      Meteor._debug("Exception while parsing DDP", e);
       return;
     }
-    if (typeof msg !== 'object' || !msg.msg) {
+
+    if (msg === null || !msg.msg) {
       Meteor._debug("discarding invalid livedata message", msg);
       return;
     }
 
-    if (msg.msg === 'connected')
+    if (msg.msg === 'connected') {
+      self._version = self._versionSuggestion;
+      options.onConnected();
       self._livedata_connected(msg);
-    else if (msg.msg === 'data')
+    }
+    else if (msg.msg == 'failed') {
+      if (_.contains(self._supportedDDPVersions, msg.version)) {
+        self._versionSuggestion = msg.version;
+        self._stream.reconnect({_force: true});
+      } else {
+        var error =
+              "Version negotiation failed; server requested version " + msg.version;
+        self._stream.forceDisconnect(error);
+        options.onConnectionFailure(error);
+      }
+    }
+    else if (_.include(['added', 'changed', 'removed', 'ready', 'updated'], msg.msg))
       self._livedata_data(msg);
     else if (msg.msg === 'nosub')
       self._livedata_nosub(msg);
@@ -197,7 +222,10 @@ Meteor._LivedataConnection = function (url, options) {
     var msg = {msg: 'connect'};
     if (self._lastSessionId)
       msg.session = self._lastSessionId;
-    self._stream.send(JSON.stringify(msg));
+    msg.version = self._versionSuggestion || self._supportedDDPVersions[0];
+    self._versionSuggestion = msg.version;
+    msg.support = self._supportedDDPVersions;
+    self._send(msg);
 
     // Now, to minimize setup latency, go ahead and blast out all of
     // our pending methods ands subscriptions before we've even taken
@@ -232,9 +260,13 @@ Meteor._LivedataConnection = function (url, options) {
 
     // add new subscriptions at the end. this way they take effect after
     // the handlers and we don't see flicker.
-    self._subCollection.find().forEach(function (sub) {
-      self._stream.send(JSON.stringify(
-        {msg: 'sub', id: sub._id, name: sub.name, params: sub.args}));
+    _.each(self._subscriptions, function (sub, id) {
+      self._send({
+        msg: 'sub',
+        id: id,
+        name: sub.name,
+        params: sub.params
+      });
     });
   });
 
@@ -246,25 +278,6 @@ Meteor._LivedataConnection = function (url, options) {
       Meteor._reload.reload();
     });
   }
-
-  // we never terminate the observe, since there is no way to destroy a
-  // LivedataConnection... but this shouldn't matter, since we're the only one
-  // that holds a reference to self._subCollection
-  self._subCollection.find({})._observeUnordered({
-    added: function (sub) {
-      self._stream.send(JSON.stringify({
-        msg: 'sub', id: sub._id, name: sub.name, params: sub.args}));
-    },
-    changed: function (sub) {
-      if (sub.count <= 0) {
-        // minimongo not re-entrant.
-        _.defer(function () { self._subCollection.remove({_id: sub._id}); });
-      }
-    },
-    removed: function (obj) {
-      self._stream.send(JSON.stringify({msg: 'unsub', id: obj._id}));
-    }
-  });
 };
 
 // A MethodInvoker manages sending a method to the server and calling the user's
@@ -281,7 +294,7 @@ var MethodInvoker = function (options) {
 
   self._callback = options.callback;
   self._connection = options.connection;
-  self._message = JSON.stringify(options.message);
+  self._message = options.message;
   self._onResultReceived = options.onResultReceived || function () {};
   self._wait = options.wait;
   self._methodResult = null;
@@ -313,7 +326,7 @@ _.extend(MethodInvoker.prototype, {
       self._connection._methodsBlockingQuiescence[self.methodId] = true;
 
     // Actually send the message.
-    self._connection._stream.send(self._message);
+    self._connection._send(self._message);
   },
   // Invoke the callback, if we have both a result and know that all data has
   // been written to the local cache.
@@ -397,54 +410,126 @@ _.extend(Meteor._LivedataConnection.prototype, {
     return true;
   },
 
-  subscribe: function (name /* .. [arguments] .. callback */) {
+  subscribe: function (name /* .. [arguments] .. (callback|callbacks) */) {
     var self = this;
-    var id;
 
-    var args = Array.prototype.slice.call(arguments, 1);
-    if (args.length && typeof args[args.length - 1] === "function")
-      var callback = args.pop();
-
-    // Look for existing subs (ignore those with count=0, since they're going to
-    // get removed on the next time through the event loop).
-    var existing = self._subCollection.find(
-      {name: name, args: args, count: {$gt: 0}},
-      {reactive: false}).fetch();
-
-    if (existing && existing[0]) {
-      // already subbed, inc count.
-      id = existing[0]._id;
-      self._subCollection.update({_id: id}, {$inc: {count: 1}});
-
-      if (callback) {
-        if (self._subReadyCallbacks[id])
-          self._subReadyCallbacks[id].push(callback);
-        else
-          callback(); // XXX maybe _.defer?
+    var params = Array.prototype.slice.call(arguments, 1);
+    var callbacks = {};
+    if (params.length) {
+      var lastParam = params[params.length - 1];
+      if (typeof lastParam === "function") {
+        callbacks.onReady = params.pop();
+      } else if (lastParam && (typeof lastParam.onReady === "function" ||
+                               typeof lastParam.onError === "function")) {
+        callbacks = params.pop();
       }
-    } else {
-      // new sub, add object.
-      // generate our own id so we can know it w/ a find afterwards.
-      id = LocalCollection.uuid();
-      self._subCollection.insert({_id: id, name: name, args: args, count: 1});
-
-      self._subReadyCallbacks[id] = [];
-
-      if (callback)
-        self._subReadyCallbacks[id].push(callback);
     }
 
-    // return an object with a stop method.
-    var token = {stop: function () {
-      if (!id) return; // must have an id (local from above).
-      // just update the database. observe takes care of the rest.
-      self._subCollection.update({_id: id}, {$inc: {count: -1}});
-    }};
+    // Is there an existing sub with the same name and param, run in an
+    // invalidated Context? This can only happen if the context just got
+    // invalidated and we haven't fully finished a round of Meteor.flush()
+    // yet. For example, this will happen with the pattern of:
+    //   Meteor.autorun(function () {
+    //     Meteor.subscribe("foo", Session.get("foo"));
+    //     Meteor.subscribe("bar", Session.get("bar"));
+    //   });
+    // if "foo" has changed but "bar" has not: we are being careful to not unsub
+    // and resub to the "bar" subscription.
+    //
+    // We only look for one such sub; if there are N apparently-identical subs
+    // being invalidated, we will require N matching subscribe calls to keep
+    // them all active.
+    var existing = _.find(self._subscriptions, function (sub) {
+      return sub.context && sub.context.invalidated && sub.name === name &&
+        EJSON.equals(sub.params, params);
+    });
 
-    if (captureSubs)
-      captureSubs.push(token);
+    var currentContext = Meteor.deps && Meteor.deps.Context.current;
+    var id;
+    if (existing) {
+      id = existing.id;
+      // Substitute our current context (if any) for the one on the sub.
+      existing.context = currentContext;
 
-    return token;
+      if (callbacks.onReady) {
+        // If the sub is not already ready, replace any ready callback with the
+        // one provided now. (It's not really clear what users would expect for
+        // an onReady callback inside an autorun; the semantics we provide is
+        // that at the time the sub first becomes ready, we call the last
+        // onReady callback provided, if any.)
+        if (!existing.ready)
+          existing.readyCallback = callbacks.onReady;
+      }
+      if (callbacks.onError) {
+        // Replace existing callback if any, so that errors aren't
+        // double-reported.
+        existing.errorCallback = callbacks.onError;
+      }
+    } else {
+      // New sub! Generate an id, save it locally, and send message.
+      id = Random.id();
+      self._subscriptions[id] = {
+        id: id,
+        name: name,
+        params: params,
+        context: currentContext,
+        ready: false,
+        readyListeners: Meteor.deps && new Meteor.deps._ContextSet,
+        readyCallback: callbacks.onReady,
+        errorCallback: callbacks.onError
+      };
+      self._send({msg: 'sub', id: id, name: name, params: params});
+    }
+
+    // return a handle to the application.
+    var handle = {
+      stop: function () {
+        if (!_.has(self._subscriptions, id))
+          return;
+        self._send({msg: 'unsub', id: id});
+        delete self._subscriptions[id];
+      },
+      ready: function () {
+        // return false if we've unsubscribed.
+        if (!_.has(self._subscriptions, id))
+          return false;
+        var record = self._subscriptions[id];
+        record.readyListeners && record.readyListeners.addCurrentContext();
+        return record.ready;
+      }
+    };
+
+    if (currentContext) {
+      // We're in a reactive context, so we'd like to unsubscribe when the
+      // context is invalidated... but not if some *OTHER* onInvalidate callback
+      // on currentContext re-subscribes to the same subscription (eg, as part
+      // of an autorun). Meteor.flush guarantees that it won't interleave calls
+      // to currentContext's callbacks and unsubscribeContext's callbacks, so
+      // this ensures that by the time unsubscribeContext's onInvalidate
+      // callback is called, we've already re-run the autorun function (if this
+      // was an autorun context).
+      var unsubscribeContext = new Meteor.deps.Context;
+      unsubscribeContext.onInvalidate(function () {
+        // Did we already unsubscribe from this? Do nothing.
+        if (!_.has(self._subscriptions, id))
+          return;
+        // Did we substitute a new context in for this constitute in the
+        // "Substitute" block above? (eg, are we in an autorun and the re-run of
+        // the function subscribed to this again?)
+        if (self._subscriptions[id].context !== currentContext)
+          return;
+        // Nope, the only reason we are currently subscribed to this
+        // subscription is that *THIS* subscribe call wanted it to be so, and
+        // its context is invalidated, so it's time to unsubscribe.
+        handle.stop();
+      });
+      currentContext.onInvalidate(function () {
+        unsubscribeContext.invalidate();
+      });
+
+    }
+
+    return handle;
   },
 
   methods: function (methods) {
@@ -537,7 +622,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
         try {
           var ret = Meteor._CurrentInvocation.withValue(invocation,function () {
-            return stub.apply(invocation, args);
+            return stub.apply(invocation, EJSON.clone(args));
           });
         }
         catch (e) {
@@ -657,6 +742,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
     _.each(self._stores, function (s, collection) {
       var originals = s.retrieveOriginals();
       _.each(originals, function (doc, id) {
+        if (typeof id !== 'string')
+          throw new Error("id is not a string");
         docsWritten.push({collection: collection, id: id});
         var serverDoc = Meteor._ensure(self._serverDocuments, collection, id);
         if (serverDoc.writtenByStubs) {
@@ -675,6 +762,12 @@ _.extend(Meteor._LivedataConnection.prototype, {
     if (!_.isEmpty(docsWritten)) {
       self._documentsWrittenByStub[methodId] = docsWritten;
     }
+  },
+
+  // Sends the DDP stringification of the given message object
+  _send: function (obj) {
+    var self = this;
+    self._stream.send(Meteor._stringifyDDP(obj));
   },
 
   status: function (/*passthrough args*/) {
@@ -750,10 +843,12 @@ _.extend(Meteor._LivedataConnection.prototype, {
     // be resent if still relevant.
     self._updatesForUnknownStores = {};
 
-    // Forget about the effects of stubs. We'll be resetting all collections
-    // anyway.
-    self._documentsWrittenByStub = {};
-    self._serverDocuments = {};
+    if (self._resetStores) {
+      // Forget about the effects of stubs. We'll be resetting all collections
+      // anyway.
+      self._documentsWrittenByStub = {};
+      self._serverDocuments = {};
+    }
 
     // Clear _afterUpdateCallbacks.
     self._afterUpdateCallbacks = [];
@@ -763,9 +858,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
     // XXX We should also block reconnect quiescence until autopublish is done
     //     re-publishing to avoid flicker!
     self._subsBeingRevived = {};
-    self._subCollection.find({}).forEach(function (sub) {
-      if (!self._subReadyCallbacks[sub._id])
-        self._subsBeingRevived[sub._id] = true;
+    _.each(self._subscriptions, function (sub, id) {
+      if (sub.ready)
+        self._subsBeingRevived[id] = true;
     });
 
     // Arrange for "half-finished" methods to have their callbacks run, and
@@ -814,6 +909,14 @@ _.extend(Meteor._LivedataConnection.prototype, {
       self._runAfterUpdateCallbacks();
     }
   },
+
+
+  _processOneDataMessage: function (msg, updates) {
+    var self = this;
+    // Using underscore here so as not to need to capitalize.
+    self['_process_' + msg.msg](msg, updates);
+  },
+
 
   _livedata_data: function (msg) {
     var self = this;
@@ -883,51 +986,73 @@ _.extend(Meteor._LivedataConnection.prototype, {
   // reconnect-quiescence time.
   _runAfterUpdateCallbacks: function () {
     var self = this;
-    _.each(self._afterUpdateCallbacks, function (c) {
+    var callbacks = self._afterUpdateCallbacks;
+    self._afterUpdateCallbacks = [];
+    _.each(callbacks, function (c) {
       c();
     });
-    self._afterUpdateCallbacks = [];
   },
 
-  // Process a single "data" message. Stores updates (set/unset/replace) in the
-  // "updates" object (map from collection name to array of updates). Processes
-  // "method data done" and "sub ready" declarations and schedules the relevant
-  // callbacks to occur after all currently buffered docs are written to the
-  // local cache.
-  _processOneDataMessage: function (msg, updates) {
+  _pushUpdate: function (updates, collection, msg) {
     var self = this;
-    // Apply writes (set/unset) from the message.
-    if (msg.collection && msg.id) {
-      var serverDoc = Meteor._get(
-        self._serverDocuments, msg.collection, msg.id);
-      if (serverDoc) {
-        // A client stub wrote this document, so we have to apply this change to
-        // the snapshot in serverDoc rather than directly to the database.
-        // First apply unset (assuming that there are any fields at all.
-        if (serverDoc.document) {
-          _.each(msg.unset, function (propname) {
-            delete serverDoc.document[propname];
-          });
-        }
-        // Now apply set.
-        _.each(msg.set, function (value, propname) {
-          if (!serverDoc.document)
-            serverDoc.document = {};
-          serverDoc.document[propname] = value;
-        });
-        // Now erase the document if it has become empty.
-        if (serverDoc.document &&
-            _.isEmpty(_.without(_.keys(serverDoc.document), '_id')))
-          delete serverDoc.document;
-      } else {
-        // No client stub wrote this document, so we can apply it
-        // directly to the database.
-        if (!updates[msg.collection])
-          updates[msg.collection] = [];
-        updates[msg.collection].push(msg);
-      }
+    if (!_.has(updates, collection)) {
+      updates[collection] = [];
     }
+    updates[collection].push(msg);
+  },
 
+  _process_added: function (msg, updates) {
+    var self = this;
+    var serverDoc = Meteor._get(self._serverDocuments, msg.collection, msg.id);
+    if (serverDoc) {
+      // Some outstanding stub wrote here.
+      if (serverDoc.document !== undefined) {
+        throw new Error("It doesn't make sense to be adding something we know exists: "
+                        + msg.id);
+      }
+      serverDoc.document = msg.fields || {};
+      serverDoc.document._id = Meteor.idParse(msg.id);
+    } else {
+      self._pushUpdate(updates, msg.collection, msg);
+    }
+  },
+
+  _process_changed: function (msg, updates) {
+    var self = this;
+    var serverDoc = Meteor._get(self._serverDocuments, msg.collection, msg.id);
+    if (serverDoc) {
+      if (serverDoc.document === undefined) {
+        throw new Error("It doesn't make sense to be changing something we don't think exists: "
+                        + msg.id);
+      }
+      LocalCollection._applyChanges(serverDoc.document, msg.fields);
+    } else {
+      self._pushUpdate(updates, msg.collection, msg);
+    }
+  },
+
+  _process_removed: function (msg, updates) {
+    var self = this;
+    var serverDoc = Meteor._get(
+      self._serverDocuments, msg.collection, msg.id);
+    if (serverDoc) {
+      // Some outstanding stub wrote here.
+      if (serverDoc.document === undefined) {
+        throw new Error("It doesn't make sense to be deleting something we don't know exists: "
+                        + msg.id);
+      }
+      serverDoc.document = undefined;
+    } else {
+      self._pushUpdate(updates, msg.collection, {
+        msg: 'removed',
+        collection: msg.collection,
+        id: msg.id
+      });
+    }
+  },
+
+  _process_updated: function (msg, updates) {
+    var self = this;
     // Process "method done" messages.
     _.each(msg.methods, function (methodId) {
       _.each(self._documentsWrittenByStub[methodId], function (written) {
@@ -944,10 +1069,14 @@ _.extend(Meteor._LivedataConnection.prototype, {
           // now copy the saved document to the database (reverting the stub's
           // change if the server did not write to this object, or applying the
           // server's writes if it did).
-          if (!updates[written.collection])
-            updates[written.collection] = [];
-          updates[written.collection].push({id: written.id,
-                                            replace: serverDoc.document});
+
+          // This is a fake ddp 'replace' message.  It's just for talking between
+          // livedata connections and minimongo.
+          self._pushUpdate(updates, written.collection, {
+            msg: 'replace',
+            id: written.id,
+            replace: serverDoc.document
+          });
           // Call all flush callbacks.
           _.each(serverDoc.flushCallbacks, function (c) {
             c();
@@ -969,14 +1098,25 @@ _.extend(Meteor._LivedataConnection.prototype, {
       self._runWhenAllServerDocsAreFlushed(
         _.bind(callbackInvoker.dataVisible, callbackInvoker));
     });
+  },
 
+  _process_ready: function (msg, updates) {
+    var self = this;
     // Process "sub ready" messages. "sub ready" messages don't take effect
     // until all current server documents have been flushed to the local
     // database. We can use a write fence to implement this.
     _.each(msg.subs, function (subId) {
       self._runWhenAllServerDocsAreFlushed(function () {
-        _.each(self._subReadyCallbacks[subId], function (c) { c(); });
-        delete self._subReadyCallbacks[subId];
+        var subRecord = self._subscriptions[subId];
+        // Did we already unsubscribe?
+        if (!subRecord)
+          return;
+        // Did we already receive a ready message? (Oops!)
+        if (subRecord.ready)
+          return;
+        subRecord.readyCallback && subRecord.readyCallback();
+        subRecord.ready = true;
+        subRecord.readyListeners && subRecord.readyListeners.invalidateAll();
       });
     });
   },
@@ -1000,8 +1140,15 @@ _.extend(Meteor._LivedataConnection.prototype, {
     };
     _.each(self._serverDocuments, function (collectionDocs) {
       _.each(collectionDocs, function (serverDoc) {
-        ++unflushedServerDocCount;
-        serverDoc.flushCallbacks.push(onServerDocFlush);
+        var writtenByStubForAMethodWithSentMessage = _.any(
+          serverDoc.writtenByStubs, function (dummy, methodId) {
+            var invoker = self._methodInvokers[methodId];
+            return invoker && invoker.sentMessage;
+          });
+        if (writtenByStubForAMethodWithSentMessage) {
+          ++unflushedServerDocCount;
+          serverDoc.flushCallbacks.push(onServerDocFlush);
+        }
       });
     });
     if (unflushedServerDocCount === 0) {
@@ -1013,7 +1160,15 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
   _livedata_nosub: function (msg) {
     var self = this;
-    // Meteor._debug("NOSUB", msg);
+    // we weren't subbed anyway, or we initiated the unsub.
+    if (!_.has(self._subscriptions, msg.id))
+      return;
+    var errorCallback = self._subscriptions[msg.id].errorCallback;
+    delete self._subscriptions[msg.id];
+    if (errorCallback && msg.error) {
+      errorCallback(new Meteor.Error(
+        msg.error.error, msg.error.reason, msg.error.details));
+    }
   },
 
   _livedata_result: function (msg) {
@@ -1095,8 +1250,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
   _livedata_error: function (msg) {
     Meteor._debug("Received error from server: ", msg.reason);
-    if (msg.offending_message)
-      Meteor._debug("For: ", msg.offending_message);
+    if (msg.offendingMessage)
+      Meteor._debug("For: ", msg.offendingMessage);
   },
 
   _callOnReconnectAndSendAppropriateOutstandingMethods: function() {
@@ -1169,43 +1324,17 @@ _.extend(Meteor, {
       url, {reloadOnUpdate: _reloadOnUpdate});
     Meteor._LivedataConnection._allConnections.push(ret); // hack. see below.
     return ret;
-  },
-
-  autosubscribe: function (sub_func) {
-    var local_subs = [];
-    var context = new Meteor.deps.Context();
-
-    context.onInvalidate(function () {
-      // recurse.
-      Meteor.autosubscribe(sub_func);
-      // unsub after re-subbing, to avoid bouncing.
-      _.each(local_subs, function (x) { x.stop(); });
-    });
-
-    context.run(function () {
-      if (captureSubs)
-        throw new Error("Meteor.autosubscribe may not be called recursively");
-
-      captureSubs = [];
-      try {
-        sub_func();
-      } finally {
-        local_subs = captureSubs;
-        captureSubs = null;
-      }
-    });
   }
 });
-
 
 // Hack for `spiderable` package: a way to see if the page is done
 // loading all the data it needs.
 Meteor._LivedataConnection._allConnections = [];
 Meteor._LivedataConnection._allSubscriptionsReady = function () {
   return _.all(Meteor._LivedataConnection._allConnections, function (conn) {
-    for (var k in conn._subReadyCallbacks)
-      return false;
-    return true;
+    return _.all(conn._subscriptions, function (sub) {
+      return sub.ready;
+    });
   });
 };
 })();

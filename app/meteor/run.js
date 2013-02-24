@@ -11,6 +11,7 @@ var updater = require(path.join(__dirname, '..', 'lib', 'updater.js'));
 var bundler = require(path.join(__dirname, '..', 'lib', 'bundler.js'));
 var mongo_runner = require(path.join(__dirname, '..', 'lib', 'mongo_runner.js'));
 var mongoExitCodes = require(path.join(__dirname, '..', 'lib', 'mongo_exit_codes.js'));
+var inFiber = require(path.join(__dirname, '..', 'lib', 'fiber-helpers.js')).inFiber;
 
 var _ = require('underscore');
 
@@ -213,19 +214,13 @@ var log_to_clients = function (msg) {
 // onExit
 // [onListen]
 // [nodeOptions]
-// [runOnce]: boolean; default false; if true doesn't ever try to restart, and
-//          forwards server exit code.
 // [settingsFile]
 
 var start_server = function (options) {
   // environment
   options = _.extend({
-    runOnce: false,
     nodeOptions: []
   }, options);
-  if (options.runOnce) {
-    Status.shouldRestart = false;
-  }
 
   var env = {};
   for (var k in process.env)
@@ -579,6 +574,10 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
   var test_server_handle;
   var watcher;
 
+  if (once) {
+    Status.shouldRestart = false;
+  }
+
   var start_watching = function () {
     if (!Status.shouldRestart)
       return;
@@ -601,7 +600,7 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
     }
   };
 
-  var restart_server = function () {
+  var restart_server = inFiber(function () {
     Status.running = false;
     Status.listening = false;
     if (server_handle)
@@ -672,7 +671,6 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
         request_queue = [];
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
-      runOnce: once,
       settingsFile: settingsFile
     });
 
@@ -700,7 +698,7 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
           }});
       }
     };
-  };
+  });
 
 
   var mongo_err_count = 0;

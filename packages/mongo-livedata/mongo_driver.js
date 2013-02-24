@@ -10,7 +10,54 @@
 
 var path = __meteor_bootstrap__.require('path');
 var MongoDB = __meteor_bootstrap__.require('mongodb');
+var Fiber = __meteor_bootstrap__.require('fibers');
 var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
+
+var replaceMongoAtomWithMeteor = function (document) {
+  if (document instanceof MongoDB.Binary) {
+    var buffer = document.value(true);
+    return new Uint8Array(buffer);
+  }
+  if (document instanceof MongoDB.ObjectID) {
+    return new Meteor.Collection.ObjectID(document.toHexString());
+  }
+  return undefined;
+};
+
+var replaceMeteorAtomWithMongo = function (document) {
+  if (EJSON.isBinary(document)) {
+    // This does more copies than we'd like, but is necessary because
+    // MongoDB.BSON only looks like it takes a Uint8Array (and doesn't actually
+    // serialize it correctly).
+    return new MongoDB.Binary(new Buffer(document));
+  }
+  if (document instanceof Meteor.Collection.ObjectID) {
+    return new MongoDB.ObjectID(document.toHexString());
+  }
+  return undefined;
+};
+
+var replaceTypes = function (document, atomTransformer) {
+  if (typeof document !== 'object' || document === null)
+    return document;
+
+  var replacedTopLevelAtom = atomTransformer(document);
+  if (replacedTopLevelAtom !== undefined)
+    return replacedTopLevelAtom;
+
+  var ret = document;
+  _.each(document, function (val, key) {
+    var valReplaced = replaceTypes(val, atomTransformer);
+    if (val !== valReplaced) {
+      // Lazy clone. Shallow copy.
+      if (ret === document)
+        ret = _.clone(document);
+      ret[key] = valReplaced;
+    }
+  });
+  return ret;
+};
+
 
 _Mongo = function (url) {
   var self = this;
@@ -89,7 +136,6 @@ _Mongo.prototype._maybeBeginWrite = function () {
 
 _Mongo.prototype.insert = function (collection_name, document) {
   var self = this;
-
   if (collection_name === "___meteor_failure_test_collection" &&
       document.fail) {
     var e = new Error("Failure test");
@@ -106,16 +152,37 @@ _Mongo.prototype.insert = function (collection_name, document) {
       return;
     }
 
-    collection.insert(document, {safe: true}, function (err) {
+    collection.insert(replaceTypes(document, replaceMeteorAtomWithMongo),
+                      {safe: true}, function (err) {
       future.ret(err);
     });
   });
 
   var err = future.wait();
-  Meteor.refresh({collection: collection_name});
+  // XXX do we need this to run this at all on error?
+  Meteor.refresh({collection: collection_name, id: document._id});
   write.committed();
   if (err)
     throw err;
+};
+
+// Cause queries that may be affected by the selector to poll in this write
+// fence.
+_Mongo.prototype._refresh = function (collectionName, selector) {
+  var self = this;
+  var refreshKey = {collection: collectionName};
+  // If we know which documents we're removing, don't poll queries that are
+  // specific to other documents. (Note that multiple notifications here should
+  // not cause multiple polls, since all our listener is doing is enqueueing a
+  // poll.)
+  var specificIds = LocalCollection._idsMatchedBySelector(selector);
+  if (specificIds) {
+    _.each(specificIds, function (id) {
+      Meteor.refresh(_.extend({id: id}, refreshKey));
+    });
+  } else {
+    Meteor.refresh(refreshKey);
+  }
 };
 
 _Mongo.prototype.remove = function (collection_name, selector) {
@@ -137,13 +204,14 @@ _Mongo.prototype.remove = function (collection_name, selector) {
       return;
     }
 
-    collection.remove(selector, {safe: true}, function (err) {
+    collection.remove(replaceTypes(selector, replaceMeteorAtomWithMongo),
+                      {safe: true}, function (err) {
       future.ret(err);
     });
   });
 
   var err = future.wait();
-  Meteor.refresh({collection: collection_name});
+  self._refresh(collection_name, selector);
   write.committed();
   if (err)
     throw err;
@@ -175,13 +243,15 @@ _Mongo.prototype.update = function (collection_name, selector, mod, options) {
     if (options.upsert) opts.upsert = true;
     if (options.multi) opts.multi = true;
 
-    collection.update(selector, mod, opts, function (err) {
+    collection.update(replaceTypes(selector, replaceMeteorAtomWithMongo),
+                      replaceTypes(mod, replaceMeteorAtomWithMongo),
+                      opts, function (err) {
       future.ret(err);
     });
   });
 
   var err = future.wait();
-  Meteor.refresh({collection: collection_name});
+  self._refresh(collection_name, selector);
   write.committed();
   if (err)
     throw err;
@@ -199,7 +269,6 @@ _Mongo.prototype.find = function (collectionName, selector, options) {
 
 _Mongo.prototype.findOne = function (collection_name, selector, options) {
   var self = this;
-
   if (arguments.length === 1)
     selector = {};
 
@@ -248,8 +317,8 @@ _Mongo.prototype._ensureIndex = function (collectionName, index, options) {
 // SynchronousCursor (lazily: it doesn't contact Mongo until you call a method
 // like fetch or forEach on it).
 //
-// ObserveHandle is the "observe handle" returned from observe and
-// _observeUnordered. It has a reference to a LiveResultsSet.
+// ObserveHandle is the "observe handle" returned from observeChanges. It has a
+// reference to a LiveResultsSet.
 //
 // LiveResultsSet caches the results of a query and reruns it when necessary.
 // It is hooked up to one or more ObserveHandles; a single LiveResultsSet
@@ -285,38 +354,29 @@ _.each(['forEach', 'map', 'rewind', 'fetch', 'count'], function (method) {
   };
 });
 
-// Called by livedata_server to automatically publish cursors returned from a
-// publish handler over DDP.
+// When you call Meteor.publish() with a function that returns a Cursor, we need
+// to transmute it into the equivalent subscription.  This is the function that
+// does that.
+
 Cursor.prototype._publishCursor = function (sub) {
   var self = this;
   var collection = self._cursorDescription.collectionName;
 
-  var observeHandle = self._observeUnordered({
-    added: function (obj) {
-      sub.set(collection, obj._id, obj);
-      sub.flush();
+  var observeHandle = self.observeChanges({
+    added: function (id, fields) {
+      sub.added(collection, id, fields);
     },
-    changed: function (obj, oldObj) {
-      var set = {};
-      _.each(obj, function (v, k) {
-        if (!_.isEqual(v, oldObj[k]))
-          set[k] = v;
-      });
-      sub.set(collection, obj._id, set);
-      var deadKeys = _.difference(_.keys(oldObj), _.keys(obj));
-      sub.unset(collection, obj._id, deadKeys);
-      sub.flush();
+    changed: function (id, fields) {
+      sub.changed(collection, id, fields);
     },
-    removed: function (oldObj) {
-      sub.unset(collection, oldObj._id, _.keys(oldObj));
-      sub.flush();
+    removed: function (id) {
+      sub.removed(collection, id);
     }
   });
 
-  // _observeUnordered only returns after the initial added callbacks have run.
-  // mark subscription as completed.
-  sub.complete();
-  sub.flush();
+  // observeChanges only returns after the initial added callbacks have run.
+  // mark subscription as ready.
+  sub.ready();
 
   // register stop callback (expects lambda w/ no args).
   sub.onStop(function () {observeHandle.stop();});
@@ -324,14 +384,14 @@ Cursor.prototype._publishCursor = function (sub) {
 
 Cursor.prototype.observe = function (callbacks) {
   var self = this;
-  return self._mongo._observe(
-    self._cursorDescription, true, callbacks);
+  return LocalCollection._observeFromObserveChanges(self, callbacks);
 };
 
-Cursor.prototype._observeUnordered = function (callbacks) {
+Cursor.prototype.observeChanges = function (callbacks) {
   var self = this;
-  return self._mongo._observe(
-    self._cursorDescription, false, callbacks);
+  var ordered = LocalCollection._isOrderedChanges(callbacks);
+  return self._mongo._observeChanges(
+    self._cursorDescription, ordered, callbacks);
 };
 
 _Mongo.prototype._createSynchronousCursor = function (cursorDescription) {
@@ -346,7 +406,7 @@ _Mongo.prototype._createSynchronousCursor = function (cursorDescription) {
       }
       var options = cursorDescription.options;
       var dbCursor = collection.find(
-        cursorDescription.selector,
+        replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
         options.fields, {
           sort: options.sort,
           limit: options.limit,
@@ -376,8 +436,10 @@ _.extend(SynchronousCursor.prototype, {
     while (true) {
       var doc = self._synchronousNextObject().wait();
       if (!doc || !doc._id) return null;
-      if (self._visitedIds[doc._id]) continue;
-      self._visitedIds[doc._id] = true;
+      doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
+      var strId = Meteor.idStringify(doc._id);
+      if (self._visitedIds[strId]) continue;
+      self._visitedIds[strId] = true;
       return doc;
     }
   },
@@ -448,9 +510,11 @@ var ObserveHandle = function (liveResultsSet, callbacks) {
   var self = this;
   self._liveResultsSet = liveResultsSet;
   self._added = callbacks.added;
+  self._addedBefore = callbacks.addedBefore;
   self._changed = callbacks.changed;
   self._removed = callbacks.removed;
   self._moved = callbacks.moved;
+  self._movedBefore = callbacks.movedBefore;
   self._observeHandleId = nextObserveHandleId++;
 };
 ObserveHandle.prototype.stop = function () {
@@ -459,7 +523,8 @@ ObserveHandle.prototype.stop = function () {
   self._liveResultsSet = null;
 };
 
-_Mongo.prototype._observe = function (cursorDescription, ordered, callbacks) {
+_Mongo.prototype._observeChanges = function (
+    cursorDescription, ordered, callbacks) {
   var self = this;
   var observeKey = JSON.stringify(
     _.extend({ordered: ordered}, cursorDescription));
@@ -483,7 +548,8 @@ _Mongo.prototype._observe = function (cursorDescription, ordered, callbacks) {
         ordered,
         function () {
           delete self._liveResultsSets[observeKey];
-        });
+        },
+        callbacks._testOnlyPollCallback);
       self._liveResultsSets[observeKey] = liveResultsSet;
       newlyCreated = true;
     }
@@ -506,7 +572,7 @@ _Mongo.prototype._observe = function (cursorDescription, ordered, callbacks) {
 };
 
 var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
-                               stopCallback) {
+                               stopCallback, testOnlyPollCallback) {
   var self = this;
 
   self._cursorDescription = cursorDescription;
@@ -543,34 +609,48 @@ var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
 
   self._taskQueue = new Meteor._SynchronousQueue();
 
-  // listen for the invalidation messages that will trigger us to poll the
-  // database for changes
-  var keys = (cursorDescription.options.key ||
-              {collection: cursorDescription.collectionName});
-  if (!(keys instanceof Array))
-    keys = [keys];
-  _.each(keys, function (key) {
+  // Listen for the invalidation messages that will trigger us to poll the
+  // database for changes. If this selector specifies specific IDs, specify them
+  // here, so that updates to different specific IDs don't cause us to poll.
+  var listenOnTrigger = function (trigger) {
     var listener = Meteor._InvalidationCrossbar.listen(
-      key, function (notification, complete) {
+      trigger, function (notification, complete) {
         // When someone does a transaction that might affect us, schedule a poll
         // of the database. If that transaction happens inside of a write fence,
         // block the fence until we've polled and notified observers.
         var fence = Meteor._CurrentWriteFence.get();
         if (fence)
           self._pendingWrites.push(fence.beginWrite());
-        self._ensurePollIsScheduled();
+        // Ensure a poll is scheduled... but if we already know that one is,
+        // don't hit the throttled _ensurePollIsScheduled function (which might
+        // lead to us calling it unnecessarily in 50ms).
+        if (self._pollsScheduledButNotStarted === 0)
+          self._ensurePollIsScheduled();
         complete();
       });
     self._stopCallbacks.push(function () { listener.stop(); });
-  });
+  };
+  var key = {collection: cursorDescription.collectionName};
+  var specificIds = LocalCollection._idsMatchedBySelector(
+    cursorDescription.selector);
+  if (specificIds) {
+    _.each(specificIds, function (id) {
+      listenOnTrigger(_.extend({id: id}, key));
+    });
+  } else {
+    listenOnTrigger(key);
+  }
 
   // Map from handle ID to ObserveHandle.
   self._observeHandles = {};
 
   self._callbackMultiplexer = {};
   var callbackNames = ['added', 'changed', 'removed'];
-  if (self._ordered)
+  if (self._ordered) {
     callbackNames.push('moved');
+    callbackNames.push('addedBefore');
+    callbackNames.push('movedBefore');
+  }
   _.each(callbackNames, function (callback) {
     var handleCallback = '_' + callback;
     self._callbackMultiplexer[callback] = function () {
@@ -589,14 +669,22 @@ var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
     };
   });
 
-  // every once and a while, poll even if we don't think we're dirty,
-  // for eventual consistency with database writes from outside the
-  // Meteor universe
-  var intervalHandle = Meteor.setInterval(
-    _.bind(self._ensurePollIsScheduled, self), 10 * 1000 /* 10 seconds */);
-  self._stopCallbacks.push(function () {
-    Meteor.clearInterval(intervalHandle);
-  });
+  // every once and a while, poll even if we don't think we're dirty, for
+  // eventual consistency with database writes from outside the Meteor
+  // universe.
+  //
+  // For testing, there's an undocumented callback argument to observeChanges
+  // which disables time-based polling and gets called at the beginning of each
+  // poll.
+  if (testOnlyPollCallback) {
+    self._testOnlyPollCallback = testOnlyPollCallback;
+  } else {
+    var intervalHandle = Meteor.setInterval(
+      _.bind(self._ensurePollIsScheduled, self), 10 * 1000);
+    self._stopCallbacks.push(function () {
+      Meteor.clearInterval(intervalHandle);
+    });
+  }
 };
 
 _.extend(LiveResultsSet.prototype, {
@@ -667,6 +755,8 @@ _.extend(LiveResultsSet.prototype, {
     var self = this;
     --self._pollsScheduledButNotStarted;
 
+    self._testOnlyPollCallback && self._testOnlyPollCallback();
+
     // Save the list of pending writes which this round will commit.
     var writesForCycle = self._pendingWrites;
     self._pendingWrites = [];
@@ -682,9 +772,10 @@ _.extend(LiveResultsSet.prototype, {
     var oldResults = self._results;
 
     // Run diffs. (This can yield too.)
-    if (!_.isEmpty(self._observeHandles))
-      LocalCollection._diffQuery(
-        self._ordered, oldResults, newResults, self._callbackMultiplexer, true);
+    if (!_.isEmpty(self._observeHandles)) {
+      LocalCollection._diffQueryChanges(
+        self._ordered, oldResults, newResults, self._callbackMultiplexer);
+    }
 
     // Replace self._results atomically.
     self._results = newResults;
@@ -700,7 +791,6 @@ _.extend(LiveResultsSet.prototype, {
   // with a call to _pollMongo or another call to this function.
   _addObserveHandleAndSendInitialAdds: function (handle) {
     var self = this;
-
     // Keep track of how many of these tasks are on the queue, so that
     // _removeObserveHandle knows if it's safe to GC.
     ++self._addHandleTasksScheduledButNotPerformed;
@@ -715,10 +805,16 @@ _.extend(LiveResultsSet.prototype, {
       --self._addHandleTasksScheduledButNotPerformed;
 
       // Send initial adds.
-      if (handle._added) {
+      if (handle._added || handle._addedBefore) {
         _.each(self._results, function (doc, i) {
-          handle._added(LocalCollection._deepcopy(doc),
-                        self._ordered ? i : undefined);
+          var fields = EJSON.clone(doc);
+          delete fields._id;
+          if (self._ordered) {
+            handle._added && handle._added(doc._id, fields);
+            handle._addedBefore && handle._addedBefore(doc._id, fields, null);
+          } else {
+            handle._added(doc._id, fields);
+          }
         });
       }
     });

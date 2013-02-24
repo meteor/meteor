@@ -1,4 +1,5 @@
 (function () {
+  var Fiber = __meteor_bootstrap__.require('fibers');
   var handlesForRun = {};
   var reportsForRun = {};
 
@@ -12,11 +13,12 @@
       handlesForRun[runId] = _.without(handlesForRun[runId], self);
     });
     if (_.has(reportsForRun, runId)) {
-      self.set(Meteor._ServerTestResultsCollection, runId,
-               reportsForRun[runId]);
+      self.added(Meteor._ServerTestResultsCollection, runId,
+                 reportsForRun[runId]);
+    } else {
+      self.added(Meteor._ServerTestResultsCollection, runId, {});
     }
-    self.complete();
-    self.flush();
+    self.ready();
   });
 
   Meteor.methods({
@@ -36,12 +38,11 @@
                         "You probably forgot to wrap a callback in bindEnvironment.");
           console.trace();
         }
-        var dummyKey = Meteor.uuid();
-        var setObject = {};
-        setObject[dummyKey] = report;
+        var dummyKey = Random.id();
+        var fields = {};
+        fields[dummyKey] = report;
         _.each(handlesForRun[runId], function (handle) {
-          handle.set(Meteor._ServerTestResultsCollection, runId, setObject);
-          handle.flush();
+          handle.changed(Meteor._ServerTestResultsCollection, runId, fields);
         });
         // Save for future subscriptions.
         reportsForRun[runId][dummyKey] = report;

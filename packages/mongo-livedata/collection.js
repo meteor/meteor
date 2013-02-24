@@ -1,5 +1,8 @@
 // manager, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
+
+(function () {
+
 Meteor.Collection = function (name, options) {
   var self = this;
   if (options && options.methods) {
@@ -11,9 +14,24 @@ Meteor.Collection = function (name, options) {
   }
   options = _.extend({
     manager: undefined,
+    idGeneration: 'STRING',
     _driver: undefined,
     _preventAutopublish: false
   }, options);
+
+  switch (options.idGeneration) {
+  case 'MONGO':
+    self._makeNewID = function () {
+      return new Meteor.Collection.ObjectID();
+    };
+    break;
+  case 'STRING':
+  default:
+    self._makeNewID = function () {
+      return Random.id();
+    };
+    break;
+  }
 
   if (!name && (name !== null)) {
     Meteor._debug("Warning: creating anonymous collection. It will not be " +
@@ -68,47 +86,56 @@ Meteor.Collection = function (name, options) {
       // Apply an update.
       // XXX better specify this interface (not in terms of a wire message)?
       update: function (msg) {
-        var doc = self._collection.findOne(msg.id);
+        var mongoId = Meteor.idParse(msg.id);
+        var doc = self._collection.findOne(mongoId);
 
         // Is this a "replace the whole doc" message coming from the quiescence
         // of method writes to an object? (Note that 'undefined' is a valid
         // value meaning "remove it".)
-        if (_.has(msg, 'replace')) {
+        if (msg.msg === 'replace') {
           var replace = msg.replace;
-          // An empty doc is equivalent to a nonexistent doc.
-          if (replace && _.isEmpty(_.without(_.keys(replace), '_id')))
-            replace = undefined;
           if (!replace) {
             if (doc)
-              self._collection.remove(msg.id);
+              self._collection.remove(mongoId);
           } else if (!doc) {
-            self._collection.insert(_.extend({_id: msg.id}, replace));
+            self._collection.insert(replace);
           } else {
             // XXX check that replace has no $ ops
-            self._collection.update(msg.id, replace);
+            self._collection.update(mongoId, replace);
           }
           return;
+        } else if (msg.msg === 'added') {
+          if (doc) {
+            debugger;
+            throw new Error("Expected not to find a document already present for an add");
+          }
+          self._collection.insert(_.extend({_id: mongoId}, msg.fields));
+        } else if (msg.msg === 'removed') {
+          if (!doc)
+            throw new Error("Expected to find a document already present for removed");
+          self._collection.remove(mongoId);
+        } else if (msg.msg === 'changed') {
+          if (!doc)
+            throw new Error("Expected to find a document to change");
+          if (!_.isEmpty(msg.fields)) {
+            var modifier = {};
+            _.each(msg.fields, function (value, key) {
+              if (value === undefined) {
+                if (!modifier.$unset)
+                  modifier.$unset = {};
+                modifier.$unset[key] = 1;
+              } else {
+                if (!modifier.$set)
+                  modifier.$set = {};
+                modifier.$set[key] = value;
+              }
+            });
+            self._collection.update(mongoId, modifier);
+          }
+        } else {
+          throw new Error("I don't know how to deal with this message");
         }
 
-        // ... otherwise we're applying set/unset messages against specific
-        // fields.
-        if (doc
-            && (!msg.set)
-            && _.difference(_.keys(doc), msg.unset, ['_id']).length === 0) {
-          // what's left is empty, just remove it.  cannot fail.
-          self._collection.remove(msg.id);
-        } else if (doc) {
-          var mutator = {$set: msg.set, $unset: {}};
-          _.each(msg.unset, function (propname) {
-            mutator.$unset[propname] = 1;
-          });
-          // XXX error check return value from update.
-          self._collection.update(msg.id, mutator);
-        } else {
-          // XXX error check return value from insert.
-          if (msg.set)
-            self._collection.insert(_.extend({_id: msg.id}, msg.set));
-        }
       },
 
       // Called at the end of a batch of updates.
@@ -174,7 +201,7 @@ Meteor.Collection._rewriteSelector = function (selector) {
 
   if (!selector || (('_id' in selector) && !selector._id))
     // can't match anything
-    return {_id: Meteor.uuid()};
+    return {_id: Random.id()};
 
   var ret = {};
   _.each(selector, function (value, key) {
@@ -249,9 +276,14 @@ _.each(["insert", "update", "remove"], function (name) {
         throw new Error("insert requires an argument");
       // shallow-copy the document and generate an ID
       args[0] = _.extend({}, args[0]);
-      if ('_id' in args[0])
-        throw new Error("Do not pass an _id to insert. Meteor will generate the _id for you.");
-      ret = args[0]._id = Meteor.uuid();
+      if ('_id' in args[0]) {
+        ret = args[0]._id;
+        if (!(typeof ret === 'string'
+              || ret instanceof Meteor.Collection.ObjectID))
+          throw new Error("Meteor requires document _id fields to be strings or ObjectIDs");
+      } else {
+        ret = args[0]._id = self._makeNewID();
+      }
     } else {
       args[0] = Meteor.Collection._rewriteSelector(args[0]);
     }
@@ -302,6 +334,8 @@ Meteor.Collection.prototype._ensureIndex = function (index, options) {
     throw new Error("Can only call _ensureIndex on server collections");
   self._collection._ensureIndex(index, options);
 };
+
+Meteor.Collection.ObjectID = LocalCollection._ObjectID;
 
 ///
 /// Remote methods and access control.
@@ -377,6 +411,7 @@ Meteor.Collection.prototype._ensureIndex = function (index, options) {
   };
 })();
 
+
 Meteor.Collection.prototype._defineMutationMethods = function() {
   var self = this;
 
@@ -411,27 +446,34 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
 
     _.each(['insert', 'update', 'remove'], function (method) {
       m[self._prefix + method] = function (/* ... */) {
-        if (this.isSimulation || (!self._restricted && self._isInsecure())) {
-          self._collection[method].apply(
+        try {
+          if (this.isSimulation || (!self._restricted && self._isInsecure())) {
+            self._collection[method].apply(
             self._collection, _.toArray(arguments));
-        } else if (self._restricted) {
-          // short circuit if there is no way it will pass.
-          if (self._validators[method].allow.length === 0) {
-            throw new Meteor.Error(
-              403, "Access denied. No allow validators set on restricted " +
-                "collection.");
-          }
+          } else if (self._restricted) {
+            // short circuit if there is no way it will pass.
+            if (self._validators[method].allow.length === 0) {
+              throw new Meteor.Error(
+                403, "Access denied. No allow validators set on restricted " +
+                  "collection.");
+            }
 
-          var validatedMethodName =
-                '_validated' + method.charAt(0).toUpperCase() + method.slice(1);
-          var argsWithUserId = [this.userId].concat(_.toArray(arguments));
-          self[validatedMethodName].apply(self, argsWithUserId);
-        } else {
-          throw new Meteor.Error(403, "Access denied");
+            var validatedMethodName =
+                  '_validated' + method.charAt(0).toUpperCase() + method.slice(1);
+            var argsWithUserId = [this.userId].concat(_.toArray(arguments));
+            self[validatedMethodName].apply(self, argsWithUserId);
+          } else {
+            throw new Meteor.Error(403, "Access denied");
+          }
+        } catch (e) {
+          if (e.name === 'MongoError' || e.name === 'MinimongoError') {
+            throw new Meteor.Error(409, e.toString());
+          } else {
+            throw e;
+          }
         }
       };
     });
-
     self._manager.methods(m);
   }
 };
@@ -555,7 +597,7 @@ Meteor.Collection.prototype._validatedUpdate = function(
     // If the original selector was just a lookup by _id, no need to "and" it
     // with the idSelector (and it won't work anyway without explicitly
     // comparing with _id).
-    if (docs.length !== 1 || docs[0]._id !== selector)
+    if (docs.length !== 1 || !_.isEqual(docs[0]._id, selector))
       throw new Error("Lookup by ID " + selector + " found something else");
     fullSelector = selector;
   } else {
@@ -606,3 +648,5 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
 
   self._collection.remove.call(self._collection, idSelector);
 };
+
+})();

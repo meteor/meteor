@@ -12,7 +12,7 @@ TestCaseResults = function (test_case, onEvent, onException, stop_at_offset) {
   self.current_fail_count = 0;
   self.stop_at_offset = stop_at_offset;
   self.onException = onException;
-  self.id = Meteor.uuid();
+  self.id = Random.id();
 };
 
 _.extend(TestCaseResults.prototype, {
@@ -113,15 +113,27 @@ _.extend(TestCaseResults.prototype, {
       matched = expected === actual;
       expected = "[Node]";
       actual = "[Unknown]";
+    } else if (typeof Uint8Array !== 'undefined' && expected instanceof Uint8Array) {
+      // I have no idea why but _.isEqual on Chrome horks completely on Uint8Arrays.
+      // and the symptom is the chrome renderer taking up an entire CPU and freezing
+      // your web page, but not pausing anywhere in _.isEqual.  I don't understand it
+      // but we fall back to a manual comparison
+      if (!(actual instanceof Uint8Array))
+        this.fail({type: "assert_equal", message: "found object is not a typed array",
+                   expected: "A typed array", actual: actual.constructor.toString()});
+      if (expected.length !== actual.length)
+        this.fail({type: "assert_equal", message: "lengths of typed arrays do not match",
+                   expected: expected.length, actual: actual.length});
+      for (var i = 0; i < expected.length; i++) {
+        this.equal(actual[i], expected[i]);
+      }
     } else {
       matched = _.isEqual(expected, actual);
-      expected = JSON.stringify(expected);
-      actual = JSON.stringify(actual);
     }
 
     if (matched === !!not) {
       this.fail({type: "assert_equal", message: message,
-                 expected: expected, actual: actual, not: !!not});
+                 expected: JSON.stringify(expected), actual: JSON.stringify(actual), not: !!not});
     } else
       this.ok();
   },
@@ -207,7 +219,7 @@ _.extend(TestCaseResults.prototype, {
   include: function (s, v) {
     var pass = false;
     if (s instanceof Array)
-      pass = _.indexOf(s, v) !== -1;
+      pass = _.any(s, function(it) {return _.isEqual(v, it);});
     else if (typeof s === "object")
       pass = v in s;
     else if (typeof s === "string")
@@ -220,8 +232,9 @@ _.extend(TestCaseResults.prototype, {
       /* fail -- not something that contains other things */;
     if (pass)
       this.ok();
-    else
+    else {
       this.fail({type: "include", sequence: s, should_contain_value: v});
+    }
   },
 
   // XXX should change to lengthOf to match vowsjs
