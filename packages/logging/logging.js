@@ -37,7 +37,7 @@
 
             // arguments.join(" ") doesn't work, so use _.each instead (TypeError: Object #<Object> has no method 'join')
             var argumentString="";
-            _.each(graeme,function(element) { argumentString+=" "+element });
+            _.each(arguments,function(element) { argumentString+=" "+element });
             argumentString=argumentString.trim();
 
             console.log.apply(console,[argumentString]);
