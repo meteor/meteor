@@ -31,6 +31,20 @@ elif [ "$UNAME" == "Darwin" ] ; then
     fi
 
     MONGO_OS="osx"
+
+elif [ "$UNAME" == "SunOS" ] ; then
+  if [ "$ARCH" == "i86pc" ] ; then
+    ARCH="x86_64"
+  fi
+
+  if [ "$ARCH" != "x86_64" ] ; then
+      echo "Unsupported architecture: $ARCH"
+      echo "Meteor only supports x86_64 for now."
+      exit 1
+  fi
+
+  MONGO_OS="sunos5"
+    
 else
     echo "This OS not yet supported"
     exit 1
@@ -142,6 +156,7 @@ cd "$DIR"
 MONGO_VERSION="2.2.1"
 MONGO_NAME="mongodb-${MONGO_OS}-${ARCH}-${MONGO_VERSION}"
 MONGO_URL="http://fastdl.mongodb.org/${MONGO_OS}/${MONGO_NAME}.tgz"
+echo "Downloading $MONGO_URL"
 curl "$MONGO_URL" | tar -xz
 mv "$MONGO_NAME" mongodb
 
@@ -149,7 +164,7 @@ mv "$MONGO_NAME" mongodb
 # could be deleted from git dev_bundle but not sure which we'll end up
 # needing.
 cd mongodb/bin
-rm bsondump mongodump mongoexport mongofiles mongoimport mongorestore mongos mongosniff mongostat mongotop mongooplog mongoperf
+rm bsondump mongodump mongoexport mongofiles mongoimport mongorestore mongos mongostat mongotop mongooplog mongoperf
 cd ../..
 
 # Clean up an unneeded directory accidentally installed by the
