@@ -79,10 +79,7 @@ var builtinConverters = [
       return _.has(obj, '$type') && _.has(obj, '$value') && _.size(obj) === 2;
     },
     matchObject: function (obj) {
-      return obj &&
-        typeof obj.toJSONValue === 'function' &&
-        typeof obj.typeName === 'function' &&
-        _.has(customTypes, obj.typeName());
+      return EJSON._isCustomType(obj);
     },
     toJSONValue: function (obj) {
       return {$type: obj.typeName(), $value: obj.toJSONValue()};
@@ -94,6 +91,13 @@ var builtinConverters = [
     }
   }
 ];
+
+EJSON._isCustomType = function (obj) {
+  return obj &&
+    typeof obj.toJSONValue === 'function' &&
+    typeof obj.typeName === 'function' &&
+    _.has(customTypes, obj.typeName());
+};
 
 
 //for both arrays and objects, in-place modification.
