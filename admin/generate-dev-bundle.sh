@@ -3,7 +3,7 @@
 set -e
 set -u
 
-BUNDLE_VERSION=0.2.19
+BUNDLE_VERSION=0.2.20
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -99,6 +99,8 @@ npm install underscore@1.4.2
 npm install fstream@0.1.21
 npm install tar@0.1.14
 npm install websocket@1.0.8
+npm install kexec@0.1.1
+npm install shell-quote@0.0.1
 
 # allow clientMaxAge to be set to 0:
 # https://github.com/tomgco/gzippo/pull/49
