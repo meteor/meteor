@@ -27,24 +27,21 @@
         // http://patik.com/blog/complete-cross-browser-console-log/
         if (typeof console.log.apply === "function") {
           // Most browsers
-          
-          // Chrome and Safari only hyperlink URLs to source files in arguments[0], so join arguments into single string 
-          // if all arguments are strings
+
+          // Chrome and Safari only hyperlink URLs to source files in first argument of
+          // console.log, so try to call it with one argument if possible.
+          // Approach taken here: If all arguments are strings, join them on space.
           // See https://github.com/meteor/meteor/pull/732#issuecomment-13975991
-          var allArgumentsOfTypeString=_.every(arguments,function(element) { return typeof element=="string" });
+          var allArgumentsOfTypeString = true;
+          for (var i = 0; i < arguments.length; i++)
+            if (typeof arguments[i] !== "string")
+              allArgumentsOfTypeString = false;
 
-          if (allArgumentsOfTypeString) {
+          if (allArgumentsOfTypeString)
+            console.log.apply(console, [Array.prototype.join.call(arguments, " ")]);
+          else
+            console.log.apply(console, arguments);
 
-            // arguments.join(" ") doesn't work, so use _.each instead (TypeError: Object #<Object> has no method 'join')
-            var argumentString="";
-            _.each(arguments,function(element) { argumentString+=" "+element });
-            argumentString=argumentString.trim();
-
-            console.log.apply(console,[argumentString]);
-
-          } else
-            console.log.apply(console,arguments);
-            
         } else if (typeof Function.prototype.bind === "function") {
           // IE9
           var log = Function.prototype.bind.call(console.log, console);
