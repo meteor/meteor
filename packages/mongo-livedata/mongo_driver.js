@@ -27,8 +27,8 @@ var replaceNames = function (filter, thing) {
   return thing;
 };
 
-var addSpace = function (name) { return " " + name; };
-var rmSpace = function (name) { return name.substr(1); };
+var makeMongoLegal = function (name) { return "EJSON" + name; };
+var unmakeMongoLegal = function (name) { return name.substr(5); };
 
 var replaceMongoAtomWithMeteor = function (document) {
   if (document instanceof MongoDB.Binary) {
@@ -38,8 +38,8 @@ var replaceMongoAtomWithMeteor = function (document) {
   if (document instanceof MongoDB.ObjectID) {
     return new Meteor.Collection.ObjectID(document.toHexString());
   }
-  if (document[" $type"] && document[" $value"]) {
-    return EJSON.fromJSONValue(replaceNames(rmSpace, document));
+  if (document["EJSON$type"] && document["EJSON$value"]) {
+    return EJSON.fromJSONValue(replaceNames(unmakeMongoLegal, document));
   }
   return undefined;
 };
@@ -54,7 +54,7 @@ var replaceMeteorAtomWithMongo = function (document) {
   if (document instanceof Meteor.Collection.ObjectID) {
     return new MongoDB.ObjectID(document.toHexString());
   } else if (EJSON._isCustomType(document)) {
-    return replaceNames(addSpace, EJSON.toJSONValue(document));
+    return replaceNames(makeMongoLegal, EJSON.toJSONValue(document));
   }
   // It is not ordinarily possible to stick dollar-sign keys into mongo
   // so we don't bother checking for things that need escaping at this time.
