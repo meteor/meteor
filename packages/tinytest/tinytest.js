@@ -331,9 +331,9 @@ _.extend(TestManager.prototype, {
     self.ordered_tests.push(test);
   },
 
-  createRun: function (onReport) {
+  createRun: function (onReport, pathPrefix) {
     var self = this;
-    return new TestRun(self, onReport);
+    return new TestRun(self, onReport, pathPrefix);
   }
 });
 
@@ -344,46 +344,60 @@ TestManager = new TestManager;
 /* TestRun                                                                    */
 /******************************************************************************/
 
-TestRun = function (manager, onReport) {
+TestRun = function (manager, onReport, pathPrefix) {
   var self = this;
   self.manager = manager;
   self.onReport = onReport;
   self.next_sequence_number = 0;
-
+  self._pathPrefix = pathPrefix || [];
   _.each(self.manager.ordered_tests, function (test) {
-    self._report(test);
+    if (self._prefixMatch(test.groupPath))
+      self._report(test);
   });
 };
 
 _.extend(TestRun.prototype, {
+
+  _prefixMatch: function (testPath) {
+    var self = this;
+    for (var i = 0; i < self._pathPrefix.length; i++) {
+      if (!testPath[i] || self._pathPrefix[i] !== testPath[i]) {
+        return false;
+      }
+    }
+    return true;
+  },
+
   _runOne: function (test, onComplete, stop_at_offset) {
     var self = this;
-
     var startTime = (+new Date);
+    if (self._prefixMatch(test.groupPath)) {
+      test.run(function (event) {
+        /* onEvent */
+        self._report(test, event);
+      }, function () {
+        /* onComplete */
+        var totalTime = (+new Date) - startTime;
+        self._report(test, {type: "finish", timeMs: totalTime});
+        onComplete && onComplete();
+      }, function (exception) {
+        /* onException */
 
-    test.run(function (event) {
-      /* onEvent */
-      self._report(test, event);
-    }, function () {
-      /* onComplete */
-      var totalTime = (+new Date) - startTime;
-      self._report(test, {type: "finish", timeMs: totalTime});
+        // XXX you want the "name" and "message" fields on the
+        // exception, to start with..
+        self._report(test, {
+          type: "exception",
+          details: {
+            message: exception.message, // XXX empty???
+            stack: exception.stack // XXX portability
+          }
+        });
+
+        onComplete && onComplete();
+      }, stop_at_offset);
+    } else {
       onComplete && onComplete();
-    }, function (exception) {
-      /* onException */
-
-      // XXX you want the "name" and "message" fields on the
-      // exception, to start with..
-      self._report(test, {
-        type: "exception",
-        details: {
-          message: exception.message, // XXX empty???
-          stack: exception.stack // XXX portability
-        }
-      });
-
-      onComplete && onComplete();
-    }, stop_at_offset);
+    }
   },
 
   run: function (onComplete) {
@@ -467,8 +481,8 @@ globals.Tinytest = {
 // process only (if called on the server, runs the tests on the
 // server, and likewise for the client.) Report results via
 // onReport. Call onComplete when it's done.
-Meteor._runTests = function (onReport, onComplete) {
-  var testRun = TestManager.createRun(onReport);
+Meteor._runTests = function (onReport, onComplete, pathPrefix) {
+  var testRun = TestManager.createRun(onReport, pathPrefix);
   testRun.run(onComplete);
 };
 

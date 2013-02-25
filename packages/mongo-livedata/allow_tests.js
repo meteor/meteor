@@ -40,7 +40,7 @@ _.each(['STRING', 'MONGO'], function (idGeneration) {
   var lockedDownCollection = defineCollection(
     "collection-locked-down", false /*insecure*/);
 
-  // resticted collection with same allowed modifications, both with and
+  // restricted collection with same allowed modifications, both with and
   // without the `insecure` package
   var restrictedCollectionDefaultSecure = defineCollection(
     "collection-restrictedDefaultSecure", false /*insecure*/);

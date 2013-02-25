@@ -1,5 +1,21 @@
 (function () {
 
+  Tinytest.add('session - setDefault', function (test) {
+    Session.setDefault('def', "argyle");
+    test.equal(Session.get('def'), "argyle");
+    Session.set('def', "noodle");
+    test.equal(Session.get('def'), "noodle");
+    Session.set('nondef', "potato");
+    test.equal(Session.get('nondef'), "potato");
+    Session.setDefault('nondef', "eggs");
+    test.equal(Session.get('nondef'), "potato");
+    // This is so the test passes the next time, after hot code push.  I know it
+    // doesn't return it to the completely untouched state, but we don't have
+    // Session.clear() yet.  When we do, this should be that.
+    delete Session.keys['def'];
+    delete Session.keys['nondef'];
+  });
+
   Tinytest.add('session - get/set/equals types', function (test) {
     test.equal(Session.get('u'), undefined);
     test.isTrue(Session.equals('u', undefined));

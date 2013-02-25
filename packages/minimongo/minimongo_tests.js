@@ -1696,3 +1696,24 @@ Tinytest.add("minimongo - pause", function (test) {
 
   h.stop();
 });
+
+Tinytest.add("minimongo - ids matched by selector", function (test) {
+  var check = function (selector, ids) {
+    var idsFromSelector = LocalCollection._idsMatchedBySelector(selector);
+    // XXX normalize order, in a way that also works for ObjectIDs?
+    test.equal(idsFromSelector, ids);
+  };
+  check("foo", ["foo"]);
+  check({_id: "foo"}, ["foo"]);
+  var oid1 = new LocalCollection._ObjectID();
+  check(oid1, [oid1]);
+  check({_id: oid1}, [oid1]);
+  check({_id: "foo", x: 42}, ["foo"]);
+  check({}, null);
+  check({_id: {$in: ["foo", oid1]}}, ["foo", oid1]);
+  check({_id: {$ne: "foo"}}, null);
+  // not actually valid, but works for now...
+  check({$and: ["foo"]}, ["foo"]);
+  check({$and: [{x: 42}, {_id: oid1}]}, [oid1]);
+  check({$and: [{x: 42}, {_id: {$in: [oid1]}}]}, [oid1]);
+});

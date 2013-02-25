@@ -1,43 +1,93 @@
 
 ## vNEXT
 
+* Fixed bug where an empty `fields` object was sometimes passed to a `changed`
+  callback of `Cursor.observeChanges`.
 
-* Changed the api for publish functions that do not return a
-  cursor. Specifically, use `added`, `changed`, `removed`, and `ready`, instead
-  of `set`, `unset`, `flush`, and `complete`.  See the [`publish`
-  docs](http://docs.meteor.com/#meteor_publish) for details. Additionally,
-  `stop` has been improved, and `error` is now available for indicating that
-  there is an error to the subscriber.
+* Fixed `{$type: 5}` selectors for binary values on browsers that do not support
+  `Uint8Array`
 
-* Changed the api for `observe`.  Observing with `added`, `changed` and
-  `removed` callbacks is now unordered; for ordering information use `addedAt`,
-  `changedAt`, `removedAt`, and `movedTo`. Full documentation is in the
-  [`observe` docs](http://docs.meteor.com/#observe).  All callers of `observe`
-  need to be updated.
+## v0.5.7
 
-* Added new [`observeChanges`](http://docs.meteor.com/#observe_changes) api for
-  keeping track of the contents of a cursor more efficiently.
+* The DDP wire protocol has been redesigned.
 
-* New [EJSON](http://docs.meteor.com/#ejson) package allows you to use Dates,
-  Mongo ObjectIDs, and binary data (as `Uint8Array` or a normal array with
-  `$Uint8ArrayPolyfill` set to true) in your collections and Session variables.
-  You can also add your own custom datatypes.
+  * The handshake message is now versioned. This breaks backwards
+    compatibility between sites with `Meteor.connect()`. Older meteor
+    apps can not talk to new apps and vice versa. This includes the
+    `madewith` package, apps using `madewith` must upgrade.
 
-* You can specify that a collection should use MongoDB ObjectIDs as its `_id`
-  fields for inserts instead of strings. If you do this, use `EJSON.equals()`
-  for comparing equality instead of `===`.
+  * New [EJSON](http://docs.meteor.com/#ejson) package allows you to use
+    Dates, Mongo ObjectIDs, and binary data in your collections and
+    Session variables.  You can also add your own custom datatypes.
 
-* The DDP wire protocol has been redesigned.  It is now versioned, and at
-  version "pre1".  There is an informal specification in
-  `packages/livedata/DDP.md`.
+  * Meteor now correctly represents empty documents in Collections.
 
-* Meteor now uses a shorter string ID for MongoDB documents by default. You can
-  generate this kind of ID with `Random.id()`.  `Meteor.uuid()` is deprecated.
+  * There is an informal specification in `packages/livedata/DDP.md`.
 
-* There is a new reactive function on susbcription handles: `ready()` returns
-  true when the subscription has received all of its initial documents.
 
-* Meteor now correctly represents empty documents in Collections.
+* Breaking API changes
+
+  * Changed the API for `observe`.  Observing with `added`, `changed`
+    and `removed` callbacks is now unordered; for ordering information
+    use `addedAt`, `changedAt`, `removedAt`, and `movedTo`. Full
+    documentation is in the [`observe` docs](http://docs.meteor.com/#observe).
+    All callers of `observe` need to be updated.
+
+  * Changed the API for publish functions that do not return a cursor
+    (ie functions that call `this.set` and `this.unset`). See the
+    [`publish` docs](http://docs.meteor.com/#meteor_publish) for the new
+    API.
+
+
+* New Features
+
+  * Added new [`observeChanges`](http://docs.meteor.com/#observe_changes)
+    API for keeping track of the contents of a cursor more efficiently.
+
+  * There is a new reactive function on subscription handles: `ready()`
+    returns true when the subscription has received all of its initial
+    documents.
+
+  * Added `Session.setDefault(key, value)` so you can easily provide
+    initial values for session variables that will not be clobbered on
+    hot code push.
+
+  * You can specify that a collection should use MongoDB ObjectIDs as
+    its `_id` fields for inserts instead of strings. This allows you to
+    use Meteor with existing MongoDB databases that have ObjectID
+    `_id`s. If you do this, you must use `EJSON.equals()` for comparing
+    equality instead of `===`. See http://docs.meteor.com/#meteor_collection.
+
+  * New [`random` package](http://docs.meteor.com/#random) provides
+    several functions for generating random values. The new
+    `Random.id()` function is used to provide shorter string IDs for
+    MongoDB documents. `Meteor.uuid()` is deprecated.
+
+  * `Meteor.status()` can return the status `failed` if DDP version
+    negotiation fails.
+
+
+* Major Performance Enhancements
+
+  * Rewrote subscription duplication detection logic to use a more
+    efficient algorithm. This significantly reduces CPU usage on the
+    server during initial page load and when dealing with large amounts
+    of data.
+
+  * Reduced unnecessary MongoDB re-polling of live queries. Meteor no
+    longer polls for changes on queries that specify `_id` when
+    updates for a different specific `_id` are processed. This
+    drastically improves performance when dealing with many
+    subscriptions and updates to individual objects, such as those
+    generated by the `accounts-base` package on the `Meteor.users`
+    collection.
+
+
+* Upgraded UglifyJS2 to version 2.2.5
+
+
+Patches contributed by GitHub users awwx and michaelglenadams.
+
 
 ## v0.5.6
 
