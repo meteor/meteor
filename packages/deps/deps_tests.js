@@ -125,7 +125,10 @@ Tinytest.add("deps - nested autorun", function (test) {
   changeAndExpect(f, 'f');
   // kill A
   a.changed();
-  Deps.flush(); // why is this necessary?
+  // This flush would be unnecessary if outstanding callbacks
+  // were processed in the containment order of their contexts
+  // (i.e. parents before children)
+  Deps.flush();
   changeAndExpect(f, '');
   changeAndExpect(e, '');
   changeAndExpect(d, '');
