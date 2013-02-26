@@ -360,6 +360,7 @@ LocalCollection.Cursor.prototype._depend = function (changers) {
     // recreated. so we might want to let it linger for a little
     // while and repurpose it if it comes back. this will save us
     // work because we won't have to redo the initial find.
+    // The logic would be similar to that in Meteor.subscribe.
     Deps.currentComputation.onInvalidate(handle.stop);
   }
 };
