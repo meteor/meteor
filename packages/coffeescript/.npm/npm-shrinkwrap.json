@@ -2,7 +2,8 @@
   "dependencies": {
     "coffee-script": {
       "version": "1.4.0",
-      "from": "coffee-script@1.4.0"
+      "from": "coffee-script@1.4.0",
+      "resolved": "https://registry.npmjs.org/coffee-script/-/coffee-script-1.4.0.tgz"
     }
   }
 }

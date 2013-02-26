@@ -19,40 +19,9 @@
           "from": "rai@*"
         },
         "xoauth2": {
-          "version": "0.1.5",
+          "version": "0.1.6",
           "from": "xoauth2@>= 0.1.1",
-          "dependencies": {
-            "request": {
-              "version": "2.12.0",
-              "from": "request@*",
-              "dependencies": {
-                "form-data": {
-                  "version": "0.0.3",
-                  "from": "form-data",
-                  "dependencies": {
-                    "combined-stream": {
-                      "version": "0.0.3",
-                      "from": "combined-stream@0.0.3",
-                      "dependencies": {
-                        "delayed-stream": {
-                          "version": "0.0.5",
-                          "from": "delayed-stream@0.0.5"
-                        }
-                      }
-                    },
-                    "async": {
-                      "version": "0.1.9",
-                      "from": "async@0.1.9"
-                    }
-                  }
-                },
-                "mime": {
-                  "version": "1.2.7",
-                  "from": "mime"
-                }
-              }
-            }
-          }
+          "resolved": "https://registry.npmjs.org/xoauth2/-/xoauth2-0.1.6.tgz"
         }
       }
     },

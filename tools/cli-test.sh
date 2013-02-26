@@ -10,7 +10,7 @@ cd `dirname $0`
 if [ -z "$METEOR_DIR" ]; then
     METEOR_DIR=`pwd`/..
 fi
-METEOR=$METEOR_DIR/meteor
+METEOR="$METEOR_DIR/meteor"
 
 if [ -z "$NODE" ]; then
     NODE=`pwd`/node.sh
@@ -22,6 +22,13 @@ if [ "$1" == "--global" ]; then
     METEOR=/usr/local/bin/meteor
 fi
 
+# if we're running with a warehouse, specific a release so that we
+# make sure to test fetching packages. notably this doesn't test engine
+# springboarding
+if [ "$TEST_WAREHOUSE_DIR" ]; then
+    METEOR="$METEOR --release=db0fb17e372464dcba9a39f75c2164c46dd37b08" # some random non-official release
+fi
+
 TMPDIR=`mktemp -d -t meteor-cli-test-XXXXXXXX`
 OUTPUT="$TMPDIR/output"
 trap 'echo "[...]"; tail -25 $OUTPUT; echo FAILED ; rm -rfd `find $METEOR_DIR -name __tmp`; rm -rf "$TMPDIR" >/dev/null 2>&1' EXIT
@@ -29,11 +36,16 @@ trap 'echo "[...]"; tail -25 $OUTPUT; echo FAILED ; rm -rfd `find $METEOR_DIR -n
 cd "$TMPDIR"
 set -e -x
 
+
 ## Begin actual tests
 
-echo "... --help"
+if [ "$TEST_WAREHOUSE_DIR" ]; then
+    $METEOR --version | grep db0fb17e372464dcba9a39f75c2164c46dd37b08 >> $OUTPUT
+else
+    $METEOR --version | grep checkout >> $OUTPUT
+fi
 
-$METEOR --version | grep "Engine version" >> $OUTPUT
+echo "... --help"
 $METEOR --help | grep "List available" >> $OUTPUT
 $METEOR run --help | grep "Port to listen" >> $OUTPUT
 $METEOR test-packages --help | grep "Port to listen" >> $OUTPUT
@@ -74,7 +86,6 @@ cd .meteor
 
 echo "... add/remove/list"
 
-$METEOR --version | grep "Meteor release" >> $OUTPUT
 $METEOR list | grep "backbone" >> $OUTPUT
 ! $METEOR list --using 2>&1 | grep "backbone" >> $OUTPUT
 $METEOR add backbone 2>&1 | grep "backbone:" | grep -v "no such package" | >> $OUTPUT
@@ -151,22 +162,13 @@ Package.on_test(function (api) {
 });
 EOF
 
-if [ "$TEST_INSTALLED_METEOR" ]; then
-  $METEOR test-packages --release=0.0.1 -p $PORT --package-dir="$TMPDIR/local-packages/die-now/" | grep Dying >> $OUTPUT 2>&1
-else
-  $METEOR test-packages -p $PORT --package-dir="$TMPDIR/local-packages/die-now/" | grep Dying >> $OUTPUT 2>&1
-fi
+$METEOR test-packages -p $PORT --package-dir="$TMPDIR/local-packages/die-now/" | grep Dying >> $OUTPUT 2>&1
 # since the server process was killed via 'process.exit', mongo is still running.
 ps ax | grep -e "$MONGOMARK" | grep -v grep | awk '{print $1}' | xargs kill || true
 sleep 2 # make sure mongo is dead
 
 
-if [ "$TEST_INSTALLED_METEOR" ]; then
-  ( ! $METEOR test-packages -p $PORT ) | grep "Please specify a release version" >> $OUTPUT 2>&1
-  $METEOR test-packages --release=0.0.1 -p $PORT >> $OUTPUT 2>&1 &
-else
-  $METEOR test-packages -p $PORT >> $OUTPUT 2>&1 &
-fi
+$METEOR test-packages -p $PORT >> $OUTPUT 2>&1 &
 
 METEOR_PID=$!
 
