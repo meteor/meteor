@@ -115,7 +115,7 @@ Tinytest.add("livedata stub - subscribe", function (test) {
   test.equal(message, {msg: 'sub', name: 'my_data', params: []});
 
   var reactivelyReady = false;
-  var autorunHandle = Meteor.autorun(function () {
+  var autorunHandle = Deps.autorun(function () {
     reactivelyReady = sub.ready();
   });
   test.isFalse(reactivelyReady);
@@ -123,7 +123,7 @@ Tinytest.add("livedata stub - subscribe", function (test) {
   // get the sub satisfied. callback fires.
   stream.receive({msg: 'ready', 'subs': [id]});
   test.isTrue(callback_fired);
-  Meteor.flush();
+  Deps.flush();
   test.isTrue(reactivelyReady);
   autorunHandle.stop();
 
@@ -165,7 +165,7 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
 
   // Subscribe to some subs.
   var stopperHandle;
-  var autorunHandle = Meteor.autorun(function () {
+  var autorunHandle = Deps.autorun(function () {
     conn.subscribe("foo", rFoo.get(), onReady(rFoo.get()));
     conn.subscribe("bar", rBar.get(), onReady(rBar.get()));
     conn.subscribe("completer", onReady("completer"));
@@ -216,7 +216,7 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   // subscription should *NOT* call its new onReady callback, because we only
   // call at most one onReady for a given reactively-saved subscription.
   rFoo.set("foo2");
-  Meteor.flush();
+  Deps.flush();
   test.length(stream.sent, 3);
 
   message = JSON.parse(stream.sent.shift());
@@ -246,7 +246,7 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   // Shut down the autorun. This should unsub us from all current subs at flush
   // time.
   autorunHandle.stop();
-  Meteor.flush();
+  Deps.flush();
 
   test.length(stream.sent, 4);
   // The order of unsubs here is not important.

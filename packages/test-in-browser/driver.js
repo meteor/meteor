@@ -2,8 +2,8 @@ var running = true;
 
 var resultTree = [];
 var failedTests = [];
-var resultDeps = new Meteor.deps._ContextSet;
-var countDeps = new Meteor.deps._ContextSet;
+var resultsVar = new Deps.Variable;
+var countVar = new Deps.Variable;
 var totalCount = 0;
 var passedCount = 0;
 var failedCount = 0;
@@ -13,37 +13,37 @@ Session.setDefault("groupPath", ["tinytest"]);
 Session.set("rerunScheduled", false);
 
 Meteor.startup(function () {
-  Meteor.flush();
+  Deps.flush();
   Meteor._runTestsEverywhere(reportResults, function () {
     running = false;
     Meteor.onTestsComplete && Meteor.onTestsComplete();
-    _resultsChanged();
-    Meteor.flush();
+    resultsVar.changed();
+    Deps.flush();
   }, Session.get("groupPath"));
 
 });
 
 Template.progressBar.running = function () {
-  countDeps.addCurrentContext();
+  Deps.depend(countVar);
   return passedCount + failedCount < totalCount;
 };
 
 Template.progressBar.percentPass = function () {
-  countDeps.addCurrentContext();
+  Deps.depend(countVar);
   if (totalCount === 0)
     return 0;
   return 100*passedCount/totalCount;
 };
 
 Template.progressBar.percentFail = function () {
-  countDeps.addCurrentContext();
+  Deps.depend(countVar);
   if (totalCount === 0)
     return 0;
   return 100*failedCount/totalCount;
 };
 
 Template.progressBar.anyFail = function () {
-  countDeps.addCurrentContext();
+  Deps.depend(countVar);
   return failedCount > 0;
 };
 
@@ -85,12 +85,12 @@ Template.test_group.events({
 });
 
 Template.test_table.running = function() {
-  resultDeps.addCurrentContext();
+  Deps.depend(resultsVar);
   return running;
 };
 
 Template.test_table.passed = function() {
-  resultDeps.addCurrentContext();
+  Deps.depend(resultsVar);
 
   // walk whole tree to look for failed tests
   var walk = function (groups) {
@@ -119,7 +119,7 @@ Template.test_table.passed = function() {
 
 
 Template.test_table.total_test_time = function() {
-  resultDeps.addCurrentContext();
+  Deps.depend(resultsVar);
 
   // walk whole tree to get all tests
   var walk = function (groups) {
@@ -142,11 +142,11 @@ Template.test_table.total_test_time = function() {
 
 
 Template.test_table.data = function() {
-  resultDeps.addCurrentContext();
+  Deps.depend(resultsVar);
   return resultTree;
 };
 Template.test_table.failedTests = function() {
-  resultDeps.addCurrentContext();
+  Deps.depend(resultsVar);
   return failedTests;
 };
 
@@ -182,7 +182,7 @@ Template.test.test_class = function() {
 Template.test.events({
   'click .testname': function() {
     this.expanded = ! this.expanded;
-    _resultsChanged();
+    resultsVar.changed();
   }
 });
 
@@ -275,11 +275,6 @@ Template.event.is_debuggable = function() {
   return !!this.cookie;
 };
 
-
-var _resultsChanged = function() {
-  resultDeps.invalidateAll();
-};
-
 var _testTime = function(t) {
   if (t.events && t.events.length > 0) {
     var lastEvent = _.last(t.events);
@@ -351,7 +346,7 @@ var _findTestForResults = function (results) {
     test = {name: testName, parent: group, server: server, fullName: fullName};
     group.tests.push(test);
     totalCount++;
-    countDeps.invalidateAll();
+    countVar.changed();
   }
 
   return test;
@@ -380,7 +375,7 @@ var reportResults = function(results) {
   var status = _testStatus(test);
   if (status === "failed") {
     failedCount++;
-    countDeps.invalidateAll();
+    countVar.changed();
     // Expand a failed test (but only set this if the user hasn't clicked on the
     // test name yet).
     if (test.expanded === undefined)
@@ -389,7 +384,7 @@ var reportResults = function(results) {
       failedTests.push(test.fullName);
   } else if (status === "succeeded") {
     passedCount++;
-    countDeps.invalidateAll();
+    countVar.changed();
   }
 
   _.defer(_throttled_update);
@@ -401,16 +396,16 @@ var forgetEvents = function (results) {
   var status = _testStatus(test);
   if (status === "failed") {
     failedCount--;
-    countDeps.invalidateAll();
+    countVar.changed();
   } else if (status === "succeeded") {
     passedCount--;
-    countDeps.invalidateAll();
+    countVar.changed();
   }
   delete test.events;
-  _resultsChanged();
+  resultsVar.changed();
 };
 
 var _throttled_update = _.throttle(function() {
-  _resultsChanged();
-  Meteor.flush();
+  resultsVar.changed();
+  Deps.flush();
 }, 500);

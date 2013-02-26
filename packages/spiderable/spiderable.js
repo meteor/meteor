@@ -41,7 +41,7 @@
             "    if (typeof Meteor !== 'undefined' " +
             "        && typeof(Meteor.status) !== 'undefined' " +
             "        && Meteor.status().connected) {" +
-            "      Meteor.flush();" +
+            "      Deps.flush();" +
             "      return Meteor._LivedataConnection._allSubscriptionsReady();" +
             "    }" +
             "    return false;" +

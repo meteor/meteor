@@ -43,14 +43,14 @@ OnscreenDiv.prototype.node = function() {
 };
 
 // remove the DIV from the document and trigger
-// "fast GC" -- i.e., after the next Meteor.flush()
+// "fast GC" -- i.e., after the next Deps.flush()
 // the DIV will be fully cleaned up by LiveUI.
 OnscreenDiv.prototype.kill = function() {
   var self = this;
   if (self.div.parentNode)
     self.div.parentNode.removeChild(self.div);
 
-  Meteor._atFlush(function () {
+  Deps.afterFlush(function () {
     Spark.finalize(self.div);
   });
 };

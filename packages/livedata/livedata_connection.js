@@ -145,7 +145,8 @@ Meteor._LivedataConnection = function (url, options) {
   //   - id
   //   - name
   //   - params
-  //   - context (the Context in which Meteor.subscribe was called, if any)
+  //   - computation (the Deps.Computation in which Meteor.subscribe was
+  //     called, if any)
   //   - ready (has the 'ready' message been received?)
   //   - readyCallback (an optional callback to call when ready)
   //   - errorCallback (an optional callback to call if the sub terminates with
@@ -158,7 +159,7 @@ Meteor._LivedataConnection = function (url, options) {
 
   // Reactive userId.
   self._userId = null;
-  self._userIdListeners = Meteor.deps && new Meteor.deps._ContextSet;
+  self._userIdVar = (typeof Deps !== "undefined") && new Deps.Variable;
 
   // Block auto-reload while we're waiting for method responses.
   if (!options.reloadWithOutstanding) {
@@ -426,10 +427,10 @@ _.extend(Meteor._LivedataConnection.prototype, {
     }
 
     // Is there an existing sub with the same name and param, run in an
-    // invalidated Context? This can only happen if the context just got
-    // invalidated and we haven't fully finished a round of Meteor.flush()
+    // invalidated Computation? This can only happen if the computation just got
+    // invalidated and we haven't fully finished a round of Deps.flush()
     // yet. For example, this will happen with the pattern of:
-    //   Meteor.autorun(function () {
+    //   Deps.autorun(function () {
     //     Meteor.subscribe("foo", Session.get("foo"));
     //     Meteor.subscribe("bar", Session.get("bar"));
     //   });
@@ -440,16 +441,16 @@ _.extend(Meteor._LivedataConnection.prototype, {
     // being invalidated, we will require N matching subscribe calls to keep
     // them all active.
     var existing = _.find(self._subscriptions, function (sub) {
-      return sub.context && sub.context.invalidated && sub.name === name &&
-        EJSON.equals(sub.params, params);
+      return sub.computation && sub.computation.invalidated &&
+        sub.name === name && EJSON.equals(sub.params, params);
     });
 
-    var currentContext = Meteor.deps && Meteor.deps.Context.current;
+    var currentComputation = Deps.currentComputation;
     var id;
     if (existing) {
       id = existing.id;
-      // Substitute our current context (if any) for the one on the sub.
-      existing.context = currentContext;
+      // Substitute our current computation (if any) for the one on the sub.
+      existing.computation = currentComputation;
 
       if (callbacks.onReady) {
         // If the sub is not already ready, replace any ready callback with the
@@ -472,9 +473,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
         id: id,
         name: name,
         params: params,
-        context: currentContext,
+        computation: currentComputation,
         ready: false,
-        readyListeners: Meteor.deps && new Meteor.deps._ContextSet,
+        readyVar: (typeof Deps !== "undefined") && new Deps.Variable,
         readyCallback: callbacks.onReady,
         errorCallback: callbacks.onError
       };
@@ -494,37 +495,34 @@ _.extend(Meteor._LivedataConnection.prototype, {
         if (!_.has(self._subscriptions, id))
           return false;
         var record = self._subscriptions[id];
-        record.readyListeners && record.readyListeners.addCurrentContext();
+        record.readyVar && Deps.depend(record.readyVar);
         return record.ready;
       }
     };
 
-    if (currentContext) {
-      // We're in a reactive context, so we'd like to unsubscribe when the
-      // context is invalidated... but not if some *OTHER* onInvalidate callback
-      // on currentContext re-subscribes to the same subscription (eg, as part
-      // of an autorun). Meteor.flush guarantees that it won't interleave calls
-      // to currentContext's callbacks and unsubscribeContext's callbacks, so
-      // this ensures that by the time unsubscribeContext's onInvalidate
-      // callback is called, we've already re-run the autorun function (if this
-      // was an autorun context).
-      var unsubscribeContext = new Meteor.deps.Context;
-      unsubscribeContext.onInvalidate(function () {
-        // Did we already unsubscribe from this? Do nothing.
-        if (!_.has(self._subscriptions, id))
-          return;
-        // Did we substitute a new context in for this constitute in the
-        // "Substitute" block above? (eg, are we in an autorun and the re-run of
-        // the function subscribed to this again?)
-        if (self._subscriptions[id].context !== currentContext)
-          return;
-        // Nope, the only reason we are currently subscribed to this
-        // subscription is that *THIS* subscribe call wanted it to be so, and
-        // its context is invalidated, so it's time to unsubscribe.
-        handle.stop();
-      });
-      currentContext.onInvalidate(function () {
-        unsubscribeContext.invalidate();
+    if (currentComputation) {
+      // We're in a reactive computation, so we'd like to unsubscribe when the
+      // computation is invalidated... but not if some *OTHER* onInvalidate
+      // callback on currentComputation re-subscribes to the same subscription
+      // (eg, as part of a Deps.autorun).  Use Deps.afterFlush to schedule
+      // this check to happen later in the flush cycle, after all of
+      // currentComputation's callbacks have been called, and therefore after
+      // the current Deps.autorun (if any) has been re-run.
+      currentComputation.onInvalidate(function () {
+        Deps.afterFlush(function () {
+          // Did we already unsubscribe from this? Do nothing.
+          if (!_.has(self._subscriptions, id))
+            return;
+          // Did we substitute a new computation in for this constitute in the
+          // "Substitute" block above? (eg, are we in an autorun and the re-run of
+          // the function subscribed to this again?)
+          if (self._subscriptions[id].computation !== currentComputation)
+            return;
+          // Nope, the only reason we are currently subscribed to this
+          // subscription is that *THIS* subscribe call wanted it to be so, and
+          // its computation is invalidated, so it's time to unsubscribe.
+          handle.stop();
+        });
       });
 
     }
@@ -785,19 +783,19 @@ _.extend(Meteor._LivedataConnection.prototype, {
   ///
   userId: function () {
     var self = this;
-    if (self._userIdListeners)
-      self._userIdListeners.addCurrentContext();
+    if (self._userIdVar)
+      Deps.depend(self._userIdVar);
     return self._userId;
   },
 
   setUserId: function (userId) {
     var self = this;
-    // Avoid invalidating listeners if setUserId is called with current value.
+    // Avoid invalidating dependents if setUserId is called with current value.
     if (self._userId === userId)
       return;
     self._userId = userId;
-    if (self._userIdListeners)
-      self._userIdListeners.invalidateAll();
+    if (self._userIdVar)
+      self._userIdVar.changed();
   },
 
   // Returns true if we are in a state after reconnect of waiting for subs to be
@@ -1116,7 +1114,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
           return;
         subRecord.readyCallback && subRecord.readyCallback();
         subRecord.ready = true;
-        subRecord.readyListeners && subRecord.readyListeners.invalidateAll();
+        subRecord.readyVar && subRecord.readyVar.changed();
       });
     });
   },

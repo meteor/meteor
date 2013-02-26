@@ -1,46 +1,46 @@
 Tinytest.add('deps - autorun', function (test) {
-  var listeners = new Meteor.deps._ContextSet;
+  var v = new Deps.Variable;
   var x = 0;
-  var handle = Meteor.autorun(function (handle) {
-    listeners.addCurrentContext();
+  var handle = Deps.autorun(function (handle) {
+    Deps.depend(v);
     ++x;
   });
   test.equal(x, 1);
-  Meteor.flush();
+  Deps.flush();
   test.equal(x, 1);
-  listeners.invalidateAll();
+  v.changed();
   test.equal(x, 1);
-  Meteor.flush();
+  Deps.flush();
   test.equal(x, 2);
-  listeners.invalidateAll();
+  v.changed();
   test.equal(x, 2);
-  Meteor.flush();
+  Deps.flush();
   test.equal(x, 3);
-  listeners.invalidateAll();
+  v.changed();
   // Prevent the function from running further.
   handle.stop();
-  Meteor.flush();
+  Deps.flush();
   test.equal(x, 3);
-  listeners.invalidateAll();
-  Meteor.flush();
+  v.changed();
+  Deps.flush();
   test.equal(x, 3);
 
-  Meteor.autorun(function (internalHandle) {
-    listeners.addCurrentContext();
+  Deps.autorun(function (internalHandle) {
+    Deps.depend(v);
     ++x;
     if (x == 6)
       internalHandle.stop();
   });
   test.equal(x, 4);
-  listeners.invalidateAll();
-  Meteor.flush();
+  v.changed();
+  Deps.flush();
   test.equal(x, 5);
-  listeners.invalidateAll();
+  v.changed();
   // Increment to 6 and stop.
-  Meteor.flush();
+  Deps.flush();
   test.equal(x, 6);
-  listeners.invalidateAll();
-  Meteor.flush();
+  v.changed();
+  Deps.flush();
   // Still 6!
   test.equal(x, 6);
 });

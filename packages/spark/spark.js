@@ -352,7 +352,7 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
     finalized = true;
   };
 
-  Meteor._atFlush(function () {
+  Deps.afterFlush(function () {
     if (finalized)
       return;
 
@@ -807,7 +807,7 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
           var landmark = (landmarkRange && landmarkRange.landmark);
 
           // Note that the handler can do arbitrary things, like call
-          // Meteor.flush() or otherwise remove and finalize parts of
+          // Deps.flush() or otherwise remove and finalize parts of
           // the DOM.  We can't assume `range` is valid past this point,
           // and we'll check the `finalized` flag at the top of the loop.
           var returnValue = callback.call(eventData, event, landmark);
@@ -837,20 +837,20 @@ Spark.isolate = function (htmlFunc) {
   var range;
   var firstRun = true;
   var retHtml;
-  Meteor.autorun(function (handle) {
+  Deps.autorun(function (handle) {
     if (firstRun) {
       retHtml = renderer.annotate(
         htmlFunc(), Spark._ANNOTATION_ISOLATE,
         function (r) {
           if (! r) {
-            // annotation not used; kill our context
+            // annotation not used; kill this autorun
             handle.stop();
           } else {
             range = r;
             range.finalize = function () {
               // Spark.finalize() was called on our range (presumably
               // because it was removed from the document.)  Kill
-              // this context and stop rerunning.
+              // this autorun.
               handle.stop();
             };
           }
@@ -976,7 +976,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   };
 
   var later = function (f) {
-    Meteor._atFlush(function () {
+    Deps.afterFlush(function () {
       if (! stopped)
         withEventGuard(f);
     });
@@ -1155,15 +1155,9 @@ Spark.createLandmark = function (options, htmlFunc) {
     landmark = new Spark.Landmark;
     if (options.created) {
       // Run callback outside the current Spark.isolate's deps context.
-      // XXX Can't call run() on null, so this is a hack.  Running inside
-      // a fresh context wouldn't be equivalent.
-      var oldCx = Meteor.deps.Context.current;
-      Meteor.deps.Context.current = null;
-      try {
+      Deps.nonreactive(function () {
         options.created.call(landmark);
-      } finally {
-        Meteor.deps.Context.current = oldCx;
-      }
+      });
     }
   }
   notes.landmark = landmark;

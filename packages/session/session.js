@@ -15,8 +15,8 @@
 
   Session = _.extend({}, {
     keys: {}, // key -> value
-    keyDeps: {}, // key -> _ContextSet
-    keyValueDeps: {}, // key -> value -> _ContextSet
+    keyVars: {}, // key -> Variable
+    keyValueVars: {}, // key -> value -> Variable
 
     set: function (key, value) {
       var self = this;
@@ -29,14 +29,14 @@
         return;
       self.keys[key] = value;
 
-      var invalidateAll = function (cset) {
-        cset && cset.invalidateAll();
+      var changed = function (v) {
+        v && v.changed();
       };
 
-      invalidateAll(self.keyDeps[key]);
-      if (self.keyValueDeps[key]) {
-        invalidateAll(self.keyValueDeps[key][oldSerializedValue]);
-        invalidateAll(self.keyValueDeps[key][value]);
+      changed(self.keyVars[key]);
+      if (self.keyValueVars[key]) {
+        changed(self.keyValueVars[key][oldSerializedValue]);
+        changed(self.keyValueVars[key][value]);
       }
     },
 
@@ -53,19 +53,18 @@
     get: function (key) {
       var self = this;
       self._ensureKey(key);
-      self.keyDeps[key].addCurrentContext();
+      Deps.depend(self.keyVars[key]);
       return parse(self.keys[key]);
     },
 
     equals: function (key, value) {
       var self = this;
-      var context = Meteor.deps.Context.current;
 
       // We don't allow objects (or arrays that might include objects) for
       // .equals, because JSON.stringify doesn't canonicalize object key
       // order. (We can make equals have the right return value by parsing the
       // current value and using EJSON.equals, but we won't have a canonical
-      // element of keyValueDeps[key] to store the context.) You can still use
+      // element of keyValueVars[key] to store the dependency.) You can still use
       // "EJSON.equals(Session.get(key), value)".
       //
       // XXX we could allow arrays as long as we recursively check that there
@@ -80,19 +79,19 @@
         throw new Error("Session.equals: value must be scalar");
       var serializedValue = stringify(value);
 
-      if (context) {
+      if (Deps.active) {
         self._ensureKey(key);
 
-        if (! _.has(self.keyValueDeps[key], serializedValue))
-          self.keyValueDeps[key][serializedValue] = new Meteor.deps._ContextSet;
+        if (! _.has(self.keyValueVars[key], serializedValue))
+          self.keyValueVars[key][serializedValue] = new Deps.Variable;
 
-        var isNew = self.keyValueDeps[key][serializedValue].add(context);
+        var isNew = Deps.depend(self.keyValueVars[key][serializedValue]);
         if (isNew) {
-          context.onInvalidate(function () {
+          Deps.currentComputation.onInvalidate(function () {
             // clean up [key][serializedValue] if it's now empty, so we don't
             // use O(n) memory for n = values seen ever
-            if (self.keyValueDeps[key][serializedValue].isEmpty())
-              delete self.keyValueDeps[key][serializedValue];
+            if (! self.keyValueVars[key][serializedValue].hasDependents())
+              delete self.keyValueVars[key][serializedValue];
           });
         }
       }
@@ -104,9 +103,9 @@
 
     _ensureKey: function (key) {
       var self = this;
-      if (!(key in self.keyDeps)) {
-        self.keyDeps[key] = new Meteor.deps._ContextSet;
-        self.keyValueDeps[key] = {};
+      if (!(key in self.keyVars)) {
+        self.keyVars[key] = new Deps.Variable;
+        self.keyValueVars[key] = {};
       }
     }
   });

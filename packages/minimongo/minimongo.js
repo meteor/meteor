@@ -140,11 +140,11 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
     self.db_objects = self._getRawObjects(true);
 
   if (self.reactive)
-    self._markAsReactive({
-                          addedBefore: true,
-                          removed: true,
-                          changed: true,
-                          movedBefore: true});
+    self._depend({
+      addedBefore: true,
+      removed: true,
+      changed: true,
+      movedBefore: true});
 
   while (self.cursor_pos < self.db_objects.length)
     callback(EJSON.clone(self.db_objects[self.cursor_pos++]));
@@ -172,7 +172,7 @@ LocalCollection.Cursor.prototype.count = function () {
   var self = this;
 
   if (self.reactive)
-    self._markAsReactive({added: true, removed: true});
+    self._depend({added: true, removed: true});
 
   if (self.db_objects === null)
     self.db_objects = self._getRawObjects(true);
@@ -339,27 +339,28 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered) {
 
 // XXX Maybe we need a version of observe that just calls a callback if
 // anything changed.
-LocalCollection.Cursor.prototype._markAsReactive = function (options) {
+LocalCollection.Cursor.prototype._depend = function (changers) {
   var self = this;
 
-  var context = Meteor.deps.Context.current;
+  if (Deps.active) {
+    var v = new Deps.Variable;
+    Deps.depend(v);
+    var notifyChange = _.bind(v.change, v);
 
-  if (context) {
-    var invalidate = _.bind(context.invalidate, context);
-    var handle;
-    var newOptions = {_suppress_initial: true};
+    var options = {_suppress_initial: true};
     _.each(['added', 'changed', 'removed', 'addedBefore', 'movedBefore'],
            function (fnName) {
-      if (options[fnName])
-        newOptions[fnName] = invalidate;
-    });
-    handle = self.observeChanges(newOptions);
+             if (changers[fnName])
+               options[fnName] = notifyChange;
+           });
+
+    var handle = self.observeChanges(options);
 
     // XXX in many cases, the query will be immediately
     // recreated. so we might want to let it linger for a little
     // while and repurpose it if it comes back. this will save us
     // work because we won't have to redo the initial find.
-    context.onInvalidate(handle.stop);
+    Deps.currentComputation.onInvalidate(handle.stop);
   }
 };
 

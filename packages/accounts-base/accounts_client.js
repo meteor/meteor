@@ -6,18 +6,18 @@
   };
 
   var loggingIn = false;
-  var loggingInListeners = new Meteor.deps._ContextSet;
+  var loggingInVar = new Deps.Variable;
   // This is mostly just called within this file, but Meteor.loginWithPassword
   // also uses it to make loggingIn() be true during the beginPasswordExchange
   // method call too.
   Accounts._setLoggingIn = function (x) {
     if (loggingIn !== x) {
       loggingIn = x;
-      loggingInListeners.invalidateAll();
+      loggingInVar.changed();
     }
   };
   Meteor.loggingIn = function () {
-    loggingInListeners.addCurrentContext();
+    loggingInVar.changed();
     return loggingIn;
   };
 
@@ -181,10 +181,10 @@
   // XXX this can be simplified if we merge in
   // https://github.com/meteor/meteor/pull/273
   var loginServicesConfigured = false;
-  var loginServicesConfiguredListeners = new Meteor.deps._ContextSet;
+  var loginServicesConfiguredVar = new Deps.Variable;
   Meteor.subscribe("meteor.loginServiceConfiguration", function () {
     loginServicesConfigured = true;
-    loginServicesConfiguredListeners.invalidateAll();
+    loginServicesConfiguredVar.changed();
   });
 
   // A reactive function returning whether the
@@ -196,7 +196,7 @@
       return true;
 
     // not yet complete, save the context for invalidation once we are.
-    loginServicesConfiguredListeners.addCurrentContext();
+    Deps.depend(loginServicesConfiguredVar);
     return false;
   };
 })();

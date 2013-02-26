@@ -27,7 +27,7 @@
     this.invalidated = false;
   };
 
-  _.extend(Computation.prototype, {
+  _.extend(Deps.Computation.prototype, {
     run: function (f) {
       var previous = Deps.currentComputation;
       Deps.currentComputation = this;
@@ -60,8 +60,10 @@
         this._callbacks.push(f);
     },
 
+    // Make this computation depend on v.  Return true
+    // if this is a new dependency.
     depend: function (v) {
-      v._addDependent(this);
+      return v._addDependent(this);
     }
   });
 
@@ -69,7 +71,7 @@
     this._dependentsById = {};
   };
 
-  _.extend(Variable.prototype, {
+  _.extend(Deps.Variable.prototype, {
     // Adds `computation` to this set if it is not already
     // present.  Returns true if `computation` is a new member of the set.
     _addDependent: function (computation) {
@@ -98,9 +100,13 @@
   });
 
   _.extend(Deps, {
+    // Make the current computation depend on v.  Returns true
+    // if this is a new dependency.  If there is no current
+    // computation, does nothing and returns false.
     depend: function (v) {
       if (Deps.active)
-        v._addDependent(Deps.currentComputation);
+        return v._addDependent(Deps.currentComputation);
+      return false;
     },
 
     flush: function () {
