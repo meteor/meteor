@@ -605,7 +605,7 @@ _.extend(Bundle.prototype, {
         hash: self._hash(contents)
       });
     };
-        
+
     if (is_app) {
       if (fs.existsSync(path.join(project_dir, 'public'))) {
         var copied =
