@@ -10,6 +10,7 @@ var getName = function (result) {
 var finished = 0;
 var passed = 0;
 var failed = 0;
+var expected = 0;
 var resultSet = {};
 Meteor.startup(function () {
 Meteor._runTestsEverywhere(
@@ -22,11 +23,18 @@ Meteor._runTestsEverywhere(
       switch (event.type) {
       case "ok":
         break;
+      case "expected_fail":
+        if (resultSet[name].status !== "FAIL")
+          resultSet[name].status = "EXPECTED";
+        break;
       case "finish":
         if (resultSet[name].status === "PENDING") {
           resultSet[name].status = "OK";
           console.log(name, ":", "OK");
           passed++;
+        } else if (resultSet[name].status === "EXPECTED") {
+          console.log(name, ":", "EXPECTED FAILURE");
+          expected++;
         } else {
           failed++;
           console.log(name, ":", "!!!!!!!!! FAIL !!!!!!!!!!!");
@@ -42,7 +50,7 @@ Meteor._runTestsEverywhere(
     });
   },
   function () {
-    console.log("passed/failed/total", passed, "/", failed, "/", _.size(resultSet));
+    console.log("passed/expected/failed/total", passed, "/", expected, "/", failed, "/", _.size(resultSet));
     DONE = true;
   },
   ["tinytest"]);
