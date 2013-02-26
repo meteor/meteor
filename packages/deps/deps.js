@@ -186,6 +186,14 @@
         comp.run(function () { f.call(this, handle); });
         comp.onInvalidate(rerun);
       };
+
+      // If enclosing (parent) computation is invalidated, stop the
+      // handle.
+      if (Deps.active)
+        Deps.currentComputation.onInvalidate(function () {
+          handle.stop();
+        });
+
       rerun();
       return handle;
     },
