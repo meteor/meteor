@@ -28,17 +28,23 @@ Meteor._runTestsEverywhere(
           resultSet[name].status = "EXPECTED";
         break;
       case "finish":
-        if (resultSet[name].status === "PENDING") {
+        switch (resultSet[name].status) {
+        case "OK":
+          break;
+        case "PENDING":
           resultSet[name].status = "OK";
           console.log(name, ":", "OK");
           passed++;
-        } else if (resultSet[name].status === "EXPECTED") {
+          break;
+        case "EXPECTED":
           console.log(name, ":", "EXPECTED FAILURE");
           expected++;
-        } else {
+          break;
+        default:
           failed++;
           console.log(name, ":", "!!!!!!!!! FAIL !!!!!!!!!!!");
           console.log(JSON.stringify(resultSet[name].info));
+          break;
         }
         finished++;
         break;

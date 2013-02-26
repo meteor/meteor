@@ -5,7 +5,7 @@ cd $METEOR_HOME/packages
 meteor --tests=test-in-phantom &
 METEOR_PID=$!
 
-sleep 1
+sleep 2
 
 phantomjs ./test-in-phantom/runner.js
 
