@@ -1,5 +1,15 @@
 #!/bin/bash
 
+### Build a tarball for each smart package, which will later be put on
+### warehouse.meteor.com. Compute a version for each package by
+### hashing its contents. Prepare the packages part of a release
+### manifest with each package's version.
+###
+### At the moment smart packages don't support binary dependencies so
+### we don't have to build on different architectures. At some point
+### this will change, at which we'll use an approach similar to what
+### we do for engines.
+
 set -e
 
 # cd to top level dir
@@ -18,7 +28,7 @@ fi
 
 FIRST_RUN=true # keep track to place commas correctly
 cd packages
-for PACKAGE in `ls`
+for PACKAGE in *
 do
   if [ -a "$PACKAGE/package.js" ]; then
     if [ $FIRST_RUN == false ]; then
