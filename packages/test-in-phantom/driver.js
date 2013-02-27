@@ -55,6 +55,7 @@ Meteor._runTestsEverywhere(
       }
     });
   },
+
   function () {
     console.log("passed/expected/failed/total", passed, "/", expected, "/", failed, "/", _.size(resultSet));
     DONE = true;
