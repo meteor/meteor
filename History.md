@@ -1,6 +1,8 @@
 
 ## vNEXT
 
+* User documents have id's when onCreateUser and validateNewUser hooks run.
+
 * Removed all restrictions on EJSON types in MongoDB, even user-defined ones.
 
 * Fixed bug where an empty `fields` object was sometimes passed to a `changed`
