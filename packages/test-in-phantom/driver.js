@@ -40,11 +40,13 @@ Meteor._runTestsEverywhere(
           console.log(name, ":", "EXPECTED FAILURE");
           expected++;
           break;
-        default:
+        case "FAIL":
           failed++;
           console.log(name, ":", "!!!!!!!!! FAIL !!!!!!!!!!!");
           console.log(JSON.stringify(resultSet[name].info));
           break;
+        default:
+          console.log(name, ": unknown state for the test to be in");
         }
         finished++;
         break;
