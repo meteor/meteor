@@ -55,7 +55,7 @@ Meteor.makeComponent = function (options) {
 
       // XXX figure out what our argument convention for controllers
       // is. named arguments seems nice, but what about supporting
-      // {{{TextInput "fieldname"}}}? maybe it's an array, but by
+      // {{{TextBox "fieldname"}}}? maybe it's an array, but by
       // convention the last argument in the array is an options hash,
       // and for a block helper that's where fn and inverse end up?
 
@@ -110,7 +110,7 @@ SaveButton = Meteor.makeComponent({
 
 ///////////////////////////////////////////////////////////////////////////////
 
-var TextInputController = Spark.Landmark.extend({
+var TextBoxController = Spark.Landmark.extend({
   init: function (fieldName) {
     this.setup(fieldName);
     // XXX call super
@@ -158,16 +158,16 @@ var TextInputController = Spark.Landmark.extend({
       return ''+v;
     if (v === undefined || v === null)
       return '';
-    throw new Error("Current value can't be shown in a TextInput")
+    throw new Error("Current value can't be shown in a TextBox")
   },
   fromString: function (s) {
     return s; // XXX let me edit numbers as numbers?
   }
 });
 
-TextInput = Meteor.makeComponent({
-  controller: TextInputController,
-  template: Template.TextInputView
+TextBox = Meteor.makeComponent({
+  controller: TextBoxController,
+  template: Template.TextBoxView
 });
 
 
