@@ -20,8 +20,8 @@ TOPDIR=$(pwd)
 OUTDIR="$TOPDIR/dist/packages"
 mkdir -p $OUTDIR
 
-# A hacky (?) way to pass $ENGINE_VERSION back into build-release.sh.
-# Contents set below
+# A hacky (?) way to pass the release manifest chunk with package
+# versions back into build-release.sh.  Contents set below
 if [ -e "$TOPDIR/.package_manifest_chunk" ]; then
   rm "$TOPDIR/.package_manifest_chunk"
 fi
