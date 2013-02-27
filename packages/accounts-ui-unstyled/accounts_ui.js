@@ -4,14 +4,15 @@ if (!Accounts.ui)
 if (!Accounts.ui._options) {
   Accounts.ui._options = {
     requestPermissions: {},
-    requestOfflineToken: {}
+    requestOfflineToken: {},
+    extraSignupFields: []
   };
 }
 
 
 Accounts.ui.config = function(options) {
   // validate options keys
-  var VALID_KEYS = ['passwordSignupFields', 'requestPermissions', 'requestOfflineToken'];
+  var VALID_KEYS = ['passwordSignupFields', 'requestPermissions', 'requestOfflineToken', 'extraSignupFields'];
   _.each(_.keys(options), function (key) {
     if (!_.contains(VALID_KEYS, key))
       throw new Error("Accounts.ui.config: Invalid key: " + key);
@@ -59,6 +60,21 @@ Accounts.ui.config = function(options) {
         Accounts.ui._options.requestOfflineToken[service] = value;
       }
     });
+  }
+
+  // deal with `extraSignupFields`
+  if (typeof options.extraSignupFields !== 'object' || ! options.extraSignupFields instanceof Array) {
+    throw new Error("Accounts.ui.config: `extraSignupFields` must be an array.");
+  } else {
+    if (options.extraSignupFields) {
+      _.each(options.extraSignupFields, function (field, index) {
+        if (! field.fieldName || ! field.fieldLabel)
+          throw new Error("Accounts.ui.config: `extraSignupFields` objects must have `fieldName` and `fieldLabel` attributes.");
+        if (typeof field.visible === 'undefined')
+          field.visible = true;
+        Accounts.ui._options.extraSignupFields[index] = field;
+      });
+    }
   }
 };
 

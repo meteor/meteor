@@ -252,6 +252,8 @@
        }}
     ];
 
+    signupFields = Accounts.ui._options.extraSignupFields.concat(signupFields);
+
     return loginButtonsSession.get('inSignupFlow') ? signupFields : loginFields;
   };
 
@@ -416,6 +418,33 @@
       options.password = password;
 
     if (!matchPasswordAgainIfPresent())
+      return;
+
+    // prepare the profile object
+    options.profile = {};
+
+    // define a proxy function to allow extraSignupFields set error messages
+    var errorFn = function(errorMessage) {
+      Accounts._loginButtonsSession.errorMessage(errorMessage);
+    };
+
+    var invalidExtraSignupFields = false;
+
+    // parse extraSignupFields to populate account's profile data
+    _.each(Accounts.ui._options.extraSignupFields, function (field, index) {
+      var value = elementValueById('login-' + field.fieldName);
+      if (typeof field.validate === 'function') {
+        if (field.validate(value, errorFn)) {
+          options.profile[field.fieldName] = elementValueById('login-' + field.fieldName);
+        } else {
+          invalidExtraSignupFields = true;
+        }
+      } else {
+        options.profile[field.fieldName] = elementValueById('login-' + field.fieldName);
+      }
+    });
+
+    if (invalidExtraSignupFields)
       return;
 
     Accounts.createUser(options, function (error) {
