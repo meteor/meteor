@@ -164,7 +164,7 @@ case is to publish a database query.
     // server: publish all room documents
     Meteor.publish("all-rooms", function () {
       return Rooms.find(); // everything
-    );
+    });
 
     // server: publish all messages for a given room
     Meteor.publish("messages", function (roomId) {
