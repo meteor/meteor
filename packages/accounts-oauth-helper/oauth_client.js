@@ -33,7 +33,7 @@
     } else {
       // If we are on mobile, using the method found by boundsj.
       // https://github.com/meteor/meteor/issues/438
-      var popup = window.open(url, '_self');
+      window.open(url, '_self');
     }
   };
 
