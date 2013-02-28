@@ -1,51 +1,51 @@
-Tinytest.add('deps - autorun', function (test) {
-  var v = new Deps.Variable;
+Tinytest.add('deps - run', function (test) {
+  var d = new Deps.Variable;
   var x = 0;
-  var handle = Deps.autorun(function (handle) {
-    Deps.depend(v);
+  var handle = Deps.run(function (handle) {
+    Deps.depend(d);
     ++x;
   });
   test.equal(x, 1);
   Deps.flush();
   test.equal(x, 1);
-  v.changed();
+  d.change();
   test.equal(x, 1);
   Deps.flush();
   test.equal(x, 2);
-  v.changed();
+  d.change();
   test.equal(x, 2);
   Deps.flush();
   test.equal(x, 3);
-  v.changed();
+  d.change();
   // Prevent the function from running further.
   handle.stop();
   Deps.flush();
   test.equal(x, 3);
-  v.changed();
+  d.change();
   Deps.flush();
   test.equal(x, 3);
 
-  Deps.autorun(function (internalHandle) {
-    Deps.depend(v);
+  Deps.run(function (internalHandle) {
+    d.depend();
     ++x;
     if (x == 6)
       internalHandle.stop();
   });
   test.equal(x, 4);
-  v.changed();
+  d.change();
   Deps.flush();
   test.equal(x, 5);
-  v.changed();
+  d.change();
   // Increment to 6 and stop.
   Deps.flush();
   test.equal(x, 6);
-  v.changed();
+  d.change();
   Deps.flush();
   // Still 6!
   test.equal(x, 6);
 });
 
-Tinytest.add("deps - nested autorun", function (test) {
+Tinytest.add("deps - nested run", function (test) {
   var a = new Deps.Variable;
   var b = new Deps.Variable;
   var c = new Deps.Variable;
@@ -55,34 +55,40 @@ Tinytest.add("deps - nested autorun", function (test) {
 
   var buf = "";
 
-  var c1 = new Deps.Computation;
-  c1.run(function () {
-    Deps.depend(a);
+  var c1 = new Deps.Computation(function () {
+    a.depend();
     buf += 'a';
-    Deps.autorun(function () {
-      Deps.depend(b);
+    Deps.run(function () {
+      b.depend();
       buf += 'b';
-      Deps.autorun(function () {
-        Deps.depend(c);
+      Deps.run(function () {
+        c.depend();
         buf += 'c';
-        var c2 = new Deps.Computation;
-        c2.run(function () {
-          Deps.depend(d);
+        var c2 = new Deps.Computation(function () {
+          d.depend();
           buf += 'd';
-          Deps.autorun(function () {
-            Deps.depend(e);
+          Deps.run(function () {
+            e.depend();
             buf += 'e';
-            Deps.autorun(function () {
-              Deps.depend(f);
+            Deps.run(function () {
+              f.depend();
               buf += 'f';
             });
           });
+          Deps.onInvalidate(function () {
+            // only run once
+            c2.stop();
+          });
         });
-        Deps.currentComputation.onInvalidate(function () {
-          c2.invalidate();
+        Deps.onInvalidate(function () {
+          // link to parent explicitly
+          c2.stop();
         });
       });
     });
+  });
+  c1.onInvalidate(function () {
+    c1.stop();
   });
 
   var expect = function (str) {
@@ -92,39 +98,39 @@ Tinytest.add("deps - nested autorun", function (test) {
 
   expect('abcdef');
 
-  b.changed();
+  b.change();
   expect(''); // didn't flush yet
   Deps.flush();
   expect('bcdef');
 
-  c.changed();
+  c.change();
   Deps.flush();
   expect('cdef');
 
   var changeAndExpect = function (v, str) {
-    v.changed();
+    v.change();
     Deps.flush();
     expect(str);
   };
 
-  // more autoruns
+  // should cause running
   changeAndExpect(e, 'ef');
   changeAndExpect(f, 'f');
   // invalidate inner context
   changeAndExpect(d, '');
-  // no more autorunning!
+  // no more running!
   changeAndExpect(e, '');
   changeAndExpect(f, '');
-  // re-autorun C
+  // rerun C
   changeAndExpect(c, 'cdef');
   changeAndExpect(e, 'ef');
   changeAndExpect(f, 'f');
-  // re-autorun B
+  // rerun B
   changeAndExpect(b, 'bcdef');
   changeAndExpect(e, 'ef');
   changeAndExpect(f, 'f');
   // kill A
-  a.changed();
+  a.change();
   // This flush would be unnecessary if outstanding callbacks
   // were processed in the containment order of their contexts
   // (i.e. parents before children)

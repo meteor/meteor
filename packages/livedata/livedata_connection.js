@@ -145,8 +145,7 @@ Meteor._LivedataConnection = function (url, options) {
   //   - id
   //   - name
   //   - params
-  //   - computation (the Deps.Computation in which Meteor.subscribe was
-  //     called, if any)
+  //   - inactive (if true, will be cleaned up if not reused in re-run)
   //   - ready (has the 'ready' message been received?)
   //   - readyCallback (an optional callback to call when ready)
   //   - errorCallback (an optional callback to call if the sub terminates with
@@ -426,6 +425,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
       }
     }
 
+    // XXX fix comment
+    //
     // Is there an existing sub with the same name and param, run in an
     // invalidated Computation? This can only happen if the computation just got
     // invalidated and we haven't fully finished a round of Deps.flush()
@@ -441,16 +442,14 @@ _.extend(Meteor._LivedataConnection.prototype, {
     // being invalidated, we will require N matching subscribe calls to keep
     // them all active.
     var existing = _.find(self._subscriptions, function (sub) {
-      return sub.computation && sub.computation.invalidated &&
-        sub.name === name && EJSON.equals(sub.params, params);
+      return sub.inactive && sub.name === name &&
+        EJSON.equals(sub.params, params);
     });
 
-    var currentComputation = Deps.currentComputation;
     var id;
     if (existing) {
       id = existing.id;
-      // Substitute our current computation (if any) for the one on the sub.
-      existing.computation = currentComputation;
+      existing.inactive = false; // reactivate
 
       if (callbacks.onReady) {
         // If the sub is not already ready, replace any ready callback with the
@@ -473,7 +472,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
         id: id,
         name: name,
         params: params,
-        computation: currentComputation,
+        inactivate: false,
         ready: false,
         readyVar: (typeof Deps !== "undefined") && new Deps.Variable,
         readyCallback: callbacks.onReady,
@@ -500,7 +499,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
       }
     };
 
-    if (currentComputation) {
+    if (Deps.active) {
+      // XXX fix comment
+      //
       // We're in a reactive computation, so we'd like to unsubscribe when the
       // computation is invalidated... but not if some *OTHER* onInvalidate
       // callback on currentComputation re-subscribes to the same subscription
@@ -508,23 +509,16 @@ _.extend(Meteor._LivedataConnection.prototype, {
       // this check to happen later in the flush cycle, after all of
       // currentComputation's callbacks have been called, and therefore after
       // the current Deps.autorun (if any) has been re-run.
-      currentComputation.onInvalidate(function () {
-        Deps.afterFlush(function () {
-          // Did we already unsubscribe from this? Do nothing.
-          if (!_.has(self._subscriptions, id))
-            return;
-          // Did we substitute a new computation in for this constitute in the
-          // "Substitute" block above? (eg, are we in an autorun and the re-run of
-          // the function subscribed to this again?)
-          if (self._subscriptions[id].computation !== currentComputation)
-            return;
-          // Nope, the only reason we are currently subscribed to this
-          // subscription is that *THIS* subscribe call wanted it to be so, and
-          // its computation is invalidated, so it's time to unsubscribe.
+      Deps.onInvalidate(function (c) {
+        if (c.stopped)
           handle.stop();
-        });
+        else if (_.has(self._subscriptions, id))
+          self._subscriptions[id].inactive = true;
       });
-
+      Deps.afterRerun(function () {
+        if (_.has(self._subscriptions, id) && self._subscriptions[id].inactive)
+          handle.stop();
+      });
     }
 
     return handle;
