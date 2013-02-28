@@ -515,7 +515,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
         else if (_.has(self._subscriptions, id))
           self._subscriptions[id].inactive = true;
       });
-      Deps.afterRerun(function () {
+      Deps.afterInvalidate(function () {
         if (_.has(self._subscriptions, id) && self._subscriptions[id].inactive)
           handle.stop();
       });

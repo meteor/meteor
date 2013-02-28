@@ -21,9 +21,8 @@
   Deps.Computation = function (f) {
     this._id = nextId++;
     this._callbacks = {
-      beforeRerun: [],
       onInvalidate: [],
-      afterRerun: []
+      afterInvalidate: []
     };
     this.stopped = false;
     this.invalidated = false;
@@ -39,12 +38,8 @@
       this._callbacks.onInvalidate.push(f);
     },
 
-    beforeRerun: function (f) {
-      this._callbacks.beforeRerun.push(f);
-    },
-
-    afterRerun: function (f) {
-      this._callbacks.afterRerun.push(f);
+    afterInvalidate: function (f) {
+      this._callbacks.afterInvalidate.push(f);
     },
 
     invalidate: function () {
@@ -101,28 +96,24 @@
 
     _service: function () {
       while (this.invalidated) {
-        if (this.stopped) {
-          this._callCallbacks('onInvalidate');
-          break;
-        } else {
-          this._callCallbacks('beforeRerun');
-          this._callCallbacks('onInvalidate');
-          if (this.stopped)
-            break;
+        this._callCallbacks('onInvalidate');
+        if (! this.stopped) {
           try {
             this._run();
           } catch (e) {
             Meteor._debug("Exception from Deps rerun:", e.stack);
           }
           this.invalidated = false;
-          this._callCallbacks('afterRerun');
-          // If we're now stopped, loop back around and handle it.
-          //
-          // If we're not stopped but we are invalidated, also loop.
-          // It's valid in some cases for a computation to invalidate
-          // itself (or afterRerun to invalid it), but we could have
-          // a run-away loop counter here.
         }
+        this._callCallbacks('afterInvalidate');
+
+        if (this.stopped)
+          break;
+
+        // If we're not stopped but we are invalidated, also loop.
+        // It's valid in some cases for a computation to invalidate
+        // itself (or for afterInvalidate to invalid it), but we
+        // could add a run-away loop counter here.
       }
     }
   });
@@ -240,18 +231,11 @@
       Deps.currentComputation.onInvalidate(f);
     },
 
-    beforeRerun: function (f) {
-        if (! Deps.active)
-        throw new Error("Deps.beforeRerun needs a currentComputation");
-
-      Deps.currentComputation.beforeRerun(f);
-    },
-
-    afterRerun: function (f) {
+    afterInvalidate: function (f) {
       if (! Deps.active)
-        throw new Error("Deps.afterRerun needs a currentComputation");
+        throw new Error("Deps.afterInvalidate needs a currentComputation");
 
-      Deps.currentComputation.afterRerun(f);
+      Deps.currentComputation.afterInvalidate(f);
     },
 
     // XXX TEMPORARY
