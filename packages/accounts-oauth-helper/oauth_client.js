@@ -8,7 +8,7 @@
   //   error.
   // @param dimensions {optional Object(width, height)} The dimensions of
   //   the popup. If not passed defaults to something sane
-  Accounts.oauth.initiateLogin = function(state, url, callback, dimensions) {
+  Accounts.oauth.initiateLogin = function(state, url, callback, dimensions, replacementCallbackForAfterPopupClosed) {
     // XXX these dimensions worked well for facebook and google, but
     // it's sort of weird to have these here. Maybe an optional
     // argument instead?
@@ -23,7 +23,11 @@
       // http://code.google.com/p/android/issues/detail?id=21061
       if (popup.closed || popup.closed === undefined) {
         clearInterval(checkPopupOpen);
-        tryLoginAfterPopupClosed(state, callback);
+        if(replacementCallbackForAfterPopupClosed) {
+          replacementCallbackForAfterPopupClosed(state, callback);
+        } else {
+          tryLoginAfterPopupClosed(state, callback);
+        }
       }
     }, 100);
   };

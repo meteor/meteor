@@ -53,9 +53,14 @@
         var oauthResult = service.handleOauthRequest(oauthBinding);
 
         // Get or create user doc and login token for reconnect.
-        Accounts.oauth._loginResultForState[query.state] =
-          Accounts.updateOrCreateUserFromExternalService(
-            service.serviceName, oauthResult.serviceData, oauthResult.options);
+        if(query.skipUserUpsert === 'true') {
+          Accounts.oauth._loginResultForState[query.state] =
+            [service.serviceName, oauthResult.serviceData, oauthResult.options];
+        } else {
+          Accounts.oauth._loginResultForState[query.state] =
+            Accounts.updateOrCreateUserFromExternalService(
+              service.serviceName, oauthResult.serviceData, oauthResult.options);
+        }
       }
     }
 
