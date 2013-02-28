@@ -12,6 +12,21 @@ Meteor.FieldSet = Spark.Landmark.extend({
   },
   equals: function (key, value) {
     return this._fieldValues.equals(key, value);
+  },
+  lookup: function (key) {
+    // XXX blacklist certain keys
+    var fieldValue = this._fieldValues.get(key);
+    if (fieldValue !== undefined)
+      return fieldValue;
+    if (key in this) {
+      var val = this[key];
+      if (typeof val === "function")
+        // XXX HACK -- until the contract for helpers change to take
+        // the enclosing controller in 'this', bind functions
+        // automagically
+        val = _.bind(val, this);
+      return val;
+    }
   }
 });
 
@@ -129,7 +144,7 @@ var TextBoxController = Spark.Landmark.extend({
       var fieldset = self.parent(Meteor.FieldSet);
       var current = self.toString(fieldset.get(self.fieldName));
       if (self.hasDom()) { // XXX ugly/private?
-        self.find('input').value = current;
+        self.find('.textbox').value = current;
       }
     });
   },
@@ -137,20 +152,25 @@ var TextBoxController = Spark.Landmark.extend({
     // XXX defer this if they are currently editing the field?
     var self = this;
     var fieldset = self.parent(Meteor.FieldSet);
-    self.find('input').value = self.toString(fieldset.get(self.fieldName));
+    self.find('.textbox').value = self.toString(fieldset.get(self.fieldName));
   },
   finalize: function () {
     var self = this;
     if (self.handle)
       self.handle.stop();
   },
+  syncFieldToDom: function (evt) {
+    var fieldset = this.parent(Meteor.FieldSet);
+    fieldset.set(this.fieldName, this.fromString(evt.target.value));
+  },
   events: {
-    'blur input': function (evt) {
-      var fieldset = this.parent(Meteor.FieldSet);
-      fieldset.set(this.fieldName, this.fromString(evt.target.value));
+    'blur .textbox': "syncFieldToDom",
+    'keyup .textbox': function (evt) {
+      if (this.savePolicy === "continuous")
+        this.syncFieldToDom(evt);
     }
   },
-  preserve: ['input'],
+  preserve: ['.textbox'],
   toString: function (v) {
     if (typeof v === "string")
       return v;

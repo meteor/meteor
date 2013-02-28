@@ -170,10 +170,21 @@ Handlebars.evaluate = function (ast, data, options) {
       data = (stack.data && stack.data[id[1]]);
 
       if (! data && ((! stack.data) || (! (id[1] in stack.data))) &&
-          id[0] === 0 && ! scopedToContext && id[1] in Handlebars._defaultThis) {
-        // not found as helper or in template data, but found in global
-        // JavaScript environment, so use that
-        data = Handlebars._defaultThis[id[1]];
+          id[0] === 0 && ! scopedToContext) {
+        // it's a bare identifier, and it's not found as helper or in
+        // template data. look other places.
+
+        var controller = Spark.currentController();
+        var valueFromController;
+         if (controller && typeof (controller.lookup) === "function" &&
+            ((valueFromController = controller.lookup(id[1]))
+             !== undefined)) {
+           // An enclosing controller provided a value
+           data = valueFromController;
+        } else if (id[1] in Handlebars._defaultThis) {
+          // Found in global JavaScript environment
+          data = Handlebars._defaultThis[id[1]];
+        }
       }
     }
 

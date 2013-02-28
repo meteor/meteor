@@ -7,3 +7,5 @@ autopublish
 insecure
 preserve-inputs
 controllers
+bootstrap
+showdown

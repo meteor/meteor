@@ -1,8 +1,16 @@
 MyForm = Meteor.Form.extend({
   onSave: function () {
-    Meteor.call('addEntry', this.get("bob"));
-    this.set("bob", "");
+    Meteor.call('addEntry', this.get("entry"));
+    this.set("entry", "");
+  },
+  charsLeft: function () {
+    return 140 - (this.get("entry") || '').length;
   }
+});
+
+ContinuouslySavingTextArea = TextBox.extend({
+  savePolicy: "continuous",
+  template: Template.ContinuouslySavingTextAreaView
 });
 
 Template.body.entries = function () {

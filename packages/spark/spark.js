@@ -1153,6 +1153,8 @@ Spark.createLandmark = function (options, htmlFunc) {
 };
 
 // Argument: (controller, [controller args,] htmlFunc)
+// controller is a Spark.Landmark subclass (the class itself, not an
+// instance of the class)
 Spark.attachController = function (controller, htmlFunc) {
   if (! (controller.prototype instanceof Spark.Landmark))
     throw new Error("Controller must be a subclass of Spark.Landmark");
@@ -1264,6 +1266,16 @@ Spark.attachController = function (controller, htmlFunc) {
       landmark._setRange(range);
       renderer.landmarkRanges.push(range);
     });
+};
+
+// XXX document
+
+// Call during rendering to get the current nearest enclosing
+// controller (aka Spark.Landmark subclass) -- that is, the controller
+// for the nearest enclosing attachController on the call stack, or
+// null if none.
+Spark.currentController = function () {
+  return Spark._currentLandmark.get() || null;
 };
 
 // used by unit tests

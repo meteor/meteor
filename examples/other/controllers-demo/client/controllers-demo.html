@@ -3,19 +3,39 @@
 </head>
 
 <body>
-  {{> body}}
+  <div class="container">
+    {{> body}}
+  </div>
 </body>
 
 <template name="body">
-  <h2>Most recent five entries</h2>
-  <ul>
-    {{#each entries}}
-    <li>{{message}}</li>
-    {{/each}}
-  </ul>
+  <div class="row">
 
-  <h2>Add your own</h2>
-  {{#controller MyForm}}
-    Your message: {{{TextBox "bob"}}} {{{SaveButton}}}
-  {{/controller}}
+    <div class="span6">
+      <h2>Add something</h2>
+      {{#controller MyForm}}
+        Your message: {{{ContinuouslySavingTextArea "entry"}}}<br>
+        {{{SaveButton}}}<br>
+        {{charsLeft}} chars left
+        <hr>
+        <em>Preview:</em><br>
+{{#markdown}}{{entry}}{{/markdown}}
+      {{/controller}}
+    </div>
+
+    <div class="span6">
+      <h2>Most recent five entries</h2>
+      <ul>
+        {{#each entries}}
+        <li>{{#markdown}}{{message}}{{/markdown}}</li>
+        {{/each}}
+      </ul>
+    </div>
+
+  </div>
+</template>
+
+
+<template name="ContinuouslySavingTextAreaView">
+  <textarea class="textbox">
 </template>
