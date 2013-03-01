@@ -222,6 +222,8 @@ EJSON.equals = function (a, b, options) {
   var keyOrderSensitive = !!(options && options.keyOrderSensitive);
   if (a === b)
     return true;
+  if (!a || !b) // if either one is falsy, they'd have to be === to be equal
+    return false;
   if (!(typeof a === 'object' && typeof b === 'object'))
     return false;
   if (a instanceof Date && b instanceof Date)
