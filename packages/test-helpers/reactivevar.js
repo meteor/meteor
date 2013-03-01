@@ -19,11 +19,11 @@ var ReactiveVar = function(initialValue) {
 
   this._value = (typeof initialValue === "undefined" ? null :
                  initialValue);
-  this._depsVar = new Deps.Variable;
+  this._deps = new Deps.Variable;
 };
 
 ReactiveVar.prototype.get = function() {
-  Deps.depend(this._depsVar);
+  Deps.depend(this._deps);
   return this._value;
 };
 
@@ -35,10 +35,10 @@ ReactiveVar.prototype.set = function(newValue) {
 
   this._value = newValue;
 
-  this._depsVar.changed();
+  this._deps.changed();
 };
 
 ReactiveVar.prototype.numListeners = function() {
   // accesses private field (tests want to know)
-  return _.keys(this._depsVar._dependentsById).length;
+  return _.keys(this._deps._dependentsById).length;
 };

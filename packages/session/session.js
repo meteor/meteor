@@ -15,8 +15,8 @@
 
   Session = _.extend({}, {
     keys: {}, // key -> value
-    keyVars: {}, // key -> Variable
-    keyValueVars: {}, // key -> value -> Variable
+    keyDeps: {}, // key -> Variable
+    keyValueDeps: {}, // key -> value -> Variable
 
     set: function (key, value) {
       var self = this;
@@ -33,10 +33,10 @@
         v && v.changed();
       };
 
-      changed(self.keyVars[key]);
-      if (self.keyValueVars[key]) {
-        changed(self.keyValueVars[key][oldSerializedValue]);
-        changed(self.keyValueVars[key][value]);
+      changed(self.keyDeps[key]);
+      if (self.keyValueDeps[key]) {
+        changed(self.keyValueDeps[key][oldSerializedValue]);
+        changed(self.keyValueDeps[key][value]);
       }
     },
 
@@ -53,7 +53,7 @@
     get: function (key) {
       var self = this;
       self._ensureKey(key);
-      Deps.depend(self.keyVars[key]);
+      Deps.depend(self.keyDeps[key]);
       return parse(self.keys[key]);
     },
 
@@ -64,7 +64,7 @@
       // .equals, because JSON.stringify doesn't canonicalize object key
       // order. (We can make equals have the right return value by parsing the
       // current value and using EJSON.equals, but we won't have a canonical
-      // element of keyValueVars[key] to store the dependency.) You can still use
+      // element of keyValueDeps[key] to store the dependency.) You can still use
       // "EJSON.equals(Session.get(key), value)".
       //
       // XXX we could allow arrays as long as we recursively check that there
@@ -82,16 +82,16 @@
       if (Deps.active) {
         self._ensureKey(key);
 
-        if (! _.has(self.keyValueVars[key], serializedValue))
-          self.keyValueVars[key][serializedValue] = new Deps.Variable;
+        if (! _.has(self.keyValueDeps[key], serializedValue))
+          self.keyValueDeps[key][serializedValue] = new Deps.Variable;
 
-        var isNew = Deps.depend(self.keyValueVars[key][serializedValue]);
+        var isNew = Deps.depend(self.keyValueDeps[key][serializedValue]);
         if (isNew) {
           Deps.currentComputation.onInvalidate(function () {
             // clean up [key][serializedValue] if it's now empty, so we don't
             // use O(n) memory for n = values seen ever
-            if (! self.keyValueVars[key][serializedValue].hasDependents())
-              delete self.keyValueVars[key][serializedValue];
+            if (! self.keyValueDeps[key][serializedValue].hasDependents())
+              delete self.keyValueDeps[key][serializedValue];
           });
         }
       }
@@ -103,9 +103,9 @@
 
     _ensureKey: function (key) {
       var self = this;
-      if (!(key in self.keyVars)) {
-        self.keyVars[key] = new Deps.Variable;
-        self.keyValueVars[key] = {};
+      if (!(key in self.keyDeps)) {
+        self.keyDeps[key] = new Deps.Variable;
+        self.keyValueDeps[key] = {};
       }
     }
   });

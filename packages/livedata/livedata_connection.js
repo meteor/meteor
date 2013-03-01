@@ -158,7 +158,7 @@ Meteor._LivedataConnection = function (url, options) {
 
   // Reactive userId.
   self._userId = null;
-  self._userIdVar = (typeof Deps !== "undefined") && new Deps.Variable;
+  self._userIdDeps = (typeof Deps !== "undefined") && new Deps.Variable;
 
   // Block auto-reload while we're waiting for method responses.
   if (!options.reloadWithOutstanding) {
@@ -474,7 +474,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
         params: params,
         inactivate: false,
         ready: false,
-        readyVar: (typeof Deps !== "undefined") && new Deps.Variable,
+        readyDeps: (typeof Deps !== "undefined") && new Deps.Variable,
         readyCallback: callbacks.onReady,
         errorCallback: callbacks.onError
       };
@@ -494,7 +494,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
         if (!_.has(self._subscriptions, id))
           return false;
         var record = self._subscriptions[id];
-        record.readyVar && Deps.depend(record.readyVar);
+        record.readyDeps && Deps.depend(record.readyDeps);
         return record.ready;
       }
     };
@@ -777,8 +777,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
   ///
   userId: function () {
     var self = this;
-    if (self._userIdVar)
-      Deps.depend(self._userIdVar);
+    if (self._userIdDeps)
+      Deps.depend(self._userIdDeps);
     return self._userId;
   },
 
@@ -788,8 +788,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
     if (self._userId === userId)
       return;
     self._userId = userId;
-    if (self._userIdVar)
-      self._userIdVar.changed();
+    if (self._userIdDeps)
+      self._userIdDeps.changed();
   },
 
   // Returns true if we are in a state after reconnect of waiting for subs to be
@@ -1108,7 +1108,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
           return;
         subRecord.readyCallback && subRecord.readyCallback();
         subRecord.ready = true;
-        subRecord.readyVar && subRecord.readyVar.changed();
+        subRecord.readyDeps && subRecord.readyDeps.changed();
       });
     });
   },
