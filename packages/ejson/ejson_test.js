@@ -31,3 +31,12 @@ Tinytest.add("ejson - nesting and literal", function (test) {
   var roundTrip = EJSON.fromJSONValue(eObj);
   test.equal(obj, roundTrip);
 });
+
+Tinytest.add("ejson - equality and falsiness", function (test) {
+  test.isTrue(EJSON.equals(null, null));
+  test.isTrue(EJSON.equals(undefined, undefined));
+  test.isFalse(EJSON.equals("foo", null));
+  test.isFalse(EJSON.equals(null, "foo"));
+  test.isFalse(EJSON.equals(undefined, "foo"));
+  test.isFalse(EJSON.equals("foo", undefined));
+});
