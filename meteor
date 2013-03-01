@@ -54,7 +54,7 @@ function install_dev_bundle {
         echo "Skipping download and installing kit from $SCRIPT_DIR/$TARBALL"
         tar -xzf "$SCRIPT_DIR/$TARBALL" -C "$TMPDIR"
     else
-        curl -# https://d3sqy0vbqsdhku.cloudfront.net/$TARBALL | tar -xzf - -C "$TMPDIR"
+        curl -# https://s3.amazonaws.com/com.tastemade.utils/$TARBALL | tar -xzf - -C "$TMPDIR"
         test -x "${TMPDIR}/bin/node" # bomb out if it didn't work, eg no net
     fi
 

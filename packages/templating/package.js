@@ -5,6 +5,7 @@ Package.describe({
 
 var fs = require('fs');
 var path = require('path');
+var jade = require('jade');
 
 Package.on_use(function (api) {
   // XXX would like to do the following only when the first html file
@@ -39,6 +40,9 @@ Package.register_extension(
     // XXX the way we deal with encodings here is sloppy .. should get
     // religion on that
     var contents = fs.readFileSync(source_path);
+    if (source_path.indexOf(".jade.html", source_path.length - ".jade.html".length) !== -1) {
+      contents = jade.compile(contents, {})();
+    }
 
     // XXX super lame! we actually have to give paths relative to
     // app/inner/app.js, since that's who's evaling us.

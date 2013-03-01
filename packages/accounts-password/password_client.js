@@ -24,9 +24,7 @@
   // @param password {String}
   // @param callback {Function(error|undefined)}
   Meteor.loginWithPassword = function (selector, password, callback) {
-    var srp = new Meteor._srp.Client(password);
-    var request = srp.startExchange();
-
+    var request = {};
     if (typeof selector === 'string')
       if (selector.indexOf('@') === -1)
         selector = {username: selector};
@@ -34,31 +32,60 @@
         selector = {email: selector};
 
     request.user = selector;
+    
+    Meteor.apply('isSRP', [request], function (error, result) {
+        if (error || !result) {
+            error = error || new Error("No result from call to isSRP");
+            callback && callback(error);
+            return;
+        }
+        switch (result) {
+            case 'SRP':
+              // Normally, we only set Meteor.loggingIn() to true within
+              // Accounts.callLoginMethod, but we'd also like it to be true during the
+              // password exchange. So we set it to true here, and clear it on error; in
+              // the non-error case, it gets cleared by callLoginMethod.
+              var srp = new Meteor._srp.Client(password);
+              request = _.extend(request, srp.startExchange());
+              
+              Accounts._setLoggingIn(true);
+              Meteor.apply('beginPasswordExchange', [request], function (error, result) {
+                if (error || !result) {
+                  Accounts._setLoggingIn(false);
+                  error = error || new Error("No result from call to beginPasswordExchange");
+                  callback && callback(error);
+                  return;
+                }
 
-    // Normally, we only set Meteor.loggingIn() to true within
-    // Accounts.callLoginMethod, but we'd also like it to be true during the
-    // password exchange. So we set it to true here, and clear it on error; in
-    // the non-error case, it gets cleared by callLoginMethod.
-    Accounts._setLoggingIn(true);
-    Meteor.apply('beginPasswordExchange', [request], function (error, result) {
-      if (error || !result) {
-        Accounts._setLoggingIn(false);
-        error = error || new Error("No result from call to beginPasswordExchange");
-        callback && callback(error);
-        return;
-      }
-
-      var response = srp.respondToChallenge(result);
-      Accounts.callLoginMethod({
-        methodArguments: [{srp: response}],
-        validateResult: function (result) {
-          if (!srp.verifyConfirmation({HAMK: result.HAMK}))
-            throw new Error("Server is cheating!");
-        },
-        userCallback: callback});
+                var response = srp.respondToChallenge(result);
+                Accounts.callLoginMethod({
+                  methodArguments: [{srp: response}],
+                  validateResult: function (result) {
+                    if (!srp.verifyConfirmation({HAMK: result.HAMK}))
+                      throw new Error("Server is cheating!");
+                  },
+                  userCallback: callback});
+              });
+            break;
+            case 'TM':
+              Accounts.callLoginMethod({
+                methodArguments: [{user: selector, password: password}],
+                validateResult: function (result) {
+                  if (!result.id)
+                    throw new Error("Failed login");
+                    
+                  //upgrade to SRP
+                },
+                userCallback: callback});
+            break;
+            default:
+              error = new Error("No valid auth method found.");
+              callback && callback(error);
+              return;
+            break;
+        }
     });
   };
-
 
   // @param oldPassword {String|null}
   // @param newPassword {String}

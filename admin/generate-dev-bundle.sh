@@ -99,6 +99,7 @@ npm install underscore@1.4.2
 npm install fstream@0.1.21
 npm install tar@0.1.14
 npm install websocket@1.0.8
+npm install jade@0.27.7
 
 # allow clientMaxAge to be set to 0:
 # https://github.com/tomgco/gzippo/pull/49
@@ -106,7 +107,8 @@ npm install https://github.com/meteor/gzippo/tarball/1e4b955439
 
 # uglify-js has a bug which drops 'undefined' in arrays:
 # https://github.com/mishoo/UglifyJS2/pull/97
-npm install https://github.com/meteor/UglifyJS2/tarball/aa5abd14d3
+#npm install https://github.com/meteor/UglifyJS2/tarball/9a4d0d86ed
+npm install uglify-js@2.2.5
 
 # progress 0.1.0 has a regression where it opens stdin and thus does not
 # allow the node process to exit cleanly. See
