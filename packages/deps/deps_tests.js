@@ -8,38 +8,38 @@ Tinytest.add('deps - run', function (test) {
   test.equal(x, 1);
   Deps.flush();
   test.equal(x, 1);
-  d.change();
+  d.changed();
   test.equal(x, 1);
   Deps.flush();
   test.equal(x, 2);
-  d.change();
+  d.changed();
   test.equal(x, 2);
   Deps.flush();
   test.equal(x, 3);
-  d.change();
+  d.changed();
   // Prevent the function from running further.
   handle.stop();
   Deps.flush();
   test.equal(x, 3);
-  d.change();
+  d.changed();
   Deps.flush();
   test.equal(x, 3);
 
   Deps.run(function (internalHandle) {
-    d.depend();
+    Deps.depend(d);
     ++x;
     if (x == 6)
       internalHandle.stop();
   });
   test.equal(x, 4);
-  d.change();
+  d.changed();
   Deps.flush();
   test.equal(x, 5);
-  d.change();
+  d.changed();
   // Increment to 6 and stop.
   Deps.flush();
   test.equal(x, 6);
-  d.change();
+  d.changed();
   Deps.flush();
   // Still 6!
   test.equal(x, 6);
@@ -56,22 +56,22 @@ Tinytest.add("deps - nested run", function (test) {
   var buf = "";
 
   var c1 = new Deps.Computation(function () {
-    a.depend();
+    Deps.depend(a);
     buf += 'a';
     Deps.run(function () {
-      b.depend();
+      Deps.depend(b);
       buf += 'b';
       Deps.run(function () {
-        c.depend();
+        Deps.depend(c);
         buf += 'c';
         var c2 = new Deps.Computation(function () {
-          d.depend();
+          Deps.depend(d);
           buf += 'd';
           Deps.run(function () {
-            e.depend();
+            Deps.depend(e);
             buf += 'e';
             Deps.run(function () {
-              f.depend();
+              Deps.depend(f);
               buf += 'f';
             });
           });
@@ -98,17 +98,17 @@ Tinytest.add("deps - nested run", function (test) {
 
   expect('abcdef');
 
-  b.change();
+  b.changed();
   expect(''); // didn't flush yet
   Deps.flush();
   expect('bcdef');
 
-  c.change();
+  c.changed();
   Deps.flush();
   expect('cdef');
 
   var changeAndExpect = function (v, str) {
-    v.change();
+    v.changed();
     Deps.flush();
     expect(str);
   };
@@ -130,7 +130,7 @@ Tinytest.add("deps - nested run", function (test) {
   changeAndExpect(e, 'ef');
   changeAndExpect(f, 'f');
   // kill A
-  a.change();
+  a.changed();
   // This flush would be unnecessary if outstanding callbacks
   // were processed in the containment order of their contexts
   // (i.e. parents before children)

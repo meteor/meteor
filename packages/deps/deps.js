@@ -126,10 +126,12 @@
     // Adds `computation` to this set if it is not already
     // present.  Returns true if `computation` is a new member of the set.
     // Defaults to currentComputation, which must exist.
-    depend: function (computation) {
+    addDependent: function (computation) {
       if (! computation) {
         if (! Deps.active)
-          throw new Error("Variable.depend() called with no currentComputation");
+          throw new Error(
+            "Variable.addDependent() called with no currentComputation");
+
         computation = Deps.currentComputation;
       }
       var self = this;
@@ -143,14 +145,10 @@
       }
       return false;
     },
-    change: function () {
+    changed: function () {
       var self = this;
       for (var id in self._dependentsById)
         self._dependentsById[id].invalidate();
-    },
-    // XXX TEMPORARY
-    changed: function () {
-      this.change();
     },
     hasDependents: function () {
       var self = this;
@@ -238,16 +236,14 @@
       Deps.currentComputation.afterInvalidate(f);
     },
 
-    // XXX TEMPORARY
-    autorun: function (f) {
-      return Deps.run(f);
-    },
     depend: function (v) {
       if (! Deps.active)
         return false;
-      return v.depend();
+
+      return v.addDependent();
     },
-    afterFlush: function (f) {
+
+    atFlush: function (f) {
       var c = new Deps.Computation();
       c.onInvalidate(f);
       c.stop();

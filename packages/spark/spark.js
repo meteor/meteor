@@ -352,7 +352,7 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
     finalized = true;
   };
 
-  Deps.afterFlush(function () {
+  Deps.atFlush(function () {
     if (finalized)
       return;
 
@@ -837,20 +837,20 @@ Spark.isolate = function (htmlFunc) {
   var range;
   var firstRun = true;
   var retHtml;
-  Deps.autorun(function (handle) {
+  Deps.run(function (handle) {
     if (firstRun) {
       retHtml = renderer.annotate(
         htmlFunc(), Spark._ANNOTATION_ISOLATE,
         function (r) {
           if (! r) {
-            // annotation not used; kill this autorun
+            // annotation not used; kill this Deps.run
             handle.stop();
           } else {
             range = r;
             range.finalize = function () {
               // Spark.finalize() was called on our range (presumably
               // because it was removed from the document.)  Kill
-              // this autorun.
+              // this Deps.run.
               handle.stop();
             };
           }
@@ -976,7 +976,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   };
 
   var later = function (f) {
-    Deps.afterFlush(function () {
+    Deps.atFlush(function () {
       if (! stopped)
         withEventGuard(f);
     });

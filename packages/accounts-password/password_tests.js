@@ -54,7 +54,7 @@ if (Meteor.isClient) (function () {
       // Set up a reactive context that only refreshes when Meteor.user() is
       // invalidated.
       var loaded = false;
-      var handle = Deps.autorun(function () {
+      var handle = Deps.run(function () {
         if (Meteor.user() && Meteor.user().emails)
           loaded = true;
       });
@@ -65,7 +65,7 @@ if (Meteor.isClient) (function () {
         test.notEqual(Meteor.userId(), null);
         // By the time of the login callback, the user should be loaded.
         test.isTrue(Meteor.user().emails);
-        // Flushing should get us the autorun as well.
+        // Flushing should get us the rerun as well.
         Deps.flush();
         test.isTrue(loaded);
         handle.stop();

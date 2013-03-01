@@ -10,7 +10,11 @@ Meteor.is_server = Meteor.isServer;
 
 // We used to require a special "autosubscribe" call to reactively subscribe to
 // things. Now, it works with autorun.
-Meteor.autosubscribe = Deps.autorun;
+Meteor.autosubscribe = Deps.run;
+
+// new deps back-compat
+Meteor.flush = Deps.flush;
+Meteor.autorun = Deps.run;
 
 // Instead of the "random" package with Random.id(), we used to have this
 // Meteor.uuid() implementing the RFC 4122 v4 UUID.

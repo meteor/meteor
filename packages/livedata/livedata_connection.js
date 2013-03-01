@@ -505,7 +505,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
       // We're in a reactive computation, so we'd like to unsubscribe when the
       // computation is invalidated... but not if some *OTHER* onInvalidate
       // callback on currentComputation re-subscribes to the same subscription
-      // (eg, as part of a Deps.autorun).  Use Deps.afterFlush to schedule
+      // (eg, as part of a Deps.autorun).  Use Deps.atFlush to schedule
       // this check to happen later in the flush cycle, after all of
       // currentComputation's callbacks have been called, and therefore after
       // the current Deps.autorun (if any) has been re-run.
