@@ -33,12 +33,13 @@ if (!platform)
 console.log("URL", url);
 var report = function (name, last) {
   if (url) {
-    var namePath = name.split(" - ");
     var data = {
       run_id: Meteor.settings.public.runId,
-      testPath: namePath,
+      testPath: resultSet[name].testPath,
       status: resultSet[name].status,
-      platform: platform
+      platform: platform,
+      server: resultSet[name].server,
+      fullName: name.substr(3)
     };
     if (!_.isEmpty(resultSet[name].events))
       data.events = resultSet[name].events;
@@ -46,13 +47,10 @@ var report = function (name, last) {
       data.end = new Date();
     else
       data.start = new Date();
-    if (Meteor.isServer) {
-    } else {
-      toReport.push({
-        url: url,
-        content: EJSON.stringify(data)
-      });
-    }
+    toReport.push({
+      url: url,
+      content: EJSON.stringify(data)
+    });
   }
 };
 var sendReports = function (callback) {
@@ -69,7 +67,15 @@ Meteor._runTestsEverywhere(
   function (results) {
     var name = getName(results);
     if (!_.has(resultSet, name)) {
-      resultSet[name] = {name: name, status: "PENDING", events: []};
+      var testPath = EJSON.clone(results.groupPath);
+      testPath.push(results.test);
+      resultSet[name] = {
+        name: name,
+        status: "PENDING",
+        events: [],
+        server: !!results.server,
+        testPath: testPath
+      };
       report(name, false);
     }
     _.each(results.events, function (event) {
@@ -88,12 +94,12 @@ Meteor._runTestsEverywhere(
         case "PENDING":
           resultSet[name].status = "OK";
           report(name, true);
-          console.log(name, ":", "OK", Meteor.isServer);
+          console.log(name, ":", "OK");
           passed++;
           break;
         case "EXPECTED":
           report(name, true);
-          console.log(name, ":", "EXPECTED FAILURE", Meteor.isServer);
+          console.log(name, ":", "EXPECTED FAILURE");
           expected++;
           break;
         case "FAIL":
