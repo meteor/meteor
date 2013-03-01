@@ -28,7 +28,7 @@ if (Meteor.settings &&
 
 var hrefPath = document.location.href.split("/");
 var platform = hrefPath.length && hrefPath[hrefPath.length - 1];
-if (!platform)
+if (_.isEmpty(platform))
   platform = "local";
 console.log("URL", url);
 var report = function (name, last) {
