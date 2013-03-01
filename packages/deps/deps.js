@@ -3,6 +3,13 @@
   Deps.active = false;
   Deps.currentComputation = null;
 
+  var _debugFunc = function () {
+    // evaluate this lazily in order to not constrain load order
+    return (typeof Meteor !== "undefined" ? Meteor._debug :
+            ((typeof console !== "undefined") && console.log ? console.log :
+             function () {}));
+  };
+
   var nextId = 1;
   // computations whose callbacks we should call at flush time
   var pendingComputations = [];
@@ -87,8 +94,8 @@
           try {
             f(self);
           } catch (e) {
-            Meteor._debug("Exception from Deps " + which + " callback:",
-                          e.stack);
+            _debugFunc()("Exception from Deps invalidation callback:",
+                         e.stack);
           }
         }
       }
@@ -101,7 +108,7 @@
           try {
             this._run();
           } catch (e) {
-            Meteor._debug("Exception from Deps rerun:", e.stack);
+            _debugFunc()("Exception from Deps rerun:", e.stack);
           }
           this.invalidated = false;
         }
