@@ -59,7 +59,7 @@ var getManifest = function(s3, release) {
 };
 
 // are there any files with this prefix?
-var notEmpty = function(s3, prefix) {
+var noneWithPrefix = function(s3, prefix) {
   var files = s3.ListObjects({
     BucketName: "com.meteor.packages",
     Prefix: prefix
@@ -74,7 +74,7 @@ var publishEngine = function(s3, release, version) {
   var destPath = ["engines", version].join("/");
 
   process.stdout.write("Engine " + version + ": ");
-  if (notEmpty(s3, destPath)) {
+  if (noneWithPrefix(s3, destPath)) {
     console.log("already published");
     return;
   } else {
@@ -110,7 +110,7 @@ var publishPackage = function(s3, release, name, version) {
   var sourceKey = ["unpublished", release, filename].join("/");
 
   process.stdout.write("Package " + name + " version " + version + ": ");
-  if (notEmpty(s3, destKey)) {
+  if (noneWithPrefix(s3, destKey)) {
     console.log("already published");
     return;
   } else {
@@ -134,7 +134,7 @@ var publishManifest = function(s3, release) {
   var sourceKey = ["unpublished", release, "manifest.json"].join("/");
 
   process.stdout.write("Release manifest " + release + ": ");
-  if (notEmpty(s3, destKey)) {
+  if (noneWithPrefix(s3, destKey)) {
     console.log("already published");
     return;
   } else {
