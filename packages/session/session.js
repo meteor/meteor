@@ -87,7 +87,7 @@
 
         var isNew = Deps.depend(self.keyValueDeps[key][serializedValue]);
         if (isNew) {
-          Deps.currentComputation.onInvalidate(function () {
+          Deps.onInvalidate(function () {
             // clean up [key][serializedValue] if it's now empty, so we don't
             // use O(n) memory for n = values seen ever
             if (! self.keyValueDeps[key][serializedValue].hasDependents())

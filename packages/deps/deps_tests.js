@@ -86,9 +86,9 @@ Tinytest.add("deps - nested run", function (test) {
         });
       });
     });
-  });
-  c1.onInvalidate(function () {
-    c1.stop();
+    Deps.onInvalidate(function (c1) {
+      c1.stop();
+    });
   });
 
   var expect = function (str) {

@@ -33,6 +33,7 @@
     };
     this.stopped = false;
     this.invalidated = false;
+    this.active = false;
     this._parent = null; // set in Deps.run; for future use
     this._func = (f || function () {});
 
@@ -42,10 +43,18 @@
   _.extend(Deps.Computation.prototype, {
 
     onInvalidate: function (f) {
+      if (! this.active)
+        throw new Error(
+          "Can only register callbacks with an active Computation");
+
       this._callbacks.onInvalidate.push(f);
     },
 
     afterInvalidate: function (f) {
+      if (! this.active)
+        throw new Error(
+          "Can only register callbacks with an active Computation");
+
       this._callbacks.afterInvalidate.push(f);
     },
 
@@ -72,9 +81,11 @@
       var previous = Deps.currentComputation;
       Deps.currentComputation = this;
       Deps.active = true;
+      this.active = true;
       try {
         this._func(this);
       } finally {
+        this.active = false;
         Deps.currentComputation = previous;
         Deps.active = !! Deps.currentComputation;
       }
@@ -175,8 +186,10 @@
       // any useful notion of a nested flush.
       //
       // https://app.asana.com/0/159908330244/385138233856
-      if (inFlush)
+      if (inFlush) {
+        _debugFunc()("Warning: Ignored nested Deps.flush");
         return;
+      }
 
       inFlush = true;
       willFlush = true;
@@ -251,9 +264,10 @@
     },
 
     atFlush: function (f) {
-      var c = new Deps.Computation();
-      c.onInvalidate(f);
-      c.stop();
+      new Deps.Computation(function (c) {
+        c.onInvalidate(f);
+        c.stop();
+      });
     }
 
 });

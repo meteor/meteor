@@ -361,7 +361,7 @@ LocalCollection.Cursor.prototype._depend = function (changers) {
     // while and repurpose it if it comes back. this will save us
     // work because we won't have to redo the initial find.
     // The logic would be similar to that in Meteor.subscribe.
-    Deps.currentComputation.onInvalidate(handle.stop);
+    Deps.onInvalidate(handle.stop);
   }
 };
 
