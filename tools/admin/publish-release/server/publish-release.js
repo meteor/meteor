@@ -3,6 +3,9 @@ var S3 = AWSSum.load('amazon/s3', 'S3');
 var Future = Npm.require("fibers/future");
 var child_process = Npm.require("child_process");
 
+// accumulated while running, printed at the end
+var publishedArtifacts = [];
+
 // gets git sha passed in via --settings
 var getGitSha = function () {
   var gitSha = Meteor.settings["git-sha"];
@@ -73,11 +76,12 @@ var noneWithPrefix = function(s3, prefix) {
 var publishEngine = function(s3, release, version) {
   var destPath = ["engines", version].join("/");
 
-  process.stdout.write("Engine " + version + ": ");
+  process.stdout.write("engine " + version + ": ");
   if (noneWithPrefix(s3, destPath)) {
     console.log("already published");
     return;
   } else {
+    publishedArtifacts.push("engine " + version);
     console.log("publishing");
   }
 
@@ -109,11 +113,12 @@ var publishPackage = function(s3, release, name, version) {
   var destKey = ["packages", name, filename].join("/");
   var sourceKey = ["unpublished", release, filename].join("/");
 
-  process.stdout.write("Package " + name + " version " + version + ": ");
+  process.stdout.write("package " + name + " version " + version + ": ");
   if (noneWithPrefix(s3, destKey)) {
     console.log("already published");
     return;
   } else {
+    publishedArtifacts.push("package " + name + " version " + version);
     console.log("publishing");
   }
 
@@ -133,11 +138,12 @@ var publishManifest = function(s3, release) {
   var destKey = ["releases", release + ".json"].join("/");
   var sourceKey = ["unpublished", release, "manifest.json"].join("/");
 
-  process.stdout.write("Release manifest " + release + ": ");
+  process.stdout.write("release manifest " + release + ": ");
   if (noneWithPrefix(s3, destKey)) {
     console.log("already published");
     return;
   } else {
+    publishedArtifacts.push("release manifest " + release);
     console.log("publishing");
   }
 
@@ -161,6 +167,7 @@ var main = function() {
     publishPackage(s3, release, name, version);
   });
   publishManifest(s3, release);
+  console.log("\nPUBLISHED:\n" + publishedArtifacts.join('\n'));
   process.exit();
 };
 
