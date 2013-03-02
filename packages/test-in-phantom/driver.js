@@ -47,10 +47,7 @@ var report = function (name, last) {
       data.end = new Date();
     else
       data.start = new Date();
-    toReport.push({
-      url: url,
-      content: EJSON.stringify(data)
-    });
+    toReport.push(EJSON.toJSONValue(data));
   }
 };
 var sendReports = function (callback) {
@@ -58,7 +55,7 @@ var sendReports = function (callback) {
   if (!callback)
     callback = function () {};
   toReport = [];
-  Meteor.call("report", reports, callback);
+  Meteor.call("report", url, reports, callback);
 };
 Meteor.startup(function () {
 setTimeout(sendReports, 500);
