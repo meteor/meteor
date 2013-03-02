@@ -2,9 +2,6 @@
 DIR="$(pwd)"
 METEOR_DIR="$(pwd)/../.."
 
-# publish-release is a meteor app
-cd publish-release
-
 # prepare settings file with git sha of last commit
 TMPDIR=$(mktemp -d -t meteor-publish-release-XXXXXXXX)
 GIT_SHA=$(git rev-parse HEAD)
@@ -12,7 +9,15 @@ cat > "$TMPDIR/settings.json" <<EOF
 {"git-sha": "$GIT_SHA"}
 EOF
 
-# Run meteor with our awssum smart package.
+# ensure our 'awssum' smart package is up-to-date
+cd $METEOR_DIR
+git submodule init
+git submodule update
+
+# publish-release is a meteor app
+cd $DIR/publish-release
+
+# run it
 #
 # XXX when we support packages in apps fold this into the app itself.
 #
