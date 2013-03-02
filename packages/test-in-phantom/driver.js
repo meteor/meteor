@@ -30,9 +30,8 @@ var hrefPath = document.location.href.split("/");
 var platform = hrefPath.length && hrefPath[hrefPath.length - 1];
 if (_.isEmpty(platform))
   platform = "local";
-console.log("URL", url);
 var report = function (name, last) {
-  if (url) {
+  if (url && url !== "") {
     var data = {
       run_id: Meteor.settings.public.runId,
       testPath: resultSet[name].testPath,
@@ -41,8 +40,11 @@ var report = function (name, last) {
       server: resultSet[name].server,
       fullName: name.substr(3)
     };
-    if (!_.isEmpty(resultSet[name].events))
+    if ((data.status === "FAIL" || data.status === "EXPECTED") &&
+        !_.isEmpty(resultSet[name].events)) {
+      // only send events when bad things happen
       data.events = resultSet[name].events;
+    }
     if (last)
       data.end = new Date();
     else
@@ -55,11 +57,15 @@ var sendReports = function (callback) {
   if (!callback)
     callback = function () {};
   toReport = [];
-  Meteor.call("report", url, reports, callback);
+  if (url)
+    Meteor.call("report", url, reports, callback);
+  else
+    callback();
 };
 Meteor.startup(function () {
 setTimeout(sendReports, 500);
 setInterval(sendReports, 2000);
+
 Meteor._runTestsEverywhere(
   function (results) {
     var name = getName(results);

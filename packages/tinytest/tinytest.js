@@ -420,7 +420,7 @@ _.extend(TestRun.prototype, {
       var groupsDone = 0;
 
       _.each(testGroups, function(tests) {
-        var runNext = function () {
+        var runNext = function () { Meteor.defer(function () {
           if (tests.length) {
             self._runOne(tests.shift(), runNext);
           } else {
@@ -428,7 +428,7 @@ _.extend(TestRun.prototype, {
             if (groupsDone >= testGroups.length)
               onComplete();
           }
-        };
+        });};
 
         runNext();
       });
