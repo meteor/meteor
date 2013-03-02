@@ -1,0 +1,3 @@
+[submodule "meteor-awssum"]
+      path = tools/admin/publish-release-packages/awssum
+      url = https://github.com/avital/meteor-awssum

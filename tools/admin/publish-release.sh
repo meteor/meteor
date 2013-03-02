@@ -14,10 +14,10 @@ EOF
 
 # Run meteor with our awssum smart package.
 #
-# XXX when we support apps in packages fold this into the app itself.
+# XXX when we support packages in apps fold this into the app itself.
 #
 # XXX when we support third-party packages use that mechanism instead
-# of keeping the pacakge in git.
+# of keeping the package in git.
 #
 # XXX it would be cool to be able to not listen on any port here. instead
 # we use port 31337
