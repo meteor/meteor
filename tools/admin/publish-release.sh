@@ -19,12 +19,10 @@ cd $DIR/publish-release
 
 # run it
 #
-# XXX when we support packages in apps fold this into the app itself.
-#
 # XXX when we support third-party packages use that mechanism instead
 # of keeping the package in git.
 #
 # XXX it would be cool to be able to not listen on any port here. instead
 # we use port 31337
-PACKAGE_DIRS=$DIR/publish-release-packages $METEOR_DIR/meteor -p 31337 --once --settings=$TMPDIR/settings.json
+$METEOR_DIR/meteor -p 31337 --once --settings=$TMPDIR/settings.json
 
