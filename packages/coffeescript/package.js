@@ -6,7 +6,7 @@ var coffee = require('coffee-script');
 var fs = require('fs');
 var path = require('path');
 
-function coffeescript_handler(bundle, source_path, serve_path, where) {
+var coffeescript_handler = function(bundle, source_path, serve_path, where) {
   serve_path = serve_path + '.js';
 
   var contents = fs.readFileSync(source_path);
