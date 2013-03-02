@@ -140,6 +140,7 @@ var TextInputController = Spark.Landmark.extend({
     self.find('input').value = self.toString(fieldset.get(self.fieldName));
   },
   finalize: function () {
+    var self = this;
     if (self.handle)
       self.handle.stop();
   },
