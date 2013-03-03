@@ -542,114 +542,116 @@ Spark.renderToRange = function (range, htmlFunc) {
   // document by scheduleOnscreenSetUp's scheduled setup.
   // However, if range is not valid, bail out now before running
   // htmlFunc.
-  var startNode = range.firstNode();
-  if (! startNode || ! startNode.parentNode)
-    return;
+  try {
+    var startNode = range.firstNode();
+    if (! startNode || ! startNode.parentNode)
+      return;
 
-  var renderer = new Spark._Renderer();
+    var renderer = new Spark._Renderer();
 
-  // Call 'func' for each landmark in 'range'. Pass two arguments to
-  // 'func', the range, and an extra "notes" object such that two
-  // landmarks receive the same (===) notes object iff they have the
-  // same branch path. 'func' can write to the notes object so long as
-  // it limits itself to attributes that do not start with '_'.
-  var visitLandmarksInRange = function (range, func) {
-    var stack = renderer.newLabelStack();
+    // Call 'func' for each landmark in 'range'. Pass two arguments to
+    // 'func', the range, and an extra "notes" object such that two
+    // landmarks receive the same (===) notes object iff they have the
+    // same branch path. 'func' can write to the notes object so long as
+    // it limits itself to attributes that do not start with '_'.
+    var visitLandmarksInRange = function (range, func) {
+      var stack = renderer.newLabelStack();
 
-    range.visit(function (isStart, r) {
-      if (r.type === Spark._ANNOTATION_LABEL) {
-        if (isStart)
-          stack.pushLabel(r.label);
-        else
-          stack.popLabel();
-      } else if (r.type === Spark._ANNOTATION_LANDMARK && isStart) {
-        func(r, stack.getNotes());
-      }
+      range.visit(function (isStart, r) {
+        if (r.type === Spark._ANNOTATION_LABEL) {
+          if (isStart)
+            stack.pushLabel(r.label);
+          else
+            stack.popLabel();
+        } else if (r.type === Spark._ANNOTATION_LANDMARK && isStart) {
+          func(r, stack.getNotes());
+        }
+      });
+    };
+
+    // Find all of the landmarks in the old contents of the range
+    visitLandmarksInRange(range, function (landmarkRange, notes) {
+      notes.originalRange = landmarkRange;
     });
-  };
 
-  // Find all of the landmarks in the old contents of the range
-  visitLandmarksInRange(range, function (landmarkRange, notes) {
-    notes.originalRange = landmarkRange;
-  });
+    // Once we render the new fragment, as soon as it is placed into the DOM (even
+    // temporarily), if any radio buttons in the new framgent are checked, any
+    // radio buttons with the same name in the entire document will be unchecked
+    // (since only one radio button of a given name can be checked at a time). So
+    // we save the current checked value of all radio buttons in an expando.
+    var radios = DomUtils.findAllClipped(
+      range.containerNode(), 'input[type=radio]',
+      range.firstNode(), range.lastNode());
+    _.each(radios, function (node) {
+      node._currentChecked = [!!node.checked];
+    });
 
-  // Once we render the new fragment, as soon as it is placed into the DOM (even
-  // temporarily), if any radio buttons in the new framgent are checked, any
-  // radio buttons with the same name in the entire document will be unchecked
-  // (since only one radio button of a given name can be checked at a time). So
-  // we save the current checked value of all radio buttons in an expando.
-  var radios = DomUtils.findAllClipped(
-    range.containerNode(), 'input[type=radio]',
-    range.firstNode(), range.lastNode());
-  _.each(radios, function (node) {
-    node._currentChecked = [!!node.checked];
-  });
+    var frag = renderer.materialize(htmlFunc);
 
-  var frag = renderer.materialize(htmlFunc);
+    DomUtils.wrapFragmentForContainer(frag, range.containerNode());
 
-  DomUtils.wrapFragmentForContainer(frag, range.containerNode());
+    var tempRange = new LiveRange(Spark._TAG, frag);
 
-  var tempRange = new LiveRange(Spark._TAG, frag);
+    // find preservation roots from matched landmarks inside the
+    // rerendered region
+    var pc = renderer.pc;
+    visitLandmarksInRange(
+      tempRange, function (landmarkRange, notes) {
+        if (notes.originalRange) {
+          if (landmarkRange.constant)
+            pc.addConstantRegion(notes.originalRange, landmarkRange);
 
-  // find preservation roots from matched landmarks inside the
-  // rerendered region
-  var pc = renderer.pc;
-  visitLandmarksInRange(
-    tempRange, function (landmarkRange, notes) {
-      if (notes.originalRange) {
-        if (landmarkRange.constant)
-          pc.addConstantRegion(notes.originalRange, landmarkRange);
-
-        pc.addRoot(landmarkRange.preserve,
+          pc.addRoot(landmarkRange.preserve,
                    notes.originalRange, landmarkRange);
-      }
+        }
+      });
+
+    // find preservation roots that come from landmarks enclosing the
+    // updated region
+    var walk = range;
+    while ((walk = walk.findParent())) {
+      if (! walk.firstNode().parentNode)
+        // we're in a DOM island with a top-level range (not really
+        // allowed, but could happen if `range` is on nodes that
+        // manually removed.
+        // XXX check for this sooner; hard to reason about this function
+        // on a "malformed" liverange tree
+        break;
+
+      if (walk.type === Spark._ANNOTATION_LANDMARK, walk)
+        pc.addRoot(walk.preserve, range, tempRange, walk.containerNode());
+    }
+
+    pc.addRoot(Spark._globalPreserves, range, tempRange);
+
+    // compute preservations (must do this before destroying tempRange)
+    var preservations = pc.computePreservations(range, tempRange);
+
+    tempRange.destroy();
+
+    var results = {};
+
+    // Patch! (using preservations)
+    withEventGuard(function () {
+      range.operate(function (start, end) {
+        // XXX this will destroy all liveranges, including ones
+        // inside constant regions whose DOM nodes we are going
+        // to preserve untouched
+        Spark.finalize(start, end);
+        Spark._patch(start.parentNode, frag, start.previousSibling,
+                     end.nextSibling, preservations, results);
+      });
     });
 
-  // find preservation roots that come from landmarks enclosing the
-  // updated region
-  var walk = range;
-  while ((walk = walk.findParent())) {
-    if (! walk.firstNode().parentNode)
-      // we're in a DOM island with a top-level range (not really
-      // allowed, but could happen if `range` is on nodes that
-      // manually removed.
-      // XXX check for this sooner; hard to reason about this function
-      // on a "malformed" liverange tree
-      break;
-
-    if (walk.type === Spark._ANNOTATION_LANDMARK, walk)
-      pc.addRoot(walk.preserve, range, tempRange, walk.containerNode());
-  }
-
-  pc.addRoot(Spark._globalPreserves, range, tempRange);
-
-  // compute preservations (must do this before destroying tempRange)
-  var preservations = pc.computePreservations(range, tempRange);
-
-  tempRange.destroy();
-
-  var results = {};
-
-  // Patch! (using preservations)
-  withEventGuard(function () {
-    range.operate(function (start, end) {
-      // XXX this will destroy all liveranges, including ones
-      // inside constant regions whose DOM nodes we are going
-      // to preserve untouched
-      Spark.finalize(start, end);
-      Spark._patch(start.parentNode, frag, start.previousSibling,
-                   end.nextSibling, preservations, results);
+    _.each(results.regionPreservations, function (landmarkRange) {
+      // Rely on the fact that computePreservations only emits
+      // region preservations whose ranges are landmarks.
+      // This flag means that landmarkRange is a new constant landmark
+      // range that matched an old one *and* was DOM-preservable by
+      // the patcher.
+      landmarkRange.isPreservedConstant = true;
     });
-  });
-
-  _.each(results.regionPreservations, function (landmarkRange) {
-    // Rely on the fact that computePreservations only emits
-    // region preservations whose ranges are landmarks.
-    // This flag means that landmarkRange is a new constant landmark
-    // range that matched an old one *and* was DOM-preservable by
-    // the patcher.
-    landmarkRange.isPreservedConstant = true;
-  });
+  } catch (error) {}
 };
 
 // Delete all of the liveranges in the range of nodes between `start`
