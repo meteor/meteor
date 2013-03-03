@@ -5,6 +5,9 @@
 
 * Removed all restrictions on EJSON types in MongoDB, even user-defined ones.
 
+* `coffeescript` package: Support literate Coffeescript files with the extension
+  `.litcoffee`.
+
 * Fixed bug where an empty `fields` object was sometimes passed to a `changed`
   callback of `Cursor.observeChanges`.
 
