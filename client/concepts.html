@@ -153,7 +153,7 @@ can be used from both client and server code.
     // server: populate collections with some initial documents
     Rooms.insert({name: "Conference Room A"});
     var myRooms = Rooms.find({}).fetch();
-    Messages.insert({text: "Hello world", room: myRooms[0].id});
+    Messages.insert({text: "Hello world", room: myRooms[0]._id});
     Parties.insert({name: "Super Bowl Party"});
 
 Each document set is defined by a publish function on the server.  The
