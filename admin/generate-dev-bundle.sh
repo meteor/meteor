@@ -3,7 +3,7 @@
 set -e
 set -u
 
-BUNDLE_VERSION=0.2.20
+BUNDLE_VERSION=0.2.21
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -79,7 +79,7 @@ which npm
 cd "$DIR/lib/node_modules"
 npm install connect@1.9.2 # not 2.x yet. sockjs doesn't work w/ new connect
 npm install optimist@0.3.5
-npm install coffee-script@1.4.0
+npm install coffee-script@1.5.0
 npm install less@1.3.3
 npm install stylus@0.30.1
 npm install nib@0.8.2
