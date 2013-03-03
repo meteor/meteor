@@ -127,7 +127,10 @@ Meteor._runTestsEverywhere(
   function () {
     console.log("passed/expected/failed/total", passed, "/", expected, "/", failed, "/", _.size(resultSet));
     sendReports(function () {
-      DONE = true;
+      console.log("Waiting 3s for any last reports to get sent out");
+      setTimeout(function () {
+        DONE = true;
+      }, 3000);
     });
   },
   ["tinytest"]);
