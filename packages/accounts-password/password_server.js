@@ -64,7 +64,7 @@
         var serialized = this._sessionData.srpChallenge;
         if (!serialized || serialized.M !== options.M)
           throw new Meteor.Error(403, "Incorrect password");
-        if (serialized.userId !== this.userId)
+        if (!EJSON.equals(serialized.userId, this.userId))
           // No monkey business!
           throw new Meteor.Error(403, "Incorrect password");
         // Only can use challenges once.
