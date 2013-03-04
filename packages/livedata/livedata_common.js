@@ -79,7 +79,7 @@ Meteor._parseDDP = function (stringMessage) {
 
   _.each(['fields', 'params', 'result'], function (field) {
     if (_.has(msg, field))
-      EJSON._adjustTypesFromJSONValue(msg[field]);
+      msg[field] = EJSON._adjustTypesFromJSONValue(msg[field]);
   });
 
   return msg;
@@ -105,7 +105,7 @@ Meteor._stringifyDDP = function (msg) {
   // adjust types to basic
   _.each(['fields', 'params', 'result'], function (field) {
     if (_.has(copy, field))
-      EJSON._adjustTypesToJSONValue(copy[field]);
+      copy[field] = EJSON._adjustTypesToJSONValue(copy[field]);
   });
   if (msg.id && typeof msg.id !== 'string') {
     throw new Error("Message id is not a string");

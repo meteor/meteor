@@ -5,6 +5,9 @@ Meteor.methods({
   echo: function (/* arguments */) {
     return _.toArray(arguments);
   },
+  echoOne: function (/*arguments*/) {
+    return arguments[0];
+  },
   exception: function (where, intended) {
     var shouldThrow =
       (Meteor.isServer && where === "server") ||

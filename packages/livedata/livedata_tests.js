@@ -57,12 +57,15 @@ Tinytest.add("livedata - methods with colliding names", function (test) {
 
 var echoTest = function (item) {
   return function (test, expect) {
-    if (Meteor.isServer)
+    if (Meteor.isServer) {
       test.equal(Meteor.call("echo", item), [item]);
+      test.equal(Meteor.call("echoOne", item), item);
+    }
     if (Meteor.isClient)
       test.equal(Meteor.call("echo", item), undefined);
 
     test.equal(Meteor.call("echo", item, expect(undefined, [item])), undefined);
+    test.equal(Meteor.call("echoOne", item, expect(undefined, item)), undefined);
   };
 };
 

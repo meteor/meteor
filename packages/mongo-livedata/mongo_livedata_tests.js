@@ -656,6 +656,47 @@ testAsyncMulti('mongo-livedata - document with binary data, ' + idGeneration, [
   }
 ]);
 
+testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, [
+  function (test, expect) {
+    var Dog = function (name, color) {
+      var self = this;
+      self.color = color;
+      self.name = name;
+    };
+    _.extend(Dog.prototype, {
+      getName: function () { return this.name;},
+      getColor: function () { return this.name;},
+      equals: function (other) { return other.name === this.name &&
+                                 other.color === this.color; },
+      toJSONValue: function () { return {color: this.color, name: this.name};},
+      typeName: function () { return "dog"; },
+      clone: function () { return new Dog(this.name, this.color); },
+      speak: function () { return "woof"; }
+    });
+    if (!EJSON._isCustomType(new Dog("a", "b")))
+        EJSON.addType("dog", function (o) { return new Dog(o.name, o.color);});
+    var collectionName = Random.id();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
+      Meteor.subscribe('c-' + collectionName);
+    }
+
+    var coll = new Meteor.Collection(collectionName, collectionOptions);
+    var docId;
+    var d = new Dog("reginald", "purple");
+    coll.insert({d: d}, expect(function (err, id) {
+      test.isFalse(err);
+      test.isTrue(id);
+      docId = id;
+      var cursor = coll.find();
+      test.equal(cursor.count(), 1);
+      var inColl = coll.findOne();
+      test.isTrue(inColl);
+      inColl && test.equal(inColl.d.speak(), "woof");
+    }));
+  }
+]);
+
 if (Meteor.isServer) {
   Tinytest.addAsync("mongo-livedata - id-based invalidation, " + idGeneration, function (test, onComplete) {
     var run = test.runId();

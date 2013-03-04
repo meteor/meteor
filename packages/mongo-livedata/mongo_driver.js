@@ -13,6 +13,23 @@ var MongoDB = __meteor_bootstrap__.require('mongodb');
 var Fiber = __meteor_bootstrap__.require('fibers');
 var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
 
+var replaceNames = function (filter, thing) {
+  if (typeof thing === "object") {
+    if (_.isArray(thing)) {
+      return _.map(thing, _.partial(replaceNames, filter));
+    }
+    var ret = {};
+    _.each(thing, function (value, key) {
+      ret[filter(key)] = replaceNames(filter, value);
+    });
+    return ret;
+  }
+  return thing;
+};
+
+var makeMongoLegal = function (name) { return "EJSON" + name; };
+var unmakeMongoLegal = function (name) { return name.substr(5); };
+
 var replaceMongoAtomWithMeteor = function (document) {
   if (document instanceof MongoDB.Binary) {
     var buffer = document.value(true);
@@ -20,6 +37,9 @@ var replaceMongoAtomWithMeteor = function (document) {
   }
   if (document instanceof MongoDB.ObjectID) {
     return new Meteor.Collection.ObjectID(document.toHexString());
+  }
+  if (document["EJSON$type"] && document["EJSON$value"]) {
+    return EJSON.fromJSONValue(replaceNames(unmakeMongoLegal, document));
   }
   return undefined;
 };
@@ -33,7 +53,11 @@ var replaceMeteorAtomWithMongo = function (document) {
   }
   if (document instanceof Meteor.Collection.ObjectID) {
     return new MongoDB.ObjectID(document.toHexString());
+  } else if (EJSON._isCustomType(document)) {
+    return replaceNames(makeMongoLegal, EJSON.toJSONValue(document));
   }
+  // It is not ordinarily possible to stick dollar-sign keys into mongo
+  // so we don't bother checking for things that need escaping at this time.
   return undefined;
 };
 
