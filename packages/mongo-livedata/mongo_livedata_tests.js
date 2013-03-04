@@ -692,7 +692,6 @@ testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, 
       test.equal(cursor.count(), 1);
       var inColl = coll.findOne();
       test.isTrue(inColl);
-      debugger;
       inColl && test.equal(inColl.d.speak(), "woof");
     }));
   }

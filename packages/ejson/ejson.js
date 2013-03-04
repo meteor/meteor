@@ -104,7 +104,10 @@ EJSON._isCustomType = function (obj) {
 var adjustTypesToJSONValue =
 EJSON._adjustTypesToJSONValue = function (obj) {
   if (obj === null)
-    return;
+    return null;
+  var maybeChanged = toJSONValueHelper(obj);
+  if (maybeChanged !== undefined)
+    return maybeChanged;
   _.each(obj, function (value, key) {
     if (typeof value !== 'object' && value !== undefined)
       return; // continue
@@ -117,6 +120,7 @@ EJSON._adjustTypesToJSONValue = function (obj) {
     // at this level.  recurse.
     adjustTypesToJSONValue(value);
   });
+  return obj;
 };
 
 // Either return the JSON-compatible version of the argument, or undefined (if
@@ -142,11 +146,16 @@ EJSON.toJSONValue = function (item) {
   return item;
 };
 
-//for both arrays and objects
+//for both arrays and objects. Tries its best to just
+// use the object you hand it, but may return something
+// different if the object you hand it itself needs changing.
 var adjustTypesFromJSONValue =
 EJSON._adjustTypesFromJSONValue = function (obj) {
   if (obj === null)
-    return;
+    return null;
+  var maybeChanged = fromJSONValueHelper(obj);
+  if (maybeChanged !== obj)
+    return maybeChanged;
   _.each(obj, function (value, key) {
     if (typeof value === 'object') {
       var changed = fromJSONValueHelper(value);
@@ -159,6 +168,7 @@ EJSON._adjustTypesFromJSONValue = function (obj) {
       adjustTypesFromJSONValue(value);
     }
   });
+  return obj;
 };
 
 // Either return the argument changed to have the non-json
@@ -212,6 +222,8 @@ EJSON.equals = function (a, b, options) {
   var keyOrderSensitive = !!(options && options.keyOrderSensitive);
   if (a === b)
     return true;
+  if (!a || !b) // if either one is falsy, they'd have to be === to be equal
+    return false;
   if (!(typeof a === 'object' && typeof b === 'object'))
     return false;
   if (a instanceof Date && b instanceof Date)

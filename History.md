@@ -1,13 +1,20 @@
 
 ## vNEXT
 
+* User documents have id's when onCreateUser and validateNewUser hooks run.
+
 * Removed all restrictions on EJSON types in MongoDB, even user-defined ones.
+
+* `coffeescript` package: Support literate Coffeescript files with the extension
+  `.litcoffee`.
 
 * Fixed bug where an empty `fields` object was sometimes passed to a `changed`
   callback of `Cursor.observeChanges`.
 
 * Fixed `{$type: 5}` selectors for binary values on browsers that do not support
   `Uint8Array`
+
+* Stop making `Session` available on the server; it's not very useful there.
 
 ## v0.5.7
 
