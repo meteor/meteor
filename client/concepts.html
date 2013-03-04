@@ -153,7 +153,7 @@ can be used from both client and server code.
     // server: populate collections with some initial documents
     Rooms.insert({name: "Conference Room A"});
     var myRooms = Rooms.find({}).fetch();
-    Messages.insert({text: "Hello world", room: myRooms[0].id});
+    Messages.insert({text: "Hello world", room: myRooms[0]._id});
     Parties.insert({name: "Super Bowl Party"});
 
 Each document set is defined by a publish function on the server.  The
@@ -164,7 +164,7 @@ case is to publish a database query.
     // server: publish all room documents
     Meteor.publish("all-rooms", function () {
       return Rooms.find(); // everything
-    );
+    });
 
     // server: publish all messages for a given room
     Meteor.publish("messages", function (roomId) {
@@ -377,7 +377,7 @@ queries are stopped, and they stop updating. For this reason, you never have to
 worry about the [zombie
 templates](http://lostechies.com/derickbailey/2011/09/15/zombies-run-managing-page-transitions-in-backbone-apps/)
 that plague hand-written update logic. To protect your elements from cleanup,
-just make sure that they on-screen before your code returns to the event loop,
+just make sure that they are on-screen before your code returns to the event loop,
 or before any call you make to [`Meteor.flush`](#meteor_flush).
 
 Another thorny problem in hand-written applications is element
@@ -574,10 +574,12 @@ Meteor environment in arbitrary ways. Some examples of packages are:
   it's faster to add a package.
 
 * The [underscore](#underscore) package extends both the
-  client and server environments.  Many of the core Meteor features,
-  including Minimongo, the Session object, and reactive Handlebars
-  templates, are implemented as internal packages automatically
-  included with every Meteor application.
+  client and server environments.
+
+Many of the core Meteor features,
+including Minimongo, the Session object, and reactive Handlebars
+templates, are implemented as internal packages automatically
+included with every Meteor application.
 
 You can see a list of available packages
 with [`meteor list`](#meteorlist), add packages to your project
