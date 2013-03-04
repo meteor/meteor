@@ -14,6 +14,8 @@
 * Fixed `{$type: 5}` selectors for binary values on browsers that do not support
   `Uint8Array`
 
+* Stop making `Session` available on the server; it's not very useful there.
+
 ## v0.5.7
 
 * The DDP wire protocol has been redesigned.
