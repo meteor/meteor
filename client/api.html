@@ -136,7 +136,7 @@ function is rerun with the new value.
 
 {{> api_box subscription_onStop}}
 
-If you call [`observe`](#observe) or [`observeChanges`](#observeChanges) in your
+If you call [`observe`](#observe) or [`observeChanges`](#observe_changes) in your
 publish handler, this is the place to stop the observes.
 
 {{> api_box subscription_error}}
@@ -900,7 +900,7 @@ Establishes a *live query* that invokes callbacks when the result of
 the query changes. The callbacks receive the entire contents of the
 document that was affected, as well as its old contents, if
 applicable. If you only need to receive the fields that changed, see
-[`observeChanges`](#cursor_observe_changes).
+[`observeChanges`](#observe_changes).
 
 `callbacks` may have the following functions as properties:
 
@@ -957,7 +957,7 @@ down the query. **The query will run forever until you call this.**
 {{> api_box cursor_observe_changes}}
 
 Establishes a *live query* that invokes callbacks when the result of
-the query changes. In contrast to [`observe`](#cursor_observe),
+the query changes. In contrast to [`observe`](#observe),
 `observeChanges` provides only the difference between the old and new
 result set, not the entire contents of the document that changed.
 
