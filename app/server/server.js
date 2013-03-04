@@ -192,9 +192,9 @@ var run = function () {
   // to rewrite URLs of static assets to include a query parameter to
   // bust caches. That way we can both get good caching behavior and
   // allow users to change assets without delay.
-  // https://app.asana.com/0/2604819267102/4310170949669
+  // https://github.com/meteor/meteor/issues/773
   app.use(gzippo.staticGzip(path.join(bundle_dir, 'static'),
-                            {clientMaxAge: 1000 * 60 * 60 * 24 * 7}));
+                            {clientMaxAge: 1000 * 60 * 60 * 24}));
 
   // read bundle config file
   var info_raw =
