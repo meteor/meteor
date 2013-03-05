@@ -2241,9 +2241,9 @@ If you nest calls to `Deps.run`, then when the outer call stops or reruns, the i
 
 <h2 id="deps_computation"><span>Deps.Computation</span></h2>
 
-A Computation object represents code that is repeatedly rerun in response to reactive data changes.  Computations don't have return values, they just perform actions, such as rerendering a template on the screen.  They are created using [`Deps.run`](#deps_run).  Use [`stop`](#computation_stop) to prevent further rerunning of a computation.
+A Computation object represents code that is repeatedly rerun in response to reactive data changes.  Computations don't have return values, they just perform actions, such as rerendering a template on the screen.  Computations are created using [`Deps.run`](#deps_run).  Use [`stop`](#computation_stop) to prevent further rerunning of a computation.
 
-Each time the computation runs, it may access various reactive data sources that serve as inputs to the computation, which are called its dependencies.  At some future time, one of these dependencies may trigger the computation to be rerun by invalidating it.  When this happens, the computation will be rerun at next flush time, at which point the old dependencies are cleared.
+Each time a computation runs, it may access various reactive data sources that serve as inputs to the computation, which are called its dependencies.  At some future time, one of these dependencies may trigger the computation to be rerun by invalidating it.  When this happens, the computation will be rerun at next flush time, at which point the old dependencies are cleared.
 
 The *current computation* ([`Deps.currentComputation`](#deps_current_computation)) is the computation that is currently being run or rerun, and the one that gains a dependency when a reactive data source is accessed.  Data sources are responsible for tracking these dependencies using [`Deps.Variable`](#deps_variable) objects.
 
@@ -2265,107 +2265,6 @@ Example:
         y.finalize();
       });
     }
-
-XXXXXXXX
-
-Example:
-
-    // Print the current username to the console.  Will re-run every time
-    // the username changes.
-    var logCurrentUsername = function () {
-      var update = function () {
-        var ctx = new Meteor.deps.Context();  // invalidation context
-        ctx.onInvalidate(update);             // rerun update() on invalidation
-        ctx.run(function () {
-          var username = Session.get("username");
-          console.log("The current username is now", username);
-        });
-      };
-      update();
-    };
-
-    // Example use. Since Session is reactive (meaning that it knows how
-    // to use Meteor.deps to record its dependencies), logCurrentUsername
-    // will be re-run whenever Session.set is called for "username".
-    Session.set("username", "matt");
-    logCurrentUsername(); // prints matt
-    Session.set("username", "geoff"); // immediately prints geoff
-    Session.set("username", "geoff"); // won't print: Session won't trigger
-                                      // invalidation if the value is the same.
-
-{{> api_box invalidate }}
-
-If this function has already been called on this context, it does
-nothing (a mathematician would say that it is "idempotent"). Otherwise
-it calls each [`onInvalidate`](#oninvalidate) function registered on
-the context.
-
-The functions aren't called immediately &mdash; instead, they will be
-called the next time you call [`Meteor.flush`](#meteor_flush). This function
-just adds the context to the flush list and is guaranteed to do nothing
-else just yet.
-
-If you don't call [`Meteor.flush`](#meteor_flush) explicitly, it will be called
-for you automatically when your code is done running (by setting a
-`setTimeout` timer with a delay of zero).
-
-Example:
-
-    // Create a simple class called Weather that tracks the current
-    // temperature. The temperature can be read reactively.
-    var Weather = function () {
-      this.temperature = 60;
-      this.listeners = {};
-    };
-
-    // Function to get the temperature (and, if called in a reactive
-    // context, start listening for changes to the temperature)
-    Weather.prototype.getTemp = function () {
-      var context = Meteor.deps.Context.current;
-
-      // If we're inside a context, and it's not yet listening to
-      // temperature changes..
-      if (context && !this.listeners[context.id]) {
-        // .. add it to our list of contexts that care about the temperature ..
-        this.listeners[context.id] = context;
-
-        // .. and remember to take it off our list when it goes away.
-        var self = this;
-        context.onInvalidate(function () {
-          delete self.listeners[context.id];
-        });
-      }
-
-      // return the current temperature, whether or not in a reactive context.
-      return this.temperature;
-    };
-
-    // Function to set the temperature, and notify anyone that might be
-    // listening for temperature updates.
-    Weather.prototype.setTemp = function (newTemp) {
-      if (this.temperature === newTemp)
-        return; // don't want to trigger invalidation if there's no change.
-
-      // Set the temperature
-      this.temperature = newTemp;
-
-      // Notify any contexts that care about temperature changes
-      for (var contextId in this.listeners)
-        // This will trigger the onInvalidate function above, but not
-        // immediately -- only when Meteor.flush() is called, or at the end
-        // of the event loop. So we know that this.listeners will be
-        // emptied, but it won't change while we're trying to loop over it.
-        this.listeners[contextId].invalidate();
-    };
-
-{{> api_box current }}
-
-This is a global variable that is set by [`run`](#run).
-
-If you have a background in Lisp or programming language theory, you
-might think of it as a dynamically scoped ("special") variable. (That
-just means that [`run`](#run) sets it, runs some user-supplied code, and
-then restores its previous value.)
 
 {{> api_box flush }}
 
