@@ -22,11 +22,16 @@ if [ "$1" == "--global" ]; then
     METEOR=/usr/local/bin/meteor
 fi
 
-# if we're running with a warehouse, specific a release so that we
-# make sure to test fetching packages. notably this doesn't test engine
-# springboarding
 if [ "$TEST_WAREHOUSE_DIR" ]; then
-    METEOR="$METEOR --release=db0fb17e372464dcba9a39f75c2164c46dd37b08" # some random non-official release
+    # The point of this testing script is to test the engine, so we make
+    # sure (in lib/meteor.js) to not springboard if TEST_WAREHOUSE_DIR is
+    # set. This is a random release that we pass to --release on all
+    # commands (in case TEST_WAREHOUSE_DIR) is set. This could break if
+    # this specified release is incompatible with the current engine, in
+    # which case you can build and publish a new release and set it here.
+    TEST_RELEASE="db0fb17e372464dcba9a39f75c2164c46dd37b08"
+
+    METEOR="$METEOR --release=$TEST_RELEASE" # some random non-official release
 fi
 
 TMPDIR=`mktemp -d -t meteor-cli-test-XXXXXXXX`
@@ -40,7 +45,7 @@ set -e -x
 ## Begin actual tests
 
 if [ "$TEST_WAREHOUSE_DIR" ]; then
-    $METEOR --version | grep db0fb17e372464dcba9a39f75c2164c46dd37b08 >> $OUTPUT
+    $METEOR --version | grep $TEST_RELEASE >> $OUTPUT
 else
     $METEOR --version | grep checkout >> $OUTPUT
 fi
