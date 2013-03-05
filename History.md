@@ -11,6 +11,10 @@
 * `coffeescript` package: Support literate Coffeescript files with the extension
   `.litcoffee`.
 
+* If you call `observe` or `observeChanges` on a cursor created with
+  `Collection.find(query, {reactive: false})`, it now only calls initial add
+  callbacks and does not continue watching the query.
+
 * Fixed bug where an empty `fields` object was sometimes passed to a `changed`
   callback of `Cursor.observeChanges`.
 

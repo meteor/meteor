@@ -224,10 +224,8 @@ _.extend(LocalCollection.Cursor.prototype, {
     if (!ordered && (self.skip || self.limit))
       throw new Error("must use ordered observe with skip or limit");
 
-    var qid = self.collection.next_qid++;
-
     // XXX merge this object w/ "this" Cursor.  they're the same.
-    var query = self.collection.queries[qid] = {
+    var query = {
       selector_f: self.selector_f, // not fast pathed
       sort_f: ordered && self.sort_f,
       results_snapshot: null,
@@ -235,6 +233,14 @@ _.extend(LocalCollection.Cursor.prototype, {
       cursor: this,
       observeChanges: options.observeChanges
     };
+    var qid;
+
+    // Non-reactive queries call added[Before] and then never call anything
+    // else.
+    if (self.reactive) {
+      qid = self.collection.next_qid++;
+      self.collection.queries[qid] = query;
+    }
     query.results = self._getRawObjects(ordered);
     if (self.collection.paused)
       query.results_snapshot = (ordered ? [] : {});
@@ -273,7 +279,8 @@ _.extend(LocalCollection.Cursor.prototype, {
     _.extend(handle, {
       collection: self.collection,
       stop: function () {
-        delete self.collection.queries[qid];
+        if (self.reactive)
+          delete self.collection.queries[qid];
       }
     });
     return handle;
