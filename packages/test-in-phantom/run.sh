@@ -12,6 +12,8 @@ cat > settings.json <<EOF
 }
 EOF
 
+export PATH=$METEOR_HOME:PATH
+
 cat settings.json
 meteor --tests=test-in-phantom --settings=settings.json &
 METEOR_PID=$!
