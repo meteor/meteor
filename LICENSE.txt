@@ -286,30 +286,13 @@ All rights reserved.
 
 ----------
 optimist: https://github.com/substack/node-optimist
-----------
-
-Copyright 2010 James Halliday (mail@substack.net)
-
-
-----------
 node-mkdirp: https://github.com/substack/node-mkdirp
-----------
-
-Copyright 2010 James Halliday (mail@substack.net)
-
-
-----------
 wordwrap: https://github.com/substack/node-wordwrap
-----------
-
-Copyright 2011 James Halliday (mail@substack.net)
-
-
-----------
 node-archy: https://github.com/substack/node-archy
+node-shell-quote: https://github.com/substack/node-shell-quote
 ----------
 
-Copyright 2012 James Halliday (mail@substack.net)
+Copyright 2010, 2011, 2012 James Halliday (mail@substack.net)
 
 
 ----------
@@ -354,6 +337,14 @@ node-form-data: https://github.com/felixge/node-form-data
 ----------
 
 Copyright (c) 2012 Felix Geisendörfer (felix@debuggable.com) and contributors
+
+
+----------
+node-kexec: https://github.com/jprichardson/node-kexec
+----------
+
+Copyright (c) 2011-2012 JP Richardson
+
 
 
 ==============
@@ -420,6 +411,20 @@ bson: https://github.com/mongodb/js-bson
 ----------
 
 Copyright (c) 2012 Christian Amor Kvalheim <christkv@gmail.com>
+
+
+----------
+websocket: https://github.com/Worlize/WebSocket-Node/blob/master/LICENSE
+----------
+
+Brian McKelvey
+
+
+----------
+amdefine: https://github.com/jrburke/amdefine
+----------
+
+Copyright (c) 2011, The Dojo Foundation
 
 
 
@@ -579,11 +584,13 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 node-tar: https://github.com/isaacs/node-tar
 fstream: https://github.com/isaacs/fstream
 fstream-npm: https://github.com/isaacs/fstream-npm
+fstream-ignore: https://github.com/isaacs/fstream-ignore
 read: https://github.com/isaacs/read
 block-stream: https://github.com/isaacs/block-stream
 node-glob: https://github.com/isaacs/node-glob
 chownr: https://github.com/isaacs/chownr
 uid-number: https://github.com/isaacs/uid-number
+sigmund: https://github.com/isaacs/sigmund
 ----------
 
 Copyright (c) Isaac Z. Schlueter
@@ -657,7 +664,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 ----------
-d3: https://github.com/mbostock/d3
+D3: https://github.com/mbostock/d3
 ----------
 
 Copyright (c) 2012, Michael Bostock
@@ -756,10 +763,40 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 ----------
-D3: http://d3js.org/
+ycssmin: https://github.com/yui/ycssmin
 ----------
 
-Copyright (c) 2012, Michael Bostock
+Copyright 2012 Yahoo! Inc.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of the Yahoo! Inc. nor the
+      names of its contributors may be used to endorse or promote products
+      derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL YAHOO! INC. BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+----------
+source-map: https://github.com/mozilla/source-map
+----------
+
+Copyright (c) 2009-2011, Mozilla Foundation and contributors
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -772,19 +809,20 @@ modification, are permitted provided that the following conditions are met:
   this list of conditions and the following disclaimer in the documentation
   and/or other materials provided with the distribution.
 
-* The name Michael Bostock may not be used to endorse or promote products
-  derived from this software without specific prior written permission.
+* Neither the names of the Mozilla Foundation nor the names of project
+  contributors may be used to endorse or promote products derived from this
+  software without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL MICHAEL BOSTOCK BE LIABLE FOR ANY DIRECT,
-INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
-OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
-EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
@@ -834,6 +872,7 @@ mimelib: https://github.com/andris9/mimelib
 mailcomposer: https://github.com/andris9/mailcomposer
 simplesmtp: https://github.com/andris9/simplesmtp
 rai: https://github.com/andris9/rai
+xoauth2: https://github.com/andris9/xoauth2
 ----------
 
 Copyright (c) 2012 Andris Reinman
@@ -874,6 +913,26 @@ By Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/)
    TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
 
   0. You just DO WHAT THE FUCK YOU WANT TO.
+
+
+----------
+opener: https://github.com/domenic/opener
+----------
+
+            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+                    Version 2, December 2004
+
+ Copyright (C) 2012 Domenic Denicola <domenic@domenicdenicola.com>
+
+ Everyone is permitted to copy and distribute verbatim or modified
+ copies of this license document, and changing it is allowed as long
+ as the name is changed.
+
+            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+   TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
+
+  0. You just DO WHAT THE FUCK YOU WANT TO.
+
 
 
 ----------
