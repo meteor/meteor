@@ -58,7 +58,7 @@ LocalCollection.MinimongoError.prototype = new Error;
 //   (in the first form you're beholden to key enumeration order in
 //   your javascript VM)
 //
-// reactive: if given, and false, don't register with Meteor.deps (default
+// reactive: if given, and false, don't register with Deps (default
 // is true)
 //
 // XXX possibly should support retrieving a subset of fields? and
@@ -103,8 +103,8 @@ LocalCollection.Cursor = function (collection, selector, options) {
   self.db_objects = null;
   self.cursor_pos = 0;
 
-  // by default, queries register w/ Meteor.deps when it is available.
-  if (typeof Meteor === "object" && Meteor.deps)
+  // by default, queries register w/ Deps when it is available.
+  if (typeof Deps !== "undefined")
     self.reactive = (options.reactive === undefined) ? true : options.reactive;
 };
 
@@ -352,7 +352,7 @@ LocalCollection.Cursor.prototype._depend = function (changers) {
   if (Deps.active) {
     var v = new Deps.Variable;
     Deps.depend(v);
-    var notifyChange = _.bind(v.change, v);
+    var notifyChange = _.bind(v.changed, v);
 
     var options = {_suppress_initial: true};
     _.each(['added', 'changed', 'removed', 'addedBefore', 'movedBefore'],
