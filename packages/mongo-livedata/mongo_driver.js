@@ -398,13 +398,20 @@ Cursor.prototype._publishCursor = function (sub) {
     }
   });
 
-  // observeChanges only returns after the initial added callbacks have run.
-  // mark subscription as ready.
-  sub.ready();
+  // We don't call sub.ready() here: it gets called in livedata_server, after
+  // possibly calling _publishCursor on multiple returned cursors.
 
   // register stop callback (expects lambda w/ no args).
   sub.onStop(function () {observeHandle.stop();});
 };
+
+// Used to guarantee that publish functions return at most one cursor per
+// collection. Private, because we might later have cursors that include
+// documents from multiple collections somehow.
+Cursor.prototype._getCollectionName = function () {
+  var self = this;
+  return self._cursorDescription.collectionName;
+}
 
 Cursor.prototype.observe = function (callbacks) {
   var self = this;

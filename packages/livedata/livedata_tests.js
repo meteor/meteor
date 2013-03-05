@@ -507,6 +507,30 @@ if (Meteor.isClient) {
         conn._stream.forceDisconnect();
       }
     ];})());
+
+    testAsyncMulti("livedata - publish multiple cursors", [
+      function (test, expect) {
+        Meteor.subscribe("multiPublish", {normal: 1}, {
+          onReady: expect(function () {
+            test.equal(One.find().count(), 2);
+            test.equal(Two.find().count(), 3);
+          }),
+          onError: failure()
+        });
+      },
+      function (test, expect) {
+        Meteor.subscribe("multiPublish", {dup: 1}, {
+          onReady: failure(),
+          onError: expect(failure(test, 500, "Internal server error"))
+        });
+      },
+      function (test, expect) {
+        Meteor.subscribe("multiPublish", {notCursor: 1}, {
+          onReady: failure(),
+          onError: expect(failure(test, 500, "Internal server error"))
+        });
+      }
+    ]);
 }
 
 // XXX some things to test in greater detail:

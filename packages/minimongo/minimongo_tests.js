@@ -1411,6 +1411,14 @@ _.each([true, false], function (ordered) {
     c.update(4, {$set: {eek: 5}});
     expect('cb4_');
     handle.stop();
+
+    // Test observe with reactive: false.
+    handle = c.find({tags: "flower"}, {reactive: false}).observe(makecb('c'));
+    expect('ac4_ac5_');
+    // This insert shouldn't trigger a callback because it's not reactive.
+    c.insert({_id: 6, name: "river", tags: ["flower"]});
+    expect('');
+    handle.stop();
   });
 });
 

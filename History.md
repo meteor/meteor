@@ -1,6 +1,9 @@
 
 ## vNEXT
 
+* Publish functions may now return an array of cursors to publish. Currently,
+  the cursors must all be from different collections.
+
 * User documents have id's when onCreateUser and validateNewUser hooks run.
 
 * Removed all restrictions on EJSON types in MongoDB, even user-defined ones.
@@ -8,11 +11,18 @@
 * `coffeescript` package: Support literate Coffeescript files with the extension
   `.litcoffee`.
 
+* If you call `observe` or `observeChanges` on a cursor created with
+  `Collection.find(query, {reactive: false})`, it now only calls initial add
+  callbacks and does not continue watching the query.
+
 * Fixed bug where an empty `fields` object was sometimes passed to a `changed`
   callback of `Cursor.observeChanges`.
 
 * Fixed `{$type: 5}` selectors for binary values on browsers that do not support
   `Uint8Array`
+
+* In an event handler, if the data context is falsey, default it to `{}` rather
+  than to the global object.
 
 * Stop making `Session` available on the server; it's not very useful there.
 

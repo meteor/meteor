@@ -801,7 +801,7 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
           }
 
           // Found a matching handler. Call it.
-          var eventData = Spark.getDataContext(event.currentTarget);
+          var eventData = Spark.getDataContext(event.currentTarget) || {};
           var landmarkRange =
                 findParentOfType(Spark._ANNOTATION_LANDMARK, range);
           var landmark = (landmarkRange && landmarkRange.landmark);
