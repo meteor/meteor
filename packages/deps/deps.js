@@ -25,7 +25,27 @@
     }
   };
 
+  // `new Deps.Computation` is private API, but accessible via an
+  // underscore-preceded call.  The contract is clean and there
+  // are conceivable uses -- e.g. other utilities like `atFlush` --
+  // but since 99% of the time you want `Deps.run`, not this,
+  // the constructor is undocumented and throws an exception if
+  // invoked from outside this file.
+  var privateNewComputation = false;
+  Deps._newComputation = function (f) {
+    privateNewComputation = true;
+    try {
+      return new Deps.Computation(f);
+    } finally {
+      privateNewComputation = false;
+    }
+  };
+
   Deps.Computation = function (f) {
+    if (! privateNewComputation)
+      throw new Error(
+        "Deps.Computation constructor is private; use Deps.run");
+
     this._id = nextId++;
     this._callbacks = {
       onInvalidate: [],
@@ -112,7 +132,7 @@
       }
     },
 
-    _service: function () {
+    _process: function () {
       while (this.invalidated) {
         this._callCallbacks('onInvalidate');
         if (! this.stopped) {
@@ -199,7 +219,7 @@
         pendingComputations = [];
 
         for (var i = 0, comp; comp = comps[i]; i++)
-          comp._service();
+          comp._process();
       }
 
       inFlush = false;
@@ -214,7 +234,7 @@
     // Additionally, links the computation to the current computation
     // so that it is stopped if the current computation is invalidated.
     run: function (f) {
-      var c = new Deps.Computation(f);
+      var c = Deps._newComputation(f);
 
       if (Deps.active) {
         c._parent = Deps.currentComputation;
@@ -264,7 +284,7 @@
     },
 
     atFlush: function (f) {
-      new Deps.Computation(function (c) {
+      Deps._newComputation(function (c) {
         c.onInvalidate(f);
         c.stop();
       });
