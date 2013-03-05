@@ -521,15 +521,15 @@ if (Meteor.isClient) {
       function (test, expect) {
         Meteor.subscribe("multiPublish", {dup: 1}, {
           onReady: failure(),
-          onError: expect(failure(test, 500, "Publish function returned multiple cursors for one collection"))
+          onError: expect(failure(test, 500, "Internal server error"))
         });
       },
       function (test, expect) {
         Meteor.subscribe("multiPublish", {notCursor: 1}, {
           onReady: failure(),
-          onError: expect(failure(test, 500, "Pulish function returned an array of non-Cursors"))
+          onError: expect(failure(test, 500, "Internal server error"))
         });
-      },
+      }
     ]);
 }
 

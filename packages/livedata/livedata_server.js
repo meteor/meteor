@@ -819,10 +819,11 @@ _.extend(Meteor._LivedataSubscription.prototype, {
       return;
     }
 
-   // SPECIAL CASE: Instead of writing their own callbacks that invoke
+    // SPECIAL CASE: Instead of writing their own callbacks that invoke
     // this.added/changed/ready/etc, the user can just return a collection
-    // cursor or array of cursors from the publish function; we call its _publishCursor method which
-    // starts observing the cursor and publishes the results.
+    // cursor or array of cursors from the publish function; we call their
+    // _publishCursor method which starts observing the cursor and publishes the
+    // results. Note that _publishCursor does NOT call ready().
     //
     // XXX This uses an undocumented interface which only the Mongo cursor
     // interface publishes. Should we make this interface public and encourage
@@ -834,33 +835,39 @@ _.extend(Meteor._LivedataSubscription.prototype, {
     //       reactiveThingy.publishMe();
     //     });
     //   };
-    if (res) {
-      if (res._publishCursor) {
-        res._publishCursor(self);
-        // _publishCursor only returns after the initial added callbacks have run.
-        // mark subscription as ready.
-        self.ready();
-      } else if (_.isArray(res)) {
-        // check all the elements are cursors
-        if (! _.every(res, function (cur) { return cur && cur._publishCursor; })) {
-          self.error(new Meteor.Error(500, "Pulish function returned an array of non-Cursors"));
+    var isCursor = function (c) {
+      return c && c._publishCursor;
+    };
+    if (isCursor(res)) {
+      res._publishCursor(self);
+      // _publishCursor only returns after the initial added callbacks have run.
+      // mark subscription as ready.
+      self.ready();
+    } else if (_.isArray(res)) {
+      // check all the elements are cursors
+      if (! _.all(res, isCursor)) {
+        self.error(new Error("Publish function returned an array of non-Cursors"));
+        return;
+      }
+      // find duplicate collection names
+      // XXX we should support overlapping cursors, but that would require the
+      // merge box to allow overlap within a subscription
+      var collectionNames = {};
+      for (var i = 0; i < res.length; ++i) {
+        var collectionName = res[i]._getCollectionName();
+        if (_.has(collectionNames, collectionName)) {
+          self.error(new Error(
+            "Publish function returned multiple cursors for collection " +
+              collectionName));
           return;
         }
-        // find duplicate collection names
-        var dups = [];
-        _.each(_.countBy(res, function (cur) { return cur._getCollectionName(); }),
-          function (count, col) {
-            count > 1 && dups.push(col);
-          });
+        collectionNames[collectionName] = true;
+      };
 
-        if (dups.length === 0) { // no duplicates
-          _.each(res, function (cur) {
-            cur._publishCursor(self);
-          });
-          self.ready();
-        } else
-          self.error(new Meteor.Error(500, "Publish function returned multiple cursors for one collection", dups));
-      }
+      _.each(res, function (cur) {
+        cur._publishCursor(self);
+      });
+      self.ready();
     }
   },
 

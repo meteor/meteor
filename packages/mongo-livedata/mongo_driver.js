@@ -398,13 +398,16 @@ Cursor.prototype._publishCursor = function (sub) {
     }
   });
 
+  // We don't call sub.ready() here: it gets called in livedata_server, after
+  // possibly calling _publishCursor on multiple returned cursors.
+
   // register stop callback (expects lambda w/ no args).
   sub.onStop(function () {observeHandle.stop();});
 };
 
-// When you call Meteor.publish() with a function that returns an array of Cursor, we need
-// to check uniqueness of Cursor for each collection in that array. We can accomplish it through
-// Cursor collection name comparison.
+// Used to guarantee that publish functions return at most one cursor per
+// collection. Private, because we might later have cursors that include
+// documents from multiple collections somehow.
 Cursor.prototype._getCollectionName = function () {
   var self = this;
   return self._cursorDescription.collectionName;

@@ -294,24 +294,28 @@ if (Meteor.isServer) {
   Two.insert({name: "value5"});
 
   Meteor.publish("multiPublish", function (options) {
-    if (options.normal)
+    if (options.normal) {
       return [
         One.find(),
         Two.find()
       ];
-    else if (options.dup)
+    } else if (options.dup) {
+      // Suppress the log of the expected internal error.
+      Meteor._suppress_log(1);
       return [
         One.find(),
         One.find({name: "value2"}), // multiple cursors for one collection - error
         Two.find()
       ];
-    else if (options.notCursor)
+    } else if (options.notCursor) {
+      // Suppress the log of the expected internal error.
+      Meteor._suppress_log(1);
       return [
         One.find(),
         "not a cursor",
         Two.find()
       ];
-    else
+    } else
       throw "unexpected options";
   });
 }
