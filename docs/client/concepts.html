@@ -45,8 +45,8 @@ create a nested tree of separate files, or anything in between.
 
 Files outside the `client`, `server` and `tests` subdirectories are loaded on
 both the client and the server!  That's the place for model definitions and
-other functions.  Meteor provides the variables [`isClient` and
-`isServer`](#meteor_isclient) so that your code can alter its behavior depending
+other functions.  Meteor provides the variables [`isClient`](#meteor_isclient) and
+[`isServer`](#meteor_isserver) so that your code can alter its behavior depending
 on whether it's running on the client or the server. (Files in directories named
 `tests` are not loaded anywhere.)
 
