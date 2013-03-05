@@ -43,10 +43,17 @@ To publish records to clients, call `Meteor.publish` on the server with
 two parameters: the name of the record set, and a *publish function*
 that Meteor will call each time a client subscribes to the name.
 
-Publish functions can return an instance or array of
+Publish functions can return a
 [`Collection.Cursor`](#meteor_collection_cursor), in which case Meteor
-will publish that cursor's documents. You can return only one cursor
-for each collection when returning an array of cursors.
+will publish that cursor's documents. You can also return an array of
+`Collection.Cursor`s, in which case Meteor will publish all of the
+cursors.
+
+{{#warning}}
+If you return multiple cursors in an array, they currently must all be from
+different collections. We hope to lift this restriction in a future release.
+cursors.
+{{/warning}}
 
     // server: publish the rooms collection, minus secret info.
     Meteor.publish("rooms", function () {
@@ -61,7 +68,7 @@ for each collection when returning an array of cursors.
     });
 
     // publish dependent documents and simulate joins
-    Meteor.publish("room", function (roomId) {
+    Meteor.publish("roomAndMessages", function (roomId) {
       return [
         Rooms.find({_id: roomId}, {fields: {secretInfo: 0}}),
         Messages.find({roomId: roomId})
