@@ -45,7 +45,15 @@ that Meteor will call each time a client subscribes to the name.
 
 Publish functions can return a
 [`Collection.Cursor`](#meteor_collection_cursor), in which case Meteor
-will publish that cursor's documents.
+will publish that cursor's documents. You can also return an array of
+`Collection.Cursor`s, in which case Meteor will publish all of the
+cursors.
+
+{{#warning}}
+If you return multiple cursors in an array, they currently must all be from
+different collections. We hope to lift this restriction in a future release.
+cursors.
+{{/warning}}
 
     // server: publish the rooms collection, minus secret info.
     Meteor.publish("rooms", function () {
@@ -57,6 +65,14 @@ will publish that cursor's documents.
     // are merged together into the same documents in the Rooms collection.
     Meteor.publish("adminSecretInfo", function () {
       return Rooms.find({admin: this.userId}, {fields: {secretInfo: 1}});
+    });
+
+    // publish dependent documents and simulate joins
+    Meteor.publish("roomAndMessages", function (roomId) {
+      return [
+        Rooms.find({_id: roomId}, {fields: {secretInfo: 0}}),
+        Messages.find({roomId: roomId})
+      ];
     });
 
 Otherwise, the publish function should call the functions
@@ -952,6 +968,9 @@ or more times to deliver the initial results of the query.
 `observe` returns a live query handle, which is an object with a `stop` method.
 Call `stop` with no arguments to stop calling the callback functions and tear
 down the query. **The query will run forever until you call this.**
+(If the cursor was created with the option `reactive` set to false, it will
+only deliver the initial results and will not call any further callbacks;
+it is not necessary to call `stop` on the handle.)
 
 
 {{> api_box cursor_observe_changes}}
@@ -1002,6 +1021,9 @@ zero or more times to deliver the initial results of the query.
 `observeChanges` returns a live query handle, which is an object with a `stop`
 method.  Call `stop` with no arguments to stop calling the callback functions
 and tear down the query. **The query will run forever until you call this.**
+(If the cursor was created with the option `reactive` set to false, it will
+only deliver the initial results and will not call any further callbacks;
+it is not necessary to call `stop` on the handle.)
 
 {{#note}}
 Unlike `observe`, `observeChanges` does not provide absolute position
