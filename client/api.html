@@ -968,6 +968,9 @@ or more times to deliver the initial results of the query.
 `observe` returns a live query handle, which is an object with a `stop` method.
 Call `stop` with no arguments to stop calling the callback functions and tear
 down the query. **The query will run forever until you call this.**
+(If the cursor was created with the option `reactive` set to false, it will
+only deliver the initial results and will not call any further callbacks;
+it is not necessary to call `stop` on the handle.)
 
 
 {{> api_box cursor_observe_changes}}
@@ -1018,6 +1021,9 @@ zero or more times to deliver the initial results of the query.
 `observeChanges` returns a live query handle, which is an object with a `stop`
 method.  Call `stop` with no arguments to stop calling the callback functions
 and tear down the query. **The query will run forever until you call this.**
+(If the cursor was created with the option `reactive` set to false, it will
+only deliver the initial results and will not call any further callbacks;
+it is not necessary to call `stop` on the handle.)
 
 {{#note}}
 Unlike `observe`, `observeChanges` does not provide absolute position
