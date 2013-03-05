@@ -724,24 +724,16 @@ Template.api.fieldspecifiers = {
   name: "Field Specifiers"
 };
 
-Template.api.Context = {
-  id: "context",
-  name: "new Meteor.deps.Context",
-  locus: "Client",
-  descr: ["Create an invalidation context. Invalidation contexts are used to run a piece of code, and record its dependencies so it can be rerun later if one of its inputs changes.", "An invalidation context is basically just a list of callbacks for an event that can fire only once. The [`onInvalidate`](#oninvalidate) method adds a callback to the list, and the [`invalidate`](#invalidate) method fires the event."]
-};
+// Template.api.Computation = {
+//   id: "computation",
+//   name: "new Deps.Computation(runFunc)",
+//   locus: "Client",
+//   descr: ["Create and run a new computation.  Use [`Deps.run`](#deps_run) in preference to this constructor."
+//           + ""
+//           + "Computations represent code that must be rerun when data changes that it depends on.  When a computation runs, any reactive data sources that it accesses are considered dependencies, which may later invalidate the computation, causing it to be rerun.
 
-Template.api.run = {
-  id: "run",
-  name: "<em>context</em>.run(func)",
-  locus: "Client",
-  descr: ["Run some code inside an evaluation context."],
-  args: [
-    {name: "func",
-     type: "Function",
-     descr: "The code to run"}
-  ]
-};
+//     "Create an invalidation context. Invalidation contexts are used to run a piece of code, and record its dependencies so it can be rerun later if one of its inputs changes.", "An invalidation context is basically just a list of callbacks for an event that can fire only once. The [`onInvalidate`](#oninvalidate) method adds a callback to the list, and the [`invalidate`](#invalidate) method fires the event."]
+// };
 
 Template.api.onInvalidate = {
   id: "oninvalidate",
@@ -769,15 +761,15 @@ Template.api.current = {
   descr: ["The current [`invalidation context`](#context), or `null` if not being called from inside [`run`](#run)."]
 };
 
-Template.api.autorun = {
-  id: "meteor_autorun",
-  name: "Meteor.autorun(func)",
+Template.api.deps_run = {
+  id: "deps_run",
+  name: "Deps.run(func)",
   locus: "Client",
-  descr: ["Run a function and rerun it whenever its dependencies change. Returns a handle that provides a `stop` method, which will prevent further reruns."],
+  descr: ["Run a function now and rerun it later whenever its dependencies change. Returns a Computation object that can be used to stop or observe the rerunning."],
   args: [
     {name: "func",
      type: "Function",
-     descr: "The function to run. It receives one argument: the same handle that `Meteor.autorun` returns."}
+     descr: "The function to run. It receives one argument: the Computation object that will be returned."}
   ]
 };
 
