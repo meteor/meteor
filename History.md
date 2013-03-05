@@ -21,6 +21,9 @@
 * Fixed `{$type: 5}` selectors for binary values on browsers that do not support
   `Uint8Array`
 
+* In an event handler, if the data context is falsey, default it to `{}` rather
+  than to the global object.
+
 * Stop making `Session` available on the server; it's not very useful there.
 
 ## v0.5.7
