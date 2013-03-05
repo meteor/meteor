@@ -1,6 +1,9 @@
 
 ## vNEXT
 
+* Publish functions may now return an array of cursors to publish. Currently,
+  the cursors must all be from different collections.
+
 * User documents have id's when onCreateUser and validateNewUser hooks run.
 
 * Removed all restrictions on EJSON types in MongoDB, even user-defined ones.
