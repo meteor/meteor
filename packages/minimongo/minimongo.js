@@ -214,7 +214,7 @@ LocalCollection.LiveResultsSet = function () {};
 _.extend(LocalCollection.Cursor.prototype, {
   observe: function (options) {
     var self = this;
-    return  LocalCollection._observeFromObserveChanges(self, options);
+    return LocalCollection._observeFromObserveChanges(self, options);
   },
   observeChanges: function (options) {
     var self = this;
@@ -283,6 +283,18 @@ _.extend(LocalCollection.Cursor.prototype, {
           delete self.collection.queries[qid];
       }
     });
+
+    if (self.reactive && Deps.active) {
+      // XXX in many cases, the same observe will be recreated when
+      // the current Deps.run is rerun.  we could save work by
+      // letting it linger across rerun and potentially get
+      // repurposed if the same observe is performed, using logic
+      // similar to that of Meteor.subscribe.
+      Deps.onInvalidate(function () {
+        handle.stop();
+      });
+    }
+
     return handle;
   }
 });
@@ -361,14 +373,7 @@ LocalCollection.Cursor.prototype._depend = function (changers) {
                options[fnName] = notifyChange;
            });
 
-    var handle = self.observeChanges(options);
-
-    // XXX in many cases, the query will be immediately
-    // recreated. so we might want to let it linger for a little
-    // while and repurpose it if it comes back. this will save us
-    // work because we won't have to redo the initial find.
-    // The logic would be similar to that in Meteor.subscribe.
-    Deps.onInvalidate(handle.stop);
+    self.observeChanges(options);
   }
 };
 
