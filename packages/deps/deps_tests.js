@@ -55,7 +55,7 @@ Tinytest.add("deps - nested run", function (test) {
 
   var buf = "";
 
-  var c1 = new Deps.Computation(function () {
+  var c1 = Deps._newComputation(function () {
     Deps.depend(a);
     buf += 'a';
     Deps.run(function () {
@@ -64,7 +64,7 @@ Tinytest.add("deps - nested run", function (test) {
       Deps.run(function () {
         Deps.depend(c);
         buf += 'c';
-        var c2 = new Deps.Computation(function () {
+        var c2 = Deps._newComputation(function () {
           Deps.depend(d);
           buf += 'd';
           Deps.run(function () {
@@ -148,4 +148,83 @@ Tinytest.add("deps - nested run", function (test) {
   test.isFalse(d.hasDependents());
   test.isFalse(e.hasDependents());
   test.isFalse(f.hasDependents());
+});
+
+Tinytest.add("deps - flush", function (test) {
+
+  var buf = "";
+
+  var c1 = Deps.run(function (c) {
+    buf += 'a';
+    // invalidate first time
+    if (c.firstRun)
+      c.invalidate();
+  });
+
+  test.equal(buf, 'a');
+  Deps.flush();
+  test.equal(buf, 'aa');
+  Deps.flush();
+  test.equal(buf, 'aa');
+  c1.stop();
+  Deps.flush();
+  test.equal(buf, 'aa');
+
+  /////
+  // Can't cause rerun nested in run
+
+  buf = "";
+
+  var c2 = Deps.run(function (c) {
+    buf += 'a';
+    // invalidate first time
+    if (c.firstRun)
+      c.invalidate();
+
+    Deps.onInvalidate(function () {
+      buf += "<";
+    });
+    Deps.afterInvalidate(function () {
+      buf += ">";
+    });
+
+    if (c.firstRun)
+      Meteor.flush();
+  });
+
+  test.equal(buf, 'a');
+  Deps.flush();
+  test.equal(buf, 'a<a>');
+  c2.stop();
+  Deps.flush();
+  test.equal(buf, 'a<a><>');
+
+  /////
+  // Can flush a diferent run from a run;
+  // no current computation in onInvalidate
+
+  buf = "";
+
+  var c3 = Deps.run(function (c) {
+    buf += 'a';
+    // invalidate first time
+    if (c.firstRun)
+      c.invalidate();
+    Deps.onInvalidate(function () {
+      buf += (Deps.active ? "1" : "0");
+    });
+  });
+
+  var c4 = Deps.run(function (c) {
+    c4 = c;
+    buf += 'b';
+    Meteor.flush();
+    buf += 'b';
+  });
+
+  test.equal(buf, 'ab0ab');
+  c3.stop();
+  c4.stop();
+  Deps.flush();
+
 });

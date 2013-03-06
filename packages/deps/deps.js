@@ -46,18 +46,24 @@
       throw new Error(
         "Deps.Computation constructor is private; use Deps.run");
 
+    this.stopped = false;
+    this.invalidated = false;
+    this.active = false;
+    this.firstRun = true;
+
     this._id = nextId++;
     this._callbacks = {
       onInvalidate: [],
       afterInvalidate: []
     };
-    this.stopped = false;
-    this.invalidated = false;
-    this.active = false;
     this._parent = null; // set in Deps.run; for future use
     this._func = (f || function () {});
 
-    this._run();
+    try {
+      this._run();
+    } finally {
+      this.firstRun = false;
+    }
   };
 
   _.extend(Deps.Computation.prototype, {
@@ -65,7 +71,7 @@
     onInvalidate: function (f) {
       if (! this.active)
         throw new Error(
-          "Can only register callbacks with an active Computation");
+          "Can only register callbacks on an active Computation");
 
       this._callbacks.onInvalidate.push(f);
     },
@@ -73,31 +79,36 @@
     afterInvalidate: function (f) {
       if (! this.active)
         throw new Error(
-          "Can only register callbacks with an active Computation");
+          "Can only register callbacks on an active Computation");
 
       this._callbacks.afterInvalidate.push(f);
     },
 
     invalidate: function () {
       if (! this.invalidated) {
-        pendingComputations.push(this);
-        requireFlush();
+        if (! this.active)
+          // an active computation is enqueued at
+          // end of _run instead.
+          this._enqueue();
         this.invalidated = true;
       }
     },
 
     stop: function () {
       if (! this.stopped) {
-        if (! this.invalidated) {
-          requireFlush();
-          pendingComputations.push(this);
-        }
-        this.invalidated = true;
+        this.invalidate();
         this.stopped = true;
       }
     },
 
+    _enqueue: function () {
+      requireFlush();
+      pendingComputations.push(this);
+    },
+
     _run: function () {
+      this.invalidated = false;
+
       var previous = Deps.currentComputation;
       Deps.currentComputation = this;
       Deps.active = true;
@@ -109,41 +120,43 @@
         Deps.currentComputation = previous;
         Deps.active = !! Deps.currentComputation;
       }
+
+      if (this.invalidated)
+        this._enqueue();
     },
 
-    _callCallbacks: function (which) {
-      var self = this;
-      var callbacks = self._callbacks;
+    _process: function () {
+      while (this.invalidated) {
+        var onInvalidateCallbacks = this._callbacks.onInvalidate;
+        this._callbacks.onInvalidate = [];
+        var afterInvalidateCallbacks = this._callbacks.afterInvalidate;
+        this._callbacks.afterInvalidate = [];
 
-      // call funcs in callbacks[which] in order, allowing
-      // for new ones that might come along during the loop.
-      while (callbacks[which].length) {
-        var funcs = callbacks[which];
-        callbacks[which] = [];
-
-        for(var i = 0, f; f = funcs[i]; i++) {
+        for(var i = 0, f; f = onInvalidateCallbacks[i]; i++) {
           try {
-            f(self);
+            f(this);
           } catch (e) {
             _debugFunc()("Exception from Deps invalidation callback:",
                          e.stack);
           }
         }
-      }
-    },
 
-    _process: function () {
-      while (this.invalidated) {
-        this._callCallbacks('onInvalidate');
         if (! this.stopped) {
           try {
             this._run();
           } catch (e) {
             _debugFunc()("Exception from Deps rerun:", e.stack);
           }
-          this.invalidated = false;
         }
-        this._callCallbacks('afterInvalidate');
+
+        for(var i = 0, f; f = afterInvalidateCallbacks[i]; i++) {
+          try {
+            f(this);
+          } catch (e) {
+            _debugFunc()("Exception from Deps invalidation callback:",
+                         e.stack);
+          }
+        }
 
         if (this.stopped)
           break;
@@ -207,20 +220,31 @@
       //
       // https://app.asana.com/0/159908330244/385138233856
       if (inFlush) {
-        _debugFunc()("Warning: Ignored nested Deps.flush");
+        // note: consider removing this warning if it comes up
+        // in legit uses of flush and is annoying.
+        _debugFunc()("Warning: Ignored nested Deps.flush:",
+                     (new Error).stack);
         return;
       }
 
       inFlush = true;
       willFlush = true;
 
-      while (pendingComputations.length) {
-        var comps = pendingComputations;
-        pendingComputations = [];
+      // It's possible for Computations to be active,
+      // if we are in an enclosing Deps.run in its
+      // first run (i.e. not called from flush).
+      // Keep one from being currentComputation.
+      Deps.nonreactive(function () {
 
-        for (var i = 0, comp; comp = comps[i]; i++)
-          comp._process();
-      }
+        while (pendingComputations.length) {
+          var comps = pendingComputations;
+          pendingComputations = [];
+
+          for (var i = 0, comp; comp = comps[i]; i++)
+            comp._process();
+        }
+
+      });
 
       inFlush = false;
       willFlush = false;
