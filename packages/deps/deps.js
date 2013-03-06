@@ -25,27 +25,14 @@
     }
   };
 
-  // `new Deps.Computation` is private API, but accessible via an
-  // underscore-preceded call.  The contract is clean and there
-  // are conceivable uses -- e.g. other utilities like `atFlush` --
-  // but since 99% of the time you want `Deps.run`, not this,
-  // the constructor is undocumented and throws an exception if
-  // invoked from outside this file.
-  var privateNewComputation = false;
-  Deps._newComputation = function (f) {
-    var previous = privateNewComputation;
-    privateNewComputation = true;
-    try {
-      return new Deps.Computation(f);
-    } finally {
-      privateNewComputation = previous;
-    }
-  };
+  // Deps.Computation constructor is visible but private
+  var constructingComputation = false;
 
-  Deps.Computation = function (f) {
-    if (! privateNewComputation)
+  Deps.Computation = function (f, parent) {
+    if (! constructingComputation)
       throw new Error(
         "Deps.Computation constructor is private; use Deps.run");
+    constructingComputation = false;
 
     var self = this;
     self.stopped = false;
@@ -58,7 +45,9 @@
       onInvalidate: [],
       afterInvalidate: []
     };
-    self._parent = null; // set in Deps.run; for future use
+    // the plan is at some point to use the parent relation
+    // to constrain the order that computations are processed
+    self._parent = parent;
     self._func = (f || function () {});
 
     try {
@@ -261,17 +250,16 @@
     //
     // Returns a new Computation, which is also passed to f.
     //
-    // Additionally, links the computation to the current computation
+    // Links the computation to the current computation
     // so that it is stopped if the current computation is invalidated.
     run: function (f) {
-      var c = Deps._newComputation(f);
+      constructingComputation = true;
+      var c = new Deps.Computation(f, Deps.currentComputation);
 
-      if (Deps.active) {
-        c._parent = Deps.currentComputation;
-        c._parent.onInvalidate(function () {
+      if (Deps.active)
+        Deps.onInvalidate(function () {
           c.stop();
         });
-      }
 
       return c;
     },
@@ -314,9 +302,11 @@
     },
 
     atFlush: function (f) {
-      Deps._newComputation(function (c) {
-        c.onInvalidate(f);
-        c.stop();
+      Deps.nonreactive(function () {
+        Deps.run(function (c) {
+          c.onInvalidate(f);
+          c.stop();
+        });
       });
     }
 

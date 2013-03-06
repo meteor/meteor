@@ -55,7 +55,7 @@ Tinytest.add("deps - nested run", function (test) {
 
   var buf = "";
 
-  var c1 = Deps._newComputation(function () {
+  var c1 = Deps.run(function () {
     Deps.depend(a);
     buf += 'a';
     Deps.run(function () {
@@ -64,7 +64,7 @@ Tinytest.add("deps - nested run", function (test) {
       Deps.run(function () {
         Deps.depend(c);
         buf += 'c';
-        var c2 = Deps._newComputation(function () {
+        var c2 = Deps.run(function () {
           Deps.depend(d);
           buf += 'd';
           Deps.run(function () {
@@ -79,10 +79,6 @@ Tinytest.add("deps - nested run", function (test) {
             // only run once
             c2.stop();
           });
-        });
-        Deps.onInvalidate(function () {
-          // link to parent explicitly
-          c2.stop();
         });
       });
     });
