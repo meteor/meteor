@@ -425,18 +425,20 @@ _.extend(Meteor._LivedataConnection.prototype, {
       }
     }
 
-    // XXX fix comment
-    //
     // Is there an existing sub with the same name and param, run in an
-    // invalidated Computation? This can only happen if the computation just got
-    // invalidated and we haven't fully finished a round of Deps.flush()
-    // yet. For example, this will happen with the pattern of:
-    //   Deps.autorun(function () {
-    //     Meteor.subscribe("foo", Session.get("foo"));
-    //     Meteor.subscribe("bar", Session.get("bar"));
-    //   });
-    // if "foo" has changed but "bar" has not: we are being careful to not unsub
-    // and resub to the "bar" subscription.
+    // invalidated Computation? This will happen if we are rerunning an
+    // existing computation.
+    //
+    // For example, consider a rerun of:
+    //
+    //     Deps.run(function () {
+    //       Meteor.subscribe("foo", Session.get("foo"));
+    //       Meteor.subscribe("bar", Session.get("bar"));
+    //     });
+    //
+    // If "foo" has changed but "bar" has not, we will match the "bar"
+    // subcribe to an existing inactive subscription in order to not
+    // unsub and resub the subscription unnecessarily.
     //
     // We only look for one such sub; if there are N apparently-identical subs
     // being invalidated, we will require N matching subscribe calls to keep
@@ -500,15 +502,12 @@ _.extend(Meteor._LivedataConnection.prototype, {
     };
 
     if (Deps.active) {
-      // XXX fix comment
-      //
       // We're in a reactive computation, so we'd like to unsubscribe when the
-      // computation is invalidated... but not if some *OTHER* onInvalidate
-      // callback on currentComputation re-subscribes to the same subscription
-      // (eg, as part of a Deps.autorun).  Use Deps.atFlush to schedule
-      // this check to happen later in the flush cycle, after all of
-      // currentComputation's callbacks have been called, and therefore after
-      // the current Deps.autorun (if any) has been re-run.
+      // computation is invalidated... but not if the rerun just re-subscribes
+      // to the same subscription!  When a rerun happens, we use onInvalidate
+      // as a change to mark the subscription "inactive" so that it can
+      // be reused from the rerun.  If it isn't reused, it's killed fro
+      // mafterInvalidate.
       Deps.onInvalidate(function (c) {
         if (c.stopped)
           handle.stop();
