@@ -179,6 +179,7 @@ var main = function() {
   });
   publishManifest(s3, release);
   console.log("\nPUBLISHED:\n" + publishedArtifacts.join('\n'));
+  console.log();
   process.exit();
 };
 
