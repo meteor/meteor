@@ -215,6 +215,10 @@ Tinytest.add("deps - flush", function (test) {
     });
   });
 
+  Deps.atFlush(function () {
+    buf += 'c';
+  });
+
   var c4 = Deps.run(function (c) {
     c4 = c;
     buf += 'b';
@@ -222,9 +226,76 @@ Tinytest.add("deps - flush", function (test) {
     buf += 'b';
   });
 
-  test.equal(buf, 'ab0ab');
+  test.equal(buf, 'ab0acb');
   c3.stop();
   c4.stop();
   Deps.flush();
 
+
+});
+
+Tinytest.add("deps - lifecycle", function (test) {
+
+  test.isFalse(Deps.active);
+  test.equal(null, Deps.currentComputation);
+
+  var runCount = 0;
+  var firstRun = true;
+  var buf = [];
+  var cbId = 1;
+  var makeCb = function () {
+    var id = cbId++;
+    return function () {
+      buf.push(id);
+    };
+  };
+
+  var c1 = Deps.run(function (c) {
+    test.isTrue(Deps.active);
+    test.equal(c, Deps.currentComputation);
+    test.equal(c.stopped, false);
+    test.equal(c.invalidated, false);
+    test.equal(c.active, true);
+    test.equal(c.firstRun, firstRun)
+
+    Deps.onInvalidate(makeCb());
+    Deps.afterInvalidate(makeCb());
+
+    Deps.run(function (x) {
+      x.stop();
+      // should be ok to attach callback from
+      // nested run
+      c.onInvalidate(makeCb());
+      c.afterInvalidate(makeCb());
+
+      Deps.onInvalidate(makeCb());
+      Deps.afterInvalidate(makeCb());
+    });
+    runCount++;
+  });
+
+  test.throws(function () {
+    c1.onInvalidate(function () {});
+  });
+  test.throws(function () {
+    c1.afterInvalidate(function () {});
+  });
+
+  firstRun = false;
+
+  test.equal(runCount, 1);
+
+  test.equal(buf, []);
+  c1.invalidate();
+  test.equal(runCount, 1);
+  test.equal(c1.invalidated, true);
+  test.equal(c1.stopped, false);
+  test.equal(c1.active, false);
+  test.equal(buf, []);
+
+  Deps.flush();
+
+  test.equal(runCount, 2);
+  test.equal(c1.invalidated, false);
+  test.equal(buf, [5, 6, 1, 3, 2, 4, 11, 12]);
 });
