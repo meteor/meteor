@@ -246,6 +246,8 @@ Tinytest.add("deps - lifecycle", function (test) {
     };
   };
 
+  var shouldStop = false;
+
   var c1 = Deps.run(function (c) {
     test.isTrue(Deps.active);
     test.equal(c, Deps.currentComputation);
@@ -268,6 +270,9 @@ Tinytest.add("deps - lifecycle", function (test) {
       Deps.afterInvalidate(makeCb());
     });
     runCount++;
+
+    if (shouldStop)
+      c.stop();
   });
 
   test.throws(function () {
@@ -293,5 +298,21 @@ Tinytest.add("deps - lifecycle", function (test) {
 
   test.equal(runCount, 2);
   test.equal(c1.invalidated, false);
+  // 5/6, 11/12, etc. are from the nested run, whose
+  // invalidation is scheduled each time by the outer
+  // rerun.
+  // 1/3 are onInvalidate and 2/4 are afterInvalidate.
   test.equal(buf, [5, 6, 1, 3, 2, 4, 11, 12]);
+
+  // test self-stop
+  buf.length = 0;
+  shouldStop = true;
+  c1.invalidate();
+  Deps.flush();
+  // when the computation stops itself, all the
+  // callbacks from last time and this time should
+  // get called consecutively, followed by the inner
+  // computation's 17/18.
+  test.equal(buf, [7, 9, 8, 10, 13, 15, 14, 16, 17, 18]);
+
 });

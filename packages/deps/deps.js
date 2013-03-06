@@ -78,8 +78,9 @@
     invalidate: function () {
       if (! this.invalidated) {
         if (! this.active)
-          // an active computation is enqueued at
-          // end of _run instead.
+          // an active computation is either already being
+          // processed or, on first run, is enqueued at
+          // the end of _run
           this._enqueue();
         this.invalidated = true;
       }
@@ -113,7 +114,7 @@
         Deps.active = !! Deps.currentComputation;
       }
 
-      if (self.invalidated)
+      if (self.firstRun && self.invalidated)
         self._enqueue();
     },
 
@@ -135,7 +136,8 @@
           }
         }
 
-        if (! self.stopped) {
+        var wasStopped = self.stopped;
+        if (! wasStopped) {
           try {
             self._run();
           } catch (e) {
@@ -152,13 +154,16 @@
           }
         }
 
-        if (self.stopped)
+        if (wasStopped)
           break;
 
-        // If we're not stopped but we are invalidated, also loop.
-        // It's valid in some cases for a computation to invalidate
-        // itself (or for afterInvalidate to invalid it), but we
-        // could add a run-away loop counter here.
+        // If _run() stopped us, we loop around to handle callbacks.
+        // If _run() invalidated us, we run again immediately.
+        // A computation that invalidates itself indefinitely is an
+        // infinite loop, of course.
+        //
+        // We could put an iteration counter here and catch run-away
+        // loops.
       }
     }
   });
