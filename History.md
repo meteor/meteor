@@ -2,29 +2,43 @@
 ## vNEXT
 
 * Publish functions may now return an array of cursors to publish. Currently,
-  the cursors must all be from different collections.
+  the cursors must all be from different collections. #716
 
 * User documents have id's when onCreateUser and validateNewUser hooks run.
 
-* Removed all restrictions on EJSON types in MongoDB, even user-defined ones.
+* Encode and store custom EJSON types in MongoDB.
 
-* `coffeescript` package: Support literate Coffeescript files with the extension
-  `.litcoffee`.
+* Support literate CoffeeScript files with the extension `.litcoffee`. #766
 
-* If you call `observe` or `observeChanges` on a cursor created with
-  `Collection.find(query, {reactive: false})`, it now only calls initial add
-  callbacks and does not continue watching the query.
+* If you call `observe` or `observeChanges` on a cursor created with the
+  `reactive: false` option, it now only calls initial add callbacks and
+  does not continue watching the query. #771
 
-* Fixed bug where an empty `fields` object was sometimes passed to a `changed`
-  callback of `Cursor.observeChanges`.
+* In an event handler, if the data context is falsey, default it to `{}`
+  rather than to the global object. #777
 
-* Fixed `{$type: 5}` selectors for binary values on browsers that do not support
-  `Uint8Array`
+* Revert caching header change from 0.5.5. This fixes image flicker on redraw.
 
-* In an event handler, if the data context is falsey, default it to `{}` rather
-  than to the global object.
+* Stop making `Session` available on the server; it's not useful there. #751
 
-* Stop making `Session` available on the server; it's not very useful there.
+* Force URLs in stack traces in browser consoles to be hyperlinks. #725
+
+* Suppress spurious `changed` callbacks with empty `fields` from
+  `Cursor.observeChanges`.
+
+* Fix logic bug in template branch matching. #724
+
+* Make `spiderable` user-agent test case insensitive. #721
+
+* Fix several bugs in EJSON type support:
+  * Fix `{$type: 5}` selectors for binary values on browsers that do
+    not support `Uint8Array`.
+  * Fix EJSON equality on falsey values.
+  * Fix for returning a scalar EJSON type from a method. #731
+
+Patches contributed by GitHub users awwx, cmather, graemian, jmhredsox,
+kevinxucs, krizka, mitar, raix, and rasmuserik.
+
 
 ## v0.5.7
 
