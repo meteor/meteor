@@ -51,7 +51,7 @@ var getManifest = function(s3, release) {
   var content;
   try {
     content = s3.GetObject({
-      BucketName: "com.meteor.packages",
+      BucketName: "com.meteor.warehouse",
       ObjectName: ["unpublished", release, "manifest.json"].join("/")
     }).Body;
   } catch (e) {
@@ -65,15 +65,15 @@ var getManifest = function(s3, release) {
 // are there any files with this prefix?
 var noneWithPrefix = function(s3, prefix) {
   var files = s3.ListObjects({
-    BucketName: "com.meteor.packages",
+    BucketName: "com.meteor.warehouse",
     Prefix: prefix
   });
   return !_.isEmpty(files.Body.ListBucketResult.Contents);
 };
 
 // publish a given engine, copying multiple files from
-// s3://com.meteor.packages/RELEASE/unpublished/ to
-// s3://com.meteor.packages/engines/VERSION/
+// s3://com.meteor.warehouse/RELEASE/unpublished/ to
+// s3://com.meteor.warehouse/engines/VERSION/
 var publishEngine = function(s3, release, version) {
   var destPath = ["engines", version].join("/");
 
@@ -87,7 +87,7 @@ var publishEngine = function(s3, release, version) {
   }
 
   var engineArtifacts = s3.ListObjects({
-    BucketName: "com.meteor.packages",
+    BucketName: "com.meteor.warehouse",
     Prefix: ["unpublished", release, "meteor-engine-"].join("/")
   }).Body.ListBucketResult.Contents;
 
@@ -97,9 +97,9 @@ var publishEngine = function(s3, release, version) {
     var destKey = [destPath, filename].join("/");
 
     var opts = {
-      BucketName: "com.meteor.packages",
+      BucketName: "com.meteor.warehouse",
       ObjectName: destKey,
-      SourceBucket: "com.meteor.packages",
+      SourceBucket: "com.meteor.warehouse",
       SourceObject: sourceKey
     };
     s3.CopyObject(opts);
@@ -107,8 +107,8 @@ var publishEngine = function(s3, release, version) {
 };
 
 // publish a given package, copying from
-// s3://com.meteor.packages/unpublished/RELEASE/NAME-VERSION.tar.gz to
-// s3://com.meteor.packages/packages/NAME-VERSION.tar.gz
+// s3://com.meteor.warehouse/unpublished/RELEASE/NAME-VERSION.tar.gz to
+// s3://com.meteor.warehouse/packages/NAME-VERSION.tar.gz
 var publishPackage = function(s3, release, name, version) {
   var filename = name + "-" + version + ".tar.gz";
   var destKey = ["packages", name, filename].join("/");
@@ -124,17 +124,17 @@ var publishPackage = function(s3, release, name, version) {
   }
 
   var opts = {
-    BucketName: "com.meteor.packages",
+    BucketName: "com.meteor.warehouse",
     ObjectName: destKey,
-    SourceBucket: "com.meteor.packages",
+    SourceBucket: "com.meteor.warehouse",
     SourceObject: sourceKey
   };
   s3.CopyObject(opts);
 };
 
 // publish the release manifest, copying from
-// s3://com.meteor.packages/unpublished/RELEASE/manifest.json to
-// s3://com.meteor.packages/releases/RELEASE.json
+// s3://com.meteor.warehouse/unpublished/RELEASE/manifest.json to
+// s3://com.meteor.warehouse/releases/RELEASE.json
 var publishManifest = function(s3, release) {
   var destKey = ["releases", release + ".json"].join("/");
   var sourceKey = ["unpublished", release, "manifest.json"].join("/");
@@ -149,9 +149,9 @@ var publishManifest = function(s3, release) {
   }
 
   var opts = {
-    BucketName: "com.meteor.packages",
+    BucketName: "com.meteor.warehouse",
     ObjectName: destKey,
-    SourceBucket: "com.meteor.packages",
+    SourceBucket: "com.meteor.warehouse",
     SourceObject: sourceKey
   };
   s3.CopyObject(opts);
