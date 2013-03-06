@@ -239,16 +239,13 @@ var toc = [
       "Meteor.clearInterval"
     ],
 
-    "Meteor.deps", [
-      {name: "Meteor.deps.Context", id: "context"}, [
-        {instance: "context", name: "run"},
-        {instance: "context", name: "onInvalidate", id: "oninvalidate"},
-        {instance: "context", name: "invalidate"}
-      ],
-      {name: "Meteor.deps.Context.current", id: "current"},
-      "Meteor.autorun",
-      "Meteor.flush"
-    // ],
+    "Deps", [
+      "Deps.run",
+      "Deps.flush",
+      "Deps.Computation", [
+        {instance: "computation", name: "stop"}
+      ]
+    ],
 
     // "Environment Variables", [
     //   "Meteor.EnvironmentVariable", [
@@ -256,7 +253,7 @@ var toc = [
     //     {instance: "env_var", name: "withValue", id: "env_var_withvalue"},
     //     {instance: "env_var", name: "bindEnvironment", id: "env_var_bindenvironment"}
     //   ]
-    ],
+    //],
 
     {name: "EJSON", id: "ejson"}, [
       {name: "EJSON.parse", id: "ejson_parse"},
