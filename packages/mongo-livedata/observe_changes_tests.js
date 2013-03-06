@@ -27,7 +27,7 @@ _.each ([{added:'added', forceOrdered: true},
                        function (logger) {
     var barid = c.insert({thing: "stuff"});
     var fooid = c.insert({noodles: "good", bacon: "bad", apples: "ok"});
-    c.find(fooid).observeChanges(logger);
+    var handle = c.find(fooid).observeChanges(logger);
     if (added === 'added')
       logger.expectResult(added, [fooid, {noodles: "good", bacon: "bad",apples: "ok"}]);
     else
@@ -44,6 +44,7 @@ _.each ([{added:'added', forceOrdered: true},
 
     c.insert({noodles: "good", bacon: "bad", apples: "ok"});
     logger.expectNoResult();
+    handle.stop();
     onComplete();
     });
   });
@@ -54,9 +55,10 @@ Tinytest.addAsync("observeChanges - single id - initial adds", function (test, o
   var c = makeCollection();
   withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, function (logger) {
   var fooid = c.insert({noodles: "good", bacon: "bad", apples: "ok"});
-  c.find(fooid).observeChanges(logger);
+  var handle = c.find(fooid).observeChanges(logger);
   logger.expectResult("added", [fooid, {noodles: "good", bacon: "bad", apples: "ok"}]);
   logger.expectNoResult();
+  handle.stop();
   onComplete();
   });
 });
@@ -68,7 +70,7 @@ Tinytest.addAsync("observeChanges - unordered - initial adds", function (test, o
   withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, function (logger) {
   var fooid = c.insert({noodles: "good", bacon: "bad", apples: "ok"});
   var barid = c.insert({noodles: "good", bacon: "weird", apples: "ok"});
-  c.find().observeChanges(logger);
+  var handle = c.find().observeChanges(logger);
   logger.expectResultUnordered([
     {callback: "added",
      args: [fooid, {noodles: "good", bacon: "bad", apples: "ok"}]},
@@ -76,6 +78,7 @@ Tinytest.addAsync("observeChanges - unordered - initial adds", function (test, o
      args: [barid, {noodles: "good", bacon: "weird", apples: "ok"}]}
   ]);
   logger.expectNoResult();
+  handle.stop();
   onComplete();
   });
 });
@@ -83,7 +86,7 @@ Tinytest.addAsync("observeChanges - unordered - initial adds", function (test, o
 Tinytest.addAsync("observeChanges - unordered - basics", function (test, onComplete) {
   var c = makeCollection();
   withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, function (logger) {
-  c.find().observeChanges(logger);
+  var handle = c.find().observeChanges(logger);
   var barid = c.insert({thing: "stuff"});
   logger.expectResultOnly("added", [barid, {thing: "stuff"}]);
 
@@ -104,6 +107,7 @@ Tinytest.addAsync("observeChanges - unordered - basics", function (test, onCompl
 
   logger.expectResult("added", [fooid, {noodles: "good", bacon: "bad", apples: "ok"}]);
   logger.expectNoResult();
+  handle.stop();
   onComplete();
   });
 });
@@ -112,7 +116,7 @@ if (Meteor.isServer) {
   Tinytest.addAsync("observeChanges - unordered - specific fields", function (test, onComplete) {
     var c = makeCollection();
     withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, function (logger) {
-      c.find({}, {fields:{noodles: 1, bacon: 1}}).observeChanges(logger);
+      var handle = c.find({}, {fields:{noodles: 1, bacon: 1}}).observeChanges(logger);
       var barid = c.insert({thing: "stuff"});
       logger.expectResultOnly("added", [barid, {}]);
 
@@ -133,6 +137,7 @@ if (Meteor.isServer) {
 
       logger.expectResult("added", [fooid, {noodles: "good", bacon: "bad"}]);
       logger.expectNoResult();
+      handle.stop();
       onComplete();
     });
   });
@@ -142,7 +147,7 @@ if (Meteor.isServer) {
 Tinytest.addAsync("observeChanges - unordered - enters and exits result set through change", function (test, onComplete) {
   var c = makeCollection();
   withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, function (logger) {
-  c.find({noodles: "good"}).observeChanges(logger);
+  var handle = c.find({noodles: "good"}).observeChanges(logger);
   var barid = c.insert({thing: "stuff"});
 
   var fooid = c.insert({noodles: "good", bacon: "bad", apples: "ok"});
@@ -158,6 +163,7 @@ Tinytest.addAsync("observeChanges - unordered - enters and exits result set thro
   c.update(fooid, {noodles: "good", potatoes: "tasty", apples: "ok"});
   logger.expectResult("added", [fooid, {noodles: "good", potatoes: "tasty", apples: "ok"}]);
   logger.expectNoResult();
+  handle.stop();
   onComplete();
   });
 });
