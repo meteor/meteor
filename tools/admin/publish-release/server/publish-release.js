@@ -1,5 +1,6 @@
 var amazon = AWSSum.load('amazon/amazon');
 var S3 = AWSSum.load('amazon/s3', 'S3');
+var Fiber = Npm.require("fibers");
 var Future = Npm.require("fibers/future");
 var child_process = Npm.require("child_process");
 
@@ -113,13 +114,13 @@ var publishPackage = function(s3, release, name, version) {
   var destKey = ["packages", name, filename].join("/");
   var sourceKey = ["unpublished", release, filename].join("/");
 
-  process.stdout.write("package " + name + " version " + version + ": ");
+  var packageHeader = "package " + name + " version " + version + ": ";
   if (noneWithPrefix(s3, destKey)) {
-    console.log("already published");
+    console.log(packageHeader + "already published");
     return;
   } else {
     publishedArtifacts.push("package " + name + " version " + version);
-    console.log("publishing");
+    console.log(packageHeader + "publishing");
   }
 
   var opts = {
@@ -156,6 +157,16 @@ var publishManifest = function(s3, release) {
   s3.CopyObject(opts);
 };
 
+var parallelEach = function (collection, callback, context) {
+  var futures = _.map(collection, function () {
+    var args = _.toArray(arguments);
+    return function () {
+      callback.apply(context, args);
+    }.future()();
+  });
+  Future.wait(futures);
+};
+
 // START HERE
 var main = function() {
   // read git sha, used as the version of the unpublished release.
@@ -163,7 +174,7 @@ var main = function() {
   var s3 = configureS3();
   var manifest = getManifest(s3, release);
   publishEngine(s3, release, manifest.engine);
-  _.each(manifest.packages, function(version, name) {
+  parallelEach(manifest.packages, function(version, name) {
     publishPackage(s3, release, name, version);
   });
   publishManifest(s3, release);
