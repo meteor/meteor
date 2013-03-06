@@ -2214,7 +2214,7 @@ Returns a handle that can be used by `Meteor.clearInterval`.
 <h2 id="deps"><span>Deps</span></h2>
 
 Meteor has a simple dependency tracking system which allows it to
-automatically rerun templates and other data consumers whenever
+automatically rerun templates and other computations whenever
 [`Session`](#session) variables, database queries, and other data
 sources change.
 
@@ -2227,15 +2227,18 @@ template being rendered).  Later, when the data changes, the function
 can "invalidate" the Computation, causing it to rerun (rerendering the
 template).
 
-Applications are expected to use [`Deps.run`](#deps_run) and
-[`Deps.flush`](#dep_flush) directly, while more advanced facilities
-are useful for package authors implementing new reactive data sources.
+The ability to create `Deps.Variable` objects and register computation
+callbacks is expected to be most useful to package authors
+implementing new reactive data sources.
 
 {{> api_box deps_run }}
 
-`Deps.run` allows you to run a function that depends on reactive data sources, in such a way that if there are changes to the data later, the function will be rerun.
+`Deps.run` allows you to run a function that depends on reactive data
+sources, in such a way that if there are changes to the data later,
+the function will be rerun.
 
-For example, you can monitor a cursor (which is a reactive data source) and aggregate it into a session variable:
+For example, you can monitor a cursor (which is a reactive data
+source) and aggregate it into a session variable:
 
     Deps.run(function () {
       var oldest = _.max(Monkeys.find().fetch(), function (monkey) {
@@ -2245,7 +2248,9 @@ For example, you can monitor a cursor (which is a reactive data source) and aggr
         Session.set("oldest", oldest.name);
     });
 
-Or you can wait for a session variable to have a certain value, and do something the first time it does, calling `stop` on the computation to prevent further rerunning:
+Or you can wait for a session variable to have a certain value, and do
+something the first time it does, calling `stop` on the computation to
+prevent further rerunning:
 
     Deps.run(function (c) {
       if (! Session.equals("shouldAlert", true))
@@ -2255,27 +2260,57 @@ Or you can wait for a session variable to have a certain value, and do something
       alert("Oh no!");
     });
 
-The function is invoked immediately, at which point it may alert and stop right away if `shouldAlert` is already true.  If not, the function is run again when `shouldAlert` becomes true.
+The function is invoked immediately, at which point it may alert and
+stop right away if `shouldAlert` is already true.  If not, the
+function is run again when `shouldAlert` becomes true.
 
-Reruns do not occur immediately when the data dependency changes, but are deferred until "flush time", which is scheduled for after whatever code made the change has finished running.  You can use [`Deps.flush`](#deps_flush) to force reactive updates to happen sooner.
+Reruns do not occur immediately when a data dependency changes, but
+are deferred until a flush occurs.  A flush will always occur when the
+system is idle if necessary.  You can also use
+[`Deps.flush`](#deps_flush) to cause an immediate flush of all pending
+reruns and invalidation callbacks.
 
-If you nest calls to `Deps.run`, then when the outer call stops or reruns, the inner call will stop automatically.  Subscriptions and observers are also automatically stopped when used as part of a computation that is rerun.
+If you nest calls to `Deps.run`, then when the outer call stops or
+reruns, the inner call will stop automatically.  Subscriptions and
+observers are also automatically stopped when used as part of a
+computation that is rerun.
 
 <h2 id="deps_computation"><span>Deps.Computation</span></h2>
 
-A Computation object represents code that is repeatedly rerun in response to reactive data changes.  Computations don't have return values, they just perform actions, such as rerendering a template on the screen.  Computations are created using [`Deps.run`](#deps_run).  Use [`stop`](#computation_stop) to prevent further rerunning of a computation.
+A Computation object represents code that is repeatedly rerun in
+response to reactive data changes.  Computations don't have return
+values; they just perform actions, such as rerendering a template on
+the screen.  Computations are created using [`Deps.run`](#deps_run).
+Use [`stop`](#computation_stop) to prevent further rerunning of a
+computation.
 
-Each time a computation runs, it may access various reactive data sources that serve as inputs to the computation, which are called its dependencies.  At some future time, one of these dependencies may trigger the computation to be rerun by invalidating it.  When this happens, the computation will be rerun at next flush time, at which point the old dependencies are cleared.
+Each time a computation runs, it may access various reactive data
+sources that serve as inputs to the computation, which are called its
+dependencies.  At some future time, one of these dependencies may
+trigger the computation to be rerun by invalidating it.  When this
+happens, the computation will be rerun at next flush time, at which
+point the old dependencies are cleared.
 
-The *current computation* ([`Deps.currentComputation`](#deps_current_computation)) is the computation that is currently being run or rerun, and the one that gains a dependency when a reactive data source is accessed.  Data sources are responsible for tracking these dependencies using [`Deps.Variable`](#deps_variable) objects.
+The *current computation*
+([`Deps.currentComputation`](#deps_current_computation)) is the
+computation that is currently being run or rerun, and the one that
+gains a dependency when a reactive data source is accessed.  Data
+sources are responsible for tracking these dependencies using
+[`Deps.Variable`](#deps_variable) objects.
 
-Stopping or invalidating a computation will cause it to be processed at next flush time, or later in the current flush if one is in progress.  Processing a stopped or invalidated computation involves these steps:
+Stopping or invalidating a computation will cause it to be processed
+at next flush time, or later in the current flush if one is in
+progress.  Processing a stopped or invalidated computation involves
+these steps:
 
 * Call (and clear) all `onInvalidate` callbacks
 * If the computation is not stopped, rerun it and mark it valid again
 * Call (and clear) all `afterInvalidate` callbacks
 
-Callbacks can only be added to a computation while the computation is active, meaning its function is being run or rerun (it may be the current computation or one that encloses it).  In particular, you can't register new callbacks from within a callback.
+Callbacks can only be added to a computation while the computation is
+active, meaning its function is being run or rerun (it may be the
+current computation or one that encloses it).  In particular, you
+can't register new callbacks from within a callback.
 
 Example:
 

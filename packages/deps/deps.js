@@ -33,11 +33,12 @@
   // invoked from outside this file.
   var privateNewComputation = false;
   Deps._newComputation = function (f) {
+    var previous = privateNewComputation;
     privateNewComputation = true;
     try {
       return new Deps.Computation(f);
     } finally {
-      privateNewComputation = false;
+      privateNewComputation = previous;
     }
   };
 
@@ -46,23 +47,24 @@
       throw new Error(
         "Deps.Computation constructor is private; use Deps.run");
 
-    this.stopped = false;
-    this.invalidated = false;
-    this.active = false;
-    this.firstRun = true;
+    var self = this;
+    self.stopped = false;
+    self.invalidated = false;
+    self.active = false;
+    self.firstRun = true;
 
-    this._id = nextId++;
-    this._callbacks = {
+    self._id = nextId++;
+    self._callbacks = {
       onInvalidate: [],
       afterInvalidate: []
     };
-    this._parent = null; // set in Deps.run; for future use
-    this._func = (f || function () {});
+    self._parent = null; // set in Deps.run; for future use
+    self._func = (f || function () {});
 
     try {
-      this._run();
+      self._run();
     } finally {
-      this.firstRun = false;
+      self.firstRun = false;
     }
   };
 
@@ -107,43 +109,46 @@
     },
 
     _run: function () {
-      this.invalidated = false;
+      var self = this;
+      self.invalidated = false;
 
       var previous = Deps.currentComputation;
-      Deps.currentComputation = this;
+      Deps.currentComputation = self;
       Deps.active = true;
-      this.active = true;
+      self.active = true;
       try {
-        this._func(this);
+        self._func(self);
       } finally {
-        this.active = false;
+        self.active = false;
         Deps.currentComputation = previous;
         Deps.active = !! Deps.currentComputation;
       }
 
-      if (this.invalidated)
-        this._enqueue();
+      if (self.invalidated)
+        self._enqueue();
     },
 
     _process: function () {
-      while (this.invalidated) {
-        var onInvalidateCallbacks = this._callbacks.onInvalidate;
-        this._callbacks.onInvalidate = [];
-        var afterInvalidateCallbacks = this._callbacks.afterInvalidate;
-        this._callbacks.afterInvalidate = [];
+      var self = this;
+
+      while (self.invalidated) {
+        var onInvalidateCallbacks = self._callbacks.onInvalidate;
+        self._callbacks.onInvalidate = [];
+        var afterInvalidateCallbacks = self._callbacks.afterInvalidate;
+        self._callbacks.afterInvalidate = [];
 
         for(var i = 0, f; f = onInvalidateCallbacks[i]; i++) {
           try {
-            f(this);
+            f(self);
           } catch (e) {
             _debugFunc()("Exception from Deps invalidation callback:",
                          e.stack);
           }
         }
 
-        if (! this.stopped) {
+        if (! self.stopped) {
           try {
-            this._run();
+            self._run();
           } catch (e) {
             _debugFunc()("Exception from Deps rerun:", e.stack);
           }
@@ -151,14 +156,14 @@
 
         for(var i = 0, f; f = afterInvalidateCallbacks[i]; i++) {
           try {
-            f(this);
+            f(self);
           } catch (e) {
             _debugFunc()("Exception from Deps invalidation callback:",
                          e.stack);
           }
         }
 
-        if (this.stopped)
+        if (self.stopped)
           break;
 
         // If we're not stopped but we are invalidated, also loop.
@@ -176,7 +181,8 @@
   _.extend(Deps.Variable.prototype, {
     // Adds `computation` to this set if it is not already
     // present.  Returns true if `computation` is a new member of the set.
-    // Defaults to currentComputation, which must exist.
+    // If no argument, defaults to currentComputation (which is required to
+    // exist in this case).
     addDependent: function (computation) {
       if (! computation) {
         if (! Deps.active)

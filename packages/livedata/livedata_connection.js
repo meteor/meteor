@@ -472,7 +472,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
         id: id,
         name: name,
         params: params,
-        inactivate: false,
+        inactive: false,
         ready: false,
         readyDeps: (typeof Deps !== "undefined") && new Deps.Variable,
         readyCallback: callbacks.onReady,

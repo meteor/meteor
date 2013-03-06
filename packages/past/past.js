@@ -8,7 +8,7 @@ Meteor.is_server = Meteor.isServer;
 
 
 // We used to require a special "autosubscribe" call to reactively subscribe to
-// things. Now, it works with autorun.
+// things. Now, it works with Deps.run.
 Meteor.autosubscribe = Deps.run;
 
 // "new deps" back-compat
