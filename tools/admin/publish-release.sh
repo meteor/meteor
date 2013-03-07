@@ -1,4 +1,5 @@
 #!/bin/bash
+cd `dirname $0`
 DIR="$(pwd)"
 METEOR_DIR="$(pwd)/../.."
 
