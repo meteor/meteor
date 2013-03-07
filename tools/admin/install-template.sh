@@ -98,8 +98,11 @@ rm -rf "$TMPDIR"
 echo
 echo "Downloading the latest Meteor release"
 
-# XXX this will become 'update' once that works
-"$PREFIX/bin/meteor" --version
+TMPDIR=`mktemp -d -t meteor-no-app-here-so-just-a-global-update-XXXXXXX`
+cd "$TMPDIR"
+"$PREFIX/bin/meteor" update
+cd ..
+rm -rf "$TMPDIR"
 
 cat <<EOF
 
