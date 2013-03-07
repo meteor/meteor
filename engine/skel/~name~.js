@@ -1,6 +1,8 @@
 if (Meteor.isClient) {
   Template.hello.greeting = function () {
-    return "Welcome to ~name~.";
+    if (Meteor.release)
+      return "Welcome to Meteor " + Meteor.release + "!";
+    return "Welcome to Meteor!";
   };
 
   Template.hello.events({
