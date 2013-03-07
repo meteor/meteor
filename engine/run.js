@@ -496,34 +496,52 @@ _.extend(DependencyWatcher.prototype, {
 ////////// Upgrade check //////////
 
 // XXX this should move to main meteor command-line, probably?
-var start_update_checks = function () {
+var start_update_checks = function (initialRelease) {
   var update_check = inFiber(function () { // 'inFiber' to ensure we don't delay launching the app
-    var manifest;
+    var manifest = null;
     try {
       manifest = updater.getManifest();
     } catch (e) {
-      // Ignore errors (eg, offline)
-      return;
+      // Ignore error (eg, offline), but still do the "can we update this app
+      // with a locally available release" check.
     }
-    // XXX in the future support release channels other than stable
-    var latestRelease = manifest.releases.stable;
 
-    if (!files.in_checkout() && manifest &&
-        latestRelease !== warehouse.latestRelease()) {
+    if (!files.usesWarehouse())
+      return;
+
+    // XXX in the future support release channels other than stable
+    var manifestLatestRelease =
+          manifest && manifest.releases && manifest.releases.stable;
+    var localLatestRelease = warehouse.latestRelease();
+    if (manifestLatestRelease && manifestLatestRelease !== localLatestRelease) {
       console.log("////////////////////////////////////////");
       console.log("////////////////////////////////////////");
       console.log();
-      console.log("Meteor " + latestRelease + " released. We'll download it now.");
+      console.log("Meteor release " + manifestLatestRelease + " released. We'll download it now.");
       console.log("To update your app, run 'meteor update' from within its directory.");
       console.log();
       console.log("////////////////////////////////////////");
       console.log("////////////////////////////////////////");
-
       try {
-        warehouse.fetchLatestRelease(true);
+        warehouse.fetchLatestRelease(true /* background */);
       } catch (e) {
         // just don't die
       }
+      return;
+    }
+    // We don't need to do a global update (or we're not online), but do we
+    // need to update this app?
+    // XXX this probably shouldn't happen if you pass --release
+    if (localLatestRelease !== initialRelease) {
+      console.log("////////////////////////////////////////");
+      console.log("////////////////////////////////////////");
+      console.log();
+      console.log("Your app is running Meteor release " + initialRelease + ", but you have");
+      console.log("release " + localLatestRelease + " installed.");
+      console.log("To update your app, run 'meteor update' from within its directory.");
+      console.log();
+      console.log("////////////////////////////////////////");
+      console.log("////////////////////////////////////////");
     }
   });
   setInterval(update_check, 12*60*60*1000); // twice a day
@@ -737,7 +755,7 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
       process.stdout.write("Running on: http://localhost:" + outer_port + "/\n");
     };
 
-    start_update_checks();
+    start_update_checks(bundle_opts.release);
     launch();
   });
 };
