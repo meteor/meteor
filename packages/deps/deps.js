@@ -26,6 +26,7 @@
   };
 
   // Deps.Computation constructor is visible but private
+  // (throws an error if you try to call it)
   var constructingComputation = false;
 
   Deps.Computation = function (f, parent) {
@@ -309,7 +310,10 @@
     atFlush: function (f) {
       Deps.nonreactive(function () {
         Deps.run(function (c) {
-          c.onInvalidate(f);
+          c.onInvalidate(function () {
+            // (wrap f so as not to pass c)
+            f();
+          });
           c.stop();
         });
       });
