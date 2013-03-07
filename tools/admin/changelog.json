@@ -1,0 +1,26 @@
+[
+  {
+    "release": "0.7.2",
+    "tagline": "Far future",
+    "changes": [
+      "Far future 1",
+      "Far future 2"
+    ]
+  },
+  {
+    "release": "0.7.1",
+    "tagline": "Something in the future",
+    "changes": [
+      "A future technology",
+      "Another future feature"
+    ]
+  },
+  {
+    "release": "0.7.0",
+    "tagline": "Npm support in packages",
+    "changes": [
+      "Use 'Npm.require' instead of '__meteor_bootstrap__.require'",
+      "more..."
+    ]
+  }
+]

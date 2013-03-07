@@ -10,6 +10,7 @@
 ///     releases/
 ///       latest (relative path symlink to latest x.y.z.release.json)
 ///       x.y.z.release.json
+///       x.y.z.changelog.json
 ///     packages/
 ///       foo/
 ///         x.y.z/
@@ -24,8 +25,6 @@ var os = require("os");
 var Future = require("fibers/future");
 var _ = require("underscore");
 
-// XXX do we really need this __dirname dance? Doesn't
-// require("./files.js") work?
 var files = require('./files.js');
 var updater = require('./updater.js');
 
@@ -190,6 +189,22 @@ var warehouse = module.exports = {
       process.exit(1);
     }
 
+    // try getting the releases's changelog. notable only blessed
+    // releases have one, so if we can't find it just proceed
+    try {
+      var changelog = Future.wrap(files.getUrl)(
+        PACKAGES_URLBASE + "/releases/" + releaseVersion + ".release.json").wait();
+
+      // If a file is not on S3 we get served an 'access denied' XML
+      // file. This will throw (intentionally) in that case. Real
+      // changelogs are valid JSON.
+      JSON.parse(changelog);
+
+      fs.writeFileSync(path.join(releasesDir, releaseVersion + '.changelog.json'), changelog);
+    } catch (e) {
+      // no changelog, proceed
+    }
+
     // populate warehouse with engine version for this release
     var engineVersion = releaseManifest.engine;
     if (!warehouse.engineExistsInWarehouse(engineVersion)) {
@@ -243,6 +258,40 @@ var warehouse = module.exports = {
     // now that we have written all packages, it's safe to write the
     // release manifest
     fs.writeFileSync(releaseManifestPath, JSON.stringify(releaseManifest));
+  },
+
+  printChangelog: function(fromRelease, toRelease) {
+    var changelogPath = path.join(
+      warehouse.getWarehouseDir(), 'releases', toRelease + '.changelog.json');
+
+    if (fs.existsSync(path.join(changelogPath))) {
+      var changelog = JSON.parse(fs.readFileSync(changelogPath));
+      var foundFromRelease = false;
+      var newChanges = []; // acculumate change until we hit 'fromRelease'
+      _.find(changelog, function(change) {
+        if (change.release === fromRelease) {
+          foundFromRelease = true;
+          return true; // exit _.find
+        } else {
+          newChanges.push(change);
+          return false;
+        }
+      });
+
+      if (foundFromRelease) {
+        console.log("Important changes from " + fromRelease + ":");
+        _.each(newChanges, function(change) {
+          console.log(change.release + ": " + change.tagline);
+          _.each(change.changes, function (changeline) {
+            console.log('* ' + changeline);
+          });
+          console.log();
+        });
+      } else {
+        // didn't find 'fromRelease' in the changelog. must have been
+        // an unofficial release.  don't print anything.
+      }
+    }
   },
 
   // @param packagesToPopulate {Object} eg {"less": "0.5.0"}

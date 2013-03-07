@@ -441,7 +441,9 @@ Fiber(function () {
       // XXX should we really print the full path here (appDir)?
       console.log("Updated app '%s' to release %s from release %s.",
                   appDir, releaseVersion, appRelease);
-      // XXX print change log
+      console.log();
+
+      warehouse.printChangelog(appRelease, releaseVersion);
     }
   });
 
