@@ -724,62 +724,144 @@ Template.api.fieldspecifiers = {
   name: "Field Specifiers"
 };
 
-// Template.api.Computation = {
-//   id: "computation",
-//   name: "new Deps.Computation(runFunc)",
-//   locus: "Client",
-//   descr: ["Create and run a new computation.  Use [`Deps.run`](#deps_run) in preference to this constructor."
-//           + ""
-//           + "Computations represent code that must be rerun when data changes that it depends on.  When a computation runs, any reactive data sources that it accesses are considered dependencies, which may later invalidate the computation, causing it to be rerun.
-
-//     "Create an invalidation context. Invalidation contexts are used to run a piece of code, and record its dependencies so it can be rerun later if one of its inputs changes.", "An invalidation context is basically just a list of callbacks for an event that can fire only once. The [`onInvalidate`](#oninvalidate) method adds a callback to the list, and the [`invalidate`](#invalidate) method fires the event."]
-// };
-
-Template.api.onInvalidate = {
-  id: "oninvalidate",
-  name: "<em>context</em>.onInvalidate(callback)",
-  locus: "Client",
-  descr: ["Registers `callback` to be called when this context is invalidated. `callback` will be run exactly once."],
-  args: [
-    {name: "callback",
-     type: "Function",
-     descr: "Function to be called on invalidation. Receives one argument, the context that was invalidated."}
-  ]
-};
-
-Template.api.invalidate = {
-  id: "invalidate",
-  name: "<em>context</em>.invalidate()",
-  locus: "Client",
-  descr: ["Add this context to the list of contexts that will have their [`onInvalidate`](#oninvalidate) callbacks called by the next call to [`Meteor.flush`](#meteor_flush)."]
-};
-
-Template.api.current = {
-  id: "current",
-  name: "Meteor.deps.Context.current",
-  locus: "Client",
-  descr: ["The current [`invalidation context`](#context), or `null` if not being called from inside [`run`](#run)."]
-};
+////// DEPS
 
 Template.api.deps_run = {
   id: "deps_run",
-  name: "Deps.run(func)",
+  name: "Deps.run(runFunc)",
   locus: "Client",
   descr: ["Run a function now and rerun it later whenever its dependencies change. Returns a Computation object that can be used to stop or observe the rerunning."],
   args: [
-    {name: "func",
+    {name: "runFunc",
      type: "Function",
      descr: "The function to run. It receives one argument: the Computation object that will be returned."}
   ]
 };
 
-Template.api.flush = {
-  id: "meteor_flush",
-  name: "Meteor.flush()",
+Template.api.deps_flush = {
+  id: "deps_flush",
+  name: "Deps.flush()",
   locus: "Client",
-  descr: ["Ensure that any reactive updates have finished. Allow auto-updating DOM elements to be cleaned up if they are offscreen."]
+  descr: ["Process all reactive updates immediately and ensure that all invalidated computations are rerun."]
 };
 
+Template.api.deps_nonreactive = {
+  id: "deps_nonreactive",
+  name: "Deps.nonreactive(func)",
+  locus: "Client",
+  descr: ["Run a function without tracking dependencies."],
+  args: [
+    {name: "func",
+     type: "Function",
+     descr: "A function to call immediately."}
+  ]
+};
+
+Template.api.deps_active = {
+  id: "deps_active",
+  name: "Deps.active",
+  locus: "Client",
+  descr: ["True if there is a current computation, meaning that dependencies on reactive data sources will be tracked and potentially cause the current computation to be rerun."]
+};
+
+Template.api.deps_currentcomputation = {
+  id: "deps_currentcomputation",
+  name: "Deps.currentComputation",
+  locus: "Client",
+  descr: ["The current computation, or `null` if there isn't one.  The current computation is the [`Deps.Computation`](#deps_computation) object created by the innermost active call to `Deps.run`, and it's the computation that gains dependencies when reactive data sources are accessed."]
+};
+
+Template.api.deps_oninvalidate = {
+  id: "deps_oninvalidate",
+  name: "Deps.onInvalidate(func)",
+  locus: "Client",
+  descr: ["Registers a new [`onInvalidate`](#computation_oninvalidate) callback on the current computation."],
+  args: [
+    {name: "func",
+     type: "Function",
+     descr: "A callback function that will be invoked as `func(c)`, where `c` is the computation on which the callback is registered."}
+  ]
+};
+
+Template.api.deps_afterinvalidate = {
+  id: "deps_afterinvalidate",
+  name: "Deps.afterInvalidate(func)",
+  locus: "Client",
+  descr: ["Registers a new [`afterInvalidate`](#computation_afterinvalidate) callback on the current computation."],
+  args: [
+    {name: "func",
+     type: "Function",
+     descr: "A callback function that will be invoked as `func(c)`, where `c` is the computation on which the callback is registered."}
+  ]
+};
+
+Template.api.deps_atflush = {
+  id: "deps_atflush",
+  name: "Deps.atFlush(func)",
+  locus: "Client",
+  descr: ["Schedules a function to be called during the next flush, or later in the current flush if one is in progress."],
+  args: [
+    {name: "func",
+     type: "Function",
+     descr: "A function to call at flush time."}
+  ]
+};
+
+Template.api.deps_depend = {
+  id: "deps_depend",
+  name: "Deps.depend(variable)",
+  locus: "Client",
+  descr: ["Declares that the current computation depends on `variable`.  The current computation, if there is one, becomes a dependent of `variable`, meaning it will be invalidated and rerun the next time `variable` changes.", "Returns `true` if this results in `variable` gaining a new dependent (or `false` if this relationship already exists or there is no current computation)."],
+  args: [
+    {name: "variable",
+     type: "Deps.Variable",
+     descr: "The variable for this computation to depend on."}
+  ]
+};
+
+Template.api.computation_stop = {
+  id: "computation_stop",
+  name: "<em>computation</em>.stop()",
+  locus: "Client",
+  descr: ["Stops this computation from rerunning."]
+};
+
+Template.api.computation_invalidate = {
+  id: "computation_invalidate",
+  name: "<em>computation</em>.invalidate()",
+  locus: "Client",
+  descr: ["Invalidates this computation so that it will be rerun."]
+};
+
+
+
+// Template.api.onInvalidate = {
+//   id: "oninvalidate",
+//   name: "<em>context</em>.onInvalidate(callback)",
+//   locus: "Client",
+//   descr: ["Registers `callback` to be called when this context is invalidated. `callback` will be run exactly once."],
+//   args: [
+//     {name: "callback",
+//      type: "Function",
+//      descr: "Function to be called on invalidation. Receives one argument, the context that was invalidated."}
+//   ]
+// };
+
+// Template.api.invalidate = {
+//   id: "invalidate",
+//   name: "<em>context</em>.invalidate()",
+//   locus: "Client",
+//   descr: ["Add this context to the list of contexts that will have their [`onInvalidate`](#oninvalidate) callbacks called by the next call to [`Meteor.flush`](#meteor_flush)."]
+// };
+
+// Template.api.current = {
+//   id: "current",
+//   name: "Meteor.deps.Context.current",
+//   locus: "Client",
+//   descr: ["The current [`invalidation context`](#context), or `null` if not being called from inside [`run`](#run)."]
+// };
+
+//////
 
 // writeFence
 // invalidationCrossbar
