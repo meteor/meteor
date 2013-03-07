@@ -53,6 +53,9 @@ Meteor.startup(function () {
   };
 
   var scrollToSection = function (section) {
+    if (! $(section).length)
+      return;
+
     ignore_waypoints = true;
     Session.set("section", section.substr(1));
     scroller().animate({
