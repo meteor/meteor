@@ -83,7 +83,6 @@ npm install coffee-script@1.5.0
 npm install less@1.3.3
 npm install stylus@0.30.1
 npm install nib@0.8.2
-npm install mime@1.2.7
 npm install semver@1.1.0
 npm install handlebars@1.0.7
 npm install mongodb@1.1.11
