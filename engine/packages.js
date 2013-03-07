@@ -194,14 +194,19 @@ _.extend(Package.prototype, {
     self.serve_root = path.sep;
 
     var sources_except = function (api, except, tests) {
-      return _(self._scan_for_sources(api, ignore_files || []))
-        .reject(function (source_path) {
-          return (path.sep + source_path + path.sep).indexOf(path.sep + except + path.sep) !== -1;
-        })
-        .filter(function (source_path) {
-          var is_test = ((path.sep + source_path + path.sep).indexOf(path.sep + 'tests' + path.sep) !== -1);
-          return is_test === (!!tests);
-        });
+      var allSources = self._scan_for_sources(api, ignore_files || []);
+      var withoutAppPackages = _.reject(allSources, function (sourcePath) {
+        // Skip files that are in app packages. (Directories named "packages"
+        // lower in the tree are OK.)
+        return sourcePath.match(/^packages\//);
+      });
+      var withoutExceptDir = _.reject(withoutAppPackages, function (source_path) {
+        return (path.sep + source_path + path.sep).indexOf(path.sep + except + path.sep) !== -1;
+      });
+      return _.filter(withoutExceptDir, function (source_path) {
+        var is_test = ((path.sep + source_path + path.sep).indexOf(path.sep + 'tests' + path.sep) !== -1);
+        return is_test === (!!tests);
+      });
     };
 
     self.packageFacade.on_use(function (api) {
