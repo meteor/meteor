@@ -192,11 +192,8 @@ Fiber(function () {
                 "meteor test-packages [--release=x.y.z] --package-dir=<path to local package> [options]\n" +
                 "    Runs unit tests on one package located on disk.\n" +
                 "\n" +
-                "meteor test-packages [--release=x.y.z] [comma delimited package names] [options]\n" +
+                "meteor test-packages [--release=x.y.z] [options] [package...]\n" +
                 "    Runs unit tests for a set of packages.\n" +
-                "\n" +
-                "You must either pass the --release option, or be in a git checkout of Meteor,\n" +
-                "in which cases local packages are loaded.\n" +
                 "\n" +
                 "Point your browser to localhost:3000 to run tests and see results.\n");
 
@@ -213,8 +210,8 @@ Fiber(function () {
         // was important to strip trailing path.sep, otherwise we'd get a package named "foo/"
         var packageName = path.basename(packageDir);
         testPackages = [packages.loadFromDir(packageName, packageDir)];
-      } else if (new_argv._[1]) {
-        testPackages = new_argv._[1].split(',');
+      } else if (!_.isEmpty(argv._)) {
+        testPackages = argv._;
       } else if (!files.usesWarehouse()) {
         testPackages = _.keys(packages.list());
       } else {
