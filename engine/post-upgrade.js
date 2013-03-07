@@ -6,7 +6,7 @@ try {
 
   var fs = require('fs');
   var path = require('path');
-  var files = require(path.join(__dirname, "..", "lib", "files.js"));
+  var files = require("./files.js");
 
   var _ = require('underscore');
 

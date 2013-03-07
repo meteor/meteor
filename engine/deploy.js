@@ -9,11 +9,11 @@ var tty = require('tty');
 var request = require('request');
 var qs = require('querystring');
 var path = require('path');
-var files = require(path.join(__dirname, '..', 'lib', 'files.js'));
+var files = require('./files.js');
 var _ = require('underscore');
 var keypress = require('keypress');
 var child_process = require('child_process');
-var inFiber = require(path.join(__dirname, 'fiber-helpers.js')).inFiber;
+var inFiber = require('./fiber-helpers.js').inFiber;
 
 //
 // configuration
@@ -96,7 +96,7 @@ var deployToServer = function (app_dir, bundleOptions, deployOptions) {
   var bundle_path = path.join(build_dir, 'bundle');
 
   process.stdout.write('Deploying to ' + site + '.  Bundling ... ');
-  var bundler = require(path.join(__dirname, '..', 'lib', 'bundler.js'));
+  var bundler = require('./bundler.js');
   var errors = bundler.bundle(app_dir, bundle_path, bundleOptions);
   if (errors) {
     process.stdout.write("\n\nErrors prevented deploying:\n");

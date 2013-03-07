@@ -13,7 +13,7 @@ var useragent = require('useragent');
 
 var _ = require('underscore');
 
-// This code is duplicated in app/server/server.js.
+// This code is duplicated in engine/server/server.js.
 var MIN_NODE_VERSION = 'v0.8.18';
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
@@ -103,15 +103,6 @@ var categorizeRequest = function (req) {
     browser: identifyBrowser(req),
     url: url.parse(req.url, true)
   };
-};
-
-var supported_browser = function (browser) {
-  return true;
-
-  // For now, we don't actually deny anyone. The unsupported browser
-  // page isn't very good.
-  //
-  // return !(browser.family === 'IE' && browser.major <= 5);
 };
 
 
@@ -290,7 +281,6 @@ var run = function () {
     // packages can insert connect middlewares and update
     // __meteor_runtime_config__
     var app_html = fs.readFileSync(path.join(bundle_dir, 'app.html'), 'utf8');
-    var unsupported_html = fs.readFileSync(path.join(bundle_dir, 'unsupported.html'));
 
     app_html = runtime_config(app_html);
 
@@ -301,12 +291,6 @@ var run = function () {
       var request = categorizeRequest(req);
 
       res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
-
-      if (! supported_browser(request.browser)) {
-        res.write(unsupported_html);
-        res.end();
-        return;
-      }
 
       var requestSpecificHtml = htmlAttributes(app_html, request);
       res.write(requestSpecificHtml);

@@ -1,8 +1,8 @@
 var path = require('path');
 var _ = require('underscore');
-var files = require(path.join(__dirname, 'files.js'));
-var warehouse = require(path.join(__dirname, 'warehouse.js'));
-var meteorNpm = require(path.join(__dirname, 'meteor_npm.js'));
+var files = require('./files.js');
+var warehouse = require('./warehouse.js');
+var meteorNpm = require('./meteor_npm.js');
 var fs = require('fs');
 
 // Under the hood, packages in the library (/package/foo), and user

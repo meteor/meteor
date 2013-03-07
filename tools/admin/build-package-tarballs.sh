@@ -35,11 +35,9 @@ do
       echo "," >> "$TOPDIR/.package_manifest_chunk"
     fi
 
-    cd $PACKAGE
-    PACKAGE_VERSION=$($TOPDIR/tools/admin/hash-dir.sh)
+    PACKAGE_VERSION=$(git ls-tree HEAD $PACKAGE | shasum | cut -f 1 -d " ") # shasum's output looks like: 'SHA -'
     echo "$PACKAGE version $PACKAGE_VERSION"
-    tar -c -z -f $OUTDIR/$PACKAGE-$PACKAGE_VERSION.tar.gz .
-    cd ..
+    tar -c -z -f $OUTDIR/$PACKAGE-$PACKAGE_VERSION.tar.gz $PACKAGE
 
     # this is used in build-release.sh, which constructs the manifest json.
     echo -n "    \"$PACKAGE\": \"$PACKAGE_VERSION\"" >> "$TOPDIR/.package_manifest_chunk"

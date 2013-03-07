@@ -2,7 +2,7 @@ var fs = require("fs");
 var path = require("path");
 var child_process = require('child_process');
 
-var files = require(path.join(__dirname, '..', 'lib', 'files.js'));
+var files = require('./files.js');
 
 var _ = require('underscore');
 

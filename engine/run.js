@@ -6,16 +6,16 @@ var spawn = require('child_process').spawn;
 
 var httpProxy = require('http-proxy');
 
-var files = require(path.join(__dirname, '..', 'lib', 'files.js'));
-var packages = require(path.join(__dirname, '..', 'lib', 'packages.js'));
-var updater = require(path.join(__dirname, '..', 'lib', 'updater.js'));
-var bundler = require(path.join(__dirname, '..', 'lib', 'bundler.js'));
-var mongo_runner = require(path.join(__dirname, '..', 'lib', 'mongo_runner.js'));
-var mongoExitCodes = require(path.join(__dirname, '..', 'lib', 'mongo_exit_codes.js'));
+var files = require('./files.js');
+var packages = require('./packages.js');
+var updater = require('./updater.js');
+var bundler = require('./bundler.js');
+var mongo_runner = require('./mongo_runner.js');
+var mongoExitCodes = require('./mongo_exit_codes.js');
 var warehouse = require("./warehouse.js");
 
 var _ = require('underscore');
-var inFiber = require(path.join(__dirname, 'fiber-helpers.js')).inFiber;
+var inFiber = require('./fiber-helpers.js').inFiber;
 
 ////////// Globals //////////
 //XXX: Refactor to not have globals anymore?

@@ -35,9 +35,8 @@ function CPR {
     tar -c --exclude .meteor/local "$1" | tar -x -C "$2"
 }
 cp meteor "$TARGET_DIR/bin"
-CPR lib "$TARGET_DIR"
-rm -rf "$TARGET_DIR"/lib/tests
-CPR server "$TARGET_DIR"
+CPR engine "$TARGET_DIR"
+rm -rf "$TARGET_DIR"/engine/tests
 CPR examples "$TARGET_DIR"
 rm -rf "$TARGET_DIR"/examples/unfinished
 rm -rf "$TARGET_DIR"/examples/other
@@ -48,6 +47,6 @@ git rev-parse HEAD > "$TARGET_DIR/.git_version.txt"
 # generate engine version: directory hash that depends only on file
 # contents but nothing else, eg modification time
 echo -n "Computing engine version... "
-ENGINE_VERSION=$(tools/admin/hash-dir.sh)
+ENGINE_VERSION=$(git ls-tree HEAD LICENSE.txt meteor engine examples | shasum | cut -f 1 -d " ") # shasum's output looks like: 'SHA -'
 echo $ENGINE_VERSION
 echo -n "$ENGINE_VERSION" > "$TARGET_DIR/.engine_version.txt"

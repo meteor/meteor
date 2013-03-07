@@ -6,18 +6,19 @@ var semver = require('semver');
 
 var optimist = require('optimist');
 
-var updater = require(path.join(__dirname, '..', 'app', 'lib', 'updater.js'));
+var updater = require('../engine/updater.js'));
 var _ = require('underscore');
 
 // What files to update. Relative to project root.
-var UPDATE_FILES = [path.join('app', 'lib', 'updater.js'),
-                    path.join('app', 'meteor', 'post-upgrade.js'),
-                    path.join('admin', 'install-s3.sh'),
-                    path.join('admin', 'debian', 'changelog'),
-                    path.join('admin', 'meteor.spec'),
+// XXX this might be all wrong
+var UPDATE_FILES = [path.join('engine', 'updater.js'),
+                    path.join('engine', 'post-upgrade.js'),
+                    path.join('tools', 'admin', 'install-s3.sh'),
+                    path.join('tools', 'admin', 'debian', 'changelog'),
+                    path.join('tools', 'admin', 'meteor.spec'),
                     path.join('docs', 'client', 'docs.js'),
                     path.join('docs', 'client', 'docs.html'),
-                    [path.join('admin', 'manifest.json'), 'g']];
+                    [path.join('tools', 'admin', 'manifest.json'), 'g']];
 
 // Files to update for dev_bundle
 var BUNDLE_FILES = [path.join('admin', 'generate-dev-bundle.sh'), 'meteor'];

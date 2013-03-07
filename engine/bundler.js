@@ -2,9 +2,9 @@
 // main.js [run to start the server]
 // /static [served by node for now]
 // /static_cacheable [cache-forever files, served by node for now]
-// /server
-//   server.js, db.js, .... [contents of app/server]
-//   node_modules [for now, contents of (meteor_root)/lib/node_modules]
+// /server [XXX split out into a package]
+//   server.js, .... [contents of engine/server]
+//   node_modules [for now, contents of (dev_bundle)/lib/node_modules]
 // /app.html
 // /app [user code]
 // /app.json: [data for server.js]
@@ -557,7 +557,7 @@ _.extend(Bundle.prototype, {
 
     // --- Core runner code ---
 
-    files.cp_r(path.join(__dirname, '..', 'server'),
+    files.cp_r(path.join(__dirname, 'server'),
                path.join(build_path, 'server'), {ignore: ignore_files});
     dependencies_json.core.push('server');
 
@@ -695,16 +695,12 @@ _.extend(Bundle.prototype, {
       where: 'internal',
       hash: self._hash(app_html)
     });
-    dependencies_json.core.push(path.join('lib', 'app.html.in'));
-
-    fs.writeFileSync(path.join(build_path, 'unsupported.html'),
-                     fs.readFileSync(path.join(__dirname, "unsupported.html")));
-    dependencies_json.core.push(path.join('lib', 'unsupported.html'));
+    dependencies_json.core.push(path.join('engine', 'app.html.in'));
 
     // --- Documentation, and running from the command line ---
 
     fs.writeFileSync(path.join(build_path, 'main.js'),
-"require(require('path').join(__dirname, 'server', 'server.js'));\n");
+"require('./server/server.js');\n");
 
     fs.writeFileSync(path.join(build_path, 'README'),
 "This is a Meteor application bundle. It has only one dependency,\n" +

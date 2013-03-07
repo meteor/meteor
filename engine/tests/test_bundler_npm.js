@@ -93,7 +93,7 @@ var _assertCorrectPackageNpmDir = function(deps) {
 var _assertCorrectBundleNpmContents = function(bundleDir, deps) {
   // sanity check -- main.js has expected contents.
   assert.strictEqual(fs.readFileSync(path.join(bundleDir, "main.js"), "utf8").trim(),
-                     "require(require('path').join(__dirname, 'server', 'server.js'));");
+                     "require('./server/server.js'));");
 
   var bundledPackageNodeModulesDir = path.join(bundleDir, 'app', 'packages', 'test-package', 'node_modules');
 
