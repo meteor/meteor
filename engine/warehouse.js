@@ -272,7 +272,10 @@ var warehouse = module.exports = {
       var tmpPackageDir = result.packageDir + ".tmp" + warehouse._randomToken();
       files.mkdir_p(tmpPackageDir);
       files.extractTarGz(result.buffer, tmpPackageDir);
-      fs.renameSync(tmpPackageDir, result.packageDir);
+      // tmpPackageDir should contain precisely one entry: a directory named
+      // after the package.
+      fs.renameSync(path.join(tmpPackageDir, result.name), result.packageDir);
+      fs.rmdirSync(tmpPackageDir);
 
       // fetch npm dependencies
       var packages = require(path.join(__dirname, "packages.js")); // load late to work around circular require
