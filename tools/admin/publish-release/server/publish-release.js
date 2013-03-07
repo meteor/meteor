@@ -100,7 +100,8 @@ var publishEngine = function(s3, release, version) {
       BucketName: "com.meteor.warehouse",
       ObjectName: destKey,
       SourceBucket: "com.meteor.warehouse",
-      SourceObject: sourceKey
+      SourceObject: sourceKey,
+      Acl: "public-read"
     };
     s3.CopyObject(opts);
   });
@@ -127,7 +128,8 @@ var publishPackage = function(s3, release, name, version) {
     BucketName: "com.meteor.warehouse",
     ObjectName: destKey,
     SourceBucket: "com.meteor.warehouse",
-    SourceObject: sourceKey
+    SourceObject: sourceKey,
+    Acl: "public-read"
   };
   s3.CopyObject(opts);
 };
@@ -152,7 +154,8 @@ var publishManifest = function(s3, release) {
     BucketName: "com.meteor.warehouse",
     ObjectName: destKey,
     SourceBucket: "com.meteor.warehouse",
-    SourceObject: sourceKey
+    SourceObject: sourceKey,
+    Acl: "public-read"
   };
   s3.CopyObject(opts);
 };
