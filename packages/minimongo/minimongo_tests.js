@@ -1774,7 +1774,9 @@ Tinytest.add("minimongo - reactive stop", function (test) {
   // observe callbacks don't wait for flush, they are inline.
   coll.insert({_id: 'F'});
   test.equal(x, "FEDCBA");
+  test.equal(y, "FEDCBA");
   Deps.flush();
   coll.insert({_id: 'G'});
   test.equal(x, "FEDCBA");
+  test.equal(y, "FEDCBA");
 });

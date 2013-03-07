@@ -373,6 +373,7 @@ LocalCollection.Cursor.prototype._depend = function (changers) {
                options[fnName] = notifyChange;
            });
 
+    // observeChanges will stop() when this computation is invalidated
     self.observeChanges(options);
   }
 };
