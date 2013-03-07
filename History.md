@@ -36,6 +36,12 @@
   * Fix EJSON equality on falsey values.
   * Fix for returning a scalar EJSON type from a method. #731
 
+* Upgraded dependencies:
+  * mongodb driver to version 1.2.13 (from 0.1.11)
+  * underscore to version 1.4.4 (from 1.4.2)
+  * mime module removed (it was unused)
+
+
 Patches contributed by GitHub users awwx, cmather, graemian, jmhredsox,
 kevinxucs, krizka, mitar, raix, and rasmuserik.
 
