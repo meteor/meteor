@@ -74,8 +74,8 @@ do_with_root() {
   fi
 }
 
-TMPDIR=`mktemp -d -t meteor-install-XXXXXXX`
-cd "$TMPDIR"
+TEMPORARY_DIR=`mktemp -d -t meteor-install-XXXXXXX`
+cd "$TEMPORARY_DIR"
 
 sed 's/^X//' >meteor << 'END-of-meteor-bootstrap'
 SHARHERE
@@ -92,17 +92,17 @@ fi
 
 do_with_root mv meteor "$PREFIX/bin/"
 
-cd .. # get out of TMPDIR before we remove it.
-rm -rf "$TMPDIR"
+cd .. # get out of TEMPORARY_DIR before we remove it.
+rm -rf "$TEMPORARY_DIR"
 
 echo
 echo "Downloading the latest Meteor release"
 
-TMPDIR=`mktemp -d -t meteor-no-app-here-so-just-a-global-update-XXXXXXX`
-cd "$TMPDIR"
+TEMPORARY_DIR=`mktemp -d -t meteor-global-update-XXXXXXX`
+cd "$TEMPORARY_DIR"
 "$PREFIX/bin/meteor" update
 cd ..
-rm -rf "$TMPDIR"
+rm -rf "$TEMPORARY_DIR"
 
 cat <<EOF
 
