@@ -3,7 +3,7 @@
 set -e
 set -u
 
-BUNDLE_VERSION=0.2.21
+BUNDLE_VERSION=0.2.22
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -85,7 +85,7 @@ npm install stylus@0.30.1
 npm install nib@0.8.2
 npm install semver@1.1.0
 npm install handlebars@1.0.7
-npm install mongodb@1.1.11
+npm install mongodb@1.2.13
 npm install clean-css@0.8.3
 npm install useragent@2.0.1
 npm install request@2.12.0
