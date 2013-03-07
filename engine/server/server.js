@@ -213,6 +213,9 @@ var run = function () {
   };
 
   __meteor_runtime_config__ = {};
+  if (info.release) {
+    __meteor_runtime_config__.meteorRelease = info.release;
+  }
 
   Fiber(function () {
     // (put in a fiber to let Meteor.db operations happen during loading)
