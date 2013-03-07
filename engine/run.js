@@ -618,6 +618,7 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
     }
   };
 
+  var process_startup_printer;
   // Using `inFiber` since bundling can yield when loading a manifest
   // file from warehouse.meteor.com.
   var restart_server = inFiber(function () {
@@ -668,6 +669,7 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
 
     start_watching();
     Status.running = true;
+    process_startup_printer();
     server_handle = start_server({
       bundlePath: bundle_path,
       outerPort: outer_port,
@@ -696,7 +698,6 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
   var mongo_err_count = 0;
   var mongo_err_timer;
   var mongo_startup_print_timer;
-  var process_startup_printer;
   var launch = function () {
     Status.mongoHandle = mongo_runner.launch_mongo(
       app_dir,
@@ -706,11 +707,6 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
         if (mongo_startup_print_timer) {
           clearTimeout(mongo_startup_print_timer);
           mongo_startup_print_timer = null;
-        }
-        // print startup if we haven't already.
-        if (process_startup_printer) {
-          process_startup_printer();
-          process_startup_printer = null;
         }
         restart_server();
       },
@@ -751,8 +747,14 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
     mongo_startup_print_timer = setTimeout(function () {
       process.stdout.write("Initializing mongo database... this may take a moment.\n");
     }, 3000);
+    var first = true;
     process_startup_printer = function () {
-      process.stdout.write("Running on: http://localhost:" + outer_port + "/\n");
+      if (first) {
+        process.stdout.write("=> Running on: http://localhost:" + outer_port + "/\n");
+        first = false;
+      } else {
+        process.stdout.write("=> Meteor server restarted\n");
+      }
     };
 
     start_update_checks(bundle_opts.release);
