@@ -242,8 +242,27 @@ var toc = [
     "Deps", [
       "Deps.run",
       "Deps.flush",
+      "Deps.nonreactive",
+      "Deps.active",
+      "Deps.currentComputation",
+      "Deps.onInvalidate",
+      "Deps.afterInvalidate",
+      "Deps.atFlush",
+      "Deps.depend",
       "Deps.Computation", [
-        {instance: "computation", name: "stop"}
+        {instance: "computation", name: "stop", id: "computation_stop"},
+        {instance: "computation", name: "invalidate", id: "computation_invalidate"},
+        {instance: "computation", name: "onInvalidate", id: "computation_oninvalidate"},
+        {instance: "computation", name: "afterInvalidate", id: "computation_afterinvalidate"},
+        {instance: "computation", name: "stopped", id: "computation_stopped"},
+        {instance: "computation", name: "invalidated", id: "computation_invalidated"},
+        {instance: "computation", name: "firstRun", id: "computation_firstrun"},
+        {instance: "computation", name: "active", id: "computation_active"}
+      ],
+      "Deps.Variable", [
+        {instance: "variable", name: "changed", id: "variable_changed"},
+        {instance: "variable", name: "addDependent", id: "variable_adddependent"},
+        {instance: "variable", name: "hasDependents", id: "variable_hasdependents"}
       ]
     ],
 

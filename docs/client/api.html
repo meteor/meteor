@@ -2227,9 +2227,10 @@ template being rendered).  Later, when the data changes, the function
 can "invalidate" the Computation, causing it to rerun (rerendering the
 template).
 
-The ability to create `Deps.Variable` objects and register computation
-callbacks is expected to be most useful to package authors
-implementing new reactive data sources.
+Applications will find [`Deps.run`](#deps_run) useful, while more
+advanced facilities such as `Deps.Variable` and `onInvalidate`
+callbacks are intended primarily for package authors implementing new
+reactive data sources.
 
 {{> api_box deps_run }}
 
@@ -2264,16 +2265,98 @@ The function is invoked immediately, at which point it may alert and
 stop right away if `shouldAlert` is already true.  If not, the
 function is run again when `shouldAlert` becomes true.
 
-Reruns do not occur immediately when a data dependency changes, but
-are deferred until a flush occurs.  A flush will always occur when the
-system is idle if necessary.  You can also use
-[`Deps.flush`](#deps_flush) to cause an immediate flush of all pending
-reruns and invalidation callbacks.
+A change to a data dependency does not cause an immediate rerun, but
+rather "invalidates" the computation, causing it to rerun the next
+time a flush occurs.  A flush will occur automatically the next time
+the system is idle if there are invalidated computations.  You can
+also use [`Deps.flush`](#deps_flush) to cause an immediate flush of
+all pending reruns and invalidation callbacks.
 
 If you nest calls to `Deps.run`, then when the outer call stops or
 reruns, the inner call will stop automatically.  Subscriptions and
 observers are also automatically stopped when used as part of a
 computation that is rerun.
+
+{{> api_box deps_flush }}
+
+Normally, when you make changes (like writing to the database),
+their impact (like updating the DOM) is delayed until the system is
+idle. This keeps things predictable &mdash; you can know that the DOM
+won't go changing out from under your code as it runs. It's also one
+of the things that makes Meteor fast.
+
+`Deps.flush` forces all of the pending reactive updates to complete
+(for example, it ensures the DOM has been updated with your recent
+database changes).  Call `flush` to apply those pending changes
+immediately.  For example, if an event handler changes a Session
+variable that will cause part of the user interface to rerender, the
+handler can call `flush` to perform the rerender immediately and then
+access the resulting DOM.
+
+Any auto-updating DOM elements that are found to not be in the
+document during a flush may be cleaned up (meaning that Meteor will
+stop tracking and updating the elements, so that the browser's garbage
+collector can delete them).  So, if you manually call `flush`, you need
+to make sure that any auto-updating elements that you have created by
+calling [`Meteor.render`](#meteor_render) have already been inserted
+in the main DOM tree.
+
+An automatic flush occurs whenever the system is idle which performs
+exactly the same work as `Deps.flush`.  The flushing process consists
+of rerunning invalidated computations and calling their callbacks (see
+[`Deps.Computation`](#deps_computation)).  If additional invalidations
+happen while flushing, they are processed as part of the same flush
+until there is no more work to be done.
+
+{{> api_box deps_nonreactive }}
+
+Calls `func()` with `Deps.currentComputation` temporarily set to
+`null`.  If `func` accesses reactive data sources, these data sources 
+will never cause a rerun of the enclosing computation.
+
+{{> api_box deps_active }}
+
+This value is useful for data source implementations to determine
+whether they are being accessed reactively or not.
+
+{{> api_box deps_currentcomputation }}
+
+It's very rare to need to access `currentComputation` directly.  The
+current computation is used implicitly by
+[`Deps.active`](#deps_active) (which tests whether there is one),
+[`Deps.depend`](#deps_depend) (which registers that it depends on a
+variable), and [`Deps.onInvalidate`](#deps_oninvalidate) (which
+registers a callback with it).
+
+{{> api_box deps_oninvalidate }}
+
+See [*`computation`*`.onInvalidate`](#computation_oninvalidate) for a description of this callback.
+
+It is an error if there is no current computation.
+
+{{> api_box deps_afterinvalidate }}
+
+See [*`computation`*`.afterInvalidate`](#computation_afterinvalidate) for a description of this callback.
+
+It is an error if there is no current computation.
+
+{{> api_box deps_atflush }}
+
+Functions scheduled by multiple calls to `atFlush` are guaranteed to
+run in the order that `atFlush` was called.
+
+If possible, developers should perform all work at flush time using
+`Deps.run`, `onInvalidate`, and `afterInvalidate` rather than
+`atFlush`.
+
+{{> api_box deps_depend }}
+
+`Deps.depend` is used in reactive data source implementations as the
+primary way to record the fact that a variable is being accessed from
+some computation.  If there is a current computation, it becomes a
+dependent of the variable, while the variable becomes a dependency of
+the computation.  Calls
+[`variable.addDependent()`](#variable_adddependent).
 
 <h2 id="deps_computation"><span>Deps.Computation</span></h2>
 
@@ -2299,13 +2382,23 @@ sources are responsible for tracking these dependencies using
 [`Deps.Variable`](#deps_variable) objects.
 
 Stopping or invalidating a computation will cause it to be processed
-at next flush time, or later in the current flush if one is in
-progress.  Processing a stopped or invalidated computation involves
-these steps:
+during the next flush, or later in the current flush if one is in
+progress.  Processing an invalidated (but not stopped) computation
+involves the following steps:
 
-* Call (and clear) all `onInvalidate` callbacks
-* If the computation is not stopped, rerun it and mark it valid again
-* Call (and clear) all `afterInvalidate` callbacks
+* Call all `onInvalidate` callbacks in the order they
+were registered and remove them.
+* Set `computation.invalidated = false`.
+* Rerun the computation by calling the original function passed
+  to `Deps.run`.
+* Call all `afterInvalidate` callbacks that were present when
+  processing began, in the order they were registered,
+  and remove them.
+
+Processing a stopped computation involves calling all of its
+`onInvalidate` callbacks followed by all its `afterInvalidate`
+callbacks.  Each computation is repeatedly processed as long
+as processing results in new calls to `invalidate` or `stop`.
 
 Callbacks can only be added to a computation while the computation is
 active, meaning its function is being run or rerun (it may be the
@@ -2315,7 +2408,8 @@ can't register new callbacks from within a callback.
 Example:
 
     // if we're in a computation, then perform some clean-up
-    // when this computation is invalidated (rerun or stopped)
+    // when the current computation is invalidated (rerun or
+    // stopped)
     if (Deps.active) {
       Deps.onInvalidate(function () {
         x.destroy();
@@ -2323,37 +2417,52 @@ Example:
       });
     }
 
-{{> api_box flush }}
+{{> api_box computation_stop}}
 
-Normally, when you make changes (like writing to the database),
-their impact (like updating the DOM) is delayed until the system is
-idle. This keeps things predictable &mdash; you can know that the DOM
-won't go changing out from under your code as it runs. It's also one
-of the things that makes Meteor fast.
+Stopping a computation is irreversible and guarantees that it will
+never be rerun.  A computation may call stop on itself to prevent any
+future reruns.  Stopping a computation that is already stopped has no
+effect.
 
-`Meteor.flush` forces all of the pending reactive updates to complete
-(for example, it ensures the DOM has been updated with your recent
-database changes).  Call `flush` to apply those pending changes
-immediately. The main use for this is to make sure the DOM has been
-brought up to date with your latest changes, so you can manually
-manipulate it with jQuery or the like.
+Stopping a computation causes its `onInvalidate` and `afterInvalidate`
+callbacks to run at flush time.  If a computation is stopped while
+rerunning, either by its own function or by a callback registered on
+it, the timing is as follows: If the computation is stopped
+from one of its `onInvalidate` callbacks, then no rerun happens; the
+`onInvalidate` and `afterInvalidate` callbacks simply finish running.
+If the computation is stopped during rerun or from one of its
+`afterInvalidate` callbacks, then the `afterInvalidate` callbacks
+continue to run, followed by any new `onInvalidate` or
+`afterInvalidate` callbacks registered during the rerun.
 
-When you call `flush`, any auto-updating DOM elements that are not on
-the screen may be cleaned up (meaning that Meteor will stop tracking
-and updating the elements, so that the browser's garbage collector can
-delete them). So, if you manually call `flush`, you need to make sure
-that any auto-updating elements that you have created by calling
-[`Meteor.render`](#meteor_render) have already been inserted in the main
-DOM tree.
+{{> api_box computation_invalidate }}
 
-Technically speaking, `flush` calls the [invalidation callbacks](#oninvalidate)
-on every [reactive context](#context) that has been [invalidated](#invalidate),
-but hasn't yet had its callbacks called. If the invalidation callbacks
-invalidate still more contexts, flush keeps flushing until everything is totally
-settled. In this case, the callbacks on the newly-invalidated context won't be
-called until after the currently-flushing context's callbacks have all been
-run.
+Invalidating a computation causes it to be rerun at flush time.  It is
+rare to invalidate a computation directly, because reactive data
+sources will invalidate their calling computations when they change.
+Reactive data sources themselves usually implement this invalidation
+indirectly through use of
+[`Deps.Variable.changed()`](#variable_changed).
 
+Invalidating a computation that is currently invalidated or is stopped
+has no effect.  A computation can invalidate itself, but if it
+continues to do so indefinitely, the result will be an infinite loop.
+You can't invalidate a computation from an `onInvalidate` handler
+registered on it, because the computation will not have been made
+valid again, but you can from an `afterInvalidate` handler.
+
+**XXX TODO:**
+
+* computation.onInvalidate
+* computation.afterInvalidate
+* computation.stopped
+* computation.invalidated
+* computation.firstRun
+* computation.active
+* Deps.Variable
+* variable.changed
+* variable.addDependent
+* variable.hasDependents
 
 <h2 id="ejson"><span>EJSON</span></h2>
 
