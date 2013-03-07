@@ -821,8 +821,9 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 
     // SPECIAL CASE: Instead of writing their own callbacks that invoke
     // this.added/changed/ready/etc, the user can just return a collection
-    // cursor from the publish function; we call its _publishCursor method which
-    // starts observing the cursor and publishes the results.
+    // cursor or array of cursors from the publish function; we call their
+    // _publishCursor method which starts observing the cursor and publishes the
+    // results. Note that _publishCursor does NOT call ready().
     //
     // XXX This uses an undocumented interface which only the Mongo cursor
     // interface publishes. Should we make this interface public and encourage
@@ -834,8 +835,40 @@ _.extend(Meteor._LivedataSubscription.prototype, {
     //       reactiveThingy.publishMe();
     //     });
     //   };
-    if (res && res._publishCursor)
+    var isCursor = function (c) {
+      return c && c._publishCursor;
+    };
+    if (isCursor(res)) {
       res._publishCursor(self);
+      // _publishCursor only returns after the initial added callbacks have run.
+      // mark subscription as ready.
+      self.ready();
+    } else if (_.isArray(res)) {
+      // check all the elements are cursors
+      if (! _.all(res, isCursor)) {
+        self.error(new Error("Publish function returned an array of non-Cursors"));
+        return;
+      }
+      // find duplicate collection names
+      // XXX we should support overlapping cursors, but that would require the
+      // merge box to allow overlap within a subscription
+      var collectionNames = {};
+      for (var i = 0; i < res.length; ++i) {
+        var collectionName = res[i]._getCollectionName();
+        if (_.has(collectionNames, collectionName)) {
+          self.error(new Error(
+            "Publish function returned multiple cursors for collection " +
+              collectionName));
+          return;
+        }
+        collectionNames[collectionName] = true;
+      };
+
+      _.each(res, function (cur) {
+        cur._publishCursor(self);
+      });
+      self.ready();
+    }
   },
 
   // This calls all stop callbacks and prevents the handler from updating any
