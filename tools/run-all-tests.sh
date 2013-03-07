@@ -1,6 +1,7 @@
 #!/bin/bash
 
 ## Setup
+cd `dirname $0`
 METEOR_DIR=`pwd`/..
 # Die with message on failure, print commands being executed
 trap 'echo FAILED' EXIT
