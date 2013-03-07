@@ -24,20 +24,23 @@ echo "Setting up engine tree in $TARGET_DIR"
 # make sure dev bundle exists before trying to install
 ./meteor --version || exit 1
 
-# The engine starts as a copy of the dev bundle.
-cp -a dev_bundle "$TARGET_DIR"
-
-# Add informational files.
-cp LICENSE.txt "$TARGET_DIR"
-cp History.md "$TARGET_DIR"
-
 function CPR {
     tar -c --exclude .meteor/local "$1" | tar -x -C "$2"
 }
+
+# The engine starts as a copy of the dev bundle.
+cp -a dev_bundle "$TARGET_DIR"
+# Copy over files and directories that we want in the tarball. Keep this list
+# synchronized with the files used in the $ENGINE_VERSION calculation below. The
+# "meteor" script file contains the version number of the dev bundle, so we
+# include that instead of the (arch-specific) bundle itself in sha calculation.
+cp LICENSE.txt "$TARGET_DIR"
 cp meteor "$TARGET_DIR/bin"
 CPR engine "$TARGET_DIR"
-rm -rf "$TARGET_DIR"/engine/tests
 CPR examples "$TARGET_DIR"
+
+# Trim tests and unfinished examples.
+rm -rf "$TARGET_DIR"/engine/tests
 rm -rf "$TARGET_DIR"/examples/unfinished
 rm -rf "$TARGET_DIR"/examples/other
 
