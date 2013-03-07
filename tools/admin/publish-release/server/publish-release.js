@@ -136,9 +136,9 @@ var publishPackage = function(s3, release, name, version) {
 
 // publish the release manifest, copying from
 // s3://com.meteor.warehouse/unpublished/RELEASE/manifest.json to
-// s3://com.meteor.warehouse/releases/RELEASE.json
+// s3://com.meteor.warehouse/releases/RELEASE.release.json
 var publishManifest = function(s3, release) {
-  var destKey = ["releases", release + ".json"].join("/");
+  var destKey = ["releases", release + ".release.json"].join("/");
   var sourceKey = ["unpublished", release, "manifest.json"].join("/");
 
   process.stdout.write("release manifest " + release + ": ");

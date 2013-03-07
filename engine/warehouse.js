@@ -8,8 +8,8 @@
 ///       latest/ (relative path symlink to latest x.y.z/ engine directory)
 ///       x.y.z/
 ///     releases/
-///       latest (relative path symlink to latest x.y.z.json)
-///       x.y.z.json
+///       latest (relative path symlink to latest x.y.z.release.json)
+///       x.y.z.release.json
 ///     packages/
 ///       foo/
 ///         x.y.z/
@@ -76,7 +76,7 @@ var warehouse = module.exports = {
     }
 
     var manifestPath = path.join(
-      warehouse.getWarehouseDir(), 'releases', release + '.json');
+      warehouse.getWarehouseDir(), 'releases', release + '.release.json');
 
     warehouse._populateWarehouseForRelease(release);
 
@@ -97,7 +97,7 @@ var warehouse = module.exports = {
     } catch (e) {
       return null;
     }
-    return linkText.replace(/\.json$/, '');
+    return linkText.replace(/\.release\.json$/, '');
   },
 
   _latestEngineSymlinkPath: function () {
@@ -145,7 +145,7 @@ var warehouse = module.exports = {
     if (storedLatestRelease && storedLatestRelease === releaseName)
       return false;
 
-    symlinkOverSync(releaseName + '.json',
+    symlinkOverSync(releaseName + '.release.json',
                     warehouse._latestReleaseSymlinkPath());
     return true;
   },
@@ -169,7 +169,8 @@ var warehouse = module.exports = {
     var future = new Future;
     var releasesDir = path.join(warehouse.getWarehouseDir(), 'releases');
     files.mkdir_p(releasesDir, 0755);
-    var releaseManifestPath = path.join(releasesDir, releaseVersion + '.json');
+    var releaseManifestPath = path.join(releasesDir,
+                                        releaseVersion + '.release.json');
 
     if (fs.existsSync(releaseManifestPath))
       return;
@@ -179,7 +180,7 @@ var warehouse = module.exports = {
     var releaseManifest;
     try {
       releaseManifest = JSON.parse(Future.wrap(files.getUrl)(
-        PACKAGES_URLBASE + "/releases/" + releaseVersion + ".json").wait());
+        PACKAGES_URLBASE + "/releases/" + releaseVersion + ".release.json").wait());
     } catch (e) {
       if (background)
         throw e;  // just throw, it's being ignored
