@@ -3,7 +3,7 @@
 set -e
 set -u
 
-BUNDLE_VERSION=0.2.21
+BUNDLE_VERSION=0.2.22
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -85,7 +85,7 @@ npm install stylus@0.30.1
 npm install nib@0.8.2
 npm install semver@1.1.0
 npm install handlebars@1.0.7
-npm install mongodb@1.1.11
+npm install mongodb@1.2.13
 npm install clean-css@0.8.3
 npm install useragent@2.0.1
 npm install request@2.12.0
@@ -94,7 +94,7 @@ npm install stream-buffers@0.2.3
 npm install keypress@0.1.0
 npm install sockjs@0.3.4
 npm install http-proxy@0.8.5
-npm install underscore@1.4.2
+npm install underscore@1.4.4
 npm install fstream@0.1.21
 npm install tar@0.1.14
 npm install websocket@1.0.8
@@ -152,12 +152,6 @@ mv "$MONGO_NAME" mongodb
 cd mongodb/bin
 rm bsondump mongodump mongoexport mongofiles mongoimport mongorestore mongos mongosniff mongostat mongotop mongooplog mongoperf
 cd ../..
-
-# Clean up an unneeded directory accidentally installed by the
-# node-mongo-native driver. This will be fixed in later versions, but
-# for now we have to manually remove it.
-# https://github.com/mongodb/node-mongodb-native/issues/736
-rm -rf lib/node_modules/mongodb/.coverage_data
 
 
 echo BUNDLING
