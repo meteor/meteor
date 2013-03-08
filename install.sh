@@ -1,5 +1,5 @@
 #!/bin/bash
-
+echo "test"
 cd `dirname $0`
 
 if [ "$PREFIX" != "" ] ; then
