@@ -19,6 +19,8 @@ Meteor.startup(function () {
     Meteor.onTestsComplete && Meteor.onTestsComplete();
     resultsDeps.changed();
     Deps.flush();
+
+    Meteor.default_connection._unsubscribeAll();
   }, Session.get("groupPath"));
 
 });

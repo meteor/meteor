@@ -9,8 +9,6 @@ var url = require("url");
 var connect = require('connect');
 var gzippo = require('gzippo');
 var argv = require('optimist').argv;
-var mime = require('mime');
-var handlebars = require('handlebars');
 var useragent = require('useragent');
 
 var _ = require('underscore');

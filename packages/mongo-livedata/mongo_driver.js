@@ -456,7 +456,11 @@ _Mongo.prototype._createSynchronousCursor = function (cursorDescription) {
 var SynchronousCursor = function (dbCursor) {
   var self = this;
   self._dbCursor = dbCursor;
-  self._synchronousNextObject = Future.wrap(dbCursor.nextObject.bind(dbCursor));
+  // Need to specify that the callback is the first argument to nextObject,
+  // since otherwise when we try to call it with no args the driver will
+  // interpret "undefined" first arg as an options hash and crash.
+  self._synchronousNextObject = Future.wrap(
+    dbCursor.nextObject.bind(dbCursor), 0);
   self._synchronousCount = Future.wrap(dbCursor.count.bind(dbCursor));
   self._visitedIds = {};
 };
@@ -822,6 +826,14 @@ _.extend(LiveResultsSet.prototype, {
   // with a call to _pollMongo or another call to this function.
   _addObserveHandleAndSendInitialAdds: function (handle) {
     var self = this;
+
+    // Check this before calling runTask (even though runTask does the same
+    // check) so that we don't leak a LiveResultsSet by incrementing
+    // _addHandleTasksScheduledButNotPerformed and never decrementing it.
+    if (!self._taskQueue.safeToRunTask())
+      throw new Error(
+        "Can't call observe() from an observe callback on the same query");
+
     // Keep track of how many of these tasks are on the queue, so that
     // _removeObserveHandle knows if it's safe to GC.
     ++self._addHandleTasksScheduledButNotPerformed;

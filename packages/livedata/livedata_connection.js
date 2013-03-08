@@ -755,6 +755,16 @@ _.extend(Meteor._LivedataConnection.prototype, {
     }
   },
 
+  // This is very much a private function we use to make the tests
+  // take up fewer server resources after they complete.
+  _unsubscribeAll: function () {
+    var self = this;
+    _.each(_.clone(self._subscriptions), function (sub, id) {
+      self._send({msg: 'unsub', id: id});
+      delete self._subscriptions[id];
+    });
+  },
+
   // Sends the DDP stringification of the given message object
   _send: function (obj) {
     var self = this;
