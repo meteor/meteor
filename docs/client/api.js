@@ -775,7 +775,7 @@ Template.api.deps_oninvalidate = {
   id: "deps_oninvalidate",
   name: "Deps.onInvalidate(callback)",
   locus: "Client",
-  descr: ["Registers a new [`onInvalidate`](#computation_oninvalidate) callback on the current computation."],
+  descr: ["Registers a new [`onInvalidate`](#computation_oninvalidate) callback on the current computation (which must exist), to be called immediately when the current computation is invalidated or stopped."],
   args: [
     {name: "callback",
      type: "Function",
