@@ -2416,10 +2416,11 @@ computation is rerun.
 
 {{> api_box computation_invalidate }}
 
-Invalidating a computation marks it to be rerun at flush time.  It is
-rare to invalidate a computation directly, because reactive data
-sources will invalidate their calling computations when they change.
-Reactive data sources in turn implement this using
+Invalidating a computation marks it to be rerun at flush time, at
+which point the computation becomes valid again.  It is rare to
+invalidate a computation directly, because reactive data sources will
+invalidate their calling computations when they change.  Reactive data
+sources in turn implement this using
 [`Deps.Variable.changed()`](#variable_changed).
 
 Invalidating a computation immediately calls all `onInvalidate`
@@ -2428,16 +2429,98 @@ currently invalidated or is stopped has no effect.  A computation can
 invalidate itself, but if it continues to do so indefinitely, the
 result will be an infinite loop.
 
-**XXX TODO:**
+{{> api_box computation_oninvalidate }}
 
-* computation.onInvalidate
-* computation.stopped
-* computation.invalidated
-* computation.firstRun
-* Deps.Variable
-* variable.changed
-* variable.addDependent
-* variable.hasDependents
+`onInvalidate` registers a one-time callback that either fires
+immediately or as soon as the computation is next invalidated or
+stopped.  It is used by reactive data sources to clean up resources or
+break dependencies when a computation is rerun or stopped.
+
+To get a callback after a computation has been recomputed, you can
+call [`Deps.afterFlush`](#deps_afterflush) from `onInvalidate`.
+
+{{> api_box computation_stopped }}
+
+{{> api_box computation_invalidated }}
+
+This property is initially false.  It is set to true by `stop()` and
+`invalidate()`.  It is reset to false when the computation is
+recomputed at flush time.
+
+{{> api_box computation_firstrun }}
+
+This property is a convenience to support the common pattern where a
+`Deps.run` has logic specific to the first run.
+
+<h2 id="deps_variable"><span>Deps.Variable</span></h2>
+
+A Deps Variable represents an atomic unit of reactive data that a
+computation might depend on.  Reactive data sources such as Session or
+Minimongo internally create different Variables for different
+pieces of data, each of which may be depended on by multiple
+computations.  When the data changes, the computations are
+invalidated.
+
+Variables don't store data, they just track the set of computations to
+invalidate if they change.  Typically, a data value will be accompanied by a Variable that affords dependency tracking, as in this example:
+
+    var weather = "sunny";
+    var weatherDeps = new Deps.Variable;
+
+    var getWeather = function () {
+      Deps.depend(weatherDeps);
+      return weather;
+    };
+
+    var setWeather = function (w) {
+      weather = w;
+      // (could add logic here to only call changed()
+      // if the new value is different from the old)
+      weatherDeps.changed();
+    };
+
+This example implements a weather data source with a simple getter and
+setter.  The getter records that the current computation depends on
+the `weatherDeps` variable using `Deps.depend`, while the setter
+signals the variable to invalidate all dependent computations by
+calling `changed()`.
+
+The reason Variables do not store data themselves is that it can be
+useful to associate multiple variables with the same piece of data.
+For example, one Variable might represent the result of a database
+query, while another might represent just the number of documents in
+the result.  A Variable could represent whether the weather is sunny
+or not, or whether the temperature is above freezing.
+[`Session.equals`](#session_equals) is implemented this way for
+efficiency.  When you call `Session.equals("weather", "sunny")`, the
+current computation is made to depend on an internal Variable that
+does not change if the weather goes from, say, "rainy" to "cloudy".
+
+Conceptually, the only two things a Variable can do are gain a
+dependent (typically via `Deps.depend`) and change.
+
+A Variable's dependent computations are always valid (they have
+`invalidated === false`).  If a dependent is invalidated at any time,
+either by the Variable itself or some other way, it is immediately
+removed.
+
+{{> api_box variable_changed }}
+
+{{> api_box variable_adddependent }}
+
+In almost all cases, you want to declare a dependency of the current
+computation and should use `Deps.depend(variable)` instead,
+which is equivalent to `variable.addDependent(null)`.
+
+Computations added as dependents of the Variable will be removed
+immediately if they are ever invalidated or stopped.
+
+{{> api_box variable_hasdependents }}
+
+For reactive data sources that create many internal Variables,
+this function is useful to determine whether a particular Variable is
+still tracking any dependency relationships or if it can be cleaned up
+to save memory.
 
 <h2 id="ejson"><span>EJSON</span></h2>
 

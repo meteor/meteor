@@ -246,7 +246,7 @@ var toc = [
       "Deps.active",
       "Deps.currentComputation",
       "Deps.onInvalidate",
-      "Deps.atFlush",
+      "Deps.afterFlush",
       "Deps.depend",
       "Deps.Computation", [
         {instance: "computation", name: "stop", id: "computation_stop"},
