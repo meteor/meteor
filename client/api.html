@@ -2270,12 +2270,14 @@ rather "invalidates" the computation, causing it to rerun the next
 time a flush occurs.  A flush will occur automatically the next time
 the system is idle if there are invalidated computations.  You can
 also use [`Deps.flush`](#deps_flush) to cause an immediate flush of
-all pending reruns and invalidation callbacks.
+all pending reruns.
 
 If you nest calls to `Deps.run`, then when the outer call stops or
 reruns, the inner call will stop automatically.  Subscriptions and
 observers are also automatically stopped when used as part of a
-computation that is rerun.
+computation that is rerun, allowing new ones to be established.  See
+[`Meteor.subscribe`](#meteor_subscribe) for more information about
+subscriptions and reactivity.
 
 {{> api_box deps_flush }}
 
@@ -2285,28 +2287,30 @@ idle. This keeps things predictable &mdash; you can know that the DOM
 won't go changing out from under your code as it runs. It's also one
 of the things that makes Meteor fast.
 
-`Deps.flush` forces all of the pending reactive updates to complete
-(for example, it ensures the DOM has been updated with your recent
-database changes).  Call `flush` to apply those pending changes
-immediately.  For example, if an event handler changes a Session
+`Deps.flush` forces all of the pending reactive updates to complete.
+For example, if an event handler changes a Session
 variable that will cause part of the user interface to rerender, the
 handler can call `flush` to perform the rerender immediately and then
 access the resulting DOM.
 
-Any auto-updating DOM elements that are found to not be in the
-document during a flush may be cleaned up (meaning that Meteor will
-stop tracking and updating the elements, so that the browser's garbage
-collector can delete them).  So, if you manually call `flush`, you need
-to make sure that any auto-updating elements that you have created by
-calling [`Meteor.render`](#meteor_render) have already been inserted
-in the main DOM tree.
-
 An automatic flush occurs whenever the system is idle which performs
 exactly the same work as `Deps.flush`.  The flushing process consists
-of rerunning invalidated computations and calling their callbacks (see
-[`Deps.Computation`](#deps_computation)).  If additional invalidations
-happen while flushing, they are processed as part of the same flush
-until there is no more work to be done.
+of rerunning any invalidated computations.  If additional
+invalidations happen while flushing, they are processed as part of the
+same flush until there is no more work to be done.  Callbacks
+registered with [`Meteor.afterFlush`](#meteor_afterflush) are called
+after processing outstanding invalidations.
+
+Any auto-updating DOM elements that are found to not be in the
+document during a flush may be cleaned up by Meteor (meaning that
+Meteor will stop tracking and updating the elements, so that the
+browser's garbage collector can delete them).  So, if you manually
+call `flush`, you need to make sure that any auto-updating elements
+that you have created by calling [`Meteor.render`](#meteor_render)
+have already been inserted in the main DOM tree.
+
+It is illegal to call `flush` from inside a `flush` or from a running
+computation.
 
 {{> api_box deps_nonreactive }}
 
@@ -2330,24 +2334,18 @@ registers a callback with it).
 
 {{> api_box deps_oninvalidate }}
 
-See [*`computation`*`.onInvalidate`](#computation_oninvalidate) for a description of this callback.
+See [*`computation`*`.onInvalidate`](#computation_oninvalidate).
 
 It is an error if there is no current computation.
 
-{{> api_box deps_afterinvalidate }}
+{{> api_box deps_afterflush }}
 
-See [*`computation`*`.afterInvalidate`](#computation_afterinvalidate) for a description of this callback.
-
-It is an error if there is no current computation.
-
-{{> api_box deps_atflush }}
-
-Functions scheduled by multiple calls to `atFlush` are guaranteed to
-run in the order that `atFlush` was called.
-
-If possible, developers should perform all work at flush time using
-`Deps.run`, `onInvalidate`, and `afterInvalidate` rather than
-`atFlush`.
+Functions scheduled by multiple calls to `afterFlush` are guaranteed
+to run in the order that `afterFlush` was called.  Functions are
+guaranteed to be called at a time when there are no invalidated
+computations that need rerunning.  This means that if an `afterFlush`
+function invalidates a computation, that computation will be rerun
+before any subsequent `afterFlush` functions are called.
 
 {{> api_box deps_depend }}
 
@@ -2371,39 +2369,25 @@ Each time a computation runs, it may access various reactive data
 sources that serve as inputs to the computation, which are called its
 dependencies.  At some future time, one of these dependencies may
 trigger the computation to be rerun by invalidating it.  When this
-happens, the computation will be rerun at next flush time, at which
-point the old dependencies are cleared.
+happens, the dependencies are cleared, and the computation is
+scheduled to be rerun at flush time.
 
 The *current computation*
 ([`Deps.currentComputation`](#deps_current_computation)) is the
-computation that is currently being run or rerun, and the one that
-gains a dependency when a reactive data source is accessed.  Data
-sources are responsible for tracking these dependencies using
+computation that is currently being run or rerun (computed), and the
+one that gains a dependency when a reactive data source is accessed.
+Data sources are responsible for tracking these dependencies using
 [`Deps.Variable`](#deps_variable) objects.
 
-Stopping or invalidating a computation will cause it to be processed
-during the next flush, or later in the current flush if one is in
-progress.  Processing an invalidated (but not stopped) computation
-involves the following steps:
+Invalidating a computation immediately calls all of the computation's
+`onInvalidate` callbacks and sets its `invalidated` property to
+`true`.  When a flush occurs, if the computation has been invalidated
+and not stopped, then the computation is rerun by setting the
+`invalidated` property to `false` and calling the original function
+that was passed to `Deps.run`.
 
-* Call all `onInvalidate` callbacks in the order they
-were registered and remove them.
-* Set `computation.invalidated = false`.
-* Rerun the computation by calling the original function passed
-  to `Deps.run`.
-* Call all `afterInvalidate` callbacks that were present when
-  processing began, in the order they were registered,
-  and remove them.
-
-Processing a stopped computation involves calling all of its
-`onInvalidate` callbacks followed by all its `afterInvalidate`
-callbacks.  Each computation is repeatedly processed as long
-as processing results in new calls to `invalidate` or `stop`.
-
-Callbacks can only be added to a computation while the computation is
-active, meaning its function is being run or rerun (it may be the
-current computation or one that encloses it).  In particular, you
-can't register new callbacks from within a callback.
+Stopping a computation invalidates it (if it is valid) for the purpose
+calling callbacks, but ensures that it will never be rerun.
 
 Example:
 
@@ -2420,45 +2404,36 @@ Example:
 {{> api_box computation_stop}}
 
 Stopping a computation is irreversible and guarantees that it will
-never be rerun.  A computation may call stop on itself to prevent any
-future reruns.  Stopping a computation that is already stopped has no
-effect.
+never be rerun.  You can stop a computation at any time, including
+from the computation's own run function.  Stopping a computation that
+is already stopped has no effect.
 
-Stopping a computation causes its `onInvalidate` and `afterInvalidate`
-callbacks to run at flush time.  If a computation is stopped while
-rerunning, either by its own function or by a callback registered on
-it, the timing is as follows: If the computation is stopped
-from one of its `onInvalidate` callbacks, then no rerun happens; the
-`onInvalidate` and `afterInvalidate` callbacks simply finish running.
-If the computation is stopped during rerun or from one of its
-`afterInvalidate` callbacks, then the `afterInvalidate` callbacks
-continue to run, followed by any new `onInvalidate` or
-`afterInvalidate` callbacks registered during the rerun.
+Stopping a computation causes its `onInvalidate` callbacks to run
+immediately if it is not currently invalidated.
+
+Nested computations are stopped automatically when their enclosing
+computation is rerun.
 
 {{> api_box computation_invalidate }}
 
-Invalidating a computation causes it to be rerun at flush time.  It is
+Invalidating a computation marks it to be rerun at flush time.  It is
 rare to invalidate a computation directly, because reactive data
 sources will invalidate their calling computations when they change.
-Reactive data sources themselves usually implement this invalidation
-indirectly through use of
+Reactive data sources in turn implement this using
 [`Deps.Variable.changed()`](#variable_changed).
 
-Invalidating a computation that is currently invalidated or is stopped
-has no effect.  A computation can invalidate itself, but if it
-continues to do so indefinitely, the result will be an infinite loop.
-You can't invalidate a computation from an `onInvalidate` handler
-registered on it, because the computation will not have been made
-valid again, but you can from an `afterInvalidate` handler.
+Invalidating a computation immediately calls all `onInvalidate`
+callbacks registered on it.  Invalidating a computation that is
+currently invalidated or is stopped has no effect.  A computation can
+invalidate itself, but if it continues to do so indefinitely, the
+result will be an infinite loop.
 
 **XXX TODO:**
 
 * computation.onInvalidate
-* computation.afterInvalidate
 * computation.stopped
 * computation.invalidated
 * computation.firstRun
-* computation.active
 * Deps.Variable
 * variable.changed
 * variable.addDependent

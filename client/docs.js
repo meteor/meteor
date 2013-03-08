@@ -246,18 +246,15 @@ var toc = [
       "Deps.active",
       "Deps.currentComputation",
       "Deps.onInvalidate",
-      "Deps.afterInvalidate",
       "Deps.atFlush",
       "Deps.depend",
       "Deps.Computation", [
         {instance: "computation", name: "stop", id: "computation_stop"},
         {instance: "computation", name: "invalidate", id: "computation_invalidate"},
         {instance: "computation", name: "onInvalidate", id: "computation_oninvalidate"},
-        {instance: "computation", name: "afterInvalidate", id: "computation_afterinvalidate"},
         {instance: "computation", name: "stopped", id: "computation_stopped"},
         {instance: "computation", name: "invalidated", id: "computation_invalidated"},
-        {instance: "computation", name: "firstRun", id: "computation_firstrun"},
-        {instance: "computation", name: "active", id: "computation_active"}
+        {instance: "computation", name: "firstRun", id: "computation_firstrun"}
       ],
       "Deps.Variable", [
         {instance: "variable", name: "changed", id: "variable_changed"},
