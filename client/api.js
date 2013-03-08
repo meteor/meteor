@@ -773,11 +773,11 @@ Template.api.deps_currentcomputation = {
 
 Template.api.deps_oninvalidate = {
   id: "deps_oninvalidate",
-  name: "Deps.onInvalidate(func)",
+  name: "Deps.onInvalidate(callback)",
   locus: "Client",
   descr: ["Registers a new [`onInvalidate`](#computation_oninvalidate) callback on the current computation."],
   args: [
-    {name: "func",
+    {name: "callback",
      type: "Function",
      descr: "A callback function that will be invoked as `func(c)`, where `c` is the computation on which the callback is registered."}
   ]
@@ -785,11 +785,11 @@ Template.api.deps_oninvalidate = {
 
 Template.api.deps_afterflush = {
   id: "deps_afterflush",
-  name: "Deps.afterFlush(func)",
+  name: "Deps.afterFlush(callback)",
   locus: "Client",
-  descr: ["Schedules a function to be called during the next flush, or later in the current flush if one is in progress, after all invalidated computations have been rerun."],
+  descr: ["Schedules a function to be called during the next flush, or later in the current flush if one is in progress, after all invalidated computations have been rerun.  The function will be run once and not on subsequent flushes unless `afterFlush` is called again."],
   args: [
-    {name: "func",
+    {name: "callback",
      type: "Function",
      descr: "A function to call at flush time."}
   ]
@@ -821,33 +821,64 @@ Template.api.computation_invalidate = {
   descr: ["Invalidates this computation so that it will be rerun."]
 };
 
+Template.api.computation_oninvalidate = {
+  id: "computation_oninvalidate",
+  name: "<em>computation</em>.onInvalidate(callback)",
+  locus: "Client",
+  descr: ["Registers `callback` to run when this computation is next invalidated, or runs it immediately if the computation is already invalidated.  The callback is run exactly once and not upon future invalidations unless `onInvalidate` is called again after the computation becomes valid again."],
+  args: [
+    {name: "callback",
+     type: "Function",
+     descr: "Function to be called on invalidation. Receives one argument, the computation that was invalidated."}
+  ]
+};
 
+Template.api.computation_stopped = {
+  id: "computation_stopped",
+  name: "<em>computation</em>.stopped",
+  locus: "Client",
+  descr: ["True if this computation has been stopped."]
+};
 
-// Template.api.onInvalidate = {
-//   id: "oninvalidate",
-//   name: "<em>context</em>.onInvalidate(callback)",
-//   locus: "Client",
-//   descr: ["Registers `callback` to be called when this context is invalidated. `callback` will be run exactly once."],
-//   args: [
-//     {name: "callback",
-//      type: "Function",
-//      descr: "Function to be called on invalidation. Receives one argument, the context that was invalidated."}
-//   ]
-// };
+Template.api.computation_invalidated = {
+  id: "computation_invalidated",
+  name: "<em>computation</em>.invalidated",
+  locus: "Client",
+  descr: ["True if this computation has been invalidated (and not yet rerun), or if it has been stopped."]
+};
 
-// Template.api.invalidate = {
-//   id: "invalidate",
-//   name: "<em>context</em>.invalidate()",
-//   locus: "Client",
-//   descr: ["Add this context to the list of contexts that will have their [`onInvalidate`](#oninvalidate) callbacks called by the next call to [`Meteor.flush`](#meteor_flush)."]
-// };
+Template.api.computation_firstrun = {
+  id: "computation_firstrun",
+  name: "<em>computation</em>.firstRun",
+  locus: "Client",
+  descr: ["True during the initial run of the computation at the time `Deps.run` is called, and false on subsequent reruns and at other times."]
+};
 
-// Template.api.current = {
-//   id: "current",
-//   name: "Meteor.deps.Context.current",
-//   locus: "Client",
-//   descr: ["The current [`invalidation context`](#context), or `null` if not being called from inside [`run`](#run)."]
-// };
+Template.api.variable_changed = {
+  id: "variable_changed",
+  name: "<em>variable</em>.changed()",
+  locus: "Client",
+  descr: ["Invalidate all dependent computations immediately and remove them as dependents."]
+};
+
+Template.api.variable_adddependent = {
+  id: "variable_adddependent",
+  name: "<em>variable</em>.addDependent(computation)",
+  locus: "Client",
+  descr: ["Adds `computation` as a dependent of this Variable, recording the fact that the computation depends on this Variable.", "Returns true if the computation was not already a dependent of this Variable."],
+  args: [
+    {name: "computation",
+     type: "Deps.Computation",
+     descr: "The computation to add, or `null` to use the current computation (in which case there must be a current computation)."}
+  ]
+};
+
+Template.api.variable_hasdependents = {
+  id: "variable_hasdependents",
+  name: "<em>variable</em>.hasDependents()",
+  locus: "Client",
+  descr: ["True if this Variable has one or more dependent Computations, which would be invalidated if this Variable were to change."]
+};
 
 //////
 
