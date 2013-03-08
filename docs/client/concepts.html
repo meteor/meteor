@@ -281,27 +281,26 @@ If the value of `Session.get("currentRoomId")` changes for any reason, the
 function will be automatically re-run, setting up a new subscription that
 replaces the old one.
 
-This automatic recomputation is achieved by a cooperation
-between `Session` and `Deps.run`.
-Methods like `Meteor.autorun` establish a "reactive
-context" inside of which data dependencies are tracked, and they are
-prepared to re-run their function argument as necessary.  Data
-providers like `Session`, on the other hand, make note of
-the context they are called from and what data was requested, and they
-are prepared to send an invalidation signal when the data changes.
+This automatic recomputation is achieved by a cooperation between
+`Session` and `Deps.run`.  `Deps.run` performs an arbitrary "reactive
+computation" inside of which data dependencies are tracked, and it
+will re-run its function argument as necessary.  Data providers like
+`Session`, on the other hand, make note of the computation they are
+called from and what data was requested, and they are prepared to send
+an invalidation signal to the computation when the data changes.
 
-This simple pattern (reactive context + reactive data source) has wide
+This simple pattern (reactive computation + reactive data source) has wide
 applicability.  Above, the programmer is saved from writing
 unsubscribe/resubscribe calls and making sure they are called at the
 right time.  In general, Meteor can eliminate whole classes of data
 propagation code which would otherwise clog up your application with
 error-prone logic.
 
-These Meteor functions run your code in a reactive context:
+These Meteor functions run your code as a reactive computation:
 
 * [Templates](#templates)
 * [`Meteor.render`](#meteor_render) and [`Meteor.renderList`](#meteor_renderlist)
-* [`Meteor.autorun`](#meteor_autorun)
+* [`Deps.run`](#deps_run)
 
 And the reactive data sources that can trigger changes are:
 
@@ -313,15 +312,14 @@ And the reactive data sources that can trigger changes are:
 * [`Meteor.userId`](#meteor_userid)
 * [`Meteor.loggingIn`](#meteor_loggingin)
 
-In addition, calling [`Meteor.subscribe`](#meteor_subscribe) in a reactive
-context sets up a subscription which is automatically stopped when the context
+In addition, calling [`Meteor.subscribe`](#meteor_subscribe) from a reactive
+computation sets up a subscription which is automatically stopped when computation
 is invalidated, as shown above.
 
 Meteor's
 [implementation](https://github.com/meteor/meteor/blob/master/packages/deps/deps.js)
-of reactivity is short and sweet, about 50 lines of code.  You can hook into it
-yourself to add new reactive contexts or data sources, using the
-[`Meteor.deps`](#meteor_deps) module.
+is a package called [`Deps`](#deps) that is fairly short and straightforward.
+You can use it yourself to create your own reactive computations and data sources.
 
 {{/better_markdown}}
 </template>
@@ -354,7 +352,7 @@ function that returns some HTML as a string. It returns an auto-updating
 function, it is re-run. The DOM nodes in the `DocumentFragment` then
 update themselves in-place, no matter where they were inserted on the
 page. It's completely automatic. [`Meteor.render`](#meteor_render) uses
-[reactive contexts](#reactivity) to discover what data is used by the
+a [reactive computation](#reactivity) to discover what data is used by the
 rendering function.
 
 Most of the time, though, you won't call these functions directly
