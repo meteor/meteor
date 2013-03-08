@@ -382,6 +382,11 @@ _.each(['forEach', 'map', 'rewind', 'fetch', 'count'], function (method) {
 // to transmute it into the equivalent subscription.  This is the function that
 // does that.
 
+Cursor.prototype.getFactory = function () {
+  var self = this;
+  return self._cursorDescription._factory;
+};
+
 Cursor.prototype._publishCursor = function (sub) {
   var self = this;
   var collection = self._cursorDescription.collectionName;

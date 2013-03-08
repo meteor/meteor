@@ -15,6 +15,7 @@ Meteor.Collection = function (name, options) {
   options = _.extend({
     manager: undefined,
     idGeneration: 'STRING',
+    defaultFactory: null,
     _driver: undefined,
     _preventAutopublish: false
   }, options);
@@ -32,6 +33,8 @@ Meteor.Collection = function (name, options) {
     };
     break;
   }
+
+  self._defaultFactory = options.defaultFactory;
 
   if (!name && (name !== null)) {
     Meteor._debug("Warning: creating anonymous collection. It will not be " +
@@ -174,17 +177,40 @@ Meteor.Collection = function (name, options) {
 
 
 _.extend(Meteor.Collection.prototype, {
+
+  _getFindSelector: function (args) {
+    if (args.length == 0)
+      return {};
+    else
+      return args[0];
+  },
+
+  _getFindOptions: function (args) {
+    var self = this;
+    if (args.length < 2) {
+      return { factory: self._defaultFactory };
+    } else {
+      return _.extend({
+        factory: self._defaultFactory
+      }, args[1]);
+    }
+  },
+
   find: function (/* selector, options */) {
     // Collection.find() (return all docs) behaves differently
     // from Collection.find(undefined) (return 0 docs).  so be
-    // careful about preserving the length of arguments.
+    // careful about the length of arguments.
     var self = this;
-    return self._collection.find.apply(self._collection, _.toArray(arguments));
+    var argArray = _.toArray(arguments);
+    return self._collection.find(self._getFindSelector(argArray),
+                                 self._getFindOptions(argArray));
   },
 
   findOne: function (/* selector, options */) {
     var self = this;
-    return self._collection.findOne.apply(self._collection, _.toArray(arguments));
+    var argArray = _.toArray(arguments);
+    return self._collection.findOne(self._getFindSelector(argArray),
+                                    self._getFindOptions(argArray));
   }
 
 });
