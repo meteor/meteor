@@ -127,7 +127,7 @@ var files = module.exports = {
   },
 
   // given a predicate function and a starting path, traverse upwards
-  // from the path until we find a path that satisfys the predicate.
+  // from the path until we find a path that satisfies the predicate.
   //
   // returns either the path to the lowest level directory that passed
   // the test or null for none found. if starting path isn't given, use
