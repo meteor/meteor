@@ -1449,7 +1449,7 @@ Template.api.set = {
   id: "session_set",
   name: "Session.set(key, value)",
   locus: "Client",
-  descr: ["Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Meteor.autorun`](#meteor_autorun) blocks, that called [`Session.get`](#session_get) on this `key`.)"],
+  descr: ["Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Deps.run`](#deps_run) computations, that called [`Session.get`](#session_get) on this `key`.)"],
   args: [
     {name: "key",
      type: "String",
@@ -1479,7 +1479,7 @@ Template.api.get = {
   id: "session_get",
   name: "Session.get(key)",
   locus: "Client",
-  descr: ["Get the value of a session variable. If inside a [`Meteor.deps`](#meteor_deps) context, invalidate the context the next time the value of the variable is changed by [`Session.set`](#session_set). This returns a clone of the session value, so if it's an object or an array, mutating the returned value has no effect on the value stored in the session."],
+  descr: ["Get the value of a session variable. If inside a [reactive computation](#reactivity), invalidate the computation the next time the value of the variable is changed by [`Session.set`](#session_set). This returns a clone of the session value, so if it's an object or an array, mutating the returned value has no effect on the value stored in the session."],
   args: [
     {name: "key",
      type: "String",
@@ -1491,7 +1491,7 @@ Template.api.equals = {
   id: "session_equals",
   name: "Session.equals(key, value)",
   locus: "Client",
-  descr: ["Test if a session variable is equal to a value. If inside a [`Meteor.deps`](#meteor_deps) context, invalidate the context the next time the variable changes to or from the value."],
+  descr: ["Test if a session variable is equal to a value. If inside a [reactive computation](#reactivity), invalidate the computation the next time the variable changes to or from the value."],
   args: [
     {name: "key",
      type: "String",

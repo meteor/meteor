@@ -125,7 +125,7 @@ Example:
     Counts = new Meteor.Collection("counts");
 
     // client: subscribe to the count for the current room
-    Meteor.autorun(function () {
+    Deps.run(function () {
       Meteor.subscribe("counts-by-room", Session.get("roomId"));
     });
 
@@ -200,15 +200,17 @@ reactive data source.
 {{/dtdd}}
 </dl>
 
-If you call `Meteor.subscribe` within a [reactive context](#reactivity) such as
-[`Meteor.autorun`](#meteor_autorun), the subscription will automatically be
-cancelled when the context is invalidated; it's not necessary to call `stop` on
-subscriptions made from inside `Meteor.autorun`. However, if the next iteration
-of your autorun function subscribes to the same record set (same name and
+If you call `Meteor.subscribe` within a [reactive computation](#reactivity),
+for example using
+[`Deps.run`](#deps_run), the subscription will automatically be
+cancelled when the computation is invalidated or stopped; it's not necessary
+to call `stop` on
+subscriptions made from inside `Deps.run`. However, if the next iteration
+of your run function subscribes to the same record set (same name and
 parameters), Meteor is smart enough to skip a wasteful
 unsubscribe/resubscribe. For example:
 
-    Meteor.autorun(function () {
+    Deps.run(function () {
       Meteor.subscribe("chat", {room: Session.get("current-room")});
       Meteor.subscribe("privateMessages");
     });
@@ -420,8 +422,8 @@ the server. The return value is an object with the following fields:
 
 Instead of using callbacks to notify you on changes, this is
 a [reactive](#reactivity) data source. You can use it in a
-[template](#templates) or [invalidation](#meteor_deps)
-context to get realtime updates.
+[template](#templates) or [computation](#deps_run)
+to get realtime updates.
 
 {{> api_box reconnect}}
 
@@ -600,8 +602,8 @@ those changes may or may not appear in the result set.
 
 Cursors are a reactive data source.  The first time you retrieve a
 cursor's documents with `fetch`, `map`, or `forEach` inside a
-reactive context (eg, [`Meteor.render`](#meteor_render) or
-[`Meteor.autorun`](#meteor_autorun)), Meteor will register a
+reactive computation (eg, a template or
+[`Deps.run`](#deps_run)), Meteor will register a
 dependency on the underlying data.  Any change to the collection that
 changes the documents in a cursor will trigger a recomputation.  To
 disable this behavior, pass `{reactive: false}` as an option to
@@ -860,7 +862,7 @@ cursor, use [`forEach`](#foreach), [`map`](#map), or [`fetch`](#fetch).
 
 {{> api_box cursor_foreach}}
 
-When called in a reactive context, `forEach` registers dependencies on
+When called from a reactive computation, `forEach` registers dependencies on
 the matching documents.
 
 Examples:
@@ -875,7 +877,7 @@ Examples:
 
 {{> api_box cursor_map}}
 
-When called in a reactive context, `map` registers dependencies on
+When called from a reactive computation, `map` registers dependencies on
 the matching documents.
 
 <!-- The following is not yet implemented, but users shouldn't assume
@@ -886,7 +888,7 @@ the first call is waiting. If strict sequential execution is necessary, use
 
 {{> api_box cursor_fetch}}
 
-When called in a reactive context, `fetch` registers dependencies on
+When called from a reactive computation, `fetch` registers dependencies on
 the matching documents.
 
 {{> api_box cursor_count}}
@@ -1171,15 +1173,15 @@ whenever [`Session.set`](#session_set)`("currentList", x)` is called.
 
 Example:
 
-    Meteor.autorun(function () {
+    Deps.run(function () {
       Meteor.subscribe("chat-history", {room: Session.get("currentRoomId")});
     });
 
-    // Causes the function passed to Meteor.autorun to be re-run, so
+    // Causes the function passed to Deps.run to be re-run, so
     // that the chat-history subscription is moved to the room "home".
     Session.set("currentRoomId", "home");
 
-See [`Meteor.deps`](#meteor_deps) for another example.
+See [`Meteor.deps`](#deps) for another example.
 
 {{> api_box setDefault}}
 
@@ -1907,7 +1909,7 @@ automatically cleaned up. For more details about clean-up, see
 [`Deps.flush`](#deps_flush).
 
 `Meteor.render` tracks the data dependencies of `htmlFunc` by running
-it in a reactive context, so it can respond to changes in any reactive
+it in a reactive computation, so it can respond to changes in any reactive
 data sources used by that function. For more information, or to learn
 how to make your own reactive data sources, see
 [Reactivity](#reactivity).
@@ -1944,7 +1946,7 @@ will be called to render alternate content. You might use this to show
 a message like "No records match your query."
 
 Each call to `docFunc` or `elseFunc` is run in its own reactive
-context so that if it has other external data dependencies, it will be
+computation so that if it has other external data dependencies, it will be
 individually re-run when the data changes.
 
 Example:
@@ -2170,7 +2172,7 @@ correctly inside constant regions.
 
 {{#api_box_inline isolate}}
 
-Each template runs in its own reactive context.  When the template
+Each template runs as its own reactive computation.  When the template
 accesses a reactive data source, such as by calling `Session.get` or
 making a database query, this establishes a data dependency that will
 cause the whole template to be re-rendered when the data changes.
@@ -2298,7 +2300,7 @@ exactly the same work as `Deps.flush`.  The flushing process consists
 of rerunning any invalidated computations.  If additional
 invalidations happen while flushing, they are processed as part of the
 same flush until there is no more work to be done.  Callbacks
-registered with [`Meteor.afterFlush`](#meteor_afterflush) are called
+registered with [`Meteor.afterFlush`](#deps_afterflush) are called
 after processing outstanding invalidations.
 
 Any auto-updating DOM elements that are found to not be in the
@@ -2373,7 +2375,7 @@ happens, the dependencies are cleared, and the computation is
 scheduled to be rerun at flush time.
 
 The *current computation*
-([`Deps.currentComputation`](#deps_current_computation)) is the
+([`Deps.currentComputation`](#deps_currentcomputation)) is the
 computation that is currently being run or rerun (computed), and the
 one that gains a dependency when a reactive data source is accessed.
 Data sources are responsible for tracking these dependencies using
