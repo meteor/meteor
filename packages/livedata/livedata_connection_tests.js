@@ -1050,6 +1050,72 @@ Tinytest.add("livedata stub - unsent methods don't block quiescence", function (
 
 });
 
+Tinytest.add("livedata stub - reactive resub", function (test) {
+  var stream = new Meteor._StubStream();
+  var conn = newConnection(stream);
+
+  startAndConnect(test, stream);
+
+  var readiedSubs = {};
+  var markAllReady = function () {
+    // synthesize a "ready" message in response to any "sub"
+    // message with an id we haven't seen before
+    _.each(stream.sent, function (msg) {
+      msg = JSON.parse(msg);
+      if (msg.msg === 'sub' && ! _.has(readiedSubs, msg.id)) {
+        stream.receive({msg: 'ready', subs: [msg.id]});
+        readiedSubs[msg.id] = true;
+      }
+    });
+  };
+
+  var fooArg = new ReactiveVar('A');
+  var fooReady = 0;
+
+  var inner;
+  var outer = Deps.run(function () {
+    inner = Deps.run(function () {
+      conn.subscribe("foo-sub", fooArg.get(),
+                     function () { fooReady++; });
+    });
+  });
+
+  markAllReady();
+  test.equal(fooReady, 1);
+
+  // Rerun the inner Deps.run with different subscription
+  // arguments.  Detect the re-sub via onReady.
+  fooArg.set('B');
+  test.isTrue(inner.invalidated);
+  Deps.flush();
+  test.isFalse(inner.invalidated);
+  markAllReady();
+  test.equal(fooReady, 2);
+
+  // Rerun inner again with same args; should be no re-sub.
+  inner.invalidate();
+  test.isTrue(inner.invalidated);
+  Deps.flush();
+  test.isFalse(inner.invalidated);
+  markAllReady();
+  test.equal(fooReady, 2);
+
+  // Rerun outer!  Should still be no re-sub even though
+  // the inner computation is stopped and a new one is
+  // started.
+  outer.invalidate();
+  test.isTrue(inner.invalidated);
+  Deps.flush();
+  test.isFalse(inner.invalidated);
+  markAllReady();
+  test.equal(fooReady, 2);
+
+  // Change the subscription.  Now we should get an onReady.
+  fooArg.set('C');
+  Deps.flush();
+  markAllReady();
+  test.equal(fooReady, 3);
+});
 
 
 

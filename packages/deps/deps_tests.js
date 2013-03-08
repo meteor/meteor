@@ -1,10 +1,3 @@
-// TO TEST:
-//   - Subscriptions use afterFlush inside onInvalidate
-//   - No current computation from onInvalidate
-//   - Subscription de-duping with nested Deps.run
-//   - Deps.flush throws
-//   - onInvalidate behavior
-
 Tinytest.add('deps - run', function (test) {
   var d = new Deps.Variable;
   var x = 0;
@@ -50,6 +43,13 @@ Tinytest.add('deps - run', function (test) {
   Deps.flush();
   // Still 6!
   test.equal(x, 6);
+
+  test.throws(function () {
+    Deps.run();
+  });
+  test.throws(function () {
+    Deps.run({});
+  });
 });
 
 Tinytest.add("deps - nested run", function (test) {
@@ -223,6 +223,25 @@ Tinytest.add("deps - flush", function (test) {
   c4.stop();
   Deps.flush();
 
+  // cases where flush throws
+
+  var ran = false;
+  Deps.afterFlush(function (arg) {
+    ran = true;
+    test.equal(typeof arg, 'undefined');
+    test.throws(function () {
+      Deps.flush(); // illegal nested flush
+    });
+  });
+
+  Deps.flush();
+  test.isTrue(ran);
+
+  test.throws(function () {
+    Deps.run(function () {
+      Deps.flush(); // illegal to flush from a computation
+    });
+  });
 });
 
 Tinytest.add("deps - lifecycle", function (test) {
@@ -291,4 +310,60 @@ Tinytest.add("deps - lifecycle", function (test) {
   Deps.flush();
   test.equal(buf, [6, 8, 14, 11, 13, 12, 15]);
 
+});
+
+Tinytest.add("deps - onInvalidate", function (test) {
+  var buf = "";
+
+  var c1 = Deps.run(function () {
+    buf += "*";
+  });
+
+  var append = function (x) {
+    return function () {
+      test.isFalse(Deps.active);
+      buf += x;
+    };
+  };
+
+  c1.onInvalidate(append('a'));
+  c1.onInvalidate(append('b'));
+  test.equal(buf, '*');
+  Deps.run(function (me) {
+    Deps.onInvalidate(append('z'));
+    me.stop();
+    test.equal(buf, '*z');
+    c1.invalidate();
+  });
+  test.equal(buf, '*zab');
+  c1.onInvalidate(append('c'));
+  c1.onInvalidate(append('d'));
+  test.equal(buf, '*zabcd');
+  Deps.flush();
+  test.equal(buf, '*zabcd*');
+
+  // afterFlush ordering
+  buf = '';
+  c1.onInvalidate(append('a'));
+  c1.onInvalidate(append('b'));
+  Deps.afterFlush(function () {
+    append('x')();
+    c1.onInvalidate(append('c'));
+    c1.invalidate();
+  });
+  Deps.afterFlush(function () {
+    append('y')();
+    c1.onInvalidate(append('d'));
+    c1.invalidate();
+  });
+
+  test.equal(buf, '');
+  Deps.flush();
+  test.equal(buf, 'xabc*yd*');
+
+  buf = "";
+  c1.onInvalidate(append('e'));
+  c1.stop();
+  test.equal(buf, 'e');
+  Deps.flush();
 });

@@ -509,9 +509,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
       // be reused from the rerun.  If it isn't reused, it's killed from
       // an afterFlush.
       Deps.onInvalidate(function (c) {
-        if (c.stopped)
-          handle.stop();
-        else if (_.has(self._subscriptions, id))
+        if (_.has(self._subscriptions, id))
           self._subscriptions[id].inactive = true;
 
         Deps.afterFlush(function () {
