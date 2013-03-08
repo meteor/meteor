@@ -412,7 +412,7 @@ Tinytest.add("spark - heuristic finalize", function (test) {
   Deps.flush();
   R.set(456); // won't take effect until flush()
   test.equal(div.html(), "<p>The number is 123.</p><hr><br><br><u>underlined</u>");
-  test.equal(R.numListeners(), 1);
+  test.equal(R.numListeners(), 0); // listener already gone
   Deps.flush();
   test.equal(div.html(), "<p>The number is 456.</p><hr><br><br><u>underlined</u>");
   test.equal(R.numListeners(), 1);

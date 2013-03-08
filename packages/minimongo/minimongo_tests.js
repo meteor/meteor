@@ -1770,13 +1770,8 @@ Tinytest.add("minimongo - reactive stop", function (test) {
   test.equal(y, "EDCBA");
 
   c.stop();
-  // stopping doesn't kill the observes until flush.
-  // observe callbacks don't wait for flush, they are inline.
+  // stopping kills the observes immediately
   coll.insert({_id: 'F'});
-  test.equal(x, "FEDCBA");
-  test.equal(y, "FEDCBA");
-  Deps.flush();
-  coll.insert({_id: 'G'});
-  test.equal(x, "FEDCBA");
-  test.equal(y, "FEDCBA");
+  test.equal(x, "EDCBA");
+  test.equal(y, "EDCBA");
 });

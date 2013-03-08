@@ -22,7 +22,7 @@
 
 // XXX in landmark-demo, if Template.timer.created throws an exception,
 // then it is never called again, even if you push the 'create a
-// timer' button again. the problem is almost certainly in atFlush
+// timer' button again. the problem is almost certainly in afterFlush
 // (not hard to see what it is.)
 
 (function() {
@@ -352,7 +352,7 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
     finalized = true;
   };
 
-  Deps.atFlush(function () {
+  Deps.afterFlush(function () {
     if (finalized)
       return;
 
@@ -976,7 +976,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   };
 
   var later = function (f) {
-    Deps.atFlush(function () {
+    Deps.afterFlush(function () {
       if (! stopped)
         withEventGuard(f);
     });

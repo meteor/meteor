@@ -3,8 +3,13 @@
   Deps.active = false;
   Deps.currentComputation = null;
 
+  var setCurrentComputation = function (c) {
+    Deps.currentComputation = c;
+    Deps.active = !! c;
+  };
+
   var _debugFunc = function () {
-    // evaluate this lazily in order to not constrain load order
+    // lazy evaluation because `Meteor` does not exist right away
     return (typeof Meteor !== "undefined" ? Meteor._debug :
             ((typeof console !== "undefined") && console.log ? console.log :
              function () {}));
@@ -17,6 +22,8 @@
   var willFlush = false;
   // `true` if we are in Deps.flush now
   var inFlush = false;
+
+  var afterFlushCallbacks = [];
 
   var requireFlush = function () {
     if (! willFlush) {
@@ -38,18 +45,15 @@
     var self = this;
     self.stopped = false;
     self.invalidated = false;
-    self.active = false;
     self.firstRun = true;
 
     self._id = nextId++;
-    self._callbacks = {
-      onInvalidate: [],
-      afterInvalidate: []
-    };
+    self._onInvalidateCallbacks = [];
     // the plan is at some point to use the parent relation
     // to constrain the order that computations are processed
     self._parent = parent;
     self._func = (f || function () {});
+    self._processing = false;
 
     try {
       self._run();
@@ -61,42 +65,49 @@
   _.extend(Deps.Computation.prototype, {
 
     onInvalidate: function (f) {
-      if (! this.active)
-        throw new Error(
-          "Can only register callbacks on an active Computation");
+      var self = this;
 
-      this._callbacks.onInvalidate.push(f);
-    },
+      if (typeof f !== 'function')
+        throw new Error("onInvalidate requires a function");
 
-    afterInvalidate: function (f) {
-      if (! this.active)
-        throw new Error(
-          "Can only register callbacks on an active Computation");
+      var g = function () {
+        Deps.nonreactive(function () {
+          f(self);
+        });
+      };
 
-      this._callbacks.afterInvalidate.push(f);
+      if (self.invalidated)
+        g();
+      else
+        self._onInvalidateCallbacks.push(g);
     },
 
     invalidate: function () {
-      if (! this.invalidated) {
-        if (! this.active)
-          // an active computation is either already being
-          // processed or, on first run, is enqueued at
-          // the end of _run
-          this._enqueue();
-        this.invalidated = true;
+      var self = this;
+      if (! self.invalidated) {
+        // If this computation is currently being rerun,
+        // don't enqueue it.  It will be rerun again
+        // immediately.
+        if (! self._processing) {
+          requireFlush();
+          pendingComputations.push(this);
+        }
+
+        self.invalidated = true;
+
+        // callbacks can't add callbacks, because
+        // self.invalidated === true.
+        for(var i = 0, f; f = self._onInvalidateCallbacks[i]; i++)
+          f(); // already bound with self as argument
+        self._onInvalidateCallbacks = [];
       }
     },
 
     stop: function () {
       if (! this.stopped) {
-        this.invalidate();
         this.stopped = true;
+        this.invalidate();
       }
-    },
-
-    _enqueue: function () {
-      requireFlush();
-      pendingComputations.push(this);
     },
 
     _run: function () {
@@ -104,61 +115,24 @@
       self.invalidated = false;
 
       var previous = Deps.currentComputation;
-      Deps.currentComputation = self;
-      Deps.active = true;
-      self.active = true;
+      setCurrentComputation(self);
       try {
         self._func(self);
       } finally {
-        self.active = false;
-        Deps.currentComputation = previous;
-        Deps.active = !! Deps.currentComputation;
+        setCurrentComputation(previous);
       }
-
-      if (self.firstRun && self.invalidated)
-        self._enqueue();
     },
 
     _process: function () {
       var self = this;
 
-      while (self.invalidated) {
-        var onInvalidateCallbacks = self._callbacks.onInvalidate;
-        self._callbacks.onInvalidate = [];
-        var afterInvalidateCallbacks = self._callbacks.afterInvalidate;
-        self._callbacks.afterInvalidate = [];
-
-        for(var i = 0, f; f = onInvalidateCallbacks[i]; i++) {
-          try {
-            f(self);
-          } catch (e) {
-            _debugFunc()("Exception from Deps invalidation callback:",
-                         e.stack);
-          }
+      self._processing = true;
+      while (self.invalidated && ! self.stopped) {
+        try {
+          self._run();
+        } catch (e) {
+          _debugFunc()("Exception from Deps rerun:", e.stack);
         }
-
-        var wasStopped = self.stopped;
-        if (! wasStopped) {
-          try {
-            self._run();
-          } catch (e) {
-            _debugFunc()("Exception from Deps rerun:", e.stack);
-          }
-        }
-
-        for(var i = 0, f; f = afterInvalidateCallbacks[i]; i++) {
-          try {
-            f(self);
-          } catch (e) {
-            _debugFunc()("Exception from Deps invalidation callback:",
-                         e.stack);
-          }
-        }
-
-        if (wasStopped)
-          break;
-
-        // If _run() stopped us, we loop around to handle callbacks.
         // If _run() invalidated us, we run again immediately.
         // A computation that invalidates itself indefinitely is an
         // infinite loop, of course.
@@ -166,6 +140,7 @@
         // We could put an iteration counter here and catch run-away
         // loops.
       }
+      self._processing = false;
     }
   });
 
@@ -220,32 +195,37 @@
       // any useful notion of a nested flush.
       //
       // https://app.asana.com/0/159908330244/385138233856
-      if (inFlush) {
-        // note: consider removing this warning if it comes up
-        // in legit uses of flush and is annoying.
-        _debugFunc()("Warning: Ignored nested Deps.flush:",
-                     (new Error).stack);
-        return;
-      }
+      if (inFlush)
+        throw new Error("Can't call Deps.flush while flushing");
+
+      if (Deps.active)
+        throw new Error("Can't flush inside Deps.run");
 
       inFlush = true;
       willFlush = true;
 
-      // It's possible for Computations to be active,
-      // if we are in an enclosing Deps.run in its
-      // first run (i.e. not called from flush).
-      // Keep one from being currentComputation.
-      Deps.nonreactive(function () {
+      while (pendingComputations.length ||
+             afterFlushCallbacks.length) {
 
-        while (pendingComputations.length) {
-          var comps = pendingComputations;
-          pendingComputations = [];
+        // rerun all pending computations
+        var comps = pendingComputations;
+        pendingComputations = [];
 
-          for (var i = 0, comp; comp = comps[i]; i++)
-            comp._process();
+        for (var i = 0, comp; comp = comps[i]; i++)
+          comp._process();
+
+        if (afterFlushCallbacks.length) {
+          // call one afterFlush callback, which may
+          // invalidate more computations
+          var func = afterFlushCallbacks.shift();
+          try {
+            func();
+          } catch (e) {
+            _debugFunc()("Exception from Deps afterFlush function:",
+                         e.stack);
+          }
         }
-
-      });
+      }
 
       inFlush = false;
       willFlush = false;
@@ -276,28 +256,19 @@
     // computations being invalidated.
     nonreactive: function (f) {
       var previous = Deps.currentComputation;
-      Deps.currentComputation = null;
-      Deps.active = false;
+      setCurrentComputation(null);
       try {
         return f();
       } finally {
-        Deps.currentComputation = previous;
-        Deps.active = !! Deps.currentComputation;
+        setCurrentComputation(previous);
       }
     },
 
     onInvalidate: function (f) {
       if (! Deps.active)
-        throw new Error("Deps.onInvalidate needs a currentComputation");
+        throw new Error("Deps.onInvalidate requires a currentComputation");
 
       Deps.currentComputation.onInvalidate(f);
-    },
-
-    afterInvalidate: function (f) {
-      if (! Deps.active)
-        throw new Error("Deps.afterInvalidate needs a currentComputation");
-
-      Deps.currentComputation.afterInvalidate(f);
     },
 
     depend: function (v) {
@@ -307,16 +278,8 @@
       return v.addDependent();
     },
 
-    atFlush: function (f) {
-      Deps.nonreactive(function () {
-        Deps.run(function (c) {
-          c.onInvalidate(function () {
-            // (wrap f so as not to pass c)
-            f();
-          });
-          c.stop();
-        });
-      });
+    afterFlush: function (f) {
+      afterFlushCallbacks.push(f);
     }
 
 });

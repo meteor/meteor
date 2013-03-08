@@ -50,7 +50,7 @@ OnscreenDiv.prototype.kill = function() {
   if (self.div.parentNode)
     self.div.parentNode.removeChild(self.div);
 
-  Deps.atFlush(function () {
+  Deps.afterFlush(function () {
     Spark.finalize(self.div);
   });
 };

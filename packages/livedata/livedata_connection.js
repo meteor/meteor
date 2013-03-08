@@ -506,17 +506,19 @@ _.extend(Meteor._LivedataConnection.prototype, {
       // computation is invalidated... but not if the rerun just re-subscribes
       // to the same subscription!  When a rerun happens, we use onInvalidate
       // as a change to mark the subscription "inactive" so that it can
-      // be reused from the rerun.  If it isn't reused, it's killed fro
-      // mafterInvalidate.
+      // be reused from the rerun.  If it isn't reused, it's killed from
+      // an afterFlush.
       Deps.onInvalidate(function (c) {
         if (c.stopped)
           handle.stop();
         else if (_.has(self._subscriptions, id))
           self._subscriptions[id].inactive = true;
-      });
-      Deps.afterInvalidate(function () {
-        if (_.has(self._subscriptions, id) && self._subscriptions[id].inactive)
-          handle.stop();
+
+        Deps.afterFlush(function () {
+          if (_.has(self._subscriptions, id) &&
+              self._subscriptions[id].inactive)
+            handle.stop();
+        });
       });
     }
 

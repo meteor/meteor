@@ -1,3 +1,10 @@
+// TO TEST:
+//   - Subscriptions use afterFlush inside onInvalidate
+//   - No current computation from onInvalidate
+//   - Subscription de-duping with nested Deps.run
+//   - Deps.flush throws
+//   - onInvalidate behavior
+
 Tinytest.add('deps - run', function (test) {
   var d = new Deps.Variable;
   var x = 0;
@@ -127,10 +134,6 @@ Tinytest.add("deps - nested run", function (test) {
   changeAndExpect(f, 'f');
   // kill A
   a.changed();
-  // This flush would be unnecessary if outstanding callbacks
-  // were processed in the containment order of their contexts
-  // (i.e. parents before children)
-  Deps.flush();
   changeAndExpect(f, '');
   changeAndExpect(e, '');
   changeAndExpect(d, '');
@@ -166,8 +169,7 @@ Tinytest.add("deps - flush", function (test) {
   Deps.flush();
   test.equal(buf, 'aa');
 
-  /////
-  // Can't cause rerun nested in run
+  //////
 
   buf = "";
 
@@ -178,26 +180,21 @@ Tinytest.add("deps - flush", function (test) {
       c.invalidate();
 
     Deps.onInvalidate(function () {
-      buf += "<";
+      buf += "*";
     });
-    Deps.afterInvalidate(function () {
-      buf += ">";
-    });
-
-    if (c.firstRun)
-      Meteor.flush();
   });
 
-  test.equal(buf, 'a');
+  test.equal(buf, 'a*');
   Deps.flush();
-  test.equal(buf, 'a<a>');
+  test.equal(buf, 'a*a');
   c2.stop();
+  test.equal(buf, 'a*a*');
   Deps.flush();
-  test.equal(buf, 'a<a><>');
+  test.equal(buf, 'a*a*');
 
   /////
   // Can flush a diferent run from a run;
-  // no current computation in onInvalidate
+  // no current computation in afterFlush
 
   buf = "";
 
@@ -206,27 +203,25 @@ Tinytest.add("deps - flush", function (test) {
     // invalidate first time
     if (c.firstRun)
       c.invalidate();
-    Deps.onInvalidate(function () {
+    Deps.afterFlush(function () {
       buf += (Deps.active ? "1" : "0");
     });
   });
 
-  Deps.atFlush(function () {
+  Deps.afterFlush(function () {
     buf += 'c';
   });
 
   var c4 = Deps.run(function (c) {
     c4 = c;
     buf += 'b';
-    Meteor.flush();
-    buf += 'b';
   });
 
-  test.equal(buf, 'ab0acb');
+  Deps.flush();
+  test.equal(buf, 'aba0c0');
   c3.stop();
   c4.stop();
   Deps.flush();
-
 
 });
 
@@ -253,21 +248,17 @@ Tinytest.add("deps - lifecycle", function (test) {
     test.equal(c, Deps.currentComputation);
     test.equal(c.stopped, false);
     test.equal(c.invalidated, false);
-    test.equal(c.active, true);
-    test.equal(c.firstRun, firstRun)
+      test.equal(c.firstRun, firstRun);
 
-    Deps.onInvalidate(makeCb());
-    Deps.afterInvalidate(makeCb());
+    Deps.onInvalidate(makeCb()); // 1, 6, ...
+    Deps.afterFlush(makeCb()); // 2, 7, ...
 
     Deps.run(function (x) {
       x.stop();
-      // should be ok to attach callback from
-      // nested run
-      c.onInvalidate(makeCb());
-      c.afterInvalidate(makeCb());
+      c.onInvalidate(makeCb()); // 3, 8, ...
 
-      Deps.onInvalidate(makeCb());
-      Deps.afterInvalidate(makeCb());
+      Deps.onInvalidate(makeCb()); // 4, 9, ...
+      Deps.afterFlush(makeCb()); // 5, 10, ...
     });
     runCount++;
 
@@ -275,44 +266,29 @@ Tinytest.add("deps - lifecycle", function (test) {
       c.stop();
   });
 
-  test.throws(function () {
-    c1.onInvalidate(function () {});
-  });
-  test.throws(function () {
-    c1.afterInvalidate(function () {});
-  });
-
   firstRun = false;
 
   test.equal(runCount, 1);
 
-  test.equal(buf, []);
+  test.equal(buf, [4]);
   c1.invalidate();
   test.equal(runCount, 1);
   test.equal(c1.invalidated, true);
   test.equal(c1.stopped, false);
-  test.equal(c1.active, false);
-  test.equal(buf, []);
+  test.equal(buf, [4, 1, 3]);
 
   Deps.flush();
 
   test.equal(runCount, 2);
   test.equal(c1.invalidated, false);
-  // 5/6, 11/12, etc. are from the nested run, whose
-  // invalidation is scheduled each time by the outer
-  // rerun.
-  // 1/3 are onInvalidate and 2/4 are afterInvalidate.
-  test.equal(buf, [5, 6, 1, 3, 2, 4, 11, 12]);
+  test.equal(buf, [4, 1, 3, 9, 2, 5, 7, 10]);
 
   // test self-stop
   buf.length = 0;
   shouldStop = true;
   c1.invalidate();
+  test.equal(buf, [6, 8]);
   Deps.flush();
-  // when the computation stops itself, all the
-  // callbacks from last time and this time should
-  // get called consecutively, followed by the inner
-  // computation's 17/18.
-  test.equal(buf, [7, 9, 8, 10, 13, 15, 14, 16, 17, 18]);
+  test.equal(buf, [6, 8, 14, 11, 13, 12, 15]);
 
 });
