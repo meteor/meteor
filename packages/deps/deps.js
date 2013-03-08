@@ -52,7 +52,7 @@
     // the plan is at some point to use the parent relation
     // to constrain the order that computations are processed
     self._parent = parent;
-    self._func = (f || function () {});
+    self._func = f;
     self._processing = false;
 
     try {
@@ -239,6 +239,9 @@
     // Links the computation to the current computation
     // so that it is stopped if the current computation is invalidated.
     run: function (f) {
+      if (typeof f !== 'function')
+        throw new Error('Deps.run requires a function argument');
+
       constructingComputation = true;
       var c = new Deps.Computation(f, Deps.currentComputation);
 
