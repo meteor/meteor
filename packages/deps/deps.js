@@ -22,6 +22,11 @@
   var willFlush = false;
   // `true` if we are in Deps.flush now
   var inFlush = false;
+  // `true` if we are computing a computation now, either first time
+  // or recompute.  This matches Deps.active unless we are inside
+  // Deps.nonreactive, which nullfies currentComputation even though
+  // an enclosing computation may still be running.
+  var inCompute = false;
 
   var afterFlushCallbacks = [];
 
@@ -53,10 +58,10 @@
     // to constrain the order that computations are processed
     self._parent = parent;
     self._func = f;
-    self._processing = false;
+    self._computing = false;
 
     try {
-      self._run();
+      self._compute();
     } finally {
       self.firstRun = false;
     }
@@ -85,10 +90,9 @@
     invalidate: function () {
       var self = this;
       if (! self.invalidated) {
-        // If this computation is currently being rerun,
-        // don't enqueue it.  It will be rerun again
-        // immediately.
-        if (! self._processing) {
+        // if we're currently computing, don't enqueue
+        // ourselves, since we'll rerun immediately anyway.
+        if (! self._computing) {
           requireFlush();
           pendingComputations.push(this);
         }
@@ -110,37 +114,40 @@
       }
     },
 
-    _run: function () {
+    _compute: function () {
       var self = this;
       self.invalidated = false;
 
       var previous = Deps.currentComputation;
       setCurrentComputation(self);
+      var previousInCompute = inCompute;
+      inCompute = true;
       try {
         self._func(self);
       } finally {
         setCurrentComputation(previous);
+        inCompute = false;
       }
     },
 
-    _process: function () {
+    _recompute: function () {
       var self = this;
 
-      self._processing = true;
+      self._computing = true;
       while (self.invalidated && ! self.stopped) {
         try {
-          self._run();
+          self._compute();
         } catch (e) {
-          _debugFunc()("Exception from Deps rerun:", e.stack);
+          _debugFunc()("Exception from Deps recompute:", e.stack);
         }
-        // If _run() invalidated us, we run again immediately.
+        // If _compute() invalidated us, we run again immediately.
         // A computation that invalidates itself indefinitely is an
         // infinite loop, of course.
         //
         // We could put an iteration counter here and catch run-away
         // loops.
       }
-      self._processing = false;
+      self._computing = false;
     }
   });
 
@@ -198,7 +205,7 @@
       if (inFlush)
         throw new Error("Can't call Deps.flush while flushing");
 
-      if (Deps.active)
+      if (inCompute)
         throw new Error("Can't flush inside Deps.run");
 
       inFlush = true;
@@ -207,12 +214,12 @@
       while (pendingComputations.length ||
              afterFlushCallbacks.length) {
 
-        // rerun all pending computations
+        // recompute all pending computations
         var comps = pendingComputations;
         pendingComputations = [];
 
         for (var i = 0, comp; comp = comps[i]; i++)
-          comp._process();
+          comp._recompute();
 
         if (afterFlushCallbacks.length) {
           // call one afterFlush callback, which may

@@ -783,23 +783,11 @@ Template.api.deps_oninvalidate = {
   ]
 };
 
-Template.api.deps_afterinvalidate = {
-  id: "deps_afterinvalidate",
-  name: "Deps.afterInvalidate(func)",
+Template.api.deps_afterflush = {
+  id: "deps_afterflush",
+  name: "Deps.afterFlush(func)",
   locus: "Client",
-  descr: ["Registers a new [`afterInvalidate`](#computation_afterinvalidate) callback on the current computation."],
-  args: [
-    {name: "func",
-     type: "Function",
-     descr: "A callback function that will be invoked as `func(c)`, where `c` is the computation on which the callback is registered."}
-  ]
-};
-
-Template.api.deps_atflush = {
-  id: "deps_atflush",
-  name: "Deps.atFlush(func)",
-  locus: "Client",
-  descr: ["Schedules a function to be called during the next flush, or later in the current flush if one is in progress."],
+  descr: ["Schedules a function to be called during the next flush, or later in the current flush if one is in progress, after all invalidated computations have been rerun."],
   args: [
     {name: "func",
      type: "Function",
@@ -823,7 +811,7 @@ Template.api.computation_stop = {
   id: "computation_stop",
   name: "<em>computation</em>.stop()",
   locus: "Client",
-  descr: ["Stops this computation from rerunning."]
+  descr: ["Prevents this computation from rerunning."]
 };
 
 Template.api.computation_invalidate = {

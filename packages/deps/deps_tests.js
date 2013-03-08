@@ -350,20 +350,25 @@ Tinytest.add("deps - onInvalidate", function (test) {
     append('x')();
     c1.onInvalidate(append('c'));
     c1.invalidate();
+    Deps.afterFlush(function () {
+      append('y')();
+      c1.onInvalidate(append('d'));
+      c1.invalidate();
+    });
   });
   Deps.afterFlush(function () {
-    append('y')();
-    c1.onInvalidate(append('d'));
+    append('z')();
+    c1.onInvalidate(append('e'));
     c1.invalidate();
   });
 
   test.equal(buf, '');
   Deps.flush();
-  test.equal(buf, 'xabc*yd*');
+  test.equal(buf, 'xabc*ze*yd*');
 
   buf = "";
-  c1.onInvalidate(append('e'));
+  c1.onInvalidate(append('m'));
   c1.stop();
-  test.equal(buf, 'e');
+  test.equal(buf, 'm');
   Deps.flush();
 });
