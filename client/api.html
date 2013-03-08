@@ -1904,7 +1904,7 @@ You may insert the returned `DocumentFragment` directly into the DOM
 wherever you would like it to appear. The inserted nodes will continue
 to update until they are taken off the screen. Then they will be
 automatically cleaned up. For more details about clean-up, see
-[`Meteor.flush`](#meteor_flush).
+[`Deps.flush`](#deps_flush).
 
 `Meteor.render` tracks the data dependencies of `htmlFunc` by running
 it in a reactive context, so it can respond to changes in any reactive

@@ -271,7 +271,7 @@ programming](http://en.wikipedia.org/wiki/Reactive_programming). This means that
 you can write your code in a simple imperative style, and the result will be
 automatically recalculated whenever data changes that your code depends on.
 
-    Meteor.autorun(function () {
+    Deps.run(function () {
       Meteor.subscribe("messages", Session.get("currentRoomId"));
     });
 
@@ -282,7 +282,7 @@ function will be automatically re-run, setting up a new subscription that
 replaces the old one.
 
 This automatic recomputation is achieved by a cooperation
-between `Session` and `Meteor.autorun`.
+between `Session` and `Deps.run`.
 Methods like `Meteor.autorun` establish a "reactive
 context" inside of which data dependencies are tracked, and they are
 prepared to re-run their function argument as necessary.  Data
@@ -368,7 +368,7 @@ won't change out from underneath you. Sometimes you want the opposite
 behavior. For example, if you've just inserted a record in the
 database, you might want to force the DOM to update so you can find
 the new elements using a library like jQuery. In that case, call
-[`Meteor.flush`](#meteor_flush) to bring the DOM up to date
+[`Deps.flush`](#deps_flush) to bring the DOM up to date
 immediately.
 
 When live-updating DOM elements are taken off the screen, they are automatically
@@ -378,7 +378,7 @@ worry about the [zombie
 templates](http://lostechies.com/derickbailey/2011/09/15/zombies-run-managing-page-transitions-in-backbone-apps/)
 that plague hand-written update logic. To protect your elements from cleanup,
 just make sure that they are on-screen before your code returns to the event loop,
-or before any call you make to [`Meteor.flush`](#meteor_flush).
+or before any call you make to [`Deps.flush`](#deps_flush).
 
 Another thorny problem in hand-written applications is element
 preservation. Suppose the user is typing text into an `<input>`
