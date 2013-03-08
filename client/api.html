@@ -2334,9 +2334,8 @@ registers a callback with it).
 
 {{> api_box deps_oninvalidate }}
 
-See [*`computation`*`.onInvalidate`](#computation_oninvalidate).
-
-It is an error if there is no current computation.
+See [*`computation`*`.onInvalidate`](#computation_oninvalidate) for more
+details.
 
 {{> api_box deps_afterflush }}
 
@@ -2418,10 +2417,10 @@ computation is rerun.
 
 Invalidating a computation marks it to be rerun at flush time, at
 which point the computation becomes valid again.  It is rare to
-invalidate a computation directly, because reactive data sources will
+invalidate a computation manually, because reactive data sources
 invalidate their calling computations when they change.  Reactive data
-sources in turn implement this using
-[`Deps.Variable.changed()`](#variable_changed).
+sources in turn perform this invalidation using one or more
+[`Deps.Variable`](#deps_variable) objects.
 
 Invalidating a computation immediately calls all `onInvalidate`
 callbacks registered on it.  Invalidating a computation that is
