@@ -28,6 +28,17 @@ echo "Building a fake release in $TMPDIR."
 
 # Start out with just the dev bundle.
 cp -a dev_bundle "$TMPDIR/meteor"
+# ... but not the mongodb build, or some of the larger modules that we
+# definitely don't use to find engine. (really, we just need node, kexec, and
+# underscore.)
+rm -rf "$TMPDIR/meteor/mongodb"
+pushd "$TMPDIR/meteor/lib/node_modules"
+mv kexec ..
+mv underscore ..
+rm -rf *
+mv ../kexec .
+mv ../underscore .
+popd
 
 # Copy post-upgrade script to where it is expected.
 mkdir -p "$TMPDIR/meteor/app/meteor"
