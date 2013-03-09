@@ -400,7 +400,7 @@ Meteor.Collection.ObjectID = LocalCollection._ObjectID;
 (function () {
   var addValidator = function(allowOrDeny, options) {
     // validate keys
-    var VALID_KEYS = ['insert', 'update', 'remove', 'fetch'];
+    var VALID_KEYS = ['insert', 'update', 'remove', 'fetch', 'factory'];
     _.each(_.keys(options), function (key) {
       if (!_.contains(VALID_KEYS, key))
         throw new Error(allowOrDeny + ": Invalid key: " + key);
@@ -414,6 +414,10 @@ Meteor.Collection.ObjectID = LocalCollection._ObjectID;
         if (!(options[name] instanceof Function)) {
           throw new Error(allowOrDeny + ": Value for `" + name + "` must be a function");
         }
+        if (self._defaultFactory)
+          options[name].factory = self._defaultFactory;
+        if (options.factory)
+          options[name].factory = options.factory;
         self._validators[name][allowOrDeny].push(options[name]);
       }
     });
@@ -526,19 +530,26 @@ Meteor.Collection.prototype._isInsecure = function () {
   return self._insecure;
 };
 
+var docToValidate = function (validator, doc) {
+  var ret = doc;
+  if (validator.factory)
+    ret = validator.factory(EJSON.clone(doc));
+  return ret;
+};
+
 Meteor.Collection.prototype._validatedInsert = function(userId, doc) {
   var self = this;
 
   // call user validators.
   // Any deny returns true means denied.
   if (_.any(self._validators.insert.deny, function(validator) {
-    return validator(userId, doc);
+    return validator(userId, docToValidate(validator, doc));
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
   if (_.all(self._validators.insert.allow, function(validator) {
-    return !validator(userId, doc);
+    return !validator(userId, docToValidate(validator, doc));
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
@@ -597,13 +608,19 @@ Meteor.Collection.prototype._validatedUpdate = function(
   // call user validators.
   // Any deny returns true means denied.
   if (_.any(self._validators.update.deny, function(validator) {
-    return validator(userId, docs, fields, mutator);
+    return validator(userId,
+                     _.map(docs, _.partial(docToValidate, validator)),
+                     fields,
+                     mutator);
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
   if (_.all(self._validators.update.allow, function(validator) {
-    return !validator(userId, docs, fields, mutator);
+    return !validator(userId,
+                      _.map(docs, _.partial(docToValidate, validator)),
+                      fields,
+                      mutator);
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
@@ -660,7 +677,7 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
   }
   // Any allow returns true means proceed. Throw error if they all fail.
   if (_.all(self._validators.remove.allow, function(validator) {
-    return !validator(userId, docs);
+    return !validator(userId,  _.map(docs, _.partial(docToValidate, validator)));
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
