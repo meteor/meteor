@@ -362,7 +362,6 @@ var Cursor = function (mongo, cursorDescription) {
 
   self._mongo = mongo;
   self._cursorDescription = cursorDescription;
-  if (cursorDescription.options.factory)
   self._synchronousCursor = null;
 };
 
@@ -379,14 +378,14 @@ _.each(['forEach', 'map', 'rewind', 'fetch', 'count'], function (method) {
   };
 });
 
-// When you call Meteor.publish() with a function that returns a Cursor, we need
-// to transmute it into the equivalent subscription.  This is the function that
-// does that.
-
 Cursor.prototype.getFactory = function () {
   var self = this;
   return self._cursorDescription._factory;
 };
+
+// When you call Meteor.publish() with a function that returns a Cursor, we need
+// to transmute it into the equivalent subscription.  This is the function that
+// does that.
 
 Cursor.prototype._publishCursor = function (sub) {
   var self = this;
