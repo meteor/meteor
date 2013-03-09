@@ -38,7 +38,6 @@
 
 * Upgraded dependencies:
   * mongodb driver to version 1.2.13 (from 0.1.11)
-  * underscore to version 1.4.4 (from 1.4.2)
   * mime module removed (it was unused)
 
 
