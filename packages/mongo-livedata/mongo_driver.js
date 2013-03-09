@@ -362,6 +362,7 @@ var Cursor = function (mongo, cursorDescription) {
 
   self._mongo = mongo;
   self._cursorDescription = cursorDescription;
+  if (cursorDescription.options.factory)
   self._synchronousCursor = null;
 };
 
@@ -455,11 +456,14 @@ _Mongo.prototype._createSynchronousCursor = function (cursorDescription) {
   if (!result[0])
     throw result[1];
 
-  return new SynchronousCursor(result[1]);
+  return new SynchronousCursor(result[1],
+                               cursorDescription.options &&
+                               cursorDescription.options.factory);
 };
 
-var SynchronousCursor = function (dbCursor) {
+var SynchronousCursor = function (dbCursor, factory) {
   var self = this;
+  self._factory = factory;
   self._dbCursor = dbCursor;
   // Need to specify that the callback is the first argument to nextObject,
   // since otherwise when we try to call it with no args the driver will
@@ -477,6 +481,8 @@ _.extend(SynchronousCursor.prototype, {
       var doc = self._synchronousNextObject().wait();
       if (!doc || !doc._id) return null;
       doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
+      if (self._factory)
+        doc = self._factory(doc);
       var strId = Meteor.idStringify(doc._id);
       if (self._visitedIds[strId]) continue;
       self._visitedIds[strId] = true;

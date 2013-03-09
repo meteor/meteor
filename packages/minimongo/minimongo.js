@@ -156,6 +156,7 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
 };
 
 LocalCollection.Cursor.prototype.getFactory = function () {
+  var self = this;
   return self._factory;
 };
 

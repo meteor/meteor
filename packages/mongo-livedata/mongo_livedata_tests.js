@@ -3,10 +3,13 @@
 
 (function () {
 //var Future = __meteor_bootstrap__.require('fibers/future');
-
+var FACTORIES = {};
 if (Meteor.isServer) {
   Meteor.methods({
     createInsecureCollection: function (name, options) {
+      if (options && options.defaultFactoryName) {
+        options.defaultFactory = FACTORIES[options.defaultFactoryName];
+      }
       var c = new Meteor.Collection(name, options);
       c._insecure = true;
       Meteor.publish('c-' + name, function () {
@@ -621,6 +624,37 @@ testAsyncMulti('mongo-livedata - document with a date, ' + idGeneration, [
       var cursor = coll.find();
       test.equal(cursor.count(), 1);
       test.equal(coll.findOne().d.getFullYear(), 2012);
+    }));
+  }
+]);
+
+testAsyncMulti('mongo-livedata - document goes through a factory, ' + idGeneration, [
+  function (test, expect) {
+    var seconds = function (doc) {
+      doc.seconds = function () {return doc.d.getSeconds();};
+      return doc;
+    };
+    FACTORIES["seconds"] = seconds;
+    var collectionOptions = {
+      idGeneration: idGeneration,
+      defaultFactory: seconds,
+      defaultFactoryName: "seconds"
+    };
+    var collectionName = Random.id();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
+      Meteor.subscribe('c-' + collectionName);
+    }
+
+    var coll = new Meteor.Collection(collectionName, collectionOptions);
+    var docId;
+    coll.insert({d: new Date(1356152390004)}, expect(function (err, id) {
+      test.isFalse(err);
+      test.isTrue(id);
+      docId = id;
+      var cursor = coll.find();
+      test.equal(cursor.count(), 1);
+      test.equal(coll.findOne().seconds(), 50);
     }));
   }
 ]);
