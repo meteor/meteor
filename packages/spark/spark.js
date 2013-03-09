@@ -990,8 +990,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
         doc._id = id;
         var renderDoc = doc;
         if (cursor.getFactory && cursor.getFactory()) {
-          console.log(cursor.getFactory());
-          renderDoc = EJSON.clone(renderDoc);
+          renderDoc = cursor.getFactory()(EJSON.clone(renderDoc));
         }
         var frag = Spark.render(_.bind(itemFunc, null, renderDoc));
         DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
@@ -1045,7 +1044,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
         applyChanges(elt.doc, fields);
         var renderDoc = elt.doc;
         if (cursor.getFactory && cursor.getFactory())
-          renderDoc = cursor.getFactory()(EJSON.clone(elt.doc));
+          renderDoc = cursor.getFactory()(EJSON.clone(renderDoc));
         Spark.renderToRange(elt.liveRange, _.bind(itemFunc, null, renderDoc));
       });
     }
