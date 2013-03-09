@@ -648,13 +648,29 @@ testAsyncMulti('mongo-livedata - document goes through a factory, ' + idGenerati
 
     var coll = new Meteor.Collection(collectionName, collectionOptions);
     var docId;
+    var expectAdd = expect(function (doc) {
+      test.equal(doc.seconds(), 50);
+    });
+    var expectRemove = expect (function (doc) {
+      test.equal(doc.seconds(), 50);
+    });
     coll.insert({d: new Date(1356152390004)}, expect(function (err, id) {
       test.isFalse(err);
       test.isTrue(id);
       docId = id;
       var cursor = coll.find();
+      cursor.observe({
+        added: expectAdd,
+        removed: expectRemove
+      });
       test.equal(cursor.count(), 1);
+      test.equal(cursor.fetch()[0].seconds(), 50);
       test.equal(coll.findOne().seconds(), 50);
+      test.equal(coll.findOne({}, {factory: null}).seconds, undefined);
+      test.equal(coll.findOne({}, {
+        factory: function (doc) {return {seconds: doc.d.getSeconds()};}
+      }).seconds, 50);
+      coll.remove({});
     }));
   }
 ]);
