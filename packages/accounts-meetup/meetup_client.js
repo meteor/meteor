@@ -13,10 +13,14 @@
     }
     var state = Random.id();
 
+    var scope = (options && options.requestPermissions) || [];
+    var flatScope = _.map(scope, encodeURIComponent).join('+');
+
     var loginUrl =
 	  'https://secure.meetup.com/oauth2/authorize' +
 	  '?client_id=' + config.clientId +
           '&response_type=code' +
+	  '&scope=' + flatScope +
 	  '&redirect_uri=' + Meteor.absoluteUrl('_oauth/meetup?close') +
 	  '&state=' + state;
 
