@@ -557,6 +557,12 @@ Meteor.Collection.prototype._validatedInsert = function(userId, doc) {
   self._collection.insert.call(self._collection, doc);
 };
 
+var factoryAll = function (validator, docs) {
+  if (validator.factory)
+    return _.map(docs, validator.factory);
+  return docs;
+};
+
 // Simulate a mongo `update` operation while validating that the access
 // control rules set by calls to `allow/deny` are satisfied. If all
 // pass, rewrite the mongo operation to use $in to set the list of
@@ -585,7 +591,7 @@ Meteor.Collection.prototype._validatedUpdate = function(
     }
   });
 
-  var findOptions = {};
+  var findOptions = {factory: null};
   if (!self._validators.fetchAllFields) {
     findOptions.fields = {};
     _.each(self._validators.fetch, function(fieldName) {
@@ -605,11 +611,15 @@ Meteor.Collection.prototype._validatedUpdate = function(
     docs = [doc];
   }
 
+  var factoriedDocs;
+
   // call user validators.
   // Any deny returns true means denied.
   if (_.any(self._validators.update.deny, function(validator) {
+    if (!factoriedDocs)
+      factoriedDocs = factoryAll(validator, docs);
     return validator(userId,
-                     _.map(docs, _.partial(docToValidate, validator)),
+                     factoriedDocs,
                      fields,
                      mutator);
   })) {
@@ -617,8 +627,10 @@ Meteor.Collection.prototype._validatedUpdate = function(
   }
   // Any allow returns true means proceed. Throw error if they all fail.
   if (_.all(self._validators.update.allow, function(validator) {
+    if (!factoriedDocs)
+      factoriedDocs = factoryAll(validator, docs);
     return !validator(userId,
-                      _.map(docs, _.partial(docToValidate, validator)),
+                      factoriedDocs,
                       fields,
                       mutator);
   })) {
@@ -656,7 +668,7 @@ Meteor.Collection.prototype._validatedUpdate = function(
 Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
   var self = this;
 
-  var findOptions = {};
+  var findOptions = {factory: null};
   if (!self._validators.fetchAllFields) {
     findOptions.fields = {};
     _.each(self._validators.fetch, function(fieldName) {
@@ -671,13 +683,13 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
   // call user validators.
   // Any deny returns true means denied.
   if (_.any(self._validators.remove.deny, function(validator) {
-    return validator(userId, docs);
+    return validator(userId, factoryAll(validator, docs));
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
   if (_.all(self._validators.remove.allow, function(validator) {
-    return !validator(userId,  _.map(docs, _.partial(docToValidate, validator)));
+    return !validator(userId, factoryAll(validator, docs));
   })) {
     throw new Meteor.Error(403, "Access denied");
   }

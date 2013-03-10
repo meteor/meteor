@@ -599,7 +599,6 @@ _.extend(Meteor._LivedataSession.prototype, {
 
       fence.arm(); // we're done adding writes to the fence
       unblock(); // unblock, if the method hasn't done it already
-
       exception = wrapInternalException(
         exception, "while invoking method '" + msg.method + "'");
 
