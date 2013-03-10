@@ -469,14 +469,16 @@ collection with `new Meteor.Collection`.
 
 {{> api_box meteor_collection}}
 
-Calling this function is analogous to declaring a model in a
-traditional ORM (Object-Relation Mapper)-centric framework. It sets up a
-*collection* (a storage space for records, or "documents") that can be
-used to store a particular type of information, like users, posts,
-scores, todo items, or whatever matters to your application.  Each
-document is a EJSON object.  It includes an `_id` property whose value is
-unique in the collection, which Meteor will set when you first create
-the document.
+Calling this function is analogous to declaring a model in a traditional ORM
+(Object-Relation Mapper)-centric framework. It sets up a *collection* (a storage
+space for records, or "documents") that can be used to store a particular type
+of information, like users, posts, scores, todo items, or whatever matters to
+your application.  Each document is a EJSON object.  It includes an `_id`
+property whose value is unique in the collection, which Meteor will set when you
+first create the document.  If you need your documents to have methods, or be
+otherwise modified from their EJSON reperesentation within the collection, you
+can specify a `defaultFactory` function that documents will be passed through
+before coming out of your collection.
 
     // common code on client and server declares livedata-managed mongo
     // collection.
