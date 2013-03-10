@@ -462,6 +462,10 @@ Template.api.meteor_collection = {
      " - **`'STRING'`**: random strings\n" +
      " - **`'MONGO'`**:  random [`Meteor.Collection.ObjectID`](#collection_object_id) values\n\n" +
      "The default id generation technique is `'STRING'`."
+    },
+    {name: "defaultFactory",
+     type: "Function",
+     descr: "Pass documents through this function before returning them."
     }
   ]
 };
@@ -494,7 +498,10 @@ Template.api.find = {
      descr: "(Server only) Dictionary of fields to return or exclude."},
     {name: "reactive",
      type: "Boolean",
-     descr: "(Client only) Default `true`; pass `false` to disable reactivity"}
+     descr: "(Client only) Default `true`; pass `false` to disable reactivity"},
+    {name: "factory",
+     type: "Function",
+     descr: "Pass documents through this function before returning them or passing them to `observe` callbacks. `null` specifies unmodified documents, even if the `Collection` has a `defaultFactory`."}
   ]
 };
 
@@ -523,7 +530,10 @@ Template.api.findone = {
      descr: "(Server only) Dictionary of fields to return or exclude."},
     {name: "reactive",
      type: "Boolean",
-     descr: "(Client only) Default true; pass false to disable reactivity"}
+     descr: "(Client only) Default true; pass false to disable reactivity"},
+    {name: "factory",
+     type: "Function",
+     descr: "Pass the document through this function before returning it.  `null` specifies the document should be unmodified, even if the `Collection` has a `defaultFactory`."}
   ]
 };
 
@@ -594,7 +604,10 @@ Template.api.allow = {
      descr: "Functions that look at a proposed modification to the database and return true if it should be allowed."},
     {name: "fetch",
      type: "Array of String",
-     descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions."}
+     descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions."},
+    {name: "factory",
+     type: "Function",
+     descr: "Pass documents to this function before passing them to callbacks.  `null` specifies unmodified documents, even if the `Collection` has a `defaultFactory`."}
   ]
 };
 
@@ -609,7 +622,10 @@ Template.api.deny = {
      descr: "Functions that look at a proposed modification to the database and return true if it should be denied, even if an `allow` rule says otherwise."},
     {name: "fetch",
      type: "Array of Strings",
-     descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions."}
+     descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions."},
+    {name: "factory",
+     type: "Function",
+     descr: "Pass documents to this function before passing them to callbacks.  `null` specifies unmodified documents, even if the `Collection` has a `defaultFactory`."}
   ]
 };
 
