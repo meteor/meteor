@@ -240,7 +240,7 @@ var toc = [
     ],
 
     "Deps", [
-      "Deps.run",
+      "Deps.autorun",
       "Deps.flush",
       "Deps.nonreactive",
       "Deps.active",

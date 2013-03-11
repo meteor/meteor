@@ -726,9 +726,9 @@ Template.api.fieldspecifiers = {
 
 ////// DEPS
 
-Template.api.deps_run = {
-  id: "deps_run",
-  name: "Deps.run(runFunc)",
+Template.api.deps_autorun = {
+  id: "deps_autorun",
+  name: "Deps.autorun(runFunc)",
   locus: "Client",
   descr: ["Run a function now and rerun it later whenever its dependencies change. Returns a Computation object that can be used to stop or observe the rerunning."],
   args: [
@@ -768,7 +768,7 @@ Template.api.deps_currentcomputation = {
   id: "deps_currentcomputation",
   name: "Deps.currentComputation",
   locus: "Client",
-  descr: ["The current computation, or `null` if there isn't one.  The current computation is the [`Deps.Computation`](#deps_computation) object created by the innermost active call to `Deps.run`, and it's the computation that gains dependencies when reactive data sources are accessed."]
+  descr: ["The current computation, or `null` if there isn't one.  The current computation is the [`Deps.Computation`](#deps_computation) object created by the innermost active call to `Deps.autorun`, and it's the computation that gains dependencies when reactive data sources are accessed."]
 };
 
 Template.api.deps_oninvalidate = {
@@ -851,7 +851,7 @@ Template.api.computation_firstrun = {
   id: "computation_firstrun",
   name: "<em>computation</em>.firstRun",
   locus: "Client",
-  descr: ["True during the initial run of the computation at the time `Deps.run` is called, and false on subsequent reruns and at other times."]
+  descr: ["True during the initial run of the computation at the time `Deps.autorun` is called, and false on subsequent reruns and at other times."]
 };
 
 Template.api.variable_changed = {
@@ -1449,7 +1449,7 @@ Template.api.set = {
   id: "session_set",
   name: "Session.set(key, value)",
   locus: "Client",
-  descr: ["Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Deps.run`](#deps_run) computations, that called [`Session.get`](#session_get) on this `key`.)"],
+  descr: ["Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Deps.autorun`](#deps_autorun) computations, that called [`Session.get`](#session_get) on this `key`.)"],
   args: [
     {name: "key",
      type: "String",
