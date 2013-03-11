@@ -2468,7 +2468,9 @@ computations.  When the data changes, the computations are
 invalidated.
 
 Dependencies don't store data, they just track the set of computations to
-invalidate if something changes.  Typically, a data value will be accompanied by a Dependency that affords dependency tracking, as in this example:
+invalidate if something changes.  Typically, a data value will be
+accompanied by a Dependency object that tracks the computations that depend
+on it, as in this example:
 
     var weather = "sunny";
     var weatherDeps = new Deps.Dependency;
