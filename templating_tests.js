@@ -752,6 +752,24 @@ Tinytest.add("templating - events", function (test) {
   div.kill();
   Meteor.flush();
 
+  //Test for identical callbacks for issue #650
+  tmpl = Template.test_template_events_c;
+  buf = [];
+  tmpl.events({
+    'click u': function () { buf.push('a'); }
+  });
+  tmpl.events({
+    'click u': function () { buf.push('b'); }
+  });
+
+  div = OnscreenDiv(Meteor.render(tmpl));
+  clickElement(DomUtils.find(div.node(), 'u'));
+  test.equal(buf.length, 2);
+  test.isTrue(buf.indexOf('a') > -1);
+  test.isTrue(buf.indexOf('b') > -1);
+  div.kill();
+  Meteor.flush();
+
 });
 
 Tinytest.add("templating - #each rendered callback", function (test) {
