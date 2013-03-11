@@ -1,6 +1,12 @@
 
 ## vNEXT
 
+* You can now provide a `defaultFactory` option to collections, which is a
+  function that documents coming out of that collection are passed
+  through. `find`, `findOne`, `allow`, and `deny` now take `factory` arguments,
+  which may override the Collection's `defaultFactory`.  Specifying a `factory`
+  of `null` causes you to receive the documents unmodified.
+
 * Publish functions may now return an array of cursors to publish. Currently,
   the cursors must all be from different collections. #716
 
