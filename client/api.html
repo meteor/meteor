@@ -969,7 +969,9 @@ or more times to deliver the initial results of the query.
 
 `observe` returns a live query handle, which is an object with a `stop` method.
 Call `stop` with no arguments to stop calling the callback functions and tear
-down the query. **The query will run forever until you call this.**
+down the query. **The query will run forever until you call this.**  If
+`observe` is called from a `Deps.run` computation, it is automatically
+stopped when the computation is rerun or stopped.
 (If the cursor was created with the option `reactive` set to false, it will
 only deliver the initial results and will not call any further callbacks;
 it is not necessary to call `stop` on the handle.)
@@ -1023,6 +1025,9 @@ zero or more times to deliver the initial results of the query.
 `observeChanges` returns a live query handle, which is an object with a `stop`
 method.  Call `stop` with no arguments to stop calling the callback functions
 and tear down the query. **The query will run forever until you call this.**
+If
+`observeChanges` is called from a `Deps.run` computation, it is automatically
+stopped when the computation is rerun or stopped.
 (If the cursor was created with the option `reactive` set to false, it will
 only deliver the initial results and will not call any further callbacks;
 it is not necessary to call `stop` on the handle.)
@@ -2267,7 +2272,7 @@ function is run again when `shouldAlert` becomes true.
 
 A change to a data dependency does not cause an immediate rerun, but
 rather "invalidates" the computation, causing it to rerun the next
-time a flush occurs.  A flush will occur automatically the next time
+time a flush occurs.  A flush will occur automatically as soon as
 the system is idle if there are invalidated computations.  You can
 also use [`Deps.flush`](#deps_flush) to cause an immediate flush of
 all pending reruns.
@@ -2344,7 +2349,7 @@ to run in the order that `afterFlush` was called.  Functions are
 guaranteed to be called at a time when there are no invalidated
 computations that need rerunning.  This means that if an `afterFlush`
 function invalidates a computation, that computation will be rerun
-before any subsequent `afterFlush` functions are called.
+before any other `afterFlush` functions are called.
 
 {{> api_box deps_depend }}
 
@@ -2378,15 +2383,16 @@ one that gains a dependency when a reactive data source is accessed.
 Data sources are responsible for tracking these dependencies using
 [`Deps.Variable`](#deps_variable) objects.
 
-Invalidating a computation immediately calls all of the computation's
-`onInvalidate` callbacks and sets its `invalidated` property to
-`true`.  When a flush occurs, if the computation has been invalidated
+Invalidating a computation sets its `invalidated` property to true
+and immediately calls all of the computation's `onInvalidate`
+callbacks.  When a flush occurs, if the computation has been invalidated
 and not stopped, then the computation is rerun by setting the
 `invalidated` property to `false` and calling the original function
-that was passed to `Deps.run`.
+that was passed to `Deps.run`.  A flush will occur when the current
+code finishes running, or sooner if `Deps.flush` is called.
 
 Stopping a computation invalidates it (if it is valid) for the purpose
-calling callbacks, but ensures that it will never be rerun.
+of calling callbacks, but ensures that it will never be rerun.
 
 Example:
 
@@ -2415,7 +2421,8 @@ computation is rerun.
 
 {{> api_box computation_invalidate }}
 
-Invalidating a computation marks it to be rerun at flush time, at
+Invalidating a computation marks it to be rerun at
+[flush time](#deps_flush), at
 which point the computation becomes valid again.  It is rare to
 invalidate a computation manually, because reactive data sources
 invalidate their calling computations when they change.  Reactive data
@@ -2509,7 +2516,7 @@ removed.
 
 In almost all cases, you want to declare a dependency of the current
 computation and should use `Deps.depend(variable)` instead,
-which is equivalent to `variable.addDependent(null)`.
+which calls `variable.addDependent(null)`.
 
 Computations added as dependents of the Variable will be removed
 immediately if they are ever invalidated or stopped.

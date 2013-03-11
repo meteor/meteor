@@ -312,14 +312,18 @@ And the reactive data sources that can trigger changes are:
 * [`Meteor.userId`](#meteor_userid)
 * [`Meteor.loggingIn`](#meteor_loggingin)
 
-In addition, calling [`Meteor.subscribe`](#meteor_subscribe) from a reactive
-computation sets up a subscription which is automatically stopped when computation
-is invalidated, as shown above.
+In addition, the following functions which return an object with a
+`stop` method, if called from a reactive computation, are stopped when
+the computation is rerun or stopped:
+
+* [`Deps.run`](#deps_run) (nested)
+* [`Meteor.subscribe`](#meteor_subscribe)
+* [`observe()`](#observe) and [`observeChanges()`](#observe_changes) on cursors
 
 Meteor's
 [implementation](https://github.com/meteor/meteor/blob/master/packages/deps/deps.js)
 is a package called [`Deps`](#deps) that is fairly short and straightforward.
-You can use it yourself to create your own reactive computations and data sources.
+You can use it yourself to implement new reactive data sources.
 
 {{/better_markdown}}
 </template>
