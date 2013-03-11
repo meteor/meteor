@@ -431,7 +431,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
     //
     // For example, consider a rerun of:
     //
-    //     Deps.run(function () {
+    //     Deps.autorun(function () {
     //       Meteor.subscribe("foo", Session.get("foo"));
     //       Meteor.subscribe("bar", Session.get("bar"));
     //     });

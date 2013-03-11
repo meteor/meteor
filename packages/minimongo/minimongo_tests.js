@@ -1742,7 +1742,7 @@ Tinytest.add("minimongo - reactive stop", function (test) {
   var x, y;
   var sortOrder = ReactiveVar(1);
 
-  var c = Deps.run(function () {
+  var c = Deps.autorun(function () {
     var q = coll.find({}, {sort: {_id: sortOrder.get()}});
     x = "";
     q.observe({ addedAt: function (doc, atIndex, before) {

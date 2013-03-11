@@ -31,7 +31,7 @@ var listsHandle = Meteor.subscribe('lists', function () {
 
 var todosHandle = null;
 // Always be subscribed to the todos for the selected list.
-Deps.run(function () {
+Deps.autorun(function () {
   var list_id = Session.get('list_id');
   if (list_id)
     todosHandle = Meteor.subscribe('todos', list_id);

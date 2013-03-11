@@ -837,20 +837,20 @@ Spark.isolate = function (htmlFunc) {
   var range;
   var firstRun = true;
   var retHtml;
-  Deps.run(function (handle) {
+  Deps.autorun(function (handle) {
     if (firstRun) {
       retHtml = renderer.annotate(
         htmlFunc(), Spark._ANNOTATION_ISOLATE,
         function (r) {
           if (! r) {
-            // annotation not used; kill this Deps.run
+            // annotation not used; kill this autorun
             handle.stop();
           } else {
             range = r;
             range.finalize = function () {
               // Spark.finalize() was called on our range (presumably
               // because it was removed from the document.)  Kill
-              // this Deps.run.
+              // this autorun.
               handle.stop();
             };
           }

@@ -286,7 +286,7 @@ _.extend(LocalCollection.Cursor.prototype, {
 
     if (self.reactive && Deps.active) {
       // XXX in many cases, the same observe will be recreated when
-      // the current Deps.run is rerun.  we could save work by
+      // the current autorun is rerun.  we could save work by
       // letting it linger across rerun and potentially get
       // repurposed if the same observe is performed, using logic
       // similar to that of Meteor.subscribe.

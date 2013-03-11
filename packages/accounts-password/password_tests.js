@@ -54,7 +54,7 @@ if (Meteor.isClient) (function () {
       // Set up a reactive context that only refreshes when Meteor.user() is
       // invalidated.
       var loaded = false;
-      var handle = Deps.run(function () {
+      var handle = Deps.autorun(function () {
         if (Meteor.user() && Meteor.user().emails)
           loaded = true;
       });

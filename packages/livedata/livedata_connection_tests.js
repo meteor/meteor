@@ -115,7 +115,7 @@ Tinytest.add("livedata stub - subscribe", function (test) {
   test.equal(message, {msg: 'sub', name: 'my_data', params: []});
 
   var reactivelyReady = false;
-  var autorunHandle = Deps.run(function () {
+  var autorunHandle = Deps.autorun(function () {
     reactivelyReady = sub.ready();
   });
   test.isFalse(reactivelyReady);
@@ -165,7 +165,7 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
 
   // Subscribe to some subs.
   var stopperHandle;
-  var autorunHandle = Deps.run(function () {
+  var autorunHandle = Deps.autorun(function () {
     conn.subscribe("foo", rFoo.get(), onReady(rFoo.get()));
     conn.subscribe("bar", rBar.get(), onReady(rBar.get()));
     conn.subscribe("completer", onReady("completer"));
@@ -1073,8 +1073,8 @@ Tinytest.add("livedata stub - reactive resub", function (test) {
   var fooReady = 0;
 
   var inner;
-  var outer = Deps.run(function () {
-    inner = Deps.run(function () {
+  var outer = Deps.autorun(function () {
+    inner = Deps.autorun(function () {
       conn.subscribe("foo-sub", fooArg.get(),
                      function () { fooReady++; });
     });
@@ -1083,7 +1083,7 @@ Tinytest.add("livedata stub - reactive resub", function (test) {
   markAllReady();
   test.equal(fooReady, 1);
 
-  // Rerun the inner Deps.run with different subscription
+  // Rerun the inner autorun with different subscription
   // arguments.  Detect the re-sub via onReady.
   fooArg.set('B');
   test.isTrue(inner.invalidated);

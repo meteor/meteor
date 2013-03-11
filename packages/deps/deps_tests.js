@@ -1,7 +1,7 @@
 Tinytest.add('deps - run', function (test) {
   var d = new Deps.Variable;
   var x = 0;
-  var handle = Deps.run(function (handle) {
+  var handle = Deps.autorun(function (handle) {
     Deps.depend(d);
     ++x;
   });
@@ -25,7 +25,7 @@ Tinytest.add('deps - run', function (test) {
   Deps.flush();
   test.equal(x, 3);
 
-  Deps.run(function (internalHandle) {
+  Deps.autorun(function (internalHandle) {
     Deps.depend(d);
     ++x;
     if (x == 6)
@@ -45,10 +45,10 @@ Tinytest.add('deps - run', function (test) {
   test.equal(x, 6);
 
   test.throws(function () {
-    Deps.run();
+    Deps.autorun();
   });
   test.throws(function () {
-    Deps.run({});
+    Deps.autorun({});
   });
 });
 
@@ -62,22 +62,22 @@ Tinytest.add("deps - nested run", function (test) {
 
   var buf = "";
 
-  var c1 = Deps.run(function () {
+  var c1 = Deps.autorun(function () {
     Deps.depend(a);
     buf += 'a';
-    Deps.run(function () {
+    Deps.autorun(function () {
       Deps.depend(b);
       buf += 'b';
-      Deps.run(function () {
+      Deps.autorun(function () {
         Deps.depend(c);
         buf += 'c';
-        var c2 = Deps.run(function () {
+        var c2 = Deps.autorun(function () {
           Deps.depend(d);
           buf += 'd';
-          Deps.run(function () {
+          Deps.autorun(function () {
             Deps.depend(e);
             buf += 'e';
-            Deps.run(function () {
+            Deps.autorun(function () {
               Deps.depend(f);
               buf += 'f';
             });
@@ -153,7 +153,7 @@ Tinytest.add("deps - flush", function (test) {
 
   var buf = "";
 
-  var c1 = Deps.run(function (c) {
+  var c1 = Deps.autorun(function (c) {
     buf += 'a';
     // invalidate first time
     if (c.firstRun)
@@ -173,7 +173,7 @@ Tinytest.add("deps - flush", function (test) {
 
   buf = "";
 
-  var c2 = Deps.run(function (c) {
+  var c2 = Deps.autorun(function (c) {
     buf += 'a';
     // invalidate first time
     if (c.firstRun)
@@ -198,7 +198,7 @@ Tinytest.add("deps - flush", function (test) {
 
   buf = "";
 
-  var c3 = Deps.run(function (c) {
+  var c3 = Deps.autorun(function (c) {
     buf += 'a';
     // invalidate first time
     if (c.firstRun)
@@ -212,7 +212,7 @@ Tinytest.add("deps - flush", function (test) {
     buf += 'c';
   });
 
-  var c4 = Deps.run(function (c) {
+  var c4 = Deps.autorun(function (c) {
     c4 = c;
     buf += 'b';
   });
@@ -238,7 +238,7 @@ Tinytest.add("deps - flush", function (test) {
   test.isTrue(ran);
 
   test.throws(function () {
-    Deps.run(function () {
+    Deps.autorun(function () {
       Deps.flush(); // illegal to flush from a computation
     });
   });
@@ -262,7 +262,7 @@ Tinytest.add("deps - lifecycle", function (test) {
 
   var shouldStop = false;
 
-  var c1 = Deps.run(function (c) {
+  var c1 = Deps.autorun(function (c) {
     test.isTrue(Deps.active);
     test.equal(c, Deps.currentComputation);
     test.equal(c.stopped, false);
@@ -272,7 +272,7 @@ Tinytest.add("deps - lifecycle", function (test) {
     Deps.onInvalidate(makeCb()); // 1, 6, ...
     Deps.afterFlush(makeCb()); // 2, 7, ...
 
-    Deps.run(function (x) {
+    Deps.autorun(function (x) {
       x.stop();
       c.onInvalidate(makeCb()); // 3, 8, ...
 
@@ -315,7 +315,7 @@ Tinytest.add("deps - lifecycle", function (test) {
 Tinytest.add("deps - onInvalidate", function (test) {
   var buf = "";
 
-  var c1 = Deps.run(function () {
+  var c1 = Deps.autorun(function () {
     buf += "*";
   });
 
@@ -329,7 +329,7 @@ Tinytest.add("deps - onInvalidate", function (test) {
   c1.onInvalidate(append('a'));
   c1.onInvalidate(append('b'));
   test.equal(buf, '*');
-  Deps.run(function (me) {
+  Deps.autorun(function (me) {
     Deps.onInvalidate(append('z'));
     me.stop();
     test.equal(buf, '*z');

@@ -105,7 +105,7 @@
 
   Tinytest.add('session - context invalidation for get', function (test) {
     var xGetExecutions = 0;
-    Deps.run(function () {
+    Deps.autorun(function () {
       ++xGetExecutions;
       Session.get('x');
     });
@@ -126,7 +126,7 @@
 
   Tinytest.add('session - context invalidation for equals', function (test) {
     var xEqualsExecutions = 0;
-    Deps.run(function () {
+    Deps.autorun(function () {
       ++xEqualsExecutions;
       Session.equals('x', 5);
     });
@@ -159,7 +159,7 @@
     function (test) {
       // Make sure the special casing for equals undefined works.
       var yEqualsExecutions = 0;
-      Deps.run(function () {
+      Deps.autorun(function () {
         ++yEqualsExecutions;
         Session.equals('y', undefined);
       });

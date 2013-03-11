@@ -44,7 +44,7 @@
   Deps.Computation = function (f, parent) {
     if (! constructingComputation)
       throw new Error(
-        "Deps.Computation constructor is private; use Deps.run");
+        "Deps.Computation constructor is private; use Deps.autorun");
     constructingComputation = false;
 
     var self = this;
@@ -206,7 +206,7 @@
         throw new Error("Can't call Deps.flush while flushing");
 
       if (inCompute)
-        throw new Error("Can't flush inside Deps.run");
+        throw new Error("Can't flush inside Deps.autorun");
 
       inFlush = true;
       willFlush = true;
@@ -245,9 +245,9 @@
     //
     // Links the computation to the current computation
     // so that it is stopped if the current computation is invalidated.
-    run: function (f) {
+    autorun: function (f) {
       if (typeof f !== 'function')
-        throw new Error('Deps.run requires a function argument');
+        throw new Error('Deps.autorun requires a function argument');
 
       constructingComputation = true;
       var c = new Deps.Computation(f, Deps.currentComputation);

@@ -125,7 +125,7 @@ Example:
     Counts = new Meteor.Collection("counts");
 
     // client: subscribe to the count for the current room
-    Deps.run(function () {
+    Deps.autorun(function () {
       Meteor.subscribe("counts-by-room", Session.get("roomId"));
     });
 
@@ -202,15 +202,15 @@ reactive data source.
 
 If you call `Meteor.subscribe` within a [reactive computation](#reactivity),
 for example using
-[`Deps.run`](#deps_run), the subscription will automatically be
+[`Deps.autorun`](#deps_autorun), the subscription will automatically be
 cancelled when the computation is invalidated or stopped; it's not necessary
 to call `stop` on
-subscriptions made from inside `Deps.run`. However, if the next iteration
+subscriptions made from inside `autorun`. However, if the next iteration
 of your run function subscribes to the same record set (same name and
 parameters), Meteor is smart enough to skip a wasteful
 unsubscribe/resubscribe. For example:
 
-    Deps.run(function () {
+    Deps.autorun(function () {
       Meteor.subscribe("chat", {room: Session.get("current-room")});
       Meteor.subscribe("privateMessages");
     });
@@ -422,7 +422,7 @@ the server. The return value is an object with the following fields:
 
 Instead of using callbacks to notify you on changes, this is
 a [reactive](#reactivity) data source. You can use it in a
-[template](#templates) or [computation](#deps_run)
+[template](#templates) or [computation](#deps_autorun)
 to get realtime updates.
 
 {{> api_box reconnect}}
@@ -603,7 +603,7 @@ those changes may or may not appear in the result set.
 Cursors are a reactive data source.  The first time you retrieve a
 cursor's documents with `fetch`, `map`, or `forEach` inside a
 reactive computation (eg, a template or
-[`Deps.run`](#deps_run)), Meteor will register a
+[`autorun`](#deps_autorun)), Meteor will register a
 dependency on the underlying data.  Any change to the collection that
 changes the documents in a cursor will trigger a recomputation.  To
 disable this behavior, pass `{reactive: false}` as an option to
@@ -970,7 +970,7 @@ or more times to deliver the initial results of the query.
 `observe` returns a live query handle, which is an object with a `stop` method.
 Call `stop` with no arguments to stop calling the callback functions and tear
 down the query. **The query will run forever until you call this.**  If
-`observe` is called from a `Deps.run` computation, it is automatically
+`observe` is called from a `Deps.autorun` computation, it is automatically
 stopped when the computation is rerun or stopped.
 (If the cursor was created with the option `reactive` set to false, it will
 only deliver the initial results and will not call any further callbacks;
@@ -1026,7 +1026,7 @@ zero or more times to deliver the initial results of the query.
 method.  Call `stop` with no arguments to stop calling the callback functions
 and tear down the query. **The query will run forever until you call this.**
 If
-`observeChanges` is called from a `Deps.run` computation, it is automatically
+`observeChanges` is called from a `Deps.autorun` computation, it is automatically
 stopped when the computation is rerun or stopped.
 (If the cursor was created with the option `reactive` set to false, it will
 only deliver the initial results and will not call any further callbacks;
@@ -1178,11 +1178,11 @@ whenever [`Session.set`](#session_set)`("currentList", x)` is called.
 
 Example:
 
-    Deps.run(function () {
+    Deps.autorun(function () {
       Meteor.subscribe("chat-history", {room: Session.get("currentRoomId")});
     });
 
-    // Causes the function passed to Deps.run to be re-run, so
+    // Causes the function passed to Deps.autorun to be re-run, so
     // that the chat-history subscription is moved to the room "home".
     Session.set("currentRoomId", "home");
 
@@ -2232,21 +2232,21 @@ template being rendered).  Later, when the data changes, the function
 can "invalidate" the Computation, causing it to rerun (rerendering the
 template).
 
-Applications will find [`Deps.run`](#deps_run) useful, while more
+Applications will find [`Deps.autorun`](#deps_autorun) useful, while more
 advanced facilities such as `Deps.Variable` and `onInvalidate`
 callbacks are intended primarily for package authors implementing new
 reactive data sources.
 
-{{> api_box deps_run }}
+{{> api_box deps_autorun }}
 
-`Deps.run` allows you to run a function that depends on reactive data
+`Deps.autorun` allows you to run a function that depends on reactive data
 sources, in such a way that if there are changes to the data later,
 the function will be rerun.
 
 For example, you can monitor a cursor (which is a reactive data
 source) and aggregate it into a session variable:
 
-    Deps.run(function () {
+    Deps.autorun(function () {
       var oldest = _.max(Monkeys.find().fetch(), function (monkey) {
         return monkey.age;
       });
@@ -2258,7 +2258,7 @@ Or you can wait for a session variable to have a certain value, and do
 something the first time it does, calling `stop` on the computation to
 prevent further rerunning:
 
-    Deps.run(function (c) {
+    Deps.autorun(function (c) {
       if (! Session.equals("shouldAlert", true))
         return;
 
@@ -2277,7 +2277,7 @@ the system is idle if there are invalidated computations.  You can
 also use [`Deps.flush`](#deps_flush) to cause an immediate flush of
 all pending reruns.
 
-If you nest calls to `Deps.run`, then when the outer call stops or
+If you nest calls to `Deps.autorun`, then when the outer call stops or
 reruns, the inner call will stop automatically.  Subscriptions and
 observers are also automatically stopped when used as part of a
 computation that is rerun, allowing new ones to be established.  See
@@ -2365,7 +2365,7 @@ the computation.  Calls
 A Computation object represents code that is repeatedly rerun in
 response to reactive data changes.  Computations don't have return
 values; they just perform actions, such as rerendering a template on
-the screen.  Computations are created using [`Deps.run`](#deps_run).
+the screen.  Computations are created using [`Deps.autorun`](#deps_autorun).
 Use [`stop`](#computation_stop) to prevent further rerunning of a
 computation.
 
@@ -2388,7 +2388,7 @@ and immediately calls all of the computation's `onInvalidate`
 callbacks.  When a flush occurs, if the computation has been invalidated
 and not stopped, then the computation is rerun by setting the
 `invalidated` property to `false` and calling the original function
-that was passed to `Deps.run`.  A flush will occur when the current
+that was passed to `Deps.autorun`.  A flush will occur when the current
 code finishes running, or sooner if `Deps.flush` is called.
 
 Stopping a computation invalidates it (if it is valid) for the purpose
@@ -2456,7 +2456,7 @@ recomputed at flush time.
 {{> api_box computation_firstrun }}
 
 This property is a convenience to support the common pattern where a
-`Deps.run` has logic specific to the first run.
+computation has logic specific to the first run.
 
 <h2 id="deps_variable"><span>Deps.Variable</span></h2>
 
