@@ -256,10 +256,10 @@ var toc = [
         {instance: "computation", name: "invalidated", id: "computation_invalidated"},
         {instance: "computation", name: "firstRun", id: "computation_firstrun"}
       ],
-      "Deps.Variable", [
-        {instance: "variable", name: "changed", id: "variable_changed"},
-        {instance: "variable", name: "addDependent", id: "variable_adddependent"},
-        {instance: "variable", name: "hasDependents", id: "variable_hasdependents"}
+      "Deps.Dependency", [
+        {instance: "dependency", name: "changed", id: "dependency_changed"},
+        {instance: "dependency", name: "addDependent", id: "dependency_adddependent"},
+        {instance: "dependency", name: "hasDependents", id: "dependency_hasdependents"}
       ]
     ],
 

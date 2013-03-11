@@ -797,13 +797,13 @@ Template.api.deps_afterflush = {
 
 Template.api.deps_depend = {
   id: "deps_depend",
-  name: "Deps.depend(variable)",
+  name: "Deps.depend(dependency)",
   locus: "Client",
-  descr: ["Declares that the current computation depends on `variable`.  The current computation, if there is one, becomes a dependent of `variable`, meaning it will be invalidated and rerun the next time `variable` changes.", "Returns `true` if this results in `variable` gaining a new dependent (or `false` if this relationship already exists or there is no current computation)."],
+  descr: ["Declares that the current computation depends on `dependency`.  The current computation, if there is one, becomes a dependent of `dependency`, meaning it will be invalidated and rerun the next time `dependency` changes.", "Returns `true` if this results in `dependency` gaining a new dependent (or `false` if this relationship already exists or there is no current computation)."],
   args: [
-    {name: "variable",
-     type: "Deps.Variable",
-     descr: "The variable for this computation to depend on."}
+    {name: "dependency",
+     type: "Deps.Dependency",
+     descr: "The dependency for this computation to depend on."}
   ]
 };
 
@@ -854,18 +854,18 @@ Template.api.computation_firstrun = {
   descr: ["True during the initial run of the computation at the time `Deps.autorun` is called, and false on subsequent reruns and at other times."]
 };
 
-Template.api.variable_changed = {
-  id: "variable_changed",
-  name: "<em>variable</em>.changed()",
+Template.api.dependency_changed = {
+  id: "dependency_changed",
+  name: "<em>dependency</em>.changed()",
   locus: "Client",
   descr: ["Invalidate all dependent computations immediately and remove them as dependents."]
 };
 
-Template.api.variable_adddependent = {
-  id: "variable_adddependent",
-  name: "<em>variable</em>.addDependent(computation)",
+Template.api.dependency_adddependent = {
+  id: "dependency_adddependent",
+  name: "<em>dependency</em>.addDependent(computation)",
   locus: "Client",
-  descr: ["Adds `computation` as a dependent of this Variable, recording the fact that the computation depends on this Variable.", "Returns true if the computation was not already a dependent of this Variable."],
+  descr: ["Adds `computation` as a dependent of this Dependency, recording the fact that the computation depends on this Dependency.", "Returns true if the computation was not already a dependent of this Dependency."],
   args: [
     {name: "computation",
      type: "Deps.Computation",
@@ -873,11 +873,11 @@ Template.api.variable_adddependent = {
   ]
 };
 
-Template.api.variable_hasdependents = {
-  id: "variable_hasdependents",
-  name: "<em>variable</em>.hasDependents()",
+Template.api.dependency_hasdependents = {
+  id: "dependency_hasdependents",
+  name: "<em>dependency</em>.hasDependents()",
   locus: "Client",
-  descr: ["True if this Variable has one or more dependent Computations, which would be invalidated if this Variable were to change."]
+  descr: ["True if this Dependency has one or more dependent Computations, which would be invalidated if this Dependency were to change."]
 };
 
 //////
