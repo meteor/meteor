@@ -1,5 +1,5 @@
 Tinytest.add('deps - run', function (test) {
-  var d = new Deps.Variable;
+  var d = new Deps.Dependency;
   var x = 0;
   var handle = Deps.autorun(function (handle) {
     Deps.depend(d);
@@ -53,12 +53,12 @@ Tinytest.add('deps - run', function (test) {
 });
 
 Tinytest.add("deps - nested run", function (test) {
-  var a = new Deps.Variable;
-  var b = new Deps.Variable;
-  var c = new Deps.Variable;
-  var d = new Deps.Variable;
-  var e = new Deps.Variable;
-  var f = new Deps.Variable;
+  var a = new Deps.Dependency;
+  var b = new Deps.Dependency;
+  var c = new Deps.Dependency;
+  var d = new Deps.Dependency;
+  var e = new Deps.Dependency;
+  var f = new Deps.Dependency;
 
   var buf = "";
 

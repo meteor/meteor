@@ -158,7 +158,7 @@ Meteor._LivedataConnection = function (url, options) {
 
   // Reactive userId.
   self._userId = null;
-  self._userIdDeps = (typeof Deps !== "undefined") && new Deps.Variable;
+  self._userIdDeps = (typeof Deps !== "undefined") && new Deps.Dependency;
 
   // Block auto-reload while we're waiting for method responses.
   if (!options.reloadWithOutstanding) {
@@ -476,7 +476,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
         params: params,
         inactive: false,
         ready: false,
-        readyDeps: (typeof Deps !== "undefined") && new Deps.Variable,
+        readyDeps: (typeof Deps !== "undefined") && new Deps.Dependency,
         readyCallback: callbacks.onReady,
         errorCallback: callbacks.onError
       };

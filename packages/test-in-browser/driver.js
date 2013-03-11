@@ -2,8 +2,8 @@ var running = true;
 
 var resultTree = [];
 var failedTests = [];
-var resultsDeps = new Deps.Variable;
-var countDeps = new Deps.Variable;
+var resultsDeps = new Deps.Dependency;
+var countDeps = new Deps.Dependency;
 var totalCount = 0;
 var passedCount = 0;
 var failedCount = 0;

@@ -362,7 +362,7 @@ LocalCollection.Cursor.prototype._depend = function (changers) {
   var self = this;
 
   if (Deps.active) {
-    var v = new Deps.Variable;
+    var v = new Deps.Dependency;
     Deps.depend(v);
     var notifyChange = _.bind(v.changed, v);
 

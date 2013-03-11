@@ -151,11 +151,11 @@
     }
   });
 
-  Deps.Variable = function () {
+  Deps.Dependency = function () {
     this._dependentsById = {};
   };
 
-  _.extend(Deps.Variable.prototype, {
+  _.extend(Deps.Dependency.prototype, {
     // Adds `computation` to this set if it is not already
     // present.  Returns true if `computation` is a new member of the set.
     // If no argument, defaults to currentComputation (which is required to
@@ -164,7 +164,7 @@
       if (! computation) {
         if (! Deps.active)
           throw new Error(
-            "Variable.addDependent() called with no currentComputation");
+            "Dependency.addDependent() called with no currentComputation");
 
         computation = Deps.currentComputation;
       }

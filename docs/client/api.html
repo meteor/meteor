@@ -2233,7 +2233,7 @@ can "invalidate" the Computation, causing it to rerun (rerendering the
 template).
 
 Applications will find [`Deps.autorun`](#deps_autorun) useful, while more
-advanced facilities such as `Deps.Variable` and `onInvalidate`
+advanced facilities such as `Deps.Dependency` and `onInvalidate`
 callbacks are intended primarily for package authors implementing new
 reactive data sources.
 
@@ -2334,7 +2334,7 @@ It's very rare to need to access `currentComputation` directly.  The
 current computation is used implicitly by
 [`Deps.active`](#deps_active) (which tests whether there is one),
 [`Deps.depend`](#deps_depend) (which registers that it depends on a
-variable), and [`Deps.onInvalidate`](#deps_oninvalidate) (which
+dependency), and [`Deps.onInvalidate`](#deps_oninvalidate) (which
 registers a callback with it).
 
 {{> api_box deps_oninvalidate }}
@@ -2354,11 +2354,11 @@ before any other `afterFlush` functions are called.
 {{> api_box deps_depend }}
 
 `Deps.depend` is used in reactive data source implementations as the
-primary way to record the fact that a variable is being accessed from
+primary way to record the fact that a Dependency is being accessed from
 some computation.  If there is a current computation, it becomes a
-dependent of the variable, while the variable becomes a dependency of
+dependent of the Dependency, while the Dependency becomes a dependency of
 the computation.  Calls
-[`variable.addDependent()`](#variable_adddependent).
+[`dependency.addDependent()`](#dependency_adddependent).
 
 <h2 id="deps_computation"><span>Deps.Computation</span></h2>
 
@@ -2381,7 +2381,7 @@ The *current computation*
 computation that is currently being run or rerun (computed), and the
 one that gains a dependency when a reactive data source is accessed.
 Data sources are responsible for tracking these dependencies using
-[`Deps.Variable`](#deps_variable) objects.
+[`Deps.Dependency`](#deps_dependency) objects.
 
 Invalidating a computation sets its `invalidated` property to true
 and immediately calls all of the computation's `onInvalidate`
@@ -2427,7 +2427,7 @@ which point the computation becomes valid again.  It is rare to
 invalidate a computation manually, because reactive data sources
 invalidate their calling computations when they change.  Reactive data
 sources in turn perform this invalidation using one or more
-[`Deps.Variable`](#deps_variable) objects.
+[`Deps.Dependency`](#deps_dependency) objects.
 
 Invalidating a computation immediately calls all `onInvalidate`
 callbacks registered on it.  Invalidating a computation that is
@@ -2458,20 +2458,20 @@ recomputed at flush time.
 This property is a convenience to support the common pattern where a
 computation has logic specific to the first run.
 
-<h2 id="deps_variable"><span>Deps.Variable</span></h2>
+<h2 id="deps_dependency"><span>Deps.Dependency</span></h2>
 
-A Deps Variable represents an atomic unit of reactive data that a
+A Dependency represents an atomic unit of reactive data that a
 computation might depend on.  Reactive data sources such as Session or
-Minimongo internally create different Variables for different
+Minimongo internally create different Dependency objects for different
 pieces of data, each of which may be depended on by multiple
 computations.  When the data changes, the computations are
 invalidated.
 
-Variables don't store data, they just track the set of computations to
-invalidate if they change.  Typically, a data value will be accompanied by a Variable that affords dependency tracking, as in this example:
+Dependencies don't store data, they just track the set of computations to
+invalidate if something changes.  Typically, a data value will be accompanied by a Dependency that affords dependency tracking, as in this example:
 
     var weather = "sunny";
-    var weatherDeps = new Deps.Variable;
+    var weatherDeps = new Deps.Dependency;
 
     var getWeather = function () {
       Deps.depend(weatherDeps);
@@ -2487,44 +2487,44 @@ invalidate if they change.  Typically, a data value will be accompanied by a Var
 
 This example implements a weather data source with a simple getter and
 setter.  The getter records that the current computation depends on
-the `weatherDeps` variable using `Deps.depend`, while the setter
-signals the variable to invalidate all dependent computations by
+the `weatherDeps` dependency using `Deps.depend`, while the setter
+signals the dependency to invalidate all dependent computations by
 calling `changed()`.
 
-The reason Variables do not store data themselves is that it can be
-useful to associate multiple variables with the same piece of data.
-For example, one Variable might represent the result of a database
+The reason Dependencies do not store data themselves is that it can be
+useful to associate multiple Dependencies with the same piece of data.
+For example, one Dependency might represent the result of a database
 query, while another might represent just the number of documents in
-the result.  A Variable could represent whether the weather is sunny
+the result.  A Dependency could represent whether the weather is sunny
 or not, or whether the temperature is above freezing.
 [`Session.equals`](#session_equals) is implemented this way for
 efficiency.  When you call `Session.equals("weather", "sunny")`, the
-current computation is made to depend on an internal Variable that
+current computation is made to depend on an internal Dependency that
 does not change if the weather goes from, say, "rainy" to "cloudy".
 
-Conceptually, the only two things a Variable can do are gain a
+Conceptually, the only two things a Dependency can do are gain a
 dependent (typically via `Deps.depend`) and change.
 
-A Variable's dependent computations are always valid (they have
+A Dependency's dependent computations are always valid (they have
 `invalidated === false`).  If a dependent is invalidated at any time,
-either by the Variable itself or some other way, it is immediately
+either by the Dependency itself or some other way, it is immediately
 removed.
 
-{{> api_box variable_changed }}
+{{> api_box dependency_changed }}
 
-{{> api_box variable_adddependent }}
+{{> api_box dependency_adddependent }}
 
 In almost all cases, you want to declare a dependency of the current
-computation and should use `Deps.depend(variable)` instead,
-which calls `variable.addDependent(null)`.
+computation and should use `Deps.depend(dependency)` instead,
+which calls `dependency.addDependent(null)`.
 
-Computations added as dependents of the Variable will be removed
+Computations added as dependents of the Dependency will be removed
 immediately if they are ever invalidated or stopped.
 
-{{> api_box variable_hasdependents }}
+{{> api_box dependency_hasdependents }}
 
-For reactive data sources that create many internal Variables,
-this function is useful to determine whether a particular Variable is
+For reactive data sources that create many internal Dependencies,
+this function is useful to determine whether a particular Dependency is
 still tracking any dependency relationships or if it can be cleaned up
 to save memory.
 

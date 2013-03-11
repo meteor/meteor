@@ -6,7 +6,7 @@
   };
 
   var loggingIn = false;
-  var loggingInDeps = new Deps.Variable;
+  var loggingInDeps = new Deps.Dependency;
   // This is mostly just called within this file, but Meteor.loginWithPassword
   // also uses it to make loggingIn() be true during the beginPasswordExchange
   // method call too.
@@ -181,7 +181,7 @@
   // XXX this can be simplified if we merge in
   // https://github.com/meteor/meteor/pull/273
   var loginServicesConfigured = false;
-  var loginServicesConfiguredDeps = new Deps.Variable;
+  var loginServicesConfiguredDeps = new Deps.Dependency;
   Meteor.subscribe("meteor.loginServiceConfiguration", function () {
     loginServicesConfigured = true;
     loginServicesConfiguredDeps.changed();

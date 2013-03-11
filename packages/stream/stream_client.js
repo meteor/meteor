@@ -47,7 +47,7 @@ Meteor._Stream = function (url) {
     retry_count: 0
   };
 
-  self.status_listeners = window.Deps && new Deps.Variable;
+  self.status_listeners = window.Deps && new Deps.Dependency;
   self.status_changed = function () {
     if (self.status_listeners)
       self.status_listeners.changed();

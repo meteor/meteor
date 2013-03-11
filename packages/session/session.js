@@ -15,8 +15,8 @@
 
   Session = _.extend({}, {
     keys: {}, // key -> value
-    keyDeps: {}, // key -> Variable
-    keyValueDeps: {}, // key -> value -> Variable
+    keyDeps: {}, // key -> Dependency
+    keyValueDeps: {}, // key -> value -> Dependency
 
     set: function (key, value) {
       var self = this;
@@ -83,7 +83,7 @@
         self._ensureKey(key);
 
         if (! _.has(self.keyValueDeps[key], serializedValue))
-          self.keyValueDeps[key][serializedValue] = new Deps.Variable;
+          self.keyValueDeps[key][serializedValue] = new Deps.Dependency;
 
         var isNew = Deps.depend(self.keyValueDeps[key][serializedValue]);
         if (isNew) {
@@ -104,7 +104,7 @@
     _ensureKey: function (key) {
       var self = this;
       if (!(key in self.keyDeps)) {
-        self.keyDeps[key] = new Deps.Variable;
+        self.keyDeps[key] = new Deps.Dependency;
         self.keyValueDeps[key] = {};
       }
     }
