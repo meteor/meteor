@@ -58,7 +58,7 @@
     // to constrain the order that computations are processed
     self._parent = parent;
     self._func = f;
-    self._computing = false;
+    self._recomputing = false;
 
     try {
       self._compute();
@@ -90,9 +90,9 @@
     invalidate: function () {
       var self = this;
       if (! self.invalidated) {
-        // if we're currently computing, don't enqueue
+        // if we're currently in _recompute(), don't enqueue
         // ourselves, since we'll rerun immediately anyway.
-        if (! self._computing) {
+        if (! self._recomputing && ! self.stopped) {
           requireFlush();
           pendingComputations.push(this);
         }
@@ -133,7 +133,7 @@
     _recompute: function () {
       var self = this;
 
-      self._computing = true;
+      self._recomputing = true;
       while (self.invalidated && ! self.stopped) {
         try {
           self._compute();
@@ -147,7 +147,7 @@
         // We could put an iteration counter here and catch run-away
         // loops.
       }
-      self._computing = false;
+      self._recomputing = false;
     }
   });
 
@@ -290,6 +290,7 @@
 
     afterFlush: function (f) {
       afterFlushCallbacks.push(f);
+      requireFlush();
     }
 
 });
