@@ -463,7 +463,7 @@ Template.api.meteor_collection = {
      " - **`'MONGO'`**:  random [`Meteor.Collection.ObjectID`](#collection_object_id) values\n\n" +
      "The default id generation technique is `'STRING'`."
     },
-    {name: "defaultFactory",
+    {name: "transform",
      type: "Function",
      descr: "Pass documents through this function before returning them."
     }
@@ -499,9 +499,9 @@ Template.api.find = {
     {name: "reactive",
      type: "Boolean",
      descr: "(Client only) Default `true`; pass `false` to disable reactivity"},
-    {name: "factory",
+    {name: "transform",
      type: "Function",
-     descr: "Pass documents through this function before returning them or passing them to `observe` callbacks. `null` specifies unmodified documents, even if the `Collection` has a `defaultFactory`."}
+     descr: "Pass documents through this function before returning them or passing them to `observe` callbacks. `null` specifies unmodified documents, even if the `Collection` has a `transform`."}
   ]
 };
 
@@ -531,9 +531,9 @@ Template.api.findone = {
     {name: "reactive",
      type: "Boolean",
      descr: "(Client only) Default true; pass false to disable reactivity"},
-    {name: "factory",
+    {name: "transform",
      type: "Function",
-     descr: "Pass the document through this function before returning it.  `null` specifies the document should be unmodified, even if the `Collection` has a `defaultFactory`."}
+     descr: "Pass the document through this function before returning it.  `null` specifies the document should be unmodified, even if the `Collection` has a `transform`."}
   ]
 };
 
@@ -605,9 +605,9 @@ Template.api.allow = {
     {name: "fetch",
      type: "Array of String",
      descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions."},
-    {name: "factory",
+    {name: "transform",
      type: "Function",
-     descr: "Pass documents to this function before passing them to callbacks.  `null` specifies unmodified documents, even if the `Collection` has a `defaultFactory`."}
+     descr: "Pass documents to this function before passing them to callbacks.  `null` specifies unmodified documents, even if the `Collection` has a `transform`."}
   ]
 };
 
@@ -623,9 +623,9 @@ Template.api.deny = {
     {name: "fetch",
      type: "Array of Strings",
      descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions."},
-    {name: "factory",
+    {name: "transform",
      type: "Function",
-     descr: "Pass documents to this function before passing them to callbacks.  `null` specifies unmodified documents, even if the `Collection` has a `defaultFactory`."}
+     descr: "Pass documents to this function before passing them to callbacks.  `null` specifies unmodified documents, even if the `Collection` has a `transform`."}
   ]
 };
 

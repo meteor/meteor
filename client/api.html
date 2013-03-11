@@ -477,8 +477,8 @@ your application.  Each document is a EJSON object.  It includes an `_id`
 property whose value is unique in the collection, which Meteor will set when you
 first create the document.  If you need your documents to have methods, or be
 otherwise modified from their EJSON reperesentation within the collection, you
-can specify a `defaultFactory` function that documents will be passed through
-before coming out of your collection.
+can specify a `transform` function that documents will be passed through before
+coming out of your collection.
 
     // common code on client and server declares livedata-managed mongo
     // collection.
