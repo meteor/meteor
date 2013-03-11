@@ -15,7 +15,7 @@ Meteor.Collection = function (name, options) {
   options = _.extend({
     manager: undefined,
     idGeneration: 'STRING',
-    defaultFactory: null,
+    transform: null,
     _driver: undefined,
     _preventAutopublish: false
   }, options);
@@ -34,7 +34,7 @@ Meteor.Collection = function (name, options) {
     break;
   }
 
-  self._defaultFactory = options.defaultFactory;
+  self._transform = options.transform;
 
   if (!name && (name !== null)) {
     Meteor._debug("Warning: creating anonymous collection. It will not be " +
@@ -188,10 +188,10 @@ _.extend(Meteor.Collection.prototype, {
   _getFindOptions: function (args) {
     var self = this;
     if (args.length < 2) {
-      return { factory: self._defaultFactory };
+      return { transform: self._transform };
     } else {
       return _.extend({
-        factory: self._defaultFactory
+        transform: self._transform
       }, args[1]);
     }
   },
@@ -400,7 +400,7 @@ Meteor.Collection.ObjectID = LocalCollection._ObjectID;
 (function () {
   var addValidator = function(allowOrDeny, options) {
     // validate keys
-    var VALID_KEYS = ['insert', 'update', 'remove', 'fetch', 'factory'];
+    var VALID_KEYS = ['insert', 'update', 'remove', 'fetch', 'transform'];
     _.each(_.keys(options), function (key) {
       if (!_.contains(VALID_KEYS, key))
         throw new Error(allowOrDeny + ": Invalid key: " + key);
@@ -414,10 +414,10 @@ Meteor.Collection.ObjectID = LocalCollection._ObjectID;
         if (!(options[name] instanceof Function)) {
           throw new Error(allowOrDeny + ": Value for `" + name + "` must be a function");
         }
-        if (self._defaultFactory)
-          options[name].factory = self._defaultFactory;
-        if (options.factory)
-          options[name].factory = options.factory;
+        if (self._transform)
+          options[name].transform = self._transform;
+        if (options.transform)
+          options[name].transform = options.transform;
         self._validators[name][allowOrDeny].push(options[name]);
       }
     });
@@ -532,8 +532,8 @@ Meteor.Collection.prototype._isInsecure = function () {
 
 var docToValidate = function (validator, doc) {
   var ret = doc;
-  if (validator.factory)
-    ret = validator.factory(EJSON.clone(doc));
+  if (validator.transform)
+    ret = validator.transform(EJSON.clone(doc));
   return ret;
 };
 
@@ -557,9 +557,9 @@ Meteor.Collection.prototype._validatedInsert = function(userId, doc) {
   self._collection.insert.call(self._collection, doc);
 };
 
-var factoryAll = function (validator, docs) {
-  if (validator.factory)
-    return _.map(docs, validator.factory);
+var transformAll = function (validator, docs) {
+  if (validator.transform)
+    return _.map(docs, validator.transform);
   return docs;
 };
 
@@ -591,7 +591,7 @@ Meteor.Collection.prototype._validatedUpdate = function(
     }
   });
 
-  var findOptions = {factory: null};
+  var findOptions = {transform: null};
   if (!self._validators.fetchAllFields) {
     findOptions.fields = {};
     _.each(self._validators.fetch, function(fieldName) {
@@ -617,7 +617,7 @@ Meteor.Collection.prototype._validatedUpdate = function(
   // Any deny returns true means denied.
   if (_.any(self._validators.update.deny, function(validator) {
     if (!factoriedDocs)
-      factoriedDocs = factoryAll(validator, docs);
+      factoriedDocs = transformAll(validator, docs);
     return validator(userId,
                      factoriedDocs,
                      fields,
@@ -628,7 +628,7 @@ Meteor.Collection.prototype._validatedUpdate = function(
   // Any allow returns true means proceed. Throw error if they all fail.
   if (_.all(self._validators.update.allow, function(validator) {
     if (!factoriedDocs)
-      factoriedDocs = factoryAll(validator, docs);
+      factoriedDocs = transformAll(validator, docs);
     return !validator(userId,
                       factoriedDocs,
                       fields,
@@ -668,7 +668,7 @@ Meteor.Collection.prototype._validatedUpdate = function(
 Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
   var self = this;
 
-  var findOptions = {factory: null};
+  var findOptions = {transform: null};
   if (!self._validators.fetchAllFields) {
     findOptions.fields = {};
     _.each(self._validators.fetch, function(fieldName) {
@@ -683,13 +683,13 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
   // call user validators.
   // Any deny returns true means denied.
   if (_.any(self._validators.remove.deny, function(validator) {
-    return validator(userId, factoryAll(validator, docs));
+    return validator(userId, transformAll(validator, docs));
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
   if (_.all(self._validators.remove.allow, function(validator) {
-    return !validator(userId, factoryAll(validator, docs));
+    return !validator(userId, transformAll(validator, docs));
   })) {
     throw new Meteor.Error(403, "Access denied");
   }

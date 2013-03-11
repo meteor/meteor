@@ -3,12 +3,12 @@
 
 (function () {
 //var Future = __meteor_bootstrap__.require('fibers/future');
-var FACTORIES = {};
+var TRANSFORMS = {};
 if (Meteor.isServer) {
   Meteor.methods({
     createInsecureCollection: function (name, options) {
-      if (options && options.defaultFactoryName) {
-        options.defaultFactory = FACTORIES[options.defaultFactoryName];
+      if (options && options.transformName) {
+        options.transform = TRANSFORMS[options.transformName];
       }
       var c = new Meteor.Collection(name, options);
       c._insecure = true;
@@ -628,17 +628,17 @@ testAsyncMulti('mongo-livedata - document with a date, ' + idGeneration, [
   }
 ]);
 
-testAsyncMulti('mongo-livedata - document goes through a factory, ' + idGeneration, [
+testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGeneration, [
   function (test, expect) {
     var seconds = function (doc) {
       doc.seconds = function () {return doc.d.getSeconds();};
       return doc;
     };
-    FACTORIES["seconds"] = seconds;
+    TRANSFORMS["seconds"] = seconds;
     var collectionOptions = {
       idGeneration: idGeneration,
-      defaultFactory: seconds,
-      defaultFactoryName: "seconds"
+      transform: seconds,
+      transformName: "seconds"
     };
     var collectionName = Random.id();
     if (Meteor.isClient) {
@@ -666,9 +666,9 @@ testAsyncMulti('mongo-livedata - document goes through a factory, ' + idGenerati
       test.equal(cursor.count(), 1);
       test.equal(cursor.fetch()[0].seconds(), 50);
       test.equal(coll.findOne().seconds(), 50);
-      test.equal(coll.findOne({}, {factory: null}).seconds, undefined);
+      test.equal(coll.findOne({}, {transform: null}).seconds, undefined);
       test.equal(coll.findOne({}, {
-        factory: function (doc) {return {seconds: doc.d.getSeconds()};}
+        transform: function (doc) {return {seconds: doc.d.getSeconds()};}
       }).seconds, 50);
       coll.remove({});
     }));

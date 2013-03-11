@@ -989,8 +989,8 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
         var doc = EJSON.clone(fields);
         doc._id = id;
         var renderDoc = doc;
-        if (cursor.getFactory && cursor.getFactory()) {
-          renderDoc = cursor.getFactory()(EJSON.clone(renderDoc));
+        if (cursor.getTransform && cursor.getTransform()) {
+          renderDoc = cursor.getTransform()(EJSON.clone(renderDoc));
         }
         var frag = Spark.render(_.bind(itemFunc, null, renderDoc));
         DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
@@ -1043,8 +1043,8 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
           throw new Error("Unknown id for changed: " + id);
         applyChanges(elt.doc, fields);
         var renderDoc = elt.doc;
-        if (cursor.getFactory && cursor.getFactory())
-          renderDoc = cursor.getFactory()(EJSON.clone(renderDoc));
+        if (cursor.getTransform && cursor.getTransform())
+          renderDoc = cursor.getTransform()(EJSON.clone(renderDoc));
         Spark.renderToRange(elt.liveRange, _.bind(itemFunc, null, renderDoc));
       });
     }

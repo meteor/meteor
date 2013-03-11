@@ -8,10 +8,10 @@ _.each(['STRING', 'MONGO'], function (idGeneration) {
 
   // helper for defining a collection, subscribing to it, and defining
   // a method to clear it
-  var defineCollection = function(name, insecure, defaultFactory) {
+  var defineCollection = function(name, insecure, transform) {
     var collection = new Meteor.Collection(name + idGeneration, {
       idGeneration: idGeneration,
-      defaultFactory: defaultFactory
+      transform: transform
     });
     collection._insecure = insecure;
 
@@ -60,12 +60,12 @@ _.each(['STRING', 'MONGO'], function (idGeneration) {
   var restrictedCollectionForFetchAllTest = defineCollection(
     "collection-restrictedForFetchAllTest", true /*insecure*/);
 
-  var restrictedCollectionWithFactory = defineCollection(
-    "withFactory", false, function (doc) {
+  var restrictedCollectionWithTransform = defineCollection(
+    "withTransform", false, function (doc) {
       return doc.a;
     });
 
-  restrictedCollectionWithFactory.allow({
+  restrictedCollectionWithTransform.allow({
     insert: function (userId, doc) {
       return doc.foo === "foo";
     },
@@ -347,14 +347,14 @@ _.each(['STRING', 'MONGO'], function (idGeneration) {
     var item2;
     testAsyncMulti("collection - restrected factories " + idGeneration, [
       function (test, expect) {
-        restrictedCollectionWithFactory.insert({
+        restrictedCollectionWithTransform.insert({
           a: {foo: "foo", bar: "bar", baz: "baz"}
         }, expect(function (e, res) {
           test.isFalse(e);
           test.isTrue(res);
           item1 = res;
         }));
-        restrictedCollectionWithFactory.insert({
+        restrictedCollectionWithTransform.insert({
           a: {foo: "foo", bar: "quux", baz: "quux"},
           b: "potato"
         }, expect(function (e, res) {
@@ -362,7 +362,7 @@ _.each(['STRING', 'MONGO'], function (idGeneration) {
           test.isTrue(res);
           item2 = res;
         }));
-        restrictedCollectionWithFactory.insert({
+        restrictedCollectionWithTransform.insert({
           a: {foo: "adsfadf", bar: "quux", baz: "quux"},
           b: "potato"
         }, expect(function (e, res) {
@@ -370,10 +370,10 @@ _.each(['STRING', 'MONGO'], function (idGeneration) {
         }));
       },
       function (test, expect) {
-        restrictedCollectionWithFactory.remove(item1, expect(function (e, res) {
+        restrictedCollectionWithTransform.remove(item1, expect(function (e, res) {
           test.isFalse(e);
         }));
-        restrictedCollectionWithFactory.remove(item2, expect(function (e, res) {
+        restrictedCollectionWithTransform.remove(item2, expect(function (e, res) {
           test.isTrue(e);
         }));
       }
