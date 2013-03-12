@@ -345,10 +345,16 @@ _.each(['STRING', 'MONGO'], function (idGeneration) {
   if (Meteor.isClient) {
     var item1;
     var item2;
-    testAsyncMulti("collection - restrected factories " + idGeneration, [
+    testAsyncMulti("collection - restricted factories " + idGeneration, [
+      function (test, expect) {
+        restrictedCollectionWithTransform.callClearMethod(test.runId(), expect(function () {
+          test.equal(restrictedCollectionWithTransform.find({world: test.runId()}).count(), 0);
+        }));
+      },
       function (test, expect) {
         restrictedCollectionWithTransform.insert({
-          a: {foo: "foo", bar: "bar", baz: "baz"}
+          a: {foo: "foo", bar: "bar", baz: "baz"},
+          world: test.runId()
         }, expect(function (e, res) {
           test.isFalse(e);
           test.isTrue(res);
@@ -356,7 +362,8 @@ _.each(['STRING', 'MONGO'], function (idGeneration) {
         }));
         restrictedCollectionWithTransform.insert({
           a: {foo: "foo", bar: "quux", baz: "quux"},
-          b: "potato"
+          b: "potato",
+          world: test.runId()
         }, expect(function (e, res) {
           test.isFalse(e);
           test.isTrue(res);
@@ -364,7 +371,8 @@ _.each(['STRING', 'MONGO'], function (idGeneration) {
         }));
         restrictedCollectionWithTransform.insert({
           a: {foo: "adsfadf", bar: "quux", baz: "quux"},
-          b: "potato"
+          b: "potato",
+          world: test.runId()
         }, expect(function (e, res) {
           test.isTrue(e);
         }));
