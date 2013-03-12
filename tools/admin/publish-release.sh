@@ -4,9 +4,9 @@ DIR="$(pwd)"
 METEOR_DIR="$(pwd)/../.."
 
 # prepare settings file with git sha of last commit
-TMPDIR=$(mktemp -d -t meteor-publish-release-XXXXXXXX)
+PUBLISH_TMPDIR=$(mktemp -d -t meteor-publish-release-XXXXXXXX)
 GIT_SHA=$(git rev-parse HEAD)
-cat > "$TMPDIR/settings.json" <<EOF
+cat > "$PUBLISH_TMPDIR/settings.json" <<EOF
 {"git-sha": "$GIT_SHA"}
 EOF
 
@@ -25,5 +25,5 @@ cd $DIR/publish-release
 #
 # XXX it would be cool to be able to not listen on any port here. instead
 # we use port 31337
-$METEOR_DIR/meteor -p 31337 --once --settings=$TMPDIR/settings.json
+$METEOR_DIR/meteor -p 31337 --once --settings=$PUBLISH_TMPDIR/settings.json
 

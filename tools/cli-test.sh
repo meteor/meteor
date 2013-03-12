@@ -34,11 +34,11 @@ if [ "$TEST_WAREHOUSE_DIR" ]; then
     METEOR="$METEOR --release=$TEST_RELEASE" # some random non-official release
 fi
 
-TMPDIR=`mktemp -d -t meteor-cli-test-XXXXXXXX`
-OUTPUT="$TMPDIR/output"
-trap 'echo "[...]"; tail -25 $OUTPUT; echo FAILED ; rm -rfd `find $METEOR_DIR -name __tmp`; rm -rf "$TMPDIR" >/dev/null 2>&1' EXIT
+TEST_TMPDIR=`mktemp -d -t meteor-cli-test-XXXXXXXX`
+OUTPUT="$TEST_TMPDIR/output"
+trap 'echo "[...]"; tail -25 $OUTPUT; echo FAILED ; rm -rfd `find $METEOR_DIR -name __tmp`; rm -rf "$TEST_TMPDIR" >/dev/null 2>&1' EXIT
 
-cd "$TMPDIR"
+cd "$TEST_TMPDIR"
 set -e -x
 
 
@@ -158,8 +158,8 @@ sleep 2 # need to make sure these kills take effect
 
 echo "... test-packages"
 
-mkdir -p "$TMPDIR/local-packages/die-now/"
-cat > "$TMPDIR/local-packages/die-now/package.js" <<EOF
+mkdir -p "$TEST_TMPDIR/local-packages/die-now/"
+cat > "$TEST_TMPDIR/local-packages/die-now/package.js" <<EOF
 Package.on_test(function (api) {
   api.use('deps'); // try to use a core package
   console.log("Dying");
@@ -167,7 +167,7 @@ Package.on_test(function (api) {
 });
 EOF
 
-$METEOR test-packages -p $PORT --package-dir="$TMPDIR/local-packages/die-now/" | grep Dying >> $OUTPUT 2>&1
+$METEOR test-packages -p $PORT --package-dir="$TEST_TMPDIR/local-packages/die-now/" | grep Dying >> $OUTPUT 2>&1
 # since the server process was killed via 'process.exit', mongo is still running.
 ps ax | grep -e "$MONGOMARK" | grep -v grep | awk '{print $1}' | xargs kill || true
 sleep 2 # make sure mongo is dead
@@ -233,8 +233,8 @@ EOF
 
 echo "... local-package-sets -- new package"
 
-mkdir -p "$TMPDIR/local-packages/a-package-named-bar/"
-cat > "$TMPDIR/local-packages/a-package-named-bar/package.js" <<EOF
+mkdir -p "$TEST_TMPDIR/local-packages/a-package-named-bar/"
+cat > "$TEST_TMPDIR/local-packages/a-package-named-bar/package.js" <<EOF
 console.log("loaded a-package-named-bar");
 
 Npm.depends({gcd: '0.0.0'});
@@ -244,24 +244,24 @@ Package.on_use(function(api) {
 });
 EOF
 
-cat > "$TMPDIR/local-packages/a-package-named-bar/call_gcd.js" <<EOF
+cat > "$TEST_TMPDIR/local-packages/a-package-named-bar/call_gcd.js" <<EOF
 var gcd = Npm.require('gcd');
 console.log("gcd(4,6)=" + gcd(4,6));
 EOF
 
 ! $METEOR add a-package-named-bar >> $OUTPUT
-PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR add a-package-named-bar >> $OUTPUT
+PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR add a-package-named-bar >> $OUTPUT
 ! $METEOR -p $PORT --once | grep "loaded a-package-named-bar" >> $OUTPUT
-PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR -p $PORT --once | grep "loaded a-package-named-bar" >> $OUTPUT
-PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR bundle $TMPDIR/bundle.tar.gz >> $OUTPUT
-tar tvzf $TMPDIR/bundle.tar.gz >>$OUTPUT
-PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR -p $PORT --once | grep "gcd(4,6)=2" >> $OUTPUT
+PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR -p $PORT --once | grep "loaded a-package-named-bar" >> $OUTPUT
+PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR bundle $TEST_TMPDIR/bundle.tar.gz >> $OUTPUT
+tar tvzf $TEST_TMPDIR/bundle.tar.gz >>$OUTPUT
+PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR -p $PORT --once | grep "gcd(4,6)=2" >> $OUTPUT
 
 
 echo "... local-package-sets -- overridden package"
 
-mkdir -p "$TMPDIR/local-packages/accounts-ui/"
-cat > "$TMPDIR/local-packages/accounts-ui/package.js" <<EOF
+mkdir -p "$TEST_TMPDIR/local-packages/accounts-ui/"
+cat > "$TEST_TMPDIR/local-packages/accounts-ui/package.js" <<EOF
 Package.describe({
   summary: "accounts-ui - overridden"
 });
@@ -270,9 +270,9 @@ EOF
 
 ! $METEOR add accounts-ui 2>&1 | grep "accounts-ui - overridden" >> $OUTPUT
 $METEOR remove accounts-ui 2>&1 >> $OUTPUT
-PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR add accounts-ui 2>&1 | grep "accounts-ui - overridden" >> $OUTPUT
+PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR add accounts-ui 2>&1 | grep "accounts-ui - overridden" >> $OUTPUT
 ! $METEOR list | grep "accounts-ui - overridden" >> $OUTPUT
-PACKAGE_DIRS="$TMPDIR/local-packages" $METEOR list | grep "accounts-ui - overridden" >> $OUTPUT
+PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR list | grep "accounts-ui - overridden" >> $OUTPUT
 
 
 # remove die.js, we're done with package tests.

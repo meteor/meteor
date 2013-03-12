@@ -40,17 +40,17 @@ if [ ! -x "$HOME/.meteor/meteor" ]; then
     fi
   fi
 
-  TMPDIR="$HOME/.meteor-install-tmp"
-  rm -rf "$TMPDIR"
-  mkdir "$TMPDIR"
+  INSTALL_TMPDIR="$HOME/.meteor-install-tmp"
+  rm -rf "$INSTALL_TMPDIR"
+  mkdir "$INSTALL_TMPDIR"
   echo 'This is your first time using Meteor! Downloading the engine now.'
   curl --progress-bar --fail \
       "$URLBASE/meteor-engine-bootstrap-${UNAME}-${ARCH}.tar.gz" | \
-    tar -xzf - -C "$TMPDIR"
+    tar -xzf - -C "$INSTALL_TMPDIR"
   # bomb out if it didn't work, eg no net
-  test -x "${TMPDIR}/.meteor/meteor"
-  mv "${TMPDIR}/.meteor" "$HOME"
-  rmdir "${TMPDIR}"
+  test -x "${INSTALL_TMPDIR}/.meteor/meteor"
+  mv "${INSTALL_TMPDIR}/.meteor" "$HOME"
+  rmdir "${INSTALL_TMPDIR}"
   # just double-checking :)
   test -x "$HOME/.meteor/meteor"
 fi
