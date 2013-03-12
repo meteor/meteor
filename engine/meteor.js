@@ -428,13 +428,16 @@ Fiber(function () {
       }
 
       var appRelease = project.getMeteorReleaseVersion(appDir);
+      // Write release version unconditionally, so that we write it even if
+      // appRelease === releaseVersion === the implicit 0.6.0 from a missing
+      // file.
+      project.writeMeteorReleaseVersion(appDir, releaseVersion);
       if (appRelease === releaseVersion) {
         console.log("Your app is already running Meteor release "
                     + releaseVersion + ".");
         return;
       }
 
-      project.writeMeteorReleaseVersion(appDir, releaseVersion);
       // This is the right spot to do any other changes we need to the app in
       // order to update it for the new release (new metadata file formats,
       // etc, or maybe even updating renamed APIs).
