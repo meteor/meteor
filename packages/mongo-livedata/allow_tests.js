@@ -378,6 +378,9 @@ _.each(['STRING', 'MONGO'], function (idGeneration) {
         }));
       },
       function (test, expect) {
+        test.equal(
+          restrictedCollectionWithTransform.findOne({"a.bar": "bar"}),
+          {foo: "foo", bar: "bar", baz: "baz"});
         restrictedCollectionWithTransform.remove(item1, expect(function (e, res) {
           test.isFalse(e);
         }));

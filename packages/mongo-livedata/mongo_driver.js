@@ -374,7 +374,7 @@ _.each(['forEach', 'map', 'rewind', 'fetch', 'count'], function (method) {
 
     if (!self._synchronousCursor)
       self._synchronousCursor = self._mongo._createSynchronousCursor(
-        self._cursorDescription);
+        self._cursorDescription, true);
 
     return self._synchronousCursor[method].apply(
       self._synchronousCursor, arguments);
@@ -433,7 +433,8 @@ Cursor.prototype.observeChanges = function (callbacks) {
     self._cursorDescription, ordered, callbacks);
 };
 
-_Mongo.prototype._createSynchronousCursor = function (cursorDescription) {
+_Mongo.prototype._createSynchronousCursor = function (cursorDescription,
+                                                      useTransform) {
   var self = this;
 
   var future = new Future;
@@ -459,6 +460,7 @@ _Mongo.prototype._createSynchronousCursor = function (cursorDescription) {
     throw result[1];
 
   return new SynchronousCursor(result[1],
+                               useTransform &&
                                cursorDescription.options &&
                                cursorDescription.options.transform);
 };
@@ -814,7 +816,7 @@ _.extend(LiveResultsSet.prototype, {
       self._synchronousCursor.rewind();
     } else {
       self._synchronousCursor = self._mongoHandle._createSynchronousCursor(
-        self._cursorDescription);
+        self._cursorDescription, false);
     }
     var newResults = self._synchronousCursor.getRawObjects(self._ordered);
     var oldResults = self._results;
