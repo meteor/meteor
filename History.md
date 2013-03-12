@@ -29,6 +29,8 @@
 * In an event handler, if the data context is falsey, default it to `{}`
   rather than to the global object. #777
 
+* Allow specifying multiple event handlers for the same selector. #753
+
 * Revert caching header change from 0.5.5. This fixes image flicker on redraw.
 
 * Stop making `Session` available on the server; it's not useful there. #751
@@ -53,8 +55,8 @@
   * mime module removed (it was unused)
 
 
-Patches contributed by GitHub users awwx, cmather, graemian, jmhredsox,
-kevinxucs, krizka, mitar, raix, and rasmuserik.
+Patches contributed by GitHub users awwx, cmather, graemian, jagill,
+jmhredsox, kevinxucs, krizka, mitar, raix, and rasmuserik.
 
 
 ## v0.5.7
