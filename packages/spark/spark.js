@@ -724,9 +724,13 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
   var listener = getListener();
 
   var handlerMap = {}; // type -> [{selector, callback}, ...]
-  // iterate over eventMap, which has form {"type selector, ...": callback},
+  // iterate over eventMap, which has form {"type selector, ...": callbacks},
+  // callbacks can either be a fn, or an array of fns
   // and populate handlerMap
-  _.each(eventMap, function(callback, spec) {
+  _.each(eventMap, function(callbacks, spec) {
+    if ('function' === typeof callbacks) {
+      callbacks = [ callbacks ];
+    }
     var clauses = spec.split(/,\s+/);
     // iterate over clauses of spec, e.g. ['click .foo', 'click .bar']
     _.each(clauses, function (clause) {
@@ -738,7 +742,9 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
       var selector = parts.join(' ');
 
       handlerMap[type] = handlerMap[type] || [];
-      handlerMap[type].push({selector: selector, callback: callback});
+      _.each(callbacks, function(callback) {
+        handlerMap[type].push({selector: selector, callback: callback});
+      });
     });
   });
 
