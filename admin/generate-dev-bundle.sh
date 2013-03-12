@@ -94,7 +94,7 @@ npm install stream-buffers@0.2.3
 npm install keypress@0.1.0
 npm install sockjs@0.3.4
 npm install http-proxy@0.8.5
-npm install underscore@1.4.4
+npm install underscore@1.4.2 # 1.4.4 is a performance regression
 npm install fstream@0.1.21
 npm install tar@0.1.14
 npm install websocket@1.0.8
