@@ -1,6 +1,10 @@
 
 ## vNEXT
 
+* Add new `appcache` package. Add this package to your project to speed
+  up page load and make hot code reload smoother using the HTML5
+  AppCache API. See http://docs.meteor.com/#appcache for details.
+
 * You can now provide a `transform` option to collections, which is a
   function that documents coming out of that collection are passed
   through. `find`, `findOne`, `allow`, and `deny` now take `transform` options,

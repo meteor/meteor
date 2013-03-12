@@ -12,7 +12,7 @@
 //  - manifest [list of resources in load order, each consists of an object]:
 //     {
 //       "path": relative path of file in the bundle, normalized to use forward slashes
-//       "where": "client"  [could also be "server" in future]
+//       "where": "client", "internal"  [could also be "server" in future]
 //       "type": "js", "css", or "static"
 //       "cacheable": (client) boolean, is it safe to ask the browser to cache this file
 //       "url": (client) relative url to download the resource, includes cache
@@ -231,11 +231,19 @@ var Bundle = function () {
   // list of filenames
   self.css = [];
 
+  // images and other static files added from packages
+  // map from environment, to list of filenames
+  self.static = {client: [], server: []};
+
   // Map from environment, to path name (server relative), to contents
   // of file as buffer.
   self.files = {client: {}, client_cacheable: {}, server: {}};
 
-  // See description of manifest at the top
+  // See description of the manifest at the top.
+  // Note that in contrast to self.js etc., the manifest only includes
+  // files which are in the final bundler output: for example, if code
+  // is minified, the manifest includes the minify output file but not
+  // the individual input files that were combined.
   self.manifest = [];
 
   // list of segments of additional HTML for <head>/<body>
@@ -315,6 +323,7 @@ var Bundle = function () {
           self[options.type].push(data);
         } else if (options.type === "static") {
           self.files[w][options.path] = data;
+          self.static[w].push(options.path);
         } else {
           throw new Error("Unknown type " + options.type);
         }
@@ -529,6 +538,25 @@ _.extend(Bundle.prototype, {
 
     // --- Static assets ---
 
+    var addClientFileToManifest = function (filepath, contents, type, cacheable, url) {
+      if (! contents instanceof Buffer)
+        throw new Error('contents must be a Buffer');
+      var normalized = filepath.split(path.sep).join('/');
+      if (normalized.charAt(0) === '/')
+        normalized = normalized.substr(1);
+      self.manifest.push({
+        // path is normalized to use forward slashes
+        path: (cacheable ? 'static_cacheable' : 'static') + '/' + normalized,
+        where: 'client',
+        type: type,
+        cacheable: cacheable,
+        url: url || '/' + normalized,
+        // contents is a Buffer and so correctly gives us the size in bytes
+        size: contents.length,
+        hash: self._hash(contents)
+      });
+    };
+        
     if (is_app) {
       if (fs.existsSync(path.join(project_dir, 'public'))) {
         var copied =
@@ -537,18 +565,8 @@ _.extend(Bundle.prototype, {
 
         _.each(copied, function (fs_relative_path) {
           var filepath = path.join(build_path, 'static', fs_relative_path);
-          var normalized = fs_relative_path.split(path.sep).join('/');
-          self.manifest.push({
-            // path is normalized to use forward slashes, so deliberately
-            // not using path.sep here
-            path: 'static/' + normalized,
-            type: 'static',
-            where: 'client',
-            cacheable: false,
-            url: '/' + normalized,
-            size: fs.statSync(filepath).size,
-            hash: self._hash(fs.readFileSync(filepath))
-          });
+          var contents = fs.readFileSync(filepath);
+          addClientFileToManifest(fs_relative_path, contents, 'static', false);
         });
       }
       dependencies_json.app.push('public');
@@ -573,17 +591,7 @@ _.extend(Bundle.prototype, {
       else
         throw new Error('unable to find file: ' + file);
 
-      self.manifest.push({
-        // path is normalized to use forward slashes
-        path: 'static_cacheable' + file.split(path.sep).join('/'),
-        where: 'client',
-        type: type,
-        cacheable: true,
-        url: url,
-        // contents is a Buffer and so correctly gives us the size in bytes
-        size: contents.length,
-        hash: self._hash(contents)
-      });
+      addClientFileToManifest(file, contents, type, true, url);
     };
 
     _.each(self.js.client, function (file) { processClientCode('js',  file); });
@@ -594,6 +602,7 @@ _.extend(Bundle.prototype, {
       var full_path = path.join(build_path, 'static', rel_path);
       files.mkdir_p(path.dirname(full_path), 0755);
       fs.writeFileSync(full_path, self.files.client[rel_path]);
+      addClientFileToManifest(rel_path, self.files.client[rel_path], 'static', false);
     }
 
     // -- Client cache forever code --
@@ -613,8 +622,13 @@ _.extend(Bundle.prototype, {
       fs.writeFileSync(full_path, self.files.server[rel_path]);
     }
 
-    fs.writeFileSync(path.join(build_path, 'app.html'),
-                     self._generate_app_html());
+    var app_html = self._generate_app_html();
+    fs.writeFileSync(path.join(build_path, 'app.html'), app_html);
+    self.manifest.push({
+      path: 'app.html',
+      where: 'internal',
+      hash: self._hash(app_html)
+    });
     dependencies_json.core.push(path.join('lib', 'app.html.in'));
 
     fs.writeFileSync(path.join(build_path, 'unsupported.html'),
