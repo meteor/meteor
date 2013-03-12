@@ -380,7 +380,7 @@ _.each(['forEach', 'map', 'rewind', 'fetch', 'count'], function (method) {
 
 Cursor.prototype.getTransform = function () {
   var self = this;
-  return self._cursorDescription._transform;
+  return self._synchronousCursor._transform;
 };
 
 // When you call Meteor.publish() with a function that returns a Cursor, we need
