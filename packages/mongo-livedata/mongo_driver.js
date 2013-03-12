@@ -330,8 +330,11 @@ _Mongo.prototype._ensureIndex = function (collectionName, index, options) {
 
 // There are several classes which relate to cursors:
 //
-// CursorDescription represents the arguments used
-// to construct a cursor: collectionName, selector, and (find) options.
+// CursorDescription represents the arguments used to construct a cursor:
+// collectionName, selector, and (find) options.  Because it is used as a key
+// for cursor de-dup, everything in it should either be JSON-stringifiable or
+// not affect observeChanges output (eg, options.transform functions are not
+// stringifiable but do not affect observeChanges).
 //
 // SynchronousCursor is a wrapper around a MongoDB cursor
 // which includes fully-synchronous versions of forEach, etc.
@@ -380,7 +383,7 @@ _.each(['forEach', 'map', 'rewind', 'fetch', 'count'], function (method) {
 
 Cursor.prototype.getTransform = function () {
   var self = this;
-  return self._synchronousCursor._transform;
+  return self._cursorDescription.options.transform;
 };
 
 // When you call Meteor.publish() with a function that returns a Cursor, we need
