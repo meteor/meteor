@@ -26,14 +26,14 @@ Template.details.anyParties = function () {
 };
 
 Template.details.creatorName = function () {
-  var owner = findOneUser(this.owner);
+  var owner = Meteor.users.findOne(this.owner);
   if (owner._id === Meteor.userId())
     return "me";
-  return owner.displayName();
+  return displayName(owner);
 };
 
 Template.details.canRemove = function () {
-  return this.owner === Meteor.userId() && this.attending() === 0;
+  return this.owner === Meteor.userId() && attending(this) === 0;
 };
 
 Template.details.maybeChosen = function (what) {
@@ -71,16 +71,20 @@ Template.details.events({
 // Party attendance widget
 
 Template.attendance.rsvpName = function () {
-  var user = findOneUser(this.user);
-  return user.displayName();
+  var user = Meteor.users.findOne(this.user);
+  return displayName(user);
 };
 
 Template.attendance.outstandingInvitations = function () {
   var party = Parties.findOne(this._id);
-  return findUsers({$and: [
+  return Meteor.users.find({$and: [
     {_id: {$in: party.invited}}, // they're invited
     {_id: {$nin: _.pluck(party.rsvps, 'user')}} // but haven't RSVP'd
   ]});
+};
+
+Template.attendance.invitationName = function () {
+  return displayName(this);
 };
 
 Template.attendance.rsvpIs = function (what) {
@@ -127,7 +131,7 @@ Template.map.rendered = function () {
       var selected = Session.get('selected');
       var selectedParty = selected && Parties.findOne(selected);
       var radius = function (party) {
-        return 10 + Math.sqrt(party.attending()) * 10;
+        return 10 + Math.sqrt(attending(party)) * 10;
       };
 
       // Draw a circle for each party
@@ -154,7 +158,7 @@ Template.map.rendered = function () {
       // Label each with the current attendance count
       var updateLabels = function (group) {
         group.attr("id", function (party) { return party._id; })
-        .text(function (party) {return party.attending() || '';})
+        .text(function (party) {return attending(party) || '';})
         .attr("x", function (party) { return party.x * 500; })
         .attr("y", function (party) { return party.y * 500 + radius(party)/2 })
         .style('font-size', function (party) {
@@ -218,7 +222,7 @@ Template.createDialog.events({
       }, function (error, party) {
         if (! error) {
           Session.set("selected", party);
-          if (! public && findUsers().count() > 1)
+          if (! public && Meteor.users.find().count() > 1)
             openInviteDialog();
         }
       });
@@ -263,6 +267,10 @@ Template.inviteDialog.uninvited = function () {
   var party = Parties.findOne(Session.get("selected"));
   if (! party)
     return []; // party hasn't loaded yet
-  return findUsers({$nor: [{_id: {$in: party.invited}},
-                           {_id: party.owner}]});
+  return Meteor.users.find({$nor: [{_id: {$in: party.invited}},
+                                   {_id: party.owner}]});
+};
+
+Template.inviteDialog.displayName = function () {
+  return displayName(this);
 };

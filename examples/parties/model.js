@@ -13,14 +13,7 @@
     invited: Array of user id's that are invited (only if !public)
     rsvps: Array of objects like {user: userId, rsvp: "yes"} (or "no"/"maybe")
 */
-
-Parties = new Meteor.Collection("parties", {
-  transform: function (p) {
-    p.attending = function () {
-      return (_.groupBy(this.rsvps, 'rsvp').yes || []).length;
-    };
-    return p;
-  }});
+Parties = new Meteor.Collection("parties");
 
 Parties.allow({
   insert: function (userId, party) {
@@ -44,10 +37,14 @@ Parties.allow({
   remove: function (userId, parties) {
     return ! _.any(parties, function (party) {
       // deny if not the owner, or if other people are going
-      return party.owner !== userId || party.attending() > 0;
+      return party.owner !== userId || attending(party) > 0;
     });
   }
 });
+
+var attending = function (party) {
+  return (_.groupBy(party.rsvps, 'rsvp').yes || []).length;
+};
 
 Meteor.methods({
   // options should include: title, description, x, y, public
@@ -150,25 +147,10 @@ Meteor.methods({
 ///////////////////////////////////////////////////////////////////////////////
 // Users
 
-var userTransform = function (user) {
-  user.displayName = function () {
-    if (this.profile && this.profile.name)
-      return this.profile.name;
-    return this.emails[0].address;
-  };
-  return user;
-};
-
-findOneUser = function (query, options) {
-  options = options || {};
-  options.transform = userTransform;
-  return Meteor.users.findOne(query, options);
-};
-
-findUsers = function (query, options) {
-  options = options || {};
-  options.transform = userTransform;
-  return Meteor.users.find(query, options);
+var displayName = function (user) {
+  if (user.profile && user.profile.name)
+    return user.profile.name;
+  return user.emails[0].address;
 };
 
 var contactEmail = function (user) {
