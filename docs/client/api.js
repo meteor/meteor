@@ -465,7 +465,7 @@ Template.api.meteor_collection = {
     },
     {name: "transform",
      type: "Function",
-     descr: "Pass documents through this function before returning them."
+     descr: "An optional transformation function. Documents will be passed through this function before being returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `allow`, and `deny`."
     }
   ]
 };
@@ -501,7 +501,7 @@ Template.api.find = {
      descr: "(Client only) Default `true`; pass `false` to disable reactivity"},
     {name: "transform",
      type: "Function",
-     descr: "Pass documents through this function before returning them or passing them to `observe` callbacks. `null` specifies unmodified documents, even if the `Collection` has a `transform`."}
+     descr: "Overrides `transform` on the  [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation."}
   ]
 };
 
@@ -533,7 +533,8 @@ Template.api.findone = {
      descr: "(Client only) Default true; pass false to disable reactivity"},
     {name: "transform",
      type: "Function",
-     descr: "Pass the document through this function before returning it.  `null` specifies the document should be unmodified, even if the `Collection` has a `transform`."}
+     descr:  "Overrides `transform` on the [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation."
+    }
   ]
 };
 
@@ -607,7 +608,7 @@ Template.api.allow = {
      descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions."},
     {name: "transform",
      type: "Function",
-     descr: "Pass documents to this function before passing them to callbacks.  `null` specifies unmodified documents, even if the `Collection` has a `transform`."}
+     descr: "Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation."}
   ]
 };
 
@@ -625,7 +626,7 @@ Template.api.deny = {
      descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions."},
     {name: "transform",
      type: "Function",
-     descr: "Pass documents to this function before passing them to callbacks.  `null` specifies unmodified documents, even if the `Collection` has a `transform`."}
+     descr:  "Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation."}
   ]
 };
 

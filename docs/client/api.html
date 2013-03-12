@@ -475,10 +475,7 @@ space for records, or "documents") that can be used to store a particular type
 of information, like users, posts, scores, todo items, or whatever matters to
 your application.  Each document is a EJSON object.  It includes an `_id`
 property whose value is unique in the collection, which Meteor will set when you
-first create the document.  If you need your documents to have methods, or be
-otherwise modified from their EJSON reperesentation within the collection, you
-can specify a `transform` function that documents will be passed through before
-coming out of your collection.
+first create the document.
 
     // common code on client and server declares livedata-managed mongo
     // collection.
@@ -562,6 +559,42 @@ your collection should be published to which users.
     for (var i = 0; i < 10; i++)
       Scratchpad.insert({number: i * 2});
     assert(Scratchpad.find({number: {$lt: 9}}).count() === 5);
+
+
+If you specify a `transform` option to the `Collection` or any of its retrieval
+methods, documents are passed through the `transform` function before being
+returned or passed to callbacks.  This allows you to add methods or otherwise
+modify the contents of your collection from their database representation.  You
+can also specify `transform` on a particular `find`, `findOne`, `allow`, or
+`deny` call.
+
+    // An Animal class that takes a document in its constructor
+    Animal = function (doc) {
+      _.extend(this, doc);
+    };
+    _.extend(Animal.prototype, {
+      makeNoise: function () {
+        console.log(this.sound);
+      }
+    });
+
+    // Define a Collection that uses Animal as its document
+    Animals = new Meteor.Collection("Animals", {
+      transform: function (doc) { return new Animal(doc); }
+    });
+
+    // Create an Animal and call its makeNoise method
+    Animals.insert({name: "raptor", sound: "roar"});
+    Animals.findOne({name: "raptor"}).makeNoise(); // prints "roar"
+
+{{#note}}
+
+`transform` functions are not called reactively.  If you want to add a
+dynamically changing attribute to an object, do it with a function that computes
+the value at the time it's called, not by computing the attribute at `transform`
+time.
+
+{{/note}}
 
 {{#warning}}
 In this release, Minimongo has some limitations:
