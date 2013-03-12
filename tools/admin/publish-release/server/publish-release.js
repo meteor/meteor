@@ -91,7 +91,7 @@ var publishEngine = function(s3, release, version) {
     Prefix: ["unpublished", release, "meteor-engine-"].join("/")
   }).Body.ListBucketResult.Contents;
 
-  _.each(engineArtifacts, function (artifact) {
+  parallelEach(engineArtifacts, function (artifact) {
     var sourceKey = artifact.Key;
     var filename = _.last(sourceKey.split("/"));
     var destKey = [destPath, filename].join("/");
@@ -168,6 +168,8 @@ var parallelEach = function (collection, callback, context) {
     }.future()();
   });
   Future.wait(futures);
+  // Throw if any threw.
+  _.each(futures, function (f) { f.get(); });
 };
 
 // START HERE
