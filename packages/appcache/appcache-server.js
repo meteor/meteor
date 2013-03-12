@@ -1,8 +1,8 @@
 var app = __meteor_bootstrap__.app;
 var bundle = __meteor_bootstrap__.bundle;
-var crypto = __meteor_bootstrap__.require('crypto');
-var fs = __meteor_bootstrap__.require('fs');
-var path = __meteor_bootstrap__.require('path');
+var crypto = Npm.require('crypto');
+var fs = Npm.require('fs');
+var path = Npm.require('path');
 
 var knownBrowsers = ['android', 'chrome', 'firefox', 'ie', 'mobileSafari', 'safari'];
 

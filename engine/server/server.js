@@ -205,8 +205,6 @@ var run = function () {
     // added to the '<html>' tag. Each function is passed a 'request'
     // object (see #BrowserIdentifcation) and should return a string,
     htmlAttributeHooks: [],
-    // Node.js 'require' object.
-    require: require,
     // functions to be called after all packages are loaded and we are
     // ready to serve HTTP.
     startup_hooks: []
