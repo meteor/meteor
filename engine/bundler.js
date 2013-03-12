@@ -284,9 +284,9 @@ var Bundle = function () {
     add_resource: function (options) {
       var source_file = options.source_file || options.path;
 
-      var data = options.data;
+      var data;
       if (options.data) {
-        var data = options.data;
+        data = options.data;
         if (!(data instanceof Buffer)) {
           if (!(typeof data === "string"))
             throw new Error("Bad type for data");
@@ -295,7 +295,7 @@ var Bundle = function () {
       } else {
         if (!source_file)
           throw new Error("Need either source_file or data");
-        var data = fs.readFileSync(source_file);
+        data = fs.readFileSync(source_file);
       }
 
       var where = options.where;
@@ -310,7 +310,17 @@ var Bundle = function () {
             throw new Error("Must specify path");
 
           if (w === "client" || w === "server") {
-            self.files[w][options.path] = data;
+            var wrapped = data;
+            // On the client, wrap each file in a closure, to give it a separate
+            // scope (eg, file-level vars are file-scoped). On the server, this
+            // is done in server/server.js to inject the Npm symbol.
+            if (w === "client") {
+              wrapped = Buffer.concat([
+                new Buffer("(function(){"),
+                data,
+                new Buffer("\n})()")]);
+            }
+            self.files[w][options.path] = wrapped;
             self.js[w].push(options.path);
           } else {
             throw new Error("Invalid environment");
