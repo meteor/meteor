@@ -24,6 +24,12 @@
 	  '&redirect_uri=' + Meteor.absoluteUrl('_oauth/meetup?close') +
 	  '&state=' + state;
 
-    Accounts.oauth.initiateLogin(state, loginUrl, callback, {width: 900, height: 450});
+    // meetup box gets taller when permissions requested.
+    var height = 620;
+    if (_.without(scope, 'basic').length)
+      height += 130;
+
+    Accounts.oauth.initiateLogin(state, loginUrl, callback,
+                                 {width: 900, height: height});
   };
 }) ();
