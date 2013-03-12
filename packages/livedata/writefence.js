@@ -1,4 +1,3 @@
-(function(){
 var path = Npm.require('path');
 var Future = Npm.require(path.join('fibers', 'future'));
 
@@ -96,4 +95,3 @@ _.extend(Meteor._WriteFence.prototype, {
     self.retired = true;
   }
 });
-})();

@@ -25,8 +25,6 @@
 // timer' button again. the problem is almost certainly in afterFlush
 // (not hard to see what it is.)
 
-(function() {
-
 Spark = {};
 
 Spark._currentRenderer = (function () {
@@ -1216,5 +1214,3 @@ Spark._getEnclosingLandmark = function (node) {
   var range = findRangeOfType(Spark._ANNOTATION_LANDMARK, node);
   return range ? range.landmark : null;
 };
-
-})();

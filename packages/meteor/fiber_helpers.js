@@ -1,5 +1,3 @@
-(function () {
-
 var path = Npm.require('path');
 var Fiber = Npm.require('fibers');
 var Future = Npm.require(path.join('fibers', 'future'));
@@ -158,5 +156,3 @@ Meteor._sleepForMs = function (ms) {
   }, ms);
   Fiber.yield();
 };
-
-})();

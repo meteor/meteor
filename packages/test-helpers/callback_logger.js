@@ -1,5 +1,3 @@
-(function () {
-
 // This file allows you to write tests that expect certain callbacks to be
 // called in certain orders, or optionally in groups where the order does not
 // matter.  It can be set up in either a synchronous manner, so that each
@@ -132,5 +130,3 @@ CallbackLogger.prototype.expectNoResult = function () {
   }
   self._expectNoResultImpl();
 };
-
-})();

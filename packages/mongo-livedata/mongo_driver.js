@@ -1,4 +1,3 @@
-(function(){
 /**
  * Provide a synchronous Collection API using fibers, backed by
  * MongoDB.  This is only for use on the server, and mostly identical
@@ -907,4 +906,3 @@ _.extend(LiveResultsSet.prototype, {
 _.extend(Meteor, {
   _Mongo: _Mongo
 });
-})();

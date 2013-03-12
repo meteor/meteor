@@ -1,4 +1,3 @@
-(function(){
 Meteor.methods({
   nothing: function () {
   },
@@ -319,5 +318,3 @@ if (Meteor.isServer) {
       throw "unexpected options";
   });
 }
-
-})();

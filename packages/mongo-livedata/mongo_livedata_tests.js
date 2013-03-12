@@ -1,8 +1,6 @@
 // This is a magic collection that fails its writes on the server when
 // the selector (or inserted document) contains fail: true.
 
-(function () {
-//var Future = __meteor_bootstrap__.require('fibers/future');
 var TRANSFORMS = {};
 if (Meteor.isServer) {
   Meteor.methods({
@@ -819,6 +817,3 @@ testAsyncMulti('mongo-livedata - specified _id', [
     }));
   }
 ]);
-
-
-})();
