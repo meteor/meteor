@@ -769,7 +769,6 @@ Tinytest.add("templating - events", function (test) {
   test.isTrue(buf.indexOf('b') > -1);
   div.kill();
   Meteor.flush();
-
 });
 
 Tinytest.add("templating - #each rendered callback", function (test) {
