@@ -34,7 +34,10 @@ Meteor.Collection = function (name, options) {
     break;
   }
 
-  self._transform = options.transform;
+  if (options.transform)
+    self._transform = Deps._makeNonreactive(options.transform);
+  else
+    self._transform = null;
 
   if (!name && (name !== null)) {
     Meteor._debug("Warning: creating anonymous collection. It will not be " +
@@ -417,7 +420,7 @@ Meteor.Collection.ObjectID = LocalCollection._ObjectID;
         if (self._transform)
           options[name].transform = self._transform;
         if (options.transform)
-          options[name].transform = options.transform;
+          options[name].transform = Deps._makeNonreactive(options.transform);
         self._validators[name][allowOrDeny].push(options[name]);
       }
     });

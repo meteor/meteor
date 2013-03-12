@@ -97,7 +97,10 @@ LocalCollection.Cursor = function (collection, selector, options) {
   }
   self.skip = options.skip;
   self.limit = options.limit;
-  self._transform = options.transform;
+  if (options.transform && typeof Deps !== "undefined")
+    self._transform = Deps._makeNonreactive(options.transform);
+  else
+    self._transform = options.transform;
 
   // db_objects is a list of the objects that match the cursor. (It's always a
   // list, never an object: LocalCollection.Cursor is always ordered.)
