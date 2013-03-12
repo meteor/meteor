@@ -240,16 +240,29 @@ var toc = [
       "Meteor.clearInterval"
     ],
 
-    "Meteor.deps", [
-      {name: "Meteor.deps.Context", id: "context"}, [
-        {instance: "context", name: "run"},
-        {instance: "context", name: "onInvalidate", id: "oninvalidate"},
-        {instance: "context", name: "invalidate"}
+    "Deps", [
+      "Deps.autorun",
+      "Deps.flush",
+      "Deps.nonreactive",
+      "Deps.active",
+      "Deps.currentComputation",
+      "Deps.onInvalidate",
+      "Deps.afterFlush",
+      "Deps.depend",
+      "Deps.Computation", [
+        {instance: "computation", name: "stop", id: "computation_stop"},
+        {instance: "computation", name: "invalidate", id: "computation_invalidate"},
+        {instance: "computation", name: "onInvalidate", id: "computation_oninvalidate"},
+        {instance: "computation", name: "stopped", id: "computation_stopped"},
+        {instance: "computation", name: "invalidated", id: "computation_invalidated"},
+        {instance: "computation", name: "firstRun", id: "computation_firstrun"}
       ],
-      {name: "Meteor.deps.Context.current", id: "current"},
-      "Meteor.autorun",
-      "Meteor.flush"
-    // ],
+      "Deps.Dependency", [
+        {instance: "dependency", name: "changed", id: "dependency_changed"},
+        {instance: "dependency", name: "addDependent", id: "dependency_adddependent"},
+        {instance: "dependency", name: "hasDependents", id: "dependency_hasdependents"}
+      ]
+    ],
 
     // "Environment Variables", [
     //   "Meteor.EnvironmentVariable", [
@@ -257,7 +270,7 @@ var toc = [
     //     {instance: "env_var", name: "withValue", id: "env_var_withvalue"},
     //     {instance: "env_var", name: "bindEnvironment", id: "env_var_bindenvironment"}
     //   ]
-    ],
+    //],
 
     {name: "EJSON", id: "ejson"}, [
       {name: "EJSON.parse", id: "ejson_parse"},
