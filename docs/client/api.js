@@ -462,6 +462,10 @@ Template.api.meteor_collection = {
      " - **`'STRING'`**: random strings\n" +
      " - **`'MONGO'`**:  random [`Meteor.Collection.ObjectID`](#collection_object_id) values\n\n" +
      "The default id generation technique is `'STRING'`."
+    },
+    {name: "transform",
+     type: "Function",
+     descr: "An optional transformation function. Documents will be passed through this function before being returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `allow`, and `deny`."
     }
   ]
 };
@@ -494,7 +498,10 @@ Template.api.find = {
      descr: "(Server only) Dictionary of fields to return or exclude."},
     {name: "reactive",
      type: "Boolean",
-     descr: "(Client only) Default `true`; pass `false` to disable reactivity"}
+     descr: "(Client only) Default `true`; pass `false` to disable reactivity"},
+    {name: "transform",
+     type: "Function",
+     descr: "Overrides `transform` on the  [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation."}
   ]
 };
 
@@ -523,7 +530,11 @@ Template.api.findone = {
      descr: "(Server only) Dictionary of fields to return or exclude."},
     {name: "reactive",
      type: "Boolean",
-     descr: "(Client only) Default true; pass false to disable reactivity"}
+     descr: "(Client only) Default true; pass false to disable reactivity"},
+    {name: "transform",
+     type: "Function",
+     descr:  "Overrides `transform` on the [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation."
+    }
   ]
 };
 
@@ -594,7 +605,10 @@ Template.api.allow = {
      descr: "Functions that look at a proposed modification to the database and return true if it should be allowed."},
     {name: "fetch",
      type: "Array of String",
-     descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions."}
+     descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions."},
+    {name: "transform",
+     type: "Function",
+     descr: "Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation."}
   ]
 };
 
@@ -609,7 +623,10 @@ Template.api.deny = {
      descr: "Functions that look at a proposed modification to the database and return true if it should be denied, even if an `allow` rule says otherwise."},
     {name: "fetch",
      type: "Array of Strings",
-     descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions."}
+     descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions."},
+    {name: "transform",
+     type: "Function",
+     descr:  "Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation."}
   ]
 };
 

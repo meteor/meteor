@@ -378,6 +378,11 @@ _.each(['forEach', 'map', 'rewind', 'fetch', 'count'], function (method) {
   };
 });
 
+Cursor.prototype.getTransform = function () {
+  var self = this;
+  return self._cursorDescription._transform;
+};
+
 // When you call Meteor.publish() with a function that returns a Cursor, we need
 // to transmute it into the equivalent subscription.  This is the function that
 // does that.
@@ -450,11 +455,14 @@ _Mongo.prototype._createSynchronousCursor = function (cursorDescription) {
   if (!result[0])
     throw result[1];
 
-  return new SynchronousCursor(result[1]);
+  return new SynchronousCursor(result[1],
+                               cursorDescription.options &&
+                               cursorDescription.options.transform);
 };
 
-var SynchronousCursor = function (dbCursor) {
+var SynchronousCursor = function (dbCursor, transform) {
   var self = this;
+  self._transform = transform;
   self._dbCursor = dbCursor;
   // Need to specify that the callback is the first argument to nextObject,
   // since otherwise when we try to call it with no args the driver will
@@ -472,6 +480,8 @@ _.extend(SynchronousCursor.prototype, {
       var doc = self._synchronousNextObject().wait();
       if (!doc || !doc._id) return null;
       doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
+      if (self._transform)
+        doc = self._transform(doc);
       var strId = Meteor.idStringify(doc._id);
       if (self._visitedIds[strId]) continue;
       self._visitedIds[strId] = true;

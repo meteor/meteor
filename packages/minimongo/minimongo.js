@@ -97,6 +97,7 @@ LocalCollection.Cursor = function (collection, selector, options) {
   }
   self.skip = options.skip;
   self.limit = options.limit;
+  self._transform = options.transform;
 
   // db_objects is a list of the objects that match the cursor. (It's always a
   // list, never an object: LocalCollection.Cursor is always ordered.)
@@ -146,8 +147,17 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
                           changed: true,
                           movedBefore: true});
 
-  while (self.cursor_pos < self.db_objects.length)
-    callback(EJSON.clone(self.db_objects[self.cursor_pos++]));
+  while (self.cursor_pos < self.db_objects.length) {
+    var elt = EJSON.clone(self.db_objects[self.cursor_pos++]);
+    if (self._transform)
+      elt = self._transform(elt);
+    callback(elt);
+  }
+};
+
+LocalCollection.Cursor.prototype.getTransform = function () {
+  var self = this;
+  return self._transform;
 };
 
 LocalCollection.Cursor.prototype.map = function (callback) {
@@ -810,6 +820,9 @@ LocalCollection._makeChangedFields = function (newDoc, oldDoc) {
 };
 
 LocalCollection._observeFromObserveChanges = function (cursor, callbacks) {
+  var transform = cursor.getTransform();
+  if (!transform)
+    transform = function (doc) {return doc;};
   if (callbacks.addedAt && callbacks.added)
     throw new Error("Please specify only one of added() and addedAt()");
   if (callbacks.changedAt && callbacks.changed)
@@ -818,13 +831,13 @@ LocalCollection._observeFromObserveChanges = function (cursor, callbacks) {
     throw new Error("Please specify only one of removed() and removedAt()");
   if (callbacks.addedAt || callbacks.movedTo ||
       callbacks.changedAt || callbacks.removedAt)
-    return LocalCollection._observeOrderedFromObserveChanges(cursor, callbacks);
+    return LocalCollection._observeOrderedFromObserveChanges(cursor, callbacks, transform);
   else
-    return LocalCollection._observeUnorderedFromObserveChanges(cursor, callbacks);
+    return LocalCollection._observeUnorderedFromObserveChanges(cursor, callbacks, transform);
 };
 
 LocalCollection._observeUnorderedFromObserveChanges =
-    function (cursor, callbacks) {
+    function (cursor, callbacks, transform) {
   var docs = {};
   var suppressed = !!callbacks._suppress_initial;
   var handle = cursor.observeChanges({
@@ -833,7 +846,7 @@ LocalCollection._observeUnorderedFromObserveChanges =
       var doc = EJSON.clone(fields);
       doc._id = id;
       docs[strId] = doc;
-      suppressed || callbacks.added && callbacks.added(doc);
+      suppressed || callbacks.added && callbacks.added(transform(doc));
     },
     changed: function (id, fields) {
       var strId = LocalCollection._idStringify(id);
@@ -841,13 +854,13 @@ LocalCollection._observeUnorderedFromObserveChanges =
       var oldDoc = EJSON.clone(doc);
       // writes through to the doc set
       LocalCollection._applyChanges(doc, fields);
-      suppressed || callbacks.changed && callbacks.changed(doc, oldDoc);
+      suppressed || callbacks.changed && callbacks.changed(transform(doc), transform(oldDoc));
     },
     removed: function (id) {
       var strId = LocalCollection._idStringify(id);
       var doc = docs[strId];
       delete docs[strId];
-      suppressed || callbacks.removed && callbacks.removed(doc);
+      suppressed || callbacks.removed && callbacks.removed(transform(doc));
     }
   });
   suppressed = false;
@@ -855,7 +868,7 @@ LocalCollection._observeUnorderedFromObserveChanges =
 };
 
 LocalCollection._observeOrderedFromObserveChanges =
-    function (cursor, callbacks) {
+    function (cursor, callbacks, transform) {
   var docs = new OrderedDict(LocalCollection._idStringify);
   var suppressed = !!callbacks._suppress_initial;
   var handle = cursor.observeChanges({
@@ -866,9 +879,10 @@ LocalCollection._observeOrderedFromObserveChanges =
       if (!suppressed) {
         if (callbacks.addedAt) {
           var index = docs.indexOf(id);
-          callbacks.addedAt(EJSON.clone(doc), index, before);
+          callbacks.addedAt(transform(EJSON.clone(doc)),
+                            index, before);
         } else if (callbacks.added) {
-          callbacks.added(EJSON.clone(doc));
+          callbacks.added(transform(EJSON.clone(doc)));
         }
       }
     },
@@ -881,9 +895,11 @@ LocalCollection._observeOrderedFromObserveChanges =
       LocalCollection._applyChanges(doc, fields);
       if (callbacks.changedAt) {
         var index = docs.indexOf(id);
-        callbacks.changedAt(EJSON.clone(doc), oldDoc, index);
+        callbacks.changedAt(transform(EJSON.clone(doc)),
+                            transform(oldDoc), index);
       } else if (callbacks.changed) {
-        callbacks.changed(EJSON.clone(doc), oldDoc);
+        callbacks.changed(transform(EJSON.clone(doc)),
+                          transform(oldDoc));
       }
     },
     movedBefore: function (id, before) {
@@ -895,9 +911,9 @@ LocalCollection._observeOrderedFromObserveChanges =
       docs.moveBefore(id, before ? before : null);
       if (callbacks.movedTo) {
         var to = docs.indexOf(id);
-        callbacks.movedTo(EJSON.clone(doc), from, to);
+        callbacks.movedTo(transform(EJSON.clone(doc)), from, to);
       } else if (callbacks.moved) {
-        callbacks.moved(EJSON.clone(doc));
+        callbacks.moved(transform(EJSON.clone(doc)));
       }
 
     },
@@ -907,8 +923,8 @@ LocalCollection._observeOrderedFromObserveChanges =
       if (callbacks.removedAt)
         index = docs.indexOf(id);
       docs.remove(id);
-      callbacks.removedAt && callbacks.removedAt(doc, index);
-      callbacks.removed && callbacks.removed(doc);
+      callbacks.removedAt && callbacks.removedAt(transform(doc), index);
+      callbacks.removed && callbacks.removed(transform(doc));
     }
   });
   suppressed = false;

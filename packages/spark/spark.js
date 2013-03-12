@@ -988,7 +988,11 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
       later(function () {
         var doc = EJSON.clone(fields);
         doc._id = id;
-        var frag = Spark.render(_.bind(itemFunc, null, doc));
+        var renderDoc = doc;
+        if (cursor.getTransform && cursor.getTransform()) {
+          renderDoc = cursor.getTransform()(EJSON.clone(renderDoc));
+        }
+        var frag = Spark.render(_.bind(itemFunc, null, renderDoc));
         DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
         var range = makeRange(Spark._ANNOTATION_LIST_ITEM, frag);
 
@@ -1038,7 +1042,10 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
         if (!elt)
           throw new Error("Unknown id for changed: " + id);
         applyChanges(elt.doc, fields);
-        Spark.renderToRange(elt.liveRange, _.bind(itemFunc, null, elt.doc));
+        var renderDoc = elt.doc;
+        if (cursor.getTransform && cursor.getTransform())
+          renderDoc = cursor.getTransform()(EJSON.clone(renderDoc));
+        Spark.renderToRange(elt.liveRange, _.bind(itemFunc, null, renderDoc));
       });
     }
   });

@@ -3,10 +3,13 @@
 
 (function () {
 //var Future = __meteor_bootstrap__.require('fibers/future');
-
+var TRANSFORMS = {};
 if (Meteor.isServer) {
   Meteor.methods({
     createInsecureCollection: function (name, options) {
+      if (options && options.transformName) {
+        options.transform = TRANSFORMS[options.transformName];
+      }
       var c = new Meteor.Collection(name, options);
       c._insecure = true;
       Meteor.publish('c-' + name, function () {
@@ -621,6 +624,53 @@ testAsyncMulti('mongo-livedata - document with a date, ' + idGeneration, [
       var cursor = coll.find();
       test.equal(cursor.count(), 1);
       test.equal(coll.findOne().d.getFullYear(), 2012);
+    }));
+  }
+]);
+
+testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGeneration, [
+  function (test, expect) {
+    var seconds = function (doc) {
+      doc.seconds = function () {return doc.d.getSeconds();};
+      return doc;
+    };
+    TRANSFORMS["seconds"] = seconds;
+    var collectionOptions = {
+      idGeneration: idGeneration,
+      transform: seconds,
+      transformName: "seconds"
+    };
+    var collectionName = Random.id();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
+      Meteor.subscribe('c-' + collectionName);
+    }
+
+    var coll = new Meteor.Collection(collectionName, collectionOptions);
+    var docId;
+    var expectAdd = expect(function (doc) {
+      test.equal(doc.seconds(), 50);
+    });
+    var expectRemove = expect (function (doc) {
+      test.equal(doc.seconds(), 50);
+    });
+    coll.insert({d: new Date(1356152390004)}, expect(function (err, id) {
+      test.isFalse(err);
+      test.isTrue(id);
+      docId = id;
+      var cursor = coll.find();
+      cursor.observe({
+        added: expectAdd,
+        removed: expectRemove
+      });
+      test.equal(cursor.count(), 1);
+      test.equal(cursor.fetch()[0].seconds(), 50);
+      test.equal(coll.findOne().seconds(), 50);
+      test.equal(coll.findOne({}, {transform: null}).seconds, undefined);
+      test.equal(coll.findOne({}, {
+        transform: function (doc) {return {seconds: doc.d.getSeconds()};}
+      }).seconds, 50);
+      coll.remove({});
     }));
   }
 ]);

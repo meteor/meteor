@@ -8,8 +8,11 @@ _.each(['STRING', 'MONGO'], function (idGeneration) {
 
   // helper for defining a collection, subscribing to it, and defining
   // a method to clear it
-  var defineCollection = function(name, insecure) {
-    var collection = new Meteor.Collection(name + idGeneration, {idGeneration: idGeneration});
+  var defineCollection = function(name, insecure, transform) {
+    var collection = new Meteor.Collection(name + idGeneration, {
+      idGeneration: idGeneration,
+      transform: transform
+    });
     collection._insecure = insecure;
 
     if (Meteor.isServer) {
@@ -57,7 +60,26 @@ _.each(['STRING', 'MONGO'], function (idGeneration) {
   var restrictedCollectionForFetchAllTest = defineCollection(
     "collection-restrictedForFetchAllTest", true /*insecure*/);
 
+  var restrictedCollectionWithTransform = defineCollection(
+    "withTransform", false, function (doc) {
+      return doc.a;
+    });
 
+  restrictedCollectionWithTransform.allow({
+    insert: function (userId, doc) {
+      return doc.foo === "foo";
+    },
+    update: function (userId, docs) {
+      return _.all(docs, function (doc) {
+        return doc.foo === "foo";
+      });
+    },
+    remove: function (userId, docs) {
+      return _.all(docs, function (doc) {
+        return doc.bar === "bar";
+      });
+    }
+  });
   //
   // Set up allow/deny rules for test collections
   //
@@ -256,6 +278,8 @@ _.each(['STRING', 'MONGO'], function (idGeneration) {
   }
 
   if (Meteor.isClient) {
+
+
     // test that if allow is called once then the collection is
     // restricted, and that other mutations aren't allowed
     testAsyncMulti("collection - partial allow, " + idGeneration, [
@@ -319,6 +343,41 @@ _.each(['STRING', 'MONGO'], function (idGeneration) {
   }
 
   if (Meteor.isClient) {
+    var item1;
+    var item2;
+    testAsyncMulti("collection - restrected factories " + idGeneration, [
+      function (test, expect) {
+        restrictedCollectionWithTransform.insert({
+          a: {foo: "foo", bar: "bar", baz: "baz"}
+        }, expect(function (e, res) {
+          test.isFalse(e);
+          test.isTrue(res);
+          item1 = res;
+        }));
+        restrictedCollectionWithTransform.insert({
+          a: {foo: "foo", bar: "quux", baz: "quux"},
+          b: "potato"
+        }, expect(function (e, res) {
+          test.isFalse(e);
+          test.isTrue(res);
+          item2 = res;
+        }));
+        restrictedCollectionWithTransform.insert({
+          a: {foo: "adsfadf", bar: "quux", baz: "quux"},
+          b: "potato"
+        }, expect(function (e, res) {
+          test.isTrue(e);
+        }));
+      },
+      function (test, expect) {
+        restrictedCollectionWithTransform.remove(item1, expect(function (e, res) {
+          test.isFalse(e);
+        }));
+        restrictedCollectionWithTransform.remove(item2, expect(function (e, res) {
+          test.isTrue(e);
+        }));
+      }
+    ]);
     testAsyncMulti("collection - insecure, " + idGeneration, [
       function (test, expect) {
         insecureCollection.callClearMethod(test.runId(), expect(function () {
