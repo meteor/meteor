@@ -22,6 +22,25 @@ if (Meteor.isServer) {
 Meteor._FailureTestCollection =
   new Meteor.Collection("___meteor_failure_test_collection");
 
+// For test "document with a custom type"
+var Dog = function (name, color) {
+  var self = this;
+  self.color = color;
+  self.name = name;
+};
+_.extend(Dog.prototype, {
+  getName: function () { return this.name;},
+  getColor: function () { return this.name;},
+  equals: function (other) { return other.name === this.name &&
+                             other.color === this.color; },
+  toJSONValue: function () { return {color: this.color, name: this.name};},
+  typeName: function () { return "dog"; },
+  clone: function () { return new Dog(this.name, this.color); },
+  speak: function () { return "woof"; }
+});
+EJSON.addType("dog", function (o) { return new Dog(o.name, o.color);});
+
+
 // Parameterize tests.
 _.each( ['STRING', 'MONGO'], function(idGeneration) {
 
@@ -708,23 +727,6 @@ testAsyncMulti('mongo-livedata - document with binary data, ' + idGeneration, [
 
 testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, [
   function (test, expect) {
-    var Dog = function (name, color) {
-      var self = this;
-      self.color = color;
-      self.name = name;
-    };
-    _.extend(Dog.prototype, {
-      getName: function () { return this.name;},
-      getColor: function () { return this.name;},
-      equals: function (other) { return other.name === this.name &&
-                                 other.color === this.color; },
-      toJSONValue: function () { return {color: this.color, name: this.name};},
-      typeName: function () { return "dog"; },
-      clone: function () { return new Dog(this.name, this.color); },
-      speak: function () { return "woof"; }
-    });
-    if (!EJSON._isCustomType(new Dog("a", "b")))
-        EJSON.addType("dog", function (o) { return new Dog(o.name, o.color);});
     var collectionName = Random.id();
     if (Meteor.isClient) {
       Meteor.call('createInsecureCollection', collectionName, collectionOptions);
@@ -733,6 +735,8 @@ testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, 
 
     var coll = new Meteor.Collection(collectionName, collectionOptions);
     var docId;
+    // Dog is implemented at the top of the file, outside of the idGeneration
+    // loop (so that we only call EJSON.addType once).
     var d = new Dog("reginald", "purple");
     coll.insert({d: d}, expect(function (err, id) {
       test.isFalse(err);
