@@ -179,6 +179,7 @@ var toc = [
       {name: "Meteor.loginWithFacebook", id: "meteor_loginwithexternalservice"},
       {name: "Meteor.loginWithGithub", id: "meteor_loginwithexternalservice"},
       {name: "Meteor.loginWithGoogle", id: "meteor_loginwithexternalservice"},
+      {name: "Meteor.loginWithMeetup", id: "meteor_loginwithexternalservice"},
       {name: "Meteor.loginWithTwitter", id: "meteor_loginwithexternalservice"},
       {name: "Meteor.loginWithWeibo", id: "meteor_loginwithexternalservice"},
       {type: "spacer"},
