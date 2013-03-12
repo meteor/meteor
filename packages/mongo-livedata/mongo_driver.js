@@ -467,7 +467,10 @@ _Mongo.prototype._createSynchronousCursor = function (cursorDescription,
 
 var SynchronousCursor = function (dbCursor, transform) {
   var self = this;
-  self._transform = transform;
+  if (transform)
+    self._transform = Deps._makeNonreactive(transform);
+  else
+    self._transform = transform;
   self._dbCursor = dbCursor;
   // Need to specify that the callback is the first argument to nextObject,
   // since otherwise when we try to call it with no args the driver will
