@@ -3,7 +3,7 @@
 
 * You can now provide a `transform` option to collections, which is a
   function that documents coming out of that collection are passed
-  through. `find`, `findOne`, `allow`, and `deny` now take `transform` arguments,
+  through. `find`, `findOne`, `allow`, and `deny` now take `transform` options,
   which may override the Collection's `transform`.  Specifying a `transform`
   of `null` causes you to receive the documents unmodified.
 
