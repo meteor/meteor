@@ -1,4 +1,7 @@
-METEOR_VERSION = "0.5.9";
+Template.headline.release = function () {
+  return Meteor.release || "(checkout)";
+};
+
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
@@ -77,7 +80,7 @@ Meteor.startup(function () {
 });
 
 var toc = [
-  {name: "Meteor " + METEOR_VERSION, id: "top"}, [
+  {name: "Meteor " + Template.headline.release(), id: "top"}, [
     "Quick start",
     "Seven principles",
     "Resources"
