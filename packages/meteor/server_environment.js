@@ -3,8 +3,6 @@ Meteor = {
   isServer: true
 };
 
-// XXX read Meteor.release here.
-
 Meteor.settings = {};
 if (process.env.METEOR_SETTINGS) {
   try {
