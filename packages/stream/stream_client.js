@@ -47,10 +47,10 @@ Meteor._Stream = function (url) {
     retry_count: 0
   };
 
-  self.status_listeners = (Meteor.deps && new Meteor.deps._ContextSet);
+  self.status_listeners = window.Deps && new Deps.Dependency;
   self.status_changed = function () {
     if (self.status_listeners)
-      self.status_listeners.invalidateAll();
+      self.status_listeners.changed();
   };
 
   //// Retry logic
@@ -139,7 +139,7 @@ _.extend(Meteor._Stream.prototype, {
   status: function () {
     var self = this;
     if (self.status_listeners)
-      self.status_listeners.addCurrentContext();
+      Deps.depend(self.status_listeners);
     return self.current_status;
   },
 

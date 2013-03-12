@@ -58,7 +58,7 @@ LocalCollection.MinimongoError.prototype = new Error;
 //   (in the first form you're beholden to key enumeration order in
 //   your javascript VM)
 //
-// reactive: if given, and false, don't register with Meteor.deps (default
+// reactive: if given, and false, don't register with Deps (default
 // is true)
 //
 // XXX possibly should support retrieving a subset of fields? and
@@ -104,8 +104,8 @@ LocalCollection.Cursor = function (collection, selector, options) {
   self.db_objects = null;
   self.cursor_pos = 0;
 
-  // by default, queries register w/ Meteor.deps when it is available.
-  if (typeof Meteor === "object" && Meteor.deps)
+  // by default, queries register w/ Deps when it is available.
+  if (typeof Deps !== "undefined")
     self.reactive = (options.reactive === undefined) ? true : options.reactive;
 };
 
@@ -141,11 +141,11 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
     self.db_objects = self._getRawObjects(true);
 
   if (self.reactive)
-    self._markAsReactive({
-                          addedBefore: true,
-                          removed: true,
-                          changed: true,
-                          movedBefore: true});
+    self._depend({
+      addedBefore: true,
+      removed: true,
+      changed: true,
+      movedBefore: true});
 
   while (self.cursor_pos < self.db_objects.length) {
     var elt = EJSON.clone(self.db_objects[self.cursor_pos++]);
@@ -182,7 +182,7 @@ LocalCollection.Cursor.prototype.count = function () {
   var self = this;
 
   if (self.reactive)
-    self._markAsReactive({added: true, removed: true});
+    self._depend({added: true, removed: true});
 
   if (self.db_objects === null)
     self.db_objects = self._getRawObjects(true);
@@ -224,7 +224,7 @@ LocalCollection.LiveResultsSet = function () {};
 _.extend(LocalCollection.Cursor.prototype, {
   observe: function (options) {
     var self = this;
-    return  LocalCollection._observeFromObserveChanges(self, options);
+    return LocalCollection._observeFromObserveChanges(self, options);
   },
   observeChanges: function (options) {
     var self = this;
@@ -293,6 +293,18 @@ _.extend(LocalCollection.Cursor.prototype, {
           delete self.collection.queries[qid];
       }
     });
+
+    if (self.reactive && Deps.active) {
+      // XXX in many cases, the same observe will be recreated when
+      // the current autorun is rerun.  we could save work by
+      // letting it linger across rerun and potentially get
+      // repurposed if the same observe is performed, using logic
+      // similar to that of Meteor.subscribe.
+      Deps.onInvalidate(function () {
+        handle.stop();
+      });
+    }
+
     return handle;
   }
 });
@@ -356,27 +368,23 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered) {
 
 // XXX Maybe we need a version of observe that just calls a callback if
 // anything changed.
-LocalCollection.Cursor.prototype._markAsReactive = function (options) {
+LocalCollection.Cursor.prototype._depend = function (changers) {
   var self = this;
 
-  var context = Meteor.deps.Context.current;
+  if (Deps.active) {
+    var v = new Deps.Dependency;
+    Deps.depend(v);
+    var notifyChange = _.bind(v.changed, v);
 
-  if (context) {
-    var invalidate = _.bind(context.invalidate, context);
-    var handle;
-    var newOptions = {_suppress_initial: true};
+    var options = {_suppress_initial: true};
     _.each(['added', 'changed', 'removed', 'addedBefore', 'movedBefore'],
            function (fnName) {
-      if (options[fnName])
-        newOptions[fnName] = invalidate;
-    });
-    handle = self.observeChanges(newOptions);
+             if (changers[fnName])
+               options[fnName] = notifyChange;
+           });
 
-    // XXX in many cases, the query will be immediately
-    // recreated. so we might want to let it linger for a little
-    // while and repurpose it if it comes back. this will save us
-    // work because we won't have to redo the initial find.
-    context.onInvalidate(handle.stop);
+    // observeChanges will stop() when this computation is invalidated
+    self.observeChanges(options);
   }
 };
 

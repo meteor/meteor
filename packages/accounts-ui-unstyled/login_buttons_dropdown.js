@@ -7,7 +7,7 @@
   Template._loginButtons.events({
     'click #login-name-link, click #login-sign-in-link': function () {
       loginButtonsSession.set('dropdownVisible', true);
-      Meteor.flush();
+      Deps.flush();
       correctDropdownZIndexes();
     },
     'click .login-close-text': function () {
@@ -85,7 +85,7 @@
       loginButtonsSession.set('inSignupFlow', true);
       loginButtonsSession.set('inForgotPasswordFlow', false);
       // force the ui to update so that we have the approprate fields to fill in
-      Meteor.flush();
+      Deps.flush();
 
       // update new fields with appropriate defaults
       if (username !== null)
@@ -121,7 +121,7 @@
       loginButtonsSession.set('inSignupFlow', false);
       loginButtonsSession.set('inForgotPasswordFlow', true);
       // force the ui to update so that we have the approprate fields to fill in
-      Meteor.flush();
+      Deps.flush();
 
       // update new fields with appropriate defaults
       if (email !== null)
@@ -141,7 +141,7 @@
       loginButtonsSession.set('inSignupFlow', false);
       loginButtonsSession.set('inForgotPasswordFlow', false);
       // force the ui to update so that we have the approprate fields to fill in
-      Meteor.flush();
+      Deps.flush();
 
       if (document.getElementById('login-username'))
         document.getElementById('login-username').value = username;

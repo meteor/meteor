@@ -1725,3 +1725,53 @@ Tinytest.add("minimongo - ids matched by selector", function (test) {
   check({$and: [{x: 42}, {_id: oid1}]}, [oid1]);
   check({$and: [{x: 42}, {_id: {$in: [oid1]}}]}, [oid1]);
 });
+
+Tinytest.add("minimongo - reactive stop", function (test) {
+  var coll = new LocalCollection();
+  coll.insert({_id: 'A'});
+  coll.insert({_id: 'B'});
+  coll.insert({_id: 'C'});
+
+  var addBefore = function (str, newChar, before) {
+    var idx = str.indexOf(before);
+    if (idx === -1)
+      return str + newChar;
+    return str.slice(0, idx) + newChar + str.slice(idx);
+  };
+
+  var x, y;
+  var sortOrder = ReactiveVar(1);
+
+  var c = Deps.autorun(function () {
+    var q = coll.find({}, {sort: {_id: sortOrder.get()}});
+    x = "";
+    q.observe({ addedAt: function (doc, atIndex, before) {
+      x = addBefore(x, doc._id, before);
+    }});
+    y = "";
+    q.observeChanges({ addedBefore: function (id, fields, before) {
+      y = addBefore(y, id, before);
+    }});
+  });
+
+  test.equal(x, "ABC");
+  test.equal(y, "ABC");
+
+  sortOrder.set(-1);
+  test.equal(x, "ABC");
+  test.equal(y, "ABC");
+  Deps.flush();
+  test.equal(x, "CBA");
+  test.equal(y, "CBA");
+
+  coll.insert({_id: 'D'});
+  coll.insert({_id: 'E'});
+  test.equal(x, "EDCBA");
+  test.equal(y, "EDCBA");
+
+  c.stop();
+  // stopping kills the observes immediately
+  coll.insert({_id: 'F'});
+  test.equal(x, "EDCBA");
+  test.equal(y, "EDCBA");
+});

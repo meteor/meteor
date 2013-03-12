@@ -5,7 +5,7 @@ Meteor.subscribe("parties");
 
 // If no party selected, select one.
 Meteor.startup(function () {
-  Meteor.autorun(function () {
+  Deps.autorun(function () {
     if (! Session.get("selected")) {
       var party = Parties.findOne();
       if (party)
@@ -127,7 +127,7 @@ Template.map.rendered = function () {
   self.node = self.find("svg");
 
   if (! self.handle) {
-    self.handle = Meteor.autorun(function () {
+    self.handle = Deps.autorun(function () {
       var selected = Session.get('selected');
       var selectedParty = selected && Parties.findOne(selected);
       var radius = function (party) {
