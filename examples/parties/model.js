@@ -13,7 +13,14 @@
     invited: Array of user id's that are invited (only if !public)
     rsvps: Array of objects like {user: userId, rsvp: "yes"} (or "no"/"maybe")
 */
-Parties = new Meteor.Collection("parties");
+
+Parties = new Meteor.Collection("parties", {
+  transform: function (p) {
+    p.attending = function () {
+      return (_.groupBy(this.rsvps, 'rsvp').yes || []).length;
+    };
+    return p;
+  }});
 
 Parties.allow({
   insert: function (userId, party) {
@@ -37,14 +44,10 @@ Parties.allow({
   remove: function (userId, parties) {
     return ! _.any(parties, function (party) {
       // deny if not the owner, or if other people are going
-      return party.owner !== userId || attending(party) > 0;
+      return party.owner !== userId || party.attending() > 0;
     });
   }
 });
-
-var attending = function (party) {
-  return (_.groupBy(party.rsvps, 'rsvp').yes || []).length;
-};
 
 Meteor.methods({
   // options should include: title, description, x, y, public

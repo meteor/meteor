@@ -33,7 +33,7 @@ Template.details.creatorName = function () {
 };
 
 Template.details.canRemove = function () {
-  return this.owner === Meteor.userId() && attending(this) === 0;
+  return this.owner === Meteor.userId() && this.attending() === 0;
 };
 
 Template.details.maybeChosen = function (what) {
@@ -131,7 +131,7 @@ Template.map.rendered = function () {
       var selected = Session.get('selected');
       var selectedParty = selected && Parties.findOne(selected);
       var radius = function (party) {
-        return 10 + Math.sqrt(attending(party)) * 10;
+        return 10 + Math.sqrt(party.attending()) * 10;
       };
 
       // Draw a circle for each party
@@ -158,7 +158,7 @@ Template.map.rendered = function () {
       // Label each with the current attendance count
       var updateLabels = function (group) {
         group.attr("id", function (party) { return party._id; })
-        .text(function (party) {return attending(party) || '';})
+        .text(function (party) {return party.attending() || '';})
         .attr("x", function (party) { return party.x * 500; })
         .attr("y", function (party) { return party.y * 500 + radius(party)/2 })
         .style('font-size', function (party) {
