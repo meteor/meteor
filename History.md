@@ -5,6 +5,9 @@
   up page load and make hot code reload smoother using the HTML5
   AppCache API. See http://docs.meteor.com/#appcache for details.
 
+* Rewrite reactivity library. `Meteor.deps` is now `Deps` and has a new
+  API. See http://docs.meteor.com/#deps for details.
+
 * You can now provide a `transform` option to collections, which is a
   function that documents coming out of that collection are passed
   through. `find`, `findOne`, `allow`, and `deny` now take `transform` options,
