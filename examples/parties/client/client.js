@@ -26,10 +26,10 @@ Template.details.anyParties = function () {
 };
 
 Template.details.creatorName = function () {
-  var owner = Meteor.users.findOne(this.owner);
+  var owner = findOneUser(this.owner);
   if (owner._id === Meteor.userId())
     return "me";
-  return displayName(owner);
+  return owner.displayName();
 };
 
 Template.details.canRemove = function () {
@@ -71,20 +71,16 @@ Template.details.events({
 // Party attendance widget
 
 Template.attendance.rsvpName = function () {
-  var user = Meteor.users.findOne(this.user);
-  return displayName(user);
+  var user = findOneUser(this.user);
+  return user.displayName();
 };
 
 Template.attendance.outstandingInvitations = function () {
   var party = Parties.findOne(this._id);
-  return Meteor.users.find({$and: [
+  return findUsers({$and: [
     {_id: {$in: party.invited}}, // they're invited
     {_id: {$nin: _.pluck(party.rsvps, 'user')}} // but haven't RSVP'd
   ]});
-};
-
-Template.attendance.invitationName = function () {
-  return displayName(this);
 };
 
 Template.attendance.rsvpIs = function (what) {
@@ -222,7 +218,7 @@ Template.createDialog.events({
       }, function (error, party) {
         if (! error) {
           Session.set("selected", party);
-          if (! public && Meteor.users.find().count() > 1)
+          if (! public && findUsers().count() > 1)
             openInviteDialog();
         }
       });
@@ -267,10 +263,6 @@ Template.inviteDialog.uninvited = function () {
   var party = Parties.findOne(Session.get("selected"));
   if (! party)
     return []; // party hasn't loaded yet
-  return Meteor.users.find({$nor: [{_id: {$in: party.invited}},
-                                   {_id: party.owner}]});
-};
-
-Template.inviteDialog.displayName = function () {
-  return displayName(this);
+  return findUsers({$nor: [{_id: {$in: party.invited}},
+                           {_id: party.owner}]});
 };

@@ -150,10 +150,25 @@ Meteor.methods({
 ///////////////////////////////////////////////////////////////////////////////
 // Users
 
-var displayName = function (user) {
-  if (user.profile && user.profile.name)
-    return user.profile.name;
-  return user.emails[0].address;
+var userTransform = function (user) {
+  user.displayName = function () {
+    if (this.profile && this.profile.name)
+      return this.profile.name;
+    return this.emails[0].address;
+  };
+  return user;
+};
+
+findOneUser = function (query, options) {
+  options = options || {};
+  options.transform = userTransform;
+  return Meteor.users.findOne(query, options);
+};
+
+findUsers = function (query, options) {
+  options = options || {};
+  options.transform = userTransform;
+  return Meteor.users.find(query, options);
 };
 
 var contactEmail = function (user) {

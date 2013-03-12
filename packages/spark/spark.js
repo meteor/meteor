@@ -931,6 +931,14 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
         _.bind(renderer.annotate, renderer) :
     function (html) { return html; };
 
+  // Templates should have access to data and methods added by the transformer,
+  // but observeChanges doesn't transform, so we have to do it here.
+  var transformedDoc = function (doc) {
+    if (cursor.getTransform && cursor.getTransform())
+      return cursor.getTransform()(EJSON.clone(doc));
+    return doc;
+  };
+
   // Render the initial contents. If we have a renderer, create a
   // range around each item as well as around the list, and save them
   // off for later.
@@ -941,7 +949,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   else {
     itemDict.forEach(function (elt) {
         html += maybeAnnotate(
-          itemFunc(elt.doc),
+          itemFunc(transformedDoc(elt.doc)),
           Spark._ANNOTATION_LIST_ITEM,
           function (range) {
             elt.liveRange = range;
@@ -994,11 +1002,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
       later(function () {
         var doc = EJSON.clone(fields);
         doc._id = id;
-        var renderDoc = doc;
-        if (cursor.getTransform && cursor.getTransform()) {
-          renderDoc = cursor.getTransform()(EJSON.clone(renderDoc));
-        }
-        var frag = Spark.render(_.bind(itemFunc, null, renderDoc));
+        var frag = Spark.render(_.bind(itemFunc, null, transformedDoc(doc)));
         DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
         var range = makeRange(Spark._ANNOTATION_LIST_ITEM, frag);
 
@@ -1048,10 +1052,8 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
         if (!elt)
           throw new Error("Unknown id for changed: " + id);
         applyChanges(elt.doc, fields);
-        var renderDoc = elt.doc;
-        if (cursor.getTransform && cursor.getTransform())
-          renderDoc = cursor.getTransform()(EJSON.clone(renderDoc));
-        Spark.renderToRange(elt.liveRange, _.bind(itemFunc, null, renderDoc));
+        Spark.renderToRange(elt.liveRange,
+                            _.bind(itemFunc, null, transformedDoc(elt.doc)));
       });
     }
   });
