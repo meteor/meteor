@@ -16,6 +16,8 @@
 
 * Support literate CoffeeScript files with the extension `.litcoffee`. #766
 
+* Add new login service provider for Meetup.com in `accounts-meetup` package.
+
 * If you call `observe` or `observeChanges` on a cursor created with the
   `reactive: false` option, it now only calls initial add callbacks and
   does not continue watching the query. #771
