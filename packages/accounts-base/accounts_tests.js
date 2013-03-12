@@ -7,14 +7,16 @@ Tinytest.add('accounts - config validates keys', function (test) {
   });
 });
 
+
+var idsInValidateNewUser = {};
+Accounts.validateNewUser(function (user) {
+  idsInValidateNewUser[user._id] = true;
+  return true;
+});
+
 Tinytest.add('accounts - validateNewUser gets passed user with _id', function (test) {
-  var idInValidateNewUser;
-  Accounts.validateNewUser(function (user) {
-    idInValidateNewUser = user._id;
-    return true;
-  });
   var newUserId = Accounts.updateOrCreateUserFromExternalService('foobook', {id: Random.id()}).id;
-  test.equal(idInValidateNewUser, newUserId);
+  test.isTrue(newUserId in idsInValidateNewUser);
 });
 
 Tinytest.add('accounts - updateOrCreateUserFromExternalService - Facebook', function (test) {
