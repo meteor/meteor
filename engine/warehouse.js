@@ -193,7 +193,7 @@ var warehouse = module.exports = {
     // releases have one, so if we can't find it just proceed
     try {
       var changelog = Future.wrap(files.getUrl)(
-        PACKAGES_URLBASE + "/releases/" + releaseVersion + ".release.json").wait();
+        PACKAGES_URLBASE + "/releases/" + releaseVersion + ".changelog.json").wait();
 
       // If a file is not on S3 we get served an 'access denied' XML
       // file. This will throw (intentionally) in that case. Real
@@ -290,6 +290,7 @@ var warehouse = module.exports = {
       } else {
         // didn't find 'fromRelease' in the changelog. must have been
         // an unofficial release.  don't print anything.
+        // XXX probably print the latest only or something
       }
     }
   },
