@@ -1,6 +1,10 @@
 
 ## vNEXT
 
+* Add new `appcache` package. Add this package to your project to speed
+  up page load and make hot code reload smoother using the HTML5
+  AppCache API. See http://docs.meteor.com/#appcache for details.
+
 * Publish functions may now return an array of cursors to publish. Currently,
   the cursors must all be from different collections. #716
 
