@@ -10,7 +10,12 @@ var coffeescript_handler = function(bundle, source_path, serve_path, where) {
   serve_path = serve_path + '.js';
 
   var contents = fs.readFileSync(source_path);
-  var options = {bare: true, filename: source_path, literate: path.extname(source_path) === '.litcoffee'};
+  var options = {
+    bare: true,
+    map: true,
+    filename: source_path,
+    literate: path.extname(source_path) === '.litcoffee'
+  };
   try {
     contents = coffee.compile(contents.toString('utf8'), options);
   } catch (e) {
