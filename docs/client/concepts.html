@@ -521,7 +521,7 @@ the data context of the element that triggered the event.
     <!-- myapp.js -->
     Template.playerScore.events({
       'click .givePoints': function () {
-        Users.update({_id: this._id}, {$inc: {score: 2}});
+        Users.update(this._id, {$inc: {score: 2}});
       }
     });
 
