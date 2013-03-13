@@ -56,20 +56,21 @@ testAsyncMulti("mongo-livedata - database error reporting. " + idGeneration, [
     };
 
     _.each(["insert", "remove", "update"], function (op) {
+      var arg = (op === "insert" ? {} : 'bla');
       if (Meteor.isServer) {
         test.throws(function () {
-          ftc[op]({fail: true});
+          ftc[op](arg);
         });
 
-        ftc[op]({fail: true}, expect(exception));
+        ftc[op](arg, expect(exception));
       }
 
       if (Meteor.isClient) {
-        ftc[op]({fail: true}, expect(exception));
+        ftc[op](arg, expect(exception));
 
         // This would log to console in normal operation.
         Meteor._suppress_log(1);
-        ftc[op]({fail: true});
+        ftc[op](arg);
       }
     });
   }
@@ -567,44 +568,6 @@ if (Meteor.isServer) {
 }
 
 
-testAsyncMulti('mongo-livedata - rewrite selector, ' + idGeneration, [
-  function (test, expect) {
-    var collectionName = Random.id();
-    if (Meteor.isClient) {
-      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
-      Meteor.subscribe('c-' + collectionName);
-    }
-
-    var coll = new Meteor.Collection(collectionName, collectionOptions);
-
-    var docId;
-
-    var updateCallback = expect(function (err2) {
-      test.isFalse(err2);
-
-      var doc = coll.findOne(docId);
-      test.isTrue(doc);
-      test.equal(doc.name, "f\noobar");
-      test.equal(doc.value, 43);
-    });
-
-    coll.insert({name: 'f\noobar', value: 42}, expect(function (err1, id) {
-      test.isFalse(err1);
-      test.isTrue(id);
-      docId = id;
-
-      var doc = coll.findOne(docId);
-      test.isTrue(doc);
-      test.equal(doc.name, "f\noobar");
-      test.equal(doc.value, 42);
-
-      // Ensure that "i" and "m" flags are respected by making /B/ match b and
-      // /^/ match at the newline.
-      coll.update({name: /^o+B/im}, {$inc: {value: 1}}, updateCallback);
-    }));
-  }
-]);
-
 testAsyncMulti('mongo-livedata - empty documents, ' + idGeneration, [
   function (test, expect) {
     var collectionName = Random.id();
@@ -666,7 +629,6 @@ testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGenera
     }
 
     var coll = new Meteor.Collection(collectionName, collectionOptions);
-    var docId;
     var expectAdd = expect(function (doc) {
       test.equal(doc.seconds(), 50);
     });
@@ -676,7 +638,6 @@ testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGenera
     coll.insert({d: new Date(1356152390004)}, expect(function (err, id) {
       test.isFalse(err);
       test.isTrue(id);
-      docId = id;
       var cursor = coll.find();
       cursor.observe({
         added: expectAdd,
@@ -689,7 +650,7 @@ testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGenera
       test.equal(coll.findOne({}, {
         transform: function (doc) {return {seconds: doc.d.getSeconds()};}
       }).seconds, 50);
-      coll.remove({});
+      coll.remove(id);
     }));
   }
 ]);
@@ -816,26 +777,6 @@ if (Meteor.isServer) {
       {all: 1, id1Direct: 1, id1InQuery: 1, id2Direct: 1, id2InQuery: 1,
        bothIds: 1});
 
-    // Update id1 using "validated update" and with a query that doesn't appear
-    // to match on ID. The validation should change this to an ID-specific
-    // query, so we should not poll the id2 queries.
-    resetPollsAndRunInFence(function () {
-      coll._validatedUpdate("user", {is1: true}, {$inc: {x: 1}});
-    });
-    test.equal(
-      polls,
-      {all: 1, id1Direct: 1, id1InQuery: 1, bothIds: 1});
-
-    // Remove id2 using "validated remove" and with a query that doesn't appear
-    // to match on ID. The validation should change this to an ID-specific
-    // query, so we should not poll the id1 queries.
-    resetPollsAndRunInFence(function () {
-      coll._validatedRemove("user", {is2: true});
-    });
-    test.equal(
-      polls,
-      {all: 1, id2Direct: 1, id2InQuery: 1, bothIds: 1});
-
     _.each(handlesToStop, function (h) {h.stop();});
     onComplete();
   });
@@ -843,6 +784,18 @@ if (Meteor.isServer) {
 
 
 });  // end idGeneration parametrization
+
+Tinytest.add('mongo-livedata - rewrite selector', function (test) {
+  test.equal(Meteor.Collection._rewriteSelector({x: /^o+B/im}),
+             {x: {$regex: '^o+B', $options: 'im'}});
+  test.equal(Meteor.Collection._rewriteSelector({x: /^o+B/}),
+             {x: {$regex: '^o+B'}});
+  test.equal(Meteor.Collection._rewriteSelector('foo'),
+             {_id: 'foo'});
+  var oid = new Meteor.Collection.ObjectID();
+  test.equal(Meteor.Collection._rewriteSelector(oid),
+             {_id: oid});
+});
 
 testAsyncMulti('mongo-livedata - specified _id', [
   function (test, expect) {
