@@ -589,14 +589,10 @@ can also specify `transform` on a particular `find`, `findOne`, `allow`, or
     Animals.insert({name: "raptor", sound: "roar"});
     Animals.findOne({name: "raptor"}).makeNoise(); // prints "roar"
 
-{{#note}}
-
 `transform` functions are not called reactively.  If you want to add a
 dynamically changing attribute to an object, do it with a function that computes
 the value at the time it's called, not by computing the attribute at `transform`
 time.
-
-{{/note}}
 
 {{#warning}}
 In this release, Minimongo has some limitations:
@@ -614,10 +610,9 @@ in the repository.
 {{/warning}}
 
 {{#warning}}
-Minimongo currently doesn't have indexes. This will come soon. It's
-usually not an issue, since there usually isn't that much data in
-the client &mdash; it is not that common for developers to implement
-indexes in their client-side models anyway.
+Minimongo doesn't currently have indexes. It's rare for this to be an
+issue, since it's unusual for a client to have enough data that an
+index is worthwhile.
 {{/warning}}
 
 {{> api_box find}}
@@ -655,7 +650,9 @@ its fields can contain any combination of EJSON-compatible datatypes
 (arrays, objects, numbers, strings, `null`, true, and false).
 
 `insert` will generate a unique ID for the object you pass, insert it
-in the database, and return the ID.
+in the database, and return the ID. When `insert` is called from
+untrusted client code, it will be allowed only if passes any
+applicable [`allow`](#allow) and [`deny`](#deny) rules.
 
 On the server, if you don't provide a callback, then `insert` blocks
 until the database acknowledges the write, or throws an exception if
@@ -680,12 +677,23 @@ Example:
 
 {{> api_box update}}
 
-Modify documents that match `selector` as given by `modifier` (see [modifier
-documentation](#modifiers)).  By default, modify only one matching document.  If
-`multi` is true, modify all matching documents.
+Modify documents that match `selector` according to `modifier` (see
+[modifier documentation](#modifiers)).
 
-Instead of a selector, you can pass a string, which will be
-interpreted as an `_id`.
+The behavior of `update` differs depending on whether it is called by
+trusted or untrusted code. Trusted code includes server code and
+method code. Untrusted code includes client-side code such as event
+handlers and a browser's JavaScript console.
+
+- Trusted code can modify multiple documents at once by setting
+  `multi` to true, and can use an arbitrary [Mongo
+  selector](#selectors) to find the documents to modify. It bypasses
+  any access control rules set up by [`allow`](#allow) and
+  [`deny`](#deny).
+
+- Untrusted code can only modify a single document at once, specified
+  by its `_id`. The modification is allowed only after checking any
+  applicable [`allow`](#allow) and [`deny`](#deny) rules.
 
 On the server, if you don't provide a callback, then `update` blocks
 until the database acknowledges the write, or throws an exception if
@@ -700,14 +708,29 @@ the console.  If you provide a callback, Meteor will call that function
 with an error argument if there was an error, or no arguments if the
 update was successful.
 
-Example:
+Client example:
 
-    // Give the "Superlative" badge to each user with a score greater than
+    // When the givePoints button in the admin dashboard is pressed,
+    // give 5 points to the current player. The new score will be
+    // immediately visible on everyone's screens.
+    Template.adminDashboard.events({
+      'click .givePoints': function () {
+        Players.update(Session.get("currentPlayer"), {$inc: {score: 5}});
+      }
+    });
+
+Server example:
+
+    // Give the "Winner" badge to each user with a score greater than
     // 10. If they are logged in and their badge list is visible on the
     // screen, it will update automatically as they watch.
-    Users.update({score: {$gt: 10}},
-                 {$addToSet: {badges: "Superlative"}},
-                 {multi: true});
+    Meteor.methods({
+      declareWinners: function () {
+        Users.update({score: {$gt: 10}},
+                     {$addToSet: {badges: "Winner"}},
+                     {multi: true});
+      }
+    });
 
 {{#warning}}
 The Mongo `upsert` feature is not implemented.
@@ -715,11 +738,27 @@ The Mongo `upsert` feature is not implemented.
 
 {{> api_box remove}}
 
-Find all of the documents that match `selector` and delete them from the
-collection. Or instead of a selector, you may pass a string, to delete
-the document with that `_id`.  As a safety measure, do nothing if the
-selector is undefined.  If the selector is `{}`, remove all the
-documents from the collection.
+Find all of the documents that match `selector` and delete them from
+the collection.
+
+The behavior of `remove` differs depending on whether it is called by
+trusted or untrusted code. Trusted code includes server code and
+method code. Untrusted code includes client-side code such as event
+handlers and a browser's JavaScript console.
+
+- Trusted code can use an arbitrary [Mongo selector](#selectors) to
+  find the documents to remove, and can remove more than one document
+  at once by passing a selector that matches multiple documents. It
+  bypasses any access control rules set up by [`allow`](#allow) and
+  [`deny`](#deny).
+
+  As a safety measure, if `selector` is omitted (or is `undefined`),
+  no documents will be removed. Set `selector` to `{}` if you really
+  want to remove all documents from your collection.
+
+- Untrusted code can only remove a single document at a time,
+  specified by its `_id`. The document is removed only after checking
+  any applicable [`allow`](#allow) and [`deny`](#deny) rules.
 
 On the server, if you don't provide a callback, then `remove` blocks
 until the database acknowledges the write, or throws an exception if
@@ -734,14 +773,26 @@ the console.  If you provide a callback, Meteor will call that function
 with an error argument if there was an error, or no arguments if the
 remove was successful.
 
-Example:
+Client example:
 
-    // Delete all users with a karma of less than -2.
-    Users.remove({karma: {$lt: -2}});
+    // When the remove button is clicked on a chat message, delete
+    // that message.
+    Template.chat.events({
+      'click .remove': function () {
+        Messages.remove(this._id);
+      }
+    });
 
-    // Delete all the log entries
-    Logs.remove({});
+Server example:
 
+    // When the server starts, clear the log, and delete all players
+    // with a karma of less than -2.
+    Meteor.startup(function () {
+      if (Meteor.isServer) {
+        Logs.remove({});
+        Players.remove({karma: {$lt: -2}});
+      }
+    });
 
 {{> api_box allow}}
 
@@ -773,17 +824,17 @@ The user `userId` wants to insert the document `doc` into the
 collection. Return `true` if this should be allowed.
 {{/dtdd}}
 
-{{#dtdd "update(userId, docs, fieldNames, modifier)"}}
-The user `userId` wants to update some documents. Meteor has fetched the
-documents from the database and they are available in `docs` as an
-array. Return `true` if the user should be allowed to change these
-documents.
+{{#dtdd "update(userId, doc, fieldNames, modifier)"}}
 
-Additional details about the proposed modification are in `fieldNames` and
-`modifier`. &emsp; `fieldNames` is the top-level fields in the document that the
-client wishes to modify, for example `['name',`&nbsp;`'score']`. &emsp; `modifier`
-is the raw Mongo modifier that the client wants to execute, for example `{$set:
-{'name.first': "Alice"}, $inc: {score: 1}}`.
+The user `userId` wants to update a document `doc`. (`doc` is the
+current version of the document from the database, without the
+proposed update.) Return `true` to permit the change.
+
+`fieldNames` is an array of the (top-level) fields in `doc` that the
+client wants to mody, for example
+`['name',`&nbsp;`'score']`. `modifier` is the raw Mongo modifier that
+the client wants to execute, for example `{$set: {'name.first':
+"Alice"}, $inc: {score: 1}}`.
 
 Only Mongo modifiers are supported (operations like `$set` and `$push`).
 If the user tries to replace the entire document rather than use
@@ -792,21 +843,20 @@ functions.
 
 {{/dtdd}}
 
-{{#dtdd "remove(userId, docs)"}}
-The user `userId` wants to remove some documents. Meteor has fetched the
-documents from the database and they are available in `docs` as an
-array. Return `true` if the user should be allowed to remove these
-documents.
+{{#dtdd "remove(userId, doc)"}}
+
+The user `userId` wants to remove `doc` from the database. Return
+`true` to permit this.
+
 {{/dtdd}}
 
 </dl>
 
-By default, when Meteor fetches the documents from the database for the
-`docs` array, it will retrieve all of the fields in the documents. For
-efficiency you may instead want to retrieve just the fields that are
-actually needed by your functions. This is enabled by the `fetch`
-option. Set `fetch` to an array of the field names that should be
-retrieved.
+When calling `update` or `remove` Meteor will by default fetch the
+entire document `doc` from the database. If you have large documents
+you may wish to fetch only the fields that are actually used by your
+functions. Accomplish this by setting `fetch` to an array of field
+names to retrieve.
 
 Example:
 
@@ -824,17 +874,13 @@ Example:
         // the user must be logged in, and the document must be owned by the user
         return (userId && doc.owner === userId);
       },
-      update: function (userId, docs, fields, modifier) {
+      update: function (userId, doc, fields, modifier) {
         // can only change your own documents
-        return _.all(docs, function(doc) {
-          return doc.owner === userId;
-        });
+        return doc.owner === userId;
       },
-      remove: function (userId, docs) {
+      remove: function (userId, doc) {
         // can only remove your own documents
-        return _.all(docs, function(doc) {
-          return doc.owner === userId;
-        });
+        return doc.owner === userId;
       },
       fetch: ['owner']
     });
@@ -844,11 +890,9 @@ Example:
         // can't change owners
         return _.contains(fields, 'owner');
       },
-      remove: function (userId, docs) {
+      remove: function (userId, doc) {
         // can't remove locked documents
-        return _.any(docs, function (doc) {
-          return doc.locked;
-        });
+        return doc.locked;
       },
       fetch: ['locked'] // no need to fetch 'owner'
     });
@@ -868,15 +912,6 @@ collection. This is the only effect of insecure mode. If you call `allow` or
 `deny` at all on a collection, even `Posts.allow({})`, then access is checked
 just like normal on that collection. __New Meteor projects start in insecure
 mode by default.__ To turn it off just run `$ meteor remove insecure`.
-
-{{#note}}
-For `update` and `remove`, documents will be affected only if they match
-the selector both at the time the documents are fetched to run the
-`allow` and `deny` rules, __and__ at the time that the operation is
-actually executed. This is accomplished by rewriting the selector to
-`{$and: [(original selector), {$in: {_id: [(ids of documents fetched
-and checked by allow and deny)]}}]}`.
-{{/note}}
 
 {{> api_box deny}}
 

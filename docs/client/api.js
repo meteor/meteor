@@ -477,13 +477,13 @@ Template.api.find = {
   descr: ["Find the documents in a collection that match the selector."],
   args: [
     {name: "selector",
-     type: "Object: Mongo selector, or String",
+     type: "Mongo selector, or String",
      type_link: "selectors",
      descr: "The query"}
   ],
   options: [
     {name: "sort",
-     type: "Object: sort specifier",
+     type: "Sort specifier",
      type_link: "sortspecifiers",
      descr: "Sort order (default: natural order)"},
     {name: "skip",
@@ -493,7 +493,7 @@ Template.api.find = {
      type: "Number",
      descr: "Maximum number of results to return"},
     {name: "fields",
-     type: "Object: field specifier",
+     type: "Field specifier",
      type_link: "fieldspecifiers",
      descr: "(Server only) Dictionary of fields to return or exclude."},
     {name: "reactive",
@@ -512,20 +512,20 @@ Template.api.findone = {
   descr: ["Finds the first document that matches the selector, as ordered by sort and skip options."],
   args: [
     {name: "selector",
-     type: "Object: Mongo selector, or String",
+     type: "Mongo selector, or String",
      type_link: "selectors",
      descr: "The query"}
   ],
   options: [
     {name: "sort",
-     type: "Object: sort specifier",
+     type: "Sort specifier",
      type_link: "sortspecifiers",
      descr: "Sort order (default: natural order)"},
     {name: "skip",
      type: "Number",
      descr: "Number of results to skip at the beginning"},
     {name: "fields",
-     type: "Object: field specifier",
+     type: "Field specifier",
      type_link: "fieldspecifiers",
      descr: "(Server only) Dictionary of fields to return or exclude."},
     {name: "reactive",
@@ -560,11 +560,11 @@ Template.api.update = {
   descr: ["Modify one or more documents in the collection"],
   args: [
     {name: "selector",
-     type: "Object: Mongo selector, or String",
+     type: "Mongo selector, or object id",
      type_link: "selectors",
      descr: "Specifies which documents to modify"},
     {name: "modifier",
-     type: "Object: Mongo modifier",
+     type: "Mongo modifier",
      type_link: "modifiers",
      descr: "Specifies how to modify the documents"},
     {name: "callback",
@@ -585,7 +585,7 @@ Template.api.remove = {
   descr: ["Remove documents from the collection"],
   args: [
     {name: "selector",
-     type: "Object: Mongo selector, or String",
+     type: "Mongo selector, or object id",
      type_link: "selectors",
      descr: "Specifies which documents to remove"},
     {name: "callback",
@@ -1636,7 +1636,7 @@ Template.api.template_events = {
   descr: ["Specify event handlers for this template."],
   args: [
     {name: "eventMap",
-     type: "Object: event map",
+     type: "Event map",
      type_link: "eventmaps",
      descr: "Event handlers to associate with this template."}
   ]
