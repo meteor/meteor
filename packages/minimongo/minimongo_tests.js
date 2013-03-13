@@ -1775,3 +1775,23 @@ Tinytest.add("minimongo - reactive stop", function (test) {
   test.equal(x, "EDCBA");
   test.equal(y, "EDCBA");
 });
+
+Tinytest.add("minimongo - immediate invalidate", function (test) {
+  var coll = new LocalCollection();
+  coll.insert({_id: 'A'});
+
+  // This has two separate findOnes.  findOne() uses skip/limit, which means
+  // that its response to an update() call involves a recompute. We used to have
+  // a bug where we would first calculate all the calls that need to be
+  // recomputed, then recompute them one by one, without checking to see if the
+  // callbacks from recomputing one query stopped the second query, which
+  // crashed.
+  var c = Deps.autorun(function () {
+    coll.findOne('A');
+    coll.findOne('A');
+  });
+
+  coll.update('A', {$set: {x: 42}});
+
+  c.stop();
+});
