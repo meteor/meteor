@@ -419,14 +419,15 @@ LocalCollection.prototype.insert = function (doc) {
     var query = self.queries[qid];
     if (query.selector_f(doc)) {
       if (query.cursor.skip || query.cursor.limit)
-        queriesToRecompute.push(query);
+        queriesToRecompute.push(qid);
       else
         LocalCollection._insertInResults(query, doc);
     }
   }
 
-  _.each(queriesToRecompute, function (query) {
-    LocalCollection._recomputeResults(query);
+  _.each(queriesToRecompute, function (qid) {
+    if (self.queries[qid])
+      LocalCollection._recomputeResults(self.queries[qid]);
   });
 };
 
@@ -460,12 +461,12 @@ LocalCollection.prototype.remove = function (selector) {
   for (var i = 0; i < remove.length; i++) {
     var removeId = remove[i];
     var removeDoc = self.docs[removeId];
-    _.each(self.queries, function (query) {
+    _.each(self.queries, function (query, qid) {
       if (query.selector_f(removeDoc)) {
         if (query.cursor.skip || query.cursor.limit)
-          queriesToRecompute.push(query);
+          queriesToRecompute.push(qid);
         else
-          queryRemove.push([query, removeDoc]);
+          queryRemove.push({qid: qid, doc: removeDoc});
       }
     });
     self._saveOriginal(removeId, removeDoc);
@@ -473,11 +474,15 @@ LocalCollection.prototype.remove = function (selector) {
   }
 
   // run live query callbacks _after_ we've removed the documents.
-  for (var i = 0; i < queryRemove.length; i++) {
-    LocalCollection._removeFromResults(queryRemove[i][0], queryRemove[i][1]);
-  }
-  _.each(queriesToRecompute, function (query) {
-    LocalCollection._recomputeResults(query);
+  _.each(queryRemove, function (remove) {
+    var query = self.queries[remove.qid];
+    if (query)
+      LocalCollection._removeFromResults(query, remove.doc);
+  });
+  _.each(queriesToRecompute, function (qid) {
+    var query = self.queries[qid];
+    if (query)
+      LocalCollection._recomputeResults(query);
   });
 };
 
@@ -516,8 +521,10 @@ LocalCollection.prototype.update = function (selector, mod, options) {
   }
 
   _.each(recomputeQids, function (dummy, qid) {
-    LocalCollection._recomputeResults(self.queries[qid],
-                                      qidToOriginalResults[qid]);
+    var query = self.queries[qid];
+    if (query)
+      LocalCollection._recomputeResults(query,
+                                        qidToOriginalResults[qid]);
   });
 };
 

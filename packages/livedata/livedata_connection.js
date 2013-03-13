@@ -643,9 +643,11 @@ _.extend(Meteor._LivedataConnection.prototype, {
       //
       // Tests can set the 'expected' flag on an exception so it won't
       // go to log.
-      if (exception && !exception.expected)
+      if (exception && !exception.expected) {
+        debugger;
         Meteor._debug("Exception while simulating the effect of invoking '" +
                       name + "'", exception, exception.stack);
+      }
     }
 
     // At this point we're definitely doing an RPC, and we're going to
