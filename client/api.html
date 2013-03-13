@@ -498,7 +498,7 @@ works on both the client and the server (see below).
     Messages.insert({text: "Hello, world!"});
 
     // mark my first message as "important"
-    Messages.update(myMessages[0].id, {$set: {important: true}});
+    Messages.update(myMessages[0]._id, {$set: {important: true}});
 
 If you pass a `name` when you create the collection, then you are
 declaring a persistent collection &mdash; one that is stored on the
@@ -726,9 +726,9 @@ Server example:
     // screen, it will update automatically as they watch.
     Meteor.methods({
       declareWinners: function () {
-        Users.update({score: {$gt: 10}},
-                     {$addToSet: {badges: "Winner"}},
-                     {multi: true});
+        Players.update({score: {$gt: 10}},
+                       {$addToSet: {badges: "Winner"}},
+                       {multi: true});
       }
     });
 
@@ -1990,16 +1990,17 @@ how to make your own reactive data sources, see
 
 Example:
 
-    // Show the number of users online.
+    // Client side: show the number of players online.
     var frag = Meteor.render(function () {
-      return "<p>There are " + Users.find({online: true}).count() +
-        " users online.</p>";
+      return "<p>There are " + Players.find({online: true}).count() +
+        " players online.</p>";
     });
     document.body.appendChild(frag);
 
-    // Find all users that have been idle for a while, and mark them as
-    // offline. The count on the screen will automatically update.
-    Users.update({idleTime: {$gt: 30}}, {online: false});
+    // Server side: find all players that have been idle for a while,
+    // and mark them as offline. The count on the screen will
+    // automatically update on all clients.
+    Players.update({idleTime: {$gt: 30}}, {$set: {online: false}});
 
 {{> api_box renderList}}
 
