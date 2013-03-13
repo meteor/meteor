@@ -433,6 +433,7 @@ Fiber(function () {
       // file.
       project.writeMeteorReleaseVersion(appDir, releaseVersion);
       if (appRelease === releaseVersion) {
+        // XXX this is wrong if we just updated from no file to 0.6.0.
         console.log("Your app is already running Meteor release "
                     + releaseVersion + ".");
         return;
