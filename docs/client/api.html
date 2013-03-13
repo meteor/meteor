@@ -913,15 +913,6 @@ collection. This is the only effect of insecure mode. If you call `allow` or
 just like normal on that collection. __New Meteor projects start in insecure
 mode by default.__ To turn it off just run `$ meteor remove insecure`.
 
-{{#note}}
-For `update` and `remove`, documents will be affected only if they match
-the selector both at the time the documents are fetched to run the
-`allow` and `deny` rules, __and__ at the time that the operation is
-actually executed. This is accomplished by rewriting the selector to
-`{$and: [(original selector), {$in: {_id: [(ids of documents fetched
-and checked by allow and deny)]}}]}`.
-{{/note}}
-
 {{> api_box deny}}
 
 This works just like [`allow`](#allow), except it lets you
