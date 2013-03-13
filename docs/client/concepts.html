@@ -45,8 +45,8 @@ create a nested tree of separate files, or anything in between.
 
 Files outside the `client`, `server` and `tests` subdirectories are loaded on
 both the client and the server!  That's the place for model definitions and
-other functions.  Meteor provides the variables [`isClient` and
-`isServer`](#meteor_isclient) so that your code can alter its behavior depending
+other functions.  Meteor provides the variables [`isClient`](#meteor_isclient) and
+[`isServer`](#meteor_isserver) so that your code can alter its behavior depending
 on whether it's running on the client or the server. (Files in directories named
 `tests` are not loaded anywhere.)
 
@@ -80,7 +80,7 @@ for images, `favicon.ico`, `robots.txt`, and anything else.
 It is best to write your application in such a way that it is
 insensitive to the order in which files are loaded, for example by
 using [Meteor.startup](#meteor_startup), or by moving load order
-sensitive code into Smart Packages, which can explicitly control both
+sensitive code into [Smart Packages](#smartpackages), which can explicitly control both
 the load order of their contents and their load order with respect to
 other packages. However sometimes load order dependencies in your
 application are unavoidable. The JavaScript and CSS files in an
@@ -237,6 +237,8 @@ modify data, those modifications can run locally without waiting for the
 confirmation from the server, while still giving the server final say
 over the requested change.
 
+<h3 id="dataandsecurity-authentication">Authentication and user accounts</h3>
+
 Meteor includes [Meteor Accounts](#accounts_api), a state-of-the-art
 authentication system. It features secure password login using the
 [Secure Remote Password
@@ -340,7 +342,7 @@ that it will update automatically to track changes in the data used to
 generate it.
 
 This optional feature works with any HTML templating library, or even
-with HTML you generate manually from Javascript. Here's an example:
+with HTML you generate manually from JavaScript. Here's an example:
 
     var fragment = Meteor.render(
       function () {
