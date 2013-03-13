@@ -1,12 +1,28 @@
 
 ## vNEXT
 
+## v0.5.8
+
+* Calls to the `update` and `remove` collection functions in untrusted code may
+  no longer use arbitrary selectors. You must specify a single document ID when
+  invoking these functions from the client (other than in a method stub).
+
+  You may still use other selectors when calling `update` and `remove` on the
+  server and from client method stubs, so you can replace calls that are no
+  longer supported (eg, in event handlers) with custom method calls.
+
+  The corresponding `update` and `remove` callbacks passed to `allow` and `deny`
+  now take a single document instead of an array.
+
 * Add new `appcache` package. Add this package to your project to speed
   up page load and make hot code reload smoother using the HTML5
   AppCache API. See http://docs.meteor.com/#appcache for details.
 
 * Rewrite reactivity library. `Meteor.deps` is now `Deps` and has a new
-  API. See http://docs.meteor.com/#deps for details.
+  API. `Meteor.autorun` and `Meteor.flush` are now called `Deps.autorun` and
+  `Deps.flush` (the old names still work for now). The other names under
+  `Meteor.deps` such as `Context` no longer exist. The new API is documented at
+  http://docs.meteor.com/#deps
 
 * You can now provide a `transform` option to collections, which is a
   function that documents coming out of that collection are passed

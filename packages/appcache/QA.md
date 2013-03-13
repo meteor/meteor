@@ -64,9 +64,11 @@ Disable your browser in the appcache config.  For example, if you're
 using Chrome:
 
 ````
-Meteor.AppCache.config({
-  chrome: false
-});
+if (Meteor.isServer) {
+  Meteor.AppCache.config({
+    chrome: false
+  });
+}
 ````
 
 Observe following the hot code reload the app is no longer cached.
@@ -74,9 +76,11 @@ Observe following the hot code reload the app is no longer cached.
 Enable your browser again:
 
 ````
-Meteor.AppCache.config({
-  chrome: true
-});
+if (Meteor.isServer) {
+  Meteor.AppCache.config({
+    chrome: true
+  });
+}
 ````
 
 Observe following the hot code reload the app is cached again.
