@@ -4,8 +4,7 @@ set -e
 set -u
 set -o pipefail  # so curl failure triggers the "set -e"
 
-# XXX this should be cloudfront, not test
-URLBASE='https://s3.amazonaws.com/com.meteor.static/test'
+BOOTSTRAP_URL='https://install-bootstrap.meteor.com/'
 
 if [ ! -x "$HOME/.meteor/meteor" ]; then
   if [ -e "$HOME/.meteor" ]; then
@@ -40,13 +39,15 @@ if [ ! -x "$HOME/.meteor/meteor" ]; then
     fi
   fi
 
+  # This returns something like https://warehouse.meteor.com/engines/db68972b9d239a95bffa3abe652d1e17815dba91
+  ROOT_URL="$(curl -s --fail $BOOTSTRAP_URL)"
+  TARBALL_URL="${ROOT_URL}/meteor-engine-bootstrap-${UNAME}-${ARCH}.tar.gz"
+
   INSTALL_TMPDIR="$HOME/.meteor-install-tmp"
   rm -rf "$INSTALL_TMPDIR"
   mkdir "$INSTALL_TMPDIR"
   echo 'This is your first time using Meteor! Downloading the engine now.'
-  curl --progress-bar --fail \
-      "$URLBASE/meteor-engine-bootstrap-${UNAME}-${ARCH}.tar.gz" | \
-    tar -xzf - -C "$INSTALL_TMPDIR"
+  curl --progress-bar --fail "$TARBALL_URL" | tar -xzf - -C "$INSTALL_TMPDIR"
   # bomb out if it didn't work, eg no net
   test -x "${INSTALL_TMPDIR}/.meteor/meteor"
   mv "${INSTALL_TMPDIR}/.meteor" "$HOME"
