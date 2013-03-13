@@ -160,8 +160,7 @@ _Mongo.prototype._maybeBeginWrite = function () {
 
 _Mongo.prototype.insert = function (collection_name, document) {
   var self = this;
-  if (collection_name === "___meteor_failure_test_collection" &&
-      document.fail) {
+  if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
     e.expected = true;
     throw e;
@@ -212,8 +211,7 @@ _Mongo.prototype._refresh = function (collectionName, selector) {
 _Mongo.prototype.remove = function (collection_name, selector) {
   var self = this;
 
-  if (collection_name === "___meteor_failure_test_collection" &&
-      selector.fail) {
+  if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
     e.expected = true;
     throw e;
@@ -244,8 +242,7 @@ _Mongo.prototype.remove = function (collection_name, selector) {
 _Mongo.prototype.update = function (collection_name, selector, mod, options) {
   var self = this;
 
-  if (collection_name === "___meteor_failure_test_collection" &&
-      selector.fail) {
+  if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
     e.expected = true;
     throw e;

@@ -254,6 +254,15 @@ Meteor.Collection._rewriteSelector = function (selector) {
   return ret;
 };
 
+var throwIfSelectorIsNotId = function (selector, methodName) {
+  if (!LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
+    // XXX look at string
+    throw new Meteor.Error(
+      403, "Not permitted. Untrusted code may only " + methodName +
+        " documents by ID.");
+  }
+};
+
 // 'insert' immediately returns the inserted document's new _id.  The
 // others return nothing.
 //
@@ -320,6 +329,16 @@ _.each(["insert", "update", "remove"], function (name) {
     if (self._manager && self._manager !== Meteor.default_server) {
       // just remote to another endpoint, propagate return value or
       // exception.
+
+      var enclosing = Meteor._CurrentInvocation.get();
+      var alreadyInSimulation = enclosing && enclosing.isSimulation;
+      if (!alreadyInSimulation && name !== "insert") {
+        // If we're about to actually send an RPC, we should throw an error if
+        // this is a non-ID selector, because the mutation methods only allow
+        // single-ID selectors. (If we don't throw here, we'll see flicker.)
+        throwIfSelectorIsNotId(args[0], name);
+      }
+
       if (callback) {
         // asynchronous: on success, callback should return ret
         // (document ID for insert, undefined for update and
@@ -480,10 +499,21 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
     _.each(['insert', 'update', 'remove'], function (method) {
       m[self._prefix + method] = function (/* ... */) {
         try {
-          if (this.isSimulation || (!self._restricted && self._isInsecure())) {
+          if (this.isSimulation) {
+            // In a client simulation, you can do any mutation (even with a
+            // complex selector).
             self._collection[method].apply(
-            self._collection, _.toArray(arguments));
-          } else if (self._restricted) {
+              self._collection, _.toArray(arguments));
+            return;
+          }
+
+          // This is the server receiving a method call from the client. We
+          // don't allow arbitrary selectors in mutations from the client: only
+          // single-ID selectors.
+          if (method !== 'insert')
+            throwIfSelectorIsNotId(arguments[0], method);
+
+          if (self._restricted) {
             // short circuit if there is no way it will pass.
             if (self._validators[method].allow.length === 0) {
               throw new Meteor.Error(
@@ -495,7 +525,13 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
                   '_validated' + method.charAt(0).toUpperCase() + method.slice(1);
             var argsWithUserId = [this.userId].concat(_.toArray(arguments));
             self[validatedMethodName].apply(self, argsWithUserId);
+          } else if (self._isInsecure()) {
+            // In insecure mode, allow any mutation (with a simple selector).
+            self._collection[method].apply(
+              self._collection, _.toArray(arguments));
           } else {
+            // In secure mode, if we haven't called allow or deny, then nothing
+            // is permitted.
             throw new Meteor.Error(403, "Access denied");
           }
         } catch (e) {
@@ -560,10 +596,10 @@ Meteor.Collection.prototype._validatedInsert = function(userId, doc) {
   self._collection.insert.call(self._collection, doc);
 };
 
-var transformAll = function (validator, docs) {
+var transformDoc = function (validator, doc) {
   if (validator.transform)
-    return _.map(docs, validator.transform);
-  return docs;
+    return validator.transform(doc);
+  return doc;
 };
 
 // Simulate a mongo `update` operation while validating that the access
@@ -574,10 +610,13 @@ Meteor.Collection.prototype._validatedUpdate = function(
     userId, selector, mutator, options) {
   var self = this;
 
+  if (!LocalCollection._selectorIsIdPerhapsAsObject(selector))
+    throw new Error("validated update should be of a single ID");
+
   // compute modified fields
   var fields = [];
   _.each(mutator, function (params, op) {
-    if (op[0] !== '$') {
+    if (op.charAt(0) !== '$') {
       throw new Meteor.Error(
         403, "Access denied. In a restricted collection you can only update documents, not replace them. Use a Mongo update operator, such as '$set'.");
     } else {
@@ -602,27 +641,19 @@ Meteor.Collection.prototype._validatedUpdate = function(
     });
   }
 
-  var docs;
-  if (options && options.multi) {
-    docs = self._collection.find(selector, findOptions).fetch();
-    if (docs.length === 0)  // none satisfied!
-      return;
-  } else {
-    var doc = self._collection.findOne(selector, findOptions);
-    if (!doc)  // none satisfied!
-      return;
-    docs = [doc];
-  }
+  var doc = self._collection.findOne(selector, findOptions);
+  if (!doc)  // none satisfied!
+    return;
 
-  var factoriedDocs;
+  var factoriedDoc;
 
   // call user validators.
   // Any deny returns true means denied.
   if (_.any(self._validators.update.deny, function(validator) {
-    if (!factoriedDocs)
-      factoriedDocs = transformAll(validator, docs);
+    if (!factoriedDoc)
+      factoriedDoc = transformDoc(validator, doc);
     return validator(userId,
-                     factoriedDocs,
+                     factoriedDoc,
                      fields,
                      mutator);
   })) {
@@ -630,40 +661,23 @@ Meteor.Collection.prototype._validatedUpdate = function(
   }
   // Any allow returns true means proceed. Throw error if they all fail.
   if (_.all(self._validators.update.allow, function(validator) {
-    if (!factoriedDocs)
-      factoriedDocs = transformAll(validator, docs);
+    if (!factoriedDoc)
+      factoriedDoc = transformDoc(validator, doc);
     return !validator(userId,
-                      factoriedDocs,
+                      factoriedDoc,
                       fields,
                       mutator);
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
 
-  // Construct new $in selector to augment the original one. This means we'll
-  // never update any doc we didn't validate. We keep around the original
-  // selector so that we don't mutate any docs that have been updated to no
-  // longer match the original selector.
-  var idInClause = {};
-  idInClause.$in = _.map(docs, function(doc) {
-    return doc._id;
-  });
-  var idSelector = {_id: idInClause};
-
-  var fullSelector;
-  if (LocalCollection._selectorIsId(selector)) {
-    // If the original selector was just a lookup by _id, no need to "and" it
-    // with the idSelector (and it won't work anyway without explicitly
-    // comparing with _id).
-    if (docs.length !== 1 || !_.isEqual(docs[0]._id, selector))
-      throw new Error("Lookup by ID " + selector + " found something else");
-    fullSelector = selector;
-  } else {
-    fullSelector = {$and: [selector, idSelector]};
-  }
+  // Back when we supported arbitrary client-provided selectors, we actually
+  // rewrote the selector to include an _id clause before passing to Mongo to
+  // avoid races, but since selector is guaranteed to already just be an ID, we
+  // don't have to any more.
 
   self._collection.update.call(
-    self._collection, fullSelector, mutator, options);
+    self._collection, selector, mutator, options);
 };
 
 // Simulate a mongo `remove` operation while validating access control
@@ -679,32 +693,30 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
     });
   }
 
-  var docs = self._collection.find(selector, findOptions).fetch();
-  if (docs.length === 0)  // none satisfied!
+  var doc = self._collection.findOne(selector, findOptions);
+  if (!doc)
     return;
 
   // call user validators.
   // Any deny returns true means denied.
   if (_.any(self._validators.remove.deny, function(validator) {
-    return validator(userId, transformAll(validator, docs));
+    return validator(userId, transformDoc(validator, doc));
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
   if (_.all(self._validators.remove.allow, function(validator) {
-    return !validator(userId, transformAll(validator, docs));
+    return !validator(userId, transformDoc(validator, doc));
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
 
-  // construct new $in selector to replace the original one
-  var idInClause = {};
-  idInClause.$in = _.map(docs, function(doc) {
-    return doc._id;
-  });
-  var idSelector = {_id: idInClause};
+  // Back when we supported arbitrary client-provided selectors, we actually
+  // rewrote the selector to {_id: {$in: [ids that we found]}} before passing to
+  // Mongo to avoid races, but since selector is guaranteed to already just be
+  // an ID, we don't have to any more.
 
-  self._collection.remove.call(self._collection, idSelector);
+  self._collection.remove.call(self._collection, selector);
 };
 
 })();
