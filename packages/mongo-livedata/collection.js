@@ -256,7 +256,6 @@ Meteor.Collection._rewriteSelector = function (selector) {
 
 var throwIfSelectorIsNotId = function (selector, methodName) {
   if (!LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
-    // XXX look at string
     throw new Meteor.Error(
       403, "Not permitted. Untrusted code may only " + methodName +
         " documents by ID.");
