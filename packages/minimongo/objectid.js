@@ -59,6 +59,14 @@ LocalCollection._selectorIsId = function (selector) {
     selector instanceof LocalCollection._ObjectID;
 };
 
+// Is the selector just lookup by _id (shorthand or not)?
+LocalCollection._selectorIsIdPerhapsAsObject = function (selector) {
+  return LocalCollection._selectorIsId(selector) ||
+    (selector && typeof selector === "object" &&
+     selector._id && LocalCollection._selectorIsId(selector._id) &&
+     _.size(selector) === 1);
+};
+
 // If this is a selector which explicitly constrains the match by ID to a finite
 // number of documents, returns a list of their IDs.  Otherwise returns
 // null. Note that the selector may have other restrictions so it may not even
