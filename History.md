@@ -8,7 +8,10 @@
   AppCache API. See http://docs.meteor.com/#appcache for details.
 
 * Rewrite reactivity library. `Meteor.deps` is now `Deps` and has a new
-  API. See http://docs.meteor.com/#deps for details.
+  API. `Meteor.autorun` and `Meteor.flush` are now called `Deps.autorun` and
+  `Deps.flush` (the old names still work for now). The other names under
+  `Meteor.deps` such as `Context` no longer exist. The new API is documented at
+  http://docs.meteor.com/#deps
 
 * You can now provide a `transform` option to collections, which is a
   function that documents coming out of that collection are passed
