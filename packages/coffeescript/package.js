@@ -6,7 +6,7 @@ var coffee = require('coffee-script');
 var fs = require('fs');
 var path = require('path');
 
-var coffeescript_handler = function(bundle, source_path, serve_path, where) {
+var coffeescript_handler = function(bundle, source_path, serve_path, where, literate) {
   serve_path = serve_path + '.js';
 
   var contents = fs.readFileSync(source_path);
@@ -14,8 +14,9 @@ var coffeescript_handler = function(bundle, source_path, serve_path, where) {
     bare: true,
     map: true,
     filename: source_path,
-    literate: path.extname(source_path) === '.litcoffee'
+    literate: literate
   };
+  
   try {
     contents = coffee.compile(contents.toString('utf8'), options);
   } catch (e) {
@@ -31,10 +32,19 @@ var coffeescript_handler = function(bundle, source_path, serve_path, where) {
   });
 }
 
-Package.register_extension("coffee", coffeescript_handler);
-Package.register_extension("litcoffee", coffeescript_handler);
+var coffeescript_default_handler = function(bundle, source_path, serve_path, where) {
+  return coffeescript_handler(bundle, source_path, serve_path, where, false);
+}
+
+var coffeescript_literate_handler = function(bundle, source_path, serve_path, where) {
+  return coffeescript_handler(bundle, source_path, serve_path, where, true);
+}
+
+Package.register_extension("coffee", coffeescript_default_handler);
+Package.register_extension("litcoffee", coffeescript_literate_handler);
+Package.register_extension("coffee.md", coffeescript_literate_handler);
 
 Package.on_test(function (api) {
-  api.add_files(['coffeescript_tests.coffee', 'litcoffeescript_tests.litcoffee', 'coffeescript_tests.js'],
+  api.add_files(['coffeescript_tests.coffee', 'litcoffeescript_tests.litcoffee', 'litcoffeescript_tests.coffee.md', 'coffeescript_tests.js'],
                 ['client', 'server']);
 });
