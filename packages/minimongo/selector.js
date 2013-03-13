@@ -1,7 +1,13 @@
 (function(){
 
+// Like _.isArray, but doesn't regard polyfilled Uint8Arrays on old browsers as
+// arrays.
+var isArray = function (x) {
+  return _.isArray(x) && !EJSON.isBinary(x);
+};
+
 var _anyIfArray = function (x, f) {
-  if (_.isArray(x))
+  if (isArray(x))
     return _.any(x, f);
   return f(x);
 };
@@ -9,7 +15,7 @@ var _anyIfArray = function (x, f) {
 var _anyIfArrayPlus = function (x, f) {
   if (f(x))
     return true;
-  return _.isArray(x) && _.any(x, f);
+  return isArray(x) && _.any(x, f);
 };
 
 var hasOperators = function(valueSelector) {
@@ -54,9 +60,9 @@ var compileValueSelector = function (valueSelector) {
   }
 
   // Arrays match either identical arrays or arrays that contain it as a value.
-  if (_.isArray(valueSelector)) {
+  if (isArray(valueSelector)) {
     return function (value) {
-      if (!_.isArray(value))
+      if (!isArray(value))
         return false;
       return _anyIfArrayPlus(value, function (x) {
         return LocalCollection._f._equal(valueSelector, x);
@@ -92,7 +98,7 @@ var compileValueSelector = function (valueSelector) {
 // XXX can factor out common logic below
 var LOGICAL_OPERATORS = {
   "$and": function(subSelector) {
-    if (!_.isArray(subSelector) || _.isEmpty(subSelector))
+    if (!isArray(subSelector) || _.isEmpty(subSelector))
       throw Error("$and/$or/$nor must be nonempty array");
     var subSelectorFunctions = _.map(
       subSelector, compileDocumentSelector);
@@ -104,7 +110,7 @@ var LOGICAL_OPERATORS = {
   },
 
   "$or": function(subSelector) {
-    if (!_.isArray(subSelector) || _.isEmpty(subSelector))
+    if (!isArray(subSelector) || _.isEmpty(subSelector))
       throw Error("$and/$or/$nor must be nonempty array");
     var subSelectorFunctions = _.map(
       subSelector, compileDocumentSelector);
@@ -116,7 +122,7 @@ var LOGICAL_OPERATORS = {
   },
 
   "$nor": function(subSelector) {
-    if (!_.isArray(subSelector) || _.isEmpty(subSelector))
+    if (!isArray(subSelector) || _.isEmpty(subSelector))
       throw Error("$and/$or/$nor must be nonempty array");
     var subSelectorFunctions = _.map(
       subSelector, compileDocumentSelector);
@@ -139,7 +145,7 @@ var LOGICAL_OPERATORS = {
 
 var VALUE_OPERATORS = {
   "$in": function (operand) {
-    if (!_.isArray(operand))
+    if (!isArray(operand))
       throw new Error("Argument to $in must be array");
     return function (value) {
       return _anyIfArrayPlus(value, function (x) {
@@ -151,10 +157,10 @@ var VALUE_OPERATORS = {
   },
 
   "$all": function (operand) {
-    if (!_.isArray(operand))
+    if (!isArray(operand))
       throw new Error("Argument to $all must be array");
     return function (value) {
-      if (!_.isArray(value))
+      if (!isArray(value))
         return false;
       return _.all(operand, function (operandElt) {
         return _.any(value, function (valueElt) {
@@ -205,7 +211,7 @@ var VALUE_OPERATORS = {
   },
 
   "$nin": function (operand) {
-    if (!_.isArray(operand))
+    if (!isArray(operand))
       throw new Error("Argument to $nin must be array");
     var inFunction = VALUE_OPERATORS.$in(operand);
     return function (value) {
@@ -234,7 +240,7 @@ var VALUE_OPERATORS = {
 
   "$size": function (operand) {
     return function (value) {
-      return _.isArray(value) && operand === value.length;
+      return isArray(value) && operand === value.length;
     };
   },
 
@@ -285,7 +291,7 @@ var VALUE_OPERATORS = {
   "$elemMatch": function (operand) {
     var matcher = compileDocumentSelector(operand);
     return function (value) {
-      if (!_.isArray(value))
+      if (!isArray(value))
         return false;
       return _.any(value, function (x) {
         return matcher(x);
@@ -312,7 +318,7 @@ LocalCollection._f = {
       return 2;
     if (typeof v === "boolean")
       return 8;
-    if (v instanceof Array)
+    if (isArray(v))
       return 4;
     if (v === null)
       return 10;
@@ -512,7 +518,7 @@ LocalCollection._makeLookupFunction = function (key) {
       return [firstLevel];
 
     // It's an empty array, and we're not done: we won't find anything.
-    if (_.isArray(firstLevel) && firstLevel.length === 0)
+    if (isArray(firstLevel) && firstLevel.length === 0)
       return [undefined];
 
     // For each result at this level, finish the lookup on the rest of the key,
@@ -524,7 +530,7 @@ LocalCollection._makeLookupFunction = function (key) {
     // consistently yet itself, see eg
     // https://jira.mongodb.org/browse/SERVER-2898
     // https://github.com/mongodb/mongo/blob/master/jstests/array_match2.js
-    if (!_.isArray(firstLevel) || nextIsNumeric)
+    if (!isArray(firstLevel) || nextIsNumeric)
       firstLevel = [firstLevel];
     return Array.prototype.concat.apply([], _.map(firstLevel, lookupRest));
   };
@@ -582,8 +588,9 @@ LocalCollection._compileSelector = function (selector) {
   if (!selector || (('_id' in selector) && !selector._id))
     return function (doc) {return false;};
 
-  // Top level can't be an array or true.
-  if (typeof(selector) === 'boolean' || _.isArray(selector))
+  // Top level can't be an array or true or binary.
+  if (typeof(selector) === 'boolean' || isArray(selector) ||
+      EJSON.isBinary(selector))
     throw new Error("Invalid selector: " + selector);
 
   return compileDocumentSelector(selector);
@@ -645,11 +652,11 @@ LocalCollection._compileSort = function (spec) {
     // an array itself, iterate over the values in the array separately.
     _.each(branchValues, function (branchValue) {
       // Value not an array? Pretend it is.
-      if (!_.isArray(branchValue))
+      if (!isArray(branchValue))
         branchValue = [branchValue];
       // Value is an empty array? Pretend it was missing, since that's where it
       // should be sorted.
-      if (_.isArray(branchValue) && branchValue.length === 0)
+      if (isArray(branchValue) && branchValue.length === 0)
         branchValue = [undefined];
       _.each(branchValue, function (value) {
         // We should get here at least once: lookup functions return non-empty

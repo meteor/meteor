@@ -115,7 +115,7 @@ Tinytest.add("livedata stub - subscribe", function (test) {
   test.equal(message, {msg: 'sub', name: 'my_data', params: []});
 
   var reactivelyReady = false;
-  var autorunHandle = Meteor.autorun(function () {
+  var autorunHandle = Deps.autorun(function () {
     reactivelyReady = sub.ready();
   });
   test.isFalse(reactivelyReady);
@@ -123,7 +123,7 @@ Tinytest.add("livedata stub - subscribe", function (test) {
   // get the sub satisfied. callback fires.
   stream.receive({msg: 'ready', 'subs': [id]});
   test.isTrue(callback_fired);
-  Meteor.flush();
+  Deps.flush();
   test.isTrue(reactivelyReady);
   autorunHandle.stop();
 
@@ -165,7 +165,7 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
 
   // Subscribe to some subs.
   var stopperHandle;
-  var autorunHandle = Meteor.autorun(function () {
+  var autorunHandle = Deps.autorun(function () {
     conn.subscribe("foo", rFoo.get(), onReady(rFoo.get()));
     conn.subscribe("bar", rBar.get(), onReady(rBar.get()));
     conn.subscribe("completer", onReady("completer"));
@@ -216,7 +216,7 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   // subscription should *NOT* call its new onReady callback, because we only
   // call at most one onReady for a given reactively-saved subscription.
   rFoo.set("foo2");
-  Meteor.flush();
+  Deps.flush();
   test.length(stream.sent, 3);
 
   message = JSON.parse(stream.sent.shift());
@@ -246,7 +246,7 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   // Shut down the autorun. This should unsub us from all current subs at flush
   // time.
   autorunHandle.stop();
-  Meteor.flush();
+  Deps.flush();
 
   test.length(stream.sent, 4);
   // The order of unsubs here is not important.
@@ -1050,6 +1050,72 @@ Tinytest.add("livedata stub - unsent methods don't block quiescence", function (
 
 });
 
+Tinytest.add("livedata stub - reactive resub", function (test) {
+  var stream = new Meteor._StubStream();
+  var conn = newConnection(stream);
+
+  startAndConnect(test, stream);
+
+  var readiedSubs = {};
+  var markAllReady = function () {
+    // synthesize a "ready" message in response to any "sub"
+    // message with an id we haven't seen before
+    _.each(stream.sent, function (msg) {
+      msg = JSON.parse(msg);
+      if (msg.msg === 'sub' && ! _.has(readiedSubs, msg.id)) {
+        stream.receive({msg: 'ready', subs: [msg.id]});
+        readiedSubs[msg.id] = true;
+      }
+    });
+  };
+
+  var fooArg = new ReactiveVar('A');
+  var fooReady = 0;
+
+  var inner;
+  var outer = Deps.autorun(function () {
+    inner = Deps.autorun(function () {
+      conn.subscribe("foo-sub", fooArg.get(),
+                     function () { fooReady++; });
+    });
+  });
+
+  markAllReady();
+  test.equal(fooReady, 1);
+
+  // Rerun the inner autorun with different subscription
+  // arguments.  Detect the re-sub via onReady.
+  fooArg.set('B');
+  test.isTrue(inner.invalidated);
+  Deps.flush();
+  test.isFalse(inner.invalidated);
+  markAllReady();
+  test.equal(fooReady, 2);
+
+  // Rerun inner again with same args; should be no re-sub.
+  inner.invalidate();
+  test.isTrue(inner.invalidated);
+  Deps.flush();
+  test.isFalse(inner.invalidated);
+  markAllReady();
+  test.equal(fooReady, 2);
+
+  // Rerun outer!  Should still be no re-sub even though
+  // the inner computation is stopped and a new one is
+  // started.
+  outer.invalidate();
+  test.isTrue(inner.invalidated);
+  Deps.flush();
+  test.isFalse(inner.invalidated);
+  markAllReady();
+  test.equal(fooReady, 2);
+
+  // Change the subscription.  Now we should get an onReady.
+  fooArg.set('C');
+  Deps.flush();
+  markAllReady();
+  test.equal(fooReady, 3);
+});
 
 
 

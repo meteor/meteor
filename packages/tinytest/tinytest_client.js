@@ -1,7 +1,7 @@
 // Like Meteor._runTests, but runs the tests on both the client and
 // the server. Sets a 'server' flag on test results that came from the
 // server.
-Meteor._runTestsEverywhere = function (onReport, onComplete) {
+Meteor._runTestsEverywhere = function (onReport, onComplete, pathPrefix) {
   var runId = Random.id();
   var localComplete = false;
   var remoteComplete = false;
@@ -17,7 +17,7 @@ Meteor._runTestsEverywhere = function (onReport, onComplete) {
   Meteor._runTests(onReport, function () {
     localComplete = true;
     maybeDone();
-  });
+  }, pathPrefix);
 
   Meteor.default_connection.registerStore(Meteor._ServerTestResultsCollection, {
     update: function (msg) {
@@ -34,12 +34,12 @@ Meteor._runTestsEverywhere = function (onReport, onComplete) {
         report.server = true;
         onReport(report);
       });
-    }  
+    }
   });
 
   var handle = Meteor.subscribe(Meteor._ServerTestResultsSubscription, runId);
 
-  Meteor.call('tinytest/run', runId, function (error, result) {
+  Meteor.call('tinytest/run', runId, pathPrefix, function (error, result) {
     if (error)
       // XXX better report error
       throw new Error("Test server returned an error");

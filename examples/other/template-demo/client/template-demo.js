@@ -207,7 +207,7 @@ Template.circles.rendered = function () {
 
   if (! self.handle) {
     d3.select(self.node).append("rect");
-    self.handle = Meteor.autorun(function () {
+    self.handle = Deps.autorun(function () {
       var circle = d3.select(self.node).selectAll("circle")
         .data(Circles.find({group: data.group}).fetch(),
               function (d) { return d._id; });

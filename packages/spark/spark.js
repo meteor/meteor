@@ -22,7 +22,7 @@
 
 // XXX in landmark-demo, if Template.timer.created throws an exception,
 // then it is never called again, even if you push the 'create a
-// timer' button again. the problem is almost certainly in atFlush
+// timer' button again. the problem is almost certainly in afterFlush
 // (not hard to see what it is.)
 
 (function() {
@@ -352,7 +352,7 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
     finalized = true;
   };
 
-  Meteor._atFlush(function () {
+  Deps.afterFlush(function () {
     if (finalized)
       return;
 
@@ -724,9 +724,13 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
   var listener = getListener();
 
   var handlerMap = {}; // type -> [{selector, callback}, ...]
-  // iterate over eventMap, which has form {"type selector, ...": callback},
+  // iterate over eventMap, which has form {"type selector, ...": callbacks},
+  // callbacks can either be a fn, or an array of fns
   // and populate handlerMap
-  _.each(eventMap, function(callback, spec) {
+  _.each(eventMap, function(callbacks, spec) {
+    if ('function' === typeof callbacks) {
+      callbacks = [ callbacks ];
+    }
     var clauses = spec.split(/,\s+/);
     // iterate over clauses of spec, e.g. ['click .foo', 'click .bar']
     _.each(clauses, function (clause) {
@@ -738,7 +742,9 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
       var selector = parts.join(' ');
 
       handlerMap[type] = handlerMap[type] || [];
-      handlerMap[type].push({selector: selector, callback: callback});
+      _.each(callbacks, function(callback) {
+        handlerMap[type].push({selector: selector, callback: callback});
+      });
     });
   });
 
@@ -801,13 +807,13 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
           }
 
           // Found a matching handler. Call it.
-          var eventData = Spark.getDataContext(event.currentTarget);
+          var eventData = Spark.getDataContext(event.currentTarget) || {};
           var landmarkRange =
                 findParentOfType(Spark._ANNOTATION_LANDMARK, range);
           var landmark = (landmarkRange && landmarkRange.landmark);
 
           // Note that the handler can do arbitrary things, like call
-          // Meteor.flush() or otherwise remove and finalize parts of
+          // Deps.flush() or otherwise remove and finalize parts of
           // the DOM.  We can't assume `range` is valid past this point,
           // and we'll check the `finalized` flag at the top of the loop.
           var returnValue = callback.call(eventData, event, landmark);
@@ -837,20 +843,20 @@ Spark.isolate = function (htmlFunc) {
   var range;
   var firstRun = true;
   var retHtml;
-  Meteor.autorun(function (handle) {
+  Deps.autorun(function (handle) {
     if (firstRun) {
       retHtml = renderer.annotate(
         htmlFunc(), Spark._ANNOTATION_ISOLATE,
         function (r) {
           if (! r) {
-            // annotation not used; kill our context
+            // annotation not used; kill this autorun
             handle.stop();
           } else {
             range = r;
             range.finalize = function () {
               // Spark.finalize() was called on our range (presumably
               // because it was removed from the document.)  Kill
-              // this context and stop rerunning.
+              // this autorun.
               handle.stop();
             };
           }
@@ -925,6 +931,14 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
         _.bind(renderer.annotate, renderer) :
     function (html) { return html; };
 
+  // Templates should have access to data and methods added by the transformer,
+  // but observeChanges doesn't transform, so we have to do it here.
+  var transformedDoc = function (doc) {
+    if (cursor.getTransform && cursor.getTransform())
+      return cursor.getTransform()(EJSON.clone(doc));
+    return doc;
+  };
+
   // Render the initial contents. If we have a renderer, create a
   // range around each item as well as around the list, and save them
   // off for later.
@@ -935,7 +949,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   else {
     itemDict.forEach(function (elt) {
         html += maybeAnnotate(
-          itemFunc(elt.doc),
+          itemFunc(transformedDoc(elt.doc)),
           Spark._ANNOTATION_LIST_ITEM,
           function (range) {
             elt.liveRange = range;
@@ -976,7 +990,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   };
 
   var later = function (f) {
-    Meteor._atFlush(function () {
+    Deps.afterFlush(function () {
       if (! stopped)
         withEventGuard(f);
     });
@@ -988,7 +1002,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
       later(function () {
         var doc = EJSON.clone(fields);
         doc._id = id;
-        var frag = Spark.render(_.bind(itemFunc, null, doc));
+        var frag = Spark.render(_.bind(itemFunc, null, transformedDoc(doc)));
         DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
         var range = makeRange(Spark._ANNOTATION_LIST_ITEM, frag);
 
@@ -1038,7 +1052,8 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
         if (!elt)
           throw new Error("Unknown id for changed: " + id);
         applyChanges(elt.doc, fields);
-        Spark.renderToRange(elt.liveRange, _.bind(itemFunc, null, elt.doc));
+        Spark.renderToRange(elt.liveRange,
+                            _.bind(itemFunc, null, transformedDoc(elt.doc)));
       });
     }
   });
@@ -1155,15 +1170,9 @@ Spark.createLandmark = function (options, htmlFunc) {
     landmark = new Spark.Landmark;
     if (options.created) {
       // Run callback outside the current Spark.isolate's deps context.
-      // XXX Can't call run() on null, so this is a hack.  Running inside
-      // a fresh context wouldn't be equivalent.
-      var oldCx = Meteor.deps.Context.current;
-      Meteor.deps.Context.current = null;
-      try {
+      Deps.nonreactive(function () {
         options.created.call(landmark);
-      } finally {
-        Meteor.deps.Context.current = oldCx;
-      }
+      });
     }
   }
   notes.landmark = landmark;
