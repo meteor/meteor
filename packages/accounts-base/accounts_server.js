@@ -319,13 +319,8 @@
   Meteor.users.allow({
     // clients can modify the profile field of their own document, and
     // nothing else.
-    update: function (userId, docs, fields, modifier) {
-      // if there is more than one doc, at least one of them isn't our
-      // user record.
-      if (docs.length !== 1)
-        return false;
+    update: function (userId, user, fields, modifier) {
       // make sure it is our record
-      var user = docs[0];
       if (user._id !== userId)
         return false;
 
