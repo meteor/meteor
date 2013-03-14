@@ -1,6 +1,15 @@
 
 ## vNEXT
 
+## v0.5.9
+
+* Fix regression in 0.5.8 that prevented users from editing their own
+  profile. #809
+
+* Fix regression in 0.5.8 where `Meteor.loggingIn()` would not update
+  reactively. #811
+
+
 ## v0.5.8
 
 * Calls to the `update` and `remove` collection functions in untrusted code may
