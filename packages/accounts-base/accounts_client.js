@@ -17,7 +17,7 @@
     }
   };
   Meteor.loggingIn = function () {
-    loggingInDeps.changed();
+    Deps.depend(loggingInDeps);
     return loggingIn;
   };
 
