@@ -18,7 +18,7 @@
         arg,
         function (item) {
           return Spark.labelBranch(
-            item._id || Spark.UNIQUE_LABEL, function () {
+            (item && item._id) || Spark.UNIQUE_LABEL, function () {
               var html = Spark.isolate(_.bind(options.fn, null, item));
               return Spark.setDataContext(item, html);
             });
