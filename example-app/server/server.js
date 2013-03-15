@@ -96,6 +96,7 @@ Meteor.publish("secrets", function () {
     return Meteor.secrets.find();
   }
 
+  this.stop();
   return;
 });
 
@@ -107,6 +108,7 @@ Meteor.publish("users", function () {
     return Meteor.users.find({}, {fields: {emails: 1, profile: 1, roles: 1}});
   } 
 
+  this.stop();
   return;
 });
 
