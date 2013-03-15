@@ -90,6 +90,7 @@ Meteor.publish('secrets', function () {
   } else {
     
     // user not authorized. do not publish secrets
+    this.stop();
     return;
   
   }
