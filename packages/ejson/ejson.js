@@ -79,10 +79,7 @@ var builtinConverters = [
       return _.has(obj, '$type') && _.has(obj, '$value') && _.size(obj) === 2;
     },
     matchObject: function (obj) {
-      return obj &&
-        typeof obj.toJSONValue === 'function' &&
-        typeof obj.typeName === 'function' &&
-        _.has(customTypes, obj.typeName());
+      return EJSON._isCustomType(obj);
     },
     toJSONValue: function (obj) {
       return {$type: obj.typeName(), $value: obj.toJSONValue()};
@@ -95,12 +92,22 @@ var builtinConverters = [
   }
 ];
 
+EJSON._isCustomType = function (obj) {
+  return obj &&
+    typeof obj.toJSONValue === 'function' &&
+    typeof obj.typeName === 'function' &&
+    _.has(customTypes, obj.typeName());
+};
+
 
 //for both arrays and objects, in-place modification.
 var adjustTypesToJSONValue =
 EJSON._adjustTypesToJSONValue = function (obj) {
   if (obj === null)
-    return;
+    return null;
+  var maybeChanged = toJSONValueHelper(obj);
+  if (maybeChanged !== undefined)
+    return maybeChanged;
   _.each(obj, function (value, key) {
     if (typeof value !== 'object' && value !== undefined)
       return; // continue
@@ -113,6 +120,7 @@ EJSON._adjustTypesToJSONValue = function (obj) {
     // at this level.  recurse.
     adjustTypesToJSONValue(value);
   });
+  return obj;
 };
 
 // Either return the JSON-compatible version of the argument, or undefined (if
@@ -138,11 +146,16 @@ EJSON.toJSONValue = function (item) {
   return item;
 };
 
-//for both arrays and objects
+//for both arrays and objects. Tries its best to just
+// use the object you hand it, but may return something
+// different if the object you hand it itself needs changing.
 var adjustTypesFromJSONValue =
 EJSON._adjustTypesFromJSONValue = function (obj) {
   if (obj === null)
-    return;
+    return null;
+  var maybeChanged = fromJSONValueHelper(obj);
+  if (maybeChanged !== obj)
+    return maybeChanged;
   _.each(obj, function (value, key) {
     if (typeof value === 'object') {
       var changed = fromJSONValueHelper(value);
@@ -155,6 +168,7 @@ EJSON._adjustTypesFromJSONValue = function (obj) {
       adjustTypesFromJSONValue(value);
     }
   });
+  return obj;
 };
 
 // Either return the argument changed to have the non-json
@@ -200,7 +214,7 @@ EJSON.parse = function (item) {
 
 EJSON.isBinary = function (obj) {
   return (typeof Uint8Array !== 'undefined' && obj instanceof Uint8Array) ||
-    obj.$Uint8ArrayPolyfill;
+    (obj && obj.$Uint8ArrayPolyfill);
 };
 
 EJSON.equals = function (a, b, options) {
@@ -208,6 +222,8 @@ EJSON.equals = function (a, b, options) {
   var keyOrderSensitive = !!(options && options.keyOrderSensitive);
   if (a === b)
     return true;
+  if (!a || !b) // if either one is falsy, they'd have to be === to be equal
+    return false;
   if (!(typeof a === 'object' && typeof b === 'object'))
     return false;
   if (a instanceof Date && b instanceof Date)
@@ -223,7 +239,6 @@ EJSON.equals = function (a, b, options) {
   }
   if (typeof (a.equals) === 'function')
     return a.equals(b, options);
-  // fall back to structural equality.
   if (a instanceof Array) {
     if (!(b instanceof Array))
       return false;
@@ -235,25 +250,41 @@ EJSON.equals = function (a, b, options) {
     }
     return true;
   }
+  // fall back to structural equality of objects
+  var ret;
   if (keyOrderSensitive) {
-      var b_keys = [];
-      for (var x in b)
-        b_keys.push(x);
-      i = 0;
-      for (var x in a) {
-        if (i >= b_keys.length)
-          return false;
-        if (x !== b_keys[i])
-          return false;
-        if (!EJSON.equals(a[x], b[b_keys[i]], options))
-          return false;
-        i++;
-      }
-      if (i !== b_keys.length)
+    var bKeys = [];
+    _.each(b, function (val, x) {
+        bKeys.push(x);
+    });
+    i = 0;
+    ret = _.all(a, function (val, x) {
+      if (i >= bKeys.length) {
         return false;
+      }
+      if (x !== bKeys[i]) {
+        return false;
+      }
+      if (!EJSON.equals(val, b[bKeys[i]], options)) {
+        return false;
+      }
+      i++;
       return true;
+    });
+    return ret && i === bKeys.length;
   } else {
-    return _.isEqual(a, b);
+    i = 0;
+    ret = _.all(a, function (val, key) {
+      if (!_.has(b, key)) {
+        return false;
+      }
+      if (!EJSON.equals(val, b[key], options)) {
+        return false;
+      }
+      i++;
+      return true;
+    });
+    return ret && _.size(b) === i;
   }
 };
 
@@ -284,8 +315,9 @@ EJSON.clone = function (v) {
   }
   // handle other objects
   ret = {};
-  for (var key in v)
-    ret[key] = EJSON.clone(v[key]);
+  _.each(v, function (value, key) {
+    ret[key] = EJSON.clone(value);
+  });
   return ret;
 };
 })();

@@ -45,8 +45,8 @@ create a nested tree of separate files, or anything in between.
 
 Files outside the `client`, `server` and `tests` subdirectories are loaded on
 both the client and the server!  That's the place for model definitions and
-other functions.  Meteor provides the variables [`isClient` and
-`isServer`](#meteor_isclient) so that your code can alter its behavior depending
+other functions.  Meteor provides the variables [`isClient`](#meteor_isclient) and
+[`isServer`](#meteor_isserver) so that your code can alter its behavior depending
 on whether it's running on the client or the server. (Files in directories named
 `tests` are not loaded anywhere.)
 
@@ -80,7 +80,7 @@ for images, `favicon.ico`, `robots.txt`, and anything else.
 It is best to write your application in such a way that it is
 insensitive to the order in which files are loaded, for example by
 using [Meteor.startup](#meteor_startup), or by moving load order
-sensitive code into Smart Packages, which can explicitly control both
+sensitive code into [Smart Packages](#smartpackages), which can explicitly control both
 the load order of their contents and their load order with respect to
 other packages. However sometimes load order dependencies in your
 application are unavoidable. The JavaScript and CSS files in an
@@ -153,7 +153,7 @@ can be used from both client and server code.
     // server: populate collections with some initial documents
     Rooms.insert({name: "Conference Room A"});
     var myRooms = Rooms.find({}).fetch();
-    Messages.insert({text: "Hello world", room: myRooms[0].id});
+    Messages.insert({text: "Hello world", room: myRooms[0]._id});
     Parties.insert({name: "Super Bowl Party"});
 
 Each document set is defined by a publish function on the server.  The
@@ -164,7 +164,7 @@ case is to publish a database query.
     // server: publish all room documents
     Meteor.publish("all-rooms", function () {
       return Rooms.find(); // everything
-    );
+    });
 
     // server: publish all messages for a given room
     Meteor.publish("messages", function (roomId) {
@@ -237,13 +237,16 @@ modify data, those modifications can run locally without waiting for the
 confirmation from the server, while still giving the server final say
 over the requested change.
 
+<h3 id="dataandsecurity-authentication">Authentication and user accounts</h3>
+
 Meteor includes [Meteor Accounts](#accounts_api), a state-of-the-art
-authentication system. It features secure password login using the [Secure
-Remote Password
-protocol](http://en.wikipedia.org/wiki/Secure_Remote_Password_protocol), and
-integration with external services including Facebook, GitHub, Google, Twitter,
-and Weibo. Meteor Accounts defines a [`Meteor.users`](#meteor_users) collection
-where developers can store application-specific user data.
+authentication system. It features secure password login using the
+[Secure Remote Password
+protocol](http://en.wikipedia.org/wiki/Secure_Remote_Password_protocol),
+and integration with external services including Facebook, GitHub,
+Google, Meetup, Twitter, and Weibo. Meteor Accounts defines a
+[`Meteor.users`](#meteor_users) collection where developers can store
+application-specific user data.
 
 Meteor also includes pre-built forms for common tasks like login, signup,
 password change, and password reset emails. You can add [Accounts
@@ -271,7 +274,7 @@ programming](http://en.wikipedia.org/wiki/Reactive_programming). This means that
 you can write your code in a simple imperative style, and the result will be
 automatically recalculated whenever data changes that your code depends on.
 
-    Meteor.autorun(function () {
+    Deps.autorun(function () {
       Meteor.subscribe("messages", Session.get("currentRoomId"));
     });
 
@@ -281,27 +284,26 @@ If the value of `Session.get("currentRoomId")` changes for any reason, the
 function will be automatically re-run, setting up a new subscription that
 replaces the old one.
 
-This automatic recomputation is achieved by a cooperation
-between `Session` and `Meteor.autorun`.
-Methods like `Meteor.autorun` establish a "reactive
-context" inside of which data dependencies are tracked, and they are
-prepared to re-run their function argument as necessary.  Data
-providers like `Session`, on the other hand, make note of
-the context they are called from and what data was requested, and they
-are prepared to send an invalidation signal when the data changes.
+This automatic recomputation is achieved by a cooperation between
+`Session` and `Deps.autorun`.  `Deps.autorun` performs an arbitrary "reactive
+computation" inside of which data dependencies are tracked, and it
+will re-run its function argument as necessary.  Data providers like
+`Session`, on the other hand, make note of the computation they are
+called from and what data was requested, and they are prepared to send
+an invalidation signal to the computation when the data changes.
 
-This simple pattern (reactive context + reactive data source) has wide
+This simple pattern (reactive computation + reactive data source) has wide
 applicability.  Above, the programmer is saved from writing
 unsubscribe/resubscribe calls and making sure they are called at the
 right time.  In general, Meteor can eliminate whole classes of data
 propagation code which would otherwise clog up your application with
 error-prone logic.
 
-These Meteor functions run your code in a reactive context:
+These Meteor functions run your code as a reactive computation:
 
 * [Templates](#templates)
 * [`Meteor.render`](#meteor_render) and [`Meteor.renderList`](#meteor_renderlist)
-* [`Meteor.autorun`](#meteor_autorun)
+* [`Deps.autorun`](#deps_autorun)
 
 And the reactive data sources that can trigger changes are:
 
@@ -313,15 +315,18 @@ And the reactive data sources that can trigger changes are:
 * [`Meteor.userId`](#meteor_userid)
 * [`Meteor.loggingIn`](#meteor_loggingin)
 
-In addition, calling [`Meteor.subscribe`](#meteor_subscribe) in a reactive
-context sets up a subscription which is automatically stopped when the context
-is invalidated, as shown above.
+In addition, the following functions which return an object with a
+`stop` method, if called from a reactive computation, are stopped when
+the computation is rerun or stopped:
+
+* [`Deps.autorun`](#deps_autorun) (nested)
+* [`Meteor.subscribe`](#meteor_subscribe)
+* [`observe()`](#observe) and [`observeChanges()`](#observe_changes) on cursors
 
 Meteor's
 [implementation](https://github.com/meteor/meteor/blob/master/packages/deps/deps.js)
-of reactivity is short and sweet, about 50 lines of code.  You can hook into it
-yourself to add new reactive contexts or data sources, using the
-[`Meteor.deps`](#meteor_deps) module.
+is a package called [`Deps`](#deps) that is fairly short and straightforward.
+You can use it yourself to implement new reactive data sources.
 
 {{/better_markdown}}
 </template>
@@ -337,7 +342,7 @@ that it will update automatically to track changes in the data used to
 generate it.
 
 This optional feature works with any HTML templating library, or even
-with HTML you generate manually from Javascript. Here's an example:
+with HTML you generate manually from JavaScript. Here's an example:
 
     var fragment = Meteor.render(
       function () {
@@ -354,7 +359,7 @@ function that returns some HTML as a string. It returns an auto-updating
 function, it is re-run. The DOM nodes in the `DocumentFragment` then
 update themselves in-place, no matter where they were inserted on the
 page. It's completely automatic. [`Meteor.render`](#meteor_render) uses
-[reactive contexts](#reactivity) to discover what data is used by the
+a [reactive computation](#reactivity) to discover what data is used by the
 rendering function.
 
 Most of the time, though, you won't call these functions directly
@@ -368,7 +373,7 @@ won't change out from underneath you. Sometimes you want the opposite
 behavior. For example, if you've just inserted a record in the
 database, you might want to force the DOM to update so you can find
 the new elements using a library like jQuery. In that case, call
-[`Meteor.flush`](#meteor_flush) to bring the DOM up to date
+[`Deps.flush`](#deps_flush) to bring the DOM up to date
 immediately.
 
 When live-updating DOM elements are taken off the screen, they are automatically
@@ -377,8 +382,8 @@ queries are stopped, and they stop updating. For this reason, you never have to
 worry about the [zombie
 templates](http://lostechies.com/derickbailey/2011/09/15/zombies-run-managing-page-transitions-in-backbone-apps/)
 that plague hand-written update logic. To protect your elements from cleanup,
-just make sure that they on-screen before your code returns to the event loop,
-or before any call you make to [`Meteor.flush`](#meteor_flush).
+just make sure that they are on-screen before your code returns to the event loop,
+or before any call you make to [`Deps.flush`](#deps_flush).
 
 Another thorny problem in hand-written applications is element
 preservation. Suppose the user is typing text into an `<input>`
@@ -518,7 +523,7 @@ the data context of the element that triggered the event.
     <!-- myapp.js -->
     Template.playerScore.events({
       'click .givePoints': function () {
-        Users.update({_id: this._id}, {$inc: {score: 2}});
+        Users.update(this._id, {$inc: {score: 2}});
       }
     });
 
@@ -574,10 +579,12 @@ Meteor environment in arbitrary ways. Some examples of packages are:
   it's faster to add a package.
 
 * The [underscore](#underscore) package extends both the
-  client and server environments.  Many of the core Meteor features,
-  including Minimongo, the Session object, and reactive Handlebars
-  templates, are implemented as internal packages automatically
-  included with every Meteor application.
+  client and server environments.
+
+Many of the core Meteor features,
+including Minimongo, the Session object, and reactive Handlebars
+templates, are implemented as internal packages automatically
+included with every Meteor application.
 
 You can see a list of available packages
 with [`meteor list`](#meteorlist), add packages to your project

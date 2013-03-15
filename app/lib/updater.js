@@ -2,7 +2,7 @@
 // true. This will make it act as if it is at version 0.1.0 and use test URLs
 // for update checks.
 var testingUpdater = false;
-exports.CURRENT_VERSION = testingUpdater ? "0.1.0" : "0.5.7";
+exports.CURRENT_VERSION = testingUpdater ? "0.1.0" : "0.5.9";
 
 var fs = require("fs");
 var http = require("http");

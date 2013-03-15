@@ -58,7 +58,7 @@ LocalCollection.MinimongoError.prototype = new Error;
 //   (in the first form you're beholden to key enumeration order in
 //   your javascript VM)
 //
-// reactive: if given, and false, don't register with Meteor.deps (default
+// reactive: if given, and false, don't register with Deps (default
 // is true)
 //
 // XXX possibly should support retrieving a subset of fields? and
@@ -97,14 +97,18 @@ LocalCollection.Cursor = function (collection, selector, options) {
   }
   self.skip = options.skip;
   self.limit = options.limit;
+  if (options.transform && typeof Deps !== "undefined")
+    self._transform = Deps._makeNonreactive(options.transform);
+  else
+    self._transform = options.transform;
 
   // db_objects is a list of the objects that match the cursor. (It's always a
   // list, never an object: LocalCollection.Cursor is always ordered.)
   self.db_objects = null;
   self.cursor_pos = 0;
 
-  // by default, queries register w/ Meteor.deps when it is available.
-  if (typeof Meteor === "object" && Meteor.deps)
+  // by default, queries register w/ Deps when it is available.
+  if (typeof Deps !== "undefined")
     self.reactive = (options.reactive === undefined) ? true : options.reactive;
 };
 
@@ -140,14 +144,23 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
     self.db_objects = self._getRawObjects(true);
 
   if (self.reactive)
-    self._markAsReactive({
-                          addedBefore: true,
-                          removed: true,
-                          changed: true,
-                          movedBefore: true});
+    self._depend({
+      addedBefore: true,
+      removed: true,
+      changed: true,
+      movedBefore: true});
 
-  while (self.cursor_pos < self.db_objects.length)
-    callback(EJSON.clone(self.db_objects[self.cursor_pos++]));
+  while (self.cursor_pos < self.db_objects.length) {
+    var elt = EJSON.clone(self.db_objects[self.cursor_pos++]);
+    if (self._transform)
+      elt = self._transform(elt);
+    callback(elt);
+  }
+};
+
+LocalCollection.Cursor.prototype.getTransform = function () {
+  var self = this;
+  return self._transform;
 };
 
 LocalCollection.Cursor.prototype.map = function (callback) {
@@ -172,7 +185,7 @@ LocalCollection.Cursor.prototype.count = function () {
   var self = this;
 
   if (self.reactive)
-    self._markAsReactive({added: true, removed: true});
+    self._depend({added: true, removed: true});
 
   if (self.db_objects === null)
     self.db_objects = self._getRawObjects(true);
@@ -214,7 +227,7 @@ LocalCollection.LiveResultsSet = function () {};
 _.extend(LocalCollection.Cursor.prototype, {
   observe: function (options) {
     var self = this;
-    return  LocalCollection._observeFromObserveChanges(self, options);
+    return LocalCollection._observeFromObserveChanges(self, options);
   },
   observeChanges: function (options) {
     var self = this;
@@ -224,10 +237,8 @@ _.extend(LocalCollection.Cursor.prototype, {
     if (!ordered && (self.skip || self.limit))
       throw new Error("must use ordered observe with skip or limit");
 
-    var qid = self.collection.next_qid++;
-
     // XXX merge this object w/ "this" Cursor.  they're the same.
-    var query = self.collection.queries[qid] = {
+    var query = {
       selector_f: self.selector_f, // not fast pathed
       sort_f: ordered && self.sort_f,
       results_snapshot: null,
@@ -235,6 +246,14 @@ _.extend(LocalCollection.Cursor.prototype, {
       cursor: this,
       observeChanges: options.observeChanges
     };
+    var qid;
+
+    // Non-reactive queries call added[Before] and then never call anything
+    // else.
+    if (self.reactive) {
+      qid = self.collection.next_qid++;
+      self.collection.queries[qid] = query;
+    }
     query.results = self._getRawObjects(ordered);
     if (self.collection.paused)
       query.results_snapshot = (ordered ? [] : {});
@@ -273,9 +292,22 @@ _.extend(LocalCollection.Cursor.prototype, {
     _.extend(handle, {
       collection: self.collection,
       stop: function () {
-        delete self.collection.queries[qid];
+        if (self.reactive)
+          delete self.collection.queries[qid];
       }
     });
+
+    if (self.reactive && Deps.active) {
+      // XXX in many cases, the same observe will be recreated when
+      // the current autorun is rerun.  we could save work by
+      // letting it linger across rerun and potentially get
+      // repurposed if the same observe is performed, using logic
+      // similar to that of Meteor.subscribe.
+      Deps.onInvalidate(function () {
+        handle.stop();
+      });
+    }
+
     return handle;
   }
 });
@@ -339,27 +371,23 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered) {
 
 // XXX Maybe we need a version of observe that just calls a callback if
 // anything changed.
-LocalCollection.Cursor.prototype._markAsReactive = function (options) {
+LocalCollection.Cursor.prototype._depend = function (changers) {
   var self = this;
 
-  var context = Meteor.deps.Context.current;
+  if (Deps.active) {
+    var v = new Deps.Dependency;
+    Deps.depend(v);
+    var notifyChange = _.bind(v.changed, v);
 
-  if (context) {
-    var invalidate = _.bind(context.invalidate, context);
-    var handle;
-    var newOptions = {_suppress_initial: true};
+    var options = {_suppress_initial: true};
     _.each(['added', 'changed', 'removed', 'addedBefore', 'movedBefore'],
            function (fnName) {
-      if (options[fnName])
-        newOptions[fnName] = invalidate;
-    });
-    handle = self.observeChanges(newOptions);
+             if (changers[fnName])
+               options[fnName] = notifyChange;
+           });
 
-    // XXX in many cases, the query will be immediately
-    // recreated. so we might want to let it linger for a little
-    // while and repurpose it if it comes back. this will save us
-    // work because we won't have to redo the initial find.
-    context.onInvalidate(handle.stop);
+    // observeChanges will stop() when this computation is invalidated
+    self.observeChanges(options);
   }
 };
 
@@ -391,14 +419,15 @@ LocalCollection.prototype.insert = function (doc) {
     var query = self.queries[qid];
     if (query.selector_f(doc)) {
       if (query.cursor.skip || query.cursor.limit)
-        queriesToRecompute.push(query);
+        queriesToRecompute.push(qid);
       else
         LocalCollection._insertInResults(query, doc);
     }
   }
 
-  _.each(queriesToRecompute, function (query) {
-    LocalCollection._recomputeResults(query);
+  _.each(queriesToRecompute, function (qid) {
+    if (self.queries[qid])
+      LocalCollection._recomputeResults(self.queries[qid]);
   });
 };
 
@@ -432,12 +461,12 @@ LocalCollection.prototype.remove = function (selector) {
   for (var i = 0; i < remove.length; i++) {
     var removeId = remove[i];
     var removeDoc = self.docs[removeId];
-    _.each(self.queries, function (query) {
+    _.each(self.queries, function (query, qid) {
       if (query.selector_f(removeDoc)) {
         if (query.cursor.skip || query.cursor.limit)
-          queriesToRecompute.push(query);
+          queriesToRecompute.push(qid);
         else
-          queryRemove.push([query, removeDoc]);
+          queryRemove.push({qid: qid, doc: removeDoc});
       }
     });
     self._saveOriginal(removeId, removeDoc);
@@ -445,11 +474,15 @@ LocalCollection.prototype.remove = function (selector) {
   }
 
   // run live query callbacks _after_ we've removed the documents.
-  for (var i = 0; i < queryRemove.length; i++) {
-    LocalCollection._removeFromResults(queryRemove[i][0], queryRemove[i][1]);
-  }
-  _.each(queriesToRecompute, function (query) {
-    LocalCollection._recomputeResults(query);
+  _.each(queryRemove, function (remove) {
+    var query = self.queries[remove.qid];
+    if (query)
+      LocalCollection._removeFromResults(query, remove.doc);
+  });
+  _.each(queriesToRecompute, function (qid) {
+    var query = self.queries[qid];
+    if (query)
+      LocalCollection._recomputeResults(query);
   });
 };
 
@@ -488,8 +521,10 @@ LocalCollection.prototype.update = function (selector, mod, options) {
   }
 
   _.each(recomputeQids, function (dummy, qid) {
-    LocalCollection._recomputeResults(self.queries[qid],
-                                      qidToOriginalResults[qid]);
+    var query = self.queries[qid];
+    if (query)
+      LocalCollection._recomputeResults(query,
+                                        qidToOriginalResults[qid]);
   });
 };
 
@@ -584,16 +619,19 @@ LocalCollection._removeFromResults = function (query, doc) {
 LocalCollection._updateInResults = function (query, doc, old_doc) {
   if (!EJSON.equals(doc._id, old_doc._id))
     throw new Error("Can't change a doc's _id while updating");
+  var changedFields = LocalCollection._makeChangedFields(doc, old_doc);
   if (!query.ordered) {
-    query.changed(doc._id, LocalCollection._makeChangedFields(doc, old_doc));
-    query.results[LocalCollection._idStringify(doc._id)] = doc;
+    if (!_.isEmpty(changedFields)) {
+      query.changed(doc._id, changedFields);
+      query.results[LocalCollection._idStringify(doc._id)] = doc;
+    }
     return;
   }
 
   var orig_idx = LocalCollection._findInOrderedResults(query, doc);
 
-
-  query.changed(doc._id, LocalCollection._makeChangedFields(doc, old_doc));
+  if (!_.isEmpty(changedFields))
+    query.changed(doc._id, changedFields);
   if (!query.sort_f)
     return;
 
@@ -800,6 +838,9 @@ LocalCollection._makeChangedFields = function (newDoc, oldDoc) {
 };
 
 LocalCollection._observeFromObserveChanges = function (cursor, callbacks) {
+  var transform = cursor.getTransform();
+  if (!transform)
+    transform = function (doc) {return doc;};
   if (callbacks.addedAt && callbacks.added)
     throw new Error("Please specify only one of added() and addedAt()");
   if (callbacks.changedAt && callbacks.changed)
@@ -808,13 +849,13 @@ LocalCollection._observeFromObserveChanges = function (cursor, callbacks) {
     throw new Error("Please specify only one of removed() and removedAt()");
   if (callbacks.addedAt || callbacks.movedTo ||
       callbacks.changedAt || callbacks.removedAt)
-    return LocalCollection._observeOrderedFromObserveChanges(cursor, callbacks);
+    return LocalCollection._observeOrderedFromObserveChanges(cursor, callbacks, transform);
   else
-    return LocalCollection._observeUnorderedFromObserveChanges(cursor, callbacks);
+    return LocalCollection._observeUnorderedFromObserveChanges(cursor, callbacks, transform);
 };
 
 LocalCollection._observeUnorderedFromObserveChanges =
-    function (cursor, callbacks) {
+    function (cursor, callbacks, transform) {
   var docs = {};
   var suppressed = !!callbacks._suppress_initial;
   var handle = cursor.observeChanges({
@@ -823,7 +864,7 @@ LocalCollection._observeUnorderedFromObserveChanges =
       var doc = EJSON.clone(fields);
       doc._id = id;
       docs[strId] = doc;
-      suppressed || callbacks.added && callbacks.added(doc);
+      suppressed || callbacks.added && callbacks.added(transform(doc));
     },
     changed: function (id, fields) {
       var strId = LocalCollection._idStringify(id);
@@ -831,13 +872,13 @@ LocalCollection._observeUnorderedFromObserveChanges =
       var oldDoc = EJSON.clone(doc);
       // writes through to the doc set
       LocalCollection._applyChanges(doc, fields);
-      suppressed || callbacks.changed && callbacks.changed(doc, oldDoc);
+      suppressed || callbacks.changed && callbacks.changed(transform(doc), transform(oldDoc));
     },
     removed: function (id) {
       var strId = LocalCollection._idStringify(id);
       var doc = docs[strId];
       delete docs[strId];
-      suppressed || callbacks.removed && callbacks.removed(doc);
+      suppressed || callbacks.removed && callbacks.removed(transform(doc));
     }
   });
   suppressed = false;
@@ -845,7 +886,7 @@ LocalCollection._observeUnorderedFromObserveChanges =
 };
 
 LocalCollection._observeOrderedFromObserveChanges =
-    function (cursor, callbacks) {
+    function (cursor, callbacks, transform) {
   var docs = new OrderedDict(LocalCollection._idStringify);
   var suppressed = !!callbacks._suppress_initial;
   var handle = cursor.observeChanges({
@@ -856,9 +897,10 @@ LocalCollection._observeOrderedFromObserveChanges =
       if (!suppressed) {
         if (callbacks.addedAt) {
           var index = docs.indexOf(id);
-          callbacks.addedAt(EJSON.clone(doc), index, before);
+          callbacks.addedAt(transform(EJSON.clone(doc)),
+                            index, before);
         } else if (callbacks.added) {
-          callbacks.added(EJSON.clone(doc));
+          callbacks.added(transform(EJSON.clone(doc)));
         }
       }
     },
@@ -871,9 +913,11 @@ LocalCollection._observeOrderedFromObserveChanges =
       LocalCollection._applyChanges(doc, fields);
       if (callbacks.changedAt) {
         var index = docs.indexOf(id);
-        callbacks.changedAt(EJSON.clone(doc), oldDoc, index);
+        callbacks.changedAt(transform(EJSON.clone(doc)),
+                            transform(oldDoc), index);
       } else if (callbacks.changed) {
-        callbacks.changed(EJSON.clone(doc), oldDoc);
+        callbacks.changed(transform(EJSON.clone(doc)),
+                          transform(oldDoc));
       }
     },
     movedBefore: function (id, before) {
@@ -885,9 +929,9 @@ LocalCollection._observeOrderedFromObserveChanges =
       docs.moveBefore(id, before ? before : null);
       if (callbacks.movedTo) {
         var to = docs.indexOf(id);
-        callbacks.movedTo(EJSON.clone(doc), from, to);
+        callbacks.movedTo(transform(EJSON.clone(doc)), from, to);
       } else if (callbacks.moved) {
-        callbacks.moved(EJSON.clone(doc));
+        callbacks.moved(transform(EJSON.clone(doc)));
       }
 
     },
@@ -897,8 +941,8 @@ LocalCollection._observeOrderedFromObserveChanges =
       if (callbacks.removedAt)
         index = docs.indexOf(id);
       docs.remove(id);
-      callbacks.removedAt && callbacks.removedAt(doc, index);
-      callbacks.removed && callbacks.removed(doc);
+      callbacks.removedAt && callbacks.removedAt(transform(doc), index);
+      callbacks.removed && callbacks.removed(transform(doc));
     }
   });
   suppressed = false;

@@ -23,6 +23,7 @@ if (Meteor.isClient) (function () {
   // the test so when we use the 'debug' link in the tests, they get new
   // values and the tests don't fail.
   var username, username2, username3;
+  var userId1, userId3;
   var email;
   var password, password2, password3;
 
@@ -42,6 +43,10 @@ if (Meteor.isClient) (function () {
         {username: username, email: email, password: password},
         loggedInAs(username, test, expect));
     },
+    function (test, expect) {
+      userId1 = Meteor.userId();
+      test.notEqual(userId1, null);
+    },
     logoutStep,
     function (test, expect) {
       Meteor.loginWithPassword(username, password,
@@ -54,7 +59,7 @@ if (Meteor.isClient) (function () {
       // Set up a reactive context that only refreshes when Meteor.user() is
       // invalidated.
       var loaded = false;
-      var handle = Meteor.autorun(function () {
+      var handle = Deps.autorun(function () {
         if (Meteor.user() && Meteor.user().emails)
           loaded = true;
       });
@@ -65,8 +70,8 @@ if (Meteor.isClient) (function () {
         test.notEqual(Meteor.userId(), null);
         // By the time of the login callback, the user should be loaded.
         test.isTrue(Meteor.user().emails);
-        // Flushing should get us the autorun as well.
-        Meteor.flush();
+        // Flushing should get us the rerun as well.
+        Deps.flush();
         test.isTrue(loaded);
         handle.stop();
       }));
@@ -191,7 +196,50 @@ if (Meteor.isClient) (function () {
         test.equal(err, undefined);
       }));
     },
+    // test the default Meteor.users allow rule. This test properly belongs in
+    // accounts-base/accounts_tests.js, but this is where the tests that
+    // actually log in are.
     function(test, expect) {
+      userId3 = Meteor.userId();
+      test.notEqual(userId3, null);
+      // Can't update fields other than profile.
+      Meteor.users.update(
+        userId3, {$set: {disallowed: true, 'profile.updated': 42}},
+        expect(function (err) {
+          test.isTrue(err);
+          test.equal(err.error, 403);
+          test.isFalse(_.has(Meteor.user(), 'disallowed'));
+          test.isFalse(_.has(Meteor.user().profile, 'updated'));
+        }));
+    },
+    function(test, expect) {
+      // Can't update another user.
+      Meteor.users.update(
+        userId1, {$set: {'profile.updated': 42}},
+        expect(function (err) {
+          test.isTrue(err);
+          test.equal(err.error, 403);
+        }));
+    },
+    function(test, expect) {
+      // Can't update using a non-ID selector. (This one is thrown client-side.)
+      test.throws(function () {
+        Meteor.users.update(
+          {username: username3}, {$set: {'profile.updated': 42}});
+      });
+      test.isFalse(_.has(Meteor.user().profile, 'updated'));
+    },
+    function(test, expect) {
+      // Can update own profile using ID.
+      Meteor.users.update(
+        userId3, {$set: {'profile.updated': 42}},
+        expect(function (err) {
+          test.isFalse(err);
+          test.equal(42, Meteor.user().profile.updated);
+        }));
+    },
+    function(test, expect) {
+      // Test that even with no published fields, we still have a document.
       Meteor.call('clearUsernameAndProfile', expect(function() {
         test.isTrue(Meteor.userId());
         var user = Meteor.user();

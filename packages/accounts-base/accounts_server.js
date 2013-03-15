@@ -122,9 +122,19 @@
     return user;
   };
   Accounts.insertUserDoc = function (options, user) {
-    // add created at timestamp (and protect passed in user object from
-    // modification)
-    user = _.extend({createdAt: +(new Date)}, user);
+    // - clone user document, to protect from modification
+    // - add createdAt timestamp
+    // - prepare an _id, so that you can modify other collections (eg
+    // create a first task for every new user)
+    //
+    // XXX If the onCreateUser or validateNewUser hooks fail, we might
+    // end up having modified some other collection
+    // inappropriately. The solution is probably to have onCreateUser
+    // accept two callbacks - one that gets called before inserting
+    // the user document (in which you can modify its contents), and
+    // one that gets called after (in which you should change other
+    // collections)
+    user = _.extend({createdAt: +(new Date), _id: Random.id()}, user);
 
     var result = {};
     if (options.generateLoginToken) {
@@ -309,13 +319,8 @@
   Meteor.users.allow({
     // clients can modify the profile field of their own document, and
     // nothing else.
-    update: function (userId, docs, fields, modifier) {
-      // if there is more than one doc, at least one of them isn't our
-      // user record.
-      if (docs.length !== 1)
-        return false;
+    update: function (userId, user, fields, modifier) {
       // make sure it is our record
-      var user = docs[0];
       if (user._id !== userId)
         return false;
 

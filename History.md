@@ -1,6 +1,92 @@
 
 ## vNEXT
 
+## v0.5.9
+
+* Fix regression in 0.5.8 that prevented users from editing their own
+  profile. #809
+
+* Fix regression in 0.5.8 where `Meteor.loggingIn()` would not update
+  reactively. #811
+
+
+## v0.5.8
+
+* Calls to the `update` and `remove` collection functions in untrusted code may
+  no longer use arbitrary selectors. You must specify a single document ID when
+  invoking these functions from the client (other than in a method stub).
+
+  You may still use other selectors when calling `update` and `remove` on the
+  server and from client method stubs, so you can replace calls that are no
+  longer supported (eg, in event handlers) with custom method calls.
+
+  The corresponding `update` and `remove` callbacks passed to `allow` and `deny`
+  now take a single document instead of an array.
+
+* Add new `appcache` package. Add this package to your project to speed
+  up page load and make hot code reload smoother using the HTML5
+  AppCache API. See http://docs.meteor.com/#appcache for details.
+
+* Rewrite reactivity library. `Meteor.deps` is now `Deps` and has a new
+  API. `Meteor.autorun` and `Meteor.flush` are now called `Deps.autorun` and
+  `Deps.flush` (the old names still work for now). The other names under
+  `Meteor.deps` such as `Context` no longer exist. The new API is documented at
+  http://docs.meteor.com/#deps
+
+* You can now provide a `transform` option to collections, which is a
+  function that documents coming out of that collection are passed
+  through. `find`, `findOne`, `allow`, and `deny` now take `transform` options,
+  which may override the Collection's `transform`.  Specifying a `transform`
+  of `null` causes you to receive the documents unmodified.
+
+* Publish functions may now return an array of cursors to publish. Currently,
+  the cursors must all be from different collections. #716
+
+* User documents have id's when onCreateUser and validateNewUser hooks run.
+
+* Encode and store custom EJSON types in MongoDB.
+
+* Support literate CoffeeScript files with the extension `.litcoffee`. #766
+
+* Add new login service provider for Meetup.com in `accounts-meetup` package.
+
+* If you call `observe` or `observeChanges` on a cursor created with the
+  `reactive: false` option, it now only calls initial add callbacks and
+  does not continue watching the query. #771
+
+* In an event handler, if the data context is falsey, default it to `{}`
+  rather than to the global object. #777
+
+* Allow specifying multiple event handlers for the same selector. #753
+
+* Revert caching header change from 0.5.5. This fixes image flicker on redraw.
+
+* Stop making `Session` available on the server; it's not useful there. #751
+
+* Force URLs in stack traces in browser consoles to be hyperlinks. #725
+
+* Suppress spurious `changed` callbacks with empty `fields` from
+  `Cursor.observeChanges`.
+
+* Fix logic bug in template branch matching. #724
+
+* Make `spiderable` user-agent test case insensitive. #721
+
+* Fix several bugs in EJSON type support:
+  * Fix `{$type: 5}` selectors for binary values on browsers that do
+    not support `Uint8Array`.
+  * Fix EJSON equality on falsey values.
+  * Fix for returning a scalar EJSON type from a method. #731
+
+* Upgraded dependencies:
+  * mongodb driver to version 1.2.13 (from 0.1.11)
+  * mime module removed (it was unused)
+
+
+Patches contributed by GitHub users awwx, cmather, graemian, jagill,
+jmhredsox, kevinxucs, krizka, mitar, raix, and rasmuserik.
+
+
 ## v0.5.7
 
 * The DDP wire protocol has been redesigned.
@@ -81,7 +167,6 @@
 
 
 Patches contributed by GitHub users awwx and michaelglenadams.
-
 
 
 ## v0.5.6

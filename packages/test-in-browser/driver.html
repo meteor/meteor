@@ -12,7 +12,8 @@
   <div class="navbar navbar-fixed-top navbar-inverse">
     <div class="navbar-inner">
       <div class="row-fluid">
-        <div class="span2 offset1"><a class="brand" href="#">
+        <div class="span3"><a class="brand" href="#">
+          &nbsp;
           {{#if running}}
             Testing in progress...
           {{else}}
@@ -35,7 +36,8 @@
       </div>
     </div>
   </div>
-  <div class="row-fluid"><div class="span11 offset1">
+  {{> groupNav}}
+  <div class="row-fluid"><div class="span12">
   <ul class="failedTests">
     {{#each failedTests}}
       <li>{{this}}</li>
@@ -51,15 +53,40 @@
 </template>
 
 <template name="progressBar">
-  <div id="testProgressBar" class="progress {{#if running}}progress-striped active{{/if}}">
+  <div id="testProgressBar" class="progress {{#if running}}progress-striped{{/if}}">
     <div class="bar bar-danger" style="width: {{percentFail}}%;"></div>
     <div class="bar {{#if anyFail}}bar-warning{{else}}bar-success{{/if}}" style="width: {{percentPass}}%;"></div>
   </div>
 </template>
 
+<template name="groupNav">
+  <div class="navbar navbar-fixed-bottom navbar-inverse">
+    <div class="navbar-inner">
+      <ul class="nav">
+      {{#each groupPaths}}
+        <li class="navbar-text">&nbsp;-&nbsp;</li>
+        <li><a class="group" href="#">{{name}}</a></li>
+      {{/each}}
+      </ul>
+      <form class="navbar-form pull-right">
+        <a class="btn rerun">
+          {{#if rerunScheduled}}
+          <i class="icon-time"></i>
+          Rerun scheduled...
+          {{else}}
+          <i class="icon-repeat"></i>
+          Rerun
+          {{/if}}
+        </a>
+      </form>
+      &nbsp;
+    </div>
+  </div>
+</template>
+
 <template name="test_group">
   <div class="group">
-    <div class="groupname">{{name}}</div>
+    <div class="groupname"><a>{{name}}</a></div>
     {{#each tests}}
       {{> test}}
     {{/each}}

@@ -105,7 +105,7 @@
 
   Tinytest.add('session - context invalidation for get', function (test) {
     var xGetExecutions = 0;
-    Meteor.autorun(function () {
+    Deps.autorun(function () {
       ++xGetExecutions;
       Session.get('x');
     });
@@ -113,44 +113,44 @@
     Session.set('x', 1);
     // Invalidation shouldn't happen until flush time.
     test.equal(xGetExecutions, 1);
-    Meteor.flush();
+    Deps.flush();
     test.equal(xGetExecutions, 2);
     // Setting to the same value doesn't re-run.
     Session.set('x', 1);
-    Meteor.flush();
+    Deps.flush();
     test.equal(xGetExecutions, 2);
     Session.set('x', '1');
-    Meteor.flush();
+    Deps.flush();
     test.equal(xGetExecutions, 3);
   });
 
   Tinytest.add('session - context invalidation for equals', function (test) {
     var xEqualsExecutions = 0;
-    Meteor.autorun(function () {
+    Deps.autorun(function () {
       ++xEqualsExecutions;
       Session.equals('x', 5);
     });
     test.equal(xEqualsExecutions, 1);
     Session.set('x', 1);
-    Meteor.flush();
+    Deps.flush();
     // Changing undefined -> 1 shouldn't affect equals(5).
     test.equal(xEqualsExecutions, 1);
     Session.set('x', 5);
     // Invalidation shouldn't happen until flush time.
     test.equal(xEqualsExecutions, 1);
-    Meteor.flush();
+    Deps.flush();
     test.equal(xEqualsExecutions, 2);
     Session.set('x', 5);
-    Meteor.flush();
+    Deps.flush();
     // Setting to the same value doesn't re-run.
     test.equal(xEqualsExecutions, 2);
     Session.set('x', '5');
     test.equal(xEqualsExecutions, 2);
-    Meteor.flush();
+    Deps.flush();
     test.equal(xEqualsExecutions, 3);
     Session.set('x', 5);
     test.equal(xEqualsExecutions, 3);
-    Meteor.flush();
+    Deps.flush();
     test.equal(xEqualsExecutions, 4);
   });
 
@@ -159,27 +159,27 @@
     function (test) {
       // Make sure the special casing for equals undefined works.
       var yEqualsExecutions = 0;
-      Meteor.autorun(function () {
+      Deps.autorun(function () {
         ++yEqualsExecutions;
         Session.equals('y', undefined);
       });
       test.equal(yEqualsExecutions, 1);
       Session.set('y', undefined);
-      Meteor.flush();
+      Deps.flush();
       test.equal(yEqualsExecutions, 1);
       Session.set('y', 5);
       test.equal(yEqualsExecutions, 1);
-      Meteor.flush();
+      Deps.flush();
       test.equal(yEqualsExecutions, 2);
       Session.set('y', 3);
-      Meteor.flush();
+      Deps.flush();
       test.equal(yEqualsExecutions, 2);
       Session.set('y', 'undefined');
-      Meteor.flush();
+      Deps.flush();
       test.equal(yEqualsExecutions, 2);
       Session.set('y', undefined);
       test.equal(yEqualsExecutions, 2);
-      Meteor.flush();
+      Deps.flush();
       test.equal(yEqualsExecutions, 3);
     });
 }());

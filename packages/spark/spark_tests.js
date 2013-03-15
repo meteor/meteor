@@ -163,7 +163,7 @@ Tinytest.add("spark - replace tag contents", function (test) {
       return R.get();
     });
     R.set("three four five six");
-    Meteor.flush();
+    Deps.flush();
     test.equal(this.div.html(), "three four five six");
   });
 
@@ -177,7 +177,7 @@ Tinytest.add("spark - replace tag contents", function (test) {
 
     test.equal($(this.node()).find("#morphing td").text(), "HI!");
     R.set("<tr><td>BUH BYE!</td></tr>");
-    Meteor.flush();
+    Deps.flush();
     test.equal($(this.node()).find("#morphing td").text(), "BUH BYE!");
   });
 
@@ -191,7 +191,7 @@ Tinytest.add("spark - replace tag contents", function (test) {
 
     test.equal($(this.node()).find("#morphing td").text(), "HI!");
     R.set("<tr><td>BUH BYE!</td></tr>");
-    Meteor.flush();
+    Deps.flush();
     test.equal($(this.node()).find("#morphing td").text(), "BUH BYE!");
   });
 
@@ -205,7 +205,7 @@ Tinytest.add("spark - replace tag contents", function (test) {
 
     test.equal($(this.node()).find("#morphing td").text(), "HI!");
     R.set("<td>BUH BYE!</td>");
-    Meteor.flush();
+    Deps.flush();
     test.equal($(this.node()).find("#morphing td").text(), "BUH BYE!");
   });
 
@@ -219,7 +219,7 @@ Tinytest.add("spark - replace tag contents", function (test) {
 
     test.equal($(this.node()).find("#morphing li").text(), "HI!");
     R.set("<li>BUH BYE!</li>");
-    Meteor.flush();
+    Deps.flush();
     test.equal($(this.node()).find("#morphing li").text(), "BUH BYE!");
   });
 
@@ -233,7 +233,7 @@ Tinytest.add("spark - replace tag contents", function (test) {
 
     test.equal($(this.node()).find("#morphing option").text(), "HI!");
     R.set("<option>BUH BYE!</option>");
-    Meteor.flush();
+    Deps.flush();
     test.equal($(this.node()).find("#morphing option").text(), "BUH BYE!");
   });
 
@@ -261,7 +261,7 @@ Tinytest.add("spark - replace tag contents", function (test) {
                '<option value="2">Cheeseburger</option>' +
                '</select>');
     c.insert({name: 'Chicken Snickers', value: 8});
-    Meteor.flush();
+    Deps.flush();
     test.equal(furtherCanon(this.div.html()),
                '<select id="morphing" name="fred">' +
                '<option value="1">Hamburger</option>' +
@@ -270,20 +270,20 @@ Tinytest.add("spark - replace tag contents", function (test) {
                '</select>');
     c.remove({value: 1});
     c.remove({value: 2});
-    Meteor.flush();
+    Deps.flush();
     test.equal(furtherCanon(this.div.html()),
                '<select id="morphing" name="fred">' +
                '<option value="8">Chicken Snickers</option>' +
                '</select>');
     c.remove({});
-    Meteor.flush();
+    Deps.flush();
     test.equal(furtherCanon(this.div.html()),
                '<select id="morphing" name="fred">' +
                '<!---->' +
                '</select>');
     c.insert({name: 'Hamburger', value: 1});
     c.insert({name: 'Cheeseburger', value: 2});
-    Meteor.flush();
+    Deps.flush();
     test.equal(furtherCanon(this.div.html()),
                '<select id="morphing" name="fred">' +
                '<option value="1">Hamburger</option>' +
@@ -307,14 +307,14 @@ Tinytest.add("spark - basic isolate", function (test) {
   test.equal(div.html(), '<div><span>foo</span></div>');
   R.set('bar');
   test.equal(div.html(), '<div><span>foo</span></div>');
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html(), '<div><span>bar</span></div>');
   R.set('baz');
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html(), '<div><span>baz</span></div>');
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 Tinytest.add("spark - one render", function (test) {
@@ -332,13 +332,13 @@ Tinytest.add("spark - one render", function (test) {
   R.set("bar");
   // haven't flushed yet, so update won't have happened
   test.equal(frag.html(), "foo");
-  Meteor.flush();
+  Deps.flush();
   // flushed now, frag should say "bar"
   test.equal(frag.html(), "bar");
   frag.release(); // frag is now considered offscreen
-  Meteor.flush();
+  Deps.flush();
   R.set("baz");
-  Meteor.flush();
+  Deps.flush();
   // no update should have happened, offscreen range dep killed
   test.equal(frag.html(), "bar");
 
@@ -358,14 +358,14 @@ Tinytest.add("spark - one render", function (test) {
   })).hold();
   test.equal(frag.html(), "<div>hello</div><div>world</div>");
   R.set(false);
-  Meteor.flush();
+  Deps.flush();
   test.equal(frag.html(), "<!---->");
   R.set(true);
-  Meteor.flush();
+  Deps.flush();
   test.equal(frag.html(), "<div>hello</div><div>world</div>");
   test.equal(R.numListeners(), 1);
   frag.release();
-  Meteor.flush();
+  Deps.flush();
   test.equal(R.numListeners(), 0);
 
   // more complicated changes
@@ -381,18 +381,18 @@ Tinytest.add("spark - one render", function (test) {
   test.equal(frag.html(),
                '<div class="foo" id="x0" name="bar"><p><b>1</b></p></div>');
   R.set(3);
-  Meteor.flush();
+  Deps.flush();
   test.equal(frag.html(),
                '<div class="foo" id="x0" name="bar"><p><b>3</b></p></div>'+
                '<div class="foo" id="x1" name="bar"><p><b>3</b></p></div>'+
                '<div class="foo" id="x2" name="bar"><p><b>3</b></p></div>');
   R.set(2);
-  Meteor.flush();
+  Deps.flush();
   test.equal(frag.html(),
                '<div class="foo" id="x0" name="bar"><p><b>2</b></p></div>'+
                '<div class="foo" id="x1" name="bar"><p><b>2</b></p></div>');
   frag.release();
-  Meteor.flush();
+  Deps.flush();
   test.equal(R.numListeners(), 0);
 
   // caller violating preconditions
@@ -409,17 +409,17 @@ Tinytest.add("spark - heuristic finalize", function (test) {
 
   test.equal(div.html(), "<p>The number is 123.</p><hr><br><br><u>underlined</u>");
   test.equal(R.numListeners(), 1);
-  Meteor.flush();
+  Deps.flush();
   R.set(456); // won't take effect until flush()
   test.equal(div.html(), "<p>The number is 123.</p><hr><br><br><u>underlined</u>");
-  test.equal(R.numListeners(), 1);
-  Meteor.flush();
+  test.equal(R.numListeners(), 0); // listener already gone
+  Deps.flush();
   test.equal(div.html(), "<p>The number is 456.</p><hr><br><br><u>underlined</u>");
   test.equal(R.numListeners(), 1);
 
   div.remove();
   R.set(789); // update should force div dependency to be GCed when div is updated
-  Meteor.flush();
+  Deps.flush();
   test.equal(R.numListeners(), 0);
 });
 
@@ -445,23 +445,23 @@ Tinytest.add("spark - isolate", function (test) {
 
   test.equal(frag.html(), "0,0 0,0 0,0");
 
-  inc(R1); Meteor.flush();
+  inc(R1); Deps.flush();
   test.equal(frag.html(), "1,1 0,1 0,1");
 
-  inc(R2); Meteor.flush();
+  inc(R2); Deps.flush();
   test.equal(frag.html(), "1,1 1,2 0,2");
 
-  inc(R3); Meteor.flush();
+  inc(R3); Deps.flush();
   test.equal(frag.html(), "1,1 1,2 1,3");
 
-  inc(R2); Meteor.flush();
+  inc(R2); Deps.flush();
   test.equal(frag.html(), "1,1 2,3 1,4");
 
-  inc(R1); Meteor.flush();
+  inc(R1); Deps.flush();
   test.equal(frag.html(), "2,2 2,4 1,5");
 
   frag.release();
-  Meteor.flush();
+  Deps.flush();
   test.equal(R1.numListeners(), 0);
   test.equal(R2.numListeners(), 0);
   test.equal(R3.numListeners(), 0);
@@ -487,37 +487,37 @@ Tinytest.add("spark - isolate", function (test) {
   })).hold();
 
   test.equal(frag.html(), '<div class="foo0"><!----></div>');
-  R2.set(3); Meteor.flush();
+  R2.set(3); Deps.flush();
   test.equal(frag.html(), '<div class="foo0">'+
                '<div>0</div><div>0</div><div>0</div>'+
                '</div>');
 
-  R3.set(5); Meteor.flush();
+  R3.set(5); Deps.flush();
   test.equal(frag.html(), '<div class="foo0">'+
                '<div>5</div><div>5</div><div>5</div>'+
                '</div>');
 
-  R1.set(7); Meteor.flush();
+  R1.set(7); Deps.flush();
   test.equal(frag.html(), '<div class="foo7">'+
                '<div>5</div><div>5</div><div>5</div>'+
                '</div>');
 
-  R2.set(1); Meteor.flush();
+  R2.set(1); Deps.flush();
   test.equal(frag.html(), '<div class="foo7">'+
                '<div>5</div>'+
                '</div>');
 
-  R1.set(11); Meteor.flush();
+  R1.set(11); Deps.flush();
   test.equal(frag.html(), '<div class="foo11">'+
                '<div>5</div>'+
                '</div>');
 
-  R2.set(2); Meteor.flush();
+  R2.set(2); Deps.flush();
   test.equal(frag.html(), '<div class="foo11">'+
                '<div>5</div><div>5</div>'+
                '</div>');
 
-  R3.set(4); Meteor.flush();
+  R3.set(4); Deps.flush();
   test.equal(frag.html(), '<div class="foo11">'+
                '<div>4</div><div>4</div>'+
                '</div>');
@@ -551,7 +551,7 @@ Tinytest.add("spark - isolate", function (test) {
   // might get an error on flush() if implementation
   // deals poorly with unused isolates, or a listener
   // still existing after flush.
-  Meteor.flush();
+  Deps.flush();
   test.equal(Q.numListeners(), 0);
 
   // nesting
@@ -566,10 +566,10 @@ Tinytest.add("spark - isolate", function (test) {
   }));
   test.equal(div.html(), "xyhi");
   stuff.set(false);
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html(), "xhi");
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   // more nesting
 
@@ -596,26 +596,26 @@ Tinytest.add("spark - isolate", function (test) {
   }));
   test.equal(div.html(), "1x");
   numset(2);
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html(), "2x");
   numset(3);
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html(), "3x");
   numset(1);
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html(), "1x");
   numset(3);
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html(), "3x");
   numset(2);
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html(), "2x");
   div.remove();
-  Meteor.flush();
+  Deps.flush();
 
   // the real test for slow-path GC finalization:
   num2.set(! num2.get());
-  Meteor.flush();
+  Deps.flush();
   test.equal(num1.numListeners(), 0);
   test.equal(num2.numListeners(), 0);
   test.equal(num3.numListeners(), 0);
@@ -721,12 +721,12 @@ Tinytest.add("spark - tables", function (test) {
   }));
 
   R.set(1);
-  Meteor.flush();
+  Deps.flush();
   test.equal(table.html(), "<table><tbody><tr><td>1</td></tr></tbody></table>");
 
   R.set(10);
   test.equal(table.html(), "<table><tbody><tr><td>1</td></tr></tbody></table>");
-  Meteor.flush();
+  Deps.flush();
   test.equal(table.html(), "<table><tbody>"+
                "<tr><td>1</td></tr>"+
                "<tr><td>2</td></tr>"+
@@ -741,10 +741,10 @@ Tinytest.add("spark - tables", function (test) {
                "</tbody></table>");
 
   R.set(0);
-  Meteor.flush();
+  Deps.flush();
   test.equal(table.html(), "<table></table>");
   table.kill();
-  Meteor.flush();
+  Deps.flush();
   test.equal(R.numListeners(), 0);
 
   var div = OnscreenDiv();
@@ -757,7 +757,7 @@ Tinytest.add("spark - tables", function (test) {
   }));
   test.equal(div.html(), "<table><!----></table>");
   R.set(3);
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html(), "<table><tbody>"+
                "<tr><td>1</td></tr>"+
                "<tr><td>2</td></tr>"+
@@ -765,10 +765,10 @@ Tinytest.add("spark - tables", function (test) {
                "</tbody></table>");
   test.equal(div.node().firstChild.rows.length, 3);
   R.set(0);
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html(), "<table><!----></table>");
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   test.equal(R.numListeners(), 0);
 
@@ -786,24 +786,24 @@ Tinytest.add("spark - tables", function (test) {
                "<table><tbody><tr><td>1</td><td>2</td><td>3</td>"+
                "</tr></tbody></table>");
   R.set(1);
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html(),
                "<table><tbody><tr><td>1</td></tr></tbody></table>");
   div.kill();
-  Meteor.flush();
+  Deps.flush();
   test.equal(R.numListeners(), 0);
 
   div = OnscreenDiv(renderWithPreservation(function() {
     return '<table id="my-awesome-table">'+R.get()+'</table>';
   }));
-  Meteor.flush();
+  Deps.flush();
   R.set("<tr><td>Hello</td></tr>");
-  Meteor.flush();
+  Deps.flush();
   test.equal(
     div.html(),
     '<table id="my-awesome-table"><tbody><tr><td>Hello</td></tr></tbody></table>');
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   test.equal(R.numListeners(), 0);
 });
@@ -841,7 +841,7 @@ Tinytest.add("spark - event handling", function (test) {
   clickElement(getid("foozy"));
   test.equal(event_buf, ['click']);
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   // selector that specifies a top-level div
   event_buf.length = 0;
@@ -851,7 +851,7 @@ Tinytest.add("spark - event handling", function (test) {
   clickElement(getid("foozy"));
   test.equal(event_buf, ['click div']);
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   // selector that specifies a second-level span
   event_buf.length = 0;
@@ -861,7 +861,7 @@ Tinytest.add("spark - event handling", function (test) {
   clickElement(getid("foozy").firstChild);
   test.equal(event_buf, ['click span']);
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   // replaced top-level elements still have event handlers
   // even if replaced by an isolate above the handlers in the DOM
@@ -876,17 +876,17 @@ Tinytest.add("spark - event handling", function (test) {
   test.equal(event_buf, ['click']);
   event_buf.length = 0;
   R.set("div"); // change tag, which is sure to replace element
-  Meteor.flush();
+  Deps.flush();
   clickElement(getid("foozy")); // still clickable?
   test.equal(event_buf, ['click']);
   event_buf.length = 0;
   R.set("p");
-  Meteor.flush();
+  Deps.flush();
   clickElement(getid("foozy"));
   test.equal(event_buf, ['click']);
   event_buf.length = 0;
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   // bubbling from event on descendent of element matched
   // by selector
@@ -899,7 +899,7 @@ Tinytest.add("spark - event handling", function (test) {
     getid("foozy").firstChild.firstChild.firstChild);
   test.equal(event_buf, ['click span']);
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   // bubbling order (for same event, same render node, different selector nodes)
   event_buf.length = 0;
@@ -911,7 +911,7 @@ Tinytest.add("spark - event handling", function (test) {
     getid("foozy").firstChild.firstChild.firstChild);
   test.equal(event_buf, ['click b', 'click span']);
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   // "bubbling" order for handlers at same level
   event_buf.length = 0;
@@ -926,7 +926,7 @@ Tinytest.add("spark - event handling", function (test) {
   test.equal(event_buf, ['click .c', 'click .b', 'click .a']);
   event_buf.length = 0;
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   // stopPropagation doesn't prevent other event maps from
   // handling same node
@@ -943,7 +943,7 @@ Tinytest.add("spark - event handling", function (test) {
   test.equal(event_buf, ['click .c', 'click .b', 'click .a']);
   event_buf.length = 0;
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   // stopImmediatePropagation DOES
   event_buf.length = 0;
@@ -960,7 +960,7 @@ Tinytest.add("spark - event handling", function (test) {
   test.equal(event_buf, ['click .c', 'click .b']);
   event_buf.length = 0;
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   // bubbling continues even with DOM change
   event_buf.length = 0;
@@ -971,7 +971,7 @@ Tinytest.add("spark - event handling", function (test) {
     }, {events: { 'click span': function () {
       event_buf.push('click span');
       R.set(false);
-      Meteor.flush(); // kill the span
+      Deps.flush(); // kill the span
     }, 'click div': function (evt) {
       event_buf.push('click div');
     }}});
@@ -982,7 +982,7 @@ Tinytest.add("spark - event handling", function (test) {
   test.equal(event_buf, ['click span', 'click div']);
   event_buf.length = 0;
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   // "deep reach" from high node down to replaced low node.
   // Tests that events are registered correctly to work in
@@ -998,14 +998,14 @@ Tinytest.add("spark - event handling", function (test) {
       '</b></span></p></div>';
   }, { events: eventmap('change b', 'change input'), event_data:event_buf }));
   R.set('bar');
-  Meteor.flush();
+  Deps.flush();
   // click on input
   clickElement(div.node().getElementsByTagName('input')[0]);
   event_buf.sort(); // don't care about order
   test.equal(event_buf, ['change b', 'change input', 'click input']);
   event_buf.length = 0;
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   // test that 'click *' fires on bubble
   event_buf.length = 0;
@@ -1018,7 +1018,7 @@ Tinytest.add("spark - event handling", function (test) {
       '</b></span></p></div>';
   }, { events: eventmap('click *'), event_data:event_buf }));
   R.set('bar');
-  Meteor.flush();
+  Deps.flush();
   // click on input
   clickElement(div.node().getElementsByTagName('input')[0]);
   test.equal(
@@ -1026,7 +1026,7 @@ Tinytest.add("spark - event handling", function (test) {
     ['click input', 'click *', 'click *', 'click *', 'click *', 'click *']);
   event_buf.length = 0;
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   // clicking on a div in a nested chunk (without patching)
   event_buf.length = 0;
@@ -1041,13 +1041,13 @@ Tinytest.add("spark - event handling", function (test) {
   test.equal(event_buf, ['click']);
   event_buf.length = 0;
   R.set('bar');
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.text(), 'barism');
   clickElement(div.node().getElementsByTagName('SPAN')[0]);
   test.equal(event_buf, ['click']);
   event_buf.length = 0;
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   // Test that reactive fragments manually inserted inside
   // a reactive fragment eventually get wired.
@@ -1055,7 +1055,7 @@ Tinytest.add("spark - event handling", function (test) {
   div = OnscreenDiv(render(function () {
     return "<div></div>";
   }, { events: eventmap("click span", event_buf) }));
-  Meteor.flush();
+  Deps.flush();
   div.node().firstChild.appendChild(render(function () {
     return '<span id="foozy">hello</span>';
   }));
@@ -1063,13 +1063,13 @@ Tinytest.add("spark - event handling", function (test) {
   // implementation has no way to know we've inserted the fragment
   test.equal(event_buf, []);
   event_buf.length = 0;
-  Meteor.flush();
+  Deps.flush();
   clickElement(getid("foozy"));
   // now should be wired up
   test.equal(event_buf, ['click span']);
   event_buf.length = 0;
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   // Event data comes from event.currentTarget, not event.target
   var data_buf = [];
@@ -1082,7 +1082,7 @@ Tinytest.add("spark - event handling", function (test) {
   clickElement(getid("funyard"));
   test.equal(data_buf, [{x:'ulstuff'}]);
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 
@@ -1115,7 +1115,7 @@ Tinytest.add("spark - list event handling", function(test) {
                               html);
     return html;
   }));
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.text().match(/\S+/)[0], 'else');
   // click on input
   var doClick = function() {
@@ -1128,18 +1128,18 @@ Tinytest.add("spark - list event handling", function(test) {
   // add item
   lst.push({_id:'foo'});
   lst.callbacks.addedBefore(lst[0]._id, lst[0], null);
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.text().match(/\S+/)[0], 'foo');
   doClick();
   // remove item, back to "else" case
   lst.callbacks.removed(lst[0]._id);
   lst.pop();
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.text().match(/\S+/)[0], 'else');
   doClick();
   // cleanup
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
 });
 
@@ -1173,22 +1173,22 @@ Tinytest.add("spark - basic landmarks", function (test) {
   }));
 
   expect(["c"]);
-  Meteor.flush();
+  Deps.flush();
   expect(["r", X]);
-  Meteor.flush();
+  Deps.flush();
   expect([]);
   R.set("222");
   expect([]);
-  Meteor.flush();
+  Deps.flush();
   expect(["r", X]);
-  Meteor.flush();
+  Deps.flush();
   expect([]);
   div.remove();
   expect([]);
-  Meteor.flush();
+  Deps.flush();
   expect([]);
   div.kill();
-  Meteor.flush();
+  Deps.flush();
   expect(["d", X]);
 });
 
@@ -1279,45 +1279,45 @@ Tinytest.add("spark - labeled landmarks", function (test) {
 
   // callback order is not specced
   expect(["c", 1, "c", 2, "c", 3, "c", 4, "c", 5], [1, 2, 3, 4, 5]);
-  Meteor.flush();
+  Deps.flush();
   expect(["r", 1, "r", 2, "r", 5, "r", 4, "r", 3], [1, 2, 5, 4, 3]);
   for (var i = 0; i < 10; i++) {
     R[i].set(1);
     expect([], []);
-    Meteor.flush();
+    Deps.flush();
     expect(["r", 1, "r", 2, "r", 5, "r", 4, "r", 3],
            [i*5 + 6, i*5 + 7, i*5 + 10, i*5 + 9, i*5 + 8]);
   };
 
   excludeLandmarks[2].set(true);
   expect([], []);
-  Meteor.flush();
+  Deps.flush();
   expect(["d", 2, "r", 1, "r", 5, "r", 4, "r", 3],
          [52, 56, 59, 58, 57]);
 
   excludeLandmarks[2].set(false);
   excludeLandmarks[3].set(true);
   expect([], []);
-  Meteor.flush();
+  Deps.flush();
   expect(["c", 2, "d", 3, "d", 4, "d", 5, "r", 1, "r", 2],
          [61, 57, 58, 59, 60, 61]);
 
   excludeLandmarks[2].set(true);
   excludeLandmarks[3].set(false);
   expect([], []);
-  Meteor.flush();
+  Deps.flush();
   expect(["c", 3, "c", 4, "c", 5, "d", 2, "r", 1, "r", 5, "r", 4, "r", 3],
          [63, 64, 65, 61, 62, 65, 64, 63]);
 
   excludeLandmarks[2].set(false);
   expect([], []);
-  Meteor.flush();
+  Deps.flush();
   expect(["c", 2, "r", 1, "r", 2, "r", 5, "r", 4, "r", 3],
          [67, 66, 67, 70, 69, 68]);
 
   isolateLandmarks.set(true);
   expect([], []);
-  Meteor.flush();
+  Deps.flush();
   expect(["r", 1, "r", 2, "r", 5, "r", 4, "r", 3],
          [71, 72, 75, 74, 73]);
 
@@ -1336,25 +1336,25 @@ Tinytest.add("spark - labeled landmarks", function (test) {
     ][i];
     R[i].set(2);
     expect([], []);
-    Meteor.flush();
+    Deps.flush();
     expect.apply(null, expected);
   };
 
   excludeLandmarks[4].set(true);
-  Meteor.flush();
+  Deps.flush();
   expect(["d", 4, "d", 5, "r", 3], [101, 103, 104]);
 
   excludeLandmarks[4].set(false);
   excludeLandmarks[5].set(true);
-  Meteor.flush();
+  Deps.flush();
   expect(["c", 4, "r", 4, "r", 3], [106, 106, 105]);
 
   excludeLandmarks[5].set(false);
-  Meteor.flush();
+  Deps.flush();
   expect(["c", 5, "r", 5, "r", 4, "r", 3], [108, 108, 107, 105]);
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 
@@ -1379,12 +1379,12 @@ Tinytest.add("spark - preserve copies attributes", function(test) {
 
   R1.set("bar");
   R2.set("efgh");
-  Meteor.flush();
+  Deps.flush();
   test.equal(node1.getAttribute("puppy"), "bar");
   test.equal(node2.getAttribute("kittycat"), "efgh");
 
   frag.release();
-  Meteor.flush();
+  Deps.flush();
   test.equal(R1.numListeners(), 0);
   test.equal(R2.numListeners(), 0);
 
@@ -1395,18 +1395,18 @@ Tinytest.add("spark - preserve copies attributes", function(test) {
   })).hold();
   var get_checked = function() { return !! frag.node().firstChild.checked; };
   test.equal(get_checked(), false);
-  Meteor.flush();
+  Deps.flush();
   test.equal(get_checked(), false);
   R.set(true);
   test.equal(get_checked(), false);
-  Meteor.flush();
+  Deps.flush();
   test.equal(get_checked(), true);
   R.set(false);
   test.equal(get_checked(), true);
-  Meteor.flush();
+  Deps.flush();
   test.equal(get_checked(), false);
   R.set(true);
-  Meteor.flush();
+  Deps.flush();
   test.equal(get_checked(), true);
   frag.release();
   R = ReactiveVar(true);
@@ -1414,11 +1414,11 @@ Tinytest.add("spark - preserve copies attributes", function(test) {
     return '<input type="checkbox"' + (R.get() ? ' checked="checked"' : '') + '>';
   })).hold();
   test.equal(get_checked(), true);
-  Meteor.flush();
+  Deps.flush();
   test.equal(get_checked(), true);
   R.set(false);
   test.equal(get_checked(), true);
-  Meteor.flush();
+  Deps.flush();
   test.equal(get_checked(), false);
   frag.release();
 
@@ -1440,19 +1440,19 @@ Tinytest.add("spark - preserve copies attributes", function(test) {
     var if_blurred = function(v, v2) {
       return with_focus ? v2 : v; };
     test.equal(get_value(), "apple");
-    Meteor.flush();
+    Deps.flush();
     test.equal(get_value(), "apple");
     R.set("");
     test.equal(get_value(), "apple");
-    Meteor.flush();
+    Deps.flush();
     test.equal(get_value(), if_blurred("", "apple"));
     R.set("pear");
     test.equal(get_value(), if_blurred("", "apple"));
-    Meteor.flush();
+    Deps.flush();
     test.equal(get_value(), if_blurred("pear", "apple"));
     set_value("jerry"); // like user typing
     R.set("steve");
-    Meteor.flush();
+    Deps.flush();
     // should overwrite user typing if blurred
     test.equal(get_value(), if_blurred("steve", "jerry"));
     div.kill();
@@ -1462,14 +1462,14 @@ Tinytest.add("spark - preserve copies attributes", function(test) {
     }));
     maybe_focus(div);
     test.equal(get_value(), "");
-    Meteor.flush();
+    Deps.flush();
     test.equal(get_value(), "");
     R.set("tom");
     test.equal(get_value(), "");
-    Meteor.flush();
+    Deps.flush();
     test.equal(get_value(), if_blurred("tom", ""));
     div.kill();
-    Meteor.flush();
+    Deps.flush();
   });
 });
 
@@ -1484,7 +1484,7 @@ Tinytest.add("spark - bad labels", function(test) {
     })).hold();
 
     R.set(false);
-    Meteor.flush();
+    Deps.flush();
     test.equal(frag.html(), html2);
     frag.release();
   };
@@ -1653,14 +1653,14 @@ Tinytest.add("spark - landmark patching", function(test) {
     fillInElementIdentities(structure, frag.node());
     var labeledNodes = collectLabeledNodeData(structure);
     R.set(true);
-    Meteor.flush();
+    Deps.flush();
     test.equal(frag.html(), nodeListToHtml(structure, true) || "<!---->");
     _.each(labeledNodes, function(x) {
       test.isTrue(isSameElements(x.parents, getParentChain(x.node)));
     });
 
     frag.release();
-    Meteor.flush();
+    Deps.flush();
     test.equal(R.numListeners(), 0);
   }
 
@@ -1686,10 +1686,10 @@ Tinytest.add("spark - landmark constant", function(test) {
 
   var nodes = nodesToArray(div.node().childNodes);
   test.equal(nodes.length, 3);
-  Meteor.flush();
+  Deps.flush();
   test.equal(states.length, 1);
   R.set(1);
-  Meteor.flush();
+  Deps.flush();
   test.equal(states.length, 1); // no render callback on constant
   var nodes2 = nodesToArray(div.node().childNodes);
   test.equal(nodes2.length, 3);
@@ -1697,7 +1697,7 @@ Tinytest.add("spark - landmark constant", function(test) {
   test.isTrue(nodes[1] === nodes2[1]);
   test.isTrue(nodes[2] === nodes2[2]);
   div.kill();
-  Meteor.flush();
+  Deps.flush();
   test.equal(R.numListeners(), 0);
 
   // non-top-level
@@ -1746,7 +1746,7 @@ Tinytest.add("spark - landmark constant", function(test) {
                    (nodeAfter ? 'foo' : ''));
 
         R.set('bar');
-        Meteor.flush();
+        Deps.flush();
 
         // only non-matching landmark should cause the constant
         // chunk to be re-rendered
@@ -1760,7 +1760,7 @@ Tinytest.add("spark - landmark constant", function(test) {
         test.equal(crd, matchLandmark ? [1,1,0] : [1,1,1]);
 
         R.set('baz');
-        Meteor.flush();
+        Deps.flush();
 
         // should be repeatable (liveranges not damaged)
         test.equal(div.text(),
@@ -1770,7 +1770,7 @@ Tinytest.add("spark - landmark constant", function(test) {
 
         isConstant = false; // no longer constant:true!
         R.set('qux');
-        Meteor.flush();
+        Deps.flush();
         test.equal(div.text(),
                    (nodeBefore ? 'qux' : '')+
                    'blah'+
@@ -1780,7 +1780,7 @@ Tinytest.add("spark - landmark constant", function(test) {
         isConstant = true;
         hasSpan = true;
         R.set('popsicle');
-        Meteor.flush();
+        Deps.flush();
         // we don't get the span, instead old "blah" is preserved
         test.equal(div.text(),
                    (nodeBefore ? 'popsicle' : '')+
@@ -1789,7 +1789,7 @@ Tinytest.add("spark - landmark constant", function(test) {
 
         isConstant = false;
         R.set('hi');
-        Meteor.flush();
+        Deps.flush();
         // now we get the span!
         test.equal(div.text(),
                    (nodeBefore ? 'hi' : '')+
@@ -1797,7 +1797,7 @@ Tinytest.add("spark - landmark constant", function(test) {
                    (nodeAfter ? 'hi' : ''));
 
         div.kill();
-        Meteor.flush();
+        Deps.flush();
       });
     });
   });
@@ -1817,26 +1817,26 @@ Tinytest.add("spark - landmark constant", function(test) {
       }) +
       '</' + R.get().split(' ')[0] + '>';
   }));
-  Meteor.flush();
+  Deps.flush();
   test.equal(renderCount, 1);
 
   R.set('div class="hamburger"');
-  Meteor.flush();
+  Deps.flush();
   // constant patched around, not re-rendered!
   test.equal(renderCount, 1);
 
   R.set('span class="hamburger"');
-  Meteor.flush();
+  Deps.flush();
   // can't patch parent to a different tag
   test.equal(renderCount, 2);
 
   R.set('span');
-  Meteor.flush();
+  Deps.flush();
   // can patch here, renderCount stays the same
   test.equal(renderCount, 2);
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 _.each(['STRING', 'MONGO'], function (idGeneration) {
@@ -1902,13 +1902,13 @@ Tinytest.add("spark - leaderboard, " + idGeneration, function(test) {
     });
   };
 
-  Meteor.flush();
+  Deps.flush();
   var glinnesNameNode = findPlayerNameDiv(names[0]);
   test.isTrue(!! glinnesNameNode);
   var glinnesScoreNode = glinnesNameNode.nextSibling;
   test.equal(glinnesScoreNode.getAttribute("name"), "score");
   clickElement(glinnesNameNode);
-  Meteor.flush();
+  Deps.flush();
   glinnesNameNode = findPlayerNameDiv(names[0]);
   test.isTrue(!! glinnesNameNode);
   test.equal(glinnesNameNode.parentNode.className, 'player selected');
@@ -1920,7 +1920,7 @@ Tinytest.add("spark - leaderboard, " + idGeneration, function(test) {
     '<div class="name">Glinnes Hulden</div><div name="score">0</div>');
 
   bump();
-  Meteor.flush();
+  Deps.flush();
 
   glinnesNameNode = findPlayerNameDiv(names[0], glinnesNameNode);
   var glinnesScoreNode2 = glinnesNameNode.nextSibling;
@@ -1934,7 +1934,7 @@ Tinytest.add("spark - leaderboard, " + idGeneration, function(test) {
     '<div class="name">Glinnes Hulden</div><div name="score">5</div>');
 
   bump();
-  Meteor.flush();
+  Deps.flush();
 
   glinnesNameNode = findPlayerNameDiv(names[0], glinnesNameNode);
   test.equal(
@@ -1942,7 +1942,7 @@ Tinytest.add("spark - leaderboard, " + idGeneration, function(test) {
     '<div class="name">Glinnes Hulden</div><div name="score">10</div>');
 
   scores.kill();
-  Meteor.flush();
+  Deps.flush();
   test.equal(selected_player.numListeners(), 0);
 });
 });
@@ -1970,7 +1970,7 @@ Tinytest.add("spark - list cursor stop", function(test) {
     return "#"+doc._id;
   });
   test.equal(result, "#123#456");
-  Meteor.flush();
+  Deps.flush();
   // chunk killed because not created inside Spark.render
   test.equal(numHandles, 0);
 
@@ -1982,17 +1982,17 @@ Tinytest.add("spark - list cursor stop", function(test) {
     return "";
   })).hold();
   test.equal(numHandles, 1);
-  Meteor.flush();
+  Deps.flush();
   test.equal(numHandles, 1);
   R.set(2);
-  Meteor.flush();
+  Deps.flush();
   test.equal(numHandles, 1);
   R.set(-1);
-  Meteor.flush();
+  Deps.flush();
   test.equal(numHandles, 0);
 
   frag.release();
-  Meteor.flush();
+  Deps.flush();
 });
 
 Tinytest.add("spark - list table", function(test) {
@@ -2032,7 +2032,7 @@ Tinytest.add("spark - list table", function(test) {
   var shouldFlushTo = function(html) {
     // same before flush
     test.equal(table.html(), lastHtml);
-    Meteor.flush();
+    Deps.flush();
     test.equal(table.html(), html);
     lastHtml = html;
   };
@@ -2197,7 +2197,7 @@ Tinytest.add("spark - list event data", function(test) {
   };
 
   later();
-  Meteor.flush();
+  Deps.flush();
   test.equal(item("Foo").innerHTML, "Foo");
   test.equal(item("Bar").innerHTML, "Bar");
   test.equal(item("Baz").innerHTML, "Baz");
@@ -2206,7 +2206,7 @@ Tinytest.add("spark - list event data", function(test) {
   var doClick = function(name) {
     clickElement(item(name));
     test.equal(lastClicked, name);
-    Meteor.flush();
+    Deps.flush();
   };
 
   doClick("Foo");
@@ -2228,7 +2228,7 @@ Tinytest.add("spark - list event data", function(test) {
   doClick("Foo");
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
 });
 
@@ -2257,12 +2257,12 @@ Tinytest.add("spark - events on preserved nodes", function(test) {
   test.equal(count.get(), 0);
   for(var i=0; i<10; i++) {
     click();
-    Meteor.flush();
+    Deps.flush();
     test.equal(count.get(), i+1);
   }
 
   demo.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 
@@ -2294,32 +2294,32 @@ Tinytest.add("spark - cleanup", function(test) {
   }));
 
   test.equal(div.text(), "x1");
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.text(), "x1");
   test.equal(R.numListeners(), 1);
 
   clear_docs();
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.text(), "x0");
   test.equal(R.numListeners(), 1); // test clean-up of doc on remove
 
   add_doc();
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.text(), "x1");
   test.equal(R.numListeners(), 1); // test clean-up of "else" listeners
 
   add_doc();
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.text(), "x1x1");
   test.equal(R.numListeners(), 2);
 
   remove_one();
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.text(), "x1");
   test.equal(R.numListeners(), 1); // test clean-up of doc with other docs
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
   test.equal(R.numListeners(), 0);
 
   //// list stopped if not materialized
@@ -2352,7 +2352,7 @@ Tinytest.add("spark - cleanup", function(test) {
   test.equal([observeCount, stopCount], [1, 1]);
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 
@@ -2409,14 +2409,14 @@ var make_input_tester = function(render_func, events) {
     kill: function() {
       // clean up
       div.kill();
-      Meteor.flush();
+      Deps.flush();
     },
     inputNode: function() {
       return div.node().getElementsByTagName("input")[0];
     },
     redraw: function() {
       R.set(R.get() + 1);
-      Meteor.flush();
+      Deps.flush();
     }
   };
 };
@@ -2637,7 +2637,7 @@ testAsyncMulti(
         _.each(hitlist, function(thing) {
           thing.kill();
         });
-        Meteor.flush();
+        Deps.flush();
       }
     ];
   })());
@@ -2681,7 +2681,7 @@ Tinytest.add("spark - controls - radio", function(test) {
     return html;
   }));
 
-  Meteor.flush();
+  Deps.flush();
 
   // get the three buttons; they should be considered 'labeled'
   // by the patcher and not change identities!
@@ -2693,12 +2693,12 @@ Tinytest.add("spark - controls - radio", function(test) {
   clickElement(btns[0]);
   test.equal(change_buf, ['AM']);
   change_buf.length = 0;
-  Meteor.flush();
+  Deps.flush();
   test.equal(_.pluck(btns, 'checked'), [true, false, false]);
   test.equal(div.text(), "Band: AM");
 
   R2.set("change");
-  Meteor.flush();
+  Deps.flush();
   test.length(change_buf, 0);
   test.equal(_.pluck(btns, 'checked'), [true, false, false]);
   test.equal(div.text(), "Band: AM");
@@ -2706,21 +2706,21 @@ Tinytest.add("spark - controls - radio", function(test) {
   clickElement(btns[1]);
   test.equal(change_buf, ['FM']);
   change_buf.length = 0;
-  Meteor.flush();
+  Deps.flush();
   test.equal(_.pluck(btns, 'checked'), [false, true, false]);
   test.equal(div.text(), "Band: FM");
 
   clickElement(btns[2]);
   test.equal(change_buf, ['XM']);
   change_buf.length = 0;
-  Meteor.flush();
+  Deps.flush();
   test.equal(_.pluck(btns, 'checked'), [false, false, true]);
   test.equal(div.text(), "Band: XM");
 
   clickElement(btns[1]);
   test.equal(change_buf, ['FM']);
   change_buf.length = 0;
-  Meteor.flush();
+  Deps.flush();
   test.equal(_.pluck(btns, 'checked'), [false, true, false]);
   test.equal(div.text(), "Band: FM");
 
@@ -2744,7 +2744,7 @@ Tinytest.add("spark - controls - checkbox", function(test) {
     return buf.join('');
   }));
 
-  Meteor.flush();
+  Deps.flush();
 
   // get the three boxes; they should be considered 'labeled' by the patcher and
   // not change identities!
@@ -2754,42 +2754,42 @@ Tinytest.add("spark - controls - checkbox", function(test) {
 
   // Re-render with first one checked.
   Rs.Foo.set(true);
-  Meteor.flush();
+  Deps.flush();
   test.equal(_.pluck(boxes, 'checked'), [true, false, false]);
 
   // Re-render with first one unchecked again.
   Rs.Foo.set(false);
-  Meteor.flush();
+  Deps.flush();
   test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
 
   // User clicks the second one.
   clickElement(boxes[1]);
   test.equal(_.pluck(boxes, 'checked'), [false, true, false]);
-  Meteor.flush();
+  Deps.flush();
   test.equal(_.pluck(boxes, 'checked'), [false, true, false]);
 
   // Re-render with third one checked. Second one should stay checked because
   // it's a user update!
   Rs.Baz.set(true);
-  Meteor.flush();
+  Deps.flush();
   test.equal(_.pluck(boxes, 'checked'), [false, true, true]);
 
   // User turns second and third off.
   clickElement(boxes[1]);
   clickElement(boxes[2]);
   test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
-  Meteor.flush();
+  Deps.flush();
   test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
 
   // Re-render with first one checked. Third should stay off because it's a user
   // update!
   Rs.Foo.set(true);
-  Meteor.flush();
+  Deps.flush();
   test.equal(_.pluck(boxes, 'checked'), [true, false, false]);
 
   // Re-render with first one unchecked. Third should still stay off.
   Rs.Foo.set(false);
-  Meteor.flush();
+  Deps.flush();
   test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
 
   div.kill();
@@ -2833,7 +2833,7 @@ _.each(['textarea', 'text', 'password', 'submit', 'button',
 
     // value updates reactively
     R.set({x:"fridge"});
-    Meteor.flush();
+    Deps.flush();
     test.equal(DomUtils.getElementValue(input), "This is a fridge");
     test.equal(input._sparkOriginalRenderedValue, ["This is a fridge"]);
 
@@ -2841,18 +2841,18 @@ _.each(['textarea', 'text', 'password', 'submit', 'button',
       // ...unless focused
       focusElement(input);
       R.set({x:"frog"});
-      Meteor.flush();
+      Deps.flush();
       test.equal(DomUtils.getElementValue(input), "This is a fridge");
       test.equal(input._sparkOriginalRenderedValue, ["This is a fridge"]);
 
       // blurring and re-setting works
       blurElement(input);
-      Meteor.flush();
+      Deps.flush();
       test.equal(DomUtils.getElementValue(input), "This is a fridge");
       test.equal(input._sparkOriginalRenderedValue, ["This is a fridge"]);
     }
     R.set({x:"frog"});
-    Meteor.flush();
+    Deps.flush();
     test.equal(DomUtils.getElementValue(input), "This is a frog");
     test.equal(input._sparkOriginalRenderedValue, ["This is a frog"]);
 
@@ -2861,13 +2861,13 @@ _.each(['textarea', 'text', 'password', 'submit', 'button',
     // not change.
     DomUtils.setElementValue(input, "foobar");
     R2.set("change");
-    Meteor.flush();
+    Deps.flush();
     test.equal(DomUtils.getElementValue(input), "foobar");
     test.equal(input._sparkOriginalRenderedValue, ["This is a frog"]);
 
     // ... but if the actual rendered value changes, that should take effect.
     R.set({x:"photograph"});
-    Meteor.flush();
+    Deps.flush();
     test.equal(DomUtils.getElementValue(input), "This is a photograph");
     test.equal(input._sparkOriginalRenderedValue, ["This is a photograph"]);
 
@@ -2877,7 +2877,7 @@ _.each(['textarea', 'text', 'password', 'submit', 'button',
     // gets updated too.
     DomUtils.setElementValue(input, "This is a monkey");
     R.set({x:"monkey"});
-    Meteor.flush();
+    Deps.flush();
     test.equal(DomUtils.getElementValue(input), "This is a monkey");
     test.equal(input._sparkOriginalRenderedValue, ["This is a monkey"]);
 
@@ -2889,7 +2889,7 @@ _.each(['textarea', 'text', 'password', 'submit', 'button',
       DomUtils.setElementValue(input, "This is a donkey");
       focusElement(input);
       R.set({x:"donkey"});
-      Meteor.flush();
+      Deps.flush();
       test.equal(DomUtils.getElementValue(input), "This is a donkey");
       test.equal(input._sparkOriginalRenderedValue, ["This is a donkey"]);
     }
@@ -2938,18 +2938,18 @@ Tinytest.add("spark - oldschool landmark matching", function(test) {
   test.equal(buf, ["c0"]);
 
   test.equal(div.html(), "A");
-  Meteor.flush();
+  Deps.flush();
   test.equal(buf, ["c0", "r0"]);
   test.equal(div.html(), "A");
 
   R.set("B");
-  Meteor.flush();
+  Deps.flush();
   test.equal(buf, ["c0", "r0", "r0"]);
   test.equal(div.html(), "B");
 
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
   test.equal(buf, ["c0", "r0", "r0", "d0"]);
 
   // with a branch
@@ -2969,19 +2969,19 @@ Tinytest.add("spark - oldschool landmark matching", function(test) {
   }));
 
   test.equal(buf, ["c0", "c1"]);
-  Meteor.flush();
+  Deps.flush();
   // what order of chunks {0,1} is preferable??
   // should be consistent but I'm not sure what makes most sense.
   test.equal(buf, "c0,c1,r1,r0".split(','));
   buf.length = 0;
 
   R.set("B");
-  Meteor.flush();
+  Deps.flush();
   test.equal(buf, "r1,r0".split(','));
   buf.length = 0;
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
   buf.sort();
   test.equal(buf, "d0,d1".split(','));
 });
@@ -3001,18 +3001,18 @@ Tinytest.add("spark - oldschool branch keys", function(test) {
     }, function () { return R.get(); });
   }));
 
-  Meteor.flush();
+  Deps.flush();
   R.set("bar");
-  Meteor.flush();
+  Deps.flush();
   R.set("baz");
-  Meteor.flush();
+  Deps.flush();
 
   test.equal(objs.length, 3);
   test.isTrue(objs[0] === objs[1]);
   test.isTrue(objs[1] === objs[2]);
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   // track chunk matching / re-rendering in detail
 
@@ -3077,25 +3077,25 @@ Tinytest.add("spark - oldschool branch keys", function(test) {
                    ], 1, 'fruit');
   }));
 
-  Meteor.flush();
+  Deps.flush();
   buf.sort();
   test.equal(buf, ['c1', 'c2', 'c3', 'c4', 'on1', 'on2', 'on3', 'on4']);
   buf.length = 0;
 
   R.set("bar");
-  Meteor.flush();
+  Deps.flush();
   buf.sort();
   test.equal(buf, ['on1', 'on2', 'on3', 'on4']);
   buf.length = 0;
 
   R.set("nothing");
-  Meteor.flush();
+  Deps.flush();
   buf.sort();
   test.equal(buf, ['off1', 'off2', 'off3', 'off4']);
   buf.length = 0;
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   ///// Chunk 3 has no branch key, should be recreated
 
@@ -3113,19 +3113,19 @@ Tinytest.add("spark - oldschool branch keys", function(test) {
                    ], 1, 'fruit');
   }));
 
-  Meteor.flush();
+  Deps.flush();
   buf.sort();
   test.equal(buf, ['c1', 'c2', 'c3', 'c4', 'on1', 'on2', 'on3', 'on4']);
   buf.length = 0;
 
   R.set("bar");
-  Meteor.flush();
+  Deps.flush();
   buf.sort();
   test.equal(buf, ['c3*', 'off3', 'on1', 'on2', 'on3*', 'on4']);
   buf.length = 0;
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
   buf.sort();
   // killing the div should have given us offscreen calls for 1,2,3*,4
   test.equal(buf, ['off1', 'off2', 'off3*', 'off4']);
@@ -3156,12 +3156,12 @@ Tinytest.add("spark - isolate inside landmark", function (test) {
   var foo1 = d.node().firstChild;
   test.equal(d.node().firstChild.nextSibling.nodeValue, '1');
   R.set(2);
-  Meteor.flush();
+  Deps.flush();
   var foo2 = d.node().firstChild;
   test.equal(d.node().firstChild.nextSibling.nodeValue, '2');
   test.isTrue(foo1 === foo2);
   d.kill();
-  Meteor.flush();
+  Deps.flush();
 
   // test that selectors in a landmark preservation map are resolved
   // relative to the landmark, not relative to the re-rendered
@@ -3183,13 +3183,13 @@ Tinytest.add("spark - isolate inside landmark", function (test) {
   test.equal(foo1.nodeName, 'HR');
   test.equal(foo1.nextSibling.nodeValue, '1');
   R.set(2);
-  Meteor.flush();
+  Deps.flush();
   var foo2 = DomUtils.find(d.node(), '.foo');
   test.equal(foo2.nodeName, 'HR');
   test.equal(foo2.nextSibling.nodeValue, '2');
   test.isTrue(foo1 === foo2);
   d.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 Tinytest.add("spark - nested onscreen processing", function (test) {
@@ -3212,11 +3212,11 @@ Tinytest.add("spark - nested onscreen processing", function (test) {
     });
   }));
 
-  Meteor.flush();
+  Deps.flush();
   test.equal(x.join(''), 'cr');
   x = [];
   d.kill();
-  Meteor.flush();
+  Deps.flush();
   test.equal(x.join(''), 'd');
 });
 
@@ -3341,7 +3341,7 @@ Tinytest.add("spark - current landmark", function (test) {
   };
 
   test.equal(callbacks, 1);
-  Meteor.flush();
+  Deps.flush();
   test.equal(callbacks, 2);
   test.equal(null, Spark._getEnclosingLandmark(d.node()));
   var enc = Spark._getEnclosingLandmark(d.node().firstChild);
@@ -3349,15 +3349,15 @@ Tinytest.add("spark - current landmark", function (test) {
   test.equal(enc.b, 2);
   test.isFalse('c' in enc);
   enc.c = 3;
-  Meteor.flush();
+  Deps.flush();
   test.equal(callbacks, 2);
 
   R.set(2)
-  Meteor.flush();
+  Deps.flush();
   test.equal(callbacks, 3);
 
   R.set(3)
-  Meteor.flush();
+  Deps.flush();
   test.equal(callbacks, 4);
 
   test.isTrue(Spark._getEnclosingLandmark(findOuter()).outer);
@@ -3368,30 +3368,30 @@ Tinytest.add("spark - current landmark", function (test) {
   test.equal(1, Spark._getEnclosingLandmark(findInnerB()).renderCount);
 
   R.set(4)
-  Meteor.flush();
+  Deps.flush();
   test.equal(callbacks, 5);
   test.equal(2, Spark._getEnclosingLandmark(findOuter()).renderCount);
   test.equal(2, Spark._getEnclosingLandmark(findInnerA()).renderCount);
 
   R.set(5)
-  Meteor.flush();
+  Deps.flush();
   test.equal(callbacks, 6);
   test.equal(3, Spark._getEnclosingLandmark(findOuter()).renderCount);
   test.equal(3, Spark._getEnclosingLandmark(findInnerA()).renderCount);
   test.equal(1, Spark._getEnclosingLandmark(findInnerB()).renderCount);
 
   R.set(6)
-  Meteor.flush();
+  Deps.flush();
   test.equal(callbacks, 7);
   test.equal(4, Spark._getEnclosingLandmark(findOuter()).renderCount);
   test.equal(4, Spark._getEnclosingLandmark(findInnerA()).renderCount);
   test.equal(2, Spark._getEnclosingLandmark(findInnerB()).renderCount);
 
   d.kill();
-  Meteor.flush();
+  Deps.flush();
   test.equal(callbacks, 8);
 
-  Meteor.flush();
+  Deps.flush();
   test.equal(callbacks, 8);
 });
 
@@ -3461,12 +3461,12 @@ Tinytest.add("spark - find/findAll on landmark", function (test) {
   check(false);
   check(true);
   R.set(2);
-  Meteor.flush();
+  Deps.flush();
   check(false);
   check(true);
 
   d.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 Tinytest.add("spark - landmark clean-up", function (test) {
@@ -3495,7 +3495,7 @@ Tinytest.add("spark - landmark clean-up", function (test) {
     return '';
   });
   test.equal(crd, [1,0,1]);
-  Meteor.flush();
+  Deps.flush();
   test.equal(crd, [1,0,1]);
 
   // two landmarks, only one materialized at a time.
@@ -3510,16 +3510,16 @@ Tinytest.add("spark - landmark clean-up", function (test) {
   }));
   test.equal(crd1, [1,0,0]); // created
   test.equal(crd2, [0,0,0]);
-  Meteor.flush();
+  Deps.flush();
   test.equal(crd1, [1,1,0]); // rendered
   test.equal(crd2, [0,0,0]);
   R.set(2);
-  Meteor.flush();
+  Deps.flush();
   test.equal(crd1, [1,1,0]); // not destroyed (callback replaced)
   test.equal(crd2, [0,1,0]); // matched
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
   test.equal(crd1, [1,1,0]);
   test.equal(crd2, [0,1,1]); // destroyed
 });
@@ -3551,19 +3551,19 @@ Tinytest.add("spark - bubbling render", function (test) {
     });
   }));
 
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html(), 'foo');
   test.equal(crd1, [1,1,0]);
   test.equal(crd2, [1,1,0]);
 
   R.set('bar');
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html(), 'bar');
   test.equal(crd1, [1,2,0]);
   test.equal(crd2, [1,2,0]);
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 Tinytest.add("spark - landmark arg", function (test) {
@@ -3596,13 +3596,13 @@ Tinytest.add("spark - landmark arg", function (test) {
   }));
 
   test.equal(div.text(), "Foo Bar Baz");
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.text(), "Greetings 1-bold Line");
   clickElement(DomUtils.find(div.node(), 'i'));
   test.equal(div.text(), "Hello 3-element World");
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 Tinytest.add("spark - landmark preserve", function (test) {
@@ -3623,7 +3623,7 @@ Tinytest.add("spark - landmark preserve", function (test) {
   test.equal(div.html(), '<div><span>foo</span><hr><hr></div>');
   var hrs1 = DomUtils.findAll(div.node(), 'hr');
   R.set("bar");
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html(), '<div><span>bar</span><hr><hr></div>');
   var hrs2 = DomUtils.findAll(div.node(), 'hr');
 
@@ -3631,7 +3631,7 @@ Tinytest.add("spark - landmark preserve", function (test) {
   test.isTrue(hrs1[1] === hrs2[1]);
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 Tinytest.add("spark - branch annotation is optional", function (test) {
@@ -3660,7 +3660,7 @@ Tinytest.add("spark - branch annotation is optional", function (test) {
   var div1 = div.node().firstChild;
   var hrs1 = DomUtils.findAll(div.node(), 'hr');
   R.set("bar");
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html(), '<div class="bar"></div><div><hr><hr></div>');
   var div2 = div.node().firstChild;
   var hrs2 = DomUtils.findAll(div.node(), 'hr');
@@ -3670,7 +3670,7 @@ Tinytest.add("spark - branch annotation is optional", function (test) {
   test.isTrue(hrs1[1] === hrs2[1]);
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 Tinytest.add("spark - unique label", function (test) {
@@ -3696,14 +3696,14 @@ Tinytest.add("spark - unique label", function (test) {
   var div = OnscreenDiv(Meteor.render(function () {
     return ublm() + ublm() + ublm() + R.get();
   }));
-  Meteor.flush();
+  Deps.flush();
   test.equal(bufstr(), 'cccrrr');
   R.set('bar');
-  Meteor.flush();
+  Deps.flush();
   test.equal(bufstr(), 'cccdddrrr');
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
   test.equal(bufstr(), 'ddd');
 
 });
@@ -3738,21 +3738,21 @@ Tinytest.add("spark - list update", function (test) {
   }));
 
   lst.another();
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html(), "foo<hr>");
 
   lst.another();
   R.set('bar');
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html(), "bar<hr><hr>");
 
   R.set('baz');
   lst.another();
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html(), "baz<hr><hr><hr>");
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 Tinytest.add("spark - callback context", function (test) {
@@ -3762,7 +3762,7 @@ Tinytest.add("spark - callback context", function (test) {
   var buf = [];
 
   var R = ReactiveVar("foo");
-  var getCx = function () { return Meteor.deps.Context.current; };
+  var getCx = function () { return Deps.currentComputation; };
   var callbackFunc = function (ltr) {
     return function () {
       buf.push(ltr);
@@ -3786,11 +3786,11 @@ Tinytest.add("spark - callback context", function (test) {
     test.isTrue(getCx() === cx); // test that context was restored
     return html;
   }));
-  Meteor.flush();
+  Deps.flush();
   R.set('bar');
-  Meteor.flush();
+  Deps.flush();
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   test.equal(buf.join(''), 'ccdrrd');
   test.equal(cxs.length, 6);
@@ -3820,7 +3820,7 @@ Tinytest.add("spark - legacy preserve names", function (test) {
 
   var inputs1 = nodesToArray(div.node().getElementsByTagName('input'));
   R.set('bar');
-  Meteor.flush();
+  Deps.flush();
   var inputs2 = nodesToArray(div.node().getElementsByTagName('input'));
   test.isTrue(inputs1[0] === inputs2[0]);
   test.isTrue(inputs1[1] === inputs2[1]);
@@ -3828,12 +3828,12 @@ Tinytest.add("spark - legacy preserve names", function (test) {
   test.isTrue(inputs1[3] !== inputs2[3]);
 
   R2.set('banana');
-  Meteor.flush();
+  Deps.flush();
   var inputs3 = nodesToArray(div.node().getElementsByTagName('input'));
   test.isTrue(inputs1[2] === inputs3[2]);
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 Tinytest.add("spark - update defunct range", function (test) {
@@ -3852,13 +3852,13 @@ Tinytest.add("spark - update defunct range", function (test) {
 
   test.equal(div.html(), "<p>foo</p>");
   R.set("bar");
-  Meteor.flush();
+  Deps.flush();
   test.equal(R.numListeners(), 1);
   test.equal(div.html(), "<p>bar</p>");
   test.equal(div.node().firstChild.nodeName, "P");
   div.node().firstChild.innerHTML = '';
   R.set("baz");
-  Meteor.flush(); // should throw no errors
+  Deps.flush(); // should throw no errors
   // will be 1 if our isolate func was run.
   test.equal(R.numListeners(), 0);
 
@@ -3876,13 +3876,13 @@ Tinytest.add("spark - update defunct range", function (test) {
 
   test.equal(div.html(), "<p><span>foo</span></p>");
   R.set("bar");
-  Meteor.flush();
+  Deps.flush();
   test.equal(R.numListeners(), 1);
   test.equal(div.html(), "<p><span>bar</span></p>");
   test.equal(div.node().firstChild.nodeName, "P");
   div.node().firstChild.innerHTML = '';
   R.set("baz");
-  Meteor.flush(); // should throw no errors
+  Deps.flush(); // should throw no errors
   // will be 1 if our isolate func was run.
   test.equal(R.numListeners(), 0);
 

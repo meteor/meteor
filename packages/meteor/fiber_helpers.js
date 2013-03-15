@@ -60,10 +60,12 @@ _.extend(Meteor._SynchronousQueue.prototype, {
   runTask: function (task) {
     var self = this;
 
-    if (!Fiber.current)
-      throw new Error("Can only call runTask in a Fiber");
-    if (self._currentTaskFiber === Fiber.current)
-      throw new Error("Can't runTask from another task in the same fiber");
+    if (!self.safeToRunTask()) {
+      if (Fiber.current)
+        throw new Error("Can't runTask from another task in the same fiber");
+      else
+        throw new Error("Can only call runTask in a Fiber");
+    }
 
     var fut = new Future;
     self._taskHandles.push({task: task, future: fut});
@@ -82,6 +84,12 @@ _.extend(Meteor._SynchronousQueue.prototype, {
     var self = this;
     return self._taskRunning;
   },
+
+  safeToRunTask: function () {
+    var self = this;
+    return Fiber.current && self._currentTaskFiber !== Fiber.current;
+  },
+
   _scheduleRun: function () {
     var self = this;
 

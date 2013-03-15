@@ -10,6 +10,8 @@ Package.on_use(function (api) {
   api.use('tinytest');
   api.use('bootstrap');
 
+  api.use('session');
+
   api.use(['spark', 'livedata', 'templating'], 'client');
 
   api.add_files([

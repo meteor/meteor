@@ -57,12 +57,15 @@ Tinytest.add("livedata - methods with colliding names", function (test) {
 
 var echoTest = function (item) {
   return function (test, expect) {
-    if (Meteor.isServer)
+    if (Meteor.isServer) {
       test.equal(Meteor.call("echo", item), [item]);
+      test.equal(Meteor.call("echoOne", item), item);
+    }
     if (Meteor.isClient)
       test.equal(Meteor.call("echo", item), undefined);
 
     test.equal(Meteor.call("echo", item, expect(undefined, [item])), undefined);
+    test.equal(Meteor.call("echoOne", item, expect(undefined, item)), undefined);
   };
 };
 
@@ -504,6 +507,30 @@ if (Meteor.isClient) {
         conn._stream.forceDisconnect();
       }
     ];})());
+
+    testAsyncMulti("livedata - publish multiple cursors", [
+      function (test, expect) {
+        Meteor.subscribe("multiPublish", {normal: 1}, {
+          onReady: expect(function () {
+            test.equal(One.find().count(), 2);
+            test.equal(Two.find().count(), 3);
+          }),
+          onError: failure()
+        });
+      },
+      function (test, expect) {
+        Meteor.subscribe("multiPublish", {dup: 1}, {
+          onReady: failure(),
+          onError: expect(failure(test, 500, "Internal server error"))
+        });
+      },
+      function (test, expect) {
+        Meteor.subscribe("multiPublish", {notCursor: 1}, {
+          onReady: failure(),
+          onError: expect(failure(test, 500, "Internal server error"))
+        });
+      }
+    ]);
 }
 
 // XXX some things to test in greater detail:
