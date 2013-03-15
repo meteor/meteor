@@ -1,6 +1,14 @@
 ### Filing Bug Reports
 
-If you've found a bug in Meteor, file a bug report in [our issue tracker](https://github.com/meteor/meteor/issues). However, a Meteor app has many moving parts, and it's often difficult to reproduce a bug based on just a few lines of code. If you want somebody to be able to fix a bug (or verify a fix that you've contributed), the best way is:
+If you've found a bug in Meteor, file a bug report in [our issue
+tracker](https://github.com/meteor/meteor/issues). If the issue contains
+sensitive information or raises a security concern, email
+[security@meteor.com](mailto:security@meteor.com) instead, which will page the
+security team.
+
+A Meteor app has many moving parts, and it's often difficult to reproduce a bug
+based on just a few lines of code. If you want somebody to be able to fix a bug
+(or verify a fix that you've contributed), the best way is:
 
 * Create a new Meteor app that displays the bug with as little code as possible. Try to delete any code that is unrelated to the precise bug you're reporting.
 * Create a new GitHub repository with a name like `meteor-reactivity-bug` (or if you're adding a new reproduction recipe to an existing issue, `meteor-issue-321`) and push your code to it. (Make sure to include the `.meteor/packages` file!)

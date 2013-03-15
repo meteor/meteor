@@ -462,6 +462,10 @@ Template.api.meteor_collection = {
      " - **`'STRING'`**: random strings\n" +
      " - **`'MONGO'`**:  random [`Meteor.Collection.ObjectID`](#collection_object_id) values\n\n" +
      "The default id generation technique is `'STRING'`."
+    },
+    {name: "transform",
+     type: "Function",
+     descr: "An optional transformation function. Documents will be passed through this function before being returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `allow`, and `deny`."
     }
   ]
 };
@@ -473,13 +477,13 @@ Template.api.find = {
   descr: ["Find the documents in a collection that match the selector."],
   args: [
     {name: "selector",
-     type: "Object: Mongo selector, or String",
+     type: "Mongo selector, or String",
      type_link: "selectors",
      descr: "The query"}
   ],
   options: [
     {name: "sort",
-     type: "Object: sort specifier",
+     type: "Sort specifier",
      type_link: "sortspecifiers",
      descr: "Sort order (default: natural order)"},
     {name: "skip",
@@ -489,12 +493,15 @@ Template.api.find = {
      type: "Number",
      descr: "Maximum number of results to return"},
     {name: "fields",
-     type: "Object: field specifier",
+     type: "Field specifier",
      type_link: "fieldspecifiers",
      descr: "(Server only) Dictionary of fields to return or exclude."},
     {name: "reactive",
      type: "Boolean",
-     descr: "(Client only) Default `true`; pass `false` to disable reactivity"}
+     descr: "(Client only) Default `true`; pass `false` to disable reactivity"},
+    {name: "transform",
+     type: "Function",
+     descr: "Overrides `transform` on the  [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation."}
   ]
 };
 
@@ -505,25 +512,29 @@ Template.api.findone = {
   descr: ["Finds the first document that matches the selector, as ordered by sort and skip options."],
   args: [
     {name: "selector",
-     type: "Object: Mongo selector, or String",
+     type: "Mongo selector, or String",
      type_link: "selectors",
      descr: "The query"}
   ],
   options: [
     {name: "sort",
-     type: "Object: sort specifier",
+     type: "Sort specifier",
      type_link: "sortspecifiers",
      descr: "Sort order (default: natural order)"},
     {name: "skip",
      type: "Number",
      descr: "Number of results to skip at the beginning"},
     {name: "fields",
-     type: "Object: field specifier",
+     type: "Field specifier",
      type_link: "fieldspecifiers",
      descr: "(Server only) Dictionary of fields to return or exclude."},
     {name: "reactive",
      type: "Boolean",
-     descr: "(Client only) Default true; pass false to disable reactivity"}
+     descr: "(Client only) Default true; pass false to disable reactivity"},
+    {name: "transform",
+     type: "Function",
+     descr:  "Overrides `transform` on the [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation."
+    }
   ]
 };
 
@@ -549,11 +560,11 @@ Template.api.update = {
   descr: ["Modify one or more documents in the collection"],
   args: [
     {name: "selector",
-     type: "Object: Mongo selector, or String",
+     type: "Mongo selector, or object id",
      type_link: "selectors",
      descr: "Specifies which documents to modify"},
     {name: "modifier",
-     type: "Object: Mongo modifier",
+     type: "Mongo modifier",
      type_link: "modifiers",
      descr: "Specifies how to modify the documents"},
     {name: "callback",
@@ -574,7 +585,7 @@ Template.api.remove = {
   descr: ["Remove documents from the collection"],
   args: [
     {name: "selector",
-     type: "Object: Mongo selector, or String",
+     type: "Mongo selector, or object id",
      type_link: "selectors",
      descr: "Specifies which documents to remove"},
     {name: "callback",
@@ -594,7 +605,10 @@ Template.api.allow = {
      descr: "Functions that look at a proposed modification to the database and return true if it should be allowed."},
     {name: "fetch",
      type: "Array of String",
-     descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions."}
+     descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions."},
+    {name: "transform",
+     type: "Function",
+     descr: "Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation."}
   ]
 };
 
@@ -609,7 +623,10 @@ Template.api.deny = {
      descr: "Functions that look at a proposed modification to the database and return true if it should be denied, even if an `allow` rule says otherwise."},
     {name: "fetch",
      type: "Array of Strings",
-     descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions."}
+     descr: "Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions."},
+    {name: "transform",
+     type: "Function",
+     descr:  "Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation."}
   ]
 };
 
@@ -724,70 +741,163 @@ Template.api.fieldspecifiers = {
   name: "Field Specifiers"
 };
 
-Template.api.Context = {
-  id: "context",
-  name: "new Meteor.deps.Context",
-  locus: "Client",
-  descr: ["Create an invalidation context. Invalidation contexts are used to run a piece of code, and record its dependencies so it can be rerun later if one of its inputs changes.", "An invalidation context is basically just a list of callbacks for an event that can fire only once. The [`onInvalidate`](#oninvalidate) method adds a callback to the list, and the [`invalidate`](#invalidate) method fires the event."]
-};
+////// DEPS
 
-Template.api.run = {
-  id: "run",
-  name: "<em>context</em>.run(func)",
+Template.api.deps_autorun = {
+  id: "deps_autorun",
+  name: "Deps.autorun(runFunc)",
   locus: "Client",
-  descr: ["Run some code inside an evaluation context."],
+  descr: ["Run a function now and rerun it later whenever its dependencies change. Returns a Computation object that can be used to stop or observe the rerunning."],
   args: [
-    {name: "func",
+    {name: "runFunc",
      type: "Function",
-     descr: "The code to run"}
+     descr: "The function to run. It receives one argument: the Computation object that will be returned."}
   ]
 };
 
-Template.api.onInvalidate = {
-  id: "oninvalidate",
-  name: "<em>context</em>.onInvalidate(callback)",
+Template.api.deps_flush = {
+  id: "deps_flush",
+  name: "Deps.flush()",
   locus: "Client",
-  descr: ["Registers `callback` to be called when this context is invalidated. `callback` will be run exactly once."],
+  descr: ["Process all reactive updates immediately and ensure that all invalidated computations are rerun."]
+};
+
+Template.api.deps_nonreactive = {
+  id: "deps_nonreactive",
+  name: "Deps.nonreactive(func)",
+  locus: "Client",
+  descr: ["Run a function without tracking dependencies."],
+  args: [
+    {name: "func",
+     type: "Function",
+     descr: "A function to call immediately."}
+  ]
+};
+
+Template.api.deps_active = {
+  id: "deps_active",
+  name: "Deps.active",
+  locus: "Client",
+  descr: ["True if there is a current computation, meaning that dependencies on reactive data sources will be tracked and potentially cause the current computation to be rerun."]
+};
+
+Template.api.deps_currentcomputation = {
+  id: "deps_currentcomputation",
+  name: "Deps.currentComputation",
+  locus: "Client",
+  descr: ["The current computation, or `null` if there isn't one.  The current computation is the [`Deps.Computation`](#deps_computation) object created by the innermost active call to `Deps.autorun`, and it's the computation that gains dependencies when reactive data sources are accessed."]
+};
+
+Template.api.deps_oninvalidate = {
+  id: "deps_oninvalidate",
+  name: "Deps.onInvalidate(callback)",
+  locus: "Client",
+  descr: ["Registers a new [`onInvalidate`](#computation_oninvalidate) callback on the current computation (which must exist), to be called immediately when the current computation is invalidated or stopped."],
   args: [
     {name: "callback",
      type: "Function",
-     descr: "Function to be called on invalidation. Receives one argument, the context that was invalidated."}
+     descr: "A callback function that will be invoked as `func(c)`, where `c` is the computation on which the callback is registered."}
   ]
 };
 
-Template.api.invalidate = {
-  id: "invalidate",
-  name: "<em>context</em>.invalidate()",
+Template.api.deps_afterflush = {
+  id: "deps_afterflush",
+  name: "Deps.afterFlush(callback)",
   locus: "Client",
-  descr: ["Add this context to the list of contexts that will have their [`onInvalidate`](#oninvalidate) callbacks called by the next call to [`Meteor.flush`](#meteor_flush)."]
-};
-
-Template.api.current = {
-  id: "current",
-  name: "Meteor.deps.Context.current",
-  locus: "Client",
-  descr: ["The current [`invalidation context`](#context), or `null` if not being called from inside [`run`](#run)."]
-};
-
-Template.api.autorun = {
-  id: "meteor_autorun",
-  name: "Meteor.autorun(func)",
-  locus: "Client",
-  descr: ["Run a function and rerun it whenever its dependencies change. Returns a handle that provides a `stop` method, which will prevent further reruns."],
+  descr: ["Schedules a function to be called during the next flush, or later in the current flush if one is in progress, after all invalidated computations have been rerun.  The function will be run once and not on subsequent flushes unless `afterFlush` is called again."],
   args: [
-    {name: "func",
+    {name: "callback",
      type: "Function",
-     descr: "The function to run. It receives one argument: the same handle that `Meteor.autorun` returns."}
+     descr: "A function to call at flush time."}
   ]
 };
 
-Template.api.flush = {
-  id: "meteor_flush",
-  name: "Meteor.flush()",
+Template.api.deps_depend = {
+  id: "deps_depend",
+  name: "Deps.depend(dependency)",
   locus: "Client",
-  descr: ["Ensure that any reactive updates have finished. Allow auto-updating DOM elements to be cleaned up if they are offscreen."]
+  descr: ["Declares that the current computation depends on `dependency`.  The current computation, if there is one, becomes a dependent of `dependency`, meaning it will be invalidated and rerun the next time `dependency` changes.", "Returns `true` if this results in `dependency` gaining a new dependent (or `false` if this relationship already exists or there is no current computation)."],
+  args: [
+    {name: "dependency",
+     type: "Deps.Dependency",
+     descr: "The dependency for this computation to depend on."}
+  ]
 };
 
+Template.api.computation_stop = {
+  id: "computation_stop",
+  name: "<em>computation</em>.stop()",
+  locus: "Client",
+  descr: ["Prevents this computation from rerunning."]
+};
+
+Template.api.computation_invalidate = {
+  id: "computation_invalidate",
+  name: "<em>computation</em>.invalidate()",
+  locus: "Client",
+  descr: ["Invalidates this computation so that it will be rerun."]
+};
+
+Template.api.computation_oninvalidate = {
+  id: "computation_oninvalidate",
+  name: "<em>computation</em>.onInvalidate(callback)",
+  locus: "Client",
+  descr: ["Registers `callback` to run when this computation is next invalidated, or runs it immediately if the computation is already invalidated.  The callback is run exactly once and not upon future invalidations unless `onInvalidate` is called again after the computation becomes valid again."],
+  args: [
+    {name: "callback",
+     type: "Function",
+     descr: "Function to be called on invalidation. Receives one argument, the computation that was invalidated."}
+  ]
+};
+
+Template.api.computation_stopped = {
+  id: "computation_stopped",
+  name: "<em>computation</em>.stopped",
+  locus: "Client",
+  descr: ["True if this computation has been stopped."]
+};
+
+Template.api.computation_invalidated = {
+  id: "computation_invalidated",
+  name: "<em>computation</em>.invalidated",
+  locus: "Client",
+  descr: ["True if this computation has been invalidated (and not yet rerun), or if it has been stopped."]
+};
+
+Template.api.computation_firstrun = {
+  id: "computation_firstrun",
+  name: "<em>computation</em>.firstRun",
+  locus: "Client",
+  descr: ["True during the initial run of the computation at the time `Deps.autorun` is called, and false on subsequent reruns and at other times."]
+};
+
+Template.api.dependency_changed = {
+  id: "dependency_changed",
+  name: "<em>dependency</em>.changed()",
+  locus: "Client",
+  descr: ["Invalidate all dependent computations immediately and remove them as dependents."]
+};
+
+Template.api.dependency_adddependent = {
+  id: "dependency_adddependent",
+  name: "<em>dependency</em>.addDependent(computation)",
+  locus: "Client",
+  descr: ["Adds `computation` as a dependent of this Dependency, recording the fact that the computation depends on this Dependency.", "Returns true if the computation was not already a dependent of this Dependency."],
+  args: [
+    {name: "computation",
+     type: "Deps.Computation",
+     descr: "The computation to add, or `null` to use the current computation (in which case there must be a current computation)."}
+  ]
+};
+
+Template.api.dependency_hasdependents = {
+  id: "dependency_hasdependents",
+  name: "<em>dependency</em>.hasDependents()",
+  locus: "Client",
+  descr: ["True if this Dependency has one or more dependent Computations, which would be invalidated if this Dependency were to change."]
+};
+
+//////
 
 // writeFence
 // invalidationCrossbar
@@ -1356,7 +1466,7 @@ Template.api.set = {
   id: "session_set",
   name: "Session.set(key, value)",
   locus: "Client",
-  descr: ["Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Meteor.autorun`](#meteor_autorun) blocks, that called [`Session.get`](#session_get) on this `key`.)"],
+  descr: ["Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Deps.autorun`](#deps_autorun) computations, that called [`Session.get`](#session_get) on this `key`.)"],
   args: [
     {name: "key",
      type: "String",
@@ -1386,7 +1496,7 @@ Template.api.get = {
   id: "session_get",
   name: "Session.get(key)",
   locus: "Client",
-  descr: ["Get the value of a session variable. If inside a [`Meteor.deps`](#meteor_deps) context, invalidate the context the next time the value of the variable is changed by [`Session.set`](#session_set). This returns a clone of the session value, so if it's an object or an array, mutating the returned value has no effect on the value stored in the session."],
+  descr: ["Get the value of a session variable. If inside a [reactive computation](#reactivity), invalidate the computation the next time the value of the variable is changed by [`Session.set`](#session_set). This returns a clone of the session value, so if it's an object or an array, mutating the returned value has no effect on the value stored in the session."],
   args: [
     {name: "key",
      type: "String",
@@ -1398,7 +1508,7 @@ Template.api.equals = {
   id: "session_equals",
   name: "Session.equals(key, value)",
   locus: "Client",
-  descr: ["Test if a session variable is equal to a value. If inside a [`Meteor.deps`](#meteor_deps) context, invalidate the context the next time the variable changes to or from the value."],
+  descr: ["Test if a session variable is equal to a value. If inside a [reactive computation](#reactivity), invalidate the computation the next time the variable changes to or from the value."],
   args: [
     {name: "key",
      type: "String",
@@ -1526,7 +1636,7 @@ Template.api.template_events = {
   descr: ["Specify event handlers for this template."],
   args: [
     {name: "eventMap",
-     type: "Object: event map",
+     type: "Event map",
      type_link: "eventmaps",
      descr: "Event handlers to associate with this template."}
   ]

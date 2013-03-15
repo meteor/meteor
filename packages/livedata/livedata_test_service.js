@@ -5,6 +5,9 @@ Meteor.methods({
   echo: function (/* arguments */) {
     return _.toArray(arguments);
   },
+  echoOne: function (/*arguments*/) {
+    return arguments[0];
+  },
   exception: function (where, intended) {
     var shouldThrow =
       (Meteor.isServer && where === "server") ||
@@ -273,5 +276,48 @@ if (Meteor.isServer) {
   });
 }
 
+
+/*****/
+
+/// Helpers for "livedata - publish multiple cursors"
+One = new Meteor.Collection("collectionOne");
+Two = new Meteor.Collection("collectionTwo");
+
+if (Meteor.isServer) {
+  One.remove({});
+  One.insert({name: "value1"});
+  One.insert({name: "value2"});
+
+  Two.remove({});
+  Two.insert({name: "value3"});
+  Two.insert({name: "value4"});
+  Two.insert({name: "value5"});
+
+  Meteor.publish("multiPublish", function (options) {
+    if (options.normal) {
+      return [
+        One.find(),
+        Two.find()
+      ];
+    } else if (options.dup) {
+      // Suppress the log of the expected internal error.
+      Meteor._suppress_log(1);
+      return [
+        One.find(),
+        One.find({name: "value2"}), // multiple cursors for one collection - error
+        Two.find()
+      ];
+    } else if (options.notCursor) {
+      // Suppress the log of the expected internal error.
+      Meteor._suppress_log(1);
+      return [
+        One.find(),
+        "not a cursor",
+        Two.find()
+      ];
+    } else
+      throw "unexpected options";
+  });
+}
 
 })();

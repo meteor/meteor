@@ -8,19 +8,14 @@ Package.describe({
 // XXX hack -- need a way to use a package at bundle time
 var _ = require(path.join('..', '..', 'packages', 'underscore', 'underscore.js'));
 
-Package.on_use(function (api, where) {
-  where = where || ['client', 'server'];
-
-  api.use(['underscore', 'deps'], where);
+Package.on_use(function (api) {
+  api.use(['underscore', 'deps'], 'client');
   // XXX what I really want to do is ensure that if 'reload' is going to
   // be loaded, it should be loaded before 'session'. Session can work
   // with or without reload.
-  if (where === "client" ||
-      (where instanceof Array && _.indexOf(where, "client") !== -1)) {
-    api.use("reload", "client");
-  }
+  api.use('reload', 'client');
 
-  api.add_files('session.js', where);
+  api.add_files('session.js', 'client');
 });
 
 Package.on_test(function (api) {

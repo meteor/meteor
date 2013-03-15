@@ -98,7 +98,14 @@ var files = module.exports = {
   // given a path, returns true if it is a meteor application (has a
   // .meteor directory with a 'packages' file). false otherwise.
   is_app_dir: function (filepath) {
-    return fs.existsSync(path.join(filepath, '.meteor', 'packages'));
+    // .meteor/packages must be a *file*, not a directory; future versions of
+    // meteor will create a directory at $HOME/.meteor which contains a
+    // subdirectory called packages, but this doesn't make it an app!
+    try { // use try/catch to avoid the additional syscall to fs.existsSync
+      return fs.statSync(path.join(filepath, '.meteor', 'packages')).isFile();
+    } catch (e) {
+      return false;
+    }
   },
 
   // given a path, returns true if it is a meteor package (is a

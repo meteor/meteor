@@ -31,7 +31,7 @@ var listsHandle = Meteor.subscribe('lists', function () {
 
 var todosHandle = null;
 // Always be subscribed to the todos for the selected list.
-Meteor.autorun(function () {
+Deps.autorun(function () {
   var list_id = Session.get('list_id');
   if (list_id)
     todosHandle = Meteor.subscribe('todos', list_id);
@@ -95,7 +95,7 @@ Template.lists.events({
   },
   'dblclick .list': function (evt, tmpl) { // start editing list name
     Session.set('editing_listname', this._id);
-    Meteor.flush(); // force DOM redraw, so we can focus the edit field
+    Deps.flush(); // force DOM redraw, so we can focus the edit field
     activateInput(tmpl.find("#list-name-input"));
   }
 });
@@ -211,13 +211,13 @@ Template.todo_item.events({
 
   'click .addtag': function (evt, tmpl) {
     Session.set('editing_addtag', this._id);
-    Meteor.flush(); // update DOM before focus
+    Deps.flush(); // update DOM before focus
     activateInput(tmpl.find("#edittag-input"));
   },
 
   'dblclick .display .todo-text': function (evt, tmpl) {
     Session.set('editing_itemname', this._id);
-    Meteor.flush(); // update DOM before focus
+    Deps.flush(); // update DOM before focus
     activateInput(tmpl.find("#todo-input"));
   },
 

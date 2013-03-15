@@ -19,11 +19,11 @@ var ReactiveVar = function(initialValue) {
 
   this._value = (typeof initialValue === "undefined" ? null :
                  initialValue);
-  this._deps = new Meteor.deps._ContextSet;
+  this._deps = new Deps.Dependency;
 };
 
 ReactiveVar.prototype.get = function() {
-  this._deps.addCurrentContext();
+  Deps.depend(this._deps);
   return this._value;
 };
 
@@ -35,9 +35,10 @@ ReactiveVar.prototype.set = function(newValue) {
 
   this._value = newValue;
 
-  this._deps.invalidateAll();
+  this._deps.changed();
 };
 
 ReactiveVar.prototype.numListeners = function() {
-  return _.keys(this._deps._contextsById).length;
+  // accesses private field (tests want to know)
+  return _.keys(this._deps._dependentsById).length;
 };

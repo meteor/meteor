@@ -1411,6 +1411,14 @@ _.each([true, false], function (ordered) {
     c.update(4, {$set: {eek: 5}});
     expect('cb4_');
     handle.stop();
+
+    // Test observe with reactive: false.
+    handle = c.find({tags: "flower"}, {reactive: false}).observe(makecb('c'));
+    expect('ac4_ac5_');
+    // This insert shouldn't trigger a callback because it's not reactive.
+    c.insert({_id: 6, name: "river", tags: ["flower"]});
+    expect('');
+    handle.stop();
   });
 });
 
@@ -1716,4 +1724,74 @@ Tinytest.add("minimongo - ids matched by selector", function (test) {
   check({$and: ["foo"]}, ["foo"]);
   check({$and: [{x: 42}, {_id: oid1}]}, [oid1]);
   check({$and: [{x: 42}, {_id: {$in: [oid1]}}]}, [oid1]);
+});
+
+Tinytest.add("minimongo - reactive stop", function (test) {
+  var coll = new LocalCollection();
+  coll.insert({_id: 'A'});
+  coll.insert({_id: 'B'});
+  coll.insert({_id: 'C'});
+
+  var addBefore = function (str, newChar, before) {
+    var idx = str.indexOf(before);
+    if (idx === -1)
+      return str + newChar;
+    return str.slice(0, idx) + newChar + str.slice(idx);
+  };
+
+  var x, y;
+  var sortOrder = ReactiveVar(1);
+
+  var c = Deps.autorun(function () {
+    var q = coll.find({}, {sort: {_id: sortOrder.get()}});
+    x = "";
+    q.observe({ addedAt: function (doc, atIndex, before) {
+      x = addBefore(x, doc._id, before);
+    }});
+    y = "";
+    q.observeChanges({ addedBefore: function (id, fields, before) {
+      y = addBefore(y, id, before);
+    }});
+  });
+
+  test.equal(x, "ABC");
+  test.equal(y, "ABC");
+
+  sortOrder.set(-1);
+  test.equal(x, "ABC");
+  test.equal(y, "ABC");
+  Deps.flush();
+  test.equal(x, "CBA");
+  test.equal(y, "CBA");
+
+  coll.insert({_id: 'D'});
+  coll.insert({_id: 'E'});
+  test.equal(x, "EDCBA");
+  test.equal(y, "EDCBA");
+
+  c.stop();
+  // stopping kills the observes immediately
+  coll.insert({_id: 'F'});
+  test.equal(x, "EDCBA");
+  test.equal(y, "EDCBA");
+});
+
+Tinytest.add("minimongo - immediate invalidate", function (test) {
+  var coll = new LocalCollection();
+  coll.insert({_id: 'A'});
+
+  // This has two separate findOnes.  findOne() uses skip/limit, which means
+  // that its response to an update() call involves a recompute. We used to have
+  // a bug where we would first calculate all the calls that need to be
+  // recomputed, then recompute them one by one, without checking to see if the
+  // callbacks from recomputing one query stopped the second query, which
+  // crashed.
+  var c = Deps.autorun(function () {
+    coll.findOne('A');
+    coll.findOne('A');
+  });
+
+  coll.update('A', {$set: {x: 42}});
+
+  c.stop();
 });

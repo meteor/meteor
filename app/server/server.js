@@ -9,8 +9,6 @@ var url = require("url");
 var connect = require('connect');
 var gzippo = require('gzippo');
 var argv = require('optimist').argv;
-var mime = require('mime');
-var handlebars = require('handlebars');
 var useragent = require('useragent');
 
 var _ = require('underscore');
@@ -157,9 +155,9 @@ var appUrl = function (url) {
   if (url === '/app.manifest')
     return false;
 
-  // Avoid serving app HTML for declared network routes such as /sockjs/.
+  // Avoid serving app HTML for declared routes such as /sockjs/.
   if (__meteor_bootstrap__._routePolicy &&
-      __meteor_bootstrap__._routePolicy.classify(url) === 'network')
+      __meteor_bootstrap__._routePolicy.classify(url))
     return false;
 
   // we currently return app HTML on all URLs by default
@@ -180,8 +178,21 @@ var run = function () {
   var app = connect.createServer();
   var static_cacheable_path = path.join(bundle_dir, 'static_cacheable');
   if (fs.existsSync(static_cacheable_path))
-    app.use(gzippo.staticGzip(static_cacheable_path, {clientMaxAge: 1000 * 60 * 60 * 24 * 365}));
-  app.use(gzippo.staticGzip(path.join(bundle_dir, 'static'), {clientMaxAge: 0}));
+    // cacheable files are files that should never change. Typically
+    // named by their hash (eg meteor bundled js and css files).
+    // cache them ~forever (1yr)
+    app.use(gzippo.staticGzip(static_cacheable_path,
+                              {clientMaxAge: 1000 * 60 * 60 * 24 * 365}));
+  // cache non-cacheable file anyway. This isn't really correct, as
+  // users can change the files and changes won't propogate
+  // immediately. However, if we don't cache them, browsers will
+  // 'flicker' when rerendering images. Eventually we will probably want
+  // to rewrite URLs of static assets to include a query parameter to
+  // bust caches. That way we can both get good caching behavior and
+  // allow users to change assets without delay.
+  // https://github.com/meteor/meteor/issues/773
+  app.use(gzippo.staticGzip(path.join(bundle_dir, 'static'),
+                            {clientMaxAge: 1000 * 60 * 60 * 24}));
 
   // read bundle config file
   var info_raw =

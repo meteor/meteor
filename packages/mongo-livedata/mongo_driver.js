@@ -13,6 +13,23 @@ var MongoDB = __meteor_bootstrap__.require('mongodb');
 var Fiber = __meteor_bootstrap__.require('fibers');
 var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
 
+var replaceNames = function (filter, thing) {
+  if (typeof thing === "object") {
+    if (_.isArray(thing)) {
+      return _.map(thing, _.partial(replaceNames, filter));
+    }
+    var ret = {};
+    _.each(thing, function (value, key) {
+      ret[filter(key)] = replaceNames(filter, value);
+    });
+    return ret;
+  }
+  return thing;
+};
+
+var makeMongoLegal = function (name) { return "EJSON" + name; };
+var unmakeMongoLegal = function (name) { return name.substr(5); };
+
 var replaceMongoAtomWithMeteor = function (document) {
   if (document instanceof MongoDB.Binary) {
     var buffer = document.value(true);
@@ -20,6 +37,9 @@ var replaceMongoAtomWithMeteor = function (document) {
   }
   if (document instanceof MongoDB.ObjectID) {
     return new Meteor.Collection.ObjectID(document.toHexString());
+  }
+  if (document["EJSON$type"] && document["EJSON$value"]) {
+    return EJSON.fromJSONValue(replaceNames(unmakeMongoLegal, document));
   }
   return undefined;
 };
@@ -33,7 +53,11 @@ var replaceMeteorAtomWithMongo = function (document) {
   }
   if (document instanceof Meteor.Collection.ObjectID) {
     return new MongoDB.ObjectID(document.toHexString());
+  } else if (EJSON._isCustomType(document)) {
+    return replaceNames(makeMongoLegal, EJSON.toJSONValue(document));
   }
+  // It is not ordinarily possible to stick dollar-sign keys into mongo
+  // so we don't bother checking for things that need escaping at this time.
   return undefined;
 };
 
@@ -136,8 +160,7 @@ _Mongo.prototype._maybeBeginWrite = function () {
 
 _Mongo.prototype.insert = function (collection_name, document) {
   var self = this;
-  if (collection_name === "___meteor_failure_test_collection" &&
-      document.fail) {
+  if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
     e.expected = true;
     throw e;
@@ -188,8 +211,7 @@ _Mongo.prototype._refresh = function (collectionName, selector) {
 _Mongo.prototype.remove = function (collection_name, selector) {
   var self = this;
 
-  if (collection_name === "___meteor_failure_test_collection" &&
-      selector.fail) {
+  if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
     e.expected = true;
     throw e;
@@ -220,8 +242,7 @@ _Mongo.prototype.remove = function (collection_name, selector) {
 _Mongo.prototype.update = function (collection_name, selector, mod, options) {
   var self = this;
 
-  if (collection_name === "___meteor_failure_test_collection" &&
-      selector.fail) {
+  if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
     e.expected = true;
     throw e;
@@ -306,8 +327,11 @@ _Mongo.prototype._ensureIndex = function (collectionName, index, options) {
 
 // There are several classes which relate to cursors:
 //
-// CursorDescription represents the arguments used
-// to construct a cursor: collectionName, selector, and (find) options.
+// CursorDescription represents the arguments used to construct a cursor:
+// collectionName, selector, and (find) options.  Because it is used as a key
+// for cursor de-dup, everything in it should either be JSON-stringifiable or
+// not affect observeChanges output (eg, options.transform functions are not
+// stringifiable but do not affect observeChanges).
 //
 // SynchronousCursor is a wrapper around a MongoDB cursor
 // which includes fully-synchronous versions of forEach, etc.
@@ -347,12 +371,17 @@ _.each(['forEach', 'map', 'rewind', 'fetch', 'count'], function (method) {
 
     if (!self._synchronousCursor)
       self._synchronousCursor = self._mongo._createSynchronousCursor(
-        self._cursorDescription);
+        self._cursorDescription, true);
 
     return self._synchronousCursor[method].apply(
       self._synchronousCursor, arguments);
   };
 });
+
+Cursor.prototype.getTransform = function () {
+  var self = this;
+  return self._cursorDescription.options.transform;
+};
 
 // When you call Meteor.publish() with a function that returns a Cursor, we need
 // to transmute it into the equivalent subscription.  This is the function that
@@ -374,13 +403,20 @@ Cursor.prototype._publishCursor = function (sub) {
     }
   });
 
-  // observeChanges only returns after the initial added callbacks have run.
-  // mark subscription as ready.
-  sub.ready();
+  // We don't call sub.ready() here: it gets called in livedata_server, after
+  // possibly calling _publishCursor on multiple returned cursors.
 
   // register stop callback (expects lambda w/ no args).
   sub.onStop(function () {observeHandle.stop();});
 };
+
+// Used to guarantee that publish functions return at most one cursor per
+// collection. Private, because we might later have cursors that include
+// documents from multiple collections somehow.
+Cursor.prototype._getCollectionName = function () {
+  var self = this;
+  return self._cursorDescription.collectionName;
+}
 
 Cursor.prototype.observe = function (callbacks) {
   var self = this;
@@ -394,7 +430,8 @@ Cursor.prototype.observeChanges = function (callbacks) {
     self._cursorDescription, ordered, callbacks);
 };
 
-_Mongo.prototype._createSynchronousCursor = function (cursorDescription) {
+_Mongo.prototype._createSynchronousCursor = function (cursorDescription,
+                                                      useTransform) {
   var self = this;
 
   var future = new Future;
@@ -419,13 +456,24 @@ _Mongo.prototype._createSynchronousCursor = function (cursorDescription) {
   if (!result[0])
     throw result[1];
 
-  return new SynchronousCursor(result[1]);
+  return new SynchronousCursor(result[1],
+                               useTransform &&
+                               cursorDescription.options &&
+                               cursorDescription.options.transform);
 };
 
-var SynchronousCursor = function (dbCursor) {
+var SynchronousCursor = function (dbCursor, transform) {
   var self = this;
+  if (transform)
+    self._transform = Deps._makeNonreactive(transform);
+  else
+    self._transform = transform;
   self._dbCursor = dbCursor;
-  self._synchronousNextObject = Future.wrap(dbCursor.nextObject.bind(dbCursor));
+  // Need to specify that the callback is the first argument to nextObject,
+  // since otherwise when we try to call it with no args the driver will
+  // interpret "undefined" first arg as an options hash and crash.
+  self._synchronousNextObject = Future.wrap(
+    dbCursor.nextObject.bind(dbCursor), 0);
   self._synchronousCount = Future.wrap(dbCursor.count.bind(dbCursor));
   self._visitedIds = {};
 };
@@ -437,6 +485,8 @@ _.extend(SynchronousCursor.prototype, {
       var doc = self._synchronousNextObject().wait();
       if (!doc || !doc._id) return null;
       doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
+      if (self._transform)
+        doc = self._transform(doc);
       var strId = Meteor.idStringify(doc._id);
       if (self._visitedIds[strId]) continue;
       self._visitedIds[strId] = true;
@@ -766,7 +816,7 @@ _.extend(LiveResultsSet.prototype, {
       self._synchronousCursor.rewind();
     } else {
       self._synchronousCursor = self._mongoHandle._createSynchronousCursor(
-        self._cursorDescription);
+        self._cursorDescription, false);
     }
     var newResults = self._synchronousCursor.getRawObjects(self._ordered);
     var oldResults = self._results;
@@ -791,6 +841,14 @@ _.extend(LiveResultsSet.prototype, {
   // with a call to _pollMongo or another call to this function.
   _addObserveHandleAndSendInitialAdds: function (handle) {
     var self = this;
+
+    // Check this before calling runTask (even though runTask does the same
+    // check) so that we don't leak a LiveResultsSet by incrementing
+    // _addHandleTasksScheduledButNotPerformed and never decrementing it.
+    if (!self._taskQueue.safeToRunTask())
+      throw new Error(
+        "Can't call observe() from an observe callback on the same query");
+
     // Keep track of how many of these tasks are on the queue, so that
     // _removeObserveHandle knows if it's safe to GC.
     ++self._addHandleTasksScheduledButNotPerformed;

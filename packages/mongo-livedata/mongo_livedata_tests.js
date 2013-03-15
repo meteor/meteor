@@ -3,10 +3,13 @@
 
 (function () {
 //var Future = __meteor_bootstrap__.require('fibers/future');
-
+var TRANSFORMS = {};
 if (Meteor.isServer) {
   Meteor.methods({
     createInsecureCollection: function (name, options) {
+      if (options && options.transformName) {
+        options.transform = TRANSFORMS[options.transformName];
+      }
       var c = new Meteor.Collection(name, options);
       c._insecure = true;
       Meteor.publish('c-' + name, function () {
@@ -18,6 +21,25 @@ if (Meteor.isServer) {
 
 Meteor._FailureTestCollection =
   new Meteor.Collection("___meteor_failure_test_collection");
+
+// For test "document with a custom type"
+var Dog = function (name, color) {
+  var self = this;
+  self.color = color;
+  self.name = name;
+};
+_.extend(Dog.prototype, {
+  getName: function () { return this.name;},
+  getColor: function () { return this.name;},
+  equals: function (other) { return other.name === this.name &&
+                             other.color === this.color; },
+  toJSONValue: function () { return {color: this.color, name: this.name};},
+  typeName: function () { return "dog"; },
+  clone: function () { return new Dog(this.name, this.color); },
+  speak: function () { return "woof"; }
+});
+EJSON.addType("dog", function (o) { return new Dog(o.name, o.color);});
+
 
 // Parameterize tests.
 _.each( ['STRING', 'MONGO'], function(idGeneration) {
@@ -34,20 +56,21 @@ testAsyncMulti("mongo-livedata - database error reporting. " + idGeneration, [
     };
 
     _.each(["insert", "remove", "update"], function (op) {
+      var arg = (op === "insert" ? {} : 'bla');
       if (Meteor.isServer) {
         test.throws(function () {
-          ftc[op]({fail: true});
+          ftc[op](arg);
         });
 
-        ftc[op]({fail: true}, expect(exception));
+        ftc[op](arg, expect(exception));
       }
 
       if (Meteor.isClient) {
-        ftc[op]({fail: true}, expect(exception));
+        ftc[op](arg, expect(exception));
 
         // This would log to console in normal operation.
         Meteor._suppress_log(1);
-        ftc[op]({fail: true});
+        ftc[op](arg);
       }
     });
   }
@@ -545,44 +568,6 @@ if (Meteor.isServer) {
 }
 
 
-testAsyncMulti('mongo-livedata - rewrite selector, ' + idGeneration, [
-  function (test, expect) {
-    var collectionName = Random.id();
-    if (Meteor.isClient) {
-      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
-      Meteor.subscribe('c-' + collectionName);
-    }
-
-    var coll = new Meteor.Collection(collectionName, collectionOptions);
-
-    var docId;
-
-    var updateCallback = expect(function (err2) {
-      test.isFalse(err2);
-
-      var doc = coll.findOne(docId);
-      test.isTrue(doc);
-      test.equal(doc.name, "f\noobar");
-      test.equal(doc.value, 43);
-    });
-
-    coll.insert({name: 'f\noobar', value: 42}, expect(function (err1, id) {
-      test.isFalse(err1);
-      test.isTrue(id);
-      docId = id;
-
-      var doc = coll.findOne(docId);
-      test.isTrue(doc);
-      test.equal(doc.name, "f\noobar");
-      test.equal(doc.value, 42);
-
-      // Ensure that "i" and "m" flags are respected by making /B/ match b and
-      // /^/ match at the newline.
-      coll.update({name: /^o+B/im}, {$inc: {value: 1}}, updateCallback);
-    }));
-  }
-]);
-
 testAsyncMulti('mongo-livedata - empty documents, ' + idGeneration, [
   function (test, expect) {
     var collectionName = Random.id();
@@ -625,6 +610,51 @@ testAsyncMulti('mongo-livedata - document with a date, ' + idGeneration, [
   }
 ]);
 
+testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGeneration, [
+  function (test, expect) {
+    var seconds = function (doc) {
+      doc.seconds = function () {return doc.d.getSeconds();};
+      return doc;
+    };
+    TRANSFORMS["seconds"] = seconds;
+    var collectionOptions = {
+      idGeneration: idGeneration,
+      transform: seconds,
+      transformName: "seconds"
+    };
+    var collectionName = Random.id();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
+      Meteor.subscribe('c-' + collectionName);
+    }
+
+    var coll = new Meteor.Collection(collectionName, collectionOptions);
+    var expectAdd = expect(function (doc) {
+      test.equal(doc.seconds(), 50);
+    });
+    var expectRemove = expect (function (doc) {
+      test.equal(doc.seconds(), 50);
+    });
+    coll.insert({d: new Date(1356152390004)}, expect(function (err, id) {
+      test.isFalse(err);
+      test.isTrue(id);
+      var cursor = coll.find();
+      cursor.observe({
+        added: expectAdd,
+        removed: expectRemove
+      });
+      test.equal(cursor.count(), 1);
+      test.equal(cursor.fetch()[0].seconds(), 50);
+      test.equal(coll.findOne().seconds(), 50);
+      test.equal(coll.findOne({}, {transform: null}).seconds, undefined);
+      test.equal(coll.findOne({}, {
+        transform: function (doc) {return {seconds: doc.d.getSeconds()};}
+      }).seconds, 50);
+      coll.remove(id);
+    }));
+  }
+]);
+
 testAsyncMulti('mongo-livedata - document with binary data, ' + idGeneration, [
   function (test, expect) {
     var bin = EJSON._base64Decode(
@@ -652,6 +682,32 @@ testAsyncMulti('mongo-livedata - document with binary data, ' + idGeneration, [
       var inColl = coll.findOne();
       test.isTrue(EJSON.isBinary(inColl.b));
       test.equal(inColl.b, bin);
+    }));
+  }
+]);
+
+testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, [
+  function (test, expect) {
+    var collectionName = Random.id();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
+      Meteor.subscribe('c-' + collectionName);
+    }
+
+    var coll = new Meteor.Collection(collectionName, collectionOptions);
+    var docId;
+    // Dog is implemented at the top of the file, outside of the idGeneration
+    // loop (so that we only call EJSON.addType once).
+    var d = new Dog("reginald", "purple");
+    coll.insert({d: d}, expect(function (err, id) {
+      test.isFalse(err);
+      test.isTrue(id);
+      docId = id;
+      var cursor = coll.find();
+      test.equal(cursor.count(), 1);
+      var inColl = coll.findOne();
+      test.isTrue(inColl);
+      inColl && test.equal(inColl.d.speak(), "woof");
     }));
   }
 ]);
@@ -721,26 +777,6 @@ if (Meteor.isServer) {
       {all: 1, id1Direct: 1, id1InQuery: 1, id2Direct: 1, id2InQuery: 1,
        bothIds: 1});
 
-    // Update id1 using "validated update" and with a query that doesn't appear
-    // to match on ID. The validation should change this to an ID-specific
-    // query, so we should not poll the id2 queries.
-    resetPollsAndRunInFence(function () {
-      coll._validatedUpdate("user", {is1: true}, {$inc: {x: 1}});
-    });
-    test.equal(
-      polls,
-      {all: 1, id1Direct: 1, id1InQuery: 1, bothIds: 1});
-
-    // Remove id2 using "validated remove" and with a query that doesn't appear
-    // to match on ID. The validation should change this to an ID-specific
-    // query, so we should not poll the id1 queries.
-    resetPollsAndRunInFence(function () {
-      coll._validatedRemove("user", {is2: true});
-    });
-    test.equal(
-      polls,
-      {all: 1, id2Direct: 1, id2InQuery: 1, bothIds: 1});
-
     _.each(handlesToStop, function (h) {h.stop();});
     onComplete();
   });
@@ -748,6 +784,18 @@ if (Meteor.isServer) {
 
 
 });  // end idGeneration parametrization
+
+Tinytest.add('mongo-livedata - rewrite selector', function (test) {
+  test.equal(Meteor.Collection._rewriteSelector({x: /^o+B/im}),
+             {x: {$regex: '^o+B', $options: 'im'}});
+  test.equal(Meteor.Collection._rewriteSelector({x: /^o+B/}),
+             {x: {$regex: '^o+B'}});
+  test.equal(Meteor.Collection._rewriteSelector('foo'),
+             {_id: 'foo'});
+  var oid = new Meteor.Collection.ObjectID();
+  test.equal(Meteor.Collection._rewriteSelector(oid),
+             {_id: oid});
+});
 
 testAsyncMulti('mongo-livedata - specified _id', [
   function (test, expect) {

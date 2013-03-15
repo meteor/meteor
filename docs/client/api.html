@@ -3,7 +3,7 @@
 
 <h1 id="api">The Meteor API</h1>
 
-Your Javascript code can run in two environments: the *client* (browser), and
+Your JavaScript code can run in two environments: the *client* (browser), and
 the *server* (a [Node.js](http://nodejs.org/) container on a server).  For each
 function in this API reference, we'll indicate if the function is available just
 on the client, just on the server, or *Anywhere*.
@@ -45,7 +45,15 @@ that Meteor will call each time a client subscribes to the name.
 
 Publish functions can return a
 [`Collection.Cursor`](#meteor_collection_cursor), in which case Meteor
-will publish that cursor's documents.
+will publish that cursor's documents. You can also return an array of
+`Collection.Cursor`s, in which case Meteor will publish all of the
+cursors.
+
+{{#warning}}
+If you return multiple cursors in an array, they currently must all be from
+different collections. We hope to lift this restriction in a future release.
+cursors.
+{{/warning}}
 
     // server: publish the rooms collection, minus secret info.
     Meteor.publish("rooms", function () {
@@ -57,6 +65,14 @@ will publish that cursor's documents.
     // are merged together into the same documents in the Rooms collection.
     Meteor.publish("adminSecretInfo", function () {
       return Rooms.find({admin: this.userId}, {fields: {secretInfo: 1}});
+    });
+
+    // publish dependent documents and simulate joins
+    Meteor.publish("roomAndMessages", function (roomId) {
+      return [
+        Rooms.find({_id: roomId}, {fields: {secretInfo: 0}}),
+        Messages.find({roomId: roomId})
+      ];
     });
 
 Otherwise, the publish function should call the functions
@@ -109,7 +125,7 @@ Example:
     Counts = new Meteor.Collection("counts");
 
     // client: subscribe to the count for the current room
-    Meteor.autorun(function () {
+    Deps.autorun(function () {
       Meteor.subscribe("counts-by-room", Session.get("roomId"));
     });
 
@@ -136,7 +152,7 @@ function is rerun with the new value.
 
 {{> api_box subscription_onStop}}
 
-If you call [`observe`](#observe) or [`observeChanges`](#observeChanges) in your
+If you call [`observe`](#observe) or [`observeChanges`](#observe_changes) in your
 publish handler, this is the place to stop the observes.
 
 {{> api_box subscription_error}}
@@ -184,15 +200,17 @@ reactive data source.
 {{/dtdd}}
 </dl>
 
-If you call `Meteor.subscribe` within a [reactive context](#reactivity) such as
-[`Meteor.autorun`](#meteor_autorun), the subscription will automatically be
-cancelled when the context is invalidated; it's not necessary to call `stop` on
-subscriptions made from inside `Meteor.autorun`. However, if the next iteration
-of your autorun function subscribes to the same record set (same name and
+If you call `Meteor.subscribe` within a [reactive computation](#reactivity),
+for example using
+[`Deps.autorun`](#deps_autorun), the subscription will automatically be
+cancelled when the computation is invalidated or stopped; it's not necessary
+to call `stop` on
+subscriptions made from inside `autorun`. However, if the next iteration
+of your run function subscribes to the same record set (same name and
 parameters), Meteor is smart enough to skip a wasteful
 unsubscribe/resubscribe. For example:
 
-    Meteor.autorun(function () {
+    Deps.autorun(function () {
       Meteor.subscribe("chat", {room: Session.get("current-room")});
       Meteor.subscribe("privateMessages");
     });
@@ -404,8 +422,8 @@ the server. The return value is an object with the following fields:
 
 Instead of using callbacks to notify you on changes, this is
 a [reactive](#reactivity) data source. You can use it in a
-[template](#templates) or [invalidation](#meteor_deps)
-context to get realtime updates.
+[template](#templates) or [computation](#deps_autorun)
+to get realtime updates.
 
 {{> api_box reconnect}}
 
@@ -453,14 +471,13 @@ collection with `new Meteor.Collection`.
 
 {{> api_box meteor_collection}}
 
-Calling this function is analogous to declaring a model in a
-traditional ORM (Object-Relation Mapper)-centric framework. It sets up a
-*collection* (a storage space for records, or "documents") that can be
-used to store a particular type of information, like users, posts,
-scores, todo items, or whatever matters to your application.  Each
-document is a EJSON object.  It includes an `_id` property whose value is
-unique in the collection, which Meteor will set when you first create
-the document.
+Calling this function is analogous to declaring a model in a traditional ORM
+(Object-Relation Mapper)-centric framework. It sets up a *collection* (a storage
+space for records, or "documents") that can be used to store a particular type
+of information, like users, posts, scores, todo items, or whatever matters to
+your application.  Each document is a EJSON object.  It includes an `_id`
+property whose value is unique in the collection, which Meteor will set when you
+first create the document.
 
     // common code on client and server declares livedata-managed mongo
     // collection.
@@ -481,7 +498,7 @@ works on both the client and the server (see below).
     Messages.insert({text: "Hello, world!"});
 
     // mark my first message as "important"
-    Messages.update(myMessages[0].id, {$set: {important: true}});
+    Messages.update(myMessages[0]._id, {$set: {important: true}});
 
 If you pass a `name` when you create the collection, then you are
 declaring a persistent collection &mdash; one that is stored on the
@@ -545,19 +562,47 @@ your collection should be published to which users.
       Scratchpad.insert({number: i * 2});
     assert(Scratchpad.find({number: {$lt: 9}}).count() === 5);
 
+
+If you specify a `transform` option to the `Collection` or any of its retrieval
+methods, documents are passed through the `transform` function before being
+returned or passed to callbacks.  This allows you to add methods or otherwise
+modify the contents of your collection from their database representation.  You
+can also specify `transform` on a particular `find`, `findOne`, `allow`, or
+`deny` call.
+
+    // An Animal class that takes a document in its constructor
+    Animal = function (doc) {
+      _.extend(this, doc);
+    };
+    _.extend(Animal.prototype, {
+      makeNoise: function () {
+        console.log(this.sound);
+      }
+    });
+
+    // Define a Collection that uses Animal as its document
+    Animals = new Meteor.Collection("Animals", {
+      transform: function (doc) { return new Animal(doc); }
+    });
+
+    // Create an Animal and call its makeNoise method
+    Animals.insert({name: "raptor", sound: "roar"});
+    Animals.findOne({name: "raptor"}).makeNoise(); // prints "roar"
+
+`transform` functions are not called reactively.  If you want to add a
+dynamically changing attribute to an object, do it with a function that computes
+the value at the time it's called, not by computing the attribute at `transform`
+time.
+
 {{#warning}}
 In this release, Minimongo has some limitations:
 
-* `$elemMatch` is not supported in selectors.
 * `$pull` in modifiers can only accept certain kinds
 of selectors.
-* In selectors, dot notation may not work correctly.
 * `$` to denote the matched array position is not
 supported in modifier.
 * `findAndModify`, upsert, aggregate functions, and
 map/reduce aren't supported.
-* The supported types are String, Number, Boolean, Array,
-and Object.
 
 All of these will be addressed in a future release. For full
 Minimongo release notes, see packages/minimongo/NOTES
@@ -565,10 +610,9 @@ in the repository.
 {{/warning}}
 
 {{#warning}}
-Minimongo currently doesn't have indexes. This will come soon. It's
-usually not an issue, since there usually isn't that much data in
-the client &mdash; it is not that common for developers to implement
-indexes in their client-side models anyway.
+Minimongo doesn't currently have indexes. It's rare for this to be an
+issue, since it's unusual for a client to have enough data that an
+index is worthwhile.
 {{/warning}}
 
 {{> api_box find}}
@@ -588,8 +632,8 @@ those changes may or may not appear in the result set.
 
 Cursors are a reactive data source.  The first time you retrieve a
 cursor's documents with `fetch`, `map`, or `forEach` inside a
-reactive context (eg, [`Meteor.render`](#meteor_render) or
-[`Meteor.autorun`](#meteor_autorun)), Meteor will register a
+reactive computation (eg, a template or
+[`autorun`](#deps_autorun)), Meteor will register a
 dependency on the underlying data.  Any change to the collection that
 changes the documents in a cursor will trigger a recomputation.  To
 disable this behavior, pass `{reactive: false}` as an option to
@@ -606,7 +650,9 @@ its fields can contain any combination of EJSON-compatible datatypes
 (arrays, objects, numbers, strings, `null`, true, and false).
 
 `insert` will generate a unique ID for the object you pass, insert it
-in the database, and return the ID.
+in the database, and return the ID. When `insert` is called from
+untrusted client code, it will be allowed only if passes any
+applicable [`allow`](#allow) and [`deny`](#deny) rules.
 
 On the server, if you don't provide a callback, then `insert` blocks
 until the database acknowledges the write, or throws an exception if
@@ -631,12 +677,23 @@ Example:
 
 {{> api_box update}}
 
-Modify documents that match `selector` as given by `modifier` (see [modifier
-documentation](#modifiers)).  By default, modify only one matching document.  If
-`multi` is true, modify all matching documents.
+Modify documents that match `selector` according to `modifier` (see
+[modifier documentation](#modifiers)).
 
-Instead of a selector, you can pass a string, which will be
-interpreted as an `_id`.
+The behavior of `update` differs depending on whether it is called by
+trusted or untrusted code. Trusted code includes server code and
+method code. Untrusted code includes client-side code such as event
+handlers and a browser's JavaScript console.
+
+- Trusted code can modify multiple documents at once by setting
+  `multi` to true, and can use an arbitrary [Mongo
+  selector](#selectors) to find the documents to modify. It bypasses
+  any access control rules set up by [`allow`](#allow) and
+  [`deny`](#deny).
+
+- Untrusted code can only modify a single document at once, specified
+  by its `_id`. The modification is allowed only after checking any
+  applicable [`allow`](#allow) and [`deny`](#deny) rules.
 
 On the server, if you don't provide a callback, then `update` blocks
 until the database acknowledges the write, or throws an exception if
@@ -651,14 +708,29 @@ the console.  If you provide a callback, Meteor will call that function
 with an error argument if there was an error, or no arguments if the
 update was successful.
 
-Example:
+Client example:
 
-    // Give the "Superlative" badge to each user with a score greater than
+    // When the givePoints button in the admin dashboard is pressed,
+    // give 5 points to the current player. The new score will be
+    // immediately visible on everyone's screens.
+    Template.adminDashboard.events({
+      'click .givePoints': function () {
+        Players.update(Session.get("currentPlayer"), {$inc: {score: 5}});
+      }
+    });
+
+Server example:
+
+    // Give the "Winner" badge to each user with a score greater than
     // 10. If they are logged in and their badge list is visible on the
     // screen, it will update automatically as they watch.
-    Users.update({score: {$gt: 10}},
-                 {$addToSet: {badges: "Superlative"}},
-                 {multi: true});
+    Meteor.methods({
+      declareWinners: function () {
+        Players.update({score: {$gt: 10}},
+                       {$addToSet: {badges: "Winner"}},
+                       {multi: true});
+      }
+    });
 
 {{#warning}}
 The Mongo `upsert` feature is not implemented.
@@ -666,11 +738,27 @@ The Mongo `upsert` feature is not implemented.
 
 {{> api_box remove}}
 
-Find all of the documents that match `selector` and delete them from the
-collection. Or instead of a selector, you may pass a string, to delete
-the document with that `_id`.  As a safety measure, do nothing if the
-selector is undefined.  If the selector is `{}`, remove all the
-documents from the collection.
+Find all of the documents that match `selector` and delete them from
+the collection.
+
+The behavior of `remove` differs depending on whether it is called by
+trusted or untrusted code. Trusted code includes server code and
+method code. Untrusted code includes client-side code such as event
+handlers and a browser's JavaScript console.
+
+- Trusted code can use an arbitrary [Mongo selector](#selectors) to
+  find the documents to remove, and can remove more than one document
+  at once by passing a selector that matches multiple documents. It
+  bypasses any access control rules set up by [`allow`](#allow) and
+  [`deny`](#deny).
+
+  As a safety measure, if `selector` is omitted (or is `undefined`),
+  no documents will be removed. Set `selector` to `{}` if you really
+  want to remove all documents from your collection.
+
+- Untrusted code can only remove a single document at a time,
+  specified by its `_id`. The document is removed only after checking
+  any applicable [`allow`](#allow) and [`deny`](#deny) rules.
 
 On the server, if you don't provide a callback, then `remove` blocks
 until the database acknowledges the write, or throws an exception if
@@ -685,14 +773,26 @@ the console.  If you provide a callback, Meteor will call that function
 with an error argument if there was an error, or no arguments if the
 remove was successful.
 
-Example:
+Client example:
 
-    // Delete all users with a karma of less than -2.
-    Users.remove({karma: {$lt: -2}});
+    // When the remove button is clicked on a chat message, delete
+    // that message.
+    Template.chat.events({
+      'click .remove': function () {
+        Messages.remove(this._id);
+      }
+    });
 
-    // Delete all the log entries
-    Logs.remove({});
+Server example:
 
+    // When the server starts, clear the log, and delete all players
+    // with a karma of less than -2.
+    Meteor.startup(function () {
+      if (Meteor.isServer) {
+        Logs.remove({});
+        Players.remove({karma: {$lt: -2}});
+      }
+    });
 
 {{> api_box allow}}
 
@@ -724,17 +824,17 @@ The user `userId` wants to insert the document `doc` into the
 collection. Return `true` if this should be allowed.
 {{/dtdd}}
 
-{{#dtdd "update(userId, docs, fieldNames, modifier)"}}
-The user `userId` wants to update some documents. Meteor has fetched the
-documents from the database and they are available in `docs` as an
-array. Return `true` if the user should be allowed to change these
-documents.
+{{#dtdd "update(userId, doc, fieldNames, modifier)"}}
 
-Additional details about the proposed modification are in `fieldNames` and
-`modifier`. &emsp; `fieldNames` is the top-level fields in the document that the
-client wishes to modify, for example `['name',`&nbsp;`'score']`. &emsp; `modifier`
-is the raw Mongo modifier that the client wants to execute, for example `{$set:
-{'name.first': "Alice"}, $inc: {score: 1}}`.
+The user `userId` wants to update a document `doc`. (`doc` is the
+current version of the document from the database, without the
+proposed update.) Return `true` to permit the change.
+
+`fieldNames` is an array of the (top-level) fields in `doc` that the
+client wants to mody, for example
+`['name',`&nbsp;`'score']`. `modifier` is the raw Mongo modifier that
+the client wants to execute, for example `{$set: {'name.first':
+"Alice"}, $inc: {score: 1}}`.
 
 Only Mongo modifiers are supported (operations like `$set` and `$push`).
 If the user tries to replace the entire document rather than use
@@ -743,21 +843,20 @@ functions.
 
 {{/dtdd}}
 
-{{#dtdd "remove(userId, docs)"}}
-The user `userId` wants to remove some documents. Meteor has fetched the
-documents from the database and they are available in `docs` as an
-array. Return `true` if the user should be allowed to remove these
-documents.
+{{#dtdd "remove(userId, doc)"}}
+
+The user `userId` wants to remove `doc` from the database. Return
+`true` to permit this.
+
 {{/dtdd}}
 
 </dl>
 
-By default, when Meteor fetches the documents from the database for the
-`docs` array, it will retrieve all of the fields in the documents. For
-efficiency you may instead want to retrieve just the fields that are
-actually needed by your functions. This is enabled by the `fetch`
-option. Set `fetch` to an array of the field names that should be
-retrieved.
+When calling `update` or `remove` Meteor will by default fetch the
+entire document `doc` from the database. If you have large documents
+you may wish to fetch only the fields that are actually used by your
+functions. Accomplish this by setting `fetch` to an array of field
+names to retrieve.
 
 Example:
 
@@ -775,17 +874,13 @@ Example:
         // the user must be logged in, and the document must be owned by the user
         return (userId && doc.owner === userId);
       },
-      update: function (userId, docs, fields, modifier) {
+      update: function (userId, doc, fields, modifier) {
         // can only change your own documents
-        return _.all(docs, function(doc) {
-          return doc.owner === userId;
-        });
+        return doc.owner === userId;
       },
-      remove: function (userId, docs) {
+      remove: function (userId, doc) {
         // can only remove your own documents
-        return _.all(docs, function(doc) {
-          return doc.owner === userId;
-        });
+        return doc.owner === userId;
       },
       fetch: ['owner']
     });
@@ -795,11 +890,9 @@ Example:
         // can't change owners
         return _.contains(fields, 'owner');
       },
-      remove: function (userId, docs) {
+      remove: function (userId, doc) {
         // can't remove locked documents
-        return _.any(docs, function (doc) {
-          return doc.locked;
-        });
+        return doc.locked;
       },
       fetch: ['locked'] // no need to fetch 'owner'
     });
@@ -820,15 +913,6 @@ collection. This is the only effect of insecure mode. If you call `allow` or
 just like normal on that collection. __New Meteor projects start in insecure
 mode by default.__ To turn it off just run `$ meteor remove insecure`.
 
-{{#note}}
-For `update` and `remove`, documents will be affected only if they match
-the selector both at the time the documents are fetched to run the
-`allow` and `deny` rules, __and__ at the time that the operation is
-actually executed. This is accomplished by rewriting the selector to
-`{$and: [(original selector), {$in: {_id: [(ids of documents fetched
-and checked by allow and deny)]}}]}`.
-{{/note}}
-
 {{> api_box deny}}
 
 This works just like [`allow`](#allow), except it lets you
@@ -848,7 +932,7 @@ cursor, use [`forEach`](#foreach), [`map`](#map), or [`fetch`](#fetch).
 
 {{> api_box cursor_foreach}}
 
-When called in a reactive context, `forEach` registers dependencies on
+When called from a reactive computation, `forEach` registers dependencies on
 the matching documents.
 
 Examples:
@@ -863,7 +947,7 @@ Examples:
 
 {{> api_box cursor_map}}
 
-When called in a reactive context, `map` registers dependencies on
+When called from a reactive computation, `map` registers dependencies on
 the matching documents.
 
 <!-- The following is not yet implemented, but users shouldn't assume
@@ -874,7 +958,7 @@ the first call is waiting. If strict sequential execution is necessary, use
 
 {{> api_box cursor_fetch}}
 
-When called in a reactive context, `fetch` registers dependencies on
+When called from a reactive computation, `fetch` registers dependencies on
 the matching documents.
 
 {{> api_box cursor_count}}
@@ -904,7 +988,7 @@ Establishes a *live query* that invokes callbacks when the result of
 the query changes. The callbacks receive the entire contents of the
 document that was affected, as well as its old contents, if
 applicable. If you only need to receive the fields that changed, see
-[`observeChanges`](#cursor_observe_changes).
+[`observeChanges`](#observe_changes).
 
 `callbacks` may have the following functions as properties:
 
@@ -955,13 +1039,18 @@ or more times to deliver the initial results of the query.
 
 `observe` returns a live query handle, which is an object with a `stop` method.
 Call `stop` with no arguments to stop calling the callback functions and tear
-down the query. **The query will run forever until you call this.**
+down the query. **The query will run forever until you call this.**  If
+`observe` is called from a `Deps.autorun` computation, it is automatically
+stopped when the computation is rerun or stopped.
+(If the cursor was created with the option `reactive` set to false, it will
+only deliver the initial results and will not call any further callbacks;
+it is not necessary to call `stop` on the handle.)
 
 
 {{> api_box cursor_observe_changes}}
 
 Establishes a *live query* that invokes callbacks when the result of
-the query changes. In contrast to [`observe`](#cursor_observe),
+the query changes. In contrast to [`observe`](#observe),
 `observeChanges` provides only the difference between the old and new
 result set, not the entire contents of the document that changed.
 
@@ -1006,6 +1095,12 @@ zero or more times to deliver the initial results of the query.
 `observeChanges` returns a live query handle, which is an object with a `stop`
 method.  Call `stop` with no arguments to stop calling the callback functions
 and tear down the query. **The query will run forever until you call this.**
+If
+`observeChanges` is called from a `Deps.autorun` computation, it is automatically
+stopped when the computation is rerun or stopped.
+(If the cursor was created with the option `reactive` set to false, it will
+only deliver the initial results and will not call any further callbacks;
+it is not necessary to call `stop` on the handle.)
 
 {{#note}}
 Unlike `observe`, `observeChanges` does not provide absolute position
@@ -1153,15 +1248,13 @@ whenever [`Session.set`](#session_set)`("currentList", x)` is called.
 
 Example:
 
-    Meteor.autorun(function () {
+    Deps.autorun(function () {
       Meteor.subscribe("chat-history", {room: Session.get("currentRoomId")});
     });
 
-    // Causes the function passed to Meteor.autorun to be re-run, so
+    // Causes the function passed to Deps.autorun to be re-run, so
     // that the chat-history subscription is moved to the room "home".
     Session.set("currentRoomId", "home");
-
-See [`Meteor.deps`](#meteor_deps) for another example.
 
 {{> api_box setDefault}}
 
@@ -1252,8 +1345,8 @@ interface](#accountsui).
 The basic Accounts system is in the `accounts-base` package, but
 applications typically include this automatically by adding one of the
 login provider packages: `accounts-password`, `accounts-facebook`,
-`accounts-github`, `accounts-google`, `accounts-twitter`, or
-`accounts-weibo`.
+`accounts-github`, `accounts-google`, `accounts-meetup`,
+`accounts-twitter`, or `accounts-weibo`.
 
 
 {{> api_box user}}
@@ -1387,6 +1480,7 @@ sites:
 - Facebook: <http://developers.facebook.com/docs/authentication/permissions/>
 - GitHub: <http://developer.github.com/v3/oauth/#scopes>
 - Google: <https://developers.google.com/accounts/docs/OAuth2Login#scopeparameter>
+- Meetup: <http://www.meetup.com/meetup_api/auth/#oauth2-scopes>
 - Twitter, Weibo: `requestPermissions` currently not supported
 
 External login services typically require registering and configuring
@@ -1886,26 +1980,27 @@ You may insert the returned `DocumentFragment` directly into the DOM
 wherever you would like it to appear. The inserted nodes will continue
 to update until they are taken off the screen. Then they will be
 automatically cleaned up. For more details about clean-up, see
-[`Meteor.flush`](#meteor_flush).
+[`Deps.flush`](#deps_flush).
 
 `Meteor.render` tracks the data dependencies of `htmlFunc` by running
-it in a reactive context, so it can respond to changes in any reactive
+it in a reactive computation, so it can respond to changes in any reactive
 data sources used by that function. For more information, or to learn
 how to make your own reactive data sources, see
 [Reactivity](#reactivity).
 
 Example:
 
-    // Show the number of users online.
+    // Client side: show the number of players online.
     var frag = Meteor.render(function () {
-      return "<p>There are " + Users.find({online: true}).count() +
-        " users online.</p>";
+      return "<p>There are " + Players.find({online: true}).count() +
+        " players online.</p>";
     });
     document.body.appendChild(frag);
 
-    // Find all users that have been idle for a while, and mark them as
-    // offline. The count on the screen will automatically update.
-    Users.update({idleTime: {$gt: 30}}, {online: false});
+    // Server side: find all players that have been idle for a while,
+    // and mark them as offline. The count on the screen will
+    // automatically update on all clients.
+    Players.update({idleTime: {$gt: 30}}, {$set: {online: false}});
 
 {{> api_box renderList}}
 
@@ -1926,7 +2021,7 @@ will be called to render alternate content. You might use this to show
 a message like "No records match your query."
 
 Each call to `docFunc` or `elseFunc` is run in its own reactive
-context so that if it has other external data dependencies, it will be
+computation so that if it has other external data dependencies, it will be
 individually re-run when the data changes.
 
 Example:
@@ -2152,7 +2247,7 @@ correctly inside constant regions.
 
 {{#api_box_inline isolate}}
 
-Each template runs in its own reactive context.  When the template
+Each template runs as its own reactive computation.  When the template
 accesses a reactive data source, such as by calling `Session.get` or
 making a database query, this establishes a data dependency that will
 cause the whole template to be re-rendered when the data changes.
@@ -2193,187 +2288,37 @@ Returns a handle that can be used by `Meteor.clearInterval`.
 {{> api_box clearTimeout}}
 {{> api_box clearInterval}}
 
-<h2 id="meteor_deps"><span>Meteor.deps</span></h2>
+<h2 id="deps"><span>Deps</span></h2>
 
-Meteor has a simple dependency tracking system, so that it it can
-automatically rerender templates and such when [`Session`](#session)
-variables are modified, or database queries change.
+Meteor has a simple dependency tracking system which allows it to
+automatically rerun templates and other computations whenever
+[`Session`](#session) variables, database queries, and other data
+sources change.
 
 Unlike most other systems, you don't have to manually declare these
 dependencies &mdash; it "just works". The mechanism is simple and
 efficient. When you call a function that supports reactive updates
-(say, a database query), it automatically saves the current
-"invalidation context" object if any (say, the current template being
-rendered). Later, when the data changes, it can "invalidate" this
-context (tell the template to rerender itself). The whole
-implementation is about 50 lines of code.
+(such as a database query), it automatically saves the current
+Computation object, if any (representing, for example, the current
+template being rendered).  Later, when the data changes, the function
+can "invalidate" the Computation, causing it to rerun (rerendering the
+template).
 
-Developers, particularly package authors, can use *invalidation
-contexts* to implement additional reactive data sources or to write
-functions that automatically register dependencies on reactive data
-sources.
+Applications will find [`Deps.autorun`](#deps_autorun) useful, while more
+advanced facilities such as `Deps.Dependency` and `onInvalidate`
+callbacks are intended primarily for package authors implementing new
+reactive data sources.
 
-{{> api_box Context }}
+{{> api_box deps_autorun }}
 
-Create an invalidation context by calling this constructor, then run
-some code inside the context with [`run`](#run). Finally, register a
-callback with [`onInvalidate`](#oninvalidate) that will get called
-when the code you run wants to signal that it should be rerun.
+`Deps.autorun` allows you to run a function that depends on reactive data
+sources, in such a way that if there are changes to the data later,
+the function will be rerun.
 
-Code can see if it's running inside an invalidation context by reading
-the [`Meteor.deps.Context.current`](#current) global variable, which
-will be the currently active context, or `null` if it's not being run
-from inside a context.  If it wants to participate in the reactivity
-system, it should save this context away, and later call the
-[`invalidate`](#invalidate) method on the context when it wants to
-signal that something has changed. If it does this, it should also use
-[`onInvalidate`](#oninvalidate) to set up a cleanup function so that
-it can know when to stop listening for changes.
+For example, you can monitor a cursor (which is a reactive data
+source) and aggregate it into a session variable:
 
-Invalidation contexts have an `id` attribute, which is a unique positive
-integer, and a boolean attribute `invalidated`. `invalidated` starts out false,
-and is set to true when `invalidate` is called, before calling any of the
-invalidation callbacks. You're free to add any other attributes you like to the
-invalidation context for your own convenience, as long as they don't start with
-an underscore.
-
-{{> api_box run }}
-
-This function simply sets [`Meteor.deps.Context.current`](#current) to
-this invalidation context, runs `func`, and then restores it to its
-previous value. It returns the result of calling `func`.
-
-It's fine for `run` to be called recursively. `current` will return the
-innermost context.
-
-{{> api_box onInvalidate }}
-
-If this context hasn't been invalidated yet, adds `callback` to the list
-of callbacks that will be called when [`invalidate`](#invalidate) is
-called. If the context has already been invalidated, call `callback`
-immediately.
-
-Typically this function will have two kinds of callers:
-
-* The function that creates the invalidation context will use the
-  `onInvalidate` callback as a signal to rerun the code in the context,
-  to see what new value it returns. In order to rerun the code, it'll
-  create a fresh invalidation context and reregister its `onInvalidate`
-  callback on that new context. When that context is invalidated the
-  cycle will repeat.
-
-* Functions that are sources of reactive data will save
-  [`Meteor.deps.Context.current`](#current) into some kind of list of
-  listeners. They'll use the `onInvalidate` callback to remove the
-  context from their listener list.
-
-Example:
-
-    // Print the current username to the console.  Will re-run every time
-    // the username changes.
-    var logCurrentUsername = function () {
-      var update = function () {
-        var ctx = new Meteor.deps.Context();  // invalidation context
-        ctx.onInvalidate(update);             // rerun update() on invalidation
-        ctx.run(function () {
-          var username = Session.get("username");
-          console.log("The current username is now", username);
-        });
-      };
-      update();
-    };
-
-    // Example use. Since Session is reactive (meaning that it knows how
-    // to use Meteor.deps to record its dependencies), logCurrentUsername
-    // will be re-run whenever Session.set is called for "username".
-    Session.set("username", "matt");
-    logCurrentUsername(); // prints matt
-    Session.set("username", "geoff"); // immediately prints geoff
-    Session.set("username", "geoff"); // won't print: Session won't trigger
-                                      // invalidation if the value is the same.
-
-{{> api_box invalidate }}
-
-If this function has already been called on this context, it does
-nothing (a mathematician would say that it is "idempotent"). Otherwise
-it calls each [`onInvalidate`](#oninvalidate) function registered on
-the context.
-
-The functions aren't called immediately &mdash; instead, they will be
-called the next time you call [`Meteor.flush`](#meteor_flush). This function
-just adds the context to the flush list and is guaranteed to do nothing
-else just yet.
-
-If you don't call [`Meteor.flush`](#meteor_flush) explicitly, it will be called
-for you automatically when your code is done running (by setting a
-`setTimeout` timer with a delay of zero).
-
-Example:
-
-    // Create a simple class called Weather that tracks the current
-    // temperature. The temperature can be read reactively.
-    var Weather = function () {
-      this.temperature = 60;
-      this.listeners = {};
-    };
-
-    // Function to get the temperature (and, if called in a reactive
-    // context, start listening for changes to the temperature)
-    Weather.prototype.getTemp = function () {
-      var context = Meteor.deps.Context.current;
-
-      // If we're inside a context, and it's not yet listening to
-      // temperature changes..
-      if (context && !this.listeners[context.id]) {
-        // .. add it to our list of contexts that care about the temperature ..
-        this.listeners[context.id] = context;
-
-        // .. and remember to take it off our list when it goes away.
-        var self = this;
-        context.onInvalidate(function () {
-          delete self.listeners[context.id];
-        });
-      }
-
-      // return the current temperature, whether or not in a reactive context.
-      return this.temperature;
-    };
-
-    // Function to set the temperature, and notify anyone that might be
-    // listening for temperature updates.
-    Weather.prototype.setTemp = function (newTemp) {
-      if (this.temperature === newTemp)
-        return; // don't want to trigger invalidation if there's no change.
-
-      // Set the temperature
-      this.temperature = newTemp;
-
-      // Notify any contexts that care about temperature changes
-      for (var contextId in this.listeners)
-        // This will trigger the onInvalidate function above, but not
-        // immediately -- only when Meteor.flush() is called, or at the end
-        // of the event loop. So we know that this.listeners will be
-        // emptied, but it won't change while we're trying to loop over it.
-        this.listeners[contextId].invalidate();
-    };
-
-{{> api_box current }}
-
-This is a global variable that is set by [`run`](#run).
-
-If you have a background in Lisp or programming language theory, you
-might think of it as a dynamically scoped ("special") variable. (That
-just means that [`run`](#run) sets it, runs some user-supplied code, and
-then restores its previous value.)
-
-{{> api_box autorun }}
-
-`Meteor.autorun` allows you to set up your own reactive context, where you can
-perform arbitrary actions when dependencies change. For example, you can monitor
-a cursor (which is a reactive data source) and aggregate it into a session
-variable:
-
-    Meteor.autorun(function() {
+    Deps.autorun(function () {
       var oldest = _.max(Monkeys.find().fetch(), function (monkey) {
         return monkey.age;
       });
@@ -2381,21 +2326,37 @@ variable:
         Session.set("oldest", oldest.name);
     });
 
-Or you can wait for a session variable to get a certain value, and do something
-the first time it does so, using the `stop` handle to prevent further runs:
+Or you can wait for a session variable to have a certain value, and do
+something the first time it does, calling `stop` on the computation to
+prevent further rerunning:
 
-    Meteor.autorun(function(handle) {
-      if (!Session.equals("shouldAlert", true)) return;
-      handle.stop();
+    Deps.autorun(function (c) {
+      if (! Session.equals("shouldAlert", true))
+        return;
+
+      c.stop();
       alert("Oh no!");
     });
 
-The function is invoked immediately and &mdash; like all reactive
-sources &mdash; the rerun occurs at the time of the next
-[`Meteor.flush`](#meteor_flush).
+The function is invoked immediately, at which point it may alert and
+stop right away if `shouldAlert` is already true.  If not, the
+function is run again when `shouldAlert` becomes true.
 
+A change to a data dependency does not cause an immediate rerun, but
+rather "invalidates" the computation, causing it to rerun the next
+time a flush occurs.  A flush will occur automatically as soon as
+the system is idle if there are invalidated computations.  You can
+also use [`Deps.flush`](#deps_flush) to cause an immediate flush of
+all pending reruns.
 
-{{> api_box flush }}
+If you nest calls to `Deps.autorun`, then when the outer call stops or
+reruns, the inner call will stop automatically.  Subscriptions and
+observers are also automatically stopped when used as part of a
+computation that is rerun, allowing new ones to be established.  See
+[`Meteor.subscribe`](#meteor_subscribe) for more information about
+subscriptions and reactivity.
+
+{{> api_box deps_flush }}
 
 Normally, when you make changes (like writing to the database),
 their impact (like updating the DOM) is delayed until the system is
@@ -2403,29 +2364,243 @@ idle. This keeps things predictable &mdash; you can know that the DOM
 won't go changing out from under your code as it runs. It's also one
 of the things that makes Meteor fast.
 
-`Meteor.flush` forces all of the pending reactive updates to complete
-(for example, it ensures the DOM has been updated with your recent
-database changes).  Call `flush` to apply those pending changes
-immediately. The main use for this is to make sure the DOM has been
-brought up to date with your latest changes, so you can manually
-manipulate it with jQuery or the like.
+`Deps.flush` forces all of the pending reactive updates to complete.
+For example, if an event handler changes a Session
+variable that will cause part of the user interface to rerender, the
+handler can call `flush` to perform the rerender immediately and then
+access the resulting DOM.
 
-When you call `flush`, any auto-updating DOM elements that are not on
-the screen may be cleaned up (meaning that Meteor will stop tracking
-and updating the elements, so that the browser's garbage collector can
-delete them). So, if you manually call `flush`, you need to make sure
-that any auto-updating elements that you have created by calling
-[`Meteor.render`](#meteor_render) have already been inserted in the main
-DOM tree.
+An automatic flush occurs whenever the system is idle which performs
+exactly the same work as `Deps.flush`.  The flushing process consists
+of rerunning any invalidated computations.  If additional
+invalidations happen while flushing, they are processed as part of the
+same flush until there is no more work to be done.  Callbacks
+registered with [`Meteor.afterFlush`](#deps_afterflush) are called
+after processing outstanding invalidations.
 
-Technically speaking, `flush` calls the [invalidation callbacks](#oninvalidate)
-on every [reactive context](#context) that has been [invalidated](#invalidate),
-but hasn't yet had its callbacks called. If the invalidation callbacks
-invalidate still more contexts, flush keeps flushing until everything is totally
-settled. In this case, the callbacks on the newly-invalidated context won't be
-called until after the currently-flushing context's callbacks have all been
-run.
+Any auto-updating DOM elements that are found to not be in the
+document during a flush may be cleaned up by Meteor (meaning that
+Meteor will stop tracking and updating the elements, so that the
+browser's garbage collector can delete them).  So, if you manually
+call `flush`, you need to make sure that any auto-updating elements
+that you have created by calling [`Meteor.render`](#meteor_render)
+have already been inserted in the main DOM tree.
 
+It is illegal to call `flush` from inside a `flush` or from a running
+computation.
+
+{{> api_box deps_nonreactive }}
+
+Calls `func()` with `Deps.currentComputation` temporarily set to
+`null`.  If `func` accesses reactive data sources, these data sources 
+will never cause a rerun of the enclosing computation.
+
+{{> api_box deps_active }}
+
+This value is useful for data source implementations to determine
+whether they are being accessed reactively or not.
+
+{{> api_box deps_currentcomputation }}
+
+It's very rare to need to access `currentComputation` directly.  The
+current computation is used implicitly by
+[`Deps.active`](#deps_active) (which tests whether there is one),
+[`Deps.depend`](#deps_depend) (which registers that it depends on a
+dependency), and [`Deps.onInvalidate`](#deps_oninvalidate) (which
+registers a callback with it).
+
+{{> api_box deps_oninvalidate }}
+
+See [*`computation`*`.onInvalidate`](#computation_oninvalidate) for more
+details.
+
+{{> api_box deps_afterflush }}
+
+Functions scheduled by multiple calls to `afterFlush` are guaranteed
+to run in the order that `afterFlush` was called.  Functions are
+guaranteed to be called at a time when there are no invalidated
+computations that need rerunning.  This means that if an `afterFlush`
+function invalidates a computation, that computation will be rerun
+before any other `afterFlush` functions are called.
+
+{{> api_box deps_depend }}
+
+`Deps.depend` is used in reactive data source implementations as the
+primary way to record the fact that a Dependency is being accessed from
+some computation.  If there is a current computation, it becomes a
+dependent of the Dependency, while the Dependency becomes a dependency of
+the computation.  Calls
+[`dependency.addDependent()`](#dependency_adddependent).
+
+<h2 id="deps_computation"><span>Deps.Computation</span></h2>
+
+A Computation object represents code that is repeatedly rerun in
+response to reactive data changes.  Computations don't have return
+values; they just perform actions, such as rerendering a template on
+the screen.  Computations are created using [`Deps.autorun`](#deps_autorun).
+Use [`stop`](#computation_stop) to prevent further rerunning of a
+computation.
+
+Each time a computation runs, it may access various reactive data
+sources that serve as inputs to the computation, which are called its
+dependencies.  At some future time, one of these dependencies may
+trigger the computation to be rerun by invalidating it.  When this
+happens, the dependencies are cleared, and the computation is
+scheduled to be rerun at flush time.
+
+The *current computation*
+([`Deps.currentComputation`](#deps_currentcomputation)) is the
+computation that is currently being run or rerun (computed), and the
+one that gains a dependency when a reactive data source is accessed.
+Data sources are responsible for tracking these dependencies using
+[`Deps.Dependency`](#deps_dependency) objects.
+
+Invalidating a computation sets its `invalidated` property to true
+and immediately calls all of the computation's `onInvalidate`
+callbacks.  When a flush occurs, if the computation has been invalidated
+and not stopped, then the computation is rerun by setting the
+`invalidated` property to `false` and calling the original function
+that was passed to `Deps.autorun`.  A flush will occur when the current
+code finishes running, or sooner if `Deps.flush` is called.
+
+Stopping a computation invalidates it (if it is valid) for the purpose
+of calling callbacks, but ensures that it will never be rerun.
+
+Example:
+
+    // if we're in a computation, then perform some clean-up
+    // when the current computation is invalidated (rerun or
+    // stopped)
+    if (Deps.active) {
+      Deps.onInvalidate(function () {
+        x.destroy();
+        y.finalize();
+      });
+    }
+
+{{> api_box computation_stop}}
+
+Stopping a computation is irreversible and guarantees that it will
+never be rerun.  You can stop a computation at any time, including
+from the computation's own run function.  Stopping a computation that
+is already stopped has no effect.
+
+Stopping a computation causes its `onInvalidate` callbacks to run
+immediately if it is not currently invalidated.
+
+Nested computations are stopped automatically when their enclosing
+computation is rerun.
+
+{{> api_box computation_invalidate }}
+
+Invalidating a computation marks it to be rerun at
+[flush time](#deps_flush), at
+which point the computation becomes valid again.  It is rare to
+invalidate a computation manually, because reactive data sources
+invalidate their calling computations when they change.  Reactive data
+sources in turn perform this invalidation using one or more
+[`Deps.Dependency`](#deps_dependency) objects.
+
+Invalidating a computation immediately calls all `onInvalidate`
+callbacks registered on it.  Invalidating a computation that is
+currently invalidated or is stopped has no effect.  A computation can
+invalidate itself, but if it continues to do so indefinitely, the
+result will be an infinite loop.
+
+{{> api_box computation_oninvalidate }}
+
+`onInvalidate` registers a one-time callback that either fires
+immediately or as soon as the computation is next invalidated or
+stopped.  It is used by reactive data sources to clean up resources or
+break dependencies when a computation is rerun or stopped.
+
+To get a callback after a computation has been recomputed, you can
+call [`Deps.afterFlush`](#deps_afterflush) from `onInvalidate`.
+
+{{> api_box computation_stopped }}
+
+{{> api_box computation_invalidated }}
+
+This property is initially false.  It is set to true by `stop()` and
+`invalidate()`.  It is reset to false when the computation is
+recomputed at flush time.
+
+{{> api_box computation_firstrun }}
+
+This property is a convenience to support the common pattern where a
+computation has logic specific to the first run.
+
+<h2 id="deps_dependency"><span>Deps.Dependency</span></h2>
+
+A Dependency represents an atomic unit of reactive data that a
+computation might depend on.  Reactive data sources such as Session or
+Minimongo internally create different Dependency objects for different
+pieces of data, each of which may be depended on by multiple
+computations.  When the data changes, the computations are
+invalidated.
+
+Dependencies don't store data, they just track the set of computations to
+invalidate if something changes.  Typically, a data value will be
+accompanied by a Dependency object that tracks the computations that depend
+on it, as in this example:
+
+    var weather = "sunny";
+    var weatherDeps = new Deps.Dependency;
+
+    var getWeather = function () {
+      Deps.depend(weatherDeps);
+      return weather;
+    };
+
+    var setWeather = function (w) {
+      weather = w;
+      // (could add logic here to only call changed()
+      // if the new value is different from the old)
+      weatherDeps.changed();
+    };
+
+This example implements a weather data source with a simple getter and
+setter.  The getter records that the current computation depends on
+the `weatherDeps` dependency using `Deps.depend`, while the setter
+signals the dependency to invalidate all dependent computations by
+calling `changed()`.
+
+The reason Dependencies do not store data themselves is that it can be
+useful to associate multiple Dependencies with the same piece of data.
+For example, one Dependency might represent the result of a database
+query, while another might represent just the number of documents in
+the result.  A Dependency could represent whether the weather is sunny
+or not, or whether the temperature is above freezing.
+[`Session.equals`](#session_equals) is implemented this way for
+efficiency.  When you call `Session.equals("weather", "sunny")`, the
+current computation is made to depend on an internal Dependency that
+does not change if the weather goes from, say, "rainy" to "cloudy".
+
+Conceptually, the only two things a Dependency can do are gain a
+dependent (typically via `Deps.depend`) and change.
+
+A Dependency's dependent computations are always valid (they have
+`invalidated === false`).  If a dependent is invalidated at any time,
+either by the Dependency itself or some other way, it is immediately
+removed.
+
+{{> api_box dependency_changed }}
+
+{{> api_box dependency_adddependent }}
+
+In almost all cases, you want to declare a dependency of the current
+computation and should use `Deps.depend(dependency)` instead,
+which calls `dependency.addDependent(null)`.
+
+Computations added as dependents of the Dependency will be removed
+immediately if they are ever invalidated or stopped.
+
+{{> api_box dependency_hasdependents }}
+
+For reactive data sources that create many internal Dependencies,
+this function is useful to determine whether a particular Dependency is
+still tracking any dependency relationships or if it can be cleaned up
+to save memory.
 
 <h2 id="ejson"><span>EJSON</span></h2>
 

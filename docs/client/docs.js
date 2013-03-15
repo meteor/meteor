@@ -1,4 +1,4 @@
-METEOR_VERSION = "0.5.7";
+METEOR_VERSION = "0.5.9";
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
@@ -53,6 +53,9 @@ Meteor.startup(function () {
   };
 
   var scrollToSection = function (section) {
+    if (! $(section).length)
+      return;
+
     ignore_waypoints = true;
     Session.set("section", section.substr(1));
     scroller().animate({
@@ -176,6 +179,7 @@ var toc = [
       {name: "Meteor.loginWithFacebook", id: "meteor_loginwithexternalservice"},
       {name: "Meteor.loginWithGithub", id: "meteor_loginwithexternalservice"},
       {name: "Meteor.loginWithGoogle", id: "meteor_loginwithexternalservice"},
+      {name: "Meteor.loginWithMeetup", id: "meteor_loginwithexternalservice"},
       {name: "Meteor.loginWithTwitter", id: "meteor_loginwithexternalservice"},
       {name: "Meteor.loginWithWeibo", id: "meteor_loginwithexternalservice"},
       {type: "spacer"},
@@ -236,16 +240,29 @@ var toc = [
       "Meteor.clearInterval"
     ],
 
-    "Meteor.deps", [
-      {name: "Meteor.deps.Context", id: "context"}, [
-        {instance: "context", name: "run"},
-        {instance: "context", name: "onInvalidate", id: "oninvalidate"},
-        {instance: "context", name: "invalidate"}
+    "Deps", [
+      "Deps.autorun",
+      "Deps.flush",
+      "Deps.nonreactive",
+      "Deps.active",
+      "Deps.currentComputation",
+      "Deps.onInvalidate",
+      "Deps.afterFlush",
+      "Deps.depend",
+      "Deps.Computation", [
+        {instance: "computation", name: "stop", id: "computation_stop"},
+        {instance: "computation", name: "invalidate", id: "computation_invalidate"},
+        {instance: "computation", name: "onInvalidate", id: "computation_oninvalidate"},
+        {instance: "computation", name: "stopped", id: "computation_stopped"},
+        {instance: "computation", name: "invalidated", id: "computation_invalidated"},
+        {instance: "computation", name: "firstRun", id: "computation_firstrun"}
       ],
-      {name: "Meteor.deps.Context.current", id: "current"},
-      "Meteor.autorun",
-      "Meteor.flush"
-    // ],
+      "Deps.Dependency", [
+        {instance: "dependency", name: "changed", id: "dependency_changed"},
+        {instance: "dependency", name: "addDependent", id: "dependency_adddependent"},
+        {instance: "dependency", name: "hasDependents", id: "dependency_hasdependents"}
+      ]
+    ],
 
     // "Environment Variables", [
     //   "Meteor.EnvironmentVariable", [
@@ -253,7 +270,7 @@ var toc = [
     //     {instance: "env_var", name: "withValue", id: "env_var_withvalue"},
     //     {instance: "env_var", name: "bindEnvironment", id: "env_var_bindenvironment"}
     //   ]
-    ],
+    //],
 
     {name: "EJSON", id: "ejson"}, [
       {name: "EJSON.parse", id: "ejson_parse"},
@@ -287,6 +304,7 @@ var toc = [
 
   "Packages", [ [
     "accounts-ui",
+    "appcache",
     "amplify",
     "backbone",
     "bootstrap",

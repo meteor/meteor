@@ -31,7 +31,7 @@ WrappedFrag.prototype.release = function() {
   // decrement frag's GC protection reference count
   // Clean up on flush, if hits 0.  Wait to decrement
   // so no one else cleans it up first.
-  Meteor._atFlush(function () {
+  Deps.afterFlush(function () {
     if (! --frag["_protect"]) {
       Spark.finalize(frag);
     }

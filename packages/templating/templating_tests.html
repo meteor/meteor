@@ -270,6 +270,10 @@
   <b>foo</b><u>bar</u><i>baz</i>
 </template>
 
+<template name="test_template_events_c">
+  <b>foo</b><u>bar</u><i>baz</i>
+</template>
+
 <template name="test_template_eachrender_a">
   {{#each entries}}
     <div>{{x}}</div>
@@ -345,4 +349,9 @@
 
 <template name="test_template_trickylabels_a2">
   <div>foo</div>
+</template>
+
+<!-- Test for issue #801 - Each handling of falsy values eg. [1, 2, null, undefined] -->
+<template name="test_template_issue801">
+{{#each values}}{{this}}{{/each}}
 </template>

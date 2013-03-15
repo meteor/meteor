@@ -1,8 +1,7 @@
 // Old under_score version of camelCase public API names.
 Meteor.is_client = Meteor.isClient;
 Meteor.is_server = Meteor.isServer;
-Meteor.deps.Context.prototype.on_invalidate =
-  Meteor.deps.Context.prototype.onInvalidate;
+
 // See also the "this.is_simulation" assignment in livedata/livedata_common.js
 // and the retry_count and retry_time fields of self.current_status in
 // stream/stream_client.js.
@@ -10,7 +9,11 @@ Meteor.deps.Context.prototype.on_invalidate =
 
 // We used to require a special "autosubscribe" call to reactively subscribe to
 // things. Now, it works with autorun.
-Meteor.autosubscribe = Meteor.autorun;
+Meteor.autosubscribe = Deps.autorun;
+
+// "new deps" back-compat
+Meteor.flush = Deps.flush;
+Meteor.autorun = Deps.autorun;
 
 // Instead of the "random" package with Random.id(), we used to have this
 // Meteor.uuid() implementing the RFC 4122 v4 UUID.
