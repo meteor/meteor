@@ -4,6 +4,21 @@
 ## know what shell the user has. Debian uses 'dash' for 'sh', for
 ## example.
 
+# Is Meteor already installed (in /usr/local/bin (engine) or /usr/bin
+# (pre-engine)? If so, just run the updater instead of starting from
+# scratch. (This means that if you have pre-engine installed and run this curl
+# install script instead of "meteor update", the existing install will be
+# cleaned up.)
+
+if [ -x /usr/local/bin/meteor ]; then
+  exec /usr/local/bin/meteor update
+fi
+
+if [ -x /usr/bin/meteor ]; then
+  exec /usr/bin/meteor update
+fi
+
+
 PREFIX="/usr/local"
 
 UNAME=`uname`
