@@ -57,3 +57,26 @@ TARBALL="$OUTDIR/meteor-package-${UNAME}-${ARCH}-${VERSION}.tar.gz"
 echo "Tarring to: $TARBALL"
 
 tar -C "$FAKE_TMPDIR" --exclude .meteor/local -czf "$TARBALL" meteor
+
+
+if [ "$UNAME" == "Linux" ] ; then
+    echo "Building debian package"
+    DEBDIR="$FAKE_TMPDIR/debian"
+    mkdir "$DEBDIR"
+    cd "$DEBDIR"
+    cp "$TARBALL" "meteor_${VERSION}.orig.tar.gz"
+    mkdir "meteor-${VERSION}"
+    cd "meteor-${VERSION}"
+    cp -r "$TOPDIR/admin/debian" .
+    export TARBALL
+    dpkg-buildpackage
+    cp ../*.deb "$OUTDIR"
+
+
+    echo "Building RPM"
+    RPMDIR="$FAKE_TMPDIR/rpm"
+    mkdir $RPMDIR
+    rpmbuild -bb --define="TARBALL $TARBALL" \
+        --define="_topdir $RPMDIR" "$TOPDIR/admin/meteor.spec"
+    cp $RPMDIR/RPMS/*/*.rpm "$OUTDIR"
+fi

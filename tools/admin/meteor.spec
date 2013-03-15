@@ -5,7 +5,7 @@
 Summary: Meteor platform and JavaScript application server
 Vendor: Meteor
 Name: meteor
-Version: 0.5.9
+Version: 0.6.0
 Release: 1
 License: MIT
 Group: Networking/WWW
@@ -30,7 +30,6 @@ install -d %{buildroot}%{_libdir}
 # XXX XXX
 tar -x -C %{buildroot}%{_libdir} -f %{TARBALL}
 install -d %{buildroot}%{_bindir}
-ln -s /%{_libdir}/meteor/bin/meteor %{buildroot}%{_bindir}/meteor
 echo -n 'rpm' > %{buildroot}%{_libdir}/meteor/.package_stamp
 
 %clean
@@ -38,5 +37,4 @@ echo -n 'rpm' > %{buildroot}%{_libdir}/meteor/.package_stamp
 
 %files
 %defattr(-,root,root)
-%{_bindir}/meteor
 %{_libdir}/meteor
