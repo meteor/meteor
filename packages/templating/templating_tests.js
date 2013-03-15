@@ -1085,3 +1085,10 @@ Tinytest.add("templating - tricky branch labels", function (test) {
   div.kill();
   Deps.flush();
 });
+
+Tinytest.add('templating - each falsy Issue #801', function (test) {
+  //Minor test for issue #801
+  Template.test_template_issue801.values = function() { return [1,2,null,undefined]; };
+  var frag = Meteor.render(Template.test_template_issue801);
+  test.equal(canonicalizeHtml(DomUtils.fragmentToHtml(frag)), "12null");
+});
