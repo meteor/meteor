@@ -33,7 +33,7 @@
     } else {
       // If we are on mobile, using the method found by boundsj.
       // https://github.com/meteor/meteor/issues/438
-      url = url.replace("close", "redirect=" + encodeURIComponent("/?authState=" + state));
+      url = url.replace("close", "redirect=" + Meteor.absoluteUrl("?authState=" + state));
       window.open(url, '_self');
     }
   };
