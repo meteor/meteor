@@ -127,7 +127,7 @@ var files = module.exports = {
   },
 
   // given a predicate function and a starting path, traverse upwards
-  // from the path until we find a path that satisfys the predicate.
+  // from the path until we find a path that satisfies the predicate.
   //
   // returns either the path to the lowest level directory that passed
   // the test or null for none found. if starting path isn't given, use
@@ -198,7 +198,7 @@ var files = module.exports = {
     else
       return path.join(__dirname, '..', '..');
   },
-  
+
   // returns a list of places where packages can be found.
   // 1. directories set via process.env.PACKAGES_DIRS
   // 2. default is packages/ in the meteor directory
@@ -207,11 +207,11 @@ var files = module.exports = {
     var package_dirs = [path.join(__dirname, '..', '..', 'packages')];
     if (process.env.PACKAGE_DIRS)
       package_dirs = process.env.PACKAGE_DIRS.split(':').concat(package_dirs);
-    
+
     return package_dirs;
   },
-  
-  // search package dirs for a package named name. 
+
+  // search package dirs for a package named name.
   // undefined if the package isn't in any dir
   get_package_dir: function (name) {
     var ret;
@@ -222,7 +222,7 @@ var files = module.exports = {
         return true;
       }
     });
-    
+
     return ret;
   },
 
