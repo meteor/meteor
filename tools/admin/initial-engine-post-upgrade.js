@@ -93,7 +93,7 @@ var runWithRoot = function (cmd, args) {
 
 var copyScriptLinux = function () {
   runWithRoot("cp", [bootstrapScript, binary]);
-  fs.chmodSync(binary, 0755);
+  runWithRoot("chmod", [755, binary]);
 };
 
 var debUpgrade = function () {
