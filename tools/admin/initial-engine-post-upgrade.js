@@ -97,7 +97,7 @@ var copyScriptLinux = function () {
 
 var debUpgrade = function () {
   copyScriptLinux();
-  runWithRoot("apt-get", ["-y", "remove", "meteor"]);
+  runWithRoot("dpkg", ["-r", "meteor"]);
 };
 
 var rpmUpgrade = function () {
