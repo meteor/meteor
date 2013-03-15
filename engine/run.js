@@ -215,6 +215,7 @@ var log_to_clients = function (msg) {
 // mongoURL
 // onExit
 // [onListen]
+// [onStdio]
 // [nodeOptions]
 // [settingsFile]
 
@@ -257,13 +258,18 @@ var start_server = function (options) {
     data = data.replace(/^LISTENING\s*(?:\n|$)/m, '');
     if (data.length != originalLength)
       options.onListen && options.onListen();
-    if (data)
+    if (data) {
+      options.onStdio && options.onStdio();
       log_to_clients({stdout: data});
+    }
   });
 
   proc.stderr.setEncoding('utf8');
   proc.stderr.on('data', function (data) {
-    data && log_to_clients({stderr: data});
+    if (data) {
+      options.onStdio && options.onStdio();
+      log_to_clients({stderr: data});
+    }
   });
 
   proc.on('exit', function (code, signal) {
@@ -585,6 +591,9 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
   // Allow override and use of external mongo. Matches code in launch_mongo.
   var mongo_url = process.env.MONGO_URL ||
         ("mongodb://127.0.0.1:" + mongo_port + "/meteor");
+  var firstRun = true;
+  var lastThingThatPrintedWasRestartMessage;
+  var silentRuns = 0;
 
   var deps_info = null;
   var warned_about_no_deps_info = false;
@@ -618,7 +627,6 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
     }
   };
 
-  var process_startup_printer;
   // Using `inFiber` since bundling can yield when loading a manifest
   // file from warehouse.meteor.com.
   var restart_server = inFiber(function () {
@@ -669,7 +677,26 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
 
     start_watching();
     Status.running = true;
-    process_startup_printer();
+
+    if (firstRun) {
+      process.stdout.write("=> Meteor server running on: http://localhost:" + outer_port + "/\n");
+      firstRun = false;
+      lastThingThatPrintedWasRestartMessage = false;
+    } else {
+      if (lastThingThatPrintedWasRestartMessage) {
+        // The last run was not the "Running on: " run, and it didn't print
+        // anything. So the last thing that printed was the restart message.
+        // Overwrite it.
+        process.stdout.write('\r');
+      }
+      process.stdout.write("=> Meteor server restarted");
+      if (lastThingThatPrintedWasRestartMessage) {
+        ++silentRuns;
+        process.stdout.write(" (x" + (silentRuns+1) + ")");
+      }
+      lastThingThatPrintedWasRestartMessage = true;
+    }
+
     server_handle = start_server({
       bundlePath: bundle_path,
       outerPort: outer_port,
@@ -689,6 +716,13 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
         Status.listening = true;
         _.each(request_queue, function (f) { f(); });
         request_queue = [];
+      },
+      onStdio: function () {
+        if (lastThingThatPrintedWasRestartMessage) {
+          process.stdout.write("\n");
+          lastThingThatPrintedWasRestartMessage = false;
+          silentRuns = 0;
+        }
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
       settingsFile: settingsFile
@@ -747,15 +781,6 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
     mongo_startup_print_timer = setTimeout(function () {
       process.stdout.write("Initializing mongo database... this may take a moment.\n");
     }, 3000);
-    var first = true;
-    process_startup_printer = function () {
-      if (first) {
-        process.stdout.write("=> Running on: http://localhost:" + outer_port + "/\n");
-        first = false;
-      } else {
-        process.stdout.write("=> Meteor server restarted\n");
-      }
-    };
 
     start_update_checks(bundle_opts.release);
     launch();
