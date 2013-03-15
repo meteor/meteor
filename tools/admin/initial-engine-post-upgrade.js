@@ -7,7 +7,7 @@ var _ = require('underscore');
 
 
 var prefix = path.join(__dirname, '..', '..', '..');
-var binary = path.join(prefix, 'bin', 'meteor');
+var binary = '/usr/local/bin/meteor';
 var oldDirectory = path.join(prefix, 'meteor');
 var bootstrapScript = path.join(
   oldDirectory, 'app', 'meteor', 'meteor-bootstrap.sh');
