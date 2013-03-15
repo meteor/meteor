@@ -994,7 +994,26 @@ Template.api.loggingInTemplate = {
   descr: ["Calls [Meteor.loggingIn()](#meteor_loggingin)."]
 };
 
+Template.api.loggingOut = {
+  id: "meteor_loggingout",
+  name: "Meteor.loggingOut()",
+  locus: "Client",
+  descr: ["True if a logout method (such as `Meteor.loginWithPassword`, `Meteor.loginWithFacebook`, or `Accounts.createUser`) is currently in progress. A reactive data source."]
+};
 
+Template.api.loggingOutTemplate = {
+  id: "template_loggingout",
+  name: "{{loggingOut}}",
+  locus: "Handlebars templates",
+  descr: ["Calls [Meteor.loggingOut()](#meteor_loggingout)."]
+};
+
+Template.api.loggingInOutTemplate = {
+  id: "template_logginginout",
+  name: "{{loggingInOut}}",
+  locus: "Handlebars templates",
+  descr: ["Returns ( [Meteor.loggingIn()](#meteor_loggingin) || [Meteor.loggingOut()](#meteor_loggingout) )."]
+};
 
 Template.api.logout = {
   id: "meteor_logout",
