@@ -1,6 +1,7 @@
 var fs = require('fs');
 var path = require('path');
 var kexec = require('kexec');
+var shell_quote = require('shell-quote');
 var _ = require('underscore');
 
 // Like rm -r.
@@ -37,6 +38,4 @@ fs.writeFileSync(binary, fs.readFileSync(bootstrapScript));
 fs.chmodSync(binary, 0755);
 rm_recursive(oldDirectory);
 
-// XXX do we really want to do this? and does this screw up if prefix contains a
-// space (yes).
-kexec(binary + " update");
+kexec(shell_quote.quote([binary, 'update']));
