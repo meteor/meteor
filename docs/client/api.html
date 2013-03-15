@@ -1444,8 +1444,12 @@ their user document:
 
 {{> api_box loggingIn}}
 
+{{> api_box loggingOut}}
+
+{{> api_box loggingInOut}}
+
 For example, [the `accounts-ui` package](#accountsui) uses this to display an
-animation while the login request is being processed.
+animation while the login or logout request is being processed.
 
 {{> api_box logout}}
 
@@ -1516,6 +1520,8 @@ example, to support GitHub login, run `$ meteor add accounts-github` and use the
 
 {{> api_box currentUser}}
 {{> api_box loggingInTemplate}}
+{{> api_box loggingOutTemplate}}
+{{> api_box loggingInOutTemplate}}
 {{> api_box accounts_config}}
 {{> api_box accounts_ui_config}}
 
