@@ -1,6 +1,7 @@
 var fs = require('fs');
 var path = require('path');
 var kexec = require('kexec');
+var Fiber = require('fibers');
 var Future = require('fibers/future');
 var shell_quote = require('shell-quote');
 var _ = require('underscore');
