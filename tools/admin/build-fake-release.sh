@@ -67,7 +67,7 @@ if [ "$UNAME" == "Linux" ] ; then
     cp "$TARBALL" "meteor_${VERSION}.orig.tar.gz"
     mkdir "meteor-${VERSION}"
     cd "meteor-${VERSION}"
-    cp -r "$TOPDIR/admin/debian" .
+    cp -r "$TOPDIR/tools/admin/debian" .
     export TARBALL
     dpkg-buildpackage
     cp ../*.deb "$OUTDIR"
@@ -77,6 +77,6 @@ if [ "$UNAME" == "Linux" ] ; then
     RPMDIR="$FAKE_TMPDIR/rpm"
     mkdir $RPMDIR
     rpmbuild -bb --define="TARBALL $TARBALL" \
-        --define="_topdir $RPMDIR" "$TOPDIR/admin/meteor.spec"
+        --define="_topdir $RPMDIR" "$TOPDIR/tools/admin/meteor.spec"
     cp $RPMDIR/RPMS/*/*.rpm "$OUTDIR"
 fi
