@@ -116,5 +116,11 @@ Fiber(function () {
     rpmUpgrade();
   }
 
+  if (package_stamp !== 'tar') {
+    console.log("**************************************************************");
+    console.log("*** Meteor is now installed at /usr/local/bin/meteor.      ***");
+    console.log("*** Run `hash -r` so that your shell notices it has moved. ***");
+    console.log("**************************************************************");
+  }
   kexec(shell_quote.quote([binary, 'update']));
 }).run();
