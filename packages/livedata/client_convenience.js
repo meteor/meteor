@@ -2,13 +2,22 @@
   // By default, try to connect back to the same endpoint as the page
   // was served from.
   var ddpUrl = '/';
+  var ddpAppUrl = ddpUrl;
+
   if (typeof __meteor_runtime_config__ !== "undefined") {
     if (__meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL)
       ddpUrl = __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL;
   }
 
+  // Connect to this app server for hot code push
   _.extend(Meteor, {
-    default_connection: Meteor.connect(ddpUrl, true /* restart_on_update */),
+    app_connection: Meteor.connect(ddpAppUrl, true /* restart_on_update */)
+  });
+
+  // Connect meteor to this app server or remote server
+  _.extend(Meteor, {
+    default_connection: (ddpUrl == ddpAppUrl)?
+            Meteor.app_connection:Meteor.connect(ddpUrl, false /* dont use remote restart_on_update */),
 
     refresh: function (notification) {
     }
