@@ -167,6 +167,9 @@
   };
 
   Accounts.oauth._renderOauthResults = function(res, query) {
+    // TODO: remove after debugging is done
+    console.log("query", query);
+
     // We support ?close and ?redirect=URL. Any other query should
     // just serve a blank page
     if ('close' in query) { // check with 'in' because we don't set a value
