@@ -20,7 +20,7 @@ var coffeescript_handler = function(bundle, source_path, serve_path, where) {
     var contents = coffee.compile(coffeeContent, options);
     var jsContent = new Buffer(contents.js);
   } catch (e) {
-    return console.log(bundle.error(e.message));
+    return bundle.error(e.message);
   }
 
   if (options.sourceMap) {
