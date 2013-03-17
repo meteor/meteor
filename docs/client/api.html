@@ -643,6 +643,11 @@ disable this behavior, pass `{reactive: false}` as an option to
 
 Equivalent to `find(selector, options).fetch()[0]`.
 
+{{> api_box findHelper}}
+
+{{> api_box findOneHelper}}
+
+
 {{> api_box insert}}
 
 Add a document to the collection. A document is just an object, and
@@ -1330,6 +1335,9 @@ For object and array session values, you cannot use `Session.equals`; instead,
 you need to use the `underscore` package and write
 `_.isEqual(Session.get(key), value)`.
 
+{{> api_box getSessionHelper}}
+
+{{> api_box sessionEqualsHelper}}
 
 
 <h2 id="accounts_api"><span>Accounts</span></h2>

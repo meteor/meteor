@@ -1,0 +1,10 @@
+{
+  "name": "handlebar-helpers",
+  "description": "Meteor handlebar helpers, getSession, sessionEquals, find, findOne",
+  "homepage": "https://github.com/raix/Meteor-handlebar-helpers",
+  "author": "Morten Henriksen  (http://gi-software.com)",
+  "version": "0.0.5",
+  "git": "https://github.com/raix/Meteor-handlebar-helpers.git",
+  "packages": {
+  }
+}

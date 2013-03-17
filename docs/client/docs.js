@@ -159,14 +159,21 @@ var toc = [
       {name: "Selectors", style: "noncode"},
       {name: "Modifiers", style: "noncode"},
       {name: "Sort specifiers", style: "noncode"},
-      {name: "Field specifiers", style: "noncode"}
+      {name: "Field specifiers", style: "noncode"},
+      {type: "spacer"},
+      {name: "{{find}}", id: "template_helper_find"},
+      {name: "{{findOne}}", id: "template_helper_findone"},
+
     ],
 
     "Session", [
       "Session.set",
       {name: "Session.setDefault", id: "session_set_default"},
       "Session.get",
-      "Session.equals"
+      "Session.equals",
+      {type: "spacer"},
+      {name: "{{getSession}}", id: "template_helper_getsession"},
+      {name: "{{sessionEquals}}", id: "template_helper_sessionequals"},
     ],
 
     {name: "Accounts", id: "accounts_api"}, [
@@ -317,7 +324,8 @@ var toc = [
     "spiderable",
     "stylus",
     "showdown",
-    "underscore"
+    "underscore",
+    "handlebar-helpers"
   ] ],
 
   "Command line", [ [

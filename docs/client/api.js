@@ -965,6 +965,69 @@ Template.api.currentUser = {
   descr: ["Calls [Meteor.user()](#meteor_user). Use `{{#if currentUser}}` to check whether the user is logged in."]
 };
 
+Template.api.getSessionHelper = {
+  id: "template_helper_getsession",
+  name: "{{getSession}}",
+  locus: "Handlebars templates",
+  descr: ["Calls [Session.get(key)](#session_get). Use `{{getSession 'foo'}}` in handlebar html template to return value of session variable 'foo'."],
+  args: [
+    {name: "key",
+     type: "string",
+     descr: "The name of the session variable to return"}
+  ]
+};
+
+Template.api.sessionEqualsHelper = {
+  id: "template_helper_sessionequals",
+  name: "{{sessionEquals}}",
+  locus: "Handlebars templates",
+  descr: ["Calls [Session.equals(key, value)](#session_equals). Use `{{#if sessionEquals 'foo' 'bar'}}` to check whether the session variable 'foo' equals the value 'bar'."],
+    args: [
+    {name: "key",
+     type: "string",
+     descr: "The name of the session variable to test"},
+    {name: "value",
+     type: "string/integer/boolean",
+     descr: "The value to test against"}
+  ]
+};
+
+Template.api.findHelper = {
+  id: "template_helper_find",
+  name: "{{find}}",
+  locus: "Handlebars templates",
+  descr: ["Calls [collection.find(query, options)](#find). Use `{{#each find 'myCollection' '{}'}}` to loop through all items in `myCollection`."],
+  args: [
+    {name: "collection",
+     type: "string",
+     descr: 'Equals "myCollection" if collection defined as: `var myCollection = new Meteor.Collection(null);` '},
+    {name: "query",
+     type: "JSON",
+     descr: 'The query eg. ´{}´ or ´{"_id":5}´'},
+    {name: "options",
+     type: "JSON",
+     descr: 'Options eg. ´{ "sort": { "createdAt":1 } }´'}
+  ]
+};
+
+Template.api.findOneHelper = {
+  id: "template_helper_findone",
+  name: "{{findOne}}",
+  locus: "Handlebars templates",
+  descr: ["Calls [collection.findOne(query, options)](#findone). Use eg. `{{#with findOne 'myCollection' '{}'}}` to handle one item from `myCollection`."],
+  args: [
+    {name: "collection",
+     type: "string",
+     descr: 'Equals "myCollection" if collection defined as: `var myCollection = new Meteor.Collection(null);` '},
+    {name: "query",
+     type: "JSON",
+     descr: 'The query eg. ´{}´ or ´{"_id":5}´'},
+    {name: "options",
+     type: "JSON",
+     descr: 'Options eg. ´{ "sort": { "createdAt":1 } }´'}
+  ]
+};
+
 Template.api.userId = {
   id: "meteor_userid",
   name: "Meteor.userId()",
