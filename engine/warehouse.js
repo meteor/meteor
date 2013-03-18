@@ -33,7 +33,7 @@ var PACKAGES_URLBASE = 'https://warehouse.meteor.com';
 // Like fs.symlinkSync, but creates a temporay link and renames it over the
 // file; this means it works even if the file already exists.
 var symlinkOverSync = function (linkText, file) {
-  var tmpSymlink = file + ".tmp" + warehouse._randomToken();
+  var tmpSymlink = file + ".tmp" + files._randomToken();
   fs.symlinkSync(linkText, tmpSymlink);
   fs.renameSync(tmpSymlink, file);
 };
@@ -226,13 +226,8 @@ var warehouse = module.exports = {
           url: PACKAGES_URLBASE + engineTarballPath,
           encoding: null
         }).wait();
-        var engineDir = warehouse.getEngineDir(engineVersion);
-        // use a temp dir to avoid getting a corrupt warehouse
-        var tmpEngineDir = warehouse.getEngineDir(
-          ".tmp" + warehouse._randomToken());
-        files.mkdir_p(tmpEngineDir);
-        files.extractTarGz(engineTarball, tmpEngineDir);
-        fs.renameSync(path.join(tmpEngineDir, releaseManifest.engine), engineDir);
+        files.extractTarGz(engineTarball,
+                           warehouse.getEngineDir(engineVersion));
       } catch (e) {
         if (!background)
           console.error("Failed to load engine for release " + releaseVersion);
@@ -318,25 +313,13 @@ var warehouse = module.exports = {
 
     _.each(futures, function (f) {
       var result = f.get();
-      // extract to a temporary directory and then rename, to ensure
-      // we don't end up with a corrupt warehouse
-      var tmpPackageDir = result.packageDir + ".tmp" + warehouse._randomToken();
-      files.mkdir_p(tmpPackageDir);
-      files.extractTarGz(result.buffer, tmpPackageDir);
-      // tmpPackageDir should contain precisely one entry: a directory named
-      // after the package.
-      fs.renameSync(path.join(tmpPackageDir, result.name), result.packageDir);
-      fs.rmdirSync(tmpPackageDir);
+      files.extractTarGz(result.buffer, result.packageDir);
 
       // fetch npm dependencies
       var packages = require(path.join(__dirname, "packages.js")); // load late to work around circular require
       var pkg = packages.loadFromDir(result.name, result.packageDir);
       pkg.installNpmDependencies(background /* === quiet */);
     });
-  },
-
-  _randomToken: function() {
-    return (Math.random() * 0x100000000 + 1).toString(36);
   },
 
   _unameAndArch: function () {

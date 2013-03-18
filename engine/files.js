@@ -365,9 +365,15 @@ var files = module.exports = {
     throw new Error("failed to make tempory directory in " + tmp_dir);
   },
 
-  // Takes a buffer containing `.tar.gz` data and extracts the archive into
-  // a destination directory.
+  // Takes a buffer containing `.tar.gz` data and extracts the archive into a
+  // destination directory. destPath should not exist yet, and the archive
+  // should contain a single top-level directory, which will be renamed
+  // atomically to destPath.
   extractTarGz: function (buffer, destPath) {
+    var parentDir = path.dirname(destPath);
+    var tempDir = path.join(parentDir, '.tmp' + files._randomToken());
+    files.mkdir_p(tempDir);
+
     var future, error;
 
     future = new Future;
@@ -380,7 +386,7 @@ var files = module.exports = {
       throw error;
 
     future = new Future;
-    var extractor = new tar.Extract({ path: destPath })
+    var extractor = new tar.Extract({ path: tempDir })
           .on('error', function (e) {
             error = e;
             future['return'](false);
@@ -396,7 +402,14 @@ var files = module.exports = {
     if (error)
       throw error;
 
-    // succeed! no return value.
+    // succeed!
+    var topLevelOfArchive = fs.readdirSync(tempDir);
+    if (topLevelOfArchive.length !== 1)
+      throw new Error(
+        "Extracted archive '" + tempDir + "' should only contain one entry");
+
+    fs.renameSync(path.join(tempDir, topLevelOfArchive[0]), destPath);
+    fs.rmdirSync(tempDir);
   },
 
   // Tar-gzips a directory, returning a stream that can then
@@ -413,6 +426,9 @@ var files = module.exports = {
     return request(urlOrOptions, function (error, response, body) {
       callback(error, body, response);
     });
-  }
+  },
 
+  _randomToken: function() {
+    return (Math.random() * 0x100000000 + 1).toString(36);
+  }
 };
