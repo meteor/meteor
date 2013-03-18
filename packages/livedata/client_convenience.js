@@ -21,29 +21,21 @@
     app_connection: Meteor.connect(ddpAppUrl, true /* restart_on_update */),
 
     refresh: function (notification) {
-    },
-    setDefaultConnection: function(url) {
-      if (ddpUrl != url) {
-        ddpUrl = (url)?url:ddpAppUrl;
-        ddpUrlDependency.changed();
-      }
     }
   });
 
-  Deps.autorun(function() {
-    Deps.depend(ddpUrlDependency);
-    // Connect meteor to this app server or remote server
-    _.extend(Meteor, {
-      default_connection: (ddpUrl == ddpAppUrl)?
-              Meteor.app_connection:Meteor.connect(ddpUrl, false /* dont use remote restart_on_update */)
-    });
-
-    // Proxy the public methods of Meteor.default_connection so they can
-    // be called directly on Meteor.
-    _.each(['subscribe', 'methods', 'call', 'apply', 'status', 'reconnect'],
-           function (name) {
-             Meteor[name] = _.bind(Meteor.default_connection[name],
-                                   Meteor.default_connection);
-           });
+  Deps.depend(ddpUrlDependency);
+  // Connect meteor to this app server or remote server
+  _.extend(Meteor, {
+    default_connection: (ddpUrl == ddpAppUrl)?
+            Meteor.app_connection:Meteor.connect(ddpUrl, false /* dont use remote restart_on_update */)
   });
+
+  // Proxy the public methods of Meteor.default_connection so they can
+  // be called directly on Meteor.
+  _.each(['subscribe', 'methods', 'call', 'apply', 'status', 'reconnect'],
+         function (name) {
+           Meteor[name] = _.bind(Meteor.default_connection[name],
+                                 Meteor.default_connection);
+         });
 })();

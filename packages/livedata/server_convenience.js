@@ -22,6 +22,18 @@ _.extend(Meteor, {
       if (proxy_write)
         proxy_write.committed();
     });
+  },
+  setDefaultServer: function(url) {
+    var default_connection = (process.env.DDP_DEFAULT_CONNECTION_URL)?
+            process.env.DDP_DEFAULT_CONNECTION_URL:'/';
+
+    // Set app connection to default or env set        
+    __meteor_runtime_config__.DDP_APP_CONNECTION_URL = (process.env.DDP_APP_CONNECTION_URL)?
+            process.env.DDP_APP_CONNECTION_URL:default_connection;
+
+    // Set default connection
+    __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL = url;
+
   }
 });
 
