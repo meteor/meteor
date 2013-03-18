@@ -209,10 +209,9 @@ var warehouse = module.exports = {
     var engineVersion = releaseManifest.engine;
     if (!warehouse.engineExistsInWarehouse(engineVersion)) {
       try {
-        // XXX this sucks. We store both the engine tarball *and* the uncompressed
-        // vanilla tar file contents in memory. This is huge (>100MB). We should
-        // instead use streams, especially in files.extractTarGz. Since the node
-        // stream API is in flux, we should probably wait a bit.
+        // XXX this sucks. We store all the tarballs in memory. This is huge.
+        // We should instead stream packages in parallel. Since the node stream
+        // API is in flux, we should probably wait a bit.
         // http://blog.nodejs.org/2012/12/20/streams2/
 
         var engineTarballFilename =

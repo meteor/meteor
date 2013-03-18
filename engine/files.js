@@ -374,33 +374,26 @@ var files = module.exports = {
     var tempDir = path.join(parentDir, '.tmp' + files._randomToken());
     files.mkdir_p(tempDir);
 
-    var future, error;
+    var future = new Future;
 
-    future = new Future;
-    zlib.gunzip(buffer, function (e, result) {
-      error = e;
-      future['return'](result);
-    });
-    var unzippedBuffer = future.wait();
-    if (error)
-      throw error;
-
-    future = new Future;
+    var gunzip = zlib.createGunzip()
+          .on('error', function (e) {
+            future.throw(e);
+          });
     var extractor = new tar.Extract({ path: tempDir })
           .on('error', function (e) {
-            error = e;
-            future['return'](false);
+            future.throw(e);
           })
           .on('end', function () {
-            future['return'](true);
+            future.return();
           });
-    // write the unzippedBuffer to the tar extractor; these calls
-    // cause the tar to be extracted to disk.
-    extractor.write(unzippedBuffer);
-    extractor.end();
+
+    // write the buffer to the (gunzip|untar) pipeline; these calls cause the
+    // tar to be extracted to disk.
+    gunzip.pipe(extractor);
+    gunzip.write(buffer);
+    gunzip.end();
     future.wait();
-    if (error)
-      throw error;
 
     // succeed!
     var topLevelOfArchive = fs.readdirSync(tempDir);
