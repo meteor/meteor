@@ -177,10 +177,10 @@ var warehouse = module.exports = {
 
     // get release manifest, but only write it after we're done
     // writing packages
-    var releaseManifest;
     try {
-      releaseManifest = JSON.parse(files.getUrl(
-        PACKAGES_URLBASE + "/releases/" + releaseVersion + ".release.json"));
+      var releaseManifestText = files.getUrl(
+        PACKAGES_URLBASE + "/releases/" + releaseVersion + ".release.json");
+      var releaseManifest = JSON.parse(releaseManifestText);
     } catch (e) {
       if (background)
         throw e;  // just throw, it's being ignored
@@ -250,9 +250,9 @@ var warehouse = module.exports = {
       throw e;
     }
 
-    // now that we have written all packages, it's safe to write the
-    // release manifest
-    fs.writeFileSync(releaseManifestPath, JSON.stringify(releaseManifest));
+    // Now that we have written all packages, it's safe to write the
+    // release manifest.
+    fs.writeFileSync(releaseManifestPath, releaseManifestText);
   },
 
   printChangelog: function(fromRelease, toRelease) {
