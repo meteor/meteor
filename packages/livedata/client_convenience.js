@@ -2,7 +2,6 @@
   // By default, try to connect back to the same endpoint as the page
   // was served from.
   var ddpUrl = '/';
-  var ddpUrlDependency = new Deps.Dependency;
 
   if (typeof __meteor_runtime_config__ !== "undefined") {
     if (__meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL)
@@ -24,7 +23,6 @@
     }
   });
 
-  Deps.depend(ddpUrlDependency);
   // Connect meteor to this app server or remote server
   _.extend(Meteor, {
     default_connection: (ddpUrl == ddpAppUrl)?
