@@ -32,7 +32,7 @@ _.extend(Meteor, {
             process.env.DDP_APP_CONNECTION_URL:default_connection;
 
     // Set default connection
-    __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL = url;
+    __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL = (url)?url:default_connection;
 
   }
 });
