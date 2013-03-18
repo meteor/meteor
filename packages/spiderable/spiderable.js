@@ -80,7 +80,7 @@
           } else {
             // phantomjs failed. Don't send the error, instead send the
             // normal page.
-            if (error.code === 127)
+            if (error && error.code === 127)
               Meteor._debug("spiderable: phantomjs not installed. Download and install from http://phantomjs.org/");
             else
               Meteor._debug("spiderable: phantomjs failed:", error, "\nstderr:", stderr);
