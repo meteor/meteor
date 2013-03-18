@@ -76,7 +76,7 @@ Meteor.makeComponent = function (options) {
 
       var args = _.toArray(arguments);
       args.unshift(config.controller);
-      args.pop(); // lose extra handlebars data for now
+      config.template.helpers(args.pop().hash); // add extra handlebars data for now
       args.push(config.template);
       return Spark.attachController.apply(Spark, args);
     };

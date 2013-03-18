@@ -14,7 +14,7 @@
     <div class="span6">
       <h2>Add something</h2>
       {{#controller MyForm}}
-        Your message: {{{ContinuouslySavingTextArea "entry"}}}<br>
+        Your message: {{{ContinuouslySavingTextArea "entry" value=entry style="color: blue;" required="required"}}}<br>
         {{{SaveButton}}}<br>
         {{charsLeft}} chars left
         <hr>
@@ -37,5 +37,7 @@
 
 
 <template name="ContinuouslySavingTextAreaView">
-  <textarea class="textbox">
+  <textarea class="textbox" style="{{style}}" {{required}}></textarea>
+  <br/>
+  Current value: {{value}}
 </template>
