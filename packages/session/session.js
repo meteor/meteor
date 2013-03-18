@@ -51,7 +51,7 @@ Session = _.extend({}, {
   get: function (key) {
     var self = this;
     self._ensureKey(key);
-    Deps.depend(self.keyDeps[key]);
+    self.keyDeps[key].depend();
     return parse(self.keys[key]);
   },
 
@@ -83,7 +83,7 @@ Session = _.extend({}, {
       if (! _.has(self.keyValueDeps[key], serializedValue))
         self.keyValueDeps[key][serializedValue] = new Deps.Dependency;
 
-      var isNew = Deps.depend(self.keyValueDeps[key][serializedValue]);
+      var isNew = self.keyValueDeps[key][serializedValue].depend();
       if (isNew) {
         Deps.onInvalidate(function () {
           // clean up [key][serializedValue] if it's now empty, so we don't

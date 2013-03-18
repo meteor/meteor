@@ -157,13 +157,12 @@
   _.extend(Deps.Dependency.prototype, {
     // Adds `computation` to this set if it is not already
     // present.  Returns true if `computation` is a new member of the set.
-    // If no argument, defaults to currentComputation (which is required to
-    // exist in this case).
-    addDependent: function (computation) {
+    // If no argument, defaults to currentComputation, or does nothing
+    // if there is no currentComputation.
+    depend: function (computation) {
       if (! computation) {
         if (! Deps.active)
-          throw new Error(
-            "Dependency.addDependent() called with no currentComputation");
+          return false;
 
         computation = Deps.currentComputation;
       }
@@ -295,13 +294,6 @@
       throw new Error("Deps.onInvalidate requires a currentComputation");
 
     Deps.currentComputation.onInvalidate(f);
-  },
-
-  depend: function (v) {
-    if (! Deps.active)
-      return false;
-
-    return v.addDependent();
   },
 
   afterFlush: function (f) {

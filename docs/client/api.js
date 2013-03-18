@@ -812,18 +812,6 @@ Template.api.deps_afterflush = {
   ]
 };
 
-Template.api.deps_depend = {
-  id: "deps_depend",
-  name: "Deps.depend(dependency)",
-  locus: "Client",
-  descr: ["Declares that the current computation depends on `dependency`.  The current computation, if there is one, becomes a dependent of `dependency`, meaning it will be invalidated and rerun the next time `dependency` changes.", "Returns `true` if this results in `dependency` gaining a new dependent (or `false` if this relationship already exists or there is no current computation)."],
-  args: [
-    {name: "dependency",
-     type: "Deps.Dependency",
-     descr: "The dependency for this computation to depend on."}
-  ]
-};
-
 Template.api.computation_stop = {
   id: "computation_stop",
   name: "<em>computation</em>.stop()",
@@ -878,15 +866,15 @@ Template.api.dependency_changed = {
   descr: ["Invalidate all dependent computations immediately and remove them as dependents."]
 };
 
-Template.api.dependency_adddependent = {
-  id: "dependency_adddependent",
-  name: "<em>dependency</em>.addDependent(computation)",
+Template.api.dependency_depend = {
+  id: "dependency_depend",
+  name: "<em>dependency</em>.depend([fromComputation])",
   locus: "Client",
-  descr: ["Adds `computation` as a dependent of this Dependency, recording the fact that the computation depends on this Dependency.", "Returns true if the computation was not already a dependent of this Dependency."],
+  descr: ["Declares that the current computation (or `fromComputation` if given) depends on `dependency`.  The computation will be invalidated the next time `dependency` changes.", "If `depend()` is called with no arguments and there is no current computation, does nothing and returns false.", "Returns true if the computation is a new dependent of `dependency` rather than an existing one."],
   args: [
-    {name: "computation",
+    {name: "fromComputation",
      type: "Deps.Computation",
-     descr: "The computation to add, or `null` to use the current computation (in which case there must be a current computation)."}
+     descr: "An optional computation declared to depend on `dependency` instead of the current computation."}
   ]
 };
 
