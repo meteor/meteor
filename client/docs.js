@@ -251,7 +251,6 @@ var toc = [
       "Deps.currentComputation",
       "Deps.onInvalidate",
       "Deps.afterFlush",
-      "Deps.depend",
       "Deps.Computation", [
         {instance: "computation", name: "stop", id: "computation_stop"},
         {instance: "computation", name: "invalidate", id: "computation_invalidate"},
@@ -262,7 +261,7 @@ var toc = [
       ],
       "Deps.Dependency", [
         {instance: "dependency", name: "changed", id: "dependency_changed"},
-        {instance: "dependency", name: "addDependent", id: "dependency_adddependent"},
+        {instance: "dependency", name: "depend", id: "dependency_depend"},
         {instance: "dependency", name: "hasDependents", id: "dependency_hasdependents"}
       ]
     ],
