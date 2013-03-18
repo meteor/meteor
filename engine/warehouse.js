@@ -27,6 +27,7 @@ var _ = require("underscore");
 
 var files = require('./files.js');
 var updater = require('./updater.js');
+var fiberHelpers = require('./fiber-helpers.js');
 
 var PACKAGES_URLBASE = 'https://warehouse.meteor.com';
 
@@ -178,8 +179,8 @@ var warehouse = module.exports = {
     // writing packages
     var releaseManifest;
     try {
-      releaseManifest = JSON.parse(Future.wrap(files.getUrl)(
-        PACKAGES_URLBASE + "/releases/" + releaseVersion + ".release.json").wait());
+      releaseManifest = JSON.parse(files.getUrl(
+        PACKAGES_URLBASE + "/releases/" + releaseVersion + ".release.json"));
     } catch (e) {
       if (background)
         throw e;  // just throw, it's being ignored
@@ -192,8 +193,8 @@ var warehouse = module.exports = {
     // try getting the releases's changelog. notable only blessed
     // releases have one, so if we can't find it just proceed
     try {
-      var changelog = Future.wrap(files.getUrl)(
-        PACKAGES_URLBASE + "/releases/" + releaseVersion + ".changelog.json").wait();
+      var changelog = files.getUrl(
+        PACKAGES_URLBASE + "/releases/" + releaseVersion + ".changelog.json");
 
       // If a file is not on S3 we get served an 'access denied' XML
       // file. This will throw (intentionally) in that case. Real
@@ -221,10 +222,10 @@ var warehouse = module.exports = {
               + engineTarballFilename;
         if (!background)
           console.log("Fetching Meteor Engine " + engineVersion + "...");
-        var engineTarball = Future.wrap(files.getUrl)({
+        var engineTarball = files.getUrl({
           url: PACKAGES_URLBASE + engineTarballPath,
           encoding: null
-        }).wait();
+        });
         files.extractTarGz(engineTarball,
                            warehouse.getEngineDir(engineVersion));
       } catch (e) {
@@ -291,29 +292,22 @@ var warehouse = module.exports = {
 
   // @param packagesToPopulate {Object} eg {"less": "0.5.0"}
   _populateWarehouseWithPackages: function(packagesToPopulate, background) {
-    var futures = [];
-    _.each(packagesToPopulate, function (version, name) {
-      var packageDir = path.join(warehouse.getWarehouseDir(), 'packages', name, version);
-      var packageUrl = PACKAGES_URLBASE + "/packages/" + name + "/" +
-            name + '-' + version + ".tar.gz";
+    var results = fiberHelpers.parallelMap(
+      packagesToPopulate, function (version, name) {
+        var packageDir = path.join(warehouse.getWarehouseDir(), 'packages',
+                                   name, version);
+        var packageUrl = PACKAGES_URLBASE + "/packages/" + name + "/" +
+              name + '-' + version + ".tar.gz";
 
-      if (!background)
-        console.log("Fetching " + packageUrl + "...");
-      futures.push(Future.wrap(function (cb) {
-        files.getUrl({url: packageUrl, encoding: null}, function (error, result) {
-          if (! error && result)
-            result = { buffer: result, packageDir: packageDir, name: name };
-          cb(error, result);
-        });
-      })());
-    });
+        if (!background)
+          console.log("Fetching " + packageUrl + "...");
 
-    Future.wait(futures);
+        var tarball = files.getUrl({url: packageUrl, encoding: null});
+        files.extractTarGz(tarball, packageDir);
+        return {name: name, packageDir: packageDir};
+      });
 
-    _.each(futures, function (f) {
-      var result = f.get();
-      files.extractTarGz(result.buffer, result.packageDir);
-
+    _.each(results, function (result) {
       // fetch npm dependencies
       var packages = require(path.join(__dirname, "packages.js")); // load late to work around circular require
       var pkg = packages.loadFromDir(result.name, result.packageDir);

@@ -22,7 +22,7 @@ var manifestUrl = testingUpdater
  * null on error)
  */
 exports.getManifest = function () {
-  return Future.wrap(files.getUrl)({url: manifestUrl, json: true}).wait();
+  return files.getUrl({url: manifestUrl, json: true});
 };
 
 exports.git_sha = function () {

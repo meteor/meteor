@@ -6,7 +6,9 @@
 // meteor apps.
 Error.stackTraceLimit = Infinity; // http://code.google.com/p/v8/wiki/JavaScriptStackTraceApi
 
+var _ = require("underscore");
 var Fiber = require("fibers");
+var Future = require("fibers/future");
 
 // runs a function within a fiber. we wrap the entry point into
 // meteor.js into a fiber but if you use callbacks that call
@@ -24,3 +26,14 @@ exports.inFiber = function(func) {
   };
 };
 
+exports.parallelMap = function (collection, callback, context) {
+  var futures = _.map(collection, function () {
+    var args = _.toArray(arguments);
+    return function () {
+      return callback.apply(context, args);
+    }.future()();
+  });
+  Future.wait(futures);
+  // Throw if any threw.
+  return _.map(futures, function (f) { return f.get(); });
+};

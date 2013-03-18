@@ -413,12 +413,19 @@ var files = module.exports = {
       tar.Pack()).pipe(zlib.createGzip());
   },
 
-  // A thin wrapper around request(...) that makes the response "body"
-  // the main callback argument.  This facilitates using `Future.wrap`.
+  // A synchronous wrapper around request(...) that returns the response "body"
+  // or throws.
   getUrl: function (urlOrOptions, callback) {
-    return request(urlOrOptions, function (error, response, body) {
-      callback(error, body, response);
+    var future = new Future;
+    // can't just use Future.wrap, because we want to return "body", not
+    // "response".
+    request(urlOrOptions, function (error, response, body) {
+      if (error)
+        future.throw(error);
+      else
+        future.return(body);
     });
+    return future.wait();
   },
 
   _randomToken: function() {

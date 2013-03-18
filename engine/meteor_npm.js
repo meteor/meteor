@@ -270,7 +270,7 @@ var meteorNpm = module.exports = {
   // dependencies. `npm install` times out after more than a minute.
   _ensureConnected: function () {
     try {
-      Future.wrap(files.getUrl)("http://registry.npmjs.org").wait();
+      files.getUrl("http://registry.npmjs.org");
     } catch (e) {
       throw new Error(
         "Can't install npm dependencies. Check your internet connection and try again.");
