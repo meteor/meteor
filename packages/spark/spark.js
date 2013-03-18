@@ -931,8 +931,14 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
         _.bind(renderer.annotate, renderer) :
     function (html) { return html; };
 
-  // Templates should have access to data and methods added by the transformer,
-  // but observeChanges doesn't transform, so we have to do it here.
+  // Templates should have access to data and methods added by the
+  // transformer, but observeChanges doesn't transform, so we have to do
+  // it here.
+  //
+  // NOTE: this is a little bit of an abstraction violation. Ideally,
+  // the only thing Spark should know about Minimongo is the contract of
+  // observeChanges. In theory, anything that implements observeChanges
+  // could be passed to Spark.list. But meh.
   var transformedDoc = function (doc) {
     if (cursor.getTransform && cursor.getTransform())
       return cursor.getTransform()(EJSON.clone(doc));
