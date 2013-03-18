@@ -1,19 +1,19 @@
 (function () {
   // By default, try to connect back to the same endpoint as the page
   // was served from.
-  var ddpAppUrl = '/';
-
-  if (typeof __meteor_runtime_config__ !== "undefined") {
-    if (__meteor_runtime_config__.DDP_APP_CONNECTION_URL)
-      ddpAppUrl = __meteor_runtime_config__.DDP_APP_CONNECTION_URL;
-  }
-
-  var ddpUrl = ddpAppUrl;
+  var ddpUrl = '/';
   var ddpUrlDependency = new Deps.Dependency;
 
   if (typeof __meteor_runtime_config__ !== "undefined") {
     if (__meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL)
       ddpUrl = __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL;
+  }
+
+  var ddpAppUrl = ddpUrl;
+
+  if (typeof __meteor_runtime_config__ !== "undefined") {
+    if (__meteor_runtime_config__.DDP_APP_CONNECTION_URL)
+      ddpAppUrl = __meteor_runtime_config__.DDP_APP_CONNECTION_URL;
   }
 
   // Connect to this app server for hot code push
