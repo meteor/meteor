@@ -8,7 +8,7 @@
 ### At the moment smart packages don't support binary dependencies so
 ### we don't have to build on different architectures. At some point
 ### this will change, at which we'll use an approach similar to what
-### we do for engines.
+### we do for tools.
 
 set -e
 

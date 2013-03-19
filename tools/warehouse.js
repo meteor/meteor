@@ -1,19 +1,19 @@
-/// We store a "warehouse" of engines, releases and packages on
+/// We store a "warehouse" of tools, releases and packages on
 /// disk. This warehouse is populated from our servers, as needed.
 ///
 /// Directory structure:
 ///
-///     meteor (relative path symlink to engines/latest/bin/meteor)
-///     engines/ (not in checkout, since we run against checked-out code)
-///       latest/ (relative path symlink to latest x.y.z/ engine directory)
-///       x.y.z/
+///     meteor (relative path symlink to tools/latest/bin/meteor)
+///     tools/ (not in checkout, since we run against checked-out code)
+///       latest/ (relative path symlink to latest VERSION/ tools directory)
+///       VERSION/
 ///     releases/
 ///       latest (relative path symlink to latest x.y.z.release.json)
 ///       x.y.z.release.json
 ///       x.y.z.changelog.json
 ///     packages/
 ///       foo/
-///         x.y.z/
+///         VERSION/
 ///
 /// When running from a checkout, there is only one acceptable release - 'none', which
 /// has an empty manifest, ensuring that we only load local packages (in CHECKOUT/packages
@@ -41,7 +41,7 @@ var symlinkOverSync = function (linkText, file) {
 
 
 var warehouse = module.exports = {
-  // Return our loaded collection of engines, releases and
+  // Return our loaded collection of tools, releases and
   // packages. If we're running an installed version, found at
   // $HOME/.meteor.
   getWarehouseDir: function () {
@@ -58,8 +58,8 @@ var warehouse = module.exports = {
     return path.join(process.env.HOME, '.meteor');
   },
 
-  getEngineDir: function (version) {
-    return path.join(warehouse.getWarehouseDir(), 'engines', version);
+  getToolsDir: function (version) {
+    return path.join(warehouse.getWarehouseDir(), 'tools', version);
   },
 
   // If you're running from a git checkout, only accept 'none' and
@@ -100,18 +100,18 @@ var warehouse = module.exports = {
     return linkText.replace(/\.release\.json$/, '');
   },
 
-  _latestEngineSymlinkPath: function () {
-    return path.join(warehouse.getWarehouseDir(), 'engines', 'latest');
+  _latestToolsSymlinkPath: function () {
+    return path.join(warehouse.getWarehouseDir(), 'tools', 'latest');
   },
 
-  // Look in the warehouse for the latest engine version. (This is the one that
+  // Look in the warehouse for the latest tools version. (This is the one that
   // the meteor shell script runs initially). If the symlink doesn't exist
   // (which shouldn't happen, since it is provided in the bootstrap tarball)
   // returns null.
-  latestEngine: function() {
-    var latestEngineSymlink = warehouse._latestEngineSymlinkPath();
+  latestTools: function() {
+    var latestToolsSymlink = warehouse._latestToolsSymlinkPath();
     try {
-      return fs.readlinkSync(latestEngineSymlink);
+      return fs.readlinkSync(latestToolsSymlink);
     } catch (e) {
       return null;
     }
@@ -134,11 +134,11 @@ var warehouse = module.exports = {
     warehouse._populateWarehouseForRelease(releaseName, background);
     var latestReleaseManifest = warehouse.releaseManifestByVersion(releaseName);
 
-    // First, make sure the latest engine symlink reflects the latest installed
+    // First, make sure the latest tools symlink reflects the latest installed
     // release.
-    if (latestReleaseManifest.engine !== warehouse.latestEngine()) {
-      symlinkOverSync(latestReleaseManifest.engine,
-                      warehouse._latestEngineSymlinkPath());
+    if (latestReleaseManifest.tools !== warehouse.latestTools()) {
+      symlinkOverSync(latestReleaseManifest.tools,
+                      warehouse._latestToolsSymlinkPath());
     }
 
     var storedLatestRelease = warehouse.latestRelease();
@@ -158,8 +158,8 @@ var warehouse = module.exports = {
       path.join(warehouse.getWarehouseDir(), 'packages', name, version, 'package.js'));
   },
 
-  engineExistsInWarehouse: function (version) {
-    return fs.existsSync(warehouse.getEngineDir(version));
+  toolsExistsInWarehouse: function (version) {
+    return fs.existsSync(warehouse.getToolsDir(version));
   },
 
   // fetches the manifest file for the given release version. also fetches
@@ -206,31 +206,31 @@ var warehouse = module.exports = {
       // no changelog, proceed
     }
 
-    // populate warehouse with engine version for this release
-    var engineVersion = releaseManifest.engine;
-    if (!warehouse.engineExistsInWarehouse(engineVersion)) {
+    // populate warehouse with tools version for this release
+    var toolsVersion = releaseManifest.tools;
+    if (!warehouse.toolsExistsInWarehouse(toolsVersion)) {
       try {
         // XXX this sucks. We store all the tarballs in memory. This is huge.
         // We should instead stream packages in parallel. Since the node stream
         // API is in flux, we should probably wait a bit.
         // http://blog.nodejs.org/2012/12/20/streams2/
 
-        var engineTarballFilename =
-            "meteor-engine-" + releaseManifest.engine + "-" +
+        var toolsTarballFilename =
+            "meteor-tools-" + releaseManifest.tools + "-" +
             warehouse._unameAndArch() + ".tar.gz";
-        var engineTarballPath = "/engines/" + releaseManifest.engine + "/"
-              + engineTarballFilename;
+        var toolsTarballPath = "/tools/" + releaseManifest.tools + "/"
+              + toolsTarballFilename;
         if (!background)
-          console.log("Fetching Meteor Engine " + engineVersion + "...");
-        var engineTarball = files.getUrl({
-          url: PACKAGES_URLBASE + engineTarballPath,
+          console.log("Fetching Meteor Tools " + toolsVersion + "...");
+        var toolsTarball = files.getUrl({
+          url: PACKAGES_URLBASE + toolsTarballPath,
           encoding: null
         });
-        files.extractTarGz(engineTarball,
-                           warehouse.getEngineDir(engineVersion));
+        files.extractTarGz(toolsTarball,
+                           warehouse.getToolsDir(toolsVersion));
       } catch (e) {
         if (!background)
-          console.error("Failed to load engine for release " + releaseVersion);
+          console.error("Failed to load tools for release " + releaseVersion);
         throw e;
       }
     }

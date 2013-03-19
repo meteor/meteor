@@ -107,7 +107,7 @@ var rpmUpgrade = function () {
 };
 
 Fiber(function () {
-  console.log("Upgrading to Engine Meteor in " + prefix + "!");
+  console.log("Upgrading to Tools Meteor in " + prefix + "!");
   if (package_stamp === 'tar') {
     macUpgrade();
   } else if (package_stamp === 'deb') {

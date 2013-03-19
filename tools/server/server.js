@@ -13,7 +13,7 @@ var useragent = require('useragent');
 
 var _ = require('underscore');
 
-// This code is duplicated in engine/server/server.js.
+// This code is duplicated in tools/server/server.js.
 var MIN_NODE_VERSION = 'v0.8.18';
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(

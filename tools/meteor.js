@@ -72,7 +72,7 @@ Fiber(function () {
 
   // If the releases directory in local warehouse is empty, fetch the
   // latest release from our servers. This release may require a
-  // different engine, in which case we'll springboard later.
+  // different tools, in which case we'll springboard later.
   var ensureSomeRelease = function () {
     if (!warehouse.latestRelease()) {
       warehouse.fetchLatestRelease();
@@ -399,14 +399,14 @@ Fiber(function () {
         var didUpdate = warehouse.fetchLatestRelease();
 
         // we need to update the global releaseVersion variable
-        // because that's what engineSpringboard reads
+        // because that's what toolsSpringboard reads
         /* global */ releaseVersion = warehouse.latestRelease();
 
         // XXX make errors look good
         if (didUpdate) {
           console.log("Updated Meteor to release " + releaseVersion + ".");
-          engineSpringboard(['--updated-from=' + updatedFrom]);
-          // If the engine for release is different, then engineSpringboard
+          toolsSpringboard(['--updated-from=' + updatedFrom]);
+          // If the tools for release is different, then toolsSpringboard
           // execs and does not return. Otherwise, keeps going.
         }
 
@@ -414,7 +414,7 @@ Fiber(function () {
           // XXX this next line is WRONG, which suggests that the logic for
           // updatedFrom is wrong. (updatedFrom can be an app's version, not
           // just global version.)
-          engineDebugMessage("Globally updated from " + updatedFrom + " to "
+          toolsDebugMessage("Globally updated from " + updatedFrom + " to "
                              + releaseVersion);
           // ... here is a chance to update the bootstrap script, etc
           // ... maybe print out some release notes or something
@@ -828,30 +828,30 @@ Fiber(function () {
     }
   });
 
-  // Prints a message if $METEOR_ENGINE_DEBUG is set.
+  // Prints a message if $METEOR_TOOLS_DEBUG is set.
   // XXX We really should have a better logging system.
-  var engineDebugMessage = function (msg) {
-    if (process.env.METEOR_ENGINE_DEBUG)
-      console.log("[ENGINE DEBUG] " + msg);
+  var toolsDebugMessage = function (msg) {
+    if (process.env.METEOR_TOOLS_DEBUG)
+      console.log("[TOOLS DEBUG] " + msg);
   };
 
   // As the first step of running the Meteor CLI, check which Meteor
   // release we should be running against. Then, check whether the
-  // engine corresponding to that release is the same as the one
-  // we're running. If not, springboard to the right engine (after
+  // tools corresponding to that release is the same as the one
+  // we're running. If not, springboard to the right tools (after
   // having fetched it to the local warehouse)
-  var engineSpringboard = function (extraArgs) {
+  var toolsSpringboard = function (extraArgs) {
     var releaseManifest = warehouse.releaseManifestByVersion(releaseVersion);
-    if (releaseManifest.engine === files.getEngineVersion())
+    if (releaseManifest.tools === files.getToolsVersion())
       return;
 
-    engineDebugMessage("springboarding from " + files.getEngineVersion() +
-                       " to " + releaseManifest.engine);
+    toolsDebugMessage("springboarding from " + files.getToolsVersion() +
+                      " to " + releaseManifest.tools);
 
     // Strip off the "node" and "meteor.js" from argv and replace it with the
-    // appropriate engine's meteor shell script.
+    // appropriate tools's meteor shell script.
     var newArgv = process.argv.slice(2);
-    newArgv.unshift(path.join(warehouse.getEngineDir(releaseManifest.engine),
+    newArgv.unshift(path.join(warehouse.getToolsDir(releaseManifest.tools),
                               'bin', 'meteor'));
     if (extraArgs)
       newArgv.push.apply(newArgv, extraArgs);
@@ -873,15 +873,15 @@ Fiber(function () {
     var argv = optimist.argv;
 
     /*global*/ releaseVersion = calculateReleaseVersion(argv);
-    engineDebugMessage("Running Meteor Release " + releaseVersion);
+    toolsDebugMessage("Running Meteor Release " + releaseVersion);
 
-    // if we're not running the correct engine, fetch it and
+    // if we're not running the correct tools, fetch it and
     // re-run. do *not* do this if we are in a checkout, or if
     // process.env.TEST_WAREHOUSE_DIR is set. This hook allows unit
-    // tests to test the current engine's ability to run other
+    // tests to test the current tools's ability to run other
     // releases.
     if (!files.in_checkout() && !process.env.TEST_WAREHOUSE_DIR)
-      engineSpringboard();
+      toolsSpringboard();
 
     if (argv.help) {
       argv._.splice(0, 0, "help");

@@ -23,11 +23,11 @@ if [ "$1" == "--global" ]; then
 fi
 
 if [ "$TEST_WAREHOUSE_DIR" ]; then
-    # The point of this testing script is to test the engine, so we make
+    # The point of this testing script is to test the tools, so we make
     # sure (in lib/meteor.js) to not springboard if TEST_WAREHOUSE_DIR is
     # set. This is a random release that we pass to --release on all
     # commands (in case TEST_WAREHOUSE_DIR) is set. This could break if
-    # this specified release is incompatible with the current engine, in
+    # this specified release is incompatible with the current tools, in
     # which case you can build and publish a new release and set it here.
     TEST_RELEASE="0.6.0"
 

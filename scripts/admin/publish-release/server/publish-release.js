@@ -71,27 +71,27 @@ var noneWithPrefix = function(s3, prefix) {
   return !_.isEmpty(files.Body.ListBucketResult.Contents);
 };
 
-// publish a given engine, copying multiple files from
+// publish a given tools, copying multiple files from
 // s3://com.meteor.warehouse/RELEASE/unpublished/ to
-// s3://com.meteor.warehouse/engines/VERSION/
-var publishEngine = function(s3, release, version) {
-  var destPath = ["engines", version].join("/");
+// s3://com.meteor.warehouse/tools/VERSION/
+var publishTools = function(s3, release, version) {
+  var destPath = ["tools", version].join("/");
 
-  process.stdout.write("engine " + version + ": ");
+  process.stdout.write("tools " + version + ": ");
   if (noneWithPrefix(s3, destPath)) {
     console.log("already published");
     return;
   } else {
-    publishedArtifacts.push("engine " + version);
+    publishedArtifacts.push("tools " + version);
     console.log("publishing");
   }
 
-  var engineArtifacts = s3.ListObjects({
+  var toolsArtifacts = s3.ListObjects({
     BucketName: "com.meteor.warehouse",
-    Prefix: ["unpublished", release, "meteor-engine-"].join("/")
+    Prefix: ["unpublished", release, "meteor-tools-"].join("/")
   }).Body.ListBucketResult.Contents;
 
-  parallelEach(engineArtifacts, function (artifact) {
+  parallelEach(toolsArtifacts, function (artifact) {
     var sourceKey = artifact.Key;
     var filename = _.last(sourceKey.split("/"));
     var destKey = [destPath, filename].join("/");
@@ -178,7 +178,7 @@ var main = function() {
   var release = getGitSha();
   var s3 = configureS3();
   var manifest = getManifest(s3, release);
-  publishEngine(s3, release, manifest.engine);
+  publishTools(s3, release, manifest.tools);
   parallelEach(manifest.packages, function(version, name) {
     publishPackage(s3, release, name, version);
   });

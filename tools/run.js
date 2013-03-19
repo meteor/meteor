@@ -338,7 +338,7 @@ var DependencyWatcher = function (
   // contain individual files)
   self.bulk_dirs = [];
   _.each(deps.core || [], function (filepath) {
-    self.bulk_dirs.push(path.join(files.getCurrentEngineDir(), filepath));
+    self.bulk_dirs.push(path.join(files.getCurrentToolsDir(), filepath));
   });
   _.each(deps.app || [], function (filepath) {
     self.bulk_dirs.push(path.join(self.app_dir, filepath));

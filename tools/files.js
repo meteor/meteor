@@ -189,7 +189,7 @@ var files = module.exports = {
   // Are we running Meteor from a git checkout?
   in_checkout: function () {
     try {
-      if (fs.existsSync(path.join(files.getCurrentEngineDir(), '.git')))
+      if (fs.existsSync(path.join(files.getCurrentToolsDir(), '.git')))
         return true;
     } catch (e) { console.log(e);}
 
@@ -208,13 +208,13 @@ var files = module.exports = {
       return !files.in_checkout();
   },
 
-  // Read the '.engine_version.txt' file. If in a checkout, throw an error.
-  getEngineVersion: function () {
+  // Read the '.tools_version.txt' file. If in a checkout, throw an error.
+  getToolsVersion: function () {
     if (!files.in_checkout()) {
       return fs.readFileSync(
-        path.join(files.getCurrentEngineDir(), '.engine_version.txt'), 'utf8');
+        path.join(files.getCurrentToolsDir(), '.tools_version.txt'), 'utf8');
     } else {
-      throw new Error("Unexpected. Git checkouts don't have engine versions.");
+      throw new Error("Unexpected. Git checkouts don't have tools versions.");
     }
   },
 
@@ -222,13 +222,13 @@ var files = module.exports = {
   // install, or (checkout root)/dev_bundle in a checkout..)
   get_dev_bundle: function () {
     if (files.in_checkout())
-      return path.join(files.getCurrentEngineDir(), 'dev_bundle');
+      return path.join(files.getCurrentToolsDir(), 'dev_bundle');
     else
-      return files.getCurrentEngineDir();
+      return files.getCurrentToolsDir();
   },
 
   // Return the top-level directory for this meteor install or checkout
-  getCurrentEngineDir: function () {
+  getCurrentToolsDir: function () {
     return path.join(__dirname, '..');
   },
 

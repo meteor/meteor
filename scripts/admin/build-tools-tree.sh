@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # This script fills TARGET_DIR with what should go into
-#     /usr/local/meteor/engines/X.Y.Z
+#     ~/.meteor/tools/VERSION
 # It does not set up the top-level springboard file in
-# /usr/local/meteor/engines or the /usr/local/bin/meteor symlink.
+# ~/.meteor/tools or the ~/.meteor/meteor symlink.
 
 cd `dirname $0`/../..
 
@@ -19,7 +19,7 @@ if [ -e "$TARGET_DIR" ] ; then
     exit 1
 fi
 
-echo "Setting up engine tree in $TARGET_DIR"
+echo "Setting up tools tree in $TARGET_DIR"
 
 # make sure dev bundle exists before trying to install
 ./meteor --version || exit 1
@@ -28,28 +28,28 @@ function CPR {
     tar -c --exclude .meteor/local "$1" | tar -x -C "$2"
 }
 
-# The engine starts as a copy of the dev bundle.
+# The tools starts as a copy of the dev bundle.
 cp -a dev_bundle "$TARGET_DIR"
 # Copy over files and directories that we want in the tarball. Keep this list
-# synchronized with the files used in the $ENGINE_VERSION calculation below. The
+# synchronized with the files used in the $TOOLS_VERSION calculation below. The
 # "meteor" script file contains the version number of the dev bundle, so we
 # include that instead of the (arch-specific) bundle itself in sha calculation.
 cp LICENSE.txt "$TARGET_DIR"
 cp meteor "$TARGET_DIR/bin"
-CPR engine "$TARGET_DIR"
+CPR tools "$TARGET_DIR"
 CPR examples "$TARGET_DIR"
 
 # Trim tests and unfinished examples.
-rm -rf "$TARGET_DIR"/engine/tests
+rm -rf "$TARGET_DIR"/tools/tests
 rm -rf "$TARGET_DIR"/examples/unfinished
 rm -rf "$TARGET_DIR"/examples/other
 
 # mark directory with current git sha
 git rev-parse HEAD > "$TARGET_DIR/.git_version.txt"
 
-# generate engine version: directory hash that depends only on file
+# generate tools version: directory hash that depends only on file
 # contents but nothing else, eg modification time
-echo -n "Computing engine version... "
-ENGINE_VERSION=$(git ls-tree HEAD LICENSE.txt meteor engine examples | shasum | cut -f 1 -d " ") # shasum's output looks like: 'SHA -'
-echo $ENGINE_VERSION
-echo -n "$ENGINE_VERSION" > "$TARGET_DIR/.engine_version.txt"
+echo -n "Computing tools version... "
+TOOLS_VERSION=$(git ls-tree HEAD LICENSE.txt meteor tools examples | shasum | cut -f 1 -d " ") # shasum's output looks like: 'SHA -'
+echo $TOOLS_VERSION
+echo -n "$TOOLS_VERSION" > "$TARGET_DIR/.tools_version.txt"

@@ -435,7 +435,7 @@ var packages = module.exports = {
     // If we're running out of a git checkout of meteor, use the packages from
     // the git tree.
     if (!files.usesWarehouse())
-      packageDirs.push(path.join(files.getCurrentEngineDir(), 'packages'));
+      packageDirs.push(path.join(files.getCurrentToolsDir(), 'packages'));
 
     // Only return directories that exist.
     return _.filter(packageDirs, function (dir) {

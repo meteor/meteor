@@ -12,14 +12,14 @@ make_temp_dir() {
   mktemp -d -t $1.XXXXXX
 }
 
-## Test the Meteor CLI from an installed engine (tests loading packages
+## Test the Meteor CLI from an installed tools (tests loading packages
 ## into the warehouse). Notably
 TEST_TMPDIR=$(make_temp_dir meteor-installed-cli-tests)
-ENGINE_DIR="$TEST_TMPDIR/engine-tree"
-TARGET_DIR="$ENGINE_DIR" admin/build-engine-tree.sh
+TOOLS_DIR="$TEST_TMPDIR/tools-tree"
+TARGET_DIR="$TOOLS_DIR" admin/build-tools-tree.sh
 
 export TEST_WAREHOUSE_DIR=$(make_temp_dir meteor-installed-cli-tests-warehouse) # run with empty warehouse
-export METEOR_DIR="$ENGINE_DIR/bin"
+export METEOR_DIR="$TOOLS_DIR/bin"
 ./cli-test.sh
 unset TEST_WAREHOUSE_DIR
 unset METEOR_DIR

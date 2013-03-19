@@ -70,8 +70,7 @@ var project = module.exports = {
       return project._trim_line(project._get_lines(releasePath)[0]);
     else
       // This is a legacy app with no '.meteor/release'
-      // file. Default to the first release separating engine from
-      // packages
+      // file. Default to the first release of Engine.
       return '0.6.0';
   },
 

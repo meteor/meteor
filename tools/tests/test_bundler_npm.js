@@ -244,7 +244,7 @@ assert.doesNotThrow(function () {
       // shared state, such as cached compiled packages
       try {
         var result = meteorNpm._execFileSync(
-          path.join(files.getCurrentEngineDir(), "meteor"),
+          path.join(files.getCurrentToolsDir(), "meteor"),
           ["bundle", path.join(tmpDirToPutBundleTarball, "bundle.tar.gz")],
           {cwd: tmpAppDir});
         files.rm_recursive(tmpDirToPutBundleTarball);

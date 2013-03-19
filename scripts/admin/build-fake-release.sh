@@ -44,12 +44,12 @@ popd
 
 # Copy post-upgrade script to where it is expected.
 mkdir -p "$FAKE_TMPDIR/meteor/app/meteor"
-cp "$TOPDIR/tools/admin/initial-engine-post-upgrade.js" \
+cp "$TOPDIR/scripts/admin/initial-engine-post-upgrade.js" \
    "$FAKE_TMPDIR/meteor/app/meteor/post-upgrade.js"
 
 # Copy in meteor-bootstrap.sh, which will become the installed
 # /usr/local/bin/meteor.
-cp "$TOPDIR/tools/admin/meteor-bootstrap.sh" \
+cp "$TOPDIR/scripts/admin/meteor-bootstrap.sh" \
    "$FAKE_TMPDIR/meteor/app/meteor/meteor-bootstrap.sh"
 
 OUTDIR="$TOPDIR/dist"
@@ -69,7 +69,7 @@ if [ "$UNAME" == "Linux" ] ; then
     cp "$TARBALL" "meteor_${VERSION}.orig.tar.gz"
     mkdir "meteor-${VERSION}"
     cd "meteor-${VERSION}"
-    cp -r "$TOPDIR/tools/admin/debian" .
+    cp -r "$TOPDIR/scripts/admin/debian" .
     export TARBALL
     dpkg-buildpackage
     cp ../*.deb "$OUTDIR"
@@ -79,6 +79,6 @@ if [ "$UNAME" == "Linux" ] ; then
     RPMDIR="$FAKE_TMPDIR/rpm"
     mkdir $RPMDIR
     rpmbuild -bb --define="TARBALL $TARBALL" \
-        --define="_topdir $RPMDIR" "$TOPDIR/tools/admin/meteor.spec"
+        --define="_topdir $RPMDIR" "$TOPDIR/scripts/admin/meteor.spec"
     cp $RPMDIR/RPMS/*/*.rpm "$OUTDIR"
 fi

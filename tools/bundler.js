@@ -3,7 +3,7 @@
 // /static [served by node for now]
 // /static_cacheable [cache-forever files, served by node for now]
 // /server [XXX split out into a package]
-//   server.js, .... [contents of engine/server]
+//   server.js, .... [contents of tools/server]
 //   node_modules [for now, contents of (dev_bundle)/lib/node_modules]
 // /app.html
 // /app [user code]
@@ -702,7 +702,7 @@ _.extend(Bundle.prototype, {
       where: 'internal',
       hash: self._hash(app_html)
     });
-    dependencies_json.core.push(path.join('engine', 'app.html.in'));
+    dependencies_json.core.push(path.join('tools', 'app.html.in'));
 
     // --- Documentation, and running from the command line ---
 
