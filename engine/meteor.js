@@ -50,9 +50,9 @@ Fiber(function () {
   // @param cmd {String} The command that was run. Used when printing
   //   error message.
   var requireDirInApp = function (cmd) {
-    var app_dir = files.findAppDir();
-    if (app_dir) {
-      return app_dir;
+    var appDir = files.findAppDir();
+    if (appDir) {
+      return appDir;
     } else {
       // This is where you end up if you type 'meteor' with no
       // args. Be gentle to the noobs..
@@ -109,9 +109,9 @@ Fiber(function () {
   };
 
   var find_mongo_port = function (cmd, callback) {
-    var app_dir = requireDirInApp(cmd);
+    var appDir = requireDirInApp(cmd);
     var mongo_runner = require(path.join(__dirname, 'mongo_runner.js'));
-    mongo_runner.find_mongo_port(app_dir, callback);
+    mongo_runner.find_mongo_port(appDir, callback);
   };
 
   var findCommand = function (name) {
@@ -236,15 +236,15 @@ Fiber(function () {
         noMinify: true,
         packageSearchOptions: packageSearchOptions
       };
-      var app_dir = path.join(__dirname, 'test-runner-app');
+      var appDir = path.join(__dirname, 'test-runner-app');
 
       if (new_argv.deploy) {
         var deployOptions = {
           site: new_argv.deploy
         };
-        deploy.deployToServer(app_dir, bundleOptions, deployOptions);
+        deploy.deployToServer(appDir, bundleOptions, deployOptions);
       } else {
-        runner.run(app_dir, bundleOptions, new_argv.port, new_argv.once);
+        runner.run(appDir, bundleOptions, new_argv.port, new_argv.once);
       }
     }
   });
@@ -514,9 +514,9 @@ Fiber(function () {
         process.exit(1);
       }
 
-      var app_dir = requireDirInApp('remove');
+      var appDir = requireDirInApp('remove');
       var using = {};
-      _.each(project.get_packages(app_dir), function (name) {
+      _.each(project.get_packages(appDir), function (name) {
         using[name] = true;
       });
 
@@ -524,7 +524,7 @@ Fiber(function () {
         if (!(name in using)) {
           process.stderr.write(name + ": not in project\n");
         } else {
-          project.remove_package(app_dir, name);
+          project.remove_package(appDir, name);
           process.stderr.write(name + ": removed\n");
         }
       });
@@ -808,7 +808,7 @@ Fiber(function () {
         process.exit(1);
       }
 
-      var app_dir = path.resolve(requireDirInApp("reset"));
+      var appDir = path.resolve(requireDirInApp("reset"));
 
       find_mongo_port("reset", function (mongod_port) {
         if (mongod_port) {
@@ -820,7 +820,7 @@ Fiber(function () {
           process.exit(1);
         }
 
-        var local_dir = path.join(app_dir, '.meteor', 'local');
+        var local_dir = path.join(appDir, '.meteor', 'local');
         files.rm_recursive(local_dir);
 
         process.stdout.write("Project reset.\n");
