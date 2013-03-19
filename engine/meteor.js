@@ -414,8 +414,8 @@ Fiber(function () {
           // XXX this next line is WRONG, which suggests that the logic for
           // updatedFrom is wrong. (updatedFrom can be an app's version, not
           // just global version.)
-          console.log("XXX Globally updated from " + updatedFrom + " to "
-                      + releaseVersion);
+          engineDebugMessage("Globally updated from " + updatedFrom + " to "
+                             + releaseVersion);
           // ... here is a chance to update the bootstrap script, etc
           // ... maybe print out some release notes or something
           // ... etc
@@ -828,6 +828,13 @@ Fiber(function () {
     }
   });
 
+  // Prints a message if $METEOR_ENGINE_DEBUG is set.
+  // XXX We really should have a better logging system.
+  var engineDebugMessage = function (msg) {
+    if (process.env.METEOR_ENGINE_DEBUG)
+      console.log("[ENGINE DEBUG] " + msg);
+  };
+
   // As the first step of running the Meteor CLI, check which Meteor
   // release we should be running against. Then, check whether the
   // engine corresponding to that release is the same as the one
@@ -838,8 +845,8 @@ Fiber(function () {
     if (releaseManifest.engine === files.getEngineVersion())
       return;
 
-    console.log("XXX springboarding from " + files.getEngineVersion() +
-                " to " + releaseManifest.engine);
+    engineDebugMessage("springboarding from " + files.getEngineVersion() +
+                       " to " + releaseManifest.engine);
 
     // Strip off the "node" and "meteor.js" from argv and replace it with the
     // appropriate engine's meteor shell script.
@@ -866,7 +873,7 @@ Fiber(function () {
     var argv = optimist.argv;
 
     /*global*/ releaseVersion = calculateReleaseVersion(argv);
-    console.log("XXX Running Meteor Release " + releaseVersion);
+    engineDebugMessage("Running Meteor Release " + releaseVersion);
 
     // if we're not running the correct engine, fetch it and
     // re-run. do *not* do this if we are in a checkout, or if
