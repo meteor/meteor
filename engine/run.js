@@ -319,7 +319,8 @@ var kill_server = function (handle) {
 // relativeFiles are any other files to watch, relative to the current
 //   directory (eg, the --settings file)
 // on_change is only fired once
-var DependencyWatcher = function (deps, app_dir, relativeFiles, on_change) {
+var DependencyWatcher = function (
+    deps, app_dir, relativeFiles, packageSearchOptions, on_change) {
   var self = this;
 
   self.app_dir = app_dir;
@@ -346,14 +347,17 @@ var DependencyWatcher = function (deps, app_dir, relativeFiles, on_change) {
   // Additional list of specific files that are interesting.
   self.specific_files = {};
   for (var pkg in (deps.packages || {})) {
-    _.each(deps.packages[pkg], function (file) {
-      // We only watch for changes in local packages, rather than ones
-      // in the warehouse, since only changes to local ones need to
-      // cause an app to reload. Notably, the app will *not* reload
-      // the first time a local package is created.
-      self.specific_files[path.join(packages.directoryForLocalPackage(pkg), file)]
-        = true;
-    });
+    // We only watch for changes in local packages, rather than ones in the
+    // warehouse, since only changes to local ones need to cause an app to
+    // reload. Notably, the app will *not* reload the first time a local package
+    // is created which overrides an installed package.
+    var localPackageDir =
+          packages.directoryForLocalPackage(pkg, packageSearchOptions);
+    if (localPackageDir) {
+      _.each(deps.packages[pkg], function (file) {
+        self.specific_files[path.join(localPackageDir, file)] = true;
+      });
+    }
   };
 
   _.each(relativeFiles, function (file) {
@@ -365,7 +369,10 @@ var DependencyWatcher = function (deps, app_dir, relativeFiles, on_change) {
     return new RegExp(pattern);
   });
   self.exclude_paths = [
-    path.join(app_dir, '.meteor', 'local')
+    path.join(app_dir, '.meteor', 'local'),
+    // For app packages, we only watch files explicitly used by the package (in
+    // specific_files)
+    path.join(app_dir, 'packages')
   ];
 
   // Start monitoring
@@ -458,6 +465,13 @@ _.extend(DependencyWatcher.prototype, {
   // Should we even bother to scan/recurse into this file?
   _is_excluded: function (filepath) {
     var self = this;
+
+    // Files we're specifically being asked to scan are never excluded. For
+    // example, files from app packages (that are actually pulled in by their
+    // package.js) are not excluded, but the app packages directory itself is
+    // (so that other files in package directories aren't watched).
+    if (filepath in self.specific_files)
+      return false;
 
     if (_.indexOf(self.exclude_paths, filepath) !== -1)
       return true;
@@ -618,6 +632,7 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
       }
 
       watcher = new DependencyWatcher(deps_info, app_dir, relativeFiles,
+                                      bundle_opts.packageSearchOptions,
                                       function () {
         if (Status.crashing)
           log_to_clients({'system': "=> Modified -- restarting."});

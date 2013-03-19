@@ -10,6 +10,7 @@ var request = require('request');
 var qs = require('querystring');
 var path = require('path');
 var files = require('./files.js');
+var warehouse = require('./warehouse.js');
 var _ = require('underscore');
 var keypress = require('keypress');
 var child_process = require('child_process');
@@ -72,7 +73,11 @@ var deployCmd = function (url, app_dir, release, opt_debug,
     var bundleOptions = {
       nodeModulesMode: 'skip',
       noMinify: !!opt_debug,
-      release: release
+      release: release,
+      packageSearchOptions: {
+        releaseManifest: warehouse.releaseManifestByVersion(release),
+        appDir: app_dir
+      }
     };
     if (opt_set_password)
       get_new_password(function (set_password) {
@@ -392,6 +397,7 @@ var get_new_password = function (callback) {
 };
 
 exports.deployCmd = deployCmd;
+exports.deployToServer = deployToServer;
 exports.delete_app = delete_app;
 exports.mongo = mongo;
 exports.logs = logs;

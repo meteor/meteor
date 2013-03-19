@@ -95,10 +95,7 @@ var PackageBundlingInfo = function (pkg, bundle) {
         names = names ? [names] : [];
 
       _.each(names, function (name) {
-        var pkg = packages.get(name, {
-          releaseManifest: self.bundle.releaseManifest,
-          appDir: self.bundle.appDir
-        });
+        var pkg = packages.get(name, self.bundle.packageSearchOptions);
         if (!pkg)
           throw new Error("Package not found: " + name);
         self.bundle.use(pkg, where, self);
@@ -221,12 +218,11 @@ var Bundle = function () {
   // Packages that have had tests included. Map from package id to instance
   self.tests_included = {};
 
-  // app dir. used to find packages in app
-  self.appDir = null;
-
-  // meteor release manifest
-  self.releaseManifest = null;
+  // meteor release stamp
   self.release = null;
+
+  // see packages.js
+  self.packageSearchOptions = {};
 
   // map from environment, to list of filenames
   self.js = {client: [], server: []};
@@ -421,10 +417,7 @@ _.extend(Bundle.prototype, {
   includeTests: function (packageOrPackageName) {
     var self = this;
     // 'packages.get' is a noop if 'packageOrPackageName' is a Package object.
-    var pkg = packages.get(packageOrPackageName, {
-      releaseManifest: self.releaseManifest,
-      appDir: self.appDir
-    });
+    var pkg = packages.get(packageOrPackageName, self.packageSearchOptions);
     if (!pkg) {
       console.error("Can't find package " + packageOrPackageName);
       process.exit(1);
@@ -796,8 +789,14 @@ _.extend(Bundle.prototype, {
  * - testPackages : array of package objects or package names whose
  *   tests should be included in this bundle
  *
- * - release : Which Meteor release version to use, or 'none' for local
- *   packages only
+ * - release : The Meteor release version to use. This is *ONLY*
+ *             used as a stamp (eg Meteor.release). The package
+ *             search path is configured with packageSearchOptions.
+ *
+ * - packageSearchOptions: see packages.js. NOTE: if there's an appDir here,
+ *   it's used for package searching but it is NOT the appDir that we bundle!
+ *   So for "meteor test-packages" in an app, appDir is the test-runner-app but
+ *   packageSearchOptions.appDir is the app the user is in.
  */
 exports.bundle = function (app_dir, output_path, options) {
   if (!options)
@@ -812,9 +811,8 @@ exports.bundle = function (app_dir, output_path, options) {
     packages.flush();
 
     var bundle = new Bundle;
-    bundle.releaseManifest = warehouse.releaseManifestByVersion(options.release);
     bundle.release = options.release;
-    bundle.appDir = app_dir;
+    bundle.packageSearchOptions = options.packageSearchOptions || {};
 
     // our release manifest is set, let's now load the app
     var app = packages.get_for_app(app_dir, ignore_files);

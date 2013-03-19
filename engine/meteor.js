@@ -165,13 +165,17 @@ Fiber(function () {
         process.exit(1);
       }
 
-      var app_dir = path.resolve(requireDirInApp("run"));
-      var bundle_opts = {
+      var appDir = path.resolve(requireDirInApp("run"));
+      var bundleOpts = {
         noMinify: !new_argv.production,
         nodeModulesMode: 'symlink',
-        release: releaseVersion
+        release: releaseVersion,
+        packageSearchOptions: {
+          appDir: appDir,
+          releaseManifest: warehouse.releaseManifestByVersion(releaseVersion)
+        }
       };
-      runner.run(app_dir, bundle_opts, new_argv.port, new_argv.once, new_argv.settings);
+      runner.run(appDir, bundleOpts, new_argv.port, new_argv.once, new_argv.settings);
     }
   });
 
@@ -204,26 +208,33 @@ Fiber(function () {
         process.exit(1);
       }
 
+      var packageSearchOptions = {
+        releaseManifest: warehouse.releaseManifestByVersion(releaseVersion)
+      };
+      // If we're in an app dir, search its packages subdirectory.
+      var currentAppDir = files.findAppDir();
+      if (currentAppDir)
+        packageSearchOptions.appDir = currentAppDir;
+
       var testPackages;
       if (new_argv["package-dir"]) {
-        var packageDir = path.resolve(new_argv["package-dir"], "."); // strips trailing path.sep
-        // was important to strip trailing path.sep, otherwise we'd get a package named "foo/"
+        // Use path.resolve to strip trailing path.sep, so we don't get a
+        // package named "foo/".
+        var packageDir = path.resolve(new_argv["package-dir"], ".");
         var packageName = path.basename(packageDir);
         testPackages = [packages.loadFromDir(packageName, packageDir)];
       } else if (!_.isEmpty(argv._)) {
         testPackages = argv._;
-      } else if (!files.usesWarehouse()) {
-        testPackages = _.keys(packages.list());
       } else {
-        var releaseManifest = warehouse.releaseManifestByVersion(releaseVersion);
-        testPackages = _.keys(packages.list(releaseManifest));
+        testPackages = _.keys(packages.list(packageSearchOptions));
       }
 
       var bundleOptions = {
         nodeModulesMode: new_argv.deploy ? 'skip' : 'symlink',
         testPackages: testPackages,
         release: releaseVersion,
-        noMinify: true
+        noMinify: true,
+        packageSearchOptions: packageSearchOptions
       };
       var app_dir = path.join(__dirname, 'test-runner-app');
 
@@ -465,11 +476,13 @@ Fiber(function () {
         process.exit(1);
       }
 
-      var app_dir = requireDirInApp('add');
-      var releaseManifest = warehouse.releaseManifestByVersion(releaseVersion);
-      var all = packages.list(releaseManifest);
+      var appDir = requireDirInApp('add');
+      var all = packages.list({
+        releaseManifest: warehouse.releaseManifestByVersion(releaseVersion),
+        appDir: appDir
+      });
       var using = {};
-      _.each(project.get_packages(app_dir), function (name) {
+      _.each(project.get_packages(appDir), function (name) {
         using[name] = true;
       });
 
@@ -479,7 +492,7 @@ Fiber(function () {
         } else if (name in using) {
           process.stderr.write(name + ": already using\n");
         } else {
-          project.add_package(app_dir, name);
+          project.add_package(appDir, name);
           var note = all[name].metadata.summary || '';
           process.stderr.write(name + ": " + note + "\n");
         }
@@ -533,9 +546,10 @@ Fiber(function () {
         process.exit(1);
       }
 
+      var appDir;
       if (argv.using) {
-        var app_dir = requireDirInApp('list --using');
-        var using = require(path.join(__dirname, 'project.js')).get_packages(app_dir);
+        appDir = requireDirInApp('list --using');
+        var using = require(path.join(__dirname, 'project.js')).get_packages(appDir);
 
         if (using.length) {
           _.each(using, function (name) {
@@ -551,11 +565,13 @@ Fiber(function () {
         }
         return;
       } else {
-        var app_dir = requireDirInApp('list');
+        appDir = requireDirInApp('list');
       }
 
-      var releaseManifest = warehouse.releaseManifestByVersion(releaseVersion);
-      var list = packages.list(releaseManifest);
+      var list = packages.list({
+        releaseManifest: warehouse.releaseManifestByVersion(releaseVersion),
+        appDir: appDir
+      });
       var names = _.keys(list);
       names.sort();
       var pkgs = [];
@@ -592,15 +608,19 @@ Fiber(function () {
       // of the file, not a constant 'bundle' (a bit obnoxious for
       // machines, but worth it for humans)
 
-      var app_dir = path.resolve(requireDirInApp("bundle"));
-      var build_dir = path.join(app_dir, '.meteor', 'local', 'build_tar');
+      var appDir = path.resolve(requireDirInApp("bundle"));
+      var build_dir = path.join(appDir, '.meteor', 'local', 'build_tar');
       var bundle_path = path.join(build_dir, 'bundle');
       var output_path = path.resolve(argv._[0]); // get absolute path
 
       var bundler = require(path.join(__dirname, 'bundler.js'));
-      var errors = bundler.bundle(app_dir, bundle_path, {
+      var errors = bundler.bundle(appDir, bundle_path, {
         nodeModulesMode: 'copy',
-        release: releaseVersion
+        release: releaseVersion,
+        packageSearchOptions: {
+          releaseManifest: warehouse.releaseManifestByVersion(releaseVersion),
+          appDir: appDir
+        }
       });
       if (errors) {
         process.stdout.write("Errors prevented bundling:\n");
