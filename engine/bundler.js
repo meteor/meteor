@@ -187,7 +187,12 @@ _.extend(PackageBundlingInfo.prototype, {
 
     var ext = path.extname(rel_path).substr(1);
     var handler = self.get_source_handler(ext);
-    if (!handler) {
+    if (handler) {
+      handler(self.bundle.api,
+              path.join(self.pkg.source_root, rel_path),
+              path.join(self.pkg.serve_root, rel_path),
+              where);
+    } else {
       // If we don't have an extension handler, serve this file
       // as a static resource.
       self.bundle.api.add_resource({
@@ -196,14 +201,9 @@ _.extend(PackageBundlingInfo.prototype, {
         data: fs.readFileSync(path.join(self.pkg.source_root, rel_path)),
         where: where
       });
-      return;
     }
 
-    handler(self.bundle.api,
-            path.join(self.pkg.source_root, rel_path),
-            path.join(self.pkg.serve_root, rel_path),
-            where);
-
+    // Reload runner when this file changes.
     self.dependencies[rel_path] = true;
   }
 });
