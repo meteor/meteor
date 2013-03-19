@@ -19,7 +19,8 @@
     rerun.  This prevents a Spark exception when template rendering fails
     ("Can't call 'firstNode' of undefined").
 
-Patches contributed by GitHub users raix, blackcoat, mquandalle, timhaines
+Patches contributed by GitHub users raix, blackcoat, mquandalle, timhaines,
+Primigenus
 
 ## v0.5.9
 
