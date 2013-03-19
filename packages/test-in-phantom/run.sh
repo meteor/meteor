@@ -13,6 +13,7 @@ cat > settings.json <<EOF
 EOF
 
 export PATH=$METEOR_HOME:$PATH
+meteor --version # syncronously get the dev bundle if its not there.
 
 cat settings.json
 meteor --tests=test-in-phantom --settings=settings.json &
