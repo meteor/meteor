@@ -1,10 +1,18 @@
 #!/bin/bash
-cd $METEOR_HOME/examples;
+
+set -e
+
+cd `dirname $0`
+cd ../examples
+
+
 read -p "Prefix? " PREFIX;
-for EXAMPLE in leaderboard todos wordplay parties
-do
-    cd $EXAMPLE;
-    echo "meteor deploy $@ $PREFIX-$EXAMPLE;"
-    meteor deploy $@ $PREFIX-$EXAMPLE;
-    cd ..;
+
+for EXAMPLE in * ; do
+    if [ -d "$EXAMPLE/.meteor" ] ; then
+        cd $EXAMPLE;
+        echo "meteor deploy $@ $PREFIX-$EXAMPLE;"
+        meteor deploy $@ $PREFIX-$EXAMPLE;
+        cd ..;
+    fi
 done
