@@ -29,7 +29,7 @@ var coffeescript_handler = function(bundle, source_path, serve_path, where) {
     bundle.add_resource({
       type: "static", // WARNING : Seems to doesn't be updated on client reloading
       path: serve_path,
-      data: coffeeContent,
+      data: coffeeContent+"#bonjour",
       where: where
     });
 
@@ -50,7 +50,7 @@ var coffeescript_handler = function(bundle, source_path, serve_path, where) {
   // Bundle the compiled JavaScript file
   bundle.add_resource({
     type: "js",
-    path: serve_path,
+    path: serve_path+".js",
     data: jsContent,
     where: where
   });
