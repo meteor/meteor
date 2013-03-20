@@ -13,9 +13,18 @@ var cleanup = module.exports = {
   }
 };
 
-process.on('SIGINT', function () {
-  _.each(cleanup._exitHandlers, function(func) {
-    func();
+var runHandlers = function () {
+  var handlers = cleanup._exitHandlers;
+  cleanup._exitHandlers = [];
+  _.each(handlers, function (f) {
+    f();
   });
-  process.exit();
+};
+
+process.on('exit', runHandlers);
+_.each(['SIGINT', 'SIGHUP', 'SIGTERM'], function (sig) {
+  process.once(sig, function () {
+    runHandlers();
+    process.kill(process.pid, sig);
+  });
 });

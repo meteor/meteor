@@ -231,16 +231,22 @@ Fiber(function () {
         testPackages = _.keys(packages.list(context.packageSearchOptions));
       }
 
-      // Note: runnerAppDir is not the same as
+      // Make a temporary app dir (based on the test runner app). This will be
+      // cleaned up on process exit. Using a temporary app dir means that we can
+      // run multiple "test-packages" commands in parallel without them stomping
+      // on each other.
+      //
+      // Note: context.appDir now is DIFFERENT from
       // bundleOptions.packageSearchOptions.appDir: we are bundling the test
       // runner app, but finding app packages from the current app (if any).
-      var runnerAppDir = path.join(__dirname, 'test-runner-app');
+      context.appDir = files.mkdtemp('meteor-test-run');
+      files.cp_r(path.join(__dirname, 'test-runner-app'), context.appDir);
 
       if (new_argv.deploy) {
         var deployOptions = {
           site: new_argv.deploy
         };
-        deploy.deployToServer(runnerAppDir, {
+        deploy.deployToServer(context.appDir, {
           nodeModulesMode: 'skip',
           testPackages: testPackages,
           noMinify: true,  // XXX provide a --production
@@ -250,7 +256,6 @@ Fiber(function () {
           site: new_argv.deploy
         });
       } else {
-        context.appDir = runnerAppDir;
         runner.run(context, {
           port: new_argv.port,
           noMinify: true,  // XXX provide a --production

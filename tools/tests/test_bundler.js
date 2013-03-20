@@ -27,9 +27,6 @@ Fiber(function () {
     /// RUN TESTS
     require(path.join(__dirname, 'test_bundler_options.js'));
     require(path.join(__dirname, 'test_bundler_npm.js'));
-
-    /// SUCCESS
-    files.rm_recursive(tmpBaseDir);
   } catch (err) {
     // print stack track and exit with error code if an assertion fails
     console.log(err.stack);

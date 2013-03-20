@@ -14,6 +14,8 @@ var request = require('request');
 
 var fstream = require('fstream');
 
+var cleanup = require('./cleanup.js');
+
 var files = module.exports = {
   // A sort comparator to order files into load order.
   sort: function (a, b) {
@@ -340,29 +342,39 @@ var files = module.exports = {
   },
 
   // Make a temporary directory. Returns the path to the newly created
-  // directory. Caller is responsible for deleting the directory later.
+  // directory. We clean up on exit.
   mkdtemp: function (prefix) {
-    prefix = prefix || 'meteor-temp-';
-    // find /tmp
-    var tmp_dir = _.first(_.map(['TMPDIR', 'TMP', 'TEMP'], function (t) {
-      return process.env[t];
-    }).filter(_.identity)) || path.sep + 'tmp';
-    tmp_dir = fs.realpathSync(tmp_dir);
+    var make = function () {
+      prefix = prefix || 'meteor-temp-';
+      // find /tmp
+      var tmp_dir = _.first(_.map(['TMPDIR', 'TMP', 'TEMP'], function (t) {
+        return process.env[t];
+      }).filter(_.identity)) || path.sep + 'tmp';
+      tmp_dir = fs.realpathSync(tmp_dir);
 
-    // make the directory. give it 3 tries in case of collisions from
-    // crappy random.
-    var tries = 3;
-    while (tries > 0) {
-      var dir_path = path.join(
-        tmp_dir, prefix + (Math.random() * 0x100000000 + 1).toString(36));
-      try {
-        fs.mkdirSync(dir_path, 0755);
-        return dir_path;
-      } catch (err) {
-        tries--;
+      // make the directory. give it 3 tries in case of collisions from
+      // crappy random.
+      var tries = 3;
+      while (tries > 0) {
+        var dir_path = path.join(
+          tmp_dir, prefix + (Math.random() * 0x100000000 + 1).toString(36));
+        try {
+          fs.mkdirSync(dir_path, 0755);
+          return dir_path;
+        } catch (err) {
+          tries--;
+        }
       }
-    }
-    throw new Error("failed to make tempory directory in " + tmp_dir);
+      throw new Error("failed to make tempory directory in " + tmp_dir);
+    };
+    var dir = make();
+    tempDirs.push(dir);
+    return dir;
+  },
+
+  _cleanUpTempDirs: function (sig) {
+    _.each(tempDirs, files.rm_recursive);
+    tempDirs = [];
   },
 
   // Takes a buffer containing `.tar.gz` data and extracts the archive into a
@@ -432,3 +444,7 @@ var files = module.exports = {
     return (Math.random() * 0x100000000 + 1).toString(36);
   }
 };
+
+
+var tempDirs = [];
+cleanup.onExit(files._cleanUpTempDirs);
