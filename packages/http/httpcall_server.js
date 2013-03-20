@@ -96,7 +96,7 @@ Meteor.http = Meteor.http || {};
     var req_options = {
       url: new_url,
       method: method,
-      encoding: "utf8",
+      encoding: _.isUndefined(options.encoding) ? "utf8" : options.encoding,
       jar: false,
       timeout: options.timeout,
       body: content,
