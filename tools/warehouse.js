@@ -67,13 +67,10 @@ var warehouse = module.exports = {
   // version is stored in the local warehouse and return its parsed
   // manifest.
   releaseManifestByVersion: function(release) {
-    if (release === 'none') {
-      if (!files.usesWarehouse()) {
-        return null;
-      } else {
-        throw new Error("The 'none' release can only be used from a git checkout of Meteor");
-      }
-    }
+    if (release === 'none')
+      return null;
+    if (!files.usesWarehouse())
+      throw new Error("Not in a warehouse but requesting a manifest!");
 
     var manifestPath = path.join(
       warehouse.getWarehouseDir(), 'releases', release + '.release.json');

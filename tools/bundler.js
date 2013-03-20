@@ -804,7 +804,7 @@ exports.bundle = function (app_dir, output_path, options) {
   if (!options.nodeModulesMode)
     throw new Error("Must pass options.nodeModulesMode");
   if (!options.releaseStamp)
-    throw new Error("Must pass options.releaseStamp. Pass 'none' for local packages only");
+    throw new Error("Must pass options.releaseStamp or 'none'.");
 
   try {
     // Create a bundle, add the project

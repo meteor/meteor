@@ -66,14 +66,16 @@ Fiber(function () {
   var calculateContext = function (argv) {
     var appDir = files.findAppDir();
     context.appDir = appDir && path.resolve(appDir);
+    context.globalReleaseVersion = calculateReleaseVersion(argv);
 
     if (context.appDir) {
       context.appReleaseVersion =
         project.getMeteorReleaseVersion(context.appDir);
     }
-
+    // Recalculate release version, taking the current app into account.
     context.releaseVersion = calculateReleaseVersion(argv);
     toolsDebugMessage("Running Meteor Release " + context.releaseVersion);
+
     context.releaseManifest =
       warehouse.releaseManifestByVersion(context.releaseVersion);
     context.packageSearchOptions = {
@@ -109,13 +111,23 @@ Fiber(function () {
   //   error message.
   var requireDirInApp = function (cmd) {
     if (context.appDir) {
-      // XXX this is an inelegant place to put this check, but it is pretty
-      // accurate for now: "all the commands that need an app".
+      // XXX this is an inelegant place to put these checks, but it is pretty
+      // accurate for now: "all the commands that need an app and don't do
+      // something special with releases" (ie, everything but create, help,
+      // logs, mongo SITE, test-packages, and deploy -D).
       if (!files.usesWarehouse() && context.appReleaseVersion !== 'none') {
         console.log(
           "=> Running Meteor from a checkout -- overrides project version (%s)",
           context.appReleaseVersion);
         console.log();
+      }
+      if (files.usesWarehouse() && context.releaseVersion === 'none') {
+        die(
+          "You must specify a Meteor version with --release when you work with this\n" +
+            "project. It was created from an unreleased Meteor checkout and doesn't\n" +
+            "have a version associated with it.\n" +
+            "\n" +
+            "You can permanently set a release for this project with 'meteor update'.");
       }
       return;
     }
@@ -298,7 +310,9 @@ Fiber(function () {
         });
       }
 
-      project.writeMeteorReleaseVersion(appPath, context.releaseVersion);
+      // Use the global release version, so that it isn't influenced by the
+      // release version of the app dir you happen to be inside now.
+      project.writeMeteorReleaseVersion(appPath, context.globalReleaseVersion);
 
       process.stderr.write(appPath + ": created");
       if (new_argv.example &&
@@ -882,7 +896,8 @@ Fiber(function () {
   // we're running. If not, springboard to the right tools (after
   // having fetched it to the local warehouse)
   var toolsSpringboard = function (extraArgs) {
-    if (context.releaseManifest.tools === files.getToolsVersion())
+    if (!context.releaseManifest ||
+        context.releaseManifest.tools === files.getToolsVersion())
       return;
 
     toolsDebugMessage("springboarding from " + files.getToolsVersion() +
