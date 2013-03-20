@@ -66,6 +66,12 @@ Fiber(function () {
   var calculateContext = function (argv) {
     var appDir = files.findAppDir();
     context.appDir = appDir && path.resolve(appDir);
+
+    if (context.appDir) {
+      context.appReleaseVersion =
+        project.getMeteorReleaseVersion(context.appDir);
+    }
+
     context.releaseVersion = calculateReleaseVersion(argv);
     toolsDebugMessage("Running Meteor Release " + context.releaseVersion);
     context.releaseManifest =
@@ -89,15 +95,12 @@ Fiber(function () {
     ensureSomeRelease();
 
     // If a release was specified explicitly on the command line, that's the one
-    // to use.
-    if (argv.release)
-      return argv.release;
+    // to use. Otherwise use the release specified in the app (if
+    // any). Otherwise use the latest release.
 
-
-    if (context.appDir)
-      return project.getMeteorReleaseVersion(context.appDir);
-    else
-      return warehouse.latestRelease();
+    return argv.release ||
+      context.appReleaseVersion ||
+      warehouse.latestRelease();
   };
 
   // If we're not in an app directory, die with an error message.
