@@ -64,8 +64,10 @@ Fiber(function () {
   // Figures out if we're in an app dir, what release we're using, etc. May
   // download the release if necessary.
   var calculateContext = function (argv) {
-    context.appDir = path.resolve(files.findAppDir());
+    var appDir = files.findAppDir();
+    context.appDir = appDir && path.resolve(appDir);
     context.releaseVersion = calculateReleaseVersion(argv);
+    toolsDebugMessage("Running Meteor Release " + context.releaseVersion);
     context.releaseManifest =
       warehouse.releaseManifestByVersion(context.releaseVersion);
     context.packageSearchOptions = {
@@ -884,7 +886,6 @@ Fiber(function () {
     var argv = optimist.argv;
 
     calculateContext(argv);
-    toolsDebugMessage("Running Meteor Release " + context.releaseVersion);
 
     // if we're not running the correct tools, fetch it and
     // re-run. do *not* do this if we are in a checkout, or if
