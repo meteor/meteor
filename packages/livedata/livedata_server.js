@@ -1,12 +1,9 @@
-var Fiber = __meteor_bootstrap__.require('fibers');
+var Fiber = Npm.require('fibers');
 
 // This file contains classes:
 // * LivedataSession - The server's connection to a single DDP client
 // * LivedataSubscription - A single subscription for a single client
 // * LivedataServer - An entire server that may talk to > 1 client.  A DDP endpoint.
-
-(function () {
-
 
 // Represents a single document in a SessionCollectionView
 Meteor._SessionDocumentView = function () {
@@ -1318,6 +1315,3 @@ var wrapInternalException = function (exception, context) {
     Meteor._debug("Exception " + context, exception.stack);
   return new Meteor.Error(500, "Internal server error");
 };
-
-
-})();

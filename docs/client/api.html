@@ -1806,12 +1806,6 @@ new event handlers in addition to the existing ones.
 See [Event Maps](#eventmaps) for a detailed description of the event
 map format and how event handling works in Meteor.
 
-{{#note}}
-This syntax replaces the previous syntax: `Template.myTemplate.events = {...}`,
-but for now, the old syntax still works.
-{{/note}}
-
-
 {{> api_box template_helpers}}
 
 Each template has a local dictionary of helpers that are made available to it,
@@ -2392,7 +2386,7 @@ computation.
 {{> api_box deps_nonreactive }}
 
 Calls `func()` with `Deps.currentComputation` temporarily set to
-`null`.  If `func` accesses reactive data sources, these data sources 
+`null`.  If `func` accesses reactive data sources, these data sources
 will never cause a rerun of the enclosing computation.
 
 {{> api_box deps_active }}

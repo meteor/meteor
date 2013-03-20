@@ -1,5 +1,3 @@
-(function () {
-
 var makeCollection = function () {
   if (Meteor.isServer)
     return new Meteor.Collection(Random.id());
@@ -167,5 +165,3 @@ Tinytest.addAsync("observeChanges - unordered - enters and exits result set thro
   onComplete();
   });
 });
-
-})();

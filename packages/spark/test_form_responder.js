@@ -1,5 +1,3 @@
-(function () {
-
 var TEST_RESPONDER_ROUTE = "/spark_test_responder";
 
 var respond = function(req, res) {
@@ -22,5 +20,3 @@ var run_responder = function() {
 };
 
 run_responder();
-
-})();

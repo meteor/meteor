@@ -1,6 +1,3 @@
-
-(function() {
-
 var parserTestOptions = { includeComments: true };
 
 var allNodeNames = [
@@ -734,5 +731,3 @@ Tinytest.add("jsparse - initial lex error", function (test) {
   doTest('/');
   doTest('@');
 });
-
-})();

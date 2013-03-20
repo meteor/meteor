@@ -1,0 +1,10 @@
+[
+  {
+    "release": "0.6.0",
+    "tagline": "The engine!",
+    "changes": [
+      "Use 'Npm.require' instead of '__meteor_bootstrap__.require'",
+      "more..."
+    ]
+  }
+]

@@ -1,5 +1,3 @@
-(function () {
-
 var inputTags = 'input textarea button select option'.split(' ');
 
 var selector = _.map(inputTags, function (t) {
@@ -8,5 +6,3 @@ var selector = _.map(inputTags, function (t) {
 
 
 Spark._globalPreserves[selector] = Spark._labelFromIdOrName;
-
-})();

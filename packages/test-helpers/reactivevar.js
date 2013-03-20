@@ -13,7 +13,7 @@
 // var R = [new] ReactiveVar([initialValue])
 
 
-var ReactiveVar = function(initialValue) {
+ReactiveVar = function(initialValue) {
   if (! (this instanceof ReactiveVar))
     return new ReactiveVar(initialValue);
 
