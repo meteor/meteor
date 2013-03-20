@@ -52,7 +52,7 @@ git rev-parse HEAD > "$TARGET_DIR/.git_version.txt"
 # version is treated fully opaquely, so to make it a little more attractive we
 # just use the first ten characters.
 echo -n "Computing tools version... "
-TOOLS_VERSION=$(git ls-tree HEAD LICENSE.txt meteor tools examples
+TOOLS_VERSION=$(git ls-tree HEAD LICENSE.txt meteor tools examples \
     | shasum | cut -c 1-10) # shasum's output looks like: 'SHA -'
 echo $TOOLS_VERSION
 echo -n "$TOOLS_VERSION" > "$TARGET_DIR/.tools_version.txt"
