@@ -67,15 +67,15 @@ $METEOR reset --help | grep "Reset the current" >> $OUTPUT
 
 echo "... not in dir"
 
-$METEOR | grep "run: You're not in" >> $OUTPUT
-$METEOR run | grep "run: You're not in" >> $OUTPUT
-$METEOR add foo | grep "add: You're not in" >> $OUTPUT
-$METEOR remove foo | grep "remove: You're not in" >> $OUTPUT
-$METEOR list --using | grep "list --using: You're not in" >> $OUTPUT
-$METEOR bundle foo.tar.gz | grep "bundle: You're not in" >> $OUTPUT
-$METEOR mongo | grep "mongo: You're not in" >> $OUTPUT
-$METEOR deploy automated-test | grep "deploy: You're not in" >> $OUTPUT
-$METEOR reset | grep "reset: You're not in" >> $OUTPUT
+$METEOR 2>&1 | grep "run: You're not in" >> $OUTPUT
+$METEOR run 2>&1 | grep "run: You're not in" >> $OUTPUT
+$METEOR add foo 2>&1 | grep "add: You're not in" >> $OUTPUT
+$METEOR remove foo 2>&1 | grep "remove: You're not in" >> $OUTPUT
+$METEOR list --using 2>&1 | grep "list --using: You're not in" >> $OUTPUT
+$METEOR bundle foo.tar.gz 2>&1 | grep "bundle: You're not in" >> $OUTPUT
+$METEOR mongo 2>&1 | grep "mongo: You're not in" >> $OUTPUT
+$METEOR deploy automated-test 2>&1 | grep "deploy: You're not in" >> $OUTPUT
+$METEOR reset 2>&1 | grep "reset: You're not in" >> $OUTPUT
 
 echo "... create"
 
