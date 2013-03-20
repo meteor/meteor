@@ -856,6 +856,9 @@ Fiber(function () {
       // runner app, but finding app packages from the current app (if any).
       context.appDir = files.mkdtemp('meteor-test-run');
       files.cp_r(path.join(__dirname, 'test-runner-app'), context.appDir);
+      // Undocumented flag to use a different test driver.
+      project.add_package(context.appDir,
+                          new_argv['driver-package'] || 'test-in-browser');
 
       if (new_argv.deploy) {
         var deployOptions = {
