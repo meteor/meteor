@@ -92,9 +92,9 @@ do_with_root() {
 TEMPORARY_DIR=`mktemp -d -t meteor-install-XXXXXXX`
 cd "$TEMPORARY_DIR"
 
-sed 's/^X//' >meteor << 'END-of-meteor-bootstrap'
+sed 's/^X//' >meteor << 'END-of-launch-meteor'
 SHARHERE
-END-of-meteor-bootstrap
+END-of-launch-meteor
 
 chmod 755 meteor
 

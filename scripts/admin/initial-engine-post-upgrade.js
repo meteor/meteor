@@ -10,8 +10,8 @@ var _ = require('underscore');
 var prefix = path.join(__dirname, '..', '..', '..');
 var binary = '/usr/local/bin/meteor';
 var oldDirectory = path.join(prefix, 'meteor');
-var bootstrapScript = path.join(
-  oldDirectory, 'app', 'meteor', 'meteor-bootstrap.sh');
+var launchScript = path.join(
+  oldDirectory, 'app', 'meteor', 'launch-meteor');
 
 // Figure out what platform we're upgrading on (dpkg, rpm, tar)
 var package_stamp_path = path.join(oldDirectory, '.package_stamp');
@@ -49,7 +49,7 @@ var rm_recursive = function (p) {
 
 var macUpgrade = function () {
   fs.unlinkSync(binary);
-  fs.writeFileSync(binary, fs.readFileSync(bootstrapScript));
+  fs.writeFileSync(binary, fs.readFileSync(launchScript));
   fs.chmodSync(binary, 0755);
   rm_recursive(oldDirectory);
 };
@@ -92,7 +92,7 @@ var runWithRoot = function (cmd, args) {
 };
 
 var copyScriptLinux = function () {
-  runWithRoot("cp", [bootstrapScript, binary]);
+  runWithRoot("cp", [launchScript, binary]);
   runWithRoot("chmod", [755, binary]);
 };
 

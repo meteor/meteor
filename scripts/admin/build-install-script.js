@@ -7,7 +7,7 @@ var path = require('path');
 var template = fs.readFileSync(
   path.join(__dirname, 'install-template.sh'), 'utf8');
 var bootstrap = fs.readFileSync(
-  path.join(__dirname, 'meteor-bootstrap.sh'), 'utf8');
+  path.join(__dirname, 'launch-meteor'), 'utf8');
 
 process.stdout.write(
   template.replace(/SHARHERE/,

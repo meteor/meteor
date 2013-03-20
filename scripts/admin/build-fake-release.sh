@@ -47,10 +47,10 @@ mkdir -p "$FAKE_TMPDIR/meteor/app/meteor"
 cp "$TOPDIR/scripts/admin/initial-engine-post-upgrade.js" \
    "$FAKE_TMPDIR/meteor/app/meteor/post-upgrade.js"
 
-# Copy in meteor-bootstrap.sh, which will become the installed
+# Copy in launch-bootstrap, which will become the installed
 # /usr/local/bin/meteor.
-cp "$TOPDIR/scripts/admin/meteor-bootstrap.sh" \
-   "$FAKE_TMPDIR/meteor/app/meteor/meteor-bootstrap.sh"
+cp "$TOPDIR/scripts/admin/launch-meteor" \
+   "$FAKE_TMPDIR/meteor/app/meteor/launch-meteor"
 
 OUTDIR="$TOPDIR/dist"
 rm -rf "$OUTDIR"
