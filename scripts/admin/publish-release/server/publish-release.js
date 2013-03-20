@@ -52,7 +52,7 @@ var getManifest = function(s3, release) {
   try {
     content = s3.GetObject({
       BucketName: "com.meteor.warehouse",
-      ObjectName: ["unpublished", release, "manifest.json"].join("/")
+      ObjectName: ["unpublished", release, "release.json"].join("/")
     }).Body;
   } catch (e) {
     console.log("Release " + release + " not built.");
@@ -135,11 +135,11 @@ var publishPackage = function(s3, release, name, version) {
 };
 
 // publish the release manifest, copying from
-// s3://com.meteor.warehouse/unpublished/RELEASE/manifest.json to
+// s3://com.meteor.warehouse/unpublished/RELEASE/release.json to
 // s3://com.meteor.warehouse/releases/RELEASE.release.json
 var publishManifest = function(s3, release) {
   var destKey = ["releases", release + ".release.json"].join("/");
-  var sourceKey = ["unpublished", release, "manifest.json"].join("/");
+  var sourceKey = ["unpublished", release, "release.json"].join("/");
 
   process.stdout.write("release manifest " + release + ": ");
   if (noneWithPrefix(s3, destKey)) {

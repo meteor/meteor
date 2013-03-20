@@ -39,7 +39,7 @@ do
     echo "$PACKAGE version $PACKAGE_VERSION"
     tar -c -z -f $OUTDIR/$PACKAGE-$PACKAGE_VERSION.tar.gz $PACKAGE
 
-    # this is used in build-release.sh, which constructs the manifest json.
+    # this is used in build-release.sh, which constructs the release json.
     echo -n "    \"$PACKAGE\": \"$PACKAGE_VERSION\"" >> "$TOPDIR/.package_manifest_chunk"
     FIRST_RUN=false
   fi
