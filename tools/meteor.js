@@ -346,9 +346,7 @@ Fiber(function () {
 
       // refuse to update if we're in a git checkout.
       if (!files.usesWarehouse()) {
-        console.log("Your Meteor installation is a git checkout. Update it " +
-                    "manually with 'git pull'.");
-        process.exit(1);
+        die("update: can only be run from official releases, not from checkouts");
       }
 
       if (opt.argv.release) {
