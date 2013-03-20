@@ -47,7 +47,7 @@ set -e -x
 if [ "$TEST_WAREHOUSE_DIR" ]; then
     $METEOR --version | grep $TEST_RELEASE >> $OUTPUT
 else
-    $METEOR --version | grep checkout >> $OUTPUT
+    $METEOR --version 2>&1 | grep checkout >> $OUTPUT
 fi
 
 echo "... --help"
