@@ -756,8 +756,18 @@ Fiber(function () {
         if (new_argv.settings)
           settings = runner.getSettings(new_argv.settings);
         requireDirInApp("deploy");
-        deploy.deployCmd(new_argv._[1], context.appDir, context.releaseVersion,
-                         new_argv.debug, new_argv.password, settings);
+        deploy.deployCmd({
+          url: new_argv._[1],
+          appDir: context.appDir,
+          settings: settings,
+          setPassword: !!new_argv.password,
+          bundleOptions: {
+            nodeModulesMode: 'skip',
+            noMinify: !!new_argv.debug,
+            release: context.releaseVersion,
+            packageSearchOptions: context.packageSearchOptions
+          }
+        });
       }
     }
   });

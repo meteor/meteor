@@ -58,9 +58,8 @@ var meteor_rpc = function (rpc_name, method, site, query_params, callback) {
 };
 
 // called by command-line `meteor deploy`
-var deployCmd = function (url, app_dir, release, opt_debug,
-                          opt_set_password, settings) {
-  var parsed_url = parse_url(url);
+var deployCmd = function (options) {
+  var parsed_url = parse_url(options.url);
 
   // a bit contorted here to make sure we ask for the password before
   // launching the slow bundle process.
@@ -68,24 +67,15 @@ var deployCmd = function (url, app_dir, release, opt_debug,
     var deployOptions = {
       site: parsed_url.hostname,
       password: password,
-      settings: settings
+      settings: options.settings
     };
-    var bundleOptions = {
-      nodeModulesMode: 'skip',
-      noMinify: !!opt_debug,
-      release: release,
-      packageSearchOptions: {
-        releaseManifest: warehouse.releaseManifestByVersion(release),
-        appDir: app_dir
-      }
-    };
-    if (opt_set_password)
-      get_new_password(function (set_password) {
-        deployOptions.setPassword = set_password;
-        deployToServer(app_dir, bundleOptions, deployOptions);
+    if (options.setPassword)
+      get_new_password(function (newPassword) {
+        deployOptions.setPassword = newPassword;
+        deployToServer(options.appDir, options.bundleOptions, deployOptions);
       });
     else
-      deployToServer(app_dir, bundleOptions, deployOptions);
+      deployToServer(options.appDir, options.bundleOptions, deployOptions);
   });
 };
 
