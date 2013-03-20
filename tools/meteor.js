@@ -201,12 +201,27 @@ Fiber(function () {
             .describe('deploy', 'Optionally, specify a domain to deploy to, rather than running locally.')
             .boolean('once') // See #Once
             .usage(
-              "Usage: \n" +
+              "Usage: meteor test-packages [--release=x.y.z] [options] [package...]\n" +
                 "\n" +
-                "meteor test-packages [--release=x.y.z] [options] [package...]\n" +
-                "    Runs unit tests for a set of packages.\n" +
+                "Runs unit tests for one or more packages. The results are shown in\n" +
+                "a browser dashboard that updates whenever a relevate source file is\n" +
+                "modified.\n" +
                 "\n" +
-                "Point your browser to localhost:3000 to run tests and see results.\n");
+                "Packages may be specified by name or by path. If a package argument\n" +
+                "contains a '/', it is loaded from a directory of that name; otherwise,\n" +
+                "the package name is resolved according to the usual package search\n" +
+                "algorithm ('packages' subdirectory of the current app, $PACKAGE_DIRS\n" +
+                "directories, and core packages in that order). You can test any number\n" +
+                "of packages simultaneously. If you don't specify any package names\n" +
+                "then all available packages will be tested.\n" +
+                "\n" +
+                "Open the test dashboard in your browser to run the tests and see the\n" +
+                "results. By default the URL is localhost:3000 but that can be changed\n" +
+                "with --port. Alternatively, you can deploy the tests onto the 'meteor\n" +
+                "deploy' server by using --deploy. This gives you a public URL that you\n" +
+                "can use in conjunction with a service like Browserling or BrowserStack\n" +
+                "to try the tests against many different browser versions.");
+
 
       var new_argv = opt.argv;
 
