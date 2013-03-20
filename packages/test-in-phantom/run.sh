@@ -16,7 +16,7 @@ export PATH=$METEOR_HOME:$PATH
 meteor --version # syncronously get the dev bundle if its not there.
 
 cat settings.json
-meteor --tests=test-in-phantom --settings=settings.json &
+meteor test-packages --driver-package test-in-phantom --settings=settings.json &
 METEOR_PID=$!
 
 sleep 2
