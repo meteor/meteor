@@ -108,8 +108,17 @@ Fiber(function () {
   // @param cmd {String} The command that was run. Used when printing
   //   error message.
   var requireDirInApp = function (cmd) {
-    if (context.appDir)
+    if (context.appDir) {
+      // XXX this is an inelegant place to put this check, but it is pretty
+      // accurate for now: "all the commands that need an app".
+      if (!files.usesWarehouse() && context.appReleaseVersion !== 'none') {
+        console.log(
+          "=> Running Meteor from a checkout -- overrides project version (%s)",
+          context.appReleaseVersion);
+        console.log();
+      }
       return;
+    }
     // This is where you end up if you type 'meteor' with no args. Be gentle to
     // the noobs..
     die(cmd + ": You're not in a Meteor project directory.\n" +
