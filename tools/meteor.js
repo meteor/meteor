@@ -11,6 +11,11 @@ Fiber(function () {
   var project = require(path.join(__dirname, 'project.js'));
   var warehouse = require(path.join(__dirname, 'warehouse.js'));
 
+  var die = function (msg) {
+    console.error(msg);
+    process.exit(1);
+  };
+
   // This code is duplicated in app/server/server.js.
   var MIN_NODE_VERSION = 'v0.8.18';
   if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
@@ -44,32 +49,6 @@ Fiber(function () {
     process.exit(1);
   };
 
-  // Looks up the directory tree from the current working directory
-  // to find an app directory. If not found, print an error message.
-  //
-  // @param cmd {String} The command that was run. Used when printing
-  //   error message.
-  var requireDirInApp = function (cmd) {
-    var appDir = files.findAppDir();
-    if (appDir) {
-      return appDir;
-    } else {
-      // This is where you end up if you type 'meteor' with no
-      // args. Be gentle to the noobs..
-      process.stdout.write(
-        cmd + ": You're not in a Meteor project directory.\n" +
-          "\n" +
-          "To create a new Meteor project:\n" +
-          "   meteor create <project name>\n" +
-          "For example:\n" +
-          "   meteor create myapp\n" +
-          "\n" +
-          "For more help, see 'meteor --help'.\n");
-      process.exit(1);
-      return false; // no need for this since we exit(), but makes jslint happy
-    }
-  };
-
   // If the releases directory in local warehouse is empty, fetch the
   // latest release from our servers. This release may require a
   // different tools, in which case we'll springboard later.
@@ -79,15 +58,26 @@ Fiber(function () {
     }
   };
 
-  // returns the release version to use (for certain commands). if we
-  // are in an app, reads '.meteor/release'. otherwise, the latest
-  // found in the warehouse, or null if warehouse has no releases
-  var releaseVersion = null;
+  // Stores the app directory (if any), release version, etc.
+  var context = {};
+
+  // Figures out if we're in an app dir, what release we're using, etc. May
+  // download the release if necessary.
+  var calculateContext = function (argv) {
+    context.appDir = path.resolve(files.findAppDir());
+    context.releaseVersion = calculateReleaseVersion(argv);
+    context.releaseManifest =
+      warehouse.releaseManifestByVersion(context.releaseVersion);
+    context.packageSearchOptions = {
+      appDir: context.appDir,
+      releaseManifest: context.releaseManifest
+    };
+  };
+
   var calculateReleaseVersion = function (argv) {
     if (!files.usesWarehouse()) {
       if (argv.release) {
-        console.error("Cannot specify --release when running meteor from a git checkout.");
-        process.exit(1);
+        die("Can't specify a release when running Meteor from a checkout.");
       }
       // The release in a git checkout is called "none" and is hardcoded in
       // warehouse.js to have no packages.
@@ -101,17 +91,36 @@ Fiber(function () {
     if (argv.release)
       return argv.release;
 
-    var appDir = files.findAppDir();
-    if (appDir)
-      return project.getMeteorReleaseVersion(appDir);
+
+    if (context.appDir)
+      return project.getMeteorReleaseVersion(context.appDir);
     else
       return warehouse.latestRelease();
   };
 
+  // If we're not in an app directory, die with an error message.
+  //
+  // @param cmd {String} The command that was run. Used when printing
+  //   error message.
+  var requireDirInApp = function (cmd) {
+    if (context.appDir)
+      return;
+    // This is where you end up if you type 'meteor' with no args. Be gentle to
+    // the noobs..
+    die(cmd + ": You're not in a Meteor project directory.\n" +
+        "\n" +
+        "To create a new Meteor project:\n" +
+        "   meteor create <project name>\n" +
+        "For example:\n" +
+        "   meteor create myapp\n" +
+        "\n" +
+        "For more help, see 'meteor --help'.");
+  };
+
   var find_mongo_port = function (cmd, callback) {
-    var appDir = requireDirInApp(cmd);
+    requireDirInApp(cmd);
     var mongo_runner = require(path.join(__dirname, 'mongo_runner.js'));
-    mongo_runner.find_mongo_port(appDir, callback);
+    mongo_runner.find_mongo_port(context.appDir, callback);
   };
 
   var findCommand = function (name) {
@@ -165,17 +174,14 @@ Fiber(function () {
         process.exit(1);
       }
 
-      var appDir = path.resolve(requireDirInApp("run"));
+      requireDirInApp("run");
       var bundleOpts = {
         noMinify: !new_argv.production,
         nodeModulesMode: 'symlink',
-        release: releaseVersion,
-        packageSearchOptions: {
-          appDir: appDir,
-          releaseManifest: warehouse.releaseManifestByVersion(releaseVersion)
-        }
+        release: context.releaseVersion,
+        packageSearchOptions: context.packageSearchOptions
       };
-      runner.run(appDir, bundleOpts, new_argv.port, new_argv.once, new_argv.settings);
+      runner.run(context.appDir, bundleOpts, new_argv.port, new_argv.once, new_argv.settings);
     }
   });
 
@@ -208,14 +214,6 @@ Fiber(function () {
         process.exit(1);
       }
 
-      var packageSearchOptions = {
-        releaseManifest: warehouse.releaseManifestByVersion(releaseVersion)
-      };
-      // If we're in an app dir, search its packages subdirectory.
-      var currentAppDir = files.findAppDir();
-      if (currentAppDir)
-        packageSearchOptions.appDir = currentAppDir;
-
       var testPackages;
       if (new_argv["package-dir"]) {
         // Use path.resolve to strip trailing path.sep, so we don't get a
@@ -226,25 +224,29 @@ Fiber(function () {
       } else if (!_.isEmpty(argv._)) {
         testPackages = argv._;
       } else {
-        testPackages = _.keys(packages.list(packageSearchOptions));
+        testPackages = _.keys(packages.list(context.packageSearchOptions));
       }
 
       var bundleOptions = {
         nodeModulesMode: new_argv.deploy ? 'skip' : 'symlink',
         testPackages: testPackages,
-        release: releaseVersion,
+        release: context.releaseVersion,
         noMinify: true,
-        packageSearchOptions: packageSearchOptions
+        packageSearchOptions: context.packageSearchOptions
       };
-      var appDir = path.join(__dirname, 'test-runner-app');
+
+      // Note: runnerAppDir is not the same as
+      // bundleOptions.packageSearchOptions.appDir: we are bundling the test
+      // runner app, but finding app packages from the current app (if any).
+      var runnerAppDir = path.join(__dirname, 'test-runner-app');
 
       if (new_argv.deploy) {
         var deployOptions = {
           site: new_argv.deploy
         };
-        deploy.deployToServer(appDir, bundleOptions, deployOptions);
+        deploy.deployToServer(runnerAppDir, bundleOptions, deployOptions);
       } else {
-        runner.run(appDir, bundleOptions, new_argv.port, new_argv.once);
+        runner.run(runnerAppDir, bundleOptions, new_argv.port, new_argv.once);
       }
     }
   });
@@ -349,7 +351,7 @@ Fiber(function () {
         });
       }
 
-      project.writeMeteorReleaseVersion(appPath, releaseVersion);
+      project.writeMeteorReleaseVersion(appPath, context.releaseVersion);
 
       process.stderr.write(appPath + ": created");
       if (new_argv.example &&
@@ -394,28 +396,28 @@ Fiber(function () {
         // to, we already would have done that back in main().
       } else {
         // XXX think carefully about what happens if we double-update
-        var updatedFrom = opt.argv['updated-from'] || releaseVersion;
+        var updatedFrom = opt.argv['updated-from'] || context.releaseVersion;
 
         var didUpdate = warehouse.fetchLatestRelease();
 
         // we need to update the global releaseVersion variable
         // because that's what toolsSpringboard reads
-        /* global */ releaseVersion = warehouse.latestRelease();
+        context.releaseVersion = warehouse.latestRelease();
 
         // XXX make errors look good
         if (didUpdate) {
-          console.log("Updated Meteor to release " + releaseVersion + ".");
+          console.log("Updated Meteor to release " + context.releaseVersion + ".");
           toolsSpringboard(['--updated-from=' + updatedFrom]);
           // If the tools for release is different, then toolsSpringboard
           // execs and does not return. Otherwise, keeps going.
         }
 
-        if (updatedFrom !== releaseVersion) {
+        if (updatedFrom !== context.releaseVersion) {
           // XXX this next line is WRONG, which suggests that the logic for
           // updatedFrom is wrong. (updatedFrom can be an app's version, not
           // just global version.)
           toolsDebugMessage("Globally updated from " + updatedFrom + " to "
-                             + releaseVersion);
+                             + context.releaseVersion);
           // ... here is a chance to update the bootstrap script, etc
           // ... maybe print out some release notes or something
           // ... etc
@@ -427,26 +429,25 @@ Fiber(function () {
 
       // If we're not in an app, then we're done. Otherwise, we have to upgrade
       // the app too.
-      var appDir = files.findAppDir();
-      if (!appDir) {
+      if (!context.appDir) {
         // If we weren't fetching the latest release, then we haven't printed
         // anything yet (other than possibly in main), so we should print
         // something now.
         if (opt.argv.release) {
-          console.log("Meteor release " + releaseVersion + " is installed.");
+          console.log("Meteor release " + context.releaseVersion + " is installed.");
         }
         return;
       }
 
-      var appRelease = project.getMeteorReleaseVersion(appDir);
+      var appRelease = project.getMeteorReleaseVersion(context.appDir);
       // Write release version unconditionally, so that we write it even if
       // appRelease === releaseVersion === the implicit 0.6.0 from a missing
       // file.
-      project.writeMeteorReleaseVersion(appDir, releaseVersion);
-      if (appRelease === releaseVersion) {
+      project.writeMeteorReleaseVersion(context.appDir, context.releaseVersion);
+      if (appRelease === context.releaseVersion) {
         // XXX this is wrong if we just updated from no file to 0.6.0.
         console.log("Your app is already running Meteor release "
-                    + releaseVersion + ".");
+                    + context.releaseVersion + ".");
         return;
       }
 
@@ -455,10 +456,10 @@ Fiber(function () {
       // etc, or maybe even updating renamed APIs).
       // XXX should we really print the full path here (appDir)?
       console.log("Updated app '%s' to release %s from release %s.",
-                  appDir, releaseVersion, appRelease);
+                  context.appDir, context.releaseVersion, appRelease);
       console.log();
 
-      warehouse.printChangelog(appRelease, releaseVersion);
+      warehouse.printChangelog(appRelease, context.releaseVersion);
     }
   });
 
@@ -476,13 +477,10 @@ Fiber(function () {
         process.exit(1);
       }
 
-      var appDir = requireDirInApp('add');
-      var all = packages.list({
-        releaseManifest: warehouse.releaseManifestByVersion(releaseVersion),
-        appDir: appDir
-      });
+      requireDirInApp('add');
+      var all = packages.list(context.packageSearchOptions);
       var using = {};
-      _.each(project.get_packages(appDir), function (name) {
+      _.each(project.get_packages(context.appDir), function (name) {
         using[name] = true;
       });
 
@@ -492,7 +490,7 @@ Fiber(function () {
         } else if (name in using) {
           process.stderr.write(name + ": already using\n");
         } else {
-          project.add_package(appDir, name);
+          project.add_package(context.appDir, name);
           var note = all[name].metadata.summary || '';
           process.stderr.write(name + ": " + note + "\n");
         }
@@ -514,9 +512,9 @@ Fiber(function () {
         process.exit(1);
       }
 
-      var appDir = requireDirInApp('remove');
+      requireDirInApp('remove');
       var using = {};
-      _.each(project.get_packages(appDir), function (name) {
+      _.each(project.get_packages(context.appDir), function (name) {
         using[name] = true;
       });
 
@@ -524,7 +522,7 @@ Fiber(function () {
         if (!(name in using)) {
           process.stderr.write(name + ": not in project\n");
         } else {
-          project.remove_package(appDir, name);
+          project.remove_package(context.appDir, name);
           process.stderr.write(name + ": removed\n");
         }
       });
@@ -546,10 +544,9 @@ Fiber(function () {
         process.exit(1);
       }
 
-      var appDir;
       if (argv.using) {
-        appDir = requireDirInApp('list --using');
-        var using = require(path.join(__dirname, 'project.js')).get_packages(appDir);
+        requireDirInApp('list --using');
+        var using = project.get_packages(context.appDir);
 
         if (using.length) {
           _.each(using, function (name) {
@@ -564,23 +561,17 @@ Fiber(function () {
               "  meteor list\n");
         }
         return;
-      } else {
-        appDir = requireDirInApp('list');
       }
 
-      var list = packages.list({
-        releaseManifest: warehouse.releaseManifestByVersion(releaseVersion),
-        appDir: appDir
-      });
+      requireDirInApp('list');
+      var list = packages.list(context.packageSearchOptions);
       var names = _.keys(list);
       names.sort();
       var pkgs = [];
       _.each(names, function (name) {
         pkgs.push(list[name]);
       });
-      process.stdout.write("\n" +
-                           require(path.join(__dirname, 'packages.js')).format_list(pkgs) +
-                           "\n");
+      process.stdout.write("\n" + packages.format_list(pkgs) + "\n");
     }
   });
 
@@ -608,26 +599,23 @@ Fiber(function () {
       // of the file, not a constant 'bundle' (a bit obnoxious for
       // machines, but worth it for humans)
 
-      var appDir = path.resolve(requireDirInApp("bundle"));
-      var build_dir = path.join(appDir, '.meteor', 'local', 'build_tar');
-      var bundle_path = path.join(build_dir, 'bundle');
+      requireDirInApp("bundle");
+      var buildDir = path.join(context.appDir, '.meteor', 'local', 'build_tar');
+      var bundle_path = path.join(buildDir, 'bundle');
       var output_path = path.resolve(argv._[0]); // get absolute path
 
       var bundler = require(path.join(__dirname, 'bundler.js'));
-      var errors = bundler.bundle(appDir, bundle_path, {
+      var errors = bundler.bundle(context.appDir, bundle_path, {
         nodeModulesMode: 'copy',
-        release: releaseVersion,
-        packageSearchOptions: {
-          releaseManifest: warehouse.releaseManifestByVersion(releaseVersion),
-          appDir: appDir
-        }
+        release: context.releaseVersion,
+        packageSearchOptions: context.packageSearchOptions
       });
       if (errors) {
         process.stdout.write("Errors prevented bundling:\n");
         _.each(errors, function (e) {
           process.stdout.write(e + "\n");
         });
-        files.rm_recursive(build_dir);
+        files.rm_recursive(buildDir);
         process.exit(1);
       }
 
@@ -638,10 +626,10 @@ Fiber(function () {
         process.stderr.write("Couldn't create tarball\n");
       });
       out.on('close', function () {
-        files.rm_recursive(build_dir);
+        files.rm_recursive(buildDir);
       });
 
-      files.createTarGzStream(path.join(build_dir, 'bundle')).pipe(out);
+      files.createTarGzStream(path.join(buildDir, 'bundle')).pipe(out);
     }
   });
 
@@ -767,8 +755,8 @@ Fiber(function () {
         var settings = undefined;
         if (new_argv.settings)
           settings = runner.getSettings(new_argv.settings);
-        var project_dir = path.resolve(requireDirInApp("deploy"));
-        deploy.deployCmd(new_argv._[1], project_dir, releaseVersion,
+        requireDirInApp("deploy");
+        deploy.deployCmd(new_argv._[1], context.appDir, context.releaseVersion,
                          new_argv.debug, new_argv.password, settings);
       }
     }
@@ -808,8 +796,6 @@ Fiber(function () {
         process.exit(1);
       }
 
-      var appDir = path.resolve(requireDirInApp("reset"));
-
       find_mongo_port("reset", function (mongod_port) {
         if (mongod_port) {
           process.stdout.write(
@@ -820,7 +806,7 @@ Fiber(function () {
           process.exit(1);
         }
 
-        var local_dir = path.join(appDir, '.meteor', 'local');
+        var local_dir = path.join(context.appDir, '.meteor', 'local');
         files.rm_recursive(local_dir);
 
         process.stdout.write("Project reset.\n");
@@ -841,18 +827,18 @@ Fiber(function () {
   // we're running. If not, springboard to the right tools (after
   // having fetched it to the local warehouse)
   var toolsSpringboard = function (extraArgs) {
-    var releaseManifest = warehouse.releaseManifestByVersion(releaseVersion);
-    if (releaseManifest.tools === files.getToolsVersion())
+    if (context.releaseManifest.tools === files.getToolsVersion())
       return;
 
     toolsDebugMessage("springboarding from " + files.getToolsVersion() +
-                      " to " + releaseManifest.tools);
+                      " to " + context.releaseManifest.tools);
 
     // Strip off the "node" and "meteor.js" from argv and replace it with the
     // appropriate tools's meteor shell script.
     var newArgv = process.argv.slice(2);
-    newArgv.unshift(path.join(warehouse.getToolsDir(releaseManifest.tools),
-                              'bin', 'meteor'));
+    newArgv.unshift(
+      path.join(warehouse.getToolsDir(context.releaseManifest.tools),
+                'bin', 'meteor'));
     if (extraArgs)
       newArgv.push.apply(newArgv, extraArgs);
 
@@ -860,6 +846,21 @@ Fiber(function () {
     // XXX fork kexec and make it take an array instead of using shell
     var quotedArgv = require('shell-quote').quote(newArgv);
     require('kexec')(quotedArgv);
+  };
+
+  var printVersion = function () {
+    if (files.usesWarehouse()) {
+      console.log("Release " + context.releaseVersion);
+      process.exit(0);
+    }
+
+    if (context.appDir) {
+      die("This project was created with a checkout of Meteor, rather than an\n" +
+          "official release, and doesn't have a release number associated with\n" +
+          "it. You can set its release with 'meteor update'.");
+    } else {
+      die("Unreleased (running from a checkout)");
+    }
   };
 
   var main = function() {
@@ -872,8 +873,8 @@ Fiber(function () {
 
     var argv = optimist.argv;
 
-    /*global*/ releaseVersion = calculateReleaseVersion(argv);
-    toolsDebugMessage("Running Meteor Release " + releaseVersion);
+    calculateContext(argv);
+    toolsDebugMessage("Running Meteor Release " + context.releaseVersion);
 
     // if we're not running the correct tools, fetch it and
     // re-run. do *not* do this if we are in a checkout, or if
@@ -889,12 +890,8 @@ Fiber(function () {
     }
 
     if (argv.version) {
-      if (!files.usesWarehouse())
-        console.log("Running from a git checkout");
-      else
-        console.log("Meteor release " + releaseVersion);
-
-      process.exit(0);
+      printVersion();
+      return;
     }
 
     var cmd = 'run';
