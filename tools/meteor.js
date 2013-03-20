@@ -711,10 +711,10 @@ Fiber(function () {
       if (new_argv.delete) {
         deploy.delete_app(new_argv._[1]);
       } else {
+        requireDirInApp("deploy");
         var settings = undefined;
         if (new_argv.settings)
           settings = runner.getSettings(new_argv.settings);
-        requireDirInApp("deploy");
         deploy.deployCmd({
           url: new_argv._[1],
           appDir: context.appDir,
@@ -794,6 +794,7 @@ Fiber(function () {
             .describe('port', 'Port to listen on. NOTE: Also uses port N+1 and N+2.')
             .describe('deploy', 'Optionally, specify a domain to deploy to, rather than running locally.')
             .boolean('once') // See #Once
+            .describe('settings',  'Set optional data for Meteor.settings on the server')
             .usage(
               "Usage: meteor test-packages [--release=x.y.z] [options] [package...]\n" +
                 "\n" +
@@ -871,14 +872,16 @@ Fiber(function () {
           releaseStamp: context.releaseVersion,
           packageSearchOptions: context.packageSearchOptions
         }, {
-          site: new_argv.deploy
+          site: new_argv.deploy,
+          settings: new_argv.settings && runner.getSettings(new_argv.settings)
         });
       } else {
         runner.run(context, {
           port: new_argv.port,
           noMinify: true,  // XXX provide a --production
           once: new_argv.once,
-          testPackages: testPackages
+          testPackages: testPackages,
+          settingsFile: new_argv.settings
         });
       }
     }
