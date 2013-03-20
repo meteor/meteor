@@ -28,8 +28,7 @@ Run locally:
 
   1. User entries in the ```Meteor.users``` collection gain a new field named ```roles``` which is an array of strings corresponding to the user's roles.
   2. A new collection ```Meteor.roles``` contains a global list of defined role names.
-  3. The currently logged-in user's ```roles``` field is automatically published under ```_roles_own_user_roles```.
-  4. Client javascript automatically subscribes to ```_roles_own_user_roles```.
+  3. The currently logged-in user's ```roles``` field is automatically published to the client.
 
 <br />
 
