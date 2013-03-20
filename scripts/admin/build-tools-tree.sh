@@ -47,9 +47,12 @@ rm -rf "$TARGET_DIR"/examples/other
 # mark directory with current git sha
 git rev-parse HEAD > "$TARGET_DIR/.git_version.txt"
 
-# generate tools version: directory hash that depends only on file
-# contents but nothing else, eg modification time
+# generate tools version: directory hash that depends only on file contents and
+# permissions but nothing else, eg modification time or build outputs. This
+# version is treated fully opaquely, so to make it a little more attractive we
+# just use the first ten characters.
 echo -n "Computing tools version... "
-TOOLS_VERSION=$(git ls-tree HEAD LICENSE.txt meteor tools examples | shasum | cut -f 1 -d " ") # shasum's output looks like: 'SHA -'
+TOOLS_VERSION=$(git ls-tree HEAD LICENSE.txt meteor tools examples
+    | shasum | cut -c 1-10) # shasum's output looks like: 'SHA -'
 echo $TOOLS_VERSION
 echo -n "$TOOLS_VERSION" > "$TARGET_DIR/.tools_version.txt"
