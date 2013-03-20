@@ -5,6 +5,9 @@
     return Meteor.default_connection.userId();
   };
 
+  var loggingOut = false;
+  var loggingOutDeps = new Deps.Dependency;
+
   var loggingIn = false;
   var loggingInDeps = new Deps.Dependency;
   // This is mostly just called within this file, but Meteor.loginWithPassword
@@ -16,9 +19,22 @@
       loggingInDeps.changed();
     }
   };
+
+  Accounts._setLoggingOut = function (x) {
+    if (loggingOut !== x) {
+      loggingOut = x;
+      loggingOutDeps.changed();
+    }
+  };
+
   Meteor.loggingIn = function () {
     Deps.depend(loggingInDeps);
     return loggingIn;
+  };
+
+  Meteor.loggingOut = function () {
+    Deps.depend(loggingOutDeps);
+    return loggingOut;
   };
 
   // This calls userId, which is reactive.
@@ -157,6 +173,7 @@
   };
 
   Meteor.logout = function (callback) {
+    Accounts._setLoggingOut(true);
     Meteor.apply('logout', [], {wait: true}, function(error, result) {
       if (error) {
         callback && callback(error);
@@ -164,6 +181,7 @@
         Accounts._makeClientLoggedOut();
         callback && callback();
       }
+      Accounts._setLoggingOut(false);
     });
   };
 
@@ -175,6 +193,12 @@
     });
     Handlebars.registerHelper('loggingIn', function () {
       return Meteor.loggingIn();
+    });
+    Handlebars.registerHelper('loggingOut', function () {
+      return Meteor.loggingOut();
+    });
+    Handlebars.registerHelper('loggingInOut', function () {
+      return (Meteor.loggingIn() || Meteor.loggingOut());
     });
   }
 
