@@ -167,7 +167,7 @@ Package.on_test(function (api) {
 });
 EOF
 
-$METEOR test-packages -p $PORT --package-dir="$TEST_TMPDIR/local-packages/die-now/" | grep Dying >> $OUTPUT 2>&1
+$METEOR test-packages -p $PORT $TEST_TMPDIR/local-packages/die-now | grep Dying >> $OUTPUT 2>&1
 # since the server process was killed via 'process.exit', mongo is still running.
 ps ax | grep -e "$MONGOMARK" | grep -v grep | awk '{print $1}' | xargs kill || true
 sleep 2 # make sure mongo is dead

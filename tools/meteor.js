@@ -203,9 +203,6 @@ Fiber(function () {
             .usage(
               "Usage: \n" +
                 "\n" +
-                "meteor test-packages [--release=x.y.z] --package-dir=<path to local package> [options]\n" +
-                "    Runs unit tests on one package located on disk.\n" +
-                "\n" +
                 "meteor test-packages [--release=x.y.z] [options] [package...]\n" +
                 "    Runs unit tests for a set of packages.\n" +
                 "\n" +
@@ -219,16 +216,25 @@ Fiber(function () {
       }
 
       var testPackages;
-      if (new_argv["package-dir"]) {
-        // Use path.resolve to strip trailing path.sep, so we don't get a
-        // package named "foo/".
-        var packageDir = path.resolve(new_argv["package-dir"], ".");
-        var packageName = path.basename(packageDir);
-        testPackages = [packages.loadFromDir(packageName, packageDir)];
-      } else if (!_.isEmpty(argv._)) {
-        testPackages = argv._;
-      } else {
+      if (_.isEmpty(argv._)) {
         testPackages = _.keys(packages.list(context.packageSearchOptions));
+      } else {
+        context.packageSearchOptions.preloadedPackages = {};
+        testPackages = _.map(argv._, function (p) {
+          // If it's a package name, the bundler will resolve it using
+          // context.packageSearchOptions later.
+          if (p.indexOf('/') === -1)
+            return p;
+
+          // Otherwise it's a directory; load it into a Package now. Use
+          // path.resolve to strip trailing slashes, so that packageName doesn't
+          // have a trailing slash.
+          var packageDir = path.resolve(p);
+          var packageName = path.basename(packageDir);
+          context.packageSearchOptions.preloadedPackages[packageName] =
+            packages.loadFromDir(packageName, packageDir);
+          return packageName;
+        });
       }
 
       // Make a temporary app dir (based on the test runner app). This will be

@@ -18,8 +18,11 @@ var fs = require('fs');
 //   pkg.init_from_app_dir(app_dir);
 
 // In general in this file, `packageSearchOptions` means an optional object with
-// keys (all optional) `releaseManifest` (a parsed release manifest) and
-// `appDir`.
+// keys (all optional):
+//    - `releaseManifest` (a parsed release manifest)
+//    - `appDir` (directory which may contain a `packages` subdir)
+//    - `preloadedPackages` (a map from package name to Package, used when
+//       specifying particular dirs to test-packages)
 
 var next_package_id = 1;
 var Package = function () {
@@ -312,13 +315,18 @@ var packages = module.exports = {
     if (name instanceof Package)
       return name;
     if (!(name in loadedPackages)) {
-      var pkg = new Package;
-      if (pkg.initFromLocalPackages(name, packageSearchOptions)) {
-        loadedPackages[name] = pkg;
-      } else if (packageSearchOptions.releaseManifest) {
-        pkg.initFromWarehouse(
-          name, packageSearchOptions.releaseManifest.packages[name]);
-        loadedPackages[name] = pkg;
+      if (packageSearchOptions.preloadedPackages &&
+          name in packageSearchOptions.preloadedPackages) {
+        loadedPackages[name] = packageSearchOptions.preloadedPackages[name];
+      } else {
+        var pkg = new Package;
+        if (pkg.initFromLocalPackages(name, packageSearchOptions)) {
+          loadedPackages[name] = pkg;
+        } else if (packageSearchOptions.releaseManifest) {
+          pkg.initFromWarehouse(
+            name, packageSearchOptions.releaseManifest.packages[name]);
+          loadedPackages[name] = pkg;
+        }
       }
     }
 
