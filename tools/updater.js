@@ -16,26 +16,10 @@ var manifestUrl = testingUpdater
       ? 'https://s3.amazonaws.com/com.meteor.static/test/update/manifest.json'
       : 'https://update.meteor.com/manifest.json';
 
-
 /**
  * Downloads the current manifest file and returns it via a callback (or
  * null on error)
  */
 exports.getManifest = function () {
   return files.getUrl({url: manifestUrl, json: true});
-};
-
-exports.git_sha = function () {
-  var d = files.get_dev_bundle();
-  var f = path.join(d, ".git_version.txt");
-
-  if (fs.existsSync(f)) {
-    try {
-      var contents = fs.readFileSync(f, 'utf8');
-      contents = contents.replace(/\s+$/, "");
-      return contents;
-    } catch (err) { }
-  }
-
-  return null;
 };
