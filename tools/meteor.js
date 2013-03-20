@@ -28,7 +28,7 @@ Fiber(function () {
 
   var usage = function() {
     process.stdout.write(
-      "Usage: meteor [--version] [--help] <command> [<args>]\n" +
+      "Usage: meteor [--version] [--release <release>] [--help] <command> [<args>]\n" +
         "\n" +
         "With no arguments, 'meteor' runs the project in the current\n" +
         "directory in local development mode. You can run it from the root\n" +
@@ -186,104 +186,6 @@ Fiber(function () {
         once: new_argv.once,
         settingsFile: new_argv.settings
       });
-    }
-  });
-
-  Commands.push({
-    name: "test-packages",
-    help: "Test one or more packages",
-    func: function (argv) {
-      // reparse args
-      // This help logic should probably move to run.js eventually
-      var opt = require('optimist')
-            .alias('port', 'p').default('port', 3000)
-            .describe('port', 'Port to listen on. NOTE: Also uses port N+1 and N+2.')
-            .describe('deploy', 'Optionally, specify a domain to deploy to, rather than running locally.')
-            .boolean('once') // See #Once
-            .usage(
-              "Usage: meteor test-packages [--release=x.y.z] [options] [package...]\n" +
-                "\n" +
-                "Runs unit tests for one or more packages. The results are shown in\n" +
-                "a browser dashboard that updates whenever a relevate source file is\n" +
-                "modified.\n" +
-                "\n" +
-                "Packages may be specified by name or by path. If a package argument\n" +
-                "contains a '/', it is loaded from a directory of that name; otherwise,\n" +
-                "the package name is resolved according to the usual package search\n" +
-                "algorithm ('packages' subdirectory of the current app, $PACKAGE_DIRS\n" +
-                "directories, and core packages in that order). You can test any number\n" +
-                "of packages simultaneously. If you don't specify any package names\n" +
-                "then all available packages will be tested.\n" +
-                "\n" +
-                "Open the test dashboard in your browser to run the tests and see the\n" +
-                "results. By default the URL is localhost:3000 but that can be changed\n" +
-                "with --port. Alternatively, you can deploy the tests onto the 'meteor\n" +
-                "deploy' server by using --deploy. This gives you a public URL that you\n" +
-                "can use in conjunction with a service like Browserling or BrowserStack\n" +
-                "to try the tests against many different browser versions.");
-
-
-      var new_argv = opt.argv;
-
-      if (argv.help) {
-        process.stdout.write(opt.help());
-        process.exit(1);
-      }
-
-      var testPackages;
-      if (_.isEmpty(argv._)) {
-        testPackages = _.keys(packages.list(context.packageSearchOptions));
-      } else {
-        context.packageSearchOptions.preloadedPackages = {};
-        testPackages = _.map(argv._, function (p) {
-          // If it's a package name, the bundler will resolve it using
-          // context.packageSearchOptions later.
-          if (p.indexOf('/') === -1)
-            return p;
-
-          // Otherwise it's a directory; load it into a Package now. Use
-          // path.resolve to strip trailing slashes, so that packageName doesn't
-          // have a trailing slash.
-          var packageDir = path.resolve(p);
-          var packageName = path.basename(packageDir);
-          context.packageSearchOptions.preloadedPackages[packageName] =
-            packages.loadFromDir(packageName, packageDir);
-          return packageName;
-        });
-      }
-
-      // Make a temporary app dir (based on the test runner app). This will be
-      // cleaned up on process exit. Using a temporary app dir means that we can
-      // run multiple "test-packages" commands in parallel without them stomping
-      // on each other.
-      //
-      // Note: context.appDir now is DIFFERENT from
-      // bundleOptions.packageSearchOptions.appDir: we are bundling the test
-      // runner app, but finding app packages from the current app (if any).
-      context.appDir = files.mkdtemp('meteor-test-run');
-      files.cp_r(path.join(__dirname, 'test-runner-app'), context.appDir);
-
-      if (new_argv.deploy) {
-        var deployOptions = {
-          site: new_argv.deploy
-        };
-        deploy.deployToServer(context.appDir, {
-          nodeModulesMode: 'skip',
-          testPackages: testPackages,
-          noMinify: true,  // XXX provide a --production
-          releaseStamp: context.releaseVersion,
-          packageSearchOptions: context.packageSearchOptions
-        }, {
-          site: new_argv.deploy
-        });
-      } else {
-        runner.run(context, {
-          port: new_argv.port,
-          noMinify: true,  // XXX provide a --production
-          once: new_argv.once,
-          testPackages: testPackages
-        });
-      }
     }
   });
 
@@ -857,6 +759,104 @@ Fiber(function () {
 
         process.stdout.write("Project reset.\n");
       });
+    }
+  });
+
+  Commands.push({
+    name: "test-packages",
+    help: "Test one or more packages",
+    func: function (argv) {
+      // reparse args
+      // This help logic should probably move to run.js eventually
+      var opt = require('optimist')
+            .alias('port', 'p').default('port', 3000)
+            .describe('port', 'Port to listen on. NOTE: Also uses port N+1 and N+2.')
+            .describe('deploy', 'Optionally, specify a domain to deploy to, rather than running locally.')
+            .boolean('once') // See #Once
+            .usage(
+              "Usage: meteor test-packages [--release=x.y.z] [options] [package...]\n" +
+                "\n" +
+                "Runs unit tests for one or more packages. The results are shown in\n" +
+                "a browser dashboard that updates whenever a relevate source file is\n" +
+                "modified.\n" +
+                "\n" +
+                "Packages may be specified by name or by path. If a package argument\n" +
+                "contains a '/', it is loaded from a directory of that name; otherwise,\n" +
+                "the package name is resolved according to the usual package search\n" +
+                "algorithm ('packages' subdirectory of the current app, $PACKAGE_DIRS\n" +
+                "directories, and core packages in that order). You can test any number\n" +
+                "of packages simultaneously. If you don't specify any package names\n" +
+                "then all available packages will be tested.\n" +
+                "\n" +
+                "Open the test dashboard in your browser to run the tests and see the\n" +
+                "results. By default the URL is localhost:3000 but that can be changed\n" +
+                "with --port. Alternatively, you can deploy the tests onto the 'meteor\n" +
+                "deploy' server by using --deploy. This gives you a public URL that you\n" +
+                "can use in conjunction with a service like Browserling or BrowserStack\n" +
+                "to try the tests against many different browser versions.");
+
+
+      var new_argv = opt.argv;
+
+      if (argv.help) {
+        process.stdout.write(opt.help());
+        process.exit(1);
+      }
+
+      var testPackages;
+      if (_.isEmpty(argv._)) {
+        testPackages = _.keys(packages.list(context.packageSearchOptions));
+      } else {
+        context.packageSearchOptions.preloadedPackages = {};
+        testPackages = _.map(argv._, function (p) {
+          // If it's a package name, the bundler will resolve it using
+          // context.packageSearchOptions later.
+          if (p.indexOf('/') === -1)
+            return p;
+
+          // Otherwise it's a directory; load it into a Package now. Use
+          // path.resolve to strip trailing slashes, so that packageName doesn't
+          // have a trailing slash.
+          var packageDir = path.resolve(p);
+          var packageName = path.basename(packageDir);
+          context.packageSearchOptions.preloadedPackages[packageName] =
+            packages.loadFromDir(packageName, packageDir);
+          return packageName;
+        });
+      }
+
+      // Make a temporary app dir (based on the test runner app). This will be
+      // cleaned up on process exit. Using a temporary app dir means that we can
+      // run multiple "test-packages" commands in parallel without them stomping
+      // on each other.
+      //
+      // Note: context.appDir now is DIFFERENT from
+      // bundleOptions.packageSearchOptions.appDir: we are bundling the test
+      // runner app, but finding app packages from the current app (if any).
+      context.appDir = files.mkdtemp('meteor-test-run');
+      files.cp_r(path.join(__dirname, 'test-runner-app'), context.appDir);
+
+      if (new_argv.deploy) {
+        var deployOptions = {
+          site: new_argv.deploy
+        };
+        deploy.deployToServer(context.appDir, {
+          nodeModulesMode: 'skip',
+          testPackages: testPackages,
+          noMinify: true,  // XXX provide a --production
+          releaseStamp: context.releaseVersion,
+          packageSearchOptions: context.packageSearchOptions
+        }, {
+          site: new_argv.deploy
+        });
+      } else {
+        runner.run(context, {
+          port: new_argv.port,
+          noMinify: true,  // XXX provide a --production
+          once: new_argv.once,
+          testPackages: testPackages
+        });
+      }
     }
   });
 
