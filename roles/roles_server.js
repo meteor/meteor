@@ -12,14 +12,14 @@ if (!Meteor.roles) {
   Meteor.roles._ensureIndex('name', {unique: 1})
 }
 
-Meteor.publish('_roles_own_user_roles', function () {
+
+/**
+ * Always publish logged-in user's roles so client-side
+ * checks can work.
+ */
+Meteor.publish(null, function () {
   var userId = this.userId,
       fields = {roles:1}
-
-  if (!userId) {
-    this.stop()
-    return
-  }
 
   return Meteor.users.find({_id:userId}, {fields: fields})
 })

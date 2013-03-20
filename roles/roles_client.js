@@ -1,7 +1,5 @@
 ;(function () {
 
-Meteor.subscribe('_roles_own_user_roles')
-
 /**
  * Convenience functions for use on client.
  *
