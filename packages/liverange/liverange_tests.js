@@ -1,6 +1,3 @@
-
-(function() {
-
 /******************************************************************************/
 
 var create = function (id, start, end, inner, tag) {
@@ -622,6 +619,3 @@ Tinytest.add("liverange - destroy", function(test) {
   });
   test.equal(buf, [[true, 2], [true, 3], [false, 3], [false, 2]]);
 });
-
-
-})();

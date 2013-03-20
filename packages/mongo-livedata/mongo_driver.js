@@ -1,4 +1,3 @@
-(function(){
 /**
  * Provide a synchronous Collection API using fibers, backed by
  * MongoDB.  This is only for use on the server, and mostly identical
@@ -8,10 +7,10 @@
  * these outside of a fiber they will explode!
  */
 
-var path = __meteor_bootstrap__.require('path');
-var MongoDB = __meteor_bootstrap__.require('mongodb');
-var Fiber = __meteor_bootstrap__.require('fibers');
-var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
+var path = Npm.require('path');
+var MongoDB = Npm.require('mongodb');
+var Fiber = Npm.require('fibers');
+var Future = Npm.require(path.join('fibers', 'future'));
 
 var replaceNames = function (filter, thing) {
   if (typeof thing === "object") {
@@ -907,4 +906,3 @@ _.extend(LiveResultsSet.prototype, {
 _.extend(Meteor, {
   _Mongo: _Mongo
 });
-})();

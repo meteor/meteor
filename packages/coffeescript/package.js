@@ -2,11 +2,12 @@ Package.describe({
   summary: "Javascript dialect with fewer braces and semicolons"
 });
 
-var coffee = require('coffee-script');
-var fs = require('fs');
-var path = require('path');
+Npm.depends({"coffee-script": "1.6.1"});
 
 var coffeescript_handler = function(bundle, source_path, serve_path, where) {
+  var fs = Npm.require('fs');
+  var path = Npm.require('path');
+  var coffee = Npm.require('coffee-script');
   var options = {
     bare: true,
     sourceMap: true,

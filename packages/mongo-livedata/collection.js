@@ -1,8 +1,6 @@
 // manager, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
 
-(function () {
-
 Meteor.Collection = function (name, options) {
   var self = this;
   if (options && options.methods) {
@@ -717,5 +715,3 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
 
   self._collection.remove.call(self._collection, selector);
 };
-
-})();

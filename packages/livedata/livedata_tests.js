@@ -1,5 +1,4 @@
 // XXX should check error codes
-(function () {
 var failure = function (test, code, reason) {
   return function (error, result) {
     test.equal(result, undefined);
@@ -613,4 +612,3 @@ if (Meteor.isClient) {
 // reconnection not resulting in method re-execution
 // reconnection tolerating all kinds of lost messages (including data)
 // [probably lots more]
-})();
