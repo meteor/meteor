@@ -397,7 +397,7 @@ Fiber(function () {
                   context.appDir, context.releaseVersion, appRelease);
       console.log();
 
-      warehouse.printChangelog(appRelease, context.releaseVersion);
+      warehouse.printNotices(appRelease, context.releaseVersion);
     }
   });
 

@@ -10,7 +10,7 @@
 ///     releases/
 ///       latest (relative path symlink to latest x.y.z.release.json)
 ///       x.y.z.release.json
-///       x.y.z.changelog.json
+///       x.y.z.notices.json
 ///     packages/
 ///       foo/
 ///         VERSION/
@@ -190,20 +190,20 @@ var warehouse = module.exports = {
       process.exit(1);
     }
 
-    // try getting the releases's changelog. notable only blessed
+    // try getting the releases's notices. notable only blessed
     // releases have one, so if we can't find it just proceed
     try {
-      var changelog = files.getUrl(
-        PACKAGES_URLBASE + "/releases/" + releaseVersion + ".changelog.json");
+      var notices = files.getUrl(
+        PACKAGES_URLBASE + "/releases/" + releaseVersion + ".notices.json");
 
       // If a file is not on S3 we get served an 'access denied' XML
       // file. This will throw (intentionally) in that case. Real
-      // changelogs are valid JSON.
-      JSON.parse(changelog);
+      // notices are valid JSON.
+      JSON.parse(notices);
 
-      fs.writeFileSync(path.join(releasesDir, releaseVersion + '.changelog.json'), changelog);
+      fs.writeFileSync(path.join(releasesDir, releaseVersion + '.notices.json'), notices);
     } catch (e) {
-      // no changelog, proceed
+      // no notices, proceed
     }
 
     // populate warehouse with tools version for this release
@@ -255,15 +255,15 @@ var warehouse = module.exports = {
     fs.writeFileSync(releaseManifestPath, releaseManifestText);
   },
 
-  printChangelog: function(fromRelease, toRelease) {
-    var changelogPath = path.join(
-      warehouse.getWarehouseDir(), 'releases', toRelease + '.changelog.json');
+  printNotices: function(fromRelease, toRelease) {
+    var noticesPath = path.join(
+      warehouse.getWarehouseDir(), 'releases', toRelease + '.notices.json');
 
-    if (fs.existsSync(path.join(changelogPath))) {
-      var changelog = JSON.parse(fs.readFileSync(changelogPath));
+    if (fs.existsSync(path.join(noticesPath))) {
+      var notices = JSON.parse(fs.readFileSync(noticesPath));
       var foundFromRelease = false;
       var newChanges = []; // acculumate change until we hit 'fromRelease'
-      _.find(changelog, function(change) {
+      _.find(notices, function(change) {
         if (change.release === fromRelease) {
           foundFromRelease = true;
           return true; // exit _.find
@@ -283,7 +283,7 @@ var warehouse = module.exports = {
           console.log();
         });
       } else {
-        // didn't find 'fromRelease' in the changelog. must have been
+        // didn't find 'fromRelease' in the notices. must have been
         // an unofficial release.  don't print anything.
         // XXX probably print the latest only or something
       }
