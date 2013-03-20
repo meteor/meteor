@@ -3,7 +3,6 @@
 set -e
 set -u
 
-BUNDLE_VERSION=0.2.23
 UNAME=$(uname)
 ARCH=$(uname -m)
 
@@ -39,6 +38,7 @@ elif [ "$UNAME" == "Darwin" ] ; then
     # too much because we do need node to be able to load objects like
     # fibers.node.)
     stripBinary() {
+        true
     }
 else
     echo "This OS not yet supported"
@@ -49,6 +49,14 @@ fi
 # save off meteor checkout dir as final target
 cd `dirname $0`/..
 TARGET_DIR=`pwd`
+
+# Read the bundle version from the meteor shell script.
+BUNDLE_VERSION=$(perl -ne 'print $1 if /BUNDLE_VERSION=(\S+)/' meteor)
+if [ -z "$BUNDLE_VERSION" ]; then
+    echo "BUNDLE_VERSION not found"
+    exit 1
+fi
+echo "Building dev bundle $BUNDLE_VERSION"
 
 DIR=`mktemp -d -t generate-dev-bundle-XXXXXXXX`
 trap 'rm -rf "$DIR" >/dev/null 2>&1' 0
@@ -98,7 +106,6 @@ npm install http-proxy@0.8.5
 npm install underscore@1.4.2 # 1.4.4 is a performance regression
 npm install fstream@0.1.21
 npm install tar@0.1.14
-npm install websocket@1.0.8
 npm install kexec@0.1.1
 npm install shell-quote@0.0.1
 
