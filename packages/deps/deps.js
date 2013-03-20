@@ -1,4 +1,3 @@
-(function () {
   Deps = {};
   Deps.active = false;
   Deps.currentComputation = null;
@@ -195,121 +194,118 @@
   _.extend(Deps, {
     flush: function () {
       // Nested flush could plausibly happen if, say, a flush causes
-      // DOM mutation, which causes a "blur" event, which runs an
-      // app event handler that calls Deps.flush.  At the moment
-      // Spark blocks event handlers during DOM mutation anyway,
-      // because the LiveRange tree isn't valid.  And we don't have
-      // any useful notion of a nested flush.
-      //
-      // https://app.asana.com/0/159908330244/385138233856
-      if (inFlush)
-        throw new Error("Can't call Deps.flush while flushing");
+    // DOM mutation, which causes a "blur" event, which runs an
+    // app event handler that calls Deps.flush.  At the moment
+    // Spark blocks event handlers during DOM mutation anyway,
+    // because the LiveRange tree isn't valid.  And we don't have
+    // any useful notion of a nested flush.
+    //
+    // https://app.asana.com/0/159908330244/385138233856
+    if (inFlush)
+      throw new Error("Can't call Deps.flush while flushing");
 
-      if (inCompute)
-        throw new Error("Can't flush inside Deps.autorun");
+    if (inCompute)
+      throw new Error("Can't flush inside Deps.autorun");
 
-      inFlush = true;
-      willFlush = true;
+    inFlush = true;
+    willFlush = true;
 
-      while (pendingComputations.length ||
-             afterFlushCallbacks.length) {
+    while (pendingComputations.length ||
+           afterFlushCallbacks.length) {
 
-        // recompute all pending computations
-        var comps = pendingComputations;
-        pendingComputations = [];
+      // recompute all pending computations
+      var comps = pendingComputations;
+      pendingComputations = [];
 
-        for (var i = 0, comp; comp = comps[i]; i++)
-          comp._recompute();
+      for (var i = 0, comp; comp = comps[i]; i++)
+        comp._recompute();
 
-        if (afterFlushCallbacks.length) {
-          // call one afterFlush callback, which may
-          // invalidate more computations
-          var func = afterFlushCallbacks.shift();
-          try {
-            func();
-          } catch (e) {
-            _debugFunc()("Exception from Deps afterFlush function:",
-                         e.stack);
-          }
+      if (afterFlushCallbacks.length) {
+        // call one afterFlush callback, which may
+        // invalidate more computations
+        var func = afterFlushCallbacks.shift();
+        try {
+          func();
+        } catch (e) {
+          _debugFunc()("Exception from Deps afterFlush function:",
+                       e.stack);
         }
       }
-
-      inFlush = false;
-      willFlush = false;
-    },
-
-    // Run f(). Record its dependencies. Rerun it whenever the
-    // dependencies change.
-    //
-    // Returns a new Computation, which is also passed to f.
-    //
-    // Links the computation to the current computation
-    // so that it is stopped if the current computation is invalidated.
-    autorun: function (f) {
-      if (typeof f !== 'function')
-        throw new Error('Deps.autorun requires a function argument');
-
-      constructingComputation = true;
-      var c = new Deps.Computation(f, Deps.currentComputation);
-
-      if (Deps.active)
-        Deps.onInvalidate(function () {
-          c.stop();
-        });
-
-      return c;
-    },
-
-    // Run `f` with no current computation, returning the return value
-    // of `f`.  Used to turn off reactivity for the duration of `f`,
-    // so that reactive data sources accessed by `f` will not result in any
-    // computations being invalidated.
-    nonreactive: function (f) {
-      var previous = Deps.currentComputation;
-      setCurrentComputation(null);
-      try {
-        return f();
-      } finally {
-        setCurrentComputation(previous);
-      }
-    },
-
-    // Wrap `f` so that it is always run nonreactively.
-    _makeNonreactive: function (f) {
-      if (f.$isNonreactive) // avoid multiple layers of wrapping.
-        return f;
-      var nonreactiveVersion = function (/*arguments*/) {
-        var self = this;
-        var args = _.toArray(arguments);
-        var ret;
-        Deps.nonreactive(function () {
-          ret = f.apply(self, args);
-        });
-        return ret;
-      };
-      nonreactiveVersion.$isNonreactive = true;
-      return nonreactiveVersion;
-    },
-
-    onInvalidate: function (f) {
-      if (! Deps.active)
-        throw new Error("Deps.onInvalidate requires a currentComputation");
-
-      Deps.currentComputation.onInvalidate(f);
-    },
-
-    depend: function (v) {
-      if (! Deps.active)
-        return false;
-
-      return v.addDependent();
-    },
-
-    afterFlush: function (f) {
-      afterFlushCallbacks.push(f);
-      requireFlush();
     }
 
-});
+    inFlush = false;
+    willFlush = false;
+  },
 
-})();
+  // Run f(). Record its dependencies. Rerun it whenever the
+  // dependencies change.
+  //
+  // Returns a new Computation, which is also passed to f.
+  //
+  // Links the computation to the current computation
+  // so that it is stopped if the current computation is invalidated.
+  autorun: function (f) {
+    if (typeof f !== 'function')
+      throw new Error('Deps.autorun requires a function argument');
+
+    constructingComputation = true;
+    var c = new Deps.Computation(f, Deps.currentComputation);
+
+    if (Deps.active)
+      Deps.onInvalidate(function () {
+        c.stop();
+      });
+
+    return c;
+  },
+
+  // Run `f` with no current computation, returning the return value
+  // of `f`.  Used to turn off reactivity for the duration of `f`,
+  // so that reactive data sources accessed by `f` will not result in any
+  // computations being invalidated.
+  nonreactive: function (f) {
+    var previous = Deps.currentComputation;
+    setCurrentComputation(null);
+    try {
+      return f();
+    } finally {
+      setCurrentComputation(previous);
+    }
+  },
+
+  // Wrap `f` so that it is always run nonreactively.
+  _makeNonreactive: function (f) {
+    if (f.$isNonreactive) // avoid multiple layers of wrapping.
+      return f;
+    var nonreactiveVersion = function (/*arguments*/) {
+      var self = this;
+      var args = _.toArray(arguments);
+      var ret;
+      Deps.nonreactive(function () {
+        ret = f.apply(self, args);
+      });
+      return ret;
+    };
+    nonreactiveVersion.$isNonreactive = true;
+    return nonreactiveVersion;
+  },
+
+  onInvalidate: function (f) {
+    if (! Deps.active)
+      throw new Error("Deps.onInvalidate requires a currentComputation");
+
+    Deps.currentComputation.onInvalidate(f);
+  },
+
+  depend: function (v) {
+    if (! Deps.active)
+      return false;
+
+    return v.addDependent();
+  },
+
+  afterFlush: function (f) {
+    afterFlushCallbacks.push(f);
+    requireFlush();
+  }
+});

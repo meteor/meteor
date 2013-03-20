@@ -11,7 +11,7 @@
   </div>
   <div id="main">
     <div id="top"></div>
-    <h1 class="main-headline">Meteor 0.5.9</h1>
+    {{> headline }}
     {{> introduction }}
     {{> concepts }}
     {{> api }}
@@ -35,6 +35,10 @@
 </div>
 </template>
 
+<!-- This only is displayed on narrow displays (eg phone) -->
+<template name="headline">
+  <h1 class="main-headline">Meteor {{release}}</h1>
+</template>
 
 
 <template name="dtdd_helper">

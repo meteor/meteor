@@ -1,5 +1,3 @@
-(function () {
-
 if (Meteor.isServer) {
   // Set up allow/deny rules for test collections
 
@@ -749,5 +747,3 @@ if (Meteor.isServer) {
   });
 }
 
-
-}) ();

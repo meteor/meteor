@@ -1,4 +1,3 @@
-(function () {
 Meteor._SUPPORTED_DDP_VERSIONS = [ 'pre1' ];
 
 Meteor._MethodInvocation = function (options) {
@@ -142,4 +141,3 @@ Meteor.Error = function (error, reason, details) {
 };
 
 Meteor.Error.prototype = new Error;
-})();

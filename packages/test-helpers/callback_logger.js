@@ -1,5 +1,3 @@
-(function () {
-
 // This file allows you to write tests that expect certain callbacks to be
 // called in certain orders, or optionally in groups where the order does not
 // matter.  It can be set up in either a synchronous manner, so that each
@@ -8,6 +6,7 @@
 // timeout for the callback.  Because we're using Node Fibers to yield & start
 // ourselves, the asynchronous version is only available on the server.
 
+var Fiber = Meteor.isServer ? Npm.require('fibers') : null;
 
 var TIMEOUT = 1000;
 
@@ -131,5 +130,3 @@ CallbackLogger.prototype.expectNoResult = function () {
   }
   self._expectNoResultImpl();
 };
-
-})();

@@ -34,13 +34,9 @@ Handlebars.to_json_ast = function (code) {
   // run-time environment; we have '_' but not 'require'.
   // This is all very hacky.
   var req = (typeof require === 'undefined' ?
-             __meteor_bootstrap__.require : require);
+             Npm.require : require);
   var path = req('path');
-
-  var _ = global._;
-  if (! _)
-    _ = req(path.join('..', '..', 'packages', 'underscore', 'underscore.js')); // XXX super lame
-
+  var _ = req("underscore");
   var ast = req("handlebars").parse(code);
 
   // Recreate Handlebars.Exception to properly report error messages
