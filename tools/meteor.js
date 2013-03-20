@@ -180,13 +180,12 @@ Fiber(function () {
       }
 
       requireDirInApp("run");
-      var bundleOpts = {
+      runner.run(context, {
+        port: new_argv.port,
         noMinify: !new_argv.production,
-        nodeModulesMode: 'symlink',
-        releaseStamp: context.releaseVersion,
-        packageSearchOptions: context.packageSearchOptions
-      };
-      runner.run(context.appDir, bundleOpts, new_argv.port, new_argv.once, new_argv.settings);
+        once: new_argv.once,
+        settingsFile: new_argv.settings
+      });
     }
   });
 
@@ -232,14 +231,6 @@ Fiber(function () {
         testPackages = _.keys(packages.list(context.packageSearchOptions));
       }
 
-      var bundleOptions = {
-        nodeModulesMode: new_argv.deploy ? 'skip' : 'symlink',
-        testPackages: testPackages,
-        releaseStamp: context.releaseVersion,
-        noMinify: true,
-        packageSearchOptions: context.packageSearchOptions
-      };
-
       // Note: runnerAppDir is not the same as
       // bundleOptions.packageSearchOptions.appDir: we are bundling the test
       // runner app, but finding app packages from the current app (if any).
@@ -249,9 +240,23 @@ Fiber(function () {
         var deployOptions = {
           site: new_argv.deploy
         };
-        deploy.deployToServer(runnerAppDir, bundleOptions, deployOptions);
+        deploy.deployToServer(runnerAppDir, {
+          nodeModulesMode: 'skip',
+          testPackages: testPackages,
+          noMinify: true,  // XXX provide a --production
+          releaseStamp: context.releaseVersion,
+          packageSearchOptions: context.packageSearchOptions
+        }, {
+          site: new_argv.deploy
+        });
       } else {
-        runner.run(runnerAppDir, bundleOptions, new_argv.port, new_argv.once);
+        context.appDir = runnerAppDir;
+        runner.run(context, {
+          port: new_argv.port,
+          noMinify: true,  // XXX provide a --production
+          once: new_argv.once,
+          testPackages: testPackages
+        });
       }
     }
   });

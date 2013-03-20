@@ -516,7 +516,7 @@ _.extend(DependencyWatcher.prototype, {
 ////////// Upgrade check //////////
 
 // XXX this should move to main meteor command-line, probably?
-var start_update_checks = function (initialRelease) {
+var start_update_checks = function (context) {
   var update_check = inFiber(function () { // 'inFiber' to ensure we don't delay launching the app
     var manifest = null;
     try {
@@ -552,11 +552,11 @@ var start_update_checks = function (initialRelease) {
     // We don't need to do a global update (or we're not online), but do we
     // need to update this app?
     // XXX this probably shouldn't happen if you pass --release
-    if (localLatestRelease !== initialRelease) {
+    if (localLatestRelease !== context.releaseVersion) {
       console.log("////////////////////////////////////////");
       console.log("////////////////////////////////////////");
       console.log();
-      console.log("Your app is running Meteor release " + initialRelease + ", but you have");
+      console.log("Your app is running Meteor release " + context.releaseVersion + ", but you have");
       console.log("release " + localLatestRelease + " installed.");
       console.log("To update your app, run 'meteor update' from within its directory.");
       console.log();
@@ -597,11 +597,14 @@ exports.getSettings = function (filename) {
 // This function never returns and will call process.exit() if it
 // can't continue. If you change this, remember to call
 // watcher.destroy() as appropriate.
-exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
-  var outer_port = port || 3000;
+//
+// context is as created in meteor.js.
+// options include: port, noMinify, once, settingsFile, testPackages
+exports.run = function (context, options) {
+  var outer_port = options.port || 3000;
   var inner_port = outer_port + 1;
   var mongo_port = outer_port + 2;
-  var bundle_path = path.join(app_dir, '.meteor', 'local', 'build');
+  var bundle_path = path.join(context.appDir, '.meteor', 'local', 'build');
   // Allow override and use of external mongo. Matches code in launch_mongo.
   var mongo_url = process.env.MONGO_URL ||
         ("mongodb://127.0.0.1:" + mongo_port + "/meteor");
@@ -615,9 +618,17 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
   var server_handle;
   var watcher;
 
-  if (once) {
+  if (options.once) {
     Status.shouldRestart = false;
   }
+
+  var bundleOpts = {
+    noMinify: options.noMinify,
+    nodeModulesMode: 'symlink',
+    testPackges: options.testPackages,
+    releaseStamp: context.releaseVersion,
+    packageSearchOptions: context.packageSearchOptions
+  };
 
   var start_watching = function () {
     if (!Status.shouldRestart)
@@ -627,12 +638,12 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
         watcher.destroy();
 
       var relativeFiles;
-      if (settingsFile) {
-        relativeFiles = [settingsFile];
+      if (options.settingsFile) {
+        relativeFiles = [options.settingsFile];
       }
 
-      watcher = new DependencyWatcher(deps_info, app_dir, relativeFiles,
-                                      bundle_opts.packageSearchOptions,
+      watcher = new DependencyWatcher(deps_info, context.appDir, relativeFiles,
+                                      context.packageSearchOptions,
                                       function () {
         if (Status.crashing)
           log_to_clients({'system': "=> Modified -- restarting."});
@@ -652,7 +663,7 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
 
     server_log = [];
 
-    var errors = bundler.bundle(app_dir, bundle_path, bundle_opts);
+    var errors = bundler.bundle(context.appDir, bundle_path, bundleOpts);
 
     var deps_raw;
     try {
@@ -740,7 +751,7 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
         }
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
-      settingsFile: settingsFile
+      settingsFile: options.settingsFile
     });
   });
 
@@ -749,7 +760,7 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
   var mongo_startup_print_timer;
   var launch = function () {
     Status.mongoHandle = mongo_runner.launch_mongo(
-      app_dir,
+      context.appDir,
       mongo_port,
       function () { // On Mongo startup complete
         // don't print mongo startup is slow warning.
@@ -791,13 +802,13 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
   };
 
   start_proxy(outer_port, inner_port, function () {
-    process.stdout.write("[[[[[ " + files.pretty_path(app_dir) + " ]]]]]\n\n");
+    process.stdout.write("[[[[[ " + files.pretty_path(context.appDir) + " ]]]]]\n\n");
 
     mongo_startup_print_timer = setTimeout(function () {
       process.stdout.write("Initializing mongo database... this may take a moment.\n");
     }, 3000);
 
-    start_update_checks(bundle_opts.release);
+    start_update_checks(context);
     launch();
   });
 };
