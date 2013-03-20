@@ -13,7 +13,7 @@ var emptyAppDir = path.join(__dirname, 'empty-app');
 console.log("nodeModules: 'skip'");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', release: 'none'});
+  var errors = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none'});
   assert.strictEqual(errors, undefined, errors && errors[0]);
 
   // sanity check -- main.js has expected contents.
@@ -35,7 +35,7 @@ assert.doesNotThrow(function () {
 console.log("nodeModules: 'skip', noMinify");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', noMinify: true, release: 'none'});
+  var errors = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', noMinify: true, releaseStamp: 'none'});
   assert.strictEqual(errors, undefined);
 
   // sanity check -- main.js has expected contents.
@@ -54,7 +54,7 @@ console.log("nodeModules: 'skip', noMinify, testPackages: ['meteor']");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
   var errors = bundler.bundle(
-    emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', noMinify: true, testPackages: ['meteor'], release: 'none'});
+    emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', noMinify: true, testPackages: ['meteor'], releaseStamp: 'none'});
   assert.strictEqual(errors, undefined);
 
   // sanity check -- main.js has expected contents.
@@ -68,7 +68,7 @@ assert.doesNotThrow(function () {
 console.log("nodeModules: 'copy'");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'copy', release: 'none'});
+  var errors = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'copy', releaseStamp: 'none'});
   assert.strictEqual(errors, undefined);
 
   // sanity check -- main.js has expected contents.
@@ -83,7 +83,7 @@ assert.doesNotThrow(function () {
 console.log("nodeModules: 'symlink'");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'symlink', release: 'none'});
+  var errors = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'symlink', releaseStamp: 'none'});
   assert.strictEqual(errors, undefined);
 
   // sanity check -- main.js has expected contents.

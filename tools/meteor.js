@@ -178,7 +178,7 @@ Fiber(function () {
       var bundleOpts = {
         noMinify: !new_argv.production,
         nodeModulesMode: 'symlink',
-        release: context.releaseVersion,
+        releaseStamp: context.releaseVersion,
         packageSearchOptions: context.packageSearchOptions
       };
       runner.run(context.appDir, bundleOpts, new_argv.port, new_argv.once, new_argv.settings);
@@ -230,7 +230,7 @@ Fiber(function () {
       var bundleOptions = {
         nodeModulesMode: new_argv.deploy ? 'skip' : 'symlink',
         testPackages: testPackages,
-        release: context.releaseVersion,
+        releaseStamp: context.releaseVersion,
         noMinify: true,
         packageSearchOptions: context.packageSearchOptions
       };
@@ -607,7 +607,7 @@ Fiber(function () {
       var bundler = require(path.join(__dirname, 'bundler.js'));
       var errors = bundler.bundle(context.appDir, bundle_path, {
         nodeModulesMode: 'copy',
-        release: context.releaseVersion,
+        releaseStamp: context.releaseVersion,
         packageSearchOptions: context.packageSearchOptions
       });
       if (errors) {
@@ -764,7 +764,7 @@ Fiber(function () {
           bundleOptions: {
             nodeModulesMode: 'skip',
             noMinify: !!new_argv.debug,
-            release: context.releaseVersion,
+            releaseStamp: context.releaseVersion,
             packageSearchOptions: context.packageSearchOptions
           }
         });

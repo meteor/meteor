@@ -219,7 +219,7 @@ var Bundle = function () {
   self.tests_included = {};
 
   // meteor release stamp
-  self.release = null;
+  self.releaseStamp = null;
 
   // see packages.js
   self.packageSearchOptions = {};
@@ -740,8 +740,8 @@ _.extend(Bundle.prototype, {
       }
     }
 
-    if (self.release && self.release !== 'none')
-      app_json.release = self.release;
+    if (self.releaseStamp && self.releaseStamp !== 'none')
+      app_json.release = self.releaseStamp;
 
     fs.writeFileSync(path.join(build_path, 'app.json'),
                      JSON.stringify(app_json, null, 2));
@@ -789,9 +789,9 @@ _.extend(Bundle.prototype, {
  * - testPackages : array of package objects or package names whose
  *   tests should be included in this bundle
  *
- * - release : The Meteor release version to use. This is *ONLY*
- *             used as a stamp (eg Meteor.release). The package
- *             search path is configured with packageSearchOptions.
+ * - releaseStamp : The Meteor release version to use. This is *ONLY*
+ *                  used as a stamp (eg Meteor.release). The package
+ *                  search path is configured with packageSearchOptions.
  *
  * - packageSearchOptions: see packages.js. NOTE: if there's an appDir here,
  *   it's used for package searching but it is NOT the appDir that we bundle!
@@ -803,15 +803,15 @@ exports.bundle = function (app_dir, output_path, options) {
     throw new Error("Must pass options");
   if (!options.nodeModulesMode)
     throw new Error("Must pass options.nodeModulesMode");
-  if (!options.release)
-    throw new Error("Must pass options.release. Pass 'none' for local packages only");
+  if (!options.releaseStamp)
+    throw new Error("Must pass options.releaseStamp. Pass 'none' for local packages only");
 
   try {
     // Create a bundle, add the project
     packages.flush();
 
     var bundle = new Bundle;
-    bundle.release = options.release;
+    bundle.releaseStamp = options.releaseStamp;
     bundle.packageSearchOptions = options.packageSearchOptions || {};
 
     // our release manifest is set, let's now load the app
