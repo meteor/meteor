@@ -625,7 +625,7 @@ exports.run = function (context, options) {
   var bundleOpts = {
     noMinify: options.noMinify,
     nodeModulesMode: 'symlink',
-    testPackges: options.testPackages,
+    testPackages: options.testPackages,
     releaseStamp: context.releaseVersion,
     packageSearchOptions: context.packageSearchOptions
   };
