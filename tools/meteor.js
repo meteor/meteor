@@ -793,6 +793,8 @@ Fiber(function () {
             .alias('port', 'p').default('port', 3000)
             .describe('port', 'Port to listen on. NOTE: Also uses port N+1 and N+2.')
             .describe('deploy', 'Optionally, specify a domain to deploy to, rather than running locally.')
+            .boolean('production')
+            .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
             .boolean('once') // See #Once
             .describe('settings',  'Set optional data for Meteor.settings on the server')
             .usage(
@@ -868,7 +870,7 @@ Fiber(function () {
         deploy.deployToServer(context.appDir, {
           nodeModulesMode: 'skip',
           testPackages: testPackages,
-          noMinify: true,  // XXX provide a --production
+          noMinify: !new_argv.production,
           releaseStamp: context.releaseVersion,
           packageSearchOptions: context.packageSearchOptions
         }, {
@@ -878,7 +880,7 @@ Fiber(function () {
       } else {
         runner.run(context, {
           port: new_argv.port,
-          noMinify: true,  // XXX provide a --production
+          noMinify: !new_argv.production,
           once: new_argv.once,
           testPackages: testPackages,
           settingsFile: new_argv.settings
