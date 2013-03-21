@@ -53,7 +53,7 @@ var _assertCorrectPackageNpmDir = function(deps) {
     _.each(['version', 'from', 'resolved', 'dependencies'], function(key) {
       if (expected[key])
         val[key] = expected[key];
-      else if (actualMeteorNpmShrinkwrapDependencies[name][key])
+      else if (actualMeteorNpmShrinkwrapDependencies[name] && actualMeteorNpmShrinkwrapDependencies[name][key])
         val[key] = actualMeteorNpmShrinkwrapDependencies[name][key];
     });
 
@@ -231,6 +231,22 @@ assert.doesNotThrow(function () {
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0', mime: '1.2.7'});
 });
 
+
+console.log("app that uses gcd - install gzippo via tarball");
+assert.doesNotThrow(function () {
+  var deps = {gzippo: 'https://github.com/meteor/gzippo/tarball/1e4b955439abc643879ae264b28a761521818f3b'};
+  updateTestPackage(deps);
+  var tmpOutputDir = tmpDir();
+  var errors = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none'});
+  assert.strictEqual(errors, undefined, errors && errors[0]);
+  _assertCorrectPackageNpmDir(deps);
+  _assertCorrectBundleNpmContents(tmpOutputDir, deps);
+  // Check that a string introduced by our fork is in the source.
+  assert(/clientMaxAge = 604800000/.test(
+    fs.readFileSync(
+      path.join(testPackageDir, ".npm", "node_modules", "gzippo", "lib", "staticGzip.js"), "utf8")));
+});
+
 console.log("bundle multiple apps in parallel using a meteor package dependent on an npm package");
 // this fails if we don't manage the package .npm directory correctly
 // against parallel bundling.  this happens if you are running more
@@ -276,22 +292,6 @@ assert.doesNotThrow(function () {
   });
 
   Future.wait(futures);
-});
-
-
-console.log("app that uses gcd - install gzippo via tarball");
-assert.doesNotThrow(function () {
-  var deps = {gzippo: 'https://github.com/meteor/gzippo/tarball/1e4b955439abc643879ae264b28a761521818f3b'};
-  updateTestPackage(deps);
-  var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none'});
-  assert.strictEqual(errors, undefined, errors && errors[0]);
-  _assertCorrectPackageNpmDir(deps);
-  _assertCorrectBundleNpmContents(tmpOutputDir, deps);
-  // Check that a string introduced by our fork is in the source.
-  assert(/clientMaxAge = 604800000/.test(
-    fs.readFileSync(
-      path.join(testPackageDir, ".npm", "node_modules", "gzippo", "lib", "staticGzip.js"), "utf8")));
 });
 
 

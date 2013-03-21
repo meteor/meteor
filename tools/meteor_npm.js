@@ -70,7 +70,7 @@ var meteorNpm = module.exports = {
     try {
       if (fs.existsSync(packageNpmDir)) {
         // we already nave a .npm directory. update it appropriately with some ceremony involving:
-        // `npm install`, `npm install name@version`, `npm prune`, `npm shrinkwrap`
+        // `npm install`, `npm install name@version`, `npm shrinkwrap`
         self._updateExistingNpmDirectory(
           packageName, newPackageNpmDir, packageNpmDir, npmDependencies, quiet);
       } else {
@@ -98,42 +98,59 @@ var meteorNpm = module.exports = {
 
     var installedDependencies = self._installedDependencies(packageNpmDir);
 
-    // don't do npm work unnecessarily
-    if (!_.isEqual(installedDependencies, npmDependencies)) {
-      if (!quiet)
-        self._logUpdateDependencies(packageName, npmDependencies);
+    // If we already have the right things installed, life is good.
+    // XXX avoid creating and deleting newPackageNpmDir in this case?
+    if (_.isEqual(installedDependencies, npmDependencies))
+      return;
 
-      // copy over npm-shrinkwrap.json
+    if (!quiet)
+      self._logUpdateDependencies(packageName, npmDependencies);
+
+    var shrinkwrappedDependenciesTree =
+          self._shrinkwrappedDependenciesTree(packageNpmDir);
+    var shrinkwrappedDependencies = self._treeToDependencies(
+      shrinkwrappedDependenciesTree);
+    var preservedShrinkwrap = {dependencies: {}};
+    _.each(shrinkwrappedDependencies, function (version, name) {
+      if (npmDependencies[name] === version) {
+        // We're not changing this dependency, so copy over its shrinkwrap.
+        preservedShrinkwrap.dependencies[name] =
+          shrinkwrappedDependenciesTree.dependencies[name];
+      }
+    });
+
+    if (!_.isEmpty(preservedShrinkwrap.dependencies)) {
+      // There are some unchanged packages here. Install from shrinkwrap.
       fs.writeFileSync(path.join(newPackageNpmDir, 'npm-shrinkwrap.json'),
-                       fs.readFileSync(path.join(packageNpmDir, 'npm-shrinkwrap.json')));
+                       JSON.stringify(preservedShrinkwrap, null, /*legible*/2));
 
-      // construct package.json
-      self._constructPackageJson(packageName, newPackageNpmDir, npmDependencies);
+      // construct a matching package.json to make `npm install` happy
+      self._constructPackageJson(packageName, newPackageNpmDir,
+                                 self._treeToDependencies(preservedShrinkwrap));
 
       // `npm install`
       self._installFromShrinkwrap(newPackageNpmDir);
 
-      // remove ununsed packages
-      self._prune(newPackageNpmDir);
-
-      // delete package.json
+      // delete package.json and npm-shrinkwrap.json
       fs.unlinkSync(path.join(newPackageNpmDir, 'package.json'));
-
-      // we've just installed the shrinkwrapped packages. get the new
-      // list of installed dependencies
-      var newInstalledDependencies = self._installedDependencies(newPackageNpmDir);
-
-      // `npm install name@version` for modules that need updating
-      _.each(npmDependencies, function(version, name) {
-        if (newInstalledDependencies[name] !== version) {
-          self._installNpmModule(name, version, newPackageNpmDir);
-        }
-      });
-
-      self._shrinkwrap(newPackageNpmDir);
-      self._createReadme(newPackageNpmDir);
-      self._renameAlmostAtomically(newPackageNpmDir, packageNpmDir);
+      fs.unlinkSync(path.join(newPackageNpmDir, 'npm-shrinkwrap.json'));
     }
+
+    // we may have just installed the shrinkwrapped packages. but let's not
+    // trust that it actually worked: let's do the rest based on what we
+    // actually have installed now.
+    var newInstalledDependencies = self._installedDependencies(newPackageNpmDir);
+
+    // `npm install name@version` for modules that need updating
+    _.each(npmDependencies, function(version, name) {
+      if (newInstalledDependencies[name] !== version) {
+        self._installNpmModule(name, version, newPackageNpmDir);
+      }
+    });
+
+    self._shrinkwrap(newPackageNpmDir);
+    self._createReadme(newPackageNpmDir);
+    self._renameAlmostAtomically(newPackageNpmDir, packageNpmDir);
   },
 
   _createFreshNpmDirectory: function(
@@ -220,7 +237,8 @@ var meteorNpm = module.exports = {
       files.rm_recursive(oldPackageNpmDir);
   },
 
-  // Runs `npm ls --json`.
+  // Gets a JSON object from `npm ls --json` (_installedDependenciesTree) or
+  // `npm-shrinkwrap.json` (_shrinkwrappedDependenciesTree).
   //
   // @returns {Object} eg {
   //   "name": "packages",
@@ -242,20 +260,43 @@ var meteorNpm = module.exports = {
                          ["ls", "--json"],
                          {cwd: dir}).stdout);
   },
+  _shrinkwrappedDependenciesTree: function(dir) {
+    var shrinkwrapFile = fs.readFileSync(path.join(dir, 'npm-shrinkwrap.json'));
+    return JSON.parse(shrinkwrapFile);
+  },
 
-  // map the structure returned from `npm ls` into the structure of
-  // npmDependencies (e.g. {gcd: '0.0.0'}), so that they can be
+  // Maps a "dependency object" (a thing you find in `npm ls --json` or
+  // npm-shrinkwrap.json with keys like "version" and "from") to the canonical
+  // version that matches what users put in the `Npm.depends` clause.  ie,
+  // either the version or the tarball URL.
+  _canonicalVersion: function (depObj) {
+    var self = this;
+    if (self._isGitHubTarball(depObj.from))
+      return depObj.from;
+    else
+      return depObj.version;
+  },
+
+  // map the structure returned from `npm ls` or shrinkwrap.json into the
+  // structure of npmDependencies (e.g. {gcd: '0.0.0'}), so that they can be
   // diffed. This only returns top-level dependencies.
-  _installedDependencies: function(dir) {
+  _treeToDependencies: function (tree) {
     var self = this;
     return _.object(
       _.map(
-        self._installedDependenciesTree(dir).dependencies, function(properties, name) {
-          if (self._isGitHubTarball(properties.from))
-            return [name, properties.from];
-          else
-            return [name, properties.version];
+        tree.dependencies, function(properties, name) {
+          return [name, self._canonicalVersion(properties)];
         }));
+  },
+
+  _installedDependencies: function(dir) {
+    var self = this;
+    return self._treeToDependencies(self._installedDependenciesTree(dir));
+  },
+
+  _shrinkwrappedDependencies: function (dir) {
+    var self = this;
+    return self._treeToDependencies(self._shrinkwrappedDependenciesTree(dir));
   },
 
   _installNpmModule: function(name, version, dir) {
@@ -293,13 +334,6 @@ var meteorNpm = module.exports = {
       throw new Error(
         "Can't install npm dependencies. Check your internet connection and try again.");
     }
-  },
-
-  // `npm prune`
-  _prune: function(dir) {
-    this._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
-                       ["prune"],
-                       {cwd: dir});
   },
 
   // `npm shrinkwrap`
