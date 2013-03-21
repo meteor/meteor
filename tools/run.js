@@ -337,9 +337,13 @@ var DependencyWatcher = function (
   // Any file under a bulk_dir is interesting. (bulk_dirs may also
   // contain individual files)
   self.bulk_dirs = [];
-  _.each(deps.core || [], function (filepath) {
-    self.bulk_dirs.push(path.join(files.getCurrentToolsDir(), filepath));
-  });
+  // If we're running from a git checkout, we reload when "core" files like
+  // server.js change.
+  if (!files.usesWarehouse()) {
+    _.each(deps.core || [], function (filepath) {
+      self.bulk_dirs.push(path.join(files.getCurrentToolsDir(), filepath));
+    });
+  }
   _.each(deps.app || [], function (filepath) {
     self.bulk_dirs.push(path.join(self.app_dir, filepath));
   });
