@@ -15,6 +15,11 @@ Meteor.autosubscribe = Deps.autorun;
 Meteor.flush = Deps.flush;
 Meteor.autorun = Deps.autorun;
 
+// Deps API that briefly existed in 0.5.9
+Deps.depend = function (d) {
+  return d.depend();
+};
+
 // Instead of the "random" package with Random.id(), we used to have this
 // Meteor.uuid() implementing the RFC 4122 v4 UUID.
 Meteor.uuid = function () {
