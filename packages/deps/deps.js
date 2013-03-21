@@ -3,15 +3,15 @@ Deps.active = false;
 Deps.currentComputation = null;
 
 var setCurrentComputation = function (c) {
-    Deps.currentComputation = c;
-    Deps.active = !! c;
+  Deps.currentComputation = c;
+  Deps.active = !! c;
 };
 
 var _debugFunc = function () {
-    // lazy evaluation because `Meteor` does not exist right away
-    return (typeof Meteor !== "undefined" ? Meteor._debug :
-            ((typeof console !== "undefined") && console.log ? console.log :
-             function () {}));
+  // lazy evaluation because `Meteor` does not exist right away
+  return (typeof Meteor !== "undefined" ? Meteor._debug :
+          ((typeof console !== "undefined") && console.log ? console.log :
+           function () {}));
 };
 
 var nextId = 1;
@@ -30,10 +30,10 @@ var inCompute = false;
 var afterFlushCallbacks = [];
 
 var requireFlush = function () {
-    if (! willFlush) {
-      setTimeout(Deps.flush, 0);
-      willFlush = true;
-    }
+  if (! willFlush) {
+    setTimeout(Deps.flush, 0);
+    willFlush = true;
+  }
 };
 
 // Deps.Computation constructor is visible but private
@@ -41,158 +41,158 @@ var requireFlush = function () {
 var constructingComputation = false;
 
 Deps.Computation = function (f, parent) {
-    if (! constructingComputation)
-      throw new Error(
-        "Deps.Computation constructor is private; use Deps.autorun");
-    constructingComputation = false;
+  if (! constructingComputation)
+    throw new Error(
+      "Deps.Computation constructor is private; use Deps.autorun");
+  constructingComputation = false;
 
-    var self = this;
-    self.stopped = false;
-    self.invalidated = false;
-    self.firstRun = true;
+  var self = this;
+  self.stopped = false;
+  self.invalidated = false;
+  self.firstRun = true;
 
-    self._id = nextId++;
-    self._onInvalidateCallbacks = [];
-    // the plan is at some point to use the parent relation
-    // to constrain the order that computations are processed
-    self._parent = parent;
-    self._func = f;
-    self._recomputing = false;
+  self._id = nextId++;
+  self._onInvalidateCallbacks = [];
+  // the plan is at some point to use the parent relation
+  // to constrain the order that computations are processed
+  self._parent = parent;
+  self._func = f;
+  self._recomputing = false;
 
-    try {
-      self._compute();
-    } finally {
-      self.firstRun = false;
-    }
+  try {
+    self._compute();
+  } finally {
+    self.firstRun = false;
+  }
 };
 
 _.extend(Deps.Computation.prototype, {
 
-    onInvalidate: function (f) {
-      var self = this;
+  onInvalidate: function (f) {
+    var self = this;
 
-      if (typeof f !== 'function')
-        throw new Error("onInvalidate requires a function");
+    if (typeof f !== 'function')
+      throw new Error("onInvalidate requires a function");
 
-      var g = function () {
-        Deps.nonreactive(function () {
-          f(self);
-        });
-      };
+    var g = function () {
+      Deps.nonreactive(function () {
+        f(self);
+      });
+    };
 
-      if (self.invalidated)
-        g();
-      else
-        self._onInvalidateCallbacks.push(g);
-    },
+    if (self.invalidated)
+      g();
+    else
+      self._onInvalidateCallbacks.push(g);
+  },
 
-    invalidate: function () {
-      var self = this;
-      if (! self.invalidated) {
-        // if we're currently in _recompute(), don't enqueue
-        // ourselves, since we'll rerun immediately anyway.
-        if (! self._recomputing && ! self.stopped) {
-          requireFlush();
-          pendingComputations.push(this);
-        }
-
-        self.invalidated = true;
-
-        // callbacks can't add callbacks, because
-        // self.invalidated === true.
-        for(var i = 0, f; f = self._onInvalidateCallbacks[i]; i++)
-          f(); // already bound with self as argument
-        self._onInvalidateCallbacks = [];
+  invalidate: function () {
+    var self = this;
+    if (! self.invalidated) {
+      // if we're currently in _recompute(), don't enqueue
+      // ourselves, since we'll rerun immediately anyway.
+      if (! self._recomputing && ! self.stopped) {
+        requireFlush();
+        pendingComputations.push(this);
       }
-    },
 
-    stop: function () {
-      if (! this.stopped) {
-        this.stopped = true;
-        this.invalidate();
-      }
-    },
+      self.invalidated = true;
 
-    _compute: function () {
-      var self = this;
-      self.invalidated = false;
-
-      var previous = Deps.currentComputation;
-      setCurrentComputation(self);
-      var previousInCompute = inCompute;
-      inCompute = true;
-      try {
-        self._func(self);
-      } finally {
-        setCurrentComputation(previous);
-        inCompute = false;
-      }
-    },
-
-    _recompute: function () {
-      var self = this;
-
-      self._recomputing = true;
-      while (self.invalidated && ! self.stopped) {
-        try {
-          self._compute();
-        } catch (e) {
-          _debugFunc()("Exception from Deps recompute:", e.stack || e.message);
-        }
-        // If _compute() invalidated us, we run again immediately.
-        // A computation that invalidates itself indefinitely is an
-        // infinite loop, of course.
-        //
-        // We could put an iteration counter here and catch run-away
-        // loops.
-      }
-      self._recomputing = false;
+      // callbacks can't add callbacks, because
+      // self.invalidated === true.
+      for(var i = 0, f; f = self._onInvalidateCallbacks[i]; i++)
+        f(); // already bound with self as argument
+      self._onInvalidateCallbacks = [];
     }
+  },
+
+  stop: function () {
+    if (! this.stopped) {
+      this.stopped = true;
+      this.invalidate();
+    }
+  },
+
+  _compute: function () {
+    var self = this;
+    self.invalidated = false;
+
+    var previous = Deps.currentComputation;
+    setCurrentComputation(self);
+    var previousInCompute = inCompute;
+    inCompute = true;
+    try {
+      self._func(self);
+    } finally {
+      setCurrentComputation(previous);
+      inCompute = false;
+    }
+  },
+
+  _recompute: function () {
+    var self = this;
+
+    self._recomputing = true;
+    while (self.invalidated && ! self.stopped) {
+      try {
+        self._compute();
+      } catch (e) {
+        _debugFunc()("Exception from Deps recompute:", e.stack || e.message);
+      }
+      // If _compute() invalidated us, we run again immediately.
+      // A computation that invalidates itself indefinitely is an
+      // infinite loop, of course.
+      //
+      // We could put an iteration counter here and catch run-away
+      // loops.
+    }
+    self._recomputing = false;
+  }
 });
 
 Deps.Dependency = function () {
-    this._dependentsById = {};
+  this._dependentsById = {};
 };
 
 _.extend(Deps.Dependency.prototype, {
-    // Adds `computation` to this set if it is not already
-    // present.  Returns true if `computation` is a new member of the set.
-    // If no argument, defaults to currentComputation, or does nothing
-    // if there is no currentComputation.
-    depend: function (computation) {
-      if (! computation) {
-        if (! Deps.active)
-          return false;
+  // Adds `computation` to this set if it is not already
+  // present.  Returns true if `computation` is a new member of the set.
+  // If no argument, defaults to currentComputation, or does nothing
+  // if there is no currentComputation.
+  depend: function (computation) {
+    if (! computation) {
+      if (! Deps.active)
+        return false;
 
-        computation = Deps.currentComputation;
-      }
-      var self = this;
-      var id = computation._id;
-      if (! (id in self._dependentsById)) {
-        self._dependentsById[id] = computation;
-        computation.onInvalidate(function () {
-          delete self._dependentsById[id];
-        });
-        return true;
-      }
-      return false;
-    },
-    changed: function () {
-      var self = this;
-      for (var id in self._dependentsById)
-        self._dependentsById[id].invalidate();
-    },
-    hasDependents: function () {
-      var self = this;
-      for(var id in self._dependentsById)
-        return true;
-      return false;
+      computation = Deps.currentComputation;
     }
+    var self = this;
+    var id = computation._id;
+    if (! (id in self._dependentsById)) {
+      self._dependentsById[id] = computation;
+      computation.onInvalidate(function () {
+        delete self._dependentsById[id];
+      });
+      return true;
+    }
+    return false;
+  },
+  changed: function () {
+    var self = this;
+    for (var id in self._dependentsById)
+      self._dependentsById[id].invalidate();
+  },
+  hasDependents: function () {
+    var self = this;
+    for(var id in self._dependentsById)
+      return true;
+    return false;
+  }
 });
 
 _.extend(Deps, {
-    flush: function () {
-      // Nested flush could plausibly happen if, say, a flush causes
+  flush: function () {
+    // Nested flush could plausibly happen if, say, a flush causes
     // DOM mutation, which causes a "blur" event, which runs an
     // app event handler that calls Deps.flush.  At the moment
     // Spark blocks event handlers during DOM mutation anyway,
