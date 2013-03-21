@@ -266,6 +266,30 @@ var files = module.exports = {
       fs.unlinkSync(p);
   },
 
+  // Makes all files in a tree read-only.
+  makeTreeReadOnly: function (p) {
+    try {
+      // the l in lstat is critical -- we want to ignore symbolic links
+      var stat = fs.lstatSync(p);
+    } catch (e) {
+      if (e.code == "ENOENT")
+        return;
+      throw e;
+    }
+
+    if (stat.isDirectory()) {
+      _.each(fs.readdirSync(p), function (file) {
+        files.makeTreeReadOnly(path.join(p, file));
+      });
+    }
+    if (stat.isFile()) {
+      var permissions = stat.mode & 0777;
+      var readOnlyPermissions = permissions & 0555;
+      if (permissions !== readOnlyPermissions)
+        fs.chmodSync(p, readOnlyPermissions);
+    }
+  },
+
   // like mkdir -p. if it returns true, the item is a directory (even
   // if it was already created). if it returns false, the item is not
   // a directory and we couldn't make it one.
@@ -380,7 +404,7 @@ var files = module.exports = {
   // Takes a buffer containing `.tar.gz` data and extracts the archive into a
   // destination directory. destPath should not exist yet, and the archive
   // should contain a single top-level directory, which will be renamed
-  // atomically to destPath.
+  // atomically to destPath. The entire tree will be made readonly.
   extractTarGz: function (buffer, destPath) {
     var parentDir = path.dirname(destPath);
     var tempDir = path.join(parentDir, '.tmp' + files._randomToken());
@@ -413,7 +437,9 @@ var files = module.exports = {
       throw new Error(
         "Extracted archive '" + tempDir + "' should only contain one entry");
 
-    fs.renameSync(path.join(tempDir, topLevelOfArchive[0]), destPath);
+    var extractDir = path.join(tempDir, topLevelOfArchive[0]);
+    files.makeTreeReadOnly(extractDir);
+    fs.renameSync(extractDir, destPath);
     fs.rmdirSync(tempDir);
   },
 

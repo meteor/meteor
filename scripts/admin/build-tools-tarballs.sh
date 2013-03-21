@@ -20,6 +20,8 @@ export TARGET_DIR="$TOOLS_TMPDIR/.meteor/tools/new"
 $TOPDIR/scripts/admin/build-tools-tree.sh
 TOOLS_VERSION=$(cat $TARGET_DIR/.tools_version.txt)
 mv "$TARGET_DIR" "$TOOLS_TMPDIR/.meteor/tools/$TOOLS_VERSION"
+# The actual tools part should be unwritable.
+chmod -R a-w "$TOOLS_TMPDIR/.meteor/tools/$TOOLS_VERSION"
 
 ln -s "$TOOLS_VERSION" "$TOOLS_TMPDIR/.meteor/tools/latest"
 ln -s tools/latest/bin/meteor "$TOOLS_TMPDIR/.meteor/meteor"
