@@ -870,7 +870,7 @@ Template.api.dependency_depend = {
   id: "dependency_depend",
   name: "<em>dependency</em>.depend([fromComputation])",
   locus: "Client",
-  descr: ["Declares that the current computation (or `fromComputation` if given) depends on `dependency`.  The computation will be invalidated the next time `dependency` changes.", "If `depend()` is called with no arguments and there is no current computation, does nothing and returns false.", "Returns true if the computation is a new dependent of `dependency` rather than an existing one."],
+  descr: ["Declares that the current computation (or `fromComputation` if given) depends on `dependency`.  The computation will be invalidated the next time `dependency` changes.", "If there is no current computation and `depend()` is called with no arguments, it does nothing and returns false.", "Returns true if the computation is a new dependent of `dependency` rather than an existing one."],
   args: [
     {name: "fromComputation",
      type: "Deps.Computation",
