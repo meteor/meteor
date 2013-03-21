@@ -54,6 +54,7 @@
 
 <template name="progressBar">
   <div id="testProgressBar" class="progress {{#if running}}progress-striped{{/if}}">
+    <span class="in-progress">Passed {{passedCount}} of {{totalCount}}</span>
     <div class="bar bar-danger" style="width: {{percentFail}}%;"></div>
     <div class="bar {{#if anyFail}}bar-warning{{else}}bar-success{{/if}}" style="width: {{percentPass}}%;"></div>
   </div>
