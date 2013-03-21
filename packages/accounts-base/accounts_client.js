@@ -15,7 +15,7 @@ Accounts._setLoggingIn = function (x) {
   }
 };
 Meteor.loggingIn = function () {
-  Deps.depend(loggingInDeps);
+  loggingInDeps.depend();
   return loggingIn;
 };
 
@@ -194,6 +194,6 @@ Accounts.loginServicesConfigured = function () {
     return true;
 
   // not yet complete, save the context for invalidation once we are.
-  Deps.depend(loginServicesConfiguredDeps);
+  loginServicesConfiguredDeps.depend();
   return false;
 };

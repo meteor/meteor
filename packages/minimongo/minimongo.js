@@ -374,7 +374,7 @@ LocalCollection.Cursor.prototype._depend = function (changers) {
 
   if (Deps.active) {
     var v = new Deps.Dependency;
-    Deps.depend(v);
+    v.depend();
     var notifyChange = _.bind(v.changed, v);
 
     var options = {_suppress_initial: true};
