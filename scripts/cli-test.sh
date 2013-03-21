@@ -29,7 +29,7 @@ if [ "$TEST_WAREHOUSE_DIR" ]; then
     # commands (in case TEST_WAREHOUSE_DIR) is set. This could break if
     # this specified release is incompatible with the current tools, in
     # which case you can build and publish a new release and set it here.
-    TEST_RELEASE="0.6.0"
+    TEST_RELEASE="0.6.0-alpha1"
 
     METEOR="$METEOR --release=$TEST_RELEASE" # some random non-official release
 fi
