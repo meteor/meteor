@@ -13,7 +13,7 @@ var emptyAppDir = path.join(__dirname, 'empty-app');
 console.log("nodeModules: 'skip'");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none'});
+  var errors = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', minify: true});
   assert.strictEqual(errors, undefined, errors && errors[0]);
 
   // sanity check -- main.js has expected contents.
@@ -32,10 +32,10 @@ assert.doesNotThrow(function () {
   assert(!(/src=\"\/packages/.test(appHtml)));
 });
 
-console.log("nodeModules: 'skip', noMinify");
+console.log("nodeModules: 'skip', no minify");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', noMinify: true, releaseStamp: 'none'});
+  var errors = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', minify: false, releaseStamp: 'none'});
   assert.strictEqual(errors, undefined);
 
   // sanity check -- main.js has expected contents.
@@ -50,11 +50,11 @@ assert.doesNotThrow(function () {
   assert(!(/src=\"\/packages\/meteor\/url_tests.js/.test(appHtml)));
 });
 
-console.log("nodeModules: 'skip', noMinify, testPackages: ['meteor']");
+console.log("nodeModules: 'skip', no minify, testPackages: ['meteor']");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
   var errors = bundler.bundle(
-    emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', noMinify: true, testPackages: ['meteor'], releaseStamp: 'none'});
+    emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', minify: false, testPackages: ['meteor'], releaseStamp: 'none'});
   assert.strictEqual(errors, undefined);
 
   // sanity check -- main.js has expected contents.

@@ -775,7 +775,7 @@ _.extend(Bundle.prototype, {
  * try bundling again.
  *
  * options include:
- * - noMinify : don't minify the assets
+ * - minify : minify the CSS and JS assets
  *
  * - nodeModulesMode : decide on how to create the bundle's
  *   node_modules directory. one of:
@@ -826,7 +826,7 @@ exports.bundle = function (app_dir, output_path, options) {
     }
 
     // Minify, if requested
-    if (!options.noMinify)
+    if (options.minify)
       bundle.minify();
 
     // Write to disk

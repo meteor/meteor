@@ -599,7 +599,7 @@ exports.getSettings = function (filename) {
 // watcher.destroy() as appropriate.
 //
 // context is as created in meteor.js.
-// options include: port, noMinify, once, settingsFile, testPackages
+// options include: port, minify, once, settingsFile, testPackages
 exports.run = function (context, options) {
   var outer_port = options.port || 3000;
   var inner_port = outer_port + 1;
@@ -623,8 +623,8 @@ exports.run = function (context, options) {
   }
 
   var bundleOpts = {
-    noMinify: options.noMinify,
     nodeModulesMode: 'symlink',
+    minify: options.minify,
     testPackages: options.testPackages,
     releaseStamp: context.releaseVersion,
     packageSearchOptions: context.packageSearchOptions

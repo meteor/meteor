@@ -203,7 +203,7 @@ Fiber(function () {
       requireDirInApp("run");
       runner.run(context, {
         port: new_argv.port,
-        noMinify: !new_argv.production,
+        minify: new_argv.production,
         once: new_argv.once,
         settingsFile: new_argv.settings
       });
@@ -566,6 +566,7 @@ Fiber(function () {
       var bundler = require(path.join(__dirname, 'bundler.js'));
       var errors = bundler.bundle(context.appDir, bundle_path, {
         nodeModulesMode: 'copy',
+        minify: true,  // XXX allow --debug
         releaseStamp: context.releaseVersion,
         packageSearchOptions: context.packageSearchOptions
       });
@@ -722,7 +723,7 @@ Fiber(function () {
           setPassword: !!new_argv.password,
           bundleOptions: {
             nodeModulesMode: 'skip',
-            noMinify: !!new_argv.debug,
+            minify: !new_argv.debug,
             releaseStamp: context.releaseVersion,
             packageSearchOptions: context.packageSearchOptions
           }
@@ -870,7 +871,7 @@ Fiber(function () {
         deploy.deployToServer(context.appDir, {
           nodeModulesMode: 'skip',
           testPackages: testPackages,
-          noMinify: !new_argv.production,
+          minify: new_argv.production,
           releaseStamp: context.releaseVersion,
           packageSearchOptions: context.packageSearchOptions
         }, {
@@ -880,7 +881,7 @@ Fiber(function () {
       } else {
         runner.run(context, {
           port: new_argv.port,
-          noMinify: !new_argv.production,
+          minify: new_argv.production,
           once: new_argv.once,
           testPackages: testPackages,
           settingsFile: new_argv.settings
