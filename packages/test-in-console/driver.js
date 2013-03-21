@@ -1,10 +1,18 @@
+// Global flag for phantomjs (or other browser) to eval to see if we're done.
 DONE = false;
+// Failure count for phantomjs exit code
+FAILURES = null;
 
 var getName = function (result) {
   return (result.server ? "S: " : "C: ") +
     result.groupPath.join(" - ") + " - " + result.test;
 };
 
+var log = function (/*arguments*/) {
+  if (typeof console !== 'undefined') {
+    console.log.apply(console, arguments);
+  }
+};
 
 
 var finished = 0;
@@ -16,9 +24,10 @@ var toReport = [];
 
 var hrefPath = document.location.href.split("/");
 var platform = hrefPath.length && hrefPath[hrefPath.length - 1];
-if (_.isEmpty(platform))
+if (!platform)
   platform = "local";
 var doReport = Meteor &&
+      Meteor.settings &&
       Meteor.settings.public &&
       Meteor.settings.public.runId;
 var report = function (name, last) {
@@ -88,22 +97,22 @@ Meteor.startup(function () {
           case "PENDING":
             resultSet[name].status = "OK";
             report(name, true);
-            console.log(name, ":", "OK");
+            log(name, ":", "OK");
             passed++;
             break;
           case "EXPECTED":
             report(name, true);
-            console.log(name, ":", "EXPECTED FAILURE");
+            log(name, ":", "EXPECTED FAILURE");
             expected++;
             break;
           case "FAIL":
             failed++;
             report(name, true);
-            console.log(name, ":", "!!!!!!!!! FAIL !!!!!!!!!!!");
-            console.log(JSON.stringify(resultSet[name].info));
+            log(name, ":", "!!!!!!!!! FAIL !!!!!!!!!!!");
+            log(JSON.stringify(resultSet[name].info));
             break;
           default:
-            console.log(name, ": unknown state for the test to be in");
+            log(name, ": unknown state for the test to be in");
           }
           finished++;
           break;
@@ -116,12 +125,21 @@ Meteor.startup(function () {
     },
 
     function () {
-      console.log("passed/expected/failed/total", passed, "/", expected, "/", failed, "/", _.size(resultSet));
+      if (failed > 0) {
+        log("~~~~~~~ THERE ARE FAILURES ~~~~~~~");
+      }
+      log("passed/expected/failed/total", passed, "/", expected, "/", failed, "/", _.size(resultSet));
       sendReports(function () {
-        console.log("Waiting 3s for any last reports to get sent out");
-        setTimeout(function () {
+        if (doReport) {
+          log("Waiting 3s for any last reports to get sent out");
+          setTimeout(function () {
+            FAILURES = failed;
+            DONE = true;
+          }, 3000);
+        } else {
+          FAILURES = failed;
           DONE = true;
-        }, 3000);
+        }
       });
     },
     ["tinytest"]);

@@ -1,12 +1,10 @@
 Package.describe({
-  summary: "Run tests noninteractively in PhantomJS",
+  summary: "Run tests noninteractively, with results going to the console.",
   internal: true
 });
 
 Package.on_use(function (api) {
 
-  // XXX this should go away, and there should be a clean interface
-  // that tinytest and the driver both implement?
   api.use('tinytest');
   api.use('http');
 
