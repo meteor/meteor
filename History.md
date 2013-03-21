@@ -7,6 +7,9 @@
 * Twitter login now stores profile_image_url and profile_image_url_https
   attributes in the user.services.twitter namespace. #788
 
+* Deps API: Add `dep.depend()`, deprecate `Deps.depend(dep)` and
+  `dep.addDependent()`.
+  
 Patches contributed by GitHub users raix, blackcoat, timhaines
 
 ## v0.5.9
