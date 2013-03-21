@@ -406,7 +406,11 @@ _.extend(Bundle.prototype, {
     // what the current code will do)
 
     if (pkg.npmDependencies) {
-      pkg.installNpmDependencies();
+      // If the package isn't in the warehouse, maybe update the NPM
+      // dependencies. (Warehouse packages shouldn't change after they're
+      // installed, so we skip this slow step.)
+      if (!pkg.inWarehouse)
+        pkg.installNpmDependencies();
       self.bundleNodeModules(pkg);
     }
 
@@ -432,7 +436,11 @@ _.extend(Bundle.prototype, {
     // tests. one example is stream-buffers as used in the email
     // package
     if (pkg.npmDependencies) {
-      pkg.installNpmDependencies();
+      // If the package isn't in the warehouse, maybe update the NPM
+      // dependencies. (Warehouse packages shouldn't change after they're
+      // installed, so we skip this slow step.)
+      if (!pkg.inWarehouse)
+        pkg.installNpmDependencies();
       self.bundleNodeModules(pkg);
     }
 

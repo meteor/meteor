@@ -48,6 +48,10 @@ var Package = function () {
   // registered source file handlers
   self.extensions = {};
 
+  // Are we in the warehouse? (Set to true by initFromWarehouse.) Used to skip
+  // npm re-scans.
+  self.inWarehouse = false;
+
   // functions that can be called when the package is scanned --
   // visible as `Package` when package.js is executed
   self.packageFacade = {
@@ -184,6 +188,7 @@ _.extend(Package.prototype, {
     self.initFromPackageDir(
       name,
       path.join(warehouse.getWarehouseDir(), 'packages', name, version));
+    self.inWarehouse = true;
   },
 
   init_from_app_dir: function (app_dir, ignore_files) {
