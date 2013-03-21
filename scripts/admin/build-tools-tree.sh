@@ -5,6 +5,9 @@
 # It does not set up the top-level springboard file in
 # ~/.meteor/tools or the ~/.meteor/meteor symlink.
 
+set -e
+set -u
+
 cd `dirname $0`/../..
 
 if [ "$TARGET_DIR" == "" ] ; then
