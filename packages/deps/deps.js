@@ -1,46 +1,46 @@
-  Deps = {};
-  Deps.active = false;
-  Deps.currentComputation = null;
+Deps = {};
+Deps.active = false;
+Deps.currentComputation = null;
 
-  var setCurrentComputation = function (c) {
+var setCurrentComputation = function (c) {
     Deps.currentComputation = c;
     Deps.active = !! c;
-  };
+};
 
-  var _debugFunc = function () {
+var _debugFunc = function () {
     // lazy evaluation because `Meteor` does not exist right away
     return (typeof Meteor !== "undefined" ? Meteor._debug :
             ((typeof console !== "undefined") && console.log ? console.log :
              function () {}));
-  };
+};
 
-  var nextId = 1;
-  // computations whose callbacks we should call at flush time
-  var pendingComputations = [];
-  // `true` if a Deps.flush is scheduled, or if we are in Deps.flush now
-  var willFlush = false;
-  // `true` if we are in Deps.flush now
-  var inFlush = false;
-  // `true` if we are computing a computation now, either first time
-  // or recompute.  This matches Deps.active unless we are inside
-  // Deps.nonreactive, which nullfies currentComputation even though
-  // an enclosing computation may still be running.
-  var inCompute = false;
+var nextId = 1;
+// computations whose callbacks we should call at flush time
+var pendingComputations = [];
+// `true` if a Deps.flush is scheduled, or if we are in Deps.flush now
+var willFlush = false;
+// `true` if we are in Deps.flush now
+var inFlush = false;
+// `true` if we are computing a computation now, either first time
+// or recompute.  This matches Deps.active unless we are inside
+// Deps.nonreactive, which nullfies currentComputation even though
+// an enclosing computation may still be running.
+var inCompute = false;
 
-  var afterFlushCallbacks = [];
+var afterFlushCallbacks = [];
 
-  var requireFlush = function () {
+var requireFlush = function () {
     if (! willFlush) {
       setTimeout(Deps.flush, 0);
       willFlush = true;
     }
-  };
+};
 
-  // Deps.Computation constructor is visible but private
-  // (throws an error if you try to call it)
-  var constructingComputation = false;
+// Deps.Computation constructor is visible but private
+// (throws an error if you try to call it)
+var constructingComputation = false;
 
-  Deps.Computation = function (f, parent) {
+Deps.Computation = function (f, parent) {
     if (! constructingComputation)
       throw new Error(
         "Deps.Computation constructor is private; use Deps.autorun");
@@ -64,9 +64,9 @@
     } finally {
       self.firstRun = false;
     }
-  };
+};
 
-  _.extend(Deps.Computation.prototype, {
+_.extend(Deps.Computation.prototype, {
 
     onInvalidate: function (f) {
       var self = this;
@@ -148,13 +148,13 @@
       }
       self._recomputing = false;
     }
-  });
+});
 
-  Deps.Dependency = function () {
+Deps.Dependency = function () {
     this._dependentsById = {};
-  };
+};
 
-  _.extend(Deps.Dependency.prototype, {
+_.extend(Deps.Dependency.prototype, {
     // Adds `computation` to this set if it is not already
     // present.  Returns true if `computation` is a new member of the set.
     // If no argument, defaults to currentComputation, or does nothing
@@ -188,9 +188,9 @@
         return true;
       return false;
     }
-  });
+});
 
-  _.extend(Deps, {
+_.extend(Deps, {
     flush: function () {
       // Nested flush could plausibly happen if, say, a flush causes
     // DOM mutation, which causes a "blur" event, which runs an
