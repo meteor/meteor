@@ -25,9 +25,18 @@ cleanup.onExit(function () {
 var meteorNpm = module.exports = {
   _tmpDirs: [],
 
+  _isGitHubTarball: function (x) {
+    return /^https:\/\/github.com\/.*\/tarball\/[0-9a-f]{40}/.test(x);
+  },
+
   ensureOnlyExactVersions: function(npmDependencies) {
+    var self = this;
     _.each(npmDependencies, function(version, name) {
-      if (!semver.valid(version))
+      // We want a given version of a smart package (package.js +
+      // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
+      // don't want anything too vague. For now, we support semvers and github
+      // tarballs pointing at an exact commit.
+      if (!semver.valid(version) && !self._isGitHubTarball(version))
         throw new Error(
           "Must declare exact version of npm package dependency: " + name + '@' + version);
     });
@@ -121,13 +130,7 @@ var meteorNpm = module.exports = {
         }
       });
 
-      // if we had no installed dependencies to begin with, *DON'T*
-      // shrinkwrap. this is important so that we can pin versions of
-      // deep dependencies to tarballs, e.g.
-      // https://github.com/meteor/js-bson/tarball/master
-      if (!_.isEmpty(installedDependencies)) {
-        self._shrinkwrap(newPackageNpmDir);
-      }
+      self._shrinkwrap(newPackageNpmDir);
       self._createReadme(newPackageNpmDir);
       self._renameAlmostAtomically(newPackageNpmDir, packageNpmDir);
     }
@@ -242,24 +245,30 @@ var meteorNpm = module.exports = {
 
   // map the structure returned from `npm ls` into the structure of
   // npmDependencies (e.g. {gcd: '0.0.0'}), so that they can be
-  // diffed.
+  // diffed. This only returns top-level dependencies.
   _installedDependencies: function(dir) {
     var self = this;
     return _.object(
       _.map(
         self._installedDependenciesTree(dir).dependencies, function(properties, name) {
-          return [name, properties.version];
+          if (self._isGitHubTarball(properties.from))
+            return [name, properties.from];
+          else
+            return [name, properties.version];
         }));
   },
 
   _installNpmModule: function(name, version, dir) {
     this._ensureConnected();
 
+    var installArg = this._isGitHubTarball(version)
+          ? version : (name + "@" + version);
+
     // We don't use npm.commands.install since we couldn't
     // figure out how to silence all output (specifically the
     // installed tree which is printed out with `console.log`)
     this._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
-                       ["install", name + "@" + version],
+                       ["install", installArg],
                        {cwd: dir});
   },
 
