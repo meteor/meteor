@@ -137,7 +137,7 @@
         try {
           self._compute();
         } catch (e) {
-          _debugFunc()("Exception from Deps recompute:", e.stack);
+          _debugFunc()("Exception from Deps recompute:", e.stack || e.message);
         }
         // If _compute() invalidated us, we run again immediately.
         // A computation that invalidates itself indefinitely is an
@@ -228,7 +228,7 @@
           func();
         } catch (e) {
           _debugFunc()("Exception from Deps afterFlush function:",
-                       e.stack);
+                       e.stack || e.message);
         }
       }
     }
