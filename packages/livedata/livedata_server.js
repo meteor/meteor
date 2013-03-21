@@ -29,9 +29,12 @@ _.extend(Meteor._SessionDocumentView.prototype, {
     if (key === "_id")
       return;
     var precedenceList = self.dataByKey[key];
-    if (!precedenceList) {
-      throw new Error("Could not find field to clear " + key);
-    }
+
+    // It's okay to clear fields that didn't exist. No need to throw
+    // an error.
+    if (!precedenceList) 
+      return;
+
     var removedValue = undefined;
     for (var i = 0; i < precedenceList.length; i++) {
       var precedence = precedenceList[i];
