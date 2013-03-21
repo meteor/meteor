@@ -1,5 +1,30 @@
 #!/bin/bash
 
+# This is the script that we install somewhere in your $PATH (as "meteor")
+# when you run
+#   $ curl https://install.meteor.com/ | sh
+# In fact, all that the curl script does is install this script and run it
+# once. It's the only file that we install globally on your system; each user of
+# Meteor gets their own personal package and tools repository, called the
+# warehouse, in ~/.meteor/. This means that a user can share packages among
+# multiple apps and automatically update to new releases without having to have
+# permissions to write them to anywhere global.
+#
+# All this script does is exec ~/.meteor/meteor. But what if you don't have it
+# yet? In that case, it downloads a "bootstrap tarball", which contains the
+# latest version of the Meteor tools, and plops it down at ~/.meteor. In fact,
+# once you've run this once, you don't even really need this script: you can put
+# ~/.meteor/ into your PATH, or a symlink to ~/.meteor/meteor into some other
+# PATH directory. No special permissions needed!
+#
+# To uninstall Meteor from your system, just delete this shell script, and
+# delete your warehouse (~/.meteor/).
+#
+# We'll keep around a copy of this file at
+# ~/.meteor/engines/latest/launch-meteor just in case you ever want to find it
+# again.
+
+
 set -e
 set -u
 set -o pipefail  # so curl failure triggers the "set -e"
