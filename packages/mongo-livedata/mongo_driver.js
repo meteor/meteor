@@ -84,20 +84,31 @@ var replaceTypes = function (document, atomTransformer) {
 
 _Mongo = function (url) {
   var self = this;
-
   self.collection_queue = [];
-
   self._liveResultsSets = {};
 
-  // Set autoReconnect on Mongo URLs by default.
-  if (!(/[\?&]autoReconnect/.test(url))) {
-    if (/\?/.test(url))
-      url += '&autoReconnect=true';
-    else
-      url += '?autoReconnect=true';
+  var options = {db: {safe: true}};
+
+  // Set autoReconnect to true, unless passed on the URL. Why someone
+  // would want to set autoReconnect to false, I'm not really sure, but
+  // keeping this for backwards compatibility for now.
+  if (!(/[\?&]auto_?[rR]econnect=/.test(url))) {
+    options.server = {auto_reconnect: true};
   }
 
-  MongoDB.connect(url, {db: {safe: true}}, function(err, db) {
+  // Disable the native parser by default, unless specifically enabled
+  // in the mongo URL.
+  // - The native driver can cause errors which normally would be
+  //   thrown, caught, and handled into segfaults that take down the
+  //   whole app.
+  // - Binary modules don't yet work when you bundle and move the bundle
+  //   to a different platform (aka deploy)
+  // We should revisit this after binary npm module support lands.
+  if (!(/[\?&]native_?[pP]arser=/.test(url))) {
+    options.db.native_parser = false;
+  }
+
+  MongoDB.connect(url, options, function(err, db) {
     if (err)
       throw err;
     self.db = db;
