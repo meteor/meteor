@@ -695,7 +695,7 @@ var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
       _.each(_.keys(self._observeHandles), function (handleId) {
         var handle = self._observeHandles[handleId];
         if (handle && handle[handleCallback])
-          handle[handleCallback].apply(null, args);
+          handle[handleCallback].apply(null, EJSON.clone(args));
       });
     };
   });
