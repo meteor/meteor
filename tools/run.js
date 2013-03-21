@@ -8,6 +8,7 @@ var httpProxy = require('http-proxy');
 
 var files = require('./files.js');
 var packages = require('./packages.js');
+var project = require('./project.js');
 var updater = require('./updater.js');
 var bundler = require('./bundler.js');
 var mongo_runner = require('./mongo_runner.js');
@@ -664,6 +665,23 @@ exports.run = function (context, options) {
     Status.listening = false;
     if (server_handle)
       kill_server(server_handle);
+
+    // If the user did not specify a --release on the command line, and
+    // simultaneously runs `meteor update` during this run, just exit and let
+    // them restart the run. (We can do something fancy like allowing this to
+    // work if the tools version didn't change, or even springboarding if the
+    // tools version does change, but this (which prevents weird errors) is a
+    // start.)
+    if (files.usesWarehouse() && !context.userReleaseOverride) {
+      var newAppRelease = project.getMeteorReleaseVersion(context.appDir);
+      if (newAppRelease !== context.appReleaseVersion) {
+        console.error("Your app has been updated to release '%s' from " +
+                      "release '%s'.\nRestart meteor to use the new release.",
+                      newAppRelease,
+                      context.appReleaseVersion);
+        process.exit(1);
+      }
+    }
 
     server_log = [];
 

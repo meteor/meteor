@@ -76,6 +76,8 @@ Fiber(function () {
     context.releaseVersion = calculateReleaseVersion(argv);
     toolsDebugMessage("Running Meteor Release " + context.releaseVersion);
 
+    context.userReleaseOverride = !!argv.release;
+
     context.releaseManifest =
       warehouse.releaseManifestByVersion(context.releaseVersion);
     context.packageSearchOptions = {
