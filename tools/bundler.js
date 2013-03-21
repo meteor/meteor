@@ -85,6 +85,11 @@ var PackageBundlingInfo = function (pkg, bundle) {
   if (pkg.name)
     self.dependencies['package.js'] = true;
 
+  // Set if we've installed NPM modules on this package during this
+  // bundling. Used to ensure that we only refresh NPM modules once per package
+  // per bundling run.
+  self.installedNpmModules = false;
+
   // the API available from on_use / on_test handlers
   self.api = {
     // Called when this package wants to make another package be
@@ -376,6 +381,21 @@ _.extend(Bundle.prototype, {
     return hash.digest('hex');
   },
 
+  _maybeUpdateNpmDependencies: function (pkg, inst) {
+    var self = this;
+    if (pkg.npmDependencies) {
+      // If the package isn't in the warehouse, maybe update the NPM
+      // dependencies. (Warehouse packages shouldn't change after they're
+      // installed, so we skip this slow step.) Also, we only do this once per
+      // package per bundling run.
+      if (!pkg.inWarehouse && !inst.installedNpmModules) {
+        pkg.installNpmDependencies();
+        inst.installedNpmModules = true;
+      }
+      self.bundleNodeModules(pkg);
+    }
+  },
+
   // Call to add a package to this bundle
   // if 'where' is given, it's an array of "client" and/or "server"
   // if 'from' is given, it's the PackageBundlingInfo that's doing the
@@ -405,14 +425,7 @@ _.extend(Bundle.prototype, {
     // XXX detect circular dependencies and print an error. (not sure
     // what the current code will do)
 
-    if (pkg.npmDependencies) {
-      // If the package isn't in the warehouse, maybe update the NPM
-      // dependencies. (Warehouse packages shouldn't change after they're
-      // installed, so we skip this slow step.)
-      if (!pkg.inWarehouse)
-        pkg.installNpmDependencies();
-      self.bundleNodeModules(pkg);
-    }
+    self._maybeUpdateNpmDependencies(pkg, inst);
 
     if (pkg.on_use_handler)
       pkg.on_use_handler(inst.api, where);
@@ -435,14 +448,7 @@ _.extend(Bundle.prototype, {
     // XXX we might want to support npm modules that are only used in
     // tests. one example is stream-buffers as used in the email
     // package
-    if (pkg.npmDependencies) {
-      // If the package isn't in the warehouse, maybe update the NPM
-      // dependencies. (Warehouse packages shouldn't change after they're
-      // installed, so we skip this slow step.)
-      if (!pkg.inWarehouse)
-        pkg.installNpmDependencies();
-      self.bundleNodeModules(pkg);
-    }
+    self._maybeUpdateNpmDependencies(pkg, inst);
 
     if (inst.pkg.on_test_handler)
       inst.pkg.on_test_handler(inst.api);
