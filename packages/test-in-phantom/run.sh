@@ -1,5 +1,9 @@
 #!/bin/bash
 
+cd `dirname $0`
+cd ../..
+export METEOR_HOME=`pwd`
+
 #eventually this should be the new engine way to run tests
 cd $METEOR_HOME/packages
 
