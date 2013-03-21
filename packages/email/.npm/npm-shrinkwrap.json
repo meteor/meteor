@@ -6,7 +6,7 @@
       "dependencies": {
         "mimelib-noiconv": {
           "version": "0.1.9",
-          "from": "mimelib-noiconv@*"
+          "from": "mimelib-noiconv@0.1.9"
         }
       }
     },
@@ -16,11 +16,11 @@
       "dependencies": {
         "rai": {
           "version": "0.1.7",
-          "from": "rai@*"
+          "from": "rai@0.1.7"
         },
         "xoauth2": {
           "version": "0.1.6",
-          "from": "xoauth2@>= 0.1.1",
+          "from": "https://registry.npmjs.org/xoauth2/-/xoauth2-0.1.6.tgz",
           "resolved": "https://registry.npmjs.org/xoauth2/-/xoauth2-0.1.6.tgz"
         }
       }
