@@ -60,10 +60,10 @@ Package.register_extension("coffee", function(bundle, source_path, serve_path, w
   coffeescript_handler(bundle, source_path, serve_path, where, false);
 });
 Package.register_extension("litcoffee", function(bundle, source_path, serve_path, where) {
-  coffeescript_handler(bundle, source_path, serve_path, where, false);
+  coffeescript_handler(bundle, source_path, serve_path, where, true);
 });
 Package.register_extension("coffee.md", function(bundle, source_path, serve_path, where) {
-  coffeescript_handler(bundle, source_path, serve_path, where, false);
+  coffeescript_handler(bundle, source_path, serve_path, where, true);
 });
 
 Package.on_test(function (api) {
