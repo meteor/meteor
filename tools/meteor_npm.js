@@ -199,13 +199,22 @@ var meteorNpm = module.exports = {
     var self = this;
     var oldPackageNpmDir = packageNpmDir + '-old-' + self._randomToken();;
 
-    if (fs.existsSync(packageNpmDir)) {
+    // Get rid of old dir, if it exists.
+    var movedOldDir = true;
+    try {
       fs.renameSync(packageNpmDir, oldPackageNpmDir);
-      fs.renameSync(newPackageNpmDir, packageNpmDir);
-      files.rm_recursive(oldPackageNpmDir);
-    } else {
-      fs.renameSync(newPackageNpmDir, packageNpmDir);
+    } catch (e) {
+      if (e.code !== 'ENOENT')
+        throw e;
+      movedOldDir = false;
     }
+
+    // Now rename the directory.
+    fs.renameSync(newPackageNpmDir, packageNpmDir);
+
+    // ... and delete the old one.
+    if (movedOldDir)
+      files.rm_recursive(oldPackageNpmDir);
   },
 
   // Runs `npm ls --json`.
