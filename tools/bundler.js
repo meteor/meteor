@@ -150,9 +150,10 @@ _.extend(PackageBundlingInfo.prototype, {
   // found in this package. We'll use handlers that are defined in
   // this package and in its immediate dependencies. ('extension'
   // should be the extension of the file without a leading dot.)
-  get_source_handler: function (extension) {
+  get_source_handler: function (filepath) {
     var self = this;
     var candidates = [];
+    var extension = files.extname(filepath);
 
     if (extension in self.pkg.extensions)
       candidates.push(self.pkg.extensions[extension]);
@@ -187,9 +188,9 @@ _.extend(PackageBundlingInfo.prototype, {
       return;
     self.files[where][rel_path] = true;
 
-    var ext = files.registered_file_extension(rel_path, self.api.registered_extensions());
-    if (!! ext) {
-      var handler = self.get_source_handler(ext.substr(1));
+    var handler = self.get_source_handler(rel_path);
+
+    if (!! handler) {
       handler(self.bundle.api,
               path.join(self.pkg.source_root, rel_path),
               path.join(self.pkg.serve_root, rel_path),
