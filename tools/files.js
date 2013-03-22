@@ -85,7 +85,7 @@ var files = module.exports = {
                                   extensions, func);
           });
         });
-      } else if (_.indexOf(extensions, path.extname(filepath)) !== -1) {
+      } else if (files.findExtension(extensions, filepath)) {
         func(filepath);
       }
     });
@@ -101,11 +101,24 @@ var files = module.exports = {
         ret = ret.concat(files.file_list_sync(
           path.join(filepath, fileName), extensions));
       });
-    } else if (_.indexOf(extensions, path.extname(filepath)) !== -1) {
+    } else if (files.findExtension(extensions, filepath)) {
       ret.push(filepath);
     }
 
     return ret;
+  },
+
+  // given a list of extensions and a path, return the file extension
+  // provided in the list. If it doesn't find it, return null.
+  findExtension: function (extensions, filepath) {
+    var len = filepath.length;
+    for (var i = 0; i < extensions.length; ++i) {
+      var ext = extensions[i];
+      if (filepath.indexOf(ext, len - ext.length) !== -1){
+        return ext;
+      }
+    }
+    return null;
   },
 
   // given a path, returns true if it is a meteor application (has a

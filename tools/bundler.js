@@ -187,8 +187,8 @@ _.extend(PackageBundlingInfo.prototype, {
       return;
     self.files[where][rel_path] = true;
 
-    var ext = path.extname(rel_path).substr(1);
-    var handler = self.get_source_handler(ext);
+    var ext = files.findExtension(self.api.registered_extensions(), rel_path);
+    var handler = ext && self.get_source_handler(ext.substr(1));
     if (handler) {
       handler(self.bundle.api,
               path.join(self.pkg.source_root, rel_path),
