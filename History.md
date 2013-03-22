@@ -7,8 +7,12 @@
 * Twitter login now stores profile_image_url and profile_image_url_https
   attributes in the user.services.twitter namespace. #788
 
-* Deps API: Add `dep.depend()`, deprecate `Deps.depend(dep)` and
-  `dep.addDependent()`.
+* Deps API
+  * Add `dep.depend()`, deprecate `Deps.depend(dep)` and
+    `dep.addDependent()`.
+  * If first run of `Deps.autorun` throws an exception, stop it and don't
+    rerun.  This prevents a Spark exception when template rendering fails
+    ("Can't call 'firstNode' of undefined").
   
 Patches contributed by GitHub users raix, blackcoat, timhaines
 

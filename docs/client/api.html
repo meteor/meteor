@@ -2350,6 +2350,9 @@ computation that is rerun, allowing new ones to be established.  See
 [`Meteor.subscribe`](#meteor_subscribe) for more information about
 subscriptions and reactivity.
 
+If the initial run of an autorun throws an exception, the computation
+is automatically stopped and won't be rerun.
+
 {{> api_box deps_flush }}
 
 Normally, when you make changes (like writing to the database),

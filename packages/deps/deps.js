@@ -59,10 +59,14 @@ Deps.Computation = function (f, parent) {
   self._func = f;
   self._recomputing = false;
 
+  var errored = true;
   try {
     self._compute();
+    errored = false;
   } finally {
     self.firstRun = false;
+    if (errored)
+      self.stop();
   }
 };
 
