@@ -7,14 +7,23 @@ var child_process = Npm.require("child_process");
 // accumulated while running, printed at the end
 var publishedArtifacts = [];
 
-// gets git sha passed in via --settings
-var getGitSha = function () {
-  var gitSha = Meteor.settings["git-sha"];
-  if (!gitSha) {
-    console.log("Run with --settings to set 'git-sha'");
+var getFromSettings = function (key) {
+  var val = Meteor.settings[key];
+  if (!val) {
+    console.log("Run via publish-release.sh");
     process.exit(1);
   }
-  return gitSha;
+  return val;
+};
+
+// gets git sha passed in via --settings
+var getGitSha = function () {
+  return getFromSettings('git-sha');
+};
+
+// gets release name passed in via --settings
+var getReleaseName = function () {
+  return getFromSettings('release-name');
 };
 
 // calls 'cmd', returns stdout.
@@ -47,15 +56,15 @@ var configureS3 = function () {
 };
 
 // fetch and parse release manifest
-var getManifest = function(s3, release) {
+var getManifest = function(s3, gitSha) {
   var content;
   try {
     content = s3.GetObject({
       BucketName: "com.meteor.warehouse",
-      ObjectName: ["unpublished", release, "release.json"].join("/")
+      ObjectName: ["unpublished", gitSha, "release.json"].join("/")
     }).Body;
   } catch (e) {
-    console.log("Release " + release + " not built.");
+    console.log("Release " + gitSha + " not built.");
     process.exit(1);
   }
 
@@ -63,7 +72,7 @@ var getManifest = function(s3, release) {
 };
 
 // are there any files with this prefix?
-var noneWithPrefix = function(s3, prefix) {
+var anyWithPrefix = function(s3, prefix) {
   var files = s3.ListObjects({
     BucketName: "com.meteor.warehouse",
     Prefix: prefix
@@ -72,13 +81,13 @@ var noneWithPrefix = function(s3, prefix) {
 };
 
 // publish a given tools, copying multiple files from
-// s3://com.meteor.warehouse/RELEASE/unpublished/ to
+// s3://com.meteor.warehouse/unpublished/GITSHA/ to
 // s3://com.meteor.warehouse/tools/VERSION/
-var publishTools = function(s3, release, version) {
+var publishTools = function(s3, gitSha, version) {
   var destPath = ["tools", version].join("/");
 
   process.stdout.write("tools " + version + ": ");
-  if (noneWithPrefix(s3, destPath)) {
+  if (anyWithPrefix(s3, destPath)) {
     console.log("already published");
     return;
   } else {
@@ -88,7 +97,7 @@ var publishTools = function(s3, release, version) {
 
   var toolsArtifacts = s3.ListObjects({
     BucketName: "com.meteor.warehouse",
-    Prefix: ["unpublished", release, "meteor-tools-"].join("/")
+    Prefix: ["unpublished", gitSha, "meteor-tools-"].join("/")
   }).Body.ListBucketResult.Contents;
 
   parallelEach(toolsArtifacts, function (artifact) {
@@ -108,15 +117,15 @@ var publishTools = function(s3, release, version) {
 };
 
 // publish a given package, copying from
-// s3://com.meteor.warehouse/unpublished/RELEASE/NAME-VERSION.tar.gz to
+// s3://com.meteor.warehouse/unpublished/GITSHA/NAME-VERSION.tar.gz to
 // s3://com.meteor.warehouse/packages/NAME-VERSION.tar.gz
-var publishPackage = function(s3, release, name, version) {
+var publishPackage = function(s3, gitSha, name, version) {
   var filename = name + "-" + version + ".tar.gz";
   var destKey = ["packages", name, filename].join("/");
-  var sourceKey = ["unpublished", release, filename].join("/");
+  var sourceKey = ["unpublished", gitSha, filename].join("/");
 
   var packageHeader = "package " + name + " version " + version + ": ";
-  if (noneWithPrefix(s3, destKey)) {
+  if (anyWithPrefix(s3, destKey)) {
     console.log(packageHeader + "already published");
     return;
   } else {
@@ -135,15 +144,15 @@ var publishPackage = function(s3, release, name, version) {
 };
 
 // publish the release manifest, copying from
-// s3://com.meteor.warehouse/unpublished/RELEASE/release.json to
+// s3://com.meteor.warehouse/unpublished/GITSHA/release.json to
 // s3://com.meteor.warehouse/releases/RELEASE.release.json
-var publishManifest = function(s3, release) {
+var publishManifest = function(s3, gitSha, release) {
   var destKey = ["releases", release + ".release.json"].join("/");
-  var sourceKey = ["unpublished", release, "release.json"].join("/");
+  var sourceKey = ["unpublished", gitSha, "release.json"].join("/");
 
-  process.stdout.write("release manifest " + release + ": ");
-  if (noneWithPrefix(s3, destKey)) {
-    console.log("already published");
+  process.stdout.write("release manifest read from " + gitSha + ": ");
+  if (anyWithPrefix(s3, destKey)) {
+    console.log("already published at " + release);
     return;
   } else {
     publishedArtifacts.push("release manifest " + release);
@@ -175,14 +184,23 @@ var parallelEach = function (collection, callback, context) {
 // START HERE
 var main = function() {
   // read git sha, used as the version of the unpublished release.
-  var release = getGitSha();
+  var gitSha = getGitSha();
+  var release = getReleaseName();
+
+  if (/^([0-9]+\.)+[0-9]+$/.test(release)) {
+    console.error(
+      "It looks like you're trying to publish a final release (%s).", release);
+    console.error("Final releases should always be blessed from an RC release.");
+    process.exit(1);
+  }
+
   var s3 = configureS3();
-  var manifest = getManifest(s3, release);
-  publishTools(s3, release, manifest.tools);
+  var manifest = getManifest(s3, gitSha);
+  publishTools(s3, gitSha, manifest.tools);
   parallelEach(manifest.packages, function(version, name) {
-    publishPackage(s3, release, name, version);
+    publishPackage(s3, gitSha, name, version);
   });
-  publishManifest(s3, release);
+  publishManifest(s3, gitSha, release);
   console.log("\nPUBLISHED:\n" + publishedArtifacts.join('\n'));
   console.log();
   process.exit();
