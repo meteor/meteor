@@ -28,7 +28,10 @@ Handlebars.json_ast_to_func = function (ast) {
 // what is passed in via named arguments.
 Handlebars._default_helpers = {
   'with': function (data, options) {
-    return options.fn(data);
+    if (!data || (data instanceof Array && !data.length))
+      return options.inverse(this);
+    else
+      return options.fn(data);
   },
   'each': function (data, options) {
     var parentData = this;
