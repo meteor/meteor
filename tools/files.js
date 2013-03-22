@@ -85,7 +85,7 @@ var files = module.exports = {
                                   extensions, func);
           });
         });
-      } else if (!! files.registered_file_extension(filepath, extensions)) {
+      } else if (!! files.findExtension(extensions, filepath)) {
         func(filepath);
       }
     });
@@ -101,27 +101,33 @@ var files = module.exports = {
         ret = ret.concat(files.file_list_sync(
           path.join(filepath, fileName), extensions));
       });
-    } else if (!! files.registered_file_extension(filepath, extensions)) {
+    } else if (!! files.findExtension(extensions, filepath)) {
       ret.push(filepath);
     }
 
     return ret;
   },
 
-  // Given a path, return his file extension.
-  // Return false if there are no registered extensions that match.
-  // This function support multiple extensions such as `.coffee.md`
-  // unlike the node native `path.extname` function
-  registered_file_extension: function(filepath, extsList) {
-    parts = filepath.split('.');
-    ext = "";
-    for (var i = parts.length - 1; i > 0; i--) {
-      ext = '.' + parts[i] + ext;
-      if (_.indexOf(extsList, ext) !== -1) {
+  // given a list of extensions and a path, return the file extension
+  // provided in the list. If it doesn't find it, return false.
+  findExtension: function (extensions, filepath) {
+    var len = filepath.length;
+    for (var i = 0; i < extensions.length; ++i) {
+      ext = extensions[i];
+      if (filepath.indexOf(ext, len - ext.length) !== -1){
         return ext;
       }
     }
     return false;
+  },
+
+  // given a path, return his file extension, unlike the node native
+  // `path.extname` function, this function support multiple extensions
+  // such as `.coffee.md`. false otherwise.
+  extname: function (filepath) {
+    var basename = path.basename(filepath);
+
+    return basename.substring(basename.indexOf('.') + 1);
   },
 
   // given a path, returns true if it is a meteor application (has a
