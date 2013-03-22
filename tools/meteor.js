@@ -927,19 +927,20 @@ Fiber(function () {
     require('kexec')(quotedArgv);
   };
 
+  // Implements --version. Note that we only print to stdout and exit 0 if
+  // there's actually a specific release.
   var printVersion = function () {
-    if (files.usesWarehouse()) {
-      console.log("Release " + context.releaseVersion);
-      process.exit(0);
+    if (!files.usesWarehouse()) {
+      die("Unreleased (running from a checkout)");
     }
 
-    if (context.appDir) {
+    if (context.appReleaseVersion === "none") {
       die("This project was created with a checkout of Meteor, rather than an\n" +
           "official release, and doesn't have a release number associated with\n" +
           "it. You can set its release with 'meteor update'.");
-    } else {
-      die("Unreleased (running from a checkout)");
     }
+    console.log("Release " + context.releaseVersion);
+    process.exit(0);
   };
 
   var main = function() {
