@@ -1,8 +1,11 @@
 
 ## vNEXT
 
-* {{#each}} helper can now iterate over falsy values without throwing an
+* `{{#each}}` helper can now iterate over falsey values without throwing an
   exception. #815, #801
+
+* `{{#with}}` helper now only includes its block if its argument is not falsey,
+  and runs an `{{else}}` block if provided if the argument is falsey. #770, #866
 
 * Twitter login now stores profile_image_url and profile_image_url_https
   attributes in the user.services.twitter namespace. #788
