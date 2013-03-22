@@ -507,7 +507,7 @@ _.extend(DependencyWatcher.prototype, {
 
     // Source files
     if (in_any_dir(self.source_dirs) &&
-        _.indexOf(self.source_extensions, path.extname(filepath)) !== -1)
+        files.findExtension(self.source_extensions, filepath))
       return true;
 
     // Other directories and files that are included
