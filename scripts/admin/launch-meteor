@@ -22,7 +22,8 @@
 #
 # We'll keep around a copy of this file at
 # ~/.meteor/engines/latest/launch-meteor just in case you ever want to find it
-# again.
+# again. And if you put it somewhere that other users on your system can run it,
+# then when they run it they'll get their very own warehouse too!
 
 
 set -e
@@ -64,14 +65,19 @@ if [ ! -x "$HOME/.meteor/meteor" ]; then
     fi
   fi
 
-  # This returns something like https://warehouse.meteor.com/tools/db68972b9d239a95bffa3abe652d1e17815dba91
+  # This returns something like https://warehouse.meteor.com/bootstrap/0.6.1
   ROOT_URL="$(curl -s --fail $BOOTSTRAP_URL)"
-  TARBALL_URL="${ROOT_URL}/meteor-tools-bootstrap-${UNAME}-${ARCH}.tar.gz"
+  TARBALL_URL="${ROOT_URL}/meteor-bootstrap-${UNAME}-${ARCH}.tar.gz"
 
   INSTALL_TMPDIR="$HOME/.meteor-install-tmp"
   rm -rf "$INSTALL_TMPDIR"
   mkdir "$INSTALL_TMPDIR"
-  echo 'This is your first time using Meteor! Downloading the tools now.'
+  if [ -n "$USER" ]; then
+    echo "$USER, this is your first time using Meteor!"
+  else
+    echo "This is your first time using Meteor!"
+  fi
+  echo "Installing a Meteor distribution in your home directory."
   curl --progress-bar --fail "$TARBALL_URL" | tar -xzf - -C "$INSTALL_TMPDIR"
   # bomb out if it didn't work, eg no net
   test -x "${INSTALL_TMPDIR}/.meteor/meteor"
