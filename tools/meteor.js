@@ -800,7 +800,7 @@ Fiber(function () {
               "Usage: meteor test-packages [--release=x.y.z] [options] [package...]\n" +
                 "\n" +
                 "Runs unit tests for one or more packages. The results are shown in\n" +
-                "a browser dashboard that updates whenever a relevate source file is\n" +
+                "a browser dashboard that updates whenever a relevant source file is\n" +
                 "modified.\n" +
                 "\n" +
                 "Packages may be specified by name or by path. If a package argument\n" +
