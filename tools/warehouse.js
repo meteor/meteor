@@ -210,7 +210,7 @@ var warehouse = module.exports = {
       try {
         if (!background)
           console.log("Fetching Meteor Tools " + toolsVersion + "...");
-        warehouse.downloadTools(
+        warehouse.downloadToolsToWarehouse(
           toolsVersion,
           warehouse._unameAndArch(),
           warehouse.getWarehouseDir());
@@ -250,8 +250,7 @@ var warehouse = module.exports = {
     // http://blog.nodejs.org/2012/12/20/streams2/
 
     var toolsTarballFilename =
-          "meteor-tools-" + toolsVersion + "-" +
-          warehouse._unameAndArch() + ".tar.gz";
+          "meteor-tools-" + toolsVersion + "-" + platform + ".tar.gz";
     var toolsTarballPath = "/tools/" + toolsVersion + "/"
           + toolsTarballFilename;
     var toolsTarball = files.getUrl({
