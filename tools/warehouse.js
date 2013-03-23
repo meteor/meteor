@@ -120,7 +120,8 @@ var warehouse = module.exports = {
     var manifest = updater.getManifest();
 
     // XXX in the future support release channels other than stable
-    var releaseName = manifest && manifest.releases && manifest.releases.stable;
+    var releaseName = manifest && manifest.releases &&
+          manifest.releases.stable && manifest.releases.stable.version;
     if (!releaseName) {
       if (background)
         return false;  // it's in the background, who cares.
@@ -207,24 +208,12 @@ var warehouse = module.exports = {
     var toolsVersion = releaseManifest.tools;
     if (!warehouse.toolsExistsInWarehouse(toolsVersion)) {
       try {
-        // XXX this sucks. We store all the tarballs in memory. This is huge.
-        // We should instead stream packages in parallel. Since the node stream
-        // API is in flux, we should probably wait a bit.
-        // http://blog.nodejs.org/2012/12/20/streams2/
-
-        var toolsTarballFilename =
-            "meteor-tools-" + releaseManifest.tools + "-" +
-            warehouse._unameAndArch() + ".tar.gz";
-        var toolsTarballPath = "/tools/" + releaseManifest.tools + "/"
-              + toolsTarballFilename;
         if (!background)
           console.log("Fetching Meteor Tools " + toolsVersion + "...");
-        var toolsTarball = files.getUrl({
-          url: PACKAGES_URLBASE + toolsTarballPath,
-          encoding: null
-        });
-        files.extractTarGz(toolsTarball,
-                           warehouse.getToolsDir(toolsVersion));
+        warehouse.downloadTools(
+          toolsVersion,
+          warehouse._unameAndArch(),
+          warehouse.getWarehouseDir());
       } catch (e) {
         if (!background)
           console.error("Failed to load tools for release " + releaseVersion);
@@ -250,6 +239,27 @@ var warehouse = module.exports = {
     // Now that we have written all packages, it's safe to write the
     // release manifest.
     fs.writeFileSync(releaseManifestPath, releaseManifestText);
+  },
+
+  // this function is also used by bless-release.js
+  downloadToolsToWarehouse: function (
+    toolsVersion, platform, warehouseDirectory) {
+    // XXX this sucks. We store all the tarballs in memory. This is huge.
+    // We should instead stream packages in parallel. Since the node stream
+    // API is in flux, we should probably wait a bit.
+    // http://blog.nodejs.org/2012/12/20/streams2/
+
+    var toolsTarballFilename =
+          "meteor-tools-" + toolsVersion + "-" +
+          warehouse._unameAndArch() + ".tar.gz";
+    var toolsTarballPath = "/tools/" + toolsVersion + "/"
+          + toolsTarballFilename;
+    var toolsTarball = files.getUrl({
+      url: PACKAGES_URLBASE + toolsTarballPath,
+      encoding: null
+    });
+    files.extractTarGz(toolsTarball,
+                       path.join(warehouseDirectory, 'tools', toolsVersion));
   },
 
   printNotices: function(fromRelease, toRelease) {
@@ -287,22 +297,27 @@ var warehouse = module.exports = {
     }
   },
 
-  // @param packagesToPopulate {Object} eg {"less": "0.5.0"}
-  _populateWarehouseWithPackages: function(packagesToPopulate, background) {
-    var results = fiberHelpers.parallelMap(
-      packagesToPopulate, function (version, name) {
-        var packageDir = path.join(warehouse.getWarehouseDir(), 'packages',
-                                   name, version);
+  // this function is also used by bless-release.js
+  downloadPackagesToWarehouse: function (packagesToDownload,
+                                         warehouseDirectory) {
+    return fiberHelpers.parallelMap(
+      packagesToDownload, function (version, name) {
+        var packageDir = path.join(
+          warehouseDirectory, 'packages', name, version);
         var packageUrl = PACKAGES_URLBASE + "/packages/" + name + "/" +
               name + '-' + version + ".tar.gz";
-
-        if (!background)
-          console.log("Fetching " + packageUrl + "...");
 
         var tarball = files.getUrl({url: packageUrl, encoding: null});
         files.extractTarGz(tarball, packageDir);
         return {name: name, packageDir: packageDir};
       });
+  },
+
+  // @param packagesToPopulate {Object} eg {"less": "0.5.0"}
+  _populateWarehouseWithPackages: function(packagesToPopulate, background) {
+    var results = warehouse.downloadPackagesToWarehouse(
+      packagesToPopulate,
+      warehouse.getWarehouseDir());
 
     _.each(results, function (result) {
       // fetch npm dependencies

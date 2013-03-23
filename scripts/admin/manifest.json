@@ -1,9 +1,0 @@
-{
-  "version": "0.5.9",
-  "deb_version": "0.5.9-1",
-  "rpm_version": "0.5.9-1",
-  "urlbase": "https://d3sqy0vbqsdhku.cloudfront.net",
-  "releases": {
-    "stable": "0.6.0-alpha1"
-  }
-}

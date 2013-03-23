@@ -581,17 +581,13 @@ Fiber(function () {
         process.exit(1);
       }
 
-      var out = fs.createWriteStream(output_path);
-
-      out.on('error', function (err) {
+      try {
+        files.createTarball(path.join(buildDir, 'bundle'), output_path);
+      } catch (err) {
         console.log(JSON.stringify(err));
         process.stderr.write("Couldn't create tarball\n");
-      });
-      out.on('close', function () {
-        files.rm_recursive(buildDir);
-      });
-
-      files.createTarGzStream(path.join(buildDir, 'bundle')).pipe(out);
+      }
+      files.rm_recursive(buildDir);
     }
   });
 

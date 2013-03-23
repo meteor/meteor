@@ -464,6 +464,22 @@ var files = module.exports = {
       tar.Pack()).pipe(zlib.createGzip());
   },
 
+  // Tar-gzips a directory into a tarball on disk, synchronously.
+  // The tar archive will contain a top-level directory named after dirPath.
+  createTarball: function (dirPath, tarball) {
+    var future = new Future;
+    var out = fs.createWriteStream(tarball);
+    out.on('error', function (err) {
+      future.throw(err);
+    });
+    out.on('close', function () {
+      future.return();
+    });
+
+    files.createTarGzStream(dirPath).pipe(out);
+    future.wait();
+  },
+
   // A synchronous wrapper around request(...) that returns the response "body"
   // or throws.
   getUrl: function (urlOrOptions, callback) {
@@ -473,6 +489,8 @@ var files = module.exports = {
     request(urlOrOptions, function (error, response, body) {
       if (error)
         future.throw(error);
+      else if (response.statusCode >= 400 && response.statusCode < 600)
+        future.throw(response);
       else
         future.return(body);
     });

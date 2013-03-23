@@ -536,7 +536,8 @@ var start_update_checks = function (context) {
 
     // XXX in the future support release channels other than stable
     var manifestLatestRelease =
-          manifest && manifest.releases && manifest.releases.stable;
+          manifest && manifest.releases && manifest.releases.stable &&
+          manifest.releases.stable.version;
     var localLatestRelease = warehouse.latestRelease();
     if (manifestLatestRelease && manifestLatestRelease !== localLatestRelease) {
       console.log("////////////////////////////////////////");
