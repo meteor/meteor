@@ -11,7 +11,7 @@ set -u
 
 # cd to top level dir
 cd `dirname $0`
-cd ../..
+cd ../../..
 TOPDIR=$(pwd)
 
 UNAME=$(uname)
@@ -44,7 +44,7 @@ popd
 
 # Copy post-upgrade script to where it is expected.
 mkdir -p "$FAKE_TMPDIR/meteor/app/meteor"
-cp "$TOPDIR/scripts/admin/initial-engine-post-upgrade.js" \
+cp "$TOPDIR/scripts/admin/upgrade-to-engine/initial-engine-post-upgrade.js" \
    "$FAKE_TMPDIR/meteor/app/meteor/post-upgrade.js"
 
 # Copy in launch-bootstrap, which will become the installed
@@ -69,7 +69,7 @@ if [ "$UNAME" == "Linux" ] ; then
     cp "$TARBALL" "meteor_${VERSION}.orig.tar.gz"
     mkdir "meteor-${VERSION}"
     cd "meteor-${VERSION}"
-    cp -r "$TOPDIR/scripts/admin/debian" .
+    cp -r "$TOPDIR/scripts/admin/upgrade-to-engine/debian" .
     export TARBALL
     dpkg-buildpackage
     cp ../*.deb "$OUTDIR"
@@ -79,6 +79,6 @@ if [ "$UNAME" == "Linux" ] ; then
     RPMDIR="$FAKE_TMPDIR/rpm"
     mkdir $RPMDIR
     rpmbuild -bb --define="TARBALL $TARBALL" \
-        --define="_topdir $RPMDIR" "$TOPDIR/scripts/admin/meteor.spec"
+        --define="_topdir $RPMDIR" "$TOPDIR/scripts/admin/upgrade-to-engine/meteor.spec"
     cp $RPMDIR/RPMS/*/*.rpm "$OUTDIR"
 fi

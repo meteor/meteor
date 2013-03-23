@@ -122,5 +122,5 @@ Fiber(function () {
     console.log("*** Run `hash -r` so that your shell notices it has moved. ***");
     console.log("**************************************************************");
   }
-  kexec(shell_quote.quote([binary, 'update']));
+  kexec(shell_quote.quote([binary, '--version']));
 }).run();
