@@ -34,9 +34,9 @@ BOOTSTRAP_URL='https://install-bootstrap.meteor.com/'
 
 if [ ! -x "$HOME/.meteor/meteor" ]; then
   if [ -e "$HOME/.meteor" ]; then
-    echo "'$HOME/.meteor' exists, but '$HOME/.meteor/meteor' is not executable."
-    echo
-    echo "Remove it and try again."
+    echo "'$HOME/.meteor' exists, but '$HOME/.meteor/meteor' is not executable." 1>&2
+    echo 1>&2
+    echo "Remove it and try again." 1>&2
     exit 1
   fi
 
@@ -44,7 +44,7 @@ if [ ! -x "$HOME/.meteor/meteor" ]; then
 
   UNAME=$(uname)
   if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
-      echo "Sorry, this OS is not supported yet."
+      echo "Sorry, this OS is not supported yet." 1>&2
       exit 1
   fi
 
@@ -52,15 +52,15 @@ if [ ! -x "$HOME/.meteor/meteor" ]; then
     if [ "i386" != $(uname -p) -o "1" != $(sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0) ] ; then
       # Can't just test uname -m = x86_64, because Snow Leopard can
       # return other values.
-      echo "Only 64-bit Intel processors are supported at this time."
+      echo "Only 64-bit Intel processors are supported at this time." 1>&2
       exit 1
     fi
     ARCH="x86_64"
   elif [ "$UNAME" = "Linux" ] ; then
     ARCH="$(uname -m)"
     if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
-      echo "Unsupported architecture: $ARCH"
-      echo "Meteor only supports i686 and x86_64 for now."
+      echo "Unsupported architecture: $ARCH" 1>&2
+      echo "Meteor only supports i686 and x86_64 for now." 1>&2
       exit 1
     fi
   fi
@@ -73,11 +73,11 @@ if [ ! -x "$HOME/.meteor/meteor" ]; then
   rm -rf "$INSTALL_TMPDIR"
   mkdir "$INSTALL_TMPDIR"
   if [ -n "$USER" ]; then
-    echo "$USER, this is your first time using Meteor!"
+    echo "$USER, this is your first time using Meteor!" 1>&2
   else
-    echo "This is your first time using Meteor!"
+    echo "This is your first time using Meteor!" 1>&2
   fi
-  echo "Installing a Meteor distribution in your home directory."
+  echo "Installing a Meteor distribution in your home directory." 1>&2
   curl --progress-bar --fail "$TARBALL_URL" | tar -xzf - -C "$INSTALL_TMPDIR"
   # bomb out if it didn't work, eg no net
   test -x "${INSTALL_TMPDIR}/.meteor/meteor"
