@@ -188,6 +188,9 @@ _.extend(PackageBundlingInfo.prototype, {
     self.files[where][rel_path] = true;
 
     var ext = files.findExtension(self.api.registered_extensions(), rel_path);
+    // substr to remove the dot to translate between the with-dot world
+    // of registered_extensions and the without dot world of
+    // get_source_handler. This could use some API beautification.
     var handler = ext && self.get_source_handler(ext.substr(1));
     if (handler) {
       handler(self.bundle.api,
