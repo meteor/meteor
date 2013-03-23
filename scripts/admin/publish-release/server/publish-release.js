@@ -4,14 +4,26 @@ var Fiber = Npm.require("fibers");
 var Future = Npm.require("fibers/future");
 var child_process = Npm.require("child_process");
 
+var die = function (msg) {
+  console.error(msg);
+  process.exit(1);
+};
+
+var doOrDie = function (errorMessage, f) {
+  try {
+    return f();
+  } catch (e) {
+    die(errorMessage);
+  }
+};
+
 // accumulated while running, printed at the end
 var publishedArtifacts = [];
 
 var getFromSettings = function (key) {
   var val = Meteor.settings[key];
   if (!val) {
-    console.log("Run via publish-release.sh");
-    process.exit(1);
+    die("Run via publish-release.sh");
   }
   return val;
 };
@@ -26,12 +38,12 @@ var getReleaseName = function () {
   return getFromSettings('release-name');
 };
 
-// calls 'cmd', returns stdout.
+// runs a command, returns stdout.
 // XXX should we have a smart package for these? 'process'?
-var execSync = function (cmd) {
+var execFileSync = function (binary, args) {
   return Future.wrap(function(cb) {
     var cb2 = function(err, stdout, stderr) { cb(err, stdout); };
-    child_process.exec(cmd, cb2);
+    child_process.execFile(binary, args, cb2);
   })().wait();
 };
 
@@ -39,7 +51,7 @@ var execSync = function (cmd) {
 var configureS3 = function () {
   // calls 's3cmd --dump-config', returns {accessKey: ..., secretKey: ...}
   var getS3Credentials = function () {
-    var unparsedConfig = execSync("s3cmd --dump-config");
+    var unparsedConfig = execFileSync("s3cmd", ["--dump-config"]);
     var accessKey = /access_key = (.*)/.exec(unparsedConfig)[1];
     var secretKey = /secret_key = (.*)/.exec(unparsedConfig)[1];
     return {accessKey: accessKey, secretKey: secretKey};
@@ -57,16 +69,12 @@ var configureS3 = function () {
 
 // fetch and parse release manifest
 var getManifest = function(s3, gitSha) {
-  var content;
-  try {
-    content = s3.GetObject({
+  var content = doOrDie("Release " + gitSha + " not built.", function () {
+    return s3.GetObject({
       BucketName: "com.meteor.warehouse",
       ObjectName: ["unpublished", gitSha, "release.json"].join("/")
     }).Body;
-  } catch (e) {
-    console.log("Release " + gitSha + " not built.");
-    process.exit(1);
-  }
+  });
 
   return JSON.parse(content);
 };
@@ -190,8 +198,18 @@ var main = function() {
   if (/^([0-9]+\.)+[0-9]+$/.test(release)) {
     console.error(
       "It looks like you're trying to publish a final release (%s).", release);
-    console.error("Final releases should always be blessed from an RC release.");
-    process.exit(1);
+    die("Final releases should always be blessed from an RC release.");
+  }
+
+  var gitTag;
+  // Are we trying to give this release a name that isn't its sha?
+  if (release !== gitSha) {
+    gitTag = "release/" + release;
+    // Check to see if the release name is going to work in git.
+    doOrDie("Bad release name " + release, function () {
+      execFileSync("git", ["check-ref-format", "--allow-onelevel", gitTag]);
+    });
+    execFileSync("git", ["tag", gitTag, gitSha]);
   }
 
   var s3 = configureS3();
@@ -201,6 +219,14 @@ var main = function() {
     publishPackage(s3, gitSha, name, version);
   });
   publishManifest(s3, gitSha, release);
+
+  if (gitTag !== undefined) {
+    console.log("Pushing git tag " + gitTag);
+    execFileSync("git", ["push",
+                         "git@github.com:meteor/meteor.git",
+                         "refs/tags/" + gitTag]);
+  }
+
   console.log("\nPUBLISHED:\n" + publishedArtifacts.join('\n'));
   console.log();
   process.exit();

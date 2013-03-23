@@ -18,8 +18,10 @@
 
 var fs = require('fs');
 var path = require('path');
+var child_process = require('child_process');
 
 var Fiber = require('fibers');
+var Future = require('fibers/future');
 var _ = require('underscore');
 
 var files = require('../../tools/files.js');
@@ -36,6 +38,23 @@ var die = function (msg) {
   process.exit(1);
 };
 
+var doOrDie = function (errorMessage, f) {
+  try {
+    return f();
+  } catch (e) {
+    die(errorMessage);
+  }
+};
+
+// runs a command, returns stdout.
+// XXX should we have a smart package for these? 'process'?
+var execFileSync = function (binary, args) {
+  return Future.wrap(function(cb) {
+    var cb2 = function(err, stdout, stderr) { cb(err, stdout); };
+    child_process.execFile(binary, args, cb2);
+  })().wait();
+};
+
 var getWarehouseFile = function (path, json) {
   return files.getUrl({
     url: "https://s3.amazonaws.com/com.meteor.warehouse/" + path,
@@ -45,14 +64,6 @@ var getWarehouseFile = function (path, json) {
 
 var getReleaseManifest = function (release) {
   return getWarehouseFile("releases/" + release + ".release.json", true);
-};
-
-var doOrDie = function (errorMessage, f) {
-  try {
-    return f();
-  } catch (e) {
-    die(errorMessage);
-  }
 };
 
 var checkReleaseDoesNotExistYet = function (release) {
@@ -149,7 +160,7 @@ var writeGlobalManifest = function (blessedReleaseName, banner) {
 };
 
 
-var writeBigRedButton = function (blessedReleaseName) {
+var writeBigRedButton = function (blessedReleaseName, gitTagSourceSha, gitTag) {
   var s3Files = _.map(PLATFORMS, function (platform) {
     return [bootstrapTarballFilename(platform),
             'com.meteor.warehouse/bootstrap/' + blessedReleaseName];
@@ -171,7 +182,11 @@ var writeBigRedButton = function (blessedReleaseName) {
     return "s3cmd -P put " + f[0] + " s3://" + f[1] + "/\n";
   }).join('');
 
-  scriptText = scriptText + "echo 'Gesundheit!'\n";
+  scriptText = scriptText +
+    "git tag " + gitTag + " " + gitTagSourceSha + "\n" +
+    "git push git@github.com:meteor/meteor.git refs/tags/" + gitTag + "\n" +
+    "echo 'Gesundheit!'\n";
+
   var scriptFilename = path.join(distDirectory, "big-red-button.sh");
   fs.writeFileSync(scriptFilename, scriptText);
   fs.chmodSync(scriptFilename, 0755);
@@ -197,6 +212,19 @@ var main = function () {
 
   checkReleaseDoesNotExistYet(blessedReleaseName);
 
+  var gitTag = "release/" + blessedReleaseName;
+  // Check to see if the release name is going to work in git.
+  doOrDie("Bad release name " + blessedReleaseName, function () {
+    execFileSync("git", ["check-ref-format", "--allow-onelevel", gitTag]);
+  });
+
+  var gitTagSource = /^[0-9a-f]{40}$/.test(rcName)
+        ? rcName : 'release/' + rcName;
+  var gitTagSourceSha = doOrDie("Release " + rcName + " not in git", function () {
+    return execFileSync(
+      "git", ["rev-parse", "--verify", gitTagSource]).replace(/\s+/, '');
+  });
+
   var noticesFilename = path.resolve(__dirname, 'notices.json');
   var notices = doOrDie("Can't read notices file " + noticesFilename, function () {
     return readJSONFile(noticesFilename);
@@ -219,7 +247,7 @@ var main = function () {
   console.log("Here's the banner users will see that tells them to upgrade:");
   console.log(banner);
 
-  writeBigRedButton(blessedReleaseName);
+  writeBigRedButton(blessedReleaseName, gitTagSourceSha, gitTag);
 };
 
 Fiber(main).run();
