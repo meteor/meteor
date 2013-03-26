@@ -9,7 +9,7 @@
   // not obey the _escaped_fragment_ protocol. The page is served
   // statically to any client whos user agent matches any of these
   // regexps. (possibly make this list configurable by user).
-  var AGENTS = [/^facebookexternalhit/i, /^linkedinbot/i];
+  var AGENTS = [/^facebookexternalhit/i, /^linkedinbot/i, /vkShare/];
 
   // how long to let phantomjs run before we kill it
   var REQUEST_TIMEOUT = 15*1000;
