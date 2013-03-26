@@ -23,13 +23,7 @@ The `startup` callbacks are called in the same order as the calls to
 
 On a client, `startup` callbacks from smart packages will be called
 first, followed by `<body>` templates from your `.html` files,
-followed by your application code (since this is the order in which
-code is loaded).
-   
-Because of this ordering, in a `startup` callback from your
-application code the `<body>` templates will have been put on the
-screen already, while in a `startup` callback from a smart package
-they won't have been inserted yet.
+followed by your application code.
 
     // On server startup, if the database is empty, create some initial data.
     if (Meteor.isServer) {
