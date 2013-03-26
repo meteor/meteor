@@ -5,8 +5,6 @@
 //    if unordered, they are maps {_id: doc}.
 // observer: object with 'added', 'changed', 'removed',
 //           and (if ordered) 'moved' functions (each optional)
-// deepcopy: if true, elements of new_results that are passed
-//           to callbacks are deepcopied first.
 LocalCollection._diffQueryChanges = function (ordered, oldResults, newResults,
                                        observer) {
   if (ordered)
