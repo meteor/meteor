@@ -11,13 +11,15 @@ if (Meteor.isClient) {
   Template.main.events({
     'click #login': function (evt) {
       Meteor.loginWithGoogle(function (err) {
-        Meteor._debug(err);
+        if (err)
+          Meteor._debug(err);
       });
       evt.preventDefault();
     },
     'click #logout': function (evt) {
       Meteor.logout(function (err) {
-        Meteor._debug(err);
+        if (err)
+          Meteor._debug(err);
       });
       evt.preventDefault();
     }
