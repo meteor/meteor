@@ -258,6 +258,14 @@ _Mongo.prototype.update = function (collection_name, selector, mod, options) {
     throw e;
   }
 
+  // explicit safety check. null and undefined can crash the mongo
+  // driver. Although the node driver and minimongo do 'support'
+  // non-object modifier in that they don't crash, they are not
+  // meaningful operations and do not do anything. Defensively throw an
+  // error here.
+  if (!mod || typeof mod !== 'object')
+    throw new Error("Invalid modifier. Modifier must be an object.");
+
   var write = self._maybeBeginWrite();
 
   if (!options) options = {};
