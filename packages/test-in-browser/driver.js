@@ -26,26 +26,34 @@ Meteor.startup(function () {
 });
 
 Template.progressBar.running = function () {
-  Deps.depend(countDeps);
+  countDeps.depend();
   return passedCount + failedCount < totalCount;
 };
 
 Template.progressBar.percentPass = function () {
-  Deps.depend(countDeps);
+  countDeps.depend();
   if (totalCount === 0)
     return 0;
   return 100*passedCount/totalCount;
 };
 
+Template.progressBar.totalCount = function () {
+  return totalCount;
+};
+
+Template.progressBar.passedCount = function () {
+  return passedCount;
+};
+
 Template.progressBar.percentFail = function () {
-  Deps.depend(countDeps);
+  countDeps.depend();
   if (totalCount === 0)
     return 0;
   return 100*failedCount/totalCount;
 };
 
 Template.progressBar.anyFail = function () {
-  Deps.depend(countDeps);
+  countDeps.depend();
   return failedCount > 0;
 };
 
@@ -87,12 +95,12 @@ Template.test_group.events({
 });
 
 Template.test_table.running = function() {
-  Deps.depend(resultsDeps);
+  resultsDeps.depend();
   return running;
 };
 
 Template.test_table.passed = function() {
-  Deps.depend(resultsDeps);
+  resultsDeps.depend();
 
   // walk whole tree to look for failed tests
   var walk = function (groups) {
@@ -121,7 +129,7 @@ Template.test_table.passed = function() {
 
 
 Template.test_table.total_test_time = function() {
-  Deps.depend(resultsDeps);
+  resultsDeps.depend();
 
   // walk whole tree to get all tests
   var walk = function (groups) {
@@ -144,11 +152,11 @@ Template.test_table.total_test_time = function() {
 
 
 Template.test_table.data = function() {
-  Deps.depend(resultsDeps);
+  resultsDeps.depend();
   return resultTree;
 };
 Template.test_table.failedTests = function() {
-  Deps.depend(resultsDeps);
+  resultsDeps.depend();
   return failedTests;
 };
 

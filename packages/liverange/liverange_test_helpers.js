@@ -2,7 +2,7 @@
 // correct. if both of these things are true, then everything
 // contained by 'range' must be a valid subtree. (assuming that
 // visit() is actually working.)
-var check_liverange_integrity = function (range) {
+check_liverange_integrity = function (range) {
   var stack = [];
 
   var check_node = function (node) {

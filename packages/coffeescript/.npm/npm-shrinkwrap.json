@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "coffee-script": {
+      "version": "1.5.0",
+      "from": "coffee-script@1.5.0"
+    }
+  }
+}

@@ -9,7 +9,7 @@
 
 // Constructor, with optional 'new':
 // var d = [new] OnscreenDiv([frag])
-var OnscreenDiv = function(optFrag) {
+OnscreenDiv = function(optFrag) {
   if (! (this instanceof OnscreenDiv))
     return new OnscreenDiv(optFrag);
 

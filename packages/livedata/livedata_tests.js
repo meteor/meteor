@@ -1,5 +1,4 @@
 // XXX should check error codes
-(function () {
 var failure = function (test, code, reason) {
   return function (error, result) {
     test.equal(result, undefined);
@@ -400,6 +399,71 @@ Tinytest.add("livedata - setUserId error when called from server", function(test
   }
 });
 
+
+if (Meteor.isServer) {
+  var pubHandles = {};
+};
+Meteor.methods({
+  "livedata/setup" : function (id) {
+    if (Meteor.isServer) {
+      pubHandles[id] = {};
+      Meteor.publish("pub1"+id, function () {
+        pubHandles[id].pub1 = this;
+        this.ready();
+      });
+      Meteor.publish("pub2"+id, function () {
+        pubHandles[id].pub2 = this;
+        this.ready();
+      });
+
+    }
+  },
+  "livedata/pub1go" : function (id) {
+    if (Meteor.isServer) {
+
+      pubHandles[id].pub1.added("MultiPubCollection" + id, "foo", {a: "aa"});
+      return 1;
+    }
+    return 0;
+  },
+  "livedata/pub2go" : function (id) {
+    if (Meteor.isServer) {
+      pubHandles[id].pub2.added("MultiPubCollection" + id , "foo", {b: "bb"});
+      return 2;
+    }
+    return 0;
+  }
+});
+
+if (Meteor.isClient) {
+  (function () {
+    var MultiPub;
+    var id = Random.id();
+    testAsyncMulti("livedata - added from two different subs", [
+      function (test, expect) {
+        Meteor.call('livedata/setup', id, expect(function () {}));
+      },
+      function (test, expect) {
+        MultiPub = new Meteor.Collection("MultiPubCollection" + id);
+        var sub1 = Meteor.subscribe("pub1"+id, expect(function () {}));
+        var sub2 = Meteor.subscribe("pub2"+id, expect(function () {}));
+      },
+      function (test, expect) {
+        Meteor.call("livedata/pub1go", id, expect(function (err, res) {test.equal(res, 1);}));
+      },
+      function (test, expect) {
+        test.equal(MultiPub.findOne("foo"), {_id: "foo", a: "aa"});
+      },
+      function (test, expect) {
+        Meteor.call("livedata/pub2go", id, expect(function (err, res) {test.equal(res, 2);}));
+      },
+      function (test, expect) {
+        test.equal(MultiPub.findOne("foo"), {_id: "foo", a: "aa", b: "bb"});
+      }
+    ]);
+  })();
+};
+
 if (Meteor.isClient) {
   testAsyncMulti("livedata - overlapping universal subs", [
     function (test, expect) {
@@ -548,4 +612,3 @@ if (Meteor.isClient) {
 // reconnection not resulting in method re-execution
 // reconnection tolerating all kinds of lost messages (including data)
 // [probably lots more]
-})();

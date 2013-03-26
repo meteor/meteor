@@ -12,6 +12,8 @@ Package.describe({
   internal: true
 });
 
+Npm.depends({mongodb: "1.2.13"});
+
 Package.on_use(function (api) {
   api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging', 'livedata'],
           ['client', 'server']);

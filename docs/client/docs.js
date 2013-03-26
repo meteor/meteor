@@ -1,4 +1,7 @@
-METEOR_VERSION = "0.5.9";
+Template.headline.release = function () {
+  return Meteor.release || "(checkout)";
+};
+
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
@@ -77,7 +80,7 @@ Meteor.startup(function () {
 });
 
 var toc = [
-  {name: "Meteor " + METEOR_VERSION, id: "top"}, [
+  {name: "Meteor " + Template.headline.release(), id: "top"}, [
     "Quick start",
     "Seven principles",
     "Resources"
@@ -248,7 +251,6 @@ var toc = [
       "Deps.currentComputation",
       "Deps.onInvalidate",
       "Deps.afterFlush",
-      "Deps.depend",
       "Deps.Computation", [
         {instance: "computation", name: "stop", id: "computation_stop"},
         {instance: "computation", name: "invalidate", id: "computation_invalidate"},
@@ -259,7 +261,7 @@ var toc = [
       ],
       "Deps.Dependency", [
         {instance: "dependency", name: "changed", id: "dependency_changed"},
-        {instance: "dependency", name: "addDependent", id: "dependency_adddependent"},
+        {instance: "dependency", name: "depend", id: "dependency_depend"},
         {instance: "dependency", name: "hasDependents", id: "dependency_hasdependents"}
       ]
     ],

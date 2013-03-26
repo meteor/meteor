@@ -350,3 +350,16 @@
 <template name="test_template_trickylabels_a2">
   <div>foo</div>
 </template>
+
+<!-- Test for issue #801 - Each handling of falsy values eg. [1, 2, null, undefined] -->
+<template name="test_template_issue801">
+{{#each values}}{{this}}{{/each}}
+</template>
+
+<!-- Test for issue #770 - falsy value for with -->
+<template name="test_template_issue770">
+{{# with value1}}{{this}}{{else}}xxx{{/with}}
+{{# with value2}}{{this}}{{else}}xxx{{/with}}
+{{# with value1}}{{this}}{{/with}}
+{{# with value2}}{{this}}{{/with}}
+</template>

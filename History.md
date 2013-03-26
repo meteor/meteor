@@ -1,6 +1,28 @@
 
 ## vNEXT
 
+* `{{#each}}` helper can now iterate over falsey values without throwing an
+  exception. #815, #801
+
+* `{{#with}}` helper now only includes its block if its argument is not falsey,
+  and runs an `{{else}}` block if provided if the argument is falsey. #770, #866
+
+* Twitter login now stores profile_image_url and profile_image_url_https
+  attributes in the user.services.twitter namespace. #788
+
+* Allow packages to register file extensions with dots in the filename.
+
+* Deps API
+  * Add `dep.depend()`, deprecate `Deps.depend(dep)` and
+    `dep.addDependent()`.
+  * If first run of `Deps.autorun` throws an exception, stop it and don't
+    rerun.  This prevents a Spark exception when template rendering fails
+    ("Can't call 'firstNode' of undefined").
+
+Patches contributed by GitHub users blackcoat, estark37, mquandalle, Primigenus,
+raix, timhaines.
+
+
 ## v0.5.9
 
 * Fix regression in 0.5.8 that prevented users from editing their own

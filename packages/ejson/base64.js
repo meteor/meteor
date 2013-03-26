@@ -1,7 +1,5 @@
 // Base 64 encoding
 
-(function () {
-
 var BASE_64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 var BASE_64_VALS = {};
@@ -123,5 +121,3 @@ EJSON._base64Decode = function (str) {
   }
   return arr;
 };
-
-})();
