@@ -15,9 +15,10 @@
 ///       foo/
 ///         VERSION/
 ///
-/// When running from a checkout, there is only one acceptable release - 'none', which
-/// has an empty manifest, ensuring that we only load local packages (in CHECKOUT/packages
-/// or within a directory in the PACKAGE_DIRS environment variable)
+/// When running from a checkout, there is only one acceptable release - 'none',
+/// which has an empty manifest, ensuring that we only load local packages (in
+/// CHECKOUT/packages or within a directory in the PACKAGE_DIRS environment
+/// variable)
 
 var path = require("path");
 var fs = require("fs");
@@ -89,11 +90,9 @@ var warehouse = module.exports = {
   // releases are found, return null.
   latestRelease: function() {
     var latestReleaseSymlink = warehouse._latestReleaseSymlinkPath();
-    try {
-      var linkText = fs.readlinkSync(latestReleaseSymlink);
-    } catch (e) {
-      return null;
-    }
+    // This throws if the symlink doesn't exist, but it really should, since
+    // it exists in bootstrap tarballs and is never deleted.
+    var linkText = fs.readlinkSync(latestReleaseSymlink);
     return linkText.replace(/\.release\.json$/, '');
   },
 
@@ -140,7 +139,7 @@ var warehouse = module.exports = {
     }
 
     var storedLatestRelease = warehouse.latestRelease();
-    if (storedLatestRelease && storedLatestRelease === releaseName)
+    if (storedLatestRelease === releaseName)
       return false;
 
     symlinkOverSync(releaseName + '.release.json',

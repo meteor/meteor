@@ -49,15 +49,6 @@ Fiber(function () {
     process.exit(1);
   };
 
-  // If the releases directory in local warehouse is empty, fetch the
-  // latest release from our servers. This release may require a
-  // different tools, in which case we'll springboard later.
-  var ensureSomeRelease = function () {
-    if (!warehouse.latestRelease()) {
-      warehouse.fetchLatestRelease();
-    }
-  };
-
   // Stores the app directory (if any), release version, etc.
   var context = {};
 
@@ -95,8 +86,6 @@ Fiber(function () {
       // warehouse.js to have no packages.
       return 'none';
     }
-
-    ensureSomeRelease();
 
     // If a release was specified explicitly on the command line, that's the one
     // to use. Otherwise use the release specified in the app (if
