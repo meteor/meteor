@@ -326,6 +326,26 @@ var warehouse = module.exports = {
     });
   },
 
+  _lastPrintedBannerReleaseFile: function () {
+    return path.join(warehouse.getWarehouseDir(),
+                     'releases', '.last-printed-banner');
+  },
+
+  lastPrintedBannerRelease: function () {
+    // Calculate filename outside of try block, because getWarehouseDir can
+    // throw.
+    var filename = warehouse._lastPrintedBannerReleaseFile();
+    try {
+      return fs.readFileSync(filename, 'utf8');
+    } catch (e) {
+      return null;
+    }
+  },
+
+  writeLastPrintedBannerRelease: function (release) {
+    fs.writeFileSync(warehouse._lastPrintedBannerReleaseFile(), release);
+  },
+
   _unameAndArch: function () {
     // Normalize from Node "os.arch()" to "uname -m".
     var arch = os.arch();
