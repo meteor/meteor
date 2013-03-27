@@ -22,7 +22,8 @@ cleanup.onExit(function () {
   });
 });
 
-var meteorNpm = module.exports = {
+var meteorNpm = exports;
+_.extend(exports, {
   _tmpDirs: [],
 
   _isGitHubTarball: function (x) {
@@ -358,5 +359,5 @@ var meteorNpm = module.exports = {
   _randomToken: function() {
     return (Math.random() * 0x100000000 + 1).toString(36);
   }
-};
+});
 

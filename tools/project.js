@@ -3,7 +3,8 @@ var path = require('path');
 var _ = require('underscore');
 var files = require('./files.js');
 
-var project = module.exports = {
+var project = exports;
+_.extend(exports, {
 
   _get_lines: function (file) {
     var raw = fs.readFileSync(file, 'utf8');
@@ -99,4 +100,4 @@ var project = module.exports = {
     project._write_packages(app_dir, lines);
   }
 
-};
+});

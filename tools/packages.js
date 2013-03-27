@@ -306,7 +306,8 @@ _.extend(Package.prototype, {
 
 var loadedPackages = {};
 
-var packages = module.exports = {
+var packages = exports;
+_.extend(exports, {
 
   // get a package by name. also maps package objects to themselves.
   // load order is:
@@ -461,4 +462,4 @@ var packages = module.exports = {
       return stats.isDirectory();
     });
   }
-};
+});

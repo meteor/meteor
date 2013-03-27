@@ -16,7 +16,8 @@ var fstream = require('fstream');
 
 var cleanup = require('./cleanup.js');
 
-var files = module.exports = {
+var files = exports;
+_.extend(exports, {
   // A sort comparator to order files into load order.
   sort: function (a, b) {
     // main.* loaded last
@@ -500,7 +501,7 @@ var files = module.exports = {
   _randomToken: function() {
     return (Math.random() * 0x100000000 + 1).toString(36);
   }
-};
+});
 
 
 var tempDirs = [];

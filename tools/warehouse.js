@@ -40,8 +40,8 @@ var symlinkOverSync = function (linkText, file) {
   fs.renameSync(tmpSymlink, file);
 };
 
-
-var warehouse = module.exports = {
+var warehouse = exports;
+_.extend(warehouse, {
   // Return our loaded collection of tools, releases and
   // packages. If we're running an installed version, found at
   // $HOME/.meteor.
@@ -356,4 +356,4 @@ var warehouse = module.exports = {
       throw new Error("Unsupported architecture " + arch);
     return os.type() + "-" + arch;
   }
-};
+});
