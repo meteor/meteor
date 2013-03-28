@@ -417,6 +417,30 @@ if (Meteor.isClient) {
               test.equal(collection.find({updated: true}).count(), 2);
             }));
         },
+        // update with replacement operator not allowed, and has nice error.
+        function (test, expect) {
+          collection.update(
+            {_id: id2},
+            {_id: id2, updated: true},
+            expect(function (err, res) {
+              test.equal(err.error, 403);
+              test.matches(err.reason, /In a restricted/);
+              // unchanged
+              test.equal(collection.find({updated: true}).count(), 2);
+            }));
+        },
+        // update with rename operator not allowed, and has nice error.
+        function (test, expect) {
+          collection.update(
+            {_id: id2},
+            {$rename: {updated: 'asdf'}},
+            expect(function (err, res) {
+              test.equal(err.error, 403);
+              test.matches(err.reason, /not allowed/);
+              // unchanged
+              test.equal(collection.find({updated: true}).count(), 2);
+            }));
+        },
         // update method with a non-ID selector is not allowed
         function (test, expect) {
           // We shouldn't even send the method...
