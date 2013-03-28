@@ -28,9 +28,9 @@ var files = require('../../tools/files.js');
 var warehouse = require('../../tools/warehouse.js');
 
 var PLATFORMS = [
-  'Darwin-x86_64',
-  'Linux-i686',
-  'Linux-x86_64'
+  'Darwin_x86_64',
+  'Linux_i686',
+  'Linux_x86_64'
 ];
 
 var die = function (msg) {
