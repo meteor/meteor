@@ -203,12 +203,6 @@ _.extend(warehouse, {
       // no notices, proceed
     }
 
-    var urlBase;
-    if (releaseManifest.urlBase) {
-      urlBase = releaseManifest.urlBase.replace(/__PLATFORM__/g,
-                                                warehouse._platform());
-    }
-
     // populate warehouse with tools version for this release
     var toolsVersion = releaseManifest.tools;
     if (!warehouse.toolsExistsInWarehouse(toolsVersion)) {
@@ -218,8 +212,7 @@ _.extend(warehouse, {
         warehouse.downloadToolsToWarehouse(
           toolsVersion,
           warehouse._platform(),
-          warehouse.getWarehouseDir(),
-          urlBase
+          warehouse.getWarehouseDir()
         );
       } catch (e) {
         if (!background)
@@ -238,8 +231,7 @@ _.extend(warehouse, {
       });
       warehouse.downloadPackagesToWarehouse(missingPackages,
                                             warehouse._platform(),
-                                            warehouse.getWarehouseDir(),
-                                            urlBase);
+                                            warehouse.getWarehouseDir());
     } catch (e) {
       if (!background)
         console.error("Failed to load packages for release " + releaseVersion);
@@ -253,7 +245,7 @@ _.extend(warehouse, {
 
   // this function is also used by bless-release.js
   downloadToolsToWarehouse: function (
-    toolsVersion, platform, warehouseDirectory, urlBase) {
+      toolsVersion, platform, warehouseDirectory) {
     // XXX this sucks. We store all the tarballs in memory. This is huge.
     // We should instead stream packages in parallel. Since the node stream
     // API is in flux, we should probably wait a bit.
@@ -264,7 +256,7 @@ _.extend(warehouse, {
     var toolsTarballPath = "/tools/" + toolsVersion + "/"
           + toolsTarballFilename;
     var toolsTarball = files.getUrl({
-      url: (urlBase || WAREHOUSE_URLBASE) + toolsTarballPath,
+      url: WAREHOUSE_URLBASE + toolsTarballPath,
       encoding: null
     });
     files.extractTarGz(toolsTarball,
@@ -309,13 +301,12 @@ _.extend(warehouse, {
   // this function is also used by bless-release.js
   downloadPackagesToWarehouse: function (packagesToDownload,
                                          platform,
-                                         warehouseDirectory,
-                                         urlBase) {
+                                         warehouseDirectory) {
     return fiberHelpers.parallelMap(
       packagesToDownload, function (version, name) {
         var packageDir = path.join(
           warehouseDirectory, 'packages', name, version);
-        var packageUrl = (urlBase || WAREHOUSE_URLBASE) + "/packages/" + name +
+        var packageUrl = WAREHOUSE_URLBASE + "/packages/" + name +
               "/" + version +
               "/" + name + '-' + version + "-" + platform + ".tar.gz";
 
