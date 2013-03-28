@@ -121,7 +121,7 @@ var makeWarehouseStructure = function (blessedReleaseName, rcManifest, notices) 
 };
 
 var downloadPackages = function (packages, platform) {
-  console.log("Downloading packages");
+  console.log("Downloading packages for " + platform);
   warehouse.downloadPackagesToWarehouse(
     packages, platform, warehouseDirectory);
 };
@@ -136,7 +136,7 @@ var bootstrapTarballFilename = function (platform) {
   return "meteor-bootstrap-" + platform + ".tar.gz";
 };
 
-var makeBootstrapTarball = function (toolsVersion, platform) {
+var makeBootstrapTarball = function (platform) {
   console.log("Creating bootstrap tarball for " + platform);
   var tarballName = bootstrapTarballFilename(platform);
   files.createTarball(warehouseDirectory,

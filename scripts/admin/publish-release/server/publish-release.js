@@ -4,12 +4,6 @@ var Fiber = Npm.require("fibers");
 var Future = Npm.require("fibers/future");
 var child_process = Npm.require("child_process");
 
-var PLATFORMS = [
-  'Darwin_x86_64',
-  'Linux_i686',
-  'Linux_x86_64'
-];
-
 var die = function (msg) {
   console.error(msg);
   process.exit(1);
