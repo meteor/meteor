@@ -105,7 +105,8 @@ var copyScriptToTmp = function () {
 
 Fiber(function () {
   console.warn(
-    "Meteor has a brand new distribution system!\n" +
+    "\n" +
+      "Meteor has a brand new distribution system!\n" +
       "\n" +
       "In this new system, code-named Engine, packages are downloaded\n" +
       "individually and on demand. But all of the packages in each official\n" +

@@ -54,6 +54,7 @@ rmdir "${INSTALL_TMPDIR}"
 test -x "$HOME/.meteor/meteor"
 
 cat 1>&2 <<"EOF"
+
 Installing Meteor in your home directory (~/.meteor):
  * 'meteor' build tool
  * Package updates: absolute-url accounts-base accounts-facebook
@@ -92,6 +93,8 @@ if [ "$LAUNCHER_INSTALLED" = "1" ]; then
 *** Run `hash -r` so that your shell notices it has moved. ***
 **************************************************************
 EOF
+  else
+    echo 1>&2
   fi
 else
     cat 1>&2 <<"EOF"
