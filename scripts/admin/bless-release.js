@@ -176,7 +176,7 @@ var writeBigRedButton = function (blessedReleaseName, gitTagSourceSha, gitTag) {
         "# Look at the contents of this directory, cross your fingers, and\n" +
         "# run this script!\n\n" +
         "set -e\n" +
-        "cd " + distDirectory + "\n" +
+        "cd '" + distDirectory + "'\n" +
         "echo 'Blessing Meteor " + blessedReleaseName + "'\n\n";
   scriptText = scriptText + _.map(s3Files, function (f) {
     return "s3cmd -P put " + f[0] + " s3://" + f[1] + "/\n";
