@@ -62,7 +62,7 @@ Fiber(function () {
     if (context.appDir) {
       context.appReleaseVersion =
         project.getMeteorReleaseVersion(context.appDir) ||
-        warehouse.latestRelease();
+        (files.usesWarehouse() ? warehouse.latestRelease() : 'none');
     }
     // Recalculate release version, taking the current app into account.
     context.releaseVersion = calculateReleaseVersion(argv);

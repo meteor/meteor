@@ -620,7 +620,7 @@ exports.run = function (context, options) {
     // start.)
     if (files.usesWarehouse() && !context.userReleaseOverride) {
       var newAppRelease = project.getMeteorReleaseVersion(context.appDir) ||
-            warehouse.latestRelease();;
+            warehouse.latestRelease();
       if (newAppRelease !== context.appReleaseVersion) {
         console.error("Your app has been updated to Meteor %s from " +
                       "Meteor %s.\nRestart meteor to use the new release.",
