@@ -942,10 +942,10 @@ Fiber(function () {
 
     // if we're not running the correct tools, fetch it and
     // re-run. do *not* do this if we are in a checkout, or if
-    // process.env.TEST_WAREHOUSE_DIR is set. This hook allows unit
+    // process.env.METEOR_TEST_NO_SPRINGBOARD is set. This hook allows unit
     // tests to test the current tools's ability to run other
     // releases.
-    if (!files.in_checkout() && !process.env.TEST_WAREHOUSE_DIR)
+    if (!files.in_checkout() && !process.env.METEOR_TEST_NO_SPRINGBOARD)
       toolsSpringboard();
 
     if (argv.help) {

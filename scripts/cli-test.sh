@@ -22,13 +22,14 @@ if [ "$1" == "--global" ]; then
     METEOR=/usr/local/bin/meteor
 fi
 
-if [ "$TEST_WAREHOUSE_DIR" ]; then
-    # The point of this testing script is to test the tools, so we make
-    # sure (in lib/meteor.js) to not springboard if TEST_WAREHOUSE_DIR is
-    # set. This is a random release that we pass to --release on all
-    # commands (in case TEST_WAREHOUSE_DIR) is set. This could break if
-    # this specified release is incompatible with the current tools, in
-    # which case you can build and publish a new release and set it here.
+if [ "$METEOR_WAREHOUSE_DIR" ]; then
+    # The point of this testing script is to test the tools, so we make sure (in
+    # lib/meteor.js) to not springboard if METEOR_TEST_NO_SPRINGBOARD is
+    # set. Then we specify a random release that we pass to --release on all
+    # commands. This could break if this specified release is incompatible with
+    # the current tools, in which case you can build and publish a new release
+    # and set it here.
+    export METEOR_TEST_NO_SPRINGBOARD=t
     TEST_RELEASE="0.6.0-alpha1"
 
     METEOR="$METEOR --release=$TEST_RELEASE" # some random non-official release
@@ -44,7 +45,7 @@ set -e -x
 
 ## Begin actual tests
 
-if [ "$TEST_WAREHOUSE_DIR" ]; then
+if [ "$METEOR_WAREHOUSE_DIR" ]; then
     $METEOR --version | grep $TEST_RELEASE >> $OUTPUT
 else
     $METEOR --version 2>&1 | grep checkout >> $OUTPUT

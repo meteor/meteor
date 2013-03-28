@@ -46,12 +46,12 @@ _.extend(warehouse, {
   // packages. If we're running an installed version, found at
   // $HOME/.meteor.
   getWarehouseDir: function () {
-    // a hook for tests
-    if (process.env.TEST_WAREHOUSE_DIR)
-      return process.env.TEST_WAREHOUSE_DIR;
+    // a hook for tests, or i guess for users.
+    if (process.env.METEOR_WAREHOUSE_DIR)
+      return process.env.METEOR_WAREHOUSE_DIR;
 
     // This function should never be called unless we have a warehouse
-    // (an installed version, or with process.env.TEST_WAREHOUSE_DIR
+    // (an installed version, or with process.env.METEOR_WAREHOUSE_DIR
     // set)
     if (!files.usesWarehouse())
       throw new Error("There's no warehouse in a git checkout");

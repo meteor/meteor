@@ -212,13 +212,13 @@ _.extend(exports, {
     return false;
   },
 
-  // False if we are using a warehouse: either installed Meteor, or the test
-  // hook $TEST_WAREHOUSE_DIR is set. Otherwise true (we're in a git checkout
-  // and just using packages from the checkout).
+  // False if we are using a warehouse: either installed Meteor, or if
+  // $METEOR_WAREHOUSE_DIR is set. Otherwise true (we're in a git checkout and
+  // just using packages from the checkout).
   usesWarehouse: function () {
     // Test hook: act like we're "installed" using a non-homedir warehouse
     // directory.
-    if (process.env.TEST_WAREHOUSE_DIR)
+    if (process.env.METEOR_WAREHOUSE_DIR)
       return true;
     else
       return !files.in_checkout();
