@@ -101,6 +101,7 @@ Fiber(function () {
         context.appReleaseVersion !== context.releaseVersion) {
       console.log("=> Using Meteor %s as requested (overriding Meteor %s)",
                   context.releaseVersion, context.appReleaseVersion);
+      console.log();
     }
   };
 
