@@ -30,7 +30,7 @@ var files = require('./files.js');
 var updater = require('./updater.js');
 var fiberHelpers = require('./fiber-helpers.js');
 
-var PACKAGES_URLBASE = 'https://warehouse.meteor.com';
+var WAREHOUSE_URLBASE = 'https://warehouse.meteor.com';
 
 // Like fs.symlinkSync, but creates a temporay link and renames it over the
 // file; this means it works even if the file already exists.
@@ -176,7 +176,7 @@ _.extend(warehouse, {
     // writing packages
     try {
       var releaseManifestText = files.getUrl(
-        PACKAGES_URLBASE + "/releases/" + releaseVersion + ".release.json");
+        WAREHOUSE_URLBASE + "/releases/" + releaseVersion + ".release.json");
       var releaseManifest = JSON.parse(releaseManifestText);
     } catch (e) {
       if (background)
@@ -191,7 +191,7 @@ _.extend(warehouse, {
     // releases have one, so if we can't find it just proceed
     try {
       var notices = files.getUrl(
-        PACKAGES_URLBASE + "/releases/" + releaseVersion + ".notices.json");
+        WAREHOUSE_URLBASE + "/releases/" + releaseVersion + ".notices.json");
 
       // If a file is not on S3 we get served an 'access denied' XML
       // file. This will throw (intentionally) in that case. Real
@@ -203,6 +203,12 @@ _.extend(warehouse, {
       // no notices, proceed
     }
 
+    var urlBase;
+    if (releaseManifest.urlBase) {
+      urlBase = releaseManifest.urlBase.replace(/__PLATFORM__/g,
+                                                warehouse._unameAndArch());
+    }
+
     // populate warehouse with tools version for this release
     var toolsVersion = releaseManifest.tools;
     if (!warehouse.toolsExistsInWarehouse(toolsVersion)) {
@@ -212,7 +218,9 @@ _.extend(warehouse, {
         warehouse.downloadToolsToWarehouse(
           toolsVersion,
           warehouse._unameAndArch(),
-          warehouse.getWarehouseDir());
+          warehouse.getWarehouseDir(),
+          urlBase
+        );
       } catch (e) {
         if (!background)
           console.error("Failed to load tools for release " + releaseVersion);
@@ -228,7 +236,8 @@ _.extend(warehouse, {
           missingPackages[name] = version;
         }
       });
-      warehouse._populateWarehouseWithPackages(missingPackages, background);
+      warehouse._populateWarehouseWithPackages(missingPackages, background,
+                                               urlBase);
     } catch (e) {
       if (!background)
         console.error("Failed to load packages for release " + releaseVersion);
@@ -242,7 +251,7 @@ _.extend(warehouse, {
 
   // this function is also used by bless-release.js
   downloadToolsToWarehouse: function (
-    toolsVersion, platform, warehouseDirectory) {
+    toolsVersion, platform, warehouseDirectory, urlBase) {
     // XXX this sucks. We store all the tarballs in memory. This is huge.
     // We should instead stream packages in parallel. Since the node stream
     // API is in flux, we should probably wait a bit.
@@ -253,7 +262,7 @@ _.extend(warehouse, {
     var toolsTarballPath = "/tools/" + toolsVersion + "/"
           + toolsTarballFilename;
     var toolsTarball = files.getUrl({
-      url: PACKAGES_URLBASE + toolsTarballPath,
+      url: (urlBase || WAREHOUSE_URLBASE) + toolsTarballPath,
       encoding: null
     });
     files.extractTarGz(toolsTarball,
@@ -297,13 +306,14 @@ _.extend(warehouse, {
 
   // this function is also used by bless-release.js
   downloadPackagesToWarehouse: function (packagesToDownload,
-                                         warehouseDirectory) {
+                                         warehouseDirectory,
+                                         urlBase) {
     return fiberHelpers.parallelMap(
       packagesToDownload, function (version, name) {
         var packageDir = path.join(
           warehouseDirectory, 'packages', name, version);
-        var packageUrl = PACKAGES_URLBASE + "/packages/" + name + "/" +
-              name + '-' + version + ".tar.gz";
+        var packageUrl = (urlBase || WAREHOUSE_URLBASE) + "/packages/" + name +
+              "/" + name + '-' + version + ".tar.gz";
 
         var tarball = files.getUrl({url: packageUrl, encoding: null});
         files.extractTarGz(tarball, packageDir);
@@ -312,10 +322,12 @@ _.extend(warehouse, {
   },
 
   // @param packagesToPopulate {Object} eg {"less": "0.5.0"}
-  _populateWarehouseWithPackages: function(packagesToPopulate, background) {
+  _populateWarehouseWithPackages: function(
+      packagesToPopulate, background, urlBase) {
     var results = warehouse.downloadPackagesToWarehouse(
       packagesToPopulate,
-      warehouse.getWarehouseDir());
+      warehouse.getWarehouseDir(),
+      urlBase);
 
     _.each(results, function (result) {
       // fetch npm dependencies
