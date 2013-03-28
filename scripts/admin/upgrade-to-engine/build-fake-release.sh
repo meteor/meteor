@@ -55,6 +55,7 @@ cp "$TOPDIR/scripts/admin/launch-meteor" \
 OUTDIR="$TOPDIR/dist"
 rm -rf "$OUTDIR"
 mkdir -p "$OUTDIR"
+# note: unlike everything else, this puts a dash between uname and arch
 TARBALL="$OUTDIR/meteor-package-${UNAME}-${ARCH}-${VERSION}.tar.gz"
 echo "Tarring to: $TARBALL"
 

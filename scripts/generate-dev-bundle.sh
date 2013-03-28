@@ -45,6 +45,7 @@ else
     exit 1
 fi
 
+PLATFORM="${UNAME}_${ARCH}"
 
 # save off meteor checkout dir as final target
 cd `dirname $0`/..
@@ -167,6 +168,6 @@ cd "$DIR"
 echo "${BUNDLE_VERSION}" > .bundle_version.txt
 rm -rf build
 
-tar czf "${TARGET_DIR}/dev_bundle_${UNAME}_${ARCH}_${BUNDLE_VERSION}.tar.gz" .
+tar czf "${TARGET_DIR}/dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz" .
 
 echo DONE

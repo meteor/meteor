@@ -65,10 +65,11 @@ if [ ! -x "$METEOR_WAREHOUSE_DIR/meteor" ]; then
       exit 1
     fi
   fi
+  PLATFORM="${UNAME}_${ARCH}"
 
   # This returns something like https://warehouse.meteor.com/bootstrap/0.6.1
   ROOT_URL="$(curl -s --fail $BOOTSTRAP_URL)"
-  TARBALL_URL="${ROOT_URL}/meteor-bootstrap-${UNAME}-${ARCH}.tar.gz"
+  TARBALL_URL="${ROOT_URL}/meteor-bootstrap-${PLATFORM}.tar.gz"
 
   INSTALL_TMPDIR="$(dirname $METEOR_WAREHOUSE_DIR)/.meteor-install-tmp"
   rm -rf "$INSTALL_TMPDIR"

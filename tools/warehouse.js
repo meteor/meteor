@@ -206,7 +206,7 @@ _.extend(warehouse, {
     var urlBase;
     if (releaseManifest.urlBase) {
       urlBase = releaseManifest.urlBase.replace(/__PLATFORM__/g,
-                                                warehouse._unameAndArch());
+                                                warehouse._platform());
     }
 
     // populate warehouse with tools version for this release
@@ -217,7 +217,7 @@ _.extend(warehouse, {
           console.log("Fetching Meteor Tools " + toolsVersion + "...");
         warehouse.downloadToolsToWarehouse(
           toolsVersion,
-          warehouse._unameAndArch(),
+          warehouse._platform(),
           warehouse.getWarehouseDir(),
           urlBase
         );
@@ -357,7 +357,7 @@ _.extend(warehouse, {
     fs.writeFileSync(warehouse._lastPrintedBannerReleaseFile(), release);
   },
 
-  _unameAndArch: function () {
+  _platform: function () {
     // Normalize from Node "os.arch()" to "uname -m".
     var arch = os.arch();
     if (arch === "ia32")
@@ -366,6 +366,6 @@ _.extend(warehouse, {
       arch = "x86_64";
     else
       throw new Error("Unsupported architecture " + arch);
-    return os.type() + "-" + arch;
+    return os.type() + "_" + arch;
   }
 });
