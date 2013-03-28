@@ -308,6 +308,11 @@ Accounts.registerLoginHandler(function (options) {
      user.flood.last > Date.now() - Accounts._options.lockedAccountTimePeriod)
   	throw new Meteor.Error(403, "Too many login attempts");
   
+  // reset the user.flood properties if we are past the lockout period.
+  if(Accounts._options.failedLoginAttempts &&
+     user.flood.last < Date.now() - Accounts._options.lockedAccountTimePeriod)
+       user.flood = { attempts : 0, last : 0 };
+  
   // we're always called from within a 'login' method, so this should
   // be safe.
   if (!serialized || serialized.M !== options.srp.M) {
