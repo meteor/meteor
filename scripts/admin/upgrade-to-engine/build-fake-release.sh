@@ -47,10 +47,10 @@ mkdir -p "$FAKE_TMPDIR/meteor/app/meteor"
 cp "$TOPDIR/scripts/admin/upgrade-to-engine/initial-engine-post-upgrade.js" \
    "$FAKE_TMPDIR/meteor/app/meteor/post-upgrade.js"
 
-# Copy in launch-bootstrap, which will become the installed
-# /usr/local/bin/meteor.
-cp "$TOPDIR/scripts/admin/launch-meteor" \
-   "$FAKE_TMPDIR/meteor/app/meteor/launch-meteor"
+# Copy in upgrade-to-engine.sh, a script that is very similar to
+# install-engine.sh but with some different messages.
+cp "$TOPDIR/scripts/admin/upgrade-to-engine/upgrade-to-engine.sh" \
+   "$FAKE_TMPDIR/meteor/app/meteor/upgrade-to-engine.sh"
 
 OUTDIR="$TOPDIR/dist"
 rm -rf "$OUTDIR"

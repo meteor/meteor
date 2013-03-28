@@ -350,18 +350,19 @@ Fiber(function () {
         die("update: can only be run from official releases, not from checkouts");
       }
 
-      if (opt.argv.release) {
-        // The user specified a specific release, so we don't need to do a
-        // global update, and we don't need to springboard because if we needed
-        // to, we already would have done that back in main().
-      } else {
+      // Unless the user specified a specific release, go get the latest
+      // release.
+      if (!opt.argv.release) {
         // XXX think carefully about what happens if we double-update
         var updatedFrom = opt.argv['updated-from'] || context.releaseVersion;
 
-        var didUpdate = warehouse.fetchLatestRelease();
+        var didUpdate = false;
+        // Undocumented flag (used, eg, by upgrade-to-engine.js).
+        if (!opt.argv["no-fetch-latest"])
+          didUpdate = warehouse.fetchLatestRelease();
 
-        // we need to update the global releaseVersion variable
-        // because that's what toolsSpringboard reads
+        // we need to update the releaseVersion in the context because that's
+        // what toolsSpringboard reads
         context.releaseVersion = warehouse.latestRelease();
 
         // XXX make errors look good
@@ -378,10 +379,9 @@ Fiber(function () {
           // just global version.)
           toolsDebugMessage("Globally updated from " + updatedFrom + " to "
                              + context.releaseVersion);
-          // ... here is a chance to update the bootstrap script, etc
-          // ... maybe print out some release notes or something
+          // ... here is a chance to update the launch script, etc
           // ... etc
-        } else {
+        } else if (!opt.argv["no-fetch-latest"]) {
           console.log("Meteor release " + warehouse.latestRelease() +
                       " is already the latest release.");
         }
@@ -399,13 +399,14 @@ Fiber(function () {
         return;
       }
 
+      // Write the release to .meteor/release if it's changed (or if this is a
+      // pre-engine app that is being assumed to be 0.6.0).
       var appRelease = project.getMeteorReleaseVersion(context.appDir);
-      // Write release version unconditionally, so that we write it even if
-      // appRelease === releaseVersion === the implicit 0.6.0 from a missing
-      // file.
-      project.writeMeteorReleaseVersion(context.appDir, context.releaseVersion);
-      if (appRelease === context.releaseVersion) {
-        // XXX this is wrong if we just updated from no file to 0.6.0.
+      var appPredatesEngine = project.appPredatesEngine(context.appDir);
+      if (appPredatesEngine || appRelease !== context.releaseVersion) {
+        project.writeMeteorReleaseVersion(context.appDir,
+                                          context.releaseVersion);
+      } else {
         console.log("Your app is already running Meteor release "
                     + context.releaseVersion + ".");
         return;
@@ -414,9 +415,9 @@ Fiber(function () {
       // This is the right spot to do any other changes we need to the app in
       // order to update it for the new release (new metadata file formats,
       // etc, or maybe even updating renamed APIs).
-      // XXX should we really print the full path here (appDir)?
-      console.log("Updated app '%s' to release %s from release %s.",
-                  context.appDir, context.releaseVersion, appRelease);
+      // XXX should we really print the full path here (appDir)? (use pretty)
+      console.log("%s: updated to Meteor %s.",
+                  context.appDir, context.releaseVersion);
       console.log();
 
       warehouse.printNotices(appRelease, context.releaseVersion);
