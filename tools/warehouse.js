@@ -80,10 +80,7 @@ _.extend(warehouse, {
     var manifestPath = path.join(
       warehouse.getWarehouseDir(), 'releases', release + '.release.json');
 
-    warehouse._populateWarehouseForRelease(release);
-
-    // read from warehouse
-    return JSON.parse(fs.readFileSync(manifestPath));
+    return warehouse._populateWarehouseForRelease(release);
   },
 
   _latestReleaseSymlinkPath: function () {
@@ -132,8 +129,8 @@ _.extend(warehouse, {
       process.exit(1);
     }
 
-    warehouse._populateWarehouseForRelease(releaseName, background);
-    var latestReleaseManifest = warehouse.releaseManifestByVersion(releaseName);
+    var latestReleaseManifest =
+          warehouse._populateWarehouseForRelease(releaseName, background);
 
     // First, make sure the latest tools symlink reflects the latest installed
     // release.
@@ -255,7 +252,7 @@ _.extend(warehouse, {
     var newPieces = warehouse._calculateNewPiecesForRelease(releaseManifest);
 
     if (releaseAlreadyExists && !newPieces)
-      return;
+      return releaseManifest;
 
     if (newPieces && !background) {
       console.log("Installing Meteor %s:", releaseVersion);
@@ -332,6 +329,8 @@ _.extend(warehouse, {
         fs.unlinkSync(warehouse.getPackageFreshFile(name, packageInfo.version));
       });
     }
+
+    return releaseManifest;
   },
 
   // this function is also used by bless-release.js
