@@ -3,9 +3,18 @@ Package.describe({
   internal: true
 });
 
+Npm.depends({sockjs: "0.3.4"});
+
 Package.on_use(function (api) {
-  api.use(['stream', 'random']);
-  api.use(['ejson', 'json', 'underscore', 'deps', 'logging'], ['client', 'server']);
+  api.use(['random', 'ejson', 'json', 'underscore', 'deps', 'logging'],
+          ['client', 'server']);
+
+  // Transport
+  api.use('reload', 'client');
+  api.use('routepolicy', 'server');
+  api.add_files('sockjs-0.3.4.js', 'client');
+  api.add_files('stream_client.js', 'client');
+  api.add_files('stream_server.js', 'server');
 
   // livedata_connection.js uses a Minimongo collection internally to
   // manage the current set of subscriptions.
@@ -36,4 +45,7 @@ Package.on_test(function (api) {
   api.add_files('livedata_test_service.js', ['client', 'server']);
   api.add_files('session_view_tests.js', ['server']);
   api.add_files('crossbar_tests.js', ['server']);
+
+  api.use('http', 'client');
+  api.add_files(['stream_tests.js'], 'client');
 });
