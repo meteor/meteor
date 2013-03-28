@@ -63,6 +63,10 @@ _.extend(warehouse, {
     return path.join(warehouse.getWarehouseDir(), 'tools', version);
   },
 
+  getToolsFreshFile: function (version) {
+    return path.join(warehouse.getWarehouseDir(), 'tools', version, '.fresh');
+  },
+
   // If you're running from a git checkout, only accept 'none' and
   // return an empty manifest.  Otherwise, ensure the passed release
   // version is stored in the local warehouse and return its parsed
@@ -155,8 +159,58 @@ _.extend(warehouse, {
       path.join(warehouse.getWarehouseDir(), 'packages', name, version, 'package.js'));
   },
 
+  getPackageFreshFile: function (name, version) {
+    return path.join(warehouse.getWarehouseDir(), 'packages', name, version, '.fresh');
+  },
+
   toolsExistsInWarehouse: function (version) {
     return fs.existsSync(warehouse.getToolsDir(version));
+  },
+
+  _calculateNewPiecesForRelease: function (releaseManifest) {
+    // newPieces.tools and newPieces.packages[PACKAGE] are either falsey (if
+    // nothing is new), or an object with keys "version" and bool
+    // "needsDownload". "needsDownload" is true if the piece is not in the
+    // warehouse, and is false if it's in the warehouse but has never been used.
+    var newPieces = {
+      tools: null,
+      packages: {}
+    };
+
+    // populate warehouse with tools version for this release
+    var toolsVersion = releaseManifest.tools;
+    if (!warehouse.toolsExistsInWarehouse(toolsVersion)) {
+      newPieces.tools = {version: toolsVersion, needsDownload: true};
+    } else if (fs.existsSync(warehouse.getToolsFreshFile(toolsVersion))) {
+      newPieces.tools = {version: toolsVersion, needsDownload: false};
+    }
+
+    _.each(releaseManifest.packages, function (version, name) {
+      if (!warehouse.packageExistsInWarehouse(name, version)) {
+        newPieces.packages[name] = {version: version, needsDownload: true};
+      } else if (fs.existsSync(warehouse.getPackageFreshFile(name, version))) {
+        newPieces.packages[name] = {version: version, needsDownload: false};
+      }
+    });
+    if (newPieces.tools || !_.isEmpty(newPieces.packages))
+      return newPieces;
+    return null;
+  },
+
+  _packageUpdatesMessage: function (packageNames) {
+    var lines = [];
+    var width = 80;  // see packages.format_list for why we hardcode this
+    var currentLine = ' * Package updates:';
+    _.each(packageNames, function (name) {
+      if (currentLine.length + 1 + name.length <= width) {
+        currentLine += ' ' + name;
+      } else {
+        lines.push(currentLine);
+        currentLine = '   ' + name;
+      }
+    });
+    lines.push(currentLine);
+    return lines.join('\n');
   },
 
   // fetches the manifest file for the given release version. also fetches
@@ -169,83 +223,120 @@ _.extend(warehouse, {
     var releaseManifestPath = path.join(releasesDir,
                                         releaseVersion + '.release.json');
 
-    if (fs.existsSync(releaseManifestPath))
-      return;
-
-    // get release manifest, but only write it after we're done
-    // writing packages
+    // If the release already exists, we don't have to do anything, except maybe
+    // print a message if this release has never been used before (and we only
+    // have it due to a background download).
+    var releaseAlreadyExists = true;
     try {
-      var releaseManifestText = files.getUrl(
-        WAREHOUSE_URLBASE + "/releases/" + releaseVersion + ".release.json");
-      var releaseManifest = JSON.parse(releaseManifestText);
+      var releaseManifestText = fs.readFileSync(releaseManifestPath);
     } catch (e) {
-      if (background)
-        throw e;  // just throw, it's being ignored
-      // XXX Maybe instead of these process.exit's we can throw some special
-      // error class?
-      console.error("Release hasn't been published to Meteor's servers: " + releaseVersion);
-      process.exit(1);
+      releaseAlreadyExists = false;
     }
 
-    // try getting the releases's notices. notable only blessed
-    // releases have one, so if we can't find it just proceed
-    try {
-      var notices = files.getUrl(
-        WAREHOUSE_URLBASE + "/releases/" + releaseVersion + ".notices.json");
-
-      // If a file is not on S3 we get served an 'access denied' XML
-      // file. This will throw (intentionally) in that case. Real
-      // notices are valid JSON.
-      JSON.parse(notices);
-
-      fs.writeFileSync(path.join(releasesDir, releaseVersion + '.notices.json'), notices);
-    } catch (e) {
-      // no notices, proceed
-    }
-
-    // populate warehouse with tools version for this release
-    var toolsVersion = releaseManifest.tools;
-    if (!warehouse.toolsExistsInWarehouse(toolsVersion)) {
+    // Now get release manifest if we don't already have it, but only write it
+    // after we're done writing packages
+    if (!releaseAlreadyExists) {
       try {
-        if (!background)
-          console.log("Fetching Meteor Tools " + toolsVersion + "...");
-        warehouse.downloadToolsToWarehouse(
-          toolsVersion,
-          warehouse._platform(),
-          warehouse.getWarehouseDir()
-        );
+        releaseManifestText = files.getUrl(
+          WAREHOUSE_URLBASE + "/releases/" + releaseVersion + ".release.json");
       } catch (e) {
-        if (!background)
-          console.error("Failed to load tools for release " + releaseVersion);
-        throw e;
+        if (background)
+          throw e;  // just throw, it's being ignored
+        // XXX Maybe instead of these process.exit's we can throw some special
+        // error class?
+        console.error("Release hasn't been published to Meteor's servers: " +
+                      releaseVersion);
+        process.exit(1);
       }
     }
 
-    // populate warehouse with missing packages
-    try {
-      var missingPackages = {};
-      _.each(releaseManifest.packages, function (version, name) {
-        if (!warehouse.packageExistsInWarehouse(name, version)) {
-          missingPackages[name] = version;
-        }
-      });
-      warehouse.downloadPackagesToWarehouse(missingPackages,
-                                            warehouse._platform(),
-                                            warehouse.getWarehouseDir());
-    } catch (e) {
-      if (!background)
-        console.error("Failed to load packages for release " + releaseVersion);
-      throw e;
+    var releaseManifest = JSON.parse(releaseManifestText);
+
+    var newPieces = warehouse._calculateNewPiecesForRelease(releaseManifest);
+
+    if (releaseAlreadyExists && !newPieces)
+      return;
+
+    if (newPieces && !background) {
+      console.log("Installing Meteor %s:", releaseVersion);
+      if (newPieces.tools) {
+        console.log(" * 'meteor' build tool (version %s)",
+                    newPieces.tools.version);
+      }
+      if (!_.isEmpty(newPieces.packages)) {
+        console.log(warehouse._packageUpdatesMessage(
+          _.keys(newPieces.packages).sort()));
+      }
     }
 
-    // Now that we have written all packages, it's safe to write the
-    // release manifest.
-    fs.writeFileSync(releaseManifestPath, releaseManifestText);
+    if (!releaseAlreadyExists) {
+      if (newPieces.tools && newPieces.tools.needsDownload) {
+        try {
+          warehouse.downloadToolsToWarehouse(
+            newPieces.tools.version,
+            warehouse._platform(),
+            warehouse.getWarehouseDir());
+        } catch (e) {
+          if (!background)
+            console.error("Failed to load tools for release " + releaseVersion);
+          throw e;
+        }
+      }
+
+      var packagesToDownload = {};
+      _.each(newPieces.packages, function (packageInfo, name) {
+        if (packageInfo.needsDownload)
+          packagesToDownload[name] = packageInfo.version;
+      });
+      if (!_.isEmpty(packagesToDownload)) {
+        try {
+          warehouse.downloadPackagesToWarehouse(packagesToDownload,
+                                                warehouse._platform(),
+                                                warehouse.getWarehouseDir());
+        } catch (e) {
+          if (!background)
+            console.error("Failed to load packages for release " +
+                          releaseVersion);
+          throw e;
+        }
+      }
+
+      // try getting the releases's notices. only blessed releases have one, so
+      // if we can't find it just proceed.
+      try {
+        var notices = files.getUrl(
+          WAREHOUSE_URLBASE + "/releases/" + releaseVersion + ".notices.json");
+
+        // Real notices are valid JSON.
+        JSON.parse(notices);
+
+        fs.writeFileSync(
+          path.join(releasesDir, releaseVersion + '.notices.json'), notices);
+      } catch (e) {
+        // no notices, proceed
+      }
+
+      // Now that we have written all packages, it's safe to write the
+      // release manifest.
+      fs.writeFileSync(releaseManifestPath, releaseManifestText);
+    }
+
+    // Finally, clear the "fresh" files for all the things we just printed
+    // (whether or not we just downloaded them), unless we were in the
+    // background and printed nothing.
+    if (newPieces && !background) {
+      if (newPieces.tools) {
+        fs.unlinkSync(warehouse.getToolsFreshFile(newPieces.tools.version));
+      }
+      _.each(newPieces.packages, function (packageInfo, name) {
+        fs.unlinkSync(warehouse.getPackageFreshFile(name, packageInfo.version));
+      });
+    }
   },
 
   // this function is also used by bless-release.js
   downloadToolsToWarehouse: function (
-      toolsVersion, platform, warehouseDirectory) {
+      toolsVersion, platform, warehouseDirectory, dontWriteFreshFile) {
     // XXX this sucks. We store all the tarballs in memory. This is huge.
     // We should instead stream packages in parallel. Since the node stream
     // API is in flux, we should probably wait a bit.
@@ -261,6 +352,8 @@ _.extend(warehouse, {
     });
     files.extractTarGz(toolsTarball,
                        path.join(warehouseDirectory, 'tools', toolsVersion));
+    if (!dontWriteFreshFile)
+      fs.writeFileSync(warehouse.getToolsFreshFile(toolsVersion), '');
   },
 
   printNotices: function(fromRelease, toRelease) {
@@ -301,8 +394,9 @@ _.extend(warehouse, {
   // this function is also used by bless-release.js
   downloadPackagesToWarehouse: function (packagesToDownload,
                                          platform,
-                                         warehouseDirectory) {
-    return fiberHelpers.parallelMap(
+                                         warehouseDirectory,
+                                         dontWriteFreshFile) {
+    fiberHelpers.parallelEach(
       packagesToDownload, function (version, name) {
         var packageDir = path.join(
           warehouseDirectory, 'packages', name, version);
@@ -312,7 +406,8 @@ _.extend(warehouse, {
 
         var tarball = files.getUrl({url: packageUrl, encoding: null});
         files.extractTarGz(tarball, packageDir);
-        return {name: name, packageDir: packageDir};
+        if (!dontWriteFreshFile)
+          fs.writeFileSync(warehouse.getPackageFreshFile(name, version), '');
       });
   },
 

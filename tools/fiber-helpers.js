@@ -26,7 +26,7 @@ exports.inFiber = function(func) {
   };
 };
 
-exports.parallelMap = function (collection, callback, context) {
+exports.parallelEach = function (collection, callback, context) {
   var futures = _.map(collection, function () {
     var args = _.toArray(arguments);
     return function () {
@@ -35,5 +35,5 @@ exports.parallelMap = function (collection, callback, context) {
   });
   Future.wait(futures);
   // Throw if any threw.
-  return _.map(futures, function (f) { return f.get(); });
+  _.each(futures, function (f) { f.get(); });
 };

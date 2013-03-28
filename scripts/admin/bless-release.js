@@ -123,13 +123,13 @@ var makeWarehouseStructure = function (blessedReleaseName, rcManifest, notices) 
 var downloadPackages = function (packages, platform) {
   console.log("Downloading packages for " + platform);
   warehouse.downloadPackagesToWarehouse(
-    packages, platform, warehouseDirectory);
+    packages, platform, warehouseDirectory, true);
 };
 
 var downloadTools = function (toolsVersion, platform) {
   console.log("Downloading tools for " + platform);
   warehouse.downloadToolsToWarehouse(
-    toolsVersion, platform, warehouseDirectory);
+    toolsVersion, platform, warehouseDirectory, true);
 };
 
 var bootstrapTarballFilename = function (platform) {
