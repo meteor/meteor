@@ -619,10 +619,11 @@ exports.run = function (context, options) {
     // tools version does change, but this (which prevents weird errors) is a
     // start.)
     if (files.usesWarehouse() && !context.userReleaseOverride) {
-      var newAppRelease = project.getMeteorReleaseVersion(context.appDir);
+      var newAppRelease = project.getMeteorReleaseVersion(context.appDir) ||
+            warehouse.latestRelease();;
       if (newAppRelease !== context.appReleaseVersion) {
-        console.error("Your app has been updated to release '%s' from " +
-                      "release '%s'.\nRestart meteor to use the new release.",
+        console.error("Your app has been updated to Meteor %s from " +
+                      "Meteor %s.\nRestart meteor to use the new release.",
                       newAppRelease,
                       context.appReleaseVersion);
         process.exit(1);

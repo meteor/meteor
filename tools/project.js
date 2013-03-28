@@ -67,18 +67,14 @@ _.extend(exports, {
 
   getMeteorReleaseVersion: function (appDir) {
     var releasePath = project._meteorReleaseFilePath(appDir);
-    if (project.appPredatesEngine(appDir)) {
+    try {
+      var lines = project._get_lines(releasePath);
+    } catch (e) {
       // This is a legacy app with no '.meteor/release'
-      // file. Default to the first release of Engine.
-      return '0.6.0';
-    } else {
-      return project._trim_line(project._get_lines(releasePath)[0]);
+      // file.
+      return null;
     }
-  },
-
-  appPredatesEngine: function (appDir) {
-    var releasePath = project._meteorReleaseFilePath(appDir);
-    return !fs.existsSync(releasePath);
+    return project._trim_line(lines[0]);
   },
 
   writeMeteorReleaseVersion: function (appDir, release) {

@@ -61,7 +61,8 @@ Fiber(function () {
 
     if (context.appDir) {
       context.appReleaseVersion =
-        project.getMeteorReleaseVersion(context.appDir);
+        project.getMeteorReleaseVersion(context.appDir) ||
+        warehouse.latestRelease();
     }
     // Recalculate release version, taking the current app into account.
     context.releaseVersion = calculateReleaseVersion(argv);
@@ -402,8 +403,7 @@ Fiber(function () {
       // Write the release to .meteor/release if it's changed (or if this is a
       // pre-engine app that is being assumed to be 0.6.0).
       var appRelease = project.getMeteorReleaseVersion(context.appDir);
-      var appPredatesEngine = project.appPredatesEngine(context.appDir);
-      if (appPredatesEngine || appRelease !== context.releaseVersion) {
+      if (appRelease === null || appRelease !== context.releaseVersion) {
         project.writeMeteorReleaseVersion(context.appDir,
                                           context.releaseVersion);
       } else {
