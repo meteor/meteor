@@ -264,6 +264,7 @@ _.extend(warehouse, {
         console.log(warehouse._packageUpdatesMessage(
           _.keys(newPieces.packages).sort()));
       }
+      console.log();
     }
 
     if (!releaseAlreadyExists) {
