@@ -24,7 +24,7 @@ trap 'rm -rf "$FAKE_TMPDIR" >/dev/null 2>&1' 0
 echo "Building a fake release in $FAKE_TMPDIR."
 
 # Make sure dev bundle exists.
-./meteor --version 2>&1 | grep Unreleased
+./meteor --get-ready
 
 # Start out with just the dev bundle.
 cp -a dev_bundle "$FAKE_TMPDIR/meteor"

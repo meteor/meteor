@@ -5,7 +5,7 @@ cd `dirname $0`
 METEOR_DIR=`pwd`/..
 # Die with message on failure, print commands being executed
 trap 'echo FAILED' EXIT
-set -e -x
+set -e -u -x
 
 # linux mktemp requires at least 3 X's in the last component.
 make_temp_dir() {
