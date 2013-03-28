@@ -94,6 +94,14 @@ var resetDistDirectory = function (blessedReleaseName, rcManifest, notices) {
   console.log("Building in " + distDirectory);
   files.rm_recursive(distDirectory);
   warehouseDirectory = path.join(distDirectory, '.meteor');
+  writeJSONFile(path.join(distDirectory, blessedReleaseName + '.release.json'),
+                rcManifest);
+  writeJSONFile(path.join(distDirectory, blessedReleaseName + '.notices.json'),
+                notices);
+};
+
+var makeWarehouseStructure = function (blessedReleaseName, rcManifest, notices) {
+  files.rm_recursive(warehouseDirectory);
   files.mkdir_p(path.join(warehouseDirectory, 'releases'), 0755);
   fs.mkdirSync(path.join(warehouseDirectory, 'packages'), 0755);
   fs.mkdirSync(path.join(warehouseDirectory, 'tools'), 0755);
@@ -103,40 +111,35 @@ var resetDistDirectory = function (blessedReleaseName, rcManifest, notices) {
                  path.join(warehouseDirectory, 'releases', 'latest'));
   fs.symlinkSync(rcManifest.tools,
                  path.join(warehouseDirectory, 'tools', 'latest'));
-  // Write release JSON files both to inside the bootstrap tarball and outside
-  // (to be uploaded separately).
   writeJSONFile(path.join(warehouseDirectory, 'releases',
                           blessedReleaseName + '.release.json'),
-                rcManifest);
-  writeJSONFile(path.join(distDirectory, blessedReleaseName + '.release.json'),
                 rcManifest);
   writeJSONFile(path.join(warehouseDirectory, 'releases',
                           blessedReleaseName + '.notices.json'),
                 notices);
-  writeJSONFile(path.join(distDirectory, blessedReleaseName + '.notices.json'),
-                notices);
 };
 
-var downloadPackages = function (rcManifest) {
+var downloadPackages = function (packages, platform) {
   console.log("Downloading packages");
   warehouse.downloadPackagesToWarehouse(
-    rcManifest.packages, warehouseDirectory);
+    packages, platform, warehouseDirectory);
+};
+
+var downloadTools = function (toolsVersion, platform) {
+  console.log("Downloading tools for " + platform);
+  warehouse.downloadToolsToWarehouse(
+    toolsVersion, platform, warehouseDirectory);
 };
 
 var bootstrapTarballFilename = function (platform) {
   return "meteor-bootstrap-" + platform + ".tar.gz";
-}
+};
 
 var makeBootstrapTarball = function (toolsVersion, platform) {
-  console.log("Downloading tools for " + platform);
-  warehouse.downloadToolsToWarehouse(
-    toolsVersion, platform, warehouseDirectory);
   console.log("Creating bootstrap tarball for " + platform);
   var tarballName = bootstrapTarballFilename(platform);
   files.createTarball(warehouseDirectory,
                       path.join(distDirectory, tarballName));
-  // Clean up for the next platform.
-  files.rm_recursive(path.join(warehouseDirectory, 'tools', toolsVersion));
 };
 
 var writeGlobalManifest = function (blessedReleaseName, banner) {
@@ -238,9 +241,11 @@ var main = function () {
   console.log("Blessing RC '%s' as '%s'", rcName, blessedReleaseName);
 
   resetDistDirectory(blessedReleaseName, rcManifest, notices);
-  downloadPackages(rcManifest);
   _.each(PLATFORMS, function (platform) {
-    makeBootstrapTarball(rcManifest.tools, platform);
+    makeWarehouseStructure(blessedReleaseName, rcManifest, notices);
+    downloadPackages(rcManifest.packages, platform);
+    downloadTools(rcManifest.tools, platform);
+    makeBootstrapTarball(platform);
   });
   writeGlobalManifest(blessedReleaseName, banner);
 

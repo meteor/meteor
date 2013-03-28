@@ -387,7 +387,7 @@ _.extend(Bundle.prototype, {
       // dependencies. (Warehouse packages shouldn't change after they're
       // installed, so we skip this slow step.) Also, we only do this once per
       // package per bundling run.
-      if (!inst.installedNpmModules) {
+      if (!pkg.inWarehouse && !inst.installedNpmModules) {
         pkg.installNpmDependencies();
         inst.installedNpmModules = true;
       }

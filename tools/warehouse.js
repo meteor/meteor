@@ -236,8 +236,10 @@ _.extend(warehouse, {
           missingPackages[name] = version;
         }
       });
-      warehouse._populateWarehouseWithPackages(missingPackages, background,
-                                               urlBase);
+      warehouse.downloadPackagesToWarehouse(missingPackages,
+                                            warehouse._platform(),
+                                            warehouse.getWarehouseDir(),
+                                            urlBase);
     } catch (e) {
       if (!background)
         console.error("Failed to load packages for release " + releaseVersion);
@@ -306,6 +308,7 @@ _.extend(warehouse, {
 
   // this function is also used by bless-release.js
   downloadPackagesToWarehouse: function (packagesToDownload,
+                                         platform,
                                          warehouseDirectory,
                                          urlBase) {
     return fiberHelpers.parallelMap(
@@ -313,29 +316,13 @@ _.extend(warehouse, {
         var packageDir = path.join(
           warehouseDirectory, 'packages', name, version);
         var packageUrl = (urlBase || WAREHOUSE_URLBASE) + "/packages/" + name +
-              "/" + name + '-' + version + "-" + warehouse._platform() +
+              "/" + name + '-' + version + "-" + platform +
               ".tar.gz";
 
         var tarball = files.getUrl({url: packageUrl, encoding: null});
         files.extractTarGz(tarball, packageDir);
         return {name: name, packageDir: packageDir};
       });
-  },
-
-  // @param packagesToPopulate {Object} eg {"less": "0.5.0"}
-  _populateWarehouseWithPackages: function(
-      packagesToPopulate, background, urlBase) {
-    var results = warehouse.downloadPackagesToWarehouse(
-      packagesToPopulate,
-      warehouse.getWarehouseDir(),
-      urlBase);
-
-    _.each(results, function (result) {
-      // fetch npm dependencies
-      var packages = require(path.join(__dirname, "packages.js")); // load late to work around circular require
-      var pkg = packages.loadFromDir(result.name, result.packageDir);
-      pkg.installNpmDependencies(background /* === quiet */);
-    });
   },
 
   _lastPrintedBannerReleaseFile: function () {

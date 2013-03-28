@@ -52,16 +52,8 @@ _.extend(exports, {
   updateDependencies: function(packageName,
                                packageNpmDir,
                                npmDependencies,
-                               quiet,
-                               inWarehouse) {
+                               quiet) {
     var self = this;
-
-    // If this package is in a warehouse, it should never change after initial
-    // installation. So if it has ever had any node modules installed, we don't
-    // need to update them. (But we do need to update them if this is an initial
-    // download, or the first use of a package from a bootstrap tarball, etc.)
-    if (inWarehouse && fs.existsSync(path.join(packageNpmDir, 'node_modules')))
-      return;
 
     // we make sure to put it beside the original package dir so that
     // we can then atomically rename it. we also make sure to
