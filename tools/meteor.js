@@ -96,6 +96,13 @@ Fiber(function () {
       warehouse.latestRelease();
   };
 
+  var maybePrintUserOverrideMessage = function () {
+    if (context.appReleaseVersion !== context.releaseVersion) {
+      console.log("=> Using Meteor %s as requested (overriding Meteor %s)",
+                  context.releaseVersion, context.appReleaseVersion);
+    }
+  };
+
   // If we're not in an app directory, die with an error message.
   //
   // @param cmd {String} The command that was run. Used when printing
@@ -192,6 +199,7 @@ Fiber(function () {
       }
 
       requireDirInApp("run");
+      maybePrintUserOverrideMessage();
       runner.run(context, {
         port: new_argv.port,
         minify: new_argv.production,
