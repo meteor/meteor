@@ -16,7 +16,7 @@
     },
     "websocket": {
       "version": "1.0.7",
-      "from": "websocket@1.0.7",
+      "from": "https://registry.npmjs.org/websocket/-/websocket-1.0.7.tgz",
       "resolved": "https://registry.npmjs.org/websocket/-/websocket-1.0.7.tgz"
     }
   }

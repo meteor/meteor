@@ -54,7 +54,7 @@ Meteor._DdpClientStream = function (endpoint) {
     status: "connecting", connected: false, retryCount: 0
   };
 
-  self.statusListeners = window.Deps && new Deps.Dependency;
+  self.statusListeners = typeof Deps !== 'undefined' && new Deps.Dependency;
   self.statusChanged = function () {
     if (self.statusListeners)
       self.statusListeners.changed();
@@ -73,6 +73,8 @@ _.extend(Meteor._DdpClientStream, {
   _endpointToUrl: function (endpoint) {
     // XXX should be secure!
     // among other problems
+    endpoint = endpoint.replace(/^http(s)?:\/\//, "");
+    endpoint = endpoint.replace(/\/$/, "");
     return 'ws://' + endpoint + '/websocket';
   }
 });
@@ -200,7 +202,7 @@ _.extend(Meteor._DdpClientStream.prototype, {
   _cleanupConnection: function () {
     var self = this;
 
-    self.clearConnectionTimer();
+    self._clearConnectionTimer();
     if (self.currentConnection) {
       self.currentConnection.close();
       self.currentConnection = null;
@@ -234,6 +236,12 @@ _.extend(Meteor._DdpClientStream.prototype, {
     if (optionalErrorMessage)
       self.currentStatus.reason = optionalErrorMessage;
     self.statusChanged();
+  },
+
+  _lostConnection: function () {
+    var self = this;
+    self._cleanupConnection();
+    self._retryLater();
   },
 
   _retryTimeout: function (count) {
@@ -287,6 +295,8 @@ _.extend(Meteor._DdpClientStream.prototype, {
 
     // launch a connect attempt. we have no way to track it. we either
     // get an _onConnect event, or we don't.
+
+    // XXX: set up a timeout on this.
 
     // we would like to specify 'ddp' as the protocol here, but
     // unfortunately WebSocket-Node fails the handshake if we ask for

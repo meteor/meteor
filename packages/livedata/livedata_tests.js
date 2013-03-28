@@ -597,6 +597,27 @@ if (Meteor.isClient) {
     ]);
 }
 
+(function () {
+  if (Meteor.isServer) {
+    Meteor.methods({
+      "s2s": function (arg) {
+        return "s2s " + arg;
+      }
+    });
+  }
+  var conn;
+  testAsyncMulti("livedata - connect works from both client and server", [
+    function (test, expect) {
+      conn = Meteor.connect(Meteor.absoluteUrl());
+      conn.call('s2s', 'foo', expect(function (err, res) {
+        if (err)
+          throw err;
+        test.equal(res, "s2s foo");
+      }));
+    }
+  ]);
+})();
+
 // XXX some things to test in greater detail:
 // staying in simulation mode
 // time warp
