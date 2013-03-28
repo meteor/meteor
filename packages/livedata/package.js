@@ -3,7 +3,8 @@ Package.describe({
   internal: true
 });
 
-Npm.depends({sockjs: "0.3.4"});
+Npm.depends({sockjs: "0.3.4",
+             websocket: "1.0.7"});
 
 Package.on_use(function (api) {
   api.use(['random', 'ejson', 'json', 'underscore', 'deps', 'logging'],
@@ -12,8 +13,9 @@ Package.on_use(function (api) {
   // Transport
   api.use('reload', 'client');
   api.use('routepolicy', 'server');
-  api.add_files('sockjs-0.3.4.js', 'client');
-  api.add_files('stream_client_sockjs.js', 'client');
+  api.add_files(['sockjs-0.3.4.js',
+                 'stream_client_sockjs.js'], 'client');
+  api.add_files('stream_client_nodejs.js', 'client');
   api.add_files('stream_server.js', 'server');
 
   // livedata_connection.js uses a Minimongo collection internally to
