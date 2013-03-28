@@ -35,7 +35,7 @@ testAsyncMulti("stream - reconnect", [
 
 Tinytest.add("stream - sockjs urls are computed correctly", function(test) {
   var testHasSockjsUrl = function(raw, expectedSockjsUrl) {
-    var actual = Meteor._Stream._toSockjsUrl(raw);
+    var actual = Meteor._DdpClientStream._toSockjsUrl(raw);
     if (expectedSockjsUrl instanceof RegExp)
       test.isTrue(actual.match(expectedSockjsUrl));
     else

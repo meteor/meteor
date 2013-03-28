@@ -1,7 +1,7 @@
 // @param url {String} URL to Meteor app
 //   "http://subdomain.meteor.com/" or "/" or
 //   "ddp+sockjs://foo-**.meteor.com/sockjs"
-Meteor._Stream = function (url) {
+Meteor._DdpClientStream = function (url) {
   var self = this;
 
   self.rawUrl = url;
@@ -62,7 +62,7 @@ Meteor._Stream = function (url) {
   self._launch_connection();
 };
 
-_.extend(Meteor._Stream, {
+_.extend(Meteor._DdpClientStream, {
   // @param url {String} URL to Meteor app, eg:
   //   "/" or "madewith.meteor.com" or "https://foo.meteor.com"
   //   or "ddp+sockjs://ddp--****-foo.meteor.com/sockjs"
@@ -112,7 +112,7 @@ _.extend(Meteor._Stream, {
   }
 });
 
-_.extend(Meteor._Stream.prototype, {
+_.extend(Meteor._DdpClientStream.prototype, {
   // Register for callbacks.
   on: function (name, callback) {
     var self = this;
@@ -344,7 +344,7 @@ _.extend(Meteor._Stream.prototype, {
     // can connect to random hostnames and get around browser per-host
     // connection limits.
     self.socket = new SockJS(
-      Meteor._Stream._toSockjsUrl(self.rawUrl),
+      Meteor._DdpClientStream._toSockjsUrl(self.rawUrl),
       undefined, {
         debug: false, protocols_whitelist: [
           // only allow polling protocols. no websockets or streaming.

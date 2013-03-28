@@ -31,7 +31,7 @@ Meteor._LivedataConnection = function (url, options) {
   if (typeof url === "object") {
     self._stream = url;
   } else {
-    self._stream = new Meteor._Stream(url);
+    self._stream = new Meteor._DdpClientStream(url);
   }
 
   self._lastSessionId = null;

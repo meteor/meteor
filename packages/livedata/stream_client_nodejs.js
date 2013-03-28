@@ -14,7 +14,7 @@ var WebSocketClient = Npm.require('websocket').client;
 // We don't do any heartbeating. (The logic that did this in sockjs
 // was removed, because it used a built-in sockjs mechanism. We could
 // do it with WebSocket ping frames or with DDP-level messages.)
-Meteor._Stream = function (endpoint) {
+Meteor._DdpClientStream = function (endpoint) {
   var self = this;
 
   self.client = new WebSocketClient;
@@ -69,7 +69,7 @@ Meteor._Stream = function (endpoint) {
   self._launchConnection();
 };
 
-_.extend(Meteor._Stream, {
+_.extend(Meteor._DdpClientStream, {
   _endpointToUrl: function (endpoint) {
     // XXX should be secure!
     // among other problems
@@ -77,7 +77,7 @@ _.extend(Meteor._Stream, {
   }
 });
 
-_.extend(Meteor._Stream.prototype, {
+_.extend(Meteor._DdpClientStream.prototype, {
   // Register for callbacks.
   on: function (name, callback) {
     var self = this;
@@ -293,7 +293,7 @@ _.extend(Meteor._Stream.prototype, {
     // a protocol and the server doesn't send one back (and sockjs
     // doesn't). also, related: I guess we have to accept that
     // 'stream' is ddp-specific
-    self.client.connect(Meteor._Stream._endpointToUrl(self.endpoint));
+    self.client.connect(Meteor._DdpClientStream._endpointToUrl(self.endpoint));
 
     if (self.connectionTimer)
       clearTimeout(self.connectionTimer);
