@@ -93,6 +93,7 @@ var resetDistDirectory = function (blessedReleaseName, rcManifest, notices) {
   distDirectory = path.resolve(__dirname, '..', '..', 'dist');
   console.log("Building in " + distDirectory);
   files.rm_recursive(distDirectory);
+  fs.mkdirSync(distDirectory);
   warehouseDirectory = path.join(distDirectory, '.meteor');
   writeJSONFile(path.join(distDirectory, blessedReleaseName + '.release.json'),
                 rcManifest);
