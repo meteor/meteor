@@ -937,6 +937,18 @@ Fiber(function () {
     process.exit(0);
   };
 
+  var getReady = function () {
+    if (files.usesWarehouse()) {
+      die("meteor --get-ready only works in a checkout");
+    }
+    // dev bundle is downloaded by the wrapper script. We just need to install
+    // NPM dependencies.
+    _.each(packages.list(context.packageSearchOptions), function (p) {
+      p.installNpmDependencies();
+    });
+    process.exit(0);
+  };
+
   var main = function() {
     var optimist = require('optimist')
           .alias("h", "help")
@@ -956,6 +968,13 @@ Fiber(function () {
     // releases.
     if (!files.in_checkout() && !process.env.METEOR_TEST_NO_SPRINGBOARD)
       toolsSpringboard();
+
+    // Run this to ensure that your checkout's Meteor is "complete" (dev bundle
+    // downloaded and all NPM modules installed).
+    if (argv['get-ready']) {
+      getReady();
+      return;
+    }
 
     if (argv.help) {
       argv._.splice(0, 0, "help");

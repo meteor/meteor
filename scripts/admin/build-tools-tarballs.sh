@@ -1,15 +1,12 @@
 #!/bin/bash
 
 set -e
+set -u
 
 # cd to top level dir
 cd `dirname $0`
 cd ../..
 TOPDIR=$(pwd)
-
-UNAME=$(uname)
-ARCH=$(uname -m)
-PLATFORM="${UNAME}_${ARCH}"
 
 TOOLS_TMPDIR=$(mktemp -d -t meteor-build-release-XXXXXXXX)
 trap 'rm -rf "$TOOLS_TMPDIR" >/dev/null 2>&1' 0

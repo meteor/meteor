@@ -313,7 +313,8 @@ _.extend(warehouse, {
         var packageDir = path.join(
           warehouseDirectory, 'packages', name, version);
         var packageUrl = (urlBase || WAREHOUSE_URLBASE) + "/packages/" + name +
-              "/" + name + '-' + version + ".tar.gz";
+              "/" + name + '-' + version + "-" + warehouse._platform() +
+              ".tar.gz";
 
         var tarball = files.getUrl({url: packageUrl, encoding: null});
         files.extractTarGz(tarball, packageDir);
