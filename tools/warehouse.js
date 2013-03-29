@@ -271,7 +271,7 @@ _.extend(warehouse, {
     }
 
     if (!releaseAlreadyExists) {
-      if (newPieces.tools && newPieces.tools.needsDownload) {
+      if (newPieces && newPieces.tools && newPieces.tools.needsDownload) {
         try {
           warehouse.downloadToolsToWarehouse(
             newPieces.tools.version,
@@ -285,7 +285,7 @@ _.extend(warehouse, {
       }
 
       var packagesToDownload = {};
-      _.each(newPieces.packages, function (packageInfo, name) {
+      _.each(newPieces && newPieces.packages, function (packageInfo, name) {
         if (packageInfo.needsDownload)
           packagesToDownload[name] = packageInfo.version;
       });
