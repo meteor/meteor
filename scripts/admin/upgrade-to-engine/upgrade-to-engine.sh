@@ -110,4 +110,7 @@ fi
 
 trap - EXIT
 
+echo XXX HERE IS SOMETHING ON STDERR 1>&2
+echo XXX HERE IS SOMETHING ON STDOUT
+
 exec "$HOME/.meteor/meteor" update --dont-fetch-latest
