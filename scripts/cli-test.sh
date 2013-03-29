@@ -56,7 +56,7 @@ $METEOR --help | grep "List available" >> $OUTPUT
 $METEOR run --help | grep "Port to listen" >> $OUTPUT
 $METEOR test-packages --help | grep "Port to listen" >> $OUTPUT
 $METEOR create --help | grep "Make a subdirectory" >> $OUTPUT
-$METEOR update --help | grep "Checks to see" >> $OUTPUT
+$METEOR update --help | grep "Sets the version" >> $OUTPUT
 $METEOR add --help | grep "Adds packages" >> $OUTPUT
 $METEOR remove --help | grep "Removes a package" >> $OUTPUT
 $METEOR list --help | grep "Without arguments" >> $OUTPUT
@@ -65,6 +65,7 @@ $METEOR mongo --help | grep "Opens a Mongo" >> $OUTPUT
 $METEOR deploy --help | grep "Deploys the project" >> $OUTPUT
 $METEOR logs --help | grep "Retrieves the" >> $OUTPUT
 $METEOR reset --help | grep "Reset the current" >> $OUTPUT
+$METEOR test-packages --help | grep "Runs unit tests" >> $OUTPUT
 
 echo "... not in dir"
 
