@@ -64,11 +64,15 @@ Fiber(function () {
         project.getMeteorReleaseVersion(context.appDir) ||
         (files.usesWarehouse() ? warehouse.latestRelease() : 'none');
     }
-    // Recalculate release version, taking the current app into account.
-    context.releaseVersion = calculateReleaseVersion(argv);
-    toolsDebugMessage("Running Meteor Release " + context.releaseVersion);
-
     context.userReleaseOverride = !!argv.release;
+
+    // Recalculate release version, taking the current app into account.
+    setReleaseVersion(calculateReleaseVersion(argv));
+    toolsDebugMessage("Running Meteor Release " + context.releaseVersion);
+  };
+
+  var setReleaseVersion = function (version) {
+    context.releaseVersion = version;
 
     context.releaseManifest =
       warehouse.releaseManifestByVersion(context.releaseVersion);
@@ -351,64 +355,57 @@ Fiber(function () {
         die("update: can only be run from official releases, not from checkouts");
       }
 
-      // Unless the user specified a specific release, go get the latest
-      // release.
-      if (!opt.argv.release) {
-        // XXX think carefully about what happens if we double-update
-        var updatedFrom = opt.argv['updated-from'] || context.releaseVersion;
+      var didGlobalUpdateWithoutSpringboarding = false;
 
-        var didUpdate = false;
+      // Unless the user specified a specific release (or we're doing a
+      // mid-update springboard), go get the latest release.
+      if (!opt.argv.release) {
         // Undocumented flag (used, eg, by upgrade-to-engine.js).
         if (!opt.argv["dont-fetch-latest"])
-          didUpdate = warehouse.fetchLatestRelease();
+          didGlobalUpdateWithoutSpringboarding = warehouse.fetchLatestRelease();
 
-        // we need to update the releaseVersion in the context because that's
+        // we need to update the releaseManifest in the context because that's
         // what toolsSpringboard reads
-        context.releaseVersion = warehouse.latestRelease();
+        setReleaseVersion(warehouse.latestRelease());
 
-        // XXX make errors look good
-        if (didUpdate) {
-          console.log("Updated Meteor to release " + context.releaseVersion + ".");
-          toolsSpringboard(['--updated-from=' + updatedFrom]);
-          // If the tools for release is different, then toolsSpringboard
-          // execs and does not return. Otherwise, keeps going.
-        }
-
-        if (updatedFrom !== context.releaseVersion) {
-          // XXX this next line is WRONG, which suggests that the logic for
-          // updatedFrom is wrong. (updatedFrom can be an app's version, not
-          // just global version.)
-          toolsDebugMessage("Globally updated from " + updatedFrom + " to "
-                             + context.releaseVersion);
-          // ... here is a chance to update the launch script, etc
-          // ... etc
-        } else if (!opt.argv["dont-fetch-latest"]) {
-          console.log("Meteor release " + warehouse.latestRelease() +
-                      " is already the latest release.");
-        }
+        // If the tools for this release is different, then toolsSpringboard
+        // execs and does not return. Otherwise, keeps going.
+        toolsSpringboard(['--release=' + context.releaseVersion]);
       }
 
-      // If we're not in an app, then we're done. Otherwise, we have to upgrade
-      // the app too.
+      // If we're not in an app, then we're done (other than maybe printing some
+      // stuff). 
       if (!context.appDir) {
-        // If we weren't fetching the latest release, then we haven't printed
-        // anything yet (other than possibly in main), so we should print
-        // something now.
-        if (opt.argv.release) {
-          console.log("Meteor release " + context.releaseVersion + " is installed.");
+        if (opt.argv.release || didGlobalUpdateWithoutSpringboarding) {
+          // If the user specified a specific release, or we just did a global
+          // update (with springboarding, in which case --release is set, or
+          // without springboarding, in which case didGlobalUpdate is set),
+          // print this message.
+          console.log("Installed. Run 'meteor update' inside of a particular project\n" +
+                      "directory to update that project to Meteor %s.",
+                      context.releaseVersion);
+        } else {
+          // The user just ran "meteor update" (without --release), and we did
+          // not update.
+          console.log("The latest version of Meteor, %s, is already installed on this\n" +
+                      "computer. Run 'meteor update' inside of a particular project\n" +
+                      "directory to update that project to Meteor %s.",
+                      context.releaseVersion, context.releaseVersion);
         }
         return;
       }
 
+      // Otherwise, we have to upgrade the app too.
+
       // Write the release to .meteor/release if it's changed (or if this is a
-      // pre-engine app that is being assumed to be 0.6.0).
+      // pre-engine app).
       var appRelease = project.getMeteorReleaseVersion(context.appDir);
       if (appRelease === null || appRelease !== context.releaseVersion) {
         project.writeMeteorReleaseVersion(context.appDir,
                                           context.releaseVersion);
       } else {
-        console.log("Your app is already running Meteor release "
-                    + context.releaseVersion + ".");
+        console.log("This project is already at Meteor %s, the latest release.",
+                    context.releaseVersion);
         return;
       }
 
@@ -418,7 +415,6 @@ Fiber(function () {
       // XXX should we really print the full path here (appDir)? (use pretty)
       console.log("%s: updated to Meteor %s.",
                   context.appDir, context.releaseVersion);
-      console.log();
 
       warehouse.printNotices(appRelease, context.releaseVersion);
     }
@@ -963,11 +959,11 @@ Fiber(function () {
 
     calculateContext(argv);
 
-    // if we're not running the correct tools, fetch it and
-    // re-run. do *not* do this if we are in a checkout, or if
+    // if we're not running the correct tools, fetch it and re-run. do *not* do
+    // this if we are in a checkout, or if
     // process.env.METEOR_TEST_NO_SPRINGBOARD is set. This hook allows unit
-    // tests to test the current tools's ability to run other
-    // releases.
+    // tests to test the current tools's ability to run other releases. Also,
+    // don't do this if we are in the middle of an update that springboarded.
     if (!files.in_checkout() && !process.env.METEOR_TEST_NO_SPRINGBOARD)
       toolsSpringboard();
 
