@@ -78,9 +78,8 @@ Fiber(function () {
         throw e;
       if (context.appDir && !context.userReleaseOverride) {
         logging.die(
-          "Sorry, this project uses Meteor " + version + ", which is not\n" +
-          "installed and could not be downloaded. Please check to make sure that\n" +
-          "you are online.");
+          "Sorry, this project uses Meteor " + version + ", which is not installed and\n" +
+          "could not be downloaded. Please check to make sure that you are online.");
       } else {
         logging.die(
           "Sorry, Meteor " + version + " is not installed and could not be downloaded.\n" +
