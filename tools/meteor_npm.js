@@ -22,7 +22,8 @@ cleanup.onExit(function () {
   });
 });
 
-var meteorNpm = module.exports = {
+var meteorNpm = exports;
+_.extend(exports, {
   _tmpDirs: [],
 
   _isGitHubTarball: function (x) {
@@ -48,7 +49,10 @@ var meteorNpm = module.exports = {
   //
   // @param npmDependencies {Object} dependencies that should be installed,
   //     eg {tar: '0.1.6', gcd: '0.0.0'}
-  updateDependencies: function(packageName, packageNpmDir, npmDependencies, quiet) {
+  updateDependencies: function(packageName,
+                               packageNpmDir,
+                               npmDependencies,
+                               quiet) {
     var self = this;
 
     // we make sure to put it beside the original package dir so that
@@ -358,5 +362,5 @@ var meteorNpm = module.exports = {
   _randomToken: function() {
     return (Math.random() * 0x100000000 + 1).toString(36);
   }
-};
+});
 

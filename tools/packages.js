@@ -291,11 +291,13 @@ _.extend(Package.prototype, {
   // @param npmDependencies {Object} eg {gcd: "0.0.0", tar: "0.1.14"}
   installNpmDependencies: function(quiet) {
     if (this.npmDependencies) {
-      // go through a specialized npm dependencies update process, ensuring
-      // we don't get new versions of any (sub)dependencies. this process
-      // also runs safely multiple times in parallel (which could happen if you
+      // go through a specialized npm dependencies update process, ensuring we
+      // don't get new versions of any (sub)dependencies. this process also runs
+      // mostly safely multiple times in parallel (which could happen if you
       // have two apps running locally using the same package)
-      meteorNpm.updateDependencies(this.name, this.npmDir(), this.npmDependencies, quiet);
+      meteorNpm.updateDependencies(
+        this.name, this.npmDir(),
+        this.npmDependencies, quiet, this.inWarehouse);
     }
   },
 
@@ -306,7 +308,8 @@ _.extend(Package.prototype, {
 
 var loadedPackages = {};
 
-var packages = module.exports = {
+var packages = exports;
+_.extend(exports, {
 
   // get a package by name. also maps package objects to themselves.
   // load order is:
@@ -461,4 +464,4 @@ var packages = module.exports = {
       return stats.isDirectory();
     });
   }
-};
+});

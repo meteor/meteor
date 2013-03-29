@@ -11,6 +11,7 @@
 ### we do for tools.
 
 set -e
+set -u
 
 # cd to top level dir
 cd `dirname $0`
@@ -19,6 +20,9 @@ TOPDIR=$(pwd)
 
 OUTDIR="$TOPDIR/dist/packages"
 mkdir -p $OUTDIR
+
+# Make sure all NPM modules are updated.
+./meteor --get-ready
 
 # A hacky (?) way to pass the release manifest chunk with package
 # versions back into build-release.sh.  Contents set below
@@ -37,7 +41,7 @@ do
 
     PACKAGE_VERSION=$(git ls-tree HEAD $PACKAGE | shasum | cut -f 1 -d " ") # shasum's output looks like: 'SHA -'
     echo "$PACKAGE version $PACKAGE_VERSION"
-    tar -c -z -f $OUTDIR/$PACKAGE-$PACKAGE_VERSION.tar.gz $PACKAGE
+    tar -c -z -f $OUTDIR/$PACKAGE-${PACKAGE_VERSION}-${PLATFORM}.tar.gz $PACKAGE
 
     # this is used in build-release.sh, which constructs the release json.
     echo -n "    \"$PACKAGE\": \"$PACKAGE_VERSION\"" >> "$TOPDIR/.package_manifest_chunk"

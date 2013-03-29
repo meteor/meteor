@@ -5,7 +5,8 @@ cd ../..
 export METEOR_HOME=`pwd`
 
 export PATH=$METEOR_HOME:$PATH
-./meteor --version 2>&1 | grep Unreleased || exit 1 # syncronously get the dev bundle if its not there.
+# synchronously get the dev bundle and NPM modules if they're not there.
+./meteor --get-ready || exit 1
 
 export URL='http://localhost:4096/'
 

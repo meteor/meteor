@@ -1,14 +1,12 @@
 #!/bin/bash
 
 set -e
+set -u
 
 # cd to top level dir
 cd `dirname $0`
 cd ../..
 TOPDIR=$(pwd)
-
-UNAME=$(uname)
-ARCH=$(uname -m)
 
 TOOLS_TMPDIR=$(mktemp -d -t meteor-build-release-XXXXXXXX)
 trap 'rm -rf "$TOOLS_TMPDIR" >/dev/null 2>&1' 0
@@ -24,7 +22,7 @@ mv "$TARGET_DIR" "$TOOLS_TMPDIR/$TOOLS_VERSION"
 OUTDIR="$TOPDIR/dist/tools"
 mkdir -p "$OUTDIR"
 
-TOOLS_TARBALL="$OUTDIR/meteor-tools-${TOOLS_VERSION}-${UNAME}-${ARCH}.tar.gz"
+TOOLS_TARBALL="$OUTDIR/meteor-tools-${TOOLS_VERSION}-${PLATFORM}.tar.gz"
 echo "Tarring tools to: $TOOLS_TARBALL"
 tar -C "$TOOLS_TMPDIR" --exclude .meteor/local -czf "$TOOLS_TARBALL" "$TOOLS_VERSION"
 

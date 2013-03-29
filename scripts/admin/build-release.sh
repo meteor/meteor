@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -e
+set -u
 
 # cd to top level dir
 cd `dirname $0`
@@ -10,6 +11,12 @@ TOPDIR=$(pwd)
 OUTDIR="$TOPDIR/dist"
 rm -rf "$OUTDIR"
 mkdir -p "$OUTDIR"
+
+UNAME=$(uname)
+ARCH=$(uname -m)
+export PLATFORM="${UNAME}_${ARCH}"
+
+
 
 scripts/admin/build-tools-tarballs.sh
 TOOLS_VERSION=$(cat "$TOPDIR/.tools_version")

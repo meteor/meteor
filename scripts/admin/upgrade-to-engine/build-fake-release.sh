@@ -24,7 +24,7 @@ trap 'rm -rf "$FAKE_TMPDIR" >/dev/null 2>&1' 0
 echo "Building a fake release in $FAKE_TMPDIR."
 
 # Make sure dev bundle exists.
-./meteor --version 2>&1 | grep Unreleased
+./meteor --get-ready
 
 # Start out with just the dev bundle.
 cp -a dev_bundle "$FAKE_TMPDIR/meteor"
@@ -47,14 +47,15 @@ mkdir -p "$FAKE_TMPDIR/meteor/app/meteor"
 cp "$TOPDIR/scripts/admin/upgrade-to-engine/initial-engine-post-upgrade.js" \
    "$FAKE_TMPDIR/meteor/app/meteor/post-upgrade.js"
 
-# Copy in launch-bootstrap, which will become the installed
-# /usr/local/bin/meteor.
-cp "$TOPDIR/scripts/admin/launch-meteor" \
-   "$FAKE_TMPDIR/meteor/app/meteor/launch-meteor"
+# Copy in upgrade-to-engine.sh, a script that is very similar to
+# install-engine.sh but with some different messages.
+cp "$TOPDIR/scripts/admin/upgrade-to-engine/upgrade-to-engine.sh" \
+   "$FAKE_TMPDIR/meteor/app/meteor/upgrade-to-engine.sh"
 
 OUTDIR="$TOPDIR/dist"
 rm -rf "$OUTDIR"
 mkdir -p "$OUTDIR"
+# note: unlike everything else, this puts a dash between uname and arch
 TARBALL="$OUTDIR/meteor-package-${UNAME}-${ARCH}-${VERSION}.tar.gz"
 echo "Tarring to: $TARBALL"
 

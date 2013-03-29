@@ -16,7 +16,8 @@ var fstream = require('fstream');
 
 var cleanup = require('./cleanup.js');
 
-var files = module.exports = {
+var files = exports;
+_.extend(exports, {
   // A sort comparator to order files into load order.
   sort: function (a, b) {
     // main.* loaded last
@@ -211,13 +212,13 @@ var files = module.exports = {
     return false;
   },
 
-  // False if we are using a warehouse: either installed Meteor, or the test
-  // hook $TEST_WAREHOUSE_DIR is set. Otherwise true (we're in a git checkout
-  // and just using packages from the checkout).
+  // True if we are using a warehouse: either installed Meteor, or if
+  // $METEOR_WAREHOUSE_DIR is set. Otherwise false (we're in a git checkout and
+  // just using packages from the checkout).
   usesWarehouse: function () {
     // Test hook: act like we're "installed" using a non-homedir warehouse
     // directory.
-    if (process.env.TEST_WAREHOUSE_DIR)
+    if (process.env.METEOR_WAREHOUSE_DIR)
       return true;
     else
       return !files.in_checkout();
@@ -488,7 +489,7 @@ var files = module.exports = {
     // "response".
     request(urlOrOptions, function (error, response, body) {
       if (error)
-        future.throw(error);
+        future.throw(new files.OfflineError(error));
       else if (response.statusCode >= 400 && response.statusCode < 600)
         future.throw(response);
       else
@@ -497,10 +498,14 @@ var files = module.exports = {
     return future.wait();
   },
 
+  OfflineError: function (error) {
+    this.error = error;
+  },
+
   _randomToken: function() {
     return (Math.random() * 0x100000000 + 1).toString(36);
   }
-};
+});
 
 
 var tempDirs = [];

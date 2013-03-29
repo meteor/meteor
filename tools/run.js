@@ -13,6 +13,7 @@ var updater = require('./updater.js');
 var bundler = require('./bundler.js');
 var mongo_runner = require('./mongo_runner.js');
 var mongoExitCodes = require('./mongo_exit_codes.js');
+var updater = require("./updater.js");
 var warehouse = require("./warehouse.js");
 
 var _ = require('underscore');
@@ -518,62 +519,6 @@ _.extend(DependencyWatcher.prototype, {
   }
 });
 
-////////// Upgrade check //////////
-
-// XXX this should move to main meteor command-line, probably?
-var start_update_checks = function (context) {
-  var update_check = inFiber(function () { // 'inFiber' to ensure we don't delay launching the app
-    var manifest = null;
-    try {
-      manifest = updater.getManifest();
-    } catch (e) {
-      // Ignore error (eg, offline), but still do the "can we update this app
-      // with a locally available release" check.
-    }
-
-    if (!files.usesWarehouse())
-      return;
-
-    // XXX in the future support release channels other than stable
-    var manifestLatestRelease =
-          manifest && manifest.releases && manifest.releases.stable &&
-          manifest.releases.stable.version;
-    var localLatestRelease = warehouse.latestRelease();
-    if (manifestLatestRelease && manifestLatestRelease !== localLatestRelease) {
-      console.log("////////////////////////////////////////");
-      console.log("////////////////////////////////////////");
-      console.log();
-      console.log("Meteor release " + manifestLatestRelease + " released. We'll download it now.");
-      console.log("To update your app, run 'meteor update' from within its directory.");
-      console.log();
-      console.log("////////////////////////////////////////");
-      console.log("////////////////////////////////////////");
-      try {
-        warehouse.fetchLatestRelease(true /* background */);
-      } catch (e) {
-        // just don't die
-      }
-      return;
-    }
-    // We don't need to do a global update (or we're not online), but do we
-    // need to update this app?
-    // XXX this probably shouldn't happen if you pass --release
-    if (localLatestRelease !== context.releaseVersion) {
-      console.log("////////////////////////////////////////");
-      console.log("////////////////////////////////////////");
-      console.log();
-      console.log("Your app is running Meteor release " + context.releaseVersion + ", but you have");
-      console.log("release " + localLatestRelease + " installed.");
-      console.log("To update your app, run 'meteor update' from within its directory.");
-      console.log();
-      console.log("////////////////////////////////////////");
-      console.log("////////////////////////////////////////");
-    }
-  });
-  setInterval(update_check, 12*60*60*1000); // twice a day
-  update_check(); // and now.
-};
-
 ///////////////////////////////////////////////////////////////////////////////
 
 // Also used by "meteor deploy" in meteor.js.
@@ -674,10 +619,11 @@ exports.run = function (context, options) {
     // tools version does change, but this (which prevents weird errors) is a
     // start.)
     if (files.usesWarehouse() && !context.userReleaseOverride) {
-      var newAppRelease = project.getMeteorReleaseVersion(context.appDir);
+      var newAppRelease = project.getMeteorReleaseVersion(context.appDir) ||
+            warehouse.latestRelease();
       if (newAppRelease !== context.appReleaseVersion) {
-        console.error("Your app has been updated to release '%s' from " +
-                      "release '%s'.\nRestart meteor to use the new release.",
+        console.error("Your app has been updated to Meteor %s from " +
+                      "Meteor %s.\nRestart meteor to use the new release.",
                       newAppRelease,
                       context.appReleaseVersion);
         process.exit(1);
@@ -831,7 +777,7 @@ exports.run = function (context, options) {
       process.stdout.write("Initializing mongo database... this may take a moment.\n");
     }, 3000);
 
-    start_update_checks(context);
+    updater.startUpdateChecks(context);
     launch();
   });
 };

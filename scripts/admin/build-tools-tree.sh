@@ -25,7 +25,7 @@ fi
 echo "Setting up tools tree in $TARGET_DIR"
 
 # make sure dev bundle exists before trying to install
-./meteor --version 2>&1 | grep Unreleased
+./meteor --get-ready
 
 function CPR {
     tar -c --exclude .meteor/local "$1" | tar -x -C "$2"

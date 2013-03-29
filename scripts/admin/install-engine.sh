@@ -48,6 +48,7 @@ elif [ "$UNAME" = "Linux" ] ; then
     exit 1
   fi
 fi
+PLATFORM="${UNAME}_${ARCH}"
 
 trap "echo Installation failed. 1>&2" EXIT
 
@@ -55,7 +56,7 @@ trap "echo Installation failed. 1>&2" EXIT
 # install here:
 [ -e "$HOME/.meteor" ] && rm -rf "$HOME/.meteor"
 
-TARBALL_URL="https://warehouse.meteor.com/bootstrap/__RELEASE__/meteor-bootstrap-${UNAME}-${ARCH}.tar.gz"
+TARBALL_URL="https://warehouse.meteor.com/bootstrap/__RELEASE__/meteor-bootstrap-${PLATFORM}.tar.gz"
 
 INSTALL_TMPDIR="$HOME/.meteor-install-tmp"
 rm -rf "$INSTALL_TMPDIR"

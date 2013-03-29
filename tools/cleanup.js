@@ -3,7 +3,8 @@
 
 var _ = require('underscore');
 
-var cleanup = module.exports = {
+var cleanup = exports;
+_.extend(exports, {
   _exitHandlers: [],
 
   // register a function that will be called on SIGINT (e.g. Cmd-C on
@@ -11,7 +12,7 @@ var cleanup = module.exports = {
   onExit: function(func) {
     this._exitHandlers.push(func);
   }
-};
+});
 
 var runHandlers = function () {
   var handlers = cleanup._exitHandlers;

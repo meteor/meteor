@@ -88,30 +88,16 @@ var anyWithPrefix = function(s3, prefix) {
   return !_.isEmpty(files.Body.ListBucketResult.Contents);
 };
 
-// publish a given tools, copying multiple files from
-// s3://com.meteor.warehouse/unpublished/GITSHA/ to
-// s3://com.meteor.warehouse/tools/VERSION/
-var publishTools = function(s3, gitSha, version) {
-  var destPath = ["tools", version].join("/");
-
-  process.stdout.write("tools " + version + ": ");
-  if (anyWithPrefix(s3, destPath)) {
-    console.log("already published");
-    return;
-  } else {
-    publishedArtifacts.push("tools " + version);
-    console.log("publishing");
-  }
-
-  var toolsArtifacts = s3.ListObjects({
+var copyFilesWithPrefix = function (s3, prefix, destDir) {
+  var artifacts = s3.ListObjects({
     BucketName: "com.meteor.warehouse",
-    Prefix: ["unpublished", gitSha, "meteor-tools-"].join("/")
+    Prefix: prefix
   }).Body.ListBucketResult.Contents;
 
-  parallelEach(toolsArtifacts, function (artifact) {
+  parallelEach(artifacts, function (artifact) {
     var sourceKey = artifact.Key;
     var filename = _.last(sourceKey.split("/"));
-    var destKey = [destPath, filename].join("/");
+    var destKey = [destDir, filename].join("/");
 
     var opts = {
       BucketName: "com.meteor.warehouse",
@@ -124,31 +110,42 @@ var publishTools = function(s3, gitSha, version) {
   });
 };
 
+// publish a given tools, copying multiple files from
+// s3://com.meteor.warehouse/unpublished/GITSHA/ to
+// s3://com.meteor.warehouse/tools/VERSION/
+var publishTools = function(s3, gitSha, version) {
+  var destDir = ["tools", version].join("/");
+
+  process.stdout.write("tools " + version + ": ");
+  if (anyWithPrefix(s3, destDir + "/")) {
+    console.log("already published");
+    return;
+  } else {
+    publishedArtifacts.push("tools " + version);
+    console.log("publishing");
+  }
+
+  copyFilesWithPrefix(
+    s3, ["unpublished", gitSha, "meteor-tools-"].join("/"), destDir);
+};
+
 // publish a given package, copying from
-// s3://com.meteor.warehouse/unpublished/GITSHA/NAME-VERSION.tar.gz to
-// s3://com.meteor.warehouse/packages/NAME-VERSION.tar.gz
+// s3://com.meteor.warehouse/unpublished/GITSHA/NAME-VERSION-{PLATFORM}.tar.gz to
+// s3://com.meteor.warehouse/packages/NAME-VERSION-{PLATFORM}.tar.gz
 var publishPackage = function(s3, gitSha, name, version) {
-  var filename = name + "-" + version + ".tar.gz";
-  var destKey = ["packages", name, filename].join("/");
-  var sourceKey = ["unpublished", gitSha, filename].join("/");
+  var destDir = ["packages", name, version].join("/");
+  var sourcePrefix = ["unpublished", gitSha,
+                      name + "-" + version + "-"].join("/");
 
   var packageHeader = "package " + name + " version " + version + ": ";
-  if (anyWithPrefix(s3, destKey)) {
+  if (anyWithPrefix(s3, destDir)) {
     console.log(packageHeader + "already published");
     return;
   } else {
     publishedArtifacts.push("package " + name + " version " + version);
     console.log(packageHeader + "publishing");
   }
-
-  var opts = {
-    BucketName: "com.meteor.warehouse",
-    ObjectName: destKey,
-    SourceBucket: "com.meteor.warehouse",
-    SourceObject: sourceKey,
-    Acl: "public-read"
-  };
-  s3.CopyObject(opts);
+  copyFilesWithPrefix(s3, sourcePrefix, destDir);
 };
 
 // publish the release manifest, copying from

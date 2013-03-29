@@ -27,6 +27,7 @@ elif [ "$UNAME" = "Linux" ] ; then
         exit 1
     fi
 fi
+PLATFORM="${UNAME}_${ARCH}"
 
 # Find the script dir, following one level of symlink. Note that symlink
 # can be relative or absolute. Too bad 'readlink -f' is not portable.
@@ -44,7 +45,7 @@ function install_dev_bundle {
     set -e
     trap "echo Failed to install dependency kit." EXIT
 
-    TARBALL="dev_bundle_${UNAME}_${ARCH}_${BUNDLE_VERSION}.tar.gz"
+    TARBALL="dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz"
     BUNDLE_TMPDIR="$SCRIPT_DIR/dev_bundle.xxx"
 
     rm -rf "$BUNDLE_TMPDIR"

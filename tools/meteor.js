@@ -2,19 +2,15 @@ var Fiber = require('fibers');
 Fiber(function () {
 
   var path = require('path');
-  var files = require(path.join(__dirname, 'files.js'));
   var _ = require('underscore');
-  var deploy = require(path.join(__dirname, 'deploy'));
   var fs = require("fs");
-  var runner = require(path.join(__dirname, 'run.js'));
-  var packages = require(path.join(__dirname, 'packages.js'));
-  var project = require(path.join(__dirname, 'project.js'));
-  var warehouse = require(path.join(__dirname, 'warehouse.js'));
-
-  var die = function (msg) {
-    console.error(msg);
-    process.exit(1);
-  };
+  var files = require('./files.js');
+  var deploy = require('./deploy.js');
+  var runner = require('./run.js');
+  var packages = require('./packages.js');
+  var project = require('./project.js');
+  var warehouse = require('./warehouse.js');
+  var logging = require('./logging.js');
 
   // This code is duplicated in app/server/server.js.
   var MIN_NODE_VERSION = 'v0.8.18';
@@ -49,15 +45,6 @@ Fiber(function () {
     process.exit(1);
   };
 
-  // If the releases directory in local warehouse is empty, fetch the
-  // latest release from our servers. This release may require a
-  // different tools, in which case we'll springboard later.
-  var ensureSomeRelease = function () {
-    if (!warehouse.latestRelease()) {
-      warehouse.fetchLatestRelease();
-    }
-  };
-
   // Stores the app directory (if any), release version, etc.
   var context = {};
 
@@ -70,16 +57,35 @@ Fiber(function () {
 
     if (context.appDir) {
       context.appReleaseVersion =
-        project.getMeteorReleaseVersion(context.appDir);
+        project.getMeteorReleaseVersion(context.appDir) ||
+        (files.usesWarehouse() ? warehouse.latestRelease() : 'none');
     }
-    // Recalculate release version, taking the current app into account.
-    context.releaseVersion = calculateReleaseVersion(argv);
-    toolsDebugMessage("Running Meteor Release " + context.releaseVersion);
-
     context.userReleaseOverride = !!argv.release;
 
-    context.releaseManifest =
-      warehouse.releaseManifestByVersion(context.releaseVersion);
+    // Recalculate release version, taking the current app into account.
+    setReleaseVersion(calculateReleaseVersion(argv));
+    toolsDebugMessage("Running Meteor Release " + context.releaseVersion);
+  };
+
+  var setReleaseVersion = function (version) {
+    context.releaseVersion = version;
+
+    try {
+      context.releaseManifest =
+        warehouse.ensureReleaseExistsAndReturnManifest(context.releaseVersion);
+    } catch (e) {
+      if (!(e instanceof files.OfflineError))
+        throw e;
+      if (context.appDir && !context.userReleaseOverride) {
+        logging.die(
+          "Sorry, this project uses Meteor " + version + ", which is not installed and\n" +
+          "could not be downloaded. Please check to make sure that you are online.");
+      } else {
+        logging.die(
+          "Sorry, Meteor " + version + " is not installed and could not be downloaded.\n" +
+          "Please check to make sure that you are online.");
+      }
+    }
     context.packageSearchOptions = {
       appDir: context.appDir,
       releaseManifest: context.releaseManifest
@@ -89,14 +95,13 @@ Fiber(function () {
   var calculateReleaseVersion = function (argv) {
     if (!files.usesWarehouse()) {
       if (argv.release) {
-        die("Can't specify a release when running Meteor from a checkout.");
+        logging.die(
+          "Can't specify a release when running Meteor from a checkout.");
       }
       // The release in a git checkout is called "none" and is hardcoded in
       // warehouse.js to have no packages.
       return 'none';
     }
-
-    ensureSomeRelease();
 
     // If a release was specified explicitly on the command line, that's the one
     // to use. Otherwise use the release specified in the app (if
@@ -105,6 +110,16 @@ Fiber(function () {
     return argv.release ||
       context.appReleaseVersion ||
       warehouse.latestRelease();
+  };
+
+  var maybePrintUserOverrideMessage = function () {
+    if (files.usesWarehouse() &&
+        context.appReleaseVersion !== 'none' &&
+        context.appReleaseVersion !== context.releaseVersion) {
+      console.log("=> Using Meteor %s as requested (overriding Meteor %s)",
+                  context.releaseVersion, context.appReleaseVersion);
+      console.log();
+    }
   };
 
   // If we're not in an app directory, die with an error message.
@@ -124,7 +139,7 @@ Fiber(function () {
         console.log();
       }
       if (files.usesWarehouse() && context.releaseVersion === 'none') {
-        die(
+        logging.die(
           "You must specify a Meteor version with --release when you work with this\n" +
             "project. It was created from an unreleased Meteor checkout and doesn't\n" +
             "have a version associated with it.\n" +
@@ -135,7 +150,7 @@ Fiber(function () {
     }
     // This is where you end up if you type 'meteor' with no args. Be gentle to
     // the noobs..
-    die(cmd + ": You're not in a Meteor project directory.\n" +
+    logging.die(cmd + ": You're not in a Meteor project directory.\n" +
         "\n" +
         "To create a new Meteor project:\n" +
         "   meteor create <project name>\n" +
@@ -203,6 +218,7 @@ Fiber(function () {
       }
 
       requireDirInApp("run");
+      maybePrintUserOverrideMessage();
       runner.run(context, {
         port: new_argv.port,
         minify: new_argv.production,
@@ -334,91 +350,106 @@ Fiber(function () {
     help: "Upgrade to the latest version of Meteor",
     func: function (argv) {
       // reparse args
-      var opt = require('optimist')
-            .usage(
-              "Usage: meteor update\n" +
-                "\n" +
-                "Checks to see if a new version of Meteor is available, and if so,\n" +
-                "downloads and installs it. You must be connected to the internet.\n");
+      var opt = require('optimist').usage(
+        "Usage: meteor update [--release <release>]\n" +
+          "\n" +
+          "Sets the version of Meteor to use with the current project. If a\n" +
+          "release is specified with --release, set the project to use that\n" +
+          "version. Otherwise use the latest release of Meteor.");
 
-      if (opt.argv.help) {
+      if (argv.help) {
         process.stdout.write(opt.help());
         process.exit(1);
       }
 
       // refuse to update if we're in a git checkout.
       if (!files.usesWarehouse()) {
-        die("update: can only be run from official releases, not from checkouts");
+        logging.die(
+          "update: can only be run from official releases, not from checkouts");
       }
 
-      if (opt.argv.release) {
-        // The user specified a specific release, so we don't need to do a
-        // global update, and we don't need to springboard because if we needed
-        // to, we already would have done that back in main().
-      } else {
-        // XXX think carefully about what happens if we double-update
-        var updatedFrom = opt.argv['updated-from'] || context.releaseVersion;
+      var didGlobalUpdateWithoutSpringboarding = false;
+      var triedToGloballyUpdateButFailed = false;
 
-        var didUpdate = warehouse.fetchLatestRelease();
-
-        // we need to update the global releaseVersion variable
-        // because that's what toolsSpringboard reads
-        context.releaseVersion = warehouse.latestRelease();
-
-        // XXX make errors look good
-        if (didUpdate) {
-          console.log("Updated Meteor to release " + context.releaseVersion + ".");
-          toolsSpringboard(['--updated-from=' + updatedFrom]);
-          // If the tools for release is different, then toolsSpringboard
-          // execs and does not return. Otherwise, keeps going.
+      // Unless the user specified a specific release (or we're doing a
+      // mid-update springboard), go get the latest release.
+      if (!opt.argv.release) {
+        // Undocumented flag (used, eg, by upgrade-to-engine.js).
+        if (!opt.argv["dont-fetch-latest"]) {
+          try {
+            didGlobalUpdateWithoutSpringboarding =
+              warehouse.fetchLatestRelease();
+          } catch (e) {
+            if (!(e instanceof files.OfflineError)) {
+              console.error("Failed to update Meteor.");
+              throw e;
+            }
+            // If the problem appears to be that we're offline, just log and
+            // continue.
+            console.log("Can't contact the update server. Are you online?");
+            triedToGloballyUpdateButFailed = true;
+          }
         }
 
-        if (updatedFrom !== context.releaseVersion) {
-          // XXX this next line is WRONG, which suggests that the logic for
-          // updatedFrom is wrong. (updatedFrom can be an app's version, not
-          // just global version.)
-          toolsDebugMessage("Globally updated from " + updatedFrom + " to "
-                             + context.releaseVersion);
-          // ... here is a chance to update the bootstrap script, etc
-          // ... maybe print out some release notes or something
-          // ... etc
-        } else {
-          console.log("Meteor release " + warehouse.latestRelease() +
-                      " is already the latest release.");
-        }
+        // we need to update the releaseManifest in the context because that's
+        // what toolsSpringboard reads
+        setReleaseVersion(warehouse.latestRelease());
+
+        // If the tools for this release is different, then toolsSpringboard
+        // execs and does not return. Otherwise, keeps going.
+        toolsSpringboard(['--release=' + context.releaseVersion]);
       }
 
-      // If we're not in an app, then we're done. Otherwise, we have to upgrade
-      // the app too.
+      // If we're not in an app, then we're done (other than maybe printing some
+      // stuff).
       if (!context.appDir) {
-        // If we weren't fetching the latest release, then we haven't printed
-        // anything yet (other than possibly in main), so we should print
-        // something now.
-        if (opt.argv.release) {
-          console.log("Meteor release " + context.releaseVersion + " is installed.");
+        if (opt.argv.release || didGlobalUpdateWithoutSpringboarding) {
+          // If the user specified a specific release, or we just did a global
+          // update (with springboarding, in which case --release is set, or
+          // without springboarding, in which case didGlobalUpdate is set),
+          // print this message.
+          console.log("Installed. Run 'meteor update' inside of a particular project\n" +
+                      "directory to update that project to Meteor %s.",
+                      context.releaseVersion);
+        } else {
+          // The user just ran "meteor update" (without --release), and we did
+          // not update.
+          console.log("The latest version of Meteor, %s, is already installed on this\n" +
+                      "computer. Run 'meteor update' inside of a particular project\n" +
+                      "directory to update that project to Meteor %s.",
+                      context.releaseVersion, context.releaseVersion);
         }
         return;
       }
 
+      // Otherwise, we have to upgrade the app too.
+
+      // Write the release to .meteor/release if it's changed (or if this is a
+      // pre-engine app).
       var appRelease = project.getMeteorReleaseVersion(context.appDir);
-      // Write release version unconditionally, so that we write it even if
-      // appRelease === releaseVersion === the implicit 0.6.0 from a missing
-      // file.
-      project.writeMeteorReleaseVersion(context.appDir, context.releaseVersion);
-      if (appRelease === context.releaseVersion) {
-        // XXX this is wrong if we just updated from no file to 0.6.0.
-        console.log("Your app is already running Meteor release "
-                    + context.releaseVersion + ".");
+      if (appRelease === null || appRelease !== context.releaseVersion) {
+        project.writeMeteorReleaseVersion(context.appDir,
+                                          context.releaseVersion);
+      } else {
+        if (triedToGloballyUpdateButFailed) {
+          console.log(
+            "This project is already at Meteor %s, the latest release\n" +
+              "installed on this computer.",
+            context.releaseVersion);
+        } else {
+          console.log(
+            "This project is already at Meteor %s, the latest release.",
+            context.releaseVersion);
+        }
         return;
       }
 
       // This is the right spot to do any other changes we need to the app in
       // order to update it for the new release (new metadata file formats,
       // etc, or maybe even updating renamed APIs).
-      // XXX should we really print the full path here (appDir)?
-      console.log("Updated app '%s' to release %s from release %s.",
-                  context.appDir, context.releaseVersion, appRelease);
-      console.log();
+      // XXX should we really print the full path here (appDir)? (use pretty)
+      console.log("%s: updated to Meteor %s.",
+                  context.appDir, context.releaseVersion);
 
       warehouse.printNotices(appRelease, context.releaseVersion);
     }
@@ -927,15 +958,28 @@ Fiber(function () {
   // there's actually a specific release.
   var printVersion = function () {
     if (!files.usesWarehouse()) {
-      die("Unreleased (running from a checkout)");
+      logging.die("Unreleased (running from a checkout)");
     }
 
     if (context.appReleaseVersion === "none") {
-      die("This project was created with a checkout of Meteor, rather than an\n" +
-          "official release, and doesn't have a release number associated with\n" +
-          "it. You can set its release with 'meteor update'.");
+      logging.die(
+        "This project was created with a checkout of Meteor, rather than an\n" +
+        "official release, and doesn't have a release number associated with\n" +
+        "it. You can set its release with 'meteor update'.");
     }
     console.log("Release " + context.releaseVersion);
+    process.exit(0);
+  };
+
+  var getReady = function () {
+    if (files.usesWarehouse()) {
+      logging.die("meteor --get-ready only works in a checkout");
+    }
+    // dev bundle is downloaded by the wrapper script. We just need to install
+    // NPM dependencies.
+    _.each(packages.list(context.packageSearchOptions), function (p) {
+      p.installNpmDependencies();
+    });
     process.exit(0);
   };
 
@@ -951,13 +995,20 @@ Fiber(function () {
 
     calculateContext(argv);
 
-    // if we're not running the correct tools, fetch it and
-    // re-run. do *not* do this if we are in a checkout, or if
-    // process.env.TEST_WAREHOUSE_DIR is set. This hook allows unit
-    // tests to test the current tools's ability to run other
-    // releases.
-    if (!files.in_checkout() && !process.env.TEST_WAREHOUSE_DIR)
+    // if we're not running the correct tools, fetch it and re-run. do *not* do
+    // this if we are in a checkout, or if
+    // process.env.METEOR_TEST_NO_SPRINGBOARD is set. This hook allows unit
+    // tests to test the current tools's ability to run other releases. Also,
+    // don't do this if we are in the middle of an update that springboarded.
+    if (!files.in_checkout() && !process.env.METEOR_TEST_NO_SPRINGBOARD)
       toolsSpringboard();
+
+    // Run this to ensure that your checkout's Meteor is "complete" (dev bundle
+    // downloaded and all NPM modules installed).
+    if (argv['get-ready']) {
+      getReady();
+      return;
+    }
 
     if (argv.help) {
       argv._.splice(0, 0, "help");

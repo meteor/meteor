@@ -8,10 +8,12 @@ var _ = require('underscore');
 
 
 var prefix = path.join(__dirname, '..', '..', '..');
-var binary = '/usr/local/bin/meteor';
 var oldDirectory = path.join(prefix, 'meteor');
-var launchScript = path.join(
-  oldDirectory, 'app', 'meteor', 'launch-meteor');
+var oldMacBinary = '/usr/local/bin/meteor';
+var upgradeScript = path.join(
+  oldDirectory, 'app', 'meteor', 'upgrade-to-engine.sh');
+var upgradeScriptInTmp = '/tmp/upgrade-to-engine.sh.' + (Math.random() * 0x100000000 + 1).toString(36);
+
 
 // Figure out what platform we're upgrading on (dpkg, rpm, tar)
 var package_stamp_path = path.join(oldDirectory, '.package_stamp');
@@ -47,10 +49,8 @@ var rm_recursive = function (p) {
     fs.unlinkSync(p);
 };
 
-var macUpgrade = function () {
-  fs.unlinkSync(binary);
-  fs.writeFileSync(binary, fs.readFileSync(launchScript));
-  fs.chmodSync(binary, 0755);
+var macUninstall = function () {
+  fs.unlinkSync(oldMacBinary);
   rm_recursive(oldDirectory);
 };
 
@@ -91,36 +91,47 @@ var runWithRoot = function (cmd, args) {
   f.wait();
 };
 
-var copyScriptLinux = function () {
-  runWithRoot("cp", [launchScript, binary]);
-  runWithRoot("chmod", [755, binary]);
-};
-
-var debUpgrade = function () {
-  copyScriptLinux();
+var debUninstall = function () {
   runWithRoot("dpkg", ["-r", "meteor"]);
 };
 
-var rpmUpgrade = function () {
-  copyScriptLinux();
+var rpmUninstall = function () {
   runWithRoot("rpm", ["-e", "meteor"]);
 };
 
+var copyScriptToTmp = function () {
+  fs.writeFileSync(upgradeScriptInTmp, fs.readFileSync(upgradeScript));
+};
+
 Fiber(function () {
-  console.log("Upgrading to Tools Meteor in " + prefix + "!");
+  console.warn(
+    "\n" +
+      "Meteor has a brand new distribution system!\n" +
+      "\n" +
+      "In this new system, code-named Engine, packages are downloaded\n" +
+      "individually and on demand. But all of the packages in each official\n" +
+      "Meteor release are prefetched and cached so you can still use Meteor\n" +
+      "when you're on a plane or in a coffeeshop with no Wifi.\n" +
+      "\n" +
+      "Also, every Meteor project is now pinned to a specific Meteor release,\n" +
+      "so everyone on your team is always running the same code regardless of\n" +
+      "what they have installed on their laptop. Whenever you run 'meteor',\n" +
+      "Engine automatically fetches the needed release manifest, build tools,\n" +
+      "smart packages, and npm dependencies into your local warehouse.\n" +
+      "\n" +
+      "Removing your current installation.\n");
+
+  copyScriptToTmp();
+
   if (package_stamp === 'tar') {
-    macUpgrade();
+    macUninstall();
   } else if (package_stamp === 'deb') {
-    debUpgrade();
+    debUninstall();
   } else if (package_stamp === 'rpm') {
-    rpmUpgrade();
+    rpmUninstall();
   }
 
-  if (package_stamp !== 'tar') {
-    console.log("**************************************************************");
-    console.log("*** Meteor is now installed at /usr/local/bin/meteor.      ***");
-    console.log("*** Run `hash -r` so that your shell notices it has moved. ***");
-    console.log("**************************************************************");
-  }
-  kexec(shell_quote.quote([binary, '--version']));
+  // Now run the upgrade script. Don't worry about leaving it in /tmp. That's
+  // fine.
+  kexec("/bin/bash " + upgradeScriptInTmp);
 }).run();
