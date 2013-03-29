@@ -10,6 +10,9 @@ Meteor.startup(function () {
   // later.
   // prettyPrint();
 
+  //mixpanel tracking
+  mixpanel.track('docs');
+
   // returns a jQuery object suitable for setting scrollTop to
   // scroll the page, either directly for via animate()
   var scroller = function() {

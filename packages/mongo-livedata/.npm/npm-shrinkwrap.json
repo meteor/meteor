@@ -3,10 +3,12 @@
     "mongodb": {
       "version": "1.2.13",
       "from": "mongodb@1.2.13",
+      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-1.2.13.tgz",
       "dependencies": {
         "bson": {
           "version": "0.1.8",
-          "from": "bson@0.1.8"
+          "from": "bson@0.1.8",
+          "resolved": "https://registry.npmjs.org/bson/-/bson-0.1.8.tgz"
         }
       }
     }
