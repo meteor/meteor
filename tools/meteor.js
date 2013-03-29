@@ -359,7 +359,7 @@ Fiber(function () {
 
         var didUpdate = false;
         // Undocumented flag (used, eg, by upgrade-to-engine.js).
-        if (!opt.argv["no-fetch-latest"])
+        if (!opt.argv["dont-fetch-latest"])
           didUpdate = warehouse.fetchLatestRelease();
 
         // we need to update the releaseVersion in the context because that's
@@ -382,7 +382,7 @@ Fiber(function () {
                              + context.releaseVersion);
           // ... here is a chance to update the launch script, etc
           // ... etc
-        } else if (!opt.argv["no-fetch-latest"]) {
+        } else if (!opt.argv["dont-fetch-latest"]) {
           console.log("Meteor release " + warehouse.latestRelease() +
                       " is already the latest release.");
         }

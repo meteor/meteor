@@ -110,4 +110,4 @@ fi
 
 trap - EXIT
 
-exec "$HOME/.meteor/meteor" update --no-fetch-latest
+exec "$HOME/.meteor/meteor" update --dont-fetch-latest
