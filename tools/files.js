@@ -489,13 +489,17 @@ _.extend(exports, {
     // "response".
     request(urlOrOptions, function (error, response, body) {
       if (error)
-        future.throw(error);
+        future.throw(new files.OfflineError(error));
       else if (response.statusCode >= 400 && response.statusCode < 600)
         future.throw(response);
       else
         future.return(body);
     });
     return future.wait();
+  },
+
+  OfflineError: function (error) {
+    this.error = error;
   },
 
   _randomToken: function() {

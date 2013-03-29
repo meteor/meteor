@@ -29,6 +29,7 @@ var _ = require("underscore");
 var files = require('./files.js');
 var updater = require('./updater.js');
 var fiberHelpers = require('./fiber-helpers.js');
+var logging = require('./logging.js');
 
 var WAREHOUSE_URLBASE = 'https://warehouse.meteor.com';
 
@@ -71,7 +72,7 @@ _.extend(warehouse, {
   // return an empty manifest.  Otherwise, ensure the passed release
   // version is stored in the local warehouse and return its parsed
   // manifest.
-  releaseManifestByVersion: function(release) {
+  ensureReleaseExistsAndReturnManifest: function(release) {
     if (release === 'none')
       return null;
     if (!files.usesWarehouse())
@@ -125,8 +126,7 @@ _.extend(warehouse, {
     if (!releaseName) {
       if (background)
         return false;  // it's in the background, who cares.
-      console.error("No stable release found.");
-      process.exit(1);
+      logging.die("No stable release found.");
     }
 
     var latestReleaseManifest =
@@ -237,13 +237,16 @@ _.extend(warehouse, {
         releaseManifestText = files.getUrl(
           WAREHOUSE_URLBASE + "/releases/" + releaseVersion + ".release.json");
       } catch (e) {
-        if (background)
-          throw e;  // just throw, it's being ignored
+        // just throw, if we're in the background anyway, or if this is the
+        // OfflineError which should be handled by the caller
+        if (background || e instanceof files.OfflineError)
+          throw e;
+        // We actually got some response, so we're probably online and we
+        // just can't find the release.
         // XXX Maybe instead of these process.exit's we can throw some special
         // error class?
-        console.error("Release hasn't been published to Meteor's servers: " +
-                      releaseVersion);
-        process.exit(1);
+        logging.die("Release hasn't been published to Meteor's servers: " +
+                    releaseVersion);
       }
     }
 
