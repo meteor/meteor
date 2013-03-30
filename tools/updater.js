@@ -45,14 +45,12 @@ exports.startUpdateChecks = function (context) {
       // the last release which has had a banner printed.)
       if (manifest.releases.stable.banner &&
           warehouse.lastPrintedBannerRelease() !== manifestLatestRelease) {
-        // XXX onStdio
         console.log();
         console.log(manifest.releases.stable.banner);
         console.log();
         warehouse.writeLastPrintedBannerRelease(manifestLatestRelease);
       } else {
         // Already printed this banner, or maybe there is no banner.
-        // XXX onStdio
         console.log("=> Meteor %s is being downloaded in the background.",
                     manifestLatestRelease);
       }
@@ -67,7 +65,6 @@ exports.startUpdateChecks = function (context) {
       // before we tried to fetch it, print that out.
       var newLatestRelease = warehouse.latestRelease();
       if (newLatestRelease !== localLatestRelease) {
-        // XXX onStdio
         console.log(
           "=> Meteor %s is available. Update this project with 'meteor update'.",
           newLatestRelease);
@@ -81,7 +78,6 @@ exports.startUpdateChecks = function (context) {
     // release at the command line with --release?
     if (localLatestRelease !== context.releaseVersion &&
         !context.userReleaseOverride) {
-        // XXX onStdio
         console.log(
           "=> Meteor %s is available. Update this project with 'meteor update'.",
           localLatestRelease);
