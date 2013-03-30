@@ -403,6 +403,8 @@ Fiber(function () {
       // If we're not in an app, then we're done (other than maybe printing some
       // stuff).
       if (!context.appDir) {
+        if (opt.argv["dont-fetch-latest"])
+          return;
         if (opt.argv.release || didGlobalUpdateWithoutSpringboarding) {
           // If the user specified a specific release, or we just did a global
           // update (with springboarding, in which case --release is set, or
