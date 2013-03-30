@@ -30,7 +30,7 @@ if [ "$METEOR_WAREHOUSE_DIR" ]; then
     # the current tools, in which case you can build and publish a new release
     # and set it here.
     export METEOR_TEST_NO_SPRINGBOARD=t
-    TEST_RELEASE="0.6.0-alpha1"
+    TEST_RELEASE="0.6.0"
 
     METEOR="$METEOR --release=$TEST_RELEASE" # some random non-official release
 fi
