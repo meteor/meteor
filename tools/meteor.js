@@ -347,7 +347,7 @@ Fiber(function () {
 
   Commands.push({
     name: "update",
-    help: "Upgrade to the latest version of Meteor",
+    help: "Upgrade this project to the latest version of Meteor",
     func: function (argv) {
       // reparse args
       var opt = require('optimist').usage(
