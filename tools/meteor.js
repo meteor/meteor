@@ -451,7 +451,10 @@ Fiber(function () {
       console.log("%s: updated to Meteor %s.",
                   context.appDir, context.releaseVersion);
 
-      warehouse.printNotices(appRelease, context.releaseVersion);
+      // Print any notices relevant to this upgrade. (We don't do this on an
+      // initial upgrade to Engine Meteor.
+      if (appRelease)
+        warehouse.printNotices(appRelease, context.releaseVersion);
     }
   });
 

@@ -234,6 +234,23 @@ var main = function () {
     return readJSONFile(noticesFilename);
   });
 
+  // Every "official" release needs to be in notices.json, even those without
+  // notices, so that the notice-printing code knows how far back to look.
+  if (!_.contains(_.pluck(notices, 'release'), blessedReleaseName)) {
+    die("notices.json must contain release " +
+        blessedReleaseName + "! (It does not need to have notices.)");
+  }
+
+  _.each(notices, function (record) {
+    if (!record.release)
+      die("An element of notices.json lacks a release.");
+    _.each(record.notices, function (line) {
+      if (line.length + record.release.length + 2 > 80) {
+        die("notices.json: notice line too long: " + line);
+      }
+    });
+  });
+
   var bannerFilename = path.resolve(__dirname, 'banner.txt');
   var banner = doOrDie("Can't read banner file " + bannerFilename, function () {
     return fs.readFileSync(bannerFilename, 'utf8');
