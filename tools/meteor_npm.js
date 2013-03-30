@@ -353,10 +353,8 @@ _.extend(exports, {
   },
 
   _logUpdateDependencies: function(packageName, npmDependencies) {
-    var npmDependenciesStr = _.map(npmDependencies, function(version, name) {
-      return name + '@' + version;
-    }).join(', ');
-    console.log(packageName + ': updating npm dependencies -- ' + npmDependenciesStr + '...');
+    console.log('%s: updating npm dependencies -- %s...',
+                packageName, _.keys(npmDependencies).join(', '));
   },
 
   _randomToken: function() {
