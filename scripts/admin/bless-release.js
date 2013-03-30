@@ -139,8 +139,12 @@ var bootstrapTarballFilename = function (platform) {
 var makeBootstrapTarball = function (platform) {
   console.log("Creating bootstrap tarball for " + platform);
   var tarballName = bootstrapTarballFilename(platform);
-  files.createTarball(warehouseDirectory,
-                      path.join(distDirectory, tarballName));
+  // files.createTarball puts weird NODETAR tags in it which causes Linux tar to
+  // print warnings on extraction. Gross!
+  execFileSync("tar", ["czf",
+                       path.join(distDirectory, tarballName),
+                       "-C", path.dirname(warehouseDirectory),
+                       path.basename(warehouseDirectory)]);
 };
 
 var writeGlobalManifest = function (blessedReleaseName, banner) {
