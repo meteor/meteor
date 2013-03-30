@@ -16,6 +16,7 @@ Package.on_use(function (api) {
   api.add_files(['sockjs-0.3.4.js',
                  'stream_client_sockjs.js'], 'client');
   api.add_files('stream_client_nodejs.js', 'server');
+  api.add_files('urls.js', ['client', 'server']);
   api.add_files('stream_server.js', 'server');
 
   // livedata_connection.js uses a Minimongo collection internally to

@@ -27,6 +27,11 @@ Meteor._DdpClientStream = function (endpoint) {
     return self._onConnect(connection);
   });
 
+  self.client.on('connectFailed', function (error) {
+    // XXX: Make this do something better than make the tests hang if it does not work.
+    return self._lostConnection();
+  });
+
   //// Constants
 
   // how long to wait until we declare the connection attempt
@@ -68,16 +73,6 @@ Meteor._DdpClientStream = function (endpoint) {
   //// Kickoff!
   self._launchConnection();
 };
-
-_.extend(Meteor._DdpClientStream, {
-  _endpointToUrl: function (endpoint) {
-    // XXX should be secure!
-    // among other problems
-    endpoint = endpoint.replace(/^http(s)?:\/\//, "");
-    endpoint = endpoint.replace(/\/$/, "");
-    return 'ws://' + endpoint + '/websocket';
-  }
-});
 
 _.extend(Meteor._DdpClientStream.prototype, {
   // Register for callbacks.
@@ -303,7 +298,7 @@ _.extend(Meteor._DdpClientStream.prototype, {
     // a protocol and the server doesn't send one back (and sockjs
     // doesn't). also, related: I guess we have to accept that
     // 'stream' is ddp-specific
-    self.client.connect(Meteor._DdpClientStream._endpointToUrl(self.endpoint));
+    self.client.connect(Meteor._DdpClientStream._toWebsocketUrl(self.endpoint));
 
     if (self.connectionTimer)
       clearTimeout(self.connectionTimer);

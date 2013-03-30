@@ -37,7 +37,7 @@ Tinytest.add("stream - sockjs urls are computed correctly", function(test) {
   var testHasSockjsUrl = function(raw, expectedSockjsUrl) {
     var actual = Meteor._DdpClientStream._toSockjsUrl(raw);
     if (expectedSockjsUrl instanceof RegExp)
-      test.isTrue(actual.match(expectedSockjsUrl));
+      test.isTrue(actual.match(expectedSockjsUrl), actual);
     else
       test.equal(actual, expectedSockjsUrl);
   };

@@ -62,56 +62,6 @@ Meteor._DdpClientStream = function (url) {
   self._launch_connection();
 };
 
-_.extend(Meteor._DdpClientStream, {
-  // @param url {String} URL to Meteor app, eg:
-  //   "/" or "madewith.meteor.com" or "https://foo.meteor.com"
-  //   or "ddp+sockjs://ddp--****-foo.meteor.com/sockjs"
-  // @returns {String} URL to the sockjs endpoint, e.g.
-  //   "http://subdomain.meteor.com/sockjs" or "/sockjs"
-  //   or "https://ddp--1234-foo.meteor.com/sockjs"
-  _toSockjsUrl: function(url) {
-    // XXX from Underscore.String (http://epeli.github.com/underscore.string/)
-    var startsWith = function(str, starts) {
-      return str.length >= starts.length &&
-        str.substring(0, starts.length) === starts;
-    };
-    var endsWith = function(str, ends) {
-      return str.length >= ends.length &&
-        str.substring(str.length - ends.length) === ends;
-    };
-
-    var ddpUrlMatch = url.match(/^ddp(i?)\+sockjs:\/\//);
-    if (ddpUrlMatch) {
-      // Remove scheme and split off the host.
-      var urlAfterDDP = url.substr(ddpUrlMatch[0].length);
-      var newScheme = ddpUrlMatch[1] === 'i' ? 'http' : 'https';
-      var slashPos = urlAfterDDP.indexOf('/');
-      var host =
-            slashPos === -1 ? urlAfterDDP : urlAfterDDP.substr(0, slashPos);
-      var rest = slashPos === -1 ? '' : urlAfterDDP.substr(slashPos);
-
-      // In the host (ONLY!), change '*' characters into random digits. This
-      // allows different stream connections to connect to different hostnames
-      // and avoid browser per-hostname connection limits.
-      host = host.replace(/\*/g, function () {
-        return Math.floor(Random.fraction()*10);
-      });
-
-      return newScheme + '://' + host + rest;
-    }
-
-    // Prefix FQDNs but not relative URLs
-    if (url.indexOf("://") === -1 && !startsWith(url, "/")) {
-      url = "http://" + url;
-    }
-
-    if (endsWith(url, "/"))
-      return url + "sockjs";
-    else
-      return url + "/sockjs";
-  }
-});
-
 _.extend(Meteor._DdpClientStream.prototype, {
   // Register for callbacks.
   on: function (name, callback) {
