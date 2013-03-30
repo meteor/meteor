@@ -397,7 +397,7 @@ _.extend(warehouse, {
     console.log();
     _.each(noticesToPrint, function (record) {
       var header = record.release + ': ';
-      _.each(record.lines, function (line, i) {
+      _.each(record.notices, function (line, i) {
         console.log(header + line);
         if (i === 0)
           header = header.replace(/./g, ' ');
