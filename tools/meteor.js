@@ -974,6 +974,9 @@ Fiber(function () {
     process.exit(0);
   };
 
+  // Implements "meteor --get-ready", which you run to ensure that your
+  // checkout's Meteor is "complete" (dev bundle downloaded and all NPM modules
+  // installed).
   var getReady = function () {
     if (files.usesWarehouse()) {
       logging.die("meteor --get-ready only works in a checkout");
@@ -1006,8 +1009,6 @@ Fiber(function () {
     if (!files.in_checkout() && !process.env.METEOR_TEST_NO_SPRINGBOARD)
       toolsSpringboard();
 
-    // Run this to ensure that your checkout's Meteor is "complete" (dev bundle
-    // downloaded and all NPM modules installed).
     if (argv['get-ready']) {
       getReady();
       return;
