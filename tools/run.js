@@ -217,7 +217,6 @@ var log_to_clients = function (msg) {
 // mongoURL
 // onExit
 // [onListen]
-// [onStdio]
 // [nodeOptions]
 // [settingsFile]
 
@@ -261,7 +260,6 @@ var start_server = function (options) {
     if (data.length != originalLength)
       options.onListen && options.onListen();
     if (data) {
-      options.onStdio && options.onStdio();
       log_to_clients({stdout: data});
     }
   });
@@ -269,7 +267,6 @@ var start_server = function (options) {
   proc.stderr.setEncoding('utf8');
   proc.stderr.on('data', function (data) {
     if (data) {
-      options.onStdio && options.onStdio();
       log_to_clients({stderr: data});
     }
   });
@@ -560,14 +557,40 @@ exports.run = function (context, options) {
   var mongo_url = process.env.MONGO_URL ||
         ("mongodb://127.0.0.1:" + mongo_port + "/meteor");
   var firstRun = true;
-  var lastThingThatPrintedWasRestartMessage;
-  var silentRuns = 0;
 
   var deps_info = null;
   var warned_about_no_deps_info = false;
 
   var server_handle;
   var watcher;
+
+  var lastThingThatPrintedWasRestartMessage = false;
+  var silentRuns = 0;
+
+  // Hijack process.stdout and process.stderr so that whenever anything is
+  // written to one of them, if the last thing we printed as the "Meteor server
+  // restarted" message with no newline, we (a) print that newline and (b)
+  // remember that *something* was printed (and so we shouldn't try to erase and
+  // rewrite the line on the next restart).
+  var realStdoutWrite = process.stdout.write;
+  var realStderrWrite = process.stderr.write;
+  // Call this function before printing anything to stdout or stderr.
+  var onStdio = function () {
+    if (lastThingThatPrintedWasRestartMessage) {
+      realStdoutWrite.call(process.stdout, "\n");
+      lastThingThatPrintedWasRestartMessage = false;
+      silentRuns = 0;
+    }
+  };
+  process.stdout.write = function () {
+    onStdio();
+    return realStdoutWrite.apply(process.stdout, arguments);
+  };
+  process.stderr.write = function () {
+    onStdio();
+    return realStderrWrite.apply(process.stderr, arguments);
+  };
+
 
   if (options.once) {
     Status.shouldRestart = false;
@@ -682,12 +705,12 @@ exports.run = function (context, options) {
         // The last run was not the "Running on: " run, and it didn't print
         // anything. So the last thing that printed was the restart message.
         // Overwrite it.
-        process.stdout.write('\r');
+        realStdoutWrite.call(process.stdout, '\r');
       }
-      process.stdout.write("=> Meteor server restarted");
+      realStdoutWrite.call(process.stdout, "=> Meteor server restarted");
       if (lastThingThatPrintedWasRestartMessage) {
         ++silentRuns;
-        process.stdout.write(" (x" + (silentRuns+1) + ")");
+        realStdoutWrite.call(process.stdout, " (x" + (silentRuns+1) + ")");
       }
       lastThingThatPrintedWasRestartMessage = true;
     }
@@ -711,13 +734,6 @@ exports.run = function (context, options) {
         Status.listening = true;
         _.each(request_queue, function (f) { f(); });
         request_queue = [];
-      },
-      onStdio: function () {
-        if (lastThingThatPrintedWasRestartMessage) {
-          process.stdout.write("\n");
-          lastThingThatPrintedWasRestartMessage = false;
-          silentRuns = 0;
-        }
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
       settingsFile: options.settingsFile

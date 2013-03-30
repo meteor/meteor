@@ -1,10 +1,22 @@
 [
   {
-    "release": "0.6.0",
-    "tagline": "The engine!",
-    "changes": [
-      "Use 'Npm.require' instead of '__meteor_bootstrap__.require'",
+    "release": "0.6.0"
+  },
+  {
+    "release": "0.6.1",
+    "notices": [
+      "hi",
+      "This has a very very veryveryvery very very very long long long line",
       "more..."
+    ]
+  },
+  {
+    "release": "0.6.2"
+  },
+  {
+    "release": "0.6.3",
+    "notices": [
+      "ok here is a notice"
     ]
   }
 ]

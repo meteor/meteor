@@ -363,35 +363,47 @@ _.extend(warehouse, {
     var noticesPath = path.join(
       warehouse.getWarehouseDir(), 'releases', toRelease + '.notices.json');
 
-    if (fs.existsSync(path.join(noticesPath))) {
+    try {
       var notices = JSON.parse(fs.readFileSync(noticesPath));
-      var foundFromRelease = false;
-      var newChanges = []; // acculumate change until we hit 'fromRelease'
-      _.find(notices, function(change) {
-        if (change.release === fromRelease) {
-          foundFromRelease = true;
-          return true; // exit _.find
-        } else {
-          newChanges.push(change);
-          return false;
-        }
-      });
-
-      if (foundFromRelease) {
-        console.log("Important changes from " + fromRelease + ":");
-        _.each(newChanges, function(change) {
-          console.log(change.release + ": " + change.tagline);
-          _.each(change.changes, function (changeline) {
-            console.log('* ' + changeline);
-          });
-          console.log();
-        });
-      } else {
-        // didn't find 'fromRelease' in the notices. must have been
-        // an unofficial release.  don't print anything.
-        // XXX probably print the latest only or something
-      }
+    } catch (e) {
+      // It's valid for this file to not exist (if it's an unblessed version)
+      // and eh, if the JSON is bad then the user doesn't really care.
+      return;
     }
+
+    var noticesToPrint = [];
+    var foundFromRelease = false;
+    for (var i = 0; i < notices.length; ++i) {
+      var record = notices[i];
+      // We want to print the notices for releases newer than fromRelease, and
+      // we always want to print toRelease even if we're updating from something
+      // that's not in the notices file at all.
+      if (record.notices &&
+          (foundFromRelease || record.release === toRelease)) {
+        noticesToPrint.push(record);
+      }
+      // Nothing newer than toRelease.
+      if (record.release === toRelease)
+        break;
+      if (record.release === fromRelease)
+        foundFromRelease = true;
+    }
+
+    if (_.isEmpty(noticesToPrint))
+      return;
+
+    console.log();
+    console.log("-- Notice --");
+    console.log();
+    _.each(noticesToPrint, function (record) {
+      var header = record.release + ': ';
+      _.each(record.notices, function (line, i) {
+        console.log(header + line);
+        if (i === 0)
+          header = header.replace(/./g, ' ');
+      });
+      console.log();
+    });
   },
 
   // this function is also used by bless-release.js

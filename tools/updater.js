@@ -46,7 +46,9 @@ exports.startUpdateChecks = function (context) {
       if (manifest.releases.stable.banner &&
           warehouse.lastPrintedBannerRelease() !== manifestLatestRelease) {
         // XXX onStdio
+        console.log();
         console.log(manifest.releases.stable.banner);
+        console.log();
         warehouse.writeLastPrintedBannerRelease(manifestLatestRelease);
       } else {
         // Already printed this banner, or maybe there is no banner.

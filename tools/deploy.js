@@ -90,7 +90,7 @@ var deployToServer = function (app_dir, bundleOptions, deployOptions) {
   var build_dir = path.join(app_dir, '.meteor', 'local', 'build_tar');
   var bundle_path = path.join(build_dir, 'bundle');
 
-  process.stdout.write('Deploying to ' + site + '.  Bundling ... ');
+  process.stdout.write('Deploying to ' + site + '.  Bundling...\n');
   var bundler = require('./bundler.js');
   var errors = bundler.bundle(app_dir, bundle_path, bundleOptions);
   if (errors) {
@@ -102,7 +102,7 @@ var deployToServer = function (app_dir, bundleOptions, deployOptions) {
     process.exit(1);
   }
 
-  process.stdout.write('uploading ... ');
+  process.stdout.write('Uploading...\n');
 
   var rpcOptions = {};
   if (password) rpcOptions.password = password;
@@ -119,8 +119,6 @@ var deployToServer = function (app_dir, bundleOptions, deployOptions) {
       process.stderr.write("\nError deploying application: " + errorMessage + "\n");
       process.exit(1);
     }
-
-    process.stdout.write('done.\n');
 
     var hostname = null;
     var response = null;
