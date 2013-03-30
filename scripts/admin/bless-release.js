@@ -140,11 +140,13 @@ var makeBootstrapTarball = function (platform) {
   console.log("Creating bootstrap tarball for " + platform);
   var tarballName = bootstrapTarballFilename(platform);
   // files.createTarball puts weird NODETAR tags in it which causes Linux tar to
-  // print warnings on extraction. Gross!
-  execFileSync("tar", ["czf",
-                       path.join(distDirectory, tarballName),
-                       "-C", path.dirname(warehouseDirectory),
-                       path.basename(warehouseDirectory)]);
+  // print warnings on extraction. Even BSD tar (the default Mac tar) puts some
+  // weird SCHILY tags on it. So use gnutar, which is installed on Macs.
+  execFileSync(fs.existsSync("/usr/bin/gnutar") ? "gnutar" : "tar",
+               ["czf",
+                path.join(distDirectory, tarballName),
+                "-C", path.dirname(warehouseDirectory),
+                path.basename(warehouseDirectory)]);
 };
 
 var writeGlobalManifest = function (blessedReleaseName, banner) {
