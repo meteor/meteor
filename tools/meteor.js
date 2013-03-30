@@ -447,9 +447,8 @@ Fiber(function () {
       // This is the right spot to do any other changes we need to the app in
       // order to update it for the new release (new metadata file formats,
       // etc, or maybe even updating renamed APIs).
-      // XXX should we really print the full path here (appDir)? (use pretty)
       console.log("%s: updated to Meteor %s.",
-                  context.appDir, context.releaseVersion);
+                  path.basename(context.appDir), context.releaseVersion);
 
       // Print any notices relevant to this upgrade. (We don't do this on an
       // initial upgrade to Engine Meteor.
