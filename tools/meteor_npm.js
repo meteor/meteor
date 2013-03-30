@@ -60,16 +60,6 @@ _.extend(exports, {
     // randomize the name, in case we're bundling this package
     // multiple times in parallel.
     var newPackageNpmDir = packageNpmDir + '-new-' + self._randomToken();
-    self._tmpDirs.push(newPackageNpmDir); // keep track so that we can remove them on process exit
-    fs.mkdirSync(newPackageNpmDir);
-
-    // create .gitignore -- node_modules shouldn't be in git since we
-    // recreate it as needed by using `npm install`. since we use `npm
-    // shrinkwrap` we're guaranteed to have the same version installed
-    // each time.
-    fs.writeFileSync(
-      path.join(newPackageNpmDir, '.gitignore'),
-      ['node_modules', ''/*git diff complains without trailing newline*/].join('\n'));
 
     try {
       if (fs.existsSync(packageNpmDir)) {
@@ -89,6 +79,20 @@ _.extend(exports, {
     }
   },
 
+  _makeNewPackageNpmDir: function (newPackageNpmDir) {
+    var self = this;
+    self._tmpDirs.push(newPackageNpmDir); // keep track so that we can remove them on process exit
+    fs.mkdirSync(newPackageNpmDir);
+
+    // create .gitignore -- node_modules shouldn't be in git since we
+    // recreate it as needed by using `npm install`. since we use `npm
+    // shrinkwrap` we're guaranteed to have the same version installed
+    // each time.
+    fs.writeFileSync(
+      path.join(newPackageNpmDir, '.gitignore'),
+      ['node_modules', ''/*git diff complains without trailing newline*/].join('\n'));
+  },
+
   _updateExistingNpmDirectory: function(
     packageName, newPackageNpmDir, packageNpmDir, npmDependencies, quiet) {
     var self = this;
@@ -103,7 +107,6 @@ _.extend(exports, {
     var installedDependencies = self._installedDependencies(packageNpmDir);
 
     // If we already have the right things installed, life is good.
-    // XXX avoid creating and deleting newPackageNpmDir in this case?
     if (_.isEqual(installedDependencies, npmDependencies))
       return;
 
@@ -122,6 +125,8 @@ _.extend(exports, {
           shrinkwrappedDependenciesTree.dependencies[name];
       }
     });
+
+    self._makeNewPackageNpmDir(newPackageNpmDir);
 
     if (!_.isEmpty(preservedShrinkwrap.dependencies)) {
       // There are some unchanged packages here. Install from shrinkwrap.
@@ -164,6 +169,7 @@ _.extend(exports, {
     if (!quiet)
       self._logUpdateDependencies(packageName, npmDependencies);
 
+    self._makeNewPackageNpmDir(newPackageNpmDir);
     // install dependencies
     _.each(npmDependencies, function(version, name) {
       self._installNpmModule(name, version, newPackageNpmDir);
