@@ -243,10 +243,7 @@ _.extend(warehouse, {
           throw e;
         // We actually got some response, so we're probably online and we
         // just can't find the release.
-        // XXX Maybe instead of these process.exit's we can throw some special
-        // error class?
-        logging.die("Release hasn't been published to Meteor's servers: " +
-                    releaseVersion);
+        logging.die(releaseVersion + ": unknown release.");
       }
     }
 
