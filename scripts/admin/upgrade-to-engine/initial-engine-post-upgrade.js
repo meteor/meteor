@@ -9,6 +9,7 @@ var _ = require('underscore');
 
 var prefix = path.join(__dirname, '..', '..', '..');
 var oldDirectory = path.join(prefix, 'meteor');
+var evenOlderDirectory = path.join(prefix, 'meteor.old');
 var oldMacBinary = '/usr/local/bin/meteor';
 var upgradeScript = path.join(
   oldDirectory, 'app', 'meteor', 'upgrade-to-engine.sh');
@@ -52,6 +53,10 @@ var rm_recursive = function (p) {
 var macUninstall = function () {
   fs.unlinkSync(oldMacBinary);
   rm_recursive(oldDirectory);
+  // Also remove the /usr/local/meteor.old directory that contains the
+  // pre-Engine install (as opposed to /usr/local/meteor, which contains the
+  // fake release).
+  rm_recursive(evenOlderDirectory);
 };
 
 var linuxError = function () {
