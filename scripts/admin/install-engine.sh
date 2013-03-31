@@ -23,9 +23,12 @@ PREFIX="/usr/local"
 set -e
 set -u
 
+# Let's display everything on stderr.
+exec 1>&2
+
 UNAME=`uname`
 if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
-    echo "Sorry, this OS is not supported yet." 1>&2
+    echo "Sorry, this OS is not supported yet."
     exit 1
 fi
 
@@ -35,7 +38,7 @@ if [ "$UNAME" = "Darwin" ] ; then
   if [ "i386" != `uname -p` -o "1" != `sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0` ] ; then
     # Can't just test uname -m = x86_64, because Snow Leopard can
     # return other values.
-    echo "Only 64-bit Intel processors are supported at this time." 1>&2
+    echo "Only 64-bit Intel processors are supported at this time."
     exit 1
   fi
   ARCH="x86_64"
@@ -43,14 +46,14 @@ elif [ "$UNAME" = "Linux" ] ; then
   ### Linux ###
   ARCH=`uname -m`
   if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
-    echo "Unable architecture: $ARCH" 1>&2
-    echo "Meteor only supports i686 and x86_64 for now." 1>&2
+    echo "Unable architecture: $ARCH"
+    echo "Meteor only supports i686 and x86_64 for now."
     exit 1
   fi
 fi
 PLATFORM="${UNAME}_${ARCH}"
 
-trap "echo Installation failed. 1>&2" EXIT
+trap "echo Installation failed." EXIT
 
 # If you already have a warehouse (but don't have meteor in PATH), we do a clean
 # install here:
@@ -62,7 +65,7 @@ TARBALL_URL="https://d3fm2vapipm3k9.cloudfront.net/bootstrap/__RELEASE__/meteor-
 INSTALL_TMPDIR="$HOME/.meteor-install-tmp"
 rm -rf "$INSTALL_TMPDIR"
 mkdir "$INSTALL_TMPDIR"
-echo "Downloading Meteor distribution" 1>&2
+echo "Downloading Meteor distribution"
 curl --progress-bar --fail "$TARBALL_URL" | tar -xzf - -C "$INSTALL_TMPDIR"
 # bomb out if it didn't work, eg no net
 test -x "${INSTALL_TMPDIR}/.meteor/meteor"
@@ -71,13 +74,14 @@ rmdir "${INSTALL_TMPDIR}"
 # just double-checking :)
 test -x "$HOME/.meteor/meteor"
 
-echo "Meteor __RELEASE__ has been installed in your home directory (~/.meteor)." 1>&2
+echo
+echo "Meteor __RELEASE__ has been installed in your home directory (~/.meteor)."
 
 LAUNCHER="$HOME/.meteor/tools/latest/launch-meteor"
 
 if cp "$LAUNCHER" "$PREFIX/bin/meteor" >/dev/null 2>&1; then
-  echo "Writing a launcher script to $PREFIX/bin/meteor for your convenience." 1>&2
-  cat 1>&2 <<"EOF"
+  echo "Writing a launcher script to $PREFIX/bin/meteor for your convenience."
+  cat <<"EOF"
 
 To get started fast:
 
@@ -91,10 +95,10 @@ Or see the docs at:
 
 EOF
 elif type sudo >/dev/null 2>&1; then
-  echo "Writing a launcher script to $PREFIX/bin/meteor for your convenience." 1>&2
-  echo "This may prompt for your password." 1>&2
+  echo "Writing a launcher script to $PREFIX/bin/meteor for your convenience."
+  echo "This may prompt for your password."
   if sudo cp "$LAUNCHER" "$PREFIX/bin/meteor"; then
-    cat 1>&2 <<"EOF"
+    cat <<"EOF"
 
 To get started fast:
 
@@ -108,7 +112,7 @@ Or see the docs at:
 
 EOF
   else
-    cat 1>&2 <<"EOF"
+    cat <<"EOF"
 
 Couldn't write the launcher script. Please either:
 
@@ -122,7 +126,7 @@ docs.meteor.com.
 EOF
   fi
 else
-  cat 1>&2 <<"EOF"
+  cat <<"EOF"
 
 Now you need to do one of the following:
 
