@@ -674,7 +674,10 @@ exports.run = function (context, options) {
     // work if the tools version didn't change, or even springboarding if the
     // tools version does change, but this (which prevents weird errors) is a
     // start.)
-    if (files.usesWarehouse() && !context.userReleaseOverride) {
+    // (Make sure that we don't hit this test for "meteor test-packages",
+    // though; there's not a real app to update there!)
+    if (files.usesWarehouse() && !context.userReleaseOverride &&
+        !options.testPackages) {
       var newAppRelease = project.getMeteorReleaseVersion(context.appDir) ||
             warehouse.latestRelease();
       if (newAppRelease !== context.appReleaseVersion) {
