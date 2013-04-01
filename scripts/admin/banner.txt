@@ -1,13 +1,16 @@
 ************************************************************
 **                                                        **
-**  Announcing Meteor 0.6.0-rc1                           **
+**  Announcing Meteor 0.6.0-rc2                           **
 **  ---------------------------                           **
 **                                                        **
-**  This is the first Engine release that is being        **
-**  announced on meteor-core. It will be downloaded in    **
-**  the background.                                       **
+**  This is one in a series of release candidates for     **
+**  Meteor 0.6.0. Usually, these banners won't appear for **
+**  release candidates: just for actual releases. But     **
+**  this time around, they'll all have banners to help    **
+**  test the banner code :)                               **
 **                                                        **
-**  Update this project to Meteor 0.6.0-rc1 with          **
+**  It will be downloaded in the background.              **
+**  Update this project to Meteor 0.6.0-rc2 with          **
 **  'meteor update'.                                      **
 **                                                        **
 ************************************************************
