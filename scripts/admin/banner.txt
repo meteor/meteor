@@ -1,7 +1,7 @@
 ************************************************************
 **                                                        **
-**  Meteor 0.6.0-rc1                                      **
-**  ----------------                                      **
+**  Announcing Meteor 0.6.0-rc1                           **
+**  ---------------------------                           **
 **                                                        **
 **  This is the first Engine release that is being        **
 **  announced on meteor-core. It will be downloaded in    **
