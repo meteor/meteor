@@ -7,3 +7,4 @@ Tinytest.add("literate coffeescript - presence", function(test) {
 Tinytest.add("coffeescript - set global variable", function(test) {
   test.equal(__COFFEESCRIPT_TEST_GLOBAL, 123);
 });
+

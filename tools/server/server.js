@@ -222,10 +222,14 @@ var run = function () {
 
   Fiber(function () {
     // (put in a fiber to let Meteor.db operations happen during loading)
-
     // load app code
     _.each(info.load, function (filename) {
       var code = fs.readFileSync(path.join(bundle_dir, filename));
+
+      // only include js files
+      if(path.extname(filename) !== '.js') {
+        return;
+      }
 
       // even though the npm packages are correctly placed in
       // node_modules/ relative to the package source, we can't just
