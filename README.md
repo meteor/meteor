@@ -65,6 +65,14 @@ You'll then be able to read the docs locally in your browser at
 Note that if you run Meteor from a git checkout, you cannot pin apps to specific
 Meteor releases or run using different Meteor releases using `--release`.
 
+## Uninstalling Meteor
+
+Aside from a short launcher shell script, Meteor installs itself inside your
+home directory. To uninstall Meteor, run:
+
+    rm -rf ~/.meteor/
+    sudo rm /usr/local/bin/meteor
+
 ## Developer Resources
 
 Building an application with Meteor?
