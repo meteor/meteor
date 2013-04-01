@@ -76,6 +76,8 @@ Meteor.startup(function () {
     evt.preventDefault();
     var sel = $(this).attr('href');
     scrollToSection(sel);
+
+    mixpanel.track('docs_navigate_' + sel);
   });
 
   // Make external links open in a new tab.
