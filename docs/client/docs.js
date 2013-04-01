@@ -10,6 +10,9 @@ Meteor.startup(function () {
   // later.
   // prettyPrint();
 
+  //mixpanel tracking
+  mixpanel.track('docs');
+
   // returns a jQuery object suitable for setting scrollTop to
   // scroll the page, either directly for via animate()
   var scroller = function() {
@@ -73,6 +76,8 @@ Meteor.startup(function () {
     evt.preventDefault();
     var sel = $(this).attr('href');
     scrollToSection(sel);
+
+    mixpanel.track('docs_navigate_' + sel);
   });
 
   // Make external links open in a new tab.
