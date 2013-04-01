@@ -11,6 +11,10 @@
   All `meteor` commands accept a `--release` argument to specify which release
   to use; `meteor update` changes what release the app is pinned to.
 
+* Variables declared with `var` at the outermost level of a JavaScript
+  source file are now private to that file. Remove the `var` to share
+  a value between files.
+
 * Meteor now supports any x86 (32- or 64-bit) Linux system, not just those which
   use Debian or RedHat package management.
 
@@ -21,9 +25,6 @@
   has architecture-specific binary components, bundles built with `meteor
   bundle` or `meteor deploy` will contain the components as built for the
   developer's platform and may not run on other platforms.)
-
-* Variables declared with a `var` at the outermost level of a JavaScript source
-  file are now private to that file.
 
 * Meteor's internal package tests (as well as tests you add to your app's
   packages with the unsupported `Tinytest` framework) are now run with the new
@@ -40,8 +41,8 @@
 
 * Allow packages to register file extensions with dots in the filename.
 
-* In a publisher, it is no longer an error to clear a field with `this.changed`
-  which was not set. #850
+* When calling `this.changed` in a publish function, it is no longer an error to
+  clear a field which was never set. #850
 
 * Deps API
   * Add `dep.depend()`, deprecate `Deps.depend(dep)` and
