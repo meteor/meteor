@@ -52,7 +52,7 @@ download a pre-build version).
 
     ./meteor --help
 
-After installing, you can read the docs locally. The `/docs` directory is a
+From your checkout, you can read the docs locally. The `/docs` directory is a
 meteor application, so simply change into the `/docs` directory and launch
 the app:
 
