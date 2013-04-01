@@ -13,11 +13,11 @@ var updater = require('./updater.js');
 var bundler = require('./bundler.js');
 var mongo_runner = require('./mongo_runner.js');
 var mongoExitCodes = require('./mongo_exit_codes.js');
-var updater = require("./updater.js");
 var warehouse = require("./warehouse.js");
 
 var _ = require('underscore');
 var inFiber = require('./fiber-helpers.js').inFiber;
+var Future = require('fibers/future');
 
 ////////// Globals //////////
 //XXX: Refactor to not have globals anymore?
@@ -381,16 +381,50 @@ var DependencyWatcher = function (
   // Start monitoring
   _.each(_.union(self.source_dirs, self.bulk_dirs, _.keys(self.specific_files)),
          _.bind(self._scan, self, true));
+
+  // mtime scans are great and relatively efficient, but they have a couple of
+  // issues. One is that they only detect changes in mtimes from the start of
+  // dependency watching, not from the actual bundled file, so if bundling is
+  // slow and somebody edits a file after it's used by the bundler but before
+  // the DependencyWatcher is created, we'll miss it. An even worse problem is
+  // that on OSX HFS+, mtime resolution is only one second, so if a file is
+  // written twice in a second the bundler might get the first version and never
+  // notice the second change! So, in a second, we'll do a one-time scan to
+  // check the hash of each file against what the bundler told us we should see.
+  //
+  // This will still miss files that are newly added during bundling, and there
+  // are also race conditions where the bundler may calculate some hashes via a
+  // separate read than the read that actually was used in bundling... but it's
+  // close.
+  setTimeout(function() {
+    _.each(deps.hashes, function (hash, filepath) {
+      fs.readFile(filepath, function (error, contents) {
+        // Fire if the file was deleted or changed contents.
+        if (error || bundler.sha1(contents) !== hash)
+          self._fire();
+      });
+    });
+  }, 1000);
 };
 
 _.extend(DependencyWatcher.prototype, {
   // stop monitoring
   destroy: function () {
     var self = this;
-    self.on_change = function () {};
+    self.on_change = null;
     for (var filepath in self.watches)
       self.watches[filepath](); // unwatch
     self.watches = {};
+  },
+
+  _fire: function () {
+    var self = this;
+    if (self.on_change) {
+      var f = self.on_change;
+      self.on_change = null;
+      f();
+      self.destroy();
+    }
   },
 
   // initial is true on the inital scan, to suppress notifications
@@ -416,8 +450,7 @@ _.extend(DependencyWatcher.prototype, {
     // If an interesting file has changed, fire!
     var is_interesting = self._is_interesting(filepath);
     if (!initial && is_interesting) {
-      self.on_change();
-      self.destroy();
+      self._fire();
       return;
     }
 

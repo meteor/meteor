@@ -2,6 +2,8 @@ var path = require('path');
 var _ = require('underscore');
 var files = require('./files.js');
 var warehouse = require('./warehouse.js');
+var bundler = require('./bundler.js');
+var project = require('./project.js');
 var meteorNpm = require('./meteor_npm.js');
 var fs = require('fs');
 
@@ -51,6 +53,10 @@ var Package = function () {
   // Are we in the warehouse? (Set to true by initFromWarehouse.) Used to skip
   // npm re-scans.
   self.inWarehouse = false;
+
+  // Files that define the structure of this package. Used by dependency
+  // scanner.
+  self.metadataFileHashes = {};
 
   // functions that can be called when the package is scanned --
   // visible as `Package` when package.js is executed
@@ -152,9 +158,10 @@ _.extend(Package.prototype, {
     // something like Package.current().on_use)
 
     var fullpath = path.join(self.source_root, 'package.js');
-    var code = fs.readFileSync(fullpath).toString();
+    var code = fs.readFileSync(fullpath);
+    self.metadataFileHashes[fullpath] = bundler.sha1(code);
     // \n is necessary in case final line is a //-comment
-    var wrapped = "(function(Package,Npm){" + code + "\n})";
+    var wrapped = "(function(Package,Npm){" + code.toString() + "\n})";
     // See #runInThisContext
     //
     // XXX it'd be nice to runInNewContext so that the package
@@ -222,7 +229,11 @@ _.extend(Package.prototype, {
       // 'standard meteor stuff' like minimongo.
       api.use(['deps', 'session', 'livedata', 'mongo-livedata', 'spark',
                'templating', 'startup', 'past']);
-      api.use(require(path.join(__dirname, 'project.js')).get_packages(app_dir));
+      // XXX this read has a race with the actual read that is used
+      var packagesFile = path.join(app_dir, '.meteor', 'packages');
+      self.metadataFileHashes[packagesFile] =
+        bundler.sha1(fs.readFileSync(packagesFile));
+      api.use(project.get_packages(app_dir));
 
       // -- Source files --
       api.add_files(sources_except(api, "server"), "client");
