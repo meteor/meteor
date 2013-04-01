@@ -23,7 +23,7 @@
   developer's platform and may not run on other platforms.)
 
 * Variables declared with a `var` at the outermost level of a JavaScript source
-  files are now private to that file.
+  file are now private to that file.
 
 * Meteor's internal package tests (as well as tests you add to your app's
   packages with the unsupported `Tinytest` framework) are now run with the new
