@@ -8,8 +8,8 @@
 
 <h3 id="meteorhelp">meteor help</h3>
 
-Get help on meteor command line usage. Running `meteor
-help` by itself will list the common meteor
+Get help on meteor command line usage. Running `meteor help` by
+itself will list the common meteor
 commands. Running <code>meteor help <i>command</i></code> will print
 detailed help about the command.
 
@@ -118,10 +118,13 @@ inspector, just like any other client-side JavaScript.
 
 <h3 id="meteorupdate">meteor update</h3>
 
-Upgrade to the latest Meteor version. Checks to see if a new
-version of Meteor is available, and if so, downloads and installs
-it. You must be connected to the internet.
+Sets the version of Meteor to use with the current project. If a
+release is specified with `--release`, set the project to use that
+version. Otherwise download and use the latest release of Meteor.
 
+Every project is pinned to a specific release of Meteor. You can temporarily try
+using your package with another release by passing the `--release` option to any
+command; `meteor update` simply changes the pinned release.
 
 <h3 id="meteoradd">meteor add <i>package</i></h3>
 

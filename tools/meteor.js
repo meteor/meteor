@@ -359,7 +359,7 @@ Fiber(function () {
           "\n" +
           "Sets the version of Meteor to use with the current project. If a\n" +
           "release is specified with --release, set the project to use that\n" +
-          "version. Otherwise use the latest release of Meteor.");
+          "version. Otherwise download and use the latest release of Meteor.");
 
       if (argv.help) {
         process.stdout.write(opt.help());
