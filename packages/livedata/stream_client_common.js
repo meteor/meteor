@@ -1,0 +1,249 @@
+
+// XXX from Underscore.String (http://epeli.github.com/underscore.string/)
+var startsWith = function(str, starts) {
+  return str.length >= starts.length &&
+    str.substring(0, starts.length) === starts;
+};
+var endsWith = function(str, ends) {
+  return str.length >= ends.length &&
+    str.substring(str.length - ends.length) === ends;
+};
+
+// @param url {String} URL to Meteor app, eg:
+//   "/" or "madewith.meteor.com" or "https://foo.meteor.com"
+//   or "ddp+sockjs://ddp--****-foo.meteor.com/sockjs"
+// @returns {String} URL to the endpoint with the specific scheme and subPath, e.g.
+// for scheme "http" and subPath "sockjs"
+//   "http://subdomain.meteor.com/sockjs" or "/sockjs"
+//   or "https://ddp--1234-foo.meteor.com/sockjs"
+var translateUrl =  function(url, newSchemeBase, subPath) {
+  if (! newSchemeBase) {
+    newSchemeBase = "http";
+  }
+
+  var ddpUrlMatch = url.match(/^ddp(i?)\+sockjs:\/\//);
+  var httpUrlMatch = url.match(/^http(s?):\/\//);
+  var newScheme;
+  if (ddpUrlMatch) {
+    // Remove scheme and split off the host.
+    var urlAfterDDP = url.substr(ddpUrlMatch[0].length);
+    newScheme = ddpUrlMatch[1] === "i" ? newSchemeBase : newSchemeBase + "s";
+    var slashPos = urlAfterDDP.indexOf('/');
+    var host =
+          slashPos === -1 ? urlAfterDDP : urlAfterDDP.substr(0, slashPos);
+    var rest = slashPos === -1 ? '' : urlAfterDDP.substr(slashPos);
+
+    // In the host (ONLY!), change '*' characters into random digits. This
+    // allows different stream connections to connect to different hostnames
+    // and avoid browser per-hostname connection limits.
+    host = host.replace(/\*/g, function () {
+      return Math.floor(Random.fraction()*10);
+    });
+
+    return newScheme + '://' + host + rest;
+  } else if (httpUrlMatch) {
+    newScheme = !httpUrlMatch[1] ? newSchemeBase : newSchemeBase + "s";
+    var urlAfterHttp = url.substr(httpUrlMatch[0].length);
+    url = newScheme + "://" + urlAfterHttp;
+  }
+
+  // Prefix FQDNs but not relative URLs
+  if (url.indexOf("://") === -1 && !startsWith(url, "/")) {
+    url = newSchemeBase + "://" + url;
+  }
+
+  if (endsWith(url, "/"))
+    return url + subPath;
+  else
+    return url + "/" + subPath;
+};
+
+_.extend(Meteor._DdpClientStream.prototype, {
+
+  _initCommon: function () {
+    var self = this;
+    //// Constants
+
+    // how long to wait until we declare the connection attempt
+    // failed.
+    self.CONNECT_TIMEOUT = 10000;
+    // how long between hearing heartbeat from the server until we declare
+    // the connection dead. heartbeats come every 25s (stream_server.js)
+    //
+    // NOTE: this is a workaround until sockjs detects heartbeats on the
+    // client automatically.
+    // https://github.com/sockjs/sockjs-client/issues/67
+    // https://github.com/sockjs/sockjs-node/issues/68
+    self.HEARTBEAT_TIMEOUT = 60000;
+
+    // time for initial reconnect attempt.
+    self.RETRY_BASE_TIMEOUT = 1000;
+    // exponential factor to increase timeout each attempt.
+    self.RETRY_EXPONENT = 2.2;
+    // maximum time between reconnects.
+    self.RETRY_MAX_TIMEOUT = 1800000; // 30min.
+    // time to wait for the first 2 retries.  this helps page reload
+    // speed during dev mode restarts, but doesn't hurt prod too
+    // much (due to CONNECT_TIMEOUT)
+    self.RETRY_MIN_TIMEOUT = 10;
+    // how many times to try to reconnect 'instantly'
+    self.RETRY_MIN_COUNT = 2;
+    // fuzz factor to randomize reconnect times by. avoid reconnect
+    // storms.
+    self.RETRY_FUZZ = 0.5; // +- 25%
+
+
+
+    self.eventCallbacks = {}; // name -> [callback]
+
+    self._forcedToDisconnect = false;
+
+    //// Reactive status
+    self.currentStatus = {
+      status: "connecting",
+      connected: false,
+      retryCount: 0,
+      // XXX Backwards compatibility only. Remove this before 1.0.
+      retry_count: 0
+    };
+
+
+    self.statusListeners = typeof Deps !== 'undefined' && new Deps.Dependency;
+    self.statusChanged = function () {
+      if (self.statusListeners)
+        self.statusListeners.changed();
+    };
+
+    //// Retry logic
+    self.retryTimer = null;
+    self.connectionTimer = null;
+
+  },
+
+  // Trigger a reconnect.
+  reconnect: function (options) {
+    var self = this;
+
+    if (self.currentStatus.connected) {
+      if (options && options._force) {
+        // force reconnect.
+        self._lostConnection();
+      } // else, noop.
+      return;
+    }
+
+    // if we're mid-connection, stop it.
+    if (self.currentStatus.status === "connecting") {
+      self._lostConnection();
+    }
+
+    if (self.retryTimer)
+      clearTimeout(self.retryTimer);
+    self.retryTimer = null;
+    self.currentStatus.retryCount -= 1; // don't count manual retries
+    // XXX Backwards compatibility only. Remove this before 1.0.
+    self.currentStatus.retry_count = self.currentStatus.retryCount;
+    self._retryNow();
+  },
+
+  // Permanently disconnect a stream.
+  forceDisconnect: function (optionalErrorMessage) {
+    var self = this;
+    self._forcedToDisconnect = true;
+    self._cleanup();
+    if (self.retryTimer) {
+      clearTimeout(self.retryTimer);
+      self.retryTimer = null;
+    }
+    self.currentStatus = {
+      status: "failed",
+      connected: false,
+      retryCount: 0,
+      // XXX Backwards compatibility only. Remove this before 1.0.
+      retryCount: 0
+    };
+    if (optionalErrorMessage)
+      self.currentStatus.reason = optionalErrorMessage;
+    self.statusChanged();
+  },
+
+
+  _lostConnection: function () {
+    var self = this;
+
+    self._cleanup();
+    self._retryLater(); // sets status. no need to do it here.
+  },
+
+  _retryTimeout: function (count) {
+    var self = this;
+
+    if (count < self.RETRY_MIN_COUNT)
+      return self.RETRY_MIN_TIMEOUT;
+
+    var timeout = Math.min(
+      self.RETRY_MAX_TIMEOUT,
+      self.RETRY_BASE_TIMEOUT * Math.pow(self.RETRY_EXPONENT, count));
+    // fuzz the timeout randomly, to avoid reconnect storms when a
+    // server goes down.
+    timeout = timeout * ((Random.fraction() * self.RETRY_FUZZ) +
+                         (1 - self.RETRY_FUZZ/2));
+    return timeout;
+  },
+
+  _retryLater: function () {
+    var self = this;
+
+    var timeout = self._retryTimeout(self.currentStatus.retryCount);
+    if (self.retryTimer)
+      clearTimeout(self.retryTimer);
+    self.retryTimer = setTimeout(_.bind(self._retryNow, self), timeout);
+
+    self.currentStatus.status = "waiting";
+    self.currentStatus.connected = false;
+    self.currentStatus.retryTime = (new Date()).getTime() + timeout;
+    // XXX Backwards compatibility only. Remove this before 1.0.
+    self.currentStatus.retry_time = self.currentStatus.retryTime;
+    self.statusChanged();
+  },
+
+  _retryNow: function () {
+    var self = this;
+
+    if (self._forcedToDisconnect)
+      return;
+
+    self.currentStatus.retryCount += 1;
+    // XXX Backwards compatibility only. Remove this before 1.0.
+    self.currentStatus.retry_count = self.currentStatus.retryCount;
+    self.currentStatus.status = "connecting";
+    self.currentStatus.connected = false;
+    delete self.currentStatus.retryTime;
+    // XXX Backwards compatibility only. Remove this before 1.0.
+    delete self.currentStatus.retry_time;
+    self.statusChanged();
+
+    self._launchConnection();
+  },
+
+
+  // Get current status. Reactive.
+  status: function () {
+    var self = this;
+    if (self.statusListeners)
+      self.statusListeners.depend();
+    return self.currentStatus;
+  }
+});
+
+_.extend(Meteor._DdpClientStream, {
+
+  _toSockjsUrl: function (url) {
+    return translateUrl(url, "http", "sockjs");
+  },
+
+  _toWebsocketUrl: function (url) {
+    var ret = translateUrl(url, "ws", "websocket");
+    return ret;
+  }
+});
