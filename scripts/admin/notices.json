@@ -7,5 +7,13 @@
   },
   {
     "release": "0.6.0-alpha3"
+  },
+  {
+    "release": "0.6.0-alpha4",
+    "notices": [
+        "Made 'meteor run' more sensitive to file changes during bundler",
+        "runs. Let glasser know if you see any strange behavior related",
+        "to server restarts!"
+    ]
   }
 ]

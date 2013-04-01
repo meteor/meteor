@@ -1,9 +1,11 @@
 ************************************************************
 **                                                        **
-**  Announcing Meteor 0.6.0                               **
-**  -----------------------                               **
+**  Meteor 0.6.0-alpha4! Wow!                             **
+**  -------------------------                             **
 **                                                        **
-**  Meteor 0.6.0 has a brand-new distribution system.     **
+**  glasser maybe fixed a long-standing bug in hot code   **
+**  push with "meteor run"! Upgrade and tell him if you   **
+**  see anything strange with server restarts!            **
 **                                                        **
 **  Update this project to Meteor 0.6.0 with              **
 **  'meteor update'.                                      **
