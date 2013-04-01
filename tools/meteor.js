@@ -190,6 +190,7 @@ Fiber(function () {
             .boolean('production')
             .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
             .describe('settings',  'Set optional data for Meteor.settings on the server')
+            .describe('release', 'Specify the release of Meteor to use')
             // #Once
             // With --once, meteor does not re-run the project if it crashes and
             // does not monitor for file changes. Intentionally undocumented:
@@ -249,12 +250,15 @@ Fiber(function () {
             .boolean('list')
             .describe('list', 'Show list of available examples.')
             .usage(
-              "Usage: meteor create <name>\n" +
-                "       meteor create --example <example_name> [<name>]\n" +
+              "Usage: meteor create [--release <release>] <name>\n" +
+                "       meteor create [--release <release>] --example <example_name> [<name>]\n" +
                 "       meteor create --list\n" +
                 "\n" +
                 "Make a subdirectory named <name> and create a new Meteor project\n" +
                 "there. You can also pass an absolute or relative path.\n" +
+                "\n" +
+                "The project will use the release of Meteor specified with the --release\n" +
+                "option, or the latest available version if the option is not specified.\n" +
                 "\n" +
                 "You can pass --example to start off with a copy of one of the Meteor\n" +
                 "sample applications. Use --list to see the available examples.");
@@ -832,7 +836,7 @@ Fiber(function () {
             .boolean('once') // See #Once
             .describe('settings',  'Set optional data for Meteor.settings on the server')
             .usage(
-              "Usage: meteor test-packages [--release=x.y.z] [options] [package...]\n" +
+              "Usage: meteor test-packages [--release <release>] [options] [package...]\n" +
                 "\n" +
                 "Runs unit tests for one or more packages. The results are shown in\n" +
                 "a browser dashboard that updates whenever a relevant source file is\n" +
