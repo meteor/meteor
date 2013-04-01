@@ -15,5 +15,8 @@
         "runs. Let glasser know if you see any strange behavior related",
         "to server restarts!"
     ]
+  },
+  {
+    "release": "0.6.0-rc1"
   }
 ]

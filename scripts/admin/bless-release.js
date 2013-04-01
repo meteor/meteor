@@ -264,6 +264,10 @@ var main = function () {
 
   console.log("Blessing RC '%s' as '%s'", rcName, blessedReleaseName);
 
+  // Print the banner first, so we can kill if we forgot to update it.
+  console.log("Here's the banner users will see that tells them to upgrade:");
+  console.log(banner);
+
   resetDistDirectory(blessedReleaseName, rcManifest, notices);
   _.each(PLATFORMS, function (platform) {
     makeWarehouseStructure(blessedReleaseName, rcManifest, notices);
@@ -272,9 +276,6 @@ var main = function () {
     makeBootstrapTarball(platform);
   });
   writeGlobalManifest(blessedReleaseName, banner);
-
-  console.log("Here's the banner users will see that tells them to upgrade:");
-  console.log(banner);
 
   writeBigRedButton(blessedReleaseName, gitTagSourceSha, gitTag);
 };

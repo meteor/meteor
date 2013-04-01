@@ -1,13 +1,13 @@
 ************************************************************
 **                                                        **
-**  Meteor 0.6.0-alpha4! Wow!                             **
-**  -------------------------                             **
+**  Meteor 0.6.0-rc1                                      **
+**  ----------------                                      **
 **                                                        **
-**  glasser maybe fixed a long-standing bug in hot code   **
-**  push with "meteor run"! Upgrade and tell him if you   **
-**  see anything strange with server restarts!            **
+**  This is the first Engine release that is being        **
+**  announced on meteor-core. It will be downloaded in    **
+**  the background.                                       **
 **                                                        **
-**  Update this project to Meteor 0.6.0 with              **
+**  Update this project to Meteor 0.6.0-rc1 with          **
 **  'meteor update'.                                      **
 **                                                        **
 ************************************************************
