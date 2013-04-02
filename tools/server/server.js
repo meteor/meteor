@@ -237,28 +237,29 @@ var run = function () {
         // said npm module
         require: function(name) {
           var filePathParts = filename.split(path.sep);
-          if (filePathParts[0] !== 'app' || filePathParts[1] !== 'packages') { // XXX it's weird that we're dependent on the dir structure
+          // XXX it's weird that we're dependent on the dir structure
+          if (!(filePathParts[0] === 'app'
+                && (filePathParts[1] === 'packages'
+                    || filePathParts[1] === 'package-tests'))) {
             return require(name); // current no support for npm outside packages. load from dev bundle only
-          } else {
-            var nodeModuleDir = path.join(
-              __dirname,
-              '..' /* get out of server/ */,
-              'app' /* === filePathParts[0] */,
-              'packages' /* === filePathParts[1] */,
-              filePathParts[2] /* package name */,
-              'node_modules',
-              name);
+          }
+          var packageName = filePathParts[2].replace(/\.js$/, '');
+          var nodeModuleDir = path.join(
+            __dirname,
+            '..', // get out of server
+            'npm', packageName, name);
 
-            if (fs.existsSync(nodeModuleDir)) {
-              return require(nodeModuleDir);
-            } else {
-              try {
-                return require(name);
-              } catch (e) {
-                // XXX better message
-                throw new Error("Can't find npm module '" + name + "'. Did you forget to call 'Npm.depends' in package.js within the '" + filePathParts[2] + "' package?");
-              }
-            }
+          if (fs.existsSync(nodeModuleDir)) {
+            return require(nodeModuleDir);
+          }
+          try {
+            return require(name);
+          } catch (e) {
+            // XXX better message
+            throw new Error(
+              "Can't find npm module '" + name +
+                "'. Did you forget to call 'Npm.depends' in package.js " +
+                "within the '" + packageName + "' package?");
           }
         }
       };

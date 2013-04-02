@@ -259,9 +259,7 @@ _.extend(Bundle.prototype, {
   // directory within the bundle
   bundleNodeModules: function (pkg) {
     var nodeModulesPath = path.join(pkg.npmDir(), 'node_modules');
-    // use '/' rather than path.join since this is part of a url
-    var relNodeModulesPath = ['packages', pkg.name, 'node_modules'].join('/');
-    this.nodeModulesDirs[relNodeModulesPath] = nodeModulesPath;
+    this.nodeModulesDirs[pkg.name] = nodeModulesPath;
   },
 
   // Sort the packages in dependency order, then, package by package,
@@ -579,28 +577,23 @@ _.extend(Bundle.prototype, {
     }
 
     // `node_modules` directories for packages
-    for (var rel_path in self.nodeModulesDirs) {
-      var path_in_bundle = path.join('app', rel_path);
-      var full_path = path.join(build_path, path_in_bundle);
-
-      // XXX it's bizarre that we would be trying to install npm
-      // modules into a non-existant path, but this happens when we
-      // have an npm dependency only used during bundle time (such as
-      // the less package). we should consider supporting bundle
-      // time-only npm dependencies.
-      if (fs.existsSync(path.dirname(full_path))) {
-        if (nodeModulesMode === 'symlink') {
-          // if we symlink the dev_bundle, also symlink individual package
-          // node_modules.
-          fs.symlinkSync(self.nodeModulesDirs[rel_path], full_path);
-        } else {
-          // otherwise, copy them. if we're skipping the dev_bundle
-          // modules (eg for deploy) we still need the per-package
-          // modules.
-          files.cp_r(self.nodeModulesDirs[rel_path], full_path);
-        }
+    _.each(self.nodeModulesDirs, function (sourceNodeModulesDir, packageName) {
+      files.mkdir_p(path.join(build_path, 'npm'));
+      var buildModulesPath = path.join(build_path, 'npm', packageName);
+      // XXX we should consider supporting bundle time-only npm dependencies
+      // which don't need to be pushed to the server.
+      if (nodeModulesMode === 'symlink') {
+        // if we symlink the dev_bundle, also symlink individual package
+        // node_modules.
+        fs.symlinkSync(sourceNodeModulesDir, buildModulesPath);
+      } else {
+        // otherwise, copy them. if we're skipping the dev_bundle
+        // modules (eg for deploy) we still need the per-package
+        // modules.
+        // XXX this breaks arch-specific modules. oh well.
+        files.cp_r(sourceNodeModulesDir, buildModulesPath);
       }
-    }
+    });
 
     var app_html = self._generate_app_html();
     fs.writeFileSync(path.join(build_path, 'app.html'), app_html);
