@@ -1,16 +1,15 @@
 ************************************************************
 **                                                        **
-**  Announcing Meteor 0.6.0-rc2                           **
+**  Announcing Meteor 0.6.0-rc3                           **
 **  ---------------------------                           **
 **                                                        **
-**  This is one in a series of release candidates for     **
-**  Meteor 0.6.0. Usually, these banners won't appear for **
-**  release candidates: just for actual releases. But     **
-**  this time around, they'll all have banners to help    **
-**  test the banner code :)                               **
+**  Once 0.6.0 is out, release candidates won't have      **
+**  these silly banners --- only real releases will!      **
+**  But 0.6.0 is not out yet! But it will be soon!        **
 **                                                        **
-**  It will be downloaded in the background.              **
-**  Update this project to Meteor 0.6.0-rc2 with          **
+**  Meteor 0.6.0-rc3 will be downloaded in the            **
+**  background.                                           **
+**  Update this project to Meteor 0.6.0-rc3 with          **
 **  'meteor update'.                                      **
 **                                                        **
 ************************************************************

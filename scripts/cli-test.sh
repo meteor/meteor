@@ -3,41 +3,43 @@
 # NOTE: by default this tests the working copy, not the installed
 # meteor.  To test the installed meteor, pass in --global. To test a
 # version of meteor installed in a specific directory, set the
-# METEOR_DIR environment variable.
+# METEOR_WAREHOUSE_DIR environment variable.
 
-cd `dirname $0`
+cd `dirname $0`/..
 
-if [ -z "$METEOR_DIR" ]; then
-    METEOR_DIR=`pwd`/..
-fi
-METEOR="$METEOR_DIR/meteor"
+METEOR="$(pwd)/meteor"
 
 if [ -z "$NODE" ]; then
-    NODE=`pwd`/node.sh
+    NODE="$(pwd)/scripts/node.sh"
 fi
 
 #If this ever takes more options, use getopt
 if [ "$1" == "--global" ]; then
-    METEOR_DIR=/usr/local/meteor
-    METEOR=/usr/local/bin/meteor
-fi
-
-if [ "$METEOR_WAREHOUSE_DIR" ]; then
+    if [ -z "$TEST_RELEASE" ]; then
+        METEOR=/usr/local/bin/meteor
+    else
+        METEOR="/usr/local/bin/meteor --release=$TEST_RELEASE"
+    fi
+    INSTALLED_METEOR=t
+elif [ "$METEOR_WAREHOUSE_DIR" ]; then
     # The point of this testing script is to test the tools, so we make sure (in
     # lib/meteor.js) to not springboard if METEOR_TEST_NO_SPRINGBOARD is
     # set. Then we specify a random release that we pass to --release on all
     # commands. This could break if this specified release is incompatible with
     # the current tools, in which case you can build and publish a new release
     # and set it here.
+    INSTALLED_METEOR=t
     export METEOR_TEST_NO_SPRINGBOARD=t
-    TEST_RELEASE="0.6.0-alpha3"
+    if [ -z "$TEST_RELEASE" ]; then
+        TEST_RELEASE="0.6.0-alpha3"
+    fi
 
     METEOR="$METEOR --release=$TEST_RELEASE" # some random non-official release
 fi
 
 TEST_TMPDIR=`mktemp -d -t meteor-cli-test-XXXXXXXX`
 OUTPUT="$TEST_TMPDIR/output"
-trap 'echo "[...]"; tail -25 $OUTPUT; echo FAILED ; rm -rfd `find $METEOR_DIR -name __tmp`; rm -rf "$TEST_TMPDIR" >/dev/null 2>&1' EXIT
+trap 'echo "[...]"; tail -25 $OUTPUT; echo FAILED ; rm -rf "$TEST_TMPDIR" >/dev/null 2>&1' EXIT
 
 cd "$TEST_TMPDIR"
 set -e -x
@@ -45,8 +47,12 @@ set -e -x
 
 ## Begin actual tests
 
-if [ "$METEOR_WAREHOUSE_DIR" ]; then
-    $METEOR --version | grep $TEST_RELEASE >> $OUTPUT
+if [ -n "$INSTALLED_METEOR" ]; then
+    if [ -n "$TEST_RELEASE" ]; then 
+        $METEOR --version | grep $TEST_RELEASE >> $OUTPUT
+    else
+        $METEOR --version >> $OUTPUT
+    fi
 else
     $METEOR --version 2>&1 | grep checkout >> $OUTPUT
 fi

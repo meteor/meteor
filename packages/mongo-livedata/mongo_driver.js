@@ -340,6 +340,27 @@ _Mongo.prototype._ensureIndex = function (collectionName, index, options) {
   });
   future.wait();
 };
+_Mongo.prototype._dropIndex = function (collectionName, index) {
+  var self = this;
+
+  // This function is only used by test code, not within a method, so we don't
+  // interact with the write fence.
+  var future = new Future;
+  self._withCollection(collectionName, function (err, collection) {
+    if (err) {
+      future.throw(err);
+      return;
+    }
+    collection.dropIndex(index, function (err) {
+      if (err) {
+        future.throw(err);
+        return;
+      }
+      future.ret();
+    });
+  });
+  future.wait();
+};
 
 // CURSORS
 

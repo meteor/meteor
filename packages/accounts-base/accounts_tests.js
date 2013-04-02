@@ -54,9 +54,9 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService - Weibo', functio
   var weiboId2 = Random.id();
 
   // users that have different service ids get different users
-  uid1 = Accounts.updateOrCreateUserFromExternalService(
+  var uid1 = Accounts.updateOrCreateUserFromExternalService(
     'weibo', {id: weiboId1}, {profile: {foo: 1}}).id;
-  uid2 = Accounts.updateOrCreateUserFromExternalService(
+  var uid2 = Accounts.updateOrCreateUserFromExternalService(
     'weibo', {id: weiboId2}, {profile: {bar: 2}}).id;
   test.equal(Meteor.users.find({"services.weibo.id": {$in: [weiboId1, weiboId2]}}).count(), 2);
   test.equal(Meteor.users.findOne({"services.weibo.id": weiboId1}).profile.foo, 1);
@@ -70,8 +70,8 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService - Weibo', functio
 });
 
 Tinytest.add('accounts - updateOrCreateUserFromExternalService - Twitter', function (test) {
-  var twitterIdOld = 123;
-  var twitterIdNew = '123';
+  var twitterIdOld = parseInt(Random.hexString(4), 16);
+  var twitterIdNew = ''+twitterIdOld;
 
   // create an account with twitter using the old ID format of integer
   var uid1 = Accounts.updateOrCreateUserFromExternalService(

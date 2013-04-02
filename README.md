@@ -52,7 +52,7 @@ download a pre-build version).
 
     ./meteor --help
 
-After installing, you can read the docs locally. The `/docs` directory is a
+From your checkout, you can read the docs locally. The `/docs` directory is a
 meteor application, so simply change into the `/docs` directory and launch
 the app:
 
@@ -85,4 +85,4 @@ Building an application with Meteor?
 Interested in contributing to Meteor?
 
 * Core framework design mailing list: https://groups.google.com/group/meteor-core
-* Contribution guidelines: https://github.com/meteor/meteor/wiki
+* Contribution guidelines: https://github.com/meteor/meteor/tree/devel/Contributing.md

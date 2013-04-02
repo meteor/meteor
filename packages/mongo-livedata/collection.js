@@ -379,6 +379,12 @@ Meteor.Collection.prototype._ensureIndex = function (index, options) {
     throw new Error("Can only call _ensureIndex on server collections");
   self._collection._ensureIndex(index, options);
 };
+Meteor.Collection.prototype._dropIndex = function (index) {
+  var self = this;
+  if (!self._collection._dropIndex)
+    throw new Error("Can only call _dropIndex on server collections");
+  self._collection._dropIndex(index);
+};
 
 Meteor.Collection.ObjectID = LocalCollection._ObjectID;
 

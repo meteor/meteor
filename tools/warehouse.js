@@ -369,7 +369,9 @@ _.extend(warehouse, {
     }
 
     var noticesToPrint = [];
-    var foundFromRelease = false;
+    // If we are updating from an app with no .meteor/release, print all
+    // entries up to toRelease.
+    var foundFromRelease = !fromRelease;
     for (var i = 0; i < notices.length; ++i) {
       var record = notices[i];
       // We want to print the notices for releases newer than fromRelease, and
@@ -382,7 +384,7 @@ _.extend(warehouse, {
       // Nothing newer than toRelease.
       if (record.release === toRelease)
         break;
-      if (record.release === fromRelease)
+      if (!foundFromRelease && record.release === fromRelease)
         foundFromRelease = true;
     }
 
