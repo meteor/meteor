@@ -3,7 +3,7 @@
 // /static [served by node for now]
 // /static_cacheable [cache-forever files, served by node for now]
 // /server [XXX split out into a package]
-//   server.js, .... [contents of tools/server]
+//   server.js, .... [contents of engine/server]
 //   node_modules [for now, contents of (dev_bundle)/lib/node_modules]
 // /app.html
 // /app [user code]
@@ -26,7 +26,6 @@
 //  - core [paths relative to 'app' in meteor tree]
 //  - app [paths relative to top of app tree]
 //  - exclude [list of regexps for files to ignore (everywhere)]
-//  - hashes [SHA1 hashes of all files read by the bundler]
 //  (for 'core' and 'apps', if a directory is given, you should
 //  monitor everything in the subtree under it minus the stuff that
 //  matches exclude, and if it doesn't exist yet, you should watch for
@@ -39,6 +38,7 @@
 var path = require('path');
 var files = require(path.join(__dirname, 'files.js'));
 var packages = require(path.join(__dirname, 'packages.js'));
+var linker = require(path.join(__dirname, 'linker.js'));
 var warehouse = require(path.join(__dirname, 'warehouse.js'));
 var crypto = require('crypto');
 var fs = require('fs');
@@ -55,196 +55,52 @@ var ignore_files = [
     /^\.git$/ /* often has too many files to watch */
 ];
 
-
-var sha1 = exports.sha1 = function (contents) {
-  var hash = crypto.createHash('sha1');
-  hash.update(contents);
-  return hash.digest('hex');
-};
-
 ///////////////////////////////////////////////////////////////////////////////
-// PackageBundlingInfo
+// Slice
 ///////////////////////////////////////////////////////////////////////////////
 
-// Represents the occurrence of a package in a bundle. Includes data
-// relevant to the process of bundling this package, distinct from the
-// package data itself.
-var PackageBundlingInfo = function (pkg, bundle) {
+// Holds the resources that a package is contributing to a bundle, for
+// a particular role ('use' or 'test') and a particular where
+// ('client' or 'server').
+var Slice = function (pkg, role, where) {
   var self = this;
   self.pkg = pkg;
-  self.bundle = bundle;
 
-  // list of places we've already been used. map from a 'canonicalized
-  // where' to true. 'canonicalized where' is the JSONification of a
-  // sorted array with zero or more elements drawn from the set
-  // 'client', 'server', with each element unique
-  // XXX this is a mess, refactor
-  self.where = {};
+  // "use" in the normal case (this object represents the instance of
+  // a package in a bundle), or "test" if this instead represents an
+  // instance of the package's tests.
+  self.role = role;
 
-  // other packages we've used (with any 'where') -- map from id to package
-  self.using = {};
-
-  // map from where (client, server) to a source file name (relative
-  // to the package) to true
-  self.files = {client: {}, server: {}};
-
-  // files we depend on -- map from rel_path to true
-  self.dependencies = {};
-  if (pkg.name)
-    self.dependencies['package.js'] = true;
-
-  // Set if we've installed NPM modules on this package during this
-  // bundling. Used to ensure that we only refresh NPM modules once per package
-  // per bundling run.
-  self.installedNpmModules = false;
-
-  // the API available from on_use / on_test handlers
-  self.api = {
-    // Called when this package wants to make another package be
-    // used. Can also take literal package objects, if you have
-    // anonymous packages you want to use (eg, app packages)
-    use: function (names, where) {
-      if (!(names instanceof Array))
-        names = names ? [names] : [];
-
-      _.each(names, function (name) {
-        var pkg = packages.get(name, self.bundle.packageSearchOptions);
-        if (!pkg)
-          throw new Error("Package not found: " + name);
-        self.bundle.use(pkg, where, self);
-      });
-    },
-
-    add_files: function (paths, where) {
-      if (!(paths instanceof Array))
-        paths = paths ? [paths] : [];
-      if (!(where instanceof Array))
-        where = where ? [where] : [];
-
-      _.each(where, function (w) {
-        _.each(paths, function (rel_path) {
-          self.add_file(rel_path, w);
-        });
-      });
-    },
-
-    // Return a list of all of the extension that indicate source files
-    // inside this package, INCLUDING leading dots.
-    registered_extensions: function () {
-      var ret = _.keys(self.pkg.extensions);
-
-      for (var id in self.using) {
-        var other_inst = self.using[id];
-        ret = _.union(ret, _.keys(other_inst.pkg.extensions));
-      }
-
-      return _.map(ret, function (x) {return "." + x;});
-    },
-
-    // Report an error. It should be a single human-readable
-    // string. If any errors are reported, the bundling is considered
-    // to have failed.
-    error: function (message) {
-      self.bundle.errors.push(message);
-    }
-  };
-
-  if (pkg.name !== "meteor")
-    self.api.use("meteor");
+  // "client" or "server"
+  self.where = where;
 };
-
-_.extend(PackageBundlingInfo.prototype, {
-  // Find the function that should be used to handle a source file
-  // found in this package. We'll use handlers that are defined in
-  // this package and in its immediate dependencies. ('extension'
-  // should be the extension of the file without a leading dot.)
-  get_source_handler: function (extension) {
-    var self = this;
-    var candidates = [];
-
-    if (extension in self.pkg.extensions)
-      candidates.push(self.pkg.extensions[extension]);
-
-    for (var id in self.using) {
-      var other_inst = self.using[id];
-      var other_pkg = other_inst.pkg;
-      if (extension in other_pkg.extensions)
-        candidates.push(other_pkg.extensions[extension]);
-    }
-
-    // XXX do something more graceful than printing a stack trace and
-    // exiting!! we have higher standards than that!
-
-    if (!candidates.length)
-      return null;
-
-    if (candidates.length > 1)
-      // XXX improve error message (eg, name the packages involved)
-      // and make it clear that it's not a global conflict, but just
-      // among this package's dependencies
-      throw new Error("Conflict: two packages are both trying " +
-                      "to handle ." + extension);
-
-    return candidates[0];
-  },
-
-  add_file: function (rel_path, where) {
-    var self = this;
-
-    if (self.files[where][rel_path])
-      return;
-    self.files[where][rel_path] = true;
-
-    var sourcePath = path.join(self.pkg.source_root, rel_path);
-    var fileContents = fs.readFileSync(sourcePath);
-    // XXX for registered extensions, this hash has a race with the actual
-    // file contents re-read in the handler.
-    self.bundle.inputFileHashes[sourcePath] = sha1(fileContents);
-
-    var ext = files.findExtension(self.api.registered_extensions(), rel_path);
-    // substr to remove the dot to translate between the with-dot world
-    // of registered_extensions and the without dot world of
-    // get_source_handler. This could use some API beautification.
-    var handler = ext && self.get_source_handler(ext.substr(1));
-    if (handler) {
-      handler(self.bundle.api,
-              sourcePath,
-              path.join(self.pkg.serve_root, rel_path),
-              where);
-    } else {
-      // If we don't have an extension handler, serve this file
-      // as a static resource.
-      self.bundle.api.add_resource({
-        type: "static",
-        path: path.join(self.pkg.serve_root, rel_path),
-        data: fileContents,
-        where: where
-      });
-    }
-
-    // Reload runner when this file changes.
-    self.dependencies[rel_path] = true;
-  }
-});
 
 ///////////////////////////////////////////////////////////////////////////////
 // Bundle
 ///////////////////////////////////////////////////////////////////////////////
 
-var Bundle = function () {
+// options to include:
+//
+// - release: the Meteor release name to write into the bundle metadata
+// - appDir: null, or a path to the root of an app tree that is to be
+//   searched for package overrides
+// - releaseManifest: null, or a manifest that is to be used when
+//   searching for packages
+var Bundle = function (options) {
   var self = this;
 
-  // Packages being used. Map from a package id to a PackageBundlingInfo.
-  self.packageBundlingInfo = {};
+  // All of the Slices that are to go into this bundle, in the order
+  // that they are to be loaded.
+  self.slices = [];
 
-  // Packages that have had tests included. Map from package id to instance
-  self.tests_included = {};
+  // meteor release version
+  self.release = null;
 
-  // meteor release stamp
-  self.releaseStamp = null;
-
-  // see packages.js
-  self.packageSearchOptions = {};
+  // search configuration for package.get()
+  self.packageSearchOptions = {
+    releaseManifest: options.releaseManifest,
+    appDir: options.appDir
+  };
 
   // map from environment, to list of filenames
   self.js = {client: [], server: []};
@@ -278,199 +134,130 @@ var Bundle = function () {
 
   // list of errors encountered while bundling. array of string.
   self.errors = [];
-
-  // A map from absolute path to SHA1 of all files read by this bundle. Used for
-  // dependency watching in the runner.
-  self.inputFileHashes = {};
-
-  // the API available from register_extension handlers
-  self.api = {
-    /**
-     * This is the ultimate low-level API to add data to the bundle.
-     *
-     * type: "js", "css", "head", "body", "static"
-     *
-     * where: an environment, or a list of one or more environments
-     * ("client", "server", "tests") -- for non-JS resources, the only
-     * legal environment is "client"
-     *
-     * path: the (absolute) path at which the file will be
-     * served. ignored in the case of "head" and "body".
-     *
-     * source_file: the absolute path to read the data from. if path
-     * is set, will default based on that. overridden by data.
-     *
-     * data: the data to send. overrides source_file if present. you
-     * must still set path (except for "head" and "body".)
-     */
-    add_resource: function (options) {
-      var source_file = options.source_file || options.path;
-
-      var data;
-      if (options.data) {
-        data = options.data;
-        if (!(data instanceof Buffer)) {
-          if (!(typeof data === "string"))
-            throw new Error("Bad type for data");
-          data = new Buffer(data, 'utf8');
-        }
-      } else {
-        if (!source_file)
-          throw new Error("Need either source_file or data");
-        data = fs.readFileSync(source_file);
-      }
-
-      var where = options.where;
-      if (typeof where === "string")
-        where = [where];
-      if (!where)
-        throw new Error("Must specify where");
-
-      _.each(where, function (w) {
-        if (options.type === "js") {
-          if (!options.path)
-            throw new Error("Must specify path");
-
-          if (w === "client" || w === "server") {
-            var wrapped = data;
-            // On the client, wrap each file in a closure, to give it a separate
-            // scope (eg, file-level vars are file-scoped). On the server, this
-            // is done in server/server.js to inject the Npm symbol.
-            //
-            // The ".call(this)" allows you to do a top-level "this.foo = "
-            // to define global variables when using "use strict"
-            // (http://es5.github.io/#x15.3.4.4); this is the only way to do
-            // it in CoffeeScript.
-            if (w === "client") {
-              wrapped = Buffer.concat([
-                new Buffer("(function(){ "),
-                data,
-                new Buffer("\n}).call(this);\n")]);
-            }
-            self.files[w][options.path] = wrapped;
-            self.js[w].push(options.path);
-          } else {
-            throw new Error("Invalid environment");
-          }
-        } else if (options.type === "css") {
-          if (w !== "client")
-            // XXX might be nice to throw an error here, but then we'd
-            // have to make it so that packages.js ignores css files
-            // that appear in the server directories in an app tree
-            return;
-          if (!options.path)
-            throw new Error("Must specify path");
-          self.files.client[options.path] = data;
-          self.css.push(options.path);
-        } else if (options.type === "head" || options.type === "body") {
-          if (w !== "client")
-            throw new Error("HTML segments can only go to the client");
-          self[options.type].push(data);
-        } else if (options.type === "static") {
-          self.files[w][options.path] = data;
-          self.static[w].push(options.path);
-        } else {
-          throw new Error("Unknown type " + options.type);
-        }
-      });
-    },
-
-    // Report an error. It should be a single human-readable
-    // string. If any errors are reported, the bundling is considered
-    // to have failed.
-    error: function (message) {
-      self.errors.push(message);
-    }
-  };
 };
 
 _.extend(Bundle.prototype, {
-  _get_bundling_info_for_package: function (pkg) {
-    var self = this;
-
-    var bundlingInfo = self.packageBundlingInfo[pkg.id];
-    if (!bundlingInfo) {
-      bundlingInfo = new PackageBundlingInfo(pkg, self);
-      self.packageBundlingInfo[pkg.id] = bundlingInfo;
-    }
-
-    return bundlingInfo;
+  _hash: function (contents) {
+    var hash = crypto.createHash('sha1');
+    hash.update(contents);
+    return hash.digest('hex');
   },
 
-  _maybeUpdateNpmDependencies: function (pkg, inst) {
+  // Determine the packages to load, create Slices for
+  // them, put them in load order, save in slices.
+  //
+  // contents is a map from role ('use' or 'test') to environment
+  // ('client' or 'server') to an array of either package names or
+  // actual Package objects.
+  determineLoadOrder: function (contents) {
     var self = this;
-    if (pkg.npmDependencies) {
-      // If the package isn't in the warehouse, maybe update the NPM
-      // dependencies. (Warehouse packages shouldn't change after they're
-      // installed, so we skip this slow step.) Also, we only do this once per
-      // package per bundling run.
-      if (!pkg.inWarehouse && !inst.installedNpmModules) {
-        pkg.installNpmDependencies();
-        inst.installedNpmModules = true;
+
+    // Package slices being used. Map from a role string (eg, "use" or
+    // "test") to "client" or "server" to a package id to a Slice.
+    var sliceIndex = {use: {client: {}, server: {}},
+                    test: {client: {}, server: {}}};
+    var slicesUnordered = [];
+
+    // Ensure that slices exist for a package and its dependencies.
+    var add = function (pkg, role, where) {
+      if (sliceIndex[role][where][pkg.id])
+        return;
+      var slice = new Slice(pkg, role, where);
+      sliceIndex[role][where][pkg.id] = slice;
+      slicesUnordered.push(slice);
+      _.each(pkg.uses[role][where], function (usedPkgName) {
+        var usedPkg = self.getPackage(usedPkgName);
+        add(usedPkg, "use", where);
+      });
+    };
+
+    // Add the provided roots and all of their dependencies.
+    _.each(contents, function (whereToArray, role) {
+      _.each(whereToArray, function (packageList, where) {
+        _.each(packageList, function (packageOrPackageName) {
+          var pkg = self.getPackage(packageOrPackageName);
+          add(pkg, role, where);
+        });
+      });
+    });
+
+    // Take unorderedSlices as input, put it in order, and save it to
+    // self.slices. "In order" means that if X depends on (uses) Y,
+    // and that relationship is not marked as unordered, Y appears
+    // before X in the ordering. Raises an exception iff there is no
+    // such ordering (due to circular dependency.)
+    var id = function (slice) {
+      return slice.role + ":" + slice.where + ":" + slice.pkg.id;
+    };
+
+    var done = {};
+    var remaining = {};
+    var onStack = {};
+    _.each(slicesUnordered, function (slice) {
+      remaining[id(slice)] = slice;
+    });
+
+    while (true) {
+      // Get an arbitrary package from those that remain, or break if
+      // none remain
+      var first = undefined;
+      for (first in remaining)
+        break;
+      if (first === undefined)
+        break;
+      first = remaining[first];
+
+      // Emit that package and all of its dependencies
+      var load = function (slice) {
+        if (done[id(slice)])
+          return;
+
+        _.each(slice.pkg.uses[slice.role][slice.where], function (usedPkgName) {
+          if (slice.pkg.name && slice.pkg.unordered[usedPkgName])
+            return;
+          var usedPkg = self.getPackage(usedPkgName);
+          var usedSlice = sliceIndex.use[slice.where][usedPkg.id];
+          if (! usedSlice)
+            throw new Error("Missing slice?");
+          if (onStack[id(usedSlice)]) {
+            console.error("fatal: circular dependency between packages " +
+                          slice.pkg.name + " and " + usedSlice.pkg.name);
+            process.exit(1);
+          }
+          onStack[id(usedSlice)] = true;
+          load(usedSlice);
+          delete onStack[id(usedSlice)];
+        });
+        self.slices.push(slice);
+        done[id(slice)] = true;
+        delete remaining[id(slice)];
+      };
+      load(first);
+    }
+  },
+
+  prepNodeModules: function () {
+    var self = this;
+    var seen = {};
+    _.each(self.slices, function (slice) {
+      // Bring npm dependencies up to date. One day this will probably
+      // grow into a full-fledged package build step.
+      if (slice.pkg.npmDependencies && ! seen[slice.pkg.id]) {
+        seen[slice.pkg.id] = true;
+        slice.pkg.installNpmDependencies();
+        self.bundleNodeModules(slice.pkg);
       }
-      self.bundleNodeModules(pkg);
-    }
+    });
   },
 
-  // Call to add a package to this bundle
-  // if 'where' is given, it's an array of "client" and/or "server"
-  // if 'from' is given, it's the PackageBundlingInfo that's doing the
-  // using, or it can be undefined for top level
-  use: function (pkg, where, from) {
+  getPackage: function (packageOrPackageName) {
     var self = this;
-    var inst = self._get_bundling_info_for_package(pkg);
-
-    // Get the hash of package.js or .meteor/packages.
-    _.extend(self.inputFileHashes, pkg.metadataFileHashes);
-
-    if (from)
-      from.using[pkg.id] = inst;
-
-    // get 'canonicalized where'
-    var canon_where = where;
-    if (!canon_where)
-      canon_where = [];
-    if (!(canon_where instanceof Array))
-      canon_where = [canon_where];
-    else
-      canon_where = _.clone(canon_where);
-    canon_where.sort();
-    canon_where = JSON.stringify(canon_where);
-
-    if (inst.where[canon_where])
-      return; // already used in this environment
-    inst.where[canon_where] = true;
-
-    // XXX detect circular dependencies and print an error. (not sure
-    // what the current code will do)
-
-    self._maybeUpdateNpmDependencies(pkg, inst);
-
-    if (pkg.on_use_handler)
-      pkg.on_use_handler(inst.api, where);
-  },
-
-  includeTests: function (packageOrPackageName) {
-    var self = this;
-    // 'packages.get' is a noop if 'packageOrPackageName' is a Package object.
     var pkg = packages.get(packageOrPackageName, self.packageSearchOptions);
-    if (!pkg) {
-      console.error("Can't find package " + packageOrPackageName);
+    if (! pkg) {
+      console.error("Package not found: " + packageOrPackageName);
       process.exit(1);
     }
-    if (self.tests_included[pkg.id])
-      return;
-    self.tests_included[pkg.id] = true;
-
-    var inst = self._get_bundling_info_for_package(pkg);
-
-    // XXX we might want to support npm modules that are only used in
-    // tests. one example is stream-buffers as used in the email
-    // package
-    self._maybeUpdateNpmDependencies(pkg, inst);
-
-    if (inst.pkg.on_test_handler)
-      inst.pkg.on_test_handler(inst.api);
+    return pkg;
   },
 
   // map a package's generated node_modules directory to the package
@@ -482,13 +269,96 @@ _.extend(Bundle.prototype, {
     this.nodeModulesDirs[relNodeModulesPath] = nodeModulesPath;
   },
 
+  // Sort the packages in dependency order, then, package by package,
+  // write their resources into the bundle (which includes running the
+  // JavaScript linker.)
+  emitResources: function () {
+    var self = this;
+
+    // Copy their resources into the bundle in order
+    _.each(self.slices, function (slice) {
+      // ** Get the final resource list. It's the static resources
+      // ** from the package plus the output of running the JavaScript
+      // ** linker.
+
+      slice.pkg.ensureCompiled(self.packageSearchOptions);
+      var resources = _.clone(slice.pkg.resources[slice.role][slice.where]);
+
+      var isApp = ! slice.pkg.name;
+      // Compute imports by merging the exports of all of the
+      // packages we use. To be eligible to supply an import, a
+      // slice must presently (a) be named (the app can't supply
+      // exports, at least for now); (b) have the "use" role (you
+      // can't import symbols from tests and such, primarily
+      // because we don't have a good way to name non-"use" roles
+      // in JavaScript.) Note that in the case of conflicting
+      // symbols, later packages get precedence.
+      var imports = {}; // map from symbol to supplying package name
+      _.each(_.values(slice.pkg.uses[slice.role][slice.where]), function (otherPkgName){
+        var otherPkg = self.getPackage(otherPkgName);
+        if (otherPkg.name && ! slice.pkg.unordered[otherPkg.name]) {
+          otherPkg.ensureCompiled(); // make sure otherPkg.exports is valid
+          _.each(otherPkg.exports.use[slice.where], function (symbol) {
+            imports[symbol] = otherPkg.name;
+          });
+        }
+      });
+
+      // Phase 2 link
+      var files = linker.link({
+        imports: imports,
+        useGlobalNamespace: isApp,
+        prelinkFiles: slice.pkg.prelinkFiles[slice.role][slice.where],
+        boundary: slice.pkg.boundary[slice.role][slice.where]
+      });
+
+      // Add each output as a resource
+      _.each(files, function (file) {
+        resources.push({
+          type: "js",
+          data: new Buffer(file.source, 'utf8'),
+          servePath: file.servePath
+        });
+      });
+
+      // ** Emit the resources
+      _.each(resources, function (resource) {
+        if (resource.type === "js") {
+          self.files[slice.where][resource.servePath] = resource.data;
+          self.js[slice.where].push(resource.servePath);
+        } else if (resource.type === "css") {
+          if (slice.where !== "client")
+            // XXX might be nice to throw an error here, but then we'd
+            // have to make it so that packages.js ignores css files
+            // that appear in the server directories in an app tree
+
+            // XXX XXX can't we easily do that in the css handler in
+            // meteor.js?
+            return;
+
+          self.files[slice.where][resource.servePath] = resource.data;
+          self.css.push(resource.servePath);
+        } else if (resource.type === "static") {
+          self.files[slice.where][resource.servePath] = resource.data;
+          self.static[slice.where].push(resource.servePath);
+        } else if (resource.type === "head" || resource.type === "body") {
+          if (slice.where !== "client")
+            throw new Error("HTML segments can only go to the client");
+          self[resource.type].push(resource.data);
+        } else {
+          throw new Error("Unknown type " + resource.type);
+        }
+      });
+    });
+  },
+
   // Minify the bundle
   minify: function () {
     var self = this;
 
     var addFile = function (type, finalCode) {
       var contents = new Buffer(finalCode);
-      var hash = sha1(contents);
+      var hash = self._hash(contents);
       var name = '/' + hash + '.' + type;
       self.files.client_cacheable[name] = contents;
       self.manifest.push({
@@ -545,9 +415,7 @@ _.extend(Bundle.prototype, {
   _generate_app_html: function () {
     var self = this;
 
-    var appHtmlPath = path.join(__dirname, "app.html.in");
-    var template = fs.readFileSync(appHtmlPath);
-    self.inputFileHashes[appHtmlPath] = sha1(template);
+    var template = fs.readFileSync(path.join(__dirname, "app.html.in"));
     var f = require('handlebars').compile(template.toString());
     return f({
       scripts: self._clientUrlsFor('js'),
@@ -561,17 +429,18 @@ _.extend(Bundle.prototype, {
   // any. Kind of a hack.
   _app_extensions: function () {
     var self = this;
-    var exts = {};
+    var ret = [];
 
-    for (var id in self.packageBundlingInfo) {
-      var inst = self.packageBundlingInfo[id];
-      if (!inst.name)
-        _.each(inst.api.registered_extensions(), function (ext) {
-          exts[ext] = true;
-        });
-    }
+    _.each(self.slices, function (slice) {
+      if (! slice.pkg.name) {
+        var exts =
+          slice.pkg.registeredExtensions(slice.role, slice.where,
+                                         self.packageSearchOptions);
+        ret = _.union(ret, exts);
+      }
+    });
 
-    return _.keys(exts);
+    return ret;
   },
 
   // nodeModulesMode should be "skip", "symlink", or "copy"
@@ -622,7 +491,7 @@ _.extend(Bundle.prototype, {
 
     // --- Static assets ---
 
-    var addClientFileToManifest = function (filepath, contents, type, cacheable, url, hash) {
+    var addClientFileToManifest = function (filepath, contents, type, cacheable, url) {
       if (! contents instanceof Buffer)
         throw new Error('contents must be a Buffer');
       var normalized = filepath.split(path.sep).join('/');
@@ -637,7 +506,7 @@ _.extend(Bundle.prototype, {
         url: url || '/' + normalized,
         // contents is a Buffer and so correctly gives us the size in bytes
         size: contents.length,
-        hash: hash || sha1(contents)
+        hash: self._hash(contents)
       });
     };
 
@@ -650,10 +519,7 @@ _.extend(Bundle.prototype, {
         _.each(copied, function (fs_relative_path) {
           var filepath = path.join(build_path, 'static', fs_relative_path);
           var contents = fs.readFileSync(filepath);
-          var hash = sha1(contents);
-          self.inputFileHashes[path.join(project_dir, 'public', fs_relative_path)]
-            = hash;
-          addClientFileToManifest(fs_relative_path, contents, 'static', false, undefined, hash);
+          addClientFileToManifest(fs_relative_path, contents, 'static', false);
         });
       }
       dependencies_json.app.push('public');
@@ -673,7 +539,7 @@ _.extend(Bundle.prototype, {
         contents = self.files.client[file];
         delete self.files.client[file];
         self.files.client_cacheable[file] = contents;
-        url = file + '?' + sha1(contents)
+        url = file + '?' + self._hash(contents)
       }
       else
         throw new Error('unable to find file: ' + file);
@@ -738,9 +604,9 @@ _.extend(Bundle.prototype, {
     self.manifest.push({
       path: 'app.html',
       where: 'internal',
-      hash: sha1(app_html)
+      hash: self._hash(app_html)
     });
-    dependencies_json.core.push(path.join('tools', 'app.html.in'));
+    dependencies_json.core.push(path.join('engine', 'app.html.in'));
 
     // --- Documentation, and running from the command line ---
 
@@ -770,18 +636,17 @@ _.extend(Bundle.prototype, {
     dependencies_json.extensions = self._app_extensions();
     dependencies_json.exclude = _.pluck(ignore_files, 'source');
     dependencies_json.packages = {};
-    for (var id in self.packageBundlingInfo) {
-      var packageBundlingInfo = self.packageBundlingInfo[id];
-      if (packageBundlingInfo.pkg.name) {
-        dependencies_json.packages[packageBundlingInfo.pkg.name] =
-            _.keys(packageBundlingInfo.dependencies);
+    _.each(_.values(self.slices), function (slice) {
+      if (slice.pkg.name) {
+        dependencies_json.packages[slice.pkg.name] = _.union(
+          dependencies_json.packages[slice.pkg.name] || [],
+          slice.pkg.dependencies
+        );
       }
-    }
+    });
 
-    dependencies_json.hashes = self.inputFileHashes;
-
-    if (self.releaseStamp && self.releaseStamp !== 'none')
-      app_json.release = self.releaseStamp;
+    if (self.release && self.release !== 'none')
+      app_json.release = self.release;
 
     fs.writeFileSync(path.join(build_path, 'app.json'),
                      JSON.stringify(app_json, null, 2));
@@ -815,7 +680,7 @@ _.extend(Bundle.prototype, {
  * try bundling again.
  *
  * options include:
- * - minify : minify the CSS and JS assets
+ * - noMinify : don't minify the assets
  *
  * - nodeModulesMode : decide on how to create the bundle's
  *   node_modules directory. one of:
@@ -829,44 +694,46 @@ _.extend(Bundle.prototype, {
  * - testPackages : array of package objects or package names whose
  *   tests should be included in this bundle
  *
- * - releaseStamp : The Meteor release version to use. This is *ONLY*
- *                  used as a stamp (eg Meteor.release). The package
- *                  search path is configured with packageSearchOptions.
- *
- * - packageSearchOptions: see packages.js. NOTE: if there's an appDir here,
- *   it's used for package searching but it is NOT the appDir that we bundle!
- *   So for "meteor test-packages" in an app, appDir is the test-runner-app but
- *   packageSearchOptions.appDir is the app the user is in.
+ * - release : Which Meteor release version to use, or 'none' for local
+ *   packages only
  */
 exports.bundle = function (app_dir, output_path, options) {
   if (!options)
     throw new Error("Must pass options");
   if (!options.nodeModulesMode)
     throw new Error("Must pass options.nodeModulesMode");
-  if (!options.releaseStamp)
-    throw new Error("Must pass options.releaseStamp or 'none'.");
+  if (!options.release)
+    throw new Error("Must pass options.release. Pass 'none' for local packages only");
 
   try {
-    // Create a bundle, add the project
+    // Create a bundle and set up package search path
     packages.flush();
+    var bundle = new Bundle({
+      release: options.release,
+      releaseManifest: warehouse.releaseManifestByVersion(options.release),
+      appDir: app_dir
+    });
 
-    var bundle = new Bundle;
-    bundle.releaseStamp = options.releaseStamp;
-    bundle.packageSearchOptions = options.packageSearchOptions || {};
+    // Create a Package object that represents the app
+    var app = packages.get_for_app(app_dir, ignore_files,
+                                   bundle.packageSearchOptions);
 
-    // our release manifest is set, let's now load the app
-    var app = packages.get_for_app(app_dir, ignore_files);
-    bundle.use(app);
+    // Populate the list of slices to load
+    bundle.determineLoadOrder({
+      use: {client: [app], server: [app]},
+      test: {client: options.testPackages || [],
+             server: options.testPackages || []}
+    });
 
-    // Include tests if requested
-    if (options.testPackages) {
-      _.each(options.testPackages, function(packageOrPackageName) {
-        bundle.includeTests(packageOrPackageName);
-      });
-    }
+    // Process npm modules
+    bundle.prepNodeModules();
+
+    // Link JavaScript, put resources in load order, and copy them to
+    // the bundle
+    bundle.emitResources();
 
     // Minify, if requested
-    if (options.minify)
+    if (!options.noMinify)
       bundle.minify();
 
     // Write to disk
