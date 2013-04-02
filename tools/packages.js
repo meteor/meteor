@@ -655,15 +655,19 @@ _.extend(Package.prototype, {
   //
   // @param npmDependencies {Object} eg {gcd: "0.0.0", tar: "0.1.14"}
   installNpmDependencies: function(quiet) {
-    if (this.npmDependencies) {
-      // go through a specialized npm dependencies update process, ensuring we
-      // don't get new versions of any (sub)dependencies. this process also runs
-      // mostly safely multiple times in parallel (which could happen if you
-      // have two apps running locally using the same package)
-      meteorNpm.updateDependencies(
-        this.name, this.npmDir(),
-        this.npmDependencies, quiet, this.inWarehouse);
-    }
+    var self = this;
+    // Nothing to do if there's no Npm.depends().
+    if (!self.npmDependencies)
+      return;
+    // Warehouse packages come with their NPM dependencies and are read-only.
+    if (self.inWarehouse)
+      return;
+    // go through a specialized npm dependencies update process, ensuring we
+    // don't get new versions of any (sub)dependencies. this process also runs
+    // mostly safely multiple times in parallel (which could happen if you have
+    // two apps running locally using the same package)
+    meteorNpm.updateDependencies(
+      self.name, self.npmDir(), self.npmDependencies, quiet);
   },
 
   npmDir: function () {
