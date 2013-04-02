@@ -145,7 +145,7 @@ _.extend(Module.prototype, {
 
     // Epilogue
     combined += self.getExportCode();
-    combined += "\n}).call(this);";
+    combined += "\n})();";
 
     return [{
       source: combined,
@@ -288,14 +288,9 @@ _.extend(File.prototype, {
     // XXX XXX if a unit is not going to be used, prepend each line with '//'
 
     // The newline after the source closes a '//' comment.
-    //
-    // The ".call(this)" allows you to do a top-level "this.foo = " to
-    // define global variables; this is the only way to do it in
-    // CoffeeScript.
-
     if (options.preserveLineNumbers) {
       // Ugly version
-      return "(function(){" + self.source + "\n}).call(this);\n";
+      return "(function(){" + self.source + "\n})();\n";
     }
 
     // Pretty version
