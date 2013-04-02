@@ -521,7 +521,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
             if (self._validators[method].allow.length === 0) {
               throw new Meteor.Error(
                 403, "Access denied. No allow validators set on restricted " +
-                  "collection.");
+                  "collection for method '" + method + "'.");
             }
 
             var validatedMethodName =
