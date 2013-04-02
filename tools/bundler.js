@@ -411,6 +411,7 @@ _.extend(Bundle.prototype, {
   _generate_app_html: function () {
     var self = this;
 
+    // XXX we don't do content-based dependency watching for this file
     var template = fs.readFileSync(path.join(__dirname, "app.html.in"));
     var f = require('handlebars').compile(template.toString());
     return f({
@@ -443,7 +444,7 @@ _.extend(Bundle.prototype, {
   write_to_directory: function (output_path, project_dir, nodeModulesMode) {
     var self = this;
     var app_json = {};
-    var dependencies_json = {core: [], app: [], packages: {}};
+    var dependencies_json = {core: [], app: [], packages: {}, hashes: {}};
     var is_app = files.is_app_dir(project_dir);
 
     if (is_app) {
@@ -466,6 +467,7 @@ _.extend(Bundle.prototype, {
 
     files.cp_r(path.join(__dirname, 'server'),
                path.join(build_path, 'server'), {ignore: ignore_files});
+    // XXX we don't do content-based dependency watching for these files
     dependencies_json.core.push('server');
 
     // --- Third party dependencies ---
@@ -487,7 +489,7 @@ _.extend(Bundle.prototype, {
 
     // --- Static assets ---
 
-    var addClientFileToManifest = function (filepath, contents, type, cacheable, url) {
+    var addClientFileToManifest = function (filepath, contents, type, cacheable, url, hash) {
       if (! contents instanceof Buffer)
         throw new Error('contents must be a Buffer');
       var normalized = filepath.split(path.sep).join('/');
@@ -502,7 +504,7 @@ _.extend(Bundle.prototype, {
         url: url || '/' + normalized,
         // contents is a Buffer and so correctly gives us the size in bytes
         size: contents.length,
-        hash: sha1(contents)
+        hash: hash || sha1(contents)
       });
     };
 
@@ -515,7 +517,11 @@ _.extend(Bundle.prototype, {
         _.each(copied, function (fs_relative_path) {
           var filepath = path.join(build_path, 'static', fs_relative_path);
           var contents = fs.readFileSync(filepath);
-          addClientFileToManifest(fs_relative_path, contents, 'static', false);
+          var hash = sha1(contents);
+          dependencies_json.hashes[
+            path.join(project_dir, 'public', fs_relative_path)] = hash;
+          addClientFileToManifest(fs_relative_path, contents, 'static', false,
+                                  undefined, hash);
         });
       }
       dependencies_json.app.push('public');
@@ -524,7 +530,7 @@ _.extend(Bundle.prototype, {
     // Add cache busting query param if needed, and
     // add to manifest.
     var processClientCode = function (type, file) {
-      var contents, url;
+      var contents, url, hash;
       if (file in self.files.client_cacheable) {
         contents = self.files.client_cacheable[file];
         url = file;
@@ -535,12 +541,13 @@ _.extend(Bundle.prototype, {
         contents = self.files.client[file];
         delete self.files.client[file];
         self.files.client_cacheable[file] = contents;
-        url = file + '?' + sha1(contents)
+        hash = sha1(contents);
+        url = file + '?' + hash;
       }
       else
         throw new Error('unable to find file: ' + file);
 
-      addClientFileToManifest(file, contents, type, true, url);
+      addClientFileToManifest(file, contents, type, true, url, hash);
     };
 
     _.each(self.js.client, function (file) { processClientCode('js',  file); });
@@ -633,12 +640,20 @@ _.extend(Bundle.prototype, {
     dependencies_json.exclude = _.pluck(ignore_files, 'source');
     dependencies_json.packages = {};
     _.each(_.values(self.slices), function (slice) {
+      // Data for the mtime dependency watcher. We only record data here for
+      // packages, not apps, since apps watch the whole directory for added
+      // files.
       if (slice.pkg.name) {
         dependencies_json.packages[slice.pkg.name] = _.union(
           dependencies_json.packages[slice.pkg.name] || [],
-          slice.pkg.dependencies
+          _.keys(slice.pkg.dependencyFileShas)
         );
       }
+      // Data for the contents dependency watcher check.
+      _.each(slice.pkg.dependencyFileShas, function (sha, relPath) {
+        dependencies_json.hashes[
+          path.join(slice.pkg.source_root, relPath)] = sha;
+      });
     });
 
     if (self.releaseStamp && self.releaseStamp !== 'none')
@@ -647,7 +662,7 @@ _.extend(Bundle.prototype, {
     fs.writeFileSync(path.join(build_path, 'app.json'),
                      JSON.stringify(app_json, null, 2));
     fs.writeFileSync(path.join(build_path, 'dependencies.json'),
-                     JSON.stringify(dependencies_json));
+                     JSON.stringify(dependencies_json, null, 2));
 
     // --- Move into place ---
 
