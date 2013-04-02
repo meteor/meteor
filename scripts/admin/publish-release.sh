@@ -6,20 +6,20 @@ DIR="$(pwd)"
 METEOR_DIR="$(pwd)/../.."
 
 if [ $# -gt 2 ]; then
-  echo "usage: publish-release.sh [RELEASENAME] [GIT-REV]"
+  echo "usage: publish-release.sh [GIT-REV] [RELEASE-NAME]"
   exit 1
 fi
 
-if [ $# -lt 2 ]; then
+if [ $# -lt 1 ]; then
   GIT_SHA="$(git rev-parse HEAD)"
 else
-  GIT_SHA="$(git rev-parse "$2")"
+  GIT_SHA="$(git rev-parse "$1")"
 fi
 
-if [ $# -lt 1 ]; then
+if [ $# -lt 2 ]; then
   RELEASE_NAME="$GIT_SHA"
 else
-  RELEASE_NAME="$1"
+  RELEASE_NAME="$2"
 fi
 
 # prepare settings file with git sha of last commit
