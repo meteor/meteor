@@ -3,7 +3,7 @@
 // /static [served by node for now]
 // /static_cacheable [cache-forever files, served by node for now]
 // /server [XXX split out into a package]
-//   server.js, .... [contents of engine/server]
+//   server.js, .... [contents of tools/server]
 //   node_modules [for now, contents of (dev_bundle)/lib/node_modules]
 // /app.html
 // /app [user code]
@@ -54,6 +54,13 @@ var ignore_files = [
     /^\.meteor$/, /* avoids scanning N^2 files when bundling all packages */
     /^\.git$/ /* often has too many files to watch */
 ];
+
+var sha1 = exports.sha1 = function (contents) {
+  var hash = crypto.createHash('sha1');
+  hash.update(contents);
+  return hash.digest('hex');
+};
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Slice
@@ -137,12 +144,6 @@ var Bundle = function (options) {
 };
 
 _.extend(Bundle.prototype, {
-  _hash: function (contents) {
-    var hash = crypto.createHash('sha1');
-    hash.update(contents);
-    return hash.digest('hex');
-  },
-
   // Determine the packages to load, create Slices for
   // them, put them in load order, save in slices.
   //
@@ -358,7 +359,7 @@ _.extend(Bundle.prototype, {
 
     var addFile = function (type, finalCode) {
       var contents = new Buffer(finalCode);
-      var hash = self._hash(contents);
+      var hash = sha1(contents);
       var name = '/' + hash + '.' + type;
       self.files.client_cacheable[name] = contents;
       self.manifest.push({
@@ -506,7 +507,7 @@ _.extend(Bundle.prototype, {
         url: url || '/' + normalized,
         // contents is a Buffer and so correctly gives us the size in bytes
         size: contents.length,
-        hash: self._hash(contents)
+        hash: sha1(contents)
       });
     };
 
@@ -539,7 +540,7 @@ _.extend(Bundle.prototype, {
         contents = self.files.client[file];
         delete self.files.client[file];
         self.files.client_cacheable[file] = contents;
-        url = file + '?' + self._hash(contents)
+        url = file + '?' + sha1(contents)
       }
       else
         throw new Error('unable to find file: ' + file);
@@ -604,9 +605,9 @@ _.extend(Bundle.prototype, {
     self.manifest.push({
       path: 'app.html',
       where: 'internal',
-      hash: self._hash(app_html)
+      hash: sha1(app_html)
     });
-    dependencies_json.core.push(path.join('engine', 'app.html.in'));
+    dependencies_json.core.push(path.join('tools', 'app.html.in'));
 
     // --- Documentation, and running from the command line ---
 
