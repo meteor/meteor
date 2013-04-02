@@ -15,7 +15,11 @@ fi
 
 #If this ever takes more options, use getopt
 if [ "$1" == "--global" ]; then
-    METEOR=/usr/local/bin/meteor
+    if [ -z "$TEST_RELEASE" ]; then
+        METEOR=/usr/local/bin/meteor
+    else
+        METEOR="/usr/local/bin/meteor --release=$TEST_RELEASE"
+    fi
     INSTALLED_METEOR=t
 elif [ "$METEOR_WAREHOUSE_DIR" ]; then
     # The point of this testing script is to test the tools, so we make sure (in
