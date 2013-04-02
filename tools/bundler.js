@@ -292,7 +292,8 @@ _.extend(Bundle.prototype, {
       _.each(_.values(slice.pkg.uses[slice.role][slice.where]), function (otherPkgName){
         var otherPkg = self.getPackage(otherPkgName);
         if (otherPkg.name && ! slice.pkg.unordered[otherPkg.name]) {
-          otherPkg.ensureCompiled(); // make sure otherPkg.exports is valid
+          // make sure otherPkg.exports is valid
+          otherPkg.ensureCompiled(self.packageSearchOptions);
           _.each(otherPkg.exports.use[slice.where], function (symbol) {
             imports[symbol] = otherPkg.name;
           });
