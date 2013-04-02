@@ -38,17 +38,6 @@ Meteor._DdpClientStream = function (endpoint) {
 };
 
 _.extend(Meteor._DdpClientStream.prototype, {
-  // Register for callbacks.
-  on: function (name, callback) {
-    var self = this;
-
-    if (name !== 'message' && name !== 'reset' && name !== 'update_available')
-      throw new Error("unknown event type: " + name);
-
-    if (!self.eventCallbacks[name])
-      self.eventCallbacks[name] = [];
-    self.eventCallbacks[name].push(callback);
-  },
 
   // data is a utf8 string. Data sent while not connected is dropped on
   // the floor, and it is up the user of this API to retransmit lost

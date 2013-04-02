@@ -16,17 +16,6 @@ Meteor._DdpClientStream = function (url) {
 };
 
 _.extend(Meteor._DdpClientStream.prototype, {
-  // Register for callbacks.
-  on: function (name, callback) {
-    var self = this;
-
-    if (name !== 'message' && name !== 'reset' && name !== 'update_available')
-      throw new Error("unknown event type: " + name);
-
-    if (!self.eventCallbacks[name])
-      self.eventCallbacks[name] = [];
-    self.eventCallbacks[name].push(callback);
-  },
 
   // data is a utf8 string. Data sent while not connected is dropped on
   // the floor, and it is up the user of this API to retransmit lost
@@ -74,7 +63,7 @@ _.extend(Meteor._DdpClientStream.prototype, {
     self.currentStatus.connected = true;
     self.currentStatus.retryCount = 0;
     // XXX Backwards compatibility only. Remove before 1.0.
-    self.currentStatus.retryCount = self.currentStatus.retryCount;
+    self.currentStatus.retry_count = self.currentStatus.retryCount;
     self.statusChanged();
 
     // fire resets. This must come after status change so that clients

@@ -60,6 +60,19 @@ var translateUrl =  function(url, newSchemeBase, subPath) {
 
 _.extend(Meteor._DdpClientStream.prototype, {
 
+  // Register for callbacks.
+  on: function (name, callback) {
+    var self = this;
+
+    if (name !== 'message' && name !== 'reset' && name !== 'update_available')
+      throw new Error("unknown event type: " + name);
+
+    if (!self.eventCallbacks[name])
+      self.eventCallbacks[name] = [];
+    self.eventCallbacks[name].push(callback);
+  },
+
+
   _initCommon: function () {
     var self = this;
     //// Constants

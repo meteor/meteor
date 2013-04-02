@@ -1,3 +1,5 @@
+
+
 var newConnection = function (stream) {
   // Some of these tests leave outstanding methods with no result yet
   // returned. This should not block us from re-running tests when sources
@@ -260,12 +262,12 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   test.equal(actualIds, expectedIds);
 });
 
+
 Tinytest.add("livedata stub - this", function (test) {
   var stream = new Meteor._StubStream();
   var conn = newConnection(stream);
 
   startAndConnect(test, stream);
-
   conn.methods({test_this: function() {
     test.isTrue(this.isSimulation);
     // XXX Backwards compatibility only. Remove this before 1.0.
@@ -275,7 +277,6 @@ Tinytest.add("livedata stub - this", function (test) {
 
   // should throw no exceptions
   conn.call('test_this');
-
   // satisfy method, quiesce connection
   var message = JSON.parse(stream.sent.shift());
   test.equal(message, {msg: 'method', method: 'test_this',
@@ -286,7 +287,6 @@ Tinytest.add("livedata stub - this", function (test) {
   stream.receive({msg: 'updated', 'methods': [message.id]});
 
 });
-
 
 Tinytest.add("livedata stub - methods", function (test) {
   var stream = new Meteor._StubStream();
@@ -428,7 +428,6 @@ var observeCursor = function (test, cursor) {
   };
 };
 
-
 // method calls another method in simulation. see not sent.
 Tinytest.add("livedata stub - methods calling methods", function (test) {
   var stream = new Meteor._StubStream();
@@ -492,7 +491,6 @@ Tinytest.add("livedata stub - methods calling methods", function (test) {
 
   o.stop();
 });
-
 
 Tinytest.add("livedata stub - method call before connect", function (test) {
   var stream = new Meteor._StubStream;
@@ -640,6 +638,7 @@ Tinytest.add("livedata stub - reconnect", function (test) {
 
   o.stop();
 });
+
 
 Tinytest.add("livedata stub - reconnect method which only got result", function (test) {
   var stream = new Meteor._StubStream;
@@ -899,7 +898,6 @@ Tinytest.add("livedata stub - reconnect method which only got data", function (t
 
   o.stop();
 });
-
 
 Tinytest.add("livedata stub - multiple stubs same doc", function (test) {
   var stream = new Meteor._StubStream;
@@ -1286,7 +1284,7 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
 
 Tinytest.addAsync("livedata connection - version negotiation requires renegotiating",
                   function (test, onComplete) {
-  var connection = new Meteor._LivedataConnection("/", {
+  var connection = new Meteor._LivedataConnection(Meteor.absoluteUrl(), {
     reloadWithOutstanding: true,
     supportedDDPVersions: ["garbled", Meteor._SUPPORTED_DDP_VERSIONS[0]],
     onConnectionFailure: function () { test.fail(); onComplete(); },
@@ -1300,7 +1298,7 @@ Tinytest.addAsync("livedata connection - version negotiation requires renegotiat
 
 Tinytest.addAsync("livedata connection - version negotiation error",
                   function (test, onComplete) {
-  var connection = new Meteor._LivedataConnection("/", {
+  var connection = new Meteor._LivedataConnection(Meteor.absoluteUrl(), {
     reloadWithOutstanding: true,
     supportedDDPVersions: ["garbled", "more garbled"],
     onConnectionFailure: function () {
