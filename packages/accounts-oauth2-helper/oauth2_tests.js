@@ -37,7 +37,7 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
     test.equal(
       Accounts.oauth._loginResultForState[state].token, token);
   } finally {
-    delete Accounts.oauth._services[serviceName];
+    Accounts.oauth._unregisterService(serviceName);
   }
 });
 
@@ -91,7 +91,7 @@ Tinytest.add("oauth2 - error in user creation", function (test) {
       Meteor.apply('login', [{oauth: {version: 2, state: state}}]);
     });
   } finally {
-    delete Accounts.oauth._services[serviceName];
+    Accounts.oauth._unregisterService(serviceName);
   }
 });
 
