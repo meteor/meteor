@@ -88,11 +88,8 @@ var Slice = function (pkg, role, where) {
 
 // options to include:
 //
-// - release: the Meteor release name to write into the bundle metadata
-// - appDir: null, or a path to the root of an app tree that is to be
-//   searched for package overrides
-// - releaseManifest: null, or a manifest that is to be used when
-//   searching for packages
+// - releaseStamp: the Meteor release name to write into the bundle metadata
+// - packageSearchOptions: tells you how to find packages
 var Bundle = function (options) {
   var self = this;
 
@@ -101,13 +98,10 @@ var Bundle = function (options) {
   self.slices = [];
 
   // meteor release version
-  self.release = null;
+  self.releaseStamp = options.releaseStamp;
 
   // search configuration for package.get()
-  self.packageSearchOptions = {
-    releaseManifest: options.releaseManifest,
-    appDir: options.appDir
-  };
+  self.packageSearchOptions = options.packageSearchOptions || {};
 
   // map from environment, to list of filenames
   self.js = {client: [], server: []};
@@ -646,8 +640,8 @@ _.extend(Bundle.prototype, {
       }
     });
 
-    if (self.release && self.release !== 'none')
-      app_json.release = self.release;
+    if (self.releaseStamp && self.releaseStamp !== 'none')
+      app_json.release = self.releaseStamp;
 
     fs.writeFileSync(path.join(build_path, 'app.json'),
                      JSON.stringify(app_json, null, 2));
@@ -695,24 +689,31 @@ _.extend(Bundle.prototype, {
  * - testPackages : array of package objects or package names whose
  *   tests should be included in this bundle
  *
- * - release : Which Meteor release version to use, or 'none' for local
- *   packages only
+ * - releaseStamp : The Meteor release version to use. This is *ONLY*
+ *                  used as a stamp (eg Meteor.release). The package
+ *                  search path is configured with packageSearchOptions.
+ *
+ * - packageSearchOptions: see packages.js. NOTE: if there's an appDir here,
+ *   it's used for package searching but it is NOT the appDir that we bundle!
+ *   So for "meteor test-packages" in an app, appDir is the test-runner-app but
+ *   packageSearchOptions.appDir is the app the user is in.
  */
 exports.bundle = function (app_dir, output_path, options) {
   if (!options)
     throw new Error("Must pass options");
   if (!options.nodeModulesMode)
     throw new Error("Must pass options.nodeModulesMode");
-  if (!options.release)
-    throw new Error("Must pass options.release. Pass 'none' for local packages only");
+  if (!options.packageSearchOptions)
+    throw new Error("Must pass options.packageSearchOptions.");
+  if (!options.releaseStamp)
+    throw new Error("Must pass options.releaseStamp or 'none'.");
 
   try {
     // Create a bundle and set up package search path
     packages.flush();
     var bundle = new Bundle({
-      release: options.release,
-      releaseManifest: warehouse.releaseManifestByVersion(options.release),
-      appDir: app_dir
+      releaseStamp: options.releaseStamp,
+      packageSearchOptions: options.packageSearchOptions || {}
     });
 
     // Create a Package object that represents the app
