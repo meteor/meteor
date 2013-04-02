@@ -49,6 +49,6 @@ Package.register_extension(
 Package.register_extension("lessimport", function () {});
 
 Package.on_test(function (api) {
-  api.use('test-helpers');
+  api.use(['test-helpers', 'tinytest', 'less']);
   api.add_files(['less_tests.less', 'less_tests.js'], 'client');
 });

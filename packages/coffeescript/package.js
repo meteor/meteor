@@ -31,6 +31,7 @@ Package.register_extension("coffee", coffeescript_handler);
 Package.register_extension("litcoffee", coffeescript_handler);
 
 Package.on_test(function (api) {
+  api.use(['coffeescript', 'tinytest']);
   api.add_files([
     'coffeescript_tests.coffee',
     'coffeescript_strict_tests.coffee',

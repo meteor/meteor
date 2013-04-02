@@ -51,7 +51,7 @@ Package.on_use(function (api, where) {
 });
 
 Package.on_test(function (api) {
-  api.use('tinytest');
+  api.use(['underscore', 'tinytest']);
 
   api.add_files('client_environment_test.js', 'client');
   api.add_files('server_environment_test.js', 'server');

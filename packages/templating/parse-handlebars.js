@@ -1,3 +1,4 @@
+// @export Handlebars
 Handlebars = {};
 
 /* Our format:

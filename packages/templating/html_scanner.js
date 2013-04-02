@@ -1,5 +1,5 @@
-
-/*global*/ html_scanner = {
+// @export html_scanner
+html_scanner = {
   // Scan a template file for <head>, <body>, and <template>
   // tags and extract their contents.
   //
@@ -132,7 +132,7 @@
     }
 
     // <body> or <template>
-    var code = 'Handlebars.json_ast_to_func(' +
+    var code = 'Package.templating.Handlebars.json_ast_to_func(' +
           JSON.stringify(Handlebars.to_json_ast(contents)) + ')';
 
     if (tag === "template") {

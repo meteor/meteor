@@ -1,4 +1,6 @@
-EJSON = {}; // Global!
+// @export EJSON
+EJSON = {};
+
 var customTypes = {};
 // Add a custom type, using a method of your choice to get to and
 // from a basic JSON-able representation.  The factory argument

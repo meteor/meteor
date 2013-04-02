@@ -1,23 +1,16 @@
-// XXX this is hella confusing. this package really only has the
-// handlebars *runtime*, for precompiled templates. so really it is an
-// internal package that should get shipped down to the client iff you
-// have a precompiled handlebars template in your project.
-
 Package.describe({
-  summary: "Simple semantic templating language"
+  summary: "Simple semantic templating language",
+  internal: true
 });
-
-Package._require('parse.js'); // needed at bundle time
 
 Package.on_use(function (api) {
-  // XXX should only be sent if we have handlebars templates in the app..
-  api.add_files('evaluate.js', 'client');
-  api.add_files('parse.js', 'server'); // needed on server for tests
-
-  api.use('underscore', 'client');
+  // XXX This package has been folded into the 'templating' package
+  // for now. Historically, you could see it in your package list
+  // (because it didn't have internal: true, which it probably should
+  // have), but adding it didn't do anything (because it just
+  // contained the handlebars precompiler and runtime, not any
+  // functions you could call yourself.) So leave it around as an
+  // empty package for the moment so as to not break the projects of
+  // anyone that happened to type 'meteor add handlebars' because they
+  // thought they had to.
 });
-
-// XXX lots more to do here .. registering this a templating engine,
-// making it the default default, providing the compiler code,
-// depending on the node package (or packaging the compiler
-// ourselves..)

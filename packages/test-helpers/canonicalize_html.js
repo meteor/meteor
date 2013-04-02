@@ -1,3 +1,4 @@
+// @export canonicalizeHtml
 canonicalizeHtml = function(html) {
   var h = html;
   // kill IE-specific comments inserted by Spark

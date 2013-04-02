@@ -3,12 +3,15 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
+  api.use('underscore');
   api.add_files('httpcall_common.js', ['client', 'server']);
   api.add_files('httpcall_client.js', 'client');
   api.add_files('httpcall_server.js', 'server');
 });
 
 Package.on_test(function (api) {
+  api.use('underscore');
+  api.use('random');
   api.use('jquery', 'client');
   api.use('http', ['client', 'server']);
   api.use('test-helpers', ['client', 'server']);

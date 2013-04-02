@@ -9,6 +9,7 @@ Package.on_use(function (api, where) {
 });
 
 Package.on_test(function (api) {
+  api.use('tinytest');
   api.use('logging', 'client');
   api.add_files('logging_test.js', 'client');
 });

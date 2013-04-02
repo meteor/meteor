@@ -3,9 +3,11 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use('underscore', 'server');
+  api.use('underscore', ['client', 'server']);
   api.use('localstorage', 'client');
-  api.use('accounts-urls', 'client');
+  api.use('accounts-urls', ['client', 'server']);
+  api.use('deps', 'client');
+  api.use('random', ['client', 'server']);
 
   // need this because of the Meteor.users collection but in the future
   // we'd probably want to abstract this away
@@ -24,5 +26,6 @@ Package.on_use(function (api) {
 Package.on_test(function (api) {
   api.use('accounts-base');
   api.use('tinytest');
+  api.use('random');
   api.add_files('accounts_tests.js', 'server');
 });

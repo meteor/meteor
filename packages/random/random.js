@@ -1,3 +1,4 @@
+// @export Random
 Random = {};
 
 // see http://baagoe.org/en/wiki/Better_random_numbers_for_javascript

@@ -41,7 +41,7 @@ Package.on_test(function (api) {
   api.use('livedata', ['client', 'server']);
   api.use('mongo-livedata', ['client', 'server']);
   api.use('test-helpers', ['client', 'server']);
-  api.use('tinytest');
+  api.use(['underscore', 'tinytest', 'random', 'deps']);
 
   api.add_files('livedata_connection_tests.js', ['client', 'server']);
   api.add_files('livedata_tests.js', ['client', 'server']);

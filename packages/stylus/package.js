@@ -33,5 +33,6 @@ Package.register_extension(
 );
 
 Package.on_test(function (api) {
+  api.use(['tinytest', 'stylus', 'test-helpers'])
   api.add_files(['stylus_tests.styl', 'stylus_tests.js'], 'client');
 });

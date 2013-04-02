@@ -4,9 +4,11 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
+  api.use('underscore', 'server');
   api.add_files('routepolicy.js', 'server');
 });
 
 Package.on_test(function (api) {
+  api.use(['routepolicy', 'tinytest']);
   api.add_files(['routepolicy_tests.js'], 'server');
 });

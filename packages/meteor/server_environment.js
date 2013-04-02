@@ -1,3 +1,4 @@
+// @export Meteor
 Meteor = {
   isClient: false,
   isServer: true

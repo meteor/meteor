@@ -6,6 +6,17 @@ Package.describe({
 var fs = Npm.require('fs');
 var path = Npm.require('path');
 
+// XXX For now, the Handlebars compilation and evaluation logic has
+// been folded into this package, because we are de-supporting load
+// order dependencies between package.js files, so that we can run a
+// package build step and have it not require all of the package's
+// dependencies to be present. We'll be able to split Handlebars back
+// out into a separate file again once we've moved extension code out
+// of package.js and into its own well-defined execution environment
+// that can require other packages. At that point we will also want to
+// have the concept of a template system registry and a default
+// templating system, ideally per-package.
+
 Package.on_use(function (api) {
   // XXX would like to do the following only when the first html file
   // is encountered.. shouldn't be very hard, we just need a way to
@@ -19,12 +30,12 @@ Package.on_use(function (api) {
   // html_scanner.js emits client code that calls Meteor.startup
   api.use('startup', 'client');
 
-  // for now, the only templating system we support
-  // XXX this is a huge hack. using handlebars causes a Handlebars
-  // symbol to be slammed into the global environment, which
-  // html_scanner needs. refactor.
-  api.use('handlebars', 'client');
+  // XXX should only be sent if we have handlebars templates in the app..
+  api.add_files('evaluate-handlebars.js', 'client');
+  api.add_files('parse-handlebars.js', 'server'); // needed on server for tests
 });
+
+Package._require('parse-handlebars.js'); // needed at bundle time
 
 Package.register_extension(
   "html", function (bundle, source_path, serve_path, where) {
@@ -69,10 +80,9 @@ Package.register_extension(
 
       bundle.add_resource({
         type: "js",
+        where: where,
         path: serve_path,
-        data: new Buffer(results.js),
-        source_file: source_path,
-        where: where
+        data: results.js
       });
     }
   }
@@ -81,7 +91,10 @@ Package.register_extension(
 Package.on_test(function (api) {
   api.use('tinytest');
   api.use('htmljs');
-  api.use(['test-helpers', 'domutils', 'session'], 'client');
+  api.use('templating');
+  api.use('handlebars');
+  api.use(['test-helpers', 'domutils', 'session', 'deps',
+           'underscore', 'spark', 'minimongo'], 'client');
   api.use('handlebars', 'server');
   api.add_files([
     'templating_tests.js',

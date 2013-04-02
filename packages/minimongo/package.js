@@ -8,7 +8,8 @@ Package.on_use(function (api, where) {
 
   // It would be sort of nice if minimongo didn't depend on
   // underscore, so we could ship it separately.
-  api.use(['underscore', 'json', 'ejson', 'ordered-dict', 'random'], where);
+  api.use(['underscore', 'json', 'ejson', 'ordered-dict', 'deps',
+           'random', 'ordered-dict'], where);
   api.add_files([
     'minimongo.js',
     'selector.js',
@@ -21,6 +22,7 @@ Package.on_use(function (api, where) {
 Package.on_test(function (api) {
   api.use('minimongo', 'client');
   api.use('test-helpers', 'client');
-  api.use('tinytest');
+  api.use(['tinytest', 'underscore', 'ejson', 'ordered-dict',
+           'random', 'deps']);
   api.add_files('minimongo_tests.js', 'client');
 });

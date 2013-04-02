@@ -7,6 +7,7 @@
 
 // LiveResultsSet: the return value of a live query.
 
+// @export LocalCollection
 LocalCollection = function () {
   this.docs = {}; // _id -> document (also containing id)
 

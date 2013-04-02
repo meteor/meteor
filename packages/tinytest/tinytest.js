@@ -485,8 +485,8 @@ _.extend(TestRun.prototype, {
 /* Public API                                                                 */
 /******************************************************************************/
 
-var globals = this;
-globals.Tinytest = {
+// @export Tinytest
+Tinytest = {
   add: function (name, func) {
     TestManager.addCase(new TestCase(name, func));
   },
