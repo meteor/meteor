@@ -31,12 +31,26 @@ var fs = require('fs');
 // XXX XXX as implemented, it reads the environment and the current
 // directory. It shouldn't do that. Those should ultimately be ctor
 // arguments or something.
-var Library = function (packageSearchOptions) {
+var Library = function (options) {
   var self = this;
-  self.packageSearchOptions = packageSearchOptions || {};
+  options = options || {};
+
+  self.preloadedPackages = {};
+  self.releaseManifest = options.releaseManifest;
+  self.appDir = options.appDir;
 };
 
 _.extend(Library.prototype, {
+  // Temporarily add a package to the library (or override a package
+  // that actually exists in the library.) `packageName` is the name
+  // to use for the package and `packageDir` is the directory that
+  // contains its source.
+  preload: function (packageName, packageDir) {
+    var self = this;
+    self.preloadedPackages[packageName] =
+      packages.loadFromDir(packageName, packageDir);
+  },
+
   // get a package by name. also maps package objects to themselves.
   // load order is:
   // - APP_DIR/packages
@@ -48,16 +62,15 @@ _.extend(Library.prototype, {
     if (name instanceof Package)
       return name;
     if (!(name in loadedPackages)) {
-      if (self.packageSearchOptions.preloadedPackages &&
-          name in self.packageSearchOptions.preloadedPackages) {
-        loadedPackages[name] = self.packageSearchOptions.preloadedPackages[name];
+      if (self.preloadedPackages && name in self.preloadedPackages) {
+        loadedPackages[name] = self.preloadedPackages[name];
       } else {
         var pkg = new Package;
         if (pkg.initFromLocalPackages(name, self)) {
           loadedPackages[name] = pkg;
-        } else if (self.packageSearchOptions.releaseManifest) {
+        } else if (self.releaseManifest) {
           pkg.initFromWarehouse(
-            name, self.packageSearchOptions.releaseManifest.packages[name]);
+            name, self.releaseManifest.packages[name]);
           loadedPackages[name] = pkg;
         }
       }
@@ -92,8 +105,8 @@ _.extend(Library.prototype, {
       });
     });
 
-    if (self.packageSearchOptions.releaseManifest) {
-      _.each(self.packageSearchOptions.releaseManifest.packages, function(version, name) {
+    if (self.releaseManifest) {
+      _.each(self.releaseManifest.packages, function(version, name) {
         // don't even look for packages if they've already been
         // overridden (though this `if` isn't necessary for
         // correctness, since `packages.get` looks for packages in the
@@ -126,8 +139,8 @@ _.extend(Library.prototype, {
 
     // If we're running from an app (as opposed to a global-level "meteor
     // test-packages"), use app packages.
-    if (self.packageSearchOptions.appDir)
-      packageDirs.push(path.join(self.packageSearchOptions.appDir, 'packages'));
+    if (self.appDir)
+      packageDirs.push(path.join(self.appDir, 'packages'));
 
     // Next, search $PACKAGE_DIRS.
     if (process.env.PACKAGE_DIRS)

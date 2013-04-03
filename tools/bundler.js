@@ -700,13 +700,13 @@ _.extend(Bundle.prototype, {
  *
  * - releaseStamp : The Meteor release version to use. This is *ONLY*
  *                  used as a stamp (eg Meteor.release). The package
- *                  search path is configured with packageSearchOptions.
+ *                  search path is configured with 'library'.
  *
  * - library : Package library to use to fetch any required
  *   packages. NOTE: if there's an appDir here, it's used for package
  *   searching but it is NOT the appDir that we bundle!  So for
  *   "meteor test-packages" in an app, appDir is the test-runner-app
- *   but packageSearchOptions.appDir is the app the user is in.
+ *   but library.appDir is the app the user is in.
  */
 exports.bundle = function (app_dir, output_path, options) {
   if (!options)
