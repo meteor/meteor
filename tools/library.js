@@ -22,7 +22,7 @@ var Library = function (options) {
 
   self.loadedPackages = {};
 
-  self.preloadedPackages = {};
+  self.overrides = {}; // package name to package directory
   self.releaseManifest = options.releaseManifest;
   self.appDir = options.appDir;
 };
@@ -32,15 +32,12 @@ _.extend(Library.prototype, {
   // that actually exists in the library.) `packageName` is the name
   // to use for the package and `packageDir` is the directory that
   // contains its source.
-  preload: function (packageName, packageDir) {
+  override: function (packageName, packageDir) {
     var self = this;
-    var pkg = new packages.Package(self);
-    pkg.initFromPackageDir(name, packageDir);
-    self.preloadedPackages[packageName] = pkg;
+    self.overrides[packageName] = packageDir
   },
 
-  // force reload of all packages (does not affect preloaded packages:
-  // they are still in effect and are not reloaded)
+  // force reload of all packages
   flush: function () {
     var self = this;
     self.loadedPackages = {};
@@ -55,38 +52,24 @@ _.extend(Library.prototype, {
   // - warehouse (if options.releaseManifest passed)
   get: function (name) {
     var self = this;
+
+    // Passed a Package?
     if (name instanceof packages.Package)
       return name;
-
-    // Packages overridden with preload()
-    if (name in self.preloadedPackages)
-      return self.preloadedPackages[name];
 
     // Packages cached from previous calls
     if (name in self.loadedPackages)
       return self.loadedPackages[name];
 
-    // Try local packages:
-    // - APP/packages
-    // - GITCHECKOUTOFMETEOR/packages
-    // - $PACKAGE_DIRS (colon-separated)
+    // Need to load it from disk
+    var packageDir = self.findPackage(name);
+    if (! packageDir)
+      throw new Error("Package not available: " + name);
+
     var pkg = new packages.Package(self);
-    var packageDir = self.directoryForLocalPackage(name);
-    if (packageDir) {
-      pkg.initFromPackageDir(name, packageDir);
-      return (self.loadedPackages[name] = pkg);
-    }
-
-    // Try the release
-    var version = self.releaseManifest && self.releaseManifest.packages[name];
-    if (version) {
-      pkg.initFromPackageDir(name, path.join(warehouse.getWarehouseDir(),
-                                             'packages', name, version));
-      pkg.inWarehouse = true;
-      return (self.loadedPackages[name] = pkg);
-    }
-
-    throw new Error("Package not available: " + name);
+    pkg.initFromPackageDir(name, packageDir);
+    self.loadedPackages[name] = pkg;
+    return pkg;
   },
 
   // get a package that represents an app. (ignore_files is optional
@@ -127,6 +110,35 @@ _.extend(Library.prototype, {
     }
 
     return list;
+  },
+
+  // Return the directory for a package, or null if no such package
+  // can be found.
+  findPackage: function (name) {
+    var self = this;
+
+    // Try overrides
+    if (name in self.overrides)
+      return self.overrides[name];
+
+    // Try local directories
+    var localDir = self.directoryForLocalPackage(name);
+    if (localDir)
+      return localDir;
+
+    // Try the release
+    var version = self.releaseManifest && self.releaseManifest.packages[name];
+    if (version) {
+      var pathInWarehouse = path.join(warehouse.getWarehouseDir(),
+                                      'packages', name, version);
+      if (! fs.existsSync(pathInWarehouse))
+        throw new Error("Package missing from warehouse: " + name +
+                        " version " + version);
+      return pathInWarehouse;
+    }
+
+    // Not found
+    return null;
   },
 
   // for a package that exists in localPackageDirs, find the directory
