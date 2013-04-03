@@ -355,7 +355,8 @@ var DependencyWatcher = function (
     // reload. Notably, the app will *not* reload the first time a local package
     // is created which overrides an installed package.
     var localPackageDir =
-          packages.directoryForLocalPackage(pkg, packageSearchOptions);
+      (new packages.Library(packageSearchOptions)).
+      directoryForLocalPackage(pkg);
     if (localPackageDir) {
       _.each(deps.packages[pkg], function (file) {
         self.specific_files[path.join(localPackageDir, file)] = true;

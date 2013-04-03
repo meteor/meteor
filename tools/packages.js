@@ -27,6 +27,10 @@ var fs = require('fs');
 //    - `preloadedPackages` (a map from package name to Package, used when
 //       specifying particular dirs to test-packages)
 
+
+// XXX XXX as implemented, it reads the environment and the current
+// directory. It shouldn't do that. Those should ultimately be ctor
+// arguments or something.
 var Library = function (packageSearchOptions) {
   var self = this;
   self.packageSearchOptions = packageSearchOptions || {};
@@ -70,6 +74,80 @@ _.extend(Library.prototype, {
     var pkg = new Package;
     pkg.initFromAppDir(app_dir, ignore_files || [], self.packageSearchOptions);
     return pkg;
+  },
+
+  // get all packages available. options are appDir and releaseManifest.
+  //
+  // returns {Object} maps name to Package
+  list: function () {
+    var self = this;
+    var list = {};
+
+    _.each(self._localPackageDirs(), function (dir) {
+      _.each(fs.readdirSync(dir), function (name) {
+        if (files.is_package_dir(path.join(dir, name))) {
+          if (!list[name]) // earlier directories get precedent
+            list[name] = self.get(name);
+        }
+      });
+    });
+
+    if (self.packageSearchOptions.releaseManifest) {
+      _.each(self.packageSearchOptions.releaseManifest.packages, function(version, name) {
+        // don't even look for packages if they've already been
+        // overridden (though this `if` isn't necessary for
+        // correctness, since `packages.get` looks for packages in the
+        // override directories first anyways)
+        if (!list[name])
+          list[name] = self.get(name);
+      });
+    }
+
+    return list;
+  },
+
+  // for a package that exists in localPackageDirs, find the directory
+  // in which it exists.
+  // XXX does this need to be absolute?
+  directoryForLocalPackage: function (name) {
+    var self = this;
+    var searchDirs = self._localPackageDirs();
+    for (var i = 0; i < searchDirs.length; ++i) {
+      var packageDir = path.join(searchDirs[i], name);
+      if (fs.existsSync(path.join(packageDir, 'package.js')))
+        return packageDir;
+    }
+    return undefined;
+  },
+
+  _localPackageDirs: function () {
+    var self = this;
+    var packageDirs = [];
+
+    // If we're running from an app (as opposed to a global-level "meteor
+    // test-packages"), use app packages.
+    if (self.packageSearchOptions.appDir)
+      packageDirs.push(path.join(self.packageSearchOptions.appDir, 'packages'));
+
+    // Next, search $PACKAGE_DIRS.
+    if (process.env.PACKAGE_DIRS)
+      packageDirs.push.apply(packageDirs, process.env.PACKAGE_DIRS.split(':'));
+
+    // If we're running out of a git checkout of meteor, use the packages from
+    // the git tree.
+    if (!files.usesWarehouse())
+      packageDirs.push(path.join(files.getCurrentToolsDir(), 'packages'));
+
+    // Only return directories that exist.
+    return _.filter(packageDirs, function (dir) {
+      try {
+        // use stat rather than lstat since symlink to dir is OK
+        var stats = fs.statSync(dir);
+      } catch (e) {
+        return false;
+      }
+      return stats.isDirectory();
+    });
   }
 
 });
@@ -447,8 +525,7 @@ _.extend(Package.prototype, {
   // @returns {Boolean} was the package found in any local package sets?
   initFromLocalPackages: function (name, packageSearchOptions) {
     var self = this;
-    var packageDir = packages.directoryForLocalPackage(
-      name, packageSearchOptions);
+    var packageDir = (new Library(packageSearchOptions)).directoryForLocalPackage(name);
     if (packageDir) {
       self.initFromPackageDir(name, packageDir);
       return true;
@@ -796,37 +873,6 @@ _.extend(exports, {
     loadedPackages = {};
   },
 
-  // get all packages available. options are appDir and releaseManifest.
-  //
-  // returns {Object} maps name to Package
-  list: function (packageSearchOptions) {
-    var self = this;
-    packageSearchOptions = packageSearchOptions || {};
-    var list = {};
-
-    _.each(packages._localPackageDirs(packageSearchOptions), function (dir) {
-      _.each(fs.readdirSync(dir), function (name) {
-        if (files.is_package_dir(path.join(dir, name))) {
-          if (!list[name]) // earlier directories get precedent
-            list[name] = (new Library(packageSearchOptions)).get(name);
-        }
-      });
-    });
-
-    if (packageSearchOptions.releaseManifest) {
-      _.each(packageSearchOptions.releaseManifest.packages, function(version, name) {
-        // don't even look for packages if they've already been
-        // overridden (though this `if` isn't necessary for
-        // correctness, since `packages.get` looks for packages in the
-        // override directories first anyways)
-        if (!list[name])
-          list[name] = (new Library(packageSearchOptions)).get(name);
-      });
-    }
-
-    return list;
-  },
-
   // returns a pretty list suitable for showing to the user. input is
   // a list of package objects, each of which must have a name (not be
   // an application package.)
@@ -854,55 +900,5 @@ _.extend(exports, {
     });
 
     return out;
-  },
-
-  // for a package that exists in localPackageDirs, find the directory
-  // in which it exists.
-  // XXX does this need to be absolute?
-  directoryForLocalPackage: function (name, packageSearchOptions) {
-    // Make sure that if we're using meteor test-packages to test a package in a
-    // random spot, that we watch it for dependencies.
-    if (packageSearchOptions && packageSearchOptions.preloadedPackages &&
-        name in packageSearchOptions.preloadedPackages) {
-      return packageSearchOptions.preloadedPackages[name].source_root;
-    }
-
-    var searchDirs = packages._localPackageDirs(packageSearchOptions);
-    for (var i = 0; i < searchDirs.length; ++i) {
-      var packageDir = path.join(searchDirs[i], name);
-      if (fs.existsSync(path.join(packageDir, 'package.js')))
-        return packageDir;
-    }
-    return undefined;
-  },
-
-  _localPackageDirs: function (packageSearchOptions) {
-    var packageDirs = [];
-    packageSearchOptions = packageSearchOptions || {};
-
-    // If we're running from an app (as opposed to a global-level "meteor
-    // test-packages"), use app packages.
-    if (packageSearchOptions.appDir)
-      packageDirs.push(path.join(packageSearchOptions.appDir, 'packages'));
-
-    // Next, search $PACKAGE_DIRS.
-    if (process.env.PACKAGE_DIRS)
-      packageDirs.push.apply(packageDirs, process.env.PACKAGE_DIRS.split(':'));
-
-    // If we're running out of a git checkout of meteor, use the packages from
-    // the git tree.
-    if (!files.usesWarehouse())
-      packageDirs.push(path.join(files.getCurrentToolsDir(), 'packages'));
-
-    // Only return directories that exist.
-    return _.filter(packageDirs, function (dir) {
-      try {
-        // use stat rather than lstat since symlink to dir is OK
-        var stats = fs.statSync(dir);
-      } catch (e) {
-        return false;
-      }
-      return stats.isDirectory();
-    });
   }
 });
