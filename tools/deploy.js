@@ -94,7 +94,7 @@ var deployToServer = function (app_dir, bundleOptions, deployOptions) {
   var bundler = require('./bundler.js');
   var errors = bundler.bundle(app_dir, bundle_path, bundleOptions);
   if (errors) {
-    process.stdout.write("\n\nErrors prevented deploying:\n");
+    process.stdout.write("\n\n\033[35m\033[1mErrors prevented deploying:\033[0m\n");
     _.each(errors, function (e) {
       process.stdout.write(e + "\n");
     });
@@ -116,7 +116,7 @@ var deployToServer = function (app_dir, bundleOptions, deployOptions) {
   var rpc = meteor_rpc('deploy', 'POST', site, rpcOptions, function (err, body) {
     if (err) {
       var errorMessage = (body || ("Connection error (" + err.message + ")"));
-      process.stderr.write("\nError deploying application: " + errorMessage + "\n");
+      process.stderr.write("\n\033[35m\033[1mError deploying application: " + errorMessage + "\033[0m\n");
       process.exit(1);
     }
 
@@ -134,11 +134,11 @@ var deployToServer = function (app_dir, bundleOptions, deployOptions) {
     }
 
     if (!hostname) {
-      process.stdout.write('Error receiving hostname from deploy server.\n');
+      process.stdout.write('\033[35m\033[1mError receiving hostname from deploy server.\033[0m\n');
       process.exit(1);
     }
 
-    process.stdout.write('Now serving at ' + hostname + '\n');
+    process.stdout.write('\033[32m\033[1mNow serving at ' + hostname + '\n\033[0m');
     files.rm_recursive(build_dir);
 
 
@@ -148,11 +148,11 @@ var deployToServer = function (app_dir, bundleOptions, deployOptions) {
         if (err || cnames[0] !== 'origin.meteor.com') {
           dns.resolve(hostname, 'A', function (err, addresses) {
             if (err || addresses[0] !== '107.22.210.133') {
-              process.stdout.write('-------------\n');
+              process.stdout.write('\033[1m-------------\n');
               process.stdout.write("You've deployed to a custom domain.\n");
-              process.stdout.write("Please be sure to CNAME your hostname to origin.meteor.com,\n");
-              process.stdout.write("or set an A record to 107.22.210.133.\n");
-              process.stdout.write('-------------\n');
+              process.stdout.write("Please be sure to CNAME your hostname to \033[33morigin.meteor.com\033[0m\033[1m,\n");
+              process.stdout.write("or set an A record to \033[33m107.22.210.133\033[0m\033[1m.\n");
+              process.stdout.write('-------------\033[0m\n');
             }
           });
         }
@@ -172,7 +172,7 @@ var delete_app = function (url) {
 
     meteor_rpc('deploy', 'DELETE', parsed_url.hostname, opts, function (err, body) {
       if (err) {
-        process.stderr.write("Error deleting application: " + body + "\n");
+        process.stderr.write("\033[32m\033[1mError deleting application: " + body + "\033[0m\n");
         process.exit(1);
       }
 
@@ -378,7 +378,7 @@ var get_new_password = function (callback) {
         callback(p1);
         return;
       }
-      process.stdout.write("Passwords do not match! Try again.\n");
+      process.stdout.write("\033[32m\033[1mPasswords do not match! Try again.\033[0m\n");
       get_new_password(callback);
     });
   });

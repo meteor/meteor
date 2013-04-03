@@ -17,7 +17,7 @@ var _ = require('underscore');
 var MIN_NODE_VERSION = 'v0.8.18';
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
-    'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
+    '\033[35m\033[1mMeteor requires Node ' + MIN_NODE_VERSION + ' or later.\033[0m\n');
   process.exit(1);
 }
 
@@ -163,7 +163,7 @@ var run = function () {
 
   // check for a valid MongoDB URL right away
   if (!process.env.MONGO_URL)
-    throw new Error("MONGO_URL must be set in environment");
+    throw new Error("\033[35m\033[1mMONGO_URL must be set in environment\033[0m");
 
   // webserver
   var app = connect.createServer();
@@ -256,7 +256,7 @@ var run = function () {
                 return require(name);
               } catch (e) {
                 // XXX better message
-                throw new Error("Can't find npm module '" + name + "'. Did you forget to call 'Npm.depends' in package.js within the '" + filePathParts[2] + "' package?");
+                throw new Error("\033[35m\033[1mCan't find npm module '\033[33m" + name + "\033[35m\033[1m'. Did you forget to call 'Npm.depends' in package.js within the '" + filePathParts[2] + "' package?\033[0m");
               }
             }
           }

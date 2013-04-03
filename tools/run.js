@@ -82,7 +82,7 @@ var Status = {
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
   if (s.search("\"") !== -1 || s.search("'") !== -1) {
-    throw new Error("Meteor cannot currently handle quoted NODE_OPTIONS");
+    throw new Error("\033[35m\033[1mMeteor cannot currently handle quoted NODE_OPTIONS\033[0m");
   }
   return _.without(s.split(/\s+/), '');
 };
@@ -160,8 +160,8 @@ var start_proxy = function (outer_port, inner_port, callback) {
 
   p.on('error', function (err) {
     if (err.code == 'EADDRINUSE') {
-      process.stderr.write("Can't listen on port " + outer_port
-                           + ". Perhaps another Meteor is running?\n");
+      process.stderr.write("\033[35m\033[1mCan't listen on port " + outer_port
+                           + ". Perhaps another Meteor is running?\033[0m\n");
       process.stderr.write("\n");
       process.stderr.write("Running two copies of Meteor in the same application directory\n");
       process.stderr.write("will not work. If something else is using port " + outer_port + ", you can\n");
@@ -558,10 +558,10 @@ exports.getSettings = function (filename) {
   try {
     str = fs.readFileSync(filename, "utf8");
   } catch (e) {
-    throw new Error("Could not find settings file " + filename);
+    throw new Error("\033[35m\033[1mCould not find settings file " + filename + "\033[0m");
   }
   if (str.length > 0x10000) {
-    throw new Error("Settings file must be less than 64 KB long");
+    throw new Error("\033[35m\033[1mSettings file must be less than 64 KB long\033[0m");
   }
   // Ensure that the string is parseable in JSON, but there's
   // no reason to use the object value of it yet.
@@ -681,8 +681,8 @@ exports.run = function (context, options) {
       var newAppRelease = project.getMeteorReleaseVersion(context.appDir) ||
             warehouse.latestRelease();
       if (newAppRelease !== context.appReleaseVersion) {
-        console.error("Your app has been updated to Meteor %s from " +
-                      "Meteor %s.\nRestart meteor to use the new release.",
+        console.error("\033[32mYour app has been updated to Meteor \033[33m%s\033[32m from " +
+                      "Meteor \033[33m%s\033[32m.\nRestart meteor to use the new release.\033[0m",
                       newAppRelease,
                       context.appReleaseVersion);
         process.exit(1);
@@ -699,8 +699,8 @@ exports.run = function (context, options) {
         fs.readFileSync(path.join(bundle_path, 'dependencies.json'), 'utf8');
     } catch (e) {
       if (!warned_about_no_deps_info) {
-        process.stdout.write("No dependency info in bundle. " +
-                             "Filesystem monitoring disabled.\n");
+        process.stdout.write("\033[1mNo dependency info in bundle. " +
+                             "Filesystem monitoring disabled.\033[0m\n");
         warned_about_no_deps_info = true;
       }
     }
@@ -716,7 +716,7 @@ exports.run = function (context, options) {
 
       if (!deps_info) {
         // We don't know what files to watch for changes, so we have to exit.
-        process.stdout.write("\nPlease fix the problem and restart.\n");
+        process.stdout.write("\n\033[35m\033[1mPlease fix the problem and restart.\033[0m\n");
 
         // XXX calling process.exit like this leaves mongod running!
         // One solution would be to try to kill mongo in this case. Or
@@ -733,7 +733,7 @@ exports.run = function (context, options) {
     Status.running = true;
 
     if (firstRun) {
-      process.stdout.write("=> Meteor server running on: http://localhost:" + outer_port + "/\n");
+      process.stdout.write("\033[36m\033[1m=> Meteor server running on: \033[33mhttp://localhost:" + outer_port + "/\033[0m\n");
       firstRun = false;
       lastThingThatPrintedWasRestartMessage = false;
     } else {
@@ -743,7 +743,7 @@ exports.run = function (context, options) {
         // Overwrite it.
         realStdoutWrite.call(process.stdout, '\r');
       }
-      realStdoutWrite.call(process.stdout, "=> Meteor server restarted");
+      realStdoutWrite.call(process.stdout, "\033[1m=> Meteor server restarted\033[0m");
       if (lastThingThatPrintedWasRestartMessage) {
         ++silentRuns;
         realStdoutWrite.call(process.stdout, " (x" + (silentRuns+1) + ")");
@@ -795,19 +795,19 @@ exports.run = function (context, options) {
         if (Status.shuttingDown) {
           return;
         }
-        console.log("Unexpected mongo exit code " + code + ". Restarting.");
+        console.log("\033[35m\033[1mUnexpected mongo exit code " + code + ". Restarting.\033[0m");
 
         // if mongo dies 3 times with less than 5 seconds between each,
         // declare it failed and die.
         mongo_err_count += 1;
         if (mongo_err_count >= 3) {
           var explanation = mongoExitCodes.Codes[code];
-          console.log("Can't start mongod\n");
+          console.log("\033[35m\033[1mCan't start mongod\033[0m\n");
           if (explanation)
             console.log(explanation.longText);
           if (explanation === mongoExitCodes.EXIT_NET_ERROR)
-            console.log("\nCheck for other processes listening on port " + mongo_port +
-                        "\nor other meteors running in the same project.");
+            console.log("\n\033[1mCheck for other processes listening on port " + mongo_port +
+                        "\nor other meteors running in the same project.\033[0m");
           process.exit(1);
         }
         if (mongo_err_timer)
