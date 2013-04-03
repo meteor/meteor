@@ -89,7 +89,7 @@ var Slice = function (pkg, role, where) {
 // options to include:
 //
 // - releaseStamp: the Meteor release name to write into the bundle metadata
-// - packageSearchOptions: tells you how to find packages
+// - library: tells you how to find packages
 var Bundle = function (options) {
   var self = this;
 
@@ -101,7 +101,7 @@ var Bundle = function (options) {
   self.releaseStamp = options.releaseStamp;
 
   // search configuration for package.get()
-  self.packageSearchOptions = options.packageSearchOptions || {};
+  self.library = options.library;
 
   // map from environment, to list of filenames
   self.js = {client: [], server: []};
@@ -247,7 +247,7 @@ _.extend(Bundle.prototype, {
 
   getPackage: function (packageOrPackageName) {
     var self = this;
-    var pkg = packages.get(packageOrPackageName, self.packageSearchOptions);
+    var pkg = self.library.get(packageOrPackageName);
     if (! pkg) {
       console.error("Package not found: " + packageOrPackageName);
       process.exit(1);
@@ -274,7 +274,7 @@ _.extend(Bundle.prototype, {
       // ** from the package plus the output of running the JavaScript
       // ** linker.
 
-      slice.pkg.ensureCompiled(self.packageSearchOptions);
+      slice.pkg.ensureCompiled(self.library.packageSearchOptions);
       var resources = _.clone(slice.pkg.resources[slice.role][slice.where]);
 
       var isApp = ! slice.pkg.name;
@@ -291,7 +291,7 @@ _.extend(Bundle.prototype, {
         var otherPkg = self.getPackage(otherPkgName);
         if (otherPkg.name && ! slice.pkg.unordered[otherPkg.name]) {
           // make sure otherPkg.exports is valid
-          otherPkg.ensureCompiled(self.packageSearchOptions);
+          otherPkg.ensureCompiled(self.library.packageSearchOptions);
           _.each(otherPkg.exports.use[slice.where], function (symbol) {
             imports[symbol] = otherPkg.name;
           });
@@ -430,7 +430,7 @@ _.extend(Bundle.prototype, {
       if (! slice.pkg.name) {
         var exts =
           slice.pkg.registeredExtensions(slice.role, slice.where,
-                                         self.packageSearchOptions);
+                                         self.library.packageSearchOptions);
         ret = _.union(ret, exts);
       }
     });
@@ -717,17 +717,18 @@ exports.bundle = function (app_dir, output_path, options) {
   if (!options.releaseStamp)
     throw new Error("Must pass options.releaseStamp or 'none'.");
 
+  var library = new packages.Library(options.packageSearchOptions || {});
+
   try {
     // Create a bundle and set up package search path
     packages.flush();
     var bundle = new Bundle({
       releaseStamp: options.releaseStamp,
-      packageSearchOptions: options.packageSearchOptions || {}
+      library: library
     });
 
     // Create a Package object that represents the app
-    var app = packages.get_for_app(app_dir, ignore_files,
-                                   bundle.packageSearchOptions);
+    var app = library.getForApp(app_dir, ignore_files);
 
     // Populate the list of slices to load
     bundle.determineLoadOrder({

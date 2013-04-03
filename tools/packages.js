@@ -27,6 +27,57 @@ var fs = require('fs');
 //    - `preloadedPackages` (a map from package name to Package, used when
 //       specifying particular dirs to test-packages)
 
+var Library = function (packageSearchOptions) {
+  var self = this;
+  self.packageSearchOptions = packageSearchOptions || {};
+};
+
+_.extend(Library.prototype, {
+  // get a package by name. also maps package objects to themselves.
+  // load order is:
+  // - APP_DIR/packages
+  // - PACKAGE_DIRS
+  // - METEOR_DIR/packages (if in a git checkout)
+  // - warehouse (if options.releaseManifest passed)
+  get: function (name) {
+    var self = this;
+    if (name instanceof Package)
+      return name;
+    if (!(name in loadedPackages)) {
+      if (self.packageSearchOptions.preloadedPackages &&
+          name in self.packageSearchOptions.preloadedPackages) {
+        loadedPackages[name] = self.packageSearchOptions.preloadedPackages[name];
+      } else {
+        var pkg = new Package;
+        if (pkg.initFromLocalPackages(name, self.packageSearchOptions)) {
+          loadedPackages[name] = pkg;
+        } else if (self.packageSearchOptions.releaseManifest) {
+          pkg.initFromWarehouse(
+            name, self.packageSearchOptions.releaseManifest.packages[name]);
+          loadedPackages[name] = pkg;
+        }
+      }
+    }
+
+    return loadedPackages[name];
+  },
+
+  // get a package that represents an app. (ignore_files is optional
+  // and if given, it should be an array of regexps for filenames to
+  // ignore when scanning for source files.)
+  getForApp: function (app_dir, ignore_files) {
+    var self = this;
+    var pkg = new Package;
+    pkg.initFromAppDir(app_dir, ignore_files || [], self.packageSearchOptions);
+    return pkg;
+  }
+
+});
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+
 var next_package_id = 1;
 var Package = function () {
   var self = this;
@@ -684,7 +735,7 @@ _.extend(Package.prototype, {
     var ret = _.keys(self.extensions);
 
     _.each(self.uses[role][where], function (pkgName) {
-      var pkg = packages.get(pkgName, packageSearchOptions);
+      var pkg = new Library(packageSearchOptions).get(pkgName);
       ret = _.union(ret, _.keys(pkg.extensions));
     });
 
@@ -704,7 +755,7 @@ _.extend(Package.prototype, {
 
     var seen = {};
     _.each(self.uses[role][where], function (pkgName) {
-      var otherPkg = packages.get(pkgName, packageSearchOptions);
+      var otherPkg = new Library(packageSearchOptions).get(pkgName);
       if (extension in otherPkg.extensions)
         candidates.push(otherPkg.extensions[extension]);
     });
@@ -731,49 +782,12 @@ var loadedPackages = {};
 var packages = exports;
 _.extend(exports, {
 
-  // get a package by name. also maps package objects to themselves.
-  // load order is:
-  // - APP_DIR/packages
-  // - PACKAGE_DIRS
-  // - METEOR_DIR/packages (if in a git checkout)
-  // - warehouse (if options.releaseManifest passed)
-  get: function (name, packageSearchOptions) {
-    var self = this;
-    packageSearchOptions = packageSearchOptions || {};
-    if (name instanceof Package)
-      return name;
-    if (!(name in loadedPackages)) {
-      if (packageSearchOptions.preloadedPackages &&
-          name in packageSearchOptions.preloadedPackages) {
-        loadedPackages[name] = packageSearchOptions.preloadedPackages[name];
-      } else {
-        var pkg = new Package;
-        if (pkg.initFromLocalPackages(name, packageSearchOptions)) {
-          loadedPackages[name] = pkg;
-        } else if (packageSearchOptions.releaseManifest) {
-          pkg.initFromWarehouse(
-            name, packageSearchOptions.releaseManifest.packages[name]);
-          loadedPackages[name] = pkg;
-        }
-      }
-    }
-
-    return loadedPackages[name];
-  },
+  Library: Library,
 
   // load a package directly from a directory. don't cache.
   loadFromDir: function(name, packageDir) {
     var pkg = new Package;
     pkg.initFromPackageDir(name, packageDir);
-    return pkg;
-  },
-
-  // get a package that represents an app. (ignore_files is optional
-  // and if given, it should be an array of regexps for filenames to
-  // ignore when scanning for source files.)
-  get_for_app: function (app_dir, ignore_files, packageSearchOptions) {
-    var pkg = new Package;
-    pkg.initFromAppDir(app_dir, ignore_files || [], packageSearchOptions);
     return pkg;
   },
 
@@ -794,7 +808,7 @@ _.extend(exports, {
       _.each(fs.readdirSync(dir), function (name) {
         if (files.is_package_dir(path.join(dir, name))) {
           if (!list[name]) // earlier directories get precedent
-            list[name] = packages.get(name, packageSearchOptions);
+            list[name] = (new Library(packageSearchOptions)).get(name);
         }
       });
     });
@@ -806,7 +820,7 @@ _.extend(exports, {
         // correctness, since `packages.get` looks for packages in the
         // override directories first anyways)
         if (!list[name])
-          list[name] = packages.get(name, packageSearchOptions);
+          list[name] = (new Library(packageSearchOptions)).get(name);
       });
     }
 
