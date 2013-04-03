@@ -78,20 +78,20 @@ var Package = function () {
 
     on_use: function (f) {
       if (self.on_use_handler)
-        throw new Error("A package may have only one on_use handler");
+        throw new Error("\033[32m\033[1mA package may have only one on_use handler\033[0m");
       self.on_use_handler = f;
     },
 
     on_test: function (f) {
       if (self.on_test_handler)
-        throw new Error("A package may have only one on_test handler");
+        throw new Error("\033[32m\033[1mA package may have only one on_test handler\033[0m");
       self.on_test_handler = f;
     },
 
     register_extension: function (extension, callback) {
       if (_.has(self.extensions, extension))
-        throw new Error("This package has already registered a handler for " +
-                        extension);
+        throw new Error("\033[32m\033[1mThis package has already registered a handler for " +
+                        extension + "\033[0m");
       self.extensions[extension] = callback;
     },
 
@@ -111,7 +111,7 @@ var Package = function () {
   self.npmFacade = {
     depends: function (npmDependencies) {
       if (self.npmDependencies)
-        throw new Error("Can only call `Npm.depends` once in package " + self.name + ".");
+        throw new Error("\033[32m\033[1mCan only call `Npm.depends` once in package \033[33m" + self.name + ".\033[0m");
 
       // don't allow npm fuzzy versions so that there is complete
       // consistency when deploying a meteor app
@@ -131,7 +131,7 @@ var Package = function () {
         try {
           return require(name); // from the dev bundle
         } catch (e) {
-          throw new Error("Can't find npm module '" + name + "'. Did you forget to call 'Npm.depends'?");
+          throw new Error("\033[32m\033[1mCan't find npm module \033[33m'" + name + "\033[32m'. Did you forget to call 'Npm.depends'?\033[0m");
         }
       }
     }
@@ -150,7 +150,7 @@ _.extend(Package.prototype, {
     self.serve_root = path.join(path.sep, 'packages', name);
 
     if (!fs.existsSync(self.source_root))
-      throw new Error("The package named " + self.name + " does not exist.");
+      throw new Error("\033[32m\033[1mThe package named \033[33m" + self.name + "\033[32m does not exist.\033[0m");
 
     // We use string concatenation to load package.js rather than
     // directly `require`ing it because that allows us to simplify the
@@ -291,7 +291,7 @@ _.extend(Package.prototype, {
       if (path.relative(prefix, abs).match(/\.\./))
         // XXX audit to make sure it works in all possible symlink
         // scenarios
-        throw new Error("internal error: source file outside of parent?");
+        throw new Error("\033[32m\033[1minternal error: source file outside of parent?\033[0m");
       return abs.substr(prefix.length);
     });
   },

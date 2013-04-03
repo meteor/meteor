@@ -16,7 +16,7 @@ Fiber(function () {
   var MIN_NODE_VERSION = 'v0.8.18';
   if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
     process.stderr.write(
-      'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
+      '\033[32m\033[1mMeteor requires Node ' + MIN_NODE_VERSION + ' or later.\n\033[0m');
     process.exit(1);
   }
 
@@ -24,13 +24,13 @@ Fiber(function () {
 
   var usage = function() {
     process.stdout.write(
-      "Usage: meteor [--version] [--release <release>] [--help] <command> [<args>]\n" +
+      "Usage: \033[1mmeteor [--version] [--release <release>] [--help] <command> [<args>]\033[0m\n" +
         "\n" +
         "With no arguments, 'meteor' runs the project in the current\n" +
         "directory in local development mode. You can run it from the root\n" +
         "directory of the project or from any subdirectory.\n" +
         "\n" +
-        "Use 'meteor create <name>' to create a new Meteor project.\n" +
+        "Use '\033[1mmeteor create <name>\033[0m' to create a new Meteor project.\n" +
         "\n" +
         "Commands:\n");
     _.each(Commands, function (cmd) {
@@ -41,7 +41,7 @@ Fiber(function () {
     });
     process.stdout.write("\n");
     process.stdout.write(
-      "See 'meteor help <command>' for details on a command.\n");
+      "See '\033[1mmeteor help <command>\033[0m' for details on a command.\n");
     process.exit(1);
   };
 
@@ -78,12 +78,12 @@ Fiber(function () {
         throw e;
       if (context.appDir && !context.userReleaseOverride) {
         logging.die(
-          "Sorry, this project uses Meteor " + version + ", which is not installed and\n" +
-          "could not be downloaded. Please check to make sure that you are online.");
+          "\033[32m\033[1mSorry, this project uses Meteor " + version + ", which is not installed and\n" +
+          "could not be downloaded. Please check to make sure that you are online.\033[0m");
       } else {
         logging.die(
-          "Sorry, Meteor " + version + " is not installed and could not be downloaded.\n" +
-          "Please check to make sure that you are online.");
+          "\033[32m\033[1mSorry, Meteor " + version + " is not installed and could not be downloaded.\n" +
+          "Please check to make sure that you are online.\033[0m");
       }
     }
     context.packageSearchOptions = {
@@ -96,7 +96,7 @@ Fiber(function () {
     if (!files.usesWarehouse()) {
       if (argv.release) {
         logging.die(
-          "Can't specify a release when running Meteor from a checkout.");
+          "\033[32m\033[1mCan't specify a release when running Meteor from a checkout.\033[0m");
       }
       // The release in a git checkout is called "none" and is hardcoded in
       // warehouse.js to have no packages.
@@ -116,7 +116,7 @@ Fiber(function () {
     if (files.usesWarehouse() &&
         context.appReleaseVersion !== 'none' &&
         context.appReleaseVersion !== context.releaseVersion) {
-      console.log("=> Using Meteor %s as requested (overriding Meteor %s)",
+      console.log("\033[1m=> Using Meteor %s as requested (overriding Meteor %s)\033[0m",
                   context.releaseVersion, context.appReleaseVersion);
       console.log();
     }
@@ -134,30 +134,30 @@ Fiber(function () {
       // logs, mongo SITE, test-packages, and deploy -D).
       if (!files.usesWarehouse() && context.appReleaseVersion !== 'none') {
         console.log(
-          "=> Running Meteor from a checkout -- overrides project version (%s)",
+          "\033[1m=> Running Meteor from a checkout -- overrides project version (%s)\033[0m",
           context.appReleaseVersion);
         console.log();
       }
       if (files.usesWarehouse() && context.releaseVersion === 'none') {
         logging.die(
-          "You must specify a Meteor version with --release when you work with this\n" +
+          "You must specify a Meteor version with \033[1m--release\033[0m when you work with this\n" +
             "project. It was created from an unreleased Meteor checkout and doesn't\n" +
             "have a version associated with it.\n" +
             "\n" +
-            "You can permanently set a release for this project with 'meteor update'.");
+            "You can permanently set a release for this project with '\033[1mmeteor update\033[0m'.");
       }
       return;
     }
     // This is where you end up if you type 'meteor' with no args. Be gentle to
     // the noobs..
-    logging.die(cmd + ": You're not in a Meteor project directory.\n" +
+    logging.die(cmd + ": \033[32m\033[1mYou're not in a Meteor project directory.\033[0m\n" +
         "\n" +
         "To create a new Meteor project:\n" +
-        "   meteor create <project name>\n" +
+        "   \033[33m\033[1mmeteor create <project name>\033[0m\033[1m\n" +
         "For example:\n" +
-        "   meteor create myapp\n" +
+        "   \033[33m\033[1mmeteor create myapp\033[0m\033[1m\n" +
         "\n" +
-        "For more help, see 'meteor --help'.");
+        "For more help, see '\033[33m\033[1mmeteor --help\033[0m\033[1m'.\033[0m");
   };
 
   var find_mongo_port = function (cmd, callback) {
@@ -171,7 +171,7 @@ Fiber(function () {
       if (Commands[i].name === name)
         return Commands[i];
     process.stdout.write("'" + name + "' is not a Meteor command. See " +
-                         "'meteor --help'.\n");
+                         "'\033[1mmeteor --help\033[0m'.\n");
     process.exit(1);
   };
 
@@ -198,7 +198,7 @@ Fiber(function () {
             // use.
             .boolean('once')
             .usage(
-              "Usage: meteor run [options]\n" +
+              "Usage: \033[1mmeteor run [options]\033[0m\n" +
                 "\n" +
                 "Searches upward from the current directory for the root directory of a\n" +
                 "Meteor project, then runs that project in local development\n" +
@@ -250,9 +250,9 @@ Fiber(function () {
             .boolean('list')
             .describe('list', 'Show list of available examples.')
             .usage(
-              "Usage: meteor create [--release <release>] <name>\n" +
-                "       meteor create [--release <release>] --example <example_name> [<name>]\n" +
-                "       meteor create --list\n" +
+              "Usage: \033[1mmeteor create [--release <release>] <name>\033[0m\n" +
+                "       \033[1mmeteor create [--release <release>] --example <example_name> [<name>]\033[0m\n" +
+                "       \033[1mmeteor create --list\033[0m\n" +
                 "\n" +
                 "Make a subdirectory named <name> and create a new Meteor project\n" +
                 "there. You can also pass an absolute or relative path.\n" +
@@ -355,7 +355,7 @@ Fiber(function () {
     func: function (argv) {
       // reparse args
       var opt = require('optimist').usage(
-        "Usage: meteor update [--release <release>]\n" +
+        "Usage: \033[1mmeteor update [--release <release>]\033[0m\n" +
           "\n" +
           "Sets the version of Meteor to use with the current project. If a\n" +
           "release is specified with --release, set the project to use that\n" +
@@ -369,7 +369,7 @@ Fiber(function () {
       // refuse to update if we're in a git checkout.
       if (!files.usesWarehouse()) {
         logging.die(
-          "update: can only be run from official releases, not from checkouts");
+          "\033[32m\033[1mupdate: can only be run from official releases, not from checkouts\033[0m");
       }
 
       var didGlobalUpdateWithoutSpringboarding = false;
@@ -439,12 +439,12 @@ Fiber(function () {
       } else {
         if (triedToGloballyUpdateButFailed) {
           console.log(
-            "This project is already at Meteor %s, the latest release\n" +
-              "installed on this computer.",
+            "\033[33m\033[1mThis project is already at Meteor %s, the latest release\n" +
+              "installed on this computer.\033[0m",
             context.releaseVersion);
         } else {
           console.log(
-            "This project is already at Meteor %s, the latest release.",
+            "\033[33m\033[1mThis project is already at Meteor %s, the latest release.\033[0m",
             context.releaseVersion);
         }
         return;
@@ -467,7 +467,7 @@ Fiber(function () {
     func: function (argv) {
       if (argv.help || !argv._.length) {
         process.stdout.write(
-          "Usage: meteor add <package> [package] [package..]\n" +
+          "Usage: \033[1mmeteor add <package> [package] [package..]\033[0m\n" +
             "\n" +
             "Adds packages to your Meteor project. You can add multiple\n" +
             "packages with one command. For a list of the available packages, see\n" +
@@ -484,9 +484,9 @@ Fiber(function () {
 
       _.each(argv._, function (name) {
         if (!(name in all)) {
-          process.stderr.write(name + ": no such package\n");
+          process.stderr.write("\033[32m\033[1m" + name + ": no such package\033[0m\n");
         } else if (name in using) {
-          process.stderr.write(name + ": already using\n");
+          process.stderr.write("\033[33m\033[1m" + name + ": already using\033[0m\n");
         } else {
           project.add_package(context.appDir, name);
           var note = all[name].metadata.summary || '';
@@ -502,7 +502,7 @@ Fiber(function () {
     func: function (argv) {
       if (argv.help || !argv._.length) {
         process.stdout.write(
-          "Usage: meteor remove <package> [package] [package..]\n" +
+          "Usage: \033[1mmeteor remove <package> [package] [package..]\033[0m\n" +
             "\n" +
             "Removes a package previously added to your Meteor project. For a\n" +
             "list of the packages that your application is currently using, see\n" +
@@ -518,10 +518,10 @@ Fiber(function () {
 
       _.each(argv._, function (name) {
         if (!(name in using)) {
-          process.stderr.write(name + ": not in project\n");
+          process.stderr.write("\033[33m\033[1m" + name + ": not in project\033[0m\n");
         } else {
           project.remove_package(context.appDir, name);
-          process.stderr.write(name + ": removed\n");
+          process.stderr.write("\033[32m\033[1m" + name + "\033[0m\033[1m: removed\033[0m\n");
         }
       });
     }
@@ -533,7 +533,7 @@ Fiber(function () {
     func: function (argv) {
       if (argv.help) {
         process.stdout.write(
-          "Usage: meteor list [--using]\n" +
+          "Usage: \033[1mmeteor list [--using]\033[0m\n" +
             "\n" +
             "Without arguments, lists all available Meteor packages. To add one\n" +
             "of these packages to your project, see 'meteor add'.\n" +
@@ -553,10 +553,10 @@ Fiber(function () {
         } else {
           process.stderr.write(
             "This project doesn't use any packages yet. To add some packages:\n" +
-              "  meteor add <package> <package> ...\n" +
+              "  \033[1mmeteor add <package> <package> ...\033[0m\n" +
               "\n" +
               "To see available packages:\n" +
-              "  meteor list\n");
+              "  \033[1mmeteor list\033[0m\n");
         }
         return;
       }
@@ -579,7 +579,7 @@ Fiber(function () {
     func: function (argv) {
       if (argv.help || argv._.length != 1) {
         process.stdout.write(
-          "Usage: meteor bundle <output_file.tar.gz>\n" +
+          "Usage: \033[1mmeteor bundle <output_file.tar.gz>\033[0m\n" +
             "\n" +
             "Package this project up for deployment. The output is a tarball that\n" +
             "includes everything necessary to run the application. See README in\n" +
@@ -638,7 +638,7 @@ Fiber(function () {
             .alias('url', 'U')
             .describe('url', 'return a Mongo database URL')
             .usage(
-              "Usage: meteor mongo [--url] [site]\n" +
+              "Usage: \033[1mmeteor mongo [--url] [site]\033[0m\n" +
                 "\n" +
                 "Opens a Mongo shell to view or manipulate collections.\n" +
                 "\n" +
@@ -667,7 +667,7 @@ Fiber(function () {
         find_mongo_port("mongo", function (mongod_port) {
           if (!mongod_port) {
             process.stdout.write(
-              "mongo: Meteor isn't running.\n" +
+              "\033[32m\033[1mmongo: Meteor isn't running.\033[0m\n" +
                 "\n" +
                 "This command only works while Meteor is running your application\n" +
                 "locally. Start your application first.\n");
@@ -711,7 +711,7 @@ Fiber(function () {
             .describe('debug', 'deploy in debug mode (don\'t minify, etc)')
             .describe('settings', 'set optional data for Meteor.settings')
             .usage(
-              "Usage: meteor deploy <site> [--password] [--settings settings.json] [--debug] [--delete]\n" +
+              "Usage: \033[1mmeteor deploy <site> [--password] [--settings settings.json] [--debug] [--delete]\033[0m\n" +
                 "\n" +
                 "Deploys the project in your current directory to Meteor's servers.\n" +
                 "\n" +
@@ -773,7 +773,7 @@ Fiber(function () {
     func: function (argv) {
       if (argv.help || argv._.length < 1 || argv._.length > 2) {
         process.stdout.write(
-          "Usage: meteor logs <site>\n" +
+          "Usage: \033[1mmeteor logs <site>\033[0m\n" +
             "\n" +
             "Retrieves the server logs for the requested site.\n");
         process.exit(1);
@@ -789,7 +789,7 @@ Fiber(function () {
     func: function (argv) {
       if (argv.help) {
         process.stdout.write(
-          "Usage: meteor reset\n" +
+          "Usage: \033[1mmeteor reset\033[0m\n" +
             "\n" +
             "Reset the current project to a fresh state. Removes all local\n" +
             "data and kills any running meteor development servers.\n");
@@ -804,7 +804,7 @@ Fiber(function () {
       find_mongo_port("reset", function (mongod_port) {
         if (mongod_port) {
           process.stdout.write(
-            "reset: Meteor is running.\n" +
+            "\033[32m\033[1mreset: Meteor is running.\033[0m\n" +
               "\n" +
               "This command does not work while Meteor is running your application.\n" +
               "Exit the running meteor development server.\n");
@@ -834,7 +834,7 @@ Fiber(function () {
             .boolean('once') // See #Once
             .describe('settings',  'Set optional data for Meteor.settings on the server')
             .usage(
-              "Usage: meteor test-packages [--release <release>] [options] [package...]\n" +
+              "Usage: \033[1mmeteor test-packages [--release <release>] [options] [package...]\033[0m\n" +
                 "\n" +
                 "Runs unit tests for one or more packages. The results are shown in\n" +
                 "a browser dashboard that updates whenever a relevant source file is\n" +
@@ -969,9 +969,9 @@ Fiber(function () {
 
     if (context.appReleaseVersion === "none") {
       logging.die(
-        "This project was created with a checkout of Meteor, rather than an\n" +
+        "\033[33m\033[1mThis project was created with a checkout of Meteor, rather than an\n" +
         "official release, and doesn't have a release number associated with\n" +
-        "it. You can set its release with 'meteor update'.");
+        "it. You can set its release with 'meteor update'.\033[0m");
     }
     console.log("Release " + context.releaseVersion);
     process.exit(0);
@@ -982,7 +982,7 @@ Fiber(function () {
   // installed).
   var getReady = function () {
     if (files.usesWarehouse()) {
-      logging.die("meteor --get-ready only works in a checkout");
+      logging.die("\033[32m\033[1mmeteor --get-ready only works in a checkout\033[0m");
     }
     // dev bundle is downloaded by the wrapper script. We just need to install
     // NPM dependencies.
