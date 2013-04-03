@@ -7,7 +7,7 @@ var spawn = require('child_process').spawn;
 var httpProxy = require('http-proxy');
 
 var files = require('./files.js');
-var packages = require('./packages.js');
+var library = require('./library.js');
 var project = require('./project.js');
 var updater = require('./updater.js');
 var bundler = require('./bundler.js');
@@ -355,7 +355,7 @@ var DependencyWatcher = function (
     // reload. Notably, the app will *not* reload the first time a local package
     // is created which overrides an installed package.
     var localPackageDir =
-      (new packages.Library(packageSearchOptions)).
+      (new library.Library(packageSearchOptions)).
       directoryForLocalPackage(pkg);
     if (localPackageDir) {
       _.each(deps.packages[pkg], function (file) {

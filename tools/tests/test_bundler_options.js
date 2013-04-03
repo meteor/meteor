@@ -10,7 +10,7 @@ var emptyAppDir = path.join(__dirname, 'empty-app');
 /// TESTS
 ///
 
-var library = new packages.Library();
+var library = new library.Library();
 
 console.log("nodeModules: 'skip'");
 assert.doesNotThrow(function () {

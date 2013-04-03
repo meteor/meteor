@@ -7,7 +7,7 @@ Fiber(function () {
   var files = require('./files.js');
   var deploy = require('./deploy.js');
   var runner = require('./run.js');
-  var packages = require('./packages.js');
+  var library = require('./library.js');
   var project = require('./project.js');
   var warehouse = require('./warehouse.js');
   var logging = require('./logging.js');
@@ -86,7 +86,7 @@ Fiber(function () {
           "Please check to make sure that you are online.");
       }
     }
-    context.library = new packages.Library({
+    context.library = new library.Library({
       appDir: context.appDir,
       releaseManifest: context.releaseManifest
     });
@@ -572,7 +572,7 @@ Fiber(function () {
       _.each(names, function (name) {
         pkgs.push(list[name]);
       });
-      process.stdout.write("\n" + packages.format_list(pkgs) + "\n");
+      process.stdout.write("\n" + library.format_list(pkgs) + "\n");
     }
   });
 
